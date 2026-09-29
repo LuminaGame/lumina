@@ -180,7 +180,8 @@ begin
   if not Exec(PowerShellExe,
     ScriptArgs(ExpandConstant('{app}\setup\lumina-setup.ps1'),
       '-InstallDir ' + AddQuotes(ExpandConstant('{app}')) +
-      ' -LogPath ' + AddQuotes(ExpandConstant('{app}\setup\install.log')) + ' ' + Extra),
+      ' -LogPath ' + AddQuotes(ExpandConstant('{app}\setup\install.log')) +
+      ' -Tag {#AppTag} ' + Extra),
     ExpandConstant('{app}'), Show, ewWaitUntilTerminated, Code) then
     Code := 1;
   Result := Code;

@@ -249,8 +249,21 @@ function Invoke-GitHubApi([string]$Url) {
 }
 
 function Get-StudioRelease {
-  $url = if ($Tag -eq 'latest') { "https://api.github.com/repos/$Repository/releases/latest" } else { "https://api.github.com/repos/$Repository/releases/tags/$Tag" }
-  $release = Invoke-GitHubApi $url
+  if ($Tag -eq 'latest') {
+    # /releases/latest skips pre-releases; without a full release yet, take
+    # the newest release of any kind.
+    $url = "https://api.github.com/repos/$Repository/releases/latest"
+    try {
+      $release = Invoke-GitHubApi $url
+    } catch {
+      $url = "https://api.github.com/repos/$Repository/releases?per_page=1"
+      $release = @(Invoke-GitHubApi $url) | Select-Object -First 1
+      if (-not $release) { throw "$Repository has no release yet." }
+    }
+  } else {
+    $url = "https://api.github.com/repos/$Repository/releases/tags/$Tag"
+    $release = Invoke-GitHubApi $url
+  }
   $zip = $release.assets | Where-Object { $_.name -match '^lumina-studio-.+-windows-x64\.zip$' } | Select-Object -First 1
   if (-not $zip) { throw "Release $($release.tag_name) has no lumina-studio-*-windows-x64.zip asset." }
   $sum = $release.assets | Where-Object { $_.name -eq "$($zip.name).sha256" } | Select-Object -First 1

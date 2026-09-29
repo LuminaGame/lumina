@@ -57,7 +57,12 @@ curl_api() {
   fi
 }
 
-JSON="$(curl_api "$API" 2>/dev/null)" || {
+# /releases/latest skips pre-releases; without a full release yet, take the
+# newest release of any kind.
+if [ "$TAG" = latest ] && ! JSON="$(curl_api "$API" 2>/dev/null)"; then
+  API="https://api.github.com/repos/$REPO/releases?per_page=1"
+fi
+[ -n "${JSON:-}" ] || JSON="$(curl_api "$API" 2>/dev/null)" || {
   if [ "$DRY_RUN" = 1 ]; then
     say "  [error]    could not read $API"
     say "  [download] would download lumina-studio-<tag>-linux-x64.tar.gz from the $TAG release of $REPO into $TARGET"
