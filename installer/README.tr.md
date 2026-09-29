@@ -95,7 +95,7 @@ imzalamadan sonra silinir.
 
 ## Linux: .deb ve .rpm
 
-Paket build ve çalışma bağımlılıklarını bildirir:
+Editor ve projeleri build ettiği libc++ glibc 2.38 ya da üstünü ister (Ubuntu 24.04, Debian 13, Fedora 39 ve sonrası). Paket build ve çalışma bağımlılıklarını bildirir:
 
 | Debian / Ubuntu | Fedora / RHEL | Neden |
 |---|---|---|

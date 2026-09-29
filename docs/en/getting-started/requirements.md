@@ -15,7 +15,7 @@ What you need installed before you can build and run Lumina: the Flutter SDK, me
 
 The native-assets hooks compile the C wrappers of `flutter_filament`, `flutter_assimp` and `flutter_riglogic` on the first `flutter test` or `flutter run`. There is no manual build step for them, but a toolchain must be installed:
 
-- **Linux**: clang, CMake and Ninja. The hooks compile against the libc++ bundled in `flutter_filament/third_party/libcxx`, so the system clang does not need its own libc++ headers.
+- **Linux**: clang, CMake and Ninja. The hooks compile against the libc++ bundled in `flutter_filament/third_party/libcxx`, so the system clang does not need its own libc++ headers. That libc++ needs **glibc 2.38 or newer** (Ubuntu 24.04, Debian 13, Fedora 39 or later).
 - **Windows**: Visual Studio 2022 with the C++ workload (MSVC, CMake, Ninja) and Python 3.
 
 ## Native libraries from the tools repository

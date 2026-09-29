@@ -30,6 +30,8 @@ description: |-
 # good: appsrc, vp8enc, webmmux) records videos; libGL / libvulkan load the
 # renderer's backends.
 depends:
+  # The bundled libc++ the engine builds with needs glibc 2.38+.
+  - libc6 (>= 2.38)
   - git
   - curl
   - ca-certificates
@@ -57,6 +59,7 @@ overrides:
   # Fedora / RHEL names.
   rpm:
     depends:
+      - glibc >= 2.38
       - git
       - curl
       - ca-certificates

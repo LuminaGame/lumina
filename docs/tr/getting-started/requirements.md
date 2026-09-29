@@ -15,7 +15,7 @@ Lumina'yı build edip çalıştırmadan önce kurulu olması gerekenler: Flutter
 
 Native-assets hook'ları, `flutter_filament`, `flutter_assimp` ve `flutter_riglogic`'in C wrapper'larını ilk `flutter test` ya da `flutter run` sırasında derler. Bunlar için elle bir build adımı yoktur, ancak bir toolchain kurulu olmalıdır:
 
-- **Linux**: clang, CMake ve Ninja. Hook'lar `flutter_filament/third_party/libcxx` içinde gelen libc++'a karşı derler; bu yüzden sistemdeki clang'ın kendi libc++ header'larına ihtiyacı yoktur.
+- **Linux**: clang, CMake ve Ninja. Hook'lar `flutter_filament/third_party/libcxx` içinde gelen libc++'a karşı derler; bu yüzden sistemdeki clang'ın kendi libc++ header'larına ihtiyacı yoktur. Bu libc++ **glibc 2.38 ya da üstünü** ister (Ubuntu 24.04, Debian 13, Fedora 39 ve sonrası).
 - **Windows**: C++ workload'u ile Visual Studio 2022 (MSVC, CMake, Ninja) ve Python 3.
 
 ## tools repository'sinden native kütüphaneler

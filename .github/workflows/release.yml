@@ -110,9 +110,9 @@ jobs:
         include:
           - platform: windows
             runner: windows-latest
-          # 22.04 keeps the glibc floor of the Linux binaries low.
+          # The bundled libc++ needs glibc 2.38+, so Linux builds run on 24.04.
           - platform: linux
-            runner: ubuntu-22.04
+            runner: ubuntu-24.04
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 360
     steps:
@@ -149,7 +149,7 @@ jobs:
           - platform: windows
             runner: windows-latest
           - platform: linux
-            runner: ubuntu-22.04
+            runner: ubuntu-24.04
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 120
     env:

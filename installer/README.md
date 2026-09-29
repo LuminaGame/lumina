@@ -96,7 +96,7 @@ folder and deleted after signing.
 
 ## Linux: .deb and .rpm
 
-The package declares the build and run dependencies:
+The editor and the libc++ it builds projects with need glibc 2.38 or newer (Ubuntu 24.04, Debian 13, Fedora 39 or later). The package declares the build and run dependencies:
 
 | Debian / Ubuntu | Fedora / RHEL | Why |
 |---|---|---|
