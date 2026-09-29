@@ -56,9 +56,18 @@ jobs:
         working-directory: lumina
         run: flutter pub get
 
+      # melos scripts run `melos exec` in a subshell, so melos must be on
+      # PATH; activate the version the workspace lock pins.
+      - name: Activate melos
+        working-directory: lumina
+        run: |
+          version=$(awk '/^  melos:/{f=1} f && /version:/{gsub(/"/, "", $2); print $2; exit}' pubspec.lock)
+          dart pub global activate melos "$version"
+          echo "${PUB_CACHE:-$HOME/.pub-cache}/bin" >> "$GITHUB_PATH"
+
       - name: melos run analyze
         working-directory: lumina
-        run: dart run melos run analyze
+        run: melos run analyze
 
   unit:
     name: Unit tests (noop backend)
