@@ -4,11 +4,24 @@
 
 Eklentileri listeleyen, etkinleştiren ve devre dışı bırakan Plugin Manager penceresi ve şablondan eklenti paketi üreten New Plugin sihirbazı. Dosya yolları `lumina_ui/` paket dizinine görelidir.
 
+## Eklenti içe aktarma
+
+Liste başlığında **New Plugin**'in yanındaki **Import from Folder** ve **Import from Zip**, bir eklentiyi kopyalayarak kullanıcıya özel eklenti klasörüne (`UserPluginDir.resolve()`; Marketplace de eklentileri buraya kurar) kurar; eklenti seçildiği yerden asla bağlanmaz (link). İkisi de sistem seçicisini açar ve hiçbir şey yazmadan önce doğrular:
+
+- `<name>.lmplugin` manifesti, marketplace paket kurallarıyla (`lumina_marketplace_shared` içindeki `checkPluginPackage`) ve editörün kendi yükleyicisiyle (`PluginRepository.loadInternal`);
+- **zip**, `tool/pack_plugin.dart`'ın yazdığı marketplace eklenti paketi biçiminde okunur: her girdi güvenli bir göreli yol olmalı (`isSafeRelativePath`: `..`, mutlak yol, sürücü harfi ve ters eğik çizgi yok), sembolik bağlantı yok, yalnızca marketplace izin listesindeki dosyalar, tekrar yok, en fazla 10.000 girdi ve açılmış hâlde 1 GB; tek bir üst klasör varsa eklentinin adını taşımalı; lisans ve changelog sorunları zip'i reddeder;
+- **klasör**, `.dart_tool/`, `.git/`, `.idea/`, `.vscode/`, `node_modules/`, kökteki `build/` ve `coverage/` ile `pubspec_overrides.yaml` olmadan kopyalanır; sembolik bağlantılar bir uyarıyla dışarıda kalır; lisans ve changelog bulguları yalnızca uyarıdır.
+
+Kullanıcı klasöründe aynı adlı bir eklenti zaten varsa **Replace / Cancel** sorulur (Replace klasörün tamamını değiştirir; yazma başarısız olursa önceki kopya geri gelir). Aynı adlı bir proje eklentisi içe aktarmayı reddeder, çünkü kullanıcı kopyasını gizler. Aynı adlı bir yerleşik (built-in) eklentinin yerini, her proje için, bir uyarıyla kullanıcı kopyası alır. Kurulumdan sonra eklenti kökleri yeniden taranır ve yeni eklenti seçilir; etkinleştirmek ayrı bir adımdır.
+
 **Bu sayfada:**
 
 - [`lib/ui/features/plugin_manager/views/new_plugin_wizard.dart`](#libuifeaturesplugin_managerviewsnew_plugin_wizarddart)
 - [`lib/ui/features/plugin_manager/views/plugin_manager_view.dart`](#libuifeaturesplugin_managerviewsplugin_manager_viewdart)
 - [`lib/ui/features/plugin_manager/view_models/plugin_manager_view_model.dart`](#libuifeaturesplugin_managerview_modelsplugin_manager_view_modeldart)
+- [`lib/ui/features/plugin_manager/views/plugin_import_dialogs.dart`](#libuifeaturesplugin_managerviewsplugin_import_dialogsdart)
+- [`lib/ui/features/plugin_manager/services/plugin_importer.dart`](#libuifeaturesplugin_managerservicesplugin_importerdart)
+- [`lib/ui/core/services/folder_install.dart`](#libuicoreservicesfolder_installdart)
 
 ## `lib/ui/features/plugin_manager/views/new_plugin_wizard.dart`
 
@@ -178,6 +191,46 @@ Eklentileri listeleyen, etkinleştiren ve devre dışı bırakan Plugin Manager 
 | `categoryCounts` | `Map<String, int> get categoryCounts` | `categoryCounts` özelliğinin anlık değerini okuyan getter erişimcisi. |
 | `refresh` | `Future<void> refresh()` | `refresh` işlemini gerçekleştirir. |
 | `resolve` | `PluginResolution resolve(Set<String> wantedEnabled)` | `resolve` işlemini gerçekleştirir. |
+| `onPluginsChanged` | `Future<void> Function()? onPluginsChanged` | Bir içe aktarma eklenti klasörlerini değiştirdikten sonra çalışır (editör `EditorViewModel.rescanPlugins`'i bağlar); yoksa kayıt defteri yenilenir. |
+| `folderPicker` / `zipPicker` | `Future<String?> Function()? folderPicker` | Import from Folder / Import from Zip seçicileri; null ise sistem diyaloğu açılır (testler ve smoke'lar `EditorViewModel.pluginFolderPicker` / `pluginZipPicker` ile gerçek dosyalara yönlendirir). |
+| `importing` | `bool get importing` | Bir içe aktarma doğrulanıyor veya kopyalanıyor (bu sırada içe aktarma düğmeleri devre dışıdır). |
+| `importPlugin` | `Future<PluginImportResult> importPlugin(PluginImportSource source, String path)` | `path`'teki klasörü veya zip'i doğrular ve kullanıcı eklenti klasörüne kopyalar; `alreadyInstalled` sonucu `confirmReplace` veya `cancelImport` bekler; kurulan eklenti listelenir ve seçilir. |
+| `confirmReplace` | `Future<PluginImportResult> confirmReplace(PluginImportResult pending)` | Replace: bekleyen eklentiyi kurulu kopyanın yerine kurar. |
+| `cancelImport` | `void cancelImport(PluginImportResult pending)` | Cancel: bekleyen içe aktarmanın hazırladıklarını siler. |
+
+## `lib/ui/features/plugin_manager/views/plugin_import_dialogs.dart`
+
+| Fonksiyon | İmza | Amaç ve Açıklama |
+| :--- | :--- | :--- |
+| `startPluginImport` | `Future<void> startPluginImport(BuildContext context, PluginManagerViewModel vm, PluginImportSource source)` | Import from Folder / Import from Zip: seçer, içe aktarır, kullanıcı klasöründe zaten olan bir eklenti için Replace / Cancel sorar (`plugin_import_replace_dialog`), sonra sonucu gösterir (`plugin_import_done_dialog` ya da her sorunu listeleyen `plugin_import_error`). |
+
+## `lib/ui/features/plugin_manager/services/plugin_importer.dart`
+
+### `class PluginImporter`
+
+Bir eklenti klasörünü veya eklenti paketi zip'ini doğrular ve kullanıcı eklenti klasörüne kopyalar (bkz. [Eklenti içe aktarma](#eklenti-içe-aktarma)).
+
+| Metot / Getter | İmza | Amaç ve Açıklama |
+| :--- | :--- | :--- |
+| `PluginImporter` | `PluginImporter({Directory? userPluginDir, Directory? stagingRoot, List<LuminaPluginDescriptor> existing = const []})` | Hedef klasör (varsayılan `UserPluginDir.resolve()`), zip'in önce açıldığı yer (varsayılan sistem temp) ve ad çakışmaları için taranmış eklentiler. |
+| `inspectFolder` / `inspectZip` | `Future<PluginImportResult> inspectFolder(String path)` | Kullanıcı klasörüne yazmadan doğrular: `PluginImportCandidate` ile `ready` ya da her sorunla `invalid`. Zip bir hazırlık (staging) klasörüne açılır. |
+| `install` | `Future<PluginImportResult> install(PluginImportCandidate candidate, {bool replace = false})` | Adayı `FolderInstall.replace` ile `<user plugin dir>/<name>/` altına kopyalar: `installed`, `alreadyInstalled` (`replace` yoksa), `conflict` (aynı adlı proje eklentisi) veya `failed` (önceki kopya geri yüklenir). |
+| `importFolder` / `importZip` | `Future<PluginImportResult> importFolder(String path)` | Önce doğrular, sonra kurar. |
+| `discard` / `discardCandidate` | `void discard(PluginImportResult result)` | Bir zip içe aktarmasının hazırladıklarını siler (Cancel). |
+
+`PluginImportSource` `folder` veya `zip`; `PluginImportStatus` `ready`, `installed`, `alreadyInstalled`, `conflict`, `invalid` veya `failed`; `PluginImportResult` durumu, adayı, `installedDir`, `existingDir`, `messages` ve `warnings`'i taşır.
+
+## `lib/ui/core/services/folder_install.dart`
+
+### `class FolderInstall`
+
+Marketplace kurucusu ile eklenti içe aktarmanın paylaştığı işlemsel (transactional) klasör kurulumu.
+
+| Metot / Getter | İmza | Amaç ve Açıklama |
+| :--- | :--- | :--- |
+| `replace` | `T replace<T>(Directory dest, T Function() write, {String tag = 'previous'})` | Var olan `dest`'i kenara alır (`.<name>.<tag>`), `write`'ı çalıştırır, sonra eski kopyayı siler ya da `write` hata verirse geri yükler. |
+| `moveAside` / `dropAside` / `restore` | `Directory? moveAside(Directory dest, {String tag})` | `replace`'in üç adımı; işlem içinde daha fazlasını yapan çağıranlar için. |
+| `copyTree` / `copyFiles` | `void copyTree(Directory from, Directory to)` | Bir klasörü ya da göreli yol → dosya eşlemesini kopyalar. |
 
 ---
 

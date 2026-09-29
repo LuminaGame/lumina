@@ -4,6 +4,8 @@ import 'package:lumina/data/services/plugin_registry_service.dart';
 import 'package:lumina/data/models/lumina_plugin_descriptor.dart';
 import 'package:lumina/data/repositories/plugin_repository.dart';
 import 'package:lumina_ui/ui/features/plugin_manager/views/new_plugin_wizard.dart';
+import 'package:lumina_ui/ui/features/plugin_manager/views/plugin_import_dialogs.dart';
+import 'package:lumina_ui/ui/features/plugin_manager/services/plugin_importer.dart';
 import 'dart:io';
 import 'package:flutter/services.dart';
 import '../../../core/theme/editor_theme.dart';
@@ -174,12 +176,40 @@ class _PluginCardList extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text('$total plugins · $enabled enabled').muted(),
-              const SizedBox(width: 8),
+            ],
+          ),
+        ),
+        // New Plugin and the two imports, on their own row so the search
+        // field keeps its width in a narrow pane.
+        Padding(
+          padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: [
               PrimaryButton(
+                key: const ValueKey('plugin_new'),
+                size: ButtonSize.small,
                 child: const Text('New Plugin'),
                 onPressed: () {
                   showNewPluginWizard(context, viewModel: vm);
                 },
+              ),
+              OutlineButton(
+                key: const ValueKey('plugin_import_folder'),
+                size: ButtonSize.small,
+                leading: const Icon(LucideIcons.folderInput, size: 14),
+                enabled: !vm.importing,
+                onPressed: () => startPluginImport(context, vm, PluginImportSource.folder),
+                child: const Text('Import from Folder'),
+              ),
+              OutlineButton(
+                key: const ValueKey('plugin_import_zip'),
+                size: ButtonSize.small,
+                leading: const Icon(LucideIcons.fileArchive, size: 14),
+                enabled: !vm.importing,
+                onPressed: () => startPluginImport(context, vm, PluginImportSource.zip),
+                child: const Text('Import from Zip'),
               ),
             ],
           ),

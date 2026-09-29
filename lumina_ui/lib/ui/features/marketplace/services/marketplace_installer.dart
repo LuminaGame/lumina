@@ -10,6 +10,7 @@ import 'package:lumina/lumina.dart'
 import 'package:lumina_marketplace_shared/lumina_marketplace_shared.dart';
 
 import '../../../core/services/content_folders.dart';
+import '../../../core/services/folder_install.dart';
 import 'marketplace_install_dirs.dart';
 import 'marketplace_license_records.dart';
 
@@ -347,7 +348,7 @@ class MarketplaceInstaller {
     final project = dirs.projectRoot!;
     final destRel = folder == null ? m.targetRoot.substring(0, m.targetRoot.length - 1) : '$folder/${m.folderName}';
     final dest = Directory('$project/$destRel');
-    final backup = _moveAside(dest);
+    final backup = FolderInstall.moveAside(dest, tag: 'marketplace-previous');
     try {
       dest.createSync(recursive: true);
       _markFolders(project, destRel);
@@ -400,10 +401,10 @@ class MarketplaceInstaller {
       ];
       final record = _record(m, installedTo: destRel, licenseFile: notice, files: {...landed, ...copied}.toList()..sort());
       MarketplaceLicenseRecords(File(dirs.projectLicensesFile!)).upsert(record);
-      _dropAside(backup);
+      FolderInstall.dropAside(backup);
       return record;
     } catch (_) {
-      _restore(dest, backup);
+      FolderInstall.restore(dest, backup);
       rethrow;
     }
   }
@@ -428,19 +429,19 @@ class MarketplaceInstaller {
   }
 
   MarketplaceInstallRecord _placeFolder(InstallManifest m, Directory files, Directory dest) {
-    final backup = _moveAside(dest);
+    final backup = FolderInstall.moveAside(dest, tag: 'marketplace-previous');
     try {
-      _copyTree(files, dest);
+      FolderInstall.copyTree(files, dest);
       final notice = '${dest.path}/LICENSE-${m.folderName}.txt';
       File(notice).writeAsStringSync(marketplaceLicenseNotice(m, source: sourceFor(m)));
       final record = _record(m, installedTo: dest.path, licenseFile: notice, files: [
         for (final f in m.files) '${dest.path}/${f.target.substring(m.targetRoot.length)}',
       ]);
       MarketplaceLicenseRecords(File(dirs.editorLicensesFile)).upsert(record);
-      _dropAside(backup);
+      FolderInstall.dropAside(backup);
       return record;
     } catch (_) {
-      _restore(dest, backup);
+      FolderInstall.restore(dest, backup);
       rethrow;
     }
   }
@@ -497,37 +498,6 @@ class MarketplaceInstaller {
       if (path == 'contents') continue;
       final dir = Directory('$project/$path');
       if (dir.existsSync()) ContentFolders.writeMarker(dir.path);
-    }
-  }
-
-  /// A previous install at [dest] is set aside (renamed beside it, same file
-  /// system) until the new one succeeds.
-  static Directory? _moveAside(Directory dest) {
-    if (!dest.existsSync()) return null;
-    final aside = Directory('${dest.parent.path}/.${dest.uri.pathSegments.where((s) => s.isNotEmpty).last}.marketplace-previous');
-    if (aside.existsSync()) aside.deleteSync(recursive: true);
-    return dest.renameSync(aside.path);
-  }
-
-  static void _dropAside(Directory? aside) {
-    try {
-      aside?.deleteSync(recursive: true);
-    } catch (_) {}
-  }
-
-  static void _restore(Directory dest, Directory? aside) {
-    try {
-      if (dest.existsSync()) dest.deleteSync(recursive: true);
-      aside?.renameSync(dest.path);
-    } catch (_) {}
-  }
-
-  static void _copyTree(Directory from, Directory to) {
-    to.createSync(recursive: true);
-    for (final f in from.listSync(recursive: true).whereType<File>()) {
-      final out = File('${to.path}/${f.path.substring(from.path.length + 1)}');
-      out.parent.createSync(recursive: true);
-      f.copySync(out.path);
     }
   }
 }

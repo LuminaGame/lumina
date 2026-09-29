@@ -633,6 +633,146 @@ void main() {
     }
   });
 
+  // Plugins ▸ Plugin Manager ▸ Import from Zip, then Import from Folder of
+  // the same plugin (Replace): the real PCG plugin, copied to a temp folder
+  // and packed there with its own pack_plugin.dart; the checkout is never
+  // touched and the user plugin directory is a temp folder.
+  testWidgets('Plugins Smoke Scenario: import a plugin from a zip and from a folder', (tester) async {
+    const name = 'Plugins Smoke Scenario: import a plugin from a zip and from a folder';
+    const barrel = 'Props/Barrels/fuel_barrel_red.glb';
+    final pcgSource = LuminaWorkspace.resolvedPackageDir(LuminaWorkspace.root, 'lumina_plugin_pcg');
+    if (pcgSource == null || !File('$pcgSource/lumina_plugin_pcg.lmplugin').existsSync()) {
+      markTestSkipped('lumina_plugin_pcg is not resolved in this workspace (run pub get)');
+      return;
+    }
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final temp = Directory.systemTemp.createTempSync('pm_import_');
+    final previousUserDir = UserPluginDir.override;
+    final userDir = Directory('${temp.path}/user_plugins')..createSync();
+    UserPluginDir.override = userDir;
+    try {
+      // A copy of the real plugin package, without its build outputs.
+      final source = Directory(pcgSource);
+      bool generated(String rel) => rel.startsWith('build/') || rel.startsWith('.dart_tool/') || rel.contains('/.dart_tool/') || rel.startsWith('.git/');
+      List<String> checkoutFiles() => [
+            for (final f in source.listSync(recursive: true, followLinks: false).whereType<File>())
+              if (!generated(f.path.substring(source.path.length + 1).replaceAll(r'\', '/'))) '${f.path}:${f.lengthSync()}',
+          ]..sort();
+      final checkoutBefore = checkoutFiles();
+      final copy = Directory('${temp.path}/src/lumina_plugin_pcg')..createSync(recursive: true);
+      for (final f in source.listSync(recursive: true, followLinks: false).whereType<File>()) {
+        final rel = f.path.substring(source.path.length + 1).replaceAll(r'\', '/');
+        if (generated(rel)) continue;
+        final out = File('${copy.path}/$rel');
+        out.parent.createSync(recursive: true);
+        f.copySync(out.path);
+      }
+      // `dart tool/pack_plugin.dart` (without `run`): dart: libraries only,
+      // no dependency resolution in the copy.
+      final pack = await tester.runAsync(() => Process.run('dart', ['tool/pack_plugin.dart'], workingDirectory: copy.path, runInShell: Platform.isWindows));
+      expect(pack!.exitCode, 0, reason: '${pack.stdout}\n${pack.stderr}');
+      final zip = File('${copy.path}/build/pack/lumina_plugin_pcg-0.1.0.zip');
+      expect(zip.existsSync(), isTrue, reason: '${pack.stdout}');
+
+      final projectsDir = Directory('${temp.path}/projects')..createSync();
+      final pDir = Directory('${projectsDir.path}/ImportSmoke')..createSync();
+      const project = LuminaProject(projectName: 'ImportSmoke', activeLevel: 'contents/levels/L_Main.lmas', settings: EngineScalabilitySettings(targetFps: 60));
+      File('${pDir.path}/ImportSmoke.lmproject').writeAsStringSync(jsonEncode(project.toMap()));
+      final vm = EditorViewModel(initialProject: project, projectDirPath: projectsDir.path, enableTimers: false);
+      addTearDown(vm.dispose);
+      await tester.runAsync(() => vm.ensureDefaultLevelAssets());
+      await tester.runAsync(() => vm.processImportPipeline(sourceFilePath: '${SmokeArtifacts.testAssetsDir.path}/$barrel'));
+      vm.refreshAssets();
+      final barrelAsset = vm.realAssets.firstWhere((a) => a.fileName == 'fuel_barrel_red.lmas' && a.type == AssetType.filamesh);
+      await tester.runAsync(() => vm.spawnActorFromAsset(barrelAsset, location: const [0.0, 0.0, 0.0]));
+      await tester.runAsync(() => vm.pluginsScanned);
+      vm.pluginZipPicker = () async => zip.path;
+      vm.pluginFolderPicker = () async => copy.path;
+
+      final boundaryKey = GlobalKey();
+      await tester.pumpWidget(RepaintBoundary(
+        key: boundaryKey,
+        child: ShadcnApp(theme: luminaEditorTheme(), home: MainEditorView(viewModel: vm)),
+      ));
+      await settle(tester, frames: 30);
+      final rec = SmokeRecorder(tester, boundary: find.byKey(boundaryKey));
+      vm.frameLevelBounds();
+      await settle(tester);
+      await rec.hold(const Duration(seconds: 1));
+      Future<void> shot(String label) async {
+        SmokeArtifacts.saveScreenshot('$name: $label',
+            await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey)),
+            usedAssets: const [barrel]);
+        await rec.hold(const Duration(seconds: 1));
+      }
+
+      Future<void> waitFor(Finder finder) async {
+        for (var i = 0; i < 100 && finder.evaluate().isEmpty; i++) {
+          await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
+          await settle(tester, frames: 3);
+        }
+        expect(finder, findsOneWidget);
+        await settle(tester, frames: 10);
+      }
+
+      // Plugins ▸ Plugin Manager...
+      await tester.tap(barItem('Plugins'));
+      await settle(tester);
+      await tester.tap(find.text('Plugin Manager...'));
+      await settle(tester, frames: 30);
+      await rec.hold(const Duration(seconds: 1));
+      expect(find.byKey(const ValueKey('plugin_import_zip')), findsOneWidget);
+      await shot('the Plugin Manager with New Plugin, Import from Folder and Import from Zip');
+
+      // Import from Zip: the packed plugin lands in the user plugin directory.
+      await tester.tap(find.byKey(const ValueKey('plugin_import_zip')));
+      await waitFor(find.byKey(const ValueKey('plugin_import_done_dialog')));
+      await rec.hold(const Duration(milliseconds: 1500));
+      await shot('the zip imported');
+      await tester.tap(find.byKey(const ValueKey('plugin_import_ok')));
+      await settle(tester, frames: 20);
+      final installed = Directory('${userDir.path}/lumina_plugin_pcg');
+      expect(File('${installed.path}/lumina_plugin_pcg.lmplugin').existsSync(), isTrue);
+      expect(Directory('${installed.path}/lib').existsSync(), isTrue);
+      expect(Directory('${installed.path}/lumina_plugin_pcg').existsSync(), isFalse, reason: 'the zip top folder is not nested');
+      final entry = vm.pluginRegistry.entries.singleWhere((e) => e.descriptor.name == 'lumina_plugin_pcg');
+      expect(entry.descriptor.origin, PluginOrigin.user);
+      expect(entry.descriptor.pluginDir.absolute.path.replaceAll(r'\', '/'), installed.absolute.path.replaceAll(r'\', '/'));
+      expect(find.text('Procedural Content Generation'), findsWidgets);
+      await rec.hold(const Duration(milliseconds: 1500));
+      await shot('the imported plugin listed as a user plugin');
+
+      // Import from Folder of the same plugin: Replace / Cancel, then Replace.
+      File('${copy.path}/lib/imported_from_folder.dart').writeAsStringSync('// Added in the folder copy.\n');
+      await tester.tap(find.byKey(const ValueKey('plugin_import_folder')));
+      await waitFor(find.byKey(const ValueKey('plugin_import_replace_dialog')));
+      await rec.hold(const Duration(milliseconds: 1500));
+      await shot('Replace or Cancel for an installed plugin');
+      await tester.tap(find.byKey(const ValueKey('plugin_import_replace')));
+      await waitFor(find.byKey(const ValueKey('plugin_import_done_dialog')));
+      await rec.hold(const Duration(seconds: 1));
+      await tester.tap(find.byKey(const ValueKey('plugin_import_ok')));
+      await settle(tester, frames: 20);
+      expect(File('${installed.path}/lib/imported_from_folder.dart').existsSync(), isTrue, reason: 'the folder copy replaced the zip install');
+      expect(Directory('${installed.path}/build').existsSync(), isFalse, reason: 'a folder import leaves build/ out');
+      expect([for (final e in userDir.listSync()) e.uri.pathSegments.where((s) => s.isNotEmpty).last], ['lumina_plugin_pcg'],
+          reason: 'no set-aside copy is left');
+      await rec.hold(const Duration(seconds: 2));
+      await shot('the folder import replaced the installed plugin');
+
+      expect(checkoutFiles(), checkoutBefore, reason: 'the plugins checkout is untouched');
+      await rec.hold(const Duration(seconds: 2));
+      rec.save(name, usedAssets: const [barrel]);
+    } finally {
+      UserPluginDir.override = previousUserDir;
+      try {
+        temp.deleteSync(recursive: true);
+      } catch (_) {}
+    }
+  });
+
   // A plugin button in each named slot (right of Blueprints,
   // toolbar end, both sides of the status bar), following its live state;
   // the toolbar-end button's command places a real barrel.

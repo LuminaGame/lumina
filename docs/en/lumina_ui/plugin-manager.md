@@ -4,11 +4,24 @@
 
 The Plugin Manager window, which lists, enables and disables plugins, and the New Plugin wizard, which generates a plugin package from a template. File paths are relative to the `lumina_ui/` package directory.
 
+## Importing a plugin
+
+**Import from Folder** and **Import from Zip**, next to **New Plugin** in the list header, install a plugin into the per-user plugin folder (`UserPluginDir.resolve()`, where the Marketplace installs plugins too) by copying it; a plugin is never linked from where it was picked. Both open the system picker and validate before anything is written:
+
+- the `<name>.lmplugin` manifest, by the marketplace's package rules (`checkPluginPackage` from `lumina_marketplace_shared`) and by the editor's own loader (`PluginRepository.loadInternal`);
+- **a zip** is read as the marketplace plugin package format that `tool/pack_plugin.dart` writes: every entry must be a safe relative path (`isSafeRelativePath`: no `..`, no absolute path or drive, no backslash), no symbolic links, only files on the marketplace's allow-list, no duplicates, at most 10,000 entries and 1 GB unpacked; a single top folder, when present, must be named after the plugin; license and changelog problems refuse the zip;
+- **a folder** is copied without `.dart_tool/`, `.git/`, `.idea/`, `.vscode/`, `node_modules/`, a root `build/` or `coverage/`, and `pubspec_overrides.yaml`; symbolic links are left out with a warning; license and changelog findings are only warnings.
+
+A plugin of the same name already in the user folder asks **Replace / Cancel** (Replace swaps the whole folder; the previous copy comes back if writing fails). A project plugin of the same name refuses the import, because it would hide the user copy. A built-in of the same name is replaced for every project by the user copy, with a warning. After an install the plugin roots are rescanned and the new plugin is selected; enabling it is still a separate step.
+
 **On this page:**
 
 - [`lib/ui/features/plugin_manager/views/new_plugin_wizard.dart`](#libuifeaturesplugin_managerviewsnew_plugin_wizarddart)
 - [`lib/ui/features/plugin_manager/views/plugin_manager_view.dart`](#libuifeaturesplugin_managerviewsplugin_manager_viewdart)
 - [`lib/ui/features/plugin_manager/view_models/plugin_manager_view_model.dart`](#libuifeaturesplugin_managerview_modelsplugin_manager_view_modeldart)
+- [`lib/ui/features/plugin_manager/views/plugin_import_dialogs.dart`](#libuifeaturesplugin_managerviewsplugin_import_dialogsdart)
+- [`lib/ui/features/plugin_manager/services/plugin_importer.dart`](#libuifeaturesplugin_managerservicesplugin_importerdart)
+- [`lib/ui/core/services/folder_install.dart`](#libuicoreservicesfolder_installdart)
 
 ## `lib/ui/features/plugin_manager/views/new_plugin_wizard.dart`
 
@@ -178,6 +191,46 @@ The Plugin Manager window, which lists, enables and disables plugins, and the Ne
 | `categoryCounts` | `Map<String, int> get categoryCounts` | Getter accessor returning the current value of `categoryCounts`. |
 | `refresh` | `Future<void> refresh()` | Executes `refresh` operation. |
 | `resolve` | `PluginResolution resolve(Set<String> wantedEnabled)` | Executes `resolve` operation. |
+| `onPluginsChanged` | `Future<void> Function()? onPluginsChanged` | Runs after an import changed the plugin folders (the editor wires `EditorViewModel.rescanPlugins`); without it the registry is refreshed. |
+| `folderPicker` / `zipPicker` | `Future<String?> Function()? folderPicker` | The Import from Folder / Import from Zip pickers; null opens the system dialog (tests and smokes point them at real files through `EditorViewModel.pluginFolderPicker` / `pluginZipPicker`). |
+| `importing` | `bool get importing` | An import is being validated or copied (the import buttons are disabled meanwhile). |
+| `importPlugin` | `Future<PluginImportResult> importPlugin(PluginImportSource source, String path)` | Validates the folder or zip at `path` and copies it into the user plugin folder; an `alreadyInstalled` result waits for `confirmReplace` or `cancelImport`; an installed plugin is listed and selected. |
+| `confirmReplace` | `Future<PluginImportResult> confirmReplace(PluginImportResult pending)` | Replace: installs the pending plugin over the installed copy. |
+| `cancelImport` | `void cancelImport(PluginImportResult pending)` | Cancel: drops what the pending import staged. |
+
+## `lib/ui/features/plugin_manager/views/plugin_import_dialogs.dart`
+
+| Function | Signature | Purpose & Description |
+| :--- | :--- | :--- |
+| `startPluginImport` | `Future<void> startPluginImport(BuildContext context, PluginManagerViewModel vm, PluginImportSource source)` | Import from Folder / Import from Zip: picks, imports, asks Replace / Cancel (`plugin_import_replace_dialog`) for a plugin already in the user folder, then shows the result (`plugin_import_done_dialog`, or `plugin_import_error` listing every problem). |
+
+## `lib/ui/features/plugin_manager/services/plugin_importer.dart`
+
+### `class PluginImporter`
+
+Validates a plugin folder or plugin package zip and copies it into the user plugin folder (see [Importing a plugin](#importing-a-plugin)).
+
+| Method / Getter | Signature | Purpose & Description |
+| :--- | :--- | :--- |
+| `PluginImporter` | `PluginImporter({Directory? userPluginDir, Directory? stagingRoot, List<LuminaPluginDescriptor> existing = const []})` | The target folder (default `UserPluginDir.resolve()`), where a zip is extracted first (default the system temp), and the scanned plugins, for name conflicts. |
+| `inspectFolder` / `inspectZip` | `Future<PluginImportResult> inspectFolder(String path)` | Validates without writing into the user folder: `ready` with a `PluginImportCandidate`, or `invalid` with every problem. A zip is extracted into a staging folder. |
+| `install` | `Future<PluginImportResult> install(PluginImportCandidate candidate, {bool replace = false})` | Copies the candidate to `<user plugin dir>/<name>/` through `FolderInstall.replace`: `installed`, `alreadyInstalled` (unless `replace`), `conflict` (a project plugin of that name) or `failed` (the previous copy restored). |
+| `importFolder` / `importZip` | `Future<PluginImportResult> importFolder(String path)` | Inspect, then install. |
+| `discard` / `discardCandidate` | `void discard(PluginImportResult result)` | Removes what a zip import staged (Cancel). |
+
+`PluginImportSource` is `folder` or `zip`; `PluginImportStatus` is `ready`, `installed`, `alreadyInstalled`, `conflict`, `invalid` or `failed`; `PluginImportResult` carries the status, the candidate, `installedDir`, `existingDir`, `messages` and `warnings`.
+
+## `lib/ui/core/services/folder_install.dart`
+
+### `class FolderInstall`
+
+Transactional folder installs, shared by the Marketplace installer and the plugin import.
+
+| Method / Getter | Signature | Purpose & Description |
+| :--- | :--- | :--- |
+| `replace` | `T replace<T>(Directory dest, T Function() write, {String tag = 'previous'})` | Sets an existing `dest` aside (`.<name>.<tag>`), runs `write`, then drops the old copy, or restores it if `write` throws. |
+| `moveAside` / `dropAside` / `restore` | `Directory? moveAside(Directory dest, {String tag})` | The three steps of `replace`, for callers that do more inside the transaction. |
+| `copyTree` / `copyFiles` | `void copyTree(Directory from, Directory to)` | Copies a folder, or a map of relative path → file. |
 
 ---
 

@@ -114,6 +114,10 @@ class SubEditorWorkspaceWidget extends StatefulWidget {
 class _TabBindings {
   Listenable? adopted;
   Listenable? created;
+
+  /// The Plugins tab's view model, kept across rebuilds so its selection and
+  /// a pending import survive the editor's notifications.
+  PluginManagerViewModel? pluginManager;
 }
 
 class _SubEditorWorkspaceWidgetState extends State<SubEditorWorkspaceWidget> {
@@ -131,6 +135,7 @@ class _SubEditorWorkspaceWidgetState extends State<SubEditorWorkspaceWidget> {
     if (id != null && editor != null && own != null && identical(editor.editorSessionFor(id), own)) {
       editor.unbindTabSession(id);
     }
+    _bindings.pluginManager?.dispose();
     super.dispose();
   }
 
@@ -195,10 +200,22 @@ class _SubEditorDispatcher extends StatelessWidget {
     switch (assetType) {
       case 'plugins':
         if (editorViewModel == null) return const Center(child: Text('Missing EditorViewModel'));
-        final vm = PluginManagerViewModel(
+        final cached = bindings.pluginManager;
+        if (cached != null && identical(cached.registryService, editorViewModel!.pluginRegistry)) {
+          cached
+            ..folderPicker = editorViewModel!.pluginFolderPicker
+            ..zipPicker = editorViewModel!.pluginZipPicker;
+          return PluginManagerView(viewModel: cached);
+        }
+        cached?.dispose();
+        final vm = bindings.pluginManager = PluginManagerViewModel(
           registryService: editorViewModel!.pluginRegistry,
           onSetEnabled: (name, enabled, {cascade = false}) =>
               editorViewModel!.enablePlugin(name, enabled, cascade: cascade),
+          // An import rescans every plugin root, as a Marketplace install does.
+          onPluginsChanged: editorViewModel!.rescanPlugins,
+          folderPicker: editorViewModel!.pluginFolderPicker,
+          zipPicker: editorViewModel!.pluginZipPicker,
         );
         return PluginManagerView(viewModel: vm);
       case 'Material':

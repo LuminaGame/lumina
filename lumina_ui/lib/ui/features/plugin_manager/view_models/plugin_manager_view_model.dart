@@ -7,9 +7,23 @@ import 'package:lumina/data/services/workspace_paths.dart';
 import 'package:lumina/data/models/lumina_plugin_descriptor.dart';
 import 'package:lumina/data/repositories/plugin_repository.dart';
 
+import '../services/plugin_importer.dart';
+
 class PluginManagerViewModel extends ChangeNotifier {
   final PluginRegistryService registryService;
   final Future<void> Function(String name, bool enabled, {bool cascade})? onSetEnabled;
+
+  /// Runs after an import changed what is on disk (the editor rescans its
+  /// plugin roots); without it the registry is refreshed directly.
+  final Future<void> Function()? onPluginsChanged;
+
+  /// Import from Folder / Import from Zip pickers; null uses the OS dialog.
+  Future<String?> Function()? folderPicker;
+  Future<String?> Function()? zipPicker;
+
+  /// Builds the importer for one import; defaults to the user plugin
+  /// directory with every scanned plugin as a possible name conflict.
+  final PluginImporter Function(List<LuminaPluginDescriptor> existing)? importerFactory;
 
   String _searchQuery = '';
   String _selectedCategory = 'ALL PLUGINS';
@@ -19,7 +33,93 @@ class PluginManagerViewModel extends ChangeNotifier {
   PluginManagerViewModel({
     required this.registryService,
     this.onSetEnabled,
+    this.onPluginsChanged,
+    this.folderPicker,
+    this.zipPicker,
+    this.importerFactory,
   });
+
+  bool _importing = false;
+  bool _disposed = false;
+
+  @override
+  void notifyListeners() {
+    // An import can finish after the Plugins tab closed.
+    if (!_disposed) super.notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
+  /// An import is being validated or copied.
+  bool get importing => _importing;
+
+  PluginImporter? _pendingImporter;
+
+  PluginImporter _importer() {
+    final existing = [for (final e in registryService.entries) e.descriptor];
+    return importerFactory?.call(existing) ?? PluginImporter(existing: existing);
+  }
+
+  /// Import from Folder / Import from Zip: validates the plugin at [path] and
+  /// copies it into the user plugin directory. An
+  /// [PluginImportStatus.alreadyInstalled] result waits for [confirmReplace]
+  /// or [cancelImport]; an installed plugin is listed and selected.
+  Future<PluginImportResult> importPlugin(PluginImportSource source, String path) async {
+    _importing = true;
+    notifyListeners();
+    try {
+      final importer = _importer();
+      final result = source == PluginImportSource.folder ? await importer.importFolder(path) : await importer.importZip(path);
+      if (result.status == PluginImportStatus.alreadyInstalled) _pendingImporter = importer;
+      if (result.status == PluginImportStatus.installed) await _afterInstall(result);
+      return result;
+    } finally {
+      _importing = false;
+      notifyListeners();
+    }
+  }
+
+  /// Replace on "already installed": the new copy replaces the installed
+  /// one (the previous copy comes back if writing fails).
+  Future<PluginImportResult> confirmReplace(PluginImportResult pending) async {
+    final candidate = pending.candidate;
+    if (candidate == null) return pending;
+    final importer = _pendingImporter ?? _importer();
+    _pendingImporter = null;
+    _importing = true;
+    notifyListeners();
+    try {
+      final result = await importer.install(candidate, replace: true);
+      if (result.status == PluginImportStatus.installed) await _afterInstall(result);
+      return result;
+    } finally {
+      _importing = false;
+      notifyListeners();
+    }
+  }
+
+  /// Cancel on "already installed": drops what the import staged.
+  void cancelImport(PluginImportResult pending) {
+    final candidate = pending.candidate;
+    if (candidate != null) PluginImporter.discardCandidate(candidate);
+    _pendingImporter = null;
+  }
+
+  Future<void> _afterInstall(PluginImportResult result) async {
+    if (onPluginsChanged != null) {
+      await onPluginsChanged!();
+    } else {
+      await registryService.refresh();
+    }
+    final name = result.candidate?.name;
+    _selectedGroup = 'ALL';
+    _selectedCategory = 'ALL PLUGINS';
+    _selectedEntry = registryService.entries.where((e) => e.descriptor.name == name).firstOrNull;
+  }
 
   String get searchQuery => _searchQuery;
   set searchQuery(String value) {

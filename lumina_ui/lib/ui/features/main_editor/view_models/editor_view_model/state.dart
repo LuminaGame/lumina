@@ -237,6 +237,12 @@ abstract class _EditorViewModelState extends ChangeNotifier {
   /// uses the OS dialog. Tests point it at a real second project.
   Future<String?> Function()? migrateTargetPicker;
 
+  /// The Plugin Manager's Import from Folder / Import from Zip pickers; null
+  /// uses the OS dialog. Tests and smokes point them at a real plugin
+  /// folder or zip on disk.
+  Future<String?> Function()? pluginFolderPicker;
+  Future<String?> Function()? pluginZipPicker;
+
   /// The Output Log's level filter (`all`, `info`, `warning`, `error`,
   /// `success`), so "Show errors" can open it filtered.
   final ValueNotifier<String> outputLogFilter = ValueNotifier<String>('all');
