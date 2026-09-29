@@ -67,7 +67,7 @@ runs:
 
     - name: Restore the cache
       id: restore
-      uses: actions/cache/restore@v4
+      uses: actions/cache/restore@v6
       with:
         path: lumina/build/filament-prebuilt/filament-*-x64.*
         key: filament-prebuilt-${{ runner.os }}-${{ hashFiles('lumina/third_party/filament/patches/**', 'lumina/tool/filament/VERSION', 'lumina/tool/filament/build_prebuilt.sh', 'lumina/tool/filament/build_prebuilt.ps1') }}
@@ -158,7 +158,7 @@ runs:
 
     - name: Save the cache
       if: steps.need.outputs.build == 'true' && inputs.save == 'true'
-      uses: actions/cache/save@v4
+      uses: actions/cache/save@v6
       with:
         path: lumina/build/filament-prebuilt/filament-*-x64.*
         key: ${{ steps.restore.outputs.cache-primary-key }}
