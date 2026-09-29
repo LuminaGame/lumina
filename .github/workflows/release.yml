@@ -109,7 +109,9 @@ jobs:
       matrix:
         include:
           - platform: windows
-            runner: windows-latest
+            # VS 2022 (MSVC 14.44): static libraries built with a newer MSVC
+            # do not link with an older one, and users run VS 2022 Build Tools.
+            runner: windows-2022
           # The bundled libc++ needs glibc 2.38+, so Linux builds run on 24.04.
           - platform: linux
             runner: ubuntu-24.04
@@ -147,7 +149,9 @@ jobs:
       matrix:
         include:
           - platform: windows
-            runner: windows-latest
+            # VS 2022 (MSVC 14.44): static libraries built with a newer MSVC
+            # do not link with an older one, and users run VS 2022 Build Tools.
+            runner: windows-2022
           - platform: linux
             runner: ubuntu-24.04
     runs-on: ${{ matrix.runner }}
@@ -274,7 +278,9 @@ jobs:
       matrix:
         include:
           - platform: windows
-            runner: windows-latest
+            # VS 2022 (MSVC 14.44): static libraries built with a newer MSVC
+            # do not link with an older one, and users run VS 2022 Build Tools.
+            runner: windows-2022
           - platform: linux
             runner: ubuntu-24.04
     runs-on: ${{ matrix.runner }}

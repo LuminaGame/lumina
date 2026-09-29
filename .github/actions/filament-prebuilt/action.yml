@@ -63,6 +63,8 @@ runs:
           echo "version=$version"
           echo "os=$os"
           echo "archive=build/filament-prebuilt/filament-$version-$os-x64.$ext"
+          # The runner image fixes the toolset the static libraries are built with.
+          echo "image=${ImageOS:-unknown}"
         } >> "$GITHUB_OUTPUT"
 
     - name: Restore the cache
@@ -70,7 +72,7 @@ runs:
       uses: actions/cache/restore@v6
       with:
         path: lumina/build/filament-prebuilt/filament-*-x64.*
-        key: filament-prebuilt-${{ runner.os }}-${{ hashFiles('lumina/third_party/filament/patches/**', 'lumina/tool/filament/VERSION', 'lumina/tool/filament/build_prebuilt.sh', 'lumina/tool/filament/build_prebuilt.ps1') }}
+        key: filament-prebuilt-${{ runner.os }}-${{ steps.info.outputs.image }}-${{ hashFiles('lumina/third_party/filament/patches/**', 'lumina/tool/filament/VERSION', 'lumina/tool/filament/build_prebuilt.sh', 'lumina/tool/filament/build_prebuilt.ps1') }}
 
     - name: Fetch a published build
       if: steps.restore.outputs.cache-hit != 'true' && inputs.fetch == 'true'
