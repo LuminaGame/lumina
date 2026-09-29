@@ -346,8 +346,10 @@ class _MainEditorViewState extends State<MainEditorView> {
                 ),
               ),
 
-              // 3. Toolbar
-              ToolbarWidget(viewModel: viewModel),
+              // 3. The level viewport's toolbar, only while the level tab is
+              // active: document tabs (Plugins, the sub-editors) carry their
+              // own tools.
+              if (viewModel.currentTab.id == EditorViewModel.kLevelTabId) ToolbarWidget(viewModel: viewModel),
 
               const Divider(height: 1),
 

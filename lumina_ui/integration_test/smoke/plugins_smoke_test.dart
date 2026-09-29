@@ -127,6 +127,10 @@ void main() {
       expect(find.text('ALL PLUGINS'), findsOneWidget);
       expect(find.text('Ocean Tools'), findsOneWidget);
       expect(find.text('Terrain Tools'), findsOneWidget);
+      // The Plugins tab is a document tab: the level viewport's toolbar
+      // (transform, play, view modes) belongs to the level tab only.
+      expect(find.byKey(const ValueKey('toolbar_play')), findsNothing);
+      expect(find.byKey(const ValueKey('toolbar_blueprints')), findsNothing);
 
       // Select plugin
       await tester.tap(find.text('Ocean Tools').last);
