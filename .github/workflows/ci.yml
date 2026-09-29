@@ -32,9 +32,11 @@ on:
 permissions:
   contents: read
 
+# A newer push supersedes a pull request's run; runs on main queue instead,
+# so the Filament cache job always finishes.
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   # Keep in step with release.yml.
