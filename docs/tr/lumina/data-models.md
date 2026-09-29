@@ -732,6 +732,9 @@ Represents a tracked project entry in the launcher's recent projects list.
 | :--- | :--- | :--- |
 | `dir` | `Directory dir` | `dir` alanını (field/property) ve ilişkili veriyi saklar. |
 | `origin` | `PluginOrigin origin` | `origin` alanını (field/property) ve ilişkili veriyi saklar. |
+| `packageDirs` | `List<Directory>? packageDirs` | Eklentileri ortak bir üst klasörde olmayan bir kök için eklenti klasörlerinin kendisi (bir çalışma alanının çözümlediği paketler); null ise `dir`'in alt klasörleri taranır. |
+| `PluginScanRoot.packages` | `PluginScanRoot.packages({required Directory dir, required List<Directory> packageDirs, required PluginOrigin origin})` | Verilen eklenti klasörlerinden oluşan kök; `dir`, onların çözümlendiği çalışma alanıdır. Editörün yerleşik eklentileri böyle bir köktür. |
+| `candidates` | `List<Directory> candidates()` | Eklenti olarak taranan klasörler: var olan `packageDirs`, yoksa `dir`'in alt klasörleri. |
 
 ### `class PluginScanResult`
 

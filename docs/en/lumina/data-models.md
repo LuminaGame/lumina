@@ -732,6 +732,9 @@ Represents a tracked project entry in the launcher's recent projects list.
 | :--- | :--- | :--- |
 | `dir` | `Directory dir` | Holds the `dir` property or configuration state. |
 | `origin` | `PluginOrigin origin` | Holds the `origin` property or configuration state. |
+| `packageDirs` | `List<Directory>? packageDirs` | The plugin folders themselves, for a root whose plugins do not share a parent (the packages a workspace resolved); null scans `dir`'s sub-folders. |
+| `PluginScanRoot.packages` | `PluginScanRoot.packages({required Directory dir, required List<Directory> packageDirs, required PluginOrigin origin})` | A root made of the given plugin folders; `dir` is the workspace they were resolved for. The editor's built-ins are one. |
+| `candidates` | `List<Directory> candidates()` | The folders scanned as plugins: the existing `packageDirs`, else `dir`'s sub-folders. |
 
 ### `class PluginScanResult`
 

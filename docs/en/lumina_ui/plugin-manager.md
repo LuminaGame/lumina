@@ -4,6 +4,10 @@
 
 The Plugin Manager window, which lists, enables and disables plugins, and the New Plugin wizard, which generates a plugin package from a template. File paths are relative to the `lumina_ui/` package directory.
 
+## Built-in plugins
+
+**BUILT-IN** lists the plugins that ship with the engine: the plugin packages the engine workspace resolved (`lumina_plugin_pcg` and `lumina_plugin_miniai` from the plugins repository, pinned by commit as `lumina_ui` dev dependencies), found through `.dart_tool/package_config.json` by `editorPluginScanRoots` (`lib/ui/core/services/user_plugin_dir.dart`). In a source workspace they are the sibling `plugins` checkout (`pubspec_overrides.yaml`); in a release checkout, the git checkouts `flutter pub get` put in the pub cache. Enabling one builds the project's editor host against the same git dependency (see [Plugins](../plugins/index.md)). A user plugin of the same name (for example a newer version imported from a zip) takes the built-in's place.
+
 ## Importing a plugin
 
 **Import from Folder** and **Import from Zip**, next to **New Plugin** in the list header, install a plugin into the per-user plugin folder (`UserPluginDir.resolve()`, where the Marketplace installs plugins too) by copying it; a plugin is never linked from where it was picked. Both open the system picker and validate before anything is written:

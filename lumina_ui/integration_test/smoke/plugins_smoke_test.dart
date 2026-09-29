@@ -166,6 +166,27 @@ void main() {
       await settle(tester);
       await rec.hold(const Duration(seconds: 1));
 
+      // BUILT-IN: the plugins the engine workspace depends on (the plugins
+      // repository's packages, resolved by pub), not an engine folder.
+      final builtIns = [for (final d in LuminaWorkspace.pluginPackageDirs(LuminaEditorHost.engineRoot)) d.replaceAll(r'\', '/').split('/').last];
+      expect(builtIns, containsAll(['lumina_plugin_pcg', 'lumina_plugin_miniai']), reason: 'pub get resolved the built-in plugins');
+      await tester.tap(find.text('All Built-in'));
+      await settle(tester);
+      expect(find.text('Procedural Content Generation'), findsWidgets);
+      expect(find.text('MiniAI'), findsWidgets);
+      expect(find.text('Terrain Tools'), findsNothing, reason: 'a project plugin is not built-in');
+      expect(
+          vm.pluginRegistry.entries.where((e) => e.descriptor.origin == PluginOrigin.engine).map((e) => e.descriptor.name),
+          containsAll(['lumina_plugin_pcg', 'lumina_plugin_miniai']));
+      await rec.hold(const Duration(milliseconds: 1500));
+      SmokeArtifacts.saveScreenshot(
+        'Plugins Smoke Scenario: the built-in plugins',
+        await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(repaintBoundaryKey)),
+      );
+      await tester.tap(find.text('ALL PLUGINS').first);
+      await settle(tester);
+      await rec.hold(const Duration(seconds: 1));
+
       // Capture screenshot
       final pngEditor = await SmokeArtifacts.captureIntegrationPng(
         binding,

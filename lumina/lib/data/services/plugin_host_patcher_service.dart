@@ -1,11 +1,17 @@
 import 'dart:io';
 import 'package:lumina/data/models/lumina_plugin_descriptor.dart';
+import 'package:lumina/data/services/workspace_paths.dart';
 
 class PluginHostPatcherService {
   final String beginMarker = '  # BEGIN LUMINA PLUGINS (generated)';
   final String endMarker = '  # END LUMINA PLUGINS';
 
-  Future<void> patchPubspec(Directory hostRoot, List<LuminaPluginDescriptor> enabledCodePlugins) async {
+  /// Writes the enabled code plugins into [hostRoot]'s `pubspec.yaml` between
+  /// the generated markers. A plugin the workspace at [workspaceRoot]
+  /// resolved from git (see [LuminaWorkspace.gitSourceOf]) is written as that
+  /// git dependency, never as a path into the pub cache; any other plugin by
+  /// its folder.
+  Future<void> patchPubspec(Directory hostRoot, List<LuminaPluginDescriptor> enabledCodePlugins, {String? workspaceRoot}) async {
     final pubspecFile = File('${hostRoot.path}/pubspec.yaml');
     if (!pubspecFile.existsSync()) return;
 
@@ -19,7 +25,16 @@ class PluginHostPatcherService {
     for (final plugin in enabledCodePlugins) {
       if (plugin.isContentOnly) continue;
       pluginBlock.writeln('  ${plugin.name}:');
-      pluginBlock.writeln('    path: ${plugin.pluginDir.path}'); // or relative
+      final git = workspaceRoot == null ? null : LuminaWorkspace.gitSourceOf(workspaceRoot, plugin.name, packageDir: plugin.pluginDir.path);
+      if (git != null) {
+        pluginBlock
+          ..writeln('    git:')
+          ..writeln('      url: ${git.url}');
+        if (git.path != null) pluginBlock.writeln('      path: ${git.path}');
+        pluginBlock.writeln('      ref: ${git.ref}');
+      } else {
+        pluginBlock.writeln('    path: ${plugin.pluginDir.path}');
+      }
     }
 
     final beginIdx = content.indexOf(beginMarker);

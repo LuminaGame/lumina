@@ -43,10 +43,29 @@ class PluginManifestException implements Exception {
 }
 
 class PluginScanRoot {
+  /// The folder whose sub-folders are plugins; for a [PluginScanRoot.packages]
+  /// root, the folder the packages were resolved for (the workspace root).
   final Directory dir;
   final PluginOrigin origin;
 
-  PluginScanRoot({required this.dir, required this.origin});
+  /// The plugin folders themselves, when they do not share a parent (the
+  /// packages a workspace resolved, wherever they live); null scans [dir]'s
+  /// sub-folders.
+  final List<Directory>? packageDirs;
+
+  PluginScanRoot({required this.dir, required this.origin}) : packageDirs = null;
+
+  /// A root made of the given plugin folders ([packageDirs]); [dir] is the
+  /// workspace they were resolved for.
+  PluginScanRoot.packages({required this.dir, required List<Directory> this.packageDirs, required this.origin});
+
+  /// The folders scanned as plugins.
+  List<Directory> candidates() {
+    final listed = packageDirs;
+    if (listed != null) return [for (final d in listed) if (d.existsSync()) d];
+    if (!dir.existsSync()) return const [];
+    return dir.listSync().whereType<Directory>().toList();
+  }
 }
 
 class PluginScanResult {
@@ -80,12 +99,7 @@ class PluginRepository {
     final seenNames = <String, LuminaPluginDescriptor>{};
 
     for (final root in sortedRoots) {
-      if (!root.dir.existsSync()) continue;
-
-      final entities = root.dir.listSync();
-      for (final entity in entities) {
-        if (entity is! Directory) continue;
-        
+      for (final entity in root.candidates()) {
         final manifests = entity.listSync().whereType<File>().where((f) => f.path.endsWith('.lmplugin')).toList();
         
         if (manifests.isEmpty) {

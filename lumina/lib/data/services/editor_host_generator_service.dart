@@ -5,6 +5,7 @@ import 'package:lumina/data/models/lumina_plugin_descriptor.dart';
 import 'package:lumina/data/services/code_generator_service.dart';
 import 'package:lumina/data/services/plugin_host_patcher_service.dart';
 import 'package:lumina/data/services/editor_source_vendor_service.dart';
+import 'package:lumina/data/services/workspace_paths.dart';
 import 'package:path/path.dart' as p;
 import 'package:yaml/yaml.dart';
 
@@ -50,8 +51,13 @@ class EditorHostGeneratorService {
   /// The host OS whose runner folder is copied (`linux`, `windows`, `macos`).
   final String platform;
 
-  EditorHostGeneratorService({required this.engineRoot, String? platform})
-      : platform = platform ?? Platform.operatingSystem;
+  /// The workspace whose `pubspec.lock` pinned the git-resolved plugins
+  /// (the engine's built-ins); defaults to [engineRoot].
+  final String workspaceRoot;
+
+  EditorHostGeneratorService({required this.engineRoot, String? platform, String? workspaceRoot})
+      : platform = platform ?? Platform.operatingSystem,
+        workspaceRoot = workspaceRoot ?? engineRoot;
 
   /// The stamp file the build service writes into the host after a build.
   static const String stampFileName = '.lumina_editor_stamp.json';
@@ -210,10 +216,22 @@ class EditorHostGeneratorService {
         ..writeln('  lumina_editor_api:')
         ..writeln('    path: ${overrides['lumina_editor_api']}');
     }
+    // A plugin the engine workspace resolved from git (a built-in, pinned
+    // by commit in its pubspec.lock and fetched into the pub cache) is the
+    // same git dependency here, never a path into the pub cache; any other
+    // plugin is its folder.
     for (final plugin in plugins) {
-      b
-        ..writeln('  ${plugin.name}:')
-        ..writeln("    path: '${_slash(p.absolute(plugin.pluginDir.path))}'");
+      b.writeln('  ${plugin.name}:');
+      final git = LuminaWorkspace.gitSourceOf(workspaceRoot, plugin.name, packageDir: plugin.pluginDir.path);
+      if (git != null) {
+        b
+          ..writeln('    git:')
+          ..writeln("      url: '${git.url}'");
+        if (git.path != null) b.writeln("      path: '${git.path}'");
+        b.writeln("      ref: '${git.ref}'");
+      } else {
+        b.writeln("    path: '${_slash(p.absolute(plugin.pluginDir.path))}'");
+      }
     }
     b
       ..writeln()

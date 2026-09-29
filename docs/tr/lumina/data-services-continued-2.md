@@ -217,7 +217,7 @@ Output is deterministic (the same inputs give byte-identical files) and written 
 
 **Yapıcı Metotlar (Constructors):**
 
-- `EditorHostGeneratorService({required this.engineRoot, String? platform})`
+- `EditorHostGeneratorService({required this.engineRoot, String? platform, String? workspaceRoot})` — `workspaceRoot` (varsayılan `engineRoot`), git'ten çözülmüş eklentileri `pubspec.lock` dosyasında sabitleyen çalışma alanıdır: böyle bir eklenti host pubspec'ine asla pub önbelleğine giden bir path olarak değil, o git bağımlılığı olarak yazılır.
 
 **Üyeler:**
 

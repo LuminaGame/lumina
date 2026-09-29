@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:lumina/data/models/lumina_plugin_descriptor.dart' show PluginOrigin;
 import 'package:lumina/data/services/lumina_data_dir.dart' show LuminaDataDir;
 import 'package:lumina/data/repositories/plugin_repository.dart' show PluginScanRoot;
+import 'package:lumina/data/services/workspace_paths.dart' show LuminaWorkspace;
 import 'package:path/path.dart' as p;
 
 import '../host/editor_host.dart' show LuminaEditorHost;
@@ -52,15 +53,27 @@ abstract final class PluginDataDir {
   }
 }
 
-/// Where the editor looks for plugins: the engine's `plugins/`
-/// (`LUMINA_ENGINE_ROOT`, else `<engineRoot>/plugins` — never relative to the
-/// working directory, which a project editor does not share with the engine),
-/// the project's `plugins/`, and the per-user [UserPluginDir]. The launcher's
-/// project editor resolver scans the same roots as the editor.
+/// Where the editor looks for plugins:
+/// * the built-ins: the plugin packages the engine workspace resolved
+///   ([LuminaWorkspace.pluginPackageDirs] of `<engineRoot>`: the plugins
+///   repository's packages, pinned as git dependencies and fetched into the
+///   pub cache, or their local checkout through `pubspec_overrides.yaml`),
+///   plus an engine `plugins/` folder when there is one (`LUMINA_ENGINE_ROOT`,
+///   else `<engineRoot>/plugins`) — never relative to the working directory,
+///   which a project editor does not share with the engine;
+/// * the project's `plugins/`;
+/// * the per-user [UserPluginDir].
+/// The launcher's project editor resolver scans the same roots as the editor.
 List<PluginScanRoot> editorPluginScanRoots(String projectDir) {
-  final engineRoot = Platform.environment['LUMINA_ENGINE_ROOT'] ?? p.join(LuminaEditorHost.engineRoot, 'plugins');
+  final engineRoot = LuminaEditorHost.engineRoot;
+  final enginePlugins = Platform.environment['LUMINA_ENGINE_ROOT'] ?? p.join(engineRoot, 'plugins');
   return [
-    PluginScanRoot(dir: Directory(engineRoot), origin: PluginOrigin.engine),
+    PluginScanRoot.packages(
+      dir: Directory(engineRoot),
+      packageDirs: [for (final d in LuminaWorkspace.pluginPackageDirs(engineRoot)) Directory(d)],
+      origin: PluginOrigin.engine,
+    ),
+    PluginScanRoot(dir: Directory(enginePlugins), origin: PluginOrigin.engine),
     PluginScanRoot(dir: Directory(p.join(projectDir, 'plugins')), origin: PluginOrigin.project),
     // <data>/plugins, where the Marketplace installs plugin
     // listings too.

@@ -565,7 +565,7 @@ Where plugins keep their per-user data, one folder per plugin: [override], else 
 
 | Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
-| `editorPluginScanRoots` | `List<PluginScanRoot> editorPluginScanRoots(String projectDir)` | Where the editor looks for plugins: the engine's `plugins/` (`LUMINA_ENGINE_ROOT`, else `<engineRoot>/plugins` — never relative to the working directory, which a project editor does not share with the engine), the project's `plugins/`, and the per-user [UserPluginDir]. The launcher's project editor resolver scans the same roots as the editor. |
+| `editorPluginScanRoots` | `List<PluginScanRoot> editorPluginScanRoots(String projectDir)` | Where the editor looks for plugins: the built-ins, the plugin packages the engine workspace resolved (`LuminaWorkspace.pluginPackageDirs(<engineRoot>)`, a `PluginScanRoot.packages` root), plus an engine `plugins/` folder when there is one (`LUMINA_ENGINE_ROOT`, else `<engineRoot>/plugins` — never relative to the working directory, which a project editor does not share with the engine); the project's `plugins/`; and the per-user [UserPluginDir]. The launcher's project editor resolver scans the same roots as the editor. |
 
 ## `lib/ui/core/theme/asset_type_style.dart`
 

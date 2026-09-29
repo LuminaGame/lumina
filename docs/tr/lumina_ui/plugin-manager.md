@@ -4,6 +4,10 @@
 
 Eklentileri listeleyen, etkinleştiren ve devre dışı bırakan Plugin Manager penceresi ve şablondan eklenti paketi üreten New Plugin sihirbazı. Dosya yolları `lumina_ui/` paket dizinine görelidir.
 
+## Yerleşik eklentiler
+
+**BUILT-IN**, engine ile gelen eklentileri listeler: engine çalışma alanının çözümlediği eklenti paketleri (plugins deposundan, commit ile sabitlenmiş `lumina_ui` dev bağımlılıkları olan `lumina_plugin_pcg` ve `lumina_plugin_miniai`); `editorPluginScanRoots` (`lib/ui/core/services/user_plugin_dir.dart`) bunları `.dart_tool/package_config.json` üzerinden bulur. Kaynak çalışma alanında yandaki `plugins` checkout'u (`pubspec_overrides.yaml`), release checkout'unda `flutter pub get`'in pub önbelleğine koyduğu git checkout'larıdır. Birini etkinleştirmek projenin editor host'unu aynı git bağımlılığıyla derler (bkz. [Eklentiler](../plugins/index.md)). Aynı adlı bir kullanıcı eklentisi (örneğin zip'ten içe aktarılmış daha yeni bir sürüm) yerleşik eklentinin yerini alır.
+
 ## Eklenti içe aktarma
 
 Liste başlığında **New Plugin**'in yanındaki **Import from Folder** ve **Import from Zip**, bir eklentiyi kopyalayarak kullanıcıya özel eklenti klasörüne (`UserPluginDir.resolve()`; Marketplace de eklentileri buraya kurar) kurar; eklenti seçildiği yerden asla bağlanmaz (link). İkisi de sistem seçicisini açar ve hiçbir şey yazmadan önce doğrular:

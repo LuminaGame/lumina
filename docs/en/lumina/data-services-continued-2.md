@@ -217,7 +217,7 @@ Output is deterministic (the same inputs give byte-identical files) and written 
 
 **Constructors:**
 
-- `EditorHostGeneratorService({required this.engineRoot, String? platform})`
+- `EditorHostGeneratorService({required this.engineRoot, String? platform, String? workspaceRoot})` — `workspaceRoot` (default `engineRoot`) is the workspace whose `pubspec.lock` pinned the git-resolved plugins: such a plugin is written into the host pubspec as that git dependency, never as a path into the pub cache.
 
 **Members:**
 

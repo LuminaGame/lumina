@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
+import 'package:yaml/yaml.dart';
 
 /// The lumina repo: generated games and plugins depend on its packages
 /// through git, and a release build fetches its engine source from it.
@@ -128,6 +129,62 @@ class LuminaWorkspace {
     return null;
   }
 
+  /// The root directories of the packages in `<root>/.dart_tool/package_config.json`
+  /// that ship a `<name>.lmplugin` manifest: the plugins the workspace
+  /// depends on (the engine's built-in plugins, `lumina_ui` dev dependencies
+  /// pinned by git; a local checkout when `pubspec_overrides.yaml` points
+  /// there), sorted by package name. Empty before `pub get`.
+  static List<String> pluginPackageDirs(String root) {
+    final config = File(p.join(root, '.dart_tool', 'package_config.json'));
+    if (!config.existsSync()) return const [];
+    final found = <String, String>{};
+    try {
+      final json = jsonDecode(config.readAsStringSync());
+      final packages = json is Map ? json['packages'] : null;
+      if (packages is! List) return const [];
+      for (final entry in packages) {
+        if (entry is! Map || entry['name'] is! String) continue;
+        final name = entry['name'] as String;
+        final rootUri = '${entry['rootUri']}';
+        // Relative URIs are relative to the config file's folder.
+        final uri = Uri.directory(p.dirname(config.absolute.path)).resolve(rootUri.endsWith('/') ? rootUri : '$rootUri/');
+        final dir = p.normalize(uri.toFilePath());
+        if (File(p.join(dir, '$name.lmplugin')).existsSync()) found[name] = dir;
+      }
+    } on FormatException {
+      return const [];
+    }
+    return [for (final name in found.keys.toList()..sort()) found[name]!];
+  }
+
+  /// The git dependency `<root>/pubspec.lock` resolved package [name] from
+  /// (url, path inside the repository, resolved commit), or null when the
+  /// lock resolved it some other way (a path override, a hosted package) or
+  /// has no lock. With [packageDir], also null unless that folder is the
+  /// checkout of that commit (pub names its git checkouts after the resolved
+  /// commit), so a same-named local copy is never mistaken for it.
+  static LuminaGitSource? gitSourceOf(String root, String name, {String? packageDir}) {
+    final lock = File(p.join(root, 'pubspec.lock'));
+    if (!lock.existsSync()) return null;
+    final Object? yaml;
+    try {
+      yaml = loadYaml(lock.readAsStringSync());
+    } on YamlException {
+      return null;
+    }
+    final packages = yaml is YamlMap ? yaml['packages'] : null;
+    final entry = packages is YamlMap ? packages[name] : null;
+    if (entry is! YamlMap || entry['source'] != 'git') return null;
+    final description = entry['description'];
+    if (description is! YamlMap) return null;
+    final url = description['url']?.toString();
+    final ref = (description['resolved-ref'] ?? description['ref'])?.toString();
+    if (url == null || ref == null || ref.isEmpty) return null;
+    if (packageDir != null && !p.normalize(p.absolute(packageDir)).contains(ref)) return null;
+    final path = description['path']?.toString();
+    return LuminaGitSource(url: url, path: path == null || path == '.' ? null : path, ref: ref);
+  }
+
   /// The shared 3D test assets (`<root>/test-assets`).
   static String get testAssets => p.join(root, 'test-assets');
 
@@ -143,4 +200,15 @@ class LuminaWorkspace {
       dir = parent;
     }
   }
+}
+
+/// A git dependency as a pubspec writes it: the repository [url], the
+/// package's [path] inside it (null at the repository root) and the commit
+/// [ref].
+class LuminaGitSource {
+  const LuminaGitSource({required this.url, required this.ref, this.path});
+
+  final String url;
+  final String? path;
+  final String ref;
 }
