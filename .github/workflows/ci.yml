@@ -11,16 +11,23 @@
 # tests below, which cover the FFI bindings, the data layer, the editor API
 # and code generation without rendering.
 #
+# The unit tests take long, so they run only when a pull request is ready to
+# merge: it carries the `ready-to-merge` label (and is not a draft). They can
+# also be started by hand (Actions > ci > Run workflow).
+#
 # The unit tests compile the native-assets hooks, so they need prebuilt
 # Filament: from the cache (key: patches + VERSION + build scripts + OS), else
 # a published release (tool/filament/fetch_prebuilt.dart), else a build.
-# Runs on main save the cache, which release tags and pull requests restore.
+# Pushes to main only warm that cache (filament-cache), which release tags
+# and pull requests restore.
 name: ci
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, labeled]
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -36,6 +43,8 @@ env:
 jobs:
   analyze:
     name: Analyze
+    # Adding a label does not change the code.
+    if: github.event.action != 'labeled'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -71,6 +80,11 @@ jobs:
 
   unit:
     name: Unit tests (noop backend)
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' &&
+       !github.event.pull_request.draft &&
+       contains(github.event.pull_request.labels.*.name, 'ready-to-merge'))
     runs-on: ubuntu-24.04
     timeout-minutes: 360
     env:
@@ -98,7 +112,7 @@ jobs:
       - uses: ./lumina/.github/actions/filament-prebuilt
         with:
           fetch: 'true'
-          save: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+          save: 'false'
           extract: 'true'
 
       - name: Build OpenRigLogic
@@ -150,8 +164,41 @@ jobs:
           test/data/landscape_data_test.dart
           test/data/sequencer_evaluator_test.dart
 
+  filament-cache:
+    name: Filament cache (main)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          path: lumina
+          persist-credentials: false
+
+      - uses: ./lumina/.github/actions/linux-build-deps
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      # fetch_prebuilt.dart runs in the resolved workspace.
+      - uses: ./lumina/.github/actions/checkout-siblings
+
+      - name: Resolve the workspace
+        working-directory: lumina
+        run: flutter pub get
+
+      - uses: ./lumina/.github/actions/filament-prebuilt
+        with:
+          fetch: 'true'
+          save: 'true'
+          extract: 'false'
+
   packaging:
     name: Release tooling and Linux packages
+    if: github.event.action != 'labeled'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
