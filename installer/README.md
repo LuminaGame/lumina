@@ -1,0 +1,174 @@
+[Türkçe](README.tr.md)
+
+# Lumina Studio installers
+
+Native installers for Lumina Studio, the editor of the Lumina engine. None of them embeds the editor. Each one
+installs what building and running Lumina projects needs, then downloads the latest editor build from the
+[GitHub releases](https://github.com/LuminaGame/lumina/releases). A later update only needs a new release, not a
+new installer.
+
+| Platform | Package | Built by | Status |
+|---|---|---|---|
+| Windows | `lumina-studio-setup-<tag>-windows-x64.exe` (Inno Setup) | `windows/build.ps1` | released |
+| Windows | `lumina-studio-<tag>-windows-x64.msix` (the editor itself) | `lumina_ui/tool/package_windows.dart` | released when the signing secrets exist |
+| Linux | `lumina-studio_<version>-1_amd64.deb`, `lumina-studio-<version>-1.x86_64.rpm` (nfpm) | `linux/build.sh` | released |
+| macOS | `lumina-studio-<tag>-macos.pkg` (pkgbuild + productbuild) | `macos/build-pkg.sh` | written, not verified, disabled in the workflow |
+
+The release workflow (`.github/workflows/release.yml`) builds all of them for every `v*` tag. Every asset has a
+`.sha256` sidecar, and the installers check the editor download against it.
+
+## Release assets
+
+| Asset | Content |
+|---|---|
+| `lumina-studio-<tag>-windows-x64.zip` | `flutter build windows --release` output with the Visual C++ runtime DLLs next to `lumina_ui.exe`, at the archive root |
+| `lumina-studio-<tag>-linux-x64.tar.gz` | `flutter build linux --release` bundle (`lumina_ui`, `lib/`, `data/`), at the archive root |
+| `filament-<VERSION>-<os>-x64.{zip,tar.gz}` | Prebuilt Filament (upstream v1.77.0 with this repository's patches), downloaded by the editor at first launch |
+| `openriglogic-<os>-x64.{zip,tar.gz}` | Prebuilt OpenRigLogic static library (built from the pinned tools commit), downloaded by the editor at first launch |
+
+Both editor builds carry `--dart-define=LUMINA_VERSION=<tag>` and `--dart-define=LUMINA_COMMIT=<sha>`.
+
+## Windows: setup.exe
+
+A per-user setup. It does not need administrator rights itself; winget asks for elevation for the machine-wide
+packages.
+
+1. **Prerequisites through winget.** Anything already present is skipped.
+   - `Git.Git`
+   - `Microsoft.VisualStudio.2022.BuildTools` with
+     `--override "--quiet --wait --norestart --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"`.
+     An existing Visual Studio with the C++ tools (found with `vswhere`) counts as present.
+   - `gstreamerproject.gstreamer`
+   - `Gyan.FFmpeg.Essentials`, only with the "Install FFmpeg" task or `/FFMPEG`
+2. **Flutter.** A `flutter` already on PATH is used as is. Otherwise the stable channel is cloned into
+   `%LOCALAPPDATA%\Lumina\flutter` (`git clone --filter=blob:none -b stable`), and its `bin` folder is added to
+   the user PATH.
+3. **Lumina Studio.** Setup reads `https://api.github.com/repos/LuminaGame/lumina/releases/latest`, downloads
+   `lumina-studio-<tag>-windows-x64.zip`, verifies its SHA-256 and unpacks it into
+   `%LOCALAPPDATA%\Programs\Lumina Studio`. Setup offers a retry when the download fails.
+4. **Shortcuts.** Start menu entries "Lumina Studio", "Update Lumina Studio" (downloads the latest release
+   again) and the uninstaller, plus an optional desktop shortcut.
+
+Uninstalling removes the editor folder. It asks before removing a Flutter SDK that setup installed, and removes
+its PATH entry too. Git, the Build Tools, GStreamer and FFmpeg stay installed, because other programs may use
+them.
+
+The work is done by `windows/lumina-setup.ps1`, which setup installs into `{app}\setup\`. It also runs on its own:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File installer\windows\lumina-setup.ps1 -DryRun
+powershell -ExecutionPolicy Bypass -File installer\windows\lumina-setup.ps1 -StudioOnly   # just (re)download the editor
+```
+
+Exit codes: 0 done, 10 a prerequisite failed, 20 Flutter failed, 30 the editor could not be downloaded, 1 other.
+The log is `{app}\setup\install.log`.
+
+### Dry run
+
+```powershell
+lumina-studio-setup-v0.1.0-windows-x64.exe /DRYRUN
+lumina-studio-setup-v0.1.0-windows-x64.exe /DRYRUN /FFMPEG /DRYRUNLOG=C:\temp\plan.txt /VERYSILENT
+```
+
+`/DRYRUN` shows the plan and exits with 0 before the wizard opens. The plan lists each prerequisite as present or
+as the exact winget command, the Flutter step, and the release asset with its URL and size. Nothing is installed
+or downloaded; the only network access is the read of the release metadata. The report is written to
+`/DRYRUNLOG` (default `%TEMP%\lumina-studio-setup-dryrun.txt`) and shown in a message box unless setup runs with
+`/VERYSILENT`.
+
+### Build locally
+
+```powershell
+winget install JRSoftware.InnoSetup
+./installer/windows/build.ps1 -Version 0.1.0 -Tag v0.1.0 -OutDir dist
+```
+
+The result is `dist/lumina-studio-setup-v0.1.0-windows-x64.exe` plus its `.sha256`. The setup icon is
+`lumina_ui/windows/runner/resources/app_icon.ico`.
+
+### MSIX
+
+The release also carries the editor as an MSIX, made by the existing `lumina_ui/tool/package_windows.dart --publish`
+with the identity in `lumina_ui/pubspec.yaml` `msix_config` (the Store reservation `LuminaEngine.LuminaEngine`).
+The certificate comes from GitHub secrets (below). Without them the workflow skips the MSIX with a notice. The
+certificate and its password never enter the repository or the logs. The `.pfx` is decoded into the runner's temp
+folder and deleted after signing.
+
+## Linux: .deb and .rpm
+
+The package declares the build and run dependencies:
+
+| Debian / Ubuntu | Fedora / RHEL | Why |
+|---|---|---|
+| `git`, `curl`, `ca-certificates`, `tar`, `unzip`, `xz-utils`, `zip` | same (`xz`) | Flutter, downloads |
+| `clang`, `cmake`, `ninja-build`, `pkg-config` | `clang`, `cmake`, `ninja-build`, `pkgconf-pkg-config` | `flutter build linux`, native-assets hooks |
+| `libgtk-3-dev`, `liblzma-dev`, `libstdc++-1{4,3,2}-dev` | `gtk3-devel`, `xz-devel`, `libstdc++-devel` | the Flutter Linux runner |
+| `libwayland-dev`, `wayland-protocols` | `wayland-devel`, `wayland-protocols-devel` | pointer capture (Wayland) |
+| `libgstreamer1.0-0`, `gstreamer1.0-plugins-base`, `gstreamer1.0-plugins-good`, `gstreamer1.0-tools` | `gstreamer1`, `gstreamer1-plugins-base`, `gstreamer1-plugins-good`, `gstreamer1-plugins-base-tools` | video recording |
+| `libgl1`, `libvulkan1` | `libglvnd-glx`, `vulkan-loader` | the renderer's OpenGL / Vulkan backends |
+
+The package installs:
+
+- `/usr/bin/lumina-studio`: the launcher. It puts `/opt/lumina/flutter/bin` first on PATH and starts the editor.
+  When the editor is missing, it downloads it first. `lumina-studio --update` downloads the latest release.
+- `/usr/lib/lumina-studio/install-studio.sh`: downloads and verifies the Linux tarball, then swaps it in.
+- `/usr/share/applications/io.github.luminagame.LuminaStudio.desktop`: the menu entry, with an "Update Lumina Studio" action.
+- `/usr/share/icons/hicolor/scalable/apps/lumina-studio.svg` and `/usr/share/pixmaps/lumina-studio.png`: the
+  `lumina_ui/assets/logo_color.*` icons.
+
+The postinstall script:
+
+1. Creates the `lumina` system group. `/opt/lumina` belongs to it (setgid, group-writable), and the user who ran
+   `sudo` / `pkexec` joins it; the membership takes effect at the next login. Group members can update the editor
+   and use the shared Flutter SDK.
+2. Keeps a Flutter already in `/opt/lumina/flutter` or on PATH. Otherwise it clones the stable channel into
+   `/opt/lumina/flutter`, adds a `safe.directory` entry to the system git config, runs `flutter precache --linux`
+   and hands the tree to the group.
+3. Downloads the latest `lumina-studio-<tag>-linux-x64.tar.gz` into `/opt/lumina/studio`.
+4. Warns when `clang` is older than 19. The engine's native code builds against the libc++ 21 headers it
+   bundles; on older distributions install a newer clang from <https://apt.llvm.org>.
+
+Network problems never fail the installation. When GitHub cannot be reached, the script says so, and the
+launcher downloads the editor on its first run. `LUMINA_SKIP_DOWNLOAD=1` skips all downloads. A user who cannot
+write `/opt/lumina` gets the editor in `~/.local/share/lumina/studio`.
+
+On removal (`apt remove`, `dnf remove`, but not on upgrade) the package deletes `/opt/lumina/studio`, and also
+`/opt/lumina/flutter` and its `safe.directory` entry when the package installed them. Purging (deb) or erasing
+(rpm) also removes the `lumina` group. Per-user downloads in `~/.local/share/lumina` stay.
+
+### Build locally
+
+```bash
+installer/linux/build.sh 0.1.0 v0.1.0 dist    # uses nfpm from PATH or downloads nfpm 2.47.0 into build/nfpm/
+dpkg-deb -I dist/lumina-studio_0.1.0-1_amd64.deb
+dpkg-deb -c dist/lumina-studio_0.1.0-1_amd64.deb
+```
+
+On Windows run it inside WSL. Pre-release versions follow nfpm's semver rules (`0.1.0-beta.1` becomes
+`0.1.0~beta.1` in the .deb).
+
+## macOS: .pkg (not verified)
+
+`macos/build-pkg.sh <version> [<tag>] [<out-dir>]` builds a `.pkg` whose payload is only the
+`/usr/local/bin/lumina-studio` launcher and a download script. Its postinstall script:
+
+1. checks the Xcode Command Line Tools and starts their installer when they are missing;
+2. installs `git cmake ninja gstreamer` with Homebrew as the logged-in user, or prints the command when Homebrew is
+   missing;
+3. clones Flutter (stable) into `/opt/lumina/flutter` unless one is on PATH;
+4. downloads the latest `lumina-studio-<tag>-macos-*.zip` into `/Applications/Lumina Studio.app`.
+
+`LUMINA_PKG_SIGN_IDENTITY` signs the product with a Developer ID Installer identity. The release workflow's
+macOS job is disabled (`if: false`) because no macOS build has been verified yet. Its comment lists what is
+missing.
+
+## GitHub configuration
+
+| Name | Kind | Used for |
+|---|---|---|
+| `LUMINA_MSIX_PUBLISHER` | secret | MSIX: the certificate subject, which must equal the package publisher |
+| `LUMINA_MSIX_CERT_BASE64` | secret | MSIX: the code-signing `.pfx`, base64-encoded |
+| `LUMINA_MSIX_CERT_PASSWORD` | secret | MSIX: the `.pfx` password |
+| `LUMINA_MSIX_TIMESTAMP_URL` | variable (optional) | MSIX: RFC 3161 timestamp server |
+
+Everything else uses the workflow's own `GITHUB_TOKEN`. Only the `release` job gets `contents: write`.

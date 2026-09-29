@@ -1,0 +1,275 @@
+import 'dart:typed_data';
+import 'package:flutter_filament/flutter_filament.dart';
+import 'package:vector_math/vector_math_64.dart';
+import 'lumina_material.dart';
+import 'lumina_material_instance.dart';
+
+/// A dynamic material instance.
+///
+/// Supports per-actor parameter mutations, texture bindings with custom samplers,
+/// render-state overrides, and stencil configurations without modifying other instances.
+class LuminaDynamicMaterialInstance extends LuminaMaterialInstance {
+  final Map<String, FilamentTexture> _boundTextures = {};
+  final List<FilamentTexture> _ownedTextures = [];
+
+  /// The last value set per parameter name (a `double`, an `int`, a `bool`,
+  /// a `[r, g, b, a]` list, a texture path), for tools and Blueprints to
+  /// read back.
+  final Map<String, Object?> parameterValues = {};
+
+  LuminaDynamicMaterialInstance._(
+    FilamentMaterialInstance nativeInstance,
+    LuminaMaterial material,
+    String name,
+  ) : super.internal(
+          nativeInstance,
+          material,
+          isDefaultInstance: false,
+        ) {
+    material.addRef();
+  }
+
+  /// Creates a dynamic duplicate of [source], inheriting its current parameters.
+  factory LuminaDynamicMaterialInstance.from(
+    LuminaMaterialInstance source, {
+    String? name,
+  }) {
+    final nativeDuplicate = source.nativeInstance.duplicate(name: name);
+    final instName = name ?? '${source.name}#dyn_${nativeDuplicate.hashCode}';
+    return LuminaDynamicMaterialInstance._(
+      nativeDuplicate,
+      source.material,
+      instName,
+    );
+  }
+
+  void _validateParam(String name, UniformType expectedType) {
+    if (!material.hasParameter(name)) {
+      throw ArgumentError('Material "${material.name}" does not declare parameter "$name"');
+    }
+    final p = material.parameters.firstWhere((e) => e.name == name);
+    if (p.isSampler || p.uniformType != expectedType) {
+      throw ArgumentError(
+        'Parameter "$name" has type ${p.uniformType}, cannot set with $expectedType',
+      );
+    }
+  }
+
+  void _validateArray(String name, UniformType expectedType, int totalLength, int stride) {
+    _validateParam(name, expectedType);
+    final p = material.parameters.firstWhere((e) => e.name == name);
+    final elementCount = totalLength ~/ stride;
+    if (elementCount != p.count) {
+      throw ArgumentError(
+        'Parameter array "$name" expects ${p.count} elements, but got $elementCount elements',
+      );
+    }
+  }
+
+  void _validateSampler(String name) {
+    if (!material.hasParameter(name)) {
+      throw ArgumentError('Material "${material.name}" does not declare sampler "$name"');
+    }
+    if (!material.isSampler(name)) {
+      throw ArgumentError('Parameter "$name" is a uniform parameter, not a sampler');
+    }
+  }
+
+  /// Sets a scalar float parameter value.
+  void setScalar(String name, double value) {
+    parameterValues[name] = value;
+    _validateParam(name, UniformType.float_);
+    nativeInstance.setFloat(name, value);
+  }
+
+  /// Sets an integer parameter value.
+  @override
+  void setInt(String name, int value) {
+    _validateParam(name, UniformType.int_);
+    nativeInstance.setInt(name, value);
+  }
+
+  /// Sets a boolean parameter value.
+  @override
+  void setBool(String name, bool value) {
+    _validateParam(name, UniformType.bool_);
+    nativeInstance.setBool(name, value);
+  }
+
+  /// Sets a 4-component vector parameter value.
+  void setVector(String name, Vector4 value) {
+    parameterValues[name] = <double>[value.x, value.y, value.z, value.w];
+    _validateParam(name, UniformType.float4);
+    nativeInstance.setFloat4(name, value.x, value.y, value.z, value.w);
+  }
+
+  /// Sets a 3-component vector parameter value.
+  void setVector3(String name, Vector3 value) {
+    _validateParam(name, UniformType.float3);
+    nativeInstance.setFloat3(name, value.x, value.y, value.z);
+  }
+
+  /// Sets a color parameter value with color-space conversion.
+  void setColor(String name, RgbType type, (double, double, double) rgb) {
+    _validateParam(name, UniformType.float3);
+    nativeInstance.setColor(name, type, rgb.$1, rgb.$2, rgb.$3);
+  }
+
+  /// Sets a 4-component color parameter value with color-space conversion.
+  void setColorRgba(String name, RgbaType type, (double, double, double, double) rgba) {
+    _validateParam(name, UniformType.float4);
+    nativeInstance.setColorRgba(name, type, rgba.$1, rgba.$2, rgba.$3, rgba.$4);
+  }
+
+  /// Sets an array of float scalar values.
+  void setScalarArray(String name, Float32List values) {
+    _validateArray(name, UniformType.float_, values.length, 1);
+    nativeInstance.setFloatArray(name, values);
+  }
+
+  /// Sets an array of float4 vector values (packed 4 floats per element).
+  void setVectorArray(String name, Float32List packed16) {
+    _validateArray(name, UniformType.float4, packed16.length, 4);
+    nativeInstance.setFloat4Array(name, packed16);
+  }
+
+  /// Sets an array of 4x4 matrices (packed 16 floats per element).
+  void setMatrixArray(String name, Float32List packed64) {
+    _validateArray(name, UniformType.mat4, packed64.length, 16);
+    nativeInstance.setMat4Array(name, packed64);
+  }
+
+  /// Binds a texture to [name] with an optional [sampler].
+  void setTexture(
+    String name,
+    FilamentTexture texture, {
+    TextureSampler sampler = const TextureSampler(),
+  }) {
+    _validateSampler(name);
+    final old = _boundTextures[name];
+    if (old != null && old != texture && _ownedTextures.contains(old)) {
+      _ownedTextures.remove(old);
+      old.dispose();
+    }
+    _boundTextures[name] = texture;
+    nativeInstance.setTexture(name, texture, sampler: sampler);
+  }
+
+  /// Builds a 2D texture from raw RGBA8 pixels and binds it to [name].
+  void setTextureFromPixels(
+    String name, {
+    required int width,
+    required int height,
+    required Uint8List rgbaBytes,
+    TextureSampler sampler = const TextureSampler(),
+  }) {
+    _validateSampler(name);
+    final engine = material.world.filamentEngine;
+    final texture = FilamentTexture.create2D(
+      engine: engine,
+      width: width,
+      height: height,
+    );
+    texture.setImage(
+      pixelData: rgbaBytes,
+      width: width,
+      height: height,
+    );
+    _ownedTextures.add(texture);
+    setTexture(name, texture, sampler: sampler);
+  }
+
+  // --- Render State Overrides ---
+
+  /// Face culling mode override.
+  CullingMode get cullingMode => nativeInstance.cullingMode;
+  set cullingMode(CullingMode mode) => nativeInstance.setCullingMode(mode);
+
+  /// Double-sided rendering override.
+  bool get isDoubleSided => nativeInstance.isDoubleSided;
+  set isDoubleSided(bool doubleSided) => nativeInstance.setDoubleSided(doubleSided);
+
+  /// Color buffer write override.
+  bool get isColorWriteEnabled => nativeInstance.isColorWriteEnabled;
+  set isColorWriteEnabled(bool enable) => nativeInstance.setColorWrite(enable);
+
+  /// Depth buffer write override.
+  bool get isDepthWriteEnabled => nativeInstance.isDepthWriteEnabled;
+  set isDepthWriteEnabled(bool enable) => nativeInstance.setDepthWrite(enable);
+
+  /// Depth test (culling) override.
+  bool get isDepthCullingEnabled => nativeInstance.isDepthCullingEnabled;
+  set isDepthCullingEnabled(bool enable) => nativeInstance.setDepthCulling(enable);
+
+  /// Depth comparison function override.
+  DepthFunc get depthFunc => nativeInstance.depthFunc;
+  set depthFunc(DepthFunc func) => nativeInstance.setDepthFunc(func);
+
+  /// Transparency mode override.
+  TransparencyMode get transparencyMode => nativeInstance.transparencyMode;
+  set transparencyMode(TransparencyMode mode) => nativeInstance.setTransparencyMode(mode);
+
+  /// Mask alpha cutoff threshold override.
+  double get maskThreshold => nativeInstance.maskThreshold;
+  set maskThreshold(double threshold) => nativeInstance.setMaskThreshold(threshold);
+
+  /// Sets the polygon offset for this instance (e.g. for decals).
+  void setPolygonOffset(double scale, double constant) {
+    nativeInstance.setPolygonOffset(scale, constant);
+  }
+
+  /// Sets a custom viewport scissor rectangle (bottom-left origin).
+  void setScissor({required int left, required int bottom, required int width, required int height}) {
+    nativeInstance.setScissor(left: left, bottom: bottom, width: width, height: height);
+  }
+
+  /// Unsets custom scissor rectangle.
+  void unsetScissor() {
+    nativeInstance.unsetScissor();
+  }
+
+  // --- Stencil Overrides ---
+
+  /// Enables or disables writing to the stencil buffer.
+  void setStencilWrite(bool enabled) => nativeInstance.setStencilWrite(enabled);
+
+  /// Checks if stencil buffer writing is enabled.
+  bool get isStencilWriteEnabled => nativeInstance.isStencilWriteEnabled;
+
+  /// Sets the stencil comparison function.
+  void setStencilCompareFunction(DepthFunc func, {StencilFace face = StencilFace.frontAndBack}) {
+    nativeInstance.setStencilCompareFunction(func, face: face);
+  }
+
+  /// Sets the stencil operation on pass.
+  void setStencilOpDepthStencilPass(StencilOperation op, {StencilFace face = StencilFace.frontAndBack}) {
+    nativeInstance.setStencilOpDepthStencilPass(op, face: face);
+  }
+
+  /// Sets the stencil reference value.
+  void setStencilReferenceValue(int value, {StencilFace face = StencilFace.frontAndBack}) {
+    nativeInstance.setStencilReferenceValue(value, face: face);
+  }
+
+  /// Sets the stencil read mask.
+  void setStencilReadMask(int mask, {StencilFace face = StencilFace.frontAndBack}) {
+    nativeInstance.setStencilReadMask(mask, face: face);
+  }
+
+  /// Sets the stencil write mask.
+  void setStencilWriteMask(int mask, {StencilFace face = StencilFace.frontAndBack}) {
+    nativeInstance.setStencilWriteMask(mask, face: face);
+  }
+
+  @override
+  void dispose() {
+    if (isDisposed) return;
+    for (final tex in _ownedTextures) {
+      tex.dispose();
+    }
+    _ownedTextures.clear();
+    _boundTextures.clear();
+    super.dispose();
+    material.release();
+  }
+}

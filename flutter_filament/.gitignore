@@ -1,0 +1,44 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.buildlog/
+.history
+.svn/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# The .vscode folder contains launch configuration and tasks you configure in
+# VS Code which you may wish to be included in version control, so this line
+# is commented out by default.
+#.vscode/
+
+# Flutter/Dart/Pub related
+# Libraries should not include pubspec.lock, per https://dart.dev/guides/libraries/private-files#pubspeclock.
+/pubspec.lock
+**/doc/api/
+.dart_tool/
+.flutter-plugins-dependencies
+/build/
+/coverage/
+
+# Build-generated symlink target lives under /build (ignored)
+/compile_commands.json
+
+# WebAssembly module built by tool/web/build_module.sh
+/web/flutter_filament.js
+/web/flutter_filament.wasm
+
+# clangd's index cache (the first commit included it by mistake)
+.cache/
+
+# clangd config with machine-specific include paths (see docs/en/getting-started/setup.md)
+.clangd

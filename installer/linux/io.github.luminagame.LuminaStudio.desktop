@@ -1,0 +1,18 @@
+[Desktop Entry]
+Type=Application
+Version=1.5
+Name=Lumina Studio
+GenericName=3D Game Engine Editor
+Comment=Create 3D games with the Lumina engine
+Exec=lumina-studio
+Icon=lumina-studio
+Terminal=false
+Categories=Development;IDE;Graphics;3DGraphics;
+Keywords=game;engine;3D;editor;filament;flutter;
+StartupNotify=true
+StartupWMClass=lumina_ui
+Actions=update;
+
+[Desktop Action update]
+Name=Update Lumina Studio
+Exec=lumina-studio --update

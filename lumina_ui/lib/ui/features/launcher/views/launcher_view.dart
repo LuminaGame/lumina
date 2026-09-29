@@ -1,0 +1,561 @@
+import 'dart:async';
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
+import 'package:path/path.dart' as p;
+import 'package:shadcn_flutter/shadcn_flutter.dart';
+import 'package:lumina/lumina.dart';
+import 'package:lumina_ui/editor_entry.dart' show appThemeModeNotifier;
+import '../../../core/theme/editor_theme.dart';
+import '../../../core/theme/editor_theme_data.dart';
+import '../../../core/theme/editor_theme_store.dart';
+import '../../../core/window/lumina_window.dart';
+import '../../../core/window/window_controls.dart';
+import '../../../core/host/editor_host.dart';
+import '../services/project_editor_resolver.dart';
+import 'editor_build_splash.dart';
+import 'missing_editor_binary_dialog.dart';
+import '../view_models/launcher_view_model.dart';
+import '../../main_editor/views/main_editor_view.dart';
+import "create_project_dialog.dart";
+import 'launcher_recent_projects_pane.dart';
+import 'launcher_settings_panes.dart';
+import 'launcher_templates_pane.dart';
+import "../view_models/create_project_view_model.dart";
+
+class LauncherView extends StatefulWidget {
+  final LauncherViewModel? viewModel;
+
+  /// `--project <dir>` — open this project as soon as the
+  /// launcher is up, through the same resolver as Open.
+  final String? initialProjectDir;
+
+  /// Builds the editor an Open lands in (default: [MainEditorView]); tests
+  /// pass one with a view model they control.
+  final Widget Function(LuminaProject project, String? projectLocation, String? startupWarning)? editorBuilder;
+
+  const LauncherView({super.key, this.viewModel, this.initialProjectDir, this.editorBuilder});
+
+  @override
+  State<LauncherView> createState() => _LauncherViewState();
+}
+
+class _LauncherViewState extends State<LauncherView> {
+  late final LauncherViewModel _viewModel;
+
+  @override
+  void initState() {
+    super.initState();
+    _viewModel = widget.viewModel ?? LauncherViewModel();
+    _viewModel.addListener(_onViewModelChanged);
+    final initial = widget.initialProjectDir;
+    if (initial != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _openInitialProject(initial));
+    }
+  }
+
+  @override
+  void dispose() {
+    _viewModel.removeListener(_onViewModelChanged);
+    if (widget.viewModel == null) {
+      _viewModel.dispose();
+    }
+    super.dispose();
+  }
+
+  void _onViewModelChanged() {
+    if (appThemeModeNotifier.value != _viewModel.themeMode) {
+      appThemeModeNotifier.value = _viewModel.themeMode;
+    }
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+
+  void _openMainEditor(
+    BuildContext context, {
+    required LuminaProject project,
+    String? projectDir,
+    String? startupWarning,
+  }) {
+    // [projectDir] is the project folder; EditorViewModel wants its parent, so
+    // the editor opens the real folder on disk instead of falling back to
+    // ~/Lumina Projects/<name>.
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder(
+        pageBuilder: (_, _, _) {
+          final location = projectDir == null ? null : Directory(projectDir).parent.path;
+          return widget.editorBuilder?.call(project, location, startupWarning) ??
+              MainEditorView(project: project, projectLocation: location, startupWarning: startupWarning);
+        },
+      ),
+    );
+  }
+
+  // --- Every Open goes through the project editor resolver ------
+
+  /// "Checking project editor…" while the resolver runs.
+  bool _resolving = false;
+
+  /// `--project <dir>`: open it as soon as the launcher is up.
+  Future<void> _openInitialProject(String dir) async {
+    final name = EditorHostGeneratorService.projectNameIn(dir);
+    final loaded = name == null ? null : await _viewModel.openExternal(p.join(dir, '$name.lmproject'));
+    if (loaded == null || !mounted) return;
+    await _openProject(loaded, dir, rebuild: LuminaEditorHost.args.rebuild);
+  }
+
+  static String _inactivePluginsWarning(List<String> names) =>
+      'Code plugins inactive in this session: ${names.join(', ')}. Reopen the project from the launcher and build its '
+      'editor to use them.';
+
+  Future<void> _openProject(LuminaProject project, String projectDir, {bool rebuild = false}) async {
+    // A project editor opens its own project (after checking it is not
+    // stale); `--no-plugins` opens any project in this binary.
+    if (LuminaEditorHost.isProjectEditor) return _selfCheckThenOpen(project, projectDir);
+    if (LuminaEditorHost.args.noPlugins) {
+      final plugins = await _viewModel.editorResolver.enabledCodePlugins(projectDir);
+      if (!mounted) return;
+      return _openMainEditor(context,
+          project: project,
+          projectDir: projectDir,
+          startupWarning: plugins.isEmpty ? null : _inactivePluginsWarning([for (final d in plugins) d.name]));
+    }
+
+    setState(() => _resolving = true);
+    ProjectEditorDecision decision;
+    String? fallbackWarning;
+    try {
+      decision = await _viewModel.resolveProjectEditor(projectDir, rebuild: rebuild);
+    } catch (e) {
+      // No Flutter on PATH, an unreadable plugin: the project still opens.
+      List<LuminaPluginDescriptor> plugins;
+      try {
+        plugins = await _viewModel.editorResolver.enabledCodePlugins(projectDir);
+      } catch (_) {
+        plugins = const [];
+      }
+      decision = plugins.isEmpty ? const OpenInPlace() : MissingBinary("Could not check this project's editor: $e", plugins);
+      // Say why a project that would have its own editor opened here.
+      if (plugins.isEmpty && _viewModel.editorResolver.everyProject) {
+        fallbackWarning = "Could not build this project's editor ($e); it opened in this editor.";
+      }
+    } finally {
+      if (mounted) setState(() => _resolving = false);
+    }
+    if (!mounted) return;
+    switch (decision) {
+      case OpenInPlace():
+        _openMainEditor(context, project: project, projectDir: projectDir, startupWarning: fallbackWarning);
+      case ExecCached(:final entry):
+        await _viewModel.execProjectEditor(entry.executable, projectDir);
+      case NeedsBuild(:final plugins):
+        _showBuildSplash(project, projectDir, plugins);
+      case MissingBinary(:final reason, :final plugins, :final pluginNames):
+        final choice = await MissingEditorBinaryDialog.show(context,
+            projectName: project.projectName, pluginNames: pluginNames, reason: reason);
+        if (!mounted) return;
+        switch (choice) {
+          case MissingBinaryChoice.buildAndOpen:
+            _showBuildSplash(project, projectDir, plugins);
+          case MissingBinaryChoice.openWithoutPlugins:
+            _openMainEditor(context, project: project, projectDir: projectDir, startupWarning: _inactivePluginsWarning(pluginNames));
+          case MissingBinaryChoice.cancel:
+            break;
+        }
+    }
+  }
+
+  void _showBuildSplash(LuminaProject project, String projectDir, List<LuminaPluginDescriptor> plugins) {
+    final build = _viewModel.projectEditorBuild(project.projectName, projectDir, plugins);
+    // With a native window the splash resizes it to 720×400; in tests it is
+    // drawn at that size in the middle of the test window.
+    final manageWindow = EditorBuildSplash.manageNativeWindow && Platform.environment['FLUTTER_TEST'] != 'true';
+    Navigator.of(context)
+        .push(
+          PageRouteBuilder(
+            pageBuilder: (routeContext, _, _) {
+              final splash = EditorBuildSplash(
+                viewModel: build,
+                manageWindow: manageWindow,
+                onSucceeded: (vm) {
+                  final outcome = vm.outcome;
+                  if (outcome is EditorBuildSucceeded) {
+                    unawaited(_viewModel.execProjectEditor(outcome.entry.executable, projectDir));
+                  }
+                },
+                onOpenWithoutPlugins: () {
+                  Navigator.of(routeContext).pop();
+                  _openMainEditor(context,
+                      project: project,
+                      projectDir: projectDir,
+                      startupWarning: plugins.isEmpty
+                          ? "This project's editor did not build; it opened in this editor (see the build log)."
+                          : _inactivePluginsWarning([for (final d in plugins) d.name]));
+                },
+                onClose: () => Navigator.of(routeContext).pop(),
+              );
+              return manageWindow
+                  ? splash
+                  : ColoredBox(
+                      color: EditorColors.background,
+                      child: Center(child: SizedBox.fromSize(size: EditorBuildSplash.windowSize, child: splash)),
+                    );
+            },
+          ),
+        )
+        .whenComplete(build.dispose);
+  }
+
+  /// A project editor started on its own (desktop shortcut, `flutter run`)
+  /// checks its compiled-in fingerprint against the project's current
+  /// inputs; a stale one offers to rebuild through the launcher.
+  Future<void> _selfCheckThenOpen(LuminaProject project, String projectDir) async {
+    List<String> reasons;
+    try {
+      reasons = await _viewModel.editorResolver.staleSelfCheck(projectDir, LuminaEditorHost.compiledFingerprint);
+    } catch (_) {
+      reasons = const [];
+    }
+    if (!mounted) return;
+    if (reasons.isEmpty) return _openMainEditor(context, project: project, projectDir: projectDir);
+    final rebuild = await showOverlay<bool>(
+      context,
+      const DialogConfiguration(),
+      builder: (ctx) => AlertDialog(
+        key: const Key('stale_project_editor_dialog'),
+        title: const Text('Project editor out of date'),
+        content: Text("This project's editor is out of date (${reasons.join(', ')}). Rebuild now?"),
+        actions: [
+          OutlineButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Continue anyway')),
+          PrimaryButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Rebuild')),
+        ],
+      ),
+    ).future;
+    if (!mounted) return;
+    if (rebuild == true) {
+      await EditorHandOff.instance.restartThroughLauncher(projectDir, rebuild: true);
+      return;
+    }
+    _openMainEditor(context,
+        project: project,
+        projectDir: projectDir,
+        startupWarning: 'This project editor is out of date (${reasons.join(', ')}); continuing with the old build.');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // The switch shows and sets the editor theme's
+    // brightness — Lumina Light, or back to Lumina Dark.
+    final themes = EditorThemeScope.of(context);
+    final isDark = themes.active.brightness == Brightness.dark;
+
+    final launcher = Scaffold(
+      child: Container(
+        color: EditorColors.background,
+        child: Column(
+          children: [
+            // Top App Header
+            // the header is the window's title bar —
+            // drag to move, double-click to maximize, window buttons at the
+            // right end.
+            Container(
+              height: 52,
+              padding: EdgeInsets.only(left: 20 + LuminaWindow.leadingInset),
+              decoration: const BoxDecoration(
+                color: EditorColors.cardHeader,
+                border: Border(bottom: BorderSide(color: EditorColors.border)),
+              ),
+              child: Row(
+                children: [
+                  Image.asset(
+                    isDark ? 'assets/logo_white.png' : 'assets/logo_black.png',
+                    height: 52,
+                    errorBuilder: (ctx, _, _) => const Icon(
+                      LucideIcons.box,
+                      size: 24,
+                      color: EditorColors.primary,
+                    ),
+                  ),
+
+                  const SizedBox(width: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2.5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: EditorColors.primary.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(
+                        color: EditorColors.primary.withValues(alpha: 0.4),
+                      ),
+                    ),
+                    child: Text(
+                      _viewModel.engineDisplayVersion,
+                      style: const TextStyle(
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: EditorTypography.monoFamily,
+                        color: EditorColors.primary,
+                      ),
+                    ),
+                  ),
+                  const Expanded(
+                    child: WindowDragArea(key: ValueKey('launcher_title_drag_area')),
+                  ),
+                  // Theme Mode Switcher
+                  Row(
+                    children: [
+                      Icon(
+                        isDark ? LucideIcons.moon : LucideIcons.sun,
+                        size: 14,
+                        color: isDark ? EditorColors.primary : Colors.amber,
+                      ),
+                      const SizedBox(width: 8),
+                      Switch(
+                        value: isDark,
+                        onChanged: (val) {
+                          _viewModel.toggleTheme(val);
+                          themes.activate(val ? EditorThemeData.luminaDark.name : EditorThemeData.luminaLight.name);
+                        },
+                      ),
+                    ],
+                  ),
+                  SizedBox(width: LuminaWindow.drawsOwnControls ? 16 : 20),
+                  const LuminaWindowControls(height: 52),
+                ],
+              ),
+            ),
+
+            // Main Content Area with Left Navigation Bar & Center Pane
+            Expanded(
+              child: Row(
+                children: [
+                  // Left Navigation Sidebar
+                  Container(
+                    width: 220,
+                    decoration: const BoxDecoration(
+                      color: EditorColors.cardHeader,
+                      border: Border(
+                        right: BorderSide(color: EditorColors.border),
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 12),
+                        _buildNavButton(
+                          0,
+                          'Recent Projects',
+                          LucideIcons.clock,
+                        ),
+                        _buildNavButton(
+                          1,
+                          'Templates',
+                          LucideIcons.layoutTemplate,
+                        ),
+                        _buildNavButton(2, 'Engine Versions', LucideIcons.cpu),
+                        _buildNavButton(3, 'Settings', LucideIcons.settings),
+                        const Spacer(),
+                        // Sidebar Footer
+                        Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Row(
+                            children: [
+                              Image.asset(
+                                isDark ? 'assets/logo_white.png' : 'assets/logo_black.png',
+                                height: 20,
+                                errorBuilder: (ctx, _, _) => const Icon(
+                                  LucideIcons.box,
+                                  size: 16,
+                                  color: EditorColors.mutedForeground,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Lumina Engine ${_viewModel.engineVersion}',
+                                  style: const TextStyle(
+                                    fontSize: 9,
+                                    color: EditorColors.mutedForeground,
+                                    fontFamily: EditorTypography.monoFamily,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Center Selected Tab Content Pane
+                  Expanded(
+                    child: IndexedStack(
+                      index: _viewModel.selectedTabIndex,
+                      children: [
+                        LauncherRecentProjectsPane(
+                          viewModel: _viewModel,
+                          onOpenProject: (project, dir) => _openProject(project, dir),
+                          onNewProject: () => _showNewProjectDialog(context),
+                        ),
+                        LauncherTemplatesPane(
+                          viewModel: _viewModel,
+                          onUseTemplate: (id) => _showNewProjectDialog(context, initialTemplate: id),
+                        ),
+                        LauncherEngineVersionsPane(viewModel: _viewModel),
+                        LauncherSettingsPane(viewModel: _viewModel),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Bottom Action Bar
+            Container(
+              height: 52,
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              decoration: const BoxDecoration(
+                color: EditorColors.cardHeader,
+                border: Border(top: BorderSide(color: EditorColors.border)),
+              ),
+              child: Row(
+                children: [
+                  OutlineButton(
+                    onPressed: () => _handleOpenExternal(context),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(LucideIcons.folderOpen, size: 14),
+                        SizedBox(width: 8),
+                        Text('Open External...'),
+                      ],
+                    ),
+                  ),
+                  const Spacer(),
+                  PrimaryButton(
+                    onPressed: () => _showNewProjectDialog(context),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(LucideIcons.plus, size: 14),
+                        SizedBox(width: 8),
+                        Text('New Project...'),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!_resolving) return launcher;
+    // The resolver hashes the plugins and the engine revision
+    // before a project opens.
+    return Stack(children: [
+      launcher,
+      Positioned.fill(
+        child: ColoredBox(
+          color: EditorColors.background.withValues(alpha: 0.6),
+          child: const Center(
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              CircularProgressIndicator(size: 16),
+              SizedBox(width: 10),
+              Text('Checking project editor…', key: Key('launcher_resolving'), style: TextStyle(fontSize: 12, color: EditorColors.foreground)),
+            ]),
+          ),
+        ),
+      ),
+    ]);
+  }
+
+  Widget _buildNavButton(int index, String label, IconData icon) {
+    final isSelected = _viewModel.selectedTabIndex == index;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+      child: GestureDetector(
+        onTap: () => _viewModel.setTab(index),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? EditorColors.primary.withValues(alpha: 0.15)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(6),
+            border: isSelected
+                ? Border.all(color: EditorColors.primary.withValues(alpha: 0.5))
+                : null,
+          ),
+          child: Row(
+            children: [
+              Icon(
+                icon,
+                size: 15,
+                color: isSelected
+                    ? EditorColors.primary
+                    : EditorColors.mutedForeground,
+              ),
+              const SizedBox(width: 10),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  color: isSelected
+                      ? EditorColors.primary
+                      : EditorColors.foreground,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+
+  Future<void> _handleOpenExternal(BuildContext context) async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['lmproject'],
+    );
+    if (result != null && result.files.single.path != null) {
+      final path = result.files.single.path!;
+      final loaded = await _viewModel.openExternal(path);
+      if (loaded != null && context.mounted) {
+        await _openProject(loaded, File(path).parent.path);
+      }
+    }
+  }
+
+
+  void _showNewProjectDialog(BuildContext context, {String? initialTemplate}) {
+    // Templates installed since the launcher opened.
+    _viewModel.refreshInstalledTemplates();
+    showOverlay(
+      context,
+      const DialogConfiguration(),
+      builder: (ctx) {
+        final createVM = CreateProjectViewModel(
+          launcherVM: _viewModel,
+          projectRepo: _viewModel.projectRepo,
+        );
+        if (initialTemplate != null) {
+          createVM.updateTemplate(initialTemplate);
+        }
+        return CreateProjectDialog(
+          viewModel: createVM,
+          onSuccess: () {
+            if (createVM.activeProject != null) {
+              _openProject(createVM.activeProject!, '${createVM.location}/${createVM.name}');
+            }
+          },
+        );
+      },
+    );
+  }
+}

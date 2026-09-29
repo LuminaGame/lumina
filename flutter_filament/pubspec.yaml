@@ -1,0 +1,46 @@
+name: flutter_filament
+description: "Dart FFI bindings for Google Filament 3D rendering engine. Supports macOS, Linux and Windows."
+version: 0.0.1
+repository: https://github.com/user/flutter_filament
+
+environment:
+  sdk: ^3.12.0
+  flutter: ">=3.0.0"
+resolution: workspace
+
+dependencies:
+  code_assets: ^1.0.0
+  # hook/native_library_cache.dart keys the native library cache.
+  crypto: ^3.0.6
+  ffi: ^2.1.4
+  flutter:
+    sdk: flutter
+  hooks: ^1.0.0
+  # The smoke-test system that lib/testing.dart exports (SmokeArtifacts, the
+  # video rules and the report runner of tool/smoke_report.dart); tools repo,
+  # pubspec_overrides.yaml at the workspace root points it at ../tools.
+  lumina_smoke:
+    git:
+      url: https://github.com/LuminaGame/tools.git
+      path: lumina_smoke
+      ref: 553e2bfe1dc153263d566162164a8997e382f1ca
+  logging: ^1.3.0
+  native_toolchain_c: ^0.17.4
+  web: ^1.1.1
+
+flutter:
+  plugin:
+    platforms:
+      macos:
+        ffiPlugin: true
+      linux:
+        ffiPlugin: true
+
+dev_dependencies:
+  ffigen: ^20.1.1
+  flutter_lints: ^6.0.0
+  flutter_test:
+    sdk: flutter
+  image: ^4.10.1
+  puppeteer: ^3.26.0
+  test: ^1.28.0

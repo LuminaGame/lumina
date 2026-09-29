@@ -1,0 +1,40 @@
+# Dart / Flutter (per-package .gitignore files add their own entries)
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+coverage/
+
+# Local development overrides of the sibling repos (tools, plugins,
+# marketplace): see pubspec.yaml; pub workspaces read them at the root only.
+pubspec_overrides.yaml
+
+# Local links (see .lumina_symlinks.json): patched Filament with its prebuilt
+# out/ folders, and the shared 3D test assets (their own repo). A release
+# checkout also links its prebuilt OpenRigLogic library folder.
+/filament
+/test-assets
+/openriglogic
+
+# Generated web module (flutter_filament/tool/web)
+flutter_filament/web/flutter_filament.js
+flutter_filament/web/flutter_filament.wasm
+
+# Packaging secrets and outputs (lumina_ui Windows packaging)
+windows/packaging/dev/
+**/windows/packaging/dev/
+*.pfx
+*.msix
+
+# Release outputs of the installer and packaging scripts run locally
+/dist/
+
+# IDEs / OS
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db

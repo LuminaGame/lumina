@@ -1,0 +1,92 @@
+<!doctype html>
+<!-- The WebAssembly module draws on a WebGL2 canvas through the same
+     filament_* C functions the Dart bindings call. Driven by
+     test/web/canvas_smoke_test.dart; results land in window.__smoke. -->
+<html>
+<head><meta charset="utf-8"><title>flutter_filament web module smoke</title>
+<style>html, body { margin: 0; background: #000; } canvas { display: block; }</style></head>
+<body>
+<canvas id="c" width="512" height="512"></canvas>
+<script src="/web/flutter_filament.js"></script>
+<script>
+(async () => {
+  const report = (r) => { window.__smoke = r; };
+  try {
+    const M = await FlutterFilament();
+    const cstr = (s) => { const n = M.lengthBytesUTF8(s) + 1; const p = M._malloc(n); M.stringToUTF8(s, p, n); return p; };
+
+    const ctxOut = M._malloc(4);
+    const engine = M._filament_engine_create_for_canvas(cstr('#c'), ctxOut);
+    if (!engine) return report({ ok: false, error: 'no engine' });
+    const swapChain = M._filament_engine_create_swap_chain(engine, 0, 0n);
+    const renderer = M._filament_engine_create_renderer(engine);
+    const scene = M._filament_engine_create_scene(engine);
+    const view = M._filament_engine_create_view(engine);
+
+    const entities = M._malloc(8);
+    M._filament_entity_manager_create_entities(2, entities);
+    const triangle = M.HEAPU32[entities >> 2];
+    const cameraEntity = M.HEAPU32[(entities >> 2) + 1];
+    const camera = M._filament_engine_create_camera(engine, cameraEntity);
+    M._filament_camera_set_projection_ortho(camera, -1, 1, -1, 1, 0, 10);
+
+    // One triangle across the centre, at z = -1 (the camera looks down -Z).
+    const positions = new Float32Array([-0.6, -0.6, -1, 0.6, -0.6, -1, 0.0, 0.7, -1]);
+    const pos = M._malloc(positions.byteLength);
+    M.HEAPF32.set(positions, pos >> 2);
+    const vb = M._filament_vertex_buffer_create_legacy(engine, 3, 1);
+    M._filament_vertex_buffer_set_buffer_at(engine, vb, 0, pos, positions.byteLength, 0, 0, 0);
+    const indices = new Uint16Array([0, 1, 2]);
+    const idx = M._malloc(indices.byteLength);
+    M.HEAPU16.set(indices, idx >> 1);
+    const ib = M._filament_index_buffer_create(engine, 3, M._filament_enum_index_type(0));
+    M._filament_index_buffer_set_buffer(engine, ib, idx, indices.byteLength, 0, 0, 0);
+
+    const pkg = new Uint8Array(await (await fetch('/build/web_smoke/red_unlit.filamat')).arrayBuffer());
+    const pkgPtr = M._malloc(pkg.byteLength);
+    M.HEAPU8.set(pkg, pkgPtr);
+    const material = M._filament_material_create(engine, pkgPtr, pkg.byteLength);
+    if (!material) return report({ ok: false, error: 'material package rejected' });
+    const mi = M._filament_material_get_default_instance(material);
+
+    const rb = M._filament_renderable_builder_create(1);
+    M._filament_renderable_builder_bounding_box(rb, -1, -1, -2, 1, 1, 0);
+    M._filament_renderable_builder_material(rb, 0, mi);
+    M._filament_renderable_builder_geometry(rb, 0, M._filament_enum_primitive_type(3), vb, ib, 0, 3);
+    // build() consumes the builder (as the Dart wrapper relies on): no destroy.
+    if (M._filament_renderable_builder_build(rb, engine, triangle) !== 0) return report({ ok: false, error: 'renderable build failed' });
+    M._filament_scene_add_entity(scene, triangle);
+
+    M._filament_view_set_scene(view, scene);
+    M._filament_view_set_camera(view, camera);
+    M._filament_view_set_viewport(view, 0, 0, 512, 512);
+    // No tone mapping: the pixels must be exactly the clear colour and red.
+    M._filament_view_set_post_processing_enabled(view, false);
+    M._filament_renderer_set_clear_options(renderer, 0.2, 0.4, 0.8, 1.0, true, false);
+
+    const gl = document.getElementById('c').getContext('webgl2');
+    const px = (x, y) => { const b = new Uint8Array(4); gl.readPixels(x, y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, b); return Array.from(b); };
+    let rendered = 0;
+    for (let frame = 0; frame < 10 && rendered < 3; frame++) {
+      if (M._filament_renderer_begin_frame(renderer, swapChain, 0n)) {
+        M._filament_renderer_render(renderer, view);
+        M._filament_renderer_end_frame(renderer);
+        rendered++;
+      }
+      M._filament_engine_flush_and_wait(engine);
+      await new Promise((r) => requestAnimationFrame(r));
+    }
+    // Draw once more and read back in the same task, before compositing.
+    M._filament_renderer_begin_frame(renderer, swapChain, 0n);
+    M._filament_renderer_render(renderer, view);
+    M._filament_renderer_end_frame(renderer);
+    M._filament_engine_flush_and_wait(engine);
+    report({ ok: true, rendered, center: px(256, 200), corner: px(10, 10), glError: gl.getError(),
+             contextHandle: M.HEAP32[ctxOut >> 2] });
+  } catch (e) {
+    report({ ok: false, error: String(e && e.stack || e) });
+  }
+})();
+</script>
+</body>
+</html>

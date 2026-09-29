@@ -1,0 +1,172 @@
+name: Prebuilt Filament
+description: >
+  Makes the prebuilt Filament of this runner's OS available: the archive
+  lumina/build/filament-prebuilt/filament-<VERSION>-<os>-x64.{zip|tar.gz}
+  plus its .sha256 sidecar, from the cache, else built from upstream Filament
+  and third_party/filament/patches (tool/filament/build_prebuilt.*). With
+  `fetch`, a cache miss first tries the latest published release
+  (tool/filament/fetch_prebuilt.dart). With `extract` the Filament tree ends
+  up where the root pubspec's `filament_dir` user-define points
+  (tool/release/release_info.dart filament-dir), which is what the hooks read.
+
+  The cache key hashes the patches, tool/filament/VERSION, the build scripts
+  and the runner OS. Caches are scoped to a ref and readable from the default
+  branch, so the CI workflow's runs on main keep a cache every release tag
+  (and every pull request) can restore.
+
+  Linux runners need the linux-build-deps action first (clang 19+); fetching
+  needs the workspace resolved (flutter pub get).
+
+inputs:
+  fetch:
+    description: On a cache miss, try the latest published release before building.
+    default: 'false'
+  save:
+    description: Save a newly built archive to the cache.
+    default: 'true'
+  extract:
+    description: Unpack the archive to the root pubspec's filament_dir.
+    default: 'false'
+
+outputs:
+  version:
+    description: tool/filament/VERSION.
+    value: ${{ steps.info.outputs.version }}
+  os:
+    description: linux, windows or macos.
+    value: ${{ steps.info.outputs.os }}
+  cache-hit:
+    description: Whether the cache had the archive.
+    value: ${{ steps.restore.outputs.cache-hit }}
+
+runs:
+  using: composite
+  steps:
+    - name: Filament version
+      id: info
+      shell: bash
+      working-directory: lumina
+      run: |
+        set -euo pipefail
+        if [ ! -f tool/filament/VERSION ]; then
+          echo "::error::tool/filament/VERSION is missing." >&2
+          exit 1
+        fi
+        version="$(tr -d '[:space:]' < tool/filament/VERSION)"
+        case "$RUNNER_OS" in
+          Linux) os=linux; ext=tar.gz ;;
+          Windows) os=windows; ext=zip ;;
+          macOS) os=macos; ext=tar.gz ;;
+          *) echo "::error::Unsupported runner OS $RUNNER_OS" >&2; exit 1 ;;
+        esac
+        {
+          echo "version=$version"
+          echo "os=$os"
+          echo "archive=build/filament-prebuilt/filament-$version-$os-x64.$ext"
+        } >> "$GITHUB_OUTPUT"
+
+    - name: Restore the cache
+      id: restore
+      uses: actions/cache/restore@v4
+      with:
+        path: lumina/build/filament-prebuilt/filament-*-x64.*
+        key: filament-prebuilt-${{ runner.os }}-${{ hashFiles('lumina/third_party/filament/patches/**', 'lumina/tool/filament/VERSION', 'lumina/tool/filament/build_prebuilt.sh', 'lumina/tool/filament/build_prebuilt.ps1') }}
+
+    - name: Fetch a published build
+      if: steps.restore.outputs.cache-hit != 'true' && inputs.fetch == 'true'
+      shell: bash
+      working-directory: lumina
+      env:
+        GH_TOKEN: ${{ github.token }}
+        REPO: ${{ github.repository }}
+        VERSION: ${{ steps.info.outputs.version }}
+      run: |
+        latest="https://api.github.com/repos/$REPO/releases/latest"
+        tag="$(curl -fsSL -H "Authorization: Bearer $GH_TOKEN" "$latest" 2>/dev/null \
+          | sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n1 || true)"
+        target="$(dart tool/release/release_info.dart filament-dir)"
+        if [ -n "$tag" ] && dir="$(dart run tool/filament/fetch_prebuilt.dart --tag "$tag")"; then
+          if [ "$(realpath "$dir")" != "$(realpath -m "$target")" ]; then
+            rm -rf "$target"
+            mkdir -p "$(dirname "$target")"
+            mv "$dir" "$target"
+          fi
+          echo "Filament $VERSION from release $tag in $target."
+        else
+          echo "::notice::No published Filament $VERSION to fetch; building it."
+        fi
+
+    - name: Is a build needed?
+      id: need
+      shell: bash
+      working-directory: lumina
+      env:
+        ARCHIVE: ${{ steps.info.outputs.archive }}
+      run: |
+        target="$(dart tool/release/release_info.dart filament-dir 2>/dev/null || echo filament)"
+        if [ -f "$ARCHIVE" ] || [ -f "$target/android/gradle.properties" ]; then
+          echo "build=false" >> "$GITHUB_OUTPUT"
+        else
+          echo "build=true" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Free disk space (Linux)
+      if: steps.need.outputs.build == 'true' && runner.os == 'Linux'
+      shell: bash
+      run: |
+        sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+        df -h "$GITHUB_WORKSPACE"
+
+    - name: MSVC environment (Windows)
+      if: steps.need.outputs.build == 'true' && runner.os == 'Windows'
+      uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: x64
+
+    - name: Build Filament (Linux / macOS)
+      if: steps.need.outputs.build == 'true' && runner.os != 'Windows'
+      shell: bash
+      working-directory: lumina
+      run: bash tool/filament/build_prebuilt.sh
+
+    # A short work folder: MSVC object paths approach MAX_PATH.
+    - name: Build Filament (Windows)
+      if: steps.need.outputs.build == 'true' && runner.os == 'Windows'
+      shell: pwsh
+      working-directory: lumina
+      run: ./tool/filament/build_prebuilt.ps1 -WorkDir (Join-Path $env:RUNNER_TEMP 'fs')
+
+    - name: Checksums
+      if: steps.need.outputs.build == 'true' || steps.restore.outputs.cache-hit == 'true'
+      shell: bash
+      working-directory: lumina
+      env:
+        ARCHIVE: ${{ steps.info.outputs.archive }}
+      run: |
+        set -euo pipefail
+        if [ ! -f "$ARCHIVE" ]; then
+          echo "::error::No $ARCHIVE after the Filament build." >&2
+          ls -la build/filament-prebuilt 2>/dev/null || true
+          exit 1
+        fi
+        cd "$(dirname "$ARCHIVE")"
+        name="$(basename "$ARCHIVE")"
+        if [ ! -f "$name.sha256" ]; then
+          sha256sum "$name" > "$name.sha256"
+        fi
+        sha256sum -c "$name.sha256"
+
+    - name: Save the cache
+      if: steps.need.outputs.build == 'true' && inputs.save == 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: lumina/build/filament-prebuilt/filament-*-x64.*
+        key: ${{ steps.restore.outputs.cache-primary-key }}
+
+    - name: Unpack to the hooks' filament_dir
+      if: inputs.extract == 'true'
+      shell: bash
+      working-directory: lumina
+      env:
+        ARCHIVE: ${{ steps.info.outputs.archive }}
+      run: bash .github/scripts/extract_filament.sh "$ARCHIVE" "$(dart tool/release/release_info.dart filament-dir)"

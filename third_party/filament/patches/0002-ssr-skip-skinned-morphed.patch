@@ -1,0 +1,48 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Can Us <me@canus.dev>
+Date: Wed, 23 Sep 2026 18:22:54 +0300
+Subject: [PATCH 2/3] Leave skinned/morphed renderables out of the SSR pass
+
+SPECIAL_SSR_VARIANT (MNT|PCK|DEP) cannot carry SKN because
+SPECIAL_SSR_MASK includes it, so setSkinning() turned the SSR variant of
+a skinned or morphed renderable into MNT|PCK|DEP|SKN, which resolves as
+a depth/picking variant. Its program does not match the SSR pass' render
+target or per-view layout: GL tolerates it, Vulkan loses the device
+(vkGetQueryPoolResults error=-4).
+
+Skinned/morphed renderables now emit sentinel commands in the SSR pass
+only; they are still drawn normally everywhere else.
+
+diff --git a/filament/src/RenderPass.cpp b/filament/src/RenderPass.cpp
+index af198953..31c6ff8a 100644
+--- a/filament/src/RenderPass.cpp
++++ b/filament/src/RenderPass.cpp
+@@ -621,6 +621,16 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
+ 
+         Variant renderableVariant{ variant };
+ 
++        // Lumina local patch (carried on top of v1.77.0):
++        // SPECIAL_SSR_VARIANT (MNT|PCK|DEP) cannot carry SKN -- SPECIAL_SSR_MASK includes it --
++        // so setSkinning() below would turn the SSR variant of a skinned or morphed renderable
++        // into MNT|PCK|DEP|SKN, which Variant resolves as a *depth/picking* variant. That
++        // program does not match the SSR pass' render target and per-view descriptor-set
++        // layout; GL tolerates it, Vulkan loses the device (vkGetQueryPoolResults error=-4).
++        // Until SSR gains skinning variants, skinned/morphed renderables are simply left out
++        // of the screen-space reflections pass (they are still drawn normally).
++        bool const skipInSsrPass = Variant::isSSRVariant(variant) && hasSkinningOrMorphing;
++
+         // We can't have SSR and shadowing together by construction.
+         assert_invariant(!Variant::isSSRVariant(variant) || !hasShadowing);
+         renderableVariant.setShadowReceiver(soaVisibility[i].receiveShadows && hasShadowing);
+@@ -673,9 +683,10 @@ RenderPass::Command* RenderPass::generateCommandsImpl(CommandTypeFlags extraFlag
+          */
+         for (auto const& primitive: primitives) {
+             FMaterialInstance const* const mi = primitive.getMaterialInstance();
+-            if (UTILS_UNLIKELY(!mi)) {
++            if (UTILS_UNLIKELY(!mi || skipInSsrPass)) {
+                 // This can happen because RenderPrimitives can be initialized with
+                 // a null MaterialInstance. In this case, skip the primitive.
++                // (Also taken for skinned/morphed renderables in the SSR pass, see above.)
+                 if constexpr (isColorPass) {
+                     curr->key = uint64_t(Pass::SENTINEL);
+                     ++curr;

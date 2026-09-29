@@ -1,0 +1,2 @@
+libc++abi1: arch-dependent-file-not-in-arch-specific-directory *usr/lib/llvm-22/lib/libc++abi.so.1.0*
+libc++abi1: breaks-without-version

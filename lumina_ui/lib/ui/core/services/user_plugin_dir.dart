@@ -1,0 +1,69 @@
+import 'dart:io';
+
+import 'package:lumina/data/models/lumina_plugin_descriptor.dart' show PluginOrigin;
+import 'package:lumina/data/services/lumina_data_dir.dart' show LuminaDataDir;
+import 'package:lumina/data/repositories/plugin_repository.dart' show PluginScanRoot;
+import 'package:path/path.dart' as p;
+
+import '../host/editor_host.dart' show LuminaEditorHost;
+
+/// The per-user plugin install directory the editor scans with the
+/// [PluginOrigin.user] origin and the Marketplace installs
+/// plugin listings into: `<data>/plugins`, beside the rest of the per-user
+/// data in [LuminaDataDir] (`~/.local/share/lumina` on Linux,
+/// `%LOCALAPPDATA%\Lumina` on Windows).
+///
+/// Resolved in this order:
+/// 1. [override], the in-process redirect a test sets to a temp directory;
+/// 2. the `LUMINA_USER_PLUGIN_DIR` environment variable;
+/// 3. `<data>/plugins`.
+abstract final class UserPluginDir {
+  static const String environmentVariable = 'LUMINA_USER_PLUGIN_DIR';
+
+  /// In-process redirect, ahead of [environmentVariable].
+  static Directory? override;
+
+  static Directory resolve({Map<String, String>? environment}) {
+    final redirected = override;
+    if (redirected != null) return redirected;
+    final env = environment ?? Platform.environment;
+    final fromEnv = env[environmentVariable];
+    if (fromEnv != null && fromEnv.isNotEmpty) return Directory(fromEnv);
+    return Directory(p.join(LuminaDataDir.resolve(environment: env).path, 'plugins'));
+  }
+}
+
+/// Where plugins keep their per-user data, one folder per
+/// plugin: [override], else `LUMINA_PLUGIN_DATA_DIR`, else
+/// `<data>/plugin_data` (beside the user plugin dir).
+abstract final class PluginDataDir {
+  static const String environmentVariable = 'LUMINA_PLUGIN_DATA_DIR';
+
+  /// In-process redirect, ahead of [environmentVariable].
+  static Directory? override;
+
+  static Directory resolve({Map<String, String>? environment}) {
+    final redirected = override;
+    if (redirected != null) return redirected;
+    final env = environment ?? Platform.environment;
+    final fromEnv = env[environmentVariable];
+    if (fromEnv != null && fromEnv.isNotEmpty) return Directory(fromEnv);
+    return Directory(p.join(LuminaDataDir.resolve(environment: env).path, 'plugin_data'));
+  }
+}
+
+/// Where the editor looks for plugins: the engine's `plugins/`
+/// (`LUMINA_ENGINE_ROOT`, else `<engineRoot>/plugins` — never relative to the
+/// working directory, which a project editor does not share with the engine),
+/// the project's `plugins/`, and the per-user [UserPluginDir]. The launcher's
+/// project editor resolver scans the same roots as the editor.
+List<PluginScanRoot> editorPluginScanRoots(String projectDir) {
+  final engineRoot = Platform.environment['LUMINA_ENGINE_ROOT'] ?? p.join(LuminaEditorHost.engineRoot, 'plugins');
+  return [
+    PluginScanRoot(dir: Directory(engineRoot), origin: PluginOrigin.engine),
+    PluginScanRoot(dir: Directory(p.join(projectDir, 'plugins')), origin: PluginOrigin.project),
+    // <data>/plugins, where the Marketplace installs plugin
+    // listings too.
+    PluginScanRoot(dir: UserPluginDir.resolve(), origin: PluginOrigin.user),
+  ];
+}

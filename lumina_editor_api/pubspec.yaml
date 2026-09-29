@@ -1,0 +1,23 @@
+name: lumina_editor_api
+description: "API for Lumina Editor Plugins."
+version: 0.0.1
+publish_to: none
+
+environment:
+  sdk: ^3.12.0
+  flutter: ">=1.17.0"
+resolution: workspace
+
+dependencies:
+  flutter:
+    sdk: flutter
+  lumina:
+    path: ../lumina
+  shadcn_flutter: ^0.0.9+1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:

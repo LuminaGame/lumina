@@ -1,0 +1,108 @@
+# nfpm configuration of the lumina-studio .deb and .rpm packages.
+# Build with installer/linux/build.sh (it runs nfpm from the repository root,
+# which the `src` paths below are relative to, with LUMINA_VERSION set).
+#
+# The package holds no editor binary: it declares what building and running
+# Lumina projects needs, installs a launcher, a .desktop entry and the icon,
+# and its postinstall script installs Flutter and downloads the latest
+# Lumina Studio release into /opt/lumina.
+name: lumina-studio
+arch: amd64
+platform: linux
+version: ${LUMINA_VERSION}
+version_schema: semver
+release: 1
+section: devel
+priority: optional
+maintainer: LuminaGame <lumina@users.noreply.github.com>
+vendor: Lumina
+homepage: https://github.com/LuminaGame/lumina
+description: |-
+  Lumina Studio, the editor of the Lumina 3D game engine.
+  Installs the tools to build and run Lumina projects (git, clang, CMake,
+  Ninja, the GTK 3 development files, GStreamer), the Flutter SDK
+  (stable, in /opt/lumina/flutter) and the latest Lumina Studio release
+  (/opt/lumina/studio), started with `lumina-studio`.
+
+# Debian / Ubuntu names. `flutter build linux` needs clang, cmake, ninja,
+# pkg-config and the GTK 3 / liblzma / libstdc++ development files; the
+# engine's pointer capture builds against the Wayland ones; GStreamer (base +
+# good: appsrc, vp8enc, webmmux) records videos; libGL / libvulkan load the
+# renderer's backends.
+depends:
+  - git
+  - curl
+  - ca-certificates
+  - tar
+  - unzip
+  - xz-utils
+  - zip
+  - clang
+  - cmake
+  - ninja-build
+  - pkg-config
+  - libgtk-3-dev
+  - liblzma-dev
+  - libstdc++-14-dev | libstdc++-13-dev | libstdc++-12-dev
+  - libwayland-dev
+  - wayland-protocols
+  - libgstreamer1.0-0
+  - gstreamer1.0-plugins-base
+  - gstreamer1.0-plugins-good
+  - gstreamer1.0-tools
+  - libgl1
+  - libvulkan1
+
+overrides:
+  # Fedora / RHEL names.
+  rpm:
+    depends:
+      - git
+      - curl
+      - ca-certificates
+      - tar
+      - unzip
+      - xz
+      - zip
+      - clang
+      - cmake
+      - ninja-build
+      - pkgconf-pkg-config
+      - gtk3-devel
+      - xz-devel
+      - libstdc++-devel
+      - wayland-devel
+      - wayland-protocols-devel
+      - gstreamer1
+      - gstreamer1-plugins-base
+      - gstreamer1-plugins-good
+      - gstreamer1-plugins-base-tools
+      - libglvnd-glx
+      - vulkan-loader
+
+contents:
+  - src: ./installer/linux/lumina-studio
+    dst: /usr/bin/lumina-studio
+    file_info:
+      mode: 0755
+  - src: ./installer/linux/install-studio.sh
+    dst: /usr/lib/lumina-studio/install-studio.sh
+    file_info:
+      mode: 0755
+  - src: ./installer/linux/io.github.luminagame.LuminaStudio.desktop
+    dst: /usr/share/applications/io.github.luminagame.LuminaStudio.desktop
+    file_info:
+      mode: 0644
+  - src: ./lumina_ui/assets/logo_color.svg
+    dst: /usr/share/icons/hicolor/scalable/apps/lumina-studio.svg
+    file_info:
+      mode: 0644
+  - src: ./lumina_ui/assets/logo_color.png
+    dst: /usr/share/pixmaps/lumina-studio.png
+    file_info:
+      mode: 0644
+
+scripts:
+  postinstall: ./installer/linux/scripts/postinstall.sh
+  preremove: ./installer/linux/scripts/preremove.sh
+  postremove: ./installer/linux/scripts/postremove.sh

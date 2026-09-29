@@ -1,0 +1,2 @@
+libc++-21-dev: arch-dependent-file-not-in-arch-specific-directory *usr/lib/llvm-21/lib/libc++.a*
+libc++-21-dev: arch-dependent-file-not-in-arch-specific-directory *usr/lib/llvm-21/lib/libc++experimental.a*

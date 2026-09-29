@@ -1,0 +1,66 @@
+name: lumina_workspace
+description: "Lumina: the Flutter/Filament 3D game engine (flutter_filament, lumina) and its editor, Lumina Studio (lumina_ui, lumina_editor_api)."
+publish_to: none
+
+environment:
+  sdk: ^3.12.0
+
+# Dart pub workspace: one resolution and one pubspec.lock for every package.
+workspace:
+  - flutter_filament
+  - flutter_filament/example
+  - lumina
+  - lumina/example
+  - lumina_editor_api
+  - lumina_ui
+
+dev_dependencies:
+  melos: ^7.8.0
+
+# Native-assets hook settings, read from this (the workspace root) pubspec;
+# paths are relative to this file. Every hook falls back to
+# `<package>/../filament`, which is right for flutter_filament here and for
+# the tools packages next to their own repo's `filament/` link — but a tools
+# package resolved from git (the pub cache) has no Filament beside it, so it
+# is told where this repo's is. Likewise flutter_riglogic from git has no
+# OpenRigLogic library built: a release checkout links the release's prebuilt
+# one as `openriglogic/` (EngineBootstrap); where that folder has no library
+# (a development checkout) the hook uses the tools checkout's own build.
+# `LUMINA_FILAMENT_DIR` / `LUMINA_RIGLOGIC_LIB_DIR` override these when a
+# hook runs directly (the hooks runner forwards no LUMINA_* variables).
+hooks:
+  user_defines:
+    flutter_filament:
+      filament_dir: filament
+    flutter_assimp:
+      filament_dir: filament
+      libcxx_dir: flutter_filament/third_party/libcxx
+    flutter_riglogic:
+      riglogic_lib_dir: openriglogic/lib
+      libcxx_dir: flutter_filament/third_party/libcxx
+
+melos:
+  scripts:
+    analyze:
+      description: flutter analyze in every package.
+      exec: flutter analyze .
+    format:
+      description: Format every package's Dart sources.
+      exec: dart format .
+    format:check:
+      description: Fail when a package's Dart sources are not formatted.
+      exec: dart format --output=none --set-exit-if-changed .
+    test:
+      description: flutter test in every package that has tests, one package at a time (smoke files run through `smoke`).
+      run: flutter test --concurrency=1
+      exec:
+        concurrency: 1
+      packageFilters:
+        dirExists: test
+    smoke:
+      description: Every smoke suite on GPU 1 (FILAMENT_GPU='RTX PRO 2000'), merged into each package's build/smoke_report.html.
+      run: dart run tool/smoke_report.dart --no-dashboard
+      exec:
+        concurrency: 1
+      packageFilters:
+        fileExists: tool/smoke_report.dart

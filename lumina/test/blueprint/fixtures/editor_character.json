@@ -1,0 +1,316 @@
+{
+  "parentClass": "LuminaCharacter",
+  "components": [
+    {
+      "id": "root_capsule",
+      "name": "CapsuleComponent",
+      "type": "LuminaCapsuleComponent",
+      "parentId": null,
+      "properties": {
+        "location": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "capsuleRadius": 35.0,
+        "capsuleHalfHeight": 90.0
+      },
+      "isSceneComponent": true
+    },
+    {
+      "id": "arrow_comp",
+      "name": "ArrowComponent",
+      "type": "LuminaArrowComponent",
+      "parentId": "root_capsule",
+      "properties": {
+        "location": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "arrowSize": 1.0,
+        "arrowColor": "#0088ffff"
+      },
+      "isSceneComponent": true
+    },
+    {
+      "id": "spring_arm",
+      "name": "CameraBoom",
+      "type": "LuminaSpringArmComponent",
+      "parentId": "root_capsule",
+      "properties": {
+        "location": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "targetArmLength": 400.0,
+        "usePawnControlRotation": true,
+        "inheritPitch": true,
+        "inheritYaw": true,
+        "inheritRoll": false
+      },
+      "isSceneComponent": true
+    },
+    {
+      "id": "follow_cam",
+      "name": "FollowCamera",
+      "type": "LuminaCameraComponent",
+      "parentId": "spring_arm",
+      "properties": {
+        "location": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "fieldOfView": 90.0,
+        "usePawnControlRotation": false
+      },
+      "isSceneComponent": true
+    },
+    {
+      "id": "skm_mesh",
+      "name": "Mesh",
+      "type": "LuminaSkeletalMeshComponent",
+      "parentId": "root_capsule",
+      "properties": {
+        "location": [
+          0.0,
+          0.0,
+          -90.0
+        ],
+        "rotation": [
+          0.0,
+          -90.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "skeletalMeshAsset": "",
+        "animMode": "Use Animation Asset",
+        "castShadows": true,
+        "receiveShadows": true
+      },
+      "isSceneComponent": true
+    },
+    {
+      "id": "char_move",
+      "name": "CharacterMovement",
+      "type": "LuminaCharacterMovementComponent",
+      "parentId": null,
+      "properties": {
+        "maxWalkSpeed": 600.0,
+        "jumpZVelocity": 700.0,
+        "gravityScale": 1.75,
+        "airControl": 0.35
+      },
+      "isSceneComponent": false
+    }
+  ],
+  "eventGraph": {
+    "nodes": [
+      {
+        "id": "n_begin",
+        "registryId": "event_beginplay",
+        "title": "Event BeginPlay",
+        "category": "Events",
+        "position": {
+          "x": 80.0,
+          "y": 120.0
+        },
+        "headerColor": 4290190364,
+        "inputs": [],
+        "outputs": [
+          {
+            "id": "exec_out",
+            "name": "Exec Out",
+            "type": "exec",
+            "isOutput": true
+          }
+        ],
+        "literals": {}
+      },
+      {
+        "id": "n_print",
+        "registryId": "print_string",
+        "title": "Print String",
+        "category": "Development",
+        "position": {
+          "x": 360.0,
+          "y": 120.0
+        },
+        "headerColor": 4280000768,
+        "inputs": [
+          {
+            "id": "exec_in",
+            "name": "Exec In",
+            "type": "exec",
+            "isOutput": false
+          },
+          {
+            "id": "in_string",
+            "name": "In String",
+            "type": "string",
+            "isOutput": false,
+            "defaultValue": "Hello Lumina"
+          }
+        ],
+        "outputs": [
+          {
+            "id": "exec_out",
+            "name": "Exec Out",
+            "type": "exec",
+            "isOutput": true
+          }
+        ],
+        "literals": {
+          "in_string": "hi"
+        }
+      },
+      {
+        "id": "n_tick",
+        "registryId": "event_tick",
+        "title": "Event Tick",
+        "category": "Events",
+        "position": {
+          "x": 80.0,
+          "y": 320.0
+        },
+        "headerColor": 4290190364,
+        "inputs": [],
+        "outputs": [
+          {
+            "id": "exec_tick_out",
+            "name": "Exec Out",
+            "type": "exec",
+            "isOutput": true
+          },
+          {
+            "id": "delta_seconds",
+            "name": "Delta Seconds",
+            "type": "number",
+            "isOutput": true
+          }
+        ],
+        "literals": {}
+      },
+      {
+        "id": "n_move",
+        "registryId": "add_movement_input",
+        "title": "Add Movement Input",
+        "category": "Pawn",
+        "position": {
+          "x": 360.0,
+          "y": 320.0
+        },
+        "headerColor": 4279592384,
+        "inputs": [
+          {
+            "id": "exec_move_in",
+            "name": "Exec In",
+            "type": "exec",
+            "isOutput": false
+          },
+          {
+            "id": "world_dir",
+            "name": "World Direction",
+            "type": "vector3",
+            "isOutput": false,
+            "defaultValue": [
+              0.0,
+              1.0,
+              0.0
+            ]
+          },
+          {
+            "id": "scale_val",
+            "name": "Scale Value",
+            "type": "number",
+            "isOutput": false,
+            "defaultValue": 1.0
+          }
+        ],
+        "outputs": [
+          {
+            "id": "exec_move_out",
+            "name": "Exec Out",
+            "type": "exec",
+            "isOutput": true
+          }
+        ],
+        "literals": {
+          "scale_val": 0.5
+        }
+      }
+    ],
+    "connections": [
+      {
+        "id": "w1",
+        "fromNodeId": "n_begin",
+        "fromPinId": "exec_out",
+        "toNodeId": "n_print",
+        "toPinId": "exec_in"
+      },
+      {
+        "id": "w2",
+        "fromNodeId": "n_tick",
+        "fromPinId": "exec_tick_out",
+        "toNodeId": "n_move",
+        "toPinId": "exec_move_in"
+      }
+    ]
+  },
+  "variables": [
+    {
+      "name": "Health",
+      "type": "Float",
+      "default": "100.0"
+    }
+  ],
+  "classDefaults": {
+    "initialHealth": 100.0
+  }
+}

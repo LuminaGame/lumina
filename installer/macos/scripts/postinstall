@@ -1,0 +1,44 @@
+#!/bin/sh
+# lumina-studio .pkg postinstall (runs as root). NOT VERIFIED: see
+# installer/macos/build-pkg.sh.
+#
+# 1. Xcode Command Line Tools: checked; when missing, their installer is
+#    started (it asks the user) and the rest continues.
+# 2. Homebrew (as the logged-in user): git, cmake, ninja, gstreamer. Without
+#    Homebrew the commands to run are printed.
+# 3. Flutter (stable) into /opt/lumina/flutter, unless one is on PATH.
+# 4. The latest Lumina Studio into /Applications.
+# Network problems never fail the installation.
+set -u
+say() { echo "lumina-studio: $*"; }
+
+console_user="$(stat -f %Su /dev/console 2>/dev/null || true)"
+
+if ! xcode-select -p >/dev/null 2>&1; then
+  say "the Xcode Command Line Tools are missing; starting their installer."
+  xcode-select --install >/dev/null 2>&1 || true
+fi
+
+brew=""
+for b in /opt/homebrew/bin/brew /usr/local/bin/brew; do
+  [ -x "$b" ] && brew="$b" && break
+done
+if [ -n "$brew" ] && [ -n "$console_user" ] && [ "$console_user" != root ]; then
+  sudo -u "$console_user" "$brew" install git cmake ninja gstreamer || say "brew install failed; run: brew install git cmake ninja gstreamer"
+else
+  say "Homebrew not found. Install it from https://brew.sh, then run: brew install git cmake ninja gstreamer"
+fi
+
+if [ ! -x /opt/lumina/flutter/bin/flutter ] && ! command -v flutter >/dev/null 2>&1; then
+  mkdir -p /opt/lumina
+  if git clone --quiet --filter=blob:none --branch stable https://github.com/flutter/flutter.git /opt/lumina/flutter; then
+    touch /opt/lumina/.flutter-installed-by-lumina
+    [ -n "$console_user" ] && chown -R "$console_user" /opt/lumina/flutter
+  else
+    say "cloning Flutter failed; install it later from https://flutter.dev."
+  fi
+fi
+
+/usr/local/lib/lumina-studio/install-studio.sh \
+  || say "Lumina Studio could not be downloaded now; run lumina-studio --update later."
+exit 0

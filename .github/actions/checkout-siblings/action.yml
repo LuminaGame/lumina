@@ -1,0 +1,59 @@
+name: Check out the sibling repos
+description: >
+  Checks out tools, plugins and marketplace next to this repository at the
+  commit SHAs the workspace pubspecs pin (git `ref:`), and writes the
+  pubspec_overrides.yaml that points the git dependencies at those checkouts:
+  the same layout as a local development checkout.
+
+  Expects this repository at `lumina/` under the workspace and `dart` on PATH
+  (run subosito/flutter-action first).
+
+outputs:
+  tools:
+    description: The pinned tools commit.
+    value: ${{ steps.pins.outputs.tools }}
+  plugins:
+    description: The pinned plugins commit.
+    value: ${{ steps.pins.outputs.plugins }}
+  marketplace:
+    description: The pinned marketplace commit.
+    value: ${{ steps.pins.outputs.marketplace }}
+
+runs:
+  using: composite
+  steps:
+    - name: Read the pinned commits
+      id: pins
+      shell: bash
+      run: dart lumina/tool/release/release_info.dart pins --github-output
+
+    - name: Check out tools
+      if: steps.pins.outputs.tools != ''
+      uses: actions/checkout@v5
+      with:
+        repository: LuminaGame/tools
+        ref: ${{ steps.pins.outputs.tools }}
+        path: tools
+        persist-credentials: false
+
+    - name: Check out plugins
+      if: steps.pins.outputs.plugins != ''
+      uses: actions/checkout@v5
+      with:
+        repository: LuminaGame/plugins
+        ref: ${{ steps.pins.outputs.plugins }}
+        path: plugins
+        persist-credentials: false
+
+    - name: Check out marketplace
+      if: steps.pins.outputs.marketplace != ''
+      uses: actions/checkout@v5
+      with:
+        repository: LuminaGame/marketplace
+        ref: ${{ steps.pins.outputs.marketplace }}
+        path: marketplace
+        persist-credentials: false
+
+    - name: Point the git dependencies at the checkouts
+      shell: bash
+      run: dart lumina/tool/release/release_info.dart overrides

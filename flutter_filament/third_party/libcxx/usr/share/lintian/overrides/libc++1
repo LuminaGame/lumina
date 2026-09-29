@@ -1,0 +1,2 @@
+libc++1: arch-dependent-file-not-in-arch-specific-directory *usr/lib/llvm-22/lib/libc++.so.1.0*
+libc++1: breaks-without-version

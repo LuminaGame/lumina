@@ -1,0 +1,279 @@
+/*
+ * Copyright 2024 flutter_filament authors.
+ * Licensed under the Apache License, Version 2.0.
+ */
+
+// Engine creation with a GPU preference. Every native engine is
+// created here: on desktop Linux and Windows the Vulkan backend gets a
+// VulkanPlatformLinux/VulkanPlatformWindows whose only change is the `gpu`
+// customization, so the
+// preference (explicit, or FILAMENT_GPU / VK_DEVICE_INDEX from the
+// environment) reaches Filament's device selection, and the chosen physical
+// device can be read back.
+
+#include "gpu_c.h"
+
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <exception>
+#include <mutex>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
+#include <filament/Engine.h>
+#include <utils/Panic.h>
+
+#if !defined(__EMSCRIPTEN__) && defined(__linux__) && !defined(__ANDROID__)
+#define FLUTTER_FILAMENT_GPU_PLATFORM 1
+#include <backend/platforms/VulkanPlatformLinux.h>
+using DesktopVulkanPlatform = filament::backend::VulkanPlatformLinux;
+#elif defined(_WIN32)
+#define FLUTTER_FILAMENT_GPU_PLATFORM 1
+#include <backend/platforms/VulkanPlatformWindows.h>
+using DesktopVulkanPlatform = filament::backend::VulkanPlatformWindows;
+#endif
+
+using namespace filament;
+
+namespace {
+
+struct GpuPreference {
+    std::string name;
+    int index = -1;
+    bool empty() const { return name.empty() && index < 0; }
+};
+
+bool allDigits(const char* s) {
+    if (!s || !*s) return false;
+    for (const char* p = s; *p; ++p) {
+        if (*p < '0' || *p > '9') return false;
+    }
+    return true;
+}
+
+/// FILAMENT_GPU (a name substring or an index), then VK_DEVICE_INDEX.
+GpuPreference fromEnvironment() {
+    GpuPreference pref;
+    const char* gpu = std::getenv("FILAMENT_GPU");
+    if (gpu && *gpu) {
+        if (allDigits(gpu)) {
+            pref.index = std::atoi(gpu);
+        } else {
+            pref.name = gpu;
+        }
+        return pref;
+    }
+    const char* index = std::getenv("VK_DEVICE_INDEX");
+    if (allDigits(index)) pref.index = std::atoi(index);
+    return pref;
+}
+
+#if FLUTTER_FILAMENT_GPU_PLATFORM
+class PreferredGpuPlatform final : public DesktopVulkanPlatform {
+public:
+    explicit PreferredGpuPlatform(GpuPreference pref) : mPref(std::move(pref)) {}
+
+    Customization getCustomization() const noexcept override {
+        Customization c = DesktopVulkanPlatform::getCustomization();
+        if (!mPref.name.empty()) c.gpu.deviceName = utils::CString(mPref.name.c_str());
+        if (mPref.index >= 0) c.gpu.index = static_cast<int8_t>(mPref.index);
+        return c;
+    }
+
+private:
+    GpuPreference mPref;
+};
+
+std::mutex gPlatformsMutex;
+std::unordered_map<Engine*, PreferredGpuPlatform*> gPlatforms;
+#endif
+
+}  // namespace
+
+void* filament_engine_create_on_gpu(int backend, int feature_level, bool paused,
+        const filament_engine_config_t* config, const char* const* feature_names,
+        const bool* feature_values, int feature_count, const char* gpu_name, int gpu_index) {
+    try {
+        Engine::Builder builder;
+        auto resolved = static_cast<Engine::Backend>(backend);
+        builder.backend(resolved);
+        if (feature_level >= 0) {
+            builder.featureLevel(static_cast<Engine::FeatureLevel>(feature_level));
+        }
+        builder.paused(paused);
+        Engine::Config cfg;
+        if (config) {
+            cfg.commandBufferSizeMB = config->command_buffer_size_mb;
+            cfg.perRenderPassArenaSizeMB = config->per_render_pass_arena_size_mb;
+            cfg.minCommandBufferSizeMB = config->min_command_buffer_size_mb;
+            cfg.jobSystemThreadCount = config->job_system_thread_count;
+            cfg.preferredShaderLanguage = static_cast<Engine::Config::ShaderLanguage>(config->preferred_shader_language);
+            cfg.forceGLES2Context = config->force_gles2_context;
+            cfg.gpuContextPriority = static_cast<backend::Platform::GpuContextPriority>(config->gpu_context_priority);
+            cfg.materialCacheCapacity = config->material_cache_capacity;
+            cfg.stereoscopicEyeCount = static_cast<uint8_t>(config->stereoscopic_eye_count);
+            cfg.stereoscopicType = static_cast<backend::StereoscopicType>(config->stereoscopic_type);
+            builder.config(&cfg);
+        }
+        if (feature_names && feature_values && feature_count > 0) {
+            for (int i = 0; i < feature_count; ++i) {
+                if (feature_names[i]) builder.feature(feature_names[i], feature_values[i]);
+            }
+        }
+
+#if FLUTTER_FILAMENT_GPU_PLATFORM
+        // DEFAULT resolves to Vulkan on desktop Linux and Windows (PlatformFactory.cpp).
+        const bool vulkan = resolved == Engine::Backend::VULKAN || resolved == Engine::Backend::DEFAULT;
+        PreferredGpuPlatform* platform = nullptr;
+        if (vulkan) {
+            GpuPreference pref;
+            if (gpu_name && *gpu_name) pref.name = gpu_name;
+            if (gpu_index >= 0) pref.index = gpu_index;
+            if (pref.empty()) pref = fromEnvironment();
+            // Filament's own name matching is broken in v1.77.0: its
+            // DeviceInfo::name is a string_view into a per-iteration
+            // VkPhysicalDeviceProperties, so every name dangles
+            // (VulkanPlatform.cpp selectPhysicalDevice). Resolve the name
+            // against our enumeration (same loader order) and pass an index.
+            if (!pref.name.empty()) {
+                const int found = flutter_filament_find_vulkan_device(pref.name.c_str());
+                if (found >= 0) {
+                    pref.index = found;
+                } else {
+                    fprintf(stderr, "[flutter_filament] no Vulkan device matches \"%s\"; using the default device\n", pref.name.c_str());
+                }
+                pref.name.clear();
+            }
+            // Filament aborts on an index past its device list; drop it instead.
+            if (pref.index >= 0 && pref.index >= flutter_filament_cached_vulkan_device_count()) {
+                fprintf(stderr, "[flutter_filament] GPU index %d is out of range; using the default device\n", pref.index);
+                pref.index = -1;
+            }
+            platform = new PreferredGpuPlatform(pref);
+            builder.backend(Engine::Backend::VULKAN);
+            builder.platform(platform);
+        }
+        Engine* engine = builder.build();
+        if (platform) {
+            if (engine) {
+                std::lock_guard<std::mutex> lock(gPlatformsMutex);
+                gPlatforms[engine] = platform;
+            } else {
+                delete platform;
+            }
+        }
+        return engine;
+#else
+        (void) gpu_name;
+        (void) gpu_index;
+        return builder.build();
+#endif
+    } catch (const utils::Panic& e) {
+        fprintf(stderr, "[Filament C++ Panic (Handled Safely)]: %s\n", e.what());
+        return nullptr;
+    } catch (const std::exception& e) {
+        fprintf(stderr, "[flutter_filament] engine creation failed: %s\n", e.what());
+        return nullptr;
+    }
+}
+
+int filament_engine_get_gpu_name(void* engine, char* out, int capacity) {
+    if (!out || capacity <= 0) return 0;
+    out[0] = '\0';
+#if FLUTTER_FILAMENT_GPU_PLATFORM
+    PreferredGpuPlatform* platform = nullptr;
+    {
+        std::lock_guard<std::mutex> lock(gPlatformsMutex);
+        auto it = gPlatforms.find(static_cast<Engine*>(engine));
+        if (it != gPlatforms.end()) platform = it->second;
+    }
+    if (!platform) return 0;
+    VkPhysicalDevice device = platform->getPhysicalDevice();
+    if (device == VK_NULL_HANDLE) return 0;
+    // bluevk is bound to this engine's own instance by Filament.
+    VkPhysicalDeviceProperties props{};
+    bluevk::vkGetPhysicalDeviceProperties(device, &props);
+    std::strncpy(out, props.deviceName, static_cast<size_t>(capacity) - 1);
+    out[capacity - 1] = '\0';
+    return static_cast<int>(std::strlen(out));
+#else
+    (void) engine;
+    return 0;
+#endif
+}
+
+bool filament_engine_get_gpu_memory(void* engine, filament_gpu_memory_t* out) {
+    if (!out) return false;
+    *out = filament_gpu_memory_t{};
+#if FLUTTER_FILAMENT_GPU_PLATFORM
+    PreferredGpuPlatform* platform = nullptr;
+    {
+        std::lock_guard<std::mutex> lock(gPlatformsMutex);
+        auto it = gPlatforms.find(static_cast<Engine*>(engine));
+        if (it != gPlatforms.end()) platform = it->second;
+    }
+    if (!platform) return false;
+    VkPhysicalDevice device = platform->getPhysicalDevice();
+    if (device == VK_NULL_HANDLE) return false;
+    // The budget struct may only be chained when the device supports the
+    // extension (it need not be enabled for a physical-device query).
+    uint32_t extensionCount = 0;
+    if (bluevk::vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr) != VK_SUCCESS) {
+        return false;
+    }
+    std::vector<VkExtensionProperties> extensions(extensionCount);
+    bluevk::vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, extensions.data());
+    bool supported = false;
+    for (const auto& e : extensions) {
+        if (std::strcmp(e.extensionName, VK_EXT_MEMORY_BUDGET_EXTENSION_NAME) == 0) supported = true;
+    }
+    // Filament's instance is Vulkan 1.1, so the core entry point is valid.
+    if (!supported || !bluevk::vkGetPhysicalDeviceMemoryProperties2) return false;
+    VkPhysicalDeviceMemoryBudgetPropertiesEXT budget{};
+    budget.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_BUDGET_PROPERTIES_EXT;
+    VkPhysicalDeviceMemoryProperties2 props{};
+    props.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2;
+    props.pNext = &budget;
+    bluevk::vkGetPhysicalDeviceMemoryProperties2(device, &props);
+    for (uint32_t i = 0; i < props.memoryProperties.memoryHeapCount; ++i) {
+        const VkMemoryHeap& heap = props.memoryProperties.memoryHeaps[i];
+        if ((heap.flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) == 0) continue;
+        out->device_local_usage += budget.heapUsage[i];
+        out->device_local_budget += budget.heapBudget[i];
+        out->device_local_size += heap.size;
+        out->heap_count++;
+    }
+    return out->heap_count > 0;
+#else
+    (void) engine;
+    return false;
+#endif
+}
+
+void flutter_filament_release_gpu_platform(Engine* engine) {
+#if FLUTTER_FILAMENT_GPU_PLATFORM
+    PreferredGpuPlatform* platform = nullptr;
+    {
+        std::lock_guard<std::mutex> lock(gPlatformsMutex);
+        auto it = gPlatforms.find(engine);
+        if (it == gPlatforms.end()) return;
+        platform = it->second;
+        gPlatforms.erase(it);
+    }
+    delete platform;
+#else
+    (void) engine;
+#endif
+}
+
+int filament_gpu_live_platform_count(void) {
+#if FLUTTER_FILAMENT_GPU_PLATFORM
+    std::lock_guard<std::mutex> lock(gPlatformsMutex);
+    return static_cast<int>(gPlatforms.size());
+#else
+    return 0;
+#endif
+}
+

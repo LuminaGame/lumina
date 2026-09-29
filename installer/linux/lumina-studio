@@ -1,0 +1,69 @@
+#!/bin/sh
+# Starts Lumina Studio (installed as /usr/bin/lumina-studio).
+#
+#   lumina-studio [args...]     start the editor, downloading it first when missing
+#   lumina-studio --update      download the latest release, then start it
+#   lumina-studio --help
+#
+# The editor lives in /opt/lumina/studio (installed by the package, updatable
+# by members of the "lumina" group) or, when that folder cannot be written,
+# in ${XDG_DATA_HOME:-~/.local/share}/lumina/studio. The Flutter SDK in
+# /opt/lumina/flutter goes first on PATH, so the editor builds projects with it.
+set -eu
+
+SYSTEM_DIR=/opt/lumina/studio
+USER_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/lumina/studio"
+INSTALLER=/usr/lib/lumina-studio/install-studio.sh
+
+if [ -x /opt/lumina/flutter/bin/flutter ]; then
+  PATH="/opt/lumina/flutter/bin:$PATH"
+  export PATH
+fi
+
+update=0
+case "${1:-}" in
+  --update) update=1; shift ;;
+  -h|--help) sed -n '2,11p' "$0"; exit 0 ;;
+esac
+
+notify() {
+  printf '%s\n' "$*" >&2
+  if [ ! -t 2 ] && command -v notify-send >/dev/null 2>&1; then
+    notify-send -i lumina-studio "Lumina Studio" "$*" || true
+  fi
+}
+
+installed_dir() {
+  for d in "$USER_DIR" "$SYSTEM_DIR"; do
+    if [ -x "$d/lumina_ui" ]; then
+      printf '%s' "$d"
+      return 0
+    fi
+  done
+  return 1
+}
+
+dir="$(installed_dir || true)"
+if [ "$update" = 1 ] || [ -z "$dir" ]; then
+  # The shared folder when this user may replace it, else the user's own.
+  if [ -w /opt/lumina ] && { [ ! -e "$SYSTEM_DIR" ] || [ -w "$SYSTEM_DIR" ]; }; then
+    target="$SYSTEM_DIR"
+  else
+    target="$USER_DIR"
+  fi
+  if [ -z "$dir" ]; then
+    notify "Lumina Studio is not downloaded yet; downloading the latest release into $target..."
+  fi
+  if ! "$INSTALLER" --target "$target"; then
+    if [ -n "$dir" ]; then
+      notify "The update failed; starting the installed Lumina Studio."
+    else
+      notify "Lumina Studio could not be downloaded. Check the internet connection and run lumina-studio again."
+      exit 1
+    fi
+  else
+    dir="$target"
+  fi
+fi
+
+exec "$dir/lumina_ui" "$@"

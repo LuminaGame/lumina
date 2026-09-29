@@ -1,0 +1,5 @@
+# The gitignored local checkouts beside the packages (see README).
+analyzer:
+  exclude:
+    - filament/**
+    - test-assets/**

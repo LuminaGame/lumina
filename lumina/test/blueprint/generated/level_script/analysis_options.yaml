@@ -1,0 +1,4 @@
+# A copy of a generated game's lib/: compiled Blueprint actors
+# (lib/actors/bp_door.dart, class BpDoor) and the level (lib/levels/l_test.dart,
+# class LTest), named by Dart's rules as every generated game is.
+include: ../../../../analysis_options.yaml

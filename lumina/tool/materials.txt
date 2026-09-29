@@ -1,0 +1,14 @@
+# Every compiled material this package ships.
+#
+#   <output path>|<source .mat>|<matc flags>
+#
+# Paths are relative to the package root, except a source under `../filament/`,
+# which is the vendored engine tree this workspace always has. The sky material
+# is authored there; copying it here would be a second copy to keep in sync,
+# which is how a stale header copy once caused an ABI mismatch in flutter_filament.
+#
+# `tool/build_materials.sh` regenerates every row.
+# `test/data/material_packages_test.dart` fails if a `.filamat` in this package
+# is missing from this list.
+assets/sky/simulated_skybox.filamat|../filament/web/examples/materials/simulated_skybox.mat|-a all -p desktop
+example/assets/sky/simulated_skybox.filamat|../filament/web/examples/materials/simulated_skybox.mat|-a all -p desktop

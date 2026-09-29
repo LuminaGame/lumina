@@ -1,0 +1,136 @@
+name: lumina_ui
+description: Lumina Studio 3D Game Engine Editor UI
+publish_to: 'none'
+
+version: 0.0.1+1
+
+environment:
+  sdk: ^3.12.0
+resolution: workspace
+
+dependencies:
+  flutter:
+    sdk: flutter
+  lumina:
+    path: ../lumina
+  flutter_filament:
+    path: ../flutter_filament
+  # From the tools repo; pubspec_overrides.yaml at the workspace root points
+  # them at a local ../tools checkout.
+  flutter_assimp:
+    git:
+      url: https://github.com/LuminaGame/tools.git
+      path: flutter_assimp
+      ref: 553e2bfe1dc153263d566162164a8997e382f1ca
+  flutter_riglogic:
+    git:
+      url: https://github.com/LuminaGame/tools.git
+      path: flutter_riglogic
+      ref: 553e2bfe1dc153263d566162164a8997e382f1ca
+  # The smoke-test system that lib/testing.dart exports (SmokeArtifacts,
+  # SmokeRecorder, the report runner of tool/smoke_report.dart).
+  lumina_smoke:
+    git:
+      url: https://github.com/LuminaGame/tools.git
+      path: lumina_smoke
+      ref: 553e2bfe1dc153263d566162164a8997e382f1ca
+  lumina_editor_api:
+    path: ../lumina_editor_api
+  # Play captures the mouse.
+  lumina_mouse_capture:
+    git:
+      url: https://github.com/LuminaGame/tools.git
+      path: lumina_mouse_capture
+      ref: 553e2bfe1dc153263d566162164a8997e382f1ca
+  # The Lumina Marketplace API client and DTOs, plus what the
+  # installer needs (streamed downloads, zip archives, sha256, the encrypted
+  # session file).
+  # From the marketplace repo (local override: ../marketplace/shared).
+  lumina_marketplace_shared:
+    git:
+      url: https://github.com/LuminaGame/marketplace.git
+      path: shared
+      ref: 7f83ac85075e4dfb3ea2ff2c430739fb8e071ac8
+  http: ^1.6.0
+  archive: ^4.3.0
+  crypto: ^3.0.6
+  cryptography: ^2.9.0
+  shadcn_flutter: ^0.0.54
+  file_picker: ^8.0.0
+  cupertino_icons: ^1.0.8
+  flutter_svg: ^2.3.0
+  ffi: ^2.1.3
+  vector_math: ^2.1.4
+  path: ^1.9.1
+  window_manager: ^0.5.1
+  # material_preview_renderer.dart decodes previews with it (lib code, so a
+  # regular dependency: a project's editor host builds lumina_ui as a
+  # dependency).
+  image: ^4.9.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  puppeteer: ^3.26.0
+  # Tests boot the editor with the reference plugin (a project
+  # editor host compiles it in for real; the engine app never does).
+  # From the plugins repo (local overrides: ../plugins/<plugin>).
+  lumina_plugin_pcg:
+    git:
+      url: https://github.com/LuminaGame/plugins.git
+      path: lumina_plugin_pcg
+      ref: c200c809d9c6848280b0af01e48938a016eb1f73
+  # MiniAI: tests and smoke, as for PCG.
+  lumina_plugin_miniai:
+    git:
+      url: https://github.com/LuminaGame/plugins.git
+      path: lumina_plugin_miniai
+      ref: c200c809d9c6848280b0af01e48938a016eb1f73
+  msix: ^3.18.0
+
+# The MSIX identity of Lumina Studio, shared by both
+# modes of tool/package-windows.sh (it passes the version and the signing
+# values on the command line). The identity is the Store reservation.
+# `publisher` is the Store / Partner Center publisher,
+# used only by a bare `dart run msix:…` / a future --store build: self-signed
+# builds sign as "CN=Lumina Studio Dev, O=Lumina, C=TR", --publish builds as
+# LUMINA_MSIX_PUBLISHER.
+msix_config:
+  display_name: Lumina Engine
+  publisher_display_name: Lumina Engine
+  identity_name: LuminaEngine.LuminaEngine
+  publisher: CN=76408633-2846-4256-BED6-0DF8748A95C6
+  logo_path: assets/logo_color.png
+  # The marketplace (internet) and the loopback MCP server.
+  capabilities: internetClient,privateNetworkClientServer
+  execution_alias: lumina-studio
+  architecture: x64
+  build_windows: true
+  output_name: LuminaEngine
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/
+    # Filament's logo (Apache-2.0, LICENSE alongside).
+    - assets/third_party/filament/
+    - assets/ibl/default_env/default_env_ibl.ktx
+    - assets/fonts/
+
+  # `--font-mono: 'JetBrains Mono'` in the design prototype's index.css.
+  # JetBrains Mono is SIL OFL licensed, so it ships with the editor (licence
+  # next to the files) rather than being approximated by a system monospace.
+  # The prototype's `--font-sans: 'Geist Variable'` needs nothing here:
+  # shadcn_flutter already bundles the whole Geist family as `GeistSans`.
+  fonts:
+    - family: JetBrains Mono
+      fonts:
+        - asset: assets/fonts/JetBrainsMono-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/JetBrainsMono-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/JetBrainsMono-Bold.ttf
+          weight: 700

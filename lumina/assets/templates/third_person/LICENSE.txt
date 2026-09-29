@@ -1,0 +1,41 @@
+SKM_Superhero_Female.glb
+========================
+
+The Third Person template character, built by
+lumina/tool/build_third_person_content.dart from three packs by Quaternius
+(https://quaternius.com), each released under CC0 1.0 Universal:
+
+- Universal Base Characters [Standard]
+  https://quaternius.itch.io/universal-base-characters
+  Used: Base Characters/Godot - UE/Superhero_Female_FullBody.gltf and its
+  textures (repacked as a GLB, textures downscaled and re-encoded as JPEG,
+  unused vertex attributes removed, the three meshes joined into one).
+
+- Universal Animation Library [Standard]
+  https://quaternius.itch.io/universal-animation-library
+  Used from UAL1_Standard.glb: Idle_Loop, Walk_Loop, Jog_Fwd_Loop,
+  Jump_Start, Jump_Loop, Jump_Land, Roll, Idle_Talking_Loop.
+
+- Universal Animation Library 2 [Standard]
+  https://quaternius.itch.io/universal-animation-library-2
+  Used from UAL2_Standard.glb: NinjaJump_Start, Idle_FoldArms_Loop, Yes.
+
+The side and backward Walk_* / Jog_* clips are derived from Walk_Loop and
+Jog_Fwd_Loop (turned about the vertical axis, and played backward for the
+backward directions). Every clip is retargeted rotation-only onto the
+character's skeleton.
+
+License text shipped with each pack (License.txt / License_Standard.txt):
+
+-------------------------------------------------------
+License:
+CC0 1.0 Universal (CC0 1.0)
+Public Domain Dedication
+https://creativecommons.org/publicdomain/zero/1.0/
+
+------------------------------------------------------
+Models by @Quaternius
+Consider supporting me on Patreon!
+
+https://www.patreon.com/quaternius
+-------------------------------------------------------

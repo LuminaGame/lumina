@@ -1,0 +1,44 @@
+# Normalise text to LF in the repository and working trees.
+* text=auto eol=lf
+
+# Windows scripts keep CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary files: never normalised or diffed as text.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.tga binary
+*.ktx binary
+*.ktx2 binary
+*.hdr binary
+*.exr binary
+*.glb binary
+*.bin binary
+*.fbx binary
+*.filamat binary
+*.filamesh binary
+*.wav binary
+*.ogg binary
+*.mp3 binary
+*.mp4 binary
+*.webm binary
+*.ttf binary
+*.otf binary
+*.zip binary
+*.gz binary
+*.a binary
+*.lib binary
+*.dll binary
+*.so binary
+*.exe binary
+*.gguf binary
+*.wasm binary
+*.pdf binary
+
+# Generated bindings and goldens are compared byte for byte.
+*.g.dart text eol=lf

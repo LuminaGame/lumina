@@ -1,0 +1,3 @@
+# POSIX scripts keep LF on Windows checkouts (core.autocrlf),
+# or Git Bash stops at the first carriage return.
+*.sh text eol=lf

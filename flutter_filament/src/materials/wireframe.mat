@@ -1,0 +1,25 @@
+// Unlit, single-colour material for editor line geometry: the transform gizmo,
+// the grid and the selection boxes.
+//
+// This is compiled ahead of time with matc and embedded as bytes, rather than
+// built at runtime with filamat::MaterialBuilder. The runtime path failed on
+// this workspace with "api level can't be set below 1 or above unstable
+// material level(2)", which left every wireframe with no material instance at
+// all: Filament drew them with its default white material and every call to
+// set a colour was silently ignored.
+material {
+    name : WireframeLine,
+    shadingModel : unlit,
+    culling : none,
+    depthWrite : true,
+    parameters : [
+        { type : float4, name : baseColor }
+    ]
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        material.baseColor = materialParams.baseColor;
+    }
+}

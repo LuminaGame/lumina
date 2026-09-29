@@ -1,0 +1,29 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Can Us <me@canus.dev>
+Date: Wed, 23 Sep 2026 22:19:22 +0300
+Subject: [PATCH 3/3] libwebp: build the decoder for WASM without the webp.js
+ demo
+
+The tnt wrapper forces WEBP_BUILD_WEBP_JS ON for WASM, and webp.js needs
+SDL2 (find_package REQUIRED), so a WASM configure with
+FILAMENT_SUPPORTS_WEBP_TEXTURES=ON fails. Filament only links the
+webpdecoder library. Needed for the WebAssembly build of glTF assets
+that use EXT_texture_webp.
+
+diff --git a/third_party/libwebp/tnt/CMakeLists.txt b/third_party/libwebp/tnt/CMakeLists.txt
+index 15cc91cf..a99f641b 100644
+--- a/third_party/libwebp/tnt/CMakeLists.txt
++++ b/third_party/libwebp/tnt/CMakeLists.txt
+@@ -16,7 +16,11 @@ set(WEBP_BUILD_EXTRAS OFF)
+ set(WEBP_BUILD_FUZZTEST OFF)
+ 
+ if (WASM)
+-    set(WEBP_BUILD_WEBP_JS ON)
++    # Lumina local patch: webp.js is a demo viewer
++    # that needs SDL2; Filament only links the webpdecoder library, and with
++    # webp.js ON a WASM configure with FILAMENT_SUPPORTS_WEBP_TEXTURES fails
++    # on find_package(SDL2).
++    set(WEBP_BUILD_WEBP_JS OFF)
+     set(WEBP_ENABLE_SIMD OFF)
+     # ensure non-empty config var value
+     if (WASM_PTHREADS)

@@ -1,0 +1,436 @@
+# Release: builds prebuilt Lumina Studio (lumina_ui) for Windows and Linux,
+# the prebuilt Filament and OpenRigLogic archives the installed editor
+# downloads at first launch, and the native installers, then publishes all of
+# them as the GitHub release of the tag.
+#
+#   check ──┬── filament (windows, linux) ── studio (windows, linux) ──┐
+#           └── installers (setup.exe; .deb + .rpm) ──────────────────┴── release
+#
+# The Flutter SDK is pinned in FLUTTER_VERSION below: the version the
+# workspace is developed and tested with (the pubspecs only constrain the Dart
+# SDK, ^3.12.0, and the lock file records flutter >=3.47.0). Keep ci.yml in
+# step when bumping it.
+#
+# Sibling repos: tools, plugins and marketplace are checked out next to this
+# repository at the commit SHAs the pubspecs pin, and pubspec_overrides.yaml
+# points the git dependencies at them (.github/actions/checkout-siblings), the
+# layout of a local development checkout. Letting pub resolve the git
+# dependencies instead does not work here: the plugins depend on `lumina` and
+# `lumina_editor_api` from git, which conflicts with the workspace's own path
+# packages, and flutter_riglogic's hook needs the OpenRigLogic library built
+# inside its package folder, which a pub-cache copy does not have.
+#
+# Secrets (all optional; without them the MSIX is skipped with a notice):
+#   LUMINA_MSIX_PUBLISHER       certificate subject, equal to the package publisher
+#   LUMINA_MSIX_CERT_BASE64     the code-signing .pfx, base64-encoded
+#   LUMINA_MSIX_CERT_PASSWORD   its password
+# Variables (optional): LUMINA_MSIX_TIMESTAMP_URL.
+name: release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tag to build and publish (e.g. v0.1.0)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  FLUTTER_VERSION: 3.47.5
+
+jobs:
+  check:
+    name: Check pins and version
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+      sha: ${{ steps.sha.outputs.sha }}
+      version: ${{ steps.version.outputs.version }}
+      msix_version: ${{ steps.version.outputs.msix_version }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
+    steps:
+      - name: Resolve the tag
+        id: tag
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          tag="${INPUT_TAG:-$GITHUB_REF_NAME}"
+          if ! [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::\"$tag\" is not a release tag (v<major>.<minor>.<patch>[-<prerelease>])."
+            exit 1
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v5
+        with:
+          ref: refs/tags/${{ steps.tag.outputs.tag }}
+          path: lumina
+          persist-credentials: false
+
+      - name: Commit
+        id: sha
+        run: echo "sha=$(git -C lumina rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Tag matches lumina_ui version
+        id: version
+        run: dart lumina/tool/release/release_info.dart version --tag "${{ steps.tag.outputs.tag }}" --github-output
+
+      - uses: ./lumina/.github/actions/checkout-siblings
+
+      - name: Resolve the workspace
+        working-directory: lumina
+        run: flutter pub get
+
+      - name: Cross-repo pins
+        working-directory: lumina
+        run: dart run tool/pin_deps.dart --check
+
+  filament:
+    name: Filament (${{ matrix.platform }})
+    needs: check
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - platform: windows
+            runner: windows-latest
+          # 22.04 keeps the glibc floor of the Linux binaries low.
+          - platform: linux
+            runner: ubuntu-22.04
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.check.outputs.sha }}
+          path: lumina
+          persist-credentials: false
+
+      - if: matrix.platform == 'linux'
+        uses: ./lumina/.github/actions/linux-build-deps
+
+      - id: filament
+        uses: ./lumina/.github/actions/filament-prebuilt
+        with:
+          fetch: 'false'
+          save: 'true'
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: filament-${{ matrix.platform }}
+          path: lumina/build/filament-prebuilt/filament-*
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
+  studio:
+    name: Lumina Studio (${{ matrix.platform }})
+    needs: [check, filament]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows
+            runner: windows-latest
+          - platform: linux
+            runner: ubuntu-22.04
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 120
+    env:
+      TAG: ${{ needs.check.outputs.tag }}
+      SHA: ${{ needs.check.outputs.sha }}
+      HAS_MSIX_CERT: ${{ secrets.LUMINA_MSIX_CERT_BASE64 != '' && secrets.LUMINA_MSIX_PUBLISHER != '' }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.check.outputs.sha }}
+          path: lumina
+          persist-credentials: false
+
+      - if: matrix.platform == 'linux'
+        uses: ./lumina/.github/actions/linux-build-deps
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - uses: ./lumina/.github/actions/checkout-siblings
+
+      - name: Download the Filament build
+        uses: actions/download-artifact@v5
+        with:
+          name: filament-${{ matrix.platform }}
+          path: lumina/build/filament-prebuilt
+
+      # Into the folder the root pubspec's `filament_dir` user-defines name.
+      - name: Unpack Filament
+        working-directory: lumina
+        run: |
+          archive="$(find build/filament-prebuilt -maxdepth 1 \( -name 'filament-*-x64.zip' -o -name 'filament-*-x64.tar.gz' \) | head -n1)"
+          bash .github/scripts/extract_filament.sh "$archive" "$(dart tool/release/release_info.dart filament-dir)"
+
+      - name: Build OpenRigLogic (Linux)
+        if: matrix.platform == 'linux'
+        run: bash tools/flutter_riglogic/tool/build_openriglogic.sh
+
+      - name: Build OpenRigLogic (Windows)
+        if: matrix.platform == 'windows'
+        shell: cmd
+        run: call tools\flutter_riglogic\tool\build_openriglogic.bat
+
+      # The library an installed editor links into its engine checkout as
+      # `openriglogic/` (the root pubspec's riglogic_lib_dir): the
+      # flutter_riglogic it resolves from git has none built.
+      - name: Package OpenRigLogic
+        run: bash lumina/.github/scripts/package_openriglogic.sh ${{ matrix.platform }} tools/flutter_riglogic dist
+
+      - name: Resolve the workspace
+        working-directory: lumina
+        run: flutter pub get
+
+      - name: flutter build ${{ matrix.platform }}
+        working-directory: lumina/lumina_ui
+        run: >-
+          flutter build ${{ matrix.platform }} --release
+          --dart-define=LUMINA_VERSION=${{ env.TAG }}
+          --dart-define=LUMINA_COMMIT=${{ env.SHA }}
+
+      - name: Package
+        working-directory: lumina/lumina_ui
+        run: bash ../.github/scripts/package_studio.sh ${{ matrix.platform }} "$TAG" ../../dist
+
+      # The MSIX of the editor itself, signed with the certificate from the
+      # secrets (tool/package_windows.dart --publish, identity from
+      # lumina_ui/pubspec.yaml msix_config). Built here because the packaging
+      # tool needs the resolved workspace and the Release folder above.
+      - name: MSIX (signed)
+        if: matrix.platform == 'windows' && env.HAS_MSIX_CERT == 'true'
+        working-directory: lumina/lumina_ui
+        shell: pwsh
+        env:
+          LUMINA_MSIX_PUBLISHER: ${{ secrets.LUMINA_MSIX_PUBLISHER }}
+          LUMINA_MSIX_CERT_PASSWORD: ${{ secrets.LUMINA_MSIX_CERT_PASSWORD }}
+          LUMINA_MSIX_CERT_BASE64: ${{ secrets.LUMINA_MSIX_CERT_BASE64 }}
+          LUMINA_MSIX_TIMESTAMP_URL: ${{ vars.LUMINA_MSIX_TIMESTAMP_URL }}
+          MSIX_VERSION: ${{ needs.check.outputs.msix_version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $pfx = Join-Path $env:RUNNER_TEMP 'lumina-msix.pfx'
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:LUMINA_MSIX_CERT_BASE64))
+          $env:LUMINA_MSIX_CERT_BASE64 = ''
+          $env:LUMINA_MSIX_CERT_PATH = $pfx
+          if (-not $env:LUMINA_MSIX_TIMESTAMP_URL) { Remove-Item Env:LUMINA_MSIX_TIMESTAMP_URL -ErrorAction SilentlyContinue }
+          try {
+            dart run tool/package_windows.dart --publish --skip-build --version $env:MSIX_VERSION --output build/msix
+            if ($LASTEXITCODE -ne 0) { throw "MSIX packaging failed (exit $LASTEXITCODE)" }
+          } finally {
+            Remove-Item -Force -ErrorAction SilentlyContinue $pfx
+          }
+          $msix = Get-ChildItem build/msix -Filter *.msix | Select-Object -First 1
+          $name = "lumina-studio-$env:TAG-windows-x64.msix"
+          $dest = Join-Path (Resolve-Path ../../dist) $name
+          Copy-Item $msix.FullName $dest
+          $hash = (Get-FileHash -Algorithm SHA256 $dest).Hash.ToLowerInvariant()
+          [IO.File]::WriteAllText("$dest.sha256", "$hash  $name`n")
+
+      - name: MSIX skipped
+        if: matrix.platform == 'windows' && env.HAS_MSIX_CERT != 'true'
+        run: echo "::notice::No MSIX signing secrets (LUMINA_MSIX_PUBLISHER, LUMINA_MSIX_CERT_BASE64); the MSIX is not part of this release."
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: studio-${{ matrix.platform }}
+          path: dist/*
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
+  installers:
+    name: Installers (${{ matrix.platform }})
+    needs: check
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows
+            runner: windows-latest
+          - platform: linux
+            runner: ubuntu-24.04
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    env:
+      TAG: ${{ needs.check.outputs.tag }}
+      VERSION: ${{ needs.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.check.outputs.sha }}
+          path: lumina
+          persist-credentials: false
+
+      - name: setup.exe (Inno Setup)
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          ./lumina/installer/windows/build.ps1 -Version $env:VERSION -Tag $env:TAG -OutDir dist -InstallInnoSetup
+          # Dry run: lists what the installer would install and download.
+          $setup = Get-ChildItem dist -Filter 'lumina-studio-setup-*.exe' | Select-Object -First 1
+          $log = Join-Path $env:RUNNER_TEMP 'setup-dryrun.txt'
+          $p = Start-Process -FilePath $setup.FullName -ArgumentList '/DRYRUN', "/DRYRUNLOG=`"$log`"", '/VERYSILENT', '/SUPPRESSMSGBOXES' -Wait -PassThru
+          Get-Content -Raw $log
+          if ($p.ExitCode -ne 0) { throw "setup.exe /DRYRUN exited with $($p.ExitCode)" }
+
+      - name: .deb and .rpm (nfpm)
+        if: matrix.platform == 'linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash lumina/installer/linux/build.sh "$VERSION" "$TAG" dist
+          dpkg-deb -I dist/*.deb
+          dpkg-deb -c dist/*.deb
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installer-${{ matrix.platform }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 7
+
+  # macOS is written but not run: it has never been built or verified.
+  # Missing before it can be enabled:
+  #   - tool/filament/build_prebuilt.sh on macOS (a universal or arm64
+  #     out/cmake-release) and a matching fetch_prebuilt.dart asset name;
+  #   - an OpenRigLogic macOS build (build_openriglogic.sh targets Linux and
+  #     its bundled libc++);
+  #   - the macOS runner's entitlements (network client, process spawning for
+  #     project builds) and lumina_mouse_capture support;
+  #   - Developer ID signing and notarization of the .app and the .pkg
+  #     (Apple certificates and an App Store Connect key as secrets).
+  macos:
+    name: macOS (disabled)
+    if: false
+    needs: check
+    runs-on: macos-14
+    timeout-minutes: 360
+    env:
+      TAG: ${{ needs.check.outputs.tag }}
+      SHA: ${{ needs.check.outputs.sha }}
+      VERSION: ${{ needs.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.check.outputs.sha }}
+          path: lumina
+          persist-credentials: false
+      - run: brew install ninja cmake
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - uses: ./lumina/.github/actions/checkout-siblings
+      - uses: ./lumina/.github/actions/filament-prebuilt
+        with:
+          extract: 'true'
+      - run: bash tools/flutter_riglogic/tool/build_openriglogic.sh
+      - working-directory: lumina
+        run: flutter pub get
+      - working-directory: lumina/lumina_ui
+        run: >-
+          flutter build macos --release
+          --dart-define=LUMINA_VERSION=${{ env.TAG }}
+          --dart-define=LUMINA_COMMIT=${{ env.SHA }}
+      - name: Package the app
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          app="$(find lumina/lumina_ui/build/macos/Build/Products/Release -maxdepth 1 -name '*.app' | head -n1)"
+          name="lumina-studio-$TAG-macos-arm64.zip"
+          ditto -c -k --keepParent "$app" "dist/$name"
+          (cd dist && shasum -a 256 "$name" > "$name.sha256")
+          cp lumina/build/filament-prebuilt/filament-* dist/
+      - name: .pkg
+        run: bash lumina/installer/macos/build-pkg.sh "$VERSION" "$TAG" dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: dist/*
+          retention-days: 7
+
+  release:
+    name: Publish the release
+    needs: [check, filament, studio, installers]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    env:
+      TAG: ${{ needs.check.outputs.tag }}
+      PRERELEASE: ${{ needs.check.outputs.prerelease }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Verify checksums
+        working-directory: dist
+        run: |
+          set -euo pipefail
+          ls -la
+          for sum in *.sha256; do sha256sum -c "$sum"; done
+
+      - name: Create or update the release
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG exists; replacing its assets."
+          else
+            flags=(--verify-tag --title "Lumina Studio $TAG" --generate-notes)
+            if [ "$PRERELEASE" = true ]; then flags+=(--prerelease); fi
+            gh release create "$TAG" "${flags[@]}" --notes "$(cat <<'EOF'
+          ## Downloads
+
+          | File | What it is |
+          |---|---|
+          | `lumina-studio-setup-*-windows-x64.exe` | Windows installer: installs Git, the Visual Studio 2022 C++ Build Tools, GStreamer and Flutter, then the latest Lumina Studio |
+          | `lumina-studio_*_amd64.deb`, `lumina-studio-*.x86_64.rpm` | Linux packages: build dependencies, Flutter in /opt/lumina/flutter and the latest Lumina Studio in /opt/lumina/studio |
+          | `lumina-studio-*-windows-x64.zip`, `lumina-studio-*-linux-x64.tar.gz` | The editor alone (what the installers download) |
+          | `lumina-studio-*-windows-x64.msix` | The editor as an MSIX package (when signed) |
+          | `filament-*` | Prebuilt Filament the editor downloads at first launch |
+          | `openriglogic-*` | Prebuilt OpenRigLogic library the editor downloads at first launch |
+
+          Every file has a `.sha256` sidecar.
+          EOF
+          )"
+          fi
+          gh release upload "$TAG" dist/* --clobber
+          {
+            echo "### Release $TAG"
+            echo
+            for f in dist/*; do echo "- $(basename "$f")"; done
+          } >> "$GITHUB_STEP_SUMMARY"

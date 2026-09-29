@@ -1,0 +1,171 @@
+# CI for pull requests and pushes to main, on GitHub-hosted runners.
+#
+#   analyze    `melos run analyze` (flutter analyze in every package)
+#   unit       a curated set of fast unit tests on the noop backend (no GPU)
+#   packaging  release_info.dart checks and the Linux packages
+#
+# The GPU smoke suites (PNG + video evidence) need a real GPU and the shared
+# test assets, which hosted runners do not have; they run on developer
+# machines through tool/ci.sh --smoke (or a self-hosted GPU runner calling it).
+# The full unit suites run the same way (tool/ci.sh --unit): CI keeps to the
+# tests below, which cover the FFI bindings, the data layer, the editor API
+# and code generation without rendering.
+#
+# The unit tests compile the native-assets hooks, so they need prebuilt
+# Filament: from the cache (key: patches + VERSION + build scripts + OS), else
+# a published release (tool/filament/fetch_prebuilt.dart), else a build.
+# Runs on main save the cache, which release tags and pull requests restore.
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Keep in step with release.yml.
+  FLUTTER_VERSION: 3.47.5
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          path: lumina
+          persist-credentials: false
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - uses: ./lumina/.github/actions/checkout-siblings
+
+      - name: Resolve the workspace
+        working-directory: lumina
+        run: flutter pub get
+
+      - name: melos run analyze
+        working-directory: lumina
+        run: dart run melos run analyze
+
+  unit:
+    name: Unit tests (noop backend)
+    runs-on: ubuntu-22.04
+    timeout-minutes: 360
+    env:
+      LUMINA_MOUSE_CAPTURE: 'off'
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          path: lumina
+          persist-credentials: false
+
+      - uses: ./lumina/.github/actions/linux-build-deps
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - uses: ./lumina/.github/actions/checkout-siblings
+
+      - name: Resolve the workspace
+        working-directory: lumina
+        run: flutter pub get
+
+      - uses: ./lumina/.github/actions/filament-prebuilt
+        with:
+          fetch: 'true'
+          save: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+          extract: 'true'
+
+      - name: Build OpenRigLogic
+        run: bash tools/flutter_riglogic/tool/build_openriglogic.sh
+
+      # Tests never touch a real editor config.
+      - name: Isolated config folder
+        run: echo "LUMINA_CONFIG_DIR=$RUNNER_TEMP/lumina-config" >> "$GITHUB_ENV"
+
+      - name: flutter_filament
+        working-directory: lumina/flutter_filament
+        run: >-
+          flutter test
+          test/math
+          test/hook/native_library_cache_test.dart
+          test/hook/windows_response_file_test.dart
+          test/math_abi_test.dart
+          test/enum_fidelity_test.dart
+          test/src/engine_test.dart
+          test/web/bindings_lockstep_test.dart
+
+      - name: lumina
+        working-directory: lumina/lumina
+        run: >-
+          flutter test
+          test/project_manifest_test.dart
+          test/obj_parser_test.dart
+          test/tga_decoder_test.dart
+          test/glb_parser_test.dart
+          test/asset_test.dart
+          test/repository_test.dart
+          test/web/runtime_import_graph_test.dart
+          test/data/dart_identifiers_test.dart
+          test/data/project_settings_model_test.dart
+
+      - name: lumina_editor_api
+        working-directory: lumina/lumina_editor_api
+        run: >-
+          flutter test
+          test/api_contract_test.dart
+          test/editor_level_contract_test.dart
+          test/plugin_storage_test.dart
+          test/project_settings_section_test.dart
+
+      - name: lumina_ui
+        working-directory: lumina/lumina_ui
+        run: >-
+          flutter test
+          test/data/landscape_data_test.dart
+          test/data/sequencer_evaluator_test.dart
+
+  packaging:
+    name: Release tooling and Linux packages
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          path: lumina
+          persist-credentials: false
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: lumina_ui version is a release version
+        run: |
+          version="$(sed -n 's/^version:[[:space:]]*\([^+[:space:]]*\).*/\1/p' lumina/lumina_ui/pubspec.yaml)"
+          dart lumina/tool/release/release_info.dart version --tag "v$version"
+
+      - name: Build and inspect the .deb / .rpm
+        run: |
+          set -euo pipefail
+          version="$(sed -n 's/^version:[[:space:]]*\([^+[:space:]]*\).*/\1/p' lumina/lumina_ui/pubspec.yaml)"
+          bash lumina/installer/linux/build.sh "$version" "v$version" dist
+          dpkg-deb -I dist/*.deb
+          dpkg-deb -c dist/*.deb

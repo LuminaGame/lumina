@@ -1,0 +1,7 @@
+# actionlint settings (https://github.com/rhysd/actionlint).
+paths:
+  .github/workflows/release.yml:
+    ignore:
+      # The macOS job is disabled on purpose with `if: false` until macOS
+      # builds are verified (see the comment above the job).
+      - 'constant expression "false" in condition'
