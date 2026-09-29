@@ -87,7 +87,8 @@ class LauncherViewModel extends ChangeNotifier {
   LuminaProject? get activeProject => _activeProject;
 
   String get engineVersion => kLuminaEngineVersion;
-  String get engineDisplayVersion => kLuminaEngineDisplayVersion;
+  /// The release tag in a release build, else the source version.
+  String get engineDisplayVersion => LuminaRelease.isRelease ? LuminaRelease.version : kLuminaEngineDisplayVersion;
 
   /// The launcher's template list, derived from the shared
   /// [GameTemplateCatalog] so the chips, the Templates pane and the scaffolder

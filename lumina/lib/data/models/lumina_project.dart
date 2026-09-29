@@ -583,7 +583,8 @@ class EngineScalabilitySettings {
 }
 
 const String kLuminaEngineVersion = '0.0.1';
-const String kLuminaEngineDisplayVersion = 'v0.0.1-alpha';
+/// The version the editor shows when it is not a release build.
+const String kLuminaEngineDisplayVersion = 'v0.0.1-dev';
 
 class EditorViewportSettings {
   final String cameraMode;
