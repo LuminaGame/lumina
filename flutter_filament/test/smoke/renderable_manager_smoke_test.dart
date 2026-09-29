@@ -61,7 +61,7 @@ void main() {
       final px = rig.screenshot('RenderableManager Smoke Tests Renderable geometry, bounding box, and material application');
       // Apex (0,1,0) projects to the upper half: a red pixel just below the top-centre.
       final (r, g, b) = pixelAt(px, rig.width, 200, 90);
-      print('apex pixel=($r,$g,$b)');
+      smokeLog('apex pixel=($r,$g,$b)');
       expect(r, greaterThan(150));
       expect(g, lessThan(80));
       expect(countForegroundPixels(px, rig.width), greaterThan(rig.width * rig.height ~/ 10));
@@ -107,7 +107,7 @@ void main() {
         rig.view.setVisibleLayers(0xff, 0x01);
         final hidden = rig.renderFrame();
         final fgHidden = countForegroundPixels(hidden, rig.width);
-        print('ac_unit primitives=$primitives visible=$fgVisible hidden=$fgHidden');
+        smokeLog('ac_unit primitives=$primitives visible=$fgVisible hidden=$fgHidden');
         expect(fgHidden, lessThan(fgVisible ~/ 10), reason: 'layer mask hides the mesh');
         rig.scene.setIndirectLight(null);
         ibl.dispose();

@@ -43,9 +43,6 @@ void main() {
         newEye[2] - initialEye[2],
       ];
       
-      // Default initial target is (0,0,0) and eye is at (0,0,1)? Let's get the forward vector
-      final forward = manipulator.getLookAt().target; // Wait, actually we can just check if length > 0
-      
       final lengthSq = diff[0] * diff[0] + diff[1] * diff[1] + diff[2] * diff[2];
       expect(lengthSq, greaterThan(0));
     });
@@ -76,10 +73,10 @@ void main() {
       final pos3 = manipulator.getLookAt().eye;
       final dist2 = (pos3[0] - pos2[0]).abs() + (pos3[1] - pos2[1]).abs() + (pos3[2] - pos2[2]).abs();
       
-      print('pos1: $pos1');
-      print('pos2: $pos2');
-      print('pos3: $pos3');
-      print('dist1: $dist1, dist2: $dist2');
+      printOnFailure('pos1: $pos1');
+      printOnFailure('pos2: $pos2');
+      printOnFailure('pos3: $pos3');
+      printOnFailure('dist1: $dist1, dist2: $dist2');
       
       // Default damping is 0, meaning it may stop immediately (dist1 == 0).
       expect(dist1, greaterThanOrEqualTo(0));

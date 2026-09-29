@@ -2,7 +2,6 @@ import 'dart:math' as math;
 import 'package:test/test.dart';
 import 'package:vector_math/vector_math_64.dart';
 import 'package:lumina/lumina.dart';
-import 'package:lumina/src/animation/skeleton_retargeter.dart';
 
 void main() {
   group('LuminaSkeletonRetargeter Tests', () {

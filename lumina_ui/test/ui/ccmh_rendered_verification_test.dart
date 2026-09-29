@@ -80,16 +80,16 @@ void main() {
       );
       final assetLoader = FilamentAssetLoader.create(
         engine: engine,
-        materialProvider: materialProvider!,
+        materialProvider: materialProvider,
       );
       final resourceLoader = FilamentResourceLoader.create(
         engine: engine,
         normalizeSkinningWeights: true,
       );
       // Crucial: register default texture providers!
-      resourceLoader!.registerDefaultProviders(engine);
+      resourceLoader.registerDefaultProviders(engine);
 
-      final asset = assetLoader!.createAsset(sanitizedGlb);
+      final asset = assetLoader.createAsset(sanitizedGlb);
       expect(asset, isNotNull);
       final loadOk = resourceLoader.loadResources(asset!);
       expect(loadOk, isTrue);
@@ -141,7 +141,7 @@ void main() {
         }
       }
 
-      print('CCMH Rendered textured/colored pixels: $coloredPixels / ${w * h}');
+      printOnFailure('CCMH Rendered textured/colored pixels: $coloredPixels / ${w * h}');
       expect(
         coloredPixels,
         greaterThan(3000),

@@ -42,7 +42,6 @@ abstract class _EditorViewModelState extends ChangeNotifier {
   /// construct the editor with `enableTimers: false`, unless asked for).
   final bool _autoThumbnails;
   AssetReferenceGraph? _referenceGraph;
-  Map<String, String>? _assetPathsById;
   final List<String> _thumbnailQueue = [];
   final Set<String> _forcedThumbnails = {};
   int _thumbnailTotal = 0;

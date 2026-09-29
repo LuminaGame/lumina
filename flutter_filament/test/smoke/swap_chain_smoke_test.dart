@@ -15,7 +15,7 @@ void main() {
       final rig = SmokeRig.adopt(engine, width: 256, height: 256,
           swapChainFlags: SwapChainConfig.readable | SwapChainConfig.transparent);
       expect(engine.isValidSwapChain(rig.swapChain), isTrue);
-      print('srgb=${FilamentSwapChain.isSRGBSupported(engine)} msaa=${FilamentSwapChain.isMSAASupported(engine)} '
+      smokeLog('srgb=${FilamentSwapChain.isSRGBSupported(engine)} msaa=${FilamentSwapChain.isMSAASupported(engine)} '
           'frameRateChange=${rig.swapChain.isFrameRateChangeSupported}');
       expect(FilamentSwapChain.isProtectedContentSupported(engine), isA<bool>());
       expect(rig.swapChain.isFrameRateChangeSupported, isNotNull);
@@ -38,7 +38,7 @@ void main() {
         engine.pumpMessageQueues();
         await Future<void>.delayed(const Duration(milliseconds: 5));
       }
-      print('callbacks scheduled=$scheduled completed=$completed');
+      smokeLog('callbacks scheduled=$scheduled completed=$completed');
       expect(scheduled, greaterThanOrEqualTo(6), reason: 'one scheduled callback per rendered frame');
       // Headless swap chains never present, so onFrameCompleted stays 0 here;
       // the setter round-trip is still exercised.

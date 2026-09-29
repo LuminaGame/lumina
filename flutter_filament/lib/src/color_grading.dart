@@ -148,7 +148,6 @@ class ColorGrading {
 class ColorGradingBuilder {
   ffi.Pointer<ffi.Void> _ptr;
   bool _disposed = false;
-  ToneMapper? _toneMapperRef;
 
   ffi.Pointer<ffi.Void> get nativePointer => _ptr;
 
@@ -190,7 +189,6 @@ class ColorGradingBuilder {
     if (toneMapper.isDisposed) {
       throw StateError('Cannot use a disposed ToneMapper in ColorGradingBuilder');
     }
-    _toneMapperRef = toneMapper;
     c.filament_color_grading_builder_tone_mapper(_ptr, toneMapper.nativePointer);
     return this;
   }
@@ -352,7 +350,6 @@ class ColorGradingBuilder {
     final cgPtr = c.filament_color_grading_builder_build(_ptr, engine.nativePointer);
     _ptr = ffi.nullptr;
     _disposed = true;
-    _toneMapperRef = null;
     if (cgPtr.address == 0) {
       throw StateError('Failed to build ColorGrading');
     }
@@ -365,7 +362,6 @@ class ColorGradingBuilder {
       c.filament_color_grading_builder_destroy(_ptr);
       _ptr = ffi.nullptr;
       _disposed = true;
-      _toneMapperRef = null;
     }
   }
 }

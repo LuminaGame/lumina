@@ -7,7 +7,6 @@ import 'ffi_platform.dart' as ffi;
 import 'dart:typed_data';
 
 import 'package:flutter_filament/src/buffer_descriptor.dart';
-import 'package:flutter_filament/src/engine.dart';
 import 'package:flutter_filament/src/filament_bindings.dart' as c;
 
 /// The algorithm used to generate the tangent space.
@@ -41,10 +40,7 @@ enum TsmAuxAttribute {
 /// Internal data types for auxiliary attributes.
 enum _TsmAuxType {
   float2(0),
-  float3(1),
-  float4(2),
-  ushort3(3),
-  ushort4(4);
+  float4(2);
 
   final int value;
   const _TsmAuxType(this.value);
@@ -108,7 +104,6 @@ class TangentSpaceMeshBuilder {
   void aux(TsmAuxAttribute attribute, Float32List data, {int strideBytes = 0}) {
     final buffer = NativeBuffer.fromTypedData(data);
     _retain(buffer);
-    final elementsPerItem = (data.lengthInBytes / 4) ~/ _calculateCount(strideBytes);
     // Rough heuristic since the builder doesn't specify if it's float2/3/4 directly:
     // We assume the user passes a properly sized list for vertexCount * channels.
     // If we just default to float4 it might read out of bounds. The C API doesn't know.
@@ -118,11 +113,6 @@ class TangentSpaceMeshBuilder {
     if (attribute == TsmAuxAttribute.uv1) type = _TsmAuxType.float2.value;
     
     c.filament_tsm_builder_aux(_builder, attribute.value, buffer.pointer.cast(), type, strideBytes);
-  }
-
-  int _calculateCount(int strideBytes) {
-    // Just a fallback heuristic
-    return 1;
   }
 
   void algorithm(TsmAlgorithm algo) {

@@ -525,7 +525,7 @@ mixin _EditorActorsAndComponents on _EditorViewModelState {
     if (!isCommit) {
       if (actorId.isNotEmpty) {
         final actor =
-            _actors.where((a) => a.id == actorId).firstOrNull as EditorActorNode?;
+            _actors.where((a) => a.id == actorId).firstOrNull;
         if (actor != null) {
           final c = actor.components.where((c) => c.id == componentId).firstOrNull;
           if (c != null) {
@@ -579,15 +579,17 @@ mixin _EditorActorsAndComponents on _EditorViewModelState {
     };
 
     void apply() {
-      for (final a in targets)
+      for (final a in targets) {
         a.components.firstWhere((c) => c.type == type).enabled = enabled;
+      }
       _markDirty();
     }
 
     void undo() {
-      for (final a in targets)
+      for (final a in targets) {
         a.components.firstWhere((c) => c.type == type).enabled =
             beforeStates[a.id]!;
+      }
       _markDirty();
     }
 

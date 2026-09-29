@@ -72,7 +72,7 @@ void main() {
           },
         );
         final changed = countChangedPixels(first, last);
-        print('orbit changed pixels=$changed');
+        smokeLog('orbit changed pixels=$changed');
         expect(changed, greaterThan(1000), reason: 'half-turn swaps the props left/right');
       } finally {
         ac.dispose(rig.scene);

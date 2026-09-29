@@ -106,8 +106,8 @@ void main() {
       final entities2 = EntityManager.createEntities(10000);
       sw2.stop();
 
-      print('10k Singular Creates: ${sw1.elapsedMilliseconds} ms');
-      print('10k Bulk Creates: ${sw2.elapsedMilliseconds} ms');
+      printOnFailure('10k Singular Creates: ${sw1.elapsedMilliseconds} ms');
+      printOnFailure('10k Bulk Creates: ${sw2.elapsedMilliseconds} ms');
 
       final sw3 = Stopwatch()..start();
       for (final e in entities1) {
@@ -119,8 +119,8 @@ void main() {
       EntityManager.destroyEntities(entities2);
       sw4.stop();
 
-      print('10k Singular Destroys: ${sw3.elapsedMilliseconds} ms');
-      print('10k Bulk Destroys: ${sw4.elapsedMilliseconds} ms');
+      printOnFailure('10k Singular Destroys: ${sw3.elapsedMilliseconds} ms');
+      printOnFailure('10k Bulk Destroys: ${sw4.elapsedMilliseconds} ms');
     });
   });
 }

@@ -1,5 +1,4 @@
 
-import 'package:flutter/widgets.dart' show BuildContext, Widget, State, StatefulWidget, ListenableBuilder, ValueChanged, BoxConstraints, WidgetsBinding;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina/lumina.dart' show LuminaBlueprintComponent, LuminaBlueprintDocument, LuminaMeshPhysics, MeshPhysicsService;
 import 'package:lumina_ui/ui/features/details/services/multi_edit_service.dart';
@@ -10,7 +9,6 @@ import '../../../core/property_editors/scrub_numeric_field.dart';
 import '../../../core/property_editors/color_field.dart';
 import '../../../core/property_editors/slider_field.dart';
 import '../../../core/property_editors/enum_field.dart';
-import '../../../core/property_editors/curve_field.dart';
 import '../../../core/property_editors/asset_ref_field.dart';
 import '../../details/widgets/actor_mesh_section.dart';
 import '../../../core/property_editors/collision_section_editor.dart';
@@ -26,7 +24,6 @@ import '../view_models/editor_view_model.dart';
 import 'play_blocked_dialog.dart' show openBlueprintAtNode;
 import '../../details/models/component_property_registry.dart';
 import '../../details/models/editor_component_node.dart';
-import 'package:lumina/data/models/lumina_asset.dart';
 import 'package:lumina/data/services/level_template_service.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart' show DetailsTarget;
 

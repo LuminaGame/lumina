@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:flutter/widgets.dart' show Widget, BuildContext;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina/data/models/lumina_plugin_descriptor.dart';
@@ -185,12 +184,12 @@ void main() {
   });
 
   testWidgets('Wizard creation workflow triggers generator, persists author, and shows Enable prompt', (tester) async {
-    ProcessRunner mockRunner = (String exec, List<String> args, {String? workingDirectory, bool runInShell = false}) async {
+    Future<ProcessResult> mockRunner(String exec, List<String> args, {String? workingDirectory, bool runInShell = false}) async {
       if (args.contains('create')) {
         Directory(args.last).createSync(recursive: true);
       }
       return ProcessResult(0, 0, 'ok', '');
-    };
+    }
 
     final generatorService = PluginTemplateGeneratorService(
       projectRoot: projectDir,

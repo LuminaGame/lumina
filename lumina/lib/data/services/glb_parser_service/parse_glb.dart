@@ -87,8 +87,9 @@ Future<GlbMeshData?> _parseGlb(Uint8List bytes) async {
       if (matIdx == null ||
           materials == null ||
           matIdx < 0 ||
-          matIdx >= materials.length)
+          matIdx >= materials.length) {
         return null;
+      }
       final imgIdx = _baseColorImageIndex(materials[matIdx], textures);
       if (imgIdx == null) return null;
       return decodedImages[imgIdx];
@@ -127,8 +128,9 @@ Future<GlbMeshData?> _parseGlb(Uint8List bytes) async {
       }
       // Palette for multiple material slots (e.g. Manny armor vs joints)
       if (matIdx == 0) return const [0.84, 0.85, 0.88]; // Main polymer/armor
-      if (matIdx == 1)
+      if (matIdx == 1) {
         return const [0.28, 0.30, 0.38]; // Dark mechanics/joints
+      }
       if (matIdx == 2) return const [0.92, 0.62, 0.18]; // Accent amber
       if (matIdx == 3) return const [0.22, 0.58, 0.88]; // Accent cyan
       return const [0.75, 0.78, 0.85];
@@ -304,8 +306,9 @@ Future<GlbMeshData?> _parseGlb(Uint8List bytes) async {
       for (final node in parsedAllNodes) {
         if (node.meshIndex == null ||
             node.meshIndex! < 0 ||
-            node.meshIndex! >= meshes.length)
+            node.meshIndex! >= meshes.length) {
           continue;
+        }
         final mIdx = node.meshIndex!;
         final mesh = meshes[mIdx] as Map;
         final primitives = mesh['primitives'] as List?;
@@ -330,8 +333,9 @@ Future<GlbMeshData?> _parseGlb(Uint8List bytes) async {
           final attributes = prim['attributes'] as Map?;
           if (attributes == null) continue;
           final posAccessorIdx = attributes['POSITION'] as int?;
-          if (posAccessorIdx == null || posAccessorIdx >= accessors.length)
+          if (posAccessorIdx == null || posAccessorIdx >= accessors.length) {
             continue;
+          }
 
           final posAccessor = accessors[posAccessorIdx] as Map;
           final posBufViewIdx = posAccessor['bufferView'] as int?;
@@ -598,8 +602,9 @@ Future<GlbMeshData?> _parseGlb(Uint8List bytes) async {
           List<int> getVertexJoints(int vertIndex) {
             if (jointsTotalOffset == null ||
                 vertIndex < 0 ||
-                vertIndex >= jointsCount)
+                vertIndex >= jointsCount) {
               return const [0, 0, 0, 0];
+            }
             final idx = jointsTotalOffset + (vertIndex * jointsByteStride);
             if (idx + (jointsComponentType == 5123 ? 8 : 4) <= bytes.length) {
               if (jointsComponentType == 5123) {
@@ -623,8 +628,9 @@ Future<GlbMeshData?> _parseGlb(Uint8List bytes) async {
           List<double> getVertexWeights(int vertIndex) {
             if (weightsTotalOffset == null ||
                 vertIndex < 0 ||
-                vertIndex >= weightsCount)
+                vertIndex >= weightsCount) {
               return const [1.0, 0.0, 0.0, 0.0];
+            }
             final idx = weightsTotalOffset + (vertIndex * weightsByteStride);
             if (weightsComponentType == 5126 && idx + 16 <= bytes.length) {
               return [
@@ -686,11 +692,13 @@ Future<GlbMeshData?> _parseGlb(Uint8List bytes) async {
           }
 
           List<double> getMorphDelta(int targetIdx, int vertIndex) {
-            if (targetIdx < 0 || targetIdx >= targetInfos.length)
+            if (targetIdx < 0 || targetIdx >= targetInfos.length) {
               return const [0.0, 0.0, 0.0];
+            }
             final info = targetInfos[targetIdx];
-            if (vertIndex < 0 || vertIndex >= info.$3)
+            if (vertIndex < 0 || vertIndex >= info.$3) {
               return const [0.0, 0.0, 0.0];
+            }
             final idx = info.$1 + (vertIndex * info.$2);
             if (idx + 12 <= bytes.length) {
               final dx = byteData.getFloat32(idx, Endian.little);
@@ -716,8 +724,9 @@ Future<GlbMeshData?> _parseGlb(Uint8List bytes) async {
           List<double>? getVertexUV(int vertIndex) {
             if (uvTotalOffset == null ||
                 vertIndex < 0 ||
-                vertIndex >= uvCount)
+                vertIndex >= uvCount) {
               return null;
+            }
             final idx = uvTotalOffset + (vertIndex * uvByteStride);
             if (idx + 8 <= bytes.length) {
               final u = byteData.getFloat32(idx, Endian.little);
@@ -807,10 +816,12 @@ Future<GlbMeshData?> _parseGlb(Uint8List bytes) async {
               int getIndex(int idxInAccessor) {
                 final idx = totalIndOffset + (idxInAccessor * indByteStride);
                 if (idx + stride <= bytes.length) {
-                  if (stride == 4)
+                  if (stride == 4) {
                     return byteData.getUint32(idx, Endian.little);
-                  if (stride == 2)
+                  }
+                  if (stride == 2) {
                     return byteData.getUint16(idx, Endian.little);
+                  }
                   return byteData.getUint8(idx);
                 }
                 return 0;

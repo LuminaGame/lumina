@@ -32,7 +32,7 @@ void main() {
       final texture = reader.load(file.readAsBytesSync(), Ktx2TransferFunction.sRGB);
       expect(texture, isNotNull);
       expect(texture!.width(), greaterThan(1));
-      print('ktx2 ${texture.width()}x${texture.height()} levels=${texture.levels} format=${texture.format}');
+      smokeLog('ktx2 ${texture.width()}x${texture.height()} levels=${texture.levels} format=${texture.format}');
 
       final material = buildUnlitMaterial(rig.engine, textured: true);
       final mi = material.createInstance()
@@ -42,7 +42,7 @@ void main() {
       addQuadRenderable(rig, quad, mi);
       final px = rig.screenshot('KtxReader Smoke Tests KtxReader: KTX2 UASTC colour grid transcodes and renders on a quad');
       final stats = frameStats(px);
-      print('ktx2 quad $stats');
+      smokeLog('ktx2 quad $stats');
       expect(stats.distinct, greaterThan(50), reason: 'colour grid has many distinct colours');
       expect(countForegroundPixels(px, rig.width), greaterThan(rig.width * rig.height ~/ 2));
 
@@ -73,7 +73,7 @@ void main() {
       rig.camera.setProjection(fovDegrees: 90, aspect: 1, near: 0.1, far: 100);
       final px = rig.screenshot('KtxReader Smoke Tests KtxReader: KTX1 cubemap bundle becomes a skybox texture');
       final stats = frameStats(px);
-      print('ktx1 skybox $stats');
+      smokeLog('ktx1 skybox $stats');
       expect(stats.distinct, greaterThan(1000), reason: 'photographic environment fills the frame');
 
       rig.scene.skybox = null;

@@ -80,7 +80,7 @@ void main() {
           final dx = e[0] - c.x, dy = e[1] - c.y, dz = e[2] - c.z;
           return dx * dx + dy * dy + dz * dz;
         }
-        print('orbit home=${home.eye} after=${after.eye} zoomed=${zoomed.eye}');
+        smokeLog('orbit home=${home.eye} after=${after.eye} zoomed=${zoomed.eye}');
         expect(dist(zoomed.eye), lessThan(dist(after.eye)), reason: 'scroll zooms in');
 
         final bookmark = manip.currentBookmark;

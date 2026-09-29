@@ -55,7 +55,7 @@ void main() {
         final outView = rig.renderFrame();
         final fgOut = countForegroundPixels(outView, rig.width);
         final visibleAfter = rig.view.visibleRenderableCount;
-        print('visible before=$visibleBefore after=$visibleAfter fgOut=$fgOut worldBox=${worldBox()}');
+        smokeLog('visible before=$visibleBefore after=$visibleAfter fgOut=$fgOut worldBox=${worldBox()}');
         expect(frustumNow().intersects(worldBox()), isFalse);
         expect(fgOut, lessThan(50));
         expect(visibleAfter, lessThan(visibleBefore));

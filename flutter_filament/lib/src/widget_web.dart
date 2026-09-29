@@ -22,7 +22,7 @@ import 'widget.dart';
 
 /// Web builds: Filament's WebGL2 backend presents straight
 /// into a `<canvas>` hosted by a platform view — no readback, no decode.
-State<FilamentWidget> createFilamentWidgetState() => WebFilamentWidgetState();
+typedef FilamentWidgetStateImpl = WebFilamentWidgetState;
 
 class WebFilamentWidgetState extends State<FilamentWidget> with SingleTickerProviderStateMixin {
   static int _nextId = 0;

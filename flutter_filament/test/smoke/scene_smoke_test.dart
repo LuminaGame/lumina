@@ -49,7 +49,7 @@ void main() {
         expect(rig.scene.hasEntity(ents.first), isTrue);
         final back = rig.renderFrame();
         final backFg = countForegroundPixels(back, rig.width);
-        print('scene renderables=${rig.scene.renderableCount} fg full=$fullFg empty=$emptyFg back=$backFg');
+        smokeLog('scene renderables=${rig.scene.renderableCount} fg full=$fullFg empty=$emptyFg back=$backFg');
         expect(emptyFg, lessThan(fullFg ~/ 10));
         expect(backFg, closeTo(fullFg, fullFg * 0.05));
 

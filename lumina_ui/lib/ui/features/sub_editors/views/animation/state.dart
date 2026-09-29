@@ -8,7 +8,6 @@ abstract class _AnimationSubEditorStateBase extends State<AnimationSubEditor> wi
   final FocusNode _focusNode = FocusNode();
   int _activeLeftTab = 0; // 0 = Properties, 1 = Bone Tracks, 2 = Notifies
   int _activeRightTab = 0; // 0 = Curves, 1 = BlendSpace
-  bool _wasPlayingBeforeDrag = false;
 
   // --- Implemented by the domain mixins or [_AnimationSubEditorState]. ---
 

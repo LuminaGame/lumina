@@ -1,8 +1,6 @@
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
-import 'package:flutter/widgets.dart' show Widget, BuildContext;
-import 'package:lumina/data/models/lumina_project.dart';
 import 'package:lumina/data/repositories/plugin_repository.dart';
 import 'package:lumina/data/models/lumina_plugin_descriptor.dart';
 import 'package:lumina/data/repositories/project_repository.dart';
@@ -104,7 +102,7 @@ void main() {
       }));
 
     File('${projectDir.path}/project.lmproject')
-      ..writeAsStringSync(jsonEncode({
+      .writeAsStringSync(jsonEncode({
         'project_name': 'test_project',
         'engine_version': '0.0.1',
         'active_level': 'contents/levels/L_DefaultLevel.lmas',
@@ -160,7 +158,7 @@ void main() {
     expect(find.text('INSTALLED'), findsOneWidget);
     
     final texts = find.byType(Text).evaluate().map((e) => (e.widget as Text).data).toList();
-    print(texts);
+    printOnFailure('$texts');
     
     expect(find.text('7 plugins · 0 enabled'), findsOneWidget);
   });

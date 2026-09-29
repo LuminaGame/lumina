@@ -4,7 +4,6 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:image/image.dart' as img;
-import 'package:lumina/lumina.dart' show LandscapeData, LandscapeSectionMap;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/landscape_brush.dart';

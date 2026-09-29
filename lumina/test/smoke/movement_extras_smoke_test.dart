@@ -78,7 +78,7 @@ void main() {
           final scale0 = max0 > 0 ? 1.0 / max0 : 1.0;
           final barrelMat = Matrix4.identity()
             ..setTranslationRaw(0.0, -aabb0.min.y * scale0, 0.0)
-            ..scale(scale0, scale0, scale0);
+            ..scaleByDouble(scale0, scale0, scale0, 1.0);
           tm.setTransform(assets[0].rootEntity, barrelMat.storage.toList());
 
           // Projectile Card (Asset 1) flying and bouncing
@@ -97,7 +97,7 @@ void main() {
               ..setTranslationRaw(posX, posY, posZ)
               ..rotateZ(-t * 3.0)
               ..rotateY(t * 2.0)
-              ..scale(scale1, scale1, scale1);
+              ..scaleByDouble(scale1, scale1, scale1, 1.0);
             tm.setTransform(assets[1].rootEntity, projMat.storage.toList());
           }
 
@@ -110,7 +110,7 @@ void main() {
             final acMat = Matrix4.identity()
               ..setTranslationRaw(4.5, -aabb2.min.y * scale2, 0.0)
               ..rotateY(math.pi)
-              ..scale(scale2, scale2, scale2);
+              ..scaleByDouble(scale2, scale2, scale2, 1.0);
             tm.setTransform(assets[2].rootEntity, acMat.storage.toList());
           }
 
@@ -195,7 +195,7 @@ void main() {
           final barrelMat = Matrix4.identity()
             ..setTranslationRaw(0.0, -aabb0.min.y * scale0, 0.0)
             ..rotateY(timeSeconds * 2.0)
-            ..scale(scale0, scale0, scale0);
+            ..scaleByDouble(scale0, scale0, scale0, 1.0);
           tm.setTransform(assets[0].rootEntity, barrelMat.storage.toList());
 
           // AC Unit (Asset 1) orbiting around central barrel
@@ -209,7 +209,7 @@ void main() {
             final acMat = Matrix4.identity()
               ..setTranslationRaw(math.sin(orbitAngle) * orbitRadius, 1.2, math.cos(orbitAngle) * orbitRadius)
               ..rotateY(orbitAngle + math.pi / 2.0)
-              ..scale(scale1, scale1, scale1);
+              ..scaleByDouble(scale1, scale1, scale1, 1.0);
             tm.setTransform(assets[1].rootEntity, acMat.storage.toList());
           }
 
@@ -227,7 +227,7 @@ void main() {
             final cardMat = Matrix4.identity()
               ..setTranslationRaw(elevX, elevY, elevZ)
               ..rotateY(timeSeconds * 3.0)
-              ..scale(scale2, scale2, scale2);
+              ..scaleByDouble(scale2, scale2, scale2, 1.0);
             tm.setTransform(assets[2].rootEntity, cardMat.storage.toList());
           }
 

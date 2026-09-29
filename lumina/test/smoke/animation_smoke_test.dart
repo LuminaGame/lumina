@@ -161,7 +161,7 @@ void main() {
               ..setTranslationRaw(xOffset, -aabb.min.y * scale + currentBob, 0.0)
               ..rotateX(currentTilt)
               ..rotateY(math.sin(timeSeconds * (1.0 + runSpeed * 2.0)) * 0.2)
-              ..scale(scale, scale, scale);
+              ..scaleByDouble(scale, scale, scale, 1.0);
             tm.setTransform(assets[i].rootEntity, mat.storage.toList());
           }
 
@@ -286,18 +286,10 @@ void main() {
 
           // Montage timing: Attack triggers at 2.5s, impacts at 4.0s, finishes at 5.5s, repeats at 7.0s
           final cycleT = timeSeconds % 4.5;
-          double attackWeight = 0.0;
           double armSwing = 0.0;
 
           if (cycleT > 1.0 && cycleT < 3.5) {
             final p = (cycleT - 1.0) / 2.5; // 0 -> 1
-            if (p < 0.2) {
-              attackWeight = p / 0.2; // blend in
-            } else if (p > 0.8) {
-              attackWeight = (1.0 - p) / 0.2; // blend out
-            } else {
-              attackWeight = 1.0;
-            }
             armSwing = math.sin(p * math.pi) * 1.5;
           }
 
@@ -312,7 +304,7 @@ void main() {
               ..setTranslationRaw(xOffset, -aabb.min.y * scale, 0.0)
               ..rotateZ(armSwing * 0.3)
               ..rotateY(math.sin(timeSeconds * 1.5) * 0.2)
-              ..scale(scale, scale, scale);
+              ..scaleByDouble(scale, scale, scale, 1.0);
             tm.setTransform(assets[i].rootEntity, mat.storage.toList());
           }
 
@@ -449,7 +441,7 @@ void main() {
               ..setTranslationRaw(xOffset, -aabb.min.y * scale + bob, 0.0)
               ..rotateX(forwardTilt)
               ..rotateY(math.sin(timeSeconds * 1.2) * 0.3)
-              ..scale(scale, scale, scale);
+              ..scaleByDouble(scale, scale, scale, 1.0);
             tm.setTransform(assets[i].rootEntity, mat.storage.toList());
           }
 
@@ -518,7 +510,7 @@ void main() {
               }
               
               // CRITICAL: Update bone matrices on the visual asset so the skinning buffer recalculates!
-              assets[0].instance?.animator?.updateBoneMatrices();
+              assets[0].instance?.animator.updateBoneMatrices();
             }
           }
 
@@ -532,7 +524,7 @@ void main() {
               
               final mat = Matrix4.identity()
                 ..setTranslationRaw(0.0, -aabb.min.y * scale, 0.0)
-                ..scale(scale, scale, scale);
+                ..scaleByDouble(scale, scale, scale, 1.0);
               tm.setTransform(assets[i].rootEntity, mat.storage.toList());
             } else {
               final mat = Matrix4.identity()..setTranslationRaw(0.0, -1000.0, 0.0);

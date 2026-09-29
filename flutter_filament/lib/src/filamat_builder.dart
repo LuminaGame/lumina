@@ -772,7 +772,7 @@ class FilamentMaterialBuilder {
         return UniformType.int2;
       case 'int3':
       case 'int3_type':
-        return UniformType.int3_type;
+        return UniformType.int3Type;
       case 'int4':
         return UniformType.int4;
       case 'uint':
@@ -818,7 +818,7 @@ class FilamentMaterialBuilder {
         return 'int';
       case UniformType.int2:
         return 'int2';
-      case UniformType.int3_type:
+      case UniformType.int3Type:
         return 'int3';
       case UniformType.int4:
         return 'int4';

@@ -1,4 +1,3 @@
-import 'dart:ffi' as ffi;
 import 'dart:typed_data';
 import 'package:flutter_filament/flutter_filament.dart';
 import 'package:test/test.dart';
@@ -6,15 +5,6 @@ import 'package:test/test.dart';
 void main() {
   group('VertexBuffer Partial Updates', () {
     late FilamentEngine engine;
-    late FilamentRenderer renderer;
-    late FilamentView view;
-    late FilamentScene scene;
-    late FilamentCamera camera;
-    late FilamentSwapChain swapChain;
-    late FilamentRenderTarget renderTarget;
-
-    const int width = 64;
-    const int height = 64;
 
     setUp(() {
       engine = FilamentEngine.create(backend: FilamentBackend.noop)!;

@@ -64,7 +64,7 @@ void main() {
       final brightSide = hemisphere(0.0, 0.5);
       final darkSide = hemisphere(0.5, 1.0);
       back.destroy();
-      print('round-trip equirect mean bright=${brightSide.toStringAsFixed(3)} dark=${darkSide.toStringAsFixed(3)}');
+      smokeLog('round-trip equirect mean bright=${brightSide.toStringAsFixed(3)} dark=${darkSide.toStringAsFixed(3)}');
       expect(brightSide, greaterThan(darkSide * 5), reason: 'cubemap round-trip preserves the lit hemisphere');
 
       final shRaw = CubemapSH.computeSH(cube, numBands: 3, irradiance: true);
@@ -72,7 +72,7 @@ void main() {
       CubemapSH.preprocessSHForShader(shRaw);
       final sh = SphericalHarmonics(bands: 3, coefficients: shRaw);
       final dir = FilamentIndirectLight.directionEstimateFromSh(sh);
-      print('sh direction estimate=$dir');
+      smokeLog('sh direction estimate=$dir');
       expect(dir.length, closeTo(1, 1e-3));
       // u = 0.25 is the +X meridian in Filament's equirect convention.
       expect(dir.x, greaterThan(0.9), reason: 'SH direction estimate points at the bright hemisphere (+X)');
@@ -89,7 +89,7 @@ void main() {
         rig.scene.setIndirectLight(null);
         final dark = rig.renderFrame();
         final darkStats = frameStats(dark);
-        print('sh lit distinct=${litStats.distinct} dark distinct=${darkStats.distinct}');
+        smokeLog('sh lit distinct=${litStats.distinct} dark distinct=${darkStats.distinct}');
         expect(litStats.distinct, greaterThan(darkStats.distinct), reason: 'SH irradiance adds shading');
       } finally {
         gltf.dispose(rig.scene);

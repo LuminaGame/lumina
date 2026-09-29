@@ -41,7 +41,7 @@ void main() {
         final pixels = rig.screenshot('gltfio Smoke Tests gltfio: Draco+WebP helicopter GLB renders with ubershader materials');
         final stats = frameStats(pixels);
         final fg = countForegroundPixels(pixels, rig.width);
-        print('helicopter renderables=${gltf.asset.renderableEntityCount} $stats foreground=$fg');
+        smokeLog('helicopter renderables=${gltf.asset.renderableEntityCount} $stats foreground=$fg');
         expect(fg, greaterThan(rig.width * rig.height ~/ 40), reason: 'mesh must cover >2.5% of the frame');
         expect(fg, lessThan(rig.width * rig.height * 95 ~/ 100), reason: 'background must remain visible');
         expect(stats.distinct, greaterThan(200), reason: 'shaded PBR mesh expected');
@@ -58,7 +58,7 @@ void main() {
         final duration = animator.getAnimationDuration(0);
         expect(duration, greaterThan(0));
         expect(animator.getAnimationName(0), contains('Walk'));
-        print('mannequin clip=${animator.getAnimationName(0)} duration=${duration.toStringAsFixed(2)}s');
+        smokeLog('mannequin clip=${animator.getAnimationName(0)} duration=${duration.toStringAsFixed(2)}s');
 
         // The clip plays in real time, looping, for the whole 10 s video.
         final last = rig.video(
@@ -79,7 +79,7 @@ void main() {
         animator.updateBoneMatrices();
         final b = rig.renderFrame(warmup: 1);
         final changed = countChangedPixels(a, b);
-        print('mannequin pose delta pixels=$changed');
+        smokeLog('mannequin pose delta pixels=$changed');
         expect(changed, greaterThan(50), reason: 'animation must move geometry');
       } finally {
         gltf.dispose(rig.scene);

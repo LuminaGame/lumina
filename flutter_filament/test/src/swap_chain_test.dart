@@ -139,15 +139,8 @@ void main() {
     test('onFrameScheduled and onFrameCompleted callback wiring and clearing', () {
       final sc = engine.createHeadlessSwapChain(32, 32);
 
-      var scheduledCalled = false;
-      var completedCalled = false;
-
-      sc.onFrameScheduled = () {
-        scheduledCalled = true;
-      };
-      sc.onFrameCompleted = () {
-        completedCalled = true;
-      };
+      sc.onFrameScheduled = () {};
+      sc.onFrameCompleted = () {};
 
       // Clearing callbacks
       sc.onFrameScheduled = null;

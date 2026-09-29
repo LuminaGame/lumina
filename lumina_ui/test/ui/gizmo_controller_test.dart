@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vector_math/vector_math_64.dart';
 import 'package:lumina_ui/ui/features/main_editor/services/gizmo_controller.dart';
-import 'package:lumina_ui/ui/features/main_editor/services/viewport_picker.dart' hide Ray;
 
 void main() {
   group('GizmoController', () {

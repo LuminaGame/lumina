@@ -62,7 +62,7 @@ class MaterialGraphController extends ChangeNotifier implements BlueprintGraphHo
     final param = _vm.parameters.where((p) => p.name == parameter && p.isSampler).firstOrNull;
     if (param == null) return false;
     final before = param.textureRef;
-    final afterId = asset?.assetId ?? (asset == null ? null : asset.fileName.replaceAll(RegExp(r'\.lmas$'), ''));
+    final afterId = asset?.assetId ?? (asset?.fileName.replaceAll(RegExp(r'\.lmas$'), ''));
     if (before?.assetPath == asset?.relativePath && before?.assetId == afterId) return false;
     void apply(String? id, String? path) {
       if (path == null || id == null) {

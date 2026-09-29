@@ -80,7 +80,7 @@ void main() {
         provider.updateQueue();
         
         final popped = provider.popTexture();
-        expect(popped?.nativePointer, equals(tex?.nativePointer));
+        expect(popped?.nativePointer, equals(tex.nativePointer));
         expect(provider.popMessage, isNotNull, reason: 'Decode should fail');
         popped?.dispose();
       }

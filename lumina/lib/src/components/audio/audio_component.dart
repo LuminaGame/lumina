@@ -1,4 +1,3 @@
-import 'package:vector_math/vector_math_64.dart';
 import '../../audio/audio_backend.dart';
 import '../../audio/audio_subsystem.dart';
 import '../../audio/sound_base.dart';
@@ -47,8 +46,8 @@ class LuminaAudioComponent extends LuminaSceneComponent {
   double get fadeFactor => _fadeFactor;
 
   @override
-  void onRegister(LuminaActor owner) {
-    super.onRegister(owner);
+  void onRegister(LuminaActor ownerActor) {
+    super.onRegister(ownerActor);
     final audioSys = world?.subsystems.getSubsystem<LuminaAudioSubsystem>();
     audioSys?.registerComponent(this);
 

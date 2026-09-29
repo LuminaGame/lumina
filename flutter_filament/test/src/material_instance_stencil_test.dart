@@ -107,7 +107,7 @@ void main() {
     });
 
     test('View stencilBufferEnabled property toggle', () {
-      final view = engine.createView()!;
+      final view = engine.createView();
       expect(view.stencilBufferEnabled, isFalse);
 
       view.stencilBufferEnabled = true;

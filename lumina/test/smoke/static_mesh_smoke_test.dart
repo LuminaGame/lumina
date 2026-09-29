@@ -152,7 +152,6 @@ void main() {
       for (int f = 0; f < 5; f++) {
         for (int i = 0; i < vertexCount; i++) {
           final x = positions[i * 3 + 0];
-          final z = positions[i * 3 + 2];
           positions[i * 3 + 1] = 0.2 * (x * 0.5 + f * 0.1);
         }
         procMesh.updateMeshSection(0, positions: positions);

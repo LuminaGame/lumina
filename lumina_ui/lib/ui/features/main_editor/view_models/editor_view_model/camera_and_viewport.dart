@@ -666,7 +666,7 @@ mixin _EditorCameraAndViewport on _EditorViewModelState {
     _quality = next;
     _qualityRevision++;
     _logger.log(
-      '$what — editor viewport now ${_quality}',
+      '$what — editor viewport now $_quality',
       level: 'info',
       source: 'QualityManager',
     );

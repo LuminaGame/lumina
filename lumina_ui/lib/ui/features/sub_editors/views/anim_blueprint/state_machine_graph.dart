@@ -269,8 +269,9 @@ class AnimStateMachineGraphState extends State<AnimStateMachineGraph> {
             }
             if (event is KeyDownEvent &&
                 (event.logicalKey == LogicalKeyboardKey.delete || event.logicalKey == LogicalKeyboardKey.backspace)) {
-              if (vm.selectedTransition != null && vm.deleteTransition(vm.selectedTransition!))
+              if (vm.selectedTransition != null && vm.deleteTransition(vm.selectedTransition!)) {
                 return KeyEventResult.handled;
+              }
               if (vm.selectedState != null && vm.deleteState(vm.selectedState!)) return KeyEventResult.handled;
             }
             return KeyEventResult.ignored;

@@ -51,7 +51,7 @@ void main() {
         engine.flushAndWait();
       }
       
-      final hit = await futureHit;
+      await futureHit;
       // It might be null in headless
       
       final miss = await futureMiss;

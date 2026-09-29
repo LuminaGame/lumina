@@ -4,7 +4,6 @@ import 'package:lumina/data/models/lumina_project.dart';
 import 'package:lumina/data/repositories/plugin_repository.dart';
 import 'package:lumina/data/repositories/project_repository.dart';
 import 'package:lumina/data/services/editor_host_generator_service.dart';
-import 'package:pub_semver/pub_semver.dart';
 
 enum PluginIssueType {
   missingDependency,

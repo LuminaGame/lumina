@@ -1,11 +1,8 @@
-import 'package:flutter/widgets.dart' show Size;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina_ui/ui/features/details/models/editor_component_node.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/details_widget.dart';
-import 'package:lumina/data/models/lumina_project.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
-import 'dart:io';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 
 void main() {

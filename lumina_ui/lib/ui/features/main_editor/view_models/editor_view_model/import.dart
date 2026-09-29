@@ -51,20 +51,21 @@ mixin _EditorImport on _EditorViewModelState {
       final stagedPath = staged['stagedPath'] as String;
       final detectedKind = staged['detectedKind'] as String;
       AssetType type;
-      if (detectedKind == 'static mesh')
+      if (detectedKind == 'static mesh') {
         type = AssetType.filamesh;
-      else if (detectedKind == 'skeletal mesh')
+      } else if (detectedKind == 'skeletal mesh') {
         type = AssetType.filameshSk;
-      else if (detectedKind == 'animation')
+      } else if (detectedKind == 'animation') {
         type = AssetType.animation;
-      else if (detectedKind == 'texture')
+      } else if (detectedKind == 'texture') {
         type = AssetType.texture;
-      else if (detectedKind == 'audio')
+      } else if (detectedKind == 'audio') {
         type = AssetType.audio;
-      else if (detectedKind == 'material')
+      } else if (detectedKind == 'material') {
         type = AssetType.filamat;
-      else
+      } else {
         type = AssetType.filamesh;
+      }
 
       // STEP 2: Conversion
       _importStatusMessage = 'Converting "$baseFileName"...';
@@ -88,9 +89,15 @@ mixin _EditorImport on _EditorViewModelState {
       final materials = converted['materials'] as List;
       final textures = converted['textures'] as List;
       final animations = converted['animations'] as List? ?? [];
-      for (final m in materials) extractedSubs.add(m['name'] as String);
-      for (final t in textures) extractedSubs.add(t['name'] as String);
-      for (final a in animations) extractedSubs.add(a['name'] as String);
+      for (final m in materials) {
+        extractedSubs.add(m['name'] as String);
+      }
+      for (final t in textures) {
+        extractedSubs.add(t['name'] as String);
+      }
+      for (final a in animations) {
+        extractedSubs.add(a['name'] as String);
+      }
 
       final targetPaths = _assetRepo.resolveTargetPaths(
         projectPath: projectDirPath,
@@ -106,7 +113,7 @@ mixin _EditorImport on _EditorViewModelState {
       _importProgress = 0.90;
       notifyListeners();
 
-      final emitted = await _assetRepo.emitAssetFamily(
+      await _assetRepo.emitAssetFamily(
         targetPaths: targetPaths,
         convertedData: converted,
       );

@@ -124,7 +124,7 @@ class PluginExtensionRegistry extends ChangeNotifier implements LuminaEditorHost
   final Map<String, List<DetailsCustomization>> _detailsCustomizations = {};
   
   // Custom type for console commands to hold handler and help text
-  final Map<String, Map<String, _ConsoleCommand>> _consoleCommands = {};
+  final Map<String, Map<String, RegisteredConsoleCommand>> _consoleCommands = {};
 
   String? _currentPlugin;
 
@@ -436,7 +436,7 @@ class PluginExtensionRegistry extends ChangeNotifier implements LuminaEditorHost
       logger.log('Duplicate console command $name from plugin $plugin', level: 'error', source: 'PluginRegistry');
       return;
     }
-    _consoleCommands.putIfAbsent(plugin, () => {})[name] = _ConsoleCommand(help, handler);
+    _consoleCommands.putIfAbsent(plugin, () => {})[name] = RegisteredConsoleCommand(help, handler);
   }
 
   void _checkDuplicateCommand(String id, String pluginName) {
@@ -460,8 +460,8 @@ class PluginExtensionRegistry extends ChangeNotifier implements LuminaEditorHost
   List<EditorAssetTypeHandler> get allAssetTypes => _assetTypes.values.expand((e) => e).toList();
   List<EditorImporter> get allImporters => _importers.values.expand((e) => e).toList();
   List<DetailsCustomization> get allDetailsCustomizations => _detailsCustomizations.values.expand((e) => e).toList();
-  Map<String, _ConsoleCommand> get allConsoleCommands {
-    Map<String, _ConsoleCommand> map = {};
+  Map<String, RegisteredConsoleCommand> get allConsoleCommands {
+    Map<String, RegisteredConsoleCommand> map = {};
     for (var entry in _consoleCommands.values) {
       map.addAll(entry);
     }
@@ -502,10 +502,11 @@ class PluginMenu {
   const PluginMenu(this.plugin, this.menu);
 }
 
-class _ConsoleCommand {
+/// A console command as the host holds it: its help text and handler.
+class RegisteredConsoleCommand {
   final String help;
   final void Function(List<String>) handler;
-  _ConsoleCommand(this.help, this.handler);
+  RegisteredConsoleCommand(this.help, this.handler);
 }
 
 /// A slot button as the host holds it: its plugin and its

@@ -1,3 +1,5 @@
+// ignore_for_file: file_names
+
 import 'dart:ffi' as ffi;
 import 'dart:io';
 
@@ -11,11 +13,10 @@ import 'smoke_helper.dart';
 void main() {
   group('00_infrastructure Smoke Tests', () {
     late FilamentEngine engine;
-    late FilamentSwapChain swapChain;
 
     setUp(() {
       engine = FilamentEngine.create(backend: FilamentBackend.noop)!;
-      swapChain = engine.createHeadlessSwapChain(800, 600);
+      engine.createHeadlessSwapChain(800, 600);
     });
 
     tearDown(() {

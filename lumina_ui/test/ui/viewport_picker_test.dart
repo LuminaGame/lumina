@@ -3,7 +3,6 @@ import 'package:vector_math/vector_math_64.dart';
 import 'package:lumina_ui/ui/features/main_editor/services/viewport_picker.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 import 'package:lumina/lumina.dart';
-import 'dart:io';
 
 void main() {
   _assetSpaceBounds();
@@ -42,20 +41,6 @@ void main() {
       
       expect(hits.isNotEmpty, isTrue);
       expect(hits.first.actor.id, 'actor_near');
-    });
-
-    test('Click 6 px outside projected AABB -> no hit', () {
-      final picker = ViewportPicker();
-      // Test 2D fallback or 3D ray bounds
-      final actor = EditorActorNode(
-        id: 'point_light',
-        name: 'Light',
-        type: 'PointLight',
-        location: [0, 0, 100],
-      );
-      
-      // We don't have meshData, so it relies on 40px screen distance
-      // We need a projection matrix for this, let's just test that without matrix it fails gracefully or something.
     });
 
     test('Hidden and locked actors are skipped', () {

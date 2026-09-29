@@ -1,6 +1,4 @@
-import 'package:flutter/widgets.dart' show Size;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina_ui/ui/features/details/models/component_property_registry.dart';
 import 'package:lumina_ui/ui/features/details/models/editor_component_node.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/details_widget.dart';

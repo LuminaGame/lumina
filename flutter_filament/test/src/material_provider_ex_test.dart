@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_filament/src/engine.dart';
 import 'package:flutter_filament/src/gltf_loader.dart';
-import 'package:flutter_filament/src/material.dart';
 
 void main() {
   group('MaterialProvider Expansion Tests', () {

@@ -65,7 +65,7 @@ void main() {
       // Bottom edge (vertices 0,1) red; top edge (vertices 2,3) green.
       final (br, bg, _) = pixelAt(px, rig.width, 128, 220);
       final (tr, tg, _) = pixelAt(px, rig.width, 128, 36);
-      print('bottom=($br,$bg) top=($tr,$tg)');
+      smokeLog('bottom=($br,$bg) top=($tr,$tg)');
       expect(br, greaterThan(180));
       expect(bg, lessThan(60));
       expect(tg, greaterThan(180));
@@ -103,7 +103,7 @@ void main() {
 
       final px = rig.screenshot('VertexBuffer Smoke Tests VertexBuffer: BufferObject-backed vertex buffer renders a quad');
       final fg = countForegroundPixels(px, rig.width);
-      print('bufferObject quad foreground=$fg');
+      smokeLog('bufferObject quad foreground=$fg');
       // Quad spans half the ortho frustum: ~25% of 256x256.
       expect(fg, inInclusiveRange(rig.width * rig.height ~/ 6, rig.width * rig.height ~/ 3));
 

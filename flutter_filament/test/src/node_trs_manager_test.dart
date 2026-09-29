@@ -57,7 +57,7 @@ void main() {
       // Find an entity that has the component
       int? targetEntity;
       for (final e in entities) {
-        if (nodeManager!.hasComponent(e)) {
+        if (nodeManager.hasComponent(e)) {
           targetEntity = e;
           break;
         }
@@ -67,7 +67,7 @@ void main() {
 
     test('Extras round trip', () {
       if (asset == null) return;
-      final nodeManager = assetLoader.nodeManager!;
+      final nodeManager = assetLoader.nodeManager;
       final entity = asset!.entities.last;
 
       if (!nodeManager.hasComponent(entity)) return;
@@ -81,7 +81,7 @@ void main() {
 
     test('Scene membership round trip', () {
       if (asset == null) return;
-      final nodeManager = assetLoader.nodeManager!;
+      final nodeManager = assetLoader.nodeManager;
       final entity = asset!.entities.last;
 
       if (!nodeManager.hasComponent(entity)) return;

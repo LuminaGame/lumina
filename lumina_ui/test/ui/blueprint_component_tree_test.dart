@@ -43,7 +43,7 @@ void main() {
     final vm = BlueprintEditorViewModel(
       assetPath: 'contents/blueprints/BP_Hero.lmas',
     );
-    final capsule = vm.addComponent('LuminaCapsuleComponent')!;
+    vm.addComponent('LuminaCapsuleComponent')!;
 
     await tester.pumpWidget(
       ShadcnApp(

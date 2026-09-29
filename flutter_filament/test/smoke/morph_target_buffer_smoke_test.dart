@@ -65,7 +65,7 @@ void main() {
       rm.setMorphWeights(entity, Float32List.fromList([1, 0]));
       final morphed = rig.renderFrame();
       final morphedFg = countForegroundPixels(morphed, rig.width);
-      print('rest fg=$restFg morphed fg=$morphedFg');
+      smokeLog('rest fg=$restFg morphed fg=$morphedFg');
       // Quad 0.8 wide → 1.6 wide: foreground roughly doubles.
       expect(morphedFg, greaterThan((restFg * 1.7).round()));
       // Pixel far right of the original quad is covered only when morphed.

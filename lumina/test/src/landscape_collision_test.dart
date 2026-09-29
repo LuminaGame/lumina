@@ -133,7 +133,7 @@ void main() {
     // The Third Person mannequin's capsule (35 cm radius), as landscape
     // smoke Scenario 04 walks it.
     const halfHeight = LuminaTemplateCharacterTuning.thirdPersonCapsuleHalfHeight;
-    final surfaceAt = (double wx, double wz) => data.sampleHeight(wx / _u, wz / _u) * _u;
+    double surfaceAt(double wx, double wz) => data.sampleHeight(wx / _u, wz / _u) * _u;
     final character = LuminaTemplateCharacter(thirdPerson: true, location: Vector3(0.0, surfaceAt(0.0, 3000.0) + halfHeight + 2.0, 3000.0));
     world.persistentLevel.registerActor(character);
     world.beginPlay();

@@ -259,8 +259,9 @@ class FilamentTransformGizmo {
   /// The colour a handle carries when nothing is hovered: red X, green Y,
   /// blue Z, white for the uniform/centre handle.
   static List<double> defaultHandleColor(String handleId) {
-    if (handleId == 'CENTER' || handleId == 'UNIFORM')
+    if (handleId == 'CENTER' || handleId == 'UNIFORM') {
       return const [1.0, 1.0, 1.0, 1.0];
+    }
     if (handleId.contains('X')) return const [1.0, 0.2, 0.2, 1.0];
     if (handleId.contains('Y')) return const [0.2, 1.0, 0.2, 1.0];
     if (handleId.contains('Z')) return const [0.2, 0.2, 1.0, 1.0];

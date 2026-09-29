@@ -52,7 +52,7 @@ void main() {
         if (px[i] > 150 && px[i + 2] < 80) reds++;
         if (px[i + 2] > 150 && px[i] < 80) blues++;
       }
-      print('filamesh reds=$reds blues=$blues aabb=$box');
+      smokeLog('filamesh reds=$reds blues=$blues aabb=$box');
       expect(reds, greaterThan(300), reason: 'submesh A drawn with matA');
       expect(blues, greaterThan(300), reason: 'submesh B drawn with matB');
 

@@ -95,7 +95,7 @@ void main() {
       lm.setDirection(sun, 0, 0, 1);
       final back = rig.renderFrame();
       final (br, _, _) = averageColor(back, rig.width, 100, 100, 56, 56);
-      print('tsm quad brightness front=${fr.toStringAsFixed(1)} back=${br.toStringAsFixed(1)}');
+      smokeLog('tsm quad brightness front=${fr.toStringAsFixed(1)} back=${br.toStringAsFixed(1)}');
       expect(fr, greaterThan(120), reason: 'lit from the front the normal (0,0,1) faces the light');
       expect(br, lessThan(fr * 0.5), reason: 'normal points away from a back light');
 
@@ -129,7 +129,7 @@ void main() {
       rig.view.postProcessingEnabled = false;
       final px = rig.screenshot('Geometry Smoke Tests Geometry: Transcoder expands normalized short3 positions for upload');
       final fg = countForegroundPixels(px, rig.width);
-      print('transcoded quad fg=$fg');
+      smokeLog('transcoded quad fg=$fg');
       expect(fg, inInclusiveRange(15000, 18000), reason: 'quad of side 1.0 in a 2.0 ortho frustum = 1/4 of 65536');
 
       rig.releaseEntities(); // Renderables before their material instance

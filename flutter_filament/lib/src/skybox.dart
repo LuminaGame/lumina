@@ -16,13 +16,10 @@ class FilamentSkybox {
   final FilamentEngine _engine;
   bool _disposed = false;
 
-  /// Strong reference to keep environment texture alive.
-  final FilamentTexture? _environmentTexture;
-
-  FilamentSkybox._(this._ptr, this._engine, [this._environmentTexture]);
+  FilamentSkybox._(this._ptr, this._engine);
 
   /// Internal constructor.
-  FilamentSkybox.internal(this._ptr, this._engine, [this._environmentTexture]);
+  FilamentSkybox.internal(this._ptr, this._engine);
 
   /// Constructs a [FilamentSkybox] with full builder parameters.
   ///
@@ -70,7 +67,7 @@ class FilamentSkybox {
       throw Exception('Failed to build FilamentSkybox');
     }
 
-    return FilamentSkybox._(ptr, engine, environment);
+    return FilamentSkybox._(ptr, engine);
   }
 
   /// Creates a solid color Skybox.

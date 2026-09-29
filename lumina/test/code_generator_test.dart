@@ -5,7 +5,6 @@ import 'package:lumina/data/models/lumina_asset.dart';
 import 'package:lumina/data/services/code_generator_service.dart';
 import 'package:lumina/data/services/level_template_service.dart';
 import 'package:lumina/src/game/template_character.dart';
-import 'package:lumina/src/world/streaming_source.dart';
 import 'package:lumina/src/world/world_partition.dart';
 
 import 'helpers/analyze_generated_project.dart';

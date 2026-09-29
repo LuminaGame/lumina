@@ -304,7 +304,7 @@ class _ContentBrowserWidgetState extends _ContentBrowserWidgetStateBase
                               SelectItemButton(value: 'Last Modified ↓', child: Text('Last Modified ↓')),
                             ],
                           ),
-                        ),
+                        ).call,
                       ),
                     ],
                   ),
@@ -632,7 +632,6 @@ class _ContentBrowserWidgetState extends _ContentBrowserWidgetStateBase
                                             if (vm != null)
                                               MenuButton(
                                                 leading: const Icon(LucideIcons.library, size: 14),
-                                                child: const Text('Add to Collection', style: TextStyle(fontSize: 10)),
                                                 subMenu: [
                                                   MenuButton(
                                                     onPressed: (_) => _showNewCollectionModal(context, vm),
@@ -644,6 +643,7 @@ class _ContentBrowserWidgetState extends _ContentBrowserWidgetStateBase
                                                     child: Text(c.name, style: const TextStyle(fontSize: 10)),
                                                   )),
                                                 ],
+                                                child: const Text('Add to Collection', style: TextStyle(fontSize: 10)),
                                               ),
                                             const MenuDivider(),
                                             MenuButton(
@@ -754,7 +754,6 @@ class _ContentBrowserWidgetState extends _ContentBrowserWidgetStateBase
                                             if (vm != null)
                                               MenuButton(
                                                 leading: const Icon(LucideIcons.library, size: 14),
-                                                child: const Text('Add to Collection', style: TextStyle(fontSize: 10)),
                                                 subMenu: [
                                                   MenuButton(
                                                     onPressed: (_) => _showNewCollectionModal(context, vm),
@@ -766,6 +765,7 @@ class _ContentBrowserWidgetState extends _ContentBrowserWidgetStateBase
                                                     child: Text(c.name, style: const TextStyle(fontSize: 10)),
                                                   )),
                                                 ],
+                                                child: const Text('Add to Collection', style: TextStyle(fontSize: 10)),
                                               ),
                                             const MenuDivider(),
                                             MenuButton(

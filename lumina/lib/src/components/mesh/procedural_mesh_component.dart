@@ -52,7 +52,6 @@ class _ProceduralMeshSection {
     this.material,
     this.stagingBuffer,
     required this.stagingByteSize,
-    this.visible = true,
     required this.bounds,
     required this.hasNormals,
     required this.hasUv0,
@@ -64,7 +63,7 @@ class _ProceduralMeshSection {
     required this.uv0Offset,
     required this.uv1Offset,
     required this.colorOffset,
-  });
+  }) : visible = true;
 
   void dispose(FilamentEngine? engine, FilamentScene? scene) {
     if (scene != null && entity != 0) {
@@ -332,7 +331,7 @@ class LuminaProceduralMeshComponent extends LuminaSceneComponent {
       byteData.setFloat32(base + 8, finalPositions[i * 3 + 2], Endian.host);
 
       // Tangents
-      if (hasTangents && finalQuats != null) {
+      if (hasTangents) {
         byteData.setInt16(base + tangentOffset + 0, finalQuats[i * 4 + 0], Endian.host);
         byteData.setInt16(base + tangentOffset + 2, finalQuats[i * 4 + 1], Endian.host);
         byteData.setInt16(base + tangentOffset + 4, finalQuats[i * 4 + 2], Endian.host);
@@ -340,7 +339,7 @@ class LuminaProceduralMeshComponent extends LuminaSceneComponent {
       }
 
       // UV0
-      if (hasUv && finalUv0 != null) {
+      if (hasUv) {
         byteData.setFloat32(base + uv0Offset + 0, finalUv0[i * 2 + 0], Endian.host);
         byteData.setFloat32(base + uv0Offset + 4, finalUv0[i * 2 + 1], Endian.host);
       }
@@ -352,7 +351,7 @@ class LuminaProceduralMeshComponent extends LuminaSceneComponent {
       }
 
       // Color
-      if (hasCol && colors != null) {
+      if (hasCol) {
         final colIdx = (i < inputVertexCount ? i : (i % inputVertexCount)) * 4;
         byteData.setUint8(base + colorOffset + 0, colors[colIdx + 0]);
         byteData.setUint8(base + colorOffset + 1, colors[colIdx + 1]);

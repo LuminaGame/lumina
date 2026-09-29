@@ -224,8 +224,9 @@ class _ScrubNumericFieldState extends State<ScrubNumericField> {
             width: 16,
             child: GhostButton(
               
-              child: const Icon(LucideIcons.rotateCcw, size: 10),
               onPressed: widget.onReset,
+              
+              child: const Icon(LucideIcons.rotateCcw, size: 10),
             ),
           ),
       ],

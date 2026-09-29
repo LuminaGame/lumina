@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina/lumina.dart';
-import 'package:lumina/data/services/code_generator_service.dart';
 
 /// Play-In-Editor cannot import the character the launcher generates
 /// into the user's project, because that is source in another package. It needs

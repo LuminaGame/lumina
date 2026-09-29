@@ -33,7 +33,7 @@ void main() {
       initialAsset: LuminaAsset(assetId: 'BP_Hero', name: 'BP_Hero', type: AssetType.actor),
     );
 
-    final root = vm.addComponent('LuminaCapsuleComponent')!;
+    vm.addComponent('LuminaCapsuleComponent')!;
     final beginPlay = vm.addGraphNode('event_beginplay', const Offset(40, 40))!;
     final printString = vm.addGraphNode('print_string', const Offset(260, 40))!;
     vm.addGraphWire(fromNodeId: beginPlay.id, fromPinId: 'exec_out', toNodeId: printString.id, toPinId: 'exec_in');

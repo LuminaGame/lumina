@@ -1,7 +1,5 @@
 import 'dart:io';
-import 'package:flutter/material.dart' hide ThemeData, Colors, Icon, Icons, DropdownMenu, TextField, Scaffold;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina/lumina.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 

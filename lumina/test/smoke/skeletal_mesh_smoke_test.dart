@@ -211,7 +211,7 @@ void main() {
           final scale0 = max0 > 0 ? 1.8 / max0 : 1.0;
           final mannyMat = Matrix4.identity()
             ..setTranslationRaw(0.0, -mannyAabb.min.y * scale0, 0.0)
-            ..scale(scale0, scale0, scale0);
+            ..scaleByDouble(scale0, scale0, scale0, 1.0);
           tm.setTransform(assets[0].rootEntity, mannyMat.storage.toList());
 
           // Accessory (Asset 1) attached to hand socket, waving up and down with sine wave
@@ -226,7 +226,7 @@ void main() {
             final itemMat = Matrix4.identity()
               ..setTranslationRaw(handX, handY, handZ)
               ..rotateZ(math.sin(timeSeconds * 3.0) * 0.5)
-              ..scale(scale1, scale1, scale1);
+              ..scaleByDouble(scale1, scale1, scale1, 1.0);
             tm.setTransform(assets[1].rootEntity, itemMat.storage.toList());
           }
 
@@ -310,7 +310,7 @@ void main() {
           final scale0 = max0 > 0 ? 1.8 / max0 : 1.0;
           final mannyMat = Matrix4.identity()
             ..setTranslationRaw(0.0, -aabb0.min.y * scale0, 0.0)
-            ..scale(scale0, scale0, scale0);
+            ..scaleByDouble(scale0, scale0, scale0, 1.0);
           tm.setTransform(assets[0].rootEntity, mannyMat.storage.toList());
 
           // Camera close-up tracking Manny's head/face

@@ -1,4 +1,3 @@
-import 'dart:ffi' as ffi;
 import 'dart:typed_data';
 import 'package:flutter_filament/flutter_filament.dart';
 import 'package:test/test.dart';
@@ -300,9 +299,6 @@ void main() {
       test('RenderableManager setGeometryAt, geometryType, and queries', () {
         expect(GeometryType.staticBounds.value, equals(1));
         
-        // Setup materials mock
-        final miA = FilamentMaterialInstance.internal(ffi.Pointer.fromAddress(0x1000), engine);
-        final miB = FilamentMaterialInstance.internal(ffi.Pointer.fromAddress(0x2000), engine);
         final rm = FilamentRenderableManager(engine);
 
         final entity1 = engine.createEntity();

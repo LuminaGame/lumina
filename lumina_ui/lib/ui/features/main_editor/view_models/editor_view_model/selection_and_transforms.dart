@@ -170,40 +170,6 @@ mixin _EditorSelectionAndTransforms on _EditorViewModelState {
     );
   }
 
-  void _old_duplicateSelectedActor() {
-    final actor = _selectedActor;
-    if (actor == null) return;
-
-    final newId = 'act_${DateTime.now().millisecondsSinceEpoch}';
-    final newName = '${actor.name}_Copy';
-    final newLocation = [
-      actor.location[0] + 50.0,
-      actor.location[1] + 50.0,
-      actor.location[2],
-    ];
-
-    final newActor = EditorActorNode(
-      id: newId,
-      name: newName,
-      type: actor.type,
-      location: newLocation,
-      rotation: List.from(actor.rotation),
-      scale: List.from(actor.scale),
-      isVisible: actor.isVisible,
-      isLocked: actor.isLocked,
-      mobility: actor.mobility,
-      lightIntensity: actor.lightIntensity,
-      castShadows: actor.castShadows,
-      lightColorHex: actor.lightColorHex,
-      materialPath: actor.materialPath,
-      meshData: actor.meshData,
-    );
-
-    _actors.add(newActor);
-    _selectedActor = newActor;
-    _markDirty();
-  }
-
   void restoreSnapshot(List<EditorActorNode> snapshot) {
     // A snapshot is a serialized copy, and the parsed mesh is not serialized.
     // Take it from the live node being replaced, or the viewport, picking and
@@ -234,12 +200,15 @@ mixin _EditorSelectionAndTransforms on _EditorViewModelState {
     if (_dragSnapshotLocation == null) return;
     _implicitTransformDrag = false;
     for (final a in selectedActors) {
-      if (_dragSnapshotLocation!.containsKey(a.id))
+      if (_dragSnapshotLocation!.containsKey(a.id)) {
         a.location = _dragSnapshotLocation![a.id]!;
-      if (_dragSnapshotRotation!.containsKey(a.id))
+      }
+      if (_dragSnapshotRotation!.containsKey(a.id)) {
         a.rotation = _dragSnapshotRotation![a.id]!;
-      if (_dragSnapshotScale!.containsKey(a.id))
+      }
+      if (_dragSnapshotScale!.containsKey(a.id)) {
         a.scale = _dragSnapshotScale![a.id]!;
+      }
     }
     _dragSnapshotLocation = null;
     _dragSnapshotRotation = null;
@@ -281,12 +250,15 @@ mixin _EditorSelectionAndTransforms on _EditorViewModelState {
     bool changed = false;
     for (final a in targets) {
       for (int i = 0; i < 3; i++) {
-        if ((beforeLocs[a.id]![i] - afterLocs[a.id]![i]).abs() > 0.001)
+        if ((beforeLocs[a.id]![i] - afterLocs[a.id]![i]).abs() > 0.001) {
           changed = true;
-        if ((beforeRots[a.id]![i] - afterRots[a.id]![i]).abs() > 0.001)
+        }
+        if ((beforeRots[a.id]![i] - afterRots[a.id]![i]).abs() > 0.001) {
           changed = true;
-        if ((beforeScales[a.id]![i] - afterScales[a.id]![i]).abs() > 0.001)
+        }
+        if ((beforeScales[a.id]![i] - afterScales[a.id]![i]).abs() > 0.001) {
           changed = true;
+        }
       }
     }
     if (!changed) return;
@@ -348,31 +320,37 @@ mixin _EditorSelectionAndTransforms on _EditorViewModelState {
     final beforeStates = <String, dynamic>{};
     for (final actor in targets) {
       if (componentType == null) {
-        if (propertyId == 'location')
+        if (propertyId == 'location') {
           beforeStates[actor.id] = List<double>.from(actor.location);
-        else if (propertyId == 'rotation')
+        } else if (propertyId == 'rotation') {
           beforeStates[actor.id] = List<double>.from(actor.rotation);
-        else if (propertyId == 'scale')
+        } else if (propertyId == 'scale') {
           beforeStates[actor.id] = List<double>.from(actor.scale);
+        }
       } else {
         final c = actor.components.firstWhere((c) => c.type == componentType);
         beforeStates[actor.id] = c.properties[propertyId];
       }
     }
 
-    void _applyVal(EditorActorNode actor, dynamic newVal) {
+    void applyVal(EditorActorNode actor, dynamic newVal) {
       if (componentType == null) {
-        if (propertyId == 'location')
+        if (propertyId == 'location') {
           actor.location = List<double>.from(newVal);
-        else if (propertyId == 'rotation') {
+        } else if (propertyId == 'rotation') {
           final r = List<double>.from(newVal);
           for (int i = 0; i < 3; i++) {
-            while (r[i] > 180) r[i] -= 360;
-            while (r[i] < -180) r[i] += 360;
+            while (r[i] > 180) {
+              r[i] -= 360;
+            }
+            while (r[i] < -180) {
+              r[i] += 360;
+            }
           }
           actor.rotation = r;
-        } else if (propertyId == 'scale')
+        } else if (propertyId == 'scale') {
           actor.scale = List<double>.from(newVal);
+        }
       } else {
         final c = actor.components.firstWhere((c) => c.type == componentType);
         c.properties[propertyId] = newVal;
@@ -391,7 +369,7 @@ mixin _EditorSelectionAndTransforms on _EditorViewModelState {
           final next = [for (final e in own) (e as num).toDouble()];
           final v = ((value as List)[axis] as num).toDouble();
           next[axis] = relative ? next[axis] + v : v;
-          _applyVal(actor, next);
+          applyVal(actor, next);
         } else if (relative && componentType == null) {
           final before = beforeStates[actor.id] as List;
           final delta = value as List;
@@ -400,9 +378,9 @@ mixin _EditorSelectionAndTransforms on _EditorViewModelState {
             (before[1] as num).toDouble() + (delta[1] as num).toDouble(),
             (before[2] as num).toDouble() + (delta[2] as num).toDouble(),
           ];
-          _applyVal(actor, after);
+          applyVal(actor, after);
         } else {
-          _applyVal(actor, value);
+          applyVal(actor, value);
         }
       }
       _markDirty();
@@ -410,7 +388,7 @@ mixin _EditorSelectionAndTransforms on _EditorViewModelState {
 
     void undo() {
       for (final actor in targets) {
-        _applyVal(actor, beforeStates[actor.id]);
+        applyVal(actor, beforeStates[actor.id]);
       }
       _markDirty();
     }

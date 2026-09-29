@@ -484,10 +484,7 @@ class ProjectRepository {
         final match = flutterRegex.firstMatch(pubspecContent);
         if (match != null) {
           final insertPos = match.end;
-          pubspecContent = pubspecContent.substring(0, insertPos) +
-              '\n' +
-              assetList +
-              pubspecContent.substring(insertPos);
+          pubspecContent = '${pubspecContent.substring(0, insertPos)}\n$assetList${pubspecContent.substring(insertPos)}';
         } else {
           pubspecContent += '\nflutter:\n$assetList';
         }

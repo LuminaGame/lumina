@@ -29,14 +29,13 @@ class LuminaSpotLightComponent extends LuminaLightComponent {
     super.color,
     super.intensity = 10000.0, // Default: 10,000 lumens
     this.intensityInCandela = false,
-    double falloffRadius = 1000.0, // cm
+    this._falloffRadius = 1000.0, // cm
     double innerConeAngleDegrees = 30.0,
     double outerConeAngleDegrees = 45.0,
     super.castShadows = false,
     super.shadowOptions,
     super.visible = true,
-  }) : _falloffRadius = falloffRadius,
-       _innerConeAngleDegrees = innerConeAngleDegrees,
+  }) : _innerConeAngleDegrees = innerConeAngleDegrees,
        _outerConeAngleDegrees = outerConeAngleDegrees {
     if (innerConeAngleDegrees < 0.0 || innerConeAngleDegrees > outerConeAngleDegrees || outerConeAngleDegrees > 90.0) {
       throw ArgumentError('Invalid spot cone angles: must satisfy 0 <= inner <= outer <= 90');

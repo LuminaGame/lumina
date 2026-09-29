@@ -26,6 +26,7 @@ mixin _ViewportCameraControls on _ViewportWidgetStateBase {
   }
 
   /// Pushes [_meteredEv100] to the viewport's Filament camera when it moved.
+  @override
   void _syncAutoExposure() {
     final camera = _nativeCamera;
     if (camera == null) return;

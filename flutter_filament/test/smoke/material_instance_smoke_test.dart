@@ -52,7 +52,7 @@ void main() {
       final scissored = rig.renderFrame();
       final (_, _, topB) = pixelAt(scissored, rig.width, 192, 100);
       final (_, _, botB) = pixelAt(scissored, rig.width, 192, 170);
-      print('scissor top=$topB bottom=$botB');
+      smokeLog('scissor top=$topB bottom=$botB');
       expect(topB, greaterThan(180));
       expect(botB, lessThan(60), reason: 'scissor clips the bottom half');
       b.unsetScissor();
@@ -71,7 +71,7 @@ void main() {
         if (culled[i] > 180 && culled[i + 2] < 60) redPixels++;
         if (culled[i + 2] > 180 && culled[i] < 60) bluePixels++;
       }
-      print('from behind: red=$redPixels blue=$bluePixels');
+      smokeLog('from behind: red=$redPixels blue=$bluePixels');
       expect(redPixels, 0, reason: 'back-culled single-sided quad is invisible from behind');
       expect(bluePixels, greaterThan(5000), reason: 'double-sided quad still renders');
 

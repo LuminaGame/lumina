@@ -403,8 +403,9 @@ Uint8List _convertGlbTgaToPng(
           final colorAccIdx = attrs['COLOR_0'];
           if (colorAccIdx is! int ||
               colorAccIdx < 0 ||
-              colorAccIdx >= accessors.length)
+              colorAccIdx >= accessors.length) {
             continue;
+          }
           final acc = accessors[colorAccIdx] as Map?;
           if (acc == null) continue;
 

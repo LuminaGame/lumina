@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:flutter/material.dart' as mat;
-import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';

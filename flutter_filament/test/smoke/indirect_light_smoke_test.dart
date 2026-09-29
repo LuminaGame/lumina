@@ -41,7 +41,7 @@ void main() {
         ibl.setIntensity(2000);
         final dim = rig.renderFrame();
         final dimBrightness = _brightness(dim);
-        print('brightness lit=${litBrightness.toStringAsFixed(1)} dim=${dimBrightness.toStringAsFixed(1)}');
+        smokeLog('brightness lit=${litBrightness.toStringAsFixed(1)} dim=${dimBrightness.toStringAsFixed(1)}');
         expect(dimBrightness, lessThan(litBrightness));
         ibl.setIntensity(40000);
 

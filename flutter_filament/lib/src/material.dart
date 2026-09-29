@@ -1391,7 +1391,7 @@ class FilamentMaterialInstance {
   /// The parent [FilamentMaterial] of this instance.
   FilamentMaterial get material {
     _checkDisposed();
-    if (_parentMaterial != null) return _parentMaterial!;
+    if (_parentMaterial != null) return _parentMaterial;
     final matPtr = c.filament_material_instance_get_material(_ptr);
     return FilamentMaterial.internal(matPtr, _engine);
   }

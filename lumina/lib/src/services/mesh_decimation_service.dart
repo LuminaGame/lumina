@@ -1,6 +1,5 @@
 import 'dart:typed_data';
 import 'dart:math' as math;
-import '../../data/services/glb_parser_service.dart';
 
 class DecimatedMeshData {
   final Float32List positions;

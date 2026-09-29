@@ -5,7 +5,6 @@ import 'package:lumina/data/models/lumina_plugin_descriptor.dart';
 import 'package:lumina/data/repositories/plugin_repository.dart';
 import 'package:lumina/data/services/plugin_pack_script.dart';
 import 'package:lumina/data/services/plugin_template_generator_service.dart';
-import 'package:lumina/data/services/tga_decoder_service.dart';
 
 void main() {
   late Directory tempRoot;
@@ -36,7 +35,7 @@ void main() {
     test('Blank template into real temp project creates valid package structure and manifest', () async {
       final spawnedCommands = <List<String>>[];
 
-      ProcessRunner recordingRunner = (String exec, List<String> args, {String? workingDirectory, bool runInShell = false}) async {
+      Future<ProcessResult> recordingRunner(String exec, List<String> args, {String? workingDirectory, bool runInShell = false}) async {
         spawnedCommands.add([exec, ...args]);
         // Simulate scaffold directory creation
         if (args.contains('create')) {
@@ -44,7 +43,7 @@ void main() {
           targetDir.createSync(recursive: true);
         }
         return ProcessResult(0, 0, 'ok', '');
-      };
+      }
 
       final service = PluginTemplateGeneratorService(
         projectRoot: projectRoot,
@@ -131,10 +130,10 @@ void main() {
 
     test('Content-only template generates directory structure with zero process spawn', () async {
       int processCount = 0;
-      ProcessRunner recordingRunner = (String exec, List<String> args, {String? workingDirectory, bool runInShell = false}) async {
+      Future<ProcessResult> recordingRunner(String exec, List<String> args, {String? workingDirectory, bool runInShell = false}) async {
         processCount++;
         return ProcessResult(0, 0, 'ok', '');
-      };
+      }
 
       final service = PluginTemplateGeneratorService(
         projectRoot: projectRoot,
@@ -177,12 +176,12 @@ void main() {
     });
 
     test('Editor panel template registers panel with widget counter button', () async {
-      ProcessRunner runner = (String exec, List<String> args, {String? workingDirectory, bool runInShell = false}) async {
+      Future<ProcessResult> runner(String exec, List<String> args, {String? workingDirectory, bool runInShell = false}) async {
         if (args.contains('create')) {
           Directory(args.last).createSync(recursive: true);
         }
         return ProcessResult(0, 0, 'ok', '');
-      };
+      }
 
       final service = PluginTemplateGeneratorService(
         projectRoot: projectRoot,
@@ -208,12 +207,12 @@ void main() {
     });
 
     test('Importer template writes .txt importer with LuminaAsset .lmas serialization', () async {
-      ProcessRunner runner = (String exec, List<String> args, {String? workingDirectory, bool runInShell = false}) async {
+      Future<ProcessResult> runner(String exec, List<String> args, {String? workingDirectory, bool runInShell = false}) async {
         if (args.contains('create')) {
           Directory(args.last).createSync(recursive: true);
         }
         return ProcessResult(0, 0, 'ok', '');
-      };
+      }
 
       final service = PluginTemplateGeneratorService(
         projectRoot: projectRoot,
@@ -242,7 +241,7 @@ void main() {
     });
 
     test('Verify-stage failure rolls back and deletes generated plugin directory', () async {
-      ProcessRunner failingRunner = (String exec, List<String> args, {String? workingDirectory, bool runInShell = false}) async {
+      Future<ProcessResult> failingRunner(String exec, List<String> args, {String? workingDirectory, bool runInShell = false}) async {
         if (args.contains('create')) {
           Directory(args.last).createSync(recursive: true);
           return ProcessResult(0, 0, 'ok', '');
@@ -251,7 +250,7 @@ void main() {
           return ProcessResult(0, 1, '', 'Error: Missing semicolon at line 10');
         }
         return ProcessResult(0, 0, 'ok', '');
-      };
+      }
 
       final service = PluginTemplateGeneratorService(
         projectRoot: projectRoot,

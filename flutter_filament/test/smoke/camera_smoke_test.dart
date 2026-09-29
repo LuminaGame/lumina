@@ -59,7 +59,7 @@ void main() {
           },
         );
         final nearFg = countForegroundPixels(last, rig.width);
-        print('dolly foreground far=$farFg near=$nearFg');
+        smokeLog('dolly foreground far=$farFg near=$nearFg');
         expect(nearFg, greaterThan(farFg * 2), reason: 'dolly-in grows the prop on screen');
 
         // Exposure: +3 EV brighter.
@@ -67,14 +67,14 @@ void main() {
         final ev = cam.renderFrameBrightness(rig);
         cam.setExposureEv100(12);
         final bright = cam.renderFrameBrightness(rig);
-        print('brightness ev15=${ev.toStringAsFixed(1)} ev12=${bright.toStringAsFixed(1)}');
+        smokeLog('brightness ev15=${ev.toStringAsFixed(1)} ev12=${bright.toStringAsFixed(1)}');
         // 3 stops brighter; the frame mean is damped by the unlit background.
         expect(bright, greaterThan(ev * 1.15));
         // The same EV set both ways renders the same frame (the old
         // wrapper took the EV as an exposure factor: ~15× over-exposed).
         cam.setExposureEv100(math.log(16 * 16 * 125) / math.ln2);
         final same = cam.renderFrameBrightness(rig);
-        print('brightness sunny16=${ev.toStringAsFixed(1)} setExposureEv100(14.97)=${same.toStringAsFixed(1)}');
+        smokeLog('brightness sunny16=${ev.toStringAsFixed(1)} setExposureEv100(14.97)=${same.toStringAsFixed(1)}');
         expect(same, closeTo(ev, 1.5));
       } finally {
         gltf.dispose(rig.scene);

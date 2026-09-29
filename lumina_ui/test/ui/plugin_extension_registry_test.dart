@@ -28,7 +28,7 @@ class TestContextPlugin extends LuminaEditorPlugin {
       extensions: ['.test'], description: 'Test', import: (s, c) async => const ImportResult.success('test')
     ));
     context.registerDetailsCustomization(DetailsCustomization(
-      targetTypeId: 'TestActor', sectionTitle: 'Test', builder: (_, __) => const SizedBox()
+      targetTypeId: 'TestActor', sectionTitle: 'Test', builder: (_, _) => const SizedBox()
     ));
     context.registerConsoleCommand('testcmd', 'Test command', (args) {});
   }

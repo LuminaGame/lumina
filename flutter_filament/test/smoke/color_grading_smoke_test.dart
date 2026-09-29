@@ -61,7 +61,7 @@ void main() {
         final graded = rig.screenshot('ColorGrading Smoke Tests ColorGrading: desaturating grade changes a real PBR render');
         final gradedSat = saturation(graded);
         final changed = countChangedPixels(plain, graded);
-        print('saturation plain=${plainSat.toStringAsFixed(3)} graded=${gradedSat.toStringAsFixed(3)} changed=$changed');
+        smokeLog('saturation plain=${plainSat.toStringAsFixed(3)} graded=${gradedSat.toStringAsFixed(3)} changed=$changed');
         expect(gradedSat, lessThan(plainSat * 0.5), reason: 'saturation(0) grade desaturates the frame');
         expect(changed, greaterThan(rig.width * rig.height ~/ 2));
 

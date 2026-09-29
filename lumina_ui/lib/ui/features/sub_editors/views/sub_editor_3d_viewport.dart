@@ -395,8 +395,9 @@ class _SubEditor3DViewportState extends _SubEditor3DViewportStateBase
                         final down = _tapDownPosition;
                         _tapDownPosition = null;
                         if (down == null) return;
-                        if ((_tapDownButtons & kPrimaryMouseButton) == 0)
+                        if ((_tapDownButtons & kPrimaryMouseButton) == 0) {
                           return;
+                        }
                         if ((event.localPosition - down).distance > 4.0) return;
                         if (widget.transformGizmo != null &&
                             !HardwareKeyboard.instance.isAltPressed) {

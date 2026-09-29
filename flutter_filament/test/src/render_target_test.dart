@@ -73,7 +73,7 @@ void main() {
     test('MRT: create an RT with 2 color attachments', () {
       final count = FilamentRenderTarget.supportedColorAttachmentsCount(engine);
       if (count < 2) {
-        print('Skipping MRT test as supportedColorAttachmentsCount < 2');
+        markTestSkipped('Skipping MRT test as supportedColorAttachmentsCount < 2');
         return;
       }
 

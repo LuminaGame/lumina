@@ -1,5 +1,4 @@
 import 'package:lumina/data/repositories/asset_repository.dart';
-import 'package:lumina/data/models/lumina_project.dart';
 
 class QuickOpenMatch {
   final RealAssetInfo asset;

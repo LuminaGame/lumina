@@ -1,9 +1,6 @@
-import 'dart:math' as math;
 import 'package:vector_math/vector_math_64.dart';
-import '../../collision/collision_query.dart';
 import '../../collision/collision_subsystem.dart';
 import '../../math/units.dart';
-import '../../object/actor.dart';
 import '../base/actor_component.dart';
 import '../base/scene_component.dart';
 import '../collision/collision_component.dart';

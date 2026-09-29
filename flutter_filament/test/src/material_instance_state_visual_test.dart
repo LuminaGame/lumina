@@ -1,5 +1,4 @@
 import 'dart:typed_data';
-import 'package:flutter_filament/src/buffer_descriptor.dart';
 import 'package:flutter_filament/flutter_filament.dart';
 import 'package:test/test.dart';
 

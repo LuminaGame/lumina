@@ -30,7 +30,7 @@ void main() {
       final decoded = decodeImage(file.readAsBytesSync(), sourceName: 'milkyway.png');
       expect(decoded.width, greaterThan(64));
       expect(decoded.channels, anyOf(3, 4));
-      print('milkyway ${decoded.width}x${decoded.height}x${decoded.channels}');
+      smokeLog('milkyway ${decoded.width}x${decoded.height}x${decoded.channels}');
 
       final small = resampleImage(decoded, 128, 64, filter: ImageFilter.lanczos);
       expect(small.width, 128);
@@ -71,7 +71,7 @@ void main() {
       addQuadRenderable(rig, quad, mi);
       final px = rig.screenshot('Image Smoke Tests Image: decode → resample → colour transform → encode → GPU texture');
       final stats = frameStats(px);
-      print('milkyway quad $stats');
+      smokeLog('milkyway quad $stats');
       expect(stats.distinct, greaterThan(500), reason: 'photographic texture on screen');
 
       rig.releaseEntities(); // Renderables before their material instance

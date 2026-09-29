@@ -18,7 +18,7 @@ import 'widget.dart';
 
 /// Native platforms: render into a headless swap chain and present the
 /// readback through a [RawImage].
-State<FilamentWidget> createFilamentWidgetState() => NativeFilamentWidgetState();
+typedef FilamentWidgetStateImpl = NativeFilamentWidgetState;
 
 class NativeFilamentWidgetState extends State<FilamentWidget>
     with SingleTickerProviderStateMixin {
@@ -35,7 +35,6 @@ class NativeFilamentWidgetState extends State<FilamentWidget>
   int? _cameraEntity;
 
   late AnimationController _ticker;
-  int _frameCount = 0;
   int _fps = 60;
   int _framesThisSecond = 0;
   int _lastFpsTimestamp = DateTime.now().millisecondsSinceEpoch;
@@ -207,7 +206,6 @@ class NativeFilamentWidgetState extends State<FilamentWidget>
         }
         _lastTickTimestamp = endTick;
         
-        _frameCount++;
         _framesThisSecond++;
         final int now = DateTime.now().millisecondsSinceEpoch;
         if (now - _lastFpsTimestamp >= 1000) {

@@ -1,11 +1,8 @@
 import 'dart:io';
-import 'package:flutter/material.dart' show Shortcuts; 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina/lumina.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
-import 'package:lumina_ui/ui/features/main_editor/views/content_browser_widget.dart';
 
 void main() {
   group('Content Browser Search, Filters, & Collections', () {

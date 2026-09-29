@@ -115,7 +115,6 @@ mixin _AnimationToolbarTimeline on _AnimationSubEditorStateBase {
 
   Widget _buildBottomTimelinePanel() {
     final vm = _viewModel;
-    final maxDuration = vm.duration > 0 ? vm.duration : 0.001;
 
     return Container(
       height: 240,
@@ -207,7 +206,7 @@ mixin _AnimationToolbarTimeline on _AnimationSubEditorStateBase {
                           SelectItemButton(value: 2.0, child: Text('2.0x')),
                         ],
                       ),
-                    ),
+                    ).call,
                   ),
                 ),
                 const Spacer(),

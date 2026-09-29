@@ -93,7 +93,7 @@ void main() {
           final baseScale0 = max0 > 0 ? 1.0 / max0 : 1.0;
           final mat0 = Matrix4.identity()
             ..setTranslationRaw(0.0, -aabb0.min.y * baseScale0 * scale0Factor, 0.0)
-            ..scale(baseScale0 * scale0Factor, baseScale0 * scale0Factor, baseScale0 * scale0Factor);
+            ..scaleByDouble(baseScale0 * scale0Factor, baseScale0 * scale0Factor, baseScale0 * scale0Factor, 1.0);
           tm.setTransform(assets[0].rootEntity, mat0.storage.toList());
 
           // Asset 1 at (3.5, 0)
@@ -105,7 +105,7 @@ void main() {
           final baseScale1 = max1 > 0 ? 1.0 / max1 : 1.0;
           final mat1 = Matrix4.identity()
             ..setTranslationRaw(3.5, -aabb1.min.y * baseScale1 * scale1Factor, 0.0)
-            ..scale(baseScale1 * scale1Factor, baseScale1 * scale1Factor, baseScale1 * scale1Factor);
+            ..scaleByDouble(baseScale1 * scale1Factor, baseScale1 * scale1Factor, baseScale1 * scale1Factor, 1.0);
           tm.setTransform(assets[1].rootEntity, mat1.storage.toList());
 
           // Camera follows the active source
@@ -201,7 +201,7 @@ void main() {
           final scale0 = max0 > 0 ? 1.0 / max0 : 1.0;
           final mat0 = Matrix4.identity()
             ..setTranslationRaw(pawnX, -aabb0.min.y * scale0, pawnZ)
-            ..scale(scale0, scale0, scale0);
+            ..scaleByDouble(scale0, scale0, scale0, 1.0);
           tm.setTransform(assets[0].rootEntity, mat0.storage.toList());
 
           // Near prop (Asset 1) at (-2.0, 0, 0)
@@ -213,7 +213,7 @@ void main() {
           final base1 = max1 > 0 ? 0.8 / max1 : 1.0;
           final mat1 = Matrix4.identity()
             ..setTranslationRaw(-2.0, -aabb1.min.y * base1 * scaleNear, 0.0)
-            ..scale(base1 * scaleNear, base1 * scaleNear, base1 * scaleNear);
+            ..scaleByDouble(base1 * scaleNear, base1 * scaleNear, base1 * scaleNear, 1.0);
           tm.setTransform(assets[1].rootEntity, mat1.storage.toList());
 
           // Far prop (Asset 2) at (2.0, 0, 0)
@@ -225,7 +225,7 @@ void main() {
           final base2 = max2 > 0 ? 0.8 / max2 : 1.0;
           final mat2 = Matrix4.identity()
             ..setTranslationRaw(2.0, -aabb2.min.y * base2 * scaleFar, 0.0)
-            ..scale(base2 * scaleFar, base2 * scaleFar, base2 * scaleFar);
+            ..scaleByDouble(base2 * scaleFar, base2 * scaleFar, base2 * scaleFar, 1.0);
           tm.setTransform(assets[2].rootEntity, mat2.storage.toList());
 
           // Camera tracks pawn in 3rd person
@@ -313,7 +313,7 @@ void main() {
           final scale0 = max0 > 0 ? 1.0 / max0 : 1.0;
           final mat0 = Matrix4.identity()
             ..setTranslationRaw(-1.0, -aabb0.min.y * scale0, 0.0)
-            ..scale(scale0, scale0, scale0);
+            ..scaleByDouble(scale0, scale0, scale0, 1.0);
           tm.setTransform(assets[0].rootEntity, mat0.storage.toList());
 
           // Quest layer asset (Asset 1) gates in/out based on time (t between 2.5s and 7.5s)
@@ -335,7 +335,7 @@ void main() {
           final base1 = max1 > 0 ? 1.0 / max1 : 1.0;
           final mat1 = Matrix4.identity()
             ..setTranslationRaw(1.0, -aabb1.min.y * base1 * questAlpha, 0.0)
-            ..scale(base1 * questAlpha, base1 * questAlpha, base1 * questAlpha);
+            ..scaleByDouble(base1 * questAlpha, base1 * questAlpha, base1 * questAlpha, 1.0);
           tm.setTransform(assets[1].rootEntity, mat1.storage.toList());
 
           cam.lookAt(
@@ -434,7 +434,7 @@ void main() {
           final scale0 = max0 > 0 ? (1.0 / max0) * detailAlpha : 1.0;
           final mat0 = Matrix4.identity()
             ..setTranslationRaw(0.0, -aabb0.min.y * scale0, 0.0)
-            ..scale(scale0, scale0, scale0);
+            ..scaleByDouble(scale0, scale0, scale0, 1.0);
           tm.setTransform(assets[0].rootEntity, mat0.storage.toList());
 
           final aabb1 = assets[1].getBoundingBox();
@@ -443,7 +443,7 @@ void main() {
           final scale1 = max1 > 0 ? (1.0 / max1) * hlodAlpha : 1.0;
           final mat1 = Matrix4.identity()
             ..setTranslationRaw(0.0, -aabb1.min.y * scale1, 0.0)
-            ..scale(scale1, scale1, scale1);
+            ..scaleByDouble(scale1, scale1, scale1, 1.0);
           tm.setTransform(assets[1].rootEntity, mat1.storage.toList());
 
           cam.lookAt(

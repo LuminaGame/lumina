@@ -107,14 +107,11 @@ class FilameshMesh {
   bool _isDisposed = false;
 
   FilameshMesh._({
-    required FilamentEngine engine,
-    required int renderable,
-    required int vertexBuffer,
-    required int indexBuffer,
-  })  : _engine = engine,
-        _renderable = renderable,
-        _vertexBuffer = vertexBuffer,
-        _indexBuffer = indexBuffer;
+    required this._engine,
+    required this._renderable,
+    required this._vertexBuffer,
+    required this._indexBuffer,
+  });
 
   /// The renderable entity ID.
   int get renderable {

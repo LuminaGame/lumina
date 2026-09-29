@@ -68,7 +68,7 @@ void main() {
           final barrelMat = Matrix4.identity()
             ..setTranslationRaw(0.0, -aabb0.min.y * scale0, 0.0)
             ..rotateY(timeSeconds * 1.5)
-            ..scale(scale0, scale0, scale0);
+            ..scaleByDouble(scale0, scale0, scale0, 1.0);
           tm.setTransform(assets[0].rootEntity, barrelMat.storage.toList());
 
           // Fast Pulsing Satellite (Asset 1: AC Unit orbiting and flashing every 0.2s)
@@ -82,7 +82,7 @@ void main() {
             final acMat = Matrix4.identity()
               ..setTranslationRaw(math.sin(orbitAngle) * orbitRadius, 1.0 + math.sin(timeSeconds * 5.0) * 0.3, math.cos(orbitAngle) * orbitRadius)
               ..rotateY(orbitAngle)
-              ..scale(scale1, scale1, scale1);
+              ..scaleByDouble(scale1, scale1, scale1, 1.0);
             tm.setTransform(assets[1].rootEntity, acMat.storage.toList());
           }
 
@@ -96,7 +96,7 @@ void main() {
             final cardMat = Matrix4.identity()
               ..setTranslationRaw(-2.5, triggeredHeight, -2.0)
               ..rotateY(timeSeconds * 4.0)
-              ..scale(scale2, scale2, scale2);
+              ..scaleByDouble(scale2, scale2, scale2, 1.0);
             tm.setTransform(assets[2].rootEntity, cardMat.storage.toList());
           }
 
@@ -183,7 +183,7 @@ void main() {
           final barrelMat = Matrix4.identity()
             ..setTranslationRaw(0.0, -aabb0.min.y * scale0, 0.0)
             ..rotateY(timeSeconds * 3.0)
-            ..scale(scale0, scale0, scale0);
+            ..scaleByDouble(scale0, scale0, scale0, 1.0);
           tm.setTransform(assets[0].rootEntity, barrelMat.storage.toList());
 
           // Blast Affected Satellite 1 (Asset 1: AC Unit knocked back by radial shockwave)
@@ -199,7 +199,7 @@ void main() {
             final acMat = Matrix4.identity()
               ..setTranslationRaw(posX, posY, 0.0)
               ..rotateZ(knockback * 0.5)
-              ..scale(scale1, scale1, scale1);
+              ..scaleByDouble(scale1, scale1, scale1, 1.0);
             tm.setTransform(assets[1].rootEntity, acMat.storage.toList());
           }
 
@@ -217,7 +217,7 @@ void main() {
               ..setTranslationRaw(posX, posY, 0.0)
               ..rotateY(timeSeconds * 2.0)
               ..rotateZ(-knockback * 0.5)
-              ..scale(scale2, scale2, scale2);
+              ..scaleByDouble(scale2, scale2, scale2, 1.0);
             tm.setTransform(assets[2].rootEntity, cardMat.storage.toList());
           }
 
@@ -301,7 +301,7 @@ void main() {
           final barrelMat = Matrix4.identity()
             ..setTranslationRaw(0.0, -aabb0.min.y * scale0 + elevY, 0.0)
             ..rotateY(timeSeconds * 2.0)
-            ..scale(scale0, scale0, scale0);
+            ..scaleByDouble(scale0, scale0, scale0, 1.0);
           tm.setTransform(assets[0].rootEntity, barrelMat.storage.toList());
 
           // Invisible Blocking Boundary (Asset 1: AC Unit bouncing off blocking wall at X = 3.5)
@@ -315,7 +315,7 @@ void main() {
             final acMat = Matrix4.identity()
               ..setTranslationRaw(cycleX, 0.6, 2.0)
               ..rotateY(timeSeconds * 1.5)
-              ..scale(scale1, scale1, scale1);
+              ..scaleByDouble(scale1, scale1, scale1, 1.0);
             tm.setTransform(assets[1].rootEntity, acMat.storage.toList());
           }
 
@@ -332,7 +332,7 @@ void main() {
               ..setTranslationRaw(-3.5, fallY, -1.0)
               ..rotateZ(timeSeconds * 5.0)
               ..rotateY(timeSeconds * 3.0)
-              ..scale(scale2, scale2, scale2);
+              ..scaleByDouble(scale2, scale2, scale2, 1.0);
             tm.setTransform(assets[2].rootEntity, cardMat.storage.toList());
           }
 
@@ -421,7 +421,7 @@ void main() {
           final barrelMat = Matrix4.identity()
             ..setTranslationRaw(0.0, -aabb0.min.y * pulseScale, 0.0)
             ..rotateY(timeSeconds * 1.5)
-            ..scale(pulseScale, pulseScale, pulseScale);
+            ..scaleByDouble(pulseScale, pulseScale, pulseScale, 1.0);
           tm.setTransform(assets[0].rootEntity, barrelMat.storage.toList());
 
           // Selectable Target 1 (Asset 1: AC Unit)
@@ -434,7 +434,7 @@ void main() {
             final acMat = Matrix4.identity()
               ..setTranslationRaw(3.0, 0.6, -1.0)
               ..rotateY(timeSeconds * 0.8)
-              ..scale(scale1, scale1, scale1);
+              ..scaleByDouble(scale1, scale1, scale1, 1.0);
             tm.setTransform(assets[1].rootEntity, acMat.storage.toList());
           }
 
@@ -450,7 +450,7 @@ void main() {
               ..setTranslationRaw(-3.0, hoverY, 1.0)
               ..rotateZ(timeSeconds * 2.0)
               ..rotateY(timeSeconds * 1.5)
-              ..scale(scale2, scale2, scale2);
+              ..scaleByDouble(scale2, scale2, scale2, 1.0);
             tm.setTransform(assets[2].rootEntity, cardMat.storage.toList());
           }
 

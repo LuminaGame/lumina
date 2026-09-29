@@ -5,7 +5,7 @@ import 'package:lumina/lumina.dart';
 /// Prints a summary of every `.lmas` container under a directory (or a single
 /// file), optionally filtered by a substring of the path.
 ///
-/// Usage: dart run lumina:inspect_lmas <path> [name-filter]
+/// Usage: `dart run lumina:inspect_lmas <path> [name-filter]`
 void main(List<String> args) {
   if (args.isEmpty) {
     stderr.writeln('Usage: dart run lumina:inspect_lmas <file-or-directory> [name-filter]');
@@ -33,23 +33,23 @@ void main(List<String> args) {
   var count = 0;
   for (final file in files) {
     count++;
-    print('Reading file: ${file.path}');
+    stdout.writeln('Reading file: ${file.path}');
     try {
       final map = jsonDecode(file.readAsStringSync());
       final asset = LuminaAsset.fromMap(Map<String, dynamic>.from(map as Map));
-      print('  Asset Name: ${asset.name}');
-      print('  Type: ${asset.type}');
-      print('  Payload length: ${asset.rawPayload?.length}');
+      stdout.writeln('  Asset Name: ${asset.name}');
+      stdout.writeln('  Type: ${asset.type}');
+      stdout.writeln('  Payload length: ${asset.rawPayload?.length}');
       final payload = asset.rawPayload;
       if (payload != null && payload.length >= 12) {
         final hdr = payload.sublist(0, 12);
         final isGlb = hdr[0] == 0x67 && hdr[1] == 0x6C && hdr[2] == 0x54 && hdr[3] == 0x46;
-        print('  Header bytes: $hdr');
-        print('  Is glTF binary header: $isGlb');
+        stdout.writeln('  Header bytes: $hdr');
+        stdout.writeln('  Is glTF binary header: $isGlb');
       }
     } catch (e) {
-      print('  Error parsing: $e');
+      stdout.writeln('  Error parsing: $e');
     }
   }
-  print('Inspected $count .lmas file(s)');
+  stdout.writeln('Inspected $count .lmas file(s)');
 }

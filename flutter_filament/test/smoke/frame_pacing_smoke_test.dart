@@ -66,7 +66,7 @@ void main() {
             tm.setTransform(root, [math.cos(a), 0, -math.sin(a), 0, 0, 1, 0, 0, math.sin(a), 0, math.cos(a), 0, 0, 0, 0, 1]);
           },
         );
-        print('pacer accepted=$accepted skipped=$skipped status=${pacer.pacingStatus} '
+        smokeLog('pacer accepted=$accepted skipped=$skipped status=${pacer.pacingStatus} '
             'latency=${pacer.effectiveLatency} rate=${pacer.selectedFrameRate}');
         // 30 Hz target on 60 Hz ticks: every other tick is accepted.
         expect(accepted, inInclusiveRange(frames - 2, frames + 2),

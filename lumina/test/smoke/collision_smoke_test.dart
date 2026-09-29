@@ -391,7 +391,7 @@ void main() {
             final mat = Matrix4.identity()
               ..setTranslationRaw(xOffset, -aabb.min.y * scale + bob, 0.0)
               ..rotateY(timeSeconds * rotSpeed)
-              ..scale(scale, scale, scale);
+              ..scaleByDouble(scale, scale, scale, 1.0);
             tm.setTransform(assets[i].rootEntity, mat.storage.toList());
           }
 
@@ -475,7 +475,7 @@ void main() {
           final scale0 = max0 > 0 ? 1.0 / max0 : 1.0;
           final mat0 = Matrix4.identity()
             ..setTranslationRaw(moveX, -aabb0.min.y * scale0, 0.0)
-            ..scale(scale0, scale0, scale0);
+            ..scaleByDouble(scale0, scale0, scale0, 1.0);
           tm.setTransform(assets[0].rootEntity, mat0.storage.toList());
 
           // Wall (Asset 1) at (1.0, 0, 0)
@@ -485,7 +485,7 @@ void main() {
           final scale1 = max1 > 0 ? 1.2 / max1 : 1.0;
           final mat1 = Matrix4.identity()
             ..setTranslationRaw(1.0, -aabb1.min.y * scale1, 0.0)
-            ..scale(scale1, scale1, scale1);
+            ..scaleByDouble(scale1, scale1, scale1, 1.0);
           tm.setTransform(assets[1].rootEntity, mat1.storage.toList());
 
           cam.lookAt(
@@ -581,7 +581,7 @@ void main() {
             final mat = Matrix4.identity()
               ..setTranslationRaw(x, -aabb.min.y * scale, 0.0)
               ..rotateY((i == 0 ? 1 : -1) * timeSeconds * 1.5)
-              ..scale(scale, scale, scale);
+              ..scaleByDouble(scale, scale, scale, 1.0);
             tm.setTransform(assets[i].rootEntity, mat.storage.toList());
           }
 
@@ -672,7 +672,7 @@ void main() {
           final mat0 = Matrix4.identity()
             ..setTranslationRaw(pawnX, -aabb0.min.y * scale0, pawnZ)
             ..rotateY(pawnAngle + math.pi / 2.0)
-            ..scale(scale0, scale0, scale0);
+            ..scaleByDouble(scale0, scale0, scale0, 1.0);
           tm.setTransform(assets[0].rootEntity, mat0.storage.toList());
 
           // Stationary wall (Asset 1) at center (0, 0, 0)
@@ -682,7 +682,7 @@ void main() {
           final scale1 = max1 > 0 ? 1.2 / max1 : 1.0;
           final mat1 = Matrix4.identity()
             ..setTranslationRaw(0.0, -aabb1.min.y * scale1, 0.0)
-            ..scale(scale1, scale1, scale1);
+            ..scaleByDouble(scale1, scale1, scale1, 1.0);
           tm.setTransform(assets[1].rootEntity, mat1.storage.toList());
 
           cam.lookAt(

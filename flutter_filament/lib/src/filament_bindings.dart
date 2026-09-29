@@ -5,4 +5,6 @@
 
 /// The C bindings: ffigen's `@Native` externals on native platforms, the
 /// generated WebAssembly calls on the web (tool/ffigen_web.dart).
+library;
+
 export 'third_party/filament_c.g.dart' if (dart.library.js_interop) 'third_party/filament_c.web.g.dart';

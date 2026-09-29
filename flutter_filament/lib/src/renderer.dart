@@ -330,6 +330,23 @@ class FilamentRenderer {
     }
   }
 
+  /// Queues a readback of the current viewport (swap chain) into [buffer],
+  /// `width * height` RGBA8 pixels, without waiting for it: call between
+  /// [beginFrame] and [endFrame]; the pixels are in [buffer], which must stay
+  /// allocated until then, once the engine has been flushed (for example by
+  /// [FilamentEngine.flushAndWait] after [endFrame]).
+  void readPixelsInto(
+    ffi.Pointer<ffi.Uint8> buffer, {
+    required int x,
+    required int y,
+    required int width,
+    required int height,
+  }) {
+    _checkDisposed();
+    c.filament_renderer_read_pixels(
+        _ptr, _engine.nativePointer, x, y, width, height, buffer.cast(), ffi.nullptr, ffi.nullptr);
+  }
+
   /// Reads back pixels from the specified [renderTarget].
   ///
   /// Origin (0,0) is at the bottom-left of the render target.

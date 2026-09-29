@@ -43,12 +43,10 @@ class RigLogicEvaluator {
   bool _isDisposed = false;
 
   RigLogicEvaluator._({
-    required DnaReader reader,
-    required RigLogic rigLogic,
-    required RigInstance instance,
-  })  : _reader = reader,
-        _rigLogic = rigLogic,
-        _instance = instance {
+    required this._reader,
+    required this._rigLogic,
+    required this._instance,
+  }) {
     _initMetadata();
   }
 

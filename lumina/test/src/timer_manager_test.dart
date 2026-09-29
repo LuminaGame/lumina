@@ -70,7 +70,7 @@ void main() {
       world.beginPlay();
 
       int fires = 0;
-      final handle = timerMgr.setTimer(
+      timerMgr.setTimer(
         () => fires++,
         rate: 0.5,
         firstDelay: 2.0,

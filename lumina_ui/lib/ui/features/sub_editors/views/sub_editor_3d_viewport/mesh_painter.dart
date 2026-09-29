@@ -47,8 +47,9 @@ Color previewBaseColorFromParams(List<MaterialParamModel> params) {
   for (final p in params) {
     if (p.type != MaterialParamType.colorType &&
         p.type != MaterialParamType.vec4Type &&
-        p.type != MaterialParamType.vec3Type)
+        p.type != MaterialParamType.vec3Type) {
       continue;
+    }
     final v = p.value;
     if (v is List && v.length >= 3 && v.every((e) => e is num)) {
       double c(int i) => (v[i] as num).toDouble().clamp(0.0, 1.0);
@@ -351,10 +352,12 @@ class _SubEditor3DPainter extends _SubEditor3DPainterBase with _SubEditor3DMeshP
           ..lineTo(p4.dx, p4.dy)
           ..close();
 
-        if (shadingMode != ViewportShadingMode.wireframe)
+        if (shadingMode != ViewportShadingMode.wireframe) {
           canvas.drawPath(path, fillPaint);
-        if (shadingMode == ViewportShadingMode.wireframe)
+        }
+        if (shadingMode == ViewportShadingMode.wireframe) {
           canvas.drawPath(path, linePaint);
+        }
       }
     } else {
       // Sphere / Cylinder 3D wireframe wiremesh

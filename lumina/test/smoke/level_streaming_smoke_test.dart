@@ -93,7 +93,7 @@ void main() {
           final scale0 = max0 > 0 ? 1.0 / max0 : 1.0;
           final mat0 = Matrix4.identity()
             ..setTranslationRaw(-1.0, -aabb0.min.y * scale0, 0.0)
-            ..scale(scale0, scale0, scale0);
+            ..scaleByDouble(scale0, scale0, scale0, 1.0);
           tm.setTransform(assets[0].rootEntity, mat0.storage.toList());
 
           // Sub-level streaming asset (Asset 1) at (1.0, 0, 0)
@@ -116,7 +116,7 @@ void main() {
           final scale1 = max1 > 0 ? 1.0 / max1 : 1.0;
           final mat1 = Matrix4.identity()
             ..setTranslationRaw(1.0, -aabb1.min.y * scale1 * streamAlpha, 0.0)
-            ..scale(scale1 * streamAlpha, scale1 * streamAlpha, scale1 * streamAlpha);
+            ..scaleByDouble(scale1 * streamAlpha, scale1 * streamAlpha, scale1 * streamAlpha, 1.0);
           tm.setTransform(assets[1].rootEntity, mat1.storage.toList());
 
           cam.lookAt(
@@ -194,7 +194,7 @@ void main() {
           final scale0 = max0 > 0 ? 1.0 / max0 : 1.0;
           final mat0 = Matrix4.identity()
             ..setTranslationRaw(pawnX, -aabb0.min.y * scale0, 0.0)
-            ..scale(scale0, scale0, scale0);
+            ..scaleByDouble(scale0, scale0, scale0, 1.0);
           tm.setTransform(assets[0].rootEntity, mat0.storage.toList());
 
           // Volume target asset (Asset 1) streams in when pawn is inside |x| < 1.0
@@ -206,7 +206,7 @@ void main() {
           final scale1 = max1 > 0 ? 1.0 / max1 : 1.0;
           final mat1 = Matrix4.identity()
             ..setTranslationRaw(0.0, -aabb1.min.y * scale1 * streamScale, 1.2)
-            ..scale(scale1 * streamScale, scale1 * streamScale, scale1 * streamScale);
+            ..scaleByDouble(scale1 * streamScale, scale1 * streamScale, scale1 * streamScale, 1.0);
           tm.setTransform(assets[1].rootEntity, mat1.storage.toList());
 
           cam.lookAt(
@@ -286,7 +286,7 @@ void main() {
             final scale = maxDim > 0 ? 1.0 / maxDim : 1.0;
             final mat = Matrix4.identity()
               ..setTranslationRaw(zoneX, -aabb.min.y * scale * activeScale, 0.0)
-              ..scale(scale * activeScale, scale * activeScale, scale * activeScale);
+              ..scaleByDouble(scale * activeScale, scale * activeScale, scale * activeScale, 1.0);
             tm.setTransform(assets[i].rootEntity, mat.storage.toList());
           }
 

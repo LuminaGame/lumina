@@ -51,7 +51,7 @@ class LuminaBlueprintLevelActorRef {
   static List<LuminaBlueprintLevelActorRef> fromActorMaps(Iterable<Object?> actors) => [
         for (final a in actors)
           if (a is Map)
-            if (fromActorMap(Map<String, dynamic>.from(a)) case final ref?) ref,
+            ?fromActorMap(Map<String, dynamic>.from(a)),
       ];
 
   Map<String, dynamic> toJson() => {'name': name, 'actorClass': actorClass, 'id': id};

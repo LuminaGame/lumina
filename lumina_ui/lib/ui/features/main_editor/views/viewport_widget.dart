@@ -109,10 +109,12 @@ class _ViewportWidgetState extends _ViewportWidgetStateBase
     _flyTicker.dispose();
     _pieTicker.dispose();
     _keyboardFocus.dispose();
-    if (widget.viewModel.onStartSimulationRequest == _startPie)
+    if (widget.viewModel.onStartSimulationRequest == _startPie) {
       widget.viewModel.onStartSimulationRequest = null;
-    if (widget.viewModel.onStopSimulationRequest == _stopPie)
+    }
+    if (widget.viewModel.onStopSimulationRequest == _stopPie) {
       widget.viewModel.onStopSimulationRequest = null;
+    }
     if (widget.viewModel.onPlayBlocked == _showPlayBlocked) widget.viewModel.onPlayBlocked = null;
     if (widget.viewModel.onPlayWarnings == _showPlayWarnings) widget.viewModel.onPlayWarnings = null;
     _stopPie();

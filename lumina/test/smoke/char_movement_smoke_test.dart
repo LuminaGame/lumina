@@ -74,7 +74,7 @@ void main() {
           final scale1 = max1 > 0 ? 200.0 / max1 : 1.0;
           final wallMat = Matrix4.identity()
             ..setTranslationRaw(wallPos.x, -aabb1.min.y * scale1, wallPos.z)
-            ..scale(scale1, scale1, scale1);
+            ..scaleByDouble(scale1, scale1, scale1, 1.0);
           tm.setTransform(assets[1].rootEntity, wallMat.storage.toList());
 
           // Character (Asset 0) walks towards wall, collides at x=100, slides along Z, then turns back
@@ -110,7 +110,7 @@ void main() {
           final charMat = Matrix4.identity()
             ..setTranslationRaw(charX, -aabb0.min.y * scale0, charZ)
             ..rotateY(charYaw)
-            ..scale(scale0, scale0, scale0);
+            ..scaleByDouble(scale0, scale0, scale0, 1.0);
           tm.setTransform(assets[0].rootEntity, charMat.storage.toList());
 
           cam.lookAt(
@@ -215,7 +215,7 @@ void main() {
           final scale1 = max1 > 0 ? 180.0 / max1 : 1.0;
           final stepMat = Matrix4.identity()
             ..setTranslationRaw(stepPos.x, -aabb1.min.y * scale1 * 0.4, stepPos.z)
-            ..scale(scale1, scale1 * 0.4, scale1);
+            ..scaleByDouble(scale1, scale1 * 0.4, scale1, 1.0);
           tm.setTransform(assets[1].rootEntity, stepMat.storage.toList());
 
           // Character (Asset 0) walks, jumps onto step, walks across, and steps down
@@ -259,7 +259,7 @@ void main() {
           final charMat = Matrix4.identity()
             ..setTranslationRaw(charX, -aabb0.min.y * scale0 + charY, charZ)
             ..rotateY(charYaw)
-            ..scale(scale0, scale0, scale0);
+            ..scaleByDouble(scale0, scale0, scale0, 1.0);
           tm.setTransform(assets[0].rootEntity, charMat.storage.toList());
 
           cam.lookAt(
@@ -372,7 +372,7 @@ void main() {
           final scale0 = max0 > 0 ? 400.0 / max0 : 1.0;
           final floorMat = Matrix4.identity()
             ..setTranslationRaw(0.0, -aabb0.min.y * scale0 * 0.2, 0.0)
-            ..scale(scale0, scale0 * 0.2, scale0);
+            ..scaleByDouble(scale0, scale0 * 0.2, scale0, 1.0);
           tm.setTransform(assets[0].rootEntity, floorMat.storage.toList());
 
           // Character (Asset 1): 4-mode lifecycle simulation
@@ -418,7 +418,7 @@ void main() {
           final charMat = Matrix4.identity()
             ..setTranslationRaw(charX, -aabb1.min.y * scale1 + charY, charZ)
             ..rotateX(charPitch)
-            ..scale(scale1, scale1, scale1);
+            ..scaleByDouble(scale1, scale1, scale1, 1.0);
           tm.setTransform(assets[1].rootEntity, charMat.storage.toList());
 
           cam.lookAt(

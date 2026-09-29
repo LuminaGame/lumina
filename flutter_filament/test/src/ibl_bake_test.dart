@@ -12,16 +12,12 @@ void main() {
       }
 
       final filtered = IblCubemap(8);
-      var progressCalls = 0;
-
       CubemapIBL.roughnessFilter(
         filtered,
         [base],
         0.5,
         maxNumSamples: 16,
-        onProgress: (index, progress) {
-          progressCalls++;
-        },
+        onProgress: (index, progress) {},
       );
 
       expect(filtered.dimensions, equals(8));

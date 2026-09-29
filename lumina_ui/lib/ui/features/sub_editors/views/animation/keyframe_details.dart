@@ -105,9 +105,9 @@ mixin _AnimationKeyframeDetails on _AnimationSubEditorStateBase {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: EditorColors.warning.withOpacity(0.12),
+                  color: EditorColors.warning.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: EditorColors.warning.withOpacity(0.3)),
+                  border: Border.all(color: EditorColors.warning.withValues(alpha: 0.3)),
                 ),
                 child: const Icon(LucideIcons.keyRound, size: 22, color: EditorColors.warning),
               ),
@@ -147,7 +147,7 @@ mixin _AnimationKeyframeDetails on _AnimationSubEditorStateBase {
                   Container(
                     padding: const EdgeInsets.all(5),
                     decoration: BoxDecoration(
-                      color: EditorColors.warning.withOpacity(0.2),
+                      color: EditorColors.warning.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: const Icon(LucideIcons.keyRound, size: 14, color: EditorColors.warning),
@@ -389,7 +389,7 @@ mixin _AnimationKeyframeDetails on _AnimationSubEditorStateBase {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
             decoration: BoxDecoration(
-              color: accentColor.withOpacity(0.2),
+              color: accentColor.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(2),
             ),
             child: Text(

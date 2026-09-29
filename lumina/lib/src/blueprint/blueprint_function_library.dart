@@ -18,7 +18,6 @@ import '../components/particles/particle_emitter_config.dart';
 import '../components/particles/particle_system_component.dart';
 import '../game/console.dart';
 import '../game/game_instance.dart';
-import '../input/input_key.dart';
 import '../material/dynamic_material_instance.dart';
 import '../save/save_game.dart';
 import '../save/save_game_subsystem.dart';

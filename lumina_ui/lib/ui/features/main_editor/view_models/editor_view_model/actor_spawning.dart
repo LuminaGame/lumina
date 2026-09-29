@@ -351,7 +351,6 @@ mixin _EditorActorSpawning on _EditorViewModelState {
 
     GlbMeshData? meshData;
     String? resolvedMeshPath;
-    List<EditorComponentNode> components = [];
     if (asset.lmasPath != null && File(asset.lmasPath!).existsSync()) {
       _logger.log(
         'Loading 3D mesh geometry from LMAS container: ${asset.lmasPath}',

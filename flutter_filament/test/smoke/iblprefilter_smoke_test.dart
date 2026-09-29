@@ -81,7 +81,7 @@ void main() {
       final irradiance = irradianceFilter.run(envCube);
       irradianceFilter.destroy();
       expect(irradiance.target, TextureSamplerType.samplerCubemap);
-      print('prefilter env=${envCube.width()} reflections=${reflections.width()} levels=${reflections.levels} irradiance=${irradiance.width()}');
+      smokeLog('prefilter env=${envCube.width()} reflections=${reflections.width()} levels=${reflections.levels} irradiance=${irradiance.width()}');
 
       final ibl = FilamentIndirectLight.build(rig.engine, reflections: reflections, irradiance: null, intensity: 30000);
       rig.scene.setIndirectLight(ibl);
@@ -90,7 +90,7 @@ void main() {
         final px = rig.screenshot('IblPrefilter Smoke Tests IblPrefilter: equirect → cubemap → specular/irradiance filters light a real prop');
         final fg = countForegroundPixels(px, rig.width);
         final stats = frameStats(px);
-        print('prefiltered IBL barrel fg=$fg $stats');
+        smokeLog('prefiltered IBL barrel fg=$fg $stats');
         expect(fg, greaterThan(rig.width * rig.height ~/ 40));
         expect(stats.distinct, greaterThan(300), reason: 'reflections shade the barrel');
         rig.scene.setIndirectLight(null);

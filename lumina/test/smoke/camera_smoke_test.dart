@@ -207,7 +207,7 @@ void main() {
           final pawnMat = Matrix4.identity()
             ..setTranslationRaw(pawnX, -aabb0.min.y * scale0, pawnZ)
             ..rotateY(pawnYaw)
-            ..scale(scale0, scale0, scale0);
+            ..scaleByDouble(scale0, scale0, scale0, 1.0);
           tm.setTransform(assets[0].rootEntity, pawnMat.storage.toList());
 
           // 2. Obstacle placement (Asset 1)
@@ -219,19 +219,22 @@ void main() {
 
           final obsMat = Matrix4.identity()
             ..setTranslationRaw(obsPos.x, -aabb1.min.y * scale1, obsPos.z)
-            ..scale(scale1, scale1, scale1);
+            ..scaleByDouble(scale1, scale1, scale1, 1.0);
           tm.setTransform(assets[1].rootEntity, obsMat.storage.toList());
 
           // 3. SpringArm lag physics calculation
           const dt = 1.0 / SmokeVideo.minimumFps; // one frame of renderRealAssetMedia's default rate
-          const lagAlpha = 1.0 - math.e; // smooth step
           final targetLagPos = pawnPos;
           laggedArmPos += (targetLagPos - laggedArmPos) * (1.0 - math.exp(-4.0 * dt));
 
           // Angle diff for yaw lag
           var yawDiff = pawnYaw - laggedArmYaw;
-          while (yawDiff < -math.pi) yawDiff += 2 * math.pi;
-          while (yawDiff > math.pi) yawDiff -= 2 * math.pi;
+          while (yawDiff < -math.pi) {
+            yawDiff += 2 * math.pi;
+          }
+          while (yawDiff > math.pi) {
+            yawDiff -= 2 * math.pi;
+          }
           laggedArmYaw += yawDiff * (1.0 - math.exp(-4.0 * dt));
 
           // 4. Collision check against obstacle

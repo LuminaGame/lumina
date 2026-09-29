@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/widgets.dart' show ListenableBuilder;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina/data/services/level_template_service.dart';
 import 'package:lumina/lumina.dart';
@@ -165,7 +164,7 @@ void main() {
         height: 900,
         child: ListenableBuilder(
           listenable: vm,
-          builder: (_, __) => OutlinerWidget(viewModel: vm),
+          builder: (_, _) => OutlinerWidget(viewModel: vm),
         ),
       ),
     ));

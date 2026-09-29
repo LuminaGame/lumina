@@ -517,11 +517,10 @@ class UmgNode {
     Map<String, dynamic>? props,
     List<UmgEvent>? events,
     List<UmgNode>? children,
-    bool? isVariable,
+    this._isVariable,
   })  : props = props ?? {},
         events = events ?? [],
-        children = children ?? [],
-        _isVariable = isVariable;
+        children = children ?? [];
 
   bool get isVariable => _isVariable ?? type.isVariableByDefault;
 

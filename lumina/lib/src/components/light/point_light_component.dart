@@ -26,11 +26,11 @@ class LuminaPointLightComponent extends LuminaLightComponent {
     super.color,
     super.intensity = 10000.0, // Default: 10,000 lumens
     this.intensityInCandela = false,
-    double falloffRadius = 1000.0, // cm
+    this._falloffRadius = 1000.0, // cm
     super.castShadows = false,
     super.shadowOptions,
     super.visible = true,
-  }) : _falloffRadius = falloffRadius;
+  });
 
   @override
   LightBuilder createLightBuilder() {

@@ -66,7 +66,7 @@ void main() {
         inside = on;
       }
       final fg = countForegroundPixels(px, rig.width);
-      print('instance grid runs=$runs fg=$fg');
+      smokeLog('instance grid runs=$runs fg=$fg');
       expect(runs, 4, reason: 'four instances across one grid row');
       // 16 quads of 0.3 on a 2-unit frame → each 15% of the side → ~36% of the pixels.
       expect(fg / (rig.width * rig.height), inInclusiveRange(0.24, 0.46));

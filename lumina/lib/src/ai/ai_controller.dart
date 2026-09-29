@@ -259,9 +259,9 @@ class LuminaAIController extends LuminaController {
   }
 
   @override
-  void onUnpossess(LuminaPawn oldPawn) {
+  void onUnpossess(LuminaPawn pawn) {
     stopMovement();
     _focusStack.clear();
-    super.onUnpossess(oldPawn);
+    super.onUnpossess(pawn);
   }
 }

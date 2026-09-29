@@ -1,7 +1,6 @@
 import 'dart:typed_data';
 import 'package:test/test.dart';
 import 'package:flutter_filament/src/tangent_space_mesh.dart';
-import 'package:flutter_filament/src/engine.dart';
 
 void main() {
   group('TangentSpaceMesh', () {

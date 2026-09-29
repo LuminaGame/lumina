@@ -60,7 +60,7 @@ class LuminaBlueprintSaveGame extends LuminaSaveGame {
   LuminaBlueprintSaveGame(this.className, {LuminaBlueprintSaveGameDocument? document, super.customSaveData, super.saveSlotName, super.userIndex,
       super.saveTimestamp, super.currentLevelName, super.playerLocation, super.playerRotation, super.saveGameVersion}) {
     for (final f in document?.fields ?? const <LuminaBlueprintVariable>[]) {
-      this.customSaveData.putIfAbsent(f.name, () => f.defaultValue ?? _plainZero(f));
+      customSaveData.putIfAbsent(f.name, () => f.defaultValue ?? _plainZero(f));
     }
   }
 

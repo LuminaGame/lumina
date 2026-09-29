@@ -4,7 +4,6 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/rendering.dart' show RenderRepaintBoundary;
-import 'package:flutter/services.dart' show TextInputAction;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina/lumina.dart' hide BoxShape;
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';

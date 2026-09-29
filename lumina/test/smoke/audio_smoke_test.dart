@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'dart:math' as math;
-import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_filament/flutter_filament.dart';
 import 'package:vector_math/vector_math_64.dart';
@@ -96,7 +95,7 @@ void main() {
           final barrelMat = Matrix4.identity()
             ..setTranslationRaw(3.0, -aabb0.min.y * pulse, 0.0)
             ..rotateY(timeSeconds * 0.5)
-            ..scale(pulse, pulse, pulse);
+            ..scaleByDouble(pulse, pulse, pulse, 1.0);
           tm.setTransform(assets[0].rootEntity, barrelMat.storage.toList());
 
           // Emitter B (Asset 1: Radio Generator / AC unit at X = -3.0 with sound waves)
@@ -109,7 +108,7 @@ void main() {
             final acMat = Matrix4.identity()
               ..setTranslationRaw(-3.0, 0.6, 0.0)
               ..rotateY(timeSeconds * 1.0)
-              ..scale(scale1, scale1, scale1);
+              ..scaleByDouble(scale1, scale1, scale1, 1.0);
             tm.setTransform(assets[1].rootEntity, acMat.storage.toList());
           }
 
@@ -124,7 +123,7 @@ void main() {
             final cardMat = Matrix4.identity()
               ..setTranslationRaw(listenerX, 1.2, math.cos(timeSeconds * 1.2) * 1.5)
               ..rotateY(timeSeconds * 2.0)
-              ..scale(scale2, scale2, scale2);
+              ..scaleByDouble(scale2, scale2, scale2, 1.0);
             tm.setTransform(assets[2].rootEntity, cardMat.storage.toList());
           }
 

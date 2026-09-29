@@ -43,10 +43,9 @@ void main() {
     test('Cross-fade edge cases (alpha 0.0 and 1.0)', () {
       if (asset == null) return;
       final animator = asset!.animator;
-      if (animator == null || animator.animationCount < 2) return;
+      if (animator.animationCount < 2) return;
 
       final tm = FilamentTransformManager(engine);
-      final root = asset!.rootEntity; // Use root or another entity to track transform
       
       // We might need to find an animated entity to track. We can just pick the first renderable or child of root.
       final entities = asset!.entities;
@@ -87,7 +86,7 @@ void main() {
     test('Cross-fade midpoint (alpha 0.5)', () {
       if (asset == null) return;
       final animator = asset!.animator;
-      if (animator == null || animator.animationCount < 2) return;
+      if (animator.animationCount < 2) return;
 
       final tm = FilamentTransformManager(engine);
       final entities = asset!.entities;
@@ -120,7 +119,7 @@ void main() {
     test('resetBoneMatrices returns mesh to rest pose', () {
       if (asset == null) return;
       final animator = asset!.animator;
-      if (animator == null || animator.animationCount == 0) return;
+      if (animator.animationCount == 0) return;
 
       final tm = FilamentTransformManager(engine);
       final entities = asset!.entities;
@@ -134,7 +133,6 @@ void main() {
       // 2. Animate
       animator.applyAnimation(0, 1.5);
       animator.updateBoneMatrices();
-      final tAnim = tm.getWorldTransform(entity);
       
       // 3. Reset
       animator.resetBoneMatrices();
@@ -149,7 +147,6 @@ void main() {
     test('Invalid previousAnimIndex throws RangeError', () {
       if (asset == null) return;
       final animator = asset!.animator;
-      if (animator == null) return;
 
       expect(
         () => animator.applyCrossFade(999, 0.0, 0.5),
@@ -160,7 +157,7 @@ void main() {
     test('AnimationStateMachine.crossFadeTo advances alpha monotonically', () {
       if (asset == null) return;
       final animator = asset!.animator;
-      if (animator == null || animator.animationCount < 2) return;
+      if (animator.animationCount < 2) return;
 
       final stateMachine = AnimationStateMachine(animator);
       

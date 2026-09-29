@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina/lumina.dart';
@@ -54,7 +53,7 @@ void main() {
     });
 
     test('Scripted process runner pipeline creates tree, protobuf level, and valid pubspec', () async {
-      ProcessRunner fakeRunner = (String exec, List<String> args, {String? workingDirectory, bool runInShell = false}) async {
+      Future<ProcessResult> fakeRunner(String exec, List<String> args, {String? workingDirectory, bool runInShell = false}) async {
         if (args.contains('create')) {
           // Simulate flutter create output
           final target = args.last;
@@ -75,7 +74,7 @@ flutter:
 ''');
         }
         return ProcessResult(1234, 0, 'Success', '');
-      };
+      }
 
       final repo = ProjectRepository(configDir: tempConfigDir, processRunner: fakeRunner);
       final launcherVM = LauncherViewModel(configDir: tempConfigDir, projectRepo: repo);
@@ -150,9 +149,9 @@ flutter:
     });
 
     test('Rollback on failure deletes created directory and leaves recents untouched', () async {
-      ProcessRunner failingRunner = (String exec, List<String> args, {String? workingDirectory, bool runInShell = false}) async {
+      Future<ProcessResult> failingRunner(String exec, List<String> args, {String? workingDirectory, bool runInShell = false}) async {
         return ProcessResult(1234, 1, '', 'Simulated fatal flutter error');
-      };
+      }
 
       final repo = ProjectRepository(configDir: tempConfigDir, processRunner: failingRunner);
       final targetDir = Directory('${tempWorkspace.path}/rollback_game');
@@ -174,7 +173,7 @@ flutter:
 
     testWidgets('CreateProjectDialog validation and progress UI test', (tester) async {
       final completer = Completer<void>();
-      ProcessRunner fakeRunner = (String exec, List<String> args, {String? workingDirectory, bool runInShell = false}) async {
+      Future<ProcessResult> fakeRunner(String exec, List<String> args, {String? workingDirectory, bool runInShell = false}) async {
         // Only `flutter create <target>` scaffolds a project; `flutter pub get`
         // must not treat its trailing "get" argument as a directory.
         if (args.isNotEmpty && args.first == 'create') {
@@ -187,7 +186,7 @@ flutter:
           await completer.future;
         }
         return ProcessResult(1234, 0, 'OK', '');
-      };
+      }
 
       final repo = ProjectRepository(configDir: tempConfigDir, processRunner: fakeRunner);
       // This test is about the dialog; writing the editor host is

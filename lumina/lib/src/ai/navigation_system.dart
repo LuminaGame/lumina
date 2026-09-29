@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:vector_math/vector_math_64.dart';
-import '../collision/shapes.dart';
 import '../components/collision/collision_component.dart';
 import '../world/subsystem/world_subsystem.dart';
 

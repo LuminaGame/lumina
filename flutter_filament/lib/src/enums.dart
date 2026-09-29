@@ -184,7 +184,7 @@ enum UniformType {
   float4(7),
   intType(8),
   int2(9),
-  int3_type(10),
+  int3Type(10),
   int4(11),
   uint(12),
   uint2(13),
@@ -200,7 +200,7 @@ enum UniformType {
   static const UniformType bool_ = boolType;
   static const UniformType float_ = floatType;
   static const UniformType int_ = intType;
-  static const UniformType int3 = int3_type;
+  static const UniformType int3 = int3Type;
   static const UniformType struct_ = structType;
 }
 

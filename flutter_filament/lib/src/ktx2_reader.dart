@@ -56,12 +56,10 @@ class Ktx2AsyncLoad {
   bool _isDisposed = false;
 
   Ktx2AsyncLoad._({
-    required Ktx2Reader reader,
-    required ffi.Pointer<c.FilKtx2Async> handle,
-    required FilamentTexture texture,
-  })  : _reader = reader,
-        _handle = handle,
-        _texture = texture;
+    required this._reader,
+    required this._handle,
+    required this._texture,
+  });
 
   /// The [FilamentTexture] being populated.
   FilamentTexture get texture {

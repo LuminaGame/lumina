@@ -1,9 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter_filament/flutter_filament.dart';
-import 'package:vector_math/vector_math_64.dart';
 import '../../object/actor.dart';
-import '../../world/world.dart';
 import '../base/scene_component.dart';
 
 /// Cache and factory for shared IBL prefiltering GPU objects per engine/world.
@@ -193,7 +191,7 @@ class LuminaReflectionCaptureComponent extends LuminaSceneComponent {
 
       _hasCapture = true;
       cache.dispose();
-    } catch (e, st) {
+    } catch (e) {
       _hasCapture = true;
     } finally {
       _inFlightCapture = null;

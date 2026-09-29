@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 import 'package:vector_math/vector_math_64.dart';
-import 'package:lumina/lumina.dart';
 import 'editor_transform.dart';
 
 

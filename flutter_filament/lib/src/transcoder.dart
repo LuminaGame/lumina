@@ -56,7 +56,6 @@ class Transcoder {
     }
 
     final totalFloats = vertexCount * config.componentCount;
-    final totalOutputBytes = totalFloats * ffi.sizeOf<ffi.Float>();
 
     final targetPtr = calloc<ffi.Float>(totalFloats);
     final sourceBytes = source.buffer.asUint8List(source.offsetInBytes, source.lengthInBytes);
@@ -64,7 +63,7 @@ class Transcoder {
     sourcePtr.asTypedList(sourceBytes.length).setAll(0, sourceBytes);
 
     try {
-      final bytesWritten = c.filament_transcode(
+      c.filament_transcode(
         targetPtr,
         sourcePtr.cast(),
         vertexCount,

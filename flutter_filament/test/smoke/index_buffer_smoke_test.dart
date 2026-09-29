@@ -44,7 +44,7 @@ void main() {
           byteOffset: 12, autoFree: true);
       final full = rig.screenshot('IndexBuffer Smoke Tests IndexBuffer: uint32 indices with byte-offset patch select triangles');
       final fullFg = countForegroundPixels(full, rig.width);
-      print('half=$halfFg full=$fullFg');
+      smokeLog('half=$halfFg full=$fullFg');
       expect(halfFg, greaterThan(rig.width * rig.height ~/ 5));
       expect(fullFg, greaterThan(halfFg * 1.7), reason: 'patched indices add the second triangle');
 

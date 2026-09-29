@@ -111,7 +111,7 @@ class FilamentMaterialCompiler {
         'float4' => UniformType.float4,
         'int' => UniformType.intType,
         'int2' => UniformType.int2,
-        'int3' => UniformType.int3_type,
+        'int3' => UniformType.int3Type,
         'int4' => UniformType.int4,
         'uint' => UniformType.uint,
         'uint2' => UniformType.uint2,

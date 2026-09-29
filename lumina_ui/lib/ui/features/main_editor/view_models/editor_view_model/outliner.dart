@@ -390,7 +390,7 @@ mixin _EditorOutliner on _EditorViewModelState {
 
     void duplicateDeep(EditorActorNode node, String? newParentId, bool isRoot) {
       final newId =
-          DateTime.now().microsecondsSinceEpoch.toString() + '_' + node.id;
+          '${DateTime.now().microsecondsSinceEpoch}_${node.id}';
       final newName = isRoot ? '${node.name}_Copy' : '${node.name}_Copy';
 
       // Every field: a hand-picked list dropped the class, mesh and

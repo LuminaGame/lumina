@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_ui/ui/core/property_editors/asset_ref_field.dart';
@@ -36,17 +35,13 @@ void main() {
     });
 
     testWidgets('Drag and drop updates value correctly', (tester) async {
-      Map<String, dynamic>? committedValue;
-
       await tester.pumpWidget(_buildApp(
         AssetRefField(
           value: null,
           slotName: 'Albedo',
           assetType: 'LuminaMaterial',
           viewModel: viewModel,
-          onCommit: (val) {
-            committedValue = val;
-          },
+          onCommit: (val) {},
         ),
       ));
 

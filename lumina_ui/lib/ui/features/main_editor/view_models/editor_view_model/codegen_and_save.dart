@@ -64,8 +64,9 @@ mixin _EditorCodegenAndSave on _EditorViewModelState {
     );
 
     final contentsLevelDir = Directory('$projectDirPath/contents/levels');
-    if (!contentsLevelDir.existsSync())
+    if (!contentsLevelDir.existsSync()) {
       contentsLevelDir.createSync(recursive: true);
+    }
 
     // Ensure all environment actors have a LuminaSkyComponent so both the
     // .lmas metadata and generated Dart code carry the sky and lighting settings.
@@ -247,11 +248,6 @@ mixin _EditorCodegenAndSave on _EditorViewModelState {
       if (!file.parent.existsSync()) file.parent.createSync(recursive: true);
       file.writeAsBytesSync(asset.toProtoBufferBytes());
 
-      final tabIndex = _openTabs.indexWhere((t) => t.asset == asset);
-      if (tabIndex != -1) {
-        _openTabs[tabIndex].isDirty = false;
-        notifyListeners();
-      }
       _logger.log(
         'Saved asset ${asset.name} to disk.',
         level: 'success',

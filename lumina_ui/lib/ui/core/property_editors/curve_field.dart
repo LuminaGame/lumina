@@ -1,5 +1,4 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
-import 'package:flutter/widgets.dart' show CustomPaint, CustomPainter, Canvas, Paint, Path, Size, Offset, PaintingStyle;
 import '../theme/editor_theme.dart';
 
 class CurveField extends StatefulWidget {

@@ -45,8 +45,8 @@ class BlueprintPaletteEntry {
   /// of the same palette ("Create a Reference to Door_01" beside `Door_01`).
   final String? keyOverride;
 
-  /// Listed first, above the graph actions (the `Create a Reference to
-  /// <Actor>` row at the top of the right-click menu).
+  /// Listed first, above the graph actions (the
+  /// `Create a Reference to <Actor>` row at the top of the right-click menu).
   final bool pinned;
 
   const BlueprintPaletteEntry({
@@ -282,9 +282,9 @@ abstract final class BlueprintPalette {
     );
   }
 
-  /// A widget graph's rows: `<Element>` (Get) per `Is
-  /// Variable` element under **Widgets**, and `On <Event> (<Element>)` per
-  /// event each offers under **Widget Events**; from a pin, only the Gets.
+  /// A widget graph's rows: `<Element>` (Get) per `Is Variable` element
+  /// under **Widgets**, and `On <Event> (<Element>)` per event each offers
+  /// under **Widget Events**; from a pin, only the Gets.
   static List<BlueprintPaletteEntry> widgetEntries(
     LuminaBlueprintTypeContext context, {
     BlueprintPinRef? from,

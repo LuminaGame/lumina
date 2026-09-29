@@ -43,7 +43,7 @@ melos:
   scripts:
     analyze:
       description: flutter analyze in every package.
-      exec: flutter analyze --no-fatal-infos --no-fatal-warnings .
+      exec: flutter analyze .
     format:
       description: Format every package's Dart sources.
       exec: dart format .

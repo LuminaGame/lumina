@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:ffi' as ffi;
 
 import 'dart:io';
@@ -83,9 +82,9 @@ void main() {
     );
     scene.addEntity(keyEntity);
 
-    final materialProvider = FilamentMaterialProvider.createJitShader(engine: engine)!;
-    final assetLoader = FilamentAssetLoader.create(engine: engine, materialProvider: materialProvider)!;
-    final resourceLoader = FilamentResourceLoader.create(engine: engine, normalizeSkinningWeights: true)!;
+    final materialProvider = FilamentMaterialProvider.createJitShader(engine: engine);
+    final assetLoader = FilamentAssetLoader.create(engine: engine, materialProvider: materialProvider);
+    final resourceLoader = FilamentResourceLoader.create(engine: engine, normalizeSkinningWeights: true);
     resourceLoader.registerDefaultProviders(engine);
 
     final asset = assetLoader.createAsset(rawBytes)!;
@@ -136,7 +135,7 @@ void main() {
     if (!outDir.existsSync()) outDir.createSync(recursive: true);
     final pngBytes = SmokeArtifacts.encodeRgbaToPng(framePixels, w, h);
     File('${outDir.path}/head_morphed.png').writeAsBytesSync(pngBytes);
-    print('Saved ${outDir.path}/head_morphed.png');
+    printOnFailure('Saved ${outDir.path}/head_morphed.png');
 
     calloc.free(pixelBuffer);
     asset.removeFromScene(scene);

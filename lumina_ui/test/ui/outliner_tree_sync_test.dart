@@ -3,10 +3,7 @@ import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.
 import 'package:lumina/data/models/lumina_project.dart';
 
 
-import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter/gestures.dart' show kSecondaryMouseButton;
-import 'package:flutter/services.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/outliner_widget.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';

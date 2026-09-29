@@ -26,7 +26,7 @@ void main() {
       expect(engine.supportedFeatureLevel.index, greaterThanOrEqualTo(FeatureLevel.fl1.index));
       expect(engine.activeFeatureLevel, isNotNull);
       expect(engine.maxAutomaticInstances, greaterThanOrEqualTo(1));
-      print('backend=${engine.backend} supported=${engine.supportedFeatureLevel} active=${engine.activeFeatureLevel}');
+      smokeLog('backend=${engine.backend} supported=${engine.supportedFeatureLevel} active=${engine.activeFeatureLevel}');
 
       final rig = SmokeRig.adopt(engine, width: 256, height: 256);
       expect(engine.isValidRenderer(rig.renderer), isTrue);

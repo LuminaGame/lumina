@@ -49,9 +49,9 @@ mixin _DopeSheetTopHeader on _AnimationDopeSheetWidgetStateBase {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: EditorColors.chart4.withOpacity(0.15),
+                color: EditorColors.chart4.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: EditorColors.chart4.withOpacity(0.4)),
+                border: Border.all(color: EditorColors.chart4.withValues(alpha: 0.4)),
               ),
               child: Text(
                 '$animatedBoneCount Animated Bones',
@@ -64,9 +64,9 @@ mixin _DopeSheetTopHeader on _AnimationDopeSheetWidgetStateBase {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: EditorColors.primary.withOpacity(0.15),
+                color: EditorColors.primary.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: EditorColors.primary.withOpacity(0.4)),
+                border: Border.all(color: EditorColors.primary.withValues(alpha: 0.4)),
               ),
               child: Text(
                 '$clipKeyframeCount Keys',
@@ -80,7 +80,7 @@ mixin _DopeSheetTopHeader on _AnimationDopeSheetWidgetStateBase {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
-              color: isZoomedIn ? EditorColors.primary.withOpacity(0.12) : EditorColors.cardHeader,
+              color: isZoomedIn ? EditorColors.primary.withValues(alpha: 0.12) : EditorColors.cardHeader,
               borderRadius: BorderRadius.circular(4),
               border: Border.all(color: EditorColors.border),
             ),

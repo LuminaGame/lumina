@@ -20,8 +20,8 @@ mixin _DopeSheetTrackStrips on _AnimationDopeSheetWidgetStateBase {
     return Container(
       height: 26,
       decoration: BoxDecoration(
-        color: EditorColors.background.withOpacity(0.2),
-        border: Border(bottom: BorderSide(color: EditorColors.border.withOpacity(0.3))),
+        color: EditorColors.background.withValues(alpha: 0.2),
+        border: Border(bottom: BorderSide(color: EditorColors.border.withValues(alpha: 0.3))),
       ),
       child: Stack(
         children: [
@@ -53,8 +53,8 @@ mixin _DopeSheetTrackStrips on _AnimationDopeSheetWidgetStateBase {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      EditorColors.chart4.withOpacity(0.85),
-                      EditorColors.chart4.withOpacity(0.70),
+                      EditorColors.chart4.withValues(alpha: 0.85),
+                      EditorColors.chart4.withValues(alpha: 0.70),
                     ],
                   ),
                   borderRadius: BorderRadius.circular(3),
@@ -130,13 +130,13 @@ mixin _DopeSheetTrackStrips on _AnimationDopeSheetWidgetStateBase {
       return Container(
         height: 22,
         decoration: BoxDecoration(
-          color: EditorColors.background.withOpacity(0.1),
-          border: Border(bottom: BorderSide(color: EditorColors.border.withOpacity(0.15))),
+          color: EditorColors.background.withValues(alpha: 0.1),
+          border: Border(bottom: BorderSide(color: EditorColors.border.withValues(alpha: 0.15))),
         ),
         child: Center(
           child: Container(
             height: 1,
-            color: EditorColors.border.withOpacity(0.2),
+            color: EditorColors.border.withValues(alpha: 0.2),
           ),
         ),
       );
@@ -150,8 +150,8 @@ mixin _DopeSheetTrackStrips on _AnimationDopeSheetWidgetStateBase {
     return Container(
       height: 22,
       decoration: BoxDecoration(
-        color: subTrack.color.withOpacity(0.04),
-        border: Border(bottom: BorderSide(color: EditorColors.border.withOpacity(0.2))),
+        color: subTrack.color.withValues(alpha: 0.04),
+        border: Border(bottom: BorderSide(color: EditorColors.border.withValues(alpha: 0.2))),
       ),
       child: Stack(
         children: [
@@ -181,7 +181,7 @@ mixin _DopeSheetTrackStrips on _AnimationDopeSheetWidgetStateBase {
               },
               child: Container(
                 decoration: BoxDecoration(
-                  color: subTrack.color.withOpacity(0.65),
+                  color: subTrack.color.withValues(alpha: 0.65),
                   borderRadius: BorderRadius.circular(2),
                   border: Border.all(color: subTrack.color, width: 0.6),
                 ),
@@ -231,7 +231,7 @@ mixin _DopeSheetTrackStrips on _AnimationDopeSheetWidgetStateBase {
   Widget _buildNotifiesTrackRow(double trackWidth, double duration, AnimationEditorViewModel vm) {
     return Container(
       height: 32,
-      color: EditorColors.background.withOpacity(0.4),
+      color: EditorColors.background.withValues(alpha: 0.4),
       child: Stack(
         children: vm.notifies.map((n) {
           final x = (n.time / duration * trackWidth).clamp(0.0, trackWidth - 60);
@@ -248,7 +248,7 @@ mixin _DopeSheetTrackStrips on _AnimationDopeSheetWidgetStateBase {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: isSelected ? EditorColors.primary : EditorColors.logWarning.withOpacity(0.85),
+                  color: isSelected ? EditorColors.primary : EditorColors.logWarning.withValues(alpha: 0.85),
                   borderRadius: BorderRadius.circular(4),
                   border: Border.all(
                     color: isSelected ? EditorColors.foreground : EditorColors.border,
@@ -282,7 +282,7 @@ mixin _DopeSheetTrackStrips on _AnimationDopeSheetWidgetStateBase {
   Widget _buildCurvesTrackRow(double trackWidth, double duration, AnimationEditorViewModel vm) {
     return Container(
       height: 32,
-      color: EditorColors.card.withOpacity(0.3),
+      color: EditorColors.card.withValues(alpha: 0.3),
       child: const SizedBox.expand(),
     );
   }
@@ -292,8 +292,8 @@ mixin _DopeSheetTrackStrips on _AnimationDopeSheetWidgetStateBase {
     return Container(
       height: 26,
       decoration: BoxDecoration(
-        color: EditorColors.background.withOpacity(0.2),
-        border: Border(bottom: BorderSide(color: EditorColors.border.withOpacity(0.3))),
+        color: EditorColors.background.withValues(alpha: 0.2),
+        border: Border(bottom: BorderSide(color: EditorColors.border.withValues(alpha: 0.3))),
       ),
       child: Stack(
         children: curve.keys.map((k) {

@@ -1,10 +1,8 @@
 import 'package:lumina/data/models/lumina_asset.dart';
 import 'package:flutter/widgets.dart';
-import 'package:flutter/services.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as shadcn;
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 import 'package:lumina_ui/ui/features/main_editor/utils/fuzzy_match.dart';
-import 'package:lumina/data/models/lumina_project.dart';
 
 void showQuickOpenPalette(BuildContext context, EditorViewModel viewModel, FocusNode returnFocus) {
   shadcn.showOverlay(
@@ -133,7 +131,7 @@ class _QuickOpenPaletteWidgetState extends State<QuickOpenPaletteWidget> {
                         _onSubmitted();
                       },
                       child: Container(
-                        color: isSelected ? shadcn.Theme.of(context).colorScheme.primary.withOpacity(0.1) : null,
+                        color: isSelected ? shadcn.Theme.of(context).colorScheme.primary.withValues(alpha: 0.1) : null,
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         child: Text(match.asset.relativePath),
                       ),

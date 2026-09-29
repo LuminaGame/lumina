@@ -1,9 +1,7 @@
 import 'dart:io';
-import 'package:flutter/material.dart' hide Scaffold, Row;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
-import 'package:lumina_ui/ui/features/main_editor/view_models/editor_layout_state.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/main_editor_view.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 

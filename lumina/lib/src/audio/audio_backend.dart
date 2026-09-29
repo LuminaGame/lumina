@@ -34,8 +34,8 @@ class _ActiveSoundInfo {
   double pitch;
   double pan;
   bool looping;
-  bool isPaused;
-  double elapsed;
+  bool isPaused = false;
+  double elapsed = 0.0;
 
   _ActiveSoundInfo({
     required this.sound,
@@ -43,8 +43,6 @@ class _ActiveSoundInfo {
     required this.pitch,
     required this.pan,
     required this.looping,
-    this.isPaused = false,
-    this.elapsed = 0.0,
   });
 }
 

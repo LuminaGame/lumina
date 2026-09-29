@@ -1,6 +1,5 @@
 import 'dart:math' as math;
 import 'package:vector_math/vector_math_64.dart';
-import 'package:lumina_ui/ui/features/main_editor/services/viewport_picker.dart' hide Ray;
 
 enum GizmoMode { translate, rotate, scale }
 enum GizmoSpace { world, local }

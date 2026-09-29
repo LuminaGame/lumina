@@ -99,7 +99,7 @@ void main() {
   test('an opaque RGB JPEG still decodes with alpha 255 on a worker isolate', () async {
     final image = img.Image(width: 8, height: 8)..clear(img.ColorRgb8(10, 200, 30));
     final offRoot = await Isolate.run(() => _decodeOffRoot(img.encodeJpg(image, quality: 100)));
-    expect([for (var i = 3; i < offRoot.rgba.length; i += 4) offRoot.rgba[i]].toSet(), {255});
+    expect({for (var i = 3; i < offRoot.rgba.length; i += 4) offRoot.rgba[i]}, {255});
   });
 
   test('the root isolate has the platform codec, a worker isolate does not', () async {

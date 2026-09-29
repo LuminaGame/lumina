@@ -32,16 +32,6 @@ class _SubEditorGizmoPainter extends CustomPainter {
     if (glbMesh == null) return;
     if (!showBones && !showSockets) return;
 
-    final center = Offset(size.width / 2, size.height / 2) + cameraPan;
-
-    final radYaw = cameraYaw * math.pi / 180.0;
-    final radPitch = cameraPitch * math.pi / 180.0;
-
-    final cosY = math.cos(radYaw);
-    final sinY = math.sin(radYaw);
-    final cosP = math.cos(radPitch);
-    final sinP = math.sin(radPitch);
-
     final minX = glbMesh!.minBounds[0];
     final minY = glbMesh!.minBounds[1];
     final minZ = glbMesh!.minBounds[2];
@@ -53,7 +43,6 @@ class _SubEditorGizmoPainter extends CustomPainter {
     final cy = (minY + maxY) / 2.0;
     final cz = (minZ + maxZ) / 2.0;
 
-    final spanX = (maxX - minX).abs();
     final spanY = (maxY - minY).abs();
     final spanZ = (maxZ - minZ).abs();
     final bool isZUp = (spanZ >= spanY);
@@ -120,12 +109,12 @@ class _SubEditorGizmoPainter extends CustomPainter {
         final radZ = rz * math.pi / 180.0;
 
         final deltaMat = Matrix4.identity()
-          ..translate(tx * 0.01, ty * 0.01, tz * 0.01)
+          ..translateByDouble(tx * 0.01, ty * 0.01, tz * 0.01, 1.0)
           ..rotateX(radX)
           ..rotateY(radY)
           ..rotateZ(radZ);
         if (sx != 0.0 || sy != 0.0 || sz != 0.0) {
-          deltaMat.scale(1.0 + sx, 1.0 + sy, 1.0 + sz);
+          deltaMat.scaleByDouble(1.0 + sx, 1.0 + sy, 1.0 + sz, 1.0);
         }
         return restTransform * deltaMat;
       }

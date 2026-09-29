@@ -125,7 +125,6 @@ class LuminaPluginDescriptor {
     final friendlyName = extras.remove('friendly_name') as String?;
     final version = Version.parse(extras.remove('version') as String);
     final description = extras.remove('description') as String?;
-    final category = extras.remove('category') as String? ?? (extras['category'] == '' ? 'Other' : 'Other');
     
     // category could have been empty string
     final rawCategory = json['category'] as String?;

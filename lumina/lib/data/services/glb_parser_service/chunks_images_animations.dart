@@ -79,8 +79,9 @@ int? _baseColorImageIndex(Object? material, List? textures) {
   if (texIdx == null ||
       textures == null ||
       texIdx < 0 ||
-      texIdx >= textures.length)
+      texIdx >= textures.length) {
     return null;
+  }
   final tex = textures[texIdx] as Map?;
   if (tex == null) return null;
   int? imgIdx = tex['source'] as int?;
@@ -261,8 +262,9 @@ List<GlbAnimationClip> _parseAnimations(Map<String, dynamic> json, Uint8List byt
         if (accIdx == null ||
             accessorsList == null ||
             accIdx < 0 ||
-            accIdx >= accessorsList.length)
+            accIdx >= accessorsList.length) {
           return const [];
+        }
         final acc = accessorsList[accIdx];
         if (acc is! Map) return const [];
         final count = acc['count'] as int? ?? 0;
@@ -280,8 +282,9 @@ List<GlbAnimationClip> _parseAnimations(Map<String, dynamic> json, Uint8List byt
         if (bufferViewsList == null ||
             bvIdx == null ||
             bvIdx < 0 ||
-            bvIdx >= bufferViewsList.length)
+            bvIdx >= bufferViewsList.length) {
           return const [];
+        }
         final bv = bufferViewsList[bvIdx] as Map;
         final byteOffset =
             (bv['byteOffset'] as int? ?? 0) +

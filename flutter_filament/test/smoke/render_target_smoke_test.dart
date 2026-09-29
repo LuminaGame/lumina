@@ -61,7 +61,7 @@ void main() {
           SmokeArtifacts.encodePng(w, h, px, flipY: true));
       final (cr, cg, _) = pixelAt(px, w, w ~/ 2, h ~/ 2);
       final (er, eg, _) = pixelAt(px, w, 2, 2);
-      print('rt centre=($cr,$cg) edge=($er,$eg)');
+      smokeLog('rt centre=($cr,$cg) edge=($er,$eg)');
       expect(cg, greaterThan(180), reason: 'green quad in the middle');
       expect(cr, lessThan(80));
       expect(er, greaterThan(50), reason: 'red clear at the edge');

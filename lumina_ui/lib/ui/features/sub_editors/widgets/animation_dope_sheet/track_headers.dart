@@ -135,8 +135,8 @@ mixin _DopeSheetTrackHeaders on _AnimationDopeSheetWidgetStateBase {
                             padding: const EdgeInsets.only(left: 8, right: 8),
                             alignment: Alignment.centerLeft,
                             decoration: BoxDecoration(
-                              color: isSelected ? EditorColors.chart4.withOpacity(0.15) : Colors.transparent,
-                              border: Border(bottom: BorderSide(color: EditorColors.border.withOpacity(0.3))),
+                              color: isSelected ? EditorColors.chart4.withValues(alpha: 0.15) : Colors.transparent,
+                              border: Border(bottom: BorderSide(color: EditorColors.border.withValues(alpha: 0.3))),
                             ),
                             child: Row(
                               children: [
@@ -230,8 +230,8 @@ mixin _DopeSheetTrackHeaders on _AnimationDopeSheetWidgetStateBase {
                                 padding: const EdgeInsets.only(left: 28, right: 8),
                                 alignment: Alignment.centerLeft,
                                 decoration: BoxDecoration(
-                                  color: isSubSelected ? st.color.withOpacity(0.12) : EditorColors.background.withOpacity(0.4),
-                                  border: Border(bottom: BorderSide(color: EditorColors.border.withOpacity(0.2))),
+                                  color: isSubSelected ? st.color.withValues(alpha: 0.12) : EditorColors.background.withValues(alpha: 0.4),
+                                  border: Border(bottom: BorderSide(color: EditorColors.border.withValues(alpha: 0.2))),
                                 ),
                                 child: Row(
                                   children: [
@@ -240,10 +240,10 @@ mixin _DopeSheetTrackHeaders on _AnimationDopeSheetWidgetStateBase {
                                       height: 14,
                                       alignment: Alignment.center,
                                       decoration: BoxDecoration(
-                                        color: st.hasVariation ? st.color.withOpacity(0.2) : EditorColors.mutedForeground.withOpacity(0.1),
+                                        color: st.hasVariation ? st.color.withValues(alpha: 0.2) : EditorColors.mutedForeground.withValues(alpha: 0.1),
                                         borderRadius: BorderRadius.circular(2),
                                         border: Border.all(
-                                          color: st.hasVariation ? st.color.withOpacity(0.5) : EditorColors.border,
+                                          color: st.hasVariation ? st.color.withValues(alpha: 0.5) : EditorColors.border,
                                           width: 0.5,
                                         ),
                                       ),

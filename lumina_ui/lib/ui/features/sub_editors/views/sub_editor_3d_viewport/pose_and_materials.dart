@@ -187,12 +187,12 @@ mixin _SubEditor3DViewportPoseAndMaterials on _SubEditor3DViewportStateBase {
                 final radZ = rz * math.pi / 180.0;
 
                 final deltaMat = Matrix4.identity()
-                  ..translate(tx * 0.01, ty * 0.01, tz * 0.01)
+                  ..translateByDouble(tx * 0.01, ty * 0.01, tz * 0.01, 1.0)
                   ..rotateX(radX)
                   ..rotateY(radY)
                   ..rotateZ(radZ);
                 if (sx != 0.0 || sy != 0.0 || sz != 0.0) {
-                  deltaMat.scale(1.0 + sx, 1.0 + sy, 1.0 + sz);
+                  deltaMat.scaleByDouble(1.0 + sx, 1.0 + sy, 1.0 + sz, 1.0);
                 }
 
                 final mRest = Matrix4.fromList(rest);

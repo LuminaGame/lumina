@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
-import 'package:flutter/painting.dart' show Color;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina/data/models/lumina_asset.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/material_preview_renderer.dart';

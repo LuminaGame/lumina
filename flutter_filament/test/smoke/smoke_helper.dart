@@ -5,6 +5,7 @@
 // a headless swap chain, reads pixels back and publishes PNG / WebM evidence
 // through `SmokeArtifacts` so it lands in `build/smoke_report.html`.
 
+import 'dart:async';
 import 'dart:ffi' as ffi;
 import 'dart:io';
 import 'dart:typed_data';
@@ -13,6 +14,10 @@ import 'package:ffi/ffi.dart';
 import 'package:flutter_filament/flutter_filament.dart';
 import 'package:flutter_filament/src/third_party/filament_c.g.dart' as c;
 import 'package:flutter_filament/testing.dart';
+
+/// Writes [message] to the scenario's output, which the smoke report lists
+/// under the test: the same channel as `print`.
+void smokeLog(Object? message) => Zone.current.print('$message');
 
 /// Root of the shared real 3D assets (the workspace's `test-assets/`, or
 /// `LUMINA_TEST_ASSETS`).

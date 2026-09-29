@@ -86,5 +86,5 @@ class FilamentWidget extends StatefulWidget {
 
   @override
   // A readback into a RawImage natively; a WebGL2 canvas on the web.
-  State<FilamentWidget> createState() => createFilamentWidgetState();
+  State<FilamentWidget> createState() => FilamentWidgetStateImpl();
 }

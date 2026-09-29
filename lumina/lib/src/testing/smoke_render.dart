@@ -6,7 +6,6 @@ import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
 import 'package:flutter_filament/flutter_filament.dart';
-import 'package:flutter_filament/src/third_party/filament_c.g.dart' as c;
 import 'package:lumina_smoke/lumina_smoke.dart';
 import 'package:vector_math/vector_math_64.dart';
 
@@ -175,7 +174,7 @@ abstract final class SmokeRender {
       final root = asset.rootEntity;
       final mat = Matrix4.identity()
         ..setTranslationRaw(xOffset, yOffset, 0.0)
-        ..scale(scale, scale, scale);
+        ..scaleByDouble(scale, scale, scale, 1.0);
       FilamentTransformManager(
         effectiveEngine,
       ).setTransform(root, mat.storage.toList());
@@ -231,17 +230,7 @@ abstract final class SmokeRender {
 
         if (renderer.beginFrame(swapChain)) {
           renderer.render(view);
-          c.filament_renderer_read_pixels(
-            renderer.nativePointer,
-            effectiveEngine.nativePointer,
-            0,
-            0,
-            width,
-            height,
-            nativeBuf.cast(),
-            ffi.nullptr,
-            ffi.nullptr,
-          );
+          renderer.readPixelsInto(nativeBuf, x: 0, y: 0, width: width, height: height);
           renderer.endFrame();
         }
 

@@ -70,6 +70,7 @@ class LuminaAnimationClip implements AnimPoseSource {
   /// Samples the keyframe curves at [time] and writes local transform matrices to [outLocalPose].
   ///
   /// If [weight] is less than 1.0, the sampled pose is blended with the existing matrices in [outLocalPose].
+  @override
   void samplePose(
     double time,
     List<Matrix4> outLocalPose, {

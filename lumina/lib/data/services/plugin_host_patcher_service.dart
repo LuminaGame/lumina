@@ -37,11 +37,7 @@ class PluginHostPatcherService {
         final insertIdx = content.indexOf('\n', depsIdx) + 1;
         final before = content.substring(0, insertIdx);
         final after = content.substring(insertIdx);
-        content = before +
-            '$beginMarker\n' +
-            pluginBlock.toString() +
-            '$endMarker\n' +
-            after;
+        content = '$before$beginMarker\n$pluginBlock$endMarker\n$after';
       }
     }
 

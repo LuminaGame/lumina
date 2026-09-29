@@ -62,13 +62,10 @@ class FilamentIndirectLight {
   final FilamentEngine _engine;
   bool _disposed = false;
 
-  /// Strong reference to keep the reflection texture alive.
-  final FilamentTexture? _reflectionsTexture;
-
-  FilamentIndirectLight._(this._ptr, this._engine, [this._reflectionsTexture]);
+  FilamentIndirectLight._(this._ptr, this._engine);
 
   /// Internal constructor.
-  FilamentIndirectLight.internal(this._ptr, this._engine, [this._reflectionsTexture]);
+  FilamentIndirectLight.internal(this._ptr, this._engine);
 
   /// Builds an [FilamentIndirectLight] with full builder parameters.
   ///
@@ -122,7 +119,7 @@ class FilamentIndirectLight {
         throw Exception('Failed to build FilamentIndirectLight');
       }
 
-      return FilamentIndirectLight._(ptr, engine, reflections);
+      return FilamentIndirectLight._(ptr, engine);
     } finally {
       if (rotPtr != ffi.nullptr) calloc.free(rotPtr);
       if (radPtr != ffi.nullptr) calloc.free(radPtr);

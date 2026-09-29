@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import '../components/mesh/skeletal_mesh_component.dart';
 import 'animation_clip.dart';
 import 'anim_montage.dart';
@@ -48,7 +47,6 @@ class AnimTransition {
 /// Gameplay-driven animation state machine evaluating transitions and driving skeletal bone poses.
 class LuminaAnimInstance {
   final LuminaSkinnedMeshComponent mesh;
-  final List<AnimState> _states;
   final Map<String, AnimState> _stateMap = {};
   final List<AnimTransition> _transitions;
 
@@ -90,11 +88,9 @@ class LuminaAnimInstance {
   LuminaAnimInstance({
     required this.mesh,
     required List<AnimState> states,
-    required List<AnimTransition> transitions,
+    required this._transitions,
     required String initialState,
-  })  : _states = states,
-        _transitions = transitions,
-        _currentStateName = initialState {
+  }) : _currentStateName = initialState {
     for (final s in states) {
       _stateMap[s.name] = s;
     }

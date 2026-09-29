@@ -82,7 +82,7 @@ mixin _DopeSheetTimelineCanvas on _AnimationDopeSheetWidgetStateBase {
                               // Expanded Bone Tracks Subrows (with nested component sub-tracks)
                               if (_expandBoneTracks) ...[
                                 // Space matching search bar
-                                Container(height: 28, color: EditorColors.background.withOpacity(0.5)),
+                                Container(height: 28, color: EditorColors.background.withValues(alpha: 0.5)),
                                 const Divider(height: 1),
                                 ...filteredBones.expand(
                                   (b) => [
@@ -140,7 +140,7 @@ mixin _DopeSheetTimelineCanvas on _AnimationDopeSheetWidgetStateBase {
 
     return Container(
       height: 32,
-      color: EditorColors.primary.withOpacity(0.04),
+      color: EditorColors.primary.withValues(alpha: 0.04),
       child: Stack(
         children: [
           // Solid Track Strip Bar
@@ -159,15 +159,15 @@ mixin _DopeSheetTimelineCanvas on _AnimationDopeSheetWidgetStateBase {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      EditorColors.primary.withOpacity(0.75),
-                      EditorColors.primary.withOpacity(0.55),
+                      EditorColors.primary.withValues(alpha: 0.75),
+                      EditorColors.primary.withValues(alpha: 0.55),
                     ],
                   ),
                   borderRadius: BorderRadius.circular(4),
                   border: Border.all(color: EditorColors.primary, width: 1.0),
                   boxShadow: [
                     BoxShadow(
-                      color: EditorColors.primary.withOpacity(0.2),
+                      color: EditorColors.primary.withValues(alpha: 0.2),
                       blurRadius: 4,
                       offset: const Offset(0, 1),
                     ),
@@ -238,7 +238,7 @@ mixin _DopeSheetTimelineCanvas on _AnimationDopeSheetWidgetStateBase {
 
     return Container(
       height: 32,
-      color: EditorColors.chart4.withOpacity(0.04),
+      color: EditorColors.chart4.withValues(alpha: 0.04),
       child: Stack(
         children: [
           // Range Bars for each animated bone superimposed
@@ -254,7 +254,7 @@ mixin _DopeSheetTimelineCanvas on _AnimationDopeSheetWidgetStateBase {
               bottom: 8,
               child: Container(
                 decoration: BoxDecoration(
-                  color: EditorColors.chart4.withOpacity(0.2),
+                  color: EditorColors.chart4.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -275,7 +275,7 @@ mixin _DopeSheetTimelineCanvas on _AnimationDopeSheetWidgetStateBase {
                     width: 7,
                     height: 7,
                     decoration: BoxDecoration(
-                      color: EditorColors.chart4.withOpacity(0.8),
+                      color: EditorColors.chart4.withValues(alpha: 0.8),
                       borderRadius: BorderRadius.circular(1),
                     ),
                   ),

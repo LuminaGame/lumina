@@ -93,7 +93,7 @@ void main() {
       sb.setBonesFromMatrices(Float32List.fromList([...identity, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0.45, 0.3, 0, 1]), count: 2);
       final sheared = rig.renderFrame();
       final changed = countChangedPixels(rest, sheared);
-      print('rest fg=$restFg changed=$changed lastFrameFg=${countForegroundPixels(last, rig.width)}');
+      smokeLog('rest fg=$restFg changed=$changed lastFrameFg=${countForegroundPixels(last, rig.width)}');
       expect(changed, greaterThan(2000), reason: 'bone translation must move the top edge');
       // Top-right corner region is covered only when bone 1 has moved the top edge there.
       final probeX = rig.width * 200 ~/ 256, probeY = rig.height * 40 ~/ 256;

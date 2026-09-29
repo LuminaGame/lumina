@@ -67,11 +67,11 @@ class _DopeSheetGridPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final linePaint = Paint()
-      ..color = EditorColors.border.withOpacity(0.2)
+      ..color = EditorColors.border.withValues(alpha: 0.2)
       ..strokeWidth = 1.0;
 
     final majorLinePaint = Paint()
-      ..color = EditorColors.border.withOpacity(0.45)
+      ..color = EditorColors.border.withValues(alpha: 0.45)
       ..strokeWidth = 1.0;
 
     final totalFrames = (duration * fps).round().clamp(1, 9999);

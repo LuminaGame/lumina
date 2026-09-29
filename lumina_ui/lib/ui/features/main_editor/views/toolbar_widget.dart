@@ -145,34 +145,6 @@ class _ToolbarWidgetState extends State<ToolbarWidget> {
     );
   }
 
-  void _showMenuAtKey(GlobalKey key, List<String> items, Function(String) onSelect) {
-    final renderBox = key.currentContext?.findRenderObject() as RenderBox?;
-    if (renderBox != null) {
-      final offset = renderBox.localToGlobal(Offset.zero);
-      final position = Offset(offset.dx, offset.dy + renderBox.size.height + 2);
-      showDropdown(
-        context: context,
-        // An explicit position is where the menu opens; following the
-        // anchor widget would drag it to that widget's bottom centre.
-        follow: false,
-        // Top-left corner at the point, as editor context menus open.
-        alignment: Alignment.topLeft,
-        anchorAlignment: Alignment.topLeft,
-        position: position,
-        builder: (context) => DropdownMenu(
-          children: items.map((item) {
-            return MenuButton(
-              onPressed: (ctx) {
-                onSelect(item);
-              },
-              child: Text(item, style: const TextStyle(fontSize: 10)),
-            );
-          }).toList(),
-        ),
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final vm = widget.viewModel;
@@ -337,7 +309,6 @@ class _ToolbarWidgetState extends State<ToolbarWidget> {
                               ),
                               const MenuDivider(),
                               MenuButton(
-                                child: const Text('Buffer Visualization', style: TextStyle(fontSize: 10)),
                                 subMenu: [
                                   'Base Color', 'Opacity', 'Roughness', 'Metallic', 'Emissive', 'Normal'
                                 ].map((buffer) => MenuButton(
@@ -347,6 +318,7 @@ class _ToolbarWidgetState extends State<ToolbarWidget> {
                                   },
                                   child: Text(buffer, style: const TextStyle(fontSize: 10)),
                                 )).toList(),
+                                child: const Text('Buffer Visualization', style: TextStyle(fontSize: 10)),
                               ),
                             ],
                           ),
@@ -617,8 +589,7 @@ class _ToolBtn extends StatelessWidget {
   final bool active;
   final VoidCallback onTap;
 
-  const _ToolBtn({super.key,
-    required this.icon,
+  const _ToolBtn({required this.icon,
     required this.active,
     required this.onTap,
   });

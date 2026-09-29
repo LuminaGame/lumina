@@ -46,7 +46,7 @@ void main() {
         final env = rig.screenshot('Skybox Smoke Tests Skybox: KTX environment and solid colour backgrounds behind a real prop');
         final envStats = frameStats(env);
         final (er, eg, eb) = pixelAt(env, rig.width, 4, 4);
-        print('bg none=($nr,$ng,$nb) env=($er,$eg,$eb) envDistinct=${envStats.distinct}');
+        smokeLog('bg none=($nr,$ng,$nb) env=($er,$eg,$eb) envDistinct=${envStats.distinct}');
         expect((er - nr).abs() + (eg - ng).abs() + (eb - nb).abs(), greaterThan(30), reason: 'environment replaces the clear colour');
         expect(envStats.distinct, greaterThan(2000), reason: 'a photographic cubemap has many colours');
 
@@ -54,7 +54,7 @@ void main() {
         rig.scene.skybox = solid;
         final red = rig.renderFrame();
         final (sr, sg, sb) = pixelAt(red, rig.width, 4, 4);
-        print('solid bg=($sr,$sg,$sb)');
+        smokeLog('solid bg=($sr,$sg,$sb)');
         // Tone mapping lifts the dark channels, so compare channel dominance.
         expect(sr, greaterThan(200));
         expect(sg, lessThan(sr - 80));

@@ -2,7 +2,6 @@ import 'dart:typed_data';
 import 'package:flutter_filament/flutter_filament.dart';
 import 'package:vector_math/vector_math_64.dart' hide Frustum;
 import '../../object/actor.dart';
-import '../../world/world.dart';
 import '../base/scene_component.dart';
 
 /// Descriptor for a single level of detail (LOD) geometry mesh in an [LuminaInstancedStaticMeshComponent].
@@ -64,12 +63,12 @@ class LuminaInstancedStaticMeshComponent extends LuminaSceneComponent {
     this.initialBounds,
     this.castShadows = false,
     this.receiveShadows = true,
-    InstanceBuffer? instanceBufferOverride,
+    this._instanceBufferOverride,
     super.key,
     super.location,
     super.rotation,
     super.scale,
-  }) : _instanceBufferOverride = instanceBufferOverride {
+  }) {
     if (capacity < 1 || capacity > 32767) {
       throw ArgumentError('capacity ($capacity) must be between 1 and 32767');
     }

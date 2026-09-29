@@ -30,7 +30,7 @@ void main() {
 
       final px = rig.screenshot('Renderer Smoke Tests Renderer: clear colour round-trips, frame history fills, readPixels matches', warmup: 5);
       final (r, g, b) = averageColor(px, rig.width, 0, 0, rig.width, rig.height);
-      print('clear readback avg=($r,$g,$b)');
+      smokeLog('clear readback avg=($r,$g,$b)');
       expect(r, lessThan(10));
       expect(g, inInclusiveRange(110, 145));
       expect(b, greaterThan(240));
@@ -44,7 +44,7 @@ void main() {
       }
       expect(history, isNotEmpty);
       expect(history.first.frameId, greaterThan(0));
-      print('frame history=${history.length} lastId=${history.first.frameId}');
+      smokeLog('frame history=${history.length} lastId=${history.first.frameId}');
 
       // Convenience readPixels path (copies after flushAndWait) agrees with the screenshot.
       final out = Uint8ListExt.zeros(rig.width * rig.height * 4);

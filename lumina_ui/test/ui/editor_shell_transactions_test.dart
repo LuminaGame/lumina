@@ -1,11 +1,9 @@
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina/data/models/lumina_project.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 import 'package:lumina_ui/ui/features/main_editor/commands/editor_transaction.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/menu_bar_widget.dart';
-import 'package:lumina_ui/ui/features/main_editor/views/toolbar_widget.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 
 void main() {
@@ -66,7 +64,7 @@ void main() {
       expect(actor.location[0], 20.0);
       
       viewModel.transactions.undo();
-      print('Location after undo is ${actor.location[0]}');
+      printOnFailure('Location after undo is ${actor.location[0]}');
       expect(actor.location[0], 0.0);
       
       viewModel.transactions.redo();

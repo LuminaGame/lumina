@@ -1,9 +1,7 @@
-import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina/lumina.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
-import 'package:lumina_ui/ui/features/main_editor/commands/editor_command.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/menu_bar_widget.dart';
 import 'dart:io';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';

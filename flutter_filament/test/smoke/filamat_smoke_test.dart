@@ -94,7 +94,7 @@ void main() {
         mi.setFloat('wobble', amp);
         final inflated = rig.renderFrame();
         final inflatedFg = countForegroundPixels(inflated, rig.width);
-        print('barrel fg rest=$restFg inflated=$inflatedFg');
+        smokeLog('barrel fg rest=$restFg inflated=$inflatedFg');
         expect(inflatedFg, greaterThan((restFg * 1.15).round()), reason: 'vertex shader pushes vertices outward');
         expect(countForegroundPixels(last, rig.width), greaterThan(0));
       } finally {

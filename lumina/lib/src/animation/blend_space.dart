@@ -176,8 +176,8 @@ class LuminaBlendSpace2D implements AnimPoseSource {
   final int gridDivisionsY;
   final double interpolationTime;
 
-  Vector2 _targetParameter;
-  Vector2 _currentParameter;
+  final Vector2 _targetParameter;
+  final Vector2 _currentParameter;
   double _normalizedPhase = 0.0;
   double _phaseDuration = 1.0;
   final List<double> _sampleWeights;

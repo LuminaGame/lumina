@@ -84,7 +84,7 @@ void main() {
             final scale1 = max1 > 0 ? 100.0 / max1 : 1.0;
             final barrelMat = Matrix4.identity()
               ..setTranslationRaw(250.0, -aabb1.min.y * scale1, 0.0)
-              ..scale(scale1, scale1, scale1);
+              ..scaleByDouble(scale1, scale1, scale1, 1.0);
             tm.setTransform(assets[1].rootEntity, barrelMat.storage.toList());
           }
 
@@ -96,7 +96,7 @@ void main() {
             final scale2 = max2 > 0 ? 250.0 / max2 : 1.0;
             final wallMat = Matrix4.identity()
               ..setTranslationRaw(0.0, -aabb2.min.y * scale2, -250.0)
-              ..scale(scale2, scale2, scale2);
+              ..scaleByDouble(scale2, scale2, scale2, 1.0);
             tm.setTransform(assets[2].rootEntity, wallMat.storage.toList());
           }
 
@@ -129,7 +129,7 @@ void main() {
           final mannyMat = Matrix4.identity()
             ..setTranslationRaw(botX, -aabb0.min.y * scale0, 0.0)
             ..rotateY(botYaw)
-            ..scale(scale0, scale0, scale0);
+            ..scaleByDouble(scale0, scale0, scale0, 1.0);
           tm.setTransform(assets[0].rootEntity, mannyMat.storage.toList());
 
           // Camera smoothly tracking Manny
@@ -213,7 +213,7 @@ void main() {
             final scale1 = max1 > 0 ? 300.0 / max1 : 1.0;
             final wallMat = Matrix4.identity()
               ..setTranslationRaw(0.0, -aabb1.min.y * scale1, 0.0)
-              ..scale(scale1, scale1, scale1);
+              ..scaleByDouble(scale1, scale1, scale1, 1.0);
             tm.setTransform(assets[1].rootEntity, wallMat.storage.toList());
           }
 
@@ -225,7 +225,7 @@ void main() {
             final scale2 = max2 > 0 ? 100.0 / max2 : 1.0;
             final barrelMat = Matrix4.identity()
               ..setTranslationRaw(0.0, -aabb2.min.y * scale2, 350.0)
-              ..scale(scale2, scale2, scale2);
+              ..scaleByDouble(scale2, scale2, scale2, 1.0);
             tm.setTransform(assets[2].rootEntity, barrelMat.storage.toList());
           }
 
@@ -274,7 +274,7 @@ void main() {
           final mannyMat = Matrix4.identity()
             ..setTranslationRaw(currentPos.x, -aabb0.min.y * scale0, currentPos.z)
             ..rotateY(yaw)
-            ..scale(scale0, scale0, scale0);
+            ..scaleByDouble(scale0, scale0, scale0, 1.0);
           tm.setTransform(assets[0].rootEntity, mannyMat.storage.toList());
 
           // Top-angled camera tracking Manny navigating around the obstacle
@@ -359,7 +359,7 @@ void main() {
             final scale2 = max2 > 0 ? 100.0 / max2 : 1.0;
             final markerMat = Matrix4.identity()
               ..setTranslationRaw(300.0, -aabb2.min.y * scale2, 0.0)
-              ..scale(scale2, scale2, scale2);
+              ..scaleByDouble(scale2, scale2, scale2, 1.0);
             tm.setTransform(assets[2].rootEntity, markerMat.storage.toList());
           }
 
@@ -401,7 +401,7 @@ void main() {
           final walkMat = Matrix4.identity()
             ..setTranslationRaw(posX, -aabb0.min.y * scale0, 0.0)
             ..rotateY(yaw)
-            ..scale(scale0, scale0, scale0);
+            ..scaleByDouble(scale0, scale0, scale0, 1.0);
           tm.setTransform(assets[0].rootEntity, walkMat.storage.toList());
 
           // Asset 1 (Idle model)
@@ -413,7 +413,7 @@ void main() {
             final idleMat = Matrix4.identity()
               ..setTranslationRaw(posX, -aabb1.min.y * scale1, 0.0)
               ..rotateY(yaw)
-              ..scale(scale1, scale1, scale1);
+              ..scaleByDouble(scale1, scale1, scale1, 1.0);
             tm.setTransform(assets[1].rootEntity, idleMat.storage.toList());
           }
 
@@ -508,7 +508,7 @@ void main() {
           final scale0 = max0 > 0 ? 120.0 / max0 : 1.0;
           final sideMat = Matrix4.identity()
             ..setTranslationRaw(-160.0, -aabb0.min.y * scale0, 0.0)
-            ..scale(scale0, scale0, scale0);
+            ..scaleByDouble(scale0, scale0, scale0, 1.0);
           tm.setTransform(assets[0].rootEntity, sideMat.storage.toList());
 
           // Intruder Barrel (Asset 2) circling around guard at radius 350cm
@@ -523,7 +523,7 @@ void main() {
             final scale2 = max2 > 0 ? 120.0 / max2 : 1.0;
             final barrelMat = Matrix4.identity()
               ..setTranslationRaw(intruderX, -aabb2.min.y * scale2, intruderZ)
-              ..scale(scale2, scale2, scale2);
+              ..scaleByDouble(scale2, scale2, scale2, 1.0);
             tm.setTransform(assets[2].rootEntity, barrelMat.storage.toList());
           }
 
@@ -538,7 +538,7 @@ void main() {
             final guardMat = Matrix4.identity()
               ..setTranslationRaw(0.0, -aabb1.min.y * scale1, 0.0)
               ..rotateY(guardYaw)
-              ..scale(scale1, scale1, scale1);
+              ..scaleByDouble(scale1, scale1, scale1, 1.0);
             tm.setTransform(assets[1].rootEntity, guardMat.storage.toList());
           }
 

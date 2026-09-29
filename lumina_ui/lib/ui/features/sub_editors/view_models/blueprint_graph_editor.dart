@@ -663,7 +663,7 @@ class BlueprintGraphEditor extends ChangeNotifier {
     if (current != null && current != LuminaPinType.wildcard) return;
     LuminaPinType? type;
     String? cls;
-    if (end.type == LuminaPinType.wildcard && other.type != null && other.type != LuminaPinType.wildcard) {
+    if (end.type == LuminaPinType.wildcard && other.type != LuminaPinType.wildcard) {
       type = other.type;
       cls = other.objectClass;
     } else if (end.type == LuminaPinType.array &&

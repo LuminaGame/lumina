@@ -49,7 +49,7 @@ void main() {
       mi.setTexture('tex', texture, sampler: linear);
       final linearPx = rig.screenshot('TextureSampler Smoke Tests TextureSampler: nearest vs linear magnification of a 2x2 checker');
       final linearStats = frameStats(linearPx);
-      print('nearest=$nearestStats linear=$linearStats');
+      smokeLog('nearest=$nearestStats linear=$linearStats');
 
       // Nearest: bottom-left quadrant (UV origin is bottom-left) is the pure red texel.
       final (r, g, b) = pixelAt(nearestPx, rig.width, 64, 192);

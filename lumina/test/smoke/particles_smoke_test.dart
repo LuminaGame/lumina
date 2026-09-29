@@ -79,7 +79,7 @@ void main() {
           final scale0 = max0 > 0 ? 1.0 / max0 : 1.0;
           final barrelMat = Matrix4.identity()
             ..setTranslationRaw(0.0, -aabb0.min.y * scale0, 0.0)
-            ..scale(scale0, scale0, scale0);
+            ..scaleByDouble(scale0, scale0, scale0, 1.0);
           tm.setTransform(assets[0].rootEntity, barrelMat.storage.toList());
 
           // AC Unit background asset
@@ -91,7 +91,7 @@ void main() {
             final acMat = Matrix4.identity()
               ..setTranslationRaw(3.0, -aabb1.min.y * scale1, -2.0)
               ..rotateY(-math.pi / 4.0)
-              ..scale(scale1, scale1, scale1);
+              ..scaleByDouble(scale1, scale1, scale1, 1.0);
             tm.setTransform(assets[1].rootEntity, acMat.storage.toList());
           }
 
@@ -108,7 +108,7 @@ void main() {
               ..setTranslationRaw(math.sin(timeSeconds * 2.0) * 1.5, arcY, math.cos(timeSeconds * 2.0) * 1.5)
               ..rotateY(timeSeconds * 4.0)
               ..rotateX(timeSeconds * 3.0)
-              ..scale(scale2, scale2, scale2);
+              ..scaleByDouble(scale2, scale2, scale2, 1.0);
             tm.setTransform(assets[2].rootEntity, sparkMat.storage.toList());
           }
 
@@ -215,7 +215,7 @@ void main() {
               assets[0].rootEntity,
               (Matrix4.identity()
                     ..setTranslationRaw(0.0, -aabb.min.y * scale, 0.0)
-                    ..scale(scale, scale, scale))
+                    ..scaleByDouble(scale, scale, scale, 1.0))
                   .storage
                   .toList(),
             );
