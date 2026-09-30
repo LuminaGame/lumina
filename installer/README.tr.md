@@ -23,10 +23,24 @@ Release workflow'u (`.github/workflows/release.yml`) her `v*` tag'i için hepsin
 |---|---|
 | `lumina-studio-<tag>-windows-x64.zip` | `flutter build windows --release` çıktısı; Visual C++ runtime DLL'leri `lumina_ui.exe`'nin yanında, dosyalar arşivin kökünde |
 | `lumina-studio-<tag>-linux-x64.tar.gz` | `flutter build linux --release` bundle'ı (`lumina_ui`, `lib/`, `data/`), arşivin kökünde |
-| `filament-<VERSION>-<os>-x64.{zip,tar.gz}` | Prebuilt Filament (upstream v1.77.0 + bu repo'nun patch'leri); editör ilk açılışta indirir |
 | `openriglogic-<os>-x64.{zip,tar.gz}` | Prebuilt OpenRigLogic statik kütüphanesi (pinlenen tools commit'inden build edilir); editör ilk açılışta indirir |
 
 İki editör build'i de `--dart-define=LUMINA_VERSION=<tag>` ve `--dart-define=LUMINA_COMMIT=<sha>` taşır.
+
+Prebuilt Filament (upstream v1.77.0 + bu repo'nun patch'leri) Lumina release'lerine eklenmez. Her Filament sürümü
+(`tool/filament/VERSION`) bir kez, kendi release'inde yayımlanır: `filament-<VERSION>`; içinde
+`filament-<VERSION>-windows-x64.zip`, `filament-<VERSION>-linux-x64.tar.gz` ve `.sha256` sidecar'ları bulunur.
+Hiçbir zaman Latest olarak işaretlenmeyen ve tamamlandıktan sonra değişmeyen bir pre-release'tir; workflow onu
+ihtiyaç duyan ilk tag'den oluşturur (`.github/scripts/filament_release.sh`), sonraki tag'ler notlarında yalnızca
+ona bağlantı verir. Editör ilk açılışta oradan indirir; bulamazsa kendi release'inin dosyalarına döner
+(v0.0.1-dev.6'ya kadarki release'ler Filament'i orada tutar).
+
+Installer'lar (setup.exe, `install-studio.sh`, "Update Lumina Studio", `lumina-studio --update`) için **"latest"**,
+platformun editörünü taşıyorsa `/releases/latest`, değilse onu taşıyan, pre-release'ler dahil en yeni yayımlanmış
+release'tir. `filament-*` release'leri, taslaklar ve `lumina-studio-*` dosyası olmayan release'ler hiçbir zaman
+seçilmez. `lumina-setup.ps1 -SelectReleaseFrom <dosya>` ve `install-studio.sh --select-release-from <dosya>` bu
+seçimi kaydedilmiş bir `GET /repos/<repo>/releases` yanıtına uygular (`tag=` ve `asset=` yazdırır); testler bunu
+kullanır.
 
 ## Windows: setup.exe
 
@@ -43,8 +57,8 @@ winget ister.
 2. **Flutter.** PATH'te zaten bir `flutter` varsa o kullanılır. Yoksa stable kanalı
    `%LOCALAPPDATA%\Lumina\flutter` klasörüne clone edilir (`git clone --filter=blob:none -b stable`) ve `bin`
    klasörü kullanıcı PATH'ine eklenir.
-3. **Lumina Studio.** Setup `https://api.github.com/repos/LuminaGame/lumina/releases/latest` adresini okur,
-   `lumina-studio-<tag>-windows-x64.zip` dosyasını indirir, SHA-256'sını doğrular ve
+3. **Lumina Studio.** Setup editörü taşıyan en son release'i bulur (yukarıda: `/releases/latest`, yoksa onu
+   taşıyan en yeni pre-release), `lumina-studio-<tag>-windows-x64.zip` dosyasını indirir, SHA-256'sını doğrular ve
    `%LOCALAPPDATA%\Programs\Lumina Studio` klasörüne açar. İndirme başarısız olursa setup yeniden denemeyi önerir.
 4. **Kısayollar.** Başlat menüsünde "Lumina Studio", "Update Lumina Studio" (en son release'i yeniden indirir) ve
    uninstaller; isteğe bağlı olarak bir masaüstü kısayolu.

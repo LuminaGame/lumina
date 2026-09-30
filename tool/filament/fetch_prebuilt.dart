@@ -1,10 +1,12 @@
 // ignore_for_file: avoid_print
 
-/// Downloads a prebuilt Filament archive from a Lumina GitHub release,
-/// verifies it against its `.sha256` sidecar, unpacks it and prints the
-/// directory (usable as the hooks' `filament_dir`) on stdout.
+/// Downloads a prebuilt Filament archive from its `filament-<version>` GitHub
+/// release, verifies it against its `.sha256` sidecar, unpacks it and prints
+/// the directory (usable as the hooks' `filament_dir`) on stdout.
 ///
-///   dart run tool/filament/fetch_prebuilt.dart --tag <release-tag>
+///   dart run tool/filament/fetch_prebuilt.dart
+///       [--tag <release-tag>]  a Lumina release to try when the
+///                              filament-<version> release has no such asset
 ///       [--version <id>]    default: tool/filament/VERSION
 ///       [--os windows|linux|macos]   default: this one
 ///       [--dest <dir>]      default: build/filament-prebuilt/cache
@@ -30,7 +32,7 @@ Future<void> main(List<String> args) async {
   }
 
   if (args.contains('-h') || args.contains('--help')) _usage(null);
-  final tag = opt('tag') ?? _usage('--tag is required');
+  final tag = opt('tag');
   final version = opt('version') ?? File('$repo/tool/filament/VERSION').readAsStringSync().trim();
   final dest = Directory(opt('dest') ?? '$repo/build/filament-prebuilt/cache');
   var shown = -1;
@@ -58,7 +60,7 @@ Future<void> main(List<String> args) async {
 
 Never _usage(String? error) {
   if (error != null) stderr.writeln(error);
-  stderr.writeln('usage: dart run tool/filament/fetch_prebuilt.dart --tag <release-tag> '
+  stderr.writeln('usage: dart run tool/filament/fetch_prebuilt.dart [--tag <release-tag>] '
       '[--version <id>] [--os windows|linux|macos] [--dest <dir>] [--base-url <url>] [--force]');
   exit(error == null ? 0 : 2);
 }

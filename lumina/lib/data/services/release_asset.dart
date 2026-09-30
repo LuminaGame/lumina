@@ -5,8 +5,9 @@ import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:path/path.dart' as p;
 
-/// The prebuilt archives attached to each Lumina GitHub release (Filament,
-/// OpenRigLogic): downloaded, checked against their `.sha256` sidecar and
+/// The prebuilt archives attached to Lumina GitHub releases (Filament in its
+/// own `filament-<VERSION>` release, OpenRigLogic in each Lumina release):
+/// downloaded, checked against their `.sha256` sidecar and
 /// unpacked into a per-user cache. [FilamentPrebuilt] and
 /// [OpenRigLogicPrebuilt] name the assets; this holds what they share.
 abstract final class ReleaseAssets {
@@ -36,11 +37,12 @@ abstract final class ReleaseAssets {
       Uri.parse('${baseUrl.endsWith('/') ? baseUrl.substring(0, baseUrl.length - 1) : baseUrl}'
           '/${Uri.encodeComponent(releaseTag)}/$asset');
 
-  /// The first of [variables] set to a non-empty value in the process
-  /// environment, or null.
-  static String? baseUrlFromEnvironment(List<String> variables) {
+  /// The first of [variables] set to a non-empty value in [environment]
+  /// (default: the process environment), or null.
+  static String? baseUrlFromEnvironment(List<String> variables, [Map<String, String>? environment]) {
+    final env = environment ?? Platform.environment;
     for (final name in variables) {
-      final v = Platform.environment[name];
+      final v = env[name];
       if (v != null && v.isNotEmpty) return v;
     }
     return null;
@@ -64,7 +66,8 @@ abstract final class ReleaseAssets {
   /// happens next to [target], so a failed or interrupted run leaves no
   /// partial [target] behind. [onProgress] gets 0..0.9 while downloading,
   /// then 0.9 and 1; [label] names the download in its messages; [error]
-  /// builds the exception thrown.
+  /// builds the exception thrown, and [notFound], when given, the one for
+  /// an HTTP 404 of the archive or its sidecar.
   static Future<Directory> fetch({
     required Uri uri,
     required String folder,
@@ -73,9 +76,11 @@ abstract final class ReleaseAssets {
     required Directory target,
     required String label,
     required Exception Function(String message) error,
+    Exception Function(String message)? notFound,
     void Function(double progress, String message)? onProgress,
     HttpClient? httpClient,
   }) async {
+    final missing = notFound ?? error;
     final shaUri = uri.replace(path: '${uri.path}.sha256');
     final client = httpClient ?? (HttpClient()..connectionTimeout = const Duration(seconds: 30));
     await target.parent.create(recursive: true);
@@ -84,10 +89,10 @@ abstract final class ReleaseAssets {
     staging.createSync(recursive: true);
     try {
       onProgress?.call(0, 'Downloading ${p.basename(shaUri.path)}');
-      final expected = _parseSha256(await _getText(client, shaUri, error), error);
+      final expected = _parseSha256(await _getText(client, shaUri, error, missing), error);
       final archive = File(p.join(staging.path, p.basename(uri.path)));
       var shownTenths = -1;
-      final actual = await _downloadTo(client, uri, archive, error, (received, total) {
+      final actual = await _downloadTo(client, uri, archive, error, missing, (received, total) {
         // One event per 0.1 MiB, not per network chunk.
         final tenths = received * 10 ~/ (1 << 20);
         if (tenths == shownTenths && received != total) return;
@@ -136,24 +141,27 @@ abstract final class ReleaseAssets {
 
   /// GETs [uri], following redirects (GitHub serves release assets from
   /// another host).
-  static Future<HttpClientResponse> _get(HttpClient client, Uri uri, Exception Function(String) error) async {
+  static Future<HttpClientResponse> _get(
+      HttpClient client, Uri uri, Exception Function(String) error, Exception Function(String) notFound) async {
     final request = await client.getUrl(uri);
     request.headers.set(HttpHeaders.userAgentHeader, 'lumina-release-assets');
     final response = await request.close();
     if (response.statusCode != HttpStatus.ok) {
       await response.drain<void>();
-      throw error('GET $uri: HTTP ${response.statusCode}.');
+      final message = 'GET $uri: HTTP ${response.statusCode}.';
+      throw response.statusCode == HttpStatus.notFound ? notFound(message) : error(message);
     }
     return response;
   }
 
-  static Future<String> _getText(HttpClient client, Uri uri, Exception Function(String) error) async =>
-      utf8.decode(await (await _get(client, uri, error)).fold<List<int>>(<int>[], (a, b) => a..addAll(b)));
+  static Future<String> _getText(
+          HttpClient client, Uri uri, Exception Function(String) error, Exception Function(String) notFound) async =>
+      utf8.decode(await (await _get(client, uri, error, notFound)).fold<List<int>>(<int>[], (a, b) => a..addAll(b)));
 
   /// Streams [uri] into [to] and returns the body's SHA-256.
   static Future<Digest> _downloadTo(HttpClient client, Uri uri, File to, Exception Function(String) error,
-      void Function(int received, int? total)? progress) async {
-    final response = await _get(client, uri, error);
+      Exception Function(String) notFound, void Function(int received, int? total)? progress) async {
+    final response = await _get(client, uri, error, notFound);
     final total = response.contentLength >= 0 ? response.contentLength : null;
     final digestSink = _DigestSink();
     final hasher = sha256.startChunkedConversion(digestSink);

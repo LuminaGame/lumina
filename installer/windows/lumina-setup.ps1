@@ -17,6 +17,13 @@
 
   -DryRun lists what would be installed and downloaded and changes nothing.
 
+  "latest" is /releases/latest when it carries the editor, else the newest
+  published release (pre-releases included) that has the Windows zip. The
+  prebuilt Filament has its own filament-<VERSION> pre-releases, which are
+  never taken. -SelectReleaseFrom <file> applies that choice to a saved
+  releases answer from the GitHub API, prints tag= and asset= and exits
+  (0, or 30 when no release qualifies); nothing else runs.
+
   Exit codes: 0 done, 10 a prerequisite failed, 20 Flutter failed,
   30 Lumina Studio could not be downloaded, 1 anything else.
 
@@ -40,7 +47,8 @@ param(
   [switch]$RemoveFlutter,
   [string]$Repository = 'LuminaGame/lumina',
   [string]$Tag = 'latest',
-  [string]$LogPath
+  [string]$LogPath,
+  [string]$SelectReleaseFrom
 )
 
 $ErrorActionPreference = 'Stop'
@@ -248,23 +256,38 @@ function Invoke-GitHubApi([string]$Url) {
   return Invoke-RestMethod -Uri $Url -Headers $headers -UseBasicParsing -TimeoutSec 60
 }
 
+$StudioZipPattern = '^lumina-studio-.+-windows-x64\.zip$'
+
+# The first of $Releases (newest first, as the API lists them; one release
+# object works too) that is published, is not a Filament release
+# (filament-<VERSION>, the prebuilt Filament) and carries the Windows zip.
+function Select-StudioRelease($Releases) {
+  foreach ($r in @($Releases)) {
+    if (-not $r -or $r.draft) { continue }
+    if ([string]$r.tag_name -like 'filament-*') { continue }
+    $zip = @($r.assets | Where-Object { $_.name -match $StudioZipPattern }) | Select-Object -First 1
+    if ($zip) { return $r }
+  }
+  return $null
+}
+
 function Get-StudioRelease {
   if ($Tag -eq 'latest') {
-    # /releases/latest skips pre-releases; without a full release yet, take
-    # the newest release of any kind.
+    # /releases/latest skips pre-releases; without a full release that has
+    # the editor, take the newest release that does.
     $url = "https://api.github.com/repos/$Repository/releases/latest"
-    try {
-      $release = Invoke-GitHubApi $url
-    } catch {
-      $url = "https://api.github.com/repos/$Repository/releases?per_page=1"
-      $release = @(Invoke-GitHubApi $url) | Select-Object -First 1
-      if (-not $release) { throw "$Repository has no release yet." }
+    $release = $null
+    try { $release = Select-StudioRelease (Invoke-GitHubApi $url) } catch { }
+    if (-not $release) {
+      $url = "https://api.github.com/repos/$Repository/releases?per_page=30"
+      $release = Select-StudioRelease (Invoke-GitHubApi $url)
+      if (-not $release) { throw "$Repository has no release with a lumina-studio-*-windows-x64.zip yet." }
     }
   } else {
     $url = "https://api.github.com/repos/$Repository/releases/tags/$Tag"
     $release = Invoke-GitHubApi $url
   }
-  $zip = $release.assets | Where-Object { $_.name -match '^lumina-studio-.+-windows-x64\.zip$' } | Select-Object -First 1
+  $zip = $release.assets | Where-Object { $_.name -match $StudioZipPattern } | Select-Object -First 1
   if (-not $zip) { throw "Release $($release.tag_name) has no lumina-studio-*-windows-x64.zip asset." }
   $sum = $release.assets | Where-Object { $_.name -eq "$($zip.name).sha256" } | Select-Object -First 1
   return New-Object PSObject -Property @{ Url = $url; Tag = $release.tag_name; Zip = $zip; Sha256 = $sum }
@@ -393,6 +416,19 @@ function Invoke-Uninstall {
 }
 
 # ------------------------------------------------------------ main
+
+if ($SelectReleaseFrom) {
+  $saved = [IO.File]::ReadAllText((Resolve-Path $SelectReleaseFrom).Path, $Utf8) | ConvertFrom-Json
+  $picked = Select-StudioRelease $saved
+  if (-not $picked) {
+    Write-Host 'No release with a lumina-studio-*-windows-x64.zip.'
+    exit 30
+  }
+  $zip = @($picked.assets | Where-Object { $_.name -match $StudioZipPattern }) | Select-Object -First 1
+  Write-Host ("tag={0}" -f $picked.tag_name)
+  Write-Host ("asset={0}" -f $zip.name)
+  exit 0
+}
 
 try {
   if ($LogPath -and (Test-Path $LogPath) -and $DryRun) { Remove-Item -Force $LogPath }

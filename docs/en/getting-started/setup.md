@@ -74,18 +74,18 @@ The hooks expect the static libraries in `filament/out/cmake-release/` (Linux an
 
 ### Prebuilt archive
 
-The quickest way to get Filament is the prebuilt archive. `tool/filament/VERSION` names it (for example `1.77.0-lumina.1`); each Lumina release attaches `filament-<VERSION>-windows-x64.zip` and `filament-<VERSION>-linux-x64.tar.gz`, each with a `.sha256` file. The archive holds one folder that works as `filament_dir`: the headers, sources and static libraries the hooks read (listed in `tool/filament/prebuilt_manifest.txt`), `matc`, the patches and a `lumina-filament.json` describing the build.
+The quickest way to get Filament is the prebuilt archive. `tool/filament/VERSION` names it (for example `1.77.0-lumina.2`), and each version is published once, in its own GitHub release `filament-<VERSION>` (for example [`filament-1.77.0-lumina.2`](https://github.com/LuminaGame/lumina/releases/tag/filament-1.77.0-lumina.2)): `filament-<VERSION>-windows-x64.zip` and `filament-<VERSION>-linux-x64.tar.gz`, each with a `.sha256` file. That release is a pre-release that is never marked Latest, its notes list the upstream tag and the patches, and its assets never change; a new build gets a new version. Lumina releases up to v0.0.1-dev.6 attached the archives to their own release instead, and still carry them. The archive holds one folder that works as `filament_dir`: the headers, sources and static libraries the hooks read (listed in `tool/filament/prebuilt_manifest.txt`), `matc`, the patches and a `lumina-filament.json` describing the build.
 
 Download, verify and unpack it with:
 
 ```bash
-dart run tool/filament/fetch_prebuilt.dart --tag <lumina release tag>
+dart run tool/filament/fetch_prebuilt.dart
 ```
 
-It prints the unpacked folder (by default `build/filament-prebuilt/cache/<VERSION>`). Link it as `filament`, or point `filament_dir` at it:
+It downloads from the `filament-<VERSION>` release; `--tag <lumina release tag>` names a release to try when that one has no such asset (an older Lumina release that attached Filament itself). `--base-url`, `LUMINA_FILAMENT_BASE_URL` or `LUMINA_RELEASE_BASE_URL` point it at a mirror laid out like the GitHub release downloads. It prints the unpacked folder (by default `build/filament-prebuilt/cache/<VERSION>`). Link it as `filament`, or point `filament_dir` at it:
 
 ```bash
-ln -s "$(dart run tool/filament/fetch_prebuilt.dart --tag v0.1.0)" filament   # Windows: mklink /J filament <folder>
+ln -s "$(dart run tool/filament/fetch_prebuilt.dart)" filament   # Windows: mklink /J filament <folder>
 ```
 
 To build the archive yourself from upstream Filament and the patches:
@@ -142,9 +142,9 @@ To use Lumina Studio without building it, install it from the [GitHub releases](
 | Windows | `lumina-studio-setup-<tag>-windows-x64.exe` | Git, the Visual Studio 2022 C++ Build Tools and GStreamer (winget), Flutter stable unless one is on PATH, then the editor in `%LOCALAPPDATA%\Programs\Lumina Studio` |
 | Linux | `lumina-studio_<version>-1_amd64.deb` / `lumina-studio-<version>-1.x86_64.rpm` | The build dependencies (clang, CMake, Ninja, GTK 3, GStreamer), Flutter in `/opt/lumina/flutter`, the editor in `/opt/lumina/studio`, started with `lumina-studio` |
 
-The Windows setup accepts `/DRYRUN`, which lists what it would install and download without changing anything. Every release also carries the editor on its own (`lumina-studio-<tag>-windows-x64.zip`, `lumina-studio-<tag>-linux-x64.tar.gz`, and an MSIX when signed) and the prebuilt Filament archives described above, which the editor downloads at first launch. Each file has a `.sha256` sidecar.
+The Windows setup accepts `/DRYRUN`, which lists what it would install and download without changing anything. Every release also carries the editor on its own (`lumina-studio-<tag>-windows-x64.zip`, `lumina-studio-<tag>-linux-x64.tar.gz`, and an MSIX when signed) and the prebuilt OpenRigLogic library. Each file has a `.sha256` sidecar. The prebuilt Filament is not attached to Lumina releases: the release notes link the `filament-<VERSION>` release described above, which the editor downloads from at first launch (falling back to its own release's assets, which is where releases up to v0.0.1-dev.6 keep them). The installers' "latest" is the newest Lumina release with the editor for the platform; they never pick a `filament-*` release.
 
-Pushing a `v*` tag that matches the version in `lumina_ui/pubspec.yaml` runs `.github/workflows/release.yml`. It checks the cross-repository pins, builds Filament (cached), builds Lumina Studio for Windows and Linux and the installers, and publishes the release. `installer/README.md` describes each installer, how to build it locally and the signing secrets.
+Pushing a `v*` tag that matches the version in `lumina_ui/pubspec.yaml` runs `.github/workflows/release.yml`. It checks the cross-repository pins, makes sure the `filament-<VERSION>` release exists and is complete (building Filament, or restoring it from the cache, only when it is not), builds Lumina Studio for Windows and Linux and the installers, and publishes the release. `installer/README.md` describes each installer, how to build it locally and the signing secrets.
 
 ### Signing the Windows release (Certum)
 

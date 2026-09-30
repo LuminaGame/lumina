@@ -23,10 +23,24 @@ The release workflow (`.github/workflows/release.yml`) builds all of them for ev
 |---|---|
 | `lumina-studio-<tag>-windows-x64.zip` | `flutter build windows --release` output with the Visual C++ runtime DLLs next to `lumina_ui.exe`, at the archive root |
 | `lumina-studio-<tag>-linux-x64.tar.gz` | `flutter build linux --release` bundle (`lumina_ui`, `lib/`, `data/`), at the archive root |
-| `filament-<VERSION>-<os>-x64.{zip,tar.gz}` | Prebuilt Filament (upstream v1.77.0 with this repository's patches), downloaded by the editor at first launch |
 | `openriglogic-<os>-x64.{zip,tar.gz}` | Prebuilt OpenRigLogic static library (built from the pinned tools commit), downloaded by the editor at first launch |
 
 Both editor builds carry `--dart-define=LUMINA_VERSION=<tag>` and `--dart-define=LUMINA_COMMIT=<sha>`.
+
+The prebuilt Filament (upstream v1.77.0 with this repository's patches) is not attached to the Lumina releases.
+Each Filament version (`tool/filament/VERSION`) is published once, in its own release `filament-<VERSION>`:
+`filament-<VERSION>-windows-x64.zip`, `filament-<VERSION>-linux-x64.tar.gz` and their `.sha256` sidecars. It is a
+pre-release that is never marked Latest and never changes once complete; the workflow creates it from the first
+tag that needs it (`.github/scripts/filament_release.sh`) and later tags only link it in their notes. The editor
+downloads from it at first launch and falls back to its own release's assets, which is where releases up to
+v0.0.1-dev.6 keep their Filament.
+
+**"Latest"** for the installers (setup.exe, `install-studio.sh`, "Update Lumina Studio", `lumina-studio --update`)
+is `/releases/latest` when that release has the editor for the platform, else the newest published release,
+pre-releases included, that has it. `filament-*` releases, drafts and releases without the
+`lumina-studio-*` asset are never taken. `lumina-setup.ps1 -SelectReleaseFrom <file>` and
+`install-studio.sh --select-release-from <file>` apply that choice to a saved `GET /repos/<repo>/releases` answer
+(they print `tag=` and `asset=`), which is how it is tested.
 
 ## Windows: setup.exe
 
@@ -43,8 +57,8 @@ packages.
 2. **Flutter.** A `flutter` already on PATH is used as is. Otherwise the stable channel is cloned into
    `%LOCALAPPDATA%\Lumina\flutter` (`git clone --filter=blob:none -b stable`), and its `bin` folder is added to
    the user PATH.
-3. **Lumina Studio.** Setup reads `https://api.github.com/repos/LuminaGame/lumina/releases/latest`, downloads
-   `lumina-studio-<tag>-windows-x64.zip`, verifies its SHA-256 and unpacks it into
+3. **Lumina Studio.** Setup finds the latest release with the editor (above: `/releases/latest`, else the
+   newest pre-release that has it), downloads `lumina-studio-<tag>-windows-x64.zip`, verifies its SHA-256 and unpacks it into
    `%LOCALAPPDATA%\Programs\Lumina Studio`. Setup offers a retry when the download fails.
 4. **Shortcuts.** Start menu entries "Lumina Studio", "Update Lumina Studio" (downloads the latest release
    again) and the uninstaller, plus an optional desktop shortcut.
@@ -194,7 +208,7 @@ The postinstall script:
 2. Keeps a Flutter already in `/opt/lumina/flutter` or on PATH. Otherwise it clones the stable channel into
    `/opt/lumina/flutter`, adds a `safe.directory` entry to the system git config, runs `flutter precache --linux`
    and hands the tree to the group.
-3. Downloads the latest `lumina-studio-<tag>-linux-x64.tar.gz` into `/opt/lumina/studio`.
+3. Downloads the latest `lumina-studio-<tag>-linux-x64.tar.gz` (see "Latest" above) into `/opt/lumina/studio`.
 4. Warns when `clang` is older than 19. The engine's native code builds against the libc++ 21 headers it
    bundles; on older distributions install a newer clang from <https://apt.llvm.org>.
 

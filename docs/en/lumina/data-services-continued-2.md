@@ -346,7 +346,7 @@ What the release workflow compiles into a Lumina Studio build (`--dart-define`):
 
 ### `typedef FilamentProvider`
 
-Downloads (or finds) the prebuilt Filament build [version] and returns its directory, usable as the hooks' `filament_dir`. The signature of `FilamentPrebuilt.ensure`.
+Downloads (or finds) the prebuilt Filament build [version] and returns its directory, usable as the hooks' `filament_dir`: from the `filament-<version>` release, else from the [releaseTag] release (the editor's own, for releases that attached Filament themselves). The signature of `FilamentPrebuilt.ensure`.
 
 ### `enum EngineBootstrapStep`
 

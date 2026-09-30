@@ -74,18 +74,20 @@ Hook'lar static kütüphaneleri `filament/out/cmake-release/` (Linux ve macOS) y
 
 ### Hazır arşiv
 
-Filament'i edinmenin en hızlı yolu hazır arşivdir. `tool/filament/VERSION` onu adlandırır (örneğin `1.77.0-lumina.1`); her Lumina release'i `filament-<VERSION>-windows-x64.zip` ve `filament-<VERSION>-linux-x64.tar.gz` dosyalarını, her biri bir `.sha256` dosyasıyla birlikte içerir. Arşivde `filament_dir` olarak kullanılabilen tek bir klasör vardır: hook'ların okuduğu header'lar, kaynaklar ve static kütüphaneler (`tool/filament/prebuilt_manifest.txt` içinde listelenir), `matc`, yamalar ve build'i tarif eden bir `lumina-filament.json`.
+Filament'i edinmenin en hızlı yolu hazır arşivdir. `tool/filament/VERSION` onu adlandırır (örneğin `1.77.0-lumina.2`) ve her sürüm bir kez, kendi GitHub release'inde yayımlanır: `filament-<VERSION>` (örneğin [`filament-1.77.0-lumina.2`](https://github.com/LuminaGame/lumina/releases/tag/filament-1.77.0-lumina.2)); içinde `filament-<VERSION>-windows-x64.zip` ve `filament-<VERSION>-linux-x64.tar.gz` dosyaları, her biri bir `.sha256` dosyasıyla birlikte bulunur. Bu release hiçbir zaman Latest olarak işaretlenmeyen bir pre-release'tir, notları upstream tag'ini ve yamaları listeler ve dosyaları asla değişmez; yeni bir build yeni bir sürüm alır. v0.0.1-dev.6'ya kadarki Lumina release'leri arşivleri kendi release'lerine ekliyordu ve hâlâ taşıyor. Arşivde `filament_dir` olarak kullanılabilen tek bir klasör vardır: hook'ların okuduğu header'lar, kaynaklar ve static kütüphaneler (`tool/filament/prebuilt_manifest.txt` içinde listelenir), `matc`, yamalar ve build'i tarif eden bir `lumina-filament.json`.
 
 İndirmek, doğrulamak ve açmak için:
 
 ```bash
-dart run tool/filament/fetch_prebuilt.dart --tag <lumina release tag'i>
+dart run tool/filament/fetch_prebuilt.dart
 ```
+
+`filament-<VERSION>` release'inden indirir; `--tag <lumina release tag'i>`, o release'te böyle bir dosya yoksa denenecek release'i verir (Filament'i kendisi ekleyen eski bir Lumina release'i). `--base-url`, `LUMINA_FILAMENT_BASE_URL` ya da `LUMINA_RELEASE_BASE_URL` onu GitHub release indirmeleri gibi düzenlenmiş bir aynaya yönlendirir.
 
 Komut açılan klasörü yazdırır (varsayılan olarak `build/filament-prebuilt/cache/<VERSION>`). Klasörü `filament` olarak link edin ya da `filament_dir`'i ona yönlendirin:
 
 ```bash
-ln -s "$(dart run tool/filament/fetch_prebuilt.dart --tag v0.1.0)" filament   # Windows: mklink /J filament <klasör>
+ln -s "$(dart run tool/filament/fetch_prebuilt.dart)" filament   # Windows: mklink /J filament <klasör>
 ```
 
 Arşivi upstream Filament ve yamalardan kendiniz build etmek için:
@@ -142,9 +144,9 @@ Lumina Studio'yu build etmeden kullanmak için [GitHub releases](https://github.
 | Windows | `lumina-studio-setup-<tag>-windows-x64.exe` | Git, Visual Studio 2022 C++ Build Tools ve GStreamer (winget), PATH'te yoksa Flutter stable, ardından `%LOCALAPPDATA%\Programs\Lumina Studio` içine editör |
 | Linux | `lumina-studio_<version>-1_amd64.deb` / `lumina-studio-<version>-1.x86_64.rpm` | Build bağımlılıkları (clang, CMake, Ninja, GTK 3, GStreamer), `/opt/lumina/flutter` içine Flutter, `/opt/lumina/studio` içine editör; `lumina-studio` ile başlatılır |
 
-Windows setup'ı `/DRYRUN` kabul eder: hiçbir şeyi değiştirmeden neyi kuracağını ve indireceğini listeler. Her release editörün kendisini de (`lumina-studio-<tag>-windows-x64.zip`, `lumina-studio-<tag>-linux-x64.tar.gz` ve imzalıysa bir MSIX) ve editörün ilk açılışta indirdiği, yukarıda anlatılan prebuilt Filament arşivlerini de taşır. Her dosyanın bir `.sha256` sidecar'ı vardır.
+Windows setup'ı `/DRYRUN` kabul eder: hiçbir şeyi değiştirmeden neyi kuracağını ve indireceğini listeler. Her release editörün kendisini de (`lumina-studio-<tag>-windows-x64.zip`, `lumina-studio-<tag>-linux-x64.tar.gz` ve imzalıysa bir MSIX) ve prebuilt OpenRigLogic kütüphanesini de taşır. Her dosyanın bir `.sha256` sidecar'ı vardır. Prebuilt Filament Lumina release'lerine eklenmez: release notları yukarıda anlatılan `filament-<VERSION>` release'ine bağlantı verir; editör ilk açılışta oradan indirir (bulamazsa kendi release'inin dosyalarına döner; v0.0.1-dev.6'ya kadarki release'ler Filament'i orada tutar). Kurulum programlarının "latest"ı, platformun editörünü taşıyan en yeni Lumina release'idir; hiçbir zaman bir `filament-*` release'ini seçmezler.
 
-`lumina_ui/pubspec.yaml` içindeki sürümle eşleşen bir `v*` tag'i push etmek `.github/workflows/release.yml`'ı çalıştırır. Workflow repository'ler arası pin'leri kontrol eder, Filament'ı build eder (cache'li), Windows ve Linux için Lumina Studio'yu ve installer'ları build eder ve release'i yayımlar. `installer/README.tr.md` her installer'ı, yerelde nasıl build edileceğini ve imzalama secret'larını anlatır.
+`lumina_ui/pubspec.yaml` içindeki sürümle eşleşen bir `v*` tag'i push etmek `.github/workflows/release.yml`'ı çalıştırır. Workflow repository'ler arası pin'leri kontrol eder, `filament-<VERSION>` release'inin var ve eksiksiz olduğundan emin olur (Filament'i yalnızca eksikse build eder ya da cache'ten alır), Windows ve Linux için Lumina Studio'yu ve installer'ları build eder ve release'i yayımlar. `installer/README.tr.md` her installer'ı, yerelde nasıl build edileceğini ve imzalama secret'larını anlatır.
 
 ### Windows release'ini imzalamak (Certum)
 

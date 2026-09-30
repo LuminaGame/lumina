@@ -1,10 +1,24 @@
 # Release: builds prebuilt Lumina Studio (lumina_ui) for Windows and Linux,
-# the prebuilt Filament and OpenRigLogic archives the installed editor
-# downloads at first launch, and the native installers, then publishes all of
-# them as the GitHub release of the tag.
+# the prebuilt OpenRigLogic archive the installed editor downloads at first
+# launch, and the native installers, then publishes all of them as the GitHub
+# release of the tag.
 #
-#   check ──┬── filament (windows, linux) ── studio (windows, linux) ──┐
-#           └── installers (setup.exe; .deb + .rpm) ──────────────────┴── release
+#   check ──┬── filament (windows, linux) ──┬── filament-release ──────────┐
+#           │                               └── studio (windows, linux) ───┤
+#           └── installers (setup.exe; .deb + .rpm) ───────────────────────┴── release
+#
+# Prebuilt Filament is published once per tool/filament/VERSION, in its own
+# release `filament-<VERSION>` (a pre-release that is never "Latest", created
+# at the commit that built it; .github/scripts/filament_release.sh). Each
+# `filament` leg first asks whether that release already has its OS's
+# archive and sidecar: if so it does nothing, otherwise it restores the
+# archive from the cache (or builds it) and hands it on as an artifact. The
+# single `filament-release` job then creates the release if needed and
+# uploads only what is missing; a complete Filament release is never
+# changed, and its job-level concurrency group keeps runs of two tags from
+# writing to it at once. The Lumina release carries no Filament: its notes
+# link the Filament release, and the editor downloads from there (falling
+# back to its own tag, which is where releases up to v0.0.1-dev.6 put it).
 #
 # The Flutter SDK is pinned in FLUTTER_VERSION below: the version the
 # workspace is developed and tested with (the pubspecs only constrain the Dart
@@ -66,6 +80,8 @@ jobs:
       version: ${{ steps.version.outputs.version }}
       msix_version: ${{ steps.version.outputs.msix_version }}
       prerelease: ${{ steps.version.outputs.prerelease }}
+      filament_version: ${{ steps.filament.outputs.version }}
+      filament_tag: ${{ steps.filament.outputs.tag }}
     steps:
       - name: Resolve the tag
         id: tag
@@ -88,6 +104,17 @@ jobs:
       - name: Commit
         id: sha
         run: echo "sha=$(git -C lumina rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Filament version
+        id: filament
+        run: |
+          version="$(tr -d '[:space:]' < lumina/tool/filament/VERSION)"
+          if [ -z "$version" ]; then
+            echo "::error::tool/filament/VERSION is empty."
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=filament-$version" >> "$GITHUB_OUTPUT"
 
       - uses: subosito/flutter-action@v2
         with:
@@ -125,6 +152,11 @@ jobs:
             runner: ubuntu-24.04
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 360
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      FILAMENT_TAG: ${{ needs.check.outputs.filament_tag }}
+      FILAMENT_VERSION: ${{ needs.check.outputs.filament_version }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -132,22 +164,105 @@ jobs:
           path: lumina
           persist-credentials: false
 
-      - if: matrix.platform == 'linux'
+      # When the Filament release already has this OS's archive and sidecar,
+      # nothing is restored, built or uploaded. A failed lookup builds, and
+      # filament-release decides what is really missing.
+      - name: Already in the Filament release?
+        id: published
+        shell: bash
+        run: |
+          if ! missing="$(bash lumina/.github/scripts/filament_release.sh missing "$FILAMENT_TAG" "$FILAMENT_VERSION" "${{ matrix.platform }}")"; then
+            echo "::warning::Could not read the release $FILAMENT_TAG; making Filament $FILAMENT_VERSION available anyway."
+            missing=unknown
+          fi
+          if [ -z "$missing" ]; then
+            echo "::notice::$FILAMENT_TAG already has Filament $FILAMENT_VERSION for ${{ matrix.platform }}; nothing to build or upload."
+            echo "published=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "published=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - if: matrix.platform == 'linux' && steps.published.outputs.published != 'true'
         uses: ./lumina/.github/actions/linux-build-deps
 
       - id: filament
+        if: steps.published.outputs.published != 'true'
         uses: ./lumina/.github/actions/filament-prebuilt
         with:
           fetch: 'false'
           save: 'true'
 
-      - uses: actions/upload-artifact@v4
+      - if: steps.published.outputs.published != 'true'
+        uses: actions/upload-artifact@v4
         with:
           name: filament-${{ matrix.platform }}
           path: lumina/build/filament-prebuilt/filament-*
           if-no-files-found: error
           compression-level: 0
           retention-days: 7
+
+  # The only job that writes the Filament release. Queued per Filament
+  # version across workflow runs, so two tags never create it or upload to it
+  # at the same time; `publish` also tolerates a release another run created
+  # first and never replaces a complete archive/sidecar pair.
+  filament-release:
+    name: Filament release
+    needs: [check, filament]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: write
+    concurrency:
+      group: filament-release-${{ needs.check.outputs.filament_version }}
+      cancel-in-progress: false
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      FILAMENT_TAG: ${{ needs.check.outputs.filament_tag }}
+      FILAMENT_VERSION: ${{ needs.check.outputs.filament_version }}
+      SHA: ${{ needs.check.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.check.outputs.sha }}
+          path: lumina
+          persist-credentials: false
+
+      - name: What is missing?
+        id: missing
+        run: |
+          set -euo pipefail
+          missing="$(bash lumina/.github/scripts/filament_release.sh missing "$FILAMENT_TAG" "$FILAMENT_VERSION")"
+          if [ -z "$missing" ]; then
+            echo "complete=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "complete=false" >> "$GITHUB_OUTPUT"
+            printf 'Missing from %s:\n%s\n' "$FILAMENT_TAG" "$missing"
+          fi
+
+      - name: Download the Filament builds
+        if: steps.missing.outputs.complete != 'true'
+        uses: actions/download-artifact@v5
+        with:
+          pattern: filament-*
+          path: filament
+          merge-multiple: true
+
+      - name: Create or complete the Filament release
+        if: steps.missing.outputs.complete != 'true'
+        run: bash lumina/.github/scripts/filament_release.sh publish "$FILAMENT_TAG" "$FILAMENT_VERSION" "$SHA" filament
+
+      - name: Summary
+        run: |
+          {
+            echo "### Filament $FILAMENT_VERSION"
+            echo
+            if [ "${{ steps.missing.outputs.complete }}" = true ]; then
+              echo "[$FILAMENT_TAG](https://github.com/$GH_REPO/releases/tag/$FILAMENT_TAG) was already complete; nothing uploaded."
+            else
+              echo "[$FILAMENT_TAG](https://github.com/$GH_REPO/releases/tag/$FILAMENT_TAG) created or completed from this run's builds."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
   studio:
     name: Lumina Studio (${{ matrix.platform }})
@@ -189,18 +304,26 @@ jobs:
 
       - uses: ./lumina/.github/actions/checkout-siblings
 
-      - name: Download the Filament build
+      - name: Resolve the workspace
+        working-directory: lumina
+        run: flutter pub get
+
+      # Filament for the hooks: the archive this run's filament job built
+      # (there is none when the Filament release already had it), else the
+      # cache, else the filament-<VERSION> release, unpacked into the folder
+      # the root pubspec's `filament_dir` user-defines name.
+      - name: Filament built by this run
+        continue-on-error: true
         uses: actions/download-artifact@v5
         with:
           name: filament-${{ matrix.platform }}
           path: lumina/build/filament-prebuilt
 
-      # Into the folder the root pubspec's `filament_dir` user-defines name.
-      - name: Unpack Filament
-        working-directory: lumina
-        run: |
-          archive="$(find build/filament-prebuilt -maxdepth 1 \( -name 'filament-*-x64.zip' -o -name 'filament-*-x64.tar.gz' \) | head -n1)"
-          bash .github/scripts/extract_filament.sh "$archive" "$(dart tool/release/release_info.dart filament-dir)"
+      - uses: ./lumina/.github/actions/filament-prebuilt
+        with:
+          fetch: 'true'
+          save: 'false'
+          extract: 'true'
 
       - name: Build OpenRigLogic (Linux)
         if: matrix.platform == 'linux'
@@ -216,10 +339,6 @@ jobs:
       # flutter_riglogic it resolves from git has none built.
       - name: Package OpenRigLogic
         run: bash lumina/.github/scripts/package_openriglogic.sh ${{ matrix.platform }} tools/flutter_riglogic dist
-
-      - name: Resolve the workspace
-        working-directory: lumina
-        run: flutter pub get
 
       - name: flutter build ${{ matrix.platform }}
         working-directory: lumina/lumina_ui
@@ -335,7 +454,9 @@ jobs:
   # macOS is written but not run: it has never been built or verified.
   # Missing before it can be enabled:
   #   - tool/filament/build_prebuilt.sh on macOS (a universal or arm64
-  #     out/cmake-release) and a matching fetch_prebuilt.dart asset name;
+  #     out/cmake-release), a matching fetch_prebuilt.dart asset name, and
+  #     that archive in the filament-<VERSION> release (a macOS leg in the
+  #     filament matrix and in filament_release.sh's default OS list);
   #   - an OpenRigLogic macOS build (build_openriglogic.sh targets Linux and
   #     its bundled libc++);
   #   - the macOS runner's entitlements (network client, process spawning for
@@ -384,7 +505,6 @@ jobs:
           name="lumina-studio-$TAG-macos-arm64.zip"
           ditto -c -k --keepParent "$app" "dist/$name"
           (cd dist && shasum -a 256 "$name" > "$name.sha256")
-          cp lumina/build/filament-prebuilt/filament-* dist/
       - name: .pkg
         run: bash lumina/installer/macos/build-pkg.sh "$VERSION" "$TAG" dist
       - uses: actions/upload-artifact@v4
@@ -395,7 +515,7 @@ jobs:
 
   release:
     name: Publish the release
-    needs: [check, filament, studio, installers]
+    needs: [check, filament-release, studio, installers]
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
@@ -403,12 +523,23 @@ jobs:
     env:
       TAG: ${{ needs.check.outputs.tag }}
       PRERELEASE: ${{ needs.check.outputs.prerelease }}
+      FILAMENT_TAG: ${{ needs.check.outputs.filament_tag }}
+      FILAMENT_VERSION: ${{ needs.check.outputs.filament_version }}
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
       WINDOWS_SIGNING: ${{ vars.LUMINA_WINDOWS_SIGNING }}
     steps:
+      # The editor, OpenRigLogic and the installers; Filament is in its own
+      # release.
       - uses: actions/download-artifact@v5
         with:
+          pattern: studio-*
+          path: dist
+          merge-multiple: true
+
+      - uses: actions/download-artifact@v5
+        with:
+          pattern: installer-*
           path: dist
           merge-multiple: true
 
@@ -453,12 +584,13 @@ jobs:
           | `lumina-studio_*_amd64.deb`, `lumina-studio-*.x86_64.rpm` | Linux packages: build dependencies, Flutter in /opt/lumina/flutter and the latest Lumina Studio in /opt/lumina/studio |
           | `lumina-studio-*-windows-x64.zip`, `lumina-studio-*-linux-x64.tar.gz` | The editor alone (what the installers download) |
           | `lumina-studio-*-windows-x64.msix` | The editor as an MSIX package (when signed) |
-          | `filament-*` | Prebuilt Filament the editor downloads at first launch |
           | `openriglogic-*` | Prebuilt OpenRigLogic library the editor downloads at first launch |
 
           Every file has a `.sha256` sidecar.
           EOF
           )"
+            filament="Filament: the prebuilt Filament \`$FILAMENT_VERSION\` the editor downloads at first launch is in the [$FILAMENT_TAG](https://github.com/$GH_REPO/releases/tag/$FILAMENT_TAG) release."
+            notes="$(printf '%s\n\n%s' "$notes" "$filament")"
             if [ "$WINDOWS_SIGNING" = local ]; then
               flags+=(--draft)
               notes="$(printf '%s\n\n%s' "$marker" "$notes")"
@@ -474,4 +606,6 @@ jobs:
               echo
             fi
             for f in dist/*; do echo "- $(basename "$f")"; done
+            echo
+            echo "Filament $FILAMENT_VERSION: [$FILAMENT_TAG](https://github.com/$GH_REPO/releases/tag/$FILAMENT_TAG)"
           } >> "$GITHUB_STEP_SUMMARY"

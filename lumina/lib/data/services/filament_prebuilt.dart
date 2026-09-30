@@ -14,16 +14,18 @@ class FilamentPrebuiltException implements Exception {
   String toString() => 'FilamentPrebuiltException: $message';
 }
 
-/// The prebuilt Filament builds attached to each Lumina GitHub release
-/// (`tool/filament/build_prebuilt.{sh,ps1}` makes them): upstream Filament
-/// plus `third_party/filament/patches`, pruned to the headers, sources and
-/// static libraries the native-assets hooks read.
+/// The prebuilt Filament builds (`tool/filament/build_prebuilt.{sh,ps1}`
+/// makes them): upstream Filament plus `third_party/filament/patches`, pruned
+/// to the headers, sources and static libraries the native-assets hooks read.
 ///
-/// Release assets, per [version] (`tool/filament/VERSION`, e.g.
-/// `1.77.0-lumina.1`) and OS:
-/// `<baseUrl>/<releaseTag>/filament-<version>-<os>-x64.<zip|tar.gz>` plus a
+/// Each [version] (`tool/filament/VERSION`, e.g. `1.77.0-lumina.2`) is
+/// published once, in its own GitHub release [releaseTagFor] =
+/// `filament-<version>` (a pre-release that never becomes "Latest"). Assets,
+/// per OS: `<baseUrl>/<tag>/filament-<version>-<os>-x64.<zip|tar.gz>` plus a
 /// `.sha256` sidecar (`sha256sum` format). The archive holds one folder,
 /// `filament-<version>-<os>-x64`, with a `lumina-filament.json` describing it.
+/// Lumina releases up to v0.0.1-dev.6 attached the same assets to their own
+/// release instead; [ensure] falls back to such a tag.
 ///
 /// [ensure] downloads, verifies and unpacks it to `<cacheRoot>/<version>`,
 /// a folder that works as the hooks' `filament_dir`; an unpacked one is
@@ -38,6 +40,10 @@ abstract final class FilamentPrebuilt {
   /// Redirects the Filament download only; [ReleaseAssets.baseUrlVariable]
   /// redirects every release asset.
   static const String baseUrlVariable = 'LUMINA_FILAMENT_BASE_URL';
+
+  /// The GitHub release that holds the prebuilt [version]:
+  /// `filament-<version>`.
+  static String releaseTagFor(String version) => 'filament-$version';
 
   /// The OS name used in asset names for [operatingSystem] (a
   /// `Platform.operatingSystem` value).
@@ -70,24 +76,28 @@ abstract final class FilamentPrebuilt {
   static Map<String, Object?>? readInfo(Directory dir) => ReleaseAssets.readInfo(dir, infoFileName);
 
   /// Makes `<cacheRoot>/<version>` the unpacked prebuilt Filament [version]
-  /// for this OS, downloading it from the [releaseTag] release when it is
-  /// not there yet, and returns it. The archive is checked against its
-  /// `.sha256` sidecar before anything is unpacked; a failed or interrupted
-  /// run leaves no partial folder behind. [onProgress] gets a 0..1 fraction
-  /// (download, then unpack) and a message.
+  /// for this OS, downloading it when it is not there yet, and returns it.
+  /// The download comes from the [releaseTagFor] release; when that has no
+  /// such asset (HTTP 404) and [releaseTag] is given, from the [releaseTag]
+  /// release (a Lumina release that attached Filament itself). The archive
+  /// is checked against its `.sha256` sidecar before anything is unpacked; a
+  /// failed or interrupted run leaves no partial folder behind. [onProgress]
+  /// gets a 0..1 fraction (download, then unpack) and a message.
   ///
   /// [baseUrl] replaces [defaultBaseUrl] (so do [baseUrlVariable] and
-  /// [ReleaseAssets.baseUrlVariable], for mirrors); [force] downloads again
-  /// even when it is installed.
+  /// [ReleaseAssets.baseUrlVariable] in [environment], default the process
+  /// environment, for mirrors); [force] downloads again even when it is
+  /// installed.
   static Future<Directory> ensure({
     required String version,
-    required String releaseTag,
+    String? releaseTag,
     required Directory cacheRoot,
     void Function(double progress, String message)? onProgress,
     String? operatingSystem,
     String? baseUrl,
     bool force = false,
     HttpClient? httpClient,
+    Map<String, String>? environment,
   }) async {
     if (!force) {
       final found = installed(cacheRoot, version);
@@ -97,17 +107,38 @@ abstract final class FilamentPrebuilt {
       }
     }
     final os = osName(operatingSystem);
-    final base = baseUrl ?? ReleaseAssets.baseUrlFromEnvironment(const [baseUrlVariable, ReleaseAssets.baseUrlVariable]) ?? defaultBaseUrl;
-    return ReleaseAssets.fetch(
-      uri: archiveUri(version, releaseTag, operatingSystem: os, baseUrl: base),
-      folder: baseName(version, os),
-      infoFileName: infoFileName,
-      accept: (info) => info['version'] == version,
-      target: Directory(p.join(cacheRoot.path, version)),
-      label: 'Filament $version',
-      error: FilamentPrebuiltException.new,
-      onProgress: onProgress,
-      httpClient: httpClient,
-    );
+    final base = baseUrl ??
+        ReleaseAssets.baseUrlFromEnvironment(const [baseUrlVariable, ReleaseAssets.baseUrlVariable], environment) ??
+        defaultBaseUrl;
+    final tags = [releaseTagFor(version), if (releaseTag != null && releaseTag.isNotEmpty && releaseTag != releaseTagFor(version)) releaseTag];
+    final notFound = <String>[];
+    for (final tag in tags) {
+      if (notFound.isNotEmpty) {
+        onProgress?.call(0, 'Filament $version is not in the ${tags.first} release; trying the $tag release');
+      }
+      try {
+        return await ReleaseAssets.fetch(
+          uri: archiveUri(version, tag, operatingSystem: os, baseUrl: base),
+          folder: baseName(version, os),
+          infoFileName: infoFileName,
+          accept: (info) => info['version'] == version,
+          target: Directory(p.join(cacheRoot.path, version)),
+          label: 'Filament $version',
+          error: FilamentPrebuiltException.new,
+          notFound: _NotFound.new,
+          onProgress: onProgress,
+          httpClient: httpClient,
+        );
+      } on _NotFound catch (e) {
+        notFound.add(e.message);
+      }
+    }
+    throw FilamentPrebuiltException(
+        notFound.length == 1 ? notFound.single : 'No release has Filament $version: ${notFound.join(' ')}');
   }
+}
+
+/// An HTTP 404 of an asset: the next release tag may have it.
+class _NotFound extends FilamentPrebuiltException {
+  const _NotFound(super.message);
 }

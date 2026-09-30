@@ -17,7 +17,8 @@
 #
 # The unit tests compile the native-assets hooks, so they need prebuilt
 # Filament: from the cache (key: patches + VERSION + build scripts + OS), else
-# a published release (tool/filament/fetch_prebuilt.dart), else a build.
+# the version's own release, filament-<VERSION>
+# (tool/filament/fetch_prebuilt.dart), else a build.
 # Pushes to main only warm that cache (filament-cache), which release tags
 # and pull requests restore.
 name: ci

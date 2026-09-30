@@ -3,8 +3,10 @@ description: >
   Makes the prebuilt Filament of this runner's OS available: the archive
   lumina/build/filament-prebuilt/filament-<VERSION>-<os>-x64.{zip|tar.gz}
   plus its .sha256 sidecar, from the cache, else built from upstream Filament
-  and third_party/filament/patches (tool/filament/build_prebuilt.*). With
-  `fetch`, a cache miss first tries the latest published release
+  and third_party/filament/patches (tool/filament/build_prebuilt.*). An
+  archive already in lumina/build/filament-prebuilt/ (an artifact of the
+  same run) is used as is. With `fetch`, a cache miss first tries the
+  version's own release, filament-<VERSION>
   (tool/filament/fetch_prebuilt.dart). With `extract` the Filament tree ends
   up where the root pubspec's `filament_dir` user-define points
   (tool/release/release_info.dart filament-dir), which is what the hooks read.
@@ -19,7 +21,7 @@ description: >
 
 inputs:
   fetch:
-    description: On a cache miss, try the latest published release before building.
+    description: On a cache miss, try the filament-<VERSION> release before building.
     default: 'false'
   save:
     description: Save a newly built archive to the cache.
@@ -67,35 +69,44 @@ runs:
           echo "image=${ImageOS:-unknown}"
         } >> "$GITHUB_OUTPUT"
 
+    - name: Archive already here?
+      id: present
+      shell: bash
+      working-directory: lumina
+      env:
+        ARCHIVE: ${{ steps.info.outputs.archive }}
+      run: |
+        if [ -f "$ARCHIVE" ]; then
+          echo "present=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "present=false" >> "$GITHUB_OUTPUT"
+        fi
+
     - name: Restore the cache
       id: restore
+      if: steps.present.outputs.present != 'true'
       uses: actions/cache/restore@v6
       with:
         path: lumina/build/filament-prebuilt/filament-*-x64.*
         key: filament-prebuilt-${{ runner.os }}-${{ steps.info.outputs.image }}-${{ hashFiles('lumina/third_party/filament/patches/**', 'lumina/tool/filament/VERSION', 'lumina/tool/filament/build_prebuilt.sh', 'lumina/tool/filament/build_prebuilt.ps1') }}
 
-    - name: Fetch a published build
-      if: steps.restore.outputs.cache-hit != 'true' && inputs.fetch == 'true'
+    - name: Fetch the published build
+      if: steps.present.outputs.present != 'true' && steps.restore.outputs.cache-hit != 'true' && inputs.fetch == 'true'
       shell: bash
       working-directory: lumina
       env:
-        GH_TOKEN: ${{ github.token }}
-        REPO: ${{ github.repository }}
         VERSION: ${{ steps.info.outputs.version }}
       run: |
-        latest="https://api.github.com/repos/$REPO/releases/latest"
-        tag="$(curl -fsSL -H "Authorization: Bearer $GH_TOKEN" "$latest" 2>/dev/null \
-          | sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n1 || true)"
         target="$(dart tool/release/release_info.dart filament-dir)"
-        if [ -n "$tag" ] && dir="$(dart run tool/filament/fetch_prebuilt.dart --tag "$tag")"; then
+        if dir="$(dart run tool/filament/fetch_prebuilt.dart)"; then
           if [ "$(realpath "$dir")" != "$(realpath -m "$target")" ]; then
             rm -rf "$target"
             mkdir -p "$(dirname "$target")"
             mv "$dir" "$target"
           fi
-          echo "Filament $VERSION from release $tag in $target."
+          echo "Filament $VERSION from the filament-$VERSION release in $target."
         else
-          echo "::notice::No published Filament $VERSION to fetch; building it."
+          echo "::notice::No published Filament $VERSION to fetch (release filament-$VERSION); building it."
         fi
 
     - name: Is a build needed?
