@@ -253,6 +253,9 @@ class PieController {
     // mass (the Static Mesh editor's `metadata.physics`), read fresh.
     final projectDir = viewModel.projectDirPath;
     LuminaBlueprintComponents.meshPhysicsResolver = (stored) => MeshPhysicsService.forMeshAsset(stored, projectDir: projectDir);
+    // Blueprints name assets project-relative (a Set Material node's
+    // `contents/materials/…`); Play reads them from this project.
+    LuminaAssets.projectDir = projectDir;
     return EditorPieGame(
       actors,
       templateKind: templateKind,

@@ -314,6 +314,10 @@ Scene component rendering a static (non-skinned) 3D mesh via Filament and gltfio
 | `rootEntity` | `int? get rootEntity` | Root Filament entity of the loaded mesh hierarchy. |
 | `entities` | `List<int> get entities` | All Filament entities belonging to the loaded mesh hierarchy (including root transform entity). |
 | `localBounds` | `Aabb3? get localBounds` | Local bounding box of the loaded mesh. |
+| `materialOverrideAsset` | `final String? materialOverrideAsset` | Mesh'in kendi materyalleri yerine her bölümde çizilen materyal asset'i (materyal `.lmas`'ı ya da `.filamat`; Blueprint Static Mesh bileşeninin Material Override'ı). Null ise mesh'in kendi materyalleri ya da mesh asset'inin slotlarındaki materyaller kalır. |
+| `drawsSlotMaterials` | `bool get drawsSlotMaterials` | Mesh asset'inin slotlarına atanan materyallerin (`.lmas`'ındaki `element_<n>` / `material_slot_<n>` referansları) bölümlerde çizilip çizilmediği; yalnızca derlenmiş paketi olan materyal çizilir. Skeletal mesh'te false. |
+| `setMaterialOverride` | `void setMaterialOverride(dynamic mi, {int primitiveIndex = 0})` | [mi]'yi [primitiveIndex] bölümünde çizer (renderable'lar entity sırasıyla, her birinin primitive'leri sırayla). Mesh yüklenmeden verilirse yüklenince çizilir. Override kaldırılınca ya da bileşen dünyadan çıkınca bölümün kendi materyali geri gelir. |
+| `setMaterialAsset` | `Future<void> setMaterialAsset(String path, {int primitiveIndex = 0})` | [path]'teki materyal asset'ini (Material Editor'ün kaydettiği `.lmas`, kaydedilen parametre değerleriyle, ya da `.filamat`) dünyanın materyal önbelleğinden yükleyip [primitiveIndex] bölümünde çizer (Set Material bunu çalıştırır). Aynı bölüme sonra yapılan atama, hâlâ yüklenen atamanın önüne geçer. |
 | `castShadows` | `bool get castShadows` | `castShadows` özelliğinin anlık değerini okuyan getter erişimcisi. |
 | `castShadows` | `castShadows(bool value)` | `castShadows` işlemini gerçekleştirir. |
 | `receiveShadows` | `bool get receiveShadows` | `receiveShadows` özelliğinin anlık değerini okuyan getter erişimcisi. |

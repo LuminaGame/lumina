@@ -15,11 +15,22 @@ abstract final class LuminaAssets {
   /// own `assetProvider` is null. Null reads the file system.
   static LuminaAssetProvider? defaultProvider;
 
+  /// The open project's folder, set by the editor: a disk read of a
+  /// project-relative path (`contents/…`, what Blueprints store) resolves
+  /// against it. Null reads every path as given.
+  static String? projectDir;
+
+  static Future<Uint8List> _readDisk(String path) {
+    final dir = projectDir;
+    final relative = dir != null && path.replaceAll(r'\', '/').startsWith('contents/');
+    return File(relative ? '$dir/$path' : path).readAsBytes();
+  }
+
   /// Resolves the provider for a load: [explicit], else [defaultProvider],
   /// else a disk read. Paths a level preload pinned ([pinResident]) are
   /// served from memory first.
   static LuminaAssetProvider resolve(LuminaAssetProvider? explicit) {
-    final base = explicit ?? defaultProvider ?? (path) => File(path).readAsBytes();
+    final base = explicit ?? defaultProvider ?? _readDisk;
     if (_resident.isEmpty) return base;
     return (path) {
       for (final r in _resident.values) {

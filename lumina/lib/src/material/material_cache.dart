@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter_filament/flutter_filament.dart';
+import '../../data/models/lumina_asset.dart';
 import '../utility/lumina_assets.dart';
 import '../world/world.dart';
 import 'lumina_material.dart';
@@ -83,13 +85,26 @@ class LuminaMaterialCache {
     List<MaterialConstant> constants,
     Future<Uint8List> Function(String path)? assetProvider,
   ) async {
-    final bytes = await LuminaAssets.resolve(assetProvider)(assetPath);
+    var bytes = await LuminaAssets.resolve(assetProvider)(assetPath);
+    var values = const <String, Object?>{};
+    // A material asset: the compiled package is its payload, the values the
+    // Material Editor saved are its instances' starting parameters.
+    if (assetPath.toLowerCase().endsWith('.lmas')) {
+      final asset = LuminaAsset.fromBytes(bytes);
+      final payload = asset.rawPayload;
+      if (payload == null || !_isFilamatPackage(payload)) {
+        throw StateError('$assetPath carries no compiled material');
+      }
+      bytes = payload;
+      values = _savedParameters(asset);
+    }
 
     final nativeMat = FilamentMaterial.fromBuffer(
       engine: engine,
       filamatBuffer: bytes,
       constants: constants,
     );
+    _setDefaults(nativeMat, values);
 
     return LuminaMaterial.internal(
       nativeMat,
@@ -97,6 +112,62 @@ class LuminaMaterialCache {
       constants: constants,
       cache: this,
     );
+  }
+
+  /// Whether [bytes] is a compiled `.filamat` package (a `MAT_VERS` chunk of
+  /// size 4): Filament aborts the process on anything else.
+  static bool _isFilamatPackage(Uint8List bytes) {
+    const magic = [0x53, 0x52, 0x45, 0x56, 0x5F, 0x54, 0x41, 0x4D];
+    if (bytes.length < 16) return false;
+    for (var i = 0; i < magic.length; i++) {
+      if (bytes[i] != magic[i]) return false;
+    }
+    return ByteData.view(bytes.buffer, bytes.offsetInBytes + 8, 4).getUint32(0, Endian.little) == 4;
+  }
+
+  /// The parameter values the Material Editor saved on [asset]
+  /// (`metadata.parameter_defaults`).
+  static Map<String, Object?> _savedParameters(LuminaAsset asset) {
+    final saved = asset.metadata['parameter_defaults'];
+    if (saved == null || saved.isEmpty) return const {};
+    try {
+      final decoded = jsonDecode(saved);
+      if (decoded is Map) return {for (final e in decoded.entries) e.key.toString(): e.value};
+    } catch (_) {}
+    return const {};
+  }
+
+  /// Makes [values] the defaults every instance of [material] starts with
+  /// (instances are copies of the default instance). Values that match no
+  /// declared scalar or vector parameter are ignored.
+  static void _setDefaults(FilamentMaterial material, Map<String, Object?> values) {
+    if (values.isEmpty) return;
+    final declared = {for (final p in material.parameters) p.name: p};
+    values.forEach((name, value) {
+      final p = declared[name];
+      if (p == null || p.isSampler || p.count > 1) return;
+      final n = value is num
+          ? [value.toDouble()]
+          : value is List
+              ? [for (final v in value) if (v is num) v.toDouble()]
+              : const <double>[];
+      switch (p.uniformType) {
+        case UniformType.floatType when n.isNotEmpty:
+          material.setDefaultParameterFloat(name, n[0]);
+        case UniformType.float2 when n.length >= 2:
+          material.setDefaultParameterFloat2(name, n[0], n[1]);
+        case UniformType.float3 when n.length >= 3:
+          material.setDefaultParameterFloat3(name, n[0], n[1], n[2]);
+        case UniformType.float4 when n.length >= 3:
+          material.setDefaultParameterFloat4(name, n[0], n[1], n[2], n.length > 3 ? n[3] : 1.0);
+        case UniformType.intType when n.isNotEmpty:
+          material.setDefaultParameterInt(name, n[0].toInt());
+        case UniformType.boolType when value is bool:
+          material.setDefaultParameterBool(name, value);
+        default:
+          break;
+      }
+    });
   }
 
   /// Internal callback when material refcount drops to zero.

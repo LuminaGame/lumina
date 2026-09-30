@@ -226,10 +226,7 @@ void _setMaterial(LuminaActor self, Object? target, [int elementIndex = 0, Strin
   if (target is! LuminaStaticMeshComponent || material.isEmpty) return;
   final world = self.world;
   if (world == null || !world.hasNativeContext) return;
-  world.materialCache.load(world, material).then((m) {
-    if (self.isDestroyed) return;
-    target.setMaterialOverride(m.createInstance(), primitiveIndex: elementIndex);
-  }).catchError((Object e) {
+  target.setMaterialAsset(material, primitiveIndex: elementIndex).catchError((Object e) {
     developer.log('Set Material: cannot load $material: $e', name: 'Blueprint', level: 900);
   });
 }

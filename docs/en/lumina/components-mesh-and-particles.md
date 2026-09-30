@@ -314,6 +314,10 @@ Scene component rendering a static (non-skinned) 3D mesh via Filament and gltfio
 | `rootEntity` | `int? get rootEntity` | Root Filament entity of the loaded mesh hierarchy. |
 | `entities` | `List<int> get entities` | All Filament entities belonging to the loaded mesh hierarchy (including root transform entity). |
 | `localBounds` | `Aabb3? get localBounds` | Local bounding box of the loaded mesh. |
+| `materialOverrideAsset` | `final String? materialOverrideAsset` | A material asset (a material `.lmas` or `.filamat`) drawn on every section in place of the mesh's own materials (a Blueprint Static Mesh component's Material Override); null keeps them, or the materials the mesh asset's slots name. |
+| `drawsSlotMaterials` | `bool get drawsSlotMaterials` | Whether the materials assigned to the mesh asset's slots (`element_<n>` / `material_slot_<n>` references of its `.lmas`) are drawn on its sections; only one with a compiled package is. False for skeletal meshes. |
+| `setMaterialOverride` | `void setMaterialOverride(dynamic mi, {int primitiveIndex = 0})` | Draws [mi] on section [primitiveIndex] (the renderables in entity order, each one's primitives in order); set before the mesh has loaded it is drawn once it does. The section's own material comes back when the override is cleared or the component leaves the world. |
+| `setMaterialAsset` | `Future<void> setMaterialAsset(String path, {int primitiveIndex = 0})` | Draws the material asset at [path] (a material `.lmas` saved by the Material Editor, with its saved parameter values, or a `.filamat`) on section [primitiveIndex], loaded through the world's material cache (what Set Material runs). A later assignment to the same section wins over a load in flight. |
 | `castShadows` | `bool get castShadows` | Getter accessor returning the current value of `castShadows`. |
 | `castShadows` | `castShadows(bool value)` | Executes `castShadows` operation. |
 | `receiveShadows` | `bool get receiveShadows` | Getter accessor returning the current value of `receiveShadows`. |

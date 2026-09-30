@@ -48,6 +48,9 @@ class LuminaAnimatedMeshComponent extends LuminaStaticMeshComponent {
     super.assetUnitScale,
   });
 
+  @override
+  bool get drawsSlotMaterials => false;
+
   FilamentAnimator? _animator;
   List<String> _clipNames = const [];
   List<double> _durations = const [];

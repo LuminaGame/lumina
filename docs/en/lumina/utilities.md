@@ -376,6 +376,7 @@ Where the runtime reads assets that a component was not handed a provider for. T
 | Member | Signature | Description |
 | :--- | :--- | :--- |
 | `defaultProvider` | `static LuminaAssetProvider? defaultProvider` | Used by the mesh cache, the material cache and the sky whenever their own `assetProvider` is null. Null reads the file system. |
+| `projectDir` | `static String? projectDir` | The open project's folder, set by the editor: a disk read of a project-relative path (`contents/…`, what Blueprints store) resolves against it. Null reads every path as given. |
 | `resolve` | `static LuminaAssetProvider resolve(LuminaAssetProvider? explicit)` | Resolves the provider for a load: [explicit], else [defaultProvider], else a disk read. Paths a level preload pinned ([pinResident]) are served from memory first. |
 | `pinResident` | `static void pinResident(Object owner, Map<String, Uint8List> bytes, [Map<String, Object> misses = const {}])` | Serves [bytes] (and fails [misses] with their error) by path from [resolve] until [unpinResident] with the same [owner]: what a level preload read, handed to the level's components. The maps are live — entries the owner adds later are served too. |
 | `unpinResident` | `static void unpinResident(Object owner)` | Stops serving what [owner] pinned. |

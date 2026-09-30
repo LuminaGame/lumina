@@ -1,10 +1,13 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 import 'dart:typed_data';
 import 'package:flutter_filament/flutter_filament.dart';
 import 'package:meta/meta.dart';
 import 'package:vector_math/vector_math_64.dart';
 import '../../material/lumina_material_instance.dart';
 import '../../material/dynamic_material_instance.dart';
+import '../../../data/models/lumina_asset.dart';
+import '../../utility/lumina_assets.dart';
 import '../../object/actor.dart';
 import '../../world/world.dart';
 import '../base/scene_component.dart';
@@ -46,7 +49,20 @@ class LuminaStaticMeshComponent extends LuminaSceneComponent with LuminaPrimitiv
     this._visible = true,
     this.assetProvider,
     this.assetUnitScale = LuminaUnits.unitsPerMetre,
+    this.materialOverrideAsset,
   });
+
+  /// A material asset (a material `.lmas` or `.filamat`) drawn on every
+  /// section in place of the mesh's own materials; null keeps them — or the
+  /// materials the mesh asset's slots name (see [drawsSlotMaterials]).
+  final String? materialOverrideAsset;
+
+  /// Whether the materials assigned to the mesh asset's slots (the
+  /// `element_<n>` / `material_slot_<n>` references of its `.lmas`) are drawn
+  /// on its sections. Only a slot material with a compiled package is: an
+  /// import's source-only material describes what the mesh already draws.
+  @protected
+  bool get drawsSlotMaterials => true;
 
   /// The transform the asset's root is drawn with: the component's world
   /// transform, then the asset → world unit scale.
@@ -147,8 +163,27 @@ class LuminaStaticMeshComponent extends LuminaSceneComponent with LuminaPrimitiv
   final Map<int, LuminaMaterialInstance> _materialOverrides = {};
   final Map<int, LuminaDynamicMaterialInstance> _dynamicMaterialInstances = {};
 
-  /// Sets a material override for the root renderable entity at [primitiveIndex].
+  /// Every override set, by section, drawn once the mesh has loaded.
+  final Map<int, FilamentMaterialInstance> _nativeOverrides = {};
+
+  /// The latest material asset load per section: a load only applies while it
+  /// is still the latest request for its section.
+  final Map<int, Object> _materialRequests = {};
+
+  /// What an overridden section drew before (the mesh's own material), put
+  /// back when the override is cleared or the component leaves the world.
+  final Map<int, FilamentMaterialInstance> _ownMaterials = {};
+
+  /// Sets a material override for section [primitiveIndex]: the mesh's
+  /// renderables in entity order, each one's primitives in order (a
+  /// single-mesh asset's primitives). Set before the mesh has loaded, it is
+  /// drawn once it does.
   void setMaterialOverride(dynamic mi, {int primitiveIndex = 0}) {
+    _materialRequests.remove(primitiveIndex);
+    _setOverride(mi, primitiveIndex);
+  }
+
+  void _setOverride(dynamic mi, int primitiveIndex) {
     final FilamentMaterialInstance nativeMi;
     if (mi is LuminaMaterialInstance) {
       _materialOverrides[primitiveIndex] = mi;
@@ -158,13 +193,149 @@ class LuminaStaticMeshComponent extends LuminaSceneComponent with LuminaPrimitiv
     } else {
       throw ArgumentError('Expected LuminaMaterialInstance or FilamentMaterialInstance');
     }
+    _nativeOverrides[primitiveIndex] = nativeMi;
 
     final w = owner?.world;
     if (w == null || _instance == null || !w.hasNativeContext) return;
     final rm = FilamentRenderableManager(w.filamentEngine);
-    if (rootEntity != null && rm.hasComponent(rootEntity!)) {
-      rm.setMaterialInstanceAt(rootEntity!, primitiveIndex, nativeMi);
+    final section = _section(rm, primitiveIndex);
+    if (section == null) return;
+    if (!_ownMaterials.containsKey(primitiveIndex)) {
+      final own = rm.getMaterialInstanceAt(section.$1, section.$2);
+      if (own != null) _ownMaterials[primitiveIndex] = own;
     }
+    rm.setMaterialInstanceAt(section.$1, section.$2, nativeMi);
+  }
+
+  /// Draws section [primitiveIndex] with its own material again.
+  void _restoreOwnMaterial(FilamentRenderableManager rm, int primitiveIndex) {
+    final own = _ownMaterials.remove(primitiveIndex);
+    final section = _section(rm, primitiveIndex);
+    if (section == null) return;
+    if (own != null) {
+      rm.setMaterialInstanceAt(section.$1, section.$2, own);
+    } else {
+      rm.clearMaterialInstanceAt(section.$1, section.$2);
+    }
+  }
+
+  /// Draws the material asset at [path] (a material `.lmas` saved by the
+  /// Material Editor, or a `.filamat`) on section [primitiveIndex], loaded
+  /// through the world's material cache. A later assignment to the same
+  /// section wins over a load still in flight. Throws when the component is
+  /// not in a world that renders, or the asset holds no compiled material.
+  Future<void> setMaterialAsset(String path, {int primitiveIndex = 0}) async {
+    final w = owner?.world;
+    if (w == null || !w.hasNativeContext) {
+      throw StateError('Cannot load material $path: the mesh is not in a rendering world');
+    }
+    final request = _materialRequests[primitiveIndex] = Object();
+    final material = await w.materialCache.load(w, path, assetProvider: assetProvider);
+    if (!identical(_materialRequests[primitiveIndex], request) || owner == null) {
+      material.release();
+      return;
+    }
+    _materialRequests.remove(primitiveIndex);
+    _setOverride(material.createInstance(), primitiveIndex);
+  }
+
+  /// Draws [materialOverrideAsset] on every section, else the [slots]
+  /// materials — on each section nothing was assigned to meanwhile.
+  void _applyMaterialAssets(LuminaWorld w, Map<int, String> slots) {
+    final override = materialOverrideAsset ?? '';
+    if (override.isEmpty && slots.isEmpty) return;
+    final rm = FilamentRenderableManager(w.filamentEngine);
+    var sections = 0;
+    for (final entity in entities) {
+      if (rm.hasComponent(entity)) sections += rm.getPrimitiveCount(entity);
+    }
+    for (var i = 0; i < sections; i++) {
+      if (_nativeOverrides.containsKey(i) || _materialRequests.containsKey(i)) continue;
+      final path = override.isNotEmpty ? override : slots[i];
+      if (path == null) continue;
+      unawaited(setMaterialAsset(path, primitiveIndex: i).catchError((Object e) {
+        developer.log('Cannot draw material $path on $meshAssetPath: $e', name: 'StaticMesh', level: 900);
+      }));
+    }
+  }
+
+  /// Slot materials by mesh `.lmas`, read once per world.
+  static final Expando<Map<String, Future<Map<int, String>>>> _slotCache = Expando();
+
+  /// The materials with a compiled package that the mesh asset's slots name,
+  /// by section; empty when the mesh is not an imported asset, draws
+  /// [materialOverrideAsset] or does not draw slot materials.
+  Future<Map<int, String>> _slotMaterials(LuminaWorld w) {
+    if ((materialOverrideAsset ?? '').isNotEmpty || !drawsSlotMaterials) return Future.value(const {});
+    final path = meshAssetPath;
+    final lower = path.toLowerCase();
+    final String lmas;
+    if (lower.endsWith('.entity.glb')) {
+      lmas = '${path.substring(0, path.length - '.entity.glb'.length)}.lmas';
+    } else if (lower.endsWith('.lmas')) {
+      lmas = path;
+    } else {
+      return Future.value(const {});
+    }
+    final cache = _slotCache[w] ??= {};
+    return cache[lmas] ??= _readSlotMaterials(lmas);
+  }
+
+  Future<Map<int, String>> _readSlotMaterials(String lmas) async {
+    final read = LuminaAssets.resolve(assetProvider);
+    final LuminaAssetSummary mesh;
+    try {
+      // The references only: the mesh payload is not decoded again.
+      mesh = LuminaAssetSummary.fromBytes(await read(lmas));
+    } catch (_) {
+      return const {};
+    }
+    // The Static Mesh editor's `element_<n>` wins over the import's
+    // `material_slot_<n>`.
+    final named = <int, String>{};
+    for (final prefix in const ['material_slot_', 'element_']) {
+      for (final r in mesh.references) {
+        if (!r.slotName.startsWith(prefix) || r.assetPath.isEmpty) continue;
+        final index = int.tryParse(r.slotName.substring(prefix.length));
+        if (index != null) named[index] = _storedAssetPath(r.assetPath);
+      }
+    }
+    final out = <int, String>{};
+    final compiled = <String, Future<bool>>{};
+    for (final e in named.entries) {
+      final ok = await (compiled[e.value] ??= () async {
+        try {
+          final payload = LuminaAsset.fromBytes(await read(e.value)).rawPayload;
+          return payload != null && payload.isNotEmpty;
+        } catch (_) {
+          return false;
+        }
+      }());
+      if (ok) out[e.key] = e.value;
+    }
+    return out;
+  }
+
+  /// [stored] as this mesh reads it: `/`-separated, and a project asset's
+  /// absolute path (what the Static Mesh editor stores) cut to `contents/…`
+  /// when a provider — a built game's bundle — serves the assets.
+  String _storedAssetPath(String stored) {
+    final p = stored.replaceAll(r'\', '/');
+    if ((assetProvider ?? LuminaAssets.defaultProvider) == null) return p;
+    final i = p.indexOf('/contents/');
+    return i < 0 ? p : p.substring(i + 1);
+  }
+
+  /// The renderable entity and primitive that draw section [index].
+  (int, int)? _section(FilamentRenderableManager rm, int index) {
+    var first = 0;
+    for (final entity in entities) {
+      if (!rm.hasComponent(entity)) continue;
+      final count = rm.getPrimitiveCount(entity);
+      if (index < first + count) return (entity, index - first);
+      first += count;
+    }
+    return null;
   }
 
   /// Creates (or returns existing) dynamic material instance for [primitiveIndex].
@@ -197,16 +368,16 @@ class LuminaStaticMeshComponent extends LuminaSceneComponent with LuminaPrimitiv
   /// The dynamic instance made for [primitiveIndex], if any.
   LuminaDynamicMaterialInstance? dynamicMaterialInstance([int primitiveIndex = 0]) => _dynamicMaterialInstances[primitiveIndex];
 
-  /// Clears material override for the root renderable entity at [primitiveIndex].
+  /// Clears the material override of section [primitiveIndex].
   void clearMaterialOverride({int primitiveIndex = 0}) {
     _materialOverrides.remove(primitiveIndex);
-    _dynamicMaterialInstances.remove(primitiveIndex)?.dispose();
+    _nativeOverrides.remove(primitiveIndex);
+    _materialRequests.remove(primitiveIndex);
     final w = owner?.world;
-    if (w == null || _instance == null || !w.hasNativeContext) return;
-    final rm = FilamentRenderableManager(w.filamentEngine);
-    if (rootEntity != null && rm.hasComponent(rootEntity!)) {
-      rm.clearMaterialInstanceAt(rootEntity!, primitiveIndex);
+    if (w != null && _instance != null && w.hasNativeContext) {
+      _restoreOwnMaterial(FilamentRenderableManager(w.filamentEngine), primitiveIndex);
     }
+    _dynamicMaterialInstances.remove(primitiveIndex)?.dispose();
   }
 
   @override
@@ -274,7 +445,14 @@ class LuminaStaticMeshComponent extends LuminaSceneComponent with LuminaPrimitiv
         _lastSyncedTransform = Matrix4.copy(mtx);
       }
 
+      // Overrides set while the mesh was loading.
+      for (final e in _nativeOverrides.entries.toList()) {
+        _setOverride(e.value, e.key);
+      }
+
       onAssetLoaded(instance);
+      // The mesh asset's slot materials: its `.lmas` is read after the mesh.
+      _applyMaterialAssets(w, await _slotMaterials(w));
 
       if (!_loadCompleter.isCompleted) {
         _loadCompleter.complete();
@@ -310,11 +488,22 @@ class LuminaStaticMeshComponent extends LuminaSceneComponent with LuminaPrimitiv
 
   @override
   void onUnregister() {
+    final world = owner?.world;
+    if (world != null && _instance != null && world.hasNativeContext) {
+      // The mesh's own materials go back before overrides can be destroyed.
+      final rm = FilamentRenderableManager(world.filamentEngine);
+      for (final index in _ownMaterials.keys.toList()) {
+        _restoreOwnMaterial(rm, index);
+      }
+    }
+    _ownMaterials.clear();
     for (final d in _dynamicMaterialInstances.values) {
       d.dispose();
     }
     _dynamicMaterialInstances.clear();
     _materialOverrides.clear();
+    _nativeOverrides.clear();
+    _materialRequests.clear();
 
     final w = owner?.world;
     if (w != null && _instance != null && w.hasNativeContext) {

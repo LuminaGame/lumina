@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
@@ -417,6 +418,188 @@ void main() {
       expect(warnings, isEmpty, reason: 'every section declares what the ubershader requires');
       expect(warm, greaterThan(20000), reason: 'the lit sheet draws');
       expect(cyan, greaterThan(20000), reason: 'the unlit sheet draws');
+    }, timeout: const Timeout(Duration(minutes: 5)));
+
+    test('Scenario 05: material assets assigned by Set Material, a Blueprint Material Override and the mesh slot draw in their saved colours', () async {
+      const testTitle = 'static_mesh_smoke_test: Scenario 05 material assets from Set Material, Material Override and mesh slot draw their saved colours';
+      const barrelAsset = 'Props/Barrels/empty_barrel.glb';
+      const usedAssets = [barrelAsset];
+      const w = 1024, h = 768, fps = 30;
+      const seconds = 10.5;
+
+      // A game's project: material assets saved by the Material Editor
+      // (compiled package, colour only in `parameter_defaults`) and the
+      // blue-white barrel imported twice, once with a slot material.
+      final project = Directory.systemTemp.createTempSync('lumina_smoke_mesh_materials_');
+      addTearDown(() {
+        try {
+          project.deleteSync(recursive: true);
+        } catch (_) {}
+      });
+      void write(String relative, LuminaAsset asset) => File('${project.path}/$relative')
+        ..parent.createSync(recursive: true)
+        ..writeAsBytesSync(asset.toProtoBufferBytes());
+      FilamentMaterialBuilder.initEngine();
+      final builder = FilamentMaterialBuilder.create()
+        ..setName('M_Runner_Color')
+        ..setShading(FilamatShading.lit)
+        ..materialDomain(MaterialDomain.surface)
+        ..blending(BlendingMode.opaque)
+        ..addParameter('baseColor', UniformType.float4)
+        ..addParameter('roughness', UniformType.float_)
+        ..addParameter('metallic', UniformType.float_)
+        ..platform(MaterialPlatform.desktop)
+        ..targetApi(TargetApi.vulkan)
+        ..optimization(OptimizationLevel.none)
+        ..setCode('''
+          void material(inout MaterialInputs material) {
+              prepareMaterial(material);
+              material.baseColor = materialParams.baseColor;
+              material.roughness = materialParams.roughness;
+              material.metallic = materialParams.metallic;
+          }
+        ''');
+      final package = builder.build()!;
+      builder.dispose();
+      const colours = {
+        'M_Red': [0.85, 0.12, 0.1, 1.0],
+        'M_Gold': [1.0, 0.78, 0.15, 1.0],
+        'M_Green': [0.1, 0.75, 0.2, 1.0],
+      };
+      for (final e in colours.entries) {
+        write(
+          'contents/materials/runner/${e.key}.lmas',
+          LuminaAsset(
+            assetId: e.key,
+            name: e.key,
+            type: AssetType.filamat,
+            rawPayload: package,
+            metadata: {'parameter_defaults': jsonEncode({'baseColor': e.value, 'roughness': 0.5, 'metallic': 0.0})},
+          ),
+        );
+      }
+      final glb = File('${SmokeArtifacts.testAssetsDir.path}/$barrelAsset').readAsBytesSync();
+      for (final (name, refs) in [
+        ('SM_Barrel', const <AssetReference>[]),
+        // The Static Mesh editor stores the slot's material as an absolute path.
+        ('SM_Barrel_Green', [AssetReference(slotName: 'element_0', assetId: 'M_Green', assetPath: '${project.path}/contents/materials/runner/M_Green.lmas')]),
+      ]) {
+        write('contents/meshes/static/$name.lmas', LuminaAsset(assetId: name, name: name, type: AssetType.filamesh, rawPayload: glb, references: refs));
+        File('${project.path}/contents/meshes/static/$name.entity.glb').writeAsBytesSync(glb);
+      }
+      // What a built game reads through: its bundle, keyed `contents/…`.
+      LuminaAssets.defaultProvider = (path) async {
+        if (!path.startsWith('contents/')) throw StateError('not in the bundle: $path');
+        return File('${project.path}/$path').readAsBytes();
+      };
+      addTearDown(() => LuminaAssets.defaultProvider = null);
+
+      final view = engine.createView();
+      final renderer = engine.createRenderer();
+      final swapChain = engine.createHeadlessSwapChain(w, h);
+      final cameraEntity = engine.createEntity();
+      final camera = engine.createCamera(cameraEntity);
+      final provider = FilamentMaterialProvider.ubershader(engine);
+      view
+        ..scene = scene
+        ..camera = camera
+        ..setViewport(0, 0, w, h);
+      camera.setProjection(fovDegrees: 45.0, aspect: w / h, near: 10.0, far: 10000.0, direction: FovDirection.vertical);
+      addTearDown(() {
+        provider.dispose();
+        view.dispose();
+        engine.destroyEntity(cameraEntity);
+        camera.dispose();
+        renderer.dispose();
+        swapChain.dispose();
+      });
+
+      world.persistentLevel.registerActor(LuminaActor(
+        root: LuminaSkyComponent.color(color: Vector4(0.44, 0.58, 0.76, 1.0), skyIntensity: 20000.0, iblIntensity: 20000.0),
+      ));
+      world.persistentLevel.registerActor(LuminaActor(
+        root: LuminaDirectionalLightComponent(
+          intensity: 90000.0,
+          castShadows: true,
+          rotation: Quaternion.axisAngle(Vector3(0.0, 1.0, 0.0), 30.0 * math.pi / 180.0) *
+              Quaternion.axisAngle(Vector3(1.0, 0.0, 0.0), -50.0 * math.pi / 180.0),
+        ),
+      ));
+      // Left to right: the barrel's own material, Set Material at BeginPlay
+      // (red), a Blueprint component's Material Override (gold), the mesh
+      // asset's slot material (green).
+      final own = LuminaStaticMeshComponent(meshAssetPath: 'contents/meshes/static/SM_Barrel.entity.glb', location: Vector3(-240.0, 0.0, 0.0));
+      final setMaterial = LuminaStaticMeshComponent(meshAssetPath: 'contents/meshes/static/SM_Barrel.entity.glb', location: Vector3(-80.0, 0.0, 0.0));
+      final setMaterialActor = LuminaActor(root: setMaterial);
+      final blueprintActor = LuminaActor(location: Vector3(80.0, 0.0, 0.0));
+      final built = LuminaBlueprintComponents.construct(blueprintActor, [
+        LuminaBlueprintComponent(id: 'root', name: 'DefaultSceneRoot', type: 'LuminaSceneComponent', parentId: null, isSceneComponent: true),
+        LuminaBlueprintComponent(
+          id: 'mesh',
+          name: 'StaticMeshComponent',
+          type: 'LuminaStaticMeshComponent',
+          parentId: 'root',
+          properties: {
+            'staticMeshAsset': 'contents/meshes/static/SM_Barrel.lmas',
+            'materialOverride': 'contents/materials/runner/M_Gold.lmas',
+          },
+          isSceneComponent: true,
+        ),
+      ]);
+      final overridden = built['mesh']! as LuminaStaticMeshComponent;
+      final slotted = LuminaStaticMeshComponent(meshAssetPath: 'contents/meshes/static/SM_Barrel_Green.entity.glb', location: Vector3(240.0, 0.0, 0.0));
+      for (final a in [LuminaActor(root: own), setMaterialActor, blueprintActor, LuminaActor(root: slotted)]) {
+        world.persistentLevel.registerActor(a);
+      }
+      world.beginPlay();
+      LuminaBlueprintFunctionLibrary.setMaterial(setMaterialActor, setMaterial, 0, 'contents/materials/runner/M_Red.lmas');
+      for (final m in [own, setMaterial, overridden, slotted]) {
+        await m.loaded.timeout(const Duration(seconds: 30));
+      }
+      // The material assets load after their meshes.
+      final end = DateTime.now().add(const Duration(seconds: 10));
+      while (DateTime.now().isBefore(end) && [setMaterial, overridden, slotted].any((m) => m.materialOverride(0) == null)) {
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      }
+
+      final video = SmokeVideoRecorder(width: w, height: h, fps: fps, testName: testTitle);
+      addTearDown(video.discard);
+      final pixels = Uint8List(w * h * 4);
+      Uint8List? middle;
+      final frames = (seconds * fps).round();
+      for (var f = 0; f < frames; f++) {
+        final t = f / fps;
+        final angle = 0.3 * math.sin(t * 0.6);
+        camera.lookAt(eyeX: 620.0 * math.sin(angle), eyeY: 220.0, eyeZ: 620.0 * math.cos(angle), centerX: 0.0, centerY: 40.0, centerZ: 0.0);
+        world.tick(1.0 / fps);
+        if (renderer.beginFrame(swapChain)) {
+          renderer.render(view);
+          renderer.readPixels(x: 0, y: 0, width: w, height: h, outPixels: pixels);
+          renderer.endFrame();
+        }
+        engine.flushAndWait();
+        video.addFrame(pixels);
+        if (f == frames ~/ 2) middle = Uint8List.fromList(pixels);
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+
+      var red = 0, gold = 0, green = 0;
+      final shot = middle!;
+      for (var p = 0; p < shot.length; p += 4) {
+        final r = shot[p], g = shot[p + 1], b = shot[p + 2];
+        if (r > 90 && r > g * 2.5 && r > b * 2.5) red++;
+        if (r > 150 && g > r * 0.8 && b < g * 0.75) gold++;
+        if (g > 70 && g > r * 1.8 && g > b * 1.8) green++;
+      }
+      // ignore: avoid_print
+      print('[static_mesh smoke 05] redPixels=$red goldPixels=$gold greenPixels=$green');
+
+      SmokeArtifacts.saveScreenshot(testTitle, SmokeArtifacts.encodePng(w, h, shot, flipY: false), usedAssets: usedAssets);
+      SmokeArtifacts.saveVideo(testTitle, video.finish(), extension: 'webm', usedAssets: usedAssets);
+
+      expect(red, greaterThan(2000), reason: 'Set Material draws the red material asset');
+      expect(gold, greaterThan(2000), reason: "the Blueprint component's Material Override draws gold");
+      expect(green, greaterThan(2000), reason: "the mesh asset's slot material draws green");
     }, timeout: const Timeout(Duration(minutes: 5)));
   });
 }

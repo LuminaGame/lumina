@@ -408,6 +408,7 @@ abstract final class LuminaBlueprintComponents {
           castShadows: _bool(p, 'castShadows') ?? true,
           receiveShadows: _bool(p, 'receiveShadows') ?? true,
           assetProvider: assetProvider,
+          materialOverrideAsset: (p['materialOverride'] as String? ?? '').isEmpty ? null : p['materialOverride'] as String,
         );
         _transform(mesh, p);
         _physics(mesh, p);
