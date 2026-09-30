@@ -211,6 +211,40 @@ void main() {
       expect(vm.transactions.history(limit: 200).length, levelHistory, reason: 'the level stack is unchanged');
     });
 
+    test('a Spring Arm: Use Pawn Control Rotation and the other settings the runtime reads are settable', () async {
+      final arm = ((await ok('add_blueprint_component', {'asset': door, 'type': 'LuminaSpringArmComponent'}))['component'] as Map)['id'] as String;
+      final editor = doorEditor();
+      // The runtime's defaults, seeded on add.
+      expect(editor.getComponent(arm)!.properties, containsPair('usePawnControlRotation', false));
+      const values = <String, Object>{
+        'usePawnControlRotation': true,
+        'inheritPitch': true,
+        'inheritYaw': true,
+        'inheritRoll': false,
+        'enableCameraRotationLag': true,
+        'cameraRotationLagSpeed': 14.0,
+        'doCollisionTest': false,
+        'probeSize': 25.0,
+      };
+      for (final e in values.entries) {
+        await ok('set_blueprint_component_property', {'asset': door, 'component': arm, 'property': e.key, 'value': e.value});
+      }
+      final props = editor.getComponent(arm)!.properties;
+      for (final e in values.entries) {
+        expect(props[e.key], e.value, reason: e.key);
+      }
+      await expectToolError('set_blueprint_component_property',
+          {'asset': door, 'component': arm, 'property': 'usePawnControlRotation', 'value': 'yes'}, contains('true or false'));
+      // What the editor writes is what the game builds.
+      final built = LuminaBlueprintComponents.construct(
+          LuminaActor(root: LuminaSceneComponent()), [editor.getComponent(arm)!])[arm] as LuminaSpringArmComponent;
+      expect(built.bUsePawnControlRotation, isTrue);
+      expect(built.bInheritRoll, isFalse);
+      expect(built.bDoCollisionTest, isFalse);
+      expect(built.cameraRotationLagSpeed, 14.0);
+      expect(built.probeSize, 25.0);
+    });
+
     test('component transform is one undo step on the Blueprint tab', () async {
       final mesh = ((await ok('add_blueprint_component', {'asset': door, 'type': 'LuminaStaticMeshComponent'}))['component'] as Map)['id'] as String;
       final editor = doorEditor();

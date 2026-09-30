@@ -1765,6 +1765,138 @@ void logDoor(LuminaActor self, String text) {
     final video = rec.save('blueprint editor: level blueprint opens a placed door', usedAssets: usedAssets);
     expect(SmokeArtifacts.videoDurationSeconds(video)!, greaterThanOrEqualTo(10.0));
   }, timeout: const Timeout(Duration(minutes: 20)));
+
+  testWidgets('blueprint editor: spring arm Use Pawn Control Rotation', (tester) async {
+    // The launcher's Third Person project. BP_ThirdPersonCharacter's
+    // CameraBoom shows Use Pawn Control Rotation (on) in Details; switched
+    // off and saved, looking up in Play pitches the controller but not the
+    // camera (the character turns with the controller's yaw, never its
+    // pitch); switched back on, the camera pitches with the mouse.
+    final root = Directory.systemTemp.createTempSync('lumina_smoke_bp_arm_');
+    addTearDown(() => root.deleteSync(recursive: true));
+    final projectDir = (await tester.runAsync(() => scaffoldGameProject(root, name: 'bp_arm_smoke', widgetLibrary: 'flutter')))!;
+    final project = LuminaProject.fromMap(Map<String, dynamic>.from(
+        jsonDecode(File('$projectDir/bp_arm_smoke.lmproject').readAsStringSync()) as Map));
+    final vm = EditorViewModel(initialProject: project, projectLocation: root.path);
+    addTearDown(vm.dispose);
+    await tester.runAsync(vm.ensureDefaultLevelAssets);
+    vm.refreshAssets();
+
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    Future<void> settle([int frames = 12]) async {
+      for (var i = 0; i < frames; i++) {
+        await tester.pump(const Duration(milliseconds: 16));
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 16)));
+      }
+    }
+
+    final boundaryKey = GlobalKey();
+    await tester.pumpWidget(RepaintBoundary(
+      key: boundaryKey,
+      child: ShadcnApp(theme: luminaEditorTheme(), home: MainEditorView(viewModel: vm)),
+    ));
+    await settle(40);
+    final rec = SmokeRecorder(tester, boundary: find.byKey(boundaryKey));
+    Future<void> shot(String name) async => SmokeArtifacts.saveScreenshot(
+        name, await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey)));
+    await rec.hold(const Duration(milliseconds: 600));
+
+    final asset = vm.realAssets.firstWhere((a) => a.relativePath == LuminaThirdPersonContent.characterBlueprintPath);
+    Finder useControlSwitch() => find.descendant(
+        of: find.ancestor(of: find.text('Use Pawn Control Rotation'), matching: find.byType(Row)).first,
+        matching: find.byType(Switch));
+
+    /// Opens the character, selects CameraBoom, sets the switch to [on] in
+    /// Details and saves.
+    Future<void> setUseControl(bool on, String shotName) async {
+      vm.openSubEditorTab('Blueprint', asset: asset);
+      await settle(20);
+      final bp = tester.state<BlueprintSubEditorState>(find.byType(BlueprintSubEditor)).viewModel;
+      for (var i = 0; i < 200 && bp.getComponent('boom') == null; i++) {
+        await settle(2);
+      }
+      bp.selectComponent('boom');
+      await settle(10);
+      await tester.ensureVisible(find.text('Use Pawn Control Rotation'));
+      await settle(6);
+      await rec.hold(const Duration(milliseconds: 800));
+      if (tester.widget<Switch>(useControlSwitch()).value != on) {
+        await tester.tap(useControlSwitch());
+        await settle(8);
+      }
+      expect(bp.getComponent('boom')!.properties['usePawnControlRotation'], on);
+      expect(tester.widget<Switch>(useControlSwitch()).value, on);
+      await rec.hold(const Duration(milliseconds: 800));
+      await shot(shotName);
+      expect(await tester.runAsync(bp.save), isTrue);
+      await rec.hold(const Duration(milliseconds: 400));
+    }
+
+    double angleDiff(double a, double b) => ((a - b + 540) % 360 - 180).abs();
+
+    /// Plays, moves the mouse up the view and returns how far the
+    /// controller and the camera pitched (degrees).
+    Future<({double control, double camera})> playAndLook(bool expectUseControl, String shotName) async {
+      vm.selectTab(0);
+      await settle(10);
+      await tester.tap(find.byKey(const ValueKey('toolbar_play')));
+      for (var i = 0; i < 100 && !vm.pieController.isPlaying; i++) {
+        await settle(2);
+      }
+      await settle(30);
+      final pie = vm.pieController;
+      expect(pie.isPlaying, isTrue, reason: 'blocked: ${vm.playBlockers} error: ${pie.lastError}');
+      final pawn = pie.possessedPawn! as LuminaBlueprintInstance;
+      final boom = pawn.blueprintComponents['boom'] as LuminaSpringArmComponent;
+      expect(boom.bUsePawnControlRotation, expectUseControl);
+      double cameraPitch() => luminaQuaternionToControlRotation(boom.socketWorldRotation).x;
+      final controlBefore = pie.game!.playerController!.controlRotation.x;
+      final cameraBefore = cameraPitch();
+      final viewRect = tester.getRect(find.byType(ViewportWidget));
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await mouse.addPointer(location: viewRect.center);
+      await settle(4);
+      for (var i = 0; i < 30; i++) {
+        await mouse.moveTo(viewRect.center + Offset(0, -6.0 * (i + 1)));
+        await settle(2);
+        await rec.capture();
+      }
+      // The rotation lag catches up.
+      for (var i = 0; i < 40; i++) {
+        await settle(2);
+        await rec.capture();
+      }
+      await mouse.removePointer();
+      await shot(shotName);
+      final turned = (
+        control: angleDiff(pie.game!.playerController!.controlRotation.x, controlBefore),
+        camera: angleDiff(cameraPitch(), cameraBefore),
+      );
+      debugPrint('[bp_arm_smoke] usePawnControlRotation=$expectUseControl: control '
+          'pitched ${turned.control.toStringAsFixed(1)} deg, camera ${turned.camera.toStringAsFixed(1)} deg');
+      await tester.tap(find.byKey(const ValueKey('toolbar_stop')));
+      await settle(30);
+      expect(pie.isPlaying, isFalse);
+      return turned;
+    }
+
+    await setUseControl(false, 'blueprint_spring_arm_use_pawn_control_rotation_off_details');
+    final off = await playAndLook(false, 'blueprint_spring_arm_pie_look_with_arm_fixed');
+    expect(off.control, greaterThan(10), reason: 'the mouse pitches the controller');
+    expect(off.camera, lessThan(2), reason: 'an arm without Use Pawn Control Rotation keeps the camera still');
+
+    await setUseControl(true, 'blueprint_spring_arm_use_pawn_control_rotation_on_details');
+    final on = await playAndLook(true, 'blueprint_spring_arm_pie_look_with_arm_following');
+    expect(on.control, greaterThan(10), reason: 'the mouse pitches the controller');
+    expect(on.camera, closeTo(on.control, 3), reason: 'the arm follows the control rotation');
+
+    await rec.hold(const Duration(milliseconds: 800));
+    final video = rec.save('blueprint editor: spring arm Use Pawn Control Rotation');
+    expect(SmokeArtifacts.videoDurationSeconds(video)!, greaterThanOrEqualTo(10.0));
+  }, timeout: const Timeout(Duration(minutes: 15)));
 }
 
 /// The canvas y below every node and comment box of [vm]'s Event Graph, as
