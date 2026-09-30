@@ -2069,6 +2069,30 @@ void filament_filamat_free_package(ffi.Pointer<ffi.Void> package_bytes) {
   _m.filament_filamat_free_package(package_bytes.address.toJS);
 }
 
+/// Compiles a whole Filament material definition (`.mat`: a `material { … }` header, `vertex { … }`,
+/// `fragment { … }` / `compute { … }` blocks) the way Filament's `matc` does: `#include` resolution, Filament's
+/// own .mat parser (matp) driving `filamat::MaterialBuilder`, then `build()`.
+///
+/// `source`/`length`: the .mat text (need not be NUL-terminated).
+/// `file_name`: the name `#line` directives use for the material itself (NULL: none).
+/// `include_dir`: the directory `#include "…"` resolves against (NULL: an `#include` is an error).
+/// `default_name`: the material's name when its header has no `name` (NULL: none).
+/// `platform` (MaterialBuilder::Platform), `target_api` (TargetApi bit mask), `optimization`
+/// (MaterialBuilder::Optimization): a negative value keeps matc's default (ALL, OpenGL, PERFORMANCE).
+/// `debug`: keep debug information in the shaders (matc -g). `variant_filter`: UserVariantFilterMask bits.
+///
+/// Returns a malloc'ed package (NULL when the material does not compile) and its size in `out_size`, and always
+/// sets `*out_diagnostics` (when non-NULL) to a malloc'ed, NUL-terminated copy of everything matc would have
+/// printed for this compile, in order. Free both with `filament_matc_free`. Desktop only: the web build returns
+/// NULL.
+ffi.Pointer<ffi.Void> filament_matc_compile(ffi.Pointer<ffi.Char> source, int length, ffi.Pointer<ffi.Char> file_name, ffi.Pointer<ffi.Char> include_dir, ffi.Pointer<ffi.Char> default_name, int platform, int target_api, int optimization, bool debug, int variant_filter, ffi.Pointer<ffi.Size> out_size, ffi.Pointer<ffi.Pointer<ffi.Char>> out_diagnostics) =>
+    ffi.Pointer<ffi.Void>.fromAddress(_m.filament_matc_compile(source.address.toJS, length.toJS, file_name.address.toJS, include_dir.address.toJS, default_name.address.toJS, platform.toJS, target_api.toJS, optimization.toJS, (debug ? 1 : 0).toJS, variant_filter.toJS, out_size.address.toJS, out_diagnostics.address.toJS).toDartInt);
+
+/// Frees a package or diagnostics string returned by `filament_matc_compile`.
+void filament_matc_free(ffi.Pointer<ffi.Void> pointer) {
+  _m.filament_matc_free(pointer.address.toJS);
+}
+
 /// Inspects a `.filamat` material binary buffer and returns a JSON string containing material parameters and info.
 /// Free returned char* with `filament_tools_free_string`.
 ffi.Pointer<ffi.Char> filament_tools_inspect_material_json(ffi.Pointer<ffi.Void> data, int size) =>
@@ -7005,6 +7029,10 @@ extension type _Module._(JSObject _) implements JSObject {
   external JSNumber filament_material_builder_build(JSNumber builder, JSNumber out_size);
   @JS('_filament_filamat_free_package')
   external void filament_filamat_free_package(JSNumber package_bytes);
+  @JS('_filament_matc_compile')
+  external JSNumber filament_matc_compile(JSNumber source, JSNumber length, JSNumber file_name, JSNumber include_dir, JSNumber default_name, JSNumber platform, JSNumber target_api, JSNumber optimization, JSNumber debug, JSNumber variant_filter, JSNumber out_size, JSNumber out_diagnostics);
+  @JS('_filament_matc_free')
+  external void filament_matc_free(JSNumber pointer);
   @JS('_filament_tools_inspect_material_json')
   external JSNumber filament_tools_inspect_material_json(JSNumber data, JSNumber size);
   @JS('_filament_tools_inspect_material_text')

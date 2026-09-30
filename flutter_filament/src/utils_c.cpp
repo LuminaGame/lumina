@@ -1,8 +1,10 @@
 #include "utils_c.h"
+#include "log_tap.h"
 
 #include <utils/Log.h>
 #include <utils/Panic.h>
 
+#include <cstdio>
 #include <mutex>
 #include <string.h>
 
@@ -47,9 +49,28 @@ namespace {
     FilamentLogHandler g_logHandler = nullptr;
     void* g_logUserData = nullptr;
 
+    std::mutex g_tapMutex;
+    flutter_filament::LogTap g_tap = nullptr;
+    void* g_tapUser = nullptr;
+
     void dispatchLog(int priority, const char* message) {
+        bool tapped = false;
+        {
+            std::lock_guard<std::mutex> lock(g_tapMutex);
+            if (g_tap) {
+                g_tap(g_tapUser, priority, message);
+                tapped = true;
+            }
+        }
         if (g_logHandler) {
             g_logHandler(priority, strdup("Filament"), message ? strdup(message) : nullptr, g_logUserData);
+        } else if (tapped && message) {
+            // The consumers are installed only for the tap: print what Filament would have printed.
+            if (priority >= 6) {
+                fprintf(stderr, "%s", message);
+            } else if (priority > 2) {
+                fprintf(stdout, "%s", message);
+            }
         }
     }
 
@@ -85,24 +106,52 @@ bool filament_get_last_panic(char* out_message, size_t max_len) {
     return false;
 }
 
+namespace {
+    void installLogConsumers() {
+        utils::slog.v.setConsumer(logConsumerV, nullptr);
+        utils::slog.d.setConsumer(logConsumerD, nullptr);
+        utils::slog.i.setConsumer(logConsumerI, nullptr);
+        utils::slog.w.setConsumer(logConsumerW, nullptr);
+        utils::slog.e.setConsumer(logConsumerE, nullptr);
+    }
+
+    void clearLogConsumers() {
+        utils::slog.v.setConsumer(nullptr, nullptr);
+        utils::slog.d.setConsumer(nullptr, nullptr);
+        utils::slog.i.setConsumer(nullptr, nullptr);
+        utils::slog.w.setConsumer(nullptr, nullptr);
+        utils::slog.e.setConsumer(nullptr, nullptr);
+    }
+}
+
+void flutter_filament::setLogTap(LogTap tap, void* user) {
+    {
+        std::lock_guard<std::mutex> lock(g_tapMutex);
+        g_tap = tap;
+        g_tapUser = user;
+    }
+    if (tap) {
+        installLogConsumers();
+    } else if (!g_logHandler) {
+        clearLogConsumers();
+    }
+}
+
 void filament_set_log_callback(FilamentLogHandler handler, void* user_data) {
     g_logHandler = handler;
     g_logUserData = user_data;
-    utils::slog.v.setConsumer(logConsumerV, nullptr);
-    utils::slog.d.setConsumer(logConsumerD, nullptr);
-    utils::slog.i.setConsumer(logConsumerI, nullptr);
-    utils::slog.w.setConsumer(logConsumerW, nullptr);
-    utils::slog.e.setConsumer(logConsumerE, nullptr);
+    installLogConsumers();
 }
 
 void filament_clear_log_callback(void) {
     g_logHandler = nullptr;
     g_logUserData = nullptr;
-    utils::slog.v.setConsumer(nullptr, nullptr);
-    utils::slog.d.setConsumer(nullptr, nullptr);
-    utils::slog.i.setConsumer(nullptr, nullptr);
-    utils::slog.w.setConsumer(nullptr, nullptr);
-    utils::slog.e.setConsumer(nullptr, nullptr);
+    bool tapped;
+    {
+        std::lock_guard<std::mutex> lock(g_tapMutex);
+        tapped = g_tap != nullptr;
+    }
+    if (!tapped) clearLogConsumers();
 }
 
 void filament_test_trigger_panic(void) {

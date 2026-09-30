@@ -2,16 +2,18 @@
 
 # Materials
 
-Loading compiled materials, creating material instances and setting their parameters and render state, and building new materials at run time with the filamat material builder. File paths are relative to the `flutter_filament/` package directory.
+Loading compiled materials, creating material instances and setting their parameters and render state, and building new materials at run time: a whole `.mat` material definition with Filament's own matc parser (`FilamentMatc`), or setter by setter with the filamat material builder. File paths are relative to the `flutter_filament/` package directory.
 
 **On this page:**
 
 - [Native C bridge](#native-c-bridge)
   - [`src/filamat_c.h`](#srcfilamat_ch)
+  - [`src/matc_c.h`](#srcmatc_ch)
   - [`src/material_c.h`](#srcmaterial_ch)
   - [`src/material_instance_c.h`](#srcmaterial_instance_ch)
 - [Dart API](#dart-api)
   - [`lib/src/filamat_builder.dart`](#libsrcfilamat_builderdart)
+  - [`lib/src/matc.dart`](#libsrcmatcdart)
   - [`lib/src/material.dart`](#libsrcmaterialdart)
 
 ## Native C bridge
@@ -63,6 +65,15 @@ The C functions below are declared in the package's `src/` headers and called fr
 | `filament_material_builder_optimization` | `FFI_PLUGIN_EXPORT void filament_material_builder_optimization(void*...` | Executes native Filament `filament_material_builder_optimization` C binding. |
 | `filament_material_builder_variant_filter` | `FFI_PLUGIN_EXPORT void filament_material_builder_variant_filter(voi...` | Executes native Filament `filament_material_builder_variant_filter` C binding. |
 | *... and 23 additional native C functions* | - | Library FFI bindings. |
+
+### `src/matc_c.h`
+
+Filament's own `.mat` parser (matc's `matp` library, vendored unmodified in `third_party/filament_matp/` because the prebuilt Filament archives do not carry it) behind one call.
+
+| C Function | Signature | Purpose & Description |
+| :--- | :--- | :--- |
+| `filament_matc_compile` | `FFI_PLUGIN_EXPORT void* filament_matc_compile(const char* source, size_t length, const char* file_name, const char* include_dir, const char* default_name, int platform, int target_api, int optimization, bool debug, uint32_t variant_filter, size_t* out_size, char** out_diagnostics);` | Compiles a whole material definition the way `matc` does: `#include` resolution from `include_dir`, the `material { … }` header (every key matc knows), `vertex` / `fragment` / `compute` blocks in any order, then `MaterialBuilder::build`. Returns a `malloc`ed package (NULL on failure) and always the text matc would have printed (matp's `std::cerr`, filamat's errors and warnings, the parser status). Negative `platform` / `optimization` and a zero `target_api` keep matc's defaults. Compiles are serialized. Web: a stub that returns NULL. |
+| `filament_matc_free` | `FFI_PLUGIN_EXPORT void filament_matc_free(void* pointer);` | Frees the package or diagnostics string `filament_matc_compile` returned. |
 
 ### `src/material_c.h`
 
@@ -484,6 +495,24 @@ Dynamically builds and compiles GLSL material shaders into binary `.filamat` pac
 | `build` | `Uint8List? build()` | Compiles the GLSL shader and builds a `.filamat` binary buffer.  Returns `null` if compilation failed. |
 | `dispose` | `void dispose()` | Disposes this builder. |
 | `isDisposed` | `bool get isDisposed` | Checks current state or capability and returns a boolean value. |
+
+### `lib/src/matc.dart`
+
+#### `abstract final class FilamentMatc`
+
+Compiles whole Filament material definitions (`.mat`) in process, the way Filament's `matc` tool does. Desktop only; a web build returns a failed result that says so.
+
+| Method / Getter | Signature | Purpose & Description |
+| :--- | :--- | :--- |
+| `compile` | `static MatcResult compile(String source, {String? fileName, String? includeDirectory, String? defaultName, MaterialPlatform? platform, TargetApi targetApi = TargetApi.all, OptimizationLevel? optimization, bool debug = false, int variantFilter = 0})` | Compiles `source`: every header key, `vertex` and `fragment` blocks in any order, `#include` from `includeDirectory`. `defaultName` names a material whose header has no `name`. Unlike matc (OpenGL only) the default `targetApi` is every API. |
+
+#### `class MatcResult`
+
+`package` (the `.filamat` bytes, null when matc rejected the material), `log` (everything matc printed, in order), `diagnostics` (`List<MatcDiagnostic>`), `ok`, `errorText` (the error messages joined).
+
+#### `class MatcDiagnostic`
+
+One of matc's messages: `severity` (`MatcSeverity.error` / `warning`), `line` (the `.mat` line from `at line:N` or glslang's `ERROR: 0:N:`; blocks keep their `.mat` line numbers), `file` (an `#include`d file a glslang message names), `message` (verbatim, one or more lines). `static List<MatcDiagnostic> parseLog(String log, {required bool failed, String? rootFile})` splits matc's output.
 
 ### `lib/src/material.dart`
 

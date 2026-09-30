@@ -18,6 +18,7 @@
 #include "gltf_c.h"
 #include "manipulator_c.h"
 #include "filamat_c.h"
+#include "matc_c.h"
 #include "tools_c.h"
 #include "buffer_descriptor_c.h"
 #include "callback_bridge_c.h"

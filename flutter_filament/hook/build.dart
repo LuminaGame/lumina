@@ -51,6 +51,7 @@ void main(List<String> args) async {
         'src/gltf_c.cpp',
         'src/manipulator_c.cpp',
         'src/filamat_c.cpp',
+        'src/matc_c.cpp',
         'src/tools_c.cpp',
         'src/buffer_descriptor_c.cpp',
         'src/callback_bridge_c.cpp',
@@ -92,6 +93,9 @@ void main(List<String> args) async {
         'src/web_c.cpp',
         'src/web_stubs_c.cpp',
         '$filament/third_party/smol-v/source/smolv.cpp',
+        // Filament's .mat parser (matc's matp library), vendored: the
+        // prebuilt Filament archives carry no matp (third_party/filament_matp/README.md).
+        for (final matp in _matpSources) 'third_party/filament_matp/src/$matp',
     ];
     final includes = [
         'src',
@@ -133,6 +137,7 @@ void main(List<String> args) async {
         '$filament/third_party/draco/src',
         '$filament/third_party/draco/tnt',
         '$filament/third_party/cgltf',
+        'third_party/filament_matp/include',
     ];
     // On Windows the sources, includes and Filament libraries go to a
     // response file; cl runs through cmd.exe, whose command line holds 8 191
@@ -409,6 +414,8 @@ NativeBuildInputs _cacheInputs(BuildInput input, CBuilder cbuilder,
     headers: [
       for (final f in Directory(abs('src')).listSync().whereType<File>())
         if (f.path.endsWith('.h')) f.path,
+      for (final f in Directory(abs('third_party/filament_matp')).listSync(recursive: true).whereType<File>())
+        if (f.path.endsWith('.h')) f.path,
     ],
     archives: [
       for (final f in cbuilder.flags) if (isArchive(f)) File(f).isAbsolute ? f : abs(f),
@@ -495,6 +502,17 @@ const _windowsFilamentLibs = [
   'third_party/tinyexr/tnt/tinyexr.lib',
   'third_party/libpng/tnt/png.lib',
   'third_party/libz/tnt/z.lib',
+];
+
+/// The vendored matp sources (`third_party/filament_matp/src/`).
+const _matpSources = [
+  'DirIncluder.cpp',
+  'Includes.cpp',
+  'JsonishLexer.cpp',
+  'JsonishParser.cpp',
+  'MaterialLexer.cpp',
+  'MaterialParser.cpp',
+  'ParametersProcessor.cpp',
 ];
 
 /// Win32 import libraries the Filament backends and civetweb need.

@@ -4465,6 +4465,57 @@ external void filament_filamat_free_package(
   ffi.Pointer<ffi.Void> package_bytes,
 );
 
+/// Compiles a whole Filament material definition (`.mat`: a `material { … }` header, `vertex { … }`,
+/// `fragment { … }` / `compute { … }` blocks) the way Filament's `matc` does: `#include` resolution, Filament's
+/// own .mat parser (matp) driving `filamat::MaterialBuilder`, then `build()`.
+///
+/// `source`/`length`: the .mat text (need not be NUL-terminated).
+/// `file_name`: the name `#line` directives use for the material itself (NULL: none).
+/// `include_dir`: the directory `#include "…"` resolves against (NULL: an `#include` is an error).
+/// `default_name`: the material's name when its header has no `name` (NULL: none).
+/// `platform` (MaterialBuilder::Platform), `target_api` (TargetApi bit mask), `optimization`
+/// (MaterialBuilder::Optimization): a negative value keeps matc's default (ALL, OpenGL, PERFORMANCE).
+/// `debug`: keep debug information in the shaders (matc -g). `variant_filter`: UserVariantFilterMask bits.
+///
+/// Returns a malloc'ed package (NULL when the material does not compile) and its size in `out_size`, and always
+/// sets `*out_diagnostics` (when non-NULL) to a malloc'ed, NUL-terminated copy of everything matc would have
+/// printed for this compile, in order. Free both with `filament_matc_free`. Desktop only: the web build returns
+/// NULL.
+@ffi.Native<
+  ffi.Pointer<ffi.Void> Function(
+    ffi.Pointer<ffi.Char>,
+    ffi.Size,
+    ffi.Pointer<ffi.Char>,
+    ffi.Pointer<ffi.Char>,
+    ffi.Pointer<ffi.Char>,
+    ffi.Int,
+    ffi.Int,
+    ffi.Int,
+    ffi.Bool,
+    ffi.Uint32,
+    ffi.Pointer<ffi.Size>,
+    ffi.Pointer<ffi.Pointer<ffi.Char>>,
+  )
+>()
+external ffi.Pointer<ffi.Void> filament_matc_compile(
+  ffi.Pointer<ffi.Char> source,
+  int length,
+  ffi.Pointer<ffi.Char> file_name,
+  ffi.Pointer<ffi.Char> include_dir,
+  ffi.Pointer<ffi.Char> default_name,
+  int platform,
+  int target_api,
+  int optimization,
+  bool debug,
+  int variant_filter,
+  ffi.Pointer<ffi.Size> out_size,
+  ffi.Pointer<ffi.Pointer<ffi.Char>> out_diagnostics,
+);
+
+/// Frees a package or diagnostics string returned by `filament_matc_compile`.
+@ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>)>()
+external void filament_matc_free(ffi.Pointer<ffi.Void> pointer);
+
 /// Inspects a `.filamat` material binary buffer and returns a JSON string containing material parameters and info.
 /// Free returned char* with `filament_tools_free_string`.
 @ffi.Native<ffi.Pointer<ffi.Char> Function(ffi.Pointer<ffi.Void>, ffi.Uint32)>()

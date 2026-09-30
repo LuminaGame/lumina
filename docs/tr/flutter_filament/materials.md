@@ -2,16 +2,18 @@
 
 # Materyaller
 
-Derlenmiş materyallerin yüklenmesi, material instance oluşturma ve parametreleri ile render state'lerini ayarlama ve filamat material builder ile çalışma anında yeni materyal üretme. Dosya yolları `flutter_filament/` paket dizinine görelidir.
+Derlenmiş materyallerin yüklenmesi, material instance oluşturma ve parametreleri ile render state'lerini ayarlama ve çalışma anında yeni materyal üretme: Filament'in kendi matc ayrıştırıcısıyla bütün bir `.mat` materyal tanımı (`FilamentMatc`) ya da filamat material builder ile ayar ayar. Dosya yolları `flutter_filament/` paket dizinine görelidir.
 
 **Bu sayfada:**
 
 - [Native C köprüsü](#native-c-köprüsü)
   - [`src/filamat_c.h`](#srcfilamat_ch)
+  - [`src/matc_c.h`](#srcmatc_ch)
   - [`src/material_c.h`](#srcmaterial_ch)
   - [`src/material_instance_c.h`](#srcmaterial_instance_ch)
 - [Dart API](#dart-api)
   - [`lib/src/filamat_builder.dart`](#libsrcfilamat_builderdart)
+  - [`lib/src/matc.dart`](#libsrcmatcdart)
   - [`lib/src/material.dart`](#libsrcmaterialdart)
 
 ## Native C köprüsü
@@ -63,6 +65,15 @@ Aşağıdaki C fonksiyonları paketin `src/` header'larında tanımlanır ve Dar
 | `filament_material_builder_optimization` | `FFI_PLUGIN_EXPORT void filament_material_builder_optimization(void*...` | Filament yerel `filament_material_builder_optimization` C fonksiyonunu çalıştırır. |
 | `filament_material_builder_variant_filter` | `FFI_PLUGIN_EXPORT void filament_material_builder_variant_filter(voi...` | Filament yerel `filament_material_builder_variant_filter` C fonksiyonunu çalıştırır. |
 | *... ve 23 ek C fonksiyonu* | - | İlgili C kütüphane bağlayıcıları. |
+
+### `src/matc_c.h`
+
+Filament'in kendi `.mat` ayrıştırıcısı (matc'nin `matp` kütüphanesi; hazır Filament arşivleri onu içermediği için `third_party/filament_matp/` altında değiştirilmeden paketlenir) tek bir çağrının arkasında.
+
+| C Fonksiyonu | İmza | Amaç ve Açıklama |
+| :--- | :--- | :--- |
+| `filament_matc_compile` | `FFI_PLUGIN_EXPORT void* filament_matc_compile(const char* source, size_t length, const char* file_name, const char* include_dir, const char* default_name, int platform, int target_api, int optimization, bool debug, uint32_t variant_filter, size_t* out_size, char** out_diagnostics);` | Bütün bir materyal tanımını `matc` gibi derler: `include_dir`'den `#include` çözümleme, `material { … }` başlığı (matc'nin bildiği her anahtar), herhangi bir sırada `vertex` / `fragment` / `compute` blokları, ardından `MaterialBuilder::build`. `malloc` ile ayrılmış paketi (hata durumunda NULL) ve her zaman matc'nin yazdıracağı metni (matp'nin `std::cerr` çıktısı, filamat hata ve uyarıları, ayrıştırıcı durumu) döndürür. Negatif `platform` / `optimization` ve sıfır `target_api` matc varsayılanlarını korur. Derlemeler sıraya alınır. Web: NULL döndüren bir stub. |
+| `filament_matc_free` | `FFI_PLUGIN_EXPORT void filament_matc_free(void* pointer);` | `filament_matc_compile`'ın döndürdüğü paketi veya tanı metnini serbest bırakır. |
 
 ### `src/material_c.h`
 
@@ -484,6 +495,24 @@ Dynamically builds and compiles GLSL material shaders into binary `.filamat` pac
 | `build` | `Uint8List? build()` | Compiles the GLSL shader and builds a `.filamat` binary buffer.  Returns `null` if compilation failed. |
 | `dispose` | `void dispose()` | Disposes this builder. |
 | `isDisposed` | `bool get isDisposed` | Mevcut durumun veya yeteneğin doğruluğunu kontrol eder (`bool` döndürür). |
+
+### `lib/src/matc.dart`
+
+#### `abstract final class FilamentMatc`
+
+Bütün Filament materyal tanımlarını (`.mat`) süreç içinde, Filament'in `matc` aracı gibi derler. Yalnızca masaüstü; web derlemesi bunu söyleyen başarısız bir sonuç döndürür.
+
+| Metot / Getter | İmza | Amaç ve Açıklama |
+| :--- | :--- | :--- |
+| `compile` | `static MatcResult compile(String source, {String? fileName, String? includeDirectory, String? defaultName, MaterialPlatform? platform, TargetApi targetApi = TargetApi.all, OptimizationLevel? optimization, bool debug = false, int variantFilter = 0})` | `source`'u derler: her başlık anahtarı, herhangi bir sırada `vertex` ve `fragment` blokları, `includeDirectory`'den `#include`. `defaultName`, başlığında `name` olmayan materyale ad verir. matc'nin aksine (yalnızca OpenGL) varsayılan `targetApi` tüm API'lerdir. |
+
+#### `class MatcResult`
+
+`package` (`.filamat` baytları; matc materyali reddettiğinde null), `log` (matc'nin sırayla yazdırdığı her şey), `diagnostics` (`List<MatcDiagnostic>`), `ok`, `errorText` (hata mesajları birleştirilmiş).
+
+#### `class MatcDiagnostic`
+
+matc'nin mesajlarından biri: `severity` (`MatcSeverity.error` / `warning`), `line` (`at line:N` ya da glslang'ın `ERROR: 0:N:` biçiminden `.mat` satırı; bloklar `.mat` satır numaralarını korur), `file` (glslang mesajının andığı `#include` dosyası), `message` (olduğu gibi, bir veya daha çok satır). `static List<MatcDiagnostic> parseLog(String log, {required bool failed, String? rootFile})` matc çıktısını böler.
 
 ### `lib/src/material.dart`
 

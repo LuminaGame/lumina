@@ -31,6 +31,7 @@ export 'src/gpu.dart';
 export 'src/entity.dart';
 export 'src/fence.dart';
 export 'src/filamat_builder.dart';
+export 'src/matc.dart';
 export 'src/frame_pacer.dart';
 export 'src/frame_pipeline_estimator.dart';
 export 'src/gltf_loader.dart';

@@ -1,5 +1,6 @@
 // Generates src/web_stubs_c.cpp: web-build bodies for the C functions whose
-// Filament libraries are desktop-only (filamat's runtime material compiler,
+// Filament libraries are desktop-only (filamat's runtime material compiler and
+// the .mat parser matc drives it with,
 // imageio's full codecs). The desktop implementations are compiled out under
 // __EMSCRIPTEN__; these keep every filament_* symbol exported so the Dart
 // bindings stay identical, and fail softly with a zero value and one log line.
@@ -11,6 +12,7 @@ import { dirname, join } from 'node:path';
 const pkg = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const units = [
   { header: 'filamat_c.h', library: 'filamat (runtime material compiler)' },
+  { header: 'matc_c.h', library: 'filamat (runtime material compiler)' },
   { header: 'imageio_c.h', library: 'imageio (image encoders and decoders)' },
 ];
 
