@@ -122,7 +122,11 @@ void main() {
     expect(primitive.type, 'Primitive');
     final shapeComponent = primitive.components.firstWhere((c) => c.type == 'LuminaProceduralMeshComponent');
     expect(shapeComponent.properties['shape'], 'box');
-    expect(shapeComponent.properties['sizeX'], isA<num>());
+    // Centimetres: Place Actors ▸ Cube is a 1 m cube, not a 1 cm speck.
+    expect(
+      [shapeComponent.properties['sizeX'], shapeComponent.properties['sizeY'], shapeComponent.properties['sizeZ']],
+      [100.0, 100.0, 100.0],
+    );
     // The mesh is built lazily by the viewport path; ask for it directly.
     await vm.ensureActorMeshDataForTest(primitive);
     expect(primitive.meshData, isNotNull, reason: 'a spawned cube must have geometry');

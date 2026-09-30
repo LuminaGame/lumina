@@ -26,9 +26,9 @@ mixin _EditorActorSpawning on _EditorViewModelState {
       return v is num ? v.toDouble() : fallback;
     }
 
-    final sizeX = dim('sizeX', 1.0);
-    final sizeY = dim('sizeY', 1.0);
-    final sizeZ = dim('sizeZ', 1.0);
+    final sizeX = dim('sizeX', 100.0);
+    final sizeY = dim('sizeY', 100.0);
+    final sizeZ = dim('sizeZ', 100.0);
     final colorHex = (props['colorHex'] ?? '#9AA3AE').toString();
     final key = '$shape|$sizeX|$sizeY|$sizeZ|$colorHex';
 

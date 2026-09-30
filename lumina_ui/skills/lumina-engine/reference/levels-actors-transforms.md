@@ -27,10 +27,10 @@
 
 ## Actors
 
-- `list_actor_types` is the live catalog. Common types: `Primitive` (a box / sphere / cylinder shape with
-  `colorHex`), `StaticMesh`, `SkeletalMesh`, `DirectionalLight`, `PointLight`, `SpotLight`, `PlayerStart`, `Pawn`,
-  `Camera`, `Environment` (sky and atmosphere, one per level), `ExponentialHeightFog`, `PostProcessVolume`,
-  `NavMeshBoundsVolume`.
+- `list_actor_types` is the live catalog. Common types: `Primitive` (a box / plane / sphere / cylinder shape with
+  `colorHex`; spawned as a 100 cm cube), `StaticMesh`, `SkeletalMesh`, `DirectionalLight`, `PointLight`,
+  `SpotLight`, `PlayerStart`, `Pawn`, `Camera`, `Environment` (sky and atmosphere, one per level),
+  `ExponentialHeightFog`, `PostProcessVolume`, `NavMeshBoundsVolume`.
 - `spawn_actor` with `type`, `name`, `location`, `rotation`, `scale`, `parent_id`. `spawn_actor_from_asset` with
   `asset`: a mesh `.lmas` becomes a Mesh actor, a Blueprint `.lmas` an instance of that class.
 - `set_actor_transform` (absolute values), `set_actor_property` (`mobility` `Static` | `Stationary` | `Movable`,

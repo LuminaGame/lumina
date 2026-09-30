@@ -67,7 +67,8 @@ class EditorActorCatalog {
     EditorActorType(
       id: 'Primitive',
       label: 'Cube',
-      description: 'An engine-drawn box. Change its shape and size in Details.',
+      description: 'An engine-drawn 100 cm cube. Change its shape (box, plane, sphere, cylinder) and its size '
+          '(sizeX, sizeY, sizeZ in cm) in Details.',
       category: 'Geometry',
       icon: LucideIcons.box,
       color: _geometry,
@@ -78,9 +79,10 @@ class EditorActorCatalog {
           name: 'Shape',
           properties: <String, dynamic>{
             'shape': 'box',
-            'sizeX': 1.0,
-            'sizeY': 1.0,
-            'sizeZ': 1.0,
+            // Centimetres, like every length in a level.
+            'sizeX': 100.0,
+            'sizeY': 100.0,
+            'sizeZ': 100.0,
             'colorHex': '#9AA3AE',
           },
         ),

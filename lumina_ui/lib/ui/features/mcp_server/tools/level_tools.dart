@@ -132,7 +132,9 @@ void registerLevelTools(McpToolRegistry registry, EditorViewModel vm) {
       description: 'Places a new actor of a catalog type (list_actor_types) in the level, optionally named and '
           'transformed, as one undo step. For a mesh from an asset use spawn_actor_from_asset. $units',
       inputSchema: McpSchema.object({
-        'type': McpSchema.string('The type id, e.g. "Primitive" (a cube), "PointLight", "DirectionalLight", "PlayerStart".'),
+        'type': McpSchema.string('The type id, e.g. "Primitive" (a basic shape: a 100 cm cube; change its shape and '
+            'size with set_actor_property "LuminaProceduralMeshComponent.shape" / ".sizeX" / ".sizeY" / ".sizeZ", in cm), '
+            '"PointLight", "DirectionalLight", "PlayerStart".'),
         'name': McpSchema.string('A name for the actor; a name already used by a sibling is refused.'),
         'location': McpSchema.vector3('[x, y, z] in centimetres, Z up. Default [0, 0, 0].'),
         'rotation': McpSchema.vector3('Rotation $kMcpRotationConvention. Default [0, 0, 0].'),
