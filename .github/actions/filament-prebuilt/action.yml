@@ -130,11 +130,13 @@ runs:
         sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
         df -h "$GITHUB_WORKSPACE"
 
+    # VS 2022 x64 developer environment via vswhere + vcvars64.bat, exported
+    # to $GITHUB_ENV (ilammy/msvc-dev-cmd has no Node.js 24 release).
     - name: MSVC environment (Windows)
       if: steps.need.outputs.build == 'true' && runner.os == 'Windows'
-      uses: ilammy/msvc-dev-cmd@v1
-      with:
-        arch: x64
+      shell: pwsh
+      working-directory: lumina
+      run: ./.github/scripts/msvc_env.ps1
 
     - name: Build Filament (Linux / macOS)
       if: steps.need.outputs.build == 'true' && runner.os != 'Windows'

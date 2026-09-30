@@ -193,7 +193,7 @@ jobs:
           save: 'true'
 
       - if: steps.published.outputs.published != 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: filament-${{ matrix.platform }}
           path: lumina/build/filament-prebuilt/filament-*
@@ -242,7 +242,7 @@ jobs:
 
       - name: Download the Filament builds
         if: steps.missing.outputs.complete != 'true'
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           pattern: filament-*
           path: filament
@@ -314,7 +314,7 @@ jobs:
       # the root pubspec's `filament_dir` user-defines name.
       - name: Filament built by this run
         continue-on-error: true
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           name: filament-${{ matrix.platform }}
           path: lumina/build/filament-prebuilt
@@ -389,7 +389,7 @@ jobs:
         if: matrix.platform == 'windows' && env.HAS_MSIX_CERT != 'true'
         run: echo "::notice::No MSIX signing secrets (LUMINA_MSIX_PUBLISHER, LUMINA_MSIX_CERT_BASE64); the MSIX is not part of this release."
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: studio-${{ matrix.platform }}
           path: dist/*
@@ -444,7 +444,7 @@ jobs:
           dpkg-deb -I dist/*.deb
           dpkg-deb -c dist/*.deb
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: installer-${{ matrix.platform }}
           path: dist/*
@@ -507,7 +507,7 @@ jobs:
           (cd dist && shasum -a 256 "$name" > "$name.sha256")
       - name: .pkg
         run: bash lumina/installer/macos/build-pkg.sh "$VERSION" "$TAG" dist
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: macos
           path: dist/*
@@ -531,13 +531,13 @@ jobs:
     steps:
       # The editor, OpenRigLogic and the installers; Filament is in its own
       # release.
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v8
         with:
           pattern: studio-*
           path: dist
           merge-multiple: true
 
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v8
         with:
           pattern: installer-*
           path: dist
