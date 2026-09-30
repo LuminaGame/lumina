@@ -21,19 +21,19 @@ dependencies:
     git:
       url: https://github.com/LuminaGame/tools.git
       path: flutter_assimp
-      ref: 553e2bfe1dc153263d566162164a8997e382f1ca
+      ref: 6d76b839fa2c928e40306832ae43013718b74627
   flutter_riglogic:
     git:
       url: https://github.com/LuminaGame/tools.git
       path: flutter_riglogic
-      ref: 553e2bfe1dc153263d566162164a8997e382f1ca
+      ref: 6d76b839fa2c928e40306832ae43013718b74627
   # The smoke-test system that lib/testing.dart exports (SmokeArtifacts,
   # SmokeRecorder, the report runner of tool/smoke_report.dart).
   lumina_smoke:
     git:
       url: https://github.com/LuminaGame/tools.git
       path: lumina_smoke
-      ref: 553e2bfe1dc153263d566162164a8997e382f1ca
+      ref: 6d76b839fa2c928e40306832ae43013718b74627
   lumina_editor_api:
     path: ../lumina_editor_api
   # Play captures the mouse.
@@ -41,7 +41,7 @@ dependencies:
     git:
       url: https://github.com/LuminaGame/tools.git
       path: lumina_mouse_capture
-      ref: 553e2bfe1dc153263d566162164a8997e382f1ca
+      ref: 6d76b839fa2c928e40306832ae43013718b74627
   # The Lumina Marketplace API client and DTOs, plus what the
   # installer needs (streamed downloads, zip archives, sha256, the encrypted
   # session file).
@@ -82,13 +82,13 @@ dev_dependencies:
     git:
       url: https://github.com/LuminaGame/plugins.git
       path: lumina_plugin_pcg
-      ref: c200c809d9c6848280b0af01e48938a016eb1f73
+      ref: 913aee6504b4a5c4a2d97d7adcec221163062ab8
   # MiniAI: tests and smoke, as for PCG.
   lumina_plugin_miniai:
     git:
       url: https://github.com/LuminaGame/plugins.git
       path: lumina_plugin_miniai
-      ref: c200c809d9c6848280b0af01e48938a016eb1f73
+      ref: 913aee6504b4a5c4a2d97d7adcec221163062ab8
   msix: ^3.18.0
 
 # The MSIX identity of Lumina Studio, shared by both
