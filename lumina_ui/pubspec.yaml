@@ -89,11 +89,6 @@ dev_dependencies:
       url: https://github.com/LuminaGame/plugins.git
       path: lumina_plugin_miniai
       ref: 1f634cfae88abd857d5d5021d9e666d6e4fa8024
-  # Unreal Engine importer: tests and smoke, as for PCG (its own repository;
-  # local override: ../unreal_engine_importer).
-  unreal_engine_importer:
-    git:
-      url: https://github.com/LuminaGame/unreal_engine_importer.git
   msix: ^3.18.0
 
 # The MSIX identity of Lumina Studio, shared by both
