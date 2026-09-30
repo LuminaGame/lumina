@@ -49,6 +49,12 @@ packages.
 4. **Shortcuts.** Start menu entries "Lumina Studio", "Update Lumina Studio" (downloads the latest release
    again) and the uninstaller, plus an optional desktop shortcut.
 
+Setup runs with Inno Setup's `RedirectionGuard=no`. Windows hands that mitigation on to every process setup
+starts, and a Lumina Studio started from the finish page could then not traverse the junctions of its engine
+checkout and projects. Lumina Studio itself also checks the policy at startup on Windows: when whatever started it
+enforced redirection trust, it starts again as a child of the Windows shell with the same arguments, and if that is
+not possible it says to start it from the Start menu.
+
 Uninstalling removes the editor folder. It asks before removing a Flutter SDK that setup installed, and removes
 its PATH entry too. Git, the Build Tools, GStreamer and FFmpeg stay installed, because other programs may use
 them.

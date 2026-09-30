@@ -63,6 +63,11 @@ SolidCompression=yes
 ChangesEnvironment=yes
 CloseApplications=yes
 SetupLogging=yes
+; Off: Windows hands the mitigation on to every process setup starts (the
+; PowerShell helper, and Lumina Studio from the finish page), which then
+; cannot traverse the junctions the editor makes for its engine checkout and
+; projects. A per-user setup that never elevates gains nothing from it.
+RedirectionGuard=no
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"

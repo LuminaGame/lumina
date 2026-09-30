@@ -49,6 +49,12 @@ winget ister.
 4. **Kısayollar.** Başlat menüsünde "Lumina Studio", "Update Lumina Studio" (en son release'i yeniden indirir) ve
    uninstaller; isteğe bağlı olarak bir masaüstü kısayolu.
 
+Setup, Inno Setup'ın `RedirectionGuard=no` ayarıyla çalışır. Windows bu korumayı setup'ın başlattığı her sürece
+aktarır; bitiş sayfasından başlatılan Lumina Studio da o zaman motor checkout'unun ve projelerin junction'larından
+geçemezdi. Lumina Studio da Windows'ta açılışta bu politikayı denetler: onu başlatan süreç redirection trust'ı
+zorunlu kıldıysa, aynı argümanlarla Windows kabuğunun alt süreci olarak yeniden başlar; bu mümkün değilse Başlat
+menüsünden açılmasını söyler.
+
 Kaldırma editör klasörünü siler. Setup'ın kurduğu bir Flutter SDK'yı silmeden önce sorar ve silerse PATH
 girdisini de kaldırır. Git, Build Tools, GStreamer ve FFmpeg kurulu kalır, çünkü başka programlar da
 kullanıyor olabilir.

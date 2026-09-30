@@ -14,6 +14,7 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'ui/core/host/editor_host.dart';
+import 'ui/core/host/redirection_trust_guard.dart';
 import 'ui/core/theme/editor_theme.dart';
 import 'ui/core/theme/editor_theme_store.dart';
 import 'ui/core/window/lumina_window.dart';
@@ -27,6 +28,11 @@ export 'ui/core/host/editor_host.dart' show EditorHostInfo, EditorLaunchArgs, Lu
 final ValueNotifier<ThemeMode> appThemeModeNotifier = ValueNotifier<ThemeMode>(ThemeMode.dark);
 
 Future<void> runLuminaEditor(List<String> args, {List<LuminaEditorPlugin> plugins = const [], EditorHostInfo? host}) async {
+  // Started by a process that enforces Windows redirection trust (an
+  // installer's finish page does), the editor and everything it runs could
+  // not traverse the junctions of the engine checkout and projects: a copy
+  // without the policy takes over before any window shows.
+  if (!RedirectionTrustGuard.startup(args)) exit(0);
   WidgetsFlutterBinding.ensureInitialized();
   LuminaEditorHost.info = host;
   LuminaEditorHost.args = EditorLaunchArgs.parse(args);
