@@ -174,8 +174,16 @@ void _callDispatcher(LuminaActor self, String dispatcher, [Map<String, Object?> 
     _runtime(self)?.blueprintDispatcher(dispatcher).broadcast(args);
 
 /// The Blueprint a dispatcher / interface node acts on: its Target pin, or Self when unwired.
+/// A widget instance (what `Create Widget` returned) stands for its graph's script.
 LuminaBlueprintRuntime? _runtimeTarget(LuminaActor self, Object? target) =>
-    target is LuminaBlueprintRuntime ? target : (target == null ? _runtime(self) : null);
+    _scriptOf(target) ?? (target == null ? _runtime(self) : null);
+
+/// [target] as a Blueprint: itself, or the graph script of a widget instance.
+LuminaBlueprintRuntime? _scriptOf(Object? target) {
+  if (target is LuminaBlueprintRuntime) return target;
+  final script = LuminaUserWidgets.of(target);
+  return script is LuminaBlueprintRuntime ? script as LuminaBlueprintRuntime : null;
+}
 
 /// The actor an actor event dispatcher (`OnActorBeginOverlap`)
 /// is bound on: [target], or Self when unwired.
@@ -217,7 +225,7 @@ List<Object?> _getLevelActorsOfClass(LuminaActor self, [String cls = LuminaBluep
     self is LuminaBlueprintLevelActors ? self.levelActorsOfClass(cls) : <Object?>[];
 
 bool _implementsInterface(Object? target, String interface) =>
-    target is LuminaBlueprintRuntime && target.implementsInterface(interface);
+    _scriptOf(target)?.implementsInterface(interface) ?? false;
 
 bool _doesImplementInterface(LuminaActor self, Object? target, String interface) =>
     LuminaBlueprintFunctionLibrary.implementsInterface(target ?? self, interface);

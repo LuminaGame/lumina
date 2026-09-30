@@ -5,6 +5,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lumina/lumina.dart' show LuminaBlueprintClass;
 import 'package:lumina/lumina_runtime.dart';
 import 'package:lumina/testing.dart';
 
@@ -22,6 +23,10 @@ const _hudName = 'umg: HUD widget in a headless game host';
 /// UMG graph smoke — a widget's own graph (the generated `WbpClickerGraph`)
 /// running in a headless game host.
 const _graphName = 'umg: widget blueprint graph in a headless game host';
+
+/// UMG interface smoke — a character sends an interface message to the widget
+/// `Create Widget` returned, and the widget's own graph sets its text.
+const _interfaceName = 'umg: interface message updates the created widget in a headless game host';
 
 /// What lumina_ui's codegen emits for WBP_Clicker's Title, StartButton and
 /// Charge: elements read through the binding, the button's handler fires
@@ -80,6 +85,47 @@ class _ClickerCharacter extends LuminaCharacter {
     widget = LuminaBlueprintFunctionLibrary.createWidget(this, clickerClass) as Map<String, Object?>;
     LuminaBlueprintFunctionLibrary.addToViewport(this, widget, 0);
   }
+}
+
+/// A runner character: Create Widget WBP_Clicker + Add to Viewport at
+/// BeginPlay, then every tick `Update Score (Message)` on the widget with the
+/// distance run so far, as a HUD Blueprint Interface does.
+class _ScoreCharacter extends LuminaCharacter {
+  Map<String, Object?>? hud;
+  double distance = 0;
+
+  @override
+  void onBeginPlay() {
+    super.onBeginPlay();
+    hud = LuminaBlueprintFunctionLibrary.createWidget(this, clickerClass) as Map<String, Object?>;
+    LuminaBlueprintFunctionLibrary.addToViewport(this, hud, 0);
+  }
+
+  @override
+  void onTick(double deltaTime) {
+    super.onTick(deltaTime);
+    distance += 6 * deltaTime;
+    LuminaBlueprintFunctionLibrary.interfaceMessage(this, hud, 'BPI_ScoreHUD', 'UpdateScore', {'Text': 'Distance: ${distance.round()} m'});
+  }
+}
+
+/// WBP_Clicker implementing BPI_ScoreHUD: its graph's Event Update Score sets
+/// the Title to the message's Text.
+LuminaWidgetBlueprintDocument _scoreHudBlueprint() {
+  final doc = clickerBlueprint();
+  doc.blueprint.interfaces.add('BPI_ScoreHUD');
+  final c = LuminaBlueprintTypeContext.forWidget(doc, widgetClasses: const [clickerWidgetClass]);
+  doc.blueprint.eventGraph.nodes.addAll([
+    LuminaBlueprintNodeLibrary.place('event_interface_function', nodeId: 'update',
+        literals: {'interface': 'BPI_ScoreHUD', 'function': 'UpdateScore'}, context: c),
+    LuminaBlueprintNodeLibrary.place('set_element_text', nodeId: 'score_text', context: c),
+  ]);
+  doc.blueprint.eventGraph.wires.addAll([
+    LuminaBlueprintWire(id: 's0', fromNodeId: 'update', fromPinId: 'exec_out', toNodeId: 'score_text', toPinId: 'exec_in'),
+    LuminaBlueprintWire(id: 's1', fromNodeId: 'update', fromPinId: 'Text', toNodeId: 'score_text', toPinId: 'in_text'),
+    LuminaBlueprintWire(id: 's2', fromNodeId: 'title', fromPinId: 'return_value', toNodeId: 'score_text', toPinId: 'target'),
+  ]);
+  return doc;
 }
 
 /// The widget class `umg_widget_codegen` emits for a WBP_HUD (Text
@@ -361,5 +407,75 @@ void main() {
     expect((script! as dynamic).clicks, 1);
     SmokeArtifacts.saveScreenshot('$_graphName (after the click)', (await tester.runAsync(png))!);
     SmokeArtifacts.saveVideo(_graphName, video.finish());
+  });
+
+  testWidgets(_interfaceName, (tester) async {
+    await tester.runAsync(_loadRoboto);
+    const width = 1024;
+    const height = 768;
+    tester.view.physicalSize = const Size(width * 1.0, height * 1.0);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    LuminaBlueprintInterfaces.register(const LuminaBlueprintInterfaceDocument(name: 'BPI_ScoreHUD', functions: [
+      LuminaBlueprintFunctionSignature(name: 'UpdateScore', inputs: [LuminaBlueprintVariable(name: 'Text', typeName: 'String', defaultValue: '')]),
+    ]));
+    LuminaWidgetBuilderRegistry.register(clickerClass, clickerWidgetClass, (context, instance) => _WbpClicker(instance: instance));
+    // The widget's graph as Play-In-Editor runs it: a VM script.
+    final cls = LuminaBlueprintClass.forWidget(_scoreHudBlueprint());
+    expect(cls.diagnostics.where((d) => d.isError), isEmpty, reason: '${cls.diagnostics}');
+    LuminaUserWidgets.register(clickerClass, cls.instantiateUserWidget);
+    addTearDown(() {
+      LuminaUserWidgets.clear();
+      LuminaWidgetBuilderRegistry.clear();
+      LuminaBlueprintInterfaces.clear();
+    });
+
+    final world = LuminaWorld(worldType: LuminaWorldType.game);
+    final character = _ScoreCharacter();
+    world.persistentLevel.registerActor(character);
+    final boundary = GlobalKey();
+    await tester.pumpWidget(Directionality(
+      textDirection: TextDirection.ltr,
+      child: DefaultTextStyle(
+        style: const TextStyle(fontFamily: 'Roboto', color: LuminaUmgColors.foreground, fontSize: 14),
+        child: RepaintBoundary(key: boundary, child: Container(color: const Color(0xFF16202A), child: LuminaWidgetLayer(world: world))),
+      ),
+    ));
+    world.beginPlay();
+    await tester.pump();
+    expect(find.text('Ready'), findsOneWidget, reason: 'Event Construct set the Title');
+    expect(LuminaBlueprintFunctionLibrary.doesImplementInterface(character, character.hud, 'BPI_ScoreHUD'), isTrue);
+
+    Future<ui.Image> capture() async => (boundary.currentContext!.findRenderObject()! as RenderRepaintBoundary).toImage();
+    Future<Uint8List> png() async {
+      final image = await capture();
+      final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+      image.dispose();
+      return bytes!.buffer.asUint8List();
+    }
+
+    SmokeArtifacts.saveScreenshot('$_interfaceName (before play ticks)', (await tester.runAsync(png))!);
+    final video = SmokeVideoRecorder(width: width, height: height, fps: 30, testName: _interfaceName);
+    addTearDown(video.discard);
+    // 11 s at 30 fps: every tick the character messages the HUD; the text follows.
+    for (var frame = 0; frame < 330; frame++) {
+      world.tick(1 / 30);
+      await tester.pump();
+      if (frame == 29) {
+        expect(find.text('Distance: 6 m'), findsOneWidget, reason: 'one second of play');
+        SmokeArtifacts.saveScreenshot('$_interfaceName (after 1 s)', (await tester.runAsync(png))!);
+      }
+      final rgba = await tester.runAsync(() async {
+        final image = await capture();
+        final bytes = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+        image.dispose();
+        return bytes!.buffer.asUint8List();
+      });
+      video.addFrame(rgba!);
+    }
+    expect(find.text('Distance: 66 m'), findsOneWidget, reason: 'the widget graph set the text the message carried');
+    expect(find.text('Ready'), findsNothing);
+    SmokeArtifacts.saveScreenshot('$_interfaceName (after 11 s)', (await tester.runAsync(png))!);
+    SmokeArtifacts.saveVideo(_interfaceName, video.finish());
   });
 }

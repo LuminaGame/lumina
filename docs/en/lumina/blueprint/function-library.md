@@ -466,9 +466,9 @@ Vectors and rotators are **authoring space** (cm, Z up; rotators about X/Y/Z lik
 | `unbindAllEvents` | `static const unbindAllEvents` | Unbind All Events: every delegate of Self bound to [target]'s dispatcher. |
 | `getLevelActor` | `static const getLevelActor` | `Get <Actor>` in a Level Blueprint: the level's placed actor [name], null once it was destroyed or removed (Is Valid is then false), and null outside a level script. |
 | `getLevelActorsOfClass` | `static const getLevelActorsOfClass` | The level's live placed actors of class string [cls], in level order. |
-| `implementsInterface` | `static const implementsInterface` |  |
+| `implementsInterface` | `static const implementsInterface` | Whether [target] (a Blueprint, or a widget instance `Create Widget` returned, through its graph) implements [interface]. |
 | `doesImplementInterface` | `static const doesImplementInterface` | Does Implement Interface with Self as the default target. |
-| `interfaceMessage` | `static const interfaceMessage` | Interface Message: the implementer's answer, or no outputs (and no error) when [target] (Self when unwired) does not implement [interface]. |
+| `interfaceMessage` | `static const interfaceMessage` | Interface Message: the implementer's answer, or no outputs (and no error) when [target] (Self when unwired) does not implement [interface]. A widget instance `Create Widget` returned answers through its graph. |
 | `enumLiteral` | `static const enumLiteral` |  |
 | `enumToString` | `static const enumToString` |  |
 | `enumToInt` | `static const enumToInt` | The index of [value] in [enumName]'s values (any registered enum when [enumName] is empty); -1 when unknown. |

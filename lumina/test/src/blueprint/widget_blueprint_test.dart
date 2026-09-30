@@ -169,4 +169,45 @@ void main() {
     expect(subsystem.widgets, isEmpty, reason: 'Remove from Parent with no Target removed the widget itself');
     expect(printed.last, 'bye', reason: 'Destruct ran');
   });
+
+  test('an interface message sent to the widget Create Widget returned runs the widget graph\'s interface event', () {
+    LuminaBlueprintInterfaces.register(const LuminaBlueprintInterfaceDocument(name: 'BPI_ScoreHUD', functions: [
+      LuminaBlueprintFunctionSignature(name: 'UpdateScore', inputs: [LuminaBlueprintVariable(name: 'Text', typeName: 'String', defaultValue: '')]),
+    ]));
+    addTearDown(LuminaBlueprintInterfaces.clear);
+    // WBP_Clicker implements BPI_ScoreHUD: Event Update Score → Set Text (Title, Text).
+    final doc = clickerBlueprint();
+    doc.blueprint.interfaces.add('BPI_ScoreHUD');
+    final c = contextOf(doc);
+    LuminaBlueprintNode p(String id, String nodeId, [Map<String, dynamic>? literals]) =>
+        LuminaBlueprintNodeLibrary.place(id, nodeId: nodeId, literals: literals, context: c);
+    LuminaBlueprintWire w(String id, String from, String fromPin, String to, String toPin) =>
+        LuminaBlueprintWire(id: id, fromNodeId: from, fromPinId: fromPin, toNodeId: to, toPinId: toPin);
+    doc.blueprint.eventGraph.nodes.addAll([
+      p('event_interface_function', 'update', {'interface': 'BPI_ScoreHUD', 'function': 'UpdateScore'}),
+      p('set_element_text', 'score_text'),
+    ]);
+    doc.blueprint.eventGraph.wires.addAll([
+      w('s0', 'update', 'exec_out', 'score_text', 'exec_in'),
+      w('s1', 'update', 'Text', 'score_text', 'in_text'),
+      w('s2', 'title', 'return_value', 'score_text', 'target'),
+    ]);
+    final cls = LuminaBlueprintClass.forWidget(doc);
+    expect(cls.diagnostics.where((d) => d.isError), isEmpty, reason: '${cls.diagnostics}');
+    LuminaUserWidgets.register(clickerClass, cls.instantiateUserWidget);
+
+    final world = LuminaWorld(worldType: LuminaWorldType.game);
+    world.beginPlay();
+    final character = world.spawnActorImmediately(LuminaActor());
+    final widget = LuminaBlueprintFunctionLibrary.createWidget(character, clickerClass);
+    LuminaBlueprintFunctionLibrary.addToViewport(character, widget, 0);
+    final title = LuminaBlueprintFunctionLibrary.getWidgetElement(widget, 'Title') as Map<String, Object?>;
+    expect(title['text'], 'Ready');
+
+    expect(LuminaBlueprintFunctionLibrary.doesImplementInterface(character, widget, 'BPI_ScoreHUD'), isTrue,
+        reason: 'the widget\'s graph implements the interface');
+    expect(LuminaBlueprintFunctionLibrary.doesImplementInterface(character, widget, 'BPI_Other'), isFalse);
+    LuminaBlueprintFunctionLibrary.interfaceMessage(character, widget, 'BPI_ScoreHUD', 'UpdateScore', {'Text': 'Score: 42'});
+    expect(title['text'], 'Score: 42', reason: 'the message reached the widget\'s Event Update Score');
+  });
 }
