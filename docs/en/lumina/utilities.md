@@ -218,7 +218,7 @@ Levels are authored and stored **Z-up**: `location`, `rotation` and `scale` in `
 | `location` | `static Vector3 location(List<num> authoring)` | Authoring `(x, y, z)` (Z up) → runtime `(x, z, −y)` (Y up). |
 | `toAuthoringLocation` | `static List<double> toAuthoringLocation(Vector3 runtime)` | Runtime `(x, y, z)` → authoring `(x, −z, y)`. |
 | `scale` | `static Vector3 scale(List<num> authoring)` | Per-axis scale follows its axis: `(sx, sy, sz)` → `(sx, sz, sy)`. |
-| `rotation` | `static Quaternion rotation(List<num> authoringDegrees)` | Authoring rotation in degrees about the authoring X, Y and Z axes, as the editor viewport composes it: yaw about Z, then pitch about X, then roll about Y. In runtime axes that is `Ry(z) · Rx(x) · Rz(−y)`. |
+| `rotation` | `static Quaternion rotation(List<num> authoringDegrees)` | Authoring rotation `[x, y, z]` in degrees about the authoring X, Y and Z axes: authoring forward is +Y, so x is **pitch**, y **roll** and z **yaw**, applied yaw first, then pitch, then roll. Positive yaw turns right (yaw 90 faces +X), positive pitch looks up, positive roll dips the left side (the up vector leans to −X). These are the numbers a Blueprint rotator (`LuminaRotator`) holds and the controller's yaw means, so an actor placed at yaw 90 reads yaw 90 from Get Actor Rotation. In runtime axes this is `Ry(−z) · Rx(x) · Rz(y)`. |
 
 **Top-level functions and variables:**
 

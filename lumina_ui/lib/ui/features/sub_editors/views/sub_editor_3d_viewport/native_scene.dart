@@ -137,9 +137,10 @@ mixin _SubEditor3DViewportNativeScene on _SubEditor3DViewportStateBase {
             loc.isNotEmpty ? loc[0] : 0.0,
             loc.length > 2 ? loc[2] : 0.0,
             loc.length > 1 ? -loc[1] : 0.0,
+            // LuminaAxes.rotation: Ry(−yaw)·Rx(pitch)·Rz(roll) in runtime axes.
             rot.isNotEmpty ? rot[0] : 0.0,
-            rot.length > 2 ? rot[2] : 0.0,
-            rot.length > 1 ? -rot[1] : 0.0,
+            rot.length > 2 ? -rot[2] : 0.0,
+            rot.length > 1 ? rot[1] : 0.0,
             scl.isNotEmpty ? scl[0] : 1.0,
             scl.length > 2 ? scl[2] : 1.0,
             scl.length > 1 ? scl[1] : 1.0,

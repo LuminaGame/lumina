@@ -133,7 +133,7 @@ class _Yard {
       color: Vector3(0.52, 0.5, 0.47),
     ));
     world.persistentLevel.registerActor(LuminaActor(
-      root: LuminaDirectionalLightComponent(rotation: LuminaAxes.rotation([-50, 0, -30]), intensity: 100000, castShadows: true),
+      root: LuminaDirectionalLightComponent(rotation: LuminaAxes.rotation([-50, 0, 30]), intensity: 100000, castShadows: true),
     ));
   }
 

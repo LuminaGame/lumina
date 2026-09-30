@@ -362,7 +362,9 @@ abstract final class AuthoringRotation {
   /// angle unwrapped to within 180° of it, so a yaw-ring drag from
   /// `[0, 0, 0]` reads `[0, 0, θ]` rather than `[180, 180, θ − 180]`.
   static List<double> eulerFromRuntime(Quaternion runtime, {List<double>? near}) {
-    // LuminaAxes.rotation composes Ry(z)·Rx(x)·Rz(−y) in runtime axes.
+    // LuminaAxes.rotation composes Ry(−z)·Rx(x)·Rz(y) in runtime axes; the
+    // solutions below are the angles a, b, c of Ry(c)·Rx(a)·Rz(b), so
+    // [x, y, z] = [a, b, −c].
     final m = runtime.asRotationMatrix();
     final sinA = (-m.entry(1, 2)).clamp(-1.0, 1.0);
     final a1 = math.asin(sinA);
@@ -382,7 +384,7 @@ abstract final class AuthoringRotation {
         b = 0.0;
         c = math.atan2(math.sin(a) * m.entry(0, 1), m.entry(0, 0));
       }
-      return [a * _r2d, -b * _r2d, c * _r2d];
+      return [a * _r2d, b * _r2d, -c * _r2d];
     }
 
     final s1 = solve(a1);

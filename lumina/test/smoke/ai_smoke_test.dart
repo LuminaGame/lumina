@@ -595,7 +595,7 @@ void main() {
       world.persistentLevel.registerActor(LuminaPrimitiveActor(
           location: Vector3(0, -10, 0), shape: LuminaPrimitiveShape.box, size: Vector3(2400, 20, 2400), color: Vector3(0.52, 0.5, 0.47)));
       world.persistentLevel.registerActor(LuminaActor(
-          root: LuminaDirectionalLightComponent(rotation: LuminaAxes.rotation([-50, 0, -30]), intensity: 100000, castShadows: true)));
+          root: LuminaDirectionalLightComponent(rotation: LuminaAxes.rotation([-50, 0, 30]), intensity: 100000, castShadows: true)));
       // The wall: 6 m wide, 2 m tall, 40 cm thick, half way between them.
       world.persistentLevel.registerActor(LuminaPrimitiveActor(
           location: Vector3(0, 100, -300), shape: LuminaPrimitiveShape.box, size: Vector3(600, 200, 40), color: Vector3(0.62, 0.6, 0.58)));
@@ -762,7 +762,7 @@ void main() {
       world.persistentLevel.registerActor(LuminaPrimitiveActor(
           location: Vector3(0, -10, 0), shape: LuminaPrimitiveShape.box, size: Vector3(2400, 20, 2400), color: Vector3(0.52, 0.5, 0.47)));
       world.persistentLevel.registerActor(LuminaActor(
-          root: LuminaDirectionalLightComponent(rotation: LuminaAxes.rotation([-50, 0, -30]), intensity: 100000, castShadows: true)));
+          root: LuminaDirectionalLightComponent(rotation: LuminaAxes.rotation([-50, 0, 30]), intensity: 100000, castShadows: true)));
       // A post at the guard's starting front (−Z) to read its heading by.
       world.persistentLevel.registerActor(LuminaPrimitiveActor(
           location: Vector3(0, 40, -250), shape: LuminaPrimitiveShape.box, size: Vector3(20, 80, 20), color: Vector3(0.85, 0.2, 0.2)));

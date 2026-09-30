@@ -108,10 +108,14 @@ void main() {
     });
 
     test('turning an authoring rotation about a world axis changes that axis only', () {
-      expect(AuthoringRotation.rotatedAboutWorldAxis([0, 0, 0], Vector3(0, 0, 1), 90), [0.0, 0.0, 90.0]);
+      // A right-handed turn about +Z (counter-clockwise seen from above) is a
+      // turn to the left: negative yaw. Pitch is right-handed about +X; roll,
+      // like yaw, is positive the other way round (LuminaAxes.rotation).
+      expect(AuthoringRotation.rotatedAboutWorldAxis([0, 0, 0], Vector3(0, 0, 1), 90), [0.0, 0.0, -90.0]);
+      expect(AuthoringRotation.rotatedAboutWorldAxis([0, 0, 0], Vector3(0, 0, -1), 90), [0.0, 0.0, 90.0]);
       expect(AuthoringRotation.rotatedAboutWorldAxis([0, 0, 0], Vector3(1, 0, 0), 30).map((v) => v.round()), [30, 0, 0]);
-      expect(AuthoringRotation.rotatedAboutWorldAxis([0, 0, 0], Vector3(0, 1, 0), 30).map((v) => v.round()), [0, 30, 0]);
-      expect(AuthoringRotation.rotatedAboutWorldAxis([0, 0, 45], Vector3(0, 0, 1), 15).map((v) => v.round()), [0, 0, 60]);
+      expect(AuthoringRotation.rotatedAboutWorldAxis([0, 0, 0], Vector3(0, 1, 0), 30).map((v) => v.round()), [0, -30, 0]);
+      expect(AuthoringRotation.rotatedAboutWorldAxis([0, 0, 45], Vector3(0, 0, -1), 15).map((v) => v.round()), [0, 0, 60]);
       // The inverse of LuminaAxes.rotation, nearest to what the user sees.
       for (final e in [
         [10.0, -20.0, 30.0],

@@ -24,9 +24,14 @@ abstract final class LuminaAxes {
   static Vector3 scale(List<num> authoring) =>
       Vector3(_at(authoring, 0, 1), _at(authoring, 2, 1), _at(authoring, 1, 1));
 
-  /// Authoring rotation in degrees about the authoring X, Y and Z axes, as
-  /// the editor viewport composes it: yaw about Z, then pitch about X, then
-  /// roll about Y. In runtime axes that is `Ry(z) · Rx(x) · Rz(−y)`.
+  /// Authoring rotation `[x, y, z]` in degrees about the authoring X, Y and
+  /// Z axes: authoring forward is +Y, so x is **pitch**, y **roll** and z
+  /// **yaw**, applied yaw first, then pitch, then roll. Positive yaw turns
+  /// right (yaw 90 faces +X), positive pitch looks up, positive roll dips the
+  /// left side (the up vector leans to −X). These are the numbers a Blueprint
+  /// rotator (`LuminaRotator`) holds and the controller's yaw means, so an
+  /// actor placed at yaw 90 reads yaw 90 from Get Actor Rotation. In runtime
+  /// axes this is `Ry(−z) · Rx(x) · Rz(y)`.
   static Quaternion rotation(List<num> authoringDegrees) => luminaAuthoringRotation(
         _at(authoringDegrees, 0),
         _at(authoringDegrees, 1),
@@ -41,6 +46,6 @@ abstract final class LuminaAxes {
 /// panel.
 Quaternion luminaAuthoringRotation(double xDeg, double yDeg, double zDeg) {
   const d2r = math.pi / 180.0;
-  final m = Matrix4.rotationY(zDeg * d2r) * Matrix4.rotationX(xDeg * d2r) * Matrix4.rotationZ(-yDeg * d2r);
+  final m = Matrix4.rotationY(-zDeg * d2r) * Matrix4.rotationX(xDeg * d2r) * Matrix4.rotationZ(yDeg * d2r);
   return Quaternion.fromRotation(m.getRotation())..normalize();
 }

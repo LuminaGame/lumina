@@ -256,7 +256,7 @@ Map<String, dynamic> _sun() => _actor(
       name: 'DirectionalLight_Sun',
       type: 'DirectionalLight',
       location: const [0.0, -400.0, 800.0],
-      rotation: const [-50.0, 0.0, -30.0],
+      rotation: const [-50.0, 0.0, 30.0],
       lightIntensity: 100000.0,
       lightColorHex: '#FFF2E0',
       components: [

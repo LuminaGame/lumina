@@ -58,13 +58,13 @@ class SolarMath {
 
   /// The stored rotation `[x (pitch), 0, z (yaw)]` in degrees whose drawn −Z
   /// is [direction] (runtime, Y-up). A light follows its drawn rotation:
-  /// `LuminaAxes.rotation([x, 0, z])` = `Ry(z)·Rx(x)`, whose
-  /// −Z is `(−sin z·cos x, sin x, −cos z·cos x)`.
+  /// `LuminaAxes.rotation([x, 0, z])` = `Ry(−z)·Rx(x)`, whose
+  /// −Z is `(sin z·cos x, sin x, −cos z·cos x)`.
   static List<double> eulerForDirection(Vector3 direction) {
     final d = direction.normalized();
     final pitch = math.asin(d.y.clamp(-1.0, 1.0));
     final horizontal = math.sqrt(d.x * d.x + d.z * d.z);
-    final yaw = horizontal < 1e-9 ? 0.0 : math.atan2(-d.x, -d.z);
+    final yaw = horizontal < 1e-9 ? 0.0 : math.atan2(d.x, -d.z);
     return [_zeroSnap(degrees(pitch)), 0.0, _zeroSnap(degrees(yaw))];
   }
 

@@ -17,7 +17,7 @@ import 'package:vector_math/vector_math_64.dart';
 /// `(sx, sz, sy)`): Ry(yaw)·Rx(pitch)·Rz(roll), column-major.
 Matrix4 _viewportMatrix(List<double> loc, List<double> rot, List<double> scl) {
   final tx = loc[0], ty = loc[2], tz = -loc[1];
-  final radX = rot[0] * math.pi / 180, radY = rot[2] * math.pi / 180, radZ = -rot[1] * math.pi / 180;
+  final radX = rot[0] * math.pi / 180, radY = -rot[2] * math.pi / 180, radZ = rot[1] * math.pi / 180;
   final sx = scl[0], sy = scl[2], sz = scl[1];
   final cx = math.cos(radX), sx_ = math.sin(radX);
   final cy = math.cos(radY), sy_ = math.sin(radY);
@@ -51,9 +51,11 @@ void main() {
           expect(runtime.storage[i], closeTo(editor.storage[i], 1e-9), reason: 'rotation $rot, element $i');
         }
       }
-      // Yaw about authoring Z is a turn about the runtime's up axis.
+      // Yaw about authoring Z is a turn about the runtime's up axis, and a
+      // positive yaw turns right: yaw 90 faces +X.
       final forward = LuminaAxes.rotation(const [0, 0, 90]).asRotationMatrix().transformed(Vector3(0, 0, -1));
       expect(forward.y, closeTo(0, 1e-12));
+      expect(forward.x, closeTo(1, 1e-12));
     });
   });
 
@@ -113,7 +115,7 @@ void main() {
       for (var i = 1; i < stairs.length; i++) {
         expect(stairs[i] - stairs[i - 1], lessThanOrEqualTo(20), reason: 'a step never rises more than 20 cm');
       }
-      expect(actor(actors, 'DirectionalLight_Sun')['rotation'], [-50, 0, -30]);
+      expect(actor(actors, 'DirectionalLight_Sun')['rotation'], [-50, 0, 30]);
     });
 
     test('First Person room is authored in cm, Z up', () {

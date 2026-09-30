@@ -185,7 +185,7 @@ mixin _ViewportPointerInteraction on _ViewportWidgetStateBase {
       },
       space: widget.viewModel.gizmoSpace == 'local' ? GizmoSpace.local : GizmoSpace.world,
       pivot: Vector3.array(selected.location),
-      rotation: Quaternion.euler(rot[2] * math.pi / 180, rot[1] * math.pi / 180, rot[0] * math.pi / 180),
+      rotation: AuthoringRotation.quaternionToAuthoring(LuminaAxes.rotation(rot)),
       axisLength: _ViewportWidgetState._gizmoAxisLen * _gizmoScale,
       planeOffset: _ViewportWidgetState._gizmoPlaneDist * _gizmoScale,
       orientHandles: false,
@@ -387,10 +387,13 @@ mixin _ViewportPointerInteraction on _ViewportWidgetStateBase {
         if (vm.rotateSnapEnabled) {
           deltaAngle = SnapService.snapAngle(deltaAngle, vm.rotateSnapStep);
         }
+        // The ring angle is right-handed about its axis; a stored pitch is
+        // too, while roll and yaw turn the other way (positive yaw turns
+        // right, LuminaAxes.rotation), so the object follows the pointer.
         final rot = _dragStartActorRot.clone();
         if (_draggingGizmoAxis == 'X') rot.x += deltaAngle;
-        if (_draggingGizmoAxis == 'Y') rot.y += deltaAngle;
-        if (_draggingGizmoAxis == 'Z') rot.z += deltaAngle;
+        if (_draggingGizmoAxis == 'Y') rot.y -= deltaAngle;
+        if (_draggingGizmoAxis == 'Z') rot.z -= deltaAngle;
         if ((rot - Vector3.array(selectedActor.rotation)).length2 > 1e-12) {
           vm.updateActorRotation([rot.x, rot.y, rot.z]);
         }
