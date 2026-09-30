@@ -332,6 +332,8 @@ class UmgEditorViewModel extends ChangeNotifier {
       _onDiskJson = _document.toFormattedJson(includeBlueprint: false);
       _graphEditor?.documentSaved();
       _logger.log('Saved widget ${file.uri.pathSegments.last} (${_document.allNodes.length} elements)', level: 'success', source: 'UmgEditor');
+      // Open Blueprint editors re-read the widget classes (`Get <Element>` pin types).
+      AssetRepository.notifyAssetsChanged();
       notifyListeners();
       return true;
     } catch (e) {
