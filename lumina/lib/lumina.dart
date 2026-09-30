@@ -33,6 +33,7 @@ export 'data/services/glb_animation_retargeter.dart';
 export 'data/services/fbx_import_service.dart';
 export 'data/services/fbx_material_mapper.dart';
 export 'data/services/fbx_texture_locator.dart';
+export 'data/services/obj_import_service.dart';
 export 'data/services/imported_asset_names.dart';
 export 'data/services/mesh_collision_service.dart';
 export 'data/services/mesh_physics_service.dart';

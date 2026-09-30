@@ -20,6 +20,7 @@ import '../services/gltf_packer.dart';
 import '../services/import_formats.dart';
 import '../services/import_image_conversion.dart';
 import '../services/imported_asset_names.dart';
+import '../services/obj_import_service.dart';
 import '../services/obj_parser_service.dart';
 import '../services/workspace_paths.dart';
 import 'package:flutter_assimp/flutter_assimp.dart';

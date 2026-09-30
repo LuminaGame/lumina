@@ -46,7 +46,8 @@ Lessons from real sessions where a model lost many rounds. Each line: what goes 
   (`set_static_mesh_material_slot` + `save_static_mesh`), the placed actor's `material` property, a Blueprint
   `materialOverride` or the `set_material` node. Not a skeletal mesh override.
 - A new material is metallic green (template defaults) → set `baseColor` and `metallic` 0 for non-metals.
-- OBJ colours are lost (MTL `Kd` ignored) → set `baseColor` after import, or import GLB / glTF.
+- An imported OBJ is grey / untextured → its `.mtl` or a texture was not found (the Output Log names it): put it next
+  to the OBJ (or choose the Textures Folder) and import again.
 - A material that does not compile → read `compile_material`'s issues: matc's messages with their `.mat` lines; see `filament-materials`.
 
 ## Lights and camera

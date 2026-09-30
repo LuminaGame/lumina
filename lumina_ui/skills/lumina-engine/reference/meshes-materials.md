@@ -38,8 +38,10 @@
 | At run time | node `set_material` (`element_index`, `material` = the material path) on a mesh component | that component, one section |
 
 - A skeletal mesh component's `materialOverride` is not drawn yet; use its mesh's slots.
-- OBJ import ignores the MTL file (colour `Kd`, dissolve `d`): the material comes out opaque grey; set its
-  `baseColor` / `blending` after import, or convert the OBJ to glTF first.
+- OBJ import reads the `.mtl` its `mtllib` names and the textures that MTL references, from next to the OBJ:
+  `Kd` colour, `d` / `Tr` transparency (`blending : fade`), `map_Kd`, `map_Bump` / `bump` / `norm` (normal map),
+  map_d (cut-out → `masked`, else `fade`) and `map_Ks`. Keep the `.mtl` and its textures beside the OBJ (or pick
+  the textures' folder as Textures Folder); a missing one is named in the Output Log and the import goes on without it.
 - A level actor's `material` that is not compiled (or not found) is not drawn: the mesh keeps its own and the
   Output Log (and the `set_actor_property` reply) says why.
 - Several colours of one mesh: `duplicate_asset` the material, change `baseColor`, `compile_material` with

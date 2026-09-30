@@ -18,6 +18,7 @@ Editöre dönük veri katmanı, birinci bölüm: domain use case'leri (level kay
 - [`lib/data/services/game_template_service.dart`](#libdataservicesgame_template_servicedart)
 - [`lib/data/services/glb_parser_service.dart`](#libdataservicesglb_parser_servicedart)
 - [`lib/data/services/level_template_service.dart`](#libdataserviceslevel_template_servicedart)
+- [`lib/data/services/obj_import_service.dart`](#libdataservicesobj_import_servicedart)
 - [`lib/data/services/obj_parser_service.dart`](#libdataservicesobj_parser_servicedart)
 - [`lib/data/services/plugin_host_patcher_service.dart`](#libdataservicesplugin_host_patcher_servicedart)
 - [`lib/data/services/plugin_registry_service.dart`](#libdataservicesplugin_registry_servicedart)
@@ -442,6 +443,37 @@ The templates `File → New Level…` offers, in dialog order.
 | Metot / Getter | İmzası | Ne İşe Yarar? |
 | :--- | :--- | :--- |
 | `byId` | `static LevelTemplate byId(String? id)` | Resolves [id] to a template; unknown ids fall back to [standard]. |
+
+## `lib/data/services/obj_import_service.dart`
+
+### `class MtlMaterial`
+
+Bir Wavefront `.mtl` dosyasının tek bir `newmtl` bloğu: `name`, `diffuse` (`Kd`), `dissolve` (`d`), `opacity` (`d`, yoksa `1 - Tr`, yoksa 1), `diffuseMap` (`map_Kd`), `normalMap` (`norm`, `map_Bump` / `bump`), `alphaMap` (`map_d`), `specularMap` (`map_Ks`). Doku yolları yazıldığı gibidir, harita seçenekleri (`-bm 1`, `-o u v w`, `-clamp on`, …) çıkarılır; yol boşluk içerebilir.
+
+### `class ObjImportResult`
+
+Import hattı için dönüştürülmüş bir OBJ dosyası: `glb` (MTL değerleriyle materyaller, bulunan dokular gömülü), `materialLibraries` (`mtllib` adları), `missingMaterialLibraries`, `missingTextures` (MTL'nin yazdığı `path`, `file`, `uses`: onu isteyen materyal ve slot) ve `embeddedTextures`.
+
+### `abstract final class ObjImportService`
+
+Import hattı için OBJ → GLB. Asset deposu her `.obj`'yi bunun üzerinden hazırlar (Content Browser import'u ve sürükle-bırak, klasör import'u, MCP `import_asset` aracı, aynı dosyayı yeniden içe aktarmak); dönüşüm kaynak dosyanın kendi klasöründen yapılır, böylece `.mtl` dosyası ve dokuları bulunur. Geometriyi Assimp dönüştürür; MTL burada da okunur ve glTF materyallerine adlarıyla uygulanır:
+
+- `Kd` → base colour; `d`, yalnızca `Tr` varsa `1 - Tr`, 1'in altındaysa → alfa ve `BLEND` (`blending : fade` olarak çizilir);
+- `map_Kd` → base colour dokusu (renk faktörü beyaza döner), `map_Bump` / `bump` / `norm` → normal dokusu, `map_Ks` → specular dokusu (`specularMap`, reflectance olarak çizilir);
+- `map_d` → base colour dokusunun alfası: `map_d` görüntüsü (alfa kanalı, yoksa parlaklığı) diffuse görüntüye işlenir, ikisi aynı dosyayı gösteriyorsa olduğu gibi kullanılır; bu alfa yalnızca tam saydam ve tam opak texel'lerden oluşuyorsa (kenar yumuşatmaya izin verilir) `MASK` (eşik 0.5), değilse `BLEND`.
+
+`mtllib` adları önce OBJ'ye göre yazıldığı gibi, sonra OBJ'nin klasöründe büyük/küçük harf fark etmeksizin dosya adıyla (ardından Assimp gibi `<obj adı>.mtl`) çözülür; doku yolları FBX'teki gibi ([FbxTextureLocator]): yazıldığı gibi, OBJ'ye göre, sonra OBJ'nin klasöründe, Import penceresinin Textures Folder'ında ve alışılmış `Textures/` klasörlerinde dosya adıyla. Hiçbir yerde bulunamayan bir materyal kütüphanesi veya doku için Output Log'a onu adlandıran tek bir uyarı yazılır; import onsuz devam eder. Hiçbir mesh'in kullanmadığı materyaller (Assimp'in `DefaultMaterial`'ı) atılır. Assimp dosyayı dönüştüremezse OBJ olduğu gibi hazırlanır.
+
+**Members:**
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `isObj` | `static bool isObj(String path)` |  |
+| `convert` | `static Future<ObjImportResult?> convert(String objPath, {List<String> textureSearchDirs = const []})` | [convertSync] arka plan isolate'inde. |
+| `convertSync` | `static ObjImportResult? convertSync(String objPath, {List<String> textureSearchDirs = const []})` | Assimp dosyayı dönüştüremezse (köprü yüklü değil ya da OBJ okunamıyor) null. |
+| `materialLibraries` | `static List<String> materialLibraries(String source)` | Bir OBJ [source]'unun `mtllib` adları, sırayla (ad boşluk içerebilir). |
+| `locateMaterialLibrary` | `static File? locateMaterialLibrary(File objFile, String name)` | Bir `mtllib` [name]'inin gösterdiği dosya: OBJ'ye göre yazıldığı gibi (veya mutlak), sonra OBJ'nin klasöründe büyük/küçük harf fark etmeksizin dosya adıyla. |
+| `parseMtl` | `static List<MtlMaterial> parseMtl(String source)` | Bir MTL [source]'unun materyalleri. |
 
 ## `lib/data/services/obj_parser_service.dart`
 

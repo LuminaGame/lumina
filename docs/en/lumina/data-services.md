@@ -18,6 +18,7 @@ The editor-facing data layer, part one: the domain use cases (save level, import
 - [`lib/data/services/game_template_service.dart`](#libdataservicesgame_template_servicedart)
 - [`lib/data/services/glb_parser_service.dart`](#libdataservicesglb_parser_servicedart)
 - [`lib/data/services/level_template_service.dart`](#libdataserviceslevel_template_servicedart)
+- [`lib/data/services/obj_import_service.dart`](#libdataservicesobj_import_servicedart)
 - [`lib/data/services/obj_parser_service.dart`](#libdataservicesobj_parser_servicedart)
 - [`lib/data/services/plugin_host_patcher_service.dart`](#libdataservicesplugin_host_patcher_servicedart)
 - [`lib/data/services/plugin_registry_service.dart`](#libdataservicesplugin_registry_servicedart)
@@ -442,6 +443,37 @@ The templates `File → New Level…` offers, in dialog order.
 | Method / Getter | Signature | Purpose & Description |
 | :--- | :--- | :--- |
 | `byId` | `static LevelTemplate byId(String? id)` | Resolves [id] to a template; unknown ids fall back to [standard]. |
+
+## `lib/data/services/obj_import_service.dart`
+
+### `class MtlMaterial`
+
+One `newmtl` block of a Wavefront `.mtl` file: `name`, `diffuse` (`Kd`), `dissolve` (`d`), `opacity` (`d`, else `1 - Tr`, else 1), `diffuseMap` (`map_Kd`), `normalMap` (`norm`, `map_Bump` / `bump`), `alphaMap` (`map_d`), `specularMap` (`map_Ks`). Texture paths are as written, with map options (`-bm 1`, `-o u v w`, `-clamp on`, …) removed; a path may contain spaces.
+
+### `class ObjImportResult`
+
+An OBJ file converted for the import pipeline: `glb` (the materials with their MTL values, found textures embedded), `materialLibraries` (the `mtllib` names), `missingMaterialLibraries`, `missingTextures` (`path` as the MTL wrote it, `file`, `uses`: the material and slot that wanted it) and `embeddedTextures`.
+
+### `abstract final class ObjImportService`
+
+OBJ → GLB for the import pipeline. The asset repository stages every `.obj` through it (Content Browser import and drag and drop, folder import, the MCP `import_asset` tool, importing the same file again), converting from the source file's own folder so its `.mtl` and textures resolve. Assimp converts the geometry; the MTL is also read here and applied to the glTF materials by name:
+
+- `Kd` → base colour; `d`, or `1 - Tr` when only `Tr` is given, below 1 → alpha and `BLEND` (drawn as `blending : fade`);
+- `map_Kd` → base colour texture (the colour factor turns white), `map_Bump` / `bump` / `norm` → normal texture, `map_Ks` → specular texture (`specularMap`, drawn as reflectance);
+- `map_d` → the base colour texture's alpha: the `map_d` image (its alpha channel, else its luminance) is baked into the diffuse image, or used as it is when both name the same file; `MASK` (cutoff 0.5) when that alpha only has clear and opaque texels (anti-aliased edges allowed), `BLEND` otherwise.
+
+`mtllib` names resolve as written relative to the OBJ, then by file name in any case in its folder (then `<obj name>.mtl`, as Assimp does); texture paths like an FBX's ([FbxTextureLocator]): as written, relative to the OBJ, then by file name in the OBJ's folder, the Import dialog's Textures Folder and the usual `Textures/` folders. A material library or texture found nowhere gets one Output Log warning naming it; the import goes on without it. Materials no mesh uses (Assimp's `DefaultMaterial`) are dropped. When Assimp cannot convert the file, the OBJ is staged as it is.
+
+**Members:**
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `isObj` | `static bool isObj(String path)` |  |
+| `convert` | `static Future<ObjImportResult?> convert(String objPath, {List<String> textureSearchDirs = const []})` | [convertSync] in a background isolate. |
+| `convertSync` | `static ObjImportResult? convertSync(String objPath, {List<String> textureSearchDirs = const []})` | Null when Assimp cannot convert the file (the bridge is not loaded or the OBJ is unreadable). |
+| `materialLibraries` | `static List<String> materialLibraries(String source)` | The `mtllib` names of an OBJ's [source], in order (a name may contain spaces). |
+| `locateMaterialLibrary` | `static File? locateMaterialLibrary(File objFile, String name)` | The file an `mtllib` [name] refers to: as written relative to the OBJ (or absolute), then by file name in any case in the OBJ's folder. |
+| `parseMtl` | `static List<MtlMaterial> parseMtl(String source)` | The materials of an MTL [source]. |
 
 ## `lib/data/services/obj_parser_service.dart`
 
