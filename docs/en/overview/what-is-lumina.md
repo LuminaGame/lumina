@@ -40,7 +40,7 @@ Plugins extend the editor through `lumina_editor_api`, a small contract package 
 | `flutter_riglogic` | tools | Dart FFI bindings to MetaHuman RigLogic |
 | `flutter_gstreamer` | tools | Dart FFI bindings to GStreamer, used to encode smoke-test videos |
 | `lumina_smoke` | tools | The smoke-test system: artifacts, video checks and the report runner |
-| `lumina_mouse_capture` | tools | Pointer capture for games and Play-In-Editor (Linux) |
+| `lumina_mouse_capture` | tools | Pointer capture for games and Play-In-Editor (Linux, Windows) |
 
 See the [repository map](repositories.md) for where each package lives and the [layered architecture](layers.md) for how they depend on each other.
 

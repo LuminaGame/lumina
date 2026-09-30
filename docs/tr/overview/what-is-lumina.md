@@ -40,7 +40,7 @@ Eklentiler editörü, yalnızca `lumina`'ya bağımlı küçük bir sözleşme p
 | `flutter_riglogic` | tools | MetaHuman RigLogic için Dart FFI binding'leri |
 | `flutter_gstreamer` | tools | GStreamer için Dart FFI binding'leri; smoke test videolarını encode etmek için kullanılır |
 | `lumina_smoke` | tools | Smoke test sistemi: artifact'ler, video kontrolleri ve rapor çalıştırıcısı |
-| `lumina_mouse_capture` | tools | Oyunlar ve Play-In-Editor için pointer capture (Linux) |
+| `lumina_mouse_capture` | tools | Oyunlar ve Play-In-Editor için pointer capture (Linux, Windows) |
 
 Her paketin nerede durduğu için [repository haritasına](repositories.md), birbirlerine nasıl bağlandıkları için [katmanlı mimariye](layers.md) bakın.
 
