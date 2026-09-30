@@ -40,6 +40,7 @@ import '../tools/level_tools.dart';
 import '../tools/log_tools.dart';
 import '../tools/material_tools.dart';
 import '../tools/play_testing_tools.dart';
+import '../tools/pie_sequence_tool.dart';
 import '../tools/play_tools.dart';
 import '../tools/project_settings_tools.dart';
 import '../tools/selection_tools.dart';
@@ -172,6 +173,7 @@ class McpServerService extends ChangeNotifier {
     registerEditorPreferencesTools(tools, viewModel);
     registerBuildTools(tools, viewModel, jobs);
     registerPlayTestingTools(tools, viewModel, playTesting, viewportBoundaryKey: viewportBoundaryKey);
+    registerPieSequenceTool(tools, viewModel, playTesting, viewportBoundaryKey: viewportBoundaryKey);
     // Content Browser organisation, Plugins, the Marketplace,
     // Source Control and Clear Derived Data Cache.
     registerContentTools(tools, viewModel, sessions, jobs);

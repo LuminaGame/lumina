@@ -683,6 +683,64 @@ The Physics Asset editor as MCP tools: bind a skeletal mesh, add / replace / rem
 | `validate_physics_asset` | readOnly | Validate physics asset | The toolbar's Validate: runs the real narrow phase over every body pair in bind pose and lists the overlapping pairs (penetration in cm) and the disabled pairs it skipped, plus the document errors that block Save. |
 | `save_physics_asset` | mutating | Save physics asset | The tab's Save: writes the bodies (cm, schema v2), constraints, disabled pairs and the skeletal mesh reference. |
 
+## `lib/ui/features/mcp_server/tools/pie_sequence_tool.dart`
+
+`const int kMcpMaxSequenceSteps`
+
+`pie_sequence`'s step limit (50).
+
+`const int kMcpMaxSequenceScreenshots`
+
+`pie_sequence`'s screenshot limit (10).
+
+`const int kMcpSequenceSettleFrames`
+
+The frames `pie_sequence` steps after starting Play, at most, until the player's pawn exists (30).
+
+`const Duration kMcpSequenceMountTimeout`
+
+How long `pie_sequence` waits for a Play it started to mount (15 s).
+
+`void registerPieSequenceTool( McpToolRegistry registry, EditorViewModel vm, McpPlayTesting play, { required GlobalKey viewportBoundaryKey, })`
+
+A scripted play test in one call: `pie_sequence` starts Play when needed, runs its steps through the play-testing tools' own handlers (`pie_key`, `pie_action`, `pie_axis`, `pie_click`, `pie_mouse_move`, `pie_play_for`, `pie_advance`), captures labelled viewport screenshots and checks light assertions on the player, and returns a per-step log. It stops at the first failing step, releases the keys the calling session holds, and stops a Play it started when a step fails.
+
+Steps: `{"key": "W", "hold_ms": 800}` (a tap held for that much game time, stepped at 60 fps), `{"key": "W", "state": "down" | "up"}`, `{"action": "IA_Jump"}`, `{"action": "IA_Move", "value": [0, 1], "hold_ms": 500}`, `{"axis": "MouseX", "value": 40}`, `{"click": {"x": 640, "y": 360}}`, `{"mouse_move": {"dx": 30, "dy": 0}}`, `{"play_ms": 500}` (wall-clock play in the viewport), `{"advance_frames": 10}`, `{"screenshot": true}`, `{"expect": {"player_moved": true, "min_distance_cm": 100, "log_contains": "text"}}`; any step may carry a `label`. Arguments: `steps` (required), `start` (default true), `stop_at_end` (default false), `keep_pie_on_error` (default false), `screenshot_max_width` (default 1280). Limits (checked before anything runs, `-32602`): 50 steps, 10 screenshots, 10 000 ms of game time in all. A Play the sequence starts loads its meshes over the first wall-clock moment, so begin with `{"play_ms": 1000}` before a first screenshot.
+
+Example call:
+
+```json
+{"name": "pie_sequence", "arguments": {"screenshot_max_width": 1280, "steps": [
+  {"play_ms": 1500, "label": "land"},
+  {"screenshot": true, "label": "before walking"},
+  {"key": "W", "hold_ms": 1000, "label": "walk"},
+  {"action": "IA_Jump", "label": "jump"},
+  {"advance_frames": 12},
+  {"screenshot": true, "label": "after walking and jumping"},
+  {"expect": {"player_moved": true, "min_distance_cm": 200}}
+]}}
+```
+
+Result (content: the JSON summary, then `Step 1 "before walking": 1280×521 PNG of the viewport, player at [...] cm.` + image, `Step 5 "after walking and jumping": …` + image; `structuredContent` abridged):
+
+```json
+{"ok": true, "started_pie": true, "stopped_pie": false, "released_keys": [],
+ "steps": [{"index": 2, "kind": "key", "label": "walk", "ok": true,
+            "result": {"key": "KeyW", "action": "tap", "frames": 60, "held_keys": [], "player_location": [...]},
+            "player_location": [...], "log": [...]}, "..."],
+ "screenshots": [{"step": 1, "label": "before walking", "width": 1280, "height": 521, "player_location": [...]},
+                 {"step": 5, "label": "after walking and jumping", "width": 1280, "height": 521, "player_location": [...]}],
+ "final_status": {"playing": true, "paused": true, "held_keys": [], "...": "..."}}
+```
+
+A failing step (for example an action the project does not bind) ends the sequence: `isError: true`, `failed_step`, `error` (`Step 1 (action) failed: No input action "IA_Nope" in this project. Actions and their keys: …`); a Play the sequence started is stopped unless `keep_pie_on_error`.
+
+**Tools:**
+
+| Tool | Risk | Title | Description |
+| :--- | :--- | :--- | :--- |
+| `pie_sequence` | editorState | Run a scripted play test | A whole play test in one call: starts Play when it is not running, runs up to 50 steps (key, action, axis, click, mouse_move, play_ms, advance_frames, screenshot, expect) and leaves Play paused; returns a per-step log, the screenshots as captioned images and the final pie_status. |
+
 ## `lib/ui/features/mcp_server/tools/play_testing_tools.dart`
 
 `const int kMcpMaxAdvanceFrames`
@@ -696,6 +754,14 @@ The Physics Asset editor as MCP tools: bind a skeletal mesh, add / replace / rem
 `List<double> mcpAuthoringRotation(Quaternion q)`
 
 Authoring degrees `[x, y, z]` of a runtime rotation (the inverse of [LuminaAxes.rotation]).
+
+`McpToolResult? mcpPieRefusal(EditorViewModel vm)`
+
+Null while a Play-In-Editor world runs, else the tool error the play-testing tools answer with.
+
+`List<double>? mcpPlayerLocation(EditorViewModel vm)`
+
+Where the possessed pawn is (cm, Z up, rounded to 0.001), or null.
 
 `void registerPlayTestingTools( McpToolRegistry registry, EditorViewModel vm, McpPlayTesting play, { required GlobalKey viewportBoundaryKey, })`
 

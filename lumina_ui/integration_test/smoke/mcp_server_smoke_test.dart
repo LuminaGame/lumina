@@ -341,12 +341,12 @@ void mcpRiskAndTrashScenario(IntegrationTestWidgetsFlutterBinding binding) {
         await settle(5);
       }
 
-      // --- The catalogue: 373 tools by group, each with its risk ---------------
+      // --- The catalogue: 374 tools by group, each with its risk ---------------
       await tester.runAsync(() => client.handshake(clientName: 'claude-code'));
       await openPanel();
       await reveal(const ValueKey('mcp_catalogue_header'));
       expect(tester.widget<Text>(find.byKey(const ValueKey('mcp_catalogue_header'))).data,
-          '373 tools · 70 read-only · 38 editor state · 234 edits · 24 destructive · 7 external');
+          '374 tools · 70 read-only · 39 editor state · 234 edits · 24 destructive · 7 external');
       for (final g in ['asset', 'level', 'blueprint', 'material', 'view', 'pie', 'log']) {
         await reveal(ValueKey('mcp_catalogue_group_$g'));
         await tester.tap(find.byKey(ValueKey('mcp_catalogue_group_$g')));
@@ -359,7 +359,7 @@ void mcpRiskAndTrashScenario(IntegrationTestWidgetsFlutterBinding binding) {
       await tester.runAsync(() => viewer.handshake(clientName: 'viewer'));
       final viewerTools = (await tester.runAsync(viewer.listTools))!;
       expect(viewerTools, hasLength(47));
-      debugPrint('[mcp04_smoke] a ?groups=level,view session lists ${viewerTools.length} tools (the full catalogue: 373)');
+      debugPrint('[mcp04_smoke] a ?groups=level,view session lists ${viewerTools.length} tools (the full catalogue: 374)');
 
       // --- One agent call, one undo step --------------------------------------
       vm.selectTab(0);

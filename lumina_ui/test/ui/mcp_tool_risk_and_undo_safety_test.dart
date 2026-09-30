@@ -104,7 +104,7 @@ void main() {
     'set_viewport_snapping', 'set_show_flags', 'set_buffer_visualization', 'set_viewport_quality', // Viewport settings
     // Playtest
     'eject_pie', 'possess_pie', 'pie_key', 'pie_axis', 'pie_mouse_move', 'pie_action', 'pie_click', 'pie_type_text',
-    'pie_advance', 'pie_play_for', 'stop_standalone', 'cancel_job',
+    'pie_advance', 'pie_play_for', 'pie_sequence', 'stop_standalone', 'cancel_job',
     'set_widget_designer', // UMG designer
     // Previews and scrubbing change what the user sees, not the document
     'anim_blueprint_preview', 'set_blend_space_preview', 'animation_preview', 'scrub_sequence', 'stop_sequence',
@@ -113,10 +113,10 @@ void main() {
   };
 
   group('risk, groups and annotations', () {
-    test('the risk table: 70 read-only, 38 editor state, 234 edits, 24 destructive, 7 external; every tool has known groups and _meta',
+    test('the risk table: 70 read-only, 39 editor state, 234 edits, 24 destructive, 7 external; every tool has known groups and _meta',
         () async {
       final tools = await client.listTools();
-      expect(tools, hasLength(373));
+      expect(tools, hasLength(374));
       Set<String> withRisk(String r) => {
             for (final t in tools)
               if ((t['_meta'] as Map)['lumina/risk'] == r) t['name'] as String,
@@ -281,7 +281,7 @@ void main() {
       // A tool may sit in more than one group (list_component_types: component + blueprint).
       final distinct = {for (final g in groups['groups'] as List) ...((g as Map)['tools'] as List)};
       expect(distinct, hasLength(groups['tool_count'] as int));
-      expect(groups['tool_count'], 373);
+      expect(groups['tool_count'], 374);
       expect(groups['active_groups'], ['level']);
       expect(groups['max_risk'], 'external');
     });

@@ -23,7 +23,8 @@ import '../../test/helpers/scaffold_game_project.dart';
 /// the game — W held, the mannequin running toward the barrel, a jump — and
 /// reads the actors back; then runs Build All as a job and starts a real
 /// `flutter build` Cook & Package, polls it and cancels it. The editor reacts
-/// on video.
+/// on video. A second scenario runs the same walk and jump as one
+/// `pie_sequence` call with two screenshots.
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
@@ -242,6 +243,141 @@ void main() {
       } catch (_) {}
     }
   }, timeout: const Timeout(Duration(minutes: 20)));
+
+  const sequenceScenario = 'MCP Smoke: pie_sequence walks the mannequin toward a barrel and jumps in one call, with two screenshots';
+  testWidgets(sequenceScenario, (tester) async {
+    final barrel = File('${SmokeArtifacts.testAssetsDir.path}/Props/Barrels/fuel_barrel_red.glb');
+    expect(barrel.existsSync(), isTrue, reason: 'test-assets must hold the fuel barrel');
+    final usedAssets = [barrel.path];
+
+    final root = Directory.systemTemp.createTempSync('lumina_smoke_mcpseq_');
+    const name = 'smoke_mcp_sequence';
+    final projectDir = (await tester.runAsync(() => scaffoldGameProject(root, name: name, widgetLibrary: 'flutter')))!;
+    final project = LuminaProject.fromMap(
+        Map<String, dynamic>.from(jsonDecode(File('$projectDir/$name.lmproject').readAsStringSync()) as Map));
+    final vm = EditorViewModel(initialProject: project, projectLocation: root.path);
+    await tester.runAsync(vm.ensureDefaultLevelAssets);
+    await tester.runAsync(() => vm.processImportPipeline(sourceFilePath: barrel.path));
+    final barrelMesh = vm.realAssets.firstWhere((a) => a.type == AssetType.filamesh && a.fileName.contains('fuel_barrel_red'));
+
+    final server = vm.mcpServer;
+    expect(await tester.runAsync(() => server.start(port: 0)), isTrue);
+    final client = McpTestClient(server.url!, server.token);
+
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    final boundaryKey = GlobalKey();
+    try {
+      await tester.pumpWidget(RepaintBoundary(
+        key: boundaryKey,
+        child: ShadcnApp(theme: luminaEditorTheme(), home: MainEditorView(viewModel: vm)),
+      ));
+      for (var i = 0; i < 40; i++) {
+        await tester.pump(const Duration(milliseconds: 16));
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 16)));
+      }
+      final rec = SmokeRecorder(tester, boundary: find.byKey(boundaryKey));
+
+      /// A call the editor answers while the recorder keeps pumping frames.
+      Future<McpToolReply> call(String tool, [Map<String, Object?> args = const {}]) async {
+        McpToolReply? reply;
+        Object? error;
+        unawaited(client.callTool(tool, args).then((r) => reply = r, onError: (Object e) => error = e));
+        while (reply == null && error == null) {
+          await rec.hold(const Duration(milliseconds: 66));
+        }
+        if (error != null) throw error!;
+        return reply!;
+      }
+
+      await tester.runAsync(() => client.handshake(clientName: 'claude-code'));
+
+      // A first sequence finds where W walks from the player start (and
+      // stops Play at its end); the barrel goes 8 m along that line.
+      final probe = await call('pie_sequence', {
+        'stop_at_end': true,
+        'steps': [
+          {'play_ms': 1500, 'label': 'land'},
+          {'key': 'W', 'hold_ms': 500, 'label': 'probe forward'},
+        ],
+      });
+      expect(probe.isError, isFalse, reason: probe.text);
+      expect(probe.data['stopped_pie'], isTrue);
+      final probeSteps = (probe.data['steps'] as List).cast<Map>();
+      final p0 = (probeSteps[0]['player_location'] as List).cast<num>();
+      final p1 = (probeSteps[1]['player_location'] as List).cast<num>();
+      final dx = (p1[0] - p0[0]).toDouble(), dy = (p1[1] - p0[1]).toDouble();
+      final len = math.sqrt(dx * dx + dy * dy);
+      expect(len, greaterThan(50), reason: 'W walks the pawn');
+      final barrelAt = [p0[0] + 800 * dx / len, p0[1] + 800 * dy / len, 0.0];
+      await rec.hold(const Duration(milliseconds: 500));
+      expect((await call('spawn_actor_from_asset', {'asset': barrelMesh.relativePath, 'location': barrelAt})).isError, isFalse);
+      await rec.hold(const Duration(milliseconds: 800));
+
+      // One call: Play starts, the pawn lands while the viewport loads its
+      // meshes, a screenshot, W for a second, a jump, a screenshot mid-air,
+      // and the check that the player moved.
+      final reply = await call('pie_sequence', {
+        'screenshot_max_width': 1280,
+        'steps': [
+          {'play_ms': 1500, 'label': 'land'},
+          {'screenshot': true, 'label': 'before walking'},
+          {'key': 'W', 'hold_ms': 1000, 'label': 'walk toward the barrel'},
+          {'action': 'IA_Jump', 'label': 'jump'},
+          {'advance_frames': 12},
+          {'screenshot': true, 'label': 'after walking and jumping'},
+          {'expect': {'player_moved': true, 'min_distance_cm': 200}},
+        ],
+      });
+      expect(reply.isError, isFalse, reason: reply.text);
+      final data = reply.data;
+      final content = reply.content;
+      final pngs = <Uint8List>[];
+      for (var i = 1; i < content.length; i++) {
+        if (content[i]['type'] != 'image') continue;
+        expect(content[i - 1]['text'], contains('Step'), reason: 'each image follows its caption');
+        pngs.add(Uint8List.fromList(base64Decode(content[i]['data'] as String)));
+      }
+      expect(pngs, hasLength(2));
+      SmokeArtifacts.saveScreenshot('mcp_sequence_before_walking', pngs[0], usedAssets: usedAssets);
+      SmokeArtifacts.saveScreenshot('mcp_sequence_after_walking_and_jumping', pngs[1], usedAssets: usedAssets);
+      final shots = (data['screenshots'] as List).cast<Map>();
+      final a = (shots[0]['player_location'] as List).cast<num>();
+      final b = (shots[1]['player_location'] as List).cast<num>();
+      final moved = math.sqrt(math.pow(b[0] - a[0], 2) + math.pow(b[1] - a[1], 2));
+      debugPrint('[mcp_sequence_smoke] the pawn moved ${moved.toStringAsFixed(0)} cm between the screenshots; '
+          'z ${a[2].toStringAsFixed(0)} → ${b[2].toStringAsFixed(0)}');
+      expect(moved, greaterThan(200));
+      expect(b[2], greaterThan(a[2]), reason: 'mid-jump');
+      expect(data['released_keys'], isEmpty, reason: 'the tap released W itself');
+      expect((data['final_status'] as Map)['paused'], isTrue);
+
+      // The paused game in the editor, then Play stopped.
+      await rec.hold(const Duration(milliseconds: 1500));
+      final shot = await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey));
+      SmokeArtifacts.saveScreenshot('mcp_sequence_editor_paused_after_sequence', shot, usedAssets: usedAssets);
+      expect((await call('stop_pie')).isError, isFalse);
+      await rec.hold(const Duration(milliseconds: 500));
+      for (var i = 0; i < 60 && rec.recorded < const Duration(milliseconds: 10300); i++) {
+        await call('set_camera', {'yaw': 20.0 + 8 * (i + 1)});
+        await rec.hold(const Duration(milliseconds: 200));
+      }
+      rec.save(sequenceScenario, usedAssets: usedAssets);
+    } finally {
+      client.close();
+      await tester.runAsync(server.stop);
+      await tester.pumpWidget(const SizedBox());
+      vm.dispose();
+      try {
+        root.deleteSync(recursive: true);
+      } catch (_) {}
+    }
+  }, timeout: const Timeout(Duration(minutes: 10)));
 }
 
 /// Pids of running `flutter build <platform>` tool processes (the Flutter

@@ -174,6 +174,19 @@ pie_click {x:640, y:360} ; pie_type_text {text:"hello", submit:true}   → UMG b
 stop_pie {}                                                        → held keys released, the level restored
 ```
 
+The same walk-and-jump check as **one call** (Play started if needed, left paused; a small model needs no round trips):
+
+```
+pie_sequence {screenshot_max_width:1280, steps:[
+  {play_ms:1500, label:"land"},                                     → real time: the pawn lands, the viewport loads its meshes
+  {screenshot:true, label:"before walking"},
+  {key:"W", hold_ms:1000, label:"walk"},                            → W held for 60 stepped frames, then released
+  {action:"IA_Jump"}, {advance_frames:12},
+  {screenshot:true, label:"after walking and jumping"},
+  {expect:{player_moved:true, min_distance_cm:200}}]}
+→ steps[] (player_location and new log lines after each), two captioned PNGs, final_status; the first failing step ends it
+```
+
 Frame-exact checks use `pie_advance` (deterministic, works while paused); `pie_play_for` needs the level viewport showing. To change what `IA_Jump` presses, rebind it (`edit_project_input`, `apply_project_settings`) and `start_pie` again. The standalone game (`play_standalone`) is a separate process: no input or actor readback there.
 
 ## 5d. Change a setting, cook and poll

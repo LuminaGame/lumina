@@ -34,6 +34,26 @@ List<double> mcpAuthoringRotation(Quaternion q) {
 
 List<double> _cm(List<double> v) => [for (final c in v) (c * 1000).roundToDouble() / 1000];
 
+/// Null while a Play-In-Editor world runs, else the tool error the
+/// play-testing tools answer with.
+McpToolResult? mcpPieRefusal(EditorViewModel vm) {
+  final controller = vm.pieController;
+  if (!vm.isPlaying && !controller.isPlaying) {
+    return McpToolResult.error('Play-In-Editor is not running; call start_pie first.');
+  }
+  if (!controller.isPlaying || controller.game == null) {
+    return McpToolResult.error('Play-In-Editor has no running game world: the level viewport is not shown, so Play '
+        'has not mounted. Show the level tab (select_tab 0) and try again, or stop_pie.');
+  }
+  return null;
+}
+
+/// Where the possessed pawn is (cm, Z up, rounded to 0.001), or null.
+List<double>? mcpPlayerLocation(EditorViewModel vm) {
+  final pawn = vm.pieController.possessedPawn;
+  return pawn == null ? null : _cm(LuminaAxes.toAuthoringLocation(pawn.actorLocation));
+}
+
 /// Play-testing tools (group `pie`): keys, axes, mouse and
 /// Enhanced Input actions into the running Play-In-Editor game — through
 /// the project's own key bindings, so triggers and modifiers run as for a
@@ -49,21 +69,9 @@ void registerPlayTestingTools(
   final controller = vm.pieController;
 
   /// Null while a PIE world runs, else the refusal.
-  McpToolResult? refuse() {
-    if (!vm.isPlaying && !controller.isPlaying) {
-      return McpToolResult.error('Play-In-Editor is not running; call start_pie first.');
-    }
-    if (!controller.isPlaying || controller.game == null) {
-      return McpToolResult.error('Play-In-Editor has no running game world: the level viewport is not shown, so Play '
-          'has not mounted. Show the level tab (select_tab 0) and try again, or stop_pie.');
-    }
-    return null;
-  }
+  McpToolResult? refuse() => mcpPieRefusal(vm);
 
-  List<double>? playerLocation() {
-    final pawn = controller.possessedPawn;
-    return pawn == null ? null : _cm(LuminaAxes.toAuthoringLocation(pawn.actorLocation));
-  }
+  List<double>? playerLocation() => mcpPlayerLocation(vm);
 
   Map<String, Object?> actorJson(LuminaActor a) {
     final key = a.key;

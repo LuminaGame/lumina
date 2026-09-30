@@ -264,6 +264,7 @@ Input goes through the project's own bindings (Project Settings → Input), so t
 | `pie_advance` | `frames` (1–600), `dt?` (default 1/60), `screenshot?`, `actors?` | pauses, steps exactly `frames`, logs one `PIE advanced N frames` line: `{frames, player_location, held_keys, frames_advanced, log[], actors?}` + a PNG with `screenshot: true`; stays paused |
 | `pie_play_for` | `ms` (≤ 10000), `screenshot?`, `actors?`, `pause_after?` (default true) | resumes, lets the viewport run the game for `ms`, pauses again; same shape as `pie_advance` |
 | `pie_get_actors` | `ids?`, `class_contains?`, `limit?` (100) | `actors[{id (editor id or null), class (Blueprint or native), native_class, location, rotation, velocity (characters), is_possessed_pawn}]` |
+| `pie_sequence` | `steps` (1–50), `start?` (default true), `stop_at_end?` (default false), `keep_pie_on_error?` (default false), `screenshot_max_width?` (1280) | a scripted play test in one call, the only one here that starts Play itself (as `start_pie`, then settles until the pawn exists). Steps, each with one kind and an optional `label`: `{key:"W", hold_ms:800}` (a tap held for that game time, 60 fps frames) or `hold_frames`, `{key, state:"down"/"up"}`, `{action:"IA_Jump"}` / `{action:"IA_Move", value:[0,1], hold_ms:500}`, `{axis:"MouseX", value:40}`, `{click:{x,y}}`, `{mouse_move:{dx,dy}}`, `{play_ms:500}` (wall clock), `{advance_frames:10}`, `{screenshot:true}`, `{expect:{player_moved, min_distance_cm, log_contains}}` (against where the player was when the steps began). Limits: 50 steps, 10 screenshots, 10 000 ms of game time (`-32602` before anything runs). Returns `{ok, started_pie, stopped_pie, released_keys, steps[{index, kind, label, ok, result, player_location, log[], error?}], screenshots[{step, label, width, height, player_location}], final_status}` + per screenshot a caption `Step N "label": W×H PNG …` and the image. The first failing step ends it (`isError`, `failed_step`, `error`); your held keys are released; a Play it started is stopped on error unless `keep_pie_on_error`, otherwise Play is left paused. Refused while a sub-editor tab is active (`select_tab 0`) |
 
 ## Jobs (group core)
 
@@ -498,7 +499,7 @@ Not offered because no editor view does it: assigning an actor to a data layer, 
 | `start_build` / `launch_web_build` | build | external | true | false |
 | `standalone_status` / `pie_get_actors` | pie | readOnly | false | true |
 | `eject_pie` / `possess_pie` / `stop_standalone` | pie | editorState | false | true |
-| `pie_key` / `pie_axis` / `pie_mouse_move` / `pie_action` / `pie_click` / `pie_type_text` / `pie_advance` / `pie_play_for` | pie | editorState | false | false |
+| `pie_key` / `pie_axis` / `pie_mouse_move` / `pie_action` / `pie_click` / `pie_type_text` / `pie_advance` / `pie_play_for` / `pie_sequence` | pie | editorState | false | false |
 | `play_standalone` | pie | external | true | false |
 
 ## Risk, groups and annotations
