@@ -215,7 +215,7 @@ A top-level menu a plugin owns. Fill it with `registerMenuItem('<title>/…', co
 | Member | Signature | Description |
 | :--- | :--- | :--- |
 | `pluginName` | `String get pluginName` |  |
-| `register` | `void register(LuminaEditorContext context)` |  |
+| `register` | `void register(LuminaEditorContext context)` | Adds this plugin's contributions to [context]. The editor's layout is loaded first, so [LuminaEditorContext.panels] reports the saved visibility here. If it throws, the editor drops what it registered, logs the error under [pluginName] and shows it in the Plugin Manager; the other plugins and the editor go on. |
 | `unregister` | `void unregister(LuminaEditorContext context)` | The last call a plugin gets, after [onEditorShutdown]. |
 | `onProjectOpened` | `void onProjectOpened(EditorProjectInfo project)` | The editor has [project] open; called after [register]. |
 | `onProjectClosing` | `Future<void> onProjectClosing() async` | The project is closing: finish pending writes. Bounded by a host timeout. |

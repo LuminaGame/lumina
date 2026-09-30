@@ -215,7 +215,7 @@ A top-level menu a plugin owns. Fill it with `registerMenuItem('<title>/…', co
 | Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `pluginName` | `String get pluginName` |  |
-| `register` | `void register(LuminaEditorContext context)` |  |
+| `register` | `void register(LuminaEditorContext context)` | Bu eklentinin katkılarını [context]'e ekler. Editörün layout'u önce yüklenir, bu yüzden [LuminaEditorContext.panels] burada kayıtlı görünürlüğü verir. Hata fırlatırsa editör eklentinin kaydettiklerini geri alır, hatayı [pluginName] adıyla Output Log'a yazar ve Plugin Manager'da gösterir; diğer eklentiler ve editör çalışmaya devam eder. |
 | `unregister` | `void unregister(LuminaEditorContext context)` | The last call a plugin gets, after [onEditorShutdown]. |
 | `onProjectOpened` | `void onProjectOpened(EditorProjectInfo project)` | The editor has [project] open; called after [register]. |
 | `onProjectClosing` | `Future<void> onProjectClosing() async` | The project is closing: finish pending writes. Bounded by a host timeout. |

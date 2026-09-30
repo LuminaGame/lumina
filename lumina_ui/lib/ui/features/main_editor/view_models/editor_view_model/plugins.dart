@@ -53,11 +53,20 @@ mixin _EditorPlugins on _EditorViewModelState {
     extensionRegistry.setPluginTitles({
       for (final e in pluginRegistry.entries) e.descriptor.name: e.descriptor.friendlyName ?? e.descriptor.name,
     });
-    const menuIssueTypes = {PluginIssueType.invalidMenuPath, PluginIssueType.menuConflict, PluginIssueType.tooManyMenus};
+    // So does a `register` that threw.
+    const registrationIssueTypes = {
+      PluginIssueType.invalidMenuPath,
+      PluginIssueType.menuConflict,
+      PluginIssueType.tooManyMenus,
+      PluginIssueType.registrationFailed,
+    };
     for (final entry in pluginRegistry.entries) {
+      final name = entry.descriptor.name;
+      final error = extensionRegistry.registrationErrorOf(name);
       entry.issues = [
-        ...entry.issues.where((i) => !menuIssueTypes.contains(i.type)),
-        ...extensionRegistry.menuIssuesFor(entry.descriptor.name),
+        ...entry.issues.where((i) => !registrationIssueTypes.contains(i.type)),
+        ...extensionRegistry.menuIssuesFor(name),
+        if (error != null) PluginIssue(PluginIssueType.registrationFailed, 'Plugin $name failed to register: $error'),
       ];
     }
 

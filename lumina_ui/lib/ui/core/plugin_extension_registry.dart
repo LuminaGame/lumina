@@ -158,18 +158,43 @@ class PluginExtensionRegistry extends ChangeNotifier implements LuminaEditorHost
     notifyListeners();
   }
 
-  /// Helper to run a plugin's register within a scoped [beginRegistration]
-  /// and [endRegistration] block.
-  void registerPlugin(LuminaEditorPlugin plugin) {
-    beginRegistration(plugin.pluginName);
-    _plugins[plugin.pluginName] = plugin;
+  /// Runs [plugin]'s `register` within a scoped [beginRegistration] and
+  /// [endRegistration] block. A plugin whose `register` throws is not
+  /// registered: what it contributed before the error is removed, the error
+  /// is logged under its name and kept as its [registrationErrorOf], and the
+  /// editor goes on. Returns whether the plugin registered.
+  bool registerPlugin(LuminaEditorPlugin plugin) {
+    final name = plugin.pluginName;
+    beginRegistration(name);
+    _plugins[name] = plugin;
+    _registrationErrors.remove(name);
+    Object? error;
+    StackTrace? stack;
     try {
       plugin.register(this);
+    } catch (e, s) {
+      error = e;
+      stack = s;
+      // Drops what it registered before the error.
+      beginRegistration(name);
+      _plugins.remove(name);
     } finally {
       endRegistration();
     }
+    if (error != null) {
+      _registrationErrors[name] = '$error';
+      logger.log('Plugin $name failed to register and is not loaded: $error\n$stack', level: 'error', source: 'Plugins');
+      return false;
+    }
     onPluginRegistered?.call(plugin);
+    return true;
   }
+
+  final Map<String, String> _registrationErrors = {};
+
+  /// The error [plugin]'s `register` threw on its last registration, or
+  /// null when it registered.
+  String? registrationErrorOf(String plugin) => _registrationErrors[plugin];
 
   final Map<String, LuminaEditorPlugin> _plugins = {};
 

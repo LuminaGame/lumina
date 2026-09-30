@@ -26,6 +26,7 @@ import 'package:lumina_ui/ui/features/launcher/views/editor_build_splash.dart';
 import 'package:lumina_ui/ui/features/launcher/views/launcher_view.dart';
 import 'package:lumina_ui/ui/features/launcher/view_models/create_project_view_model.dart';
 
+import '../../test/helpers/desktop_window.dart';
 import '../../test/helpers/mcp_test_client.dart';
 import '../../test/helpers/scaffold_game_project.dart' show offlineScaffoldRunner;
 import 'package:lumina/data/services/workspace_paths.dart';
@@ -2223,252 +2224,8 @@ void main() {
   // Enabling a code plugin generates the project's own editor
   // host; the launcher builds it for real behind the splash, execs it, and a
   // project without its host asks before building.
-  testWidgets('Plugins Smoke Scenario: per-project editor build', (tester) async {
-    const name = 'Plugins Smoke Scenario: per-project editor build';
-    final flutter = Platform.isWindows ? 'flutter.bat' : 'flutter';
-    try {
-      Process.runSync(flutter, ['--version'], runInShell: Platform.isWindows);
-    } on ProcessException {
-      markTestSkipped('flutter is not on PATH: the per-project editor build needs the Flutter toolchain');
-      return;
-    }
-    tester.view.physicalSize = const Size(1920, 1080);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(tester.view.reset);
-
-    // A short temp root: MSBuild paths under <project>/.lumina/editor/build
-    // must stay below Windows' 260-character limit.
-    final temp = Directory.systemTemp.createTempSync('pe_');
-    final pDir = Directory('${temp.path}/PeGame')..createSync(recursive: true);
-    final originalHandOff = EditorHandOff.instance;
-    Process? projectEditor;
-    try {
-      // PCG is the engine's built-in (no copy in the project): enabling it
-      // is what rebuilds this project's editor with it.
-      const project = LuminaProject(projectName: 'PeGame', activeLevel: 'contents/levels/L_Main.lmas', settings: EngineScalabilitySettings(targetFps: 60));
-      File('${pDir.path}/PeGame.lmproject').writeAsStringSync(jsonEncode(project.toMap()));
-      final enginePubspec = File('${LuminaEditorHost.uiRoot}/pubspec.yaml');
-      final enginePubspecBefore = enginePubspec.readAsBytesSync();
-
-      // The build's caches in the temp root: the hooks runner passes a hook
-      // only allow-listed variables, so the native library cache follows
-      // LOCALAPPDATA (Windows) / HOME; PUB_CACHE keeps package resolution on
-      // the real pub cache.
-      final cacheBase = Directory('${temp.path}/cache')..createSync();
-      final pubCache = Platform.environment['PUB_CACHE'] ??
-          (Platform.isWindows ? '${Platform.environment['LOCALAPPDATA']}\\Pub\\Cache' : '${Platform.environment['HOME']}/.pub-cache');
-      final buildEnv = Platform.isWindows ? {'LOCALAPPDATA': cacheBase.path, 'PUB_CACHE': pubCache} : {'HOME': cacheBase.path, 'PUB_CACHE': pubCache};
-      final cache = EditorBuildCache(
-        root: Directory(EditorBuildCache.defaultRoot(environment: buildEnv).path),
-        nativeRoot: Directory('${EditorBuildCache.cacheBase(environment: buildEnv)}/native'),
-      );
-
-      // The hand-off is recorded instead of quitting the test app.
-      final starts = <List<String>>[];
-      final exits = <int>[];
-      EditorHandOff.instance = EditorHandOff(startDetached: (exe, args) async => starts.add([exe, ...args]), exitApp: exits.add);
-      EditorBuildSplash.manageNativeWindow = false;
-
-      // 1. The editor: Plugins ▸ Plugin Manager ▸ enable PCG.
-      final vm = EditorViewModel(initialProject: project, projectDirPath: temp.path, enableTimers: false);
-      await tester.runAsync(() => vm.ensureDefaultLevelAssets());
-      final boundaryKey = GlobalKey();
-      await tester.pumpWidget(RepaintBoundary(
-        key: boundaryKey,
-        child: ShadcnApp(theme: luminaEditorTheme(), home: MainEditorView(viewModel: vm)),
-      ));
-      await settle(tester);
-      final rec = SmokeRecorder(tester, boundary: find.byKey(boundaryKey));
-      Future<void> shot(String label) async =>
-          SmokeArtifacts.saveScreenshot('$name: $label', await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey)));
-      await tester.runAsync(() => Future<void>.delayed(const Duration(seconds: 1)));
-      await settle(tester);
-      await tester.tap(barItem('Plugins'));
-      await settle(tester);
-      await tester.tap(find.text('Plugin Manager...'));
-      await settle(tester);
-      await rec.hold(const Duration(seconds: 2));
-      // Find PCG with the search, then clear it.
-      final pmSearch = find.byWidgetPredicate((w) =>
-          w is TextField && w.placeholder is Text && (w.placeholder as Text).data == 'Search plugins...');
-      await tester.tap(pmSearch);
-      await rec.typeText(pmSearch, 'procedural', perCharacter: const Duration(milliseconds: 150));
-      await settle(tester);
-      expect(find.text('Procedural Content Generation'), findsWidgets);
-      await rec.hold(const Duration(seconds: 1));
-      await tester.enterText(pmSearch, '');
-      await settle(tester);
-      // PCG's details: a code plugin (an editor module), not enabled yet.
-      await tester.tap(find.text('Procedural Content Generation').first);
-      await settle(tester);
-      await rec.hold(const Duration(seconds: 2));
-      final pcgTitle = find.text('Procedural Content Generation').first;
-      final titleY = tester.getCenter(pcgTitle).dy;
-      final pcgSwitch = find.byType(Switch).evaluate().firstWhere((e) => (tester.getCenter(find.byWidget(e.widget)).dy - titleY).abs() < 40).widget as Switch;
-      expect(pcgSwitch.value, isFalse);
-      expect(vm.pluginRegistry.entries.singleWhere((e) => e.descriptor.name == 'lumina_plugin_pcg').descriptor.origin, PluginOrigin.engine,
-          reason: 'the built-in PCG, not a project copy');
-      await tester.tap(find.byWidget(pcgSwitch));
-      final host = Directory('${pDir.path}/.lumina/editor');
-      for (var i = 0; i < 100 && !File('${host.path}/pubspec.yaml').existsSync(); i++) {
-        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
-        await tester.pump();
-      }
-      await settle(tester);
-      expect(File('${host.path}/pubspec.yaml').readAsStringSync(), contains('lumina_plugin_pcg:'), reason: 'the host depends on PCG');
-      expect(find.text('Built-in Plugin'), findsNothing, reason: 'a built-in is enabled like any plugin');
-      expect((jsonDecode(File('${pDir.path}/PeGame.lmproject').readAsStringSync()) as Map)['enabled_plugins'], ['lumina_plugin_pcg']);
-      expect(File('${host.path}/lib/plugin_registrar.dart').readAsStringSync(), contains('LuminaPluginPcgPlugin()'));
-      expect(enginePubspec.readAsBytesSync(), enginePubspecBefore, reason: 'the engine pubspec is untouched');
-      expect(File('${LuminaEditorHost.uiRoot}/lib/generated/plugin_registrar.dart').existsSync(), isFalse);
-      expect(find.text("Plugin changes require rebuilding this project's editor"), findsOneWidget);
-      expect(find.text('Restart required'), findsWidgets, reason: 'the PCG row waits for the rebuild');
-      await rec.hold(const Duration(seconds: 3));
-      await shot('PCG enabled, host generated');
-
-      // Restart Editor → save, hand off to the launcher with --project.
-      await tester.tap(find.text('Restart Editor'));
-      for (var i = 0; i < 50 && exits.isEmpty; i++) {
-        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
-        await tester.pump();
-      }
-      expect(exits, [0], reason: 'the editor quits after handing off');
-      expect(starts.single.sublist(1), ['--project', pDir.path]);
-      await rec.hold(const Duration(seconds: 2));
-      rec.save('$name: enable and restart');
-      vm.dispose();
-
-      // 2. The launcher on --project: needsBuild → the splash, a real build.
-      final resolver = ProjectEditorResolver(cache: cache);
-      final launcherConfig = Directory('${temp.path}/config')..createSync();
-      late LauncherViewModel launcher;
-      await tester.runAsync(() async => launcher = LauncherViewModel(
-            configDir: launcherConfig,
-            editorResolver: resolver,
-            buildServiceFactory: (r) => EditorBuildService(
-              engineRoot: r.engineRoot,
-              cache: r.cache,
-              generator: r.generator,
-              mode: r.mode,
-              flutterInfo: r.flutterInfo,
-              environment: buildEnv,
-            ),
-          ));
-      await tester.pumpWidget(RepaintBoundary(
-        key: boundaryKey,
-        child: ShadcnApp(theme: luminaEditorTheme(), home: LauncherView(viewModel: launcher, initialProjectDir: starts.single[2])),
-      ));
-      for (var i = 0; i < 600 && find.byType(EditorBuildSplash).evaluate().isEmpty; i++) {
-        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
-        await tester.pump();
-      }
-      expect(find.byType(EditorBuildSplash), findsOneWidget, reason: 'needsBuild shows the splash');
-      final splash = tester.widget<EditorBuildSplash>(find.byType(EditorBuildSplash));
-      final build = splash.viewModel;
-      final splashRec = SmokeRecorder(tester, boundary: find.byKey(boundaryKey));
-      final started = Stopwatch()..start();
-      while (build.phase.index < EditorBuildPhase.buildingNativeAssets.index && build.state == EditorBuildSplashState.running) {
-        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200)));
-        await tester.pump();
-      }
-      expect(build.phase, EditorBuildPhase.buildingNativeAssets);
-      await splashRec.hold(const Duration(seconds: 12));
-      await shot('splash, native assets phase');
-      splashRec.save('$name: splash');
-      final seen = <String>{};
-      while (build.state == EditorBuildSplashState.running && started.elapsed < const Duration(minutes: 45)) {
-        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 500)));
-        await tester.pump();
-        final status = build.statusText;
-        expect(status, matches(RegExp(r'^\d{1,3}% - .+$')));
-        if (seen.add(build.phase.name)) debugPrint('[plugins07_smoke] ${started.elapsed.inSeconds}s $status');
-      }
-      final firstBuild = started.elapsed;
-      expect(build.state, EditorBuildSplashState.succeeded, reason: build.logTail.join('\n'));
-      final outcome = build.outcome as EditorBuildSucceeded;
-      await tester.pump(const Duration(milliseconds: 300));
-      await shot('splash, 100% starting editor');
-      expect(starts.last.first, outcome.entry.executable, reason: 'the launcher execs the built project editor');
-      expect(starts.last.sublist(1, 3), ['--project', pDir.path]);
-      expect(File(outcome.entry.executable).existsSync(), isTrue);
-      expect(File(outcome.logPath!).readAsStringSync(), contains('native cache store'), reason: 'the first build fills the temp native cache');
-      expect(cache.hashes(), [outcome.entry.hash]);
-
-      // A second Open resolves to the cached build at once.
-      final reopen = Stopwatch()..start();
-      late ProjectEditorDecision again;
-      await tester.runAsync(() async => again = await resolver.resolve(pDir.path));
-      final cachedOpen = reopen.elapsed;
-      expect(again, isA<ExecCached>());
-      debugPrint('[plugins07_smoke] PLUGINS07_TIMINGS first_build=${firstBuild.inSeconds}s cached_open=${cachedOpen.inMilliseconds}ms');
-
-      // 3. The project editor itself boots on --project with PCG compiled in.
-      final editorConfig = Directory('${temp.path}/editor_config')..createSync();
-      final port = await tester.runAsync(() async {
-        final s = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
-        final p = s.port;
-        await s.close();
-        return p;
-      });
-      File('${editorConfig.path}/mcp_server_settings.json').writeAsStringSync(jsonEncode({'enabled': true, 'port': port}));
-      // Detached, as EditorHandOff starts it: undrained stdio pipes would
-      // fill up and block the editor's UI thread.
-      projectEditor = await tester.runAsync(() => Process.start(outcome.entry.executable, starts.last.sublist(1),
-          environment: {'LUMINA_CONFIG_DIR': editorConfig.path, 'FLUTTER_TEST': ''}, mode: ProcessStartMode.detached));
-      final connection = File('${editorConfig.path}/mcp_server.json');
-      for (var i = 0; i < 240 && !connection.existsSync(); i++) {
-        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 500)));
-      }
-      expect(connection.existsSync(), isTrue, reason: 'the project editor opened the project and started its MCP server');
-      final info = jsonDecode(connection.readAsStringSync()) as Map<String, dynamic>;
-      final client = McpTestClient(info['url'] as String, info['token'] as String);
-      await tester.runAsync(() => client.handshake());
-      final projectInfo = await tester.runAsync(() => client.callTool('project_info'));
-      expect(projectInfo!.data['project_name'], 'PeGame');
-      final log = await tester.runAsync(() => client.callTool('read_output_log', {'contains': 'Registered code plugin'}));
-      expect(log!.text, contains('Registered code plugin lumina_plugin_pcg'), reason: 'PCG is compiled into the project editor');
-      await tester.runAsync(() => Future<void>.delayed(const Duration(seconds: 3)));
-      final screenshot = await tester.runAsync(() => client.callTool('viewport_screenshot'));
-      final image = screenshot!.content.firstWhere((c) => c['type'] == 'image')['data'] as String;
-      SmokeArtifacts.saveScreenshot('$name: project editor viewport', base64Decode(image));
-      client.close();
-
-      // 4. Without its host (a fresh clone): the missing-binary prompt.
-      await tester.runAsync(() => killProcessTree(projectEditor!.pid));
-      projectEditor = null;
-      await tester.runAsync(() => host.delete(recursive: true));
-      await tester.pumpWidget(RepaintBoundary(
-        key: boundaryKey,
-        // A fresh app: the previous launcher's navigator still holds the splash.
-        child: ShadcnApp(key: const ValueKey('reopen'), theme: luminaEditorTheme(), home: LauncherView(viewModel: launcher, initialProjectDir: pDir.path)),
-      ));
-      for (var i = 0; i < 300 && find.text('Editor binary not found').evaluate().isEmpty; i++) {
-        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
-        await tester.pump();
-      }
-      expect(find.text('Editor binary not found'), findsOneWidget);
-      expect(find.textContaining('PeGame uses code plugins (lumina_plugin_pcg)'), findsOneWidget);
-      await tester.pump(const Duration(milliseconds: 300));
-      await shot('missing editor binary prompt');
-      await tester.tap(find.text('Cancel'));
-      await tester.pump(const Duration(milliseconds: 300));
-      await tester.runAsync(() async => launcher.dispose());
-    } finally {
-      EditorHandOff.instance = originalHandOff;
-      EditorBuildSplash.manageNativeWindow = true;
-      if (projectEditor != null) await tester.runAsync(() => killProcessTree(projectEditor!.pid));
-      await tester.runAsync(() async {
-        for (var i = 0; i < 40; i++) {
-          try {
-            if (temp.existsSync()) temp.deleteSync(recursive: true);
-            break;
-          } on FileSystemException {
-            await Future<void>.delayed(const Duration(milliseconds: 500));
-          }
-        }
-      });
-    }
-  }, timeout: const Timeout(Duration(minutes: 60)));
+  perProjectEditorScenario(binding, pcgProjectEditor);
+  perProjectEditorScenario(binding, miniaiProjectEditor);
 
   plainProjectEditorScenario(binding);
   sourceCopyProjectEditorScenario(binding);
@@ -3025,4 +2782,335 @@ class _LifecycleSmokePlugin extends LuminaEditorPlugin {
           await level.addActors([EditorActorSpec(name: 'LifeBarrel$i', type: 'Mesh', location: [i * 150.0 - 150, 0, 0], meshAssetPath: meshAsset)]);
         }
       });
+}
+
+/// A built-in code plugin the per-project editor build scenario enables.
+class BuiltInCodePlugin {
+  const BuiltInCodePlugin({
+    required this.scenario,
+    required this.package,
+    required this.title,
+    required this.short,
+    required this.search,
+    required this.registrar,
+    this.openPanel,
+  });
+
+  final String scenario;
+  final String package;
+
+  /// Its Plugin Manager title.
+  final String title;
+  final String short;
+
+  /// What the Plugin Manager search is typed with.
+  final String search;
+
+  /// Its plugin class, as the host registrar names it.
+  final String registrar;
+
+  /// A panel the project's saved layout has open before the rebuild.
+  final String? openPanel;
+}
+
+const pcgProjectEditor = BuiltInCodePlugin(
+  scenario: 'Plugins Smoke Scenario: per-project editor build',
+  package: 'lumina_plugin_pcg',
+  title: 'Procedural Content Generation',
+  short: 'PCG',
+  search: 'procedural',
+  registrar: 'LuminaPluginPcgPlugin',
+);
+
+/// MiniAI reads its chat panel's visibility while it registers.
+const miniaiProjectEditor = BuiltInCodePlugin(
+  scenario: 'Plugins Smoke Scenario: per-project editor build with MiniAI',
+  package: 'lumina_plugin_miniai',
+  title: 'MiniAI',
+  short: 'MiniAI',
+  search: 'miniai',
+  registrar: 'LuminaPluginMiniaiPlugin',
+  openPanel: LuminaPluginMiniaiPlugin.chatPanelId,
+);
+
+/// Enables built-in [plugin] in a project from the Plugin Manager, restarts
+/// through the launcher (the build splash, a real build of the project's
+/// editor), boots the built project editor and checks it over MCP, then opens
+/// the project without its host (the missing-binary prompt).
+void perProjectEditorScenario(IntegrationTestWidgetsFlutterBinding binding, BuiltInCodePlugin plugin) {
+  testWidgets(plugin.scenario, (tester) async {
+    final name = plugin.scenario;
+    final flutter = Platform.isWindows ? 'flutter.bat' : 'flutter';
+    try {
+      Process.runSync(flutter, ['--version'], runInShell: Platform.isWindows);
+    } on ProcessException {
+      markTestSkipped('flutter is not on PATH: the per-project editor build needs the Flutter toolchain');
+      return;
+    }
+    tester.view.physicalSize = const Size(1920, 1080);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    // A short temp root: MSBuild paths under <project>/.lumina/editor/build
+    // must stay below Windows' 260-character limit.
+    final temp = Directory.systemTemp.createTempSync('pe_');
+    final pDir = Directory('${temp.path}/PeGame')..createSync(recursive: true);
+    final originalHandOff = EditorHandOff.instance;
+    Process? projectEditor;
+    try {
+      // The plugin is the engine's built-in (no copy in the project):
+      // enabling it is what rebuilds this project's editor with it.
+      const project = LuminaProject(projectName: 'PeGame', activeLevel: 'contents/levels/L_Main.lmas', settings: EngineScalabilitySettings(targetFps: 60));
+      File('${pDir.path}/PeGame.lmproject').writeAsStringSync(jsonEncode(project.toMap()));
+      final openPanel = plugin.openPanel;
+      if (openPanel != null) {
+        // The saved layout has the plugin's panel open: the project editor
+        // restores it while the plugin registers.
+        File('${pDir.path}/.lumina/editor_layout.json')
+          ..createSync(recursive: true)
+          ..writeAsStringSync(jsonEncode({'pluginPanelVisible': {openPanel: true}, 'activeRightPanel': openPanel}));
+      }
+      final enginePubspec = File('${LuminaEditorHost.uiRoot}/pubspec.yaml');
+      final enginePubspecBefore = enginePubspec.readAsBytesSync();
+
+      // The build's caches in the temp root: the hooks runner passes a hook
+      // only allow-listed variables, so the native library cache follows
+      // LOCALAPPDATA (Windows) / HOME; PUB_CACHE keeps package resolution on
+      // the real pub cache.
+      final cacheBase = Directory('${temp.path}/cache')..createSync();
+      final pubCache = Platform.environment['PUB_CACHE'] ??
+          (Platform.isWindows ? '${Platform.environment['LOCALAPPDATA']}\\Pub\\Cache' : '${Platform.environment['HOME']}/.pub-cache');
+      final buildEnv = Platform.isWindows ? {'LOCALAPPDATA': cacheBase.path, 'PUB_CACHE': pubCache} : {'HOME': cacheBase.path, 'PUB_CACHE': pubCache};
+      final cache = EditorBuildCache(
+        root: Directory(EditorBuildCache.defaultRoot(environment: buildEnv).path),
+        nativeRoot: Directory('${EditorBuildCache.cacheBase(environment: buildEnv)}/native'),
+      );
+
+      // The hand-off is recorded instead of quitting the test app.
+      final starts = <List<String>>[];
+      final exits = <int>[];
+      EditorHandOff.instance = EditorHandOff(startDetached: (exe, args) async => starts.add([exe, ...args]), exitApp: exits.add);
+      EditorBuildSplash.manageNativeWindow = false;
+
+      // 1. The editor: Plugins ▸ Plugin Manager ▸ enable the plugin.
+      final vm = EditorViewModel(initialProject: project, projectDirPath: temp.path, enableTimers: false);
+      await tester.runAsync(() => vm.ensureDefaultLevelAssets());
+      final boundaryKey = GlobalKey();
+      await tester.pumpWidget(RepaintBoundary(
+        key: boundaryKey,
+        child: ShadcnApp(theme: luminaEditorTheme(), home: MainEditorView(viewModel: vm)),
+      ));
+      await settle(tester);
+      final rec = SmokeRecorder(tester, boundary: find.byKey(boundaryKey));
+      Future<void> shot(String label) async =>
+          SmokeArtifacts.saveScreenshot('$name: $label', await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey)));
+      await tester.runAsync(() => Future<void>.delayed(const Duration(seconds: 1)));
+      await settle(tester);
+      await tester.tap(barItem('Plugins'));
+      await settle(tester);
+      await tester.tap(find.text('Plugin Manager...'));
+      await settle(tester);
+      await rec.hold(const Duration(seconds: 2));
+      // Find the plugin with the search, then clear it.
+      final pmSearch = find.byWidgetPredicate((w) =>
+          w is TextField && w.placeholder is Text && (w.placeholder as Text).data == 'Search plugins...');
+      await tester.tap(pmSearch);
+      await rec.typeText(pmSearch, plugin.search, perCharacter: const Duration(milliseconds: 150));
+      await settle(tester);
+      expect(find.text(plugin.title), findsWidgets);
+      await rec.hold(const Duration(seconds: 1));
+      await tester.enterText(pmSearch, '');
+      await settle(tester);
+      // Its details: a code plugin (an editor module), not enabled yet.
+      await tester.tap(find.text(plugin.title).first);
+      await settle(tester);
+      await rec.hold(const Duration(seconds: 2));
+      final pluginTitle = find.text(plugin.title).first;
+      final titleY = tester.getCenter(pluginTitle).dy;
+      final pluginSwitch = find.byType(Switch).evaluate().firstWhere((e) => (tester.getCenter(find.byWidget(e.widget)).dy - titleY).abs() < 40).widget as Switch;
+      expect(pluginSwitch.value, isFalse);
+      expect(vm.pluginRegistry.entries.singleWhere((e) => e.descriptor.name == plugin.package).descriptor.origin, PluginOrigin.engine,
+          reason: 'the built-in ${plugin.short}, not a project copy');
+      await tester.tap(find.byWidget(pluginSwitch));
+      final host = Directory('${pDir.path}/.lumina/editor');
+      for (var i = 0; i < 100 && !File('${host.path}/pubspec.yaml').existsSync(); i++) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
+        await tester.pump();
+      }
+      await settle(tester);
+      expect(File('${host.path}/pubspec.yaml').readAsStringSync(), contains('${plugin.package}:'), reason: 'the host depends on ${plugin.short}');
+      expect(find.text('Built-in Plugin'), findsNothing, reason: 'a built-in is enabled like any plugin');
+      expect((jsonDecode(File('${pDir.path}/PeGame.lmproject').readAsStringSync()) as Map)['enabled_plugins'], [plugin.package]);
+      expect(File('${host.path}/lib/plugin_registrar.dart').readAsStringSync(), contains('${plugin.registrar}()'));
+      expect(enginePubspec.readAsBytesSync(), enginePubspecBefore, reason: 'the engine pubspec is untouched');
+      expect(File('${LuminaEditorHost.uiRoot}/lib/generated/plugin_registrar.dart').existsSync(), isFalse);
+      expect(find.text("Plugin changes require rebuilding this project's editor"), findsOneWidget);
+      expect(find.text('Restart required'), findsWidgets, reason: 'the ${plugin.short} row waits for the rebuild');
+      await rec.hold(const Duration(seconds: 3));
+      await shot('${plugin.short} enabled, host generated');
+
+      // Restart Editor → save, hand off to the launcher with --project.
+      await tester.tap(find.text('Restart Editor'));
+      for (var i = 0; i < 50 && exits.isEmpty; i++) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
+        await tester.pump();
+      }
+      expect(exits, [0], reason: 'the editor quits after handing off');
+      expect(starts.single.sublist(1), ['--project', pDir.path]);
+      await rec.hold(const Duration(seconds: 2));
+      rec.save('$name: enable and restart');
+      vm.dispose();
+
+      // 2. The launcher on --project: needsBuild → the splash, a real build.
+      final resolver = ProjectEditorResolver(cache: cache);
+      final launcherConfig = Directory('${temp.path}/config')..createSync();
+      late LauncherViewModel launcher;
+      await tester.runAsync(() async => launcher = LauncherViewModel(
+            configDir: launcherConfig,
+            editorResolver: resolver,
+            buildServiceFactory: (r) => EditorBuildService(
+              engineRoot: r.engineRoot,
+              cache: r.cache,
+              generator: r.generator,
+              mode: r.mode,
+              flutterInfo: r.flutterInfo,
+              environment: buildEnv,
+            ),
+          ));
+      await tester.pumpWidget(RepaintBoundary(
+        key: boundaryKey,
+        child: ShadcnApp(theme: luminaEditorTheme(), home: LauncherView(viewModel: launcher, initialProjectDir: starts.single[2])),
+      ));
+      for (var i = 0; i < 600 && find.byType(EditorBuildSplash).evaluate().isEmpty; i++) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
+        await tester.pump();
+      }
+      expect(find.byType(EditorBuildSplash), findsOneWidget, reason: 'needsBuild shows the splash');
+      final splash = tester.widget<EditorBuildSplash>(find.byType(EditorBuildSplash));
+      final build = splash.viewModel;
+      final splashRec = SmokeRecorder(tester, boundary: find.byKey(boundaryKey));
+      final started = Stopwatch()..start();
+      while (build.phase.index < EditorBuildPhase.buildingNativeAssets.index && build.state == EditorBuildSplashState.running) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200)));
+        await tester.pump();
+      }
+      expect(build.phase, EditorBuildPhase.buildingNativeAssets);
+      await splashRec.hold(const Duration(seconds: 12));
+      await shot('splash, native assets phase');
+      splashRec.save('$name: splash');
+      final seen = <String>{};
+      while (build.state == EditorBuildSplashState.running && started.elapsed < const Duration(minutes: 45)) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 500)));
+        await tester.pump();
+        final status = build.statusText;
+        expect(status, matches(RegExp(r'^\d{1,3}% - .+$')));
+        if (seen.add(build.phase.name)) debugPrint('[plugins07_smoke] ${started.elapsed.inSeconds}s $status');
+      }
+      final firstBuild = started.elapsed;
+      expect(build.state, EditorBuildSplashState.succeeded, reason: build.logTail.join('\n'));
+      final outcome = build.outcome as EditorBuildSucceeded;
+      await tester.pump(const Duration(milliseconds: 300));
+      await shot('splash, 100% starting editor');
+      expect(starts.last.first, outcome.entry.executable, reason: 'the launcher execs the built project editor');
+      expect(starts.last.sublist(1, 3), ['--project', pDir.path]);
+      expect(File(outcome.entry.executable).existsSync(), isTrue);
+      expect(File(outcome.logPath!).readAsStringSync(), contains('native cache store'), reason: 'the first build fills the temp native cache');
+      expect(cache.hashes(), [outcome.entry.hash]);
+
+      // A second Open resolves to the cached build at once.
+      final reopen = Stopwatch()..start();
+      late ProjectEditorDecision again;
+      await tester.runAsync(() async => again = await resolver.resolve(pDir.path));
+      final cachedOpen = reopen.elapsed;
+      expect(again, isA<ExecCached>());
+      debugPrint('[plugins07_smoke] PLUGINS07_TIMINGS first_build=${firstBuild.inSeconds}s cached_open=${cachedOpen.inMilliseconds}ms');
+
+      // 3. The project editor itself boots on --project with the plugin compiled in.
+      final editorConfig = Directory('${temp.path}/editor_config')..createSync();
+      final port = await tester.runAsync(() async {
+        final s = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+        final p = s.port;
+        await s.close();
+        return p;
+      });
+      File('${editorConfig.path}/mcp_server_settings.json').writeAsStringSync(jsonEncode({'enabled': true, 'port': port}));
+      // Detached, as EditorHandOff starts it: undrained stdio pipes would
+      // fill up and block the editor's UI thread.
+      projectEditor = await tester.runAsync(() => Process.start(outcome.entry.executable, starts.last.sublist(1),
+          environment: {'LUMINA_CONFIG_DIR': editorConfig.path, 'FLUTTER_TEST': ''}, mode: ProcessStartMode.detached));
+      final connection = File('${editorConfig.path}/mcp_server.json');
+      for (var i = 0; i < 240 && !connection.existsSync(); i++) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 500)));
+      }
+      expect(connection.existsSync(), isTrue, reason: 'the project editor opened the project and started its MCP server');
+      final info = jsonDecode(connection.readAsStringSync()) as Map<String, dynamic>;
+      final client = McpTestClient(info['url'] as String, info['token'] as String);
+      await tester.runAsync(() => client.handshake());
+      final projectInfo = await tester.runAsync(() => client.callTool('project_info'));
+      expect(projectInfo!.data['project_name'], 'PeGame');
+      final log = await tester.runAsync(() => client.callTool('read_output_log', {'contains': 'Registered code plugin'}));
+      expect(log!.text, contains('Registered code plugin ${plugin.package}'), reason: '${plugin.short} is compiled into the project editor');
+      final failed = await tester.runAsync(() => client.callTool('read_output_log', {'contains': 'failed to register'}));
+      expect(failed!.text, isNot(contains(plugin.package)), reason: 'its register() ran without an error');
+      await tester.runAsync(() => Future<void>.delayed(const Duration(seconds: 3)));
+      final screenshot = await tester.runAsync(() => client.callTool('viewport_screenshot'));
+      final image = screenshot!.content.firstWhere((c) => c['type'] == 'image')['data'] as String;
+      SmokeArtifacts.saveScreenshot('$name: project editor viewport', base64Decode(image));
+      client.close();
+      if (Platform.isWindows) {
+        // The whole project editor window, on DISPLAY1: the editor UI, not a
+        // blank window.
+        final pid = projectEditor!.pid;
+        (int, int, int, int)? rect;
+        for (var i = 0; i < 40 && rect == null; i++) {
+          rect = await tester.runAsync<(int, int, int, int)?>(() => placeOnDisplay1(pid, width: 1600, height: 1000));
+          if (rect == null) await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 500)));
+        }
+        expect(rect, isNotNull, reason: 'the project editor has a window');
+        final (x, y, w, h) = rect!;
+        final video = recordRegionWebm(x: x, y: y, w: w, h: h, outWebm: '${temp.path}/project_editor.webm');
+        await tester.runAsync(() => Future<void>.delayed(const Duration(seconds: 4)));
+        final png = (await tester.runAsync(() => windowPng(pid, '${temp.path}/project_editor.png')))!;
+        final colours = (await tester.runAsync(() => distinctColours(png)))!;
+        expect(colours, greaterThan(20), reason: 'the project editor drew its UI (not a blank window)');
+        SmokeArtifacts.saveScreenshot('$name: project editor window', png.readAsBytesSync(), metrics: {'distinct_colours': colours});
+        SmokeArtifacts.saveVideo('$name: project editor window', (await tester.runAsync(() => video))!.readAsBytesSync());
+      }
+
+      // 4. Without its host (a fresh clone): the missing-binary prompt.
+      await tester.runAsync(() => killProcessTree(projectEditor!.pid));
+      projectEditor = null;
+      await tester.runAsync(() => host.delete(recursive: true));
+      await tester.pumpWidget(RepaintBoundary(
+        key: boundaryKey,
+        // A fresh app: the previous launcher's navigator still holds the splash.
+        child: ShadcnApp(key: const ValueKey('reopen'), theme: luminaEditorTheme(), home: LauncherView(viewModel: launcher, initialProjectDir: pDir.path)),
+      ));
+      for (var i = 0; i < 300 && find.text('Editor binary not found').evaluate().isEmpty; i++) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
+        await tester.pump();
+      }
+      expect(find.text('Editor binary not found'), findsOneWidget);
+      expect(find.textContaining('PeGame uses code plugins (${plugin.package})'), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 300));
+      await shot('missing editor binary prompt');
+      await tester.tap(find.text('Cancel'));
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.runAsync(() async => launcher.dispose());
+    } finally {
+      EditorHandOff.instance = originalHandOff;
+      EditorBuildSplash.manageNativeWindow = true;
+      if (projectEditor != null) await tester.runAsync(() => killProcessTree(projectEditor!.pid));
+      await tester.runAsync(() async {
+        for (var i = 0; i < 40; i++) {
+          try {
+            if (temp.existsSync()) temp.deleteSync(recursive: true);
+            break;
+          } on FileSystemException {
+            await Future<void>.delayed(const Duration(milliseconds: 500));
+          }
+        }
+      });
+    }
+  }, timeout: const Timeout(Duration(minutes: 60)));
 }

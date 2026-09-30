@@ -23,6 +23,9 @@ enum PluginIssueType {
   /// More plugin top-level menus than the title bar holds; the
   /// extra menu folds into `Plugins ▸ <title>`.
   tooManyMenus,
+
+  /// The plugin's `register` threw; the editor did not load it.
+  registrationFailed,
 }
 
 class PluginIssue {

@@ -428,6 +428,9 @@ class EditorViewModel extends _EditorViewModelState
       },
     );
     extensionRegistry = PluginExtensionRegistry(logger: _logger);
+    // The saved layout is in place before any plugin registers: a plugin
+    // may read or change its panels' visibility in `register()`.
+    _loadLayoutState();
     // Plugins reach the open level through the registry.
     extensionRegistry.attachLevel(EditorViewModelLevelAccess(this));
     // Plugins open, close and observe their panels.
@@ -450,10 +453,12 @@ class EditorViewModel extends _EditorViewModelState
     // A Window-menu command per plugin panel, kept in step.
     extensionRegistry.addListener(_syncPluginPanelCommands);
     // The code plugins compiled into this binary (a project
-    // editor host's registrar; none in the stock editor).
+    // editor host's registrar; none in the stock editor). One that fails is
+    // logged and left out; the rest still register.
     for (final plugin in LuminaEditorHost.plugins) {
-      extensionRegistry.registerPlugin(plugin);
-      _logger.log('Registered code plugin ${plugin.pluginName}', level: 'info', source: 'Plugins');
+      if (extensionRegistry.registerPlugin(plugin)) {
+        _logger.log('Registered code plugin ${plugin.pluginName}', level: 'info', source: 'Plugins');
+      }
     }
     sourceControl = SourceControlViewModel(
       projectRoot: projectDirPath,
@@ -466,7 +471,6 @@ class EditorViewModel extends _EditorViewModelState
     _initCommands();
     commands.addListener(notifyListeners);
 
-    _loadLayoutState();
     ProjectRepository.ensurePubspecAssets(projectDirPath);
 
     // Log lines can arrive synchronously from inside a widget's initState /

@@ -221,6 +221,12 @@ abstract class LuminaEditorContext {
 
 abstract class LuminaEditorPlugin {
   String get pluginName;
+
+  /// Adds this plugin's contributions to [context]. The editor's layout is
+  /// loaded first, so [LuminaEditorContext.panels] reports the saved
+  /// visibility here. If it throws, the editor drops what it registered,
+  /// logs the error under [pluginName] and shows it in the Plugin Manager;
+  /// the other plugins and the editor go on.
   void register(LuminaEditorContext context);
 
   /// The last call a plugin gets, after [onEditorShutdown].
