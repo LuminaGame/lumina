@@ -6,10 +6,13 @@
 
 #include "generated_plugin_registrant.h"
 
+#include <lumina_mouse_capture/lumina_mouse_capture_plugin_c_api.h>
 #include <screen_retriever_windows/screen_retriever_windows_plugin_c_api.h>
 #include <window_manager/window_manager_plugin.h>
 
 void RegisterPlugins(flutter::PluginRegistry* registry) {
+  LuminaMouseCapturePluginCApiRegisterWithRegistrar(
+      registry->GetRegistrarForPlugin("LuminaMouseCapturePluginCApi"));
   ScreenRetrieverWindowsPluginCApiRegisterWithRegistrar(
       registry->GetRegistrarForPlugin("ScreenRetrieverWindowsPluginCApi"));
   WindowManagerPluginRegisterWithRegistrar(

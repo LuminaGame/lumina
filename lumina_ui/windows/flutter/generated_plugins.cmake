@@ -3,6 +3,7 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  lumina_mouse_capture
   screen_retriever_windows
   window_manager
 )

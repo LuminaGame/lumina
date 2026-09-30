@@ -3,6 +3,7 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  lumina_mouse_capture
 )
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST
