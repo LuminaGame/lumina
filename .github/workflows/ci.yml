@@ -167,9 +167,18 @@ jobs:
           test/data/sequencer_evaluator_test.dart
 
   filament-cache:
-    name: Filament cache (main)
+    name: Filament cache (${{ matrix.platform }}, main)
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The same runners as release.yml, so tags restore these caches.
+          - platform: linux
+            runner: ubuntu-24.04
+          - platform: windows
+            runner: windows-2022
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 360
     steps:
       - uses: actions/checkout@v5
@@ -177,24 +186,12 @@ jobs:
           path: lumina
           persist-credentials: false
 
-      - uses: ./lumina/.github/actions/linux-build-deps
-
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: stable
-          cache: true
-
-      # fetch_prebuilt.dart runs in the resolved workspace.
-      - uses: ./lumina/.github/actions/checkout-siblings
-
-      - name: Resolve the workspace
-        working-directory: lumina
-        run: flutter pub get
+      - if: matrix.platform == 'linux'
+        uses: ./lumina/.github/actions/linux-build-deps
 
       - uses: ./lumina/.github/actions/filament-prebuilt
         with:
-          fetch: 'true'
+          fetch: 'false'
           save: 'true'
           extract: 'false'
 
