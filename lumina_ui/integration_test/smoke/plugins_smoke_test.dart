@@ -2461,6 +2461,224 @@ void main() {
     }
   }, timeout: const Timeout(Duration(minutes: 10)));
 
+  // The chat's context and feedback on a real editor with the local model on
+  // GPU 1: the selection chip for a selected wall, the @ list over the real
+  // project, the Thinking row expanded while MiniCPM5 streams its reasoning,
+  // a viewport_screenshot tool card with its thumbnail (enlarged), and the
+  // "Switch to Ask" chip after a Plan-mode request for a change.
+  testWidgets('MiniAI chat context', (tester) async {
+    const barrel = 'Props/Barrels/fuel_barrel_red.glb';
+    const name = 'MiniAI chat context';
+    final env = {...Platform.environment, 'FILAMENT_GPU': Platform.environment['FILAMENT_GPU'] ?? 'RTX PRO 2000'};
+    final probe = LocalModelManager(root: LocalModelManager.defaultRoot(env), environment: env);
+    final installed = probe.isInstalled();
+    probe.dispose();
+    if (!installed) {
+      markTestSkipped('MiniCPM5 / llama-server not installed in ${LocalModelManager.defaultRoot(env)}');
+      return;
+    }
+    tester.view.physicalSize = const Size(1920, 1200);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    // The test window goes on DISPLAY1 (the non-Samsung monitor).
+    if (Platform.isWindows) await tester.runAsync(() => placeOnDisplay1(pid, width: 1920, height: 1200).catchError((_) => null));
+    final tempProjectsDir = Directory.systemTemp.createTempSync('miniai_ctx_smoke_');
+    final pDir = Directory('${tempProjectsDir.path}/ContextSmoke')..createSync(recursive: true);
+    PluginDataDir.override = Directory('${tempProjectsDir.path}/plugin_data');
+    EditorViewModel? vmRef;
+    LuminaPluginMiniaiPlugin? plugin;
+    try {
+      const project = LuminaProject(projectName: 'ContextSmoke', activeLevel: 'contents/levels/L_Main.lmas', settings: EngineScalabilitySettings(targetFps: 60));
+      File('${pDir.path}/ContextSmoke.lmproject').writeAsStringSync(jsonEncode(project.toMap()));
+      final vm = vmRef = EditorViewModel(initialProject: project, projectDirPath: tempProjectsDir.path, enableTimers: false);
+      addTearDown(vm.dispose);
+      await tester.runAsync(() => vm.ensureDefaultLevelAssets());
+      await tester.runAsync(() => vm.processImportPipeline(sourceFilePath: '${SmokeArtifacts.testAssetsDir.path}/$barrel'));
+      vm.refreshAssets();
+      final asset = vm.realAssets.firstWhere((a) => a.fileName == 'fuel_barrel_red.lmas' && a.type == AssetType.filamesh);
+      plugin = LuminaPluginMiniaiPlugin();
+      vm.extensionRegistry.registerPlugin(plugin);
+      final c = plugin.controller!;
+      Future<Map<String, Object?>> call(String tool, Map<String, Object?> args) async {
+        final r = await tester.runAsync(() => c.mcp.callTool(tool, args, caller: 'smoke'));
+        expect(r!.isError, isFalse, reason: r.content.map((x) => x['text']).join());
+        return Map<String, Object?>.from(r.structuredContent ?? jsonDecode('${r.content.first['text']}') as Map);
+      }
+
+      await call('spawn_actor', {'type': 'Primitive', 'name': 'Divider_Wall', 'location': [0, 250, 150], 'scale': [6, 0.4, 3]});
+      final wallId = vm.actors.firstWhere((a) => a.name == 'Divider_Wall').id;
+      await call('spawn_actor_from_asset', {'asset': asset.relativePath, 'location': [0, 0, 0]});
+      for (var i = 0; i < 40 && vm.actors.any((a) => a.meshAssetPath != null && a.meshData == null); i++) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
+        await tester.pump();
+      }
+
+      final boundaryKey = GlobalKey();
+      await tester.pumpWidget(RepaintBoundary(
+        key: boundaryKey,
+        child: ShadcnApp(theme: luminaEditorTheme(), home: MainEditorView(viewModel: vm)),
+      ));
+      await settle(tester, frames: 30);
+      vm.frameLevelBounds();
+      await settle(tester, frames: 20);
+      final rec = SmokeRecorder(tester, boundary: find.byKey(boundaryKey));
+      Future<void> shot(String suffix) async {
+        final png = await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey));
+        SmokeArtifacts.saveScreenshot('$name ($suffix)', png, usedAssets: const [barrel]);
+      }
+
+      Future<void> waitFor(bool Function() done, {Duration max = const Duration(minutes: 2), Duration step = const Duration(milliseconds: 150)}) async {
+        final sw = Stopwatch()..start();
+        while (!done() && sw.elapsed < max) {
+          await tester.runAsync(() => Future<void>.delayed(step));
+          await tester.pump(const Duration(milliseconds: 20));
+          await rec.capture();
+        }
+        expect(done(), isTrue, reason: 'timed out after $max');
+      }
+
+      String? chip() {
+        final f = find.byKey(const ValueKey('miniai_selection_label'));
+        return f.evaluate().isEmpty ? null : tester.widget<Text>(f).data;
+      }
+
+      // 1. The panel; the selected wall becomes the chip above the message box.
+      await tester.tap(find.byKey(const ValueKey('slot_button_lumina_plugin_miniai.ai')));
+      await settle(tester, frames: 20);
+      await call('select_actors', {
+        'ids': [wallId],
+      });
+      await waitFor(() => chip() == 'Divider_Wall · Primitive', max: const Duration(seconds: 10));
+      await rec.hold(const Duration(seconds: 2));
+      await shot('selection chip');
+
+      // 2. The local model on GPU 1 becomes the provider.
+      await tester.runAsync(() => c.local.start());
+      await waitFor(() => c.local.status == LocalModelStatus.ready && c.settings.isConfigured, max: const Duration(minutes: 2));
+      await settle(tester, frames: 10);
+
+      // 3. @ lists the project's real content: the imported barrel first.
+      await tester.tap(find.byKey(const ValueKey('miniai_message')));
+      await tester.pump();
+      await tester.enterText(find.byKey(const ValueKey('miniai_message')), 'Put a copy of @fuel');
+      await waitFor(() => find.byKey(const ValueKey('miniai_mention_asset_0')).evaluate().isNotEmpty, max: const Duration(seconds: 10));
+      final first = find.byKey(const ValueKey('miniai_mention_asset_0'));
+      expect(find.descendant(of: first, matching: find.text('fuel_barrel_red')), findsOneWidget);
+      expect(find.descendant(of: first, matching: find.textContaining(asset.relativePath)), findsOneWidget);
+      await rec.hold(const Duration(seconds: 2));
+      await shot('at mention list');
+      await tester.enterText(find.byKey(const ValueKey('miniai_message')), '');
+      await tester.pump();
+
+      // 4. A screenshot request: the Thinking row, opened while the model
+      // reasons, then the tool card with its thumbnail.
+      Future<void> ask(String text) async {
+        // Focus the composer first: after a send the text input connection
+        // stays with the old focus and enterText would type nowhere.
+        await tester.tap(find.byKey(const ValueKey('miniai_message')));
+        await tester.pump();
+        await tester.enterText(find.byKey(const ValueKey('miniai_message')), text);
+        await tester.pump();
+        expect(tester.widget<TextField>(find.byKey(const ValueKey('miniai_message'))).controller?.text, text);
+        final turns = c.chat.turns.length;
+        await tester.tap(find.byKey(const ValueKey('miniai_send')));
+        await tester.pump();
+        await waitFor(() => c.chat.turns.length > turns, max: const Duration(seconds: 10), step: const Duration(milliseconds: 20));
+      }
+
+      bool thinking() => c.chat.items.whereType<AssistantItem>().any((a) => a.thinkingActive);
+      var streamedShot = false;
+      ToolCallItem? screenshotCard() =>
+          c.chat.items.whereType<ToolCallItem>().where((i) => i.call.name == 'viewport_screenshot' && i.images.isNotEmpty).lastOrNull;
+      for (var attempt = 0; attempt < 3 && screenshotCard() == null; attempt++) {
+        await ask(attempt == 0
+            ? 'Take a screenshot of the viewport with the viewport_screenshot tool, then say in one sentence what it shows.'
+            : 'Call the viewport_screenshot tool now.');
+        // Open the row of the item that thinks now, as soon as it shows, and
+        // capture it while the reasoning still streams (each round of this
+        // model thinks for about a second).
+        final toggle = find.byKey(const ValueKey('miniai_thinking_toggle'));
+        var opened = 0;
+        while (c.running && !streamedShot) {
+          await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 15)));
+          await tester.pump(const Duration(milliseconds: 10));
+          final rows = toggle.evaluate().length;
+          if (thinking() && rows > opened) {
+            opened = rows;
+            await tester.tap(toggle.last);
+            await tester.pump(const Duration(milliseconds: 10));
+            await tester.pump(const Duration(milliseconds: 10));
+            if (thinking()) {
+              await shot('thinking row while streaming');
+              streamedShot = true;
+              debugPrint('[miniai_ctx_smoke] thinking row captured while streaming');
+            }
+          }
+        }
+        await waitFor(() => !c.running, max: const Duration(minutes: 3));
+        await settle(tester, frames: 10);
+      }
+      String describe(ChatItem i) => switch (i) {
+            ToolCallItem() => 'tool:${i.call.name}:${i.status.name}:${i.images.length}',
+            AssistantItem() => 'assistant(${i.thinkingTook?.inMilliseconds} ms)',
+            UserItem() => 'user',
+            NoteItem() => 'note:${i.text}',
+          };
+      debugPrint('[miniai_ctx_smoke] items: ${c.chat.items.map(describe).join(', ')}');
+      expect(streamedShot, isTrue, reason: 'MiniCPM5 streams reasoning');
+      final card = screenshotCard();
+      expect(card, isNotNull, reason: 'the model called viewport_screenshot');
+      expect(find.text('Context: Divider_Wall · Primitive'), findsWidgets, reason: 'the selection went with the message');
+      final thumb = find.byKey(ValueKey('miniai_tool_thumb_${card!.call.id}_0'));
+      await tester.ensureVisible(thumb);
+      await settle(tester, frames: 10);
+      expect(thumb, findsOneWidget);
+      expect(find.textContaining(RegExp(r'^Thought for \d+ s$')), findsWidgets);
+      await rec.hold(const Duration(seconds: 2));
+      await shot('screenshot tool card');
+      await tester.tap(thumb);
+      await settle(tester, frames: 15);
+      expect(find.byKey(const ValueKey('miniai_image_dialog')), findsOneWidget);
+      await rec.hold(const Duration(seconds: 2));
+      await shot('screenshot enlarged');
+      await tester.tap(find.byKey(const ValueKey('miniai_image_dialog_close')));
+      await waitFor(() => find.byKey(const ValueKey('miniai_image_dialog')).evaluate().isEmpty, max: const Duration(seconds: 10));
+      await settle(tester, frames: 30);
+
+      // 5. Plan mode: a request to add something shows the one-click switch.
+      c.mode = ApprovalMode.plan;
+      await settle(tester, frames: 5);
+      await ask('Sahneye bir varil ekle.');
+      await waitFor(() => !c.running, max: const Duration(minutes: 3));
+      await settle(tester, frames: 10);
+      final turn = c.chat.turns.last;
+      debugPrint('[miniai_ctx_smoke] plan turn: mode ${c.mode.name}, turns ${c.chat.turns.length}, blocked ${turn.planBlocked}; '
+          'items: ${c.chat.items.skip(turn.userItemIndex).map(describe).join(', ')}');
+      expect(turn.planBlocked, isNotEmpty);
+      final hint = find.byKey(ValueKey('miniai_plan_hint_${turn.id}'));
+      await tester.ensureVisible(hint);
+      await settle(tester, frames: 10);
+      expect(hint, findsOneWidget);
+      await rec.hold(const Duration(seconds: 2));
+      await shot('plan mode switch chip');
+      await tester.tap(find.byKey(const ValueKey('miniai_plan_switch')));
+      await settle(tester, frames: 10);
+      expect(c.mode, ApprovalMode.ask);
+      await rec.hold(const Duration(seconds: 1));
+
+      final minimum = Duration(milliseconds: (SmokeArtifacts.minimumVideoSeconds * 1000).ceil() + 500);
+      if (rec.recorded < minimum) await rec.hold(minimum - rec.recorded);
+      rec.save(name, usedAssets: const [barrel]);
+    } finally {
+      PluginDataDir.override = null;
+      await tester.runAsync(() async => plugin?.controller?.local.stop());
+      await tester.runAsync(() async => vmRef?.shutdownPlugins(exiting: true));
+      try {
+        if (tempProjectsDir.existsSync()) tempProjectsDir.deleteSync(recursive: true);
+      } catch (_) {}
+    }
+  }, timeout: const Timeout(Duration(minutes: 15)));
+
   // Enabling a code plugin generates the project's own editor
   // host; the launcher builds it for real behind the splash, execs it, and a
   // project without its host asks before building.
