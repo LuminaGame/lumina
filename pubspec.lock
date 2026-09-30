@@ -969,6 +969,13 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.4.0"
+  unreal_engine_importer:
+    dependency: "direct overridden"
+    description:
+      path: "../unreal_engine_importer"
+      relative: true
+    source: path
+    version: "0.1.0"
   vector_graphics:
     dependency: transitive
     description:

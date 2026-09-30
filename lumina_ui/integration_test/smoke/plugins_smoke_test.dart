@@ -15,6 +15,7 @@ import 'package:lumina/lumina.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart';
 import 'package:lumina_plugin_pcg/lumina_plugin_pcg.dart';
 import 'package:lumina_plugin_miniai/lumina_plugin_miniai.dart';
+import 'package:unreal_engine_importer/unreal_engine_importer.dart' show UnrealEngineImporterPlugin;
 import 'package:lumina_ui/ui/core/host/editor_host.dart';
 import 'package:lumina_ui/testing.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
@@ -529,6 +530,100 @@ void main() {
       await rec.hold(const Duration(seconds: 3));
       await shot('pcg.generate from the Output Log');
       rec.save(name, usedAssets: barrels);
+    } finally {
+      try {
+        if (tempProjectsDir.existsSync()) tempProjectsDir.deleteSync(recursive: true);
+      } catch (_) {}
+    }
+  });
+
+  // The Unreal Engine importer, linked into a project's plugins/ folder, is
+  // discovered by the Plugin Manager and claims .uasset: a cooked package
+  // whose class it cannot import yet is refused in the Output Log, naming the
+  // class.
+  testWidgets('Unreal Engine importer is discovered and claims .uasset', (tester) async {
+    const name = 'Unreal Engine importer is discovered and claims .uasset';
+    const barrel = 'Props/Barrels/fuel_barrel_red.glb';
+    final cooked = '${SmokeArtifacts.testAssetsDir.path}/Unreal/5.8/Windows/UEFix/Content/Fixtures';
+    final physicsAsset =
+        '$cooked/Characters/Mannequin/MF_Unarmed_Walk_Fwd/SkeletalMeshes/MF_Unarmed_Walk_Fwd_PhysicsAsset.uasset';
+    expect(File(physicsAsset).existsSync(), isTrue,
+        reason: 'cooked fixtures missing: run unreal_engine_importer/tool/cook_fixtures/cook_fixtures.dart');
+    final pluginCheckout = Directory('${Directory.current.parent.parent.path}/unreal_engine_importer');
+    expect(File('${pluginCheckout.path}/unreal_engine_importer.lmplugin').existsSync(), isTrue,
+        reason: 'the unreal_engine_importer checkout sits next to the lumina repository');
+    final tempProjectsDir = Directory.systemTemp.createTempSync('plugins_unreal_');
+    final pDir = Directory('${tempProjectsDir.path}/SmokeUnreal')..createSync(recursive: true);
+    try {
+      const project = LuminaProject(projectName: 'SmokeUnreal', activeLevel: 'contents/levels/L_Main.lmas', settings: EngineScalabilitySettings(targetFps: 60));
+      File('${pDir.path}/SmokeUnreal.lmproject').writeAsStringSync(jsonEncode(project.toMap()));
+      Link('${pDir.path}/plugins/unreal_engine_importer').createSync(pluginCheckout.path, recursive: true);
+      final vm = EditorViewModel(initialProject: project, projectDirPath: tempProjectsDir.path, enableTimers: false);
+      addTearDown(vm.dispose);
+      await tester.runAsync(() => vm.ensureDefaultLevelAssets());
+      await tester.runAsync(() => vm.processImportPipeline(sourceFilePath: '${SmokeArtifacts.testAssetsDir.path}/$barrel'));
+      vm.refreshAssets();
+      final mesh = vm.realAssets.firstWhere((a) => a.type == AssetType.filamesh && a.fileName.contains('fuel_barrel_red'));
+      await tester.runAsync(() => vm.spawnActorFromAsset(mesh, location: const [0.0, 0.0, 0.0]));
+
+      final boundaryKey = GlobalKey();
+      await tester.pumpWidget(RepaintBoundary(
+        key: boundaryKey,
+        child: ShadcnApp(theme: luminaEditorTheme(), home: MainEditorView(viewModel: vm)),
+      ));
+      await settle(tester, frames: 30);
+      await tester.runAsync(() => Future<void>.delayed(const Duration(seconds: 1)));
+      vm.frameLevelBounds();
+      await settle(tester);
+      final rec = SmokeRecorder(tester, boundary: find.byKey(boundaryKey));
+      Future<void> shot(String label) async {
+        SmokeArtifacts.saveScreenshot('$name: $label',
+            await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey)),
+            usedAssets: const [barrel]);
+        await rec.hold(const Duration(seconds: 1));
+      }
+
+      await rec.hold(const Duration(seconds: 2));
+
+      // Plugins ▸ Plugin Manager…: the linked project plugin is listed.
+      expect(vm.pluginRegistry.entries.map((e) => e.descriptor.name), contains('unreal_engine_importer'));
+      await tester.tap(barItem('Plugins'));
+      await settle(tester);
+      await rec.hold(const Duration(milliseconds: 800));
+      await tester.tap(find.text('Plugin Manager...'));
+      await settle(tester);
+      await rec.hold(const Duration(seconds: 1));
+      expect(find.text('Unreal Engine Importer'), findsWidgets);
+      await tester.tap(find.text('Unreal Engine Importer').last);
+      await settle(tester);
+      await rec.hold(const Duration(seconds: 2));
+      await shot('the Plugin Manager lists the importer');
+
+      // Registered as the editor does after enabling and a restart: the
+      // Import dialog offers .uasset.
+      if (LuminaEditorHost.plugins.whereType<UnrealEngineImporterPlugin>().isEmpty) {
+        vm.extensionRegistry.registerPlugin(UnrealEngineImporterPlugin());
+      }
+      expect(vm.importExtensions, contains('uasset'));
+
+      // Back to the level, Output Log open; a cooked PhysicsAsset through the
+      // plugin importer is refused by class.
+      vm.selectTab(0);
+      await settle(tester, frames: 20);
+      await tester.tap(find.byKey(const ValueKey('bottom_tab_1')));
+      await settle(tester);
+      await rec.hold(const Duration(seconds: 1));
+      vm.selectedFolder = 'contents';
+      final results = await tester.runAsync(() => vm.importWithPluginImporters([physicsAsset]));
+      expect(results!.single.success, isFalse);
+      expect(results.single.error, contains('PhysicsAsset'));
+      expect(results.single.error, contains('not supported yet'));
+      await settle(tester, frames: 30);
+      expect(vm.logger.logs.any((l) => l.message.contains('PhysicsAsset') && l.message.contains('not supported yet')), isTrue,
+          reason: 'the Output Log names the class the importer refused');
+      await rec.hold(const Duration(seconds: 3));
+      await shot('a cooked PhysicsAsset is refused by class in the Output Log');
+      rec.save(name, usedAssets: const [barrel]);
     } finally {
       try {
         if (tempProjectsDir.existsSync()) tempProjectsDir.deleteSync(recursive: true);
