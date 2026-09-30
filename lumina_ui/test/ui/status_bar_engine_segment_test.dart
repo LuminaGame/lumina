@@ -65,7 +65,7 @@ void main() {
     final version = gradleVersion();
     String textOf(String key) => tester.widget<Text>(find.descendant(of: find.byKey(ValueKey(key)), matching: find.byType(Text), matchRoot: true).first).data!;
     final keys = ['status_engine_version', 'status_filament_segment', 'status_level', 'status_actor_counts'];
-    expect(keys.map(textOf).toList(), ['Lumina Engine ${vm.engineVersion}', 'Filament $version', 'L_Main', '2 actors · 0 hidden · 0 selected']);
+    expect(keys.map(textOf).toList(), ['Lumina Engine ${LuminaRelease.displayVersion}', 'Filament $version', 'L_Main', '2 actors · 0 hidden · 0 selected']);
     final xs = [for (final k in keys) tester.getTopLeft(find.byKey(ValueKey(k))).dx];
     expect(xs, orderedEquals([...xs]..sort()), reason: 'left to right in that order');
     expect(find.byKey(const ValueKey('status_filament_logo')), findsOneWidget);

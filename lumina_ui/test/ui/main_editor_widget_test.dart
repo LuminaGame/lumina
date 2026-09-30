@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lumina/lumina.dart' show LuminaRelease;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/main_editor_view.dart';
@@ -28,8 +29,10 @@ void main() {
 
     await tester.pump(const Duration(milliseconds: 500));
 
-    expect(find.text('Lumina Studio'), findsOneWidget);
-    expect(find.text('0.0.1'), findsOneWidget);
+    expect(find.text('Studio'), findsOneWidget);
+    // No version badge beside the logo; the status bar names the build.
+    expect(find.text('0.0.1'), findsNothing);
+    expect(find.text('Lumina Engine ${LuminaRelease.displayVersion}'), findsOneWidget);
     expect(find.text('WORLD OUTLINER'), findsOneWidget);
     expect(find.text('DirectionalLight_Sun'), findsOneWidget);
     expect(find.text('Details'), findsOneWidget);

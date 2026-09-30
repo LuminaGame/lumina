@@ -241,25 +241,6 @@ class MenuBarWidget extends StatelessWidget {
                           color: EditorColors.foreground,
                         ),
                       ),
-                      const SizedBox(width: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 4,
-                          vertical: 1,
-                        ),
-                        decoration: BoxDecoration(
-                          color: EditorColors.primary.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                        child: Text(
-                          engineVersion,
-                          style: const TextStyle(
-                            fontSize: 8,
-                            fontWeight: FontWeight.bold,
-                            color: EditorColors.primary,
-                          ),
-                        ),
-                      ),
                     ],
                   ),
                 ],

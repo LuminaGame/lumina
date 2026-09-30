@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
+import '../models/lumina_project.dart' show kLuminaEngineDisplayVersion;
 import 'filament_prebuilt.dart';
 import 'lumina_data_dir.dart';
 import 'openriglogic_prebuilt.dart';
@@ -26,11 +27,17 @@ abstract final class LuminaRelease {
 
   /// Whether this is a release build.
   static bool get isRelease => version.isNotEmpty;
+
+  /// The build version the editor shows, without the tag's `v`: the release
+  /// tag in a release build (`0.0.1-dev.6`), else the source version.
+  static String get displayVersion => (isRelease ? version : kLuminaEngineDisplayVersion).replaceFirst(RegExp('^v'), '');
 }
 
 /// Downloads (or finds) the prebuilt Filament build [version] and returns
-/// its directory, usable as the hooks' `filament_dir`. The signature of
-/// [FilamentPrebuilt.ensure].
+/// its directory, usable as the hooks' `filament_dir`: from the
+/// `filament-<version>` release, else from the [releaseTag] release (the
+/// editor's own, for releases that attached Filament themselves). The
+/// signature of [FilamentPrebuilt.ensure].
 typedef FilamentProvider = Future<Directory> Function({
   required String version,
   required String releaseTag,
@@ -263,7 +270,8 @@ class EngineBootstrap {
   final Map<String, String> environment;
 
   /// Supplies the prebuilt Filament; defaults to [defaultFilamentProvider],
-  /// else [FilamentPrebuilt.ensure] (the release's assets).
+  /// else [FilamentPrebuilt.ensure] (the `filament-<VERSION>` release, else
+  /// this release's own assets).
   final FilamentProvider? filament;
 
   /// Supplies the prebuilt OpenRigLogic; defaults to

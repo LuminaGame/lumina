@@ -389,7 +389,7 @@ class _MainEditorViewState extends State<MainEditorView> {
                     // Engine · Filament · level · counts;
                     // the level and counts truncate first, never a version.
                     Text(
-                      'Lumina Engine ${viewModel.engineVersion}',
+                      'Lumina Engine ${LuminaRelease.displayVersion}',
                       key: const ValueKey('status_engine_version'),
                       style: _statusText,
                     ),
