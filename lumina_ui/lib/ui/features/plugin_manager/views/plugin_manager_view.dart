@@ -260,12 +260,15 @@ class _PluginCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
+                    // Wraps, so a long name never runs under the switch
+                    // and its Restart required badge.
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         Text(desc.friendlyName ?? desc.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                        const SizedBox(width: 8),
                         Text(desc.version.toString()).muted(),
-                        const SizedBox(width: 8),
                         SecondaryBadge(child: Text(desc.origin.name.toUpperCase())),
                       ],
                     ),
@@ -291,24 +294,10 @@ class _PluginCard extends StatelessWidget {
                         ),
                       Switch(
                         value: entry.enabled,
+                        // Every origin, built-ins included, is enabled per
+                        // project: the switch writes the project's
+                        // enabled_plugins and regenerates its editor host.
                         onChanged: (v) async {
-                          if (desc.origin == PluginOrigin.engine) {
-                            showOverlay(
-                              context,
-                              const DialogConfiguration(),
-                              builder: (c) => AlertDialog(
-                                title: const Text('Built-in Plugin'),
-                                content: const Text('Built-in plugins cannot be modified in project settings.'),
-                                actions: [
-                                  PrimaryButton(
-                                    child: const Text('OK'),
-                                    onPressed: () => closeOverlay(c),
-                                  )
-                                ],
-                              ),
-                            );
-                            return;
-                          }
                           if (!v) {
                             final res = await vm.setEnabled(desc.name, v);
                             if (res.issues.isNotEmpty && context.mounted) {
@@ -500,6 +489,15 @@ class _PluginDetailsPane extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
+        if (desc.origin == PluginOrigin.engine) ...[
+          Text(
+            key: const ValueKey('plugin_built_in_note'),
+            'Built-in: ships with the engine. Enable or disable it for this project with its switch; '
+            'it cannot be removed or edited here. A user plugin of the same name takes its place.',
+            style: TextStyle(fontSize: 12, color: theme.colorScheme.mutedForeground),
+          ),
+          const SizedBox(height: 16),
+        ],
         if (desc.description != null && desc.description!.isNotEmpty) ...[
           Text(
             desc.description!,

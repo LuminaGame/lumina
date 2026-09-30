@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
 import 'package:archive/archive.dart' show ZipDecoder;
-import 'package:flutter/material.dart' hide ThemeData, Colors, Icon, Icons, DropdownMenu, TextField, Switch, CircularProgressIndicator, Column, Row, Stack;
+import 'package:flutter/material.dart' hide ThemeData, Colors, Icon, Icons, DropdownMenu, TextField, Switch, CircularProgressIndicator, Column, Row, Stack, Card;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
@@ -204,6 +204,85 @@ void main() {
       if (tempProjectsDir.existsSync()) {
         tempProjectsDir.deleteSync(recursive: true);
       }
+    }
+  });
+
+  testWidgets('Plugins Smoke Scenario: enable a built-in plugin', (tester) async {
+    const name = 'Plugins Smoke Scenario: enable a built-in plugin';
+    tester.view.physicalSize = const Size(1920, 1080);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final temp = Directory.systemTemp.createTempSync('bi_');
+    final pDir = Directory('${temp.path}/BuiltInGame')..createSync(recursive: true);
+    try {
+      const project = LuminaProject(projectName: 'BuiltInGame', activeLevel: 'contents/levels/L_Main.lmas', settings: EngineScalabilitySettings(targetFps: 60));
+      final manifest = File('${pDir.path}/BuiltInGame.lmproject')..writeAsStringSync(jsonEncode(project.toMap()));
+      final vm = EditorViewModel(initialProject: project, projectDirPath: temp.path, enableTimers: false);
+      await tester.runAsync(() => vm.ensureDefaultLevelAssets());
+      final boundaryKey = GlobalKey();
+      await tester.pumpWidget(RepaintBoundary(
+        key: boundaryKey,
+        child: ShadcnApp(theme: luminaEditorTheme(), home: MainEditorView(viewModel: vm)),
+      ));
+      await settle(tester);
+      final rec = SmokeRecorder(tester, boundary: find.byKey(boundaryKey));
+      Future<void> shot(String label) async =>
+          SmokeArtifacts.saveScreenshot('$name: $label', await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey)));
+      await tester.runAsync(() => vm.pluginsScanned);
+      await rec.hold(const Duration(seconds: 1));
+
+      // Plugins ▸ Plugin Manager ▸ BUILT-IN ▸ All Built-in ▸ PCG.
+      await tester.tap(barItem('Plugins'));
+      await settle(tester);
+      await tester.tap(find.text('Plugin Manager...'));
+      await settle(tester);
+      await rec.hold(const Duration(seconds: 1));
+      await tester.tap(find.text('All Built-in'));
+      await settle(tester);
+      await rec.hold(const Duration(seconds: 2));
+      final pcg = vm.pluginRegistry.entries.singleWhere((e) => e.descriptor.name == 'lumina_plugin_pcg');
+      expect(pcg.descriptor.origin, PluginOrigin.engine);
+      expect(pcg.enabled, isFalse);
+      await tester.tap(find.text('Procedural Content Generation').first);
+      await settle(tester);
+      expect(find.byKey(const ValueKey('plugin_built_in_note')), findsOneWidget, reason: 'the details say how a built-in is managed');
+      await rec.hold(const Duration(seconds: 2));
+      await shot('PCG built-in, disabled');
+
+      // Its switch enables it for this project.
+      final pcgSwitch = find.descendant(
+        of: find.ancestor(of: find.text('Procedural Content Generation').first, matching: find.byType(Card)),
+        matching: find.byType(Switch),
+      );
+      expect(tester.widget<Switch>(pcgSwitch).value, isFalse);
+      await tester.tap(pcgSwitch);
+      final hostPubspec = File('${pDir.path}/.lumina/editor/pubspec.yaml');
+      for (var i = 0; i < 100 && find.text('Restart required').evaluate().isEmpty; i++) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
+        await tester.pump();
+      }
+      await settle(tester);
+      expect(find.text('Built-in Plugin'), findsNothing, reason: 'a built-in is not refused');
+      expect(tester.widget<Switch>(pcgSwitch).value, isTrue);
+      expect(find.text('Restart required'), findsOneWidget, reason: 'PCG waits for the project editor rebuild');
+      expect(find.text("Plugin changes require rebuilding this project's editor"), findsOneWidget);
+      expect((jsonDecode(manifest.readAsStringSync()) as Map)['enabled_plugins'], ['lumina_plugin_pcg']);
+      expect(hostPubspec.readAsStringSync(), contains('lumina_plugin_pcg:'), reason: "the project's editor host depends on PCG");
+      await rec.hold(const Duration(seconds: 4));
+      await shot('PCG enabled, restart required');
+      rec.save(name);
+      vm.dispose();
+    } finally {
+      await tester.runAsync(() async {
+        for (var i = 0; i < 20; i++) {
+          try {
+            if (temp.existsSync()) temp.deleteSync(recursive: true);
+            break;
+          } on FileSystemException {
+            await Future<void>.delayed(const Duration(milliseconds: 500));
+          }
+        }
+      });
     }
   });
 
@@ -2164,8 +2243,8 @@ void main() {
     final originalHandOff = EditorHandOff.instance;
     Process? projectEditor;
     try {
-      final pluginsRoot = Directory('${pDir.path}/plugins')..createSync(recursive: true);
-      Link('${pluginsRoot.path}/lumina_plugin_pcg').createSync(Directory(LuminaWorkspace.package('lumina_plugin_pcg')).absolute.path);
+      // PCG is the engine's built-in (no copy in the project): enabling it
+      // is what rebuilds this project's editor with it.
       const project = LuminaProject(projectName: 'PeGame', activeLevel: 'contents/levels/L_Main.lmas', settings: EngineScalabilitySettings(targetFps: 60));
       File('${pDir.path}/PeGame.lmproject').writeAsStringSync(jsonEncode(project.toMap()));
       final enginePubspec = File('${LuminaEditorHost.uiRoot}/pubspec.yaml');
@@ -2227,6 +2306,8 @@ void main() {
       final titleY = tester.getCenter(pcgTitle).dy;
       final pcgSwitch = find.byType(Switch).evaluate().firstWhere((e) => (tester.getCenter(find.byWidget(e.widget)).dy - titleY).abs() < 40).widget as Switch;
       expect(pcgSwitch.value, isFalse);
+      expect(vm.pluginRegistry.entries.singleWhere((e) => e.descriptor.name == 'lumina_plugin_pcg').descriptor.origin, PluginOrigin.engine,
+          reason: 'the built-in PCG, not a project copy');
       await tester.tap(find.byWidget(pcgSwitch));
       final host = Directory('${pDir.path}/.lumina/editor');
       for (var i = 0; i < 100 && !File('${host.path}/pubspec.yaml').existsSync(); i++) {
@@ -2235,6 +2316,8 @@ void main() {
       }
       await settle(tester);
       expect(File('${host.path}/pubspec.yaml').readAsStringSync(), contains('lumina_plugin_pcg:'), reason: 'the host depends on PCG');
+      expect(find.text('Built-in Plugin'), findsNothing, reason: 'a built-in is enabled like any plugin');
+      expect((jsonDecode(File('${pDir.path}/PeGame.lmproject').readAsStringSync()) as Map)['enabled_plugins'], ['lumina_plugin_pcg']);
       expect(File('${host.path}/lib/plugin_registrar.dart').readAsStringSync(), contains('LuminaPluginPcgPlugin()'));
       expect(enginePubspec.readAsBytesSync(), enginePubspecBefore, reason: 'the engine pubspec is untouched');
       expect(File('${LuminaEditorHost.uiRoot}/lib/generated/plugin_registrar.dart').existsSync(), isFalse);
