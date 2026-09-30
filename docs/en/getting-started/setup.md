@@ -146,6 +146,20 @@ The Windows setup accepts `/DRYRUN`, which lists what it would install and downl
 
 Pushing a `v*` tag that matches the version in `lumina_ui/pubspec.yaml` runs `.github/workflows/release.yml`. It checks the cross-repository pins, builds Filament (cached), builds Lumina Studio for Windows and Linux and the installers, and publishes the release. `installer/README.md` describes each installer, how to build it locally and the signing secrets.
 
+### Signing the Windows release (Certum)
+
+The Windows zip and setup can be Authenticode-signed with a Certum "Open Source Code Signing in the Cloud" certificate. Its key is reachable only through SimplySign Desktop on the maintainer's Windows machine, so CI cannot sign: with the repository variable `LUMINA_WINDOWS_SIGNING=local` the workflow creates the release as a draft whose notes say the Windows assets are being signed, and the maintainer finishes it locally.
+
+One-time setup: order the certificate from Certum, complete Certum's identity validation, install SimplySign Desktop and the SimplySign mobile app, log in (the certificate then appears in the Windows certificate store), and set the repository variable `LUMINA_WINDOWS_SIGNING` to `local`. The machine also needs the Windows SDK signing tools, Inno Setup 6, git and a logged-in GitHub CLI.
+
+For every release, with SimplySign Desktop logged in:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tool\release\sign_windows_release.ps1 -Tag v0.1.0 -CertificateSubject "<subject or CN>" -Publish
+```
+
+It signs `lumina_ui.exe` and our DLLs (leaving Microsoft's Visual C++ runtime as it is), re-zips with the same layout, rebuilds the setup so setup.exe and its uninstaller are signed, rewrites the `.sha256` files, uploads the replacements and publishes the draft. `-DryRun` shows the plan first, and `-FromDir` / `-OutDir` sign a folder offline. A new certificate builds SmartScreen reputation as signed downloads accumulate, so early downloads may still show a warning. `installer/README.md` has the details.
+
 ---
 
 [Previous: Requirements](requirements.md) | [Up: Lumina documentation](../../README.md) | [Next: Running the editor and tests](running.md)

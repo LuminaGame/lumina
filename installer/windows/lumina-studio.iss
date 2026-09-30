@@ -16,6 +16,11 @@
 ;
 ; Build: installer\windows\build.ps1 -Version 1.2.3 -Tag v1.2.3
 ;   (ISCC /DAppVersion=1.2.3 /DAppTag=v1.2.3 lumina-studio.iss)
+;
+; Signed build: build.ps1 -SignToolCommand "<sign tool command with $f>"
+; passes ISCC /Slumina=<command> /DSignToolName=lumina. Setup.exe and the
+; uninstaller it embeds are then both Authenticode-signed; without the define
+; nothing is signed.
 
 #ifndef AppVersion
   #define AppVersion "0.0.0"
@@ -68,6 +73,10 @@ SetupLogging=yes
 ; cannot traverse the junctions the editor makes for its engine checkout and
 ; projects. A per-user setup that never elevates gains nothing from it.
 RedirectionGuard=no
+#ifdef SignToolName
+SignTool={#SignToolName}
+SignedUninstaller=yes
+#endif
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"

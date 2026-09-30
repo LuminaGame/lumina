@@ -24,7 +24,15 @@
 #   LUMINA_MSIX_PUBLISHER       certificate subject, equal to the package publisher
 #   LUMINA_MSIX_CERT_BASE64     the code-signing .pfx, base64-encoded
 #   LUMINA_MSIX_CERT_PASSWORD   its password
-# Variables (optional): LUMINA_MSIX_TIMESTAMP_URL.
+# Variables (optional):
+#   LUMINA_MSIX_TIMESTAMP_URL   RFC 3161 timestamp server for the MSIX
+#   LUMINA_WINDOWS_SIGNING      `local`: the Windows zip and setup are
+#                               Authenticode-signed on the maintainer's machine
+#                               (tool/release/sign_windows_release.ps1, with a
+#                               certificate CI cannot reach), so the release is
+#                               created as a draft whose notes say the Windows
+#                               assets are being signed; the script publishes
+#                               it. Unset: the release is published right away.
 name: release
 
 on:
@@ -397,6 +405,7 @@ jobs:
       PRERELEASE: ${{ needs.check.outputs.prerelease }}
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
+      WINDOWS_SIGNING: ${{ vars.LUMINA_WINDOWS_SIGNING }}
     steps:
       - uses: actions/download-artifact@v5
         with:
@@ -410,15 +419,32 @@ jobs:
           ls -la
           for sum in *.sha256; do sha256sum -c "$sum"; done
 
+      # With LUMINA_WINDOWS_SIGNING=local the release stays a draft until
+      # tool/release/sign_windows_release.ps1 has replaced the Windows zip and
+      # setup with signed ones; it swaps the first line of the notes (the
+      # marker below) when it publishes. A re-run over an existing release
+      # replaces the Windows assets with unsigned ones again, so it goes back
+      # to draft in that mode.
       - name: Create or update the release
         run: |
           set -euo pipefail
+          marker='> **Windows assets are being signed.** The Windows zip and setup are replaced with Authenticode-signed builds before this release is published.'
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "Release $TAG exists; replacing its assets."
+            if [ "$WINDOWS_SIGNING" = local ]; then
+              body="$(gh release view "$TAG" --json body --jq .body)"
+              case "$body" in
+                "$marker"*) ;;
+                *) body="$(printf '%s\n\n%s' "$marker" "$body")" ;;
+              esac
+              printf '%s\n' "$body" > "$RUNNER_TEMP/notes.md"
+              gh release edit "$TAG" --draft --notes-file "$RUNNER_TEMP/notes.md"
+              echo "::notice::Release $TAG is a draft again: sign its Windows assets with tool/release/sign_windows_release.ps1 -Tag $TAG -Publish."
+            fi
           else
             flags=(--verify-tag --title "Lumina Studio $TAG" --generate-notes)
             if [ "$PRERELEASE" = true ]; then flags+=(--prerelease); fi
-            gh release create "$TAG" "${flags[@]}" --notes "$(cat <<'EOF'
+            notes="$(cat <<'EOF'
           ## Downloads
 
           | File | What it is |
@@ -433,10 +459,19 @@ jobs:
           Every file has a `.sha256` sidecar.
           EOF
           )"
+            if [ "$WINDOWS_SIGNING" = local ]; then
+              flags+=(--draft)
+              notes="$(printf '%s\n\n%s' "$marker" "$notes")"
+            fi
+            gh release create "$TAG" "${flags[@]}" --notes "$notes"
           fi
           gh release upload "$TAG" dist/* --clobber
           {
             echo "### Release $TAG"
             echo
+            if [ "$WINDOWS_SIGNING" = local ]; then
+              echo "Draft: sign the Windows assets and publish with \`tool/release/sign_windows_release.ps1 -Tag $TAG -Publish\`."
+              echo
+            fi
             for f in dist/*; do echo "- $(basename "$f")"; done
           } >> "$GITHUB_STEP_SUMMARY"

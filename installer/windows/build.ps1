@@ -6,6 +6,13 @@
   ./installer/windows/build.ps1 -Version 0.1.0 -Tag v0.1.0 -OutDir dist
   # dist/lumina-studio-setup-v0.1.0-windows-x64.exe and its .sha256
 
+.EXAMPLE
+  ./installer/windows/build.ps1 -Version 0.1.0 -Tag v0.1.0 -OutDir dist `
+    -SignToolCommand '$q<path to signtool.exe>$q sign /fd sha256 /tr http://time.certum.pl /td sha256 /sha1 <thumbprint> $f'
+  # The same, with setup.exe and its uninstaller Authenticode-signed. The
+  # command is an Inno Setup sign tool command: $f is the file to sign, $q a
+  # double quote.
+
 .NOTES
   Needs ISCC.exe (Inno Setup 6): `winget install JRSoftware.InnoSetup`, or
   -InstallInnoSetup to install it with Chocolatey (CI runners).
@@ -16,7 +23,8 @@ param(
   [string]$Tag = "v$Version",
   [string]$OutDir = 'dist',
   [string]$Repository = 'LuminaGame/lumina',
-  [switch]$InstallInnoSetup
+  [switch]$InstallInnoSetup,
+  [string]$SignToolCommand
 )
 $ErrorActionPreference = 'Stop'
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -46,7 +54,15 @@ $numeric = "$($Matches[1]).$($Matches[2]).$($Matches[3]).0"
 
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
 $out = (Resolve-Path $OutDir).Path
-& $iscc "/DAppVersion=$Version" "/DAppTag=$Tag" "/DNumericVersion=$numeric" "/DRepository=$Repository" "/O$out" "/Q" (Join-Path $here 'lumina-studio.iss') | Out-Host
+$isccArgs = @("/DAppVersion=$Version", "/DAppTag=$Tag", "/DNumericVersion=$numeric", "/DRepository=$Repository", "/O$out")
+if ($SignToolCommand) {
+  # Not quiet: the log then shows the sign tool running for the uninstaller
+  # and for setup.exe.
+  $isccArgs += @("/Slumina=$SignToolCommand", '/DSignToolName=lumina')
+} else {
+  $isccArgs += '/Q'
+}
+& $iscc @isccArgs (Join-Path $here 'lumina-studio.iss') | Out-Host
 if ($LASTEXITCODE -ne 0) { throw "ISCC failed (exit $LASTEXITCODE)" }
 
 $name = "lumina-studio-setup-$Tag-windows-x64.exe"

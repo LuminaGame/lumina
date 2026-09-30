@@ -100,6 +100,70 @@ The certificate comes from GitHub secrets (below). Without them the workflow ski
 certificate and its password never enter the repository or the logs. The `.pfx` is decoded into the runner's temp
 folder and deleted after signing.
 
+### Signing the Windows release (Certum)
+
+The Windows zip and setup of a release can be Authenticode-signed with a Certum "Open Source Code Signing in the
+Cloud" certificate. Its key stays in Certum's cloud (SimplySign): it is reachable only through SimplySign Desktop on
+the maintainer's Windows machine, unlocked with a one-time code from the phone, so CI cannot sign with it. With the
+repository variable `LUMINA_WINDOWS_SIGNING=local` the release workflow creates the release as a **draft** (a
+pre-release stays a pre-release) whose notes start with "Windows assets are being signed", and
+`tool/release/sign_windows_release.ps1` finishes it on that machine.
+
+One-time setup:
+
+1. Order the Certum "Open Source Code Signing in the Cloud" certificate. It is issued to an open-source developer,
+   whose name appears in the certificate subject.
+2. Identity validation: Certum checks your identity (an ID document; follow the instructions of the order) and the
+   open-source project before it issues the certificate.
+3. Install SimplySign Desktop on the Windows machine and the SimplySign app on the phone, and activate the account
+   with the data Certum sends. Log in to SimplySign Desktop with a code from the app: the certificate then appears in
+   the Windows certificate store. Note its subject or thumbprint:
+   ```powershell
+   Get-ChildItem Cert:\CurrentUser\My -CodeSigningCert | Format-List Subject, Thumbprint, NotAfter
+   ```
+4. On the same machine: the Windows SDK signing tools (`signtool.exe`), Inno Setup 6, git with a checkout of this
+   repository, and the GitHub CLI logged in (`gh auth login`) with write access to the repository.
+5. Set the repository variable `LUMINA_WINDOWS_SIGNING` to `local` (Settings > Secrets and variables > Actions >
+   Variables, or `gh variable set LUMINA_WINDOWS_SIGNING --body local -R LuminaGame/lumina`).
+
+For every release, once the workflow has finished and SimplySign Desktop is logged in, from the repository root:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tool\release\sign_windows_release.ps1 -Tag v0.1.0 -CertificateSubject "<subject or CN>" -DryRun
+powershell -ExecutionPolicy Bypass -File tool\release\sign_windows_release.ps1 -Tag v0.1.0 -CertificateSubject "<subject or CN>" -Publish
+```
+
+`-Thumbprint <sha1>` selects the certificate instead of `-CertificateSubject`. The script:
+
+1. checks `signtool.exe`, `ISCC.exe`, git, `gh` and the certificate (private key present, Code Signing usage, not
+   expired); without SimplySign Desktop it says "Start SimplySign Desktop and log in";
+2. downloads `lumina-studio-<tag>-windows-x64.zip`, `lumina-studio-setup-<tag>-windows-x64.exe` and their `.sha256`
+   files from the draft, and checks the zip against its sidecar;
+3. signs `lumina_ui.exe` and our DLLs (`signtool sign /fd sha256 /tr http://time.certum.pl /td sha256 /sha1 <thumbprint>`)
+   and verifies each (`signtool verify /pa`). Files that are already validly signed, such as Microsoft's Visual C++
+   runtime DLLs, are left untouched;
+4. writes the zip again with the same entries in the same order, and its `.sha256` in the original format;
+5. rebuilds the setup from the tag's `installer/windows` sources (`git archive`) with the same version, through
+   `build.ps1 -SignToolCommand`, so setup.exe and the uninstaller it installs are both signed (signing the CI-built
+   setup.exe afterwards would leave the uninstaller unsigned), and rewrites its `.sha256`;
+6. replaces the four files in the release (`gh release upload --clobber`) and, with `-Publish`, publishes the draft
+   and replaces the "being signed" line of the notes. Without `-Publish` the release stays a draft for you to check.
+
+It prints a table of every file with its signer and timestamp. All work happens in `%TEMP%\lumina-sign-<tag>`
+(`-WorkDir`), which each run starts again from the downloaded originals, so a run can simply be repeated.
+`-TimestampUrl` changes the timestamp server (default Certum's `http://time.certum.pl`). Offline,
+`-FromDir <folder>` takes the four files from a folder and writes the signed ones to `-OutDir` (default
+`<folder>\signed`) without touching GitHub. `tool/release/sign_windows_release_test.ps1 -FromDir <folder> -Tag <tag>`
+runs the offline mode end to end with a throwaway self-signed certificate (`-AllowUntrustedForTest`) and removes the
+certificate afterwards.
+
+Re-running the release workflow for a tag whose release exists replaces the Windows assets with unsigned builds
+again; in this mode it also turns the release back into a draft, so run the script again. Tags whose installer
+sources predate signed setup builds need `-InstallerSourceRef <commit>`.
+
+A new certificate has no SmartScreen reputation yet: Windows may still warn about the first signed downloads, and
+the warning fades as signed downloads accumulate. The MSIX is signed separately, in CI (above).
+
 ## Linux: .deb and .rpm
 
 The editor and the libc++ it builds projects with need glibc 2.38 or newer (Ubuntu 24.04, Debian 13, Fedora 39 or later). The package declares the build and run dependencies:
@@ -176,5 +240,6 @@ missing.
 | `LUMINA_MSIX_CERT_BASE64` | secret | MSIX: the code-signing `.pfx`, base64-encoded |
 | `LUMINA_MSIX_CERT_PASSWORD` | secret | MSIX: the `.pfx` password |
 | `LUMINA_MSIX_TIMESTAMP_URL` | variable (optional) | MSIX: RFC 3161 timestamp server |
+| `LUMINA_WINDOWS_SIGNING` | variable (optional) | `local`: releases are created as drafts, and the Windows zip and setup are signed with `tool/release/sign_windows_release.ps1` (above) |
 
 Everything else uses the workflow's own `GITHUB_TOKEN`. Only the `release` job gets `contents: write`.

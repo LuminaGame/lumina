@@ -146,6 +146,20 @@ Windows setup'ı `/DRYRUN` kabul eder: hiçbir şeyi değiştirmeden neyi kuraca
 
 `lumina_ui/pubspec.yaml` içindeki sürümle eşleşen bir `v*` tag'i push etmek `.github/workflows/release.yml`'ı çalıştırır. Workflow repository'ler arası pin'leri kontrol eder, Filament'ı build eder (cache'li), Windows ve Linux için Lumina Studio'yu ve installer'ları build eder ve release'i yayımlar. `installer/README.tr.md` her installer'ı, yerelde nasıl build edileceğini ve imzalama secret'larını anlatır.
 
+### Windows release'ini imzalamak (Certum)
+
+Windows zip'i ve setup'ı, Certum "Open Source Code Signing in the Cloud" sertifikasıyla Authenticode imzalı olabilir. Anahtarına yalnızca maintainer'ın Windows makinesindeki SimplySign Desktop üzerinden ulaşılır, bu yüzden CI imzalayamaz: `LUMINA_WINDOWS_SIGNING=local` repository değişkeniyle workflow release'i, notlarında Windows asset'lerinin imzalanmakta olduğunu söyleyen bir draft olarak oluşturur ve maintainer onu yerelde bitirir.
+
+Bir kerelik kurulum: sertifikayı Certum'dan sipariş edin, Certum'un kimlik doğrulamasını tamamlayın, SimplySign Desktop'ı ve SimplySign mobil uygulamasını kurun, giriş yapın (sertifika o zaman Windows sertifika deposunda görünür) ve `LUMINA_WINDOWS_SIGNING` repository değişkenini `local` yapın. Makinede ayrıca Windows SDK imzalama araçları, Inno Setup 6, git ve giriş yapılmış bir GitHub CLI gerekir.
+
+Her release'te, SimplySign Desktop'a giriş yapılmışken:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tool\release\sign_windows_release.ps1 -Tag v0.1.0 -CertificateSubject "<subject ya da CN>" -Publish
+```
+
+Script `lumina_ui.exe`'yi ve bizim DLL'lerimizi imzalar (Microsoft'un Visual C++ runtime'ına dokunmaz), zip'i aynı düzenle yeniden oluşturur, setup'ı setup.exe ve uninstaller'ı imzalı olacak biçimde yeniden build eder, `.sha256` dosyalarını yeniden yazar, yenilerini yükler ve draft'ı yayımlar. `-DryRun` önce planı gösterir; `-FromDir` / `-OutDir` bir klasörü çevrimdışı imzalar. Yeni bir sertifika SmartScreen itibarını imzalı indirmeler biriktikçe kazanır, bu yüzden ilk indirmelerde hâlâ bir uyarı görülebilir. Ayrıntılar `installer/README.tr.md` içinde.
+
 ---
 
 [Önceki: Gereksinimler](requirements.md) | [Üst: Lumina dokümantasyonu](../../README.tr.md) | [Sonraki: Editörü ve testleri çalıştırmak](running.md)

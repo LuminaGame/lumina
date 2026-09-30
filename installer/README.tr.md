@@ -99,6 +99,70 @@ Sertifika GitHub secret'larından gelir (aşağıda). Secret'lar yoksa workflow 
 ve parolası hiçbir zaman repository'ye ya da log'lara girmez. `.pfx` runner'ın temp klasörüne açılır ve
 imzalamadan sonra silinir.
 
+### Windows release'ini imzalamak (Certum)
+
+Bir release'in Windows zip'i ve setup'ı, Certum "Open Source Code Signing in the Cloud" sertifikasıyla Authenticode
+imzalı olabilir. Sertifikanın anahtarı Certum'un bulutunda (SimplySign) kalır: yalnızca maintainer'ın Windows
+makinesindeki SimplySign Desktop üzerinden, telefondan gelen tek kullanımlık bir kodla açılarak kullanılabilir; bu
+yüzden CI onunla imzalayamaz. `LUMINA_WINDOWS_SIGNING=local` repository değişkeniyle release workflow'u release'i
+**draft** olarak oluşturur (pre-release, pre-release olarak kalır) ve notları "Windows assets are being signed"
+satırıyla başlar; `tool/release/sign_windows_release.ps1` işi o makinede bitirir.
+
+Bir kerelik kurulum:
+
+1. Certum "Open Source Code Signing in the Cloud" sertifikasını sipariş edin. Sertifika bir açık kaynak
+   geliştiricisine verilir; geliştiricinin adı sertifikanın subject'inde yer alır.
+2. Kimlik doğrulama: Certum sertifikayı vermeden önce kimliğinizi (bir kimlik belgesi; siparişin talimatlarını
+   izleyin) ve açık kaynak projeyi doğrular.
+3. Windows makinesine SimplySign Desktop'ı, telefona SimplySign uygulamasını kurun ve hesabı Certum'un gönderdiği
+   bilgilerle etkinleştirin. SimplySign Desktop'a uygulamadaki bir kodla giriş yapın: sertifika o zaman Windows
+   sertifika deposunda görünür. Subject'ini ya da thumbprint'ini not edin:
+   ```powershell
+   Get-ChildItem Cert:\CurrentUser\My -CodeSigningCert | Format-List Subject, Thumbprint, NotAfter
+   ```
+4. Aynı makinede: Windows SDK imzalama araçları (`signtool.exe`), Inno Setup 6, bu repository'nin bir checkout'uyla
+   git ve repository'ye yazma yetkisiyle giriş yapmış GitHub CLI (`gh auth login`).
+5. `LUMINA_WINDOWS_SIGNING` repository değişkenini `local` yapın (Settings > Secrets and variables > Actions >
+   Variables ya da `gh variable set LUMINA_WINDOWS_SIGNING --body local -R LuminaGame/lumina`).
+
+Her release'te, workflow bittikten ve SimplySign Desktop'a giriş yapıldıktan sonra, repository kökünden:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tool\release\sign_windows_release.ps1 -Tag v0.1.0 -CertificateSubject "<subject ya da CN>" -DryRun
+powershell -ExecutionPolicy Bypass -File tool\release\sign_windows_release.ps1 -Tag v0.1.0 -CertificateSubject "<subject ya da CN>" -Publish
+```
+
+Sertifika `-CertificateSubject` yerine `-Thumbprint <sha1>` ile de seçilebilir. Script:
+
+1. `signtool.exe`, `ISCC.exe`, git, `gh` ve sertifikayı (private key var, Code Signing kullanımı, süresi dolmamış)
+   kontrol eder; SimplySign Desktop yoksa "Start SimplySign Desktop and log in" der;
+2. draft'tan `lumina-studio-<tag>-windows-x64.zip`, `lumina-studio-setup-<tag>-windows-x64.exe` ve `.sha256`
+   dosyalarını indirir, zip'i sidecar'ına karşı doğrular;
+3. `lumina_ui.exe`'yi ve bizim DLL'lerimizi imzalar (`signtool sign /fd sha256 /tr http://time.certum.pl /td sha256 /sha1 <thumbprint>`)
+   ve her birini doğrular (`signtool verify /pa`). Zaten geçerli bir imzası olan dosyalara, örneğin Microsoft'un
+   Visual C++ runtime DLL'lerine dokunmaz;
+4. zip'i aynı girdilerle, aynı sırada yeniden yazar ve `.sha256` dosyasını özgün biçimde yazar;
+5. setup'ı tag'in `installer/windows` kaynaklarından (`git archive`) aynı sürümle `build.ps1 -SignToolCommand`
+   üzerinden yeniden build eder; böylece setup.exe ve kurduğu uninstaller ikisi de imzalı olur (CI'ın build ettiği
+   setup.exe'yi sonradan imzalamak uninstaller'ı imzasız bırakırdı) ve `.sha256` dosyasını yeniden yazar;
+6. dört dosyayı release'te değiştirir (`gh release upload --clobber`); `-Publish` ile draft'ı yayımlar ve
+   notlardaki "being signed" satırını değiştirir. `-Publish` olmadan release, kontrol etmeniz için draft kalır.
+
+Her dosyayı, imzalayanı ve timestamp'iyle birlikte bir tabloda yazdırır. Bütün iş `%TEMP%\lumina-sign-<tag>`
+(`-WorkDir`) içinde yapılır ve her çalıştırma indirilen özgün dosyalardan yeniden başlar; yani bir çalıştırma
+olduğu gibi tekrarlanabilir. `-TimestampUrl` timestamp sunucusunu değiştirir (varsayılan Certum'un
+`http://time.certum.pl` adresi). Çevrimdışı, `-FromDir <klasör>` dört dosyayı bir klasörden alır ve imzalı olanları
+GitHub'a dokunmadan `-OutDir` klasörüne (varsayılan `<klasör>\signed`) yazar.
+`tool/release/sign_windows_release_test.ps1 -FromDir <klasör> -Tag <tag>` çevrimdışı modu, sonradan atılacak
+self-signed bir sertifikayla (`-AllowUntrustedForTest`) uçtan uca çalıştırır ve sertifikayı en sonda siler.
+
+Release'i zaten var olan bir tag için release workflow'unu yeniden çalıştırmak Windows asset'lerini yine imzasız
+build'lerle değiştirir; bu modda release de yeniden draft olur, script'i tekrar çalıştırın. Installer kaynakları
+imzalı setup build'lerinden eski olan tag'ler `-InstallerSourceRef <commit>` ister.
+
+Yeni bir sertifikanın henüz SmartScreen itibarı yoktur: Windows ilk imzalı indirmelerde hâlâ uyarabilir; uyarı
+imzalı indirmeler biriktikçe kaybolur. MSIX ayrıca, CI'da imzalanır (yukarıda).
+
 ## Linux: .deb ve .rpm
 
 Editor ve projeleri build ettiği libc++ glibc 2.38 ya da üstünü ister (Ubuntu 24.04, Debian 13, Fedora 39 ve sonrası). Paket build ve çalışma bağımlılıklarını bildirir:
@@ -175,6 +239,7 @@ yorumu listeler.
 | `LUMINA_MSIX_CERT_BASE64` | secret | MSIX: code-signing `.pfx` dosyası, base64 |
 | `LUMINA_MSIX_CERT_PASSWORD` | secret | MSIX: `.pfx` parolası |
 | `LUMINA_MSIX_TIMESTAMP_URL` | variable (isteğe bağlı) | MSIX: RFC 3161 timestamp sunucusu |
+| `LUMINA_WINDOWS_SIGNING` | variable (isteğe bağlı) | `local`: release'ler draft olarak oluşturulur, Windows zip'i ve setup'ı `tool/release/sign_windows_release.ps1` ile imzalanır (yukarıda) |
 
 Geri kalan her şey workflow'un kendi `GITHUB_TOKEN`'ını kullanır. Yalnızca `release` job'u `contents: write`
 alır.
