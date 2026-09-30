@@ -181,7 +181,10 @@ void registerBlueprintTools(McpToolRegistry registry, EditorViewModel vm, McpEdi
       description: 'Places a library node (list_blueprint_nodes id) on a graph (the event graph unless `graph` names a '
           'function or macro) at canvas position (x, y), as one undo step on the Blueprint tab. Returns the new node '
           'with its pin ids. Optional literals set unconnected input pins ({pin id: value}) and node settings (an input '
-          'action node\'s "action", a variable node\'s "variable", a custom event\'s "name").',
+          'action node\'s "action", a variable node\'s "variable", a custom event\'s "name", a widget graph\'s Get Widget '
+          '(get_widget_variable) and a Get Element\'s "element" — the element\'s designer name, e.g. "ScoreText" — and the '
+          '"class" of Create Widget ("WBP_HUD") and Cast To ("Widget:WBP_HUD", "Actor:BP_Door", '
+          '"Component:LuminaCameraComponent", "WidgetElement:text" for a Text Block)).',
       inputSchema: McpSchema.object({
         'asset': assetArg,
         'graph': graphArg,

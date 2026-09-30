@@ -254,6 +254,26 @@ void main() {
     setUp(() => boot(widgetLibrary: kUmgWidgetLibraryFlutter));
     tearDown(shutdown);
 
+    test('add_blueprint_node names the element and class settings; a Get <Element> placed with them compiles', () async {
+      final tools = {for (final t in await client.listTools()) t['name']: t};
+      final description = tools['add_blueprint_node']!['description'] as String;
+      expect(description, allOf(contains('"element"'), contains('"class"'), contains('WidgetElement:text')));
+
+      await ok('create_asset', {'type': 'widget', 'name': 'WBP_AgentHud'});
+      final root = ((await ok('get_widget_tree', {'asset': hud}))['root'] as Map)['id'];
+      await ok('add_widget', {'asset': hud, 'type': 'text', 'parent': root, 'name': 'ScoreText', 'x': 40, 'y': 30});
+      final event = ((await ok('add_blueprint_node', {'asset': hud, 'node': 'event_widget_construct', 'x': 0, 'y': 0}))['node'] as Map)['id'];
+      final get = (await ok('add_blueprint_node', {
+        'asset': hud, 'node': 'get_widget_variable', 'x': 0, 'y': 200, 'literals': {'element': 'ScoreText'},
+      }))['node'] as Map;
+      expect(get['title'], 'ScoreText');
+      final set = ((await ok('add_blueprint_node', {'asset': hud, 'node': 'set_element_text', 'x': 300, 'y': 0, 'literals': {'in_text': 'Score: 0'}}))['node'] as Map)['id'];
+      await ok('connect_blueprint_pins', {'asset': hud, 'from_node': event, 'from_pin': 'exec_out', 'to_node': set, 'to_pin': 'exec_in'});
+      await ok('connect_blueprint_pins', {'asset': hud, 'from_node': get['id'], 'from_pin': 'return_value', 'to_node': set, 'to_pin': 'target'});
+      final compiled = await ok('compile_widget', {'asset': hud});
+      expect(compiled['ok'], isTrue, reason: '$compiled');
+    });
+
     test('a shadcn button fails compile_widget with the validator error and writes no Dart file', () async {
       await ok('create_asset', {'type': 'widget', 'name': 'WBP_AgentHud'});
       final root = ((await ok('get_widget_tree', {'asset': hud}))['root'] as Map)['id'];
