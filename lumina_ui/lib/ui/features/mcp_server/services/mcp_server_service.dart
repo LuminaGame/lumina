@@ -797,7 +797,10 @@ class McpServerService extends ChangeNotifier {
             'Every edit call is one undo step labelled MCP: … (undo / redo; scope "agent" undoes only yours). '
             'Deleted assets go to .lumina/trash (list_trash, restore_asset). Tools come in groups '
             '(list_tool_groups); connect with /mcp?groups=level,view to list fewer. File tools are confined to the '
-            'project; every file change is snapshotted first (fs_history, fs_restore). Read project_info first.',
+            'project; every file change is snapshotted first (fs_history, fs_restore). Read project_info first. '
+            'Play-testing: after start_pie (or the start of a pie_sequence) let the game run at least 1.5 s '
+            '(pie_play_for with ms >= 1500, or a {"play_ms": 1500} step) before the first screenshot; '
+            'earlier frames can still show the editor camera.',
       };
 
   Future<Map<String, Object?>> _callTool(Map<String, Object?> params, McpSession? session) async {

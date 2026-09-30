@@ -74,6 +74,8 @@ void main() {
       expect(result['protocolVersion'], '2025-06-18');
       expect((result['serverInfo'] as Map)['name'], 'lumina-studio');
       expect((result['capabilities'] as Map).containsKey('tools'), isTrue);
+      // Agents wait 1.5 s of play before a play-test screenshot.
+      expect(result['instructions'], contains('let the game run at least 1.5 s'));
       expect((result['capabilities'] as Map).containsKey('resources'), isTrue);
 
       final initialized = await client.post({'jsonrpc': '2.0', 'method': 'notifications/initialized'});
