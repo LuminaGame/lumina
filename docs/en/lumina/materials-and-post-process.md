@@ -205,6 +205,7 @@ Asset-level wrapper around a compiled Filament material (.filamat) package.
 | `constants` | `List<MaterialConstant> constants` | Holds the `constants` property or configuration state. |
 | `nativeMaterial` | `FilamentMaterial get nativeMaterial` | The underlying native [FilamentMaterial]. |
 | `world` | `LuminaWorld get world` | The owning [LuminaWorld]. |
+| `textures` | `LuminaMaterialTextures get textures` | The textures bound to this material's samplers, which every instance starts with, and the ones that could not be loaded. |
 | `isDisposed` | `bool get isDisposed` | Whether this material asset has been disposed. |
 | `parameterCount` | `int get parameterCount` | Total number of parameters declared on this material. |
 | `parameters` | `List<MaterialParameter> get parameters` | Cached list of reflected material parameters. |
@@ -281,9 +282,13 @@ Refcounted cache of compiled [LuminaMaterial] assets for a world.
 | `world` | `LuminaWorld world` | Holds the `world` property or configuration state. |
 | `engine` | `FilamentEngine engine` | Holds the `engine` property or configuration state. |
 | `createNative` | `static FilamentMaterial createNative(FilamentEngine engine, String assetPath, Uint8List bytes, {List<MaterialConstant> constants = const []})` | A native material from the bytes of [assetPath]: a material `.lmas` (its compiled package, with the parameter values the Material Editor saved as defaults) or a `.filamat`. Throws a `StateError` when they hold no compiled material. |
+| `createNativeWithTextureReferences` | `static (FilamentMaterial, List<AssetReference>) createNativeWithTextureReferences(FilamentEngine engine, String assetPath, Uint8List bytes, {List<MaterialConstant> constants = const []})` | `createNative`, plus the material asset's references: which texture each sampler draws. Empty for a `.filamat`. |
 | `isCompiledPackage` | `static bool isCompiledPackage(Uint8List bytes)` | Whether [bytes] is a compiled `.filamat` package (Filament aborts the process on anything else). |
 | `onMaterialReleased` | `void onMaterialReleased(LuminaMaterial material)` | Internal callback when material refcount drops to zero. |
 | `dispose` | `void dispose()` | Disposes all cached materials. |
+
+A material the cache loads (`load`, used by `LuminaStaticMeshComponent.setMaterialAsset`, `materialOverrideAsset` and mesh slot materials) gets its sampler textures loaded and bound on its default instance before it is returned, so every instance (and a `LuminaDynamicMaterialInstance` made from one) draws them; see `LuminaMaterialTextures`.
+
 
 ### `class LuminaInstanceMaterialOverride`
 
@@ -293,10 +298,25 @@ One material asset drawn on every section of a gltfio instance that no world own
 
 | Member | Signature | Description |
 | :--- | :--- | :--- |
-| `fromBytes` | `factory LuminaInstanceMaterialOverride.fromBytes(FilamentEngine engine, String assetPath, Uint8List bytes)` | Builds the material from a material `.lmas` or `.filamat`, with its saved parameter values; a `StateError` when there is no compiled material. |
+| `fromBytes` | `factory LuminaInstanceMaterialOverride.fromBytes(FilamentEngine engine, String assetPath, Uint8List bytes, {LuminaAssetProvider? assetProvider})` | Builds the material from a material `.lmas` or `.filamat`, with its saved parameter values, and binds the textures its samplers name once they are loaded through [assetProvider] (else `LuminaAssets`); a `StateError` when there is no compiled material. |
+| `texturesLoaded` | `Future<void> texturesLoaded` | Completes once the textures are bound (or found missing, each logged once). |
+| `textures` | `LuminaMaterialTextures get textures` | The bound textures; empty until `texturesLoaded`. Released with the material on `dispose`. |
 | `applyTo` | `void applyTo(FilamentAssetInstance instance)` | Draws it on every primitive of every renderable of [instance], remembering what each drew. |
 | `restore` | `void restore()` | Gives those sections their own materials back. |
 | `dispose` | `void dispose()` | Restores the sections and destroys the material. |
+
+### `class LuminaMaterialTextures`
+
+`lib/src/material/material_textures.dart`. The textures a material asset's samplers name, loaded and uploaded. A material asset records which texture goes to which sampler in its references (`slot_name` = the sampler parameter, `asset_path` = a texture `.lmas`, whose payload is the image, or an image file): the glTF import writes them for `baseColorMap`, `normalMap`, `metallicRoughnessMap`, `occlusionMap` and `emissiveMap`, the Material Editor for every `sampler2d` a texture was assigned to. Textures are read through `LuminaAssets` (the project's files in the editor and Play, the asset bundle in a built game, the web included; an absolute project path is read as its `contents/…` key there) and uploaded with the texture asset's `texture_settings`: `srgb` (without settings, colour samplers — names containing `color`, `albedo`, `diffuse`, `emissive` — are sRGB, the rest linear), mipmaps (none for `NoMipmaps` or the `UI` group), `filter` (`Bilinear` → linear-mipmap-nearest, `Trilinear` → linear-mipmap-linear, `Anisotropic 16x` → trilinear with anisotropy 16) and `address_x` / `address_y` (`Wrap`, `Clamp`, `Mirror`). One upload is shared per texture and engine and destroyed when the last material binding it is released. A texture that cannot be read or decoded logs one warning and its sampler is left unbound.
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `load` | `static Future<LuminaMaterialTextures> load(FilamentEngine engine, FilamentMaterial material, List<AssetReference> references, {required String materialPath, LuminaAssetProvider? assetProvider})` | Loads the textures [references] name for the samplers [material] declares. |
+| `bound` | `Map<String, LuminaBoundTexture> bound` | The texture bound to each sampler (`path`, the shared `texture`, its `sampler`, `srgb`). |
+| `missing` | `Map<String, String> missing` | Why a sampler's texture was not bound. |
+| `bindTo` | `void bindTo(FilamentMaterialInstance instance)` | Binds every loaded texture on [instance]; on a material's default instance, every instance created from it starts with them. |
+| `release` | `void release()` | Lets go of the textures, after the material is destroyed. |
+| `isColorSampler` | `static bool isColorSampler(String name)` | Whether a sampler holds colour (sRGB) rather than data, by name. |
 
 ## `lib/src/post_process/post_process_blender.dart`
 

@@ -173,6 +173,7 @@ export 'src/material/lumina_material_instance.dart';
 export 'src/material/dynamic_material_instance.dart';
 export 'src/material/material_cache.dart';
 export 'src/material/instance_material_override.dart';
+export 'src/material/material_textures.dart';
 
 // Input
 export 'src/input/input_component.dart';

@@ -205,6 +205,7 @@ Asset-level wrapper around a compiled Filament material (.filamat) package.
 | `constants` | `List<MaterialConstant> constants` | `constants` alanını (field/property) ve ilişkili veriyi saklar. |
 | `nativeMaterial` | `FilamentMaterial get nativeMaterial` | The underlying native [FilamentMaterial]. |
 | `world` | `LuminaWorld get world` | The owning [LuminaWorld]. |
+| `textures` | `LuminaMaterialTextures get textures` | Bu materyalin sampler'larına bağlı, her örneğin onlarla başladığı dokular ve yüklenemeyenler. |
 | `isDisposed` | `bool get isDisposed` | Whether this material asset has been disposed. |
 | `parameterCount` | `int get parameterCount` | Total number of parameters declared on this material. |
 | `parameters` | `List<MaterialParameter> get parameters` | Cached list of reflected material parameters. |
@@ -282,8 +283,11 @@ Refcounted cache of compiled [LuminaMaterial] assets for a world.
 | `engine` | `FilamentEngine engine` | `engine` alanını (field/property) ve ilişkili veriyi saklar. |
 | `createNative` | `static FilamentMaterial createNative(FilamentEngine engine, String assetPath, Uint8List bytes, {List<MaterialConstant> constants = const []})` | [assetPath] baytlarından yerel bir materyal: bir materyal `.lmas` (derlenmiş paketi; Materyal Editörü'nün kaydettiği parametre değerleri varsayılan olur) ya da bir `.filamat`. Derlenmiş materyal yoksa `StateError` fırlatır. |
 | `isCompiledPackage` | `static bool isCompiledPackage(Uint8List bytes)` | [bytes] derlenmiş bir `.filamat` paketi mi (Filament başka her şeyde süreci durdurur). |
+| `createNativeWithTextureReferences` | `static (FilamentMaterial, List<AssetReference>) createNativeWithTextureReferences(FilamentEngine engine, String assetPath, Uint8List bytes, {List<MaterialConstant> constants = const []})` | `createNative` ve materyal varlığının referansları: her sampler'ın hangi dokuyu çizdiği. `.filamat` için boş. |
 | `onMaterialReleased` | `void onMaterialReleased(LuminaMaterial material)` | Internal callback when material refcount drops to zero. |
 | `dispose` | `void dispose()` | Disposes all cached materials. |
+
+Önbelleğin yüklediği bir materyalin (`load`; `LuminaStaticMeshComponent.setMaterialAsset`, `materialOverrideAsset` ve mesh slot materyalleri bunu kullanır) sampler dokuları, materyal döndürülmeden önce yüklenip varsayılan örneğine bağlanır; böylece her örnek (ve ondan yapılan bir `LuminaDynamicMaterialInstance`) onları çizer; bkz. `LuminaMaterialTextures`.
 
 ### `class LuminaInstanceMaterialOverride`
 
@@ -293,10 +297,25 @@ Hiçbir dünyanın sahip olmadığı bir gltfio örneğinin her bölümüne çiz
 
 | Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
-| `fromBytes` | `factory LuminaInstanceMaterialOverride.fromBytes(FilamentEngine engine, String assetPath, Uint8List bytes)` | Materyali bir materyal `.lmas` ya da `.filamat` dosyasından, kayıtlı parametre değerleriyle kurar; derlenmiş materyal yoksa `StateError`. |
+| `fromBytes` | `factory LuminaInstanceMaterialOverride.fromBytes(FilamentEngine engine, String assetPath, Uint8List bytes, {LuminaAssetProvider? assetProvider})` | Materyali bir materyal `.lmas` ya da `.filamat` dosyasından, kayıtlı parametre değerleriyle kurar ve sampler'larının adlandırdığı dokuları [assetProvider] (yoksa `LuminaAssets`) üzerinden yüklendiklerinde bağlar; derlenmiş materyal yoksa `StateError`. |
+| `texturesLoaded` | `Future<void> texturesLoaded` | Dokular bağlandığında (ya da eksik bulunup her biri bir kez yazıldığında) tamamlanır. |
+| `textures` | `LuminaMaterialTextures get textures` | Bağlı dokular; `texturesLoaded`'a kadar boş. `dispose` ile materyalle birlikte bırakılır. |
 | `applyTo` | `void applyTo(FilamentAssetInstance instance)` | [instance] içindeki her çizilebilirin her primitifine çizer, her birinin önceki materyalini hatırlar. |
 | `restore` | `void restore()` | O bölümlere kendi materyallerini geri verir. |
 | `dispose` | `void dispose()` | Bölümleri geri yükler ve materyali yok eder. |
+
+### `class LuminaMaterialTextures`
+
+`lib/src/material/material_textures.dart`. Bir materyal varlığının sampler'larının adlandırdığı dokular, yüklenmiş ve GPU'ya aktarılmış halde. Materyal varlığı hangi dokunun hangi sampler'a gittiğini referanslarında tutar (`slot_name` = sampler parametresi, `asset_path` = yükü görüntü olan bir doku `.lmas`'ı ya da bir görüntü dosyası): glTF içe aktarımı bunları `baseColorMap`, `normalMap`, `metallicRoughnessMap`, `occlusionMap` ve `emissiveMap` için, Materyal Editörü de doku atanan her `sampler2d` için yazar. Dokular `LuminaAssets` üzerinden okunur (editörde ve Play'de projenin dosyaları, derlenmiş oyunda — web dahil — asset paketi; mutlak bir proje yolu orada `contents/…` anahtarı olarak okunur) ve doku varlığının `texture_settings` ayarlarıyla yüklenir: `srgb` (ayar yoksa renk sampler'ları — adında `color`, `albedo`, `diffuse`, `emissive` geçenler — sRGB, diğerleri doğrusal), mipmap'ler (`NoMipmaps` ya da `UI` grubu için yok), `filter` (`Bilinear` → linear-mipmap-nearest, `Trilinear` → linear-mipmap-linear, `Anisotropic 16x` → anizotropi 16 ile trilinear) ve `address_x` / `address_y` (`Wrap`, `Clamp`, `Mirror`). Her doku motor başına bir kez yüklenip paylaşılır, onu bağlayan son materyal bırakıldığında yok edilir. Okunamayan ya da çözülemeyen bir doku bir kez uyarı yazar ve sampler'ı bağlanmadan kalır.
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `load` | `static Future<LuminaMaterialTextures> load(FilamentEngine engine, FilamentMaterial material, List<AssetReference> references, {required String materialPath, LuminaAssetProvider? assetProvider})` | [material]'ın bildirdiği sampler'lar için [references]'ın adlandırdığı dokuları yükler. |
+| `bound` | `Map<String, LuminaBoundTexture> bound` | Her sampler'a bağlanan doku (`path`, paylaşılan `texture`, `sampler`, `srgb`). |
+| `missing` | `Map<String, String> missing` | Bir sampler'ın dokusunun neden bağlanamadığı. |
+| `bindTo` | `void bindTo(FilamentMaterialInstance instance)` | Yüklenen her dokuyu [instance] üzerine bağlar; materyalin varsayılan örneğine bağlanınca ondan sonra oluşturulan her örnek onlarla başlar. |
+| `release` | `void release()` | Materyal yok edildikten sonra dokuları bırakır. |
+| `isColorSampler` | `static bool isColorSampler(String name)` | Bir sampler'ın veri değil renk (sRGB) tuttuğunu adından belirler. |
 
 ## `lib/src/post_process/post_process_blender.dart`
 

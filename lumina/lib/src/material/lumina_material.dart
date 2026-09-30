@@ -4,6 +4,7 @@ import 'package:vector_math/vector_math_64.dart';
 import '../world/world.dart';
 import 'lumina_material_instance.dart';
 import 'material_cache.dart';
+import 'material_textures.dart';
 
 /// Asset-level wrapper around a compiled Filament material (.filamat) package.
 class LuminaMaterial {
@@ -11,6 +12,7 @@ class LuminaMaterial {
   final String assetPath;
   final List<MaterialConstant> constants;
   final LuminaMaterialCache _cache;
+  final LuminaMaterialTextures _textures;
 
   int _refCount = 1;
   int _instanceCounter = 1;
@@ -22,7 +24,8 @@ class LuminaMaterial {
 
   LuminaMaterial._(
     this._nativeMaterial,
-    this._cache, {
+    this._cache,
+    this._textures, {
     required this.assetPath,
     required this.constants,
   });
@@ -33,10 +36,12 @@ class LuminaMaterial {
     required String assetPath,
     required List<MaterialConstant> constants,
     required LuminaMaterialCache cache,
+    LuminaMaterialTextures? textures,
   }) =>
       LuminaMaterial._(
         nativeMaterial,
         cache,
+        textures ?? LuminaMaterialTextures.none(),
         assetPath: assetPath,
         constants: constants,
       );
@@ -64,6 +69,10 @@ class LuminaMaterial {
 
   /// The owning [LuminaWorld].
   LuminaWorld get world => _cache.world;
+
+  /// The textures bound to this material's samplers (every instance starts
+  /// with them), and the ones that could not be loaded.
+  LuminaMaterialTextures get textures => _textures;
 
   /// Whether this material asset has been disposed.
   bool get isDisposed => _disposed;
@@ -238,5 +247,6 @@ class LuminaMaterial {
     _mintedInstances.clear();
     _defaultInstance = null;
     _nativeMaterial.dispose();
+    _textures.release();
   }
 }

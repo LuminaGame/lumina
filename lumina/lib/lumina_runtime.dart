@@ -113,6 +113,7 @@ export 'src/material/lumina_material.dart';
 export 'src/material/lumina_material_instance.dart';
 export 'src/material/dynamic_material_instance.dart';
 export 'src/material/material_cache.dart';
+export 'src/material/material_textures.dart';
 export 'src/input/input_component.dart';
 export 'src/components/particles/particle_emitter_config.dart';
 export 'src/components/particles/particle_system_component.dart';

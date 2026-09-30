@@ -44,6 +44,10 @@
   the textures' folder as Textures Folder); a missing one is named in the Output Log and the import goes on without it.
 - A level actor's `material` that is not compiled (or not found) is not drawn: the mesh keeps its own and the
   Output Log (and the `set_actor_property` reply) says why.
+- The textures a material's samplers name (an imported material's `baseColorMap`, `normalMap`, … or a texture set
+  with `set_material_texture`) are drawn wherever the material is assigned: viewport, Play, built game. A texture
+  that cannot be read is logged as a warning (in the level viewport: the Output Log) and its sampler stays unbound
+  (it samples black).
 - Several colours of one mesh: `duplicate_asset` the material, change `baseColor`, `compile_material` with
   `save: true`, assign per component (`materialOverride`) or per duplicated mesh (slots).
 - Glow: a material's `emissive` (see `filament-materials`), not a light.

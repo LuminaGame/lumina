@@ -266,9 +266,22 @@ mixin _ViewportSceneSync on _ViewportWidgetStateBase {
       return;
     }
     try {
-      final material = LuminaInstanceMaterialOverride.fromBytes(_nativeEngine!, path, file.readAsBytesSync());
+      // The textures its samplers name are project files (`contents/…`).
+      final material = LuminaInstanceMaterialOverride.fromBytes(
+        _nativeEngine!,
+        path,
+        file.readAsBytesSync(),
+        assetProvider: (texture) => File(File(texture).isAbsolute ? texture : '$projectDir/$texture').readAsBytes(),
+      );
       material.applyTo(handle.instance);
       _actorMaterials[actor.id] = material;
+      unawaited(material.texturesLoaded.then((_) {
+        material.textures.missing.forEach((sampler, reason) => EngineLoggerService().log(
+              'Actor "${actor.name}": material $path draws sampler $sampler without its texture: $reason',
+              level: 'warning',
+              source: 'FilamentNative',
+            ));
+      }));
       EngineLoggerService().log(
         'Actor "${actor.name}" draws material $path',
         level: 'info',

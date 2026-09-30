@@ -2,7 +2,10 @@ import 'dart:typed_data';
 
 import 'package:flutter_filament/flutter_filament.dart';
 
+import '../../data/models/lumina_asset.dart';
+import '../utility/lumina_assets.dart';
 import 'material_cache.dart';
+import 'material_textures.dart';
 
 /// One material asset drawn on every section of a gltfio instance that no
 /// world owns — the editor's level viewport, where a placed mesh shows the
@@ -12,14 +15,39 @@ import 'material_cache.dart';
 /// [applyTo] remembers what each section drew, [restore] puts it back, and
 /// [dispose] restores and destroys the material.
 class LuminaInstanceMaterialOverride {
-  LuminaInstanceMaterialOverride._(this.engine, this.assetPath, this._material)
-      : _instance = _material.createInstance(_instanceName(assetPath));
+  LuminaInstanceMaterialOverride._(this.engine, this.assetPath, this._material, List<AssetReference> references,
+      LuminaAssetProvider? assetProvider)
+      : _instance = _material.createInstance(_instanceName(assetPath)) {
+    texturesLoaded = LuminaMaterialTextures.load(
+      engine,
+      _material,
+      references,
+      materialPath: assetPath,
+      assetProvider: assetProvider,
+    ).then((textures) {
+      if (_disposed) {
+        textures.release();
+        return;
+      }
+      _textures = textures;
+      textures.bindTo(_instance);
+    }, onError: (Object _) {});
+  }
 
   /// Builds the material from [bytes], the content of [assetPath] (a material
   /// `.lmas` or a `.filamat`), with the parameter values the Material Editor
-  /// saved. Throws a [StateError] when they hold no compiled material.
-  factory LuminaInstanceMaterialOverride.fromBytes(FilamentEngine engine, String assetPath, Uint8List bytes) =>
-      LuminaInstanceMaterialOverride._(engine, assetPath, LuminaMaterialCache.createNative(engine, assetPath, bytes));
+  /// saved, and binds the textures its samplers name once they are loaded
+  /// ([texturesLoaded]) through [assetProvider] (else [LuminaAssets]). Throws
+  /// a [StateError] when they hold no compiled material.
+  factory LuminaInstanceMaterialOverride.fromBytes(
+    FilamentEngine engine,
+    String assetPath,
+    Uint8List bytes, {
+    LuminaAssetProvider? assetProvider,
+  }) {
+    final (material, references) = LuminaMaterialCache.createNativeWithTextureReferences(engine, assetPath, bytes);
+    return LuminaInstanceMaterialOverride._(engine, assetPath, material, references, assetProvider);
+  }
 
   final FilamentEngine engine;
 
@@ -30,6 +58,16 @@ class LuminaInstanceMaterialOverride {
   final FilamentMaterialInstance _instance;
 
   FilamentAssetInstance? _target;
+  LuminaMaterialTextures? _textures;
+  bool _disposed = false;
+
+  /// Completes once the textures the material's samplers name are bound (or
+  /// found missing, each logged once).
+  late final Future<void> texturesLoaded;
+
+  /// The textures bound to the material's samplers; empty until
+  /// [texturesLoaded].
+  LuminaMaterialTextures get textures => _textures ?? LuminaMaterialTextures.none();
 
   /// What each overridden section drew before, by (entity, primitive).
   final Map<(int, int), FilamentMaterialInstance?> _own = {};
@@ -72,9 +110,12 @@ class LuminaInstanceMaterialOverride {
 
   /// Restores the sections and destroys the material.
   void dispose() {
+    if (_disposed) return;
+    _disposed = true;
     restore();
     _instance.dispose();
     _material.dispose();
+    _textures?.release();
   }
 
   static String _instanceName(String path) {

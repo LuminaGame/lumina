@@ -6,6 +6,7 @@ import '../../data/models/lumina_asset.dart';
 import '../utility/lumina_assets.dart';
 import '../world/world.dart';
 import 'lumina_material.dart';
+import 'material_textures.dart';
 
 class _MaterialCacheKey {
   final String assetPath;
@@ -86,13 +87,29 @@ class LuminaMaterialCache {
     Future<Uint8List> Function(String path)? assetProvider,
   ) async {
     final bytes = await LuminaAssets.resolve(assetProvider)(assetPath);
-    final nativeMat = createNative(engine, assetPath, bytes, constants: constants);
+    final (nativeMat, references) = createNativeWithTextureReferences(engine, assetPath, bytes, constants: constants);
+    // The textures go on the default instance: every instance is a copy of it.
+    final LuminaMaterialTextures textures;
+    try {
+      textures = await LuminaMaterialTextures.load(
+        engine,
+        nativeMat,
+        references,
+        materialPath: assetPath,
+        assetProvider: assetProvider,
+      );
+    } catch (_) {
+      nativeMat.dispose();
+      rethrow;
+    }
+    textures.bindTo(nativeMat.defaultInstance);
 
     return LuminaMaterial.internal(
       nativeMat,
       assetPath: assetPath,
       constants: constants,
       cache: this,
+      textures: textures,
     );
   }
 
@@ -105,9 +122,21 @@ class LuminaMaterialCache {
     String assetPath,
     Uint8List bytes, {
     List<MaterialConstant> constants = const [],
+  }) =>
+      createNativeWithTextureReferences(engine, assetPath, bytes, constants: constants).$1;
+
+  /// [createNative], plus the material asset's references: which texture
+  /// each sampler draws ([LuminaMaterialTextures] loads and binds them).
+  /// Empty for a `.filamat` package.
+  static (FilamentMaterial, List<AssetReference>) createNativeWithTextureReferences(
+    FilamentEngine engine,
+    String assetPath,
+    Uint8List bytes, {
+    List<MaterialConstant> constants = const [],
   }) {
     var package = bytes;
     var values = const <String, Object?>{};
+    var references = const <AssetReference>[];
     // A material asset: the compiled package is its payload, the values the
     // Material Editor saved are its instances' starting parameters.
     if (assetPath.toLowerCase().endsWith('.lmas')) {
@@ -118,12 +147,13 @@ class LuminaMaterialCache {
       }
       package = payload;
       values = _savedParameters(asset);
+      references = asset.references;
     } else if (!isCompiledPackage(bytes)) {
       throw StateError('$assetPath is not a compiled material');
     }
     final material = FilamentMaterial.fromBuffer(engine: engine, filamatBuffer: package, constants: constants);
     _setDefaults(material, values);
-    return material;
+    return (material, references);
   }
 
   /// Whether [bytes] is a compiled `.filamat` package (a `MAT_VERS` chunk of
