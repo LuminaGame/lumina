@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
 import 'package:archive/archive.dart' show ZipDecoder;
-import 'package:flutter/material.dart' hide ThemeData, Colors, Icon, Icons, DropdownMenu, TextField, Switch, CircularProgressIndicator, Column, Row, Stack, Card;
+import 'package:flutter/material.dart' hide ThemeData, Colors, Icon, Icons, DropdownMenu, TextField, Switch, CircularProgressIndicator, Column, Row, Stack, Card, SelectableText;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
@@ -2484,6 +2484,35 @@ void main() {
       expect(reply, contains('Blue'));
       await rec.hold(const Duration(seconds: 3));
       await shot('AskUserQuestion answered');
+
+      // 5. The answer's Markdown is styled: a heading, bold, inline code and
+      // a bullet list, not raw markers.
+      await tester.tap(find.byKey(const ValueKey('miniai_message')));
+      await tester.pump();
+      await tester.enterText(find.byKey(const ValueKey('miniai_message')),
+          'Without calling any tool, reply in Markdown only: a "## Barrel" heading, then a bullet list of two items: '
+          '"**Colour:** Blue" and "**Asset:** `fuel_barrel_red`".');
+      final mdBefore = c.chat.messageCount;
+      await tester.tap(find.byKey(const ValueKey('miniai_send')));
+      await waitFor(() => c.chat.messageCount > mdBefore && !c.running, max: const Duration(minutes: 3));
+      await settle(tester, frames: 20);
+      final mdIndex = c.chat.items.lastIndexWhere((i) => i is AssistantItem);
+      final mdAnswer = find.byKey(ValueKey('miniai_assistant_$mdIndex'));
+      await tester.ensureVisible(mdAnswer);
+      await settle(tester, frames: 5);
+      String plain(Finder f) => tester
+          .widgetList<SelectableText>(find.descendant(of: f, matching: find.byType(SelectableText)))
+          .map((w) => w.data ?? w.textSpan?.toPlainText() ?? '')
+          .join('\n');
+      final shown = plain(mdAnswer);
+      debugPrint('[miniai14_smoke] markdown answer: ${c.chat.items[mdIndex] is AssistantItem ? (c.chat.items[mdIndex] as AssistantItem).text : ''}');
+      expect(shown, contains('Barrel'));
+      expect(shown, contains('fuel_barrel_red'));
+      expect(shown, isNot(contains('**')), reason: 'bold markers are styled away');
+      expect(shown, isNot(contains('`')), reason: 'code markers are styled away');
+      expect(find.descendant(of: mdAnswer, matching: find.text('•')), findsNWidgets(2));
+      await rec.hold(const Duration(seconds: 3));
+      await shot('Markdown answer');
       await tester.runAsync(() => vm.shutdownPlugins(exiting: true));
       final minimum = Duration(milliseconds: (SmokeArtifacts.minimumVideoSeconds * 1000).ceil() + 500);
       if (rec.recorded < minimum) await rec.hold(minimum - rec.recorded);
