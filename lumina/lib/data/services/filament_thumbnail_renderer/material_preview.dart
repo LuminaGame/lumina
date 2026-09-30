@@ -71,28 +71,24 @@ mixin _ThumbnailMaterialPreview on _FilamentThumbnailRendererState {
     }
   }
 
-  /// Compiles [source] with the in-process filamat compiler for this
-  /// engine's backend, off the calling isolate. Null when it is rejected.
+  /// Compiles the whole `.mat` [source] with the material compiler
+  /// (Filament's own `.mat` parser, as the Material Editor uses it) for this
+  /// engine's backend, off the calling isolate. Null when it is rejected; the
+  /// compiler's message is logged.
   Future<Uint8List?> _compile(String name, String source) async {
     if (_compiled.containsKey(source)) return _compiled[source];
-    final params = _headerParameters(source);
     final spec = _CompileSpec(
       name: name,
-      body: _fragmentBody(source),
-      shading: _shadingOf(source).value,
-      blending: _blendingOf(source).value,
-      doubleSided: RegExp(r'doubleSided\s*:\s*true').hasMatch(source),
-      uniforms: [
-        for (final p in params)
-          if (_uniformTypeFor(p.type) != null) (p.name, _uniformTypeFor(p.type)!.value),
-      ],
-      samplers: [for (final p in params) if (p.type.startsWith('sampler')) p.name],
-      attributes: _requiredAttributes(source).toList(),
+      source: source,
       targetApi: (_engine?.backend == FilamentBackend.opengl ? TargetApi.opengl : TargetApi.vulkan).value,
     );
     Uint8List? bytes;
     try {
-      bytes = await Isolate.run(() => _compileSpec(spec));
+      final (package, errors) = await Isolate.run(() => _compileSpec(spec));
+      bytes = package;
+      if (package == null) {
+        _logger.log('Thumbnail material "$name" did not compile: $errors', level: 'warning', source: 'ThumbnailRenderer');
+      }
     } catch (e) {
       _logger.log('Thumbnail material "$name" did not compile: $e', level: 'warning', source: 'ThumbnailRenderer');
     }
@@ -250,31 +246,16 @@ mixin _ThumbnailMaterialPreview on _FilamentThumbnailRendererState {
   }
 }
 
-Uint8List? _compileSpec(_CompileSpec s) {
-  FilamentMaterialBuilder.initEngine();
-  final builder = FilamentMaterialBuilder.create();
-  try {
-    builder.setName(s.name);
-    builder.setShading(FilamatShading.values.firstWhere((v) => v.value == s.shading));
-    builder.blending(BlendingMode.values.firstWhere((v) => v.value == s.blending));
-    builder.setDoubleSided(s.doubleSided);
-    for (final a in s.attributes) {
-      builder.requireAttribute(a);
-    }
-    for (final (name, type) in s.uniforms) {
-      builder.addParameter(name, UniformType.values.firstWhere((u) => u.value == type));
-    }
-    for (final name in s.samplers) {
-      builder.addSamplerParameter(name);
-    }
-    builder.platform(MaterialPlatform.desktop);
-    builder.targetApi(TargetApi.values.firstWhere((t) => t.value == s.targetApi));
-    builder.optimization(OptimizationLevel.none);
-    builder.setCode(s.body);
-    return builder.build();
-  } finally {
-    builder.dispose();
-  }
+(Uint8List?, String) _compileSpec(_CompileSpec s) {
+  final result = FilamentMatc.compile(
+    s.source,
+    fileName: '${s.name}.mat',
+    defaultName: s.name,
+    platform: MaterialPlatform.desktop,
+    targetApi: TargetApi.values.firstWhere((t) => t.value == s.targetApi),
+    optimization: OptimizationLevel.none,
+  );
+  return (result.package, result.ok ? '' : result.errorText);
 }
 
 List<double> _fallbackBaseColor(LuminaAsset material) {
@@ -373,69 +354,6 @@ List<_MatParam> _headerParameters(String source) {
   return out;
 }
 
-String _fragmentBody(String source) {
-  final at = source.indexOf(RegExp(r'fragment\s*\{'));
-  if (at == -1) return source;
-  final open = source.indexOf('{', at);
-  final rest = source.substring(open + 1);
-  final close = rest.lastIndexOf('}');
-  return (close == -1 ? rest : rest.substring(0, close)).trim();
-}
-
-FilamatShading _shadingOf(String source) {
-  if (RegExp(r'shadingModel\s*:\s*unlit').hasMatch(source)) return FilamatShading.unlit;
-  if (RegExp(r'shadingModel\s*:\s*cloth').hasMatch(source)) return FilamatShading.cloth;
-  if (RegExp(r'shadingModel\s*:\s*subsurface').hasMatch(source)) return FilamatShading.subsurface;
-  return FilamatShading.lit;
-}
-
-BlendingMode _blendingOf(String source) {
-  if (RegExp(r'blending\s*:\s*transparent').hasMatch(source)) return BlendingMode.transparent;
-  if (RegExp(r'blending\s*:\s*masked').hasMatch(source)) return BlendingMode.masked;
-  if (RegExp(r'blending\s*:\s*add').hasMatch(source)) return BlendingMode.add;
-  return BlendingMode.opaque;
-}
-
-/// `requires : [ uv0, color ]` as `VertexAttribute` indices.
-Set<int> _requiredAttributes(String source) {
-  final m = RegExp(r'requires\s*:\s*\[([^\]]*)\]').firstMatch(source);
-  if (m == null) return const {};
-  final out = <int>{};
-  for (final raw in m.group(1)!.split(',')) {
-    switch (raw.trim().toLowerCase()) {
-      case 'color':
-        out.add(2);
-      case 'uv0':
-        out.add(3);
-      case 'uv1':
-        out.add(4);
-    }
-  }
-  return out;
-}
-
-UniformType? _uniformTypeFor(String t) => switch (t) {
-      'bool' => UniformType.boolType,
-      'bool2' => UniformType.bool2,
-      'bool3' => UniformType.bool3,
-      'bool4' => UniformType.bool4,
-      'float' => UniformType.floatType,
-      'float2' => UniformType.float2,
-      'float3' => UniformType.float3,
-      'float4' => UniformType.float4,
-      'int' => UniformType.intType,
-      'int2' => UniformType.int2,
-      'int3' => UniformType.int3Type,
-      'int4' => UniformType.int4,
-      'uint' => UniformType.uint,
-      'uint2' => UniformType.uint2,
-      'uint3' => UniformType.uint3,
-      'uint4' => UniformType.uint4,
-      'mat3' => UniformType.mat3,
-      'mat4' => UniformType.mat4,
-      _ => null,
-    };
-
 class _MatParam {
   final String type;
   final String name;
@@ -450,28 +368,12 @@ class _DecodedImage {
   const _DecodedImage(this.rgba, this.width, this.height);
 }
 
-/// What the filamat compiler needs, as plain values so it can cross into the
+/// What the material compiler needs, as plain values so it can cross into the
 /// compile isolate.
 class _CompileSpec {
   final String name;
-  final String body;
-  final int shading;
-  final int blending;
-  final bool doubleSided;
-  final List<(String, int)> uniforms;
-  final List<String> samplers;
-  final List<int> attributes;
+  final String source;
   final int targetApi;
 
-  const _CompileSpec({
-    required this.name,
-    required this.body,
-    required this.shading,
-    required this.blending,
-    required this.doubleSided,
-    required this.uniforms,
-    required this.samplers,
-    required this.attributes,
-    required this.targetApi,
-  });
+  const _CompileSpec({required this.name, required this.source, required this.targetApi});
 }

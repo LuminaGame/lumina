@@ -177,6 +177,29 @@ fragment {
 }
 ''';
 
+    const vertexBlockSource = '''
+material {
+    name : "M_Agent",
+    shadingModel : unlit,
+    blending : fade,
+    requires : [ tangents ],
+    variables : [ tint ]
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        material.baseColor = vec4(variable_tint.rgb, 0.7);
+    }
+}
+
+vertex {
+    void materialVertex(inout MaterialVertexInputs material) {
+        material.tint = vec4(material.worldNormal * 0.5 + 0.5, 1.0);
+    }
+}
+''';
+
     test('get / set / compile a material through its editor tab, with the real compiler', () async {
       await client.callTool('create_asset', {'type': 'filamat', 'name': 'M_Agent'});
       final source = await client.callTool('get_material_source', {'asset': 'contents/materials/M_Agent.lmas'});
@@ -199,24 +222,29 @@ fragment {
       expect(broken.data['ok'], isFalse, reason: broken.text);
       expect(broken.isError, isTrue);
       final issues = (broken.data['issues'] as List).cast<Map>();
-      expect(issues.any((i) => i['severity'] == 'error'), isTrue, reason: '$issues');
+      // matc's own message, at the .mat line it names.
+      final undeclaredLine = brokenSource.split('\n').indexWhere((l) => l.contains('undeclaredColor')) + 1;
+      final error = issues.firstWhere((i) => i['severity'] == 'error', orElse: () => {});
+      expect(error['message'], contains("'undeclaredColor'"), reason: '$issues');
+      expect(error['line'], undeclaredLine, reason: '$issues');
       final asked = await client.callTool('get_material_issues', {'asset': 'M_Agent'});
-      expect((asked.data['issues'] as List), isNotEmpty);
+      expect(asked.data['issues'], issues);
 
       await client.callTool('set_material_source', {'asset': 'M_Agent', 'source': goodSource});
       final good = await client.callTool('compile_material', {'asset': 'M_Agent', 'save': true});
-      final compiledIssues = (good.data['issues'] as List).cast<Map>();
-      if (good.data['ok'] == true) {
-        expect((good.data['compiled_bytes'] as int), greaterThan(0));
-        expect(good.data['saved'], isTrue);
-      } else {
-        // Without the native filamat library (no native assets in this run)
-        // the compiler backend answers null; the tool must say so, not crash.
-        expect(compiledIssues.any((i) => (i['message'] as String).contains('filamat backend')), isTrue,
-            reason: good.text);
-      }
+      expect(good.data['ok'], isTrue, reason: good.text);
+      expect((good.data['compiled_bytes'] as int), greaterThan(0));
+      expect(good.data['saved'], isTrue);
       final onDisk = LuminaAsset.fromBytes(File('${vm.projectDirPath}/contents/materials/M_Agent.lmas').readAsBytesSync());
-      if (good.data['saved'] == true) expect(onDisk.rawMatSource, goodSource);
+      expect(onDisk.rawMatSource, goodSource);
+
+      // The whole Filament definition compiles: a vertex block after the fragment, variables, fade blending.
+      await client.callTool('set_material_source', {'asset': 'M_Agent', 'source': vertexBlockSource});
+      final wave = await client.callTool('compile_material', {'asset': 'M_Agent'});
+      expect(wave.data['ok'], isTrue, reason: wave.text);
+      final waveSource = await client.callTool('get_material_source', {'asset': 'M_Agent'});
+      expect(waveSource.data['blending'], 'fade');
+      expect(waveSource.data['shading_model'], 'unlit');
 
       final notMaterial = await client.callTool('create_asset', {'type': 'actor', 'name': 'BP_NotMat'});
       expect(notMaterial.isError, isFalse);

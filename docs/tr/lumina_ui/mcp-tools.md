@@ -611,16 +611,16 @@ The Material editor's node graph as MCP tools: the expression catalog, the graph
 
 `void registerMaterialTools(McpToolRegistry registry, EditorViewModel vm, McpEditorSessions sessions)`
 
-The Material editor as MCP tools: read and set the `.mat` source, compile it with the real filamat compiler, read the issues. Edits go through the material's editor tab (opened when needed), so the code view updates live and the tab's Save writes the `.lmas`.
+The Material editor as MCP tools: read and set the `.mat` source, compile it with Filament's own material compiler (the `.mat` parser `matc` uses), read the issues. Edits go through the material's editor tab (opened when needed), so the code view updates live and the tab's Save writes the `.lmas`.
 
 **Araçlar:**
 
 | Araç | Risk | Başlık | Açıklama |
 | :--- | :--- | :--- | :--- |
-| `get_material_source` | readOnly | Get material source | The material's .mat source (Filament material definition: a `material { … }` header with shadingModel, blending, parameters, and a `fragment { void material(inout MaterialInputs material) { … } }` body), plus the parsed... |
-| `set_material_source` | mutating | Set material source | Replaces the material's .mat source in its editor tab (the code view updates), like typing it. |
-| `compile_material` | mutating | Compile material | Compiles the material's current source with the real filamat compiler (the editor's Compile button): ok, compile time, compiled size and issues [{line, severity, message}]. |
-| `get_material_issues` | readOnly | Get material issues | The material editor's current issues (syntax checks and the last compile): [{line, severity, message}]. |
+| `get_material_source` | readOnly | Get material source | The material's .mat source (a Filament material definition, exactly what Filament's matc compiles: a `material { … }` header with any matc key, a `fragment { … }` block and optionally a `vertex { … }` block), plus the header's shading model, blending, double-sidedness, declared parameters and the last compile's issues. |
+| `set_material_source` | mutating | Set material source | Replaces the material's .mat source in its editor tab (the code view updates), like typing it. Any Filament material definition matc accepts: every header key, `vertex` and `fragment` blocks in any order, `#include` from the material's folder. |
+| `compile_material` | mutating | Compile material | Compiles the material's whole current source with Filament's own material compiler, the .mat parser matc uses (the editor's Compile button): ok, compile time, compiled size and issues [{line, severity, message}] with matc's messages verbatim and their .mat line (0 when none). |
+| `get_material_issues` | readOnly | Get material issues | The material editor's current issues: the last compile's matc messages (verbatim, with their .mat line) or, while typing, the editor's quick block/brace checks: [{line, severity, message}]. |
 
 ## `lib/ui/features/mcp_server/tools/outliner_tools.dart`
 

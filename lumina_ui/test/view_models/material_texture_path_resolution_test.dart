@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:flutter_filament/flutter_filament.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina/data/models/lumina_asset.dart';
 import 'package:lumina/data/services/tga_decoder_service.dart';
@@ -16,16 +15,12 @@ import 'package:lumina_ui/ui/features/sub_editors/view_models/material_editor_vi
 ///   for sampler baseColorMap; using the neutral fallback
 class _StubCompilerRunner implements FilamatCompilerRunner {
   @override
-  Future<Uint8List?> compile({
+  Future<MaterialCompileResult> compile({
     required String name,
-    required String code,
-    required FilamatShading shading,
-    required BlendingMode blending,
-    required bool doubleSided,
-    List<MaterialParamModel> parameters = const [],
-    Set<int> requiredAttributes = const {},
+    required String source,
+    String? includeDirectory,
   }) async =>
-      Uint8List.fromList([0x46, 0x49, 0x4C, 0x41, 0x01]);
+      MaterialCompileResult(bytes: Uint8List.fromList([0x46, 0x49, 0x4C, 0x41, 0x01]));
 }
 
 void main() {

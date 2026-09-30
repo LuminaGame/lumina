@@ -7,7 +7,8 @@ import '../services/mcp_protocol.dart';
 import '../services/mcp_tool.dart';
 
 /// The Material editor as MCP tools: read and set the `.mat`
-/// source, compile it with the real filamat compiler, read the issues.
+/// source, compile it with Filament's own material compiler (the `.mat`
+/// parser `matc` uses), read the issues.
 /// Edits go through the material's editor tab (opened when needed), so the
 /// code view updates live and the tab's Save writes the `.lmas`.
 void registerMaterialTools(McpToolRegistry registry, EditorViewModel vm, McpEditorSessions sessions) {
@@ -36,10 +37,12 @@ void registerMaterialTools(McpToolRegistry registry, EditorViewModel vm, McpEdit
       risk: McpToolRisk.readOnly,
       groups: const {McpToolGroups.material},
       title: 'Get material source',
-      description: 'The material\'s .mat source (Filament material definition: a `material { … }` header with '
-          'shadingModel, blending, parameters, and a `fragment { void material(inout MaterialInputs material) { … } }` '
-          'body), plus the parsed shading model, blending, double-sidedness, declared parameters and the last '
-          'compile\'s issues. Opens the Material editor tab.',
+      description: 'The material\'s .mat source (a Filament material definition, exactly what Filament\'s matc '
+          'compiles: a `material { … }` header with any matc key — shadingModel, blending, parameters, requires, '
+          'variables, transparency, culling, … — a `fragment { void material(inout MaterialInputs material) { … } }` '
+          'block and optionally a `vertex { void materialVertex(inout MaterialVertexInputs material) { … } }` block), '
+          'plus the header\'s shading model, blending, double-sidedness, declared parameters and the last compile\'s '
+          'issues. Opens the Material editor tab.',
       inputSchema: McpSchema.object({'asset': McpSchema.string(assetArg)}, required: ['asset']),
       handler: (args) async {
         final editor = await editorFor(args);
@@ -63,11 +66,13 @@ void registerMaterialTools(McpToolRegistry registry, EditorViewModel vm, McpEdit
       idempotent: true,
       title: 'Set material source',
       description: 'Replaces the material\'s .mat source in its editor tab (the code view updates), like typing it. '
-          'Does not compile or save: call compile_material (with save: true to write the .lmas). One undo step on '
-          'the material tab\'s own stack: undo with asset: <this material>.',
+          'Any Filament material definition matc accepts is supported: every header key, `vertex` and `fragment` '
+          'blocks in any order, `#include "file"` from the material\'s folder. Does not compile or save: call '
+          'compile_material (with save: true to write the .lmas). One undo step on the material tab\'s own stack: '
+          'undo with asset: <this material>.',
       inputSchema: McpSchema.object({
         'asset': McpSchema.string(assetArg),
-        'source': McpSchema.string('The whole .mat source: header and fragment block.'),
+        'source': McpSchema.string('The whole .mat source: the material header, the fragment block and any vertex block.'),
       }, required: ['asset', 'source']),
       handler: (args) async {
         final editor = await editorFor(args);
@@ -86,9 +91,11 @@ void registerMaterialTools(McpToolRegistry registry, EditorViewModel vm, McpEdit
       groups: const {McpToolGroups.material},
       idempotent: true,
       title: 'Compile material',
-      description: 'Compiles the material\'s current source with the real filamat compiler (the editor\'s Compile '
-          'button): ok, compile time, compiled size and issues [{line, severity, message}]. The preview sphere '
-          'takes the new material. With save: true the .lmas is written afterwards (source, parameters, payload).',
+      description: 'Compiles the material\'s whole current source with Filament\'s own material compiler, the .mat '
+          'parser matc uses (the editor\'s Compile button): ok, compile time, compiled size and issues '
+          '[{line, severity, message}] where message is matc\'s text verbatim (parser errors, glslang errors, '
+          'unknown-key warnings) and line its .mat line (0 when it names none). The preview takes the new material. '
+          'With save: true the .lmas is written afterwards (source, parameters, payload).',
       inputSchema: McpSchema.object({
         'asset': McpSchema.string(assetArg),
         'save': McpSchema.boolean('Write the .lmas after compiling. Default false.'),
@@ -128,7 +135,8 @@ void registerMaterialTools(McpToolRegistry registry, EditorViewModel vm, McpEdit
       risk: McpToolRisk.readOnly,
       groups: const {McpToolGroups.material},
       title: 'Get material issues',
-      description: 'The material editor\'s current issues (syntax checks and the last compile): [{line, severity, message}].',
+      description: 'The material editor\'s current issues: the last compile\'s matc messages (verbatim, with their '
+          '.mat line; 0 when none) or, while typing, the editor\'s quick block/brace checks: [{line, severity, message}].',
       inputSchema: McpSchema.object({'asset': McpSchema.string(assetArg)}, required: ['asset']),
       handler: (args) async {
         final editor = await editorFor(args);

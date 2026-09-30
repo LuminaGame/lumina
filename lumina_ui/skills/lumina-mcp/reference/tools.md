@@ -42,10 +42,10 @@ Argument shapes as `tools/list` declares them (`inputSchema`, `additionalPropert
 
 | Tool | Arguments | Returns / effect |
 |---|---|---|
-| `get_material_source` | `asset` | `source` (`.mat`: `material {…}` header + `fragment { void material(inout MaterialInputs material) {…} }`), `shading_model, blending, double_sided, parameters{name:{type,value,is_sampler,texture}}, is_dirty, compiled_bytes, issues` |
-| `set_material_source` | `asset`, `source` | replaces the code in the tab; does not compile or save |
-| `compile_material` | `asset`, `save?` | real filamat compile; `ok, elapsed_ms, compiled_bytes, status, issues[{line,severity,message}], saved`; `isError` when it fails |
-| `get_material_issues` | `asset` | `status, issues` |
+| `get_material_source` | `asset` | `source` (`.mat`, a whole Filament material definition: `material {…}` header with any matc key + `fragment { void material(inout MaterialInputs material) {…} }` + optional `vertex { void materialVertex(inout MaterialVertexInputs material) {…} }`), `shading_model, blending, double_sided, parameters{name:{type,value,is_sampler,texture}}, is_dirty, compiled_bytes, issues` |
+| `set_material_source` | `asset`, `source` | replaces the code in the tab; does not compile or save. Anything Filament's `matc` accepts: every header key (`variables`, `transparency`, `refractionMode`, `culling`, `vertexDomain`, `quality`, `featureLevel`, `constants`, …), `vertex` and `fragment` blocks in any order, `#include "file"` from the material's folder |
+| `compile_material` | `asset`, `save?` | compiles the whole source with Filament's own `.mat` parser (what `matc` runs) + filamat; `ok, elapsed_ms, compiled_bytes, status, issues[{line,severity,message}], saved`; `message` is matc's text verbatim (parser, glslang, unknown-key warnings), `line` its `.mat` line (0 = none); `isError` when it fails |
+| `get_material_issues` | `asset` | `status, issues` (the last compile's matc messages; while typing, the editor's quick brace/block checks) |
 
 ## UMG Widget Blueprints (group umg; edits go through the Widget tab, each call one `MCP: …` step on the designer's stack)
 

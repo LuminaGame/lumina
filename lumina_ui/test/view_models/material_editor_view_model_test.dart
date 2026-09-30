@@ -8,10 +8,8 @@ import 'package:flutter_filament/flutter_filament.dart';
 class MockFilamatCompilerRunner implements FilamatCompilerRunner {
   bool shouldSucceed;
   Uint8List? returnBytes;
-  String? lastCode;
-  FilamatShading? lastShading;
-  BlendingMode? lastBlending;
-  bool? lastDoubleSided;
+  String? lastSource;
+  String? lastIncludeDirectory;
 
   MockFilamatCompilerRunner({
     this.shouldSucceed = true,
@@ -19,22 +17,16 @@ class MockFilamatCompilerRunner implements FilamatCompilerRunner {
   });
 
   @override
-  Future<Uint8List?> compile({
+  Future<MaterialCompileResult> compile({
     required String name,
-    required String code,
-    required FilamatShading shading,
-    required BlendingMode blending,
-    required bool doubleSided,
-    List<MaterialParamModel> parameters = const [],
-    Set<int> requiredAttributes = const {},
+    required String source,
+    String? includeDirectory,
   }) async {
-    lastCode = code;
-    lastShading = shading;
-    lastBlending = blending;
-    lastDoubleSided = doubleSided;
+    lastSource = source;
+    lastIncludeDirectory = includeDirectory;
 
-    if (!shouldSucceed) return null;
-    return returnBytes ?? Uint8List.fromList([0x46, 0x49, 0x4C, 0x41, 0x01, 0x02, 0x03]);
+    if (!shouldSucceed) return const MaterialCompileResult(bytes: null);
+    return MaterialCompileResult(bytes: returnBytes ?? Uint8List.fromList([0x46, 0x49, 0x4C, 0x41, 0x01, 0x02, 0x03]));
   }
 }
 
@@ -130,16 +122,15 @@ fragment {
       expect(vm.syntaxStatus, contains('Compile OK'));
       expect(vm.issues.length, equals(1));
       expect(vm.issues.first.severity, equals(MaterialCompileSeverity.info));
-      expect(runner.lastBlending, equals(BlendingMode.transparent));
-      expect(runner.lastShading, equals(FilamatShading.lit));
+      // The whole source goes to the compiler, #includes resolved beside the asset.
+      expect(runner.lastSource, equals(vm.currentCode));
+      expect(runner.lastIncludeDirectory, equals(tempDir.path));
+      expect(vm.blending, equals(BlendingMode.transparent));
+      expect(vm.shading, equals(FilamatShading.lit));
     });
 
-    test('compile() on source with unmatched braces reports error issue', () async {
-      final runner = MockFilamatCompilerRunner();
-      final vm = MaterialEditorViewModel(
-        assetPath: '${tempDir.path}/test.lmas',
-        compilerRunner: runner,
-      );
+    test('compile() on source with unmatched braces reports the compiler error', () async {
+      final vm = MaterialEditorViewModel(assetPath: '${tempDir.path}/test.lmas');
 
       vm.currentCode = '''material {
     name : "test",
@@ -154,16 +145,13 @@ fragment {
       final success = await vm.compile();
 
       expect(success, isFalse);
-      expect(vm.issues.any((i) => i.message.contains('Unmatched braces')), isTrue);
-      expect(vm.syntaxStatus, contains('Syntax Error'));
+      expect(vm.issues.any((i) => i.severity == MaterialCompileSeverity.error && i.fromCompiler), isTrue,
+          reason: vm.issues.map((i) => i.message).join('\n'));
+      expect(vm.syntaxStatus, startsWith('Compile Error'));
     });
 
-    test('compile() on source with missing prepareMaterial reports line-mapped error', () async {
-      final runner = MockFilamatCompilerRunner();
-      final vm = MaterialEditorViewModel(
-        assetPath: '${tempDir.path}/test.lmas',
-        compilerRunner: runner,
-      );
+    test('compile() on source with missing prepareMaterial reports the compiler error', () async {
+      final vm = MaterialEditorViewModel(assetPath: '${tempDir.path}/test.lmas');
 
       vm.currentCode = '''material {
     name : "test",

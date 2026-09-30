@@ -383,7 +383,9 @@ class _MaterialSubEditorState extends State<MaterialSubEditor> {
                                                   Text(
                                                     nodeTitle != null
                                                         ? 'Node $nodeTitle:'
-                                                        : (issue.line > 0 ? 'Line ${issue.line}:' : 'Graph:'),
+                                                        : (issue.line > 0
+                                                            ? 'Line ${issue.line}:'
+                                                            : (issue.fromCompiler ? 'matc:' : 'Graph:')),
                                                     style: const TextStyle(fontFamily: EditorTypography.monoFamily, fontSize: 11),
                                                   ).muted(),
                                                   const SizedBox(width: 8),

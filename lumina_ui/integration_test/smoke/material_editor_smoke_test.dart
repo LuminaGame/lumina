@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -8,6 +10,8 @@ import 'package:image/image.dart' as img;
 import 'package:integration_test/integration_test.dart';
 import 'package:lumina/lumina.dart';
 import 'package:lumina_ui/testing.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/main_editor/views/main_editor_view.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/material_graph.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/material_preview_renderer.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/material_editor_view_model.dart';
@@ -19,6 +23,7 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 
 import '../../test/helpers/cc_body_asset.dart';
+import '../../test/helpers/mcp_test_client.dart';
 
 /// Material Editor smoke: a real material is compiled with filamat, opened in
 /// the Material Editor and its 3D preview must render a shaded primitive on the
@@ -598,6 +603,178 @@ fragment {
     rec.save('Material Editor Smoke: the Texture Sample node shows its thumbnail and picks another texture with search',
         usedAssets: project.sources);
   });
+
+  const matcScenario = 'Material Editor Smoke: a vertex-block material compiled by matc renders in the preview and in a level';
+  testWidgets(matcScenario, (tester) async {
+    final barrel = File('${SmokeArtifacts.testAssetsDir.path}/Props/Barrels/dented_barrel.glb');
+    expect(barrel.existsSync(), isTrue, reason: 'test-assets must hold the dented barrel');
+    final usedAssets = [barrel.path];
+
+    // A whole Filament material definition: unlit, fade blending, the vertex
+    // block after the fragment, a wave along the normal and a tint handed to
+    // the fragment through `variables`, both driven by the frame time.
+    const source = '''material {
+    name : M_MatcWave,
+    shadingModel : unlit,
+    blending : fade,
+    requires : [ tangents ],
+    variables : [ tint ],
+    parameters : [
+        { type : float, name : amplitude }
+    ]
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        material.baseColor = vec4(variable_tint.rgb * 0.9, 0.85);
+    }
+}
+
+vertex {
+    void materialVertex(inout MaterialVertexInputs material) {
+        float wave = sin(getPosition().y * 14.0 + getUserTime().x * 3.0);
+        float scale = length(getWorldFromModelMatrix()[0].xyz);
+        material.worldPosition.xyz += material.worldNormal * wave * materialParams.amplitude * scale;
+        material.tint = vec4(mix(vec3(0.15, 0.45, 1.0), vec3(1.0, 0.2, 0.85), 0.5 + 0.5 * wave), 1.0);
+    }
+}
+''';
+
+    final root = Directory.systemTemp.createTempSync('lumina_smoke_matc_');
+    final projectDir = Directory('${root.path}/MatcWave')..createSync();
+    const project = LuminaProject(projectName: 'MatcWave', activeLevel: 'contents/levels/L_Main.lmas');
+    File('${projectDir.path}/MatcWave.lmproject').writeAsStringSync(jsonEncode(project.toMap()));
+    Directory('${projectDir.path}/contents/levels').createSync(recursive: true);
+    Directory('${projectDir.path}/lib').createSync(recursive: true);
+    final vm = EditorViewModel(initialProject: project, projectLocation: root.path, enableTimers: false);
+    await tester.runAsync(vm.ensureDefaultLevelAssets);
+    final server = vm.mcpServer;
+    expect(await tester.runAsync(() => server.start(port: 0)), isTrue);
+    final client = McpTestClient(server.url!, server.token);
+
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    final boundaryKey = GlobalKey();
+    try {
+      await tester.pumpWidget(RepaintBoundary(
+        key: boundaryKey,
+        child: ShadcnApp(theme: luminaEditorTheme(), home: MainEditorView(viewModel: vm)),
+      ));
+      for (var i = 0; i < 40; i++) {
+        await tester.pump(const Duration(milliseconds: 16));
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 16)));
+      }
+      final rec = SmokeRecorder(tester, boundary: find.byKey(boundaryKey));
+
+      Future<McpToolReply> call(String tool, [Map<String, Object?> args = const {}]) async {
+        McpToolReply? reply;
+        Object? error;
+        unawaited(client.callTool(tool, args).then((r) => reply = r, onError: (Object e) => error = e));
+        while (reply == null && error == null) {
+          await rec.hold(const Duration(milliseconds: 66));
+        }
+        if (error != null) throw error!;
+        return reply!;
+      }
+
+      Future<Map<String, Object?>> ok(String tool, [Map<String, Object?> args = const {}]) async {
+        final reply = await call(tool, args);
+        expect(reply.isError, isFalse, reason: '$tool: ${reply.text}');
+        return reply.data;
+      }
+
+      Future<Uint8List> shot(String name) async {
+        await rec.hold(const Duration(milliseconds: 1500));
+        final png = await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey));
+        SmokeArtifacts.saveScreenshot(name, png, usedAssets: usedAssets);
+        return png;
+      }
+
+      /// Pixels of the tint's magenta end inside [rect] (a capture at ratio 1).
+      int magenta(Uint8List png, Rect rect) {
+        final d = img.decodePng(png)!;
+        var n = 0;
+        for (var y = rect.top.round(); y < rect.bottom.round(); y += 2) {
+          for (var x = rect.left.round(); x < rect.right.round(); x += 2) {
+            final p = d.getPixel(x.clamp(0, d.width - 1), y.clamp(0, d.height - 1));
+            if (p.r > p.g + 50 && p.b > p.g + 40) n++;
+          }
+        }
+        return n;
+      }
+
+      await tester.runAsync(() => client.handshake(clientName: 'claude-code'));
+
+      // --- The barrel in the level ------------------------------------------------
+      final imported = (await ok('import_asset', {'path': barrel.path}))['imported'] as List;
+      final mesh = imported.cast<Map>().firstWhere((a) => a['type'] != 'texture' && a['type'] != 'filamat')['path'] as String;
+      final spawned = await ok('spawn_actor_from_asset', {'asset': mesh, 'location': [400, 0, 0]});
+      final actorId = (spawned['actor'] as Map)['id'] as String;
+      await ok('focus_actor', {'id': actorId});
+      await ok('set_camera', {'target': [400, 0, 45], 'distance': 330, 'pitch': 15});
+      final before = await shot('material_editor_matc_level_before');
+      final magentaBefore = magenta(before, Offset.zero & tester.getSize(find.byKey(boundaryKey)));
+
+      // --- The material, through the Material Editor tab ----------------------
+      const mat = 'contents/materials/M_MatcWave.lmas';
+      await ok('create_asset', {'type': 'filamat', 'name': 'M_MatcWave'});
+      await ok('set_material_source', {'asset': mat, 'source': source});
+      final compiled = await call('compile_material', {'asset': mat, 'save': true});
+      expect(compiled.data['ok'], isTrue, reason: compiled.text);
+      await ok('set_material_parameter', {'asset': mat, 'name': 'amplitude', 'value': 0.04});
+      await ok('compile_material', {'asset': mat, 'save': true});
+      final got = await ok('get_material_source', {'asset': mat});
+      expect(got['blending'], 'fade');
+      expect(got['shading_model'], 'unlit');
+      final editor = vm.editorSessionFor(vm.currentTab.id) as MaterialEditorViewModel;
+      expect(editor.compiledBytes, isNotNull);
+      final previewRect = tester.getRect(find.byType(FilamentWidget).last);
+      final preview = await shot('material_editor_matc_vertex_block_preview');
+      final previewMagenta = magenta(preview, previewRect);
+      debugPrint('[matc_smoke] preview magenta pixels: $previewMagenta');
+      expect(previewMagenta, greaterThan(40), reason: 'the vertex-stage tint shows on the preview');
+      await rec.hold(const Duration(seconds: 3));
+
+      // --- On the barrel in the level, in Play ---------------------------------------
+      // The mesh's material slot takes the material; Play draws the level with it.
+      await ok('set_static_mesh_material_slot', {'asset': mesh, 'slot': 0, 'material': mat});
+      await ok('save_static_mesh', {'asset': mesh});
+      await ok('start_pie');
+      await rec.hold(const Duration(seconds: 2));
+      final window = Offset.zero & tester.getSize(find.byKey(boundaryKey));
+      final playing = await shot('material_editor_matc_vertex_block_level_play');
+      final magentaPlaying = magenta(playing, window);
+      debugPrint('[matc_smoke] level magenta pixels: editor before $magentaBefore, in Play $magentaPlaying');
+      expect(magentaPlaying, greaterThan(magentaBefore + 40), reason: 'the barrel wears the matc-compiled material in Play');
+      final played = await ok('pie_play_for', {'ms': 2000, 'screenshot': true, 'pause_after': false});
+      debugPrint('[matc_smoke] pie_play_for: ${played.keys.toList()}');
+      final agent = await call('viewport_screenshot', {'max_width': 1280});
+      expect(agent.isError, isFalse, reason: agent.text);
+      final image = agent.content.firstWhere((c) => c['type'] == 'image');
+      SmokeArtifacts.saveScreenshot('material_editor_matc_level_as_the_agent_saw_it', base64Decode(image['data'] as String),
+          usedAssets: usedAssets);
+
+      while (rec.recorded < const Duration(milliseconds: 10500)) {
+        await rec.hold(const Duration(milliseconds: 500));
+      }
+      rec.save(matcScenario, usedAssets: usedAssets);
+      await ok('stop_pie');
+    } finally {
+      client.close();
+      await tester.runAsync(server.stop);
+      await tester.pumpWidget(const SizedBox());
+      vm.dispose();
+      try {
+        root.deleteSync(recursive: true);
+      } catch (_) {}
+    }
+  }, timeout: const Timeout(Duration(minutes: 10)));
 }
 
 /// A temp project holding real imports: the CC body the user opened

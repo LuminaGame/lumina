@@ -348,10 +348,7 @@ void main() {
       expect(editor.graph.transactions.history().map((h) => h.label).take(2), ['MCP: Connect pins', 'MCP: Add ScalarParameter']);
 
       final compiled = await client.callTool('compile_material', {'asset': mat});
-      if (compiled.data['ok'] != true) {
-        // Without the native filamat library the backend answers null.
-        expect(compiled.text, contains('filamat backend'));
-      }
+      expect(compiled.data['ok'], isTrue, reason: compiled.text);
 
       await ok('undo', {'asset': mat, 'stack': 'graph'});
       await ok('undo', {'asset': mat, 'stack': 'graph'});

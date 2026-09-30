@@ -185,6 +185,37 @@ fragment {
     expect(g, greaterThan(b + 30), reason: 'green-dominant centre: rgb($r, $g, $b)');
   }, timeout: const Timeout(Duration(minutes: 2)));
 
+  test('renderMaterial compiles the whole .mat: an unlit material tinted from its vertex block renders that tint', () async {
+    // The vertex block comes after the fragment and hands the colour over
+    // through `variables`; nothing reaches the sphere unless both compile.
+    const source = '''material {
+    name : "M_Thumb_Vertex",
+    shadingModel : unlit,
+    variables : [ tint ]
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        material.baseColor = vec4(variable_tint.rgb, 1.0);
+    }
+}
+
+vertex {
+    void materialVertex(inout MaterialVertexInputs material) {
+        material.tint = vec4(0.9, 0.1, 0.8, 1.0);
+    }
+}
+''';
+    const asset = LuminaAsset(assetId: 'm-vertex', name: 'M_Thumb_Vertex', type: AssetType.filamat, rawMatSource: source);
+    final png = await renderer.renderMaterial(asset);
+    expect(png, isNotNull);
+    _save('material_vertex_tint.png', png!);
+    final (r, g, b) = _centre(img.decodePng(png)!);
+    expect(r, greaterThan(g + 60), reason: 'magenta centre from the vertex-stage tint: rgb($r, $g, $b)');
+    expect(b, greaterThan(g + 60), reason: 'magenta centre from the vertex-stage tint: rgb($r, $g, $b)');
+  }, timeout: const Timeout(Duration(minutes: 2)));
+
   test('renderMaterial of a material with no source falls back to a lit preview sphere', () async {
     const asset = LuminaAsset(assetId: 'm-empty', name: 'M_Ground_PBR', type: AssetType.filamat);
     final png = await renderer.renderMaterial(asset);

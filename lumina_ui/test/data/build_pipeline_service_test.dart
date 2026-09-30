@@ -742,12 +742,39 @@ void main() {
       const source = 'material {\n  name : SourceOnly,\n  shadingModel : unlit\n}\nfragment {\n  void material(inout MaterialInputs material) {\n    prepareMaterial(material);\n    material.baseColor = vec4(0.2, 0.8, 0.3, 1.0);\n  }\n}\n';
       final fromSource = await compiler(MaterialCompileInput(name: 'M_SourceOnly', relativePath: 'contents/materials/M_SourceOnly.lmas', package: Uint8List(0), source: source));
       expect(fromSource.ok, isTrue, reason: fromSource.error);
-      expect(fromSource.note, contains('compiled from GLSL source'));
+      expect(fromSource.note, contains('compiled from .mat source'));
       // The GLB import pipeline's template: header parameters must be declared for `materialParams.<name>`.
       const imported = 'material {\n  name : "barrel_blue",\n  shadingModel : lit,\n  parameters : [\n    { type : float4, name : baseColor }\n  ]\n}\nfragment {\n  void material(inout MaterialInputs material) {\n    prepareMaterial(material);\n    material.baseColor = materialParams.baseColor;\n  }\n}\n';
-      expect(FilamentMaterialCompiler.headerParameters(imported), [('float4', 'baseColor')]);
       final importedOutcome = await compiler(MaterialCompileInput(name: 'M_Imported', relativePath: 'contents/materials/M_Imported.lmas', package: Uint8List(0), source: imported));
       expect(importedOutcome.ok, isTrue, reason: importedOutcome.error);
+      // The whole definition is compiled: a vertex block after the fragment and header keys beyond shading/blending.
+      const vertexBlock = '''material {
+  name : Wave,
+  shadingModel : unlit,
+  blending : fade,
+  requires : [ tangents ],
+  variables : [ tint ]
+}
+fragment {
+  void material(inout MaterialInputs material) {
+    prepareMaterial(material);
+    material.baseColor = vec4(variable_tint.rgb, 0.8);
+  }
+}
+vertex {
+  void materialVertex(inout MaterialVertexInputs material) {
+    material.tint = vec4(material.worldNormal * 0.5 + 0.5, 1.0);
+  }
+}
+''';
+      final waveOutcome = await compiler(MaterialCompileInput(name: 'M_Wave', relativePath: 'contents/materials/M_Wave.lmas', package: Uint8List(0), source: vertexBlock));
+      expect(waveOutcome.ok, isTrue, reason: waveOutcome.error);
+      // A rejected source fails with the compiler's own message and line.
+      final brokenOutcome = await compiler(MaterialCompileInput(
+          name: 'M_Broken', relativePath: 'contents/materials/M_Broken.lmas', package: Uint8List(0), source: vertexBlock.replaceFirst('variable_tint.rgb', 'nowhereDeclared')));
+      expect(brokenOutcome.ok, isFalse);
+      expect(brokenOutcome.error, startsWith('matc: '));
+      expect(brokenOutcome.error, contains("ERROR: 0:11: 'nowhereDeclared' : undeclared identifier"));
     });
   });
 

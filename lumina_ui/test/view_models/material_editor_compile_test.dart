@@ -1,40 +1,17 @@
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter_filament/flutter_filament.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina/data/models/lumina_asset.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/material_editor_view_model.dart';
 
-/// Regression coverage: the material compiler ignored declared parameters,
-/// so any textured material failed to compile.
+/// Regression coverage: a material's declared parameters and `requires`
+/// reach the compiled material.
 ///
-/// The compiler was handed only the fragment body, so a material declaring
-/// `{ type : sampler2d, name : baseColorMap }` and reading
-/// `materialParams_baseColorMap` could never compile — the builder was told
-/// about no parameters at all.
-class _RecordingCompilerRunner implements FilamatCompilerRunner {
-  List<MaterialParamModel> lastParameters = const [];
-  Set<int> lastRequiredAttributes = const {};
-  String? lastCode;
-
-  @override
-  Future<Uint8List?> compile({
-    required String name,
-    required String code,
-    required FilamatShading shading,
-    required BlendingMode blending,
-    required bool doubleSided,
-    List<MaterialParamModel> parameters = const [],
-    Set<int> requiredAttributes = const {},
-  }) async {
-    lastCode = code;
-    lastParameters = parameters;
-    lastRequiredAttributes = requiredAttributes;
-    return Uint8List.fromList([0x46, 0x49, 0x4C, 0x41, 0x01]);
-  }
-}
-
+/// The compiler used to be handed only the fragment body, so a material
+/// declaring `{ type : sampler2d, name : baseColorMap }` and reading
+/// `materialParams_baseColorMap` could never compile. The whole source now
+/// goes to the material compiler, which reads the header itself.
 const String _texturedMaterial = '''
 material {
   name : "M_Textured",
@@ -60,6 +37,15 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   late Directory tempDir;
+  late FilamentEngine engine;
+
+  setUpAll(() {
+    engine = FilamentEngine.create(backend: FilamentBackend.noop)!;
+  });
+
+  tearDownAll(() {
+    if (!engine.isDisposed) engine.dispose();
+  });
 
   setUp(() {
     tempDir = Directory.systemTemp.createTempSync('mat_compile_');
@@ -69,7 +55,7 @@ void main() {
     if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
   });
 
-  MaterialEditorViewModel viewModelFor(String source, _RecordingCompilerRunner runner) {
+  Future<FilamentMaterial> compiled(String source) async {
     final file = File('${tempDir.path}/M_Textured.lmas');
     file.writeAsBytesSync(
       LuminaAsset(
@@ -79,45 +65,30 @@ void main() {
         rawMatSource: source,
       ).toProtoBufferBytes(),
     );
-    return MaterialEditorViewModel(assetPath: file.path, compilerRunner: runner);
+    final vm = MaterialEditorViewModel(assetPath: file.path);
+    await vm.load();
+    expect(await vm.compile(), isTrue, reason: vm.issues.map((i) => i.message).join('\n'));
+    return FilamentMaterial.fromBuffer(engine: engine, filamatBuffer: vm.compiledBytes!);
   }
 
-  test('declared samplers and uniforms reach the compiler', () async {
-    final runner = _RecordingCompilerRunner();
-    final vm = viewModelFor(_texturedMaterial, runner);
-    await vm.load();
-
-    await vm.compile();
-
-    final names = runner.lastParameters.map((p) => p.name).toList();
-    expect(
-      names,
-      containsAll(<String>['baseColorMap', 'normalMap', 'roughness']),
-      reason: 'the header declares three parameters; the builder must be told about '
-          'all of them or every materialParams reference is undefined. Got: $names',
-    );
-
-    final samplers = runner.lastParameters.where((p) => p.isSampler).map((p) => p.name).toSet();
-    expect(samplers, equals({'baseColorMap', 'normalMap'}));
+  test('declared samplers and uniforms are in the compiled material', () async {
+    final material = await compiled(_texturedMaterial);
+    final params = {for (final p in material.parameters) p.name: p};
+    expect(params.keys, containsAll(<String>['baseColorMap', 'normalMap', 'roughness']));
+    expect(params['baseColorMap']!.isSampler, isTrue);
+    expect(params['normalMap']!.isSampler, isTrue);
+    expect(params['roughness']!.uniformType, UniformType.floatType);
+    material.dispose();
   });
 
-  test('`requires : [ uv0 ]` reaches the compiler as VertexAttribute.UV0', () async {
-    final runner = _RecordingCompilerRunner();
-    final vm = viewModelFor(_texturedMaterial, runner);
-    await vm.load();
-
-    await vm.compile();
-
-    expect(
-      runner.lastRequiredAttributes,
-      contains(3),
-      reason: 'getUV0() needs UV0 (VertexAttribute index 3) required on the builder',
-    );
+  test('`requires : [ uv0 ]` is required by the compiled material', () async {
+    final material = await compiled(_texturedMaterial);
+    expect(material.requiredAttributes, contains(VertexAttribute.uv0));
+    material.dispose();
   });
 
-  test('a material with no parameters asks for nothing extra', () async {
-    final runner = _RecordingCompilerRunner();
-    final vm = viewModelFor('''
+  test('a material with no parameters declares none', () async {
+    final material = await compiled('''
 material {
   name : "M_Plain",
   shadingModel : lit,
@@ -129,12 +100,9 @@ fragment {
     material.baseColor = vec4(1.0, 0.5, 0.25, 1.0);
   }
 }
-''', runner);
-    await vm.load();
-
-    await vm.compile();
-
-    expect(runner.lastParameters, isEmpty);
-    expect(runner.lastRequiredAttributes, isEmpty);
+''');
+    expect(material.parameters, isEmpty);
+    expect(material.requiredAttributes, isNot(contains(VertexAttribute.uv0)));
+    material.dispose();
   });
 }

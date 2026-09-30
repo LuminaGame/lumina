@@ -5,7 +5,6 @@ import 'package:lumina/data/models/lumina_asset.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/material_editor_view_model.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/material/material_sub_editor.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/material/glsl_editor_widget.dart';
-import 'package:flutter_filament/flutter_filament.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 
 class MockTestCompilerRunner implements FilamatCompilerRunner {
@@ -18,17 +17,13 @@ class MockTestCompilerRunner implements FilamatCompilerRunner {
   });
 
   @override
-  Future<Uint8List?> compile({
+  Future<MaterialCompileResult> compile({
     required String name,
-    required String code,
-    required FilamatShading shading,
-    required BlendingMode blending,
-    required bool doubleSided,
-    List<MaterialParamModel> parameters = const [],
-    Set<int> requiredAttributes = const {},
+    required String source,
+    String? includeDirectory,
   }) async {
-    if (!shouldSucceed) return null;
-    return returnBytes ?? Uint8List.fromList([0x46, 0x49, 0x4C, 0x41, 0x01, 0x02, 0x03]);
+    if (!shouldSucceed) return const MaterialCompileResult(bytes: null);
+    return MaterialCompileResult(bytes: returnBytes ?? Uint8List.fromList([0x46, 0x49, 0x4C, 0x41, 0x01, 0x02, 0x03]));
   }
 }
 
@@ -130,7 +125,7 @@ fragment {
     expect(find.textContaining('Compile OK'), findsWidgets);
   });
 
-  testWidgets('MaterialSubEditor detects syntax errors in compiler log', (tester) async {
+  testWidgets("MaterialSubEditor lists the compiler's errors in the compiler log", (tester) async {
     final asset = LuminaAsset(
       assetId: 'M_Error',
       name: 'M_Error',
@@ -147,7 +142,6 @@ fragment {
     final vm = MaterialEditorViewModel(
       assetPath: 'contents/materials/M_Error.lmas',
       initialAsset: asset,
-      compilerRunner: MockTestCompilerRunner(),
     );
 
     await tester.pumpWidget(
@@ -166,7 +160,7 @@ fragment {
     await tester.tap(find.text('Compile'));
     await tester.pump();
 
-    expect(find.textContaining('Missing prepareMaterial'), findsWidgets);
+    expect(find.textContaining('prepareMaterial() is not called'), findsWidgets);
     expect(find.text('ERROR'), findsWidgets);
   });
 }

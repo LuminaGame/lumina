@@ -5,21 +5,16 @@ import 'package:lumina/data/models/lumina_asset.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/material_editor_view_model.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/material/parameter_panel.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/material/material_sub_editor.dart';
-import 'package:flutter_filament/flutter_filament.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 
 class MockParamPanelCompilerRunner implements FilamatCompilerRunner {
   @override
-  Future<Uint8List?> compile({
+  Future<MaterialCompileResult> compile({
     required String name,
-    required String code,
-    required FilamatShading shading,
-    required BlendingMode blending,
-    required bool doubleSided,
-    List<MaterialParamModel> parameters = const [],
-    Set<int> requiredAttributes = const {},
+    required String source,
+    String? includeDirectory,
   }) async {
-    return Uint8List.fromList([0x46, 0x49, 0x4C, 0x41, 0x01, 0x02]);
+    return MaterialCompileResult(bytes: Uint8List.fromList([0x46, 0x49, 0x4C, 0x41, 0x01, 0x02]));
   }
 }
 

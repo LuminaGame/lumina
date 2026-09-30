@@ -2,7 +2,7 @@
 
 # Material editor
 
-The Material editor: editing material source, compiling it with filamat, editing parameters and rendering a material preview. File paths are relative to the `lumina_ui/` package directory.
+The Material editor: editing material source, compiling the whole `.mat` definition with Filament's own material compiler (the `.mat` parser `matc` uses, through `FilamentMatc`), editing parameters and rendering a material preview. File paths are relative to the `lumina_ui/` package directory.
 
 **On this page:**
 
@@ -125,13 +125,17 @@ Reflection-driven inspector panel for Material settings, PBR parameters, and tex
 | `message` | `String message` | Holds the `message` property or configuration state. |
 | `severity` | `MaterialCompileSeverity severity` | Holds the `severity` property or configuration state. |
 
+### `class MaterialCompileResult`
+
+What one compile of a `.mat` source produced: `bytes` (the `.filamat` package, null when rejected), `issues` (the compiler's messages), `ok`.
+
 ### `class FilamatCompilerRunner`
 
-Abstract compiler runner to facilitate testing in environments without native Filament binaries.
+Compiles a whole `.mat` material definition; injectable so a test can observe what the editor hands the compiler. `Future<MaterialCompileResult> compile({required String name, required String source, String? includeDirectory})`: [source] is the complete definition as written (header, `vertex` and `fragment` blocks), [name] names a material whose header has none, `#include` resolves against [includeDirectory].
 
 ### `class DefaultFilamatCompilerRunner`
 
-`DefaultFilamatCompilerRunner`: `class` representing the data model or functionality of the module.
+The editor's compiler: Filament's own `.mat` parser (the one `matc` uses) through `FilamentMatc`, so every header key, the `vertex` and `fragment` blocks in any order and `#include`s mean what they mean to matc, and a failure lists matc's messages (verbatim) with their `.mat` line numbers as issues. `MaterialCompileIssue.fromMatc` maps one message; `MaterialCompileIssue.fromCompiler` marks it (the issue list labels a line-less one `matc:`). The header bar's shading and blending are read from the source for display only (every Filament value, e.g. `fade`, `multiply`, `specularGlossiness`); compiling never depends on them.
 
 ### `enum MaterialParamType`
 
@@ -411,7 +415,7 @@ A texture `.lmas` bound to one sampler parameter of a slot's material.
 | :--- | :--- | :--- |
 | `ok` | `final bool ok` |  |
 | `error` | `final String? error` |  |
-| `note` | `final String? note` | Extra detail for the log line (e.g. "compiled from GLSL source"). |
+| `note` | `final String? note` | Extra detail for the log line (e.g. "compiled from .mat source"). |
 
 ### `class MaterialCompileInput`
 
@@ -419,7 +423,7 @@ What the precompile seam receives for one FILAMAT asset.
 
 **Constructors:**
 
-- `const MaterialCompileInput({required this.name, required this.relativePath, required this.package, required this.source})`
+- `const MaterialCompileInput({required this.name, required this.relativePath, required this.package, required this.source, this.includeDirectory})`
 
 **Members:**
 
@@ -429,6 +433,7 @@ What the precompile seam receives for one FILAMAT asset.
 | `relativePath` | `final String relativePath` |  |
 | `package` | `final Uint8List package` |  |
 | `source` | `final String source` |  |
+| `includeDirectory` | `final String? includeDirectory` | The folder `#include "…"` in [source] resolves against (the asset's own). |
 
 ### `typedef MaterialCompiler`
 
@@ -436,7 +441,7 @@ Compiles one FILAMAT asset; injectable so tests need no GPU.
 
 ### `class FilamentMaterialCompiler`
 
-The real seam: builds the `Material` on a headless Filament engine from the asset's compiled package bytes (or, when the asset only carries GLSL source, from a package built by the in-process filamat compiler exactly the way the Material Editor does) and warms its variants via `compile()`.
+The real seam: builds the `Material` on a headless Filament engine from the asset's compiled package bytes (or, when the asset only carries `.mat` source, from a package the material compiler — Filament's own `.mat` parser, as the Material Editor uses it — builds from the whole source) and warms its variants via `compile()`. A rejected source fails as `matc: <matc's messages>`.
 
 **Constructors:**
 
@@ -448,13 +453,7 @@ The real seam: builds the `Material` on a headless Filament engine from the asse
 | :--- | :--- | :--- |
 | `timeout` | `final Duration timeout` |  |
 | `isFilamatPackage` | `static bool isFilamatPackage(Uint8List? bytes)` | Whether [bytes] look like a compiled `.filamat` package (a `MAT_VERS` chunk of size 4). Filament aborts the process on arbitrary bytes, so this guard is mandatory before `fromBuffer`. |
-| `extractFragmentBody` | `static String extractFragmentBody(String source)` | Mirrors the Material Editor: the `fragment { … }` body is what the filamat builder compiles; header keys pick shading/blending. |
-| `shadingOf` | `static FilamatShading shadingOf(String source)` |  |
-| `blendingOf` | `static BlendingMode blendingOf(String source)` |  |
-| `headerParameters` | `static List<(String, String)> headerParameters(String source)` | Parameters declared in the `.mat` header (`parameters : [ { type : float4, name : baseColor } ]`) as (type, name) pairs, so `materialParams.<name>` resolves when compiling. |
-| `requiredAttributes` | `static Set<int> requiredAttributes(String source)` | Vertex attributes the `.mat` header's `requires : [ uv0, … ]` block asks for, as `VertexAttribute` indices, the way the Material Editor reads them: `getUV0()` in the fragment only compiles when UV0 is required. |
-| `uniformTypeFor` | `static UniformType? uniformTypeFor(String matType)` |  |
-| `buildPackageFromSource` | `Uint8List? buildPackageFromSource(String name, String source)` | Builds a package from GLSL [source] with the in-process filamat compiler; null when the compiler rejects it. |
+| `buildPackageFromSource` | `MatcResult buildPackageFromSource(String name, String source, {String? includeDirectory})` | Compiles the whole `.mat` [source] with the material compiler (every header key, `vertex` and `fragment` blocks, `#include`s from [includeDirectory]), as the Material Editor does. |
 | `call` | `Future<MaterialCompileOutcome> call(MaterialCompileInput input) async` |  |
 | `dispose` | `void dispose()` |  |
 

@@ -127,8 +127,7 @@ Build Manager state: step selection, target/config, one pipeline at a time, per-
 
 **Üst Düzey Fonksiyonlar (Top-level Functions):**
 
-- **`UniformType? uniformTypeFor(String matType) => switch (matType)`**: `uniformTypeFor` işlemini gerçekleştirir.
-- **`Uint8List? buildPackageFromSource(String name, String source)`**: Builds a package from GLSL [source] with the in-process filamat compiler; null when the compiler rejects it.
+- **`MatcResult buildPackageFromSource(String name, String source, {String? includeDirectory})`**: Compiles the whole `.mat` [source] with the material compiler (every header key, `vertex` and `fragment` blocks, `#include`s from [includeDirectory]), as the Material Editor does.
 - **`Future<MaterialCompileOutcome> call(MaterialCompileInput input)`**: `call` işlemini gerçekleştirir.
 - **`void dispose()`**: Yerel FFI göstericilerini, dinleyicileri ve bellek bloklarını serbest bırakır.
 - **`BuildStepKind kind`**: `kind` işlemini gerçekleştirir.
@@ -407,7 +406,7 @@ What a step sees: the project on disk, the cancellation token and the event sink
 | :--- | :--- | :--- |
 | `ok` | `bool ok` | `ok` alanını (field/property) ve ilişkili veriyi saklar. |
 | `error` | `String? error` | `error` alanını (field/property) ve ilişkili veriyi saklar. |
-| `note` | `String? note` | Extra detail for the log line (e.g. "compiled from GLSL source"). |
+| `note` | `String? note` | Extra detail for the log line (e.g. "compiled from .mat source"). |
 
 ### `class MaterialCompileInput`
 
@@ -424,7 +423,7 @@ What the precompile seam receives for one FILAMAT asset.
 
 ### `class FilamentMaterialCompiler`
 
-The real seam: builds the `Material` on a headless Filament engine from the asset's compiled package bytes (or, when the asset only carries GLSL source, from a package built by the in-process filamat compiler exactly the way the Material Editor does) and warms its variants via `compile()`.
+The real seam: builds the `Material` on a headless Filament engine from the asset's compiled package bytes (or, when the asset only carries `.mat` source, from a package the material compiler — Filament's own `.mat` parser, as the Material Editor uses it — builds from the whole source) and warms its variants via `compile()`. A rejected source fails as `matc: <matc's messages>`.
 
 **Fonksiyonlar, Metotlar ve Erişimciler:**
 
@@ -432,9 +431,6 @@ The real seam: builds the `Material` on a headless Filament engine from the asse
 | :--- | :--- | :--- |
 | `timeout` | `Duration timeout` | `timeout` alanını (field/property) ve ilişkili veriyi saklar. |
 | `isFilamatPackage` | `static bool isFilamatPackage(Uint8List? bytes)` | Whether [bytes] look like a compiled `.filamat` package (a `MAT_VERS` chunk of size 4). Filament aborts the process on arbitrary bytes, so this guard is mandatory before `fromBuffer`. |
-| `extractFragmentBody` | `static String extractFragmentBody(String source)` | Mirrors the Material Editor: the `fragment { … }` body is what the filamat builder compiles; header keys pick shading/blending. |
-| `shadingOf` | `static FilamatShading shadingOf(String source)` | `shadingOf` işlemini gerçekleştirir. |
-| `blendingOf` | `static BlendingMode blendingOf(String source)` | `blendingOf` işlemini gerçekleştirir. |
 | `out` | `out` | `out` alanını (field/property) ve ilişkili veriyi saklar. |
 
 ## `lib/ui/features/sub_editors/services/build_pipeline_service/cook_and_package_steps.dart`

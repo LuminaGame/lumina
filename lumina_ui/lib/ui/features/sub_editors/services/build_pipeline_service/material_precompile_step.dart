@@ -6,7 +6,7 @@ class MaterialCompileOutcome {
   final bool ok;
   final String? error;
 
-  /// Extra detail for the log line (e.g. "compiled from GLSL source").
+  /// Extra detail for the log line (e.g. "compiled from .mat source").
   final String? note;
   const MaterialCompileOutcome.ok({this.note}) : ok = true, error = null;
   const MaterialCompileOutcome.failed(this.error) : ok = false, note = null;
@@ -18,20 +18,29 @@ class MaterialCompileInput {
   final String relativePath;
   final Uint8List package;
   final String source;
-  const MaterialCompileInput({required this.name, required this.relativePath, required this.package, required this.source});
+
+  /// The folder `#include "…"` in [source] resolves against (the asset's own).
+  final String? includeDirectory;
+  const MaterialCompileInput({
+    required this.name,
+    required this.relativePath,
+    required this.package,
+    required this.source,
+    this.includeDirectory,
+  });
 }
 
 /// Compiles one FILAMAT asset; injectable so tests need no GPU.
 typedef MaterialCompiler = Future<MaterialCompileOutcome> Function(MaterialCompileInput input);
 
 /// The real seam: builds the `Material` on a headless Filament engine from the
-/// asset's compiled package bytes (or, when the asset only carries GLSL
-/// source, from a package built by the in-process filamat compiler exactly
-/// the way the Material Editor does) and warms its variants via `compile()`.
+/// asset's compiled package bytes (or, when the asset only carries `.mat`
+/// source, from a package the material compiler — Filament's own `.mat`
+/// parser, as the Material Editor uses it — builds from the whole source) and
+/// warms its variants via `compile()`.
 class FilamentMaterialCompiler {
   FilamentEngine? _engine;
   bool _engineFailed = false;
-  bool _builderReady = false;
   final Duration timeout;
 
   FilamentMaterialCompiler({this.timeout = const Duration(seconds: 30)});
@@ -49,109 +58,11 @@ class FilamentMaterialCompiler {
     return ByteData.view(bytes.buffer, bytes.offsetInBytes + 8, 4).getUint32(0, Endian.little) == 4;
   }
 
-  /// Mirrors the Material Editor: the `fragment { … }` body is what the
-  /// filamat builder compiles; header keys pick shading/blending.
-  static String extractFragmentBody(String source) {
-    final fragIndex = source.indexOf('fragment {');
-    if (fragIndex == -1) return source;
-    final afterFrag = source.substring(fragIndex + 10);
-    final lastBrace = afterFrag.lastIndexOf('}');
-    return (lastBrace == -1 ? afterFrag : afterFrag.substring(0, lastBrace)).trim();
-  }
-
-  static FilamatShading shadingOf(String source) {
-    if (RegExp(r'shadingModel\s*:\s*unlit').hasMatch(source)) return FilamatShading.unlit;
-    if (RegExp(r'shadingModel\s*:\s*cloth').hasMatch(source)) return FilamatShading.cloth;
-    if (RegExp(r'shadingModel\s*:\s*subsurface').hasMatch(source)) return FilamatShading.subsurface;
-    return FilamatShading.lit;
-  }
-
-  static BlendingMode blendingOf(String source) {
-    if (RegExp(r'blending\s*:\s*transparent').hasMatch(source)) return BlendingMode.transparent;
-    if (RegExp(r'blending\s*:\s*masked').hasMatch(source)) return BlendingMode.masked;
-    if (RegExp(r'blending\s*:\s*add').hasMatch(source)) return BlendingMode.add;
-    return BlendingMode.opaque;
-  }
-
-  /// Parameters declared in the `.mat` header
-  /// (`parameters : [ { type : float4, name : baseColor } ]`) as
-  /// (type, name) pairs, so `materialParams.<name>` resolves when compiling.
-  static List<(String, String)> headerParameters(String source) {
-    final out = <(String, String)>[];
-    final block = RegExp(r'parameters\s*:\s*\[(.*?)\]', dotAll: true).firstMatch(source);
-    if (block == null) return out;
-    for (final m in RegExp(r'\{([^}]*)\}').allMatches(block.group(1)!)) {
-      final entry = m.group(1)!;
-      final type = RegExp(r'type\s*:\s*([A-Za-z0-9_]+)').firstMatch(entry)?.group(1);
-      final name = RegExp(r'name\s*:\s*"?([A-Za-z_][A-Za-z0-9_]*)"?').firstMatch(entry)?.group(1);
-      if (type != null && name != null) out.add((type, name));
-    }
-    return out;
-  }
-
-  /// Vertex attributes the `.mat` header's `requires : [ uv0, … ]` block asks
-  /// for, as `VertexAttribute` indices, the way the Material Editor reads them:
-  /// `getUV0()` in the fragment only compiles when UV0 is required.
-  static Set<int> requiredAttributes(String source) {
-    final match = RegExp(r'requires\s*:\s*\[([^\]]*)\]').firstMatch(source);
-    if (match == null) return const {};
-    return {
-      for (final raw in match.group(1)!.split(',')) ?MaterialVertexAttribute.fromName(raw),
-    };
-  }
-
-  static UniformType? uniformTypeFor(String matType) => switch (matType) {
-        'bool' => UniformType.boolType,
-        'bool2' => UniformType.bool2,
-        'bool3' => UniformType.bool3,
-        'bool4' => UniformType.bool4,
-        'float' => UniformType.floatType,
-        'float2' => UniformType.float2,
-        'float3' => UniformType.float3,
-        'float4' => UniformType.float4,
-        'int' => UniformType.intType,
-        'int2' => UniformType.int2,
-        'int3' => UniformType.int3Type,
-        'int4' => UniformType.int4,
-        'uint' => UniformType.uint,
-        'uint2' => UniformType.uint2,
-        'uint3' => UniformType.uint3,
-        'uint4' => UniformType.uint4,
-        'mat3' => UniformType.mat3,
-        'mat4' => UniformType.mat4,
-        _ => null,
-      };
-
-  /// Builds a package from GLSL [source] with the in-process filamat
-  /// compiler; null when the compiler rejects it.
-  Uint8List? buildPackageFromSource(String name, String source) {
-    if (!_builderReady) {
-      FilamentMaterialBuilder.initEngine();
-      _builderReady = true;
-    }
-    final builder = FilamentMaterialBuilder.create();
-    try {
-      builder.setName(name);
-      for (final attribute in requiredAttributes(source)) {
-        builder.requireAttribute(attribute);
-      }
-      for (final (type, pname) in headerParameters(source)) {
-        final uniform = uniformTypeFor(type);
-        if (uniform != null) {
-          builder.addParameter(pname, uniform);
-        } else if (type.startsWith('sampler')) {
-          builder.addSamplerParameter(pname);
-        }
-      }
-      builder.setCode(extractFragmentBody(source));
-      builder.setShading(shadingOf(source));
-      builder.blending(blendingOf(source));
-      builder.setDoubleSided(RegExp(r'doubleSided\s*:\s*true').hasMatch(source));
-      return builder.build();
-    } finally {
-      builder.dispose();
-    }
-  }
+  /// Compiles the whole `.mat` [source] with the material compiler (every
+  /// header key, `vertex` and `fragment` blocks, `#include`s from
+  /// [includeDirectory]), as the Material Editor does.
+  MatcResult buildPackageFromSource(String name, String source, {String? includeDirectory}) =>
+      FilamentMatc.compile(source, fileName: '$name.mat', defaultName: name, includeDirectory: includeDirectory);
 
   Future<MaterialCompileOutcome> call(MaterialCompileInput input) async {
     Uint8List package = input.package;
@@ -159,17 +70,18 @@ class FilamentMaterialCompiler {
     if (!isFilamatPackage(package)) {
       if (input.source.trim().isEmpty) {
         return MaterialCompileOutcome.failed(
-            'no compiled filamat package (${package.length} bytes) and no GLSL source — compile it in the Material Editor first');
+            'no compiled filamat package (${package.length} bytes) and no .mat source — compile it in the Material Editor first');
       }
       try {
-        final built = buildPackageFromSource(input.name, input.source);
+        final result = buildPackageFromSource(input.name, input.source, includeDirectory: input.includeDirectory);
+        final built = result.package;
         if (built == null || !isFilamatPackage(built)) {
-          return const MaterialCompileOutcome.failed('filamat rejected the GLSL source (no package produced)');
+          return MaterialCompileOutcome.failed('matc: ${result.errorText}');
         }
         package = built;
-        note = 'compiled from GLSL source (${built.length} byte package, not written back)';
+        note = 'compiled from .mat source (${built.length} byte package, not written back)';
       } catch (e) {
-        return MaterialCompileOutcome.failed('filamat build from source failed: $e');
+        return MaterialCompileOutcome.failed('material compiler failed: $e');
       }
     }
     if (_engineFailed) return const MaterialCompileOutcome.failed('Filament engine unavailable on this host');
@@ -244,6 +156,7 @@ class MaterialPrecompileStep implements BuildStep {
         relativePath: m.relativePath,
         package: m.asset.rawPayload ?? Uint8List(0),
         source: m.asset.rawMatSource,
+        includeDirectory: m.file.parent.path,
       ));
       done++;
       if (outcome.ok) {

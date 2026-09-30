@@ -7,6 +7,7 @@ import 'package:lumina/data/services/engine_logger_service.dart';
 import 'package:flutter_filament/flutter_filament.dart';
 
 import '../../main_editor/commands/editor_transaction.dart';
+import '../services/mat_source.dart';
 import 'material_graph_controller.dart';
 
 enum MaterialCompileSeverity {
@@ -24,103 +25,82 @@ class MaterialCompileIssue {
   /// the node graph rather than a source line.
   final String? nodeId;
 
+  /// Whether the material compiler (matc) reported it, as opposed to the
+  /// editor's own checks or the node graph.
+  final bool fromCompiler;
+
   const MaterialCompileIssue({
     required this.line,
     required this.message,
     this.severity = MaterialCompileSeverity.error,
     this.nodeId,
+    this.fromCompiler = false,
   });
+
+  /// matc's [diagnostic] as an issue: its `.mat` line (0 when it names none)
+  /// and its message verbatim.
+  factory MaterialCompileIssue.fromMatc(MatcDiagnostic diagnostic) => MaterialCompileIssue(
+        line: diagnostic.file == null ? (diagnostic.line ?? 0) : 0,
+        message: diagnostic.message,
+        severity: diagnostic.severity == MatcSeverity.error ? MaterialCompileSeverity.error : MaterialCompileSeverity.warning,
+        fromCompiler: true,
+      );
 }
 
-/// Abstract compiler runner to facilitate testing in environments without native Filament binaries.
+/// What one compile of a `.mat` source produced.
+class MaterialCompileResult {
+  /// The compiled `.filamat` package; null when the source was rejected.
+  final Uint8List? bytes;
+
+  /// The compiler's messages (errors when it failed, warnings either way).
+  final List<MaterialCompileIssue> issues;
+
+  const MaterialCompileResult({required this.bytes, this.issues = const []});
+
+  bool get ok => bytes != null && bytes!.isNotEmpty;
+}
+
+/// Compiles a whole `.mat` material definition; injectable so a test can
+/// observe what the editor hands the compiler.
 abstract class FilamatCompilerRunner {
-  /// [parameters] are the uniforms and samplers the `.mat` header declares, and
-  /// [requiredAttributes] the vertex attributes its `requires : [ … ]` block
-  /// asks for (`VertexAttribute` indices — `uv0` is 3). Both have to reach the
-  /// builder: the compiler only sees the fragment body, so anything the header
-  /// declares but the builder is not told about leaves every `materialParams…`
-  /// reference undefined.
-  Future<Uint8List?> compile({
+  /// [source] is the complete material definition as written (header,
+  /// `vertex` and `fragment` blocks); [name] names a material whose header has
+  /// none; `#include "…"` resolves against [includeDirectory].
+  Future<MaterialCompileResult> compile({
     required String name,
-    required String code,
-    required FilamatShading shading,
-    required BlendingMode blending,
-    required bool doubleSided,
-    List<MaterialParamModel> parameters = const [],
-    Set<int> requiredAttributes = const {},
+    required String source,
+    String? includeDirectory,
   });
 }
 
-/// `VertexAttribute` indices, as `filament/libs/filabridge/include/filament/MaterialEnums.h`
-/// defines them. Only the ones a `.mat` `requires` block can name are listed.
-class MaterialVertexAttribute {
-  static const int color = 2;
-  static const int uv0 = 3;
-  static const int uv1 = 4;
-
-  static int? fromName(String name) => switch (name.trim().toLowerCase()) {
-        'color' => color,
-        'uv0' => uv0,
-        'uv1' => uv1,
-        _ => null,
-      };
-}
-
+/// The editor's compiler: Filament's own `.mat` parser (the one `matc` uses)
+/// through [FilamentMatc], so every header key, the `vertex` and `fragment`
+/// blocks in any order and `#include`s mean what they mean to matc, and a
+/// failure lists matc's messages with their `.mat` line numbers.
 class DefaultFilamatCompilerRunner implements FilamatCompilerRunner {
-  static bool _engineInitialized = false;
-
   @override
-  Future<Uint8List?> compile({
+  Future<MaterialCompileResult> compile({
     required String name,
-    required String code,
-    required FilamatShading shading,
-    required BlendingMode blending,
-    required bool doubleSided,
-    List<MaterialParamModel> parameters = const [],
-    Set<int> requiredAttributes = const {},
+    required String source,
+    String? includeDirectory,
   }) async {
     try {
-      if (!_engineInitialized) {
-        FilamentMaterialBuilder.initEngine();
-        _engineInitialized = true;
-      }
-      final builder = FilamentMaterialBuilder.create();
-      builder.setName(name);
-      builder.setCode(code);
-      builder.setShading(shading);
-      builder.blending(blending);
-      builder.setDoubleSided(doubleSided);
-
-      for (final attribute in requiredAttributes) {
-        builder.requireAttribute(attribute);
-      }
-      for (final parameter in parameters) {
-        if (parameter.isSampler) {
-          builder.addSamplerParameter(parameter.name);
-          continue;
-        }
-        final uniformType = uniformTypeFor(parameter.type);
-        if (uniformType == null) {
-          // Dropping a declared parameter silently is what made every textured
-          // material fail to compile; say so instead.
-          EngineLoggerService().log(
-            'Material "$name" declares parameter "${parameter.name}" of type '
-            '${parameter.type.name}, which has no UniformType mapping — it will not '
-            'be visible to the shader.',
-            level: 'warning',
-            source: 'FilamatCompiler',
-          );
-          continue;
-        }
-        builder.addParameter(parameter.name, uniformType);
-      }
-
-      final bytes = builder.build();
-      builder.dispose();
-      return bytes;
+      final result = FilamentMatc.compile(
+        source,
+        fileName: '$name.mat',
+        defaultName: name,
+        includeDirectory: includeDirectory,
+      );
+      return MaterialCompileResult(
+        bytes: result.package,
+        issues: [for (final d in result.diagnostics) MaterialCompileIssue.fromMatc(d)],
+      );
     } catch (e, st) {
-      EngineLoggerService().log('DefaultFilamatCompilerRunner failed: $e\n$st', level: 'error');
-      return null;
+      EngineLoggerService().log('Material compiler failed: $e\n$st', level: 'error', source: 'FilamatCompiler');
+      return MaterialCompileResult(
+        bytes: null,
+        issues: [MaterialCompileIssue(line: 0, message: 'Material compiler failed: $e', fromCompiler: true)],
+      );
     }
   }
 }
@@ -213,7 +193,7 @@ class MaterialEditorViewModel extends ChangeNotifier {
       _compiledBytes = _asset!.rawPayload;
       _shading = _parseShadingModel(_currentCode);
       _blending = _parseBlendingMode(_currentCode);
-      _doubleSided = _currentCode.contains('doubleSided : true') || _currentCode.contains('doubleSided: true');
+      _doubleSided = _parseDoubleSided(_currentCode);
       _parseParameters();
       graph.restore(_asset!.metadata['material_graph']);
     }
@@ -320,8 +300,7 @@ class MaterialEditorViewModel extends ChangeNotifier {
     // nothing, so every `materialParams…` reference it uses is undefined.
     _shading = _parseShadingModel(_currentCode);
     _blending = _parseBlendingMode(_currentCode);
-    _doubleSided = _currentCode.contains('doubleSided : true') ||
-        _currentCode.contains('doubleSided: true');
+    _doubleSided = _parseDoubleSided(_currentCode);
     _parseParameters();
     _validateDartSyntax();
     notifyListeners();
@@ -337,62 +316,52 @@ class MaterialEditorViewModel extends ChangeNotifier {
     }
   }
 
-  /// Validates Dart-side structural constraints and maps line offsets.
+  /// Quick structural hints while typing (blocks and braces, read like the
+  /// compiler reads them: comments and strings skipped) and the line where the
+  /// fragment body starts. They only fill the issue list until the next
+  /// compile; the compiler alone decides whether a material compiles.
   void _validateDartSyntax() {
     final text = _currentCode;
     _issues = [];
 
-    int openBraces = 0;
-    int closeBraces = 0;
-    final lines = text.split('\n');
+    int lineOf(int offset) => '\n'.allMatches(text.substring(0, offset.clamp(0, text.length))).length + 1;
 
-    int materialBlockLine = -1;
-    int fragmentBlockLine = -1;
-    int prepareMaterialLine = -1;
-
-    for (int i = 0; i < lines.length; i++) {
-      final line = lines[i];
-      for (int j = 0; j < line.length; j++) {
-        if (line[j] == '{') openBraces++;
-        if (line[j] == '}') closeBraces++;
-      }
-      if (line.contains('material') && line.contains('{') && materialBlockLine == -1) {
-        materialBlockLine = i + 1;
-      }
-      if (line.contains('fragment') && line.contains('{') && fragmentBlockLine == -1) {
-        fragmentBlockLine = i + 1;
-      }
-      if (line.contains('prepareMaterial') && prepareMaterialLine == -1) {
-        prepareMaterialLine = i + 1;
-      }
-    }
-
-    // Determine bodyLineOffset (where the fragment/material body begins)
     final fragIndex = text.indexOf('void material');
+    final fragmentAt = RegExp(r'\bfragment\s*\{').firstMatch(text)?.start ?? -1;
     if (fragIndex != -1) {
-      final beforeFrag = text.substring(0, fragIndex);
-      _bodyLineOffset = beforeFrag.split('\n').length;
+      _bodyLineOffset = lineOf(fragIndex);
     } else {
-      _bodyLineOffset = fragmentBlockLine > 0 ? fragmentBlockLine : 1;
+      _bodyLineOffset = fragmentAt >= 0 ? lineOf(fragmentAt) : 1;
     }
 
-    if (openBraces != closeBraces) {
+    MatSource source;
+    try {
+      source = MatSource.parse(text);
+    } on FormatException catch (e) {
+      final unbalanced = e.message.contains('unbalanced');
       _issues.add(MaterialCompileIssue(
-        line: lines.length,
-        message: 'Unmatched braces: $openBraces open vs $closeBraces close',
+        line: e.offset == null ? 1 : lineOf(e.offset!),
+        message: unbalanced ? 'Unmatched braces: the block opened here is never closed' : 'Syntax: ${e.message}',
         severity: MaterialCompileSeverity.error,
       ));
-      _syntaxStatus = 'Syntax Error: Unmatched braces';
-    } else if (materialBlockLine == -1 && fragmentBlockLine == -1) {
+      _syntaxStatus = unbalanced ? 'Syntax Error: Unmatched braces' : 'Syntax Error';
+      return;
+    }
+
+    final fragment = source.block('fragment');
+    if (source.block('material') == null && fragment == null && source.block('compute') == null) {
       _issues.add(const MaterialCompileIssue(
         line: 1,
         message: 'Missing material {} or fragment {} block',
         severity: MaterialCompileSeverity.error,
       ));
       _syntaxStatus = 'Syntax Error: Missing blocks';
-    } else if (prepareMaterialLine == -1 && text.contains('fragment')) {
+    } else if (fragment != null &&
+        // Post-process and compute materials have no prepareMaterial.
+        !const {'postprocess', 'compute'}.contains(_headerWord(text, 'domain')?.toLowerCase()) &&
+        !fragment.body.replaceAll(RegExp(r'//[^\n]*|/\*[\s\S]*?\*/'), '').contains('prepareMaterial')) {
       _issues.add(MaterialCompileIssue(
-        line: fragmentBlockLine > 0 ? fragmentBlockLine : 1,
+        line: fragmentAt >= 0 ? lineOf(fragmentAt) : 1,
         message: 'Missing prepareMaterial(material) call in fragment shader',
         severity: MaterialCompileSeverity.error,
       ));
@@ -417,20 +386,10 @@ class MaterialEditorViewModel extends ChangeNotifier {
     return results.toList();
   }
 
-  /// Reads the header's `requires : [ uv0, … ]` block into `VertexAttribute`
-  /// indices. `getUV0()` in a fragment is only valid when UV0 is required.
-  static Set<int> _parseRequiredAttributes(String source) {
-    final match = RegExp(r'requires\s*:\s*\[([^\]]*)\]').firstMatch(source);
-    if (match == null) return const {};
-    final result = <int>{};
-    for (final raw in (match.group(1) ?? '').split(',')) {
-      final attribute = MaterialVertexAttribute.fromName(raw);
-      if (attribute != null) result.add(attribute);
-    }
-    return result;
-  }
-
-  /// Compiles the current GLSL source using the filamat compiler.
+  /// Compiles the whole current `.mat` source with the material compiler
+  /// (Filament's own `.mat` parser, as `matc` uses it): the header, the
+  /// `vertex` and `fragment` blocks in any order. The editor's own checks do
+  /// not stand in the way; the compiler's messages become [issues].
   Future<bool> compile() async {
     if (graph.isAhead && graph.analysis.hasErrors) {
       // The source is older than the graph: compiling it would preview a
@@ -439,47 +398,38 @@ class MaterialEditorViewModel extends ChangeNotifier {
       return false;
     }
     _validateDartSyntax();
-    // Declarations edited by hand reach the builder too.
+    // Declarations and header values edited by hand reach the panel and the
+    // header bar too.
     _reparseParametersKeepingValues();
-    if (_issues.any((i) => i.severity == MaterialCompileSeverity.error)) {
-      notifyListeners();
-      return false;
-    }
+    _shading = _parseShadingModel(_currentCode);
+    _blending = _parseBlendingMode(_currentCode);
+    _doubleSided = _parseDoubleSided(_currentCode);
 
     _isCompiling = true;
     notifyListeners();
 
     final stopwatch = Stopwatch()..start();
-
-    // Extract fragment code body or pass the full fragment block
-    final codeToCompile = _extractFragmentBody(_currentCode);
-    final shading = _parseShadingModel(_currentCode);
-    final blending = _parseBlendingMode(_currentCode);
-    final doubleSided = _currentCode.contains('doubleSided : true') || _currentCode.contains('doubleSided: true');
-    final name = _asset?.name ?? 'Material';
-
-    final bytes = await compilerRunner.compile(
-      name: name,
-      code: codeToCompile,
-      shading: shading,
-      blending: blending,
-      doubleSided: doubleSided,
-      parameters: _parameters,
-      requiredAttributes: _parseRequiredAttributes(_currentCode),
+    final name = _asset?.name ?? File(assetPath).uri.pathSegments.last.replaceAll('.lmas', '');
+    final result = await compilerRunner.compile(
+      name: name.isEmpty ? 'Material' : name,
+      source: _currentCode,
+      includeDirectory: File(assetPath).parent.path,
     );
 
     stopwatch.stop();
     _elapsedMs = stopwatch.elapsedMilliseconds;
     _isCompiling = false;
 
-    if (bytes != null && bytes.isNotEmpty) {
+    final bytes = result.bytes;
+    if (result.ok) {
       _compiledBytes = bytes;
       _issues = [
         MaterialCompileIssue(
           line: 1,
-          message: 'Compilation successful (${bytes.length} bytes in ${_elapsedMs}ms)',
+          message: 'Compilation successful (${bytes!.length} bytes in ${_elapsedMs}ms)',
           severity: MaterialCompileSeverity.info,
         ),
+        ...result.issues,
       ];
       if (graph.isInitialized) {
         _issues.addAll(graph.issues.where((i) => i.severity != MaterialCompileSeverity.error));
@@ -489,60 +439,47 @@ class MaterialEditorViewModel extends ChangeNotifier {
       EngineLoggerService().log('Compiled material "$name" (${bytes.length} bytes) in ${_elapsedMs}ms', level: 'info');
       notifyListeners();
       return true;
-    } else {
-      _issues = [
-        const MaterialCompileIssue(
-          line: 1,
-          message: 'filamat backend rejected the source (compile failed)',
-          severity: MaterialCompileSeverity.error,
-        ),
-      ];
-      _syntaxStatus = 'Compile Error';
-      EngineLoggerService().log('filamat backend compilation failed for material "$name"', level: 'error');
-      notifyListeners();
-      return false;
+    }
+    final errors = result.issues.where((i) => i.severity == MaterialCompileSeverity.error).toList();
+    _issues = result.issues.isEmpty
+        ? [const MaterialCompileIssue(line: 0, message: 'The material compiler produced no package', fromCompiler: true)]
+        : [...result.issues];
+    _syntaxStatus = 'Compile Error (${errors.isEmpty ? 1 : errors.length})';
+    final first = errors.isEmpty ? _issues.first : errors.first;
+    EngineLoggerService().log(
+      'Material "$name" did not compile${first.line > 0 ? ' (line ${first.line})' : ''}: ${first.message}',
+      level: 'error',
+      source: 'FilamatCompiler',
+    );
+    notifyListeners();
+    return false;
+  }
+
+  /// A header entry's bare value (`shadingModel : lit` → `lit`), read with the
+  /// `.mat` block reader; for the header bar and panel only (compiling never
+  /// depends on it). A source it cannot split falls back to a plain match.
+  static String? _headerWord(String source, String key) {
+    try {
+      final value = MatSource.parse(source).headerValue(key);
+      if (value is MatAtom) return value.text;
+      if (value is MatString) return value.text;
+      return null;
+    } on FormatException {
+      return RegExp('\\b$key\\s*:\\s*"?([A-Za-z0-9_]+)').firstMatch(source)?.group(1);
     }
   }
 
-  /// Extracts the fragment material(...) body from the full .mat string.
-  String _extractFragmentBody(String source) {
-    final fragIndex = source.indexOf('fragment {');
-    if (fragIndex != -1) {
-      final afterFrag = source.substring(fragIndex + 10);
-      final lastBrace = afterFrag.lastIndexOf('}');
-      if (lastBrace != -1) {
-        return afterFrag.substring(0, lastBrace).trim();
-      }
-      return afterFrag.trim();
-    }
-    return source;
+  static FilamatShading _parseShadingModel(String source) {
+    final word = _headerWord(source, 'shadingModel')?.toLowerCase();
+    return FilamatShading.values.where((s) => s.name.toLowerCase() == word).firstOrNull ?? FilamatShading.lit;
   }
 
-  FilamatShading _parseShadingModel(String source) {
-    if (source.contains('shadingModel : unlit') || source.contains('shadingModel: unlit')) {
-      return FilamatShading.unlit;
-    }
-    if (source.contains('shadingModel : cloth') || source.contains('shadingModel: cloth')) {
-      return FilamatShading.cloth;
-    }
-    if (source.contains('shadingModel : subsurface') || source.contains('shadingModel: subsurface')) {
-      return FilamatShading.subsurface;
-    }
-    return FilamatShading.lit;
+  static BlendingMode _parseBlendingMode(String source) {
+    final word = _headerWord(source, 'blending')?.toLowerCase();
+    return BlendingMode.values.where((b) => b.name.toLowerCase() == word).firstOrNull ?? BlendingMode.opaque;
   }
 
-  BlendingMode _parseBlendingMode(String source) {
-    if (source.contains('blending : transparent') || source.contains('blending: transparent')) {
-      return BlendingMode.transparent;
-    }
-    if (source.contains('blending : masked') || source.contains('blending: masked')) {
-      return BlendingMode.masked;
-    }
-    if (source.contains('blending : add') || source.contains('blending: add')) {
-      return BlendingMode.add;
-    }
-    return BlendingMode.opaque;
-  }
+  static bool _parseDoubleSided(String source) => _headerWord(source, 'doubleSided')?.toLowerCase() == 'true';
 
   /// Gets parameter value by name.
   dynamic getParamValue(String name) {
@@ -641,7 +578,7 @@ class MaterialEditorViewModel extends ChangeNotifier {
     _currentCode = code;
     _shading = _parseShadingModel(code);
     _blending = _parseBlendingMode(code);
-    _doubleSided = code.contains('doubleSided : true') || code.contains('doubleSided: true');
+    _doubleSided = _parseDoubleSided(code);
     _validateDartSyntax();
     _reparseParametersKeepingValues();
     if (!_issues.any((i) => i.severity == MaterialCompileSeverity.error)) {
