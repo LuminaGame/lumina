@@ -16,9 +16,13 @@ import 'package:lumina_ui/ui/features/sub_editors/view_models/project_settings_v
 import 'package:lumina_ui/ui/features/sub_editors/views/project_settings_sub_editor.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/blueprint_editor_view_model.dart';
+
+import '../../test/helpers/blueprint_test_project.dart';
 
 /// Project Settings smoke: real editor on a real temp project, Edit → Project
-/// Settings, add IA_Move (axis2D) with W/S bindings, pick the Game Default Map,
+/// Settings, add IA_Move (axis2D) with W/S bindings, pick the Game Default Map
+/// and a GameMode Blueprint saved into a subfolder after the tab opened,
 /// Apply; the `.lmproject` on disk must contain the new input block.
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -107,13 +111,34 @@ void main() {
     await tester.pump();
     await rec.hold(const Duration(seconds: 1));
 
+    // A GameMode Blueprint saved into contents/blueprints/runner/ while the
+    // tab is open: Maps & Modes lists it when the category is opened.
+    final gameMode = File(writeBlueprint(pDir.path, 'BP_RunnerGameMode',
+        BlueprintEditorViewModel.createDefaultDocument('BP_RunnerGameMode', parentClass: 'LuminaGameMode')));
+    Directory('${pDir.path}/contents/blueprints/runner').createSync(recursive: true);
+    gameMode.renameSync('${pDir.path}/contents/blueprints/runner/BP_RunnerGameMode.lmas');
+    const runnerMode = 'contents/blueprints/runner/BP_RunnerGameMode.lmas';
+
     // Maps & Modes: pick L_Hub as the Game Default Map.
     await tester.tap(find.byKey(const ValueKey('project_settings_nav_${ProjectSettingsCategory.mapsAndModes}')));
     await tester.pump();
+    expect(settingsVm.gameModeClasses, contains(runnerMode));
     final hub = settingsVm.levels.firstWhere((l) => l.displayName == 'L_Hub');
     await rec.hold(const Duration(milliseconds: 700));
     settingsVm.setGameDefaultMap(hub.relativePath);
     await tester.pump();
+    await rec.hold(const Duration(milliseconds: 800));
+    // Default Game Mode: the dropdown offers the new Blueprint.
+    await tester.tap(find.text('LuminaGameMode').last);
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    await rec.hold(const Duration(milliseconds: 800));
+    await tester.tap(find.text('BP_RunnerGameMode (Blueprint)').last);
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(settingsVm.project.mapsAndModes.defaultGameMode, runnerMode);
     await rec.hold(const Duration(milliseconds: 800));
 
     final png = await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey));
@@ -145,6 +170,7 @@ void main() {
     expect(mappings[1]['scale'], -1.0);
     expect((raw['maps_and_modes'] as Map)['game_default_map'], 'contents/levels/L_Hub.lmas');
     expect(vm.project.mapsAndModes.gameDefaultMap, 'contents/levels/L_Hub.lmas', reason: 'apply propagated to the editor');
+    expect((raw['maps_and_modes'] as Map)['default_game_mode'], runnerMode);
 
     tempProjectsDir.deleteSync(recursive: true);
   });

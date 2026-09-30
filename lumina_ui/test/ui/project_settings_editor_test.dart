@@ -13,7 +13,9 @@ import 'package:lumina_ui/ui/features/sub_editors/views/project_settings_sub_edi
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/build_pipeline_service.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/blueprint_editor_view_model.dart';
 
+import '../helpers/blueprint_test_project.dart';
 import '../helpers/flutter_build_stand_in.dart';
 
 /// Every scenario runs against a real
@@ -191,6 +193,36 @@ void main() {
     await tester.pump();
     final saved = await tester.runAsync(readManifest);
     expect(saved!.settings.qualityPreset, 'low');
+  });
+
+  testWidgets('Maps & Modes lists a GameMode Blueprint saved in a subfolder while the tab stays open', (tester) async {
+    final vm = makeVm();
+    await tester.runAsync(() => vm.load());
+    expect(vm.gameModeClasses, ['LuminaGameMode']);
+    await tester.pumpWidget(ShadcnApp(
+      theme: luminaEditorTheme(),
+      home: Scaffold(
+        child: SizedBox(width: 1200, height: 800, child: ProjectSettingsSubEditor(assetName: 'Project Settings', viewModel: vm)),
+      ),
+    ));
+    await tester.pump();
+
+    // Saved from a Blueprint editor after the tab loaded, into contents/blueprints/runner/.
+    final saved = File(writeBlueprint(projDir.path, 'BP_RunnerGameMode',
+        BlueprintEditorViewModel.createDefaultDocument('BP_RunnerGameMode', parentClass: 'LuminaGameMode')));
+    Directory('${projDir.path}/contents/blueprints/runner').createSync();
+    saved.renameSync('${projDir.path}/contents/blueprints/runner/BP_RunnerGameMode.lmas');
+    const mode = 'contents/blueprints/runner/BP_RunnerGameMode.lmas';
+
+    await tester.tap(find.byKey(const ValueKey('project_settings_nav_${ProjectSettingsCategory.mapsAndModes}')));
+    await tester.pump();
+    expect(vm.gameModeClasses, ['LuminaGameMode', mode]);
+    await tester.tap(find.text('LuminaGameMode'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('BP_RunnerGameMode (Blueprint)').last);
+    await tester.pumpAndSettle();
+    expect(vm.project.mapsAndModes.defaultGameMode, mode);
+    expect(vm.validationErrors[ProjectSettingsCategory.mapsAndModes], isEmpty);
   });
 
   testWidgets('Target FPS 0 renders Unlimited; 300 is rejected; fresh manifest defaults VSync off', (tester) async {

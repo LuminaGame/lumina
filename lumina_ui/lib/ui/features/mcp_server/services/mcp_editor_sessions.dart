@@ -373,6 +373,8 @@ class McpEditorSessions {
   Future<ProjectSettingsViewModel> projectSettings() async {
     final existing = vm.editorSessionFor(projectSettingsTabId);
     if (existing is ProjectSettingsViewModel) {
+      // Blueprints and levels created since the tab loaded become choices.
+      existing.refreshChoices();
       vm.openSubEditorTab('projectSettings', title: 'Project Settings');
       return existing;
     }

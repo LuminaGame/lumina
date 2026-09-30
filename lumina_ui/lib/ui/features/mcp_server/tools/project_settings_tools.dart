@@ -300,7 +300,11 @@ void registerProjectSettingsTools(McpToolRegistry registry, EditorViewModel vm, 
         final bound = sessions.boundProjectSettings;
         final ps = bound ?? ProjectSettingsViewModel(projectDirPath: vm.projectDirPath, initialProject: vm.project);
         try {
-          if (bound == null) await ps.load();
+          if (bound == null) {
+            await ps.load();
+          } else {
+            ps.refreshChoices();
+          }
           return McpToolResult.json(read(ps, only: args.optionalString('category')));
         } finally {
           if (bound == null) ps.dispose();

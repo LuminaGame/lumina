@@ -112,6 +112,18 @@ class ProjectSettingsViewModel extends _ProjectSettingsViewModelState
     return files.first.path;
   }
 
+  /// Rescans the project for the Maps & Modes choices (levels, game modes,
+  /// pawn classes): assets created, moved or saved after [load] appear.
+  /// The working copy is untouched; listeners hear only a changed list.
+  void refreshChoices() {
+    if (projectDirPath.isEmpty) return;
+    final before = jsonEncode([_levels.map((l) => l.relativePath).toList(), _gameModeClasses, _pawnClasses]);
+    _refreshLevels();
+    _refreshGameModes();
+    final after = jsonEncode([_levels.map((l) => l.relativePath).toList(), _gameModeClasses, _pawnClasses]);
+    if (after != before) notifyListeners();
+  }
+
   void _refreshLevels() {
     try {
       final assets = _assetRepo.scanProjectContents(projectDirPath);

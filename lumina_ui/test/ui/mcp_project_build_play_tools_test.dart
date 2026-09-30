@@ -144,6 +144,29 @@ void main() {
       expect(tab().isDirty, isFalse);
     });
 
+    test('GameMode and Character Blueprints created in a subfolder after the tab opened are listed and accepted', () async {
+      // The first edit opens the tab and binds its view model.
+      await ok('set_project_settings', {'changes': {'physics.gravity_z': -490}});
+      await ok('create_asset', {'type': 'actor', 'name': 'BP_RunnerGameMode', 'parent_class': 'LuminaGameMode', 'folder': 'blueprints/runner'});
+      await ok('create_asset', {'type': 'actor', 'name': 'BP_RunnerCharacter', 'parent_class': 'LuminaCharacter', 'folder': 'blueprints/runner'});
+      const mode = 'contents/blueprints/runner/BP_RunnerGameMode.lmas';
+      const pawn = 'contents/blueprints/runner/BP_RunnerCharacter.lmas';
+
+      final read = (await ok('get_project_settings', {'category': 'maps_and_modes'}))['maps_and_modes'] as Map;
+      expect(read['accepted_game_modes'], contains(mode));
+      expect(read['accepted_pawn_classes'], contains(pawn));
+
+      await ok('set_project_settings', {
+        'changes': {'maps_and_modes.default_game_mode': mode, 'maps_and_modes.default_pawn_class': pawn},
+      });
+      expect(tab().project.mapsAndModes.defaultGameMode, mode);
+      expect(tab().project.mapsAndModes.defaultPawnClass, pawn);
+      expect((await ok('apply_project_settings'))['validation_errors'], isEmpty);
+      final disk = manifest()['maps_and_modes'] as Map;
+      expect(disk['default_game_mode'], mode);
+      expect(disk['default_pawn_class'], pawn);
+    });
+
     testWidgets('mounting the Project Settings tab after an MCP edit adopts the same view model (no second load)', (tester) async {
       await tester.runAsync(() => ok('set_project_settings', {'changes': {'physics.gravity_z': -490}}));
       final staged = tab();

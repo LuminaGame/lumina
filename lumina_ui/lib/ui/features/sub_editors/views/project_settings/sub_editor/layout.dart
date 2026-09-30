@@ -77,7 +77,11 @@ mixin _ProjectSettingsLayout on _ProjectSettingsSubEditorStateBase {
                     ),
                   GestureDetector(
                     key: ValueKey('project_settings_nav_$cat'),
-                    onTap: () => setState(() => _activeCategory = cat),
+                    onTap: () {
+                      // Maps & Modes lists what the project holds now, not at load.
+                      if (cat == ProjectSettingsCategory.mapsAndModes) _vm.refreshChoices();
+                      setState(() => _activeCategory = cat);
+                    },
                     child: Container(
                       margin: const EdgeInsets.only(bottom: 4),
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
