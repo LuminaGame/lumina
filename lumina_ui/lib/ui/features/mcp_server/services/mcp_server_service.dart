@@ -34,6 +34,7 @@ import '../tools/outliner_tools.dart';
 import '../tools/viewport_settings_tools.dart';
 import '../tools/component_tools.dart';
 import '../tools/fs_tools.dart';
+import '../tools/guide_tools.dart';
 import '../tools/job_tools.dart';
 import '../tools/landscape_tools.dart';
 import '../tools/level_tools.dart';
@@ -55,6 +56,7 @@ import '../tools/texture_tools.dart';
 import '../tools/view_tools.dart';
 import '../../main_editor/commands/editor_transaction.dart';
 import '../tools/core_tools.dart';
+import 'lumina_guide.dart';
 import 'mcp_editor_sessions.dart';
 import 'mcp_jobs.dart';
 import 'mcp_play_testing.dart';
@@ -137,6 +139,8 @@ class McpServerService extends ChangeNotifier {
     );
     registerLevelTools(tools, viewModel);
     registerSelectionTools(tools, viewModel);
+    // How the engine works, for AI models (the lumina-engine skill).
+    registerGuideTools(tools, guide);
     // The Content Browser and the Material / Blueprint editors.
     registerAssetTools(tools, viewModel, sessions);
     registerMaterialTools(tools, viewModel, sessions);
@@ -743,9 +747,19 @@ class McpServerService extends ChangeNotifier {
           result = {'resources': _resources()};
         case 'resources/read':
           _requireSession(sessionId);
-          result = _readResource(request.params);
+          result = await _readResource(request.params);
         case 'resources/templates/list':
-          result = {'resourceTemplates': const <Object>[]};
+          result = {
+            'resourceTemplates': [
+              {
+                'uriTemplate': '${LuminaGuide.resource}/{topic}',
+                'name': 'guide-topic',
+                'title': 'Lumina engine guide topic',
+                'description': 'One topic of the Lumina engine guide: ${[for (final t in LuminaGuide.topics) t.id].join(', ')}.',
+                'mimeType': 'text/markdown',
+              },
+            ],
+          };
         case 'prompts/list':
           result = {'prompts': const <Object>[]};
         default:
@@ -798,6 +812,8 @@ class McpServerService extends ChangeNotifier {
             'Deleted assets go to .lumina/trash (list_trash, restore_asset). Tools come in groups '
             '(list_tool_groups); connect with /mcp?groups=level,view to list fewer. File tools are confined to the '
             'project; every file change is snapshotted first (fs_history, fs_restore). Read project_info first. '
+            'Before working in an area you have not used yet (Blueprints, game mode, input, widgets, materials, lights, '
+            'camera, play-testing, …) read its topic with get_lumina_guide (no topic: the overview and the list). '
             'Play-testing: after start_pie (or the start of a pie_sequence) let the game run at least 1.5 s '
             '(pie_play_for with ms >= 1500, or a {"play_ms": 1500} step) before the first screenshot; '
             'earlier frames can still show the editor camera.',
@@ -897,6 +913,10 @@ class McpServerService extends ChangeNotifier {
   static const String outputLogResource = 'lumina://output-log';
   static const String selectionResource = 'lumina://selection';
 
+  /// The Lumina engine guide the tool and the `lumina://guide` resources
+  /// serve.
+  final LuminaGuide guide = LuminaGuide();
+
   List<Map<String, Object?>> _resources() => [
         {
           'uri': projectResource,
@@ -920,10 +940,40 @@ class McpServerService extends ChangeNotifier {
               'as get_selection returns it with its defaults.',
           'mimeType': 'application/json',
         },
+        {
+          'uri': LuminaGuide.resource,
+          'name': 'guide',
+          'title': 'Lumina engine guide',
+          'description': 'How the Lumina engine works, for AI models: the overview and the topic list '
+              '(as get_lumina_guide returns it).',
+          'mimeType': 'text/markdown',
+        },
+        for (final t in LuminaGuide.topics)
+          {
+            'uri': LuminaGuide.resourceOf(t.id),
+            'name': 'guide-${t.id}',
+            'title': 'Lumina guide: ${t.title}',
+            'description': 'The "${t.id}" topic of the Lumina engine guide.',
+            'mimeType': 'text/markdown',
+          },
       ];
 
-  Map<String, Object?> _readResource(Map<String, Object?> params) {
+  Future<Map<String, Object?>> _readResource(Map<String, Object?> params) async {
     final uri = params['uri'];
+    Map<String, Object?> markdown(String text) => {
+          'contents': [
+            {'uri': uri, 'mimeType': 'text/markdown', 'text': text},
+          ],
+        };
+    if (uri == LuminaGuide.resource) return markdown(await guide.overview());
+    if (uri is String && uri.startsWith('${LuminaGuide.resource}/')) {
+      final topic = uri.substring(LuminaGuide.resource.length + 1);
+      if (!LuminaGuide.topicIds.contains(topic)) {
+        throw JsonRpcException(JsonRpcErrorCode.invalidParams,
+            'Unknown guide topic "$topic"; topics: ${LuminaGuide.topics.map((t) => t.id).join(', ')}.');
+      }
+      return markdown(await guide.topic(topic));
+    }
     switch (uri) {
       case projectResource:
         return {

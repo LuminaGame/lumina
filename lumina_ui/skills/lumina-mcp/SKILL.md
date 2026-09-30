@@ -35,10 +35,11 @@ Full argument shapes: `reference/tools.md`. Ready-made call sequences: `referenc
 2. Send `notifications/initialized` (→ 202).
 3. Echo `Mcp-Session-Id` on every later request: missing → HTTP 400, unknown → 404 (re-initialize). `DELETE /mcp` with the header ends the session.
 4. Call `project_info` first: project name, dir, active level, `world_units: cm`, `up_axis: z`, dirty flag, actor count, PIE state, undo state.
+5. Before working in an area you have not used yet (Blueprints, game mode, input, widgets, materials, lights, camera, play-testing, save games), read how the engine does it: `get_lumina_guide {topic}` (no topic: the overview and the topic list). The guide is the `lumina-engine` skill next to this one.
 
 ## 4. Units and axes
 
-The editor's authoring space, exactly as the Details panel shows it: **centimetres**, **degrees**, **Z up**. `location: [x, y, z]` cm; `rotation: [roll, pitch, yaw]` degrees about X, Y, Z; `scale: [x, y, z]` factors. A glTF metre model is drawn ×100, so a 1 m barrel spans ~100 cm at scale 1. Camera distance is cm; camera `target` is the orbit pivot in the same space.
+The editor's authoring space, exactly as the Details panel shows it: **centimetres**, **degrees**, **Z up**. `location: [x, y, z]` cm; `rotation: [roll, pitch, yaw]` degrees about X, Y, Z (index 2, about Z, is the yaw; at rotation 0 an actor faces +Y, yaw 90 faces +X: `get_lumina_guide {topic: "levels-actors-transforms"}`); `scale: [x, y, z]` factors. A glTF metre model is drawn ×100, so a 1 m barrel spans ~100 cm at scale 1. Camera distance is cm; camera `target` is the orbit pivot in the same space.
 
 ## 5. Tool catalogue (48 tools, by area)
 
@@ -58,7 +59,7 @@ Exact schemas: `reference/tools.md`. Names in `tools/list` are stable.
 | Viewport & camera | `viewport_screenshot`, `select_tab`, `get_camera`, `set_camera`, `focus_actor`, `frame_level` |
 | Output Log | `read_output_log`, `clear_output_log` |
 
-Resources (`resources/read`): `lumina://project` (the `.lmproject` as JSON), `lumina://output-log` (last 500 lines), `lumina://selection` (what the user has selected, as `get_selection` returns it).
+Resources (`resources/read`): `lumina://project` (the `.lmproject` as JSON), `lumina://output-log` (last 500 lines), `lumina://selection` (what the user has selected, as `get_selection` returns it), `lumina://guide` and `lumina://guide/<topic>` (the Lumina engine guide, as `get_lumina_guide` returns it; template `lumina://guide/{topic}`).
 
 Identifiers you pass around: actor **ids** (`act_3`, from `list_actors`, never names); asset **project-relative paths** (`contents/meshes/fuel_barrel_red.lmas`, from `list_assets`; a bare unique file name also works); Blueprint **node ids** (`node_…`, from `get_blueprint`) versus **library ids** (`print_string`, from `list_blueprint_nodes`); **pin ids** (`exec_out`, `in_string`).
 
@@ -70,7 +71,7 @@ See `reference/workflows.md` for the full call sequences. In short:
 - **Import a mesh and assign a material**: `import_asset {path}` (absolute GLB/glTF/FBX/OBJ/PNG/WAV path; extracted materials/textures come along) → `spawn_actor_from_asset {asset}` → `create_asset {type: "filamat", name}` → `set_material_source` → `compile_material {save: true}` → `set_actor_property {property: "material", value: "<path>"}`.
 - **Author and compile a Blueprint**: `create_asset {type: "actor", name, parent_class}` → `get_blueprint` (opens the tab) → `list_blueprint_nodes {query}` → `add_blueprint_node` → `connect_blueprint_pins` → `set_blueprint_pin_literal` → `compile_blueprint {save: true}` → fix what `diagnostics` names.
 - **Run Play and read the log**: `start_pie` → `pie_status` (pawn class, player location) → `read_output_log {contains: "PIE"}` / `{level: "error"}` → `stop_pie` (restores the level, selection and camera).
-- **Play-test in one call**: `pie_sequence {steps: [{play_ms: 1000}, {screenshot: true, label: "start"}, {key: "W", hold_ms: 800}, {action: "IA_Jump"}, {advance_frames: 10}, {screenshot: true, label: "after jump"}, {expect: {player_moved: true}}]}` → starts Play if needed, a per-step log (player location, new log lines), the screenshots as captioned images, `final_status`; stops at the first failing step.
+- **Play-test in one call**: `pie_sequence {steps: [{play_ms: 1500}, {screenshot: true, label: "start"}, {key: "W", hold_ms: 800}, {action: "IA_Jump"}, {advance_frames: 10}, {screenshot: true, label: "after jump"}, {expect: {player_moved: true}}]}` → starts Play if needed, a per-step log (player location, new log lines), the screenshots as captioned images, `final_status`; stops at the first failing step.
 - **Screenshot**: `set_camera {yaw, pitch, distance, target}` or `focus_actor` → `viewport_screenshot {max_width}` → MCP image content (`image/png`) + a text line; `target: "editor"` for the whole window. The level tab must be showing (`select_tab {index: 0}`).
 
 ## 7. Errors, refusals and undo

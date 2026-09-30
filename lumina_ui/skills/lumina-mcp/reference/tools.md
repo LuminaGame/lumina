@@ -7,6 +7,7 @@ Argument shapes as `tools/list` declares them (`inputSchema`, `additionalPropert
 | Tool | Arguments | Returns / effect |
 |---|---|---|
 | `project_info` | — | `project_name, engine_version, project_dir, active_level, active_level_name, world_units:"cm", up_axis:"z", is_dirty, actor_count, selected_actor_ids, pie{playing,paused}, undo{…}` |
+| `get_lumina_guide` | `topic?` (one of the topic ids) | how the engine works, for AI models (markdown text): no topic → the overview + the topic list; `project-layout`, `levels-actors-transforms`, `blueprints`, `gameplay-framework`, `input`, `umg-widgets`, `meshes-materials`, `filament-materials`, `lights`, `camera-spring-arm`, `play-testing`, `save-games`, `pitfalls`; also the resources `lumina://guide` / `lumina://guide/<topic>` |
 | `list_actors` | `type?` (exact, e.g. `PointLight`, `Mesh`, `Primitive`, `Blueprint`, `Folder`), `name_contains?` | `count, actors[{id,name,type,parent_id,location,rotation,scale,visible,locked,selected}]` |
 | `get_actor` | `id` | the full node (`toMap()`), `components[{id,type,name,enabled,properties}]`, `meshAssetPath`, `blueprintClass`, `children`, `mesh{vertices,triangles,bounds_min,bounds_max}?` |
 | `list_actor_types` | — | `types[{id,label,category,description,unique}]` — `Primitive` (cube), `StaticMesh`, `SkeletalMesh`, `DirectionalLight`, `PointLight`, `SpotLight`, `PlayerStart`, `Pawn`, `Camera`, `Environment` (unique), `ProceduralSky` (unique), `NavMeshBoundsVolume` |
@@ -519,6 +520,7 @@ Groups size the list, they are not a permission: connect with `/mcp?groups=level
 | Tool | Group | Risk | destructiveHint | idempotentHint |
 |---|---|---|---|---|
 | `project_info` | core | readOnly | false | true |
+| `get_lumina_guide` | core | readOnly | false | true |
 | `undo` | core | mutating | false | false |
 | `redo` | core | mutating | false | false |
 | `undo_state` | core | readOnly | false | true |

@@ -119,6 +119,9 @@ flutter:
     - assets/third_party/filament/
     - assets/ibl/default_env/default_env_ibl.ktx
     - assets/fonts/
+    # The Lumina engine guide for AI models (get_lumina_guide, lumina://guide).
+    - skills/lumina-engine/
+    - skills/lumina-engine/reference/
 
   # `--font-mono: 'JetBrains Mono'` in the design prototype's index.css.
   # JetBrains Mono is SIL OFL licensed, so it ships with the editor (licence

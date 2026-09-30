@@ -122,7 +122,7 @@ void main() {
   });
 
   // `--groups level` connects to /mcp?groups=level.
-  test('started with --groups level, the bridge lists the 27 level and 9 core tools', () async {
+  test('started with --groups level, the bridge lists the 27 level and 10 core tools', () async {
     final projectDir = Directory('${root.path}/GroupsProject')..createSync();
     const project = LuminaProject(projectName: 'GroupsProject', activeLevel: 'contents/levels/L_Main.lmas');
     File('${projectDir.path}/GroupsProject.lmproject').writeAsStringSync(jsonEncode(project.toMap()));
@@ -140,7 +140,7 @@ void main() {
       'params': {'protocolVersion': '2025-06-18', 'capabilities': {}, 'clientInfo': {'name': 'bridge-groups', 'version': '0'}},
     });
     final list = await ask(process, lines, {'jsonrpc': '2.0', 'id': 2, 'method': 'tools/list'});
-    expect(((list['result'] as Map)['tools'] as List), hasLength(36));
+    expect(((list['result'] as Map)['tools'] as List), hasLength(37));
     expect(server.sessionList.single.groups, {'level'});
   });
 

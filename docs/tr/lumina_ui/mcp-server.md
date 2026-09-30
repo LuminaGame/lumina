@@ -7,6 +7,7 @@ Yapay zeka agent'larının açık proje üzerinde çalışmasını sağlayan edi
 **Bu sayfada:**
 
 - [`lib/ui/features/mcp_server/services/host_editor_mcp.dart`](#libuifeaturesmcp_serverserviceshost_editor_mcpdart)
+- [`lib/ui/features/mcp_server/services/lumina_guide.dart`](#libuifeaturesmcp_serverserviceslumina_guidedart)
 - [`lib/ui/features/mcp_server/services/mcp_approval_policy.dart`](#libuifeaturesmcp_serverservicesmcp_approval_policydart)
 - [`lib/ui/features/mcp_server/services/mcp_editor_sessions.dart`](#libuifeaturesmcp_serverservicesmcp_editor_sessionsdart)
 - [`lib/ui/features/mcp_server/services/mcp_file_snapshots.dart`](#libuifeaturesmcp_serverservicesmcp_file_snapshotsdart)
@@ -45,6 +46,38 @@ The editor's MCP tools as plugins see them: one [McpToolRegistry] — the server
 | `lazyScoped` | `static EditorMcp lazyScoped(HostEditorMcp Function() host, String pluginName)` | A plugin's view whose host is created on first use. |
 | `removePlugin` | `void removePlugin(String pluginName)` | Removes every tool [pluginName] registered (it registers again). |
 | `toolsOf` | `Set<String> toolsOf(String pluginName)` | The tools [pluginName] registered. |
+
+## `lib/ui/features/mcp_server/services/lumina_guide.dart`
+
+### `class LuminaGuideTopic`
+
+One topic of the Lumina engine guide: its id (the `reference/<id>.md` file) and title.
+
+**Yapıcı Metotlar (Constructors):**
+
+- `const LuminaGuideTopic(this.id, this.title)`
+
+### `class LuminaGuide`
+
+The Lumina engine guide for AI models: how the engine works, written from the code, shipped with the editor as the `lumina-engine` skill (`skills/lumina-engine/`, Flutter assets, so every build carries it). `get_lumina_guide` and the `lumina://guide` resources serve it.
+
+**Yapıcı Metotlar (Constructors):**
+
+- `LuminaGuide({Future<String> Function(String assetPath)? load})`
+
+**Üyeler:**
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `root` | `static const String root` | The asset folder of the skill (`skills/lumina-engine`). |
+| `topics` | `static const List<LuminaGuideTopic> topics` | The topics, in reading order: `project-layout`, `levels-actors-transforms`, `blueprints`, `gameplay-framework`, `input`, `umg-widgets`, `meshes-materials`, `filament-materials`, `lights`, `camera-spring-arm`, `play-testing`, `save-games`, `pitfalls`. A test keeps this list equal to the `reference/*.md` files. |
+| `topicIds` | `static final Set<String> topicIds` |  |
+| `resource` | `static const String resource` | `lumina://guide`: the overview and the topic list. |
+| `resourceOf` | `static String resourceOf(String topic)` | `lumina://guide/<topic>`. |
+| `assetOf` | `static String assetOf(String? topic)` | The asset path of [topic] (null: the overview, `SKILL.md`). |
+| `stripFrontMatter` | `static String stripFrontMatter(String text)` | [text] without a leading YAML front matter block. |
+| `overview` | `Future<String> overview() async` | The overview followed by the topic list and how to ask for a topic. |
+| `topic` | `Future<String> topic(String id) async` | The text of [id]; an [ArgumentError] naming the topics when unknown. |
 
 ## `lib/ui/features/mcp_server/services/mcp_approval_policy.dart`
 
@@ -488,6 +521,7 @@ The bridge's `--groups a,b` connects to `/mcp?groups=a,b`, and `--caller <tag>` 
 | `projectResource` | `static const String projectResource` |  |
 | `outputLogResource` | `static const String outputLogResource` |  |
 | `selectionResource` | `static const String selectionResource` |  |
+| `guide` | `final LuminaGuide guide` | The Lumina engine guide the tool and the `lumina://guide` resources serve. |
 
 ## `lib/ui/features/mcp_server/services/mcp_server_settings.dart`
 

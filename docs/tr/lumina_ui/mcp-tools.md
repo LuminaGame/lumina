@@ -373,6 +373,18 @@ The project file tools, group `fs`: list, read, search, write, edit and delete f
 | `fs_history` | readOnly | File snapshots | The file snapshots the file tools took before each change, newest first: [{id, tool, path, existed, bytes, sha256, created, session_id, client, caller}]. |
 | `fs_restore` | mutating | Restore a file snapshot | Puts a file back as snapshot_id recorded it (fs_history): the old bytes, or — when the file did not exist then — the current file moved to the project trash. |
 
+## `lib/ui/features/mcp_server/tools/guide_tools.dart`
+
+`void registerGuideTools(McpToolRegistry registry, LuminaGuide guide)`
+
+`get_lumina_guide` (group `core`, read-only): how the Lumina engine works, for AI models: the overview and the topic list, or one topic. The same text is served as the resources `lumina://guide` and `lumina://guide/<topic>` (template `lumina://guide/{topic}`), `text/markdown`.
+
+**Araçlar:**
+
+| Araç | Risk | Başlık | Açıklama |
+| :--- | :--- | :--- | :--- |
+| `get_lumina_guide` | readOnly | Get Lumina guide | How the Lumina engine works, written for AI models: project layout and the source of truth, units and axes (forward +Y at yaw 0), Blueprints and compile, game mode / pawn defaults, input actions, widgets, materials, lights, camera, play-testing, save games and... |
+
 ## `lib/ui/features/mcp_server/tools/graph_json.dart`
 
 `Map<String, Object?> mcpPinSpec(LuminaBlueprintPinSpec p)`
@@ -705,7 +717,7 @@ How long `pie_sequence` waits for a Play it started to mount (15 s).
 
 A scripted play test in one call: `pie_sequence` starts Play when needed, runs its steps through the play-testing tools' own handlers (`pie_key`, `pie_action`, `pie_axis`, `pie_click`, `pie_mouse_move`, `pie_play_for`, `pie_advance`), captures labelled viewport screenshots and checks light assertions on the player, and returns a per-step log. It stops at the first failing step, releases the keys the calling session holds, and stops a Play it started when a step fails.
 
-Adımlar: `{"key": "W", "hold_ms": 800}` (o kadar oyun süresi basılı tutulan bir tuş, 60 fps kare adımlarıyla), `{"key": "W", "state": "down" | "up"}`, `{"action": "IA_Jump"}`, `{"action": "IA_Move", "value": [0, 1], "hold_ms": 500}`, `{"axis": "MouseX", "value": 40}`, `{"click": {"x": 640, "y": 360}}`, `{"mouse_move": {"dx": 30, "dy": 0}}`, `{"play_ms": 500}` (viewport'ta gerçek zamanlı oynatma), `{"advance_frames": 10}`, `{"screenshot": true}`, `{"expect": {"player_moved": true, "min_distance_cm": 100, "log_contains": "metin"}}`; her adım bir `label` taşıyabilir. Argümanlar: `steps` (zorunlu), `start` (varsayılan true), `stop_at_end` (varsayılan false), `keep_pie_on_error` (varsayılan false), `screenshot_max_width` (varsayılan 1280). Sınırlar (hiçbir şey çalışmadan denetlenir, `-32602`): 50 adım, 10 ekran görüntüsü, toplam 10 000 ms oyun süresi. Dizinin başlattığı Play meshlerini ilk gerçek zamanlı anlarda yükler; ilk ekran görüntüsünden önce `{"play_ms": 1000}` ile başlayın.
+Adımlar: `{"key": "W", "hold_ms": 800}` (o kadar oyun süresi basılı tutulan bir tuş, 60 fps kare adımlarıyla), `{"key": "W", "state": "down" | "up"}`, `{"action": "IA_Jump"}`, `{"action": "IA_Move", "value": [0, 1], "hold_ms": 500}`, `{"axis": "MouseX", "value": 40}`, `{"click": {"x": 640, "y": 360}}`, `{"mouse_move": {"dx": 30, "dy": 0}}`, `{"play_ms": 500}` (viewport'ta gerçek zamanlı oynatma), `{"advance_frames": 10}`, `{"screenshot": true}`, `{"expect": {"player_moved": true, "min_distance_cm": 100, "log_contains": "metin"}}`; her adım bir `label` taşıyabilir. Argümanlar: `steps` (zorunlu), `start` (varsayılan true), `stop_at_end` (varsayılan false), `keep_pie_on_error` (varsayılan false), `screenshot_max_width` (varsayılan 1280). Sınırlar (hiçbir şey çalışmadan denetlenir, `-32602`): 50 adım, 10 ekran görüntüsü, toplam 10 000 ms oyun süresi. Dizinin başlattığı Play meshlerini ilk gerçek zamanlı anlarda yükler; ilk ekran görüntüsünden önce `{"play_ms": 1500}` (en az 1,5 sn) ile başlayın.
 
 Örnek çağrı:
 

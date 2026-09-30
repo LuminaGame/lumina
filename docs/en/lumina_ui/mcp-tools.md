@@ -373,6 +373,18 @@ The project file tools, group `fs`: list, read, search, write, edit and delete f
 | `fs_history` | readOnly | File snapshots | The file snapshots the file tools took before each change, newest first: [{id, tool, path, existed, bytes, sha256, created, session_id, client, caller}]. |
 | `fs_restore` | mutating | Restore a file snapshot | Puts a file back as snapshot_id recorded it (fs_history): the old bytes, or — when the file did not exist then — the current file moved to the project trash. |
 
+## `lib/ui/features/mcp_server/tools/guide_tools.dart`
+
+`void registerGuideTools(McpToolRegistry registry, LuminaGuide guide)`
+
+`get_lumina_guide` (group `core`, read-only): how the Lumina engine works, for AI models: the overview and the topic list, or one topic. The same text is served as the resources `lumina://guide` and `lumina://guide/<topic>` (template `lumina://guide/{topic}`), `text/markdown`.
+
+**Tools:**
+
+| Tool | Risk | Title | Description |
+| :--- | :--- | :--- | :--- |
+| `get_lumina_guide` | readOnly | Get Lumina guide | How the Lumina engine works, written for AI models: project layout and the source of truth, units and axes (forward +Y at yaw 0), Blueprints and compile, game mode / pawn defaults, input actions, widgets, materials, lights, camera, play-testing, save games and... |
+
 ## `lib/ui/features/mcp_server/tools/graph_json.dart`
 
 `Map<String, Object?> mcpPinSpec(LuminaBlueprintPinSpec p)`
@@ -705,7 +717,7 @@ How long `pie_sequence` waits for a Play it started to mount (15 s).
 
 A scripted play test in one call: `pie_sequence` starts Play when needed, runs its steps through the play-testing tools' own handlers (`pie_key`, `pie_action`, `pie_axis`, `pie_click`, `pie_mouse_move`, `pie_play_for`, `pie_advance`), captures labelled viewport screenshots and checks light assertions on the player, and returns a per-step log. It stops at the first failing step, releases the keys the calling session holds, and stops a Play it started when a step fails.
 
-Steps: `{"key": "W", "hold_ms": 800}` (a tap held for that much game time, stepped at 60 fps), `{"key": "W", "state": "down" | "up"}`, `{"action": "IA_Jump"}`, `{"action": "IA_Move", "value": [0, 1], "hold_ms": 500}`, `{"axis": "MouseX", "value": 40}`, `{"click": {"x": 640, "y": 360}}`, `{"mouse_move": {"dx": 30, "dy": 0}}`, `{"play_ms": 500}` (wall-clock play in the viewport), `{"advance_frames": 10}`, `{"screenshot": true}`, `{"expect": {"player_moved": true, "min_distance_cm": 100, "log_contains": "text"}}`; any step may carry a `label`. Arguments: `steps` (required), `start` (default true), `stop_at_end` (default false), `keep_pie_on_error` (default false), `screenshot_max_width` (default 1280). Limits (checked before anything runs, `-32602`): 50 steps, 10 screenshots, 10 000 ms of game time in all. A Play the sequence starts loads its meshes over the first wall-clock moment, so begin with `{"play_ms": 1000}` before a first screenshot.
+Steps: `{"key": "W", "hold_ms": 800}` (a tap held for that much game time, stepped at 60 fps), `{"key": "W", "state": "down" | "up"}`, `{"action": "IA_Jump"}`, `{"action": "IA_Move", "value": [0, 1], "hold_ms": 500}`, `{"axis": "MouseX", "value": 40}`, `{"click": {"x": 640, "y": 360}}`, `{"mouse_move": {"dx": 30, "dy": 0}}`, `{"play_ms": 500}` (wall-clock play in the viewport), `{"advance_frames": 10}`, `{"screenshot": true}`, `{"expect": {"player_moved": true, "min_distance_cm": 100, "log_contains": "text"}}`; any step may carry a `label`. Arguments: `steps` (required), `start` (default true), `stop_at_end` (default false), `keep_pie_on_error` (default false), `screenshot_max_width` (default 1280). Limits (checked before anything runs, `-32602`): 50 steps, 10 screenshots, 10 000 ms of game time in all. A Play the sequence starts loads its meshes over the first wall-clock moment, so begin with `{"play_ms": 1500}` (at least 1.5 s) before a first screenshot.
 
 Example call:
 

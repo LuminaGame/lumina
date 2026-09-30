@@ -76,7 +76,7 @@ void main() {
   Map<String, Object?> jsonText(McpToolReply r) => Map<String, Object?>.from(jsonDecode(r.text) as Map);
 
   const expectedReadOnly = {
-    'project_info', 'list_actors', 'get_actor', 'get_selection', 'list_actor_types', 'undo_state', 'list_assets', 'get_material_source',
+    'project_info', 'get_lumina_guide', 'list_actors', 'get_actor', 'get_selection', 'list_actor_types', 'undo_state', 'list_assets', 'get_material_source',
     'get_material_issues', 'list_blueprint_nodes', 'get_blueprint', 'get_blueprint_diagnostics', 'pie_status',
     'viewport_screenshot', 'get_camera', 'read_output_log', 'list_tool_groups', 'list_trash', 'list_component_types', //
     // File and code tools
@@ -113,10 +113,10 @@ void main() {
   };
 
   group('risk, groups and annotations', () {
-    test('the risk table: 70 read-only, 39 editor state, 234 edits, 24 destructive, 7 external; every tool has known groups and _meta',
+    test('the risk table: 71 read-only, 39 editor state, 234 edits, 24 destructive, 7 external; every tool has known groups and _meta',
         () async {
       final tools = await client.listTools();
-      expect(tools, hasLength(374));
+      expect(tools, hasLength(375));
       Set<String> withRisk(String r) => {
             for (final t in tools)
               if ((t['_meta'] as Map)['lumina/risk'] == r) t['name'] as String,
@@ -240,33 +240,33 @@ void main() {
     test('groups: ?groups= on the URL, params.groups, -32602 for unknown ones, calls outside the groups still run', () async {
       final level = connect(query: '?groups=level');
       await level.handshake();
-      expect(await level.listTools(), hasLength(36), reason: '27 level (13 actor, get_selection, 4 level file, 9 level settings) + 9 core (4 job tools)');
+      expect(await level.listTools(), hasLength(37), reason: '27 level (13 actor, get_selection, 4 level file, 9 level settings) + 10 core (4 job tools, get_lumina_guide)');
       final levelView = connect(query: '?groups=level,view');
       await levelView.handshake();
-      expect(await levelView.listTools(), hasLength(48), reason: '27 level + 12 view (with asset_editor_screenshot) + 9 core');
-      expect(await client.listTools(groups: ['blueprint']), hasLength(50), reason: '41 Blueprint (9 graph, 31 member, list_component_types) + 9 core');
+      expect(await levelView.listTools(), hasLength(49), reason: '27 level + 12 view (with asset_editor_screenshot) + 10 core');
+      expect(await client.listTools(groups: ['blueprint']), hasLength(51), reason: '41 Blueprint (9 graph, 31 member, list_component_types) + 10 core');
       // Settings (Project Settings + Editor Preferences) and build (run_codegen is in code and build).
-      expect(await client.listTools(groups: ['settings']), hasLength(19), reason: '10 settings + 9 core');
-      expect(await client.listTools(groups: ['build']), hasLength(15), reason: '6 build + 9 core');
+      expect(await client.listTools(groups: ['settings']), hasLength(20), reason: '10 settings + 10 core');
+      expect(await client.listTools(groups: ['build']), hasLength(16), reason: '6 build + 10 core');
       // Content (Content Browser, Marketplace, DDC) and scm.
-      expect(await client.listTools(groups: ['content']), hasLength(30), reason: '14 Content Browser + 6 Marketplace + DDC + 9 core');
-      expect(await client.listTools(groups: ['scm']), hasLength(15), reason: '6 source control + 9 core');
+      expect(await client.listTools(groups: ['content']), hasLength(31), reason: '14 Content Browser + 6 Marketplace + DDC + 10 core');
+      expect(await client.listTools(groups: ['scm']), hasLength(16), reason: '6 source control + 10 core');
       // The UMG designer and the material graph (asset_editor_screenshot is in both and in view).
-      expect(await client.listTools(groups: ['umg']), hasLength(26), reason: '16 UMG + asset_editor_screenshot + 9 core');
+      expect(await client.listTools(groups: ['umg']), hasLength(27), reason: '16 UMG + asset_editor_screenshot + 10 core');
       // The animation editors, the Sequencer and particles (each with asset_editor_screenshot).
-      expect(await client.listTools(groups: ['animation']), hasLength(66),
-          reason: '22 Anim Blueprint + 9 Blend Space + 12 Animation + 13 Skeletal Mesh + asset_editor_screenshot + 9 core');
-      expect(await client.listTools(groups: ['sequencer']), hasLength(24), reason: '14 Sequencer + asset_editor_screenshot + 9 core');
-      expect(await client.listTools(groups: ['particle']), hasLength(29), reason: '19 Particle + asset_editor_screenshot + 9 core');
-      expect(await client.listTools(groups: ['material_graph']), hasLength(21), reason: '11 material graph + asset_editor_screenshot + 9 core');
+      expect(await client.listTools(groups: ['animation']), hasLength(67),
+          reason: '22 Anim Blueprint + 9 Blend Space + 12 Animation + 13 Skeletal Mesh + asset_editor_screenshot + 10 core');
+      expect(await client.listTools(groups: ['sequencer']), hasLength(25), reason: '14 Sequencer + asset_editor_screenshot + 10 core');
+      expect(await client.listTools(groups: ['particle']), hasLength(30), reason: '19 Particle + asset_editor_screenshot + 10 core');
+      expect(await client.listTools(groups: ['material_graph']), hasLength(22), reason: '11 material graph + asset_editor_screenshot + 10 core');
       // The asset editors, each with asset_editor_screenshot, and their umbrella.
-      expect(await client.listTools(groups: ['landscape']), hasLength(21), reason: '11 Landscape + asset_editor_screenshot + 9 core');
-      expect(await client.listTools(groups: ['static_mesh']), hasLength(19), reason: '9 Static Mesh + asset_editor_screenshot + 9 core');
-      expect(await client.listTools(groups: ['texture']), hasLength(15), reason: '5 Texture + asset_editor_screenshot + 9 core');
-      expect(await client.listTools(groups: ['physics_asset']), hasLength(21), reason: '11 Physics Asset + asset_editor_screenshot + 9 core');
-      expect(await client.listTools(groups: ['audio']), hasLength(14), reason: '4 Sound + asset_editor_screenshot + 9 core');
-      expect(await client.listTools(groups: ['blueprint_types']), hasLength(22), reason: '12 Enumeration / Interface + asset_editor_screenshot + 9 core');
-      expect(await client.listTools(groups: ['asset_editors']), hasLength(62), reason: '52 + asset_editor_screenshot + 9 core');
+      expect(await client.listTools(groups: ['landscape']), hasLength(22), reason: '11 Landscape + asset_editor_screenshot + 10 core');
+      expect(await client.listTools(groups: ['static_mesh']), hasLength(20), reason: '9 Static Mesh + asset_editor_screenshot + 10 core');
+      expect(await client.listTools(groups: ['texture']), hasLength(16), reason: '5 Texture + asset_editor_screenshot + 10 core');
+      expect(await client.listTools(groups: ['physics_asset']), hasLength(22), reason: '11 Physics Asset + asset_editor_screenshot + 10 core');
+      expect(await client.listTools(groups: ['audio']), hasLength(15), reason: '4 Sound + asset_editor_screenshot + 10 core');
+      expect(await client.listTools(groups: ['blueprint_types']), hasLength(23), reason: '12 Enumeration / Interface + asset_editor_screenshot + 10 core');
+      expect(await client.listTools(groups: ['asset_editors']), hasLength(63), reason: '52 + asset_editor_screenshot + 10 core');
       final bad = connect(query: '?groups=nope');
       await expectLater(
         bad.handshake(),
@@ -281,7 +281,7 @@ void main() {
       // A tool may sit in more than one group (list_component_types: component + blueprint).
       final distinct = {for (final g in groups['groups'] as List) ...((g as Map)['tools'] as List)};
       expect(distinct, hasLength(groups['tool_count'] as int));
-      expect(groups['tool_count'], 374);
+      expect(groups['tool_count'], 375);
       expect(groups['active_groups'], ['level']);
       expect(groups['max_risk'], 'external');
     });

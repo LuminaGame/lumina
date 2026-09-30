@@ -190,7 +190,7 @@ void registerPieSequenceTool(
         '{"mouse_move": {"dx", "dy"}}, {"play_ms": 500} (wall-clock play), {"advance_frames": 10}, {"screenshot": true}, '
         '{"expect": {"player_moved": true, "min_distance_cm": 100, "log_contains": "text"}} (against where the player '
         'was when the steps began); any step may carry a "label". Each input step runs the matching pie_* tool. A Play '
-        'the sequence starts loads its meshes over its first wall-clock moment: begin with {"play_ms": 1000} before a '
+        'the sequence starts loads its meshes over its first wall-clock moment: begin with {"play_ms": 1500} before a '
         'first screenshot. Limits: '
         '$kMcpMaxSequenceSteps steps, $kMcpMaxSequenceScreenshots screenshots, $kMcpMaxPlayForMs ms of game time in all. '
         'Returns steps [{index, kind, label, ok, result, player_location, log}], the screenshots as images each after '

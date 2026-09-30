@@ -39,6 +39,7 @@ void main() {
   mcpFileAndCodeScenario(binding);
   mcpLevelBlockoutScenario(binding);
   mcpSelectionScenario(binding);
+  mcpEngineGuideScenario(binding);
 
   testWidgets('MCP Smoke: an agent places and moves a barrel, compiles a material, authors a Blueprint, screenshots and plays through the editor\'s MCP server',
       (tester) async {
@@ -346,7 +347,7 @@ void mcpRiskAndTrashScenario(IntegrationTestWidgetsFlutterBinding binding) {
       await openPanel();
       await reveal(const ValueKey('mcp_catalogue_header'));
       expect(tester.widget<Text>(find.byKey(const ValueKey('mcp_catalogue_header'))).data,
-          '374 tools · 70 read-only · 39 editor state · 234 edits · 24 destructive · 7 external');
+          '375 tools · 71 read-only · 39 editor state · 234 edits · 24 destructive · 7 external');
       for (final g in ['asset', 'level', 'blueprint', 'material', 'view', 'pie', 'log']) {
         await reveal(ValueKey('mcp_catalogue_group_$g'));
         await tester.tap(find.byKey(ValueKey('mcp_catalogue_group_$g')));
@@ -359,7 +360,7 @@ void mcpRiskAndTrashScenario(IntegrationTestWidgetsFlutterBinding binding) {
       await tester.runAsync(() => viewer.handshake(clientName: 'viewer'));
       final viewerTools = (await tester.runAsync(viewer.listTools))!;
       expect(viewerTools, hasLength(47));
-      debugPrint('[mcp04_smoke] a ?groups=level,view session lists ${viewerTools.length} tools (the full catalogue: 374)');
+      debugPrint('[mcp04_smoke] a ?groups=level,view session lists ${viewerTools.length} tools (the full catalogue: 375)');
 
       // --- One agent call, one undo step --------------------------------------
       vm.selectTab(0);
@@ -1175,6 +1176,131 @@ void mcpSelectionScenario(IntegrationTestWidgetsFlutterBinding binding) {
       // The agent orbits the props until the video is long enough.
       for (var i = 0; i < 60 && rec.recorded < const Duration(milliseconds: 10300); i++) {
         await ok('set_camera', {'yaw': 30.0 + 8 * (i + 1)});
+        await rec.hold(const Duration(milliseconds: 200));
+      }
+      rec.save(scenario, usedAssets: usedAssets);
+    } finally {
+      client.close();
+      await tester.runAsync(server.stop);
+      await tester.pumpWidget(const SizedBox());
+      vm.dispose();
+      try {
+        tempProjectsDir.deleteSync(recursive: true);
+      } catch (_) {}
+    }
+  }, timeout: const Timeout(Duration(minutes: 15)));
+}
+
+void mcpEngineGuideScenario(IntegrationTestWidgetsFlutterBinding binding) {
+  const scenario = 'MCP Smoke: an agent reads the Lumina engine guide and places props facing the directions it describes';
+  testWidgets(scenario, (tester) async {
+    final barrel = File('${SmokeArtifacts.testAssetsDir.path}/Props/Barrels/fuel_barrel_yellow.glb');
+    final aircon = File('${SmokeArtifacts.testAssetsDir.path}/Props/AC_units/roof_aircon_unit_150x150_a.glb');
+    expect(barrel.existsSync() && aircon.existsSync(), isTrue, reason: 'test-assets must hold the yellow barrel and the roof aircon');
+
+    final tempProjectsDir = Directory.systemTemp.createTempSync('lumina_smoke_mcp_guide_');
+    final pDir = Directory('${tempProjectsDir.path}/SmokeMcpGuide')..createSync(recursive: true);
+    const project = LuminaProject(projectName: 'SmokeMcpGuide', activeLevel: 'contents/levels/L_Main.lmas');
+    File('${pDir.path}/SmokeMcpGuide.lmproject').writeAsStringSync(jsonEncode(project.toMap()));
+
+    final vm = EditorViewModel(initialProject: project, projectLocation: tempProjectsDir.path);
+    await tester.runAsync(() => vm.ensureDefaultLevelAssets());
+    for (final glb in [barrel, aircon]) {
+      await tester.runAsync(() => vm.processImportPipeline(sourceFilePath: glb.path));
+    }
+    String meshOf(String name) =>
+        vm.realAssets.firstWhere((a) => a.type == AssetType.filamesh && a.fileName.contains(name)).relativePath;
+    final barrelMesh = meshOf('fuel_barrel_yellow');
+    final airconMesh = meshOf('roof_aircon_unit_150x150_a');
+
+    final server = vm.mcpServer;
+    expect(await tester.runAsync(() => server.start(port: 0)), isTrue);
+    final client = McpTestClient(server.url!, server.token);
+
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    final boundaryKey = GlobalKey();
+    try {
+      await tester.pumpWidget(RepaintBoundary(
+        key: boundaryKey,
+        child: ShadcnApp(theme: luminaEditorTheme(), home: MainEditorView(viewModel: vm)),
+      ));
+
+      Future<void> settle([int frames = 20]) async {
+        for (var i = 0; i < frames; i++) {
+          await tester.pump(const Duration(milliseconds: 16));
+          await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 16)));
+        }
+      }
+
+      await settle(40);
+      final rec = SmokeRecorder(tester, boundary: find.byKey(boundaryKey));
+      final usedAssets = [barrel.path, aircon.path];
+
+      Future<void> shot(String name) async {
+        final png = await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey));
+        SmokeArtifacts.saveScreenshot(name, png, usedAssets: usedAssets);
+        await rec.hold(const Duration(milliseconds: 1200));
+      }
+
+      Future<Map<String, Object?>> ok(String tool, [Map<String, Object?> args = const {}]) async {
+        final reply = (await tester.runAsync(() => client.callTool(tool, args)))!;
+        await settle(12);
+        expect(reply.isError, isFalse, reason: '$tool: ${reply.text}');
+        return reply.data;
+      }
+
+      // --- The agent connects: the instructions point at the guide ---------------
+      final init = (await tester.runAsync(() => client.handshake(clientName: 'claude-code')))!;
+      expect(init['instructions'], contains('get_lumina_guide'));
+      final levelTools = (await tester.runAsync(() => client.listTools(groups: ['level'])))!;
+      expect(levelTools.map((t) => t['name']), contains('get_lumina_guide'));
+
+      // --- The overview, then the transforms topic as a resource -----------------
+      final overview = (await tester.runAsync(() => client.callTool('get_lumina_guide')))!;
+      expect(overview.isError, isFalse, reason: overview.text);
+      expect(overview.text, contains('`levels-actors-transforms`'));
+      expect(overview.text, contains('`filament-materials`'));
+      final read = (await tester.runAsync(
+          () => client.request('resources/read', {'uri': 'lumina://guide/levels-actors-transforms'})))!;
+      final topic = ((read['contents'] as List).single as Map)['text'] as String;
+      expect(topic, contains('yaw 0 → faces +Y, yaw 90 → +X, yaw -90 → -X, yaw 180 → -Y'));
+      debugPrint('[mcp_guide_smoke] overview ${overview.text.length} chars, transforms topic ${topic.length} chars');
+
+      // --- Props placed by the guide's rule: forward +Y at yaw 0, yaw 90 → +X ----
+      String idOf(Map<String, Object?> r) => (r['actor'] as Map)['id'] as String;
+      final barrelId = idOf(await ok('spawn_actor_from_asset', {'asset': barrelMesh, 'location': [0, 0, 0]}));
+      const headings = {0: [0, 1], 90: [1, 0], 180: [0, -1], -90: [-1, 0]};
+      final placed = <int, String>{};
+      for (final e in headings.entries) {
+        final id = idOf(await ok('spawn_actor_from_asset', {
+          'asset': airconMesh,
+          'location': [e.value[0] * 260, e.value[1] * 260, 0],
+        }));
+        await ok('set_actor_transform', {'id': id, 'rotation': [0, 0, e.key]});
+        placed[e.key] = id;
+      }
+      for (final e in placed.entries) {
+        final actor = vm.actors.firstWhere((a) => a.id == e.value);
+        expect(actor.rotation[2], e.key.toDouble(), reason: 'index 2 is the yaw');
+      }
+      await ok('select_actors', {'ids': [barrelId, placed[90]!]});
+      await ok('set_camera', {'target': [0, 0, 60], 'distance': 1100, 'pitch': 55, 'yaw': 20});
+      await shot('mcp_guide_props_by_heading');
+
+      // --- The agent reads the camera topic, then views the props from the +X side
+      final camera = (await tester.runAsync(() => client.callTool('get_lumina_guide', {'topic': 'camera-spring-arm'})))!;
+      expect(camera.text, contains('On a screen looking along +X, +Y is to the left.'));
+      await ok('set_camera', {'target': [0, 0, 60], 'distance': 900, 'pitch': 25, 'yaw': 90});
+      await shot('mcp_guide_view_from_plus_x');
+
+      for (var i = 0; i < 60 && rec.recorded < const Duration(milliseconds: 10300); i++) {
+        await ok('set_camera', {'yaw': 90.0 + 8 * (i + 1)});
         await rec.hold(const Duration(milliseconds: 200));
       }
       rec.save(scenario, usedAssets: usedAssets);

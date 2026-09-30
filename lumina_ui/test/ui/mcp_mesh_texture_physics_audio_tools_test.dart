@@ -459,7 +459,7 @@ void main() {
     expect(tools.keys.where((n) => RegExp('environment|lighting|navigation|navmesh').hasMatch(n) && ours.contains(n)), isEmpty);
     final screenshotGroups = (tools['asset_editor_screenshot']!['_meta'] as Map)['lumina/groups'] as List;
     expect(screenshotGroups, containsAll([...byGroup.keys, 'asset_editors']));
-    expect(await client.listTools(groups: ['asset_editors']), hasLength(52 + 1 + 9), reason: '52 + asset_editor_screenshot + 9 core');
-    expect(await client.listTools(groups: ['landscape']), hasLength(11 + 1 + 9));
+    expect(await client.listTools(groups: ['asset_editors']), hasLength(52 + 1 + 10), reason: '52 + asset_editor_screenshot + 10 core');
+    expect(await client.listTools(groups: ['landscape']), hasLength(11 + 1 + 10));
   });
 }
