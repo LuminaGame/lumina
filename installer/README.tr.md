@@ -119,7 +119,7 @@ Paketin kurdukları:
 - `/usr/lib/lumina-studio/install-studio.sh`: Linux tarball'ını indirir, doğrular ve yerine koyar.
 - `/usr/share/applications/io.github.luminagame.LuminaStudio.desktop`: "Update Lumina Studio" action'ı olan menü girdisi.
 - `/usr/share/icons/hicolor/scalable/apps/lumina-studio.svg` ve `/usr/share/pixmaps/lumina-studio.png`:
-  `lumina_ui/assets/logo_color.*` ikonları.
+  `lumina_ui/assets/app_icon.png` ikonu (Lumina amblemi).
 
 Postinstall script'i:
 

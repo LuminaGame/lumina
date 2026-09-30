@@ -120,7 +120,7 @@ The package installs:
 - `/usr/lib/lumina-studio/install-studio.sh`: downloads and verifies the Linux tarball, then swaps it in.
 - `/usr/share/applications/io.github.luminagame.LuminaStudio.desktop`: the menu entry, with an "Update Lumina Studio" action.
 - `/usr/share/icons/hicolor/scalable/apps/lumina-studio.svg` and `/usr/share/pixmaps/lumina-studio.png`: the
-  `lumina_ui/assets/logo_color.*` icons.
+  `lumina_ui/assets/app_icon.png` icon (the Lumina emblem).
 
 The postinstall script:
 
