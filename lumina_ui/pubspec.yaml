@@ -82,13 +82,13 @@ dev_dependencies:
     git:
       url: https://github.com/LuminaGame/plugins.git
       path: lumina_plugin_pcg
-      ref: 1f634cfae88abd857d5d5021d9e666d6e4fa8024
+      ref: 3bc3ca38fe09f4c1f074dd9f0d4eee051a794ea5
   # MiniAI: tests and smoke, as for PCG.
   lumina_plugin_miniai:
     git:
       url: https://github.com/LuminaGame/plugins.git
       path: lumina_plugin_miniai
-      ref: 1f634cfae88abd857d5d5021d9e666d6e4fa8024
+      ref: 3bc3ca38fe09f4c1f074dd9f0d4eee051a794ea5
   msix: ^3.18.0
 
 # The MSIX identity of Lumina Studio, shared by both
