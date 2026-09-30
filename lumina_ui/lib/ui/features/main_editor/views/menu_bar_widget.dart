@@ -412,11 +412,15 @@ class MenuBarWidget extends StatelessWidget {
                       _buildPanelCheckRow(context, 'window.toggleDetails', viewModel?.detailsOpen),
                       _buildPanelCheckRow(context, 'window.toggleBottomPanel', viewModel?.bottomPanelOpen),
                       _buildPanelCheckRow(context, 'window.showOutputLog', viewModel?.outputLogOpen),
-                      // One checked entry per plugin panel.
+                      // One checked entry per plugin panel; a right-dock
+                      // panel's is followed by its "Show in Every Editor" row.
                       if (viewModel != null)
-                        for (final panel in viewModel!.allPluginPanels)
+                        for (final panel in viewModel!.allPluginPanels) ...[
                           if (viewModel!.commands.byId('window.panel.${panel.id}') case final command?)
                             menuCheckboxItem(command, viewModel!.panelsController.visibility(panel.id), commandContext: context),
+                          if (viewModel!.commands.byId('window.panelAlways.${panel.id}') case final command?)
+                            menuCheckboxItem(command, viewModel!.panelsController.alwaysVisibility(panel.id), commandContext: context),
+                        ],
                       const MenuDivider(),
                       _buildMenuButton(context, 'window.resetLayout'),
                       ..._extensionTail(context, 'Window'),

@@ -48,7 +48,7 @@ A static icon button. The host turns it into an [EditorSlotButton]: [group] name
 
 **Constructors:**
 
-- `const EditorPanelDescriptor({required this.id, required this.title, required this.icon, required this.builder, this.defaultDock = PanelDefaultDock.left,})`
+- `const EditorPanelDescriptor({required this.id, required this.title, required this.icon, required this.builder, this.defaultDock = PanelDefaultDock.left, this.defaultAlwaysVisible = false,})`
 
 **Members:**
 
@@ -59,6 +59,7 @@ A static icon button. The host turns it into an [EditorSlotButton]: [group] name
 | `icon` | `final IconData icon` |  |
 | `builder` | `final Widget Function(BuildContext) builder` |  |
 | `defaultDock` | `final PanelDefaultDock defaultDock` |  |
+| `defaultAlwaysVisible` | `final bool defaultAlwaysVisible` | Whether a `PanelDefaultDock.right` panel shows in every editor tab (the sub-editors included) rather than in the level editor only, until the user chooses with the dock's pin button or the Window menu. The user's choice is saved with the editor layout; Reset Layout returns to this. Optional, `false` by default. |
 
 ### `class EditorAssetTypeHandler`
 

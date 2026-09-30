@@ -5,18 +5,29 @@ import '../../../core/theme/editor_theme.dart';
 import '../view_models/editor_panels_controller.dart';
 
 /// The right dock: the open `PanelDefaultDock.right` plugin
-/// panels. A header names the active one; with several open, a tab strip
-/// switches between them. Each tab has a close button. Bodies stay mounted
-/// in an [IndexedStack], so a panel keeps its state across tab switches.
+/// panels. A header names the active one; with several shown, a tab strip
+/// switches between them. Each tab has a close button, and the header a pin
+/// button that shows the active panel in every editor tab ("Always") or in
+/// the level editor only.
+///
+/// The dock shows every open panel on the level tab ([levelTab]) and only
+/// the "Always" ones on other tabs, but every open panel's body stays
+/// mounted in an [IndexedStack], so a panel keeps its state across dock and
+/// editor tab switches.
 class RightDockWidget extends StatelessWidget {
-  const RightDockWidget({super.key, required this.controller});
+  const RightDockWidget({super.key, required this.controller, this.levelTab = true});
 
   final EditorPanelsController controller;
+
+  /// Whether the active editor tab is the level editor.
+  final bool levelTab;
 
   @override
   Widget build(BuildContext context) {
     final open = controller.openRightPanels;
-    final active = controller.activeRightPanel;
+    final shown = controller.shownRightPanels(levelTab: levelTab);
+    // With none shown the dock is parked offstage: the bodies stay mounted.
+    final active = controller.activeShownPanel(levelTab: levelTab) ?? controller.activeRightPanel;
     if (open.isEmpty || active == null) return const SizedBox.shrink();
     return Container(
       color: EditorColors.card,
@@ -32,16 +43,17 @@ class RightDockWidget extends StatelessWidget {
             ),
             child: Row(
               children: [
-                if (open.length == 1)
+                if (shown.length <= 1)
                   Expanded(child: _title(active))
                 else
                   Expanded(
                     child: SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
-                      child: Row(children: [for (final panel in open) _tab(panel, panel.id == active.id)]),
+                      child: Row(children: [for (final panel in shown) _tab(panel, panel.id == active.id)]),
                     ),
                   ),
-                if (open.length == 1) _close(active),
+                _always(active),
+                if (shown.length <= 1) _close(active),
               ],
             ),
           ),
@@ -71,6 +83,24 @@ class RightDockWidget extends StatelessWidget {
             ),
           ),
         ],
+      );
+
+  /// The pin: "Always" on shows the panel in every editor tab.
+  Widget _always(EditorPanelDescriptor panel) => ValueListenableBuilder<bool>(
+        valueListenable: controller.alwaysVisibility(panel.id),
+        builder: (context, always, _) => Tooltip(
+          tooltip: (_) => TooltipContainer(child: Text(always ? 'Show in the level editor only' : 'Show in every editor')),
+          child: GhostButton(
+            key: ValueKey('right_dock_always_${panel.id}'),
+            density: ButtonDensity.compact,
+            onPressed: () => controller.toggleAlwaysVisible(panel.id),
+            child: Icon(
+              always ? LucideIcons.pin : LucideIcons.pinOff,
+              size: 11,
+              color: always ? EditorColors.primary : EditorColors.mutedForeground,
+            ),
+          ),
+        ),
       );
 
   Widget _close(EditorPanelDescriptor panel) => Tooltip(

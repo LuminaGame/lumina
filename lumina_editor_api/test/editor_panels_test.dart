@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart';
 
@@ -18,5 +19,16 @@ void main() {
     panels.hide('unknown');
     expect(panels.isVisible('unknown'), isFalse);
     expect(identical(panels.visibility('a'), panels.visibility('a')), isTrue, reason: 'one notifier per panel');
+  });
+
+  test('a panel shows in the level editor only unless its plugin asks for every editor', () {
+    Widget body(BuildContext _) => const SizedBox();
+    const icon = IconData(0xe000);
+    expect(EditorPanelDescriptor(id: 'a', title: 'A', icon: icon, builder: body).defaultAlwaysVisible, isFalse);
+    expect(
+      EditorPanelDescriptor(id: 'b', title: 'B', icon: icon, builder: body, defaultDock: PanelDefaultDock.right, defaultAlwaysVisible: true)
+          .defaultAlwaysVisible,
+      isTrue,
+    );
   });
 }

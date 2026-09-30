@@ -1239,6 +1239,107 @@ void main() {
     }
   });
 
+  // The AI Assistant stays in the level editor until its dock pin
+  // ("Show in every editor") is on; then the same panel, with the text the
+  // user typed, sits beside the Navigation editor's own Agent & Grid panel.
+  testWidgets('plugin panel shown in every editor', (tester) async {
+    const barrel = 'Props/Barrels/fuel_barrel_red.glb';
+    const name = 'plugin panel shown in every editor';
+    tester.view.physicalSize = const Size(1920, 1200);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final tempProjectsDir = Directory.systemTemp.createTempSync('always_smoke_');
+    final pDir = Directory('${tempProjectsDir.path}/AlwaysSmoke')..createSync(recursive: true);
+    try {
+      const project = LuminaProject(projectName: 'AlwaysSmoke', activeLevel: 'contents/levels/L_Main.lmas', settings: EngineScalabilitySettings(targetFps: 60));
+      File('${pDir.path}/AlwaysSmoke.lmproject').writeAsStringSync(jsonEncode(project.toMap()));
+      final vm = EditorViewModel(initialProject: project, projectDirPath: tempProjectsDir.path, enableTimers: false);
+      addTearDown(vm.dispose);
+      await tester.runAsync(() => vm.ensureDefaultLevelAssets());
+      await tester.runAsync(() => vm.processImportPipeline(sourceFilePath: '${SmokeArtifacts.testAssetsDir.path}/$barrel'));
+      vm.refreshAssets();
+      final barrelAsset = vm.realAssets.firstWhere((a) => a.fileName == 'fuel_barrel_red.lmas' && a.type == AssetType.filamesh);
+      await tester.runAsync(() => vm.spawnActorFromAsset(barrelAsset, location: const [0.0, 0.0, 0.0]));
+      vm.extensionRegistry.registerPlugin(LuminaPluginMiniaiPlugin());
+
+      final boundaryKey = GlobalKey();
+      await tester.pumpWidget(RepaintBoundary(
+        key: boundaryKey,
+        child: ShadcnApp(theme: luminaEditorTheme(), home: MainEditorView(viewModel: vm)),
+      ));
+      await settle(tester, frames: 30);
+      final rec = SmokeRecorder(tester, boundary: find.byKey(boundaryKey));
+      vm.frameLevelBounds();
+      await settle(tester);
+      await rec.hold(const Duration(seconds: 1));
+      Future<void> shot(String suffix) async {
+        final png = await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey));
+        SmokeArtifacts.saveScreenshot('$name ($suffix)', png, usedAssets: const [barrel]);
+      }
+
+      const chat = LuminaPluginMiniaiPlugin.chatPanelId;
+      final dock = find.byKey(const ValueKey('right_dock'));
+      final message = find.byKey(const ValueKey('miniai_message'));
+
+      // 1. The AI button opens the AI Assistant in the level editor; a draft
+      // message goes into its input.
+      await tester.tap(find.byKey(const ValueKey('slot_button_lumina_plugin_miniai.ai')));
+      await settle(tester, frames: 20);
+      expect(dock, findsOneWidget);
+      await tester.enterText(message, 'Place three barrels along the path');
+      await settle(tester);
+      await rec.hold(const Duration(seconds: 2));
+      await shot('AI Assistant in the level editor');
+
+      // 2. "Always" off: the Navigation editor has no dock.
+      vm.commands.execute('tools.navmeshGenerator');
+      await settle(tester, frames: 30);
+      expect(vm.currentTab.category, 'navmesh');
+      expect(find.text('AGENT & GRID'), findsOneWidget);
+      expect(dock, findsNothing);
+      await rec.hold(const Duration(seconds: 2));
+      await shot('Navigation without Always');
+
+      // 3. Back on the level tab, the dock's pin turns "Always" on.
+      vm.selectTab(0);
+      await settle(tester, frames: 20);
+      await tester.tap(find.byKey(const ValueKey('right_dock_always_$chat')));
+      await settle(tester);
+      expect(vm.panelsController.isAlwaysVisible(chat), isTrue);
+      await rec.hold(const Duration(seconds: 1));
+
+      // 4. The Navigation tab now shows the same panel, draft kept, right of
+      // Agent & Grid; the level toolbar stays on the level tab.
+      vm.selectTab(vm.openTabs.indexWhere((t) => t.category == 'navmesh'));
+      await settle(tester, frames: 30);
+      expect(dock, findsOneWidget);
+      expect(find.text('AI ASSISTANT'), findsOneWidget);
+      expect(find.text('Place three barrels along the path'), findsOneWidget, reason: 'the same panel, its input kept');
+      expect(tester.getRect(dock).left, greaterThanOrEqualTo(tester.getRect(find.text('AGENT & GRID')).right));
+      expect(find.byKey(const ValueKey('toolbar_play')), findsNothing);
+      await rec.hold(const Duration(seconds: 3));
+      await shot('AI Assistant beside the Navigation editor');
+
+      // 5. The Window menu row is checked.
+      await tester.tap(barItem('Window'));
+      await settle(tester);
+      expect(tester.widget<MenuCheckbox>(find.byKey(const ValueKey('menu_check_window.panelAlways.$chat'))).value, isTrue);
+      await rec.hold(const Duration(seconds: 2));
+      await shot('Window menu Show in Every Editor');
+      await tester.tapAt(const Offset(960, 1150));
+      await settle(tester);
+      final saved = jsonDecode(File('${pDir.path}/.lumina/editor_layout.json').readAsStringSync()) as Map<String, dynamic>;
+      expect(saved['pluginPanelAlways'], {chat: true});
+      final minimum = Duration(milliseconds: (SmokeArtifacts.minimumVideoSeconds * 1000).ceil() + 500);
+      if (rec.recorded < minimum) await rec.hold(minimum - rec.recorded);
+      rec.save(name, usedAssets: const [barrel]);
+    } finally {
+      try {
+        if (tempProjectsDir.existsSync()) tempProjectsDir.deleteSync(recursive: true);
+      } catch (_) {}
+    }
+  });
+
   // A plugin places three real barrels in one runTransaction (one
   // Undo takes all three), keeps JSON in its own store, hears the project
   // open, and its onEditorShutdown runs on exit.

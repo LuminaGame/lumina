@@ -501,17 +501,20 @@ Renders the UMG widgets a Play-In-Editor session adds to the viewport through th
 
 ### `class RightDockWidget`
 
-The right dock: the open `PanelDefaultDock.right` plugin panels. A header names the active one; with several open, a tab strip switches between them. Each tab has a close button. Bodies stay mounted in an [IndexedStack], so a panel keeps its state across tab switches.
+Sağ dock: açık `PanelDefaultDock.right` eklenti panelleri. Başlık etkin paneli adlandırır; birden fazla panel gösterildiğinde bir sekme şeridi aralarında geçiş yapar. Her sekmenin bir kapatma butonu, başlığın da etkin paneli her editör sekmesinde ("Always") ya da yalnızca level editöründe gösteren bir iğne butonu (`right_dock_always_<id>`, "Show in every editor") vardır.
+
+Dock level sekmesinde ([levelTab]) her açık paneli, diğer sekmelerde yalnızca "Always" panellerini gösterir; ama her açık panelin gövdesi bir [IndexedStack] içinde bağlı kalır, böylece panel dock ve editör sekmesi geçişlerinde durumunu korur. `MainEditorView` tüm doküman sekmeleri için yanlarında, ortak `rightWidth` genişliğinde tek bir dock kurar; paneller açıkken etkin sekme hiçbirini göstermiyorsa dock'u aynı `GlobalKey` ile ekran dışına park eder.
 
 **Yapıcı Metotlar (Constructors):**
 
-- `const RightDockWidget({super.key, required this.controller})`
+- `const RightDockWidget({super.key, required this.controller, this.levelTab = true})`
 
 **Üyeler:**
 
 | Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `controller` | `final EditorPanelsController controller` |  |
+| `levelTab` | `final bool levelTab` | Etkin editör sekmesinin level editörü olup olmadığı. |
 
 ## `lib/ui/features/main_editor/views/status_bar_engine_segment.dart`
 

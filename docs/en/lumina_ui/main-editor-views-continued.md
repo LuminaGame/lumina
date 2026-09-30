@@ -501,17 +501,20 @@ Renders the UMG widgets a Play-In-Editor session adds to the viewport through th
 
 ### `class RightDockWidget`
 
-The right dock: the open `PanelDefaultDock.right` plugin panels. A header names the active one; with several open, a tab strip switches between them. Each tab has a close button. Bodies stay mounted in an [IndexedStack], so a panel keeps its state across tab switches.
+The right dock: the open `PanelDefaultDock.right` plugin panels. A header names the active one; with several shown, a tab strip switches between them. Each tab has a close button, and the header a pin button (`right_dock_always_<id>`, "Show in every editor") that shows the active panel in every editor tab ("Always") or in the level editor only.
+
+The dock shows every open panel on the level tab ([levelTab]) and only the "Always" ones on other tabs, but every open panel's body stays mounted in an [IndexedStack], so a panel keeps its state across dock and editor tab switches. `MainEditorView` builds one dock for all document tabs, beside them, at the shared `rightWidth`; while panels are open but the active tab shows none, it parks the dock offstage under the same `GlobalKey`.
 
 **Constructors:**
 
-- `const RightDockWidget({super.key, required this.controller})`
+- `const RightDockWidget({super.key, required this.controller, this.levelTab = true})`
 
 **Members:**
 
 | Member | Signature | Description |
 | :--- | :--- | :--- |
 | `controller` | `final EditorPanelsController controller` |  |
+| `levelTab` | `final bool levelTab` | Whether the active editor tab is the level editor. |
 
 ## `lib/ui/features/main_editor/views/status_bar_engine_segment.dart`
 

@@ -47,6 +47,11 @@ class EditorLayoutState extends ChangeNotifier {
   double rightWidth;
   Map<String, bool> pluginPanelVisible;
   String? activeRightPanel;
+
+  /// The user's "Always" choice per right-dock panel: shown in every editor
+  /// tab rather than the level editor only. A panel missing here uses its
+  /// plugin's `defaultAlwaysVisible`.
+  Map<String, bool> pluginPanelAlways;
   int resetSerial = 0;
 
   EditorLayoutState({
@@ -63,10 +68,12 @@ class EditorLayoutState extends ChangeNotifier {
     double rightWidth = defaultRightWidth,
     Map<String, bool>? pluginPanelVisible,
     this.activeRightPanel,
+    Map<String, bool>? pluginPanelAlways,
   })  : sourcesWidth = clampSourcesWidth(sourcesWidth),
         expandedFolders = expandedFolders ?? {...defaultExpandedFolders},
         rightWidth = clampRightWidth(rightWidth),
-        pluginPanelVisible = pluginPanelVisible ?? {};
+        pluginPanelVisible = pluginPanelVisible ?? {},
+        pluginPanelAlways = pluginPanelAlways ?? {};
 
   static double clampRightWidth(double width) => width < minRightWidth ? minRightWidth : width;
 
@@ -91,6 +98,7 @@ class EditorLayoutState extends ChangeNotifier {
       rightWidth: (json['rightWidth'] as num?)?.toDouble() ?? defaultRightWidth,
       pluginPanelVisible: (json['pluginPanelVisible'] as Map?)?.map((k, v) => MapEntry('$k', v == true)),
       activeRightPanel: json['activeRightPanel'] as String?,
+      pluginPanelAlways: (json['pluginPanelAlways'] as Map?)?.map((k, v) => MapEntry('$k', v == true)),
     );
   }
 
@@ -109,6 +117,7 @@ class EditorLayoutState extends ChangeNotifier {
       'rightWidth': rightWidth,
       'pluginPanelVisible': pluginPanelVisible,
       'activeRightPanel': activeRightPanel,
+      'pluginPanelAlways': pluginPanelAlways,
     };
   }
 
@@ -140,6 +149,7 @@ class EditorLayoutState extends ChangeNotifier {
     rightWidth = defaultRightWidth;
     pluginPanelVisible = {};
     activeRightPanel = null;
+    pluginPanelAlways = {};
     resetSerial++;
     notifyListeners();
   }

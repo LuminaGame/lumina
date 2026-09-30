@@ -353,91 +353,9 @@ class _MainEditorViewState extends State<MainEditorView> {
 
               const Divider(height: 1),
 
-              // 4. Main Workspace (3D Viewport or Full-Screen Sub-Editor Workspace Tab)
-              Expanded(
-                child: IndexedStack(
-                  index: viewModel.activeTabIndex.clamp(0, math.max(0, viewModel.openTabs.length - 1)),
-                  children: [
-                    // Tab 0: Main Editor Workspace: the
-                    // Outliner over the Details inspector in one left column,
-                    // the viewport in the centre with the bottom panel under
-                    // it. Every absolute pane reports its dragged size back
-                    // into the layout state, one disk write per drag.
-                    ResizablePanel.horizontal(
-                      draggerBuilder: (context) => const HorizontalResizableDragger(),
-                      children: [
-                        // Left Column: World Outliner over Details
-                        if (viewModel.layoutState.outlinerVisible || viewModel.layoutState.detailsVisible)
-                          ResizablePane(
-                            // Keyed: hiding the left column must not hand its
-                            // absolute-size pane state to the centre column.
-                            key: const ValueKey('workspace_left_column'),
-                            initialSize: viewModel.layoutState.outlinerWidth,
-                            minSize: 150,
-                            onSizeChangeEnd: (size) => viewModel.setPaneSize(outlinerWidth: size),
-                            child: _buildLeftColumn(),
-                          ),
-
-                        // Center Column: 3D Viewport & Bottom Tabs
-                        ResizablePane.flex(
-                          key: const ValueKey('workspace_centre_column'),
-                          child: ResizablePanel.vertical(
-                            draggerBuilder: (context) => const VerticalResizableDragger(),
-                            children: [
-                              // 3D Viewport Screen
-                              ResizablePane.flex(
-                                child: RepaintBoundary(
-                                  key: viewModel.mcpServer.viewportBoundaryKey,
-                                  child: ViewportWidget(viewModel: viewModel),
-                                ),
-                              ),
-
-                              // Bottom Panel (Tabs): docked while pinned, a
-                              // Content Drawer opened from the status bar
-                              // while unpinned.
-                              if (viewModel.layoutState.bottomVisible)
-                                ResizablePane(
-                                  initialSize: viewModel.layoutState.bottomHeight,
-                                  minSize: 100,
-                                  onSizeChangeEnd: (size) => viewModel.setPaneSize(bottomHeight: size),
-                                  child: _buildBottomPanel(),
-                                ),
-                            ],
-                          ),
-                        ),
-
-                        // The right dock, while a right-dock
-                        // plugin panel is open. Keyed like the left column.
-                        if (viewModel.panelsController.openRightPanels.isNotEmpty)
-                          ResizablePane(
-                            key: const ValueKey('workspace_right_dock'),
-                            initialSize: viewModel.layoutState.rightWidth,
-                            minSize: EditorLayoutState.minRightWidth,
-                            onSizeChangeEnd: (size) => viewModel.setPaneSize(rightWidth: size),
-                            child: RightDockWidget(key: const ValueKey('right_dock'), controller: viewModel.panelsController),
-                          ),
-                      ],
-                    ),
-
-                    // Tabs 1..N: Sub-Editor Workspaces
-                    // each tab in its own boundary, what
-                    // asset_editor_screenshot captures.
-                    for (int i = 1; i < viewModel.openTabs.length; i++)
-                      RepaintBoundary(
-                        key: viewModel.mcpServer.subEditorBoundaryKeyFor(viewModel.openTabs[i].id),
-                        child: SubEditorWorkspaceWidget(
-                          key: ValueKey(viewModel.openTabs[i].id),
-                          assetName: viewModel.openTabs[i].asset?.fileName ?? viewModel.openTabs[i].title,
-                          assetType: viewModel.openTabs[i].category,
-                          asset: viewModel.openTabs[i].asset,
-                          editorViewModel: viewModel,
-                          tabId: viewModel.openTabs[i].id,
-                          onClose: () => _requestCloseTab(i),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
+              // 4. Main Workspace (3D Viewport or Full-Screen Sub-Editor
+              // Workspace Tab), with the plugin right dock beside it.
+              Expanded(child: _buildWorkspace()),
 
               const Divider(height: 1),
 
@@ -551,6 +469,121 @@ class _MainEditorViewState extends State<MainEditorView> {
       ),
       ],
       ),
+    );
+  }
+
+  /// Keeps the right dock's subtree (and its plugin panels' state) when the
+  /// dock moves between its pane and the offstage parking spot.
+  final GlobalKey _rightDockKey = GlobalKey(debugLabel: 'right_dock');
+
+  /// The document tabs (the level editor, then one per sub-editor) with the
+  /// plugin right dock beside them. The dock is one subtree for every tab:
+  /// it shows every open panel on the level tab and the "Always" ones on the
+  /// others, at one shared width. While panels are open but the active tab
+  /// shows none of them, it is parked offstage so they keep their state.
+  Widget _buildWorkspace() {
+    final panels = viewModel.panelsController;
+    final levelTab = viewModel.currentTab.id == EditorViewModel.kLevelTabId;
+    final dockOpen = panels.openRightPanels.isNotEmpty;
+    final dockShown = panels.shownRightPanels(levelTab: levelTab).isNotEmpty;
+    final dock = KeyedSubtree(
+      key: _rightDockKey,
+      child: RightDockWidget(key: const ValueKey('right_dock'), controller: panels, levelTab: levelTab),
+    );
+    final tabs = IndexedStack(
+      index: viewModel.activeTabIndex.clamp(0, math.max(0, viewModel.openTabs.length - 1)),
+      children: [
+        // Tab 0: Main Editor Workspace: the
+        // Outliner over the Details inspector in one left column,
+        // the viewport in the centre with the bottom panel under
+        // it. Every absolute pane reports its dragged size back
+        // into the layout state, one disk write per drag.
+        ResizablePanel.horizontal(
+          draggerBuilder: (context) => const HorizontalResizableDragger(),
+          children: [
+            // Left Column: World Outliner over Details
+            if (viewModel.layoutState.outlinerVisible || viewModel.layoutState.detailsVisible)
+              ResizablePane(
+                // Keyed: hiding the left column must not hand its
+                // absolute-size pane state to the centre column.
+                key: const ValueKey('workspace_left_column'),
+                initialSize: viewModel.layoutState.outlinerWidth,
+                minSize: 150,
+                onSizeChangeEnd: (size) => viewModel.setPaneSize(outlinerWidth: size),
+                child: _buildLeftColumn(),
+              ),
+
+            // Center Column: 3D Viewport & Bottom Tabs
+            ResizablePane.flex(
+              key: const ValueKey('workspace_centre_column'),
+              child: ResizablePanel.vertical(
+                draggerBuilder: (context) => const VerticalResizableDragger(),
+                children: [
+                  // 3D Viewport Screen
+                  ResizablePane.flex(
+                    child: RepaintBoundary(
+                      key: viewModel.mcpServer.viewportBoundaryKey,
+                      child: ViewportWidget(viewModel: viewModel),
+                    ),
+                  ),
+
+                  // Bottom Panel (Tabs): docked while pinned, a
+                  // Content Drawer opened from the status bar
+                  // while unpinned.
+                  if (viewModel.layoutState.bottomVisible)
+                    ResizablePane(
+                      initialSize: viewModel.layoutState.bottomHeight,
+                      minSize: 100,
+                      onSizeChangeEnd: (size) => viewModel.setPaneSize(bottomHeight: size),
+                      child: _buildBottomPanel(),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+
+        // Tabs 1..N: Sub-Editor Workspaces
+        // each tab in its own boundary, what
+        // asset_editor_screenshot captures.
+        for (int i = 1; i < viewModel.openTabs.length; i++)
+          RepaintBoundary(
+            key: viewModel.mcpServer.subEditorBoundaryKeyFor(viewModel.openTabs[i].id),
+            child: SubEditorWorkspaceWidget(
+              key: ValueKey(viewModel.openTabs[i].id),
+              assetName: viewModel.openTabs[i].asset?.fileName ?? viewModel.openTabs[i].title,
+              assetType: viewModel.openTabs[i].category,
+              asset: viewModel.openTabs[i].asset,
+              editorViewModel: viewModel,
+              tabId: viewModel.openTabs[i].id,
+              onClose: () => _requestCloseTab(i),
+            ),
+          ),
+      ],
+    );
+    return ResizablePanel.horizontal(
+      draggerBuilder: (context) => const HorizontalResizableDragger(),
+      children: [
+        ResizablePane.flex(
+          key: const ValueKey('workspace_documents'),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              tabs,
+              Offstage(child: dockOpen && !dockShown ? dock : null),
+            ],
+          ),
+        ),
+        // Keyed like the left column, so opening it hands no pane state around.
+        if (dockShown)
+          ResizablePane(
+            key: const ValueKey('workspace_right_dock'),
+            initialSize: viewModel.layoutState.rightWidth,
+            minSize: EditorLayoutState.minRightWidth,
+            onSizeChangeEnd: (size) => viewModel.setPaneSize(rightWidth: size),
+            child: dock,
+          ),
+      ],
     );
   }
 

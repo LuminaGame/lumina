@@ -65,7 +65,7 @@ class MyPlugin extends LuminaEditorPlugin {
 
 - menu items (`registerMenuItem`, a menu path and an `EditorCommand`) under `Plugins/<Group>/...` or under a top-level menu the plugin owns (`registerMenu`, an `EditorMenuDescriptor`); the built-in menus refuse plugin items;
 - toolbar buttons (`EditorToolbarButton`) and buttons with live state in named slots of the level toolbar or the status bar (`registerSlotButton`, an `EditorSlotButton`);
-- dockable panels (`EditorPanelDescriptor`, with a default dock position);
+- dockable panels (`EditorPanelDescriptor`, with a default dock position). A right-dock panel shows in the level editor; with "Always" on (the dock's pin button, "Show in every editor", or Window ▸ *<panel>: Show in Every Editor*) it shows in every editor tab, sub-editors included, as the same panel with its state. `defaultAlwaysVisible: true` makes that the panel's default; the user's choice is saved per panel in `editor_layout.json`;
 - asset types (`EditorAssetTypeHandler`: a built-in or custom asset type, display name and icon);
 - importers (`EditorImporter`: file extensions and a description; `ImportContext` in, `ImportResult` out);
 - details customizations (`DetailsCustomization`: a section in the details panel for a target type);

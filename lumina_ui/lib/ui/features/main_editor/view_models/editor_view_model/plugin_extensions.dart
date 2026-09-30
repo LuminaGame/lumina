@@ -33,11 +33,25 @@ mixin _EditorPluginExtensions on _EditorViewModelState {
   /// The Window-menu command for plugin panel [panelId].
   static String panelCommandId(String panelId) => 'window.panel.$panelId';
 
+  /// The Window-menu command that toggles "Always" (shown in every editor
+  /// tab) for right-dock panel [panelId].
+  static String panelAlwaysCommandId(String panelId) => 'window.panelAlways.$panelId';
+
   /// Registers (again) one `window.panel.<id>` command per plugin panel;
   /// called whenever the extension registry changes. A right-dock panel's
-  /// command toggles it; a bottom panel's shows its tab.
+  /// command toggles it; a bottom panel's shows its tab. A right-dock panel
+  /// also gets a `window.panelAlways.<id>` command.
   void _syncPluginPanelCommands() {
     for (final panel in allPluginPanels) {
+      if (EditorPanelsController.isRight(panel) && commands.byId(panelAlwaysCommandId(panel.id)) == null) {
+        commands.register(EditorCommand(
+          id: panelAlwaysCommandId(panel.id),
+          label: '${panel.title}: Show in Every Editor',
+          icon: LucideIcons.pin,
+          canExecute: () => true,
+          execute: (_) => panelsController.toggleAlwaysVisible(panel.id),
+        ));
+      }
       if (commands.byId(panelCommandId(panel.id)) != null) continue;
       commands.register(EditorCommand(
         id: panelCommandId(panel.id),

@@ -442,6 +442,10 @@ One selectable template row. It is a real focusable button, so the list is keybo
 | `detailsVisible` | `bool detailsVisible` | `detailsVisible` alanını (field/property) ve ilişkili veriyi saklar. |
 | `bottomVisible` | `bool bottomVisible` | `bottomVisible` alanını (field/property) ve ilişkili veriyi saklar. |
 | `activeBottomTab` | `int activeBottomTab` | `activeBottomTab` alanını (field/property) ve ilişkili veriyi saklar. |
+| `rightWidth` | `double rightWidth` | Sağ dock'un genişliği (varsayılan 340, en az 260); tüm editör sekmelerinde ortaktır. |
+| `pluginPanelVisible` | `Map<String, bool> pluginPanelVisible` | Hangi sağ dock eklenti panellerinin açık olduğu (gösterilene kadar kapalı). |
+| `activeRightPanel` | `String? activeRightPanel` | Sağ dock'un etkin sekmesi. |
+| `pluginPanelAlways` | `Map<String, bool> pluginPanelAlways` | Kullanıcının sağ dock paneli başına "Always" seçimi: panel yalnızca level editöründe değil, her editör sekmesinde görünür. Burada olmayan panel eklentisinin `defaultAlwaysVisible` değerini kullanır. `editor_layout.json` içinde `pluginPanelAlways` olarak kaydedilir; Reset Layout temizler. |
 | `toJson` | `Map<String, dynamic> toJson()` | Nesneyi JSON haritasına serileştirir. |
 | `resetToDefault` | `void resetToDefault()` | Değerleri veya durumları varsayılan ayarlarına sıfırlar. |
 

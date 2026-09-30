@@ -442,6 +442,10 @@ One selectable template row. It is a real focusable button, so the list is keybo
 | `detailsVisible` | `bool detailsVisible` | Holds the `detailsVisible` property or configuration state. |
 | `bottomVisible` | `bool bottomVisible` | Holds the `bottomVisible` property or configuration state. |
 | `activeBottomTab` | `int activeBottomTab` | Holds the `activeBottomTab` property or configuration state. |
+| `rightWidth` | `double rightWidth` | The right dock's width (default 340, at least 260), shared by every editor tab. |
+| `pluginPanelVisible` | `Map<String, bool> pluginPanelVisible` | Which right-dock plugin panels are open (closed until shown). |
+| `activeRightPanel` | `String? activeRightPanel` | The right dock's active tab. |
+| `pluginPanelAlways` | `Map<String, bool> pluginPanelAlways` | The user's "Always" choice per right-dock panel: shown in every editor tab rather than the level editor only. A panel missing here uses its plugin's `defaultAlwaysVisible`. Saved as `pluginPanelAlways` in `editor_layout.json`; Reset Layout clears it. |
 | `toJson` | `Map<String, dynamic> toJson()` | Serializes the object to a JSON map. |
 | `resetToDefault` | `void resetToDefault()` | Resets values or state back to defaults. |
 

@@ -48,7 +48,7 @@ A static icon button. The host turns it into an [EditorSlotButton]: [group] name
 
 **Yapıcı Metotlar (Constructors):**
 
-- `const EditorPanelDescriptor({required this.id, required this.title, required this.icon, required this.builder, this.defaultDock = PanelDefaultDock.left,})`
+- `const EditorPanelDescriptor({required this.id, required this.title, required this.icon, required this.builder, this.defaultDock = PanelDefaultDock.left, this.defaultAlwaysVisible = false,})`
 
 **Üyeler:**
 
@@ -59,6 +59,7 @@ A static icon button. The host turns it into an [EditorSlotButton]: [group] name
 | `icon` | `final IconData icon` |  |
 | `builder` | `final Widget Function(BuildContext) builder` |  |
 | `defaultDock` | `final PanelDefaultDock defaultDock` |  |
+| `defaultAlwaysVisible` | `final bool defaultAlwaysVisible` | Bir `PanelDefaultDock.right` panelinin yalnızca level editöründe değil, her editör sekmesinde (sub-editor'ler dahil) görünüp görünmeyeceği; kullanıcı dock'un iğne butonuyla ya da Window menüsüyle seçene kadar geçerlidir. Kullanıcının seçimi editör yerleşimiyle kaydedilir; Reset Layout bu değere döner. İsteğe bağlı, varsayılanı `false`. |
 
 ### `class EditorAssetTypeHandler`
 

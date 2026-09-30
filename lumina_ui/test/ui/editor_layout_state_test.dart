@@ -29,6 +29,14 @@ void main() {
     expect(s.rightWidth, EditorLayoutState.defaultRightWidth);
   });
 
+  test('the per-panel "Always" choice round-trips through JSON; an older file and Reset Layout have none', () {
+    final s = EditorLayoutState(pluginPanelAlways: {'probe.chat': true, 'probe.notes': false});
+    expect(EditorLayoutState.fromJson(s.toJson()).pluginPanelAlways, {'probe.chat': true, 'probe.notes': false});
+    expect(EditorLayoutState.fromJson({'bottomPinned': true, 'pluginPanelVisible': {'probe.chat': true}}).pluginPanelAlways, isEmpty);
+    s.resetToDefault();
+    expect(s.pluginPanelAlways, isEmpty);
+  });
+
   test('the dock width is clamped to its minimum', () {
     expect(EditorLayoutState(rightWidth: 100).rightWidth, EditorLayoutState.minRightWidth);
     expect(EditorLayoutState.minRightWidth, 260);

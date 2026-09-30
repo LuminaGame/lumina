@@ -11,7 +11,12 @@ import 'editor_layout_state.dart';
 /// other panel is a bottom-panel tab: open while the bottom panel
 /// shows its tab. Every change goes through [save] (the view model's
 /// `saveLayoutState`, which notifies); [refresh] brings each panel's
-/// [visibility] notifier up to date and runs on every such notification.
+/// [visibility] and [alwaysVisibility] notifiers up to date and runs on every
+/// such notification.
+///
+/// A right-dock panel shows in the level editor only, unless it is an
+/// "Always" panel ([isAlwaysVisible]): then it shows in every editor tab,
+/// sub-editors included. Which panels a tab shows is [shownRightPanels].
 class EditorPanelsController extends EditorPanels {
   EditorPanelsController({
     required this.layout,
@@ -34,6 +39,7 @@ class EditorPanelsController extends EditorPanels {
   final void Function(String message)? warn;
 
   final Map<String, ValueNotifier<bool>> _visibility = {};
+  final Map<String, ValueNotifier<bool>> _always = {};
 
   EditorPanelDescriptor? _panel(String id) {
     for (final p in panels()) {
@@ -57,6 +63,37 @@ class EditorPanelsController extends EditorPanels {
     if (open.isEmpty) return null;
     return open.firstWhere((p) => p.id == layout().activeRightPanel, orElse: () => open.first);
   }
+
+  /// The dock's panels on a tab: every open one on the level tab, only the
+  /// open "Always" ones on any other tab.
+  List<EditorPanelDescriptor> shownRightPanels({required bool levelTab}) =>
+      [for (final p in openRightPanels) if (levelTab || isAlwaysVisible(p.id)) p];
+
+  /// The dock's active panel on a tab: the saved active panel when that tab
+  /// shows it, else the first shown one. A tab switch never changes the
+  /// saved choice.
+  EditorPanelDescriptor? activeShownPanel({required bool levelTab}) {
+    final shown = shownRightPanels(levelTab: levelTab);
+    if (shown.isEmpty) return null;
+    return shown.firstWhere((p) => p.id == layout().activeRightPanel, orElse: () => shown.first);
+  }
+
+  /// Whether right-dock panel [panelId] shows in every editor tab: the
+  /// user's choice when there is one, else its plugin's default.
+  bool isAlwaysVisible(String panelId) =>
+      layout().pluginPanelAlways[panelId] ?? _panel(panelId)?.defaultAlwaysVisible ?? false;
+
+  /// Saves the user's "Always" choice for [panelId].
+  void setAlwaysVisible(String panelId, bool always) {
+    layout().pluginPanelAlways[panelId] = always;
+    save();
+  }
+
+  void toggleAlwaysVisible(String panelId) => setAlwaysVisible(panelId, !isAlwaysVisible(panelId));
+
+  /// [isAlwaysVisible] as a listenable, one notifier per id.
+  ValueListenable<bool> alwaysVisibility(String panelId) =>
+      _always.putIfAbsent(panelId, () => ValueNotifier(isAlwaysVisible(panelId)));
 
   @override
   bool isVisible(String panelId) {
@@ -111,17 +148,21 @@ class EditorPanelsController extends EditorPanels {
   ValueListenable<bool> visibility(String panelId) =>
       _visibility.putIfAbsent(panelId, () => ValueNotifier(isVisible(panelId)));
 
-  /// Brings every [visibility] notifier up to date.
+  /// Brings every [visibility] and [alwaysVisibility] notifier up to date.
   void refresh() {
     for (final e in _visibility.entries) {
       e.value.value = isVisible(e.key);
     }
+    for (final e in _always.entries) {
+      e.value.value = isAlwaysVisible(e.key);
+    }
   }
 
   void dispose() {
-    for (final n in _visibility.values) {
+    for (final n in [..._visibility.values, ..._always.values]) {
       n.dispose();
     }
     _visibility.clear();
+    _always.clear();
   }
 }

@@ -693,7 +693,9 @@ Authoring-space (Z-up, degrees) rotation helpers for a gizmo that turns a stored
 
 The host's [EditorPanels]: plugin panel visibility over the editor layout.
 
-A `PanelDefaultDock.right` panel lives in the right dock: open while `pluginPanelVisible[id]`, the dock's active tab `activeRightPanel`. Any other panel is a bottom-panel tab: open while the bottom panel shows its tab. Every change goes through [save] (the view model's `saveLayoutState`, which notifies); [refresh] brings each panel's [visibility] notifier up to date and runs on every such notification.
+A `PanelDefaultDock.right` panel lives in the right dock: open while `pluginPanelVisible[id]`, the dock's active tab `activeRightPanel`. Any other panel is a bottom-panel tab: open while the bottom panel shows its tab. Every change goes through [save] (the view model's `saveLayoutState`, which notifies); [refresh] brings each panel's [visibility] and [alwaysVisibility] notifiers up to date and runs on every such notification.
+
+Sağ dock paneli yalnızca level editöründe görünür; "Always" paneli ise ([isAlwaysVisible]) sub-editor'ler dahil her editör sekmesinde görünür. Bir sekmenin hangi panelleri gösterdiğini [shownRightPanels] verir.
 
 **Yapıcı Metotlar (Constructors):**
 
@@ -712,8 +714,14 @@ A `PanelDefaultDock.right` panel lives in the right dock: open while `pluginPane
 | `rightPanels` | `List<EditorPanelDescriptor> get rightPanels` | The right-dock panels, in registration order. |
 | `openRightPanels` | `List<EditorPanelDescriptor> get openRightPanels` | The open right-dock panels, in registration order. |
 | `activeRightPanel` | `EditorPanelDescriptor? get activeRightPanel` | The right dock's active panel: the saved one while open, else the first open one. |
+| `shownRightPanels` | `List<EditorPanelDescriptor> shownRightPanels({required bool levelTab})` | The dock's panels on a tab: every open one on the level tab, only the open "Always" ones on any other tab. |
+| `activeShownPanel` | `EditorPanelDescriptor? activeShownPanel({required bool levelTab})` | The dock's active panel on a tab: the saved active panel when that tab shows it, else the first shown one. A tab switch never changes the saved choice. |
+| `isAlwaysVisible` | `bool isAlwaysVisible(String panelId)` | Whether right-dock panel [panelId] shows in every editor tab: the user's choice when there is one, else its plugin's default. |
+| `setAlwaysVisible` | `void setAlwaysVisible(String panelId, bool always)` | Saves the user's "Always" choice for [panelId]. |
+| `toggleAlwaysVisible` | `void toggleAlwaysVisible(String panelId)` |  |
+| `alwaysVisibility` | `ValueListenable<bool> alwaysVisibility(String panelId)` | [isAlwaysVisible] as a listenable, one notifier per id. |
 | `activate` | `void activate(String panelId)` | Makes open right panel [panelId] the dock's active tab. |
-| `refresh` | `void refresh()` | Brings every [visibility] notifier up to date. |
+| `refresh` | `void refresh()` | Brings every [visibility] and [alwaysVisibility] notifier up to date. |
 | `dispose` | `void dispose()` |  |
 
 ## `lib/ui/features/main_editor/view_models/editor_view_model/blueprints_and_level_blueprints.dart`

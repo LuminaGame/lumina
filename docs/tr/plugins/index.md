@@ -65,7 +65,7 @@ class MyPlugin extends LuminaEditorPlugin {
 
 - `Plugins/<Grup>/...` altında ya da eklentinin sahip olduğu bir üst düzey menü altında (`registerMenu`, bir `EditorMenuDescriptor`) menü öğeleri (`registerMenuItem`, bir menü yolu ve bir `EditorCommand`); yerleşik menüler eklenti öğelerini reddeder;
 - toolbar butonları (`EditorToolbarButton`) ve level toolbar'ının ya da durum çubuğunun adlandırılmış slot'larında canlı durumlu butonlar (`registerSlotButton`, bir `EditorSlotButton`);
-- yerleştirilebilir (dockable) paneller (`EditorPanelDescriptor`, varsayılan dock konumuyla);
+- yerleştirilebilir (dockable) paneller (`EditorPanelDescriptor`, varsayılan dock konumuyla). Sağ dock paneli level editöründe görünür; "Always" açıkken (dock'un iğne butonu, "Show in every editor", ya da Window ▸ *<panel>: Show in Every Editor*) sub-editor'ler dahil her editör sekmesinde, durumu korunan aynı panel olarak görünür. `defaultAlwaysVisible: true` bunu panelin varsayılanı yapar; kullanıcının seçimi panel başına `editor_layout.json` içine kaydedilir;
 - asset tipleri (`EditorAssetTypeHandler`: yerleşik ya da özel bir asset tipi, görünen ad ve ikon);
 - importer'lar (`EditorImporter`: dosya uzantıları ve bir açıklama; girdi olarak `ImportContext`, çıktı olarak `ImportResult`);
 - details özelleştirmeleri (`DetailsCustomization`: bir hedef tip için details panelinde bir bölüm);
