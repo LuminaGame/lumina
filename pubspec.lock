@@ -287,11 +287,13 @@ packages:
     source: sdk
     version: "0.0.0"
   flutter_assimp:
-    dependency: "direct overridden"
+    dependency: transitive
     description:
-      path: "../tools/flutter_assimp"
-      relative: true
-    source: path
+      path: flutter_assimp
+      ref: e37c2f56eb80651c49709d4cfba33d22657b941d
+      resolved-ref: e37c2f56eb80651c49709d4cfba33d22657b941d
+      url: "https://github.com/LuminaGame/tools.git"
+    source: git
     version: "0.0.1"
   flutter_driver:
     dependency: transitive
@@ -299,11 +301,13 @@ packages:
     source: sdk
     version: "0.0.0"
   flutter_gstreamer:
-    dependency: "direct overridden"
+    dependency: transitive
     description:
-      path: "../tools/flutter_gstreamer"
-      relative: true
-    source: path
+      path: flutter_gstreamer
+      ref: HEAD
+      resolved-ref: e37c2f56eb80651c49709d4cfba33d22657b941d
+      url: "https://github.com/LuminaGame/tools.git"
+    source: git
     version: "0.1.0"
   flutter_lints:
     dependency: transitive
@@ -327,11 +331,13 @@ packages:
     source: hosted
     version: "2.0.35"
   flutter_riglogic:
-    dependency: "direct overridden"
+    dependency: transitive
     description:
-      path: "../tools/flutter_riglogic"
-      relative: true
-    source: path
+      path: flutter_riglogic
+      ref: e37c2f56eb80651c49709d4cfba33d22657b941d
+      resolved-ref: e37c2f56eb80651c49709d4cfba33d22657b941d
+      url: "https://github.com/LuminaGame/tools.git"
+    source: git
     version: "0.0.1"
   flutter_svg:
     dependency: transitive
@@ -522,39 +528,49 @@ packages:
     source: hosted
     version: "1.3.0"
   lumina_marketplace_shared:
-    dependency: "direct overridden"
+    dependency: transitive
     description:
-      path: "../marketplace/shared"
-      relative: true
-    source: path
+      path: shared
+      ref: "7f83ac85075e4dfb3ea2ff2c430739fb8e071ac8"
+      resolved-ref: "7f83ac85075e4dfb3ea2ff2c430739fb8e071ac8"
+      url: "https://github.com/LuminaGame/marketplace.git"
+    source: git
     version: "0.1.0"
   lumina_mouse_capture:
-    dependency: "direct overridden"
+    dependency: transitive
     description:
-      path: "../tools/lumina_mouse_capture"
-      relative: true
-    source: path
+      path: lumina_mouse_capture
+      ref: e37c2f56eb80651c49709d4cfba33d22657b941d
+      resolved-ref: e37c2f56eb80651c49709d4cfba33d22657b941d
+      url: "https://github.com/LuminaGame/tools.git"
+    source: git
     version: "0.0.1"
   lumina_plugin_miniai:
-    dependency: "direct overridden"
+    dependency: transitive
     description:
-      path: "../plugins/lumina_plugin_miniai"
-      relative: true
-    source: path
+      path: lumina_plugin_miniai
+      ref: "1f634cfae88abd857d5d5021d9e666d6e4fa8024"
+      resolved-ref: "1f634cfae88abd857d5d5021d9e666d6e4fa8024"
+      url: "https://github.com/LuminaGame/plugins.git"
+    source: git
     version: "0.1.0"
   lumina_plugin_pcg:
-    dependency: "direct overridden"
+    dependency: transitive
     description:
-      path: "../plugins/lumina_plugin_pcg"
-      relative: true
-    source: path
+      path: lumina_plugin_pcg
+      ref: "1f634cfae88abd857d5d5021d9e666d6e4fa8024"
+      resolved-ref: "1f634cfae88abd857d5d5021d9e666d6e4fa8024"
+      url: "https://github.com/LuminaGame/plugins.git"
+    source: git
     version: "0.1.0"
   lumina_smoke:
-    dependency: "direct overridden"
+    dependency: transitive
     description:
-      path: "../tools/lumina_smoke"
-      relative: true
-    source: path
+      path: lumina_smoke
+      ref: e37c2f56eb80651c49709d4cfba33d22657b941d
+      resolved-ref: e37c2f56eb80651c49709d4cfba33d22657b941d
+      url: "https://github.com/LuminaGame/tools.git"
+    source: git
     version: "0.1.0"
   markdown:
     dependency: transitive
@@ -969,13 +985,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.4.0"
-  unreal_engine_importer:
-    dependency: "direct overridden"
-    description:
-      path: "../unreal_engine_importer"
-      relative: true
-    source: path
-    version: "0.1.0"
   vector_graphics:
     dependency: transitive
     description:
