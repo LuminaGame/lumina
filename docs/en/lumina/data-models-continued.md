@@ -203,6 +203,23 @@ A mesh's thumbnail drawing, worked out without `dart:ui` rendering so it can be 
 | `forPayload` | `static Future<MeshThumbnailGeometry?> forPayload(AssetType type, Uint8List? payload) async` | The geometry of [type]'s thumbnail drawn from [payload] (a GLB, or OBJ text): null when the type does not draw its mesh or the payload holds none, as the thumbnail then falls back to the type's badge. |
 | `fromMesh` | `static MeshThumbnailGeometry fromMesh(GlbMeshData glb)` | Projects [glb] isometrically into the thumbnail (at most ~5000 triangles), shades each triangle by a fixed light and colours it from its vertex colours or the mesh's base colour. |
 
+## `lib/data/repositories/asset_repository/imported_material.dart`
+
+### `String buildImportedMaterialSource({name, baseColor, textureSlots, metallic, roughness, emissive})`
+
+The Filament `.mat` source of an imported PBR material: the glTF factors baked in as literals, one `sampler2d` per
+texture slot (`baseColorMap`, `normalMap`, `metallicRoughnessMap` (roughness G, metallic B), `occlusionMap`,
+`emissiveMap`, `specularMap`), the normal written before `prepareMaterial`. lumina's glTF / FBX import and importer
+plugins use the same builder, so an imported material is identical whoever made it.
+
+### `class ImportedMaterial`
+
+A material an importer made: `name`, `baseColor` (RGBA), `metallic`, `roughness`, `emissive` (RGB), `textures`
+(one `AssetReference` per slot, to existing texture assets) and extra `metadata`. `materialSource()` returns the
+`.mat` source; `toAsset({assetId})` the `filamat` `LuminaAsset` with the metadata keys the glTF import writes
+(`baseColor` "r,g,b,a", `metallic`, `roughness`, `emissive` "r,g,b"), the texture references and a fresh id unless one
+is given. The Unreal Engine importer plugin writes standalone material imports through it.
+
 ## `lib/data/repositories/level_repository.dart`
 
 ### `class LuminaLevelRepository`

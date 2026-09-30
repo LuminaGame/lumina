@@ -239,7 +239,7 @@ mixin _AssetStagedConversion on _AssetRepositoryState {
             }
           }
 
-          final rawMatSource = _buildMaterialSource(
+          final rawMatSource = buildImportedMaterialSource(
             name: safeMatName,
             baseColor: baseColor,
             metallic: metallic,

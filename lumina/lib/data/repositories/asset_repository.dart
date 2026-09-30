@@ -28,6 +28,7 @@ part 'asset_repository/state.dart';
 part 'asset_repository/file_operations.dart';
 part 'asset_repository/scanning.dart';
 part 'asset_repository/import_staging.dart';
+part 'asset_repository/imported_material.dart';
 part 'asset_repository/staged_conversion.dart';
 part 'asset_repository/asset_family.dart';
 part 'asset_repository/import_pipeline.dart';

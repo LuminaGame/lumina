@@ -203,6 +203,23 @@ A mesh's thumbnail drawing, worked out without `dart:ui` rendering so it can be 
 | `forPayload` | `static Future<MeshThumbnailGeometry?> forPayload(AssetType type, Uint8List? payload) async` | The geometry of [type]'s thumbnail drawn from [payload] (a GLB, or OBJ text): null when the type does not draw its mesh or the payload holds none, as the thumbnail then falls back to the type's badge. |
 | `fromMesh` | `static MeshThumbnailGeometry fromMesh(GlbMeshData glb)` | Projects [glb] isometrically into the thumbnail (at most ~5000 triangles), shades each triangle by a fixed light and colours it from its vertex colours or the mesh's base colour. |
 
+## `lib/data/repositories/asset_repository/imported_material.dart`
+
+### `String buildImportedMaterialSource({name, baseColor, textureSlots, metallic, roughness, emissive})`
+
+İçe aktarılmış bir PBR materyalin Filament `.mat` kaynağı: glTF faktörleri sabit olarak gömülür, her doku slotu
+(`baseColorMap`, `normalMap`, `metallicRoughnessMap` (roughness G, metallic B), `occlusionMap`, `emissiveMap`,
+`specularMap`) için bir `sampler2d`, normal `prepareMaterial`'dan önce yazılır. lumina'nın glTF / FBX import'u ve
+importer eklentileri aynı üreticiyi kullanır; böylece içe aktarılan bir materyal kimin ürettiğinden bağımsız aynıdır.
+
+### `class ImportedMaterial`
+
+Bir importer'ın ürettiği materyal: `name`, `baseColor` (RGBA), `metallic`, `roughness`, `emissive` (RGB), `textures`
+(her slot için mevcut bir doku asset'ine bir `AssetReference`) ve ek `metadata`. `materialSource()` `.mat` kaynağını,
+`toAsset({assetId})` glTF import'unun yazdığı metadata anahtarlarıyla (`baseColor` "r,g,b,a", `metallic`,
+`roughness`, `emissive` "r,g,b"), doku referanslarıyla ve verilmezse yeni bir id ile `filamat` `LuminaAsset`'ini
+döndürür. Unreal Engine importer eklentisi bağımsız materyal import'larını bununla yazar.
+
 ## `lib/data/repositories/level_repository.dart`
 
 ### `class LuminaLevelRepository`
