@@ -7,6 +7,9 @@ enum ComponentPropertyType {
   enumType,
   vector3,
   assetReference,
+
+  /// An sRGB `#RRGGBB` string, edited with the colour picker.
+  color,
 }
 
 class ComponentPropertySchema {
@@ -893,13 +896,50 @@ class BlueprintComponentRegistry {
       isAvailable: false,
       gapReason: 'Waiting on engine light component support',
     ),
+    // A point light that moves with its actor. Keys and units are the level
+    // Point Light's: lumens, sRGB `colorHex`, attenuation radius in cm.
     ComponentTypeDescriptor(
       typeName: 'LuminaPointLightComponent',
       displayName: 'Point Light',
       category: 'Lighting',
       isSceneComponent: true,
-      isAvailable: false,
-      gapReason: 'Waiting on engine light component support',
+      icon: LucideIcons.lightbulb,
+      properties: [
+        ..._transformSchema,
+        ComponentPropertySchema(
+          group: 'LIGHT',
+          name: 'Intensity',
+          dartField: 'intensity',
+          type: ComponentPropertyType.number,
+          defaultValue: 10000.0, // lumens
+          min: 0.0,
+          max: 100000.0,
+        ),
+        ComponentPropertySchema(
+          group: 'LIGHT',
+          name: 'Light Color',
+          dartField: 'colorHex',
+          type: ComponentPropertyType.color,
+          defaultValue: '#FFFFFF',
+        ),
+        ComponentPropertySchema(
+          group: 'LIGHT',
+          name: 'Attenuation Radius',
+          dartField: 'attenuationRadius',
+          type: ComponentPropertyType.number,
+          defaultValue: 1000.0, // cm
+          min: 1.0,
+          max: 10000.0,
+          hardMin: 1.0,
+        ),
+        ComponentPropertySchema(
+          group: 'LIGHT',
+          name: 'Cast Shadows',
+          dartField: 'castShadows',
+          type: ComponentPropertyType.boolean,
+          defaultValue: false,
+        ),
+      ],
     ),
   ];
 

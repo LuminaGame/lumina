@@ -170,5 +170,41 @@ void main() {
       expect(lm.hasComponent(entity), isFalse);
       expect(lm.componentCount, equals(initialCount));
     });
+
+    test('A Blueprint point light takes the editor colour, shadows and radius and follows its actor', () {
+      final actor = LuminaActor(root: LuminaSceneComponent(location: Vector3(100, 0, -200)));
+      final built = LuminaBlueprintComponents.construct(actor, [
+        LuminaBlueprintComponent(id: 'root', name: 'DefaultSceneRoot', type: 'LuminaSceneComponent'),
+        LuminaBlueprintComponent(id: 'lamp', name: 'Lamp', type: 'LuminaPointLightComponent', parentId: 'root', properties: {
+          'location': [0.0, 0.0, 150.0], // authoring cm, Z up
+          'intensity': 20000.0,
+          'colorHex': '#FF8000',
+          'attenuationRadius': 600.0,
+          'castShadows': true,
+        }),
+      ]);
+      final lamp = built['lamp'] as LuminaPointLightComponent;
+      world.persistentLevel.registerActor(actor);
+      world.beginPlay();
+      world.tick(1.0 / 60.0);
+
+      final lm = FilamentLightManager(engine);
+      final entity = lamp.lightEntity!;
+      final color = lm.getColor(entity);
+      // The picker's sRGB #FF8000, linear, as a level light converts it.
+      expect(color[0], closeTo(1.0, 1e-4));
+      expect(color[1], closeTo(luminaSrgbToLinear(128 / 255), 1e-4));
+      expect(color[2], closeTo(0.0, 1e-4));
+      expect(lm.isShadowCaster(entity), isTrue);
+      expect(lm.getFalloff(entity), closeTo(600.0, 1e-3));
+      var pos = lm.getPosition(entity);
+      expect([pos[0], pos[1], pos[2]], [closeTo(100, 1e-3), closeTo(150, 1e-3), closeTo(-200, 1e-3)]);
+
+      // The light moves with the actor.
+      actor.actorLocation = Vector3(-300, 0, 50);
+      world.tick(1.0 / 60.0);
+      pos = lm.getPosition(entity);
+      expect([pos[0], pos[1], pos[2]], [closeTo(-300, 1e-3), closeTo(150, 1e-3), closeTo(50, 1e-3)]);
+    });
   });
 }

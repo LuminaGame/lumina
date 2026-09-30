@@ -6,6 +6,7 @@ import 'package:lumina/lumina.dart' hide BoxShape;
 import 'package:lumina_ui/ui/features/sub_editors/services/blueprint_debugger.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_ui/ui/core/property_editors/collision_section_editor.dart';
+import 'package:lumina_ui/ui/core/property_editors/color_field.dart';
 import 'package:lumina_ui/ui/core/property_editors/physics_section_editor.dart';
 import 'package:lumina_ui/ui/core/property_editors/asset_picker_select.dart';
 import 'package:lumina_ui/ui/core/property_editors/slider_field.dart';

@@ -102,8 +102,12 @@ void main() {
       final bp = await ok('list_component_types', {'context': 'blueprint'});
       expect(bp['count'], BlueprintComponentRegistry.registeredComponents.length);
       final bpLight = (bp['types'] as List).cast<Map>().firstWhere((t) => t['type'] == 'LuminaPointLightComponent');
-      expect(bpLight['is_available'], isFalse);
-      expect(bpLight['gap_reason'], contains('light component support'));
+      expect(bpLight['is_available'], isTrue);
+      expect((bpLight['properties'] as List).cast<Map>().map((p) => p['dart_field']),
+          containsAll(['location', 'intensity', 'colorHex', 'attenuationRadius', 'castShadows']));
+      final bpSun = (bp['types'] as List).cast<Map>().firstWhere((t) => t['type'] == 'LuminaDirectionalLightComponent');
+      expect(bpSun['is_available'], isFalse);
+      expect(bpSun['gap_reason'], isNotEmpty);
     });
 
     test('add_actor_component: unique ids, one undo step each; properties settable; unknown types listed', () async {
@@ -207,8 +211,38 @@ void main() {
       await expectToolError('rename_blueprint_component', {'asset': door, 'component': mesh, 'name': 'Door Mesh'}, contains('identifier'));
       await ok('rename_blueprint_component', {'asset': door, 'component': mesh, 'name': 'DoorMesh'});
       expect(editor.getComponent(mesh)!.name, 'DoorMesh');
-      await expectToolError('add_blueprint_component', {'asset': door, 'type': 'LuminaPointLightComponent'}, contains('light component support'));
+      await expectToolError('add_blueprint_component', {'asset': door, 'type': 'LuminaDirectionalLightComponent'}, contains('not available in Blueprints'));
       expect(vm.transactions.history(limit: 200).length, levelHistory, reason: 'the level stack is unchanged');
+    });
+
+    test('a Point Light: added, its colour, intensity, radius and shadows set; the game builds that light', () async {
+      final lamp = ((await ok('add_blueprint_component', {'asset': door, 'type': 'LuminaPointLightComponent'}))['component'] as Map)['id'] as String;
+      final editor = doorEditor();
+      expect(editor.getComponent(lamp)!.isSceneComponent, isTrue);
+      expect(editor.getComponent(lamp)!.properties, allOf(containsPair('colorHex', '#FFFFFF'), containsPair('castShadows', false)));
+      await ok('set_blueprint_component_property', {'asset': door, 'component': lamp, 'property': 'colorHex', 'value': '#ffaa00'});
+      await ok('set_blueprint_component_property', {'asset': door, 'component': lamp, 'property': 'intensity', 'value': 20000});
+      await ok('set_blueprint_component_property', {'asset': door, 'component': lamp, 'property': 'Attenuation Radius', 'value': 600});
+      await ok('set_blueprint_component_property', {'asset': door, 'component': lamp, 'property': 'castShadows', 'value': true});
+      await ok('set_blueprint_component_transform', {'asset': door, 'component': lamp, 'location': [0, 0, 120]});
+      final props = editor.getComponent(lamp)!.properties;
+      expect(props['colorHex'], '#FFAA00');
+      expect(props['intensity'], 20000.0);
+      expect(props['attenuationRadius'], 600.0);
+      expect(props['castShadows'], isTrue);
+      await expectToolError('set_blueprint_component_property',
+          {'asset': door, 'component': lamp, 'property': 'colorHex', 'value': 'orange'}, contains('#RRGGBB'));
+      await expectToolError('set_blueprint_component_property',
+          {'asset': door, 'component': lamp, 'property': 'intensity', 'value': -5}, contains('a number in'));
+      // What the editor writes is what the game builds.
+      final built = LuminaBlueprintComponents.construct(
+          LuminaActor(root: LuminaSceneComponent()), [editor.getComponent(lamp)!])[lamp] as LuminaPointLightComponent;
+      expect(built.intensity, 20000.0);
+      expect(built.falloffRadius, 600.0);
+      expect(built.castShadows, isTrue);
+      expect(built.color.x, closeTo(1.0, 1e-6));
+      expect(built.color.z, closeTo(0.0, 1e-6));
+      expect(built.relativeLocation.y, closeTo(120.0, 1e-6), reason: 'authoring Z up is runtime Y up');
     });
 
     test('a Spring Arm: Use Pawn Control Rotation and the other settings the runtime reads are settable', () async {

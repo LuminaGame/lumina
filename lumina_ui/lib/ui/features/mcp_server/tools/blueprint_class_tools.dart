@@ -68,6 +68,9 @@ void registerBlueprintClassTools(McpToolRegistry registry, EditorViewModel vm, M
       case ComponentPropertyType.vector3:
         if (value is! List || value.length != 3 || value.any((e) => e is! num)) bad('[x, y, z]');
         return [for (final e in value) (e as num).toDouble()];
+      case ComponentPropertyType.color:
+        if (value is! String || !RegExp(r'^#[0-9A-Fa-f]{6}$').hasMatch(value.trim())) bad('a colour "#RRGGBB"');
+        return value.trim().toUpperCase();
     }
   }
 

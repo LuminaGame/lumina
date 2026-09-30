@@ -4,7 +4,9 @@ import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_filament/flutter_filament.dart' show FilamentLightManager;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image/image.dart' as img;
 import 'package:integration_test/integration_test.dart';
 import 'package:lumina/data/services/game_template_service.dart' show kThirdPersonTemplateId;
 import 'package:lumina/lumina.dart' hide BoxShape;
@@ -1765,6 +1767,217 @@ void logDoor(LuminaActor self, String text) {
     final video = rec.save('blueprint editor: level blueprint opens a placed door', usedAssets: usedAssets);
     expect(SmokeArtifacts.videoDurationSeconds(video)!, greaterThanOrEqualTo(10.0));
   }, timeout: const Timeout(Duration(minutes: 20)));
+
+  testWidgets('blueprint editor: a point light component lights a sunless level in Play', (tester) async {
+    // A launcher Third Person project with its sun and sky deleted and the
+    // real red fuel barrel imported. BP_Lantern draws the barrel; in the
+    // Blueprint editor a Point Light is added from Add Component and given a
+    // warm colour, 60 000 lm and a 15 m radius, 1.5 m above the barrel.
+    // BP_Lantern placed ahead of the Player Start lights the dark level in
+    // Play (the frame is measured with the light on and off), and the light
+    // moves with the actor.
+    final barrelGlb = File('${SmokeArtifacts.testAssetsDir.absolute.path}/Props/Barrels/fuel_barrel_red.glb');
+    expect(barrelGlb.existsSync(), isTrue, reason: 'test-assets present');
+    final usedAssets = [barrelGlb.path];
+    final root = Directory.systemTemp.createTempSync('lumina_smoke_bp_lamp_');
+    addTearDown(() => root.deleteSync(recursive: true));
+    const name = 'bp_lamp_smoke';
+    final projectDir = (await tester.runAsync(() => scaffoldGameProject(root, name: name, widgetLibrary: 'flutter')))!;
+    final imported = (await tester.runAsync(() => ImportAssetUseCase()(projectDir: projectDir, sourceFilePath: barrelGlb.path)))!;
+    expect(imported.isSuccess, isTrue, reason: imported.error);
+    writeBlueprint(
+      projectDir,
+      'BP_Lantern',
+      LuminaBlueprintDocument(parentClass: 'LuminaActor', components: [
+        LuminaBlueprintComponent(id: 'root', name: 'DefaultSceneRoot', type: 'LuminaSceneComponent'),
+        LuminaBlueprintComponent(id: 'barrel', name: 'Barrel', type: 'LuminaStaticMeshComponent', parentId: 'root', properties: {
+          'staticMeshAsset': imported.asset!.relativePath,
+        }),
+      ]),
+    );
+    // The level without its sun and sky, BP_Lantern 4 m ahead of the Player Start.
+    final manifest = Map<String, dynamic>.from(jsonDecode(File('$projectDir/$name.lmproject').readAsStringSync()) as Map);
+    final level = LuminaLevelRepository(projectDir).load(manifest['active_level'] as String)!;
+    final start = level.actors.firstWhere((a) => a['type'] == 'PlayerStart');
+    final startLoc = [for (final v in start['location'] as List) (v as num).toDouble()];
+    level.actors = [
+      for (final a in level.actors)
+        if (a['name'] != 'DirectionalLight_Sun' && a['name'] != 'SkyAtmosphere_Env') a,
+      {
+        'id': 'lantern_01',
+        'name': 'Lantern_01',
+        'type': 'Blueprint',
+        'blueprintClass': 'contents/blueprints/BP_Lantern.lmas',
+        'location': [startLoc[0] + 400.0, startLoc[1], 0.0],
+        'rotation': [0.0, 0.0, 0.0],
+        'scale': [1.0, 1.0, 1.0],
+      },
+    ];
+    LuminaLevelRepository(projectDir).save(level);
+
+    final editor = EditorViewModel(initialProject: LuminaProject.fromMap(manifest), projectLocation: root.path);
+    addTearDown(editor.dispose);
+    await tester.runAsync(editor.ensureDefaultLevelAssets);
+    editor.refreshAssets();
+    expect(editor.actors.where((a) => a.type.contains('Light') || a.type == 'Environment'), isEmpty);
+
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    Future<void> settle([int frames = 12]) async {
+      for (var i = 0; i < frames; i++) {
+        await tester.pump(const Duration(milliseconds: 16));
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 16)));
+      }
+    }
+
+    final boundaryKey = GlobalKey();
+    await tester.pumpWidget(RepaintBoundary(
+      key: boundaryKey,
+      child: ShadcnApp(theme: luminaEditorTheme(), home: MainEditorView(viewModel: editor)),
+    ));
+    await settle(40);
+    final rec = SmokeRecorder(tester, boundary: find.byKey(boundaryKey));
+    Future<Uint8List> capture() => SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey));
+    await rec.hold(const Duration(milliseconds: 600));
+
+    // --- BP_Lantern: Add Component → Point Light, set in Details -------------
+    final asset = editor.realAssets.firstWhere((a) => a.relativePath == 'contents/blueprints/BP_Lantern.lmas');
+    editor.openSubEditorTab('Blueprint', asset: asset);
+    await settle(20);
+    final bp = tester.state<BlueprintSubEditorState>(find.byType(BlueprintSubEditor)).viewModel;
+    for (var i = 0; i < 200 && bp.document.components.length < 2; i++) {
+      await settle(2);
+    }
+    await tester.tap(find.text('3D Viewport'));
+    await settle(6);
+    LuminaStaticMeshComponent? barrelMesh() => bp.preview.componentFor('barrel') as LuminaStaticMeshComponent?;
+    for (var i = 0; i < 400 && !(bp.preview.hasNativeWorld && (barrelMesh()?.isLoaded ?? false)); i++) {
+      await rec.hold(const Duration(milliseconds: 100));
+    }
+    expect(barrelMesh()?.isLoaded, isTrue, reason: '${bp.preview.diagnostics}');
+    await tester.tap(find.byKey(const ValueKey('add_component_button')));
+    await settle(10);
+    await rec.typeText(find.byKey(const ValueKey('add_component_search')), 'light', perCharacter: const Duration(milliseconds: 120));
+    await settle(6);
+    await rec.hold(const Duration(milliseconds: 700));
+    await tester.tap(find.byKey(const ValueKey('add_component_LuminaPointLightComponent')));
+    await settle(10);
+    final lamp = bp.getComponent(bp.selectedComponentId!)!;
+    expect(lamp.type, 'LuminaPointLightComponent');
+    expect(lamp.properties['attenuationRadius'], 1000.0);
+    bp.beginComponentTransformDrag(lamp.id);
+    bp.updateComponentTransform(lamp.id, location: [0.0, 0.0, 150.0]);
+    bp.endComponentTransformDrag();
+    bp.commitProperty(lamp.id, 'intensity', 60000.0);
+    bp.commitProperty(lamp.id, 'attenuationRadius', 1500.0);
+    await settle(8);
+    // The colour typed into Details' colour field.
+    final colorField = find.descendant(of: find.byKey(ValueKey('bp_prop_${lamp.id}_colorHex')), matching: find.byType(EditableText));
+    await tester.ensureVisible(colorField);
+    await settle(4);
+    await tester.tap(colorField);
+    await settle(2);
+    await tester.enterText(colorField, '#FFB347');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await settle(8);
+    FocusManager.instance.primaryFocus?.unfocus();
+    await settle(8);
+    expect(bp.getComponent(lamp.id)!.properties['colorHex'], '#FFB347');
+    await rec.hold(const Duration(milliseconds: 1200));
+    SmokeArtifacts.saveScreenshot('blueprint_point_light_component_details', await capture(), usedAssets: usedAssets);
+    expect(bp.preview.componentFor(lamp.id), isA<LuminaPointLightComponent>(), reason: 'the preview builds the light');
+    expect(await tester.runAsync(bp.save), isTrue);
+    await rec.hold(const Duration(milliseconds: 500));
+
+    // --- Play: the lantern lights the dark level ----------------------------
+    editor.selectTab(0);
+    await settle(10);
+    await tester.tap(find.byKey(const ValueKey('toolbar_play')));
+    for (var i = 0; i < 100 && !editor.pieController.isPlaying; i++) {
+      await settle(2);
+    }
+    final pie = editor.pieController;
+    expect(pie.isPlaying, isTrue, reason: 'blocked: ${editor.playBlockers} error: ${pie.lastError}');
+    final world = pie.game!.world!;
+    final lantern = world.persistentLevel.actors.firstWhere((a) => a.key == const ValueKey('lantern_01')) as LuminaBlueprintInstance;
+    final light = lantern.blueprintComponents[lamp.id] as LuminaPointLightComponent;
+    for (var i = 0; i < 40; i++) {
+      await settle(2);
+      await rec.capture();
+    }
+    expect(light.lightEntity, isNotNull, reason: 'a native Filament light');
+    expect(light.intensity, 60000.0);
+    expect(light.falloffRadius, 1500.0);
+    final lm = FilamentLightManager(world.filamentEngine);
+    List<double> nativePos() => lm.getPosition(light.lightEntity!).sublist(0, 3);
+
+    /// Mean luminance (0–255) of the lower half of the game view.
+    double viewLuma(Uint8List png) {
+      final image = img.decodePng(png)!;
+      final r = tester.getRect(find.byType(ViewportWidget));
+      var sum = 0.0;
+      var n = 0;
+      for (var y = (r.top + r.height / 2).round(); y < r.bottom.round() - 2; y += 4) {
+        for (var x = r.left.round() + 2; x < r.right.round() - 2; x += 4) {
+          final p = image.getPixel(x, y);
+          sum += 0.2126 * p.r + 0.7152 * p.g + 0.0722 * p.b;
+          n++;
+        }
+      }
+      return sum / n;
+    }
+
+    final litPng = await capture();
+    final lit = viewLuma(litPng);
+    SmokeArtifacts.saveScreenshot('blueprint_point_light_pie_lit', litPng, usedAssets: usedAssets, metrics: {'view_luma': lit.toStringAsFixed(1)});
+    light.visible = false;
+    for (var i = 0; i < 20; i++) {
+      await settle(2);
+      await rec.capture();
+    }
+    final darkPng = await capture();
+    final dark = viewLuma(darkPng);
+    SmokeArtifacts.saveScreenshot('blueprint_point_light_pie_off', darkPng, usedAssets: usedAssets, metrics: {'view_luma': dark.toStringAsFixed(1)});
+    debugPrint('[bp_lamp_smoke] view luma lit ${lit.toStringAsFixed(1)}, off ${dark.toStringAsFixed(1)}');
+    expect(dark, lessThan(10), reason: 'no sun, no sky, no lamp: dark');
+    expect(lit, greaterThan(math.max(dark * 4, dark + 10)), reason: 'the Blueprint light lights the level');
+    light.visible = true;
+    for (var i = 0; i < 20; i++) {
+      await settle(2);
+      await rec.capture();
+    }
+
+    // --- The light follows its actor ----------------------------------------
+    final from = lantern.actorLocation.clone();
+    for (var i = 1; i <= 60; i++) {
+      lantern.actorLocation = from + Vector3(0, 0, -5.0 * i); // runtime −Z is authoring +Y
+      await settle(2);
+      await rec.capture();
+    }
+    final expected = light.worldLocation;
+    expect(expected.z, closeTo(from.z - 300, 1e-3));
+    final pos = nativePos();
+    expect(pos, [closeTo(expected.x, 1e-2), closeTo(expected.y, 1e-2), closeTo(expected.z, 1e-2)],
+        reason: 'the Filament light moved with the actor');
+    final movedPng = await capture();
+    SmokeArtifacts.saveScreenshot('blueprint_point_light_pie_moved', movedPng, usedAssets: usedAssets,
+        metrics: {'view_luma': viewLuma(movedPng).toStringAsFixed(1), 'light_position': pos.map((v) => v.toStringAsFixed(1)).join(', ')});
+    // A flickering lantern: the intensity is set live while it plays.
+    for (var i = 0; i < 60; i++) {
+      light.intensity = 60000.0 * (0.55 + 0.45 * math.cos(i * math.pi / 15));
+      await settle(2);
+      await rec.capture();
+    }
+    light.intensity = 60000.0;
+    await settle(4);
+    await tester.tap(find.byKey(const ValueKey('toolbar_stop')));
+    await settle(20);
+    await rec.hold(const Duration(milliseconds: 800));
+    final video = rec.save('blueprint editor: a point light component lights a sunless level in Play', usedAssets: usedAssets);
+    expect(SmokeArtifacts.videoDurationSeconds(video)!, greaterThanOrEqualTo(10.0));
+  }, timeout: const Timeout(Duration(minutes: 15)));
 
   testWidgets('blueprint editor: spring arm Use Pawn Control Rotation', (tester) async {
     // The launcher's Third Person project. BP_ThirdPersonCharacter's

@@ -708,7 +708,7 @@ Turns a stored mesh asset reference (a project `.lmas` path, a `.glb`) into what
 
 ### `abstract final class LuminaBlueprintComponents`
 
-Builds a Blueprint's component tree on an actor (its construction script). The VM and generated code both call it, so a Blueprint has the same components either way. Transforms are converted from authoring space with [LuminaAxes].
+Builds a Blueprint's component tree on an actor (its construction script). The VM and generated code both call it, so a Blueprint has the same components either way. Transforms are converted from authoring space with [LuminaAxes]. Light components read `intensity` (lumens), `colorHex` (the sRGB `#RRGGBB` the colour picker stores) or `color` (linear RGB), `attenuationRadius` (cm), `castShadows` and `visible`.
 
 **Members:**
 

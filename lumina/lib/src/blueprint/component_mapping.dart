@@ -258,6 +258,20 @@ abstract final class LuminaBlueprintComponents {
     return out.length >= 4 ? out : null;
   }
 
+  /// A light's colour (`color`, linear RGB, or `colorHex`, the sRGB
+  /// `#RRGGBB` the editor's colour picker and level lights store), shadows
+  /// and visibility.
+  static void _light(LuminaLightComponent light, Map<String, dynamic> p) {
+    final color = p['color'];
+    if (color is List && color.length >= 3 && color.every((e) => e is num)) {
+      light.color = Vector3((color[0] as num).toDouble(), (color[1] as num).toDouble(), (color[2] as num).toDouble());
+    } else if (p['colorHex'] is String) {
+      light.color = luminaLightColorFromHex(p['colorHex'] as String, fallback: light.color);
+    }
+    light.castShadows = _bool(p, 'castShadows') ?? light.castShadows;
+    light.visible = _bool(p, 'visible') ?? true;
+  }
+
   static void _transform(LuminaSceneComponent s, Map<String, dynamic> p) {
     final loc = p['location'];
     final rot = p['rotation'];
@@ -374,20 +388,16 @@ abstract final class LuminaBlueprintComponents {
       case 'LuminaPointLightComponent':
         final light = LuminaPointLightComponent(intensity: _num(p, 'intensity') ?? 1000.0);
         _transform(light, p);
-        final color = p['color'];
-        if (color is List && color.length >= 3) light.color = Vector3((color[0] as num).toDouble(), (color[1] as num).toDouble(), (color[2] as num).toDouble());
+        _light(light, p);
         final radius = _num(p, 'attenuationRadius') ?? _num(p, 'falloffRadius');
         if (radius != null) light.falloffRadius = radius;
-        light.visible = _bool(p, 'visible') ?? true;
         return light;
       case 'LuminaSpotLightComponent':
         final light = LuminaSpotLightComponent(intensity: _num(p, 'intensity') ?? 10000.0);
         _transform(light, p);
-        final color = p['color'];
-        if (color is List && color.length >= 3) light.color = Vector3((color[0] as num).toDouble(), (color[1] as num).toDouble(), (color[2] as num).toDouble());
+        _light(light, p);
         final radius = _num(p, 'attenuationRadius') ?? _num(p, 'falloffRadius');
         if (radius != null) light.falloffRadius = radius;
-        light.visible = _bool(p, 'visible') ?? true;
         return light;
       case 'LuminaStaticMeshComponent':
         final stored = p['staticMeshAsset'] as String? ?? '';

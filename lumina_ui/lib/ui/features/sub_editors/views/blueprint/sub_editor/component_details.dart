@@ -459,6 +459,29 @@ mixin _BlueprintSubEditorComponentDetails on _BlueprintSubEditorStateBase {
           ),
         );
 
+      case ComponentPropertyType.color:
+        // The level lights' colour picker: typed hex or picked, one undo
+        // step per commit.
+        final hex = currentVal is String ? currentVal : (prop.defaultValue as String? ?? '#FFFFFF');
+        return Padding(
+          key: ValueKey('bp_prop_${node.id}_${prop.dartField}'),
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(prop.name, style: const TextStyle(fontSize: 10, color: EditorColors.foreground)),
+              const SizedBox(height: 4),
+              ColorField(
+                value: hex,
+                defaultValue: prop.defaultValue as String? ?? '#FFFFFF',
+                onChanged: (v) => _viewModel.previewProperty(node.id, prop.dartField, v),
+                onCommit: (v) => _viewModel.commitProperty(node.id, prop.dartField, v),
+                onReset: () => _viewModel.commitProperty(node.id, prop.dartField, prop.defaultValue),
+              ),
+            ],
+          ),
+        );
+
       case ComponentPropertyType.string:
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 4),
@@ -570,5 +593,6 @@ String? _unitOf(ComponentPropertySchema prop) {
   if (lengths.any(f.contains)) return 'cm';
   if (f.contains('speed') && !f.contains('lag')) return 'cm/s';
   if (f == 'fieldofview' || f.contains('angle') || f.contains('yaw')) return '°';
+  if (f == 'intensity') return 'lm'; // a point light's luminous power
   return null;
 }

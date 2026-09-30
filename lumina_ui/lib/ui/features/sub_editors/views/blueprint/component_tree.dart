@@ -159,6 +159,8 @@ class _BlueprintComponentTreeState extends State<BlueprintComponentTree> {
       icon = LucideIcons.footprints;
     } else if (node.type.contains('Mesh')) {
       icon = LucideIcons.cuboid;
+    } else if (node.type.contains('Light')) {
+      icon = registered ?? LucideIcons.lightbulb;
     }
 
     return Clickable(
