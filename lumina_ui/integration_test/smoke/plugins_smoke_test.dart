@@ -2513,6 +2513,30 @@ void main() {
       expect(find.descendant(of: mdAnswer, matching: find.text('•')), findsNWidgets(2));
       await rec.hold(const Duration(seconds: 3));
       await shot('Markdown answer');
+
+      // 6. The engine guide: the model reads a topic with get_lumina_guide
+      // through the editor and answers with a fact from it.
+      await tester.tap(find.byKey(const ValueKey('miniai_message')));
+      await tester.pump();
+      await tester.enterText(find.byKey(const ValueKey('miniai_message')),
+          'Call the get_lumina_guide tool of the lumina MCP server once with topic "lights", then answer in one short '
+          'sentence from what it says: in which unit is a point light\'s intensity given?');
+      final guideBefore = c.chat.messageCount;
+      await tester.tap(find.byKey(const ValueKey('miniai_send')));
+      await waitFor(() => c.chat.messageCount > guideBefore && !c.running, max: const Duration(minutes: 3));
+      await settle(tester, frames: 20);
+      final guideCards = c.chat.items.whereType<ToolCallItem>().where((i) => i.call.name == 'get_lumina_guide').toList();
+      expect(guideCards, isNotEmpty, reason: 'Claude Code called get_lumina_guide');
+      expect(guideCards.last.status, ToolCallStatus.done);
+      expect(guideCards.last.risk, McpToolRisk.readOnly);
+      expect(guideCards.last.result, contains('lumens'));
+      final guideAnswer = c.chat.items.whereType<AssistantItem>().last.text.toString();
+      debugPrint('[miniai15_smoke] guide answer: $guideAnswer');
+      expect(guideAnswer.toLowerCase(), contains('lumen'), reason: 'the answer uses what the guide says');
+      await tester.tap(find.text('get_lumina_guide').last);
+      await settle(tester, frames: 10);
+      await rec.hold(const Duration(seconds: 3));
+      await shot('Lumina guide tool card');
       await tester.runAsync(() => vm.shutdownPlugins(exiting: true));
       final minimum = Duration(milliseconds: (SmokeArtifacts.minimumVideoSeconds * 1000).ceil() + 500);
       if (rec.recorded < minimum) await rec.hold(minimum - rec.recorded);
