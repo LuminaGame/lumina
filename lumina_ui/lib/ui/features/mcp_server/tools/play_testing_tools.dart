@@ -26,11 +26,11 @@ const int kMcpMaxPlayForMs = 10000;
 /// Authoring degrees `[x, y, z]` of a runtime rotation (the inverse of
 /// [LuminaAxes.rotation]).
 List<double> mcpAuthoringRotation(Quaternion q) {
-  // luminaPawnQuaternionToEuler decomposes the conjugate as Ry·Rx·Rz; the
-  // conjugate of the conjugate is q, authored as Ry(z)·Rx(x)·Rz(−y).
-  final e = luminaPawnQuaternionToEuler(q.conjugated());
+  // luminaPawnQuaternionToEuler decomposes q as Ry(−yaw)·Rx(pitch)·Rz(−roll);
+  // q is authored as Ry(z)·Rx(x)·Rz(−y).
+  final e = luminaPawnQuaternionToEuler(q);
   double clean(double v) => (v * 1000).roundToDouble() / 1000 + 0.0;
-  return [clean(e.x), clean(-e.z), clean(e.y)];
+  return [clean(e.x), clean(e.z), clean(-e.y)];
 }
 
 List<double> _cm(List<double> v) => [for (final c in v) (c * 1000).roundToDouble() / 1000];

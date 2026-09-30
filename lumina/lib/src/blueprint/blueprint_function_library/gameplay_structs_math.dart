@@ -384,11 +384,11 @@ LuminaRotator _findLookAtRotation(Vector3 start, Vector3 target) => LuminaBluepr
 LuminaRotator _makeRotFromX(Vector3 x) {
   if (x.length2 < 1e-16) return const LuminaRotator.zero();
   final d = x.normalized();
-  final h = math.sqrt(d.y * d.y + d.z * d.z);
+  final h = math.sqrt(d.x * d.x + d.y * d.y);
   const r2d = 180.0 / math.pi;
-  if (h < 1e-12) return LuminaRotator(0.0, 0.0, d.x >= 0 ? 90.0 : -90.0);
-  if (d.y >= 0) return LuminaRotator(math.atan2(-d.z, d.y) * r2d, 0.0, math.atan2(d.x, h) * r2d);
-  return LuminaRotator(math.atan2(d.z, -d.y) * r2d, 0.0, math.atan2(d.x, -h) * r2d);
+  // Straight up or down: any yaw faces it; keep 0.
+  if (h < 1e-12) return LuminaRotator(d.z >= 0 ? 90.0 : -90.0, 0.0, 0.0);
+  return LuminaRotator(math.atan2(d.z, h) * r2d, 0.0, math.atan2(d.x, d.y) * r2d);
 }
 
 bool _rotatorEqual(LuminaRotator a, LuminaRotator b, [double errorTolerance = 1e-4]) {

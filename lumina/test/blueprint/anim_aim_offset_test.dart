@@ -67,6 +67,17 @@ void main() {
     expect(anim.aimYaw - before, closeTo((60.0 - before) * (1 - math.exp(-10 / 60)), 1e-6));
   });
 
+  test('a positive AimPitch (the camera looking up) turns the aim bones up, a negative one down', () {
+    for (final (pitch, sign) in [(30.0, 1.0), (-30.0, -1.0)]) {
+      final r = rigWithAim();
+      aim(r, 0.0, pitch);
+      r.rig.walk(Vector3.zero(), 30);
+      // The body faces its drawn −Z at yaw 0, so the turn is the world turn.
+      final forward = r.mesh.jointOverrides['Head']!.rotation.rotateVector(Vector3(0, 0, -1));
+      expect(forward.y * sign, greaterThan(0.2), reason: 'AimPitch $pitch turns the head forward to $forward');
+    }
+  });
+
   test('the aim offset round-trips through JSON', () {
     const aim = LuminaAnimAimOffset(
       bones: [LuminaAnimAimOffsetBone('neck_01', 0.4), LuminaAnimAimOffsetBone('head', 0.6)],

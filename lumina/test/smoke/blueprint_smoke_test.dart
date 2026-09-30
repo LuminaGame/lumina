@@ -1068,6 +1068,138 @@ void main() {
     SmokeArtifacts.saveVideo(name, video.finish(), usedAssets: [LuminaThirdPersonContent.bundledMeshPath, barrel, acUnit]);
   }, timeout: const Timeout(Duration(minutes: 5)));
 
+  // Mouse up / down through Enhanced Input (IA_Look, Mouse Y × −1) turns the
+  // follow camera, and the character's Line Trace Forward (Draw Debug, drawn
+  // here as a red bar along the debug segment) follows it: up with the
+  // camera, then down to the ground in front of the barrels.
+  test('blueprint: looking up and down aims the forward trace with the camera', () async {
+    const name = 'blueprint: looking up and down aims the forward trace with the camera';
+    final barrel = '${SmokeArtifacts.testAssetsDir.absolute.path}/Props/Barrels/fuel_barrel_red.glb';
+    final yard = _Yard();
+    addTearDown(yard.dispose);
+    final world = yard.world;
+    final input = ProjectInputBinder.bind(GameTemplateCatalog.thirdPerson.input);
+    final subsystem = world.registerSubsystem(LuminaInputSubsystem());
+    for (final c in input.contexts) {
+      subsystem.addMappingContext(c.context, priority: c.priority);
+    }
+    final actions = input.actions.values.toList();
+    final doc = thirdPersonCharacterBlueprint(inputActions: actions);
+    doc.components.add(LuminaBlueprintComponent(
+      id: 'mesh',
+      name: 'Mesh',
+      type: 'LuminaSkeletalMeshComponent',
+      parentId: 'capsule',
+      properties: {
+        'location': [0.0, 0.0, -LuminaTemplateCharacterTuning.thirdPersonCapsuleHalfHeight],
+        'rotation': [0.0, 0.0, 180.0],
+        'skeletalMeshAsset': LuminaThirdPersonContent.bundledMeshPath,
+      },
+    ));
+    final context = LuminaBlueprintTypeContext.forDocument(doc, inputActions: actions, className: 'BP_Aimer');
+    doc.eventGraph.nodes.add(LuminaBlueprintNodeLibrary.place('line_trace_forward',
+        nodeId: 'aim_trace', literals: {'distance': 1000.0, 'channel': 'Visibility', 'draw_debug': true}, context: context));
+    final tick = _templateTickTail(doc);
+    doc.eventGraph.wires.add(LuminaBlueprintWire(id: 'aim_w0', fromNodeId: tick.node, fromPinId: tick.pin, toNodeId: 'aim_trace', toPinId: 'exec_in'));
+    final cls = LuminaBlueprintClass.fromDocument(doc, name: 'BP_Aimer', inputActions: actions, assetProvider: (path) => File(path).readAsBytes());
+    expect(cls.diagnostics.where((d) => d.isError), isEmpty, reason: '${cls.diagnostics}');
+
+    // Barrels ahead (+Y authoring) for scale: the downward trace lands before them.
+    final start = LuminaAxes.toAuthoringLocation(yard.start);
+    final barrels = <LuminaStaticMeshComponent>[];
+    for (final offset in const [[-220.0, 900.0], [0.0, 1000.0], [220.0, 900.0]]) {
+      final mesh = LuminaStaticMeshComponent(meshAssetPath: barrel);
+      barrels.add(mesh);
+      world.persistentLevel.registerActor(LuminaActor(root: mesh, location: LuminaAxes.location([start[0] + offset[0], start[1] + offset[1], 0.0])));
+    }
+    final character = cls.instantiate(location: yard.start.clone()) as LuminaBlueprintCharacter;
+    final pc = LuminaPlayerController();
+    world.persistentLevel.registerActor(character);
+    pc.possess(character);
+    world.beginPlay();
+    await (character.blueprintComponents['mesh'] as LuminaAnimatedMeshComponent).loaded.timeout(const Duration(seconds: 60));
+    for (final b in barrels) {
+      await b.loaded.timeout(const Duration(seconds: 60));
+    }
+    // The debug segment as a thin red bar, re-aimed every frame.
+    final bar = LuminaStaticMeshComponent(
+      meshAssetPath: 'smoke-blueprint:aim-bar',
+      assetUnitScale: 1.0,
+      castShadows: false,
+      assetProvider: (_) async => PrimitiveGlbFactory.build(shape: 'box', sizeX: 8.0, sizeY: 8.0, sizeZ: 1.0, colorHex: '#FF2222'),
+    );
+    final barActor = LuminaActor(root: bar);
+    world.persistentLevel.registerActor(barActor);
+    await bar.loaded.timeout(const Duration(seconds: 60));
+
+    final follow = character.blueprintComponents['camera'] as LuminaCameraComponent;
+    ({Vector3 from, Vector3 to}) segment() {
+      final lines = world.debugShapes.where((s) => s.kind == LuminaDebugShapeKind.line).toList();
+      return (from: lines.first.points.first.clone(), to: lines.last.points.last.clone());
+    }
+
+    /// The trace seen from the character's right, 11 m out, so the PNG shows
+    /// the segment's slope (from behind it hides behind the head).
+    Uint8List sideView(({double camera, double trace, Vector3 from, Vector3 to}) a) {
+      final middle = (a.from + a.to) * 0.5;
+      // Never below the eyes: looking down, the segment runs on under the floor.
+      final eye = LuminaCameraComponent(location: Vector3(middle.x + 1100.0, math.max(middle.y, a.from.y), middle.z));
+      return yard.capture(eye, middle);
+    }
+
+    /// Up (runtime +Y) components of the camera's view and of the traced segment.
+    ({double camera, double trace, Vector3 from, Vector3 to}) aim() {
+      final s = segment();
+      final view = follow.worldRotation.rotateVector(Vector3(0, 0, -1));
+      return (camera: view.y, trace: (s.to - s.from).normalized().y, from: s.from, to: s.to);
+    }
+
+    const sens = LuminaTemplateCharacterTuning.lookSensitivity;
+    // 12 s at 30 Hz: level for 1 s, mouse up 2 s (to +35°), hold, mouse down
+    // 4 s (to −30°), hold.
+    final video = SmokeVideoRecorder(width: _w, height: _h, fps: 30, testName: name);
+    addTearDown(video.discard);
+    late ({double camera, double trace, Vector3 from, Vector3 to}) up;
+    late ({double camera, double trace, Vector3 from, Vector3 to}) down;
+    for (var frame = 0; frame < 360; frame++) {
+      // Screen Y grows downward: moving the mouse up is a negative delta.
+      if (frame >= 30 && frame < 90) subsystem.injectAnalog(LuminaKey.mouseY, -35.0 / (60 * sens));
+      if (frame >= 150 && frame < 270) subsystem.injectAnalog(LuminaKey.mouseY, 65.0 / (120 * sens));
+      pc.onTick(1 / 30);
+      world.tick(1 / 30);
+      final s = segment();
+      final d = s.to - s.from;
+      barActor.actorLocation = s.from + d * 0.5;
+      barActor.actorRotation = Quaternion.fromTwoVectors(Vector3(0.0, 0.0, 1.0), d.normalized());
+      barActor.rootComponent.relativeScale = Vector3(1.0, 1.0, d.length);
+      final png = yard.captureView();
+      video.addFrame(png);
+      if (frame == 140) {
+        up = aim();
+        expect(pc.controlRotation.x, closeTo(35.0, 1e-6), reason: 'mouse up raises the control pitch');
+        SmokeArtifacts.saveScreenshot('$name 01 looking up', SmokeArtifacts.encodePng(_w, _h, png),
+            usedAssets: [LuminaThirdPersonContent.bundledMeshPath, barrel], metrics: {'cameraUp': up.camera, 'traceUp': up.trace});
+        SmokeArtifacts.saveScreenshot('$name 01 looking up, side view', SmokeArtifacts.encodePng(_w, _h, sideView(up)),
+            usedAssets: [LuminaThirdPersonContent.bundledMeshPath, barrel], metrics: {'cameraUp': up.camera, 'traceUp': up.trace});
+      }
+      if (frame == 350) {
+        down = aim();
+        expect(pc.controlRotation.x, closeTo(-30.0, 1e-6), reason: 'mouse down lowers the control pitch');
+        SmokeArtifacts.saveScreenshot('$name 02 looking down', SmokeArtifacts.encodePng(_w, _h, png),
+            usedAssets: [LuminaThirdPersonContent.bundledMeshPath, barrel], metrics: {'cameraUp': down.camera, 'traceUp': down.trace});
+        SmokeArtifacts.saveScreenshot('$name 02 looking down, side view', SmokeArtifacts.encodePng(_w, _h, sideView(down)),
+            usedAssets: [LuminaThirdPersonContent.bundledMeshPath, barrel], metrics: {'cameraUp': down.camera, 'traceUp': down.trace});
+      }
+    }
+    expect(up.camera, closeTo(math.sin(35 * math.pi / 180), 0.02), reason: 'the camera looks 35° up');
+    expect(up.trace, closeTo(up.camera, 5e-3), reason: 'the trace climbs with the camera: ${up.from} → ${up.to}');
+    expect(down.camera, closeTo(-math.sin(30 * math.pi / 180), 0.02), reason: 'the camera looks 30° down');
+    expect(down.trace, closeTo(down.camera, 5e-3), reason: 'the trace dips with the camera: ${down.from} → ${down.to}');
+    SmokeArtifacts.saveScreenshot(name, SmokeArtifacts.encodePng(_w, _h, yard.captureView()),
+        usedAssets: [LuminaThirdPersonContent.bundledMeshPath, barrel]);
+    SmokeArtifacts.saveVideo(name, video.finish(), usedAssets: [LuminaThirdPersonContent.bundledMeshPath, barrel]);
+  }, timeout: const Timeout(Duration(minutes: 5)));
+
   // Two Blueprints loaded from .lmas files in a temp project
   // through the class registry. BP_Door sets a one-shot timer that plays a
   // Timeline swinging the barrel over 90° and, when it finishes, calls its

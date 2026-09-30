@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:vector_math/vector_math_64.dart';
 
+import '../components/camera/camera_math.dart';
+
 /// Rotating vectors the way Lumina means a rotation.
 ///
 /// A rotation quaternion `q` on a component, an actor or a control rotation
@@ -46,37 +48,16 @@ Quaternion luminaEulerListToQuaternion(List<num>? euler) {
 /// The pawn's actor-rotation convention: runtime Euler degrees (pitch X,
 /// yaw Y, roll Z) to the quaternion `LuminaPawn.faceRotation` gives the actor.
 ///
-/// Positive yaw turns right: the rotation's `forwardVector` (the drawn −Z) is
-/// `(sin yaw, 0, −cos yaw)`, the direction `LuminaTemplateCharacter.onMove`
-/// walks. It is the conjugate of `Quaternion.euler(yaw, pitch, roll)`: earlier
-/// the engine read directions through `Quaternion.rotate` (the
-/// inverse rotation) and built this quaternion without the conjugate; keeping
-/// the conjugate here keeps every direction a control rotation produced —
-/// pitch and roll included — exactly what it was, now drawn that way too.
-/// The Blueprint function library uses the same pair, so a Blueprint's Get
-/// Forward Vector is the pawn's own forward. (The spring arm's camera uses
-/// `luminaControlRotationToQuaternion`, which tilts pitch about the camera's
-/// own right axis.)
-Quaternion luminaPawnEulerToQuaternion(double pitchDeg, double yawDeg, double rollDeg) {
-  const d2r = math.pi / 180.0;
-  return Quaternion.euler(yawDeg * d2r, pitchDeg * d2r, rollDeg * d2r)..conjugate();
-}
+/// It is the control-rotation convention ([luminaControlRotationToQuaternion],
+/// what the spring arm and the player camera manager build the view from), so
+/// the camera, the pawn and a Blueprint's Get Forward Vector of the control
+/// rotation always agree: positive yaw turns right, positive pitch looks up
+/// (about the view's own right axis, whatever the yaw); the forward (drawn −Z)
+/// is `(cos p·sin y, sin p, −cos p·cos y)`, the direction
+/// `LuminaTemplateCharacter.onMove` walks at pitch 0.
+Quaternion luminaPawnEulerToQuaternion(double pitchDeg, double yawDeg, double rollDeg) =>
+    luminaControlRotationToQuaternion(pitchDeg, yawDeg, rollDeg);
 
 /// The inverse of [luminaPawnEulerToQuaternion]: runtime Euler degrees
 /// (pitch X, yaw Y, roll Z).
-Vector3 luminaPawnQuaternionToEuler(Quaternion q) {
-  const r2d = 180.0 / math.pi;
-  // Undo the conjugate, then decompose Ry(yaw)·Rx(pitch)·Rz(roll).
-  final m = q.conjugated().asRotationMatrix();
-  final pitchRad = math.asin((-m.entry(1, 2)).clamp(-1.0, 1.0));
-  double yawRad;
-  double rollRad;
-  if (math.cos(pitchRad).abs() > 1e-6) {
-    rollRad = math.atan2(m.entry(1, 0), m.entry(1, 1));
-    yawRad = math.atan2(m.entry(0, 2), m.entry(2, 2));
-  } else {
-    rollRad = 0.0;
-    yawRad = math.atan2(-m.entry(2, 0), m.entry(0, 0));
-  }
-  return Vector3(pitchRad * r2d, yawRad * r2d, rollRad * r2d);
-}
+Vector3 luminaPawnQuaternionToEuler(Quaternion q) => luminaQuaternionToControlRotation(q);

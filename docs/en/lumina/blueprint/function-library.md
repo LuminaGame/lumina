@@ -328,7 +328,7 @@ Vectors and rotators are **authoring space** (cm, Z up; rotators about X/Y/Z lik
 | `rotatorLerp` | `static const rotatorLerp` | Lerps each axis along the shortest path. |
 | `rotatorInterpTo` | `static const rotatorInterpTo` |  |
 | `findLookAtRotation` | `static const findLookAtRotation` | The rotator whose forward ([getForwardVector]) points from [start] to [target], so a Set Actor Rotation from it faces the target: yaw 0 faces +Y (authoring), yaw 90 faces +X; no roll. |
-| `makeRotFromX` | `static const makeRotFromX` | The rotator whose forward is [x] (see [findLookAtRotation]). The pawn's forward for (pitch p, yaw y) is `(sin y, cos y·cos p, −cos y·sin p)` (`luminaPawnEulerToQuaternion`: pitch turns about the authoring X axis, positive pitch looks down), which this inverts exactly. |
+| `makeRotFromX` | `static const makeRotFromX` | The rotator whose forward is [x] (see [findLookAtRotation]). The forward for (pitch p, yaw y) is `(cos p·sin y, cos p·cos y, sin p)` (`luminaPawnEulerToQuaternion`: positive pitch looks up, about the view's own right axis), which this inverts exactly. |
 | `rotatorEqual` | `static const rotatorEqual` |  |
 | `rotatorToVector` | `static const rotatorToVector` | The forward direction of [inRot]. |
 | `makeTransform` | `static const makeTransform` |  |
