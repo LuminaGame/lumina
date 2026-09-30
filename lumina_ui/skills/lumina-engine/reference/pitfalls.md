@@ -7,7 +7,8 @@ Lessons from real sessions where a model lost many rounds. Each line: what goes 
 - Guessing node ids, pin ids or class strings → read them: `list_blueprint_nodes` (`query`), `get_blueprint`,
   the node `add_blueprint_node` returns. Pin ids vary (`exec_tick_out`, `exec_move_in`, `then_0`, `true_out`).
 - Reasoning about rotation signs in your head → place, then look (`viewport_screenshot`, or a play-test
-  screenshot). Forward is +Y at yaw 0; yaw 90 faces +X.
+  screenshot). Forward is +Y at yaw 0; yaw 90 faces +X; positive pitch looks up. Rotations are `[pitch, roll,
+  yaw]`: a yaw put in index 1 rolls the object instead.
 - Editing `.lmas` files or generated Dart with the file tools → use the editor tools; generated code is
   overwritten.
 

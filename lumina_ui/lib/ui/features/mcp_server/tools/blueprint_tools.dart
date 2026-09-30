@@ -12,6 +12,7 @@ import '../services/mcp_protocol.dart';
 import '../services/mcp_tool.dart';
 import 'blueprint_tool_support.dart';
 import 'graph_json.dart';
+import 'rotation_convention.dart';
 
 /// The Blueprint editor as MCP tools: the node library,
 /// a Blueprint's components, members and graphs (the event graph, function
@@ -233,7 +234,7 @@ void registerBlueprintTools(McpToolRegistry registry, EditorViewModel vm, McpEdi
       idempotent: true,
       title: 'Set Blueprint pin literal',
       description: 'Sets the literal value of an unconnected input pin (one undo step): a string, number, boolean, '
-          'or [x, y, z] for a vector / rotator pin.',
+          '[x, y, z] for a vector pin, or a rotator pin\'s $kMcpRotationConvention.',
       inputSchema: McpSchema.object({
         'asset': assetArg,
         'graph': graphArg,

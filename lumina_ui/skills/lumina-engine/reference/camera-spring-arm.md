@@ -18,9 +18,9 @@ default; activating one deactivates the pawn's others). A pawn without a camera 
   controller's rotation (`add_controller_yaw_input` / `add_controller_pitch_input` from the look action). A new
   Character Blueprint's `CameraBoom` already has it (arm length 400).
 - **Fixed follow camera** (side-scroller, runner, top-down): `usePawnControlRotation` false and a fixed relative
-  rotation on the arm with `set_blueprint_component_transform` (rotation `[x, y, z]`, index 2 = yaw): the camera
-  sits behind the arm's forward. A top-down view: pitch the arm's forward down (a positive x tilts
-  a component's forward down) and lengthen it; confirm with a play-test screenshot.
+  rotation on the arm with `set_blueprint_component_transform` (rotation `[pitch, roll, yaw]`, as for actors): the
+  camera sits behind the arm's forward. A top-down view: pitch the arm's forward down (a negative pitch, e.g.
+  `[-60, 0, 0]`) and lengthen it; confirm with a play-test screenshot.
 
 ## Control rotation and the pawn's facing
 

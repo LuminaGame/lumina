@@ -16,6 +16,7 @@ import '../services/mcp_play_testing.dart';
 import '../services/mcp_protocol.dart';
 import '../services/mcp_tool.dart';
 import 'project_settings_tools.dart' show mcpKeyNamed;
+import 'rotation_convention.dart';
 
 /// `pie_advance`'s frame limit.
 const int kMcpMaxAdvanceFrames = 600;
@@ -532,8 +533,8 @@ void registerPlayTestingTools(
       groups: pie,
       title: 'Runtime actors',
       description: 'The actors of the running game\'s level: {id (the editor actor id, null for spawned ones), class '
-          '(the Blueprint class or the native class), native_class, name, location (cm, Z up), rotation (degrees), '
-          'velocity (cm/s, characters), is_possessed_pawn}.',
+          '(the Blueprint class or the native class), native_class, name, location (cm, Z up), rotation '
+          '($kMcpRotationConvention), velocity (cm/s, characters), is_possessed_pawn}.',
       inputSchema: McpSchema.object({
         'ids': McpSchema.stringArray('Only these editor actor ids.'),
         'class_contains': McpSchema.string('Only classes containing this (case-insensitive).'),

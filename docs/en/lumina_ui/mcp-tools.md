@@ -2,7 +2,7 @@
 
 # MCP tool catalogue
 
-The tools the editor's MCP server offers, grouped by the file that registers them: each area's registration function and its tools with their name, risk level, title and a one-line description. File paths are relative to the `lumina_ui/` package directory.
+The tools the editor's MCP server offers, grouped by the file that registers them: each area's registration function and its tools with their name, risk level, title and a one-line description. File paths are relative to the `lumina_ui/` package directory. Every `rotation` argument and result of a level actor, a multi-selection, a Blueprint component, a rotator pin or `pie_get_actors` is `[pitch, roll, yaw]` in degrees about X, Y, Z (yaw 90 faces +X, positive pitch looks up; see `rotation_convention.dart`); socket rotations are bone-space `[x, y, z]`.
 
 ## `lib/ui/features/mcp_server/tools/anim_blueprint_tools.dart`
 
@@ -767,7 +767,7 @@ A failing step (for example an action the project does not bind) ends the sequen
 
 `List<double> mcpAuthoringRotation(Quaternion q)`
 
-Authoring degrees `[x, y, z]` of a runtime rotation (the inverse of [LuminaAxes.rotation]).
+Authoring degrees `[pitch, roll, yaw]` of a runtime rotation (the inverse of [LuminaAxes.rotation]); the values Get Actor Rotation reads.
 
 `McpToolResult? mcpPieRefusal(EditorViewModel vm)`
 
@@ -793,7 +793,7 @@ Play-testing tools (group `pie`): keys, axes, mouse and input actions into the r
 | `pie_type_text` | editorState | Type into a Play text field | Types text into the focused text field of the game's UMG widgets (click it with pie_click first), at its cursor; submit: true then commits it (Enter: the field's On Text Committed). |
 | `pie_advance` | editorState | Advance Play by frames | Frame-exact play-testing: pauses the game if it runs and advances it by frames (1..…) of dt seconds (default 1/60). With `screenshot: true` (here and in `pie_play_for`) the level viewport is brought to the front when a sub-editor tab hides it, and the PNG is taken after its next frames. |
 | `pie_play_for` | editorState | Play for a while | Resumes the game, lets the viewport run it for ms of wall-clock time (≤ …), and pauses it again (unless pause_after: false). |
-| `pie_get_actors` | readOnly | Runtime actors | The actors of the running game's level: {id (the editor actor id, null for spawned ones), class (the Blueprint class or the native class), native_class, name, location (cm, Z up), rotation (degrees), velocity (cm/s, char... |
+| `pie_get_actors` | readOnly | Runtime actors | The actors of the running game's level: {id (the editor actor id, null for spawned ones), class (the Blueprint class or the native class), native_class, name, location (cm, Z up), rotation ([pitch, roll, yaw] in degrees about X, Y, Z, as the Details panel shows it: yaw 0 faces +Y, positive yaw tu... |
 
 ## `lib/ui/features/mcp_server/tools/play_tools.dart`
 
@@ -865,6 +865,18 @@ Project Settings (Edit → Project Settings) as MCP tools (group `settings`): re
 | `apply_project_settings` | mutating | Apply & Save Project Settings | The Project Settings tab's Apply & Save: validates every category and writes the .lmproject (and the app icons / web loading screen when those changed). |
 | `revert_project_settings` | mutating | Revert Project Settings | Discards the Project Settings tab's unapplied edits and reloads the .lmproject. |
 | `set_widget_library` | external | Set UMG widget library | Switches the game's UMG widget library (shadcn \| flutter) and applies Project Settings as a job (kind project_settings_apply): pubspec.yaml changes, flutter pub get runs (network), every UMG widget is regenerated, and th... |
+
+## `lib/ui/features/mcp_server/tools/rotation_convention.dart`
+
+How the MCP tools describe a rotation, in one set of words so an agent never reads two orders for the same numbers.
+
+`const String kMcpRotationConvention`
+
+A level actor's, a multi-selection's or a Blueprint component's rotation (the Details panel, `LuminaAxes.rotation`), a Blueprint rotator pin and the play-testing reads all use this triple: `[pitch, roll, yaw] in degrees about X, Y, Z, as the Details panel shows it: yaw 0 faces +Y, positive yaw turns right (yaw 90 faces +X), positive pitch looks up, positive roll dips the left side`.
+
+`const String kMcpBoneRotationConvention`
+
+A skeletal-mesh socket's rotation is in its bone's own frame instead: `[x, y, z] in degrees about the bone's own X, Y, Z axes (applied X, then Y, then Z); bone space, not the level's [pitch, roll, yaw]`.
 
 ## `lib/ui/features/mcp_server/tools/selection_tools.dart`
 

@@ -5,6 +5,7 @@ import '../services/mcp_protocol.dart';
 import '../services/mcp_tool.dart';
 import 'blueprint_tool_support.dart' show mcpRefuseWhilePlaying;
 import 'core_tools.dart' show mcpUndoState;
+import 'rotation_convention.dart';
 
 /// The multi-select Details panel as MCP tools: several
 /// actors selected and edited at once — shared transform rows (absolute, or
@@ -117,7 +118,7 @@ void registerDetailsTools(McpToolRegistry registry, EditorViewModel vm) {
       inputSchema: McpSchema.object({
         'ids': McpSchema.stringArray('The actor ids.'),
         'location': McpSchema.vector3('[x, y, z] in cm.'),
-        'rotation': McpSchema.vector3('[roll, pitch, yaw] in degrees.'),
+        'rotation': McpSchema.vector3('Rotation $kMcpRotationConvention.'),
         'scale': McpSchema.vector3('[x, y, z] factors.'),
         'relative': McpSchema.boolean('Add the values to each actor\'s own instead of setting them. Default false.'),
         'axis': McpSchema.integer('Only this axis (0, 1 or 2) of the vectors given.'),

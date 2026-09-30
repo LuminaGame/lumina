@@ -39,7 +39,7 @@ Full argument shapes: `reference/tools.md`. Ready-made call sequences: `referenc
 
 ## 4. Units and axes
 
-The editor's authoring space, exactly as the Details panel shows it: **centimetres**, **degrees**, **Z up**. `location: [x, y, z]` cm; `rotation: [roll, pitch, yaw]` degrees about X, Y, Z (index 2, about Z, is the yaw; at rotation 0 an actor faces +Y, yaw 90 faces +X: `get_lumina_guide {topic: "levels-actors-transforms"}`); `scale: [x, y, z]` factors. A glTF metre model is drawn ×100, so a 1 m barrel spans ~100 cm at scale 1. Camera distance is cm; camera `target` is the orbit pivot in the same space.
+The editor's authoring space, exactly as the Details panel shows it: **centimetres**, **degrees**, **Z up**. `location: [x, y, z]` cm; `rotation: [pitch, roll, yaw]` degrees about X, Y, Z, for level actors and Blueprint components alike (at rotation 0 an actor faces +Y; positive yaw turns right, yaw 90 faces +X; positive pitch looks up: `get_lumina_guide {topic: "levels-actors-transforms"}`); `scale: [x, y, z]` factors. A glTF metre model is drawn ×100, so a 1 m barrel spans ~100 cm at scale 1. Camera distance is cm; camera `target` is the orbit pivot in the same space.
 
 ## 5. Tool catalogue (48 tools, by area)
 

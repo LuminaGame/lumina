@@ -1,6 +1,6 @@
 # lumina-mcp — tool reference
 
-Argument shapes as `tools/list` declares them (`inputSchema`, `additionalProperties: false`). Units: cm, degrees, Z up. `?` = optional. Every tool returns pretty-printed JSON text plus `structuredContent`; `isError: true` marks a refusal whose text says what to change.
+Argument shapes as `tools/list` declares them (`inputSchema`, `additionalProperties: false`). Units: cm, degrees, Z up. Every `rotation` (level actors, `set_actors_transform`, `set_blueprint_component_transform`, rotator pins, `pie_get_actors`) is `[pitch, roll, yaw]` in degrees about X, Y, Z, as the Details panel shows it: yaw 0 faces +Y, positive yaw turns right (yaw 90 faces +X), positive pitch looks up, positive roll dips the left side; socket rotations are bone-space `[x, y, z]`. `?` = optional. Every tool returns pretty-printed JSON text plus `structuredContent`; `isError: true` marks a refusal whose text says what to change.
 
 ## Project & level
 

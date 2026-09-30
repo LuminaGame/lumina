@@ -10,7 +10,7 @@
   (new ones: 50 000); `attenuationRadius` in cm (1000 by default: the light reaches 10 m); cone angles in
   degrees (inner 30, outer 45).
 - A light shines along its forward axis (+Y at rotation 0). To aim a spot or directional light down, give it a
-  positive pitch (rotation index 0); yaw (index 2) turns it around Z.
+  negative pitch (rotation index 0; -90 is straight down, a sun about -50); yaw (index 2) turns it around Z.
 - Point and spot lights cast no shadows unless `cast_shadows` is on (the directional light's is on).
 
 ## Sky, sun, fog, exposure

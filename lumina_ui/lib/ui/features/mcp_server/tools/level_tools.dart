@@ -7,6 +7,7 @@ import '../services/mcp_tool.dart';
 import 'core_tools.dart' show mcpUndoState;
 import 'package:lumina/data/services/dart_identifiers.dart';
 import 'package:lumina/lumina.dart' show AssetType, LuminaLevelActorMaterial;
+import 'rotation_convention.dart';
 
 /// The project and level tools: what the Outliner, the
 /// Details panel and the Edit menu let a user do, as MCP tools over the real
@@ -134,7 +135,7 @@ void registerLevelTools(McpToolRegistry registry, EditorViewModel vm) {
         'type': McpSchema.string('The type id, e.g. "Primitive" (a cube), "PointLight", "DirectionalLight", "PlayerStart".'),
         'name': McpSchema.string('A name for the actor; a name already used by a sibling is refused.'),
         'location': McpSchema.vector3('[x, y, z] in centimetres, Z up. Default [0, 0, 0].'),
-        'rotation': McpSchema.vector3('[roll, pitch, yaw] in degrees about X, Y, Z. Default [0, 0, 0].'),
+        'rotation': McpSchema.vector3('Rotation $kMcpRotationConvention. Default [0, 0, 0].'),
         'scale': McpSchema.vector3('[x, y, z] scale factors. Default [1, 1, 1].'),
         'parent_id': McpSchema.string('The id of a Folder or actor to place it under.'),
       }, required: ['type']),
@@ -223,7 +224,7 @@ void registerLevelTools(McpToolRegistry registry, EditorViewModel vm) {
       inputSchema: McpSchema.object({
         'id': McpSchema.string('The actor id.'),
         'location': McpSchema.vector3('[x, y, z] in centimetres, Z up.'),
-        'rotation': McpSchema.vector3('[roll, pitch, yaw] in degrees about X, Y, Z.'),
+        'rotation': McpSchema.vector3('Rotation $kMcpRotationConvention.'),
         'scale': McpSchema.vector3('[x, y, z] scale factors.'),
       }, required: ['id']),
       handler: (args) {

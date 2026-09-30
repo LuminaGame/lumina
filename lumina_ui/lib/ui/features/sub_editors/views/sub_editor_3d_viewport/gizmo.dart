@@ -235,8 +235,8 @@ mixin _SubEditor3DViewportGizmo on _SubEditor3DViewportStateBase {
         return 'ΔX ${signed(t.x, 1)}  ΔY ${signed(t.y, 1)}  ΔZ ${signed(t.z, 1)} cm';
       case GizmoMode.rotate:
         final name = switch (handle) {
-          TransformGizmoModel.axisX => 'Roll',
-          TransformGizmoModel.axisY => 'Pitch',
+          TransformGizmoModel.axisX => 'Pitch',
+          TransformGizmoModel.axisY => 'Roll',
           _ => 'Yaw',
         };
         return 'Δ $name ${signed(degrees ?? 0.0, 1)}°';

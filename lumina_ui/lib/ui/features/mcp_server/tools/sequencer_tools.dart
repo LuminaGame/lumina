@@ -9,6 +9,7 @@ import '../services/mcp_jobs.dart';
 import '../services/mcp_protocol.dart';
 import '../services/mcp_tool.dart';
 import 'core_tools.dart' show mcpUndoState;
+import 'rotation_convention.dart';
 
 /// The job key one movie render holds.
 const String kMcpMovieRender = 'movie_render';
@@ -21,8 +22,9 @@ const String kMcpMovieRender = 'movie_render';
 /// tab's `SequencerViewModel`, one `MCP: …` step on its stack.
 void registerSequencerTools(McpToolRegistry registry, EditorViewModel vm, McpEditorSessions sessions, McpJobRegistry jobs) {
   const groups = {McpToolGroups.sequencer};
-  const units = 'Transform channels carry the level\'s authoring units: Location in cm (Z up), Rotation in degrees, '
-      'Scale factors, as the Details panel shows them. Frames are sequence frames at its fps.';
+  const units = 'Transform channels carry the level\'s authoring units: Location in cm (Z up), Rotation .X/.Y/.Z '
+      'as the level\'s $kMcpRotationConvention, Scale factors, as the Details panel shows them. Frames are sequence '
+      'frames at its fps.';
   const scrubNote = 'Scrubbing writes the evaluated keys onto the bound level actors as a preview: it records no level '
       'undo step and does not dirty the level; stop_sequence (or closing the tab) puts the actors back. Never take a '
       'scrubbed position for an authored one, and never save_level mid-scrub.';

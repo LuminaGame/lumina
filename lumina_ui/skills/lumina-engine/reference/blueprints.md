@@ -58,8 +58,8 @@ node's `interface` + `function`, a dispatcher node's `dispatcher`.
 - Components: `add_blueprint_component` with a type from `list_component_types` (e.g.
   `LuminaStaticMeshComponent`, `LuminaPointLightComponent`, `LuminaSpringArmComponent`), `parent`;
   `set_blueprint_component_property` (property by field name, e.g. `staticMeshAsset`, `materialOverride`,
-  `targetArmLength`); `set_blueprint_component_transform` (relative location, rotation as for actors: index 2 is
-  yaw, scale); `set_blueprint_class_default` (a GameMode's `defaultPawnClass`).
+  `targetArmLength`); `set_blueprint_component_transform` (relative location, rotation `[pitch, roll, yaw]` as for
+  actors, scale); `set_blueprint_class_default` (a GameMode's `defaultPawnClass`).
 
 ## Where it runs
 

@@ -2,7 +2,7 @@
 
 # MCP araç kataloğu
 
-Editörün MCP sunucusunun sunduğu araçlar, onları kaydeden dosyaya göre gruplanmış: her alanın kayıt fonksiyonu ve araçlarının adı, risk seviyesi, başlığı ve tek satırlık açıklaması. Dosya yolları `lumina_ui/` paket dizinine görelidir.
+Editörün MCP sunucusunun sunduğu araçlar, onları kaydeden dosyaya göre gruplanmış: her alanın kayıt fonksiyonu ve araçlarının adı, risk seviyesi, başlığı ve tek satırlık açıklaması. Dosya yolları `lumina_ui/` paket dizinine görelidir. Bir level aktörünün, çoklu seçimin, Blueprint bileşeninin, bir rotator pininin veya `pie_get_actors`'ın her `rotation` argümanı ve sonucu X, Y, Z eksenleri etrafında derece cinsinden `[pitch, roll, yaw]`'dır (yaw 90 +X'e bakar, pozitif pitch yukarı bakar; bkz. `rotation_convention.dart`); soket dönüşleri kemik uzayında `[x, y, z]`'dir.
 
 ## `lib/ui/features/mcp_server/tools/anim_blueprint_tools.dart`
 
@@ -767,7 +767,7 @@ Başarısız bir adım (örneğin projenin bağlamadığı bir action) diziyi bi
 
 `List<double> mcpAuthoringRotation(Quaternion q)`
 
-Authoring degrees `[x, y, z]` of a runtime rotation (the inverse of [LuminaAxes.rotation]).
+Authoring degrees `[pitch, roll, yaw]` of a runtime rotation (the inverse of [LuminaAxes.rotation]); the values Get Actor Rotation reads.
 
 `McpToolResult? mcpPieRefusal(EditorViewModel vm)`
 
@@ -793,7 +793,7 @@ Play-testing tools (group `pie`): keys, axes, mouse and input actions into the r
 | `pie_type_text` | editorState | Type into a Play text field | Types text into the focused text field of the game's UMG widgets (click it with pie_click first), at its cursor; submit: true then commits it (Enter: the field's On Text Committed). |
 | `pie_advance` | editorState | Advance Play by frames | Frame-exact play-testing: pauses the game if it runs and advances it by frames (1..…) of dt seconds (default 1/60). With `screenshot: true` (here and in `pie_play_for`) the level viewport is brought to the front when a sub-editor tab hides it, and the PNG is taken after its next frames. |
 | `pie_play_for` | editorState | Play for a while | Resumes the game, lets the viewport run it for ms of wall-clock time (≤ …), and pauses it again (unless pause_after: false). |
-| `pie_get_actors` | readOnly | Runtime actors | The actors of the running game's level: {id (the editor actor id, null for spawned ones), class (the Blueprint class or the native class), native_class, name, location (cm, Z up), rotation (degrees), velocity (cm/s, char... |
+| `pie_get_actors` | readOnly | Runtime actors | The actors of the running game's level: {id (the editor actor id, null for spawned ones), class (the Blueprint class or the native class), native_class, name, location (cm, Z up), rotation ([pitch, roll, yaw] in degrees about X, Y, Z, as the Details panel shows it: yaw 0 faces +Y, positive yaw tu... |
 
 ## `lib/ui/features/mcp_server/tools/play_tools.dart`
 
@@ -865,6 +865,18 @@ Project Settings (Edit → Project Settings) as MCP tools (group `settings`): re
 | `apply_project_settings` | mutating | Apply & Save Project Settings | The Project Settings tab's Apply & Save: validates every category and writes the .lmproject (and the app icons / web loading screen when those changed). |
 | `revert_project_settings` | mutating | Revert Project Settings | Discards the Project Settings tab's unapplied edits and reloads the .lmproject. |
 | `set_widget_library` | external | Set UMG widget library | Switches the game's UMG widget library (shadcn \| flutter) and applies Project Settings as a job (kind project_settings_apply): pubspec.yaml changes, flutter pub get runs (network), every UMG widget is regenerated, and th... |
+
+## `lib/ui/features/mcp_server/tools/rotation_convention.dart`
+
+MCP araçlarının bir dönüşü tarif ettiği tek ifade; böylece bir ajan aynı sayılar için iki farklı sıra okumaz.
+
+`const String kMcpRotationConvention`
+
+Bir level aktörünün, çoklu seçimin veya Blueprint bileşeninin dönüşü (Details paneli, `LuminaAxes.rotation`), bir Blueprint rotator pini ve play-testing okumaları hep bu üçlüyü kullanır: `[pitch, roll, yaw] in degrees about X, Y, Z, as the Details panel shows it: yaw 0 faces +Y, positive yaw turns right (yaw 90 faces +X), positive pitch looks up, positive roll dips the left side`.
+
+`const String kMcpBoneRotationConvention`
+
+Bir skeletal mesh soketinin dönüşü ise kendi kemiğinin çerçevesindedir: `[x, y, z] in degrees about the bone's own X, Y, Z axes (applied X, then Y, then Z); bone space, not the level's [pitch, roll, yaw]`.
 
 ## `lib/ui/features/mcp_server/tools/selection_tools.dart`
 

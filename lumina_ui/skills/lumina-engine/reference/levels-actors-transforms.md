@@ -5,13 +5,15 @@
 - 1 unit = **1 cm** (gravity 980 cm/s²), angles in **degrees**, **Z up**. glTF files are in metres; the importer
   converts them.
 - A transform is `location [x, y, z]`, `rotation [x, y, z]`, `scale [x, y, z]`, as the Details panel shows it.
-- **Rotation** `[x, y, z]` = degrees about the X, Y and Z axes, applied **yaw (about Z) first, then about X, then
-  about Y**. Index 2 is **yaw**. Index 0 turns about X, the right axis (pitch); index 1 about Y, the forward axis
-  (roll). Some tool descriptions name the three differently; the axes are what count.
+- **Rotation** is `[pitch, roll, yaw]` in degrees about X, Y, Z (the Details panel's X, Y, Z), applied **yaw
+  first, then pitch, then roll**: index 0 turns about X, the right axis (pitch); index 1 about Y, the forward axis
+  (roll); index 2 about Z (**yaw**). Level actors, Blueprint components (`set_blueprint_component_transform`),
+  Blueprint rotator pins and Get / Set Actor Rotation all use this triple; only socket rotations are bone-space
+  `[x, y, z]`.
 - **Forward**: at rotation 0 an actor faces **+Y**; right is +X, up is +Z.
-  - yaw 0 → faces +Y, yaw 90 → +X, yaw -90 → -X, yaw 180 → -Y.
-  - a positive x rotation (pitch) of an actor or component tilts its forward down (x = 30: forward points 30° below
-    the horizon).
+  - positive yaw turns right: yaw 0 → faces +Y, yaw 90 → +X, yaw -90 → -X, yaw 180 → -Y.
+  - positive pitch looks up (pitch 30: forward points 30° above the horizon; -90 straight down).
+  - positive roll dips the left side (the up vector leans to -X).
 - Scale 1 is the asset's own size; a `Primitive` shape's size is its component's `sizeX` / `sizeY` / `sizeZ`
   times the actor scale.
 - A mesh keeps the orientation it was modelled with: if a glTF character faces the wrong way, turn the mesh (its

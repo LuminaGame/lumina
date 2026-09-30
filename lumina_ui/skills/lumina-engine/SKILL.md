@@ -10,9 +10,10 @@ on the open project through the editor's MCP tools. Every edit call is one undo 
 
 ## Rules that hold everywhere
 
-- **Units and axes**: 1 unit = 1 cm, angles in degrees, **Z is up**. A rotation is `[x, y, z]` degrees about the
-  X, Y and Z axes: x = pitch, y = roll, z = **yaw** (about Z, applied first). At rotation 0 an actor's **forward is
-  +Y** and its right is +X; yaw 90 faces +X, yaw -90 faces -X, yaw 180 faces -Y.
+- **Units and axes**: 1 unit = 1 cm, angles in degrees, **Z is up**. A rotation is `[pitch, roll, yaw]` in degrees
+  about X, Y, Z (the Details panel's X, Y, Z; yaw applied first), the same triple for level actors, Blueprint
+  components and Blueprint rotators. At rotation 0 an actor's **forward is +Y** and its right is +X; positive yaw
+  turns right (yaw 90 faces +X, yaw -90 faces -X, yaw 180 faces -Y), positive pitch looks up.
 - **Source of truth**: the `.lmas` assets under `contents/` and the `.lmproject` manifest. The Dart code in `lib/`
   is generated from them (level save, Blueprint compile); never edit `.lmas` files or generated code by hand, use
   the tools.

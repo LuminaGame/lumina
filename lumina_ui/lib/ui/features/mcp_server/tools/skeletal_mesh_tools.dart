@@ -7,6 +7,7 @@ import '../../sub_editors/view_models/skeletal_mesh_editor_view_model.dart';
 import '../services/mcp_editor_sessions.dart';
 import '../services/mcp_protocol.dart';
 import '../services/mcp_tool.dart';
+import 'rotation_convention.dart';
 
 /// The Skeletal Mesh editor as MCP tools: bones and sockets, material slots and their texture
 /// bindings, per-bone retargeting, morph-target and RigLogic preview
@@ -19,7 +20,7 @@ void registerSkeletalMeshTools(McpToolRegistry registry, EditorViewModel vm, Mcp
   const noUndo = 'The Skeletal Mesh editor has no undo stack: the edit marks the tab dirty and is reverted only by '
       'not saving (the tab\'s Discard).';
   const space = 'Socket transforms are relative to the parent bone, as the editor\'s socket fields show them: '
-      'location in the mesh\'s units, rotation [roll, pitch, yaw] in degrees, scale factors.';
+      'location in the mesh\'s units, rotation $kMcpBoneRotationConvention, scale factors.';
   const retargetOptions = ['Animation', 'Skeleton', 'AnimationScaled'];
   final assetArg = McpSchema.string('The skeletal mesh: its project-relative .lmas path (list_assets with type '
       '"filameshSk") or its file name when unique.');
@@ -208,7 +209,7 @@ void registerSkeletalMeshTools(McpToolRegistry registry, EditorViewModel vm, Mcp
         'asset': assetArg,
         'socket': socketArg,
         'location': McpSchema.vector3('[x, y, z] relative to the bone.'),
-        'rotation': McpSchema.vector3('[roll, pitch, yaw] degrees.'),
+        'rotation': McpSchema.vector3('Rotation $kMcpBoneRotationConvention.'),
         'scale': McpSchema.vector3('[x, y, z] scale factors.'),
         'preview_asset': McpSchema.string('A mesh asset to preview on the socket; "" clears it.'),
       }, required: ['asset', 'socket']),

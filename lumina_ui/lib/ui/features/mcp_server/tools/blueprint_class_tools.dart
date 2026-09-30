@@ -9,6 +9,7 @@ import '../services/mcp_protocol.dart';
 import '../services/mcp_tool.dart';
 import 'blueprint_tool_support.dart';
 import 'component_tools.dart' show mcpApplyCollision, mcpApplyPhysics;
+import 'rotation_convention.dart';
 
 /// A Blueprint class's Components panel, Class Defaults and parent class as
 /// MCP tools. Each edit is one undo step on the Blueprint
@@ -244,7 +245,8 @@ void registerBlueprintClassTools(McpToolRegistry registry, EditorViewModel vm, M
         'asset': assetArg,
         'component': componentArg,
         'location': McpSchema.vector3('Relative location [x, y, z] in cm.'),
-        'rotation': McpSchema.vector3('Relative rotation [pitch, yaw, roll] in degrees.'),
+        'rotation': McpSchema.vector3('Relative rotation $kMcpRotationConvention (the same triple as a level '
+            'actor).'),
         'scale': McpSchema.vector3('Relative scale [x, y, z].'),
       }, required: ['asset', 'component']),
       run: (args, editor) async {

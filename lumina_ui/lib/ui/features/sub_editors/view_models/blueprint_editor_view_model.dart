@@ -483,7 +483,7 @@ class BlueprintEditorViewModel extends _BlueprintEditorViewModelState
             parentId: 'root_capsule',
             properties: {
               'location': [0.0, 0.0, -90.0],
-              'rotation': [0.0, -90.0, 0.0],
+              'rotation': [0.0, 0.0, 0.0],
               'scale': [1.0, 1.0, 1.0],
               'skeletalMeshAsset': '',
               'animMode': 'Use Animation Asset',
