@@ -12,6 +12,7 @@ import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.
 import 'package:lumina_ui/ui/features/main_editor/views/details_widget.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/main_editor_view.dart';
 import 'package:lumina_ui/ui/features/mcp_server/services/mcp_tool.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/blueprint_editor_view_model.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/blueprint/blueprint_sub_editor.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/blueprint/graph_canvas.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
@@ -37,6 +38,7 @@ void main() {
   mcpDoorBlueprintScenario(binding);
   mcpFileAndCodeScenario(binding);
   mcpLevelBlockoutScenario(binding);
+  mcpSelectionScenario(binding);
 
   testWidgets('MCP Smoke: an agent places and moves a barrel, compiles a material, authors a Blueprint, screenshots and plays through the editor\'s MCP server',
       (tester) async {
@@ -339,12 +341,12 @@ void mcpRiskAndTrashScenario(IntegrationTestWidgetsFlutterBinding binding) {
         await settle(5);
       }
 
-      // --- The catalogue: 372 tools by group, each with its risk ---------------
+      // --- The catalogue: 373 tools by group, each with its risk ---------------
       await tester.runAsync(() => client.handshake(clientName: 'claude-code'));
       await openPanel();
       await reveal(const ValueKey('mcp_catalogue_header'));
       expect(tester.widget<Text>(find.byKey(const ValueKey('mcp_catalogue_header'))).data,
-          '372 tools · 69 read-only · 38 editor state · 234 edits · 24 destructive · 7 external');
+          '373 tools · 70 read-only · 38 editor state · 234 edits · 24 destructive · 7 external');
       for (final g in ['asset', 'level', 'blueprint', 'material', 'view', 'pie', 'log']) {
         await reveal(ValueKey('mcp_catalogue_group_$g'));
         await tester.tap(find.byKey(ValueKey('mcp_catalogue_group_$g')));
@@ -357,7 +359,7 @@ void mcpRiskAndTrashScenario(IntegrationTestWidgetsFlutterBinding binding) {
       await tester.runAsync(() => viewer.handshake(clientName: 'viewer'));
       final viewerTools = (await tester.runAsync(viewer.listTools))!;
       expect(viewerTools, hasLength(47));
-      debugPrint('[mcp04_smoke] a ?groups=level,view session lists ${viewerTools.length} tools (the full catalogue: 372)');
+      debugPrint('[mcp04_smoke] a ?groups=level,view session lists ${viewerTools.length} tools (the full catalogue: 373)');
 
       // --- One agent call, one undo step --------------------------------------
       vm.selectTab(0);
@@ -1029,6 +1031,150 @@ void mcpLevelBlockoutScenario(IntegrationTestWidgetsFlutterBinding binding) {
       // The agent orbits the reopened yard until the video is long enough.
       for (var i = 0; i < 60 && rec.recorded < const Duration(milliseconds: 10300); i++) {
         await ok('set_camera', {'yaw': 35.0 + 8 * (i + 1)});
+        await rec.hold(const Duration(milliseconds: 200));
+      }
+      rec.save(scenario, usedAssets: usedAssets);
+    } finally {
+      client.close();
+      await tester.runAsync(server.stop);
+      await tester.pumpWidget(const SizedBox());
+      vm.dispose();
+      try {
+        tempProjectsDir.deleteSync(recursive: true);
+      } catch (_) {}
+    }
+  }, timeout: const Timeout(Duration(minutes: 15)));
+}
+
+void mcpSelectionScenario(IntegrationTestWidgetsFlutterBinding binding) {
+  const scenario = 'MCP Smoke: an agent reads what the user selected in the level, the Content Browser and a Blueprint graph';
+  testWidgets(scenario, (tester) async {
+    final barrel = File('${SmokeArtifacts.testAssetsDir.path}/Props/Barrels/fuel_barrel_yellow.glb');
+    final aircon = File('${SmokeArtifacts.testAssetsDir.path}/Props/AC_units/roof_aircon_unit_150x150_a.glb');
+    expect(barrel.existsSync() && aircon.existsSync(), isTrue, reason: 'test-assets must hold the yellow barrel and the roof aircon');
+
+    final tempProjectsDir = Directory.systemTemp.createTempSync('lumina_smoke_mcp_sel_');
+    final pDir = Directory('${tempProjectsDir.path}/SmokeMcpSel')..createSync(recursive: true);
+    const project = LuminaProject(projectName: 'SmokeMcpSel', activeLevel: 'contents/levels/L_Main.lmas');
+    File('${pDir.path}/SmokeMcpSel.lmproject').writeAsStringSync(jsonEncode(project.toMap()));
+
+    final vm = EditorViewModel(initialProject: project, projectLocation: tempProjectsDir.path);
+    await tester.runAsync(() => vm.ensureDefaultLevelAssets());
+    for (final glb in [barrel, aircon]) {
+      await tester.runAsync(() => vm.processImportPipeline(sourceFilePath: glb.path));
+    }
+    String meshOf(String name) =>
+        vm.realAssets.firstWhere((a) => a.type == AssetType.filamesh && a.fileName.contains(name)).relativePath;
+    final barrelMesh = meshOf('fuel_barrel_yellow');
+    final airconMesh = meshOf('roof_aircon_unit_150x150_a');
+
+    final server = vm.mcpServer;
+    expect(await tester.runAsync(() => server.start(port: 0)), isTrue);
+    final client = McpTestClient(server.url!, server.token);
+
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    final boundaryKey = GlobalKey();
+    try {
+      await tester.pumpWidget(RepaintBoundary(
+        key: boundaryKey,
+        child: ShadcnApp(theme: luminaEditorTheme(), home: MainEditorView(viewModel: vm)),
+      ));
+
+      Future<void> settle([int frames = 20]) async {
+        for (var i = 0; i < frames; i++) {
+          await tester.pump(const Duration(milliseconds: 16));
+          await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 16)));
+        }
+      }
+
+      await settle(40);
+      final rec = SmokeRecorder(tester, boundary: find.byKey(boundaryKey));
+      final usedAssets = [barrel.path, aircon.path];
+
+      Future<void> shot(String name) async {
+        final png = await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey));
+        SmokeArtifacts.saveScreenshot(name, png, usedAssets: usedAssets);
+        await rec.hold(const Duration(milliseconds: 1200));
+      }
+
+      Future<Map<String, Object?>> ok(String tool, [Map<String, Object?> args = const {}]) async {
+        final reply = (await tester.runAsync(() => client.callTool(tool, args)))!;
+        await settle(12);
+        expect(reply.isError, isFalse, reason: '$tool: ${reply.text}');
+        return reply.data;
+      }
+
+      await tester.runAsync(() => client.handshake(clientName: 'claude-code'));
+
+      // --- A wall, a barrel and an aircon; two of them selected ----------------
+      String idOf(Map<String, Object?> r) => (r['actor'] as Map)['id'] as String;
+      final wallId = idOf(await ok('spawn_actor', {
+        'type': 'Primitive',
+        'name': 'Wall_North',
+        'location': [0, -150, 0],
+        'scale': [4, 0.2, 2],
+      }));
+      final barrelId = idOf(await ok('spawn_actor_from_asset', {'asset': barrelMesh, 'location': [0, 0, 0]}));
+      final airconId = idOf(await ok('spawn_actor_from_asset', {'asset': airconMesh, 'location': [0, 150, 0]}));
+      await ok('set_camera', {'distance': 700, 'pitch': 22, 'yaw': 30});
+      await ok('select_actors', {'ids': [wallId, barrelId]});
+      await settle(10);
+
+      final level = (await ok('get_selection'))['level'] as Map;
+      expect(level['count'], 2);
+      final actors = (level['actors'] as List).cast<Map>();
+      expect(actors.map((a) => a['id']), [wallId, barrelId]);
+      expect(level['primary_actor_id'], vm.primarySelectedActor!.id);
+      expect(actors.firstWhere((a) => a['id'] == wallId)['type'], 'Primitive');
+      expect(actors.firstWhere((a) => a['id'] == barrelId)['mesh_asset_path'], contains('fuel_barrel_yellow'));
+      expect(actors.every((a) => a['id'] != airconId), isTrue);
+      await shot('mcp_selection_two_actors_selected');
+
+      // --- The Content Browser: a click on the aircon's tile --------------------
+      vm.selectedFolder = airconMesh.substring(0, airconMesh.lastIndexOf('/'));
+      await settle(20);
+      final tile = find.byKey(ValueKey('asset_item_$airconMesh'));
+      expect(tile, findsOneWidget);
+      await tester.tap(tile);
+      await settle(10);
+      final browser = (await ok('get_selection'))['content_browser'] as Map;
+      expect(browser['current_folder'], vm.selectedFolder);
+      expect(browser['primary_asset'], airconMesh);
+      expect(((browser['assets'] as List).single as Map)['type'], 'filamesh');
+      await shot('mcp_selection_content_browser_asset');
+
+      // --- A Blueprint editor tab with one graph node selected -----------------
+      await ok('create_asset', {'type': 'actor', 'name': 'BP_Beacon', 'parent_class': 'LuminaActor'});
+      const bp = 'contents/blueprints/BP_Beacon.lmas';
+      await ok('open_asset_editor', {'asset': bp});
+      final added = await ok('add_blueprint_node', {'asset': bp, 'node': 'print_string', 'x': 260, 'y': 120});
+      final nodeId = (added['node'] as Map)['id'] as String;
+      await settle(30);
+      final editor = vm.editorSessionFor(vm.currentTab.id) as BlueprintEditorViewModel;
+      editor.activeGraphEditor.select(nodeId);
+      await settle(20);
+      expect(find.byType(BlueprintGraphCanvas), findsWidgets);
+      final tab = (await ok('get_selection'))['active_tab'] as Map;
+      expect(tab['kind'], 'sub_editor');
+      expect((tab['asset'] as Map)['path'], bp);
+      expect((tab['selection'] as Map)['selected_node_ids'], [nodeId]);
+      await shot('mcp_selection_blueprint_node');
+
+      // --- Back on the level: the selection is still there ---------------------
+      await ok('select_tab', {'index': 0});
+      await settle(20);
+      expect(((await ok('get_selection'))['level'] as Map)['count'], 2);
+      await shot('mcp_selection_back_on_level');
+
+      // The agent orbits the props until the video is long enough.
+      for (var i = 0; i < 60 && rec.recorded < const Duration(milliseconds: 10300); i++) {
+        await ok('set_camera', {'yaw': 30.0 + 8 * (i + 1)});
         await rec.hold(const Duration(milliseconds: 200));
       }
       rec.save(scenario, usedAssets: usedAssets);

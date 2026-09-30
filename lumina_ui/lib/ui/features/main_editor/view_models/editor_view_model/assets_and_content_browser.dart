@@ -727,6 +727,26 @@ mixin _EditorAssetsAndContentBrowser on _EditorViewModelState {
   String? get contentBrowserRevealPath => _contentBrowserRevealPath;
   int get contentBrowserRevealSerial => _contentBrowserRevealSerial;
 
+  /// The assets selected in the Content Browser: project-relative paths in
+  /// selection order. The browser widget edits this set in place as the user
+  /// clicks, Shift-clicks and Ctrl-clicks.
+  Set<String> get contentBrowserSelection => _contentBrowserSelection;
+
+  /// The Content Browser asset clicked last (the anchor of a Shift-click
+  /// range); null when nothing was clicked.
+  String? get contentBrowserPrimaryAsset => _contentBrowserPrimaryAsset;
+  set contentBrowserPrimaryAsset(String? path) => _contentBrowserPrimaryAsset = path;
+
+  /// Replaces the Content Browser selection with [paths]; the last one
+  /// becomes the primary asset.
+  void selectContentBrowserAssets(Iterable<String> paths) {
+    _contentBrowserSelection
+      ..clear()
+      ..addAll(paths);
+    _contentBrowserPrimaryAsset = _contentBrowserSelection.isEmpty ? null : _contentBrowserSelection.last;
+    notifyListeners();
+  }
+
   /// The scanned copy of [asset] (with the thumbnail rendered since a list
   /// was built), or [asset] itself.
   RealAssetInfo latestAsset(RealAssetInfo asset) =>
@@ -748,6 +768,10 @@ mixin _EditorAssetsAndContentBrowser on _EditorViewModelState {
     selectedFolder = slash > 0 ? path.substring(0, slash) : 'contents';
     _contentBrowserRevealPath = path;
     _contentBrowserRevealSerial++;
+    _contentBrowserSelection
+      ..clear()
+      ..add(path);
+    _contentBrowserPrimaryAsset = path;
     _logger.log('Browsed to $path in the Content Browser', level: 'info', source: 'ContentBrowser');
     notifyListeners();
   }

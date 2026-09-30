@@ -58,7 +58,7 @@ Exact schemas: `reference/tools.md`. Names in `tools/list` are stable.
 | Viewport & camera | `viewport_screenshot`, `select_tab`, `get_camera`, `set_camera`, `focus_actor`, `frame_level` |
 | Output Log | `read_output_log`, `clear_output_log` |
 
-Resources (`resources/read`): `lumina://project` (the `.lmproject` as JSON), `lumina://output-log` (last 500 lines).
+Resources (`resources/read`): `lumina://project` (the `.lmproject` as JSON), `lumina://output-log` (last 500 lines), `lumina://selection` (what the user has selected, as `get_selection` returns it).
 
 Identifiers you pass around: actor **ids** (`act_3`, from `list_actors`, never names); asset **project-relative paths** (`contents/meshes/fuel_barrel_red.lmas`, from `list_assets`; a bare unique file name also works); Blueprint **node ids** (`node_…`, from `get_blueprint`) versus **library ids** (`print_string`, from `list_blueprint_nodes`); **pin ids** (`exec_out`, `in_string`).
 

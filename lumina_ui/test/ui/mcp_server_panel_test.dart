@@ -185,7 +185,7 @@ void main() {
     await tester.pump();
 
     expect(tester.widget<Text>(find.byKey(const ValueKey('mcp_catalogue_header'))).data,
-        '372 tools · 69 read-only · 38 editor state · 234 edits · 24 destructive · 7 external');
+        '373 tools · 70 read-only · 38 editor state · 234 edits · 24 destructive · 7 external');
     await tester.tap(find.byKey(const ValueKey('mcp_catalogue_group_asset')));
     await tester.pump();
     expect(find.byKey(const ValueKey('mcp_catalogue_tool_delete_asset')), findsOneWidget);

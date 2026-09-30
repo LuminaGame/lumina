@@ -786,6 +786,24 @@ Project Settings (Edit → Project Settings) as MCP tools (group `settings`): re
 | `revert_project_settings` | mutating | Revert Project Settings | Discards the Project Settings tab's unapplied edits and reloads the .lmproject. |
 | `set_widget_library` | external | Set UMG widget library | Switches the game's UMG widget library (shadcn \| flutter) and applies Project Settings as a job (kind project_settings_apply): pubspec.yaml changes, flutter pub get runs (network), every UMG widget is regenerated, and th... |
 
+## `lib/ui/features/mcp_server/tools/selection_tools.dart`
+
+`void registerSelectionTools(McpToolRegistry registry, EditorViewModel vm)`
+
+The editor's current selection as one read-only tool (groups `level` and `asset`): the selected level actors (the primary one is the Details panel's subject), the Content Browser's selected assets and folder, and the active workspace tab with its sub-editor's own selection.
+
+`Map<String, Object?> mcpSelectionSnapshot(EditorViewModel vm, {bool includeComponents = true, bool includeProperties = false})`
+
+The selection `get_selection` returns, also served with the defaults as the resource `lumina://selection`. `include_components` (default true) lists each actor's components `{id, type, name, enabled, asset_refs}`; `include_properties` (default false) adds each component's full Details `properties` (as `get_actor` returns them) and each selected graph node's pins.
+
+**Tools:**
+
+| Tool | Risk | Title | Description |
+| :--- | :--- | :--- | :--- |
+| `get_selection` | readOnly | Get selection | What the user has selected now: the selected level actors in selection order (id, name, type, transform, mobility, parent, Blueprint class, mesh / material asset paths, components with the assets they reference) with the primary one (the Details panel's subject) marked; the Content Browser's selected assets and current folder; the active workspace tab (the level or a sub-editor and its asset) with the sub-editor's own selection... |
+
+Result: `level {count, primary_actor_id, actors[{id, name, type, primary, location, rotation, scale, mobility, visible, locked, parent{id, name, type}?, blueprint{path, class_name}?, mesh_asset_path, material_path, components[…]}]}`, `content_browser {current_folder, count, primary_asset, assets[{path, name, type, primary}]}`, `active_tab {index, id, title, category, kind: "level" | "sub_editor", asset{path, name, type}?, is_dirty, selection}`, `open_tabs[{index, title, category, asset_path}]`. `selection` is the sub-editor's own, where its view model holds one: Blueprint (`graph`, `selected_node_ids`, `selected_nodes`, `selected_component_id`), Material (`selected_node_ids`, `selected_nodes`), Skeletal Mesh (`bone`, `socket`), Widget (`widget_id`), Animation Blueprint (`state`, `transition`, `variable`), Animation (`clip`, `keyframe_ids`), Blend Space (`sample`), Sequencer (`track_id`, `keys`), Particle (`emitter_index`), Physics Asset (`body_bone`, `constraint`, `bone`), Enumeration (`value_index`), Interface (`function`); null otherwise.
+
 ## `lib/ui/features/mcp_server/tools/sequencer_tools.dart`
 
 `const String kMcpMovieRender`

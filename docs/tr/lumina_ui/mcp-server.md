@@ -485,6 +485,7 @@ On start the connection details go to `mcp_server.json` (mode 0600) in the edito
 | `openStreamCount` | `int get openStreamCount` |  |
 | `projectResource` | `static const String projectResource` |  |
 | `outputLogResource` | `static const String outputLogResource` |  |
+| `selectionResource` | `static const String selectionResource` |  |
 
 ## `lib/ui/features/mcp_server/services/mcp_server_settings.dart`
 

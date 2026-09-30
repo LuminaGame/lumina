@@ -304,6 +304,11 @@ abstract class _EditorViewModelState extends ChangeNotifier {
   String? _contentBrowserRevealPath;
   int _contentBrowserRevealSerial = 0;
 
+  /// The Content Browser's selected assets (project-relative paths, in
+  /// selection order) and the one clicked last.
+  final Set<String> _contentBrowserSelection = {};
+  String? _contentBrowserPrimaryAsset;
+
   late final PluginRegistryService pluginRegistry;
   bool _pluginRestartRequired = false;
 

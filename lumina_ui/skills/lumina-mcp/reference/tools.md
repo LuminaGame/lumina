@@ -17,6 +17,7 @@ Argument shapes as `tools/list` declares them (`inputSchema`, `additionalPropert
 | `rename_actor` | `id`, `name` | an actor or an Outliner folder (`type` `Folder`); refused when a sibling has the name |
 | `delete_actor` | `id`, `keep_children?` | an actor or a folder; `deleted_ids, actor_count, undo`; undo restores the same ids; `keep_children` moves a folder's contents to its parent |
 | `duplicate_actor` | `id` | `actors[…]` (new ids, `_Copy` names) |
+| `get_selection` | `include_components?` (default true), `include_properties?` (default false) | what the user has selected now: `level{count, primary_actor_id, actors[{id,name,type,primary,location,rotation,scale,mobility,visible,locked,parent?,blueprint{path,class_name}?,mesh_asset_path,material_path,components[{id,type,name,enabled,asset_refs,properties?}]}]}`, `content_browser{current_folder,count,primary_asset,assets[{path,name,type,primary}]}`, `active_tab{index,id,title,category,kind:"level"|"sub_editor",asset?,is_dirty,selection?}` (the sub-editor's own selection: Blueprint graph + nodes, material nodes, skeleton bone / socket, UMG widget, …), `open_tabs[]`; also the resource `lumina://selection` |
 | `select_actors` | `ids[]`, `additive?` | `selected_actor_ids` |
 | `clear_selection` | — | — |
 | `save_level` | — | writes `contents/levels/<L>.lmas`, `lib/main.dart`, `lib/levels/<L>.dart`; clears dirty |
@@ -523,6 +524,7 @@ Groups size the list, they are not a permission: connect with `/mcp?groups=level
 | `list_tool_groups` | core | readOnly | false | true |
 | `list_actors` | level | readOnly | false | true |
 | `get_actor` | level | readOnly | false | true |
+| `get_selection` | level, asset | readOnly | false | true |
 | `list_actor_types` | level | readOnly | false | true |
 | `spawn_actor` | level | mutating | false | false |
 | `spawn_actor_from_asset` | level | mutating | false | false |

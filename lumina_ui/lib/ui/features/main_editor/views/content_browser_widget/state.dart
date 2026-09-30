@@ -13,11 +13,27 @@ abstract class _ContentBrowserWidgetStateBase extends State<ContentBrowserWidget
   final FocusNode _browserFocusNode = FocusNode(debugLabel: 'ContentBrowser');
 
   final double _iconSize = 64.0;
-  final Set<String> _selectedAssetPaths = {};
+
+  /// The selected assets: the view model's set (what the editor and its MCP
+  /// tools see as the Content Browser selection), edited in place.
+  Set<String> get _selectedAssetPaths => widget.viewModel?.contentBrowserSelection ?? _ownSelection;
+  final Set<String> _ownSelection = {};
 
   /// The folder tile a single click highlighted.
   String? _selectedFolderTile;
-  String? _lastSelectedAssetPath;
+
+  /// The asset clicked last (the Shift-click anchor), kept on the view model.
+  String? get _lastSelectedAssetPath => widget.viewModel != null ? widget.viewModel!.contentBrowserPrimaryAsset : _ownLastSelected;
+  set _lastSelectedAssetPath(String? path) {
+    final vm = widget.viewModel;
+    if (vm != null) {
+      vm.contentBrowserPrimaryAsset = path;
+    } else {
+      _ownLastSelected = path;
+    }
+  }
+
+  String? _ownLastSelected;
 
   /// The last "Browse to asset" request applied.
   int _handledRevealSerial = 0;

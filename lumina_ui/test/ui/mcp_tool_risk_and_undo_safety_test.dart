@@ -76,7 +76,7 @@ void main() {
   Map<String, Object?> jsonText(McpToolReply r) => Map<String, Object?>.from(jsonDecode(r.text) as Map);
 
   const expectedReadOnly = {
-    'project_info', 'list_actors', 'get_actor', 'list_actor_types', 'undo_state', 'list_assets', 'get_material_source',
+    'project_info', 'list_actors', 'get_actor', 'get_selection', 'list_actor_types', 'undo_state', 'list_assets', 'get_material_source',
     'get_material_issues', 'list_blueprint_nodes', 'get_blueprint', 'get_blueprint_diagnostics', 'pie_status',
     'viewport_screenshot', 'get_camera', 'read_output_log', 'list_tool_groups', 'list_trash', 'list_component_types', //
     // File and code tools
@@ -113,10 +113,10 @@ void main() {
   };
 
   group('risk, groups and annotations', () {
-    test('the risk table: 69 read-only, 38 editor state, 234 edits, 24 destructive, 7 external; every tool has known groups and _meta',
+    test('the risk table: 70 read-only, 38 editor state, 234 edits, 24 destructive, 7 external; every tool has known groups and _meta',
         () async {
       final tools = await client.listTools();
-      expect(tools, hasLength(372));
+      expect(tools, hasLength(373));
       Set<String> withRisk(String r) => {
             for (final t in tools)
               if ((t['_meta'] as Map)['lumina/risk'] == r) t['name'] as String,
@@ -240,10 +240,10 @@ void main() {
     test('groups: ?groups= on the URL, params.groups, -32602 for unknown ones, calls outside the groups still run', () async {
       final level = connect(query: '?groups=level');
       await level.handshake();
-      expect(await level.listTools(), hasLength(35), reason: '26 level (13 actor, 4 level file, 9 level settings) + 9 core (4 job tools)');
+      expect(await level.listTools(), hasLength(36), reason: '27 level (13 actor, get_selection, 4 level file, 9 level settings) + 9 core (4 job tools)');
       final levelView = connect(query: '?groups=level,view');
       await levelView.handshake();
-      expect(await levelView.listTools(), hasLength(47), reason: '26 level + 12 view (with asset_editor_screenshot) + 9 core');
+      expect(await levelView.listTools(), hasLength(48), reason: '27 level + 12 view (with asset_editor_screenshot) + 9 core');
       expect(await client.listTools(groups: ['blueprint']), hasLength(50), reason: '41 Blueprint (9 graph, 31 member, list_component_types) + 9 core');
       // Settings (Project Settings + Editor Preferences) and build (run_codegen is in code and build).
       expect(await client.listTools(groups: ['settings']), hasLength(19), reason: '10 settings + 9 core');
@@ -281,7 +281,7 @@ void main() {
       // A tool may sit in more than one group (list_component_types: component + blueprint).
       final distinct = {for (final g in groups['groups'] as List) ...((g as Map)['tools'] as List)};
       expect(distinct, hasLength(groups['tool_count'] as int));
-      expect(groups['tool_count'], 372);
+      expect(groups['tool_count'], 373);
       expect(groups['active_groups'], ['level']);
       expect(groups['max_risk'], 'external');
     });

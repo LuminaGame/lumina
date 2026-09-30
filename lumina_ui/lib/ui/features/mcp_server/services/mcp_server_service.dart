@@ -42,6 +42,7 @@ import '../tools/material_tools.dart';
 import '../tools/play_testing_tools.dart';
 import '../tools/play_tools.dart';
 import '../tools/project_settings_tools.dart';
+import '../tools/selection_tools.dart';
 import '../tools/umg_tools.dart';
 import '../tools/material_graph_tools.dart';
 import '../tools/particle_tools.dart';
@@ -134,6 +135,7 @@ class McpServerService extends ChangeNotifier {
       maxRisk: () => this.settings.maxRisk,
     );
     registerLevelTools(tools, viewModel);
+    registerSelectionTools(tools, viewModel);
     // The Content Browser and the Material / Blueprint editors.
     registerAssetTools(tools, viewModel, sessions);
     registerMaterialTools(tools, viewModel, sessions);
@@ -875,6 +877,7 @@ class McpServerService extends ChangeNotifier {
 
   static const String projectResource = 'lumina://project';
   static const String outputLogResource = 'lumina://output-log';
+  static const String selectionResource = 'lumina://selection';
 
   List<Map<String, Object?>> _resources() => [
         {
@@ -890,6 +893,14 @@ class McpServerService extends ChangeNotifier {
           'title': 'Output Log',
           'description': 'The last 500 lines of the editor\'s Output Log.',
           'mimeType': 'text/plain',
+        },
+        {
+          'uri': selectionResource,
+          'name': 'selection',
+          'title': 'Current selection',
+          'description': 'What the user has selected now (level actors, Content Browser assets, the active tab), '
+              'as get_selection returns it with its defaults.',
+          'mimeType': 'application/json',
         },
       ];
 
@@ -915,6 +926,16 @@ class McpServerService extends ChangeNotifier {
               'uri': outputLogResource,
               'mimeType': 'text/plain',
               'text': tail.map((e) => '[${e.timestamp}] [${e.level}] [${e.source}] ${e.message}').join('\n'),
+            },
+          ],
+        };
+      case selectionResource:
+        return {
+          'contents': [
+            {
+              'uri': selectionResource,
+              'mimeType': 'application/json',
+              'text': const JsonEncoder.withIndent('  ').convert(mcpSelectionSnapshot(viewModel)),
             },
           ],
         };
