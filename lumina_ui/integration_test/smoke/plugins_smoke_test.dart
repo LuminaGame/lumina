@@ -2447,6 +2447,43 @@ void main() {
       await settle(tester, frames: 10);
       await rec.hold(const Duration(seconds: 3));
       await shot('list_actors tool card');
+      // The open card's arguments and result: coloured JSON in boxes at most
+      // 200 px tall that scroll.
+      final result = find.byKey(ValueKey('miniai_tool_result_${cards.last.call.id}'));
+      expect(result, findsOneWidget);
+      expect(tester.getSize(result).height, lessThanOrEqualTo(200));
+
+      // 4. Claude Code asks a multiple-choice question (AskUserQuestion): the
+      // card shows it, a click answers it, and the answer reaches the model.
+      await tester.tap(find.byKey(const ValueKey('miniai_message')));
+      await tester.pump();
+      await tester.enterText(find.byKey(const ValueKey('miniai_message')),
+          'Use the AskUserQuestion tool exactly once to ask me which barrel colour I prefer, with the options Red and Blue. '
+          'Then reply with only the colour I chose.');
+      final sentBefore = c.chat.messageCount;
+      await tester.tap(find.byKey(const ValueKey('miniai_send')));
+      // The turn has started (its message is in the chat) and asks, or ended.
+      await waitFor(() => c.chat.messageCount > sentBefore && (c.chat.pendingQuestions.isNotEmpty || !c.running), max: const Duration(minutes: 3));
+      expect(c.chat.pendingQuestions, hasLength(1), reason: 'Claude Code asked through AskUserQuestion');
+      final asked = c.chat.pendingQuestions.single;
+      await settle(tester, frames: 10);
+      final blue = find.byKey(ValueKey('miniai_question_option_${asked.call.id}_0_1'));
+      await tester.ensureVisible(blue);
+      await settle(tester, frames: 5);
+      await rec.hold(const Duration(seconds: 2));
+      await shot('AskUserQuestion card');
+      await tester.tap(blue);
+      await settle(tester, frames: 5);
+      await rec.hold(const Duration(seconds: 1));
+      await tester.tap(find.byKey(ValueKey('miniai_question_answer_${asked.call.id}')));
+      await waitFor(() => !c.running, max: const Duration(minutes: 3));
+      await settle(tester, frames: 20);
+      expect(asked.status, ToolCallStatus.done);
+      expect(asked.answers?.values.single, 'Blue');
+      final reply = c.chat.items.whereType<AssistantItem>().last.text.toString();
+      expect(reply, contains('Blue'));
+      await rec.hold(const Duration(seconds: 3));
+      await shot('AskUserQuestion answered');
       await tester.runAsync(() => vm.shutdownPlugins(exiting: true));
       final minimum = Duration(milliseconds: (SmokeArtifacts.minimumVideoSeconds * 1000).ceil() + 500);
       if (rec.recorded < minimum) await rec.hold(minimum - rec.recorded);
