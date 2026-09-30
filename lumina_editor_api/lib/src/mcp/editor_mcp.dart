@@ -44,7 +44,7 @@ class McpChangeSignal {
 /// 05): the stdio bridge's command line, which reads the running editor's
 /// connection file itself, so it carries no token and never goes stale.
 class McpClientLaunch {
-  const McpClientLaunch({required this.command, required this.args, this.url});
+  const McpClientLaunch({required this.command, required this.args, this.url, this.environment = const {}});
 
   /// An absolute path to the Dart executable (or `dart`).
   final String command;
@@ -54,6 +54,11 @@ class McpClientLaunch {
 
   /// The HTTP endpoint while the server runs (it changes per session).
   final String? url;
+
+  /// Variables the bridge needs to find this editor (`LUMINA_CONFIG_DIR`
+  /// when the editor's config directory is not the default one). A client
+  /// config that passes them reaches this editor even from a redirected run.
+  final Map<String, String> environment;
 }
 
 /// The editor's MCP tools for a plugin, reached
@@ -82,6 +87,17 @@ abstract class EditorMcp {
 
   /// Every call, from any transport.
   Stream<McpToolCallEvent> get calls;
+
+  /// Runs [body]; while it runs, the tool calls of external MCP clients that
+  /// connected with the tag [clientTag] (the stdio bridge's `--caller`) are
+  /// made as [caller] and in the zone this was called from. A surrounding
+  /// `EditorLevelAccess.runTransaction` therefore groups their level edits,
+  /// and their file snapshots carry [caller] like an in-process call's.
+  /// Without an editor behind it, this only runs [body].
+  Future<T> attributeExternalCalls<T>(String clientTag, String caller, Future<T> Function() body) => body();
+
+  /// Whether [attributeExternalCalls] attributes anything here.
+  bool get attributesExternalCalls => false;
 
   /// How an external MCP client reaches this editor; null
   /// without an editor MCP server.

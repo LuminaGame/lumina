@@ -297,7 +297,12 @@ class McpServerService extends ChangeNotifier {
 
   /// How an external MCP client starts a connection to this editor: the
   /// stdio bridge, which reads [connectionFile] itself.
-  McpClientLaunch get clientLaunch => McpClientLaunch(command: _native(dartExecutable), args: [_native(bridgeScriptPath)], url: url);
+  McpClientLaunch get clientLaunch => McpClientLaunch(
+        command: _native(dartExecutable),
+        args: [_native(bridgeScriptPath)],
+        url: url,
+        environment: {LuminaConfigDir.environmentVariable: connectionFile.parent.path},
+      );
 
   /// One separator style in paths other tools' config files show.
   static String _native(String path) => Platform.isWindows ? path.replaceAll('/', r'\') : path;
@@ -712,7 +717,9 @@ class McpServerService extends ChangeNotifier {
           // ?groups=level,view on the endpoint URL.
           final groups = McpSession.parseGroups(uri.queryParameters['groups']);
           result = _initialize(request.params);
-          issued = _newSession(request.params, groups, (result as Map)['protocolVersion'] as String);
+          final tag = uri.queryParameters['caller'];
+          issued = _newSession(request.params, groups, (result as Map)['protocolVersion'] as String,
+              callerTag: tag == null || tag.isEmpty ? null : tag);
         case 'notifications/initialized':
         case 'notifications/cancelled':
         case 'notifications/roots/list_changed':
@@ -750,11 +757,12 @@ class McpServerService extends ChangeNotifier {
     }
   }
 
-  String _newSession(Map<String, Object?> params, Set<String>? groups, String protocolVersion) {
+  String _newSession(Map<String, Object?> params, Set<String>? groups, String protocolVersion, {String? callerTag}) {
     final id = _mintToken().substring(0, 32);
     final info = params['clientInfo'];
     final client = info is Map && info['name'] is String ? info['name'] as String : 'unknown';
-    _sessions[id] = McpSession(id: id, started: DateTime.now(), clientName: client, protocolVersion: protocolVersion, groups: groups);
+    _sessions[id] = McpSession(
+        id: id, started: DateTime.now(), clientName: client, protocolVersion: protocolVersion, groups: groups, callerTag: callerTag);
     return id;
   }
 
@@ -801,20 +809,25 @@ class McpServerService extends ChangeNotifier {
     final watch = Stopwatch()..start();
     final client = session?.clientName ?? 'unknown';
     final risk = tools.byName(name)?.riskOf(arguments);
+    // A tagged session bound by a plugin runs as the plugin's caller, in the
+    // plugin's zone (its transaction groups the call's edits).
+    final binding = tools.externalBinding(session?.callerTag);
     try {
-      final result = await tools.call(
-        name,
-        arguments,
-        context: (tool) => McpCallContext(
-          sessionId: session?.id ?? 'anonymous',
-          clientName: client,
-          transport: McpTransport.http,
-          tool: name,
-          risk: tool.riskOf(arguments),
-          groups: tool.groups,
-          arguments: arguments,
-        ),
-      );
+      Future<McpToolResult> run() => tools.call(
+            name,
+            arguments,
+            context: (tool) => McpCallContext(
+              sessionId: session?.id ?? 'anonymous',
+              clientName: client,
+              transport: McpTransport.http,
+              tool: name,
+              risk: tool.riskOf(arguments),
+              groups: tool.groups,
+              arguments: arguments,
+              caller: binding?.caller,
+            ),
+          );
+      final result = binding == null ? await run() : await binding.zone.run(run);
       _record(McpCallRecord(
         tool: name,
         started: started,

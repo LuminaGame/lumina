@@ -10,13 +10,18 @@ class TransactionOrigin {
   final String? clientName;
   final String? tool;
 
+  /// The caller the call was made for: an in-process caller, or the one an
+  /// external client's tagged session is bound to.
+  final String? caller;
+
   const TransactionOrigin.user()
       : kind = 'user',
         sessionId = null,
         clientName = null,
-        tool = null;
+        tool = null,
+        caller = null;
 
-  const TransactionOrigin.mcp({required String this.sessionId, required String this.clientName, required String this.tool})
+  const TransactionOrigin.mcp({required String this.sessionId, required String this.clientName, required String this.tool, this.caller})
       : kind = 'mcp';
 
   bool get isAgent => kind == 'mcp';
@@ -26,6 +31,7 @@ class TransactionOrigin {
         'session_id': ?sessionId,
         'client': ?clientName,
         'tool': ?tool,
+        'caller': ?caller,
       };
 
   @override

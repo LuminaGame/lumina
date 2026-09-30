@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina/lumina.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/host_editor_mcp.dart';
 import 'package:lumina_ui/ui/features/mcp_server/services/mcp_server_service.dart';
 import 'package:lumina_ui/ui/features/mcp_server/services/mcp_server_settings.dart';
 
@@ -141,6 +142,41 @@ void main() {
     final list = await ask(process, lines, {'jsonrpc': '2.0', 'id': 2, 'method': 'tools/list'});
     expect(((list['result'] as Map)['tools'] as List), hasLength(36));
     expect(server.sessionList.single.groups, {'level'});
+  });
+
+  // `--caller cc` connects to /mcp?caller=cc: a plugin binding the tag makes
+  // the bridge's calls its own.
+  test('started with --caller, the session carries the tag and a bound call is attributed', () async {
+    final projectDir = Directory('${root.path}/CallerProject')..createSync();
+    const project = LuminaProject(projectName: 'CallerProject', activeLevel: 'contents/levels/L_Main.lmas');
+    File('${projectDir.path}/CallerProject.lmproject').writeAsStringSync(jsonEncode(project.toMap()));
+    final vm = EditorViewModel(initialProject: project, projectLocation: root.path, enableTimers: false, autoInitAssets: false);
+    addTearDown(vm.dispose);
+    final server = McpServerService(vm, configDir: configDir, settings: McpServerSettings.load(configDir: configDir));
+    expect(await server.start(port: 0), isTrue);
+    addTearDown(server.stop);
+
+    final (process, lines) = await spawn(args: ['--caller', 'cc-bridge']);
+    await ask(process, lines, {
+      'jsonrpc': '2.0',
+      'id': 1,
+      'method': 'initialize',
+      'params': {'protocolVersion': '2025-06-18', 'capabilities': {}, 'clientInfo': {'name': 'claude-code', 'version': '0'}},
+    });
+    expect(server.sessionList.single.callerTag, 'cc-bridge');
+    final plugin = HostEditorMcp(server.tools).scoped('bridge_test');
+    final reply = await plugin.attributeExternalCalls('cc-bridge', 'miniai:chat:1', () => ask(process, lines, {
+          'jsonrpc': '2.0',
+          'id': 2,
+          'method': 'tools/call',
+          'params': {
+            'name': 'fs_write',
+            'arguments': {'path': 'lib/bridge_note.dart', 'content': '// bridge'},
+          },
+        }));
+    expect((reply['result'] as Map)['isError'], isFalse, reason: '$reply');
+    final history = await plugin.callTool('fs_history', {'caller': 'miniai:chat:1'});
+    expect(history.content.first['text'], contains('lib/bridge_note.dart'));
   });
 
   test('with no editor running, a request is answered with -32000 naming the connection file', () async {

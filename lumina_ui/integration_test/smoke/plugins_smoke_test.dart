@@ -2322,6 +2322,145 @@ void main() {
     }
   }, timeout: const Timeout(Duration(minutes: 10)));
 
+  // MiniAI on the user's installed Claude Code CLI: Model provider… finds
+  // it, `/` lists its commands, and a tiny prompt makes it call one
+  // read-only editor tool through the editor's MCP server (one cheap model
+  // call; skipped without a logged-in `claude`).
+  testWidgets('MiniAI Claude Code provider', (tester) async {
+    const barrel = 'Props/Barrels/fuel_barrel_red.glb';
+    const name = 'MiniAI Claude Code provider';
+    final install = await tester.runAsync(() => const ClaudeCodeCli().detect());
+    if (install == null || !install.ready) {
+      markTestSkipped('claude is not installed or not logged in (${install?.path ?? 'not found'})');
+      return;
+    }
+    tester.view.physicalSize = const Size(1920, 1200);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final tempProjectsDir = Directory.systemTemp.createTempSync('miniai_cc_smoke_');
+    final pDir = Directory('${tempProjectsDir.path}/ClaudeSmoke')..createSync(recursive: true);
+    PluginDataDir.override = Directory('${tempProjectsDir.path}/plugin_data');
+    EditorViewModel? vmRef;
+    LuminaPluginMiniaiPlugin? plugin;
+    try {
+      const project = LuminaProject(projectName: 'ClaudeSmoke', activeLevel: 'contents/levels/L_Main.lmas', settings: EngineScalabilitySettings(targetFps: 60));
+      File('${pDir.path}/ClaudeSmoke.lmproject').writeAsStringSync(jsonEncode(project.toMap()));
+      // A project command, so the list shows one next to the built-ins.
+      File('${pDir.path}/.claude/commands/barrels.md')
+        ..createSync(recursive: true)
+        ..writeAsStringSync('---\ndescription: Count the barrels in the level\n---\nCount the barrels in the open level with list_actors.\n');
+      final vm = vmRef = EditorViewModel(initialProject: project, projectDirPath: tempProjectsDir.path, enableTimers: false);
+      addTearDown(vm.dispose);
+      await tester.runAsync(() => vm.ensureDefaultLevelAssets());
+      await tester.runAsync(() => vm.processImportPipeline(sourceFilePath: '${SmokeArtifacts.testAssetsDir.path}/$barrel'));
+      vm.refreshAssets();
+      final asset = vm.realAssets.firstWhere((a) => a.fileName == 'fuel_barrel_red.lmas' && a.type == AssetType.filamesh);
+      // Claude Code reaches the editor over HTTP through the stdio bridge.
+      expect(await tester.runAsync(() => vm.mcpServer.start(port: 0)), isTrue);
+      plugin = LuminaPluginMiniaiPlugin();
+      vm.extensionRegistry.registerPlugin(plugin);
+      final c = plugin.controller!;
+      final placed = await tester.runAsync(
+          () => c.mcp.callTool('spawn_actor_from_asset', {'asset': asset.relativePath, 'location': [0, 0, 0]}, caller: 'smoke'));
+      expect(placed!.isError, isFalse, reason: placed.content.map((x) => x['text']).join());
+      for (var i = 0; i < 40 && vm.actors.last.meshData == null; i++) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
+        await tester.pump();
+      }
+
+      final boundaryKey = GlobalKey();
+      await tester.pumpWidget(RepaintBoundary(
+        key: boundaryKey,
+        child: ShadcnApp(theme: luminaEditorTheme(), home: MainEditorView(viewModel: vm)),
+      ));
+      await settle(tester, frames: 30);
+      vm.frameLevelBounds();
+      await settle(tester, frames: 20);
+      final rec = SmokeRecorder(tester, boundary: find.byKey(boundaryKey));
+      Future<void> shot(String suffix) async {
+        final png = await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey));
+        SmokeArtifacts.saveScreenshot('$name ($suffix)', png, usedAssets: const [barrel]);
+      }
+
+      Future<void> waitFor(bool Function() done, {Duration max = const Duration(minutes: 2)}) async {
+        final sw = Stopwatch()..start();
+        while (!done() && sw.elapsed < max) {
+          await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 150)));
+          await tester.pump(const Duration(milliseconds: 20));
+          if (sw.elapsed.inMilliseconds % 1000 < 200) await rec.capture();
+        }
+        expect(done(), isTrue, reason: 'timed out after $max');
+      }
+
+      // 1. Model provider… ▸ Claude Code: detected, Haiku, Use Claude Code.
+      await tester.tap(find.byKey(const ValueKey('slot_button_lumina_plugin_miniai.ai')));
+      await settle(tester, frames: 20);
+      await tester.tap(find.byKey(const ValueKey('miniai_model_chip')));
+      await settle(tester, frames: 10);
+      Finder use() => find.byKey(const ValueKey('miniai_claude_use'));
+      await waitFor(() => use().evaluate().isNotEmpty && tester.widget<PrimaryButton>(use()).onPressed != null, max: const Duration(seconds: 90));
+      expect(tester.widget<Text>(find.byKey(const ValueKey('miniai_claude_status'))).data, contains('Logged in'));
+      await tester.tap(find.byKey(const ValueKey('miniai_claude_model')));
+      await settle(tester, frames: 10);
+      await tester.tap(find.textContaining('Haiku').last);
+      await settle(tester, frames: 10);
+      await rec.hold(const Duration(seconds: 2));
+      await shot('provider');
+      await tester.tap(use());
+      await waitFor(() => c.usesClaudeCode, max: const Duration(seconds: 10));
+      await settle(tester, frames: 10);
+      expect(find.byKey(const ValueKey('miniai_claude_state')), findsOneWidget);
+
+      // 2. `/` lists the CLI's commands (no model call).
+      await tester.tap(find.byKey(const ValueKey('miniai_message')));
+      await tester.pump();
+      await tester.enterText(find.byKey(const ValueKey('miniai_message')), '/');
+      await waitFor(() => c.claudeCommands.isNotEmpty || c.claudeError != null, max: const Duration(seconds: 90));
+      expect(c.claudeError, isNull);
+      await settle(tester, frames: 10);
+      expect(find.byKey(const ValueKey('miniai_slash_menu')), findsOneWidget);
+      expect(c.claudeCommands.map((x) => x.name), containsAll(['barrels', 'compact', 'context']));
+      await tester.enterText(find.byKey(const ValueKey('miniai_message')), '/ba');
+      await settle(tester, frames: 10);
+      expect(find.byKey(const ValueKey('miniai_slash_barrels')), findsOneWidget);
+      await tester.enterText(find.byKey(const ValueKey('miniai_message')), '/');
+      await settle(tester, frames: 10);
+      await rec.hold(const Duration(seconds: 3));
+      await shot('slash commands');
+
+      // 3. A tiny prompt: Claude Code calls list_actors through the editor.
+      await tester.enterText(find.byKey(const ValueKey('miniai_message')),
+          'Call the list_actors tool of the lumina MCP server once, then say in one short sentence how many actors the level has.');
+      await tester.tap(find.byKey(const ValueKey('miniai_send')));
+      await waitFor(() => !c.running && c.chat.turns.isNotEmpty, max: const Duration(minutes: 3));
+      await settle(tester, frames: 20);
+      final cards = c.chat.items.whereType<ToolCallItem>().where((i) => i.call.name == 'list_actors').toList();
+      debugPrint('[miniai08_smoke] ${c.claudeState}; ${c.claudeUsage}; notes: '
+          '${c.chat.items.whereType<NoteItem>().map((n) => n.text).join(' | ')}');
+      expect(cards, isNotEmpty, reason: 'Claude Code called list_actors');
+      expect(cards.last.status, ToolCallStatus.done);
+      expect(cards.last.risk, McpToolRisk.readOnly);
+      expect(cards.last.result, contains('fuel_barrel_red'));
+      expect(c.lastTurnFailed, isFalse);
+      expect(c.claudeUsage, contains('this session'));
+      await tester.tap(find.text('list_actors').last);
+      await settle(tester, frames: 10);
+      await rec.hold(const Duration(seconds: 3));
+      await shot('list_actors tool card');
+      await tester.runAsync(() => vm.shutdownPlugins(exiting: true));
+      final minimum = Duration(milliseconds: (SmokeArtifacts.minimumVideoSeconds * 1000).ceil() + 500);
+      if (rec.recorded < minimum) await rec.hold(minimum - rec.recorded);
+      rec.save(name, usedAssets: const [barrel]);
+    } finally {
+      PluginDataDir.override = null;
+      await tester.runAsync(() async => plugin?.controller?.claude.close());
+      await tester.runAsync(() async => vmRef?.mcpServer.stop());
+      try {
+        if (tempProjectsDir.existsSync()) tempProjectsDir.deleteSync(recursive: true);
+      } catch (_) {}
+    }
+  }, timeout: const Timeout(Duration(minutes: 10)));
+
   // Enabling a code plugin generates the project's own editor
   // host; the launcher builds it for real behind the splash, execs it, and a
   // project without its host asks before building.

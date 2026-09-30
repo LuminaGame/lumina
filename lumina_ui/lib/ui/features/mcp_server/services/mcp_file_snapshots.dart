@@ -27,7 +27,7 @@ class McpSnapshotContext {
     return McpSnapshotContext(
       sessionId: session,
       client: origin?.clientName,
-      caller: session != null && session.startsWith(prefix) ? session.substring(prefix.length) : null,
+      caller: origin?.caller ?? (session != null && session.startsWith(prefix) ? session.substring(prefix.length) : null),
     );
   }
 }

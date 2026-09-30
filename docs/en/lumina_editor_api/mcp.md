@@ -43,7 +43,7 @@ How an MCP client outside the editor starts a connection to it : the stdio bridg
 
 **Constructors:**
 
-- `const McpClientLaunch({required this.command, required this.args, this.url})`
+- `const McpClientLaunch({required this.command, required this.args, this.url, this.environment = const {}})`
 
 **Members:**
 
@@ -52,6 +52,7 @@ How an MCP client outside the editor starts a connection to it : the stdio bridg
 | `command` | `final String command` | An absolute path to the Dart executable (or `dart`). |
 | `args` | `final List<String> args` | `[<lumina_ui>/bin/lumina_mcp_bridge.dart]`. |
 | `url` | `final String? url` | The HTTP endpoint while the server runs (it changes per session). |
+| `environment` | `final Map<String, String> environment` | Variables the bridge needs to find this editor (`LUMINA_CONFIG_DIR` when the editor's config directory is not the default one). A client config that passes them reaches this editor even from a redirected run. |
 
 ### `abstract class EditorMcp`
 
@@ -70,6 +71,8 @@ The editor's MCP tools for a plugin, reached through `LuminaEditorContext.mcp`: 
 | `listTools` | `List<McpTool> listTools({Set<String>? groups})` | Every tool (host and plugins) in [groups] (all when null). |
 | `callTool` | `Future<McpToolResult> callTool(String name, Map<String, Object?> args, {String? caller})` | Runs tool [name] in process: validated against its schema, through the approval chain, attributed on the undo stack as an MCP call by [caller]. Bad arguments throw a [JsonRpcException]; a failure or a denial is an error result. |
 | `calls` | `Stream<McpToolCallEvent> get calls` | Every call, from any transport. |
+| `attributeExternalCalls` | `Future<T> attributeExternalCalls<T>(String clientTag, String caller, Future<T> Function() body)` | Runs [body]; while it runs, the tool calls of external MCP clients that connected with the tag [clientTag] (the stdio bridge's `--caller`) are made as [caller] and in the zone this was called from. A surrounding `EditorLevelAccess.runTransaction` therefore groups their level edits, and their file snapshots carry [caller] like an in-process call's. Without an editor behind it, this only runs [body]. |
+| `attributesExternalCalls` | `bool get attributesExternalCalls` | Whether [attributeExternalCalls] attributes anything here. |
 | `clientLaunch` | `McpClientLaunch? get clientLaunch` | How an external MCP client reaches this editor; null without an editor MCP server. |
 | `toolsChanged` | `McpChangeSignal get toolsChanged` | Fires when a tool is added or removed. |
 
@@ -328,6 +331,7 @@ One `tools/call` as an approval policy sees it.
 | `risk` | `final McpToolRisk risk` |  |
 | `groups` | `final Set<String> groups` |  |
 | `arguments` | `final Map<String, Object?> arguments` |  |
+| `caller` | `final String? caller` | Who the call is made for: an in-process caller, or the caller an external client's tagged session is bound to (`EditorMcp.attributeExternalCalls`); null otherwise. |
 
 ### `class McpApprovalDecision`
 

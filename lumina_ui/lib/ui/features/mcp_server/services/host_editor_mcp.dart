@@ -77,8 +77,18 @@ class HostEditorMcp {
           risk: tool.riskOf(args),
           groups: tool.groups,
           arguments: args,
+          caller: caller,
         ),
       );
+
+  Future<T> _attribute<T>(String tag, String caller, Future<T> Function() body) async {
+    tools.bindExternal(tag, caller, Zone.current);
+    try {
+      return await body();
+    } finally {
+      tools.unbindExternal(tag, caller);
+    }
+  }
 }
 
 /// A plugin's [EditorMcp]: resolves the host lazily, so reading
@@ -107,4 +117,11 @@ class _ScopedEditorMcp extends EditorMcp {
 
   @override
   McpClientLaunch? get clientLaunch => _host().launch?.call();
+
+  @override
+  Future<T> attributeExternalCalls<T>(String clientTag, String caller, Future<T> Function() body) =>
+      _host()._attribute(clientTag, caller, body);
+
+  @override
+  bool get attributesExternalCalls => true;
 }

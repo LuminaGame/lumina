@@ -24,6 +24,20 @@ class McpToolRegistry {
   /// How long a policy may take before the call is denied.
   Duration approvalTimeout = const Duration(minutes: 10);
 
+  final Map<String, ({String caller, Zone zone})> _external = {};
+
+  /// Binds external sessions tagged [tag] to [caller], run in [zone]
+  /// (`EditorMcp.attributeExternalCalls`).
+  void bindExternal(String tag, String caller, Zone zone) => _external[tag] = (caller: caller, zone: zone);
+
+  /// Ends [tag]'s binding when it still belongs to [caller].
+  void unbindExternal(String tag, String caller) {
+    if (_external[tag]?.caller == caller) _external.remove(tag);
+  }
+
+  /// The caller and zone the sessions tagged [tag] run in now, if any.
+  ({String caller, Zone zone})? externalBinding(String? tag) => tag == null ? null : _external[tag];
+
   /// Refuses a tool with no group, an unknown group, or a `wraps` entry on
   /// [McpExposure.neverExpose].
   void register(McpTool tool) {
@@ -113,7 +127,7 @@ class McpToolRegistry {
       report(result, denied: true);
       return result;
     }
-    final origin = TransactionOrigin.mcp(sessionId: call.sessionId, clientName: call.clientName, tool: name);
+    final origin = TransactionOrigin.mcp(sessionId: call.sessionId, clientName: call.clientName, tool: name, caller: call.caller);
     McpToolResult result;
     try {
       result = await TransactionManager.runAttributed(origin, () async => await tool.handler(McpArgs(arguments)));

@@ -15,12 +15,18 @@ class McpSession {
   /// endpoint URL's `?groups=level,view`.
   final Set<String>? groups;
 
+  /// The endpoint URL's `?caller=<tag>` (the stdio bridge's `--caller`): a
+  /// plugin can bind the tag to one of its callers
+  /// (`EditorMcp.attributeExternalCalls`).
+  final String? callerTag;
+
   const McpSession({
     required this.id,
     required this.started,
     required this.clientName,
     required this.protocolVersion,
     this.groups,
+    this.callerTag,
   });
 
   /// `level,view` (a query value) or `["level", "view"]` (a `params.groups`)

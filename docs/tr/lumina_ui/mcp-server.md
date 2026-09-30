@@ -127,7 +127,7 @@ Who took a snapshot: the MCP session and client, and — for an in-process call 
 **Yapıcı Metotlar (Constructors):**
 
 - `const McpSnapshotContext({this.sessionId, this.client, this.caller})`
-- `factory McpSnapshotContext.current()`: The attributed MCP call running now (`TransactionManager.currentOrigin`); an in-process call's session id is `in-process:<caller>`.
+- `factory McpSnapshotContext.current()`: The attributed MCP call running now (`TransactionManager.currentOrigin`): its origin's `caller` (an in-process call's, or the one a plugin bound an external client's tagged session to), else the one in an in-process session id `in-process:<caller>`.
 
 **Üyeler:**
 
@@ -439,6 +439,8 @@ The editor's Model Context Protocol server: MCP's Streamable HTTP transport on `
 `POST /mcp` carries one JSON-RPC request (or a batch) and is answered with `application/json`. `initialize` issues an `Mcp-Session-Id` the client echoes on every later request. `GET /mcp` with that session opens its server-to-client SSE stream, which carries `notifications/tools/list_changed` when a plugin adds or removes a tool; `DELETE /mcp` ends the session and its stream.
 
 On start the connection details go to `mcp_server.json` (mode 0600) in the editor's config directory, where the stdio bridge (`bin/lumina_mcp_bridge.dart`) and the panel read them.
+
+The bridge's `--groups a,b` connects to `/mcp?groups=a,b`, and `--caller <tag>` to `/mcp?caller=<tag>`: `initialize` keeps the tag with the session (`McpSession.callerTag`). While a plugin binds that tag (`EditorMcp.attributeExternalCalls`, MiniAI running Claude Code), the session's calls run as the plugin's caller and in its zone, so its `runTransaction` groups their level edits and their file snapshots carry its caller.
 
 **Yapıcı Metotlar (Constructors):**
 

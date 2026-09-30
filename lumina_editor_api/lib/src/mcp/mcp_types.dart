@@ -485,6 +485,11 @@ class McpCallContext {
   final Set<String> groups;
   final Map<String, Object?> arguments;
 
+  /// Who the call is made for: an in-process caller, or the caller an
+  /// external client's tagged session is bound to
+  /// (`EditorMcp.attributeExternalCalls`); null otherwise.
+  final String? caller;
+
   const McpCallContext({
     required this.sessionId,
     required this.clientName,
@@ -493,6 +498,7 @@ class McpCallContext {
     required this.risk,
     required this.groups,
     required this.arguments,
+    this.caller,
   });
 }
 

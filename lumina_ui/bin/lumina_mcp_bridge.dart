@@ -10,6 +10,9 @@
 // nothing but `dart:io`, so `dart` runs it from any directory.
 // `--groups level,view` lists only those tool groups: the
 // bridge connects to `/mcp?groups=level,view`.
+// `--caller <tag>` connects to `/mcp?caller=<tag>`: a plugin that started
+// the client (MiniAI running Claude Code) binds the tag to its own caller, so
+// the calls join its turn.
 //
 // A missing or dead editor answers every request with a JSON-RPC error
 // (-32000) naming the file, so the client shows why instead of hanging.
@@ -22,7 +25,8 @@ const int _serverUnavailable = -32000;
 
 void main(List<String> arguments) async {
   final client = HttpClient();
-  final groups = _groupsArg(arguments);
+  final groups = _optionArg(arguments, 'groups');
+  final caller = _optionArg(arguments, 'caller');
   String? sessionId;
   final stdoutSink = stdout;
 
@@ -73,7 +77,13 @@ void main(List<String> arguments) async {
     }
     try {
       var endpoint = Uri.parse(connection['url'] as String);
-      if (groups != null) endpoint = endpoint.replace(queryParameters: {...endpoint.queryParameters, 'groups': groups});
+      if (groups != null || caller != null) {
+        endpoint = endpoint.replace(queryParameters: {
+          ...endpoint.queryParameters,
+          'groups': ?groups,
+          'caller': ?caller,
+        });
+      }
       final request = await client.postUrl(endpoint);
       request.headers.set(HttpHeaders.authorizationHeader, 'Bearer ${connection['token']}');
       request.headers.contentType = ContentType.json;
@@ -140,12 +150,13 @@ File _connectionFile() {
   return File('$dir/mcp_server.json');
 }
 
-/// `--groups a,b` or `--groups=a,b`: the tool groups to list.
-String? _groupsArg(List<String> arguments) {
+/// `--<name> value` or `--<name>=value` (`--groups a,b`: the tool groups to
+/// list; `--caller tag`: the session's caller tag).
+String? _optionArg(List<String> arguments, String name) {
   for (var i = 0; i < arguments.length; i++) {
     final a = arguments[i];
-    if (a == '--groups' && i + 1 < arguments.length) return arguments[i + 1];
-    if (a.startsWith('--groups=')) return a.substring('--groups='.length);
+    if (a == '--$name' && i + 1 < arguments.length) return arguments[i + 1];
+    if (a.startsWith('--$name=')) return a.substring('--$name='.length);
   }
   return null;
 }
