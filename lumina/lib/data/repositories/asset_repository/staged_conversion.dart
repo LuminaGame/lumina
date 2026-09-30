@@ -239,6 +239,11 @@ mixin _AssetStagedConversion on _AssetRepositoryState {
             }
           }
 
+          // glTF defaults: single-sided, opaque, cutoff 0.5.
+          final doubleSided = matMap['doubleSided'] == true;
+          final alphaMode = (matMap['alphaMode'] as String? ?? 'OPAQUE').toUpperCase();
+          final alphaCutoff = (matMap['alphaCutoff'] as num?)?.toDouble() ?? 0.5;
+
           final rawMatSource = buildImportedMaterialSource(
             name: safeMatName,
             baseColor: baseColor,
@@ -246,6 +251,9 @@ mixin _AssetStagedConversion on _AssetRepositoryState {
             roughness: roughness,
             emissive: emissive,
             textureSlots: texRefs.map((r) => r['slot']!).toList(),
+            doubleSided: doubleSided,
+            alphaMode: alphaMode,
+            alphaCutoff: alphaCutoff,
           );
 
           materialsList.add({
@@ -255,6 +263,9 @@ mixin _AssetStagedConversion on _AssetRepositoryState {
             'metallic': metallic,
             'roughness': roughness,
             'emissive': emissive,
+            'doubleSided': doubleSided,
+            'alphaMode': alphaMode,
+            'alphaCutoff': alphaCutoff,
             'textures': texRefs,
           });
           matIdx++;

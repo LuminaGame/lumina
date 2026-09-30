@@ -205,19 +205,27 @@ A mesh's thumbnail drawing, worked out without `dart:ui` rendering so it can be 
 
 ## `lib/data/repositories/asset_repository/imported_material.dart`
 
-### `String buildImportedMaterialSource({name, baseColor, textureSlots, metallic, roughness, emissive})`
+### `String buildImportedMaterialSource({name, baseColor, textureSlots, metallic, roughness, emissive, doubleSided, alphaMode, alphaCutoff})`
 
 İçe aktarılmış bir PBR materyalin Filament `.mat` kaynağı: glTF faktörleri sabit olarak gömülür, her doku slotu
 (`baseColorMap`, `normalMap`, `metallicRoughnessMap` (roughness G, metallic B), `occlusionMap`, `emissiveMap`,
-`specularMap`) için bir `sampler2d`, normal `prepareMaterial`'dan önce yazılır. lumina'nın glTF / FBX import'u ve
-importer eklentileri aynı üreticiyi kullanır; böylece içe aktarılan bir materyal kimin ürettiğinden bağımsız aynıdır.
+`specularMap`) için bir `sampler2d`, normal `prepareMaterial`'dan önce yazılır. glTF'in `doubleSided`, `alphaMode` ve
+`alphaCutoff` alanları başlık anahtarları olur ve gltfio'nun aynı dosyayı çizdiği gibi çizilir: `doubleSided : true` (iki
+yüz, culling kapalı); `MASK` → `blending : masked`, `maskThreshold` = `alphaCutoff` (varsayılan 0.5); `BLEND` →
+`blending : fade`, glTF'in düz alfası (`baseColorFactor.a` × base color dokusunun alfası) fragment'ta renge
+premultiply edilir, çift yüzlü bir `BLEND` materyal iki geçişte çizilir (`transparency : twoPassesTwoSides`). `OPAQUE`
+tek yüzlü materyaller matc varsayılanlarında kalır (opak, arka yüzler cull edilir). lumina'nın glTF / FBX / OBJ
+import'u (Assimp formatları önce glTF'e çevrilir) ve importer eklentileri aynı üreticiyi kullanır; böylece içe aktarılan
+bir materyal kimin ürettiğinden bağımsız aynıdır. Bu anahtarlar yazılmadan önce içe aktarılmış materyal asset'leri eski
+kaynaklarını korur; modeli yeniden içe aktarmak yenisini yazar.
 
 ### `class ImportedMaterial`
 
 Bir importer'ın ürettiği materyal: `name`, `baseColor` (RGBA), `metallic`, `roughness`, `emissive` (RGB), `textures`
-(her slot için mevcut bir doku asset'ine bir `AssetReference`) ve ek `metadata`. `materialSource()` `.mat` kaynağını,
+(her slot için mevcut bir doku asset'ine bir `AssetReference`), `doubleSided`, `alphaMode` (`OPAQUE` / `MASK` /
+`BLEND`), `alphaCutoff` ve ek `metadata`. `materialSource()` `.mat` kaynağını,
 `toAsset({assetId})` glTF import'unun yazdığı metadata anahtarlarıyla (`baseColor` "r,g,b,a", `metallic`,
-`roughness`, `emissive` "r,g,b"), doku referanslarıyla ve verilmezse yeni bir id ile `filamat` `LuminaAsset`'ini
+`roughness`, `emissive` "r,g,b", `doubleSided`, `alphaMode`, `MASK` için `alphaCutoff`), doku referanslarıyla ve verilmezse yeni bir id ile `filamat` `LuminaAsset`'ini
 döndürür. Unreal Engine importer eklentisi bağımsız materyal import'larını bununla yazar.
 
 ## `lib/data/repositories/level_repository.dart`

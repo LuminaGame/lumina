@@ -205,19 +205,27 @@ A mesh's thumbnail drawing, worked out without `dart:ui` rendering so it can be 
 
 ## `lib/data/repositories/asset_repository/imported_material.dart`
 
-### `String buildImportedMaterialSource({name, baseColor, textureSlots, metallic, roughness, emissive})`
+### `String buildImportedMaterialSource({name, baseColor, textureSlots, metallic, roughness, emissive, doubleSided, alphaMode, alphaCutoff})`
 
 The Filament `.mat` source of an imported PBR material: the glTF factors baked in as literals, one `sampler2d` per
 texture slot (`baseColorMap`, `normalMap`, `metallicRoughnessMap` (roughness G, metallic B), `occlusionMap`,
-`emissiveMap`, `specularMap`), the normal written before `prepareMaterial`. lumina's glTF / FBX import and importer
-plugins use the same builder, so an imported material is identical whoever made it.
+`emissiveMap`, `specularMap`), the normal written before `prepareMaterial`. The glTF `doubleSided`, `alphaMode` and `alphaCutoff` become header
+keys, drawn as gltfio draws the same file: `doubleSided : true` (both faces, culling off); `MASK` → `blending : masked`
+with `maskThreshold` = `alphaCutoff` (default 0.5); `BLEND` → `blending : fade`, the straight glTF alpha
+(`baseColorFactor.a` × the base colour texture's alpha) premultiplied into the colour in the fragment, and a
+double-sided `BLEND` material drawn in two passes (`transparency : twoPassesTwoSides`). `OPAQUE` single-sided
+materials keep matc's defaults (opaque, back faces culled). lumina's glTF / FBX / OBJ import (Assimp formats are
+converted to glTF first) and importer plugins use the same builder, so an imported material is identical whoever made
+it. Material assets imported before these keys were written keep their old source; importing the model again writes
+the new one.
 
 ### `class ImportedMaterial`
 
 A material an importer made: `name`, `baseColor` (RGBA), `metallic`, `roughness`, `emissive` (RGB), `textures`
-(one `AssetReference` per slot, to existing texture assets) and extra `metadata`. `materialSource()` returns the
+(one `AssetReference` per slot, to existing texture assets), `doubleSided`, `alphaMode` (`OPAQUE` / `MASK` / `BLEND`), `alphaCutoff` and extra `metadata`. `materialSource()` returns the
 `.mat` source; `toAsset({assetId})` the `filamat` `LuminaAsset` with the metadata keys the glTF import writes
-(`baseColor` "r,g,b,a", `metallic`, `roughness`, `emissive` "r,g,b"), the texture references and a fresh id unless one
+(`baseColor` "r,g,b,a", `metallic`, `roughness`, `emissive` "r,g,b", `doubleSided`, `alphaMode`, `alphaCutoff` for
+`MASK`), the texture references and a fresh id unless one
 is given. The Unreal Engine importer plugin writes standalone material imports through it.
 
 ## `lib/data/repositories/level_repository.dart`

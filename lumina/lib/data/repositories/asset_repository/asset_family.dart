@@ -131,6 +131,12 @@ mixin _AssetFamilyEmission on _AssetRepositoryState {
           if (matMap['metallic'] is num) 'metallic': '${matMap['metallic']}',
           if (matMap['roughness'] is num) 'roughness': '${matMap['roughness']}',
           if (matMap['emissive'] is List) 'emissive': (matMap['emissive'] as List).join(','),
+          if (matMap['alphaMode'] is String)
+            ..._importedMaterialModeMetadata(
+              doubleSided: matMap['doubleSided'] == true,
+              alphaMode: matMap['alphaMode'] as String,
+              alphaCutoff: (matMap['alphaCutoff'] as num?)?.toDouble() ?? 0.5,
+            ),
         },
         references: refs,
       );

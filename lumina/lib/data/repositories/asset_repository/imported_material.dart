@@ -8,6 +8,15 @@ part of '../asset_repository.dart';
 /// literal so an imported material renders correctly without anyone setting
 /// parameters on an instance at runtime.
 ///
+/// The glTF [doubleSided], [alphaMode] (`OPAQUE`, `MASK`, `BLEND`) and
+/// [alphaCutoff] become header keys, drawn the way gltfio draws the same
+/// glTF: `doubleSided : true` (both faces, culling none); `MASK` →
+/// `blending : masked` at `maskThreshold : alphaCutoff`; `BLEND` →
+/// `blending : fade` with the straight glTF alpha (factor × texture alpha)
+/// premultiplied into the colour, and a double-sided `BLEND` material drawn
+/// back faces first (`transparency : twoPassesTwoSides`). Without them the
+/// material compiles opaque with back faces culled.
+///
 /// Two Filament rules this encodes:
 /// - `material.normal` must be written **before** `prepareMaterial`, or it is
 ///   silently ignored.
@@ -20,6 +29,9 @@ String buildImportedMaterialSource({
   double metallic = 0.0,
   double roughness = 1.0,
   List<double> emissive = const [0.0, 0.0, 0.0],
+  bool doubleSided = false,
+  String alphaMode = 'OPAQUE',
+  double alphaCutoff = 0.5,
 }) {
   String f(double v) {
     final text = v.toStringAsFixed(3);
@@ -27,6 +39,7 @@ String buildImportedMaterialSource({
   }
 
   final slots = textureSlots.toSet();
+  final mode = alphaMode.toUpperCase();
   final hasSamplers = slots.isNotEmpty;
   final alpha = baseColor.length > 3 ? baseColor[3] : 1.0;
   final baseColorLiteral =
@@ -40,6 +53,17 @@ String buildImportedMaterialSource({
     ..writeln('material {')
     ..writeln('  name : "$name",')
     ..writeln('  shadingModel : lit,');
+  if (doubleSided) {
+    header.writeln('  doubleSided : true,');
+  }
+  if (mode == 'MASK') {
+    header
+      ..writeln('  blending : masked,')
+      ..writeln('  maskThreshold : ${f(alphaCutoff)},');
+  } else if (mode == 'BLEND') {
+    header.writeln('  blending : fade,');
+    if (doubleSided) header.writeln('  transparency : twoPassesTwoSides,');
+  }
   if (hasSamplers) {
     header.writeln('  requires : [ uv0 ],');
   }
@@ -66,6 +90,10 @@ String buildImportedMaterialSource({
     body.writeln(
       '    material.baseColor *= texture(materialParams_baseColorMap, getUV0());',
     );
+  }
+  // Filament blends premultiplied colour; glTF alpha is straight.
+  if (mode == 'BLEND') {
+    body.writeln('    material.baseColor.rgb *= material.baseColor.a;');
   }
   // The glTF factors, multiplied by the texture as glTF
   // defines (metallic in B, roughness in G).
@@ -133,6 +161,15 @@ class ImportedMaterial {
   /// Extra metadata entries (for example where the material came from).
   final Map<String, String> metadata;
 
+  /// glTF `doubleSided`: both faces drawn (and lit).
+  final bool doubleSided;
+
+  /// glTF `alphaMode`: `OPAQUE`, `MASK` or `BLEND`.
+  final String alphaMode;
+
+  /// glTF `alphaCutoff`, the `MASK` threshold.
+  final double alphaCutoff;
+
   const ImportedMaterial({
     required this.name,
     this.baseColor = const [1, 1, 1, 1],
@@ -141,6 +178,9 @@ class ImportedMaterial {
     this.emissive = const [0, 0, 0],
     this.textures = const [],
     this.metadata = const {},
+    this.doubleSided = false,
+    this.alphaMode = 'OPAQUE',
+    this.alphaCutoff = 0.5,
   });
 
   /// The Filament `.mat` source.
@@ -151,6 +191,9 @@ class ImportedMaterial {
         roughness: roughness,
         emissive: emissive,
         textureSlots: [for (final t in textures) t.slotName],
+        doubleSided: doubleSided,
+        alphaMode: alphaMode,
+        alphaCutoff: alphaCutoff,
       );
 
   /// The `filamat` asset, with [assetId] or a fresh id.
@@ -166,9 +209,26 @@ class ImportedMaterial {
         'metallic': '$metallic',
         'roughness': '$roughness',
         'emissive': emissive.join(','),
+        ..._importedMaterialModeMetadata(doubleSided: doubleSided, alphaMode: alphaMode, alphaCutoff: alphaCutoff),
         ...metadata,
       },
       references: textures,
     );
   }
+}
+
+/// The metadata entries an imported material asset keeps its glTF sides and
+/// alpha mode in (`doubleSided`, `alphaMode`, and `alphaCutoff` for `MASK`),
+/// next to `baseColor` / `metallic` / `roughness` / `emissive`.
+Map<String, String> _importedMaterialModeMetadata({
+  required bool doubleSided,
+  required String alphaMode,
+  required double alphaCutoff,
+}) {
+  final mode = alphaMode.toUpperCase();
+  return {
+    'doubleSided': '$doubleSided',
+    'alphaMode': mode,
+    if (mode == 'MASK') 'alphaCutoff': '$alphaCutoff',
+  };
 }

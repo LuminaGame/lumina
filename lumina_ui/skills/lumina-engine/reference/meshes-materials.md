@@ -5,6 +5,10 @@
 - `import_asset` (absolute `path`; GLB / glTF / FBX / OBJ) makes a static mesh `.lmas` (`contents/meshes/static/`)
   or a skeletal one (`contents/meshes/skeletal/`), and extracts the file's materials and textures beside it
   (`contents/materials/<Mesh>/`, `contents/textures/<Mesh>/`). The result lists what was written.
+- An imported material keeps the glTF `doubleSided` (`doubleSided : true`), `alphaMode` `MASK` (`blending : masked`,
+  `maskThreshold` = `alphaCutoff`) and `BLEND` (`blending : fade`, colour premultiplied by its alpha) in its `.mat`
+  header, so foliage cards, planes and glass draw both faces / cut out / see-through once compiled. Materials
+  imported by an older editor lack these keys: import the model again (or `set_material_settings`).
 - Place: `spawn_actor_from_asset` with the mesh `asset`; in a Blueprint: a `LuminaStaticMeshComponent` with
   `staticMeshAsset` = the mesh path (`set_blueprint_component_property`); swap at run time with `set_static_mesh`.
 - Inspect: `get_static_mesh` (sections, `material_slots`, LODs, collision), `set_static_mesh_collision`.
@@ -34,7 +38,8 @@
 | At run time | node `set_material` (`element_index`, `material` = the material path) on a mesh component | that component, one section |
 
 - A skeletal mesh component's `materialOverride` is not drawn yet; use its mesh's slots.
-- OBJ import ignores the MTL colour (`Kd`): the material comes out grey; set its `baseColor` after import.
+- OBJ import ignores the MTL file (colour `Kd`, dissolve `d`): the material comes out opaque grey; set its
+  `baseColor` / `blending` after import, or convert the OBJ to glTF first.
 - A level actor's `material` that is not compiled (or not found) is not drawn: the mesh keeps its own and the
   Output Log (and the `set_actor_property` reply) says why.
 - Several colours of one mesh: `duplicate_asset` the material, change `baseColor`, `compile_material` with
