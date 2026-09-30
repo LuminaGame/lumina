@@ -24,18 +24,19 @@
 - **`compile_material` with `save: true`** writes the `.lmas`; without `save` nothing reaches disk and Play keeps
   the old material. Check `get_material_issues`.
 
-## Putting a material on a mesh (all three draw in Play and in a built game)
+## Putting a material on a mesh (each draws in Play and in a built game)
 
 | Where | How | Affects |
 |---|---|---|
 | The mesh's slot | `set_static_mesh_material_slot` (`asset` the mesh, `slot` index, `material`), then `save_static_mesh` | every use of that mesh |
 | A Blueprint's mesh component | `set_blueprint_component_property` `property` `materialOverride`, `value` the material path | that component, every section |
+| A placed level mesh or basic shape | `set_actor_property` `property` `material`, `value` the material path (or the Details Material field); `null` clears it | that actor, every section: viewport, Play and the built game |
 | At run time | node `set_material` (`element_index`, `material` = the material path) on a mesh component | that component, one section |
 
 - A skeletal mesh component's `materialOverride` is not drawn yet; use its mesh's slots.
 - OBJ import ignores the MTL colour (`Kd`): the material comes out grey; set its `baseColor` after import.
-- A level Mesh actor's `material` property (`set_actor_property`, the Details material field) is stored in the
-  level but not drawn in Play: use the mesh slot, or place a Blueprint whose component has a `materialOverride`.
+- A level actor's `material` that is not compiled (or not found) is not drawn: the mesh keeps its own and the
+  Output Log (and the `set_actor_property` reply) says why.
 - Several colours of one mesh: `duplicate_asset` the material, change `baseColor`, `compile_material` with
   `save: true`, assign per component (`materialOverride`) or per duplicated mesh (slots).
 - Glow: a material's `emissive` (see `filament-materials`), not a light.

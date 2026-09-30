@@ -23,6 +23,9 @@ import '../object/actor.dart';
 /// the actor's scale.
 ///
 /// A mesh with neither has no collision.
+///
+/// `materialOverrideAsset` is drawn on every section in place of the mesh's
+/// own materials ([LuminaStaticMeshComponent.materialOverrideAsset]).
 class LuminaStaticMeshActor extends LuminaActor {
   /// The drawn mesh (the root component).
   final LuminaStaticMeshComponent meshComponent;
@@ -51,6 +54,7 @@ class LuminaStaticMeshActor extends LuminaActor {
     List<LuminaCollisionHull> collisionHulls = const [],
     List<LuminaCollisionPrimitive> collisionPrimitives = const [],
     Future<Uint8List> Function(String path)? assetProvider,
+    String? materialOverrideAsset,
   }) : this._(
           key,
           LuminaStaticMeshComponent(
@@ -61,6 +65,7 @@ class LuminaStaticMeshActor extends LuminaActor {
             castShadows: castShadows,
             visible: visible,
             assetProvider: assetProvider,
+            materialOverrideAsset: materialOverrideAsset,
           ),
           collisionHulls,
           collisionPrimitives,

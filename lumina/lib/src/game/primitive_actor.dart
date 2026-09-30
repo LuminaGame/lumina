@@ -9,6 +9,7 @@ import '../components/collision/collision_component.dart';
 import '../../data/services/primitive_glb_factory.dart';
 import '../components/mesh/static_mesh_component.dart';
 import '../object/actor.dart';
+import '../utility/lumina_assets.dart';
 
 /// Shapes a [LuminaPrimitiveActor] can take.
 enum LuminaPrimitiveShape { box, plane, sphere, cylinder }
@@ -200,6 +201,8 @@ class LuminaPrimitiveGeometry {
 ///
 /// Both Play-In-Editor and the generated game build the same actor from the
 /// same `LuminaProceduralMeshComponent` properties in `metadata.actors`.
+/// A `materialOverrideAsset` (the actor's assigned material) is drawn in
+/// place of the colour.
 class LuminaPrimitiveActor extends LuminaActor {
   final LuminaPrimitiveShape shape;
   final Vector3 size;
@@ -219,22 +222,29 @@ class LuminaPrimitiveActor extends LuminaActor {
     required this.shape,
     required this.size,
     required this.color,
+    String? materialOverrideAsset,
   }) {
     if (scale != null) actorScale = scale;
     final hex = luminaRgbToHex(color);
+    // Not a file: a cache key naming the generated asset, so identical
+    // primitives share it.
+    final key = 'lumina-primitive:${shape.name}:${size.x}x${size.y}x${size.z}:$hex';
     meshComponent = LuminaStaticMeshComponent(
-      // Not a file: a cache key naming the generated asset, so identical
-      // primitives share it.
-      meshAssetPath: 'lumina-primitive:${shape.name}:${size.x}x${size.y}x${size.z}:$hex',
+      meshAssetPath: key,
       // Generated in world units (cm), not glTF metres.
       assetUnitScale: 1.0,
-      assetProvider: (_) async => PrimitiveGlbFactory.build(
-        shape: shape.name,
-        sizeX: size.x,
-        sizeY: size.y,
-        sizeZ: size.z,
-        colorHex: hex,
-      ),
+      // The shape is generated; anything else (a material asset) is read as
+      // every asset is.
+      assetProvider: (path) async => path == key
+          ? PrimitiveGlbFactory.build(
+              shape: shape.name,
+              sizeX: size.x,
+              sizeY: size.y,
+              sizeZ: size.z,
+              colorHex: hex,
+            )
+          : LuminaAssets.resolve(null)(path),
+      materialOverrideAsset: materialOverrideAsset,
     );
     addComponent(meshComponent);
 
@@ -253,6 +263,7 @@ class LuminaPrimitiveActor extends LuminaActor {
     Vector3? location,
     Quaternion? rotation,
     Vector3? scale,
+    String? materialOverrideAsset,
   }) {
     double dim(String name) {
       final v = properties[name];
@@ -267,6 +278,7 @@ class LuminaPrimitiveActor extends LuminaActor {
       shape: luminaPrimitiveShapeFrom(properties['shape'] as String?),
       size: Vector3(dim('sizeX'), dim('sizeY'), dim('sizeZ')),
       color: luminaHexToRgb(properties['colorHex'] as String?),
+      materialOverrideAsset: materialOverrideAsset,
     );
   }
 }

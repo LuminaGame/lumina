@@ -327,6 +327,20 @@ mixin _LevelCodegen on _DartCodeGeneratorServiceState {
   }
 
   /// One declarative runtime object per editor actor; null for folders.
+  /// The material [a] assigns ([LuminaLevelActorMaterial]) as a
+  /// `materialOverrideAsset: '…'` argument, or '' — with a comment line
+  /// saying why when the assigned material cannot be drawn (the mesh then
+  /// keeps its own).
+  (String, String) _materialArgument(Map<String, dynamic> a, String? projectDir) {
+    final path = LuminaLevelActorMaterial.pathOf(a);
+    if (path == null) return ('', '');
+    final problem = LuminaLevelActorMaterial.problem(path, projectDir: projectDir);
+    if (problem != null) {
+      return ('', '// Material not drawn, the mesh keeps its own: ${problem.replaceAll('\n', ' ')}\n          ');
+    }
+    return ("materialOverrideAsset: '${_escape(path)}'", '');
+  }
+
   String? _emitActor(
     Map<String, dynamic> a, {
     String? streamingStartClass,
@@ -390,10 +404,11 @@ mixin _LevelCodegen on _DartCodeGeneratorServiceState {
         final sy = _num(meshProps['sizeY'], 1.0);
         final sz = _num(meshProps['sizeZ'], 1.0);
         final primColor = _hexRgb(meshProps['colorHex'], [0.6, 0.63, 0.68]);
-        return "LuminaPrimitiveActor($key, $transform, scale: $scaleCode, "
+        final (primMaterial, primNote) = _materialArgument(a, projectDir);
+        return "${primNote}LuminaPrimitiveActor($key, $transform, scale: $scaleCode, "
             "shape: luminaPrimitiveShapeFrom('${_escape(shape)}'), "
             "size: Vector3(${_f(sx)}, ${_f(sy)}, ${_f(sz)}), "
-            "color: ${_vector3(primColor)}),";
+            "color: ${_vector3(primColor)}${primMaterial.isEmpty ? '' : ', $primMaterial'}),";
       case 'TriggerVolume':
         // A trigger a Level Blueprint binds OnActorBeginOverlap
         // on; a 100 cm cube at scale 1 (runtime half extents, Y up).
@@ -421,6 +436,8 @@ mixin _LevelCodegen on _DartCodeGeneratorServiceState {
       case 'SkeletalMesh':
         final meshPath = a['meshAssetPath'];
         if (meshPath is String && meshPath.isNotEmpty) {
+          // The material assigned to the placed mesh, drawn on every section.
+          final (material, materialNote) = _materialArgument(a, projectDir);
           // 06: imported UCX_ hulls and the Static Mesh
           // editor's authored shapes are the mesh's simple collision
           // (skeletal meshes collide through a physics asset instead).
@@ -438,12 +455,13 @@ mixin _LevelCodegen on _DartCodeGeneratorServiceState {
             final primitiveList = collision.primitives.isEmpty
                 ? ''
                 : 'collisionPrimitives: const [\n${collision.primitives.map(_emitCollisionPrimitive).join()}          ], ';
-            return '${note}LuminaStaticMeshActor($key, meshAssetPath: \'${_escape(_bundlePath(meshPath))}\', '
+            return '$materialNote${note}LuminaStaticMeshActor($key, meshAssetPath: \'${_escape(_bundlePath(meshPath))}\', '
                 '$transform, scale: $scaleCode, castShadows: $castShadows, visible: $visible, '
-                '$hullList$primitiveList),';
+                '${material.isEmpty ? '' : '$material, '}$hullList$primitiveList),';
           }
-          return 'LuminaActor($key, root: LuminaStaticMeshComponent(meshAssetPath: \'${_escape(_bundlePath(meshPath))}\', '
-              '$transform, scale: $scaleCode, castShadows: $castShadows, visible: $visible)),';
+          return '${materialNote}LuminaActor($key, root: LuminaStaticMeshComponent(meshAssetPath: \'${_escape(_bundlePath(meshPath))}\', '
+              '$transform, scale: $scaleCode, castShadows: $castShadows, visible: $visible'
+              '${material.isEmpty ? '' : ', $material'})),';
         }
         return 'LuminaActor($key, root: LuminaSceneComponent($transform, scale: $scaleCode, isVisible: $visible)),';
       case 'Light':

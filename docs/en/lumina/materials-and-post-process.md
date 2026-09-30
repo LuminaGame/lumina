@@ -280,8 +280,23 @@ Refcounted cache of compiled [LuminaMaterial] assets for a world.
 | :--- | :--- | :--- |
 | `world` | `LuminaWorld world` | Holds the `world` property or configuration state. |
 | `engine` | `FilamentEngine engine` | Holds the `engine` property or configuration state. |
+| `createNative` | `static FilamentMaterial createNative(FilamentEngine engine, String assetPath, Uint8List bytes, {List<MaterialConstant> constants = const []})` | A native material from the bytes of [assetPath]: a material `.lmas` (its compiled package, with the parameter values the Material Editor saved as defaults) or a `.filamat`. Throws a `StateError` when they hold no compiled material. |
+| `isCompiledPackage` | `static bool isCompiledPackage(Uint8List bytes)` | Whether [bytes] is a compiled `.filamat` package (Filament aborts the process on anything else). |
 | `onMaterialReleased` | `void onMaterialReleased(LuminaMaterial material)` | Internal callback when material refcount drops to zero. |
 | `dispose` | `void dispose()` | Disposes all cached materials. |
+
+### `class LuminaInstanceMaterialOverride`
+
+One material asset drawn on every section of a gltfio instance that no world owns: the editor's level viewport, where a placed mesh shows its assigned material as Play and the built game draw it (`LuminaStaticMeshComponent.materialOverrideAsset`).
+
+**Members:**
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `fromBytes` | `factory LuminaInstanceMaterialOverride.fromBytes(FilamentEngine engine, String assetPath, Uint8List bytes)` | Builds the material from a material `.lmas` or `.filamat`, with its saved parameter values; a `StateError` when there is no compiled material. |
+| `applyTo` | `void applyTo(FilamentAssetInstance instance)` | Draws it on every primitive of every renderable of [instance], remembering what each drew. |
+| `restore` | `void restore()` | Gives those sections their own materials back. |
+| `dispose` | `void dispose()` | Restores the sections and destroys the material. |
 
 ## `lib/src/post_process/post_process_blender.dart`
 

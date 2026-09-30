@@ -25,6 +25,7 @@ export 'data/services/glb_parser_service.dart';
 export 'data/services/derived_data_cache.dart';
 export 'data/services/asset_index.dart';
 export 'data/services/level_asset_manifest.dart';
+export 'data/services/level_actor_material.dart';
 export 'data/services/thumbnail_sidecar_migration.dart';
 export 'data/services/primitive_glb_factory.dart';
 export 'data/services/glb_animation_merger.dart';
@@ -170,6 +171,7 @@ export 'src/material/lumina_material.dart';
 export 'src/material/lumina_material_instance.dart';
 export 'src/material/dynamic_material_instance.dart';
 export 'src/material/material_cache.dart';
+export 'src/material/instance_material_override.dart';
 
 // Input
 export 'src/input/input_component.dart';

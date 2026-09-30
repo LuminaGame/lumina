@@ -18,6 +18,7 @@ import 'blueprint_codegen/blueprint_dart_generator.dart';
 import 'blueprint_project_assets.dart';
 import 'dart_identifiers.dart';
 import 'generated_code_migration.dart';
+import 'level_actor_material.dart';
 import 'level_asset_manifest.dart';
 import 'mesh_collision_service.dart';
 import 'project_input_binder.dart';

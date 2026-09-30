@@ -11,6 +11,7 @@ import '../../../core/property_editors/slider_field.dart';
 import '../../../core/property_editors/enum_field.dart';
 import '../../../core/property_editors/asset_ref_field.dart';
 import '../../details/widgets/actor_mesh_section.dart';
+import '../../details/widgets/actor_material_section.dart';
 import '../../../core/property_editors/collision_section_editor.dart';
 import '../../../core/property_editors/physics_section_editor.dart';
 import '../../details/services/blueprint_collision_overrides.dart';
@@ -135,6 +136,8 @@ class _DetailsWidgetState extends _DetailsWidgetStateBase
                             const SizedBox(height: 8),
                             // The mesh a placed mesh actor renders.
                             if (ActorMeshSection.appliesTo(actor)) ActorMeshSection(viewModel: widget.viewModel, actor: actor),
+                            // The material drawn on it.
+                            if (ActorMaterialSection.appliesTo(actor)) ActorMaterialSection(viewModel: widget.viewModel, actor: actor),
                             
                             // A placed Blueprint's collision components:
                             // per-instance Collision.

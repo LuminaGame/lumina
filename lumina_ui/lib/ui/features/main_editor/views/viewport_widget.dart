@@ -3,6 +3,7 @@ import 'package:lumina_ui/ui/features/main_editor/services/gizmo_controller.dart
 import 'package:lumina_ui/ui/features/main_editor/services/transform_gizmo.dart';
 import 'package:vector_math/vector_math_64.dart' hide Colors;
 import 'dart:async';
+import 'dart:io';
 import 'dart:math' as math;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/scheduler.dart';

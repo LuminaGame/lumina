@@ -319,6 +319,24 @@ The class's collision components come from its Blueprint document; an edit store
 | `baseOf` | `static LuminaCollisionProfile baseOf(LuminaBlueprintDocument? doc, LuminaBlueprintComponent component)` | [component]'s built-in setup in [doc]: a Character's root capsule is Pawn, anything else lumina's default. |
 | `applyTo` | `static int applyTo(LuminaBlueprintInstance instance, EditorActorNode actor)` | Applies [actor]'s overrides to [instance]'s built collision components (Play-In-Editor, before the actor is registered). |
 
+## `lib/ui/features/details/widgets/actor_material_section.dart`
+
+### `class ActorMaterialSection`
+
+The Details panel's Material section of a placed mesh or basic shape: the material asset drawn on every section of it (in the level viewport, in Play and in the built game), picked with the shared searchable [AssetPickerSelect]; clearing it gives the mesh its own materials back. One undo step per pick. A material that cannot be drawn (not compiled, not found) is named under the picker.
+
+**Constructors:**
+
+- `const ActorMaterialSection({super.key, required this.viewModel, required this.actor})`
+
+**Members:**
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `viewModel` | `final EditorViewModel viewModel` |  |
+| `actor` | `final EditorActorNode actor` |  |
+| `appliesTo` | `static bool appliesTo(EditorActorNode actor)` | A placed mesh or basic shape (`LuminaLevelActorMaterial.actorTypes`), not a Blueprint. |
+
 ## `lib/ui/features/details/widgets/actor_mesh_section.dart`
 
 ### `class ActorMeshSection`

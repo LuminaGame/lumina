@@ -6,6 +6,7 @@ import '../services/mcp_protocol.dart';
 import '../services/mcp_tool.dart';
 import 'core_tools.dart' show mcpUndoState;
 import 'package:lumina/data/services/dart_identifiers.dart';
+import 'package:lumina/lumina.dart' show AssetType, LuminaLevelActorMaterial;
 
 /// The project and level tools: what the Outliner, the
 /// Details panel and the Edit menu let a user do, as MCP tools over the real
@@ -252,7 +253,8 @@ void registerLevelTools(McpToolRegistry registry, EditorViewModel vm) {
       description: 'Sets one property of an actor, as the Details panel does, in one undo step. Actor properties: '
           '"mobility" ("Static" | "Stationary" | "Movable"), "visible" (bool), "locked" (bool), '
           '"light_intensity" (number, lights), "cast_shadows" (bool, lights), "light_color" ("#RRGGBB", lights), '
-          '"material" (a material .lmas path, meshes). A component property is "<component id or type>.<property id>", '
+          '"material" (a material .lmas path or unique name, drawn on every section of a placed mesh or basic shape; '
+          'null gives the mesh its own back). A component property is "<component id or type>.<property id>", '
           'e.g. "LuminaProceduralMeshComponent.sizeX"; get_actor lists the components and their properties.',
       inputSchema: McpSchema.object({
         'id': McpSchema.string('The actor id.'),
@@ -294,9 +296,35 @@ void registerLevelTools(McpToolRegistry registry, EditorViewModel vm) {
             vm.selectActor(actor);
             vm.updateActorLightColor(value.toUpperCase());
           case 'material':
-            if (value is! String) return McpToolResult.error(wrongType('a material path'));
+            if (value != null && value is! String) return McpToolResult.error(wrongType('a material path or null'));
+            if (!LuminaLevelActorMaterial.actorTypes.contains(actor.type) || actor.blueprintClass != null) {
+              return McpToolResult.error(
+                'Actor "${actor.name}" (${actor.type}) draws no assigned material: only placed meshes and basic shapes do. '
+                'A Blueprint sets its Static Mesh component\'s materialOverride.',
+              );
+            }
+            String? path;
+            if (value is String && value.isNotEmpty) {
+              final wanted = value.replaceAll(r'\', '/');
+              final material = vm.realAssets
+                      .where((a) => a.type == AssetType.filamat && (a.relativePath == wanted || a.lmasPath?.replaceAll(r'\', '/') == wanted))
+                      .firstOrNull ??
+                  vm.realAssets.where((a) => a.type == AssetType.filamat && (a.fileName == wanted || a.fileName == '$wanted.lmas')).firstOrNull;
+              if (material == null) {
+                return McpToolResult.error('No material asset "$value" in the project. Call list_assets with type "filamat".');
+              }
+              path = material.relativePath;
+            }
             vm.selectActor(actor);
-            vm.updateActorMaterial(value);
+            vm.updateActorMaterial(path);
+            final problem = path == null ? null : LuminaLevelActorMaterial.problem(path, projectDir: vm.projectDirPath);
+            if (problem != null) {
+              return McpToolResult.json({
+                'actor': actorSummary(actor),
+                'material_warning': '$problem; the mesh draws its own materials until it is compiled (compile_material with save: true).',
+                'undo': undoState(),
+              });
+            }
           default:
             final dot = property.indexOf('.');
             if (dot <= 0) {

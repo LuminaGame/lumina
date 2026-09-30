@@ -248,16 +248,35 @@ mixin _EditorActorsAndComponents on _EditorViewModelState {
     return true;
   }
 
-  void updateActorMaterial(String materialPath) {
-    if (_selectedActor != null) {
-      _selectedActor!.materialPath = materialPath;
-      _logger.log(
-        'Assigned material "$materialPath" to actor "${_selectedActor!.name}"',
-        level: 'success',
-        source: 'Inspector',
-      );
+  /// Assigns the material asset [materialPath] (project-relative
+  /// `contents/…`) to the selected mesh actor, drawn on every section of its
+  /// mesh in the viewport, in Play and in the built game; null gives the mesh
+  /// its own materials back. One undo step.
+  void updateActorMaterial(String? materialPath) {
+    if (_selectedActor == null) return;
+    final node = _selectedActor!;
+    final oldVal = node.materialPath;
+    final newVal = (materialPath == null || materialPath.isEmpty) ? null : materialPath;
+    if (oldVal == newVal) return;
+
+    void set(String? value) {
+      node.materialPath = value;
       _markDirty();
     }
+
+    set(newVal);
+    _logger.log(
+      newVal == null ? 'Cleared the material of actor "${node.name}"' : 'Assigned material "$newVal" to actor "${node.name}"',
+      level: 'success',
+      source: 'Inspector',
+    );
+    transactions.record(
+      EditorTransaction(
+        label: 'Change Material ${node.name}',
+        undo: () => set(oldVal),
+        redo: () => set(newVal),
+      ),
+    );
   }
 
   // Component Wrappers

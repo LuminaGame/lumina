@@ -280,8 +280,23 @@ Refcounted cache of compiled [LuminaMaterial] assets for a world.
 | :--- | :--- | :--- |
 | `world` | `LuminaWorld world` | `world` alanını (field/property) ve ilişkili veriyi saklar. |
 | `engine` | `FilamentEngine engine` | `engine` alanını (field/property) ve ilişkili veriyi saklar. |
+| `createNative` | `static FilamentMaterial createNative(FilamentEngine engine, String assetPath, Uint8List bytes, {List<MaterialConstant> constants = const []})` | [assetPath] baytlarından yerel bir materyal: bir materyal `.lmas` (derlenmiş paketi; Materyal Editörü'nün kaydettiği parametre değerleri varsayılan olur) ya da bir `.filamat`. Derlenmiş materyal yoksa `StateError` fırlatır. |
+| `isCompiledPackage` | `static bool isCompiledPackage(Uint8List bytes)` | [bytes] derlenmiş bir `.filamat` paketi mi (Filament başka her şeyde süreci durdurur). |
 | `onMaterialReleased` | `void onMaterialReleased(LuminaMaterial material)` | Internal callback when material refcount drops to zero. |
 | `dispose` | `void dispose()` | Disposes all cached materials. |
+
+### `class LuminaInstanceMaterialOverride`
+
+Hiçbir dünyanın sahip olmadığı bir gltfio örneğinin her bölümüne çizilen tek bir materyal varlığı: editörün seviye görünümü, yerleştirilmiş bir mesh'in atanmış materyalini Play ve derlenmiş oyunun çizdiği gibi gösterir (`LuminaStaticMeshComponent.materialOverrideAsset`).
+
+**Üyeler:**
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `fromBytes` | `factory LuminaInstanceMaterialOverride.fromBytes(FilamentEngine engine, String assetPath, Uint8List bytes)` | Materyali bir materyal `.lmas` ya da `.filamat` dosyasından, kayıtlı parametre değerleriyle kurar; derlenmiş materyal yoksa `StateError`. |
+| `applyTo` | `void applyTo(FilamentAssetInstance instance)` | [instance] içindeki her çizilebilirin her primitifine çizer, her birinin önceki materyalini hatırlar. |
+| `restore` | `void restore()` | O bölümlere kendi materyallerini geri verir. |
+| `dispose` | `void dispose()` | Bölümleri geri yükler ve materyali yok eder. |
 
 ## `lib/src/post_process/post_process_blender.dart`
 

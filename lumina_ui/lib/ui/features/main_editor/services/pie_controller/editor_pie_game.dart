@@ -297,6 +297,22 @@ class EditorPieGame extends LuminaGame {
     );
   }
 
+  /// The material [actor] assigns, when it can be drawn; one that cannot (not
+  /// found, never compiled) is reported to the Output Log and the mesh keeps
+  /// its own materials, as in the generated level.
+  static String? _assignedMaterial(EditorActorNode actor) {
+    final path = LuminaLevelActorMaterial.pathOf(actor.toMap());
+    if (path == null) return null;
+    final problem = LuminaLevelActorMaterial.problem(path, projectDir: LuminaAssets.projectDir);
+    if (problem == null) return path;
+    EngineLoggerService().log(
+      'Actor "${actor.name}" draws its own materials: its material $problem',
+      level: 'warning',
+      source: 'PIE',
+    );
+    return null;
+  }
+
   /// Editor actor types that carry no runtime representation.
   static const Set<String> nonRuntimeTypes = {'Folder'};
 
@@ -348,6 +364,7 @@ class EditorPieGame extends LuminaGame {
           location: location,
           rotation: rotation,
           scale: scale,
+          materialOverrideAsset: _assignedMaterial(actor),
         );
       case 'Pawn':
         return LuminaPawn(
@@ -373,6 +390,8 @@ class EditorPieGame extends LuminaGame {
         final collision = actor.type == 'SkeletalMesh'
             ? MeshSimpleCollision.none
             : MeshCollisionService.simpleCollisionForMeshAsset(meshPath);
+        // The material assigned in the level, as the generated level draws it.
+        final material = _assignedMaterial(actor);
         if (!collision.isEmpty) {
           return LuminaStaticMeshActor(
             key: ValueKey(actor.id),
@@ -384,6 +403,7 @@ class EditorPieGame extends LuminaGame {
             visible: actor.isVisible,
             collisionHulls: collision.hulls,
             collisionPrimitives: collision.primitives,
+            materialOverrideAsset: material,
           );
         }
         return LuminaActor(
@@ -395,6 +415,7 @@ class EditorPieGame extends LuminaGame {
             meshAssetPath: meshPath,
             castShadows: actor.castShadows,
             visible: actor.isVisible,
+            materialOverrideAsset: material,
           ),
         );
       case 'Light':

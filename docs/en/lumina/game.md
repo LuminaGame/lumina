@@ -278,7 +278,7 @@ CPU-side vertex data for a primitive shape, in metres, centred on the actor orig
 
 ### `class LuminaPrimitiveActor`
 
-An engine-drawn primitive authored in Lumina Studio: a [LuminaProceduralMeshComponent] section plus a matching box collider, so a character can stand on it without any imported art asset.  Both Play-In-Editor and the generated game build the same actor from the same `LuminaProceduralMeshComponent` properties in `metadata.actors`.
+An engine-drawn primitive authored in Lumina Studio: a [LuminaProceduralMeshComponent] section plus a matching box collider, so a character can stand on it without any imported art asset.  Both Play-In-Editor and the generated game build the same actor from the same `LuminaProceduralMeshComponent` properties in `metadata.actors`. A `materialOverrideAsset` (the actor's assigned material, a material `.lmas`) is drawn in place of the colour on every section.
 
 **Functions, Methods & Accessors:**
 
@@ -352,6 +352,8 @@ The root [meshComponent] draws the mesh asset as a plain [LuminaStaticMeshCompon
 Every entry of [collisionPrimitives] (authored boxes, spheres and capsules) becomes one more collider next to them, sized for the actor's scale.
 
 A mesh with neither has no collision.
+
+`materialOverrideAsset` (the material a placed level mesh is assigned) is drawn on every section in place of the mesh's own materials ([LuminaStaticMeshComponent.materialOverrideAsset]).
 
 **Constructors:**
 

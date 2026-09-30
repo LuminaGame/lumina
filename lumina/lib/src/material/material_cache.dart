@@ -85,26 +85,8 @@ class LuminaMaterialCache {
     List<MaterialConstant> constants,
     Future<Uint8List> Function(String path)? assetProvider,
   ) async {
-    var bytes = await LuminaAssets.resolve(assetProvider)(assetPath);
-    var values = const <String, Object?>{};
-    // A material asset: the compiled package is its payload, the values the
-    // Material Editor saved are its instances' starting parameters.
-    if (assetPath.toLowerCase().endsWith('.lmas')) {
-      final asset = LuminaAsset.fromBytes(bytes);
-      final payload = asset.rawPayload;
-      if (payload == null || !_isFilamatPackage(payload)) {
-        throw StateError('$assetPath carries no compiled material');
-      }
-      bytes = payload;
-      values = _savedParameters(asset);
-    }
-
-    final nativeMat = FilamentMaterial.fromBuffer(
-      engine: engine,
-      filamatBuffer: bytes,
-      constants: constants,
-    );
-    _setDefaults(nativeMat, values);
+    final bytes = await LuminaAssets.resolve(assetProvider)(assetPath);
+    final nativeMat = createNative(engine, assetPath, bytes, constants: constants);
 
     return LuminaMaterial.internal(
       nativeMat,
@@ -114,9 +96,39 @@ class LuminaMaterialCache {
     );
   }
 
+  /// A native material from [bytes], the content of [assetPath]: a material
+  /// `.lmas` (its compiled package, with the parameter values the Material
+  /// Editor saved as the defaults every instance starts with) or a `.filamat`
+  /// package. Throws a [StateError] when they hold no compiled material.
+  static FilamentMaterial createNative(
+    FilamentEngine engine,
+    String assetPath,
+    Uint8List bytes, {
+    List<MaterialConstant> constants = const [],
+  }) {
+    var package = bytes;
+    var values = const <String, Object?>{};
+    // A material asset: the compiled package is its payload, the values the
+    // Material Editor saved are its instances' starting parameters.
+    if (assetPath.toLowerCase().endsWith('.lmas')) {
+      final asset = LuminaAsset.fromBytes(bytes);
+      final payload = asset.rawPayload;
+      if (payload == null || !isCompiledPackage(payload)) {
+        throw StateError('$assetPath carries no compiled material');
+      }
+      package = payload;
+      values = _savedParameters(asset);
+    } else if (!isCompiledPackage(bytes)) {
+      throw StateError('$assetPath is not a compiled material');
+    }
+    final material = FilamentMaterial.fromBuffer(engine: engine, filamatBuffer: package, constants: constants);
+    _setDefaults(material, values);
+    return material;
+  }
+
   /// Whether [bytes] is a compiled `.filamat` package (a `MAT_VERS` chunk of
   /// size 4): Filament aborts the process on anything else.
-  static bool _isFilamatPackage(Uint8List bytes) {
+  static bool isCompiledPackage(Uint8List bytes) {
     const magic = [0x53, 0x52, 0x45, 0x56, 0x5F, 0x54, 0x41, 0x4D];
     if (bytes.length < 16) return false;
     for (var i = 0; i < magic.length; i++) {

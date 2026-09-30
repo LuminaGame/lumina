@@ -418,23 +418,6 @@ mixin _EditorActorSpawning on _EditorViewModelState {
       );
     }
 
-    // Detect matched material asset for this mesh
-    String? matchedMaterial;
-    for (final a in _realAssets) {
-      if (a.type == AssetType.filamat &&
-          (a.fileName.contains(baseName) ||
-              baseName.contains(a.fileName.split('.').first))) {
-        matchedMaterial = a.fileName;
-        break;
-      }
-    }
-    if (matchedMaterial == null &&
-        _realAssets.any((a) => a.type == AssetType.filamat)) {
-      matchedMaterial = _realAssets
-          .firstWhere((a) => a.type == AssetType.filamat)
-          .fileName;
-    }
-
     final spawnLoc = location ?? [0.0, 0.0, 0.0];
 
     // glTF is metres and every mesh draws ×100 in the centimetre world
@@ -456,7 +439,6 @@ mixin _EditorActorSpawning on _EditorViewModelState {
       type: typeName,
       location: spawnLoc,
       scale: initialScale,
-      materialPath: matchedMaterial ?? 'M_${baseName}_Mat',
       thumbnailBytes: asset.thumbnailBytes,
       meshData: meshData,
       meshAssetPath: resolvedMeshPath,

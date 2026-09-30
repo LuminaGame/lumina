@@ -553,7 +553,7 @@ The names an import gives the materials and textures it extracts from a mesh fil
 
 ### `abstract final class LuminaLevelAssetManifest`
 
-What a level loads: the assets its placed actors name — meshes, landscapes, sky environments, textures, materials, sounds, animation assets and the Blueprint classes placed in it with the assets their components name. The level code generator emits it as the level class's `assetManifest`; Play-In-Editor builds it from the level `.lmas` found through the project's asset index. Either way a [LuminaLevelPreloader] preloads it.
+What a level loads: the assets its placed actors name — meshes, landscapes, sky environments, textures, materials, sounds, animation assets and the Blueprint classes placed in it with the assets their components name. The level code generator emits it as the level class's `assetManifest`; Play-In-Editor builds it from the level `.lmas` found through the project's asset index. Either way a [LuminaLevelPreloader] preloads it. Yerleştirilmiş bir mesh'e atanmış materyal yalnızca çizilebiliyorsa listelenir ([LuminaLevelActorMaterial]).
 
 **Üyeler:**
 
@@ -566,6 +566,18 @@ What a level loads: the assets its placed actors name — meshes, landscapes, sk
 | `levelNames` | `static List<String> levelNames(LuminaAssetIndex index)` | The names of the project's levels, from [index] (up to date). |
 | `forProjectLevel` | `static Future<List<LuminaAssetRef>?> forProjectLevel(String projectDir, String levelName) async` | Level [levelName] of [projectDir]'s asset list for Play-In-Editor: found and read through the asset index (refreshed first), paths absolute (the editor reads the disk). Null when there is no such level. |
 | `toDartLiteral` | `static String toDartLiteral(List<LuminaAssetRef> refs, {String indent = ' '})` | [refs] as the `const` list literal a generated level's `assetManifest` holds. |
+
+### `abstract final class LuminaLevelActorMaterial`
+
+Seviyeye yerleştirilmiş bir mesh'in ya da temel şeklin kendi materyali yerine her bölümde çizdiği materyal: aktörün `materialPath` alanı (Details panelinin Material alanı, `set_actor_property material`). Seviye görünümü, Play-In-Editor ve seviye kod üreticisi (`materialOverrideAsset`) bunu buradan okur.
+
+**Üyeler:**
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `actorTypes` | `static const Set<String> actorTypes` | `Mesh`, `StaticMesh`, `SkeletalMesh`, `Primitive`. |
+| `pathOf` | `static String? pathOf(Map<String, dynamic> actor)` | Atanmış materyal, paket yolu olarak (`contents/…`); atama yoksa, yerleştirilmiş bir Blueprint için ya da `.lmas` / `.filamat` adı taşımayan bir değer için (eski editörlerin yazdığı yer tutucu adlar) null. |
+| `problem` | `static String? problem(String path, {String? projectDir})` | Materyalin neden çizilemediği (bulunamadı, derlenmiş materyal yok) ya da null. Üretici o zaman argüman yerine bir yorum yazar, Play ve görünüm bunu günlüğe yazar, mesh kendi materyalini korur. |
 
 ## `lib/data/services/lumina_config_dir.dart`
 

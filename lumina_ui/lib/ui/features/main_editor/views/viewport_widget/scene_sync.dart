@@ -56,6 +56,8 @@ mixin _ViewportSceneSync on _ViewportWidgetStateBase {
     if (engine == null || engine.isDisposed) {
       _actorAssets.clear();
       _actorPayloads.clear();
+      _actorMaterials.clear();
+      _actorMaterialPaths.clear();
       _meshWires.clear();
       _nativeScene = null;
       _nativeCamera = null;
@@ -65,6 +67,13 @@ mixin _ViewportSceneSync on _ViewportWidgetStateBase {
       engine.flushAndWait();
       _sceneEnvironment.detach();
       _proceduralSky.detach();
+      // The meshes' own materials go back before the assigned ones are
+      // destroyed.
+      for (final material in _actorMaterials.values) {
+        material.dispose();
+      }
+      _actorMaterials.clear();
+      _actorMaterialPaths.clear();
       for (final handle in _actorAssets.values) {
         if (scene != null && !scene.isDisposed) scene.removeEntities(handle.instance.entities);
         handle.release();
@@ -209,6 +218,10 @@ mixin _ViewportSceneSync on _ViewportWidgetStateBase {
   }
 
   void _releaseActorMesh(String id) {
+    _actorMaterialPaths.remove(id);
+    try {
+      _actorMaterials.remove(id)?.dispose();
+    } catch (_) {}
     final handle = _actorAssets.remove(id);
     _actorPayloads.remove(id);
     _visibleInScene.remove(id);
@@ -217,6 +230,57 @@ mixin _ViewportSceneSync on _ViewportWidgetStateBase {
       if (_nativeScene != null) _nativeScene!.removeEntities(handle.instance.entities);
     } catch (_) {}
     handle.release();
+  }
+
+  /// Draws [actor]'s assigned material on every section of its instance, as
+  /// Play and the built game do, or gives the mesh its own materials back;
+  /// only when the assignment (or the material file) changed. A material that
+  /// cannot be drawn is reported to the Output Log once.
+  void _syncActorMaterial(EditorActorNode actor, LuminaMeshHandle handle) {
+    final path = LuminaLevelActorMaterial.pathOf({
+      'type': actor.type,
+      'materialPath': actor.materialPath,
+      'blueprintClass': actor.blueprintClass,
+    });
+    final projectDir = widget.viewModel.projectDirPath;
+    final file = path == null
+        ? null
+        : File(path.startsWith('/') || RegExp(r'^[A-Za-z]:/').hasMatch(path) ? path : '$projectDir/$path');
+    // A recompiled material (a newer file) is drawn anew.
+    DateTime? modified;
+    try {
+      modified = file?.lastModifiedSync();
+    } catch (_) {}
+    final key = path == null ? null : '$path@${modified?.microsecondsSinceEpoch}';
+    if (_actorMaterialPaths.containsKey(actor.id) && _actorMaterialPaths[actor.id] == key) return;
+    _actorMaterialPaths[actor.id] = key;
+    _actorMaterials.remove(actor.id)?.dispose();
+    if (path == null || file == null) return;
+    final problem = LuminaLevelActorMaterial.problem(path, projectDir: projectDir);
+    if (problem != null) {
+      EngineLoggerService().log(
+        'Actor "${actor.name}" draws its own materials: its material $problem',
+        level: 'warning',
+        source: 'FilamentNative',
+      );
+      return;
+    }
+    try {
+      final material = LuminaInstanceMaterialOverride.fromBytes(_nativeEngine!, path, file.readAsBytesSync());
+      material.applyTo(handle.instance);
+      _actorMaterials[actor.id] = material;
+      EngineLoggerService().log(
+        'Actor "${actor.name}" draws material $path',
+        level: 'info',
+        source: 'FilamentNative',
+      );
+    } catch (e) {
+      EngineLoggerService().log(
+        'Actor "${actor.name}" draws its own materials: material $path could not be drawn: $e',
+        level: 'warning',
+        source: 'FilamentNative',
+      );
+    }
   }
 
   @override
@@ -251,6 +315,7 @@ mixin _ViewportSceneSync on _ViewportWidgetStateBase {
           if (!_actorLoading.contains(actor.id)) _loadActorMesh(actor, payload);
           continue;
         }
+        _syncActorMaterial(actor, handle);
 
         // In Wireframe the edges stand in for the surface.
         final isVisible = _editorActorDrawn(actor.id) && !_wireframeMode;

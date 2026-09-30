@@ -5,6 +5,7 @@ import '../../src/world/level_preloader.dart';
 import '../models/lumina_asset.dart';
 import '../repositories/level_repository.dart';
 import 'asset_index.dart';
+import 'level_actor_material.dart';
 
 /// What a level loads: the assets its placed actors name —
 /// meshes, landscapes, sky environments, textures, materials, sounds,
@@ -46,8 +47,16 @@ abstract final class LuminaLevelAssetManifest {
       final landscape = a['landscapeAssetPath'] ?? (type == 'Landscape' ? mesh : null);
       if (landscape is String && landscape.isNotEmpty) add(landscape, LuminaAssetKind.landscape);
       if (type != 'Landscape' && mesh is String && mesh.isNotEmpty) add(mesh, LuminaAssetKind.mesh);
+      // The assigned material, only when the level draws it: a missing or
+      // uncompiled one would fail the preload.
+      final material = LuminaLevelActorMaterial.pathOf(a);
+      if (material != null && LuminaLevelActorMaterial.problem(material, projectDir: projectDir) == null) {
+        add(material, LuminaAssetKind.material);
+      }
       for (final e in a.entries) {
-        if (e.key == 'blueprintClass' || e.key == 'meshAssetPath' || e.key == 'landscapeAssetPath') continue;
+        if (e.key == 'blueprintClass' || e.key == 'meshAssetPath' || e.key == 'landscapeAssetPath' || e.key == 'materialPath') {
+          continue;
+        }
         _scan(e.value, e.key, add);
       }
     }

@@ -49,6 +49,12 @@ abstract class _ViewportWidgetStateBase extends State<ViewportWidget> with Ticke
   /// (a re-import) replaces the instance.
   final Map<String, Uint8List> _actorPayloads = {};
 
+  /// The material each mesh actor's instance draws in place of its own (the
+  /// actor's assigned material), and the assignment it was last synced for
+  /// (a path that could not be drawn stays there too, logged once).
+  final Map<String, LuminaInstanceMaterialOverride> _actorMaterials = {};
+  final Map<String, String?> _actorMaterialPaths = {};
+
   /// Actors whose mesh is loading; bumping [_meshGeneration] drops loads that
   /// land after the viewport's native objects were freed.
   final Set<String> _actorLoading = {};

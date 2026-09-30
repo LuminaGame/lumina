@@ -319,6 +319,24 @@ The class's collision components come from its Blueprint document; an edit store
 | `baseOf` | `static LuminaCollisionProfile baseOf(LuminaBlueprintDocument? doc, LuminaBlueprintComponent component)` | [component]'s built-in setup in [doc]: a Character's root capsule is Pawn, anything else lumina's default. |
 | `applyTo` | `static int applyTo(LuminaBlueprintInstance instance, EditorActorNode actor)` | Applies [actor]'s overrides to [instance]'s built collision components (Play-In-Editor, before the actor is registered). |
 
+## `lib/ui/features/details/widgets/actor_material_section.dart`
+
+### `class ActorMaterialSection`
+
+Details panelinin, yerleştirilmiş bir mesh ya da temel şekil için Material bölümü: onun her bölümüne çizilen materyal varlığı (seviye görünümünde, Play'de ve derlenmiş oyunda), paylaşılan aranabilir [AssetPickerSelect] ile seçilir; temizlemek mesh'e kendi materyallerini geri verir. Her seçim tek bir geri alma adımıdır. Çizilemeyen bir materyal (derlenmemiş, bulunamamış) seçicinin altında belirtilir.
+
+**Yapıcı Metotlar (Constructors):**
+
+- `const ActorMaterialSection({super.key, required this.viewModel, required this.actor})`
+
+**Üyeler:**
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `viewModel` | `final EditorViewModel viewModel` |  |
+| `actor` | `final EditorActorNode actor` |  |
+| `appliesTo` | `static bool appliesTo(EditorActorNode actor)` | Yerleştirilmiş bir mesh ya da temel şekil (`LuminaLevelActorMaterial.actorTypes`), Blueprint değil. |
+
 ## `lib/ui/features/details/widgets/actor_mesh_section.dart`
 
 ### `class ActorMeshSection`
