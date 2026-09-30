@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 
-import 'package:flutter/scheduler.dart' show SchedulerBinding;
 import 'package:flutter/widgets.dart' show GlobalKey;
 
 import '../../main_editor/commands/editor_transaction.dart';
@@ -313,11 +312,7 @@ void registerPieSequenceTool(
             final gate = mcpPieRefusal(vm);
             if (gate != null) throw _StepFailure(textOf(gate));
             // The stepped state reaches the screen over the next frames.
-            final binding = SchedulerBinding.instance;
-            for (var i = 0; i < 3; i++) {
-              binding.scheduleFrame();
-              await binding.endOfFrame.timeout(const Duration(milliseconds: 100), onTimeout: () {});
-            }
+            await mcpShowPlayViewport(vm);
             final McpFrame frame;
             try {
               frame = await McpFrameCapture.capture(viewportBoundaryKey, maxWidth: maxWidth, what: 'level viewport');

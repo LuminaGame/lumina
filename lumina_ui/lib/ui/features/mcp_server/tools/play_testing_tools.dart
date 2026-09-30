@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart' show ValueKey;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/rendering.dart' show RenderBox;
+import 'package:flutter/scheduler.dart' show SchedulerBinding;
 import 'package:flutter/services.dart' show TextEditingValue, TextInputAction, TextSelection;
 import 'package:flutter/widgets.dart' show EditableTextState, FocusManager, GlobalKey, SelectionChangedCause;
 import 'package:lumina/lumina.dart';
@@ -46,6 +47,19 @@ McpToolResult? mcpPieRefusal(EditorViewModel vm) {
         'has not mounted. Show the level tab (select_tab 0) and try again, or stop_pie.');
   }
   return null;
+}
+
+/// Puts the level viewport, where Play runs, on screen and waits for its
+/// next [frames] frames, so the running game (the play camera, a stepped
+/// state) is what it shows. The workspace keeps a tab that another tab hides
+/// mounted but unpainted: captured then, it still holds its frame from before.
+Future<void> mcpShowPlayViewport(EditorViewModel vm, {int frames = 3}) async {
+  if (vm.activeTabIndex != 0) vm.selectTab(0);
+  final binding = SchedulerBinding.instance;
+  for (var i = 0; i < frames; i++) {
+    binding.scheduleFrame();
+    await binding.endOfFrame.timeout(const Duration(milliseconds: 100), onTimeout: () {});
+  }
 }
 
 /// Where the possessed pawn is (cm, Z up, rounded to 0.001), or null.
@@ -126,6 +140,7 @@ void registerPlayTestingTools(
     };
     if (!args.boolean('screenshot')) return McpToolResult.json(data);
     try {
+      await mcpShowPlayViewport(vm);
       final frame = await McpFrameCapture.capture(viewportBoundaryKey, what: 'level viewport');
       data['screenshot'] = {'width': frame.width, 'height': frame.height};
       return McpToolResult([McpContent.image(frame.png), McpContent.text(_jsonLine(data))], structuredContent: data);
@@ -454,7 +469,8 @@ void registerPlayTestingTools(
       description: 'Frame-exact play-testing: pauses the game if it runs and advances it by frames (1..$kMcpMaxAdvanceFrames) '
           'of dt seconds (default 1/60). Keys held with pie_key down stay held. Logs one "PIE advanced N frames" line. '
           'Returns {frames, player_location (cm, Z up), actors (with actors: true), log (the lines emitted meanwhile), '
-          'held_keys} and, with screenshot: true, a PNG of the viewport. The game stays paused (resume_pie).',
+          'held_keys} and, with screenshot: true, a PNG of the level viewport (brought to the front when a sub-editor tab '
+          'hides it). The game stays paused (resume_pie).',
       inputSchema: McpSchema.object({
         'frames': McpSchema.integer('Frames to advance, 1..$kMcpMaxAdvanceFrames.'),
         'dt': McpSchema.number('Seconds per frame (default 1/60, at most 0.1).'),

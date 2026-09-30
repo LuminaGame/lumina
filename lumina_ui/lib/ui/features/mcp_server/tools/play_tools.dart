@@ -9,6 +9,7 @@ import '../services/mcp_jobs.dart';
 import '../services/mcp_play_testing.dart';
 import '../services/mcp_protocol.dart';
 import '../services/mcp_tool.dart';
+import 'play_testing_tools.dart' show mcpShowPlayViewport;
 
 /// The key of Play Standalone's one game process.
 const String kMcpStandalone = 'standalone';
@@ -65,8 +66,9 @@ void registerPlayTools(McpToolRegistry registry, EditorViewModel vm, {required M
       idempotent: false,
       title: 'Start Play-In-Editor',
       description: 'Presses Play: open Blueprints compile first; compile errors keep Play from starting and come back '
-          'as a tool error listing the Blueprint, node and message. While Play runs the level tools are refused; '
-          'stop_pie restores the editor\'s level exactly as it was.',
+          'as a tool error listing the Blueprint, node and message. Play runs in the level viewport: an open sub-editor '
+          'tab gives way to the level tab, and the call returns once the viewport has drawn Play\'s first frames. While '
+          'Play runs the level tools are refused; stop_pie restores the editor\'s level exactly as it was.',
       inputSchema: McpSchema.object(const {}),
       handler: (args) async {
         if (vm.isPlaying) return McpToolResult.error('Play-In-Editor is already running (pie_status).');
@@ -75,6 +77,7 @@ void registerPlayTools(McpToolRegistry registry, EditorViewModel vm, {required M
           final blockers = vm.playBlockers.map((b) => '• $b').join('\n');
           return McpToolResult.error('Play did not start.${blockers.isEmpty ? '' : '\n$blockers'}');
         }
+        await mcpShowPlayViewport(vm);
         return McpToolResult.json(status());
       },
     ),

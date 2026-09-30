@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image/image.dart' as img;
 import 'package:integration_test/integration_test.dart';
 import 'package:lumina/lumina.dart';
 import 'package:lumina_ui/testing.dart';
@@ -24,7 +25,8 @@ import '../../test/helpers/scaffold_game_project.dart';
 /// reads the actors back; then runs Build All as a job and starts a real
 /// `flutter build` Cook & Package, polls it and cancels it. The editor reacts
 /// on video. A second scenario runs the same walk and jump as one
-/// `pie_sequence` call with two screenshots.
+/// `pie_sequence` call with two screenshots; a third starts Play from a
+/// Blueprint editor tab and checks the first screenshots show the game.
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
@@ -368,6 +370,167 @@ void main() {
         await rec.hold(const Duration(milliseconds: 200));
       }
       rec.save(sequenceScenario, usedAssets: usedAssets);
+    } finally {
+      client.close();
+      await tester.runAsync(server.stop);
+      await tester.pumpWidget(const SizedBox());
+      vm.dispose();
+      try {
+        root.deleteSync(recursive: true);
+      } catch (_) {}
+    }
+  }, timeout: const Timeout(Duration(minutes: 10)));
+
+  const blueprintTabScenario = 'MCP Smoke: Play started from a Blueprint editor tab shows the game camera in the first screenshots';
+  testWidgets(blueprintTabScenario, (tester) async {
+    final barrel = File('${SmokeArtifacts.testAssetsDir.path}/Props/Barrels/fuel_barrel_red.glb');
+    expect(barrel.existsSync(), isTrue, reason: 'test-assets must hold the fuel barrel');
+    final usedAssets = [barrel.path];
+
+    final root = Directory.systemTemp.createTempSync('lumina_smoke_mcptab_');
+    const name = 'smoke_mcp_pie_tab';
+    final projectDir = (await tester.runAsync(() => scaffoldGameProject(root, name: name, widgetLibrary: 'flutter')))!;
+    final project = LuminaProject.fromMap(
+        Map<String, dynamic>.from(jsonDecode(File('$projectDir/$name.lmproject').readAsStringSync()) as Map));
+    final vm = EditorViewModel(initialProject: project, projectLocation: root.path);
+    await tester.runAsync(vm.ensureDefaultLevelAssets);
+    await tester.runAsync(() => vm.processImportPipeline(sourceFilePath: barrel.path));
+    final barrelMesh = vm.realAssets.firstWhere((a) => a.type == AssetType.filamesh && a.fileName.contains('fuel_barrel_red'));
+
+    final server = vm.mcpServer;
+    expect(await tester.runAsync(() => server.start(port: 0)), isTrue);
+    final client = McpTestClient(server.url!, server.token);
+
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    final boundaryKey = GlobalKey();
+    try {
+      await tester.pumpWidget(RepaintBoundary(
+        key: boundaryKey,
+        child: ShadcnApp(theme: luminaEditorTheme(), home: MainEditorView(viewModel: vm)),
+      ));
+      for (var i = 0; i < 40; i++) {
+        await tester.pump(const Duration(milliseconds: 16));
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 16)));
+      }
+      final rec = SmokeRecorder(tester, boundary: find.byKey(boundaryKey));
+
+      /// A call the editor answers while the recorder keeps pumping frames.
+      Future<McpToolReply> call(String tool, [Map<String, Object?> args = const {}]) async {
+        McpToolReply? reply;
+        Object? error;
+        unawaited(client.callTool(tool, args).then((r) => reply = r, onError: (Object e) => error = e));
+        while (reply == null && error == null) {
+          await rec.hold(const Duration(milliseconds: 66));
+        }
+        if (error != null) throw error!;
+        return reply!;
+      }
+
+      Future<McpToolReply> ok(String tool, [Map<String, Object?> args = const {}]) async {
+        final reply = await call(tool, args);
+        expect(reply.isError, isFalse, reason: '$tool: ${reply.text}');
+        return reply;
+      }
+
+      img.Image imageOf(McpToolReply reply, String artifact) {
+        final png = Uint8List.fromList(base64Decode(reply.content.firstWhere((c) => c['type'] == 'image')['data'] as String));
+        SmokeArtifacts.saveScreenshot(artifact, png, usedAssets: usedAssets);
+        return img.decodePng(png)!;
+      }
+
+      /// The "PIE ACTIVE" banner: the editor's primary orange, top centre.
+      bool showsPlayBanner(img.Image frame) {
+        for (var y = 0; y < math.min(48, frame.height); y++) {
+          for (var x = (frame.width * 0.35).round(); x < (frame.width * 0.65).round(); x++) {
+            final p = frame.getPixel(x, y);
+            if ((p.r - 0xFB).abs() < 12 && (p.g - 0x7C).abs() < 12 && p.b < 24) return true;
+          }
+        }
+        return false;
+      }
+
+      /// Mean per-channel difference of the 3D view below the banner.
+      double viewDifference(img.Image a, img.Image b) {
+        var sum = 0.0, n = 0;
+        for (var y = 60; y < math.min(a.height, b.height) - 30; y += 4) {
+          for (var x = 0; x < math.min(a.width, b.width); x += 4) {
+            final p = a.getPixel(x, y), q = b.getPixel(x, y);
+            sum += ((p.r - q.r).abs() + (p.g - q.g).abs() + (p.b - q.b).abs()) / 3;
+            n++;
+          }
+        }
+        return sum / n;
+      }
+
+      await tester.runAsync(() => client.handshake(clientName: 'claude-code'));
+
+      // The barrel 6 m in front of the player start; the editor camera frames
+      // the level from above, far from where the game camera will look.
+      final start = vm.actors.firstWhere((a) => a.type == 'PlayerStart');
+      final yaw = (start.rotation.length > 2 ? start.rotation[2] : 0.0) * math.pi / 180;
+      await ok('spawn_actor_from_asset', {
+        'asset': barrelMesh.relativePath,
+        'location': [start.location[0] + 600 * math.cos(yaw), start.location[1] + 600 * math.sin(yaw), 0.0],
+      });
+      await ok('frame_level');
+      await ok('set_camera', {'pitch': 55.0});
+      await rec.hold(const Duration(milliseconds: 800));
+      final editorView = imageOf(await ok('viewport_screenshot'), 'mcp_pie_tab_editor_view_before_play');
+      expect(showsPlayBanner(editorView), isFalse);
+
+      // An agent edits the character Blueprint: its tab is in front.
+      await ok('open_asset_editor', {'asset': LuminaThirdPersonContent.characterBlueprintPath});
+      await rec.hold(const Duration(milliseconds: 800));
+      expect(vm.activeTabIndex, isNot(0));
+
+      // Play, and a screenshot straight away: the game camera, not the editor's.
+      await ok('start_pie');
+      expect(vm.activeTabIndex, 0, reason: 'start_pie shows the level viewport, where Play runs');
+      final first = imageOf(await ok('viewport_screenshot'), 'mcp_pie_tab_first_screenshot_after_start_pie');
+      expect(showsPlayBanner(first), isTrue);
+      final firstDiff = viewDifference(editorView, first);
+      debugPrint('[mcp_pie_tab_smoke] first screenshot after start_pie differs from the editor view by $firstDiff');
+      expect(firstDiff, greaterThan(8), reason: 'the game camera looks from behind the pawn, not from the editor camera');
+
+      // The Blueprint tab in front again while Play runs: the play-testing
+      // screenshots bring the level viewport back and show the running game.
+      await ok('open_asset_editor', {'asset': LuminaThirdPersonContent.characterBlueprintPath});
+      await rec.hold(const Duration(milliseconds: 500));
+      expect(vm.activeTabIndex, isNot(0));
+      final advanced = await ok('pie_advance', {'frames': 30, 'screenshot': true});
+      expect(advanced.data['screenshot_error'], isNull);
+      expect(vm.activeTabIndex, 0);
+      final advancedShot = imageOf(advanced, 'mcp_pie_tab_pie_advance_from_blueprint_tab');
+      expect(showsPlayBanner(advancedShot), isTrue);
+      expect(viewDifference(editorView, advancedShot), greaterThan(8));
+
+      await ok('open_asset_editor', {'asset': LuminaThirdPersonContent.characterBlueprintPath});
+      await rec.hold(const Duration(milliseconds: 500));
+      await ok('pie_key', {'key': 'W', 'action': 'down'});
+      final played = await ok('pie_play_for', {'ms': 1500, 'screenshot': true});
+      await ok('pie_key', {'key': 'W', 'action': 'up'});
+      expect(vm.activeTabIndex, 0);
+      final playedShot = imageOf(played, 'mcp_pie_tab_pie_play_for_from_blueprint_tab');
+      expect(showsPlayBanner(playedShot), isTrue);
+      expect(viewDifference(editorView, playedShot), greaterThan(8));
+
+      await ok('resume_pie');
+      await rec.hold(const Duration(milliseconds: 1500));
+      final shot = await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey));
+      SmokeArtifacts.saveScreenshot('mcp_pie_tab_editor_while_playing', shot, usedAssets: usedAssets);
+      await ok('stop_pie');
+      await rec.hold(const Duration(milliseconds: 500));
+      for (var i = 0; i < 60 && rec.recorded < const Duration(milliseconds: 10300); i++) {
+        await call('set_camera', {'yaw': 20.0 + 8 * (i + 1)});
+        await rec.hold(const Duration(milliseconds: 200));
+      }
+      rec.save(blueprintTabScenario, usedAssets: usedAssets);
     } finally {
       client.close();
       await tester.runAsync(server.stop);

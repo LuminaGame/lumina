@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
@@ -256,6 +257,84 @@ void main() {
       expect(data['started_pie'], isTrue);
       expect((data['final_status'] as Map)['paused'], isTrue);
       expect(vm.isPlaying, isTrue);
+    });
+  });
+
+  group('PIE screenshots with a sub-editor tab in front (the real editor pumped)', () {
+    testWidgets('start_pie shows the level viewport, and a pie_advance screenshot is a frame of the running Play', (tester) async {
+      await tester.runAsync(openEditor);
+      addTearDown(() async {
+        await tester.pumpWidget(const SizedBox());
+        await tester.runAsync(closeEditor);
+      });
+      tester.view.physicalSize = const Size(1600, 1000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(ShadcnApp(theme: luminaEditorTheme(), home: MainEditorView(viewModel: vm)));
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+
+      /// A call the editor answers while frames keep coming, as in the app.
+      Future<McpToolReply> call(String tool, [Map<String, Object?> args = const {}]) async {
+        McpToolReply? reply;
+        Object? error;
+        // Sent from the real zone, so the client's timers are real ones.
+        await tester.runAsync(() async {
+          unawaited(client.callTool(tool, args).then((r) => reply = r, onError: (Object e) => error = e));
+        });
+        while (reply == null && error == null) {
+          await tester.pump(const Duration(milliseconds: 16));
+          await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 16)));
+        }
+        if (error != null) throw error!;
+        return reply!;
+      }
+
+      /// Whether [reply]'s image shows the "PIE ACTIVE" banner: the editor's
+      /// primary orange at the top centre of the viewport.
+      bool showsPlayBanner(McpToolReply reply) {
+        final image = reply.content.firstWhere((c) => c['type'] == 'image', orElse: () => const {});
+        expect(image['data'], isNotNull, reason: 'no image in: ${reply.text}');
+        final decoded = img.decodePng(base64Decode(image['data'] as String))!;
+        for (var y = 0; y < math.min(48, decoded.height); y++) {
+          for (var x = (decoded.width * 0.35).round(); x < (decoded.width * 0.65).round(); x++) {
+            final p = decoded.getPixel(x, y);
+            if ((p.r - 0xFB).abs() < 12 && (p.g - 0x7C).abs() < 12 && p.b < 24) return true;
+          }
+        }
+        return false;
+      }
+
+      // An agent edits a Blueprint: its editor tab is in front of the level.
+      vm.openSubEditorTab('mcpServer', title: 'AI Agent Access (MCP)');
+      await tester.pump(const Duration(milliseconds: 16));
+      expect(vm.activeTabIndex, isNot(0));
+
+      final started = await call('start_pie');
+      expect(started.isError, isFalse, reason: started.text);
+      expect(vm.activeTabIndex, 0, reason: 'Play runs in the level viewport, so start_pie shows it');
+      final right = await call('viewport_screenshot', {'max_width': 1280});
+      expect(right.isError, isFalse, reason: right.text);
+      expect(showsPlayBanner(right), isTrue, reason: 'viewport_screenshot right after start_pie shows Play');
+
+      // The agent opens a Blueprint again while Play runs, then asks for a frame.
+      vm.openSubEditorTab('mcpServer', title: 'AI Agent Access (MCP)');
+      await tester.pump(const Duration(milliseconds: 16));
+      expect(vm.activeTabIndex, isNot(0));
+      final advanced = await call('pie_advance', {'frames': 2, 'screenshot': true});
+      expect(advanced.isError, isFalse, reason: advanced.text);
+      expect(advanced.data['screenshot_error'], isNull, reason: '${advanced.data['screenshot_error']}');
+      expect(vm.activeTabIndex, 0, reason: 'the play-testing screenshot brings the level viewport forward');
+      expect(showsPlayBanner(advanced), isTrue, reason: 'the frame is of the running Play, not the editor before it');
+
+      // Stopped, and the Blueprint trace's fade (lit for 500 ms) runs out.
+      expect((await call('stop_pie')).isError, isFalse);
+      for (var i = 0; i < 40; i++) {
+        await tester.pump(const Duration(milliseconds: 33));
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
+      }
     });
   });
 }

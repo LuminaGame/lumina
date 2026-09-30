@@ -777,7 +777,7 @@ Play-testing tools (group `pie`): keys, axes, mouse and input actions into the r
 | `pie_action` | editorState | Trigger an input action in Play | Fires an input action by pressing the keys the project binds to it (Play's mapping contexts), for hold_frames advanced frames (default 1), then releasing them — so the action's modifiers and triggers run exactly... |
 | `pie_click` | editorState | Click in the Play viewport | A pointer down + up at (x, y) viewport pixels (the coordinate space of viewport_screenshot at its natural size): hits the UMG widgets the game added to the viewport (buttons, text fields). |
 | `pie_type_text` | editorState | Type into a Play text field | Types text into the focused text field of the game's UMG widgets (click it with pie_click first), at its cursor; submit: true then commits it (Enter: the field's On Text Committed). |
-| `pie_advance` | editorState | Advance Play by frames | Frame-exact play-testing: pauses the game if it runs and advances it by frames (1..…) of dt seconds (default 1/60). |
+| `pie_advance` | editorState | Advance Play by frames | Frame-exact play-testing: pauses the game if it runs and advances it by frames (1..…) of dt seconds (default 1/60). With `screenshot: true` (here and in `pie_play_for`) the level viewport is brought to the front when a sub-editor tab hides it, and the PNG is taken after its next frames. |
 | `pie_play_for` | editorState | Play for a while | Resumes the game, lets the viewport run it for ms of wall-clock time (≤ …), and pauses it again (unless pause_after: false). |
 | `pie_get_actors` | readOnly | Runtime actors | The actors of the running game's level: {id (the editor actor id, null for spawned ones), class (the Blueprint class or the native class), native_class, name, location (cm, Z up), rotation (degrees), velocity (cm/s, char... |
 
@@ -796,7 +796,7 @@ Play-In-Editor as MCP tools: start, stop, pause, resume, step, and the session's
 | Tool | Risk | Title | Description |
 | :--- | :--- | :--- | :--- |
 | `pie_status` | readOnly | Play-In-Editor status | Whether Play-In-Editor is running or paused, which pawn class the player possesses and where it is (cm, Z up), the last runtime error, and the Blueprint blockers / warnings of the last Play attempt. |
-| `start_pie` | editorState | Start Play-In-Editor | Presses Play: open Blueprints compile first; compile errors keep Play from starting and come back as a tool error listing the Blueprint, node and message. |
+| `start_pie` | editorState | Start Play-In-Editor | Presses Play: open Blueprints compile first; compile errors keep Play from starting and come back as a tool error listing the Blueprint, node and message. Play runs in the level viewport: an open sub-editor tab gives way to the level tab, and the call returns once the viewport has drawn Play's first frames. |
 | `stop_pie` | editorState | Stop Play-In-Editor | Stops Play and restores the editor's level, selection and camera from before Play. |
 | `pause_pie` | editorState | Pause Play-In-Editor | Pauses the running game (timers, physics and audio freeze). |
 | `resume_pie` | editorState | Resume Play-In-Editor | Resumes a paused game. |
