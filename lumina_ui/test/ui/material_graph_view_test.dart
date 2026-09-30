@@ -63,11 +63,15 @@ void main() {
     await _settle(tester);
   }
 
-  Future<String> addFromPalette(WidgetTester tester, MaterialEditorViewModel vm, String registryId) async {
+  Future<String> addFromPalette(WidgetTester tester, MaterialEditorViewModel vm, String registryId, {String? search}) async {
     final before = vm.graph.graph.nodes.map((n) => n.id).toSet();
     await tester.tap(find.byKey(const ValueKey('material_graph_add_node')));
     await _settle(tester);
-    await tester.tap(find.byKey(ValueKey('palette_entry_$registryId')));
+    if (search != null) {
+      await tester.enterText(find.byKey(const ValueKey('palette_search')), search);
+      await _settle(tester);
+    }
+    await tester.tap(find.byKey(ValueKey('palette_entry_$registryId')).first);
     await _settle(tester);
     return vm.graph.graph.nodes.map((n) => n.id).toSet().difference(before).single;
   }
@@ -142,6 +146,57 @@ void main() {
     expect(vm.graph.editor.removeSelected(), isTrue);
     await _settle(tester);
     expect(vm.graph.analysis.hasErrors, isFalse);
+  });
+
+  testWidgets('Set Vertex Variable and Vertex Variable from the palette write the vertex block; Details pick and rename',
+      (tester) async {
+    if (!barrel.existsSync()) return markTestSkipped('test-assets missing');
+    final vm = await open(tester);
+    final setter = await addFromPalette(tester, vm, MaterialNodes.setVertexVariable, search: 'vertex variable');
+    expect(vm.graph.graph.node(setter)!.literals['name'], 'Var');
+    expect(find.text('Set Vertex Variable · Var'), findsOneWidget);
+    final uv = await addFromPalette(tester, vm, MaterialNodes.textureCoordinate, search: 'texcoord');
+    await wire(tester, 'pin_${uv}_out_out', 'pin_${setter}_value_in');
+    final reader = await addFromPalette(tester, vm, MaterialNodes.vertexVariable, search: 'vertex variable');
+    expect(vm.graph.graph.node(reader)!.literals['name'], 'Var', reason: 'a new reader takes the variable the material has');
+    await wire(tester, 'pin_${reader}_rgb_out', 'pin_${MaterialNodes.outputNodeId}_${MaterialNodes.emissive}_in');
+    expect(vm.graph.analysis.hasErrors, isFalse, reason: '${vm.graph.analysis.diagnostics}');
+    expect(vm.currentCode, contains('material.Var = vec4(material.uv0, 0.0, 1.0);'));
+    expect(vm.currentCode, contains('material.emissive = vec4(variable_Var.rgb, 1.0);'));
+    expect(vm.currentCode, contains('variables : [ Var ]'));
+
+    // The GLSL tab shows the vertex block.
+    await tester.tap(find.text('GLSL Source (.mat)'));
+    await _settle(tester);
+    expect(find.textContaining('void materialVertex(inout MaterialVertexInputs material)'), findsWidgets);
+    await tester.tap(find.text('Node Graph'));
+    await _settle(tester);
+
+    // The reader's Details list the material's variables.
+    vm.graph.editor.clearSelection();
+    vm.graph.editor.select(reader);
+    await _settle(tester);
+    expect(find.byKey(ValueKey('material_details_${reader}_variable')), findsOneWidget);
+    await tester.tap(find.byKey(ValueKey('material_details_${reader}_variable')));
+    await _settle(tester);
+    expect(find.byKey(const ValueKey('material_details_variable_option_Var')), findsOneWidget);
+    await tester.tapAt(const Offset(5, 5));
+    await _settle(tester);
+
+    // Renaming the setter in its Details renames the variable everywhere.
+    vm.graph.editor.clearSelection();
+    vm.graph.editor.select(setter);
+    await _settle(tester);
+    expect(find.byKey(ValueKey('material_details_${setter}_variable_help')), findsOneWidget);
+    final field = find.descendant(of: find.byKey(ValueKey('material_details_${setter}_name_0')), matching: find.byType(TextField));
+    await tester.enterText(field.first, 'uvTint');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await _settle(tester);
+    expect(vm.graph.graph.node(reader)!.literals['name'], 'uvTint');
+    expect(vm.currentCode, contains('material.uvTint = vec4(material.uv0, 0.0, 1.0);'));
+    expect(vm.currentCode, contains('variable_uvTint.rgb'));
+    expect(vm.currentCode, isNot(contains('variable_Var')));
+    expect(await tester.runAsync(vm.compile), isTrue, reason: vm.issues.map((i) => i.message).join('\n'));
   });
 
   testWidgets('a hand edit in the GLSL tab re-parses into the graph', (tester) async {

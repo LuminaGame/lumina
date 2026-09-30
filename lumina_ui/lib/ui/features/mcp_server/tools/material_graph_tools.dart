@@ -6,6 +6,7 @@ import 'package:lumina/lumina.dart' show AssetType, LuminaBlueprintNode, LuminaB
 
 import '../../main_editor/view_models/editor_view_model.dart';
 import '../../sub_editors/models/material_graph.dart';
+import '../../sub_editors/services/mat_source.dart';
 import '../../sub_editors/view_models/material_editor_view_model.dart';
 import '../services/mcp_editor_sessions.dart';
 import '../services/mcp_protocol.dart';
@@ -127,9 +128,14 @@ void registerMaterialGraphTools(McpToolRegistry registry, EditorViewModel vm, Mc
       description: 'The Material editor\'s expression catalog: id (pass it as `node` to '
           'add_material_node, e.g. mat_scalar_parameter, mat_texture_sample, mat_lerp), title, category, keywords, '
           'tooltip, typed pins (float, float2, float3, float4, Texture2D; "any float" takes its type from the wire) '
-          'and the default settings. The Material output node is not listed: every material has exactly one.',
+          'and the default settings. The Material output node is not listed: every material has exactly one. '
+          'Vertex category: mat_set_vertex_variable computes its Value once per vertex (the .mat vertex block) '
+          'and hands it to the fragment as a float4 interpolant named by its `name` setting (a `variables` '
+          'entry); mat_vertex_variable reads it in the fragment (RGBA outputs). Only vertex-available '
+          'expressions (constants, parameters, TexCoord, VertexColor, Time, mat_world_position, math, Custom) '
+          'may feed a setter, and a material has at most 5 variables (4 when it reads the vertex colour).',
       inputSchema: McpSchema.object({
-        'category': McpSchema.string('Only this category (Constants, Parameters, Texture, Math, Utility, Custom, …).'),
+        'category': McpSchema.string('Only this category (Constants, Parameters, Texture, Math, Utility, Vertex, Custom, …).'),
         'query': McpSchema.string('Case-insensitive match on id, title or keywords.'),
       }),
       handler: (args) {
@@ -172,13 +178,23 @@ void registerMaterialGraphTools(McpToolRegistry registry, EditorViewModel vm, Mc
           'nodes), wires, the output node\'s pins with `used` for the current shading model and blending, the type '
           'checker\'s diagnostics (with node_id), and sync: ahead is true when the graph has type errors, so the '
           '.mat source was not regenerated and compile_material refuses; fallback_reason when the fragment is one '
-          'Custom (Fragment) node.',
+          'Custom (Fragment) node. `variables`: each vertex → fragment interpolant with the Set Vertex Variable '
+          'nodes writing it (set_by) and the Vertex Variable nodes reading it (read_by); `vertex_block`: "graph" '
+          'when the setters are the .mat vertex block, "hand_written" when the source has one the graph keeps as '
+          'written (then vertex_block_reason when it cannot be read as nodes; a setter would then be an error), '
+          '"none" otherwise.',
       inputSchema: McpSchema.object({'asset': McpSchema.string(assetArg)}, required: ['asset']),
       handler: (args) async {
         final editor = await editorFor(args);
         final graph = editor.graph.graph;
         final output = graph.node(MaterialNodes.outputNodeId);
         final surface = editor.graph.surface;
+        final handWritten = output?.literals['vertexVerbatim'];
+        final vertexBlock = graph.nodes.any((n) => n.registryId == MaterialNodes.setVertexVariable)
+            ? 'graph'
+            : MatSource.tryParse(editor.currentCode)?.block('vertex') != null
+                ? 'hand_written'
+                : 'none';
         return McpToolResult.json({
           'asset': editor.assetPath,
           'shading_model': editor.shading.name,
@@ -197,6 +213,22 @@ void registerMaterialGraphTools(McpToolRegistry registry, EditorViewModel vm, Mc
                   'connected': editor.graph.editor.isConnected(output.id, p.id, output: false),
                 },
           ],
+          'variables': [
+            for (final name in editor.graph.editor.declaredVariables)
+              {
+                'name': name,
+                'set_by': [
+                  for (final n in graph.nodes)
+                    if (n.registryId == MaterialNodes.setVertexVariable && n.literals['name'] == name) n.id,
+                ],
+                'read_by': [
+                  for (final n in graph.nodes)
+                    if (n.registryId == MaterialNodes.vertexVariable && n.literals['name'] == name) n.id,
+                ],
+              },
+          ],
+          'vertex_block': vertexBlock,
+          'vertex_block_reason': ?(handWritten is String ? handWritten : null),
           'diagnostics': diagnostics(editor),
           'sync': sync(editor),
           'is_dirty': editor.isDirty,
@@ -210,8 +242,11 @@ void registerMaterialGraphTools(McpToolRegistry registry, EditorViewModel vm, Mc
       title: 'Add material node',
       description: 'Places an expression node at x, y (graph units) with optional `settings` (keys from '
           'list_material_nodes: a constant\'s value, a parameter\'s name and default, a Texture Sample\'s sampler '
-          '`parameter`, …). A new parameter without a name gets a unique one. One graph undo step; the .mat source '
-          'regenerates. mat_output and mat_custom_fragment are refused.',
+          '`parameter`, a Set Vertex Variable\'s or Vertex Variable\'s variable `name`, a WorldPosition\'s `space` '
+          'absolute | camera_relative, …). A new parameter or Set Vertex Variable without a name gets a unique one; '
+          'a new Vertex Variable reads the first variable the material has. One graph undo step; the .mat source '
+          'regenerates (a Set Vertex Variable adds the vertex block and the `variables` entry). mat_output and '
+          'mat_custom_fragment are refused.',
       inputSchema: McpSchema.object({
         'asset': McpSchema.string(assetArg),
         'node': McpSchema.string('The expression id (list_material_nodes).'),
@@ -326,8 +361,9 @@ void registerMaterialGraphTools(McpToolRegistry registry, EditorViewModel vm, Mc
       title: 'Set material node setting',
       description: 'Sets one node setting, as the node\'s Details do: a constant\'s `value` (number or [2–4 '
           'numbers]), a parameter\'s `name` / `default`, a Texture Sample\'s sampler `parameter`, a mask\'s r/g/b/a, a '
-          'Custom node\'s code / inputs / outputType, or an unconnected input\'s constant (Multiply\'s B, Lerp\'s '
-          'Alpha). Keys: list_material_nodes settings. One graph undo step.',
+          'Custom node\'s code / inputs / outputType, a variable `name` (renaming the only Set Vertex Variable of a '
+          'variable renames its Vertex Variable readers too), a WorldPosition\'s `space`, or an unconnected input\'s '
+          'constant (Multiply\'s B, Lerp\'s Alpha). Keys: list_material_nodes settings. One graph undo step.',
       inputSchema: McpSchema.object({
         'asset': McpSchema.string(assetArg),
         'node': McpSchema.string(nodeArg),

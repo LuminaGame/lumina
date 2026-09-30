@@ -591,6 +591,8 @@ Window → Marketplace as MCP tools (groups `content` + `plugin`): status, searc
 
 The Material editor's node graph as MCP tools: the expression catalog, the graph with typed pins, wires, the output pins the shading model uses and the type checker's diagnostics; node / wire / setting edits through the graph's own editor, each one `MCP: …` step on the graph's stack that regenerates the `.mat` source as a mouse edit does; parameter values, sampler texture bindings and the header settings. The graph and the source tools always agree: a source edit re-parses into the graph when it is next read.
 
+Vertex → fragment interpolant'ları: `mat_set_vertex_variable` (Vertex kategorisi, `name` ayarı) `value` girdisini vertex başına bir kez hesaplar; codegen bunu `.mat` `vertex` bloğu ve bir `variables` girdisi olarak yazar. `mat_vertex_variable` değeri fragment'ta okur (RGBA çıkışları). `mat_world_position` (`space` ayarı: `absolute` / `camera_relative`) geometrinin konumunu iki aşamada da verir. Bir setter'ı yalnızca sabitler, parametreler, TexCoord, VertexColor, Time, WorldPosition, matematik ve Custom besleyebilir; bir materyalde en çok 5 değişken olur (vertex rengi okunuyorsa 4). `get_material_graph`, `variables[{name, set_by, read_by}]` ve `vertex_block` (`graph`, `vertex_block_reason` ile `hand_written` ya da `none`) döndürür.
+
 **Araçlar:**
 
 | Araç | Risk | Başlık | Açıklama |

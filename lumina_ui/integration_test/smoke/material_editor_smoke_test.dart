@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter/gestures.dart' show PointerDeviceKind, kSecondaryMouseButton;
@@ -764,6 +765,245 @@ vertex {
         await rec.hold(const Duration(milliseconds: 500));
       }
       rec.save(matcScenario, usedAssets: usedAssets);
+      await ok('stop_pie');
+    } finally {
+      client.close();
+      await tester.runAsync(server.stop);
+      await tester.pumpWidget(const SizedBox());
+      vm.dispose();
+      try {
+        root.deleteSync(recursive: true);
+      } catch (_) {}
+    }
+  }, timeout: const Timeout(Duration(minutes: 10)));
+
+  const variablesScenario =
+      'Material Editor Smoke: a world-height tint passed through a vertex variable colours the preview and the barrel';
+  testWidgets(variablesScenario, (tester) async {
+    final barrel = File('${SmokeArtifacts.testAssetsDir.path}/Props/Barrels/dented_barrel.glb');
+    expect(barrel.existsSync(), isTrue, reason: 'test-assets must hold the dented barrel');
+    final usedAssets = [barrel.path];
+
+    final root = Directory.systemTemp.createTempSync('lumina_smoke_vvar_');
+    final projectDir = Directory('${root.path}/HeightTint')..createSync();
+    const project = LuminaProject(projectName: 'HeightTint', activeLevel: 'contents/levels/L_Main.lmas');
+    File('${projectDir.path}/HeightTint.lmproject').writeAsStringSync(jsonEncode(project.toMap()));
+    Directory('${projectDir.path}/contents/levels').createSync(recursive: true);
+    Directory('${projectDir.path}/lib').createSync(recursive: true);
+    final vm = EditorViewModel(initialProject: project, projectLocation: root.path, enableTimers: false);
+    await tester.runAsync(vm.ensureDefaultLevelAssets);
+    final server = vm.mcpServer;
+    expect(await tester.runAsync(() => server.start(port: 0)), isTrue);
+    final client = McpTestClient(server.url!, server.token);
+
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    final boundaryKey = GlobalKey();
+    try {
+      await tester.pumpWidget(RepaintBoundary(
+        key: boundaryKey,
+        child: ShadcnApp(theme: luminaEditorTheme(), home: MainEditorView(viewModel: vm)),
+      ));
+      for (var i = 0; i < 40; i++) {
+        await tester.pump(const Duration(milliseconds: 16));
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 16)));
+      }
+      final rec = SmokeRecorder(tester, boundary: find.byKey(boundaryKey));
+
+      Future<McpToolReply> call(String tool, [Map<String, Object?> args = const {}]) async {
+        McpToolReply? reply;
+        Object? error;
+        unawaited(client.callTool(tool, args).then((r) => reply = r, onError: (Object e) => error = e));
+        while (reply == null && error == null) {
+          await rec.hold(const Duration(milliseconds: 66));
+        }
+        if (error != null) throw error!;
+        return reply!;
+      }
+
+      Future<Map<String, Object?>> ok(String tool, [Map<String, Object?> args = const {}]) async {
+        final reply = await call(tool, args);
+        expect(reply.isError, isFalse, reason: '$tool: ${reply.text}');
+        return reply.data;
+      }
+
+      Future<Uint8List> shot(String name) async {
+        await rec.hold(const Duration(milliseconds: 1500));
+        final png = await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey));
+        SmokeArtifacts.saveScreenshot(name, png, usedAssets: usedAssets);
+        return png;
+      }
+
+      /// The gradient's blue (low) and orange (high) pixels inside [rect],
+      /// with their mean screen heights (a capture at ratio 1). [deep] only
+      /// counts the deep blue of the gradient, not a light blue sky.
+      ({int blue, int orange, double blueY, double orangeY}) tint(Uint8List png, Rect rect, {bool deep = false}) {
+        final d = img.decodePng(png)!;
+        var blue = 0, orange = 0;
+        var blueY = 0.0, orangeY = 0.0;
+        for (var y = rect.top.round(); y < rect.bottom.round(); y += 2) {
+          for (var x = rect.left.round(); x < rect.right.round(); x += 2) {
+            final p = d.getPixel(x.clamp(0, d.width - 1), y.clamp(0, d.height - 1));
+            final isBlue = deep ? p.b > 60 && p.b > 2 * p.r + 10 && p.b > 2 * p.g : p.b > p.r + 30 && p.b > p.g + 10;
+            if (isBlue) {
+              blue++;
+              blueY += y;
+            } else if (p.r > p.b + 40 && p.r > p.g + 10) {
+              orange++;
+              orangeY += y;
+            }
+          }
+        }
+        return (blue: blue, orange: orange, blueY: blue == 0 ? 0 : blueY / blue, orangeY: orange == 0 ? 0 : orangeY / orange);
+      }
+
+      await tester.runAsync(() => client.handshake(clientName: 'claude-code'));
+
+      // --- The barrel in the level ------------------------------------------------
+      final imported = (await ok('import_asset', {'path': barrel.path}))['imported'] as List;
+      final mesh = imported.cast<Map>().firstWhere((a) => a['type'] != 'texture' && a['type'] != 'filamat')['path'] as String;
+      final spawned = await ok('spawn_actor_from_asset', {'asset': mesh, 'location': [400, 0, 0]});
+      final actorId = (spawned['actor'] as Map)['id'] as String;
+      await ok('focus_actor', {'id': actorId});
+      await ok('set_camera', {'target': [400, 0, 45], 'distance': 330, 'pitch': 15});
+      final window = Offset.zero & tester.getSize(find.byKey(boundaryKey));
+      final levelBefore = tint(await shot('material_editor_vertex_variable_level_before'), window, deep: true);
+
+      // --- The material, built as nodes by the agent ---------------------------------
+      const mat = 'contents/materials/M_HeightTint.lmas';
+      await ok('create_asset', {'type': 'filamat', 'name': 'M_HeightTint'});
+      final initial = await ok('get_material_graph', {'asset': mat});
+      await tester.tap(find.text('Node Graph').last);
+      await rec.hold(const Duration(milliseconds: 600));
+      await ok('set_material_settings', {'asset': mat, 'shading_model': 'unlit'});
+
+      Future<String> add(String node, double x, double y, [Map<String, Object?>? settings]) async {
+        final added = await ok('add_material_node', {'asset': mat, 'node': node, 'x': x, 'y': y, 'settings': ?settings});
+        await rec.hold(const Duration(milliseconds: 250));
+        return (added['node'] as Map)['id'] as String;
+      }
+
+      Future<Map<String, Object?>> connect(String from, String fromPin, String to, String toPin) async {
+        final wired = await ok(
+            'connect_material_pins', {'asset': mat, 'from_node': from, 'from_pin': fromPin, 'to_node': to, 'to_pin': toPin});
+        await rec.hold(const Duration(milliseconds: 250));
+        return wired;
+      }
+
+      // Vertex stage: world height → 0..1 → a blue-to-orange gradient, handed
+      // to the fragment as the interpolant `heightTint`.
+      final world = await add('mat_world_position', -1200, 0);
+      final height = await add('mat_component_mask', -1000, 0, {'r': false, 'g': true, 'b': false, 'a': false});
+      final scale = await add('mat_scalar_parameter', -1000, 120, {'name': 'heightScale', 'default': 0.5});
+      final scaled = await add('mat_multiply', -800, 40);
+      final offset = await add('mat_scalar_parameter', -800, 160, {'name': 'heightOffset', 'default': 0.5});
+      final shifted = await add('mat_add', -650, 40);
+      final alpha = await add('mat_clamp', -500, 40);
+      // Deep colours: the preview's tone mapping lifts bright ones towards white.
+      final low = await add('mat_constant3', -500, 200, {'value': [0.0, 0.04, 0.5]});
+      final high = await add('mat_constant3', -500, 320, {'value': [0.5, 0.08, 0.0]});
+      final gradient = await add('mat_lerp', -300, 160);
+      final setter = await add('mat_set_vertex_variable', -100, 160, {'name': 'heightTint'});
+      await connect(world, 'out', height, 'in');
+      await connect(height, 'out', scaled, 'a');
+      await connect(scale, 'out', scaled, 'b');
+      await connect(scaled, 'out', shifted, 'a');
+      await connect(offset, 'out', shifted, 'b');
+      await connect(shifted, 'out', alpha, 'in');
+      await connect(low, 'out', gradient, 'a');
+      await connect(high, 'out', gradient, 'b');
+      await connect(alpha, 'out', gradient, 'alpha');
+      await connect(gradient, 'out', setter, 'value');
+      // Fragment: read the interpolant into Base Color.
+      final reader = await add('mat_vertex_variable', -100, -120, {'name': 'heightTint'});
+      final wired = await connect(reader, 'rgb', 'material_output', 'base_color');
+      expect((wired['sync'] as Map)['ahead'], isFalse, reason: '${wired['diagnostics']}');
+      final ours = {world, height, scale, offset, scaled, shifted, alpha, low, high, gradient, setter, reader, 'material_output'};
+      for (final n in (initial['nodes'] as List).cast<Map>()) {
+        if (!ours.contains(n['id'])) await ok('remove_material_node', {'asset': mat, 'node': n['id']});
+      }
+      await ok('arrange_material_graph', {'asset': mat});
+      // Zoom the canvas out so the whole graph, both stages, is on screen.
+      final canvasRect = tester.getRect(find.byType(BlueprintGraphCanvas).last);
+      final wheel = TestPointer(78, PointerDeviceKind.mouse);
+      await tester.sendEventToBinding(wheel.hover(canvasRect.center));
+      for (var i = 0; i < 6; i++) {
+        await tester.sendEventToBinding(wheel.scroll(const Offset(0, 40)));
+        await rec.hold(const Duration(milliseconds: 250));
+      }
+      // Then centre the view on the graph (both stages).
+      final nodes = (vm.editorSessionFor(vm.currentTab.id) as MaterialEditorViewModel).graph.graph.nodes;
+      final left = nodes.map((n) => n.x).reduce(math.min);
+      final right = nodes.map((n) => n.x + 200).reduce(math.max);
+      final top = nodes.map((n) => n.y).reduce(math.min);
+      final bottom = nodes.map((n) => n.y + 120).reduce(math.max);
+      tester
+          .state<BlueprintGraphCanvasState>(find.byType(BlueprintGraphCanvas).last)
+          .frameCanvasPoint(Offset((left + right) / 2, (top + bottom) / 2));
+      await rec.hold(const Duration(milliseconds: 400));
+
+      final graph = await ok('get_material_graph', {'asset': mat});
+      expect(graph['vertex_block'], 'graph');
+      expect(graph['variables'], [
+        {'name': 'heightTint', 'set_by': [setter], 'read_by': [reader]},
+      ]);
+      final source = (await ok('get_material_source', {'asset': mat}))['source'] as String;
+      debugPrint('[vertex_variable_smoke] generated source:\n$source');
+      expect(source, contains('variables : [ heightTint ]'));
+      expect(source, contains('void materialVertex(inout MaterialVertexInputs material)'));
+      expect(source, contains('variable_heightTint.rgb'));
+      final compiled = await call('compile_material', {'asset': mat, 'save': true});
+      expect(compiled.data['ok'], isTrue, reason: compiled.text);
+      final editor = vm.editorSessionFor(vm.currentTab.id) as MaterialEditorViewModel;
+      expect(editor.compiledBytes, isNotNull);
+
+      // The preview sphere: blue at the bottom, orange at the top.
+      final previewRect = tester.getRect(find.byType(FilamentWidget).last).deflate(8);
+      final preview = tint(await shot('material_editor_vertex_variable_graph_and_preview'), previewRect);
+      debugPrint('[vertex_variable_smoke] preview: $preview');
+      expect(preview.blue, greaterThan(40), reason: 'the low end of the height gradient shows');
+      expect(preview.orange, greaterThan(40), reason: 'the high end of the height gradient shows');
+      expect(preview.blueY, greaterThan(preview.orangeY), reason: 'low world height is blue, high is orange');
+
+      // The GLSL tab: the vertex block the graph wrote.
+      await tester.tap(find.text('GLSL Source (.mat)').last);
+      await rec.hold(const Duration(milliseconds: 600));
+      expect(find.textContaining('material.heightTint = vec4('), findsWidgets);
+      await shot('material_editor_vertex_variable_generated_source');
+      await tester.tap(find.text('Node Graph').last);
+      await rec.hold(const Duration(milliseconds: 600));
+
+      // --- On the barrel in the level, in Play ---------------------------------------
+      // The level is in centimetres: the gradient spans the barrel's 0–90 cm.
+      await ok('set_material_parameter', {'asset': mat, 'name': 'heightScale', 'value': 0.011});
+      await ok('set_material_parameter', {'asset': mat, 'name': 'heightOffset', 'value': 0.0});
+      final recompiled = await call('compile_material', {'asset': mat, 'save': true});
+      expect(recompiled.data['ok'], isTrue, reason: recompiled.text);
+      await rec.hold(const Duration(milliseconds: 800));
+      await ok('set_static_mesh_material_slot', {'asset': mesh, 'slot': 0, 'material': mat});
+      await ok('save_static_mesh', {'asset': mesh});
+      await ok('start_pie');
+      await rec.hold(const Duration(seconds: 2));
+      final playing = tint(await shot('material_editor_vertex_variable_level_play'), window, deep: true);
+      debugPrint('[vertex_variable_smoke] level before $levelBefore, in Play $playing');
+      expect(playing.blue, greaterThan(levelBefore.blue + 200), reason: 'the foot of the barrel wears the low end');
+      expect(playing.orange, greaterThan(200), reason: 'the top of the barrel wears the high end');
+      expect(playing.blueY, greaterThan(playing.orangeY), reason: 'low on the barrel is blue, high is orange');
+      final agent = await call('viewport_screenshot', {'max_width': 1280});
+      expect(agent.isError, isFalse, reason: agent.text);
+      final image = agent.content.firstWhere((c) => c['type'] == 'image');
+      SmokeArtifacts.saveScreenshot('material_editor_vertex_variable_level_as_the_agent_saw_it',
+          base64Decode(image['data'] as String), usedAssets: usedAssets);
+
+      while (rec.recorded < const Duration(milliseconds: 10500)) {
+        await rec.hold(const Duration(milliseconds: 500));
+      }
+      rec.save(variablesScenario, usedAssets: usedAssets);
       await ok('stop_pie');
     } finally {
       client.close();

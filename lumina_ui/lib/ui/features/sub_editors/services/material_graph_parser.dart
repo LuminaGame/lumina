@@ -45,13 +45,17 @@ class MaterialGraphParser {
     }
     final fragment = src.block('fragment');
     final body = fragment?.body ?? '';
+    final vertex = src.block('vertex');
     try {
       final lowering = _Lowering(src);
-      lowering.run(body);
+      lowering.run(body, vertexBody: vertex?.body);
       final graph = lowering.graph;
       MaterialGraphLayout.arrange(graph);
+      final vertexNodes = graph.node(MaterialNodes.outputNodeId)?.literals['vertexGraph'] == true;
       return MaterialGraphParseResult(graph, notes: [
         if (_hasComments(body)) 'Comments in the fragment are not kept once the graph rewrites the code.',
+        if (vertexNodes && _hasComments(vertex!.body)) 'Comments in the vertex block are not kept once the graph rewrites the code.',
+        ...lowering.notes,
       ]);
     } on _Unsupported catch (e) {
       return _fallback(src, body, e.reason);
@@ -62,9 +66,16 @@ class MaterialGraphParser {
 
   static MaterialGraphParseResult _fallback(MatSource src, String fragmentBody, String reason) {
     final graph = LuminaBlueprintGraph();
-    MaterialNodes.ensureOutput(graph, materialName: src.materialName);
+    final output = MaterialNodes.ensureOutput(graph, materialName: src.materialName);
     final lowering = _Lowering(src, graph: graph);
     lowering.declareHeaderParameters(unusedOnly: false);
+    // The vertex block stays as written next to the Custom (Fragment) node;
+    // its variables are kept declared.
+    output.literals['extraVariables'] = [for (final v in src.variables) v.raw.render()];
+    final vertex = src.block('vertex');
+    if (vertex != null && vertex.body.contains('material.')) {
+      output.literals['vertexVerbatim'] = 'the fragment is a Custom (Fragment) node';
+    }
     graph.nodes.add(MaterialNodes.create(
       MaterialNodes.customFragment,
       id: 'fragment',

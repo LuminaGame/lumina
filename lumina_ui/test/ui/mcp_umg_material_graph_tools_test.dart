@@ -457,6 +457,56 @@ void main() {
       final graph = await ok('get_material_graph', {'asset': mat});
       expect((graph['output_pins'] as List).cast<Map>().firstWhere((p) => p['id'] == 'roughness')['used'], isFalse);
     });
+
+    test('a world-height tint handed from the vertex stage through a variable: nodes, source, compile', () async {
+      Future<String> add(String node, double x, double y, [Map<String, Object?>? settings]) async =>
+          ((await ok('add_material_node', {'asset': mat, 'node': node, 'x': x, 'y': y, 'settings': ?settings}))['node']
+              as Map)['id'] as String;
+      Future<Map<String, Object?>> connect(String from, String fromPin, String to, String toPin) => ok(
+          'connect_material_pins', {'asset': mat, 'from_node': from, 'from_pin': fromPin, 'to_node': to, 'to_pin': toPin});
+
+      final listed = (await ok('list_material_nodes', {'category': 'Vertex'}))['nodes'] as List;
+      expect(listed.cast<Map>().map((n) => n['id']), containsAll(['mat_set_vertex_variable', 'mat_vertex_variable']));
+
+      final world = await add('mat_world_position', -900, 400);
+      final low = await add('mat_constant3', -900, 520, {'value': [0.1, 0.3, 1.0]});
+      final high = await add('mat_constant3', -900, 640, {'value': [1.0, 0.45, 0.1]});
+      final mask = await add('mat_component_mask', -700, 400, {'r': false, 'g': true, 'b': false, 'a': false});
+      final lerp = await add('mat_lerp', -500, 500);
+      final setter = await add('mat_set_vertex_variable', -300, 500, {'name': 'heightTint'});
+      await connect(world, 'out', mask, 'in');
+      await connect(low, 'out', lerp, 'a');
+      await connect(high, 'out', lerp, 'b');
+      await connect(mask, 'out', lerp, 'alpha');
+      await connect(lerp, 'out', setter, 'value');
+      final reader = await add('mat_vertex_variable', -300, 100);
+      final wired = await connect(reader, 'rgb', 'material_output', 'base_color');
+      expect((wired['sync'] as Map)['ahead'], isFalse, reason: '${wired['diagnostics']}');
+
+      final graph = await ok('get_material_graph', {'asset': mat});
+      expect(graph['vertex_block'], 'graph');
+      expect(graph['variables'], [
+        {'name': 'heightTint', 'set_by': [setter], 'read_by': [reader]},
+      ]);
+      expect(nodeOf(graph, reader)['settings'], containsPair('name', 'heightTint'), reason: 'reads the first variable');
+      final source = (await ok('get_material_source', {'asset': mat}))['source'] as String;
+      expect(source, contains('heightTint'));
+      expect(source, contains('void materialVertex(inout MaterialVertexInputs material)'));
+      expect(source, contains('mulMat4x4Float3(getUserWorldFromWorldMatrix(), material.worldPosition.xyz).xyz.g'));
+      expect(source, contains('variable_heightTint.rgb'));
+      final compiled = await client.callTool('compile_material', {'asset': mat});
+      expect(compiled.data['ok'], isTrue, reason: compiled.text);
+
+      // A texture sample cannot run per vertex: the wire is taken, reported,
+      // and the source is not rewritten.
+      final tex = await add('mat_texture_sample', -900, 800, {'parameter': 'albedoMap'});
+      final bad = await connect(tex, 'r', lerp, 'alpha');
+      expect((bad['sync'] as Map)['ahead'], isTrue);
+      expect((bad['diagnostics'] as List).cast<Map>().map((d) => d['message']).join('\n'),
+          contains('not available in the vertex stage'));
+      await ok('undo', {'asset': mat, 'stack': 'graph'});
+      expect(((await ok('get_material_graph', {'asset': mat}))['sync'] as Map)['ahead'], isFalse);
+    });
   });
 
   group('asset_editor_screenshot', () {

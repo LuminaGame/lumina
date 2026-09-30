@@ -294,6 +294,76 @@ class MaterialNodeDetailsPanel extends StatelessWidget {
             onApply: (code) => _editor.setProperty(node.id, 'code', code),
           ),
         ];
+      case MaterialNodes.setVertexVariable:
+        final readers = _editor.nodes
+            .where((n) => n.registryId == MaterialNodes.vertexVariable && n.literals['name'] == node.literals['name'])
+            .length;
+        return [
+          _row('Variable', _text(node, 'name')),
+          Text(
+            'Computed once per vertex (the .mat vertex block) from what is wired into Value, then interpolated '
+            'across each triangle. ${readers == 0 ? 'No Vertex Variable node reads it yet.' : 'Read by $readers Vertex Variable node${readers == 1 ? '' : 's'}.'} '
+            'A material has at most ${MaterialNodes.maxVariables} variables (${MaterialNodes.maxVariablesWithColor} when it reads the vertex colour).',
+            key: ValueKey('material_details_${node.id}_variable_help'),
+            style: const TextStyle(fontSize: 10, color: EditorColors.mutedForeground),
+          ),
+        ];
+      case MaterialNodes.vertexVariable:
+        final names = _editor.declaredVariables;
+        final current = '${node.literals['name'] ?? ''}';
+        return [
+          _row(
+            'Variable',
+            names.isEmpty
+                ? _text(node, 'name')
+                : Select<String>(
+                    key: ValueKey('material_details_${node.id}_variable'),
+                    value: current,
+                    itemBuilder: (context, v) => Text(v, style: const TextStyle(fontSize: 10)),
+                    onChanged: (v) {
+                      if (v != null) _editor.setProperty(node.id, 'name', v);
+                    },
+                    popup: SelectPopup(
+                      items: SelectItemList(children: [
+                        for (final name in {...names, if (current.isNotEmpty) current})
+                          SelectItemButton(
+                            key: ValueKey('material_details_variable_option_$name'),
+                            value: name,
+                            child: Text(name),
+                          ),
+                      ]),
+                    ).call,
+                  ),
+          ),
+          if (names.isEmpty)
+            const Text(
+              'No variable yet: add a Set Vertex Variable node and wire what the vertex stage computes into it.',
+              style: TextStyle(fontSize: 10, color: EditorColors.mutedForeground),
+            ),
+        ];
+      case MaterialNodes.worldPosition:
+        return [
+          _row(
+            'Space',
+            Select<String>(
+              key: ValueKey('material_details_${node.id}_space'),
+              value: '${node.literals['space'] ?? MaterialNodes.absoluteSpace}',
+              itemBuilder: (context, v) => Text(
+                v == MaterialNodes.cameraRelativeSpace ? 'Camera-relative' : 'Absolute world',
+                style: const TextStyle(fontSize: 10),
+              ),
+              onChanged: (v) {
+                if (v != null) _editor.setProperty(node.id, 'space', v);
+              },
+              popup: const SelectPopup(
+                items: SelectItemList(children: [
+                  SelectItemButton(value: MaterialNodes.absoluteSpace, child: Text('Absolute world')),
+                  SelectItemButton(value: MaterialNodes.cameraRelativeSpace, child: Text('Camera-relative')),
+                ]),
+              ).call,
+            ),
+          ),
+        ];
       case MaterialNodes.customFragment:
         return [
           const Text(

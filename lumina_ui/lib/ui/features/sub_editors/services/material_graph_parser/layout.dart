@@ -35,7 +35,13 @@ abstract final class MaterialGraphLayout {
   }
 
   static void arrange(LuminaBlueprintGraph graph) {
-    final depth = <String, int>{MaterialNodes.outputNodeId: 0};
+    // The Material node and the Set Vertex Variable nodes are the roots, in
+    // the right-most column.
+    final depth = <String, int>{
+      MaterialNodes.outputNodeId: 0,
+      for (final n in graph.nodes)
+        if (n.registryId == MaterialNodes.setVertexVariable) n.id: 0,
+    };
     // Longest path from the output, so a node sits left of every consumer.
     var changed = true;
     var guard = 0;
@@ -70,7 +76,16 @@ abstract final class MaterialGraphLayout {
         }).reduce(math.min);
       }
 
-      list.sort((a, b) => key(a).compareTo(key(b)));
+      // Stable: nodes with the same key keep graph order (the Material node
+      // above the Set Vertex Variable nodes).
+      final order = {for (final (i, n) in graph.nodes.indexed) n.id: i};
+      list.sort((a, b) {
+        final byKey = key(a).compareTo(key(b));
+        if (byKey != 0) return byKey;
+        if (a.id == MaterialNodes.outputNodeId) return -1;
+        if (b.id == MaterialNodes.outputNodeId) return 1;
+        return order[a.id]!.compareTo(order[b.id]!);
+      });
       var cursor = 40.0;
       for (final n in list) {
         final wanted = key(n) == double.maxFinite ? cursor : math.max(cursor, key(n) - 40);
@@ -108,6 +123,8 @@ abstract final class MaterialGraphLayout {
         MaterialNodes.textureSample => '${l['parameter']}',
         MaterialNodes.textureCoordinate => '${l['index']}',
         MaterialNodes.custom || MaterialNodes.customFragment => '${l['code']}',
+        MaterialNodes.setVertexVariable || MaterialNodes.vertexVariable => '${l['name']}',
+        MaterialNodes.worldPosition => '${l['space']}',
         _ => '',
       };
       return '${n.registryId}|$key';

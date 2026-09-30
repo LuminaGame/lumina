@@ -6,13 +6,19 @@ import 'material_graph_types.dart';
 
 /// Writes a material graph as `.mat` source.
 ///
-/// The `material` header is the current source's, with `parameters` and
-/// `requires` rewritten from the graph (every other key kept as written);
-/// blocks other than `fragment` are kept as written. The fragment is the
-/// graph: expressions inline, a local for every value used more than once (or
-/// named in the source it was parsed from), what feeds Normal before
-/// `prepareMaterial(material)`, everything else after it. A Custom (Fragment)
-/// node replaces the generated fragment with its code, verbatim.
+/// The `material` header is the current source's, with `parameters`,
+/// `requires` and `variables` rewritten from the graph (every other key kept
+/// as written); blocks other than `vertex` and `fragment` are kept as written.
+/// The fragment is the graph: expressions inline, a local for every value used
+/// more than once (or named in the source it was parsed from), what feeds
+/// Normal before `prepareMaterial(material)`, everything else after it. A
+/// Custom (Fragment) node replaces the generated fragment with its code,
+/// verbatim.
+///
+/// The `vertex` block is the Set Vertex Variable nodes: each writes its
+/// interpolant from the expressions upstream of it, evaluated per vertex. With
+/// no such node a hand-written vertex block stays as written; one the graph
+/// wrote goes away with its last setter.
 class MaterialGraphCodegen {
   static String generate(
     LuminaBlueprintGraph graph, {
@@ -30,10 +36,17 @@ class MaterialGraphCodegen {
     }
 
     final fragmentNode = graph.nodes.where((n) => n.registryId == MaterialNodes.customFragment).firstOrNull;
-    final emitter = _Emitter(graph, checked, surface);
+    final emitter = _Emitter(graph, checked, surface, checked.reachable);
     final fragment = fragmentNode != null
         ? 'fragment {\n${fragmentNode.literals['code'] ?? ''}\n}'
         : emitter.fragment();
+
+    final output = graph.node(MaterialNodes.outputNodeId);
+    final setters = _setters(graph);
+    final vertexEmitter = _Emitter(graph, checked, surface, checked.vertexReachable, vertex: true);
+    // The graph writes the vertex block when it has setters, or had them.
+    final ownsVertex = setters.isNotEmpty || output?.literals['vertexGraph'] == true;
+    final vertex = setters.isEmpty ? null : vertexEmitter.vertexBlock(setters);
 
     final header = List<MatEntry>.of(src.header);
     void put(String key, MatValue value, {List<String> after = const []}) {
@@ -54,7 +67,7 @@ class MaterialGraphCodegen {
       put('name', MatString(materialName ?? src.materialName ?? 'Material'));
     }
     final requires = <String>[...src.requires];
-    for (final r in emitter.requires(fragmentNode)) {
+    for (final r in [...vertexEmitter.requires(null), ...emitter.requires(fragmentNode)]) {
       if (!requires.contains(r)) requires.add(r);
     }
     if (requires.isNotEmpty) {
@@ -64,13 +77,29 @@ class MaterialGraphCodegen {
     if (parameters.isNotEmpty || header.any((e) => e.key == 'parameters')) {
       put('parameters', MatList(parameters), after: const ['name', 'shadingModel', 'blending', 'requires']);
     }
+    // `variables` is rewritten once the graph knows them (a graph stored
+    // before it read them leaves the header as written).
+    if (ownsVertex || (output?.literals.containsKey('extraVariables') ?? false)) {
+      final variables = _variables(graph, setters);
+      if (variables.isNotEmpty) {
+        put('variables', MatList(variables), after: const ['name', 'shadingModel', 'blending', 'requires']);
+      } else {
+        header.removeWhere((e) => e.key == 'variables');
+      }
+    }
 
     final out = StringBuffer();
     var wroteHeader = false;
     var wroteFragment = false;
+    var wroteVertex = false;
     void write(String block) {
       if (out.isNotEmpty) out.write('\n\n');
       out.write(block);
+    }
+
+    void writeVertex() {
+      if (vertex != null && !wroteVertex) write(vertex);
+      wroteVertex = true;
     }
 
     for (final b in src.blocks) {
@@ -82,8 +111,12 @@ class MaterialGraphCodegen {
           write(MatSource.renderHeader(header));
           wroteHeader = true;
         }
+        // A new vertex block goes before the fragment.
+        if (ownsVertex && src.block('vertex') == null) writeVertex();
         write(fragment);
         wroteFragment = true;
+      } else if (b.name == 'vertex' && ownsVertex) {
+        writeVertex();
       } else {
         write('${b.name} {${b.body}}');
       }
@@ -95,8 +128,40 @@ class MaterialGraphCodegen {
         ..write(MatSource.renderHeader(header));
       if (rest.isNotEmpty) out.write('\n\n$rest');
     }
+    if (ownsVertex) writeVertex();
     if (!wroteFragment) write(fragment);
     return '${out.toString()}\n';
+  }
+
+  /// The Set Vertex Variable nodes in header order (then graph order).
+  static List<LuminaBlueprintNode> _setters(LuminaBlueprintGraph graph) {
+    int order(LuminaBlueprintNode n) => (n.literals['declOrder'] as num?)?.toInt() ?? 1 << 20;
+    return [
+      for (final n in graph.nodes)
+        if (n.registryId == MaterialNodes.setVertexVariable) n,
+    ]..sort((a, b) =>
+        order(a) != order(b) ? order(a).compareTo(order(b)) : graph.nodes.indexOf(a).compareTo(graph.nodes.indexOf(b)));
+  }
+
+  /// The `variables` header entries: one per setter (with its precision when
+  /// it has one), then the declared ones no setter writes, as written.
+  static List<MatValue> _variables(LuminaBlueprintGraph graph, List<LuminaBlueprintNode> setters) {
+    final names = <String>{};
+    final out = <MatValue>[];
+    for (final s in setters) {
+      final name = s.literals['name'];
+      if (name is! String || !names.add(name)) continue;
+      final precision = s.literals['precision'];
+      out.add(precision is String && precision.isNotEmpty
+          ? MatObject([MatEntry('name', MatAtom(name)), MatEntry('precision', MatAtom(precision))])
+          : MatAtom(name));
+    }
+    for (final raw in MaterialNodes.extraVariables(graph)) {
+      final name = MaterialNodes.declaredVariableName(raw);
+      if (name != null && !names.add(name)) continue;
+      out.add(MatAtom(raw));
+    }
+    return out;
   }
 
   /// The `.mat` parameters the graph declares, in header order.
@@ -147,17 +212,23 @@ class MaterialGraphCodegen {
   }
 }
 
+/// Emits one stage: the fragment (what feeds the Material node) or the
+/// vertex block (what feeds the Set Vertex Variable nodes).
 class _Emitter {
   final LuminaBlueprintGraph graph;
   final MaterialGraphAnalysis analysis;
   final MaterialSurface surface;
 
-  _Emitter(this.graph, this.analysis, this.surface);
+  /// The nodes this stage evaluates.
+  final Set<String> stage;
+  final bool vertex;
+
+  _Emitter(this.graph, this.analysis, this.surface, this.stage, {this.vertex = false});
 
   late final Map<String, int> _uses = () {
     final m = <String, int>{};
     for (final w in graph.wires) {
-      if (!analysis.reachable.contains(w.toNodeId)) continue;
+      if (!stage.contains(w.toNodeId)) continue;
       m[w.fromNodeId] = (m[w.fromNodeId] ?? 0) + 1;
     }
     return m;
@@ -165,7 +236,7 @@ class _Emitter {
 
   late final Set<String> _feedingNormal = () {
     final start = graph.wireInto(MaterialNodes.outputNodeId, MaterialNodes.normal);
-    if (start == null || !surface.uses(MaterialNodes.normal)) return <String>{};
+    if (vertex || start == null || !surface.uses(MaterialNodes.normal)) return <String>{};
     final out = <String>{};
     final stack = [start.fromNodeId];
     while (stack.isNotEmpty) {
@@ -185,6 +256,8 @@ class _Emitter {
     MaterialNodes.textureCoordinate,
     MaterialNodes.time,
     MaterialNodes.vertexColor,
+    MaterialNodes.worldPosition,
+    MaterialNodes.vertexVariable,
   };
 
   final Map<String, String> _localNames = {};
@@ -196,7 +269,11 @@ class _Emitter {
   bool _fresnel = false;
 
   bool _wantsLocal(LuminaBlueprintNode n) {
-    if (_inlineOnly.contains(n.registryId) || n.registryId == MaterialNodes.output) return false;
+    if (_inlineOnly.contains(n.registryId) ||
+        n.registryId == MaterialNodes.output ||
+        n.registryId == MaterialNodes.setVertexVariable) {
+      return false;
+    }
     if (n.literals['varName'] is String) return true;
     if ((_uses[n.id] ?? 0) >= 2) return true;
     // A float Constant wired into an input that has an inline constant would
@@ -309,14 +386,24 @@ class _Emitter {
         final index = (l['index'] as num?)?.toInt() ?? 0;
         final u = (l['uTiling'] as num?)?.toDouble() ?? 1.0;
         final v = (l['vTiling'] as num?)?.toDouble() ?? 1.0;
-        final uv = 'getUV$index()';
+        final uv = vertex ? 'material.uv$index' : 'getUV$index()';
         return u == 1.0 && v == 1.0
             ? uv
             : '($uv * vec2(${MaterialNodes.formatNumber(u)}, ${MaterialNodes.formatNumber(v)}))';
       case MaterialNodes.time:
         return 'getUserTime().x';
       case MaterialNodes.vertexColor:
-        return 'getColor()';
+        return vertex ? 'material.color' : 'getColor()';
+      case MaterialNodes.worldPosition:
+        final absolute = l['space'] != MaterialNodes.cameraRelativeSpace;
+        if (vertex) {
+          return absolute
+              ? 'mulMat4x4Float3(getUserWorldFromWorldMatrix(), material.worldPosition.xyz).xyz'
+              : 'material.worldPosition.xyz';
+        }
+        return absolute ? 'getUserWorldPosition()' : 'getWorldPosition()';
+      case MaterialNodes.vertexVariable:
+        return 'variable_${l['name']}';
       case MaterialNodes.fresnel:
         _fresnel = true;
         return 'lumina_fresnel(${_operand(n, 'exponent')}, ${_operand(n, 'base_reflect_fraction')})';
@@ -460,7 +547,36 @@ class _Emitter {
     return b.toString();
   }
 
-  /// The vertex attributes the fragment reads.
+  /// The vertex block: each setter writes its interpolant, a float4
+  /// (narrower values widened: `vec4(x)`, `vec4(xy, 0.0, 1.0)`,
+  /// `vec4(xyz, 1.0)`).
+  String vertexBlock(List<LuminaBlueprintNode> setters) {
+    final writes = <String>[];
+    for (final s in setters) {
+      final w = graph.wireInto(s.id, 'value');
+      if (w == null) continue;
+      final v = _value(w.fromNodeId, w.fromPinId);
+      final padded = switch (_typeOf(w.fromNodeId, w.fromPinId)) {
+        MaterialValueType.float4 => v,
+        MaterialValueType.float3 => 'vec4($v, 1.0)',
+        MaterialValueType.float2 => 'vec4($v, 0.0, 1.0)',
+        _ => 'vec4($v)',
+      };
+      writes.add('material.${s.literals['name']} = $padded;');
+    }
+    final b = StringBuffer('vertex {\n');
+    for (final h in _helpers) {
+      b.write('$h\n\n');
+    }
+    b.write('    void materialVertex(inout MaterialVertexInputs material) {\n');
+    for (final line in [..._pre, ..._post, ...writes]) {
+      b.write('        $line\n');
+    }
+    b.write('    }\n}');
+    return b.toString();
+  }
+
+  /// The vertex attributes this stage reads.
   List<String> requires(LuminaBlueprintNode? fragmentNode) {
     final out = <String>[];
     void add(String r) {
@@ -475,7 +591,7 @@ class _Emitter {
       return out;
     }
     for (final n in graph.nodes) {
-      if (!analysis.reachable.contains(n.id)) continue;
+      if (!stage.contains(n.id)) continue;
       switch (n.registryId) {
         case MaterialNodes.textureSample:
           if (graph.wireInto(n.id, 'uvs') == null) add('uv0');

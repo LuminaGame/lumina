@@ -23,12 +23,16 @@ class MaterialGraphAnalysis {
   final Map<String, MaterialValueType> _inputs;
   final List<MaterialGraphDiagnostic> diagnostics;
 
-  /// Nodes that feed the Material output node (or are it).
+  /// Nodes that feed the Material output node (or are it): the fragment.
   final Set<String> reachable;
 
-  const MaterialGraphAnalysis._(this._outputs, this._inputs, this.diagnostics, this.reachable);
+  /// Nodes that feed a Set Vertex Variable (or are one): the vertex block.
+  /// A node can be in both sets; each stage evaluates it.
+  final Set<String> vertexReachable;
 
-  static const MaterialGraphAnalysis empty = MaterialGraphAnalysis._({}, {}, [], {});
+  const MaterialGraphAnalysis._(this._outputs, this._inputs, this.diagnostics, this.reachable, this.vertexReachable);
+
+  static const MaterialGraphAnalysis empty = MaterialGraphAnalysis._({}, {}, [], {}, {});
 
   MaterialValueType? outputType(String nodeId, String pinId) => _outputs['$nodeId.$pinId'];
   MaterialValueType? inputType(String nodeId, String pinId) => _inputs['$nodeId.$pinId'];
@@ -65,19 +69,94 @@ class MaterialGraphChecker {
     for (final n in graph.nodes) {
       _eval(n);
     }
-    final reachable = _reachable();
+    final reachable = _reachable([MaterialNodes.outputNodeId]);
+    final vertexReachable = _reachable([
+      for (final n in graph.nodes)
+        if (n.registryId == MaterialNodes.setVertexVariable) n.id,
+    ]);
+    _checkVertexStage(reachable, vertexReachable);
     final diagnostics = <MaterialGraphDiagnostic>[];
     for (final n in graph.nodes) {
-      if (!reachable.contains(n.id) && n.registryId != MaterialNodes.customFragment) continue;
+      if (!reachable.contains(n.id) && !vertexReachable.contains(n.id) && n.registryId != MaterialNodes.customFragment) {
+        continue;
+      }
       diagnostics.addAll(_byNode[n.id] ?? const []);
     }
     _checkFresnelIntoNormal(diagnostics);
-    return MaterialGraphAnalysis._(Map.of(_outputs), Map.of(_inputs), diagnostics, reachable);
+    return MaterialGraphAnalysis._(Map.of(_outputs), Map.of(_inputs), diagnostics, reachable, vertexReachable);
   }
 
-  Set<String> _reachable() {
+  /// The vertex stage's rules: what can feed a Set Vertex Variable, the
+  /// variable names and matc's limit on them, a hand-written vertex block the
+  /// graph would overwrite, and Vertex Variable reads of undeclared names.
+  void _checkVertexStage(Set<String> fragment, Set<String> vertex) {
+    final setters = [
+      for (final n in graph.nodes)
+        if (n.registryId == MaterialNodes.setVertexVariable) n,
+    ];
+    final firstSetter = <String, String>{};
+    for (final id in vertex) {
+      final n = graph.node(id);
+      if (n == null || n.registryId == MaterialNodes.setVertexVariable) continue;
+      if (!MaterialNodes.isVertexAvailable(n.registryId)) {
+        final feeds = setters.where((s) => _feeds(n.id, s.id)).map((s) => "'${s.literals['name']}'").join(', ');
+        _error(n, 'not available in the vertex stage (it feeds Set Vertex Variable $feeds); only constants, '
+            'parameters, TexCoord, VertexColor, Time, WorldPosition, math and Custom run per vertex');
+      }
+    }
+    final output = graph.node(MaterialNodes.outputNodeId);
+    final handWritten = output?.literals['vertexVerbatim'];
+    final extras = {for (final e in MaterialNodes.extraVariables(graph)) ?MaterialNodes.declaredVariableName(e)};
+    final usesColor = graph.nodes.any((n) =>
+        n.registryId == MaterialNodes.vertexColor && (fragment.contains(n.id) || vertex.contains(n.id)));
+    final limit = usesColor ? MaterialNodes.maxVariablesWithColor : MaterialNodes.maxVariables;
+    final ordered = List.of(setters)
+      ..sort((a, b) {
+        final oa = (a.literals['declOrder'] as num?)?.toInt() ?? 1 << 20;
+        final ob = (b.literals['declOrder'] as num?)?.toInt() ?? 1 << 20;
+        return oa != ob ? oa.compareTo(ob) : graph.nodes.indexOf(a).compareTo(graph.nodes.indexOf(b));
+      });
+    final names = <String>{...extras};
+    for (final s in ordered) {
+      final name = s.literals['name'];
+      if (handWritten is String) {
+        _error(s, 'the vertex block is hand-written code the graph cannot express ($handWritten), and a Set Vertex '
+            'Variable would replace it; edit that block in the GLSL tab instead');
+      }
+      if (name is! String || !_isIdentifier(name) || name.startsWith('gl_')) {
+        _error(s, "'$name' is not a valid variable name (a GLSL identifier)");
+        continue;
+      }
+      if (firstSetter.containsKey(name)) {
+        _error(s, "'$name' is already written by another Set Vertex Variable");
+        continue;
+      }
+      firstSetter[name] = s.id;
+      names.add(name);
+      if (names.length > limit) {
+        _error(s, 'a material has at most $limit vertex variables'
+            '${usesColor ? ' when it reads the vertex colour (the colour takes the fifth)' : ''}; '
+            "'$name' is number ${names.length}");
+      }
+    }
+    for (final id in fragment) {
+      final n = graph.node(id);
+      if (n == null || n.registryId != MaterialNodes.vertexVariable) continue;
+      final name = n.literals['name'];
+      if (name is! String || !_isIdentifier(name)) {
+        _error(n, "'$name' is not a valid variable name");
+      } else if (!names.contains(name)) {
+        _error(n, "no Set Vertex Variable writes '$name' and the material header does not declare it");
+      }
+    }
+  }
+
+  /// Whether [from] feeds [to] through wires.
+  bool _feeds(String from, String to) => _reachable([to]).contains(from);
+
+  Set<String> _reachable(List<String> roots) {
     final out = <String>{};
-    final stack = <String>[MaterialNodes.outputNodeId];
+    final stack = List<String>.of(roots);
     while (stack.isNotEmpty) {
       final id = stack.removeLast();
       if (!out.add(id)) continue;
@@ -302,6 +381,9 @@ class MaterialGraphChecker {
           return {'out': null};
         }
         return {'out': MaterialValueType.ofWidth(a.width + b.width)};
+      case MaterialNodes.setVertexVariable:
+        _required(node, _pin(spec, 'value'));
+        return const {};
       case MaterialNodes.custom:
         final outType = MaterialValueType.parse(node.literals['outputType'] as String?);
         if (outType == null) _error(node, "output type '${node.literals['outputType']}' is not float/float2/float3/float4");

@@ -79,6 +79,17 @@ class MatParameterDecl {
   bool get isSampler => type.toLowerCase().startsWith('sampler');
 }
 
+/// A custom interpolant the header's `variables` declares: `tint`, or
+/// `{ name : tint, precision : medium }`.
+class MatVariableDecl {
+  final String name;
+  final String? precision;
+
+  /// The entry as written.
+  final MatValue raw;
+  const MatVariableDecl(this.name, this.precision, this.raw);
+}
+
 class MatSource {
   final List<MatBlock> blocks;
 
@@ -128,6 +139,47 @@ class MatSource {
       out.add(MatParameterDecl(text(type), text(name), item['default'], item));
     }
     return out;
+  }
+
+  /// The custom interpolants the header's `variables` declares, in order.
+  List<MatVariableDecl> get variables {
+    final v = headerValue('variables');
+    if (v is! MatList) return const [];
+    final out = <MatVariableDecl>[];
+    for (final item in v.items) {
+      switch (item) {
+        case MatAtom(:final text) || MatString(:final text):
+          out.add(MatVariableDecl(text, null, item));
+        case MatObject():
+          final name = item['name'];
+          final precision = item['precision'];
+          final text = switch (name) {
+            MatAtom(:final text) || MatString(:final text) => text,
+            _ => null,
+          };
+          if (text == null) continue;
+          out.add(MatVariableDecl(
+            text,
+            switch (precision) {
+              MatAtom(:final text) || MatString(:final text) => text,
+              _ => null,
+            },
+            item,
+          ));
+        case MatList():
+          continue;
+      }
+    }
+    return out;
+  }
+
+  /// [parse], or null when the blocks cannot be told apart.
+  static MatSource? tryParse(String source) {
+    try {
+      return parse(source);
+    } on FormatException {
+      return null;
+    }
   }
 
   /// Splits [source] into blocks. Throws [FormatException] on unbalanced braces.

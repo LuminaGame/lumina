@@ -591,6 +591,8 @@ Window → Marketplace as MCP tools (groups `content` + `plugin`): status, searc
 
 The Material editor's node graph as MCP tools: the expression catalog, the graph with typed pins, wires, the output pins the shading model uses and the type checker's diagnostics; node / wire / setting edits through the graph's own editor, each one `MCP: …` step on the graph's stack that regenerates the `.mat` source as a mouse edit does; parameter values, sampler texture bindings and the header settings. The graph and the source tools always agree: a source edit re-parses into the graph when it is next read.
 
+Vertex → fragment interpolants: `mat_set_vertex_variable` (category Vertex, setting `name`) computes its `value` once per vertex, which the codegen writes as the `.mat` `vertex` block and a `variables` entry; `mat_vertex_variable` reads it in the fragment (RGBA outputs); `mat_world_position` (setting `space`: `absolute` / `camera_relative`) gives the geometry's position in either stage. Only constants, parameters, TexCoord, VertexColor, Time, WorldPosition, math and Custom can feed a setter; a material has at most 5 variables (4 when it reads the vertex colour). `get_material_graph` returns `variables[{name, set_by, read_by}]` and `vertex_block` (`graph`, `hand_written` with `vertex_block_reason`, or `none`).
+
 **Tools:**
 
 | Tool | Risk | Title | Description |

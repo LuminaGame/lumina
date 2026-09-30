@@ -50,7 +50,6 @@ const _componentWise2 = {'min', 'max', 'mod', 'step', 'atan'};
 /// Filament getters and shading globals with a known type: read through a
 /// Custom expression node.
 const _knownValues = {
-  'getWorldPosition()': MaterialValueType.float3,
   'getWorldCameraPosition()': MaterialValueType.float3,
   'getWorldNormalVector()': MaterialValueType.float3,
   'getWorldViewVector()': MaterialValueType.float3,
@@ -64,6 +63,30 @@ const _knownValues = {
   'shading_position': MaterialValueType.float3,
   'shading_reflected': MaterialValueType.float3,
   'shading_NoV': MaterialValueType.float1,
+};
+
+/// The vertex block's getters with a known type, read through a Custom
+/// expression node (`getPosition()` is the object-space position).
+const _vertexKnownValues = {
+  'getUserTime()': MaterialValueType.float4,
+  'getPosition()': MaterialValueType.float4,
+};
+
+/// Fragment getters and the generator's fragment helpers: the vertex block
+/// reads `material.uv0` / `material.color` instead, and has no shading values.
+const _fragmentOnlyCalls = {
+  'texture',
+  'getUV0',
+  'getUV1',
+  'getColor',
+  'lumina_fresnel',
+  'getUserWorldPosition',
+  'getWorldPosition',
+  'getWorldNormalVector',
+  'getWorldViewVector',
+  'getWorldReflectedVector',
+  'getWorldGeometricNormalVector',
+  'getNdotV',
 };
 
 /// Filament's `MaterialInputs` defaults (`initMaterial`), for a field read
@@ -117,22 +140,110 @@ class _Lowering {
 
   // -- Entry --------------------------------------------------------------
 
-  void run(String fragmentBody) {
-    MaterialNodes.ensureOutput(graph, materialName: src.materialName);
+  /// Why the vertex block was kept as written, and other things a later
+  /// graph edit will not keep.
+  final List<String> notes = [];
+
+  /// Lowering the vertex block (`materialVertex`) rather than the fragment.
+  bool _vertex = false;
+
+  late final List<MatVariableDecl> _variables = src.variables;
+
+  /// What the vertex block writes to each declared variable, in write order.
+  final Map<String, _Val> _vertexWrites = {};
+
+  void run(String fragmentBody, {String? vertexBody}) {
+    final output = MaterialNodes.ensureOutput(graph, materialName: src.materialName);
+    final written = vertexBody == null ? const <String>{} : _runVertex(vertexBody, output);
     final body = _scanTopLevel(fragmentBody);
     _statements(_lex(body));
     _wireOutputs();
     declareHeaderParameters(unusedOnly: true);
+    _keepUncalledHelpers();
+    output.literals['extraVariables'] = [
+      for (final v in _variables)
+        if (!written.contains(v.name)) v.raw.render(),
+    ];
+  }
+
+  void _keepUncalledHelpers() {
     for (final h in _helpers.values.where((h) => h.name.startsWith('lumina_custom_') && !_calledHelpers.contains(h.name))) {
       // A Custom helper nothing calls: keep it visible as a node.
       _customNodeFor(h);
     }
   }
 
+  /// Lowers the vertex block into Set Vertex Variable nodes, one per
+  /// declared variable it writes; returns the names written. A block that
+  /// writes no variable, or does anything the graph cannot express (moves
+  /// vertices, writes `material.color`, control flow), leaves the graph
+  /// untouched and stays as written.
+  Set<String> _runVertex(String body, LuminaBlueprintNode output) {
+    final nodeCount = graph.nodes.length;
+    final wireCount = graph.wires.length;
+    final ids = _ids;
+    final paramNodes = Map.of(_paramNodes);
+    final shared = Map.of(_shared);
+    final usedSamplers = Set.of(_usedSamplers);
+    void rollback() {
+      graph.nodes.removeRange(nodeCount, graph.nodes.length);
+      graph.wires.removeRange(wireCount, graph.wires.length);
+      _ids = ids;
+      _paramNodes
+        ..clear()
+        ..addAll(paramNodes);
+      _shared
+        ..clear()
+        ..addAll(shared);
+      _usedSamplers
+        ..clear()
+        ..addAll(usedSamplers);
+    }
+
+    _vertex = true;
+    try {
+      final p = _Parser(_lex(_scanTopLevel(body, entry: 'materialVertex')));
+      while (!p.done) {
+        _statement(p);
+      }
+      if (_vertexWrites.isEmpty) {
+        rollback();
+        return const {};
+      }
+      for (final (index, decl) in _variables.indexed) {
+        final value = _vertexWrites[decl.name];
+        if (value == null) continue;
+        final node = _add(MaterialNodes.setVertexVariable, {
+          'name': decl.name,
+          'declOrder': index,
+          if (decl.precision != null) 'precision': decl.precision,
+        });
+        _retitle(node);
+        _input(node, 'value', value, inline: false);
+      }
+      _keepUncalledHelpers();
+      output.literals['vertexGraph'] = true;
+      return _vertexWrites.keys.toSet();
+    } on _Unsupported catch (e) {
+      rollback();
+      output.literals['vertexVerbatim'] = e.reason;
+      notes.add('The vertex block is kept as written: ${e.reason}.');
+      return const {};
+    } finally {
+      _vertex = false;
+      _locals.clear();
+      _helpers.clear();
+      _calledHelpers.clear();
+      _vertexWrites.clear();
+    }
+  }
+
   final Set<String> _calledHelpers = {};
 
-  /// Collects the fragment's functions; returns the `material()` body.
-  String _scanTopLevel(String s) {
+  /// Collects the block's functions; returns the body of its [entry]
+  /// function (`material()`, or `materialVertex()` for the vertex block).
+  String _scanTopLevel(String s, {String entry = 'material'}) {
+    final what = _vertex ? 'vertex block' : 'fragment';
     var i = 0;
     String? materialBody;
     String? pendingDescription;
@@ -155,14 +266,15 @@ class _Lowering {
         continue;
       }
       final fn = RegExp(r'([A-Za-z_][A-Za-z0-9_]*)\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(([^)]*)\)\s*\{').matchAsPrefix(s, i);
-      if (fn == null) throw _Unsupported('the fragment has top-level code other than functions');
+      if (fn == null) throw _Unsupported('the $what has top-level code other than functions');
       final open = fn.end - 1;
       final close = MatSource.matchingBrace(s, open);
       final inner = s.substring(open + 1, close);
       final name = fn.group(2)!;
-      if (name == 'material') {
-        if (fn.group(1) != 'void' || !RegExp(r'^\s*inout\s+MaterialInputs\s+material\s*$').hasMatch(fn.group(3)!)) {
-          throw _Unsupported('material() has an unexpected signature');
+      if (name == entry) {
+        final inputs = _vertex ? 'MaterialVertexInputs' : 'MaterialInputs';
+        if (fn.group(1) != 'void' || !RegExp('^\\s*inout\\s+$inputs\\s+material\\s*\$').hasMatch(fn.group(3)!)) {
+          throw _Unsupported('$entry() has an unexpected signature');
         }
         materialBody = inner;
       } else if (name == 'lumina_fresnel') {
@@ -176,12 +288,12 @@ class _Lowering {
         }
         _helpers[name] = _Helper(name, fn.group(1)!, params, _dedent(inner), pendingDescription);
       } else {
-        throw _Unsupported('the fragment defines a function the graph has no node for ($name)');
+        throw _Unsupported('the $what defines a function the graph has no node for ($name)');
       }
       pendingDescription = null;
       i = close + 1;
     }
-    if (materialBody == null) throw _Unsupported('the fragment has no material() function');
+    if (materialBody == null) throw _Unsupported('the $what has no $entry() function');
     return materialBody;
   }
 
@@ -223,6 +335,7 @@ class _Lowering {
       throw _Unsupported("'$word' statements have no material node");
     }
     if (word == 'prepareMaterial') {
+      if (_vertex) throw _Unsupported('prepareMaterial belongs in the fragment');
       p.expect('(');
       final arg = p.next();
       if (arg.text != 'material') throw _Unsupported('prepareMaterial takes material');
@@ -268,7 +381,48 @@ class _Lowering {
       return;
     }
     if (path.first != 'material') throw _Unsupported('only material fields and locals can be assigned');
+    if (_vertex) {
+      _assignVariable(path.sublist(1), op, rhs);
+      return;
+    }
     _assignField(path.sublist(1), op, rhs);
+  }
+
+  /// `material.<variable> = …;` in the vertex block: what a Set Vertex
+  /// Variable writes. Anything else the vertex block writes has no node.
+  void _assignVariable(List<String> path, String op, _E rhs) {
+    final field = path.first;
+    if (!_variables.any((v) => v.name == field)) {
+      throw _Unsupported('it writes material.${path.join('.')}, which has no node (Set Vertex Variable writes the '
+          'declared variables only)');
+    }
+    if (path.length != 1) throw _Unsupported('it writes part of material.$field (material.${path.join('.')})');
+    if (op != '=') throw _Unsupported('it compounds material.$field ($op)');
+    _vertexWrites[field] = _variableValue(rhs);
+  }
+
+  /// A variable's value, without the widening to vec4 the codegen writes:
+  /// `vec4(x)` of a float, `vec4(xy, 0.0, 1.0)`, `vec4(xyz, 1.0)`.
+  _Val _variableValue(_E rhs) {
+    if (rhs is _Call && rhs.callee == 'vec4' && rhs.args.isNotEmpty) {
+      final vals = [for (final a in rhs.args) _lower(a)];
+      final first = vals.first;
+      if (vals.length == 1 && first.type == MaterialValueType.float1 && first.broadcastTo == null) return first;
+      final rest = vals.skip(1).toList();
+      if (first.broadcastTo == null && rest.isNotEmpty && rest.every((v) => v.isScalarLiteral && v.broadcastTo == null)) {
+        final tail = [for (final v in rest) v.literal!.single];
+        final widened = switch (first.type) {
+          MaterialValueType.float3 => tail.length == 1 && tail[0] == 1.0,
+          MaterialValueType.float2 => tail.length == 2 && tail[0] == 0.0 && tail[1] == 1.0,
+          _ => false,
+        };
+        if (widened) return first;
+      }
+      return _constructVals('vec4', vals);
+    }
+    final v = _lower(rhs);
+    if (v.argWidth != 4 || v.broadcastTo != null) throw _Unsupported('a variable is a float4, it is given a ${v.type.label}');
+    return v;
   }
 
   /// A literal bound to a local becomes a Constant node named after it, so a
@@ -382,7 +536,11 @@ class _Lowering {
       case _Id(:final name):
         final local = _locals[name];
         if (local != null) return local;
-        final known = _knownValues[name];
+        if (!_vertex && name.startsWith('variable_')) {
+          final variable = name.substring('variable_'.length);
+          if (_variables.any((v) => v.name == variable)) return _readVariable(variable);
+        }
+        final known = (_vertex ? _vertexKnownValues : _knownValues)[name];
         if (known != null) return _customExpr('return $name;', const [], known);
         throw _Unsupported("'$name' is not declared");
       case _Bin(:final op, :final a, :final b):
@@ -392,11 +550,19 @@ class _Lowering {
           _input(node, 'in', v);
           return _out(node, v.type);
         }
-        if (op == '*' && a is _Call && (a.callee == 'getUV0' || a.callee == 'getUV1') && a.args.isEmpty) {
+        final uvIndex = switch (a) {
+          _Call(callee: 'getUV0', args: []) when !_vertex => 0,
+          _Call(callee: 'getUV1', args: []) when !_vertex => 1,
+          _Mem(target: _Id(name: 'material'), name: 'uv0') when _vertex => 0,
+          _Mem(target: _Id(name: 'material'), name: 'uv1') when _vertex => 1,
+          _ => null,
+        };
+        if (op == '*' && uvIndex != null && b is _Call && b.callee == 'vec2') {
           final tiling = _lower(b);
           if (tiling.isLiteral && tiling.literal!.length == 2 && tiling.broadcastTo == null) {
-            return _texCoord(a.callee == 'getUV0' ? 0 : 1, tiling.literal![0], tiling.literal![1]);
+            return _texCoord(uvIndex, tiling.literal![0], tiling.literal![1]);
           }
+          return _arith(op, _lower(a), tiling);
         }
         return _arith(op, _lower(a), _lower(b));
       case _Mem(:final target, :final name):
@@ -496,8 +662,64 @@ class _Lowering {
 
   static final RegExp _swizzle = RegExp(r'^([xyzw]{1,4}|[rgba]{1,4})$');
 
+  /// The one Vertex Variable node reading [name] in the fragment.
+  _Val _readVariable(String name) {
+    final id = _shared['variable:$name'] ??= () {
+      final node = _add(MaterialNodes.vertexVariable, {'name': name});
+      _retitle(node);
+      return node.id;
+    }();
+    return _Val.node(id, 'rgba', MaterialValueType.float4);
+  }
+
+  /// The one WorldPosition node of [space].
+  _Val _worldPosition(String space) {
+    final id = _shared['world:$space'] ??= () {
+      final node = _add(MaterialNodes.worldPosition, {'space': space});
+      _retitle(node);
+      return node.id;
+    }();
+    return _Val.node(id, 'out', MaterialValueType.float3);
+  }
+
+  /// `material.worldPosition` in the vertex block.
+  static bool _isVertexWorldPosition(_E e) =>
+      e is _Mem && e.name == 'worldPosition' && e.target is _Id && (e.target as _Id).name == 'material';
+
+  /// `mulMat4x4Float3(getUserWorldFromWorldMatrix(), material.worldPosition.xyz)`:
+  /// the absolute world position the codegen writes in the vertex block.
+  static bool _isUserWorldPosition(_E e) =>
+      e is _Call &&
+      e.callee == 'mulMat4x4Float3' &&
+      e.args.length == 2 &&
+      e.args[0] is _Call &&
+      (e.args[0] as _Call).callee == 'getUserWorldFromWorldMatrix' &&
+      (e.args[0] as _Call).args.isEmpty &&
+      e.args[1] is _Mem &&
+      (e.args[1] as _Mem).name == 'xyz' &&
+      _isVertexWorldPosition((e.args[1] as _Mem).target);
+
   _Val _member(_E target, String name) {
     if (target is _Id && target.name == 'materialParams') return _parameter(name);
+    if (_vertex) {
+      if (target is _Id && target.name == 'material') {
+        switch (name) {
+          case 'uv0' || 'uv1':
+            return _texCoord(name == 'uv0' ? 0 : 1, 1.0, 1.0);
+          case 'color':
+            return _sharedNode(MaterialNodes.vertexColor, 'rgba', MaterialValueType.float4);
+        }
+        final written = _vertexWrites[name];
+        if (written != null) return written;
+        throw _Unsupported('material.$name has no node in the vertex block');
+      }
+      if (_isVertexWorldPosition(target)) {
+        return _member(_ValExpr(_worldPosition(MaterialNodes.cameraRelativeSpace)), name);
+      }
+      if (_isUserWorldPosition(target)) {
+        return _member(_ValExpr(_worldPosition(MaterialNodes.absoluteSpace)), name);
+      }
+    }
     if (target is _Id && target.name == 'material') {
       if (!_fieldDefaults.containsKey(name)) throw _Unsupported('material.$name has no Material output pin');
       return _currentField(name);
@@ -606,7 +828,13 @@ class _Lowering {
 
   _Val _call(_Call c) {
     final args = c.args;
+    if (_vertex && _fragmentOnlyCalls.contains(c.callee)) {
+      throw _Unsupported('${c.callee}() is not available in the vertex block');
+    }
     switch (c.callee) {
+      case 'getUserWorldPosition' || 'getWorldPosition' when args.isEmpty:
+        return _worldPosition(
+            c.callee == 'getUserWorldPosition' ? MaterialNodes.absoluteSpace : MaterialNodes.cameraRelativeSpace);
       case 'texture':
         if (args.length != 2 || args[0] is! _Id || !(args[0] as _Id).name.startsWith('materialParams_')) {
           throw _Unsupported('texture() is only read from a material sampler parameter');
@@ -688,7 +916,7 @@ class _Lowering {
       return _out(node, out);
     }
     if (args.isEmpty) {
-      final known = _knownValues['${c.callee}()'];
+      final known = (_vertex ? _vertexKnownValues : _knownValues)['${c.callee}()'];
       if (known != null) return _customExpr('return ${c.callee}();', const [], known);
     }
     if (_componentWise1.contains(c.callee) && args.length == 1) {
@@ -720,10 +948,11 @@ class _Lowering {
     if (c.args.length != n) throw _Unsupported('${c.callee}() takes $n arguments');
   }
 
-  _Val _construct(_Call c) {
-    final n = c.callee == 'float' ? 1 : int.parse(c.callee.substring(3));
-    final vals = [for (final a in c.args) _lower(a)];
-    if (vals.isEmpty) throw _Unsupported('${c.callee}() needs arguments');
+  _Val _construct(_Call c) => _constructVals(c.callee, [for (final a in c.args) _lower(a)]);
+
+  _Val _constructVals(String callee, List<_Val> vals) {
+    final n = callee == 'float' ? 1 : int.parse(callee.substring(3));
+    if (vals.isEmpty) throw _Unsupported('$callee() needs arguments');
     if (vals.length == 1) {
       final v = vals.single;
       if (v.type.width == n && v.broadcastTo == null) return v;
@@ -732,7 +961,7 @@ class _Lowering {
         const letters = ['r', 'rg', 'rgb'];
         return _member(_ValExpr(v), letters[n - 1]);
       }
-      throw _Unsupported('${c.callee}() of a ${v.type.label}');
+      throw _Unsupported('$callee() of a ${v.type.label}');
     }
     if (vals.every((v) => v.isLiteral && v.broadcastTo == null) && vals.fold<int>(0, (s, v) => s + v.type.width) == n) {
       return _Val.lit([for (final v in vals) ...v.literal!]);
@@ -755,7 +984,7 @@ class _Lowering {
       }
     }
     flush();
-    if (parts.fold<int>(0, (s, v) => s + v.argWidth) != n) throw _Unsupported('${c.callee}() arguments do not add up');
+    if (parts.fold<int>(0, (s, v) => s + v.argWidth) != n) throw _Unsupported('$callee() arguments do not add up');
     var acc = parts.first;
     for (final part in parts.skip(1)) {
       acc = _append(acc, part);

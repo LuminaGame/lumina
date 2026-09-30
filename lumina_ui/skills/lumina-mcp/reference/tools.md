@@ -75,15 +75,17 @@ There are no per-property bindings: runtime updates go through the Widget Bluepr
 
 Node ids are `get_material_graph` ids (the output is `material_output`); expression ids come from `list_material_nodes` (`mat_scalar_parameter`, `mat_vector_parameter`, `mat_texture_sample`, `mat_multiply`, `mat_lerp`, …); pin ids are the catalog's (`out`, `rgb`, `r`…`a`, `tex`, `uvs`, `a`/`b`; output pins `base_color`, `metallic`, `roughness`, `specular`, `normal`, `emissive`, `opacity`, `ambient_occlusion`). Every edit returns `is_dirty, sync{ahead, fallback_reason, notes}, diagnostics[{severity, message, node_id, pin_id}]`: `sync.ahead` true means the graph has type errors, the source was **not** regenerated and `compile_material` refuses.
 
+Vertex → fragment interpolants (`variables`): `mat_set_vertex_variable` (setting `name`, input `value`) is evaluated once per vertex and becomes the `.mat` `vertex` block plus a `variables` entry; `mat_vertex_variable` (setting `name`, outputs `rgb`, `r`…`a`, `rgba`) reads it in the fragment; `mat_world_position` (setting `space`: `absolute` / `camera_relative`) is the position in either stage. Only constants, parameters, TexCoord, VertexColor, Time, WorldPosition, math and Custom may feed a setter (a TextureSample / Fresnel / Vertex Variable upstream is a diagnostic); at most 5 variables, 4 when the vertex colour is read. A hand-written vertex block the graph cannot express (vertex offset) stays as written (`vertex_block: "hand_written"`); adding a setter to it is an error.
+
 | Tool | Arguments | Returns / effect |
 |---|---|---|
 | `list_material_nodes` | `category?`, `query?` | `nodes[{id, title, category, keywords, tooltip, inputs[{id, name, type, optional, default}], outputs[…], settings}]` — types `float`…`float4`, `Texture2D`, `any float`; never `mat_output` |
-| `get_material_graph` | `asset` | `shading_model, blending, double_sided, nodes[{id, node, title, x, y, settings, sampler?, texture?, inputs, outputs}], wires[…], output_pins[{id, name, type, used, connected}], diagnostics, sync, is_dirty` |
+| `get_material_graph` | `asset` | `shading_model, blending, double_sided, nodes[{id, node, title, x, y, settings, sampler?, texture?, inputs, outputs}], wires[…], output_pins[{id, name, type, used, connected}], variables[{name, set_by, read_by}], vertex_block (graph / hand_written / none), vertex_block_reason?, diagnostics, sync, is_dirty` |
 | `add_material_node` | `asset`, `node`, `x`, `y`, `settings?{}` | `mat_output` / `mat_custom_fragment` refused; a taken parameter name refused |
 | `connect_material_pins` | `asset`, `from_node`, `from_pin`, `to_node`, `to_pin` | refused only for a loop or a texture / number mix-up ("A Texture2D goes into a TextureSample's Tex input"); other mismatches are accepted with `sync.ahead` true |
 | `remove_material_node` | `asset`, `node` | never the output node |
 | `remove_material_wire` | `asset`, `wire` | — |
-| `set_material_node_setting` | `asset`, `node`, `key`, `value` | a constant's `value`, a parameter's `name` / `default`, a sample's `parameter`, an input constant (Multiply's `b`) |
+| `set_material_node_setting` | `asset`, `node`, `key`, `value` | a constant's `value`, a parameter's `name` / `default`, a sample's `parameter`, a variable `name` (renaming a variable's only setter renames its readers), a WorldPosition's `space`, an input constant (Multiply's `b`) |
 | `arrange_material_graph` | `asset` | the toolbar's Arrange |
 | `set_material_parameter` | `asset`, `name`, `value` | number / [2–4 numbers] / bool by the parameter's type; a sampler → use `set_material_texture`; **not** a graph undo step (marks dirty; Discard reverts) |
 | `set_material_texture` | `asset`, `parameter` (a sampler), `texture?` (omit to clear) | one graph undo step |

@@ -256,11 +256,44 @@ class MaterialGraphEditor extends BlueprintGraphEditor {
     return '${base}_$k';
   }
 
+  /// The vertex variables the material has: the names Set Vertex Variable
+  /// nodes write (graph order), then those the header declares without one.
+  List<String> get declaredVariables {
+    final names = <String>[];
+    for (final n in nodes) {
+      final name = n.registryId == MaterialNodes.setVertexVariable ? n.literals['name'] : null;
+      if (name is String && name.isNotEmpty && !names.contains(name)) names.add(name);
+    }
+    for (final raw in MaterialNodes.extraVariables(graph)) {
+      final name = MaterialNodes.declaredVariableName(raw);
+      if (name != null && !names.contains(name)) names.add(name);
+    }
+    return names;
+  }
+
+  /// A variable name no Set Vertex Variable writes yet: [base], `base_1`, …
+  String uniqueVariableName(String base) {
+    final taken = declaredVariables.toSet();
+    if (!taken.contains(base)) return base;
+    var k = 1;
+    while (taken.contains('${base}_$k')) {
+      k++;
+    }
+    return '${base}_$k';
+  }
+
   LuminaBlueprintNode _create(String registryId, Offset position, Map<String, dynamic>? literals) {
     final spec = MaterialNodes.spec(registryId)!;
     final settings = <String, dynamic>{...?literals};
     if (MaterialNodes.isParameter(registryId) && settings['name'] == null) {
       settings['name'] = uniqueParameterName(spec.defaults['name'] as String);
+    }
+    if (registryId == MaterialNodes.setVertexVariable && settings['name'] == null) {
+      settings['name'] = uniqueVariableName(spec.defaults['name'] as String);
+    }
+    if (registryId == MaterialNodes.vertexVariable && settings['name'] == null) {
+      // Reads the first variable the material has; the Details pick another.
+      settings['name'] = declaredVariables.firstOrNull ?? spec.defaults['name'];
     }
     if (registryId == MaterialNodes.textureSample && settings['parameter'] == null) {
       settings['parameter'] = uniqueParameterName('Texture');
@@ -332,9 +365,13 @@ class MaterialGraphEditor extends BlueprintGraphEditor {
     final n = node(nodeId);
     if (n == null) return false;
     if ('${n.literals[key]}' == '$value' && n.literals.containsKey(key)) return false;
+    final isVariable =
+        n.registryId == MaterialNodes.setVertexVariable || n.registryId == MaterialNodes.vertexVariable;
     final label = switch (key) {
       'value' => 'Edit ${MaterialNodes.spec(n.registryId)?.title ?? 'value'}',
+      'name' when isVariable => 'Rename variable',
       'name' || 'parameter' => 'Rename parameter',
+      'space' => 'Edit WorldPosition space',
       'code' => 'Edit Custom code',
       _ => 'Edit $key',
     };
@@ -354,6 +391,18 @@ class MaterialGraphEditor extends BlueprintGraphEditor {
         }
         graph.wires.removeWhere((w) => w.toNodeId == nodeId && !after.contains(w.toPinId));
         target.literals[key] = after;
+      } else if (key == 'name' && target.registryId == MaterialNodes.setVertexVariable && value is String) {
+        // Renaming the only writer of a variable renames what reads it.
+        final old = target.literals['name'];
+        final otherWriters = nodes.where((o) =>
+            o.id != nodeId && o.registryId == MaterialNodes.setVertexVariable && o.literals['name'] == old);
+        if (old is String && otherWriters.isEmpty) {
+          for (final reader in nodes.where((o) => o.registryId == MaterialNodes.vertexVariable && o.literals['name'] == old)) {
+            reader.literals['name'] = value;
+            reader.title = MaterialNodes.titleOf(reader);
+          }
+        }
+        target.literals[key] = value;
       } else {
         target.literals[key] = value;
       }

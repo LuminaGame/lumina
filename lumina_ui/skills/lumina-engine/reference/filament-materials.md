@@ -152,7 +152,9 @@ Useful fragment APIs: `getWorldPosition()`, `getWorldViewVector()`, `getUserTime
 
 ## Vertex block
 
-The optional `vertex { void materialVertex(inout MaterialVertexInputs material) { … } }` block runs per vertex before the fragment. It can move vertices (`material.worldPosition.xyz += material.worldNormal * offset;`), change `color`, `uv0`, `uv1`, and fill the interpolants declared in the header's `variables : [ tint ]`: write `material.tint = vec4(…);` in the vertex block and read it in the fragment as `variable_` + its name (variable_tint). `getUserTime().x` animates it; `getPosition()` is the object-space position. The node graph keeps a fragment that reads `variable_*` as one Custom (Fragment) node; the source compiles unchanged.
+The optional `vertex { void materialVertex(inout MaterialVertexInputs material) { … } }` block runs per vertex before the fragment. It can move vertices (`material.worldPosition.xyz += material.worldNormal * offset;`), change `color`, `uv0`, `uv1`, and fill the interpolants declared in the header's `variables : [ tint ]`: write `material.tint = vec4(…);` in the vertex block and read it in the fragment as `variable_` + its name (variable_tint). `getUserTime().x` animates it; `getPosition()` is the object-space position. At most 5 variables (4 with `requires : [ color ]`), each a `float4`. The vertex block reads `material.uv0` / `material.color`, not `getUV0()` / `getColor()`; `material.worldPosition` is camera-relative, `getUserWorldPosition()` is the level's world position in the fragment.
+
+Node graph: `mat_set_vertex_variable` computes its `value` per vertex (no texture samples; `mat_world_position` works) and `mat_vertex_variable` reads it in the fragment; the graph writes `variables` and the vertex block. A vertex block that moves vertices stays as written.
 
 ## Pitfalls
 

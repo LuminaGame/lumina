@@ -8,6 +8,7 @@ import 'package:lumina_ui/ui/features/mcp_server/services/lumina_guide.dart';
 import 'package:lumina_ui/ui/features/mcp_server/services/mcp_server_service.dart';
 import 'package:lumina_ui/ui/features/mcp_server/services/mcp_server_settings.dart';
 import 'package:lumina_ui/ui/features/mcp_server/services/mcp_tool.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/material_graph.dart';
 
 import '../helpers/mcp_test_client.dart';
 import '../helpers/temp_project.dart';
@@ -196,6 +197,13 @@ void main() {
       props(t.inputSchema);
     }
     for (final spec in LuminaBlueprintNodeLibrary.all) {
+      known.add(spec.id);
+      for (final pin in [...spec.inputs, ...spec.outputs]) {
+        known.add(pin.id);
+      }
+    }
+    // The material expression catalog `list_material_nodes` serves.
+    for (final spec in MaterialNodes.all) {
       known.add(spec.id);
       for (final pin in [...spec.inputs, ...spec.outputs]) {
         known.add(pin.id);

@@ -136,6 +136,7 @@ const int _mathColor = 0xFF283593;
 const int _utilityColor = 0xFF00695C;
 const int _customColor = 0xFF5D4037;
 const int _outputColor = 0xFF37474F;
+const int _vertexColor = 0xFF8D6E00;
 
 /// The material expression catalog and the helpers that
 /// read a node's settings. A material graph is lumina's [LuminaBlueprintGraph]:
@@ -169,6 +170,20 @@ abstract final class MaterialNodes {
   static const String fresnel = 'mat_fresnel';
   static const String custom = 'mat_custom';
   static const String customFragment = 'mat_custom_fragment';
+  static const String worldPosition = 'mat_world_position';
+  static const String setVertexVariable = 'mat_set_vertex_variable';
+  static const String vertexVariable = 'mat_vertex_variable';
+
+  /// Filament's limit on a material's `variables` (matc's
+  /// `MATERIAL_VARIABLES_COUNT`), and the one that applies when the colour
+  /// attribute is required (the fifth interpolant then carries the colour).
+  static const int maxVariables = 5;
+  static const int maxVariablesWithColor = 4;
+
+  /// WorldPosition spaces: the API-level world, or Filament's shading world
+  /// (shifted by the camera position for precision).
+  static const String absoluteSpace = 'absolute';
+  static const String cameraRelativeSpace = 'camera_relative';
 
   /// The Material output node's fixed id: every graph has exactly one.
   static const String outputNodeId = 'material_output';
@@ -447,6 +462,42 @@ abstract final class MaterialNodes {
       outputs: _rgbaOutputs,
     ),
     MaterialNodeSpec(
+      id: worldPosition,
+      title: 'WorldPosition',
+      category: 'Utility',
+      headerColor: _utilityColor,
+      keywords: ['world', 'position', 'height', 'location', 'coordinates'],
+      outputs: [MaterialPinDef('out', '', type: MaterialValueType.float3)],
+      defaults: {'space': absoluteSpace},
+      tooltip: 'The position of the vertex (in the vertex stage) or of the pixel, in world units. Absolute is '
+          'the world the level places objects in; Camera-relative is Filament\'s shading space, shifted by the '
+          'camera position.',
+    ),
+    MaterialNodeSpec(
+      id: setVertexVariable,
+      title: 'Set Vertex Variable',
+      category: 'Vertex',
+      headerColor: _vertexColor,
+      keywords: ['vertex', 'variable', 'interpolant', 'interpolator', 'varying', 'custom uv', 'per vertex'],
+      inputs: [MaterialPinDef('value', 'Value')],
+      defaults: {'name': 'Var'},
+      tooltip: 'Computes Value once per vertex (the .mat vertex block) and hands it to the fragment as a float4 '
+          'interpolant (a `variables` entry), read with a Vertex Variable node of the same name. Only '
+          'vertex-available expressions can feed it: constants, parameters, TexCoord, VertexColor, Time, '
+          'WorldPosition, math and Custom.',
+    ),
+    MaterialNodeSpec(
+      id: vertexVariable,
+      title: 'Vertex Variable',
+      category: 'Vertex',
+      headerColor: _vertexColor,
+      keywords: ['vertex', 'variable', 'interpolant', 'interpolator', 'varying', 'read'],
+      outputs: _rgbaOutputs,
+      defaults: {'name': 'Var'},
+      tooltip: 'Reads, in the fragment, the interpolant a Set Vertex Variable of the same name writes per vertex '
+          '(`variable_<name>` in the .mat), interpolated across the triangle.',
+    ),
+    MaterialNodeSpec(
       id: fresnel,
       title: 'Fresnel',
       category: 'Utility',
@@ -481,6 +532,39 @@ abstract final class MaterialNodes {
   static final Map<String, MaterialNodeSpec> _byId = {for (final s in all) s.id: s};
 
   static MaterialNodeSpec? spec(String? id) => _byId[id];
+
+  /// Kinds the vertex stage can evaluate (everything that feeds a Set Vertex
+  /// Variable): no textures, no shading values, no interpolants.
+  static bool isVertexAvailable(String registryId) => !const {
+        output,
+        textureSample,
+        textureParameter,
+        fresnel,
+        vertexVariable,
+        customFragment,
+        setVertexVariable,
+      }.contains(registryId);
+
+  /// The variable a Set Vertex Variable writes or a Vertex Variable reads.
+  static String? variableName(LuminaBlueprintNode node) =>
+      node.registryId == setVertexVariable || node.registryId == vertexVariable ? node.literals['name'] as String? : null;
+
+  /// The name a `variables` header entry declares (`tint`, `"tint"` or
+  /// `{ name : tint, precision : medium }` as rendered).
+  static String? declaredVariableName(String entry) {
+    final t = entry.trim();
+    if (t.startsWith('{')) return RegExp(r'\bname\s*:\s*"?([A-Za-z_][A-Za-z0-9_]*)').firstMatch(t)?.group(1);
+    final m = RegExp(r'^"?([A-Za-z_][A-Za-z0-9_]*)"?$').firstMatch(t);
+    return m?.group(1);
+  }
+
+  /// Header `variables` entries no Set Vertex Variable node stands for, kept on
+  /// the Material node (`extraVariables`) so they survive a graph edit.
+  static List<String> extraVariables(LuminaBlueprintGraph graph) {
+    final raw = graph.node(outputNodeId)?.literals['extraVariables'];
+    if (raw is! List) return const [];
+    return [for (final e in raw) if (e is String && e.trim().isNotEmpty) e];
+  }
 
   /// Kinds that declare a `.mat` parameter.
   static bool isParameter(String registryId) =>
@@ -550,6 +634,12 @@ abstract final class MaterialNodes {
       case custom:
         final d = l['description'];
         return d is String && d.isNotEmpty ? d : 'Custom';
+      case setVertexVariable:
+        return 'Set Vertex Variable · ${l['name'] ?? '?'}';
+      case vertexVariable:
+        return 'Vertex Variable · ${l['name'] ?? '?'}';
+      case worldPosition:
+        return l['space'] == cameraRelativeSpace ? 'WorldPosition (Camera-relative)' : 'WorldPosition';
       default:
         return spec(node.registryId)?.title ?? node.registryId;
     }

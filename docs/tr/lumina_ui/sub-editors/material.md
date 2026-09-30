@@ -329,6 +329,13 @@ The material expression catalog and the helpers that read a node's settings. A m
 | `fresnel` | `static const String fresnel` |  |
 | `custom` | `static const String custom` |  |
 | `customFragment` | `static const String customFragment` |  |
+| `worldPosition` | `static const String worldPosition` | WorldPosition: the vertex's (vertex stage) or pixel's world position; setting `space` `absolute` (API-level world) or `camera_relative` (Filament's shading world). |
+| `setVertexVariable` | `static const String setVertexVariable` | Set Vertex Variable: a sink whose `value` input is evaluated once per vertex (the `.mat` `vertex` block) and written to the float4 interpolant `name` (a `variables` entry). |
+| `vertexVariable` | `static const String vertexVariable` | Vertex Variable: reads interpolant `name` in the fragment (`variable_<name>`), RGBA outputs. |
+| `maxVariables` | `static const int maxVariables` | Filament's limit on `variables` (matc's `MATERIAL_VARIABLES_COUNT`, 5). |
+| `maxVariablesWithColor` | `static const int maxVariablesWithColor` | The limit when the colour attribute is required (4). |
+| `absoluteSpace` | `static const String absoluteSpace` | WorldPosition space: the API-level world. |
+| `cameraRelativeSpace` | `static const String cameraRelativeSpace` | WorldPosition space: Filament's shading world, shifted by the camera position. |
 | `outputNodeId` | `static const String outputNodeId` | The Material output node's fixed id: every graph has exactly one. |
 | `baseColor` | `static const String baseColor` |  |
 | `metallic` | `static const String metallic` |  |
@@ -342,6 +349,10 @@ The material expression catalog and the helpers that read a node's settings. A m
 | `rgbaSwizzles` | `static const Map<String, String> rgbaSwizzles` | The swizzle each RGBA output reads from its vec4. |
 | `all` | `static const List<MaterialNodeSpec> all` |  |
 | `spec` | `static MaterialNodeSpec? spec(String? id)` |  |
+| `isVertexAvailable` | `static bool isVertexAvailable(String registryId)` | Kinds the vertex stage can evaluate (everything that feeds a Set Vertex Variable): no textures, no shading values, no interpolants. |
+| `variableName` | `static String? variableName(LuminaBlueprintNode node)` | The variable a Set Vertex Variable writes or a Vertex Variable reads. |
+| `declaredVariableName` | `static String? declaredVariableName(String entry)` | The name a `variables` header entry declares (`tint`, `"tint"` or `{ name : tint, precision : medium }`). |
+| `extraVariables` | `static List<String> extraVariables(LuminaBlueprintGraph graph)` | Header `variables` entries no Set Vertex Variable node stands for, kept on the Material node (`extraVariables`) so they survive a graph edit. |
 | `isParameter` | `static bool isParameter(String registryId)` | Kinds that declare a `.mat` parameter. |
 | `inputsOf` | `static List<MaterialPinDef> inputsOf(LuminaBlueprintNode node, [MaterialSurface surface = const MaterialSurfac...` | The node's inputs, resolved for its settings and the [surface]: a Custom node's named inputs; the output node's pins, the unused ones marked. |
 | `outputsOf` | `static List<MaterialPinDef> outputsOf(LuminaBlueprintNode node)` |  |
@@ -574,6 +585,22 @@ A parameter the header declares.
 | `raw` | `final MatObject raw` | The declaration as written, for re-emitting a parameter the graph does not model. |
 | `isSampler` | `bool get isSampler` |  |
 
+### `class MatVariableDecl`
+
+A custom interpolant the header's `variables` declares: `tint`, or `{ name : tint, precision : medium }`.
+
+**Yapıcı Metotlar (Constructors):**
+
+- `const MatVariableDecl(this.name, this.precision, this.raw)`
+
+**Üyeler:**
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `name` | `final String name` |  |
+| `precision` | `final String? precision` |  |
+| `raw` | `final MatValue raw` | The entry as written. |
+
 ### `class MatSource`
 
 **Yapıcı Metotlar (Constructors):**
@@ -591,6 +618,8 @@ A parameter the header declares.
 | `materialName` | `String? get materialName` |  |
 | `requires` | `List<String> get requires` |  |
 | `parameters` | `List<MatParameterDecl> get parameters` |  |
+| `variables` | `List<MatVariableDecl> get variables` | The custom interpolants the header's `variables` declares, in order. |
+| `tryParse` | `static MatSource? tryParse(String source)` | [parse], or null when the blocks cannot be told apart. |
 | `parse` | `static MatSource parse(String source)` | Splits [source] into blocks. Throws [FormatException] on unbalanced braces. |
 | `matchingBrace` | `static int matchingBrace(String s, int open)` | The index of the brace closing the one at [open], skipping strings and comments. |
 | `renderHeader` | `static String renderHeader(List<MatEntry> entries)` | Renders a `material` header block from [entries]. |
@@ -601,7 +630,9 @@ A parameter the header declares.
 
 Writes a material graph as `.mat` source.
 
-The `material` header is the current source's, with `parameters` and `requires` rewritten from the graph (every other key kept as written); blocks other than `fragment` are kept as written. The fragment is the graph: expressions inline, a local for every value used more than once (or named in the source it was parsed from), what feeds Normal before `prepareMaterial(material)`, everything else after it. A Custom (Fragment) node replaces the generated fragment with its code, verbatim.
+The `material` header is the current source's, with `parameters`, `requires` and `variables` rewritten from the graph (every other key kept as written); blocks other than `vertex` and `fragment` are kept as written. The fragment is the graph: expressions inline, a local for every value used more than once (or named in the source it was parsed from), what feeds Normal before `prepareMaterial(material)`, everything else after it. A Custom (Fragment) node replaces the generated fragment with its code, verbatim.
+
+The `vertex` block is the Set Vertex Variable nodes: each writes its interpolant (`material.<name> = …`, widened to `vec4`: `vec4(x)`, `vec4(xy, 0.0, 1.0)`, `vec4(xyz, 1.0)`) from the expressions upstream of it, evaluated per vertex with the vertex stage's reads (`material.uv0`, `material.color`, `material.worldPosition`). With no such node a hand-written vertex block stays as written; one the graph wrote goes away with its last setter.
 
 **Üyeler:**
 
@@ -633,6 +664,8 @@ What [MaterialGraphParser.parse] made of a `.mat` source.
 Reads a `.mat` source into a material graph.
 
 The fragment's `material()` body is parsed statement by statement into expressions; the generator's own output parses back into the graph it came from. A call the catalog has no node for becomes a Custom expression node holding its GLSL; anything that cannot be expressed statement by statement (control flow, unknown fields or declarations) makes the whole fragment one Custom (Fragment) node, kept verbatim. Header parameters always become parameter nodes, so a graph edit never drops a declaration.
+
+The header's `variables` and the `vertex` block are read too: `material.<variable> = …` in `materialVertex()` becomes a Set Vertex Variable node (the codegen's `vec4` widening reads back as the unwidened value), `variable_<name>` in the fragment one Vertex Variable node per name, `getUserWorldPosition()` / `getWorldPosition()` (and their vertex-block forms) a WorldPosition. A Time, VertexColor, TexCoord, WorldPosition or parameter used by both stages is one node. A vertex block that writes anything else (moves vertices, writes `material.color`) or uses control flow is kept as written (`notes` says why) and its declared variables stay readable.
 
 **Üyeler:**
 
@@ -685,7 +718,8 @@ The resolved types and diagnostics of one material graph.
 | Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `diagnostics` | `final List<MaterialGraphDiagnostic> diagnostics` |  |
-| `reachable` | `final Set<String> reachable` | Nodes that feed the Material output node (or are it). |
+| `reachable` | `final Set<String> reachable` | Nodes that feed the Material output node (or are it): the fragment. |
+| `vertexReachable` | `final Set<String> vertexReachable` | Nodes that feed a Set Vertex Variable (or are one): the vertex block. A node can be in both sets. |
 | `empty` | `static const MaterialGraphAnalysis empty` |  |
 | `outputType` | `MaterialValueType? outputType(String nodeId, String pinId)` |  |
 | `inputType` | `MaterialValueType? inputType(String nodeId, String pinId)` |  |
@@ -696,7 +730,7 @@ The resolved types and diagnostics of one material graph.
 
 ### `class MaterialGraphChecker`
 
-Infers every pin's type (float1–float4 with implicit scalar broadcast, or a texture) and reports what cannot compile.
+Infers every pin's type (float1–float4 with implicit scalar broadcast, or a texture) and reports what cannot compile, including the vertex stage's rules: a fragment-only node (TextureSample, TextureParameter, Fresnel, Vertex Variable) feeding a Set Vertex Variable, an invalid or duplicate variable name, more variables than matc allows (5; 4 with the vertex colour), a Vertex Variable whose name nothing writes or declares, and a setter while the source's vertex block is hand-written code the graph would overwrite.
 
 **Üyeler:**
 
@@ -785,8 +819,10 @@ Edits a material graph through the shared Blueprint graph canvas: material expre
 | `typeOf` | `MaterialValueType? typeOf(String nodeId, String pinId, {required bool output})` | The resolved type of a pin: its fixed type, else what flows through it. |
 | `showsInlineLiteral` | `bool showsInlineLiteral(LuminaBlueprintNode node, LuminaBlueprintPinSpec pin)` | Only inputs with a "Const" fallback (Multiply's B, Lerp's Alpha, Fresnel's exponent) edit a constant on the node. |
 | `uniqueParameterName` | `String uniqueParameterName(String base)` | A parameter name no node uses yet: [base], `base_1`, `base_2`, … |
+| `declaredVariables` | `List<String> get declaredVariables` | The vertex variables the material has: the names Set Vertex Variable nodes write (graph order), then those the header declares without one. |
+| `uniqueVariableName` | `String uniqueVariableName(String base)` | A variable name no Set Vertex Variable writes yet: [base], `base_1`, … (a new setter's default; a new Vertex Variable reads the first declared name). |
 | `removeNodes` | `bool removeNodes(Set<String> ids)` | Every node but the Material output can be deleted. |
-| `setProperty` | `bool setProperty(String nodeId, String key, Object? value)` | Sets node setting [key] (a constant's value, a parameter's name, a Custom node's code) as one undo step. Renaming a Custom input keeps its wire; removing one drops it. |
+| `setProperty` | `bool setProperty(String nodeId, String key, Object? value)` | Sets node setting [key] (a constant's value, a parameter's name, a Custom node's code) as one undo step. Renaming a Custom input keeps its wire; removing one drops it. Renaming the only Set Vertex Variable of a variable renames the Vertex Variable nodes that read it. |
 
 ## `lib/ui/features/sub_editors/views/material/graph_view.dart`
 
