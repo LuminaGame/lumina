@@ -631,6 +631,88 @@ void main() {
     }
   });
 
+  // Cooked Unreal textures (DXT1 colour, BC5 normal map, BC7) through the
+  // plugin importer: the Content Browser lists them with thumbnails and the
+  // texture editor shows the decoded pixels.
+  testWidgets('Unreal Engine importer imports cooked textures', (tester) async {
+    const name = 'Unreal Engine importer imports cooked textures';
+    const barrel = 'Props/Barrels/fuel_barrel_red.glb';
+    final cooked = '${SmokeArtifacts.testAssetsDir.path}/Unreal/5.8/Windows/UEFix/Content/Fixtures';
+    final textures = [
+      '$cooked/Characters/Mannequin/MF_Unarmed_Walk_Fwd/Textures/MI_Quinn_01_SKM_Quinn_Simple_BaseColor.uasset',
+      '$cooked/Characters/Mannequin/MF_Unarmed_Walk_Fwd/Textures/T_Quinn_01_N.uasset',
+      '$cooked/TextureFormats/T_Format_BC7.uasset',
+    ];
+    for (final t in textures) {
+      expect(File(t).existsSync(), isTrue, reason: 'cooked fixtures missing: run unreal_engine_importer/tool/cook_fixtures/cook_fixtures.dart');
+    }
+    final tempProjectsDir = Directory.systemTemp.createTempSync('plugins_unreal_tex_');
+    final pDir = Directory('${tempProjectsDir.path}/SmokeUnrealTex')..createSync(recursive: true);
+    try {
+      const project = LuminaProject(projectName: 'SmokeUnrealTex', activeLevel: 'contents/levels/L_Main.lmas', settings: EngineScalabilitySettings(targetFps: 60));
+      File('${pDir.path}/SmokeUnrealTex.lmproject').writeAsStringSync(jsonEncode(project.toMap()));
+      final vm = EditorViewModel(initialProject: project, projectDirPath: tempProjectsDir.path, enableTimers: false);
+      addTearDown(vm.dispose);
+      await tester.runAsync(() => vm.ensureDefaultLevelAssets());
+      await tester.runAsync(() => vm.processImportPipeline(sourceFilePath: '${SmokeArtifacts.testAssetsDir.path}/$barrel'));
+      vm.refreshAssets();
+      final mesh = vm.realAssets.firstWhere((a) => a.type == AssetType.filamesh && a.fileName.contains('fuel_barrel_red'));
+      await tester.runAsync(() => vm.spawnActorFromAsset(mesh, location: const [0.0, 0.0, 0.0]));
+      if (LuminaEditorHost.plugins.whereType<UnrealEngineImporterPlugin>().isEmpty) {
+        vm.extensionRegistry.registerPlugin(UnrealEngineImporterPlugin());
+      }
+
+      final boundaryKey = GlobalKey();
+      await tester.pumpWidget(RepaintBoundary(
+        key: boundaryKey,
+        child: ShadcnApp(theme: luminaEditorTheme(), home: MainEditorView(viewModel: vm)),
+      ));
+      await settle(tester, frames: 30);
+      await tester.runAsync(() => Future<void>.delayed(const Duration(seconds: 1)));
+      vm.frameLevelBounds();
+      await settle(tester);
+      final rec = SmokeRecorder(tester, boundary: find.byKey(boundaryKey));
+      Future<void> shot(String label) async {
+        SmokeArtifacts.saveScreenshot('$name: $label',
+            await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey)),
+            usedAssets: const [barrel]);
+        await rec.hold(const Duration(seconds: 1));
+      }
+
+      await rec.hold(const Duration(seconds: 1));
+      vm.selectedFolder = 'contents';
+      final results = await tester.runAsync(() => vm.importWithPluginImporters(textures));
+      for (final r in results!) {
+        expect(r.success, isTrue, reason: r.error);
+      }
+      vm.refreshAssets();
+      await settle(tester, frames: 30);
+      final imported = [
+        for (final r in results)
+          vm.realAssets.firstWhere((a) => a.relativePath == r.assetPath, orElse: () => throw StateError('${r.assetPath} not listed')),
+      ];
+      expect(imported.every((a) => a.type == AssetType.texture), isTrue);
+      expect(imported.every((a) => a.thumbnailBytes != null && a.thumbnailBytes!.isNotEmpty), isTrue, reason: 'each texture has a thumbnail');
+      await rec.hold(const Duration(seconds: 3));
+      await shot('three cooked textures in the Content Browser');
+
+      // The texture editor shows the decoded BC7 texture, then the normal map.
+      vm.openAssetEditorByPath(imported[2].relativePath);
+      await settle(tester, frames: 40);
+      await rec.hold(const Duration(seconds: 3));
+      await shot('the BC7 texture in the texture editor');
+      vm.openAssetEditorByPath(imported[1].relativePath);
+      await settle(tester, frames: 40);
+      await rec.hold(const Duration(seconds: 3));
+      await shot('the BC5 normal map in the texture editor');
+      rec.save(name, usedAssets: const [barrel]);
+    } finally {
+      try {
+        if (tempProjectsDir.existsSync()) tempProjectsDir.deleteSync(recursive: true);
+      } catch (_) {}
+    }
+  });
+
   // Tools shows built-in tools only; the Plugins menu holds the
   // Plugin Manager, New Plugin… and the PCG submenu, whose command places a
   // real volume in the level.
