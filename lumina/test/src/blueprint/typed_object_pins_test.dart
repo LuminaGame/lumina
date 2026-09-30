@@ -68,6 +68,25 @@ void main() {
       expect(LuminaBlueprintObjectClass.assignError('Widget:WBP_HUD', 'WidgetElement:text'),
           'Cannot connect Widget (WBP_HUD) to Text Block.');
     });
+
+    test('an untyped object or an element of unknown type needs a Cast, and the refusal names the class to cast to', () {
+      expect(LuminaBlueprintObjectClass.assignError(null, 'WidgetElement:text'),
+          'Cannot connect Object to Text Block: it needs a Cast To Text Block (class "WidgetElement:text").');
+      expect(LuminaBlueprintObjectClass.assignError('WidgetElement', 'WidgetElement:text'),
+          'Cannot connect Widget Element to Text Block: it needs a Cast To Text Block (class "WidgetElement:text").');
+      expect(LuminaBlueprintObjectClass.assignError('Actor', 'Actor:BP_Door'),
+          'Cannot connect Actor to BP_Door: it needs a Cast To BP_Door (class "Actor:BP_Door").');
+      // The Cast the refusal names bridges them.
+      final cast = LuminaBlueprintNodeLibrary.place(LuminaBlueprintNodeLibrary.castTo, nodeId: 'cast', literals: {'class': 'WidgetElement:text'});
+      expect(cast.title, 'Cast To Text Block');
+      final asClass = LuminaBlueprintNodeLibrary.pinsOf(cast, const LuminaBlueprintTypeContext())!.outputs.firstWhere((p) => p.id == 'as_class');
+      final target = LuminaBlueprintNodeLibrary.pinsOf(
+              LuminaBlueprintNodeLibrary.place('set_element_text', nodeId: 'set'), const LuminaBlueprintTypeContext())!
+          .inputs
+          .firstWhere((p) => p.id == 'target');
+      expect(target.objectClass, 'WidgetElement:text');
+      expect(LuminaBlueprintNodeLibrary.connectionError(asClass, target), isNull);
+    });
   });
 
   group('node library', () {

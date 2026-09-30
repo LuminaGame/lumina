@@ -327,19 +327,23 @@ abstract final class LuminaBlueprintObjectClass {
 
   /// Whether a value of class [from] can be wired into a pin of class [to]
   /// (null on either side is `Object`): any → typed is refused (it needs a
-  /// Cast), typed → any is allowed, a class is assignable to itself and to its
-  /// ancestors, `Widget:X` → `Widget:X` only.
+  /// Cast), and so is a kind alone → a class of that kind (`Widget Element` →
+  /// `Text Block`); typed → any is allowed, a class is assignable to itself
+  /// and to its ancestors, `Widget:X` → `Widget:X` only.
   static bool isAssignable(String? from, String? to, {Map<String, String> parents = const {}}) =>
       assignError(from, to, parents: parents) == null;
 
-  /// Why [from] cannot be wired into [to], or null when it can.
+  /// Why [from] cannot be wired into [to], or null when it can. A refusal a
+  /// Cast bridges names the Cast To and its class string.
   static String? assignError(String? from, String? to, {Map<String, String> parents = const {}}) {
     final f = from ?? any;
     final t = to ?? any;
     if (t == any) return null;
-    if (f == any) return 'Cannot connect Object to ${displayName(t)}: it needs a Cast.';
+    String needsCast() => 'Cannot connect ${displayName(f)} to ${displayName(t)}: it needs a Cast To ${displayName(t)} (class "$t").';
+    if (f == any) return needsCast();
     if (kind(f) != kind(t)) return 'Cannot connect ${displayName(f)} to ${displayName(t)}.';
     if (name(t).isEmpty || f == t) return null;
+    if (name(f).isEmpty) return needsCast();
     if (ancestors(f, parents: parents).contains(t)) return null;
     return 'Cannot connect ${displayName(f)} to ${displayName(t)}.';
   }
