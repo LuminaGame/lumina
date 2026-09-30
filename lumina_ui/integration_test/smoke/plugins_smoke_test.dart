@@ -713,6 +713,115 @@ void main() {
     }
   });
 
+  // Cooked Unreal static meshes through the plugin importer, each placed next
+  // to the same prop imported from its source file: the pairs match in size,
+  // orientation and texture.
+  testWidgets('Unreal Engine importer imports cooked static meshes', (tester) async {
+    const name = 'Unreal Engine importer imports cooked static meshes';
+    final cooked = '${SmokeArtifacts.testAssetsDir.path}/Unreal/5.8/Windows/UEFix/Content/Fixtures';
+    // (cooked package, source file under test-assets, source asset name)
+    const pairs = [
+      ('Props/Barrels/dented_barrel/StaticMeshes/dented_barrel', 'Props/Barrels/dented_barrel.glb', 'dented_barrel'),
+      ('Props/AC_units/ac_unit_a_300x300/StaticMeshes/ac_unit_a_300x300', 'Props/AC_units/ac_unit_a_300x300.glb', 'ac_unit_a_300x300'),
+      ('Props/Access_cards/access_card_blue/StaticMeshes/access_card_blue', 'Props/Access_cards/access_card_blue.glb', 'access_card_blue'),
+      ('Props/Banana_Bunch/banana_bunch_medium/StaticMeshes/banana_bunch_medium', 'Props/Banana Bunch/banana_bunch_medium.glb', 'banana_bunch_medium'),
+      ('Props/Slot_Machine/SM_Slot_Machine', 'FBX/StaticMeshes/SM_Slot_Machine.FBX', 'SM_Slot_Machine'),
+    ];
+    final usedAssets = [for (final p in pairs) p.$2];
+    for (final p in pairs) {
+      expect(File('$cooked/${p.$1}.uasset').existsSync(), isTrue,
+          reason: 'cooked fixtures missing: run unreal_engine_importer/tool/cook_fixtures/cook_fixtures.dart');
+    }
+    final tempProjectsDir = Directory.systemTemp.createTempSync('plugins_unreal_sm_');
+    final pDir = Directory('${tempProjectsDir.path}/SmokeUnrealSM')..createSync(recursive: true);
+    try {
+      const project = LuminaProject(projectName: 'SmokeUnrealSM', activeLevel: 'contents/levels/L_Main.lmas', settings: EngineScalabilitySettings(targetFps: 60));
+      File('${pDir.path}/SmokeUnrealSM.lmproject').writeAsStringSync(jsonEncode(project.toMap()));
+      final vm = EditorViewModel(initialProject: project, projectDirPath: tempProjectsDir.path, enableTimers: false);
+      addTearDown(vm.dispose);
+      await tester.runAsync(() => vm.ensureDefaultLevelAssets());
+      if (LuminaEditorHost.plugins.whereType<UnrealEngineImporterPlugin>().isEmpty) {
+        vm.extensionRegistry.registerPlugin(UnrealEngineImporterPlugin());
+      }
+
+      final boundaryKey = GlobalKey();
+      await tester.pumpWidget(RepaintBoundary(
+        key: boundaryKey,
+        child: ShadcnApp(theme: luminaEditorTheme(), home: MainEditorView(viewModel: vm)),
+      ));
+      await settle(tester, frames: 30);
+      final rec = SmokeRecorder(tester, boundary: find.byKey(boundaryKey));
+      await rec.hold(const Duration(seconds: 1));
+
+      // The sources through the built-in import, the cooked packages through
+      // the plugin, into separate folders.
+      for (final p in pairs) {
+        await tester.runAsync(() => vm.processImportPipeline(sourceFilePath: '${SmokeArtifacts.testAssetsDir.path}/${p.$2}'));
+      }
+      Directory('${pDir.path}/contents/unreal').createSync(recursive: true);
+      vm.selectedFolder = 'contents/unreal';
+      final results = await tester.runAsync(() => vm.importWithPluginImporters([for (final p in pairs) '$cooked/${p.$1}.uasset']));
+      for (final r in results!) {
+        expect(r.success, isTrue, reason: r.error);
+      }
+      vm.refreshAssets();
+      await rec.hold(const Duration(seconds: 1));
+
+      // Pairs along X, 3.5 m apart (the AC unit is 3 m wide): the source at
+      // −Y, the cooked copy at +Y.
+      for (var i = 0; i < pairs.length; i++) {
+        final x = (i - 2) * 350.0;
+        final source = vm.realAssets.firstWhere(
+            (a) => a.type == AssetType.filamesh && a.fileName == '${pairs[i].$3}.lmas' && !a.relativePath.startsWith('contents/unreal/'));
+        final unreal = vm.realAssets.firstWhere((a) => a.relativePath == results[i].assetPath);
+        await tester.runAsync(() => vm.spawnActorFromAsset(source, location: [x, -200.0, 0.0]));
+        await tester.runAsync(() => vm.spawnActorFromAsset(unreal, location: [x, 200.0, 0.0]));
+        await rec.hold(const Duration(milliseconds: 400));
+      }
+      vm.selectActor(null);
+      await settle(tester, frames: 20);
+
+      // Same size: the bounds of each cooked mesh match its source within 1 cm.
+      final meshActors = vm.actors.where((a) => a.meshData != null).toList();
+      for (final p in pairs) {
+        final pair = meshActors.where((a) => a.name.startsWith(p.$3)).toList();
+        expect(pair, hasLength(2), reason: p.$3);
+        final a = pair[0].meshData!, b = pair[1].meshData!;
+        for (var c = 0; c < 3; c++) {
+          final sizeA = a.maxBounds[c] - a.minBounds[c], sizeB = b.maxBounds[c] - b.minBounds[c];
+          expect(sizeB, closeTo(sizeA, 0.01), reason: '${p.$3} axis $c: $sizeA m source vs $sizeB m cooked');
+        }
+      }
+
+      Future<void> orbitTo(double yaw, {double from = 0, int steps = 40}) async {
+        for (var i = 1; i <= steps; i++) {
+          final t = i / steps;
+          vm.restoreCameraSnapshot([from + (yaw - from) * t, 12.0, 1300.0, 0.0, 0.0, 60.0]);
+          await rec.hold(const Duration(milliseconds: 60));
+        }
+        await rec.hold(const Duration(milliseconds: 800));
+      }
+
+      vm.restoreCameraSnapshot([-30.0, 12.0, 1300.0, 0.0, 0.0, 60.0]);
+      await rec.hold(const Duration(milliseconds: 600));
+      await orbitTo(0, from: -30);
+      SmokeArtifacts.saveScreenshot('$name: source props (front) and cooked copies (back) side by side',
+          await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey)),
+          usedAssets: usedAssets);
+      await orbitTo(180, from: 0);
+      SmokeArtifacts.saveScreenshot('$name: the pairs from the other side',
+          await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey)),
+          usedAssets: usedAssets);
+      await orbitTo(360, from: 180);
+      expect(rec.recorded, greaterThanOrEqualTo(const Duration(seconds: 10)));
+      rec.save(name, usedAssets: usedAssets);
+    } finally {
+      try {
+        if (tempProjectsDir.existsSync()) tempProjectsDir.deleteSync(recursive: true);
+      } catch (_) {}
+    }
+  });
+
   // Tools shows built-in tools only; the Plugins menu holds the
   // Plugin Manager, New Plugin… and the PCG submenu, whose command places a
   // real volume in the level.
