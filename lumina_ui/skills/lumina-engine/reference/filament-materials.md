@@ -10,17 +10,9 @@ Condensed from the Filament Materials Guide, Copyright (C) Google LLC, Apache Li
 3. `compile_material {asset, save: true}` compiles the current source and, when `save` is true, writes the `.lmas` (source, parameter values, compiled package). Leave out `save: true` and nothing reaches disk.
 4. `set_material_parameter {asset, name, value}` sets a value for a float, float4/colour or bool parameter. `set_material_texture {asset, parameter, texture}` binds a texture asset to a sampler. `set_material_settings` changes the header's shading model, blending and `doubleSided`, then recompiles.
 
-Lumina does not run `matc`. It passes the fragment body and a few header fields to the in-process filamat `MaterialBuilder`, which targets every API and platform with culling `none`. Only these fields are read from the header:
+Lumina compiles the whole source with Filament's own `.mat` parser, the one `matc` v1.77.0 runs, in process: every header key matc knows (`shadingModel`, `blending`, `transparency`, `maskThreshold`, `culling`, `colorWrite`, `depthWrite`, `depthCulling`, `doubleSided`, `requires`, `variables`, `vertexDomain`, `refractionMode`/`refractionType`, `specularAntiAliasing`, `quality`, `featureLevel`, `constants`, …), the `vertex` and `fragment` blocks in any order, and `#include "file"` resolved from the material's own folder. A source matc accepts compiles with the same meaning; one it rejects does not. Lumina only adds two things: the package targets every graphics API, and a header without `name` takes the asset's name.
 
-- `shadingModel`: `lit`, `unlit`, `cloth` or `subsurface`
-- `blending`: `opaque`, `transparent`, `masked` or `add`
-- `doubleSided : true`
-- `requires`: `uv0`, `uv1` or `color`
-- `parameters`
-
-Every other header key is ignored (`transparency`, `maskThreshold`, `culling`, `depthWrite`, `variables`, …). Unrecognised values fall back silently: `specularGlossiness` becomes `lit`, and `fade`, `multiply` and `screen` become `opaque`. The `name :` field is ignored too, because the asset name is used instead.
-
-Errors: structural checks (unmatched braces, missing `material`/`fragment` block or `prepareMaterial`) give a line. Shader errors return only `filamat backend rejected the source (compile failed)`, with no line or GLSL message; simplify and recompile.
+Errors: `compile_material` / `get_material_issues` return matc's own messages verbatim, each with the `.mat` line it names (`line` 0 when it names none): header syntax errors (`Syntax error, … at line:3 position:18`), invalid values (`Value 'bogus' is invalid. Valid values are: …`), glslang errors in either block (`ERROR: 0:14: 'x' : undeclared identifier`, where 14 is the `.mat` line), `prepareMaterial() is not called`. Unknown header keys compile with a warning (`Ignoring config entry (unknown key): "…"`). While the text is being typed the editor also shows quick brace/block hints; they never stop a compile.
 
 ## Structure of a .mat
 
@@ -38,11 +30,11 @@ fragment {
 
 `prepareMaterial(material)` must be called before `material()` returns; `getWorldNormalVector()`, `getWorldReflectedVector()` and `getNdotV()` only work after it. Helper functions may precede `material()`.
 
-Lumina-specific rules for the text:
+Rules for the text (matc's, nothing Lumina-specific):
 
-- Write `fragment {` exactly like that, with one space. Lumina sends everything from that token to the file's last `}` to the compiler, so the fragment block must be the last block.
-- Do not write a `vertex { … }` block. It is never passed to the builder, and if it comes after the fragment block it corrupts the fragment.
-- Write header values unquoted as `key : value` (for example `shadingModel : unlit` or `blending : transparent`). The reader matches this text literally, so a quoted value such as `"unlit"` falls back to the default.
+- Blocks can come in any order; a `vertex { … }` block is optional.
+- matc counts braces inside a block without skipping comments, so keep `{` / `}` out of comments.
+- Header values may be quoted or not (`shadingModel : unlit`). Lumina's header bar reads them for display only.
 
 Minimal working material, based on Lumina's own new-material template, with a texture added:
 
@@ -85,21 +77,16 @@ Each entry in `parameters : [ … ]` is `{ type : <t>, name : <identifier> }`, a
 - Scalars and vectors: `materialParams.roughness`
 - Samplers: the `materialParams_` prefix, as in `texture(materialParams_albedoMap, getUV0())`
 
-Filament supports many more types (`int*`, `uint*`, `bool2`–`4`, matrices, cubemaps, arrays). Lumina maps only these:
+Every Filament parameter type compiles as declared (`bool`–`bool4`, `float`–`float4`, `int`–`int4`, `uint`–`uint4`, `mat3`, `mat4`, arrays such as `float[4]`, `sampler2d`, `samplerCubemap`, `sampler2dArray`, `samplerExternal`, `subpassInput`), with `precision` and `format`. The editor's parameter panel (and `set_material_parameter`) sets values for these:
 
-| Declared type | What Lumina compiles | Value format |
-|---|---|---|
-| `float` | `float` | number |
-| `float4` | `float4` | `[r, g, b, a]` |
-| `float3`, `vec3`, `vec4`, `color` | `float4` (a float3 becomes a float4) | 4 numbers |
-| `bool` | `bool` | `true`/`false` |
-| `sampler2d` | 2D sampler (any `sampler*` type becomes a 2D sampler) | a texture binding |
+| Declared type | Value format |
+|---|---|
+| `float` | number |
+| `float3`, `float4` | `[r, g, b(, a)]` (shown as a colour) |
+| `bool` | `true`/`false` |
+| `sampler2d` | a texture binding |
 
-Other types break without warning:
-
-- `float2`, `int`, the matrix types and arrays all compile as a scalar `float`, so code that expects a vector fails.
-- Because a declared `float3` arrives as a `float4`, read it with `materialParams.tint.rgb`.
-- The `precision` and `format` fields are ignored.
+Other types compile but have no panel row; give them values in the shader or through a Blueprint.
 
 **Defaults.** Filament's parameter syntax has no default values. `default : …` is a Lumina extension, and only its editor reads it:
 
@@ -122,7 +109,7 @@ With no `parameters` block the editor invents a PBR set; write `parameters : []`
 
 ## Requires / attributes
 
-`requires : [ uv0 ]` enables `getUV0()`; `uv1` enables `getUV1()`, `color` enables `getColor()` (`float4`). A getter without its entry fails to compile. Lumina forwards only these three; `custom0`–`7` are dropped. Position is always present, and tangents are automatic except for `unlit`.
+`requires : [ uv0 ]` enables `getUV0()`; `uv1` enables `getUV1()`, `color` enables `getColor()` (`float4`); `tangents`, `custom0`–`7` work as in Filament. A getter without its entry fails to compile. Position is always present, and tangents are automatic except for `unlit` (write `requires : [ tangents ]` to read `material.worldNormal` in an unlit vertex block).
 
 ## Blending and transparency
 
@@ -130,10 +117,10 @@ With no `parameters` block the editor invents a PBR set; write `parameters : []`
 |---|---|
 | `opaque` | Alpha is ignored. |
 | `transparent` | Porter-Duff source-over with **pre-multiplied** alpha. Alpha only fades the diffuse term. |
-| `masked` | Fragments with alpha below the threshold are discarded; the rest are opaque. Filament's default threshold is 0.4, and Lumina cannot change it because `maskThreshold` is ignored. |
+| `masked` | Fragments with alpha below `maskThreshold` (default 0.4) are discarded; the rest are opaque. |
 | `add` | Output is added to the target. Good for glows. |
 
-Filament's `fade`, `multiply`, `screen` and `custom` compile as `opaque` in Lumina.
+`fade` (alpha fades the whole colour, specular included), `multiply`, `screen` and `custom` (with `blendFunction`) work as in Filament; `transparency : twoPassesOneSide` / `twoPassesTwoSides` fix sorting artefacts of transparent meshes.
 
 For `transparent`, pre-multiply the colour yourself:
 
@@ -143,7 +130,7 @@ material.baseColor = vec4(col.rgb * col.a, col.a);
 
 Filament disables depth writes for transparent materials by default.
 
-`doubleSided : true` flips back-face normals so both sides light correctly. Lumina always builds with culling `none`, so back faces draw anyway, but lit wrongly without it.
+`doubleSided : true` draws back faces and flips their normals so both sides light correctly. Without it back faces are culled (`culling : back`, Filament's default; `culling : none` draws them without the normal flip).
 
 ## MaterialInputs
 
@@ -165,11 +152,11 @@ Useful fragment APIs: `getWorldPosition()`, `getWorldViewVector()`, `getUserTime
 
 ## Vertex block
 
-Filament has an optional `vertex { void materialVertex(inout MaterialVertexInputs material) { … } }` block (edits `color`, `uv0`, `uv1`, `worldPosition`). **Lumina does not support it**, so do not write one.
+The optional `vertex { void materialVertex(inout MaterialVertexInputs material) { … } }` block runs per vertex before the fragment. It can move vertices (`material.worldPosition.xyz += material.worldNormal * offset;`), change `color`, `uv0`, `uv1`, and fill the interpolants declared in the header's `variables : [ tint ]`: write `material.tint = vec4(…);` in the vertex block and read it in the fragment as `variable_` + its name (variable_tint). `getUserTime().x` animates it; `getPosition()` is the object-space position. The node graph keeps a fragment that reads `variable_*` as one Custom (Fragment) node; the source compiles unchanged.
 
 ## Pitfalls
 
-- A missing `prepareMaterial(material)` call is rejected before compiling.
+- A missing `prepareMaterial(material)` call is a compile error (`prepareMaterial() is not called`); post-process materials have none.
 - `material.normal` written after `prepareMaterial` has no effect.
 - `baseColor` is a `float4`. Assigning a `vec3` to it fails; write `material.baseColor.rgb = …` or `vec4(c, 1.0)`.
 - With `transparent`, the RGB must already be multiplied by alpha. With `opaque`, alpha does nothing.
@@ -177,4 +164,4 @@ Filament has an optional `vertex { void materialVertex(inout MaterialVertexInput
 - Emissive is in nits; with alpha 1 small values vanish under camera exposure.
 - Samplers are `materialParams_name`; scalars are `materialParams.name`. `getUV0()` needs `requires : [ uv0 ]`.
 - Colours in parameters and literals are linear, not sRGB.
-- Lumina: fragment block last, no vertex block, only the mapped header values and parameter types; shader errors carry no line.
+- Lumina compiles what matc compiles; read the issue's message and its `.mat` line, fix, recompile.

@@ -46,7 +46,7 @@ Lessons from real sessions where a model lost many rounds. Each line: what goes 
   node. Not the level actor's `material` property (not drawn in Play), not a skeletal mesh override.
 - A new material is metallic green (template defaults) → set `baseColor` and `metallic` 0 for non-metals.
 - OBJ colours are lost (MTL `Kd` ignored) → set `baseColor` after import, or import GLB / glTF.
-- Writing a `vertex` block or a quoted header value in a `.mat` → see `filament-materials`.
+- A material that does not compile → read `compile_material`'s issues: matc's messages with their `.mat` lines; see `filament-materials`.
 
 ## Lights and camera
 
