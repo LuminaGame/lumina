@@ -900,6 +900,95 @@ void main() {
     }
   });
 
+  // A cooked Unreal skeletal mesh through the plugin importer, next to the
+  // same character imported from its source glb: same pose, size and
+  // textures; the skeletal mesh editor shows its bone tree.
+  testWidgets('Unreal Engine importer imports a cooked skeletal mesh', (tester) async {
+    const name = 'Unreal Engine importer imports a cooked skeletal mesh';
+    const sourceGlb = 'mannequin/MF_Unarmed_Walk_Fwd.glb';
+    final cooked = '${SmokeArtifacts.testAssetsDir.path}/Unreal/5.8/Windows/UEFix/Content/Fixtures';
+    final package = '$cooked/Characters/Mannequin/MF_Unarmed_Walk_Fwd/SkeletalMeshes/MF_Unarmed_Walk_Fwd.uasset';
+    expect(File(package).existsSync(), isTrue,
+        reason: 'cooked fixtures missing: run unreal_engine_importer/tool/cook_fixtures/cook_fixtures.dart');
+    final tempProjectsDir = Directory.systemTemp.createTempSync('plugins_unreal_skm_');
+    final pDir = Directory('${tempProjectsDir.path}/SmokeUnrealSkm')..createSync(recursive: true);
+    try {
+      const project = LuminaProject(projectName: 'SmokeUnrealSkm', activeLevel: 'contents/levels/L_Main.lmas', settings: EngineScalabilitySettings(targetFps: 60));
+      File('${pDir.path}/SmokeUnrealSkm.lmproject').writeAsStringSync(jsonEncode(project.toMap()));
+      final vm = EditorViewModel(initialProject: project, projectDirPath: tempProjectsDir.path, enableTimers: false);
+      addTearDown(vm.dispose);
+      await tester.runAsync(() => vm.ensureDefaultLevelAssets());
+      if (LuminaEditorHost.plugins.whereType<UnrealEngineImporterPlugin>().isEmpty) {
+        vm.extensionRegistry.registerPlugin(UnrealEngineImporterPlugin());
+      }
+      // The built-in import reads a glb named like a walk cycle as an
+      // animation; under a skeletal-mesh name it imports the character.
+      final sourceCopy = File('${tempProjectsDir.path}/SKM_Quinn_Source.glb');
+      File('${SmokeArtifacts.testAssetsDir.path}/$sourceGlb').copySync(sourceCopy.path);
+      await tester.runAsync(() => vm.processImportPipeline(sourceFilePath: sourceCopy.path));
+      Directory('${pDir.path}/contents/unreal').createSync(recursive: true);
+      vm.selectedFolder = 'contents/unreal';
+      final results = await tester.runAsync(() => vm.importWithPluginImporters([package]));
+      expect(results!.single.success, isTrue, reason: results.single.error);
+      vm.refreshAssets();
+      final source = vm.realAssets.firstWhere(
+          (a) => a.type == AssetType.filameshSk && !a.relativePath.startsWith('contents/unreal/'),
+          orElse: () => throw StateError('the source glb produced no skeletal mesh'));
+      final unreal = vm.realAssets.firstWhere((a) => a.relativePath == results.single.assetPath);
+      expect(unreal.type, AssetType.filameshSk);
+
+      final boundaryKey = GlobalKey();
+      await tester.pumpWidget(RepaintBoundary(
+        key: boundaryKey,
+        child: ShadcnApp(theme: luminaEditorTheme(), home: MainEditorView(viewModel: vm)),
+      ));
+      await settle(tester, frames: 30);
+      final rec = SmokeRecorder(tester, boundary: find.byKey(boundaryKey));
+      await rec.hold(const Duration(seconds: 1));
+
+      await tester.runAsync(() => vm.spawnActorFromAsset(source, location: const [-70.0, 0.0, 0.0]));
+      await tester.runAsync(() => vm.spawnActorFromAsset(unreal, location: const [70.0, 0.0, 0.0]));
+      vm.selectActor(null);
+      await settle(tester, frames: 20);
+      final placed = vm.actors.where((a) => a.meshData != null && a.meshData!.minBounds.isNotEmpty).toList();
+      expect(placed.length, greaterThanOrEqualTo(2));
+      final a = placed[placed.length - 2].meshData!, b = placed.last.meshData!;
+      for (var c = 0; c < 3; c++) {
+        expect(b.maxBounds[c] - b.minBounds[c], closeTo(a.maxBounds[c] - a.minBounds[c], 0.01), reason: 'same size on axis $c');
+      }
+
+      Future<void> orbitTo(double yaw, {double from = 0, int steps = 40}) async {
+        for (var i = 1; i <= steps; i++) {
+          vm.restoreCameraSnapshot([from + (yaw - from) * i / steps, 8.0, 420.0, 0.0, 0.0, 95.0]);
+          await rec.hold(const Duration(milliseconds: 60));
+        }
+        await rec.hold(const Duration(milliseconds: 800));
+      }
+
+      vm.restoreCameraSnapshot([-20.0, 8.0, 420.0, 0.0, 0.0, 95.0]);
+      await orbitTo(0, from: -20);
+      SmokeArtifacts.saveScreenshot('$name: the source character (left) and the cooked one (right)',
+          await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey)),
+          usedAssets: const [sourceGlb]);
+      await orbitTo(180, from: 0);
+      await orbitTo(360, from: 180);
+
+      // The skeletal mesh editor with the imported bone tree.
+      vm.openAssetEditorByPath(unreal.relativePath);
+      await settle(tester, frames: 40);
+      await rec.hold(const Duration(seconds: 3));
+      SmokeArtifacts.saveScreenshot('$name: the imported skeletal mesh in its editor',
+          await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey)),
+          usedAssets: const [sourceGlb]);
+      expect(rec.recorded, greaterThanOrEqualTo(const Duration(seconds: 10)));
+      rec.save(name, usedAssets: const [sourceGlb]);
+    } finally {
+      try {
+        if (tempProjectsDir.existsSync()) tempProjectsDir.deleteSync(recursive: true);
+      } catch (_) {}
+    }
+  });
+
   // Tools shows built-in tools only; the Plugins menu holds the
   // Plugin Manager, New Plugin… and the PCG submenu, whose command places a
   // real volume in the level.
