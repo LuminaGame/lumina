@@ -12,8 +12,10 @@ import '../../../core/window/lumina_window.dart';
 import '../../../core/window/window_controls.dart';
 import '../../../core/host/editor_host.dart';
 import '../services/project_editor_resolver.dart';
+import '../services/project_editor_update.dart';
 import 'editor_build_splash.dart';
 import 'missing_editor_binary_dialog.dart';
+import 'project_editor_update_dialog.dart';
 import '../view_models/launcher_view_model.dart';
 import '../../main_editor/views/main_editor_view.dart';
 import "create_project_dialog.dart";
@@ -47,6 +49,9 @@ class _LauncherViewState extends State<LauncherView> {
     super.initState();
     _viewModel = widget.viewModel ?? LauncherViewModel();
     _viewModel.addListener(_onViewModelChanged);
+    // The stock editor tells project editors started on their own which
+    // Studio (and engine) this machine runs now.
+    if (!LuminaEditorHost.isProjectEditor) unawaited(LuminaStudioRecord.recordThisStudio(configDir: _viewModel.configDir));
     final initial = widget.initialProjectDir;
     if (initial != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _openInitialProject(initial));
@@ -102,14 +107,16 @@ class _LauncherViewState extends State<LauncherView> {
     final name = EditorHostGeneratorService.projectNameIn(dir);
     final loaded = name == null ? null : await _viewModel.openExternal(p.join(dir, '$name.lmproject'));
     if (loaded == null || !mounted) return;
-    await _openProject(loaded, dir, rebuild: LuminaEditorHost.args.rebuild);
+    await _openProject(loaded, dir, rebuild: LuminaEditorHost.args.rebuild, updateEditor: LuminaEditorHost.args.updateEditor);
   }
 
   static String _inactivePluginsWarning(List<String> names) =>
       'Code plugins inactive in this session: ${names.join(', ')}. Reopen the project from the launcher and build its '
       'editor to use them.';
 
-  Future<void> _openProject(LuminaProject project, String projectDir, {bool rebuild = false}) async {
+  /// [updateEditor]: a project editor handed the project over after the
+  /// user chose Update there; its editor is updated without asking again.
+  Future<void> _openProject(LuminaProject project, String projectDir, {bool rebuild = false, bool updateEditor = false}) async {
     // A project editor opens its own project (after checking it is not
     // stale); `--no-plugins` opens any project in this binary.
     if (LuminaEditorHost.isProjectEditor) return _selfCheckThenOpen(project, projectDir);
@@ -125,8 +132,23 @@ class _LauncherViewState extends State<LauncherView> {
     setState(() => _resolving = true);
     ProjectEditorDecision decision;
     String? fallbackWarning;
+    // Whether the resolver itself chose to open in place (per-project
+    // editors off, no code plugins), not a fallback after an error.
+    var resolvedInPlace = false;
+    // The project's editor comes from another engine than this Studio's.
+    EditorEngineUpdate? update;
     try {
       decision = await _viewModel.resolveProjectEditor(projectDir, rebuild: rebuild);
+      resolvedInPlace = decision is OpenInPlace;
+      if (decision is ExecCached || decision is NeedsBuild) {
+        try {
+          update = await _viewModel.projectEditorUpdate(projectDir);
+        } catch (e) {
+          // The project still opens with the editor it has.
+          EngineLoggerService().log('Could not compare the project editor of $projectDir with this Studio: $e',
+              level: 'warning', source: 'Launcher');
+        }
+      }
     } catch (e) {
       // No Flutter on PATH, an unreadable plugin: the project still opens.
       List<LuminaPluginDescriptor> plugins;
@@ -144,9 +166,30 @@ class _LauncherViewState extends State<LauncherView> {
       if (mounted) setState(() => _resolving = false);
     }
     if (!mounted) return;
+    if (update != null) {
+      final answer = updateEditor
+          ? const ProjectEditorUpdateAnswer(ProjectEditorUpdateChoice.update)
+          : await ProjectEditorUpdateDialog.show(context,
+              projectName: project.projectName, fromLabel: update.fromLabel, toLabel: update.toLabel);
+      if (!mounted) return;
+      switch (answer.choice) {
+        case ProjectEditorUpdateChoice.cancel:
+          return;
+        case ProjectEditorUpdateChoice.update:
+          final plugins = decision is NeedsBuild ? decision.plugins : await _viewModel.editorResolver.enabledCodePlugins(projectDir);
+          if (!mounted) return;
+          return _showBuildSplash(project, projectDir, plugins, update: update);
+        case ProjectEditorUpdateChoice.openWithOldEditor:
+          if (answer.dontAskAgain) _viewModel.dismissProjectEditorUpdate(projectDir, update);
+      }
+    }
     switch (decision) {
       case OpenInPlace():
-        _openMainEditor(context, project: project, projectDir: projectDir, startupWarning: fallbackWarning);
+        // No copy of the engine to update: the project now belongs to this
+        // Studio's version.
+        final opened = resolvedInPlace ? await _viewModel.recordEngineVersion(project, projectDir) : project;
+        if (!mounted) return;
+        _openMainEditor(context, project: opened, projectDir: projectDir, startupWarning: fallbackWarning);
       case ExecCached(:final entry):
         await _viewModel.execProjectEditor(entry.executable, projectDir);
       case NeedsBuild(:final plugins):
@@ -166,8 +209,10 @@ class _LauncherViewState extends State<LauncherView> {
     }
   }
 
-  void _showBuildSplash(LuminaProject project, String projectDir, List<LuminaPluginDescriptor> plugins) {
-    final build = _viewModel.projectEditorBuild(project.projectName, projectDir, plugins);
+  /// [update]: the splash first replaces the project's copy of the engine
+  /// source with this Studio's.
+  void _showBuildSplash(LuminaProject project, String projectDir, List<LuminaPluginDescriptor> plugins, {EditorEngineUpdate? update}) {
+    final build = _viewModel.projectEditorBuild(project.projectName, projectDir, plugins, update: update);
     // With a native window the splash resizes it to 720×400; in tests it is
     // drawn at that size in the middle of the test window.
     final manageWindow = EditorBuildSplash.manageNativeWindow && Platform.environment['FLUTTER_TEST'] != 'true';
@@ -208,9 +253,42 @@ class _LauncherViewState extends State<LauncherView> {
   }
 
   /// A project editor started on its own (desktop shortcut, `flutter run`)
+  /// first asks to update to a newer Lumina Studio on this machine (the last
+  /// one that started, see [LuminaStudioRecord]) through that Studio, then
   /// checks its compiled-in fingerprint against the project's current
   /// inputs; a stale one offers to rebuild through the launcher.
   Future<void> _selfCheckThenOpen(LuminaProject project, String projectDir) async {
+    // Started by a launcher (`--launcher-exe`), the launcher already asked.
+    final studio = LuminaEditorHost.args.launcherExe == null ? LuminaStudioRecord.read(configDir: _viewModel.configDir) : null;
+    EditorEngineUpdate? update;
+    if (studio != null &&
+        File(studio.executable).existsSync() &&
+        !p.equals(p.normalize(studio.executable), p.normalize(Platform.resolvedExecutable))) {
+      try {
+        // The engine that Studio recorded when it last started.
+        update = await _viewModel.editorResolver.engineUpdate(projectDir, engineRoot: studio.engineRoot, current: studio.engine);
+        if (update != null && _viewModel.updatePrompts.isDismissed(projectDir, update.current)) update = null;
+      } catch (_) {
+        update = null;
+      }
+    }
+    if (!mounted) return;
+    if (update != null) {
+      final answer = await ProjectEditorUpdateDialog.show(context,
+          projectName: project.projectName, fromLabel: update.fromLabel, toLabel: update.toLabel);
+      if (!mounted) return;
+      switch (answer.choice) {
+        case ProjectEditorUpdateChoice.update:
+          await EditorHandOff.instance.restartThroughLauncher(projectDir, updateEditor: true, launcher: studio!.executable);
+          return;
+        case ProjectEditorUpdateChoice.cancel:
+          await EditorHandOff.instance.returnToLauncher(launcher: studio!.executable);
+          return;
+        case ProjectEditorUpdateChoice.openWithOldEditor:
+          if (answer.dontAskAgain) _viewModel.dismissProjectEditorUpdate(projectDir, update);
+      }
+    }
+    if (!mounted) return;
     List<String> reasons;
     try {
       reasons = await _viewModel.editorResolver.staleSelfCheck(projectDir, LuminaEditorHost.compiledFingerprint);

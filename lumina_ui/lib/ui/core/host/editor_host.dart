@@ -20,18 +20,22 @@ class EditorHostInfo {
 }
 
 /// The editor's command line: `--project <path>`, `--rebuild`,
-/// `--no-plugins`, `--launcher-exe <path>`.
+/// `--no-plugins`, `--launcher-exe <path>`, `--update-editor`.
 class EditorLaunchArgs {
   final String? project;
   final bool rebuild;
   final bool noPlugins;
   final String? launcherExe;
 
-  const EditorLaunchArgs({this.project, this.rebuild = false, this.noPlugins = false, this.launcherExe});
+  /// The user already chose to update the project's editor to this Studio's
+  /// engine (a project editor handed off): update without asking again.
+  final bool updateEditor;
+
+  const EditorLaunchArgs({this.project, this.rebuild = false, this.noPlugins = false, this.launcherExe, this.updateEditor = false});
 
   static EditorLaunchArgs parse(List<String> args) {
     String? project, launcherExe;
-    var rebuild = false, noPlugins = false;
+    var rebuild = false, noPlugins = false, updateEditor = false;
     for (var i = 0; i < args.length; i++) {
       final a = args[i];
       String? value() => i + 1 < args.length ? args[++i] : null;
@@ -47,9 +51,12 @@ class EditorLaunchArgs {
         rebuild = true;
       } else if (a == '--no-plugins') {
         noPlugins = true;
+      } else if (a == '--update-editor') {
+        updateEditor = true;
       }
     }
-    return EditorLaunchArgs(project: project, rebuild: rebuild, noPlugins: noPlugins, launcherExe: launcherExe);
+    return EditorLaunchArgs(
+        project: project, rebuild: rebuild, noPlugins: noPlugins, launcherExe: launcherExe, updateEditor: updateEditor);
   }
 }
 
@@ -217,19 +224,33 @@ class EditorHandOff {
     exitApp(0);
   }
 
-  /// Relaunches the launcher on [projectDir] (it resolves, builds if stale,
-  /// and opens) and quits; without a launcher, exits with
-  /// [restartExitCode]. Returns whether a launcher was started.
-  Future<bool> restartThroughLauncher(String projectDir, {bool rebuild = false}) async {
-    final launcher = LuminaEditorHost.launcherExecutable();
-    if (launcher == null) {
+  /// Relaunches the launcher ([launcher], else
+  /// [LuminaEditorHost.launcherExecutable]) on [projectDir] (it resolves,
+  /// builds if stale, and opens) and quits; without a launcher, exits with
+  /// [restartExitCode]. [updateEditor] passes `--update-editor`: the launcher
+  /// updates the project's editor to its engine without asking. Returns
+  /// whether a launcher was started.
+  Future<bool> restartThroughLauncher(String projectDir, {bool rebuild = false, bool updateEditor = false, String? launcher}) async {
+    final exe = launcher ?? LuminaEditorHost.launcherExecutable();
+    if (exe == null) {
       await _runBeforeExit();
       exitApp(restartExitCode);
       return false;
     }
-    await startDetached(launcher, ['--project', projectDir, if (rebuild) '--rebuild']);
+    await startDetached(exe, ['--project', projectDir, if (rebuild) '--rebuild', if (updateEditor) '--update-editor']);
     await _runBeforeExit();
     exitApp(0);
     return true;
+  }
+
+  /// Starts the launcher ([launcher], else
+  /// [LuminaEditorHost.launcherExecutable]) on its project list and quits;
+  /// without one, quits. Returns whether a launcher was started.
+  Future<bool> returnToLauncher({String? launcher}) async {
+    final exe = launcher ?? LuminaEditorHost.launcherExecutable();
+    if (exe != null) await startDetached(exe, const []);
+    await _runBeforeExit();
+    exitApp(0);
+    return exe != null;
   }
 }

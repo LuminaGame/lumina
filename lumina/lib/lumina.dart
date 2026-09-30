@@ -265,4 +265,5 @@ export 'data/services/plugin_template_generator_service.dart';
 export 'data/services/project_engine_link.dart';
 export 'data/services/lumina_data_dir.dart';
 export 'data/services/engine_bootstrap.dart';
+export 'data/services/engine_identity.dart';
 

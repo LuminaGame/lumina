@@ -383,7 +383,12 @@ class EditorBuildService {
     return n;
   }
 
-  EditorBuildJob start(String projectDir, List<LuminaPluginDescriptor> plugins, {String? projectName}) {
+  /// Builds the project editor of [projectDir]. [syncSource] replaces the
+  /// project's copy of the engine source first, even when one is there (the
+  /// update to the running engine), and [onSourceSynced] runs once the new
+  /// copy is in place.
+  EditorBuildJob start(String projectDir, List<LuminaPluginDescriptor> plugins,
+      {String? projectName, bool syncSource = false, FutureOr<void> Function()? onSourceSynced}) {
     final controller = StreamController<EditorBuildProgress>.broadcast();
     final result = Completer<EditorBuildOutcome>();
     var cancelled = false;
@@ -433,12 +438,19 @@ class EditorBuildService {
       final hostDir = EditorHostGeneratorService.hostDirOf(projectDir);
 
       // The engine source into the project, once; a copy that is
-      // already there (possibly edited) is left alone.
+      // already there (possibly edited) is left alone unless [syncSource].
       const copying = EditorBuildPhase.copyingSource;
-      emit(copying, 0, copying.label);
-      if (!vendor.isVendored(hostDir)) {
-        logLine('Copying the editor source from $engineRoot into $hostDir');
+      final label = syncSource ? 'Updating editor source' : copying.label;
+      emit(copying, 0, label);
+      if (syncSource || !vendor.isVendored(hostDir)) {
+        final start = syncSource
+            ? 'Updating the editor source in $hostDir from $engineRoot (edits in the copy are replaced)'
+            : 'Copying the editor source from $engineRoot into $hostDir';
+        logLine(start);
         await Directory(hostDir).create(recursive: true);
+        // On the splash's log too (after the first await: the splash listens
+        // once start returns).
+        emit(copying, 0, label, line: start);
         var shown = -1;
         try {
           await vendor.vendor(hostDir, onProgress: (fraction, file) {
@@ -446,7 +458,7 @@ class EditorBuildService {
             final percent = (fraction * 100).floor();
             if (percent == shown) return;
             shown = percent;
-            emit(copying, copying.overall(fraction), '${copying.label} ($percent %)', line: file);
+            emit(copying, copying.overall(fraction), '$label ($percent %)', line: file);
           });
         } on _Cancelled {
           return EditorBuildCancelled(logPath);
@@ -455,11 +467,14 @@ class EditorBuildService {
         } on FileSystemException catch (e) {
           return failed('copying the editor source failed: ${e.message} (${e.path})');
         }
-        logLine('Copied the editor source (${EditorSourceVendorService.copiedRepos(hostDir).join(', ')})');
+        final copied = 'Copied the editor source (${EditorSourceVendorService.copiedRepos(hostDir).join(', ')})';
+        logLine(copied);
+        emit(copying, copying.overall(1), label, line: copied);
+        if (syncSource) await onSourceSynced?.call();
       } else {
         await vendor.linkOpenRigLogic(hostDir);
       }
-      emit(copying, copying.overall(1), copying.label);
+      emit(copying, copying.overall(1), label);
       if (cancelled) return EditorBuildCancelled(logPath);
 
       emit(EditorBuildPhase.generatingHost, EditorBuildPhase.generatingHost.overall(0), EditorBuildPhase.generatingHost.label);

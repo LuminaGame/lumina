@@ -314,7 +314,10 @@ void main(List<String> args) => runLuminaEditor(
     final src = copied.existsSync() ? copied : Directory(p.join(_uiRoot, platform));
     if (!src.existsSync()) return const {};
     final out = <String, List<int>>{};
-    final files = src.listSync(recursive: true).whereType<File>().toList()..sort((a, b) => a.path.compareTo(b.path));
+    // Links are not followed: flutter/ephemeral/.plugin_symlinks leads into
+    // other packages' trees (their build folders too), none of it runner.
+    final files = src.listSync(recursive: true, followLinks: false).whereType<File>().toList()
+      ..sort((a, b) => a.path.compareTo(b.path));
     for (final f in files) {
       final rel = p.relative(f.path, from: src.path).replaceAll(r'\', '/');
       if (_isFlutterGenerated(rel)) continue;

@@ -61,6 +61,9 @@ class ProjectEditorResolver {
   /// a plugin-less project opens in the stock editor.
   final bool everyProject;
 
+  /// The running engine's identity (default: read from [engineRoot]).
+  final Future<EngineIdentity> Function() currentEngine;
+
   ProjectEditorResolver({
     String? engineRoot,
     EditorBuildCache? cache,
@@ -70,7 +73,9 @@ class ProjectEditorResolver {
     Future<FlutterToolInfo> Function()? flutterInfo,
     List<PluginScanRoot> Function(String projectDir)? scanRoots,
     this.everyProject = true,
+    Future<EngineIdentity> Function()? currentEngine,
   })  : engineRoot = engineRoot ?? LuminaEditorHost.engineRoot,
+        currentEngine = currentEngine ?? (() => EngineIdentity.of(engineRoot ?? LuminaEditorHost.engineRoot)),
         cache = cache ?? EditorBuildCache(),
         generator = generator ?? EditorHostGeneratorService(engineRoot: engineRoot ?? LuminaEditorHost.engineRoot),
         platform = platform ?? EditorHostInputs.currentPlatform(),
@@ -143,6 +148,33 @@ class ProjectEditorResolver {
     }
     if (rebuild && hit != null) return NeedsBuild('rebuild requested', plugins);
     return NeedsBuild(staleReason(hostDir.path, components), plugins);
+  }
+
+  /// Whether the project's copy of the engine source comes from another
+  /// engine than the one at [engineRoot] (default: this resolver's, the
+  /// running Studio's), whose identity is [current] (default:
+  /// [currentEngine] for this resolver's root, else read from [engineRoot]):
+  /// null when there is no copy or it is current. See
+  /// [EditorSourceVendorService.engineUpdate].
+  Future<EditorEngineUpdate?> engineUpdate(String projectDir, {EngineIdentity? current, String? engineRoot}) async {
+    final root = engineRoot ?? this.engineRoot;
+    final name = EditorHostGeneratorService.projectNameIn(projectDir);
+    String? projectEngineVersion;
+    if (name != null) {
+      try {
+        final json = jsonDecode(File(p.join(projectDir, '$name.lmproject')).readAsStringSync());
+        if (json is Map && json['engine_version'] is String) projectEngineVersion = json['engine_version'] as String;
+      } on FormatException {
+        // An unreadable manifest names no version.
+      } on FileSystemException {
+        // Same.
+      }
+    }
+    return EditorSourceVendorService(engineRoot: root).engineUpdate(
+      EditorHostGeneratorService.hostDirOf(projectDir),
+      current: current ?? (engineRoot == null ? await currentEngine() : await EngineIdentity.of(root)),
+      projectEngineVersion: projectEngineVersion,
+    );
   }
 
   /// What changed since the host's last build, from its stamp.

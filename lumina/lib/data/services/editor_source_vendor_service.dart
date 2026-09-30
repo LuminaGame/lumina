@@ -4,9 +4,43 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:yaml/yaml.dart';
 
+import '../models/lumina_project.dart' show kLuminaEngineVersion;
 import 'directory_link.dart';
 import 'editor_build_fingerprint.dart' show engineRepoState;
+import 'engine_identity.dart';
 import 'workspace_paths.dart';
+
+/// A project's copy of the engine source comes from another engine than the
+/// running one (see [EditorSourceVendorService.engineUpdate]).
+class EditorEngineUpdate {
+  /// The engine the copy was taken from, as its stamp records it; null for a
+  /// copy made before stamps recorded it.
+  final EngineIdentity? copied;
+
+  /// The project's `.lmproject` `engine_version`, when it names a version.
+  final String? projectEngineVersion;
+
+  /// The engine a sync would copy from.
+  final EngineIdentity current;
+
+  /// The copied repos whose engine source changed since the copy.
+  final List<String> changedRepos;
+
+  const EditorEngineUpdate({required this.copied, required this.current, this.projectEngineVersion, this.changedRepos = const []});
+
+  /// The copy's engine for the user: its label, else the project's
+  /// `engine_version`, else "an older engine".
+  String get fromLabel => copied?.label ?? projectEngineVersion ?? 'an older engine';
+
+  /// The running engine for the user; with a copy of the same version and
+  /// commit (edits in a source checkout) the changed repos are named.
+  String get toLabel => copied != null && copied!.key == current.key && changedRepos.isNotEmpty
+      ? '${current.label}, changed: ${changedRepos.join(', ')}'
+      : current.label;
+
+  @override
+  String toString() => 'EditorEngineUpdate($fromLabel → $toLabel)';
+}
 
 /// Copies the engine's Dart source, dependencies included, into a project's
 /// editor host: `<host>/lumina_ui/`, `<host>/lumina/`,
@@ -250,7 +284,33 @@ class EditorSourceVendorService {
       'copiedAt': DateTime.now().toUtc().toIso8601String(),
       'packages': roots,
       'engineRevisions': revisions,
+      'engine': (await EngineIdentity.of(engineRoot)).toJson(),
     }));
+  }
+
+  /// The engine [hostDir]'s copy was taken from, from its stamp; null when
+  /// the stamp predates the record (or there is no copy).
+  static EngineIdentity? copiedEngine(String hostDir) => EngineIdentity.fromJson(readStamp(hostDir)?['engine']);
+
+  /// Whether [hostDir]'s copy comes from another engine than [current] (the
+  /// engine this service copies from): null when the host holds no copy or
+  /// the copy is current. A stamp that records its engine differs when that
+  /// engine is not [current] or the engine's source changed since
+  /// ([engineChangedSince]: in a source checkout, edits count). An older
+  /// stamp differs when the source changed or the project's
+  /// [projectEngineVersion] names another version; the creators'
+  /// placeholder [kLuminaEngineVersion] names none.
+  Future<EditorEngineUpdate?> engineUpdate(String hostDir, {required EngineIdentity current, String? projectEngineVersion}) async {
+    if (!isVendored(hostDir)) return null;
+    final copied = copiedEngine(hostDir);
+    final changed = await engineChangedSince(hostDir);
+    final recorded = projectEngineVersion == null ? '' : EngineIdentity.stripTag(projectEngineVersion.trim());
+    final projectVersion = recorded.isEmpty || recorded == kLuminaEngineVersion ? null : recorded;
+    final differs = copied != null
+        ? copied.key != current.key || changed.isNotEmpty
+        : changed.isNotEmpty || (projectVersion != null && projectVersion != current.version);
+    if (!differs) return null;
+    return EditorEngineUpdate(copied: copied, current: current, projectEngineVersion: projectVersion, changedRepos: changed);
   }
 
   /// `<host>/openriglogic` → `<engine>/openriglogic` when the engine has

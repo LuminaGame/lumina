@@ -8,6 +8,7 @@ import '../../../core/host/editor_host.dart';
 import '../../main_editor/services/editor_preferences.dart';
 import '../services/installed_template_repository.dart';
 import '../services/project_editor_resolver.dart';
+import '../services/project_editor_update.dart';
 import 'editor_build_view_model.dart';
 
 /// Maps a [GameTemplate.icon] hint to the launcher's Lucide icon.
@@ -327,8 +328,54 @@ class LauncherViewModel extends ChangeNotifier {
     return decision;
   }
 
+  /// The "Don't ask again for this version" answers, per project on this
+  /// machine (this launcher's config folder).
+  late final ProjectEditorUpdatePrompts updatePrompts = ProjectEditorUpdatePrompts(configDir: configDir);
+
+  /// Whether the project's editor should be offered an update to this
+  /// Studio's engine: its copy of the engine source comes from another
+  /// engine and the user did not ask to skip this one.
+  Future<EditorEngineUpdate?> projectEditorUpdate(String projectDir) async {
+    final update = await editorResolver.engineUpdate(projectDir);
+    if (update == null) return null;
+    if (updatePrompts.isDismissed(projectDir, update.current)) {
+      _logger.log(
+          "The project editor of $projectDir is from Lumina ${update.fromLabel}; not asking to update it to "
+          "Lumina ${update.toLabel} (Don't ask again)",
+          level: 'info',
+          source: 'Launcher');
+      return null;
+    }
+    _logger.log('The project editor of $projectDir is from Lumina ${update.fromLabel}; this Studio is Lumina ${update.toLabel}',
+        level: 'info', source: 'Launcher');
+    return update;
+  }
+
+  /// "Don't ask again for this version": [update]'s engine is not offered
+  /// for [projectDir] again on this machine.
+  void dismissProjectEditorUpdate(String projectDir, EditorEngineUpdate update) {
+    updatePrompts.dismiss(projectDir, update.current);
+    _logger.log("Won't ask again to update the project editor of $projectDir to Lumina ${update.current.label}",
+        level: 'info', source: 'Launcher');
+  }
+
+  /// Writes [version] (default: this Studio's) as the project's
+  /// `engine_version` and logs the change; returns [project] carrying it.
+  Future<LuminaProject> recordEngineVersion(LuminaProject project, String projectDir, {String? version}) async {
+    final v = version ?? LuminaRelease.displayVersion;
+    final previous = await _projectRepo.updateEngineVersion(projectDir, v);
+    if (previous == null) return project.engineVersion == v ? project : project.copyWith(engineVersion: v);
+    _logger.log('${project.projectName}: engine_version ${previous.isEmpty ? '(none)' : previous} → $v (opened in Lumina $v)',
+        level: 'info', source: 'Launcher');
+    return project.copyWith(engineVersion: v);
+  }
+
   /// The build behind the splash, for [plugins] of the project at [projectDir].
-  EditorBuildViewModel projectEditorBuild(String projectName, String projectDir, List<LuminaPluginDescriptor> plugins) {
+  /// [update] first replaces the project's copy of the engine source with
+  /// this Studio's and records its version as the project's
+  /// `engine_version`.
+  EditorBuildViewModel projectEditorBuild(String projectName, String projectDir, List<LuminaPluginDescriptor> plugins,
+      {EditorEngineUpdate? update}) {
     final resolver = editorResolver;
     final service = _buildServiceFactory?.call(resolver) ??
         EditorBuildService(
@@ -343,7 +390,25 @@ class LauncherViewModel extends ChangeNotifier {
       projectDir: projectDir,
       engineVersion: kLuminaEngineVersion,
       hasPlugins: plugins.isNotEmpty,
-      startBuild: () => service.start(projectDir, plugins, projectName: projectName),
+      startBuild: () => service.start(
+        projectDir,
+        plugins,
+        projectName: projectName,
+        syncSource: update != null,
+        onSourceSynced: update == null
+            ? null
+            : () async {
+                _logger.log(
+                    "Updated the project editor source of $projectName from Lumina ${update.fromLabel} to Lumina ${update.current.label}",
+                    level: 'info',
+                    source: 'Launcher');
+                final previous = await _projectRepo.updateEngineVersion(projectDir, update.current.version);
+                if (previous != null) {
+                  _logger.log('$projectName: engine_version ${previous.isEmpty ? '(none)' : previous} → ${update.current.version}',
+                      level: 'info', source: 'Launcher');
+                }
+              },
+      ),
     );
   }
 

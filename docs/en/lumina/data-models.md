@@ -816,6 +816,7 @@ Represents a tracked project entry in the launcher's recent projects list.
 | `validateLocation` | `static String? validateLocation(String? location)` | Validates the target project parent directory. |
 | `luminaPackagePath` | `static String get luminaPackagePath` | Resolves the engine package path for pubspec dependency injection. |
 | `loadProject` | `Future<LuminaProject?> loadProject(String lmprojectPath)` | Loads data from disk or memory buffer into the engine. |
+| `updateEngineVersion` | `Future<String?> updateEngineVersion(String projectDir, String version) async` | Sets the `engine_version` of the `.lmproject` in [projectDir] to [version], leaving every other field as it is. Returns the previous value when it changed; null when it already was [version] or the folder holds no readable manifest. |
 | `saveProject` | `Future<void> saveProject(LuminaProject project, String projectDirPath)` | Serializes and writes the current state or asset to disk. |
 
 ---

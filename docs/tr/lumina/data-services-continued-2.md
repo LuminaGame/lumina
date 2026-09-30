@@ -12,6 +12,7 @@ Veri katmanı: use case'ler ve servisler sayfasının devamı: `lib/data/service
 - [`lib/data/services/encoded_image_decoder.dart`](#libdataservicesencoded_image_decoderdart)
 - [`lib/data/services/encoded_image_format.dart`](#libdataservicesencoded_image_formatdart)
 - [`lib/data/services/engine_bootstrap.dart`](#libdataservicesengine_bootstrapdart)
+- [`lib/data/services/engine_identity.dart`](#libdataservicesengine_identitydart)
 - [`lib/data/services/fbx_import_service.dart`](#libdataservicesfbx_import_servicedart)
 - [`lib/data/services/fbx_material_mapper.dart`](#libdataservicesfbx_material_mapperdart)
 - [`lib/data/services/fbx_texture_locator.dart`](#libdataservicesfbx_texture_locatordart)
@@ -175,7 +176,7 @@ Generates, resolves, builds and installs a project editor: **generate → pub ge
 | `bundleDirOf` | `String bundleDirOf(String hostDir)` | `build/<platform>/…` holding the runnable bundle, relative to the host. |
 | `executableIn` | `String executableIn(String packageName)` | The executable inside the bundle. |
 | `countHookPackages` | `static int countHookPackages(String hostDir)` | Packages in the host's package graph that have a `hook/build.dart` (from `.dart_tool/package_config.json`). |
-| `start` | `EditorBuildJob start(String projectDir, List<LuminaPluginDescriptor> plugins, {String? projectName})` |  |
+| `start` | `EditorBuildJob start(String projectDir, List<LuminaPluginDescriptor> plugins, {String? projectName, bool syncSource = false, FutureOr<void> Function()? onSourceSynced})` | [projectDir] projesinin editörünü derler. [syncSource], kopya zaten varsa bile önce projenin motor kaynağı kopyasını değiştirir (çalışan motora güncelleme; kopyalama aşaması "Updating editor source" yazar); [onSourceSynced] yeni kopya yerine geçince çalışır. |
 
 **Üst düzey fonksiyonlar ve değişkenler:**
 
@@ -235,6 +236,25 @@ Output is deterministic (the same inputs give byte-identical files) and written 
 
 ## `lib/data/services/editor_source_vendor_service.dart`
 
+### `class EditorEngineUpdate`
+
+Projenin motor kaynağı kopyası çalışan motordan başka bir motordan geliyor (bkz. [EditorSourceVendorService.engineUpdate]). Launcher [fromLabel] ve [toLabel] ile "Update this project's editor?" diye sorar.
+
+**Yapıcı Metotlar (Constructors):**
+
+- `const EditorEngineUpdate({required this.copied, required this.current, this.projectEngineVersion, this.changedRepos = const []})`
+
+**Üyeler:**
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `copied` | `final EngineIdentity? copied` | Kopyanın alındığı motor, damganın kaydettiği şekliyle; damgalar bunu kaydetmeden önce yapılmış kopyada null. |
+| `projectEngineVersion` | `final String? projectEngineVersion` | Projenin `.lmproject` `engine_version` değeri, bir sürüm adlandırıyorsa. |
+| `current` | `final EngineIdentity current` | Senkronizasyonun kopyalayacağı motor. |
+| `changedRepos` | `final List<String> changedRepos` | Kopyadan beri motor kaynağı değişen kopyalanmış depolar. |
+| `fromLabel` | `String get fromLabel` | Kopyanın motoru kullanıcı için: etiketi, yoksa projenin `engine_version` değeri, yoksa "an older engine". |
+| `toLabel` | `String get toLabel` | Çalışan motor kullanıcı için; aynı sürüm ve commit'ten alınmış kopyada (kaynak checkout'unda düzenleme) değişen depolar da yazılır. |
+
 ### `class EditorSourceVendorService`
 
 Copies the engine's Dart source, dependencies included, into a project's editor host: `<host>/lumina_ui/`, `<host>/lumina/`, `<host>/flutter_filament/`, … at the workspace's relative layout, so the copied pubspecs' `path: ../x` entries resolve among themselves. Packages from other repos (git dependencies: flutter_assimp, flutter_riglogic, flutter_gstreamer and lumina_smoke from `tools`, the marketplace's shared package) are copied from where the engine workspace resolved them (its package config: the pub cache, or a local checkout through `pubspec_overrides.yaml`) to `<host>/<name>/`; the host pubspec overrides every one of them to its copy. Filament's C++ tree is linked (`<host>/filament` → `<engine>/filament`), never copied.
@@ -264,8 +284,10 @@ The copy is made once and is the project's own afterwards: only [sync] replaces 
 | `isVendored` | `bool isVendored(String hostDir)` | Whether [hostDir] holds a complete copy: the stamp, every package in it and the Filament link. |
 | `vendorIfMissing` | `Future<bool> vendorIfMissing(String hostDir, {void Function(double fraction, String file)? onProgress}) async` | Copies the source unless [hostDir] already holds it; true when it copied. |
 | `sync` | `Future<void> sync(String hostDir, {void Function(double fraction, String file)? onProgress})` | Replaces the copy with the engine's current source; edits made in the project's copy are lost. |
-| `vendor` | `Future<void> vendor(String hostDir, {void Function(double fraction, String file)? onProgress}) async` | Copies every [copyRoots] package into [hostDir] (replacing what is there), links Filament and writes the stamp. Each package is copied into `<host>/.source.tmp/` first and moved into place only when all of them copied, so an interrupted copy leaves the old state. |
+| `vendor` | `Future<void> vendor(String hostDir, {void Function(double fraction, String file)? onProgress}) async` | Her [copyRoots] paketini [hostDir] içine kopyalar (oradakinin yerine), Filament'i bağlar ve damgayı yazar; damga kopyanın alındığı motoru kaydeder (`engine`: [EngineIdentity]). Paketler önce `<host>/.source.tmp/` içine kopyalanır, hepsi bitince yerine taşınır; yarıda kalan kopya eski durumu bırakır. |
+| `copiedEngine` | `static EngineIdentity? copiedEngine(String hostDir)` | [hostDir] kopyasının alındığı motor, damgasından; damga bu kayıttan eskiyse (ya da kopya yoksa) null. |
 | `engineChangedSince` | `Future<List<String>> engineChangedSince(String hostDir) async` | The engine repos (top-level dirs) whose state changed since [hostDir]'s copy was made. |
+| `engineUpdate` | `Future<EditorEngineUpdate?> engineUpdate(String hostDir, {required EngineIdentity current, String? projectEngineVersion}) async` | [hostDir] kopyası [current] dışında bir motordan mı geliyor: kopya yoksa ya da günselse null. Motorunu kaydeden damga, o motor [current] değilse ya da motor kaynağı o zamandan beri değiştiyse ([engineChangedSince]; kaynak checkout'unda düzenlemeler de sayılır) farklıdır. Eski damga, kaynak değiştiyse ya da projenin [projectEngineVersion] değeri başka bir sürüm adlandırıyorsa farklıdır; oluşturucuların yer tutucusu `kLuminaEngineVersion` sürüm sayılmaz. |
 
 ## `lib/data/services/encoded_image_decoder.dart`
 
@@ -557,6 +579,29 @@ Every step is idempotent: a complete checkout starts without the network, an int
 | `ensure` | `Future<EngineCheckout> ensure({void Function(EngineBootstrapEvent)? onEvent, bool force = false, bool activate...` | Makes the checkout complete (see the class comment) and returns it; with [activate], points [LuminaWorkspace.root] at it. [force] deletes the checkout first and downloads it again. Throws [EngineBootstrapException]. |
 | `checkPrerequisites` | `Future<List<EnginePrerequisite>> checkPrerequisites() async` | Git and the Flutter SDK (required), and the C++ toolchain the engine's native code builds with (reported only), found through [environment]. |
 | `findExecutable` | `String? findExecutable(String name)` | [name]'s full path on [environment]'s `PATH` (with `PATHEXT` on Windows), or null. |
+
+## `lib/data/services/engine_identity.dart`
+
+### `class EngineIdentity`
+
+Bir Lumina Studio'nun hangi motorla çalıştığı ya da projenin motor kaynağı kopyasının hangi motordan alındığı: bir sürüm etiketi ve commit'i, ya da kaynak checkout'u için kaynak sürümü ve `HEAD`.
+
+**Yapıcı Metotlar (Constructors):**
+
+- `const EngineIdentity({required this.version, this.commit = '', this.release = false})`
+
+**Üyeler:**
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `version` | `final String version` | Etiketin `v` harfi olmadan sürüm: `0.0.1-dev.7`, kaynak checkout'unda `0.0.1-dev`. |
+| `commit` | `final String commit` | Tam commit SHA'sı; bilinmiyorsa (git checkout'u olmayan kaynak ağacı) boş. |
+| `release` | `final bool release` | İndirilmiş bir sürüm checkout'u mu (yalnızca etiketiyle adlandırılır). |
+| `of` | `static Future<EngineIdentity> of(String engineRoot) async` | [engineRoot] konumundaki motor: indirilmiş sürüm checkout'u etiketini ve commit'ini (bootstrap işaretçisi) verir; sürüm tanımları taşımayan proje editörü de onu indiren Studio ile aynı kimliği okur. Başka her ağaç kaynak checkout'udur: [LuminaRelease.displayVersion] ve oradaki `git rev-parse HEAD` (yalnızca ağacın kendi checkout'u). |
+| `stripTag` | `static String stripTag(String version)` | `v0.1.0` → `0.1.0`. |
+| `label` | `String get label` | Kullanıcıya gösterilen ad: sürüm, ya da kaynak sürümü ve commit'i (`0.0.1-dev (08cb722)`). |
+| `key` | `String get key` | `<version>@<commit>`: aynı motor için eşittir. |
+| `toJson / fromJson` | `Map<String, Object?> toJson() · static EngineIdentity? fromJson(Object? json)` | Vendor damgasının ve Studio kaydının `engine` kaydı; sürüm yoksa `fromJson` null döner. |
 
 ## `lib/data/services/fbx_import_service.dart`
 

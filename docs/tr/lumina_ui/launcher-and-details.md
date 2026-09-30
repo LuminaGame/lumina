@@ -25,6 +25,8 @@ Proje launcher'ı (son projeler, şablonlar ve proje oluşturma akışı) ile de
 - [`lib/ui/features/launcher/views/launcher_settings_panes.dart`](#libuifeatureslauncherviewslauncher_settings_panesdart)
 - [`lib/ui/features/launcher/views/launcher_templates_pane.dart`](#libuifeatureslauncherviewslauncher_templates_panedart)
 - [`lib/ui/features/launcher/views/missing_editor_binary_dialog.dart`](#libuifeatureslauncherviewsmissing_editor_binary_dialogdart)
+- [`lib/ui/features/launcher/services/project_editor_update.dart`](#libuifeatureslauncherservicesproject_editor_updatedart)
+- [`lib/ui/features/launcher/views/project_editor_update_dialog.dart`](#libuifeatureslauncherviewsproject_editor_update_dialogdart)
 
 ## `lib/ui/features/launcher/views/create_project_dialog.dart`
 
@@ -64,6 +66,8 @@ Proje launcher'ı (son projeler, şablonlar ve proje oluşturma akışı) ile de
 | :--- | :--- | :--- |
 | `viewModel` | `LauncherViewModel? viewModel` | `viewModel` alanını (field/property) ve ilişkili veriyi saklar. |
 | `createState` | `State<LauncherView> createState() => _LauncherViewState()` | Yeni bir `State` örneği veya ilişkili GPU kaynağını oluşturur ve yapılandırır. |
+
+**Proje açma.** Her açma (Recent Projects listesi, Open External, yeni proje, `--project <dir>`) `_openProject` üzerinden geçer: resolver karar verir (yerinde, önbellekteki proje editörü, derleme ya da eksik binary sorusu). Bir proje editörü çalıştırılacak ya da derlenecekse ve projenin motor kaynağı kopyası bu Studio'nunkinden başka bir motordan geliyorsa (`LauncherViewModel.projectEditorUpdate`), önce iki sürümü adlandıran shadcn diyaloğu "Update this project's editor?" (`ProjectEditorUpdateDialog`) açılır: **Update** kopyayı derleme splash'ında değiştirir, yeni `engine_version` değerini yazar, yeniden derler ve açar; **Open with the old editor** eskisi gibi devam eder ("Don't ask again for this version" cevabı bu makinede bu motor için saklar); **Cancel** launcher'da kalır. `--update-editor` (kullanıcı Update'i proje editöründe seçtikten sonraki devir) sormadan günceller. Proje başına editörler kapalı ve kod plugin'i yoksa proje yerinde açılır ve `engine_version` bu Studio'nun sürümü olur (Output Log'da tek satır). Kendi başına başlatılan proje editörü önce bu makinede en son başlayan Lumina Studio'yu (`LuminaStudioRecord`) okur; motoru kopyadan farklıysa aynı soruyu sorar: Update projeyi `--update-editor` ile o Studio'ya devreder, Cancel ona döner, Open with the old editor eski-derleme kontrolüne geçer.
 
 ### `class _LauncherViewState`
 
@@ -162,6 +166,11 @@ Proje launcher'ı (son projeler, şablonlar ve proje oluşturma akışı) ile de
 | `deleteFromDisk` | `Future<void> deleteFromDisk(RecentProjectEntry entry)` | Belirtilen `FromDisk` nesnesini/bileşenini serbest bırakır ve güvenle temizler. |
 | `locateProject` | `Future<LuminaProject?> locateProject(RecentProjectEntry entry, String ne...` | `locateProject` işlemini gerçekleştirir. |
 | `revealInFileManager` | `Future<void> revealInFileManager(RecentProjectEntry entry)` | `revealInFileManager` işlemini gerçekleştirir. |
+| `updatePrompts` | `late final ProjectEditorUpdatePrompts updatePrompts` | "Don't ask again for this version" cevapları, bu makinede proje başına (launcher'ın config klasörü). |
+| `projectEditorUpdate` | `Future<EditorEngineUpdate?> projectEditorUpdate(String projectDir) async` | Projenin editörüne bu Studio'nun motoruna güncelleme önerilmeli mi: motor kaynağı kopyası başka bir motordan geliyor ve kullanıcı bu motoru atlamayı seçmemiş. Karşılaştırmayı loglar. |
+| `dismissProjectEditorUpdate` | `void dismissProjectEditorUpdate(String projectDir, EditorEngineUpdate update)` | "Don't ask again for this version": [update] motoru bu makinede [projectDir] için bir daha önerilmez. |
+| `recordEngineVersion` | `Future<LuminaProject> recordEngineVersion(LuminaProject project, String projectDir, {String? version}) async` | [version] değerini (varsayılan: bu Studio'nun `LuminaRelease.displayVersion` değeri) projenin `engine_version` alanına yazar, değiştiyse bir satır loglar; bu değeri taşıyan [project] döner. Yerinde açma yolu kullanır. |
+| `projectEditorBuild` | `EditorBuildViewModel projectEditorBuild(String projectName, String projectDir, List<LuminaPluginDescriptor> plugins, {EditorEngineUpdate? update})` | Splash arkasındaki derleme. [update] önce projenin motor kaynağı kopyasını bu Studio'nunkiyle değiştirir (`syncSource`); kopya yerine geçince yeni `engine_version` değerini yazar ve iki sürümü loglar. |
 
 ## `lib/ui/features/details/services/multi_edit_service.dart`
 
@@ -488,12 +497,14 @@ Decides how a project opens: in place, in its cached project editor, or after a 
 | `flutterInfo` | `final Future<FlutterToolInfo> Function() flutterInfo` |  |
 | `scanRoots` | `final List<PluginScanRoot> Function(String projectDir) scanRoots` |  |
 | `everyProject` | `final bool everyProject` | Every project opens in its own project editor, code plugins or not (Editor Preferences › Project Editor Builds; default on). Off, a plugin-less project opens in the stock editor. |
+| `currentEngine` | `final Future<EngineIdentity> Function() currentEngine` | Çalışan motorun kimliği (varsayılan: [engineRoot] konumundan okunur). |
 | `enabledCodePlugins` | `Future<List<LuminaPluginDescriptor>> enabledCodePlugins(String projectDir) async` | The project's enabled plugins that contribute editor code, as found on the plugin roots (an enabled plugin that is not installed is skipped). |
 | `inputsFor` | `Future<EditorHostInputs> inputsFor(String projectDir, List<LuminaPluginDescriptor> plugins) async` | The inputs of the project's host build (see `fingerprint`). |
 | `resolve` | `Future<ProjectEditorDecision> resolve(String projectDir, {bool rebuild = false}) async` |  |
 | `staleReason` | `static String staleReason(String hostDir, Map<String, String> current)` | What changed since the host's last build, from its stamp. |
 | `readStamp` | `static Map<String, dynamic>? readStamp(String hostDir)` |  |
 | `staleSelfCheck` | `Future<List<String>> staleSelfCheck(String projectDir, String compiledFingerprint) async` | A project editor's self-check: the reasons its compiled-in [compiledFingerprint] no longer matches the project's current inputs (empty when current, or when this is not a built project editor). |
+| `engineUpdate` | `Future<EditorEngineUpdate?> engineUpdate(String projectDir, {EngineIdentity? current, String? engineRoot}) async` | Projenin motor kaynağı kopyası [engineRoot] (varsayılan: bu resolver'ınki, çalışan Studio) konumundaki, kimliği [current] (varsayılan: [currentEngine] ya da [engineRoot] konumundan okunur) olan motordan başka bir motordan mı geliyor; motorunu kaydetmeyen eski damgalarda projenin `engine_version` değeri yedektir. Kopya yoksa ya da günselse null. |
 
 ## `lib/ui/features/launcher/services/template_project_creator.dart`
 
@@ -765,6 +776,78 @@ A project with code plugins whose editor was never built on this machine (an old
 | `pluginNames` | `final List<String> pluginNames` |  |
 | `reason` | `final String reason` |  |
 | `show` | `static Future<MissingBinaryChoice> show(BuildContext context, {required String projectName, required List<Stri...` |  |
+
+## `lib/ui/features/launcher/services/project_editor_update.dart`
+
+### `class ProjectEditorUpdatePrompts`
+
+Kullanıcının "Update this project's editor?" sorusunu "Don't ask again for this version" ile cevapladığı projeler, bu makinede: proje klasörü başına bir daha sorulmayacak motor ([EngineIdentity.key]). Daha yeni bir motor yeniden sorar. Config klasöründe tutulur (`project_editor_updates.json`), paylaşılan `.lmproject` içinde asla.
+
+**Yapıcı Metotlar (Constructors):**
+
+- `ProjectEditorUpdatePrompts({this.configDir})`
+
+**Üyeler:**
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `configDir` | `final Directory? configDir` |  |
+| `fileName` | `static const String fileName` | `project_editor_updates.json`. |
+| `projectKey` | `static String projectKey(String projectDir)` | Yolun yazılışı ne olursa olsun proje klasörü başına tek anahtar. |
+| `isDismissed` | `bool isDismissed(String projectDir, EngineIdentity engine)` | Kullanıcı [projectDir] için [engine] hakkında sorulmamasını istedi mi. |
+| `dismiss` | `void dismiss(String projectDir, EngineIdentity engine)` | [projectDir] için [engine] bir daha sorulmaz. |
+
+### `class LuminaStudioRecord`
+
+Bu makinede en son başlayan Lumina Studio (stok editör): çalıştırılabilir dosyası, motor kökü ve motoru. Kendi başına başlatılan proje editörü, daha yeni bir Studio kurulu mu diye bakmak ve projeyi ona devretmek için okur (config klasöründe `lumina_studio.json`).
+
+**Yapıcı Metotlar (Constructors):**
+
+- `const LuminaStudioRecord({required this.executable, required this.engineRoot, required this.engine})`
+
+**Üyeler:**
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `executable / engineRoot / engine` | `final String executable · final String engineRoot · final EngineIdentity engine` |  |
+| `read` | `static LuminaStudioRecord? read({Directory? configDir})` | Kayıt; yoksa ya da okunamıyorsa null. |
+| `write` | `void write({Directory? configDir})` |  |
+| `recordThisStudio` | `static Future<LuminaStudioRecord?> recordThisStudio({Directory? configDir}) async` | Çalışan stok editörü kaydeder, gerçekten oysa: gerçek `lumina_ui` binary'si, proje editörü değil, test çalışması değil. Launcher açılırken çağırır. |
+
+## `lib/ui/features/launcher/views/project_editor_update_dialog.dart`
+
+### `enum ProjectEditorUpdateChoice`
+
+[ProjectEditorUpdateDialog] cevapları.
+
+**Değerler:**
+
+- `update`
+- `openWithOldEditor`
+- `cancel`
+
+### `class ProjectEditorUpdateAnswer`
+
+Kullanıcının seçimi ve "Don't ask again for this version" işaretli mi ([ProjectEditorUpdateChoice.openWithOldEditor] için geçerlidir).
+
+**Yapıcı Metotlar (Constructors):**
+
+- `const ProjectEditorUpdateAnswer(this.choice, {this.dontAskAgain = false})`
+
+### `class ProjectEditorUpdateDialog`
+
+Editörü, onu açandan başka bir Lumina ile kurulmuş proje: "Update this project's editor?" — "<Project> was set up with Lumina <old>; this Studio is Lumina <new>. Update the project's editor to Lumina <new>? Its copy of the engine source is replaced and the editor is rebuilt; edits made inside .lumina/editor are lost." Update, Open with the old editor, Cancel ve "Don't ask again for this version" onay kutusu. Yalnızca shadcn_flutter.
+
+**Yapıcı Metotlar (Constructors):**
+
+- `const ProjectEditorUpdateDialog({super.key, required this.projectName, required this.fromLabel, required this.toLabel})`
+
+**Üyeler:**
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `show` | `static Future<ProjectEditorUpdateAnswer> show(BuildContext context, {required String projectName, required String fromLabel, required String toLabel}) async` | Diyaloğu gösterir; cevapsız kapatmak Cancel sayılır. |
+| `lumina` | `static String lumina(String label)` | "Lumina 0.0.1-dev.6", ya da olduğu gibi "an older engine". |
 
 ---
 

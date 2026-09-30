@@ -956,6 +956,36 @@ class ProjectRepository {
     }
   }
 
+  /// Sets the `engine_version` of the `.lmproject` in [projectDir] to
+  /// [version], leaving every other field as it is. Returns the previous
+  /// value when it changed; null when it already was [version] or the folder
+  /// holds no readable manifest.
+  Future<String?> updateEngineVersion(String projectDir, String version) async {
+    final dir = Directory(projectDir);
+    if (!dir.existsSync()) return null;
+    final manifests = dir.listSync().whereType<File>().where((f) => f.path.endsWith('.lmproject')).toList()
+      ..sort((a, b) => a.path.compareTo(b.path));
+    if (manifests.isEmpty) return null;
+    final file = manifests.first;
+    try {
+      final text = await file.readAsString();
+      final map = jsonDecode(text) as Map<String, dynamic>;
+      final previous = map['engine_version'] as String? ?? '';
+      if (previous == version) return null;
+      map['engine_version'] = version;
+      // In the manifest's own layout (the editor writes it compact).
+      final pretty = text.contains('\n  "');
+      await file.writeAsString(pretty ? const JsonEncoder.withIndent('  ').convert(map) : jsonEncode(map));
+      return previous;
+    } on FormatException catch (e) {
+      _logger.log('Could not update engine_version in ${file.path}: $e', level: 'warning', source: 'ProjectRepository');
+      return null;
+    } on FileSystemException catch (e) {
+      _logger.log('Could not update engine_version in ${file.path}: $e', level: 'warning', source: 'ProjectRepository');
+      return null;
+    }
+  }
+
   Future<void> saveProject(LuminaProject project, String projectDirPath) async {
     try {
       final file = File('$projectDirPath/${project.projectName}.lmproject');

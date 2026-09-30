@@ -140,11 +140,11 @@ Which editor binary is running. A project editor host (`<project>/.lumina/editor
 
 ### `class EditorLaunchArgs`
 
-The editor's command line: `--project <path>`, `--rebuild`, `--no-plugins`, `--launcher-exe <path>`.
+Editörün komut satırı: `--project <path>`, `--rebuild`, `--no-plugins`, `--launcher-exe <path>`, `--update-editor`.
 
 **Yapıcı Metotlar (Constructors):**
 
-- `const EditorLaunchArgs({this.project, this.rebuild = false, this.noPlugins = false, this.launcherExe})`
+- `const EditorLaunchArgs({this.project, this.rebuild = false, this.noPlugins = false, this.launcherExe, this.updateEditor = false})`
 
 **Üyeler:**
 
@@ -154,6 +154,7 @@ The editor's command line: `--project <path>`, `--rebuild`, `--no-plugins`, `--l
 | `rebuild` | `final bool rebuild` |  |
 | `noPlugins` | `final bool noPlugins` |  |
 | `launcherExe` | `final String? launcherExe` |  |
+| `updateEditor` | `final bool updateEditor` | Kullanıcı projenin editörünü bu Studio'nun motoruna güncellemeyi zaten seçti (proje editörü devretti): yeniden sormadan günceller. |
 | `parse` | `static EditorLaunchArgs parse(List<String> args)` |  |
 
 ### `class LuminaEditorHost`
@@ -207,7 +208,8 @@ Starts another editor binary and quits this one: the launcher execs a project ed
 | `restartExitCode` | `static const int restartExitCode` | The exit code the dev launcher script / `flutter run` wrapper treats as "rebuild and restart" when there is no launcher to hand off to. |
 | `beforeExit` | `static final List<Future<void> Function()> beforeExit` | Run before this process exits through a hand-off (the editor's plugins shut down: `onEditorShutdown`, child processes). |
 | `execProjectEditor` | `Future<void> execProjectEditor(String executable, String projectDir) async` | Execs the project editor [executable] for [projectDir] and quits. |
-| `restartThroughLauncher` | `Future<bool> restartThroughLauncher(String projectDir, {bool rebuild = false}) async` | Relaunches the launcher on [projectDir] (it resolves, builds if stale, and opens) and quits; without a launcher, exits with [restartExitCode]. Returns whether a launcher was started. |
+| `restartThroughLauncher` | `Future<bool> restartThroughLauncher(String projectDir, {bool rebuild = false, bool updateEditor = false, String? launcher}) async` | Launcher'ı ([launcher], yoksa [LuminaEditorHost.launcherExecutable]) [projectDir] ile yeniden başlatır (çözümler, eskiyse derler ve açar) ve çıkar; launcher yoksa [restartExitCode] ile çıkar. [updateEditor] `--update-editor` geçirir: launcher projenin editörünü sormadan kendi motoruna günceller. Launcher başlatıldıysa true döner. |
+| `returnToLauncher` | `Future<bool> returnToLauncher({String? launcher}) async` | Launcher'ı ([launcher], yoksa [LuminaEditorHost.launcherExecutable]) proje listesiyle başlatır ve çıkar; yoksa yalnızca çıkar. Launcher başlatıldıysa true döner. |
 
 ## `lib/ui/core/property_editors/asset_picker_select.dart`
 

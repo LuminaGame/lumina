@@ -25,6 +25,8 @@ The project launcher (recent projects, templates and the create-project flow) an
 - [`lib/ui/features/launcher/views/launcher_settings_panes.dart`](#libuifeatureslauncherviewslauncher_settings_panesdart)
 - [`lib/ui/features/launcher/views/launcher_templates_pane.dart`](#libuifeatureslauncherviewslauncher_templates_panedart)
 - [`lib/ui/features/launcher/views/missing_editor_binary_dialog.dart`](#libuifeatureslauncherviewsmissing_editor_binary_dialogdart)
+- [`lib/ui/features/launcher/services/project_editor_update.dart`](#libuifeatureslauncherservicesproject_editor_updatedart)
+- [`lib/ui/features/launcher/views/project_editor_update_dialog.dart`](#libuifeatureslauncherviewsproject_editor_update_dialogdart)
 
 ## `lib/ui/features/launcher/views/create_project_dialog.dart`
 
@@ -64,6 +66,8 @@ The project launcher (recent projects, templates and the create-project flow) an
 | :--- | :--- | :--- |
 | `viewModel` | `LauncherViewModel? viewModel` | Holds the `viewModel` property or configuration state. |
 | `createState` | `State<LauncherView> createState() => _LauncherViewState()` | Creates, configures, and returns a new `State` instance or associated GPU resource. |
+
+**Opening a project.** Every Open (the Recent Projects list, Open External, a new project, `--project <dir>`) goes through `_openProject`: the resolver decides (in place, cached project editor, build, or the missing-binary prompt). When a project editor is to be exec'd or built and the project's copy of the engine source comes from another engine than this Studio's (`LauncherViewModel.projectEditorUpdate`), the shadcn dialog "Update this project's editor?" (`ProjectEditorUpdateDialog`) names both versions first: **Update** replaces the copy on the build splash, records the new `engine_version` and rebuilds, then opens; **Open with the old editor** goes on as before ("Don't ask again for this version" stores the answer for this engine on this machine); **Cancel** stays in the launcher. `--update-editor` (a project editor's hand-off after the user chose Update there) updates without asking. Per-project editors off and no code plugins, the project opens in place and its `engine_version` becomes this Studio's version (one Output Log line). A project editor started on its own first reads the last Lumina Studio that started on this machine (`LuminaStudioRecord`) and, when its engine differs from the copy, asks the same question: Update hands the project to that Studio with `--update-editor`, Cancel returns to it, Open with the old editor goes on to the stale-build check.
 
 ### `class _LauncherViewState`
 
@@ -162,6 +166,11 @@ The project launcher (recent projects, templates and the create-project flow) an
 | `deleteFromDisk` | `Future<void> deleteFromDisk(RecentProjectEntry entry)` | Releases and safely disposes the specified `FromDisk` resource. |
 | `locateProject` | `Future<LuminaProject?> locateProject(RecentProjectEntry entry, String ne...` | Executes `locateProject` operation. |
 | `revealInFileManager` | `Future<void> revealInFileManager(RecentProjectEntry entry)` | Executes `revealInFileManager` operation. |
+| `updatePrompts` | `late final ProjectEditorUpdatePrompts updatePrompts` | The "Don't ask again for this version" answers, per project on this machine (this launcher's config folder). |
+| `projectEditorUpdate` | `Future<EditorEngineUpdate?> projectEditorUpdate(String projectDir) async` | Whether the project's editor should be offered an update to this Studio's engine: its copy of the engine source comes from another engine and the user did not ask to skip this one. Logs the comparison. |
+| `dismissProjectEditorUpdate` | `void dismissProjectEditorUpdate(String projectDir, EditorEngineUpdate update)` | "Don't ask again for this version": [update]'s engine is not offered for [projectDir] again on this machine. |
+| `recordEngineVersion` | `Future<LuminaProject> recordEngineVersion(LuminaProject project, String projectDir, {String? version}) async` | Writes [version] (default: this Studio's `LuminaRelease.displayVersion`) as the project's `engine_version` and logs one line when it changed; returns [project] carrying it. The open-in-place path uses it. |
+| `projectEditorBuild` | `EditorBuildViewModel projectEditorBuild(String projectName, String projectDir, List<LuminaPluginDescriptor> plugins, {EditorEngineUpdate? update})` | The build behind the splash. [update] first replaces the project's copy of the engine source with this Studio's (`syncSource`) and, once it is in place, writes the new `engine_version` and logs both versions. |
 
 ## `lib/ui/features/details/services/multi_edit_service.dart`
 
@@ -488,12 +497,14 @@ Decides how a project opens: in place, in its cached project editor, or after a 
 | `flutterInfo` | `final Future<FlutterToolInfo> Function() flutterInfo` |  |
 | `scanRoots` | `final List<PluginScanRoot> Function(String projectDir) scanRoots` |  |
 | `everyProject` | `final bool everyProject` | Every project opens in its own project editor, code plugins or not (Editor Preferences › Project Editor Builds; default on). Off, a plugin-less project opens in the stock editor. |
+| `currentEngine` | `final Future<EngineIdentity> Function() currentEngine` | The running engine's identity (default: read from [engineRoot]). |
 | `enabledCodePlugins` | `Future<List<LuminaPluginDescriptor>> enabledCodePlugins(String projectDir) async` | The project's enabled plugins that contribute editor code, as found on the plugin roots (an enabled plugin that is not installed is skipped). |
 | `inputsFor` | `Future<EditorHostInputs> inputsFor(String projectDir, List<LuminaPluginDescriptor> plugins) async` | The inputs of the project's host build (see `fingerprint`). |
 | `resolve` | `Future<ProjectEditorDecision> resolve(String projectDir, {bool rebuild = false}) async` |  |
 | `staleReason` | `static String staleReason(String hostDir, Map<String, String> current)` | What changed since the host's last build, from its stamp. |
 | `readStamp` | `static Map<String, dynamic>? readStamp(String hostDir)` |  |
 | `staleSelfCheck` | `Future<List<String>> staleSelfCheck(String projectDir, String compiledFingerprint) async` | A project editor's self-check: the reasons its compiled-in [compiledFingerprint] no longer matches the project's current inputs (empty when current, or when this is not a built project editor). |
+| `engineUpdate` | `Future<EditorEngineUpdate?> engineUpdate(String projectDir, {EngineIdentity? current, String? engineRoot}) async` | Whether the project's copy of the engine source comes from another engine than the one at [engineRoot] (default: this resolver's, the running Studio's), whose identity is [current] (default: [currentEngine], or read from [engineRoot]); the project's `engine_version` is the fallback for copies made before stamps recorded their engine. Null when there is no copy or it is current. |
 
 ## `lib/ui/features/launcher/services/template_project_creator.dart`
 
@@ -765,6 +776,78 @@ A project with code plugins whose editor was never built on this machine (an old
 | `pluginNames` | `final List<String> pluginNames` |  |
 | `reason` | `final String reason` |  |
 | `show` | `static Future<MissingBinaryChoice> show(BuildContext context, {required String projectName, required List<Stri...` |  |
+
+## `lib/ui/features/launcher/services/project_editor_update.dart`
+
+### `class ProjectEditorUpdatePrompts`
+
+The projects whose "Update this project's editor?" question the user answered with "Don't ask again for this version", on this machine: per project folder, the engine ([EngineIdentity.key]) not to ask about again. A newer engine asks again. Kept in the config folder (`project_editor_updates.json`), never in the shared `.lmproject`.
+
+**Constructors:**
+
+- `ProjectEditorUpdatePrompts({this.configDir})`
+
+**Members:**
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `configDir` | `final Directory? configDir` |  |
+| `fileName` | `static const String fileName` | `project_editor_updates.json`. |
+| `projectKey` | `static String projectKey(String projectDir)` | One key per project folder, whatever the spelling of its path. |
+| `isDismissed` | `bool isDismissed(String projectDir, EngineIdentity engine)` | Whether the user asked not to be asked about [engine] for [projectDir]. |
+| `dismiss` | `void dismiss(String projectDir, EngineIdentity engine)` | Don't ask about [engine] for [projectDir] again. |
+
+### `class LuminaStudioRecord`
+
+The last Lumina Studio (the stock editor) that started on this machine: its executable, engine root and engine. A project editor started on its own reads it to see whether a newer Studio is installed and to hand the project to it (`lumina_studio.json` in the config folder).
+
+**Constructors:**
+
+- `const LuminaStudioRecord({required this.executable, required this.engineRoot, required this.engine})`
+
+**Members:**
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `executable / engineRoot / engine` | `final String executable · final String engineRoot · final EngineIdentity engine` |  |
+| `read` | `static LuminaStudioRecord? read({Directory? configDir})` | The record; null when there is none or it is unreadable. |
+| `write` | `void write({Directory? configDir})` |  |
+| `recordThisStudio` | `static Future<LuminaStudioRecord?> recordThisStudio({Directory? configDir}) async` | Records the running stock editor, when it is one: the real `lumina_ui` binary, not a project editor and not a test run. The launcher calls it when it starts. |
+
+## `lib/ui/features/launcher/views/project_editor_update_dialog.dart`
+
+### `enum ProjectEditorUpdateChoice`
+
+The answers of [ProjectEditorUpdateDialog].
+
+**Values:**
+
+- `update`
+- `openWithOldEditor`
+- `cancel`
+
+### `class ProjectEditorUpdateAnswer`
+
+What the user chose, and whether "Don't ask again for this version" was ticked (it applies to [ProjectEditorUpdateChoice.openWithOldEditor]).
+
+**Constructors:**
+
+- `const ProjectEditorUpdateAnswer(this.choice, {this.dontAskAgain = false})`
+
+### `class ProjectEditorUpdateDialog`
+
+A project whose editor was set up with another Lumina than the one opening it: "Update this project's editor?" — "<Project> was set up with Lumina <old>; this Studio is Lumina <new>. Update the project's editor to Lumina <new>? Its copy of the engine source is replaced and the editor is rebuilt; edits made inside .lumina/editor are lost." Update, Open with the old editor, Cancel, and a "Don't ask again for this version" checkbox. shadcn_flutter only.
+
+**Constructors:**
+
+- `const ProjectEditorUpdateDialog({super.key, required this.projectName, required this.fromLabel, required this.toLabel})`
+
+**Members:**
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `show` | `static Future<ProjectEditorUpdateAnswer> show(BuildContext context, {required String projectName, required String fromLabel, required String toLabel}) async` | Shows the dialog; closing it without an answer is Cancel. |
+| `lumina` | `static String lumina(String label)` | "Lumina 0.0.1-dev.6", or "an older engine" as it is. |
 
 ---
 
