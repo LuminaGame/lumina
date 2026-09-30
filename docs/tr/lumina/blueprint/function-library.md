@@ -556,7 +556,7 @@ Vectors and rotators are **authoring space** (cm, Z up; rotators about X/Y/Z lik
 | `createDynamicMaterialInstance` | `static const createDynamicMaterialInstance` |  |
 | `setScalarParameterValue` | `static const setScalarParameterValue` |  |
 | `setVectorParameterValue` | `static const setVectorParameterValue` |  |
-| `setTextureParameterValue` | `static const setTextureParameterValue` | Set Texture Parameter Value: decodes the image asset and uploads it. |
+| `setTextureParameterValue` | `static const setTextureParameterValue` | Set Texture Parameter Value: bir doku asset'ini (`contents/…/T_x.lmas`, editör ve MCP'nin verdiği yol) ya da bir görüntü dosyasını `LuminaDynamicMaterialInstance.setTextureAsset` ile sampler'a bağlar (dokunun ayarları, tek paylaşılan yükleme; bulunamayan doku bir kez loglanır ve hiçbir şey bağlanmaz). |
 | `getScalarParameterValue` | `static const getScalarParameterValue` |  |
 | `setMaterialScalarParameterOnActor` | `static const setMaterialScalarParameterOnActor` | Sets a scalar on every mesh of [target] (Self when unwired), making dynamic instances where a mesh has a material override. |
 | `setLightIntensity` | `static const setLightIntensity` |  |

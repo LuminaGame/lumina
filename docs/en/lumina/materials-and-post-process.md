@@ -169,6 +169,9 @@ A dynamic material instance.  Supports per-actor parameter mutations, texture bi
 | `setScalarArray` | `void setScalarArray(String name, Float32List values)` | Sets an array of float scalar values. |
 | `setVectorArray` | `void setVectorArray(String name, Float32List packed16)` | Sets an array of float4 vector values (packed 4 floats per element). |
 | `setMatrixArray` | `void setMatrixArray(String name, Float32List packed64)` | Sets an array of 4x4 matrices (packed 16 floats per element). |
+| `setTextureAsset` | `Future<bool> setTextureAsset(String name, String path, {LuminaAssetProvider? assetProvider})` | Binds the texture at [path] to sampler [name]: a texture asset (`contents/…/T_x.lmas`) or an image file, read through `LuminaAssets` and uploaded with the texture's settings (sRGB, mipmaps, filtering, wrap) exactly as a material's own textures (`LuminaMaterialTextures`), sharing the upload. False (sampler unchanged) when it cannot be loaded (logged once) or a later call for [name] replaced it. What Set Texture Parameter Value calls. |
+| `texturesLoaded` | `Future<void> get texturesLoaded` | Completes once every `setTextureAsset` load started so far has settled. |
+| `textureParameter` | `LuminaBoundTexture? textureParameter(String name)` | The texture `setTextureAsset` bound to sampler [name], or null; released when replaced or when the instance is disposed. |
 | `cullingMode` | `CullingMode get cullingMode` | Face culling mode override. |
 | `cullingMode` | `cullingMode(CullingMode mode) => nativeInstance.setCullingMode(mode)` | Executes `cullingMode` operation. |
 | `isDoubleSided` | `bool get isDoubleSided` | Double-sided rendering override. |

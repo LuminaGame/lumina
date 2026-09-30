@@ -222,14 +222,12 @@ void _setTextureParameterValue(LuminaActor self, Object? target, String paramete
   if (!_hasParameter(target, parameterName) || texture.isEmpty) return;
   final instance = target as LuminaDynamicMaterialInstance;
   instance.parameterValues[parameterName] = texture;
-  LuminaAssets.resolve(null)(texture).then((bytes) {
-    final decoded = imglib.decodeImage(bytes);
-    if (decoded == null || instance.isDisposed) return;
-    final rgba = decoded.convert(numChannels: 4).getBytes(order: imglib.ChannelOrder.rgba);
-    instance.setTextureFromPixels(parameterName, width: decoded.width, height: decoded.height, rgbaBytes: Uint8List.fromList(rgba));
-  }).catchError((Object e) {
-    developer.log("Set Texture Parameter Value: cannot load '$texture': $e", name: 'Blueprint', level: 900);
-  });
+  // A texture asset (`contents/…/T_x.lmas`) or an image file, loaded as a
+  // material's own textures are; one that cannot be loaded is logged there.
+  unawaited(instance.setTextureAsset(parameterName, texture).catchError((Object e) {
+    developer.log("Set Texture Parameter Value: cannot bind '$texture': $e", name: 'Blueprint', level: 900);
+    return false;
+  }));
 }
 
 double _getScalarParameterValue(LuminaActor self, Object? target, String parameterName) {

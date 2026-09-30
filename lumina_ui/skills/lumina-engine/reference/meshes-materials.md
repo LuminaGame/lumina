@@ -48,6 +48,9 @@
   with `set_material_texture`) are drawn wherever the material is assigned: viewport, Play, built game. A texture
   that cannot be read is logged as a warning (in the level viewport: the Output Log) and its sampler stays unbound
   (it samples black).
+- Blueprint: Create Dynamic Material Instance → Set Texture Parameter Value (`parameter_name` = the sampler, `value`
+  = a texture asset path `contents/textures/…/T_X.lmas`, or an image file) binds it with the texture's settings, as
+  the material's own textures are bound; a texture that cannot be read is logged once and binds nothing.
 - Several colours of one mesh: `duplicate_asset` the material, change `baseColor`, `compile_material` with
   `save: true`, assign per component (`materialOverride`) or per duplicated mesh (slots).
 - Glow: a material's `emissive` (see `filament-materials`), not a light.

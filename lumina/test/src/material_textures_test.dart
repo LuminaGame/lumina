@@ -319,6 +319,91 @@ fragment {
     expect(texture.isDisposed, isTrue);
   });
 
+  // Set Texture Parameter Value (a Blueprint on a dynamic material instance):
+  // an unlit material whose `albedo` sampler names no texture draws black
+  // until the node binds one.
+  const blankSource = '''
+material {
+  name : M_Blank,
+  shadingModel : unlit,
+  requires : [ uv0 ],
+  parameters : [ { type : sampler2d, name : albedo } ]
+}
+fragment {
+  void material(inout MaterialInputs material) {
+    prepareMaterial(material);
+    material.baseColor = texture(materialParams_albedo, getUV0());
+  }
+}
+''';
+
+  Future<LuminaDynamicMaterialInstance> blankDynamicInstance() async {
+    writeMaterial('contents/materials/M_Blank.lmas', 'M_Blank', blankSource, const []);
+    final material = await LuminaMaterial.load(world, 'contents/materials/M_Blank.lmas');
+    return LuminaDynamicMaterialInstance.from(material.createInstance());
+  }
+
+  /// Lets the node's load finish (read, decode, upload).
+  Future<void> settle(LuminaDynamicMaterialInstance instance) => instance.texturesLoaded;
+
+  test('Set Texture Parameter Value binds a texture asset with its settings', () async {
+    if (!haveAssets) return markTestSkipped('test-assets missing');
+    final instance = await blankDynamicInstance();
+    // A texture asset the import wrote, as the editor and MCP hand it out.
+    final texture = textures.values.first;
+    LuminaBlueprintFunctionLibrary.setTextureParameterValue(LuminaActor(), instance, 'albedo', texture);
+    await settle(instance);
+    expect(instance.parameterValues['albedo'], texture);
+    quad(instance.nativeInstance);
+    final grid = renderGrid();
+    expect(grid.every((s) => s[0] + s[1] + s[2] > 30), isTrue, reason: 'the texture, not a black unbound sampler: $grid');
+    expect(spread(grid), greaterThan(6), reason: '$grid');
+    final bound = instance.textureParameter('albedo');
+    expect(bound?.path, texture);
+    expect(bound!.texture.format, TextureFormat.srgb8A8, reason: 'albedo is colour');
+    expect(bound.texture.levels, greaterThan(1), reason: 'mipmapped as the texture settings ask');
+  });
+
+  test('Set Texture Parameter Value still takes a plain image file', () async {
+    if (!haveAssets) return markTestSkipped('test-assets missing');
+    final png = File('${_assets.path}/FBX/TextureFixtures/SM_Slot_Machine/SM_Slot_Machine_MI_Display_1_Emissive.png');
+    if (!png.existsSync()) return markTestSkipped('test-assets PNG missing');
+    final instance = await blankDynamicInstance();
+    LuminaBlueprintFunctionLibrary.setTextureParameterValue(LuminaActor(), instance, 'albedo', png.path);
+    await settle(instance);
+    quad(instance.nativeInstance);
+    final grid = renderGrid();
+    expect(grid.every((s) => s[0] + s[1] + s[2] > 30), isTrue, reason: '$grid');
+    expect(spread(grid), greaterThan(6), reason: '$grid');
+  });
+
+  test('Set Texture Parameter Value with a missing texture binds nothing, and a new one replaces the old', () async {
+    if (!haveAssets) return markTestSkipped('test-assets missing');
+    final instance = await blankDynamicInstance();
+    LuminaBlueprintFunctionLibrary.setTextureParameterValue(LuminaActor(), instance, 'albedo', 'contents/textures/T_Gone.lmas');
+    await settle(instance);
+    expect(instance.textureParameter('albedo'), isNull);
+    quad(instance.nativeInstance);
+    renderGrid();
+
+    final first = textures.values.first;
+    final second = textures.values.last;
+    expect(second, isNot(first), reason: 'the imports wrote several textures');
+    LuminaBlueprintFunctionLibrary.setTextureParameterValue(LuminaActor(), instance, 'albedo', first);
+    await settle(instance);
+    final old = instance.textureParameter('albedo')!.texture;
+    LuminaBlueprintFunctionLibrary.setTextureParameterValue(LuminaActor(), instance, 'albedo', second);
+    await settle(instance);
+    expect(instance.textureParameter('albedo')?.path, second);
+    await Future<void>.delayed(Duration.zero);
+    expect(old.isDisposed, isTrue, reason: 'the replaced texture is released');
+    final last = instance.textureParameter('albedo')!.texture;
+    world.cleanup();
+    instance.dispose();
+    await Future<void>.delayed(Duration.zero);
+    expect(last.isDisposed, isTrue, reason: 'released with the instance');
+  });
+
   test("the level viewport's material override binds the textures on its instance", () async {
     if (!haveAssets) return markTestSkipped('test-assets missing');
     final path = materialWith('baseColorMap');

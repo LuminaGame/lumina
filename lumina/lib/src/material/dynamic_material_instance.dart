@@ -1,8 +1,11 @@
 import 'dart:typed_data';
 import 'package:flutter_filament/flutter_filament.dart';
 import 'package:vector_math/vector_math_64.dart';
+import '../../data/models/lumina_asset.dart';
+import '../utility/lumina_assets.dart';
 import 'lumina_material.dart';
 import 'lumina_material_instance.dart';
+import 'material_textures.dart';
 
 /// A dynamic material instance.
 ///
@@ -11,6 +14,13 @@ import 'lumina_material_instance.dart';
 class LuminaDynamicMaterialInstance extends LuminaMaterialInstance {
   final Map<String, FilamentTexture> _boundTextures = {};
   final List<FilamentTexture> _ownedTextures = [];
+
+  /// Textures [setTextureAsset] bound, by sampler name.
+  final Map<String, LuminaMaterialTextures> _assetTextures = {};
+
+  /// The latest [setTextureAsset] call per sampler: an older load that
+  /// finishes later is dropped.
+  final Map<String, int> _textureRequests = {};
 
   /// The last value set per parameter name (a `double`, an `int`, a `bool`,
   /// a `[r, g, b, a]` list, a texture path), for tools and Blueprints to
@@ -153,7 +163,59 @@ class LuminaDynamicMaterialInstance extends LuminaMaterialInstance {
     }
     _boundTextures[name] = texture;
     nativeInstance.setTexture(name, texture, sampler: sampler);
+    final loaded = _assetTextures[name];
+    if (loaded != null && !identical(loaded.bound[name]?.texture, texture)) {
+      _assetTextures.remove(name);
+      loaded.release();
+    }
   }
+
+  /// Binds the texture at [path] to sampler [name]: a texture asset
+  /// (`contents/…/T_x.lmas`, its payload the image) or an image file, read
+  /// through [LuminaAssets] (the open project in the editor and Play, the
+  /// asset bundle in a built game) and uploaded with the texture's settings
+  /// (sRGB, mipmaps, filtering, wrap) as a material's own textures are
+  /// ([LuminaMaterialTextures]); the upload is shared with every material
+  /// that binds the same texture. Completes with false, the sampler left as
+  /// it was, when the texture cannot be loaded (logged once) or a later call
+  /// for [name] replaced this one.
+  Future<bool> setTextureAsset(String name, String path, {LuminaAssetProvider? assetProvider}) async {
+    _validateSampler(name);
+    final request = _textureRequests[name] = (_textureRequests[name] ?? 0) + 1;
+    final load = LuminaMaterialTextures.load(
+      material.world.filamentEngine,
+      material.nativeMaterial,
+      [AssetReference(slotName: name, assetId: '', assetPath: path)],
+      materialPath: material.assetPath,
+      assetProvider: assetProvider,
+    );
+    _pendingTextures.add(load);
+    final LuminaMaterialTextures textures;
+    try {
+      textures = await load;
+    } finally {
+      _pendingTextures.remove(load);
+    }
+    final bound = textures.bound[name];
+    if (isDisposed || _textureRequests[name] != request || bound == null) {
+      textures.release();
+      return false;
+    }
+    final previous = _assetTextures.remove(name);
+    setTexture(name, bound.texture, sampler: bound.sampler);
+    _assetTextures[name] = textures;
+    // After the rebind: the sampler no longer draws what it releases.
+    previous?.release();
+    return true;
+  }
+
+  final List<Future<LuminaMaterialTextures>> _pendingTextures = [];
+
+  /// Completes once every [setTextureAsset] load started so far has settled.
+  Future<void> get texturesLoaded => Future.wait(List.of(_pendingTextures)).then((_) {}, onError: (Object _) {});
+
+  /// The texture [setTextureAsset] bound to sampler [name], or null.
+  LuminaBoundTexture? textureParameter(String name) => _assetTextures[name]?.bound[name];
 
   /// Builds a 2D texture from raw RGBA8 pixels and binds it to [name].
   void setTextureFromPixels(
@@ -263,13 +325,25 @@ class LuminaDynamicMaterialInstance extends LuminaMaterialInstance {
 
   @override
   void dispose() {
-    if (isDisposed) return;
+    if (isDisposed) {
+      // Destroyed with its material: what it bound is still let go of.
+      _releaseAssetTextures();
+      return;
+    }
     for (final tex in _ownedTextures) {
       tex.dispose();
     }
     _ownedTextures.clear();
     _boundTextures.clear();
     super.dispose();
+    _releaseAssetTextures();
     material.release();
+  }
+
+  void _releaseAssetTextures() {
+    for (final textures in _assetTextures.values) {
+      textures.release();
+    }
+    _assetTextures.clear();
   }
 }

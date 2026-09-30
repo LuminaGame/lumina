@@ -1,11 +1,9 @@
+import 'dart:async';
 import 'dart:collection';
 import 'dart:developer' as developer;
 import 'dart:math' as math;
 
-import 'dart:typed_data';
-
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb;
-import 'package:image/image.dart' as imglib;
 import 'package:vector_math/vector_math_64.dart';
 
 import '../audio/audio_subsystem.dart';
@@ -21,7 +19,6 @@ import '../game/game_instance.dart';
 import '../material/dynamic_material_instance.dart';
 import '../save/save_game.dart';
 import '../save/save_game_subsystem.dart';
-import '../utility/lumina_assets.dart';
 import '../world/level.dart';
 import '../world/level_streaming.dart';
 import '../world/level_streaming_manager.dart';
@@ -917,7 +914,8 @@ abstract final class LuminaBlueprintFunctionLibrary {
   static const createDynamicMaterialInstance = _createDynamicMaterialInstance;
   static const setScalarParameterValue = _setScalarParameterValue;
   static const setVectorParameterValue = _setVectorParameterValue;
-  /// Set Texture Parameter Value: decodes the image asset and uploads it.
+  /// Set Texture Parameter Value: binds a texture asset (`contents/…/T_x.lmas`)
+  /// or an image file to the sampler, with the texture's settings.
   static const setTextureParameterValue = _setTextureParameterValue;
   static const getScalarParameterValue = _getScalarParameterValue;
   /// Sets a scalar on every mesh of [target] (Self when unwired), making
