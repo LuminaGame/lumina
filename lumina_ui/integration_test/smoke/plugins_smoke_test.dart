@@ -822,6 +822,84 @@ void main() {
     }
   });
 
+  // Cooked Unreal material instances through the plugin importer: each
+  // becomes a Lumina material with its textures (the material editor shows
+  // them), and a cooked mesh using one renders with it in the level.
+  testWidgets('Unreal Engine importer maps cooked materials', (tester) async {
+    const name = 'Unreal Engine importer maps cooked materials';
+    final cooked = '${SmokeArtifacts.testAssetsDir.path}/Unreal/5.8/Windows/UEFix/Content/Fixtures';
+    final materials = [
+      '$cooked/Props/Barrels/dented_barrel/Materials/barrel_red_export.uasset',
+      '$cooked/Characters/Mannequin/MF_Unarmed_Walk_Fwd/Materials/MI_Quinn_01_SKM_Quinn_Simple.uasset',
+      '$cooked/Characters/Mannequin/MF_Unarmed_Walk_Fwd/Materials/MI_Quinn_02_SKM_Quinn_Simple.uasset',
+    ];
+    final mesh = '$cooked/Props/Barrels/dented_barrel/StaticMeshes/dented_barrel.uasset';
+    for (final f in [...materials, mesh]) {
+      expect(File(f).existsSync(), isTrue, reason: 'cooked fixtures missing: run unreal_engine_importer/tool/cook_fixtures/cook_fixtures.dart');
+    }
+    const usedAssets = ['Props/Barrels/dented_barrel.glb', 'mannequin/MF_Unarmed_Walk_Fwd.glb'];
+    final tempProjectsDir = Directory.systemTemp.createTempSync('plugins_unreal_mat_');
+    final pDir = Directory('${tempProjectsDir.path}/SmokeUnrealMat')..createSync(recursive: true);
+    try {
+      const project = LuminaProject(projectName: 'SmokeUnrealMat', activeLevel: 'contents/levels/L_Main.lmas', settings: EngineScalabilitySettings(targetFps: 60));
+      File('${pDir.path}/SmokeUnrealMat.lmproject').writeAsStringSync(jsonEncode(project.toMap()));
+      final vm = EditorViewModel(initialProject: project, projectDirPath: tempProjectsDir.path, enableTimers: false);
+      addTearDown(vm.dispose);
+      await tester.runAsync(() => vm.ensureDefaultLevelAssets());
+      if (LuminaEditorHost.plugins.whereType<UnrealEngineImporterPlugin>().isEmpty) {
+        vm.extensionRegistry.registerPlugin(UnrealEngineImporterPlugin());
+      }
+      Directory('${pDir.path}/contents/unreal').createSync(recursive: true);
+      vm.selectedFolder = 'contents/unreal';
+      final results = await tester.runAsync(() => vm.importWithPluginImporters([...materials, mesh]));
+      for (final r in results!) {
+        expect(r.success, isTrue, reason: r.error);
+      }
+      vm.refreshAssets();
+      final imported = [for (final r in results) vm.realAssets.firstWhere((a) => a.relativePath == r.assetPath)];
+      expect(imported.take(3).every((a) => a.type == AssetType.filamat), isTrue);
+      final quinn = LuminaAsset.fromBytes(File('${pDir.path}/${imported[1].relativePath}').readAsBytesSync());
+      expect(quinn.references.map((r) => r.slotName).toSet(), {'baseColorMap', 'normalMap', 'metallicRoughnessMap', 'occlusionMap'});
+
+      final boundaryKey = GlobalKey();
+      await tester.pumpWidget(RepaintBoundary(
+        key: boundaryKey,
+        child: ShadcnApp(theme: luminaEditorTheme(), home: MainEditorView(viewModel: vm)),
+      ));
+      await settle(tester, frames: 30);
+      final rec = SmokeRecorder(tester, boundary: find.byKey(boundaryKey));
+      Future<void> shot(String label) async {
+        SmokeArtifacts.saveScreenshot('$name: $label',
+            await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey)),
+            usedAssets: usedAssets);
+        await rec.hold(const Duration(seconds: 1));
+      }
+
+      // The cooked barrel in the level with its imported material.
+      await tester.runAsync(() => vm.spawnActorFromAsset(imported[3], location: const [0.0, 0.0, 0.0]));
+      vm.selectActor(null);
+      for (var i = 1; i <= 40; i++) {
+        vm.restoreCameraSnapshot([-40.0 + 80.0 * i / 40, 12.0, 260.0, 0.0, 0.0, 50.0]);
+        await rec.hold(const Duration(milliseconds: 60));
+      }
+      await shot('the cooked barrel with its material in the level');
+
+      // Each material in the material editor.
+      for (final (i, label) in [(0, 'the barrel material'), (1, 'the first mannequin material'), (2, 'the second mannequin material')]) {
+        vm.openAssetEditorByPath(imported[i].relativePath);
+        await settle(tester, frames: 40);
+        await rec.hold(const Duration(seconds: 2));
+        await shot('$label in the material editor');
+      }
+      expect(rec.recorded, greaterThanOrEqualTo(const Duration(seconds: 10)));
+      rec.save(name, usedAssets: usedAssets);
+    } finally {
+      try {
+        if (tempProjectsDir.existsSync()) tempProjectsDir.deleteSync(recursive: true);
+      } catch (_) {}
+    }
+  });
+
   // Tools shows built-in tools only; the Plugins menu holds the
   // Plugin Manager, New Plugin… and the PCG submenu, whose command places a
   // real volume in the level.
