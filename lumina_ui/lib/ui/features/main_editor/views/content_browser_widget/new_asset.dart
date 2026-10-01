@@ -293,6 +293,9 @@ mixin _ContentBrowserNewAsset on _ContentBrowserWidgetStateBase {
               final projectDir = vm?.projectDirPath;
               Navigator.of(context).pop();
               if (projectDir != null && vm != null) {
+                // The files the dialog writes are one undo step (an authored
+                // sequence's clip leaves its mesh with them).
+                final before = vm.contentsSnapshot();
                 showCreateAnimAssetDialog(
                   this.context,
                   projectDir: projectDir,
@@ -302,6 +305,7 @@ mixin _ContentBrowserNewAsset on _ContentBrowserWidgetStateBase {
                     _ => AnimAssetKind.animationSequence,
                   },
                   onCreated: (path) {
+                    vm.recordCreatedFilesUndo(vm.filesCreatedSince(before), 'Create ${path.split('/').last.replaceAll('.lmas', '')}');
                     vm.refreshAssets();
                     final created = vm.realAssets.where((a) => a.relativePath == path).firstOrNull;
                     if (created != null) _openSubEditor(this.context, created);

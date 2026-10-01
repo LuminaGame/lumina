@@ -38,9 +38,16 @@ abstract final class GlbAuthoredClipWriter {
   /// them, the rest pose (rotation + translation, constant over the clip)
   /// elsewhere — so the clip defines the whole skeleton after any other clip.
   ///
+  /// [index] places a new animation at that position of the list (clamped;
+  /// appended when null), to put a removed clip back where it was.
+  ///
   /// Throws [FormatException] for a non-GLB, a GLB with more than one buffer
   /// or no skin, and a clip naming a bone the mesh does not have.
-  static ({Uint8List glb, int clipIndex}) write({required Uint8List meshGlb, required AuthoredAnimationClip clip}) {
+  static ({Uint8List glb, int clipIndex}) write({
+    required Uint8List meshGlb,
+    required AuthoredAnimationClip clip,
+    int? index,
+  }) {
     var doc = GlbDocument.parse(meshGlb, label: 'mesh');
     final buffers = (doc.json['buffers'] as List?) ?? const [];
     if (buffers.length > 1) {
@@ -67,9 +74,11 @@ abstract final class GlbAuthoredClipWriter {
     }
 
     final existing = ((doc.json['animations'] as List?) ?? const []).toList();
-    var index = existing.indexWhere((a) => (a as Map)['name'] == clip.name);
-    if (index >= 0) {
-      doc = _removeAnimation(doc, index);
+    var at = existing.indexWhere((a) => (a as Map)['name'] == clip.name);
+    if (at >= 0) {
+      doc = _removeAnimation(doc, at);
+    } else if (index != null) {
+      at = index.clamp(0, existing.length);
     }
 
     final json = doc.json;
@@ -157,11 +166,11 @@ abstract final class GlbAuthoredClipWriter {
 
     final animation = <String, dynamic>{'name': clip.name, 'channels': channels, 'samplers': samplers};
     final animations = ((json['animations'] as List?) ?? const []).toList();
-    if (index >= 0 && index <= animations.length) {
-      animations.insert(index, animation);
+    if (at >= 0 && at <= animations.length) {
+      animations.insert(at, animation);
     } else {
       animations.add(animation);
-      index = animations.length - 1;
+      at = animations.length - 1;
     }
     json['animations'] = animations;
     json['accessors'] = accessors;
@@ -170,7 +179,22 @@ abstract final class GlbAuthoredClipWriter {
     json['buffers'] = [
       <String, dynamic>{'byteLength': merged.length},
     ];
-    return (glb: GlbDocument(json, merged).encode(), clipIndex: index);
+    return (glb: GlbDocument(json, merged).encode(), clipIndex: at);
+  }
+
+  /// Returns [meshGlb] without the animation named [clipName] and without the
+  /// accessors, buffer views and binary data only it used (see [write] for
+  /// the extensions that keep the data in place), with the index it had; null
+  /// when the GLB has no animation of that name.
+  static ({Uint8List glb, int clipIndex})? remove({required Uint8List meshGlb, required String clipName}) {
+    final doc = GlbDocument.parse(meshGlb, label: 'mesh');
+    final animations = (doc.json['animations'] as List?) ?? const [];
+    final index = animations.indexWhere((a) => (a as Map)['name'] == clipName);
+    if (index < 0) return null;
+    final out = _removeAnimation(doc, index);
+    // A GLB that had no animations before the clip went in has none after.
+    if (((out.json['animations'] as List?) ?? const []).isEmpty) out.json.remove('animations');
+    return (glb: out.encode(), clipIndex: index);
   }
 
   /// [doc] without animation [index], and — when every extension it uses is
@@ -444,6 +468,74 @@ abstract final class AuthoredAnimationStore {
     return updated;
   }
 
+  /// Takes the clip of the authored sequence at [animationRelPath] out of its
+  /// skeletal mesh (the GLB companion and payload, and `animation_clips`)
+  /// before the `.lmas` goes to the trash. The `.lmas` is left as it is: its
+  /// keys and `clip_index` are what [attach] puts back. False when the asset
+  /// is not an authored sequence, or its mesh or clip is gone.
+  static bool detach(String projectDir, String animationRelPath) {
+    final target = _meshOf(projectDir, animationRelPath);
+    if (target == null) return false;
+    final (meshFile, glb, clip) = target;
+    final removed = GlbAuthoredClipWriter.remove(meshGlb: glb, clipName: clip.name);
+    if (removed == null) return false;
+    _storeMesh(meshFile, LuminaAsset.fromBytes(meshFile.readAsBytesSync()), removed.glb);
+    return true;
+  }
+
+  /// Puts the clip of the authored sequence at [animationRelPath] (restored
+  /// from the trash) back into its skeletal mesh at its `clip_index`; the
+  /// `.lmas` is rewritten only when the clip lands at another index. False
+  /// when the asset is not an authored sequence, its mesh is gone, or the
+  /// mesh already has a clip of that name.
+  static bool attach(String projectDir, String animationRelPath) {
+    final target = _meshOf(projectDir, animationRelPath);
+    if (target == null) return false;
+    final (meshFile, glb, clip) = target;
+    if (GlbAnimationMerger.animationNames(glb).contains(clip.name)) return false;
+    final file = File('$projectDir/$animationRelPath');
+    final asset = LuminaAsset.fromBytes(file.readAsBytesSync());
+    final wanted = int.tryParse(asset.metadata['clip_index'] ?? '');
+    final result = GlbAuthoredClipWriter.write(meshGlb: glb, clip: clip, index: wanted);
+    _storeMesh(meshFile, LuminaAsset.fromBytes(meshFile.readAsBytesSync()), result.glb);
+    if (result.clipIndex != wanted) {
+      file.writeAsBytesSync(LuminaAsset(
+        assetId: asset.assetId,
+        name: asset.name,
+        type: asset.type,
+        hasThumbnail: asset.hasThumbnail,
+        thumbnailPng: asset.thumbnailPng,
+        rawPayload: asset.rawPayload,
+        rawMatSource: asset.rawMatSource,
+        metadata: _clipMetadata(asset.metadata, asset.metadata['source_mesh']!, clip, result.clipIndex),
+        references: asset.references,
+      ).toProtoBufferBytes());
+    }
+    return true;
+  }
+
+  /// The mesh `.lmas`, its GLB and the authored clip of the sequence at
+  /// [animationRelPath], or null when any of them is missing.
+  static (File, Uint8List, AuthoredAnimationClip)? _meshOf(String projectDir, String animationRelPath) {
+    final file = File('$projectDir/$animationRelPath');
+    if (!file.existsSync()) return null;
+    final LuminaAsset asset;
+    try {
+      asset = LuminaAsset.fromBytes(file.readAsBytesSync());
+    } catch (_) {
+      return null;
+    }
+    if (asset.type != AssetType.animation) return null;
+    final clip = clipOf(asset);
+    final meshRelPath = asset.metadata['source_mesh'];
+    if (clip == null || meshRelPath == null || meshRelPath.isEmpty) return null;
+    final meshFile = File('$projectDir/$meshRelPath');
+    if (!meshFile.existsSync()) return null;
+    final glb = AnimationImportBinder.meshGlb(meshFile.path);
+    if (glb == null) return null;
+    return (meshFile, glb, clip);
+  }
+
   /// The authored clip of the animation `.lmas` at [animationRelPath], or
   /// null when it was imported.
   static AuthoredAnimationClip? load(String projectDir, String animationRelPath) {
@@ -454,23 +546,35 @@ abstract final class AuthoredAnimationStore {
 
   static int _writeIntoMesh(File meshFile, LuminaAsset meshAsset, Uint8List glb, AuthoredAnimationClip clip) {
     final result = GlbAuthoredClipWriter.write(meshGlb: glb, clip: clip);
+    _storeMesh(meshFile, meshAsset, result.glb);
+    return result.clipIndex;
+  }
+
+  /// Writes [glb] as the mesh's GLB: the `.entity.glb` companion, the `.lmas`
+  /// payload when it has one, and its `animation_clips`.
+  static void _storeMesh(File meshFile, LuminaAsset meshAsset, Uint8List glb) {
     final companion = File(meshFile.path.replaceAll(RegExp(r'\.lmas$'), '.entity.glb'));
-    companion.writeAsBytesSync(result.glb);
-    final clips = GlbAnimationMerger.animationNames(result.glb);
+    companion.writeAsBytesSync(glb);
+    final clips = GlbAnimationMerger.animationNames(glb);
     final hasPayload = meshAsset.rawPayload != null && meshAsset.rawPayload!.isNotEmpty;
+    final metadata = Map<String, String>.from(meshAsset.metadata);
+    if (clips.isEmpty) {
+      metadata.remove('animation_clips');
+    } else {
+      metadata['animation_clips'] = clips.join(',');
+    }
     final updated = LuminaAsset(
       assetId: meshAsset.assetId,
       name: meshAsset.name,
       type: meshAsset.type,
       hasThumbnail: meshAsset.hasThumbnail,
       thumbnailPng: meshAsset.thumbnailPng,
-      rawPayload: hasPayload ? result.glb : meshAsset.rawPayload,
+      rawPayload: hasPayload ? glb : meshAsset.rawPayload,
       rawMatSource: meshAsset.rawMatSource,
-      metadata: Map<String, String>.from(meshAsset.metadata)..['animation_clips'] = clips.join(','),
+      metadata: metadata,
       references: meshAsset.references,
     );
     meshFile.writeAsBytesSync(updated.toProtoBufferBytes());
-    return result.clipIndex;
   }
 
   static Map<String, String> _clipMetadata(

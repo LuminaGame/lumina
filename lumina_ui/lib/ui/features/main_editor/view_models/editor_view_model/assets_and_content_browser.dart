@@ -667,6 +667,17 @@ mixin _EditorAssetsAndContentBrowser on _EditorViewModelState {
 
     for (final a in assetsToDelete) {
       final file = File('$projectDirPath/${a.relativePath}');
+      // An authored Animation Sequence's clip lives in its skeletal mesh's
+      // GLB too: it goes with the asset.
+      final lmas = a.lmasPath ?? (a.relativePath.endsWith('.lmas') ? file.path : null);
+      if (lmas != null && a.type == AssetType.animation) {
+        try {
+          AuthoredAnimationStore.detach(projectDirPath, _projectRelativeRef(lmas));
+        } catch (e) {
+          _logger.log('Could not take the clip of ${a.relativePath} out of its skeletal mesh: $e',
+              level: 'warning', source: 'ContentBrowser');
+        }
+      }
       if (file.existsSync()) {
         file.deleteSync();
       }

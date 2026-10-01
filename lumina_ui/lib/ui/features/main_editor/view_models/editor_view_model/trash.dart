@@ -27,6 +27,52 @@ mixin _EditorTrash on _EditorViewModelState, _EditorAssetsAndContentBrowser {
         ],
       ];
 
+  /// The authored Animation Sequences among [files] (project relative), by
+  /// their `clip_index`: their clips live in their skeletal meshes' GLBs too.
+  List<String> _authoredSequencesIn(Iterable<String> files) {
+    final found = <(int, String)>[];
+    for (final rel in files) {
+      if (!rel.endsWith('.lmas')) continue;
+      final file = File('$projectDirPath/$rel');
+      if (!file.existsSync()) continue;
+      try {
+        final asset = LuminaAsset.fromBytes(file.readAsBytesSync());
+        if (asset.type != AssetType.animation || !AuthoredAnimationStore.isAuthored(asset)) continue;
+        found.add((int.tryParse(asset.metadata['clip_index'] ?? '') ?? 0, rel));
+      } catch (_) {}
+    }
+    found.sort((a, b) => a.$1.compareTo(b.$1));
+    return [for (final f in found) f.$2];
+  }
+
+  /// Before [files] leave the project: the clips of the authored sequences
+  /// among them leave their meshes' GLBs and `animation_clips`.
+  void _detachAuthoredClips(Iterable<String> files) {
+    for (final rel in _authoredSequencesIn(files)) {
+      try {
+        if (AuthoredAnimationStore.detach(projectDirPath, rel)) {
+          _logger.log('Took the clip of $rel out of its skeletal mesh', level: 'info', source: 'ContentBrowser');
+        }
+      } catch (e) {
+        _logger.log('Could not take the clip of $rel out of its skeletal mesh: $e', level: 'warning', source: 'ContentBrowser');
+      }
+    }
+  }
+
+  /// After [files] came back: the clips of the authored sequences among them
+  /// go back into their meshes, in `clip_index` order (each where it was).
+  void _attachAuthoredClips(Iterable<String> files) {
+    for (final rel in _authoredSequencesIn(files)) {
+      try {
+        if (AuthoredAnimationStore.attach(projectDirPath, rel)) {
+          _logger.log('Put the clip of $rel back into its skeletal mesh', level: 'info', source: 'ContentBrowser');
+        }
+      } catch (e) {
+        _logger.log('Could not put the clip of $rel back into its skeletal mesh: $e', level: 'warning', source: 'ContentBrowser');
+      }
+    }
+  }
+
   /// Deletes [assets] like the Content Browser's cascade — the files and the
   /// level actors that reference them — but moves the files to the project
   /// trash, with the removed actors in its manifest, as one undo step: undo
@@ -42,6 +88,7 @@ mixin _EditorTrash on _EditorViewModelState, _EditorAssetsAndContentBrowser {
     final label = assets.length == 1 ? 'Delete Asset ${assets.first.fileName.split('.').first}' : 'Delete ${assets.length} Assets';
     final files = _filesOf(assets);
     final by = origin ?? TransactionManager.currentOrigin;
+    _detachAuthoredClips(files);
     final entry = projectTrash.moveToTrashSync(
       files,
       reason: label,
@@ -67,6 +114,7 @@ mixin _EditorTrash on _EditorViewModelState, _EditorAssetsAndContentBrowser {
       label: label,
       undo: () {
         projectTrash.restoreSync(id);
+        _attachAuthoredClips(files);
         final ordered = [...affected]..sort((a, b) => positions[a.id]!.compareTo(positions[b.id]!));
         for (final a in ordered) {
           _actors.insert(positions[a.id]!.clamp(0, _actors.length), a);
@@ -74,6 +122,7 @@ mixin _EditorTrash on _EditorViewModelState, _EditorAssetsAndContentBrowser {
         finish();
       },
       redo: () {
+        _detachAuthoredClips(files);
         projectTrash.moveToTrashSync(files, reason: label, origin: by, actors: entry.actors, id: id);
         removeActors();
         finish();
@@ -120,6 +169,7 @@ mixin _EditorTrash on _EditorViewModelState, _EditorAssetsAndContentBrowser {
       ..sort();
     final label = 'Delete Folder ${path.split('/').last}';
     final by = origin ?? TransactionManager.currentOrigin;
+    _detachAuthoredClips(files);
     final entry = projectTrash.moveToTrashSync(files, reason: label, origin: by, actors: [for (final a in affected) a.toMap()]);
     final id = entry.id;
 
@@ -151,6 +201,7 @@ mixin _EditorTrash on _EditorViewModelState, _EditorAssetsAndContentBrowser {
       label: label,
       undo: () {
         projectTrash.restoreSync(id);
+        _attachAuthoredClips(files);
         final ordered = [...affected]..sort((a, b) => positions[a.id]!.compareTo(positions[b.id]!));
         for (final a in ordered) {
           _actors.insert(positions[a.id]!.clamp(0, _actors.length), a);
@@ -158,6 +209,7 @@ mixin _EditorTrash on _EditorViewModelState, _EditorAssetsAndContentBrowser {
         finish();
       },
       redo: () {
+        _detachAuthoredClips(files);
         projectTrash.moveToTrashSync(files, reason: label, origin: by, actors: entry.actors, id: id);
         removeTree();
         removeActors();
@@ -179,13 +231,14 @@ mixin _EditorTrash on _EditorViewModelState, _EditorAssetsAndContentBrowser {
   /// them again. Throws [TrashConflict] when a path exists again.
   Future<({TrashEntry entry, List<EditorActorNode> actors})> restoreFromTrash(String id) async {
     final entry = projectTrash.restoreSync(id);
+    final files = [for (final f in entry.files) f.original];
+    _attachAuthoredClips(files);
     final existing = {for (final a in _actors) a.id};
     final actors = [
       for (final m in entry.actors)
         if (!existing.contains(m['id'])) EditorActorNode.fromMap(m),
     ];
     final ids = {for (final a in actors) a.id};
-    final files = [for (final f in entry.files) f.original];
     void addActors() {
       _actors.addAll(actors);
       _refreshAssets();
@@ -197,6 +250,7 @@ mixin _EditorTrash on _EditorViewModelState, _EditorAssetsAndContentBrowser {
     transactions.record(EditorTransaction(
       label: 'Restore ${entry.reason.replaceFirst(RegExp(r'^Delete '), '')}',
       undo: () {
+        _detachAuthoredClips(files);
         projectTrash.moveToTrashSync(files, reason: entry.reason, actors: entry.actors, id: id);
         _actors.removeWhere((a) => ids.contains(a.id));
         _selectedActorIds.removeWhere(ids.contains);
@@ -206,6 +260,7 @@ mixin _EditorTrash on _EditorViewModelState, _EditorAssetsAndContentBrowser {
       },
       redo: () {
         projectTrash.restoreSync(id);
+        _attachAuthoredClips(files);
         addActors();
       },
     ));
@@ -230,14 +285,16 @@ mixin _EditorTrash on _EditorViewModelState, _EditorAssetsAndContentBrowser {
       [for (final k in contentsSnapshot().keys) if (!before.containsKey(k)) k]..sort();
 
   /// One undo step for files an operation wrote (`import_asset`,
-  /// `create_asset`): undo moves exactly [created] to the trash, redo puts
-  /// them back.
+  /// `create_asset`, the Content Browser's New Animation Sequence / Animation
+  /// Blueprint / Blend Space): undo moves exactly [created] to the trash (an
+  /// authored sequence's clip leaves its mesh with it), redo puts them back.
   void recordCreatedFilesUndo(List<String> created, String label) {
     if (created.isEmpty) return;
     String? id;
     transactions.record(EditorTransaction(
       label: label,
       undo: () {
+        _detachAuthoredClips(created);
         id = projectTrash.moveToTrashSync(created, reason: 'Undo $label', id: id).id;
         _refreshAssets();
         notifyListeners();
@@ -245,6 +302,7 @@ mixin _EditorTrash on _EditorViewModelState, _EditorAssetsAndContentBrowser {
       redo: () {
         final entryId = id;
         if (entryId != null) projectTrash.restoreSync(entryId);
+        _attachAuthoredClips(created);
         _refreshAssets();
         notifyListeners();
       },

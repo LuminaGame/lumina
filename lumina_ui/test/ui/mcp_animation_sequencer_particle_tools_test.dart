@@ -675,5 +675,26 @@ void main() {
       expect(turn.lengthFrames, 48);
       expect(turn.frameRate, 24);
     });
+
+    test('undoing create_asset animation takes the clip out of the mesh GLB; redo puts it back', () async {
+      List<String> glbClips() => GlbAnimationMerger.animationNames(AnimationImportBinder.meshGlb('$projectDir/$manny')!);
+      final listed = AnimGraphAssetService.clipNames(projectDir, manny);
+      final inGlb = glbClips();
+      final created = await ok('create_asset',
+          {'type': 'animation', 'name': 'AgentUndo', 'target_mesh': manny, 'length_frames': 30, 'frame_rate': 30});
+      final path = created['path'] as String;
+      expect(glbClips(), [...inGlb, 'AgentUndo']);
+
+      vm.transactions.undo();
+      expect(File('$projectDir/$path').existsSync(), isFalse);
+      expect(AnimGraphAssetService.clipNames(projectDir, manny), listed);
+      expect(glbClips(), inGlb);
+
+      vm.transactions.redo();
+      expect(File('$projectDir/$path').existsSync(), isTrue);
+      expect(AnimGraphAssetService.clipNames(projectDir, manny), [...listed, 'AgentUndo']);
+      expect(glbClips(), [...inGlb, 'AgentUndo']);
+      expect(AuthoredAnimationStore.load(projectDir, path)!.lengthFrames, 30);
+    });
   });
 }

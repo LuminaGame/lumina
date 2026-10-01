@@ -184,6 +184,39 @@ void main() {
       expect(otherHead.values.sublist(0, 4), [0, 0, 0, 1], reason: 'the other clip still reads its own keys');
     });
 
+    test('remove drops the animation and the data only it used; write at an index puts it back in place', () {
+      if (!_manny.existsSync()) return markTestSkipped('test-assets/mannequin/SKM_Manny_Simple.glb is missing');
+      final idle = AuthoredAnimationClip(name: 'Idle', lengthFrames: 10)..setKey('head', 'rotation', 0, const [0, 0, 0, 1]);
+      final one = GlbAuthoredClipWriter.write(meshGlb: manny, clip: idle).glb;
+      final two = GlbAuthoredClipWriter.write(meshGlb: one, clip: waveClip()).glb;
+      final three = GlbAuthoredClipWriter.write(
+        meshGlb: two,
+        clip: AuthoredAnimationClip(name: 'Turn', lengthFrames: 20)..setKey('head', 'rotation', 20, _axisAngle(Vector3(0, 1, 0), 30)),
+      ).glb;
+      expect(GlbAnimationMerger.animationNames(three), ['Idle', 'Authored_Wave', 'Turn']);
+
+      final removed = GlbAuthoredClipWriter.remove(meshGlb: three, clipName: 'Authored_Wave')!;
+      expect(removed.clipIndex, 1);
+      expect(GlbAnimationMerger.animationNames(removed.glb), ['Idle', 'Turn']);
+      expect(removed.glb.length, lessThan(three.length), reason: "the clip's accessors and binary data leave the file");
+      expect(GlbAuthoredClipWriter.remove(meshGlb: removed.glb, clipName: 'Authored_Wave'), isNull);
+
+      final back = GlbAuthoredClipWriter.write(meshGlb: removed.glb, clip: waveClip(), index: 1);
+      expect(back.clipIndex, 1);
+      expect(GlbAnimationMerger.animationNames(back.glb), ['Idle', 'Authored_Wave', 'Turn']);
+      int binLength(Uint8List glb) => GlbDocument.parse(glb).bin.length;
+      expect(binLength(back.glb), binLength(three), reason: 'the same data back, in another place of the chunk');
+
+      // The last clip out and back in: the same binary data (the JSON may
+      // spell a default byteOffset out).
+      final last = GlbAuthoredClipWriter.remove(meshGlb: two, clipName: 'Authored_Wave')!;
+      expect(GlbAnimationMerger.animationNames(last.glb), ['Idle']);
+      expect(binLength(last.glb), binLength(one));
+      final again = GlbAuthoredClipWriter.write(meshGlb: last.glb, clip: waveClip()).glb;
+      expect(GlbAnimationMerger.animationNames(again), ['Idle', 'Authored_Wave']);
+      expect(binLength(again), binLength(two));
+    });
+
     test('an unknown bone is refused, naming it', () {
       if (!_manny.existsSync()) return markTestSkipped('test-assets/mannequin/SKM_Manny_Simple.glb is missing');
       final clip = AuthoredAnimationClip(name: 'Bad', lengthFrames: 10)
@@ -280,6 +313,48 @@ void main() {
       expect(parsed.name, 'Pose');
       final head = parsed.channels.firstWhere((c) => c.nodeName == 'head' && c.path == 'rotation');
       expect(head.interpolation, 'CUBICSPLINE');
+    });
+
+    test("detach takes a sequence's clip out of its mesh and attach puts it back at its index", () async {
+      if (!_manny.existsSync()) return markTestSkipped('test-assets/mannequin/SKM_Manny_Simple.glb is missing');
+      final a = AuthoredAnimationStore.create(projectDir: project.path, meshRelPath: meshRel, name: 'A', lengthFrames: 30);
+      AuthoredAnimationStore.create(projectDir: project.path, meshRelPath: meshRel, name: 'B', lengthFrames: 30);
+      final clipA = AuthoredAnimationStore.load(project.path, a)!..setKey('head', 'rotation', 30, _axisAngle(Vector3(0, 1, 0), 40));
+      AuthoredAnimationStore.save(projectDir: project.path, animationRelPath: a, clip: clipA);
+      final companion = File('${project.path}/contents/meshes/skeletal/SKM_Manny_Simple.entity.glb');
+      List<String> listed() => LuminaAsset.fromBytes(File('${project.path}/$meshRel').readAsBytesSync()).metadata['animation_clips']!.split(',');
+      List<String> inPayload() => GlbAnimationMerger.animationNames(LuminaAsset.fromBytes(File('${project.path}/$meshRel').readAsBytesSync()).rawPayload!);
+      final full = companion.readAsBytesSync();
+      final lmasA = File('${project.path}/$a').readAsBytesSync();
+
+      expect(AuthoredAnimationStore.detach(project.path, a), isTrue);
+      expect(listed(), ['Idle', 'B']);
+      expect(inPayload(), ['Idle', 'B']);
+      expect(GlbAnimationMerger.animationNames(companion.readAsBytesSync()), ['Idle', 'B']);
+      expect(companion.lengthSync(), lessThan(full.length));
+      expect(File('${project.path}/$a').readAsBytesSync(), lmasA, reason: 'the .lmas keeps its keys and clip index');
+      expect(AuthoredAnimationStore.detach(project.path, a), isFalse, reason: 'nothing left to take out');
+
+      expect(AuthoredAnimationStore.attach(project.path, a), isTrue);
+      expect(listed(), ['Idle', 'A', 'B']);
+      expect(inPayload(), ['Idle', 'A', 'B']);
+      expect(GlbDocument.parse(companion.readAsBytesSync()).bin.length, GlbDocument.parse(full).bin.length);
+      final parsed = (await GlbParserService.parseGlb(companion.readAsBytesSync()))!.animations[1];
+      expect(parsed.name, 'A');
+      final head = parsed.channels.firstWhere((c) => c.nodeName == 'head' && c.path == 'rotation');
+      expect(head.keyframeTimes.last, closeTo(1.0, 1e-6));
+      expect(File('${project.path}/$a').readAsBytesSync(), lmasA);
+      expect(AuthoredAnimationStore.attach(project.path, a), isFalse, reason: 'already in the mesh');
+
+      // An imported clip (no authored keys) is never touched.
+      File('${project.path}/contents/animations/Imported.lmas').writeAsBytesSync(LuminaAsset(
+        assetId: 'imp',
+        name: 'Imported',
+        type: AssetType.animation,
+        metadata: const {'source_mesh': meshRel, 'clip_name': 'Idle'},
+      ).toProtoBufferBytes());
+      expect(AuthoredAnimationStore.detach(project.path, 'contents/animations/Imported.lmas'), isFalse);
+      expect(listed(), ['Idle', 'A', 'B']);
     });
   });
 }
