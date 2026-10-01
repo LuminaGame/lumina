@@ -290,8 +290,8 @@ packages:
     dependency: transitive
     description:
       path: flutter_assimp
-      ref: e37c2f56eb80651c49709d4cfba33d22657b941d
-      resolved-ref: e37c2f56eb80651c49709d4cfba33d22657b941d
+      ref: "879df0e0559ba50e3ffa2a17e677fa9f1a9c7f93"
+      resolved-ref: "879df0e0559ba50e3ffa2a17e677fa9f1a9c7f93"
       url: "https://github.com/LuminaGame/tools.git"
     source: git
     version: "0.0.1"
@@ -305,7 +305,7 @@ packages:
     description:
       path: flutter_gstreamer
       ref: HEAD
-      resolved-ref: e37c2f56eb80651c49709d4cfba33d22657b941d
+      resolved-ref: "879df0e0559ba50e3ffa2a17e677fa9f1a9c7f93"
       url: "https://github.com/LuminaGame/tools.git"
     source: git
     version: "0.1.0"
@@ -334,8 +334,8 @@ packages:
     dependency: transitive
     description:
       path: flutter_riglogic
-      ref: e37c2f56eb80651c49709d4cfba33d22657b941d
-      resolved-ref: e37c2f56eb80651c49709d4cfba33d22657b941d
+      ref: "879df0e0559ba50e3ffa2a17e677fa9f1a9c7f93"
+      resolved-ref: "879df0e0559ba50e3ffa2a17e677fa9f1a9c7f93"
       url: "https://github.com/LuminaGame/tools.git"
     source: git
     version: "0.0.1"
@@ -540,8 +540,8 @@ packages:
     dependency: transitive
     description:
       path: lumina_mouse_capture
-      ref: e37c2f56eb80651c49709d4cfba33d22657b941d
-      resolved-ref: e37c2f56eb80651c49709d4cfba33d22657b941d
+      ref: "879df0e0559ba50e3ffa2a17e677fa9f1a9c7f93"
+      resolved-ref: "879df0e0559ba50e3ffa2a17e677fa9f1a9c7f93"
       url: "https://github.com/LuminaGame/tools.git"
     source: git
     version: "0.0.1"
@@ -567,8 +567,8 @@ packages:
     dependency: transitive
     description:
       path: lumina_smoke
-      ref: e37c2f56eb80651c49709d4cfba33d22657b941d
-      resolved-ref: e37c2f56eb80651c49709d4cfba33d22657b941d
+      ref: "879df0e0559ba50e3ffa2a17e677fa9f1a9c7f93"
+      resolved-ref: "879df0e0559ba50e3ffa2a17e677fa9f1a9c7f93"
       url: "https://github.com/LuminaGame/tools.git"
     source: git
     version: "0.1.0"
