@@ -427,6 +427,7 @@ abstract class _EditorViewModelState extends ChangeNotifier {
 
   // editor_view_model/actor_spawning.dart
   Future<void> _loadActorMeshData(EditorActorNode actor);
+  void _refreshPrimitiveMesh(EditorActorNode actor);
   String _uniqueActorId();
 
   // editor_view_model/outliner.dart

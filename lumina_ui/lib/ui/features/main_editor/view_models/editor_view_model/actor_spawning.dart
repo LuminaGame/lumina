@@ -21,16 +21,11 @@ mixin _EditorActorSpawning on _EditorViewModelState {
     );
     final props = component.properties;
     final shape = (props['shape'] ?? 'box').toString();
-    double dim(String key, double fallback) {
-      final v = props[key];
-      return v is num ? v.toDouble() : fallback;
-    }
-
-    final sizeX = dim('sizeX', 100.0);
-    final sizeY = dim('sizeY', 100.0);
-    final sizeZ = dim('sizeZ', 100.0);
+    // Stored Z up (sizeZ is the height); the geometry is the runtime's Y up,
+    // the same conversion Play and the built game make.
+    final size = luminaPrimitiveSize(props);
     final colorHex = (props['colorHex'] ?? '#9AA3AE').toString();
-    final key = '$shape|$sizeX|$sizeY|$sizeZ|$colorHex';
+    final key = '$shape|${size.x}|${size.y}|${size.z}|$colorHex';
 
     final cached = _primitiveMeshCache[key];
     if (cached != null) {
@@ -40,9 +35,9 @@ mixin _EditorActorSpawning on _EditorViewModelState {
     try {
       final bytes = PrimitiveGlbFactory.build(
         shape: shape,
-        sizeX: sizeX,
-        sizeY: sizeY,
-        sizeZ: sizeZ,
+        sizeX: size.x,
+        sizeY: size.y,
+        sizeZ: size.z,
         colorHex: colorHex,
       );
       final parsed = await GlbParserService.parseGlb(bytes);
@@ -122,6 +117,29 @@ mixin _EditorActorSpawning on _EditorViewModelState {
       }
     }
   }
+
+  /// Rebuilds a `Primitive`'s geometry after its shape, size or colour
+  /// changed (Details, MCP, undo), so the viewport draws the new shape.
+  /// Anything else is left alone. The newest edit wins when rebuilds overlap.
+  @override
+  void _refreshPrimitiveMesh(EditorActorNode actor) {
+    if (actor.type != 'Primitive' || actor.blueprintClass != null) return;
+    final request = _primitiveRebuilds[actor.id] = Object();
+    unawaited(_loadPrimitiveMeshData(actor).then((_) async {
+      if (_primitiveRebuilds[actor.id] == null) {
+        // A newer rebuild finished first: draw what the properties say now.
+        await _loadPrimitiveMeshData(actor);
+        if (!_disposed) notifyListeners();
+        return;
+      }
+      if (!identical(_primitiveRebuilds[actor.id], request)) return;
+      _primitiveRebuilds.remove(actor.id);
+      if (!_disposed) notifyListeners();
+    }));
+  }
+
+  /// The latest geometry rebuild asked for, per primitive actor id.
+  static final Map<String, Object> _primitiveRebuilds = {};
 
   @override
   Future<void> _loadActorMeshData(EditorActorNode actor) async {

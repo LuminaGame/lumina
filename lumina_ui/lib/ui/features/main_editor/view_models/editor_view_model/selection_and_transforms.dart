@@ -354,6 +354,7 @@ mixin _EditorSelectionAndTransforms on _EditorViewModelState {
       } else {
         final c = actor.components.firstWhere((c) => c.type == componentType);
         c.properties[propertyId] = newVal;
+        _refreshPrimitiveMesh(actor);
       }
     }
 

@@ -70,8 +70,8 @@ void main() {
 
     // The real level container on disk: the template's actors plus a pointer
     // and two markers, as the Details panel stores them. A Primitive's sizes
-    // are runtime (Y-up) extents, so sizeZ runs along the forward axis and the
-    // pointer's front end is its high end.
+    // are Z up like its location, so sizeY runs along the forward axis (+Y)
+    // and the pointer's front end is its high end.
     const pointerRotation = [30.0, 0.0, 90.0];
     File('${pDir.path}/contents/levels/L_DefaultLevel.lmas').writeAsStringSync(jsonEncode(<String, dynamic>{
       'assetId': 'level_L_DefaultLevel',
@@ -82,7 +82,7 @@ void main() {
       'metadata': <String, dynamic>{
         'actors': [
           ...template.levelActors,
-          primitive('Pointer', 'box', [24.0, 24.0, 360.0], '#E03C31', [0.0, 200.0, 180.0], pointerRotation),
+          primitive('Pointer', 'box', [24.0, 360.0, 24.0], '#E03C31', [0.0, 200.0, 180.0], pointerRotation),
           primitive('Marker_PlusX', 'sphere', [60.0, 60.0, 60.0], '#3CB44B', [260.0, 200.0, 180.0]),
           primitive('Marker_MinusX', 'sphere', [60.0, 60.0, 60.0], '#2F6BE0', [-260.0, 200.0, 180.0]),
         ],

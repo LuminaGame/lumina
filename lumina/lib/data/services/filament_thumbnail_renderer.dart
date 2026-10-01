@@ -9,6 +9,7 @@ import 'package:flutter_filament/flutter_filament.dart';
 import 'package:image/image.dart' as img;
 import 'package:vector_math/vector_math_64.dart';
 
+import '../../src/game/primitive_actor.dart' show luminaPrimitiveSize;
 import '../../src/math/axes.dart';
 import '../../src/math/units.dart';
 import '../models/lumina_asset.dart';
@@ -155,12 +156,12 @@ class FilamentThumbnailRenderer extends _FilamentThumbnailRendererState
       final transform = authoringTransform(a['location'], a['rotation'], a['scale']);
       if (type == 'Primitive') {
         final props = _componentProperties(a, 'LuminaProceduralMeshComponent');
-        double dim(String key) => props[key] is num ? (props[key] as num).toDouble() : 100.0;
+        final size = luminaPrimitiveSize(props);
         final glb = PrimitiveGlbFactory.build(
           shape: (props['shape'] ?? 'box').toString(),
-          sizeX: dim('sizeX'),
-          sizeY: props['sizeY'] is num ? (props['sizeY'] as num).toDouble() : 100.0,
-          sizeZ: dim('sizeZ'),
+          sizeX: size.x,
+          sizeY: size.y,
+          sizeZ: size.z,
           colorHex: (props['colorHex'] ?? '#9AA3AE').toString(),
         );
         parts.add(ThumbnailMeshPart(glb, transform: transform, unitScale: 1.0));

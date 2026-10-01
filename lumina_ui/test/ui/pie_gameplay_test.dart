@@ -58,7 +58,7 @@ void main() {
           {
             'id': 'floor_mesh',
             'type': 'LuminaProceduralMeshComponent',
-            'properties': {'shape': 'plane', 'sizeX': 2000.0, 'sizeY': 0.0, 'sizeZ': 2000.0, 'colorHex': '#6E7681'},
+            'properties': {'shape': 'plane', 'sizeX': 2000.0, 'sizeY': 2000.0, 'sizeZ': 0.0, 'colorHex': '#6E7681'},
           },
         ],
       }));

@@ -15,7 +15,9 @@
   - positive pitch looks up (pitch 30: forward points 30° above the horizon; -90 straight down).
   - positive roll dips the left side (the up vector leans to -X).
 - Scale 1 is the asset's own size; a `Primitive` shape's size is its component's `sizeX` / `sizeY` / `sizeZ`
-  times the actor scale.
+  times the actor scale, in cm and Z up like the transform: `sizeZ` is the height, `sizeY` the depth along Y (a
+  plane uses `sizeX` and `sizeY`). Set them with `set_actor_property` `LuminaProceduralMeshComponent.sizeZ`, etc.;
+  `LuminaProceduralMeshComponent.shape` is `box` | `plane` | `sphere` | `cylinder`.
 - A mesh keeps the orientation it was modelled with: if a glTF character faces the wrong way, turn the mesh (its
   component's yaw), not the actor.
 

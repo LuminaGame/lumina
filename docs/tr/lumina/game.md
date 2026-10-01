@@ -252,6 +252,7 @@ An actor that specifies a spawn point for players in the level.
 
 - **`LuminaPrimitiveShape luminaPrimitiveShapeFrom(String? name)`**: Parses the `shape` string an editor `LuminaProceduralMeshComponent` carries. Anything unrecognised is a box, so an old or hand-edited level still loads.
 - **`Vector3 luminaHexToRgb(String? hex)`**: Parses `#RRGGBB` / `#AARRGGBB` into a 0..1 RGB vector; mid grey on error.
+- **`Vector3 luminaPrimitiveSize(Map<String, dynamic> properties)`**: Bir editör `LuminaProceduralMeshComponent` girdisinin tarif ettiği temel şeklin çalışma zamanı (Y yukarı) boyutu, cm. `sizeX` / `sizeY` / `sizeZ` her kayıtlı level değeri gibi Z yukarı yazılır (`sizeZ` yükseklik, `sizeY` yazım Y'si boyunca derinlik) ve [LuminaAxes.extent] ile dönüştürülür; eksik bir boyut 100 cm'dir. Level viewport'u, Play, level kod üreticisi ve level küçük resimleri boyutları buradan okur.
 
 ### `enum LuminaPrimitiveShape`
 
@@ -285,7 +286,7 @@ An engine-drawn primitive authored in Lumina Studio: a [LuminaProceduralMeshComp
 | Metot / Getter | İmzası | Ne İşe Yarar? |
 | :--- | :--- | :--- |
 | `shape` | `LuminaPrimitiveShape shape` | `shape` alanını (field/property) ve ilişkili veriyi saklar. |
-| `size` | `Vector3 size` | `size` alanını (field/property) ve ilişkili veriyi saklar. |
+| `size` | `Vector3 size` | Çalışma zamanı (Y yukarı) boyutu, cm: `size.y` yüksekliktir. Kayıtlı, Z yukarı bileşen boyutları [luminaPrimitiveSize] ile dönüştürülür. |
 | `color` | `Vector3 color` | `color` alanını (field/property) ve ilişkili veriyi saklar. |
 | `meshComponent` | `final LuminaProceduralMeshComponent meshComponent` | `meshComponent` alanını (field/property) ve ilişkili veriyi saklar. |
 | `collisionComponent` | `final LuminaCollisionComponent collisionComponent` | `collisionComponent` alanını (field/property) ve ilişkili veriyi saklar. |

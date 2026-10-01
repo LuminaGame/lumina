@@ -252,6 +252,7 @@ An actor that specifies a spawn point for players in the level.
 
 - **`LuminaPrimitiveShape luminaPrimitiveShapeFrom(String? name)`**: Parses the `shape` string an editor `LuminaProceduralMeshComponent` carries. Anything unrecognised is a box, so an old or hand-edited level still loads.
 - **`Vector3 luminaHexToRgb(String? hex)`**: Parses `#RRGGBB` / `#AARRGGBB` into a 0..1 RGB vector; mid grey on error.
+- **`Vector3 luminaPrimitiveSize(Map<String, dynamic> properties)`**: The runtime (Y-up) extent in cm of the basic shape an editor `LuminaProceduralMeshComponent` entry describes. Its `sizeX` / `sizeY` / `sizeZ` are authored Z up like every stored level value (`sizeZ` is the height, `sizeY` the depth along authoring Y), converted through [LuminaAxes.extent]; a missing size is 100 cm. The level viewport, Play, the level code generator and level thumbnails all read sizes here.
 
 ### `enum LuminaPrimitiveShape`
 
@@ -285,7 +286,7 @@ An engine-drawn primitive authored in Lumina Studio: a [LuminaProceduralMeshComp
 | Method / Getter | Signature | Purpose & Description |
 | :--- | :--- | :--- |
 | `shape` | `LuminaPrimitiveShape shape` | Holds the `shape` property or configuration state. |
-| `size` | `Vector3 size` | Holds the `size` property or configuration state. |
+| `size` | `Vector3 size` | The runtime (Y-up) extent in cm: `size.y` is the height. The stored, Z-up component sizes convert through [luminaPrimitiveSize]. |
 | `color` | `Vector3 color` | Holds the `color` property or configuration state. |
 | `meshComponent` | `final LuminaProceduralMeshComponent meshComponent` | Holds the `meshComponent` property or configuration state. |
 | `collisionComponent` | `final LuminaCollisionComponent collisionComponent` | Holds the `collisionComponent` property or configuration state. |

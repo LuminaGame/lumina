@@ -3,6 +3,7 @@ import 'dart:io';
 import '../../data/models/lumina_asset.dart';
 import '../models/lumina_project.dart';
 import 'level_template_service.dart' show kWorldPartitionDefaultCellSize, kWorldPartitionDefaultLoadingRange;
+import '../../src/game/primitive_actor.dart' show luminaPrimitiveSize;
 import '../../src/game/template_character.dart';
 import '../../src/game/template_content.dart';
 import '../../src/collision/collision_hull.dart';

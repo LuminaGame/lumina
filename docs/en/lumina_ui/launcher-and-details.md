@@ -355,6 +355,28 @@ The Details panel's Static Mesh (or Skeletal Mesh) section of a placed mesh acto
 | `actor` | `final EditorActorNode actor` |  |
 | `appliesTo` | `static bool appliesTo(EditorActorNode actor)` | A placed mesh: it renders a mesh asset of the project (not a Blueprint, primitive or landscape, which draw something else). |
 
+
+## `lib/ui/features/details/widgets/actor_shape_section.dart`
+
+### `class ActorShapeSection`
+
+The Details panel's Shape section of a basic shape (`Primitive`): its shape, its size and its colour, kept on the actor's `LuminaProceduralMeshComponent`. Sizes are centimetres, Z up like the Transform above them: Size Z is the height, Size Y the depth along Y (a plane uses X and Y). Each commit is one undo step and redraws the shape in the viewport.
+
+**Constructors:**
+
+- `const ActorShapeSection({super.key, required this.viewModel, required this.actor})`
+
+**Members:**
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `viewModel` | `final EditorViewModel viewModel` |  |
+| `actor` | `final EditorActorNode actor` |  |
+| `componentType` | `static const String componentType` | `LuminaProceduralMeshComponent`. |
+| `shapes` | `static const List<String> shapes` | `box`, `plane`, `sphere`, `cylinder`. |
+| `appliesTo` | `static bool appliesTo(EditorActorNode actor)` | A placed basic shape (not a Blueprint). |
+
+
 ## `lib/ui/features/launcher/services/installed_template_repository.dart`
 
 ### `class InstalledGameTemplate`

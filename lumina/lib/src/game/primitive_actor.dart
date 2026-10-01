@@ -8,6 +8,7 @@ import 'package:vector_math/vector_math_64.dart';
 import '../components/collision/collision_component.dart';
 import '../../data/services/primitive_glb_factory.dart';
 import '../components/mesh/static_mesh_component.dart';
+import '../math/axes.dart';
 import '../object/actor.dart';
 import '../utility/lumina_assets.dart';
 
@@ -205,6 +206,9 @@ class LuminaPrimitiveGeometry {
 /// place of the colour.
 class LuminaPrimitiveActor extends LuminaActor {
   final LuminaPrimitiveShape shape;
+
+  /// The runtime (Y-up) extent in cm: `size.y` is the height. The stored,
+  /// Z-up component sizes convert through [luminaPrimitiveSize].
   final Vector3 size;
   final Vector3 color;
 
@@ -256,7 +260,8 @@ class LuminaPrimitiveActor extends LuminaActor {
   }
 
   /// Builds the actor from the `properties` map of an editor
-  /// `LuminaProceduralMeshComponent` entry.
+  /// `LuminaProceduralMeshComponent` entry; its sizes are authored Z up
+  /// ([luminaPrimitiveSize]).
   factory LuminaPrimitiveActor.fromComponentProperties(
     Map<String, dynamic> properties, {
     Key? key,
@@ -265,22 +270,32 @@ class LuminaPrimitiveActor extends LuminaActor {
     Vector3? scale,
     String? materialOverrideAsset,
   }) {
-    double dim(String name) {
-      final v = properties[name];
-      return v is num ? v.toDouble() : 100.0; // cm
-    }
-
     return LuminaPrimitiveActor(
       key: key,
       location: location,
       rotation: rotation,
       scale: scale,
       shape: luminaPrimitiveShapeFrom(properties['shape'] as String?),
-      size: Vector3(dim('sizeX'), dim('sizeY'), dim('sizeZ')),
+      size: luminaPrimitiveSize(properties),
       color: luminaHexToRgb(properties['colorHex'] as String?),
       materialOverrideAsset: materialOverrideAsset,
     );
   }
+}
+
+/// The runtime (Y-up) extent in cm of the basic shape an editor
+/// `LuminaProceduralMeshComponent` entry describes. Its `sizeX` / `sizeY` /
+/// `sizeZ` are authored Z up like every stored level value (`sizeZ` is the
+/// height, `sizeY` the depth along authoring Y), converted through
+/// [LuminaAxes.extent]; a missing size is 100 cm. The level viewport, Play,
+/// the level code generator and level thumbnails all read sizes here.
+Vector3 luminaPrimitiveSize(Map<String, dynamic> properties) {
+  double dim(String name) {
+    final v = properties[name];
+    return v is num ? v.toDouble() : 100.0; // cm
+  }
+
+  return LuminaAxes.extent([dim('sizeX'), dim('sizeY'), dim('sizeZ')]);
 }
 
 /// `(r, g, b)` in 0..1 as `#RRGGBB`, the inverse of [luminaHexToRgb].

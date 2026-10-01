@@ -355,6 +355,28 @@ The Details panel's Static Mesh (or Skeletal Mesh) section of a placed mesh acto
 | `actor` | `final EditorActorNode actor` |  |
 | `appliesTo` | `static bool appliesTo(EditorActorNode actor)` | A placed mesh: it renders a mesh asset of the project (not a Blueprint, primitive or landscape, which draw something else). |
 
+
+## `lib/ui/features/details/widgets/actor_shape_section.dart`
+
+### `class ActorShapeSection`
+
+Temel bir şeklin (`Primitive`) Details panelindeki Shape bölümü: aktörün `LuminaProceduralMeshComponent`'inde tutulan şekli, boyutu ve rengi. Boyutlar santimetredir ve üstündeki Transform gibi Z yukarıdır: Size Z yükseklik, Size Y Y boyunca derinliktir (düzlem X ve Y'yi kullanır). Her onay bir geri alma adımıdır ve şekli viewport'ta yeniden çizer.
+
+**Yapıcı Metotlar (Constructors):**
+
+- `const ActorShapeSection({super.key, required this.viewModel, required this.actor})`
+
+**Üyeler:**
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `viewModel` | `final EditorViewModel viewModel` |  |
+| `actor` | `final EditorActorNode actor` |  |
+| `componentType` | `static const String componentType` | `LuminaProceduralMeshComponent`. |
+| `shapes` | `static const List<String> shapes` | `box`, `plane`, `sphere`, `cylinder`. |
+| `appliesTo` | `static bool appliesTo(EditorActorNode actor)` | Yerleştirilmiş temel bir şekil (Blueprint değil). |
+
+
 ## `lib/ui/features/launcher/services/installed_template_repository.dart`
 
 ### `class InstalledGameTemplate`

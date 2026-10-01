@@ -528,10 +528,10 @@ The project and level tools: what the Outliner, the Details panel and the Edit m
 | `list_actors` | readOnly | List actors | The actors of the open level (the World Outliner), with id, name, type, parent, transform, visibility, lock and selection. |
 | `get_actor` | readOnly | Get actor | Everything the editor knows about one actor: transform, mobility, light settings, material, mesh asset path, Blueprint class and its components with their properties. |
 | `list_actor_types` | readOnly | List actor types | The actor types spawn_actor accepts (the editor's Place Actors catalog): id, label, category, what placing one does, and whether a level may hold only one. |
-| `spawn_actor` | mutating | Spawn actor | Places a new actor of a catalog type (list_actor_types) in the level, optionally named and transformed, as one undo step. |
+| `spawn_actor` | mutating | Spawn actor | Places a new actor of a catalog type (list_actor_types) in the level, optionally named and transformed, as one undo step. A `Primitive` is a 100 cm cube. |
 | `spawn_actor_from_asset` | mutating | Spawn actor from asset | Places a project asset in the level as the Content Browser's "Place in 3D Scene" does: a mesh .lmas becomes a Mesh actor drawing that mesh, a Blueprint .lmas an instance of that class, a landscape .lmas a Landscape actor... |
 | `set_actor_transform` | mutating | Set actor transform | Sets an actor's location, rotation and/or scale (absolute values), as typing them into the Details panel does. |
-| `set_actor_property` | mutating | Set actor property | Sets one property of an actor, as the Details panel does, in one undo step. |
+| `set_actor_property` | mutating | Set actor property | Sets one property of an actor, as the Details panel does, in one undo step. A basic shape's `LuminaProceduralMeshComponent.sizeX` / `.sizeY` / `.sizeZ` are cm, Z up (sizeZ is the height). |
 | `rename_actor` | mutating | Rename actor | Renames an actor or an Outliner folder (type "Folder") as one undo step. |
 | `delete_actor` | mutating | Delete actor | Deletes an actor or an Outliner folder (type "Folder") and, by default, its children, as one undo step; undo brings them back with the same ids. |
 | `duplicate_actor` | mutating | Duplicate actor | Duplicates an actor and its children (Edit → Duplicate), as one undo step. |

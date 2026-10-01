@@ -349,7 +349,7 @@ dependencies:
               },
             ],
           },
-          primitive('floor', 'plane', [20.0, 0.0, 20.0], '#6E7681'),
+          primitive('floor', 'plane', [20.0, 20.0, 0.0], '#6E7681'),
           primitive('crate', 'box', [1.0, 2.0, 3.0], '#FF8000'),
         ],
       );
@@ -357,7 +357,8 @@ dependencies:
       expect(code, contains("LuminaPlayerStart(key: const ValueKey('ps'), location: Vector3(0.0000, 100.0000, 600.0000)"));
       expect(code, contains("luminaPrimitiveShapeFrom('plane')"));
       expect(code, contains("luminaPrimitiveShapeFrom('box')"));
-      expect(code, contains('size: Vector3(1.0000, 2.0000, 3.0000)'));
+      // Stored Z up (sizeZ = 3 is the height), emitted as the runtime's Y-up extent.
+      expect(code, contains('size: Vector3(1.0000, 3.0000, 2.0000)'));
       expect(code, contains('color: Vector3(1.0000, 0.5020, 0.0000)'));
       // The primitive is an engine class, not source pasted into the level.
       // Play-In-Editor builds the same actor from the same component

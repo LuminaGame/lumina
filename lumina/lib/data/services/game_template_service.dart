@@ -216,7 +216,9 @@ Map<String, dynamic> _actor({
 
 /// A `Primitive` actor: an engine-drawn box/plane/sphere/cylinder carrying its
 /// shape, size and colour on a `LuminaProceduralMeshComponent` entry so the
-/// whole thing round-trips through `metadata.actors` untouched.
+/// whole thing round-trips through `metadata.actors` untouched. [size] is
+/// `[sizeX, sizeY, sizeZ]` in cm, Z up like the location: the last is the
+/// height (a plane's is 0).
 Map<String, dynamic> _primitive({
   required String id,
   required String name,
@@ -301,14 +303,14 @@ List<Map<String, dynamic>> _testRoom() => [
         id: 'act_floor',
         name: 'Floor',
         shape: 'plane',
-        size: const [2000.0, 0.0, 2000.0],
+        size: const [2000.0, 2000.0, 0.0],
         colorHex: '#6E7681',
       ),
       _primitive(
         id: 'act_wall_n',
         name: 'Wall_North',
         shape: 'box',
-        size: const [2000.0, 300.0, 30.0],
+        size: const [2000.0, 30.0, 300.0],
         colorHex: '#8B93A1',
         location: const [0.0, 1000.0, 150.0],
       ),
@@ -316,7 +318,7 @@ List<Map<String, dynamic>> _testRoom() => [
         id: 'act_wall_s',
         name: 'Wall_South',
         shape: 'box',
-        size: const [2000.0, 300.0, 30.0],
+        size: const [2000.0, 30.0, 300.0],
         colorHex: '#8B93A1',
         location: const [0.0, -1000.0, 150.0],
       ),
@@ -324,7 +326,7 @@ List<Map<String, dynamic>> _testRoom() => [
         id: 'act_wall_e',
         name: 'Wall_East',
         shape: 'box',
-        size: const [30.0, 300.0, 2000.0],
+        size: const [30.0, 2000.0, 300.0],
         colorHex: '#8B93A1',
         location: const [1000.0, 0.0, 150.0],
       ),
@@ -332,7 +334,7 @@ List<Map<String, dynamic>> _testRoom() => [
         id: 'act_wall_w',
         name: 'Wall_West',
         shape: 'box',
-        size: const [30.0, 300.0, 2000.0],
+        size: const [30.0, 2000.0, 300.0],
         colorHex: '#8B93A1',
         location: const [-1000.0, 0.0, 150.0],
       ),
@@ -394,7 +396,7 @@ List<Map<String, dynamic>> _firstPersonLevelActors() => [
         id: 'act_crate_c',
         name: 'Crate_C',
         shape: 'box',
-        size: const [140.0, 60.0, 140.0],
+        size: const [140.0, 140.0, 60.0],
         colorHex: '#8E6236',
         location: const [300.0, 300.0, 30.0],
       ),
@@ -402,7 +404,7 @@ List<Map<String, dynamic>> _firstPersonLevelActors() => [
         id: 'act_pillar',
         name: 'Pillar',
         shape: 'cylinder',
-        size: const [80.0, 300.0, 80.0],
+        size: const [80.0, 80.0, 300.0],
         colorHex: '#A8ADB8',
         location: const [400.0, -400.0, 150.0],
       ),
@@ -412,7 +414,7 @@ List<Map<String, dynamic>> _firstPersonLevelActors() => [
 /// around. Every piece is a `Primitive` with a collider, so the template needs
 /// no art beyond the character. Centimetres, Z up: the editor's convention,
 /// converted to the runtime's Y up by the level code generator.
-/// Primitive `size` is the mesh's own extent (its Y is height).
+/// Primitive `size` is the mesh's own extent, Z up like the rest: `[x, y, z]`, z the height.
 ///
 /// Heights are chosen against the character's movement: stairs rise 20 cm per
 /// step (`maxStepHeight` is 30), the hurdle is 50 cm (a jump clears ~120),
@@ -437,14 +439,14 @@ List<Map<String, dynamic>> _thirdPersonLevelActors() {
       id: 'act_ground',
       name: 'Ground',
       shape: 'plane',
-      size: const [2 * half, 0.0, 2 * half],
+      size: const [2 * half, 2 * half, 0.0],
       colorHex: '#5F6B5C',
     ),
     _primitive(
       id: 'act_wall_n',
       name: 'Wall_North',
       shape: 'box',
-      size: const [2 * half, wallHeight, wallThickness],
+      size: const [2 * half, wallThickness, wallHeight],
       colorHex: '#8B93A1',
       location: const [0.0, half, wallHeight / 2],
     ),
@@ -452,7 +454,7 @@ List<Map<String, dynamic>> _thirdPersonLevelActors() {
       id: 'act_wall_s',
       name: 'Wall_South',
       shape: 'box',
-      size: const [2 * half, wallHeight, wallThickness],
+      size: const [2 * half, wallThickness, wallHeight],
       colorHex: '#8B93A1',
       location: const [0.0, -half, wallHeight / 2],
     ),
@@ -460,7 +462,7 @@ List<Map<String, dynamic>> _thirdPersonLevelActors() {
       id: 'act_wall_e',
       name: 'Wall_East',
       shape: 'box',
-      size: const [wallThickness, wallHeight, 2 * half],
+      size: const [wallThickness, 2 * half, wallHeight],
       colorHex: '#8B93A1',
       location: const [half, 0.0, wallHeight / 2],
     ),
@@ -468,7 +470,7 @@ List<Map<String, dynamic>> _thirdPersonLevelActors() {
       id: 'act_wall_w',
       name: 'Wall_West',
       shape: 'box',
-      size: const [wallThickness, wallHeight, 2 * half],
+      size: const [wallThickness, 2 * half, wallHeight],
       colorHex: '#8B93A1',
       location: const [-half, 0.0, wallHeight / 2],
     ),
@@ -484,7 +486,7 @@ List<Map<String, dynamic>> _thirdPersonLevelActors() {
     id: 'act_platform',
     name: 'Platform',
     shape: 'box',
-    size: const [800.0, platformTop, 800.0],
+    size: const [800.0, 800.0, platformTop],
     colorHex: '#7E8794',
     location: const [-1400.0, 1400.0, platformTop / 2],
   ));
@@ -494,7 +496,7 @@ List<Map<String, dynamic>> _thirdPersonLevelActors() {
       id: 'act_stair_${i.toString().padLeft(2, '0')}',
       name: 'Stair_${i.toString().padLeft(2, '0')}',
       shape: 'box',
-      size: [300.0, height, stepDepth],
+      size: [300.0, stepDepth, height],
       colorHex: i.isEven ? '#98A0AD' : '#8B93A1',
       location: [-1400.0, 1000.0 - (stepCount - i) * stepDepth - stepDepth / 2, height / 2],
     ));
@@ -505,7 +507,7 @@ List<Map<String, dynamic>> _thirdPersonLevelActors() {
     id: 'act_hurdle',
     name: 'Hurdle',
     shape: 'box',
-    size: const [600.0, 50.0, 40.0],
+    size: const [600.0, 40.0, 50.0],
     colorHex: '#C1613F',
     location: const [0.0, 0.0, 25.0],
   ));
@@ -540,7 +542,7 @@ List<Map<String, dynamic>> _thirdPersonLevelActors() {
         id: 'act_pillar_$pillar',
         name: 'Pillar_${pillar.toString().padLeft(2, '0')}',
         shape: 'cylinder',
-        size: const [80.0, pillarHeight, 80.0],
+        size: const [80.0, 80.0, pillarHeight],
         colorHex: '#A8ADB8',
         location: [x, y, pillarHeight / 2],
       ));
@@ -552,7 +554,7 @@ List<Map<String, dynamic>> _thirdPersonLevelActors() {
     id: 'act_divider',
     name: 'Divider_Wall',
     shape: 'box',
-    size: const [40.0, 200.0, 1000.0],
+    size: const [40.0, 1000.0, 200.0],
     colorHex: '#8B93A1',
     location: const [-1200.0, -1200.0, 100.0],
   ));
@@ -647,7 +649,7 @@ Map<String, dynamic> luminaTemplateGroundPlane({
       id: id,
       name: name,
       shape: 'plane',
-      size: [size, 0.0, size],
+      size: [size, size, 0.0],
       colorHex: colorHex,
     );
 

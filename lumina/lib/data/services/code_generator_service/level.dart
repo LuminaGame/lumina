@@ -400,14 +400,13 @@ mixin _LevelCodegen on _DartCodeGeneratorServiceState {
             ? Map<String, dynamic>.from(meshComp!['properties'] as Map)
             : const <String, dynamic>{};
         final shape = (meshProps['shape'] ?? 'box').toString();
-        final sx = _num(meshProps['sizeX'], 1.0);
-        final sy = _num(meshProps['sizeY'], 1.0);
-        final sz = _num(meshProps['sizeZ'], 1.0);
+        // Stored Z up (sizeZ is the height), emitted as the runtime Y-up extent.
+        final primSize = luminaPrimitiveSize(meshProps);
         final primColor = _hexRgb(meshProps['colorHex'], [0.6, 0.63, 0.68]);
         final (primMaterial, primNote) = _materialArgument(a, projectDir);
         return "${primNote}LuminaPrimitiveActor($key, $transform, scale: $scaleCode, "
             "shape: luminaPrimitiveShapeFrom('${_escape(shape)}'), "
-            "size: Vector3(${_f(sx)}, ${_f(sy)}, ${_f(sz)}), "
+            "size: ${_vector3(primSize.storage)}, "
             "color: ${_vector3(primColor)}${primMaterial.isEmpty ? '' : ', $primMaterial'}),";
       case 'TriggerVolume':
         // A trigger a Level Blueprint binds OnActorBeginOverlap

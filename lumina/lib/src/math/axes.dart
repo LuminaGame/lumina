@@ -24,6 +24,15 @@ abstract final class LuminaAxes {
   static Vector3 scale(List<num> authoring) =>
       Vector3(_at(authoring, 0, 1), _at(authoring, 2, 1), _at(authoring, 1, 1));
 
+  /// An extent (a size along each axis, like a basic shape's
+  /// `sizeX` / `sizeY` / `sizeZ`) follows its axis with no sign:
+  /// `(x, y, z)` → `(x, z, y)`, so the authored Z (the height) is the
+  /// runtime Y.
+  static Vector3 extent(List<num> authoring) => Vector3(_at(authoring, 0), _at(authoring, 2), _at(authoring, 1));
+
+  /// Runtime extent `(x, y, z)` → authoring `(x, z, y)`.
+  static List<double> toAuthoringExtent(Vector3 runtime) => [runtime.x, runtime.z, runtime.y];
+
   /// Authoring rotation `[x, y, z]` in degrees about the authoring X, Y and
   /// Z axes: authoring forward is +Y, so x is **pitch**, y **roll** and z
   /// **yaw**, applied yaw first, then pitch, then roll. Positive yaw turns

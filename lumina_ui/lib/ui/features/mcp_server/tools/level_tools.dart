@@ -258,7 +258,10 @@ void registerLevelTools(McpToolRegistry registry, EditorViewModel vm) {
           '"light_intensity" (number, lights), "cast_shadows" (bool, lights), "light_color" ("#RRGGBB", lights), '
           '"material" (a material .lmas path or unique name, drawn on every section of a placed mesh or basic shape; '
           'null gives the mesh its own back). A component property is "<component id or type>.<property id>", '
-          'e.g. "LuminaProceduralMeshComponent.sizeX"; get_actor lists the components and their properties.',
+          'e.g. "LuminaProceduralMeshComponent.sizeX"; get_actor lists the components and their properties. A basic '
+          'shape (Primitive) has "LuminaProceduralMeshComponent.shape" ("box" | "plane" | "sphere" | "cylinder"), '
+          '".colorHex" and ".sizeX" / ".sizeY" / ".sizeZ" in cm, Z up like its location: sizeX along X, sizeY along Y '
+          '(depth), sizeZ is the height (a plane uses sizeX and sizeY).',
       inputSchema: McpSchema.object({
         'id': McpSchema.string('The actor id.'),
         'property': McpSchema.string('The property, as listed in the description.'),

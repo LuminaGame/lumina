@@ -400,6 +400,7 @@ mixin _EditorActorsAndComponents on _EditorViewModelState {
     final actor = _actors.firstWhere((a) => a.id == actorId);
     final comp = actor.components.firstWhere((c) => c.id == componentId);
     comp.properties[propertyId] = value;
+    _refreshPrimitiveMesh(actor);
     notifyListeners();
   }
 
@@ -549,6 +550,7 @@ mixin _EditorActorsAndComponents on _EditorViewModelState {
           final c = actor.components.where((c) => c.id == componentId).firstOrNull;
           if (c != null) {
             c.properties[propertyId] = value;
+            _refreshPrimitiveMesh(actor);
             notifyListeners();
           }
         }
@@ -558,6 +560,7 @@ mixin _EditorActorsAndComponents on _EditorViewModelState {
           final c = actor.components.where((c) => c.id == componentId).firstOrNull;
           if (c != null) {
             c.properties[propertyId] = value;
+            _refreshPrimitiveMesh(actor);
             changed = true;
           }
         }

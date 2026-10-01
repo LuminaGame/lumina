@@ -107,11 +107,11 @@ void main() {
     test('Third Person yard is authored in cm, Z up', () {
       final actors = GameTemplateCatalog.thirdPerson.levelActors;
       expect(size(actor(actors, 'Ground'))['sizeX'], 6000);
-      expect(size(actor(actors, 'Wall_North'))['sizeY'], 250);
+      expect(size(actor(actors, 'Wall_North'))['sizeZ'], 250, reason: 'a primitive size is Z up too: sizeZ is its height');
       expect((actor(actors, 'PlayerStart')['location'] as List)[2], greaterThanOrEqualTo(90), reason: 'Z is up');
-      expect(size(actor(actors, 'Platform'))['sizeY'], 200);
+      expect(size(actor(actors, 'Platform'))['sizeZ'], 200);
       expect((actor(actors, 'Platform')['location'] as List)[2], 100);
-      final stairs = actors.where((a) => (a['name'] as String).startsWith('Stair_')).map((a) => size(a)['sizeY'] as double).toList()..sort();
+      final stairs = actors.where((a) => (a['name'] as String).startsWith('Stair_')).map((a) => size(a)['sizeZ'] as double).toList()..sort();
       for (var i = 1; i < stairs.length; i++) {
         expect(stairs[i] - stairs[i - 1], lessThanOrEqualTo(20), reason: 'a step never rises more than 20 cm');
       }
@@ -123,6 +123,37 @@ void main() {
       expect(size(actor(actors, 'Floor'))['sizeX'], 2000);
       expect((actor(actors, 'Wall_North')['location'] as List)[2], 150);
       expect((actor(actors, 'Crate_B')['location'] as List)[2], 150);
+    });
+
+    test('the template primitives draw the same shapes now that their sizes are stored Z up', () {
+      // Runtime (Y-up) extents the shapes have always been drawn with.
+      const drawn = <String, Map<String, List<double>>>{
+        'thirdPerson': {
+          'Ground': [6000, 0, 6000],
+          'Wall_North': [6000, 250, 50],
+          'Wall_East': [50, 250, 6000],
+          'Platform': [800, 200, 800],
+          'Stair_03': [300, 60, 50],
+          'Hurdle': [600, 50, 40],
+          'Crate_01': [100, 100, 100],
+          'Pillar_01': [80, 400, 80],
+          'Divider_Wall': [40, 200, 1000],
+          'Marker_Sphere': [160, 160, 160],
+        },
+        'firstPerson': {
+          'Floor': [2000, 0, 2000],
+          'Wall_North': [2000, 300, 30],
+          'Wall_West': [30, 300, 2000],
+          'Crate_C': [140, 60, 140],
+          'Pillar': [80, 300, 80],
+        },
+      };
+      for (final template in [GameTemplateCatalog.thirdPerson, GameTemplateCatalog.firstPerson]) {
+        final key = template == GameTemplateCatalog.thirdPerson ? 'thirdPerson' : 'firstPerson';
+        for (final e in drawn[key]!.entries) {
+          expect(luminaPrimitiveSize(size(actor(template.levelActors, e.key))).storage, e.value, reason: '$key ${e.key}');
+        }
+      }
     });
 
     test('the level code generator converts stored Z-up transforms to the runtime', () {

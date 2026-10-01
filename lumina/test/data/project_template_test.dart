@@ -494,16 +494,16 @@ void main() {
                 .map((c) => Map<String, dynamic>.from(c as Map))
                 .firstWhere((c) => c['type'] == 'LuminaProceduralMeshComponent')['properties'] as Map,
           );
-      // Stored Z-up in cm: height is location[2]; a primitive's
-      // sizeY is its own (mesh) height.
+      // Stored Z-up in cm: height is location[2], and a primitive's
+      // sizeZ is its own (mesh) height.
       double top(Map<String, dynamic> actor) =>
-          ((actor['location'] as List)[2] as num).toDouble() + (props(actor)['sizeY'] as num) / 2.0;
+          ((actor['location'] as List)[2] as num).toDouble() + (props(actor)['sizeZ'] as num) / 2.0;
 
       expect(actors.any((a) => a['type'] == 'PlayerStart'), isTrue);
       final ground = actors.firstWhere((a) => a['name'] == 'Ground');
       expect(props(ground)['shape'], 'plane');
       expect(props(ground)['sizeX'], greaterThanOrEqualTo(6000.0));
-      expect(props(ground)['sizeZ'], greaterThanOrEqualTo(6000.0));
+      expect(props(ground)['sizeY'], greaterThanOrEqualTo(6000.0));
       expect(actors.where((a) => (a['name'] as String).startsWith('Wall_')).length, 4);
 
       final stairs = actors.where((a) => (a['name'] as String).startsWith('Stair_')).toList()

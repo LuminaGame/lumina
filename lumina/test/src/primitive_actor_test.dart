@@ -97,6 +97,27 @@ void main() {
       final actor = LuminaPrimitiveActor.fromComponentProperties(const {'shape': 'torus'});
       expect(actor.shape, LuminaPrimitiveShape.box);
     });
+
+    test('stored sizes are authored Z up: sizeZ is the height, sizeY the depth along authoring Y', () {
+      final actor = LuminaPrimitiveActor.fromComponentProperties(const <String, dynamic>{
+        'shape': 'box',
+        'sizeX': 200.0,
+        'sizeY': 100.0,
+        'sizeZ': 300.0,
+      });
+      // The runtime is Y up: its Y extent is the height.
+      expect(actor.size, Vector3(200.0, 300.0, 100.0));
+      expect(actor.collisionComponent.boxExtent, Vector3(100.0, 150.0, 50.0), reason: 'the collider stands as tall');
+      expect(luminaPrimitiveSize(const {'sizeX': 200.0, 'sizeY': 100.0, 'sizeZ': 300.0}), Vector3(200.0, 300.0, 100.0));
+      expect(luminaPrimitiveSize(const {}), Vector3.all(100.0), reason: 'a missing size is the 100 cm default');
+    });
+
+    test('an authored extent survives the round trip through the runtime', () {
+      const authored = [40.0, 1000.0, 200.0];
+      final runtime = LuminaAxes.extent(authored);
+      expect(runtime, Vector3(40.0, 200.0, 1000.0));
+      expect(LuminaAxes.toAuthoringExtent(runtime), authored);
+    });
   });
 
   // The section used to have no material, so every primitive was
