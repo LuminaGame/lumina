@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show ChangeNotifier, ValueKey, debugPrint;
@@ -32,7 +33,8 @@ import '../models/viewport_ray.dart';
 ///
 /// Every world the viewport hands over gets a fresh actor (switching tabs
 /// remounts the viewport); a document edit that changes a component rebuilds
-/// it. Without a world the actor is still built (unregistered) so the
+/// it, and so does a texture its materials draw being saved again (checked
+/// about once a second). Without a world the actor is still built (unregistered) so the
 /// overlays and [framing] are known before the viewport opens.
 class BlueprintPreviewScene extends ChangeNotifier {
   LuminaWorld? _world;
@@ -53,6 +55,11 @@ class BlueprintPreviewScene extends ChangeNotifier {
   String? _lastState;
   bool _disposed = false;
   bool _notifyScheduled = false;
+
+  /// Frames since the textures were last checked, and what each texture
+  /// file was then (modified time and size), by path.
+  int _framesSinceTextureCheck = 0;
+  Map<String, String> _textureStamps = const {};
 
   /// Listeners hear about a change after the current frame: the viewport
   /// hands its world over from inside a build, where a rebuild request is
@@ -373,11 +380,44 @@ class BlueprintPreviewScene extends ChangeNotifier {
     } catch (e, st) {
       debugPrint('[BlueprintPreviewScene] tick failed: $e\n$st');
     }
+    if (++_framesSinceTextureCheck >= 60) {
+      _framesSinceTextureCheck = 0;
+      if (_texturesChanged()) {
+        _rebuild();
+        return;
+      }
+    }
     final state = _animSummary();
     if (state != _lastState) {
       _lastState = state;
       _notify();
     }
+  }
+
+  /// Whether a texture the built meshes' materials draw was saved again
+  /// (Texture editor Save / Reimport, an import over it) since it was first
+  /// seen: their materials are then built anew with it.
+  bool _texturesChanged() {
+    final dir = _projectDir;
+    final stamps = <String, String>{};
+    for (final c in _built.values) {
+      if (c is! LuminaStaticMeshComponent) continue;
+      for (var i = 0; i < 8; i++) {
+        final material = c.materialOverride(i)?.material;
+        if (material == null || material.isDisposed) continue;
+        for (final t in material.textures.bound.values) {
+          final p = t.path;
+          final absolute = p.startsWith('/') || RegExp(r'^[A-Za-z]:[\\/]').hasMatch(p);
+          try {
+            final stat = File(absolute || dir == null ? p : '$dir/$p').statSync();
+            stamps[p] = '${stat.modified.microsecondsSinceEpoch}:${stat.size}';
+          } catch (_) {}
+        }
+      }
+    }
+    final changed = stamps.entries.any((e) => _textureStamps.containsKey(e.key) && _textureStamps[e.key] != e.value);
+    _textureStamps = changed ? const {} : stamps;
+    return changed;
   }
 
   String? _animSummary() {

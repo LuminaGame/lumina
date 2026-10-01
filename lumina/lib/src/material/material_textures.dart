@@ -44,18 +44,19 @@ class LuminaBoundTexture {
 /// texture asset's settings (`texture_settings`: sRGB, mipmaps, filtering,
 /// wrap); without settings, colour samplers (`…Color…`, albedo, diffuse,
 /// emissive) are sRGB and the rest linear. One upload is shared per texture
-/// and engine, and destroyed when the last material that binds it is
-/// released. A texture that cannot be loaded logs one warning and its
+/// content and engine, and destroyed when the last material that binds it is
+/// released: a texture saved again is uploaded anew for the materials loaded
+/// after the save. A texture that cannot be loaded logs one warning and its
 /// sampler is left unbound.
 class LuminaMaterialTextures {
-  LuminaMaterialTextures._(this._engine, this.bound, this.missing, this._keys);
+  LuminaMaterialTextures._(this._engine, this.bound, this.missing, this._held);
 
   /// Nothing to bind.
   LuminaMaterialTextures.none()
       : _engine = null,
         bound = const {},
         missing = const {},
-        _keys = const [];
+        _held = const [];
 
   final FilamentEngine? _engine;
 
@@ -65,7 +66,8 @@ class LuminaMaterialTextures {
   /// Why a sampler's texture was not bound, by sampler name.
   final Map<String, String> missing;
 
-  final List<String> _keys;
+  /// The shared uploads this holds, with their registry keys.
+  final List<(String, _SharedTexture)> _held;
   bool _released = false;
 
   /// Loads the textures [references] name for the samplers [material]
@@ -77,38 +79,37 @@ class LuminaMaterialTextures {
     required String materialPath,
     LuminaAssetProvider? assetProvider,
   }) async {
-    if (references.isEmpty) return LuminaMaterialTextures.none();
-    final samplers = [for (final p in material.parameters) if (p.isSampler) p.name];
-    final wanted = <String, String>{};
-    for (final name in samplers) {
-      for (final r in references) {
-        if (r.slotName == name && r.assetPath.isNotEmpty) {
-          wanted[name] = _readablePath(r.assetPath, assetProvider);
-          break;
-        }
-      }
-    }
+    final wanted = texturePaths(material, references, assetProvider: assetProvider);
     if (wanted.isEmpty) return LuminaMaterialTextures.none();
 
     final read = LuminaAssets.resolve(assetProvider);
     final registry = _registry[engine] ??= {};
     final bound = <String, LuminaBoundTexture>{};
     final missing = <String, String>{};
-    final keys = <String>[];
+    final held = <(String, _SharedTexture)>[];
     await Future.wait([
       for (final e in wanted.entries)
         () async {
           final colour = isColorSampler(e.key);
-          final key = '${colour ? 'srgb' : 'linear'}|${e.value}';
-          final shared = registry[key] ??= _SharedTexture(_upload(engine, e.value, colour, read));
-          shared.refs++;
+          _SharedTexture? shared;
+          String? key;
           try {
+            // Shared by content, not by path alone: a texture saved again
+            // (new image, new settings) is uploaded anew while the materials
+            // still drawing the old one keep it until they are released.
+            final bytes = await read(e.value);
+            key = '${colour ? 'srgb' : 'linear'}|${e.value}|${_fingerprint(bytes)}';
+            shared = registry[key] ??= _SharedTexture(_upload(engine, e.value, bytes, colour));
+            shared.refs++;
             final t = shared.value = await shared.future;
-            keys.add(key);
+            held.add((key, shared));
             bound[e.key] = LuminaBoundTexture._(e.value, t.texture, t.sampler, t.srgb);
           } catch (error) {
             // Read again by the next material that names it.
-            if (identical(registry[key], shared)) registry.remove(key);
+            if (shared != null) {
+              shared.refs--;
+              if (identical(registry[key], shared)) registry.remove(key);
+            }
             missing[e.key] = '$error';
             developer.log(
               "Material $materialPath: texture '${e.value}' for sampler '${e.key}' could not be loaded, the sampler "
@@ -119,7 +120,29 @@ class LuminaMaterialTextures {
           }
         }(),
     ]);
-    return LuminaMaterialTextures._(engine, bound, missing, keys);
+    return LuminaMaterialTextures._(engine, bound, missing, held);
+  }
+
+  /// The texture each sampler [material] declares draws, by sampler name: the
+  /// path of the reference whose slot name is the sampler, as [load] reads it
+  /// through [assetProvider] (else [LuminaAssets]).
+  static Map<String, String> texturePaths(
+    FilamentMaterial material,
+    List<AssetReference> references, {
+    LuminaAssetProvider? assetProvider,
+  }) {
+    final wanted = <String, String>{};
+    if (references.isEmpty) return wanted;
+    for (final p in material.parameters) {
+      if (!p.isSampler) continue;
+      for (final r in references) {
+        if (r.slotName == p.name && r.assetPath.isNotEmpty) {
+          wanted[p.name] = _readablePath(r.assetPath, assetProvider);
+          break;
+        }
+      }
+    }
+    return wanted;
   }
 
   /// Binds every loaded texture on [instance]. Bound on a material's default
@@ -136,12 +159,9 @@ class LuminaMaterialTextures {
     final engine = _engine;
     if (engine == null) return;
     final registry = _registry[engine];
-    if (registry == null) return;
-    for (final key in _keys) {
-      final shared = registry[key];
-      if (shared == null) continue;
+    for (final (key, shared) in _held) {
       if (--shared.refs > 0) continue;
-      registry.remove(key);
+      if (registry != null && identical(registry[key], shared)) registry.remove(key);
       final uploaded = shared.value;
       if (uploaded != null) {
         uploaded.texture.dispose();
@@ -172,8 +192,19 @@ class LuminaMaterialTextures {
     return i < 0 ? p : p.substring(i + 1);
   }
 
-  static Future<_Uploaded> _upload(FilamentEngine engine, String path, bool colourSampler, LuminaAssetProvider read) async {
-    final bytes = await read(path);
+  /// A content hash of [bytes] (FNV-1a over every byte, with the length):
+  /// two reads of an unchanged file share one upload.
+  static String _fingerprint(Uint8List bytes) {
+    var h = 0x811c9dc5;
+    for (var i = 0; i < bytes.length; i++) {
+      h ^= bytes[i];
+      // h * 16777619 (2^24 + 403) mod 2^32, exact on the web too.
+      h = ((h << 24) + h * 403) & 0xffffffff;
+    }
+    return '${bytes.length}:${h.toRadixString(16)}';
+  }
+
+  static Future<_Uploaded> _upload(FilamentEngine engine, String path, Uint8List bytes, bool colourSampler) async {
     Uint8List image = bytes;
     Map<String, Object?> settings = const {};
     if (path.toLowerCase().endsWith('.lmas')) {

@@ -31,6 +31,25 @@ abstract final class LuminaLevelActorMaterial {
     return LuminaLevelAssetManifest.bundlePath(path);
   }
 
+  /// What the viewport draws for the material at [path] (from [pathOf]):
+  /// changes when the material file or one of the [textures] its samplers
+  /// name (`LuminaInstanceMaterialOverride.texturePaths`) is saved again,
+  /// recompiled or reimported. `contents/…` paths are read under
+  /// [projectDir].
+  static String revision(String path, {String? projectDir, Iterable<String> textures = const []}) {
+    String stamp(String p) {
+      final absolute = p.startsWith('/') || RegExp(r'^[A-Za-z]:[\\/]').hasMatch(p);
+      try {
+        final stat = File(absolute || projectDir == null ? p : '$projectDir/$p').statSync();
+        return '${stat.modified.microsecondsSinceEpoch}:${stat.size}';
+      } catch (_) {
+        return '-';
+      }
+    }
+
+    return [path, stamp(path), for (final t in textures) '$t@${stamp(t)}'].join('|');
+  }
+
   /// Why the material at [path] (from [pathOf]) cannot be drawn — not found,
   /// or no compiled material in it — or null when it can. A `contents/…` path
   /// is read under [projectDir]; without one only absolute paths are checked.

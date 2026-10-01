@@ -17,7 +17,9 @@ import 'material_textures.dart';
 class LuminaInstanceMaterialOverride {
   LuminaInstanceMaterialOverride._(this.engine, this.assetPath, this._material, List<AssetReference> references,
       LuminaAssetProvider? assetProvider)
-      : _instance = _material.createInstance(_instanceName(assetPath)) {
+      : _instance = _material.createInstance(_instanceName(assetPath)),
+        texturePaths = List.unmodifiable(
+            LuminaMaterialTextures.texturePaths(_material, references, assetProvider: assetProvider).values.toSet()) {
     texturesLoaded = LuminaMaterialTextures.load(
       engine,
       _material,
@@ -53,6 +55,10 @@ class LuminaInstanceMaterialOverride {
 
   /// The material asset drawn.
   final String assetPath;
+
+  /// The textures its samplers name (`contents/…` or absolute paths, as they
+  /// are read): saving one of them changes what it draws.
+  final List<String> texturePaths;
 
   final FilamentMaterial _material;
   final FilamentMaterialInstance _instance;

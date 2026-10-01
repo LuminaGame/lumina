@@ -458,4 +458,60 @@ fragment {
     await Future<void>.delayed(Duration.zero);
     expect(texture!.isDisposed, isTrue);
   });
+
+  test('a texture saved anew is drawn anew: a new upload, and the old one goes with its last holder', () async {
+    if (!haveAssets) return markTestSkipped('test-assets missing');
+    final path = materialWith('baseColorMap');
+    Future<Uint8List> fromProject(String p) => File('${project.path}/$p').readAsBytes();
+    final before = LuminaInstanceMaterialOverride.fromBytes(engine, path, File('${project.path}/$path').readAsBytesSync(),
+        assetProvider: fromProject);
+    addTearDown(before.dispose);
+    await before.texturesLoaded;
+    final old = before.textures.bound['baseColorMap']!;
+    expect(old.texture.format, TextureFormat.srgb8A8);
+    // The level viewport draws the material anew when its revision changes:
+    // the material file's and every texture its samplers name.
+    expect(before.texturePaths, [old.path]);
+    final revision = LuminaLevelActorMaterial.revision(path, projectDir: project.path, textures: before.texturePaths);
+
+    // The Texture editor's Save with sRGB turned off.
+    final textureFile = File('${project.path}/${old.path}');
+    final original = textureFile.readAsBytesSync();
+    try {
+      final asset = LuminaAsset.fromBytes(original);
+      final settings = <String, Object?>{
+        ...?(jsonDecode(asset.metadata['texture_settings'] ?? '{}') as Map?)?.cast<String, Object?>(),
+        'srgb': false,
+      };
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      textureFile.writeAsBytesSync(LuminaAsset(
+        assetId: asset.assetId,
+        name: asset.name,
+        type: asset.type,
+        rawPayload: asset.rawPayload,
+        metadata: {...asset.metadata, 'texture_settings': jsonEncode(settings)},
+        references: asset.references,
+      ).toProtoBufferBytes());
+      expect(LuminaLevelActorMaterial.revision(path, projectDir: project.path, textures: before.texturePaths), isNot(revision),
+          reason: 'a saved texture changes what the viewport draws');
+
+      // While the old material still draws it, the next one gets the saved texture.
+      final after = LuminaInstanceMaterialOverride.fromBytes(engine, path, File('${project.path}/$path').readAsBytesSync(),
+          assetProvider: fromProject);
+      addTearDown(after.dispose);
+      await after.texturesLoaded;
+      final fresh = after.textures.bound['baseColorMap']!;
+      expect(identical(fresh.texture, old.texture), isFalse, reason: 'not the stale upload');
+      expect(fresh.texture.format, TextureFormat.rgba8, reason: 'the saved setting: linear');
+      before.dispose();
+      await Future<void>.delayed(Duration.zero);
+      expect(old.texture.isDisposed, isTrue, reason: 'the old upload goes with its last holder');
+      expect(fresh.texture.isDisposed, isFalse);
+      after.dispose();
+      await Future<void>.delayed(Duration.zero);
+      expect(fresh.texture.isDisposed, isTrue);
+    } finally {
+      textureFile.writeAsBytesSync(original);
+    }
+  });
 }

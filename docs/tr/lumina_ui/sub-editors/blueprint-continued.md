@@ -442,7 +442,7 @@ The Blueprint editor's 3D Viewport: the Blueprint's actor built the way Play bui
 
 - The components come from lumina's `LuminaBlueprintComponents.construct` on a `LuminaCharacter` / `LuminaPawn` / `LuminaActor` (the Blueprint VM's own parents), with the project class registry's asset resolver (a mesh `.lmas` loads through its `.entity.glb`) and Anim Class factory, so transforms convert from authoring space (cm, Z up) through `LuminaAxes` exactly as in Play and the generated game. - A Skeletal Mesh with an Animation Blueprint runs it: editor worlds do not tick gameplay, so the scene ticks the Anim Blueprint instances, then the meshes, then the world's render prep. The pawn stands still, so the Third Person character plays its Idle state. - Collision shapes (capsule, box, sphere, cylinder, cone, convex hull), spring arms, cameras and arrows are drawn as line overlays ([overlays]); the selected component is highlighted (a mesh by its bounds). Nothing looks through the Blueprint's cameras: they stay inactive, and the viewport keeps its orbit camera.
 
-Every world the viewport hands over gets a fresh actor (switching tabs remounts the viewport); a document edit that changes a component rebuilds it. Without a world the actor is still built (unregistered) so the overlays and [framing] are known before the viewport opens.
+Every world the viewport hands over gets a fresh actor (switching tabs remounts the viewport); a document edit that changes a component rebuilds it, and so does a texture its materials draw being saved again (checked about once a second). Without a world the actor is still built (unregistered) so the overlays and [framing] are known before the viewport opens.
 
 **Üyeler:**
 

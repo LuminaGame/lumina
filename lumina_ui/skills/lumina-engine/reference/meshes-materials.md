@@ -47,7 +47,9 @@
 - The textures a material's samplers name (an imported material's `baseColorMap`, `normalMap`, … or a texture set
   with `set_material_texture`) are drawn wherever the material is assigned: viewport, Play, built game. A texture
   that cannot be read is logged as a warning (in the level viewport: the Output Log) and its sampler stays unbound
-  (it samples black).
+  (it samples black). Saving a texture (Texture editor Save / Reimport, `set_texture_settings` + `save_texture`,
+  `reimport_texture`) redraws every level actor whose material samples it, and the Blueprint editor's 3D Viewport,
+  without reassigning; Play loads it fresh.
 - Blueprint: Create Dynamic Material Instance → Set Texture Parameter Value (`parameter_name` = the sampler, `value`
   = a texture asset path `contents/textures/…/T_X.lmas`, or an image file) binds it with the texture's settings, as
   the material's own textures are bound; a texture that cannot be read is logged once and binds nothing.

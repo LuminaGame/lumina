@@ -234,7 +234,8 @@ mixin _ViewportSceneSync on _ViewportWidgetStateBase {
 
   /// Draws [actor]'s assigned material on every section of its instance, as
   /// Play and the built game do, or gives the mesh its own materials back;
-  /// only when the assignment (or the material file) changed. A material that
+  /// only when the assignment, the material file or a texture its samplers
+  /// name changed (saved, reimported, its settings changed). A material that
   /// cannot be drawn is reported to the Output Log once.
   void _syncActorMaterial(EditorActorNode actor, LuminaMeshHandle handle) {
     final path = LuminaLevelActorMaterial.pathOf({
@@ -246,12 +247,11 @@ mixin _ViewportSceneSync on _ViewportWidgetStateBase {
     final file = path == null
         ? null
         : File(path.startsWith('/') || RegExp(r'^[A-Za-z]:/').hasMatch(path) ? path : '$projectDir/$path');
-    // A recompiled material (a newer file) is drawn anew.
-    DateTime? modified;
-    try {
-      modified = file?.lastModifiedSync();
-    } catch (_) {}
-    final key = path == null ? null : '$path@${modified?.microsecondsSinceEpoch}';
+    // A recompiled material, or a texture it draws saved again, is drawn anew
+    // (the old textures go with the old material).
+    String? revision(List<String> textures) =>
+        path == null ? null : LuminaLevelActorMaterial.revision(path, projectDir: projectDir, textures: textures);
+    final key = revision(_actorMaterials[actor.id]?.texturePaths ?? const []);
     if (_actorMaterialPaths.containsKey(actor.id) && _actorMaterialPaths[actor.id] == key) return;
     _actorMaterialPaths[actor.id] = key;
     _actorMaterials.remove(actor.id)?.dispose();
@@ -275,6 +275,7 @@ mixin _ViewportSceneSync on _ViewportWidgetStateBase {
       );
       material.applyTo(handle.instance);
       _actorMaterials[actor.id] = material;
+      _actorMaterialPaths[actor.id] = revision(material.texturePaths);
       unawaited(material.texturesLoaded.then((_) {
         material.textures.missing.forEach((sampler, reason) => EngineLoggerService().log(
               'Actor "${actor.name}": material $path draws sampler $sampler without its texture: $reason',

@@ -578,6 +578,7 @@ The material a placed level mesh or basic shape draws on every section in place 
 | `actorTypes` | `static const Set<String> actorTypes` | `Mesh`, `StaticMesh`, `SkeletalMesh`, `Primitive`. |
 | `pathOf` | `static String? pathOf(Map<String, dynamic> actor)` | The assigned material as a bundle path (`contents/…`); null when none, for a placed Blueprint, or for a value that names no `.lmas` / `.filamat` (the placeholder names older editors wrote). |
 | `problem` | `static String? problem(String path, {String? projectDir})` | Why the material cannot be drawn (not found, no compiled material), or null. The generator then emits a comment instead of the argument, Play and the viewport log it, and the mesh keeps its own. |
+| `revision` | `static String revision(String path, {String? projectDir, Iterable<String> textures = const []})` | What the level viewport draws for the material: the material file's and each of [textures]' (its samplers' textures) modified time and size. The viewport rebuilds an actor's material when it changes: recompiled, or a texture saved, reimported or its settings changed. |
 
 ## `lib/data/services/lumina_config_dir.dart`
 

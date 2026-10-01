@@ -578,6 +578,7 @@ Seviyeye yerleştirilmiş bir mesh'in ya da temel şeklin kendi materyali yerine
 | `actorTypes` | `static const Set<String> actorTypes` | `Mesh`, `StaticMesh`, `SkeletalMesh`, `Primitive`. |
 | `pathOf` | `static String? pathOf(Map<String, dynamic> actor)` | Atanmış materyal, paket yolu olarak (`contents/…`); atama yoksa, yerleştirilmiş bir Blueprint için ya da `.lmas` / `.filamat` adı taşımayan bir değer için (eski editörlerin yazdığı yer tutucu adlar) null. |
 | `problem` | `static String? problem(String path, {String? projectDir})` | Materyalin neden çizilemediği (bulunamadı, derlenmiş materyal yok) ya da null. Üretici o zaman argüman yerine bir yorum yazar, Play ve görünüm bunu günlüğe yazar, mesh kendi materyalini korur. |
+| `revision` | `static String revision(String path, {String? projectDir, Iterable<String> textures = const []})` | Seviye görünümünün materyal için çizdiği: materyal dosyasının ve [textures]'ın (sampler'larının dokuları) her birinin değiştirilme zamanı ve boyutu. Değişince görünüm aktörün materyalini yeniden kurar: yeniden derlenince ya da bir doku kaydedilince, yeniden içe aktarılınca veya ayarı değişince. |
 
 ## `lib/data/services/lumina_config_dir.dart`
 
