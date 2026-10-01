@@ -133,6 +133,7 @@ Every install is transactional: the archive is downloaded into a staging directo
 | `validateManifest` | `static void validateManifest(InstallManifest m)` | Checks [m] before anything is downloaded: a known format, a safe folder name, and every target a safe relative path under the root its install kind allows. Throws `unsafe_manifest` otherwise. |
 | `install` | `Future<MarketplaceInstallRecord> install(InstallManifest m, {String? projectFolder, void Function(MarketplaceI...` | Downloads, verifies and installs [m]. [projectFolder] (a Content Browser folder, `contents/...`) replaces the default `contents/Marketplace/<Publisher>/` parent of an asset listing: the listing lands in `<projectFolder>/<Listing>/`. |
 | `uninstall` | `bool uninstall(MarketplaceInstallRecord record)` | Removes what [record] installed and its license entry. |
+| `removeInstall` | `FolderRemoval? removeInstall(MarketplaceInstallRecord record)` | `uninstall` with the details: a folder goes through `FolderInstall.remove` (set aside, then deleted; a link removed as a link), a theme file is deleted with its notice; the license entry is removed once the install is gone. Null for project content with no project open. The Plugin Manager's Remove uses it for Marketplace plugins. |
 
 ## `lib/ui/features/marketplace/services/marketplace_license_records.dart`
 

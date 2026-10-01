@@ -90,6 +90,7 @@ void main() {
     root = Directory.systemTemp.createTempSync('lumina_mcp08_');
     final configDir = Directory('${root.path}/config')..createSync();
     UserPluginDir.override = Directory('${root.path}/user_plugins')..createSync();
+    PluginDataDir.override = Directory('${root.path}/plugin_data')..createSync();
     projectDir = Directory('${root.path}/AgentGame')..createSync();
     const project = LuminaProject(projectName: 'AgentGame', activeLevel: mainLevel);
     manifestFile().writeAsStringSync(jsonEncode(project.toMap()));
@@ -107,6 +108,7 @@ void main() {
     await server.stop();
     await vm.close();
     UserPluginDir.override = null;
+    PluginDataDir.override = null;
     await deleteTempProject(root);
   });
 
@@ -385,6 +387,33 @@ void main() {
       expect(codeOn['message'], contains('The agent cannot restart it'));
       expect(vm.pluginRestartRequired, isTrue, reason: 'the Restart Editor banner shows; nothing exited');
 
+      // remove_plugin: a dry run lists what would go and deletes nothing;
+      // then the enabled code plugin is removed and disabled.
+      final dry = await ok('remove_plugin', {'name': 'agent_code_tools', 'dry_run': true});
+      expect(dry['dry_run'], isTrue);
+      expect(dry['origin'], 'project');
+      expect((dry['plugin_dir'] as String).replaceAll(r'\', '/'), endsWith('plugins/agent_code_tools'));
+      expect(dry['file_count'] as int, greaterThan(0));
+      expect(dry['bytes'] as int, greaterThan(0));
+      expect(dry['enabled'], isTrue);
+      expect(dry['every_project'], isFalse);
+      expect(dry['restart_required'], isTrue);
+      expect(dry['data'], isEmpty);
+      final codeDir = Directory(dry['plugin_dir'] as String);
+      expect(codeDir.existsSync(), isTrue, reason: 'a dry run deletes nothing');
+      final removed = await ok('remove_plugin', {'name': 'agent_code_tools'});
+      expect(removed['removed'], isTrue, reason: '$removed');
+      expect(removed['disabled'], ['agent_code_tools']);
+      expect(removed['message'], contains('The agent cannot restart it'));
+      expect(codeDir.existsSync(), isFalse);
+      expect(jsonDecode(manifestFile().readAsStringSync())['enabled_plugins'], isNot(contains('agent_code_tools')));
+      expect(vm.pluginRestartRequired, isTrue, reason: 'the banner stays after the rescan');
+      final after = await ok('list_plugins', {'group': 'installed'});
+      expect((after['plugins'] as List).cast<Map>().map((p) => p['name']), isNot(contains('agent_code_tools')));
+      await expectInvalid('remove_plugin', {'name': 'agent_code_tools'}, contains('No plugin'));
+      final builtIn = vm.pluginRegistry.entries.where((e) => e.descriptor.origin == PluginOrigin.engine).firstOrNull;
+      if (builtIn != null) await expectInvalid('remove_plugin', {'name': builtIn.descriptor.name}, contains('built-in'));
+
       await expectInvalid('set_plugin_enabled', {'name': 'no_such_plugin', 'enabled': true}, contains('lumina_plugin_agent_tools'));
     }, timeout: const Timeout(Duration(minutes: 8)));
   });
@@ -543,6 +572,7 @@ void main() {
         'clear_derived_data_cache': ('destructive', {'content'}),
         'source_control_revert': ('destructive', {'scm'}),
         'create_plugin': ('external', {'plugin'}),
+        'remove_plugin': ('destructive', {'plugin'}),
         'marketplace_add_to_library': ('external', {'content', 'plugin'}),
         'marketplace_install': ('external', {'content', 'plugin'}),
       };

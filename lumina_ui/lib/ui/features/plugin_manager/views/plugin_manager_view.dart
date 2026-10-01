@@ -5,6 +5,7 @@ import 'package:lumina/data/models/lumina_plugin_descriptor.dart';
 import 'package:lumina/data/repositories/plugin_repository.dart';
 import 'package:lumina_ui/ui/features/plugin_manager/views/new_plugin_wizard.dart';
 import 'package:lumina_ui/ui/features/plugin_manager/views/plugin_import_dialogs.dart';
+import 'package:lumina_ui/ui/features/plugin_manager/views/plugin_remove_dialog.dart';
 import 'package:lumina_ui/ui/features/plugin_manager/services/plugin_importer.dart';
 import 'dart:io';
 import 'package:flutter/services.dart';
@@ -488,6 +489,30 @@ class _PluginDetailsPane extends StatelessWidget {
             ],
           ),
         ),
+        if (desc.origin != PluginOrigin.engine) ...[
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              DestructiveButton(
+                key: const ValueKey('plugin_remove'),
+                size: ButtonSize.small,
+                leading: const Icon(LucideIcons.trash2, size: 14),
+                enabled: !vm.removing,
+                onPressed: () => confirmPluginRemoval(context, vm, entry),
+                child: const Text('Remove'),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  desc.origin == PluginOrigin.user
+                      ? 'Removes it for every project on this machine; lists what is deleted first.'
+                      : 'Removes it from this project; lists what is deleted first.',
+                  style: TextStyle(fontSize: 11, color: theme.colorScheme.mutedForeground),
+                ),
+              ),
+            ],
+          ),
+        ],
         const SizedBox(height: 16),
         if (desc.origin == PluginOrigin.engine) ...[
           Text(

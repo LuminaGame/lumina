@@ -113,10 +113,10 @@ void main() {
   };
 
   group('risk, groups and annotations', () {
-    test('the risk table: 71 read-only, 39 editor state, 234 edits, 24 destructive, 7 external; every tool has known groups and _meta',
+    test('the risk table: 71 read-only, 39 editor state, 234 edits, 25 destructive, 7 external; every tool has known groups and _meta',
         () async {
       final tools = await client.listTools();
-      expect(tools, hasLength(375));
+      expect(tools, hasLength(376));
       Set<String> withRisk(String r) => {
             for (final t in tools)
               if ((t['_meta'] as Map)['lumina/risk'] == r) t['name'] as String,
@@ -135,6 +135,7 @@ void main() {
         'delete_blueprint_dispatcher', 'remove_blueprint_interface', 'remove_timeline_track', 'fs_delete',
         'remove_actors_component',
         'delete_content_folder', 'clear_derived_data_cache', 'source_control_revert', // Content and source control
+        'remove_plugin', // Plugins
         // Asset editors
         'create_landscape', 'remove_foliage_layer', 'remove_static_mesh_lod', 'remove_physics_body',
         'remove_physics_constraint', 'remove_enum_value', 'remove_interface_function', 'save_enum',
@@ -179,6 +180,7 @@ void main() {
         'remove_material_node', 'remove_material_wire', // Material graph
         'remove_particle_burst', 'remove_particle_color_stop', 'remove_particle_size_point', // Particles
         'remove_physics_body', 'remove_physics_constraint', // Physics asset
+        'remove_plugin', // Plugins
         'remove_skeletal_socket', // Skeleton
         'remove_static_mesh_lod', // Static mesh
         'remove_timeline_track', 'remove_widget', 'reset_blueprint_components',
@@ -281,7 +283,7 @@ void main() {
       // A tool may sit in more than one group (list_component_types: component + blueprint).
       final distinct = {for (final g in groups['groups'] as List) ...((g as Map)['tools'] as List)};
       expect(distinct, hasLength(groups['tool_count'] as int));
-      expect(groups['tool_count'], 375);
+      expect(groups['tool_count'], 376);
       expect(groups['active_groups'], ['level']);
       expect(groups['max_risk'], 'external');
     });

@@ -829,7 +829,7 @@ What `set_plugin_enabled` says when a code plugin changed: the editor needs a re
 
 `void registerPluginTools(McpToolRegistry registry, EditorViewModel vm, McpJobRegistry jobs)`
 
-Edit → Plugins as MCP tools (group `plugin`): list the plugins with their state, enable / disable one (reporting when a restart is needed, never restarting), and File → New Plugin as a job.
+Edit → Plugins as MCP tools (group `plugin`): list the plugins with their state, enable / disable one (reporting when a restart is needed, never restarting), remove a user or project plugin (with a dry run that lists what is deleted), and File → New Plugin as a job.
 
 **Tools:**
 
@@ -837,6 +837,7 @@ Edit → Plugins as MCP tools (group `plugin`): list the plugins with their stat
 | :--- | :--- | :--- | :--- |
 | `list_plugins` | readOnly | List plugins | The Plugin Manager's list: {name, friendly_name, version, category, origin (engine\|project\|user), enabled, content_only, restart_pending, dependencies, issues}, plus restart_required (a code plugin changed since the edit... |
 | `set_plugin_enabled` | mutating | Set plugin enabled | The Plugin Manager's Enabled checkbox: enables (with the dependencies it needs) or disables a plugin; the choice is saved in the .lmproject. |
+| `remove_plugin` | destructive | Remove plugin | The Plugin Manager's Remove: deletes a user or project plugin (never a built-in). dry_run: true returns the deletion list (plugin_dir, linked_from, file_count, bytes, every_project, enabled, also_disabled, restart_required, loaded_until_restart, marketplace, comes_back, data[]) and deletes nothing; delete_data: true also deletes the saved data. |
 | `create_plugin` | external | Create plugin | File → New Plugin (the wizard) as a job (kind create_plugin): generates the plugin under the project's plugins/ from a template — blank / editorPanel / importer are Dart packages (the generator runs dart pub get and dart... |
 
 ## `lib/ui/features/mcp_server/tools/project_settings_tools.dart`

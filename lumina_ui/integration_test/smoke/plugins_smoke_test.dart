@@ -753,6 +753,11 @@ void main() {
     final previousUserDir = UserPluginDir.override;
     final userDir = Directory('${temp.path}/user_plugins')..createSync();
     UserPluginDir.override = userDir;
+    final previousDataDir = PluginDataDir.override;
+    final pluginDataDir = Directory('${temp.path}/plugin_data')..createSync();
+    PluginDataDir.override = pluginDataDir;
+    final previousConfigDir = LuminaConfigDir.override;
+    LuminaConfigDir.override = Directory('${temp.path}/config')..createSync();
     try {
       // A copy of the real plugin package, without its build outputs.
       final source = Directory(pcgSource);
@@ -863,11 +868,50 @@ void main() {
       await rec.hold(const Duration(seconds: 2));
       await shot('the folder import replaced the installed plugin');
 
+      // Remove: the details pane's Remove lists what goes before anything is
+      // deleted (the folder, its size, the saved data, the built-in that
+      // comes back); confirming deletes the user copy and the built-in
+      // lumina_plugin_pcg is listed again.
+      final savedData = Directory('${pluginDataDir.path}/lumina_plugin_pcg')..createSync(recursive: true);
+      File('${savedData.path}/settings.json').writeAsStringSync('{"density": 0.5}');
+      expect(vm.pluginRegistry.entries.singleWhere((e) => e.descriptor.name == 'lumina_plugin_pcg').descriptor.origin, PluginOrigin.user);
+      await tester.tap(find.byKey(const ValueKey('plugin_remove')));
+      await waitFor(find.byKey(const ValueKey('plugin_remove_dialog')));
+      Finder inDialog(Finder f) => find.descendant(of: find.byKey(const ValueKey('plugin_remove_dialog')), matching: f);
+      expect(inDialog(find.textContaining('lumina_plugin_pcg')), findsWidgets);
+      expect(inDialog(find.textContaining('every project on this machine')), findsOneWidget);
+      expect(inDialog(find.byKey(const ValueKey('plugin_remove_size'))), findsOneWidget);
+      expect(inDialog(find.byKey(const ValueKey('plugin_remove_comes_back'))), findsOneWidget);
+      expect(inDialog(find.textContaining('plugin_data${Platform.pathSeparator}lumina_plugin_pcg')), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('plugin_remove_data')));
+      await settle(tester, frames: 10);
+      await rec.hold(const Duration(milliseconds: 1500));
+      await shot('Remove lists the folder, its size, the saved data and the built-in that comes back');
+      await tester.tap(find.byKey(const ValueKey('plugin_remove_confirm')));
+      for (var i = 0; i < 100 && find.byKey(const ValueKey('plugin_remove_dialog')).evaluate().isNotEmpty; i++) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
+        await settle(tester, frames: 3);
+      }
+      expect(find.byKey(const ValueKey('plugin_remove_dialog')), findsNothing);
+      await settle(tester, frames: 20);
+      expect(installed.existsSync(), isFalse);
+      expect(savedData.existsSync(), isFalse);
+      expect(userDir.listSync(), isEmpty, reason: 'no set-aside folder is left');
+      final back = vm.pluginRegistry.entries.singleWhere((e) => e.descriptor.name == 'lumina_plugin_pcg');
+      expect(back.descriptor.origin, PluginOrigin.engine, reason: 'the built-in takes its place again');
+      expect(find.text('ENGINE'), findsWidgets);
+      expect(find.byKey(const ValueKey('plugin_built_in_note')), findsOneWidget);
+      expect(find.byKey(const ValueKey('plugin_remove')), findsNothing);
+      await rec.hold(const Duration(seconds: 2));
+      await shot('the user plugin removed and the built-in listed again');
+
       expect(checkoutFiles(), checkoutBefore, reason: 'the plugins checkout is untouched');
       await rec.hold(const Duration(seconds: 2));
       rec.save(name, usedAssets: const [barrel]);
     } finally {
       UserPluginDir.override = previousUserDir;
+      PluginDataDir.override = previousDataDir;
+      LuminaConfigDir.override = previousConfigDir;
       try {
         temp.deleteSync(recursive: true);
       } catch (_) {}

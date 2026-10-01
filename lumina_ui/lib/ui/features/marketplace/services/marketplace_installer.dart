@@ -213,25 +213,36 @@ class MarketplaceInstaller {
   }
 
   /// Removes what [record] installed and its license entry.
-  bool uninstall(MarketplaceInstallRecord record) {
+  bool uninstall(MarketplaceInstallRecord record) => removeInstall(record)?.removed ?? false;
+
+  /// [uninstall] with the details: a folder goes through
+  /// [FolderInstall.remove] (set aside, then deleted; a link is removed as a
+  /// link), a theme file is deleted with its notice. The license entry is
+  /// removed once the install is gone; a removal that stopped keeps it.
+  /// Null when [record] is project content and no project is open.
+  FolderRemoval? removeInstall(MarketplaceInstallRecord record) {
     final project = record.installKind == InstallKind.projectContents;
-    if (project && dirs.projectRoot == null) return false;
+    if (project && dirs.projectRoot == null) return null;
     final target = project ? '${dirs.projectRoot}/${record.installedTo}' : record.installedTo;
-    try {
-      if (FileSystemEntity.isDirectorySync(target)) {
-        Directory(target).deleteSync(recursive: true);
-      } else if (File(target).existsSync()) {
-        File(target).deleteSync();
+    final FolderRemoval removal;
+    final type = FileSystemEntity.typeSync(target, followLinks: false);
+    if (type == FileSystemEntityType.directory || type == FileSystemEntityType.link) {
+      removal = FolderInstall.remove(Directory(target), tag: 'marketplace-removing');
+    } else {
+      try {
+        if (type == FileSystemEntityType.file) File(target).deleteSync();
+        if (record.installKind == InstallKind.theme) {
+          final notice = File(record.licenseFile);
+          if (notice.existsSync()) notice.deleteSync();
+        }
+        removal = FolderRemoval(path: target, removed: true);
+      } on FileSystemException catch (e) {
+        return FolderRemoval(path: target, removed: false, error: FolderInstall.describe(e));
       }
-      if (record.installKind == InstallKind.theme) {
-        final notice = File(record.licenseFile);
-        if (notice.existsSync()) notice.deleteSync();
-      }
-    } on FileSystemException {
-      return false;
     }
+    if (!removal.removed) return removal;
     MarketplaceLicenseRecords(File(project ? dirs.projectLicensesFile! : dirs.editorLicensesFile)).remove(record.listingId);
-    return true;
+    return removal;
   }
 
   // --- Download and verification -------------------------------------------------

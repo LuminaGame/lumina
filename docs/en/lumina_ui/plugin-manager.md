@@ -2,7 +2,7 @@
 
 # Plugin manager
 
-The Plugin Manager window, which lists, enables and disables plugins, and the New Plugin wizard, which generates a plugin package from a template. File paths are relative to the `lumina_ui/` package directory.
+The Plugin Manager window, which lists, enables, disables, imports and removes plugins, and the New Plugin wizard, which generates a plugin package from a template. File paths are relative to the `lumina_ui/` package directory.
 
 ## Built-in plugins
 
@@ -22,6 +22,19 @@ The code plugins compiled into a project editor register while the editor starts
 
 A plugin of the same name already in the user folder asks **Replace / Cancel** (Replace swaps the whole folder; the previous copy comes back if writing fails). A project plugin of the same name refuses the import, because it would hide the user copy. A built-in of the same name is replaced for every project by the user copy, with a warning. After an install the plugin roots are rescanned and the new plugin is selected; enabling it is still a separate step.
 
+## Removing a plugin
+
+A USER or PROJECT plugin has a **Remove** button in the details pane (a built-in has none; it belongs to the engine checkout). Remove first opens a confirmation (`plugin_remove_dialog`) that lists what will be deleted before anything is deleted:
+
+- the plugin folder, its file count and size; for a folder that is a **symbolic link or a Windows junction** (a developer linking a source checkout with `mklink /J`): "Linked from <target>; only the link is removed" — the link is deleted, never followed, and the folder it points to keeps every file;
+- a USER plugin is removed for every project on this machine; a PROJECT plugin from this project's `plugins/`;
+- a plugin the Marketplace installed (a plugin record in the editor's `marketplace/licenses.json` whose `installedTo` is the folder) is removed through the Marketplace's uninstall (`MarketplaceInstaller.removeInstall`), so its license record goes too;
+- enabled in the open project: it is disabled (`enabled_plugins` in the `.lmproject`) together with the enabled plugins that depend on it (named), the project's editor host is regenerated as the switch does, and removing a code plugin shows the restart banner; a plugin this editor session registered stays active until the editor restarts (`EditorViewModel.isPluginLoaded`);
+- a plugin of the same name in a lower-priority root (the built-in a user copy replaced, or a user plugin under a project one) takes its place again, disabled, and is selected;
+- **Also delete its saved data** (unchecked): the per-user `plugin_data/<name>/` (`PluginDataDir`) and the open project's `.lumina/plugins/<name>/`, each with its size; only the folders that exist are listed. Other projects' data is not touched.
+
+The removal is transactional (`FolderInstall.remove`): the folder is renamed to `.<name>.removing` beside it and only then deleted, so a locked file (on Windows, an open file or a loaded DLL) stops it before anything is deleted; the dialog then stays open and lists what was and was not removed, and nothing in the project changes. Saved data is deleted only after the plugin itself is gone. A scan root skips dot folders, so a set-aside folder is never listed as a plugin. Afterwards the plugin roots are rescanned (`EditorViewModel.rescanPlugins`, which keeps a pending restart banner) and the selection moves to the neighbour in the list. The MCP tool `remove_plugin` does the same; `dry_run: true` returns the deletion list.
+
 **On this page:**
 
 - [`lib/ui/features/plugin_manager/views/new_plugin_wizard.dart`](#libuifeaturesplugin_managerviewsnew_plugin_wizarddart)
@@ -30,6 +43,8 @@ A plugin of the same name already in the user folder asks **Replace / Cancel** (
 - [`lib/ui/features/plugin_manager/views/plugin_import_dialogs.dart`](#libuifeaturesplugin_managerviewsplugin_import_dialogsdart)
 - [`lib/ui/features/plugin_manager/services/plugin_importer.dart`](#libuifeaturesplugin_managerservicesplugin_importerdart)
 - [`lib/ui/core/services/folder_install.dart`](#libuicoreservicesfolder_installdart)
+- [`lib/ui/features/plugin_manager/views/plugin_remove_dialog.dart`](#libuifeaturesplugin_managerviewsplugin_remove_dialogdart)
+- [`lib/ui/features/plugin_manager/services/plugin_remover.dart`](#libuifeaturesplugin_managerservicesplugin_removerdart)
 
 ## `lib/ui/features/plugin_manager/views/new_plugin_wizard.dart`
 
@@ -205,6 +220,11 @@ A plugin of the same name already in the user folder asks **Replace / Cancel** (
 | `importPlugin` | `Future<PluginImportResult> importPlugin(PluginImportSource source, String path)` | Validates the folder or zip at `path` and copies it into the user plugin folder; an `alreadyInstalled` result waits for `confirmReplace` or `cancelImport`; an installed plugin is listed and selected. |
 | `confirmReplace` | `Future<PluginImportResult> confirmReplace(PluginImportResult pending)` | Replace: installs the pending plugin over the installed copy. |
 | `cancelImport` | `void cancelImport(PluginImportResult pending)` | Cancel: drops what the pending import staged. |
+| `isPluginLoaded` | `bool Function(String name)? isPluginLoaded` | Whether this editor session registered a plugin (the editor wires `EditorViewModel.isPluginLoaded`); the removal dialog says it stays active until restart. |
+| `removerFactory` | `PluginRemover Function()? removerFactory` | Builds the `PluginRemover` for one removal (tests point it at temp data and Marketplace folders). |
+| `removing` | `bool get removing` | A removal is running (Remove is disabled meanwhile). |
+| `planRemoval` | `PluginRemovalPlan planRemoval(PluginEntry entry)` | What removing a user or project plugin deletes and changes, before anything is deleted; `ArgumentError` for a built-in. |
+| `removePlugin` | `Future<PluginRemovalResult> removePlugin(PluginRemovalPlan plan, {bool deleteData = false})` | Removes it (with its saved data when asked); once the folder is gone an enabled plugin is disabled with its dependents (cascade), the roots are rescanned and the selection moves to the plugin of the same name that comes back, else the neighbour. A removal that stopped changes nothing in the project. |
 
 ## `lib/ui/features/plugin_manager/views/plugin_import_dialogs.dart`
 
@@ -239,6 +259,29 @@ Transactional folder installs, shared by the Marketplace installer and the plugi
 | `replace` | `T replace<T>(Directory dest, T Function() write, {String tag = 'previous'})` | Sets an existing `dest` aside (`.<name>.<tag>`), runs `write`, then drops the old copy, or restores it if `write` throws. |
 | `moveAside` / `dropAside` / `restore` | `Directory? moveAside(Directory dest, {String tag})` | The three steps of `replace`, for callers that do more inside the transaction. |
 | `copyTree` / `copyFiles` | `void copyTree(Directory from, Directory to)` | Copies a folder, or a map of relative path → file. |
+| `remove` | `FolderRemoval remove(Directory dir, {String tag = 'removing'})` | Removes a folder without leaving half of it: a symbolic link or junction is deleted as a link (never followed); a folder is renamed to `.<name>.<tag>` and then deleted, so a failed rename (a locked file) removes nothing. `FolderRemoval` has `removed`, `link`, `leftovers` (files the set-aside folder kept), `error` and `complete`. |
+| `describe` | `String describe(FileSystemException e)` | A file-system error in one line (OS message and path). |
+
+## `lib/ui/features/plugin_manager/views/plugin_remove_dialog.dart`
+
+| Function | Signature | Purpose & Description |
+| :--- | :--- | :--- |
+| `confirmPluginRemoval` | `void confirmPluginRemoval(BuildContext context, PluginManagerViewModel vm, PluginEntry entry)` | The details pane's Remove: the confirmation (`plugin_remove_dialog`) listing what will be deleted (see [Removing a plugin](#removing-a-plugin)), the data checkbox (`plugin_remove_data`), Cancel (`plugin_remove_cancel`) / Remove (`plugin_remove_confirm`); a removal that did not finish keeps it open with what was and was not removed (`plugin_remove_error`, Close `plugin_remove_close`). |
+| `formatPluginBytes` | `String formatPluginBytes(int bytes)` | B / KB / MB / GB. |
+
+## `lib/ui/features/plugin_manager/services/plugin_remover.dart`
+
+### `class PluginRemover`
+
+Removes a user or project plugin from disk; never a built-in.
+
+| Method / Getter | Signature | Purpose & Description |
+| :--- | :--- | :--- |
+| `PluginRemover` | `PluginRemover({Directory? pluginDataDir, MarketplaceInstallDirs? marketplaceDirs})` | The per-user plugin data folder (default `PluginDataDir.resolve()`) and the Marketplace's install folders (default `MarketplaceInstallDirs.resolve()`). |
+| `plan` | `PluginRemovalPlan plan(PluginEntry entry, {required List<PluginEntry> entries, required List<PluginScanRoot> roots, String? projectDir, bool loaded = false})` | What removing it deletes: folder, link target, files, bytes, enabled state and enabled dependents, Marketplace record, the plugin of the same name that comes back, existing data folders. `ArgumentError` for a built-in. |
+| `remove` | `PluginRemovalResult remove(PluginRemovalPlan plan, {bool deleteData = false})` | Deletes the folder (`FolderInstall.remove`, or `MarketplaceInstaller.removeInstall` for a Marketplace install), then the data folders when asked. Changes nothing in the project. |
+
+`PluginRemovalPlan` (with `toJson`, the `remove_plugin` dry run) carries `name`, `displayName`, `origin`, `pluginDir`, `linkTarget`, `fileCount`, `bytes`, `enabled`, `contentOnly`, `dependents`, `loaded`, `marketplaceRecord`, `revealedOrigin` / `revealedDir`, `data` (`PluginDataFolder`: `kind` user / project, `dir`, `fileCount`, `bytes`) and `projectDir`. `PluginRemovalResult` has `removed`, `removedPaths`, `notRemoved` (`<path>: <reason>`), `disabled` and `restartRequired`.
 
 ---
 

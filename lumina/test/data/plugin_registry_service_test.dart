@@ -151,4 +151,56 @@ void main() {
       expect(projectRepo.activeProject!.enabledPlugins, isEmpty);
     });
   });
+
+  group('PluginRegistryService on disk', () {
+    late Directory temp;
+    late Directory userDir;
+    late PluginRegistryService service;
+
+    void writePlugin(Directory parent, String folder, String name) {
+      final dir = Directory('${parent.path}/$folder')..createSync(recursive: true);
+      File('${dir.path}/$name.lmplugin').writeAsStringSync('{"name": "$name", "version": "1.0.0", "modules": '
+          '[{"name": "$name", "type": "editor", "entry_library": "lib/$name.dart", "registration_class": "P"}]}');
+    }
+
+    setUp(() async {
+      temp = Directory.systemTemp.createTempSync('lm_registry_');
+      userDir = Directory('${temp.path}/user')..createSync();
+      File('${temp.path}/project.lmproject').writeAsStringSync('{"project_name": "project", "enabled_plugins": []}');
+      service = PluginRegistryService(
+        repo: PluginRepository(roots: [PluginScanRoot(dir: userDir, origin: PluginOrigin.user)]),
+        projectRepo: ProjectRepository(),
+      );
+    });
+
+    tearDown(() {
+      try {
+        temp.deleteSync(recursive: true);
+      } on FileSystemException catch (_) {}
+    });
+
+    test('a scan root skips dot folders (set-aside installs and removals)', () async {
+      writePlugin(userDir, 'kept_plugin', 'kept_plugin');
+      writePlugin(userDir, '.gone_plugin.removing', 'gone_plugin');
+      await service.initialize(temp.path);
+      expect(service.entries.map((e) => e.descriptor.name), ['kept_plugin']);
+      expect(service.scanErrors, isEmpty);
+      expect(service.projectDirPath, temp.path);
+    });
+
+    test('a rescan keeps the restart a code plugin change is waiting for', () async {
+      writePlugin(userDir, 'a_plugin', 'a_plugin');
+      writePlugin(userDir, 'b_plugin', 'b_plugin');
+      await service.initialize(temp.path);
+      final result = await service.setEnabled('a_plugin', true);
+      expect(result.restartRequired, isTrue);
+
+      Directory('${userDir.path}/b_plugin').deleteSync(recursive: true);
+      await service.refresh();
+
+      expect(service.entries.map((e) => e.descriptor.name), ['a_plugin']);
+      expect(service.entries.single.restartPending, isTrue);
+      expect(service.entries.single.enabled, isTrue);
+    });
+  });
 }

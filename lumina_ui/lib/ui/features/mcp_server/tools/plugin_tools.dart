@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:lumina/data/models/lumina_plugin_descriptor.dart' show PluginOrigin;
 import 'package:lumina/data/services/plugin_registry_service.dart';
 import 'package:lumina/data/services/plugin_template_generator_service.dart';
 
@@ -121,6 +122,68 @@ void registerPluginTools(McpToolRegistry registry, EditorViewModel vm, McpJobReg
               : '${entry.descriptor.friendlyName ?? name} is ${entry.enabled ? 'enabled' : 'disabled'}; no restart needed.',
           'content_root': entry.enabled && entry.descriptor.isContentOnly ? '${entry.descriptor.pluginDir.path}/content' : null,
         });
+      },
+    ),
+    McpTool(
+      name: 'remove_plugin',
+      risk: McpToolRisk.destructive,
+      groups: plugin,
+      title: 'Remove plugin',
+      description: 'The Plugin Manager\'s Remove: deletes a user or project plugin (never a built-in). Call it with '
+          'dry_run: true first and show the user the list: {plugin_dir, linked_from (a symlink / junction: only the '
+          'link is removed), file_count, bytes, every_project (a user plugin is removed for every project on this '
+          'machine), enabled, also_disabled (enabled plugins that depend on it), restart_required, '
+          'loaded_until_restart, marketplace (its license record is removed too), comes_back (a plugin of the same '
+          'name that takes its place), data[{kind, path, file_count, bytes}]}. Without dry_run it removes the folder '
+          '(set aside, then deleted; nothing is removed when a file in it is locked), disables it and its dependents '
+          'in the .lmproject when it was enabled (the Restart Editor banner shows; the agent never restarts), and '
+          'deletes the data folders only with delete_data: true. Result {removed, removed_paths, not_removed, '
+          'disabled, restart_required}.',
+      inputSchema: McpSchema.object({
+        'name': McpSchema.string('The plugin\'s name (list_plugins), e.g. "my_tools".'),
+        'dry_run': McpSchema.boolean('true: return what would be deleted and delete nothing. Default false.'),
+        'delete_data': McpSchema.boolean('Also delete its saved data (the data folders the dry run lists). Default false.'),
+      }, required: ['name']),
+      handler: (args) async {
+        await vm.pluginsScanned;
+        final name = args.string('name');
+        final entry = vm.pluginRegistry.entries.where((e) => e.descriptor.name == name).firstOrNull;
+        if (entry == null) {
+          final names = [for (final e in vm.pluginRegistry.entries) e.descriptor.name]..sort();
+          throw JsonRpcException(JsonRpcErrorCode.invalidParams, 'No plugin "$name". Plugins: ${names.join(', ')}.');
+        }
+        if (entry.descriptor.origin == PluginOrigin.engine) {
+          throw JsonRpcException(JsonRpcErrorCode.invalidParams,
+              '$name is a built-in plugin; it ships with the engine and cannot be removed. Disable it with set_plugin_enabled.');
+        }
+        final m = PluginManagerViewModel(
+          registryService: vm.pluginRegistry,
+          onSetEnabled: (n, enabled, {cascade = false}) => vm.enablePlugin(n, enabled, cascade: cascade),
+          onPluginsChanged: vm.rescanPlugins,
+          isPluginLoaded: vm.isPluginLoaded,
+        );
+        try {
+          final plan = m.planRemoval(entry);
+          if (args.boolean('dry_run')) {
+            return McpToolResult.json({'dry_run': true, ...plan.toJson()});
+          }
+          final result = await m.removePlugin(plan, deleteData: args.boolean('delete_data'));
+          openPluginManager();
+          if (!result.removed) {
+            return McpToolResult.error('Nothing was removed: ${result.notRemoved.join('; ')}');
+          }
+          return McpToolResult.json({
+            'name': name,
+            ...result.toJson(),
+            'message': result.restartRequired
+                ? '$name was removed and disabled. $kMcpPluginRestartMessage'
+                : plan.loaded
+                    ? '$name was removed; its code stays loaded until the editor restarts.'
+                    : '$name was removed.',
+          });
+        } finally {
+          m.dispose();
+        }
       },
     ),
     McpTool(

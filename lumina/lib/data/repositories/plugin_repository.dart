@@ -64,7 +64,12 @@ class PluginScanRoot {
     final listed = packageDirs;
     if (listed != null) return [for (final d in listed) if (d.existsSync()) d];
     if (!dir.existsSync()) return const [];
-    return dir.listSync().whereType<Directory>().toList();
+    // A dot folder is never a plugin (a plugin name starts with a letter):
+    // installs and removals set a folder aside as `.<name>.<tag>`.
+    return [
+      for (final d in dir.listSync().whereType<Directory>())
+        if (!d.uri.pathSegments.lastWhere((s) => s.isNotEmpty, orElse: () => '').startsWith('.')) d,
+    ];
   }
 }
 

@@ -227,7 +227,7 @@ marketplace_install {id, folder:"contents/Marketplace"} → {job_id}; wait_job {
 marketplace_list_installed {}
 ```
 
-A plugin listing installs disabled: `set_plugin_enabled {name, enabled:true}`; a code plugin answers `restart_required: true` — tell the user to click Restart Editor, never try to restart. Uninstalling is the user's (Window → Marketplace → Installed).
+A plugin listing installs disabled: `set_plugin_enabled {name, enabled:true}`; a code plugin answers `restart_required: true` — tell the user to click Restart Editor, never try to restart. Uninstalling is the user's (Window → Marketplace → Installed, or the Plugin Manager's Remove); an agent asked to remove a plugin calls `remove_plugin {name, dry_run: true}`, shows the user what would be deleted, and removes it only once they agree.
 
 ## 5g. Commit my changes
 

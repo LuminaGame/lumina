@@ -90,9 +90,19 @@ class PluginRegistryService {
   List<PluginEntry> get entries => _entries.values.toList();
   List<PluginScanError> get scanErrors => _scanErrors;
 
+  /// The open project's folder (null before [initialize]).
+  String? get projectDirPath => _currentProjectDirPath;
+
+  /// Scans the plugin roots again. A plugin still listed keeps its
+  /// [PluginEntry.restartPending]: a rescan (after an install or a removal)
+  /// does not make a pending editor restart unnecessary.
   Future<void> refresh() async {
     if (_currentProjectDirPath != null) {
+      final pending = {for (final e in _entries.values) if (e.restartPending) e.descriptor.name};
       await initialize(_currentProjectDirPath!);
+      for (final name in pending) {
+        _entries[name]?.restartPending = true;
+      }
     }
   }
 

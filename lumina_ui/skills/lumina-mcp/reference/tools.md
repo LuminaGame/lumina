@@ -329,6 +329,7 @@ Folders are project-relative (`contents` or `contents/…`); an absolute path or
 | `import_asset_folder` | `path` (absolute folder), `target_folder?` (`contents`), `mirror_folder_structure?` (true: `path`'s subfolders are recreated under the target), `conflict_policy?` (`skip`/`overwrite`/`rename`), `auto_organize?`, `generate_lods?`, `dry_run?` | `dry_run` → the plan `imports[{source, target, conflict}], skipped_existing, unsupported[{path, reason}], counts`, nothing written; otherwise `{job_id}` (kind `import_folder`, progress = the import panel) → result `{imported, failed[{file, error}], cancelled, skipped}`; `cancel_job` stops after the files in progress; a target outside `contents/` → -32602 |
 | `list_plugins` | `group?` (`installed`/`built_in`), `category?`, `query?` | `plugins[{name, friendly_name, version, category, origin, enabled, content_only, restart_pending, dependencies, issues}]`, `restart_required`, `scan_errors` |
 | `set_plugin_enabled` | `name`, `enabled`, `cascade?` | `{enabled, restart_required, issues, message}`; a code plugin → `restart_required: true` and "Restart the editor to load it (the Restart Editor banner). The agent cannot restart it." — tell the user; unknown name → -32602 listing names |
+| `remove_plugin` | `name`, `dry_run?`, `delete_data?` | a user or project plugin (a built-in or unknown name → -32602). `dry_run: true` → the deletion list `{plugin_dir, linked_from, file_count, bytes, every_project, enabled, also_disabled, restart_required, loaded_until_restart, marketplace, comes_back, data[{kind, path, file_count, bytes}]}`, nothing deleted — show it to the user before removing; otherwise `{removed, removed_paths, not_removed, disabled, restart_required, message}` (a linked install loses only the link; data only with `delete_data: true`; a locked folder → error, nothing removed) |
 | `create_plugin` | `name`, `template` (`blank`/`contentOnly`/`editorPanel`/`importer`), `friendly_name?`, `author?`, `description?`, `category?` | an invalid name → -32602 (the wizard's text); `{job_id}` (kind `create_plugin`, log = the generator's lines) → `{plugin_dir, success, failure_output}`; never enabled |
 | `marketplace_status` | — | `server_url, signed_in, user{username, display_name}` — never a token |
 | `marketplace_search` | `query?`, `category?` | `total, results[{id, title, publisher, category, install_kind, latest_version, licenses, in_library, installed}]` |
@@ -354,6 +355,7 @@ Folders are project-relative (`contents` or `contents/…`); an absolute path or
 | `delete_content_folder` / `clear_derived_data_cache` | content | destructive | true | false |
 | `list_plugins` | plugin | readOnly | false | true |
 | `set_plugin_enabled` | plugin | mutating | false | true |
+| `remove_plugin` | plugin | destructive | true | false |
 | `create_plugin` | plugin | external | true | false |
 | `marketplace_status` / `marketplace_search` / `marketplace_get_listing` / `marketplace_list_installed` | content, plugin | readOnly | false | true |
 | `marketplace_add_to_library` / `marketplace_install` | content, plugin | external | true | false |
@@ -512,7 +514,7 @@ Every tool has a **risk** and one or more **groups**; `tools/list` carries them 
 - `readOnly` — reads, changes nothing (`readOnlyHint: true`).
 - `editorState` — changes what the user sees, never the project: selection, camera, tabs, Play, the session log. Not undoable, never on disk.
 - `mutating` — edits the project; **one undo step per call**, labelled `MCP: …`.
-- `destructive` — throws away authored content: `delete_asset` moves project files to the project trash (`.lumina/trash`, `list_trash`, `restore_asset`); removing a component, a Blueprint member, an interface or a timeline track, or resetting the components, stays undoable but sits above a `mutating` risk ceiling.
+- `destructive` — throws away authored content: `delete_asset` moves project files to the project trash (`.lumina/trash`, `list_trash`, `restore_asset`); removing a component, a Blueprint member, an interface or a timeline track, or resetting the components, stays undoable but sits above a `mutating` risk ceiling. `remove_plugin` deletes a plugin folder and is not undoable: call it with `dry_run: true` and show the user the list first.
 - `external` — reaches outside the project or spawns processes: `set_widget_library` (`flutter pub get`), `start_build` (`flutter build`), `launch_web_build` (a browser), `play_standalone` (a build and a game process), `create_plugin` (`dart pub get` / `dart analyze`), `marketplace_add_to_library` / `marketplace_install` (the user's server account, downloads).
 
 `destructiveHint: true` means the tool **removes content** (actors, nodes, wires, assets) even when undo brings it back; in-place edits the undo stack reverts are `destructiveHint: false`. `openWorldHint: true` for `import_asset` and `import_asset_folder` (they read any absolute path) and every external tool.

@@ -9,7 +9,7 @@
     levels/  meshes/static/  meshes/skeletal/  materials/  textures/  animations/  audio/
     blueprints/  widgets/  enums/  interfaces/  particles/  landscapes/  ui/
   lib/                    Dart generated from the assets (main.dart, levels/, actors/, widgets/) + your own code
-  .lumina/                editor data: trash/ (deleted assets), plugins/<plugin>/ (plugin data, chats)
+  .lumina/                editor data: trash/ (deleted assets), plugins/<plugin>/ (plugin data, chats; Plugin Manager Remove deletes it only on request)
   Saved/SaveGames/        save slots written while playing in the editor
 ```
 

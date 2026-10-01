@@ -216,6 +216,7 @@ class _SubEditorDispatcher extends StatelessWidget {
           onPluginsChanged: editorViewModel!.rescanPlugins,
           folderPicker: editorViewModel!.pluginFolderPicker,
           zipPicker: editorViewModel!.pluginZipPicker,
+          isPluginLoaded: editorViewModel!.isPluginLoaded,
         );
         return PluginManagerView(viewModel: vm);
       case 'Material':

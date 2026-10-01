@@ -89,6 +89,8 @@ ln -s /path/to/plugins/lumina_plugin_pcg ~/.local/share/lumina/plugins/lumina_pl
 
 Then Plugins → Plugin Manager... → toggle the switch → the restart banner appears (code plugins) → restart the editor (`flutter run` again). Check `lumina_ui/pubspec.yaml`'s `# BEGIN LUMINA PLUGINS` block and `lib/generated/plugin_registrar.dart` name your class. Content-only plugins mount `content/` live, no restart. Disable removes the block; a plugin others depend on asks for cascade.
 
+**Uninstall**: select the plugin in the Plugin Manager → **Remove** (user and project plugins; built-ins cannot be removed). The dialog lists what is deleted first. A linked development install (the symlink above, or a Windows junction from `mklink /J`) is removed as a link only: your checkout keeps every file. An enabled plugin is disabled in the project (with the plugins that depend on it) and the editor host rebuilt on restart; its saved data (`plugin_data/<name>/`, `<project>/.lumina/plugins/<name>/`) is deleted only when you tick the box. Agents use `remove_plugin` (`dry_run: true` first).
+
 ## 5. Test it
 
 - **Package unit tests** (`flutter test` in the plugin): pure logic + a registration test against a bare `implements LuminaEditorContext` double (the wizard ships one) and, for level features, a `LuminaEditorHostContext` double whose `EditorLevelAccess` keeps actors in memory and writes a real `.lmas` on `saveLevel` (`lumina_plugin_pcg/test/test_support.dart` `FileLevel`). Use real assets from the `test-assets` checkout ([LuminaGame/test-assets](https://github.com/LuminaGame/test-assets)) (copy into a temp project's `contents/`).

@@ -8,6 +8,7 @@ import 'package:lumina/data/models/lumina_plugin_descriptor.dart';
 import 'package:lumina/data/repositories/plugin_repository.dart';
 
 import '../services/plugin_importer.dart';
+import '../services/plugin_remover.dart';
 
 class PluginManagerViewModel extends ChangeNotifier {
   final PluginRegistryService registryService;
@@ -25,6 +26,14 @@ class PluginManagerViewModel extends ChangeNotifier {
   /// directory with every scanned plugin as a possible name conflict.
   final PluginImporter Function(List<LuminaPluginDescriptor> existing)? importerFactory;
 
+  /// Whether this editor session registered plugin `name` (it stays active
+  /// until a restart even once removed); null: none is.
+  final bool Function(String name)? isPluginLoaded;
+
+  /// Builds the remover for one removal; defaults to the per-user plugin
+  /// data folder and the Marketplace's install records.
+  final PluginRemover Function()? removerFactory;
+
   String _searchQuery = '';
   String _selectedCategory = 'ALL PLUGINS';
   String _selectedGroup = 'ALL'; // ALL, INSTALLED, BUILT-IN
@@ -37,6 +46,8 @@ class PluginManagerViewModel extends ChangeNotifier {
     this.folderPicker,
     this.zipPicker,
     this.importerFactory,
+    this.isPluginLoaded,
+    this.removerFactory,
   });
 
   bool _importing = false;
@@ -119,6 +130,63 @@ class PluginManagerViewModel extends ChangeNotifier {
     _selectedGroup = 'ALL';
     _selectedCategory = 'ALL PLUGINS';
     _selectedEntry = registryService.entries.where((e) => e.descriptor.name == name).firstOrNull;
+  }
+
+  bool _removing = false;
+
+  /// A removal is running.
+  bool get removing => _removing;
+
+  PluginRemover _remover() => removerFactory?.call() ?? PluginRemover();
+
+  /// What removing the user or project plugin [entry] deletes and changes,
+  /// before anything is deleted. Throws [ArgumentError] for a built-in.
+  PluginRemovalPlan planRemoval(PluginEntry entry) => _remover().plan(
+        entry,
+        entries: registryService.entries,
+        roots: registryService.repo.roots,
+        projectDir: registryService.projectDirPath,
+        loaded: isPluginLoaded?.call(entry.descriptor.name) ?? false,
+      );
+
+  /// Removes the plugin [plan] describes (with its saved data when
+  /// [deleteData]). Once its folder is gone, a plugin that was enabled is
+  /// disabled in the open project with the plugins that depend on it (the
+  /// project's `enabled_plugins` and editor host follow, as the switch
+  /// does), the plugin roots are rescanned, and the selection moves to the
+  /// plugin of the same name that comes back, else to the neighbour in the
+  /// list. A removal that stopped changes nothing in the project.
+  Future<PluginRemovalResult> removePlugin(PluginRemovalPlan plan, {bool deleteData = false}) async {
+    _removing = true;
+    notifyListeners();
+    try {
+      final before = entries;
+      final index = before.indexWhere((e) => e.descriptor.name == plan.name);
+      var result = _remover().remove(plan, deleteData: deleteData);
+      if (!result.removed) return result;
+      if (plan.enabled) {
+        final enable = await setEnabled(plan.name, false, cascade: true);
+        result = result.withProject(disabled: [plan.name, ...plan.dependents], restartRequired: enable.restartRequired);
+      }
+      if (onPluginsChanged != null) {
+        await onPluginsChanged!();
+      } else {
+        await registryService.refresh();
+      }
+      final back = registryService.entries.where((e) => e.descriptor.name == plan.name).firstOrNull;
+      if (back != null) {
+        _selectedGroup = 'ALL';
+        _selectedCategory = 'ALL PLUGINS';
+        _selectedEntry = back;
+      } else {
+        final now = entries;
+        _selectedEntry = now.isEmpty ? null : now[(index < 0 ? 0 : index).clamp(0, now.length - 1)];
+      }
+      return result;
+    } finally {
+      _removing = false;
+      notifyListeners();
+    }
   }
 
   String get searchQuery => _searchQuery;

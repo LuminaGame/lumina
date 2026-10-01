@@ -2,7 +2,7 @@
 
 # Eklenti yöneticisi
 
-Eklentileri listeleyen, etkinleştiren ve devre dışı bırakan Plugin Manager penceresi ve şablondan eklenti paketi üreten New Plugin sihirbazı. Dosya yolları `lumina_ui/` paket dizinine görelidir.
+Eklentileri listeleyen, etkinleştiren, devre dışı bırakan, içe aktaran ve kaldıran Plugin Manager penceresi ve şablondan eklenti paketi üreten New Plugin sihirbazı. Dosya yolları `lumina_ui/` paket dizinine görelidir.
 
 ## Yerleşik eklentiler
 
@@ -22,6 +22,19 @@ Liste başlığında **New Plugin**'in yanındaki **Import from Folder** ve **Im
 
 Kullanıcı klasöründe aynı adlı bir eklenti zaten varsa **Replace / Cancel** sorulur (Replace klasörün tamamını değiştirir; yazma başarısız olursa önceki kopya geri gelir). Aynı adlı bir proje eklentisi içe aktarmayı reddeder, çünkü kullanıcı kopyasını gizler. Aynı adlı bir yerleşik (built-in) eklentinin yerini, her proje için, bir uyarıyla kullanıcı kopyası alır. Kurulumdan sonra eklenti kökleri yeniden taranır ve yeni eklenti seçilir; etkinleştirmek ayrı bir adımdır.
 
+## Eklenti kaldırma
+
+USER ya da PROJECT bir eklentinin ayrıntılar panelinde **Remove** düğmesi vardır (yerleşik eklentide yoktur; engine checkout'una aittir). Remove önce, hiçbir şey silinmeden, silinecek her şeyi listeleyen bir onay penceresi (`plugin_remove_dialog`) açar:
+
+- eklenti klasörü, dosya sayısı ve boyutu; **sembolik bağlantı ya da Windows junction** olan bir klasör için (kaynak checkout'unu `mklink /J` ile bağlayan geliştirici): "Linked from <target>; only the link is removed" — yalnızca bağlantı silinir, asla izlenmez, gösterdiği klasör bütün dosyalarını korur;
+- bir USER eklentisi bu makinedeki her projeden kaldırılır; bir PROJECT eklentisi bu projenin `plugins/` klasöründen;
+- Marketplace'in kurduğu bir eklenti (editörün `marketplace/licenses.json` dosyasında `installedTo` değeri bu klasör olan bir plugin kaydı) Marketplace'in kaldırma yolundan (`MarketplaceInstaller.removeInstall`) geçer, lisans kaydı da silinir;
+- açık projede etkinse: devre dışı bırakılır (`.lmproject` içindeki `enabled_plugins`), ona bağımlı etkin eklentiler de (adlarıyla) devre dışı kalır, projenin editor host'u anahtardaki gibi yeniden üretilir ve bir code plugin'in kaldırılması yeniden başlatma bandını gösterir; bu editör oturumunun kaydettiği bir eklenti editör yeniden başlayana kadar etkin kalır (`EditorViewModel.isPluginLoaded`);
+- daha düşük öncelikli bir kökte aynı adlı bir eklenti (kullanıcı kopyasının yerini aldığı yerleşik eklenti ya da bir proje eklentisinin altındaki kullanıcı eklentisi) devre dışı olarak yeniden yerine geçer ve seçilir;
+- **Also delete its saved data** (işaretsiz): kullanıcıya özel `plugin_data/<name>/` (`PluginDataDir`) ve açık projenin `.lumina/plugins/<name>/` klasörü, boyutlarıyla; yalnızca var olan klasörler listelenir. Diğer projelerin verisine dokunulmaz.
+
+Kaldırma işlemseldir (`FolderInstall.remove`): klasör önce yanında `.<name>.removing` adına taşınır, ancak sonra silinir; böylece kilitli bir dosya (Windows'ta açık bir dosya ya da yüklenmiş bir DLL) hiçbir şey silinmeden işlemi durdurur; pencere açık kalır, neyin silinip neyin silinmediğini listeler ve projede hiçbir şey değişmez. Kayıtlı veri yalnızca eklentinin kendisi silindikten sonra silinir. Tarama kökleri nokta ile başlayan klasörleri atlar, böylece kenara alınmış bir klasör asla eklenti olarak listelenmez. Ardından eklenti kökleri yeniden taranır (`EditorViewModel.rescanPlugins`, bekleyen bir yeniden başlatma bandını korur) ve seçim listedeki komşuya geçer. MCP aracı `remove_plugin` aynısını yapar; `dry_run: true` silinecekler listesini döndürür.
+
 **Bu sayfada:**
 
 - [`lib/ui/features/plugin_manager/views/new_plugin_wizard.dart`](#libuifeaturesplugin_managerviewsnew_plugin_wizarddart)
@@ -30,6 +43,8 @@ Kullanıcı klasöründe aynı adlı bir eklenti zaten varsa **Replace / Cancel*
 - [`lib/ui/features/plugin_manager/views/plugin_import_dialogs.dart`](#libuifeaturesplugin_managerviewsplugin_import_dialogsdart)
 - [`lib/ui/features/plugin_manager/services/plugin_importer.dart`](#libuifeaturesplugin_managerservicesplugin_importerdart)
 - [`lib/ui/core/services/folder_install.dart`](#libuicoreservicesfolder_installdart)
+- [`lib/ui/features/plugin_manager/views/plugin_remove_dialog.dart`](#libuifeaturesplugin_managerviewsplugin_remove_dialogdart)
+- [`lib/ui/features/plugin_manager/services/plugin_remover.dart`](#libuifeaturesplugin_managerservicesplugin_removerdart)
 
 ## `lib/ui/features/plugin_manager/views/new_plugin_wizard.dart`
 
@@ -205,6 +220,11 @@ Kullanıcı klasöründe aynı adlı bir eklenti zaten varsa **Replace / Cancel*
 | `importPlugin` | `Future<PluginImportResult> importPlugin(PluginImportSource source, String path)` | `path`'teki klasörü veya zip'i doğrular ve kullanıcı eklenti klasörüne kopyalar; `alreadyInstalled` sonucu `confirmReplace` veya `cancelImport` bekler; kurulan eklenti listelenir ve seçilir. |
 | `confirmReplace` | `Future<PluginImportResult> confirmReplace(PluginImportResult pending)` | Replace: bekleyen eklentiyi kurulu kopyanın yerine kurar. |
 | `cancelImport` | `void cancelImport(PluginImportResult pending)` | Cancel: bekleyen içe aktarmanın hazırladıklarını siler. |
+| `isPluginLoaded` | `bool Function(String name)? isPluginLoaded` | Bu editör oturumunun bir eklentiyi kaydedip kaydetmediği (editör `EditorViewModel.isPluginLoaded`'ı bağlar); kaldırma penceresi eklentinin yeniden başlatmaya kadar etkin kaldığını söyler. |
+| `removerFactory` | `PluginRemover Function()? removerFactory` | Bir kaldırma için `PluginRemover`'ı kurar (testler geçici veri ve Marketplace klasörlerine yönlendirir). |
+| `removing` | `bool get removing` | Bir kaldırma sürüyor (bu sırada Remove devre dışıdır). |
+| `planRemoval` | `PluginRemovalPlan planRemoval(PluginEntry entry)` | Bir kullanıcı ya da proje eklentisini kaldırmanın neyi silip neyi değiştireceği, hiçbir şey silinmeden; yerleşik eklenti için `ArgumentError`. |
+| `removePlugin` | `Future<PluginRemovalResult> removePlugin(PluginRemovalPlan plan, {bool deleteData = false})` | Kaldırır (istenirse kayıtlı verisiyle); klasör silinince etkin bir eklenti bağımlılarıyla (cascade) devre dışı bırakılır, kökler yeniden taranır ve seçim geri gelen aynı adlı eklentiye, yoksa komşuya geçer. Duran bir kaldırma projede hiçbir şeyi değiştirmez. |
 
 ## `lib/ui/features/plugin_manager/views/plugin_import_dialogs.dart`
 
@@ -239,6 +259,29 @@ Marketplace kurucusu ile eklenti içe aktarmanın paylaştığı işlemsel (tran
 | `replace` | `T replace<T>(Directory dest, T Function() write, {String tag = 'previous'})` | Var olan `dest`'i kenara alır (`.<name>.<tag>`), `write`'ı çalıştırır, sonra eski kopyayı siler ya da `write` hata verirse geri yükler. |
 | `moveAside` / `dropAside` / `restore` | `Directory? moveAside(Directory dest, {String tag})` | `replace`'in üç adımı; işlem içinde daha fazlasını yapan çağıranlar için. |
 | `copyTree` / `copyFiles` | `void copyTree(Directory from, Directory to)` | Bir klasörü ya da göreli yol → dosya eşlemesini kopyalar. |
+| `remove` | `FolderRemoval remove(Directory dir, {String tag = 'removing'})` | Bir klasörü yarısını bırakmadan kaldırır: sembolik bağlantı ya da junction bağlantı olarak silinir (asla izlenmez); klasör önce `.<name>.<tag>` adına taşınır, sonra silinir, böylece başarısız bir taşıma (kilitli bir dosya) hiçbir şey silmez. `FolderRemoval`: `removed`, `link`, `leftovers` (kenara alınan klasörde kalan dosyalar), `error` ve `complete`. |
+| `describe` | `String describe(FileSystemException e)` | Bir dosya sistemi hatası tek satırda (işletim sistemi mesajı ve yol). |
+
+## `lib/ui/features/plugin_manager/views/plugin_remove_dialog.dart`
+
+| Fonksiyon | İmza | Amaç ve Açıklama |
+| :--- | :--- | :--- |
+| `confirmPluginRemoval` | `void confirmPluginRemoval(BuildContext context, PluginManagerViewModel vm, PluginEntry entry)` | Ayrıntılar panelinin Remove'u: silinecekleri listeleyen onay penceresi (`plugin_remove_dialog`; bkz. [Eklenti kaldırma](#eklenti-kaldırma)), veri onay kutusu (`plugin_remove_data`), Cancel (`plugin_remove_cancel`) / Remove (`plugin_remove_confirm`); tamamlanamayan bir kaldırmada pencere açık kalır ve neyin silinip neyin silinmediğini gösterir (`plugin_remove_error`, Close `plugin_remove_close`). |
+| `formatPluginBytes` | `String formatPluginBytes(int bytes)` | B / KB / MB / GB. |
+
+## `lib/ui/features/plugin_manager/services/plugin_remover.dart`
+
+### `class PluginRemover`
+
+Bir kullanıcı ya da proje eklentisini diskten kaldırır; yerleşik eklentiyi asla.
+
+| Metot / Getter | İmza | Amaç ve Açıklama |
+| :--- | :--- | :--- |
+| `PluginRemover` | `PluginRemover({Directory? pluginDataDir, MarketplaceInstallDirs? marketplaceDirs})` | Kullanıcıya özel eklenti veri klasörü (varsayılan `PluginDataDir.resolve()`) ve Marketplace kurulum klasörleri (varsayılan `MarketplaceInstallDirs.resolve()`). |
+| `plan` | `PluginRemovalPlan plan(PluginEntry entry, {required List<PluginEntry> entries, required List<PluginScanRoot> roots, String? projectDir, bool loaded = false})` | Kaldırmanın silecekleri: klasör, bağlantı hedefi, dosyalar, baytlar, etkinlik durumu ve etkin bağımlılar, Marketplace kaydı, geri gelecek aynı adlı eklenti, var olan veri klasörleri. Yerleşik eklenti için `ArgumentError`. |
+| `remove` | `PluginRemovalResult remove(PluginRemovalPlan plan, {bool deleteData = false})` | Klasörü siler (`FolderInstall.remove`, Marketplace kurulumu için `MarketplaceInstaller.removeInstall`), istenirse sonra veri klasörlerini. Projede hiçbir şeyi değiştirmez. |
+
+`PluginRemovalPlan` (`toJson` ile; `remove_plugin` dry run'ı) `name`, `displayName`, `origin`, `pluginDir`, `linkTarget`, `fileCount`, `bytes`, `enabled`, `contentOnly`, `dependents`, `loaded`, `marketplaceRecord`, `revealedOrigin` / `revealedDir`, `data` (`PluginDataFolder`: `kind` user / project, `dir`, `fileCount`, `bytes`) ve `projectDir` taşır. `PluginRemovalResult`: `removed`, `removedPaths`, `notRemoved` (`<path>: <reason>`), `disabled` ve `restartRequired`.
 
 ---
 

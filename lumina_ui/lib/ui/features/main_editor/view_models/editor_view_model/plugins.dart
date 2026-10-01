@@ -113,11 +113,22 @@ mixin _EditorPlugins on _EditorViewModelState {
 
   /// Scans the plugin roots again (a plugin was installed or removed, e.g.
   /// by the Marketplace), so the Plugin Manager lists what is on disk.
+  /// A restart a code plugin change is waiting for stays pending: the
+  /// banner remains after an install or a removal rescans.
   Future<void> rescanPlugins() async {
     await _pluginsScanned.future;
+    final restartPending = _pluginRestartRequired;
     await pluginRegistry.refresh();
     _updatePluginState();
+    if (restartPending && !_pluginRestartRequired) {
+      _pluginRestartRequired = true;
+      notifyListeners();
+    }
   }
+
+  /// Whether this editor session registered plugin [name] (its code stays
+  /// loaded until the editor restarts, even once it is disabled or removed).
+  bool isPluginLoaded(String name) => extensionRegistry.registeredPlugins.any((p) => p.pluginName == name);
 
   /// `editor.restart` and the banner's Restart Editor. Saves
   /// through the normal save-all path, then hands off to the launcher with
