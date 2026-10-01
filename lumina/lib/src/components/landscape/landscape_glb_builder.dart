@@ -259,6 +259,12 @@ class LandscapeGlbBuilder {
         bytes = payload;
       }
       final data = LandscapeData.fromBytes(bytes);
+      // A large landscape's heights live in the sidecar next to the asset.
+      if (data.samplesAreExternal) {
+        final sidecar = File(LandscapeData.sidecarPathFor(assetPath));
+        if (!sidecar.existsSync()) return null;
+        data.readSidecar(sidecar);
+      }
       final glb = build(data, unitsPerMetre: unitsPerMetre, maxResolution: maxResolution);
       return await GlbParserService.parseGlb(glb);
     } catch (_) {
