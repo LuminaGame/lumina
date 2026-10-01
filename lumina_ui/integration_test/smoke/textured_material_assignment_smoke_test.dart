@@ -104,7 +104,8 @@ void main() {
       ({int changed, double spread, double warm}) barrelChange(img.Image before, img.Image after) {
         final lum = <double>[];
         var warm = 0;
-        for (var y = 0; y < after.height; y += 2) {
+        // Below the toolbar and Play's fading "Press F4" hint.
+        for (var y = after.height * 18 ~/ 100; y < after.height; y += 2) {
           for (var x = 0; x < after.width; x += 2) {
             final a = after.getPixel(x, y);
             final b = before.getPixel(x, y);

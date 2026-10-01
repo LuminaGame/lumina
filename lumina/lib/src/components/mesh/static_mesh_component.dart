@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter_filament/flutter_filament.dart';
 import 'package:meta/meta.dart';
 import 'package:vector_math/vector_math_64.dart';
+import '../../material/lumina_material.dart';
 import '../../material/lumina_material_instance.dart';
 import '../../material/dynamic_material_instance.dart';
 import '../../../data/models/lumina_asset.dart';
@@ -177,6 +178,20 @@ class LuminaStaticMeshComponent extends LuminaSceneComponent with LuminaPrimitiv
   /// back when the override is cleared or the component leaves the world.
   final Map<int, FilamentMaterialInstance> _ownMaterials = {};
 
+  /// What [setMaterialAsset] loaded per section: the cached material (one
+  /// reference held) and the instance made of it, let go of when the
+  /// section's override is replaced or cleared, or the component leaves the
+  /// world, so the cache destroys the material with its last user.
+  final Map<int, (LuminaMaterial, LuminaMaterialInstance)> _assetMaterials = {};
+
+  void _releaseAssetMaterial(int primitiveIndex) {
+    final held = _assetMaterials.remove(primitiveIndex);
+    if (held == null) return;
+    final (material, instance) = held;
+    if (!instance.isDisposed && !material.isDisposed) instance.dispose();
+    material.release();
+  }
+
   /// Sets a material override for section [primitiveIndex]: the mesh's
   /// renderables in entity order, each one's primitives in order (a
   /// single-mesh asset's primitives). Set before the mesh has loaded, it is
@@ -184,6 +199,7 @@ class LuminaStaticMeshComponent extends LuminaSceneComponent with LuminaPrimitiv
   void setMaterialOverride(dynamic mi, {int primitiveIndex = 0}) {
     _materialRequests.remove(primitiveIndex);
     _setOverride(mi, primitiveIndex);
+    if (!identical(_assetMaterials[primitiveIndex]?.$2, mi)) _releaseAssetMaterial(primitiveIndex);
   }
 
   void _setOverride(dynamic mi, int primitiveIndex) {
@@ -250,7 +266,10 @@ class LuminaStaticMeshComponent extends LuminaSceneComponent with LuminaPrimitiv
       return;
     }
     _materialRequests.remove(primitiveIndex);
-    _setOverride(material.createInstance(), primitiveIndex);
+    final instance = material.createInstance();
+    _setOverride(instance, primitiveIndex);
+    _releaseAssetMaterial(primitiveIndex);
+    _assetMaterials[primitiveIndex] = (material, instance);
   }
 
   /// Draws [materialOverrideAsset] on every section, else the [slots]
@@ -423,6 +442,7 @@ class LuminaStaticMeshComponent extends LuminaSceneComponent with LuminaPrimitiv
       _restoreOwnMaterial(FilamentRenderableManager(w.filamentEngine), primitiveIndex);
     }
     _dynamicMaterialInstances.remove(primitiveIndex)?.dispose();
+    _releaseAssetMaterial(primitiveIndex);
   }
 
   @override
@@ -546,6 +566,9 @@ class LuminaStaticMeshComponent extends LuminaSceneComponent with LuminaPrimitiv
       d.dispose();
     }
     _dynamicMaterialInstances.clear();
+    for (final index in _assetMaterials.keys.toList()) {
+      _releaseAssetMaterial(index);
+    }
     _materialOverrides.clear();
     _nativeOverrides.clear();
     _materialRequests.clear();

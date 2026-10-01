@@ -437,6 +437,24 @@ fragment {
         reason: 'once loaded, the node returns the same instance');
   });
 
+  test('a static mesh component lets go of the material asset it drew when it leaves the world', () async {
+    if (!haveAssets) return markTestSkipped('test-assets missing');
+    final path = materialWith('baseColorMap');
+    final component = LuminaStaticMeshComponent(meshAssetPath: meshes.values.first, materialOverrideAsset: path);
+    final actor = LuminaActor(root: component);
+    world.persistentLevel.registerActor(actor);
+    expect(await component.materialOverrideWhenLoaded(0), isNotNull);
+    final drawn = component.materialOverride(0)!.material;
+    final texture = drawn.textures.bound['baseColorMap']!.texture;
+    world.persistentLevel.unregisterActor(actor);
+    await Future<void>.delayed(Duration.zero);
+    expect(drawn.isDisposed, isTrue, reason: 'its last user is gone');
+    expect(texture.isDisposed, isTrue, reason: 'and the texture with it');
+    final again = await LuminaMaterial.load(world, path);
+    expect(identical(again, drawn), isFalse, reason: 'the next load reads the asset again');
+    again.release();
+  });
+
   test("the level viewport's material override binds the textures on its instance", () async {
     if (!haveAssets) return markTestSkipped('test-assets missing');
     final path = materialWith('baseColorMap');
