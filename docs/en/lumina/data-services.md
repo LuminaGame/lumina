@@ -645,7 +645,7 @@ Service for parsing Wavefront OBJ 3D model geometry.
 
 ### `class PrimitiveGlbFactory`
 
-Builds a real glTF 2.0 binary (`.glb`) for an engine primitive.  `Primitive` actors — the template test rooms, and "spawn a cube" — carry a shape and a size instead of an imported model. Rather than teaching every consumer a second geometry path, the shape is turned into an ordinary glTF binary here, so it flows through the same parser, the same renderer, the same picking and the same triangle counter as any imported mesh.  Geometry is centred on the origin and sized in metres, so the actor's own transform places it. Output is deterministic for a given request.
+Builds a real glTF 2.0 binary (`.glb`) for an engine primitive.  `Primitive` actors — the template test rooms, and "spawn a cube" — carry a shape and a size instead of an imported model. Rather than teaching every consumer a second geometry path, the shape is turned into an ordinary glTF binary here, so it flows through the same parser, the same renderer, the same picking and the same triangle counter as any imported mesh.  Geometry is centred on the origin and sized in world units (cm), so the actor's own transform places it. Output is deterministic for a given request.  Every shape carries `TEXCOORD_0` and `TANGENT`, so a textured (or normal-mapped) material assigned to it draws its texture: each box face and the plane map the whole 0..1 square upright, a sphere and a cylinder wall wrap it once around (u) from top (v = 0) to bottom (v = 1), and cylinder caps map it as a disc. UVs follow glTF (v runs down the image); tangents point along +u, with `w` making `cross(normal, tangent) * w` point up the image, as glTF defines it.
 
 **Constructors:**
 - `PrimitiveGlbFactory._()`: Initializes `PrimitiveGlbFactory._()`.
@@ -655,7 +655,7 @@ Builds a real glTF 2.0 binary (`.glb`) for an engine primitive.  `Primitive` act
 `_Geometry`: `class` representing the data model or functionality of the module.
 
 **Constructors:**
-- `_Geometry(this.positions, this.normals, this.indices)`: Initializes `_Geometry(this.positions, this.normals, this.indices)`.
+- `_Geometry(this.positions, this.normals, this.uvs, this.indices)`: Initializes `_Geometry(this.positions, this.normals, this.uvs, this.indices)`.
 
 **Functions, Methods & Accessors:**
 
@@ -663,6 +663,7 @@ Builds a real glTF 2.0 binary (`.glb`) for an engine primitive.  `Primitive` act
 | :--- | :--- | :--- |
 | `positions` | `List<double> positions` | Holds the `positions` property or configuration state. |
 | `normals` | `List<double> normals` | Holds the `normals` property or configuration state. |
+| `uvs` | `List<double> uvs` | Holds the `uvs` property or configuration state. |
 | `indices` | `List<int> indices` | Holds the `indices` property or configuration state. |
 
 ## `lib/data/services/project_input_binder.dart`

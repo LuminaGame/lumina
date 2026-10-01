@@ -645,7 +645,7 @@ Service for parsing Wavefront OBJ 3D model geometry.
 
 ### `class PrimitiveGlbFactory`
 
-Builds a real glTF 2.0 binary (`.glb`) for an engine primitive.  `Primitive` actors — the template test rooms, and "spawn a cube" — carry a shape and a size instead of an imported model. Rather than teaching every consumer a second geometry path, the shape is turned into an ordinary glTF binary here, so it flows through the same parser, the same renderer, the same picking and the same triangle counter as any imported mesh.  Geometry is centred on the origin and sized in metres, so the actor's own transform places it. Output is deterministic for a given request.
+Builds a real glTF 2.0 binary (`.glb`) for an engine primitive.  `Primitive` actors — the template test rooms, and "spawn a cube" — carry a shape and a size instead of an imported model. Rather than teaching every consumer a second geometry path, the shape is turned into an ordinary glTF binary here, so it flows through the same parser, the same renderer, the same picking and the same triangle counter as any imported mesh.  Geometri orijinde ortalanır ve dünya birimiyle (cm) boyutlanır; aktörün kendi dönüşümü onu yerleştirir. Aynı istek her zaman aynı çıktıyı verir.  Her şekil `TEXCOORD_0` ve `TANGENT` taşır; böylece atanan dokulu (ya da normal haritalı) bir materyal dokusunu çizer: kutunun her yüzü ve düzlem 0..1 karesinin tamamını dik olarak eşler, küre ve silindir yüzeyi dokuyu bir kez çevresine sarar (u), üstten (v = 0) alta (v = 1); silindir kapakları dokuyu disk olarak eşler. UV'ler glTF'i izler (v görüntüde aşağı doğru artar); teğetler +u yönündedir ve `w`, glTF'in tanımladığı gibi `cross(normal, tangent) * w` vektörünü görüntüde yukarı çevirir.
 
 **Yapıcı Metotlar (Constructors):**
 - `PrimitiveGlbFactory._()`: `PrimitiveGlbFactory._()` nesnesini ilklendirir.
@@ -655,7 +655,7 @@ Builds a real glTF 2.0 binary (`.glb`) for an engine primitive.  `Primitive` act
 `_Geometry`: İlgili modülün veri modelini veya temel işlevselliğini temsil eden `class` yapısıdır.
 
 **Yapıcı Metotlar (Constructors):**
-- `_Geometry(this.positions, this.normals, this.indices)`: `_Geometry(this.positions, this.normals, this.indices)` nesnesini ilklendirir.
+- `_Geometry(this.positions, this.normals, this.uvs, this.indices)`: `_Geometry(this.positions, this.normals, this.uvs, this.indices)` nesnesini ilklendirir.
 
 **Fonksiyonlar, Metotlar ve Erişimciler:**
 
@@ -663,6 +663,7 @@ Builds a real glTF 2.0 binary (`.glb`) for an engine primitive.  `Primitive` act
 | :--- | :--- | :--- |
 | `positions` | `List<double> positions` | `positions` alanını (field/property) ve ilişkili veriyi saklar. |
 | `normals` | `List<double> normals` | `normals` alanını (field/property) ve ilişkili veriyi saklar. |
+| `uvs` | `List<double> uvs` | `uvs` alanını (field/property) ve ilişkili veriyi saklar. |
 | `indices` | `List<int> indices` | `indices` alanını (field/property) ve ilişkili veriyi saklar. |
 
 ## `lib/data/services/project_input_binder.dart`

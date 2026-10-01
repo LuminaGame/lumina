@@ -13,7 +13,9 @@
 - Place: `spawn_actor_from_asset` with the mesh `asset`; in a Blueprint: a `LuminaStaticMeshComponent` with
   `staticMeshAsset` = the mesh path (`set_blueprint_component_property`); swap at run time with `set_static_mesh`.
 - Inspect: `get_static_mesh` (sections, `material_slots`, LODs, collision), `set_static_mesh_collision`.
-- For simple shapes use a `Primitive` actor (box / sphere / cylinder with `colorHex`) instead of importing.
+- For simple shapes use a `Primitive` actor (box / plane / sphere / cylinder with `colorHex`) instead of importing.
+  Shapes carry UVs and tangents, so a textured material assigned to one draws its texture: the whole image on
+  each box face and on the plane, wrapped once around a sphere or a cylinder, a disc on the cylinder caps.
 
 ## Material assets
 
