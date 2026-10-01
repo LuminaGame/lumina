@@ -89,10 +89,11 @@ class FbxTextureLocator {
   }();
 
   /// The file an FBX texture reference [uri] names: as written, relative to
-  /// the FBX, then by file name (case-insensitive) in the [referenceDirs],
-  /// then as an image in the [nearDirs] whose name ends in `_<file name>`
-  /// (an exporter that prefixed the asset's name, e.g. Godot's
-  /// `SM_Slot_Machine_T_Tread_Plate_Normal.png`).
+  /// the FBX (each with its folders and file matched in any case when that
+  /// spelling is not on disk, see [findIgnoringCase]), then by file name
+  /// (case-insensitive) in the [referenceDirs], then as an image in the
+  /// [nearDirs] whose name ends in `_<file name>` (an exporter that prefixed
+  /// the asset's name, e.g. Godot's `SM_Slot_Machine_T_Tread_Plate_Normal.png`).
   File? locateReference(String uri) {
     String decoded;
     try {
@@ -104,13 +105,15 @@ class FbxTextureLocator {
     for (final candidate in [File(decoded), File('${sourceDir.path}/$decoded')]) {
       if (candidate.existsSync()) return candidate;
     }
-    final base = decoded.split('/').last.toLowerCase();
-    if (base.isEmpty) return null;
+    final anyCase = _isAbsolute(decoded) ? findIgnoringCase(decoded) : findIgnoringCase(decoded, base: sourceDir);
+    if (anyCase != null) return anyCase;
+    final fileName = decoded.split('/').last;
+    if (fileName.isEmpty) return null;
     for (final dir in referenceDirs) {
-      for (final f in _files(dir)) {
-        if (f.uri.pathSegments.last.toLowerCase() == base) return f;
-      }
+      final found = pickIgnoringCase(_files(dir), fileName);
+      if (found != null) return found;
     }
+    final base = fileName.toLowerCase();
     for (final f in nearImages) {
       final name = f.uri.pathSegments.last.toLowerCase();
       if (name.endsWith('_$base') || name.endsWith('-$base')) return f;
@@ -205,6 +208,64 @@ class FbxTextureLocator {
     }
     return result;
   }
+
+  /// The file [path] (`/`- or `\`-separated; relative to [base], or absolute)
+  /// names where its folders or file are spelled with other capitals than on
+  /// a case-sensitive disk: each segment goes to the entry of that name in any
+  /// case ([pickIgnoringCase]). `.` and `..` are followed as written. Null
+  /// when a segment has no match. (A case-insensitive file system finds these
+  /// by the exact lookup already.)
+  static File? findIgnoringCase(String path, {Directory? base}) {
+    var segments = path.replaceAll('\\', '/').split('/');
+    String dir;
+    if (_isAbsolute(path)) {
+      // The root ("/" or "C:/") as written.
+      dir = segments.first.isEmpty ? '/' : '${segments.first}/';
+      segments = segments.skip(1).toList();
+    } else if (base != null) {
+      dir = base.path;
+    } else {
+      return null;
+    }
+    segments = [for (final s in segments) if (s.isNotEmpty && s != '.') s];
+    for (var i = 0; i < segments.length; i++) {
+      final last = i == segments.length - 1;
+      if (segments[i] == '..') {
+        if (last) return null;
+        dir = Directory(dir).parent.path;
+        continue;
+      }
+      final List<FileSystemEntity> entries;
+      try {
+        entries = [for (final e in Directory(dir).listSync()) if (last ? e is File : e is Directory) e];
+      } catch (_) {
+        return null;
+      }
+      final match = pickIgnoringCase(entries, segments[i]);
+      if (match == null) return null;
+      if (last) return match as File;
+      dir = match.path;
+    }
+    return null;
+  }
+
+  /// The entry of [entries] named [name] in any case: the one spelled
+  /// exactly so when there is one, else the first by name (code units), so
+  /// the choice never depends on the order the directory was listed in.
+  static T? pickIgnoringCase<T extends FileSystemEntity>(Iterable<T> entries, String name) {
+    final lower = name.toLowerCase();
+    final matches = [for (final e in entries) if (_nameOf(e).toLowerCase() == lower) e];
+    if (matches.isEmpty) return null;
+    for (final e in matches) {
+      if (_nameOf(e) == name) return e;
+    }
+    matches.sort((a, b) => _nameOf(a).compareTo(_nameOf(b)));
+    return matches.first;
+  }
+
+  static String _nameOf(FileSystemEntity e) => e.path.replaceAll('\\', '/').split('/').lastWhere((s) => s.isNotEmpty, orElse: () => '');
+
+  static bool _isAbsolute(String path) => path.startsWith('/') || RegExp(r'^[A-Za-z]:').hasMatch(path);
 
   static List<Directory> _existing(List<Directory> dirs) {
     final seen = <String>{};

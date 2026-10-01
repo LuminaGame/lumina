@@ -247,19 +247,20 @@ abstract final class ObjImportService {
   }
 
   /// The file an OBJ's `mtllib` [name] refers to: as written relative to the
-  /// OBJ (or absolute), then by file name in any case in the OBJ's folder.
+  /// OBJ (or absolute), with its folders and file in any case, then by file
+  /// name in any case in the OBJ's folder.
   static File? locateMaterialLibrary(File objFile, String name) {
     final path = name.replaceAll('\\', '/');
     for (final candidate in [File('${objFile.parent.path}/$path'), File(path)]) {
       if (candidate.existsSync()) return candidate;
     }
-    final base = path.split('/').last.toLowerCase();
+    final anyCase = FbxTextureLocator.findIgnoringCase(path, base: objFile.parent);
+    if (anyCase != null) return anyCase;
     try {
-      for (final f in objFile.parent.listSync().whereType<File>()) {
-        if (f.uri.pathSegments.last.toLowerCase() == base) return f;
-      }
-    } catch (_) {}
-    return null;
+      return FbxTextureLocator.pickIgnoringCase(objFile.parent.listSync().whereType<File>(), path.split('/').last);
+    } catch (_) {
+      return null;
+    }
   }
 
   /// The materials of an MTL [source].

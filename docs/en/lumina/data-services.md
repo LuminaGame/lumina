@@ -462,7 +462,7 @@ OBJ → GLB for the import pipeline. The asset repository stages every `.obj` th
 - `map_Kd` → base colour texture (the colour factor turns white), `map_Bump` / `bump` / `norm` → normal texture, `map_Ks` → specular texture (`specularMap`, drawn as reflectance);
 - `map_d` → the base colour texture's alpha: the `map_d` image (its alpha channel, else its luminance) is baked into the diffuse image, or used as it is when both name the same file; `MASK` (cutoff 0.5) when that alpha only has clear and opaque texels (anti-aliased edges allowed), `BLEND` otherwise.
 
-`mtllib` names resolve as written relative to the OBJ, then by file name in any case in its folder (then `<obj name>.mtl`, as Assimp does); texture paths like an FBX's ([FbxTextureLocator]): as written, relative to the OBJ, then by file name in the OBJ's folder, the Import dialog's Textures Folder and the usual `Textures/` folders. A material library or texture found nowhere gets one Output Log warning naming it; the import goes on without it. Materials no mesh uses (Assimp's `DefaultMaterial`) are dropped. When Assimp cannot convert the file, the OBJ is staged as it is.
+`mtllib` names resolve as written relative to the OBJ (folders and file in any case when that spelling is not on disk), then by file name in any case in its folder (then `<obj name>.mtl`, as Assimp does); texture paths like an FBX's ([FbxTextureLocator]): as written, relative to the OBJ (likewise in any case), then by file name in the OBJ's folder, the Import dialog's Textures Folder and the usual `Textures/` folders. A material library or texture found nowhere gets one Output Log warning naming it; the import goes on without it. Materials no mesh uses (Assimp's `DefaultMaterial`) are dropped. When Assimp cannot convert the file, the OBJ is staged as it is.
 
 **Members:**
 
@@ -472,7 +472,7 @@ OBJ → GLB for the import pipeline. The asset repository stages every `.obj` th
 | `convert` | `static Future<ObjImportResult?> convert(String objPath, {List<String> textureSearchDirs = const []})` | [convertSync] in a background isolate. |
 | `convertSync` | `static ObjImportResult? convertSync(String objPath, {List<String> textureSearchDirs = const []})` | Null when Assimp cannot convert the file (the bridge is not loaded or the OBJ is unreadable). |
 | `materialLibraries` | `static List<String> materialLibraries(String source)` | The `mtllib` names of an OBJ's [source], in order (a name may contain spaces). |
-| `locateMaterialLibrary` | `static File? locateMaterialLibrary(File objFile, String name)` | The file an `mtllib` [name] refers to: as written relative to the OBJ (or absolute), then by file name in any case in the OBJ's folder. |
+| `locateMaterialLibrary` | `static File? locateMaterialLibrary(File objFile, String name)` | The file an `mtllib` [name] refers to: as written relative to the OBJ (or absolute), with its folders and file in any case ([FbxTextureLocator.findIgnoringCase]), then by file name in any case in the OBJ's folder. |
 | `parseMtl` | `static List<MtlMaterial> parseMtl(String source)` | The materials of an MTL [source]. |
 
 ## `lib/data/services/obj_parser_service.dart`

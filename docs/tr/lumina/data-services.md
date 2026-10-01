@@ -462,7 +462,7 @@ Import hattı için OBJ → GLB. Asset deposu her `.obj`'yi bunun üzerinden haz
 - `map_Kd` → base colour dokusu (renk faktörü beyaza döner), `map_Bump` / `bump` / `norm` → normal dokusu, `map_Ks` → specular dokusu (`specularMap`, reflectance olarak çizilir);
 - `map_d` → base colour dokusunun alfası: `map_d` görüntüsü (alfa kanalı, yoksa parlaklığı) diffuse görüntüye işlenir, ikisi aynı dosyayı gösteriyorsa olduğu gibi kullanılır; bu alfa yalnızca tam saydam ve tam opak texel'lerden oluşuyorsa (kenar yumuşatmaya izin verilir) `MASK` (eşik 0.5), değilse `BLEND`.
 
-`mtllib` adları önce OBJ'ye göre yazıldığı gibi, sonra OBJ'nin klasöründe büyük/küçük harf fark etmeksizin dosya adıyla (ardından Assimp gibi `<obj adı>.mtl`) çözülür; doku yolları FBX'teki gibi ([FbxTextureLocator]): yazıldığı gibi, OBJ'ye göre, sonra OBJ'nin klasöründe, Import penceresinin Textures Folder'ında ve alışılmış `Textures/` klasörlerinde dosya adıyla. Hiçbir yerde bulunamayan bir materyal kütüphanesi veya doku için Output Log'a onu adlandıran tek bir uyarı yazılır; import onsuz devam eder. Hiçbir mesh'in kullanmadığı materyaller (Assimp'in `DefaultMaterial`'ı) atılır. Assimp dosyayı dönüştüremezse OBJ olduğu gibi hazırlanır.
+`mtllib` adları önce OBJ'ye göre yazıldığı gibi (bu yazımla diskte yoksa klasörler ve dosya büyük/küçük harf fark etmeksizin), sonra OBJ'nin klasöründe büyük/küçük harf fark etmeksizin dosya adıyla (ardından Assimp gibi `<obj adı>.mtl`) çözülür; doku yolları FBX'teki gibi ([FbxTextureLocator]): yazıldığı gibi, OBJ'ye göre (aynı şekilde harf büyüklüğünden bağımsız), sonra OBJ'nin klasöründe, Import penceresinin Textures Folder'ında ve alışılmış `Textures/` klasörlerinde dosya adıyla. Hiçbir yerde bulunamayan bir materyal kütüphanesi veya doku için Output Log'a onu adlandıran tek bir uyarı yazılır; import onsuz devam eder. Hiçbir mesh'in kullanmadığı materyaller (Assimp'in `DefaultMaterial`'ı) atılır. Assimp dosyayı dönüştüremezse OBJ olduğu gibi hazırlanır.
 
 **Members:**
 
@@ -472,7 +472,7 @@ Import hattı için OBJ → GLB. Asset deposu her `.obj`'yi bunun üzerinden haz
 | `convert` | `static Future<ObjImportResult?> convert(String objPath, {List<String> textureSearchDirs = const []})` | [convertSync] arka plan isolate'inde. |
 | `convertSync` | `static ObjImportResult? convertSync(String objPath, {List<String> textureSearchDirs = const []})` | Assimp dosyayı dönüştüremezse (köprü yüklü değil ya da OBJ okunamıyor) null. |
 | `materialLibraries` | `static List<String> materialLibraries(String source)` | Bir OBJ [source]'unun `mtllib` adları, sırayla (ad boşluk içerebilir). |
-| `locateMaterialLibrary` | `static File? locateMaterialLibrary(File objFile, String name)` | Bir `mtllib` [name]'inin gösterdiği dosya: OBJ'ye göre yazıldığı gibi (veya mutlak), sonra OBJ'nin klasöründe büyük/küçük harf fark etmeksizin dosya adıyla. |
+| `locateMaterialLibrary` | `static File? locateMaterialLibrary(File objFile, String name)` | Bir `mtllib` [name]'inin gösterdiği dosya: OBJ'ye göre yazıldığı gibi (veya mutlak), klasörleri ve dosyası büyük/küçük harf fark etmeksizin ([FbxTextureLocator.findIgnoringCase]), sonra OBJ'nin klasöründe büyük/küçük harf fark etmeksizin dosya adıyla. |
 | `parseMtl` | `static List<MtlMaterial> parseMtl(String source)` | Bir MTL [source]'unun materyalleri. |
 
 ## `lib/data/services/obj_parser_service.dart`
