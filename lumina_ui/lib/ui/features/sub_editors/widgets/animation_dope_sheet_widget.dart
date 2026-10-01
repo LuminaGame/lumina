@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/services.dart' show HardwareKeyboard;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import '../../../core/theme/editor_theme.dart';

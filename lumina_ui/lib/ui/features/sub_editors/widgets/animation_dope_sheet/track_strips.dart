@@ -14,9 +14,9 @@ mixin _DopeSheetTrackStrips on _AnimationDopeSheetWidgetStateBase {
   ) {
     // An authored sequence's few keys are always shown (and draggable).
     final showKeys = vm.timelineZoom >= 1.8 || vm.isAuthored;
-    final startX = (bone.startTime / duration * trackWidth).clamp(0.0, trackWidth);
-    final endX = (bone.endTime / duration * trackWidth).clamp(startX + 6, trackWidth);
-    final barWidth = (endX - startX).clamp(6.0, trackWidth);
+    final bar = _AnimationDopeSheetWidgetStateBase._rangeBar(bone.startTime, bone.endTime, duration, trackWidth, 6);
+    final startX = bar.left;
+    final barWidth = bar.width;
 
     return Container(
       height: 26,
@@ -85,7 +85,7 @@ mixin _DopeSheetTrackStrips on _AnimationDopeSheetWidgetStateBase {
               final isSelected = vm.selectedKeyframeIds.contains(keyId);
               // A selected key follows a drag of any selected key.
               final dragX = vm.isAuthored && isSelected && _boneKeyDragDx != null ? _boneKeyDragDx! : 0.0;
-              final x = (t / duration * trackWidth + dragX).clamp(0.0, trackWidth - 9);
+              final x = _AnimationDopeSheetWidgetStateBase._markLeft(t / duration * trackWidth + dragX, trackWidth, 9);
 
               return Positioned(
                 left: x,
@@ -169,9 +169,9 @@ mixin _DopeSheetTrackStrips on _AnimationDopeSheetWidgetStateBase {
     }
 
     final showKeys = vm.timelineZoom >= 1.8;
-    final startX = (subTrack.startTime / duration * trackWidth).clamp(0.0, trackWidth);
-    final endX = (subTrack.endTime / duration * trackWidth).clamp(startX + 4, trackWidth);
-    final barWidth = (endX - startX).clamp(4.0, trackWidth);
+    final bar = _AnimationDopeSheetWidgetStateBase._rangeBar(subTrack.startTime, subTrack.endTime, duration, trackWidth, 4);
+    final startX = bar.left;
+    final barWidth = bar.width;
 
     return Container(
       height: 22,
@@ -218,7 +218,7 @@ mixin _DopeSheetTrackStrips on _AnimationDopeSheetWidgetStateBase {
           // Sub-Track Keyframe Diamonds if Zoomed In (Only for active keyframes within movement range)
           if (showKeys)
             ...subTrack.keyframeTimes.where((t) => t >= subTrack.startTime - 1e-4 && t <= subTrack.endTime + 1e-4).map((t) {
-              final x = (t / duration * trackWidth).clamp(0.0, trackWidth - 8);
+              final x = _AnimationDopeSheetWidgetStateBase._markLeft(t / duration * trackWidth, trackWidth, 8);
               final keyId = 'bone_${bone.boneName}_${subTrack.label}_${t.toStringAsFixed(3)}';
               final isSelected = vm.selectedKeyframeIds.contains(keyId);
 
@@ -260,7 +260,7 @@ mixin _DopeSheetTrackStrips on _AnimationDopeSheetWidgetStateBase {
       color: EditorColors.background.withValues(alpha: 0.4),
       child: Stack(
         children: vm.notifies.map((n) {
-          final x = (n.time / duration * trackWidth).clamp(0.0, trackWidth - 60);
+          final x = _AnimationDopeSheetWidgetStateBase._markLeft(n.time / duration * trackWidth, trackWidth, 60);
           final isSelected = vm.selectedKeyframeIds.contains(n.id);
 
           return Positioned(
@@ -323,7 +323,7 @@ mixin _DopeSheetTrackStrips on _AnimationDopeSheetWidgetStateBase {
       ),
       child: Stack(
         children: curve.keys.map((k) {
-          final x = (k.time / duration * trackWidth).clamp(0.0, trackWidth - 14);
+          final x = _AnimationDopeSheetWidgetStateBase._markLeft(k.time / duration * trackWidth, trackWidth, 14);
           final keyId = '${curve.name}_${k.time.toStringAsFixed(3)}';
           final isSelected = vm.selectedKeyframeIds.contains(keyId);
 

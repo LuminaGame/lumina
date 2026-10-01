@@ -195,7 +195,7 @@ mixin _DopeSheetTimelineCanvas on _AnimationDopeSheetWidgetStateBase {
           // Render Keyframe Diamonds if Zoomed In
           if (showKeys)
             ...keys.map((t) {
-              final x = (t / duration * trackWidth).clamp(0.0, trackWidth - 12);
+              final x = _AnimationDopeSheetWidgetStateBase._markLeft(t / duration * trackWidth, trackWidth, 12);
               final keyId = 'master_${t.toStringAsFixed(3)}';
               final isSelected = vm.selectedKeyframeIds.contains(keyId);
 
@@ -243,13 +243,11 @@ mixin _DopeSheetTimelineCanvas on _AnimationDopeSheetWidgetStateBase {
         children: [
           // Range Bars for each animated bone superimposed
           ...bones.map((b) {
-            final startX = (b.startTime / duration * trackWidth).clamp(0.0, trackWidth);
-            final endX = (b.endTime / duration * trackWidth).clamp(startX + 4, trackWidth);
-            final width = (endX - startX).clamp(4.0, trackWidth);
+            final bar = _AnimationDopeSheetWidgetStateBase._rangeBar(b.startTime, b.endTime, duration, trackWidth, 4);
 
             return Positioned(
-              left: startX,
-              width: width,
+              left: bar.left,
+              width: bar.width,
               top: 8,
               bottom: 8,
               child: Container(
@@ -264,7 +262,7 @@ mixin _DopeSheetTimelineCanvas on _AnimationDopeSheetWidgetStateBase {
           // Composite keyframe diamonds if zoomed in
           if (showKeys)
             ...vm.activeClipKeyframes.map((t) {
-              final x = (t / duration * trackWidth).clamp(0.0, trackWidth - 8);
+              final x = _AnimationDopeSheetWidgetStateBase._markLeft(t / duration * trackWidth, trackWidth, 8);
 
               return Positioned(
                 left: x,
