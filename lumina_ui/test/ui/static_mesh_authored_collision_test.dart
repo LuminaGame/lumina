@@ -307,8 +307,13 @@ void main() {
       game.mountIntoWorldForTest(world);
       final collision = world.getSubsystem<LuminaCollisionSubsystem>()!;
       final prop = world.persistentLevel.actors.firstWhere((a) => a.key == const ValueKey('counter')) as LuminaStaticMeshActor;
-      // Turned 90°, the counter runs along runtime z at x 250; walk at it along −x.
-      final character = LuminaCharacter(location: Vector3(700, 80.5, 0));
+      // Yaw 90 turns the counter's length (authoring +X) to authoring −Y, so
+      // it runs along runtime +z from its pivot at z 40, and its depth
+      // (authoring −Y) to −X, ending at x 250. Walk at its middle along −x.
+      final box = prop.collisionComponents.single.getAABB();
+      expect(box.min.z, lessThan(445), reason: 'the walk line crosses the counter');
+      expect(box.max.z, greaterThan(445), reason: 'the walk line crosses the counter');
+      final character = LuminaCharacter(location: Vector3(700, 80.5, 445));
       world.spawnActor(character);
       final overlaps = <LuminaCollisionComponent>[];
       for (var frame = 0; frame < 240; frame++) {
@@ -318,7 +323,7 @@ void main() {
             ignore: character.capsuleComponent);
         expect(overlaps.where(prop.collisionComponents.contains), isEmpty, reason: 'frame $frame');
       }
-      final face = prop.collisionComponents.single.getAABB().max.x;
+      final face = box.max.x;
       expect(character.actorLocation.x, closeTo(face + character.capsuleComponent.radius, 0.5));
       world.cleanup();
     });
