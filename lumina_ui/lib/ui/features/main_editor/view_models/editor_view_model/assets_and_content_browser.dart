@@ -517,6 +517,7 @@ mixin _EditorAssetsAndContentBrowser on _EditorViewModelState {
       subFolder: subFolder,
       fileName: fileName,
       type: type,
+      rawMatSource: _newAssetMatSource(type, fileName),
     );
     _refreshAssets();
     return true;
@@ -798,3 +799,10 @@ mixin _EditorAssetsAndContentBrowser on _EditorViewModelState {
     notifyListeners();
   }
 }
+
+/// The material source a new asset is written with: a new material starts
+/// from the Material Editor's template, so it opens as nodes and compiles;
+/// other types carry none.
+String _newAssetMatSource(AssetType type, String fileName) => type == AssetType.filamat
+    ? MaterialEditorViewModel.newMaterialSource(fileName.replaceAll('.lmas', ''))
+    : '';

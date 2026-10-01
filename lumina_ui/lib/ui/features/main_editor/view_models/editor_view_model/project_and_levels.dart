@@ -90,6 +90,7 @@ mixin _EditorProjectAndLevels on _EditorViewModelState {
           subFolder: 'materials',
           fileName: 'M_Ground_PBR.lmas',
           type: AssetType.filamat,
+          rawMatSource: _newAssetMatSource(AssetType.filamat, 'M_Ground_PBR.lmas'),
         );
         await _assetRepo.createAsset(
           projectPath: projectDirPath,

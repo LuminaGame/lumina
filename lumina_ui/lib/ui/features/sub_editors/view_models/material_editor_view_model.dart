@@ -286,7 +286,7 @@ class MaterialEditorViewModel extends ChangeNotifier {
         assetId: file.uri.pathSegments.last,
         name: file.uri.pathSegments.last.replaceAll('.lmas', ''),
         type: AssetType.filamat,
-        rawMatSource: _defaultTemplate(file.uri.pathSegments.last.replaceAll('.lmas', '')),
+        rawMatSource: newMaterialSource(file.uri.pathSegments.last.replaceAll('.lmas', '')),
       );
     } else {
       final bytes = await file.readAsBytes();
@@ -897,11 +897,13 @@ class MaterialEditorViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// The source a new material starts from. `flipUV : false`: every mesh
+  /// The source a new material starts from, whichever way it is made (the
+  /// editor on a missing file, Content Browser ▸ New, MCP `create_asset`).
+  /// `flipUV : false`: every mesh
   /// carries glTF texture coordinates (v = 0 at the image top) and textures
   /// upload top row first, so a texture sampled with `getUV0()` draws upright
   /// only unflipped (matc's default, `true`, turns it upside down).
-  static String _defaultTemplate(String name) {
+  static String newMaterialSource(String name) {
     return '''material {
     name : "$name",
     shadingModel : lit,

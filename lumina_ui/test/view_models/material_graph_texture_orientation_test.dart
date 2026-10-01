@@ -3,7 +3,8 @@
 // into Base Color, compiled with matc, draws the image's top-left quadrant on
 // the top-left corner of a glTF quad (glTF texture coordinates, v = 0 at the
 // image top), whether the material started from the editor's new-material
-// template or from the empty source Content Browser ▸ New writes.
+// template or from an empty source (what Content Browser ▸ New wrote before
+// it used the template).
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -151,7 +152,7 @@ void main() {
     expect(await drawnCorners(material), TextureOrientationFixture.upright, reason: source);
   });
 
-  test('a Texture Sample built on a Content Browser ▸ New material draws the texture upright', () async {
+  test('a Texture Sample built on an empty-source material draws the texture upright', () async {
     await AssetRepository().createAsset(
         projectPath: root.path, subFolder: 'materials', fileName: 'M_GraphNew.lmas', type: AssetType.filamat);
     const material = 'contents/materials/M_GraphNew.lmas';

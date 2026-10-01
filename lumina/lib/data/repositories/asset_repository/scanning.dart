@@ -175,6 +175,7 @@ mixin _AssetScanning on _AssetRepositoryState {
     required String subFolder,
     required String fileName,
     required AssetType type,
+    String rawMatSource = '',
   }) async {
     final file = File('$projectPath/contents/$subFolder/$fileName');
     if (!file.parent.existsSync()) {
@@ -189,6 +190,7 @@ mixin _AssetScanning on _AssetRepositoryState {
       type: type,
       hasThumbnail: thumbBytes != null,
       thumbnailPng: thumbBytes,
+      rawMatSource: rawMatSource,
     );
 
     file.writeAsStringSync(jsonEncode(asset.toMap()));

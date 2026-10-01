@@ -20,6 +20,10 @@ import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.
 import 'package:lumina_ui/ui/features/main_editor/views/content_browser_widget.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/import_asset_options_dialog.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/main_editor_view.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/material_graph.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/material_editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/material/graph_view.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/material/material_sub_editor.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import '../helpers/shared_editor_preferences.dart';
 
@@ -119,6 +123,61 @@ void main() {
       await rec.typeText(_searchField(), 'ac_unit', perCharacter: const Duration(milliseconds: 150));
       await rec.hold(const Duration(milliseconds: 500));
       expect(vm.visibleAssets.any((a) => a.fileName.toLowerCase().contains('ac_unit')), isTrue);
+      await rec.hold(const Duration(seconds: 1));
+
+      // New Asset ▸ New Material: the material starts from the Material
+      // Editor's template, so double-clicking it opens a node graph of the
+      // template's nodes wired into the Material node (not one Custom
+      // (Fragment) node).
+      await tester.enterText(_searchField(), '');
+      vm.searchQuery = '';
+      await _settle(tester);
+      final materialsBefore = vm.realAssets.where((a) => a.type == AssetType.filamat).map((a) => a.fileName).toSet();
+      await tester.tap(find.text('New Asset').first);
+      await _settle(tester);
+      await rec.hold(const Duration(milliseconds: 700));
+      await tester.tap(find.text('New Material (.lmas)'));
+      await _settle(tester, 20);
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
+      await _settle(tester);
+      final newMaterial =
+          vm.realAssets.where((a) => a.type == AssetType.filamat && !materialsBefore.contains(a.fileName)).single;
+      final newMaterialName = newMaterial.fileName.replaceAll('.lmas', '');
+      final newSource =
+          LuminaAsset.fromBytes(File('${vm.projectDirPath}/${newMaterial.relativePath}').readAsBytesSync()).rawMatSource;
+      expect(newSource, MaterialEditorViewModel.newMaterialSource(newMaterialName));
+      vm.selectedFolder = 'contents/materials';
+      await _settle(tester);
+      await rec.hold(const Duration(milliseconds: 700));
+      final newTile = _tile(newMaterial.fileName);
+      expect(newTile, findsOneWidget);
+      await tester.tap(newTile);
+      await tester.pump();
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 90)));
+      await tester.tap(newTile);
+      await _settle(tester, 20);
+      for (var i = 0; i < 100 && find.byType(MaterialSubEditor).evaluate().isEmpty; i++) {
+        await _settle(tester, 2);
+      }
+      expect(find.byType(MaterialSubEditor), findsOneWidget, reason: '$newMaterialName opens in the Material Editor');
+      await rec.hold(const Duration(milliseconds: 1500));
+      await tester.tap(find.text('Node Graph').first);
+      await _settle(tester, 20);
+      await rec.hold(const Duration(milliseconds: 1500));
+      final materialVm = tester.widget<MaterialGraphView>(find.byType(MaterialGraphView)).viewModel;
+      final graphNodes = materialVm.graph.graph.nodes;
+      expect(graphNodes.where((n) => n.registryId == MaterialNodes.customFragment), isEmpty,
+          reason: '${graphNodes.map((n) => n.registryId).toList()}');
+      expect({
+        for (final w in materialVm.graph.graph.wires)
+          if (w.toNodeId == MaterialNodes.outputNodeId) w.toPinId,
+      }, containsAll([MaterialNodes.baseColor, MaterialNodes.roughness, MaterialNodes.metallic]));
+      final graphPng = await SmokeArtifacts.captureIntegrationPng(
+          IntegrationTestWidgetsFlutterBinding.instance, tester, boundary: find.byKey(boundaryKey));
+      SmokeArtifacts.saveScreenshot('content_browser_new_material_graph', graphPng, usedAssets: const [
+        'Props/AC_units/ac_unit_a_300x300.glb',
+        'Props/Barrels/empty_barrel.glb',
+      ]);
       await rec.hold(const Duration(seconds: 1));
       rec.save('Content Browser Smoke Test: Search, filters, collections', usedAssets: const [
         'Props/AC_units/ac_unit_a_300x300.glb',
