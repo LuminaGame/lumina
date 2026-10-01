@@ -68,6 +68,14 @@ mixin _ContentBrowserNewAsset on _ContentBrowserWidgetStateBase {
                     _newAssetTypeBtn(
                       context,
                       vm,
+                      'Animation → Animation Sequence (.lmas)',
+                      AssetType.animation,
+                      LucideIcons.clapperboard,
+                      'animations',
+                    ),
+                    _newAssetTypeBtn(
+                      context,
+                      vm,
                       'Animation → Animation Blueprint (.lmas)',
                       AssetType.animBlueprint,
                       LucideIcons.workflow,
@@ -278,16 +286,21 @@ mixin _ContentBrowserNewAsset on _ContentBrowserWidgetStateBase {
               // shell.
               Navigator.of(context).pop();
               vm?.createWidgetBlueprint(folder: vm.selectedFolder);
-            } else if (type == AssetType.animBlueprint || type == AssetType.blendSpace) {
-              // Animation → Animation Blueprint / Blend Space: pick the
-              // target skeletal mesh, create the asset, open its editor.
+            } else if (type == AssetType.animBlueprint || type == AssetType.blendSpace || type == AssetType.animation) {
+              // Animation → Animation Sequence / Animation Blueprint / Blend
+              // Space: pick the target skeletal mesh, create the asset, open
+              // its editor.
               final projectDir = vm?.projectDirPath;
               Navigator.of(context).pop();
               if (projectDir != null && vm != null) {
                 showCreateAnimAssetDialog(
                   this.context,
                   projectDir: projectDir,
-                  kind: type == AssetType.animBlueprint ? AnimAssetKind.animBlueprint : AnimAssetKind.blendSpace,
+                  kind: switch (type) {
+                    AssetType.animBlueprint => AnimAssetKind.animBlueprint,
+                    AssetType.blendSpace => AnimAssetKind.blendSpace,
+                    _ => AnimAssetKind.animationSequence,
+                  },
                   onCreated: (path) {
                     vm.refreshAssets();
                     final created = vm.realAssets.where((a) => a.relativePath == path).firstOrNull;

@@ -179,6 +179,10 @@ class _SubEditor3DViewportState extends _SubEditor3DViewportStateBase
       }
     }
 
+    if (!identical(widget.jointLocalPose, oldWidget.jointLocalPose)) {
+      _applyJointLocalPose();
+    }
+
     if (widget.jointDeltas != oldWidget.jointDeltas ||
         !_jointDeltasEquals(_appliedJointDeltas, widget.jointDeltas)) {
       _applyJointTransforms();
@@ -658,6 +662,7 @@ class _SubEditor3DViewportState extends _SubEditor3DViewportStateBase
                                     selectedNode: widget.selectedNode,
                                     selectedSocket: widget.selectedSocket,
                                     jointDeltas: widget.jointDeltas,
+                                    jointLocalPose: widget.jointLocalPose,
                                     cameraYaw: _cameraYaw,
                                     cameraPitch: _cameraPitch,
                                     cameraDistance: _cameraDistance,

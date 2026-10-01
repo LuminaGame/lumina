@@ -651,4 +651,29 @@ void main() {
       await drainRealIo(tester);
     });
   });
+
+  group('Animation Sequence authored from scratch', () {
+    test('create_asset animation with target_mesh, length_frames and frame_rate authors a 1.5 s sequence in the mesh', () async {
+      expect(await refused('create_asset', {'type': 'animation', 'name': 'AgentWave', 'target_mesh': 'contents/nope.lmas'}),
+          contains(manny));
+      final created = await ok('create_asset',
+          {'type': 'animation', 'name': 'AgentWave', 'target_mesh': manny, 'length_frames': 45, 'frame_rate': 30});
+      const path = 'contents/animations/SKM_Manny_Simple/AgentWave.lmas';
+      expect(created['path'], path);
+      final asset = LuminaAsset.fromBytes(File('$projectDir/$path').readAsBytesSync());
+      expect(asset.type, AssetType.animation);
+      expect(asset.metadata['source_mesh'], manny);
+      expect(asset.metadata['duration_seconds'], '1.500');
+      final clip = AuthoredAnimationStore.clipOf(asset)!;
+      expect(clip.lengthFrames, 45);
+      expect(clip.frameRate, 30);
+      expect(AnimGraphAssetService.clipNames(projectDir, manny), contains('AgentWave'));
+
+      final seconds = await ok('create_asset',
+          {'type': 'animation', 'name': 'AgentTurn', 'target_mesh': manny, 'length_seconds': 2, 'frame_rate': 24});
+      final turn = AuthoredAnimationStore.load(projectDir, seconds['path'] as String)!;
+      expect(turn.lengthFrames, 48);
+      expect(turn.frameRate, 24);
+    });
+  });
 }

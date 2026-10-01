@@ -17,6 +17,10 @@
   `references`, base64 `raw_payload`). Types: `level`, `filamesh` (static mesh), `filameshSk` (skeletal mesh),
   `filamat` (material), `texture`, `actor` (Blueprint class, Enumeration, Interface), `widget` (Widget Blueprint),
   `animation`, `animBlueprint`, `blendSpace`, `particle`, `audio`, `landscape`, `physicsAsset`, `sequencer`.
+- An **animation clip lives in its skeletal mesh's GLB** (the mesh's `.entity.glb`, or its payload) and is
+  played by name; an `animation` `.lmas` only points at it (`source_mesh`, `clip_name`). An Animation Sequence
+  authored from scratch (`create_asset {type: "animation", target_mesh, length_frames, frame_rate}`, keyed in the
+  Animation editor) is written there the same way, so Anim Blueprints, Play and the game play it unchanged.
 - Asset paths are **project-relative and `/`-separated**: `contents/blueprints/BP_Door.lmas`. Many tools also take
   a unique file name (`BP_Door`).
 
@@ -43,7 +47,8 @@
    `contents/materials/<Mesh>/`, textures into `contents/textures/<Mesh>/`, even when you pass `folder`.
    `import_asset_folder` imports a whole folder.
 3. New assets: `create_asset` with `type` and `name` (`filamat` material, `actor` Blueprint with `parent_class`,
-   `widget` Widget Blueprint, `actor` + `blueprint_kind` `enum` / `interface`); `open_asset_editor` opens its tab.
+   `widget` Widget Blueprint, `actor` + `blueprint_kind` `enum` / `interface`, `animation` + `target_mesh` an
+   Animation Sequence for that skeletal mesh); `open_asset_editor` opens its tab.
 4. Organise: `move_asset` (references to the asset are rewritten), `rename_asset`, `duplicate_asset`,
    `delete_asset` (to `.lumina/trash`; `list_trash`, `restore_asset`).
 5. Levels: `new_level`, `open_level`, `save_level`.

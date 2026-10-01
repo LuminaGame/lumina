@@ -12,7 +12,8 @@ mixin _DopeSheetTrackStrips on _AnimationDopeSheetWidgetStateBase {
     double duration,
     AnimationEditorViewModel vm,
   ) {
-    final showKeys = vm.timelineZoom >= 1.8;
+    // An authored sequence's few keys are always shown (and draggable).
+    final showKeys = vm.timelineZoom >= 1.8 || vm.isAuthored;
     final startX = (bone.startTime / duration * trackWidth).clamp(0.0, trackWidth);
     final endX = (bone.endTime / duration * trackWidth).clamp(startX + 6, trackWidth);
     final barWidth = (endX - startX).clamp(6.0, trackWidth);
@@ -80,18 +81,43 @@ mixin _DopeSheetTrackStrips on _AnimationDopeSheetWidgetStateBase {
           // Individual Keyframe Diamonds if Zoomed In (Only for active keyframe timestamps)
           if (showKeys)
             ...bone.keyframeTimes.where((t) => t >= bone.startTime - 1e-4 && t <= bone.endTime + 1e-4).map((t) {
-              final x = (t / duration * trackWidth).clamp(0.0, trackWidth - 9);
               final keyId = 'bone_${bone.boneName}_${t.toStringAsFixed(3)}';
               final isSelected = vm.selectedKeyframeIds.contains(keyId);
+              // A selected key follows a drag of any selected key.
+              final dragX = vm.isAuthored && isSelected && _boneKeyDragDx != null ? _boneKeyDragDx! : 0.0;
+              final x = (t / duration * trackWidth + dragX).clamp(0.0, trackWidth - 9);
 
               return Positioned(
                 left: x,
                 top: 8,
                 child: GestureDetector(
+                  key: ValueKey('dope_bone_key_${bone.boneName}_${(t * vm.frameRate).round()}'),
                   onTap: () {
-                    vm.selectKeyframe(keyId);
+                    vm.selectKeyframe(keyId, multiSelect: HardwareKeyboard.instance.isShiftPressed);
+                    if (vm.isAuthored) vm.selectBone(bone.boneName);
                     vm.seek(t);
                   },
+                  // Authored keys drag along the timeline (snapped to frames).
+                  onHorizontalDragStart: !vm.isAuthored
+                      ? null
+                      : (_) {
+                          if (!vm.selectedKeyframeIds.contains(keyId)) {
+                            vm.selectKeyframe(keyId, multiSelect: HardwareKeyboard.instance.isShiftPressed);
+                          }
+                          setState(() => _boneKeyDragDx = 0.0);
+                        },
+                  onHorizontalDragUpdate: !vm.isAuthored
+                      ? null
+                      : (d) => setState(() => _boneKeyDragDx = (_boneKeyDragDx ?? 0.0) + d.delta.dx),
+                  onHorizontalDragEnd: !vm.isAuthored
+                      ? null
+                      : (_) {
+                          final dx = _boneKeyDragDx ?? 0.0;
+                          setState(() => _boneKeyDragDx = null);
+                          final frames = (dx / trackWidth * duration * vm.frameRate).round();
+                          if (frames != 0) vm.moveSelectedBoneKeysBy(frames);
+                        },
+                  onHorizontalDragCancel: !vm.isAuthored ? null : () => setState(() => _boneKeyDragDx = null),
                   child: Transform.rotate(
                     angle: 0.785398,
                     child: Container(

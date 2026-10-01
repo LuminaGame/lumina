@@ -123,6 +123,10 @@ void registerAssetTools(McpToolRegistry registry, EditorViewModel vm, McpEditorS
           'mesh; the Anim Blueprint starts with an Idle state playing its first clip, the Blend Space as Direction × '
           'Speed), placed beside its clips under contents/animations/<Mesh>/; "sequencer", "particle" and "animation" '
           'the document their editor authors for a new asset (a 30 fps, 120-frame sequence; one default emitter); '
+          '"animation" with target_mesh an Animation Sequence authored from scratch for that skeletal mesh '
+          '(length_frames or length_seconds, frame_rate default 30; the skeleton root\'s rest pose keyed at frame 0), '
+          'stored as a clip in the mesh\'s GLB so Animation Blueprints, Play and the game play it by name — key its '
+          'bones in the Animation editor; '
           '"landscape" a real flat terrain (grid_resolution n × 64 + 1, default 129; world_size_cm, default 25 600; '
           'max_height_cm, default 10 000), as New → Landscape; "actor" with blueprint_kind "enum" / "interface" an '
           'Enumeration (contents/enums) / Blueprint Interface (contents/interfaces), as New → Blueprints; a '
@@ -136,7 +140,11 @@ void registerAssetTools(McpToolRegistry registry, EditorViewModel vm, McpEditorS
         'folder': McpSchema.string('The contents/ subfolder, e.g. "materials"; default by type (materials, blueprints, widgets, …).'),
         'parent_class': McpSchema.string('For "actor": the Blueprint\'s parent class. Default "LuminaActor".', enumValues: parentClasses),
         'target_mesh': McpSchema.string('For "animBlueprint" and "blendSpace" (required): the skeletal mesh .lmas '
-            '(project-relative) whose clips it plays.'),
+            '(project-relative) whose clips it plays. For "animation": the skeletal mesh a new Animation Sequence is '
+            'authored for (without it, an empty placeholder is written).'),
+        'length_frames': McpSchema.integer('For "animation" with target_mesh: the sequence length in frames; default 60.'),
+        'length_seconds': McpSchema.number('For "animation" with target_mesh: the length in seconds, instead of length_frames.'),
+        'frame_rate': McpSchema.number('For "animation" with target_mesh: frames per second; default 30.'),
         'blueprint_kind': McpSchema.string('For "actor": "class" (default) a Blueprint class, "enum" an Enumeration, '
             '"interface" a Blueprint Interface.', enumValues: const ['class', 'enum', 'interface']),
         'grid_resolution': McpSchema.integer('For "landscape": vertices per side, n × 64 + 1 (65 … 8129); default 129.'),
@@ -251,6 +259,31 @@ void registerAssetTools(McpToolRegistry registry, EditorViewModel vm, McpEditorS
               worldSize: LuminaUnits.toMetres(size),
               maxHeight: LuminaUnits.toMetres(height),
             );
+            vm.refreshAssets();
+          // An Animation Sequence authored from scratch for a skeletal mesh,
+          // as Content Browser → New → Animation Sequence makes it.
+          case AssetType.animation when args.optionalString('target_mesh') != null:
+            final meshes = AnimGraphAssetService.skeletalMeshes(vm.projectDirPath);
+            final mesh = args.optionalString('target_mesh')!;
+            if (!meshes.any((m) => m.relativePath == mesh)) {
+              return McpToolResult.error('No skeletal mesh "$mesh": pass one of the project\'s skeletal meshes: '
+                  '${meshes.isEmpty ? 'none (import one first)' : meshes.map((m) => m.relativePath).join(', ')}.');
+            }
+            final fps = args.number('frame_rate', fallback: 30);
+            if (fps <= 0 || fps > 240) return McpToolResult.error('frame_rate must be in (0, 240]; got $fps.');
+            final seconds = args.optionalNumber('length_seconds');
+            final frames = seconds != null ? (seconds * fps).round() : args.integer('length_frames', fallback: 60);
+            if (frames < 1) return McpToolResult.error('The length must be at least one frame; got $frames.');
+            try {
+              relative = AnimGraphAssetService.createAnimationSequence(vm.projectDirPath,
+                  name: name,
+                  meshRelPath: mesh,
+                  lengthFrames: frames,
+                  frameRate: fps,
+                  folder: folderArg == null ? null : _folderArg(folderArg, ''));
+            } catch (e) {
+              return McpToolResult.error('Could not create the Animation Sequence: $e');
+            }
             vm.refreshAssets();
           // What the editor authors on a new asset, saved.
           case AssetType.sequencer || AssetType.particle || AssetType.animation:

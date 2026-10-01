@@ -62,4 +62,26 @@ class SelectedKeyframeDetails {
 
     return [pitch, yaw, roll];
   }
+
+  /// A bone's local rotation as degrees about its own X, Y and Z axes
+  /// (applied X, then Y, then Z: `q = qZ · qY · qX`), the order
+  /// [eulerXyzToQuaternion] reads back.
+  static List<double> quaternionToEulerXyz(double x, double y, double z, double w) {
+    final e = quaternionToEuler(x, y, z, w); // [about Y, about Z, about X]
+    return [e[2], e[0], e[1]];
+  }
+
+  /// `[x, y, z]` degrees → quaternion `[x, y, z, w]`, `q = qZ · qY · qX`.
+  static List<double> eulerXyzToQuaternion(double xDeg, double yDeg, double zDeg) {
+    const d2r = math.pi / 180.0;
+    final cx = math.cos(xDeg * d2r / 2), sx = math.sin(xDeg * d2r / 2);
+    final cy = math.cos(yDeg * d2r / 2), sy = math.sin(yDeg * d2r / 2);
+    final cz = math.cos(zDeg * d2r / 2), sz = math.sin(zDeg * d2r / 2);
+    return [
+      sx * cy * cz - cx * sy * sz,
+      cx * sy * cz + sx * cy * sz,
+      cx * cy * sz - sx * sy * cz,
+      cx * cy * cz + sx * sy * sz,
+    ];
+  }
 }

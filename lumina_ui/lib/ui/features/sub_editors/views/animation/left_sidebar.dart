@@ -240,6 +240,7 @@ mixin _AnimationLeftSidebar on _AnimationSubEditorStateBase {
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
           color: EditorColors.background,
           child: TextField(
+            key: const ValueKey('anim_bone_filter'),
             initialValue: vm.boneSearchQuery,
             placeholder: const Text('Filter bones (e.g. foot, spine)...', style: TextStyle(fontSize: 10)),
             style: const TextStyle(fontSize: 10),
@@ -279,6 +280,7 @@ mixin _AnimationLeftSidebar on _AnimationSubEditorStateBase {
     }
     final isExpanded = query.isNotEmpty ? true : _expandedNodeIndices.contains(node.index);
     final isAnimated = vm.activeAnimatedNodeIndices.contains(node.index);
+    final isSelectedBone = vm.isAuthored && vm.selectedBone == node.name;
     final childBones = node.children.where((c) => c.type != GlbNodeType.mesh && (query.isEmpty || _nodeMatchesFilter(c, query))).toList();
 
     return Column(
@@ -286,7 +288,13 @@ mixin _AnimationLeftSidebar on _AnimationSubEditorStateBase {
       children: [
         GestureDetector(
           behavior: HitTestBehavior.opaque,
+          key: ValueKey('anim_bone_tree_${node.name}'),
           onTap: () {
+            if (vm.isAuthored) {
+              // Authored sequence: the bone gets the viewport's gizmo.
+              vm.selectBone(node.name);
+              return;
+            }
             final activeAnim = vm.animatedBoneTracks.where((b) => b.boneName == node.name).firstOrNull;
             final t = activeAnim != null ? activeAnim.startTime : vm.positionSeconds;
             final keyId = 'bone_${node.name}_${t.toStringAsFixed(3)}';
@@ -297,7 +305,9 @@ mixin _AnimationLeftSidebar on _AnimationSubEditorStateBase {
           child: Container(
             height: 24,
             padding: EdgeInsets.only(left: 6.0 + depth * 14.0, right: 8.0),
-            color: isAnimated ? Colors.orange.withValues(alpha: 0.12) : Colors.transparent,
+            color: isSelectedBone
+                ? Colors.amber.withValues(alpha: 0.25)
+                : (isAnimated ? Colors.orange.withValues(alpha: 0.12) : Colors.transparent),
             child: Row(
               children: [
                 if (childBones.isNotEmpty)

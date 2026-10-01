@@ -53,13 +53,17 @@ mixin _AnimationEditorDopeSheet on _AnimationEditorViewModelState {
     if (_selectedKeyframeIds.isEmpty) return null;
     final id = _selectedKeyframeIds.last;
 
-    // 1. Bone Keyframe: format 'bone_boneName_time'
-    if (id.startsWith('bone_')) {
-      final parts = id.split('_');
-      if (parts.length >= 3) {
-        final timeStr = parts.last;
-        final boneName = parts.sublist(1, parts.length - 1).join('_');
-        final targetTime = double.tryParse(timeStr) ?? _positionSeconds;
+    // An authored sequence's bone key: its editable values.
+    if (_authoredClip != null && id.startsWith('bone_')) {
+      return authoredKeyDetails(id);
+    }
+
+    // 1. Bone Keyframe: 'bone_<bone>_<time>' or 'bone_<bone>_<sub-track>_<time>'
+    final ref = parseBoneKeyId(id);
+    if (ref != null) {
+      {
+        final boneName = ref.bone;
+        final targetTime = double.tryParse(id.substring(id.lastIndexOf('_') + 1)) ?? _positionSeconds;
         final frame = (targetTime * _frameRate).round();
 
         List<double> loc = [0.0, 0.0, 0.0];
@@ -189,6 +193,9 @@ mixin _AnimationEditorDopeSheet on _AnimationEditorViewModelState {
   }
 
   void deleteSelectedKeys() {
+    if (_selectedKeyframeIds.isEmpty) return;
+    // Bone keys of an authored sequence: one undo step.
+    if (_authoredClip != null) deleteSelectedBoneKeys();
     if (_selectedKeyframeIds.isEmpty) return;
     for (final id in _selectedKeyframeIds) {
       // Check if it matches a notify

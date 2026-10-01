@@ -65,6 +65,8 @@ mixin _AnimationToolbarTimeline on _AnimationSubEditorStateBase {
             ),
           ],
 
+          ..._authoringToolbarItems(),
+
           const Spacer(),
 
           // Retarget Animation Button

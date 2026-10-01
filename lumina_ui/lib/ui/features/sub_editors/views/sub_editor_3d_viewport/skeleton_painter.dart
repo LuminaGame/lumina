@@ -8,6 +8,11 @@ class _SubEditorGizmoPainter extends CustomPainter {
   final GlbNode? selectedNode;
   final SkeletalMeshSocket? selectedSocket;
   final Map<String, List<double>>? jointDeltas;
+
+  /// A whole pose (joint name → translation, rotation, scale; see
+  /// `SubEditor3DViewport.jointLocalPose`) the bones are drawn in instead of
+  /// the rest pose.
+  final Map<String, List<double>>? jointLocalPose;
   final double cameraYaw;
   final double cameraPitch;
   final double cameraDistance;
@@ -21,6 +26,7 @@ class _SubEditorGizmoPainter extends CustomPainter {
     this.selectedNode,
     this.selectedSocket,
     this.jointDeltas,
+    this.jointLocalPose,
     required this.cameraYaw,
     required this.cameraPitch,
     required this.cameraDistance,
@@ -71,6 +77,14 @@ class _SubEditorGizmoPainter extends CustomPainter {
     // `Matrix4.rotate` divides by its length, turning the node and every
     // descendant into NaN and `Canvas.drawLine` into an exception per frame.
     Matrix4 computeNodeTransform(GlbNode node) {
+      final posed = jointLocalPose?[node.name];
+      if (posed != null && posed.length >= 10) {
+        return Matrix4.compose(
+          Vector3(posed[0], posed[1], posed[2]),
+          Quaternion(posed[3], posed[4], posed[5], posed[6]),
+          Vector3(posed[7], posed[8], posed[9]),
+        );
+      }
       final t = node.translation;
       final r = node.rotation;
       final s = node.scale;

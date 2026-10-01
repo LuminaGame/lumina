@@ -6,6 +6,7 @@ The animation editor: the sub-editor view and view model, the playback controlle
 
 **On this page:**
 
+- [Authoring an Animation Sequence from scratch](#authoring-an-animation-sequence-from-scratch)
 - [`lib/ui/features/sub_editors/views/animation_sub_editor.dart`](#libuifeaturessub_editorsviewsanimation_sub_editordart)
 - [`lib/ui/features/sub_editors/view_models/animation_editor_view_model.dart`](#libuifeaturessub_editorsview_modelsanimation_editor_view_modeldart)
 - [`lib/ui/features/sub_editors/models/anim_bone_track_info.dart`](#libuifeaturessub_editorsmodelsanim_bone_track_infodart)
@@ -27,6 +28,14 @@ The animation editor: the sub-editor view and view model, the playback controlle
 - [`lib/ui/features/sub_editors/views/blend_space/blend_space_grid.dart`](#libuifeaturessub_editorsviewsblend_spaceblend_space_griddart)
 - [`lib/ui/features/sub_editors/views/blend_space/blend_space_sub_editor.dart`](#libuifeaturessub_editorsviewsblend_spaceblend_space_sub_editordart)
 - [`lib/ui/features/sub_editors/widgets/anim_blueprint_retarget_modal.dart`](#libuifeaturessub_editorswidgetsanim_blueprint_retarget_modaldart)
+
+## Authoring an Animation Sequence from scratch
+
+- **Create**: Content Browser ▸ New Asset ▸ **Animation → Animation Sequence** (or MCP `create_asset {type: "animation", target_mesh, length_frames | length_seconds, frame_rate}`) asks for the target skeletal mesh, a name, the length in frames or seconds and the frame rate (30 by default). The sequence is a glTF animation added to the mesh's GLB (the skeleton root's rest pose keyed at frame 0) with an animation `.lmas` under `contents/animations/<Mesh>/` that points at it (lumina's `AuthoredAnimationStore`), and opens in the Animation editor.
+- **Pose**: the Bone Tracks tab lists the skeleton (filter by name); clicking a bone there, or near a joint in the viewport, selects it. The viewport draws the skeleton over the mesh (selected bone in amber) and puts the transform gizmo on the bone: **rotate** (E, the default) for every bone, **translate** (W) for the skeleton root and the pelvis, **scale** (R); World / Local and the snap settings in the viewport's tool cluster. The pose shows live through the same joint transforms and skinning the playback uses (`SubEditor3DViewport.jointLocalPose`).
+- **Auto Key** (toolbar, on by default, remembered in `editor_preferences.json` as `animationAutoKey`): releasing the gizmo keys the bone's changed channels (rotation as a quaternion, translation, scale) at the playhead frame, as one undo step, updating a key already there. With Auto Key off a change is a preview that the next seek or play reverts; **Key** (K) keys the pending changes, or the selected bone's whole transform.
+- **Keys**: the dope sheet lists every keyed bone with its keys; click selects (Shift adds), drag moves the selected keys by whole frames, Delete removes them. A selected bone key opens the Key panel: frame (editable, moves the key), local rotation in degrees about the bone's X / Y / Z, translation, scale (each field keys that channel at the frame) and the interpolation of the bone's channels (Linear / Step / Cubic — glTF interpolates per channel; Cubic eases in and out of every key). Ctrl+Z / Ctrl+Y undo and redo every authored edit.
+- **Save** writes the clip into the mesh's GLB, so Anim Blueprints, Blend Spaces, montages, Play and the generated game play it by name, unchanged; reopening the asset restores the keys exactly from its `authored_clip`.
 
 ## `lib/ui/features/sub_editors/views/animation_sub_editor.dart`
 
@@ -172,6 +181,24 @@ The animation editor: the sub-editor view and view model, the playback controlle
 | `formatTimecode` | `static String formatTimecode(double seconds)` | Executes `formatTimecode` operation. |
 | `save` | `Future<bool> save()` | Serializes and writes the current state or asset to disk. |
 | `dispose` | `void dispose()` | Releases native FFI pointers, event subscriptions, and allocated memory. |
+
+**Authoring members (sequences created in the editor):**
+
+| Member | Signature | Purpose & Description |
+| :--- | :--- | :--- |
+| `isAuthored` / `authoredClip` / `skeleton` | `bool get isAuthored` · `AuthoredAnimationClip? get authoredClip` · `GlbSkeleton? get skeleton` | A sequence authored here (its keys in the asset's `authored_clip`), its clip and the mesh's skeleton. |
+| `transactions` / `undo` / `redo` | `TransactionManager transactions` | The editor's undo stack for authored edits (Ctrl+Z / Ctrl+Y). |
+| `autoKey` / `setAutoKey` / `onAutoKeyChanged` | `bool get autoKey` · `void setAutoKey(bool value)` | Auto Key: a released gizmo keys the changed channels at the playhead; told to the preferences. |
+| `selectedBone` / `selectBone` | `String? get selectedBone` · `void selectBone(String? bone)` | The bone the gizmo sits on. |
+| `playheadFrame` | `int get playheadFrame` | The frame keys are written at. |
+| `currentNodePose` / `jointLocalPose` | `Map<int, BoneTrs> get currentNodePose` · `Map<String, List<double>>? get jointLocalPose` | The pose shown: the clip at the playhead with pending previews over it; per joint for the viewport. |
+| `boneLocal` / `boneWorldPosition` / `canTranslateBone` | `BoneTrs? boneLocal(String bone)` · `Vector3? boneWorldPosition(String bone)` · `bool canTranslateBone(String bone)` | A bone's local transform / world position now; only the root and pelvis translate. |
+| `gizmoTarget` / `pickBone` | `SubEditorGizmoTarget? gizmoTarget(GizmoMode mode)` · `String? pickBone(Vector3 origin, Vector3 direction)` | The gizmo's target (authoring frame) and the joint nearest a click ray. |
+| `beginBonePose` / `previewGizmoDelta` / `previewBonePose` / `endBonePose` / `cancelBonePose` | `void beginBonePose(String bone)` · `void previewGizmoDelta(SubEditorGizmoDelta delta)` · … | The gizmo drag: a world delta turned into the bone's local transform (`R_local' = R_parent⁻¹ · Δ · R_parent · R_local`); release keys it with Auto Key on, Esc restores it. |
+| `hasPendingPreview` / `keyPendingOrSelected` | `bool get hasPendingPreview` · `void keyPendingOrSelected()` | The Key button: keys pending previews, or the selected bone's whole transform. |
+| `parseBoneKeyId` / `boneKeyId` / `selectedBoneKeys` | `AnimBoneKeyRef? parseBoneKeyId(String id)` · `String boneKeyId(String bone, int frame)` | Dope sheet bone key ids (`bone_<bone>[_<sub-track>]_<time>`) ↔ bone and frame. |
+| `setBoneKey` / `moveSelectedBoneKeysBy` / `moveSelectedBoneKeysToFrame` / `deleteSelectedBoneKeys` / `setBoneInterpolation` | `void setBoneKey(String bone, int frame, {List<double>? translation, rotation, scale})` · … | Key panel and dope sheet edits, each one undo step. |
+| `authoredGlbClip` / `authoredBoneTracks` / `authoredKeyDetails` | `GlbAnimationClip? get authoredGlbClip` · … | The authored clip as the dope sheet and Key panel read clips. |
 
 ## `lib/ui/features/sub_editors/models/anim_bone_track_info.dart`
 
@@ -475,6 +502,7 @@ Animation Blueprint and Blend Space assets on disk: lumina's anim graph document
 | `newBlendSpace` | `static LuminaBlendSpaceDocument newBlendSpace()` | A new 2D Blend Space: Direction (−180…180°) × Speed (0…500 cm/s). |
 | `createAnimBlueprint` | `static String createAnimBlueprint(String projectDir, {required String name, required String meshRelPath})` | Creates `ABP_<name>.lmas` for [meshRelPath] and returns its project relative path. |
 | `createBlendSpace` | `static String createBlendSpace(String projectDir, {required String name, required String meshRelPath, LuminaBl...` | Creates `BS_<name>.lmas` for [meshRelPath] and returns its path; [document] is its content (a new 2D space by default). |
+| `createAnimationSequence` | `static String createAnimationSequence(String projectDir, {required String name, required String meshRelPath, required int lengthFrames, double frameRate = 30.0, String? folder})` | Creates an empty Animation Sequence for [meshRelPath] (the skeleton root's rest pose keyed at frame 0), stored as a clip in the mesh's GLB; returns its project relative path. |
 | `readAnimBlueprint` | `static LuminaAnimBlueprintDocument? readAnimBlueprint(String projectDir, String relPath)` |  |
 | `readBlendSpace` | `static LuminaBlendSpaceDocument? readBlendSpace(String projectDir, String relPath)` |  |
 | `blendSpaceTarget` | `static String? blendSpaceTarget(String projectDir, String relPath)` | The mesh a Blend Space was made for (its metadata), or null. |

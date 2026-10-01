@@ -122,6 +122,25 @@ abstract final class AnimGraphAssetService {
         samples: [],
       );
 
+  /// Creates an empty Animation Sequence for [meshRelPath]
+  /// (`contents/animations/<Mesh>/<name>.lmas`): [lengthFrames] long at
+  /// [frameRate], the skeleton root's rest pose keyed at frame 0, stored as
+  /// a clip in the mesh's GLB. Returns its project relative path.
+  static String createAnimationSequence(String projectDir,
+          {required String name,
+          required String meshRelPath,
+          required int lengthFrames,
+          double frameRate = 30.0,
+          String? folder}) =>
+      AuthoredAnimationStore.create(
+        projectDir: projectDir,
+        meshRelPath: meshRelPath,
+        name: name,
+        lengthFrames: lengthFrames,
+        frameRate: frameRate,
+        folder: folder,
+      );
+
   /// Creates `ABP_<name>.lmas` for [meshRelPath] and returns its project
   /// relative path.
   static String createAnimBlueprint(String projectDir, {required String name, required String meshRelPath}) {

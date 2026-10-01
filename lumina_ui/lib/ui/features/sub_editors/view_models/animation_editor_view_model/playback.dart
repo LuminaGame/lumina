@@ -13,6 +13,7 @@ mixin _AnimationEditorPlayback on _AnimationEditorViewModelState {
     notifyListeners();
   }
 
+  @override
   void pause() {
     if (!_isPlaying) return;
     _isPlaying = false;
@@ -64,6 +65,11 @@ mixin _AnimationEditorPlayback on _AnimationEditorViewModelState {
   void setFrameRate(double fps) {
     if (fps > 0) {
       _frameRate = fps;
+      if (_authoredClip != null) {
+        // Keys stay on their frames; the clip plays faster or slower.
+        _authoredClip!.frameRate = fps;
+        _authoredChanged();
+      }
       _isDirty = true;
       notifyListeners();
     }
@@ -190,6 +196,11 @@ mixin _AnimationEditorPlayback on _AnimationEditorViewModelState {
 
   @override
   void _updatePlaybackController() {
+    // A preview that was not keyed lasts until the playhead moves.
+    if (_dragBone == null && _pendingPose.isNotEmpty) {
+      _pendingPose.clear();
+      _authoredChanged();
+    }
     playbackController.setPlayback(
       clipIndex: _selectedClip,
       timeSeconds: _positionSeconds,

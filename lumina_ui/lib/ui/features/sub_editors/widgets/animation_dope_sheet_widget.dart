@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart' show HardwareKeyboard;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import '../../../core/theme/editor_theme.dart';
 import '../models/anim_notify_and_curves.dart';

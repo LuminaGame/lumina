@@ -122,6 +122,9 @@ abstract class _SubEditor3DViewportStateBase extends State<SubEditor3DViewport> 
   final Map<int, List<double>> _restEntityTransforms = {};
   final Set<int> _posedEntities = {};
 
+  /// The native asset's entities by joint name, for [SubEditor3DViewport.jointLocalPose].
+  final Map<String, List<int>> _jointEntities = {};
+
   // --- Implemented by the domain mixins or [_SubEditor3DViewportState]. ---
 
   bool get _nativeScale;
@@ -145,6 +148,8 @@ abstract class _SubEditor3DViewportStateBase extends State<SubEditor3DViewport> 
   void _applyJointTransforms({bool force = false});
 
   void _onPlaybackChanged();
+
+  void _applyJointLocalPose();
 
   ViewportRay? _brushRay(Offset local);
 

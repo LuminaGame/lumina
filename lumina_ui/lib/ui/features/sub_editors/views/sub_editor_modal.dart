@@ -325,6 +325,7 @@ class _SubEditorDispatcher extends StatelessWidget {
           viewModel: _existingSession<AnimationEditorViewModel>(),
           onBind: _bind, onClose: onClose,
           onAssetsModified: editorViewModel?.refreshAssets,
+          preferences: editorViewModel?.editorPreferences,
         );
       case 'Texture':
       case 'TEXTURE':

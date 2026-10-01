@@ -31,7 +31,8 @@ enum FlightCameraControlType {
 /// once.
 class EditorPreferences extends ChangeNotifier {
   EditorPreferences._(this.file, this._flightCameraControl, this._importWorkers, this._marketplaceUrl,
-      this._editorBuildMode, this._editorBuildKeep, this._editorBuildCacheDir, this._perProjectEditors, this._cameraPreviewWidth, this._sequencerAutoKey);
+      this._editorBuildMode, this._editorBuildKeep, this._editorBuildCacheDir, this._perProjectEditors, this._cameraPreviewWidth, this._sequencerAutoKey,
+      this._animationAutoKey);
 
   /// The preferences stored in [configDir] (default: [LuminaConfigDir]); the
   /// defaults when the file is missing or unreadable.
@@ -46,6 +47,7 @@ class EditorPreferences extends ChangeNotifier {
     var perProject = defaultPerProjectEditors;
     var previewWidth = defaultCameraPreviewWidth;
     var autoKey = defaultSequencerAutoKey;
+    var animationAutoKey = defaultAnimationAutoKey;
     try {
       final decoded = ConfigJsonFile(file).read();
       if (decoded is Map) {
@@ -66,11 +68,14 @@ class EditorPreferences extends ChangeNotifier {
         if (preview is num && preview.isFinite) previewWidth = clampCameraPreviewWidth(preview.toDouble());
         final sequencerAutoKey = decoded['sequencerAutoKey'];
         if (sequencerAutoKey is bool) autoKey = sequencerAutoKey;
+        final animAutoKey = decoded['animationAutoKey'];
+        if (animAutoKey is bool) animationAutoKey = animAutoKey;
       }
     } catch (e) {
       debugPrint('[EditorPreferences] ${file.path} is unreadable, using the defaults: $e');
     }
-    return EditorPreferences._(file, flight, importWorkers, marketplaceUrl, buildMode, buildKeep, buildCacheDir, perProject, previewWidth, autoKey);
+    return EditorPreferences._(file, flight, importWorkers, marketplaceUrl, buildMode, buildKeep, buildCacheDir, perProject, previewWidth, autoKey,
+        animationAutoKey);
   }
 
   static const String fileName = 'editor_preferences.json';
@@ -214,6 +219,21 @@ class EditorPreferences extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Animation editor.
+
+  /// The Animation editor's Auto Key: releasing a bone gizmo on an authored
+  /// sequence keys the changed channels at the playhead (on by default).
+  bool get animationAutoKey => _animationAutoKey;
+  bool _animationAutoKey;
+  static const bool defaultAnimationAutoKey = true;
+
+  void setAnimationAutoKey(bool value) {
+    if (value == _animationAutoKey) return;
+    _animationAutoKey = value;
+    _save();
+    notifyListeners();
+  }
+
   void setFlightCameraControl(FlightCameraControlType value) {
     if (value == _flightCameraControl) return;
     _flightCameraControl = value;
@@ -235,6 +255,7 @@ class EditorPreferences extends ChangeNotifier {
           'perProjectEditors': _perProjectEditors,
           'cameraPreviewWidth': _cameraPreviewWidth,
           'sequencerAutoKey': _sequencerAutoKey,
+          'animationAutoKey': _animationAutoKey,
         },
         isValid: (value) => value is Map<String, dynamic>,
         pretty: true,

@@ -224,9 +224,44 @@ mixin _SubEditor3DViewportPoseAndMaterials on _SubEditor3DViewportStateBase {
     }
   }
 
+  /// Writes [SubEditor3DViewport.jointLocalPose] onto the joints and
+  /// refreshes the skin, the way a clip's playback does.
+  @override
+  void _applyJointLocalPose() {
+    final pose = widget.jointLocalPose;
+    final asset = _nativeAsset;
+    final engine = _nativeEngine;
+    if (pose == null || asset == null || engine == null) return;
+    try {
+      final tm = FilamentTransformManager(engine);
+      tm.transaction(() {
+        for (final entry in pose.entries) {
+          final v = entry.value;
+          if (v.length < 10) continue;
+          final entities = _jointEntities.putIfAbsent(entry.key, () => asset.getEntitiesByName(entry.key));
+          if (entities.isEmpty) continue;
+          final m = Matrix4.compose(
+            Vector3(v[0], v[1], v[2]),
+            Quaternion(v[3], v[4], v[5], v[6]),
+            Vector3(v[7], v[8], v[9]),
+          ).storage.toList();
+          for (final entity in entities) {
+            tm.setTransform(entity, m);
+          }
+        }
+      });
+      asset.animator.updateBoneMatrices();
+    } catch (e) {
+      debugPrint('[SubEditor3DViewport] joint pose update error: $e');
+    }
+  }
+
   @override
   void _onPlaybackChanged() {
-    if (_nativeAsset != null && widget.playbackController != null) {
+    if (_nativeAsset != null && widget.jointLocalPose != null) {
+      // The pose is the whole skeleton: no clip under it.
+      _applyJointLocalPose();
+    } else if (_nativeAsset != null && widget.playbackController != null) {
       final ctrl = widget.playbackController!;
       try {
         ctrl.recordCall('applyAnimation');

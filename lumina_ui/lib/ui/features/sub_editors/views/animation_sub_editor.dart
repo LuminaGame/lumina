@@ -4,8 +4,12 @@ import '../sub_editor_binding.dart';
 import 'package:lumina/lumina.dart';
 import '../../../core/theme/editor_theme.dart';
 import '../../../core/property_editors/asset_picker_select.dart';
+import '../../main_editor/services/editor_preferences.dart';
 import '../models/anim_notify_and_curves.dart';
+import '../models/selected_keyframe_details.dart';
+import '../models/sub_editor_transform_gizmo.dart';
 import '../view_models/animation_editor_view_model.dart';
+import 'sequencer/key_details_panel.dart' show SequencerNumberField;
 import '../widgets/animation_retarget_modal.dart';
 import '../widgets/animation_dope_sheet_widget.dart';
 import 'sub_editor_3d_viewport.dart';
@@ -15,6 +19,7 @@ part 'animation/toolbar_timeline.dart';
 part 'animation/left_sidebar.dart';
 part 'animation/keyframe_details.dart';
 part 'animation/curves_blend_space.dart';
+part 'animation/authoring.dart';
 
 class AnimationSubEditor extends StatefulWidget {
   final String assetName;
@@ -25,6 +30,9 @@ class AnimationSubEditor extends StatefulWidget {
   final SubEditorBindCallback? onBind;
   final VoidCallback? onAssetsModified;
 
+  /// The per-user preferences (Auto Key is remembered there).
+  final EditorPreferences? preferences;
+
   const AnimationSubEditor({
     super.key,
     required this.assetName,
@@ -34,6 +42,7 @@ class AnimationSubEditor extends StatefulWidget {
     this.onClose,
     this.onBind,
     this.onAssetsModified,
+    this.preferences,
   });
 
   @override
@@ -45,7 +54,8 @@ class _AnimationSubEditorState extends _AnimationSubEditorStateBase
         _AnimationToolbarTimeline,
         _AnimationLeftSidebar,
         _AnimationKeyframeDetails,
-        _AnimationCurvesBlendSpace {
+        _AnimationCurvesBlendSpace,
+        _AnimationAuthoring {
 
   @override
   void initState() {
@@ -54,6 +64,12 @@ class _AnimationSubEditorState extends _AnimationSubEditorStateBase
     final path = widget.assetPath ?? widget.asset?.lmasPath ?? widget.asset?.relativePath ?? 'contents/animations/${widget.assetName}.lmas';
     _viewModel = widget.viewModel ?? AnimationEditorViewModel(assetPath: path, vsync: this);
     widget.onBind?.call(_viewModel, _viewModel.save, () => _viewModel.isDirty);
+    // Auto Key is a per-user preference.
+    final preferences = widget.preferences;
+    if (preferences != null) {
+      _viewModel.setAutoKey(preferences.animationAutoKey);
+      _viewModel.onAutoKeyChanged = preferences.setAnimationAutoKey;
+    }
 
     if (_ownsViewModel) {
       _viewModel.load().then((_) {
@@ -62,6 +78,8 @@ class _AnimationSubEditorState extends _AnimationSubEditorStateBase
             for (final node in _viewModel.allBones) {
               _expandedNodeIndices.add(node.index);
             }
+            // An authored sequence is posed bone by bone: show the skeleton.
+            if (_viewModel.isAuthored) _activeLeftTab = 1;
           });
         }
       });
@@ -69,11 +87,13 @@ class _AnimationSubEditorState extends _AnimationSubEditorStateBase
       for (final node in _viewModel.allBones) {
         _expandedNodeIndices.add(node.index);
       }
+      if (_viewModel.isAuthored) _activeLeftTab = 1;
     }
   }
 
   @override
   void dispose() {
+    if (_viewModel.onAutoKeyChanged == widget.preferences?.setAnimationAutoKey) _viewModel.onAutoKeyChanged = null;
     _focusNode.dispose();
     if (_ownsViewModel) {
       _viewModel.dispose();
@@ -83,6 +103,7 @@ class _AnimationSubEditorState extends _AnimationSubEditorStateBase
 
   KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    if (_handleAuthoringKey(event)) return KeyEventResult.handled;
 
     if (event.logicalKey == LogicalKeyboardKey.space) {
       _viewModel.togglePlay();
@@ -103,8 +124,15 @@ class _AnimationSubEditorState extends _AnimationSubEditorStateBase
       focusNode: _focusNode,
       autofocus: true,
       onKeyEvent: _handleKeyEvent,
-      child: ListenableBuilder(
-        listenable: _viewModel,
+      // A click anywhere in the editor brings its shortcuts back (Space,
+      // arrows, Ctrl+Z, Delete, K) when focus was elsewhere.
+      child: Listener(
+        behavior: HitTestBehavior.translucent,
+        onPointerDown: (_) {
+          if (!_focusNode.hasFocus) _focusNode.requestFocus();
+        },
+        child: ListenableBuilder(
+        listenable: Listenable.merge([_viewModel, _viewModel.transactions]),
         builder: (context, _) {
           final isDirty = _viewModel.isDirty;
 
@@ -175,13 +203,7 @@ class _AnimationSubEditorState extends _AnimationSubEditorStateBase
                             Expanded(
                               child: Stack(
                                 children: [
-                                  SubEditor3DViewport(
-                                    title: 'Animation Viewport — ${widget.assetName}',
-                                    glbMesh: _viewModel.glbMesh,
-                                    meshSourcePath: _viewModel.previewMeshSourcePath,
-                                    playbackController: _viewModel.playbackController,
-                                    showShapeSelector: true,
-                                  ),
+                                  _buildViewport(),
                                   // Top-Left Stats Overlay HUD
                                   Positioned(
                                     top: 12,
@@ -303,6 +325,7 @@ class _AnimationSubEditorState extends _AnimationSubEditorStateBase
             ),
           );
         },
+        ),
       ),
     );
   }

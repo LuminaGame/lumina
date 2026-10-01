@@ -37,6 +37,7 @@ mixin _AnimationEditorPreviewAndRetarget on _AnimationEditorViewModelState {
             } else {
               _glbMesh = parsedMesh;
             }
+            _refreshSkeleton();
             _updatePlaybackController();
           }
         } catch (_) {}

@@ -1,8 +1,13 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/foundation.dart';
 import 'package:lumina/lumina.dart';
+import 'package:vector_math/vector_math_64.dart' show Matrix4, Quaternion, Vector3;
+import '../../main_editor/commands/editor_transaction.dart';
+import '../../main_editor/services/transform_gizmo.dart' show AuthoringRotation, TransformGizmoModel;
+import '../models/sub_editor_transform_gizmo.dart';
 import '../models/animation_playback_controller.dart';
 import '../models/anim_notify_and_curves.dart';
 import '../models/anim_bone_track_info.dart';
@@ -14,13 +19,15 @@ part 'animation_editor_view_model/preview_and_retarget.dart';
 part 'animation_editor_view_model/playback.dart';
 part 'animation_editor_view_model/notifies_curves_blend_space.dart';
 part 'animation_editor_view_model/dope_sheet.dart';
+part 'animation_editor_view_model/authoring.dart';
 
 class AnimationEditorViewModel extends _AnimationEditorViewModelState
     with
         _AnimationEditorPreviewAndRetarget,
         _AnimationEditorPlayback,
         _AnimationEditorNotifiesCurvesBlendSpace,
-        _AnimationEditorDopeSheet {
+        _AnimationEditorDopeSheet,
+        _AnimationEditorAuthoring {
   AnimationEditorViewModel({required super.assetPath, super.initialAsset, super.vsync});
 
   bool get isLoading => _isLoading;
@@ -74,8 +81,12 @@ class AnimationEditorViewModel extends _AnimationEditorViewModelState
   }
 
   @override
-  GlbAnimationClip? get activeClip =>
-      _clips.isNotEmpty && _selectedClip < _clips.length ? _clips[_selectedClip] : null;
+  GlbAnimationClip? get activeClip => isAuthored
+      ? authoredGlbClip
+      : (_clips.isNotEmpty && _selectedClip < _clips.length ? _clips[_selectedClip] : null);
+
+  @override
+  List<GlbAnimationChannel> get activeClipChannels => activeClip?.channels ?? const [];
 
   @override
   double get duration => activeClip?.duration ?? 0.0;
@@ -107,6 +118,8 @@ class AnimationEditorViewModel extends _AnimationEditorViewModelState
 
   /// Returns only bones that actively vary (position/rotation/scale) over time.
   List<AnimBoneTrackInfo> get animatedBoneTracks {
+    // An authored sequence lists every keyed bone, even one holding a pose.
+    if (isAuthored) return authoredBoneTracks;
     return allBoneTrackInfos.where((b) => b.hasVariation).toList();
   }
 
@@ -214,6 +227,12 @@ class AnimationEditorViewModel extends _AnimationEditorViewModelState
         ];
       }
 
+      // A sequence authored in the editor keeps its keys in the asset.
+      _authoredClip = AuthoredAnimationStore.clipOf(_asset);
+      _pendingPose.clear();
+      _selectedBone = null;
+      _refreshSkeleton();
+
       // Discover available skeletal meshes in the project
       final projectDir = _findProjectDir(assetPath);
       if (projectDir != null) {
@@ -251,8 +270,17 @@ class AnimationEditorViewModel extends _AnimationEditorViewModelState
         } catch (_) {}
       }
 
-      // If a preview mesh path is configured, bind it
-      if (_previewMeshPath != null && _availableSkeletalMeshes.isNotEmpty) {
+      // A clip that lives in a mesh's GLB is that animation, by name.
+      final clipName = _asset?.metadata['clip_name'];
+      if (clipName != null && clipName.isNotEmpty) {
+        final index = _clips.indexWhere((c) => c.name == clipName);
+        if (index >= 0) _selectedClip = index;
+      }
+      if (_authoredClip != null) _frameRate = _authoredClip!.frameRate;
+
+      // If a preview mesh path is configured, bind it (an authored sequence
+      // always shows the mesh it is keyed on).
+      if (_authoredClip == null && _previewMeshPath != null && _availableSkeletalMeshes.isNotEmpty) {
         final match = _availableSkeletalMeshes.where((m) => m.relativePath == _previewMeshPath).firstOrNull;
         if (match != null) {
           await setPreviewMesh(match, markDirty: false);
@@ -353,6 +381,37 @@ class AnimationEditorViewModel extends _AnimationEditorViewModelState
           assetId: s.assetName,
           assetPath: s.assetPath,
         ));
+      }
+    }
+
+    final authored = _authoredClip;
+    if (authored != null) {
+      final projectDir = _findProjectDir(assetPath);
+      if (projectDir == null) {
+        EngineLoggerService().log('Cannot save $assetPath: it is not inside a project', level: 'error');
+        return false;
+      }
+      final root = Directory(projectDir).absolute.path.replaceAll(r'\', '/');
+      final rel = File(assetPath).absolute.path.replaceAll(r'\', '/').substring(root.length + 1);
+      try {
+        _asset = AuthoredAnimationStore.save(
+          projectDir: projectDir,
+          animationRelPath: rel,
+          clip: authored,
+          metadata: updatedMetadata,
+          references: [
+            ...?_asset?.references.where((r) => !r.slotName.startsWith('blend_sample_')),
+            ...refs,
+          ],
+        );
+        _isDirty = false;
+        EngineLoggerService().log('Saved Animation asset to $assetPath (clip ${authored.name} in its mesh)', level: 'info');
+        AssetRepository.notifyAssetsChanged();
+        notifyListeners();
+        return true;
+      } catch (e, st) {
+        EngineLoggerService().log('Failed to save Animation asset: $e\n$st', level: 'error');
+        return false;
       }
     }
 

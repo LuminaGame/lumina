@@ -44,6 +44,29 @@ abstract class _AnimationEditorViewModelState extends ChangeNotifier {
   int _snapInterval = 1;
   final Set<String> _selectedKeyframeIds = {};
 
+  // Authoring (a sequence created in the editor: keys on bones)
+  AuthoredAnimationClip? _authoredClip;
+  GlbSkeleton? _skeleton;
+  bool _autoKey = true;
+  String? _selectedBone;
+
+  /// Bone → local transform shown over the clip until it is keyed, or
+  /// reverted by the next seek / play (Auto Key off, or mid-drag).
+  final Map<String, BoneTrs> _pendingPose = {};
+  String? _dragBone;
+  BoneTrs? _dragBase;
+  Matrix4? _dragParentWorld;
+  Map<String, BoneTrs>? _dragPendingBefore;
+
+  /// Bumped on every change of the authored keys or the pending pose.
+  int _poseRevision = 0;
+
+  /// The editor's undo stack (authored keys).
+  final TransactionManager transactions = TransactionManager();
+
+  /// Told when the user flips Auto Key (the editor preferences remember it).
+  void Function(bool value)? onAutoKeyChanged;
+
   Ticker? _ticker;
   Duration? _lastElapsed;
 
@@ -79,11 +102,23 @@ abstract class _AnimationEditorViewModelState extends ChangeNotifier {
 
   void play();
 
+  void pause();
+
   void selectClip(int index);
 
   void _onTick(Duration elapsed);
 
   void _updatePlaybackController();
+
+  void _refreshSkeleton();
+
+  SelectedKeyframeDetails? authoredKeyDetails(String id);
+
+  bool deleteSelectedBoneKeys();
+
+  AnimBoneKeyRef? parseBoneKeyId(String id);
+
+  void _authoredChanged();
 
   void addCurve(String name);
 

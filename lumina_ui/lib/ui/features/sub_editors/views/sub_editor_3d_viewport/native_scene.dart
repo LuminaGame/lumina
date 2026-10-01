@@ -186,8 +186,11 @@ mixin _SubEditor3DViewportNativeScene on _SubEditor3DViewportStateBase {
       _appliedSectionMaterials = const {};
 
       _nativeAsset = asset;
+      _jointEntities.clear();
       try {
-        if (widget.playbackController != null) {
+        if (widget.jointLocalPose != null) {
+          _applyJointLocalPose();
+        } else if (widget.playbackController != null) {
           _onPlaybackChanged();
         } else {
           asset.animator.updateBoneMatrices();

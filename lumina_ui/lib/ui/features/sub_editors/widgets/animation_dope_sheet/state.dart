@@ -9,6 +9,9 @@ abstract class _AnimationDopeSheetWidgetStateBase extends State<AnimationDopeShe
   final ScrollController _verticalHeadersScroll = ScrollController();
   bool _isSyncingScroll = false;
 
+  /// Pixels the selected bone keys are being dragged by, or null.
+  double? _boneKeyDragDx;
+
   // --- Implemented by the domain mixins or [_AnimationDopeSheetWidgetState]. ---
 
   Widget _buildIndividualBoneTrackStrip(

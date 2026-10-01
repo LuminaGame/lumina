@@ -128,6 +128,9 @@ mixin _AnimationKeyframeDetails on _AnimationSubEditorStateBase {
       );
     }
 
+    // A bone key of a sequence authored here: editable.
+    if (vm.isAuthored && details.type == 'Bone Keyframe') return _buildAuthoredKeyPanel(details);
+
     return ListView(
       padding: const EdgeInsets.all(12),
       children: [
@@ -345,6 +348,7 @@ mixin _AnimationKeyframeDetails on _AnimationSubEditorStateBase {
     );
   }
 
+  @override
   Widget _buildTransformSectionHeader(String title, IconData icon) {
     return Row(
       children: [

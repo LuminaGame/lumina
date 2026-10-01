@@ -38,6 +38,14 @@ class SubEditor3DViewport extends StatefulWidget {
   /// Tx, Ty, Tz (cm), Rx, Ry, Rz (Euler deg), Sx, Sy, Sz (scale delta).
   final Map<String, List<double>>? jointDeltas;
 
+  /// A whole pose to show instead of [playbackController]'s clip: each
+  /// joint's local transform by name, 10 floats — translation (x, y, z),
+  /// rotation quaternion (x, y, z, w), scale (x, y, z) — in the GLB's units.
+  /// Written through the same joint transforms and `updateBoneMatrices` the
+  /// clip playback uses, whenever a different map is passed and after the
+  /// mesh (re)loads. The Animation editor's authored sequences pose with it.
+  final Map<String, List<double>>? jointLocalPose;
+
   /// Geometry section indices to leave out of the preview, driven by the mesh
   /// editors' per-slot Isolate toggle.
   ///
@@ -160,6 +168,7 @@ class SubEditor3DViewport extends StatefulWidget {
     this.socketAttachments = const [],
     this.morphWeights,
     this.jointDeltas,
+    this.jointLocalPose,
     this.hiddenSectionIndices = const {},
     this.highlightedSectionIndices = const {},
     this.sectionMaterialOverrides = const {},
