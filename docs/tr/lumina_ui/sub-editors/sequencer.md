@@ -7,6 +7,7 @@ Sinematikler için Sequencer: timeline, track ağacı ve eğri editörü, sequen
 **Bu sayfada:**
 
 - [`lib/ui/features/sub_editors/views/sequencer/curve_editor_widget.dart`](#libuifeaturessub_editorsviewssequencercurve_editor_widgetdart)
+- [`lib/ui/features/sub_editors/views/sequencer/key_details_panel.dart`](#libuifeaturessub_editorsviewssequencerkey_details_paneldart)
 - [`lib/ui/features/sub_editors/views/sequencer/level_viewport.dart`](#libuifeaturessub_editorsviewssequencerlevel_viewportdart)
 - [`lib/ui/features/sub_editors/models/sequencer_viewport_camera.dart`](#libuifeaturessub_editorsmodelssequencer_viewport_cameradart)
 - [`lib/ui/features/sub_editors/views/sequencer/render_dialog.dart`](#libuifeaturessub_editorsviewssequencerrender_dialogdart)
@@ -117,6 +118,8 @@ The Curves tab: every keyed channel as a coloured curve with draggable keys and 
 
 Sequencer'ın 3D Viewport sekmesi: sekansın sürdüğü level, level viewport'unun kendi Filament sahnesinden (`EditorViewModel.levelScene`) ikinci bir view ile çizilir; Sequencer'ın level aktörlerine yazdığı her scrub ve oynatma karesi burada aynı karede görünür. Kendi editör kamerasından bakar (level viewport kamerasının olduğu yerden başlar: sürükleyerek yörünge, orta tuş veya Shift+sürükleme ile kaydırma, tekerlekle dolly, sağ tuş + W/A/S/D/Q/E ile uçuş, F veya çerçeve düğmesiyle animasyonlu aktörleri kadraja alma) ya da kamera menüsünden kilitlenince sekansa bağlı bir kamera aktöründen (konumu, +Y ileri yönü ve kamera bileşeninin görüş açısı, bileşen yoksa 60°) 16:9 film kapısı içinde, `PILOTING <ad>` rozetiyle bakar. Pozlama level viewport kamerasını izler. Kilitli bir kameradan bakarken editör yardımcıları (grid, gizmo, seçim kutuları, ışık çizgileri) çizilmez (`EditorViewLayers.cameraView`); editör kamerası onları gösterir. View bir `LevelSceneView`'dır; level viewport'unun kamera önizlemesi de aynı ikinci-view çekirdeğini kullanır. Level editörü olmadan açılan bir sekans bunun yerine bir uyarı gösterir.
 
+**Aktörleri seçme ve canlandırma.** Tıklama işaretçinin altındaki aktörü seçer (level'da, böylece Details onu gösterir, ve sekanstaki track'ini); track outliner'da bir track'e tıklamak da aktörünü seçer. Seçili aktöre level viewport'unun dönüşüm gizmosu, bu view'ın üstüne kendi kamerası için sabit ekran boyutunda çizilir (`SubEditorTransformGizmoPainter`, ortak `TransformGizmoModel`): level'ın kullandığı araç (`activeTool`; view odaktayken ve sağ tuş uçmuyorken W/E/R, ya da sağ üstteki Move / Rotate / Scale düğmeleri), World/Local uzayı ve level'ın taşıma / döndürme / ölçek yakalaması (araçların yanındaki anahtarlar). Level viewport'unun kendi native gizmosu `EditorViewLayers.gizmo` katmanındadır ve bu view onu çizmez. Bir gizmo hareketi `SequencerViewModel.beginActorTransform` … `endActorTransform` yolundan geçer: Auto Key açıkken bırakmak değişen kanalları playhead karesinde key'ler (tek geri alma adımı); Esc sürüklemeyi iptal eder.
+
 | Üye | İmzası | Ne İşe Yarar? |
 | :--- | :--- | :--- |
 | `editorViewModel` | `EditorViewModel editorViewModel` | Sahnesini ve aktörlerini view'ın çizdiği level editörü. |
@@ -133,7 +136,20 @@ Sequencer'ın 3D Viewport sekmesi: sekansın sürdüğü level, level viewport'u
 | `lockToCamera` | `void lockToCamera(String? actorId)` | `actorId` içinden bakar; null ise yeniden editör kamerasından. |
 | `focusAnimatedActors` | `void focusAnimatedActors()` | Kamera olmayan tüm bağlı aktörleri kadraja alır (sekans hiçbirini bağlamıyorsa tüm leveli). |
 | `editorCamera` | `SequencerViewportCamera get editorCamera` | Editör kamerasının gezinme durumu. |
+| `gizmoModel` | `TransformGizmoModel? gizmoModel([Size? size])` | Seçili aktörün şu anda çizildiği ve isabet testinden geçtiği haliyle gizmosu (testler için tutamak konumları) ya da null. |
+| `projectStored` / `rayAt` | `Offset? projectStored(Vector3 p, [Size? size])` / `Ray rayAt(Offset local, [Size? size])` | Saklanan eksenlerdeki (Z yukarı) bir noktanın bu view'daki izdüşümü ve işaretçi ışını (seçim, gizmo sürüklemeleri). |
+| `hoveredGizmoHandle` / `isDraggingGizmo` | `String?` / `bool` | İşaretçinin altındaki ya da sürüklenen tutamak; bir sürükleme olup olmadığı. |
 | `viewForTest` / `cameraForTest` | `FilamentView?` / `FilamentCamera?` | Testler için Filament view'ı ve kamerası. |
+
+## `lib/ui/features/sub_editors/views/sequencer/key_details_panel.dart`
+
+### `class SequencerKeyDetailsPanel`
+
+Sequencer'ın sağına yerleşik Key paneli. Timeline'da bir key elmasına tıklamak onu seçer (Shift+tıklama key ekler) ve panel şunları gösterir: kare (düzenlenebilir: seçili key'leri taşır, hedef karede zaten bulunan key'in yerini alır), zaman (saniye ve timecode), track ve kanal(lar), o karedeki değerler (dönüşüm track'i için dokuz Location / Rotation / Scale X/Y/Z değerinin tamamı: key'li olanlar kalın, diğerleri eğriden örneklenir ya da key yoksa aktörün canlı değeridir; birini düzenlemek o karedeki key'i yazar ya da günceller), interpolasyon (Constant / Linear / Cubic / Cubic (Auto)) ve cubic bir key için giriş/çıkış tanjantları. Başlıktaki düğmeler playhead'i key'e taşır ve seçili key'leri siler. Her düzenleme tek bir Sequencer geri alma adımıdır ve level'ı hemen yeniden değerlendirir.
+
+### `class SequencerNumberField`
+
+Enter'da ya da odağı kaybettiğinde değeri işleyen, düzenlenmediği sürece `value` değerini izleyen sayı alanı; key'li değer kalın çizilir.
 
 ## `lib/ui/features/sub_editors/models/sequencer_viewport_camera.dart`
 
@@ -210,7 +226,7 @@ The Movie Render Queue dialog: configure an offscreen PNG-sequence export, then 
 
 ### `class SequencerSubEditor`
 
-`SequencerSubEditor`: İlgili modülün veri modelini veya temel işlevselliğini temsil eden `class` yapısıdır.
+Sequencer editörü: araç çubuğu (FPS, uzunluk, **Auto Key** anahtarı, **Key** düğmesi, zaman göstergesi, Render Movie, Save), solda track outliner, ortada 3D Viewport / Curves sekmeleri, sağda Key paneli (`SequencerKeyDetailsPanel`), altta transport çubuğu ve timeline. Bir `editorViewModel` ile sekansı level'a bağlar (track tıklamaları level aktörünü seçer), Auto Key'i `EditorPreferences.sequencerAutoKey` içinden okur ve geri yazar, kapanana kadar `SequencerViewModel.handleLevelTransformEdits` metodunu level'ın `actorTransformEditHandler`'ı olarak kurar; böylece canlandırılan aktörlerin level viewport'ta ya da Details'te yapılan dönüşüm düzenlemeleri sekansta key'lenir.
 
 **Fonksiyonlar, Metotlar ve Erişimciler:**
 
@@ -242,7 +258,7 @@ The Movie Render Queue dialog: configure an offscreen PNG-sequence export, then 
 
 ### `class SequencerTimelineWidget`
 
-`SequencerTimelineWidget`: Kullanıcı arayüzünü (UI) oluşturan ve kullanıcı etkileşimlerini dinleyen shadcn_flutter bileşenidir.
+Çok track'li timeline: bir key elmasına tıklamak onu seçer (Shift+tıklama key ekler ya da çıkarır, seçili tüm key'ler vurgulanır), sürüklemek yeniden zamanlar, boş alana tıklamak scrub yapar, bir şeride çift tıklamak key ekler. Timeline odaktayken Del / Backspace seçili key'leri tek geri alma adımıyla siler, Sol / Sağ ok onları bir kare (Shift: on) kaydırır.
 
 **Fonksiyonlar, Metotlar ve Erişimciler:**
 
@@ -361,7 +377,7 @@ How the transport bar's current-time readout is formatted.
 | `selectKeys` | `void selectKeys(Iterable<SequencerKeyRef> keys)` | Box-select: replaces the selection with [keys]; the first becomes the primary [selectedKey] whose tangent handles are shown. |
 | `isKeySelected` | `bool isKeySelected(String trackId, String channelName, int keyIndex)` | Mevcut durumun veya yeteneğin doğruluğunu kontrol eder (`bool` döndürür). |
 | `clearKeySelection` | `void clearKeySelection()` | Koleksiyon veya tampon içeriğini tamamen temizler. |
-| `deleteSelectedKeys` | `void deleteSelectedKeys()` | Belirtilen `SelectedKeys` nesnesini/bileşenini serbest bırakır ve güvenle temizler. |
+| `deleteSelectedKeys` | `void deleteSelectedKeys()` | Seçili tüm key'leri tek geri alma adımıyla siler. |
 | `findTrack` | `SequencerTrack? findTrack(String trackId)` | Belirtilen arama kriterlerine uyan nesneleri veya aktörleri bulup listeler. |
 | `findChannel` | `SequencerChannel? findChannel(String trackId, String channelName)` | Belirtilen arama kriterlerine uyan nesneleri veya aktörleri bulup listeler. |
 | `deleteTrack` | `void deleteTrack(String trackId)` | Belirtilen `Track` nesnesini/bileşenini serbest bırakır ve güvenle temizler. |
@@ -379,6 +395,18 @@ How the transport bar's current-time readout is formatted.
 | `setKeyInterpolationCubicAuto` | `void setKeyInterpolationCubicAuto(String trackId, String channelName, in...` | `Cubic (Auto)`: cubic interpolation with Catmull-Rom tangents computed from the neighbours, in == out (unified handles). |
 | `setKeyInterpolationCubicBroken` | `void setKeyInterpolationCubicBroken(String trackId, String channelName, ...` | `Cubic (Broken)`: cubic interpolation whose two handles move independently. |
 | `restoreLevel` | `void restoreLevel()` | Puts every touched actor property back to its pre-preview value and forgets the snapshot. A cinematic preview never dirties the level: the writes bypass the transaction/dirty path entirely. |
+| `autoKey` / `setAutoKey` | `bool get autoKey` / `void setAutoKey(bool value)` | Auto Key (varsayılan açık; editör `onAutoKeyChanged` ile `EditorPreferences.sequencerAutoKey` içinde saklar): bir dönüşüm değişikliği yapıldığı anda playhead karesinde key'lenir. Kapalıyken bir önizlemedir; `keyPendingOrSelected` ile key'lenmezse sonraki değerlendirme (scrub, oynatma) onu geri alır. |
+| `hasPendingPreview` | `bool get hasPendingPreview` | Auto Key kapalıyken yapılmış ve key'lenmeyi bekleyen bir değişiklik olup olmadığı. |
+| `beginActorTransform` / `previewActorTransform` / `endActorTransform` / `cancelActorTransform` | `void beginActorTransform(String actorId)` … `bool endActorTransform(String actorId)` | Sequencer viewport gizmosunun düzenleme yolu. Begin aktörün dönüşümünü hatırlar ve dokuz dönüşüm kanalının level değerlerini `restoreLevel` için yakalar; preview doğrudan aktöre yazar (geri alma adımı yok); end değişen kanalları (Location/Rotation/Scale X/Y/Z) playhead karesinde **tek** bir geri alma adımıyla key'ler; sekansta aktörün dönüşüm track'i yoksa (dokuz kanallı) oluşturur, o karede zaten bir key varsa onu günceller (interpolasyonu ve tanjantları korunur; yeni key'ler lineer); geri alma aktörü de eski yerine koyar. Cancel (Esc) aktörü geri koyar. |
+| `handleLevelTransformEdits` | `Set<String> handleLevelTransformEdits(List<SequencerLevelTransformEdit> edits)` | Sequencer açıkken `EditorViewModel.actorTransformEditHandler` olarak kurulur: sekansın canlandırdığı aktörlerin dönüşüm düzenlemeleri (level viewport gizmosu, Details) burada key'lenir (Auto Key kapalıyken önizlenir), level'da geri alma adımı ya da kirli işareti oluşturmaz; diğer aktörler sıradan level düzenlemesi olarak kalır. Alınan id'leri döndürür. |
+| `keyPendingOrSelected` | `void keyPendingOrSelected({String? selectedActorId})` | Araç çubuğundaki **Key** düğmesi: bekleyen önizlemelerin değişen kanallarını, yoksa `selectedActorId` aktörünün dokuz dönüşüm kanalının tamamını playhead karesinde key'ler. |
+| `selectTrackForActor` | `void selectTrackForActor(String? actorId)` | `actorId` aktörüne bağlı track'i seçer (viewport'ta tıklama). `selectTrack` de track'in aktörünü level'da seçer. |
+| `transformTrackFor` / `isActorBound` | `SequencerTrack? transformTrackFor(String actorId)` / `bool isActorBound(String actorId)` | Aktörün dönüşüm track'i; herhangi bir track'in onu bağlayıp bağlamadığı. |
+| `toggleKeySelection` | `void toggleKeySelection(String trackId, String channelName, int keyIndex)` | Timeline'da Shift+tıklama: key'i seçime ekler (birincil key olur) ya da çıkarır. |
+| `keyAt` / `channelValueAtFrame` / `hasKeyAt` / `currentActorChannelValue` | `SequencerKey? keyAt(SequencerKeyRef ref)` … | Key panelinin okudukları: bir referansın gösterdiği key, bir kanalın bir karedeki değeri (key ya da örneklenen eğri), orada key olup olmadığı, key'siz bir dönüşüm kanalının canlı değeri. |
+| `setChannelValueAtFrame` | `void setChannelValueAtFrame(String trackId, String channelName, int frame, double value)` | `frame` karesindeki key'i yazar ya da günceller (eksik dönüşüm kanalını oluşturur); tek geri alma adımı. |
+| `moveSelectedKeysToFrame` / `nudgeSelectedKeys` | `void moveSelectedKeysToFrame(int frame)` / `void nudgeSelectedKeys(int delta)` | Seçili key'leri yeniden zamanlar (aynı kanalda hedef karede zaten bulunan key değiştirilir); seçim key'leri izler; tek geri alma adımı. |
+| `setSelectedKeysInterpolation` | `void setSelectedKeysInterpolation(SequencerKeyInterpolationChoice choice)` | Seçili her key'e Constant / Linear / Cubic / Cubic (Auto, tanjantlar komşulardan); tek geri alma adımı. |
 | `attachTicker` | `void attachTicker(TickerProvider vsync)` | Drives playback from the widget's frame clock. Without a ticker (unit tests) advance the clock manually with [advanceClock]. |
 | `detachTicker` | `void detachTicker()` | Drops the widget-owned ticker (the widget is going away while the view model may live on, e.g. when injected by a test or a tab session). |
 | `play` | `void play()` | `play` işlemini gerçekleştirir. |
@@ -418,6 +446,7 @@ One animated actor property: knows how to read/write it on an [EditorActorNode] 
 | `actorId` | `String actorId` | `actorId` alanını (field/property) ve ilişkili veriyi saklar. |
 | `id` | `String id` | `id` alanını (field/property) ve ilişkili veriyi saklar. |
 | `capture` | `void capture(EditorActorNode actor) => _original = _read(actor)` | `capture` işlemini gerçekleştirir. |
+| `captureValue` | `void captureValue(dynamic original)` | Bir düzenlemenin önceki değerini önizleme öncesi değer olarak kaydeder (aktör zaten hareket etmişken). |
 | `write` | `void write(EditorActorNode actor, double value) => _write(actor, value)` | `write` işlemini gerçekleştirir. |
 | `restore` | `void restore(EditorActorNode actor) => _restore(actor, _original)` | `restore` işlemini gerçekleştirir. |
 | `resolve` | `static _ChannelSnapshot? resolve(EditorActorNode actor, TrackSample samp...` | `resolve` işlemini gerçekleştirir. |

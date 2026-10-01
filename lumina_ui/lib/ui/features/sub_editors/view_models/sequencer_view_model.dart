@@ -12,6 +12,7 @@ part 'sequencer_view_model/tracks_and_keys.dart';
 part 'sequencer_view_model/curve_editing.dart';
 part 'sequencer_view_model/playback_and_level_binding.dart';
 part 'sequencer_view_model/render_queue.dart';
+part 'sequencer_view_model/keying.dart';
 
 /// How the transport bar's current-time readout is formatted.
 enum SequencerTimeFormat { frames, seconds, timecode }
@@ -24,7 +25,8 @@ class SequencerViewModel extends _SequencerViewModelState
         _SequencerTracksAndKeys,
         _SequencerCurveEditing,
         _SequencerPlaybackAndLevelBinding,
-        _SequencerRenderQueue {
+        _SequencerRenderQueue,
+        _SequencerKeying {
   SequencerViewModel({
     required super.assetPath,
     super.initialAsset,
@@ -34,6 +36,7 @@ class SequencerViewModel extends _SequencerViewModelState
     super.onLevelChanged,
     super.projectDirPath,
     super.renderService,
+    super.autoKey,
   });
   static const SequencerEvaluator _evaluator = SequencerEvaluator();
 
@@ -211,10 +214,14 @@ class SequencerViewModel extends _SequencerViewModelState
     if (_rangeEnd != null && _rangeEnd! > len) _rangeEnd = null;
   }
 
+  /// Selects [trackId] (clearing the key selection) and its actor in the
+  /// level, so the Sequencer viewport's gizmo and Details show it.
   void selectTrack(String? trackId) {
     _selectedTrackId = trackId;
     _selectedKey = null;
     _selectedKeys.clear();
+    final actorId = trackId == null ? null : findTrack(trackId)?.actorId;
+    if (actorId != null && actorId.isNotEmpty) _selectLevelActor?.call(actorId);
     notifyListeners();
   }
 
@@ -224,6 +231,21 @@ class SequencerViewModel extends _SequencerViewModelState
       ..clear()
       ..add(_selectedKey!);
     _selectedTrackId = trackId;
+    notifyListeners();
+  }
+
+  /// Shift-click: adds the key to the selection (it becomes the primary key
+  /// the Key panel shows), or takes it out when it is already selected.
+  void toggleKeySelection(String trackId, String channelName, int keyIndex) {
+    final ref = (trackId, channelName, keyIndex);
+    if (_selectedKeys.contains(ref)) {
+      _selectedKeys.remove(ref);
+      if (_selectedKey == ref) _selectedKey = _selectedKeys.isEmpty ? null : _selectedKeys.last;
+    } else {
+      _selectedKeys.add(ref);
+      _selectedKey = ref;
+      _selectedTrackId = trackId;
+    }
     notifyListeners();
   }
 
@@ -244,24 +266,6 @@ class SequencerViewModel extends _SequencerViewModelState
   void clearKeySelection() {
     _selectedKey = null;
     _selectedKeys.clear();
-    notifyListeners();
-  }
-
-  void deleteSelectedKeys() {
-    // Delete highest index first per channel so earlier indices stay valid.
-    final ordered = _selectedKeys.toList()
-      ..sort((a, b) {
-        final c = a.$1.compareTo(b.$1);
-        if (c != 0) return c;
-        final d = a.$2.compareTo(b.$2);
-        if (d != 0) return d;
-        return b.$3.compareTo(a.$3);
-      });
-    for (final ref in ordered) {
-      deleteKey(ref.$1, ref.$2, ref.$3);
-    }
-    _selectedKeys.clear();
-    _selectedKey = null;
     notifyListeners();
   }
 
@@ -349,6 +353,10 @@ class _ChannelSnapshot {
         _restore = restore; // ignore: prefer_initializing_formals
 
   void capture(EditorActorNode actor) => _original = _read(actor);
+
+  /// Records [original] as the pre-preview value (an edit's before-value,
+  /// when the actor already moved).
+  void captureValue(dynamic original) => _original = original;
   void write(EditorActorNode actor, double value) => _write(actor, value);
   void restore(EditorActorNode actor) => _restore(actor, _original);
 

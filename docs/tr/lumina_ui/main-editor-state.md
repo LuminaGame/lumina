@@ -319,7 +319,8 @@ A live binding between an open sub-editor tab and its view model.
 | `restoreCameraSnapshot` | `void restoreCameraSnapshot(List<double> cam)` | `restoreCameraSnapshot` işlemini gerçekleştirir. |
 | `beginTransformDrag` | `void beginTransformDrag()` | `beginTransformDrag` işlemini gerçekleştirir. |
 | `cancelTransformDrag` | `void cancelTransformDrag()` | `cancelTransformDrag` işlemini gerçekleştirir. |
-| `endTransformDrag` | `void endTransformDrag()` | `endTransformDrag` işlemini gerçekleştirir. |
+| `endTransformDrag` | `void endTransformDrag()` | Bir dönüşüm sürüklemesini tek geri alma adımıyla bitirir. Açık bir Sequencer'ın `actorTransformEditHandler` üzerinden aldığı aktörler orada key'lenir (level adımı ve kirli işareti yok); `applyPropertyToSelection` da `location` / `rotation` / `scale` için aynısını yapar. |
+| `actorTransformEditHandler` | `Set<String> Function(List<({EditorActorNode actor, List<double> location, List<double> rotation, List<double> scale})> edits)? actorTransformEditHandler` | Açık bir Sequencer tarafından kurulur: her işlenen aktör dönüşüm düzenlemesini önceki değerleriyle alır; key'lediği id'leri döndürür. |
 | `removeComponentWithTransaction` | `void removeComponentWithTransaction(String actorId, String compId)` | Belirtilen `ComponentWithTransaction` nesnesini/bileşenini serbest bırakır ve güvenle temizler. |
 | `pluginRegistry` | `final PluginRegistryService pluginRegistry` | `pluginRegistry` alanını (field/property) ve ilişkili veriyi saklar. |
 | `pluginPatcher` | `final PluginHostPatcherService pluginPatcher` | `pluginPatcher` alanını (field/property) ve ilişkili veriyi saklar. |

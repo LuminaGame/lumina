@@ -509,10 +509,10 @@ mixin _ViewportSceneSync on _ViewportWidgetStateBase {
   void _syncViewLayers() {
     final engine = _nativeEngine, view = _nativeView;
     if (engine == null || engine.isDisposed) return;
+    final gizmo = <int>{...?_nativeGizmo?.entityIds};
     final helpers = <int>{
       ?_nativeGrid?.entityId,
       for (final box in _selectionBoxes.values) ?box.entityId,
-      ...?_nativeGizmo?.entityIds,
       for (final (_, wire) in _lightWires.values) wire.entityId,
       for (final wire in _capsuleWires.values) wire.entityId,
       for (final (_, wire) in _volumeWires.values) wire.entityId,
@@ -520,7 +520,9 @@ mixin _ViewportSceneSync on _ViewportWidgetStateBase {
     };
     final fresh = helpers.difference(_taggedHelperEntities);
     if (fresh.isNotEmpty) EditorViewLayers.tag(engine, fresh, EditorViewLayers.helpers);
-    _taggedHelperEntities = helpers;
+    final freshGizmo = gizmo.difference(_taggedHelperEntities);
+    if (freshGizmo.isNotEmpty) EditorViewLayers.tag(engine, freshGizmo, EditorViewLayers.gizmo);
+    _taggedHelperEntities = {...helpers, ...gizmo};
     if (view == null) return;
     final layers = _wireframeMode ? EditorViewLayers.levelViewportWireframe : EditorViewLayers.levelViewport;
     if (layers == _appliedViewLayers) return;

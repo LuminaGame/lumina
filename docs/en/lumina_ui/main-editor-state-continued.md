@@ -208,6 +208,8 @@ The editor's per-user preferences (as opposed to the project's Project Settings)
 | `setPerProjectEditors` | `void setPerProjectEditors(bool value)` |  |
 | `cameraPreviewWidth` | `double get cameraPreviewWidth` | The width of the level viewport's camera preview in logical pixels (its height follows 16:9); set by dragging its corner. Default 320, clamped to 192–960. |
 | `setCameraPreviewWidth` | `void setCameraPreviewWidth(double value)` |  |
+| `sequencerAutoKey` | `bool get sequencerAutoKey` | The Sequencer's Auto Key: a transform change made while a Sequencer is open is keyed at the playhead. Default on; the Sequencer toolbar's toggle writes it. |
+| `setSequencerAutoKey` | `void setSequencerAutoKey(bool value)` |  |
 | `setFlightCameraControl` | `void setFlightCameraControl(FlightCameraControlType value)` |  |
 
 ## `lib/ui/features/main_editor/services/editor_transform.dart`

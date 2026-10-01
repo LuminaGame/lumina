@@ -7,6 +7,7 @@ The Sequencer for cinematics: the timeline, track tree and curve editor, the seq
 **On this page:**
 
 - [`lib/ui/features/sub_editors/views/sequencer/curve_editor_widget.dart`](#libuifeaturessub_editorsviewssequencercurve_editor_widgetdart)
+- [`lib/ui/features/sub_editors/views/sequencer/key_details_panel.dart`](#libuifeaturessub_editorsviewssequencerkey_details_paneldart)
 - [`lib/ui/features/sub_editors/views/sequencer/level_viewport.dart`](#libuifeaturessub_editorsviewssequencerlevel_viewportdart)
 - [`lib/ui/features/sub_editors/models/sequencer_viewport_camera.dart`](#libuifeaturessub_editorsmodelssequencer_viewport_cameradart)
 - [`lib/ui/features/sub_editors/views/sequencer/render_dialog.dart`](#libuifeaturessub_editorsviewssequencerrender_dialogdart)
@@ -117,6 +118,8 @@ The Curves tab: every keyed channel as a coloured curve with draggable keys and 
 
 The Sequencer's 3D Viewport tab: the level the sequence drives, drawn from the level viewport's own Filament scene (`EditorViewModel.levelScene`) by a second view, so every scrub and playback frame the Sequencer writes onto the level's actors shows here the same frame. It looks through an editor camera of its own (starting where the level viewport's camera is: drag to orbit, middle-drag or Shift+drag to pan, wheel to dolly, right button + W/A/S/D/Q/E to fly, F or the frame button to frame the animated actors) or, locked from the camera menu, through a camera actor bound in the sequence (its location, its +Y forward and the field of view of its camera component, 60° without one) inside a 16:9 film gate, with a `PILOTING <name>` badge. Exposure follows the level viewport's camera. Through a locked camera the editor's helpers (grid, gizmo, selection boxes, light wires) are left out (`EditorViewLayers.cameraView`); the editor camera shows them. The view is a `LevelSceneView`, the second-view core the level viewport's camera preview also uses. A sequence opened without a level editor shows a notice instead.
 
+**Selecting and animating actors.** A click selects the actor under the pointer (in the level, so Details shows it, and its track in the sequence); clicking a track in the track outliner selects its actor too. The selected actor gets the level viewport's transform gizmo, drawn over this view for its own camera at a constant screen size (`SubEditorTransformGizmoPainter`, the shared `TransformGizmoModel`): the tool the level uses (`activeTool`; W/E/R while the view has focus and the right button is not flying, or the Move / Rotate / Scale buttons at the top right), World/Local space, and the level's translate / rotate / scale snapping (toggles beside the tools). The level viewport's own native gizmo is on `EditorViewLayers.gizmo`, which this view does not draw. A gizmo gesture goes through `SequencerViewModel.beginActorTransform` … `endActorTransform`: with Auto Key on, release keys the changed channels at the playhead (one undo step); Esc cancels the drag.
+
 | Member | Signature | Purpose & Description |
 | :--- | :--- | :--- |
 | `editorViewModel` | `EditorViewModel editorViewModel` | The level editor whose scene and actors the view draws. |
@@ -133,7 +136,20 @@ The Sequencer's 3D Viewport tab: the level the sequence drives, drawn from the l
 | `lockToCamera` | `void lockToCamera(String? actorId)` | Looks through `actorId`, or through the editor camera again when null. |
 | `focusAnimatedActors` | `void focusAnimatedActors()` | Frames every bound actor that is not a camera (the whole level when the sequence binds none). |
 | `editorCamera` | `SequencerViewportCamera get editorCamera` | The editor camera's navigation state. |
+| `gizmoModel` | `TransformGizmoModel? gizmoModel([Size? size])` | The selected actor's gizmo as drawn and hit-tested now (handle positions for tests), or null. |
+| `projectStored` / `rayAt` | `Offset? projectStored(Vector3 p, [Size? size])` / `Ray rayAt(Offset local, [Size? size])` | This view's projection of a stored-axes (Z up) point, and the pointer ray in stored axes (picking, gizmo drags). |
+| `hoveredGizmoHandle` / `isDraggingGizmo` | `String?` / `bool` | The handle under the pointer or being dragged; whether a drag is in progress. |
 | `viewForTest` / `cameraForTest` | `FilamentView?` / `FilamentCamera?` | The Filament view and camera, for tests. |
+
+## `lib/ui/features/sub_editors/views/sequencer/key_details_panel.dart`
+
+### `class SequencerKeyDetailsPanel`
+
+The Key panel docked on the right of the Sequencer. Clicking a key diamond on the timeline selects it (Shift-click adds keys) and the panel shows: the frame (editable: moves the selected keys, replacing a key already at the target frame), the time (seconds and timecode), the track and channel(s), the values at that frame (for a transform track all nine Location / Rotation / Scale X/Y/Z values: keyed ones bold, the others sampled from the curve or, unkeyed, the actor's live value; editing one writes or updates the key at that frame), the interpolation (Constant / Linear / Cubic / Cubic (Auto)) and, for a cubic key, its in/out tangents. The header buttons move the playhead to the key and delete the selected keys. Every edit is one Sequencer undo step and re-evaluates the level at once.
+
+### `class SequencerNumberField`
+
+A number field that commits on Enter or when it loses focus and follows its `value` while not being edited; a keyed value is drawn bold.
 
 ## `lib/ui/features/sub_editors/models/sequencer_viewport_camera.dart`
 
@@ -210,7 +226,7 @@ The Movie Render Queue dialog: configure an offscreen PNG-sequence export, then 
 
 ### `class SequencerSubEditor`
 
-`SequencerSubEditor`: `class` representing the data model or functionality of the module.
+The Sequencer editor: toolbar (FPS, length, **Auto Key** toggle, **Key** button, time readout, Render Movie, Save), the track outliner on the left, the 3D Viewport / Curves tabs in the middle, the Key panel (`SequencerKeyDetailsPanel`) on the right, the transport bar and the timeline below. With an `editorViewModel` it binds the sequence to the level (track clicks select the level actor), reads Auto Key from `EditorPreferences.sequencerAutoKey` and writes it back, and installs `SequencerViewModel.handleLevelTransformEdits` as the level's `actorTransformEditHandler` until it closes, so transform edits of the animated actors made in the level viewport or Details are keyed in the sequence.
 
 **Functions, Methods & Accessors:**
 
@@ -242,7 +258,7 @@ The Movie Render Queue dialog: configure an offscreen PNG-sequence export, then 
 
 ### `class SequencerTimelineWidget`
 
-`SequencerTimelineWidget`: shadcn_flutter UI component rendering interface elements and listening to interactions.
+The multi-track timeline: a click on a key diamond selects it (Shift-click adds or removes keys, every selected key is highlighted), a drag retimes it, a click on empty space scrubs, a double-click on a lane adds a key. With the timeline focused, Del / Backspace deletes the selected keys as one undo step and Left / Right nudge them one frame (Shift: ten).
 
 **Functions, Methods & Accessors:**
 
@@ -361,7 +377,7 @@ How the transport bar's current-time readout is formatted.
 | `selectKeys` | `void selectKeys(Iterable<SequencerKeyRef> keys)` | Box-select: replaces the selection with [keys]; the first becomes the primary [selectedKey] whose tangent handles are shown. |
 | `isKeySelected` | `bool isKeySelected(String trackId, String channelName, int keyIndex)` | Checks current state or capability and returns a boolean value. |
 | `clearKeySelection` | `void clearKeySelection()` | Clears all elements from the collection or buffer. |
-| `deleteSelectedKeys` | `void deleteSelectedKeys()` | Releases and safely disposes the specified `SelectedKeys` resource. |
+| `deleteSelectedKeys` | `void deleteSelectedKeys()` | Deletes every selected key as one undo step. |
 | `findTrack` | `SequencerTrack? findTrack(String trackId)` | Searches and retrieves matching items or actors. |
 | `findChannel` | `SequencerChannel? findChannel(String trackId, String channelName)` | Searches and retrieves matching items or actors. |
 | `deleteTrack` | `void deleteTrack(String trackId)` | Releases and safely disposes the specified `Track` resource. |
@@ -379,6 +395,18 @@ How the transport bar's current-time readout is formatted.
 | `setKeyInterpolationCubicAuto` | `void setKeyInterpolationCubicAuto(String trackId, String channelName, in...` | `Cubic (Auto)`: cubic interpolation with Catmull-Rom tangents computed from the neighbours, in == out (unified handles). |
 | `setKeyInterpolationCubicBroken` | `void setKeyInterpolationCubicBroken(String trackId, String channelName, ...` | `Cubic (Broken)`: cubic interpolation whose two handles move independently. |
 | `restoreLevel` | `void restoreLevel()` | Puts every touched actor property back to its pre-preview value and forgets the snapshot. A cinematic preview never dirties the level: the writes bypass the transaction/dirty path entirely. |
+| `autoKey` / `setAutoKey` | `bool get autoKey` / `void setAutoKey(bool value)` | Auto Key (on by default; the editor keeps it in `EditorPreferences.sequencerAutoKey` through `onAutoKeyChanged`): a transform change is keyed at the playhead when it is made. Off, it is a preview the next evaluation (scrub, playback) reverts unless keyed with `keyPendingOrSelected`. |
+| `hasPendingPreview` | `bool get hasPendingPreview` | Whether a change made with Auto Key off waits to be keyed. |
+| `beginActorTransform` / `previewActorTransform` / `endActorTransform` / `cancelActorTransform` | `void beginActorTransform(String actorId)` … `bool endActorTransform(String actorId)` | The Sequencer viewport gizmo's edit path. Begin remembers the actor's transform and captures the level's values of its nine transform channels for `restoreLevel`; preview writes straight onto the actor (no undo step); end keys the channels that changed (Location/Rotation/Scale X/Y/Z) at the playhead as **one** undo step, creating the actor's transform track (nine channels) when the sequence has none and updating a key already at that frame (its interpolation and tangents kept; new keys are linear); undo also puts the actor back. Cancel (Esc) restores the actor. |
+| `handleLevelTransformEdits` | `Set<String> handleLevelTransformEdits(List<SequencerLevelTransformEdit> edits)` | Installed as `EditorViewModel.actorTransformEditHandler` while the Sequencer is open: transform edits of actors the sequence animates (the level viewport's gizmo, Details) are keyed here (or previewed, Auto Key off) and get no level undo step or dirty flag; other actors stay ordinary level edits. Returns the ids taken. |
+| `keyPendingOrSelected` | `void keyPendingOrSelected({String? selectedActorId})` | The toolbar's **Key** button: keys the pending previews' changed channels, or else all nine transform channels of `selectedActorId`, at the playhead. |
+| `selectTrackForActor` | `void selectTrackForActor(String? actorId)` | Selects the track bound to `actorId` (a click in the viewport). `selectTrack` in turn selects the track's actor in the level. |
+| `transformTrackFor` / `isActorBound` | `SequencerTrack? transformTrackFor(String actorId)` / `bool isActorBound(String actorId)` | The actor's transform track; whether any track binds it. |
+| `toggleKeySelection` | `void toggleKeySelection(String trackId, String channelName, int keyIndex)` | Shift-click on the timeline: adds the key to the selection (it becomes the primary key) or removes it. |
+| `keyAt` / `channelValueAtFrame` / `hasKeyAt` / `currentActorChannelValue` | `SequencerKey? keyAt(SequencerKeyRef ref)` … | What the Key panel reads: the key a reference points at, a channel's value at a frame (key or sampled curve), whether it is keyed there, an unkeyed transform channel's live value. |
+| `setChannelValueAtFrame` | `void setChannelValueAtFrame(String trackId, String channelName, int frame, double value)` | Writes or updates the key at `frame` (creating a missing transform channel); one undo step. |
+| `moveSelectedKeysToFrame` / `nudgeSelectedKeys` | `void moveSelectedKeysToFrame(int frame)` / `void nudgeSelectedKeys(int delta)` | Retimes the selected keys (a key already at the target frame on the same channel is replaced); the selection follows; one undo step. |
+| `setSelectedKeysInterpolation` | `void setSelectedKeysInterpolation(SequencerKeyInterpolationChoice choice)` | Constant / Linear / Cubic / Cubic (Auto, tangents from the neighbours) on every selected key; one undo step. |
 | `attachTicker` | `void attachTicker(TickerProvider vsync)` | Drives playback from the widget's frame clock. Without a ticker (unit tests) advance the clock manually with [advanceClock]. |
 | `detachTicker` | `void detachTicker()` | Drops the widget-owned ticker (the widget is going away while the view model may live on, e.g. when injected by a test or a tab session). |
 | `play` | `void play()` | Executes `play` operation. |
@@ -418,6 +446,7 @@ One animated actor property: knows how to read/write it on an [EditorActorNode] 
 | `actorId` | `String actorId` | Holds the `actorId` property or configuration state. |
 | `id` | `String id` | Holds the `id` property or configuration state. |
 | `capture` | `void capture(EditorActorNode actor) => _original = _read(actor)` | Executes `capture` operation. |
+| `captureValue` | `void captureValue(dynamic original)` | Records an edit's before-value as the pre-preview value (the actor already moved). |
 | `write` | `void write(EditorActorNode actor, double value) => _write(actor, value)` | Executes `write` operation. |
 | `restore` | `void restore(EditorActorNode actor) => _restore(actor, _original)` | Executes `restore` operation. |
 | `resolve` | `static _ChannelSnapshot? resolve(EditorActorNode actor, TrackSample samp...` | Executes `resolve` operation. |

@@ -385,7 +385,7 @@ The preview draws the level viewport's own scene (`EditorViewModel.levelScene`) 
 | `CameraPreviewPanel` | The panel: title bar, `LevelSceneView` through the camera (`CameraActorView.apply`), the top-right resize grip. `aspect` = 16:9. |
 | `LevelSceneView` / `LevelSceneViewState` | A second view of the level's scene on the shared engine, aimed by its owner (`onAim`, called on creation, scene changes, resize and every frame), with its own visible layers. The Sequencer viewport is built on it too. `drawsLevelScene`, `view`, `camera`, `drawn`, `aspect`, `aim()`. |
 | `CameraActorView` (`services/camera_actor_view.dart`) | A camera actor as a view: `settingsOf` (`LuminaCameraSettings`), `pose` (`LevelViewPose`), `apply` (projection, clip planes, pose, exposure). |
-| `EditorViewLayers` (`services/editor_view_layers.dart`) | The layer bits (`content`, `helpers`, `solids`), the masks of each view, `show(view, layers)`, `tag(engine, entities, layer)`. |
+| `EditorViewLayers` (`services/editor_view_layers.dart`) | The layer bits (`content`, `helpers`, `solids`, and `gizmo`: the level viewport's native transform gizmo, which the Sequencer's view (`editorView`) leaves out because it draws its own), the masks of each view, `show(view, layers)`, `tag(engine, entities, layer)`. |
 
 Test seams on the level viewport state: `viewLayersForTest` (the level view's visible layers), `editorActorsInSceneForTest` (solids the level view draws; 0 in Wireframe), `editorActorSolidsInSceneForTest` (solids in the scene).
 

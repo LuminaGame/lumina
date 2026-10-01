@@ -208,6 +208,8 @@ The editor's per-user preferences (as opposed to the project's Project Settings)
 | `setPerProjectEditors` | `void setPerProjectEditors(bool value)` |  |
 | `cameraPreviewWidth` | `double get cameraPreviewWidth` | Level viewport'unun kamera önizlemesinin mantıksal piksel cinsinden genişliği (yüksekliği 16:9'a göre); köşesi sürüklenerek ayarlanır. Varsayılan 320, 192–960 aralığına sıkıştırılır. |
 | `setCameraPreviewWidth` | `void setCameraPreviewWidth(double value)` |  |
+| `sequencerAutoKey` | `bool get sequencerAutoKey` | Sequencer'ın Auto Key ayarı: bir Sequencer açıkken yapılan dönüşüm değişikliği playhead karesinde key'lenir. Varsayılan açık; Sequencer araç çubuğundaki anahtar yazar. |
+| `setSequencerAutoKey` | `void setSequencerAutoKey(bool value)` |  |
 | `setFlightCameraControl` | `void setFlightCameraControl(FlightCameraControlType value)` |  |
 
 ## `lib/ui/features/main_editor/services/editor_transform.dart`

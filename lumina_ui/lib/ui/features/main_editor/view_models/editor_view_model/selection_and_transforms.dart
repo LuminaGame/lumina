@@ -247,6 +247,18 @@ mixin _EditorSelectionAndTransforms on _EditorViewModelState {
     _dragSnapshotRotation = null;
     _dragSnapshotScale = null;
 
+    // An open Sequencer keys the actors it animates instead.
+    final taken = actorTransformEditHandler?.call([
+      for (final a in targets) (actor: a, location: beforeLocs[a.id]!, rotation: beforeRots[a.id]!, scale: beforeScales[a.id]!),
+    ]);
+    if (taken != null && taken.isNotEmpty) {
+      targets.removeWhere((a) => taken.contains(a.id));
+      if (targets.isEmpty) {
+        notifyListeners();
+        return;
+      }
+    }
+
     bool changed = false;
     for (final a in targets) {
       for (int i = 0; i < 3; i++) {
@@ -358,7 +370,7 @@ mixin _EditorSelectionAndTransforms on _EditorViewModelState {
       }
     }
 
-    void apply() {
+    void apply({bool markDirty = true}) {
       for (final actor in targets) {
         if (axis != null) {
           final own = beforeStates[actor.id] ??
@@ -384,7 +396,7 @@ mixin _EditorSelectionAndTransforms on _EditorViewModelState {
           applyVal(actor, value);
         }
       }
-      _markDirty();
+      if (markDirty) _markDirty();
     }
 
     void undo() {
@@ -394,7 +406,28 @@ mixin _EditorSelectionAndTransforms on _EditorViewModelState {
       _markDirty();
     }
 
-    apply();
+    apply(markDirty: false);
+    // An open Sequencer keys the actors it animates instead.
+    final handler = actorTransformEditHandler;
+    if (handler != null && componentType == null && const ['location', 'rotation', 'scale'].contains(propertyId)) {
+      final taken = handler([
+        for (final a in targets)
+          (
+            actor: a,
+            location: propertyId == 'location' ? List<double>.from(beforeStates[a.id] as List) : List<double>.from(a.location),
+            rotation: propertyId == 'rotation' ? List<double>.from(beforeStates[a.id] as List) : List<double>.from(a.rotation),
+            scale: propertyId == 'scale' ? List<double>.from(beforeStates[a.id] as List) : List<double>.from(a.scale),
+          ),
+      ]);
+      if (taken.isNotEmpty) {
+        targets.removeWhere((a) => taken.contains(a.id));
+        if (targets.isEmpty) {
+          notifyListeners();
+          return;
+        }
+      }
+    }
+    _markDirty();
     final capitalized = propertyId.isEmpty
         ? propertyId
         : propertyId[0].toUpperCase() + propertyId.substring(1);

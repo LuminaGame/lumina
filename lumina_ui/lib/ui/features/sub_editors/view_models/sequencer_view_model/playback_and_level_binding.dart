@@ -11,10 +11,16 @@ mixin _SequencerPlaybackAndLevelBinding on _SequencerViewModelState {
   /// Binds the cinematic to the live level. [actors] resolves the current
   /// actor list (usually `editorViewModel.actors`), [onChanged] is the
   /// editor's notify path so outliner/details/viewport redraw the same frame.
-  void bindLevel({required List<EditorActorNode> Function() actors, VoidCallback? onChanged}) {
+  /// [selectActor] selects an actor in the level when its track is clicked.
+  void bindLevel({
+    required List<EditorActorNode> Function() actors,
+    VoidCallback? onChanged,
+    void Function(String actorId)? selectActor,
+  }) {
     restoreLevel();
     _levelActors = actors;
     _onLevelChanged = onChanged;
+    _selectLevelActor = selectActor;
   }
 
   /// Puts every touched actor property back to its pre-preview value and
@@ -22,6 +28,8 @@ mixin _SequencerPlaybackAndLevelBinding on _SequencerViewModelState {
   /// writes bypass the transaction/dirty path entirely.
   @override
   void restoreLevel() {
+    _pendingPreview.clear();
+    _editBefore.clear();
     if (_snapshot.isEmpty) return;
     final actors = _levelActors?.call() ?? const <EditorActorNode>[];
     for (final snap in _snapshot.values) {
@@ -32,6 +40,7 @@ mixin _SequencerPlaybackAndLevelBinding on _SequencerViewModelState {
     _onLevelChanged?.call();
   }
 
+  @override
   EditorActorNode? _findActor(List<EditorActorNode> actors, String id) {
     for (final a in actors) {
       if (a.id == id) return a;
@@ -46,7 +55,9 @@ mixin _SequencerPlaybackAndLevelBinding on _SequencerViewModelState {
     final actors = provider();
     if (actors.isEmpty) return;
 
-    bool touched = false;
+    // Previews Auto Key did not key go back before the sequence is sampled.
+    bool touched = _pendingPreview.isNotEmpty;
+    _revertPendingPreviews(actors);
     for (final sample in SequencerViewModel._evaluator.evaluate(_data, _playheadPosition)) {
       if (sample.values.isEmpty) continue;
       final actor = _findActor(actors, sample.actorId);

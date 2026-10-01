@@ -6,6 +6,7 @@ import '../../sub_editor_binding.dart';
 import '../../services/sequencer_offscreen_frame_source.dart';
 import '../../view_models/sequencer_view_model.dart';
 import 'curve_editor_widget.dart';
+import 'key_details_panel.dart';
 import 'level_viewport.dart';
 import 'render_dialog.dart';
 import 'timeline_widget.dart';
@@ -56,7 +57,19 @@ class _SequencerSubEditorState extends State<SequencerSubEditor> with SingleTick
 
     final evm = widget.editorViewModel;
     if (evm != null) {
-      _viewModel.bindLevel(actors: () => evm.actors, onChanged: evm.notifyListeners);
+      _viewModel.bindLevel(
+        actors: () => evm.actors,
+        onChanged: evm.notifyListeners,
+        selectActor: (id) {
+          final actor = evm.actors.where((a) => a.id == id).firstOrNull;
+          if (actor != null) evm.selectActor(actor);
+        },
+      );
+      // Auto Key is a per-user preference; the level's transform edits of
+      // the actors this sequence animates are keyed here while it is open.
+      _viewModel.setAutoKey(evm.editorPreferences.sequencerAutoKey);
+      _viewModel.onAutoKeyChanged = evm.editorPreferences.setSequencerAutoKey;
+      evm.actorTransformEditHandler = _viewModel.handleLevelTransformEdits;
     } else if (widget.levelActors != null) {
       _viewModel.bindLevel(actors: () => widget.levelActors!);
     }
@@ -71,6 +84,11 @@ class _SequencerSubEditorState extends State<SequencerSubEditor> with SingleTick
   @override
   void dispose() {
     // Closing the editor must never leave a cinematic pose on the level.
+    final evm = widget.editorViewModel;
+    if (evm != null && evm.actorTransformEditHandler == _viewModel.handleLevelTransformEdits) {
+      evm.actorTransformEditHandler = null;
+    }
+    _viewModel.onAutoKeyChanged = null;
     _viewModel.detachTicker();
     if (_ownsViewModel) {
       _viewModel.dispose();
@@ -163,6 +181,19 @@ class _SequencerSubEditorState extends State<SequencerSubEditor> with SingleTick
                                   : SequencerCurveEditorWidget(viewModel: _viewModel),
                             ),
                           ],
+                        ),
+                      ),
+                    ),
+
+                    // Right: the selected key's frame, values and interpolation
+                    ResizablePane(
+                      initialSize: 270,
+                      minSize: 220,
+                      child: Container(
+                        color: EditorColors.card,
+                        child: SequencerKeyDetailsPanel(
+                          key: const ValueKey('seq_key_panel'),
+                          viewModel: _viewModel,
                         ),
                       ),
                     ),
@@ -274,7 +305,56 @@ class _SequencerSubEditorState extends State<SequencerSubEditor> with SingleTick
               ).call,
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
+
+          // Auto Key: a transform change is keyed at the playhead when made.
+          Tooltip(
+            tooltip: (_) => const TooltipContainer(
+              child: Text('Auto Key: a move / rotate / scale is keyed at the playhead frame.\nOff: changes preview only; a scrub reverts them unless you press Key.',
+                  style: TextStyle(fontSize: 9)),
+            ),
+            child: Toggle(
+              key: const ValueKey('seq_auto_key'),
+              value: vm.autoKey,
+              onChanged: vm.setAutoKey,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(LucideIcons.keyRound, size: 11, color: vm.autoKey ? EditorColors.logError : EditorColors.mutedForeground),
+                  const SizedBox(width: 4),
+                  Text('Auto Key', style: TextStyle(fontSize: 9, color: vm.autoKey ? EditorColors.logError : EditorColors.mutedForeground)),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
+          ListenableBuilder(
+            listenable: widget.editorViewModel ?? vm,
+            builder: (context, _) => Tooltip(
+            tooltip: (_) => TooltipContainer(
+              child: Text(
+                  vm.hasPendingPreview
+                      ? 'Key the previewed changes at frame ${vm.playheadFrame}'
+                      : 'Key the selected actor\'s transform at frame ${vm.playheadFrame}',
+                  style: const TextStyle(fontSize: 9)),
+            ),
+            child: OutlineButton(
+              key: const ValueKey('seq_key_button'),
+              size: ButtonSize.small,
+              onPressed: vm.hasPendingPreview || widget.editorViewModel?.selectedActor != null
+                  ? () => vm.keyPendingOrSelected(selectedActorId: widget.editorViewModel?.selectedActor?.id)
+                  : null,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(LucideIcons.diamondPlus, size: 11),
+                  const SizedBox(width: 4),
+                  Text(vm.hasPendingPreview ? 'Key *' : 'Key', style: const TextStyle(fontSize: 9.5)),
+                ],
+              ),
+            ),
+          )),
+          const SizedBox(width: 12),
 
           // Timecode & Frame Readout
           Container(

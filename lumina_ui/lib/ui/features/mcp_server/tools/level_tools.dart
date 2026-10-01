@@ -224,7 +224,9 @@ void registerLevelTools(McpToolRegistry registry, EditorViewModel vm) {
       idempotent: true,
       title: 'Set actor transform',
       description: 'Sets an actor\'s location, rotation and/or scale (absolute values), as typing them into the '
-          'Details panel does. Each vector given is one undo step. The actor becomes the selection. $units',
+          'Details panel does. Each vector given is one undo step. The actor becomes the selection. While the Sequencer '
+          'editor is open, an actor its sequence animates is keyed at the playhead there instead (Auto Key; the level '
+          'is unchanged). $units',
       inputSchema: McpSchema.object({
         'id': McpSchema.string('The actor id.'),
         'location': McpSchema.vector3('[x, y, z] in centimetres, Z up.'),

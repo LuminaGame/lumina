@@ -319,7 +319,8 @@ A live binding between an open sub-editor tab and its view model.
 | `restoreCameraSnapshot` | `void restoreCameraSnapshot(List<double> cam)` | Executes `restoreCameraSnapshot` operation. |
 | `beginTransformDrag` | `void beginTransformDrag()` | Executes `beginTransformDrag` operation. |
 | `cancelTransformDrag` | `void cancelTransformDrag()` | Executes `cancelTransformDrag` operation. |
-| `endTransformDrag` | `void endTransformDrag()` | Executes `endTransformDrag` operation. |
+| `endTransformDrag` | `void endTransformDrag()` | Ends a transform drag as one undo step. Actors an open Sequencer takes through `actorTransformEditHandler` are keyed there instead (no level step, no dirty flag); `applyPropertyToSelection` does the same for `location` / `rotation` / `scale`. |
+| `actorTransformEditHandler` | `Set<String> Function(List<({EditorActorNode actor, List<double> location, List<double> rotation, List<double> scale})> edits)? actorTransformEditHandler` | Installed by an open Sequencer: offered every committed actor transform edit with the before-values; returns the ids it keyed. |
 | `removeComponentWithTransaction` | `void removeComponentWithTransaction(String actorId, String compId)` | Releases and safely disposes the specified `ComponentWithTransaction` resource. |
 | `pluginRegistry` | `final PluginRegistryService pluginRegistry` | Holds the `pluginRegistry` property or configuration state. |
 | `pluginPatcher` | `final PluginHostPatcherService pluginPatcher` | Holds the `pluginPatcher` property or configuration state. |

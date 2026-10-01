@@ -101,6 +101,15 @@ abstract class _EditorViewModelState extends ChangeNotifier {
   /// config directory: when W/A/S/D fly the level viewport.
   late final EditorPreferences editorPreferences = EditorPreferences.load();
 
+  /// Installed by an open Sequencer: offered every committed transform edit
+  /// of actors (the level viewport's gizmo, Details) with each actor's
+  /// transform before it, and returns the ids it took (the actors the
+  /// sequence animates, keyed there instead). Those get no level undo step
+  /// and do not dirty the level.
+  Set<String> Function(
+    List<({EditorActorNode actor, List<double> location, List<double> rotation, List<double> scale})> edits,
+  )? actorTransformEditHandler;
+
   /// The project's Dart functions exposed to Blueprints:
   /// scanned on open and when an annotated file under lib/ changes.
   late final ProjectBlueprintFunctions blueprintFunctions = ProjectBlueprintFunctions(projectDirPath)

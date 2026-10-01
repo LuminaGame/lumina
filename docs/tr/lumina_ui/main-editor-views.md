@@ -385,7 +385,7 @@ Tek bir kamera aktörü seçilince (yerleştirilmiş `Camera`; Play sırasında 
 | `CameraPreviewPanel` | Panel: başlık çubuğu, kameradan bakan `LevelSceneView` (`CameraActorView.apply`), sağ üst boyutlandırma tutamağı. `aspect` = 16:9. |
 | `LevelSceneView` / `LevelSceneViewState` | Level sahnesinin paylaşılan motor üzerindeki ikinci bir view'ı; sahibi tarafından yönlendirilir (`onAim`: oluşturulunca, sahne değişince, yeniden boyutlanınca ve her karede çağrılır), kendi görünür katmanlarıyla. Sequencer viewport'u da bunun üzerine kuruludur. `drawsLevelScene`, `view`, `camera`, `drawn`, `aspect`, `aim()`. |
 | `CameraActorView` (`services/camera_actor_view.dart`) | Bir kamera aktörünü view'a çevirir: `settingsOf` (`LuminaCameraSettings`), `pose` (`LevelViewPose`), `apply` (projeksiyon, kırpma düzlemleri, poz, pozlama). |
-| `EditorViewLayers` (`services/editor_view_layers.dart`) | Katman bitleri (`content`, `helpers`, `solids`), her view'ın maskesi, `show(view, layers)`, `tag(engine, entities, layer)`. |
+| `EditorViewLayers` (`services/editor_view_layers.dart`) | Katman bitleri (`content`, `helpers`, `solids` ve `gizmo`: level viewport'unun native dönüşüm gizmosu; Sequencer'ın view'ı (`editorView`) kendi gizmosunu çizdiği için onu dışarıda bırakır), her view'ın maskesi, `show(view, layers)`, `tag(engine, entities, layer)`. |
 
 Level viewport state'indeki test noktaları: `viewLayersForTest` (level view'ın görünür katmanları), `editorActorsInSceneForTest` (level view'ın çizdiği katılar; Wireframe'de 0), `editorActorSolidsInSceneForTest` (sahnedeki katılar).
 

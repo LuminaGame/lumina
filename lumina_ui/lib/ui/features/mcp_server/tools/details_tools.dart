@@ -114,7 +114,8 @@ void registerDetailsTools(McpToolRegistry registry, EditorViewModel vm) {
       description: 'The multi-select Details transform rows: sets location, rotation and/or scale on every actor at '
           'once — absolute, or added to each actor\'s own value with relative (a scrub), on one axis only with axis '
           '(0 = X, 1 = Y, 2 = Z; the other axes keep each actor\'s values). One undo step for the call. Locked '
-          'actors are skipped and listed. $units',
+          'actors are skipped and listed. While the Sequencer editor is open, actors its sequence animates are keyed at '
+          'the playhead there instead (Auto Key; the level is unchanged). $units',
       inputSchema: McpSchema.object({
         'ids': McpSchema.stringArray('The actor ids.'),
         'location': McpSchema.vector3('[x, y, z] in cm.'),

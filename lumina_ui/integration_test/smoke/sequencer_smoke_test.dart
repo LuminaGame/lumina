@@ -1,10 +1,12 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:integration_test/integration_test.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina/lumina.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/transform_gizmo.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/main_editor_view.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/sequencer_movie_render_service.dart';
@@ -16,6 +18,7 @@ import 'package:lumina_ui/ui/features/sub_editors/views/sequencer/sequencer_sub_
 import 'package:lumina_ui/ui/features/sub_editors/views/sequencer/timeline_widget.dart';
 import 'package:lumina_ui/testing.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:vector_math/vector_math_64.dart' show Vector3;
 
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -757,4 +760,221 @@ void main() {
       }
     }
   }, timeout: const Timeout(Duration(minutes: 8)));
+
+  testWidgets('Sequencer Smoke Scenario: The viewport gizmo keys the barrel at frames 0 and 60, the Key panel edits a key', (tester) async {
+    final barrelGlb = '${Directory.current.parent.path}/test-assets/Props/Barrels/fuel_barrel_red.glb';
+    final acUnitGlb = '${Directory.current.parent.path}/test-assets/Props/AC_units/ac_unit_a_300x300.glb';
+    if (!File(barrelGlb).existsSync() || !File(acUnitGlb).existsSync()) {
+      markTestSkipped('test assets missing: $barrelGlb, $acUnitGlb');
+      return;
+    }
+    tester.view.physicalSize = const Size(1680, 1120);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    Future<void> settle({int frames = 20}) async {
+      for (var i = 0; i < frames; i++) {
+        await tester.pump(const Duration(milliseconds: 16));
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 16)));
+      }
+    }
+
+    const scenario = 'Sequencer Smoke Scenario: The viewport gizmo keys the barrel at frames 0 and 60, the Key panel edits a key';
+    const usedAssets = ['Props/Barrels/fuel_barrel_red.glb', 'Props/AC_units/ac_unit_a_300x300.glb', 'contents/cinematics/SEQ_Gizmo.lmas'];
+    final tempProjectsDir = Directory.systemTemp.createTempSync('seq_gizmo_smoke_');
+    const projectName = 'SmokeSeqGizmo';
+    final pDir = Directory('${tempProjectsDir.path}/$projectName')..createSync(recursive: true);
+    final repo = AssetRepository();
+    await repo.createAsset(projectPath: pDir.path, subFolder: 'meshes', fileName: 'Barrel.lmas', type: AssetType.filamesh);
+    File(barrelGlb).copySync('${pDir.path}/contents/meshes/Barrel.glb');
+    await repo.createAsset(projectPath: pDir.path, subFolder: 'meshes', fileName: 'AC_Unit.lmas', type: AssetType.filamesh);
+    File(acUnitGlb).copySync('${pDir.path}/contents/meshes/AC_Unit.glb');
+
+    try {
+      File('${pDir.path}/$projectName.lmproject').writeAsStringSync('{}');
+      final vm = EditorViewModel(
+        initialProject: LuminaProject(projectName: projectName, activeLevel: 'contents/levels/L_Main.lmas', settings: EngineScalabilitySettings(targetFps: 60)),
+        projectLocation: tempProjectsDir.path,
+        enableTimers: false,
+      );
+      addTearDown(vm.dispose);
+      await vm.ensureDefaultLevelAssets();
+      // The barrel the user animates, and a static AC unit behind its path for reference.
+      await vm.spawnActorFromAsset(vm.realAssets.firstWhere((a) => a.fileName == 'Barrel.lmas'), location: [-200, 0, 0]);
+      final barrel = vm.actors.last;
+      await vm.spawnActorFromAsset(vm.realAssets.firstWhere((a) => a.fileName == 'AC_Unit.lmas'), location: [0, 250, 0]);
+      vm.spawnNewActor('Environment');
+      vm.spawnNewActor('DirectionalLight');
+      vm.actors.last.location = [900, 900, 600];
+      vm.clearSelection();
+
+      // The barrel is in the sequence, with no keys yet.
+      final seqData = SequencerData(fps: 30, lengthFrames: 120, tracks: [
+        SequencerTrack(id: 'track-barrel', actorId: barrel.id, actorName: barrel.name, kind: SequencerTrackKind.transform, channels: [
+          for (final name in const ['Location.X', 'Location.Y', 'Location.Z', 'Rotation.X', 'Rotation.Y', 'Rotation.Z', 'Scale.X', 'Scale.Y', 'Scale.Z'])
+            SequencerChannel(name: name),
+        ]),
+      ]);
+      Directory('${pDir.path}/contents/cinematics').createSync(recursive: true);
+      File('${pDir.path}/contents/cinematics/SEQ_Gizmo.lmas').writeAsBytesSync(
+          LuminaAsset(assetId: 'seq-gizmo', name: 'SEQ_Gizmo', type: AssetType.sequencer, rawPayload: seqData.toBytes()).toProtoBufferBytes());
+      vm.refreshAssets();
+
+      final boundaryKey = GlobalKey();
+      await tester.pumpWidget(RepaintBoundary(
+        key: boundaryKey,
+        child: ShadcnApp(theme: luminaEditorTheme(), home: MainEditorView(viewModel: vm)),
+      ));
+      await settle(frames: 60);
+      final rec = SmokeRecorder(tester, boundary: find.byKey(boundaryKey));
+      await rec.hold(const Duration(milliseconds: 800));
+
+      vm.openSubEditorTab('SEQUENCER', asset: vm.realAssets.firstWhere((a) => a.fileName == 'SEQ_Gizmo.lmas'));
+      for (var i = 0; i < 100 && find.byType(SequencerLevelViewport).evaluate().isEmpty; i++) {
+        await settle(frames: 1);
+      }
+      final seqView = tester.state<SequencerLevelViewportState>(find.byType(SequencerLevelViewport));
+      for (var i = 0; i < 200 && !seqView.drawsLevelScene; i++) {
+        await settle(frames: 1);
+      }
+      expect(seqView.drawsLevelScene, isTrue);
+      final seqVm = seqView.sequencer;
+      expect(seqVm.autoKey, isTrue, reason: 'Auto Key is on by default');
+      seqView.editorCamera
+        ..yaw = 0
+        ..pitch = 22
+        ..distance = 1000
+        ..target = [0, 0, 60];
+      await settle(frames: 10);
+
+      // Select the barrel through its track.
+      await tester.tap(find.descendant(of: find.byType(SequencerSubEditor), matching: find.text(barrel.name)).first);
+      await settle(frames: 10);
+      expect(vm.selectedActor?.id, barrel.id);
+
+      Offset viewOrigin() => tester.getTopLeft(find.byType(SequencerLevelViewport));
+
+      // Drags the X arrow by [dx] arrow lengths, recorded.
+      Future<void> dragX(double lengths) async {
+        vm.setActiveTool('translate');
+        await settle(frames: 3);
+        final h = seqView.gizmoModel()!.handleScreenPositions()!;
+        final c = h[TransformGizmoModel.center]!, x = h[TransformGizmoModel.axisX]!;
+        final grab = c + (x - c) * 0.8;
+        expect(seqView.gizmoModel()!.hitTest(grab), TransformGizmoModel.axisX);
+        await rec.drag(viewOrigin() + grab, viewOrigin() + grab + (x - c) * lengths, steps: 24);
+      }
+
+      // Turns the yaw (Z) ring by a quarter of its points, recorded; W/E/R through the viewport's focus.
+      Future<void> dragYaw() async {
+        await tester.sendKeyEvent(LogicalKeyboardKey.keyE);
+        await settle(frames: 3);
+        expect(vm.activeTool, 'rotate');
+        final model = seqView.gizmoModel()!;
+        final ring = model.ringPoints(TransformGizmoModel.axisZ);
+        var at = -1;
+        for (var i = 0; i < ring.length - 6; i++) {
+          final p = ring[i], q = ring[i + 6];
+          if (p != null && q != null && model.hitTest(p) == TransformGizmoModel.axisZ) {
+            at = i;
+            break;
+          }
+        }
+        expect(at, greaterThanOrEqualTo(0), reason: 'a point on the yaw ring');
+        await rec.drag(viewOrigin() + ring[at]!, viewOrigin() + ring[at + 6]!, steps: 24);
+        await tester.sendKeyEvent(LogicalKeyboardKey.keyW);
+      }
+
+      // 1. Frame 0: move and turn the barrel → keys at 0.
+      seqVm.scrubToFrame(0);
+      await settle(frames: 10);
+      await rec.hold(const Duration(milliseconds: 800));
+      await dragX(-0.6);
+      await dragYaw();
+      expect(seqVm.findChannel('track-barrel', 'Location.X')!.keys.map((k) => k.frame), [0]);
+      expect(seqVm.findChannel('track-barrel', 'Rotation.Z')!.keys.map((k) => k.frame), [0]);
+      final x0 = barrel.location[0];
+
+      // 2. Frame 60: move it far to the right and turn it → keys at 60.
+      seqVm.scrubToFrame(60);
+      await settle(frames: 10);
+      await rec.hold(const Duration(milliseconds: 800));
+      await dragX(2.5);
+      await dragYaw();
+      final x60 = barrel.location[0];
+      expect(seqVm.findChannel('track-barrel', 'Location.X')!.keys.map((k) => k.frame), [0, 60]);
+      expect(seqVm.findChannel('track-barrel', 'Rotation.Z')!.keys.map((k) => k.frame), [0, 60]);
+      expect(x60 - x0, greaterThan(100), reason: 'the barrel moved right between the keys');
+      for (final c in const ['Location.Y', 'Location.Z', 'Scale.X', 'Scale.Y', 'Scale.Z']) {
+        expect(seqVm.findChannel('track-barrel', c)!.keys, isEmpty, reason: '$c did not change');
+      }
+      await rec.hold(const Duration(milliseconds: 800));
+
+      // 3. Scrub to 30: the barrel is half way.
+      seqVm.scrubToFrame(30);
+      await settle(frames: 20);
+      await rec.hold(const Duration(milliseconds: 1200));
+      expect(barrel.location[0], closeTo((x0 + x60) / 2, 1e-6));
+      final s0 = seqView.projectStored(_barrelPivot(x0))!.dx, s60 = seqView.projectStored(_barrelPivot(x60))!.dx;
+      final s30 = seqView.projectStored(_barrelPivot(barrel.location[0]))!.dx;
+      expect(s30, inExclusiveRange(s0, s60), reason: 'on screen between its two keyed poses');
+      SmokeArtifacts.saveScreenshot('Sequencer Smoke Scenario: gizmo keys at 0 and 60, scrubbed to 30 (barrel half way)',
+          await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey)),
+          usedAssets: usedAssets);
+
+      // 4. Click the frame-60 key of Location.X → the Key panel shows its values.
+      final canvas = find.byWidgetPredicate((w) => w is CustomPaint && w.painter is SequencerTimelinePainter);
+      final rect = tester.getRect(canvas);
+      final keyRects = SequencerTimelinePainter.computeKeyRects(tracks: seqVm.tracks, lengthFrames: seqVm.lengthFrames, size: rect.size);
+      await tester.tapAt(rect.topLeft + keyRects[1].center); // Location.X @ 0, @ 60, Rotation.Z @ 0, @ 60
+      await settle(frames: 30);
+      expect(seqVm.selectedKey, ('track-barrel', 'Location.X', 1));
+      expect(find.text('Location.X'), findsWidgets);
+      await tester.tap(find.byKey(const ValueKey('seq_key_goto')));
+      await settle(frames: 10);
+      expect(seqVm.playheadFrame, 60);
+      await rec.hold(const Duration(milliseconds: 1500));
+      SmokeArtifacts.saveScreenshot('Sequencer Smoke Scenario: the Key panel shows the frame-60 key',
+          await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey)),
+          usedAssets: usedAssets);
+
+      // 5. Edit its Location Z → the barrel rises at 60.
+      final zField = find.descendant(of: find.byKey(const ValueKey('seq_key_value_Location.Z')), matching: find.byType(EditableText));
+      await tester.tap(zField);
+      await rec.typeText(zField, '180');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await settle(frames: 20);
+      expect(seqVm.findChannel('track-barrel', 'Location.Z')!.keys.map((k) => (k.frame, k.value)), [(60, 180.0)]);
+      expect(barrel.location[2], 180.0);
+      await rec.hold(const Duration(milliseconds: 1500));
+      SmokeArtifacts.saveScreenshot('Sequencer Smoke Scenario: Location Z edited in the Key panel, the barrel rises at 60',
+          await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey)),
+          usedAssets: usedAssets);
+
+      // Play it back once, then save and reload the keys.
+      seqVm.goToFirstFrame();
+      seqVm.play();
+      await rec.hold(const Duration(seconds: 3));
+      seqVm.pause();
+      expect(await seqVm.save(), isTrue);
+      final reopened = SequencerViewModel(assetPath: '${pDir.path}/contents/cinematics/SEQ_Gizmo.lmas');
+      await reopened.load();
+      expect(reopened.findChannel('track-barrel', 'Location.X')!.keys.map((k) => k.frame), [0, 60]);
+      expect(reopened.findChannel('track-barrel', 'Location.Z')!.keys.single.value, 180.0);
+      await rec.hold(const Duration(milliseconds: 800));
+      rec.save(scenario, usedAssets: usedAssets);
+    } finally {
+      if (tempProjectsDir.existsSync()) {
+        try {
+          tempProjectsDir.deleteSync(recursive: true);
+        } catch (_) {}
+      }
+    }
+  }, timeout: const Timeout(Duration(minutes: 8)));
 }
+
+/// A pivot at Location.X = [x] (Y 0, Z 0), for projecting the barrel.
+Vector3 _barrelPivot(double x) => Vector3(x, 0, 0);

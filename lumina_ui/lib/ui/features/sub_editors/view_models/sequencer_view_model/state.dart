@@ -36,6 +36,21 @@ abstract class _SequencerViewModelState extends ChangeNotifier {
   VoidCallback? _onLevelChanged;
   final Map<String, _ChannelSnapshot> _snapshot = {};
 
+  /// Selects an actor in the level (the track outliner's click), installed by
+  /// [bindLevel].
+  void Function(String actorId)? _selectLevelActor;
+
+  // Keying from the viewport: Auto Key, the gizmo edit in progress (actor id
+  // → transform before the gesture) and, with Auto Key off, the previews not
+  // keyed yet (actor id → transform before the first previewed gesture).
+  bool _autoKey;
+
+  /// Called when [SequencerViewModel.setAutoKey] changes Auto Key (the editor
+  /// stores it in its preferences).
+  ValueChanged<bool>? onAutoKeyChanged;
+  final Map<String, _ActorTransform> _editBefore = {};
+  final Map<String, _ActorTransform> _pendingPreview = {};
+
   /// Keys whose in/out tangents are edited independently ("Cubic (Broken)").
   /// Editor-side only: the `.lmas` schema carries the two tangent values, and
   /// unequal tangents survive a reload as-is.
@@ -61,7 +76,9 @@ abstract class _SequencerViewModelState extends ChangeNotifier {
     VoidCallback? onLevelChanged,
     String? projectDirPath,
     MovieRenderService renderService = const MovieRenderService(),
-  }) : transactions = transactionManager ?? TransactionManager() {
+    bool autoKey = true,
+  }) : _autoKey = autoKey, // ignore: prefer_initializing_formals
+       transactions = transactionManager ?? TransactionManager() {
     _renderService = renderService;
     _projectDirPath = projectDirPath;
     _levelActors = levelActorsProvider;
@@ -118,4 +135,8 @@ abstract class _SequencerViewModelState extends ChangeNotifier {
   set projectDirPath(String value);
 
   Future<bool> save();
+
+  void _revertPendingPreviews(List<EditorActorNode> actors);
+
+  EditorActorNode? _findActor(List<EditorActorNode> actors, String id);
 }

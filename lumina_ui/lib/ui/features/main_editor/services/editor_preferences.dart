@@ -31,7 +31,7 @@ enum FlightCameraControlType {
 /// once.
 class EditorPreferences extends ChangeNotifier {
   EditorPreferences._(this.file, this._flightCameraControl, this._importWorkers, this._marketplaceUrl,
-      this._editorBuildMode, this._editorBuildKeep, this._editorBuildCacheDir, this._perProjectEditors, this._cameraPreviewWidth);
+      this._editorBuildMode, this._editorBuildKeep, this._editorBuildCacheDir, this._perProjectEditors, this._cameraPreviewWidth, this._sequencerAutoKey);
 
   /// The preferences stored in [configDir] (default: [LuminaConfigDir]); the
   /// defaults when the file is missing or unreadable.
@@ -45,6 +45,7 @@ class EditorPreferences extends ChangeNotifier {
     String? buildCacheDir;
     var perProject = defaultPerProjectEditors;
     var previewWidth = defaultCameraPreviewWidth;
+    var autoKey = defaultSequencerAutoKey;
     try {
       final decoded = ConfigJsonFile(file).read();
       if (decoded is Map) {
@@ -63,11 +64,13 @@ class EditorPreferences extends ChangeNotifier {
         if (everyProject is bool) perProject = everyProject;
         final preview = decoded['cameraPreviewWidth'];
         if (preview is num && preview.isFinite) previewWidth = clampCameraPreviewWidth(preview.toDouble());
+        final sequencerAutoKey = decoded['sequencerAutoKey'];
+        if (sequencerAutoKey is bool) autoKey = sequencerAutoKey;
       }
     } catch (e) {
       debugPrint('[EditorPreferences] ${file.path} is unreadable, using the defaults: $e');
     }
-    return EditorPreferences._(file, flight, importWorkers, marketplaceUrl, buildMode, buildKeep, buildCacheDir, perProject, previewWidth);
+    return EditorPreferences._(file, flight, importWorkers, marketplaceUrl, buildMode, buildKeep, buildCacheDir, perProject, previewWidth, autoKey);
   }
 
   static const String fileName = 'editor_preferences.json';
@@ -196,6 +199,21 @@ class EditorPreferences extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Sequencer.
+
+  /// The Sequencer's Auto Key: a transform change made while a Sequencer is
+  /// open is keyed at the playhead (on by default).
+  bool get sequencerAutoKey => _sequencerAutoKey;
+  bool _sequencerAutoKey;
+  static const bool defaultSequencerAutoKey = true;
+
+  void setSequencerAutoKey(bool value) {
+    if (value == _sequencerAutoKey) return;
+    _sequencerAutoKey = value;
+    _save();
+    notifyListeners();
+  }
+
   void setFlightCameraControl(FlightCameraControlType value) {
     if (value == _flightCameraControl) return;
     _flightCameraControl = value;
@@ -216,6 +234,7 @@ class EditorPreferences extends ChangeNotifier {
           'editorBuildCacheDir': _editorBuildCacheDir,
           'perProjectEditors': _perProjectEditors,
           'cameraPreviewWidth': _cameraPreviewWidth,
+          'sequencerAutoKey': _sequencerAutoKey,
         },
         isValid: (value) => value is Map<String, dynamic>,
         pretty: true,

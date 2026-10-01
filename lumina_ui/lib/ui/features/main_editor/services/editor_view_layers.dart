@@ -23,14 +23,23 @@ class EditorViewLayers {
   /// view of the scene still draws the solids.
   static const int solids = 0x04;
 
+  /// The level viewport's own transform gizmo (sized for the level
+  /// viewport's camera): another editor view of the scene (the Sequencer's)
+  /// draws a gizmo of its own instead.
+  static const int gizmo = 0x08;
+
   /// Every layer this class assigns.
-  static const int all = content | helpers | solids;
+  static const int all = content | helpers | solids | gizmo;
 
   /// The level viewport in Lit and Unlit.
-  static const int levelViewport = content | helpers | solids;
+  static const int levelViewport = content | helpers | solids | gizmo;
 
   /// The level viewport in Wireframe: the edge lines stand in for the solids.
-  static const int levelViewportWireframe = content | helpers;
+  static const int levelViewportWireframe = content | helpers | gizmo;
+
+  /// Another editor view of the level (the Sequencer's viewport): the
+  /// helpers without the level viewport's gizmo.
+  static const int editorView = content | helpers | solids;
 
   /// What a camera sees: no editor helpers.
   static const int cameraView = content | solids;

@@ -38,12 +38,19 @@ class _SequencerTimelineWidgetState extends State<SequencerTimelineWidget> {
       focusNode: _focusNode,
       autofocus: true,
       onKeyEvent: (node, event) {
+        if ((event is KeyDownEvent || event is KeyRepeatEvent) &&
+            (event.logicalKey == LogicalKeyboardKey.arrowLeft || event.logicalKey == LogicalKeyboardKey.arrowRight) &&
+            vm.selectedKeys.isNotEmpty) {
+          // Nudge the selected keys one frame (Shift: ten).
+          final step = HardwareKeyboard.instance.isShiftPressed ? 10 : 1;
+          vm.nudgeSelectedKeys(event.logicalKey == LogicalKeyboardKey.arrowLeft ? -step : step);
+          return KeyEventResult.handled;
+        }
         if (event is KeyDownEvent) {
           if (event.logicalKey == LogicalKeyboardKey.delete ||
               event.logicalKey == LogicalKeyboardKey.backspace) {
-            final sel = vm.selectedKey;
-            if (sel != null) {
-              vm.deleteKey(sel.$1, sel.$2, sel.$3);
+            if (vm.selectedKeys.isNotEmpty) {
+              vm.deleteSelectedKeys();
               return KeyEventResult.handled;
             }
           } else if (event.logicalKey == LogicalKeyboardKey.keyZ &&
@@ -153,7 +160,11 @@ class _SequencerTimelineWidgetState extends State<SequencerTimelineWidget> {
                       // Check if clicked on a diamond
                       final hitKey = _hitTestKey(localPos, width);
                       if (hitKey != null) {
-                        vm.selectKey(hitKey.$1, hitKey.$2, hitKey.$3);
+                        if (HardwareKeyboard.instance.isShiftPressed) {
+                          vm.toggleKeySelection(hitKey.$1, hitKey.$2, hitKey.$3);
+                        } else {
+                          vm.selectKey(hitKey.$1, hitKey.$2, hitKey.$3);
+                        }
                       } else {
                         // Clicked empty area -> scrub to that frame
                         final frame = ((localPos.dx / width) * vm.lengthFrames).round().clamp(0, vm.lengthFrames);
@@ -184,7 +195,7 @@ class _SequencerTimelineWidgetState extends State<SequencerTimelineWidget> {
                       final hitKey = _hitTestKey(details.localPosition, width);
                       if (hitKey != null) {
                         _draggedKey = hitKey;
-                        vm.selectKey(hitKey.$1, hitKey.$2, hitKey.$3);
+                        if (!vm.isKeySelected(hitKey.$1, hitKey.$2, hitKey.$3)) vm.selectKey(hitKey.$1, hitKey.$2, hitKey.$3);
                       }
                     },
                     onPanUpdate: (details) {
@@ -222,6 +233,7 @@ class _SequencerTimelineWidgetState extends State<SequencerTimelineWidget> {
                         playheadFrame: vm.playheadFrame,
                         fps: vm.fps,
                         selectedKey: vm.selectedKey,
+                        selectedKeys: vm.selectedKeys,
                         rangeStart: vm.rangeStart,
                         rangeEnd: vm.rangeEnd,
                       ),
@@ -290,6 +302,9 @@ class SequencerTimelinePainter extends CustomPainter {
   final int fps;
   final (String trackId, String channelName, int keyIndex)? selectedKey;
 
+  /// Every selected key (Shift-click adds keys); all are highlighted.
+  final Set<(String trackId, String channelName, int keyIndex)> selectedKeys;
+
   /// Playback range rendered as brackets on the ruler; frames outside it are
   /// shaded. Null keeps the whole sequence.
   final int? rangeStart;
@@ -301,6 +316,7 @@ class SequencerTimelinePainter extends CustomPainter {
     required this.playheadFrame,
     required this.fps,
     this.selectedKey,
+    this.selectedKeys = const {},
     this.rangeStart,
     this.rangeEnd,
   });
@@ -427,7 +443,8 @@ class SequencerTimelinePainter extends CustomPainter {
           final kx = (key.frame / lengthFrames) * size.width;
           final ky = currentY + laneHeight / 2;
 
-          final isKeySelected = selectedKey?.$1 == track.id && selectedKey?.$2 == channel.name && selectedKey?.$3 == k;
+          final isKeySelected = (selectedKey?.$1 == track.id && selectedKey?.$2 == channel.name && selectedKey?.$3 == k) ||
+              selectedKeys.contains((track.id, channel.name, k));
 
           final path = Path()
             ..moveTo(kx, ky - 5)
