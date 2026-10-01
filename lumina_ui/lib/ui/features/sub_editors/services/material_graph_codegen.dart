@@ -8,7 +8,9 @@ import 'material_graph_types.dart';
 ///
 /// The `material` header is the current source's, with `parameters`,
 /// `requires` and `variables` rewritten from the graph (every other key kept
-/// as written); blocks other than `vertex` and `fragment` are kept as written.
+/// as written; a source without a header gets one declaring `flipUV : false`,
+/// as the new-material template does); blocks other than `vertex` and
+/// `fragment` are kept as written.
 /// The fragment is the graph: expressions inline, a local for every value used
 /// more than once (or named in the source it was parsed from), what feeds
 /// Normal before `prepareMaterial(material)`, everything else after it. A
@@ -65,6 +67,12 @@ class MaterialGraphCodegen {
 
     if (!header.any((e) => e.key == 'name')) {
       put('name', MatString(materialName ?? src.materialName ?? 'Material'));
+    }
+    // A header the graph writes itself samples glTF texture coordinates
+    // unflipped, as the new-material template does; an existing header keeps
+    // its `flipUV` (or matc's default without one) as written.
+    if (src.block('material') == null) {
+      put('flipUV', const MatAtom('false'), after: const ['name', 'shadingModel', 'blending']);
     }
     final requires = <String>[...src.requires];
     for (final r in [...vertexEmitter.requires(null), ...emitter.requires(fragmentNode)]) {

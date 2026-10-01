@@ -117,7 +117,8 @@ void registerAssetTools(McpToolRegistry registry, EditorViewModel vm, McpEditorS
       idempotent: false,
       title: 'Create asset',
       description: 'Creates a new asset under contents/ (Content Browser → New): "filamat" writes a material with the '
-          'editor\'s default .mat source; "actor" a Blueprint class (give parent_class: ${parentClasses.join(', ')}); '
+          'editor\'s default .mat source (it declares flipUV : false, so a texture sampled with getUV0() draws upright); '
+          '"actor" a Blueprint class (give parent_class: ${parentClasses.join(', ')}); '
           '"widget" a Widget Blueprint; "animBlueprint" / "blendSpace" an ABP_ / BS_ asset for target_mesh (a skeletal '
           'mesh; the Anim Blueprint starts with an Idle state playing its first clip, the Blend Space as Direction × '
           'Speed), placed beside its clips under contents/animations/<Mesh>/; "sequencer", "particle" and "animation" '

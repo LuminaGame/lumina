@@ -420,6 +420,58 @@ fragment {
     expect(vm.currentCode, contains('material.ambientOcclusion = 0.75;'));
   });
 
+  group('texture coordinates: the header keeps glTF UVs unflipped', () {
+    // Every Lumina mesh carries glTF texture coordinates (v = 0 at the image
+    // top), so a material the editor writes declares `flipUV : false`;
+    // matc's default (`true`) would draw its textures upside down.
+    String? flipUV(String source) => MatSource.parse(source).headerValue('flipUV')?.render();
+
+    LuminaBlueprintGraph textured() {
+      final g = LuminaBlueprintGraph();
+      MaterialNodes.ensureOutput(g, materialName: 'M_Tex');
+      g.nodes.add(MaterialNodes.create(MaterialNodes.textureSample, id: 'tex', literals: {'parameter': 'albedo'}));
+      g.wires.add(_w('tex', 'rgba', MaterialNodes.outputNodeId, MaterialNodes.baseColor));
+      return g;
+    }
+
+    test('the new-material template declares flipUV : false and compiles', () async {
+      final project = Directory.systemTemp.createTempSync('material_template_flipuv_');
+      addTearDown(() => project.deleteSync(recursive: true));
+      final vm = MaterialEditorViewModel(assetPath: '${project.path}/contents/materials/M_New.lmas');
+      await vm.load();
+      expect(flipUV(vm.currentCode), 'false', reason: vm.currentCode);
+      expect(await vm.compile(), isTrue, reason: vm.currentCode);
+    });
+
+    test('a header the graph writes declares flipUV : false and keeps it through graph → .mat → graph', () async {
+      final generated = _generate(textured(), '');
+      expect(flipUV(generated), 'false', reason: generated);
+      expect(MatSource.parse(generated).requires, ['uv0']);
+      expect(await _compiles(generated), isTrue, reason: generated);
+      final again = MaterialGraphParser.parse(generated).graph;
+      expect(_generate(again, generated), generated);
+    });
+
+    test('a Texture Sample added to the template keeps its flipUV : false', () async {
+      final project = Directory.systemTemp.createTempSync('material_template_flipuv_');
+      addTearDown(() => project.deleteSync(recursive: true));
+      final vm = MaterialEditorViewModel(assetPath: '${project.path}/contents/materials/M_New.lmas');
+      await vm.load();
+      final generated = _generate(textured(), vm.currentCode);
+      expect(flipUV(generated), 'false', reason: generated);
+      expect(MatSource.parse(generated).requires, ['uv0']);
+    });
+
+    test("a hand-written header's flipUV, or its absence, is kept as written", () {
+      const hand = 'material {\n    name : "M_Hand",\n    shadingModel : lit,\n    flipUV : true\n}\n';
+      expect(flipUV(_generate(textured(), hand)), 'true');
+      const handWithout = 'material {\n    name : "M_Hand",\n    shadingModel : lit\n}\n';
+      final generated = _generate(textured(), handWithout);
+      expect(flipUV(generated), isNull, reason: "no key keeps matc's meaning: $generated");
+      expect(flipUV(_generate(MaterialGraphParser.parse(generated).graph, generated)), isNull);
+    });
+  });
+
   test('a re-parse keeps the positions the author gave the nodes', () {
     final before = MaterialGraphParser.parse(_ccBody).graph;
     final sample = before.nodes.firstWhere((n) => n.literals['parameter'] == 'specularMap');

@@ -72,7 +72,7 @@ The Content Browser as MCP tools: list and search assets, import a file through 
 | :--- | :--- | :--- | :--- |
 | `list_assets` | readOnly | List assets | The project's assets under contents/ (the Content Browser), with their project-relative path, type (${AssetType.values.map((t) => t.name).join( |
 | `import_asset` | mutating | Import asset | Imports a file from disk through the editor's import pipeline (Content Browser → Import): GLB / glTF / FBX / OBJ / Collada (.dae) / 3DS / PLY / DirectX (.x) / STL meshes (their materials and textures ar... |
-| `create_asset` | mutating | Create asset | Creates a new asset under contents/ (Content Browser → New): "filamat" writes a material with the editor's default .mat source; "actor" a Blueprint class (give parent_class: ${parentClasses.join( |
+| `create_asset` | mutating | Create asset | Creates a new asset under contents/ (Content Browser → New): "filamat" writes a material with the editor's default .mat source (it declares flipUV : false, so a texture sampled with getUV0() draws upright); "actor" a Blueprint class (give parent_class: ${parentClasses.join( |
 | `open_asset_editor` | editorState | Open asset editor | Opens the asset's editor in a workspace tab, as a double-click in the Content Browser does (Material, Blueprint, Static Mesh, Skeletal Mesh, Animation, Texture, …). |
 | `delete_asset` | destructive | Delete asset | Deletes an asset (Content Browser → Delete): its files move to the project trash (.lumina/trash/<trash_id>) and the level actors that reference it are removed (`removed_actors`). |
 | `list_trash` | readOnly | List trash | The project trash (.lumina/trash): every deleted asset's entry, newest first — id, when, why, who, its files and the actors it removed. |

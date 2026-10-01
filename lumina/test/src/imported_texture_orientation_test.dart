@@ -12,34 +12,11 @@ import 'dart:typed_data';
 
 import 'package:flutter_filament/flutter_filament.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:image/image.dart' as img;
 import 'package:lumina/lumina.dart';
+import 'package:lumina/testing.dart' show TextureOrientationFixture, TextureQuadrant;
 import 'package:vector_math/vector_math_64.dart';
 
 Directory get _assets => Directory(Platform.environment['LUMINA_TEST_ASSETS'] ?? '${Directory.current.parent.path}/test-assets');
-
-/// The texture's quadrants, as the image is written (row 0 at the top).
-enum Quadrant { topLeft, topRight, bottomLeft, bottomRight }
-
-const _colours = {
-  Quadrant.topLeft: [230, 20, 20], // red
-  Quadrant.topRight: [20, 210, 30], // green
-  Quadrant.bottomLeft: [20, 40, 230], // blue
-  Quadrant.bottomRight: [235, 225, 20], // yellow
-};
-
-/// Which quadrant colour a lit, tone-mapped sample is.
-Quadrant? classify(List<int> rgb) {
-  final [r, g, b] = rgb;
-  if (r + g + b < 30) return null;
-  final max = [r, g, b].reduce((a, c) => a > c ? a : c);
-  final hi = [r > 0.55 * max, g > 0.55 * max, b > 0.55 * max];
-  if (hi[0] && hi[1] && !hi[2]) return Quadrant.bottomRight;
-  if (hi[0] && !hi[1] && !hi[2]) return Quadrant.topLeft;
-  if (!hi[0] && hi[1] && !hi[2]) return Quadrant.topRight;
-  if (!hi[0] && !hi[1] && hi[2]) return Quadrant.bottomLeft;
-  return null;
-}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -51,13 +28,7 @@ void main() {
     root = Directory.systemTemp.createTempSync('lumina_uv_orientation_');
     File('${root.path}/P.lmproject').writeAsStringSync(jsonEncode(const LuminaProject(projectName: 'P').toMap()));
     src = Directory('${root.path}/src')..createSync();
-    final image = img.Image(width: 64, height: 64);
-    for (final MapEntry(key: q, value: c) in _colours.entries) {
-      final x0 = q == Quadrant.topLeft || q == Quadrant.bottomLeft ? 0 : 32;
-      final y0 = q == Quadrant.topLeft || q == Quadrant.topRight ? 0 : 32;
-      img.fillRect(image, x1: x0, y1: y0, x2: x0 + 31, y2: y0 + 31, color: img.ColorRgb8(c[0], c[1], c[2]));
-    }
-    File('${src.path}/quadrants.png').writeAsBytesSync(img.encodePng(image));
+    File('${src.path}/quadrants.png').writeAsBytesSync(TextureOrientationFixture.quadrantsPng());
   });
 
   tearDownAll(() => root.deleteSync(recursive: true));
@@ -65,7 +36,7 @@ void main() {
   // The quad: x -1..1, y 0..2, facing +Z. Source-convention UVs put the
   // image's top-left at the quad's top-left corner (-1, 2, 0).
   final sources = <String, String Function()>{
-    'quad_gltf.glb': () => _writeGltfQuad('${src.path}/quad_gltf.glb', File('${src.path}/quadrants.png').readAsBytesSync()),
+    'quad_gltf.glb': () => TextureOrientationFixture.writeGltfQuad('${src.path}/quad_gltf.glb', File('${src.path}/quadrants.png').readAsBytesSync()),
     'quad_obj.obj': () {
       File('${src.path}/quad_obj.mtl').writeAsStringSync('newmtl Quadrants\nKd 1 1 1\nmap_Kd quadrants.png\n');
       return (File('${src.path}/quad_obj.obj')
@@ -172,7 +143,7 @@ void main() {
 
   /// Draws [mesh] (with [material] in place of its own when given) and
   /// returns the quadrant colour found at each corner of the quad on screen.
-  Future<Map<Quadrant, Quadrant?>> drawnCorners(String mesh, {String? material}) async {
+  Future<Map<TextureQuadrant, TextureQuadrant?>> drawnCorners(String mesh, {String? material}) async {
     final actor = LuminaStaticMeshActor(meshAssetPath: mesh, materialOverrideAsset: material);
     world.persistentLevel.registerActor(actor);
     world.beginPlay();
@@ -204,51 +175,24 @@ void main() {
       }
       engine.flushAndWait();
     }
-    List<int> at(int x, int y) => [for (var c = 0; c < 3; c++) pixels[(y * width + x) * 4 + c]];
-    var x0 = width, x1 = -1, y0 = height, y1 = -1;
-    for (var y = 0; y < height; y++) {
-      for (var x = 0; x < width; x++) {
-        if (at(x, y).reduce((a, b) => a + b) < 30) continue;
-        if (x < x0) x0 = x;
-        if (x > x1) x1 = x;
-        if (y < y0) y0 = y;
-        if (y > y1) y1 = y;
-      }
-    }
-    expect(x1, greaterThan(x0), reason: 'the quad is lit and in frame');
-    // The quad sits in the upper right: its rows are nearer the "up" end.
-    final upIsHighRow = (y0 + y1) / 2 > height / 2;
-    final rightIsHighColumn = (x0 + x1) / 2 > width / 2;
-    int col(double f) => (rightIsHighColumn ? x0 + (x1 - x0) * f : x1 - (x1 - x0) * f).round();
-    int row(double f) => (upIsHighRow ? y1 - (y1 - y0) * f : y0 + (y1 - y0) * f).round(); // f from the top
-    return {
-      Quadrant.topLeft: classify(at(col(0.25), row(0.25))),
-      Quadrant.topRight: classify(at(col(0.75), row(0.25))),
-      Quadrant.bottomLeft: classify(at(col(0.25), row(0.75))),
-      Quadrant.bottomRight: classify(at(col(0.75), row(0.75))),
-    };
+    final corners = TextureOrientationFixture.quadCorners(pixels, width, height);
+    expect(corners, isNotNull, reason: 'the quad is lit and in frame');
+    return corners!;
   }
-
-  const upright = {
-    Quadrant.topLeft: Quadrant.topLeft,
-    Quadrant.topRight: Quadrant.topRight,
-    Quadrant.bottomLeft: Quadrant.bottomLeft,
-    Quadrant.bottomRight: Quadrant.bottomRight,
-  };
 
   for (final file in sources.keys) {
     final format = file.substring(file.indexOf('.') + 1).toUpperCase();
     test('a $format quad draws its own material with the texture upright', () async {
       if (skip(file)) return;
       final quad = await importQuad(file);
-      expect(await drawnCorners(quad.mesh), upright);
+      expect(await drawnCorners(quad.mesh), TextureOrientationFixture.upright);
     });
 
     test('a $format quad draws its compiled imported material with the texture upright', () async {
       if (skip(file)) return;
       final quad = await importQuad(file);
       compile(quad.material);
-      expect(await drawnCorners(quad.mesh, material: quad.material), upright);
+      expect(await drawnCorners(quad.mesh, material: quad.material), TextureOrientationFixture.upright);
     });
   }
 
@@ -344,84 +288,6 @@ Map<(int, int, int), Set<(int, int)>> _uvsByCorner(Uint8List glb) {
     out.putIfAbsent((n[0], n[1], n[2]), () => {}).add(((uv[0] * 1000).round(), (uv[1] * 1000).round()));
   }
   return out;
-}
-
-/// A glTF quad written by hand: V down (glTF), so the image's top-left
-/// (uv 0, 0) sits at the quad's top-left corner (-1, 2, 0). The PNG is
-/// embedded and is the material's base colour texture.
-String _writeGltfQuad(String path, Uint8List png) {
-  const positions = [-1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 2.0, 0.0, -1.0, 2.0, 0.0];
-  const uvs = [0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0];
-  const normals = [0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0];
-  final imageOffset = 48 + 48 + 32 + 12;
-  final pad = (4 - png.length % 4) % 4;
-  final bin = ByteData(imageOffset + png.length + pad);
-  var o = 0;
-  for (final v in [...positions, ...normals, ...uvs]) {
-    bin.setFloat32(o, v, Endian.little);
-    o += 4;
-  }
-  for (final i in [0, 1, 2, 0, 2, 3]) {
-    bin.setUint16(o, i, Endian.little);
-    o += 2;
-  }
-  bin.buffer.asUint8List().setRange(imageOffset, imageOffset + png.length, png);
-  final json = {
-    'asset': {'version': '2.0'},
-    'buffers': [{'byteLength': bin.lengthInBytes}],
-    'bufferViews': [
-      {'buffer': 0, 'byteOffset': 0, 'byteLength': 48},
-      {'buffer': 0, 'byteOffset': 48, 'byteLength': 48},
-      {'buffer': 0, 'byteOffset': 96, 'byteLength': 32},
-      {'buffer': 0, 'byteOffset': 128, 'byteLength': 12},
-      {'buffer': 0, 'byteOffset': imageOffset, 'byteLength': png.length},
-    ],
-    'accessors': [
-      {'bufferView': 0, 'componentType': 5126, 'count': 4, 'type': 'VEC3', 'min': [-1, 0, 0], 'max': [1, 2, 0]},
-      {'bufferView': 1, 'componentType': 5126, 'count': 4, 'type': 'VEC3'},
-      {'bufferView': 2, 'componentType': 5126, 'count': 4, 'type': 'VEC2'},
-      {'bufferView': 3, 'componentType': 5123, 'count': 6, 'type': 'SCALAR'},
-    ],
-    'images': [{'bufferView': 4, 'mimeType': 'image/png', 'name': 'quadrants'}],
-    'samplers': [{'magFilter': 9728, 'minFilter': 9728}],
-    'textures': [{'source': 0, 'sampler': 0}],
-    'materials': [
-      {
-        'name': 'Quadrants',
-        'pbrMetallicRoughness': {'baseColorTexture': {'index': 0}, 'metallicFactor': 0.0, 'roughnessFactor': 1.0},
-      },
-    ],
-    'meshes': [
-      {
-        'name': 'Quad',
-        'primitives': [
-          {'attributes': {'POSITION': 0, 'NORMAL': 1, 'TEXCOORD_0': 2}, 'indices': 3, 'material': 0},
-        ],
-      },
-    ],
-    'nodes': [{'mesh': 0, 'name': 'Quad'}],
-    'scenes': [{'nodes': [0]}],
-    'scene': 0,
-  };
-  var jsonBytes = utf8.encode(jsonEncode(json));
-  jsonBytes = Uint8List.fromList([...jsonBytes, ...List.filled((4 - jsonBytes.length % 4) % 4, 0x20)]);
-  ByteData u32s(List<int> v) {
-    final d = ByteData(v.length * 4);
-    for (var i = 0; i < v.length; i++) {
-      d.setUint32(i * 4, v[i], Endian.little);
-    }
-    return d;
-  }
-
-  final total = 12 + 8 + jsonBytes.length + 8 + bin.lengthInBytes;
-  File(path).writeAsBytesSync([
-    ...u32s([0x46546C67, 2, total]).buffer.asUint8List(),
-    ...u32s([jsonBytes.length, 0x4E4F534A]).buffer.asUint8List(),
-    ...jsonBytes,
-    ...u32s([bin.lengthInBytes, 0x004E4942]).buffer.asUint8List(),
-    ...bin.buffer.asUint8List(),
-  ]);
-  return path;
 }
 
 /// An ASCII FBX 7.4 quad (Y up) whose material's diffuse texture is [texture].

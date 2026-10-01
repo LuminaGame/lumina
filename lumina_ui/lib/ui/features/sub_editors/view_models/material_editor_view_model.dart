@@ -275,7 +275,10 @@ class MaterialEditorViewModel extends ChangeNotifier {
     }
   }
 
-  /// Loads the asset from the given [assetPath].
+  /// Loads the asset from the given [assetPath]. A missing file starts from
+  /// the new-material template, which declares `flipUV : false`: meshes carry
+  /// glTF texture coordinates (v = 0 at the image top), so a texture sampled
+  /// with `getUV0()` draws upright (matc's default `true` turns it upside down).
   Future<void> load() async {
     final file = File(assetPath);
     if (!file.existsSync()) {
@@ -894,11 +897,16 @@ class MaterialEditorViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// The source a new material starts from. `flipUV : false`: every mesh
+  /// carries glTF texture coordinates (v = 0 at the image top) and textures
+  /// upload top row first, so a texture sampled with `getUV0()` draws upright
+  /// only unflipped (matc's default, `true`, turns it upside down).
   static String _defaultTemplate(String name) {
     return '''material {
     name : "$name",
     shadingModel : lit,
     blending : opaque,
+    flipUV : false,
     parameters : [
         { type : float, name : roughness, default : 0.30 },
         { type : float, name : metallic, default : 0.80 },

@@ -92,6 +92,8 @@ void main() {
       expect(matAsset.type, AssetType.filamat);
       expect(matAsset.rawMatSource, contains('material {'));
       expect(matAsset.rawMatSource, contains('fragment {'));
+      // glTF texture coordinates sampled unflipped: a texture draws upright.
+      expect(matAsset.rawMatSource, contains('flipUV : false'));
       expect(vm.realAssets.any((a) => a.relativePath == 'contents/materials/M_Agent.lmas'), isTrue);
       final again = await client.callTool('create_asset', {'type': 'filamat', 'name': 'M_Agent'});
       expect(again.isError, isTrue);

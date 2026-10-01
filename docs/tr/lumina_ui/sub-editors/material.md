@@ -182,7 +182,7 @@ Editörün derleyicisi: `FilamentMatc` üzerinden Filament'in kendi `.mat` ayrı
 | `parameters` | `List<MaterialParamModel> get parameters` | `parameters` özelliğinin anlık değerini okuyan getter erişimcisi. |
 | `currentCode` | `currentCode(String value)` | `currentCode` işlemini gerçekleştirir. |
 | `updateCodeFromEditor` | `void updateCodeFromEditor(String value)` | Updates code directly from the text editor without triggering continuous rebuild loops. |
-| `load` | `Future<void> load()` | Loads the asset from the given [assetPath]. |
+| `load` | `Future<void> load()` | Loads the asset from the given [assetPath]. A missing file starts from the new-material template, which declares `flipUV : false`: meshes carry glTF texture coordinates (v = 0 at the image top), so a texture sampled with `getUV0()` draws upright (matc's default `true` turns it upside down). |
 
 ## `lib/ui/features/sub_editors/services/material_preview_renderer.dart`
 
@@ -630,7 +630,7 @@ A custom interpolant the header's `variables` declares: `tint`, or `{ name : tin
 
 Writes a material graph as `.mat` source.
 
-The `material` header is the current source's, with `parameters`, `requires` and `variables` rewritten from the graph (every other key kept as written); blocks other than `vertex` and `fragment` are kept as written. The fragment is the graph: expressions inline, a local for every value used more than once (or named in the source it was parsed from), what feeds Normal before `prepareMaterial(material)`, everything else after it. A Custom (Fragment) node replaces the generated fragment with its code, verbatim.
+The `material` header is the current source's, with `parameters`, `requires` and `variables` rewritten from the graph (every other key kept as written; a source without a header gets one declaring `flipUV : false`, as the new-material template does); blocks other than `vertex` and `fragment` are kept as written. The fragment is the graph: expressions inline, a local for every value used more than once (or named in the source it was parsed from), what feeds Normal before `prepareMaterial(material)`, everything else after it. A Custom (Fragment) node replaces the generated fragment with its code, verbatim.
 
 The `vertex` block is the Set Vertex Variable nodes: each writes its interpolant (`material.<name> = …`, widened to `vec4`: `vec4(x)`, `vec4(xy, 0.0, 1.0)`, `vec4(xyz, 1.0)`) from the expressions upstream of it, evaluated per vertex with the vertex stage's reads (`material.uv0`, `material.color`, `material.worldPosition`). With no such node a hand-written vertex block stays as written; one the graph wrote goes away with its last setter.
 
