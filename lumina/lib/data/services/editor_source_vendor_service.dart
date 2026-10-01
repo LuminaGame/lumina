@@ -55,7 +55,8 @@ class EditorEngineUpdate {
 /// is linked (`<host>/filament` → `<engine>/filament`), never copied; so is
 /// the prebuilt OpenRigLogic library folder of a release checkout
 /// (`<host>/openriglogic` → `<engine>/openriglogic`), which a flutter_riglogic
-/// copied from the pub cache needs.
+/// copied from the pub cache needs. The engine's `pubspec.lock` travels
+/// with the copy ([engineLockFileName]).
 ///
 /// The copy is made once and is the project's own afterwards: only [sync]
 /// replaces it.
@@ -74,6 +75,11 @@ class EditorSourceVendorService {
   EditorSourceVendorService({required this.engineRoot, this.rootPackage = 'lumina_ui', this.linkPackages = false});
 
   static const String stampFileName = '.lumina_source.json';
+
+  /// The engine workspace's `pubspec.lock` as it was when the copy was made:
+  /// the versions the copied source was built and tested with, which the
+  /// host pins its hosted packages to (EditorHostGeneratorService).
+  static const String engineLockFileName = '.lumina_engine_pubspec.lock';
 
   /// Filament's C++ tree, linked beside the copied packages because the
   /// native-assets hooks resolve `../filament/…` from their package root.
@@ -274,6 +280,14 @@ class EditorSourceVendorService {
     // A junction on Windows: no admin rights or Developer Mode needed.
     DirectoryLink.createSync(link.path, filament.path);
     await linkOpenRigLogic(hostDir);
+
+    final engineLock = File(p.join(engineRoot, 'pubspec.lock'));
+    final lockCopy = File(p.join(hostDir, engineLockFileName));
+    if (engineLock.existsSync()) {
+      await engineLock.copy(lockCopy.path);
+    } else if (lockCopy.existsSync()) {
+      await lockCopy.delete();
+    }
 
     final revisions = <String, String>{};
     for (final repo in _repos(roots)) {

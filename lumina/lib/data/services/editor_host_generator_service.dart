@@ -44,6 +44,9 @@ class EditorHostResult {
 /// Output is deterministic (the same inputs give byte-identical files) and
 /// written in place: a regeneration that changes nothing leaves the folder —
 /// the source copy, `.dart_tool`, `pubspec.lock` and build stamp — untouched.
+/// The host's `pubspec.lock` is seeded from the engine's (see
+/// [engineLockOf]), so `pub get` resolves the versions the engine was built
+/// with, never whatever pub.dev published since.
 class EditorHostGeneratorService {
   /// The workspace root holding `lumina_ui/`, `lumina/`, `flutter_filament/`, ….
   final String engineRoot;
@@ -123,13 +126,16 @@ class EditorHostGeneratorService {
 
     // In place, never by swapping the folder: it also holds the project's
     // copy of the engine source, the lock and the stamp.
+    var pubspecChanged = false;
     for (final entry in files.entries) {
       final f = File(p.join(hostDir.path, entry.key));
       if (f.existsSync() && _sameBytes(f.readAsBytesSync(), entry.value)) continue;
       await f.parent.create(recursive: true);
       await f.writeAsBytes(entry.value, flush: true);
       changed = true;
+      if (entry.key == 'pubspec.yaml') pubspecChanged = true;
     }
+    if (await _pinEngineLock(hostDir.path, force: pubspecChanged)) changed = true;
     // A runner file the engine dropped since the last generation.
     final runnerDir = Directory(p.join(hostDir.path, platform));
     if (runnerDir.existsSync()) {
@@ -157,6 +163,112 @@ class EditorHostGeneratorService {
     } on YamlException {
       return false;
     }
+  }
+
+  /// The lock the host's hosted packages are pinned to: the project copy's
+  /// snapshot of the engine lock (the versions that source was built and
+  /// tested with), else the engine workspace's `pubspec.lock`.
+  File engineLockOf(String hostDir) {
+    final snapshot = File(p.join(hostDir, EditorSourceVendorService.engineLockFileName));
+    return snapshot.existsSync() ? snapshot : File(p.join(workspaceRoot, 'pubspec.lock'));
+  }
+
+  /// The engine-locked hosted packages the host's `pubspec.lock` holds at
+  /// another version (a code plugin's constraint moved them), as
+  /// `name <engine> → <host>`.
+  List<String> movedFromEngineLock(String hostDir) {
+    final engine = _hostedEntries(_readLock(engineLockOf(hostDir)));
+    final host = _readLock(File(p.join(hostDir, 'pubspec.lock')));
+    final packages = host?['packages'];
+    if (packages is! YamlMap) return const [];
+    return [
+      for (final MapEntry(key: name, value: pinned) in engine.entries)
+        if (packages[name] case final YamlMap h when h['source'] == 'hosted' && '${h['version']}' != '${pinned['version']}')
+          '$name ${pinned['version']} → ${h['version']}',
+    ];
+  }
+
+  /// Seeds the host's `pubspec.lock` with every hosted package of
+  /// [engineLockOf], so `pub get` keeps the engine's versions instead of
+  /// resolving the newest ones (a new upstream release would otherwise
+  /// reach every project editor). Packages only the host has (a code
+  /// plugin's own dependencies) keep their entries; `pub get` resolves what
+  /// is new and drops what is unused. Path and git packages are pinned by
+  /// the pubspec itself (the project's copies, a plugin's `ref:`).
+  ///
+  /// Written when the host has no lock, when [force] (its pubspec changed),
+  /// or when the lock holds an engine package at another version; a host
+  /// that matches is left untouched. True when the lock was rewritten.
+  Future<bool> _pinEngineLock(String hostDir, {required bool force}) async {
+    final engineLock = _readLock(engineLockOf(hostDir));
+    final pinned = _hostedEntries(engineLock);
+    if (pinned.isEmpty) return false;
+    final file = File(p.join(hostDir, 'pubspec.lock'));
+    final existing = file.existsSync() ? (_readLock(file)?['packages']) : null;
+    final current = existing is YamlMap ? existing : null;
+    if (current != null && !force && movedFromEngineLock(hostDir).isEmpty) return false;
+    final merged = <String, YamlMap>{
+      if (current != null)
+        for (final e in current.entries)
+          if (e.value is YamlMap) '${e.key}': e.value as YamlMap,
+      ...pinned,
+    };
+    final sdks = engineLock?['sdks'];
+    final text = _lockText(merged, sdks is YamlMap ? sdks : null);
+    if (file.existsSync() && file.readAsStringSync() == text) return false;
+    await file.writeAsString(text, flush: true);
+    return true;
+  }
+
+  static YamlMap? _readLock(File lock) {
+    if (!lock.existsSync()) return null;
+    try {
+      final yaml = loadYaml(lock.readAsStringSync());
+      return yaml is YamlMap ? yaml : null;
+    } on YamlException {
+      return null;
+    }
+  }
+
+  static Map<String, YamlMap> _hostedEntries(YamlMap? lock) {
+    final packages = lock?['packages'];
+    if (packages is! YamlMap) return const {};
+    return {
+      for (final e in packages.entries)
+        if (e.value case final YamlMap entry when entry['source'] == 'hosted') '${e.key}': entry,
+    };
+  }
+
+  /// A `pubspec.lock` in pub's layout: packages and keys sorted, strings
+  /// double-quoted.
+  static String _lockText(Map<String, YamlMap> packages, YamlMap? sdks) {
+    String scalar(Object? v) => v is String ? jsonEncode(v) : '$v';
+    List<String> keys(YamlMap m) => [for (final k in m.keys) '$k']..sort();
+    final b = StringBuffer()
+      ..writeln("# Generated by Lumina Studio from the engine's pubspec.lock; pub rewrites it.")
+      ..writeln('packages:');
+    for (final name in packages.keys.toList()..sort()) {
+      final entry = packages[name]!;
+      b.writeln('  $name:');
+      for (final key in keys(entry)) {
+        final value = entry[key];
+        if (value is YamlMap) {
+          b.writeln('    $key:');
+          for (final k in keys(value)) {
+            b.writeln('      $k: ${scalar(value[k])}');
+          }
+        } else {
+          b.writeln('    $key: ${scalar(value)}');
+        }
+      }
+    }
+    if (sdks != null) {
+      b.writeln('sdks:');
+      for (final k in keys(sdks)) {
+        b.writeln('  $k: ${scalar(sdks[k])}');
+      }
+    }
+    return b.toString();
   }
 
   static List<int> _utf8(String s) => utf8.encode(s);

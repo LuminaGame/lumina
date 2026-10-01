@@ -216,6 +216,8 @@ Writes a project's editor host package: a thin Flutter app in `<project>/.lumina
 
 Output is deterministic (the same inputs give byte-identical files) and written in place: a regeneration that changes nothing leaves the folder — the source copy, `.dart_tool`, `pubspec.lock` and build stamp — untouched.
 
+The host's `pubspec.lock` is seeded with every hosted package of the engine lock ([engineLockOf]: the project copy's snapshot, else the engine workspace's `pubspec.lock`), so `pub get` keeps the versions the engine was built with instead of the newest ones pub.dev published since. Packages only the host has (a code plugin's own dependencies) keep their entries and new ones resolve normally; path and git packages are pinned by the pubspec itself. The lock is rewritten when the host has none, when its pubspec changed, or when it holds an engine package at another version.
+
 **Constructors:**
 
 - `EditorHostGeneratorService({required this.engineRoot, String? platform, String? workspaceRoot})` — `workspaceRoot` (default `engineRoot`) is the workspace whose `pubspec.lock` pinned the git-resolved plugins: such a plugin is written into the host pubspec as that git dependency, never as a path into the pub cache.
@@ -232,6 +234,8 @@ Output is deterministic (the same inputs give byte-identical files) and written 
 | `editorCodePlugins` | `static List<LuminaPluginDescriptor> editorCodePlugins(List<LuminaPluginDescriptor> plugins)` | The plugins that contribute editor code (the ones a host must compile). |
 | `projectNameIn` | `static String? projectNameIn(String projectDir)` | The project's name: the `.lmproject` file's base name. |
 | `generate` | `Future<EditorHostResult> generate(String projectDir, List<LuminaPluginDescriptor> enabledCodePlugins, {String?...` |  |
+| `engineLockOf` | `File engineLockOf(String hostDir)` | The lock the host's hosted packages are pinned to: the copy's `EditorSourceVendorService.engineLockFileName`, else `<workspaceRoot>/pubspec.lock`. |
+| `movedFromEngineLock` | `List<String> movedFromEngineLock(String hostDir)` | Engine-locked hosted packages the host's lock holds at another version (a code plugin's constraint moved them), as `name <engine> → <host>`; the build log warns about each. |
 | `isOldLayout` | `static bool isOldLayout(String hostDir)` | Whether the host at [hostDir] depends on `lumina_ui` anywhere but the project's copy beside it (a host from before per-project source copies). |
 
 ## `lib/data/services/editor_source_vendor_service.dart`
@@ -273,6 +277,7 @@ The copy is made once and is the project's own afterwards: only [sync] replaces 
 | `rootPackage` | `final String rootPackage` | The package whose path-dependency closure is copied. |
 | `linkPackages` | `final bool linkPackages` | Links each package to the engine instead of copying it: for engine development and tests, where a ~650 MB copy per build is pointless. Projects never use it. |
 | `stampFileName` | `static const String stampFileName` |  |
+| `engineLockFileName` | `static const String engineLockFileName` | `.lumina_engine_pubspec.lock`: the engine workspace's `pubspec.lock` as it was when the copy was made (the versions the copied source was built and tested with); [vendor] writes it and the host generator pins the host's hosted packages to it. |
 | `filamentDir` | `static const String filamentDir` | Filament's C++ tree, linked beside the copied packages because the native-assets hooks resolve `../filament/…` from their package root. |
 | `packageExcludes` | `static const Set<String> packageExcludes` | Skipped directly under each package root: build outputs, tests and backlog docs, none of which the editor build reads. |
 | `anywhereExcludes` | `static const Set<String> anywhereExcludes` | Skipped at any depth. |

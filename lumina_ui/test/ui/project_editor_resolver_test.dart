@@ -94,7 +94,8 @@ void main() {
     expect(d, isA<NeedsBuild>());
     expect((d as NeedsBuild).reason, 'editor source copied into the project');
     expect(File(p.join(fx.hostDir, 'pubspec.yaml')).readAsStringSync(), contains('  lumina_ui:\n    path: lumina_ui\n'));
-    expect(File(p.join(fx.hostDir, 'pubspec.lock')).existsSync(), isFalse);
+    expect(File(p.join(fx.hostDir, 'pubspec.lock')).readAsStringSync(), isNot('packages: {}\n'),
+        reason: "the old resolution is dropped; the engine lock's versions seed the new one");
   });
 
   test('enabled_plugins set but .lumina/editor absent → missingBinary naming the plugin', () async {

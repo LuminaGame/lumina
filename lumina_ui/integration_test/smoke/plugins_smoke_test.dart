@@ -2969,6 +2969,10 @@ void sourceCopyProjectEditorScenario(IntegrationTestWidgetsFlutterBinding bindin
       expect(FileSystemEntity.isLinkSync('$host/filament'), isTrue);
       expect(FileSystemEntity.isLinkSync('$host/lumina_ui'), isFalse, reason: 'a real copy, not a link');
       expect(Directory('$host/lumina_ui/test').existsSync(), isFalse, reason: 'tests are not copied');
+      // The engine lock travels with the copy, and the host resolved every
+      // hosted package at its version, whatever pub.dev published since.
+      expect(File('$host/${EditorSourceVendorService.engineLockFileName}').existsSync(), isTrue);
+      expect(resolver.generator.movedFromEngineLock(host), isEmpty);
       final log = File(outcome.logPath!).readAsStringSync();
       expect(log, contains('Copying the editor source'));
       if (Platform.isWindows) expect(log, contains('Building through'), reason: 'the space-free alias');

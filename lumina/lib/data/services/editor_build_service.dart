@@ -491,6 +491,12 @@ class EditorBuildService {
       final pubGet = await run(['pub', 'get'], buildDir, (l) => emit(EditorBuildPhase.resolvingPackages, last, EditorBuildPhase.resolvingPackages.label, line: l));
       if (cancelled) return EditorBuildCancelled(logPath);
       if (pubGet != 0) return failed('flutter pub get exited with code $pubGet');
+      // The host keeps the engine's versions unless a code plugin's
+      // constraints forced another one; the editor source was not built
+      // against that version, so the log says which.
+      for (final moved in generator.movedFromEngineLock(hostDir)) {
+        logLine('Warning: a code plugin moved $moved (the engine was built with the first version)');
+      }
       emit(EditorBuildPhase.resolvingPackages, EditorBuildPhase.resolvingPackages.overall(1), EditorBuildPhase.resolvingPackages.label);
 
       final flutter = await flutterInfo();
