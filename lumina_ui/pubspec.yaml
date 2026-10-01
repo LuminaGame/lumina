@@ -50,7 +50,7 @@ dependencies:
     git:
       url: https://github.com/LuminaGame/marketplace.git
       path: shared
-      ref: 7f83ac85075e4dfb3ea2ff2c430739fb8e071ac8
+      ref: 3ec62b418bc5df6af900e839ba67164430babc39
   http: ^1.6.0
   archive: ^4.3.0
   crypto: ^3.0.6
@@ -82,13 +82,13 @@ dev_dependencies:
     git:
       url: https://github.com/LuminaGame/plugins.git
       path: lumina_plugin_pcg
-      ref: 153ab38e90f2b3d51737d34c009a478549211350
+      ref: 77cf545c452571fa82719ef41ed5314d3fddc89a
   # MiniAI: tests and smoke, as for PCG.
   lumina_plugin_miniai:
     git:
       url: https://github.com/LuminaGame/plugins.git
       path: lumina_plugin_miniai
-      ref: 153ab38e90f2b3d51737d34c009a478549211350
+      ref: 77cf545c452571fa82719ef41ed5314d3fddc89a
   msix: ^3.18.0
 
 # The MSIX identity of Lumina Studio, shared by every
