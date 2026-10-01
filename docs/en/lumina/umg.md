@@ -227,6 +227,23 @@ A horizontal progress bar; [progress] is clamped to 0..1 (UMG Progress Bar `Perc
 | `color` | `final Color? color` |  |
 | `trackColor` | `final Color? trackColor` |  |
 
+### `class LuminaUmgSkeleton`
+
+A loading placeholder (the shadcn Skeleton component): [lines] stretched rows of [text], each drawn as a rounded bone over the text's own line boxes, so the placeholder takes the space the text would. The bones pulse between 5 % and 10 % of [color]'s alpha over [duration], back and forth (shadcn passes its primary colour).
+
+**Constructors:**
+
+- `const LuminaUmgSkeleton({super.key, this.lines = 3, this.text = 'Loading placeholder text line', this.color = LuminaUmgColors.foreground, this.duration = const Duration(seconds: 1)})`
+
+**Members:**
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `lines` | `final int lines` |  |
+| `text` | `final String text` |  |
+| `color` | `final Color color` |  |
+| `duration` | `final Duration duration` | One pulse, from the faint to the strong colour. |
+
 ### `class LuminaUmgBorder`
 
 A filled, rounded panel around one child (UMG Border).

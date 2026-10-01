@@ -161,6 +161,7 @@ class UmgWidgetCodegen {
       if (containers.isNotEmpty) ...['LuminaUmgContainer', 'LuminaUmgContainerStyle'],
       if (usesGradient) 'LuminaUmgGradient',
       if (usesKbd) 'LuminaUmgStyleJson',
+      if (!plain && nodes.any((n) => n.type == UmgWidgetType.shadcnSkeleton)) 'LuminaUmgSkeleton',
       if (plain)
         for (final n in nodes) ...?_plainRuntimeNames[n.type],
     }.toList()

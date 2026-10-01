@@ -18,7 +18,7 @@ Rules that apply: shadcn_flutter only (never Material), no mock data, every butt
 ```
 <name>/
   <name>.lmplugin            # manifest — basename MUST equal "name"
-  pubspec.yaml               # lumina_editor_api (+ lumina) path deps, shadcn_flutter pinned (0.0.53 = kHostShadcnFlutterVersion)
+  pubspec.yaml               # lumina_editor_api (+ lumina) path deps, shadcn_flutter pinned (0.0.55 = kHostShadcnFlutterVersion)
   lib/<name>.dart            # `library; export 'src/<name>_plugin.dart';`
   lib/src/<name>_plugin.dart # class <PascalName>Plugin extends LuminaEditorPlugin
   resources/icon128.png      # 128×128 PNG shown in the Plugin Manager
@@ -34,7 +34,7 @@ Manifest fields (`lumina/lib/data/models/lumina_plugin_descriptor.dart`): `name`
 dependencies:
   lumina_editor_api: {path: ../lumina_editor_api}   # the plugin API (host ↔ plugin cycle breaker)
   lumina:            {path: ../lumina}              # runtime/data types: LuminaAsset, AssetType, LandscapeData, GlbMeshData …
-  shadcn_flutter: 0.0.53                             # exact host version
+  shadcn_flutter: 0.0.55                             # exact host version
 ```
 
 `package:lumina/lumina.dart` (or a specific `lumina/data/models/*.dart`) is fine — that is the engine and its data layer. `package:lumina_ui/...` is not: it does not resolve from a plugin and would recreate the pub cycle. Everything editor-side reaches you through `LuminaEditorContext` / `LuminaEditorHostContext` (`lumina_editor_api/lib/src/api_types.dart`, `editor_level.dart`).
@@ -108,7 +108,7 @@ Then Plugins → Plugin Manager... → toggle the switch → the restart banner 
 - `LuminaAsset` has no path: the host puts the absolute `.lmas` path in `metadata[kAssetPathMetadataKey]` only for `editorFactory`; elsewhere resolve paths yourself against `level.projectDirPath`.
 - Units: the level is cm, Z up; `LandscapeData` is metres, Y up, centred on its actor; glTF meshes are metres and the viewport scales them ×100. `PcgLandscapeSurface` shows the mapping.
 - `meshAssetPath` must be absolute and the file must exist, or the instance draws nothing and codegen emits a bare scene actor.
-- `Select<T>` in shadcn 0.0.53: `popup: SelectPopup(items: SelectItemList(children: [SelectItemButton(value:, child:)])).call`, `itemBuilder: (context, v) => …`; `ColorSchemes.darkZinc` is a value, not a function.
-- The wizard pins `shadcn_flutter: 0.0.53`; a `^` range can resolve a different copy than the host and break `showOverlay`.
+- `Select<T>` in shadcn 0.0.55: `popup: SelectPopup(items: SelectItemList(children: [SelectItemButton(value:, child:)])).call`, `itemBuilder: (context, v) => …`; `ColorSchemes.darkZinc` is a value, not a function.
+- The wizard pins `shadcn_flutter: 0.0.55`; a `^` range can resolve a different copy than the host and break `showOverlay`.
 - Menu path rules (enforced by the host registry): `Plugins/<Group>/…` or `<your registered menu title>/…` only. `File/`, `Edit/`, `View/`, `Build/`, `Debug/`, `Window/`, `Help/` (and another plugin's menu) reject the item with an `invalidMenuPath` issue on your Plugin Manager row and an Output Log error; a title equal to a built-in or another plugin's menu is a `menuConflict`. Legacy `Tools/<Group>/…` still works (moved to `Plugins/<Group>/…`) with one deprecation warning.
 - `dart analyze` from the plugin dir is the cheap check; `flutter test` needs the batch (one test process at a time on this machine).

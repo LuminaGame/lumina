@@ -83,7 +83,7 @@ class PluginGenerationResult {
 
 /// The shadcn_flutter version Lumina Studio (lumina_ui/pubspec.lock) resolves.
 /// Generated plugins pin it exactly so they compile against the host's copy.
-const String kHostShadcnFlutterVersion = '0.0.54';
+const String kHostShadcnFlutterVersion = '0.0.55';
 
 
 class PluginTemplateGeneratorService {

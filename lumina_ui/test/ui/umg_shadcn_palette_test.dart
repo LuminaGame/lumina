@@ -226,7 +226,7 @@ void main() {
     doc.allNodes.firstWhere((n) => n.type == UmgWidgetType.shadcnSwitch).events.add(const UmgEvent(name: 'OnValueChanged', handler: 'onValueChangedSwitch'));
     final src = UmgWidgetCodegen.generateWidgetDart(doc, assetName: 'WBP_Shadcn');
     for (final w in ['Card(', 'PrimaryBadge(', 'Avatar(', 'Alert(', 'Divider(', 'Progress(', 'Switch(', 'Toggle(', 'Tabs(', 'TabItem(', 'Accordion(',
-        'AccordionItem(', 'Tooltip(', 'TooltipContainer(', 'Chip(', 'KeyboardDisplay(', '.asSkeleton()', 'TextField(', 'TextArea(', 'Select<String>(',
+        'AccordionItem(', 'Tooltip(', 'TooltipContainer(', 'Chip(', 'KeyboardDisplay(', 'LuminaUmgSkeleton(', 'TextField(', 'TextArea(', 'Select<String>(',
         'RadioGroup<String>(', 'RadioItem<String>(', 'Slider(', 'Checkbox(', 'PrimaryButton(', 'SecondaryButton(', 'OutlineButton(', 'GhostButton(',
         'DestructiveButton(', 'LinkButton(']) {
       expect(src, contains(w));

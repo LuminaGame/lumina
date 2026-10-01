@@ -177,8 +177,9 @@ String _emitShadcn(UmgNode node, UmgDocument doc, String indent, bool stateful, 
       return 'KeyboardDisplay($key, keys: LuminaUmgStyleJson.keyboardKeys(${str('text')}))';
     case UmgWidgetType.shadcnSkeleton:
       final lines = _int(p['lines'], 3).clamp(1, 12);
-      return 'Column(\n$inner$key,\n${inner}mainAxisSize: MainAxisSize.min,\n${inner}crossAxisAlignment: CrossAxisAlignment.stretch,\n'
-          "${inner}children: [for (var i = 0; i < $lines; i++) const Text('Loading placeholder text line')],\n$indent).asSkeleton()";
+      // shadcn_flutter's own skeleton lives in a separate package now; the
+      // runtime's placeholder needs none.
+      return 'LuminaUmgSkeleton($key, lines: $lines, color: Theme.of(context).colorScheme.primary)';
     case UmgWidgetType.shadcnTextField:
     case UmgWidgetType.shadcnTextArea:
       final widget = node.type == UmgWidgetType.shadcnTextArea ? 'TextArea' : 'TextField';

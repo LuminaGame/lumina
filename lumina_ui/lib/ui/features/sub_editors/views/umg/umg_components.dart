@@ -1,5 +1,5 @@
 import 'package:lumina/lumina.dart'
-    show LuminaUmgContainer, LuminaUmgContainerStyle, LuminaUmgElementBinding, LuminaUmgStyleJson;
+    show LuminaUmgContainer, LuminaUmgContainerStyle, LuminaUmgElementBinding, LuminaUmgSkeleton, LuminaUmgStyleJson;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
@@ -164,11 +164,7 @@ Widget umgShadcnComponent(
       return KeyboardDisplay(keys: LuminaUmgStyleJson.keyboardKeys(str('text')));
     case UmgWidgetType.shadcnSkeleton:
       final lines = ((p['lines'] as num?)?.toInt() ?? 3).clamp(1, 12);
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [for (var i = 0; i < lines; i++) const Text('Loading placeholder text line')],
-      ).asSkeleton();
+      return Builder(builder: (context) => LuminaUmgSkeleton(lines: lines, color: Theme.of(context).colorScheme.primary));
     case UmgWidgetType.shadcnTextField:
       return TextField(
         key: ValueKey('umg_shadcn_field_${node.id}_${p['text']}'),

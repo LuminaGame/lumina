@@ -131,4 +131,24 @@ void main() {
     await tester.pumpWidget(_host(const LuminaUmgBorder(padding: EdgeInsets.all(10), child: SizedBox(width: 40, height: 20))));
     expect(tester.getSize(find.byType(LuminaUmgBorder)), const Size(60, 40));
   });
+
+  testWidgets('LuminaUmgSkeleton lays out its lines like the text and paints pulsing rounded bones', (tester) async {
+    const red = Color(0xFFFF0000);
+    await tester.pumpWidget(_host(const SizedBox(width: 300, child: LuminaUmgSkeleton(lines: 4, color: red))));
+    final rows = find.descendant(of: find.byType(LuminaUmgSkeleton), matching: find.byType(CustomPaint));
+    expect(rows, findsNWidgets(4));
+    expect(tester.getSize(rows.first).width, 300, reason: 'the rows stretch, as the shadcn skeleton column did');
+    expect(find.text('Loading placeholder text line'), findsNWidgets(4), reason: 'the text sizes the rows');
+    final faint = red.withValues(alpha: 0.05);
+    final strong = red.withValues(alpha: 0.1);
+    expect(rows.first, paints..rrect(color: faint));
+    await tester.pump(const Duration(seconds: 1));
+    expect(rows.first, paints..rrect(color: strong), reason: 'one pulse later the bone is at its strongest');
+    await tester.pump(const Duration(seconds: 1));
+    expect(rows.first, paints..rrect(color: faint), reason: 'and it pulses back');
+
+    await tester.pumpWidget(_host(const SizedBox(width: 220, height: 30, child: LuminaUmgSkeleton(color: red))));
+    expect(tester.takeException(), isNull, reason: 'a slot shorter than the lines clips them instead of overflowing');
+    expect(tester.getSize(find.byType(LuminaUmgSkeleton)), const Size(220, 30));
+  });
 }

@@ -134,7 +134,7 @@ class _OutputLogWidgetState extends State<OutputLogWidget> {
 
         // Selectable Log Items Viewport
         Expanded(
-          // shadcn_flutter 0.0.54 installs no Material ancestors, so Material's
+          // shadcn_flutter installs no Material ancestors, so Material's
           // SelectionArea (which needs MaterialLocalizations) is replaced by the
           // widgets-layer region with shadcn's handle-less controls.
           child: SelectableRegion(

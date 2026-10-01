@@ -760,6 +760,11 @@ void main() {
       umg.setProp(sw.id, 'checked', true);
       await settle(4);
       await rec.hold(const Duration(milliseconds: 800));
+      // The loading placeholder pulses while the recording runs.
+      final skeleton = umg.addWidget(UmgWidgetType.shadcnSkeleton, parentId: column.id)!;
+      umg.setProp(skeleton.id, 'lines', 2);
+      await settle(4);
+      await rec.hold(const Duration(milliseconds: 800));
       final button = umg.addWidget(UmgWidgetType.shadcnPrimaryButton, parentId: column.id)!;
       umg.setProp(button.id, 'label', 'Deploy');
       umg.select(null);
@@ -775,6 +780,7 @@ void main() {
       expect(inNode(progress, Progress), findsOneWidget);
       expect(inNode(sw, Switch), findsOneWidget);
       expect(inNode(button, PrimaryButton), findsOneWidget);
+      expect(inNode(skeleton, LuminaUmgSkeleton), findsOneWidget);
 
       final png = await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey));
       SmokeArtifacts.saveScreenshot(name, png);
@@ -786,6 +792,7 @@ void main() {
       expect(compiled.source, contains('Card('));
       expect(compiled.source, contains('Progress('));
       expect(compiled.source, contains('Switch('));
+      expect(compiled.source, contains('LuminaUmgSkeleton('));
       await rec.hold(const Duration(seconds: 2));
       rec.save(name);
     } finally {

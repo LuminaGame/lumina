@@ -125,9 +125,13 @@ void main() {
     Progress progressWidget() => tester.widget<Progress>(
           find.descendant(of: find.byKey(ValueKey('umg_rt_${bar.id}')), matching: find.byType(Progress)),
         );
+    // The runtime view passes Progress's own colour argument (deprecated for
+    // theme: in shadcn_flutter 0.0.55, still honoured).
+    // ignore: deprecated_member_use
     expect(progressWidget().color, isNot(const Color(0xFFFF0000)));
     vm.setProp(bar.id, 'color', '#FF0000');
     await tester.pump();
+    // ignore: deprecated_member_use
     expect(progressWidget().color, const Color(0xFFFF0000));
     expect(vm.document.findNode(bar.id)!.props['color'], '#FF0000');
 

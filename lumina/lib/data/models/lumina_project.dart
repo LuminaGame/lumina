@@ -273,7 +273,7 @@ const List<String> kUmgWidgetLibraries = [kUmgWidgetLibraryShadcn, kUmgWidgetLib
 
 /// The shadcn_flutter version a game depends on when its widgets use it:
 /// exactly the editor's, whose API the UMG codegen emits.
-const String kGameShadcnFlutterVersion = '0.0.54';
+const String kGameShadcnFlutterVersion = '0.0.55';
 
 /// `ui` section: how the project's UMG widgets are generated.
 class ProjectUiSettings {
