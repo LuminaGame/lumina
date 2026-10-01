@@ -1472,8 +1472,8 @@ void main() {
   testWidgets('MiniAI places barrels with a local model', (tester) async {
     const barrel = 'Props/Barrels/fuel_barrel_red.glb';
     const name = 'MiniAI places barrels with a local model';
-    final home = Platform.environment['USERPROFILE'] ?? Platform.environment['HOME'] ?? '';
-    final miniai = '$home/.local/share/lumina/miniai';
+    // Where the MiniAI setup installs them on this platform.
+    final miniai = LocalModelManager.defaultRoot(Platform.environment);
     final model = File('$miniai/models/MiniCPM5-2B-Q4_K_M.gguf');
     final serverExe = File('$miniai/bin/b11239/${Platform.isWindows ? 'llama-server.exe' : 'llama-server'}');
     if (!model.existsSync() || !serverExe.existsSync()) {
@@ -1563,9 +1563,24 @@ void main() {
       await settle(tester);
       await rec.hold(const Duration(seconds: 2));
       await shot('model provider');
+
+      // Advanced / Sampling: Test connection found llama-server; MiniCPM5's
+      // recommended values (repeat penalty 1.05, min_p 0) are filled in.
+      await tester.ensureVisible(find.byKey(const ValueKey('miniai_sampling_toggle')));
+      await tester.tap(find.byKey(const ValueKey('miniai_sampling_toggle')));
+      await settle(tester);
+      String sampling(String field) => tester.widget<TextField>(find.byKey(ValueKey('miniai_sampling_$field'))).controller!.text;
+      expect(find.text(ServerBackend.llamaCpp.label), findsWidgets);
+      expect([sampling('temperature'), sampling('top_p'), sampling('min_p'), sampling('repeat_penalty')], ['1.0', '0.95', '0.0', '1.05']);
+      expect(find.byKey(const ValueKey('miniai_sampling_dry_multiplier')), findsOneWidget, reason: 'llama-server takes DRY');
+      await tester.ensureVisible(find.byKey(const ValueKey('miniai_sampling_reset')));
+      await settle(tester);
+      await rec.hold(const Duration(seconds: 2));
+      await shot('sampling defaults');
       await tester.tap(find.byKey(const ValueKey('miniai_provider_save')));
       await waitFor(() => plugin.controller!.settings.isConfigured && find.byKey(const ValueKey('miniai_provider_save')).evaluate().isEmpty,
           max: const Duration(seconds: 20));
+      expect(plugin.controller!.settings.selected!.backend, ServerBackend.llamaCpp);
 
       // 2. Ask for three barrels; approve the calls.
       final before = vm.actors.length;
