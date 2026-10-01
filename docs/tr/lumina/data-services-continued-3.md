@@ -6,6 +6,8 @@ Veri katmanı: use case'ler ve servisler sayfasının devamı: `lib/data/service
 
 **Bu sayfada:**
 
+- [`lib/data/services/authored_animation_clip.dart`](#libdataservicesauthored_animation_clipdart)
+- [`lib/data/services/authored_animation_writer.dart`](#libdataservicesauthored_animation_writerdart)
 - [`lib/data/services/glb_animation_merger.dart`](#libdataservicesglb_animation_mergerdart)
 - [`lib/data/services/glb_animation_retargeter.dart`](#libdataservicesglb_animation_retargeterdart)
 - [`lib/data/services/gltf_packer.dart`](#libdataservicesgltf_packerdart)
@@ -25,6 +27,47 @@ Veri katmanı: use case'ler ve servisler sayfasının devamı: `lib/data/service
 - [`lib/data/services/umg_widget_library_service.dart`](#libdataservicesumg_widget_library_servicedart)
 - [`lib/data/services/web_loading_screen_service.dart`](#libdataservicesweb_loading_screen_servicedart)
 - [`lib/data/services/workspace_paths.dart`](#libdataservicesworkspace_pathsdart)
+
+## `lib/data/services/authored_animation_clip.dart`
+
+Editörde oluşturulan bir Animation Sequence (Content Browser ▸ New ▸ Animation Sequence, ardından Animation editöründe kemik kemik pozlanır): kemiklerin translation / rotation / scale kanallarında tam karelerdeki anahtarlar. Animasyon `.lmas` dosyası onu JSON olarak (`authored_clip`), editörün birebir kaynağı olarak saklar; `GlbAuthoredClipWriter` onu her oynatıcının kullandığı glTF animasyonuna çevirir.
+
+### `enum AuthoredInterpolation`
+
+Bir kanalın anahtarları arasında nasıl ilerlediği: `linear` (`LINEAR`; dönüşler en kısa yoldan slerp), `step` (`STEP`, önceki anahtarı tutar) ve `cubic` (sıfır giriş / çıkış teğetleriyle yazılan `CUBICSPLINE`: her anahtarda yumuşak giriş ve çıkış). gltfio spline teğetlerini anahtar aralığıyla değil interpolantla ölçekler; bu yüzden düz teğetler, onun ve glTF belirtiminin aynı biçimde hesapladığı tek cubic biçimidir. glTF anahtar başına değil kanal başına interpolasyon yapar. `gltfName`, `label`, `fromGltf`, `fromLabel`.
+
+### `class BoneTrs`
+
+Bir kemiğin yerel dönüşümü (glTF düğüm TRS): `t`, `r` (quaternion), `s`; `toMatrix`, `toList` (`[tx, ty, tz, qx, qy, qz, qw, sx, sy, sz]`, `SubEditor3DViewport.jointLocalPose`'un aldığı biçim), `channel(path)`, `withChannel(path, values)`.
+
+### `class AuthoredChannel`
+
+Bir kemiğin animasyonlu bir özelliği: `path` (`translation` / `rotation` / `scale`), `interpolation`, `keys` (kare → 3 değer, dönüş için 4: `x y z w`). `setKey`, `removeKey`, `moveKey` (indiği yerdeki anahtarın yerini alır), `copy`, JSON. `sample(frame)` kanalı gltfio animatörünün yaptığı gibi hesaplar: anahtarlı aralığın dışında uç anahtarlar tutulur, `STEP` önceki anahtarı tutar, translation / scale doğrusal, rotation slerp, cubic yumuşak (bileşen bileşen, dönüş için normalize); dönüş anahtarları önce, yazıcının sakladığı gibi, tek yarıküreye getirilir.
+
+### `class AuthoredAnimationClip`
+
+`name` (glTF animasyon adı), `frameRate`, `lengthFrames`, `duration`, `tracks` (kemik → yol → kanal), `bones` (anahtarı olanlar). `setKey(bone, path, frame, values)` (0 ≤ kare ≤ `lengthFrames`), `hasKey`, `removeKey` / `moveKey` (tek kanal ya da kemiğin tüm kanalları), `keyFrames(bone)`, `sample(bone, path, t)`, `samplePose(skeleton, t)` (her düğümün yerel dönüşümü: dinlenme pozunun üzerinde anahtarlı kanallar), `copy`, `toJson` / `fromJson` / `encode` / `decode` (birebir gidiş-dönüş; eşitlik JSON'u karşılaştırır).
+
+### `class GlbSkeleton`
+
+Deri (skin) içeren bir GLB'nin düğüm hiyerarşisi: `names`, `parent`, `rest(node)`, `joints` (tüm skin'lerin eklemleri), `order` (ebeveynler çocuklardan önce), `root` (en üstteki skin eklemi), `rootChild` (onun altında en çok alt düğümü olan eklem: pelvis), `indexOf`, `isJoint`, `worldMatrices(pose)` (GLB'nin çerçevesi: metre, Y yukarı). `GlbSkeleton.fromGlb(bytes)` / `fromJson(gltfJson)`.
+
+## `lib/data/services/authored_animation_writer.dart`
+
+### `abstract final class GlbAuthoredClipWriter`
+
+`write({meshGlb, clip}) → ({Uint8List glb, int clipIndex})`: `clip`'i `clip.name` adlı animasyon olarak içeren mesh GLB'si; aynı adlı bir animasyon varsa yerinde değiştirilir (dosyanın kullandığı her eklenti referanslarını yeniden eşleyebildiği türdense eski accessor'ları, buffer view'ları ve ikili verisi atılıp parça sıkıştırılır), yoksa sona eklenir. Her skin eklemi bir kanal alır: klibin anahtarı olan yerde anahtarlar, diğerlerinde dinlenme rotation + translation değeri (`[0, duration]` boyunca sabit); böylece klip, başka bir klipten sonra da tüm iskeleti tanımlar. Tek anahtarlı bir kanal iki anahtarla tutulur (gltfio ikiden az zamanı olan sampler'ları atlar). GLB olmayan girdi, birden fazla buffer, skin yokluğu, mesh'te olmayan bir kemik (adıyla) ya da klip dışındaki bir anahtar için `FormatException` fırlatır.
+
+### `abstract final class AuthoredAnimationStore`
+
+Bir projedeki oluşturulmuş sekanslar; Third Person şablonunun ve bağlanmış bir FBX içe aktarımının klipleri gibi saklanır: klip iskelet mesh'in GLB'sinde (`.entity.glb` eşi ve varsa mesh `.lmas` payload'ı), adı mesh'in `animation_clips` listesinde, ve ona işaret eden payload'sız bir animasyon `.lmas` dosyası (`source_mesh`, `clip_name`, `clip_index`, `anim_properties`, `duration_seconds`, `length_frames`, bir `skeletal_mesh` referansı) ile birlikte `authored: true` ve `authored_clip`. Anim Blueprint'ler, Blend Space'ler, montajlar, Play-In-Editor ve üretilen oyun onu gltfio üzerinden adıyla, değiştirmeden oynatır.
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `create` | `static String create({required String projectDir, required String meshRelPath, required String name, required int lengthFrames, double frameRate = 30.0, String? folder})` | Mesh için yeni bir sekans ([folder] verilmezse `contents/animations/<Mesh>/<name>.lmas`); ad, mesh'in klipleri ve klasörün dosyaları arasında benzersiz yapılır; iskelet kökünün dinlenme translation ve rotation değeri 0. karede anahtarlanır. Proje göreli yolu döndürür. |
+| `save` | `static LuminaAsset save({required String projectDir, required String animationRelPath, required AuthoredAnimationClip clip, Map<String, String>? metadata, List<AssetReference>? references})` | Klibi mesh GLB'sine (aynı indeks) ve `.lmas` dosyasına yazar (editörün diğer metadata'sı korunur). |
+| `load` | `static AuthoredAnimationClip? load(String projectDir, String animationRelPath)` | Oluşturulmuş klip; içe aktarılmış bir klip için null. |
+| `isAuthored` / `clipOf` | `static bool isAuthored(LuminaAsset? asset)` / `static AuthoredAnimationClip? clipOf(LuminaAsset? asset)` | Bir animasyon varlığının burada oluşturulup oluşturulmadığı ve klibi. |
 
 ## `lib/data/services/glb_animation_merger.dart`
 

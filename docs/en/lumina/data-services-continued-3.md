@@ -6,6 +6,8 @@ Continuation of Data layer: use cases and services: the remaining public files u
 
 **On this page:**
 
+- [`lib/data/services/authored_animation_clip.dart`](#libdataservicesauthored_animation_clipdart)
+- [`lib/data/services/authored_animation_writer.dart`](#libdataservicesauthored_animation_writerdart)
 - [`lib/data/services/glb_animation_merger.dart`](#libdataservicesglb_animation_mergerdart)
 - [`lib/data/services/glb_animation_retargeter.dart`](#libdataservicesglb_animation_retargeterdart)
 - [`lib/data/services/gltf_packer.dart`](#libdataservicesgltf_packerdart)
@@ -25,6 +27,47 @@ Continuation of Data layer: use cases and services: the remaining public files u
 - [`lib/data/services/umg_widget_library_service.dart`](#libdataservicesumg_widget_library_servicedart)
 - [`lib/data/services/web_loading_screen_service.dart`](#libdataservicesweb_loading_screen_servicedart)
 - [`lib/data/services/workspace_paths.dart`](#libdataservicesworkspace_pathsdart)
+
+## `lib/data/services/authored_animation_clip.dart`
+
+An Animation Sequence authored in the editor (Content Browser ▸ New ▸ Animation Sequence, then posed bone by bone in the Animation editor): keys at whole frames on bones' translation / rotation / scale channels. The animation `.lmas` keeps it as JSON (`authored_clip`), the editor's exact source; `GlbAuthoredClipWriter` turns it into the glTF animation every player uses.
+
+### `enum AuthoredInterpolation`
+
+How a channel moves between its keys: `linear` (`LINEAR`; rotations slerp on the shortest path), `step` (`STEP`, holds the earlier key) and `cubic` (`CUBICSPLINE` written with zero in / out tangents: an ease in and out at every key). gltfio scales spline tangents by the interpolant rather than the key spacing, so flat tangents are the one cubic form it and the glTF specification evaluate the same way. glTF interpolates per channel, not per key. `gltfName`, `label`, `fromGltf`, `fromLabel`.
+
+### `class BoneTrs`
+
+A bone's local transform (glTF node TRS): `t`, `r` (quaternion), `s`; `toMatrix`, `toList` (`[tx, ty, tz, qx, qy, qz, qw, sx, sy, sz]`, the form `SubEditor3DViewport.jointLocalPose` takes), `channel(path)`, `withChannel(path, values)`.
+
+### `class AuthoredChannel`
+
+One animated property of one bone: `path` (`translation` / `rotation` / `scale`), `interpolation`, `keys` (frame → 3 values, or 4 for a rotation `x y z w`). `setKey`, `removeKey`, `moveKey` (replaces a key where it lands), `copy`, JSON. `sample(frame)` evaluates the channel exactly as gltfio's animator does: the end keys hold outside the keyed range, the earlier key holds for `STEP`, translation / scale lerp, rotation slerps, cubic eases (component-wise, normalised for a rotation); rotation keys are brought into one hemisphere first, as the writer stores them.
+
+### `class AuthoredAnimationClip`
+
+`name` (the glTF animation name), `frameRate`, `lengthFrames`, `duration`, `tracks` (bone → path → channel), `bones` (the keyed ones). `setKey(bone, path, frame, values)` (0 ≤ frame ≤ `lengthFrames`), `hasKey`, `removeKey` / `moveKey` (one channel or all of a bone's), `keyFrames(bone)`, `sample(bone, path, t)`, `samplePose(skeleton, t)` (every node's local transform: the keyed channels over the rest pose), `copy`, `toJson` / `fromJson` / `encode` / `decode` (exact round trip; equality compares the JSON).
+
+### `class GlbSkeleton`
+
+A skinned GLB's node hierarchy: `names`, `parent`, `rest(node)`, `joints` (every skin's joints), `order` (parents before children), `root` (the topmost skin joint), `rootChild` (the joint below it with the most descendants: the pelvis), `indexOf`, `isJoint`, `worldMatrices(pose)` (the GLB's frame: metres, Y up). `GlbSkeleton.fromGlb(bytes)` / `fromJson(gltfJson)`.
+
+## `lib/data/services/authored_animation_writer.dart`
+
+### `abstract final class GlbAuthoredClipWriter`
+
+`write({meshGlb, clip}) → ({Uint8List glb, int clipIndex})`: the mesh GLB with `clip` as the animation named `clip.name`, replacing one of that name in place (its accessors, buffer views and binary data dropped and the chunk compacted, when every extension the file uses is one whose references it can remap) or appended. Every skin joint gets a channel: the clip's keys where it has them, the rest rotation + translation (constant over `[0, duration]`) elsewhere, so the clip defines the whole skeleton after any other clip. A one-key channel is held over two keys (gltfio skips samplers with fewer than two times). Throws `FormatException` for a non-GLB, more than one buffer, no skin, a bone the mesh lacks (named) or a key outside the clip.
+
+### `abstract final class AuthoredAnimationStore`
+
+Authored sequences in a project, stored the way the Third Person template's and a bound FBX import's clips are: the clip in the skeletal mesh's GLB (the `.entity.glb` companion, and the mesh `.lmas` payload when it has one), its name in the mesh's `animation_clips`, and an animation `.lmas` with no payload that points at it (`source_mesh`, `clip_name`, `clip_index`, `anim_properties`, `duration_seconds`, `length_frames`, a `skeletal_mesh` reference) plus `authored: true` and `authored_clip`. Anim Blueprints, Blend Spaces, montages, Play-In-Editor and the generated game play it by name through gltfio, unchanged.
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `create` | `static String create({required String projectDir, required String meshRelPath, required String name, required int lengthFrames, double frameRate = 30.0, String? folder})` | A new sequence for the mesh (`contents/animations/<Mesh>/<name>.lmas` unless [folder]); the name is made unique among the mesh's clips and the folder's files; the skeleton root's rest translation and rotation keyed at frame 0. Returns the project relative path. |
+| `save` | `static LuminaAsset save({required String projectDir, required String animationRelPath, required AuthoredAnimationClip clip, Map<String, String>? metadata, List<AssetReference>? references})` | Writes the clip into the mesh GLB (same index) and the `.lmas` (the editor's other metadata kept). |
+| `load` | `static AuthoredAnimationClip? load(String projectDir, String animationRelPath)` | The authored clip, or null for an imported clip. |
+| `isAuthored` / `clipOf` | `static bool isAuthored(LuminaAsset? asset)` / `static AuthoredAnimationClip? clipOf(LuminaAsset? asset)` | Whether an animation asset was authored here, and its clip. |
 
 ## `lib/data/services/glb_animation_merger.dart`
 

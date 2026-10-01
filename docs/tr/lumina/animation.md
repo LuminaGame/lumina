@@ -2,7 +2,7 @@
 
 # Animasyon
 
-İskelet animasyonu: animasyon clip'leri ve bone track'leri, state machine ve montage harmanlamasıyla anim instance, section ve notify'lı montage'lar, 1D ve 2D blend space'ler, düzenlenebilir keyframe track'leri ve skeleton retargeter. Dosya yolları `lumina/` paket dizinine görelidir.
+İskelet animasyonu: animasyon clip'leri ve bone track'leri, state machine ve montage harmanlamasıyla anim instance, section ve notify'lı montage'lar, 1D ve 2D blend space'ler, düzenlenebilir keyframe track'leri ve skeleton retargeter. Dosya yolları `lumina/` paket dizinine görelidir. Bir oyunun oynattığı clip'ler iskelet mesh'in GLB'sindeki glTF animasyonlarıdır ve gltfio üzerinden adlarıyla oynatılır; editörde oluşturulan clip'ler de oraya yazılır (`AuthoredAnimationClip`, `GlbAuthoredClipWriter`, `AuthoredAnimationStore`, [veri katmanında](data-services-continued-3.md#libdataservicesauthored_animation_clipdart)).
 
 **Bu sayfada:**
 

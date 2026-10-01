@@ -39,6 +39,8 @@ export 'data/services/imported_asset_names.dart';
 export 'data/services/mesh_collision_service.dart';
 export 'data/services/mesh_physics_service.dart';
 export 'data/services/animation_import_binder.dart';
+export 'data/services/authored_animation_clip.dart';
+export 'data/services/authored_animation_writer.dart';
 export 'data/services/obj_parser_service.dart';
 export 'data/services/tga_decoder_service.dart';
 export 'data/services/encoded_image_format.dart';
