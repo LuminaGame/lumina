@@ -553,7 +553,7 @@ Vectors and rotators are **authoring space** (cm, Z up; rotators about X/Y/Z lik
 | `spawnDecalAtLocation` | `static const spawnDecalAtLocation` | `Spawn Decal at Location`: the engine has no decal component yet, so nothing is spawned and the return value is null; the validator reports the node as not supported. |
 | `deactivateParticleSystem` | `static const deactivateParticleSystem` |  |
 | `setParticleParameter` | `static const setParticleParameter` |  |
-| `createDynamicMaterialInstance` | `static const createDynamicMaterialInstance` |  |
+| `createDynamicMaterialInstance` | `static const createDynamicMaterialInstance` | Create Dynamic Material Instance: bölümün `LuminaDynamicMaterialInstance`'ı; bileşenin Material Override'ı (ya da slot materyali) hâlâ yüklenirken (BeginPlay'deki gibi) bir `LuminaPendingDynamicMaterialInstance` döner: Set Scalar / Vector / Texture Parameter Value düğümleri ona sıraya girer, materyal yüklenince instance yapılır ve değerler uygulanır. |
 | `setScalarParameterValue` | `static const setScalarParameterValue` |  |
 | `setVectorParameterValue` | `static const setVectorParameterValue` |  |
 | `setTextureParameterValue` | `static const setTextureParameterValue` | Set Texture Parameter Value: bir doku asset'ini (`contents/…/T_x.lmas`, editör ve MCP'nin verdiği yol) ya da bir görüntü dosyasını `LuminaDynamicMaterialInstance.setTextureAsset` ile sampler'a bağlar (dokunun ayarları, tek paylaşılan yükleme; bulunamayan doku bir kez loglanır ve hiçbir şey bağlanmaz). |

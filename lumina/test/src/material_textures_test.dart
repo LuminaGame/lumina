@@ -34,6 +34,9 @@ void main() {
   /// Project-relative path of each imported texture, by asset name.
   final textures = <String, String>{};
 
+  /// Project-relative path of each imported static mesh, by asset name.
+  final meshes = <String, String>{};
+
   String relativeOf(File f) => f.path.replaceAll(r'\', '/').substring(project.path.replaceAll(r'\', '/').length + 1);
 
   LuminaAsset read(String relative) => LuminaAsset.fromBytes(File('${project.path}/$relative').readAsBytesSync());
@@ -66,6 +69,7 @@ void main() {
       if (!f.path.endsWith('.lmas')) continue;
       final asset = LuminaAsset.fromBytes(f.readAsBytesSync());
       if (asset.type == AssetType.texture) textures[asset.name] = relativeOf(f);
+      if (asset.type == AssetType.filamesh) meshes[asset.name] = relativeOf(f);
       if (asset.type != AssetType.filamat) continue;
       final result = FilamentMatc.compile(asset.rawMatSource, fileName: '${asset.name}.mat', defaultName: asset.name);
       expect(result.ok, isTrue, reason: result.log);
@@ -402,6 +406,35 @@ fragment {
     instance.dispose();
     await Future<void>.delayed(Duration.zero);
     expect(last.isDisposed, isTrue, reason: 'released with the instance');
+  });
+
+  test('Create Dynamic Material Instance at BeginPlay waits for the Material Override asset, then takes parameters', () async {
+    if (!haveAssets) return markTestSkipped('test-assets missing');
+    writeMaterial('contents/materials/M_Blank.lmas', 'M_Blank', blankSource, const []);
+    // A Blueprint's Static Mesh component with a Material Override asset:
+    // both load after the actor is registered.
+    final component = LuminaStaticMeshComponent(
+      meshAssetPath: meshes.values.first,
+      materialOverrideAsset: 'contents/materials/M_Blank.lmas',
+    );
+    final actor = LuminaActor(root: component);
+    world.persistentLevel.registerActor(actor);
+    world.beginPlay();
+    // BeginPlay: Create Dynamic Material Instance → Set Texture Parameter Value.
+    final created = LuminaBlueprintFunctionLibrary.createDynamicMaterialInstance(actor, component, 0);
+    expect(created, isNotNull, reason: 'the node hands out the instance the section will draw');
+    final texture = textures.values.first;
+    LuminaBlueprintFunctionLibrary.setTextureParameterValue(actor, created, 'albedo', texture);
+
+    await component.loaded;
+    final dynamicInstance = created is LuminaPendingDynamicMaterialInstance ? await created.ready : created as LuminaDynamicMaterialInstance?;
+    expect(dynamicInstance, isNotNull);
+    await dynamicInstance!.texturesLoaded;
+    expect(component.materialOverride(0), same(dynamicInstance), reason: 'the section draws the dynamic instance');
+    expect(dynamicInstance.material.assetPath, 'contents/materials/M_Blank.lmas');
+    expect(dynamicInstance.textureParameter('albedo')?.path, texture);
+    expect(identical(LuminaBlueprintFunctionLibrary.createDynamicMaterialInstance(actor, component, 0), dynamicInstance), isTrue,
+        reason: 'once loaded, the node returns the same instance');
   });
 
   test("the level viewport's material override binds the textures on its instance", () async {

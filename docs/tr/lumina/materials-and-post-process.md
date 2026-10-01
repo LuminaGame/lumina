@@ -194,6 +194,17 @@ A dynamic material instance.  Supports per-actor parameter mutations, texture bi
 | `isStencilWriteEnabled` | `bool get isStencilWriteEnabled` | Checks if stencil buffer writing is enabled. |
 | `dispose` | `void dispose()` | Yerel FFI göstericilerini, dinleyicileri ve bellek bloklarını serbest bırakır. |
 
+### `class LuminaPendingDynamicMaterialInstance`
+
+`lib/src/material/dynamic_material_instance.dart`. Bölümün materyal asset'i yüklendiğinde var olan dynamic material instance: bileşenin Material Override'ı (ya da slot materyali) hâlâ yüklenirken (BeginPlay'deki gibi) Create Dynamic Material Instance'ın verdiği değer. Bu arada verilen parametreler, instance yapıldığında sırayla ona uygulanır.
+
+| Metot / Getter | İmzası | Ne İşe Yarar? |
+| :--- | :--- | :--- |
+| `ready` | `late final Future<LuminaDynamicMaterialInstance?> ready` | Instance; bölüm instance yapılacak bir materyal almadıysa null. |
+| `instance` | `LuminaDynamicMaterialInstance? get instance` | `ready` tamamlandıktan sonra instance, öncesinde null. |
+| `parameterValues` | `final Map<String, Object?> parameterValues` | Parametre adına göre şimdiye kadar verilen değerler; Blueprint'ler instance yokken de okuyabilsin diye. |
+| `whenReady` | `void whenReady(void Function(LuminaDynamicMaterialInstance instance) apply)` | [apply]'ı instance varsa hemen, yoksa yapıldığında çalıştırır (hiç yapılmazsa atılır). |
+
 ## `lib/src/material/lumina_material.dart`
 
 ### `class LuminaMaterial`

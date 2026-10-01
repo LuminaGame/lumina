@@ -193,6 +193,18 @@ void _setParticleParameter(LuminaActor self, Object? target, String parameterNam
 
 Object? _createDynamicMaterialInstance(LuminaActor self, Object? target, [int elementIndex = 0]) {
   if (target is! LuminaStaticMeshComponent) return null;
+  // At BeginPlay the Material Override asset is usually still loading: the
+  // instance is made once it has, with the parameters set meanwhile.
+  if (target.dynamicMaterialInstance(elementIndex) == null && target.isMaterialLoading(elementIndex)) {
+    return LuminaPendingDynamicMaterialInstance(target.materialOverrideWhenLoaded(elementIndex).then((loaded) {
+      if (loaded == null) {
+        developer.log('Create Dynamic Material Instance: section $elementIndex of ${target.meshAssetPath} has no material',
+            name: 'Blueprint', level: 900);
+        return null;
+      }
+      return target.createDynamicMaterialInstance(primitiveIndex: elementIndex);
+    }));
+  }
   try {
     return target.createDynamicMaterialInstance(primitiveIndex: elementIndex);
   } catch (e) {
@@ -209,16 +221,28 @@ bool _hasParameter(Object? target, String name) {
 }
 
 void _setScalarParameterValue(LuminaActor self, Object? target, String parameterName, [double value = 0.0]) {
+  if (target is LuminaPendingDynamicMaterialInstance) {
+    target.parameterValues[parameterName] = value;
+    return target.whenReady((d) => _setScalarParameterValue(self, d, parameterName, value));
+  }
   if (_hasParameter(target, parameterName)) (target as LuminaDynamicMaterialInstance).setScalar(parameterName, value);
 }
 
 void _setVectorParameterValue(LuminaActor self, Object? target, String parameterName, List<double> value) {
+  if (target is LuminaPendingDynamicMaterialInstance) {
+    target.parameterValues[parameterName] = List<double>.of(value);
+    return target.whenReady((d) => _setVectorParameterValue(self, d, parameterName, value));
+  }
   if (_hasParameter(target, parameterName)) {
     (target as LuminaDynamicMaterialInstance).setVector(parameterName, Vector4(_at(value, 0), _at(value, 1), _at(value, 2), _at(value, 3)));
   }
 }
 
 void _setTextureParameterValue(LuminaActor self, Object? target, String parameterName, String texture) {
+  if (target is LuminaPendingDynamicMaterialInstance) {
+    if (texture.isNotEmpty) target.parameterValues[parameterName] = texture;
+    return target.whenReady((d) => _setTextureParameterValue(self, d, parameterName, texture));
+  }
   if (!_hasParameter(target, parameterName) || texture.isEmpty) return;
   final instance = target as LuminaDynamicMaterialInstance;
   instance.parameterValues[parameterName] = texture;
@@ -231,6 +255,11 @@ void _setTextureParameterValue(LuminaActor self, Object? target, String paramete
 }
 
 double _getScalarParameterValue(LuminaActor self, Object? target, String parameterName) {
+  if (target is LuminaPendingDynamicMaterialInstance) {
+    final remembered = target.parameterValues[parameterName];
+    if (remembered is num) return remembered.toDouble();
+    return target.instance == null ? 0.0 : _getScalarParameterValue(self, target.instance, parameterName);
+  }
   if (target is! LuminaDynamicMaterialInstance) return 0.0;
   final remembered = target.parameterValues[parameterName];
   if (remembered is num) return remembered.toDouble();

@@ -170,6 +170,9 @@ class LuminaStaticMeshComponent extends LuminaSceneComponent with LuminaPrimitiv
   /// is still the latest request for its section.
   final Map<int, Object> _materialRequests = {};
 
+  /// The material asset load of each section still in flight.
+  final Map<int, Future<void>> _materialLoads = {};
+
   /// What an overridden section drew before (the mesh's own material), put
   /// back when the override is cleared or the component leaves the world.
   final Map<int, FilamentMaterialInstance> _ownMaterials = {};
@@ -224,7 +227,18 @@ class LuminaStaticMeshComponent extends LuminaSceneComponent with LuminaPrimitiv
   /// through the world's material cache. A later assignment to the same
   /// section wins over a load still in flight. Throws when the component is
   /// not in a world that renders, or the asset holds no compiled material.
-  Future<void> setMaterialAsset(String path, {int primitiveIndex = 0}) async {
+  Future<void> setMaterialAsset(String path, {int primitiveIndex = 0}) {
+    final load = _loadMaterialAsset(path, primitiveIndex);
+    _materialLoads[primitiveIndex] = load;
+    void settled() {
+      if (identical(_materialLoads[primitiveIndex], load)) _materialLoads.remove(primitiveIndex);
+    }
+
+    load.then((_) => settled(), onError: (Object _) => settled());
+    return load;
+  }
+
+  Future<void> _loadMaterialAsset(String path, int primitiveIndex) async {
     final w = owner?.world;
     if (w == null || !w.hasNativeContext) {
       throw StateError('Cannot load material $path: the mesh is not in a rendering world');
@@ -362,6 +376,36 @@ class LuminaStaticMeshComponent extends LuminaSceneComponent with LuminaPrimitiv
     return dynamicInst;
   }
 
+  /// Whether section [primitiveIndex] has no material override yet but may
+  /// get one from a material asset still loading: the mesh (and with it
+  /// [materialOverrideAsset] or its slot materials) has not loaded, or a
+  /// [setMaterialAsset] load is in flight. A Blueprint's BeginPlay runs
+  /// while they load.
+  bool isMaterialLoading([int primitiveIndex = 0]) {
+    final w = owner?.world;
+    if (w == null || !w.hasNativeContext || _materialOverrides.containsKey(primitiveIndex)) return false;
+    return !_loadCompleter.isCompleted || _materialLoads.containsKey(primitiveIndex);
+  }
+
+  /// The override section [primitiveIndex] draws once the mesh and the
+  /// material assets it draws have loaded (null when it gets none, or the
+  /// mesh failed to load).
+  Future<LuminaMaterialInstance?> materialOverrideWhenLoaded([int primitiveIndex = 0]) async {
+    try {
+      await loaded;
+    } catch (_) {
+      return null;
+    }
+    while (true) {
+      final pending = _materialLoads[primitiveIndex];
+      if (pending == null) break;
+      try {
+        await pending;
+      } catch (_) {}
+    }
+    return _materialOverrides[primitiveIndex];
+  }
+
   /// The material override at [primitiveIndex], if any.
   LuminaMaterialInstance? materialOverride([int primitiveIndex = 0]) => _materialOverrides[primitiveIndex];
 
@@ -373,6 +417,7 @@ class LuminaStaticMeshComponent extends LuminaSceneComponent with LuminaPrimitiv
     _materialOverrides.remove(primitiveIndex);
     _nativeOverrides.remove(primitiveIndex);
     _materialRequests.remove(primitiveIndex);
+    _materialLoads.remove(primitiveIndex);
     final w = owner?.world;
     if (w != null && _instance != null && w.hasNativeContext) {
       _restoreOwnMaterial(FilamentRenderableManager(w.filamentEngine), primitiveIndex);
@@ -504,6 +549,7 @@ class LuminaStaticMeshComponent extends LuminaSceneComponent with LuminaPrimitiv
     _materialOverrides.clear();
     _nativeOverrides.clear();
     _materialRequests.clear();
+    _materialLoads.clear();
 
     final w = owner?.world;
     if (w != null && _instance != null && w.hasNativeContext) {

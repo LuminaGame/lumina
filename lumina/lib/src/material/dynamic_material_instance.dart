@@ -347,3 +347,54 @@ class LuminaDynamicMaterialInstance extends LuminaMaterialInstance {
     _assetTextures.clear();
   }
 }
+
+/// A section's dynamic material instance that exists once the section's
+/// material asset has loaded: what Create Dynamic Material Instance hands
+/// out while a component's Material Override (or slot material) is still
+/// loading, as it is at BeginPlay. Parameters set on it meanwhile
+/// ([whenReady]) are applied to the instance, in order, when it is made.
+class LuminaPendingDynamicMaterialInstance {
+  LuminaPendingDynamicMaterialInstance(Future<LuminaDynamicMaterialInstance?> instance) {
+    ready = instance.then((made) {
+      _instance = made;
+      _resolved = true;
+      final queued = List.of(_queued);
+      _queued.clear();
+      if (made != null && !made.isDisposed) {
+        for (final apply in queued) {
+          apply(made);
+        }
+      }
+      return made;
+    }, onError: (Object _) {
+      _resolved = true;
+      _queued.clear();
+      return null;
+    });
+  }
+
+  /// The instance, or null when the section got no material to make one of.
+  late final Future<LuminaDynamicMaterialInstance?> ready;
+
+  LuminaDynamicMaterialInstance? _instance;
+  bool _resolved = false;
+  final List<void Function(LuminaDynamicMaterialInstance)> _queued = [];
+
+  /// The instance once [ready] completed, else null.
+  LuminaDynamicMaterialInstance? get instance => _instance;
+
+  /// The values set so far per parameter name, for Blueprints to read back
+  /// before the instance exists.
+  final Map<String, Object?> parameterValues = {};
+
+  /// Runs [apply] on the instance: now when it exists, else once it is made
+  /// (dropped when none is).
+  void whenReady(void Function(LuminaDynamicMaterialInstance instance) apply) {
+    final made = _instance;
+    if (made != null) {
+      if (!made.isDisposed) apply(made);
+      return;
+    }
+    if (!_resolved) _queued.add(apply);
+  }
+}

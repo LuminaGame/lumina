@@ -553,7 +553,7 @@ Vectors and rotators are **authoring space** (cm, Z up; rotators about X/Y/Z lik
 | `spawnDecalAtLocation` | `static const spawnDecalAtLocation` | `Spawn Decal at Location`: the engine has no decal component yet, so nothing is spawned and the return value is null; the validator reports the node as not supported. |
 | `deactivateParticleSystem` | `static const deactivateParticleSystem` |  |
 | `setParticleParameter` | `static const setParticleParameter` |  |
-| `createDynamicMaterialInstance` | `static const createDynamicMaterialInstance` |  |
+| `createDynamicMaterialInstance` | `static const createDynamicMaterialInstance` | Create Dynamic Material Instance: the section's `LuminaDynamicMaterialInstance`; while the component's Material Override (or slot material) is still loading, as at BeginPlay, a `LuminaPendingDynamicMaterialInstance` that the Set Scalar / Vector / Texture Parameter Value nodes queue on and that makes the instance once the material has loaded. |
 | `setScalarParameterValue` | `static const setScalarParameterValue` |  |
 | `setVectorParameterValue` | `static const setVectorParameterValue` |  |
 | `setTextureParameterValue` | `static const setTextureParameterValue` | Set Texture Parameter Value: binds a texture asset (`contents/…/T_x.lmas`, what the editor and MCP hand out) or an image file to the sampler through `LuminaDynamicMaterialInstance.setTextureAsset` (the texture's settings, one shared upload; a missing texture is logged once and binds nothing). |

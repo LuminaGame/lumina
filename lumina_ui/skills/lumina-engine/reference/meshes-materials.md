@@ -51,6 +51,8 @@
 - Blueprint: Create Dynamic Material Instance → Set Texture Parameter Value (`parameter_name` = the sampler, `value`
   = a texture asset path `contents/textures/…/T_X.lmas`, or an image file) binds it with the texture's settings, as
   the material's own textures are bound; a texture that cannot be read is logged once and binds nothing.
+  At BeginPlay the component's Material Override is usually still loading: Create Dynamic Material Instance then
+  hands out a pending instance, made once the material has loaded, with every Set … Parameter Value applied in order.
 - Several colours of one mesh: `duplicate_asset` the material, change `baseColor`, `compile_material` with
   `save: true`, assign per component (`materialOverride`) or per duplicated mesh (slots).
 - Glow: a material's `emissive` (see `filament-materials`), not a light.
