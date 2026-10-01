@@ -24,6 +24,7 @@ import '../services/editor_transform.dart';
 import '../services/blueprint_play_support.dart';
 import '../services/editor_level_lights.dart';
 import '../services/editor_level_post_process.dart';
+import '../services/editor_level_scene.dart';
 import '../services/environment_actor_properties.dart';
 import '../services/light_actor_properties.dart';
 import 'pie_debug_draw_layer.dart';
@@ -330,6 +331,10 @@ class _ViewportWidgetState extends _ViewportWidgetStateBase
                             // Meshes come from lumina's shared engine cache,
                             // not a loader of our own.
                             _syncActorAssets();
+
+                            // Other views of the level (the Sequencer's
+                            // viewport) draw this scene.
+                            widget.viewModel.levelScene.value = EditorLevelScene(engine: engine, scene: scene, camera: camera);
                           } catch (e) {
                             debugPrint(
                               '[Lumina Main Viewport] Filament C++ FFI init error: $e',

@@ -11,6 +11,7 @@ import 'package:lumina_ui/ui/features/sub_editors/services/sequencer_movie_rende
 import 'package:lumina_ui/ui/features/sub_editors/services/sequencer_offscreen_frame_source.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/sequencer_view_model.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/sequencer/curve_editor_widget.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/sequencer/level_viewport.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/sequencer/sequencer_sub_editor.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/sequencer/timeline_widget.dart';
 import 'package:lumina_ui/testing.dart';
@@ -571,6 +572,188 @@ void main() {
     } finally {
       if (tempProjectsDir.existsSync()) {
         tempProjectsDir.deleteSync(recursive: true);
+      }
+    }
+  }, timeout: const Timeout(Duration(minutes: 8)));
+
+  testWidgets('Sequencer Smoke Scenario: The Sequencer viewport draws the level, follows the playhead and locks to the bound camera', (tester) async {
+    final barrelGlb = '${Directory.current.parent.path}/test-assets/Props/Barrels/fuel_barrel_red.glb';
+    final acUnitGlb = '${Directory.current.parent.path}/test-assets/Props/AC_units/ac_unit_a_300x300.glb';
+    if (!File(barrelGlb).existsSync() || !File(acUnitGlb).existsSync()) {
+      markTestSkipped('test assets missing: $barrelGlb, $acUnitGlb');
+      return;
+    }
+    tester.view.physicalSize = const Size(1680, 1120);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    Future<void> settle({int frames = 20}) async {
+      for (var i = 0; i < frames; i++) {
+        await tester.pump(const Duration(milliseconds: 16));
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 16)));
+      }
+    }
+
+    const scenario = 'Sequencer Smoke Scenario: The Sequencer viewport draws the level, follows the playhead and locks to the bound camera';
+    const usedAssets = ['Props/Barrels/fuel_barrel_red.glb', 'Props/AC_units/ac_unit_a_300x300.glb', 'contents/cinematics/SEQ_Shot.lmas'];
+    final tempProjectsDir = Directory.systemTemp.createTempSync('seq_vp_smoke_');
+    const projectName = 'SmokeSeqViewport';
+    final pDir = Directory('${tempProjectsDir.path}/$projectName')..createSync(recursive: true);
+    final repo = AssetRepository();
+    await repo.createAsset(projectPath: pDir.path, subFolder: 'meshes', fileName: 'Barrel.lmas', type: AssetType.filamesh);
+    File(barrelGlb).copySync('${pDir.path}/contents/meshes/Barrel.glb');
+    await repo.createAsset(projectPath: pDir.path, subFolder: 'meshes', fileName: 'AC_Unit.lmas', type: AssetType.filamesh);
+    File(acUnitGlb).copySync('${pDir.path}/contents/meshes/AC_Unit.glb');
+
+    try {
+      File('${pDir.path}/$projectName.lmproject').writeAsStringSync('{}');
+      final vm = EditorViewModel(
+        initialProject: LuminaProject(projectName: projectName, activeLevel: 'contents/levels/L_Main.lmas', settings: EngineScalabilitySettings(targetFps: 60)),
+        projectLocation: tempProjectsDir.path,
+        enableTimers: false,
+      );
+      addTearDown(vm.dispose);
+      await vm.ensureDefaultLevelAssets();
+      // The barrel the sequence moves, a static AC unit beside its path, and a camera.
+      await vm.spawnActorFromAsset(vm.realAssets.firstWhere((a) => a.fileName == 'Barrel.lmas'), location: [-200, 0, 0]);
+      final barrel = vm.actors.last;
+      await vm.spawnActorFromAsset(vm.realAssets.firstWhere((a) => a.fileName == 'AC_Unit.lmas'), location: [0, 250, 0]);
+      vm.spawnNewActor('Camera');
+      final camera = vm.actors.last;
+      camera.name = 'Camera_1';
+      camera.location = [-200, -650, 180];
+      camera.rotation = [-8, 0, 0];
+      // Sky light and a sun, so the meshes are lit.
+      vm.spawnNewActor('Environment');
+      vm.spawnNewActor('DirectionalLight');
+      vm.actors.last.location = [900, 900, 600]; // its arrow out of the shot
+      vm.clearSelection();
+
+      final seqData = SequencerData(fps: 30, lengthFrames: 120, tracks: [
+        SequencerTrack(id: 'track-barrel', actorId: barrel.id, actorName: barrel.name, kind: SequencerTrackKind.transform, channels: [
+          SequencerChannel(name: 'Location.X', keys: [SequencerKey(frame: 0, value: -200), SequencerKey(frame: 90, value: 250)]),
+          SequencerChannel(name: 'Rotation.Z', keys: [SequencerKey(frame: 0, value: 0), SequencerKey(frame: 90, value: 180)]),
+        ]),
+        // The camera trucks with the barrel and pushes in.
+        SequencerTrack(id: 'track-camera', actorId: camera.id, actorName: camera.name, kind: SequencerTrackKind.transform, channels: [
+          SequencerChannel(name: 'Location.X', keys: [SequencerKey(frame: 0, value: -200), SequencerKey(frame: 90, value: 250)]),
+          SequencerChannel(name: 'Location.Y', keys: [SequencerKey(frame: 0, value: -650), SequencerKey(frame: 90, value: -420)]),
+        ]),
+      ]);
+      Directory('${pDir.path}/contents/cinematics').createSync(recursive: true);
+      File('${pDir.path}/contents/cinematics/SEQ_Shot.lmas').writeAsBytesSync(
+          LuminaAsset(assetId: 'seq-shot', name: 'SEQ_Shot', type: AssetType.sequencer, rawPayload: seqData.toBytes()).toProtoBufferBytes());
+      vm.refreshAssets();
+
+      final boundaryKey = GlobalKey();
+      await tester.pumpWidget(RepaintBoundary(
+        key: boundaryKey,
+        child: ShadcnApp(theme: luminaEditorTheme(), home: MainEditorView(viewModel: vm)),
+      ));
+      await settle(frames: 60);
+      final rec = SmokeRecorder(tester, boundary: find.byKey(boundaryKey));
+      await rec.hold(const Duration(milliseconds: 1200));
+
+      vm.openSubEditorTab('SEQUENCER', asset: vm.realAssets.firstWhere((a) => a.fileName == 'SEQ_Shot.lmas'));
+      for (var i = 0; i < 100 && find.byType(SequencerLevelViewport).evaluate().isEmpty; i++) {
+        await settle(frames: 1);
+      }
+      final seqView = tester.state<SequencerLevelViewportState>(find.byType(SequencerLevelViewport));
+      for (var i = 0; i < 200 && !seqView.drawsLevelScene; i++) {
+        await settle(frames: 1);
+      }
+      expect(seqView.drawsLevelScene, isTrue, reason: 'the Sequencer view renders the level viewport\'s scene');
+      expect(find.text('SPHERE'), findsNothing, reason: 'no material preview shapes');
+      final seqVm = seqView.sequencer;
+
+      // A capture of the window, and the Sequencer viewport's rectangle in it
+      // (inside its frame, below its camera bar).
+      Future<({img.Image image, Rect rect})> shot(String name) async {
+        final png = await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey));
+        SmokeArtifacts.saveScreenshot(name, png, usedAssets: usedAssets);
+        final image = img.decodePng(png)!;
+        final scale = image.width / tester.getSize(find.byKey(boundaryKey)).width;
+        final r = tester.getRect(find.byType(SequencerLevelViewport));
+        return (image: image, rect: Rect.fromLTRB(r.left * scale + 8, r.top * scale + 60, r.right * scale - 8, r.bottom * scale - 8));
+      }
+
+      // Where [a] shows something [b] does not: the mean x of the pixels that
+      // changed between the two captures and are not the blue sky or floor in [a].
+      double movedMeanX(({img.Image image, Rect rect}) a, ({img.Image image, Rect rect}) b) {
+        var count = 0;
+        var sum = 0.0;
+        for (var y = a.rect.top.round(); y < a.rect.bottom.round(); y += 2) {
+          for (var x = a.rect.left.round(); x < a.rect.right.round(); x += 2) {
+            final p = a.image.getPixel(x, y), q = b.image.getPixel(x, y);
+            final diff = (p.r - q.r).abs() + (p.g - q.g).abs() + (p.b - q.b).abs();
+            if (diff > 60 && p.b - p.r < 25) {
+              count++;
+              sum += x;
+            }
+          }
+        }
+        expect(count, greaterThan(40), reason: 'the barrel is drawn where it moved');
+        return sum / count;
+      }
+
+      // 1. Editor camera on the animated barrel; the playhead at 0 and at 90.
+      seqView.editorCamera
+        ..yaw = 0
+        ..pitch = 18
+        ..distance = 1100
+        ..target = [25, 0, 60];
+      seqVm.scrubToFrame(0);
+      await settle(frames: 30);
+      await rec.hold(const Duration(milliseconds: 1500));
+      final at0 = await shot('Sequencer Smoke Scenario: Sequencer viewport at frame 0 (editor camera)');
+      seqVm.scrubToFrame(90);
+      await settle(frames: 30);
+      await rec.hold(const Duration(milliseconds: 1500));
+      final at90 = await shot('Sequencer Smoke Scenario: Sequencer viewport at frame 90 (editor camera)');
+      expect(barrel.location[0], closeTo(250.0, 1e-6));
+      // The barrel moves +X: to the right for a camera looking along +Y.
+      expect(movedMeanX(at90, at0) - movedMeanX(at0, at90), greaterThan(80), reason: 'the barrel moved right on screen with the playhead');
+
+      // 2. Playback in the editor camera.
+      seqVm.setLooping(true);
+      seqVm.goToFirstFrame();
+      seqVm.play();
+      await rec.hold(const Duration(seconds: 4));
+      seqVm.pause();
+
+      // 3. Camera lock: through Camera_1 inside the 16:9 gate.
+      expect(seqView.cameraCandidates.map((c) => c.id), [camera.id]);
+      seqView.lockToCamera(camera.id);
+      seqVm.scrubToFrame(45);
+      await settle(frames: 30);
+      expect(find.text('PILOTING Camera_1'), findsOneWidget);
+      await rec.hold(const Duration(milliseconds: 1500));
+      final locked = await shot('Sequencer Smoke Scenario: Sequencer viewport locked to Camera_1 at frame 45');
+      final eye = LuminaAxes.location(camera.location);
+      final cam = seqView.cameraForTest!;
+      expect(cam.position.x, closeTo(eye.x, 1e-2));
+      expect(cam.position.z, closeTo(eye.z, 1e-2));
+      // The wide viewport pillarboxes the 16:9 gate: black at the sides, the level inside.
+      final side = locked.image.getPixel(locked.rect.left.round() + 4, locked.rect.center.dy.round());
+      final middle = locked.image.getPixel(locked.rect.center.dx.round(), locked.rect.center.dy.round());
+      expect(side.r + side.g + side.b, lessThan(15), reason: 'outside the film gate is masked');
+      expect(middle.r + middle.g + middle.b, greaterThan(60), reason: 'the level is drawn inside the gate');
+
+      seqVm.goToFirstFrame();
+      seqVm.play();
+      await rec.hold(const Duration(seconds: 4));
+      seqVm.stop();
+      await settle(frames: 5);
+      await rec.hold(const Duration(milliseconds: 800));
+      rec.save(scenario, usedAssets: usedAssets);
+    } finally {
+      if (tempProjectsDir.existsSync()) {
+        try {
+          tempProjectsDir.deleteSync(recursive: true);
+        } catch (_) {}
       }
     }
   }, timeout: const Timeout(Duration(minutes: 8)));

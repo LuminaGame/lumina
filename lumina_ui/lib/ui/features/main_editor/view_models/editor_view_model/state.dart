@@ -5,6 +5,11 @@ part of '../editor_view_model.dart';
 /// order), the core accessors, and the cross-domain members the mixins
 /// call on one another.
 abstract class _EditorViewModelState extends ChangeNotifier {
+  /// The level viewport's live Filament scene while it exists, for views
+  /// that draw the same level (the Sequencer's viewport); null before the
+  /// level viewport is up and after it is gone.
+  final ValueNotifier<EditorLevelScene?> levelScene = ValueNotifier<EditorLevelScene?>(null);
+
   final CollectionsRepository _collectionsRepo = CollectionsRepository();
 
   List<Collection> _collections = [];

@@ -51,6 +51,9 @@ mixin _ViewportSceneSync on _ViewportWidgetStateBase {
   void _disposeNative() {
     final engine = _nativeEngine;
     final scene = _nativeScene;
+    // Views drawing this scene let go of it before it is freed.
+    final shared = widget.viewModel.levelScene.value;
+    if (shared != null && identical(shared.scene, scene)) widget.viewModel.levelScene.value = null;
     _meshGeneration++;
     _actorLoading.clear();
     if (engine == null || engine.isDisposed) {

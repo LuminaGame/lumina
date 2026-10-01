@@ -7,6 +7,8 @@ Sinematikler için Sequencer: timeline, track ağacı ve eğri editörü, sequen
 **Bu sayfada:**
 
 - [`lib/ui/features/sub_editors/views/sequencer/curve_editor_widget.dart`](#libuifeaturessub_editorsviewssequencercurve_editor_widgetdart)
+- [`lib/ui/features/sub_editors/views/sequencer/level_viewport.dart`](#libuifeaturessub_editorsviewssequencerlevel_viewportdart)
+- [`lib/ui/features/sub_editors/models/sequencer_viewport_camera.dart`](#libuifeaturessub_editorsmodelssequencer_viewport_cameradart)
 - [`lib/ui/features/sub_editors/views/sequencer/render_dialog.dart`](#libuifeaturessub_editorsviewssequencerrender_dialogdart)
 - [`lib/ui/features/sub_editors/views/sequencer/sequencer_sub_editor.dart`](#libuifeaturessub_editorsviewssequencersequencer_sub_editordart)
 - [`lib/ui/features/sub_editors/views/sequencer/timeline_widget.dart`](#libuifeaturessub_editorsviewssequencertimeline_widgetdart)
@@ -108,6 +110,51 @@ The Curves tab: every keyed channel as a coloured curve with draggable keys and 
 | `fitAll` | `void fitAll()` | `fitAll` işlemini gerçekleştirir. |
 | `panBy` | `void panBy(double dFrames, double dValues)` | `panBy` işlemini gerçekleştirir. |
 | `build` | `Widget build(BuildContext context)` | Deklaratif alt nesne veya widget ağacını inşa eder. |
+
+## `lib/ui/features/sub_editors/views/sequencer/level_viewport.dart`
+
+### `class SequencerLevelViewport`
+
+Sequencer'ın 3D Viewport sekmesi: sekansın sürdüğü level, level viewport'unun kendi Filament sahnesinden (`EditorViewModel.levelScene`) ikinci bir view ile çizilir; Sequencer'ın level aktörlerine yazdığı her scrub ve oynatma karesi burada aynı karede görünür. Kendi editör kamerasından bakar (level viewport kamerasının olduğu yerden başlar: sürükleyerek yörünge, orta tuş veya Shift+sürükleme ile kaydırma, tekerlekle dolly, sağ tuş + W/A/S/D/Q/E ile uçuş, F veya çerçeve düğmesiyle animasyonlu aktörleri kadraja alma) ya da kamera menüsünden kilitlenince sekansa bağlı bir kamera aktöründen (konumu, +Y ileri yönü ve kamera bileşeninin görüş açısı, bileşen yoksa 60°) 16:9 film kapısı içinde, `PILOTING <ad>` rozetiyle bakar. Pozlama level viewport kamerasını izler. Level editörü olmadan açılan bir sekans bunun yerine bir uyarı gösterir.
+
+| Üye | İmzası | Ne İşe Yarar? |
+| :--- | :--- | :--- |
+| `editorViewModel` | `EditorViewModel editorViewModel` | Sahnesini ve aktörlerini view'ın çizdiği level editörü. |
+| `sequencer` | `SequencerViewModel sequencer` | Sekans; track'leri view'ın kilitlenebileceği kamera aktörlerini belirtir. |
+| `filmAspect` | `static const double filmAspect = 16 / 9` | Kilitli kameranın kadrajladığı film kapısı. |
+
+### `class SequencerLevelViewportState`
+
+| Üye | İmzası | Ne İşe Yarar? |
+| :--- | :--- | :--- |
+| `drawsLevelScene` | `bool get drawsLevelScene` | View'ın şu anda level viewport'unun sahnesini çizip çizmediği (level viewport açılmadan önce ve kapandıktan sonra false; view o zaman kendi boş sahnesini çizer). |
+| `cameraCandidates` | `List<EditorActorNode> get cameraCandidates` | Sekansın canlandırdığı level kamera aktörleri: kamera menüsünün sunduğu seçenekler. |
+| `lockedCameraId` | `String? get lockedCameraId` | View'ın içinden baktığı kamera aktörü; editör kamerası için null. |
+| `lockToCamera` | `void lockToCamera(String? actorId)` | `actorId` içinden bakar; null ise yeniden editör kamerasından. |
+| `focusAnimatedActors` | `void focusAnimatedActors()` | Kamera olmayan tüm bağlı aktörleri kadraja alır (sekans hiçbirini bağlamıyorsa tüm leveli). |
+| `editorCamera` | `SequencerViewportCamera get editorCamera` | Editör kamerasının gezinme durumu. |
+| `viewForTest` / `cameraForTest` | `FilamentView?` / `FilamentCamera?` | Testler için Filament view'ı ve kamerası. |
+
+## `lib/ui/features/sub_editors/models/sequencer_viewport_camera.dart`
+
+### `class SequencerViewPose`
+
+Level'e bakan bir view'ın bakış noktası: çalışma zamanı eksenlerinde (Y yukarı, santimetre) `eye`, `forward`, `up` ve dikey `fovDegrees`.
+
+### `class SequencerViewportCamera`
+
+Sequencer viewport'unun editör kamerası: level viewport'unun yörünge kamerası (saklanan Z-yukarı bir hedef etrafında yaw, pitch ve mesafe), kendi pozuyla; Sequencer view'ında gezinmek level viewport kamerasını yerinde bırakır.
+
+| Üye | İmzası | Ne İşe Yarar? |
+| :--- | :--- | :--- |
+| `fromEditor` | `factory SequencerViewportCamera.fromEditor(EditorViewModel vm)` | Level viewport kamerasının olduğu yerden başlar. |
+| `editorPose` | `SequencerViewPose editorPose({double fovDegrees = 45.0})` | Editör kamerasının baktığı poz. |
+| `orbit` / `pan` / `dolly` | `void orbit(double dx, double dy)` … | Hedef etrafında döner, view düzleminde kayar, hedefe yaklaşır veya uzaklaşır. |
+| `fly` | `void fly({required int forward, required int right, required int up, required double dt, double speed = 400.0})` | Bakış yönü, yatay sağ ve dünya yukarısı boyunca uçar. |
+| `focus` | `void focus({required List<double> center, required double radius})` | Bir küreyi (saklanan eksenler, santimetre) kadraja alır. |
+| `lockedPose` | `static SequencerViewPose lockedPose(EditorActorNode camera)` | Kamera kilidinin baktığı poz: aktörün konumundan ileri yönü boyunca (saklanan +Y, rotasyonuyla döndürülmüş), kamera bileşeninin `fieldOfView` / `fov` değeriyle. |
+| `cameraFovDegrees` | `static double cameraFovDegrees(EditorActorNode camera)` | Kamera aktörünün dikey görüş açısı; kamera bileşeni yoksa 60° (çalışma zamanı kamera bileşeninin varsayılanı). |
+| `isCamera` | `static bool isCamera(EditorActorNode actor)` | View'ın aktörün içinden bakıp bakamayacağı. |
 
 ## `lib/ui/features/sub_editors/views/sequencer/render_dialog.dart`
 

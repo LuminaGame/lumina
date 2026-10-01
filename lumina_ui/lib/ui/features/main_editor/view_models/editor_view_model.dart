@@ -36,6 +36,7 @@ import '../services/editor_preferences.dart';
 import '../services/project_trash.dart';
 import '../services/light_actor_properties.dart';
 import '../services/editor_quality_settings.dart';
+import '../services/editor_level_scene.dart';
 import '../commands/editor_command.dart';
 import '../commands/editor_transaction.dart';
 import '../services/pie_controller.dart';

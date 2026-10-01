@@ -5,8 +5,8 @@ import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.
 import '../../sub_editor_binding.dart';
 import '../../services/sequencer_offscreen_frame_source.dart';
 import '../../view_models/sequencer_view_model.dart';
-import '../sub_editor_3d_viewport.dart';
 import 'curve_editor_widget.dart';
+import 'level_viewport.dart';
 import 'render_dialog.dart';
 import 'timeline_widget.dart';
 import 'track_tree_widget.dart';
@@ -159,9 +159,7 @@ class _SequencerSubEditorState extends State<SequencerSubEditor> with SingleTick
                             _buildCenterTabsHeader(),
                             Expanded(
                               child: _activeTabIndex == 0
-                                  ? SubEditor3DViewport(
-                                      title: widget.assetName,
-                                    )
+                                  ? _buildViewport()
                                   : SequencerCurveEditorWidget(viewModel: _viewModel),
                             ),
                           ],
@@ -360,6 +358,23 @@ class _SequencerSubEditorState extends State<SequencerSubEditor> with SingleTick
         onCancelRender: _viewModel.cancelRender,
         onClose: () => Navigator.of(dialogCtx).pop(),
       ),
+    );
+  }
+
+  /// The level the sequence drives, drawn live; without a level editor
+  /// (a sequence opened on its own) there is no level to draw.
+  Widget _buildViewport() {
+    final evm = widget.editorViewModel;
+    if (evm == null) {
+      return const Center(
+        child: Text('No level is open: the viewport draws the level this sequence animates.',
+            style: TextStyle(fontSize: 10, color: EditorColors.mutedForeground)),
+      );
+    }
+    return SequencerLevelViewport(
+      key: const ValueKey('seq_level_viewport'),
+      editorViewModel: evm,
+      sequencer: _viewModel,
     );
   }
 

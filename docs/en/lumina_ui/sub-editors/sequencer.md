@@ -7,6 +7,8 @@ The Sequencer for cinematics: the timeline, track tree and curve editor, the seq
 **On this page:**
 
 - [`lib/ui/features/sub_editors/views/sequencer/curve_editor_widget.dart`](#libuifeaturessub_editorsviewssequencercurve_editor_widgetdart)
+- [`lib/ui/features/sub_editors/views/sequencer/level_viewport.dart`](#libuifeaturessub_editorsviewssequencerlevel_viewportdart)
+- [`lib/ui/features/sub_editors/models/sequencer_viewport_camera.dart`](#libuifeaturessub_editorsmodelssequencer_viewport_cameradart)
 - [`lib/ui/features/sub_editors/views/sequencer/render_dialog.dart`](#libuifeaturessub_editorsviewssequencerrender_dialogdart)
 - [`lib/ui/features/sub_editors/views/sequencer/sequencer_sub_editor.dart`](#libuifeaturessub_editorsviewssequencersequencer_sub_editordart)
 - [`lib/ui/features/sub_editors/views/sequencer/timeline_widget.dart`](#libuifeaturessub_editorsviewssequencertimeline_widgetdart)
@@ -108,6 +110,51 @@ The Curves tab: every keyed channel as a coloured curve with draggable keys and 
 | `fitAll` | `void fitAll()` | Executes `fitAll` operation. |
 | `panBy` | `void panBy(double dFrames, double dValues)` | Executes `panBy` operation. |
 | `build` | `Widget build(BuildContext context)` | Constructs and returns the declarative element or widget hierarchy. |
+
+## `lib/ui/features/sub_editors/views/sequencer/level_viewport.dart`
+
+### `class SequencerLevelViewport`
+
+The Sequencer's 3D Viewport tab: the level the sequence drives, drawn from the level viewport's own Filament scene (`EditorViewModel.levelScene`) by a second view, so every scrub and playback frame the Sequencer writes onto the level's actors shows here the same frame. It looks through an editor camera of its own (starting where the level viewport's camera is: drag to orbit, middle-drag or Shift+drag to pan, wheel to dolly, right button + W/A/S/D/Q/E to fly, F or the frame button to frame the animated actors) or, locked from the camera menu, through a camera actor bound in the sequence (its location, its +Y forward and the field of view of its camera component, 60° without one) inside a 16:9 film gate, with a `PILOTING <name>` badge. Exposure follows the level viewport's camera. A sequence opened without a level editor shows a notice instead.
+
+| Member | Signature | Purpose & Description |
+| :--- | :--- | :--- |
+| `editorViewModel` | `EditorViewModel editorViewModel` | The level editor whose scene and actors the view draws. |
+| `sequencer` | `SequencerViewModel sequencer` | The sequence; its tracks name the camera actors the view can lock to. |
+| `filmAspect` | `static const double filmAspect = 16 / 9` | The film gate a locked camera frames. |
+
+### `class SequencerLevelViewportState`
+
+| Member | Signature | Purpose & Description |
+| :--- | :--- | :--- |
+| `drawsLevelScene` | `bool get drawsLevelScene` | Whether the view renders the level viewport's scene right now (false before the level viewport is up and after it is gone; the view then draws its own empty scene). |
+| `cameraCandidates` | `List<EditorActorNode> get cameraCandidates` | The level's camera actors the sequence animates: what the camera menu offers. |
+| `lockedCameraId` | `String? get lockedCameraId` | The camera actor the view looks through, or null for the editor camera. |
+| `lockToCamera` | `void lockToCamera(String? actorId)` | Looks through `actorId`, or through the editor camera again when null. |
+| `focusAnimatedActors` | `void focusAnimatedActors()` | Frames every bound actor that is not a camera (the whole level when the sequence binds none). |
+| `editorCamera` | `SequencerViewportCamera get editorCamera` | The editor camera's navigation state. |
+| `viewForTest` / `cameraForTest` | `FilamentView?` / `FilamentCamera?` | The Filament view and camera, for tests. |
+
+## `lib/ui/features/sub_editors/models/sequencer_viewport_camera.dart`
+
+### `class SequencerViewPose`
+
+Where a view of the level looks from: `eye`, `forward` and `up` in runtime axes (Y up, centimetres) and the vertical `fovDegrees`.
+
+### `class SequencerViewportCamera`
+
+The Sequencer viewport's editor camera: the level viewport's orbit camera (yaw, pitch and distance around a stored Z-up target) with its own pose, so navigating the Sequencer's view leaves the level viewport's camera where it was.
+
+| Member | Signature | Purpose & Description |
+| :--- | :--- | :--- |
+| `fromEditor` | `factory SequencerViewportCamera.fromEditor(EditorViewModel vm)` | Starts where the level viewport's camera is. |
+| `editorPose` | `SequencerViewPose editorPose({double fovDegrees = 45.0})` | The pose the editor camera looks through. |
+| `orbit` / `pan` / `dolly` | `void orbit(double dx, double dy)` … | Tumbles around the target, slides in the view plane, moves toward or away from the target. |
+| `fly` | `void fly({required int forward, required int right, required int up, required double dt, double speed = 400.0})` | Flies along the gaze, the horizontal right and the world up. |
+| `focus` | `void focus({required List<double> center, required double radius})` | Frames a sphere (stored axes, centimetres). |
+| `lockedPose` | `static SequencerViewPose lockedPose(EditorActorNode camera)` | The pose a camera lock looks through: the actor's location along its forward (+Y stored, rotated by its rotation), with its camera component's `fieldOfView` / `fov`. |
+| `cameraFovDegrees` | `static double cameraFovDegrees(EditorActorNode camera)` | The camera actor's vertical field of view; 60° (the runtime camera component's default) without a camera component. |
+| `isCamera` | `static bool isCamera(EditorActorNode actor)` | Whether the view can look through the actor. |
 
 ## `lib/ui/features/sub_editors/views/sequencer/render_dialog.dart`
 
