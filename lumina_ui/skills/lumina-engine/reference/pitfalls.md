@@ -48,6 +48,9 @@ Lessons from real sessions where a model lost many rounds. Each line: what goes 
 - A new material is metallic green (template defaults) → set `baseColor` and `metallic` 0 for non-metals.
 - An imported OBJ is grey / untextured → its `.mtl` or a texture was not found (the Output Log names it): put it next
   to the OBJ (or choose the Textures Folder) and import again.
+- A texture drawn upside down (an atlas showing the wrong region) → the model or its material was imported before
+  texture coordinates were fixed (2026-10-01): import it again. A material you write yourself that samples
+  `getUV0()` on a mesh needs `flipUV : false` in its header (matc's default flips V; meshes carry glTF UVs).
 - A material that does not compile → read `compile_material`'s issues: matc's messages with their `.mat` lines; see `filament-materials`.
 
 ## Lights and camera

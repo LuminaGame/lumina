@@ -64,6 +64,8 @@ void main() {
     expect(asset.references.map((r) => r.slotName), ['baseColorMap', 'normalMap']);
     expect(asset.rawMatSource, contains('materialParams_normalMap'));
     expect(asset.rawMatSource, contains('materialParams_baseColorMap'));
+    // glTF UVs are sampled unchanged, as gltfio's own materials do.
+    expect(asset.rawMatSource, contains('flipUV : false'));
   });
 
   test('an imported material keeps its sides and alpha mode in its source and metadata', () {

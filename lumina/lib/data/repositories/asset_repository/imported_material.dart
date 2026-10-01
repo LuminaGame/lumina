@@ -15,7 +15,9 @@ part of '../asset_repository.dart';
 /// `blending : fade` with the straight glTF alpha (factor × texture alpha)
 /// premultiplied into the colour, and a double-sided `BLEND` material drawn
 /// back faces first (`transparency : twoPassesTwoSides`). Without them the
-/// material compiles opaque with back faces culled.
+/// material compiles opaque with back faces culled. A textured material
+/// declares `flipUV : false`: it samples glTF texture coordinates unchanged,
+/// as gltfio does.
 ///
 /// Two Filament rules this encodes:
 /// - `material.normal` must be written **before** `prepareMaterial`, or it is
@@ -65,7 +67,13 @@ String buildImportedMaterialSource({
     if (doubleSided) header.writeln('  transparency : twoPassesTwoSides,');
   }
   if (hasSamplers) {
-    header.writeln('  requires : [ uv0 ],');
+    // glTF texture coordinates put v = 0 at the image's top row, and textures
+    // are uploaded top row first, so the UVs are sampled as they are, the way
+    // gltfio builds its own glTF materials. matc's default (`flipUV : true`)
+    // would turn every texture upside down on a glTF mesh.
+    header
+      ..writeln('  requires : [ uv0 ],')
+      ..writeln('  flipUV : false,');
   }
   if (params.isEmpty) {
     header.writeln('  parameters : []');

@@ -214,10 +214,14 @@ keys, drawn as gltfio draws the same file: `doubleSided : true` (both faces, cul
 with `maskThreshold` = `alphaCutoff` (default 0.5); `BLEND` → `blending : fade`, the straight glTF alpha
 (`baseColorFactor.a` × the base colour texture's alpha) premultiplied into the colour in the fragment, and a
 double-sided `BLEND` material drawn in two passes (`transparency : twoPassesTwoSides`). `OPAQUE` single-sided
-materials keep matc's defaults (opaque, back faces culled). lumina's glTF / FBX / OBJ import (Assimp formats are
+materials keep matc's defaults (opaque, back faces culled). A textured material declares `flipUV : false`: the mesh's
+glTF texture coordinates (v = 0 at the image top) are sampled as they are, as gltfio's own materials do; matc's
+default `flipUV : true` would draw the texture upside down. lumina's glTF / FBX / OBJ import (Assimp formats are
 converted to glTF first) and importer plugins use the same builder, so an imported material is identical whoever made
 it. Material assets imported before these keys were written keep their old source; importing the model again writes
-the new one.
+the new one. That includes `flipUV`: a material imported without it draws its textures upside down once compiled, and an
+FBX / OBJ / Collada / 3DS / PLY / X mesh imported before Assimp's V flip was fixed holds V-up coordinates (its own
+textures upside down); import the model again.
 
 ### `class ImportedMaterial`
 

@@ -214,10 +214,14 @@ A mesh's thumbnail drawing, worked out without `dart:ui` rendering so it can be 
 yüz, culling kapalı); `MASK` → `blending : masked`, `maskThreshold` = `alphaCutoff` (varsayılan 0.5); `BLEND` →
 `blending : fade`, glTF'in düz alfası (`baseColorFactor.a` × base color dokusunun alfası) fragment'ta renge
 premultiply edilir, çift yüzlü bir `BLEND` materyal iki geçişte çizilir (`transparency : twoPassesTwoSides`). `OPAQUE`
-tek yüzlü materyaller matc varsayılanlarında kalır (opak, arka yüzler cull edilir). lumina'nın glTF / FBX / OBJ
+tek yüzlü materyaller matc varsayılanlarında kalır (opak, arka yüzler cull edilir). Dokulu bir materyal `flipUV : false`
+bildirir: mesh'in glTF doku koordinatları (v = 0 görüntünün üstünde) gltfio'nun kendi materyallerindeki gibi olduğu gibi
+örneklenir; matc'nin varsayılanı `flipUV : true` dokuyu ters çizerdi. lumina'nın glTF / FBX / OBJ
 import'u (Assimp formatları önce glTF'e çevrilir) ve importer eklentileri aynı üreticiyi kullanır; böylece içe aktarılan
 bir materyal kimin ürettiğinden bağımsız aynıdır. Bu anahtarlar yazılmadan önce içe aktarılmış materyal asset'leri eski
-kaynaklarını korur; modeli yeniden içe aktarmak yenisini yazar.
+kaynaklarını korur; modeli yeniden içe aktarmak yenisini yazar. `flipUV` da buna dahildir: onsuz içe aktarılmış bir
+materyal derlendiğinde dokularını ters çizer; Assimp'in V çevirmesi düzeltilmeden önce içe aktarılmış bir FBX / OBJ /
+Collada / 3DS / PLY / X mesh'i V-yukarı koordinatlar taşır (kendi dokuları ters); modeli yeniden içe aktarın.
 
 ### `class ImportedMaterial`
 

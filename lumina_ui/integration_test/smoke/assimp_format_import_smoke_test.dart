@@ -358,11 +358,11 @@ void main() {
       expect(cans.values.map((c) => c.$1.red).reduce((a, b) => a > b ? a : b), greaterThan(400),
           reason: 'the reference jerry can shows its red paint');
       for (final (glbCan, daeCan) in cans.values) {
-        // Not the same count: Assimp's conversion samples every format's
-        // texture upside down at the moment, so other parts of the paint face
-        // the camera. Untextured, the can has no red at all.
-        expect(daeCan.red, greaterThan(glbCan.red ~/ 8),
-            reason: 'the Collada jerry can shows the red of the texture its <init_from> names');
+        // The same paint in the same places: the Collada texture coordinates
+        // (V up) come out of the conversion as glTF's. Untextured, the can has
+        // no red at all; sampled upside down, about a quarter of it.
+        expect((daeCan.red - glbCan.red).abs(), lessThan(glbCan.red * 0.15),
+            reason: 'the Collada jerry can shows the red of the texture its <init_from> names, where the original has it');
         expect(daeCan.distanceTo(glbCan), lessThan(15), reason: 'the Collada jerry can looks like the original GLB');
       }
       expect(bananaViews.values.map((c) => c.banana).reduce((a, b) => a > b ? a : b), greaterThan(2000),

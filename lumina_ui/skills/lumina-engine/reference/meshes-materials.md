@@ -49,6 +49,11 @@
   paths, bare names) are found and embedded like an FBX's: next to the file, in its `Textures/` folders or the
   Textures Folder. Folder and file names match in any case, also on Linux (`Maps/wood.png` finds `maps/wood.png`).
   A missing texture is named once in the Output Log; a file Assimp cannot read fails the import and writes nothing.
+- Every mesh carries glTF texture coordinates (v = 0 at the image top): glTF imports as they are, FBX / OBJ / Collada /
+  3DS / PLY / X converted to them, basic shapes generated that way. Imported materials declare `flipUV : false` so
+  they sample them unchanged. Models imported before 2026-10-01 (FBX / OBJ / Collada / 3DS / PLY / X meshes, and any
+  imported material compiled from a source without `flipUV : false`) draw their textures upside down: import them
+  again; nothing migrates them.
 - A level actor's `material` that is not compiled (or not found) is not drawn: the mesh keeps its own and the
   Output Log (and the `set_actor_property` reply) says why.
 - The textures a material's samplers name (an imported material's `baseColorMap`, `normalMap`, … or a texture set
