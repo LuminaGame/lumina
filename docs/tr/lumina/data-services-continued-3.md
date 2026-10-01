@@ -345,7 +345,7 @@ What an importable file becomes.
 
 **Değerler:**
 
-- `mesh`: glTF / GLB, OBJ, FBX → a static or skeletal mesh (or an animation).
+- `mesh`: glTF / GLB, OBJ, FBX, Collada, 3DS, PLY, DirectX, STL → a static or skeletal mesh (or an animation).
 - `texture`: PNG, JPEG, WebP, TGA → a texture.
 - `audio`: WAV, OGG, MP3 → a sound.
 - `asset`: A `.lmas` from another project, copied in as it is.

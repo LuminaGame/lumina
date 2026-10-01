@@ -12,6 +12,7 @@ The editor-facing data layer, part one: the domain use cases (save level, import
 - [`lib/domain/use_cases/use_case_validation.dart`](#libdomainuse_casesuse_case_validationdart)
 - [`lib/domain/models/use_case_results.dart`](#libdomainmodelsuse_case_resultsdart)
 - [`lib/data/services/asset_reference_graph.dart`](#libdataservicesasset_reference_graphdart)
+- [`lib/data/services/assimp_import_service.dart`](#libdataservicesassimp_import_servicedart)
 - [`lib/data/services/auto_save_timer_service.dart`](#libdataservicesauto_save_timer_servicedart)
 - [`lib/data/services/code_generator_service.dart`](#libdataservicescode_generator_servicedart)
 - [`lib/data/services/engine_logger_service.dart`](#libdataservicesengine_logger_servicedart)
@@ -137,6 +138,28 @@ Result of [ImportAssetUseCase]: the imported asset's `.lmas` description.
 | `referencersOf` | `List<RealAssetInfo> referencersOf(String assetId)` | Executes `referencersOf` operation. |
 | `dependencyClosure` | `Set<String> dependencyClosure(String assetId)` | Executes `dependencyClosure` operation. |
 | `resolve` | `ResolvedReference resolve(AssetReference ref)` | Executes `resolve` operation. |
+
+## `lib/data/services/assimp_import_service.dart`
+
+### `class AssimpImportException`
+
+A model file Assimp could not convert: `message` names the file and Assimp's reason. The import logs it as an error and writes nothing.
+
+### `class AssimpImportResult`
+
+A Collada, 3DS, PLY, DirectX or STL file converted for the import pipeline: `glb` (every texture that was found embedded), `missingTextures` (`material`, `slot`, `path` as the file wrote it, `file`) and `embeddedTextures` (the file names found).
+
+### `abstract final class AssimpImportService`
+
+Every 3D format Assimp reads besides FBX and OBJ (which have their own services) → GLB for the import pipeline: Collada (`.dae`), 3DS, PLY, DirectX (`.x`) and STL ([FlutterAssimp.importExtensions]). The asset repository stages these through it (Content Browser import and drag and drop, folder import, the MCP `import_asset` tool), converting from the source file where it is, so whatever it references relative to itself resolves; nothing is converted from a staged copy. Textures are then located like an FBX's ([FbxTextureLocator]: as written, relative to the file with folders and file in any case, by name in its folder, the Import dialog's Textures Folder and the usual `Textures/` folders) and embedded. A texture found nowhere gets one Output Log warning naming it and the material is imported without it. Geometry, units and axes are as Assimp reads them (Collada's `<unit>` and `<up_axis>` are applied by its importer). A file Assimp cannot read fails the import with an error and writes no asset.
+
+**Members:**
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `handles` | `static bool handles(String path)` | Whether [path] is imported through this service (an Assimp format other than FBX and OBJ). |
+| `convert` | `static Future<AssimpImportResult> convert(String path, {List<String> textureSearchDirs = const []})` | [convertSync] in a background isolate. |
+| `convertSync` | `static AssimpImportResult convertSync(String path, {List<String> textureSearchDirs = const []})` | Throws [AssimpImportException] when Assimp cannot read the file. |
 
 ## `lib/data/services/auto_save_timer_service.dart`
 

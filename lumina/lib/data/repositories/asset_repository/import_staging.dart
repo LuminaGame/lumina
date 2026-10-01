@@ -36,9 +36,10 @@ mixin _AssetImportStaging on _AssetRepositoryState {
     // must not share temp/<name>: the second stages into its own folder.
     final lowerExt = sourceExt.toLowerCase();
     final isObj = ObjImportService.isObj(sourceFileName);
+    final isOtherModel = AssimpImportService.handles(sourceFileName);
     final stagedExt = lowerExt == '.webp' || lowerExt == '.tga'
         ? '.png'
-        : (lowerExt == '.gltf' || isObj || FbxImportService.isFbx(sourceFileName) ? '.glb' : sourceExt);
+        : (lowerExt == '.gltf' || isObj || isOtherModel || FbxImportService.isFbx(sourceFileName) ? '.glb' : sourceExt);
     if (File('${tempDir.path}/$stagedBase$stagedExt').existsSync()) {
       tempDir = tempDir.createTempSync('stage_');
     }
@@ -60,6 +61,15 @@ mixin _AssetImportStaging on _AssetRepositoryState {
         textureSearchDirs: textureSearchDirs,
       );
       if (staged != null) return staged;
+    }
+    if (isOtherModel) {
+      return _stageAssimpModel(
+        sourceFile: sourceFile,
+        tempDir: tempDir,
+        generateLods: generateLods,
+        baseName: stagedBase,
+        textureSearchDirs: textureSearchDirs,
+      );
     }
     if (originalFileName.toLowerCase().endsWith('.glb')) {
       AssetRepository.checkGlbContainer(sourceFile);
@@ -258,6 +268,66 @@ mixin _AssetImportStaging on _AssetRepositoryState {
     return {
       'stagedPath': staged.path,
       'detectedKind': 'static mesh',
+      'metadata': <String, dynamic>{},
+    };
+  }
+
+  /// STEP 1 for a Collada, 3DS, PLY, DirectX or STL file: converts the
+  /// source from its own folder ([AssimpImportService]), so the textures it
+  /// references resolve and are embedded, and stages the result as
+  /// `temp/<name>.glb`. A texture found nowhere gets one Output Log warning;
+  /// the import goes on without it. A file Assimp cannot read fails the
+  /// import (nothing is written).
+  Future<Map<String, dynamic>> _stageAssimpModel({
+    required File sourceFile,
+    required Directory tempDir,
+    required bool generateLods,
+    required String baseName,
+    List<String> textureSearchDirs = const [],
+  }) async {
+    final fileName = sourceFile.uri.pathSegments.last;
+    final AssimpImportResult model;
+    try {
+      model = await AssimpImportService.convert(sourceFile.path, textureSearchDirs: textureSearchDirs);
+    } on AssimpImportException catch (e) {
+      _logger.log(e.message, level: 'error', source: 'AssetRepository');
+      rethrow;
+    }
+    final staged = File('${tempDir.path}/$baseName.glb')..writeAsBytesSync(model.glb);
+
+    final byFile = <String, List<Map<String, dynamic>>>{};
+    for (final d in model.missingTextures) {
+      byFile.putIfAbsent('${d['path']}', () => []).add(d);
+    }
+    final folders = [
+      ...textureSearchDirs.where((d) => d.trim().isNotEmpty),
+      "the file's folder and its Textures/ subfolders",
+    ].join(', ');
+    for (final entry in byFile.entries) {
+      final uses = entry.value.map((d) => ImportedAssetNames.material('${d['material']}', baseName)).toSet().join(', ');
+      _logger.log(
+        '"$fileName": texture "${entry.value.first['file']}"${uses.isEmpty ? '' : ' for $uses'} was not found '
+        '(the file points at ${entry.key}; looked in $folders). The material is imported without it — '
+        'put the texture next to the file or choose its folder as Textures Folder in the import options, then re-import.',
+        level: 'warning',
+        source: 'AssetRepository',
+      );
+    }
+    _logger.log(
+      '[Step 1/4] Converted "$fileName" → glTF'
+      '${model.embeddedTextures.isEmpty ? '' : '; textures: ${model.embeddedTextures.join(', ')}'}.',
+      level: 'info',
+      source: 'AssetRepository',
+    );
+    if (generateLods) {
+      _logger.log('LOD generation not yet available', level: 'warning', source: 'AssetRepository');
+    }
+
+    final json = GlbDocument.parse(model.glb, label: fileName).json;
+    final hasSkins = ((json['skins'] as List?) ?? const []).isNotEmpty;
+    return {
+      'stagedPath': staged.path,
+      'detectedKind': hasSkins ? 'skeletal mesh' : 'static mesh',
       'metadata': <String, dynamic>{},
     };
   }

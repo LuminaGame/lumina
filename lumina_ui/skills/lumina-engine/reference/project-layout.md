@@ -37,8 +37,8 @@
 
 1. `project_info` (name, active level, units, dirty flag, Play state), `list_levels`, `list_assets`
    (filter by type or folder), `list_content_folders`.
-2. Import: `import_asset` with an absolute `path` (GLB / glTF / FBX / OBJ meshes with their materials and
-   textures, PNG / JPG / WebP / TGA textures, WAV / OGG audio). Use the paths the result returns: meshes are
+2. Import: `import_asset` with an absolute `path` (GLB / glTF / FBX / OBJ / Collada / 3DS / PLY / DirectX / STL
+   meshes with their materials and textures, PNG / JPG / WebP / TGA textures, WAV / OGG audio). Use the paths the result returns: meshes are
    auto-organised into `contents/meshes/static/` (or `skeletal/`), extracted materials into
    `contents/materials/<Mesh>/`, textures into `contents/textures/<Mesh>/`, even when you pass `folder`.
    `import_asset_folder` imports a whole folder.

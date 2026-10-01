@@ -12,6 +12,7 @@ Editöre dönük veri katmanı, birinci bölüm: domain use case'leri (level kay
 - [`lib/domain/use_cases/use_case_validation.dart`](#libdomainuse_casesuse_case_validationdart)
 - [`lib/domain/models/use_case_results.dart`](#libdomainmodelsuse_case_resultsdart)
 - [`lib/data/services/asset_reference_graph.dart`](#libdataservicesasset_reference_graphdart)
+- [`lib/data/services/assimp_import_service.dart`](#libdataservicesassimp_import_servicedart)
 - [`lib/data/services/auto_save_timer_service.dart`](#libdataservicesauto_save_timer_servicedart)
 - [`lib/data/services/code_generator_service.dart`](#libdataservicescode_generator_servicedart)
 - [`lib/data/services/engine_logger_service.dart`](#libdataservicesengine_logger_servicedart)
@@ -137,6 +138,28 @@ Result of [ImportAssetUseCase]: the imported asset's `.lmas` description.
 | `referencersOf` | `List<RealAssetInfo> referencersOf(String assetId)` | `referencersOf` işlemini gerçekleştirir. |
 | `dependencyClosure` | `Set<String> dependencyClosure(String assetId)` | `dependencyClosure` işlemini gerçekleştirir. |
 | `resolve` | `ResolvedReference resolve(AssetReference ref)` | `resolve` işlemini gerçekleştirir. |
+
+## `lib/data/services/assimp_import_service.dart`
+
+### `class AssimpImportException`
+
+Assimp'in dönüştüremediği bir model dosyası: `message` dosyayı ve Assimp'in gerekçesini adlandırır. Import bunu hata olarak loglar ve hiçbir şey yazmaz.
+
+### `class AssimpImportResult`
+
+Import hattı için dönüştürülmüş bir Collada, 3DS, PLY, DirectX veya STL dosyası: `glb` (bulunan her doku gömülü), `missingTextures` (`material`, `slot`, dosyanın yazdığı `path`, `file`) ve `embeddedTextures` (bulunan dosya adları).
+
+### `abstract final class AssimpImportService`
+
+FBX ve OBJ dışında (onların kendi servisleri var) Assimp'in okuduğu her 3D formatı → import hattı için GLB: Collada (`.dae`), 3DS, PLY, DirectX (`.x`) ve STL ([FlutterAssimp.importExtensions]). Asset deposu bunları bu servis üzerinden hazırlar (Content Browser import'u ve sürükle-bırak, klasör import'u, MCP `import_asset` aracı); dönüşüm kaynak dosyanın bulunduğu yerden yapılır, böylece dosyanın kendine göre gösterdiği her şey bulunur; hiçbir şey hazırlanmış bir kopyadan dönüştürülmez. Dokular sonra bir FBX'inkiler gibi bulunur ([FbxTextureLocator]: yazıldığı gibi, dosyaya göre klasörler ve dosya büyük/küçük harf fark etmeksizin, dosyanın klasöründe adıyla, Import penceresinin Textures Folder'ında ve alışılmış `Textures/` klasörlerinde) ve gömülür. Hiçbir yerde bulunamayan bir doku için Output Log'a onu adlandıran tek bir uyarı yazılır ve materyal onsuz içe aktarılır. Geometri, birimler ve eksenler Assimp'in okuduğu gibidir (Collada'nın `<unit>` ve `<up_axis>` değerlerini importer'ı uygular). Assimp'in okuyamadığı bir dosya import'u hatayla bitirir ve hiçbir asset yazmaz.
+
+**Üyeler:**
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `handles` | `static bool handles(String path)` | [path] bu servis üzerinden mi içe aktarılır (FBX ve OBJ dışında bir Assimp formatı). |
+| `convert` | `static Future<AssimpImportResult> convert(String path, {List<String> textureSearchDirs = const []})` | [convertSync]'i arka plan isolate'inde çalıştırır. |
+| `convertSync` | `static AssimpImportResult convertSync(String path, {List<String> textureSearchDirs = const []})` | Assimp dosyayı okuyamazsa [AssimpImportException] fırlatır. |
 
 ## `lib/data/services/auto_save_timer_service.dart`
 

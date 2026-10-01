@@ -30,6 +30,7 @@ export 'data/services/thumbnail_sidecar_migration.dart';
 export 'data/services/primitive_glb_factory.dart';
 export 'data/services/glb_animation_merger.dart';
 export 'data/services/glb_animation_retargeter.dart';
+export 'data/services/assimp_import_service.dart';
 export 'data/services/fbx_import_service.dart';
 export 'data/services/fbx_material_mapper.dart';
 export 'data/services/fbx_texture_locator.dart';

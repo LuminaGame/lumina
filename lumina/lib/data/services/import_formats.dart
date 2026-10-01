@@ -1,6 +1,7 @@
 /// What an importable file becomes.
 enum ImportFormatKind {
-  /// glTF / GLB, OBJ, FBX → a static or skeletal mesh (or an animation).
+  /// glTF / GLB, OBJ, FBX, Collada, 3DS, PLY, DirectX, STL → a static or
+  /// skeletal mesh (or an animation).
   mesh,
 
   /// PNG, JPEG, WebP, TGA → a texture.
@@ -25,6 +26,12 @@ class ImportFormats {
     'gltf': ImportFormatKind.mesh,
     'obj': ImportFormatKind.mesh,
     'fbx': ImportFormatKind.mesh,
+    // Collada, 3DS, PLY, DirectX, STL: converted by Assimp from their folder.
+    'dae': ImportFormatKind.mesh,
+    '3ds': ImportFormatKind.mesh,
+    'ply': ImportFormatKind.mesh,
+    'x': ImportFormatKind.mesh,
+    'stl': ImportFormatKind.mesh,
     'png': ImportFormatKind.texture,
     'jpg': ImportFormatKind.texture,
     'jpeg': ImportFormatKind.texture,

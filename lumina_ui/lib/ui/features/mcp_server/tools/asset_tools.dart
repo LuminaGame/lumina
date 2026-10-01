@@ -78,7 +78,8 @@ void registerAssetTools(McpToolRegistry registry, EditorViewModel vm, McpEditorS
       openWorld: true,
       title: 'Import asset',
       description: 'Imports a file from disk through the editor\'s import pipeline (Content Browser → Import): '
-          'GLB / glTF / FBX / OBJ meshes (their materials and textures are extracted alongside), PNG / JPG / WebP / TGA '
+          'GLB / glTF / FBX / OBJ / Collada (.dae) / 3DS / PLY / DirectX (.x) / STL meshes (their materials and textures '
+          'are extracted alongside; textures the file references are looked up next to it), PNG / JPG / WebP / TGA '
           'textures, WAV / OGG audio. Returns the .lmas assets that appeared and every file written (created_files). '
           'One undo step: undo moves exactly those files to the project trash (.lumina/trash).',
       inputSchema: McpSchema.object({

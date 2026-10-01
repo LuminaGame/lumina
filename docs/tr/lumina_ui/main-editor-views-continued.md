@@ -281,7 +281,7 @@ The Import Asset Options dialog's **Target Skeleton** row: which project skeleta
 
 ### `class ImportTexturesFolderRow`
 
-The Import Asset Options dialog's **Textures Folder** row: a folder the FBX importer searches first for the FBX's textures. Without one it looks next to the FBX and in its `Textures/`, `textures/`, `<name>/` and `<name>.fbm/` folders. Textures the FBX names are found by file name; images named after a material and a channel (`T_Wood_BaseColor`, `…_MI_Neon_Green_…_Emissive`, `_Normal`, `_ORM`) are applied to that material even when the FBX names none (an Unreal FBX export carries only its materials' constants).
+The Import Asset Options dialog's **Textures Folder** row: a folder the FBX importer searches first for the FBX's textures (the OBJ, Collada, 3DS, PLY and DirectX importers search it for the textures their files name, too). Without one it looks next to the FBX and in its `Textures/`, `textures/`, `<name>/` and `<name>.fbm/` folders. Textures the FBX names are found by file name; images named after a material and a channel (`T_Wood_BaseColor`, `…_MI_Neon_Green_…_Emissive`, `_Normal`, `_ORM`) are applied to that material even when the FBX names none (an Unreal FBX export carries only its materials' constants).
 
 **Yapıcı Metotlar (Constructors):**
 

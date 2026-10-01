@@ -2,7 +2,8 @@
 
 ## Meshes
 
-- `import_asset` (absolute `path`; GLB / glTF / FBX / OBJ) makes a static mesh `.lmas` (`contents/meshes/static/`)
+- `import_asset` (absolute `path`; GLB / glTF / FBX / OBJ / Collada `.dae` / 3DS / PLY / DirectX `.x` / STL) makes a
+  static mesh `.lmas` (`contents/meshes/static/`)
   or a skeletal one (`contents/meshes/skeletal/`), and extracts the file's materials and textures beside it
   (`contents/materials/<Mesh>/`, `contents/textures/<Mesh>/`). The result lists what was written.
 - An imported material keeps the glTF `doubleSided` (`doubleSided : true`), `alphaMode` `MASK` (`blending : masked`,
@@ -42,6 +43,10 @@
   `Kd` colour, `d` / `Tr` transparency (`blending : fade`), `map_Kd`, `map_Bump` / `bump` / `norm` (normal map),
   map_d (cut-out → `masked`, else `fade`) and `map_Ks`. Keep the `.mtl` and its textures beside the OBJ (or pick
   the textures' folder as Textures Folder); a missing one is named in the Output Log and the import goes on without it.
+- Collada, 3DS, PLY and DirectX files are converted from where they are, so the textures they reference (relative
+  paths, bare names) are found and embedded like an FBX's: next to the file, in its `Textures/` folders or the
+  Textures Folder. Folder and file names match in any case, also on Linux (`Maps/wood.png` finds `maps/wood.png`).
+  A missing texture is named once in the Output Log; a file Assimp cannot read fails the import and writes nothing.
 - A level actor's `material` that is not compiled (or not found) is not drawn: the mesh keeps its own and the
   Output Log (and the `set_actor_property` reply) says why.
 - The textures a material's samplers name (an imported material's `baseColorMap`, `normalMap`, … or a texture set

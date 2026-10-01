@@ -9,6 +9,7 @@ import 'dart:ui' as ui;
 import '../models/lumina_asset.dart';
 import '../services/animation_import_binder.dart';
 import '../services/asset_index.dart';
+import '../services/assimp_import_service.dart';
 import '../services/derived_data_cache.dart';
 import '../services/encoded_image_format.dart';
 import '../services/engine_logger_service.dart';
