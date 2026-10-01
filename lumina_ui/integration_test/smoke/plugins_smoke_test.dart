@@ -3002,6 +3002,13 @@ void sourceCopyProjectEditorScenario(IntegrationTestWidgetsFlutterBinding bindin
       expect(projectInfo!.data['project_name'], 'source_game');
       final actors = await tester.runAsync(() => client.callTool('list_actors'));
       expect(actors!.text, contains(barrelName), reason: 'the saved level, barrel included');
+      // The engine guide ships in the built editor: lumina_ui is a dependency
+      // of the host there, so its assets are keyed packages/lumina_ui/….
+      final guide = await tester.runAsync(() => client.callTool('get_lumina_guide', {'topic': 'blueprints'}));
+      expect(guide!.isError, isFalse, reason: guide.text);
+      expect(guide.text, startsWith('# Blueprints'));
+      debugPrint('[plugins11_smoke] get_lumina_guide blueprints: ${guide.text.length} chars, '
+          '"${guide.text.split('\n').first}"');
       await tester.runAsync(() => Future<void>.delayed(const Duration(seconds: 3)));
       final screenshot = await tester.runAsync(() => client.callTool('viewport_screenshot'));
       final image = screenshot!.content.firstWhere((c) => c['type'] == 'image')['data'] as String;

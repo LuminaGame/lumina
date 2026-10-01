@@ -59,7 +59,7 @@ One topic of the Lumina engine guide: its id (the `reference/<id>.md` file) and 
 
 ### `class LuminaGuide`
 
-The Lumina engine guide for AI models: how the engine works, written from the code, shipped with the editor as the `lumina-engine` skill (`skills/lumina-engine/`, Flutter assets, so every build carries it). `get_lumina_guide` and the `lumina://guide` resources serve it.
+The Lumina engine guide for AI models: how the engine works, written from the code, shipped with the editor as the `lumina-engine` skill (`skills/lumina-engine/`, Flutter assets, so every build carries it; loaded through [EditorAssets], so a project editor host, which bundles them as `packages/lumina_ui/skills/…`, finds them too). `get_lumina_guide` and the `lumina://guide` resources serve it.
 
 **Yapıcı Metotlar (Constructors):**
 
@@ -582,6 +582,7 @@ The tools a server offers, by name; validates a call's arguments against the dec
 | :--- | :--- | :--- |
 | `approvalPolicies` | `final List<McpApprovalPolicy> approvalPolicies` | The approval chain every call passes: the first `deny` wins; empty means allow all. |
 | `approvalTimeout` | `Duration approvalTimeout` | How long a policy may take before the call is denied. |
+| `onToolError` | `void Function(String tool, Object error, StackTrace stack)? onToolError` | Told about a handler that threw, with its stack (the server logs it to the Output Log); the caller's result carries the message only. |
 | `register` | `void register(McpTool tool)` | Refuses a tool with no group, an unknown group, or a `wraps` entry on [McpExposure.neverExpose]. |
 | `registerAll` | `void registerAll(Iterable<McpTool> tools)` |  |
 | `unregister` | `void unregister(String name)` | Removes tool [name] (a plugin re-registering). |
@@ -591,7 +592,7 @@ The tools a server offers, by name; validates a call's arguments against the dec
 | `byName` | `McpTool? byName(String name)` |  |
 | `filtered` | `List<McpTool> filtered({Set<String>? groups, McpToolRisk? maxRisk})` | The tools in [groups] (all when null; `core` always) at or below [maxRisk]. |
 | `list` | `List<Map<String, Object?>> list({Set<String>? groups, McpToolRisk? maxRisk})` |  |
-| `call` | `Future<McpToolResult> call(String name, Map<String, Object?> arguments, {required McpCallContext Function(McpT...` | Runs [name] with [arguments]: validates them, passes [context] through the approval chain, then runs the handler as one attributed call (every undo step it records is one `MCP: …` step per stack). A handler that throws a [JsonRpcException] surfaces it as a protocol error (bad arguments); any other exception becomes a tool error result with its message, never a transport failure. A denied call is a tool error whose text is `{"status": "denied", "tool", "risk", "reason"}`. |
+| `call` | `Future<McpToolResult> call(String name, Map<String, Object?> arguments, {required McpCallContext Function(McpT...` | Runs [name] with [arguments]: validates them, passes [context] through the approval chain, then runs the handler as one attributed call (every undo step it records is one `MCP: …` step per stack). A handler that throws a [JsonRpcException] surfaces it as a protocol error (bad arguments); any other exception becomes a tool error result `<tool> failed: <exception>` (no stack trace; that goes to [onToolError]), never a transport failure. A denied call is a tool error whose text is `{"status": "denied", "tool", "risk", "reason"}`. |
 
 ## `lib/ui/features/mcp_server/services/project_dart_sdk.dart`
 

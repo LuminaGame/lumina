@@ -24,6 +24,10 @@ class McpToolRegistry {
   /// How long a policy may take before the call is denied.
   Duration approvalTimeout = const Duration(minutes: 10);
 
+  /// Told about a handler that threw, with its stack (the server logs it to
+  /// the Output Log); the caller's result carries the message only.
+  void Function(String tool, Object error, StackTrace stack)? onToolError;
+
   final Map<String, ({String caller, Zone zone})> _external = {};
 
   /// Binds external sessions tagged [tag] to [caller], run in [zone]
@@ -90,8 +94,9 @@ class McpToolRegistry {
   /// the approval chain, then runs the handler as one attributed call (every
   /// undo step it records is one `MCP: …` step per stack). A handler that
   /// throws a [JsonRpcException] surfaces it as a protocol error (bad
-  /// arguments); any other exception becomes a tool error result with its
-  /// message, never a transport failure. A denied call is a tool error whose
+  /// arguments); any other exception becomes a tool error result
+  /// `<tool> failed: <exception>` (no stack trace; that goes to
+  /// [onToolError]), never a transport failure. A denied call is a tool error whose
   /// text is `{"status": "denied", "tool", "risk", "reason"}`.
   Future<McpToolResult> call(
     String name,
@@ -134,7 +139,9 @@ class McpToolRegistry {
     } on JsonRpcException {
       rethrow;
     } catch (e, st) {
-      result = McpToolResult.error('$name failed: $e\n$st');
+      // A model acts on the message; the stack is for the Output Log.
+      onToolError?.call(name, e, st);
+      result = McpToolResult.error('$name failed: $e');
     }
     report(result);
     return result;

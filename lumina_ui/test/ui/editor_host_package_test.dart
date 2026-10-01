@@ -13,7 +13,8 @@ import '../helpers/editor_host_fixture.dart';
 /// lumina_ui works as a dependency, not only as the app. A
 /// generated project editor host runs a widget test of its own that renders
 /// the launcher: lumina_ui's `assets/…` resolve as `packages/lumina_ui/…`
-/// through the editor's asset bundle, and its fonts register unqualified.
+/// through the editor's asset bundle (the engine guide's `skills/…` too), and
+/// its fonts register unqualified.
 void main() {
   test('the launcher renders from a generated host package with lumina_ui assets and fonts', () async {
     final flutter = Platform.isWindows ? 'flutter.bat' : 'flutter';
@@ -47,6 +48,7 @@ import 'package:lumina_ui/editor_entry.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/features/launcher/view_models/launcher_view_model.dart';
 import 'package:lumina_ui/ui/features/launcher/views/launcher_view.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/lumina_guide.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 void main() {
@@ -57,6 +59,9 @@ void main() {
     expect(logo!.lengthInBytes, greaterThan(1000));
     final mono = await tester.runAsync(() => EditorAssets.bundle.load('assets/fonts/JetBrainsMono-Regular.ttf'));
     expect(mono!.lengthInBytes, greaterThan(1000));
+    // The engine guide (lumina_ui's `skills/` assets) loads in the host too.
+    final blueprints = await tester.runAsync(() => LuminaGuide().topic('blueprints'));
+    expect(blueprints, contains('# Blueprints'));
 
     tester.view.physicalSize = const Size(1600, 1000);
     tester.view.devicePixelRatio = 1.0;

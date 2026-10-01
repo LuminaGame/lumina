@@ -1,4 +1,4 @@
-import 'package:flutter/services.dart' show rootBundle;
+import '../../../core/host/editor_host.dart' show EditorAssets;
 
 /// One topic of the Lumina engine guide: its id (the `reference/<id>.md`
 /// file) and title.
@@ -10,10 +10,12 @@ class LuminaGuideTopic {
 
 /// The Lumina engine guide for AI models: how the engine works, written
 /// from the code, shipped with the editor as the `lumina-engine` skill
-/// (`skills/lumina-engine/`, Flutter assets, so every build carries it).
+/// (`skills/lumina-engine/`, Flutter assets, so every build carries it;
+/// loaded through [EditorAssets], so a project editor host, which bundles
+/// them as `packages/lumina_ui/skills/…`, finds them too).
 /// `get_lumina_guide` and the `lumina://guide` resources serve it.
 class LuminaGuide {
-  LuminaGuide({Future<String> Function(String assetPath)? load}) : _load = load ?? rootBundle.loadString;
+  LuminaGuide({Future<String> Function(String assetPath)? load}) : _load = load ?? EditorAssets.bundle.loadString;
 
   final Future<String> Function(String assetPath) _load;
   final Map<String, String> _cache = {};

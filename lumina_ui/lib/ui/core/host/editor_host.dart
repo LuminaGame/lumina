@@ -122,10 +122,10 @@ class LuminaEditorHost {
 }
 
 /// lumina_ui's own assets, wherever it runs: as the app its keys are
-/// `assets/…`; as a project editor host's dependency Flutter bundles them as
-/// `packages/lumina_ui/assets/…`. The editor keeps writing `assets/…`, and this
-/// bundle — installed as the app's [DefaultAssetBundle] and used for direct
-/// loads — maps the key.
+/// `assets/…` and `skills/…`; as a project editor host's dependency Flutter
+/// bundles them as `packages/lumina_ui/assets/…`. The editor keeps writing the
+/// unprefixed key, and this bundle — installed as the app's
+/// [DefaultAssetBundle] and used for direct loads — maps it.
 class EditorAssets {
   EditorAssets._();
 
@@ -136,8 +136,11 @@ class EditorAssets {
 
   static final AssetBundle bundle = _EditorAssetBundle();
 
-  /// The bundle key of lumina_ui asset [path] (`assets/…`).
-  static String key(String path) => packaged && path.startsWith('assets/') ? '$packagePrefix$path' : path;
+  /// The top folders of lumina_ui's own assets (pubspec `flutter: assets:`).
+  static const List<String> ownFolders = ['assets/', 'skills/'];
+
+  /// The bundle key of lumina_ui asset [path] (`assets/…`, `skills/…`).
+  static String key(String path) => packaged && ownFolders.any(path.startsWith) ? '$packagePrefix$path' : path;
 
   static Future<ByteData> load(String path) => rootBundle.load(key(path));
 

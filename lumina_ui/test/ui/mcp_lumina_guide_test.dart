@@ -1,8 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina/lumina.dart';
+import 'package:lumina_ui/ui/core/host/editor_host.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 import 'package:lumina_ui/ui/features/mcp_server/services/lumina_guide.dart';
 import 'package:lumina_ui/ui/features/mcp_server/services/mcp_server_service.dart';
@@ -152,6 +154,58 @@ void main() {
       );
     },
   );
+
+  test('as a project editor host dependency (assets keyed packages/lumina_ui/…), the guide still loads', () async {
+    // A generated host app depends on lumina_ui, so Flutter bundles its assets
+    // under `packages/lumina_ui/`. Serve the asset channel that way: only the
+    // packaged keys exist, read from this package's files on disk.
+    final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    final requested = <String>[];
+    messenger.setMockMessageHandler('flutter/assets', (message) async {
+      final key = Uri.decodeFull(utf8.decode(message!.buffer.asUint8List(message.offsetInBytes, message.lengthInBytes)));
+      requested.add(key);
+      if (!key.startsWith(EditorAssets.packagePrefix)) return null;
+      final file = File('${Directory.current.path}/${key.substring(EditorAssets.packagePrefix.length)}');
+      if (!file.existsSync()) return null;
+      final bytes = file.readAsBytesSync();
+      return ByteData.sublistView(bytes);
+    });
+    final wasPackaged = EditorAssets.packaged;
+    EditorAssets.packaged = true;
+    addTearDown(() {
+      EditorAssets.packaged = wasPackaged;
+      messenger.setMockMessageHandler('flutter/assets', null);
+    });
+
+    final guide = LuminaGuide();
+    expect(await guide.topic('blueprints'), fileText('reference/blueprints.md'));
+    expect(await guide.topic('project-layout'), fileText('reference/project-layout.md'));
+    expect(await guide.overview(), startsWith(fileText('SKILL.md')));
+    expect(requested, everyElement(startsWith(EditorAssets.packagePrefix)));
+  });
+
+  test('a tool that throws: the caller gets the exception message only, the stack goes to the Output Log', () async {
+    server.tools.register(
+      McpTool(
+        name: 'throwing_probe',
+        risk: McpToolRisk.readOnly,
+        groups: const {McpToolGroups.core},
+        title: 'Throwing probe',
+        description: 'Throws.',
+        inputSchema: McpSchema.object({}),
+        handler: (_) async => throw StateError('the probe broke'),
+      ),
+    );
+    final reply = await client.callTool('throwing_probe');
+    expect(reply.isError, isTrue);
+    expect(reply.text, 'throwing_probe failed: Bad state: the probe broke');
+    expect(reply.text, isNot(contains('#0')));
+    expect(reply.text, isNot(contains('.dart')));
+    final logged = vm.logger.logs.where((l) => l.message.contains('throwing_probe failed: Bad state: the probe broke'));
+    expect(logged, isNotEmpty, reason: 'the failure is in the Output Log');
+    expect(logged.first.level, 'error');
+    expect(logged.first.message, contains('#0'), reason: 'with its stack trace');
+  });
 
   test('the initialize instructions tell clients to read a topic with get_lumina_guide', () {
     expect(initialize['instructions'], contains('get_lumina_guide'));

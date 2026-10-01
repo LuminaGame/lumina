@@ -177,7 +177,7 @@ Process-wide state of the running editor: its host, arguments and the code plugi
 
 ### `class EditorAssets`
 
-lumina_ui's own assets, wherever it runs: as the app its keys are `assets/…`; as a project editor host's dependency Flutter bundles them as `packages/lumina_ui/assets/…`. The editor keeps writing `assets/…`, and this bundle — installed as the app's [DefaultAssetBundle] and used for direct loads — maps the key.
+lumina_ui's own assets, wherever it runs: as the app its keys are `assets/…` and `skills/…`; as a project editor host's dependency Flutter bundles them as `packages/lumina_ui/assets/…`. The editor keeps writing the unprefixed key, and this bundle — installed as the app's [DefaultAssetBundle] and used for direct loads — maps it.
 
 **Üyeler:**
 
@@ -186,7 +186,8 @@ lumina_ui's own assets, wherever it runs: as the app its keys are `assets/…`; 
 | `packagePrefix` | `static const String packagePrefix` |  |
 | `packaged` | `static bool packaged` | Whether keys need [packagePrefix]; set by [configure]. |
 | `bundle` | `static final AssetBundle bundle` |  |
-| `key` | `static String key(String path)` | The bundle key of lumina_ui asset [path] (`assets/…`). |
+| `ownFolders` | `static const List<String> ownFolders` | The top folders of lumina_ui's own assets (pubspec `flutter: assets:`). |
+| `key` | `static String key(String path)` | The bundle key of lumina_ui asset [path] (`assets/…`, `skills/…`). |
 | `load` | `static Future<ByteData> load(String path)` |  |
 | `configure` | `static Future<void> configure() async` | Detects the packaged layout from the asset manifest and, when packaged, registers lumina_ui's bundled fonts under their unqualified family names (a dependency's fonts are otherwise `packages/lumina_ui/<Family>`). |
 

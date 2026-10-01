@@ -130,6 +130,7 @@ class McpServerService extends ChangeNotifier {
     // The panel's risk ceiling is the first policy; more are
     // appended to approvalPolicies (the first deny wins).
     tools.approvalPolicies.add(McpRiskCeilingPolicy(() => this.settings.maxRisk));
+    tools.onToolError = (tool, e, st) => viewModel.logger.log('$tool failed: $e\n$st', level: 'error', source: 'MCP');
     registerCoreTools(
       tools,
       viewModel,
