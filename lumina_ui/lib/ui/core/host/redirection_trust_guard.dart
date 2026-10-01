@@ -19,6 +19,8 @@ import 'dart:io';
 
 import 'package:ffi/ffi.dart';
 
+import 'package_identity.dart';
+
 /// What startup does about the process's redirection trust policy.
 enum RedirectionTrustAction {
   /// Junctions can be traversed (or the policy is unknown): start normally.
@@ -45,9 +47,14 @@ const String redirectionTrustMessage =
 
 /// The decision for [policyFlags] (`null` when they cannot be read) in a
 /// process that was ([relaunched]) or was not started by this guard.
-RedirectionTrustAction decideRedirectionTrustAction({required int? policyFlags, required bool relaunched}) {
+///
+/// A [packaged] process (MSIX package identity) never relaunches: the copy
+/// would start the packaged executable outside its package, without the
+/// package's identity and its view of AppData, so the engine data would
+/// split between two places. It explains instead.
+RedirectionTrustAction decideRedirectionTrustAction({required int? policyFlags, required bool relaunched, bool packaged = false}) {
   if (policyFlags == null || policyFlags & enforceRedirectionTrustFlag == 0) return RedirectionTrustAction.proceed;
-  return relaunched ? RedirectionTrustAction.explain : RedirectionTrustAction.relaunch;
+  return relaunched || packaged ? RedirectionTrustAction.explain : RedirectionTrustAction.relaunch;
 }
 
 /// This process's redirection trust policy flags, or `null` off Windows or
@@ -103,6 +110,7 @@ abstract final class RedirectionTrustGuard {
     final action = decideRedirectionTrustAction(
       policyFlags: queryRedirectionTrustPolicyFlags(),
       relaunched: relaunched(Platform.environment),
+      packaged: currentPackageFamilyName() != null,
     );
     if (action == RedirectionTrustAction.proceed) return true;
     if (action == RedirectionTrustAction.relaunch && _relaunchUnderShell(args)) return false;

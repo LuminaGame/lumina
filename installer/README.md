@@ -10,6 +10,7 @@ new installer.
 | Platform | Package | Built by | Status |
 |---|---|---|---|
 | Windows | `lumina-studio-setup-<tag>-windows-x64.exe` (Inno Setup) | `windows/build.ps1` | released |
+| Windows | `lumina-studio-<tag>-windows-x64-store.msix` (the editor, unsigned, for the Microsoft Store) | `lumina_ui/tool/package_windows.dart --store` | released |
 | Windows | `lumina-studio-<tag>-windows-x64.msix` (the editor itself) | `lumina_ui/tool/package_windows.dart` | released when the signing secrets exist |
 | Linux | `lumina-studio_<version>-1_amd64.deb`, `lumina-studio-<version>-1.x86_64.rpm` (nfpm) | `linux/build.sh` | released |
 | macOS | `lumina-studio-<tag>-macos.pkg` (pkgbuild + productbuild) | `macos/build-pkg.sh` | written, not verified, disabled in the workflow |
@@ -113,6 +114,14 @@ with the identity in `lumina_ui/pubspec.yaml` `msix_config` (the Store reservati
 The certificate comes from GitHub secrets (below). Without them the workflow skips the MSIX with a notice. The
 certificate and its password never enter the repository or the logs. The `.pfx` is decoded into the runner's temp
 folder and deleted after signing.
+
+Every release also carries `lumina-studio-<tag>-windows-x64-store.msix`, the Microsoft Store package
+(`package_windows.dart --store`): unsigned, because the Store re-signs every package it accepts, with the Partner
+Center publisher `CN=76408633-2846-4256-BED6-0DF8748A95C6` from `msix_config`. It needs no secrets. Upload it in
+Partner Center (Store ID `9PHJG2NH6BQF`); it does not install locally until the Store has signed it. Its version is
+the check job's `msix_version` (`tool/release/release_info.dart`): `0.0.1-dev.10` → `1.0.1010.0`, `0.0.1` →
+`1.0.1999.0`, `1.0.0` → `2.0.999.0`, so it grows with every tag and keeps the Store's rules (fourth section 0, first
+not 0). `lumina_ui/tool/README.md` has the scheme and the manifest checks.
 
 ### Signing the Windows release (Certum)
 

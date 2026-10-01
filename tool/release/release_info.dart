@@ -5,7 +5,8 @@
 // line-based reader instead of package:yaml.
 //
 //   version --tag v1.2.3            Check the tag against lumina_ui's pubspec
-//                                   version; print tag, version, msix_version,
+//                                   version; print tag, version, msix_version
+//                                   (msixVersion: Store-valid, increasing),
 //                                   prerelease.
 //   pins                            Print the commit SHA every sibling repo
 //                                   (tools, plugins, marketplace) is pinned to
@@ -115,10 +116,34 @@ Map<String, String> checkVersion(String tag, String pubspecYaml) {
   return {
     'tag': tag,
     'version': tagVersion,
-    // MSIX versions are four numbers and the last one stays 0 (Store rule).
-    'msix_version': '${t.group(1)}.${t.group(2)}.${t.group(3)}.0',
+    'msix_version': msixVersion(tagVersion),
     'prerelease': t.group(4) != null ? 'true' : 'false',
   };
+}
+
+/// The MSIX package version of [version] (`M.m.p[-dev.N|-rc.N]`), valid for
+/// the Microsoft Store and strictly increasing with semver order — the same
+/// scheme as lumina_ui's `storeMsixVersion` (lib/tooling/windows_packaging):
+/// `(M+1).m.(p*1000 + s).0` with `s` = `N` for `dev.N` (1–499), `500+N` for
+/// `rc.N` (1–498), `999` for a final release. The Store keeps the fourth
+/// section for itself (0) and refuses a first section of 0, hence `M+1`.
+String msixVersion(String version) {
+  final m = _semver.firstMatch(version);
+  if (m == null) _fail('"$version" is not a semantic version.');
+  final major = int.parse(m.group(1)!), minor = int.parse(m.group(2)!), patch = int.parse(m.group(3)!);
+  final pre = m.group(4);
+  var stage = 999;
+  if (pre != null) {
+    final p = RegExp(r'^(dev|rc)\.(\d+)$').firstMatch(pre);
+    if (p == null) _fail('"$version": only dev.N and rc.N pre-releases map to an MSIX version, got "-$pre".');
+    final n = int.parse(p.group(2)!);
+    final dev = p.group(1) == 'dev';
+    if (n < 1 || n > (dev ? 499 : 498)) _fail('"$version": ${p.group(1)}.N must be 1–${dev ? 499 : 498} to map to an MSIX version.');
+    stage = (dev ? 0 : 500) + n;
+  }
+  if (patch > 64) _fail('"$version": the patch number must be at most 64 to map to an MSIX version; raise the minor instead.');
+  if (major + 1 > 65535 || minor > 65535) _fail('"$version": a version section exceeds 65535.');
+  return '${major + 1}.$minor.${patch * 1000 + stage}.0';
 }
 
 // ---------------------------------------------------------------- pubspecs

@@ -131,7 +131,35 @@ class PackagingPlanner {
     return switch (options.mode) {
       PackagingMode.selfSigned => _selfSigned(options, config, version, outputDir, outputName, common),
       PackagingMode.publish => _publish(options, config, version, outputDir, outputName, common),
+      PackagingMode.store => _store(options, config, version, outputDir, outputName, common),
     };
+  }
+
+  /// Unsigned (`msix --store` skips signing), published as the Partner
+  /// Center publisher recorded in `msix_config`.
+  Future<PackagingPlan> _store(PackageWindowsOptions options, MsixConfig config, String version, String outputDir,
+      String outputName, List<String> common) async {
+    final publisher = config.storePublisher;
+    if (publisher == null || publisher.isEmpty) {
+      throw const PackagingException.usage('--store needs msix_config: publisher in pubspec.yaml: the Partner Center publisher '
+          '(Product management → Product identity → Package/Identity/Publisher).');
+    }
+    checkStoreVersion(version);
+    return PackagingPlan(
+      mode: PackagingMode.store,
+      version: version,
+      config: config,
+      outputDir: outputDir,
+      outputName: outputName,
+      publisher: publisher,
+      msixCommand: 'create',
+      msixArguments: [...common, '--store', '--publisher', publisher],
+      secrets: const [],
+      skipBuild: options.skipBuild,
+      certificateThumbprint: null,
+      signingSource: 'none (Microsoft Store package; the Store signs it)',
+      devCertificate: null,
+    );
   }
 
   Future<PackagingPlan> _selfSigned(PackageWindowsOptions options, MsixConfig config, String version, String outputDir,

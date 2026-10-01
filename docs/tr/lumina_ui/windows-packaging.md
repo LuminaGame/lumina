@@ -2,7 +2,7 @@
 
 # Windows paketleme
 
-`tool/package-windows.sh` script'inin arkasındaki mantık: komut satırı seçenekleri, geliştirme sertifikası, self-signed ve publish modları için paketleme planı ve build edilmiş bir MSIX paketini geri okuyan doğrulama. Dosya yolları `lumina_ui/` paket dizinine görelidir.
+`tool/package-windows.sh` script'inin arkasındaki mantık: komut satırı seçenekleri, geliştirme sertifikası, self-signed, publish ve Microsoft Store modları için paketleme planı, MSIX sürüm şeması ve build edilmiş bir MSIX paketini geri okuyan doğrulama. Dosya yolları `lumina_ui/` paket dizinine görelidir.
 
 **Bu sayfada:**
 
@@ -91,6 +91,7 @@ How the package is signed.
 
 - `selfSigned`: The stable Lumina development certificate (local and team testing).
 - `publish`: A certificate from the environment, timestamped (distribution).
+- `store`: Unsigned, with the Partner Center publisher from `msix_config`: the Microsoft Store signs what it is sent.
 
 ### `class PackagingException`
 
@@ -121,7 +122,7 @@ The parsed command line of `tool/package-windows.sh`.
 | Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `mode` | `final PackagingMode mode` |  |
-| `version` | `final String? version` | `a.b.c.d` from `--version`; null → from `pubspec.yaml` ([resolveVersion]). |
+| `version` | `final String? version` | `a.b.c.d` from `--version`; null → from `pubspec.yaml` ([resolveVersion], [storeMsixVersion]). |
 | `output` | `final String output` | The output folder (`--output`, default `build/msix`), relative to `lumina_ui/` unless absolute. |
 | `skipBuild` | `final bool skipBuild` |  |
 | `appInstaller` | `final String? appInstaller` | Publish mode only: the App Installer feed folder (`msix:publish`). |
@@ -154,13 +155,17 @@ The `msix_config:` block of `pubspec.yaml` (the identity both modes share; signi
 | `architecture` | `String get architecture` |  |
 | `logoPath` | `String? get logoPath` |  |
 | `storePublisher` | `String? get storePublisher` | The Store / Partner Center publisher, when the config records one. |
+| `osMinVersion` | `String get osMinVersion` | `TargetDeviceFamily MinVersion` (msix's own default when unset). |
 | `capabilities` | `List<String> get capabilities` |  |
 
 **Üst düzey fonksiyonlar ve değişkenler:**
 
 | Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
-| `msixVersionFromPubspec` | `String msixVersionFromPubspec(String pubspecYaml)` | `version: x.y.z+n` → `x.y.z.n` (`x.y.z` → `x.y.z.0`). |
+| `checkStoreVersion` | `void checkStoreVersion(String version)` | The Microsoft Store's version rules for [version] (`a.b.c.d`): the fourth section stays 0 (the Store's own) and the first is not 0. Throws a [PackagingException] (64) naming the rule. |
+| `maxStorePatch` | `const int maxStorePatch` | The highest patch number the scheme of [storeMsixVersion] fits in a section (64·1000 + 999 ≤ 65535). |
+| `storeMsixVersion` | `String storeMsixVersion(String semver)` | The MSIX version of a release version, valid for the Microsoft Store and strictly increasing with semver order, shared with `tool/release/release_info.dart`: `M.m.p[-dev.N\|-rc.N]` → `(M+1).m.(p*1000 + s).0`, `s` = `N` for `dev.N` (1–499), `500+N` for `rc.N` (1–498), `999` for a final release. The `+build` suffix is ignored; anything else throws a [PackagingException] (64). |
+| `msixVersionFromPubspec` | `String msixVersionFromPubspec(String pubspecYaml)` | The MSIX version of `pubspec.yaml`'s `version:` ([storeMsixVersion]). |
 
 ## `lib/tooling/windows_packaging/package_windows.dart`
 
@@ -260,7 +265,7 @@ What a package must be.
 
 **Yapıcı Metotlar (Constructors):**
 
-- `const MsixExpectation({required this.identityName, required this.publisher, required this.version, required this.mode, this.thumbprint,})`
+- `const MsixExpectation({required this.identityName, required this.publisher, required this.version, required this.mode, this.thumbprint, this.osMinVersion, this.executionAlias, this.capabilities = const [],})`
 
 **Üyeler:**
 
@@ -271,6 +276,11 @@ What a package must be.
 | `version` | `final String version` |  |
 | `mode` | `final PackagingMode mode` |  |
 | `thumbprint` | `final String? thumbprint` | The signing certificate's thumbprint, when known. |
+| `osMinVersion` | `final String? osMinVersion` | `TargetDeviceFamily Name="Windows.Desktop" MinVersion`, when checked. |
+| `executionAlias` | `final String? executionAlias` | The execution alias (without `.exe`), when checked. |
+| `capabilities` | `final List<String> capabilities` | Capabilities the manifest must declare besides [requiredCapabilities]. |
+| `requiredCapabilities` | `static const List<String> requiredCapabilities` | A desktop (Win32) app runs as full trust: every package declares `runFullTrust`, and the Store asks for its justification. |
+| `requiredImages` | `static final List<String> requiredImages` | The images the manifest references (`Images/<name>.scale-<n>.png` at every scale, plus the `Square44x44Logo.targetsize-*` sizes), which the Store requires to be in the package. |
 | `requiredFiles` | `static const List<String> requiredFiles` | Files every Lumina Studio package holds (plus `data/flutter_assets/…`). |
 
 ### `class MsixVerification`
@@ -291,6 +301,8 @@ The read-back of a package; [problems] is empty when it passed.
 | `version` | `final String? version` |  |
 | `executionAlias` | `final String? executionAlias` |  |
 | `capabilities` | `final List<String> capabilities` |  |
+| `deviceFamily` | `final String? deviceFamily` | `TargetDeviceFamily` Name and MinVersion. |
+| `deviceFamilyMinVersion` | `final String? deviceFamilyMinVersion` |  |
 | `signatureStatus` | `final String signatureStatus` |  |
 | `signatureMessage` | `final String signatureMessage` |  |
 | `signerSubject` | `final String? signerSubject` |  |
@@ -304,7 +316,7 @@ The read-back of a package; [problems] is empty when it passed.
 
 | Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
-| `verifyMsix` | `Future<MsixVerification> verifyMsix(File msix, MsixExpectation expected) async` | Verifies [msix] against [expected]: every problem is collected, each naming what was found and what was expected. |
+| `verifyMsix` | `Future<MsixVerification> verifyMsix(File msix, MsixExpectation expected) async` | Verifies [msix] against [expected]: the files, the logo images, the manifest identity, `runFullTrust` and the capabilities, the device family and its minimum version, the alias and the signature (`NotSigned` for a Store package). Every problem is collected, each naming what was found and what was expected. |
 
 ---
 

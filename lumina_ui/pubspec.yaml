@@ -91,12 +91,12 @@ dev_dependencies:
       ref: 153ab38e90f2b3d51737d34c009a478549211350
   msix: ^3.18.0
 
-# The MSIX identity of Lumina Studio, shared by both
-# modes of tool/package-windows.sh (it passes the version and the signing
+# The MSIX identity of Lumina Studio, shared by every
+# mode of tool/package-windows.sh (it passes the version and the signing
 # values on the command line). The identity is the Store reservation.
-# `publisher` is the Store / Partner Center publisher,
-# used only by a bare `dart run msix:…` / a future --store build: self-signed
-# builds sign as "CN=Lumina Studio Dev, O=Lumina, C=TR", --publish builds as
+# `publisher` is the Store / Partner Center publisher, used by --store builds
+# (unsigned; the Store signs them): self-signed builds sign as
+# "CN=Lumina Studio Dev, O=Lumina, C=TR", --publish builds as
 # LUMINA_MSIX_PUBLISHER.
 msix_config:
   display_name: Lumina Engine
@@ -107,6 +107,11 @@ msix_config:
   # The marketplace (internet) and the loopback MCP server.
   capabilities: internetClient,privateNetworkClientServer
   execution_alias: lumina-studio
+  # Windows 10 2004 (the oldest Windows 10 base still serviced, 2004-22H2).
+  # From 1903 on, MSIX redirects only newly created AppData files and lets a
+  # packaged app edit existing ones in place; before, every AppData write was
+  # copy-on-write.
+  os_min_version: 10.0.19041.0
   architecture: x64
   build_windows: true
   output_name: LuminaEngine

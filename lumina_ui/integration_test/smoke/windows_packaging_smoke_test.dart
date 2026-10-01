@@ -84,7 +84,8 @@ void main() {
           environment: env, workingDirectory: uiRoot);
       packaging.stop();
       expect(built.exitCode, 0, reason: '${built.stdout}\n${built.stderr}');
-      final msix = File(p.join(outDir.path, 'LuminaEngine_0.0.1.1_x64.msix'));
+      final version = msixVersionFromPubspec(File(p.join(uiRoot, 'pubspec.yaml')).readAsStringSync());
+      final msix = File(p.join(outDir.path, 'LuminaEngine_${version}_x64.msix'));
       expect(msix.existsSync(), isTrue);
       expect(built.stdout as String, contains('Import-Certificate'), reason: 'the script prints the one-time trust command');
       final cert = await readCertificate(dev.cer.path);
@@ -94,7 +95,7 @@ void main() {
           MsixExpectation(
               identityName: _identity,
               publisher: DevCertificate.subject,
-              version: '0.0.1.1',
+              version: version,
               mode: PackagingMode.selfSigned,
               thumbprint: cert.thumbprint));
       expect(verification.problems, isEmpty);
@@ -120,7 +121,7 @@ void main() {
             r'Select-Object Name, Publisher, @{n="Version";e={[string]$_.Version}}, InstallLocation | ConvertTo-Json -Compress');
         final installed = jsonDecode((info.stdout as String).trim()) as Map<String, dynamic>;
         expect(installed['Publisher'], DevCertificate.subject);
-        expect(installed['Version'], '0.0.1.1');
+        expect(installed['Version'], version);
         final location = installed['InstallLocation'] as String;
         expect(location, contains(r'\WindowsApps\'));
         for (final dll in ['flutter_filament.dll', 'flutter_assimp.dll', 'flutter_riglogic.dll']) {

@@ -10,6 +10,7 @@ yeni bir installer değil, yalnızca yeni bir release gerekir.
 | Platform | Paket | Üreten | Durum |
 |---|---|---|---|
 | Windows | `lumina-studio-setup-<tag>-windows-x64.exe` (Inno Setup) | `windows/build.ps1` | yayımlanıyor |
+| Windows | `lumina-studio-<tag>-windows-x64-store.msix` (editör, imzasız, Microsoft Store için) | `lumina_ui/tool/package_windows.dart --store` | yayımlanıyor |
 | Windows | `lumina-studio-<tag>-windows-x64.msix` (editörün kendisi) | `lumina_ui/tool/package_windows.dart` | imzalama secret'ları varsa yayımlanıyor |
 | Linux | `lumina-studio_<version>-1_amd64.deb`, `lumina-studio-<version>-1.x86_64.rpm` (nfpm) | `linux/build.sh` | yayımlanıyor |
 | macOS | `lumina-studio-<tag>-macos.pkg` (pkgbuild + productbuild) | `macos/build-pkg.sh` | yazıldı, doğrulanmadı, workflow'da kapalı |
@@ -112,6 +113,14 @@ kimlik `lumina_ui/pubspec.yaml` içindeki `msix_config`'ten gelir (Store rezerva
 Sertifika GitHub secret'larından gelir (aşağıda). Secret'lar yoksa workflow MSIX'i bir notice ile atlar. Sertifika
 ve parolası hiçbir zaman repository'ye ya da log'lara girmez. `.pfx` runner'ın temp klasörüne açılır ve
 imzalamadan sonra silinir.
+
+Her release ayrıca Microsoft Store paketini, `lumina-studio-<tag>-windows-x64-store.msix`'i taşır
+(`package_windows.dart --store`): imzasızdır, çünkü Store kabul ettiği her paketi yeniden imzalar; publisher
+`msix_config`'teki Partner Center publisher'ı `CN=76408633-2846-4256-BED6-0DF8748A95C6`'dır. Secret gerektirmez.
+Partner Center'a yüklenir (Store ID `9PHJG2NH6BQF`); Store imzalayana kadar yerelde kurulmaz. Sürümü check job'ının
+`msix_version`'ıdır (`tool/release/release_info.dart`): `0.0.1-dev.10` → `1.0.1010.0`, `0.0.1` → `1.0.1999.0`,
+`1.0.0` → `2.0.999.0`; böylece her tag'de büyür ve Store kurallarına uyar (dördüncü bölüm 0, birinci 0 değil).
+Şema ve manifest kontrolleri `lumina_ui/tool/README.md`'de.
 
 ### Windows release'ini imzalamak (Certum)
 

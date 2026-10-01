@@ -34,7 +34,14 @@
 # packages, and flutter_riglogic's hook needs the OpenRigLogic library built
 # inside its package folder, which a pub-cache copy does not have.
 #
-# Secrets (all optional; without them the MSIX is skipped with a notice):
+# Every release carries an unsigned Microsoft Store package of the editor,
+# lumina-studio-<tag>-windows-x64-store.msix (tool/package_windows.dart
+# --store, the Partner Center identity from lumina_ui/pubspec.yaml
+# msix_config), to upload in Partner Center; the Store signs it. Its version
+# is the check job's msix_version (tool/release/release_info.dart), which
+# the Store accepts and which grows with every tag.
+#
+# Secrets (all optional; without them the signed MSIX is skipped with a notice):
 #   LUMINA_MSIX_PUBLISHER       certificate subject, equal to the package publisher
 #   LUMINA_MSIX_CERT_BASE64     the code-signing .pfx, base64-encoded
 #   LUMINA_MSIX_CERT_PASSWORD   its password
@@ -387,7 +394,27 @@ jobs:
 
       - name: MSIX skipped
         if: matrix.platform == 'windows' && env.HAS_MSIX_CERT != 'true'
-        run: echo "::notice::No MSIX signing secrets (LUMINA_MSIX_PUBLISHER, LUMINA_MSIX_CERT_BASE64); the MSIX is not part of this release."
+        run: echo "::notice::No MSIX signing secrets (LUMINA_MSIX_PUBLISHER, LUMINA_MSIX_CERT_BASE64); the signed MSIX is not part of this release."
+
+      # The Microsoft Store package: unsigned (the Store signs it), with the
+      # Partner Center identity and publisher from msix_config, over the same
+      # Release folder. No secrets needed, so every release has one.
+      - name: MSIX (Microsoft Store)
+        if: matrix.platform == 'windows'
+        working-directory: lumina/lumina_ui
+        shell: pwsh
+        env:
+          MSIX_VERSION: ${{ needs.check.outputs.msix_version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          dart run tool/package_windows.dart --store --skip-build --version $env:MSIX_VERSION --output build/msix-store
+          if ($LASTEXITCODE -ne 0) { throw "Store MSIX packaging failed (exit $LASTEXITCODE)" }
+          $msix = Get-ChildItem build/msix-store -Filter *.msix | Select-Object -First 1
+          $name = "lumina-studio-$env:TAG-windows-x64-store.msix"
+          $dest = Join-Path (Resolve-Path ../../dist) $name
+          Copy-Item $msix.FullName $dest
+          $hash = (Get-FileHash -Algorithm SHA256 $dest).Hash.ToLowerInvariant()
+          [IO.File]::WriteAllText("$dest.sha256", "$hash  $name`n")
 
       - uses: actions/upload-artifact@v7
         with:
@@ -583,7 +610,8 @@ jobs:
           | `lumina-studio-setup-*-windows-x64.exe` | Windows installer: installs Git, the Visual Studio 2022 C++ Build Tools, GStreamer and Flutter, then the latest Lumina Studio |
           | `lumina-studio_*_amd64.deb`, `lumina-studio-*.x86_64.rpm` | Linux packages: build dependencies, Flutter in /opt/lumina/flutter and the latest Lumina Studio in /opt/lumina/studio |
           | `lumina-studio-*-windows-x64.zip`, `lumina-studio-*-linux-x64.tar.gz` | The editor alone (what the installers download) |
-          | `lumina-studio-*-windows-x64.msix` | The editor as an MSIX package (when signed) |
+          | `lumina-studio-*-windows-x64-store.msix` | The editor as an unsigned Microsoft Store package (for the Partner Center submission; it installs once the Store has signed it) |
+          | `lumina-studio-*-windows-x64.msix` | The editor as a signed MSIX package (when signed) |
           | `openriglogic-*` | Prebuilt OpenRigLogic library the editor downloads at first launch |
 
           Every file has a `.sha256` sidecar.

@@ -21,13 +21,46 @@ class MsixExpectation {
   /// The signing certificate's thumbprint, when known.
   final String? thumbprint;
 
+  /// `TargetDeviceFamily Name="Windows.Desktop" MinVersion`, when checked.
+  final String? osMinVersion;
+
+  /// The execution alias (without `.exe`), when checked.
+  final String? executionAlias;
+
+  /// Capabilities the manifest must declare besides [requiredCapabilities].
+  final List<String> capabilities;
+
   const MsixExpectation({
     required this.identityName,
     required this.publisher,
     required this.version,
     required this.mode,
     this.thumbprint,
+    this.osMinVersion,
+    this.executionAlias,
+    this.capabilities = const [],
   });
+
+  /// A desktop (Win32) app runs as full trust: every package declares it, and
+  /// the Store asks for its justification.
+  static const List<String> requiredCapabilities = ['runFullTrust'];
+
+  /// The images the manifest references (`Images/<name>.scale-<n>.png` at
+  /// every scale), which the Store requires to be in the package.
+  static final List<String> requiredImages = [
+    for (final name in const [
+      'Square44x44Logo',
+      'Square150x150Logo',
+      'Wide310x150Logo',
+      'StoreLogo',
+      'LargeTile',
+      'SmallTile',
+      'SplashScreen',
+      'BadgeLogo',
+    ])
+      for (final scale in const [100, 125, 150, 200, 400]) 'Images/$name.scale-$scale.png',
+    for (final size in const [16, 24, 32, 48, 256]) 'Images/Square44x44Logo.targetsize-$size.png',
+  ];
 
   /// Files every Lumina Studio package holds (plus `data/flutter_assets/…`).
   static const List<String> requiredFiles = [
@@ -49,6 +82,10 @@ class MsixVerification {
   final String? version;
   final String? executionAlias;
   final List<String> capabilities;
+
+  /// `TargetDeviceFamily` Name and MinVersion.
+  final String? deviceFamily;
+  final String? deviceFamilyMinVersion;
   final String signatureStatus;
   final String signatureMessage;
   final String? signerSubject;
@@ -64,6 +101,8 @@ class MsixVerification {
     required this.version,
     required this.executionAlias,
     required this.capabilities,
+    this.deviceFamily,
+    this.deviceFamilyMinVersion,
     required this.signatureStatus,
     required this.signatureMessage,
     required this.signerSubject,
@@ -129,8 +168,12 @@ Future<MsixVerification> verifyMsix(File msix, MsixExpectation expected) async {
   if (entries.isNotEmpty && !entries.any((e) => e.startsWith('data/flutter_assets/'))) {
     problems.add('the package is missing data/flutter_assets/');
   }
+  if (entries.isNotEmpty) {
+    final missingImages = MsixExpectation.requiredImages.where((i) => !entries.contains(i)).toList();
+    if (missingImages.isNotEmpty) problems.add('the package is missing the logo images ${missingImages.join(', ')}');
+  }
 
-  String? identityName, publisher, version, alias;
+  String? identityName, publisher, version, alias, family, familyMin;
   final capabilities = <String>[];
   if (manifest != null) {
     final identity = RegExp(r'<Identity\b[^>]*>', dotAll: true).firstMatch(manifest)?.group(0) ?? '';
@@ -146,6 +189,26 @@ Future<MsixVerification> verifyMsix(File msix, MsixExpectation expected) async {
     alias = aliasMatch == null ? null : _unescapeXml(aliasMatch.group(1)!).replaceAll(RegExp(r'\.exe$'), '');
     for (final m in RegExp(r'<(?:\w+:)?(?:Device)?Capability\b[^>]*\bName="([^"]+)"').allMatches(manifest)) {
       capabilities.add(m.group(1)!);
+    }
+    final device = RegExp(r'<TargetDeviceFamily\b[^>]*>').firstMatch(manifest)?.group(0) ?? '';
+    family = attr(device, 'Name');
+    familyMin = attr(device, 'MinVersion');
+    for (final c in MsixExpectation.requiredCapabilities) {
+      if (!RegExp('<rescap:Capability\\b[^>]*\\bName="$c"').hasMatch(manifest)) {
+        problems.add('AppxManifest.xml does not declare the restricted capability $c (rescap:Capability)');
+      }
+    }
+    for (final c in expected.capabilities) {
+      if (!capabilities.contains(c)) problems.add('AppxManifest.xml does not declare the capability $c');
+    }
+    if (family != 'Windows.Desktop') {
+      problems.add('AppxManifest.xml TargetDeviceFamily is "$family", expected "Windows.Desktop"');
+    }
+    if (expected.osMinVersion != null && familyMin != expected.osMinVersion) {
+      problems.add('AppxManifest.xml TargetDeviceFamily MinVersion is "$familyMin", expected "${expected.osMinVersion}"');
+    }
+    if (expected.executionAlias != null && alias != expected.executionAlias) {
+      problems.add('AppxManifest.xml execution alias is "$alias", expected "${expected.executionAlias}"');
     }
     if (identityName != expected.identityName) {
       problems.add('AppxManifest.xml Identity Name is "$identityName", expected "${expected.identityName}"');
@@ -181,11 +244,16 @@ Future<MsixVerification> verifyMsix(File msix, MsixExpectation expected) async {
     } else {
       problems.add('Get-AuthenticodeSignature failed: ${(r.stderr as String).trim()}');
     }
-    final allowed = expected.mode == PackagingMode.publish ? const ['Valid'] : const ['Valid', 'UnknownError', 'NotTrusted'];
+    final allowed = switch (expected.mode) {
+      PackagingMode.publish => const ['Valid'],
+      PackagingMode.selfSigned => const ['Valid', 'UnknownError', 'NotTrusted'],
+      // The Store signs what it is sent.
+      PackagingMode.store => const ['NotSigned'],
+    };
     if (!allowed.contains(status)) {
       problems.add('the signature status is $status ($message), expected ${allowed.join(' or ')}');
     }
-    if (signerSubject != expected.publisher) {
+    if (expected.mode != PackagingMode.store && signerSubject != expected.publisher) {
       problems.add('the package is signed by "$signerSubject", expected "${expected.publisher}"');
     }
     if (expected.thumbprint != null && signerThumbprint != expected.thumbprint!.toUpperCase()) {
@@ -203,6 +271,8 @@ Future<MsixVerification> verifyMsix(File msix, MsixExpectation expected) async {
     version: version,
     executionAlias: alias,
     capabilities: capabilities,
+    deviceFamily: family,
+    deviceFamilyMinVersion: familyMin,
     signatureStatus: status,
     signatureMessage: message,
     signerSubject: signerSubject,

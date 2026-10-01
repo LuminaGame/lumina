@@ -16,10 +16,42 @@ void main() {
       expect(o.dryRun, isFalse);
       expect(o.appInstaller, isNull);
       expect(o.help, isFalse);
-      // The version the plan uses: pubspec `version: 0.0.1+1` → 0.0.1.1.
+      // The version the plan uses: the pubspec version through the Store
+      // scheme, e.g. `version: 0.0.1-dev.10+10` → 1.0.1010.0.
       final pubspec = File('pubspec.yaml').readAsStringSync();
-      expect(RegExp(r'^version: 0\.0\.1\+1$', multiLine: true).hasMatch(pubspec), isTrue);
-      expect(o.resolveVersion(pubspec), '0.0.1.1');
+      final semver = RegExp(r'^version:\s*(\S+)$', multiLine: true).firstMatch(pubspec)!.group(1)!;
+      expect(o.resolveVersion(pubspec), storeMsixVersion(semver));
+      expect(o.resolveVersion('version: 0.0.1-dev.10+10\n'), '1.0.1010.0');
+    });
+
+    test('--store: unsigned Store mode, exclusive with --publish and --appinstaller', () {
+      final o = PackageWindowsOptions.parse(const ['--store', '--skip-build']);
+      expect(o.mode, PackagingMode.store);
+      expect(o.resolveVersion('version: 0.0.1-dev.10+10\n'), '1.0.1010.0');
+      for (final args in const [
+        ['--store', '--publish'],
+        ['--publish', '--store'],
+        ['--store', '--appinstaller', 'D:/feed'],
+      ]) {
+        expect(() => PackageWindowsOptions.parse(args), throwsA(isA<PackagingException>().having((e) => e.exitCode, 'exitCode', 64)),
+            reason: args.join(' '));
+      }
+    });
+
+    test('--store --version must follow the Store rules (fourth section 0, first not 0)', () {
+      expect(PackageWindowsOptions.parse(const ['--store', '--version', '1.0.1010.0']).version, '1.0.1010.0');
+      expect(
+        () => PackageWindowsOptions.parse(const ['--store', '--version', '1.2.3.4']),
+        throwsA(isA<PackagingException>()
+            .having((e) => e.exitCode, 'exitCode', 64)
+            .having((e) => e.message, 'message', contains('fourth section'))),
+      );
+      expect(
+        () => PackageWindowsOptions.parse(const ['--store', '--version', '0.1.2.0']),
+        throwsA(isA<PackagingException>()
+            .having((e) => e.exitCode, 'exitCode', 64)
+            .having((e) => e.message, 'message', contains('first section'))),
+      );
     });
 
     test('--publish --version 1.2.3.4 --output D:/out', () {
@@ -68,22 +100,22 @@ void main() {
     });
 
     test('the usage text lists every option', () {
-      for (final option in ['--publish', '--version', '--output', '--skip-build', '--appinstaller', '--dry-run', '--help']) {
+      for (final option in ['--publish', '--store', '--version', '--output', '--skip-build', '--appinstaller', '--dry-run', '--help']) {
         expect(PackageWindowsOptions.usage, contains(option));
       }
     });
   });
 
   group('msixVersionFromPubspec', () {
-    test('x.y.z+n → x.y.z.n, x.y.z → x.y.z.0', () {
-      expect(msixVersionFromPubspec('name: a\nversion: 0.0.1+1\n'), '0.0.1.1');
-      expect(msixVersionFromPubspec('version: 3.4.5+12\n'), '3.4.5.12');
-      expect(msixVersionFromPubspec('version: 3.4.5\n'), '3.4.5.0');
+    test('the pubspec version through the Store scheme (the +build is ignored)', () {
+      expect(msixVersionFromPubspec('name: a\nversion: 0.0.1+1\n'), '1.0.1999.0');
+      expect(msixVersionFromPubspec('version: 1.0.0-dev.1+2\n'), '2.0.1.0');
+      expect(msixVersionFromPubspec('version: 3.4.5\n'), '4.4.5999.0');
     });
 
     test('a pubspec without a usable version is an error', () {
       expect(() => msixVersionFromPubspec('name: a\n'), throwsA(isA<PackagingException>()));
-      expect(() => msixVersionFromPubspec('version: 1.0.0-dev.1+2\n'), throwsA(isA<PackagingException>()));
+      expect(() => msixVersionFromPubspec('version: 1.0.0-beta.1+2\n'), throwsA(isA<PackagingException>()));
     });
   });
 
@@ -99,6 +131,8 @@ void main() {
       expect(config.logoPath, 'assets/logo_color.png');
       expect(File(config.logoPath!).existsSync(), isTrue, reason: 'the colour logo is in the repo');
       expect(config.capabilities, containsAll(['internetClient', 'privateNetworkClientServer']));
+      expect(config.storePublisher, 'CN=76408633-2846-4256-BED6-0DF8748A95C6', reason: 'the Partner Center publisher');
+      expect(config.osMinVersion, '10.0.19041.0');
     });
 
     test('a pubspec without msix_config is an error naming it', () {

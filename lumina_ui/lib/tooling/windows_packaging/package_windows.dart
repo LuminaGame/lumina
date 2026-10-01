@@ -59,7 +59,11 @@ Future<int> runPackageWindows(List<String> args, PackagingContext context) async
     }
 
     final plan = await PackagingPlanner(context).plan(options);
-    final modeName = plan.mode == PackagingMode.selfSigned ? 'self-signed' : 'publish';
+    final modeName = switch (plan.mode) {
+      PackagingMode.selfSigned => 'self-signed',
+      PackagingMode.publish => 'publish',
+      PackagingMode.store => 'Microsoft Store, unsigned',
+    };
     out
       ..writeln('Lumina Studio MSIX ($modeName)')
       ..writeln('  identity:  ${plan.config.identityName} (${plan.config.displayName})')
@@ -115,6 +119,9 @@ Future<int> runPackageWindows(List<String> args, PackagingContext context) async
         version: plan.version,
         mode: plan.mode,
         thumbprint: plan.certificateThumbprint,
+        osMinVersion: plan.config.osMinVersion,
+        executionAlias: plan.config.executionAlias,
+        capabilities: plan.config.capabilities,
       ),
     );
     if (!result.ok) {
@@ -125,9 +132,12 @@ Future<int> runPackageWindows(List<String> args, PackagingContext context) async
       ..writeln('  size:       ${_size(result.size)}')
       ..writeln('  mode:       $modeName')
       ..writeln('  publisher:  ${result.publisher}')
-      ..writeln('  thumbprint: ${result.signerThumbprint}')
+      ..writeln('  thumbprint: ${result.signerThumbprint ?? 'none'}')
       ..writeln('  signature:  ${result.signatureStatus}${result.timestamped ? ', timestamped' : ''}')
-      ..writeln('  verified:   ${MsixExpectation.requiredFiles.join(', ')}, data/flutter_assets/');
+      ..writeln('  manifest:   ${result.capabilities.join(', ')}; ${result.deviceFamily} ${result.deviceFamilyMinVersion}; '
+          'alias ${result.executionAlias}')
+      ..writeln('  verified:   ${MsixExpectation.requiredFiles.join(', ')}, data/flutter_assets/, '
+          '${MsixExpectation.requiredImages.length} logo images');
     final dev = plan.devCertificate;
     if (dev != null) {
       out
@@ -135,6 +145,12 @@ Future<int> runPackageWindows(List<String> args, PackagingContext context) async
         ..writeln('Self-signed: trust the dev certificate once (elevated PowerShell) before installing:')
         ..writeln('  ${dev.trustCommand}')
         ..writeln('Then install with: Add-AppxPackage -Path "${plan.msixPath}"');
+    }
+    if (plan.mode == PackagingMode.store) {
+      out
+        ..writeln()
+        ..writeln('Upload ${p.basename(plan.msixPath)} in Partner Center (Packages); it does not install locally until '
+            'the Store has signed it.');
     }
     return 0;
   } on PackagingException catch (e) {

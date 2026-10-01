@@ -31,6 +31,10 @@ void main() {
         err: err,
       );
 
+  // The version every mode defaults to: the pubspec version through the
+  // Store scheme.
+  final pubspecVersion = msixVersionFromPubspec(File('pubspec.yaml').readAsStringSync());
+
   String valueAfter(List<String> argv, String option) {
     final i = argv.indexOf(option);
     expect(i, isNot(-1), reason: '$option is in $argv');
@@ -47,13 +51,13 @@ void main() {
       expect(valueAfter(argv, '--certificate-path'), p.join(devDir.path, 'lumina_dev.pfx'));
       expect(valueAfter(argv, '--publisher'), 'CN=Lumina Studio Dev, O=Lumina, C=TR');
       expect(valueAfter(argv, '--install-certificate'), 'false');
-      expect(valueAfter(argv, '--version'), '0.0.1.1');
+      expect(valueAfter(argv, '--version'), pubspecVersion);
       expect(valueAfter(argv, '--output-path'), outDir.path);
-      expect(valueAfter(argv, '--output-name'), 'LuminaEngine_0.0.1.1_x64');
+      expect(valueAfter(argv, '--output-name'), 'LuminaEngine_${pubspecVersion}_x64');
       expect(valueAfter(argv, '--identity-name'), 'LuminaEngine.LuminaEngine');
       expect(argv, isNot(contains('--signtool-options')));
       expect(argv, isNot(contains('--build-windows')), reason: 'a build unless --skip-build');
-      expect(plan.msixPath, p.join(outDir.path, 'LuminaEngine_0.0.1.1_x64.msix'));
+      expect(plan.msixPath, p.join(outDir.path, 'LuminaEngine_${pubspecVersion}_x64.msix'));
       expect(devDir.existsSync(), isFalse, reason: 'a dry run creates no certificate');
     });
 
@@ -89,6 +93,43 @@ void main() {
       expect(argv, isNot(contains('--certificate-path')));
       expect(valueAfter(argv, '--publisher'), 'CN=Arbwick Ltd, O=Arbwick Ltd, C=GB');
       expect(valueAfter(argv, '--install-certificate'), 'false');
+    });
+
+    test('store: unsigned, the Partner Center publisher, the pubspec version', () async {
+      final out = StringBuffer(), err = StringBuffer();
+      final code = await runPackageWindows(['--store', '--dry-run', '--skip-build', '--output', outDir.path], context(const {}, out, err));
+      expect(code, 0, reason: '$err');
+      expect(out.toString(), contains('Microsoft Store, unsigned'));
+      final plan = await PackagingPlanner(context(const {}, out, err))
+          .plan(PackageWindowsOptions.parse(['--store', '--dry-run', '--output', outDir.path]));
+      final argv = plan.msixArguments;
+      expect(plan.mode, PackagingMode.store);
+      expect(argv, contains('--store'));
+      expect(valueAfter(argv, '--publisher'), 'CN=76408633-2846-4256-BED6-0DF8748A95C6');
+      expect(valueAfter(argv, '--version'), pubspecVersion);
+      expect(valueAfter(argv, '--identity-name'), 'LuminaEngine.LuminaEngine');
+      expect(argv, isNot(contains('--certificate-path')));
+      expect(argv, isNot(contains('--certificate-password')));
+      expect(argv, isNot(contains('--signtool-options')));
+      expect(plan.secrets, isEmpty);
+      expect(devDir.existsSync(), isFalse, reason: 'a Store build never touches the dev certificate');
+    });
+
+    test('store without msix_config: publisher → exit 64 naming it', () async {
+      final root = Directory(p.join(temp.path, 'pkg'))..createSync();
+      final pubspec = File('pubspec.yaml').readAsStringSync().replaceAll(RegExp(r'^  publisher: .*\r?\n', multiLine: true), '');
+      expect(pubspec, isNot(contains('publisher: CN=')));
+      File(p.join(root.path, 'pubspec.yaml')).writeAsStringSync(pubspec);
+      final out = StringBuffer(), err = StringBuffer();
+      final code = await runPackageWindows(['--store', '--dry-run', '--output', outDir.path], PackagingContext(
+            packageRoot: root.path,
+            environment: const {},
+            devCertificateDir: devDir.path,
+            out: out,
+            err: err,
+          ));
+      expect(code, 64);
+      expect(err.toString(), contains('msix_config: publisher'));
     });
 
     test('publish honours LUMINA_MSIX_TIMESTAMP_URL and --appinstaller', () async {

@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lumina_ui/ui/core/host/package_identity.dart';
 import 'package:lumina_ui/ui/core/host/redirection_trust_guard.dart';
 
 void main() {
@@ -25,6 +26,18 @@ void main() {
     test('explains instead of relaunching again when a relaunched copy is still enforced', () {
       expect(decideRedirectionTrustAction(policyFlags: 0x1, relaunched: true), RedirectionTrustAction.explain);
     });
+
+    test('a packaged (MSIX) process never relaunches itself outside its package', () {
+      expect(decideRedirectionTrustAction(policyFlags: 0x1, relaunched: false, packaged: true), RedirectionTrustAction.explain);
+      expect(decideRedirectionTrustAction(policyFlags: 0x3, relaunched: false, packaged: true), RedirectionTrustAction.explain);
+      expect(decideRedirectionTrustAction(policyFlags: 0, relaunched: false, packaged: true), RedirectionTrustAction.proceed);
+      expect(decideRedirectionTrustAction(policyFlags: null, relaunched: false, packaged: true), RedirectionTrustAction.proceed);
+    });
+  });
+
+  test('currentPackageFamilyName is null in a process without package identity', () {
+    // flutter_tester is an ordinary (unpackaged) executable.
+    expect(currentPackageFamilyName(), isNull);
   });
 
   test('windowsCommandLine quotes arguments so CommandLineToArgvW reads them back unchanged', () {
