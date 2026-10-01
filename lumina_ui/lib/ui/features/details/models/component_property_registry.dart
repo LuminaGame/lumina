@@ -137,16 +137,23 @@ class ComponentPropertyRegistry {
         PropertyDescriptor(id: 'cameraRotationLagSpeed', label: 'Camera Rotation Lag Speed', group: 'Lag & Interpolation', editor: PropertyEditorType.float, defaultValue: 12.0),
       ],
     ),
+    // A camera component's settings under the names and units the runtime
+    // reads (`LuminaCameraSettings`): vertical field of view in degrees, cm,
+    // f-stops, seconds, ISO. A placed Camera actor edits the same
+    // properties in its own Camera section.
     'LuminaCameraComponent': ComponentDescriptor(
       type: 'LuminaCameraComponent',
-      sections: ['Camera Settings', 'Camera Options'],
+      sections: ['Camera Settings', 'Exposure'],
       properties: [
         PropertyDescriptor(id: 'projectionMode', label: 'Projection Mode', group: 'Camera Settings', editor: PropertyEditorType.dropdown, defaultValue: 'Perspective', enumValues: ['Perspective', 'Orthographic']),
-        PropertyDescriptor(id: 'fov', label: 'Field of View (FOV)', group: 'Camera Settings', editor: PropertyEditorType.float, unit: '°', min: 60.0, max: 110.0, defaultValue: 90.0),
-        PropertyDescriptor(id: 'nearClipPlane', label: 'Near Clip Plane', group: 'Camera Settings', editor: PropertyEditorType.float, unit: 'm', defaultValue: 0.1),
-        PropertyDescriptor(id: 'farClipPlane', label: 'Far Clip Plane', group: 'Camera Settings', editor: PropertyEditorType.float, unit: 'm', defaultValue: 1000.0),
-        PropertyDescriptor(id: 'aspectRatio', label: 'Aspect Ratio', group: 'Camera Settings', editor: PropertyEditorType.dropdown, defaultValue: '16:9', enumValues: ['16:9', '21:9']),
-        PropertyDescriptor(id: 'usePawnControlRotation', label: 'Use Pawn Control Rotation', group: 'Camera Options', editor: PropertyEditorType.boolean, defaultValue: false),
+        PropertyDescriptor(id: 'fieldOfView', label: 'Field of View (vertical)', group: 'Camera Settings', editor: PropertyEditorType.float, unit: '°', min: 5.0, max: 170.0, defaultValue: 60.0),
+        PropertyDescriptor(id: 'orthoWidth', label: 'Ortho Width', group: 'Camera Settings', editor: PropertyEditorType.float, unit: 'cm', min: 1.0, max: 100000.0, defaultValue: 1000.0),
+        PropertyDescriptor(id: 'nearClipPlane', label: 'Near Clip Plane', group: 'Camera Settings', editor: PropertyEditorType.float, unit: 'cm', min: 0.01, max: 1000.0, defaultValue: 10.0),
+        PropertyDescriptor(id: 'farClipPlane', label: 'Far Clip Plane', group: 'Camera Settings', editor: PropertyEditorType.float, unit: 'cm', min: 1000.0, max: 1000000.0, defaultValue: 100000.0),
+        PropertyDescriptor(id: 'autoExposure', label: 'Auto Exposure', group: 'Exposure', editor: PropertyEditorType.boolean, defaultValue: true),
+        PropertyDescriptor(id: 'aperture', label: 'Aperture', group: 'Exposure', editor: PropertyEditorType.float, unit: 'f', min: 0.5, max: 64.0, defaultValue: 16.0),
+        PropertyDescriptor(id: 'shutterSpeed', label: 'Shutter Speed', group: 'Exposure', editor: PropertyEditorType.float, unit: 's', min: 0.0001, max: 1.0, defaultValue: 0.008),
+        PropertyDescriptor(id: 'sensitivity', label: 'ISO', group: 'Exposure', editor: PropertyEditorType.float, min: 25.0, max: 6400.0, defaultValue: 100.0),
       ],
     ),
     'LuminaCapsuleComponent': ComponentDescriptor(

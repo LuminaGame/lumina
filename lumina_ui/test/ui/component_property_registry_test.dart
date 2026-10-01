@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lumina/lumina.dart' show LuminaCameraSettings;
 import 'package:lumina_ui/ui/features/details/models/component_property_registry.dart';
 
 void main() {
@@ -28,10 +29,14 @@ void main() {
 
     test('LuminaCameraComponent has exact properties', () {
       final desc = ComponentPropertyRegistry.descriptors['LuminaCameraComponent']!;
-      final fov = desc.properties.firstWhere((p) => p.id == 'fov');
-      expect(fov.min, 60.0);
-      expect(fov.max, 110.0);
-      expect(fov.defaultValue, 90.0);
+      // The runtime's names and units (LuminaCameraSettings).
+      final fov = desc.properties.firstWhere((p) => p.id == 'fieldOfView');
+      expect(fov.min, 5.0);
+      expect(fov.max, 170.0);
+      expect(fov.defaultValue, LuminaCameraSettings.defaultFieldOfView);
+      expect(desc.properties.firstWhere((p) => p.id == 'nearClipPlane').unit, 'cm');
+      expect(desc.properties.map((p) => p.id).toSet(),
+          const LuminaCameraSettings().toProperties().keys.toSet().difference({'autoActivateForPlayer'}));
     });
 
     test('LuminaCapsuleComponent has exact properties', () {

@@ -8,6 +8,11 @@ class LuminaMinimalViewInfo {
   double fovDegrees = 90.0;
   double nearClip = 10.0; // cm
   double farClip = 100000.0; // cm
+
+  /// The camera component this point of view is, when the view target has
+  /// one and no blend is running: the view then uses its projection, clip
+  /// planes and exposure too. Null for a blend or a target without a camera.
+  LuminaCameraComponent? camera;
 }
 
 enum LuminaViewTargetBlendFunction {
@@ -171,6 +176,7 @@ class LuminaPlayerCameraManager {
         cameraCachePov.location.setFrom(newPov.location);
         cameraCachePov.rotation.setFrom(newPov.rotation);
         cameraCachePov.fovDegrees = _overriddenFov ?? newPov.fovDegrees;
+        _copyLens(newPov);
       } else {
         final pendingPov = _evaluatePov(_pendingViewTarget);
         final pct = 1.0 - (_blendTimeToGo / _blendTimeTotal);
@@ -182,11 +188,16 @@ class LuminaPlayerCameraManager {
         final baseFov = _overriddenFov ?? targetPov.fovDegrees;
         final pendingFov = _overriddenFov ?? pendingPov.fovDegrees;
         cameraCachePov.fovDegrees = baseFov * (1.0 - alpha) + pendingFov * alpha;
+        cameraCachePov
+          ..nearClip = targetPov.nearClip * (1.0 - alpha) + pendingPov.nearClip * alpha
+          ..farClip = targetPov.farClip * (1.0 - alpha) + pendingPov.farClip * alpha
+          ..camera = null;
       }
     } else {
       cameraCachePov.location.setFrom(targetPov.location);
       cameraCachePov.rotation.setFrom(targetPov.rotation);
       cameraCachePov.fovDegrees = _overriddenFov ?? targetPov.fovDegrees;
+      _copyLens(targetPov);
     }
     
     // Apply shakes
@@ -198,6 +209,14 @@ class LuminaPlayerCameraManager {
     
     cameraCachePov.location += totalShakeOffset;
     _publishToWorld();
+  }
+
+  /// The clip planes and camera of [pov] onto [cameraCachePov].
+  void _copyLens(LuminaMinimalViewInfo pov) {
+    cameraCachePov
+      ..nearClip = pov.nearClip
+      ..farClip = pov.farClip
+      ..camera = pov.camera;
   }
 
   /// Hands the world the POV to render from while the view is not simply
@@ -238,6 +257,9 @@ class LuminaPlayerCameraManager {
         pov.location = cam.worldLocation;
         pov.rotation = cam.worldRotation;
         pov.fovDegrees = cam.fieldOfViewInDegrees;
+        pov.nearClip = cam.nearClipPlane;
+        pov.farClip = cam.farClipPlane;
+        pov.camera = cam;
       } else if (actor is LuminaPawn) {
         final eyes = actor.getActorEyesViewPoint();
         pov.location = eyes.location;

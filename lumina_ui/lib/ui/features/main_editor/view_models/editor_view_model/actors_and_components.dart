@@ -443,6 +443,20 @@ mixin _EditorActorsAndComponents on _EditorViewModelState {
     return component;
   }
 
+  /// Gives a Camera from an older level (no camera component) its
+  /// `LuminaCameraComponent` with the runtime defaults, so the Details panel
+  /// can edit it. Not an undoable edit.
+  EditorComponentNode? ensureCameraComponent(String actorId) {
+    final actor = _actors.where((a) => a.id == actorId).firstOrNull;
+    if (actor == null || !CameraActorProperties.isCameraActor(actor)) return null;
+    final existing = CameraActorProperties.componentOf(actor);
+    if (existing != null) return existing;
+    final component = CameraActorProperties.ensureComponent(actor);
+    _markDirty();
+    notifyListeners();
+    return component;
+  }
+
   /// Gives an environment actor its `LuminaSkyComponent`, so the Details panel
   /// can edit it and the code generator can emit it.
   EditorComponentNode? ensureSkyComponent(String actorId) {

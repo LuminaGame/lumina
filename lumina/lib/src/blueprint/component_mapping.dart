@@ -365,10 +365,10 @@ abstract final class LuminaBlueprintComponents {
         arm.probeSize = _num(p, 'probeSize') ?? arm.probeSize;
         return arm;
       case 'LuminaCameraComponent':
-        final camera = LuminaCameraComponent(fieldOfViewInDegrees: _num(p, 'fieldOfView') ?? 60.0);
+        // The level Camera's property names and units.
+        final camera = LuminaCameraComponent();
+        LuminaCameraSettings.fromProperties(p).applyTo(camera);
         _transform(camera, p);
-        camera.nearClipPlane = _num(p, 'nearClipPlane') ?? camera.nearClipPlane;
-        camera.farClipPlane = _num(p, 'farClipPlane') ?? camera.farClipPlane;
         // A Blueprint's camera auto-activates by default.
         camera.isActive = _bool(p, 'autoActivate') ?? true;
         return camera;

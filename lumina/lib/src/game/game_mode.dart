@@ -5,6 +5,7 @@ import '../controller/player_state.dart';
 import '../world/world.dart';
 import '../math/transform_snapshot.dart';
 import 'game_state.dart';
+import 'camera_actor.dart';
 import 'player_start.dart';
 import 'dart:developer' as developer;
 
@@ -77,10 +78,27 @@ class LuminaGameMode {
 
     gameState.addPlayerState(controller.playerState);
     handleStartingNewPlayer(controller);
+    // A placed camera set to Auto Activate for Player is what the player
+    // looks through from the start.
+    final camera = autoActivatedCamera();
+    if (camera != null) controller.cameraManager.setViewTarget(camera);
     // PostLogin: the level scripts hear the player has arrived.
     _world?.notifyPostLogin(controller);
 
     return controller;
+  }
+
+  /// The first camera actor in the world with
+  /// [LuminaCameraActor.autoActivateForPlayer] set, or null.
+  LuminaCameraActor? autoActivatedCamera() {
+    final world = _world;
+    if (world == null) return null;
+    for (final level in [world.persistentLevel, ...world.streamingLevels]) {
+      for (final actor in level.actors) {
+        if (actor is LuminaCameraActor && actor.autoActivateForPlayer && !actor.isDestroyed) return actor;
+      }
+    }
+    return null;
   }
 
   /// Unpossesses and destroys the pawn, and removes player state from game state.

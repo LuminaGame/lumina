@@ -68,6 +68,7 @@ Defines the rules of a running world.
 | `hasMatchStarted` | `bool get hasMatchStarted` | Whether the match has started. |
 | `hasMatchEnded` | `bool get hasMatchEnded` | Whether the match has ended. |
 | `initGame` | `void initGame(LuminaWorld world)` | Called once before any actor onBeginPlay. Creates the game state. |
+| `autoActivatedCamera` | `LuminaCameraActor? autoActivatedCamera()` | Dünyada `autoActivateForPlayer` açık ilk kamera aktörü ya da null; `login` onu yeni oyuncunun görüş hedefi yapar. |
 | `logout` | `void logout(LuminaPlayerController controller)` | Unpossesses and destroys the pawn, and removes player state from game state. |
 | `handleStartingNewPlayer` | `void handleStartingNewPlayer(LuminaPlayerController controller)` | Called after login to start a new player. Default implementation calls restartPlayer. |
 | `canRestartPlayer` | `bool canRestartPlayer(LuminaPlayerController controller)` | Determines if the player can be restarted. |
@@ -193,6 +194,8 @@ Editor-facing play state of a [LuminaGame] (Play-In-Editor toolbar state).  Tran
 
 `LuminaMinimalViewInfo`: Kullanıcı arayüzünü (UI) oluşturan ve kullanıcı etkileşimlerini dinleyen shadcn_flutter bileşenidir.
 
+`camera` alanı, hedefin bir kamera bileşeni varsa ve harmanlama yoksa görüş hedefinin kamerasıdır (aksi halde null); `nearClip` / `farClip` o kameranınkidir. Dünya ve Play o zaman projeksiyonunu, kırpma düzlemlerini ve pozlamasını da kullanır.
+
 ### `enum LuminaViewTargetBlendFunction`
 
 `LuminaViewTargetBlendFunction`: Sistemde kullanılan seçenekleri ve durumları listeleyen numaralandırma türüdür.
@@ -233,6 +236,21 @@ Editor-facing play state of a [LuminaGame] (Play-In-Editor toolbar state).  Tran
 | `resetFov` | `void resetFov()` | Değerleri veya durumları varsayılan ayarlarına sıfırlar. |
 | `startCameraShake` | `void startCameraShake(LuminaCameraShake shake)` | `startCameraShake` işlemini gerçekleştirir. |
 | `updateCamera` | `void updateCamera(double deltaTime)` | Mevcut verileri veya durumu günceller. |
+
+## `lib/src/game/camera_actor.dart`
+
+### `class LuminaCameraActor`
+
+Bir levele yerleştirilmiş kamera: levelin `LuminaCameraSettings`'ini taşıyan bir `LuminaCameraComponent` (kökü; kendi −Z'sine, yani yazılmış +Y'ye bakar). Kamerası etkin olmaz, yani görüntüyü kendiliğinden sahiplenilen pawn'dan almaz; bir görüş hedefi (view target) olarak içinden bakılır — bir Blueprint'ten `Set View Target with Blend` ya da her oturum açan oyuncunun görüş hedefi yapan `autoActivateForPlayer` (`LuminaGameMode.login`). Dünya onu kendi projeksiyonu, kırpma düzlemleri ve pozlamasıyla çizer. Play ve üretilen level her yerleştirilmiş `Camera` aktörünü bununla kurar.
+
+**Fonksiyonlar, Metotlar ve Erişimciler:**
+
+| Metot / Getter | İmzası | Ne İşe Yarar? |
+| :--- | :--- | :--- |
+| `LuminaCameraActor` | `LuminaCameraActor({Key? key, Vector3? location, Quaternion? rotation, Vector3? scale, LuminaCameraSettings settings})` | Ayarlar uygulanmış, verilen dönüşümde bir kamera. |
+| `settings` | `final LuminaCameraSettings settings` | Kameranın kurulduğu ayarlar. |
+| `cameraComponent` | `final LuminaCameraComponent cameraComponent` | İçinden bakılan kamera; aktörün kökü. |
+| `autoActivateForPlayer` | `bool get autoActivateForPlayer` | Bir oyuncunun oturum açtığı andan itibaren bu kameradan bakıp bakmadığı. |
 
 ## `lib/src/game/player_start.dart`
 

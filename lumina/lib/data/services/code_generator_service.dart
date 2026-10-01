@@ -7,6 +7,7 @@ import '../../src/game/primitive_actor.dart' show luminaPrimitiveSize;
 import '../../src/game/template_character.dart';
 import '../../src/game/template_content.dart';
 import '../../src/collision/collision_hull.dart';
+import '../../src/components/camera/camera_settings.dart' show LuminaCameraSettings;
 import '../../src/collision/collision_primitive.dart';
 import '../../src/components/environment/exponential_height_fog_component.dart' show LuminaHeightFogSettings;
 import '../../src/components/light/auto_exposure.dart' show luminaLightColorFromHex;

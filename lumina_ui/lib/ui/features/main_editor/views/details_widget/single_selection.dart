@@ -183,6 +183,8 @@ mixin _DetailsSingleSelection on _DetailsWidgetStateBase {
   Widget _buildComponentBlock(EditorActorNode actor, EditorComponentNode comp) {
     // A placed Blueprint's collision override shows in its class's section.
     if (BlueprintCollisionOverrides.isOverride(comp)) return const SizedBox.shrink();
+    // A placed camera's own component is the Camera section above.
+    if (ActorCameraSection.appliesTo(actor) && identical(comp, CameraActorProperties.componentOf(actor))) return const SizedBox.shrink();
     final desc = ComponentPropertyRegistry.descriptors[comp.type];
     // An actor's own collision component gets the
     // Collision section in place of the old preset / matrix rows.

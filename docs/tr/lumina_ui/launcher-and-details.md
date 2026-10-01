@@ -356,6 +356,25 @@ The Details panel's Static Mesh (or Skeletal Mesh) section of a placed mesh acto
 | `appliesTo` | `static bool appliesTo(EditorActorNode actor)` | A placed mesh: it renders a mesh asset of the project (not a Blueprint, primitive or landscape, which draw something else). |
 
 
+## `lib/ui/features/details/widgets/actor_camera_section.dart`
+
+### `class ActorCameraSection`
+
+Yerleştirilmiş bir `Camera` aktörünün Details panelindeki Camera bölümü: `LuminaCameraComponent`'inin ayarları, `LuminaCameraSettings`'in adları ve birimleriyle — Projection, Field of View (dikey, °; ortografikte cm cinsinden Ortho Width), Near / Far Clip Plane (cm), Auto Activate for Player ve Exposure: Auto Exposure, Aperture (f-stop), Shutter Speed (saniye olarak saklanır, 1/x paydası olarak düzenlenir) ve ISO. Her onay bir geri alma adımıdır; Sequencer kamera kilidi, Play ve üretilen oyun bu değerlerle bakar. Eski bir levelden gelen (bileşensiz) bir Camera seçildiğinde varsayılanlarla bir bileşen alır.
+
+**Yapıcı Metotlar (Constructors):**
+
+- `const ActorCameraSection({super.key, required this.viewModel, required this.actor})`
+
+**Üyeler:**
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `viewModel` | `final EditorViewModel viewModel` |  |
+| `actor` | `final EditorActorNode actor` |  |
+| `appliesTo` | `static bool appliesTo(EditorActorNode actor)` | Kamera bileşeni olan yerleştirilmiş bir kamera. |
+
+
 ## `lib/ui/features/details/widgets/actor_shape_section.dart`
 
 ### `class ActorShapeSection`

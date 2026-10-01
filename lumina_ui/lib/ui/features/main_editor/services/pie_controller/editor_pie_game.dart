@@ -88,6 +88,16 @@ class EditorPieGame extends LuminaGame {
     return cameras.where((c) => c.isActive).firstOrNull ?? cameras.firstOrNull;
   }
 
+  /// The camera the player's view goes through: a placed camera actor the
+  /// player's camera manager targets (Auto Activate for Player, Set View
+  /// Target), else [playerCamera].
+  LuminaCameraComponent? get viewCamera => viewTargetPov?.camera ?? playerCamera;
+
+  /// The player camera manager's point of view while the view is not simply
+  /// the pawn's own camera (another view target, a blend, an FOV override or
+  /// a shake); null otherwise.
+  LuminaMinimalViewInfo? get viewTargetPov => gameInstance.world?.viewTargetPov;
+
   /// What the status bar names as the running pawn: `BP_ThirdPersonCharacter
   /// (VM)` for a Blueprint pawn.
   String? get pawnClassLabel {
@@ -366,6 +376,16 @@ class EditorPieGame extends LuminaGame {
           scale: scale,
           materialOverrideAsset: _assignedMaterial(actor),
         );
+      case 'Camera':
+        // A placed camera, looked through as a view target with its
+        // Details settings.
+        return LuminaCameraActor(
+          key: ValueKey(actor.id),
+          location: location,
+          rotation: rotation,
+          scale: scale,
+          settings: CameraActorProperties.read(actor),
+        );
       case 'Pawn':
         return LuminaPawn(
           key: ValueKey(actor.id),
@@ -526,7 +546,7 @@ class EditorPieGame extends LuminaGame {
           ),
         );
       default:
-        // Environment, Camera, Trigger and any plugin-defined type: a plain
+        // Environment, Trigger and any plugin-defined type: a plain
         // actor at the authored transform.
         return LuminaActor(
           key: ValueKey(actor.id),

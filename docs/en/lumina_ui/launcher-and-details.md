@@ -356,6 +356,25 @@ The Details panel's Static Mesh (or Skeletal Mesh) section of a placed mesh acto
 | `appliesTo` | `static bool appliesTo(EditorActorNode actor)` | A placed mesh: it renders a mesh asset of the project (not a Blueprint, primitive or landscape, which draw something else). |
 
 
+## `lib/ui/features/details/widgets/actor_camera_section.dart`
+
+### `class ActorCameraSection`
+
+The Details panel's Camera section of a placed `Camera` actor: the settings of its `LuminaCameraComponent`, under `LuminaCameraSettings`' names and units — Projection, Field of View (vertical, °; Ortho Width in cm when orthographic), Near / Far Clip Plane (cm), Auto Activate for Player, and Exposure: Auto Exposure, Aperture (f-stops), Shutter Speed (stored in seconds, edited as its 1/x denominator) and ISO. Each commit is one undo step; the Sequencer camera lock, Play and the generated game look through these values. A Camera from an older level (no component) gets one with the defaults when selected.
+
+**Constructors:**
+
+- `const ActorCameraSection({super.key, required this.viewModel, required this.actor})`
+
+**Members:**
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `viewModel` | `final EditorViewModel viewModel` |  |
+| `actor` | `final EditorActorNode actor` |  |
+| `appliesTo` | `static bool appliesTo(EditorActorNode actor)` | A placed camera with its camera component. |
+
+
 ## `lib/ui/features/details/widgets/actor_shape_section.dart`
 
 ### `class ActorShapeSection`

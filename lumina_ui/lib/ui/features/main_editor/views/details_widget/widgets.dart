@@ -24,6 +24,31 @@ class _LightComponentSeederState extends State<_LightComponentSeeder> {
   Widget build(BuildContext context) => const SizedBox.shrink();
 }
 
+/// Adds the camera component to a Camera from an older level after the
+/// frame, so the Camera section appears without mutating the level during
+/// build.
+class _CameraComponentSeeder extends StatefulWidget {
+  const _CameraComponentSeeder({required this.viewModel, required this.actorId});
+  final EditorViewModel viewModel;
+  final String actorId;
+
+  @override
+  State<_CameraComponentSeeder> createState() => _CameraComponentSeederState();
+}
+
+class _CameraComponentSeederState extends State<_CameraComponentSeeder> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) widget.viewModel.ensureCameraComponent(widget.actorId);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => const SizedBox.shrink();
+}
+
 /// Adds the LuminaSkyComponent to a legacy environment actor after the frame, so the
 /// section appears without mutating the level during build.
 class _SkyComponentSeeder extends StatefulWidget {

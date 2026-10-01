@@ -16,6 +16,7 @@ import 'package:vector_math/vector_math_64.dart' as vm64;
 import '../../sub_editors/services/umg_widget_codegen.dart';
 import '../../sub_editors/services/widget_class_catalog.dart';
 import 'blueprint_play_support.dart';
+import 'camera_actor_properties.dart';
 import 'environment_actor_properties.dart';
 import 'light_actor_properties.dart';
 import 'pie_mouse_capture.dart';
@@ -583,6 +584,13 @@ class PieController {
 
   /// The camera Play looks through.
   LuminaCameraComponent? get playerCamera => _game?.playerCamera;
+
+  /// The camera the player's view goes through ([EditorPieGame.viewCamera]).
+  LuminaCameraComponent? get viewCamera => _game?.viewCamera;
+
+  /// The player camera manager's point of view while it is not the pawn's own
+  /// camera ([EditorPieGame.viewTargetPov]).
+  LuminaMinimalViewInfo? get viewTargetPov => _game?.viewTargetPov;
 
   /// `BP_ThirdPersonCharacter (VM)` while a Blueprint pawn plays.
   String? get pawnClassLabel => _game?.pawnClassLabel;

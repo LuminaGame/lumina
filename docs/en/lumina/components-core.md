@@ -295,6 +295,22 @@ Component wrapping camera projection, view matrix, shake, activation, and raycas
 | `syncWithFilamentCamera` | `void syncWithFilamentCamera([dynamic camera])` | Synchronizes projection, lookAt, and exposure parameters with the native Filament camera. |
 | `onUnregister` | `void onUnregister()` | Callback invoked when the corresponding event is triggered. |
 
+## `lib/src/components/camera/camera_settings.dart`
+
+### `class LuminaCameraSettings`
+
+A camera's authored settings as one property map, read the one way every consumer agrees on: the level editor's Camera section (a placed `Camera` actor's `LuminaCameraComponent`), Play, the generated game, MCP and the Blueprint camera component all use these names and units: `fieldOfView` (degrees, vertical, 5–170, default 60), `projectionMode` (`Perspective` / `Orthographic`), `orthoWidth` (cm, default 1000), `nearClipPlane` / `farClipPlane` (cm, 10 / 100000), `autoExposure` (default true), `aperture` (f-stops, 16), `shutterSpeed` (seconds, 1/125), `sensitivity` (ISO, 100), `autoActivateForPlayer` (default false). The aspect ratio is the viewport's; aperture, shutter speed and ISO only set the exposure (depth of field comes from a Post Process Volume).
+
+**Functions, Methods & Accessors:**
+
+| Method / Getter | Signature | Purpose & Description |
+| :--- | :--- | :--- |
+| `componentType` | `static const String componentType` | `LuminaCameraComponent`: the component a placed camera's settings live on. |
+| `projectionModes` | `static const List<String> projectionModes` | The values `projectionMode` takes. |
+| `fromProperties` | `factory LuminaCameraSettings.fromProperties(Map<String, dynamic>? properties)` | Reads a property map; a missing, mistyped or out-of-range value keeps the default (field of view clamped to 5–170°, the far plane kept beyond the near one). |
+| `toProperties` | `Map<String, dynamic> toProperties()` | The property map `fromProperties` reads back. |
+| `applyTo` | `void applyTo(LuminaCameraComponent camera)` | Writes the settings onto a camera component (not its activation). |
+
 ## `lib/src/components/camera/camera_math.dart`
 
 **Top-level Functions:**

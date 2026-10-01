@@ -122,6 +122,7 @@ export 'src/game/game_mode.dart';
 export 'src/game/player_camera_manager.dart';
 export 'src/game/hud_overlay.dart';
 export 'src/game/game_state.dart';
+export 'src/game/camera_actor.dart';
 export 'src/game/player_start.dart';
 export 'src/game/primitive_actor.dart';
 export 'src/game/static_mesh_actor.dart';

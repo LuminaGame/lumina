@@ -408,6 +408,14 @@ mixin _LevelCodegen on _DartCodeGeneratorServiceState {
             "shape: luminaPrimitiveShapeFrom('${_escape(shape)}'), "
             "size: ${_vector3(primSize.storage)}, "
             "color: ${_vector3(primColor)}${primMaterial.isEmpty ? '' : ', $primMaterial'}),";
+      case 'Camera':
+        // A placed camera: its camera component's settings (Details ▸
+        // Camera), normalised, through the runtime's one parser.
+        final cameraComp = _componentOfType(a, LuminaCameraSettings.componentType);
+        final cameraSettings = LuminaCameraSettings.fromProperties(
+            cameraComp?['properties'] is Map ? Map<String, dynamic>.from(cameraComp!['properties'] as Map) : null);
+        return 'LuminaCameraActor($key, $transform, scale: $scaleCode, '
+            'settings: LuminaCameraSettings.fromProperties(${DartCodeGeneratorService._dartLiteral(cameraSettings.toProperties())})),';
       case 'TriggerVolume':
         // A trigger a Level Blueprint binds OnActorBeginOverlap
         // on; a 100 cm cube at scale 1 (runtime half extents, Y up).

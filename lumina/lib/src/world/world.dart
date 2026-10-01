@@ -753,12 +753,24 @@ class LuminaWorld extends LuminaObject {
       final eye = override.location;
       final forward = override.rotation.rotateVector(Vector3(0, 0, -1));
       final up = override.rotation.rotateVector(Vector3(0, 1, 0));
-      target.setProjection(
-        fovDegrees: override.fovDegrees,
-        aspect: width / height,
-        near: camera?.nearClipPlane ?? override.nearClip,
-        far: camera?.farClipPlane ?? override.farClip,
-      );
+      // A camera view target (a placed camera actor) is seen through its
+      // own lens: projection, clip planes and exposure; the pose and field of
+      // view stay the manager's (shakes, FOV overrides).
+      final lens = override.camera;
+      final aspect = width / height;
+      final near = lens?.nearClipPlane ?? camera?.nearClipPlane ?? override.nearClip;
+      final far = lens?.farClipPlane ?? camera?.farClipPlane ?? override.farClip;
+      if (lens != null && lens.projectionMode == CameraProjectionMode.orthographic) {
+        final halfWidth = lens.orthographicWidth * 0.5;
+        final halfHeight = halfWidth / aspect;
+        target.setProjectionOrtho(left: -halfWidth, right: halfWidth, bottom: -halfHeight, top: halfHeight, near: near, far: far);
+      } else {
+        target.setProjection(fovDegrees: override.fovDegrees, aspect: aspect, near: near, far: far);
+      }
+      if (lens != null) {
+        LuminaAutoExposure.applyTo(lens, LuminaAutoExposure.ev100ForWorld(this));
+        target.setExposure(aperture: lens.aperture, shutterSpeed: lens.shutterSpeed, sensitivity: lens.sensitivity);
+      }
       target.lookAt(
         eyeX: eye.x, eyeY: eye.y, eyeZ: eye.z,
         centerX: eye.x + forward.x, centerY: eye.y + forward.y, centerZ: eye.z + forward.z,

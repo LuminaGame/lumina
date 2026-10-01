@@ -145,11 +145,13 @@ mixin _ViewportPieSession on _ViewportWidgetStateBase {
     final size = Size(_viewportWidth, _viewportHeight);
     if (_pieCameraDrivesView) {
       final cam = widget.viewModel.pieController.playerCamera!;
+      // The manager's view (a camera view target, a blend) when it has one.
+      final pov = widget.viewModel.pieController.viewTargetPov;
       return PieCameraProjection(
-        eye: cam.worldLocation,
-        forward: cam.forwardVector,
-        up: cam.upVector,
-        fovDegrees: cam.fieldOfViewInDegrees,
+        eye: pov?.location ?? cam.worldLocation,
+        forward: pov?.rotation.rotateVector(Vector3(0, 0, -1)) ?? cam.forwardVector,
+        up: pov?.rotation.rotateVector(Vector3(0, 1, 0)) ?? cam.upVector,
+        fovDegrees: pov?.fovDegrees ?? cam.fieldOfViewInDegrees,
         size: size,
       );
     }
@@ -168,30 +170,52 @@ mixin _ViewportPieSession on _ViewportWidgetStateBase {
     );
   }
 
-  /// Points the Filament camera through the possessed pawn's camera component.
+  /// Points the Filament camera through the player's view: the possessed
+  /// pawn's camera component, or the player camera manager's point of view
+  /// while it is something else — a placed camera as view target (Auto
+  /// Activate for Player, Set View Target), a blend, an FOV override or a
+  /// shake. A camera view target also brings its projection, clip planes and
+  /// exposure.
   ///
   /// The runtime is Y-up and its transforms are already in Filament's space, so
   /// unlike the editor path this applies them with no axis conversion.
   void _applyPieCamera() {
     if (!_pieCameraDrivesView) return;
     final camera = _nativeCamera;
+    final pie = widget.viewModel.pieController;
     // The template character's camera, or a Blueprint pawn's.
-    final cameraComponent = widget.viewModel.pieController.playerCamera;
+    final cameraComponent = pie.playerCamera;
     if (camera == null || cameraComponent == null) return;
 
-    final eye = cameraComponent.worldLocation;
-    final forward = cameraComponent.forwardVector;
-    final up = cameraComponent.upVector;
+    final pov = pie.viewTargetPov;
+    final lens = pov?.camera;
+    final eye = pov?.location ?? cameraComponent.worldLocation;
+    final forward = pov?.rotation.rotateVector(Vector3(0, 0, -1)) ?? cameraComponent.forwardVector;
+    final up = pov?.rotation.rotateVector(Vector3(0, 1, 0)) ?? cameraComponent.upVector;
+    final fov = pov?.fovDegrees ?? cameraComponent.fieldOfViewInDegrees;
 
     final aspect = (_viewportWidth > 0 && _viewportHeight > 0)
         ? _viewportWidth / _viewportHeight
         : 16.0 / 9.0;
-    camera.setProjection(
-      fovDegrees: cameraComponent.fieldOfViewInDegrees,
-      aspect: aspect,
-      near: 0.1,
-      far: 5000.0,
-    );
+    if (lens != null && lens.projectionMode == CameraProjectionMode.orthographic) {
+      final halfWidth = lens.orthographicWidth * 0.5;
+      final halfHeight = halfWidth / aspect;
+      camera.setProjectionOrtho(
+        left: -halfWidth,
+        right: halfWidth,
+        bottom: -halfHeight,
+        top: halfHeight,
+        near: lens.nearClipPlane,
+        far: lens.farClipPlane,
+      );
+    } else {
+      camera.setProjection(
+        fovDegrees: fov,
+        aspect: aspect,
+        near: lens?.nearClipPlane ?? 0.1,
+        far: lens?.farClipPlane ?? 5000.0,
+      );
+    }
     camera.lookAt(
       eyeX: eye.x,
       eyeY: eye.y,
@@ -203,8 +227,14 @@ mixin _ViewportPieSession on _ViewportWidgetStateBase {
       upY: up.y,
       upZ: up.z,
     );
-    // The playing world's lights may change every frame.
-    _syncAutoExposure();
+    if (lens != null && !lens.autoExposure) {
+      // The placed camera's own exposure, set by hand in its Details.
+      camera.setExposure(aperture: lens.aperture, shutterSpeed: lens.shutterSpeed, sensitivity: lens.sensitivity);
+      _appliedEv100 = null;
+    } else {
+      // The playing world's lights may change every frame.
+      _syncAutoExposure();
+    }
     // The editor pose has to be pushed again once the game lets go of the view.
     _pushedCameraPose = null;
   }
@@ -213,7 +243,8 @@ mixin _ViewportPieSession on _ViewportWidgetStateBase {
   /// the editor camera owns the view.
   List<double>? get pieCameraEyeForTest {
     if (!_pieCameraDrivesView) return null;
-    final eye = widget.viewModel.pieController.playerCamera!.worldLocation;
+    final pov = widget.viewModel.pieController.viewTargetPov;
+    final eye = pov?.location ?? widget.viewModel.pieController.playerCamera!.worldLocation;
     return [eye.x, eye.y, eye.z];
   }
 }

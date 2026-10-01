@@ -34,6 +34,7 @@ import '../models/editor_actor_catalog.dart';
 import '../services/viewport_picker.dart';
 import '../services/editor_preferences.dart';
 import '../services/project_trash.dart';
+import '../services/camera_actor_properties.dart';
 import '../services/light_actor_properties.dart';
 import '../services/editor_quality_settings.dart';
 import '../services/editor_level_scene.dart';

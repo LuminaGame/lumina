@@ -13,6 +13,7 @@ import '../../../core/property_editors/asset_ref_field.dart';
 import '../../details/widgets/actor_mesh_section.dart';
 import '../../details/widgets/actor_material_section.dart';
 import '../../details/widgets/actor_shape_section.dart';
+import '../../details/widgets/actor_camera_section.dart';
 import '../../../core/property_editors/collision_section_editor.dart';
 import '../../../core/property_editors/physics_section_editor.dart';
 import '../../details/services/blueprint_collision_overrides.dart';
@@ -21,6 +22,7 @@ import '../../sub_editors/models/blueprint_component_registry.dart';
 import '../../../core/theme/editor_theme.dart';
 import '../../../core/editor_level_access.dart';
 import '../../../core/services/editor_scene_environment.dart';
+import '../services/camera_actor_properties.dart';
 import '../services/light_actor_properties.dart';
 import '../view_models/editor_view_model.dart';
 import 'play_blocked_dialog.dart' show openBlueprintAtNode;
@@ -141,6 +143,8 @@ class _DetailsWidgetState extends _DetailsWidgetStateBase
                             if (ActorShapeSection.appliesTo(actor)) ActorShapeSection(viewModel: widget.viewModel, actor: actor),
                             // The material drawn on it.
                             if (ActorMaterialSection.appliesTo(actor)) ActorMaterialSection(viewModel: widget.viewModel, actor: actor),
+                            // A placed camera's lens and exposure.
+                            if (ActorCameraSection.appliesTo(actor)) ActorCameraSection(viewModel: widget.viewModel, actor: actor),
                             
                             // A placed Blueprint's collision components:
                             // per-instance Collision.
@@ -151,6 +155,10 @@ class _DetailsWidgetState extends _DetailsWidgetStateBase
                             // component yet: give it one, then show it.
                             if (LightActorProperties.isLightActor(actor) && LightActorProperties.componentOf(actor) == null)
                               _LightComponentSeeder(viewModel: widget.viewModel, actorId: actor.id),
+                            // A Camera from an older level has no camera
+                            // component yet: give it one, then show it.
+                            if (CameraActorProperties.isCameraActor(actor) && CameraActorProperties.componentOf(actor) == null)
+                              _CameraComponentSeeder(viewModel: widget.viewModel, actorId: actor.id),
                             if (EditorSceneEnvironment.isEnvironmentActor(actor.type) && EditorSceneEnvironment.componentOf(actor) == null)
                               _SkyComponentSeeder(viewModel: widget.viewModel, actorId: actor.id),
                             // Plugin sections for this actor type (a plugin's

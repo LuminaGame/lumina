@@ -68,6 +68,7 @@ Defines the rules of a running world.
 | `hasMatchStarted` | `bool get hasMatchStarted` | Whether the match has started. |
 | `hasMatchEnded` | `bool get hasMatchEnded` | Whether the match has ended. |
 | `initGame` | `void initGame(LuminaWorld world)` | Called once before any actor onBeginPlay. Creates the game state. |
+| `autoActivatedCamera` | `LuminaCameraActor? autoActivatedCamera()` | The first camera actor in the world with `autoActivateForPlayer` set, or null; `login` makes it the new player's view target. |
 | `logout` | `void logout(LuminaPlayerController controller)` | Unpossesses and destroys the pawn, and removes player state from game state. |
 | `handleStartingNewPlayer` | `void handleStartingNewPlayer(LuminaPlayerController controller)` | Called after login to start a new player. Default implementation calls restartPlayer. |
 | `canRestartPlayer` | `bool canRestartPlayer(LuminaPlayerController controller)` | Determines if the player can be restarted. |
@@ -193,6 +194,8 @@ Editor-facing play state of a [LuminaGame] (Play-In-Editor toolbar state).  Tran
 
 `LuminaMinimalViewInfo`: shadcn_flutter UI component rendering interface elements and listening to interactions.
 
+Its `camera` is the view target's camera component when the target has one and no blend runs (null otherwise); `nearClip` / `farClip` are that camera's. The world and Play then also use its projection, clip planes and exposure.
+
 ### `enum LuminaViewTargetBlendFunction`
 
 `LuminaViewTargetBlendFunction`: Enumeration listing system options and state constants.
@@ -233,6 +236,21 @@ Editor-facing play state of a [LuminaGame] (Play-In-Editor toolbar state).  Tran
 | `resetFov` | `void resetFov()` | Resets values or state back to defaults. |
 | `startCameraShake` | `void startCameraShake(LuminaCameraShake shake)` | Executes `startCameraShake` operation. |
 | `updateCamera` | `void updateCamera(double deltaTime)` | Updates the current state or data values. |
+
+## `lib/src/game/camera_actor.dart`
+
+### `class LuminaCameraActor`
+
+A camera placed in a level: a `LuminaCameraComponent` (its root, looking down its −Z, the authored +Y) carrying the level's `LuminaCameraSettings`. Its camera stays inactive, so it never takes the view from the possessed pawn by itself; it is looked through as a view target — `Set View Target with Blend` from a Blueprint, or `autoActivateForPlayer`, which makes it the view target of each player logging in (`LuminaGameMode.login`). The world then renders it with its own projection, clip planes and exposure. Play and the generated level build every placed `Camera` actor as one.
+
+**Functions, Methods & Accessors:**
+
+| Method / Getter | Signature | Purpose & Description |
+| :--- | :--- | :--- |
+| `LuminaCameraActor` | `LuminaCameraActor({Key? key, Vector3? location, Quaternion? rotation, Vector3? scale, LuminaCameraSettings settings})` | A camera at the transform with the settings applied. |
+| `settings` | `final LuminaCameraSettings settings` | The settings the camera was built with. |
+| `cameraComponent` | `final LuminaCameraComponent cameraComponent` | The camera looked through; the actor's root. |
+| `autoActivateForPlayer` | `bool get autoActivateForPlayer` | Whether a player looks through this camera from login on. |
 
 ## `lib/src/game/player_start.dart`
 

@@ -5,6 +5,7 @@ import '../base/scene_component.dart';
 import 'camera_math.dart';
 
 export 'camera_math.dart';
+export 'camera_settings.dart';
 
 enum CameraProjectionMode { perspective, orthographic }
 

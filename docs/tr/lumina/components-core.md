@@ -295,6 +295,22 @@ Component wrapping camera projection, view matrix, shake, activation, and raycas
 | `syncWithFilamentCamera` | `void syncWithFilamentCamera([dynamic camera])` | Synchronizes projection, lookAt, and exposure parameters with the native Filament camera. |
 | `onUnregister` | `void onUnregister()` | Olay tetiklendiğinde çalışan geri çağırım metodudur. |
 
+## `lib/src/components/camera/camera_settings.dart`
+
+### `class LuminaCameraSettings`
+
+Bir kameranın yazılmış ayarları tek bir özellik haritası olarak; her tüketici aynı şekilde okur: level editörünün Camera bölümü (yerleştirilmiş bir `Camera` aktörünün `LuminaCameraComponent`'i), Play, üretilen oyun, MCP ve Blueprint kamera bileşeni hep bu adları ve birimleri kullanır: `fieldOfView` (derece, dikey, 5–170, varsayılan 60), `projectionMode` (`Perspective` / `Orthographic`), `orthoWidth` (cm, varsayılan 1000), `nearClipPlane` / `farClipPlane` (cm, 10 / 100000), `autoExposure` (varsayılan true), `aperture` (f-stop, 16), `shutterSpeed` (saniye, 1/125), `sensitivity` (ISO, 100), `autoActivateForPlayer` (varsayılan false). En-boy oranı viewport'unkidir; diyafram, enstantane ve ISO yalnızca pozlamayı belirler (alan derinliği bir Post Process Volume'dan gelir).
+
+**Fonksiyonlar, Metotlar ve Erişimciler:**
+
+| Metot / Getter | İmzası | Ne İşe Yarar? |
+| :--- | :--- | :--- |
+| `componentType` | `static const String componentType` | `LuminaCameraComponent`: yerleştirilmiş bir kameranın ayarlarının durduğu bileşen. |
+| `projectionModes` | `static const List<String> projectionModes` | `projectionMode`'un alabileceği değerler. |
+| `fromProperties` | `factory LuminaCameraSettings.fromProperties(Map<String, dynamic>? properties)` | Bir özellik haritasını okur; eksik, yanlış tipte ya da aralık dışı bir değer varsayılanı korur (görüş alanı 5–170°'ye sıkıştırılır, uzak düzlem yakın düzlemin ötesinde tutulur). |
+| `toProperties` | `Map<String, dynamic> toProperties()` | `fromProperties`'in geri okuduğu özellik haritası. |
+| `applyTo` | `void applyTo(LuminaCameraComponent camera)` | Ayarları bir kamera bileşenine yazar (etkinleştirmesine dokunmaz). |
+
 ## `lib/src/components/camera/camera_math.dart`
 
 **Üst Düzey Fonksiyonlar (Top-level Functions):**

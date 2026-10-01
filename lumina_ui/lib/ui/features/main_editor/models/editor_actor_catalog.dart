@@ -2,6 +2,7 @@ import 'package:lumina/lumina.dart' show LuminaProceduralSkyDescription;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import '../../details/models/editor_component_node.dart';
+import '../services/camera_actor_properties.dart';
 import '../services/environment_actor_properties.dart';
 import '../services/light_actor_properties.dart';
 import '../../../core/theme/editor_theme.dart';
@@ -174,13 +175,15 @@ class EditorActorCatalog {
       icon: LucideIcons.user,
       color: _gameplay,
     ),
-    const EditorActorType(
+    EditorActorType(
       id: 'Camera',
       label: 'Camera',
-      description: 'A camera actor for cinematics and viewport piloting.',
+      description: 'A camera to look through: Sequencer camera lock, or the player\'s view in Play when set to '
+          'Auto Activate for Player. Field of view, projection, clip planes and exposure in Details.',
       category: 'Gameplay',
       icon: LucideIcons.camera,
       color: _gameplay,
+      componentsBuilder: (actorId) => [CameraActorProperties.seedComponent(actorId)],
     ),
 
     // --- World --------------------------------------------------------------

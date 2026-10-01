@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import '../../main_editor/services/camera_actor_properties.dart';
 import '../../main_editor/models/editor_actor_catalog.dart';
 import '../../main_editor/view_models/editor_view_model.dart';
 import '../services/mcp_protocol.dart';
@@ -84,7 +85,8 @@ void registerLevelTools(McpToolRegistry registry, EditorViewModel vm) {
       groups: const {McpToolGroups.level},
       title: 'Get actor',
       description: 'Everything the editor knows about one actor: transform, mobility, light settings, material, '
-          'mesh asset path, Blueprint class and its components with their properties. $units',
+          'mesh asset path, Blueprint class and its components with their properties (a Camera\'s field of view, '
+          'projection, clip planes and exposure are its LuminaCameraComponent properties). $units',
       inputSchema: McpSchema.object({'id': McpSchema.string('The actor id from list_actors.')}, required: ['id']),
       handler: (args) {
         final a = actorOrThrow(args.string('id'));
@@ -261,7 +263,12 @@ void registerLevelTools(McpToolRegistry registry, EditorViewModel vm) {
           'e.g. "LuminaProceduralMeshComponent.sizeX"; get_actor lists the components and their properties. A basic '
           'shape (Primitive) has "LuminaProceduralMeshComponent.shape" ("box" | "plane" | "sphere" | "cylinder"), '
           '".colorHex" and ".sizeX" / ".sizeY" / ".sizeZ" in cm, Z up like its location: sizeX along X, sizeY along Y '
-          '(depth), sizeZ is the height (a plane uses sizeX and sizeY).',
+          '(depth), sizeZ is the height (a plane uses sizeX and sizeY). A placed Camera has '
+          '"LuminaCameraComponent.fieldOfView" (vertical, degrees, 5-170), ".projectionMode" ("Perspective" | '
+          '"Orthographic"), ".orthoWidth" (cm), ".nearClipPlane" / ".farClipPlane" (cm), ".autoActivateForPlayer" '
+          '(bool: Play looks through it as the player view target), ".autoExposure" (bool), ".aperture" (f-stops), '
+          '".shutterSpeed" (seconds) and ".sensitivity" (ISO), the names a Blueprint camera component uses; the '
+          'Sequencer camera lock, Play and the generated game look through them.',
       inputSchema: McpSchema.object({
         'id': McpSchema.string('The actor id.'),
         'property': McpSchema.string('The property, as listed in the description.'),
@@ -341,6 +348,8 @@ void registerLevelTools(McpToolRegistry registry, EditorViewModel vm) {
             }
             final componentKey = property.substring(0, dot);
             final propertyId = property.substring(dot + 1);
+            // A Camera from an older level gets its camera component first.
+            if (componentKey == CameraActorProperties.componentType) vm.ensureCameraComponent(actor.id);
             final component = actor.components.where((c) => c.id == componentKey || c.type == componentKey).firstOrNull;
             if (component == null) {
               return McpToolResult.error(

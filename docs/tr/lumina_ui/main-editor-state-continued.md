@@ -261,6 +261,23 @@ Filament's limits, stated once: one global exponential height fog per view (`Exp
 | `isSphere` | `static bool isSphere(EditorActorNode actor)` | Whether a `LocalFogVolume` actor is a sphere. |
 | `signature` | `static String signature(EditorActorNode a)` | Everything that changes what the runtime component does, for change detection. |
 
+## `lib/ui/features/main_editor/services/camera_actor_properties.dart`
+
+### `class CameraActorProperties`
+
+Yerleştirilmiş bir `Camera` aktörünün ayarları `LuminaCameraComponent`'inde (`<actorId>_camera`), `LuminaCameraSettings`'in okuduğu adlar ve birimlerle durur: Details panelinin Camera bölümü, Play (`EditorPieGame.mapEditorActor` bir `LuminaCameraActor` kurar), kod üreticisi, Sequencer kamera kilidi ve MCP hep bunlardan geçer. Katalog bileşeni yerleştirirken ekler; `EditorViewModel.ensureCameraComponent` eski bir levelden gelen Camera'ya bir tane verir.
+
+**Üyeler:**
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `componentType` | `static const String componentType` | `LuminaCameraComponent`. |
+| `isCameraActor` | `static bool isCameraActor(EditorActorNode actor)` | [actor] yerleştirilmiş bir kamera mı (Blueprint değil). |
+| `componentOf` | `static EditorComponentNode? componentOf(EditorActorNode actor)` | Varsa [actor]'ün kamera bileşeni. |
+| `seedComponent` | `static EditorComponentNode seedComponent(String actorId)` | Yeni yerleştirilen bir kameranın başladığı bileşen: çalışma zamanı kamerasının varsayılanları. |
+| `ensureComponent` | `static EditorComponentNode? ensureComponent(EditorActorNode actor)` | Bileşeni olmayan bir kameraya varsayılanlarla bir tane verir; diğer aktörler için null. |
+| `read` | `static LuminaCameraSettings read(EditorActorNode actor)` | [actor]'ün ayarları, her tüketicinin gördüğü şekliyle. |
+
 ## `lib/ui/features/main_editor/services/light_actor_properties.dart`
 
 ### `class LightActorProperties`

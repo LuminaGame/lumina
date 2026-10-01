@@ -261,6 +261,23 @@ Filament's limits, stated once: one global exponential height fog per view (`Exp
 | `isSphere` | `static bool isSphere(EditorActorNode actor)` | Whether a `LocalFogVolume` actor is a sphere. |
 | `signature` | `static String signature(EditorActorNode a)` | Everything that changes what the runtime component does, for change detection. |
 
+## `lib/ui/features/main_editor/services/camera_actor_properties.dart`
+
+### `class CameraActorProperties`
+
+A placed `Camera` actor's settings live on its `LuminaCameraComponent` (`<actorId>_camera`), under the names and units `LuminaCameraSettings` reads: the Details panel's Camera section, Play (`EditorPieGame.mapEditorActor` builds a `LuminaCameraActor`), the code generator, the Sequencer camera lock and MCP all go through them. The catalog seeds the component on placement; `EditorViewModel.ensureCameraComponent` gives a Camera from an older level one.
+
+**Members:**
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `componentType` | `static const String componentType` | `LuminaCameraComponent`. |
+| `isCameraActor` | `static bool isCameraActor(EditorActorNode actor)` | Whether [actor] is a placed camera (not a Blueprint). |
+| `componentOf` | `static EditorComponentNode? componentOf(EditorActorNode actor)` | The camera component of [actor], if it has one. |
+| `seedComponent` | `static EditorComponentNode seedComponent(String actorId)` | The component a freshly placed camera starts with: the runtime camera's defaults. |
+| `ensureComponent` | `static EditorComponentNode? ensureComponent(EditorActorNode actor)` | Gives a camera without a component one with the defaults; null for other actors. |
+| `read` | `static LuminaCameraSettings read(EditorActorNode actor)` | [actor]'s settings as every consumer sees them. |
+
 ## `lib/ui/features/main_editor/services/light_actor_properties.dart`
 
 ### `class LightActorProperties`
