@@ -160,4 +160,29 @@ void main() {
     expect((vm.preview.componentFor('boom') as LuminaSpringArmComponent).targetArmLength,
         LuminaTemplateCharacterTuning.boomLength, reason: 'and its undo');
   });
+  test("a Static Mesh component's Material Override is read from the project folder, before any Play", () async {
+    // Play sets LuminaAssets.projectDir; the editor's preview must not need it.
+    expect(LuminaAssets.projectDir, isNull);
+    const material = LuminaThirdPersonContent.characterBlueprintPath;
+    final doc = LuminaBlueprintDocument.fromJson({
+      'parentClass': 'LuminaActor',
+      'components': [
+        {
+          'id': 'barrel',
+          'name': 'Barrel',
+          'type': 'LuminaStaticMeshComponent',
+          'properties': {'staticMeshAsset': 'contents/meshes/static/SM_Barrel.lmas', 'materialOverride': material},
+        },
+      ],
+    });
+    final scene = BlueprintPreviewScene()..setDocument(doc, projectDir: dir);
+    addTearDown(scene.dispose);
+    scene.attachHeadless();
+    final mesh = scene.componentFor('barrel') as LuminaStaticMeshComponent;
+    expect(mesh.materialOverrideAsset, material);
+    final read = LuminaAssets.resolve(mesh.assetProvider);
+    expect(await read(material), File('$dir/$material').readAsBytesSync(), reason: 'contents/… is the project folder');
+    final absolute = '$dir/$material';
+    expect(await read(absolute), File(absolute).readAsBytesSync(), reason: 'an absolute path is read as it is');
+  });
 }

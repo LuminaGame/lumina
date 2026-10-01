@@ -271,6 +271,11 @@ class BlueprintPreviewScene extends ChangeNotifier {
         actor,
         doc.components,
         resolveAsset: registry?.resolveAsset,
+        // Components name project files `contents/…` (a Material Override,
+        // its textures): read them from this project, as Play does.
+        assetProvider: dir == null
+            ? null
+            : (path) => File(path.startsWith('/') || RegExp(r'^[A-Za-z]:[\\/]').hasMatch(path) ? path : '$dir/$path').readAsBytes(),
         animBlueprints: registry == null ? null : (animClass) => registry.animClassFor(animClass)?.factory,
         diagnostics: diagnostics,
       );
