@@ -31,7 +31,7 @@ enum FlightCameraControlType {
 /// once.
 class EditorPreferences extends ChangeNotifier {
   EditorPreferences._(this.file, this._flightCameraControl, this._importWorkers, this._marketplaceUrl,
-      this._editorBuildMode, this._editorBuildKeep, this._editorBuildCacheDir, this._perProjectEditors);
+      this._editorBuildMode, this._editorBuildKeep, this._editorBuildCacheDir, this._perProjectEditors, this._cameraPreviewWidth);
 
   /// The preferences stored in [configDir] (default: [LuminaConfigDir]); the
   /// defaults when the file is missing or unreadable.
@@ -44,6 +44,7 @@ class EditorPreferences extends ChangeNotifier {
     var buildKeep = defaultEditorBuildKeep;
     String? buildCacheDir;
     var perProject = defaultPerProjectEditors;
+    var previewWidth = defaultCameraPreviewWidth;
     try {
       final decoded = ConfigJsonFile(file).read();
       if (decoded is Map) {
@@ -60,11 +61,13 @@ class EditorPreferences extends ChangeNotifier {
         if (cacheDir is String && cacheDir.trim().isNotEmpty) buildCacheDir = cacheDir.trim();
         final everyProject = decoded['perProjectEditors'];
         if (everyProject is bool) perProject = everyProject;
+        final preview = decoded['cameraPreviewWidth'];
+        if (preview is num && preview.isFinite) previewWidth = clampCameraPreviewWidth(preview.toDouble());
       }
     } catch (e) {
       debugPrint('[EditorPreferences] ${file.path} is unreadable, using the defaults: $e');
     }
-    return EditorPreferences._(file, flight, importWorkers, marketplaceUrl, buildMode, buildKeep, buildCacheDir, perProject);
+    return EditorPreferences._(file, flight, importWorkers, marketplaceUrl, buildMode, buildKeep, buildCacheDir, perProject, previewWidth);
   }
 
   static const String fileName = 'editor_preferences.json';
@@ -172,6 +175,27 @@ class EditorPreferences extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Level Editor › Viewports.
+
+  /// The width of the level viewport's camera preview, logical pixels (its
+  /// height follows the preview's aspect); set by dragging its corner.
+  double get cameraPreviewWidth => _cameraPreviewWidth;
+  double _cameraPreviewWidth;
+  static const double defaultCameraPreviewWidth = 320.0;
+  static const double minCameraPreviewWidth = 192.0;
+  static const double maxCameraPreviewWidth = 960.0;
+
+  static double clampCameraPreviewWidth(double value) => value.clamp(minCameraPreviewWidth, maxCameraPreviewWidth);
+
+  void setCameraPreviewWidth(double value) {
+    if (!value.isFinite) return;
+    final clamped = clampCameraPreviewWidth(value);
+    if (clamped == _cameraPreviewWidth) return;
+    _cameraPreviewWidth = clamped;
+    _save();
+    notifyListeners();
+  }
+
   void setFlightCameraControl(FlightCameraControlType value) {
     if (value == _flightCameraControl) return;
     _flightCameraControl = value;
@@ -191,6 +215,7 @@ class EditorPreferences extends ChangeNotifier {
           'editorBuildKeep': _editorBuildKeep,
           'editorBuildCacheDir': _editorBuildCacheDir,
           'perProjectEditors': _perProjectEditors,
+          'cameraPreviewWidth': _cameraPreviewWidth,
         },
         isValid: (value) => value is Map<String, dynamic>,
         pretty: true,

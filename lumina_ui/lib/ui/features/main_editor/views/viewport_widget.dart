@@ -25,6 +25,7 @@ import '../services/blueprint_play_support.dart';
 import '../services/editor_level_lights.dart';
 import '../services/editor_level_post_process.dart';
 import '../services/editor_level_scene.dart';
+import '../services/editor_view_layers.dart';
 import '../services/environment_actor_properties.dart';
 import '../services/light_actor_properties.dart';
 import 'pie_debug_draw_layer.dart';
@@ -32,6 +33,7 @@ import 'pie_mouse_capture_layer.dart';
 import 'pie_widget_layer.dart';
 import '../services/pie_debug_projection.dart';
 import 'play_blocked_dialog.dart';
+import 'camera_preview_panel.dart';
 
 part 'viewport_widget/state.dart';
 part 'viewport_widget/wireframes.dart';
@@ -306,6 +308,7 @@ class _ViewportWidgetState extends _ViewportWidgetStateBase
                             _appliedEv100 = null;
                             _nativeScene = scene;
                             _nativeView = view;
+                            _appliedViewLayers = null;
                             view.setDynamicLightingOptions(LuminaUnits.dynamicLightingNear, LuminaUnits.dynamicLightingFar);
                             _applyEditorQuality(force: true);
 
@@ -930,6 +933,15 @@ class _ViewportWidgetState extends _ViewportWidgetStateBase
                             ),
                           ],
                         ),
+                      ),
+                    ),
+
+                    // A selected camera's preview, bottom-left: what it sees.
+                    Positioned.fill(
+                      child: CameraPreviewOverlay(
+                        viewModel: widget.viewModel,
+                        viewportSize: Size(_viewportWidth, _viewportHeight),
+                        isPaused: widget.viewModel.activeTabIndex != 0,
                       ),
                     ),
                   ],

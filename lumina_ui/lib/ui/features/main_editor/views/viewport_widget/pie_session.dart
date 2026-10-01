@@ -105,8 +105,16 @@ mixin _ViewportPieSession on _ViewportWidgetStateBase {
   bool _editorActorDrawn(String actorId) =>
       !_pieOwnsTheScene && widget.viewModel.isEffectivelyVisible(actorId);
 
-  /// Test seam: how many of the editor's actor renderables are in the scene.
-  int get editorActorsInSceneForTest => _visibleInScene.length;
+  /// Test seam: how many editor actors the level view draws as solids (in
+  /// Wireframe none: their solids stay in the scene on a layer the level
+  /// view hides, see [editorActorSolidsInSceneForTest]).
+  int get editorActorsInSceneForTest => _wireframeMode ? 0 : _visibleInScene.length;
+
+  /// Test seam: how many editor actors have their solid mesh in the scene.
+  int get editorActorSolidsInSceneForTest => _visibleInScene.length;
+
+  /// Test seam: the visibility layers the level view shows.
+  int? get viewLayersForTest => _nativeView?.visibleLayers;
 
   /// Test seam: whether the editor's preview sun is in the scene.
   bool get editorSunInSceneForTest => editorLightEntitiesForTest.isNotEmpty;

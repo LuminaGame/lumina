@@ -84,6 +84,7 @@ mixin _ViewportSceneSync on _ViewportWidgetStateBase {
       _actorAssets.clear();
       _actorPayloads.clear();
       _visibleInScene.clear();
+      _taggedHelperEntities = {};
       for (final wire in _capsuleWires.values) {
         if (scene != null && !scene.isDisposed) scene.removeEntity(wire.entityId);
         wire.dispose();
@@ -162,6 +163,7 @@ mixin _ViewportSceneSync on _ViewportWidgetStateBase {
       }
       _lastGridVisible = gridWanted;
     }
+    _syncViewLayers();
   }
 
   /// Takes the engine's shared asset for [payload] (uploading it only when
@@ -334,11 +336,13 @@ mixin _ViewportSceneSync on _ViewportWidgetStateBase {
         }
         _syncActorMaterial(actor, handle);
 
-        // In Wireframe the edges stand in for the surface.
-        final isVisible = _editorActorDrawn(actor.id) && !_wireframeMode;
+        // In Wireframe the solids stay in the scene for other views of it (a
+        // camera preview); the level view hides their layer.
+        final isVisible = _editorActorDrawn(actor.id);
         final currentlyVisible = _visibleInScene.contains(actor.id);
 
         if (isVisible && !currentlyVisible) {
+          EditorViewLayers.tag(_nativeEngine!, handle.instance.entities, EditorViewLayers.solids);
           _nativeScene!.addEntities(handle.instance.entities);
           _visibleInScene.add(actor.id);
         } else if (!isVisible && currentlyVisible) {
@@ -494,6 +498,34 @@ mixin _ViewportSceneSync on _ViewportWidgetStateBase {
       _syncAutoExposure();
       _syncLevelPostProcess();
     }
+    _syncViewLayers();
+  }
+
+  /// Puts the editor's helpers on their own layer (so a view through a
+  /// camera leaves them out) and shows the level view its layers: in
+  /// Wireframe the solids' layer is hidden, the edge lines stand in for it.
+  /// Helpers are re-created (gizmo mode, selection box, wires), so this runs
+  /// after every sync; only new entities are tagged.
+  void _syncViewLayers() {
+    final engine = _nativeEngine, view = _nativeView;
+    if (engine == null || engine.isDisposed) return;
+    final helpers = <int>{
+      ?_nativeGrid?.entityId,
+      for (final box in _selectionBoxes.values) ?box.entityId,
+      ...?_nativeGizmo?.entityIds,
+      for (final (_, wire) in _lightWires.values) wire.entityId,
+      for (final wire in _capsuleWires.values) wire.entityId,
+      for (final (_, wire) in _volumeWires.values) wire.entityId,
+      for (final (_, _, wire) in _meshWires.values) wire.entityId,
+    };
+    final fresh = helpers.difference(_taggedHelperEntities);
+    if (fresh.isNotEmpty) EditorViewLayers.tag(engine, fresh, EditorViewLayers.helpers);
+    _taggedHelperEntities = helpers;
+    if (view == null) return;
+    final layers = _wireframeMode ? EditorViewLayers.levelViewportWireframe : EditorViewLayers.levelViewport;
+    if (layers == _appliedViewLayers) return;
+    _appliedViewLayers = layers;
+    EditorViewLayers.show(view, layers);
   }
 
   /// The editor camera's eye in authoring axes (cm, Z-up): the point the

@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'package:flutter/gestures.dart' show kSecondaryMouseButton, PointerDeviceKind;
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image/image.dart' as img;
 import 'package:integration_test/integration_test.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/main_editor_view.dart';
@@ -15,6 +16,9 @@ import 'package:lumina/lumina.dart';
 import 'package:lumina_ui/testing.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/features/main_editor/services/editor_preferences.dart';
+import 'package:lumina_ui/ui/core/property_editors/scrub_numeric_field.dart';
+import 'package:lumina_ui/ui/features/main_editor/views/camera_preview_panel.dart';
+import 'package:lumina_ui/ui/features/main_editor/views/level_scene_view.dart';
 
 import '../../test/helpers/scaffold_game_project.dart';
 
@@ -501,7 +505,7 @@ void main() {
   testWidgets('Viewport Smoke Scenario: view modes Lit → Wireframe → Unlit → Lit on the Third Person level',
       (tester) async {
     // Wireframe — every mesh actor as edge lines only, the
-    // solid renderables out of the scene, the header label following the mode;
+    // solid renderables hidden from the level view, the header label following the mode;
     // Unlit and Lit bring the solids back. Driven through the View menu (the
     // same field the toolbar select writes), on video with a PNG per state.
     final root = Directory.systemTemp.createTempSync('viewport_smoke_viewmodes_');
@@ -577,4 +581,159 @@ void main() {
 
     rec.save('Viewport Smoke Scenario: view modes Lit → Wireframe → Unlit → Lit on the Third Person level');
   });
+
+  testWidgets('Viewport Smoke Scenario: a selected camera previews what it sees, bottom-left, resizable from its corner',
+      (tester) async {
+    final assets = Directory.current.parent.path;
+    final barrelGlb = '$assets/test-assets/Props/Barrels/fuel_barrel_red.glb';
+    final acUnitGlb = '$assets/test-assets/Props/AC_units/ac_unit_a_300x300.glb';
+    final bananaGlb = '$assets/test-assets/Props/Banana Bunch/banana_bunch_long.glb';
+    for (final f in [barrelGlb, acUnitGlb, bananaGlb]) {
+      if (!File(f).existsSync()) {
+        markTestSkipped('test asset missing: $f');
+        return;
+      }
+    }
+    const scenario = 'Viewport Smoke Scenario: a selected camera previews what it sees, bottom-left, resizable from its corner';
+    const usedAssets = [
+      'Props/Barrels/fuel_barrel_red.glb',
+      'Props/AC_units/ac_unit_a_300x300.glb',
+      'Props/Banana Bunch/banana_bunch_long.glb',
+    ];
+    tester.view.physicalSize = const Size(1680, 1120);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final root = Directory.systemTemp.createTempSync('viewport_smoke_cam_preview_');
+    addTearDown(() {
+      try {
+        root.deleteSync(recursive: true);
+      } catch (_) {}
+    });
+    const projectName = 'SmokeCameraPreview';
+    final pDir = Directory('${root.path}/$projectName')..createSync(recursive: true);
+    final repo = AssetRepository();
+    await tester.runAsync(() async {
+      for (final (name, glb) in [('Barrel', barrelGlb), ('AC_Unit', acUnitGlb), ('Bananas', bananaGlb)]) {
+        await repo.createAsset(projectPath: pDir.path, subFolder: 'meshes', fileName: '$name.lmas', type: AssetType.filamesh);
+        File(glb).copySync('${pDir.path}/contents/meshes/$name.glb');
+      }
+    });
+    File('${pDir.path}/$projectName.lmproject').writeAsStringSync('{}');
+    final vm = EditorViewModel(
+      initialProject: LuminaProject(projectName: projectName, activeLevel: 'contents/levels/L_Main.lmas', settings: EngineScalabilitySettings(targetFps: 60)),
+      projectLocation: root.path,
+      enableTimers: false,
+    );
+    addTearDown(vm.dispose);
+    await tester.runAsync(vm.ensureDefaultLevelAssets);
+    // A barrel, a bunch of bananas on it and an AC unit behind them, lit,
+    // and Camera_1 six metres away aimed at them.
+    RealAssetInfo asset(String file) => vm.realAssets.firstWhere((a) => a.fileName == file);
+    await tester.runAsync(() => vm.spawnActorFromAsset(asset('Barrel.lmas'), location: [0, 0, 0]));
+    final barrel = vm.actors.last;
+    await tester.runAsync(() => vm.spawnActorFromAsset(asset('Bananas.lmas'), location: [-120, 60, 0]));
+    await tester.runAsync(() => vm.spawnActorFromAsset(asset('AC_Unit.lmas'), location: [250, 400, 0]));
+    vm.spawnNewActor('Environment');
+    vm.spawnNewActor('DirectionalLight');
+    vm.actors.last.location = [900, 900, 600];
+    vm.spawnNewActor('Camera');
+    final camera = vm.actors.last;
+    camera.name = 'Camera_1';
+    camera.location = [0, -600, 60];
+    camera.rotation = [0, 0, 0];
+    final cameraComponent = camera.components.firstWhere((c) => c.type == 'LuminaCameraComponent');
+    vm.selectActor(null);
+
+    final boundaryKey = GlobalKey();
+    await tester.pumpWidget(RepaintBoundary(
+      key: boundaryKey,
+      child: ShadcnApp(theme: luminaEditorTheme(), home: MainEditorView(viewModel: vm)),
+    ));
+    dynamic viewport() => tester.state(find.byType(ViewportWidget));
+    for (var i = 0; i < 400 && viewport().editorActorsInSceneForTest < 3; i++) {
+      await _settle(tester, 1);
+    }
+    expect(viewport().editorActorsInSceneForTest, 3, reason: 'the three meshes drawn');
+    final rec = SmokeRecorder(tester, boundary: find.byKey(boundaryKey));
+    await rec.hold(const Duration(milliseconds: 1200));
+
+    const panelKey = ValueKey('camera_preview_panel');
+    Future<img.Image> shot(String name) async {
+      final png = await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey));
+      SmokeArtifacts.saveScreenshot(name, png, usedAssets: usedAssets);
+      return img.decodePng(png)!;
+    }
+
+    // The meshes in the preview's upper half (the camera's eye is level, so
+    // that is above the horizon): any pixel that is not the blue sky.
+    int objectPixels(img.Image image) {
+      final scale = image.width / tester.getSize(find.byKey(boundaryKey)).width;
+      final r = tester.getRect(find.byKey(const ValueKey('camera_preview_view')));
+      var count = 0;
+      for (var y = (r.top * scale + 3).round(); y < (r.center.dy * scale - 2).round(); y++) {
+        for (var x = (r.left * scale + 3).round(); x < (r.right * scale - 3).round(); x++) {
+          final p = image.getPixel(x, y);
+          final sky = p.b > p.r + 12 && p.b >= p.g;
+          if (!sky && p.r + p.g + p.b > 90) count++;
+        }
+      }
+      return count;
+    }
+
+    // 1. Select Camera_1 in the Outliner's way: the preview opens bottom-left.
+    vm.selectActorById(camera.id);
+    for (var i = 0; i < 200; i++) {
+      final shown = find.byKey(panelKey).evaluate().isNotEmpty &&
+          tester.state<LevelSceneViewState>(find.byKey(const ValueKey('camera_preview_view'))).drawsLevelScene;
+      if (shown) break;
+      await _settle(tester, 1);
+    }
+    expect(find.byKey(panelKey), findsOneWidget);
+    final vpRect = tester.getRect(find.byType(ViewportWidget));
+    final small = tester.getRect(find.byKey(panelKey));
+    expect(small.left, closeTo(vpRect.left + CameraPreviewOverlay.margin, 0.5));
+    expect(small.bottom, closeTo(vpRect.bottom - CameraPreviewOverlay.statsStripHeight - CameraPreviewOverlay.margin, 0.5));
+    await rec.hold(const Duration(milliseconds: 2500));
+    final first = objectPixels(await shot('Viewport Smoke Scenario: Camera_1 selected, its preview bottom-left'));
+    expect(first, greaterThan(100), reason: 'the preview shows the meshes in front of the camera');
+
+    // 2. Drag the top-right corner up and right: bigger, 16:9 kept.
+    final grip = tester.getCenter(find.byKey(const ValueKey('camera_preview_resize')));
+    await rec.drag(grip, grip + const Offset(280, -150), steps: 40);
+    await rec.hold(const Duration(milliseconds: 1500));
+    final big = tester.getRect(find.byKey(panelKey));
+    expect(big.width, greaterThan(small.width + 200));
+    expect(big.left, closeTo(small.left, 0.5));
+    expect(big.bottom, closeTo(small.bottom, 0.5));
+    final viewRect = tester.getRect(find.byKey(const ValueKey('camera_preview_view')));
+    expect(viewRect.width / viewRect.height, closeTo(CameraPreviewPanel.aspect, 0.01));
+    expect(vm.editorPreferences.cameraPreviewWidth, closeTo(big.width, 1.0));
+    final wide = objectPixels(await shot('Viewport Smoke Scenario: the camera preview dragged bigger from its corner'));
+
+    // 3. Details: Field of View 60 → 30, committed through the field: the
+    // preview zooms in.
+    await tester.ensureVisible(find.text('CAMERA'));
+    await _settle(tester, 10);
+    final fovField = find.byKey(const ValueKey('details_camera_fieldOfView'));
+    expect(tester.widget<ScrubNumericField>(fovField).value, 60.0);
+    tester.widget<ScrubNumericField>(fovField).onCommit(30.0);
+    await _settle(tester, 20);
+    expect(cameraComponent.properties['fieldOfView'], 30.0);
+    await rec.hold(const Duration(milliseconds: 2500));
+    final narrow = objectPixels(await shot('Viewport Smoke Scenario: the camera preview at FOV 30'));
+    debugPrint('[camera_preview_smoke] object pixels above the horizon: FOV 60 = $wide, FOV 30 = $narrow (first $first)');
+    // tan(30°) / tan(15°) = 2.15× the size, about 4.6× the area.
+    expect(narrow, greaterThan(wide * 2), reason: 'the meshes fill more of the preview at 30°');
+
+    // 4. Select a mesh: the preview goes.
+    vm.selectActorById(barrel.id);
+    await _settle(tester, 10);
+    expect(find.byKey(panelKey), findsNothing);
+    expect(find.byKey(const ValueKey('camera_preview_filament')), findsNothing);
+    await rec.hold(const Duration(milliseconds: 2500));
+    await shot('Viewport Smoke Scenario: a mesh selected, no camera preview');
+    rec.save(scenario, usedAssets: usedAssets);
+  }, timeout: const Timeout(Duration(minutes: 8)));
 }

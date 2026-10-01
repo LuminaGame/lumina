@@ -206,6 +206,8 @@ The editor's per-user preferences (as opposed to the project's Project Settings)
 | `perProjectEditors` | `bool get perProjectEditors` | Every project opens in its own project editor, built on its first open, even without code plugins. Off, a plugin-less project opens in this editor. |
 | `defaultPerProjectEditors` | `static const bool defaultPerProjectEditors` |  |
 | `setPerProjectEditors` | `void setPerProjectEditors(bool value)` |  |
+| `cameraPreviewWidth` | `double get cameraPreviewWidth` | Level viewport'unun kamera önizlemesinin mantıksal piksel cinsinden genişliği (yüksekliği 16:9'a göre); köşesi sürüklenerek ayarlanır. Varsayılan 320, 192–960 aralığına sıkıştırılır. |
+| `setCameraPreviewWidth` | `void setCameraPreviewWidth(double value)` |  |
 | `setFlightCameraControl` | `void setFlightCameraControl(FlightCameraControlType value)` |  |
 
 ## `lib/ui/features/main_editor/services/editor_transform.dart`

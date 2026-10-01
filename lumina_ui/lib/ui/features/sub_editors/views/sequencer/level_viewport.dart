@@ -3,14 +3,15 @@ import 'dart:math' as math;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_filament/flutter_filament.dart' show FilamentCamera, FilamentEngine, FilamentScene, FilamentView, FilamentWidget;
+import 'package:flutter_filament/flutter_filament.dart' show FilamentCamera, FilamentView;
 import 'package:lumina/lumina.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
-import 'package:lumina_ui/ui/features/main_editor/services/editor_level_scene.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/editor_view_layers.dart';
 import 'package:lumina_ui/ui/features/main_editor/services/viewport_picker.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/main_editor/views/level_scene_view.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/viewport_widget.dart' show kViewportFovDegrees;
 import '../../models/sequencer_viewport_camera.dart';
 import '../../view_models/sequencer_view_model.dart';
@@ -24,7 +25,7 @@ import '../../view_models/sequencer_view_model.dart';
 /// viewport's camera is; drag to orbit, middle-drag to pan, wheel to dolly,
 /// right button + W/A/S/D/Q/E to fly, F to frame the animated actors) or,
 /// locked, through a camera actor bound in the sequence, inside a 16:9 film
-/// gate.
+/// gate, without the editor's helpers (grid, gizmo, light wires).
 class SequencerLevelViewport extends StatefulWidget {
   const SequencerLevelViewport({super.key, required this.editorViewModel, required this.sequencer});
 
@@ -39,19 +40,12 @@ class SequencerLevelViewport extends StatefulWidget {
 }
 
 class SequencerLevelViewportState extends State<SequencerLevelViewport> with SingleTickerProviderStateMixin {
-  FilamentEngine? _engine;
-  FilamentView? _view;
-  FilamentCamera? _camera;
-
-  /// The FilamentWidget's own (empty) scene, drawn while the level's is not
-  /// available.
-  FilamentScene? _ownScene;
-  EditorLevelScene? _drawn;
+  /// The second view of the level this viewport draws through.
+  final GlobalKey<LevelSceneViewState> _sceneView = GlobalKey<LevelSceneViewState>();
 
   late SequencerViewportCamera _editorCamera;
   String? _lockedCameraId;
   Size _size = Size.zero;
-  int _appliedQualityRevision = -1;
 
   final FocusNode _focus = FocusNode(debugLabel: 'Sequencer viewport');
   final Set<LogicalKeyboardKey> _keys = {};
@@ -65,7 +59,7 @@ class SequencerLevelViewportState extends State<SequencerLevelViewport> with Sin
   SequencerViewModel get sequencer => widget.sequencer;
 
   /// Whether this view draws the level viewport's scene right now.
-  bool get drawsLevelScene => _drawn != null;
+  bool get drawsLevelScene => _sceneView.currentState?.drawsLevelScene ?? false;
 
   /// The editor camera (navigation state), for tests.
   SequencerViewportCamera get editorCamera => _editorCamera;
@@ -73,8 +67,8 @@ class SequencerLevelViewportState extends State<SequencerLevelViewport> with Sin
   /// The camera actor the view looks through, or null for the editor camera.
   String? get lockedCameraId => _lockedCameraId;
 
-  FilamentView? get viewForTest => _view;
-  FilamentCamera? get cameraForTest => _camera;
+  FilamentView? get viewForTest => _sceneView.currentState?.view;
+  FilamentCamera? get cameraForTest => _sceneView.currentState?.camera;
 
   /// The level's camera actors the sequence animates: what the view can be
   /// locked to.
@@ -106,7 +100,6 @@ class SequencerLevelViewportState extends State<SequencerLevelViewport> with Sin
   void initState() {
     super.initState();
     _editorCamera = SequencerViewportCamera.fromEditor(_evm);
-    _evm.levelScene.addListener(_attachLevelScene);
     _evm.addListener(_onLevelChanged);
     sequencer.addListener(_onLevelChanged);
     _flyTicker = createTicker(_onFlyTick)..start();
@@ -116,11 +109,8 @@ class SequencerLevelViewportState extends State<SequencerLevelViewport> with Sin
   void didUpdateWidget(covariant SequencerLevelViewport oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.editorViewModel != widget.editorViewModel) {
-      oldWidget.editorViewModel.levelScene.removeListener(_attachLevelScene);
       oldWidget.editorViewModel.removeListener(_onLevelChanged);
-      widget.editorViewModel.levelScene.addListener(_attachLevelScene);
       widget.editorViewModel.addListener(_onLevelChanged);
-      _attachLevelScene();
     }
     if (oldWidget.sequencer != widget.sequencer) {
       oldWidget.sequencer.removeListener(_onLevelChanged);
@@ -130,69 +120,21 @@ class SequencerLevelViewportState extends State<SequencerLevelViewport> with Sin
 
   @override
   void dispose() {
-    _evm.levelScene.removeListener(_attachLevelScene);
     _evm.removeListener(_onLevelChanged);
     sequencer.removeListener(_onLevelChanged);
     _flyTicker.dispose();
     _focus.dispose();
-    _releaseNative();
     super.dispose();
-  }
-
-  /// Points the view back at its own scene before the FilamentWidget frees
-  /// the view; the level's scene stays the level viewport's.
-  void _releaseNative() {
-    final view = _view, own = _ownScene;
-    if (view != null && own != null && _drawn != null) {
-      try {
-        view.scene = own;
-      } catch (_) {}
-    }
-    _drawn = null;
-    _view = null;
-    _camera = null;
-    _ownScene = null;
-    _engine = null;
-  }
-
-  void _onSceneCreated(FilamentEngine engine, FilamentScene scene, FilamentCamera camera, FilamentView view) {
-    _engine = engine;
-    _ownScene = scene;
-    _camera = camera;
-    _view = view;
-    view.setDynamicLightingOptions(LuminaUnits.dynamicLightingNear, LuminaUnits.dynamicLightingFar);
-    _applyQuality(force: true);
-    _attachLevelScene();
-  }
-
-  /// Draws the level viewport's scene when it is published on this view's
-  /// engine, else this view's own empty scene.
-  void _attachLevelScene() {
-    final view = _view, own = _ownScene;
-    if (view == null || own == null) return;
-    final shared = _evm.levelScene.value;
-    final usable = shared != null && identical(shared.engine, _engine) && !shared.scene.isDisposed;
-    if (usable) {
-      if (!identical(_drawn, shared)) view.scene = shared.scene;
-      _drawn = shared;
-    } else {
-      if (_drawn != null) view.scene = own;
-      _drawn = null;
-    }
-    _applyCamera();
-    _rebuild();
   }
 
   void _onLevelChanged() {
     if (_lockedCameraId != null && _lockedCamera == null) _lockedCameraId = null;
-    _applyQuality();
     _applyCamera();
     _rebuild();
   }
 
   /// Rebuilds now, or after the frame when the notification came while the
-  /// tree is being built or torn down (the level viewport retracts its scene
-  /// from its own dispose).
+  /// tree is being built.
   void _rebuild() {
     if (!mounted) return;
     if (SchedulerBinding.instance.schedulerPhase == SchedulerPhase.persistentCallbacks) {
@@ -204,14 +146,6 @@ class SequencerLevelViewportState extends State<SequencerLevelViewport> with Sin
     }
   }
 
-  void _applyQuality({bool force = false}) {
-    final view = _view;
-    if (view == null) return;
-    if (!force && _evm.qualityRevision == _appliedQualityRevision) return;
-    _appliedQualityRevision = _evm.qualityRevision;
-    _evm.quality.applyToView(view);
-  }
-
   /// The pose the view looks through now.
   SequencerViewPose get _pose {
     final locked = _lockedCamera;
@@ -220,25 +154,29 @@ class SequencerLevelViewportState extends State<SequencerLevelViewport> with Sin
         : _editorCamera.editorPose(fovDegrees: kViewportFovDegrees);
   }
 
-  /// Points the Filament camera through [_pose]: a locked camera's field of
-  /// view spans the film gate's height, the rest of the widget is masked.
-  void _applyCamera() {
-    final camera = _camera;
+  /// Points the Filament camera through [_pose] (now, when the view exists).
+  void _applyCamera() => _sceneView.currentState?.aim();
+
+  /// Points [view]'s camera through [_pose]: a locked camera's field of view
+  /// spans the film gate's height, the rest of the widget is masked.
+  void _aim(LevelSceneViewState view) {
+    final camera = view.camera;
     if (camera == null || camera.isDisposed) return;
     final pose = _pose;
-    final aspect = _size.width > 0 && _size.height > 0 ? _size.width / _size.height : 16 / 9;
+    final size = view.size;
+    final aspect = size.width > 0 && size.height > 0 ? size.width / size.height : 16 / 9;
     var fov = pose.fovDegrees;
     final locked = _lockedCamera != null;
     if (locked) {
-      final gate = _filmGate(_size);
-      if (gate.height > 0 && gate.height < _size.height) {
-        final half = math.atan(math.tan(fov * math.pi / 360) * _size.height / gate.height);
+      final gate = _filmGate(size);
+      if (gate.height > 0 && gate.height < size.height) {
+        final half = math.atan(math.tan(fov * math.pi / 360) * size.height / gate.height);
         fov = half * 360 / math.pi;
       }
     }
     final far = locked ? 100000.0 : math.max(5000.0, _editorCamera.distance * 4.0);
     camera.setProjection(fovDegrees: fov, aspect: aspect, near: locked ? 1.0 : 0.1, far: far);
-    _view?.setDynamicLightingOptions(LuminaUnits.dynamicLightingNear, math.max(LuminaUnits.dynamicLightingFar, far));
+    view.view?.setDynamicLightingOptions(LuminaUnits.dynamicLightingNear, math.max(LuminaUnits.dynamicLightingFar, far));
     final e = pose.eye, f = pose.forward, u = pose.up;
     camera.lookAt(
       eyeX: e.x,
@@ -252,7 +190,7 @@ class SequencerLevelViewportState extends State<SequencerLevelViewport> with Sin
       upZ: u.z,
     );
     // The level viewport meters exposure from the level's lights.
-    final source = _drawn?.camera;
+    final source = view.drawn?.camera;
     if (source != null && !source.isDisposed) {
       camera.setExposure(aperture: source.aperture, shutterSpeed: source.shutterSpeed, sensitivity: source.sensitivity);
     }
@@ -357,13 +295,7 @@ class SequencerLevelViewportState extends State<SequencerLevelViewport> with Sin
     final locked = _lockedCamera;
     return LayoutBuilder(builder: (context, constraints) {
       final size = constraints.biggest;
-      if (size != _size && size.isFinite) {
-        _size = size;
-        // After the FilamentWidget resized its own camera projection.
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) _applyCamera();
-        });
-      }
+      if (size.isFinite) _size = size;
       final gate = _filmGate(_size);
       return Focus(
         focusNode: _focus,
@@ -383,23 +315,20 @@ class SequencerLevelViewportState extends State<SequencerLevelViewport> with Sin
           child: Stack(
             children: [
               Positioned.fill(
-                child: FilamentWidget(
-                  key: const ValueKey('seq_level_viewport_filament'),
+                child: LevelSceneView(
+                  key: _sceneView,
+                  filamentKey: const ValueKey('seq_level_viewport_filament'),
+                  editorViewModel: _evm,
                   debugLabel: 'Sequencer viewport',
-                  onSceneCreated: _onSceneCreated,
-                  onDispose: _releaseNative,
-                  // A resize resets the projection; the camera is re-aimed
-                  // every frame (a few calls), so it never lags a resize.
-                  onFrame: (_, _) => _applyCamera(),
+                  onAim: _aim,
+                  // Through a camera: what it sees, without the editor's helpers.
+                  visibleLayers: locked != null ? EditorViewLayers.cameraView : EditorViewLayers.levelViewport,
+                  placeholder: const Text('The level viewport is not running: open the level tab once to start it.',
+                      style: TextStyle(fontSize: 10, color: EditorColors.mutedForeground)),
                 ),
               ),
               if (locked != null && !gate.isEmpty) ..._letterbox(gate),
               Positioned(left: 8, top: 8, child: _buildHud(locked)),
-              if (_view != null && !drawsLevelScene)
-                const Center(
-                  child: Text('The level viewport is not running: open the level tab once to start it.',
-                      style: TextStyle(fontSize: 10, color: EditorColors.mutedForeground)),
-                ),
             ],
           ),
         ),

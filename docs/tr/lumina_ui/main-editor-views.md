@@ -373,6 +373,22 @@ One selectable template row. It is a real focusable button, so the list is keybo
 | `viewModel` | `EditorViewModel viewModel` | `viewModel` alanını (field/property) ve ilişkili veriyi saklar. |
 | `createState` | `State<ViewportWidget> createState() => _ViewportWidgetState()` | Yeni bir `State` örneği veya ilişkili GPU kaynağını oluşturur ve yapılandırır. |
 
+### Kamera önizlemesi (`camera_preview_panel.dart`, `level_scene_view.dart`)
+
+Tek bir kamera aktörü seçilince (yerleştirilmiş `Camera`; Play sırasında değil) 3D alanın sol altında, istatistik şeridinin üstünde bir **Camera preview** paneli açılır: kameranın adı, kapatma düğmesi (×) ve level'a o kameradan canlı bakan bir görüntü — konumu ve dönüşü (gizmo sürüklemeleri ve Details düzenlemeleriyle birlikte), projeksiyonu (dikey görüş açısı ya da ortografik genişlik), yakın / uzak kırpma düzlemleri ve pozlaması (kendi diyafram / enstantane / ISO değerleri ya da Auto Exposure açıkken level viewport'unun ölçtüğü pozlama). Görüntü 16:9'dur (kameranın henüz en-boy ayarı yok; dikey görüş açısı kameranınki olduğundan dikey kadraj Play ile aynıdır). Sağ üst köşeden sürüklenerek boyutlandırılır (16:9 korunur, 192–960 px genişlik, 3D alanın izin verdiğinden uzun olmaz); genişlik kullanıcıya özel bir editör tercihidir (`EditorPreferences.cameraPreviewWidth`). × paneli başka bir kamera seçilene (ya da seçim başka yere gidip geri gelene) kadar gizler; kamera olmayan bir aktör ya da birden çok aktör seçilince panel kapanır. Panele yapılan tıklamalar panelde kalır (arkadaki seçimi ya da gezinmeyi etkilemez). Gizliyken hiç Filament view'ı yoktur.
+
+Önizleme level viewport'unun kendi sahnesini (`EditorViewModel.levelScene`) editör yardımcıları olmadan çizer; bunu Filament görünürlük katmanları (`EditorViewLayers`) sağlar: içerik (varsayılan katman), yardımcılar (grid, gizmo, seçim kutuları, ışık / kapsül / hacim çizgileri, Wireframe kenar çizgileri) ve aktör katıları. Level view Lit / Unlit'te üçünü de gösterir, Wireframe'de katıları gizler (sahnede kalırlar, böylece önizleme ışıklı level'ı göstermeye devam eder); önizleme içerik ve katıları gösterir. Işıklar sahnenin parçası olduğundan Unlit'te önizleme de doğrudan ışıkları kaybeder; level viewport'unun sisi ve Post Process Volume'ları önizlemeye uygulanmaz.
+
+| Sınıf | Amaç |
+| :--- | :--- |
+| `CameraPreviewOverlay` | 3D alanı kaplar, `previewCameraOf(vm)` için (Play dışında seçili tek kamera) paneli gösterir, × ve köşe sürüklemesini yönetir; `panelWidth`, `maxWidth`, `close()`. |
+| `CameraPreviewPanel` | Panel: başlık çubuğu, kameradan bakan `LevelSceneView` (`CameraActorView.apply`), sağ üst boyutlandırma tutamağı. `aspect` = 16:9. |
+| `LevelSceneView` / `LevelSceneViewState` | Level sahnesinin paylaşılan motor üzerindeki ikinci bir view'ı; sahibi tarafından yönlendirilir (`onAim`: oluşturulunca, sahne değişince, yeniden boyutlanınca ve her karede çağrılır), kendi görünür katmanlarıyla. Sequencer viewport'u da bunun üzerine kuruludur. `drawsLevelScene`, `view`, `camera`, `drawn`, `aspect`, `aim()`. |
+| `CameraActorView` (`services/camera_actor_view.dart`) | Bir kamera aktörünü view'a çevirir: `settingsOf` (`LuminaCameraSettings`), `pose` (`LevelViewPose`), `apply` (projeksiyon, kırpma düzlemleri, poz, pozlama). |
+| `EditorViewLayers` (`services/editor_view_layers.dart`) | Katman bitleri (`content`, `helpers`, `solids`), her view'ın maskesi, `show(view, layers)`, `tag(engine, entities, layer)`. |
+
+Level viewport state'indeki test noktaları: `viewLayersForTest` (level view'ın görünür katmanları), `editorActorsInSceneForTest` (level view'ın çizdiği katılar; Wireframe'de 0), `editorActorSolidsInSceneForTest` (sahnedeki katılar).
+
 ### `class _ViewportWidgetState`
 
 `_ViewportWidgetState`: Kullanıcı arayüzünü (UI) oluşturan ve kullanıcı etkileşimlerini dinleyen shadcn_flutter bileşenidir.

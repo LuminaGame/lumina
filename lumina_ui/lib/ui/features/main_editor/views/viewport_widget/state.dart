@@ -13,6 +13,12 @@ abstract class _ViewportWidgetStateBase extends State<ViewportWidget> with Ticke
   FilamentView? _nativeView;
   int _appliedQualityRevision = -1;
 
+  /// The [EditorViewLayers] the level view was last told to show.
+  int? _appliedViewLayers;
+
+  /// Helper entities already put on [EditorViewLayers.helpers].
+  Set<int> _taggedHelperEntities = {};
+
   /// The scale the gizmo is currently drawn at, so hover hit-testing can use
   /// the same size the user sees rather than a fixed world offset.
   double _gizmoScale = 1.0;

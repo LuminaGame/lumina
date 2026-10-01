@@ -3,18 +3,11 @@ import 'dart:math' as math;
 import 'package:lumina/lumina.dart';
 import 'package:vector_math/vector_math_64.dart';
 
+import '../../main_editor/services/camera_actor_view.dart';
 import '../../main_editor/view_models/editor_view_model.dart' show EditorActorNode, EditorViewModel;
 
-/// Where a view of the level looks from: runtime axes (Y up), centimetres,
-/// and the vertical field of view.
-class SequencerViewPose {
-  const SequencerViewPose({required this.eye, required this.forward, required this.up, required this.fovDegrees});
-
-  final Vector3 eye;
-  final Vector3 forward;
-  final Vector3 up;
-  final double fovDegrees;
-}
+/// Where a view of the level looks from (the level's shared pose type).
+typedef SequencerViewPose = LevelViewPose;
 
 /// The Sequencer viewport's editor camera: the level viewport's orbit
 /// camera (yaw, pitch and distance around a target, stored Z up) with its
@@ -45,7 +38,7 @@ class SequencerViewportCamera {
 
   /// The vertical field of view a camera actor without a camera component
   /// renders with (the runtime camera component's default).
-  static const double defaultCameraFovDegrees = 60.0;
+  static const double defaultCameraFovDegrees = CameraActorView.defaultFovDegrees;
 
   /// The eye in stored axes (Z up).
   List<double> get eyeAuthoring {
@@ -120,29 +113,12 @@ class SequencerViewportCamera {
 
   /// The pose a camera lock looks through [camera]: from its location along
   /// its forward (+Y stored, rotated by its rotation), with the field of
-  /// view of its camera component (`fieldOfView` / `fov`) when it has one.
-  static SequencerViewPose lockedPose(EditorActorNode camera) {
-    // As a matrix: vector_math's Quaternion.rotated turns the other way.
-    final r = LuminaAxes.rotation(camera.rotation).asRotationMatrix();
-    final forward = r.transformed(LuminaAxes.location(const [0, 1, 0]))..normalize();
-    final up = r.transformed(LuminaAxes.location(const [0, 0, 1]))..normalize();
-    return SequencerViewPose(
-      eye: LuminaAxes.location(camera.location),
-      forward: forward,
-      up: up,
-      fovDegrees: cameraFovDegrees(camera),
-    );
-  }
+  /// view of its camera component.
+  static SequencerViewPose lockedPose(EditorActorNode camera) => CameraActorView.pose(camera);
 
   /// [camera]'s vertical field of view in degrees.
-  static double cameraFovDegrees(EditorActorNode camera) {
-    for (final c in camera.components) {
-      final fov = c.properties['fieldOfView'] ?? c.properties['fov'];
-      if (fov is num && fov > 1 && fov < 179) return fov.toDouble();
-    }
-    return defaultCameraFovDegrees;
-  }
+  static double cameraFovDegrees(EditorActorNode camera) => CameraActorView.settingsOf(camera).fieldOfView;
 
   /// Whether [actor] is a camera the view can look through.
-  static bool isCamera(EditorActorNode actor) => actor.type.contains('Camera');
+  static bool isCamera(EditorActorNode actor) => CameraActorView.isCamera(actor);
 }

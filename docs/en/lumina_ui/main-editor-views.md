@@ -373,6 +373,22 @@ One selectable template row. It is a real focusable button, so the list is keybo
 | `viewModel` | `EditorViewModel viewModel` | Holds the `viewModel` property or configuration state. |
 | `createState` | `State<ViewportWidget> createState() => _ViewportWidgetState()` | Creates, configures, and returns a new `State` instance or associated GPU resource. |
 
+### Camera preview (`camera_preview_panel.dart`, `level_scene_view.dart`)
+
+Selecting exactly one camera actor (a placed `Camera`; not during Play) opens a **Camera preview** panel at the bottom-left of the 3D area, above the stats strip: the camera's name, a close button (×) and a live view of the level through that camera — its location and rotation (following gizmo drags and Details edits), its projection (vertical field of view, or orthographic width), near / far clip planes and exposure (its own aperture / shutter speed / ISO, or the level viewport's metered exposure with Auto Exposure). The picture is 16:9 (a camera has no aspect setting yet; the vertical field of view is the camera's, so the vertical framing matches Play). Drag the top-right corner to resize it (16:9 kept, 192–960 px wide and never taller than the 3D area allows); the width is a per-user editor preference (`EditorPreferences.cameraPreviewWidth`). × hides it until another camera is selected (or the selection moves away and back); selecting a non-camera or several actors hides it. Clicks on the panel stay on it (no selection or navigation behind it). While hidden it has no Filament view.
+
+The preview draws the level viewport's own scene (`EditorViewModel.levelScene`) without the editor's helpers, through Filament visibility layers (`EditorViewLayers`): content (default layer), helpers (grid, gizmo, selection boxes, light / capsule / volume wires, Wireframe edge lines) and actor solids. The level view shows all three in Lit / Unlit and hides the solids in Wireframe (they stay in the scene, so the preview still shows the lit level); the preview shows content and solids. Lights are part of the scene, so in Unlit the preview loses the direct lights too; the level viewport's fog and Post Process Volumes are not applied to the preview.
+
+| Class | Purpose |
+| :--- | :--- |
+| `CameraPreviewOverlay` | Fills the 3D area, shows the panel for `previewCameraOf(vm)` (the single selected camera outside Play), handles × and the corner drag; `panelWidth`, `maxWidth`, `close()`. |
+| `CameraPreviewPanel` | The panel: title bar, `LevelSceneView` through the camera (`CameraActorView.apply`), the top-right resize grip. `aspect` = 16:9. |
+| `LevelSceneView` / `LevelSceneViewState` | A second view of the level's scene on the shared engine, aimed by its owner (`onAim`, called on creation, scene changes, resize and every frame), with its own visible layers. The Sequencer viewport is built on it too. `drawsLevelScene`, `view`, `camera`, `drawn`, `aspect`, `aim()`. |
+| `CameraActorView` (`services/camera_actor_view.dart`) | A camera actor as a view: `settingsOf` (`LuminaCameraSettings`), `pose` (`LevelViewPose`), `apply` (projection, clip planes, pose, exposure). |
+| `EditorViewLayers` (`services/editor_view_layers.dart`) | The layer bits (`content`, `helpers`, `solids`), the masks of each view, `show(view, layers)`, `tag(engine, entities, layer)`. |
+
+Test seams on the level viewport state: `viewLayersForTest` (the level view's visible layers), `editorActorsInSceneForTest` (solids the level view draws; 0 in Wireframe), `editorActorSolidsInSceneForTest` (solids in the scene).
+
 ### `class _ViewportWidgetState`
 
 `_ViewportWidgetState`: shadcn_flutter UI component rendering interface elements and listening to interactions.
