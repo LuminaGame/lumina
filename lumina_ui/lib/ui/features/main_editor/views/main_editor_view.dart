@@ -5,7 +5,7 @@ import 'dart:ui' show AppExitResponse, AppExitType;
 import 'package:flutter/services.dart' show ServicesBinding;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina/lumina.dart';
-import 'package:lumina_editor_api/lumina_editor_api.dart' show EditorSlot;
+import 'package:lumina_editor_api/lumina_editor_api.dart' show EditorSlot, MinimizedPluginDialogsBar;
 import '../../../core/theme/editor_theme.dart';
 import '../../../core/window/lumina_window.dart';
 import '../../../core/property_editors/asset_picker_select.dart';
@@ -389,6 +389,8 @@ class _MainEditorViewState extends State<MainEditorView> {
                       ),
                       const SizedBox(width: 6),
                     ],
+                    // Minimized plugin dialogs dock here with their plugin icon and progress.
+                    const MinimizedPluginDialogsBar(),
                     Image.asset('assets/logo_white.png', height: 11),
                     const SizedBox(width: 6),
                     // Engine · Filament · level · counts;

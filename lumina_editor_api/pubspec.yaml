@@ -14,6 +14,8 @@ dependencies:
   lumina:
     path: ../lumina
   shadcn_flutter: ^0.0.55
+  path: ^1.9.0
+  crypto: ^3.0.3
 
 dev_dependencies:
   flutter_test:
