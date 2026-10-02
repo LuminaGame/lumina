@@ -444,6 +444,24 @@ class EditorViewModel extends _EditorViewModelState
     extensionRegistry.attachPanels(panelsController);
     // Plugins open workspace tabs.
     extensionRegistry.attachTabOpener((id, {title}) => openSubEditorTab(id, title: title));
+    // Plugins save assets, refresh Content Browser and generate thumbnails.
+    extensionRegistry.attachAssetSaver(({
+      required String relativePath,
+      Uint8List? bytes,
+      bool generateThumbnail = true,
+    }) async {
+      final normRel = p.normalize(relativePath).replaceAll('\\', '/');
+      final fullPath = p.normalize(p.join(projectDirPath, normRel));
+      if (bytes != null) {
+        final file = File(fullPath);
+        await file.parent.create(recursive: true);
+        await file.writeAsBytes(bytes, flush: true);
+      }
+      _refreshAssets();
+      if (generateThumbnail && File(fullPath).existsSync()) {
+        enqueueThumbnail(fullPath, force: true);
+      }
+    });
     // Per-plugin storage, the project each plugin is told about,
     // and plugin shutdown before a hand-off exits the process.
     extensionRegistry.attachStorage(dataRoot: PluginDataDir.resolve, projectDir: () => projectDirPath);

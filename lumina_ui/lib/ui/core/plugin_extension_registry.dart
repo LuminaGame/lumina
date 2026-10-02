@@ -64,6 +64,40 @@ class PluginExtensionRegistry extends ChangeNotifier implements LuminaEditorHost
     return l;
   }
 
+  Future<void> Function({
+    required String relativePath,
+    Uint8List? bytes,
+    bool generateThumbnail,
+  })? _assetSaver;
+
+  /// Attaches the host function that handles saving assets, updating Content
+  /// Browser, and enqueuing thumbnail generation.
+  void attachAssetSaver(
+    Future<void> Function({
+      required String relativePath,
+      Uint8List? bytes,
+      bool generateThumbnail,
+    }) saver,
+  ) {
+    _assetSaver = saver;
+  }
+
+  @override
+  Future<void> saveAsset({
+    required String relativePath,
+    Uint8List? bytes,
+    bool generateThumbnail = true,
+  }) async {
+    final saver = _assetSaver;
+    if (saver != null) {
+      await saver(
+        relativePath: relativePath,
+        bytes: bytes,
+        generateThumbnail: generateThumbnail,
+      );
+    }
+  }
+
   /// `(path, mtime)` → the custom type id read from the `.lmas`, so a
   /// content-browser rebuild never re-reads unchanged files.
   final Map<String, (int, String?)> _customTypeCache = {};

@@ -881,6 +881,19 @@ class _TestEditorContext implements LuminaEditorContext {
 
   @override
   void registerConsoleCommand(String name, String help, void Function(List<String> args) handler) {}
+
+  @override
+  void registerTab(EditorTabDescriptor tab) {}
+
+  @override
+  void openTab(String tabId, {String? title}) {}
+
+  @override
+  Future<void> saveAsset({
+    required String relativePath,
+    Uint8List? bytes,
+    bool generateThumbnail = true,
+  }) async {}
 }
 
 void main() {

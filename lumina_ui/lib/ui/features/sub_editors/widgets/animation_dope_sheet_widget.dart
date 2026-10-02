@@ -37,6 +37,7 @@ class _AnimationDopeSheetWidgetState extends _AnimationDopeSheetWidgetStateBase
   @override
   void initState() {
     super.initState();
+    _expandBoneTracks = widget.viewModel.animatedBoneTracks.length <= 40;
     _verticalTracksScroll.addListener(_syncTracksToHeaders);
     _verticalHeadersScroll.addListener(_syncHeadersToTracks);
   }

@@ -12,8 +12,8 @@ mixin _DopeSheetTrackStrips on _AnimationDopeSheetWidgetStateBase {
     double duration,
     AnimationEditorViewModel vm,
   ) {
-    // An authored sequence's few keys are always shown (and draggable).
-    final showKeys = vm.timelineZoom >= 1.8 || vm.isAuthored;
+    // An authored sequence's few keys are shown (and draggable). Dense clips only show keys when zoomed.
+    final showKeys = vm.timelineZoom >= 1.8 || (vm.isAuthored && bone.keyframeTimes.length <= 16);
     final bar = _AnimationDopeSheetWidgetStateBase._rangeBar(bone.startTime, bone.endTime, duration, trackWidth, 6);
     final startX = bar.left;
     final barWidth = bar.width;

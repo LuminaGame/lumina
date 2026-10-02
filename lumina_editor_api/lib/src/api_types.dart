@@ -265,6 +265,16 @@ abstract class LuminaEditorContext {
   void registerImporter(EditorImporter importer);
   void registerDetailsCustomization(DetailsCustomization c);
   void registerConsoleCommand(String name, String help, void Function(List<String> args) handler);
+
+  /// Saves an asset to the active project at [relativePath] (e.g.
+  /// `contents/animations/SK_MH_2/prpr.lmas`), optionally writing [bytes] if
+  /// provided, generates a thumbnail when [generateThumbnail] is true, and
+  /// notifies the Content Browser to refresh.
+  Future<void> saveAsset({
+    required String relativePath,
+    Uint8List? bytes,
+    bool generateThumbnail = true,
+  }) async {}
 }
 
 abstract class LuminaEditorPlugin {

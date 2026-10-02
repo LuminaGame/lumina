@@ -86,14 +86,61 @@ class GlbRetargetResult {
 /// ones where nothing moves), so switching from another clip of the asset
 /// cannot leave a bone where that clip put it.
 abstract final class GlbAnimationRetargeter {
-  /// Names of the joints of every skin in [glb].
+  /// All node indices of a target skeleton: skin joints, ancestors up to the
+  /// root, and any intermediate bone nodes.
+  static Set<int> _skeletonNodeIndices(Map<String, dynamic> json) {
+    final skins = (json['skins'] as List?) ?? const [];
+    if (skins.isEmpty) return const {};
+    final nodes = (json['nodes'] as List?) ?? const [];
+    final parent = List<int>.filled(nodes.length, -1);
+    for (var i = 0; i < nodes.length; i++) {
+      for (final c in ((nodes[i] as Map)['children'] as List?) ?? const []) {
+        if (c is int && c >= 0 && c < nodes.length) parent[c] = i;
+      }
+    }
+    final skeletonNodes = <int>{};
+    for (final s in skins) {
+      if (s is! Map) continue;
+      final skeletonRoot = s['skeleton'] as int?;
+      if (skeletonRoot != null && skeletonRoot >= 0 && skeletonRoot < nodes.length) {
+        skeletonNodes.add(skeletonRoot);
+      }
+      for (final j in (s['joints'] as List?) ?? const []) {
+        if (j is! int || j < 0 || j >= nodes.length) continue;
+        var curr = j;
+        while (curr >= 0) {
+          if (!skeletonNodes.add(curr)) break;
+          curr = parent[curr];
+        }
+      }
+    }
+    for (final s in skins) {
+      if (s is! Map) continue;
+      final skeletonRoot = s['skeleton'] as int?;
+      if (skeletonRoot != null && skeletonRoot >= 0 && skeletonRoot < nodes.length) {
+        void visit(int n) {
+          if ((nodes[n] as Map)['mesh'] == null) {
+            skeletonNodes.add(n);
+            for (final c in ((nodes[n] as Map)['children'] as List?) ?? const []) {
+              if (c is int && c >= 0 && c < nodes.length) visit(c);
+            }
+          }
+        }
+        visit(skeletonRoot);
+      }
+    }
+    return skeletonNodes;
+  }
+
+  /// Names of the joints of every skin in [glb], including intermediate
+  /// skeleton hierarchy nodes.
   static Set<String> jointNames(Uint8List glb) {
     final json = GlbDocument.parse(glb).json;
     final nodes = (json['nodes'] as List?) ?? const [];
+    final indices = _skeletonNodeIndices(json);
     return {
-      for (final s in (json['skins'] as List?) ?? const [])
-        for (final j in ((s as Map)['joints'] as List?) ?? const [])
-          if ((nodes[j as int] as Map)['name'] is String) (nodes[j] as Map)['name'] as String,
+      for (final j in indices)
+        if ((nodes[j] as Map)['name'] is String) (nodes[j] as Map)['name'] as String,
     };
   }
 
@@ -142,10 +189,7 @@ abstract final class GlbAnimationRetargeter {
       throw FormatException('target uses ${buffers.length} buffers; only single-buffer GLBs can be merged into');
     }
 
-    final joints = <int>{
-      for (final s in (tDoc.json['skins'] as List?) ?? const [])
-        for (final j in ((s as Map)['joints'] as List?) ?? const []) j as int,
-    };
+    final joints = _skeletonNodeIndices(tDoc.json);
     if (joints.isEmpty) throw const FormatException('target has no skin; there is no skeleton to retarget onto');
 
     final animations = (cDoc.json['animations'] as List?) ?? const [];
@@ -236,6 +280,7 @@ abstract final class GlbAnimationRetargeter {
     final tgtWorld = List<_Quat>.filled(tgt.count, _Quat.identity);
     // Parents of the skeleton roots, at rest on the target side.
     final tgtRootParent = tgt.restWorld(tgt.parent[rootT!]);
+    final rootAlign = (tgt.restWorld(rootT) * src.restWorld(rootS).inverse()).normalized();
     for (final t in frames) {
       for (final i in src.order) {
         final local = tracks.rotation(i, t) ?? src.restR[i];
@@ -243,7 +288,7 @@ abstract final class GlbAnimationRetargeter {
         srcWorld[i] = p < 0 ? local : srcWorld[p] * local;
       }
       final srcRootParent = src.parent[rootS] < 0 ? _Quat.identity : srcWorld[src.parent[rootS]];
-      final delta = tgtRootParent * srcRootParent.inverse();
+      final delta = (rootAlign * tgtRootParent * srcRootParent.inverse()).normalized();
       for (final j in tgt.order) {
         final p = tgt.parent[j];
         final parentWorld = p < 0 ? _Quat.identity : tgtWorld[p];
@@ -260,16 +305,21 @@ abstract final class GlbAnimationRetargeter {
     }
 
     // Translations: root copied, pelvis scaled, the rest from the skeleton.
-    List<List<double>>? sampledTranslation(int targetJoint, double scale) {
+    List<List<double>>? sampledTranslation(int targetJoint, double scale, {bool isPelvis = false}) {
       final s = mapped[targetJoint];
       if (s == null || !tracks.hasTranslation(s)) return null;
+      final qAlign = isPelvis
+          ? (tgt.restR[rootT!].inverse() * src.restR[rootS]).normalized()
+          : (tgt.parent[rootT!] < 0 ? _Quat.identity : tgtRootParent * src.restWorld(src.parent[rootS]).inverse()).normalized();
       return [
-        for (final t in frames) [for (final v in tracks.translation(s, t)!) v * scale],
+        for (final t in frames) [
+          for (final v in qAlign.rotateVector(tracks.translation(s, t)!)) v * scale,
+        ],
       ];
     }
 
     final rootTranslation = sampledTranslation(rootT, 1.0);
-    final pelvisTranslation = pelvisT == null ? null : sampledTranslation(pelvisT, pelvisScale);
+    final pelvisTranslation = pelvisT == null ? null : sampledTranslation(pelvisT, pelvisScale, isPelvis: true);
 
     // ---- Write the animation into the target GLB.
     final json = tDoc.json;
@@ -409,6 +459,12 @@ class _Quat {
   _Quat inverse() {
     final n = x * x + y * y + z * z + w * w;
     return n == 0 ? identity : _Quat(-x / n, -y / n, -z / n, w / n);
+  }
+
+  List<double> rotateVector(List<double> v) {
+    final qv = _Quat(v[0], v[1], v[2], 0);
+    final res = this * qv * inverse();
+    return [res.x, res.y, res.z];
   }
 
   _Quat normalized() {

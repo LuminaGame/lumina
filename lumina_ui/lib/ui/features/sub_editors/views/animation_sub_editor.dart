@@ -77,8 +77,14 @@ class _AnimationSubEditorState extends _AnimationSubEditorStateBase
       _viewModel.load().then((_) {
         if (mounted) {
           setState(() {
-            for (final node in _viewModel.allBones) {
-              _expandedNodeIndices.add(node.index);
+            if (_viewModel.allBones.length <= 60) {
+              for (final node in _viewModel.allBones) {
+                _expandedNodeIndices.add(node.index);
+              }
+            } else {
+              for (final node in _viewModel.rootBones) {
+                _expandedNodeIndices.add(node.index);
+              }
             }
             // An authored sequence is posed bone by bone: show the skeleton.
             if (_viewModel.isAuthored) _activeLeftTab = 1;
@@ -86,8 +92,14 @@ class _AnimationSubEditorState extends _AnimationSubEditorStateBase
         }
       });
     } else {
-      for (final node in _viewModel.allBones) {
-        _expandedNodeIndices.add(node.index);
+      if (_viewModel.allBones.length <= 60) {
+        for (final node in _viewModel.allBones) {
+          _expandedNodeIndices.add(node.index);
+        }
+      } else {
+        for (final node in _viewModel.rootBones) {
+          _expandedNodeIndices.add(node.index);
+        }
       }
       if (_viewModel.isAuthored) _activeLeftTab = 1;
     }
