@@ -487,6 +487,41 @@ void main() {
       expect(File('$cwd/marker.txt').readAsStringSync(), 'in the project', reason: 'the alias is the project folder');
       expect(events.whereType<BuildLogEvent>().any((l) => l.message.contains('Building through $cwd')), isTrue);
     });
+
+    test('a failed build logs the error of the native-assets hook that failed in it, not older ones', () async {
+      writeLevel();
+      final hooks = '${projDir.path}/.dart_tool/hooks_runner';
+      // A hook that failed in an earlier build: not this build's error.
+      final stale = Directory('$hooks/flutter_riglogic/0123456789')..createSync(recursive: true);
+      File('${stale.path}/stderr.txt')
+        ..writeAsStringSync('Exception: riglogic.lib not found\n')
+        ..setLastModifiedSync(DateTime.now().subtract(const Duration(hours: 1)));
+      // A hook that succeeded in this build (empty stderr).
+      final ok = Directory('$hooks/flutter_filament/bc4af5bfa5')..createSync(recursive: true);
+      File('${ok.path}/stderr.txt').writeAsStringSync('');
+      File('${ok.path}/stdout.txt').writeAsStringSync('native cache hit 5acf8243\n');
+      final hookStandIn = _writeFailingHookStandIn(tempDir);
+      final step = CookAndPackageStep(
+        target: 'windows',
+        configuration: BuildConfiguration.shipping,
+        buildAliasRoot: Directory('${tempDir.path}/aliases'),
+        processStarter: (exe, args, {workingDirectory}) =>
+            Process.start(_dartExecutable(), [hookStandIn, '$hooks/flutter_assimp/bc4af5bfa5'], workingDirectory: workingDirectory),
+      );
+      final events = await runPlan(BuildPlan(steps: [step]));
+      expect(events.whereType<BuildStepFinished>().single.status, BuildStepStatus.failed);
+      final errors = events.whereType<BuildLogEvent>().where((l) => l.level == 'error').map((l) => l.message).toList();
+      final log = errors.join('\n');
+      expect(errors.where((l) => l.startsWith('Native assets hook ')), hasLength(1), reason: log);
+      expect(log, contains('Native assets hook flutter_assimp failed'));
+      expect(log, contains("Exit code: '1'."), reason: 'the hook exception');
+      expect(log, contains("'C:\\Program' is not recognized as an internal or external command,"), reason: "the failing tool's message");
+      expect(log, contains('operable program or batch file.'));
+      expect(log, isNot(contains('#0      runProcess')), reason: 'stack frames are left out');
+      expect(log, isNot(contains('riglogic.lib not found')), reason: "an earlier build's hook error is not this one");
+      expect(errors.every((l) => l.length < CookAndPackageStep.hookLineLimit + 80), isTrue, reason: 'command and environment dumps are shortened');
+      expect(errors.last, contains('exited with code 1'));
+    });
   });
 
   group('CookAndPackageStep for the web', () {
@@ -953,6 +988,44 @@ String _dartExecutable() {
     if (File(candidate).existsSync()) return candidate;
   }
   return 'dart';
+}
+
+/// A real child process standing in for a `flutter build` whose
+/// native-assets hook fails: it writes the hook's `stderr.txt` / `stdout.txt`
+/// into the hooks runner folder given as the argument, as the hooks runner
+/// does (the text of a flutter_assimp hook that ran cl.exe through cmd.exe
+/// under a path with a space), prints flutter's own summary and exits 1.
+String _writeFailingHookStandIn(Directory dir) {
+  final f = File('${dir.path}/flutter_hook_stand_in.dart');
+  f.writeAsStringSync(r'''
+import 'dart:io';
+
+void main(List<String> args) {
+  final run = Directory(args[0])..createSync(recursive: true);
+  final env = List.filled(40, r'C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\bin\HostX64\x64').join(';');
+  File('${run.path}/stderr.txt').writeAsStringSync([
+    "ProcessException: Full command string: '(cd C:\\Users\\dev\\Lumina Projects\\game\\.dart_tool\\hooks_runner\\shared\\flutter_assimp\\build\\bc4af5bfa5\\; PATH=$env cl.exe /O2 )'.",
+    "Exit code: '1'.",
+    'For the output of the process check the logger output.',
+    '#0      runProcess (package:native_toolchain_c/src/utils/run_process.dart:85:5)',
+    '<asynchronous suspension>',
+    '#1      RunCBuilder.runCl (package:native_toolchain_c/src/cbuilder/run_cbuilder.dart:378:20)',
+    '<asynchronous suspension>',
+    '',
+  ].join('\r\n'));
+  File('${run.path}/stdout.txt').writeAsStringSync([
+    'Using envScript from input: file:///C:/Program%20Files/Microsoft%20Visual%20Studio/2022/Community/VC/Auxiliary/Build/vcvars64.bat',
+    'Running `(cd C:\\Users\\dev\\Lumina Projects\\game; PATH=$env $env $env cl.exe )`.',
+    r"'C:\Program' is not recognized as an internal or external command,",
+    'operable program or batch file.',
+    '',
+  ].join('\r\n'));
+  stdout.writeln('Building Windows application...');
+  stderr.writeln('Target build_hooks failed: error: Building native assets failed. See the logs for more details.');
+  exit(1);
+}
+''');
+  return f.path;
 }
 
 /// A real child process standing in for `flutter build`: prints N lines with a

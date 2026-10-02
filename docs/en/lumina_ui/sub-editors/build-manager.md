@@ -479,6 +479,8 @@ Regenerates the game's Dart code; the default reads the active level from disk, 
 | `formatBytes` | `static String formatBytes(int bytes)` | `12.3 MB`-style sizes for the log and the Output section. |
 | `derivedDataCacheLeak` | `static String? derivedDataCacheLeak(String projectDir)` | Why cooking [projectDir] would ship its editor-only `DerivedDataCache/`, or null. `flutter build` bundles only the pubspec's asset entries, so the cache stays out unless one of them names it. |
 | `buildAliasRoot` | `final Directory? buildAliasRoot` | Windows: where the space-free alias the build runs through lives ([SpaceFreeBuildDir]; default [SpaceFreeBuildDir.defaultAliasRoot]). On Windows `flutter build` runs through that alias of the project, because the native-assets hooks cannot compile under a path with a space (every project under `Lumina Projects`). |
+| `hookLineLimit` | `static const int hookLineLimit` | The longest hook output line [failedHookReport] shows in full. |
+| `failedHookReport` | `static List<String> failedHookReport(String projectDir, {DateTime? since, int outputLines = 8, int errorLines = 12})` | The error of every native-assets hook of [projectDir] that failed since [since], as log lines: the package, the hook's exception (stack frames left out) and the last lines of its output (the failing tool's message). Empty when no hook failed. Read from `.dart_tool/hooks_runner/<package>/<id>/stderr.txt` and `stdout.txt`. A failed build logs it as errors, since `flutter build` itself prints only "Building native assets failed". |
 
 ### `class PackageTargetsStep`
 

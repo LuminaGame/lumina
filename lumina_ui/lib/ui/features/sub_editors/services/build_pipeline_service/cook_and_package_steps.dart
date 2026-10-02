@@ -229,6 +229,8 @@ class CookAndPackageStep implements BuildStep {
       ctx.log('Could not create a space-free alias of the project (${e.message}); building in place', level: 'warning');
     }
     if (buildDir != ctx.projectDir) ctx.log('Building through $buildDir -> ${ctx.projectDir}');
+    // Hook output older than this belongs to an earlier build.
+    final started = DateTime.now().subtract(const Duration(seconds: 2));
     Process proc;
     try {
       proc = await _starter(flutterExecutable, args, workingDirectory: buildDir);
@@ -261,7 +263,58 @@ class CookAndPackageStep implements BuildStep {
       }
       return StepResult.ok('flutter build $target ${configuration.flag} succeeded (exit 0) — artifact: $artifact', artifactPath: artifact);
     }
+    // flutter prints only "Building native assets failed" for a failing
+    // hook; its own error is in the hooks runner's files.
+    for (final line in failedHookReport(ctx.projectDir, since: started)) {
+      ctx.log(line, level: 'error');
+    }
     return StepResult.failed('flutter build $target ${configuration.flag} exited with code $code');
+  }
+
+  /// The longest hook output line [failedHookReport] shows in full.
+  static const int hookLineLimit = 300;
+
+  /// The error of every native-assets hook of [projectDir] that failed since
+  /// [since], as log lines: the package, the hook's exception (stack frames
+  /// left out) and the last lines of its output (the failing tool's
+  /// message). Empty when no hook failed. Read from
+  /// `.dart_tool/hooks_runner/<package>/<id>/stderr.txt` and `stdout.txt`.
+  static List<String> failedHookReport(String projectDir, {DateTime? since, int outputLines = 8, int errorLines = 12}) {
+    final root = Directory('$projectDir/.dart_tool/hooks_runner');
+    if (!root.existsSync()) return const [];
+    String shorten(String l) => l.length <= hookLineLimit ? l : '${l.substring(0, hookLineLimit)}… (${l.length} characters)';
+    List<String> linesOf(File f) => f.existsSync()
+        ? f.readAsStringSync().split(RegExp(r'\r\n|\r|\n')).map((l) => l.trimRight()).where((l) => l.trim().isNotEmpty).toList()
+        : const [];
+    final frame = RegExp(r'^#\d+\s');
+    final out = <String>[];
+    String nameOf(Directory d) => d.uri.pathSegments.lastWhere((s) => s.isNotEmpty);
+    // `shared/` holds the hooks' build folders, one per package beside it.
+    final packages = root.listSync().whereType<Directory>().where((d) => nameOf(d) != 'shared').toList()
+      ..sort((a, b) => a.path.compareTo(b.path));
+    for (final pkg in packages) {
+      final name = nameOf(pkg);
+      for (final run in pkg.listSync().whereType<Directory>()) {
+        final stderr = File('${run.path}/stderr.txt');
+        if (!stderr.existsSync() || (since != null && stderr.lastModifiedSync().isBefore(since))) continue;
+        final error = linesOf(stderr).where((l) => !frame.hasMatch(l) && l.trim() != '<asynchronous suspension>').toList();
+        if (error.isEmpty) continue;
+        out.add('Native assets hook $name failed (${stderr.path}):');
+        for (final l in error.take(errorLines)) {
+          out.add('  ${shorten(l)}');
+        }
+        // The tool's own message ends the output; command and environment
+        // dumps are no help there.
+        final output = linesOf(File('${run.path}/stdout.txt')).where((l) => l.length <= 4 * hookLineLimit).toList();
+        if (output.isNotEmpty) {
+          out.add('  Hook output (last lines):');
+          for (final l in output.skip(output.length > outputLines ? output.length - outputLines : 0)) {
+            out.add('    ${shorten(l)}');
+          }
+        }
+      }
+    }
+    return out;
   }
 }
 

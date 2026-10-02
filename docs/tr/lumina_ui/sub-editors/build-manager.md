@@ -479,6 +479,8 @@ Regenerates the game's Dart code; the default reads the active level from disk, 
 | `formatBytes` | `static String formatBytes(int bytes)` | `12.3 MB`-style sizes for the log and the Output section. |
 | `derivedDataCacheLeak` | `static String? derivedDataCacheLeak(String projectDir)` | Why cooking [projectDir] would ship its editor-only `DerivedDataCache/`, or null. `flutter build` bundles only the pubspec's asset entries, so the cache stays out unless one of them names it. |
 | `buildAliasRoot` | `final Directory? buildAliasRoot` | Windows: build'in üzerinden çalıştığı boşluksuz takma adın bulunduğu yer ([SpaceFreeBuildDir]; varsayılan [SpaceFreeBuildDir.defaultAliasRoot]). Windows'ta `flutter build` projenin bu takma adı üzerinden çalışır, çünkü native-assets hook'ları boşluk içeren bir yolda (`Lumina Projects` altındaki her proje) derleme yapamaz. |
+| `hookLineLimit` | `static const int hookLineLimit` | [failedHookReport]'un tam gösterdiği en uzun hook çıktı satırı. |
+| `failedHookReport` | `static List<String> failedHookReport(String projectDir, {DateTime? since, int outputLines = 8, int errorLines = 12})` | [projectDir]'in [since]'tan beri başarısız olan her native-assets hook'unun hatası, log satırları olarak: paket, hook'un exception'ı (stack frame'ler hariç) ve çıktısının son satırları (başarısız aracın mesajı). Başarısız hook yoksa boş. `.dart_tool/hooks_runner/<package>/<id>/stderr.txt` ve `stdout.txt` dosyalarından okunur. `flutter build` yalnızca "Building native assets failed" yazdığı için başarısız bir build bunu hata olarak loglar. |
 
 ### `class PackageTargetsStep`
 
