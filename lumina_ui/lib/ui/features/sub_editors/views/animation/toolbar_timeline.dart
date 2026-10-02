@@ -119,7 +119,6 @@ mixin _AnimationToolbarTimeline on _AnimationSubEditorStateBase {
     final vm = _viewModel;
 
     return Container(
-      height: 240,
       color: EditorColors.cardHeader,
       child: Column(
         children: [

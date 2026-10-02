@@ -8,6 +8,7 @@ abstract class _AnimationSubEditorStateBase extends State<AnimationSubEditor> wi
   final FocusNode _focusNode = FocusNode();
   int _activeLeftTab = 0; // 0 = Properties, 1 = Bone Tracks, 2 = Notifies
   int _activeRightTab = 0; // 0 = Key Details, 1 = Curves, 2 = BlendSpace, 3 = Pose (authored)
+  double _bottomTimelineHeight = 260.0;
 
   /// Viewport clicks add root path points (the Pose tab's Draw Path).
   bool _drawingRootPath = false;

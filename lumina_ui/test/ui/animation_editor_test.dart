@@ -5,6 +5,7 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina/lumina.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/animation_sub_editor.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/animation_editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/widgets/animation_dope_sheet_widget.dart';
 import '../view_models/animation_editor_view_model_test.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 
@@ -124,4 +125,36 @@ void main() {
     expect(find.textContaining('Frame: 0 / 45'), findsOneWidget);
     expect(find.textContaining('Clip: Walk'), findsWidgets);
   });
+
+  testWidgets('AnimationSubEditor allows resizing the bottom timeline panel via VerticalResizableDragger', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1280, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final vm = AnimationEditorViewModel(assetPath: lmasPath);
+    await tester.runAsync(() => vm.load());
+
+    await tester.pumpWidget(
+      ShadcnApp(
+        theme: luminaEditorTheme(),
+        home: Scaffold(
+          child: AnimationSubEditor(
+            assetName: 'A_Hero_Anim',
+            assetPath: lmasPath,
+            viewModel: vm,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final draggerFinder = find.byType(VerticalResizableDragger);
+    expect(draggerFinder, findsOneWidget);
+
+    final draggerCenter = tester.getCenter(draggerFinder);
+    await tester.dragFrom(draggerCenter, const Offset(0, -100));
+    await tester.pump();
+
+    expect(find.byType(AnimationDopeSheetWidget), findsOneWidget);
+  });
 }
+

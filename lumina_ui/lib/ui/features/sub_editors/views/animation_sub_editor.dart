@@ -209,12 +209,14 @@ class _AnimationSubEditorState extends _AnimationSubEditorStateBase
                         ),
                       ),
 
-                      // Center Panel: 3D Viewport + Bottom Timeline Transport
+                      // Center Panel: 3D Viewport + Bottom Timeline Transport (vertically resizable)
                       ResizablePane.flex(
-                        child: Column(
+                        child: ResizablePanel.vertical(
+                          key: const ValueKey('anim_center_vertical_panel'),
+                          draggerBuilder: (context) => const VerticalResizableDragger(),
                           children: [
                             // 3D Viewport with Live Stats Overlay & Root Motion Switch
-                            Expanded(
+                            ResizablePane.flex(
                               child: Stack(
                                 children: [
                                   _buildViewport(),
@@ -323,10 +325,14 @@ class _AnimationSubEditorState extends _AnimationSubEditorStateBase
                                 ],
                               ),
                             ),
-                            const Divider(height: 1),
 
                             // Bottom Transport Timeline Panel
-                            _buildBottomTimelinePanel(),
+                            ResizablePane(
+                              initialSize: _bottomTimelineHeight,
+                              minSize: 120,
+                              onSizeChangeEnd: (size) => setState(() => _bottomTimelineHeight = size),
+                              child: _buildBottomTimelinePanel(),
+                            ),
                           ],
                         ),
                       ),
