@@ -31,6 +31,35 @@ void main(List<String> args) async {
     String windowsLib(String path) => input.packageRoot
         .resolveUri(Uri.file('$filament/out/$filamentOut/$path'))
         .toFilePath();
+
+    final String? androidAbi;
+    final List<String> androidLibs;
+    if (targetOS == OS.android) {
+      switch (input.config.code.targetArchitecture) {
+        case Architecture.arm64:
+          androidAbi = 'arm64-v8a';
+        case Architecture.x64:
+          androidAbi = 'x86_64';
+        case Architecture.arm:
+          androidAbi = 'armeabi-v7a';
+        default:
+          throw UnsupportedError(
+              'Unsupported Android architecture: ${input.config.code.targetArchitecture}');
+      }
+      final androidLibDir = '$filament/out/android-release/filament/lib/$androidAbi';
+      final libDir = Directory(input.packageRoot.resolveUri(Uri.file(androidLibDir)).toFilePath());
+      if (!libDir.existsSync()) {
+        throw StateError(
+            'Filament Android libraries for $androidAbi not found at ${libDir.path}.\n'
+            'Build them with flutter_filament/tool/build_filament_android.bat first.');
+      }
+      androidLibs = [
+        for (final lib in androidFilamentLibs) '$androidLibDir/$lib',
+      ];
+    } else {
+      androidAbi = null;
+      androidLibs = const <String>[];
+    }
     // The Filament version the wrapper is built against, from the
     // file Filament's bump-version.sh treats as primary.
     final gradleProperties = input.packageRoot.resolveUri(Uri.file('$filament/android/gradle.properties'));
@@ -138,6 +167,7 @@ void main(List<String> args) async {
         '$filament/third_party/draco/tnt',
         '$filament/third_party/cgltf',
         'third_party/filament_matp/include',
+        'third_party/filament_matp/src',
     ];
     // On Windows the sources, includes and Filament libraries go to a
     // response file; cl runs through cmd.exe, whose command line holds 8 191
@@ -239,6 +269,16 @@ void main(List<String> args) async {
           '-lz',
           '-lc++',
           '-lc++abi',
+        ] else if (targetOS == OS.android) ...[
+          '-Wl,--whole-archive',
+          ...androidLibs,
+          '-Wl,--no-whole-archive',
+          '-llog',
+          '-landroid',
+          '-lEGL',
+          '-lGLESv3',
+          '-lm',
+          '-ldl',
         ] else if (targetOS == OS.linux) ...[
           '-nostdinc++',
           '-isystem', 'third_party/libcxx/usr/lib/llvm-21/include/c++/v1',
@@ -306,7 +346,7 @@ void main(List<String> args) async {
       libraries: [
         if (targetOS == OS.windows) ..._windowsSystemLibs,
       ],
-      cppLinkStdLib: targetOS == OS.macOS ? 'c++' : null,
+      cppLinkStdLib: targetOS == OS.macOS ? 'c++' : (targetOS == OS.android ? 'c++_static' : null),
     );
     // A machine-wide cache of the built library, keyed
     // by the very lists the CBuilder above compiles with.
@@ -526,3 +566,37 @@ const _windowsSystemLibs = [
   'ole32',
   'ws2_32',
 ];
+
+/// The static libraries linked on Android, relative to
+/// `out/android-release/filament/lib/<abi>/`.
+const androidFilamentLibs = [
+  'libfilament.a',
+  'libbackend.a',
+  'libutils.a',
+  'libgltfio_core.a',
+  'libuberarchive.a',
+  'libfilabridge.a',
+  'libfilamat.a',
+  'libcamutils.a',
+  'libabseil.a',
+  'libcivetweb.a',
+  'libshaders.a',
+  'libbluevk.a',
+  'libgeometry.a',
+  'libdracodec.a',
+  'libbasis_transcoder.a',
+  'libmeshoptimizer.a',
+  'libmikktspace.a',
+  'libfilameshio.a',
+  'libfilaflat.a',
+  'libzstd.a',
+  'libimage.a',
+  'libibl.a',
+  'libktxreader.a',
+  'libfilament-iblprefilter.a',
+  'libuberzlib.a',
+  'libwebpdecoder.a',
+  'libstb.a',
+  'libsmol-v.a',
+];
+

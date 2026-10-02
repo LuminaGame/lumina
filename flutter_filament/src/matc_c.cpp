@@ -14,8 +14,8 @@
 // Filament's .mat parser, vendored unmodified under third_party/filament_matp (see its README).
 #include <filament-matp/Config.h>
 #include <filament-matp/MaterialParser.h>
-#include "../third_party/filament_matp/src/DirIncluder.h"
-#include "../third_party/filament_matp/src/Includes.h"
+#include "DirIncluder.h"
+#include "Includes.h"
 
 #include <filamat/MaterialBuilder.h>
 #include <filamat/Package.h>
