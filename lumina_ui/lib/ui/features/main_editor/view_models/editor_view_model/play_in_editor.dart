@@ -72,12 +72,32 @@ mixin _EditorPlayInEditor on _EditorViewModelState {
   @override
   Future<bool> playStandalone() async {
     if (standalone.isActive) return false;
+    if (!await _prepareProjectRun('Play Standalone')) return false;
+    return standalone.start();
+  }
+
+  /// Play on Device: the same preparation as Play Standalone, then the
+  /// project is built, installed and launched on [device] (an emulator that
+  /// is not running is started first). The device is remembered for the
+  /// dropdown. Returns whether the game was launched.
+  @override
+  Future<bool> playOnAndroidDevice(AndroidDevice device) async {
+    final runner = androidRunner;
+    if (runner == null || runner.isActive) return false;
+    androidDevices.lastDeviceId = device.id;
+    if (!await _prepareProjectRun('Play on Device')) return false;
+    return runner.start(device);
+  }
+
+  /// Open Blueprints compile (errors stop the run), open assets are saved,
+  /// the exposed functions' registration and the game code are regenerated.
+  Future<bool> _prepareProjectRun(String label) async {
     final pending = openBlueprintEditors.where(BlueprintPlayPreflight.needsCompile).toList();
     final blockers = pending.isEmpty ? const <PlayBlocker>[] : await BlueprintPlayPreflight.compileEditors(projectDirPath, pending);
     if (blockers.isNotEmpty) {
       playBlockers = List.unmodifiable(blockers);
       for (final b in blockers) {
-        _logger.log('Play Standalone stopped: $b', level: 'error', source: 'Blueprint');
+        _logger.log('$label stopped: $b', level: 'error', source: 'Blueprint');
       }
       onPlayBlocked?.call(playBlockers);
       notifyListeners();
@@ -88,7 +108,7 @@ mixin _EditorPlayInEditor on _EditorViewModelState {
     }
     await blueprintFunctions.scan();
     await saveLevelAndGenerateCode();
-    return standalone.start();
+    return true;
   }
 
   /// Stops Play Standalone's game (or build).

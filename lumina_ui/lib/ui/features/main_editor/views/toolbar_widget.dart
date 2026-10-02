@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart' show EditorSlot;
 import '../../../core/theme/editor_theme.dart';
@@ -5,6 +7,8 @@ import '../../../core/widgets/quality_settings_popover.dart';
 import '../view_models/editor_view_model.dart';
 import 'package:lumina/lumina.dart' show AssetType;
 import '../services/standalone_game_runner.dart' show StandaloneState;
+import '../services/android_device_runner.dart' show AndroidRunState;
+import 'play_on_device_menu.dart';
 import '../services/snap_service.dart';
 import 'editor_slot_bar.dart';
 import 'toolbar_priority_row.dart';
@@ -107,12 +111,15 @@ class _ToolbarWidgetState extends State<ToolbarWidget> {
     );
   }
 
-  /// Play's modes: in the level viewport (PIE), or the
-  /// project built and run as its own process.
+  /// Play's modes: in the level viewport (PIE), the
+  /// project built and run as its own process, or (with an Android SDK) on an
+  /// Android device or emulator, listed afresh each time the menu opens.
   void _showPlayModes(EditorViewModel vm) {
     final box = _playModeKey.currentContext?.findRenderObject() as RenderBox?;
     if (box == null) return;
     final offset = box.localToGlobal(Offset.zero);
+    final devices = vm.androidDevices;
+    if (devices.available) unawaited(devices.refresh());
     showDropdown(
       context: context,
       // An explicit position is where the menu opens; following the
@@ -122,7 +129,9 @@ class _ToolbarWidgetState extends State<ToolbarWidget> {
       alignment: Alignment.topLeft,
       anchorAlignment: Alignment.topLeft,
       position: Offset(offset.dx, offset.dy + box.size.height + 2),
-      builder: (context) => DropdownMenu(
+      builder: (context) => ListenableBuilder(
+        listenable: devices,
+        builder: (context, _) => DropdownMenu(
         children: [
           MenuButton(
             key: const ValueKey('play_mode_viewport'),
@@ -140,7 +149,13 @@ class _ToolbarWidgetState extends State<ToolbarWidget> {
             },
             child: const Text('Play Standalone', style: TextStyle(fontSize: 10)),
           ),
+          ...playOnDeviceMenuItems(
+            list: devices,
+            runActive: vm.androidRunner?.isActive ?? false,
+            onChoose: (device) => unawaited(vm.playOnAndroidDevice(device)),
+          ),
         ],
+      ),
       ),
     );
   }
@@ -233,7 +248,9 @@ class _ToolbarWidgetState extends State<ToolbarWidget> {
                     child: Icon(
                       LucideIcons.square,
                       size: 14,
-                      color: vm.standalone.isActive ? EditorColors.destructive : EditorColors.mutedForeground,
+                      color: vm.standalone.isActive || (vm.androidRunner?.isActive ?? false)
+                          ? EditorColors.destructive
+                          : EditorColors.mutedForeground,
                     ),
                   ),
                   // Play Standalone's state, like PIE's.
@@ -244,6 +261,24 @@ class _ToolbarWidgetState extends State<ToolbarWidget> {
                       child: OutlineBadge(
                         child: Text(
                           vm.standalone.state == StandaloneState.building ? 'STANDALONE · BUILDING' : 'STANDALONE · RUNNING',
+                          style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: EditorColors.primary),
+                        ),
+                      ),
+                    ),
+                  // Play on Device's state and device.
+                  if (vm.androidRunner?.isActive ?? false)
+                    Padding(
+                      key: const ValueKey('play_on_device_status'),
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: OutlineBadge(
+                        child: Text(
+                          '${vm.androidRunner!.device?.name ?? 'DEVICE'} · ${switch (vm.androidRunner!.state) {
+                            AndroidRunState.booting => 'BOOTING',
+                            AndroidRunState.building => 'BUILDING',
+                            AndroidRunState.installing => 'INSTALLING',
+                            AndroidRunState.running => 'RUNNING',
+                            AndroidRunState.idle => '',
+                          }}',
                           style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: EditorColors.primary),
                         ),
                       ),

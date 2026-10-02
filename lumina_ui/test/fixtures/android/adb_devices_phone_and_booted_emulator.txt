@@ -1,0 +1,4 @@
+List of devices attached
+0a1b2c3                device product:platina model:MI_8_Lite device:platina transport_id:1
+emulator-5554          device product:sdk_gphone64_x86_64 model:sdk_gphone64_x86_64 device:emu64xa transport_id:5
+

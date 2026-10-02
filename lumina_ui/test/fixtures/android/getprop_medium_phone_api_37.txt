@@ -1,0 +1,8 @@
+[ro.boot.qemu.avd_name]: [Medium_Phone_API_37.0]
+[ro.build.version.codename]: [REL]
+[ro.build.version.release]: [17]
+[ro.build.version.sdk]: [37]
+[ro.product.cpu.abi]: [x86_64]
+[ro.product.manufacturer]: [Google]
+[ro.product.model]: [sdk_gphone64_x86_64]
+[sys.boot_completed]: [1]
