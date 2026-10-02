@@ -11,6 +11,7 @@ import 'package:lumina_ui/ui/features/main_editor/services/editor_preferences.da
 /// With the preference off, nothing is written. A real ProjectRepository on a
 /// temp workspace; `flutter create` / `pub get` scripted.
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   late Directory config;
   late Directory workspace;
 
@@ -62,6 +63,19 @@ flutter:
     expect(File('$host/pubspec.yaml').readAsStringSync(), contains('name: created_game_editor'));
     expect(File('$host/lib/plugin_registrar.dart').existsSync(), isTrue);
     expect(File('$host/lib/main.dart').existsSync(), isTrue);
+  });
+
+  test('a new project has the AI agent skills for Claude Code and Antigravity and its AGENTS.md / CLAUDE.md', () async {
+    final dir = await create('agent_game');
+    for (final skill in ['lumina-engine', 'lumina-mcp', 'create-plugin']) {
+      expect(File('$dir/.claude/skills/$skill/SKILL.md').existsSync(), isTrue, reason: skill);
+      expect(File('$dir/.agents/skills/$skill/SKILL.md').existsSync(), isTrue, reason: skill);
+    }
+    expect(File('$dir/.claude/skills/lumina-mcp/reference/tools.md').existsSync(), isTrue);
+    final agents = File('$dir/AGENTS.md').readAsStringSync();
+    expect(agents, contains('# agent_game'));
+    expect(agents, contains('agent_game.lmproject'));
+    expect(File('$dir/CLAUDE.md').readAsStringSync(), contains('@AGENTS.md'));
   });
 
   test('with per-project editors off, no host is written', () async {

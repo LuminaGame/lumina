@@ -359,6 +359,14 @@ mixin _EditorCommands on _EditorViewModelState {
         canExecute: () => true,
         execute: (ctx) => openSubEditorTab('mcpServer', title: 'AI Agent Access (MCP)'),
       ),
+      // Tools → Set Up AI Agent Files...: the editor's skills for Claude Code
+      // and Antigravity and the project's AGENTS.md / CLAUDE.md.
+      EditorCommand(
+        id: 'tools.aiAgentFiles',
+        label: 'Set Up AI Agent Files...',
+        canExecute: () => true,
+        execute: (ctx) => runAiAgentFilesCommand(ctx, projectDir: projectDirPath, project: project),
+      ),
       EditorCommand(
         id: 'tools.clearDerivedDataCache',
         label: 'Clear Derived Data Cache',

@@ -109,7 +109,32 @@ Proje launcher'ı (son projeler, şablonlar ve proje oluşturma akışı) ile de
 | `updateTemplate` | `void updateTemplate(String val)` | Mevcut verileri veya durumu günceller. |
 | `validateProjectName` | `static String? validateProjectName(String name)` | `validateProjectName` işlemini gerçekleştirir. |
 | `validateLocation` | `static String? validateLocation(String location)` | `validateLocation` işlemini gerçekleştirir. |
-| `createProject` | `Future<void> createProject()` | Yeni bir `Project` örneği veya ilişkili GPU kaynağını oluşturur ve yapılandırır. |
+| `createProject` | `Future<void> createProject()` | Oluşturma hattını (yerleşik ya da kurulu şablon) çalıştırır, standart içerik klasörlerini ve projenin editör host'unu ekler, ardından AI ajan dosyalarını kurar (`AiAgentFiles`, aşağıda); son ikisindeki bir hata `processOutput`'a yazılır, oluşturmayı hiçbir zaman başarısız kılmaz. |
+
+## AI ajan dosyaları (`lib/ui/core/services/ai_agent_files.dart`)
+
+Her yeni proje, oyun üzerinde (motor üzerinde değil) çalışan AI ajanları için hazırlanır:
+
+| Ne | Projede nerede | Kim okur |
+| :--- | :--- | :--- |
+| Editörün skill'leri (`lumina-engine`, `lumina-mcp`, `create-plugin`, `reference/` dosyalarıyla) | `.claude/skills/<skill>/` | Claude Code (proje skill'leri) |
+| Aynı skill'ler | `.agents/skills/<skill>/` | Antigravity (çalışma alanı skill'leri; Antigravity belgeleri, *Skills*: `<workspace-root>/.agents/skills/<skill-folder>/`) |
+| `AGENTS.md`: proje özeti (ad, motor sürümü, şablon, açılış seviyesi, widget kütüphanesi, birimler ve eksenler, dizin yapısı, oyunu deneme ve derleme, MCP sunucusu, yapılacaklar ve yapılmayacaklar, kurulu skill'ler) | proje kökü | Antigravity (her zaman etkin kural, belgeler *Rules*), diğer ajan araçları |
+| `CLAUDE.md`: `@AGENTS.md` dosyasını içe aktaran kısa bir Claude Code başlığı | proje kökü | Claude Code |
+
+- Skill'ler ve belge şablonları (`assets/agent_files/AGENTS.md.template`, `CLAUDE.md.template`; `{{placeholder}}` değerleri `LuminaProject`'ten doldurulur) Flutter asset'idir, bu yüzden kurulu editör de onları taşır; `AiAgentFiles` skill dosyalarını asset manifest'inden listeler (`skills/...`, proje editör host'unda `packages/lumina_ui/skills/...`) ve `EditorAssets` üzerinden yükler.
+- Yazılan her belge `<!-- lumina-agent-file sha256=... -->` işaretiyle biter. Metni hâlâ işaretine uyan belge editöründür ve serbestçe yeniden üretilir; düzenlenmiş (ya da kullanıcının yazdığı) belge, kullanıcı Replace demedikçe korunur.
+- Kurulu skill klasörleri her kurulumda editörün sürümüyle değiştirilir; `.claude/skills/` ve `.agents/skills/` altındaki diğer klasörler kullanıcınındır, hiç dokunulmaz.
+
+| Üye | İmza | Amaç |
+| :--- | :--- | :--- |
+| `skillAssets` | `Future<List<String>> skillAssets()` | Paketlenmiş skill dosyaları, `skills/<skill>/<path>`, sıralı. |
+| `skills` | `Future<List<AgentSkill>> skills()` | `SKILL.md` açıklamaları ve dosyalarıyla paketlenmiş skill'ler. |
+| `renderDocs` | `Future<Map<String, String>> renderDocs(LuminaProject project, {List<AgentSkill>? skills})` | Projenin `AGENTS.md` ve `CLAUDE.md` dosyaları, işaret dahil. |
+| `editedDocs` | `Future<List<String>> editedDocs(String projectDir)` | Mevcut olup artık editörün yazdığı gibi olmayan belgeler. |
+| `install` | `Future<AiAgentFilesReport> install(String projectDir, LuminaProject project, {bool overwriteDocs = false})` | Skill'leri iki araç için kurar ve belgeleri yazar; `overwriteDocs` yoksa düzenlenmiş belgeler korunur. Rapor skill'leri, yazılan ve korunan belgeleri listeler. |
+
+**Mevcut projeler**: Tools > **Set Up AI Agent Files...** (`tools.aiAgentFiles` komutu, `lib/ui/features/main_editor/views/ai_agent_files_dialog.dart`) aynı dosyaları açık projeye kurar. `AGENTS.md` ya da `CLAUDE.md` düzenlenmişse bir pencere *Keep mine* / *Replace* diye sorar; skill'ler her durumda yenilenir, sonuç Output Log'a ve bir bildirime yazılır. UI bağlamı olmadan (`askReplace` verilmeden `setUpAiAgentFiles`) düzenlenmiş belgeler korunur.
 
 ## `lib/ui/features/launcher/view_models/launcher_view_model.dart`
 

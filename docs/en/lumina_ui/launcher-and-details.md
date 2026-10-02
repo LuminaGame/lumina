@@ -109,7 +109,32 @@ The project launcher (recent projects, templates and the create-project flow) an
 | `updateTemplate` | `void updateTemplate(String val)` | Updates the current state or data values. |
 | `validateProjectName` | `static String? validateProjectName(String name)` | Executes `validateProjectName` operation. |
 | `validateLocation` | `static String? validateLocation(String location)` | Executes `validateLocation` operation. |
-| `createProject` | `Future<void> createProject()` | Creates, configures, and returns a new `Project` instance or associated GPU resource. |
+| `createProject` | `Future<void> createProject()` | Runs the creation pipeline (built-in or installed template), adds the standard content folders and the project's editor host, then installs the AI agent files (`AiAgentFiles`, below); a failure of the last two is logged in `processOutput` and never fails the creation. |
+
+## AI agent files (`lib/ui/core/services/ai_agent_files.dart`)
+
+Every new project is set up for AI agents working on the game (not the engine):
+
+| What | Where in the project | Read by |
+| :--- | :--- | :--- |
+| The editor's skills (`lumina-engine`, `lumina-mcp`, `create-plugin`, with their `reference/` files) | `.claude/skills/<skill>/` | Claude Code (project skills) |
+| The same skills | `.agents/skills/<skill>/` | Antigravity (workspace skills; Antigravity docs, *Skills*: `<workspace-root>/.agents/skills/<skill-folder>/`) |
+| `AGENTS.md`: the project brief (name, engine version, template, startup level, widget library, units and axes, layout, how to play-test and build, the MCP server, do's and don'ts, the installed skills) | project root | Antigravity (always-on rule, docs *Rules*), other agent tools |
+| `CLAUDE.md`: a short Claude Code header that imports `@AGENTS.md` | project root | Claude Code |
+
+- The skills and the document templates (`assets/agent_files/AGENTS.md.template`, `CLAUDE.md.template`, `{{placeholder}}` values filled from the `LuminaProject`) are Flutter assets, so an installed editor carries them; `AiAgentFiles` lists the skill files from the asset manifest (`skills/...`, or `packages/lumina_ui/skills/...` in a project editor host) and loads them through `EditorAssets`.
+- A written document ends with a `<!-- lumina-agent-file sha256=... -->` marker. A document whose text still matches its marker is the editor's and is regenerated freely; an edited (or user-written) one is kept unless the user chooses Replace.
+- Installed skill folders are replaced by the editor's version on every install; other folders under `.claude/skills/` and `.agents/skills/` are the user's and are never touched.
+
+| Member | Signature | Purpose |
+| :--- | :--- | :--- |
+| `skillAssets` | `Future<List<String>> skillAssets()` | The bundled skill files, `skills/<skill>/<path>`, sorted. |
+| `skills` | `Future<List<AgentSkill>> skills()` | The bundled skills with their `SKILL.md` descriptions and files. |
+| `renderDocs` | `Future<Map<String, String>> renderDocs(LuminaProject project, {List<AgentSkill>? skills})` | `AGENTS.md` and `CLAUDE.md` for the project, marker included. |
+| `editedDocs` | `Future<List<String>> editedDocs(String projectDir)` | The documents present and no longer as the editor wrote them. |
+| `install` | `Future<AiAgentFilesReport> install(String projectDir, LuminaProject project, {bool overwriteDocs = false})` | Installs the skills for both tools and writes the documents; edited documents are kept unless `overwriteDocs`. The report lists the skills, the written and the kept documents. |
+
+**Existing projects**: Tools > **Set Up AI Agent Files...** (command `tools.aiAgentFiles`, `lib/ui/features/main_editor/views/ai_agent_files_dialog.dart`) installs the same files into the open project. When `AGENTS.md` or `CLAUDE.md` was edited, a dialog asks *Keep mine* / *Replace*; the skills are refreshed either way, and the result goes to the Output Log and a toast. Without a UI context (`setUpAiAgentFiles` with no `askReplace`) edited documents are kept.
 
 ## `lib/ui/features/launcher/view_models/launcher_view_model.dart`
 

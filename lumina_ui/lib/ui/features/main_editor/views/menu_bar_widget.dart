@@ -359,6 +359,9 @@ class MenuBarWidget extends StatelessWidget {
                       const MenuDivider(),
                       // The editor's MCP server for AI agents.
                       _buildMenuButton(context, 'tools.aiAgentAccess'),
+                      // Skills + AGENTS.md / CLAUDE.md for AI agents; asks
+                      // before replacing edited files, after the menu closed.
+                      _buildMenuButton(context, 'tools.aiAgentFiles', commandContext: context),
                       const MenuDivider(),
                       // Empties the project's DerivedDataCache/.
                       _buildMenuButton(context, 'tools.clearDerivedDataCache'),

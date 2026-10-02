@@ -1,0 +1,80 @@
+# {{project_name}}
+
+A game made with **Lumina Studio** (Lumina engine {{engine_version}}): a 3D engine in Dart and Flutter on Google
+Filament, and its desktop editor. This file briefs AI agents (Antigravity, Claude Code, and any tool that reads
+`AGENTS.md`) working on this game project, not on the engine. `CLAUDE.md` imports it, so keep the shared rules here.
+
+## Project
+
+| | |
+|---|---|
+| Name | `{{project_name}}` (manifest `{{project_name}}.lmproject`) |
+| Engine | Lumina {{engine_version}} |
+| Created from template | `{{template}}` |
+| Level the editor opens | `{{active_level}}` |
+| UMG widget library | `{{widget_library}}` |
+| World units and axes | {{units_line}}, {{up_line}}, angles in degrees |
+
+The manifest and the assets are the source of truth; ask the running editor (`project_info` over MCP) for the
+current state rather than trusting this table, which was written when the file was generated.
+
+## Layout
+
+```
+{{project_name}}/
+  {{project_name}}.lmproject  the manifest (JSON): name, levels, input actions, maps & modes, physics, packaging, plugins
+  contents/                   every asset, one .lmas file each
+    levels/ meshes/static/ meshes/skeletal/ materials/ textures/ animations/ audio/
+    blueprints/ widgets/ input/ enums/ interfaces/ particles/ landscapes/
+  lib/                        Dart generated from the assets (main.dart, levels/, actors/, widgets/) + your own code
+  plugins/                    project plugins (source-level Dart packages, see the create-plugin skill)
+  .lumina/                    editor data: editor/ (this project's editor host), trash/, plugins/<plugin>/
+  Saved/SaveGames/            save slots written while playing in the editor
+  DerivedDataCache/           rebuildable editor cache (gitignored)
+  pubspec.yaml                the game's Flutter package (the engine is a dependency)
+  {{claude_skills_dir}}/  {{antigravity_skills_dir}}/   the Lumina skills, one copy per agent tool
+```
+
+- An `.lmas` asset is the bytes `LMAS` followed by JSON (`asset_id`, `name`, `type`, `metadata`, `references`,
+  base64 `raw_payload`). Asset paths are project-relative and `/`-separated: `contents/blueprints/BP_Door.lmas`.
+- `lib/` is generated: saving a level writes `lib/main.dart` and `lib/levels/<level>.dart`, compiling a Blueprint
+  writes `lib/actors/<name>.dart`, compiling a Widget Blueprint writes `lib/widgets/`. Only the marked user-code
+  regions in `lib/actors/` survive the next generation.
+
+## Units and axes
+
+{{units_detail}}
+
+## Working on the game
+
+- **Use the running editor.** Lumina Studio runs an MCP server inside the editor (Tools → AI Agent Access (MCP)
+  shows its URL, token and the `claude mcp add` command to copy). Place actors, import assets, edit materials,
+  Blueprints and widgets, save levels and play-test through its tools: every edit shows up live in the editor and
+  is one Edit → Undo step. The `lumina-mcp` skill explains the connection and the tool catalogue.
+- **Read the engine guide first** for an area you have not worked in: the `lumina-engine` skill (or the MCP tool
+  `get_lumina_guide {topic}`) covers Blueprints, game mode and pawn, input, widgets, materials, lights, camera,
+  play-testing, save games and the common pitfalls.
+- **Play-test**: Play-In-Editor (Debug → Play / Stop Simulation, Alt+P; over MCP `start_pie`, `pie_sequence`),
+  Debug → Play Standalone runs the generated game in its own window. Build → Cook & Package makes a shippable
+  build for the targets set in Project Settings ▸ Packaging.
+- **Dart code**: the project is a Flutter package; check it with `dart analyze` (or the MCP tool `dart_analyze`).
+  Your own gameplay code goes in new files under `lib/` or in the user-code regions of generated actors.
+- **Plugins**: editor extensions for this project live in `plugins/<name>/`; follow the `create-plugin` skill.
+
+## Do and don't
+
+- Do edit assets through the editor (or its MCP tools); don't write or patch `.lmas` files or the `.lmproject` by
+  hand while the editor has the project open: the editor overwrites them and its undo history no longer matches.
+- Don't hand-edit generated Dart outside the user-code regions; change the asset and save or compile it instead.
+- Do keep transforms in the editor's space ({{units_line}}, {{up_line}}); glTF/GLB models are in metres and the
+  importer scales them.
+- Don't delete `.lumina/` (the project's editor host and asset trash); `DerivedDataCache/` can go (Tools → Clear
+  Derived Data Cache).
+- Do stop Play-In-Editor (`stop_pie`) before editing again: edits are refused while Play runs.
+
+## Skills installed in this project
+
+The skills ship with Lumina Studio; Tools → Set Up AI Agent Files... refreshes them to the
+editor's version. Claude Code reads them from `{{claude_skills_dir}}/`, Antigravity from `{{antigravity_skills_dir}}/`.
+
+{{skills_table}}

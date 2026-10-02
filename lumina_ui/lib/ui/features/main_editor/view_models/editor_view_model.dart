@@ -28,6 +28,7 @@ import 'package:lumina/data/services/game_template_service.dart';
 import 'package:lumina/data/services/level_template_service.dart';
 import '../views/new_level_dialog.dart';
 import '../views/about_dialog.dart';
+import '../views/ai_agent_files_dialog.dart';
 import '../views/import_asset_folder_dialog.dart';
 
 import '../models/editor_actor_catalog.dart';

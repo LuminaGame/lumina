@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:lumina/lumina.dart';
+import '../../../core/services/ai_agent_files.dart';
 import '../../../core/services/content_folders.dart';
 import '../services/installed_template_repository.dart';
 import '../services/template_project_creator.dart';
@@ -169,6 +170,18 @@ class CreateProjectViewModel extends ChangeNotifier {
       await launcherVM.loadRecentProjects();
       final path = '$_location/$_name/$_name.lmproject';
       _activeProject = await projectRepo.loadProject(path);
+
+      // The editor's skills for Claude Code (.claude/skills) and Antigravity
+      // (.agents/skills), and the project's AGENTS.md / CLAUDE.md. A failure
+      // never fails the creation: Tools → Set Up AI Agent Files... retries.
+      try {
+        final created = _activeProject ?? LuminaProject(projectName: _name);
+        final report = await AiAgentFiles().install('$_location/$_name', created);
+        _processOutput.add(report.summary);
+      } catch (e) {
+        _processOutput.add('Could not write the AI agent files: $e');
+      }
+      notifyListeners();
     } catch (e) {
       _creationError = e.toString();
     } finally {

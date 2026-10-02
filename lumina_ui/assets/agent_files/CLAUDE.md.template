@@ -1,0 +1,15 @@
+# CLAUDE.md — {{project_name}}
+
+Guidance for Claude Code in the Lumina game project `{{project_name}}` (Lumina engine {{engine_version}}). The
+project brief shared with the other agent tools is `AGENTS.md`, imported here:
+
+@AGENTS.md
+
+## Claude Code specifics
+
+- Skills: `{{claude_skills_dir}}/` holds the Lumina skills ({{skill_names}}); Claude Code loads them by their
+  descriptions. Use `lumina-mcp` to connect to the running editor and `lumina-engine` before working in a new area.
+- Connect to the editor's MCP server with the command Tools → AI Agent Access (MCP) shows
+  (`claude mcp add --transport http lumina <url> --header "Authorization: Bearer <token>"`); the token changes
+  each editor session, so re-add it after the editor restarts.
+- Put rules every agent should follow in `AGENTS.md`, and Claude-only notes here.
