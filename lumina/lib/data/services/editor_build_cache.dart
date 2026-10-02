@@ -122,13 +122,33 @@ class EditorBuildCache {
     await root.create(recursive: true);
     final raf = await lockFile(hash).open(mode: FileMode.append);
     try {
-      await raf.lock(FileLock.blockingExclusive);
+      var acquired = false;
+      final deadline = DateTime.now().add(const Duration(seconds: 15));
+      while (!acquired && DateTime.now().isBefore(deadline)) {
+        try {
+          await raf.lock(FileLock.exclusive);
+          acquired = true;
+        } on FileSystemException {
+          await Future.delayed(const Duration(milliseconds: 150));
+        }
+      }
+      if (!acquired) {
+        // Fallback with a short timeout to prevent hanging forever.
+        try {
+          await raf.lock(FileLock.blockingExclusive).timeout(const Duration(seconds: 5));
+          acquired = true;
+        } catch (_) {}
+      }
       _heldHere.add(lockFile(hash).absolute.path);
       try {
         return await body();
       } finally {
         _heldHere.remove(lockFile(hash).absolute.path);
-        await raf.unlock();
+        if (acquired) {
+          try {
+            await raf.unlock();
+          } catch (_) {}
+        }
       }
     } finally {
       await raf.close();

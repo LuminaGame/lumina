@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:crypto/crypto.dart';
 import 'package:path/path.dart' as p;
@@ -171,27 +172,42 @@ String _pluginHash(String dir) {
 /// checkout (a sorted path + content-hash manifest).
 const List<String> _manifestDirs = ['lib', 'src', 'hook'];
 
+bool _isInsideGit(String dir) {
+  if (!Directory(dir).existsSync()) return false;
+  var current = Directory(dir).absolute;
+  while (true) {
+    if (Directory(p.join(current.path, '.git')).existsSync() ||
+        File(p.join(current.path, '.git')).existsSync()) {
+      return true;
+    }
+    final parent = current.parent;
+    if (parent.path == current.path) break;
+    current = parent;
+  }
+  return false;
+}
+
 /// A repo's source state: its git state when it is a checkout, else a
 /// content manifest (the project's copy of the engine).
 Future<String> engineRepoState(String dir) async {
-  if (Directory(p.join(dir, '.git')).existsSync() || File(p.join(dir, '.git')).existsSync()) {
+  if (_isInsideGit(dir)) {
     final git = await _gitState(dir);
     if (git != null) return git;
   }
-  return _manifestHash(dir, [for (final s in _manifestDirs) p.join(dir, s)], extraFiles: [p.join(dir, 'pubspec.yaml')]);
+  return Isolate.run(() => _manifestHash(dir, [for (final s in _manifestDirs) p.join(dir, s)], extraFiles: [p.join(dir, 'pubspec.yaml')]));
 }
 
 /// `HEAD` + a hash of `git diff HEAD` + the untracked source files (path,
 /// size, mtime): a pull, a local edit and a new file each change it.
 Future<String?> _gitState(String dir) async {
   try {
-    final head = await Process.run('git', ['rev-parse', 'HEAD'], workingDirectory: dir);
+    final head = await Process.run('git', ['rev-parse', 'HEAD'], workingDirectory: dir, runInShell: Platform.isWindows);
     if (head.exitCode != 0) return null;
-    final diff = await Process.run('git', ['diff', 'HEAD', '--no-ext-diff', '--no-color'],
-        workingDirectory: dir, stdoutEncoding: null);
+    final diff = await Process.run('git', ['diff', 'HEAD', '--no-ext-diff', '--no-color', '--', '.'],
+        workingDirectory: dir, stdoutEncoding: null, runInShell: Platform.isWindows);
     if (diff.exitCode != 0) return null;
     final untracked = await Process.run('git', ['ls-files', '--others', '--exclude-standard', '--', ..._manifestDirs, 'pubspec.yaml'],
-        workingDirectory: dir);
+        workingDirectory: dir, runInShell: Platform.isWindows);
     final files = (untracked.stdout as String).split('\n').map((l) => l.trim()).where((l) => l.isNotEmpty).toList()..sort();
     final untrackedLines = [
       for (final rel in files)

@@ -43,12 +43,16 @@ class LauncherView extends StatefulWidget {
 
 class _LauncherViewState extends State<LauncherView> {
   late final LauncherViewModel _viewModel;
+  late bool _loadingInitialProject;
+  String _initialLoadingStatus = 'Opening project…';
+  String? _startupError;
 
   @override
   void initState() {
     super.initState();
     _viewModel = widget.viewModel ?? LauncherViewModel();
     _viewModel.addListener(_onViewModelChanged);
+    _loadingInitialProject = widget.initialProjectDir != null;
     // The stock editor tells project editors started on their own which
     // Studio (and engine) this machine runs now.
     if (!LuminaEditorHost.isProjectEditor) unawaited(LuminaStudioRecord.recordThisStudio(configDir: _viewModel.configDir));
@@ -105,8 +109,42 @@ class _LauncherViewState extends State<LauncherView> {
   /// `--project <dir>`: open it as soon as the launcher is up.
   Future<void> _openInitialProject(String dir) async {
     final name = EditorHostGeneratorService.projectNameIn(dir);
-    final loaded = name == null ? null : await _viewModel.openExternal(p.join(dir, '$name.lmproject'));
-    if (loaded == null || !mounted) return;
+    if (name == null) {
+      if (mounted) {
+        setState(() {
+          _loadingInitialProject = false;
+          _startupError = 'Could not find a project in "$dir".';
+        });
+      }
+      return;
+    }
+    setState(() {
+      _initialLoadingStatus = 'Opening $name…';
+    });
+    LuminaProject? loaded;
+    try {
+      loaded = await _viewModel.openExternal(p.join(dir, '$name.lmproject'));
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _loadingInitialProject = false;
+          _startupError = 'Could not load project "$name": $e';
+        });
+      }
+      return;
+    }
+    if (loaded == null || !mounted) {
+      if (mounted) {
+        setState(() {
+          _loadingInitialProject = false;
+          _startupError = 'Could not open project "$name".';
+        });
+      }
+      return;
+    }
+    setState(() {
+      _initialLoadingStatus = 'Checking project editor…';
+    });
     await _openProject(loaded, dir, rebuild: LuminaEditorHost.args.rebuild, updateEditor: LuminaEditorHost.args.updateEditor);
   }
 
@@ -174,6 +212,7 @@ class _LauncherViewState extends State<LauncherView> {
       if (!mounted) return;
       switch (answer.choice) {
         case ProjectEditorUpdateChoice.cancel:
+          if (_loadingInitialProject) setState(() => _loadingInitialProject = false);
           return;
         case ProjectEditorUpdateChoice.update:
           final plugins = decision is NeedsBuild ? decision.plugins : await _viewModel.editorResolver.enabledCodePlugins(projectDir);
@@ -191,7 +230,17 @@ class _LauncherViewState extends State<LauncherView> {
         if (!mounted) return;
         _openMainEditor(context, project: opened, projectDir: projectDir, startupWarning: fallbackWarning);
       case ExecCached(:final entry):
-        await _viewModel.execProjectEditor(entry.executable, projectDir);
+        if (_loadingInitialProject) setState(() => _initialLoadingStatus = 'Starting project editor…');
+        try {
+          await _viewModel.execProjectEditor(entry.executable, projectDir);
+        } catch (e) {
+          if (mounted) {
+            setState(() {
+              _loadingInitialProject = false;
+              _startupError = 'Could not launch project editor: $e';
+            });
+          }
+        }
       case NeedsBuild(:final plugins):
         _showBuildSplash(project, projectDir, plugins);
       case MissingBinary(:final reason, :final plugins, :final pluginNames):
@@ -204,6 +253,7 @@ class _LauncherViewState extends State<LauncherView> {
           case MissingBinaryChoice.openWithoutPlugins:
             _openMainEditor(context, project: project, projectDir: projectDir, startupWarning: _inactivePluginsWarning(pluginNames));
           case MissingBinaryChoice.cancel:
+            if (_loadingInitialProject) setState(() => _loadingInitialProject = false);
             break;
         }
     }
@@ -226,7 +276,15 @@ class _LauncherViewState extends State<LauncherView> {
                 onSucceeded: (vm) {
                   final outcome = vm.outcome;
                   if (outcome is EditorBuildSucceeded) {
-                    unawaited(_viewModel.execProjectEditor(outcome.entry.executable, projectDir));
+                    _viewModel.execProjectEditor(outcome.entry.executable, projectDir).catchError((e) {
+                      if (mounted) {
+                        setState(() {
+                          _loadingInitialProject = false;
+                          _startupError = 'Could not start project editor: $e';
+                        });
+                        if (routeContext.mounted) Navigator.of(routeContext).pop();
+                      }
+                    });
                   }
                 },
                 onOpenWithoutPlugins: () {
@@ -238,7 +296,12 @@ class _LauncherViewState extends State<LauncherView> {
                           ? "This project's editor did not build; it opened in this editor (see the build log)."
                           : _inactivePluginsWarning([for (final d in plugins) d.name]));
                 },
-                onClose: () => Navigator.of(routeContext).pop(),
+                onClose: () {
+                  Navigator.of(routeContext).pop();
+                  if (mounted && _loadingInitialProject) {
+                    setState(() => _loadingInitialProject = false);
+                  }
+                },
               );
               return manageWindow
                   ? splash
@@ -283,6 +346,7 @@ class _LauncherViewState extends State<LauncherView> {
           return;
         case ProjectEditorUpdateChoice.cancel:
           await EditorHandOff.instance.returnToLauncher(launcher: studio!.executable);
+          if (mounted && _loadingInitialProject) setState(() => _loadingInitialProject = false);
           return;
         case ProjectEditorUpdateChoice.openWithOldEditor:
           if (answer.dontAskAgain) _viewModel.dismissProjectEditorUpdate(projectDir, update);
@@ -327,6 +391,10 @@ class _LauncherViewState extends State<LauncherView> {
     // brightness — Lumina Light, or back to Lumina Dark.
     final themes = EditorThemeScope.of(context);
     final isDark = themes.active.brightness == Brightness.dark;
+
+    if (_loadingInitialProject) {
+      return _buildProjectLoadingScreen(context, isDark);
+    }
 
     final launcher = Scaffold(
       child: Container(
@@ -405,6 +473,29 @@ class _LauncherViewState extends State<LauncherView> {
                 ],
               ),
             ),
+
+            if (_startupError != null)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                color: EditorColors.destructive.withValues(alpha: 0.15),
+                child: Row(
+                  children: [
+                    Icon(LucideIcons.triangleAlert, size: 16, color: EditorColors.destructive),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        _startupError!,
+                        style: const TextStyle(fontSize: 12, color: EditorColors.destructive),
+                      ),
+                    ),
+                    IconButton.ghost(
+                      density: ButtonDensity.compact,
+                      icon: const Icon(LucideIcons.x, size: 14),
+                      onPressed: () => setState(() => _startupError = null),
+                    ),
+                  ],
+                ),
+              ),
 
             // Main Content Area with Left Navigation Bar & Center Pane
             Expanded(
@@ -634,6 +725,123 @@ class _LauncherViewState extends State<LauncherView> {
           },
         );
       },
+    );
+  }
+
+  Widget _buildProjectLoadingScreen(BuildContext context, bool isDark) {
+    final projectName = widget.initialProjectDir != null
+        ? (EditorHostGeneratorService.projectNameIn(widget.initialProjectDir!) ?? p.basename(widget.initialProjectDir!))
+        : 'Project';
+
+    return Scaffold(
+      child: Container(
+        color: EditorColors.background,
+        child: Column(
+          children: [
+            // Top App Header / Window Controls
+            Container(
+              height: 52,
+              padding: EdgeInsets.only(left: 20 + LuminaWindow.leadingInset),
+              decoration: const BoxDecoration(
+                color: EditorColors.cardHeader,
+                border: Border(bottom: BorderSide(color: EditorColors.border)),
+              ),
+              child: Row(
+                children: [
+                  Image.asset(
+                    isDark ? 'assets/logo_white.png' : 'assets/logo_black.png',
+                    height: 52,
+                    errorBuilder: (ctx, _, _) => const Icon(
+                      LucideIcons.box,
+                      size: 24,
+                      color: EditorColors.primary,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    'Lumina Studio · $projectName',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: EditorColors.foreground,
+                    ),
+                  ),
+                  const Expanded(
+                    child: WindowDragArea(key: ValueKey('loading_title_drag_area')),
+                  ),
+                  SizedBox(width: LuminaWindow.drawsOwnControls ? 16 : 20),
+                  const LuminaWindowControls(height: 52),
+                ],
+              ),
+            ),
+
+            // Loading Center Area
+            Expanded(
+              child: Center(
+                child: Container(
+                  constraints: const BoxConstraints(maxWidth: 400),
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Image.asset(
+                        'assets/logo_color.png',
+                        height: 72,
+                        errorBuilder: (_, _, _) => const Icon(
+                          LucideIcons.box,
+                          size: 64,
+                          color: EditorColors.primary,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      const Text(
+                        'LUMINA',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 4.0,
+                          color: EditorColors.foreground,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        projectName,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: EditorColors.mutedForeground,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 32),
+                      const CircularProgressIndicator(size: 24),
+                      const SizedBox(height: 16),
+                      Text(
+                        _initialLoadingStatus,
+                        key: const Key('initial_project_loading_status'),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: EditorColors.mutedForeground,
+                        ),
+                      ),
+                      const SizedBox(height: 28),
+                      OutlineButton(
+                        density: ButtonDensity.compact,
+                        onPressed: () {
+                          setState(() {
+                            _loadingInitialProject = false;
+                          });
+                        },
+                        child: const Text('Cancel to Projects'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
