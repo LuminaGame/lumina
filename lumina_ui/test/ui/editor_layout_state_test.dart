@@ -13,8 +13,8 @@ void main() {
   });
 
   test('a layout saved before the right dock loads with it closed at the default width', () {
-    final back = EditorLayoutState.fromJson({'outlinerWidth': 250.0, 'bottomPinned': true});
-    expect(back.outlinerWidth, 250);
+    final back = EditorLayoutState.fromJson({'outlinerWidth': 360.0, 'bottomPinned': true});
+    expect(back.outlinerWidth, 360);
     expect(back.rightWidth, EditorLayoutState.defaultRightWidth);
     expect(back.pluginPanelVisible, isEmpty);
     expect(back.activeRightPanel, isNull);

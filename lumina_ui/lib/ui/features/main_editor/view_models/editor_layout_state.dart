@@ -17,7 +17,12 @@ import 'package:flutter/foundation.dart';
 /// default). [resetSerial] changes on every [resetToDefault], so a pane that
 /// ignores a new initial size can be re-created.
 class EditorLayoutState extends ChangeNotifier {
-  static const double defaultOutlinerWidth = 220.0;
+  static const double defaultOutlinerWidth = 320.0;
+
+  /// The narrowest the left column (World Outliner over Details) goes: the
+  /// Details transform rows (a label and three number fields, each with its
+  /// axis letter, value and reset button) fit at this width.
+  static const double minOutlinerWidth = 320.0;
   static const double defaultDetailsHeight = 320.0;
   static const double defaultBottomHeight = 240.0;
 
@@ -31,7 +36,11 @@ class EditorLayoutState extends ChangeNotifier {
   static const double defaultRightWidth = 340.0;
   static const double minRightWidth = 260.0;
 
-  double outlinerWidth;
+  /// The left column's width, never under [minOutlinerWidth] (a narrower
+  /// width from an older layout file or a caller is widened to it).
+  double get outlinerWidth => _outlinerWidth;
+  set outlinerWidth(double value) => _outlinerWidth = clampOutlinerWidth(value);
+  double _outlinerWidth;
   double detailsHeight;
   double bottomHeight;
   bool outlinerVisible;
@@ -55,7 +64,7 @@ class EditorLayoutState extends ChangeNotifier {
   int resetSerial = 0;
 
   EditorLayoutState({
-    this.outlinerWidth = defaultOutlinerWidth,
+    double outlinerWidth = defaultOutlinerWidth,
     this.detailsHeight = defaultDetailsHeight,
     this.bottomHeight = defaultBottomHeight,
     this.outlinerVisible = true,
@@ -69,11 +78,14 @@ class EditorLayoutState extends ChangeNotifier {
     Map<String, bool>? pluginPanelVisible,
     this.activeRightPanel,
     Map<String, bool>? pluginPanelAlways,
-  })  : sourcesWidth = clampSourcesWidth(sourcesWidth),
+  })  : _outlinerWidth = clampOutlinerWidth(outlinerWidth),
+        sourcesWidth = clampSourcesWidth(sourcesWidth),
         expandedFolders = expandedFolders ?? {...defaultExpandedFolders},
         rightWidth = clampRightWidth(rightWidth),
         pluginPanelVisible = pluginPanelVisible ?? {},
         pluginPanelAlways = pluginPanelAlways ?? {};
+
+  static double clampOutlinerWidth(double width) => width < minOutlinerWidth ? minOutlinerWidth : width;
 
   static double clampRightWidth(double width) => width < minRightWidth ? minRightWidth : width;
 

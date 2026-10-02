@@ -152,6 +152,8 @@ The sidebar surface is not part of this shadcn_flutter version's [ColorScheme]; 
 
 The prototype's density, in logical pixels.  Tailwind's spacing step is 4 px, so `h-7` is 28, `h-6` is 24, `h-5.5` is 22 and `px-2` is an 8 px gutter. These are measurements off the prototype's markup, not preferences.
 
+`inlineFieldHeight` (20), Details panelindeki bir sayı alanının çizilen yüksekliğidir; Mobility düğmeleri bunu kullanır. `chipButton` / `narrowChipButton`, `chipHeight` (20) yüksekliğinde çizilen bir metin düğmesinin `ButtonDensity` değeridir (`px-2` / `px-1`): Content Browser'ın filtre çipleri, Show All, Import / New Asset / Refresh ve World Outliner'ın Add düğmesi. shadcn'in `ButtonDensity.compact` yoğunluğunda hiç dolgu yoktur; bu düğmeler etiketleri kadar alçak kalıyordu.
+
 **Yapıcı Metotlar (Constructors):**
 - `EditorDensity._()`: `EditorDensity._()` nesnesini ilklendirir.
 
@@ -302,6 +304,8 @@ The prototype's density, in logical pixels.  Tailwind's spacing step is 4 px, so
 ### `class ScrubNumericField`
 
 `ScrubNumericField`: İlgili modülün veri modelini veya temel işlevselliğini temsil eden `class` yapısıdır.
+
+Eksen harfi (varsayılan 12 px sütun), değer ve değer varsayılanından farklıysa 12 px'lik sıfırlama düğmesi her biri kendi yerindedir. Alana sığmayan bir değer, alan düzenlenmez ya da sürüklenmezken kısaltılmış çizilir (`fitValueText`: daha az ondalık, sonra `12.8k` / `1.3M`); değerin tamamı ipucunda (tooltip) görünür. Denetleyicinin metni, düzenleme ve kaydetme her zaman tam değeri kullanır.
 
 **Fonksiyonlar, Metotlar ve Erişimciler:**
 

@@ -210,7 +210,7 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     await tester.pumpWidget(ShadcnApp(theme: luminaEditorTheme(), home: Scaffold(child: DetailsWidget(viewModel: vm))));
     await tester.pump(const Duration(milliseconds: 50));
-    for (final label in ['Mobility', 'Static', 'Stationary', 'Movable', 'Inner Cone Angle', 'Outer Cone Angle']) {
+    for (final label in ['MOBILITY', 'Static', 'Stationary', 'Movable', 'Inner Cone Angle', 'Outer Cone Angle']) {
       expect(find.text(label, skipOffstage: false), findsWidgets, reason: label);
     }
     await tester.tap(find.text('Static'));

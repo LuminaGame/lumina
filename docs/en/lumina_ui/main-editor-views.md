@@ -444,6 +444,8 @@ Test seams on the level viewport state: `viewLayersForTest` (the level view's vi
 
 `EditorLayoutState`: `class` representing the data model or functionality of the module.
 
+The left column (World Outliner over Details) is never narrower than `minOutlinerWidth` (320 px, also `defaultOutlinerWidth`): the splitter stops there and a narrower width from a layout file or a caller is widened to it (`clampOutlinerWidth`).
+
 **Constructors:**
 - `EditorLayoutState.fromJson(Map<String, dynamic> json)`: Initializes `EditorLayoutState.fromJson(Map<String, dynamic> json)`.
 

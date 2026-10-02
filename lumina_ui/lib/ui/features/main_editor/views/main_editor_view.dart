@@ -508,7 +508,7 @@ class _MainEditorViewState extends State<MainEditorView> {
                 // absolute-size pane state to the centre column.
                 key: const ValueKey('workspace_left_column'),
                 initialSize: viewModel.layoutState.outlinerWidth,
-                minSize: 150,
+                minSize: EditorLayoutState.minOutlinerWidth,
                 onSizeChangeEnd: (size) => viewModel.setPaneSize(outlinerWidth: size),
                 child: _buildLeftColumn(),
               ),

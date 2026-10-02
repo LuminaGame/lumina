@@ -186,7 +186,7 @@ void main() {
     final file = File('${viewModel.projectDirPath}/.lumina/editor_layout.json');
     file.createSync(recursive: true);
     file.writeAsStringSync(jsonEncode({
-      'outlinerWidth': 250.0,
+      'outlinerWidth': 360.0,
       'detailsWidth': 260.0,
       'bottomHeight': 200.0,
       'outlinerVisible': true,
@@ -197,7 +197,7 @@ void main() {
 
     final migrated = EditorViewModel(projectLocation: root.path, enableTimers: false, autoInitAssets: false);
     addTearDown(migrated.dispose);
-    expect(migrated.layoutState.outlinerWidth, 250.0, reason: 'the left column keeps its width');
+    expect(migrated.layoutState.outlinerWidth, 360.0, reason: 'the left column keeps its width');
     expect(migrated.layoutState.bottomHeight, 200.0);
     expect(migrated.layoutState.detailsHeight, EditorLayoutState.defaultDetailsHeight, reason: 'detailsWidth is ignored');
     expect(migrated.layoutState.bottomVisible, isTrue, reason: 'a pre-drawer file comes up open');

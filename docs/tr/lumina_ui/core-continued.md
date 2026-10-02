@@ -16,6 +16,7 @@ Uygulama kabuğu ve ortak UI sayfasının devamı: `lib/`, `lib/testing/`, `lib/
 - [`lib/ui/core/property_editors/synced_text_field.dart`](#libuicoreproperty_editorssynced_text_fielddart)
 - [`lib/ui/core/services/asset_picker_catalog.dart`](#libuicoreservicesasset_picker_catalogdart)
 - [`lib/ui/core/services/content_folders.dart`](#libuicoreservicescontent_foldersdart)
+- [`lib/ui/core/services/file_reveal.dart`](#libuicoreservicesfile_revealdart)
 - [`lib/ui/core/services/editor_mesh_budget.dart`](#libuicoreserviceseditor_mesh_budgetdart)
 - [`lib/ui/core/services/rgba_png_encoder.dart`](#libuicoreservicesrgba_png_encoderdart)
 - [`lib/ui/core/services/user_plugin_dir.dart`](#libuicoreservicesuser_plugin_dirdart)
@@ -508,6 +509,28 @@ The content browser never lists the marker: assets are `.lmas` files only.
 | `ensureProjectFolders` | `static List<String> ensureProjectFolders(String projectDir)` | Creates [projectFolders] (with markers) under [projectDir]; existing folders and their files are left alone. Returns the folders it created. |
 | `writeMarker` | `static void writeMarker(String dirPath)` | Writes the keep-marker into [dirPath] unless it is already there. |
 | `parentOf` | `static String parentOf(String relativePath)` | The folder an asset at [relativePath] sits in (`contents/a/b.lmas` → `contents/a`), with separators normalised to `/`. |
+
+## `lib/ui/core/services/file_reveal.dart`
+
+### `abstract final class FileReveal`
+
+"Show in Explorer" (Windows) / "Reveal in Finder" (macOS) / "Show in File Manager" (Linux): platformun dosya yöneticisini bir dosyada (seçili) ya da bir klasörde (açık) açar. Content Browser'ın klasör menüsü (Sources ağacı ve klasör kutucukları), varlık menüsü (varlığın `.lmas` dosyası), varlık seçicinin satır menüsü ve World Outliner'ın aktör menüsü ("Show Asset in Explorer": aktörün mesh ya da Blueprint sınıf dosyası, diskteyse) bunu kullanır.
+
+| Platform | Dosya | Klasör |
+| :--- | :--- | :--- |
+| Windows | `explorer.exe /select, <dosya>` | `explorer.exe <klasör>` |
+| macOS | `open -R <dosya>` | `open <klasör>` |
+| Linux | `xdg-open <üst klasör>` | `xdg-open <klasör>` |
+
+**Üyeler:**
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `runner` | `static FileRevealRunner runner` | Komutu başlatır (varsayılan: bağımsız süreç); testler çağrıyı kaydetmek için değiştirir. |
+| `menuLabel` | `static String menuLabel({String? subject, String? os})` | Platformun menü etiketi; [subject] gösterileni adlandırır ("Show Asset in Explorer"). |
+| `commandFor` | `static FileRevealCommand commandFor(String path, {required bool isDirectory, String? os})` | [os] üzerinde [path] için komut satırı (yukarıdaki tablo). |
+| `resolve` | `static String resolve(String projectDir, String path)` | Projeye göreli bir yol (`contents/props`) [projectDir]'e göre çözülür; mutlak yol olduğu gibi kalır. |
+| `reveal` | `static Future<bool> reveal(String path, {String? os})` | [path]'i gösterir; diskte yoksa ya da dosya yöneticisi başlatılamazsa false döner. |
 
 ## `lib/ui/core/services/editor_mesh_budget.dart`
 

@@ -77,8 +77,8 @@ mixin _DetailsSingleSelection on _DetailsWidgetStateBase {
               const SizedBox(height: 12),
               Row(
                 children: [
-                  const Text('Mobility', style: TextStyle(fontSize: 9, color: EditorColors.mutedForeground)),
-                  const SizedBox(width: 12),
+                  // Labelled and aligned like the LOCATION / ROTATION / SCALE rows.
+                  const SizedBox(width: 60, child: Text('MOBILITY', style: EditorTypography.sectionLabel)),
                   Expanded(
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,

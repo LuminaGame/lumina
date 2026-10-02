@@ -152,6 +152,8 @@ The sidebar surface is not part of this shadcn_flutter version's [ColorScheme]; 
 
 The prototype's density, in logical pixels.  Tailwind's spacing step is 4 px, so `h-7` is 28, `h-6` is 24, `h-5.5` is 22 and `px-2` is an 8 px gutter. These are measurements off the prototype's markup, not preferences.
 
+`inlineFieldHeight` (20) is the rendered height of a Details number field; the Mobility buttons use it. `chipButton` / `narrowChipButton` are the `ButtonDensity` (`px-2` / `px-1`) of a text button drawn at `chipHeight` (20): the Content Browser's filter chips, Show All, Import / New Asset / Refresh and the World Outliner's Add button. shadcn's `ButtonDensity.compact` has no padding, which left those buttons as tall as their label.
+
 **Constructors:**
 - `EditorDensity._()`: Initializes `EditorDensity._()`.
 
@@ -302,6 +304,8 @@ The prototype's density, in logical pixels.  Tailwind's spacing step is 4 px, so
 ### `class ScrubNumericField`
 
 `ScrubNumericField`: `class` representing the data model or functionality of the module.
+
+The axis letter (12 px column by default), the value and, when the value is not its default, a 12 px reset button each have their own slot. A value wider than the field is drawn shortened while the field is not edited or scrubbed (`fitValueText`: fewer decimals, then `12.8k` / `1.3M`) with the whole value in a tooltip; the controller's text, editing and commits always use the whole value.
 
 **Functions, Methods & Accessors:**
 

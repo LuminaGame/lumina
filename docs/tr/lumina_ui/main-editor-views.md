@@ -444,6 +444,8 @@ Level viewport state'indeki test noktaları: `viewLayersForTest` (level view'ın
 
 `EditorLayoutState`: İlgili modülün veri modelini veya temel işlevselliğini temsil eden `class` yapısıdır.
 
+Sol sütun (World Outliner ve altında Details) hiçbir zaman `minOutlinerWidth` değerinden (320 px, aynı zamanda `defaultOutlinerWidth`) dar olmaz: ayırıcı orada durur, bir düzen dosyasından ya da çağırandan gelen daha dar bir genişlik bu değere genişletilir (`clampOutlinerWidth`).
+
 **Yapıcı Metotlar (Constructors):**
 - `EditorLayoutState.fromJson(Map<String, dynamic> json)`: `EditorLayoutState.fromJson(Map<String, dynamic> json)` nesnesini ilklendirir.
 

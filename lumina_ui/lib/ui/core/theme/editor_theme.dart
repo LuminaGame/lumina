@@ -513,6 +513,12 @@ class EditorDensity {
   static const double rowHeight = 24;
   static const double fieldHeight = 24;
 
+  /// The rendered height of a Details number field (`ScrubNumericField`:
+  /// one line of 11 px mono text, 2 px vertical padding and the input
+  /// border). Controls sharing a row with the transform fields (the
+  /// Mobility buttons) use it so the panel reads as one grid.
+  static const double inlineFieldHeight = 20;
+
   /// `h-5.5` — the outliner's filter box and the Content Browser's folder rows.
   static const double compactRowHeight = 22;
 
@@ -536,7 +542,22 @@ class EditorDensity {
 
   /// `border-l-2` — the accent bar on the selected outliner row.
   static const double selectionBarWidth = 2;
+
+  /// The padding of a text button drawn at [chipHeight] or [fieldHeight]
+  /// (a filter chip, a toolbar button, a segmented choice): `px-2`, with the
+  /// height set by a `SizedBox` around the button and the label centred in
+  /// it. shadcn's `ButtonDensity.compact` has no padding at all, which left
+  /// these buttons as tall as their 8–10 px label.
+  static const ButtonDensity chipButton = ButtonDensity(_chipButtonPadding);
+
+  /// [chipButton] with `px-1`, for a choice in a narrow row (the Details
+  /// panel's Mobility buttons).
+  static const ButtonDensity narrowChipButton = ButtonDensity(_narrowChipButtonPadding);
 }
+
+EdgeInsets _chipButtonPadding(EdgeInsets _) => const EdgeInsets.symmetric(horizontal: EditorDensity.gutter);
+
+EdgeInsets _narrowChipButtonPadding(EdgeInsets _) => const EdgeInsets.symmetric(horizontal: EditorDensity.gap);
 
 /// The shared look of a tab in a tab strip: the workspace
 /// tabs, the bottom panel's tabs and the Blueprint editor's graph tabs.

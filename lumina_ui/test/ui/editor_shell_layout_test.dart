@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_layout_state.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/main_editor_view.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 
@@ -29,15 +30,15 @@ void main() {
         home: Scaffold(child: MainEditorView(viewModel: viewModel)),
       ));
       
-      viewModel.layoutState.outlinerWidth = 300.0;
+      viewModel.layoutState.outlinerWidth = 360.0;
       viewModel.saveLayoutState();
       
       final file = File('${tempProjectDir.path}/MyFirstLuminaGame/.lumina/editor_layout.json');
       expect(file.existsSync(), isTrue);
       final content = file.readAsStringSync();
-      expect(content, contains('"outlinerWidth":300.0'));
+      expect(content, contains('"outlinerWidth":360.0'));
       final restoredViewModel = EditorViewModel(projectLocation: tempProjectDir.path, enableTimers: false, autoInitAssets: false);
-      expect(restoredViewModel.layoutState.outlinerWidth, 300.0);
+      expect(restoredViewModel.layoutState.outlinerWidth, 360.0);
     });
 
     testWidgets('Corrupt editor_layout.json falls back to defaults without crash', (tester) async {
@@ -46,7 +47,7 @@ void main() {
       file.writeAsStringSync('garbage{');
 
       final corruptViewModel = EditorViewModel(projectLocation: tempProjectDir.path, enableTimers: false, autoInitAssets: false);
-      expect(corruptViewModel.layoutState.outlinerWidth, 220.0);
+      expect(corruptViewModel.layoutState.outlinerWidth, EditorLayoutState.defaultOutlinerWidth);
       expect(corruptViewModel.layoutState.outlinerVisible, isTrue);
     });
 
@@ -56,7 +57,7 @@ void main() {
       
       viewModel.layoutState.resetToDefault();
       
-      expect(viewModel.layoutState.outlinerWidth, 220.0);
+      expect(viewModel.layoutState.outlinerWidth, EditorLayoutState.defaultOutlinerWidth);
       expect(viewModel.layoutState.outlinerVisible, isTrue);
     });
 

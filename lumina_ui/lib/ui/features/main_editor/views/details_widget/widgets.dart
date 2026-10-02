@@ -115,16 +115,26 @@ class _MobilityBtn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Compact padding and a one-line label that scales down: the Details
-    // panel is ~210 px wide by default.
-    return Button(
-      style: active
-          ? const ButtonStyle.primary(density: ButtonDensity.compact)
-          : const ButtonStyle.secondary(density: ButtonDensity.compact),
-      onPressed: onTap,
-      child: FittedBox(
-        fit: BoxFit.scaleDown,
-        child: Text(label, maxLines: 1, style: const TextStyle(fontSize: 8, fontWeight: FontWeight.bold)),
+    // As tall as the transform fields above it, with label-size text; the
+    // label stays on one line and scales down when the Details panel is
+    // narrow (~210 px by default).
+    return SizedBox(
+      height: EditorDensity.inlineFieldHeight,
+      child: Button(
+        key: ValueKey('details_mobility_$label'),
+        alignment: Alignment.center,
+        style: active
+            ? const ButtonStyle.primary(density: EditorDensity.narrowChipButton)
+            : const ButtonStyle.secondary(density: EditorDensity.narrowChipButton),
+        onPressed: onTap,
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            label,
+            maxLines: 1,
+            style: const TextStyle(fontSize: EditorTypography.labelSize, fontWeight: FontWeight.w600),
+          ),
+        ),
       ),
     );
   }

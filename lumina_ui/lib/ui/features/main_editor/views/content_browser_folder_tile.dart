@@ -1,6 +1,7 @@
 import 'package:lumina/lumina.dart' show RealAssetInfo;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
+import '../../../core/services/file_reveal.dart';
 import '../../../core/theme/editor_theme.dart';
 import '../view_models/editor_view_model.dart';
 import 'affected_actors_note.dart';
@@ -106,8 +107,9 @@ class ContentBrowserFolderTile extends StatelessWidget {
 
 /// The folder context menu shared by the grid's folder tiles and the Sources
 /// tree: Open (when [onOpen] is given), New Folder, Import Folder Here,
-/// Rename, Delete and Favorites. The `contents` root offers New Folder,
-/// Import Folder Here and Favorites only.
+/// Rename, Delete, Show in Explorer (the platform file manager) and
+/// Favorites. The `contents` root offers New Folder, Import Folder Here,
+/// Show in Explorer and Favorites only.
 List<MenuItem> contentFolderMenuItems(BuildContext context, EditorViewModel vm, String path, {VoidCallback? onOpen}) {
   final isRoot = !path.contains('/');
   return [
@@ -141,6 +143,12 @@ List<MenuItem> contentFolderMenuItems(BuildContext context, EditorViewModel vm, 
       ),
     ],
     const MenuDivider(),
+    MenuButton(
+      key: ValueKey('folder_menu_reveal_$path'),
+      leading: const Icon(LucideIcons.folderSearch, size: 12),
+      onPressed: (_) => FileReveal.reveal(FileReveal.resolve(vm.projectDirPath, path)),
+      child: Text(FileReveal.menuLabel(), style: const TextStyle(fontSize: 10)),
+    ),
     MenuButton(
       leading: const Icon(LucideIcons.star, size: 12),
       onPressed: (_) => vm.toggleFavoriteFolder(path),

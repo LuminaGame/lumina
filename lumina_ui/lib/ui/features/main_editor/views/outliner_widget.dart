@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/gestures.dart' show kDoubleTapTimeout;
 import 'package:flutter/services.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
+import '../../../core/services/file_reveal.dart';
 import '../../../core/theme/editor_theme.dart';
 import '../models/editor_actor_catalog.dart';
 import '../view_models/editor_view_model.dart';
@@ -221,17 +223,19 @@ class _OutlinerWidgetState extends State<OutlinerWidget> {
                 tooltip: 'Collapse All',
                 onPressed: () => vm.collapseAllInOutliner(),
               ),
-              GhostButton(
-                density: ButtonDensity.compact,
+              SizedBox(height: EditorDensity.chipHeight, child: GhostButton(
+                key: const ValueKey('outliner_add_actor'),
+                density: EditorDensity.chipButton,
+                alignment: Alignment.center,
                 onPressed: () => _showAddActorDialog(context, vm),
                 child: const Row(
                   children: [
-                    Icon(LucideIcons.plus, size: 10, color: EditorColors.primary),
-                    SizedBox(width: 2),
-                    Text('Add', style: TextStyle(fontSize: 8, color: EditorColors.primary, fontWeight: FontWeight.bold)),
+                    Icon(LucideIcons.plus, size: 12, color: EditorColors.primary),
+                    SizedBox(width: 4),
+                    Text('Add', style: TextStyle(fontSize: EditorTypography.labelSize, color: EditorColors.primary, fontWeight: FontWeight.bold)),
                   ],
                 ),
-              ),
+              )),
             ],
           ),
         ),
@@ -581,6 +585,15 @@ class _OutlinerWidgetState extends State<OutlinerWidget> {
     );
   }
 
+  /// The absolute path of the asset file [node] is placed from, when it is
+  /// on disk: its mesh, else a placed Blueprint's class `.lmas`.
+  String? _assetFileOf(EditorActorNode node) {
+    final ref = node.meshAssetPath ?? node.blueprintClass;
+    if (ref == null || ref.isEmpty) return null;
+    final path = FileReveal.resolve(_vm.projectDirPath, ref);
+    return File(path).existsSync() ? path : null;
+  }
+
   List<MenuItem> _rowMenu(EditorActorNode node, List<String> ids) {
     final vm = _vm;
     final isFolder = node.type == 'Folder';
@@ -635,6 +648,15 @@ class _OutlinerWidgetState extends State<OutlinerWidget> {
           onPressed: (ctx) => vm.focusCameraOnActor(node),
           child: const Text('Focus Camera on Actor', style: TextStyle(fontSize: 10)),
         ),
+        // The file the actor is placed from (its mesh, or a Blueprint's
+        // class asset) in the platform file manager.
+        if (_assetFileOf(node) case final asset?)
+          MenuButton(
+            key: const ValueKey('outliner_menu_reveal_asset'),
+            leading: const Icon(LucideIcons.folderSearch, size: 14),
+            onPressed: (ctx) => FileReveal.reveal(asset),
+            child: Text(FileReveal.menuLabel(subject: 'Asset'), style: const TextStyle(fontSize: 10)),
+          ),
       ],
       if (node.type == 'Environment' || node.type == 'Light' || node.type == 'DirectionalLight')
         MenuButton(

@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina/lumina.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart';
+import '../../../core/services/file_reveal.dart';
 import '../../../core/theme/asset_type_style.dart';
 import '../../../core/theme/editor_theme.dart';
 import '../view_models/editor_view_model.dart';
@@ -178,9 +179,10 @@ class _ContentBrowserWidgetState extends _ContentBrowserWidgetStateBase
                   color: EditorColors.rail,
                   child: Row(
                     children: [
-                      OutlineButton(
+                      SizedBox(height: EditorDensity.chipHeight, child: OutlineButton(
                         key: _importButtonKey,
-                        density: ButtonDensity.compact,
+                        density: EditorDensity.chipButton,
+                        alignment: Alignment.center,
                         onPressed: () => _showImportMenu(context, vm),
                         child: const Row(
                           children: [
@@ -201,10 +203,11 @@ class _ContentBrowserWidgetState extends _ContentBrowserWidgetStateBase
                             Icon(LucideIcons.chevronDown, size: 10),
                           ],
                         ),
-                      ),
+                      )),
                       const SizedBox(width: 6),
-                      OutlineButton(
-                        density: ButtonDensity.compact,
+                      SizedBox(height: EditorDensity.chipHeight, child: OutlineButton(
+                        density: EditorDensity.chipButton,
+                        alignment: Alignment.center,
                         onPressed: () => _showNewAssetModal(context, vm),
                         child: const Row(
                           children: [
@@ -213,10 +216,11 @@ class _ContentBrowserWidgetState extends _ContentBrowserWidgetStateBase
                             Text('New Asset', style: TextStyle(fontSize: 10)),
                           ],
                         ),
-                      ),
+                      )),
                       const SizedBox(width: 6),
-                      OutlineButton(
-                        density: ButtonDensity.compact,
+                      SizedBox(height: EditorDensity.chipHeight, child: OutlineButton(
+                        density: EditorDensity.chipButton,
+                        alignment: Alignment.center,
                         onPressed: () => vm?.refreshAssets(),
                         child: const Row(
                           children: [
@@ -225,7 +229,7 @@ class _ContentBrowserWidgetState extends _ContentBrowserWidgetStateBase
                             Text('Refresh', style: TextStyle(fontSize: 10)),
                           ],
                         ),
-                      ),
+                      )),
                       const SizedBox(width: 12),
                       Expanded(
                         child: SingleChildScrollView(
@@ -234,13 +238,15 @@ class _ContentBrowserWidgetState extends _ContentBrowserWidgetStateBase
                                 children: [
                                   Padding(
                                     padding: const EdgeInsets.symmetric(horizontal: 2),
-                                    child: Button(
+                                    child: SizedBox(height: EditorDensity.chipHeight, child: Button(
+                                      key: const ValueKey('content_browser_filter_all'),
+                                      alignment: Alignment.center,
                                       style: (vm?.activeTypeFilters.isEmpty ?? true)
-                                          ? const ButtonStyle.primary()
-                                          : const ButtonStyle.ghost(),
+                                          ? const ButtonStyle.primary(density: EditorDensity.chipButton)
+                                          : const ButtonStyle.ghost(density: EditorDensity.chipButton),
                                       onPressed: () { if (vm != null) vm.activeTypeFilters = {}; },
-                                      child: const Text('All', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold)),
-                                    ),
+                                      child: const Text('All', style: TextStyle(fontSize: EditorTypography.labelSize, fontWeight: FontWeight.bold)),
+                                    )),
                                   ),
                                   ...AssetType.values.where((t) => t != AssetType.unknown).map((type) {
                                     final selected = vm?.activeTypeFilters.contains(type) ?? false;
@@ -248,8 +254,12 @@ class _ContentBrowserWidgetState extends _ContentBrowserWidgetStateBase
 
                                     return Padding(
                                       padding: const EdgeInsets.symmetric(horizontal: 2),
-                                      child: Button(
-                                        style: selected ? const ButtonStyle.primary() : const ButtonStyle.ghost(),
+                                      child: SizedBox(height: EditorDensity.chipHeight, child: Button(
+                                        key: ValueKey('content_browser_filter_${type.name}'),
+                                        alignment: Alignment.center,
+                                        style: selected
+                                            ? const ButtonStyle.primary(density: EditorDensity.chipButton)
+                                            : const ButtonStyle.ghost(density: EditorDensity.chipButton),
                                         onPressed: () {
                                           if (vm == null) return;
                                           final current = Set<AssetType>.from(vm.activeTypeFilters);
@@ -264,12 +274,12 @@ class _ContentBrowserWidgetState extends _ContentBrowserWidgetStateBase
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
                                             // The kind's strip colour.
-                                            AssetTypeSwatch(key: ValueKey('asset_type_filter_swatch_${type.name}'), type: type, size: 6),
+                                            AssetTypeSwatch(key: ValueKey('asset_type_filter_swatch_${type.name}'), type: type, size: 8),
                                             const SizedBox(width: 4),
-                                            Text(label, style: const TextStyle(fontSize: 8, fontWeight: FontWeight.bold)),
+                                            Text(label, style: const TextStyle(fontSize: EditorTypography.labelSize, fontWeight: FontWeight.bold)),
                                           ],
                                         ),
-                                      ),
+                                      )),
                                     );
                                   }),
                                 ],
@@ -279,12 +289,15 @@ class _ContentBrowserWidgetState extends _ContentBrowserWidgetStateBase
                       const SizedBox(width: 8),
                       // Show All: the whole project instead of the selected
                       // folder.
-                      Button(
+                      SizedBox(height: EditorDensity.chipHeight, child: Button(
                         key: const ValueKey('content_browser_show_all'),
-                        style: (vm?.showAllAssets ?? false) ? const ButtonStyle.primary() : const ButtonStyle.outline(),
+                        alignment: Alignment.center,
+                        style: (vm?.showAllAssets ?? false)
+                            ? const ButtonStyle.primary(density: EditorDensity.chipButton)
+                            : const ButtonStyle.outline(density: EditorDensity.chipButton),
                         onPressed: () { if (vm != null) vm.showAllAssets = !vm.showAllAssets; },
-                        child: const Text('Show All', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold)),
-                      ),
+                        child: const Text('Show All', style: TextStyle(fontSize: EditorTypography.labelSize, fontWeight: FontWeight.bold)),
+                      )),
                       const SizedBox(width: 8),
                       Select<String>(
                         value: vm?.sortMode ?? 'Name ↑',
@@ -396,15 +409,16 @@ class _ContentBrowserWidgetState extends _ContentBrowserWidgetStateBase
                           child: Text(
                             '${_selectedAssetPaths.length} Selected',
                             style: const TextStyle(
-                              fontSize: 8.5,
+                              fontSize: EditorTypography.labelSize,
                               fontWeight: FontWeight.bold,
                               color: EditorColors.primary,
                             ),
                           ),
                         ),
                         const SizedBox(width: 4),
-                        GhostButton(
-                          density: ButtonDensity.compact,
+                        SizedBox(height: EditorDensity.chipHeight, child: GhostButton(
+                          density: EditorDensity.chipButton,
+                          alignment: Alignment.center,
                           onPressed: () => _confirmDeleteSelectedAssets(
                             context,
                             vm,
@@ -415,32 +429,33 @@ class _ContentBrowserWidgetState extends _ContentBrowserWidgetStateBase
                             children: [
                               const Icon(
                                 LucideIcons.trash2,
-                                size: 10,
+                                size: 12,
                                 color: EditorColors.destructive,
                               ),
-                              const SizedBox(width: 3),
+                              const SizedBox(width: 4),
                               Text(
                                 'Delete (${_selectedAssetPaths.length})',
                                 style: const TextStyle(
-                                  fontSize: 8,
+                                  fontSize: EditorTypography.labelSize,
                                   fontWeight: FontWeight.bold,
                                   color: EditorColors.destructive,
                                 ),
                               ),
                             ],
                           ),
-                        ),
-                        GhostButton(
-                          density: ButtonDensity.compact,
+                        )),
+                        SizedBox(height: EditorDensity.chipHeight, child: GhostButton(
+                          density: EditorDensity.chipButton,
+                          alignment: Alignment.center,
                           onPressed: () => setState(() {
                             _selectedAssetPaths.clear();
                             _lastSelectedAssetPath = null;
                           }),
                           child: const Text(
                             'Clear',
-                            style: TextStyle(fontSize: 8),
+                            style: TextStyle(fontSize: EditorTypography.labelSize),
                           ),
-                        ),
+                        )),
                       ],
                     ],
                   ),
@@ -726,6 +741,13 @@ class _ContentBrowserWidgetState extends _ContentBrowserWidgetStateBase
                                                 leading: const Icon(LucideIcons.folderOutput, size: 14),
                                                 onPressed: (ctx) => _migrateAsset(context, vm, asset),
                                                 child: const Text('Migrate...', style: TextStyle(fontSize: 10)),
+                                              ),
+                                              // The asset's .lmas in the platform file manager.
+                                              MenuButton(
+                                                key: const ValueKey('asset_menu_reveal'),
+                                                leading: const Icon(LucideIcons.folderSearch, size: 14),
+                                                onPressed: (ctx) => FileReveal.reveal(FileReveal.resolve(vm.projectDirPath, asset.lmasPath!)),
+                                                child: Text(FileReveal.menuLabel(), style: const TextStyle(fontSize: 10)),
                                               ),
                                             ],
                                             if (vm != null && asset.lmasPath != null)

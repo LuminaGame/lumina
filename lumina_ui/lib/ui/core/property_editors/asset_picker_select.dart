@@ -5,6 +5,7 @@ import 'package:lumina/lumina.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import '../services/asset_picker_catalog.dart';
+import '../services/file_reveal.dart';
 import '../theme/asset_type_style.dart';
 import '../theme/editor_theme.dart';
 import 'package:lumina_ui/ui/core/widgets/editor_context_menu.dart';
@@ -520,14 +521,23 @@ class _AssetPickerPopupState extends State<AssetPickerPopup> {
       ),
     );
     final browse = widget.onBrowse;
-    if (browse == null) return row;
+    final file = a.lmasPath;
+    if (browse == null && file == null) return row;
     return EditorContextMenu(
       items: [
-        MenuButton(
-          leading: const Icon(LucideIcons.folderSearch, size: 12),
-          onPressed: (_) => browse(a),
-          child: const Text('Browse to asset', style: TextStyle(fontSize: 10)),
-        ),
+        if (browse != null)
+          MenuButton(
+            leading: const Icon(LucideIcons.folderSearch, size: 12),
+            onPressed: (_) => browse(a),
+            child: const Text('Browse to asset', style: TextStyle(fontSize: 10)),
+          ),
+        // The asset's .lmas in the platform file manager.
+        if (file != null)
+          MenuButton(
+            leading: const Icon(LucideIcons.folderOpen, size: 12),
+            onPressed: (_) => FileReveal.reveal(file),
+            child: Text(FileReveal.menuLabel(), style: const TextStyle(fontSize: 10)),
+          ),
       ],
       child: row,
     );

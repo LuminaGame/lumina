@@ -16,6 +16,7 @@ Continuation of App shell and shared UI: the remaining public files under `lib/`
 - [`lib/ui/core/property_editors/synced_text_field.dart`](#libuicoreproperty_editorssynced_text_fielddart)
 - [`lib/ui/core/services/asset_picker_catalog.dart`](#libuicoreservicesasset_picker_catalogdart)
 - [`lib/ui/core/services/content_folders.dart`](#libuicoreservicescontent_foldersdart)
+- [`lib/ui/core/services/file_reveal.dart`](#libuicoreservicesfile_revealdart)
 - [`lib/ui/core/services/editor_mesh_budget.dart`](#libuicoreserviceseditor_mesh_budgetdart)
 - [`lib/ui/core/services/rgba_png_encoder.dart`](#libuicoreservicesrgba_png_encoderdart)
 - [`lib/ui/core/services/user_plugin_dir.dart`](#libuicoreservicesuser_plugin_dirdart)
@@ -508,6 +509,28 @@ The content browser never lists the marker: assets are `.lmas` files only.
 | `ensureProjectFolders` | `static List<String> ensureProjectFolders(String projectDir)` | Creates [projectFolders] (with markers) under [projectDir]; existing folders and their files are left alone. Returns the folders it created. |
 | `writeMarker` | `static void writeMarker(String dirPath)` | Writes the keep-marker into [dirPath] unless it is already there. |
 | `parentOf` | `static String parentOf(String relativePath)` | The folder an asset at [relativePath] sits in (`contents/a/b.lmas` → `contents/a`), with separators normalised to `/`. |
+
+## `lib/ui/core/services/file_reveal.dart`
+
+### `abstract final class FileReveal`
+
+"Show in Explorer" (Windows) / "Reveal in Finder" (macOS) / "Show in File Manager" (Linux): opens the platform file manager at a file (selected) or a folder (opened). The Content Browser's folder menu (Sources tree and folder tiles), its asset menu (the asset's `.lmas`), the asset picker's row menu and the World Outliner's actor menu ("Show Asset in Explorer": the actor's mesh or Blueprint class file, when it is on disk) use it.
+
+| Platform | File | Folder |
+| :--- | :--- | :--- |
+| Windows | `explorer.exe /select, <file>` | `explorer.exe <folder>` |
+| macOS | `open -R <file>` | `open <folder>` |
+| Linux | `xdg-open <parent folder>` | `xdg-open <folder>` |
+
+**Members:**
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `runner` | `static FileRevealRunner runner` | Starts the command (detached by default); tests replace it to record the call. |
+| `menuLabel` | `static String menuLabel({String? subject, String? os})` | The platform's menu label; [subject] names what is shown ("Show Asset in Explorer"). |
+| `commandFor` | `static FileRevealCommand commandFor(String path, {required bool isDirectory, String? os})` | The command line for [path] on [os] (table above). |
+| `resolve` | `static String resolve(String projectDir, String path)` | A project-relative path (`contents/props`) resolved against [projectDir]; an absolute path is kept. |
+| `reveal` | `static Future<bool> reveal(String path, {String? os})` | Shows [path]; false when it is not on disk or the file manager could not be started. |
 
 ## `lib/ui/core/services/editor_mesh_budget.dart`
 

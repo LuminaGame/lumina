@@ -107,7 +107,7 @@ A subfolder tile at the top of the content browser grid: a click selects it, a d
 
 | Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
-| `contentFolderMenuItems` | `List<MenuItem> contentFolderMenuItems(BuildContext context, EditorViewModel vm, String path, {VoidCallback? on...` | The folder context menu shared by the grid's folder tiles and the Sources tree: Open (when [onOpen] is given), New Folder, Import Folder Here, Rename, Delete and Favorites. The `contents` root offers New Folder, Import Folder Here and Favorites only. |
+| `contentFolderMenuItems` | `List<MenuItem> contentFolderMenuItems(BuildContext context, EditorViewModel vm, String path, {VoidCallback? on...` | The folder context menu shared by the grid's folder tiles and the Sources tree: Open ([onOpen] verildiğinde), New Folder, Import Folder Here, Rename, Delete, Show in Explorer (`FileReveal`: platformun dosya yöneticisi klasörde açılır) ve Favorites. `contents` kökü yalnızca New Folder, Import Folder Here, Show in Explorer ve Favorites sunar. |
 | `showNewContentFolderDialog` | `void showNewContentFolderDialog(BuildContext context, EditorViewModel vm, String parent)` | New Folder under [parent]; the browser then shows [parent] with the new tile. |
 | `showRenameContentFolderDialog` | `void showRenameContentFolderDialog(BuildContext context, EditorViewModel vm, String folder)` | Rename [folder]; references to its assets follow the new path. |
 | `showDeleteContentFolderDialog` | `void showDeleteContentFolderDialog(BuildContext context, EditorViewModel vm, String folder)` | Confirms, then deletes [folder] with every asset in it. |

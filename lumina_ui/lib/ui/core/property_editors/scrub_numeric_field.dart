@@ -47,17 +47,81 @@ class ScrubNumericField extends StatefulWidget {
     this.min,
     this.max,
     this.fractionDigits = 2,
-    this.labelWidth = 16,
+    this.labelWidth = 12,
     this.labelColor = EditorColors.mutedForeground,
     this.onScrubDelta,
   });
 
   @override
   State<ScrubNumericField> createState() => _ScrubNumericFieldState();
+
+  /// [full] (the field's text for [value]) as the field shows it in
+  /// [maxWidth]: whole when it fits, else with fewer decimals, else in
+  /// thousands / millions (`12.8k`, `-1.3M`), else the shortest of those.
+  static String fitValueText(
+    String full,
+    double value, {
+    required int fractionDigits,
+    required String? unit,
+    required double maxWidth,
+    required TextStyle style,
+    TextScaler textScaler = TextScaler.noScaling,
+  }) {
+    String withUnit(String s) => unit != null ? '$s $unit' : s;
+    final candidates = <String>[
+      full,
+      for (var d = fractionDigits - 1; d >= 0; d--) withUnit(value.toStringAsFixed(d)),
+      if (value.abs() >= 1e6) ...[
+        withUnit('${(value / 1e6).toStringAsFixed(1)}M'),
+        withUnit('${(value / 1e6).toStringAsFixed(0)}M'),
+      ] else if (value.abs() >= 1e3) ...[
+        withUnit('${(value / 1e3).toStringAsFixed(1)}k'),
+        withUnit('${(value / 1e3).toStringAsFixed(0)}k'),
+      ],
+    ];
+    var shortest = full;
+    for (final c in candidates) {
+      final painter = TextPainter(
+        text: TextSpan(text: c, style: style),
+        textDirection: TextDirection.ltr,
+        textScaler: textScaler,
+        maxLines: 1,
+      )..layout();
+      final w = painter.width;
+      painter.dispose();
+      if (w <= maxWidth) return c;
+      if (c.length < shortest.length) shortest = c;
+    }
+    return shortest;
+  }
+}
+
+/// The field's controller: [text] is always the whole value (what editing,
+/// committing and tests read); while [display] is set the field draws that
+/// shortened text instead.
+class _FittingTextController extends TextEditingController {
+  _FittingTextController({super.text});
+
+  String? display;
+
+  /// A new text (typed, scrubbed, committed) shows whole until the field
+  /// lays out again and decides whether it fits.
+  @override
+  set value(TextEditingValue newValue) {
+    if (newValue.text != text) display = null;
+    super.value = newValue;
+  }
+
+  @override
+  TextSpan buildTextSpan({required BuildContext context, TextStyle? style, required bool withComposing}) {
+    final d = display;
+    if (d != null) return TextSpan(text: d, style: style);
+    return super.buildTextSpan(context: context, style: style, withComposing: withComposing);
+  }
 }
 
 class _ScrubNumericFieldState extends State<ScrubNumericField> {
-  late TextEditingController _controller;
+  late _FittingTextController _controller;
   final FocusNode _focusNode = FocusNode();
   bool _isDragging = false;
   double _dragValue = 0;
@@ -73,7 +137,7 @@ class _ScrubNumericFieldState extends State<ScrubNumericField> {
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController(text: widget.isMixed ? '—' : _format(widget.value));
+    _controller = _FittingTextController(text: widget.isMixed ? '—' : _format(widget.value));
     _focusNode.addListener(_onFocusChange);
   }
 
@@ -94,6 +158,8 @@ class _ScrubNumericFieldState extends State<ScrubNumericField> {
   }
 
   void _onFocusChange() {
+    // Editing shows the whole value; leaving the field may shorten it again.
+    if (mounted) setState(() {});
     if (!_focusNode.hasFocus) {
       if (_controller.text != _textAtFocus) {
         _commitText(_controller.text);
@@ -173,6 +239,8 @@ class _ScrubNumericFieldState extends State<ScrubNumericField> {
           // `text-[9px] font-mono font-semibold` in the prototype's VecInput.
           child: Text(
             widget.label,
+            maxLines: 1,
+            overflow: TextOverflow.clip,
             style: TextStyle(
               fontFamily: EditorTypography.monoFamily,
               fontSize: EditorTypography.captionSize,
@@ -202,34 +270,83 @@ class _ScrubNumericFieldState extends State<ScrubNumericField> {
               onHorizontalDragCancel: () {
                 if (_isDragging) _endScrub();
               },
-              child: TextField(
-                controller: _controller,
-                focusNode: _focusNode,
-                // `text-[11px] font-mono` in the prototype's VecInput.
-                style: const TextStyle(
-                  fontFamily: EditorTypography.monoFamily,
-                  fontSize: EditorTypography.bodySize,
-                ),
-                // Enter leaves the field, and leaving it commits: one commit
-                // per edit, not one for Enter and another for the focus loss
-                // that follows it.
-                onSubmitted: (_) => _focusNode.unfocus(),
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-              ),
+              child: LayoutBuilder(builder: (context, constraints) {
+                // A value wider than the field is shown shortened (fewer
+                // decimals, then `12.8k`) while the field is not being
+                // edited; the tooltip and the editing text keep it whole.
+                final full = _controller.text;
+                final shown = _focusNode.hasFocus || widget.isMixed || _isDragging
+                    ? full
+                    : ScrubNumericField.fitValueText(
+                        full,
+                        widget.value,
+                        fractionDigits: widget.fractionDigits,
+                        unit: widget.unit,
+                        maxWidth: constraints.maxWidth - 2 * _textPadding - _textFieldChrome,
+                        style: _effectiveValueStyle(context),
+                        textScaler: MediaQuery.textScalerOf(context),
+                      );
+                _controller.display = shown == full ? null : shown;
+                final field = TextField(
+                  controller: _controller,
+                  focusNode: _focusNode,
+                  // `text-[11px] font-mono` in the prototype's VecInput.
+                  style: _valueStyle,
+                  // Enter leaves the field, and leaving it commits: one commit
+                  // per edit, not one for Enter and another for the focus loss
+                  // that follows it.
+                  onSubmitted: (_) => _focusNode.unfocus(),
+                  padding: const EdgeInsets.symmetric(horizontal: _textPadding, vertical: 2),
+                );
+                if (_controller.display == null) return field;
+                return Tooltip(
+                  tooltip: (context) => TooltipContainer(child: Text(full)),
+                  child: field,
+                );
+              }),
             ),
           ),
         ),
+        // Its own slot after the value, as wide as the icon: with shadcn's
+        // default button padding it was drawn over the next field's letter.
         if (isModified)
-          SizedBox(
-            width: 16,
-            child: GhostButton(
-              
-              onPressed: widget.onReset,
-              
-              child: const Icon(LucideIcons.rotateCcw, size: 10),
+          Padding(
+            padding: const EdgeInsets.only(left: 2),
+            child: SizedBox(
+              width: _resetSize,
+              height: _resetSize,
+              child: GhostButton(
+                density: ButtonDensity.compact,
+                alignment: Alignment.center,
+                onPressed: widget.onReset,
+                child: const Icon(LucideIcons.rotateCcw, size: 10),
+              ),
             ),
           ),
       ],
     );
   }
+
+  static const double _textPadding = 3;
+  static const double _resetSize = 12;
+
+  /// The text field's border and caret room around the padded text.
+  static const double _textFieldChrome = 4;
+
+  /// The style shadcn's `TextField` draws [_valueStyle] in (its own merge
+  /// of the default text style and the theme's typography), so the value is
+  /// measured in the font it is drawn in.
+  static TextStyle _effectiveValueStyle(BuildContext context) {
+    final theme = Theme.of(context);
+    return DefaultTextStyle.of(context)
+        .style
+        .merge(theme.typography.small)
+        .merge(theme.typography.normal)
+        .merge(_valueStyle);
+  }
+
+  static const TextStyle _valueStyle = TextStyle(
+    fontFamily: EditorTypography.monoFamily,
+    fontSize: EditorTypography.bodySize,
+  );
 }
