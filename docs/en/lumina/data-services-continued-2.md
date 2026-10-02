@@ -172,7 +172,7 @@ Generates, resolves, builds and installs a project editor: **generate → pub ge
 | `cleanHostAfterInstall` | `final bool cleanHostAfterInstall` | Whether to delete the host's `.dart_tool/` and `build/` after install (only the bundle is cached). |
 | `hostAliasRoot` | `final Directory? hostAliasRoot` | Windows: where the space-free build aliases of project hosts live Defaults to `%LOCALAPPDATA%\lumina\hosts`. |
 | `failureTailLines` | `static const int failureTailLines` |  |
-| `buildDirOf` | `String buildDirOf(String hostDir)` | Where `pub get` and `flutter build` run for [hostDir]: the host itself, or on Windows a junction to it under a space-free root. native_toolchain_c runs cl through cmd.exe, and `cl.exe` lives under "C:\Program Files", so one more quoted argument (an output dir under "…\Lumina Projects\…") breaks cmd's quoting ("'C:\Program' is not recognized"). The alias also keeps every path short. The files stay in the project. |
+| `buildDirOf` | `String buildDirOf(String hostDir)` | Where `pub get` and `flutter build` run for [hostDir]: the host itself, or on Windows a junction to it under a space-free root (see [SpaceFreeBuildDir]). The files stay in the project. |
 | `bundleDirOf` | `String bundleDirOf(String hostDir)` | `build/<platform>/…` holding the runnable bundle, relative to the host. |
 | `executableIn` | `String executableIn(String packageName)` | The executable inside the bundle. |
 | `countHookPackages` | `static int countHookPackages(String hostDir)` | Packages in the host's package graph that have a `hook/build.dart` (from `.dart_tool/package_config.json`). |
@@ -184,6 +184,19 @@ Generates, resolves, builds and installs a project editor: **generate → pub ge
 | :--- | :--- | :--- |
 | `defaultEditorBuildProcessStarter` | `Future<Process> defaultEditorBuildProcessStarter(String executable, List<String> arguments, {String? workingDi...` |  |
 | `killProcessTree` | `Future<void> killProcessTree(int pid) async` | Kills [pid] and its children (`flutter` is a script that runs the tool, which runs MSBuild/CMake/ninja and the hooks). |
+
+## `lib/data/services/space_free_build_dir.dart`
+
+### `abstract final class SpaceFreeBuildDir`
+
+Where `flutter pub get` / `flutter build` run for a folder on Windows: a junction to it under a space-free root, so the native-assets hooks never see a path with a space. native_toolchain_c runs `cl.exe` through `cmd.exe`, and `cl.exe` lives under "C:\Program Files", so one more quoted argument (an output dir, include or library under "…\Lumina Projects\…") breaks cmd's quoting ("'C:\Program' is not recognized"). The alias also keeps every path short. The files stay where they are; only the path the build sees changes. Used by the project editor build ([EditorBuildService.buildDirOf]), Cook & Package and Play Standalone.
+
+**Members:**
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `of` | `static String of(String dir, {Directory? aliasRoot, String? platform})` | The build folder for [dir]: [dir] itself off Windows (or when [platform] is not `windows`), else a stable junction to it under [aliasRoot] (default [defaultAliasRoot]), one per folder. A path at the alias that is not a link is never touched: [dir] is used as it is. |
+| `defaultAliasRoot` | `static String defaultAliasRoot()` | `%LOCALAPPDATA%\lumina\hosts`, or `<SystemDrive>\lumina-hosts` when `%LOCALAPPDATA%` itself has a space (a user name with a space). |
 
 ## `lib/data/services/editor_host_generator_service.dart`
 

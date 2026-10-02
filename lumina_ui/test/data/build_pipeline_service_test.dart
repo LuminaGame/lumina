@@ -456,6 +456,37 @@ void main() {
       expect(BuildConfiguration.debug.flag, '--debug');
       expect(BuildConfiguration.development.flag, '--profile');
     });
+
+    test('on Windows a project under a folder with a space builds through a space-free alias of it', () async {
+      final spaced = Directory('${tempDir.path}/Lumina Projects/space_game')..createSync(recursive: true);
+      final aliases = Directory('${tempDir.path}/aliases');
+      String? cwd;
+      final step = CookAndPackageStep(
+        target: 'windows',
+        configuration: BuildConfiguration.shipping,
+        buildAliasRoot: aliases,
+        codeGenerator: (ctx) async => const CookCodeGenOutcome(true, 'no level to generate'),
+        processStarter: (exe, args, {workingDirectory}) {
+          cwd = workingDirectory;
+          return Process.start(_dartExecutable(), [standIn, tempDir.path, '0', '1', '1'], workingDirectory: workingDirectory);
+        },
+      );
+      final events = await BuildPipelineService().run(BuildPlan(steps: [step]), projectDir: spaced.path).toList();
+      final finished = events.whereType<BuildStepFinished>().single;
+      expect(finished.status, BuildStepStatus.ok, reason: finished.message);
+      expect(events.whereType<BuildPipelineFinished>().single.artifactPath, '${spaced.path}/build/windows/x64/runner/Release',
+          reason: 'the artifact stays in the project');
+      if (!Platform.isWindows) {
+        expect(cwd, spaced.path, reason: 'other hosts build in place');
+        return;
+      }
+      expect(cwd, isNot(contains(' ')), reason: 'cl.exe runs through cmd.exe, which cannot quote a second path with a space');
+      expect(cwd!.startsWith(aliases.path), isTrue);
+      expect(FileSystemEntity.isLinkSync(cwd!), isTrue);
+      File('${spaced.path}/marker.txt').writeAsStringSync('in the project');
+      expect(File('$cwd/marker.txt').readAsStringSync(), 'in the project', reason: 'the alias is the project folder');
+      expect(events.whereType<BuildLogEvent>().any((l) => l.message.contains('Building through $cwd')), isTrue);
+    });
   });
 
   group('CookAndPackageStep for the web', () {
@@ -703,6 +734,42 @@ void main() {
       expect(artifact, '${dir.path}/build/linux/x64/release/bundle');
       expect(File('$artifact/tiny_cook').existsSync(), isTrue, reason: 'the built executable exists');
     }, timeout: const Timeout(Duration(minutes: 10)));
+
+    test('a launcher-created game under "Lumina Projects" (a path with a space) cooks with a real `flutter build windows --release`',
+        () async {
+      if (!Platform.isWindows) {
+        markTestSkipped('Windows only');
+        return;
+      }
+      final host = await HostBuildTargets.probe();
+      if (!host.targets.contains('windows')) {
+        markTestSkipped('host has no Windows toolchain (${host.error ?? host.targets})');
+        return;
+      }
+      // The launcher's real pipeline: flutter create, the engine dependency,
+      // the local engine link (pubspec_overrides.yaml + hook user-defines),
+      // pub get, manifest and level.
+      final projects = Directory('${tempDir.path}/Lumina Projects')..createSync();
+      const name = 'space_cook';
+      await ProjectRepository().createProjectStream(projectName: name, projectLocation: projects.path).drain<void>();
+      final projectDir = '${projects.path}/$name';
+      final project = await ProjectRepository().loadProject('$projectDir/$name.lmproject');
+      expect(project, isNotNull);
+      final step = PackageTargetsStep(
+        targets: const ['windows'],
+        reasonsFor: (_) => const [],
+        packageDirFor: (t) => '$projectDir/build/package/$t',
+        buildAliasRoot: Directory('${tempDir.path}/aliases'),
+      );
+      final events = await BuildPipelineService().run(BuildPlan(steps: [step]), projectDir: projectDir, project: project).toList();
+      final logs = events.whereType<BuildLogEvent>().map((l) => '[${l.level}] ${l.message}').join('\n');
+      expect(events.whereType<BuildStepFinished>().single.status, BuildStepStatus.ok, reason: logs);
+      expect(logs, contains('Building through '), reason: 'the build ran through the space-free alias');
+      expect(File('$projectDir/build/windows/x64/runner/Release/$name.exe').existsSync(), isTrue, reason: logs);
+      for (final dll in ['flutter_filament.dll', 'flutter_assimp.dll', 'flutter_riglogic.dll']) {
+        expect(File('$projectDir/build/package/windows/$dll').existsSync(), isTrue, reason: 'the hooks built $dll\n$logs');
+      }
+    }, timeout: const Timeout(Duration(minutes: 30)));
 
     test('FilamentMaterialCompiler compiles a real filamat package on a headless engine and rejects non-packages', () async {
       final compiler = FilamentMaterialCompiler();

@@ -5,7 +5,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:lumina/data/repositories/project_repository.dart';
 import 'package:lumina/data/services/engine_logger_service.dart';
-import 'package:lumina/lumina.dart' show LuminaGraphicsDevices, ProjectEngineLink;
+import 'package:lumina/lumina.dart' show LuminaGraphicsDevices, ProjectEngineLink, SpaceFreeBuildDir;
 
 /// Where Play Standalone is.
 enum StandaloneState { idle, building, running }
@@ -119,9 +119,12 @@ class StandaloneGameRunner extends ChangeNotifier {
     _logger.log('Play Standalone: flutter build $platform --debug${env['FILAMENT_GPU'] != null ? ' (GPU "${env['FILAMENT_GPU']}")' : ''}',
         level: 'info', source: _source);
     try {
+      // On Windows through a space-free alias of the project: the
+      // native-assets hooks cannot compile under a path with a space.
+      final buildDir = SpaceFreeBuildDir.of(projectDir);
       // `flutter` is a .bat on Windows, found only through the shell.
       final build = await Process.start(flutterExecutable, ['build', platform, '--debug'],
-          workingDirectory: projectDir, environment: env, runInShell: Platform.isWindows);
+          workingDirectory: buildDir, environment: env, runInShell: Platform.isWindows);
       _build = build;
       _pipe(build, 'info');
       final code = await build.exitCode;

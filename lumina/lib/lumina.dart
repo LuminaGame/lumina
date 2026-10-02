@@ -270,6 +270,7 @@ export 'data/services/editor_build_fingerprint.dart';
 export 'data/services/editor_source_vendor_service.dart';
 export 'data/services/editor_build_cache.dart';
 export 'data/services/editor_build_service.dart';
+export 'data/services/space_free_build_dir.dart';
 export 'data/services/plugin_template_generator_service.dart';
 export 'data/services/project_engine_link.dart';
 export 'data/services/lumina_data_dir.dart';

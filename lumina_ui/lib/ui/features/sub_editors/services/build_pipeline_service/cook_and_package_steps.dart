@@ -33,6 +33,10 @@ class CookAndPackageStep implements BuildStep {
 
   static const String bundleWebResourcesFlag = '--no-web-resources-cdn';
 
+  /// Windows: where the space-free alias the build runs through lives
+  /// ([SpaceFreeBuildDir]; default [SpaceFreeBuildDir.defaultAliasRoot]).
+  final Directory? buildAliasRoot;
+
   CookAndPackageStep({
     required this.target,
     required this.configuration,
@@ -42,6 +46,7 @@ class CookAndPackageStep implements BuildStep {
     CookCodeGenerator? codeGenerator,
     this.webModule,
     this.bundleWebResources = false,
+    this.buildAliasRoot,
   })  : _starter = processStarter ?? defaultBuildProcessStarter,
         _codeGen = codeGenerator ?? levelFileCodeGenerator;
 
@@ -212,12 +217,21 @@ class CookAndPackageStep implements BuildStep {
     ctx.log(gen.message, level: 'success');
     if (ctx.token.isCancelled) return const StepResult.cancelled('Cook cancelled before flutter build started');
 
-    // 2. Real flutter build as a child process.
+    // 2. Real flutter build as a child process. On Windows it runs through a
+    // space-free alias of the project: the native-assets hooks cannot
+    // compile under a path with a space (see SpaceFreeBuildDir).
     final args = buildArguments();
     ctx.log('Running $flutterExecutable ${args.join(' ')} (in ${ctx.projectDir})');
+    var buildDir = ctx.projectDir;
+    try {
+      buildDir = SpaceFreeBuildDir.of(ctx.projectDir, aliasRoot: buildAliasRoot);
+    } on FileSystemException catch (e) {
+      ctx.log('Could not create a space-free alias of the project (${e.message}); building in place', level: 'warning');
+    }
+    if (buildDir != ctx.projectDir) ctx.log('Building through $buildDir -> ${ctx.projectDir}');
     Process proc;
     try {
-      proc = await _starter(flutterExecutable, args, workingDirectory: ctx.projectDir);
+      proc = await _starter(flutterExecutable, args, workingDirectory: buildDir);
     } catch (e) {
       return StepResult.failed('Failed to start $flutterExecutable: $e');
     }
@@ -282,6 +296,10 @@ class PackageTargetsStep implements BuildStep {
   /// (e.g. a Linux bundle's `.desktop` entry and file-manager icon).
   final Future<void> Function(BuildStepContext ctx, String target, String artifactPath, String packageDir)? afterPackage;
 
+  /// Windows: where the space-free alias each build runs through lives
+  /// ([CookAndPackageStep.buildAliasRoot]).
+  final Directory? buildAliasRoot;
+
   PackageTargetsStep({
     required this.targets,
     required this.reasonsFor,
@@ -295,6 +313,7 @@ class PackageTargetsStep implements BuildStep {
     this.bundleWebResources = false,
     this.beforeBuild,
     this.afterPackage,
+    this.buildAliasRoot,
   });
 
   @override
@@ -373,6 +392,7 @@ class PackageTargetsStep implements BuildStep {
         codeGenerator: once,
         webModule: target == 'web' ? webModule : null,
         bundleWebResources: bundleWebResources,
+        buildAliasRoot: buildAliasRoot,
       );
       StepResult result;
       try {

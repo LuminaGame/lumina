@@ -2,12 +2,12 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:crypto/crypto.dart';
 import 'package:lumina/data/models/lumina_plugin_descriptor.dart';
 import 'package:lumina/data/services/editor_build_cache.dart';
 import 'package:lumina/data/services/editor_build_fingerprint.dart';
 import 'package:lumina/data/services/editor_host_generator_service.dart';
 import 'package:lumina/data/services/editor_source_vendor_service.dart';
+import 'package:lumina/data/services/space_free_build_dir.dart';
 import 'package:path/path.dart' as p;
 
 /// The phases of a project editor build, with their share of the bar.
@@ -315,44 +315,9 @@ class EditorBuildService {
         platform = platform ?? Platform.operatingSystem;
 
   /// Where `pub get` and `flutter build` run for [hostDir]: the host itself,
-  /// or on Windows a junction to it under a space-free root.
-  /// native_toolchain_c runs cl through cmd.exe, and `cl.exe` lives under
-  /// "C:\Program Files", so one more quoted argument (an output dir under
-  /// "…\Lumina Projects\…") breaks cmd's quoting ("'C:\Program' is not
-  /// recognized"). The alias also keeps every path short. The files stay in
-  /// the project.
-  String buildDirOf(String hostDir) {
-    if (platform != 'windows' || !Platform.isWindows) return hostDir;
-    final target = p.normalize(p.absolute(hostDir));
-    final root = hostAliasRoot?.path ?? _defaultAliasRoot();
-    final id = sha1.convert(utf8.encode(target.toLowerCase())).toString().substring(0, 10);
-    final alias = p.join(root, id);
-    final link = Link(alias);
-    final type = FileSystemEntity.typeSync(alias, followLinks: false);
-    if (type == FileSystemEntityType.link) {
-      if (p.equals(p.normalize(link.targetSync()), target)) return alias;
-      link.deleteSync();
-    } else if (type != FileSystemEntityType.notFound) {
-      return hostDir;
-    }
-    Directory(root).createSync(recursive: true);
-    // Aliases of projects that were deleted or moved.
-    for (final stale in Directory(root).listSync(followLinks: false).whereType<Link>()) {
-      try {
-        if (!Directory(stale.targetSync()).existsSync()) stale.deleteSync();
-      } on FileSystemException {
-        // Another launcher's; left for it.
-      }
-    }
-    link.createSync(target);
-    return alias;
-  }
-
-  static String _defaultAliasRoot() {
-    final local = Platform.environment['LOCALAPPDATA'];
-    if (local != null && !local.contains(' ')) return p.join(local, 'lumina', 'hosts');
-    return p.join('${Platform.environment['SystemDrive'] ?? 'C:'}\\', 'lumina-hosts');
-  }
+  /// or on Windows a junction to it under a space-free root (see
+  /// [SpaceFreeBuildDir]). The files stay in the project.
+  String buildDirOf(String hostDir) => SpaceFreeBuildDir.of(hostDir, aliasRoot: hostAliasRoot, platform: platform);
 
   /// `build/<platform>/…` holding the runnable bundle, relative to the host.
   String bundleDirOf(String hostDir) => switch (platform) {

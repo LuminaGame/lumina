@@ -478,6 +478,7 @@ Regenerates the game's Dart code; the default reads the active level from disk, 
 | `levelFileCodeGenerator` | `static Future<CookCodeGenOutcome> levelFileCodeGenerator(BuildStepContext ctx) async` | Default code-gen: reads the active level's actors + environment from its `.lmas` and runs [GenerateDartCodeUseCase] (fresh `lib/main.dart` + `lib/levels/<level>.dart`, dirty flag cleared, timestamp stamped). |
 | `formatBytes` | `static String formatBytes(int bytes)` | `12.3 MB`-style sizes for the log and the Output section. |
 | `derivedDataCacheLeak` | `static String? derivedDataCacheLeak(String projectDir)` | Why cooking [projectDir] would ship its editor-only `DerivedDataCache/`, or null. `flutter build` bundles only the pubspec's asset entries, so the cache stays out unless one of them names it. |
+| `buildAliasRoot` | `final Directory? buildAliasRoot` | Windows: where the space-free alias the build runs through lives ([SpaceFreeBuildDir]; default [SpaceFreeBuildDir.defaultAliasRoot]). On Windows `flutter build` runs through that alias of the project, because the native-assets hooks cannot compile under a path with a space (every project under `Lumina Projects`). |
 
 ### `class PackageTargetsStep`
 
@@ -503,6 +504,7 @@ Packages every ticked target in turn: a target the host, its toolchain or the en
 | `bundleWebResources` | `final bool bundleWebResources` |  |
 | `beforeBuild` | `final Future<String?> Function(BuildStepContext ctx, String target)? beforeBuild` | Runs before a buildable target's `flutter build`; a non-null result fails the target with that message (e.g. the project icon becomes the platform's app icon). |
 | `afterPackage` | `final Future<void> Function(BuildStepContext ctx, String target, String artifactPath, String packageDir)? afte...` | Runs once a target is copied into its package folder (e.g. a Linux bundle's `.desktop` entry and file-manager icon). |
+| `buildAliasRoot` | `final Directory? buildAliasRoot` | Windows: where the space-free alias each build runs through lives ([CookAndPackageStep.buildAliasRoot]). |
 | `argumentsFor` | `List<String> argumentsFor(String target)` | The argv `flutter` gets for [target]. |
 | `sourceFor` | `static String sourceFor(String target)` |  |
 | `copyArtifact` | `static int copyArtifact(String from, String to)` | Replaces [to] with a copy of [from] (a folder's contents, or a single file such as an APK); returns the bytes copied. Refuses to copy a folder into itself. |
