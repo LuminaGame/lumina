@@ -5,9 +5,11 @@ import 'package:flutter/foundation.dart' show ValueListenable, mapEquals;
 import 'package:flutter/widgets.dart';
 import 'package:lumina/lumina.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart';
+import 'package:path/path.dart' as p;
 
 import '../features/mcp_server/services/host_editor_mcp.dart';
 import '../features/sub_editors/views/sub_editor_3d_viewport.dart';
+import 'property_editors/asset_picker_select.dart';
 import 'theme/editor_theme_access.dart';
 
 class PluginExtensionRegistry extends ChangeNotifier implements LuminaEditorHostContext, EditorThemeHost {
@@ -562,6 +564,37 @@ class PluginExtensionRegistry extends ChangeNotifier implements LuminaEditorHost
         for (final list in _tabs.values) ...list,
       ];
 
+  List<RealAssetInfo> Function()? _assetsProvider;
+
+  /// Attaches the host function providing the active project's assets.
+  void attachAssetsProvider(List<RealAssetInfo> Function() provider) {
+    _assetsProvider = provider;
+  }
+
+  @override
+  Widget buildAssetPicker(
+    BuildContext context, {
+    required String? selectedPath,
+    required ValueChanged<String?> onSelected,
+    Set<AssetType>? typeFilter,
+    String placeholder = 'None',
+    bool allowClear = false,
+    bool expand = true,
+  }) {
+    final scope = AssetPickerScope.maybeOf(context);
+    final all = scope?.allAssets?.call() ?? _assetsProvider?.call() ?? const <RealAssetInfo>[];
+    return AssetPickerSelect(
+      assets: all,
+      selectedPath: selectedPath,
+      typeFilter: typeFilter,
+      placeholder: placeholder,
+      allowClear: allowClear,
+      expand: expand,
+      onSelected: (asset) => onSelected(asset.relativePath),
+      onCleared: allowClear ? () => onSelected(null) : null,
+    );
+  }
+
   @override
   Widget build3DViewport(BuildContext context, Plugin3DViewportOptions options) {
     return _Plugin3DViewportContainer(options: options);
@@ -608,9 +641,13 @@ class _Plugin3DViewportContainerState extends State<_Plugin3DViewportContainer> 
     try {
       Uint8List? bytes = opts.glbBytes;
       if (bytes == null && opts.meshPath != null) {
-        final file = File(opts.meshPath!);
-        if (await file.exists()) {
+        final path = opts.meshPath!;
+        var absPath = path;
+        final file = File(absPath);
+        if (absPath.toLowerCase().endsWith('.glb') && file.existsSync()) {
           bytes = await file.readAsBytes();
+        } else {
+          bytes = AnimationImportBinder.meshGlb(absPath);
         }
       }
       if (bytes != null && bytes.isNotEmpty) {

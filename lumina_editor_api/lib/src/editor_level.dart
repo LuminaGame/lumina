@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:lumina/lumina.dart' show AssetType;
 
 import 'api_types.dart';
 
@@ -192,4 +193,53 @@ abstract class LuminaEditorHostContext implements LuminaEditorContext {
 
   /// Builds a real Filament 3D viewport for a plugin editor.
   Widget build3DViewport(BuildContext context, Plugin3DViewportOptions options);
+
+  /// Builds a standard searchable asset picker combobox with thumbnail preview,
+  /// type filtering, recent assets, and Content Browser browse integration.
+  Widget buildAssetPicker(
+    BuildContext context, {
+    required String? selectedPath,
+    required ValueChanged<String?> onSelected,
+    Set<AssetType>? typeFilter,
+    String placeholder = 'None',
+    bool allowClear = false,
+    bool expand = true,
+  });
+}
+
+/// Standard searchable asset picker combobox for plugins.
+/// Delegates to [LuminaEditorHostContext.buildAssetPicker] to render
+/// the editor's live asset catalog with thumbnails and type filtering.
+class EditorAssetPicker extends StatelessWidget {
+  final LuminaEditorHostContext hostContext;
+  final String? selectedPath;
+  final ValueChanged<String?> onSelected;
+  final Set<AssetType>? typeFilter;
+  final String placeholder;
+  final bool allowClear;
+  final bool expand;
+
+  const EditorAssetPicker({
+    super.key,
+    required this.hostContext,
+    required this.selectedPath,
+    required this.onSelected,
+    this.typeFilter,
+    this.placeholder = 'None',
+    this.allowClear = false,
+    this.expand = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return hostContext.buildAssetPicker(
+      context,
+      selectedPath: selectedPath,
+      onSelected: onSelected,
+      typeFilter: typeFilter,
+      placeholder: placeholder,
+      allowClear: allowClear,
+      expand: expand,
+    );
+  }
 }

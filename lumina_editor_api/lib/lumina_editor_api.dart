@@ -1,4 +1,6 @@
+export 'package:lumina/lumina.dart' show AssetType;
 export 'src/api_types.dart';
+export 'src/editor_level.dart';
 export 'src/dialogs/plugin_dialog_controller.dart';
 export 'src/dialogs/plugin_dialog_frame.dart';
 export 'src/dialogs/plugin_downloader.dart';

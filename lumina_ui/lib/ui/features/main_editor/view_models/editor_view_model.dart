@@ -462,6 +462,8 @@ class EditorViewModel extends _EditorViewModelState
         enqueueThumbnail(fullPath, force: true);
       }
     });
+    // Plugins access the project's assets for the asset picker.
+    extensionRegistry.attachAssetsProvider(() => realAssets);
     // Per-plugin storage, the project each plugin is told about,
     // and plugin shutdown before a hand-off exits the process.
     extensionRegistry.attachStorage(dataRoot: PluginDataDir.resolve, projectDir: () => projectDirPath);

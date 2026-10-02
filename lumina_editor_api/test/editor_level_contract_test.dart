@@ -1,7 +1,9 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lumina/lumina.dart' show AssetType;
 import 'package:lumina_editor_api/lumina_editor_api.dart';
 
 /// The level half of the API. A host context is a
@@ -119,6 +121,16 @@ class _Host implements LuminaEditorHostContext {
   @override
   Widget build3DViewport(BuildContext context, Plugin3DViewportOptions options) => const SizedBox();
   @override
+  Widget buildAssetPicker(
+    BuildContext context, {
+    required String? selectedPath,
+    required ValueChanged<String?> onSelected,
+    Set<AssetType>? typeFilter,
+    String placeholder = 'None',
+    bool allowClear = false,
+    bool expand = true,
+  }) => const SizedBox();
+  @override
   void registerAssetType(EditorAssetTypeHandler handler) {}
   @override
   void registerImporter(EditorImporter importer) {}
@@ -126,6 +138,12 @@ class _Host implements LuminaEditorHostContext {
   void registerDetailsCustomization(DetailsCustomization c) {}
   @override
   void registerConsoleCommand(String name, String help, void Function(List<String> args) handler) {}
+  @override
+  Future<void> saveAsset({
+    required String relativePath,
+    Uint8List? bytes,
+    bool generateThumbnail = true,
+  }) async {}
 }
 
 class _Bare implements LuminaEditorContext {
@@ -162,6 +180,12 @@ class _Bare implements LuminaEditorContext {
   void registerDetailsCustomization(DetailsCustomization c) {}
   @override
   void registerConsoleCommand(String name, String help, void Function(List<String> args) handler) {}
+  @override
+  Future<void> saveAsset({
+    required String relativePath,
+    Uint8List? bytes,
+    bool generateThumbnail = true,
+  }) async {}
 }
 
 class _LevelPlugin extends LuminaEditorPlugin {
@@ -220,4 +244,22 @@ void main() {
     expect(level.opened, [('contents/levels/L_Generated.lmas', true), ('contents/levels/L_Main.lmas', false)]);
     expect(await level.openLevel('contents/maps/x.lmas'), isFalse);
   });
+
+  testWidgets('EditorAssetPicker delegates to hostContext.buildAssetPicker', (tester) async {
+    final host = _Host();
+    String? picked;
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: EditorAssetPicker(
+          hostContext: host,
+          selectedPath: 'contents/meshes/test.lmas',
+          typeFilter: const {AssetType.filameshSk},
+          onSelected: (p) => picked = p,
+        ),
+      ),
+    );
+    expect(find.byType(EditorAssetPicker), findsOneWidget);
+  });
 }
+

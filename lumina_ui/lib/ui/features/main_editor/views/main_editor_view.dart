@@ -237,10 +237,11 @@ class _MainEditorViewState extends State<MainEditorView> {
       // Every asset picker in the editor (Details panel and
       // sub-editor tabs) shows live thumbnails and can browse to its asset.
       child: AssetPickerScope(
-      changes: viewModel,
-      latest: viewModel.latestAsset,
-      requestThumbnail: viewModel.requestAssetThumbnail,
-      browse: viewModel.browseToAsset,
+        changes: viewModel,
+        allAssets: () => viewModel.realAssets,
+        latest: viewModel.latestAsset,
+        requestThumbnail: viewModel.requestAssetThumbnail,
+        browse: viewModel.browseToAsset,
       child: EditorShortcutsScope(
       viewModel: viewModel,
       child: ListenableBuilder(

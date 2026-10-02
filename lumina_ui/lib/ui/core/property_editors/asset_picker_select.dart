@@ -20,6 +20,7 @@ class AssetPickerScope extends InheritedWidget {
     super.key,
     required super.child,
     this.changes,
+    this.allAssets,
     this.latest,
     this.requestThumbnail,
     this.browse,
@@ -27,6 +28,9 @@ class AssetPickerScope extends InheritedWidget {
 
   /// Fires when assets (and their thumbnails) change.
   final Listenable? changes;
+
+  /// Returns all available project assets.
+  final List<RealAssetInfo> Function()? allAssets;
 
   /// The current copy of an asset (with a thumbnail rendered since the list
   /// was built); the asset itself when unknown.
@@ -44,6 +48,7 @@ class AssetPickerScope extends InheritedWidget {
   @override
   bool updateShouldNotify(AssetPickerScope oldWidget) =>
       changes != oldWidget.changes ||
+      allAssets != oldWidget.allAssets ||
       latest != oldWidget.latest ||
       requestThumbnail != oldWidget.requestThumbnail ||
       browse != oldWidget.browse;
@@ -680,3 +685,50 @@ class _AssetPickerPopupState extends State<AssetPickerPopup> {
     );
   }
 }
+
+/// A general-purpose asset picker combobox for the editor and plugins.
+/// Automatically resolves available assets from [AssetPickerScope] or explicit [assets],
+/// and filters them by [typeFilter] (e.g. `{AssetType.filameshSk}`, `{AssetType.animation}`, etc.).
+class AssetPickerCombobox extends StatelessWidget {
+  final String? selectedPath;
+  final ValueChanged<String?> onSelected;
+  final Set<AssetType>? typeFilter;
+  final List<RealAssetInfo>? assets;
+  final String placeholder;
+  final bool allowClear;
+  final bool expand;
+  final String keyPrefix;
+  final double thumbnailSize;
+
+  const AssetPickerCombobox({
+    super.key,
+    required this.selectedPath,
+    required this.onSelected,
+    this.typeFilter,
+    this.assets,
+    this.placeholder = 'None',
+    this.allowClear = false,
+    this.expand = true,
+    this.keyPrefix = 'asset_combobox',
+    this.thumbnailSize = 24,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scope = AssetPickerScope.maybeOf(context);
+    final all = assets ?? scope?.allAssets?.call() ?? const <RealAssetInfo>[];
+    return AssetPickerSelect(
+      keyPrefix: keyPrefix,
+      assets: all,
+      typeFilter: typeFilter,
+      selectedPath: selectedPath,
+      placeholder: placeholder,
+      allowClear: allowClear,
+      expand: expand,
+      thumbnailSize: thumbnailSize,
+      onSelected: (asset) => onSelected(asset.relativePath),
+      onCleared: allowClear ? () => onSelected(null) : null,
+    );
+  }
+}
+
