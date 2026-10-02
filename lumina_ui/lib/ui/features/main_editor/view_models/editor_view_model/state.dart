@@ -120,6 +120,35 @@ abstract class _EditorViewModelState extends ChangeNotifier {
   late final StandaloneGameRunner standalone =
       StandaloneGameRunner(projectDirPath, flutterExecutable: standaloneFlutterExecutable)..addListener(_notifyUnlessDisposed);
 
+  /// Play on Device: the Android SDK on this machine (null: none, and
+  /// Play's dropdown shows no Play on Device section).
+  late final AndroidSdk? androidSdk = (androidSdkLocator ?? AndroidSdk.locate)();
+
+  AndroidDeviceList? _androidDevices;
+  AndroidDeviceRunner? _androidRunner;
+
+  /// The devices and emulators Play on Device lists, and the one chosen last.
+  AndroidDeviceList get androidDevices => _androidDevices ??= AndroidDeviceList(
+      androidSdk == null ? null : AndroidDeviceProbe(androidSdk!, starter: androidProcessStarter))
+    ..addListener(_notifyUnlessDisposed);
+
+  /// Runs the project on an Android device; null without an Android SDK.
+  AndroidDeviceRunner? get androidRunner {
+    final sdk = androidSdk;
+    if (sdk == null) return null;
+    return _androidRunner ??= AndroidDeviceRunner(projectDirPath, sdk,
+        starter: androidProcessStarter, flutterExecutable: standaloneFlutterExecutable)
+      ..addListener(_notifyUnlessDisposed);
+  }
+
+  /// For tests: how Play on Device finds the Android SDK (a temp SDK, or
+  /// none) and starts adb / the emulator / flutter (stand-ins that record the
+  /// commands); set before [androidSdk] / [androidDevices] are first read.
+  @visibleForTesting
+  AndroidSdk? Function()? androidSdkLocator;
+  @visibleForTesting
+  AndroidProcessStarter? androidProcessStarter;
+
   /// The editor's MCP server: AI agents operate this editor
   /// through it. Started by the shell when the settings allow it.
   McpServerService? _mcpServer;
@@ -534,6 +563,7 @@ abstract class _EditorViewModelState extends ChangeNotifier {
   void togglePlaySimulation();
   Future<bool> playStandalone();
   Future<void> stopStandalone();
+  Future<bool> playOnAndroidDevice(AndroidDevice device);
 
   // editor_view_model/plugins.dart
   Future<void> restartEditor();

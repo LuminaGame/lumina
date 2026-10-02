@@ -21,6 +21,7 @@ import 'output_log_widget.dart';
 import 'pie_blueprint_debug_panel.dart';
 import 'restart_required_banner.dart';
 import 'import_progress_panel.dart';
+import 'quit_progress_overlay.dart';
 import '../shortcuts/editor_shortcuts_scope.dart';
 import 'about_dialog.dart' show rhiLabel;
 import 'status_bar_engine_segment.dart';
@@ -102,9 +103,13 @@ class _MainEditorViewState extends State<MainEditorView> {
     }
   }
 
+  /// The window's close: the unsaved-changes prompt, then the quit
+  /// sequence (saves, plugin hooks), each step under the quit notice.
   Future<bool> _confirmWindowClose() async {
     if (!mounted) return true;
-    return viewModel.confirmQuit(context);
+    if (!await viewModel.confirmQuit(context)) return false;
+    await viewModel.prepareQuit();
+    return true;
   }
 
   /// Quitting while a batch import runs asks to wait for
@@ -467,6 +472,9 @@ class _MainEditorViewState extends State<MainEditorView> {
         bottom: 28,
         child: ImportProgressPanel(jobs: viewModel.importJobs, onShowErrors: viewModel.showImportErrors),
       ),
+      // While the editor quits: what it is doing, over an editor that
+      // takes no more input.
+      Positioned.fill(child: QuitProgressOverlay(status: viewModel.quitStatus)),
       ],
       ),
     );

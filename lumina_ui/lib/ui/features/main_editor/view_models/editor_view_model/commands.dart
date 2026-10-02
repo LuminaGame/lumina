@@ -333,9 +333,14 @@ mixin _EditorCommands on _EditorViewModelState {
         id: 'debug.stopPie',
         label: 'Stop Simulation',
         shortcutLabel: 'Esc',
-        canExecute: () => isPlaying || standalone.isActive,
-        // Stop ends PIE, else the standalone game.
-        execute: (ctx) => isPlaying ? stopSimulation() : unawaited(stopStandalone()),
+        canExecute: () => isPlaying || standalone.isActive || (_androidRunner?.isActive ?? false),
+        // Stop ends PIE, else the standalone game, else the game on the
+        // Android device.
+        execute: (ctx) => isPlaying
+            ? stopSimulation()
+            : standalone.isActive
+                ? unawaited(stopStandalone())
+                : unawaited(_androidRunner?.stop() ?? Future<void>.value()),
       ),
       EditorCommand(
         id: 'debug.playStandalone',

@@ -148,12 +148,9 @@ mixin _EditorDialogs on _EditorViewModelState {
             key: const ValueKey('quit_unsaved_save'),
             onPressed: () async {
               Navigator.of(c).pop();
-              var saved = true;
-              if (_project.isDirty) await saveLevelAndGenerateCode();
-              for (var i = _openTabs.length - 1; i >= 1; i--) {
-                if (_self.isTabDirty(i)) saved = await _self.saveTab(i) && saved;
-              }
-              if (!answer.isCompleted) answer.complete(saved && !_project.isDirty);
+              final saved = await _saveForQuit();
+              if (!saved && ctx.mounted) _showQuitSaveFailed(ctx);
+              if (!answer.isCompleted) answer.complete(saved);
             },
             child: const Text('Save'),
           ),
@@ -161,6 +158,76 @@ mixin _EditorDialogs on _EditorViewModelState {
       ),
     );
     return answer.future;
+  }
+
+  /// What the quit sequence is doing right now ("Saving L_Main…", "Closing
+  /// plugins…", "Closing editor…"), shown over the editor as a notice that
+  /// cannot be dismissed; null while the editor is not quitting.
+  final ValueNotifier<String?> quitStatus = ValueNotifier<String?>(null);
+
+  /// How long each plugin's `onProjectClosing` / `onEditorShutdown` may run
+  /// while the editor quits before the quit goes on without it.
+  Duration quitHookTimeout = const Duration(seconds: 5);
+
+  /// Shows [status] and lets it paint before the step's work starts, so the
+  /// notice is on screen while that work runs.
+  Future<void> _quitStep(String status) async {
+    quitStatus.value = status;
+    try {
+      final binding = WidgetsBinding.instance;
+      binding.scheduleFrame();
+      await binding.endOfFrame.timeout(const Duration(milliseconds: 250), onTimeout: () {});
+    } catch (_) {
+      // No widgets binding (a plain unit test): nothing to paint.
+    }
+  }
+
+  /// The quit prompt's Save: the level, then every dirty sub-editor tab,
+  /// each under its own notice. True when everything was saved; on a
+  /// failure the notice goes away and the editor stays open.
+  Future<bool> _saveForQuit() async {
+    var saved = true;
+    try {
+      if (_project.isDirty) {
+        await _quitStep('Saving $activeLevelName…');
+        await saveLevelAndGenerateCode();
+      }
+      for (var i = _openTabs.length - 1; i >= 1; i--) {
+        if (!_self.isTabDirty(i)) continue;
+        await _quitStep('Saving ${_openTabs[i].title}…');
+        saved = await _self.saveTab(i) && saved;
+      }
+      saved = saved && !_project.isDirty;
+    } catch (e) {
+      _logger.log('Saving before quitting failed: $e', level: 'error', source: 'SaveLevel');
+      saved = false;
+    }
+    if (!saved) quitStatus.value = null;
+    return saved;
+  }
+
+  void _showQuitSaveFailed(BuildContext ctx) {
+    showToast(
+      context: ctx,
+      location: ToastLocation.bottomRight,
+      builder: (toastCtx, overlay) => const SurfaceCard(
+        child: Basic(
+          title: Text('Save failed'),
+          content: Text('Lumina Studio stays open; see the Output Log.', key: ValueKey('quit_save_failed')),
+        ),
+      ),
+    );
+  }
+
+  /// Runs once the quit is confirmed (saved or discarded): the plugins'
+  /// closing hooks, each bounded by [quitHookTimeout], then the final
+  /// "Closing editor…" notice, which stays up while the window goes.
+  Future<void> prepareQuit() async {
+    if (extensionRegistry.registeredPlugins.isNotEmpty) {
+      await _quitStep('Closing plugins…');
+      await _self.shutdownPlugins(exiting: true, hookTimeout: quitHookTimeout);
+    }
+    await _quitStep('Closing editor…');
   }
 
   /// Asks whether to wait for the running batch import or cancel it, then

@@ -46,6 +46,9 @@ import '../../sub_editors/services/umg_widget_codegen.dart';
 import '../services/blueprint_play_support.dart';
 import '../services/project_blueprint_functions.dart';
 import '../services/standalone_game_runner.dart';
+import '../services/android_device_runner.dart';
+import '../services/android_devices.dart';
+import '../services/android_sdk.dart';
 import '../services/widget_blueprint_assets.dart';
 import '../services/asset_editor_category.dart';
 import '../../plugin_manager/view_models/plugin_manager_view_model.dart';
@@ -572,6 +575,8 @@ class EditorViewModel extends _EditorViewModelState
     _autoSaveTimer?.stop();
     blueprintFunctions.dispose();
     standalone.dispose();
+    _androidRunner?.dispose();
+    _androidDevices?.dispose();
     _mcpServer?.dispose();
     _disposeMarketplace();
     _importJobs?.dispose();

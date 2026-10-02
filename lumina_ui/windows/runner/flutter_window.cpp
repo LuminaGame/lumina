@@ -7,7 +7,22 @@
 FlutterWindow::FlutterWindow(const flutter::DartProject& project)
     : project_(project) {}
 
-FlutterWindow::~FlutterWindow() {}
+FlutterWindow::~FlutterWindow() { DestroyFlutterController(); }
+
+// The controller destroys its view's child window, and Windows sends this
+// (still live) top-level window messages while that happens. Moving the
+// controller out first leaves `flutter_controller_` null for MessageHandler,
+// so those messages never reach a half-destroyed controller. The quit path
+// needs this: `windowManager.destroy()` ends the message loop with the window
+// still open, so the controller is destroyed here rather than in OnDestroy,
+// and touching it from MessageHandler crashed the process on every quit
+// (Windows Error Reporting then held the "Not Responding" window for a
+// minute or more).
+void FlutterWindow::DestroyFlutterController() {
+  std::unique_ptr<flutter::FlutterViewController> controller =
+      std::move(flutter_controller_);
+  controller = nullptr;
+}
 
 bool FlutterWindow::OnCreate() {
   if (!Win32Window::OnCreate()) {
@@ -40,9 +55,7 @@ bool FlutterWindow::OnCreate() {
 }
 
 void FlutterWindow::OnDestroy() {
-  if (flutter_controller_) {
-    flutter_controller_ = nullptr;
-  }
+  DestroyFlutterController();
 
   Win32Window::OnDestroy();
 }
@@ -63,7 +76,9 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
 
   switch (message) {
     case WM_FONTCHANGE:
-      flutter_controller_->engine()->ReloadSystemFonts();
+      if (flutter_controller_) {
+        flutter_controller_->engine()->ReloadSystemFonts();
+      }
       break;
   }
 

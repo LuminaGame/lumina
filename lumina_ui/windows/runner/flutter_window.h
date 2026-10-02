@@ -23,6 +23,9 @@ class FlutterWindow : public Win32Window {
                          LPARAM const lparam) noexcept override;
 
  private:
+  // Destroys the Flutter view controller, with the member already null.
+  void DestroyFlutterController();
+
   // The project to run.
   flutter::DartProject project_;
 
