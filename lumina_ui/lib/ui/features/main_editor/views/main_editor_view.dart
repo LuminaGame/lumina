@@ -312,7 +312,9 @@ class _MainEditorViewState extends State<MainEditorView> {
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         Icon(
-                                          tab.category == 'level' ? LucideIcons.map : LucideIcons.fileCode,
+                                          tab.category == 'level'
+                                              ? LucideIcons.map
+                                              : (viewModel.extensionRegistry.findTab(tab.category)?.icon ?? LucideIcons.fileCode),
                                           size: 11,
                                           color: active ? EditorColors.primary : EditorColors.mutedForeground,
                                         ),

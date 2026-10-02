@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart' show ValueListenable, mapEquals;
 import 'package:flutter/widgets.dart';
@@ -6,6 +7,7 @@ import 'package:lumina/lumina.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart';
 
 import '../features/mcp_server/services/host_editor_mcp.dart';
+import '../features/sub_editors/views/sub_editor_3d_viewport.dart';
 import 'theme/editor_theme_access.dart';
 
 class PluginExtensionRegistry extends ChangeNotifier implements LuminaEditorHostContext, EditorThemeHost {
@@ -119,6 +121,7 @@ class PluginExtensionRegistry extends ChangeNotifier implements LuminaEditorHost
   final Map<String, List<EditorToolbarButton>> _toolbarButtons = {};
   final Map<String, List<RegisteredSlotButton>> _slotButtons = {};
   final Map<String, List<EditorPanelDescriptor>> _panels = {};
+  final Map<String, List<EditorTabDescriptor>> _tabs = {};
   final Map<String, List<EditorAssetTypeHandler>> _assetTypes = {};
   final Map<String, List<EditorImporter>> _importers = {};
   final Map<String, List<DetailsCustomization>> _detailsCustomizations = {};
@@ -140,6 +143,7 @@ class PluginExtensionRegistry extends ChangeNotifier implements LuminaEditorHost
       _toolbarButtons,
       _slotButtons,
       _panels,
+      _tabs,
       _assetTypes,
       _importers,
       _detailsCustomizations,
@@ -491,6 +495,114 @@ class PluginExtensionRegistry extends ChangeNotifier implements LuminaEditorHost
       map.addAll(entry);
     }
     return map;
+  }
+
+  void Function(String tabId, {String? title})? _tabOpener;
+  void attachTabOpener(void Function(String tabId, {String? title}) opener) => _tabOpener = opener;
+
+  @override
+  void registerTab(EditorTabDescriptor tab) {
+    final plugin = _currentPlugin ?? builtInPlugin;
+    final list = _tabs.putIfAbsent(plugin, () => []);
+    list.removeWhere((t) => t.id == tab.id);
+    list.add(tab);
+  }
+
+  @override
+  void openTab(String tabId, {String? title}) {
+    final tab = findTab(tabId);
+    final t = title ?? tab?.title ?? tabId;
+    _tabOpener?.call(tabId, title: t);
+  }
+
+  EditorTabDescriptor? findTab(String tabId) {
+    for (final list in _tabs.values) {
+      for (final t in list) {
+        if (t.id == tabId) return t;
+      }
+    }
+    return null;
+  }
+
+  List<EditorTabDescriptor> get allTabs => [
+        for (final list in _tabs.values) ...list,
+      ];
+
+  @override
+  Widget build3DViewport(BuildContext context, Plugin3DViewportOptions options) {
+    return _Plugin3DViewportContainer(options: options);
+  }
+}
+
+class _Plugin3DViewportContainer extends StatefulWidget {
+  final Plugin3DViewportOptions options;
+
+  const _Plugin3DViewportContainer({required this.options});
+
+  @override
+  State<_Plugin3DViewportContainer> createState() => _Plugin3DViewportContainerState();
+}
+
+class _Plugin3DViewportContainerState extends State<_Plugin3DViewportContainer> {
+  GlbMeshData? _mesh;
+  String? _loadedKey;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMesh();
+  }
+
+  @override
+  void didUpdateWidget(covariant _Plugin3DViewportContainer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.options.meshPath != oldWidget.options.meshPath ||
+        widget.options.glbBytes != oldWidget.options.glbBytes) {
+      _loadMesh();
+    }
+  }
+
+  Future<void> _loadMesh() async {
+    final opts = widget.options;
+    final key = opts.meshPath ?? opts.glbBytes?.hashCode.toString();
+    if (key == null) {
+      if (mounted) setState(() => _mesh = null);
+      return;
+    }
+    if (key == _loadedKey && _mesh != null) return;
+
+    try {
+      Uint8List? bytes = opts.glbBytes;
+      if (bytes == null && opts.meshPath != null) {
+        final file = File(opts.meshPath!);
+        if (await file.exists()) {
+          bytes = await file.readAsBytes();
+        }
+      }
+      if (bytes != null && bytes.isNotEmpty) {
+        final mesh = await GlbParserService.parseGlb(bytes);
+        if (mounted && (opts.meshPath ?? opts.glbBytes?.hashCode.toString()) == key) {
+          setState(() {
+            _mesh = mesh;
+            _loadedKey = key;
+          });
+          return;
+        }
+      }
+    } catch (_) {}
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SubEditor3DViewport(
+      title: widget.options.title,
+      glbMesh: _mesh,
+      meshSourcePath: widget.options.meshPath,
+      jointLocalPose: widget.options.jointLocalPose,
+      overlayHUD: widget.options.overlayHUD,
+      initialCameraDistance: widget.options.cameraDistance,
+      yUpCamera: false,
+    );
   }
 }
 

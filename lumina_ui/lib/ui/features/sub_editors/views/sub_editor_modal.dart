@@ -192,6 +192,11 @@ class _SubEditorDispatcher extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final customTab = editorViewModel?.extensionRegistry.findTab(assetType);
+    if (customTab != null) {
+      return customTab.builder(context);
+    }
+
     // A plugin asset type's own editor (its
     // registerAssetType.editorFactory), by its customTypeId.
     if (assetType.startsWith(PluginExtensionRegistry.pluginAssetCategoryPrefix)) {

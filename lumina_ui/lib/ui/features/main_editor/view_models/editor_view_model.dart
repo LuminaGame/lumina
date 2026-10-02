@@ -442,6 +442,8 @@ class EditorViewModel extends _EditorViewModelState
     extensionRegistry.attachLevel(EditorViewModelLevelAccess(this));
     // Plugins open, close and observe their panels.
     extensionRegistry.attachPanels(panelsController);
+    // Plugins open workspace tabs.
+    extensionRegistry.attachTabOpener((id, {title}) => openSubEditorTab(id, title: title));
     // Per-plugin storage, the project each plugin is told about,
     // and plugin shutdown before a hand-off exits the process.
     extensionRegistry.attachStorage(dataRoot: PluginDataDir.resolve, projectDir: () => projectDirPath);

@@ -76,6 +76,40 @@ class EditorPanelDescriptor {
   });
 }
 
+/// A full-page workspace editor tab a plugin provides.
+class EditorTabDescriptor {
+  final String id;
+  final String title;
+  final IconData icon;
+  final Widget Function(BuildContext context) builder;
+
+  const EditorTabDescriptor({
+    required this.id,
+    required this.title,
+    this.icon = const IconData(0xe255, fontFamily: 'MaterialIcons'),
+    required this.builder,
+  });
+}
+
+/// Configuration for rendering a Filament 3D viewport inside a plugin editor.
+class Plugin3DViewportOptions {
+  final String title;
+  final String? meshPath;
+  final Uint8List? glbBytes;
+  final Map<String, List<double>>? jointLocalPose;
+  final Widget? overlayHUD;
+  final double? cameraDistance;
+
+  const Plugin3DViewportOptions({
+    this.title = 'Viewport',
+    this.meshPath,
+    this.glbBytes,
+    this.jointLocalPose,
+    this.overlayHUD,
+    this.cameraDistance,
+  });
+}
+
 class EditorAssetTypeHandler {
   final AssetType? assetType;
   final String? customTypeId;
@@ -220,6 +254,13 @@ abstract class LuminaEditorContext {
   /// `plugin_settings.<pluginName>`); updates when Project Settings applies.
   ValueListenable<Map<String, Object?>> get pluginSettings;
   void registerPanel(EditorPanelDescriptor panel);
+
+  /// Registers a full-page workspace editor tab (opened via [openTab]).
+  void registerTab(EditorTabDescriptor tab);
+
+  /// Opens the workspace editor tab with [tabId].
+  void openTab(String tabId, {String? title});
+
   void registerAssetType(EditorAssetTypeHandler handler);
   void registerImporter(EditorImporter importer);
   void registerDetailsCustomization(DetailsCustomization c);

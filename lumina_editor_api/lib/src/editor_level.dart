@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart' show Listenable;
+import 'package:flutter/widgets.dart';
 
 import 'api_types.dart';
 
@@ -189,4 +189,7 @@ abstract class EditorLevelAccess {
 /// `context is LuminaEditorHostContext` and keep the [level] for later.
 abstract class LuminaEditorHostContext implements LuminaEditorContext {
   EditorLevelAccess get level;
+
+  /// Builds a real Filament 3D viewport for a plugin editor.
+  Widget build3DViewport(BuildContext context, Plugin3DViewportOptions options);
 }

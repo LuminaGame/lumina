@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:flutter/foundation.dart' show ChangeNotifier, Listenable, ValueNotifier;
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart';
 
@@ -113,6 +113,12 @@ class _Host implements LuminaEditorHostContext {
   @override
   void registerPanel(EditorPanelDescriptor panel) {}
   @override
+  void registerTab(EditorTabDescriptor tab) {}
+  @override
+  void openTab(String tabId, {String? title}) {}
+  @override
+  Widget build3DViewport(BuildContext context, Plugin3DViewportOptions options) => const SizedBox();
+  @override
   void registerAssetType(EditorAssetTypeHandler handler) {}
   @override
   void registerImporter(EditorImporter importer) {}
@@ -144,6 +150,10 @@ class _Bare implements LuminaEditorContext {
   final ValueNotifier<Map<String, Object?>> pluginSettings = ValueNotifier(const {});
   @override
   void registerPanel(EditorPanelDescriptor panel) {}
+  @override
+  void registerTab(EditorTabDescriptor tab) {}
+  @override
+  void openTab(String tabId, {String? title}) {}
   @override
   void registerAssetType(EditorAssetTypeHandler handler) {}
   @override

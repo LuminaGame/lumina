@@ -241,5 +241,31 @@ void main() {
       r.endRegistration();
       expect(ids(r, EditorSlot.statusBarLeft), isEmpty);
     });
+
+    test('registerTab and openTab route to registered tabs', () {
+      final r = PluginExtensionRegistry(logger: EngineLoggerService());
+      r.beginRegistration('lumina_plugin_x');
+      r.registerTab(EditorTabDescriptor(
+        id: 'test.tab',
+        title: 'Test Tab',
+        icon: const IconData(2),
+        builder: (_) => const SizedBox(),
+      ));
+      r.endRegistration();
+
+      expect(r.allTabs.length, 1);
+      expect(r.findTab('test.tab')?.title, 'Test Tab');
+
+      String? openedId;
+      String? openedTitle;
+      r.attachTabOpener((id, {title}) {
+        openedId = id;
+        openedTitle = title;
+      });
+
+      r.openTab('test.tab');
+      expect(openedId, 'test.tab');
+      expect(openedTitle, 'Test Tab');
+    });
   });
 }
