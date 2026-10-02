@@ -8,6 +8,7 @@ description: Operate a running Lumina Studio editor through its built-in MCP ser
 Lumina Studio (`lumina_ui`) runs a Model Context Protocol server **inside the editor process**. Everything a tool does goes through the editor's own view-model commands: it is visible live in the Outliner, Details and viewport, and every level mutation is one **Edit → Undo** step. Nothing here bypasses the UI.
 
 Full argument shapes: `reference/tools.md`. Ready-made call sequences: `reference/workflows.md`.
+Filament shader guide & examples: `reference/filament_materials.md`. Physically-based material values & tables: `reference/filament_material_properties.md`.
 
 ## 1. Find or start the server
 
@@ -68,7 +69,7 @@ Identifiers you pass around: actor **ids** (`act_3`, from `list_actors`, never n
 See `reference/workflows.md` for the full call sequences. In short:
 
 - **Place and arrange actors**: `list_actor_types` → `spawn_actor {type, name?, location?, rotation?, scale?}` → `set_actor_transform` / `set_actor_property` → `focus_actor` + `viewport_screenshot` to check → `save_level`.
-- **Import a mesh and assign a material**: `import_asset {path}` (absolute GLB/glTF/FBX/OBJ/PNG/WAV path; extracted materials/textures come along) → `spawn_actor_from_asset {asset}` → `create_asset {type: "filamat", name}` → `set_material_source` → `compile_material {save: true}` → `set_actor_property {property: "material", value: "<path>"}`.
+- **Import a mesh and assign a material**: `import_asset {path}` (absolute GLB/glTF/FBX/OBJ/PNG/WAV path; extracted materials/textures come along) → `spawn_actor_from_asset {asset}` → `create_asset {type: "filamat", name}` → `set_material_source` → `compile_material {save: true}` → `set_actor_property {property: "material", value: "<path>"}`. (See `reference/filament_materials.md` for shader structure and code examples, and `reference/filament_material_properties.md` for exact PBR colors, roughness, and metal/dielectric lookup tables).
 - **Author and compile a Blueprint**: `create_asset {type: "actor", name, parent_class}` → `get_blueprint` (opens the tab) → `list_blueprint_nodes {query}` → `add_blueprint_node` → `connect_blueprint_pins` → `set_blueprint_pin_literal` → `compile_blueprint {save: true}` → fix what `diagnostics` names.
 - **Run Play and read the log**: `start_pie` → `pie_status` (pawn class, player location) → `read_output_log {contains: "PIE"}` / `{level: "error"}` → `stop_pie` (restores the level, selection and camera).
 - **Play-test in one call**: `pie_sequence {steps: [{play_ms: 1500}, {screenshot: true, label: "start"}, {key: "W", hold_ms: 800}, {action: "IA_Jump"}, {advance_frames: 10}, {screenshot: true, label: "after jump"}, {expect: {player_moved: true}}]}` → starts Play if needed, a per-step log (player location, new log lines), the screenshots as captioned images, `final_status`; stops at the first failing step.
