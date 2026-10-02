@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart' show Listenable;
 import 'package:lumina/lumina.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart';
@@ -136,6 +138,23 @@ class EditorViewModelLevelAccess implements EditorLevelAccess {
 
   @override
   void openAssetEditor(String assetPath) => viewModel.openAssetEditorByPath(assetPath);
+
+  @override
+  Future<bool> openLevel(String relativePath, {bool show = true}) async {
+    final path = relativePath.replaceAll(r'\', '/');
+    if (viewModel.isPlaying || viewModel.transactions.isFrozen) return false;
+    if (!File('${viewModel.projectDirPath}/$path').existsSync()) return false;
+    if (path == viewModel.project.activeLevel) {
+      // Read again from disk: the caller rewrote the file.
+      viewModel.switchLevel(path);
+    } else if (!await viewModel.openLevelGuarded(path, ifDirty: UnsavedLevelChoice.save)) {
+      return false;
+    }
+    // A plugin that wrote the level usually wrote its assets too.
+    viewModel.refreshAssets();
+    if (show) viewModel.selectTab(0);
+    return true;
+  }
 
   @override
   void log(String message, {String level = 'info', String source = 'Plugin'}) =>

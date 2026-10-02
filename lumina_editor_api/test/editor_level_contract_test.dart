@@ -21,7 +21,7 @@ class _Level extends ChangeNotifier implements EditorLevelAccess {
   @override
   String get projectDirPath => '/tmp/project';
   @override
-  String get activeLevelPath => 'contents/levels/L_Main.lmas';
+  String get activeLevelPath => _active;
   @override
   Listenable get changes => this;
   @override
@@ -72,6 +72,16 @@ class _Level extends ChangeNotifier implements EditorLevelAccess {
   Future<void> saveLevel() async => saves++;
   @override
   void openAssetEditor(String assetPath) {}
+  final List<(String, bool)> opened = [];
+  String _active = 'contents/levels/L_Main.lmas';
+  @override
+  Future<bool> openLevel(String relativePath, {bool show = true}) async {
+    if (!relativePath.startsWith('contents/levels/')) return false;
+    opened.add((relativePath, show));
+    _active = relativePath;
+    return true;
+  }
+
   @override
   void log(String message, {String level = 'info', String source = 'Plugin'}) => logs.add('$level:$source:$message');
 }
@@ -190,5 +200,14 @@ void main() {
     expect(a.componentOfType('Nope'), isNull);
     level.removeActors(ids);
     expect(level.actors, isEmpty);
+  });
+
+  test('openLevel opens a level by its project-relative path and shows it unless asked not to', () async {
+    final level = _Level();
+    expect(await level.openLevel('contents/levels/L_Generated.lmas'), isTrue);
+    expect(level.activeLevelPath, 'contents/levels/L_Generated.lmas');
+    expect(await level.openLevel('contents/levels/L_Main.lmas', show: false), isTrue);
+    expect(level.opened, [('contents/levels/L_Generated.lmas', true), ('contents/levels/L_Main.lmas', false)]);
+    expect(await level.openLevel('contents/maps/x.lmas'), isFalse);
   });
 }

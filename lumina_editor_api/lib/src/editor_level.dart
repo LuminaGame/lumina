@@ -167,6 +167,16 @@ abstract class EditorLevelAccess {
   /// handler registered with [LuminaEditorContext.registerAssetType].
   void openAssetEditor(String assetPath);
 
+  /// Opens the level at [relativePath] (project-relative, e.g. a level the
+  /// plugin wrote under `contents/levels/`) in the viewport and the
+  /// Outliner, like File → Open Level. The open level's unsaved changes are
+  /// saved first. When [relativePath] is already the open level it is read
+  /// again from disk, so a plugin that rewrote the file sees the new
+  /// contents; call [saveLevel] before rewriting it to keep its unsaved
+  /// changes. [show] brings the level viewport to the front. Returns false,
+  /// changing nothing, when there is no such file or Play-In-Editor runs.
+  Future<bool> openLevel(String relativePath, {bool show = true});
+
   /// Writes a line to the editor's Output Log.
   void log(String message, {String level = 'info', String source = 'Plugin'});
 }

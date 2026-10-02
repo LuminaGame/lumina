@@ -356,6 +356,7 @@ Every edit is an undoable editor transaction and marks the level dirty, exactly 
 | `selectActors` | `void selectActors(Iterable<String> ids)` | Selects exactly [ids]. |
 | `saveLevel` | `Future<void> saveLevel()` | Saves the level to disk and regenerates the game's level code, the same path as File → Save Level. |
 | `openAssetEditor` | `void openAssetEditor(String assetPath)` | Opens the asset at [assetPath] (absolute, or relative to [projectDirPath]) in its editor: a plugin asset type opens through the handler registered with [LuminaEditorContext.registerAssetType]. |
+| `openLevel` | `Future<bool> openLevel(String relativePath, {bool show = true})` | Opens the level at [relativePath] (project-relative, e.g. a level the plugin wrote under `contents/levels/`) in the viewport and the Outliner, like File → Open Level. The open level's unsaved changes are saved first. When [relativePath] is already the open level it is read again from disk, so a plugin that rewrote the file sees the new contents; call [saveLevel] before rewriting it to keep its unsaved changes. [show] brings the level viewport to the front. Returns false, changing nothing, when there is no such file or Play-In-Editor runs. |
 | `log` | `void log(String message, {String level = 'info', String source = 'Plugin'})` | Writes a line to the editor's Output Log. |
 
 ### `abstract class LuminaEditorHostContext`

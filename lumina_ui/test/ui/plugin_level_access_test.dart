@@ -226,4 +226,56 @@ void main() {
     expect(vm.actors.length, before);
     expect(level.undoTopLabel, isNot('AI: Place a barrel'));
   });
+
+  test('openLevel saves the open level, opens a level the plugin wrote with each mesh actor drawing its own file, and re-reads the open level', () async {
+    final meshes = Directory('${vm.projectDirPath}/contents/meshes')..createSync(recursive: true);
+    final barrelFile = File(barrel).copySync('${meshes.path}/fuel_barrel_red.glb');
+    // A name that does not match the mesh file: the actor still draws the
+    // file its meshAssetPath names.
+    File(barrel).copySync('${meshes.path}/road_decoy.glb');
+    const generated = 'contents/levels/L_Generated.lmas';
+    LuminaLevelRepository(vm.projectDirPath).save(
+      LuminaLevelDocument(relativePath: generated)
+        ..actors = [
+          {'id': 'gen_folder', 'name': 'Roads', 'type': 'Folder', 'location': [0.0, 0.0, 0.0]},
+          {
+            'id': 'gen_road',
+            'name': 'Road_primary_0_0',
+            'type': 'StaticMesh',
+            'parentId': 'gen_folder',
+            'location': [1200.0, -300.0, 400.0],
+            'meshAssetPath': barrelFile.path,
+            'components': [],
+          },
+        ],
+    );
+    // The open level has an unsaved plugin actor.
+    await level.addActors(const [EditorActorSpec(id: 'unsaved_1', name: 'Unsaved', type: 'StaticMesh', location: [1.0, 2.0, 3.0])]);
+    expect(vm.project.isDirty, isTrue);
+
+    expect(await level.openLevel('contents/levels/L_Missing.lmas'), isFalse);
+    expect(level.activeLevelPath, 'contents/levels/L_Main.lmas');
+
+    expect(await level.openLevel(generated, show: false), isTrue);
+    expect(level.activeLevelPath, generated);
+    final main = File('${vm.projectDirPath}/contents/levels/L_Main.lmas').readAsStringSync();
+    expect(main, contains('unsaved_1'), reason: 'the level that was open was saved first');
+    expect(level.actors.map((a) => a.id), ['gen_folder', 'gen_road']);
+    final road = vm.actors.firstWhere((a) => a.id == 'gen_road');
+    expect(road.parentId, 'gen_folder');
+    expect(road.location, [1200.0, -300.0, 400.0], reason: 'the stored location is kept as written');
+    for (var i = 0; i < 100 && road.meshData == null; i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+    }
+    expect(road.meshData, isNotNull);
+    expect(road.meshAssetPath, barrelFile.path, reason: 'the mesh the actor names, not a file guessed from its name');
+
+    // Rewritten on disk while open: opened again, the new contents are read.
+    final doc = LuminaLevelRepository(vm.projectDirPath).load(generated)!;
+    doc.actors = [...doc.actors, {'id': 'gen_extra', 'name': 'Extra', 'type': 'StaticMesh', 'location': [0.0, 0.0, 0.0]}];
+    LuminaLevelRepository(vm.projectDirPath).save(doc);
+    expect(await level.openLevel(generated), isTrue);
+    expect(level.actors.map((a) => a.id), contains('gen_extra'));
+    expect(vm.project.isDirty, isFalse);
+  });
 }

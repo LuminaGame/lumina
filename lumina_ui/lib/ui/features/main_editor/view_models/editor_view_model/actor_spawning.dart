@@ -156,6 +156,21 @@ mixin _EditorActorSpawning on _EditorViewModelState {
       await _loadLandscapeMeshData(actor);
       return;
     }
+    // The mesh the actor names (absolute, or project-relative) first: a
+    // level written elsewhere (a plugin, another editor session) names its
+    // files, and a name-based guess could pick another asset.
+    final named = actor.meshAssetPath;
+    if (named != null && named.isNotEmpty) {
+      final file = File(named).existsSync() ? named : '$projectDirPath/$named';
+      if (File(file).existsSync()) {
+        final parsed = await AssetRepository.loadMeshFromDisk(file);
+        if (parsed != null) {
+          actor.meshData = parsed;
+          if (!_disposed) notifyListeners();
+          return;
+        }
+      }
+    }
     final baseName = actor.name.split('_').first.toLowerCase();
 
     final contentsDir = Directory('$projectDirPath/contents');
