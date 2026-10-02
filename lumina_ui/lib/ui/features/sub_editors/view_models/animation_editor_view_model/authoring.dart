@@ -490,8 +490,10 @@ mixin _AnimationEditorAuthoring on _AnimationEditorViewModelState {
   }
 
   /// Applies [change] to the clip as one undo step (when it reports a
-  /// change). Undo / redo restore copies of the whole clip.
-  bool _mutate(String label, bool Function(AuthoredAnimationClip clip) change) {
+  /// change). Undo / redo restore copies of the whole clip; [apply] /
+  /// [revert] carry other state of the same edit (run now and on redo / on
+  /// undo).
+  bool _mutate(String label, bool Function(AuthoredAnimationClip clip) change, {void Function()? apply, void Function()? revert}) {
     final clip = _authoredClip;
     if (clip == null) return false;
     final before = clip.copy();
@@ -506,10 +508,17 @@ mixin _AnimationEditorAuthoring on _AnimationEditorViewModelState {
       notifyListeners();
       return false;
     }
+    apply?.call();
     transactions.record(EditorTransaction(
       label: label,
-      undo: () => _restoreClip(before),
-      redo: () => _restoreClip(after),
+      undo: () {
+        revert?.call();
+        _restoreClip(before);
+      },
+      redo: () {
+        apply?.call();
+        _restoreClip(after);
+      },
     ));
     _isDirty = true;
     _authoredChanged();

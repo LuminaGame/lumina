@@ -66,6 +66,8 @@ mixin _AnimationKeyframeDetails on _AnimationSubEditorStateBase {
                   onPressed: () => setState(() => _activeRightTab = 2),
                   child: Text(
                     'BlendSpace',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 9.5,
                       fontWeight: _activeRightTab == 2 ? FontWeight.bold : FontWeight.normal,
@@ -74,6 +76,25 @@ mixin _AnimationKeyframeDetails on _AnimationSubEditorStateBase {
                   ),
                 ),
               ),
+              // Posing and cycle tools of a sequence authored here.
+              if (vm.isAuthored) ...[
+                const SizedBox(width: 2),
+                Expanded(
+                  child: GhostButton(
+                    key: const ValueKey('anim_right_tab_pose'),
+                    size: ButtonSize.small,
+                    onPressed: () => setState(() => _activeRightTab = 3),
+                    child: Text(
+                      'Pose',
+                      style: TextStyle(
+                        fontSize: 9.5,
+                        fontWeight: _activeRightTab == 3 ? FontWeight.bold : FontWeight.normal,
+                        color: _activeRightTab == 3 ? Colors.pink : EditorColors.mutedForeground,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -84,7 +105,9 @@ mixin _AnimationKeyframeDetails on _AnimationSubEditorStateBase {
               ? _buildKeyframeDetailsPanel()
               : _activeRightTab == 1
                   ? _buildCurvesPanel()
-                  : _buildBlendSpacePanel(),
+                  : _activeRightTab == 3 && vm.isAuthored
+                      ? _buildPoseToolsPanel()
+                      : _buildBlendSpacePanel(),
         ),
       ],
     );

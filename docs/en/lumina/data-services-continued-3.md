@@ -8,6 +8,7 @@ Continuation of Data layer: use cases and services: the remaining public files u
 
 - [`lib/data/services/authored_animation_clip.dart`](#libdataservicesauthored_animation_clipdart)
 - [`lib/data/services/authored_animation_writer.dart`](#libdataservicesauthored_animation_writerdart)
+- [`lib/data/services/authored_pose_tools.dart`](#libdataservicesauthored_pose_toolsdart)
 - [`lib/data/services/glb_animation_merger.dart`](#libdataservicesglb_animation_mergerdart)
 - [`lib/data/services/glb_animation_retargeter.dart`](#libdataservicesglb_animation_retargeterdart)
 - [`lib/data/services/gltf_packer.dart`](#libdataservicesgltf_packerdart)
@@ -38,7 +39,7 @@ How a channel moves between its keys: `linear` (`LINEAR`; rotations slerp on the
 
 ### `class BoneTrs`
 
-A bone's local transform (glTF node TRS): `t`, `r` (quaternion), `s`; `toMatrix`, `toList` (`[tx, ty, tz, qx, qy, qz, qw, sx, sy, sz]`, the form `SubEditor3DViewport.jointLocalPose` takes), `channel(path)`, `withChannel(path, values)`.
+A bone's local transform (glTF node TRS): `t`, `r` (quaternion), `s`; `toMatrix`, `toList` (`[tx, ty, tz, qx, qy, qz, qw, sx, sy, sz]`, the form `SubEditor3DViewport.jointLocalPose` takes), `channel(path)`, `withChannel(path, values)`, `static BoneTrs blend(a, b, w)` (translation and scale lerp, rotation shortest-path slerp; the pose library's weight).
 
 ### `class AuthoredChannel`
 
@@ -72,6 +73,44 @@ Authored sequences in a project, stored the way the Third Person template's and 
 | `detach` | `static bool detach(String projectDir, String animationRelPath)` | Takes the sequence's clip out of its mesh (GLB companion, payload, `animation_clips`) before its `.lmas` leaves the project; the `.lmas` is untouched. False for an imported clip or when the mesh or clip is gone. The editor's trash, create-undo and Delete call it. |
 | `attach` | `static bool attach(String projectDir, String animationRelPath)` | Puts the clip of a restored sequence back into its mesh at its `clip_index` (the `.lmas` is rewritten only if it lands elsewhere). False for an imported clip, a missing mesh or a mesh that already has that clip. |
 | `isAuthored` / `clipOf` | `static bool isAuthored(LuminaAsset? asset)` / `static AuthoredAnimationClip? clipOf(LuminaAsset? asset)` | Whether an animation asset was authored here, and its clip. |
+
+## `lib/data/services/authored_pose_tools.dart`
+
+Posing helpers for authored clips, used by the Animation editor's Pose tab. They work on whole poses (`Map<int, BoneTrs>`, node → local transform) in the GLB frame (glTF metres, +Y up) and produce ordinary local transforms, so the result is keyed and saved as the same FK glTF clip.
+
+### `class SkeletonMirror`
+
+Left / right bone pairs of a `GlbSkeleton` and the sagittal plane they mirror across, detected from the rest pose (the plane's normal is the mean right-to-left direction of the paired bones, its point their mean midpoint).
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `mirroredName` | `static String? mirroredName(String name)` | The other side's name by convention: `_l`/`_r`, `_L`/`_R`, `.l`/`.r`, `.L`/`.R` suffixes, `l_`/`r_` prefixes, `Left`/`Right` words; null for a name with no side. |
+| `of` | `factory SkeletonMirror.of(GlbSkeleton skeleton, {Map<String, String> overrides = const {}})` | The table: pairs by name where both bones exist, the user's [overrides] (either direction) first. |
+| `pairs` / `lateralAxis` / `planePoint` | fields | Bone → partner (both ways); the plane's unit normal; a point on it. |
+| `partnerOf` | `String partnerOf(String bone)` | The partner, or the bone itself on the plane. |
+| `mirrorVector` / `mirrorPoint` / `mirrorRotation` | `Vector3 mirrorVector(Vector3 v)` / `Vector3 mirrorPoint(Vector3 p)` / `Quaternion mirrorRotation(Quaternion q)` | Reflection of an offset, a position, and a world rotation (`S·R·S`: the mirrored axis, the other way). |
+| `mirror` | `Map<int, BoneTrs> mirror({required Map<int, BoneTrs> source, required Map<int, BoneTrs> target, required Iterable<String> bones})` | The local transforms that put the mirror image of [bones] as posed in [source] onto their partners over [target]: each partner turns from its rest pose as its source turned (mirrored, world space); a translated source moves its partner by the mirrored offset; scale is copied; parents are solved before children. Returns the changed nodes. |
+
+### `class TwoBoneIkChain`
+
+`TwoBoneIkChain(name, upper, lower, end)`: a limb by node index. `static List<TwoBoneIkChain> detect(GlbSkeleton)` finds `LeftArm`, `RightArm`, `LeftLeg`, `RightLeg` from an end effector named like a hand or foot with a side (`hand_l`, `LeftFoot`, `foot.R`, `l_hand`) whose parent and grandparent are joints.
+
+### `abstract final class TwoBoneIkSolver`
+
+`static Map<int, BoneTrs> solve({required GlbSkeleton skeleton, required Map<int, BoneTrs> pose, required TwoBoneIkChain chain, required Vector3 target, Vector3? pole, bool keepEndRotation = true})`: law of cosines in the plane of the target and the pole (the chain's current bend when [pole] is null); the target is clamped to the chain's reach. Returns new local transforms for the upper and lower bone (and the end effector, keeping its world orientation, with [keepEndRotation]); only rotations change.
+
+### `abstract final class RootMotionAuthoring`
+
+Up is glTF +Y.
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `extractFromPelvis` | `static bool extractFromPelvis(AuthoredAnimationClip clip, GlbSkeleton skeleton)` | At every frame with a root or pelvis translation key, keys the skeleton root at its position plus the pelvis's horizontal travel since the first of them, and the pelvis (`GlbSkeleton.rootChild`) at the same world position over it, so it keeps only its vertical motion; the root channel takes the pelvis channel's interpolation. False when the pelvis has no translation keys. |
+| `zeroRoot` | `static bool zeroRoot(AuthoredAnimationClip clip, GlbSkeleton skeleton)` | The inverse: the root's translation returns to its rest value (one key at frame 0) and the pelvis is keyed where it was in the world. False when the root has no translation keys. |
+
+### `class AuthoredPose`, `class AuthoredPoseLibrary`, `abstract final class AuthoredPoseLibraryStore`
+
+`AuthoredPose(name, bones)`: local transforms by bone name (`renamed`, JSON). `AuthoredPoseLibrary({meshRelPath, poses, mirrorOverrides})`: one skeletal mesh's poses and hand-set mirror pairs (`pose(name)`, `copy`, JSON). `AuthoredPoseLibraryStore`: `pathFor(meshRelPath)` (`contents/animations/<Mesh>/PoseLibrary.lmas`), `load(projectDir, meshRelPath)` (empty when missing), `save(projectDir, library)` (an `AssetType.unknown` `.lmas` with the JSON payload and `pose_library: true`, `source_mesh`, `pose_count` metadata), `isLibrary(asset)`.
 
 ## `lib/data/services/glb_animation_merger.dart`
 

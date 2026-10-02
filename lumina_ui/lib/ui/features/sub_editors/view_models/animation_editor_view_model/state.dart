@@ -61,6 +61,23 @@ abstract class _AnimationEditorViewModelState extends ChangeNotifier {
   /// Bumped on every change of the authored keys or the pending pose.
   int _poseRevision = 0;
 
+  // Pose tools (authored sequences): onion skin, clipboard, pose library,
+  // mirror table, IK and root path.
+  AnimOnionSkin _onionSkin = const AnimOnionSkin();
+  bool _showLoopSeam = false;
+  AnimPoseClipboard? _poseClipboard;
+  AuthoredPoseLibrary? _poseLibrary;
+  SkeletonMirror? _mirror;
+  bool _ikMode = false;
+  String? _ikChain;
+  bool _ikDragsPole = false;
+  final Map<String, Vector3> _ikPoles = {};
+  bool _ikDragging = false;
+  Vector3? _ikDragStart;
+  Vector3? _ikDragTarget;
+  Map<String, BoneTrs>? _ikPendingBefore;
+  final List<Vector3> _rootPath = [];
+
   /// The editor's undo stack (authored keys).
   final TransactionManager transactions = TransactionManager();
 

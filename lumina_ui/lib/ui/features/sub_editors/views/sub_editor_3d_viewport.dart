@@ -21,6 +21,7 @@ import 'package:vector_math/vector_math_64.dart'
 import '../models/animation_playback_controller.dart';
 import '../models/skeletal_mesh_socket.dart';
 import '../models/skeletal_socket_attachment.dart';
+import '../models/sub_editor_canvas_overlay.dart';
 import '../models/sub_editor_line_set.dart';
 import '../models/sub_editor_mesh_component.dart';
 import '../models/viewport_ray.dart';
@@ -28,6 +29,7 @@ import '../models/sub_editor_transform_gizmo.dart';
 import '../../main_editor/services/transform_gizmo.dart';
 import 'sub_editor_transform_gizmo_painter.dart';
 
+export '../models/sub_editor_canvas_overlay.dart';
 export '../models/sub_editor_line_set.dart';
 export '../models/sub_editor_mesh_component.dart';
 export '../models/skeletal_socket_attachment.dart';
@@ -649,7 +651,11 @@ class _SubEditor3DViewportState extends _SubEditor3DViewportStateBase
                                     size: Size.infinite,
                                   ),
                           ),
-                          if ((widget.showBones || widget.showSockets) &&
+                          if ((widget.showBones ||
+                                  widget.showSockets ||
+                                  widget.ghostSkeletons.isNotEmpty ||
+                                  widget.overlayMarkers.isNotEmpty ||
+                                  widget.overlayPaths.isNotEmpty) &&
                               widget.glbMesh != null)
                             Positioned.fill(
                               child: IgnorePointer(
@@ -663,6 +669,9 @@ class _SubEditor3DViewportState extends _SubEditor3DViewportStateBase
                                     selectedSocket: widget.selectedSocket,
                                     jointDeltas: widget.jointDeltas,
                                     jointLocalPose: widget.jointLocalPose,
+                                    ghostSkeletons: widget.ghostSkeletons,
+                                    overlayMarkers: widget.overlayMarkers,
+                                    overlayPaths: widget.overlayPaths,
                                     cameraYaw: _cameraYaw,
                                     cameraPitch: _cameraPitch,
                                     cameraDistance: _cameraDistance,

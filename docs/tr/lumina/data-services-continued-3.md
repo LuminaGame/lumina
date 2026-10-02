@@ -8,6 +8,7 @@ Veri katmanı: use case'ler ve servisler sayfasının devamı: `lib/data/service
 
 - [`lib/data/services/authored_animation_clip.dart`](#libdataservicesauthored_animation_clipdart)
 - [`lib/data/services/authored_animation_writer.dart`](#libdataservicesauthored_animation_writerdart)
+- [`lib/data/services/authored_pose_tools.dart`](#libdataservicesauthored_pose_toolsdart)
 - [`lib/data/services/glb_animation_merger.dart`](#libdataservicesglb_animation_mergerdart)
 - [`lib/data/services/glb_animation_retargeter.dart`](#libdataservicesglb_animation_retargeterdart)
 - [`lib/data/services/gltf_packer.dart`](#libdataservicesgltf_packerdart)
@@ -38,7 +39,7 @@ Bir kanalın anahtarları arasında nasıl ilerlediği: `linear` (`LINEAR`; dön
 
 ### `class BoneTrs`
 
-Bir kemiğin yerel dönüşümü (glTF düğüm TRS): `t`, `r` (quaternion), `s`; `toMatrix`, `toList` (`[tx, ty, tz, qx, qy, qz, qw, sx, sy, sz]`, `SubEditor3DViewport.jointLocalPose`'un aldığı biçim), `channel(path)`, `withChannel(path, values)`.
+Bir kemiğin yerel dönüşümü (glTF düğüm TRS): `t`, `r` (quaternion), `s`; `toMatrix`, `toList` (`[tx, ty, tz, qx, qy, qz, qw, sx, sy, sz]`, `SubEditor3DViewport.jointLocalPose`'un aldığı biçim), `channel(path)`, `withChannel(path, values)`, `static BoneTrs blend(a, b, w)` (öteleme ve ölçek doğrusal, dönüş en kısa yoldan slerp; poz kütüphanesinin ağırlığı).
 
 ### `class AuthoredChannel`
 
@@ -72,6 +73,44 @@ Bir projedeki oluşturulmuş sekanslar; Third Person şablonunun ve bağlanmış
 | `detach` | `static bool detach(String projectDir, String animationRelPath)` | Sekansın `.lmas` dosyası projeden çıkmadan önce klibini mesh'inden (GLB eşi, payload, `animation_clips`) çıkarır; `.lmas` dosyasına dokunmaz. İçe aktarılmış klip için ya da mesh veya klip yoksa false. Editörün çöp kutusu, oluşturmayı geri alma ve Delete işlemleri bunu çağırır. |
 | `attach` | `static bool attach(String projectDir, String animationRelPath)` | Geri getirilen bir sekansın klibini mesh'ine `clip_index` konumunda geri koyar (`.lmas` yalnızca klip başka bir yere düşerse yeniden yazılır). İçe aktarılmış klip, olmayan mesh ya da o klibe zaten sahip mesh için false. |
 | `isAuthored` / `clipOf` | `static bool isAuthored(LuminaAsset? asset)` / `static AuthoredAnimationClip? clipOf(LuminaAsset? asset)` | Bir animasyon varlığının burada oluşturulup oluşturulmadığı ve klibi. |
+
+## `lib/data/services/authored_pose_tools.dart`
+
+Oluşturulmuş klipler için pozlama yardımcıları; Animation editörünün Pose sekmesi kullanır. Tüm pozlar üzerinde (`Map<int, BoneTrs>`, düğüm → yerel dönüşüm) GLB çerçevesinde (glTF metre, +Y yukarı) çalışırlar ve sıradan yerel dönüşümler üretirler; sonuç aynı FK glTF klibi olarak anahtarlanır ve kaydedilir.
+
+### `class SkeletonMirror`
+
+Bir `GlbSkeleton`'ın sol / sağ kemik çiftleri ve yansıtıldıkları sagital düzlem; dinlenme pozundan bulunur (düzlemin normali eşleşen kemiklerin ortalama sağdan sola yönü, noktası ortalama orta noktalarıdır).
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `mirroredName` | `static String? mirroredName(String name)` | Diğer tarafın adı, geleneklere göre: `_l`/`_r`, `_L`/`_R`, `.l`/`.r`, `.L`/`.R` sonekleri, `l_`/`r_` önekleri, `Left`/`Right` sözcükleri; tarafı olmayan ad için null. |
+| `of` | `factory SkeletonMirror.of(GlbSkeleton skeleton, {Map<String, String> overrides = const {}})` | Tablo: iki kemiğin de bulunduğu yerde ada göre çiftler; kullanıcının [overrides] çiftleri (her iki yönde) önce gelir. |
+| `pairs` / `lateralAxis` / `planePoint` | alanlar | Kemik → eşi (iki yönde); düzlemin birim normali; düzlem üzerinde bir nokta. |
+| `partnerOf` | `String partnerOf(String bone)` | Eşi; düzlem üzerindeki kemik için kendisi. |
+| `mirrorVector` / `mirrorPoint` / `mirrorRotation` | `Vector3 mirrorVector(Vector3 v)` / `Vector3 mirrorPoint(Vector3 p)` / `Quaternion mirrorRotation(Quaternion q)` | Bir ofsetin, bir konumun ve bir dünya dönüşünün yansıması (`S·R·S`: yansıyan eksen, ters yönde). |
+| `mirror` | `Map<int, BoneTrs> mirror({required Map<int, BoneTrs> source, required Map<int, BoneTrs> target, required Iterable<String> bones})` | [source] içinde pozlanmış [bones] kemiklerinin ayna görüntüsünü [target] üzerinde eşlerine koyan yerel dönüşümler: her eş, kaynağı dinlenme pozundan nasıl döndüyse öyle döner (yansıtılmış, dünya uzayında); öteleme almış bir kaynak eşini yansıtılmış ofset kadar taşır; ölçek kopyalanır; ebeveynler çocuklardan önce çözülür. Değişen düğümleri döndürür. |
+
+### `class TwoBoneIkChain`
+
+`TwoBoneIkChain(name, upper, lower, end)`: düğüm indeksiyle bir uzuv. `static List<TwoBoneIkChain> detect(GlbSkeleton)`, ebeveyni ve büyük ebeveyni eklem olan, el ya da ayak gibi adlandırılmış ve tarafı olan bir uç efektörden (`hand_l`, `LeftFoot`, `foot.R`, `l_hand`) `LeftArm`, `RightArm`, `LeftLeg`, `RightLeg` zincirlerini bulur.
+
+### `abstract final class TwoBoneIkSolver`
+
+`static Map<int, BoneTrs> solve({required GlbSkeleton skeleton, required Map<int, BoneTrs> pose, required TwoBoneIkChain chain, required Vector3 target, Vector3? pole, bool keepEndRotation = true})`: hedef ile pole'un düzleminde kosinüs teoremi ([pole] null ise zincirin mevcut bükülmesi); hedef zincirin erişimine sınırlanır. Üst ve alt kemik için (ve [keepEndRotation] ile dünya yönelimini koruyarak uç efektör için) yeni yerel dönüşümler döndürür; yalnızca dönüşler değişir.
+
+### `abstract final class RootMotionAuthoring`
+
+Yukarı yön glTF +Y'dir.
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `extractFromPelvis` | `static bool extractFromPelvis(AuthoredAnimationClip clip, GlbSkeleton skeleton)` | Kök ya da pelvis öteleme anahtarı olan her karede iskelet kökünü konumuna, pelvisin ilk kareden bu yana yatay yolunu ekleyerek anahtarlar; pelvisi (`GlbSkeleton.rootChild`) onun üzerinde aynı dünya konumunda anahtarlar, böylece pelvis yalnızca dikey hareketini korur; kök kanalı pelvis kanalının interpolasyonunu alır. Pelvisin öteleme anahtarı yoksa false. |
+| `zeroRoot` | `static bool zeroRoot(AuthoredAnimationClip clip, GlbSkeleton skeleton)` | Tersi: kökün ötelemesi dinlenme değerine döner (0. karede tek anahtar) ve pelvis dünyada bulunduğu yerde anahtarlanır. Kökün öteleme anahtarı yoksa false. |
+
+### `class AuthoredPose`, `class AuthoredPoseLibrary`, `abstract final class AuthoredPoseLibraryStore`
+
+`AuthoredPose(name, bones)`: kemik adına göre yerel dönüşümler (`renamed`, JSON). `AuthoredPoseLibrary({meshRelPath, poses, mirrorOverrides})`: bir iskelet mesh'in pozları ve elle ayarlanmış ayna çiftleri (`pose(name)`, `copy`, JSON). `AuthoredPoseLibraryStore`: `pathFor(meshRelPath)` (`contents/animations/<Mesh>/PoseLibrary.lmas`), `load(projectDir, meshRelPath)` (yoksa boş), `save(projectDir, library)` (JSON payload'lı ve `pose_library: true`, `source_mesh`, `pose_count` metadata'lı bir `AssetType.unknown` `.lmas`), `isLibrary(asset)`.
 
 ## `lib/data/services/glb_animation_merger.dart`
 

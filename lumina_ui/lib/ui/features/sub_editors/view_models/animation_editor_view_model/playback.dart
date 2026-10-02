@@ -197,7 +197,7 @@ mixin _AnimationEditorPlayback on _AnimationEditorViewModelState {
   @override
   void _updatePlaybackController() {
     // A preview that was not keyed lasts until the playhead moves.
-    if (_dragBone == null && _pendingPose.isNotEmpty) {
+    if (_dragBone == null && !_ikDragging && _pendingPose.isNotEmpty) {
       _pendingPose.clear();
       _authoredChanged();
     }

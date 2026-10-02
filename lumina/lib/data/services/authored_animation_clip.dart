@@ -56,6 +56,13 @@ class BoneTrs {
 
   BoneTrs copy() => BoneTrs(t, r, s);
 
+  /// [a] towards [b] by [w] (0 gives [a], 1 gives [b]): translation and scale
+  /// lerp, rotation by shortest-path slerp.
+  static BoneTrs blend(BoneTrs a, BoneTrs b, double w) {
+    final q = AuthoredChannel.slerp([a.r.x, a.r.y, a.r.z, a.r.w], [b.r.x, b.r.y, b.r.z, b.r.w], w);
+    return BoneTrs(a.t + (b.t - a.t) * w, Quaternion(q[0], q[1], q[2], q[3]), a.s + (b.s - a.s) * w);
+  }
+
   Matrix4 toMatrix() => Matrix4.compose(t, r, s);
 
   /// `[tx, ty, tz, qx, qy, qz, qw, sx, sy, sz]`.

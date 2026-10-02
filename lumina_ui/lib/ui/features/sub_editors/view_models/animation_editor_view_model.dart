@@ -20,6 +20,7 @@ part 'animation_editor_view_model/playback.dart';
 part 'animation_editor_view_model/notifies_curves_blend_space.dart';
 part 'animation_editor_view_model/dope_sheet.dart';
 part 'animation_editor_view_model/authoring.dart';
+part 'animation_editor_view_model/pose_tools.dart';
 
 class AnimationEditorViewModel extends _AnimationEditorViewModelState
     with
@@ -27,10 +28,15 @@ class AnimationEditorViewModel extends _AnimationEditorViewModelState
         _AnimationEditorPlayback,
         _AnimationEditorNotifiesCurvesBlendSpace,
         _AnimationEditorDopeSheet,
-        _AnimationEditorAuthoring {
+        _AnimationEditorAuthoring,
+        _AnimationEditorPoseTools {
   AnimationEditorViewModel({required super.assetPath, super.initialAsset, super.vsync});
 
   bool get isLoading => _isLoading;
+
+  /// True for a skeleton's pose library (`PoseLibrary.lmas`) opened from the
+  /// Content Browser: the editor previews its mesh and lists the poses.
+  bool get isPoseLibrary => AuthoredPoseLibraryStore.isLibrary(_asset);
   bool get hasError => _hasError;
   bool get isDirty => _isDirty;
   @override
@@ -201,7 +207,8 @@ class AnimationEditorViewModel extends _AnimationEditorViewModelState
         }
       }
 
-      if (_asset?.rawPayload != null && _asset!.rawPayload!.isNotEmpty) {
+      // A pose library holds JSON, not a GLB: it shows its skeletal mesh.
+      if (_asset?.rawPayload != null && _asset!.rawPayload!.isNotEmpty && !AuthoredPoseLibraryStore.isLibrary(_asset)) {
         _glbMesh = await GlbParserService.parseGlb(_asset!.rawPayload!);
       } else {
         // A clip asset that references the skeletal mesh holding its clip (the
@@ -231,6 +238,10 @@ class AnimationEditorViewModel extends _AnimationEditorViewModelState
       _authoredClip = AuthoredAnimationStore.clipOf(_asset);
       _pendingPose.clear();
       _selectedBone = null;
+      _poseLibrary = null;
+      _mirror = null;
+      _ikPoles.clear();
+      _rootPath.clear();
       _refreshSkeleton();
 
       // Discover available skeletal meshes in the project
@@ -354,6 +365,8 @@ class AnimationEditorViewModel extends _AnimationEditorViewModelState
 
   @override
   Future<bool> save() async {
+    // A pose library is written by the Pose tab of the sequences using it.
+    if (isPoseLibrary) return true;
     final file = File(assetPath);
     final updatedMetadata = Map<String, String>.from(_asset?.metadata ?? {});
 

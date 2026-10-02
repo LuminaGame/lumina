@@ -20,6 +20,7 @@ part 'animation/left_sidebar.dart';
 part 'animation/keyframe_details.dart';
 part 'animation/curves_blend_space.dart';
 part 'animation/authoring.dart';
+part 'animation/pose_tools.dart';
 
 class AnimationSubEditor extends StatefulWidget {
   final String assetName;
@@ -55,7 +56,8 @@ class _AnimationSubEditorState extends _AnimationSubEditorStateBase
         _AnimationLeftSidebar,
         _AnimationKeyframeDetails,
         _AnimationCurvesBlendSpace,
-        _AnimationAuthoring {
+        _AnimationAuthoring,
+        _AnimationPoseTools {
 
   @override
   void initState() {
@@ -270,6 +272,14 @@ class _AnimationSubEditorState extends _AnimationSubEditorStateBase
                                       ),
                                     ),
                                   ),
+
+                                  // Bottom-Left Onion Skin HUD (authored sequences)
+                                  if (_viewModel.isAuthored)
+                                    Positioned(
+                                      left: 12,
+                                      bottom: 44,
+                                      child: _onionSkinHud(),
+                                    ),
 
                                   // Top-Right Root Motion Toggle HUD
                                   Positioned(

@@ -54,6 +54,24 @@ mixin _AnimationAuthoring on _AnimationSubEditorStateBase {
       vm.keyPendingOrSelected();
       return true;
     }
+    // Pose tools: I (IK mode), O (onion skin), Ctrl+C / Ctrl+V /
+    // Ctrl+Shift+V (copy, paste, paste mirrored).
+    if (vm.isAuthored && !ctrl && key == LogicalKeyboardKey.keyI) {
+      _setIkMode(!vm.ikMode);
+      return true;
+    }
+    if (vm.isAuthored && !ctrl && key == LogicalKeyboardKey.keyO) {
+      vm.setOnionSkin(enabled: !vm.onionSkin.enabled);
+      return true;
+    }
+    if (vm.isAuthored && ctrl && key == LogicalKeyboardKey.keyC) {
+      vm.copyPose();
+      return true;
+    }
+    if (vm.isAuthored && ctrl && key == LogicalKeyboardKey.keyV) {
+      vm.pastePose(mirrored: keyboard.isShiftPressed);
+      return true;
+    }
     return false;
   }
 
@@ -61,6 +79,20 @@ mixin _AnimationAuthoring on _AnimationSubEditorStateBase {
   List<Widget> _authoringToolbarItems() {
     final vm = _viewModel;
     final clip = vm.authoredClip;
+    if (vm.isPoseLibrary) {
+      final poses = vm.libraryPoses;
+      return [
+        const SizedBox(width: 12),
+        OutlineBadge(
+          key: const ValueKey('anim_pose_library_badge'),
+          child: Text(
+            'Pose library · ${poses.length} pose${poses.length == 1 ? '' : 's'}'
+            '${poses.isEmpty ? '' : ': ${poses.map((p) => p.name).join(', ')}'} — apply them from the Pose tab of a sequence',
+            style: const TextStyle(fontSize: 9),
+          ),
+        ),
+      ];
+    }
     if (clip == null) return const [];
     return [
       const SizedBox(width: 12),
@@ -135,7 +167,19 @@ mixin _AnimationAuthoring on _AnimationSubEditorStateBase {
     // Set from the build that shows it: the viewport is rebuilt with it in
     // the same frame.
     _shownGizmoMode = _gizmo.mode;
-    _gizmo.setTarget(authored ? vm.gizmoTarget(_gizmo.mode) : null);
+    // In IK mode the gizmo moves the chain's target or pole (translate).
+    final ik = authored && vm.ikMode ? vm.ikGizmoTarget : null;
+    _gizmo.setTarget(!authored
+        ? null
+        : ik != null
+            ? SubEditorGizmoTarget(
+                id: ik.id,
+                pivot: ik.pivot,
+                rotation: ik.rotation,
+                locked: _gizmo.mode != GizmoMode.translate,
+                lockedHint: ik.lockedHint,
+              )
+            : vm.gizmoTarget(_gizmo.mode));
     return SubEditor3DViewport(
       key: const ValueKey('anim_viewport'),
       title: 'Animation Viewport — ${widget.assetName}',
@@ -150,6 +194,11 @@ mixin _AnimationAuthoring on _AnimationSubEditorStateBase {
       // bone highlighted (hidden while playing).
       showBones: authored && !vm.isPlaying,
       selectedNode: authored ? vm.allBones.where((n) => n.name == vm.selectedBone).firstOrNull : null,
+      ghostSkeletons: _ghostSkeletons(),
+      overlayMarkers: _ikMarkers(),
+      overlayPaths: _rootPaths(),
+      // Draw Path: floor clicks become root path points.
+      onFloorTap: authored && _drawingRootPath ? vm.addRootPathPoint : null,
     );
   }
 

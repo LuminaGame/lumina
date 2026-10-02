@@ -149,6 +149,16 @@ class SubEditor3DViewport extends StatefulWidget {
   /// no handle picks through it. Null draws none (every other sub-editor).
   final SubEditorTransformGizmo? transformGizmo;
 
+  /// Ghost skeletons drawn over the scene (onion skins), in the frame the
+  /// bones are drawn in.
+  final List<SubEditorGhostSkeleton> ghostSkeletons;
+
+  /// Points drawn over the scene (IK targets and poles), GLB frame.
+  final List<SubEditorOverlayMarker> overlayMarkers;
+
+  /// Polylines drawn over the scene (a drawn root path), GLB frame.
+  final List<SubEditorOverlayPath> overlayPaths;
+
   const SubEditor3DViewport({
     super.key,
     required this.title,
@@ -191,6 +201,9 @@ class SubEditor3DViewport extends StatefulWidget {
     this.overlayLines = const [],
     this.initialCameraYaw,
     this.transformGizmo,
+    this.ghostSkeletons = const [],
+    this.overlayMarkers = const [],
+    this.overlayPaths = const [],
   }) : initialShape =
            initialShape ??
             ((glbMesh != null || meshComponents != null)

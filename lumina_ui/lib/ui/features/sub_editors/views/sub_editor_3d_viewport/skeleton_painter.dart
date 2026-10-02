@@ -13,6 +13,11 @@ class _SubEditorGizmoPainter extends CustomPainter {
   /// `SubEditor3DViewport.jointLocalPose`) the bones are drawn in instead of
   /// the rest pose.
   final Map<String, List<double>>? jointLocalPose;
+
+  /// Onion-skin skeletons, IK markers and drawn paths (GLB frame).
+  final List<SubEditorGhostSkeleton> ghostSkeletons;
+  final List<SubEditorOverlayMarker> overlayMarkers;
+  final List<SubEditorOverlayPath> overlayPaths;
   final double cameraYaw;
   final double cameraPitch;
   final double cameraDistance;
@@ -27,6 +32,9 @@ class _SubEditorGizmoPainter extends CustomPainter {
     this.selectedSocket,
     this.jointDeltas,
     this.jointLocalPose,
+    this.ghostSkeletons = const [],
+    this.overlayMarkers = const [],
+    this.overlayPaths = const [],
     required this.cameraYaw,
     required this.cameraPitch,
     required this.cameraDistance,
@@ -36,7 +44,7 @@ class _SubEditorGizmoPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     if (glbMesh == null) return;
-    if (!showBones && !showSockets) return;
+    if (!showBones && !showSockets && ghostSkeletons.isEmpty && overlayMarkers.isEmpty && overlayPaths.isEmpty) return;
 
     final minX = glbMesh!.minBounds[0];
     final minY = glbMesh!.minBounds[1];
@@ -76,8 +84,8 @@ class _SubEditorGizmoPainter extends CustomPainter {
     // corrective bones — `Quaternion.axis` is the zero vector and
     // `Matrix4.rotate` divides by its length, turning the node and every
     // descendant into NaN and `Canvas.drawLine` into an exception per frame.
-    Matrix4 computeNodeTransform(GlbNode node) {
-      final posed = jointLocalPose?[node.name];
+    Matrix4 computeNodeTransform(GlbNode node, [Map<String, List<double>>? posedBy]) {
+      final posed = (posedBy ?? jointLocalPose)?[node.name];
       if (posed != null && posed.length >= 10) {
         return Matrix4.compose(
           Vector3(posed[0], posed[1], posed[2]),
@@ -149,6 +157,136 @@ class _SubEditorGizmoPainter extends CustomPainter {
 
     for (final root in glbMesh!.rootNodes) {
       collectBonePositions(root, Matrix4.identity());
+    }
+
+    // 0. Onion skins, paths and markers under the live skeleton.
+    for (final ghost in ghostSkeletons) {
+      final positions = <String, Vector3>{};
+      void collect(GlbNode node, Matrix4 parent) {
+        final world = parent * computeNodeTransform(node, ghost.jointLocalPose);
+        positions[node.name] = world.getTranslation();
+        for (final child in node.children) {
+          collect(child, world);
+        }
+      }
+
+      for (final root in glbMesh!.rootNodes) {
+        collect(root, Matrix4.identity());
+      }
+      final line = Paint()
+        ..color = ghost.color.withValues(alpha: ghost.opacity)
+        ..strokeWidth = 2.5
+        ..style = PaintingStyle.stroke;
+      final joint = Paint()
+        ..color = ghost.color.withValues(alpha: ghost.opacity)
+        ..style = PaintingStyle.fill;
+      Offset? top;
+      void draw(GlbNode node, Offset? parentProj) {
+        final p = positions[node.name];
+        final proj = p == null || !ghost.jointLocalPose.containsKey(node.name) ? null : projectPoint(p.x, p.y, p.z);
+        if (proj != null) {
+          if (parentProj != null) canvas.drawLine(parentProj, proj, line);
+          canvas.drawCircle(proj, 2.5, joint);
+          if (top == null || proj.dy < top!.dy) top = proj;
+        }
+        for (final child in node.children) {
+          draw(child, proj ?? parentProj);
+        }
+      }
+
+      for (final root in glbMesh!.rootNodes) {
+        draw(root, null);
+      }
+      if (ghost.label != null && top != null) {
+        final tp = TextPainter(
+          text: TextSpan(
+            text: ghost.label,
+            style: TextStyle(
+              fontSize: 9,
+              fontWeight: FontWeight.bold,
+              color: ghost.color,
+              backgroundColor: Colors.black.withValues(alpha: 0.55),
+            ),
+          ),
+          textDirection: TextDirection.ltr,
+        )..layout();
+        tp.paint(canvas, Offset(top!.dx - tp.width / 2, top!.dy - 16));
+      }
+    }
+
+    for (final path in overlayPaths) {
+      final paint = Paint()
+        ..color = path.color
+        ..strokeWidth = 2.0
+        ..style = PaintingStyle.stroke;
+      Offset? last;
+      for (final (i, p) in path.points.indexed) {
+        final proj = projectPoint(p.x, p.y, p.z);
+        if (proj == null) continue;
+        if (last != null) canvas.drawLine(last, proj, paint);
+        canvas.drawCircle(proj, 4.0, Paint()..color = path.color);
+        final tp = TextPainter(
+          text: TextSpan(text: '${i + 1}', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: path.color)),
+          textDirection: TextDirection.ltr,
+        )..layout();
+        tp.paint(canvas, proj + const Offset(6, -12));
+        last = proj;
+      }
+    }
+
+    for (final marker in overlayMarkers) {
+      final proj = projectPoint(marker.position.x, marker.position.y, marker.position.z);
+      if (proj == null) continue;
+      final to = marker.lineTo;
+      if (to != null) {
+        final toProj = projectPoint(to.x, to.y, to.z);
+        if (toProj != null) {
+          final dash = Paint()
+            ..color = marker.color.withValues(alpha: 0.7)
+            ..strokeWidth = 1.2;
+          final d = toProj - proj;
+          final len = d.distance;
+          for (var s = 0.0; s < len; s += 8.0) {
+            canvas.drawLine(proj + d * (s / len), proj + d * (math.min(s + 4.0, len) / len), dash);
+          }
+        }
+      }
+      final fill = Paint()..color = marker.color;
+      final stroke = Paint()
+        ..color = marker.color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.0;
+      switch (marker.shape) {
+        case SubEditorMarkerShape.dot:
+          canvas.drawCircle(proj, 5.0, fill);
+        case SubEditorMarkerShape.ring:
+          canvas.drawCircle(proj, 7.0, stroke);
+          canvas.drawCircle(proj, 2.0, fill);
+        case SubEditorMarkerShape.diamond:
+          final path = Path()
+            ..moveTo(proj.dx, proj.dy - 8)
+            ..lineTo(proj.dx + 8, proj.dy)
+            ..lineTo(proj.dx, proj.dy + 8)
+            ..lineTo(proj.dx - 8, proj.dy)
+            ..close();
+          canvas.drawPath(path, Paint()..color = marker.color.withValues(alpha: 0.35));
+          canvas.drawPath(path, stroke);
+      }
+      if (marker.label != null) {
+        final tp = TextPainter(
+          text: TextSpan(
+            text: marker.label,
+            style: TextStyle(
+              fontSize: 9,
+              fontWeight: FontWeight.bold,
+              color: marker.color,
+              backgroundColor: Colors.black.withValues(alpha: 0.55),
+            ),
+          ),
+          textDirection: TextDirection.ltr,
+        )..layout();
+        tp.paint(canvas, proj + const Offset(10, -6));
+      }
     }
 
     // 1. Draw Bones Wireframe
