@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart' show ValueListenable, mapEquals;
 import 'package:flutter/widgets.dart';
 import 'package:lumina/lumina.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart';
-import 'package:path/path.dart' as p;
 
 import '../features/mcp_server/services/host_editor_mcp.dart';
 import '../features/sub_editors/views/sub_editor_3d_viewport.dart';
