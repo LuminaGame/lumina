@@ -21,19 +21,19 @@ dependencies:
     git:
       url: https://github.com/LuminaGame/tools.git
       path: flutter_assimp
-      ref: 879df0e0559ba50e3ffa2a17e677fa9f1a9c7f93
+      ref: 1547d59790d2308fa88a32c963be6f50f1b33813
   flutter_riglogic:
     git:
       url: https://github.com/LuminaGame/tools.git
       path: flutter_riglogic
-      ref: 879df0e0559ba50e3ffa2a17e677fa9f1a9c7f93
+      ref: 1547d59790d2308fa88a32c963be6f50f1b33813
   # The smoke-test system that lib/testing.dart exports (SmokeArtifacts,
   # SmokeRecorder, the report runner of tool/smoke_report.dart).
   lumina_smoke:
     git:
       url: https://github.com/LuminaGame/tools.git
       path: lumina_smoke
-      ref: 879df0e0559ba50e3ffa2a17e677fa9f1a9c7f93
+      ref: 1547d59790d2308fa88a32c963be6f50f1b33813
   lumina_editor_api:
     path: ../lumina_editor_api
   # Play captures the mouse.
@@ -41,7 +41,7 @@ dependencies:
     git:
       url: https://github.com/LuminaGame/tools.git
       path: lumina_mouse_capture
-      ref: 879df0e0559ba50e3ffa2a17e677fa9f1a9c7f93
+      ref: 1547d59790d2308fa88a32c963be6f50f1b33813
   # The Lumina Marketplace API client and DTOs, plus what the
   # installer needs (streamed downloads, zip archives, sha256, the encrypted
   # session file).
@@ -50,7 +50,7 @@ dependencies:
     git:
       url: https://github.com/LuminaGame/marketplace.git
       path: shared
-      ref: c8004c1b5640ab4066d97ba376b59059acb1b455
+      ref: 5e6240fb68847b5a388aeb940c68dd92ec3ccd12
   http: ^1.6.0
   archive: ^4.3.0
   crypto: ^3.0.6
@@ -82,13 +82,13 @@ dev_dependencies:
     git:
       url: https://github.com/LuminaGame/plugins.git
       path: lumina_plugin_pcg
-      ref: 41e2d9525b64fbf190e5e3d748bbaab656e9cb80
+      ref: 1b87b9d89c7ed270685605066276b5de6e6609de
   # MiniAI: tests and smoke, as for PCG.
   lumina_plugin_miniai:
     git:
       url: https://github.com/LuminaGame/plugins.git
       path: lumina_plugin_miniai
-      ref: 41e2d9525b64fbf190e5e3d748bbaab656e9cb80
+      ref: 1b87b9d89c7ed270685605066276b5de6e6609de
   msix: ^3.18.0
 
 # The MSIX identity of Lumina Studio, shared by every
