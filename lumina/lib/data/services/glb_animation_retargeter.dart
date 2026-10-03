@@ -198,16 +198,20 @@ abstract final class GlbAnimationRetargeter {
     }
     final tracks = _Tracks(cDoc, animations[animationIndex] as Map);
 
-    // Name → node, for both sides.
+    // Name → node, for both sides (case-sensitive first, then case-insensitive fallback).
     final srcByName = <String, int>{};
+    final srcByNameLower = <String, int>{};
     for (var i = 0; i < src.count; i++) {
       final n = src.names[i];
-      if (n != null) srcByName.putIfAbsent(n, () => i);
+      if (n != null) {
+        srcByName.putIfAbsent(n, () => i);
+        srcByNameLower.putIfAbsent(n.toLowerCase(), () => i);
+      }
     }
     final mapped = <int, int>{}; // target node → source node
     for (final j in joints) {
       final name = tgt.names[j];
-      final s = name == null ? null : srcByName[name];
+      final s = name == null ? null : (srcByName[name] ?? srcByNameLower[name.toLowerCase()]);
       if (s != null) mapped[j] = s;
     }
     if (mapped.isEmpty) {
@@ -287,8 +291,7 @@ abstract final class GlbAnimationRetargeter {
         final p = src.parent[i];
         srcWorld[i] = p < 0 ? local : srcWorld[p] * local;
       }
-      final srcRootParent = src.parent[rootS] < 0 ? _Quat.identity : srcWorld[src.parent[rootS]];
-      final delta = (rootAlign * tgtRootParent * srcRootParent.inverse()).normalized();
+      final delta = rootAlign;
       for (final j in tgt.order) {
         final p = tgt.parent[j];
         final parentWorld = p < 0 ? _Quat.identity : tgtWorld[p];
