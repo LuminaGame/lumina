@@ -176,6 +176,7 @@ mixin _EditorProjectAndLevels on _EditorViewModelState {
         _loadActorMeshData(actor);
       }
     }
+    pieController.registerWidgetClasses();
     notifyListeners();
   }
 

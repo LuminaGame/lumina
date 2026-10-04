@@ -231,6 +231,8 @@ class PieController {
   /// Blueprint class Play will use. Empty when Play can start.
   List<PlayBlocker> preflight({List<PlayBlocker>? warnings}) {
     _registry = null; // the manifest's input actions may have changed
+    registerWidgetClasses();
+    registerBlueprintAssets();
     return BlueprintPlayPreflight.validate(
       registry,
       viewModel.project.mapsAndModes,
@@ -294,7 +296,19 @@ class PieController {
   /// state (`elements.FPSCounter.text`) from the class registered here, read
   /// fresh from the `.lmas` files so the designer's last save is what plays.
   void registerWidgetClasses() {
-    final classes = WidgetClassCatalog.scanWidgetClasses(viewModel.projectDirPath);
+    final classes = WidgetClassCatalog.scanWidgetClasses(viewModel.projectDirPath).toList();
+    for (final open in viewModel.openWidgetEditors) {
+      if (open.isLoaded) {
+        final name = UmgWidgetCodegen.fileBaseName(open.fileBasename);
+        final inMemClass = WidgetClassCatalog.fromUmgDocument(name, open.document);
+        final index = classes.indexWhere((c) => c.name == name);
+        if (index >= 0) {
+          classes[index] = inMemClass;
+        } else {
+          classes.add(inMemClass);
+        }
+      }
+    }
     LuminaWidgetClassRegistry.registerAll(classes);
     if (classes.isNotEmpty) {
       viewModel.logger.log(
@@ -640,7 +654,9 @@ class PieController {
     final contents = Directory('${viewModel.projectDirPath}/contents');
     if (!contents.existsSync()) return null;
     for (final f in contents.listSync(recursive: true, followLinks: false)) {
-      if (f is File && f.path.endsWith('/$name.lmas')) return f.path.substring(viewModel.projectDirPath.length + 1);
+      if (f is File && f.path.replaceAll(r'\', '/').endsWith('/$name.lmas')) {
+        return f.path.substring(viewModel.projectDirPath.length + 1).replaceAll(r'\', '/');
+      }
     }
     return null;
   }

@@ -10,13 +10,15 @@ import '../../sub_editors/models/blueprint_editor_nodes.dart';
 import '../../sub_editors/services/blueprint_asset_catalog.dart';
 import '../../sub_editors/view_models/blueprint_editor_view_model.dart';
 
+import '../../sub_editors/services/widget_class_catalog.dart';
+
 /// Play's Blueprint classes: lumina's
 /// [LuminaBlueprintClassRegistry], except that a Blueprint open in an editor
 /// plays its document as it is in the editor, compiled but not necessarily
 /// saved — Play runs the in-memory class. Every document,
 /// open or on disk, reaches the VM without its editor-only comment and
-/// reroute nodes, and the project's enum and
-/// interface assets are registered with lumina before any class compiles.
+/// reroute nodes, and the project's enum, interface and widget class
+/// assets are registered with lumina before any class compiles.
 class EditorBlueprintClassRegistry extends LuminaBlueprintClassRegistry {
   /// Open Blueprint editors' documents by project-relative `.lmas` path.
   final Map<String, LuminaBlueprintDocument> Function() openDocuments;
@@ -29,10 +31,12 @@ class EditorBlueprintClassRegistry extends LuminaBlueprintClassRegistry {
     registerProjectAssets();
   }
 
-  /// Registers the project's enums and interfaces into lumina's registries.
+  /// Registers the project's enums, interfaces, and widget classes into lumina's registries.
   void registerProjectAssets() {
     LuminaBlueprintEnums.registerAll([for (final e in BlueprintAssetCatalog.scanEnums(projectDir)) e.document]);
     LuminaBlueprintInterfaces.registerAll([for (final i in BlueprintAssetCatalog.scanInterfaces(projectDir)) i.document]);
+    final widgetClasses = WidgetClassCatalog.scanWidgetClasses(projectDir);
+    LuminaWidgetClassRegistry.registerAll(widgetClasses);
   }
 
   final Map<String, ({DateTime stamp, LuminaBlueprintClass cls})> _flattened = {};

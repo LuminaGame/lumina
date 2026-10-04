@@ -40,7 +40,7 @@ Continuation of Main editor: view model and services: the remaining public files
 
 ### `class EditorBlueprintClassRegistry`
 
-Play's Blueprint classes: lumina's [LuminaBlueprintClassRegistry], except that a Blueprint open in an editor plays its document as it is in the editor, compiled but not necessarily saved — Play runs the in-memory class. Every document, open or on disk, reaches the VM without its editor-only comment and reroute nodes, and the project's enum and interface assets are registered with lumina before any class compiles.
+Play's Blueprint classes: lumina's [LuminaBlueprintClassRegistry], except that a Blueprint open in an editor plays its document as it is in the editor, compiled but not necessarily saved — Play runs the in-memory class. Every document, open or on disk, reaches the VM without its editor-only comment and reroute nodes, and the project's enum, interface and widget class assets are registered with lumina before any class compiles.
 
 **Constructors:**
 

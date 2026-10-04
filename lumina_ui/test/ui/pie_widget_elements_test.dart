@@ -44,7 +44,9 @@ void main() {
   });
   tearDownAll(() {
     LuminaWidgetClassRegistry.clear();
-    root.deleteSync(recursive: true);
+    try {
+      root.deleteSync(recursive: true);
+    } catch (_) {}
   });
 
   LuminaProject manifest() =>
@@ -151,5 +153,30 @@ void main() {
     expect(fpsText, 'FPS: ${stats.fps.round()}', reason: 'the HUD and the toolbar agree');
     vm.pieController.stopHeadlessForTest();
     bp.dispose();
+    vm.dispose();
+  });
+
+  testWidgets('Fresh editor session validates and preflights Blueprints with widget elements without opening sub-editors',
+      (tester) async {
+    LuminaWidgetClassRegistry.clear();
+    expect(LuminaWidgetClassRegistry.lookup('WBP_HUD'), isNull);
+
+    final vm = EditorViewModel(
+      initialProject: manifest(),
+      projectLocation: root.path,
+      enableTimers: false,
+      autoInitAssets: false,
+    );
+    await tester.runAsync(vm.ensureDefaultLevelAssets);
+    vm.refreshAssets();
+
+    expect(LuminaWidgetClassRegistry.lookup('WBP_HUD'), isNotNull);
+
+    final blockers = vm.pieController.preflight();
+    expect(blockers, isEmpty, reason: blockers.map((b) => b.toString()).join('\n'));
+
+    expect(await tester.runAsync(vm.requestPlay), isTrue, reason: '${vm.playBlockers}');
+    vm.pieController.stopHeadlessForTest();
+    vm.dispose();
   });
 }
