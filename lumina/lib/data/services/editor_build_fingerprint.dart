@@ -4,6 +4,7 @@ import 'dart:isolate';
 
 import 'package:crypto/crypto.dart';
 import 'package:path/path.dart' as p;
+import 'package:yaml/yaml.dart';
 
 import 'workspace_paths.dart';
 
@@ -93,7 +94,57 @@ Future<Map<String, String>> fingerprintComponents(EditorHostInputs inputs) async
   for (final name in inputs.pluginDirs.keys) {
     c['plugin:$name'] = _pluginHash(inputs.pluginDirs[name]!);
   }
+  final pubspecFile = File(p.join(inputs.hostDir, 'pubspec.yaml'));
+  if (pubspecFile.existsSync()) {
+    try {
+      final yaml = loadYaml(pubspecFile.readAsStringSync());
+      final overrides = yaml is YamlMap ? yaml['dependency_overrides'] : null;
+      if (overrides is YamlMap) {
+        for (final entry in overrides.entries) {
+          final name = '${entry.key}';
+          if (inputs.repos.contains(name) || inputs.pluginDirs.containsKey(name)) continue;
+          final v = entry.value;
+          String? dir;
+          if (v is YamlMap && v['path'] != null) {
+            final raw = v['path'].toString();
+            dir = p.isAbsolute(raw) ? raw : p.normalize(p.join(inputs.hostDir, raw));
+          }
+          if (dir != null && Directory(dir).existsSync()) {
+            final manifest = _findPrebuiltManifest(dir);
+            if (manifest != null) {
+              c['override:$name'] = '$name:${_fileHash(manifest.path)}';
+            } else {
+              c['override:$name'] = await engineRepoState(dir);
+            }
+          }
+        }
+      }
+    } on YamlException {
+      // Ignore malformed yaml.
+    }
+  }
   return c;
+}
+
+/// Looks for a prebuilt provenance manifest (such as `lumina-kimodo.json`) in
+/// `<dir>/prebuilt` or `<dir>/third_party/**/prebuilt`.
+File? _findPrebuiltManifest(String dir) {
+  final d = Directory(dir);
+  if (!d.existsSync()) return null;
+  for (final sub in ['prebuilt', p.join('third_party', 'kimodo', 'prebuilt')]) {
+    final subDir = Directory(p.join(dir, sub));
+    if (!subDir.existsSync()) continue;
+    try {
+      for (final f in subDir.listSync(recursive: true).whereType<File>()) {
+        if (p.basename(f.path).startsWith('lumina-') && f.path.endsWith('.json')) {
+          return f;
+        }
+      }
+    } on FileSystemException {
+      // Ignore unreadable dirs.
+    }
+  }
+  return null;
 }
 
 /// SHA-256 (hex) over [components] (or over [fingerprintComponents] of
@@ -121,6 +172,9 @@ List<String> diffInputs(Map<String, String> older, Map<String, String> newer) {
     } else if (k.startsWith('plugin:')) {
       final name = k.substring(7);
       reasons.add(a == null ? 'plugin $name added' : (b == null ? 'plugin $name removed' : 'plugin $name changed'));
+    } else if (k.startsWith('override:')) {
+      final name = k.substring(9);
+      reasons.add(a == null ? 'dependency $name added' : (b == null ? 'dependency $name removed' : 'dependency $name changed'));
     } else if (k == 'flutter') {
       String short(String? v) => (v ?? '?').split(' ').first;
       final sa = short(a), sb = short(b);

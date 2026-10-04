@@ -213,6 +213,25 @@ void main() {
     expect(analyze.exitCode, 0, reason: '${analyze.stdout}\n${analyze.stderr}');
   }, timeout: const Timeout(Duration(minutes: 5)));
 
+  test('propagates dependency_overrides from plugin pubspec_overrides.yaml and workspace', () async {
+    final pluginDir = fx.pluginDir;
+    final extraPkg = Directory(p.join(fx.temp.path, 'custom_tool'))..createSync();
+    File(p.join(extraPkg.path, 'pubspec.yaml')).writeAsStringSync('name: custom_tool\nversion: 0.0.1\n');
+    File(p.join(pluginDir.path, 'pubspec_overrides.yaml')).writeAsStringSync('''
+dependency_overrides:
+  custom_tool:
+    path: ${p.relative(extraPkg.path, from: pluginDir.path).replaceAll(r'\', '/')}
+''');
+
+    final gen = EditorHostGeneratorService(engineRoot: engineRoot, platform: 'linux');
+    final plugin = await fx.plugin();
+    await gen.generate(fx.projectDir.path, [plugin]);
+
+    final host = Directory(p.join(fx.projectDir.path, '.lumina', 'editor'));
+    final pubspec = File(p.join(host.path, 'pubspec.yaml')).readAsStringSync();
+    expect(pubspec, contains("  custom_tool:\n    path: '${slash(extraPkg.path)}'"));
+  });
+
   // The engine's versions, not pub.dev's newest: a temp engine whose lock
   // pins yaml 3.1.3 while 3.1.4 is published.
   group('the host resolves the engine lock', () {
