@@ -106,6 +106,12 @@ class PluginDialogController extends ChangeNotifier {
     isClosed = true;
     notifyListeners();
     _onCloseRequested?.call();
+    onCancelled?.call();
+    if (taskData != null) {
+      try {
+        (taskData as dynamic).cancel();
+      } catch (_) {}
+    }
     PluginDialogManager.instance.unregister(this);
   }
 }
@@ -122,6 +128,13 @@ class PluginDialogManager extends ChangeNotifier {
 
   List<PluginDialogController> get minimizedDialogs =>
       List.unmodifiable(_dialogs.where((d) => d.isMinimized && !d.isClosed));
+
+  PluginDialogController? findByPluginId(String pluginId) {
+    for (final d in _dialogs) {
+      if (d.pluginId == pluginId && !d.isClosed) return d;
+    }
+    return null;
+  }
 
   void register(PluginDialogController controller) {
     if (!_dialogs.any((d) => d.id == controller.id)) {

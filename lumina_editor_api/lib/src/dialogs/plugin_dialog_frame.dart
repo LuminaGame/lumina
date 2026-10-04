@@ -194,6 +194,16 @@ Future<T?> showPluginDialog<T>({
   VoidCallback? onCompleted,
   dynamic taskData,
 }) async {
+  if (controller == null) {
+    final existing = PluginDialogManager.instance.findByPluginId(pluginId);
+    if (existing != null) {
+      if (existing.isMinimized) {
+        existing.restore(context);
+      }
+      return null;
+    }
+  }
+
   final ctrl = controller ??
       PluginDialogController(
         pluginId: pluginId,
