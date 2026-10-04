@@ -180,7 +180,7 @@ class LevelBlueprintEditorViewModel extends BlueprintEditorViewModel {
     final contents = Directory('$projectDirectory/contents');
     if (!contents.existsSync()) return null;
     for (final f in contents.listSync(recursive: true, followLinks: false)) {
-      if (f is File && f.path.endsWith('/$name.lmas') && !f.path.contains('/levels/')) return f;
+      if (f is File && f.path.replaceAll(r'\', '/').endsWith('/$name.lmas') && !f.path.replaceAll(r'\', '/').contains('/levels/')) return f;
     }
     return null;
   }
@@ -206,7 +206,9 @@ class LevelBlueprintEditorViewModel extends BlueprintEditorViewModel {
         functionScope: function,
         macroScope: macro,
         levelActors: levelActors,
-        customEventOwners: _ownerEvents,
+        customEventOwners: {...?widgetClassCatalog?.actorEvents, ..._ownerEvents},
+        variableOwners: widgetClassCatalog?.actorVariables ?? const {},
+        componentOwners: widgetClassCatalog?.actorComponents ?? const {},
       ),
       implementedInterfaces: document.interfaces,
     );

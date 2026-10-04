@@ -16,7 +16,22 @@ mixin _ContentBrowserCreateBlueprintDialog on _ContentBrowserWidgetStateBase {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setStateModal) {
-            final filteredClasses = _allLuminaClasses.where((c) {
+            final projectBlueprints = vm?.realAssets
+                    .where((a) => a.type == AssetType.actor && a.fileName.endsWith('.lmas'))
+                    .map((a) {
+                      final name = a.fileName.replaceAll('.lmas', '');
+                      return _LuminaClassInfo(
+                        className: name,
+                        category: 'Project Blueprints',
+                        description: 'Project Blueprint: ${a.relativePath}',
+                        icon: LucideIcons.fileCode,
+                      );
+                    }).toList() ??
+                const <_LuminaClassInfo>[];
+
+            final allClasses = [..._allLuminaClasses, ...projectBlueprints];
+
+            final filteredClasses = allClasses.where((c) {
               final matchesCategory =
                   selectedCategory == 'All' || c.category == selectedCategory;
               final matchesSearch =
@@ -96,6 +111,7 @@ mixin _ContentBrowserCreateBlueprintDialog on _ContentBrowserWidgetStateBase {
                               children:
                                   [
                                     'All',
+                                    'Project Blueprints',
                                     'Actors & Framework',
                                     'Components',
                                     'World & Subsystems',

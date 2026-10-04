@@ -152,7 +152,8 @@ mixin _AssetScanning on _AssetRepositoryState {
     if (lower.contains('/textures/') || lower.endsWith('.png') || lower.endsWith('.jpg') || lower.endsWith('.jpeg') || lower.endsWith('.tga') || lower.endsWith('.ktx2')) {
       return AssetType.texture;
     }
-    if (lower.contains('/blueprints/') || lower.endsWith('.bp')) {
+    final fileNameLower = filePath.split(RegExp(r'[/\\]')).last.toLowerCase();
+    if (lower.contains('/blueprints/') || lower.endsWith('.bp') || fileNameLower.startsWith('bp_')) {
       return AssetType.actor;
     }
     if (lower.contains('/animations/') || lower.contains('/anim/') || lower.endsWith('.anim') || lower.contains('anim_') || lower.contains('mf_') || lower.contains('_walk') || lower.contains('_run') || lower.contains('_idle') || lower.contains('_bwd') || lower.contains('_fwd') || lower.contains('_sprint') || lower.contains('_jump')) {

@@ -172,7 +172,10 @@ mixin _BlueprintSubEditorLayout on _BlueprintSubEditorStateBase {
     if (macro != null) return _buildMacroDetails(macro);
     final dispatcher = _viewModel.selectedDispatcher == null ? null : _viewModel.document.dispatcher(_viewModel.selectedDispatcher!);
     if (dispatcher != null) return _buildDispatcherDetails(dispatcher);
-    final variable = _viewModel.selectedVariable == null ? null : _viewModel.document.variable(_viewModel.selectedVariable!);
+    final variable = _viewModel.selectedVariable == null
+        ? null
+        : (_viewModel.document.variable(_viewModel.selectedVariable!) ??
+            _viewModel.inheritedVariables.where((v) => v.name == _viewModel.selectedVariable).firstOrNull);
     if (variable != null) return _buildVariableDetails(variable);
     if (_isLevel) return _buildLevelDetails();
     if (_isWidget) return _buildWidgetDetails();
@@ -240,6 +243,7 @@ mixin _BlueprintSubEditorLayout on _BlueprintSubEditorStateBase {
     return BlueprintMyBlueprintPanel(
       key: const ValueKey('bp_my_blueprint'),
       variables: vm.document.variables,
+      inheritedVariables: vm.inheritedVariables,
       context: vm.typeContext,
       selected: vm.selectedVariable,
       onSelect: vm.selectVariable,

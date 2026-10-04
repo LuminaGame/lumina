@@ -782,18 +782,43 @@ abstract final class LuminaBlueprintNodeLibrary {
         );
       case variableGet:
       case variableSet:
-        final variable = context.variable(node.literals['variable'] as String?);
+        final rawClass = literalClass('class');
+        final targetClass = rawClass == null
+            ? null
+            : (LuminaBlueprintObjectClass.isClassString(rawClass) ? rawClass : LuminaBlueprintObjectClass.actor(rawClass));
+        final LuminaBlueprintVariable? variable;
+        if (targetClass != null) {
+          variable = context.variableOf(targetClass, node.literals['variable'] as String?);
+        } else {
+          variable = context.variable(node.literals['variable'] as String?);
+        }
         final type = variable?.type ?? LuminaPinType.float;
         final cls = variable?.objectClass;
         final of = variable?.elementType;
+        final en = variable?.enumName;
+        final targetPin = targetClass != null ? _obj('target', 'Target', targetClass) : null;
+        if (s.id == variableGet) {
+          return (
+            inputs: [
+              ?targetPin,
+            ],
+            outputs: [
+              for (final p in s.outputs)
+                p.retyped(type, objectClass: cls, elementType: of, enumName: en)
+            ],
+          );
+        }
         return (
           inputs: [
+            _execIn,
+            ?targetPin,
             for (final p in s.inputs)
-              p.type == LuminaPinType.exec ? p : p.retyped(type, objectClass: cls, elementType: of)
+              if (p.type != LuminaPinType.exec)
+                p.retyped(type, objectClass: cls, elementType: of, enumName: en)
           ],
           outputs: [
             for (final p in s.outputs)
-              p.type == LuminaPinType.exec ? p : p.retyped(type, objectClass: cls, elementType: of)
+              p.type == LuminaPinType.exec ? p : p.retyped(type, objectClass: cls, elementType: of, enumName: en)
           ],
         );
       case 'create_widget':
@@ -819,10 +844,23 @@ abstract final class LuminaBlueprintNodeLibrary {
           ],
         );
       case getComponent:
-        final ref = context.component(literalClass('component'));
+        final rawClass = literalClass('class');
+        final targetClass = rawClass == null
+            ? null
+            : (LuminaBlueprintObjectClass.isClassString(rawClass) ? rawClass : LuminaBlueprintObjectClass.actor(rawClass));
+        final LuminaBlueprintComponentRef? ref;
+        if (targetClass != null) {
+          ref = context.componentOf(targetClass, literalClass('component'));
+        } else {
+          ref = context.component(literalClass('component'));
+        }
         if (ref == null) return (inputs: s.inputs, outputs: s.outputs);
+        final targetPin = targetClass != null ? _obj('target', 'Target', targetClass) : null;
         return (
-          inputs: s.inputs,
+          inputs: [
+            ?targetPin,
+            ...s.inputs,
+          ],
           outputs: [
             for (final p in s.outputs) p.id == _returnValue ? p.retyped(p.type, objectClass: ref.objectClass) : p
           ],
@@ -949,17 +987,30 @@ abstract final class LuminaBlueprintNodeLibrary {
     node.inputs.addAll(pins.inputs.map((p) => p.toPin(isOutput: false)));
     node.outputs.addAll(pins.outputs.map((p) => p.toPin(isOutput: true)));
     if (id == enhancedInputAction && literals?['action'] is String) node.title = literals!['action'] as String;
-    if ((id == variableGet || id == variableSet) && literals?['variable'] is String) {
-      node.title = '${s.title} ${literals!['variable']}';
+    final variable = literals?['variable'];
+    if ((id == variableGet || id == variableSet) && variable is String) {
+      node.title = '${s.title} $variable';
+      final cls = literals?['class'];
+      if (cls is String && cls.isNotEmpty) {
+        final clsName = LuminaBlueprintObjectClass.name(cls);
+        if (clsName.isNotEmpty) node.category = 'Variables|$clsName';
+      }
     }
-    if (id == getWidgetElement && literals?['element'] is String && (literals!['element'] as String).isNotEmpty) {
-      node.title = 'Get ${literals['element']}';
+    final element = literals?['element'];
+    if (id == getWidgetElement && element is String && element.isNotEmpty) {
+      node.title = 'Get $element';
       final owner = pins.inputs.firstWhere((p) => p.id == 'target').objectClass;
       final cls = owner == null ? '' : LuminaBlueprintObjectClass.name(owner);
       if (cls.isNotEmpty) node.category = 'Widget|$cls';
     }
-    if (id == getComponent && literals?['component'] is String && (literals!['component'] as String).isNotEmpty) {
-      node.title = 'Get ${literals['component']}';
+    final component = literals?['component'];
+    if (id == getComponent && component is String && component.isNotEmpty) {
+      node.title = 'Get $component';
+      final cls = literals?['class'];
+      if (cls is String && cls.isNotEmpty) {
+        final clsName = LuminaBlueprintObjectClass.name(cls);
+        if (clsName.isNotEmpty) node.category = 'Components|$clsName';
+      }
     }
     if (id == castTo && literals?['class'] is String && (literals!['class'] as String).isNotEmpty) {
       node.title = 'Cast To ${LuminaBlueprintObjectClass.displayName(literals['class'] as String)}';

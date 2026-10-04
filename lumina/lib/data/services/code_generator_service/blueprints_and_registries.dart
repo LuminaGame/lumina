@@ -13,8 +13,10 @@ mixin _BlueprintsAndRegistriesCodegen on _DartCodeGeneratorServiceState {
     Map<String, dynamic> docMap, {
     String? existingContent,
     List<LuminaInputAction> inputActions = const [],
+    LuminaBlueprintTypeContext? typeContext,
   }) {
-    final result = generateBlueprintClass(assetName, docMap, existingContent: existingContent, inputActions: inputActions);
+    final result = generateBlueprintClass(assetName, docMap,
+        existingContent: existingContent, inputActions: inputActions, typeContext: typeContext);
     if (result.ok) return result.code!;
     final b = StringBuffer('// Blueprint $assetName cannot be generated:\n');
     for (final e in result.errors) {
@@ -32,6 +34,7 @@ mixin _BlueprintsAndRegistriesCodegen on _DartCodeGeneratorServiceState {
     Map<String, BlueprintAnimClassRef> animBlueprints = const {},
     Map<String, BlueprintClassRef> blueprintClasses = const {},
     String? assetPath,
+    LuminaBlueprintTypeContext? typeContext,
   }) {
     final rawName = assetName.replaceAll('.lmas', '');
     return const BlueprintDartGenerator().generate(
@@ -42,6 +45,7 @@ mixin _BlueprintsAndRegistriesCodegen on _DartCodeGeneratorServiceState {
       existingContent: existingContent,
       animBlueprints: animBlueprints,
       blueprintClasses: blueprintClasses,
+      typeContext: typeContext,
     );
   }
 
@@ -165,7 +169,7 @@ mixin _BlueprintsAndRegistriesCodegen on _DartCodeGeneratorServiceState {
   /// false, writing nothing, when the Blueprint has errors; skips the write
   /// when the output is unchanged; keeps the user-code region.
   Future<bool> compileAndWriteActor(String projectPath, String assetName, Map<String, dynamic> docMap,
-      {String? assetPath, List<LuminaInputAction>? inputActions}) async {
+      {String? assetPath, List<LuminaInputAction>? inputActions, LuminaBlueprintTypeContext? typeContext}) async {
     final rawName = assetName.split('/').last.replaceAll('.lmas', '');
     // Files an earlier version named after the asset move first, with their user code.
     LuminaGeneratedCodeMigration.migrate(projectPath);
@@ -200,7 +204,8 @@ mixin _BlueprintsAndRegistriesCodegen on _DartCodeGeneratorServiceState {
         inputActions: inputActions ?? DartCodeGeneratorService.projectInputActions(projectPath),
         animBlueprints: animBlueprints,
         blueprintClasses: blueprintClasses,
-        assetPath: assetPath);
+        assetPath: assetPath,
+        typeContext: typeContext);
     if (!result.ok) return false;
     if (existingContent != result.code) {
       await file.parent.create(recursive: true);

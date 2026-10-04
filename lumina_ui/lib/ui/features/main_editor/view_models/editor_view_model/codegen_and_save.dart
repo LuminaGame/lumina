@@ -151,8 +151,35 @@ mixin _EditorCodegenAndSave on _EditorViewModelState {
       // The compiled widget classes, registered before the
       // world starts so Create Widget renders them over the game.
       widgetClasses: File('${libDir.path}/widgets/${UmgWidgetCodegen.kWidgetRegistryFileName}').existsSync(),
+      targetFps: currentProject.settings.targetFps,
+      vsyncEnabled: currentProject.settings.vsyncEnabled,
+      startFullscreen: currentProject.settings.startFullscreen,
     );
     File('${libDir.path}/main.dart').writeAsStringSync(mainContent);
+
+    final mainCppFile = File('$projectDirPath/windows/runner/main.cpp');
+    if (mainCppFile.existsSync()) {
+      try {
+        var cpp = mainCppFile.readAsStringSync();
+        if (currentProject.settings.startFullscreen) {
+          if (!cpp.contains('GetSystemMetrics(SM_CXSCREEN)')) {
+            cpp = cpp.replaceAll(
+              RegExp(r'Win32Window::Point origin\(\d+,\s*\d+\);\s*Win32Window::Size size\(\d+,\s*\d+\);'),
+              'Win32Window::Point origin(0, 0);\n  Win32Window::Size size(GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN));',
+            );
+            mainCppFile.writeAsStringSync(cpp);
+          }
+        } else {
+          if (cpp.contains('GetSystemMetrics(SM_CXSCREEN)')) {
+            cpp = cpp.replaceAll(
+              RegExp(r'Win32Window::Point origin\(\d+,\s*\d+\);\s*Win32Window::Size size\(GetSystemMetrics\(SM_CXSCREEN\),\s*GetSystemMetrics\(SM_CYSCREEN\)\);'),
+              'Win32Window::Point origin(10, 10);\n  Win32Window::Size size(1280, 720);',
+            );
+            mainCppFile.writeAsStringSync(cpp);
+          }
+        }
+      } catch (_) {}
+    }
 
     final levelDir = Directory('${libDir.path}/levels');
     if (!levelDir.existsSync()) levelDir.createSync(recursive: true);

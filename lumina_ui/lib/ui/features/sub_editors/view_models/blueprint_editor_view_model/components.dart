@@ -29,6 +29,29 @@ mixin _BlueprintEditorComponents on _BlueprintEditorViewModelState {
     beginInteraction('Transform ${getComponent(id)!.name}');
   }
 
+  /// Ensures that component [id] is present in `_document.components`.
+  /// If it is currently only inherited from a parent Blueprint, it is cloned
+  /// into `_document.components` so its property overrides can be recorded,
+  /// undo/redo tracked, and persisted to disk.
+  LuminaBlueprintComponent _ensureComponentInDocument(String id) {
+    final existing = _document.components.where((c) => c.id == id).firstOrNull;
+    if (existing != null) return existing;
+    final inherited = inheritedComponents.where((c) => c.id == id).firstOrNull;
+    if (inherited != null) {
+      final clone = LuminaBlueprintComponent(
+        id: inherited.id,
+        name: inherited.name,
+        type: inherited.type,
+        parentId: inherited.parentId,
+        properties: Map<String, dynamic>.from(jsonDecode(jsonEncode(inherited.properties)) as Map),
+        isSceneComponent: inherited.isSceneComponent,
+      );
+      _document.components.add(clone);
+      return clone;
+    }
+    throw StateError('Component $id not found');
+  }
+
   /// Writes the relative [location] / [rotation] / [scale] (authoring
   /// values, as the Details panel shows them) through live. During a drag
   /// the preview's built component moves with it and the document is not yet
@@ -36,7 +59,7 @@ mixin _BlueprintEditorComponents on _BlueprintEditorViewModelState {
   void updateComponentTransform(String id, {List<double>? location, List<double>? rotation, List<double>? scale}) {
     if (!canTransformComponent(id)) return;
     void apply() {
-      final c = getComponent(id)!;
+      final c = _ensureComponentInDocument(id);
       if (location != null) c.properties['location'] = List<double>.from(location);
       if (rotation != null) c.properties['rotation'] = List<double>.from(rotation);
       if (scale != null) c.properties['scale'] = List<double>.from(scale);
@@ -84,9 +107,12 @@ mixin _BlueprintEditorComponents on _BlueprintEditorViewModelState {
   // ---------------------------------------------------------------------------
 
   LuminaBlueprintComponent? get rootComponent =>
+      allComponents.where((c) => c.isSceneComponent && c.parentId == null).firstOrNull ??
       _document.components.where((c) => c.isSceneComponent && c.parentId == null).firstOrNull;
 
-  LuminaBlueprintComponent? getComponent(String id) => _document.components.where((c) => c.id == id).firstOrNull;
+  LuminaBlueprintComponent? getComponent(String id) =>
+      allComponents.where((c) => c.id == id).firstOrNull ??
+      _document.components.where((c) => c.id == id).firstOrNull;
 
   bool isSceneComponent(String id) => getComponent(id)?.isSceneComponent ?? false;
 
@@ -141,6 +167,7 @@ mixin _BlueprintEditorComponents on _BlueprintEditorViewModelState {
   }
 
   bool removeComponent(String id) {
+    if (isInheritedComponent(id)) return false;
     final node = getComponent(id);
     if (node == null) return false;
     mutate('Delete ${node.name}', () {
@@ -158,6 +185,7 @@ mixin _BlueprintEditorComponents on _BlueprintEditorViewModelState {
   }
 
   bool renameComponent(String id, String newName) {
+    if (isInheritedComponent(id)) return false;
     final trimmed = newName.trim();
     if (trimmed.isEmpty || !_identifier.hasMatch(trimmed)) return false;
     if (_document.components.any((c) => c.id != id && c.name.toLowerCase() == trimmed.toLowerCase())) return false;
@@ -169,6 +197,7 @@ mixin _BlueprintEditorComponents on _BlueprintEditorViewModelState {
   }
 
   bool canReparent(String childId, String? targetParentId) {
+    if (isInheritedComponent(childId)) return false;
     if (childId == targetParentId) return false;
     if (targetParentId == null) return true;
     if (!isSceneComponent(targetParentId)) return false;
@@ -230,7 +259,8 @@ mixin _BlueprintEditorComponents on _BlueprintEditorViewModelState {
     }
     if (jsonEncode(node.properties[propName]) == jsonEncode(resolvedValue)) return;
     mutate('Edit ${schema?.name ?? propName}', () {
-      getComponent(componentId)!.properties[propName] = resolvedValue;
+      final target = _ensureComponentInDocument(componentId);
+      target.properties[propName] = resolvedValue;
       return true;
     });
   }
@@ -248,8 +278,7 @@ mixin _BlueprintEditorComponents on _BlueprintEditorViewModelState {
   /// the document and the 3D Viewport follow it; [commitProperty] on release
   /// records the whole drag as one undo step.
   void previewProperty(String componentId, String propName, dynamic value) {
-    final node = getComponent(componentId);
-    if (node == null) return;
+    final node = _ensureComponentInDocument(componentId);
     final schema = BlueprintComponentRegistry.getSchema(node.type).where((p) => p.dartField == propName).firstOrNull;
     final key = '$componentId.$propName';
     if (_propertyEditId != key) {
@@ -279,7 +308,8 @@ mixin _BlueprintEditorComponents on _BlueprintEditorViewModelState {
       setProperty(componentId, propName, value);
       return;
     }
-    node.properties[propName] = _resolvePropertyValue(schema, value);
+    final target = _ensureComponentInDocument(componentId);
+    target.properties[propName] = _resolvePropertyValue(schema, value);
     _propertyEditId = null;
     endInteraction();
     notifyListeners();
@@ -292,7 +322,7 @@ mixin _BlueprintEditorComponents on _BlueprintEditorViewModelState {
     final node = getComponent(componentId);
     if (node == null || node.properties['animClass'] == path) return false;
     return mutate(path.isEmpty ? 'Clear Anim Class' : 'Set Anim Class', () {
-      final c = getComponent(componentId)!;
+      final c = _ensureComponentInDocument(componentId);
       c.properties['animClass'] = path;
       if (path.isNotEmpty) c.properties['animMode'] = 'Use Animation Blueprint';
       return true;
@@ -317,7 +347,7 @@ mixin _BlueprintEditorComponents on _BlueprintEditorViewModelState {
     };
     if (collision.isEmpty) return false;
     return mutate('Edit Collision of ${node.name}', () {
-      final c = getComponent(id)!;
+      final c = _ensureComponentInDocument(id);
       final before = jsonEncode(c.properties);
       c.properties.addAll(collision);
       return jsonEncode(c.properties) != before;
@@ -388,7 +418,7 @@ mixin _BlueprintEditorComponents on _BlueprintEditorViewModelState {
       physics.remove('meshPhysics');
     }
     return mutate('Edit Physics of ${node.name}', () {
-      final c = getComponent(id)!;
+      final c = _ensureComponentInDocument(id);
       final before = jsonEncode(c.properties);
       c.properties['physics'] = physics;
       return jsonEncode(c.properties) != before;
@@ -452,7 +482,7 @@ mixin _BlueprintEditorComponents on _BlueprintEditorViewModelState {
         for (final v in h.runtimePoints) [v.x, v.y, v.z],
     ];
     return mutate(meshPath.isEmpty ? 'Clear Convex Hull' : 'Set Convex Hull', () {
-      final c = getComponent(id)!;
+      final c = _ensureComponentInDocument(id);
       final before = jsonEncode(c.properties);
       c.properties['hullAsset'] = meshPath;
       if (points.length >= 4) {

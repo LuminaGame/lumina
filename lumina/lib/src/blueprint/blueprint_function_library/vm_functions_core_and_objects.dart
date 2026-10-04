@@ -305,7 +305,11 @@ final Map<String, LuminaBlueprintFunction> _objectFunctions = <String, LuminaBlu
     LuminaBlueprintFunctionLibrary.setElementPadding(c.self, i['target'], LuminaBlueprintFunctionLibrary._d(i['left'], 0.0), LuminaBlueprintFunctionLibrary._d(i['top'], 0.0), LuminaBlueprintFunctionLibrary._d(i['right'], 0.0), LuminaBlueprintFunctionLibrary._d(i['bottom'], 0.0));
     return const {};
   },
-  'get_component': (c, i) => LuminaBlueprintFunctionLibrary._ret(LuminaBlueprintFunctionLibrary.getComponent(c.self, i['component'] as String? ?? '')),
+  'get_component': (c, i) {
+    final actor = i.containsKey('target') ? i['target'] as LuminaActor? : c.self;
+    if (actor == null) return LuminaBlueprintFunctionLibrary._ret(null);
+    return LuminaBlueprintFunctionLibrary._ret(LuminaBlueprintFunctionLibrary.getComponent(actor, i['component'] as String? ?? ''));
+  },
   'get_component_by_class': (c, i) => LuminaBlueprintFunctionLibrary._ret(LuminaBlueprintFunctionLibrary.getComponentByClass(c.self, i['class'] as String? ?? '')),
   'add_component': (c, i) => LuminaBlueprintFunctionLibrary._ret(LuminaBlueprintFunctionLibrary.addComponent(c.self, i['class'] as String? ?? '', i['name'] as String? ?? '')),
   'set_relative_location': (c, i) {

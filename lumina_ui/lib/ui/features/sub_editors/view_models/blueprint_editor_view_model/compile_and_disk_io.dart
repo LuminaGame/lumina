@@ -66,13 +66,19 @@ mixin _BlueprintEditorCompileAndDiskIo on _BlueprintEditorViewModelState {
       ));
     }
 
+    final tCtx = _contextFor();
     final result = service.generateBlueprintClass(fileBasename, docJson,
-        inputActions: _inputActions, animBlueprints: animRefs, blueprintClasses: classRefs, assetPath: rel);
+        inputActions: _inputActions,
+        animBlueprints: animRefs,
+        blueprintClasses: classRefs,
+        assetPath: rel,
+        typeContext: tCtx);
     issues.addAll(result.issues);
     if (projectDir != null) _explainProjectFunctionErrors(issues, projectDir);
     var written = false;
     if (result.ok && !issues.any((d) => d.isError) && projectDir != null) {
-      written = await service.compileAndWriteActor(projectDir, fileBasename, docJson, assetPath: rel);
+      written = await service.compileAndWriteActor(projectDir, fileBasename, docJson,
+          assetPath: rel, typeContext: tCtx);
       if (!written) {
         issues.add(const LuminaBlueprintDiagnostic(
             LuminaBlueprintSeverity.error, 'The generated class could not be written to lib/actors/.'));

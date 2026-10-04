@@ -1,6 +1,7 @@
 import 'package:vector_math/vector_math_64.dart';
 
 import '../../../src/blueprint/blueprint.dart';
+import '../../../src/blueprint/vm/blueprint_vm.dart';
 import '../../../src/input/input_action.dart';
 import '../dart_identifiers.dart';
 
@@ -79,21 +80,41 @@ class BlueprintDartGenerator {
     Map<String, BlueprintAnimClassRef> animBlueprints = const {},
     Map<String, BlueprintClassRef> blueprintClasses = const {},
     Map<String, String> functionImports = const {},
+    Map<String, String> actorParents = const {},
+    Map<String, List<LuminaBlueprintCustomEvent>> customEventOwners = const {},
+    Map<String, List<LuminaBlueprintVariable>> variableOwners = const {},
+    Map<String, List<LuminaBlueprintComponentRef>> componentOwners = const {},
+    LuminaBlueprintTypeContext? typeContext,
   }) {
     // Comment boxes and reroutes are the editor's.
     doc = LuminaBlueprintEditorNodes.forEngine(doc);
-    final issues = validateBlueprint(doc, inputActions: inputActions, className: _blueprintName(className, assetPath));
+    final bpName = _blueprintName(className, assetPath);
+    final ctx = typeContext ??
+        LuminaBlueprintTypeContext.forDocument(
+          doc,
+          inputActions: inputActions,
+          className: bpName,
+          actorParents: actorParents,
+          customEventOwners: customEventOwners,
+          variableOwners: variableOwners,
+          componentOwners: componentOwners,
+        );
+    final issues = validateBlueprint(doc, inputActions: inputActions, className: bpName, typeContext: ctx);
     if (issues.any((d) => d.isError)) return BlueprintGenerationResult(null, issues);
     if (doc.parentClass == 'LuminaGameMode') {
       final code = _gameMode(doc, className, assetPath, blueprintClasses, issues, _userRegions(existingContent));
       return BlueprintGenerationResult(code, issues);
     }
-    if (!_parents.containsKey(doc.parentClass)) {
+    final parentRef = blueprintClasses[doc.parentClass];
+    final isBlueprintParent = parentRef != null ||
+        (!_parents.containsKey(doc.parentClass) && !LuminaBlueprintClass.isEngineParent(doc.parentClass));
+    if (!_parents.containsKey(doc.parentClass) && !isBlueprintParent) {
       issues.add(LuminaBlueprintDiagnostic(LuminaBlueprintSeverity.error,
           'Parent class ${doc.parentClass} cannot be generated yet (Actor, Pawn and Character can).'));
       return BlueprintGenerationResult(null, issues);
     }
-    final writer = _ClassWriter(doc, className, assetPath, inputActions, issues, animBlueprints, functionImports);
+    final writer = _ClassWriter(doc, className, assetPath, inputActions, issues, animBlueprints, functionImports,
+        blueprintClasses: blueprintClasses, typeContext: ctx);
     final code = writer.write(_userRegions(existingContent));
     return BlueprintGenerationResult(writer.failed ? null : code, issues);
   }

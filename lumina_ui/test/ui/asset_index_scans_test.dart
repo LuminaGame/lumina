@@ -72,12 +72,12 @@ void main() {
       final base = f.uri.pathSegments.last.replaceAll('.lmas', '');
       if (a.type == AssetType.widget || a.metadata['parent_class'] == kWidgetBlueprintParentClass) widgetNames.add(base);
       final json = payloadJson(a);
-      if (f.path.contains('/contents/blueprints/') && a.type == AssetType.actor) {
+      if (a.type == AssetType.actor) {
         final parent = (json?['parentClass'] as String?) ?? a.metadata['parent_class'];
         if (parent != null && parent.isNotEmpty && parent != kWidgetBlueprintParentClass) parents[base] = parent;
       }
-      if (json != null && luminaBlueprintDocumentKind(json) == 'enum') enums.add(f.path);
-      if (json != null && luminaBlueprintDocumentKind(json) == 'interface') interfaces.add(f.path);
+      if (json != null && luminaBlueprintDocumentKind(json) == 'enum') enums.add(f.path.replaceAll(r'\', '/'));
+      if (json != null && luminaBlueprintDocumentKind(json) == 'interface') interfaces.add(f.path.replaceAll(r'\', '/'));
       if (a.type == AssetType.widget && json != null) {
         try {
           UmgDocument.fromJson(json);
@@ -92,8 +92,10 @@ void main() {
     expect(classes.firstWhere((c) => c.name == 'WBP_Designer').toJson(),
         WidgetClassCatalog.readWidgetClass(File('$dir/contents/widgets/WBP_Designer.lmas'))!.toJson());
     expect(WidgetClassCatalog.scanActorParents(dir), parents);
-    expect(BlueprintAssetCatalog.scanEnums(dir).map((e) => e.path).toSet(), enums.toSet());
-    expect(BlueprintAssetCatalog.scanInterfaces(dir).map((e) => e.path).toSet(), interfaces.toSet());
+    expect(BlueprintAssetCatalog.scanEnums(dir).map((e) => e.path.replaceAll(r'\', '/')).toSet(),
+        enums.map((e) => e.replaceAll(r'\', '/')).toSet());
+    expect(BlueprintAssetCatalog.scanInterfaces(dir).map((e) => e.path.replaceAll(r'\', '/')).toSet(),
+        interfaces.map((i) => i.replaceAll(r'\', '/')).toSet());
     expect(UmgWidgetCodegen.widgetDocuments(dir).keys.toSet(), {for (final n in widgetDocs) UmgWidgetCodegen.fileBaseName(n)});
     final paths = BlueprintAssetCatalog.scanAssetPaths(dir);
     expect(paths[BlueprintAssetKind.montage], isNotEmpty);

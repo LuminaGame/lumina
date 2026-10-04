@@ -136,7 +136,16 @@ class _Frame {
           var value = _input(node, 'value', pins);
           // Arrays are values: a Set copies.
           if (value is List) value = List<Object?>.from(value);
-          host.hostVariables[name] = value;
+          final hasTarget = pins.inputs.any((p) => p.id == 'target');
+          if (hasTarget) {
+            final target = _input(node, 'target', pins);
+            values['target'] = target;
+            if (target is LuminaBlueprintInstance) {
+              target.variables[name] = value;
+            }
+          } else {
+            host.hostVariables[name] = value;
+          }
           _impureOutputs[node.id] = {'value': value};
           values['value'] = value;
           _emit(node, values);
@@ -541,7 +550,19 @@ class _Frame {
     final values = <String, Object?>{};
     final function = LuminaBlueprintFunctionLibrary.functions[node.registryId];
     if (node.registryId == LuminaBlueprintNodeLibrary.variableGet) {
-      outputs = {'value': host.hostVariables[node.literals['variable'] as String]};
+      final name = node.literals['variable'] as String;
+      final hasTarget = pins.inputs.any((p) => p.id == 'target');
+      if (hasTarget) {
+        final target = _input(node, 'target', pins);
+        values['target'] = target;
+        if (target is LuminaBlueprintInstance) {
+          outputs = {'value': target.variables[name]};
+        } else {
+          outputs = {'value': null};
+        }
+      } else {
+        outputs = {'value': host.hostVariables[name]};
+      }
     } else if (node.registryId == LuminaBlueprintNodeLibrary.localVariableGet) {
       outputs = {'value': host.hostLocals[node.literals['variable'] as String]};
     } else if (function == null) {

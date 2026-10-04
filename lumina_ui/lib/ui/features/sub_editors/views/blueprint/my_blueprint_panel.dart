@@ -71,6 +71,7 @@ class BlueprintMyBlueprintSections {
 /// its nodes; deleting asks first and removes its nodes.
 class BlueprintMyBlueprintPanel extends StatefulWidget {
   final List<LuminaBlueprintVariable> variables;
+  final List<LuminaBlueprintVariable> inheritedVariables;
 
   /// The document's type context: widget classes, components and actor
   /// classes the type picker and the Components section list.
@@ -92,6 +93,7 @@ class BlueprintMyBlueprintPanel extends StatefulWidget {
   const BlueprintMyBlueprintPanel({
     super.key,
     required this.variables,
+    this.inheritedVariables = const [],
     this.context = const LuminaBlueprintTypeContext(),
     required this.selected,
     required this.onSelect,
@@ -564,6 +566,19 @@ class BlueprintMyBlueprintPanelState extends State<BlueprintMyBlueprintPanel> {
                   style: TextStyle(fontSize: 9, color: EditorColors.mutedForeground)),
             ),
           for (final v in widget.variables) _row(v),
+          if (widget.inheritedVariables.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            const Row(
+              children: [
+                Icon(LucideIcons.variable, size: 12, color: EditorColors.mutedForeground),
+                SizedBox(width: 6),
+                Text('INHERITED VARIABLES',
+                    style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: EditorColors.mutedForeground)),
+              ],
+            ),
+            const SizedBox(height: 4),
+            for (final v in widget.inheritedVariables) _inheritedVariableRow(v),
+          ],
           const SizedBox(height: 6),
           const Text('Drag a variable onto the graph: Get or Set (Ctrl: Get, Alt: Set).',
               style: TextStyle(fontSize: 8, color: EditorColors.mutedForeground)),
@@ -873,6 +888,69 @@ class BlueprintMyBlueprintPanelState extends State<BlueprintMyBlueprintPanel> {
                 ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _inheritedVariableRow(LuminaBlueprintVariable v) {
+    final color = BlueprintPinStyle.color(v.type);
+    final selected = widget.selected == v.name;
+    final chip = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(width: 10, height: 4, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2))),
+        const SizedBox(width: 6),
+        Text(v.name, style: const TextStyle(fontSize: 10, color: EditorColors.foreground, fontWeight: FontWeight.w600)),
+        const SizedBox(width: 6),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+          decoration: BoxDecoration(
+            color: EditorColors.muted.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(3),
+            border: Border.all(color: EditorColors.border, width: 0.5),
+          ),
+          child: const Text('Inherited', style: TextStyle(fontSize: 7.5, color: EditorColors.mutedForeground)),
+        ),
+      ],
+    );
+    return Draggable<BlueprintVariableDrag>(
+      key: ValueKey('var_inherited_row_${v.name}'),
+      data: BlueprintVariableDrag(v.name),
+      dragAnchorStrategy: pointerDragAnchorStrategy,
+      feedback: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: EditorColors.card,
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: color),
+        ),
+        child: DefaultTextStyle(style: const TextStyle(decoration: TextDecoration.none), child: chip),
+      ),
+      child: Clickable(
+        onPressed: () => widget.onSelect(v.name),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+          margin: const EdgeInsets.only(bottom: 2),
+          decoration: BoxDecoration(
+            color: selected ? EditorColors.primary.withValues(alpha: 0.15) : Colors.transparent,
+            borderRadius: BorderRadius.circular(3),
+          ),
+          child: Row(
+            children: [
+              Expanded(child: chip),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: color.withValues(alpha: 0.7)),
+                ),
+                child: Text(BlueprintPinStyle.variableLabel(v.typeName),
+                    style: TextStyle(fontSize: 8.5, color: color, fontWeight: FontWeight.w600)),
+              ),
+            ],
           ),
         ),
       ),

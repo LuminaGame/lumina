@@ -20,6 +20,9 @@ class WidgetClassCatalog extends ChangeNotifier {
   final String projectDir;
   List<LuminaBlueprintWidgetClass> _widgetClasses = const [];
   Map<String, String> _actorParents = const {};
+  Map<String, List<LuminaBlueprintVariable>> _actorVariables = const {};
+  Map<String, List<LuminaBlueprintComponentRef>> _actorComponents = const {};
+  Map<String, List<LuminaBlueprintCustomEvent>> _actorEvents = const {};
   StreamSubscription<void>? _subscription;
 
   WidgetClassCatalog(this.projectDir, {bool watch = true}) {
@@ -33,6 +36,15 @@ class WidgetClassCatalog extends ChangeNotifier {
   /// Project Blueprint class → its parent class (`BP_Door` → `LuminaActor`).
   Map<String, String> get actorParents => _actorParents;
 
+  /// Member variables of each project Actor Blueprint by class name.
+  Map<String, List<LuminaBlueprintVariable>> get actorVariables => _actorVariables;
+
+  /// Components of each project Actor Blueprint by class name.
+  Map<String, List<LuminaBlueprintComponentRef>> get actorComponents => _actorComponents;
+
+  /// Custom events of each project Actor Blueprint by class name.
+  Map<String, List<LuminaBlueprintCustomEvent>> get actorEvents => _actorEvents;
+
   LuminaBlueprintWidgetClass? widgetClass(String? name) {
     for (final w in _widgetClasses) {
       if (w.name == name) return w;
@@ -43,12 +55,15 @@ class WidgetClassCatalog extends ChangeNotifier {
   /// Re-reads the project; listeners are told when anything changed.
   void refresh() {
     final widgets = scanWidgetClasses(projectDir);
-    final actors = scanActorParents(projectDir);
+    final actors = scanActorDefinitions(projectDir);
     final changed = jsonEncode(widgets.map((w) => w.toJson()).toList()) !=
             jsonEncode(_widgetClasses.map((w) => w.toJson()).toList()) ||
-        !mapEquals(actors, _actorParents);
+        !mapEquals(actors.parents, _actorParents);
     _widgetClasses = List.unmodifiable(widgets);
-    _actorParents = Map.unmodifiable(actors);
+    _actorParents = Map.unmodifiable(actors.parents);
+    _actorVariables = Map.unmodifiable(actors.variables);
+    _actorComponents = Map.unmodifiable(actors.components);
+    _actorEvents = Map.unmodifiable(actors.events);
     // The validator and the Dart generator resolve `Get <Element>` through
     // the registry (lumina's default type context), so the editor keeps it
     // current with the files on disk.
@@ -123,20 +138,107 @@ class WidgetClassCatalog extends ChangeNotifier {
         ],
       );
 
-  /// Every actor Blueprint under `contents/blueprints/` → its parent class,
-  /// from the asset index's summaries (the Blueprint document's
-  /// `parentClass`, else `metadata.parent_class`).
-  static Map<String, String> scanActorParents(String projectDir) {
-    final dir = Directory('$projectDir/contents/blueprints');
-    if (!dir.existsSync()) return const {};
-    final index = LuminaAssetIndex.open(projectDir)..refreshSync();
-    final out = <String, String>{};
-    for (final e in index.entries) {
-      if (!e.path.startsWith('contents/blueprints/') || e.type != AssetType.actor) continue;
-      final parent = e.summary.parentClass;
-      if (parent == null || parent.isEmpty || parent == kWidgetBlueprintParentClass) continue;
-      out[e.baseName] = parent;
+  /// Every actor Blueprint under `contents/` → its definitions: parent class,
+  /// member variables, components, and custom events, with inheritance resolved.
+  static ({
+    Map<String, String> parents,
+    Map<String, List<LuminaBlueprintVariable>> variables,
+    Map<String, List<LuminaBlueprintComponentRef>> components,
+    Map<String, List<LuminaBlueprintCustomEvent>> events,
+  }) scanActorDefinitions(String projectDir) {
+    final contents = Directory('$projectDir/contents');
+    if (!contents.existsSync()) {
+      return (
+        parents: const {},
+        variables: const {},
+        components: const {},
+        events: const {},
+      );
     }
-    return out;
+    final index = LuminaAssetIndex.open(projectDir)..refreshSync();
+    final parents = <String, String>{};
+    final rawVariables = <String, List<LuminaBlueprintVariable>>{};
+    final rawComponents = <String, List<LuminaBlueprintComponentRef>>{};
+    final events = <String, List<LuminaBlueprintCustomEvent>>{};
+
+    void processFile(File file, String baseName) {
+      if (rawVariables.containsKey(baseName)) return;
+      try {
+        final asset = LuminaAsset.fromBytes(file.readAsBytesSync());
+        if (asset.type != AssetType.actor) return;
+        final payload = asset.rawPayload;
+        if (payload == null || payload.isEmpty) return;
+        final json = jsonDecode(utf8.decode(payload));
+        if (json is! Map) return;
+        final map = Map<String, dynamic>.from(json);
+        if (luminaBlueprintDocumentKind(map) != 'class') return;
+        final doc = LuminaBlueprintDocument.fromJson(map);
+        final parent = doc.parentClass;
+        if (parent.isNotEmpty && parent != kWidgetBlueprintParentClass) {
+          parents[baseName] = parent;
+        }
+        rawVariables[baseName] = doc.variables;
+        rawComponents[baseName] = LuminaBlueprintComponentRef.fromComponents(doc.components);
+        events[baseName] = LuminaBlueprintNodeLibrary.customEventsOf(doc.eventGraph);
+      } catch (_) {}
+    }
+
+    for (final e in index.entries) {
+      if (e.type != AssetType.actor) continue;
+      processFile(e.file, e.baseName);
+    }
+
+    // Also scan contents directory directly to find any actor .lmas files not yet indexed or in subfolders
+    try {
+      for (final entity in contents.listSync(recursive: true, followLinks: false)) {
+        if (entity is File && entity.path.endsWith('.lmas')) {
+          final fileName = entity.uri.pathSegments.last;
+          final baseName = fileName.replaceAll('.lmas', '');
+          if (!rawVariables.containsKey(baseName)) {
+            processFile(entity, baseName);
+          }
+        }
+      }
+    } catch (_) {}
+
+    // Resolve inheritance for each actor
+    final variables = <String, List<LuminaBlueprintVariable>>{};
+    final components = <String, List<LuminaBlueprintComponentRef>>{};
+    for (final name in rawVariables.keys) {
+      final vars = <LuminaBlueprintVariable>[];
+      final comps = <LuminaBlueprintComponentRef>[];
+      final visited = <String>{name};
+      var currentParent = parents[name];
+      while (currentParent != null && !LuminaBlueprintClass.isEngineParent(currentParent) && visited.add(currentParent)) {
+        final parentVars = rawVariables[currentParent];
+        if (parentVars != null) vars.insertAll(0, parentVars);
+        final parentComps = rawComponents[currentParent];
+        if (parentComps != null) comps.insertAll(0, parentComps);
+        currentParent = parents[currentParent];
+      }
+      final ownVars = rawVariables[name] ?? const [];
+      final ownVarNames = {for (final v in ownVars) v.name};
+      variables[name] = [
+        for (final v in vars) if (!ownVarNames.contains(v.name)) v,
+        ...ownVars,
+      ];
+      final ownComps = rawComponents[name] ?? const [];
+      final ownCompNames = {for (final c in ownComps) c.name};
+      components[name] = [
+        for (final c in comps) if (!ownCompNames.contains(c.name)) c,
+        ...ownComps,
+      ];
+    }
+
+    return (
+      parents: parents,
+      variables: variables,
+      components: components,
+      events: events,
+    );
   }
+
+  /// Every actor Blueprint under `contents/` → its parent class.
+  static Map<String, String> scanActorParents(String projectDir) =>
+      scanActorDefinitions(projectDir).parents;
 }
