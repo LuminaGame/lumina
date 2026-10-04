@@ -144,6 +144,56 @@ void main() {
     expect((unchanged['input'] as Map)['actions'], hasLength(1));
   });
 
+  testWidgets('Input category key binding button opens KeyBindingDialog and assigns Escape', (tester) async {
+    final vm = makeVm();
+    await tester.runAsync(vm.load);
+    vm.addAction('IA_Escape');
+    vm.addMappingContext('Gameplay');
+    vm.addMapping(0, const ProjectInputMapping(action: 'IA_Escape', keyId: 0, keyLabel: ''));
+
+    await tester.pumpWidget(ShadcnApp(
+      theme: luminaEditorTheme(),
+      home: Scaffold(
+        child: SizedBox(
+          width: 1200,
+          height: 800,
+          child: ProjectSettingsSubEditor(assetName: 'Project Settings', viewModel: vm),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    // Navigate to Input category
+    await tester.tap(find.byKey(const ValueKey('project_settings_nav_${ProjectSettingsCategory.input}')));
+    await tester.pumpAndSettle();
+
+    // Key button should show 'Set key'
+    final keyButton = find.byKey(const ValueKey('project_settings_key_capture_0_0'));
+    expect(keyButton, findsOneWidget);
+    expect(find.text('Set key'), findsOneWidget);
+
+    // Click key button to open dialog
+    await tester.tap(keyButton);
+    await tester.pumpAndSettle();
+
+    // Dialog is visible
+    expect(find.byKey(const ValueKey('key_binding_dialog')), findsOneWidget);
+
+    // Press Escape
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+
+    // Click "Assign Key"
+    await tester.tap(find.byKey(const ValueKey('key_binding_assign')));
+    await tester.pumpAndSettle();
+
+    // Dialog closed, mapping updated with Escape
+    expect(find.byKey(const ValueKey('key_binding_dialog')), findsNothing);
+    expect(vm.project.input.mappingContexts[0].mappings[0].keyId, LogicalKeyboardKey.escape.keyId);
+    expect(vm.project.input.mappingContexts[0].mappings[0].keyLabel, 'Escape');
+    expect(find.text('Escape'), findsOneWidget);
+  });
+
   test('Maps & Modes picker lists only LEVEL assets; missing map is a warning, not an error', () async {
     final vm = makeVm();
     await vm.load();

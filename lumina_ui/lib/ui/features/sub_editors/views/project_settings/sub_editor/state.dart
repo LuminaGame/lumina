@@ -8,9 +8,6 @@ abstract class _ProjectSettingsSubEditorStateBase extends State<ProjectSettingsS
   final Map<String, TextEditingController> _controllers = {};
   final Map<String, FocusNode> _focus = {};
   final TextEditingController _searchController = TextEditingController();
-  int? _capturingContext;
-  int? _capturingMapping;
-  final FocusNode _captureFocus = FocusNode(debugLabel: 'project_settings_key_capture');
 
   final ScrollController _packagingScroll = ScrollController();
 

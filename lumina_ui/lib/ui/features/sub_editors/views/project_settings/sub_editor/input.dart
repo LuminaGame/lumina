@@ -127,7 +127,6 @@ mixin _ProjectSettingsInput on _ProjectSettingsSubEditorStateBase {
   }
 
   Widget _buildMappingRow(int c, int m, ProjectInputMapping map, List<String> actionNames) {
-    final capturing = _capturingContext == c && _capturingMapping == m;
     final action = _vm.project.input.actions.cast<ProjectInputAction?>().firstWhere((a) => a!.name == map.action, orElse: () => null);
     final isAxis = action != null && action.valueType != ProjectInputValueType.digital;
     return Padding(
@@ -137,38 +136,26 @@ mixin _ProjectSettingsInput on _ProjectSettingsSubEditorStateBase {
         const SizedBox(width: 6),
         Expanded(
           flex: 2,
-          child: Focus(
+          child: OutlineButton(
             key: ValueKey('project_settings_key_capture_${c}_$m'),
-            focusNode: capturing ? _captureFocus : null,
-            onKeyEvent: (node, event) {
-              if (!capturing || event is! KeyDownEvent) return KeyEventResult.ignored;
-              final key = event.logicalKey;
-              if (key == LogicalKeyboardKey.escape) {
-                setState(() {
-                  _capturingContext = null;
-                  _capturingMapping = null;
-                });
-                return KeyEventResult.handled;
-              }
-              _vm.updateMapping(c, m, keyId: key.keyId, keyLabel: key.keyLabel.isEmpty ? key.debugName ?? 'Key ${key.keyId}' : key.keyLabel);
-              setState(() {
-                _capturingContext = null;
-                _capturingMapping = null;
-              });
-              return KeyEventResult.handled;
+            onPressed: () {
+              showOverlay(
+                context,
+                const DialogConfiguration(),
+                builder: (dialogContext) => KeyBindingDialog(
+                  initialKeyId: map.keyId == 0 ? null : map.keyId,
+                  initialKeyLabel: map.keyLabel,
+                  onKeySelected: (keyId, keyLabel) {
+                    _vm.updateMapping(c, m, keyId: keyId, keyLabel: keyLabel);
+                    closeOverlay(dialogContext);
+                  },
+                  onClose: () => closeOverlay(dialogContext),
+                ),
+              );
             },
-            child: (capturing ? PrimaryButton.new : OutlineButton.new)(
-              onPressed: () {
-                setState(() {
-                  _capturingContext = c;
-                  _capturingMapping = m;
-                });
-                WidgetsBinding.instance.addPostFrameCallback((_) => _captureFocus.requestFocus());
-              },
-              child: Text(
-                capturing ? 'Press a key…' : (map.keyLabel.isEmpty ? 'Set key' : map.keyLabel),
-                style: const TextStyle(fontSize: 10),
-              ),
+            child: Text(
+              map.keyLabel.isEmpty ? 'Set key' : map.keyLabel,
+              style: const TextStyle(fontSize: 10),
             ),
           ),
         ),

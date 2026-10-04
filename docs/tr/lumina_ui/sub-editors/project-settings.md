@@ -278,7 +278,39 @@ The loading screen's layout, drawn in Flutter with the page's values (`web/index
 | `style` | `final ResolvedWebLoadingStyle style` |  |
 | `logo` | `final Widget? logo` |  |
 | `fraction` | `final double fraction` |  |
-| `labelFor` | `static String labelFor(double fraction)` | The label `loading.js` shows around [fraction] (its phases). |
+| `labelFor` | `static String labelFor(double fraction)` | `loading.js`'in [fraction] civarında gösterdiği aşama etiketi. |
+
+## `lib/ui/features/sub_editors/views/project_settings/key_binding_dialog.dart`
+
+### `class KeyBindingDialog`
+
+Kullanıcıların herhangi bir tuşa basarak (Escape, Space, Enter vb. dahil) veya kategorize edilmiş, aranabilir bir Combobox / hızlı seçim listesinden seçerek giriş tuşu atamasını sağlayan modal diyalog penceresi.
+
+**Yapıcı Metotlar (Constructors):**
+
+- `const KeyBindingDialog({super.key, this.initialKeyId, this.initialKeyLabel = '', required this.onKeySelected, required this.onClose})`
+
+**Üyeler ve Metotlar:**
+
+| Üye / Metot | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `initialKeyId` | `final int? initialKeyId` | Varsa önceden seçilmiş tuş kimliği (keyId). |
+| `initialKeyLabel` | `final String initialKeyLabel` | Önceden seçilmiş okunabilir tuş etiketi. |
+| `onKeySelected` | `final void Function(int keyId, String keyLabel) onKeySelected` | Kullanıcı tuş atamasını onayladığında çağrılan geri çağırma fonksiyonu. |
+| `onClose` | `final VoidCallback onClose` | Kullanıcı diyaloğu kapattığında veya iptal ettiğinde çağrılır. |
+
+### `class KeyOption`
+
+Diyalog içerisindeki seçilebilir her bir tuş veya eksen seçeneğini temsil eden veri sınıfı.
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `keyId` | `final int keyId` | Tuş kimliği (Flutter tuş kodu veya fare/oyun kolu negatif sabiti). |
+| `id` | `final String id` | Lumina tuş tanımlayıcısı (örn. `KeyEscape`, `MouseLeft`). |
+| `label` | `final String label` | Kullanıcıya gösterilen etiket (örn. `Escape`, `Space`). |
+| `category` | `final String category` | Tuş kategorisi (örn. `Navigation & Controls`, `Mouse`). |
+| `icon` | `final IconData icon` | Tuş türünü temsil eden ikon. |
+| `searchTerms` | `final List<String> searchTerms` | Hızlı filtreleme için arama terimleri ve takma adlar. |
 
 ---
 

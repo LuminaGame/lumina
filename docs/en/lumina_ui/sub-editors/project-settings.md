@@ -280,6 +280,38 @@ The loading screen's layout, drawn in Flutter with the page's values (`web/index
 | `fraction` | `final double fraction` |  |
 | `labelFor` | `static String labelFor(double fraction)` | The label `loading.js` shows around [fraction] (its phases). |
 
+## `lib/ui/features/sub_editors/views/project_settings/key_binding_dialog.dart`
+
+### `class KeyBindingDialog`
+
+Modal dialog allowing users to bind an input key either by pressing any key (including Escape, Space, Enter, etc.) or by selecting from a categorized search Combobox / quick-pick list.
+
+**Constructors:**
+
+- `const KeyBindingDialog({super.key, this.initialKeyId, this.initialKeyLabel = '', required this.onKeySelected, required this.onClose})`
+
+**Members & Methods:**
+
+| Member / Method | Signature | Description |
+| :--- | :--- | :--- |
+| `initialKeyId` | `final int? initialKeyId` | Pre-selected key identifier, if any. |
+| `initialKeyLabel` | `final String initialKeyLabel` | Pre-selected human-readable key label. |
+| `onKeySelected` | `final void Function(int keyId, String keyLabel) onKeySelected` | Callback invoked when the user confirms key assignment. |
+| `onClose` | `final VoidCallback onClose` | Callback invoked when the user dismisses the dialog. |
+
+### `class KeyOption`
+
+A single selectable key or axis option in the dialog.
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `keyId` | `final int keyId` | Key ID (Flutter key code or negative sentinel for mouse/gamepad). |
+| `id` | `final String id` | Lumina key ID (e.g. `KeyEscape`, `MouseLeft`). |
+| `label` | `final String label` | Human-readable label (e.g. `Escape`, `Space`). |
+| `category` | `final String category` | Categorized group name (e.g. `Navigation & Controls`, `Mouse`). |
+| `icon` | `final IconData icon` | Icon associated with the key type. |
+| `searchTerms` | `final List<String> searchTerms` | Search keywords and aliases for rapid filtering. |
+
 ---
 
 [Previous: Physics asset editor](physics-asset.md) | [Up: Sub-editors](index.md) | [Next: Sequencer](sequencer.md)

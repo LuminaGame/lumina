@@ -1,5 +1,4 @@
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/services.dart' show KeyDownEvent, LogicalKeyboardKey;
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:lumina/lumina.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart' show ProjectSettingsSection;
@@ -11,6 +10,7 @@ import '../services/build_pipeline_service.dart';
 import '../services/project_icon_rasterizer.dart';
 import '../sub_editor_binding.dart';
 import '../view_models/project_settings_view_model.dart';
+import 'project_settings/key_binding_dialog.dart';
 import 'project_settings/web_loading_style_section.dart';
 
 part 'project_settings/sub_editor/state.dart';
@@ -106,7 +106,6 @@ class _ProjectSettingsSubEditorState extends _ProjectSettingsSubEditorStateBase
       f.dispose();
     }
     _searchController.dispose();
-    _captureFocus.dispose();
     _packagingScroll.dispose();
     if (_ownsVm) _vm.dispose();
     super.dispose();
