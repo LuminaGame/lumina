@@ -223,52 +223,16 @@ mixin _AnimationKeyframeDetails on _AnimationSubEditorStateBase {
         const SizedBox(height: 12),
 
         // Bone Transform Sections
-        if (details.location != null) ...[
-          _buildTransformSectionHeader('LOCATION / TRANSLATION', LucideIcons.move),
-          const SizedBox(height: 6),
-          _buildVector3Row(details.location![0], details.location![1], details.location![2]),
-          const SizedBox(height: 12),
-        ],
-
-        if (details.rotationEuler != null) ...[
-          _buildTransformSectionHeader('ROTATION (EULER DEGREES)', LucideIcons.rotate3d),
-          const SizedBox(height: 6),
-          _buildVector3Row(
-            details.rotationEuler![0],
-            details.rotationEuler![1],
-            details.rotationEuler![2],
-            labels: ['P', 'Y', 'R'],
-            unit: '°',
+        if (details.location != null || details.rotationEuler != null || details.scale != null) ...[
+          LuminaTransformWidget(
+            location: details.location ?? const [0.0, 0.0, 0.0],
+            rotation: details.rotationEuler ?? const [0.0, 0.0, 0.0],
+            scale: details.scale ?? const [1.0, 1.0, 1.0],
+            rotationQuat: details.rotationQuat,
+            showHeaders: true,
+            useEulerLabels: true,
+            showRotationUnit: true,
           ),
-          if (details.rotationQuat != null) ...[
-            const SizedBox(height: 6),
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: EditorColors.card,
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Row(
-                children: [
-                  const Text('Quaternion: ', style: TextStyle(fontSize: 9, color: EditorColors.mutedForeground)),
-                  Expanded(
-                    child: Text(
-                      '[${details.rotationQuat!.map((v) => v.toStringAsFixed(3)).join(', ')}]',
-                      style: const TextStyle(fontSize: 9, fontFamily: EditorTypography.monoFamily, color: EditorColors.foreground),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-          const SizedBox(height: 12),
-        ],
-
-        if (details.scale != null) ...[
-          _buildTransformSectionHeader('SCALE', LucideIcons.maximize2),
-          const SizedBox(height: 6),
-          _buildVector3Row(details.scale![0], details.scale![1], details.scale![2]),
           const SizedBox(height: 12),
         ],
 
@@ -382,59 +346,6 @@ mixin _AnimationKeyframeDetails on _AnimationSubEditorStateBase {
           style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: EditorColors.mutedForeground, letterSpacing: 0.5),
         ),
       ],
-    );
-  }
-
-  Widget _buildVector3Row(
-    double x,
-    double y,
-    double z, {
-    List<String> labels = const ['X', 'Y', 'Z'],
-    String unit = '',
-  }) {
-    return Row(
-      children: [
-        Expanded(child: _buildCoordinateBox(labels[0], '${x.toStringAsFixed(3)}$unit', EditorColors.destructive)),
-        const SizedBox(width: 4),
-        Expanded(child: _buildCoordinateBox(labels[1], '${y.toStringAsFixed(3)}$unit', EditorColors.chart3)),
-        const SizedBox(width: 4),
-        Expanded(child: _buildCoordinateBox(labels[2], '${z.toStringAsFixed(3)}$unit', EditorColors.accent)),
-      ],
-    );
-  }
-
-  Widget _buildCoordinateBox(String label, String val, Color accentColor) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-      decoration: BoxDecoration(
-        color: EditorColors.card,
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: EditorColors.border),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-            decoration: BoxDecoration(
-              color: accentColor.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(2),
-            ),
-            child: Text(
-              label,
-              style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.bold, color: accentColor),
-            ),
-          ),
-          const SizedBox(width: 4),
-          Expanded(
-            child: Text(
-              val,
-              style: const TextStyle(fontSize: 9.5, fontFamily: EditorTypography.monoFamily, color: EditorColors.foreground),
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.right,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

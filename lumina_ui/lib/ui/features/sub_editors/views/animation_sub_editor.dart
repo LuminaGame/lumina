@@ -4,6 +4,7 @@ import '../sub_editor_binding.dart';
 import 'package:lumina/lumina.dart';
 import '../../../core/theme/editor_theme.dart';
 import '../../../core/property_editors/asset_picker_select.dart';
+import '../../../core/property_editors/lumina_transform_widget.dart';
 import '../../main_editor/services/editor_preferences.dart';
 import '../models/anim_notify_and_curves.dart';
 import '../models/selected_keyframe_details.dart';

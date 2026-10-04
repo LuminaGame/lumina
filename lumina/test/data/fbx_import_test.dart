@@ -256,6 +256,25 @@ void main() {
       expect(again.clipIndex, result.clipIndex);
     });
 
+    test('retargets onto skeleton with differing bone axis conventions without flipping limbs', () {
+      final fbx = _fbx('Animations/AS_Poker_Dealer_Idle_01.FBX');
+      if (!haveAssets || !fbx.existsSync()) return markTestSkipped('test-assets/FBX missing');
+      if (!_quinn.existsSync()) return markTestSkipped('bundled mesh missing');
+
+      final clip = FbxImportService.convertSync(fbx.path).glb;
+      final target = _quinn.readAsBytesSync();
+      final result = GlbAnimationRetargeter.retargetInto(target: target, clip: clip, clipName: 'Dealer_Retargeted');
+      expect(result.mappedBones, containsAll(['pelvis', 'thigh_l', 'thigh_r', 'spine_01']));
+
+      // Thigh rotation maintaining downward orientation (X component near 0.9-1.0 in Blender bind space)
+      final doc = GlbDocument.parse(result.glb);
+      final r0 = _worldRotations(doc, result.clipIndex, 0);
+      final thighRot = r0['thigh_l']!;
+      expect(thighRot[0].abs(), greaterThan(0.7), reason: 'thigh must maintain downward bind orientation');
+      final thighRotR = r0['thigh_r']!;
+      expect(thighRotR[0].abs(), greaterThan(0.7), reason: 'right thigh must maintain downward bind orientation');
+    });
+
     test('external textures: found by file name are embedded, missing ones are dropped with their slots', () {
       final chair = _fbx('StaticMeshes/SM_Casino_Chair.FBX');
       final laptop = _fbx('StaticMeshes/SM_Laptop.FBX');
