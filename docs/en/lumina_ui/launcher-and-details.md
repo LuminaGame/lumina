@@ -20,6 +20,7 @@ The project launcher (recent projects, templates and the create-project flow) an
 - [`lib/ui/features/launcher/services/template_project_creator.dart`](#libuifeatureslauncherservicestemplate_project_creatordart)
 - [`lib/ui/features/launcher/view_models/editor_build_view_model.dart`](#libuifeatureslauncherview_modelseditor_build_view_modeldart)
 - [`lib/ui/features/launcher/views/editor_build_splash.dart`](#libuifeatureslauncherviewseditor_build_splashdart)
+- [`lib/ui/features/launcher/views/lumina_splash_screen.dart`](#libuifeatureslauncherviewslumina_splash_screendart)
 - [`lib/ui/features/launcher/views/installed_template_widgets.dart`](#libuifeatureslauncherviewsinstalled_template_widgetsdart)
 - [`lib/ui/features/launcher/views/launcher_recent_projects_pane.dart`](#libuifeatureslauncherviewslauncher_recent_projects_panedart)
 - [`lib/ui/features/launcher/views/launcher_settings_panes.dart`](#libuifeatureslauncherviewslauncher_settings_panesdart)
@@ -678,6 +679,30 @@ The project editor build splash — key art, "Lumina Studio", the engine and pro
 | `manageNativeWindow` | `static bool manageNativeWindow` | Whether the launcher lets the splash resize the native window. A smoke run that records the splash inside its fixed-size test window turns it off; widget tests (no native window) never manage it. |
 | `windowSize` | `static const Size windowSize` |  |
 | `splashArt` | `static const String splashArt` |  |
+
+## `lib/ui/features/launcher/views/lumina_splash_screen.dart`
+
+### `class LuminaSplashScreen`
+
+Lumina Studio splash and loading screen — frameless 720×400 centered window with glowing Lumina logo, "Lumina Studio", engine/project subtitle, live status text, bottom-edge 2px accent progress bar, and hover/cancel controls. Used during initial launcher startup (project list scan), direct project opening (`--project <dir>`), and project resolution from the launcher grid.
+
+**Constructors:**
+
+- `const LuminaSplashScreen({super.key, this.title = 'Lumina Studio', required this.subtitle, required this.statusText, this.progress, this.failed = false, this.manageWindow = true, this.onCancel, this.cancelLabel = 'Cancel', this.actions, this.extraContent, this.alwaysShowActions = false, this.splashKey, this.statusKey, this.progressBarKey, this.cancelKey, this.splashArt = 'assets/splash/lumina_splash.png'})`
+
+**Members:**
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `windowSize` | `static const Size windowSize` | The 720×400 splash window size. |
+| `title` | `final String title` | Main bold title ("Lumina Studio"). |
+| `subtitle` | `final String subtitle` | Subtitle ("Lumina Editor <version> · <project>" or "Lumina Editor <version>"). |
+| `statusText` | `final String statusText` | Live progress or resolution status message. |
+| `progress` | `final double? progress` | Progress fraction 0.0 to 1.0 (or null for animated indeterminate bar). |
+| `failed` | `final bool failed` | Renders status and progress in destructive red. |
+| `manageWindow` | `final bool manageWindow` | Resizes and centers native OS window to 720×400 and restores on completion. |
+| `onCancel` | `final VoidCallback? onCancel` | Optional cancellation callback. |
+| `alwaysShowActions` | `final bool alwaysShowActions` | Keeps action/cancel buttons visible without requiring hover. |
 
 ## `lib/ui/features/launcher/views/installed_template_widgets.dart`
 

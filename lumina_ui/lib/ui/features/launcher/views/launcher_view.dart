@@ -14,6 +14,7 @@ import '../../../core/host/editor_host.dart';
 import '../services/project_editor_resolver.dart';
 import '../services/project_editor_update.dart';
 import 'editor_build_splash.dart';
+import 'lumina_splash_screen.dart';
 import 'missing_editor_binary_dialog.dart';
 import 'project_editor_update_dialog.dart';
 import '../view_models/launcher_view_model.dart';
@@ -35,7 +36,17 @@ class LauncherView extends StatefulWidget {
   /// pass one with a view model they control.
   final Widget Function(LuminaProject project, String? projectLocation, String? startupWarning)? editorBuilder;
 
-  const LauncherView({super.key, this.viewModel, this.initialProjectDir, this.editorBuilder});
+  /// Explicitly control whether startup splash is shown (in tests defaults to false
+  /// unless initialProjectDir != null; in normal desktop execution defaults to true).
+  final bool? showStartupSplash;
+
+  const LauncherView({
+    super.key,
+    this.viewModel,
+    this.initialProjectDir,
+    this.editorBuilder,
+    this.showStartupSplash,
+  });
 
   @override
   State<LauncherView> createState() => _LauncherViewState();
@@ -45,7 +56,16 @@ class _LauncherViewState extends State<LauncherView> {
   late final LauncherViewModel _viewModel;
   late bool _loadingInitialProject;
   String _initialLoadingStatus = 'Opening project…';
+  double? _initialLoadingProgress = 0.20;
   String? _startupError;
+
+  late bool _loadingLauncher;
+  String _launcherLoadingStatus = 'Scanning projects…';
+  double? _launcherLoadingProgress = 0.25;
+
+  LuminaProject? _openingProject;
+  String _openingProjectStatus = 'Opening project…';
+  double? _openingProjectProgress = 0.30;
 
   @override
   void initState() {
@@ -53,13 +73,60 @@ class _LauncherViewState extends State<LauncherView> {
     _viewModel = widget.viewModel ?? LauncherViewModel();
     _viewModel.addListener(_onViewModelChanged);
     _loadingInitialProject = widget.initialProjectDir != null;
+
+    final isTest = Platform.environment['FLUTTER_TEST'] == 'true';
+    _loadingLauncher = widget.initialProjectDir == null &&
+        (widget.showStartupSplash ?? !isTest);
+
     // The stock editor tells project editors started on their own which
     // Studio (and engine) this machine runs now.
     if (!LuminaEditorHost.isProjectEditor) unawaited(LuminaStudioRecord.recordThisStudio(configDir: _viewModel.configDir));
     final initial = widget.initialProjectDir;
     if (initial != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _openInitialProject(initial));
+    } else if (_loadingLauncher) {
+      _startLauncherLoading();
     }
+  }
+
+  Future<void> _startLauncherLoading() async {
+    setState(() {
+      _launcherLoadingStatus = 'Scanning projects…';
+      _launcherLoadingProgress = 0.35;
+    });
+
+    try {
+      _viewModel.refreshInstalledTemplates();
+      await _viewModel.loadRecentProjects();
+    } catch (_) {
+      // Continue even if initial refresh encounters issues
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _launcherLoadingStatus = 'Loading workspace…';
+      _launcherLoadingProgress = 0.70;
+    });
+
+    final isTest = Platform.environment['FLUTTER_TEST'] == 'true';
+    if (!isTest) {
+      await Future<void>.delayed(const Duration(milliseconds: 700));
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _launcherLoadingStatus = '100% - Ready';
+      _launcherLoadingProgress = 1.0;
+    });
+
+    if (!isTest) {
+      await Future<void>.delayed(const Duration(milliseconds: 150));
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _loadingLauncher = false;
+    });
   }
 
   @override
@@ -120,6 +187,7 @@ class _LauncherViewState extends State<LauncherView> {
     }
     setState(() {
       _initialLoadingStatus = 'Opening $name…';
+      _initialLoadingProgress = 0.35;
     });
     LuminaProject? loaded;
     try {
@@ -144,6 +212,7 @@ class _LauncherViewState extends State<LauncherView> {
     }
     setState(() {
       _initialLoadingStatus = 'Checking project editor…';
+      _initialLoadingProgress = 0.60;
     });
     await _openProject(loaded, dir, rebuild: LuminaEditorHost.args.rebuild, updateEditor: LuminaEditorHost.args.updateEditor);
   }
@@ -165,6 +234,19 @@ class _LauncherViewState extends State<LauncherView> {
           project: project,
           projectDir: projectDir,
           startupWarning: plugins.isEmpty ? null : _inactivePluginsWarning([for (final d in plugins) d.name]));
+    }
+
+    if (!_loadingInitialProject) {
+      setState(() {
+        _openingProject = project;
+        _openingProjectStatus = 'Checking project editor…';
+        _openingProjectProgress = 0.40;
+      });
+    } else {
+      setState(() {
+        _initialLoadingStatus = 'Checking project editor…';
+        _initialLoadingProgress = 0.60;
+      });
     }
 
     setState(() => _resolving = true);
@@ -213,6 +295,7 @@ class _LauncherViewState extends State<LauncherView> {
       switch (answer.choice) {
         case ProjectEditorUpdateChoice.cancel:
           if (_loadingInitialProject) setState(() => _loadingInitialProject = false);
+          if (_openingProject != null) setState(() => _openingProject = null);
           return;
         case ProjectEditorUpdateChoice.update:
           final plugins = decision is NeedsBuild ? decision.plugins : await _viewModel.editorResolver.enabledCodePlugins(projectDir);
@@ -226,17 +309,39 @@ class _LauncherViewState extends State<LauncherView> {
       case OpenInPlace():
         // No copy of the engine to update: the project now belongs to this
         // Studio's version.
+        if (_loadingInitialProject) {
+          setState(() {
+            _initialLoadingStatus = '100% - Ready';
+            _initialLoadingProgress = 1.0;
+          });
+        } else if (_openingProject != null) {
+          setState(() {
+            _openingProjectStatus = '100% - Ready';
+            _openingProjectProgress = 1.0;
+          });
+        }
         final opened = resolvedInPlace ? await _viewModel.recordEngineVersion(project, projectDir) : project;
         if (!mounted) return;
         _openMainEditor(context, project: opened, projectDir: projectDir, startupWarning: fallbackWarning);
       case ExecCached(:final entry):
-        if (_loadingInitialProject) setState(() => _initialLoadingStatus = 'Starting project editor…');
+        if (_loadingInitialProject) {
+          setState(() {
+            _initialLoadingStatus = 'Starting project editor…';
+            _initialLoadingProgress = 0.90;
+          });
+        } else if (_openingProject != null) {
+          setState(() {
+            _openingProjectStatus = 'Starting project editor…';
+            _openingProjectProgress = 0.90;
+          });
+        }
         try {
           await _viewModel.execProjectEditor(entry.executable, projectDir);
         } catch (e) {
           if (mounted) {
             setState(() {
               _loadingInitialProject = false;
+              _openingProject = null;
               _startupError = 'Could not launch project editor: $e';
             });
           }
@@ -254,6 +359,7 @@ class _LauncherViewState extends State<LauncherView> {
             _openMainEditor(context, project: project, projectDir: projectDir, startupWarning: _inactivePluginsWarning(pluginNames));
           case MissingBinaryChoice.cancel:
             if (_loadingInitialProject) setState(() => _loadingInitialProject = false);
+            if (_openingProject != null) setState(() => _openingProject = null);
             break;
         }
     }
@@ -262,6 +368,7 @@ class _LauncherViewState extends State<LauncherView> {
   /// [update]: the splash first replaces the project's copy of the engine
   /// source with this Studio's.
   void _showBuildSplash(LuminaProject project, String projectDir, List<LuminaPluginDescriptor> plugins, {EditorEngineUpdate? update}) {
+    if (_openingProject != null) setState(() => _openingProject = null);
     final build = _viewModel.projectEditorBuild(project.projectName, projectDir, plugins, update: update);
     // With a native window the splash resizes it to 720×400; in tests it is
     // drawn at that size in the middle of the test window.
@@ -280,6 +387,7 @@ class _LauncherViewState extends State<LauncherView> {
                       if (mounted) {
                         setState(() {
                           _loadingInitialProject = false;
+                          _openingProject = null;
                           _startupError = 'Could not start project editor: $e';
                         });
                         if (routeContext.mounted) Navigator.of(routeContext).pop();
@@ -300,6 +408,9 @@ class _LauncherViewState extends State<LauncherView> {
                   Navigator.of(routeContext).pop();
                   if (mounted && _loadingInitialProject) {
                     setState(() => _loadingInitialProject = false);
+                  }
+                  if (mounted && _openingProject != null) {
+                    setState(() => _openingProject = null);
                   }
                 },
               );
@@ -393,7 +504,13 @@ class _LauncherViewState extends State<LauncherView> {
     final isDark = themes.active.brightness == Brightness.dark;
 
     if (_loadingInitialProject) {
-      return _buildProjectLoadingScreen(context, isDark);
+      return _buildProjectLoadingScreen(context);
+    }
+    if (_loadingLauncher) {
+      return _buildLauncherLoadingScreen(context);
+    }
+    if (_openingProject != null) {
+      return _buildOpeningProjectScreen(context);
     }
 
     final launcher = Scaffold(
@@ -728,120 +845,78 @@ class _LauncherViewState extends State<LauncherView> {
     );
   }
 
-  Widget _buildProjectLoadingScreen(BuildContext context, bool isDark) {
+  Widget _buildProjectLoadingScreen(BuildContext context) {
     final projectName = widget.initialProjectDir != null
         ? (EditorHostGeneratorService.projectNameIn(widget.initialProjectDir!) ?? p.basename(widget.initialProjectDir!))
         : 'Project';
 
-    return Scaffold(
-      child: Container(
-        color: EditorColors.background,
-        child: Column(
-          children: [
-            // Top App Header / Window Controls
-            Container(
-              height: 52,
-              padding: EdgeInsets.only(left: 20 + LuminaWindow.leadingInset),
-              decoration: const BoxDecoration(
-                color: EditorColors.cardHeader,
-                border: Border(bottom: BorderSide(color: EditorColors.border)),
-              ),
-              child: Row(
-                children: [
-                  Image.asset(
-                    isDark ? 'assets/logo_white.png' : 'assets/logo_black.png',
-                    height: 52,
-                    errorBuilder: (ctx, _, _) => const Icon(
-                      LucideIcons.box,
-                      size: 24,
-                      color: EditorColors.primary,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    'Lumina Studio · $projectName',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: EditorColors.foreground,
-                    ),
-                  ),
-                  const Expanded(
-                    child: WindowDragArea(key: ValueKey('loading_title_drag_area')),
-                  ),
-                  SizedBox(width: LuminaWindow.drawsOwnControls ? 16 : 20),
-                  const LuminaWindowControls(height: 52),
-                ],
-              ),
-            ),
+    final manageWindow = EditorBuildSplash.manageNativeWindow && Platform.environment['FLUTTER_TEST'] != 'true';
 
-            // Loading Center Area
-            Expanded(
-              child: Center(
-                child: Container(
-                  constraints: const BoxConstraints(maxWidth: 400),
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Image.asset(
-                        'assets/logo_color.png',
-                        height: 72,
-                        errorBuilder: (_, _, _) => const Icon(
-                          LucideIcons.box,
-                          size: 64,
-                          color: EditorColors.primary,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      const Text(
-                        'LUMINA',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 4.0,
-                          color: EditorColors.foreground,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        projectName,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: EditorColors.mutedForeground,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 32),
-                      const CircularProgressIndicator(size: 24),
-                      const SizedBox(height: 16),
-                      Text(
-                        _initialLoadingStatus,
-                        key: const Key('initial_project_loading_status'),
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: EditorColors.mutedForeground,
-                        ),
-                      ),
-                      const SizedBox(height: 28),
-                      OutlineButton(
-                        density: ButtonDensity.compact,
-                        onPressed: () {
-                          setState(() {
-                            _loadingInitialProject = false;
-                          });
-                        },
-                        child: const Text('Cancel to Projects'),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+    return LuminaSplashScreen(
+      splashKey: const Key('project_loading_splash'),
+      title: 'Lumina Studio',
+      subtitle: 'Lumina Editor ${_viewModel.engineDisplayVersion} · $projectName',
+      statusText: _initialLoadingStatus,
+      statusKey: const Key('initial_project_loading_status'),
+      progress: _initialLoadingProgress,
+      progressBarKey: const Key('initial_project_loading_progress_bar'),
+      manageWindow: manageWindow,
+      alwaysShowActions: true,
+      onCancel: () {
+        setState(() {
+          _loadingInitialProject = false;
+        });
+      },
+      cancelLabel: 'Cancel to Projects',
+      cancelKey: const Key('initial_project_loading_cancel'),
+    );
+  }
+
+  Widget _buildLauncherLoadingScreen(BuildContext context) {
+    final manageWindow = EditorBuildSplash.manageNativeWindow && Platform.environment['FLUTTER_TEST'] != 'true';
+
+    return LuminaSplashScreen(
+      splashKey: const Key('launcher_loading_splash'),
+      title: 'Lumina Studio',
+      subtitle: 'Lumina Editor ${_viewModel.engineDisplayVersion}',
+      statusText: _launcherLoadingStatus,
+      statusKey: const Key('launcher_loading_status'),
+      progress: _launcherLoadingProgress,
+      progressBarKey: const Key('launcher_loading_progress_bar'),
+      manageWindow: manageWindow,
+      alwaysShowActions: true,
+      onCancel: () {
+        setState(() {
+          _loadingLauncher = false;
+        });
+      },
+      cancelLabel: 'Open Projects',
+      cancelKey: const Key('launcher_loading_skip'),
+    );
+  }
+
+  Widget _buildOpeningProjectScreen(BuildContext context) {
+    final manageWindow = EditorBuildSplash.manageNativeWindow && Platform.environment['FLUTTER_TEST'] != 'true';
+    final project = _openingProject!;
+
+    return LuminaSplashScreen(
+      splashKey: const Key('opening_project_splash'),
+      title: 'Lumina Studio',
+      subtitle: 'Lumina Editor ${_viewModel.engineDisplayVersion} · ${project.projectName}',
+      statusText: _openingProjectStatus,
+      statusKey: const Key('opening_project_status'),
+      progress: _openingProjectProgress,
+      progressBarKey: const Key('opening_project_progress_bar'),
+      manageWindow: manageWindow,
+      alwaysShowActions: true,
+      onCancel: () {
+        setState(() {
+          _openingProject = null;
+          _resolving = false;
+        });
+      },
+      cancelLabel: 'Cancel',
+      cancelKey: const Key('opening_project_cancel'),
     );
   }
 }

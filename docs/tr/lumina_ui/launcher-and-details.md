@@ -20,6 +20,7 @@ Proje launcher'ı (son projeler, şablonlar ve proje oluşturma akışı) ile de
 - [`lib/ui/features/launcher/services/template_project_creator.dart`](#libuifeatureslauncherservicestemplate_project_creatordart)
 - [`lib/ui/features/launcher/view_models/editor_build_view_model.dart`](#libuifeatureslauncherview_modelseditor_build_view_modeldart)
 - [`lib/ui/features/launcher/views/editor_build_splash.dart`](#libuifeatureslauncherviewseditor_build_splashdart)
+- [`lib/ui/features/launcher/views/lumina_splash_screen.dart`](#libuifeatureslauncherviewslumina_splash_screendart)
 - [`lib/ui/features/launcher/views/installed_template_widgets.dart`](#libuifeatureslauncherviewsinstalled_template_widgetsdart)
 - [`lib/ui/features/launcher/views/launcher_recent_projects_pane.dart`](#libuifeatureslauncherviewslauncher_recent_projects_panedart)
 - [`lib/ui/features/launcher/views/launcher_settings_panes.dart`](#libuifeatureslauncherviewslauncher_settings_panesdart)
@@ -678,6 +679,30 @@ The project editor build splash — key art, "Lumina Studio", the engine and pro
 | `manageNativeWindow` | `static bool manageNativeWindow` | Whether the launcher lets the splash resize the native window. A smoke run that records the splash inside its fixed-size test window turns it off; widget tests (no native window) never manage it. |
 | `windowSize` | `static const Size windowSize` |  |
 | `splashArt` | `static const String splashArt` |  |
+
+## `lib/ui/features/launcher/views/lumina_splash_screen.dart`
+
+### `class LuminaSplashScreen`
+
+Lumina Studio açılış ve yükleme ekranı — parlayan Lumina logosu, "Lumina Studio", motor/proje alt başlığı, canlı durum metni, alt kenarda 2 px vurgu ilerleme çubuğu ve üzerine gelindiğinde/her zaman gösterilen iptal kontrollerine sahip 720×400 çerçevesiz merkezlenmiş pencere. İlk launcher başlangıcında (proje listesi taraması), doğrudan proje açılışında (`--project <dir>`) ve launcher tablosundan proje çözülürken yükleme ekranı olarak kullanılır.
+
+**Yapıcı Metotlar (Constructors):**
+
+- `const LuminaSplashScreen({super.key, this.title = 'Lumina Studio', required this.subtitle, required this.statusText, this.progress, this.failed = false, this.manageWindow = true, this.onCancel, this.cancelLabel = 'Cancel', this.actions, this.extraContent, this.alwaysShowActions = false, this.splashKey, this.statusKey, this.progressBarKey, this.cancelKey, this.splashArt = 'assets/splash/lumina_splash.png'})`
+
+**Üyeler (Members):**
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `windowSize` | `static const Size windowSize` | 720×400 splash pencere boyutu. |
+| `title` | `final String title` | Ana kalın başlık ("Lumina Studio"). |
+| `subtitle` | `final String subtitle` | Alt başlık ("Lumina Editor <version> · <project>" veya "Lumina Editor <version>"). |
+| `statusText` | `final String statusText` | Canlı ilerleme veya çözümleme durumu mesajı. |
+| `progress` | `final double? progress` | İlerleme oranı 0.0 - 1.0 (veya belirsiz durumlar için animasyonlu çubuk için null). |
+| `failed` | `final bool failed` | Hata durumunda durum ve ilerleme çubuğunu kırmızı (destructive) renkte çizer. |
+| `manageWindow` | `final bool manageWindow` | İşletim sistemi penceresini 720×400 çerçevesiz olarak ortalar ve işlem bitince eski boyutuna geri getirir. |
+| `onCancel` | `final VoidCallback? onCancel` | İsteğe bağlı iptal geri çağırımı. |
+| `alwaysShowActions` | `final bool alwaysShowActions` | Fare ile üzerine gelme gerekmeksizin eylem/iptal düğmelerini görünür tutar. |
 
 ## `lib/ui/features/launcher/views/installed_template_widgets.dart`
 

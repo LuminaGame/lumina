@@ -65,4 +65,26 @@ void main() {
 
     expect(find.text('Recent Projects'), findsWidgets);
   });
+
+  testWidgets('LauncherView with showStartupSplash shows splash screen and transitions to recent projects',
+      (WidgetTester tester) async {
+    final vm = LauncherViewModel(configDir: tempConfigDir);
+    await tester.pumpWidget(ShadcnApp(
+      theme: luminaEditorTheme(),
+      home: LauncherView(viewModel: vm, showStartupSplash: true),
+    ));
+
+    // First frame shows splash screen
+    expect(find.byKey(const Key('launcher_loading_splash')), findsOneWidget);
+    expect(find.text('Lumina Studio'), findsOneWidget);
+    expect(find.text('Lumina Editor ${vm.engineDisplayVersion}'), findsOneWidget);
+    expect(find.text('Open Projects'), findsOneWidget);
+    expect(find.text('Recent Projects'), findsNothing);
+
+    // Skip to projects
+    await tester.tap(find.text('Open Projects'));
+    await tester.pump();
+
+    expect(find.text('Recent Projects'), findsWidgets);
+  });
 }
