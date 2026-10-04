@@ -17,25 +17,29 @@ String? subEditorCategoryFor(RealAssetInfo asset, {PluginExtensionRegistry? exte
   final lower = asset.relativePath.toLowerCase();
   final nameLower = asset.fileName.toLowerCase();
   bool looksAnimation() =>
-      lower.contains('/animations/') ||
-      lower.contains('/anim/') ||
-      nameLower.startsWith('anim_') ||
-      nameLower.startsWith('as_') ||
-      nameLower.startsWith('mf_') ||
-      nameLower.contains('_anim') ||
-      nameLower.contains('_walk') ||
-      nameLower.contains('_run') ||
-      nameLower.contains('_idle') ||
-      nameLower.contains('_bwd') ||
-      nameLower.contains('_fwd') ||
-      nameLower.contains('_sprint') ||
-      nameLower.contains('_jump');
+      !nameLower.startsWith('bp_') &&
+      !nameLower.startsWith('wbp_') &&
+      (lower.contains('/animations/') ||
+          lower.contains('/anim/') ||
+          nameLower.startsWith('anim_') ||
+          nameLower.startsWith('as_') ||
+          nameLower.startsWith('mf_') ||
+          nameLower.contains('_anim') ||
+          nameLower.contains('_walk') ||
+          nameLower.contains('_run') ||
+          nameLower.contains('_idle') ||
+          nameLower.contains('_bwd') ||
+          nameLower.contains('_fwd') ||
+          nameLower.contains('_sprint') ||
+          nameLower.contains('_jump'));
   bool looksSkeletal() =>
-      lower.contains('/skeletal') ||
-      lower.contains('/skm') ||
-      nameLower.startsWith('skm_') ||
-      nameLower.contains('skeletal') ||
-      nameLower.contains('skeleton');
+      !nameLower.startsWith('bp_') &&
+      !nameLower.startsWith('wbp_') &&
+      (lower.contains('/skeletal') ||
+          lower.contains('/skm') ||
+          nameLower.startsWith('skm_') ||
+          nameLower.contains('skeletal') ||
+          nameLower.contains('skeleton'));
 
   switch (asset.type) {
     case AssetType.level:
@@ -49,7 +53,11 @@ String? subEditorCategoryFor(RealAssetInfo asset, {PluginExtensionRegistry? exte
       // Created with the LuminaWidget parent before such Blueprints were
       // written as widgets: the widget designer opens it.
       if (isWidgetBlueprintLmas(asset.lmasPath)) return 'Widget';
-      if (looksAnimation()) return 'Animation';
+      if (blueprintKind == 'class' ||
+          nameLower.startsWith('bp_') ||
+          lower.contains('/blueprints/')) {
+        return 'Blueprint';
+      }
       if (looksSkeletal() || lower.contains('/meshes/')) return 'Skeleton';
       return 'Blueprint';
     case AssetType.filameshSk:
@@ -83,6 +91,7 @@ String? subEditorCategoryFor(RealAssetInfo asset, {PluginExtensionRegistry? exte
       // that plugin's editor.
       final handler = extensions?.handlerForAsset(asset);
       if (handler != null) return '${PluginExtensionRegistry.pluginAssetCategoryPrefix}${handler.customTypeId}';
+      if (nameLower.startsWith('bp_') || lower.contains('/blueprints/')) return 'Blueprint';
       if (looksSkeletal()) return 'Skeleton';
       if (lower.contains('/animations/') || lower.contains('/anim/') || nameLower.startsWith('anim_') || nameLower.startsWith('as_') || nameLower.startsWith('mf_')) {
         return 'Animation';
