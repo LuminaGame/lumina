@@ -140,12 +140,13 @@ class PluginDownloader {
 
     var overallBytesReceived = 0;
     final totalFiles = files.length;
+    var adjustedOverallTotalBytes = overallTotalBytes;
 
     // Account for already completed files
     for (final f in files) {
       final finalFile = File(p.join(targetDir, f.path));
-      if (finalFile.existsSync() && finalFile.lengthSync() == f.bytes) {
-        overallBytesReceived += f.bytes;
+      if (finalFile.existsSync() && (f.bytes <= 0 || finalFile.lengthSync() == f.bytes)) {
+        overallBytesReceived += f.bytes > 0 ? f.bytes : finalFile.lengthSync();
       }
     }
 
@@ -165,21 +166,21 @@ class PluginDownloader {
       }
 
       // If file already exists and valid, skip
-      if (finalFile.existsSync() && finalFile.lengthSync() == fileDef.bytes) {
+      if (finalFile.existsSync() && (fileDef.bytes <= 0 || finalFile.lengthSync() == fileDef.bytes)) {
         _log(
-          '[${i + 1}/$totalFiles] File already exists and verified, skipping: ${fileDef.path} (${fileDef.bytes} bytes)',
+          '[${i + 1}/$totalFiles] File already exists and verified, skipping: ${fileDef.path} (${finalFile.lengthSync()} bytes)',
           onLog: onLog,
         );
         yield PluginDownloadProgress(
           fileName: fileDef.path,
           fileIndex: i + 1,
           totalFiles: totalFiles,
-          fileBytesReceived: fileDef.bytes,
-          fileTotalBytes: fileDef.bytes,
+          fileBytesReceived: fileDef.bytes > 0 ? fileDef.bytes : finalFile.lengthSync(),
+          fileTotalBytes: fileDef.bytes > 0 ? fileDef.bytes : finalFile.lengthSync(),
           fileProgress: 1.0,
           overallBytesReceived: overallBytesReceived,
-          overallTotalBytes: overallTotalBytes,
-          overallProgress: overallTotalBytes > 0 ? (overallBytesReceived / overallTotalBytes).clamp(0.0, 1.0) : 1.0,
+          overallTotalBytes: adjustedOverallTotalBytes,
+          overallProgress: adjustedOverallTotalBytes > 0 ? (overallBytesReceived / adjustedOverallTotalBytes).clamp(0.0, 1.0) : 1.0,
         );
         continue;
       }
@@ -188,7 +189,7 @@ class PluginDownloader {
       final partFile = File(partPath);
 
       var downloadedBytes = partFile.existsSync() ? partFile.lengthSync() : 0;
-      if (downloadedBytes > fileDef.bytes) {
+      if (fileDef.bytes > 0 && downloadedBytes > fileDef.bytes) {
         partFile.deleteSync();
         downloadedBytes = 0;
       }
@@ -223,6 +224,32 @@ class PluginDownloader {
         '[${i + 1}/$totalFiles] Server responded with HTTP ${resp.statusCode} (contentLength: ${resp.contentLength})',
         onLog: onLog,
       );
+
+      int remoteFileTotalBytes = -1;
+      if (resp.statusCode == HttpStatus.partialContent) {
+        final cr = resp.headers.value('content-range');
+        if (cr != null && cr.contains('/')) {
+          final totalStr = cr.split('/').last.trim();
+          remoteFileTotalBytes = int.tryParse(totalStr) ?? -1;
+        }
+      } else if (resp.statusCode == HttpStatus.ok) {
+        if (resp.contentLength > 0) {
+          remoteFileTotalBytes = resp.contentLength;
+        }
+      }
+
+      if (remoteFileTotalBytes > 0 && fileDef.bytes > 0 && remoteFileTotalBytes != fileDef.bytes) {
+        adjustedOverallTotalBytes += (remoteFileTotalBytes - fileDef.bytes);
+      } else if (remoteFileTotalBytes > 0 && fileDef.bytes <= 0) {
+        adjustedOverallTotalBytes += remoteFileTotalBytes;
+      }
+
+      final expectedFileBytes = remoteFileTotalBytes > 0 ? remoteFileTotalBytes : fileDef.bytes;
+
+      if (expectedFileBytes > 0 && downloadedBytes > expectedFileBytes) {
+        partFile.deleteSync();
+        downloadedBytes = 0;
+      }
 
       final IOSink sink;
       if (resp.statusCode == HttpStatus.partialContent) {
@@ -286,13 +313,13 @@ class PluginDownloader {
             lastReportTime = now;
             bytesSinceLastReport = 0;
 
-            final fileProg = fileDef.bytes > 0 ? (downloadedBytes / fileDef.bytes).clamp(0.0, 1.0) : 0.0;
-            final overallProg = overallTotalBytes > 0 ? (overallBytesReceived / overallTotalBytes).clamp(0.0, 1.0) : 0.0;
+            final fileProg = expectedFileBytes > 0 ? (downloadedBytes / expectedFileBytes).clamp(0.0, 1.0) : 0.0;
+            final overallProg = adjustedOverallTotalBytes > 0 ? (overallBytesReceived / adjustedOverallTotalBytes).clamp(0.0, 1.0) : 0.0;
 
             if (now.difference(lastLogTime).inSeconds >= 5) {
               lastLogTime = now;
               _log(
-                '[${i + 1}/$totalFiles] ${fileDef.path}: ${(downloadedBytes / (1024 * 1024)).toStringAsFixed(1)} / ${(fileDef.bytes / (1024 * 1024)).toStringAsFixed(1)} MB (${(currentSpeed / (1024 * 1024)).toStringAsFixed(2)} MB/s, ${(overallProg * 100).toStringAsFixed(1)}% total)',
+                '[${i + 1}/$totalFiles] ${fileDef.path}: ${(downloadedBytes / (1024 * 1024)).toStringAsFixed(1)} / ${(expectedFileBytes / (1024 * 1024)).toStringAsFixed(1)} MB (${(currentSpeed / (1024 * 1024)).toStringAsFixed(2)} MB/s, ${(overallProg * 100).toStringAsFixed(1)}% total)',
                 onLog: onLog,
               );
             }
@@ -302,10 +329,10 @@ class PluginDownloader {
               fileIndex: i + 1,
               totalFiles: totalFiles,
               fileBytesReceived: downloadedBytes,
-              fileTotalBytes: fileDef.bytes,
+              fileTotalBytes: expectedFileBytes,
               fileProgress: fileProg,
               overallBytesReceived: overallBytesReceived,
-              overallTotalBytes: overallTotalBytes,
+              overallTotalBytes: adjustedOverallTotalBytes,
               overallProgress: overallProg,
               bytesPerSecond: currentSpeed,
             );
@@ -339,23 +366,33 @@ class PluginDownloader {
       _log('[${i + 1}/$totalFiles] Download complete for ${fileDef.path}. Verifying size & checksum...', onLog: onLog);
 
       final actualPartBytes = partFile.existsSync() ? partFile.lengthSync() : -1;
-      if (actualPartBytes != fileDef.bytes) {
+      final targetVerifyBytes = remoteFileTotalBytes > 0 ? remoteFileTotalBytes : fileDef.bytes;
+      if (targetVerifyBytes > 0 && actualPartBytes != targetVerifyBytes) {
         if (partFile.existsSync()) partFile.deleteSync();
         final err =
-            'Downloaded size ($actualPartBytes bytes) does not match expected size (${fileDef.bytes} bytes) for ${fileDef.path}';
+            'Downloaded size ($actualPartBytes bytes) does not match expected size ($targetVerifyBytes bytes) for ${fileDef.path}';
+        _log(err, level: 'error', onLog: onLog);
+        throw StateError(err);
+      } else if (targetVerifyBytes <= 0 && actualPartBytes <= 0) {
+        if (partFile.existsSync()) partFile.deleteSync();
+        final err = 'Downloaded file is empty for ${fileDef.path}';
         _log(err, level: 'error', onLog: onLog);
         throw StateError(err);
       }
 
-      final computedHash = await _computeSha256(partFile);
-      if (computedHash.toLowerCase() != fileDef.sha256.toLowerCase()) {
-        if (partFile.existsSync()) partFile.deleteSync();
-        final err =
-            'SHA-256 verification failed for ${fileDef.path}: expected ${fileDef.sha256}, got $computedHash';
-        _log(err, level: 'error', onLog: onLog);
-        throw StateError(err);
+      if (fileDef.sha256.trim().isNotEmpty) {
+        final computedHash = await _computeSha256(partFile);
+        if (computedHash.toLowerCase() != fileDef.sha256.trim().toLowerCase()) {
+          if (partFile.existsSync()) partFile.deleteSync();
+          final err =
+              'SHA-256 verification failed for ${fileDef.path}: expected ${fileDef.sha256}, got $computedHash';
+          _log(err, level: 'error', onLog: onLog);
+          throw StateError(err);
+        }
+        _log('[${i + 1}/$totalFiles] SHA-256 verified successfully for ${fileDef.path} ($computedHash)', onLog: onLog);
+      } else {
+        _log('[${i + 1}/$totalFiles] SHA-256 check skipped for ${fileDef.path} (no checksum specified)', onLog: onLog);
       }
-      _log('[${i + 1}/$totalFiles] SHA-256 verified successfully for ${fileDef.path} ($computedHash)', onLog: onLog);
 
       if (finalFile.existsSync()) finalFile.deleteSync();
       partFile.renameSync(finalPath);
@@ -365,14 +402,15 @@ class PluginDownloader {
         fileName: fileDef.path,
         fileIndex: i + 1,
         totalFiles: totalFiles,
-        fileBytesReceived: fileDef.bytes,
-        fileTotalBytes: fileDef.bytes,
+        fileBytesReceived: actualPartBytes,
+        fileTotalBytes: targetVerifyBytes > 0 ? targetVerifyBytes : actualPartBytes,
         fileProgress: 1.0,
         overallBytesReceived: overallBytesReceived,
-        overallTotalBytes: overallTotalBytes,
-        overallProgress: overallTotalBytes > 0 ? (overallBytesReceived / overallTotalBytes).clamp(0.0, 1.0) : 1.0,
+        overallTotalBytes: adjustedOverallTotalBytes,
+        overallProgress: adjustedOverallTotalBytes > 0 ? (overallBytesReceived / adjustedOverallTotalBytes).clamp(0.0, 1.0) : 1.0,
       );
     }
+
 
     _log('All $totalFiles files downloaded and verified successfully.', onLog: onLog);
   }

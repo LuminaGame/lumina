@@ -66,4 +66,40 @@ void main() {
     downloader.cancel();
     expect(downloader.isCancelled, isTrue);
   });
+
+  test('PluginDownloader downloads file and adopts remote server contentLength over estimated size', () async {
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    const bodyText = 'hello world dynamic size test';
+    server.listen((req) {
+      req.response.headers.contentType = ContentType.binary;
+      req.response.headers.contentLength = bodyText.length;
+      req.response.write(bodyText);
+      req.response.close();
+    });
+
+    try {
+      final downloader = PluginDownloader();
+      final files = [
+        PluginFileDef(
+          path: 'downloaded.bin',
+          bytes: 10, // estimated size was 10, but server serves bodyText.length (29)
+          sha256: '', // optional checksum
+          downloadUrl: 'http://${server.address.host}:${server.port}/downloaded.bin',
+        ),
+      ];
+
+      final updates = <PluginDownloadProgress>[];
+      await for (final p in downloader.download(files: files, targetDir: tempDir.path)) {
+        updates.add(p);
+      }
+
+      final downloaded = File('${tempDir.path}/downloaded.bin');
+      expect(downloaded.existsSync(), isTrue);
+      expect(downloaded.readAsStringSync(), bodyText);
+      expect(updates.last.fileProgress, 1.0);
+    } finally {
+      await server.close(force: true);
+    }
+  });
 }
+
