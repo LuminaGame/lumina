@@ -424,6 +424,13 @@ class ProjectRepository {
       if (createResult.exitCode != 0) {
         throw ProjectCreationException(ProjectCreationStep.flutterCreate, 'flutter create failed: ${createResult.stderr}');
       }
+      // Remove flutter create's counter template test which expects non-existent MyApp
+      final defaultWidgetTest = File('${targetDir.path}/test/widget_test.dart');
+      if (defaultWidgetTest.existsSync()) {
+        try {
+          defaultWidgetTest.deleteSync();
+        } catch (_) {}
+      }
       // The project's DerivedDataCache/ never reaches git.
       DerivedDataCache.ensureIgnoredBy(targetDir.path);
       // The asset index (.lumina/) and legacy thumbnail

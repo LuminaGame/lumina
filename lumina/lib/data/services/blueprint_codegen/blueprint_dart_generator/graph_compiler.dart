@@ -471,7 +471,13 @@ class _GraphCompiler {
         var value = input('value');
         final valueType = nodePins.inputs.firstWhere((p) => p.id == 'value').type;
         if (valueType == LuminaPinType.array) value = 'List<Object?>.from($value)';
-        out.add('$pad${writeVariable(name, value)}');
+        final hasTarget = nodePins.inputs.any((p) => p.id == 'target');
+        if (hasTarget) {
+          final target = input('target');
+          out.add('$pad($target as dynamic)?.${_var(name)} = $value;');
+        } else {
+          out.add('$pad${writeVariable(name, value)}');
+        }
         final holder = _impureVar(frame, node.id, 'value', nodePins.inputs.firstWhere((p) => p.id == 'value').type);
         out.add('$pad$holder = $value;');
         out.add("${pad}if (trace != null) blueprintTrace($trace, ${_str(node.id)}, 'variable_set', {'value': $value});");
@@ -833,8 +839,20 @@ class _GraphCompiler {
     final Map<String, String> outputs;
     if (node.registryId == LuminaBlueprintNodeLibrary.variableGet) {
       final v = 'p${_counter.next()}';
-      out.add('${pad}final $v = ${readVariable(node.literals['variable'] as String)};');
+      final hasTarget = pins[nodeId]!.inputs.any((p) => p.id == 'target');
+      if (hasTarget) {
+        final target = _input(frame, node, 'target', step, out, pad);
+        out.add('${pad}final $v = ($target as dynamic)?.${_var(node.literals['variable'] as String)};');
+      } else {
+        out.add('${pad}final $v = ${readVariable(node.literals['variable'] as String)};');
+      }
       outputs = {'value': v};
+    } else if (node.registryId == LuminaBlueprintNodeLibrary.getComponent && pins[nodeId]!.inputs.any((p) => p.id == 'target')) {
+      final target = _input(frame, node, 'target', step, out, pad);
+      final compName = _str(node.literals['component'] as String? ?? '');
+      final r = 'p${_counter.next()}';
+      out.add('${pad}final $r = LuminaBlueprintFunctionLibrary.getComponent($target, $compName);');
+      outputs = {'return_value': r};
     } else if (node.registryId == LuminaBlueprintNodeLibrary.localVariableGet) {
       final v = 'p${_counter.next()}';
       if (readLocal == null) {
