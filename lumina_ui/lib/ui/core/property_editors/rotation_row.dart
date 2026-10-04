@@ -11,6 +11,10 @@ class RotationRow extends StatelessWidget {
 
   /// Passed straight through to the [VectorRow] this wraps.
   final List<Color> labelColors;
+  final List<String> labels;
+  final String? unit;
+  final String? keyPrefix;
+  final int? revision;
 
   const RotationRow({
     super.key,
@@ -23,6 +27,10 @@ class RotationRow extends StatelessWidget {
       EditorColors.axisY,
       EditorColors.axisZ,
     ],
+    this.labels = const ['X', 'Y', 'Z'],
+    this.unit,
+    this.keyPrefix,
+    this.revision,
   });
 
   double _normalizeAngle(double angle) {
@@ -48,8 +56,11 @@ class RotationRow extends StatelessWidget {
       onChanged: _handleChange,
       onCommit: _handleCommit,
       onReset: onReset,
-      labels: const ['X', 'Y', 'Z'],
+      labels: labels,
       labelColors: labelColors,
+      unit: unit,
+      keyPrefix: keyPrefix,
+      revision: revision,
     );
   }
 }

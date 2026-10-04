@@ -10,6 +10,8 @@ import 'package:lumina_ui/ui/core/property_editors/color_field.dart';
 import 'package:lumina_ui/ui/core/property_editors/physics_section_editor.dart';
 import 'package:lumina_ui/ui/core/property_editors/asset_picker_select.dart';
 import 'package:lumina_ui/ui/core/property_editors/slider_field.dart';
+import 'package:lumina_ui/ui/core/property_editors/lumina_transform_widget.dart';
+import 'package:lumina_ui/ui/core/property_editors/vector_row.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_component_registry.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_editor_nodes.dart';
@@ -157,6 +159,17 @@ class BlueprintSubEditorState extends _BlueprintSubEditorStateBase
       _viewModel.dispose();
     }
     super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant BlueprintSubEditor oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final defaults = widget.gizmoDefaults;
+    if (defaults != null) {
+      _gizmo.setMode(defaults.mode);
+      _gizmo.setSpace(defaults.space);
+      _gizmo.setSnap(defaults.snap);
+    }
   }
 
   @override

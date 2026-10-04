@@ -122,11 +122,13 @@ class BlueprintPreviewScene extends ChangeNotifier {
 
   /// Shows [document]'s components (a copy is built; the signature of its
   /// components decides whether anything changed). [projectDir] resolves mesh
-  /// assets and Anim Classes.
-  void setDocument(LuminaBlueprintDocument document, {String? projectDir}) {
+  /// assets and Anim Classes. If [components] is provided, those components
+  /// are used instead of [document.components] (e.g. to preview inherited components).
+  void setDocument(LuminaBlueprintDocument document, {String? projectDir, List<LuminaBlueprintComponent>? components}) {
+    final effectiveComponents = components ?? document.components;
     final json = jsonEncode({
       'parentClass': document.parentClass,
-      'components': [for (final c in document.components) c.toJson()],
+      'components': [for (final c in effectiveComponents) c.toJson()],
     });
     final signature = '$projectDir\n$json';
     if (signature == _signature) return;
@@ -545,10 +547,11 @@ class BlueprintPreviewScene extends ChangeNotifier {
       case 'LuminaSkeletalMeshComponent':
       case 'LuminaAnimatedMeshComponent':
         if (built is LuminaStaticMeshComponent) points.addAll(_bounds(built));
+        if (points.isEmpty) points.addAll(_tripod(built, 40.0));
       default:
         if (shapeTypes.contains(c.type) && built is LuminaCollisionComponent) {
           points.addAll(built.buildWireframe(segments: 12));
-        } else if (c.parentId != null) {
+        } else {
           points.addAll(_tripod(built, 30.0));
         }
     }

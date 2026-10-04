@@ -33,6 +33,8 @@ class ScrubNumericField extends StatefulWidget {
   /// is relative), so a mixed field is never seeded from one actor.
   /// Typed entry still reaches [onCommit].
   final void Function(double delta, bool end)? onScrubDelta;
+  final Key? textFieldKey;
+  final String? initialValue;
 
   const ScrubNumericField({
     this.isMixed = false,
@@ -50,6 +52,8 @@ class ScrubNumericField extends StatefulWidget {
     this.labelWidth = 12,
     this.labelColor = EditorColors.mutedForeground,
     this.onScrubDelta,
+    this.textFieldKey,
+    this.initialValue,
   });
 
   @override
@@ -234,21 +238,25 @@ class _ScrubNumericFieldState extends State<ScrubNumericField> {
 
     return Row(
       children: [
-        SizedBox(
-          width: widget.labelWidth,
-          // `text-[9px] font-mono font-semibold` in the prototype's VecInput.
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1.5),
+          decoration: BoxDecoration(
+            color: widget.labelColor.withValues(alpha: 0.18),
+            borderRadius: BorderRadius.circular(2),
+          ),
           child: Text(
             widget.label,
             maxLines: 1,
             overflow: TextOverflow.clip,
             style: TextStyle(
               fontFamily: EditorTypography.monoFamily,
-              fontSize: EditorTypography.captionSize,
-              fontWeight: EditorTypography.panelTitleWeight,
+              fontSize: 8.5,
+              fontWeight: FontWeight.bold,
               color: widget.labelColor,
             ),
           ),
         ),
+        const SizedBox(width: 4),
         Expanded(
           child: MouseRegion(
             cursor: SystemMouseCursors.resizeLeftRight,
@@ -287,7 +295,26 @@ class _ScrubNumericFieldState extends State<ScrubNumericField> {
                         textScaler: MediaQuery.textScalerOf(context),
                       );
                 _controller.display = shown == full ? null : shown;
+                if (widget.initialValue != null) {
+                  return TextField(
+                    key: widget.textFieldKey,
+                    initialValue: widget.initialValue,
+                    focusNode: _focusNode,
+                    style: _valueStyle,
+                    onChanged: (val) {
+                      final v = double.tryParse(val) ?? 0.0;
+                      widget.onChanged(v);
+                    },
+                    onSubmitted: (val) {
+                      final v = double.tryParse(val) ?? 0.0;
+                      widget.onCommit(v);
+                      _focusNode.unfocus();
+                    },
+                    padding: const EdgeInsets.symmetric(horizontal: _textPadding, vertical: 2),
+                  );
+                }
                 final field = TextField(
+                  key: widget.textFieldKey,
                   controller: _controller,
                   focusNode: _focusNode,
                   // `text-[11px] font-mono` in the prototype's VecInput.

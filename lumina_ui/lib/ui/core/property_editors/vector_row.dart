@@ -11,6 +11,7 @@ class VectorRow extends StatelessWidget {
   final VoidCallback onReset;
   final List<bool>? isMixedPerAxis;
   final List<String> labels;
+  final String? unit;
 
   /// Per-axis edits, for rows whose axes do not share one vector (a
   /// multi-selection). When set, a typed value or a reset of one
@@ -28,6 +29,8 @@ class VectorRow extends StatelessWidget {
   /// [EditorColors.axisZ], which are pinned to
   /// `FilamentTransformGizmo.defaultHandleColor`.
   final List<Color> labelColors;
+  final String? keyPrefix;
+  final int? revision;
 
   const VectorRow({
     super.key,
@@ -40,11 +43,14 @@ class VectorRow extends StatelessWidget {
     this.onAxisCommit,
     this.onAxisScrub,
     this.labels = const ['X', 'Y', 'Z'],
+    this.unit,
     this.labelColors = const [
       EditorColors.axisX,
       EditorColors.axisY,
       EditorColors.axisZ,
     ],
+    this.keyPrefix,
+    this.revision,
   });
 
   void _updateComponent(int index, double newValue, bool commit) {
@@ -73,6 +79,9 @@ class VectorRow extends StatelessWidget {
               defaultValue: defaultValue[i],
               label: labels[i],
               labelColor: labelColors[i],
+              unit: unit,
+              textFieldKey: keyPrefix != null ? ValueKey('$keyPrefix.$i${revision != null ? ".$revision" : ""}') : null,
+              initialValue: keyPrefix != null ? value[i].toStringAsFixed(1) : null,
               onChanged: (v) => _updateComponent(i, v, false),
               onCommit: (v) => _updateComponent(i, v, true),
               onReset: () {

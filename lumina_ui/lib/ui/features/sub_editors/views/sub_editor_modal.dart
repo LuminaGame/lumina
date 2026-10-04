@@ -140,15 +140,31 @@ class _SubEditorWorkspaceWidgetState extends State<SubEditorWorkspaceWidget> {
   }
 
   @override
-  Widget build(BuildContext context) => _SubEditorDispatcher(
-        assetType: widget.assetType,
-        assetName: widget.assetName,
-        asset: widget.asset,
-        onClose: widget.onClose,
-        tabId: widget.tabId,
-        editorViewModel: widget.editorViewModel,
-        bindings: _bindings,
+  Widget build(BuildContext context) {
+    if (widget.editorViewModel != null) {
+      return ListenableBuilder(
+        listenable: widget.editorViewModel!,
+        builder: (context, _) => _SubEditorDispatcher(
+          assetType: widget.assetType,
+          assetName: widget.assetName,
+          asset: widget.asset,
+          onClose: widget.onClose,
+          tabId: widget.tabId,
+          editorViewModel: widget.editorViewModel,
+          bindings: _bindings,
+        ),
       );
+    }
+    return _SubEditorDispatcher(
+      assetType: widget.assetType,
+      assetName: widget.assetName,
+      asset: widget.asset,
+      onClose: widget.onClose,
+      tabId: widget.tabId,
+      editorViewModel: widget.editorViewModel,
+      bindings: _bindings,
+    );
+  }
 }
 
 class _SubEditorDispatcher extends StatelessWidget {

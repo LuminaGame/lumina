@@ -28,6 +28,7 @@ import '../object/character.dart';
 import '../physics/mass_properties.dart';
 import 'anim/anim_blueprint_instance.dart';
 import 'blueprint_model.dart';
+import 'blueprint_runtime.dart';
 import 'blueprint_validator.dart';
 
 /// Turns a stored mesh asset reference (a project `.lmas` path, a `.glb`) into
@@ -55,12 +56,14 @@ abstract final class LuminaBlueprintComponents {
   static Map<String, LuminaActorComponent> construct(
     LuminaActor actor,
     List<LuminaBlueprintComponent> components, {
+    Map<String, LuminaActorComponent>? parentComponents,
     LuminaBlueprintAssetResolver? resolveAsset,
     Future<Uint8List> Function(String path)? assetProvider,
     List<LuminaBlueprintDiagnostic>? diagnostics,
     LuminaAnimBlueprintFactory? Function(String animClass)? animBlueprints,
   }) {
-    final built = <String, LuminaActorComponent>{};
+    final existing = actor is LuminaBlueprintRuntime ? actor.blueprintComponents : const <String, LuminaActorComponent>{};
+    final built = <String, LuminaActorComponent>{...existing, ...?parentComponents};
     final pending = [...components];
     // Parents first; a parent missing from the list attaches to the root.
     var progressed = true;
@@ -74,6 +77,14 @@ abstract final class LuminaBlueprintComponents {
         if (!parentReady) continue;
         pending.remove(c);
         progressed = true;
+        final existingComp = built[c.id];
+        if (existingComp != null) {
+          if (existingComp is LuminaSceneComponent) {
+            existingComp.detachFromParent();
+          }
+          actor.removeComponent(existingComp);
+          built.remove(c.id);
+        }
         final component = _build(actor, c, resolveAsset, assetProvider, diagnostics);
         if (component == null) continue;
         built[c.id] = component;
@@ -376,7 +387,11 @@ abstract final class LuminaBlueprintComponents {
       case 'LuminaAnimatedMeshComponent':
         final stored = p['skeletalMeshAsset'] as String? ?? '';
         final path = stored.isEmpty ? null : (resolveAsset?.call(stored) ?? luminaBlueprintMeshPath(stored));
-        if (path == null) return null;
+        if (path == null) {
+          final placeholder = LuminaSceneComponent();
+          _transform(placeholder, p);
+          return placeholder;
+        }
         final mesh = LuminaAnimatedMeshComponent(
           meshAssetPath: path,
           castShadows: _bool(p, 'castShadows') ?? true,
@@ -392,6 +407,17 @@ abstract final class LuminaBlueprintComponents {
         final radius = _num(p, 'attenuationRadius') ?? _num(p, 'falloffRadius');
         if (radius != null) light.falloffRadius = radius;
         return light;
+      case 'LuminaDirectionalLightComponent':
+        final light = LuminaDirectionalLightComponent(
+          intensity: _num(p, 'intensity') ?? 100000.0,
+          isSun: _bool(p, 'isSun') ?? true,
+          sunAngularRadius: _num(p, 'sunAngularRadius') ?? 0.545,
+          sunHaloSize: _num(p, 'sunHaloSize') ?? 10.0,
+          sunHaloFalloff: _num(p, 'sunHaloFalloff') ?? 80.0,
+        );
+        _transform(light, p);
+        _light(light, p);
+        return light;
       case 'LuminaSpotLightComponent':
         final light = LuminaSpotLightComponent(intensity: _num(p, 'intensity') ?? 10000.0);
         _transform(light, p);
@@ -402,7 +428,11 @@ abstract final class LuminaBlueprintComponents {
       case 'LuminaStaticMeshComponent':
         final stored = p['staticMeshAsset'] as String? ?? '';
         final path = stored.isEmpty ? null : (resolveAsset?.call(stored) ?? luminaBlueprintMeshPath(stored));
-        if (path == null) return null;
+        if (path == null) {
+          final placeholder = LuminaSceneComponent();
+          _transform(placeholder, p);
+          return placeholder;
+        }
         final mesh = LuminaStaticMeshComponent(
           meshAssetPath: path,
           castShadows: _bool(p, 'castShadows') ?? true,

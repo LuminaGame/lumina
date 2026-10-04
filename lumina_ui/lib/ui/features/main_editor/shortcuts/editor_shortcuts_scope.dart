@@ -111,10 +111,10 @@ class _EditorShortcutsScopeState extends State<EditorShortcutsScope> {
     final vm = widget.viewModel;
     return Shortcuts(
       shortcuts: <ShortcutActivator, Intent>{
-        ConditionalActivator(LogicalKeyboardKey.keyQ, vm): const DispatchCommandIntent('tool.select'),
-        ConditionalActivator(LogicalKeyboardKey.keyW, vm): const DispatchCommandIntent('tool.translate'),
-        ConditionalActivator(LogicalKeyboardKey.keyE, vm): const DispatchCommandIntent('tool.rotate'),
-        ConditionalActivator(LogicalKeyboardKey.keyR, vm): const DispatchCommandIntent('tool.scale'),
+        ConditionalActivator(LogicalKeyboardKey.keyQ, vm, levelEditing: false): const DispatchCommandIntent('tool.select'),
+        ConditionalActivator(LogicalKeyboardKey.keyW, vm, levelEditing: false): const DispatchCommandIntent('tool.translate'),
+        ConditionalActivator(LogicalKeyboardKey.keyE, vm, levelEditing: false): const DispatchCommandIntent('tool.rotate'),
+        ConditionalActivator(LogicalKeyboardKey.keyR, vm, levelEditing: false): const DispatchCommandIntent('tool.scale'),
         ConditionalActivator(LogicalKeyboardKey.keyF, vm): const DispatchCommandIntent('view.focusSelected'),
         ConditionalActivator(LogicalKeyboardKey.delete, vm): const DispatchCommandIntent('edit.delete'),
         ConditionalActivator(LogicalKeyboardKey.f2, vm): const DispatchCommandIntent('outliner.rename'),

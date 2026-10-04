@@ -18,10 +18,33 @@ mixin _BlueprintSubEditorComponentDetails on _BlueprintSubEditorStateBase {
           BlueprintPinLiteralEditor(
             keyPrefix: 'variable_default_${v.name}',
             type: type,
-            value: v.defaultValue,
+            value: _viewModel.document.classDefaults[v.name] ?? v.defaultValue,
             expanded: true,
             onCommit: (value) => _viewModel.setVariableDefault(v.name, value),
           ),
+        if (_viewModel.isInheritedVariable(v.name)) ...[
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: EditorColors.muted.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: EditorColors.border, width: 0.5),
+            ),
+            child: Row(
+              children: [
+                const Icon(LucideIcons.info, size: 14, color: EditorColors.mutedForeground),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Inherited from ${_viewModel.document.parentClass}. Modifying the default overrides the class default for this Blueprint.',
+                    style: const TextStyle(fontSize: 9, color: EditorColors.mutedForeground),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
         const SizedBox(height: 12),
         Text('Used by ${_viewModel.nodesUsingVariable(v.name).length} node(s)',
             style: const TextStyle(fontSize: 9, color: EditorColors.mutedForeground)),
@@ -254,6 +277,61 @@ mixin _BlueprintSubEditorComponentDetails on _BlueprintSubEditorStateBase {
   }
 
   Widget _buildPropertyGroup(String groupName, List<ComponentPropertySchema> properties, LuminaBlueprintComponent node) {
+    if (groupName == 'TRANSFORM') {
+      List<double> toVec(dynamic val, [List<double> def = const [0.0, 0.0, 0.0]]) {
+        if (val is List) {
+          final res = val.map((e) => (e as num).toDouble()).toList();
+          while (res.length < 3) {
+            res.add(0.0);
+          }
+          return res;
+        }
+        return def;
+      }
+
+      final loc = toVec(node.properties['location'], const [0.0, 0.0, 0.0]);
+      final rot = toVec(node.properties['rotation'], const [0.0, 0.0, 0.0]);
+      final scl = toVec(node.properties['scale'], const [1.0, 1.0, 1.0]);
+
+      return Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: EditorColors.card,
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: EditorColors.border),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('TRANSFORM', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: EditorColors.mutedForeground)),
+            const SizedBox(height: 8),
+            LuminaTransformWidget(
+              location: loc,
+              rotation: rot,
+              scale: scl,
+              keyPrefix: node.id,
+              revision: _viewModel.componentTransformRevision,
+              showHeaders: true,
+              locationTitle: 'LOCATION / TRANSLATION',
+              rotationTitle: 'ROTATION (EULER DEGREES)',
+              scaleTitle: 'SCALE',
+              useEulerLabels: false,
+              onLocationChanged: (v) => _viewModel.previewProperty(node.id, 'location', v),
+              onLocationCommit: (v) => _viewModel.setProperty(node.id, 'location', v),
+              onLocationReset: () => _viewModel.setProperty(node.id, 'location', [0.0, 0.0, 0.0]),
+              onRotationChanged: (v) => _viewModel.previewProperty(node.id, 'rotation', v),
+              onRotationCommit: (v) => _viewModel.setProperty(node.id, 'rotation', v),
+              onRotationReset: () => _viewModel.setProperty(node.id, 'rotation', [0.0, 0.0, 0.0]),
+              onScaleChanged: (v) => _viewModel.previewProperty(node.id, 'scale', v),
+              onScaleCommit: (v) => _viewModel.setProperty(node.id, 'scale', v),
+              onScaleReset: () => _viewModel.setProperty(node.id, 'scale', [1.0, 1.0, 1.0]),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(8),
@@ -331,6 +409,9 @@ mixin _BlueprintSubEditorComponentDetails on _BlueprintSubEditorStateBase {
             vec.add(0.0);
           }
         }
+        final defaultVec = (prop.defaultValue is List)
+            ? (prop.defaultValue as List).map((e) => (e as num).toDouble()).toList()
+            : const [0.0, 0.0, 0.0];
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 4),
           child: Column(
@@ -338,44 +419,12 @@ mixin _BlueprintSubEditorComponentDetails on _BlueprintSubEditorStateBase {
             children: [
               Text(prop.name, style: const TextStyle(fontSize: 10, color: EditorColors.foreground)),
               const SizedBox(height: 4),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      key: ValueKey('${node.id}.${prop.dartField}.0.${_viewModel.componentTransformRevision}'),
-                      initialValue: vec[0].toStringAsFixed(1),
-                      placeholder: const Text('X').small(),
-                      onChanged: (val) {
-                        final v = double.tryParse(val) ?? 0.0;
-                        _viewModel.setProperty(node.id, prop.dartField, [v, vec[1], vec[2]]);
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: TextField(
-                      key: ValueKey('${node.id}.${prop.dartField}.1.${_viewModel.componentTransformRevision}'),
-                      initialValue: vec[1].toStringAsFixed(1),
-                      placeholder: const Text('Y').small(),
-                      onChanged: (val) {
-                        final v = double.tryParse(val) ?? 0.0;
-                        _viewModel.setProperty(node.id, prop.dartField, [vec[0], v, vec[2]]);
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: TextField(
-                      key: ValueKey('${node.id}.${prop.dartField}.2.${_viewModel.componentTransformRevision}'),
-                      initialValue: vec[2].toStringAsFixed(1),
-                      placeholder: const Text('Z').small(),
-                      onChanged: (val) {
-                        final v = double.tryParse(val) ?? 0.0;
-                        _viewModel.setProperty(node.id, prop.dartField, [vec[0], vec[1], v]);
-                      },
-                    ),
-                  ),
-                ],
+              VectorRow(
+                value: vec,
+                defaultValue: defaultVec,
+                onChanged: (v) => _viewModel.previewProperty(node.id, prop.dartField, v),
+                onCommit: (v) => _viewModel.setProperty(node.id, prop.dartField, v),
+                onReset: () => _viewModel.setProperty(node.id, prop.dartField, defaultVec),
               ),
             ],
           ),

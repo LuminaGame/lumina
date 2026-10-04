@@ -441,4 +441,83 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await frames(tester, 3);
   });
+
+  testWidgets('updating gizmoDefaults on BlueprintSubEditor syncs mode, space, snap to transformGizmo', (tester) async {
+    final state = await openViewport(tester, 'CameraBoom');
+    expect(state.transformGizmo.mode, GizmoMode.translate);
+
+    // Rebuild BlueprintSubEditor with new gizmoDefaults: rotate, local, snap
+    await tester.pumpWidget(ShadcnApp(
+      theme: luminaEditorTheme(),
+      home: Scaffold(
+        child: BlueprintSubEditor(
+          assetName: LuminaThirdPersonContent.characterBlueprintName,
+          assetPath: '$dir/${LuminaThirdPersonContent.characterBlueprintPath}',
+          viewModel: state.viewModel,
+          gizmoDefaults: const BlueprintGizmoDefaults(
+            mode: GizmoMode.rotate,
+            space: GizmoSpace.local,
+            snap: TransformGizmoSnap(rotateEnabled: true, rotateStep: 15.0),
+          ),
+        ),
+      ),
+    ));
+    await frames(tester, 2);
+    expect(state.transformGizmo.mode, GizmoMode.rotate);
+    expect(state.transformGizmo.space, GizmoSpace.local);
+    expect(state.transformGizmo.snap.rotateEnabled, isTrue);
+    expect(state.transformGizmo.snap.rotateStep, 15.0);
+
+    // Update again to scale
+    await tester.pumpWidget(ShadcnApp(
+      theme: luminaEditorTheme(),
+      home: Scaffold(
+        child: BlueprintSubEditor(
+          assetName: LuminaThirdPersonContent.characterBlueprintName,
+          assetPath: '$dir/${LuminaThirdPersonContent.characterBlueprintPath}',
+          viewModel: state.viewModel,
+          gizmoDefaults: const BlueprintGizmoDefaults(
+            mode: GizmoMode.scale,
+            space: GizmoSpace.world,
+          ),
+        ),
+      ),
+    ));
+    await frames(tester, 2);
+    expect(state.transformGizmo.mode, GizmoMode.scale);
+    expect(state.transformGizmo.space, GizmoSpace.world);
+
+    await tester.pumpWidget(const SizedBox());
+    await frames(tester, 3);
+  });
+
+  testWidgets('picking in preview scene finds scene components via their pick box', (tester) async {
+    final state = await openViewport(tester, 'FollowCamera');
+    final vm = state.viewModel;
+    final cameraId = idOf(vm, 'FollowCamera');
+    dynamic viewport() => tester.state(find.byType(SubEditor3DViewport));
+    final rect = tester.getRect(find.byType(SubEditor3DViewport));
+    final camera = vm.preview.sceneTransformFor(cameraId)!;
+    final at = projectWorldToViewport(
+      worldPos: camera.worldLocation,
+      size: rect.size,
+      yawDeg: viewport().cameraYawForTest as double,
+      pitchDeg: viewport().cameraPitchForTest as double,
+      distance: viewport().cameraDistanceForTest as double,
+      target: viewport().cameraTargetForTest as Vector3,
+    );
+    expect(at, isNotNull);
+    final ray = viewportRay(
+      local: at!,
+      size: rect.size,
+      yawDeg: viewport().cameraYawForTest as double,
+      pitchDeg: viewport().cameraPitchForTest as double,
+      distance: viewport().cameraDistanceForTest as double,
+      target: viewport().cameraTargetForTest as Vector3,
+    )!;
+    expect(vm.preview.pick(ray), cameraId);
+
+    await tester.pumpWidget(const SizedBox());
+    await frames(tester, 3);
+  });
 }
