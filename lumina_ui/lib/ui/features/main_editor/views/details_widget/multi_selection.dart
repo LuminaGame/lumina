@@ -117,6 +117,8 @@ mixin _DetailsMultiSelection on _DetailsWidgetStateBase {
           defaultValue: (prop.descriptor.defaultValue as num?)?.toDouble() ?? 0.0,
           min: prop.descriptor.min ?? 0.0,
           max: prop.descriptor.max ?? 100.0,
+          hardMin: prop.descriptor.hardMin,
+          hardMax: prop.descriptor.hardMax,
           unit: prop.descriptor.unit,
           isMixed: prop.isMixed,
           onChanged: (v) {
@@ -137,6 +139,8 @@ mixin _DetailsMultiSelection on _DetailsWidgetStateBase {
           defaultValue: (prop.descriptor.defaultValue as num?)?.toDouble() ?? 0.0,
           min: prop.descriptor.min ?? 0.0,
           max: prop.descriptor.max ?? 100.0,
+          hardMin: prop.descriptor.hardMin,
+          hardMax: prop.descriptor.hardMax,
           unit: prop.descriptor.unit,
           isMixed: prop.isMixed,
           onChanged: (v) {

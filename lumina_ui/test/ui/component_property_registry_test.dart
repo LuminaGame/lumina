@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina/lumina.dart' show LuminaCameraSettings;
 import 'package:lumina_ui/ui/features/details/models/component_property_registry.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_component_registry.dart';
 
 void main() {
   group('ComponentPropertyRegistry Completeness', () {
@@ -54,6 +55,21 @@ void main() {
       final desc = ComponentPropertyRegistry.descriptors['LuminaAudioComponent']!;
       final falloff = desc.properties.firstWhere((p) => p.id == 'falloffDistance');
       expect(falloff.defaultValue, 3500.0);
+    });
+
+    test('LuminaSpotLightComponent allows 100x higher lumen range up to 10M lm', () {
+      final desc = ComponentPropertyRegistry.descriptors['LuminaSpotLightComponent']!;
+      final intensity = desc.properties.firstWhere((p) => p.id == 'intensity');
+      expect(intensity.unit, 'lm');
+      expect(intensity.min, 0.0);
+      expect(intensity.max, 10000000.0, reason: '100x higher than 100k lm for large spotlights');
+      expect(intensity.hardMin, 0.0);
+      expect(intensity.hardMax, double.infinity);
+
+      final bpDesc = BlueprintComponentRegistry.getDescriptor('LuminaSpotLightComponent')!;
+      final bpIntensity = bpDesc.properties.firstWhere((p) => p.dartField == 'intensity');
+      expect(bpIntensity.min, 0.0);
+      expect(bpIntensity.max, 10000000.0);
     });
   });
 }

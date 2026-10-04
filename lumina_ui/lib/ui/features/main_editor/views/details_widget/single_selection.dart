@@ -14,65 +14,23 @@ mixin _DetailsSingleSelection on _DetailsWidgetStateBase {
           padding: const EdgeInsets.all(8),
           child: Column(
             children: [
-              Row(
-                children: [
-                  const SizedBox(width: 60, child: Text('LOCATION', style: EditorTypography.sectionLabel)),
-                  Expanded(
-                    child: VectorRow(
-                      // The axis letters carry the manipulator's own colours,
-                      // so the panel and the 3D gizmo agree on which axis is
-                      // which. See EditorColors.axisX/Y/Z.
-                      labelColors: const [
-                        EditorColors.axisX,
-                        EditorColors.axisY,
-                        EditorColors.axisZ,
-                      ],
-                      value: actor.location,
-                      onChanged: (v) => widget.viewModel.updateActorLocation(v, isCommit: false),
-                      onCommit: (v) => widget.viewModel.updateActorLocation(v, isCommit: true),
-                      onReset: () => widget.viewModel.updateActorLocation([0.0, 0.0, 0.0], isCommit: true),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  const SizedBox(width: 60, child: Text('ROTATION', style: EditorTypography.sectionLabel)),
-                  Expanded(
-                    child: RotationRow(
-                      labelColors: const [
-                        EditorColors.axisX,
-                        EditorColors.axisY,
-                        EditorColors.axisZ,
-                      ],
-                      value: actor.rotation,
-                      onChanged: (v) => widget.viewModel.updateActorRotation(v, isCommit: false),
-                      onCommit: (v) => widget.viewModel.updateActorRotation(v, isCommit: true),
-                      onReset: () => widget.viewModel.updateActorRotation([0.0, 0.0, 0.0], isCommit: true),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  const SizedBox(width: 60, child: Text('SCALE', style: EditorTypography.sectionLabel)),
-                  Expanded(
-                    child: VectorRow(
-                      labelColors: const [
-                        EditorColors.axisX,
-                        EditorColors.axisY,
-                        EditorColors.axisZ,
-                      ],
-                      value: actor.scale,
-                      defaultValue: const [1.0, 1.0, 1.0],
-                      onChanged: (v) => widget.viewModel.updateActorScale(v, isCommit: false),
-                      onCommit: (v) => widget.viewModel.updateActorScale(v, isCommit: true),
-                      onReset: () => widget.viewModel.updateActorScale([1.0, 1.0, 1.0], isCommit: true),
-                    ),
-                  ),
-                ],
+              LuminaTransformWidget(
+                location: actor.location,
+                rotation: actor.rotation,
+                scale: actor.scale,
+                showHeaders: true,
+                locationTitle: 'LOCATION',
+                rotationTitle: 'ROTATION',
+                scaleTitle: 'SCALE',
+                onLocationChanged: (v) => widget.viewModel.updateActorLocation(v, isCommit: false),
+                onLocationCommit: (v) => widget.viewModel.updateActorLocation(v, isCommit: true),
+                onLocationReset: () => widget.viewModel.updateActorLocation([0.0, 0.0, 0.0], isCommit: true),
+                onRotationChanged: (v) => widget.viewModel.updateActorRotation(v, isCommit: false),
+                onRotationCommit: (v) => widget.viewModel.updateActorRotation(v, isCommit: true),
+                onRotationReset: () => widget.viewModel.updateActorRotation([0.0, 0.0, 0.0], isCommit: true),
+                onScaleChanged: (v) => widget.viewModel.updateActorScale(v, isCommit: false),
+                onScaleCommit: (v) => widget.viewModel.updateActorScale(v, isCommit: true),
+                onScaleReset: () => widget.viewModel.updateActorScale([1.0, 1.0, 1.0], isCommit: true),
               ),
               const SizedBox(height: 12),
               Row(
@@ -292,6 +250,8 @@ mixin _DetailsSingleSelection on _DetailsWidgetStateBase {
           defaultValue: (prop.defaultValue as num?)?.toDouble() ?? 0.0,
           min: prop.min ?? 0.0,
           max: prop.max ?? 100.0,
+          hardMin: prop.hardMin,
+          hardMax: prop.hardMax,
           unit: prop.unit,
           onChanged: (v) => widget.viewModel.updateComponentProperty(actor.id, comp.id, prop.id, v),
           onCommit: (v) => widget.viewModel.updateComponentPropertyWithTransaction(actor.id, comp.id, prop.id, v),

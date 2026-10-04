@@ -21,6 +21,8 @@ class PropertyDescriptor {
   final String? unit;
   final double? min;
   final double? max;
+  final double? hardMin;
+  final double? hardMax;
   final dynamic defaultValue;
   final List<String>? enumValues;
   final String? type;
@@ -33,6 +35,8 @@ class PropertyDescriptor {
     this.unit,
     this.min,
     this.max,
+    this.hardMin,
+    this.hardMax,
     this.defaultValue,
     this.enumValues,
     this.type,
@@ -207,7 +211,7 @@ class ComponentPropertyRegistry {
       type: 'LuminaSpotLightComponent',
       sections: ['Light'],
       properties: [
-        PropertyDescriptor(id: 'intensity', label: 'Intensity', group: 'Light', editor: PropertyEditorType.float, unit: 'lm', min: 0.0, max: 100000.0, defaultValue: 10000.0),
+        PropertyDescriptor(id: 'intensity', label: 'Intensity', group: 'Light', editor: PropertyEditorType.float, unit: 'lm', min: 0.0, max: 10000000.0, hardMin: 0.0, hardMax: double.infinity, defaultValue: 10000.0),
         PropertyDescriptor(id: 'colorHex', label: 'Light Color', group: 'Light', editor: PropertyEditorType.color, defaultValue: '#FFFFFF'),
         PropertyDescriptor(id: 'attenuationRadius', label: 'Attenuation Radius', group: 'Light', editor: PropertyEditorType.float, unit: 'cm', min: 1.0, max: 10000.0, defaultValue: 1000.0),
         PropertyDescriptor(id: 'innerConeAngle', label: 'Inner Cone Angle', group: 'Light', editor: PropertyEditorType.float, unit: '°', min: 0.1, max: 90.0, defaultValue: 30.0),
