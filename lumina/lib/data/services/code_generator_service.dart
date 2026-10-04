@@ -55,6 +55,9 @@ class DartCodeGeneratorService extends _DartCodeGeneratorServiceState
     bool widgetClasses = false,
     bool blueprintRegistry = false,
     List<String> levelNames = const [],
+    int targetFps = 0,
+    bool vsyncEnabled = false,
+    bool startFullscreen = false,
   }) {
     // Every level the game can Open Level to, by authored name
     // (`L_Main` → `levels/l_main.dart`, class `LMain`).
@@ -102,6 +105,34 @@ class DartCodeGeneratorService extends _DartCodeGeneratorServiceState
     final modeExpr = pawnClass.isEmpty
         ? modeCreate
         : "($modeCreate..defaultPawnFactory = () => luminaBlueprintFactories['${_escape(pawnClass)}']!() as LuminaPawn)";
+    final ffiImport = startFullscreen ? "import 'dart:ffi' as ffi;\n" : '';
+    final fullscreenCall = startFullscreen
+        ? "  if (!kIsWeb && Platform.isWindows) {\n    _enableFullscreen();\n  }\n"
+        : '';
+    final fullscreenHelper = startFullscreen
+        ? """
+
+void _enableFullscreen() {
+  try {
+    final user32 = ffi.DynamicLibrary.open('user32.dll');
+    final getForegroundWindow = user32.lookupFunction<ffi.IntPtr Function(), int Function()>('GetForegroundWindow');
+    final getSystemMetrics = user32.lookupFunction<ffi.Int32 Function(ffi.Int32), int Function(int)>('GetSystemMetrics');
+    final setWindowPos = user32.lookupFunction<
+        ffi.Int32 Function(ffi.IntPtr, ffi.IntPtr, ffi.Int32, ffi.Int32, ffi.Int32, ffi.Int32, ffi.Uint32),
+        int Function(int, int, int, int, int, int, int)>('SetWindowPos');
+    final showWindow = user32.lookupFunction<ffi.Int32 Function(ffi.IntPtr, ffi.Int32), int Function(int, int)>('ShowWindow');
+
+    final hwnd = getForegroundWindow();
+    if (hwnd != 0) {
+      final width = getSystemMetrics(0);
+      final height = getSystemMetrics(1);
+      showWindow(hwnd, 3);
+      setWindowPos(hwnd, 0, 0, 0, width, height, 0x0020 | 0x0040);
+    }
+  } catch (_) {}
+}
+"""
+        : '';
     return """
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // Lumina Engine $kLuminaEngineVersion Auto-Generated Launcher
@@ -109,7 +140,7 @@ class DartCodeGeneratorService extends _DartCodeGeneratorServiceState
 
 import 'dart:async';
 import 'dart:io' show Platform, exit;
-import 'package:flutter/foundation.dart' show kIsWeb;
+${ffiImport}import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lumina/lumina_runtime.dart';
@@ -117,7 +148,7 @@ $shadcnImport$levelImports
 $blueprintImport$inputImport$functionsImport$widgetsImport$registryImport$modeImport
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-$registerFunctions$registerWidgets$registerBlueprints  // Every asset the level names is read from the app bundle (pubspec.yaml
+$registerFunctions$registerWidgets$registerBlueprints$fullscreenCall  // Every asset the level names is read from the app bundle (pubspec.yaml
   // bundles contents/), so the same game runs on desktop and on the web.
   LuminaAssets.defaultProvider = (path) async {
     final data = await rootBundle.load(path);
@@ -140,7 +171,7 @@ $registerFunctions$registerWidgets$registerBlueprints  // Every asset the level 
   await LuminaWebLoading.prepareGame();
   runApp(const MyLuminaGameApp());
 }
-
+$fullscreenHelper
 /// The levels Open Level can load, by name.
 final Map<String, LuminaLevel Function()> _projectLevels = {
 $levelTable
@@ -404,7 +435,11 @@ class _GameHostState extends State<_GameHost> {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                LuminaGameWidget(game: _game),
+                LuminaGameWidget(
+                  game: _game,
+                  targetFps: $targetFps,
+                  vsyncEnabled: $vsyncEnabled,
+                ),
                 LuminaWidgetLayer.forGame(game: _game),
               ],
             ),

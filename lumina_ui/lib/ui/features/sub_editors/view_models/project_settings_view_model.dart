@@ -458,6 +458,7 @@ class ProjectSettingsViewModel extends _ProjectSettingsViewModelState
     bool? vsyncEnabled,
     String? qualityPreset,
     ScalabilityCategory? scalability,
+    bool? startFullscreen,
   }) =>
       EngineScalabilitySettings(
         targetFps: targetFps ?? s.targetFps,
@@ -466,6 +467,7 @@ class ProjectSettingsViewModel extends _ProjectSettingsViewModelState
         scalability: scalability ?? s.scalability,
         autoOrganizeFiles: s.autoOrganizeFiles,
         autoSaveIntervalSeconds: s.autoSaveIntervalSeconds,
+        startFullscreen: startFullscreen ?? s.startFullscreen,
       );
 
   /// Selecting a preset instantly expands every per-category tier.
@@ -489,6 +491,7 @@ class ProjectSettingsViewModel extends _ProjectSettingsViewModelState
 
   void setTargetFps(int fps) => _update((p) => p.copyWith(settings: _copySettings(p.settings, targetFps: fps)));
   void setVSync(bool on) => _update((p) => p.copyWith(settings: _copySettings(p.settings, vsyncEnabled: on)));
+  void setStartFullscreen(bool on) => _update((p) => p.copyWith(settings: _copySettings(p.settings, startFullscreen: on)));
 
   // Enhanced Input
   void addAction([String? name]) => _update((p) {

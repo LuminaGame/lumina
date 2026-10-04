@@ -82,7 +82,11 @@ class FilamentWidget extends StatefulWidget {
     this.backend = FilamentBackend.defaultBackend,
     this.width = double.infinity,
     this.height = double.infinity,
+    this.targetFps,
   });
+
+  /// Target frame rate in FPS; null or <= 0 means unlimited / display refresh rate.
+  final int? targetFps;
 
   @override
   // A readback into a RawImage natively; a WebGL2 canvas on the web.

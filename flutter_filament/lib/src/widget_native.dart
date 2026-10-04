@@ -145,7 +145,7 @@ class NativeFilamentWidgetState extends State<FilamentWidget>
       widget.onSceneCreated?.call(engine, scene, camera, view);
 
       setState(() {
-        _status = 'Filament 3D Scene Running (60 FPS)';
+        _status = 'Filament 3D Scene Running';
       });
     } catch (e, stack) {
       debugPrint('[Filament Engine Init Exception]: $e\n$stack');
@@ -170,8 +170,16 @@ class NativeFilamentWidgetState extends State<FilamentWidget>
       return;
     }
 
-    _isRenderingFrame = true;
     final int startTick = DateTime.now().microsecondsSinceEpoch;
+    if (widget.targetFps != null && widget.targetFps! > 0) {
+      final targetIntervalUs = 1000000 / widget.targetFps!;
+      if (_lastTickTimestamp > 0 && (startTick - _lastTickTimestamp) < targetIntervalUs) {
+        return;
+      }
+    }
+    _lastTickTimestamp = startTick;
+
+    _isRenderingFrame = true;
     try {
       if (widget.cameraManipulator != null && _camera != null) {
         widget.cameraManipulator!.updateCamera(_camera!);

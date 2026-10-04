@@ -37,8 +37,14 @@ class LuminaGameWidget extends StatefulWidget {
   /// Called on every play-state transition of [game].
   final void Function(LuminaPlayState state)? onPlayStateChanged;
 
-  /// Whether to create the 1×1 headless swap chain + [LuminaFrameDriver] (see class docs).
+  /// Whether an extra headless swap chain and frame driver should be created.
   final bool useHeadlessSwapChain;
+
+  /// Target frame rate in FPS (0 = unlimited / display refresh rate).
+  final int targetFps;
+
+  /// Whether VSync is enabled.
+  final bool vsyncEnabled;
 
   const LuminaGameWidget({
     super.key,
@@ -47,6 +53,8 @@ class LuminaGameWidget extends StatefulWidget {
     this.paused = false,
     this.onPlayStateChanged,
     this.useHeadlessSwapChain = true,
+    this.targetFps = 0,
+    this.vsyncEnabled = false,
   });
 
   @override
@@ -116,6 +124,9 @@ class _LuminaGameWidgetState extends State<LuminaGameWidget> with SingleTickerPr
         swapChain: swapChain,
         view: view,
       );
+      if (widget.targetFps > 0) {
+        _frameDriver!.targetFrameRate = widget.targetFps.toDouble();
+      }
     }
 
     if (widget.paused) {
@@ -134,7 +145,8 @@ class _LuminaGameWidgetState extends State<LuminaGameWidget> with SingleTickerPr
       if (_frameDriver != null) {
         _frameDriver!.onVsync(vsyncNanos);
       } else {
-        widget.game.tickGame(0.016666667);
+        final dt = widget.targetFps > 0 ? (1.0 / widget.targetFps) : 0.016666667;
+        widget.game.tickGame(dt);
       }
     });
     _ticker?.start();
@@ -166,6 +178,7 @@ class _LuminaGameWidgetState extends State<LuminaGameWidget> with SingleTickerPr
     Widget filamentWidget = FilamentWidget(
       onSceneCreated: _onSceneCreated,
       onDispose: _onDispose,
+      targetFps: widget.targetFps > 0 ? widget.targetFps : null,
     );
 
     if (widget.hudBuilder != null) {

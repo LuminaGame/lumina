@@ -86,7 +86,7 @@ class ProjectSettingsCategory {
   /// Searchable keywords per category (row labels) for the settings search.
   static const Map<String, List<String>> keywords = {
     description: ['project name', 'engine version', 'description', 'icon', 'app icon', 'icon background', 'logo', 'splash', 'tray'],
-    graphics: ['quality preset', 'view distance', 'shadow', 'anti-aliasing', 'aa', 'post processing', 'texture', 'shading', 'target fps', 'vsync', 'frame rate'],
+    graphics: ['quality preset', 'view distance', 'shadow', 'anti-aliasing', 'aa', 'post processing', 'texture', 'shading', 'target fps', 'vsync', 'frame rate', 'fullscreen', 'start fullscreen', 'window'],
     input: ['input action', 'mapping context', 'key', 'binding', 'axis', 'scale', 'digital', 'ia_'],
     mapsAndModes: ['editor startup map', 'game default map', 'default game mode', 'level', 'map'],
     physics: ['gravity', 'fixed timestep', 'physics', 'collision'],
