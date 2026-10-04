@@ -281,3 +281,79 @@ void _disableInput(LuminaActor self, [Object? playerController]) => _runtime(sel
   final dir = (v.forward + v.right * (ndcX * tanHalf * aspect) + v.up * (ndcY * tanHalf)).normalized();
   return (worldLocation: LuminaBlueprintFunctionLibrary.toAuthoring(v.eye), worldDirection: LuminaBlueprintFunctionLibrary.toAuthoring(dir));
 }
+
+// --- Settings & Scalability -----------------------------------------
+
+final LuminaUserSettingsSubsystem _fallbackUserSettings = LuminaUserSettingsSubsystem();
+
+LuminaUserSettingsSubsystem _userSettings(LuminaActor self) =>
+    self.world?.userSettings ?? _fallbackUserSettings;
+
+void _setOverallScalabilityLevel(LuminaActor self, [String preset = 'Epic']) =>
+    _userSettings(self).setOverallScalabilityLevel(preset);
+
+String _getOverallScalabilityLevel(LuminaActor self) =>
+    _userSettings(self).overallScalabilityLevel;
+
+void _setViewDistanceQuality(LuminaActor self, [String quality = 'Epic']) =>
+    _userSettings(self).setViewDistanceQuality(quality);
+
+String _getViewDistanceQuality(LuminaActor self) =>
+    _userSettings(self).viewDistanceQuality;
+
+void _setViewDistance(LuminaActor self, [double distance = 100000.0]) =>
+    _userSettings(self).setViewDistance(distance);
+
+double _getViewDistance(LuminaActor self) =>
+    _userSettings(self).viewDistance;
+
+void _setShadowQuality(LuminaActor self, [String quality = 'High']) =>
+    _userSettings(self).setShadowQuality(quality);
+
+String _getShadowQuality(LuminaActor self) =>
+    _userSettings(self).shadowQuality;
+
+void _setAntiAliasingQuality(LuminaActor self, [String quality = 'FXAA']) =>
+    _userSettings(self).setAntiAliasingQuality(quality);
+
+String _getAntiAliasingQuality(LuminaActor self) =>
+    _userSettings(self).antiAliasingQuality;
+
+void _setPostProcessingQuality(LuminaActor self, [String quality = 'Epic']) =>
+    _userSettings(self).setPostProcessingQuality(quality);
+
+String _getPostProcessingQuality(LuminaActor self) =>
+    _userSettings(self).postProcessingQuality;
+
+void _setTextureQuality(LuminaActor self, [String quality = 'High']) =>
+    _userSettings(self).setTextureQuality(quality);
+
+String _getTextureQuality(LuminaActor self) =>
+    _userSettings(self).textureQuality;
+
+void _setShadingQuality(LuminaActor self, [String quality = 'Epic']) =>
+    _userSettings(self).setShadingQuality(quality);
+
+String _getShadingQuality(LuminaActor self) =>
+    _userSettings(self).shadingQuality;
+
+void _setResolutionScale(LuminaActor self, [double percent = 100.0]) =>
+    _userSettings(self).setResolutionScale(percent);
+
+double _getResolutionScale(LuminaActor self) =>
+    _userSettings(self).resolutionScale;
+
+void _setTargetFps(LuminaActor self, [int fps = 60]) =>
+    _userSettings(self).setTargetFps(fps);
+
+int _getTargetFps(LuminaActor self) =>
+    _userSettings(self).targetFps;
+
+void _setVsyncEnabled(LuminaActor self, [bool enabled = false]) =>
+    _userSettings(self).setVsyncEnabled(enabled);
+
+bool _getVsyncEnabled(LuminaActor self) =>
+    _userSettings(self).vsyncEnabled;
+
+void _applyScalabilitySettings(LuminaActor self) =>
+    _userSettings(self).applySettings();

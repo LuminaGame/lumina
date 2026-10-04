@@ -579,6 +579,29 @@ Vectors and rotators are **authoring space** (cm, Z up; rotators about X/Y/Z lik
 | `drawDebugString` | `static const drawDebugString` |  |
 | `drawDebugCapsule` | `static const drawDebugCapsule` |  |
 | `flushDebugShapes` | `static const flushDebugShapes` |  |
+| `setOverallScalabilityLevel` | `static const setOverallScalabilityLevel` | Sets the overall graphics scalability preset (`low`, `medium`, `high`, `epic`, `cinematic`). Adjusts all individual subsystem scalability qualities at once. |
+| `getOverallScalabilityLevel` | `static const getOverallScalabilityLevel` | Returns the current overall graphics scalability preset name (e.g. `'epic'`, `'cinematic'`). |
+| `setViewDistanceQuality` | `static const setViewDistanceQuality` | Sets the view distance quality tier (`low`: 250 m, `medium`: 500 m, `high`: 1 km, `epic`: 2 km, `cinematic`: 4 km). |
+| `getViewDistanceQuality` | `static const getViewDistanceQuality` | Returns the current view distance quality tier. |
+| `setViewDistance` | `static const setViewDistance` | Sets the explicit camera far clip view distance in centimeters (1 world unit = 1 cm). |
+| `getViewDistance` | `static const getViewDistance` | Returns the current camera far clip view distance in centimeters. |
+| `setShadowQuality` | `static const setShadowQuality` | Sets shadow quality tier (`low`: 512px 1 cascade, `medium`: 1024px 2 cascades, `high`: 2048px 3 cascades VSM, `epic`: 4096px 4 cascades PCSS 8-step, `cinematic`: 4096px 4 cascades PCSS 16-step contact shadows). |
+| `getShadowQuality` | `static const getShadowQuality` | Returns the current shadow quality tier. |
+| `setAntiAliasingQuality` | `static const setAntiAliasingQuality` | Sets anti-aliasing quality mode (`none`, `fxaa`, `msaa`, `taa`). |
+| `getAntiAliasingQuality` | `static const getAntiAliasingQuality` | Returns the current anti-aliasing quality mode. |
+| `setPostProcessingQuality` | `static const setPostProcessingQuality` | Sets post processing quality tier (`low`, `medium`, `high`, `epic`, `cinematic`). |
+| `getPostProcessingQuality` | `static const getPostProcessingQuality` | Returns the current post processing quality tier. |
+| `setTextureQuality` | `static const setTextureQuality` | Sets texture quality tier (`low`: 1/4 res MIP+2, `medium`: 1/2 res MIP+1, `high`: full res 4x aniso, `epic`: full res 8x aniso, `cinematic`: uncompressed 16x aniso). |
+| `getTextureQuality` | `static const getTextureQuality` | Returns the current texture quality tier. |
+| `setShadingQuality` | `static const setShadingQuality` | Sets shading quality tier (`low`: simple PBR min 50%, `medium`: standard PBR min 75%, `high`: full PBR 100% SSR, `epic`: ultra PBR + AO, `cinematic`: ultra PBR + 4x MSAA + max SSR). |
+| `getShadingQuality` | `static const getShadingQuality` | Returns the current shading quality tier. |
+| `setResolutionScale` | `static const setResolutionScale` | Sets internal render resolution scale percentage (25% - 200%). |
+| `getResolutionScale` | `static const getResolutionScale` | Returns the current render resolution scale percentage. |
+| `setTargetFPS` | `static const setTargetFPS` | Sets the target frame rate cap (0 for unlimited). |
+| `getTargetFPS` | `static const getTargetFPS` | Returns the current target frame rate cap. |
+| `setVSyncEnabled` | `static const setVSyncEnabled` | Enables or disables vertical synchronization. |
+| `getVSyncEnabled` | `static const getVSyncEnabled` | Returns whether vertical synchronization is enabled. |
+| `applyScalabilitySettings` | `static const applyScalabilitySettings` | Compiles and applies pending scalability and view distance settings to the live viewport and cameras. |
 | `callShapes` | `static final Map<String, LuminaBlueprintCallShape> callShapes` | One entry per [functions] key: the direct call generated code emits. |
 | `functions` | `static final Map<String, LuminaBlueprintFunction> functions` | Every node the VM can call, keyed by node id: the built-ins, then the functions registered in [LuminaBlueprintFunctionRegistry]. Inputs arrive converted to their pin types (the VM resolves wires, literals and defaults first). |
 | `builtInFunctions` | `static final Map<String, LuminaBlueprintFunction> builtInFunctions` | One entry per pure / impure built-in node, keyed by node id. |

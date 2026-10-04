@@ -70,6 +70,68 @@ final Map<String, LuminaBlueprintFunction> _gameFrameworkFunctions = <String, Lu
     return const {};
   },
   'get_last_input_device': (c, i) => LuminaBlueprintFunctionLibrary._ret(LuminaBlueprintFunctionLibrary.getLastInputDevice(c.self)),
+
+  // --- Settings & Scalability -----------------------------------------
+  'set_overall_scalability_level': (c, i) {
+    LuminaBlueprintFunctionLibrary.setOverallScalabilityLevel(c.self, i['preset'] as String? ?? 'Epic');
+    return const {};
+  },
+  'get_overall_scalability_level': (c, i) => LuminaBlueprintFunctionLibrary._ret(LuminaBlueprintFunctionLibrary.getOverallScalabilityLevel(c.self)),
+  'set_view_distance_quality': (c, i) {
+    LuminaBlueprintFunctionLibrary.setViewDistanceQuality(c.self, i['quality'] as String? ?? 'Epic');
+    return const {};
+  },
+  'get_view_distance_quality': (c, i) => LuminaBlueprintFunctionLibrary._ret(LuminaBlueprintFunctionLibrary.getViewDistanceQuality(c.self)),
+  'set_view_distance': (c, i) {
+    LuminaBlueprintFunctionLibrary.setViewDistance(c.self, LuminaBlueprintFunctionLibrary._d(i['distance'], 100000.0));
+    return const {};
+  },
+  'get_view_distance': (c, i) => LuminaBlueprintFunctionLibrary._ret(LuminaBlueprintFunctionLibrary.getViewDistance(c.self)),
+  'set_shadow_quality': (c, i) {
+    LuminaBlueprintFunctionLibrary.setShadowQuality(c.self, i['quality'] as String? ?? 'High');
+    return const {};
+  },
+  'get_shadow_quality': (c, i) => LuminaBlueprintFunctionLibrary._ret(LuminaBlueprintFunctionLibrary.getShadowQuality(c.self)),
+  'set_anti_aliasing_quality': (c, i) {
+    LuminaBlueprintFunctionLibrary.setAntiAliasingQuality(c.self, i['quality'] as String? ?? 'FXAA');
+    return const {};
+  },
+  'get_anti_aliasing_quality': (c, i) => LuminaBlueprintFunctionLibrary._ret(LuminaBlueprintFunctionLibrary.getAntiAliasingQuality(c.self)),
+  'set_post_processing_quality': (c, i) {
+    LuminaBlueprintFunctionLibrary.setPostProcessingQuality(c.self, i['quality'] as String? ?? 'Epic');
+    return const {};
+  },
+  'get_post_processing_quality': (c, i) => LuminaBlueprintFunctionLibrary._ret(LuminaBlueprintFunctionLibrary.getPostProcessingQuality(c.self)),
+  'set_texture_quality': (c, i) {
+    LuminaBlueprintFunctionLibrary.setTextureQuality(c.self, i['quality'] as String? ?? 'High');
+    return const {};
+  },
+  'get_texture_quality': (c, i) => LuminaBlueprintFunctionLibrary._ret(LuminaBlueprintFunctionLibrary.getTextureQuality(c.self)),
+  'set_shading_quality': (c, i) {
+    LuminaBlueprintFunctionLibrary.setShadingQuality(c.self, i['quality'] as String? ?? 'Epic');
+    return const {};
+  },
+  'get_shading_quality': (c, i) => LuminaBlueprintFunctionLibrary._ret(LuminaBlueprintFunctionLibrary.getShadingQuality(c.self)),
+  'set_resolution_scale': (c, i) {
+    LuminaBlueprintFunctionLibrary.setResolutionScale(c.self, LuminaBlueprintFunctionLibrary._d(i['percent'], 100.0));
+    return const {};
+  },
+  'get_resolution_scale': (c, i) => LuminaBlueprintFunctionLibrary._ret(LuminaBlueprintFunctionLibrary.getResolutionScale(c.self)),
+  'set_target_fps': (c, i) {
+    LuminaBlueprintFunctionLibrary.setTargetFps(c.self, LuminaBlueprintFunctionLibrary._n(i['fps'], 60));
+    return const {};
+  },
+  'get_target_fps': (c, i) => LuminaBlueprintFunctionLibrary._ret(LuminaBlueprintFunctionLibrary.getTargetFps(c.self)),
+  'set_vsync_enabled': (c, i) {
+    LuminaBlueprintFunctionLibrary.setVsyncEnabled(c.self, i['enabled'] as bool? ?? false);
+    return const {};
+  },
+  'get_vsync_enabled': (c, i) => LuminaBlueprintFunctionLibrary._ret(LuminaBlueprintFunctionLibrary.getVsyncEnabled(c.self)),
+  'apply_scalability_settings': (c, i) {
+    LuminaBlueprintFunctionLibrary.applyScalabilitySettings(c.self);
+    return const {};
+  },
+
   'play_sound_2d': (c, i) {
     LuminaBlueprintFunctionLibrary.playSound2D(c.self, i['sound'] as String? ?? '', LuminaBlueprintFunctionLibrary._d(i['volume'], 1.0), LuminaBlueprintFunctionLibrary._d(i['pitch'], 1.0), LuminaBlueprintFunctionLibrary._d(i['start_time'], 0.0));
     return const {};

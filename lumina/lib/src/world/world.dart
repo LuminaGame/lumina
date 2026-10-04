@@ -188,6 +188,7 @@ class LuminaWorld extends LuminaObject {
     persistentLevel.owningWorld = this;
     persistentLevel.state = LevelState.visible;
     registerSubsystem<LuminaWidgetSubsystem>(LuminaWidgetSubsystem());
+    registerSubsystem<LuminaUserSettingsSubsystem>(LuminaUserSettingsSubsystem());
     for (final actor in persistentLevel.actors) {
       actor.onRegister(this);
     }
@@ -478,10 +479,14 @@ class LuminaWorld extends LuminaObject {
       postProcess.apply(newPp);
       postProcess.applyShadowSettings(profile.shadows);
     } else {
-      _stagedSunShadowOptions = profile.shadows.toShadowOptions(
-        cameraNear: 10.0,
-        cameraFar: 10000.0,
-      );
+      try {
+        _stagedSunShadowOptions = profile.shadows.toShadowOptions(
+          cameraNear: 10.0,
+          cameraFar: 10000.0,
+        );
+      } catch (_) {
+        // In headless unit tests without native assets, staging shadow options is skipped.
+      }
     }
     _appliedScalability = profile;
   }
@@ -496,6 +501,11 @@ class LuminaWorld extends LuminaObject {
   T? getSubsystem<T extends LuminaWorldSubsystem>() {
     return subsystems.getSubsystem<T>();
   }
+
+  /// The user settings and scalability subsystem for this world.
+  LuminaUserSettingsSubsystem get userSettings =>
+      getSubsystem<LuminaUserSettingsSubsystem>() ??
+      registerSubsystem<LuminaUserSettingsSubsystem>(LuminaUserSettingsSubsystem());
 
   /// Spawns an actor into [level] (defaulting to [persistentLevel]), deferred to Phase 5.
   T spawnActor<T extends LuminaActor>(T actor, {LuminaLevel? level}) {

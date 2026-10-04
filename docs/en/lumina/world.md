@@ -26,6 +26,7 @@ The world that owns every actor: the world and its subsystems, levels and the le
 - [`lib/src/world/debug_shapes.dart`](#libsrcworlddebug_shapesdart)
 - [`lib/src/world/level_preloader.dart`](#libsrcworldlevel_preloaderdart)
 - [`lib/src/world/subsystem/widget_subsystem.dart`](#libsrcworldsubsystemwidget_subsystemdart)
+- [`lib/src/world/subsystem/user_settings_subsystem.dart`](#libsrcworldsubsystemuser_settings_subsystemdart)
 
 ## `lib/src/world/data_layer.dart`
 
@@ -757,6 +758,32 @@ Manages active UMG widgets added to the viewport in a [LuminaWorld].
 | `addWidget` | `void addWidget(Map<String, Object?> widget)` | Adds a widget to the viewport. |
 | `removeWidget` | `void removeWidget(Map<String, Object?> widget)` | Removes a widget from the viewport. |
 | `notifyChanged` | `void notifyChanged()` | Notifies listeners that widget properties (e.g. visibility, zOrder, text) changed. |
+
+## `lib/src/world/subsystem/user_settings_subsystem.dart`
+
+### `class LuminaUserSettingsSubsystem`
+
+World subsystem managing game scalability, camera view distance, and user display settings.
+
+**Members:**
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `overallScalabilityLevel` | `String get overallScalabilityLevel` | Current overall preset (`low`, `medium`, `high`, `epic`, `cinematic`, or `custom`). |
+| `viewDistanceQuality` | `String get viewDistanceQuality` | Current view distance tier (`low`, `medium`, `high`, `epic`, `cinematic`). |
+| `viewDistance` | `double get viewDistance` | Current camera far clip plane distance in centimeters. |
+| `shadowQuality` | `String get shadowQuality` | Current shadow quality tier. |
+| `antiAliasingQuality` | `String get antiAliasingQuality` | Current anti-aliasing mode (`none`, `fxaa`, `msaa`, `taa`). |
+| `postProcessingQuality` | `String get postProcessingQuality` | Current post-processing tier. |
+| `textureQuality` | `String get textureQuality` | Current texture quality tier. |
+| `shadingQuality` | `String get shadingQuality` | Current shading quality tier. |
+| `resolutionScale` | `double get resolutionScale` | Current render resolution scaling percentage. |
+| `targetFps` | `int get targetFps` | Target FPS cap (0 for unlimited). |
+| `vsyncEnabled` | `bool get vsyncEnabled` | Whether vertical synchronization is enabled. |
+| `setOverallScalabilityLevel` | `void setOverallScalabilityLevel(String preset)` | Sets all scalability tiers to match the specified preset. |
+| `setViewDistanceQuality` | `void setViewDistanceQuality(String tier)` | Sets view distance quality tier and updates far clip distance. |
+| `setViewDistance` | `void setViewDistance(double cm)` | Sets explicit camera far clip plane in centimeters. |
+| `applySettings` | `void applySettings()` | Applies the configured settings to the world, dynamic resolution, post-process controller, directional light shadows, and camera far clip planes. |
 
 ---
 

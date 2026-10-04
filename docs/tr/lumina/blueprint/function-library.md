@@ -579,6 +579,29 @@ Vectors and rotators are **authoring space** (cm, Z up; rotators about X/Y/Z lik
 | `drawDebugString` | `static const drawDebugString` |  |
 | `drawDebugCapsule` | `static const drawDebugCapsule` |  |
 | `flushDebugShapes` | `static const flushDebugShapes` |  |
+| `setOverallScalabilityLevel` | `static const setOverallScalabilityLevel` | Genel grafik ölçeklenebilirlik presetini belirler (`low`, `medium`, `high`, `epic`, `cinematic`). Tüm alt sistem ölçeklenebilirlik seviyelerini tek seferde senkronize eder. |
+| `getOverallScalabilityLevel` | `static const getOverallScalabilityLevel` | Geçerli genel grafik ölçeklenebilirlik preset adını döner (örn. `'epic'`, `'cinematic'`). |
+| `setViewDistanceQuality` | `static const setViewDistanceQuality` | Görüş mesafesi kalite kademesini ayarlar (`low`: 250 m, `medium`: 500 m, `high`: 1 km, `epic`: 2 km, `cinematic`: 4 km). |
+| `getViewDistanceQuality` | `static const getViewDistanceQuality` | Geçerli görüş mesafesi kalite kademesini döner. |
+| `setViewDistance` | `static const setViewDistance` | Santimetre cinsinden açık kamera far clip görüş mesafesini ayarlar (1 dünya birimi = 1 cm). |
+| `getViewDistance` | `static const getViewDistance` | Santimetre cinsinden geçerli kamera far clip görüş mesafesini döner. |
+| `setShadowQuality` | `static const setShadowQuality` | Gölge kalitesi kademesini ayarlar (`low`: 512px 1 cascade, `medium`: 1024px 2 cascades, `high`: 2048px 3 cascades VSM, `epic`: 4096px 4 cascades PCSS 8 adım, `cinematic`: 4096px 4 cascades PCSS 16 adımlı temas gölgeleri). |
+| `getShadowQuality` | `static const getShadowQuality` | Geçerli gölge kalitesi kademesini döner. |
+| `setAntiAliasingQuality` | `static const setAntiAliasingQuality` | Kenar yumuşatma (Anti-Aliasing) modunu belirler (`none`, `fxaa`, `msaa`, `taa`). |
+| `getAntiAliasingQuality` | `static const getAntiAliasingQuality` | Geçerli kenar yumuşatma modunu döner. |
+| `setPostProcessingQuality` | `static const setPostProcessingQuality` | Post-process kalite kademesini ayarlar (`low`, `medium`, `high`, `epic`, `cinematic`). |
+| `getPostProcessingQuality` | `static const getPostProcessingQuality` | Geçerli post-process kalite kademesini döner. |
+| `setTextureQuality` | `static const setTextureQuality` | Doku kalite kademesini ayarlar (`low`: 1/4 çözünürlük MIP+2, `medium`: 1/2 çözünürlük MIP+1, `high`: tam çözünürlük 4x anizotropik, `epic`: tam çözünürlük 8x anizo, `cinematic`: sıkıştırmasız 16x anizo). |
+| `getTextureQuality` | `static const getTextureQuality` | Geçerli doku kalite kademesini döner. |
+| `setShadingQuality` | `static const setShadingQuality` | Gölgelendirme (shading) kalite kademesini ayarlar (`low`: basit PBR min %50 dinamik çözünürlük, `medium`: standart PBR min %75, `high`: tam PBR %100 SSR, `epic`: ultra PBR + AO, `cinematic`: ultra PBR + 4x MSAA + maks SSR). |
+| `getShadingQuality` | `static const getShadingQuality` | Geçerli gölgelendirme kalite kademesini döner. |
+| `setResolutionScale` | `static const setResolutionScale` | Dahili render çözünürlük ölçeği yüzdesini ayarlar (%25 - %200). |
+| `getResolutionScale` | `static const getResolutionScale` | Geçerli render çözünürlük ölçeği yüzdesini döner. |
+| `setTargetFPS` | `static const setTargetFPS` | Hedef kare hızı sınırını belirler (sınırsız için 0). |
+| `getTargetFPS` | `static const getTargetFPS` | Geçerli hedef kare hızı sınırını döner. |
+| `setVSyncEnabled` | `static const setVSyncEnabled` | Dikey senkronizasyonu (VSync) açar veya kapatır. |
+| `getVSyncEnabled` | `static const getVSyncEnabled` | Dikey senkronizasyonun açık olup olmadığını döner. |
+| `applyScalabilitySettings` | `static const applyScalabilitySettings` | Bekleyen tüm ölçeklenebilirlik ve görüş mesafesi ayarlarını canlı sahneye ve kameralara anında derleyip uygular. |
 | `callShapes` | `static final Map<String, LuminaBlueprintCallShape> callShapes` | One entry per [functions] key: the direct call generated code emits. |
 | `functions` | `static final Map<String, LuminaBlueprintFunction> functions` | Every node the VM can call, keyed by node id: the built-ins, then the functions registered in [LuminaBlueprintFunctionRegistry]. Inputs arrive converted to their pin types (the VM resolves wires, literals and defaults first). |
 | `builtInFunctions` | `static final Map<String, LuminaBlueprintFunction> builtInFunctions` | One entry per pure / impure built-in node, keyed by node id. |

@@ -224,6 +224,7 @@ export 'src/post_process/post_process_controller.dart';
 export 'src/post_process/post_process_blender.dart';
 export 'src/post_process/shadow_settings.dart';
 export 'src/post_process/scalability_profile.dart';
+export 'src/world/subsystem/user_settings_subsystem.dart';
 
 // Animation
 export 'src/animation/animation_clip.dart';

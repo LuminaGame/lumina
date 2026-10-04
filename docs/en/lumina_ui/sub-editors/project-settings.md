@@ -312,6 +312,27 @@ A single selectable key or axis option in the dialog.
 | `icon` | `final IconData icon` | Icon associated with the key type. |
 | `searchTerms` | `final List<String> searchTerms` | Search keywords and aliases for rapid filtering. |
 
+## Scalability Presets and Technical Specifications
+
+The **Engine & Graphics** category configures project-wide graphics defaults stored in `.lmproject` under `settings.scalability`. Selecting a preset immediately configures the underlying rendering pipeline and updates camera far clipping distances:
+
+| Preset | View Distance | Shadows | Anti-Aliasing | Post Processing | Textures | Shading |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Low** | 250 m (25,000 cm) | 512×512 PCF (1 cascade) | None | Low HDR buffer, minimal bloom | 1/4 res (MIP bias +2, 1x bilinear) | Simple PBR (min 50% dynamic res) |
+| **Medium** | 500 m (50,000 cm) | 1024×1024 PCF (2 cascades, lambda 0.5) | FXAA | Medium HDR buffer, standard bloom | 1/2 res (MIP bias +1, 2x trilinear) | Standard PBR (min 75% dynamic res) |
+| **High** | 1,000 m (100,000 cm) | 2048×2048 VSM (3 cascades, 2x aniso) | FXAA | High HDR buffer, bloom, vignette, CA | Full res (4x anisotropic) | Full PBR, native 100% res, SSR |
+| **Epic** | 2,000 m (200,000 cm) | 4096×4096 PCSS (4 cascades, 8-step contact) | TAA | Ultra HDR buffer, full bloom, ACES | Full res (8x anisotropic) | Ultra PBR, SSR & Screen AO |
+| **Cinematic** | 4,000 m (400,000 cm) | 4096×4096 PCSS (4 cascades, 16-step contact, lambda 0.4) | 4x MSAA + TAA | Ultra HDR buffer, full DoF & cinematic grading | Uncompressed (16x anisotropic) | Ultra PBR, 4x MSAA + TAA, max SSR |
+
+### Detailed Breakdown of Presets:
+- **Low**: Maximum performance profile designed for low-power mobile or integrated GPUs. Disables anti-aliasing and screen-space reflections, limits shadow map to 512×512 with 1 cascade, downsamples textures by two mip levels, and caps the camera far clip distance at 250 meters.
+- **Medium**: Balanced profile for mainstream hardware. Employs 1024×1024 PCF shadows across 2 cascades, FXAA, medium HDR bloom, half-resolution textures, and a 500-meter camera view distance.
+- **High**: High-fidelity desktop profile. Uses 2048×2048 Variance Shadow Maps (VSM) across 3 cascades, native 100% viewport resolution, screen-space reflections (SSR), 4x anisotropic filtering, full texture resolution, and a 1,000-meter (1 km) view distance.
+- **Epic**: Production game fidelity target. Utilizes 4096×4096 Percentage-Closer Soft Shadows (PCSS) across 4 cascades with 8-step screen-space contact shadows, Temporal Anti-Aliasing (TAA) with sub-pixel jitter history buffer, ambient occlusion, ACES color grading, 8x anisotropic filtering, and a 2,000-meter (2 km) view distance.
+- **Cinematic**: The highest fidelity profile built for offline/cutscene capture, high-end workstations, and offline promotional rendering. Extends camera far clip plane to 4,000 meters (4 km); pushes shadow cascades to 4096×4096 PCSS with 16-step contact shadows and practical lambda 0.4 split; couples 4x hardware MSAA with TAA; enables uncompressed 16x anisotropic texture samplers; and runs full physical depth of field with cinematic grading. For interactive gameplay at high refresh rates, **Epic** or **High** is recommended.
+
+These settings can be dynamically altered at runtime inside Blueprint graphs using nodes such as `SetOverallScalabilityLevel`, `SetViewDistance`, and `ApplyScalabilitySettings`, or programmatically via `LuminaUserSettingsSubsystem`.
+
 ---
 
 [Previous: Physics asset editor](physics-asset.md) | [Up: Sub-editors](index.md) | [Next: Sequencer](sequencer.md)

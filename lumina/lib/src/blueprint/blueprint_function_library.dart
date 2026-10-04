@@ -55,6 +55,7 @@ import '../game/player_start.dart';
 import '../utility/timer_manager.dart';
 import '../world/debug_shapes.dart';
 import '../world/subsystem/widget_subsystem.dart';
+import '../world/subsystem/user_settings_subsystem.dart';
 import '../umg/user_widget.dart';
 import '../world/world.dart';
 import 'blueprint_enums_interfaces.dart';
@@ -878,6 +879,32 @@ abstract final class LuminaBlueprintFunctionLibrary {
   /// Deproject Screen to World: the ray through viewport pixel
   /// [screenPosition], in authoring space.
   static const deprojectScreenToWorld = _deprojectScreenToWorld;
+
+  // --- Settings & Scalability -----------------------------------------
+  static const setOverallScalabilityLevel = _setOverallScalabilityLevel;
+  static const getOverallScalabilityLevel = _getOverallScalabilityLevel;
+  static const setViewDistanceQuality = _setViewDistanceQuality;
+  static const getViewDistanceQuality = _getViewDistanceQuality;
+  static const setViewDistance = _setViewDistance;
+  static const getViewDistance = _getViewDistance;
+  static const setShadowQuality = _setShadowQuality;
+  static const getShadowQuality = _getShadowQuality;
+  static const setAntiAliasingQuality = _setAntiAliasingQuality;
+  static const getAntiAliasingQuality = _getAntiAliasingQuality;
+  static const setPostProcessingQuality = _setPostProcessingQuality;
+  static const getPostProcessingQuality = _getPostProcessingQuality;
+  static const setTextureQuality = _setTextureQuality;
+  static const getTextureQuality = _getTextureQuality;
+  static const setShadingQuality = _setShadingQuality;
+  static const getShadingQuality = _getShadingQuality;
+  static const setResolutionScale = _setResolutionScale;
+  static const getResolutionScale = _getResolutionScale;
+  static const setTargetFps = _setTargetFps;
+  static const getTargetFps = _getTargetFps;
+  static const setVsyncEnabled = _setVsyncEnabled;
+  static const getVsyncEnabled = _getVsyncEnabled;
+  static const applyScalabilitySettings = _applyScalabilitySettings;
+
   static const playSound2D = _playSound2D;
   static const playSoundAtLocation = _playSoundAtLocation;
   static const spawnSound2D = _spawnSound2D;

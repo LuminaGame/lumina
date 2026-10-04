@@ -2,6 +2,7 @@ import '../world.dart';
 export 'subsystem_collection.dart';
 export 'physics_world_subsystem.dart';
 export 'widget_subsystem.dart';
+export 'user_settings_subsystem.dart';
 
 /// Base class for global, lifetime-bound services attached to a [LuminaWorld].
 abstract class LuminaWorldSubsystem {

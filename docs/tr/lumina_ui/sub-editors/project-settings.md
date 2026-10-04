@@ -312,6 +312,27 @@ Diyalog içerisindeki seçilebilir her bir tuş veya eksen seçeneğini temsil e
 | `icon` | `final IconData icon` | Tuş türünü temsil eden ikon. |
 | `searchTerms` | `final List<String> searchTerms` | Hızlı filtreleme için arama terimleri ve takma adlar. |
 
+## Ölçeklenebilirlik Presetleri ve Teknik Karşılıkları
+
+**Engine & Graphics** kategorisi, projenin `.lmproject` manifest dosyasındaki `settings.scalability` altında saklanan genel grafik ayarlarını yapılandırır. Bir preset seçildiğinde motor seviyesinde arka plandaki tüm render parametreleri ve kamera kırpma mesafeleri (far clip plane) anında güncellenir:
+
+| Preset | Görüş Mesafesi | Gölgeler | Kenar Yumuşatma (AA) | Post-Processing | Dokular | Gölgelendirme (Shading) |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Low** | 250 m (25.000 cm) | 512×512 PCF (1 cascade) | Yok | Düşük HDR arabelleği, minimal bloom | 1/4 çözünürlük (MIP bias +2, 1x lineer) | Basit PBR (min %50 dinamik çözünürlük) |
+| **Medium** | 500 m (50.000 cm) | 1024×1024 PCF (2 cascades, lambda 0.5) | FXAA | Orta HDR arabelleği, standart bloom | 1/2 çözünürlük (MIP bias +1, 2x trilineer) | Standart PBR (min %75 dinamik çözünürlük) |
+| **High** | 1.000 m (100.000 cm) | 2048×2048 VSM (3 cascades, 2x anizo) | FXAA | Yüksek HDR arabelleği, bloom, vignette, CA | Tam çözünürlük (4x anizotropik) | Tam PBR, doğal %100 çözünürlük, SSR |
+| **Epic** | 2.000 m (200.000 cm) | 4096×4096 PCSS (4 cascades, 8 adım temas) | TAA | Ultra HDR arabelleği, tam bloom, ACES | Tam çözünürlük (8x anizotropik) | Ultra PBR, SSR & Ekran Alanı Ortam Kapatma (AO) |
+| **Cinematic** | 4.000 m (400.000 cm) | 4096×4096 PCSS (4 cascades, 16 adım temas, lambda 0.4) | 4x MSAA + TAA | Ultra HDR arabelleği, tam DoF ve sinematik tonlama | Sıkıştırmasız (16x anizotropik filtreleme) | Ultra PBR, 4x MSAA + TAA, maksimum SSR |
+
+### Presetlerin Detaylı Teknik Açıklamaları:
+- **Low**: Düşük güçlü mobil çipler veya dahili ekran kartları için maksimum performans modudur. Kenar yumuşatma ve SSR kapatılır, gölge haritası tek cascade ile 512×512'ye sınırlandırılır, dokular iki kademe alt örneklenir ve kamera far clip mesafesi 250 metrede tutulur.
+- **Medium**: Giriş ve orta seviye donanımlar için dengeli oyun modudur. 2 cascade 1024×1024 PCF gölgeler, FXAA, orta seviye HDR bloom, yarı çözünürlüklü dokular ve 500 metre kamera görüş mesafesi sunar.
+- **High**: Modern masaüstü sistemleri için yüksek kaliteli oyun profili. 3 cascade 2048×2048 Varyans Gölge Haritaları (VSM), doğal %100 viewport çözünürlüğü, ekran alanı yansımaları (SSR), 4x anizotropik doku filtrelemesi ve 1.000 metre (1 km) görüş mesafesi sağlar.
+- **Epic**: Yüksek kaliteli modern oyun deneyimi hedefidir. 4 cascade 4096×4096 Percentage-Closer Soft Shadows (PCSS) ve 8 adımlı temas gölgeleri, alt piksel titreme arabelleğine sahip Temporal Anti-Aliasing (TAA), ekran alanı ortam kapatma (AO), ACES renk tonlaması, 8x anizotropik dokular ve 2.000 metre (2 km) görüş mesafesi içerir.
+- **Cinematic**: Sinematik ara sahneler, çevrimdışı render alımları, tanıtım videoları ve ultra üst düzey iş istasyonları için tasarlanmış en üstün render modudur. Kamera görüş mesafesini 4.000 metreye (4 km) uzatır; gölgeleri 4 cascade 4096×4096 PCSS, 16 adımlı ekran temas gölgesi ve lambda 0.4 pratik bölünme ile çizer; donanımsal 4x MSAA ile zamansal TAA'yı birlikte kullanır; dokularda 16x anizotropik tam sıkıştırmasız örneklemeyi açar ve sinematik alan derinliği (DoF) ile tam renk derecelendirmesi uygular. Yüksek kare hızlı etkileşimli oynanış için **Epic** veya **High** modu tavsiye edilir.
+
+Bu ayarlar çalışma zamanında (runtime) Blueprint'lerde yer alan `SetOverallScalabilityLevel`, `SetViewDistance`, `ApplyScalabilitySettings` gibi düğümlerle veya kod tarafında `LuminaUserSettingsSubsystem` aracılığıyla dinamik olarak değiştirilebilir.
+
 ---
 
 [Önceki: Fizik asset editörü](physics-asset.md) | [Üst: Alt editörler](index.md) | [Sonraki: Sequencer](sequencer.md)

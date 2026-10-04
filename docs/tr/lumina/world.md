@@ -26,6 +26,7 @@ Tüm actor'lerin sahibi olan dünya: world ve subsystem'leri, level'lar ve level
 - [`lib/src/world/debug_shapes.dart`](#libsrcworlddebug_shapesdart)
 - [`lib/src/world/level_preloader.dart`](#libsrcworldlevel_preloaderdart)
 - [`lib/src/world/subsystem/widget_subsystem.dart`](#libsrcworldsubsystemwidget_subsystemdart)
+- [`lib/src/world/subsystem/user_settings_subsystem.dart`](#libsrcworldsubsystemuser_settings_subsystemdart)
 
 ## `lib/src/world/data_layer.dart`
 
@@ -757,6 +758,32 @@ Manages active UMG widgets added to the viewport in a [LuminaWorld].
 | `addWidget` | `void addWidget(Map<String, Object?> widget)` | Adds a widget to the viewport. |
 | `removeWidget` | `void removeWidget(Map<String, Object?> widget)` | Removes a widget from the viewport. |
 | `notifyChanged` | `void notifyChanged()` | Notifies listeners that widget properties (e.g. visibility, zOrder, text) changed. |
+
+## `lib/src/world/subsystem/user_settings_subsystem.dart`
+
+### `class LuminaUserSettingsSubsystem`
+
+Oyun ölçeklenebilirliğini, kamera görüş mesafesini ve kullanıcı ekran ayarlarını yöneten dünya alt sistemi (world subsystem).
+
+**Üyeler:**
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `overallScalabilityLevel` | `String get overallScalabilityLevel` | Geçerli genel preset (`low`, `medium`, `high`, `epic`, `cinematic` veya `custom`). |
+| `viewDistanceQuality` | `String get viewDistanceQuality` | Geçerli görüş mesafesi kademesi (`low`, `medium`, `high`, `epic`, `cinematic`). |
+| `viewDistance` | `double get viewDistance` | Santimetre cinsinden geçerli kamera far clip düzlemi mesafesi. |
+| `shadowQuality` | `String get shadowQuality` | Geçerli gölge kalitesi kademesi. |
+| `antiAliasingQuality` | `String get antiAliasingQuality` | Geçerli kenar yumuşatma modu (`none`, `fxaa`, `msaa`, `taa`). |
+| `postProcessingQuality` | `String get postProcessingQuality` | Geçerli post-processing kademesi. |
+| `textureQuality` | `String get textureQuality` | Geçerli doku kalitesi kademesi. |
+| `shadingQuality` | `String get shadingQuality` | Geçerli gölgelendirme kalitesi kademesi. |
+| `resolutionScale` | `double get resolutionScale` | Geçerli dahili render çözünürlük ölçeği yüzdesi. |
+| `targetFps` | `int get targetFps` | Hedef FPS sınırı (sınırsız için 0). |
+| `vsyncEnabled` | `bool get vsyncEnabled` | Dikey senkronizasyonun (VSync) etkin olup olmadığı. |
+| `setOverallScalabilityLevel` | `void setOverallScalabilityLevel(String preset)` | Tüm ölçeklenebilirlik kademelerini belirtilen presete göre senkronize eder. |
+| `setViewDistanceQuality` | `void setViewDistanceQuality(String tier)` | Görüş mesafesi kademesini belirler ve far clip mesafesini günceller. |
+| `setViewDistance` | `void setViewDistance(double cm)` | Santimetre cinsinden açık kamera far clip düzlemini belirler. |
+| `applySettings` | `void applySettings()` | Yapılandırılan ayarları dünyadaki dinamik çözünürlüğe, post-process denetleyicisine, yönlü ışık gölgelerine ve kamera kırpma düzlemlerine uygular. |
 
 ---
 
