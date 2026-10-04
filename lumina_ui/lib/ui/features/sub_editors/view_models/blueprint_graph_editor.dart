@@ -210,9 +210,19 @@ class BlueprintGraphEditor extends ChangeNotifier {
         if (context.macro(lit('macro')) == null) out.add(BlueprintNodeProblem("Unknown macro '${lit('macro') ?? ''}'"));
       case LuminaBlueprintNodeLibrary.callCustomEvent:
         // Another class's event, on a Target of that class.
-        final target = lit('class');
-        if (target != null && LuminaBlueprintObjectClass.isClassString(target) && target != context.selfClass) {
-          final owner = LuminaBlueprintObjectClass.name(target);
+        var target = lit('class');
+        if (target == null || target.isEmpty) {
+          final inWire = graph.wireInto(node.id, 'target');
+          if (inWire != null) {
+            final fromPin = pin(inWire.fromNodeId, inWire.fromPinId, output: true);
+            if (fromPin != null && fromPin.objectClass != null && fromPin.objectClass!.isNotEmpty) {
+              target = fromPin.objectClass;
+            }
+          }
+        }
+        if (target != null && target.isNotEmpty && target != context.selfClass) {
+          final raw = LuminaBlueprintObjectClass.name(target);
+          final owner = raw.isEmpty ? target : raw;
           if (context.customEventOwners.containsKey(owner) && context.customEventOf(target, lit('event')) == null) {
             out.add(BlueprintNodeProblem("$owner has no custom event '${lit('event') ?? ''}'"));
           }
@@ -228,7 +238,12 @@ class BlueprintGraphEditor extends ChangeNotifier {
       case LuminaBlueprintNodeLibrary.bindEventToDispatcher:
       case LuminaBlueprintNodeLibrary.unbindEventFromDispatcher:
       case LuminaBlueprintNodeLibrary.unbindAllEvents:
-        if (context.dispatcher(lit('dispatcher')) == null) out.add(BlueprintNodeProblem("Unknown dispatcher '${lit('dispatcher') ?? ''}'"));
+        final dName = lit('dispatcher');
+        final targetClass = lit('class');
+        final exists = (targetClass != null && targetClass.isNotEmpty)
+            ? context.dispatcher(dName, ownerClass: targetClass) != null
+            : context.dispatcher(dName) != null;
+        if (!exists) out.add(BlueprintNodeProblem("Unknown dispatcher '${dName ?? ''}'"));
       case LuminaBlueprintNodeLibrary.interfaceMessage:
       case LuminaBlueprintNodeLibrary.eventInterfaceFunction:
         if (context.interface(lit('interface'))?.function(lit('function')) == null) {
@@ -260,8 +275,40 @@ class BlueprintGraphEditor extends ChangeNotifier {
     }
     if (spec.id == LuminaBlueprintNodeLibrary.variableGet || spec.id == LuminaBlueprintNodeLibrary.variableSet) {
       final name = node.literals['variable'];
-      if (name is! String || context.variable(name) == null) {
+      var targetClass = node.literals['class'] as String?;
+      if (targetClass == null || targetClass.isEmpty) {
+        final inWire = graph.wireInto(node.id, 'target');
+        if (inWire != null) {
+          final fromPin = pin(inWire.fromNodeId, inWire.fromPinId, output: true);
+          if (fromPin != null && fromPin.objectClass != null && fromPin.objectClass!.isNotEmpty) {
+            targetClass = fromPin.objectClass;
+          }
+        }
+      }
+      final exists = (targetClass != null && targetClass.isNotEmpty)
+          ? context.variableOf(targetClass, name as String?) != null
+          : (name is String && context.variable(name) != null);
+      if (!exists) {
         out.add(BlueprintNodeProblem("Unknown variable '${name ?? ''}'"));
+      }
+    }
+    if (spec.id == LuminaBlueprintNodeLibrary.getComponent) {
+      final name = node.literals['component'];
+      var targetClass = node.literals['class'] as String?;
+      if (targetClass == null || targetClass.isEmpty) {
+        final inWire = graph.wireInto(node.id, 'target');
+        if (inWire != null) {
+          final fromPin = pin(inWire.fromNodeId, inWire.fromPinId, output: true);
+          if (fromPin != null && fromPin.objectClass != null && fromPin.objectClass!.isNotEmpty) {
+            targetClass = fromPin.objectClass;
+          }
+        }
+      }
+      final exists = (targetClass != null && targetClass.isNotEmpty)
+          ? context.componentOf(targetClass, name as String?) != null
+          : (name is String && context.component(name) != null);
+      if (!exists) {
+        out.add(BlueprintNodeProblem("Unknown component '${name ?? ''}'"));
       }
     }
     return out;

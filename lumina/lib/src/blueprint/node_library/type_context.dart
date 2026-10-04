@@ -59,6 +59,14 @@ class LuminaBlueprintTypeContext {
   /// `Open` on `Door_01`).
   final Map<String, List<LuminaBlueprintCustomEvent>> customEventOwners;
 
+  /// Member variables of other Blueprint classes by class name, for
+  /// `Get <Variable>` and `Set <Variable>` on a typed target.
+  final Map<String, List<LuminaBlueprintVariable>> variableOwners;
+
+  /// Components of other Blueprint classes by class name, for
+  /// `Get <Component>` on a typed target.
+  final Map<String, List<LuminaBlueprintComponentRef>> componentOwners;
+
   /// The `Is Variable` elements of the widget a Widget Blueprint graph
   /// scripts; null outside a Widget Blueprint.
   final List<LuminaBlueprintWidgetElement>? widgetVariables;
@@ -83,6 +91,8 @@ class LuminaBlueprintTypeContext {
     this.macroScope,
     this.levelActors,
     this.customEventOwners = const {},
+    this.variableOwners = const {},
+    this.componentOwners = const {},
     this.widgetVariables,
   });
 
@@ -137,36 +147,63 @@ class LuminaBlueprintTypeContext {
     LuminaBlueprintMacroGraph? macroScope,
     List<LuminaBlueprintLevelActorRef>? levelActors,
     Map<String, List<LuminaBlueprintCustomEvent>> customEventOwners = const {},
+    Map<String, List<LuminaBlueprintVariable>> variableOwners = const {},
+    Map<String, List<LuminaBlueprintComponentRef>> componentOwners = const {},
     List<LuminaBlueprintWidgetElement>? widgetVariables,
-  }) =>
-      LuminaBlueprintTypeContext(
-        variables: doc.variables,
-        inputActions: inputActions,
-        widgetClasses: widgetClasses ?? LuminaWidgetClassRegistry.classes,
-        components: LuminaBlueprintComponentRef.fromComponents(doc.components),
-        // A widget graph's Self is the widget (`Widget:WBP_Clicker`).
-        selfClass: widgetVariables != null
-            ? LuminaBlueprintObjectClass.widget(className ?? '')
-            : LuminaBlueprintObjectClass.actor(className ?? doc.parentClass),
-        actorParents: {
-          ...actorParents,
-          if (widgetVariables == null && className != null && className != doc.parentClass) className: doc.parentClass,
-        },
-        functions: doc.functions,
-        macros: doc.macros,
-        dispatchers: doc.dispatchers,
-        dispatcherOwners: {...dispatcherOwners, ?className: doc.dispatchers},
-        customEvents: LuminaBlueprintNodeLibrary.customEventsOf(doc.eventGraph),
-        enums: enums ?? LuminaBlueprintEnums.all,
-        interfaces: interfaces ?? LuminaBlueprintInterfaces.all,
-        gameModeClass: gameModeClass,
-        saveGameClasses: saveGameClasses ?? LuminaBlueprintSaveGameClasses.all,
-        functionScope: functionScope,
-        macroScope: macroScope,
-        levelActors: levelActors,
-        customEventOwners: customEventOwners,
-        widgetVariables: widgetVariables,
-      );
+    List<LuminaBlueprintVariable>? inheritedVariables,
+    List<LuminaBlueprintComponent>? inheritedComponents,
+  }) {
+    final childVarNames = {for (final v in doc.variables) v.name};
+    final effectiveVariables = [
+      if (inheritedVariables != null)
+        for (final v in inheritedVariables)
+          if (!childVarNames.contains(v.name)) v,
+      ...doc.variables,
+    ];
+    final childCompIds = {for (final c in doc.components) c.id};
+    final effectiveComponents = [
+      if (inheritedComponents != null)
+        for (final c in inheritedComponents)
+          if (!childCompIds.contains(c.id)) c,
+      ...doc.components,
+    ];
+    return LuminaBlueprintTypeContext(
+      variables: effectiveVariables,
+      inputActions: inputActions,
+      widgetClasses: widgetClasses ?? LuminaWidgetClassRegistry.classes,
+      components: LuminaBlueprintComponentRef.fromComponents(effectiveComponents),
+      // A widget graph's Self is the widget (`Widget:WBP_Clicker`).
+      selfClass: widgetVariables != null
+          ? LuminaBlueprintObjectClass.widget(className ?? '')
+          : LuminaBlueprintObjectClass.actor(className ?? doc.parentClass),
+      actorParents: {
+        ...actorParents,
+        if (widgetVariables == null && className != null && className != doc.parentClass) className: doc.parentClass,
+      },
+      functions: doc.functions,
+      macros: doc.macros,
+      dispatchers: doc.dispatchers,
+      dispatcherOwners: {...dispatcherOwners, ?className: doc.dispatchers},
+      customEvents: LuminaBlueprintNodeLibrary.customEventsOf(doc.eventGraph),
+      enums: enums ?? LuminaBlueprintEnums.all,
+      interfaces: interfaces ?? LuminaBlueprintInterfaces.all,
+      gameModeClass: gameModeClass,
+      saveGameClasses: saveGameClasses ?? LuminaBlueprintSaveGameClasses.all,
+      functionScope: functionScope,
+      macroScope: macroScope,
+      levelActors: levelActors,
+      customEventOwners: customEventOwners,
+      variableOwners: {
+        ...variableOwners,
+        ?className: effectiveVariables,
+      },
+      componentOwners: {
+        ...componentOwners,
+        ?className: LuminaBlueprintComponentRef.fromComponents(effectiveComponents),
+      },
+      widgetVariables: widgetVariables,
+    );
+  }
 
   /// A Widget Blueprint's context: [widgetDoc]'s graph, `Self`
   /// typed `Widget:<class>`, and its `Is Variable` elements, which
@@ -208,6 +245,8 @@ class LuminaBlueprintTypeContext {
     Map<String, String> actorParents = const {},
     Map<String, List<LuminaBlueprintDispatcher>> dispatcherOwners = const {},
     Map<String, List<LuminaBlueprintCustomEvent>> customEventOwners = const {},
+    Map<String, List<LuminaBlueprintVariable>> variableOwners = const {},
+    Map<String, List<LuminaBlueprintComponentRef>> componentOwners = const {},
     List<LuminaBlueprintEnumDocument>? enums,
     List<LuminaBlueprintInterfaceDocument>? interfaces,
     String? gameModeClass,
@@ -227,7 +266,9 @@ class LuminaBlueprintTypeContext {
           functionScope: functionScope,
           macroScope: macroScope,
           levelActors: levelActors,
-          customEventOwners: customEventOwners);
+          customEventOwners: customEventOwners,
+          variableOwners: variableOwners,
+          componentOwners: componentOwners);
 
   /// This context for [function]'s or [macro]'s graph of [doc]: everything
   /// the event graph knows (level actors, owners…) in that scope.
@@ -253,6 +294,8 @@ class LuminaBlueprintTypeContext {
         macroScope: macro,
         levelActors: levelActors,
         customEventOwners: customEventOwners,
+        variableOwners: variableOwners,
+        componentOwners: componentOwners,
         widgetVariables: widgetVariables,
       );
 
@@ -265,6 +308,9 @@ class LuminaBlueprintTypeContext {
     Map<String, String> actorParents = const {},
     List<LuminaBlueprintEnumDocument>? enums,
     List<LuminaBlueprintInterfaceDocument>? interfaces,
+    Map<String, List<LuminaBlueprintCustomEvent>> customEventOwners = const {},
+    Map<String, List<LuminaBlueprintVariable>> variableOwners = const {},
+    Map<String, List<LuminaBlueprintComponentRef>> componentOwners = const {},
   }) =>
       LuminaBlueprintTypeContext.forDocument(doc,
           inputActions: inputActions,
@@ -272,7 +318,10 @@ class LuminaBlueprintTypeContext {
           actorParents: actorParents,
           enums: enums,
           interfaces: interfaces,
-          functionScope: function);
+          functionScope: function,
+          customEventOwners: customEventOwners,
+          variableOwners: variableOwners,
+          componentOwners: componentOwners);
 
   /// The context of [macro]'s body inside [doc].
   factory LuminaBlueprintTypeContext.forMacro(
@@ -281,9 +330,18 @@ class LuminaBlueprintTypeContext {
     List<LuminaInputAction> inputActions = const [],
     String? className,
     Map<String, String> actorParents = const {},
+    Map<String, List<LuminaBlueprintCustomEvent>> customEventOwners = const {},
+    Map<String, List<LuminaBlueprintVariable>> variableOwners = const {},
+    Map<String, List<LuminaBlueprintComponentRef>> componentOwners = const {},
   }) =>
       LuminaBlueprintTypeContext.forDocument(doc,
-          inputActions: inputActions, className: className, actorParents: actorParents, macroScope: macro);
+          inputActions: inputActions,
+          className: className,
+          actorParents: actorParents,
+          macroScope: macro,
+          customEventOwners: customEventOwners,
+          variableOwners: variableOwners,
+          componentOwners: componentOwners);
 
   LuminaBlueprintFunctionGraph? function(String? name) {
     for (final f in functions) {
@@ -303,9 +361,17 @@ class LuminaBlueprintTypeContext {
   /// (`Actor:BP_Door` / `BP_Door`) when given and known.
   LuminaBlueprintDispatcher? dispatcher(String? name, {String? ownerClass}) {
     if (ownerClass != null) {
-      final owner = LuminaBlueprintObjectClass.name(ownerClass);
-      for (final d in dispatcherOwners[owner.isEmpty ? ownerClass : owner] ?? const <LuminaBlueprintDispatcher>[]) {
-        if (d.name == name) return d;
+      final raw = LuminaBlueprintObjectClass.name(ownerClass);
+      var current = raw.isEmpty ? ownerClass : raw;
+      final visited = <String>{};
+      while (current.isNotEmpty && visited.add(current)) {
+        for (final d in dispatcherOwners[current] ?? const <LuminaBlueprintDispatcher>[]) {
+          if (d.name == name) return d;
+        }
+        final parent = actorParents[current];
+        if (parent == null || parent.isEmpty || parent == current) break;
+        final parentRaw = LuminaBlueprintObjectClass.name(parent);
+        current = parentRaw.isEmpty ? parent : parentRaw;
       }
     }
     for (final d in dispatchers) {
@@ -329,9 +395,71 @@ class LuminaBlueprintTypeContext {
   /// The custom event [name] of class string [cls] (`Actor:BP_Door`): its
   /// own when [cls] is Self's class, else [customEventOwners]'.
   LuminaBlueprintCustomEvent? customEventOf(String cls, String? name) {
-    if (cls == selfClass) return customEvent(name);
-    for (final e in customEventOwners[LuminaBlueprintObjectClass.name(cls)] ?? const <LuminaBlueprintCustomEvent>[]) {
-      if (e.name == name) return e;
+    final raw = LuminaBlueprintObjectClass.name(cls);
+    final targetName = raw.isEmpty ? cls : raw;
+    final selfRaw = LuminaBlueprintObjectClass.name(selfClass);
+    final selfName = selfRaw.isEmpty ? selfClass : selfRaw;
+    if (targetName == selfName) {
+      return customEvent(name);
+    }
+    var current = targetName;
+    final visited = <String>{};
+    while (current.isNotEmpty && visited.add(current)) {
+      for (final e in customEventOwners[current] ?? const <LuminaBlueprintCustomEvent>[]) {
+        if (e.name == name) return e;
+      }
+      final parent = actorParents[current];
+      if (parent == null || parent.isEmpty || parent == current) break;
+      final parentRaw = LuminaBlueprintObjectClass.name(parent);
+      current = parentRaw.isEmpty ? parent : parentRaw;
+    }
+    return null;
+  }
+
+  /// The member variable [name] of class string [cls] (`Actor:BP_Interactable`):
+  /// its own when [cls] is Self's class, else [variableOwners]'.
+  LuminaBlueprintVariable? variableOf(String cls, String? name) {
+    final raw = LuminaBlueprintObjectClass.name(cls);
+    final targetName = raw.isEmpty ? cls : raw;
+    final selfRaw = LuminaBlueprintObjectClass.name(selfClass);
+    final selfName = selfRaw.isEmpty ? selfClass : selfRaw;
+    if (targetName == selfName) {
+      return variable(name);
+    }
+    var current = targetName;
+    final visited = <String>{};
+    while (current.isNotEmpty && visited.add(current)) {
+      for (final v in variableOwners[current] ?? const <LuminaBlueprintVariable>[]) {
+        if (v.name == name) return v;
+      }
+      final parent = actorParents[current];
+      if (parent == null || parent.isEmpty || parent == current) break;
+      final parentRaw = LuminaBlueprintObjectClass.name(parent);
+      current = parentRaw.isEmpty ? parent : parentRaw;
+    }
+    return null;
+  }
+
+  /// The component [name] of class string [cls] (`Actor:BP_Interactable`):
+  /// its own when [cls] is Self's class, else [componentOwners]'.
+  LuminaBlueprintComponentRef? componentOf(String cls, String? name) {
+    final raw = LuminaBlueprintObjectClass.name(cls);
+    final targetName = raw.isEmpty ? cls : raw;
+    final selfRaw = LuminaBlueprintObjectClass.name(selfClass);
+    final selfName = selfRaw.isEmpty ? selfClass : selfRaw;
+    if (targetName == selfName) {
+      return component(name);
+    }
+    var current = targetName;
+    final visited = <String>{};
+    while (current.isNotEmpty && visited.add(current)) {
+      for (final c in componentOwners[current] ?? const <LuminaBlueprintComponentRef>[]) {
+        if (c.name == name || c.id == name) return c;
+      }
+      final parent = actorParents[current];
+      if (parent == null || parent.isEmpty || parent == current) break;
+      final parentRaw = LuminaBlueprintObjectClass.name(parent);
+      current = parentRaw.isEmpty ? parent : parentRaw;
     }
     return null;
   }

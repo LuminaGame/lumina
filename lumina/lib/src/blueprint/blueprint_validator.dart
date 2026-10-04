@@ -156,7 +156,24 @@ void _validateGraph(
     }
     if (spec.id == LuminaBlueprintNodeLibrary.variableGet || spec.id == LuminaBlueprintNodeLibrary.variableSet) {
       final name = node.literals['variable'];
-      if (name is! String || context.variable(name) == null) {
+      var targetClass = node.literals['class'] as String?;
+      if (targetClass == null || targetClass.isEmpty) {
+        final inWire = graph.wireInto(node.id, 'target');
+        if (inWire != null) {
+          final fromNode = graph.node(inWire.fromNodeId);
+          if (fromNode != null) {
+            final fromPins = LuminaBlueprintNodeLibrary.pinsOf(fromNode, context);
+            final fromPin = fromPins?.outputs.where((p) => p.id == inWire.fromPinId).firstOrNull;
+            if (fromPin != null && fromPin.objectClass != null && fromPin.objectClass!.isNotEmpty) {
+              targetClass = fromPin.objectClass;
+            }
+          }
+        }
+      }
+      final exists = (targetClass != null && targetClass.isNotEmpty)
+          ? context.variableOf(targetClass, name as String?) != null
+          : (name is String && context.variable(name) != null);
+      if (!exists) {
         error("${spec.title} names an unknown variable '${name ?? ''}'.", node: node.id);
       }
     }
@@ -170,7 +187,24 @@ void _validateGraph(
     }
     if (spec.id == LuminaBlueprintNodeLibrary.getComponent) {
       final name = node.literals['component'];
-      if (name is! String || context.component(name) == null) {
+      var targetClass = node.literals['class'] as String?;
+      if (targetClass == null || targetClass.isEmpty) {
+        final inWire = graph.wireInto(node.id, 'target');
+        if (inWire != null) {
+          final fromNode = graph.node(inWire.fromNodeId);
+          if (fromNode != null) {
+            final fromPins = LuminaBlueprintNodeLibrary.pinsOf(fromNode, context);
+            final fromPin = fromPins?.outputs.where((p) => p.id == inWire.fromPinId).firstOrNull;
+            if (fromPin != null && fromPin.objectClass != null && fromPin.objectClass!.isNotEmpty) {
+              targetClass = fromPin.objectClass;
+            }
+          }
+        }
+      }
+      final exists = (targetClass != null && targetClass.isNotEmpty)
+          ? context.componentOf(targetClass, name as String?) != null
+          : (name is String && context.component(name) != null);
+      if (!exists) {
         error("Get Component names an unknown component '${name ?? ''}'.", node: node.id);
       }
     }

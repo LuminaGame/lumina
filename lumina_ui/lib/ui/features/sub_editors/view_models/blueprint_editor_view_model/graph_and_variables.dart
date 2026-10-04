@@ -110,7 +110,11 @@ mixin _BlueprintEditorGraphAndVariables on _BlueprintEditorViewModelState {
         for (final g in allGraphs)
           for (final n in g.nodes)
             if ((n.registryId == LuminaBlueprintNodeLibrary.variableGet || n.registryId == LuminaBlueprintNodeLibrary.variableSet) &&
-                n.literals['variable'] == name)
+                n.literals['variable'] == name &&
+                (n.literals['class'] == null ||
+                    n.literals['class'] == '' ||
+                    n.literals['class'] == fileBasename ||
+                    n.literals['class'] == 'Actor:$fileBasename'))
               n,
       ];
 
@@ -165,12 +169,21 @@ mixin _BlueprintEditorGraphAndVariables on _BlueprintEditorViewModelState {
 
   bool setVariableDefault(String name, Object? value) {
     final index = _document.variables.indexWhere((v) => v.name == name);
-    if (index < 0 || jsonEncode(_document.variables[index].defaultValue) == jsonEncode(value)) return false;
-    return mutate('Set default of $name', () {
-      final v = _document.variables[index];
-      _document.variables[index] = LuminaBlueprintVariable(name: v.name, typeName: v.typeName, defaultValue: value);
-      return true;
-    });
+    if (index >= 0) {
+      if (jsonEncode(_document.variables[index].defaultValue) == jsonEncode(value)) return false;
+      return mutate('Set default of $name', () {
+        final v = _document.variables[index];
+        _document.variables[index] = LuminaBlueprintVariable(name: v.name, typeName: v.typeName, defaultValue: value);
+        return true;
+      });
+    }
+    if (isInheritedVariable(name)) {
+      return mutate('Override default of $name', () {
+        _document.classDefaults[name] = value;
+        return true;
+      });
+    }
+    return false;
   }
 
   /// Deletes a variable and the nodes that use it (the panel asks first).
