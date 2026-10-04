@@ -144,6 +144,10 @@ abstract class _ViewportWidgetStateBase extends State<ViewportWidget> with Ticke
   /// stopping a session raise while it is still running.
   bool _syncingPie = false;
 
+  /// Whether view model changes occurred while the viewport was paused
+  /// or building, requiring a native scene sync upon becoming active again.
+  bool _pendingSceneSync = false;
+
   bool _lastVmPlaying = false;
   bool _lastVmPaused = false;
 
