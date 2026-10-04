@@ -219,5 +219,79 @@ void main() {
       pos = lm.getPosition(entity);
       expect([pos[0], pos[1], pos[2]], [closeTo(-300, 1e-3), closeTo(150, 1e-3), closeTo(50, 1e-3)]);
     });
+
+    test('LuminaSpotLightComponent.buildConeWireframe generates valid line segments', () {
+      final spot = LuminaSpotLightComponent(
+        location: Vector3(100, 200, -300),
+        innerConeAngleDegrees: 25.0,
+        outerConeAngleDegrees: 45.0,
+        falloffRadius: 500.0,
+      );
+
+      final wire = spot.buildConeWireframe(segments: 24);
+      // Line pairs: length is even
+      expect(wire.length % 2, equals(0));
+      expect(wire.isNotEmpty, isTrue);
+
+      // Apex should match world location
+      final apex = spot.worldLocation;
+      expect(wire.any((p) => (p - apex).length < 1e-3), isTrue);
+
+      // Outer cone ring (24 segments * 2 vertices = 48)
+      // + 8 outer rays (8 * 2 = 16)
+      // + inner cone ring (24 * 2 = 48)
+      // + 4 inner rays (4 * 2 = 8)
+      // + 1 center axis (2)
+      // Total = 48 + 16 + 48 + 8 + 2 = 122 vertices
+      expect(wire.length, equals(122));
+
+      // Attenuation distance: outer ray endpoints should be at falloffRadius distance from apex
+      // The 8 outer rays start at apex and end at outer cone points
+      final outerEndPoints = <Vector3>[];
+      for (var i = 48; i < 48 + 16; i += 2) {
+        expect((wire[i] - apex).length, closeTo(0.0, 1e-3));
+        outerEndPoints.add(wire[i + 1]);
+      }
+      expect(outerEndPoints.length, equals(8));
+      for (final pt in outerEndPoints) {
+        expect((pt - apex).length, closeTo(500.0, 1e-2));
+      }
+    });
+
+    test('LuminaPointLightComponent.buildSphereWireframe generates 3 rings and center cross', () {
+      final point = LuminaPointLightComponent(
+        location: Vector3(50, 60, 70),
+        falloffRadius: 400.0,
+      );
+
+      final wire = point.buildSphereWireframe(segments: 24);
+      expect(wire.length % 2, equals(0));
+      // 3 rings * 24 * 2 = 144
+      // + 3 cross lines * 2 = 6
+      // Total = 150 vertices
+      expect(wire.length, equals(150));
+
+      final center = point.worldLocation;
+      // All ring vertices are at falloffRadius from center
+      for (var i = 0; i < 144; i++) {
+        expect((wire[i] - center).length, closeTo(400.0, 1e-2));
+      }
+    });
+
+    test('LuminaDirectionalLightComponent.buildArrowWireframe generates arrow along lightDirection', () {
+      final dir = LuminaDirectionalLightComponent(
+        location: Vector3(10, 20, 30),
+      );
+
+      final wire = dir.buildArrowWireframe(length: 100.0);
+      expect(wire.length % 2, equals(0));
+      expect(wire.isNotEmpty, isTrue);
+
+      final base = dir.worldLocation;
+      // First segment is main shaft: base to base + lightDirection * 100
+      expect((wire[0] - base).length, closeTo(0.0, 1e-3));
+      final tip = base + dir.lightDirection * 100.0;
+      expect((wire[1] - tip).length, closeTo(0.0, 1e-3));
+    });
   });
 }

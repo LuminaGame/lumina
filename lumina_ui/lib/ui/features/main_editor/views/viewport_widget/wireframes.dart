@@ -284,7 +284,8 @@ mixin _ViewportWireframes on _ViewportWidgetStateBase {
     case 'LuminaSpotLightComponent':
       final r = p.attenuationRadius;
       final apex = add(0, 0, 0);
-      for (final (angle, rays) in [(p.outerConeAngle, 8), (p.innerConeAngle, 0)]) {
+      for (final (angle, rays) in [(p.outerConeAngle, 8), (p.innerConeAngle, 4)]) {
+        if (angle <= 0.0) continue;
         final rad = angle * math.pi / 180.0;
         final ringRadius = r * math.sin(rad);
         final depth = -r * math.cos(rad);
@@ -294,6 +295,9 @@ mixin _ViewportWireframes on _ViewportWidgetStateBase {
           lines.addAll([apex, start + (i * 32 ~/ rays)]);
         }
       }
+      final outerRad = p.outerConeAngle * math.pi / 180.0;
+      final center = add(0, 0, -r * math.cos(outerRad));
+      lines.addAll([apex, center]);
     default:
       // Directional: an arrow along −Z with a four-fin head, and a short
       // cross at the tail.

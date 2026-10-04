@@ -1,4 +1,5 @@
 import 'package:flutter_filament/flutter_filament.dart';
+import 'package:vector_math/vector_math_64.dart' show Vector3;
 import 'light_component.dart';
 
 /// Directional or Sun light component with illuminance intensity in lux.
@@ -48,5 +49,39 @@ class LuminaDirectionalLightComponent extends LuminaLightComponent {
   void syncNativeTransform(FilamentLightManager lm, int entity) {
     final dir = lightDirection;
     lm.setDirection(entity, dir.x, dir.y, dir.z);
+  }
+
+  /// Builds wireframe line segments (pairs of vertices in world space, runtime Y-up)
+  /// representing the directional light direction (stem arrow, 4 fins, and tail cross).
+  List<Vector3> buildArrowWireframe({double length = 120.0}) {
+    final pts = <Vector3>[];
+    final origin = worldLocation;
+    final fwd = lightDirection;
+    final right = rightVector..normalize();
+    final up = upVector..normalize();
+
+    // Central stem
+    final tip = origin + (fwd * length);
+    pts.add(origin);
+    pts.add(tip);
+
+    // 4 arrow head fins
+    final head = length * 0.2;
+    final spread = length * 0.08;
+    final finBase = tip - (fwd * head);
+    for (final (fx, fy) in [(1.0, 0.0), (-1.0, 0.0), (0.0, 1.0), (0.0, -1.0)]) {
+      final fin = finBase + (right * (fx * spread)) + (up * (fy * spread));
+      pts.add(tip);
+      pts.add(fin);
+    }
+
+    // Tail cross
+    const tailSize = 20.0;
+    pts.add(origin - (right * tailSize));
+    pts.add(origin + (right * tailSize));
+    pts.add(origin - (up * tailSize));
+    pts.add(origin + (up * tailSize));
+
+    return pts;
   }
 }

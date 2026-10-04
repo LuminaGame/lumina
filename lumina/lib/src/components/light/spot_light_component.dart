@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter_filament/flutter_filament.dart';
+import 'package:vector_math/vector_math_64.dart' show Vector3;
 import '../../math/units.dart';
 import 'light_component.dart';
 
@@ -121,5 +122,75 @@ class LuminaSpotLightComponent extends LuminaLightComponent {
     final dir = lightDirection;
     lm.setPosition(entity, pos.x, pos.y, pos.z);
     lm.setDirection(entity, dir.x, dir.y, dir.z);
+  }
+
+  /// Builds wireframe line segments (pairs of vertices in world space, runtime Y-up)
+  /// representing the spot light cone (outer circle and 8 boundary rays, inner circle
+  /// and 4 boundary rays, and central forward beam axis).
+  List<Vector3> buildConeWireframe({int segments = 24}) {
+    final pts = <Vector3>[];
+    final r = falloffRadius;
+    if (r <= 0) return pts;
+
+    final apex = worldLocation;
+    final fwd = lightDirection;
+    final right = rightVector..normalize();
+    final up = upVector..normalize();
+
+    final step = (2.0 * math.pi) / segments;
+
+    // Outer cone base circle and boundary rays
+    final thetaOuter = _outerConeAngleDegrees * math.pi / 180.0;
+    final distOuter = r * math.cos(thetaOuter);
+    final radiusOuter = r * math.sin(thetaOuter);
+    final centerOuter = apex + (fwd * distOuter);
+
+    for (int i = 0; i < segments; i++) {
+      final a1 = i * step;
+      final a2 = (i + 1) * step;
+      final p1 = centerOuter + (right * (radiusOuter * math.cos(a1))) + (up * (radiusOuter * math.sin(a1)));
+      final p2 = centerOuter + (right * (radiusOuter * math.cos(a2))) + (up * (radiusOuter * math.sin(a2)));
+      pts.add(p1);
+      pts.add(p2);
+    }
+
+    const outerRays = 8;
+    for (int k = 0; k < outerRays; k++) {
+      final angle = (2.0 * math.pi * k) / outerRays;
+      final target = centerOuter + (right * (radiusOuter * math.cos(angle))) + (up * (radiusOuter * math.sin(angle)));
+      pts.add(apex);
+      pts.add(target);
+    }
+
+    // Inner cone base circle and boundary rays (if inner cone angle is positive and less than outer)
+    if (_innerConeAngleDegrees > 0) {
+      final thetaInner = _innerConeAngleDegrees * math.pi / 180.0;
+      final distInner = r * math.cos(thetaInner);
+      final radiusInner = r * math.sin(thetaInner);
+      final centerInner = apex + (fwd * distInner);
+
+      for (int i = 0; i < segments; i++) {
+        final a1 = i * step;
+        final a2 = (i + 1) * step;
+        final p1 = centerInner + (right * (radiusInner * math.cos(a1))) + (up * (radiusInner * math.sin(a1)));
+        final p2 = centerInner + (right * (radiusInner * math.cos(a2))) + (up * (radiusInner * math.sin(a2)));
+        pts.add(p1);
+        pts.add(p2);
+      }
+
+      const innerRays = 4;
+      for (int k = 0; k < innerRays; k++) {
+        final angle = (2.0 * math.pi * k) / innerRays;
+        final target = centerInner + (right * (radiusInner * math.cos(angle))) + (up * (radiusInner * math.sin(angle)));
+        pts.add(apex);
+        pts.add(target);
+      }
+    }
+
+    // Central forward beam axis line
+    pts.add(apex);
+    pts.add(apex + (fwd * r));
+
+    return pts;
   }
 }
