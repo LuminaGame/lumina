@@ -98,6 +98,11 @@ void main() {
     expect(updatedLight.outerConeAngleDegrees, 60.0);
     expect(updatedLight.falloffRadius, 1500.0);
 
+    // Viewport preview generates the spotlight cone overlay
+    final spotOverlay = vm.preview.overlays.firstWhere((s) => s.id == spot.id);
+    expect(spotOverlay.positions.isNotEmpty, isTrue);
+    expect(spotOverlay.positions.length, equals(122 * 3));
+
     await tester.pumpWidget(const SizedBox());
   });
 }
