@@ -25,24 +25,42 @@ String _actorClassName(LuminaActor a) {
   return 'LuminaActor';
 }
 
-List<String> _actorClassChain(LuminaActor a) => [
-      _actorClassName(a),
-      if (a is LuminaCharacter) 'LuminaCharacter',
-      if (a is LuminaPawn) 'LuminaPawn',
-      // The placed-actor classes a Level Blueprint types.
-      if (a is LuminaPlayerStart) 'LuminaPlayerStart',
-      if (a is LuminaTriggerVolume) 'LuminaTriggerVolume',
-      if (a is LuminaBlockingVolume) 'LuminaBlockingVolume',
-      if (a is LuminaVolume) 'LuminaVolume',
-      if (a is LuminaLevelScriptActor) 'LuminaLevelScriptActor',
-      'LuminaActor',
-    ];
+List<String> _actorClassChain(LuminaActor a) {
+  final chain = <String>[];
+  final seen = <String>{};
+  void add(String s) {
+    if (s.isNotEmpty && seen.add(s)) chain.add(s);
+  }
+
+  add(_actorClassName(a));
+  if (a is LuminaBlueprintRuntime) {
+    for (final p in a.blueprintParentClasses) {
+      add(p);
+    }
+  }
+  if (a is LuminaCharacter) add('LuminaCharacter');
+  if (a is LuminaPawn) add('LuminaPawn');
+  // The placed-actor classes a Level Blueprint types.
+  if (a is LuminaPlayerStart) add('LuminaPlayerStart');
+  if (a is LuminaTriggerVolume) add('LuminaTriggerVolume');
+  if (a is LuminaBlockingVolume) add('LuminaBlockingVolume');
+  if (a is LuminaVolume) add('LuminaVolume');
+  if (a is LuminaLevelScriptActor) add('LuminaLevelScriptActor');
+  add('LuminaActor');
+  return chain;
+}
 
 bool _isA(Object? o, String cls) {
   if (o == null) return false;
   if (cls.isEmpty || cls == LuminaBlueprintObjectClass.any) return true;
-  final kind = LuminaBlueprintObjectClass.kind(cls);
-  final name = LuminaBlueprintObjectClass.name(cls);
+  var kind = LuminaBlueprintObjectClass.kind(cls);
+  var name = LuminaBlueprintObjectClass.name(cls);
+  if (name.isEmpty && !LuminaBlueprintObjectClass.kinds.contains(kind)) {
+    name = cls;
+    kind = o is LuminaActor
+        ? LuminaBlueprintObjectClass.actorKind
+        : (o is LuminaActorComponent ? LuminaBlueprintObjectClass.componentKind : kind);
+  }
   final own = LuminaBlueprintFunctionLibrary.classOf(o);
   if (LuminaBlueprintObjectClass.kind(own) != kind) return false;
   if (name.isEmpty) return true;

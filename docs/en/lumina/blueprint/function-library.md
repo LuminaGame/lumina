@@ -90,8 +90,8 @@ Vectors and rotators are **authoring space** (cm, Z up; rotators about X/Y/Z lik
 | `isWidgetInstance` | `static const isWidgetInstance` | Whether [widget] is a widget instance map (has a `class` and `elements`). |
 | `isWidgetElement` | `static const isWidgetElement` | Whether [o] is a widget element state map. |
 | `classOf` | `static const classOf` | The class string of a runtime object (`Widget:WBP_HUD`, `WidgetElement:text`, `Component:LuminaSpringArmComponent`, `Actor:BP_Door`), `Object` for anything else, '' for null. |
-| `actorClassChain` | `static const actorClassChain` | The class chain of a runtime actor, most derived first: the Blueprint's own name, then the engine classes it is (`LuminaCharacter`, `LuminaPawn`, `LuminaActor`). |
-| `isA` | `static const isA` | Whether [o] is an instance of class string [cls] (the Is A node): `Object` matches any object, a kind alone (`Actor`, `Widget`) any object of that kind, an actor class itself or one of its engine ancestors. |
+| `actorClassChain` | `static const actorClassChain` | The class chain of a runtime actor, most derived first: the Blueprint's own name, its parent Blueprint class hierarchy, then the engine classes it is (`LuminaCharacter`, `LuminaPawn`, `LuminaActor`). |
+| `isA` | `static const isA` | Whether [o] is an instance of class string [cls] (the Is A node): `Object` matches any object, a kind alone (`Actor`, `Widget`) any object of that kind, an actor class itself or one of its ancestor Blueprint / engine classes. |
 | `isValid` | `static const isValid` |  |
 | `castTo` | `static const castTo` | [object] when it [isA] [cls], else null (Cast To). |
 | `getClassName` | `static const getClassName` |  |

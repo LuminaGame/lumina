@@ -285,19 +285,50 @@ abstract final class GlbAnimationRetargeter {
     // Parents of the skeleton roots, at rest on the target side.
     final tgtRootParent = tgt.restWorld(tgt.parent[rootT!]);
     final rootAlign = (tgt.restWorld(rootT) * src.restWorld(rootS).inverse()).normalized();
+    final srcRestWorld = List<_Quat>.generate(src.count, (i) => src.restWorld(i));
+    final tgtRestWorld = List<_Quat>.generate(tgt.count, (j) => tgt.restWorld(j));
+
+    // Check whether the target skeleton shares the bone axis convention
+    // and rest pose orientation of the source skeleton (e.g. UE4 Manny → UE5 Quinn).
+    // When skeletons share the bone axes, direct model-space rotation transfer
+    // preserves the authored world orientations.
+    // When skeletons differ in bone axis convention (e.g. Unreal +X vs Blender/glTF +Y,
+    // where thigh or pelvis can differ by 90-180°), direct model-space transfer
+    // twists and contorts the mesh, so we apply the delta rotation relative
+    // to the target's own rest pose.
+    final sharesRestAxes = !mapped.entries.any((e) {
+      final name = tgt.names[e.key]?.toLowerCase() ?? '';
+      if (name != 'pelvis' &&
+          name != 'hips' &&
+          !name.endsWith(':hips') &&
+          name != 'thigh_l' &&
+          name != 'thigh_r' &&
+          name != 'spine_01' &&
+          name != 'spine') {
+        return false;
+      }
+      final diff = (rootAlign * srcRestWorld[e.value] * tgtRestWorld[e.key].inverse()).normalized();
+      final angle = 2 * math.acos(diff.w.abs().clamp(0.0, 1.0));
+      return angle > (25.0 * math.pi / 180.0);
+    });
+
     for (final t in frames) {
       for (final i in src.order) {
         final local = tracks.rotation(i, t) ?? src.restR[i];
         final p = src.parent[i];
         srcWorld[i] = p < 0 ? local : srcWorld[p] * local;
       }
-      final delta = rootAlign;
       for (final j in tgt.order) {
         final p = tgt.parent[j];
         final parentWorld = p < 0 ? _Quat.identity : tgtWorld[p];
         final s = mapped[j];
         if (s != null) {
-          tgtWorld[j] = (delta * srcWorld[s]).normalized();
+          if (sharesRestAxes) {
+            tgtWorld[j] = (rootAlign * srcWorld[s]).normalized();
+          } else {
+            final delta = (srcWorld[s] * srcRestWorld[s].inverse()).normalized();
+            tgtWorld[j] = (delta * tgtRestWorld[j]).normalized();
+          }
           if (joints.contains(j)) rotOut[j]!.add((parentWorld.inverse() * tgtWorld[j]).normalized());
         } else {
           final local = tgt.restR[j];
@@ -450,7 +481,11 @@ class _Quat {
   final double x, y, z, w;
   const _Quat(this.x, this.y, this.z, this.w);
 
+  @override
+  String toString() => '[${x.toStringAsFixed(4)}, ${y.toStringAsFixed(4)}, ${z.toStringAsFixed(4)}, ${w.toStringAsFixed(4)}]';
+
   static const identity = _Quat(0, 0, 0, 1);
+
 
   _Quat operator *(_Quat b) => _Quat(
         w * b.x + x * b.w + y * b.z - z * b.y,

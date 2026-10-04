@@ -175,6 +175,7 @@ What a running Blueprint needs besides its graph, shared by the VM and generated
 | `debugShapes` | `final List<LuminaDebugShape> debugShapes` | The debug shapes this actor's nodes drew this tick (a trace's Draw Debug segment, Draw Debug Line…), cleared at the start of every tick; the world keeps them with their durations in `LuminaWorld.debugShapes`. |
 | `blueprintComponentTree` | `List<LuminaBlueprintComponent> blueprintComponentTree` | The Blueprint's component tree as authored, so `Get <Component>` can find a component by its name. |
 | `blueprintClassName` | `String get blueprintClassName` | The Blueprint's class name (`BP_ThirdPersonCharacter`), what `Actor:<class>` pins, Cast To and Get Class Name see. |
+| `blueprintParentClasses` | `List<String> get blueprintParentClasses` | Bu aktörün kalıtım sırasındaki üst Blueprint sınıf adları (önce doğrudan üst sınıf, sonra ata Blueprint'ler). |
 | `blueprintAnimClasses` | `LuminaAnimBlueprintFactory? Function(String animClass)? blueprintAnimClasses` | Resolves a Skeletal Mesh's Anim Class to its Animation Blueprint, for Set Anim Instance Class. |
 | `blueprintFlowState` | `final Map<String, Object?> blueprintFlowState` | Per-node state of the flow-control macros (DoOnce, FlipFlop, Gate, DoN, MultiGate), by node id. Cleared at BeginPlay so a PIE restart starts over. |
 | `callBlueprint` | `Map<String, Object?> callBlueprint(String name, Map<String, Object?> args)` | Answers a custom event, function or implemented interface function by name; the VM and generated classes override it. |

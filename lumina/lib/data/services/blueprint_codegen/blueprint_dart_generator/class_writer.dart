@@ -83,6 +83,7 @@ class _ClassWriter {
   final List<LuminaBlueprintDiagnostic> issues;
   final Map<String, BlueprintAnimClassRef> animBlueprints;
   final Map<String, String> functionImports;
+  final Map<String, BlueprintClassRef> blueprintClasses;
   /// Set when the class is a Level Blueprint's script.
   final _LevelScript? level;
 
@@ -92,9 +93,12 @@ class _ClassWriter {
   /// The imports a level or widget script needs (see [BlueprintGenerationResult.imports]).
   final List<String> levelImports = [];
 
+  final LuminaBlueprintTypeContext? typeContext;
+
   late final String blueprintName =
       level?.levelName ?? widget?.widget.widgetClass ?? BlueprintDartGenerator._blueprintName(className, assetPath);
-  late final LuminaBlueprintTypeContext context = level?.context(doc, inputActions) ??
+  late final LuminaBlueprintTypeContext context = typeContext ??
+      level?.context(doc, inputActions) ??
       widget?.context(inputActions) ??
       LuminaBlueprintTypeContext.forDocument(doc, inputActions: inputActions, className: blueprintName);
 
@@ -123,11 +127,14 @@ class _ClassWriter {
 
   _ClassWriter(
       this.doc, this.className, this.assetPath, this.inputActions, this.issues, this.animBlueprints, this.functionImports,
-      {this.level, this.widget});
+      {this.blueprintClasses = const {}, this.level, this.widget, this.typeContext});
 
   LuminaBlueprintGraph get graph => expandedGraph;
   Map<String, _Pins> get pins => compiler.pins;
-  bool get _isPawn => doc.parentClass == 'LuminaPawn' || doc.parentClass == 'LuminaCharacter';
+  bool get _isPawn =>
+      doc.parentClass == 'LuminaPawn' ||
+      doc.parentClass == 'LuminaCharacter' ||
+      doc.classDefaults.keys.any((k) => k.startsWith('bUseControllerRotation') || k == 'baseEyeHeight');
 
   void _error(String message, {String? node}) {
     failed = true;
@@ -289,24 +296,66 @@ class _ClassWriter {
       b.writeln('class $className extends LuminaLevelScriptActor with LuminaBlueprintRuntime, LuminaBlueprintLevelActors {');
       b.writeln("  $className() : super(key: const ValueKey(${_str('${level.levelName}_script')})) {");
     } else {
+      final parentRef = blueprintClasses[doc.parentClass];
+      final isBlueprintParent = parentRef != null ||
+          (!BlueprintDartGenerator._parents.containsKey(doc.parentClass) && !LuminaBlueprintClass.isEngineParent(doc.parentClass));
+      final parentDartName = parentRef?.className ?? BlueprintDartGenerator._parents[doc.parentClass] ?? dartTypeName(doc.parentClass);
+
       b.writeln('// GENERATED CODE - DO NOT MODIFY BY HAND (except inside the USER CODE region).');
       b.writeln('// Blueprint ${assetPath ?? className}, compiled by Lumina.');
       b.writeln(_ignoreForFile);
       b.writeln();
       b.writeln("import 'package:lumina/lumina_runtime.dart';");
       b.writeln("import 'package:vector_math/vector_math_64.dart';");
+      if (isBlueprintParent) {
+        if (parentRef?.importUri != null) {
+          b.writeln('import ${_str(parentRef!.importUri!)};');
+        } else {
+          b.writeln("import '${dartFileName(doc.parentClass)}';");
+        }
+      }
       for (final uri in {for (final r in animClasses.values) if (r.importUri != null) r.importUri!}) {
         b.writeln('import ${_str(uri)};');
       }
       _functionImports(b, compiler.libraries, functionImports);
       b.writeln();
-      b.writeln('class $className extends ${BlueprintDartGenerator._parents[doc.parentClass]} with LuminaBlueprintRuntime {');
+      if (isBlueprintParent) {
+        b.writeln('class $className extends $parentDartName {');
+      } else {
+        b.writeln('class $className extends $parentDartName with LuminaBlueprintRuntime {');
+      }
       b.writeln('  $className({super.key, super.location, super.rotation}) {');
     }
     for (final line in _classDefaults()) {
       b.writeln('    $line');
     }
-    b.writeln('    blueprintComponentTree = _components;');
+    final parentRef = blueprintClasses[doc.parentClass];
+    final isBlueprintParent = parentRef != null ||
+        (!BlueprintDartGenerator._parents.containsKey(doc.parentClass) && !LuminaBlueprintClass.isEngineParent(doc.parentClass));
+    if (isBlueprintParent) {
+      for (final entry in doc.classDefaults.entries) {
+        if (const {
+          'initialHealth',
+          'defaultPawnClass',
+          'playerControllerClass',
+          'bUseControllerRotationYaw',
+          'bUseControllerRotationPitch',
+          'bUseControllerRotationRoll',
+          'baseEyeHeight',
+        }.contains(entry.key)) {
+          continue;
+        }
+        if (doc.variables.any((v) => v.name == entry.key)) continue;
+        b.writeln('    ${_var(entry.key)} = ${_json(entry.value)};');
+      }
+      b.writeln('    blueprintComponentTree = [');
+      b.writeln('      for (final pc in blueprintComponentTree)');
+      b.writeln('        if (!_components.any((c) => c.id == pc.id)) pc,');
+      b.writeln('      ..._components,');
+      b.writeln('    ];');
+    } else {
+      b.writeln('    blueprintComponentTree = _components;');
+    }
     if (doc.interfaces.isNotEmpty) b.writeln('    blueprintInterfaces = const [${doc.interfaces.map(_str).join(', ')}];');
     if (animClasses.isNotEmpty) b.writeln('    blueprintAnimClasses = _animBlueprints;');
     b.writeln(animClasses.isEmpty
@@ -316,6 +365,11 @@ class _ClassWriter {
     b.writeln();
     b.writeln('  @override');
     b.writeln('  String get blueprintClassName => ${_str(blueprintName)};');
+    if (isBlueprintParent) {
+      b.writeln();
+      b.writeln('  @override');
+      b.writeln('  List<String> get blueprintParentClasses => [${_str(doc.parentClass)}, ...super.blueprintParentClasses];');
+    }
     b.writeln();
     b.writeln("  /// The component tree (the Blueprint's construction script).");
     b.writeln('  static final List<LuminaBlueprintComponent> _components = [');

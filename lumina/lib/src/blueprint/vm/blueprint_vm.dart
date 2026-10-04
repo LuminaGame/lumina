@@ -92,7 +92,34 @@ class LuminaBlueprintClass {
       this.parentBlueprintClass});
 
   /// The root engine class this Blueprint descends from (e.g. `LuminaCharacter`, `LuminaPawn`, `LuminaActor`).
-  String get rootEngineClass => parentBlueprintClass?.rootEngineClass ?? document.parentClass;
+  String get rootEngineClass {
+    if (parentBlueprintClass != null) return parentBlueprintClass!.rootEngineClass;
+    if (isEngineParent(document.parentClass)) return document.parentClass;
+    var current = document.parentClass;
+    final visited = <String>{name};
+    while (current.isNotEmpty && !isEngineParent(current) && visited.add(current)) {
+      current = actorParents[current] ?? '';
+    }
+    return isEngineParent(current) ? current : 'LuminaActor';
+  }
+
+  /// The chain of parent Blueprint classes this class inherits from, from immediate
+  /// parent to ancestor Blueprints (excluding engine classes).
+  List<String> get parentClasses {
+    final list = <String>[];
+    final visited = <String>{name};
+    var current = parentBlueprintClass;
+    while (current != null && visited.add(current.name)) {
+      list.add(current.name);
+      current = current.parentBlueprintClass;
+    }
+    var parentName = document.parentClass;
+    while (parentName.isNotEmpty && !isEngineParent(parentName) && visited.add(parentName)) {
+      list.add(parentName);
+      parentName = actorParents[parentName] ?? '';
+    }
+    return list;
+  }
 
   /// All variables of this class, including inherited variables from parent Blueprints.
   /// Child variables override parent variables with the same name.

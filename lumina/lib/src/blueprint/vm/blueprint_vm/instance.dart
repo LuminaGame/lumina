@@ -27,11 +27,14 @@ mixin LuminaBlueprintInstance on LuminaBlueprintRuntime implements LuminaBluepri
   @override
   String get blueprintClassName => blueprintClass.name;
 
+  @override
+  List<String> get blueprintParentClasses => blueprintClass.parentClasses;
+
   void _initBlueprint(LuminaBlueprintClass cls) {
     blueprintClass = cls;
     final doc = cls.document;
     final context = cls.typeContext();
-    blueprintComponentTree = doc.components;
+    blueprintComponentTree = cls.allComponents;
     blueprintAnimClasses = cls.animBlueprints;
     blueprintInterfaces = List.unmodifiable(doc.interfaces);
     _graph = LuminaBlueprintMacroExpander.expand(doc.eventGraph, doc.macros);
@@ -47,12 +50,13 @@ mixin LuminaBlueprintInstance on LuminaBlueprintRuntime implements LuminaBluepri
         {for (final n in graph.nodes) n.id: LuminaBlueprintNodeLibrary.pinsOf(n, fc)!},
       );
     }
-    for (final v in cls.document.variables) {
+    for (final v in cls.allVariables) {
       variables[v.name] = _typed(v.type!, v.defaultValue);
     }
-    final defaults = cls.document.classDefaults;
+    final defaults = cls.allClassDefaults;
+    final allVarMap = {for (final v in cls.allVariables) v.name: v};
     for (final entry in defaults.entries) {
-      final variable = cls.document.variable(entry.key);
+      final variable = allVarMap[entry.key];
       if (variable != null) variables[variable.name] = _typed(variable.type!, entry.value);
     }
     final self = this;
@@ -67,7 +71,7 @@ mixin LuminaBlueprintInstance on LuminaBlueprintRuntime implements LuminaBluepri
     }
     blueprintComponents = LuminaBlueprintComponents.construct(
       this,
-      cls.document.components,
+      cls.allComponents,
       resolveAsset: cls.resolveAsset,
       assetProvider: cls.assetProvider,
       animBlueprints: cls.animBlueprints,

@@ -181,6 +181,10 @@ mixin LuminaBlueprintRuntime on LuminaActor implements LuminaBlueprintCallable {
   /// `Actor:<class>` pins, Cast To and Get Class Name see.
   String get blueprintClassName => runtimeType.toString();
 
+  /// The parent Blueprint class names of this actor in inheritance order
+  /// (immediate parent first, ancestor Blueprints next).
+  List<String> get blueprintParentClasses => const [];
+
   /// Resolves a Skeletal Mesh's Anim Class to its Animation Blueprint, for
   /// Set Anim Instance Class.
   LuminaAnimBlueprintFactory? Function(String animClass)? blueprintAnimClasses;
