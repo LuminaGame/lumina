@@ -419,7 +419,15 @@ abstract final class LuminaBlueprintComponents {
         _light(light, p);
         return light;
       case 'LuminaSpotLightComponent':
-        final light = LuminaSpotLightComponent(intensity: _num(p, 'intensity') ?? 10000.0);
+        final inner = _num(p, 'innerConeAngle') ?? _num(p, 'innerConeAngleDegrees') ?? 30.0;
+        final outer = _num(p, 'outerConeAngle') ?? _num(p, 'outerConeAngleDegrees') ?? 45.0;
+        final safeOuter = outer.clamp(0.01, 90.0);
+        final safeInner = inner.clamp(0.0, safeOuter);
+        final light = LuminaSpotLightComponent(
+          intensity: _num(p, 'intensity') ?? 10000.0,
+          innerConeAngleDegrees: safeInner,
+          outerConeAngleDegrees: safeOuter,
+        );
         _transform(light, p);
         _light(light, p);
         final radius = _num(p, 'attenuationRadius') ?? _num(p, 'falloffRadius');

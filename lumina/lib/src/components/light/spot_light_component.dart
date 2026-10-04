@@ -18,6 +18,11 @@ class LuminaSpotLightComponent extends LuminaLightComponent {
       FilamentLightManager(w.filamentEngine).setFalloff(lightEntity!, value);
     }
   }
+
+  /// Sphere of influence, in world units (cm); alias for [falloffRadius].
+  double get attenuationRadius => falloffRadius;
+  set attenuationRadius(double value) => falloffRadius = value;
+
   double _innerConeAngleDegrees;
   double _outerConeAngleDegrees;
 
@@ -44,6 +49,20 @@ class LuminaSpotLightComponent extends LuminaLightComponent {
 
   double get innerConeAngleDegrees => _innerConeAngleDegrees;
   double get outerConeAngleDegrees => _outerConeAngleDegrees;
+
+  /// Inner cone angle in degrees.
+  double get innerConeAngle => _innerConeAngleDegrees;
+  set innerConeAngle(double value) {
+    final v = value.clamp(0.0, 90.0);
+    setConeAngles(innerDegrees: v, outerDegrees: math.max(v, _outerConeAngleDegrees));
+  }
+
+  /// Outer cone angle in degrees.
+  double get outerConeAngle => _outerConeAngleDegrees;
+  set outerConeAngle(double value) {
+    final v = value.clamp(0.0, 90.0);
+    setConeAngles(innerDegrees: math.min(v, _innerConeAngleDegrees), outerDegrees: v);
+  }
 
   /// Sets inner and outer cone angles in degrees with validation (`0 <= inner <= outer <= 90`).
   void setConeAngles({required double innerDegrees, required double outerDegrees}) {

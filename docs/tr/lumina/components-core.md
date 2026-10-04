@@ -443,6 +443,7 @@ Omnidirectional point light component with luminous flux intensity in lumens (or
 | :--- | :--- | :--- |
 | `intensityInCandela` | `bool intensityInCandela` | `intensityInCandela` alanını (field/property) ve ilişkili veriyi saklar. |
 | `falloffRadius` | `double falloffRadius` | `falloffRadius` alanını (field/property) ve ilişkili veriyi saklar. |
+| `attenuationRadius` | `double attenuationRadius` | `falloffRadius` için zayıflama yarıçapı (cm) takma adı (alias). |
 | `createLightBuilder` | `LightBuilder createLightBuilder()` | Yeni bir `LightBuilder` örneği veya ilişkili GPU kaynağını oluşturur ve yapılandırır. |
 | `applyIntensity` | `void applyIntensity(FilamentLightManager lm, int entity, double intensity)` | `applyIntensity` işlemini gerçekleştirir. |
 | `syncNativeTransform` | `void syncNativeTransform(FilamentLightManager lm, int entity)` | `syncNativeTransform` işlemini gerçekleştirir. |
@@ -459,8 +460,11 @@ Focused or standard spot light component with cone angles in degrees (converted 
 | :--- | :--- | :--- |
 | `intensityInCandela` | `bool intensityInCandela` | `intensityInCandela` alanını (field/property) ve ilişkili veriyi saklar. |
 | `falloffRadius` | `double falloffRadius` | `falloffRadius` alanını (field/property) ve ilişkili veriyi saklar. |
+| `attenuationRadius` | `double attenuationRadius` | `falloffRadius` için zayıflama yarıçapı (cm) takma adı (alias). |
 | `innerConeAngleDegrees` | `double get innerConeAngleDegrees` | `innerConeAngleDegrees` özelliğinin anlık değerini okuyan getter erişimcisi. |
 | `outerConeAngleDegrees` | `double get outerConeAngleDegrees` | `outerConeAngleDegrees` özelliğinin anlık değerini okuyan getter erişimcisi. |
+| `innerConeAngle` | `double innerConeAngle` | Derece cinsinden iç koni açısı erişimcisi ve doğrulayıcı ayarlayıcısı. |
+| `outerConeAngle` | `double outerConeAngle` | Derece cinsinden dış koni açısı erişimcisi ve doğrulayıcı ayarlayıcısı. |
 | `createLightBuilder` | `LightBuilder createLightBuilder()` | Yeni bir `LightBuilder` örneği veya ilişkili GPU kaynağını oluşturur ve yapılandırır. |
 | `applyIntensity` | `void applyIntensity(FilamentLightManager lm, int entity, double intensity)` | `applyIntensity` işlemini gerçekleştirir. |
 | `syncNativeTransform` | `void syncNativeTransform(FilamentLightManager lm, int entity)` | `syncNativeTransform` işlemini gerçekleştirir. |

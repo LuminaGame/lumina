@@ -28,8 +28,10 @@
   `parent`: a scene component to follow), then `set_blueprint_component_property`: `intensity` (lumens, default
   10 000), `colorHex` (`#RRGGBB`), `attenuationRadius` (cm, default 1000), `castShadows` (default off). It moves
   with the actor: lamps, pickups, muzzle flashes.
-- A **Directional Light component** is not available in Blueprints yet (the tool refuses it); a Spot Light is not
-  in the Blueprint component list either. Use level lights for those.
+- **Spot Light component**: `add_blueprint_component` with `type` `LuminaSpotLightComponent` (optionally
+  `parent`: a scene component to follow), then `set_blueprint_component_property`: `intensity` (lumens, default
+  10 000), `colorHex` (`#RRGGBB`), `attenuationRadius` (cm, default 1000), `innerConeAngle` (degrees, default 30),
+  `outerConeAngle` (degrees, default 45), `castShadows` (default off). Shines along the component's forward axis (+Y).
 - A glow without lighting anything: an emissive material (`filament-materials`), cheaper than a light.
 
 ## Checking

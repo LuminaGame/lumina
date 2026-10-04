@@ -108,6 +108,10 @@ void main() {
       final bpSun = (bp['types'] as List).cast<Map>().firstWhere((t) => t['type'] == 'LuminaDirectionalLightComponent');
       expect(bpSun['is_available'], isFalse);
       expect(bpSun['gap_reason'], isNotEmpty);
+      final bpSpot = (bp['types'] as List).cast<Map>().firstWhere((t) => t['type'] == 'LuminaSpotLightComponent');
+      expect(bpSpot['is_available'], isTrue);
+      expect((bpSpot['properties'] as List).cast<Map>().map((p) => p['dart_field']),
+          containsAll(['location', 'intensity', 'colorHex', 'attenuationRadius', 'innerConeAngle', 'outerConeAngle', 'castShadows']));
     });
 
     test('add_actor_component: unique ids, one undo step each; properties settable; unknown types listed', () async {
@@ -243,6 +247,41 @@ void main() {
       expect(built.color.x, closeTo(1.0, 1e-6));
       expect(built.color.z, closeTo(0.0, 1e-6));
       expect(built.relativeLocation.y, closeTo(120.0, 1e-6), reason: 'authoring Z up is runtime Y up');
+    });
+
+    test('a Spot Light: added, its colour, intensity, radius, inner/outer cone angles and shadows set; the game builds that light', () async {
+      final spot = ((await ok('add_blueprint_component', {'asset': door, 'type': 'LuminaSpotLightComponent'}))['component'] as Map)['id'] as String;
+      final editor = doorEditor();
+      expect(editor.getComponent(spot)!.isSceneComponent, isTrue);
+      expect(editor.getComponent(spot)!.properties, allOf(
+        containsPair('colorHex', '#FFFFFF'),
+        containsPair('castShadows', false),
+        containsPair('innerConeAngle', 30.0),
+        containsPair('outerConeAngle', 45.0),
+        containsPair('attenuationRadius', 1000.0),
+      ));
+      await ok('set_blueprint_component_property', {'asset': door, 'component': spot, 'property': 'colorHex', 'value': '#00ff88'});
+      await ok('set_blueprint_component_property', {'asset': door, 'component': spot, 'property': 'intensity', 'value': 15000});
+      await ok('set_blueprint_component_property', {'asset': door, 'component': spot, 'property': 'Attenuation Radius', 'value': 800});
+      await ok('set_blueprint_component_property', {'asset': door, 'component': spot, 'property': 'Inner Cone Angle', 'value': 25});
+      await ok('set_blueprint_component_property', {'asset': door, 'component': spot, 'property': 'Outer Cone Angle', 'value': 50});
+      await ok('set_blueprint_component_property', {'asset': door, 'component': spot, 'property': 'castShadows', 'value': true});
+      final props = editor.getComponent(spot)!.properties;
+      expect(props['colorHex'], '#00FF88');
+      expect(props['intensity'], 15000.0);
+      expect(props['attenuationRadius'], 800.0);
+      expect(props['innerConeAngle'], 25.0);
+      expect(props['outerConeAngle'], 50.0);
+      expect(props['castShadows'], isTrue);
+      // What the editor writes is what the game builds.
+      final built = LuminaBlueprintComponents.construct(
+          LuminaActor(root: LuminaSceneComponent()), [editor.getComponent(spot)!])[spot] as LuminaSpotLightComponent;
+      expect(built.intensity, 15000.0);
+      expect(built.falloffRadius, 800.0);
+      expect(built.attenuationRadius, 800.0);
+      expect(built.innerConeAngleDegrees, 25.0);
+      expect(built.outerConeAngleDegrees, 50.0);
+      expect(built.castShadows, isTrue);
     });
 
     test('a Spring Arm: Use Pawn Control Rotation and the other settings the runtime reads are settable', () async {

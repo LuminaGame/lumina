@@ -105,6 +105,19 @@ void main() {
       expect(() => spotLight.setConeAngles(innerDegrees: 50.0, outerDegrees: 30.0), throwsArgumentError);
       // Validation test: outer > 90
       expect(() => spotLight.setConeAngles(innerDegrees: 30.0, outerDegrees: 95.0), throwsArgumentError);
+
+      // Property accessors
+      expect(spotLight.attenuationRadius, 1000.0);
+      spotLight.attenuationRadius = 1500.0;
+      expect(spotLight.falloffRadius, 1500.0);
+      expect(spotLight.attenuationRadius, 1500.0);
+
+      expect(spotLight.innerConeAngle, 20.0);
+      expect(spotLight.outerConeAngle, 40.0);
+      spotLight.innerConeAngle = 25.0;
+      expect(spotLight.innerConeAngleDegrees, 25.0);
+      spotLight.outerConeAngle = 55.0;
+      expect(spotLight.outerConeAngleDegrees, 55.0);
     });
 
     test('Live property setters update FilamentLightManager', () {

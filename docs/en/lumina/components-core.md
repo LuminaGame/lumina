@@ -443,6 +443,7 @@ Omnidirectional point light component with luminous flux intensity in lumens (or
 | :--- | :--- | :--- |
 | `intensityInCandela` | `bool intensityInCandela` | Holds the `intensityInCandela` property or configuration state. |
 | `falloffRadius` | `double falloffRadius` | Holds the `falloffRadius` property or configuration state. |
+| `attenuationRadius` | `double attenuationRadius` | Attenuation radius alias for `falloffRadius`. |
 | `createLightBuilder` | `LightBuilder createLightBuilder()` | Creates, configures, and returns a new `LightBuilder` instance or associated GPU resource. |
 | `applyIntensity` | `void applyIntensity(FilamentLightManager lm, int entity, double intensity)` | Executes `applyIntensity` operation. |
 | `syncNativeTransform` | `void syncNativeTransform(FilamentLightManager lm, int entity)` | Executes `syncNativeTransform` operation. |
@@ -459,8 +460,11 @@ Focused or standard spot light component with cone angles in degrees (converted 
 | :--- | :--- | :--- |
 | `intensityInCandela` | `bool intensityInCandela` | Holds the `intensityInCandela` property or configuration state. |
 | `falloffRadius` | `double falloffRadius` | Holds the `falloffRadius` property or configuration state. |
+| `attenuationRadius` | `double attenuationRadius` | Attenuation radius alias for `falloffRadius`. |
 | `innerConeAngleDegrees` | `double get innerConeAngleDegrees` | Getter accessor returning the current value of `innerConeAngleDegrees`. |
 | `outerConeAngleDegrees` | `double get outerConeAngleDegrees` | Getter accessor returning the current value of `outerConeAngleDegrees`. |
+| `innerConeAngle` | `double innerConeAngle` | Inner cone angle in degrees with live validation and clamp. |
+| `outerConeAngle` | `double outerConeAngle` | Outer cone angle in degrees with live validation and clamp. |
 | `createLightBuilder` | `LightBuilder createLightBuilder()` | Creates, configures, and returns a new `LightBuilder` instance or associated GPU resource. |
 | `applyIntensity` | `void applyIntensity(FilamentLightManager lm, int entity, double intensity)` | Executes `applyIntensity` operation. |
 | `syncNativeTransform` | `void syncNativeTransform(FilamentLightManager lm, int entity)` | Executes `syncNativeTransform` operation. |

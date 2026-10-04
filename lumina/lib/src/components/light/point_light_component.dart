@@ -18,6 +18,10 @@ class LuminaPointLightComponent extends LuminaLightComponent {
     }
   }
 
+  /// Sphere of influence, in world units (cm); alias for [falloffRadius].
+  double get attenuationRadius => falloffRadius;
+  set attenuationRadius(double value) => falloffRadius = value;
+
   LuminaPointLightComponent({
     super.key,
     super.location,

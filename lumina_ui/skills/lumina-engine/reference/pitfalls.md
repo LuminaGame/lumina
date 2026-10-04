@@ -57,9 +57,8 @@ Lessons from real sessions where a model lost many rounds. Each line: what goes 
 
 ## Lights and camera
 
-- Adding a Point Light to a Blueprint → `LuminaPointLightComponent` works (`intensity` in lumens, `colorHex`,
-  `attenuationRadius`, `castShadows`); a Directional Light component does not exist in Blueprints: use a level
-  light.
+- Adding a Point or Spot Light to a Blueprint → `LuminaPointLightComponent` or `LuminaSpotLightComponent` works (`intensity` in lumens, `colorHex`,
+  `attenuationRadius`, cone angles for Spot, `castShadows`).
 - A mouse-look camera that does not follow the mouse → spring arm `usePawnControlRotation` true.
 
 ## Play-testing
