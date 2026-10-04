@@ -33,6 +33,9 @@ class LuminaBlueprintTypeContext {
   /// The custom events the event graph declares.
   final List<LuminaBlueprintCustomEvent> customEvents;
 
+  /// Custom events defined in ancestor Blueprint classes that this Blueprint can override.
+  final List<LuminaBlueprintCustomEvent> inheritedCustomEvents;
+
   /// The project's enum and interface assets (default: the registries).
   final List<LuminaBlueprintEnumDocument> enums;
   final List<LuminaBlueprintInterfaceDocument> interfaces;
@@ -83,6 +86,7 @@ class LuminaBlueprintTypeContext {
     this.dispatchers = const [],
     this.dispatcherOwners = const {},
     this.customEvents = const [],
+    this.inheritedCustomEvents = const [],
     this.enums = const [],
     this.interfaces = const [],
     this.gameModeClass,
@@ -152,6 +156,7 @@ class LuminaBlueprintTypeContext {
     List<LuminaBlueprintWidgetElement>? widgetVariables,
     List<LuminaBlueprintVariable>? inheritedVariables,
     List<LuminaBlueprintComponent>? inheritedComponents,
+    List<LuminaBlueprintCustomEvent>? inheritedCustomEvents,
   }) {
     final childVarNames = {for (final v in doc.variables) v.name};
     final effectiveVariables = [
@@ -185,6 +190,7 @@ class LuminaBlueprintTypeContext {
       dispatchers: doc.dispatchers,
       dispatcherOwners: {...dispatcherOwners, ?className: doc.dispatchers},
       customEvents: LuminaBlueprintNodeLibrary.customEventsOf(doc.eventGraph),
+      inheritedCustomEvents: inheritedCustomEvents ?? const [],
       enums: enums ?? LuminaBlueprintEnums.all,
       interfaces: interfaces ?? LuminaBlueprintInterfaces.all,
       gameModeClass: gameModeClass,
@@ -387,6 +393,9 @@ class LuminaBlueprintTypeContext {
 
   LuminaBlueprintCustomEvent? customEvent(String? name) {
     for (final e in customEvents) {
+      if (e.name == name) return e;
+    }
+    for (final e in inheritedCustomEvents) {
       if (e.name == name) return e;
     }
     return null;

@@ -461,6 +461,7 @@ What a node's dynamic pins depend on: the document's variables, the project's in
 | `dispatchers` | `final List<LuminaBlueprintDispatcher> dispatchers` |  |
 | `dispatcherOwners` | `final Map<String, List<LuminaBlueprintDispatcher>> dispatcherOwners` | Dispatchers of other Blueprint classes by class name, for `Bind Event to <Dispatcher>` on a typed target. |
 | `customEvents` | `final List<LuminaBlueprintCustomEvent> customEvents` | The custom events the event graph declares. |
+| `inheritedCustomEvents` | `final List<LuminaBlueprintCustomEvent> inheritedCustomEvents` | Ata Blueprint sınıflarından miras alınan ve bu Blueprint'te geçersiz kılınabilen (@override) özel olaylar. |
 | `enums` | `final List<LuminaBlueprintEnumDocument> enums` | The project's enum and interface assets (default: the registries). |
 | `interfaces` | `final List<LuminaBlueprintInterfaceDocument> interfaces` |  |
 | `gameModeClass` | `final String? gameModeClass` | The project's GameMode Blueprint class (`BP_ThirdPersonGameMode`), what `Get Game Mode` is typed as. |
@@ -534,6 +535,8 @@ A Blueprint document ready to run in the VM: validated once, then instantiated a
 | `actorParents` | `final Map<String, String> actorParents` | Project Blueprint class → parent, and other classes' custom events, for typing object pins and targeted Call Custom Event. |
 | `customEventOwners` | `final Map<String, List<LuminaBlueprintCustomEvent>> customEventOwners` |  |
 | `widgetVariables` | `final List<LuminaBlueprintWidgetElement>? widgetVariables` | A Widget Blueprint's `Is Variable` elements; null for any other Blueprint. |
+| `inheritedCustomEvents` | `List<LuminaBlueprintCustomEvent> get inheritedCustomEvents` | Ata Blueprint sınıflarından miras alınan tüm özel olaylar. |
+| `allCustomEvents` | `List<LuminaBlueprintCustomEvent> get allCustomEvents` | Bu sınıfın tüm özel olayları (ata sınıfların olayları ve çocuk sınıfın @override geçersiz kılmaları). |
 | `isUserWidget` | `bool get isUserWidget` | Whether this is a Widget Blueprint's graph (use [instantiateUserWidget]). |
 | `isLevelScript` | `bool get isLevelScript` | Whether this is a Level Blueprint (use [instantiateLevelScript]). |
 | `typeContext` | `LuminaBlueprintTypeContext typeContext({LuminaBlueprintFunctionGraph? function, LuminaBlueprintMacroGraph? mac...` | The type context the class's graphs resolve in — [function]'s or [macro]'s graph when given. |

@@ -246,6 +246,7 @@ class BlueprintEditorViewModel extends _BlueprintEditorViewModelState
           macroScope: macro,
           inheritedVariables: inheritedVariables,
           inheritedComponents: inheritedComponents,
+          inheritedCustomEvents: inheritedCustomEvents,
           customEventOwners: _catalog?.actorEvents ?? const {},
           variableOwners: _catalog?.actorVariables ?? const {},
           componentOwners: _catalog?.actorComponents ?? const {},

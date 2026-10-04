@@ -509,6 +509,35 @@ abstract final class BlueprintPalette {
     for (final e in context.customEvents) {
       add(LuminaBlueprintNodeLibrary.callCustomEvent, 'Call ${e.name}', 'Call Event', {'event': e.name}, [e.name, 'custom', 'event']);
     }
+    final customEventSpec = LuminaBlueprintNodeLibrary.spec(LuminaBlueprintNodeLibrary.customEvent);
+    final allowsCustomEvent = customEventSpec != null && (filter == null || filter(customEventSpec));
+    for (final e in context.inheritedCustomEvents) {
+      if (!context.customEvents.any((ce) => ce.name == e.name)) {
+        add(LuminaBlueprintNodeLibrary.callCustomEvent, 'Call ${e.name}', 'Call Event', {'event': e.name}, [e.name, 'custom', 'event']);
+        if (allowsCustomEvent) {
+          out.add(BlueprintPaletteEntry(
+            registryId: LuminaBlueprintNodeLibrary.customEvent,
+            title: 'Event ${e.name}',
+            category: 'Add Event',
+            keywords: [
+              ...customEventSpec.keywords,
+              'override',
+              e.name,
+              e.name.toLowerCase(),
+              ...e.parameters.map((p) => p.name.toLowerCase()),
+            ],
+            headerColor: customEventSpec.headerColor,
+            kind: customEventSpec.kind,
+            tooltip: 'Override event ${e.name} from parent Blueprint',
+            literals: {
+              'name': e.name,
+              'parameters': [for (final p in e.parameters) p.toJson()],
+            },
+            keyOverride: 'override_custom_event_${e.name}',
+          ));
+        }
+      }
+    }
     // Another class's custom events, called on a Target of that
     // class (a Level Blueprint calls `Open` on Door_01).
     for (final owner in context.customEventOwners.entries) {
@@ -517,6 +546,29 @@ abstract final class BlueprintPalette {
       for (final e in owner.value) {
         add(LuminaBlueprintNodeLibrary.callCustomEvent, 'Call ${e.name}', 'Call Event|${owner.key}', {'event': e.name, 'class': cls},
             [e.name, owner.key, 'custom', 'event'],
+            objectClass: cls);
+      }
+    }
+    // Another class's variables, accessed on a Target of that class
+    for (final owner in context.variableOwners.entries) {
+      final cls = LuminaBlueprintObjectClass.actor(owner.key);
+      if (cls == context.selfClass) continue;
+      for (final v in owner.value) {
+        add(LuminaBlueprintNodeLibrary.variableGet, 'Get ${v.name}', 'Variables|${owner.key}', {'variable': v.name, 'class': cls},
+            [v.name, v.typeName, owner.key, 'variable', 'get'],
+            objectClass: cls);
+        add(LuminaBlueprintNodeLibrary.variableSet, 'Set ${v.name}', 'Variables|${owner.key}', {'variable': v.name, 'class': cls},
+            [v.name, v.typeName, owner.key, 'variable', 'set'],
+            objectClass: cls);
+      }
+    }
+    // Another class's components, accessed on a Target of that class
+    for (final owner in context.componentOwners.entries) {
+      final cls = LuminaBlueprintObjectClass.actor(owner.key);
+      if (cls == context.selfClass) continue;
+      for (final c in owner.value) {
+        add(LuminaBlueprintNodeLibrary.getComponent, 'Get ${c.name}', 'Components|${owner.key}', {'component': c.name, 'class': cls},
+            [c.name, c.componentClass, owner.key, 'component', 'get'],
             objectClass: cls);
       }
     }

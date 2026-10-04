@@ -382,5 +382,119 @@ void main() {
       final castEvent = trace.firstWhere((t) => t.registryId == 'cast_to');
       expect(castEvent.values['as_class'], same(tower));
     });
+
+    test('child inherits custom event from parent and can override it', () {
+      final parentDoc = LuminaBlueprintDocument(
+        parentClass: 'LuminaActor',
+        variables: const [
+          LuminaBlueprintVariable(name: 'Activated', typeName: 'Bool', defaultValue: false),
+        ],
+        eventGraph: LuminaBlueprintGraph(
+          nodes: [
+            LuminaBlueprintNode(
+              id: 'parent_event',
+              registryId: LuminaBlueprintNodeLibrary.customEvent,
+              title: 'OnInteract',
+              literals: const {
+                'name': 'OnInteract',
+                'parameters': [
+                  {'name': 'Energy', 'type': 'Float', 'default': 10.0}
+                ],
+              },
+            ),
+            LuminaBlueprintNode(
+              id: 'parent_set',
+              registryId: LuminaBlueprintNodeLibrary.variableSet,
+              title: 'Set Activated',
+              literals: const {'variable': 'Activated'},
+            ),
+          ],
+          wires: const [
+            LuminaBlueprintWire(id: 'w1', fromNodeId: 'parent_event', fromPinId: 'exec_out', toNodeId: 'parent_set', toPinId: 'exec_in'),
+          ],
+        ),
+      );
+
+      final parentCls = LuminaBlueprintClass.fromDocument(parentDoc, name: 'BP_Interactable');
+      expect(parentCls.allCustomEvents.length, equals(1));
+      expect(parentCls.allCustomEvents.single.name, equals('OnInteract'));
+
+      // Child inherits from BP_Interactable
+      final childDoc = LuminaBlueprintDocument(
+        parentClass: 'BP_Interactable',
+        variables: const [
+          LuminaBlueprintVariable(name: 'TowerPower', typeName: 'Float', defaultValue: 0.0),
+        ],
+        eventGraph: LuminaBlueprintGraph(
+          nodes: [
+            // Override OnInteract in child: sets TowerPower = Energy * 2.0
+            LuminaBlueprintNode(
+              id: 'child_override_event',
+              registryId: LuminaBlueprintNodeLibrary.customEvent,
+              title: 'OnInteract',
+              literals: const {
+                'name': 'OnInteract',
+                'parameters': [
+                  {'name': 'Energy', 'type': 'Float', 'default': 10.0}
+                ],
+              },
+            ),
+            LuminaBlueprintNode(
+              id: 'child_mul',
+              registryId: 'float_multiply',
+              title: 'Multiply',
+              literals: const {'b': 2.0},
+            ),
+            LuminaBlueprintNode(
+              id: 'child_set',
+              registryId: LuminaBlueprintNodeLibrary.variableSet,
+              title: 'Set TowerPower',
+              literals: const {'variable': 'TowerPower'},
+            ),
+          ],
+          wires: const [
+            LuminaBlueprintWire(id: 'cw1', fromNodeId: 'child_override_event', fromPinId: 'exec_out', toNodeId: 'child_set', toPinId: 'exec_in'),
+            LuminaBlueprintWire(id: 'cw2', fromNodeId: 'child_override_event', fromPinId: 'Energy', toNodeId: 'child_mul', toPinId: 'a'),
+            LuminaBlueprintWire(id: 'cw3', fromNodeId: 'child_mul', fromPinId: 'return_value', toNodeId: 'child_set', toPinId: 'value'),
+          ],
+        ),
+      );
+
+      final childCls = LuminaBlueprintClass.fromDocument(
+        childDoc,
+        name: 'BP_LightTower',
+        resolveClass: (p) => p == 'BP_Interactable' ? parentCls : null,
+      );
+
+      expect(childCls.hasErrors, isFalse);
+      expect(childCls.inheritedCustomEvents.length, equals(1));
+      expect(childCls.inheritedCustomEvents.first.name, equals('OnInteract'));
+      expect(childCls.inheritedCustomEvents.first.parameters.single.name, equals('Energy'));
+      expect(childCls.allCustomEvents.length, equals(1));
+
+      // Test VM execution of overridden event
+      final tower = childCls.instantiate() as LuminaBlueprintActor;
+      expect(tower.variables['TowerPower'], equals(0.0));
+      expect(tower.variables['Activated'], equals(false));
+
+      tower.callBlueprint('OnInteract', {'Energy': 25.0});
+      expect(tower.variables['TowerPower'], equals(50.0),
+          reason: 'Child override event handler must execute with supplied parameters');
+      expect(tower.variables['Activated'], equals(false),
+          reason: 'Child override replaces parent handler instead of running both');
+
+      // Test code generation emits override in callBlueprint
+      final generator = const BlueprintDartGenerator();
+      final codegenResult = generator.generate(
+        childDoc,
+        className: 'BP_LightTower',
+        blueprintClasses: {
+          'BP_Interactable': const BlueprintClassRef('BP_Interactable', 'package:game/blueprints/bp_interactable.dart'),
+        },
+      );
+      expect(codegenResult.ok, isTrue);
+      expect(codegenResult.code, contains('case \'OnInteract\':'));
+      expect(codegenResult.code, contains('return super.callBlueprint(name, args);'));
+    });
   });
 }

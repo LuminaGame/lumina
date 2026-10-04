@@ -189,4 +189,118 @@ abstract class _BlueprintEditorViewModelState extends ChangeNotifier implements 
   List<LuminaBlueprintNode> nodesCallingMacro(String name);
 
   LuminaBlueprintNode? collapseSelection({required bool toMacro, String? name, BlueprintGraphRef? graph});
+
+  LuminaBlueprintDocument? _loadBlueprintDocumentByClassName(String className) {
+    final dir = _findProjectDir(assetPath);
+    if (dir == null) return null;
+    final contentsDir = Directory('$dir/contents');
+    if (!contentsDir.existsSync()) return null;
+    try {
+      for (final entity in contentsDir.listSync(recursive: true, followLinks: false)) {
+        if (entity is File && entity.path.endsWith('.lmas')) {
+          final fileName = entity.path.split(RegExp(r'[\\/]')).last;
+          if (fileName == '$className.lmas') {
+            final asset = LuminaAsset.fromBytes(entity.readAsBytesSync());
+            if (asset.rawPayload != null && asset.rawPayload!.isNotEmpty) {
+              final decoded = jsonDecode(utf8.decode(asset.rawPayload!));
+              return LuminaBlueprintDocument.fromJson(Map<String, dynamic>.from(decoded as Map));
+            }
+          }
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// Variables inherited from parent Blueprint classes.
+  List<LuminaBlueprintVariable> get inheritedVariables {
+    final vars = <LuminaBlueprintVariable>[];
+    final visited = <String>{fileBasename};
+    var currentParent = _document.parentClass;
+    while (!LuminaBlueprintClass.isEngineParent(currentParent) && visited.add(currentParent)) {
+      final parentDoc = _loadBlueprintDocumentByClassName(currentParent);
+      if (parentDoc == null) break;
+      vars.insertAll(0, parentDoc.variables);
+      currentParent = parentDoc.parentClass;
+    }
+    return vars;
+  }
+
+  /// Components inherited from parent Blueprint classes.
+  List<LuminaBlueprintComponent> get inheritedComponents {
+    final comps = <LuminaBlueprintComponent>[];
+    final visited = <String>{fileBasename};
+    var currentParent = _document.parentClass;
+    while (!LuminaBlueprintClass.isEngineParent(currentParent) && visited.add(currentParent)) {
+      final parentDoc = _loadBlueprintDocumentByClassName(currentParent);
+      if (parentDoc == null) break;
+      comps.insertAll(0, parentDoc.components);
+      currentParent = parentDoc.parentClass;
+    }
+    return comps;
+  }
+
+  /// All variables: inherited variables merged with this document's own variables.
+  List<LuminaBlueprintVariable> get allVariables => [
+        ...inheritedVariables.where((iv) => !_document.variables.any((v) => v.name == iv.name)),
+        ..._document.variables,
+      ];
+
+  /// All components: inherited components merged with this document's own components.
+  List<LuminaBlueprintComponent> get allComponents {
+    final list = <LuminaBlueprintComponent>[];
+    for (final ic in inheritedComponents) {
+      final overrideComp = _document.components.where((c) => c.id == ic.id).firstOrNull;
+      list.add(overrideComp ?? ic);
+    }
+    for (final c in _document.components) {
+      if (!inheritedComponents.any((ic) => ic.id == c.id)) {
+        list.add(c);
+      }
+    }
+    return list;
+  }
+
+  /// Whether a component is inherited from a parent Blueprint.
+  bool isInheritedComponent(String id) =>
+      inheritedComponents.any((c) => c.id == id);
+
+  /// Whether an inherited component has been overridden in this child Blueprint.
+  bool isComponentOverridden(String id) =>
+      inheritedComponents.any((c) => c.id == id) && _document.components.any((c) => c.id == id);
+
+  /// Whether a variable is inherited from a parent Blueprint.
+  bool isInheritedVariable(String name) =>
+      inheritedVariables.any((v) => v.name == name);
+
+  /// Custom events inherited from parent Blueprint classes.
+  List<LuminaBlueprintCustomEvent> get inheritedCustomEvents {
+    final events = <LuminaBlueprintCustomEvent>[];
+    final visited = <String>{fileBasename};
+    var currentParent = _document.parentClass;
+    while (!LuminaBlueprintClass.isEngineParent(currentParent) && visited.add(currentParent)) {
+      List<LuminaBlueprintCustomEvent>? parentEvents = _catalog?.actorEvents[currentParent];
+      final parentDoc = _loadBlueprintDocumentByClassName(currentParent);
+      if (parentDoc != null) {
+        parentEvents = LuminaBlueprintNodeLibrary.customEventsOf(parentDoc.eventGraph);
+      }
+      if (parentEvents != null) {
+        for (final e in parentEvents) {
+          if (!events.any((existing) => existing.name == e.name)) {
+            events.add(e);
+          }
+        }
+      }
+      if (parentDoc != null) {
+        currentParent = parentDoc.parentClass;
+      } else {
+        currentParent = _catalog?.actorParents[currentParent] ?? '';
+      }
+    }
+    return events;
+  }
+
+  /// Whether a custom event is inherited from a parent Blueprint.
+  bool isInheritedCustomEvent(String name) =>
+      inheritedCustomEvents.any((e) => e.name == name);
 }

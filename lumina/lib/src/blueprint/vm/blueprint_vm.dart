@@ -142,6 +142,23 @@ class LuminaBlueprintClass {
     ];
   }
 
+  /// All custom events inherited from parent Blueprints.
+  List<LuminaBlueprintCustomEvent> get inheritedCustomEvents {
+    if (parentBlueprintClass == null) return const [];
+    return parentBlueprintClass!.allCustomEvents;
+  }
+
+  /// All custom events of this class, with child custom events overriding parent custom events of the same name.
+  List<LuminaBlueprintCustomEvent> get allCustomEvents {
+    final parentEvents = inheritedCustomEvents;
+    final ownEvents = LuminaBlueprintNodeLibrary.customEventsOf(document.eventGraph);
+    final ownNames = {for (final e in ownEvents) e.name};
+    return [
+      for (final e in parentEvents) if (!ownNames.contains(e.name)) e,
+      ...ownEvents,
+    ];
+  }
+
   /// All class defaults of this class, with child defaults overriding parent defaults.
   Map<String, dynamic> get allClassDefaults => {
         ...?parentBlueprintClass?.allClassDefaults,
@@ -180,7 +197,8 @@ class LuminaBlueprintClass {
           macroScope: macro,
           widgetVariables: widgetVariables,
           inheritedVariables: parentBlueprintClass?.allVariables,
-          inheritedComponents: parentBlueprintClass?.allComponents);
+          inheritedComponents: parentBlueprintClass?.allComponents,
+          inheritedCustomEvents: parentBlueprintClass?.allCustomEvents);
 
   static LuminaBlueprintTypeContext _contextOf(
     LuminaBlueprintDocument document,
@@ -196,6 +214,7 @@ class LuminaBlueprintClass {
     List<LuminaBlueprintWidgetElement>? widgetVariables,
     List<LuminaBlueprintVariable>? inheritedVariables,
     List<LuminaBlueprintComponent>? inheritedComponents,
+    List<LuminaBlueprintCustomEvent>? inheritedCustomEvents,
   }) {
     if (widgetVariables != null || document.parentClass == LuminaWidgetBlueprintDocument.parentClass) {
       return LuminaBlueprintTypeContext.forWidget(
@@ -224,7 +243,8 @@ class LuminaBlueprintClass {
         functionScope: functionScope,
         macroScope: macroScope,
         inheritedVariables: inheritedVariables,
-        inheritedComponents: inheritedComponents);
+        inheritedComponents: inheritedComponents,
+        inheritedCustomEvents: inheritedCustomEvents);
   }
 
   /// A Level Blueprint ready to run: [levelDoc]'s graph with
@@ -347,6 +367,7 @@ class LuminaBlueprintClass {
 
     final inheritedVars = parentBlueprintClass?.allVariables;
     final inheritedComps = parentBlueprintClass?.allComponents;
+    final inheritedEvents = parentBlueprintClass?.allCustomEvents;
 
     final typeCtx = levelScope ||
             widgetScope ||
@@ -355,13 +376,15 @@ class LuminaBlueprintClass {
             variableOwners.isNotEmpty ||
             componentOwners.isNotEmpty ||
             inheritedVars != null ||
-            inheritedComps != null
+            inheritedComps != null ||
+            inheritedEvents != null
         ? _contextOf(document, name, inputActions, levelActors, currentActorParents, currentCustomEvents,
             variableOwners: variableOwners,
             componentOwners: componentOwners,
             widgetVariables: widgetScope ? (widgetVariables ?? const []) : null,
             inheritedVariables: inheritedVars,
-            inheritedComponents: inheritedComps)
+            inheritedComponents: inheritedComps,
+            inheritedCustomEvents: inheritedEvents)
         : null;
 
     diagnostics.addAll(validateBlueprint(document,
