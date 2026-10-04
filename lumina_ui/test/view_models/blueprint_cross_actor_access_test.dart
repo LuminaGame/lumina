@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina/lumina.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/blueprint_play_support.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_palette.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/blueprint_editor_view_model.dart';
 
@@ -170,5 +171,166 @@ void main() {
       context: context,
     );
     expect(vm.eventGraph.problems(unknownNode).map((p) => p.message), contains("Unknown variable 'NonExistent'"));
+  });
+
+  test('EditorBlueprintClassRegistry compiles cross-actor variables and passes PIE preflight validation', () async {
+    // 1. Create target blueprint: BP_Interactable with variable Message
+    final interactableDoc = LuminaBlueprintDocument(
+      parentClass: 'LuminaActor',
+      variables: [
+        const LuminaBlueprintVariable(name: 'Message', typeName: 'String', defaultValue: 'Press E to Interact'),
+      ],
+      components: [
+        LuminaBlueprintComponent(
+          id: 'mesh_comp',
+          name: 'StaticMeshComponent',
+          type: 'LuminaStaticMeshComponent',
+          parentId: null,
+          properties: {},
+        ),
+      ],
+    );
+
+    final interactableFile = File('${contentsDir.path}/BP_Interactable.lmas');
+    final interactableAsset = LuminaAsset(
+      assetId: 'BP_Interactable',
+      name: 'BP_Interactable',
+      type: AssetType.actor,
+      rawPayload: utf8.encode(interactableDoc.toFormattedJson()),
+    );
+    await interactableFile.writeAsBytes(interactableAsset.toProtoBufferBytes());
+
+    // 2. Create caller blueprint: BP_ThirdPersonCharacter with TargetActor and Get Message wired to Print String
+    final characterDoc = LuminaBlueprintDocument(
+      parentClass: 'LuminaCharacter',
+      variables: const [
+        LuminaBlueprintVariable(
+          name: 'TargetActor',
+          typeName: 'Actor:BP_Interactable',
+        ),
+      ],
+      eventGraph: LuminaBlueprintGraph(
+        nodes: [
+          LuminaBlueprintNode(
+            id: 'begin_play',
+            registryId: 'event_beginplay',
+            title: 'Event BeginPlay',
+          ),
+          LuminaBlueprintNode(
+            id: 'get_target',
+            registryId: LuminaBlueprintNodeLibrary.variableGet,
+            title: 'Get TargetActor',
+            literals: const {'variable': 'TargetActor'},
+          ),
+          LuminaBlueprintNode(
+            id: 'get_msg',
+            registryId: LuminaBlueprintNodeLibrary.variableGet,
+            title: 'Get Message',
+            literals: const {'variable': 'Message', 'class': 'BP_Interactable'},
+          ),
+          LuminaBlueprintNode(
+            id: 'print_str',
+            registryId: 'print_string',
+            title: 'Print String',
+          ),
+        ],
+        wires: const [
+          LuminaBlueprintWire(id: 'w1', fromNodeId: 'begin_play', fromPinId: 'exec_out', toNodeId: 'print_str', toPinId: 'exec_in'),
+          LuminaBlueprintWire(id: 'w2', fromNodeId: 'get_target', fromPinId: 'value', toNodeId: 'get_msg', toPinId: 'target'),
+          LuminaBlueprintWire(id: 'w3', fromNodeId: 'get_msg', fromPinId: 'value', toNodeId: 'print_str', toPinId: 'in_string'),
+        ],
+      ),
+    );
+
+    final characterFile = File('${contentsDir.path}/BP_ThirdPersonCharacter.lmas');
+    final characterAsset = LuminaAsset(
+      assetId: 'BP_ThirdPersonCharacter',
+      name: 'BP_ThirdPersonCharacter',
+      type: AssetType.actor,
+      rawPayload: utf8.encode(characterDoc.toFormattedJson()),
+    );
+    await characterFile.writeAsBytes(characterAsset.toProtoBufferBytes());
+
+    // 3. Create EditorBlueprintClassRegistry
+    final registry = EditorBlueprintClassRegistry(
+      projectDir.path,
+      inputActions: const [],
+    );
+
+    // 4. Validate via BlueprintPlayPreflight
+    final blockers = BlueprintPlayPreflight.validate(
+      registry,
+      const ProjectMapsAndModes(),
+      ['Blueprints/BP_ThirdPersonCharacter.lmas'],
+    );
+    expect(blockers, isEmpty, reason: blockers.map((b) => b.toString()).join('\n'));
+
+    // 5. Test openDocuments in-memory overlay:
+    // User adds UnsavedVar to BP_Interactable in editor without saving to disk
+    final updatedInteractableDoc = LuminaBlueprintDocument(
+      parentClass: 'LuminaActor',
+      variables: [
+        const LuminaBlueprintVariable(name: 'Message', typeName: 'String', defaultValue: 'Press E to Interact'),
+        const LuminaBlueprintVariable(name: 'UnsavedVar', typeName: 'String', defaultValue: 'Hot Reloaded'),
+      ],
+      components: [],
+    );
+
+    final callerWithUnsavedDoc = LuminaBlueprintDocument(
+      parentClass: 'LuminaCharacter',
+      variables: const [
+        LuminaBlueprintVariable(
+          name: 'TargetActor',
+          typeName: 'Actor:BP_Interactable',
+        ),
+      ],
+      eventGraph: LuminaBlueprintGraph(
+        nodes: [
+          LuminaBlueprintNode(
+            id: 'begin_play',
+            registryId: 'event_beginplay',
+            title: 'Event BeginPlay',
+          ),
+          LuminaBlueprintNode(
+            id: 'get_target',
+            registryId: LuminaBlueprintNodeLibrary.variableGet,
+            title: 'Get TargetActor',
+            literals: const {'variable': 'TargetActor'},
+          ),
+          LuminaBlueprintNode(
+            id: 'get_unsaved',
+            registryId: LuminaBlueprintNodeLibrary.variableGet,
+            title: 'Get UnsavedVar',
+            literals: const {'variable': 'UnsavedVar', 'class': 'BP_Interactable'},
+          ),
+          LuminaBlueprintNode(
+            id: 'print_str',
+            registryId: 'print_string',
+            title: 'Print String',
+          ),
+        ],
+        wires: const [
+          LuminaBlueprintWire(id: 'w1', fromNodeId: 'begin_play', fromPinId: 'exec_out', toNodeId: 'print_str', toPinId: 'exec_in'),
+          LuminaBlueprintWire(id: 'w2', fromNodeId: 'get_target', fromPinId: 'value', toNodeId: 'get_unsaved', toPinId: 'target'),
+          LuminaBlueprintWire(id: 'w3', fromNodeId: 'get_unsaved', fromPinId: 'value', toNodeId: 'print_str', toPinId: 'in_string'),
+        ],
+      ),
+    );
+
+    final openRegistry = EditorBlueprintClassRegistry(
+      projectDir.path,
+      inputActions: const [],
+      openDocuments: () => {
+        'contents/Blueprints/BP_Interactable.lmas': updatedInteractableDoc,
+        'contents/Blueprints/BP_ThirdPersonCharacter.lmas': callerWithUnsavedDoc,
+      },
+    );
+
+    final openBlockers = BlueprintPlayPreflight.validate(
+      openRegistry,
+      const ProjectMapsAndModes(),
+      ['Blueprints/BP_ThirdPersonCharacter.lmas'],
+    );
+    expect(openBlockers, isEmpty, reason: openBlockers.map((b) => b.toString()).join('\n'));
   });
 }

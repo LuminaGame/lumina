@@ -71,14 +71,55 @@ class LuminaBlueprintClass {
   /// typing object pins and targeted Call Custom Event.
   final Map<String, String> actorParents;
   final Map<String, List<LuminaBlueprintCustomEvent>> customEventOwners;
+  final Map<String, List<LuminaBlueprintVariable>> variableOwners;
+  final Map<String, List<LuminaBlueprintComponentRef>> componentOwners;
 
   /// A Widget Blueprint's `Is Variable` elements; null for any
   /// other Blueprint.
   final List<LuminaBlueprintWidgetElement>? widgetVariables;
 
+  /// The parent Blueprint class when this class inherits another Blueprint.
+  final LuminaBlueprintClass? parentBlueprintClass;
+
   LuminaBlueprintClass._(this.name, this.document, this.inputActions, this.resolveAsset, this.assetProvider,
       this.animBlueprints, this.resolveClass, this.diagnostics,
-      {this.levelActors, this.actorParents = const {}, this.customEventOwners = const {}, this.widgetVariables});
+      {this.levelActors,
+      this.actorParents = const {},
+      this.customEventOwners = const {},
+      this.variableOwners = const {},
+      this.componentOwners = const {},
+      this.widgetVariables,
+      this.parentBlueprintClass});
+
+  /// The root engine class this Blueprint descends from (e.g. `LuminaCharacter`, `LuminaPawn`, `LuminaActor`).
+  String get rootEngineClass => parentBlueprintClass?.rootEngineClass ?? document.parentClass;
+
+  /// All variables of this class, including inherited variables from parent Blueprints.
+  /// Child variables override parent variables with the same name.
+  List<LuminaBlueprintVariable> get allVariables {
+    final parentVars = parentBlueprintClass?.allVariables ?? const <LuminaBlueprintVariable>[];
+    final childVarNames = {for (final v in document.variables) v.name};
+    return [
+      for (final v in parentVars) if (!childVarNames.contains(v.name)) v,
+      ...document.variables,
+    ];
+  }
+
+  /// All components of this class, including inherited components from parent Blueprints.
+  List<LuminaBlueprintComponent> get allComponents {
+    final parentComps = parentBlueprintClass?.allComponents ?? const <LuminaBlueprintComponent>[];
+    final childCompIds = {for (final c in document.components) c.id};
+    return [
+      for (final c in parentComps) if (!childCompIds.contains(c.id)) c,
+      ...document.components,
+    ];
+  }
+
+  /// All class defaults of this class, with child defaults overriding parent defaults.
+  Map<String, dynamic> get allClassDefaults => {
+        ...?parentBlueprintClass?.allClassDefaults,
+        ...document.classDefaults,
+      };
 
   /// Whether this is a Widget Blueprint's graph (use [instantiateUserWidget]).
   bool get isUserWidget => document.parentClass == LuminaWidgetBlueprintDocument.parentClass;
@@ -86,11 +127,33 @@ class LuminaBlueprintClass {
   /// Whether this is a Level Blueprint (use [instantiateLevelScript]).
   bool get isLevelScript => document.parentClass == LuminaLevelBlueprintDocument.parentClass;
 
+  /// Whether this is a GameMode Blueprint (use [createGameMode]).
+  bool get isGameMode => rootEngineClass == 'LuminaGameMode';
+
+  /// Whether this is a Pawn or Character Blueprint.
+  bool get isPawn => rootEngineClass == 'LuminaPawn' || rootEngineClass == 'LuminaCharacter';
+
+  /// Whether [parentClass] is an engine-level parent class rather than another Blueprint.
+  static bool isEngineParent(String parentClass) =>
+      parentClass == 'LuminaActor' ||
+      parentClass == 'LuminaPawn' ||
+      parentClass == 'LuminaCharacter' ||
+      parentClass == 'LuminaGameMode' ||
+      parentClass == LuminaLevelBlueprintDocument.parentClass ||
+      parentClass == LuminaWidgetBlueprintDocument.parentClass ||
+      LuminaBlueprintObjectClass.engineParents.containsKey(parentClass);
+
   /// The type context the class's graphs resolve in — [function]'s or
   /// [macro]'s graph when given.
   LuminaBlueprintTypeContext typeContext({LuminaBlueprintFunctionGraph? function, LuminaBlueprintMacroGraph? macro}) =>
       _contextOf(document, name, inputActions, levelActors, actorParents, customEventOwners,
-          function: function, macro: macro, widgetVariables: widgetVariables);
+          variableOwners: variableOwners,
+          componentOwners: componentOwners,
+          functionScope: function,
+          macroScope: macro,
+          widgetVariables: widgetVariables,
+          inheritedVariables: parentBlueprintClass?.allVariables,
+          inheritedComponents: parentBlueprintClass?.allComponents);
 
   static LuminaBlueprintTypeContext _contextOf(
     LuminaBlueprintDocument document,
@@ -99,17 +162,21 @@ class LuminaBlueprintClass {
     List<LuminaBlueprintLevelActorRef>? levelActors,
     Map<String, String> actorParents,
     Map<String, List<LuminaBlueprintCustomEvent>> customEventOwners, {
-    LuminaBlueprintFunctionGraph? function,
-    LuminaBlueprintMacroGraph? macro,
+    Map<String, List<LuminaBlueprintVariable>> variableOwners = const {},
+    Map<String, List<LuminaBlueprintComponentRef>> componentOwners = const {},
+    LuminaBlueprintFunctionGraph? functionScope,
+    LuminaBlueprintMacroGraph? macroScope,
     List<LuminaBlueprintWidgetElement>? widgetVariables,
+    List<LuminaBlueprintVariable>? inheritedVariables,
+    List<LuminaBlueprintComponent>? inheritedComponents,
   }) {
     if (widgetVariables != null || document.parentClass == LuminaWidgetBlueprintDocument.parentClass) {
       return LuminaBlueprintTypeContext.forWidget(
           LuminaWidgetBlueprintDocument(widgetClass: name, variables: widgetVariables ?? const [], blueprint: document),
           inputActions: inputActions,
           actorParents: actorParents,
-          functionScope: function,
-          macroScope: macro);
+          functionScope: functionScope,
+          macroScope: macroScope);
     }
     if (levelActors != null || document.parentClass == LuminaLevelBlueprintDocument.parentClass) {
       return LuminaBlueprintTypeContext.forLevel(LuminaLevelBlueprintDocument(levelPath: name, blueprint: document),
@@ -117,16 +184,20 @@ class LuminaBlueprintClass {
           inputActions: inputActions,
           actorParents: actorParents,
           customEventOwners: customEventOwners,
-          functionScope: function,
-          macroScope: macro);
+          functionScope: functionScope,
+          macroScope: macroScope);
     }
     return LuminaBlueprintTypeContext.forDocument(document,
         inputActions: inputActions,
         className: name,
         actorParents: actorParents,
         customEventOwners: customEventOwners,
-        functionScope: function,
-        macroScope: macro);
+        variableOwners: variableOwners,
+        componentOwners: componentOwners,
+        functionScope: functionScope,
+        macroScope: macroScope,
+        inheritedVariables: inheritedVariables,
+        inheritedComponents: inheritedComponents);
   }
 
   /// A Level Blueprint ready to run: [levelDoc]'s graph with
@@ -142,6 +213,8 @@ class LuminaBlueprintClass {
     LuminaBlueprintClass? Function(String path)? resolveClass,
     Map<String, String> actorParents = const {},
     Map<String, List<LuminaBlueprintCustomEvent>> customEventOwners = const {},
+    Map<String, List<LuminaBlueprintVariable>> variableOwners = const {},
+    Map<String, List<LuminaBlueprintComponentRef>> componentOwners = const {},
   }) =>
       LuminaBlueprintClass.fromDocument(levelDoc.blueprint,
           name: name ?? levelDoc.levelName,
@@ -151,7 +224,9 @@ class LuminaBlueprintClass {
           resolveClass: resolveClass,
           levelActors: levelActors,
           actorParents: actorParents,
-          customEventOwners: customEventOwners);
+          customEventOwners: customEventOwners,
+          variableOwners: variableOwners,
+          componentOwners: componentOwners);
 
   /// A Widget Blueprint's graph ready to run: [widgetDoc]'s graph
   /// with its `Is Variable` elements, named after the widget class.
@@ -186,15 +261,6 @@ class LuminaBlueprintClass {
     return instantiate(key: key) as LuminaBlueprintLevelScript;
   }
 
-  /// The parent class of a GameMode Blueprint.
-  static const String gameModeParent = 'LuminaGameMode';
-
-  /// Whether this is a GameMode Blueprint (use [createGameMode]).
-  bool get isGameMode => document.parentClass == gameModeParent;
-
-  /// Whether instances are pawns (a Pawn or Character Blueprint).
-  bool get isPawn => document.parentClass == 'LuminaPawn' || document.parentClass == 'LuminaCharacter';
-
   /// A GameMode Blueprint's Default Pawn Class (its `.lmas` path), or ''.
   String get defaultPawnClass => document.classDefaults['defaultPawnClass'] as String? ?? '';
 
@@ -209,23 +275,83 @@ class LuminaBlueprintClass {
     List<LuminaBlueprintLevelActorRef>? levelActors,
     Map<String, String> actorParents = const {},
     Map<String, List<LuminaBlueprintCustomEvent>> customEventOwners = const {},
+    Map<String, List<LuminaBlueprintVariable>> variableOwners = const {},
+    Map<String, List<LuminaBlueprintComponentRef>> componentOwners = const {},
     List<LuminaBlueprintWidgetElement>? widgetVariables,
+    LuminaBlueprintClass? parentBlueprintClass,
+    Set<String>? visitedClassNames,
   }) {
     // Comment boxes and reroutes are the editor's.
     document = LuminaBlueprintEditorNodes.forEngine(document);
     final levelScope = levelActors != null || document.parentClass == LuminaLevelBlueprintDocument.parentClass;
     // A Widget Blueprint's graph resolves in the widget's scope.
     final widgetScope = widgetVariables != null || document.parentClass == LuminaWidgetBlueprintDocument.parentClass;
-    final diagnostics = validateBlueprint(document,
+
+    final currentActorParents = Map<String, String>.from(actorParents);
+    final currentCustomEvents = Map<String, List<LuminaBlueprintCustomEvent>>.from(customEventOwners);
+    final visited = visitedClassNames != null ? Set<String>.from(visitedClassNames) : <String>{};
+    visited.add(name);
+
+    final diagnostics = <LuminaBlueprintDiagnostic>[];
+
+    if (parentBlueprintClass == null && !isEngineParent(document.parentClass) && resolveClass != null) {
+      if (visited.contains(document.parentClass)) {
+        diagnostics.add(LuminaBlueprintDiagnostic(
+          LuminaBlueprintSeverity.error,
+          "Circular inheritance detected in Blueprint '$name': extends '${document.parentClass}'.",
+        ));
+      } else {
+        parentBlueprintClass = resolveClass(document.parentClass);
+        if (parentBlueprintClass != null &&
+            parentBlueprintClass.diagnostics.any((d) => d.message.contains('Circular inheritance'))) {
+          diagnostics.add(LuminaBlueprintDiagnostic(
+            LuminaBlueprintSeverity.error,
+            "Circular inheritance detected in parent hierarchy of '$name': extends '${document.parentClass}'.",
+          ));
+        }
+      }
+    }
+
+    if (parentBlueprintClass != null) {
+      currentActorParents.addAll(parentBlueprintClass.actorParents);
+      currentActorParents[name] = document.parentClass;
+      currentCustomEvents.addAll(parentBlueprintClass.customEventOwners);
+    }
+
+    final inheritedVars = parentBlueprintClass?.allVariables;
+    final inheritedComps = parentBlueprintClass?.allComponents;
+
+    final typeCtx = levelScope ||
+            widgetScope ||
+            currentActorParents.isNotEmpty ||
+            currentCustomEvents.isNotEmpty ||
+            variableOwners.isNotEmpty ||
+            componentOwners.isNotEmpty ||
+            inheritedVars != null ||
+            inheritedComps != null
+        ? _contextOf(document, name, inputActions, levelActors, currentActorParents, currentCustomEvents,
+            variableOwners: variableOwners,
+            componentOwners: componentOwners,
+            widgetVariables: widgetScope ? (widgetVariables ?? const []) : null,
+            inheritedVariables: inheritedVars,
+            inheritedComponents: inheritedComps)
+        : null;
+
+    diagnostics.addAll(validateBlueprint(document,
         inputActions: inputActions,
         className: name,
-        typeContext: levelScope || widgetScope || actorParents.isNotEmpty || customEventOwners.isNotEmpty
-            ? _contextOf(document, name, inputActions, levelActors, actorParents, customEventOwners, widgetVariables: widgetVariables)
-            : null);
-    final gameMode = document.parentClass == gameModeParent;
+        typeContext: typeCtx));
+
+    final gameMode = (parentBlueprintClass?.rootEngineClass ?? document.parentClass) == 'LuminaGameMode';
     if (gameMode) _checkGameMode(document, resolveClass, diagnostics);
+
+    final allVars = [
+      if (inheritedVars != null) ...inheritedVars.where((iv) => !document.variables.any((v) => v.name == iv.name)),
+      ...document.variables,
+    ];
     for (final key in document.classDefaults.keys) {
-      if (!(gameMode ? _gameModeDefaultKeys : _classDefaultKeys).contains(key) && document.variable(key) == null) {
+      if (!(gameMode ? _gameModeDefaultKeys : _classDefaultKeys).contains(key) &&
+          allVars.every((v) => v.name != key)) {
         diagnostics.add(LuminaBlueprintDiagnostic(
           LuminaBlueprintSeverity.warning,
           "Class default '$key' matches no property or variable and is ignored.",
@@ -244,9 +370,12 @@ class LuminaBlueprintClass {
     return LuminaBlueprintClass._(
         name, document, inputActions, resolveAsset, assetProvider, animBlueprints, resolveClass, diagnostics,
         levelActors: levelScope ? (levelActors ?? const []) : null,
-        actorParents: actorParents,
-        customEventOwners: customEventOwners,
-        widgetVariables: widgetScope ? (widgetVariables ?? const []) : null);
+        actorParents: currentActorParents,
+        customEventOwners: currentCustomEvents,
+        variableOwners: variableOwners,
+        componentOwners: componentOwners,
+        widgetVariables: widgetScope ? (widgetVariables ?? const []) : null,
+        parentBlueprintClass: parentBlueprintClass);
   }
 
   static void _checkGameMode(LuminaBlueprintDocument document,
@@ -256,7 +385,7 @@ class LuminaBlueprintClass {
       final cls = resolveClass(pawn);
       if (cls == null) {
         diagnostics.add(LuminaBlueprintDiagnostic(
-            LuminaBlueprintSeverity.error, "Default Pawn Class '$pawn' cannot be loaded."));
+          LuminaBlueprintSeverity.error, "Default Pawn Class '$pawn' cannot be loaded."));
       } else if (!cls.isPawn) {
         diagnostics.add(LuminaBlueprintDiagnostic(LuminaBlueprintSeverity.error,
             "Default Pawn Class '$pawn' is not a Pawn or Character Blueprint (it is a ${cls.document.parentClass})."));
@@ -285,7 +414,7 @@ class LuminaBlueprintClass {
   bool get hasErrors => diagnostics.any((d) => d.isError);
 
   /// A new actor of this class: a [LuminaBlueprintCharacter],
-  /// [LuminaBlueprintPawn] or [LuminaBlueprintActor] by `parentClass`, with
+  /// [LuminaBlueprintPawn] or [LuminaBlueprintActor] by `rootEngineClass`, with
   /// its components built and class defaults applied.
   LuminaActor instantiate({Key? key, Vector3? location, Quaternion? rotation}) {
     if (hasErrors) {
@@ -293,7 +422,7 @@ class LuminaBlueprintClass {
     }
     if (isGameMode) throw StateError('$name is a GameMode Blueprint: use createGameMode().');
     final LuminaActor actor;
-    switch (document.parentClass) {
+    switch (rootEngineClass) {
       case 'LuminaCharacter':
         actor = LuminaBlueprintCharacter._(this, key: key, location: location, rotation: rotation);
       case 'LuminaPawn':

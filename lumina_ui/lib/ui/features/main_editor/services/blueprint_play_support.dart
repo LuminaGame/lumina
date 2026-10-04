@@ -37,9 +37,32 @@ class EditorBlueprintClassRegistry extends LuminaBlueprintClassRegistry {
 
   final Map<String, ({DateTime stamp, LuminaBlueprintClass cls})> _flattened = {};
 
+  void _syncDefinitions() {
+    scanDefinitions();
+    final openDocs = openDocuments();
+    for (final entry in openDocs.entries) {
+      final name = entry.key.split('/').last.replaceAll('.lmas', '');
+      final doc = entry.value;
+      if (doc.parentClass.isNotEmpty) {
+        actorParents[name] = doc.parentClass;
+      }
+      customEventOwners[name] = LuminaBlueprintNodeLibrary.customEventsOf(doc.eventGraph);
+    }
+    for (final entry in openDocs.entries) {
+      final name = entry.key.split('/').last.replaceAll('.lmas', '');
+      final doc = entry.value;
+      variableOwners[name] = resolvedVariablesFor(name, doc);
+      componentOwners[name] = resolvedComponentsFor(name, doc);
+    }
+  }
+
   @override
   LuminaBlueprintClass? classFor(String path) {
-    final open = openDocuments()[path];
+    _syncDefinitions();
+    final openDocs = openDocuments();
+    final open = openDocs[path] ??
+        openDocs['contents/$path'] ??
+        (path.startsWith('contents/') ? openDocs[path.substring('contents/'.length)] : null);
     if (open == null) return _diskClassFor(path);
     return _compile(path, open);
   }
@@ -54,13 +77,24 @@ class EditorBlueprintClassRegistry extends LuminaBlueprintClassRegistry {
       resolveAsset: resolveAsset,
       animBlueprints: (animClass) => animClassFor(animClass)?.factory,
       resolveClass: classFor,
+      actorParents: actorParents,
+      variableOwners: variableOwners,
+      componentOwners: componentOwners,
+      customEventOwners: customEventOwners,
     );
   }
 
-  /// A saved document with comments or reroutes is flattened here (cached
-  /// by file stamp); any other goes through lumina's registry as before.
+  /// A saved document is compiled here (cached by file stamp).
   LuminaBlueprintClass? _diskClassFor(String path) {
-    final file = File('$projectDir/$path');
+    var resolvedPath = path;
+    var file = File('$projectDir/$resolvedPath');
+    if (!file.existsSync() && !path.startsWith('contents/')) {
+      final inContents = File('$projectDir/contents/$path');
+      if (inContents.existsSync()) {
+        resolvedPath = 'contents/$path';
+        file = inContents;
+      }
+    }
     if (!file.existsSync()) return super.classFor(path);
     LuminaBlueprintDocument? doc;
     try {
@@ -72,14 +106,14 @@ class EditorBlueprintClassRegistry extends LuminaBlueprintClassRegistry {
     } catch (_) {
       doc = null;
     }
-    if (doc == null || !BlueprintEditorNodes.hasEditorNodes(doc)) return super.classFor(path);
+    if (doc == null) return super.classFor(path);
     final stamp = file.lastModifiedSync();
-    final cached = _flattened[path];
+    final cached = _flattened[resolvedPath];
     if (cached != null && cached.stamp == stamp) return cached.cls;
-    final cls = _compile(path, doc);
-    _flattened[path] = (stamp: stamp, cls: cls);
+    final cls = _compile(resolvedPath, doc);
+    _flattened[resolvedPath] = (stamp: stamp, cls: cls);
     if (!cls.isGameMode) {
-      LuminaBlueprintActorClasses.register(cls.name, () => (classFor(path) ?? cls).instantiate());
+      LuminaBlueprintActorClasses.register(cls.name, () => (classFor(resolvedPath) ?? cls).instantiate());
     }
     return cls;
   }
@@ -91,6 +125,7 @@ class EditorBlueprintClassRegistry extends LuminaBlueprintClassRegistry {
   @override
   LuminaBlueprintClass? levelClassFor(String levelPath,
       {List<Map<String, dynamic>>? actorMaps, LuminaLevelBlueprintDocument? document}) {
+    _syncDefinitions();
     if (document == null) {
       final open = openDocuments()[levelPath];
       document = open != null && open.parentClass == LuminaLevelBlueprintDocument.parentClass

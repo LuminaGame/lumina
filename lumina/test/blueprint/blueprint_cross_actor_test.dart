@@ -1,4 +1,9 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lumina/data/models/lumina_asset.dart';
+import 'package:lumina/data/services/blueprint_class_registry.dart';
 import 'package:lumina/data/services/blueprint_codegen/blueprint_dart_generator.dart';
 import 'package:lumina/lumina_runtime.dart';
 import 'package:lumina/src/blueprint/blueprint.dart';
@@ -260,6 +265,90 @@ void main() {
       );
       final diags = validateBlueprint(doc, typeContext: docContext);
       expect(diags.where((d) => d.isError), isEmpty);
+    });
+
+    test('LuminaBlueprintClassRegistry scans disk definitions and resolves cross-actor variables', () {
+      final tempDir = Directory.systemTemp.createTempSync('lumina_cross_actor_reg_');
+      try {
+        final bpDir = Directory('${tempDir.path}/contents/Blueprints')..createSync(recursive: true);
+
+        // 1. Write BP_Interactable
+        final interactableDoc = LuminaBlueprintDocument(
+          parentClass: 'LuminaActor',
+          variables: interactableVars,
+          components: [
+            LuminaBlueprintComponent(
+              id: 'mesh_comp',
+              name: 'StaticMeshComponent',
+              type: 'LuminaStaticMeshComponent',
+              parentId: null,
+              properties: {},
+            ),
+          ],
+        );
+        final interactableAsset = LuminaAsset(
+          assetId: 'BP_Interactable',
+          name: 'BP_Interactable',
+          type: AssetType.actor,
+          rawPayload: utf8.encode(interactableDoc.toFormattedJson()),
+        );
+        File('${bpDir.path}/BP_Interactable.lmas').writeAsBytesSync(interactableAsset.toProtoBufferBytes());
+
+        // 2. Write BP_Caller which gets Message and wires to Print String
+        final callerDoc = LuminaBlueprintDocument(
+          parentClass: 'LuminaCharacter',
+          variables: const [
+            LuminaBlueprintVariable(name: 'TargetActor', typeName: 'Actor:BP_Interactable'),
+          ],
+          eventGraph: LuminaBlueprintGraph(
+            nodes: [
+              LuminaBlueprintNode(
+                id: 'begin_play',
+                registryId: 'event_beginplay',
+                title: 'Event BeginPlay',
+              ),
+              LuminaBlueprintNode(
+                id: 'get_target',
+                registryId: LuminaBlueprintNodeLibrary.variableGet,
+                title: 'Get TargetActor',
+                literals: const {'variable': 'TargetActor'},
+              ),
+              LuminaBlueprintNode(
+                id: 'get_msg',
+                registryId: LuminaBlueprintNodeLibrary.variableGet,
+                title: 'Get Message',
+                literals: const {'variable': 'Message', 'class': 'BP_Interactable'},
+              ),
+              LuminaBlueprintNode(
+                id: 'print_str',
+                registryId: 'print_string',
+                title: 'Print String',
+              ),
+            ],
+            wires: const [
+              LuminaBlueprintWire(id: 'w1', fromNodeId: 'begin_play', fromPinId: 'exec_out', toNodeId: 'print_str', toPinId: 'exec_in'),
+              LuminaBlueprintWire(id: 'w2', fromNodeId: 'get_target', fromPinId: 'value', toNodeId: 'get_msg', toPinId: 'target'),
+              LuminaBlueprintWire(id: 'w3', fromNodeId: 'get_msg', fromPinId: 'value', toNodeId: 'print_str', toPinId: 'in_string'),
+            ],
+          ),
+        );
+        final callerAsset = LuminaAsset(
+          assetId: 'BP_Caller',
+          name: 'BP_Caller',
+          type: AssetType.actor,
+          rawPayload: utf8.encode(callerDoc.toFormattedJson()),
+        );
+        File('${bpDir.path}/BP_Caller.lmas').writeAsBytesSync(callerAsset.toProtoBufferBytes());
+
+        // 3. Compile via registry
+        final registry = LuminaBlueprintClassRegistry(tempDir.path, inputActions: const []);
+        final cls = registry.classFor('Blueprints/BP_Caller.lmas');
+        expect(cls, isNotNull);
+        expect(cls!.hasErrors, isFalse, reason: '${cls.diagnostics}');
+        expect(cls.diagnostics.where((d) => d.isError), isEmpty);
+      } finally {
+        tempDir.deleteSync(recursive: true);
+      }
     });
   });
 }
