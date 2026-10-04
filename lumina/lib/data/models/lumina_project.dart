@@ -546,6 +546,7 @@ class EngineScalabilitySettings {
   final ScalabilityCategory scalability;
   final bool autoOrganizeFiles;
   final int autoSaveIntervalSeconds;
+  final bool startFullscreen;
 
   const EngineScalabilitySettings({
     // Unlimited frame rate and VSync off by default.
@@ -555,6 +556,7 @@ class EngineScalabilitySettings {
     this.scalability = const ScalabilityCategory(),
     this.autoOrganizeFiles = true,
     this.autoSaveIntervalSeconds = 60,
+    this.startFullscreen = false,
   });
 
   Map<String, dynamic> toMap() {
@@ -565,6 +567,7 @@ class EngineScalabilitySettings {
       'scalability': scalability.toMap(),
       'auto_organize_files': autoOrganizeFiles,
       'auto_save_interval_seconds': autoSaveIntervalSeconds,
+      'start_fullscreen': startFullscreen,
     };
   }
 
@@ -578,6 +581,7 @@ class EngineScalabilitySettings {
           : const ScalabilityCategory(),
       autoOrganizeFiles: map['auto_organize_files'] as bool? ?? true,
       autoSaveIntervalSeconds: map['auto_save_interval_seconds'] as int? ?? 60,
+      startFullscreen: map['start_fullscreen'] as bool? ?? false,
     );
   }
 }
