@@ -564,6 +564,49 @@ A [PluginSettingsHandle] over a plain map (tests, detached contexts).
 
 - `MapPluginSettingsHandle([Map<String, Object?>? initial])`
 
+## Eklenti Diyalogları ve İndirici (Plugin Dialogs & Downloader)
+
+Lumina Studio, eklentiler için standartlaştırılmış bir modal diyalog altyapısı sunar. Diyaloglar durum çubuğuna (status bar) küçültme (minimize), canlı ilerleme durumu gösterimi, küçültme/geri yükleme döngülerinde görev verisi koruma ve arka planda dosya indirme desteği sağlar.
+
+### `Future<T?> showPluginDialog<T>(...)`
+
+Editör üzerinde durum çubuğuna küçültme ve kapatma butonları içeren modal bir [PluginDialogFrame] katmanı görüntüler. Eklentinin diyaloğu zaten açık veya küçültülmüş durumdaysa, [showPluginDialog] mükerrer controller oluşturmak yerine mevcut diyaloğu ekrana geri yükler (restore).
+
+### `class PluginDialogController extends ChangeNotifier`
+
+Tek bir eklenti diyaloğunun yaşam döngüsünü, durum metnini, ilerleme çubuğunu ve kalıcı görev verisini yönetir.
+
+**Üyeler:**
+
+- `isMinimized`: Diyaloğun o anda durum çubuğuna küçültülmüş olup olmadığını belirtir.
+- `isClosed`: Diyaloğun tamamen kapatılıp kapatılmadığını belirtir.
+- `statusText`: Diyalog alt çubuğunda ve durum çubuğu çipinde gösterilen dinamik durum mesajı.
+- `progress`: İsteğe bağlı ilerleme oranı (`0.0` ile `1.0` arası).
+- `taskData`: Küçültme/geri yükleme döngüleri boyunca korunan genel görev nesnesi (ör. aktif indirme görevi).
+- `minimize()`: Diyaloğu durum çubuğuna küçültür.
+- `restore(context)`: Diyaloğu yeniden ekrana geri yükler.
+- `close()`: Diyaloğu tamamen kapatır ve [onCancelled] üzerinden aktif görevleri iptal eder.
+- `updateStatus({String? text, double? progress, bool notify = true})`: Durum metnini ve ilerlemeyi canlı olarak günceller.
+
+### `class PluginDialogManager extends ChangeNotifier`
+
+Aktif ve küçültülmüş eklenti diyalog controller'larını takip eden genel kayıt defteri.
+
+**Üyeler:**
+
+- `findByPluginId(String pluginId)`: Bir eklentiye ait aktif veya küçültülmüş controller'ı arar.
+- `minimizedDialogs`: Durum çubuğunda küçültülmüş olan controller'ların değiştirilemez listesi.
+- `activeDialogs`: Kapatılmamış olan tüm controller'ların değiştirilemez listesi.
+
+### `class PluginDownloader`
+
+SHA-256 doğrulaması, yetkilendirme başlıkları (ör. Hugging Face tokenları), boş disk alanı denetimi ve akışlı (streaming) ilerleme güncellemelerini destekleyen HTTP dosya indiricisi.
+
+**Üyeler:**
+
+- `download(...)`: Geçerli dosyayı ve genel indirme ilerlemesini bildiren bir [PluginDownloadProgress] nesneleri akışı yayar.
+- `cancel()`: Aktif indirme isteğini iptal eder ve bağlantıları temiz biçimde kapatır.
+
 ---
 
 [Önceki: lumina_editor_api](index.md) | [Üst: lumina_editor_api](index.md) | [Sonraki: MCP araçları API'si](mcp.md)

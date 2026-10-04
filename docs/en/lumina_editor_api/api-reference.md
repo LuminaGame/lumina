@@ -564,6 +564,49 @@ A [PluginSettingsHandle] over a plain map (tests, detached contexts).
 
 - `MapPluginSettingsHandle([Map<String, Object?>? initial])`
 
+## Plugin Dialogs & Downloader
+
+Lumina Studio provides a standardized modal dialog system for plugins. Dialogs support status bar minimization, live progress reporting, task preservation across minimize/restore cycles, and background file downloading.
+
+### `Future<T?> showPluginDialog<T>(...)`
+
+Displays a modal [PluginDialogFrame] overlay over the editor with minimize-to-status-bar and close handlers. If the plugin's dialog is already open or minimized, [showPluginDialog] restores the existing dialog rather than duplicating controllers.
+
+### `class PluginDialogController extends ChangeNotifier`
+
+Manages a single plugin dialog's lifecycle, status text, progress indicator, and persistent task state.
+
+**Members:**
+
+- `isMinimized`: Whether the dialog is currently docked into the status bar.
+- `isClosed`: Whether the dialog has been completely dismissed.
+- `statusText`: Dynamic status message shown in the dialog footer and status bar chip.
+- `progress`: Optional progress fraction (`0.0` to `1.0`).
+- `taskData`: Arbitrary persistent task object (e.g. active download task) preserved across minimize/restore.
+- `minimize()`: Minimizes the dialog into the status bar.
+- `restore(context)`: Restores the dialog back into view.
+- `close()`: Dismisses the dialog and cancels active tasks via [onCancelled].
+- `updateStatus({String? text, double? progress, bool notify = true})`: Updates live status text and progress.
+
+### `class PluginDialogManager extends ChangeNotifier`
+
+Global registry tracking active and minimized plugin dialog controllers.
+
+**Members:**
+
+- `findByPluginId(String pluginId)`: Looks up an active or minimized controller for a plugin.
+- `minimizedDialogs`: Unmodifiable list of currently minimized dialog controllers.
+- `activeDialogs`: Unmodifiable list of non-closed dialog controllers.
+
+### `class PluginDownloader`
+
+HTTP file downloader supporting SHA-256 validation, authorization headers (e.g. Hugging Face tokens), free disk space checks, and streaming progress updates.
+
+**Members:**
+
+- `download(...)`: Emits a stream of [PluginDownloadProgress] objects reporting current file and overall progress.
+- `cancel()`: Cancels the active download request and closes streams cleanly.
+
 ---
 
 [Previous: lumina_editor_api](index.md) | [Up: lumina_editor_api](index.md) | [Next: MCP tools API](mcp.md)
