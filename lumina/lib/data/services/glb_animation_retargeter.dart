@@ -312,6 +312,23 @@ abstract final class GlbAnimationRetargeter {
       return angle > (25.0 * math.pi / 180.0);
     });
 
+    // When rest poses differ (e.g. source T-pose vs target A-pose, such as MetaHuman
+    // where arms slant down 50°+), align each target bone's rest world orientation to
+    // the source rest bone direction. This ensures animation deltas authored from
+    // T-pose apply relative to an aligned reference instead of compounding the slant
+    // and causing arms/hands to cross inward.
+    final tgtRestAligned = List<_Quat>.generate(tgt.count, (j) {
+      final s = mapped[j];
+      if (s == null) return tgtRestWorld[j];
+      final vTgt = tgt.boneDirection(j);
+      final vSrc = src.boneDirection(s);
+      if (vTgt != null && vSrc != null) {
+        final qAlign = _Quat.fromTo(vTgt, vSrc);
+        return (qAlign * tgtRestWorld[j]).normalized();
+      }
+      return tgtRestWorld[j];
+    });
+
     for (final t in frames) {
       for (final i in src.order) {
         final local = tracks.rotation(i, t) ?? src.restR[i];
@@ -327,7 +344,7 @@ abstract final class GlbAnimationRetargeter {
             tgtWorld[j] = (rootAlign * srcWorld[s]).normalized();
           } else {
             final delta = (srcWorld[s] * srcRestWorld[s].inverse()).normalized();
-            tgtWorld[j] = (delta * tgtRestWorld[j]).normalized();
+            tgtWorld[j] = (delta * tgtRestAligned[j]).normalized();
           }
           if (joints.contains(j)) rotOut[j]!.add((parentWorld.inverse() * tgtWorld[j]).normalized());
         } else {
@@ -535,6 +552,33 @@ class _Quat {
     return _Quat(a.x * wa + bb.x * wb, a.y * wa + bb.y * wb, a.z * wa + bb.z * wb, a.w * wa + bb.w * wb);
   }
 
+  static _Quat fromTo(List<double> vFrom, List<double> vTo) {
+    double len(List<double> v) => math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+    final lFrom = len(vFrom), lTo = len(vTo);
+    if (lFrom < 1e-6 || lTo < 1e-6) return identity;
+    final f = [vFrom[0] / lFrom, vFrom[1] / lFrom, vFrom[2] / lFrom];
+    final t = [vTo[0] / lTo, vTo[1] / lTo, vTo[2] / lTo];
+    final d = f[0] * t[0] + f[1] * t[1] + f[2] * t[2];
+    if (d >= 1.0 - 1e-7) return identity;
+    if (d <= -1.0 + 1e-7) {
+      final ortho = f[0].abs() < 0.9 ? const [1.0, 0.0, 0.0] : const [0.0, 1.0, 0.0];
+      final axis = [
+        f[1] * ortho[2] - f[2] * ortho[1],
+        f[2] * ortho[0] - f[0] * ortho[2],
+        f[0] * ortho[1] - f[1] * ortho[0],
+      ];
+      final lAxis = len(axis);
+      return _Quat(axis[0] / lAxis, axis[1] / lAxis, axis[2] / lAxis, 0.0);
+    }
+    final axis = [
+      f[1] * t[2] - f[2] * t[1],
+      f[2] * t[0] - f[0] * t[2],
+      f[0] * t[1] - f[1] * t[0],
+    ];
+    final s = math.sqrt((1.0 + d) * 2.0);
+    return _Quat(axis[0] / s, axis[1] / s, axis[2] / s, s / 2.0).normalized();
+  }
+
   /// Rotation part of a column-major matrix (unit scale assumed after
   /// normalizing the columns).
   static _Quat fromMatrix(List<double> m) {
@@ -625,6 +669,56 @@ class _Skeleton {
       q = q * restR[n];
     }
     return q;
+  }
+
+  /// Rest position of [node] in model space ([0, 0, 0] for -1).
+  List<double> restWorldPos(int node) {
+    if (node < 0) return const [0.0, 0.0, 0.0];
+    final chain = <int>[];
+    var curr = node;
+    while (curr >= 0) {
+      chain.add(curr);
+      curr = parent[curr];
+    }
+    var pos = [0.0, 0.0, 0.0];
+    var rot = _Quat.identity;
+    for (final n in chain.reversed) {
+      final tRot = rot.rotateVector(restT[n]);
+      pos = [pos[0] + tRot[0], pos[1] + tRot[1], pos[2] + tRot[2]];
+      rot = rot * restR[n];
+    }
+    return pos;
+  }
+
+  /// Rest model-space direction of bone [node], pointing towards its primary child.
+  List<double>? boneDirection(int node) {
+    if (node < 0 || node >= count) return null;
+    final nodePos = restWorldPos(node);
+    int? bestChild;
+    var maxL = 0.0;
+    for (var i = 0; i < parent.length; i++) {
+      if (parent[i] == node) {
+        final cPos = restWorldPos(i);
+        final dx = cPos[0] - nodePos[0], dy = cPos[1] - nodePos[1], dz = cPos[2] - nodePos[2];
+        final l = math.sqrt(dx * dx + dy * dy + dz * dz);
+        if (l > maxL) {
+          maxL = l;
+          bestChild = i;
+        }
+      }
+    }
+    if (bestChild != null && maxL > 0.001) {
+      final cPos = restWorldPos(bestChild);
+      return [(cPos[0] - nodePos[0]) / maxL, (cPos[1] - nodePos[1]) / maxL, (cPos[2] - nodePos[2]) / maxL];
+    }
+    final p = parent[node];
+    if (p >= 0) {
+      final pPos = restWorldPos(p);
+      final dx = nodePos[0] - pPos[0], dy = nodePos[1] - pPos[1], dz = nodePos[2] - pPos[2];
+      final l = math.sqrt(dx * dx + dy * dy + dz * dz);
+      if (l > 0.001) return [dx / l, dy / l, dz / l];
+    }
+    return null;
   }
 }
 

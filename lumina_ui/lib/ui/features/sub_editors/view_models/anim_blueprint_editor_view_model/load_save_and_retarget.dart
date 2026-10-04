@@ -81,8 +81,13 @@ mixin _AnimBlueprintEditorLoadSaveAndRetarget on _AnimBlueprintEditorViewModelSt
     final clips = <String>{};
     for (final m in _document.stateMachines) {
       for (final s in m.states) {
-        if (s.pose.kind == LuminaAnimPoseKind.clip && s.pose.clip != null && s.pose.clip!.isNotEmpty) {
-          clips.add(s.pose.clip!);
+        if (s.pose.kind == LuminaAnimPoseKind.clip) {
+          if (s.pose.clip != null && s.pose.clip!.isNotEmpty) {
+            clips.add(s.pose.clip!);
+          }
+          for (final c in s.pose.clips) {
+            if (c.isNotEmpty) clips.add(c);
+          }
         } else if (s.pose.kind == LuminaAnimPoseKind.blendSpace && s.pose.blendSpace != null && s.pose.blendSpace!.isNotEmpty) {
           final bs = _blendSpaces[s.pose.blendSpace] ?? (projectDir != null ? AnimGraphAssetService.readBlendSpace(projectDir!, s.pose.blendSpace!) : null);
           if (bs != null) {
@@ -136,8 +141,13 @@ mixin _AnimBlueprintEditorLoadSaveAndRetarget on _AnimBlueprintEditorViewModelSt
 
       for (final sm in _document.stateMachines) {
         for (final st in sm.states) {
-          if (st.pose.kind == LuminaAnimPoseKind.clip && st.pose.clip != null && st.pose.clip!.isNotEmpty) {
-            directClips.add(st.pose.clip!);
+          if (st.pose.kind == LuminaAnimPoseKind.clip) {
+            if (st.pose.clip != null && st.pose.clip!.isNotEmpty) {
+              directClips.add(st.pose.clip!);
+            }
+            for (final c in st.pose.clips) {
+              if (c.isNotEmpty) directClips.add(c);
+            }
           } else if (st.pose.kind == LuminaAnimPoseKind.blendSpace && st.pose.blendSpace != null && st.pose.blendSpace!.isNotEmpty) {
             final bsPath = st.pose.blendSpace!;
             final bsDoc = _blendSpaces[bsPath] ?? AnimGraphAssetService.readBlendSpace(dir, bsPath);

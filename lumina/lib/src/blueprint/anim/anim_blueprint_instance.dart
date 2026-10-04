@@ -1,3 +1,4 @@
+import 'dart:developer' as developer;
 import 'dart:math' as math;
 
 import 'package:vector_math/vector_math_64.dart';
@@ -158,6 +159,20 @@ abstract class LuminaAnimBlueprintInstance extends LuminaActorComponent {
     ));
   }
 
+  final Set<String> _warnedClips = {};
+
+  bool get _meshLoaded => mesh.clipNames.isNotEmpty;
+
+  void _warnMissingClip(String clip) {
+    if (_warnedClips.add(clip)) {
+      developer.log(
+        'AnimBlueprint: clip "$clip" not in mesh "${mesh.meshAssetPath}"; holding current pose',
+        name: 'LuminaAnimBlueprint',
+        level: 800,
+      );
+    }
+  }
+
   @override
   void onBeginPlay() {
     super.onBeginPlay();
@@ -166,7 +181,13 @@ abstract class LuminaAnimBlueprintInstance extends LuminaActorComponent {
     if (mesh.currentClip == null) {
       final pose = _currentPose;
       final (clip, _) = _target(pose);
-      if (clip != null) mesh.play(clip, loop: pose!.loop);
+      if (clip != null) {
+        if (!_meshLoaded || mesh.hasClip(clip)) {
+          mesh.play(clip, loop: pose!.loop);
+        } else {
+          _warnMissingClip(clip);
+        }
+      }
     }
     _faceOwnerForward();
   }
@@ -206,10 +227,14 @@ abstract class LuminaAnimBlueprintInstance extends LuminaActorComponent {
     final pose = _currentPose;
     final (target, rate) = _target(pose);
     if (target != null && mesh.currentClip != target) {
-      final space = pose?.blendSpace == null ? null : blendSpaces[pose!.blendSpace];
-      final sync = space != null && space.containsClip(mesh.currentClip) && space.containsClip(target);
-      mesh.crossFadeTo(target,
-          duration: taken?.blendDuration ?? stateMachine.sampleCrossFade, syncPhase: sync, loop: pose?.loop ?? true);
+      if (!_meshLoaded || mesh.hasClip(target)) {
+        final space = pose?.blendSpace == null ? null : blendSpaces[pose!.blendSpace];
+        final sync = space != null && space.containsClip(mesh.currentClip) && space.containsClip(target);
+        mesh.crossFadeTo(target,
+            duration: taken?.blendDuration ?? stateMachine.sampleCrossFade, syncPhase: sync, loop: pose?.loop ?? true);
+      } else {
+        _warnMissingClip(target);
+      }
     }
     mesh.playRate = rate;
   }
@@ -222,7 +247,14 @@ abstract class LuminaAnimBlueprintInstance extends LuminaActorComponent {
     if (pose == null || pose.kind != LuminaAnimPoseKind.clip) {
       _stateClip = null;
     } else if (pose.isRandom) {
-      _stateClip = pose.clips[random.nextInt(pose.clips.length)];
+      final available = _meshLoaded
+          ? pose.clips.where(mesh.hasClip).toList()
+          : pose.clips;
+      if (available.isNotEmpty) {
+        _stateClip = available[random.nextInt(available.length)];
+      } else {
+        _stateClip = pose.clip;
+      }
     } else {
       _stateClip = pose.clip;
     }
