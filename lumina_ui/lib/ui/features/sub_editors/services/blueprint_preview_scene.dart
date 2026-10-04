@@ -96,6 +96,8 @@ class BlueprintPreviewScene extends ChangeNotifier {
   static const (double, double, double) capsuleColor = (0.95, 0.42, 0.55);
   static const (double, double, double) springArmColor = (1.0, 0.18, 0.15);
   static const (double, double, double) cameraColor = (0.3, 0.65, 1.0);
+  static const (double, double, double) spotLightColor = (1.0, 0.85, 0.3);
+  static const (double, double, double) pointLightColor = (1.0, 0.9, 0.4);
   static const (double, double, double) selectionColor = (1.0, 0.6, 0.1);
 
   LuminaWorld? get world => _world;
@@ -199,6 +201,55 @@ class BlueprintPreviewScene extends ChangeNotifier {
     if (w != null && !_disposed) _rebuild();
   }
 
+  bool _renderSceneLights = false;
+
+  /// Whether the preview is rendered primarily using lights authored in the scene,
+  /// with the preview sun turned off and environment IBL dimmed to dark ambient.
+  bool get renderSceneLights => _renderSceneLights;
+
+  /// Whether the blueprint currently contains at least one authored light component.
+  bool get hasSceneLights {
+    final doc = _document;
+    if (doc != null && doc.components.any((c) => _isLightType(c.type))) return true;
+    final a = _actor;
+    if (a != null && a.components.any((c) => c is LuminaLightComponent)) return true;
+    return false;
+  }
+
+  static bool _isLightType(String type) =>
+      type == 'LuminaSpotLightComponent' ||
+      type == 'LuminaPointLightComponent' ||
+      type == 'LuminaDirectionalLightComponent' ||
+      type == 'SpotLightComponent' ||
+      type == 'PointLightComponent' ||
+      type == 'DirectionalLightComponent' ||
+      type.contains('LightComponent') ||
+      type.endsWith('Light');
+
+  void setRenderSceneLights(bool value) {
+    if (_renderSceneLights == value) return;
+    _renderSceneLights = value;
+    _updateEnvironmentLighting();
+    _notify();
+  }
+
+  void toggleRenderSceneLights() => setRenderSceneLights(!_renderSceneLights);
+
+  void _updateEnvironmentLighting() {
+    final w = _world;
+    if (w == null) return;
+    for (final a in _environment) {
+      final root = a.rootComponent;
+      if (root is LuminaDirectionalLightComponent) {
+        root.intensity = _renderSceneLights ? 0.0 : 90000.0;
+        root.visible = !_renderSceneLights;
+      } else if (root is LuminaSkyComponent) {
+        root.iblIntensity = _renderSceneLights ? 200.0 : 22000.0;
+        root.skyIntensity = _renderSceneLights ? 100.0 : 14000.0;
+      }
+    }
+  }
+
   void _mountEnvironment() {
     final w = _world!;
     if (!w.hasNativeContext) return;
@@ -225,6 +276,7 @@ class BlueprintPreviewScene extends ChangeNotifier {
         w.persistentLevel.registerActor(a);
         _environment.add(a);
       }
+      _updateEnvironmentLighting();
     } catch (e, st) {
       debugPrint('[BlueprintPreviewScene] environment failed: $e\n$st');
     }
@@ -543,6 +595,12 @@ class BlueprintPreviewScene extends ChangeNotifier {
       case 'LuminaArrowComponent':
         final size = (c.properties['arrowSize'] as num?)?.toDouble() ?? 1.0;
         points.addAll(_arrow(built, 80.0 * size));
+      case 'LuminaSpotLightComponent':
+        if (built is LuminaSpotLightComponent) points.addAll(built.buildConeWireframe(segments: 12));
+      case 'LuminaPointLightComponent':
+        if (built is LuminaPointLightComponent) points.addAll(built.buildSphereWireframe(segments: 12));
+      case 'LuminaDirectionalLightComponent':
+        if (built is LuminaDirectionalLightComponent) points.addAll(built.buildArrowWireframe());
       case 'LuminaStaticMeshComponent':
       case 'LuminaSkeletalMeshComponent':
       case 'LuminaAnimatedMeshComponent':
@@ -638,6 +696,15 @@ class BlueprintPreviewScene extends ChangeNotifier {
           final size = (c.properties['arrowSize'] as num?)?.toDouble() ?? 1.0;
           points.addAll(_arrow(built, 80.0 * size));
           color = _hexColor(c.properties['arrowColor']) ?? (0.0, 0.53, 1.0);
+        case 'LuminaSpotLightComponent':
+          if (built is LuminaSpotLightComponent) points.addAll(built.buildConeWireframe(segments: 24));
+          color = spotLightColor;
+        case 'LuminaPointLightComponent':
+          if (built is LuminaPointLightComponent) points.addAll(built.buildSphereWireframe(segments: 24));
+          color = pointLightColor;
+        case 'LuminaDirectionalLightComponent':
+          if (built is LuminaDirectionalLightComponent) points.addAll(built.buildArrowWireframe());
+          color = spotLightColor;
         case 'LuminaStaticMeshComponent':
         case 'LuminaSkeletalMeshComponent':
         case 'LuminaAnimatedMeshComponent':

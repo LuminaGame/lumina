@@ -113,6 +113,9 @@ mixin _BlueprintSubEditorViewportGizmo on _BlueprintSubEditorStateBase {
       gridStep: 50.0,
       overlayLines: preview.overlays,
       statsLabel: preview.summary,
+      hasSceneLights: preview.hasSceneLights,
+      renderSceneLights: preview.renderSceneLights,
+      onToggleSceneLights: (v) => _viewModel.setRenderSceneLights(v),
       onPreviewWorldReady: _viewModel.attachPreviewWorld,
       onPreviewWorldDisposing: _viewModel.detachPreviewWorld,
     );

@@ -185,4 +185,114 @@ void main() {
     final absolute = '$dir/$material';
     expect(await read(absolute), File(absolute).readAsBytesSync(), reason: 'an absolute path is read as it is');
   });
+
+  test('a Spot Light component produces cone wireframe overlay with inner and outer cone rays', () {
+    final doc = LuminaBlueprintDocument.fromJson({
+      'parentClass': 'LuminaActor',
+      'components': [
+        {
+          'id': 'root',
+          'name': 'DefaultSceneRoot',
+          'type': 'LuminaSceneComponent',
+        },
+        {
+          'id': 'spot',
+          'name': 'SpotLight',
+          'type': 'LuminaSpotLightComponent',
+          'parentId': 'root',
+          'properties': {
+            'location': [0.0, 0.0, 100.0],
+            'intensity': 50000.0,
+            'attenuationRadius': 800.0,
+            'innerConeAngle': 25.0,
+            'outerConeAngle': 45.0,
+          },
+        },
+      ],
+    });
+    final scene = BlueprintPreviewScene()..setDocument(doc, projectDir: dir);
+    addTearDown(scene.dispose);
+    final byId = {for (final s in scene.overlays) s.id: s};
+    expect(byId.containsKey('spot'), isTrue);
+    final spotOverlay = byId['spot']!;
+    expect(spotOverlay.positions.isNotEmpty, isTrue);
+    expect(spotOverlay.positions.length % 6, equals(0)); // 3 floats per vertex, 2 vertices per line segment
+    expect((spotOverlay.r, spotOverlay.g, spotOverlay.b), BlueprintPreviewScene.spotLightColor);
+
+    // When selected, it uses selection color
+    scene.select('spot');
+    final selectedSpot = scene.overlays.firstWhere((s) => s.id == 'spot');
+    expect(selectedSpot.selected, isTrue);
+    expect((selectedSpot.r, selectedSpot.g, selectedSpot.b), BlueprintPreviewScene.selectionColor);
+  });
+
+  test('a Point Light component produces sphere wireframe overlay', () {
+    final doc = LuminaBlueprintDocument.fromJson({
+      'parentClass': 'LuminaActor',
+      'components': [
+        {
+          'id': 'point',
+          'name': 'PointLight',
+          'type': 'LuminaPointLightComponent',
+          'properties': {
+            'attenuationRadius': 500.0,
+          },
+        },
+      ],
+    });
+    final scene = BlueprintPreviewScene()..setDocument(doc, projectDir: dir);
+    addTearDown(scene.dispose);
+    final byId = {for (final s in scene.overlays) s.id: s};
+    expect(byId.containsKey('point'), isTrue);
+    final pointOverlay = byId['point']!;
+    expect(pointOverlay.positions.isNotEmpty, isTrue);
+    expect((pointOverlay.r, pointOverlay.g, pointOverlay.b), BlueprintPreviewScene.pointLightColor);
+  });
+
+  test('hasSceneLights and renderSceneLights control environment lighting', () {
+    final docNoLight = LuminaBlueprintDocument.fromJson({
+      'parentClass': 'LuminaActor',
+      'components': [
+        {
+          'id': 'root',
+          'name': 'DefaultSceneRoot',
+          'type': 'LuminaSceneComponent',
+        },
+      ],
+    });
+    final sceneNoLight = BlueprintPreviewScene()..setDocument(docNoLight, projectDir: dir);
+    addTearDown(sceneNoLight.dispose);
+    expect(sceneNoLight.hasSceneLights, isFalse);
+
+    final docWithLight = LuminaBlueprintDocument.fromJson({
+      'parentClass': 'LuminaActor',
+      'components': [
+        {
+          'id': 'root',
+          'name': 'DefaultSceneRoot',
+          'type': 'LuminaSceneComponent',
+        },
+        {
+          'id': 'spot',
+          'name': 'SpotLight',
+          'type': 'SpotLightComponent',
+          'parentId': 'root',
+          'properties': {
+            'intensity': 50000.0,
+          },
+        },
+      ],
+    });
+    final scene = BlueprintPreviewScene()..setDocument(docWithLight, projectDir: dir);
+    addTearDown(scene.dispose);
+    expect(scene.hasSceneLights, isTrue);
+    expect(scene.renderSceneLights, isFalse);
+
+    scene.setRenderSceneLights(true);
+    expect(scene.renderSceneLights, isTrue);
+
+    scene.toggleRenderSceneLights();
+    expect(scene.renderSceneLights, isFalse);
+  });
 }
+

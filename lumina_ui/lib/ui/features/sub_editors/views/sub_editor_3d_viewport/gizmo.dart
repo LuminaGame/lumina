@@ -4,6 +4,35 @@ part of '../sub_editor_3d_viewport.dart';
 /// math, hover, drag, click and key handling, the drag banner and the gizmo
 /// tool cluster.
 mixin _SubEditor3DViewportGizmo on _SubEditor3DViewportStateBase {
+  SubEditorTransformGizmo? _internalGizmo;
+
+  SubEditorTransformGizmo? get _effectiveGizmo {
+    if (widget.transformGizmo != null) return widget.transformGizmo;
+    final show = widget.showTransformGizmo ?? (!widget.showShapeSelector && (widget.glbMesh != null || widget.meshComponents != null || widget.onPreviewWorldReady != null));
+    if (show) {
+      return _internalGizmo ??= SubEditorTransformGizmo();
+    }
+    return null;
+  }
+
+  void _initGizmo() {
+    _effectiveGizmo?.addListener(_onGizmoChanged);
+  }
+
+  void _updateGizmo(SubEditor3DViewport oldWidget) {
+    final oldGizmo = oldWidget.transformGizmo ?? _internalGizmo;
+    final newGizmo = _effectiveGizmo;
+    if (newGizmo != oldGizmo) {
+      oldGizmo?.removeListener(_onGizmoChanged);
+      newGizmo?.addListener(_onGizmoChanged);
+    }
+  }
+
+  void _disposeGizmo() {
+    _effectiveGizmo?.removeListener(_onGizmoChanged);
+    _internalGizmo?.dispose();
+    _internalGizmo = null;
+  }
 
   void _onGizmoChanged() {
     if (!mounted) return;
@@ -17,7 +46,7 @@ mixin _SubEditor3DViewportGizmo on _SubEditor3DViewportStateBase {
   /// Drops a drag whose target went away (deleted, deselected) and the hover
   /// without a target.
   void _syncGizmoState() {
-    final target = widget.transformGizmo?.target;
+    final target = _effectiveGizmo?.target;
     if (_gizmoDragging && (target == null || target.id != _gizmoDragTarget?.id)) {
       _gizmoDrag = null;
       _gizmoDragHandle = null;
@@ -70,7 +99,7 @@ mixin _SubEditor3DViewportGizmo on _SubEditor3DViewportStateBase {
 
   /// The gizmo as drawn and hit-tested this frame, or null without a target.
   TransformGizmoModel? _transformGizmoModel() {
-    final gizmo = widget.transformGizmo;
+    final gizmo = _effectiveGizmo;
     final target = gizmo?.target;
     if (gizmo == null || target == null) return null;
     if (_viewportSize.width <= 0 || _viewportSize.height <= 0) return null;
@@ -127,7 +156,7 @@ mixin _SubEditor3DViewportGizmo on _SubEditor3DViewportStateBase {
   /// A primary press on a handle starts a drag; returns false when the press
   /// hit no handle (the camera or a pick gets it).
   bool _beginGizmoDrag(Offset local) {
-    final gizmo = widget.transformGizmo;
+    final gizmo = _effectiveGizmo;
     final target = gizmo?.target;
     if (gizmo == null || target == null) return false;
     final model = _transformGizmoModel();
@@ -158,7 +187,7 @@ mixin _SubEditor3DViewportGizmo on _SubEditor3DViewportStateBase {
   }
 
   void _updateGizmoDrag(Offset local) {
-    final gizmo = widget.transformGizmo;
+    final gizmo = _effectiveGizmo;
     final drag = _gizmoDrag;
     final target = _gizmoDragTarget;
     if (gizmo == null || drag == null || target == null) return;
@@ -187,7 +216,7 @@ mixin _SubEditor3DViewportGizmo on _SubEditor3DViewportStateBase {
   }
 
   void _endGizmoDrag() {
-    final gizmo = widget.transformGizmo;
+    final gizmo = _effectiveGizmo;
     final target = _gizmoDragTarget;
     final wasDrag = _gizmoDrag != null;
     setState(() {
@@ -201,7 +230,7 @@ mixin _SubEditor3DViewportGizmo on _SubEditor3DViewportStateBase {
   }
 
   void _cancelGizmoDrag() {
-    final gizmo = widget.transformGizmo;
+    final gizmo = _effectiveGizmo;
     final target = _gizmoDragTarget;
     final wasDrag = _gizmoDrag != null;
     setState(() {
@@ -216,7 +245,7 @@ mixin _SubEditor3DViewportGizmo on _SubEditor3DViewportStateBase {
 
   /// A click that hit no handle: pick through the gizmo's owner.
   void _handleGizmoClick(Offset local) {
-    final gizmo = widget.transformGizmo;
+    final gizmo = _effectiveGizmo;
     if (gizmo == null || gizmo.pick == null) return;
     final ray = _brushRay(local);
     if (ray == null) return;
@@ -249,7 +278,7 @@ mixin _SubEditor3DViewportGizmo on _SubEditor3DViewportStateBase {
   /// Q/W/E/R for the gizmo's tools, Esc to cancel a drag; false when the
   /// key is not the gizmo's.
   bool _handleGizmoKey(KeyEvent event) {
-    final gizmo = widget.transformGizmo;
+    final gizmo = _effectiveGizmo;
     if (gizmo == null) return false;
     if (event.logicalKey == LogicalKeyboardKey.escape) {
       if (!_gizmoDragging) return false;
@@ -269,161 +298,6 @@ mixin _SubEditor3DViewportGizmo on _SubEditor3DViewportStateBase {
     return true;
   }
 
-  Widget _gizmoToolCluster(SubEditorTransformGizmo gizmo) {
-    Widget tool(IconData icon, GizmoMode mode, String tip, String key) {
-      final sel = gizmo.mode == mode;
-      return Tooltip(
-        tooltip: (context) => TooltipContainer(child: Text('$tip ($key)')),
-        child: GestureDetector(
-          key: ValueKey('sub_gizmo_tool_${tip.toLowerCase()}'),
-          onTap: () => gizmo.setMode(mode),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-            margin: const EdgeInsets.only(right: 2),
-            decoration: BoxDecoration(
-              color: sel ? EditorColors.primary.withValues(alpha: 0.3) : Colors.transparent,
-              borderRadius: BorderRadius.circular(3),
-            ),
-            child: Icon(icon, size: 11, color: sel ? EditorColors.primary : EditorColors.foreground),
-          ),
-        ),
-      );
-    }
-
-    Widget snapToggle({
-      required Key key,
-      required IconData icon,
-      required bool active,
-      required String tip,
-      required VoidCallback onToggle,
-    }) {
-      return Tooltip(
-        tooltip: (context) => TooltipContainer(child: Text(tip)),
-        child: GestureDetector(
-          key: key,
-          onTap: onToggle,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
-            margin: const EdgeInsets.only(left: 6),
-            decoration: BoxDecoration(
-              color: active ? EditorColors.primary.withValues(alpha: 0.3) : Colors.transparent,
-              borderRadius: BorderRadius.circular(3),
-            ),
-            child: Icon(icon, size: 11, color: active ? EditorColors.primary : EditorColors.foreground),
-          ),
-        ),
-      );
-    }
-
-    Widget stepField({
-      required Key key,
-      required double value,
-      required String suffix,
-      required ValueChanged<double> onChanged,
-    }) {
-      return SizedBox(
-        width: 54,
-        height: 20,
-        child: TextField(
-          key: key,
-          initialValue: value == value.roundToDouble() ? value.toInt().toString() : value.toString(),
-          style: const TextStyle(fontSize: 9),
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-          placeholder: Text(suffix, style: const TextStyle(fontSize: 9)),
-          onChanged: (text) {
-            final v = double.tryParse(text);
-            if (v != null && v > 0) onChanged(v);
-          },
-        ),
-      );
-    }
-
-    final snap = gizmo.snap;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: EditorColors.border),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          tool(LucideIcons.mousePointer, GizmoMode.translate, 'Select', 'Q'),
-          tool(LucideIcons.move, GizmoMode.translate, 'Translate', 'W'),
-          tool(LucideIcons.rotateCcw, GizmoMode.rotate, 'Rotate', 'E'),
-          tool(LucideIcons.maximize2, GizmoMode.scale, 'Scale', 'R'),
-          const SizedBox(width: 4),
-          Tooltip(
-            tooltip: (context) => TooltipContainer(
-              child: Text(gizmo.space == GizmoSpace.world ? 'World space (click for Local)' : 'Local space (click for World)'),
-            ),
-            child: GestureDetector(
-              key: const ValueKey('sub_gizmo_space'),
-              onTap: gizmo.toggleSpace,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                decoration: BoxDecoration(
-                  color: gizmo.space == GizmoSpace.local ? EditorColors.primary.withValues(alpha: 0.3) : Colors.transparent,
-                  borderRadius: BorderRadius.circular(3),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(gizmo.space == GizmoSpace.world ? LucideIcons.globe : LucideIcons.box,
-                        size: 11, color: gizmo.space == GizmoSpace.local ? EditorColors.primary : EditorColors.foreground),
-                    const SizedBox(width: 3),
-                    Text(gizmo.space == GizmoSpace.world ? 'WORLD' : 'LOCAL',
-                        style: TextStyle(
-                            fontSize: 8,
-                            fontWeight: FontWeight.bold,
-                            color: gizmo.space == GizmoSpace.local ? EditorColors.primary : EditorColors.foreground)),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          snapToggle(
-            key: const ValueKey('sub_gizmo_snap_translate'),
-            icon: LucideIcons.magnet,
-            active: snap.translateEnabled,
-            tip: 'Grid snap',
-            onToggle: () => gizmo.setSnap(snap.copyWith(translateEnabled: !snap.translateEnabled)),
-          ),
-          stepField(
-            key: const ValueKey('sub_gizmo_snap_translate_step'),
-            value: snap.translateStep,
-            suffix: 'cm',
-            onChanged: (v) => gizmo.setSnap(gizmo.snap.copyWith(translateStep: v)),
-          ),
-          snapToggle(
-            key: const ValueKey('sub_gizmo_snap_rotate'),
-            icon: LucideIcons.rotateCw,
-            active: snap.rotateEnabled,
-            tip: 'Rotation snap',
-            onToggle: () => gizmo.setSnap(snap.copyWith(rotateEnabled: !snap.rotateEnabled)),
-          ),
-          stepField(
-            key: const ValueKey('sub_gizmo_snap_rotate_step'),
-            value: snap.rotateStep,
-            suffix: '°',
-            onChanged: (v) => gizmo.setSnap(gizmo.snap.copyWith(rotateStep: v)),
-          ),
-          snapToggle(
-            key: const ValueKey('sub_gizmo_snap_scale'),
-            icon: LucideIcons.scaling,
-            active: snap.scaleEnabled,
-            tip: 'Scale snap',
-            onToggle: () => gizmo.setSnap(snap.copyWith(scaleEnabled: !snap.scaleEnabled)),
-          ),
-          stepField(
-            key: const ValueKey('sub_gizmo_snap_scale_step'),
-            value: snap.scaleStep,
-            suffix: '×',
-            onChanged: (v) => gizmo.setSnap(gizmo.snap.copyWith(scaleStep: v)),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget _gizmoToolCluster(SubEditorTransformGizmo gizmo) =>
+      TransformGizmoToolbar(gizmo: gizmo);
 }

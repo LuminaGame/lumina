@@ -146,8 +146,20 @@ class SubEditor3DViewport extends StatefulWidget {
   /// The transform gizmo drawn over the scene: its
   /// target gets translate / rotate / scale handles driven by the HUD's
   /// Q/W/E/R cluster, snap fields and Local/World toggle; a click that hits
-  /// no handle picks through it. Null draws none (every other sub-editor).
+  /// no handle picks through it.
   final SubEditorTransformGizmo? transformGizmo;
+
+  /// Whether the transform gizmo is shown. When null, defaults to true for 3D scenes.
+  final bool? showTransformGizmo;
+
+  /// Whether this 3D scene contains authored scene lights.
+  final bool hasSceneLights;
+
+  /// Whether the viewport is currently rendering using authored scene lights.
+  final bool renderSceneLights;
+
+  /// Callback when the scene lights toggle is clicked.
+  final ValueChanged<bool>? onToggleSceneLights;
 
   /// Ghost skeletons drawn over the scene (onion skins), in the frame the
   /// bones are drawn in.
@@ -201,6 +213,10 @@ class SubEditor3DViewport extends StatefulWidget {
     this.overlayLines = const [],
     this.initialCameraYaw,
     this.transformGizmo,
+    this.showTransformGizmo,
+    this.hasSceneLights = false,
+    this.renderSceneLights = false,
+    this.onToggleSceneLights,
     this.ghostSkeletons = const [],
     this.overlayMarkers = const [],
     this.overlayPaths = const [],

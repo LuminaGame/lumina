@@ -28,11 +28,13 @@ import '../models/viewport_ray.dart';
 import '../models/sub_editor_transform_gizmo.dart';
 import '../../main_editor/services/transform_gizmo.dart';
 import 'sub_editor_transform_gizmo_painter.dart';
+import 'transform_gizmo_toolbar.dart';
 
 export '../models/sub_editor_canvas_overlay.dart';
 export '../models/sub_editor_line_set.dart';
 export '../models/sub_editor_mesh_component.dart';
 export '../models/skeletal_socket_attachment.dart';
+export 'transform_gizmo_toolbar.dart';
 
 part 'sub_editor_3d_viewport/state.dart';
 part 'sub_editor_3d_viewport/camera.dart';
@@ -70,7 +72,7 @@ class _SubEditor3DViewportState extends _SubEditor3DViewportStateBase
     _shape = widget.initialShape;
     _cameraYaw = widget.initialCameraYaw ?? -35.0;
     widget.playbackController?.addListener(_onPlaybackChanged);
-    widget.transformGizmo?.addListener(_onGizmoChanged);
+    _initGizmo();
     _recalculateBoundsAndFraming();
     EditorSceneEnvironment.ensureAssetsLoaded();
     // Preview worlds load meshes by path: budget them like the payloads.
@@ -85,10 +87,7 @@ class _SubEditor3DViewportState extends _SubEditor3DViewportStateBase
       oldWidget.playbackController?.removeListener(_onPlaybackChanged);
       widget.playbackController?.addListener(_onPlaybackChanged);
     }
-    if (widget.transformGizmo != oldWidget.transformGizmo) {
-      oldWidget.transformGizmo?.removeListener(_onGizmoChanged);
-      widget.transformGizmo?.addListener(_onGizmoChanged);
-    }
+    _updateGizmo(oldWidget);
     final componentsChanged =
         widget.meshComponents != oldWidget.meshComponents ||
         (widget.meshComponents?.length != oldWidget.meshComponents?.length);
@@ -194,7 +193,7 @@ class _SubEditor3DViewportState extends _SubEditor3DViewportStateBase
   @override
   void dispose() {
     widget.playbackController?.removeListener(_onPlaybackChanged);
-    widget.transformGizmo?.removeListener(_onGizmoChanged);
+    _disposeGizmo();
     _viewportFocus.dispose();
     _warmupTimer?.cancel();
     _sceneEnvironment.detach();
@@ -216,7 +215,7 @@ class _SubEditor3DViewportState extends _SubEditor3DViewportStateBase
         (_shape == PreviewShape.sphere ? 642 : 192);
 
     final hasNativePayload = _hasNativePreview;
-    if (widget.transformGizmo != null) _syncGizmoState();
+    if (_effectiveGizmo != null) _syncGizmoState();
 
     return Container(
       color: EditorColors.background,
@@ -246,7 +245,7 @@ class _SubEditor3DViewportState extends _SubEditor3DViewportStateBase
                 }
                 return Focus(
                   focusNode: _viewportFocus,
-                  autofocus: widget.transformGizmo != null,
+                  autofocus: _effectiveGizmo != null,
                   onKeyEvent: (node, event) {
                     if (event is KeyDownEvent || event is KeyRepeatEvent) {
                       if (_handleGizmoKey(event)) return KeyEventResult.handled;
@@ -295,13 +294,13 @@ class _SubEditor3DViewportState extends _SubEditor3DViewportStateBase
                     },
                     child: Listener(
                       onPointerHover: (event) {
-                        if (widget.transformGizmo != null) _handleGizmoHover(event.localPosition);
+                        if (_effectiveGizmo != null) _handleGizmoHover(event.localPosition);
                         final brush = widget.brushInput;
                         final ray = brush == null ? null : _brushRay(event.localPosition);
                         if (ray != null) brush!.onHover(ray);
                       },
                       onPointerDown: (event) {
-                        if (widget.transformGizmo != null) {
+                        if (_effectiveGizmo != null) {
                           _viewportFocus.requestFocus();
                           if (event.buttons == kPrimaryMouseButton &&
                               !HardwareKeyboard.instance.isAltPressed &&
@@ -405,7 +404,7 @@ class _SubEditor3DViewportState extends _SubEditor3DViewportStateBase
                           return;
                         }
                         if ((event.localPosition - down).distance > 4.0) return;
-                        if (widget.transformGizmo != null &&
+                        if (_effectiveGizmo != null &&
                             !HardwareKeyboard.instance.isAltPressed) {
                           _handleGizmoClick(event.localPosition);
                         }
@@ -681,7 +680,7 @@ class _SubEditor3DViewportState extends _SubEditor3DViewportStateBase
                                 ),
                               ),
                             ),
-                          if (widget.transformGizmo != null)
+                          if (_effectiveGizmo != null)
                             Builder(builder: (context) {
                               final model = _transformGizmoModel();
                               if (model == null) return const SizedBox.shrink();
@@ -693,16 +692,16 @@ class _SubEditor3DViewportState extends _SubEditor3DViewportStateBase
                                       model: model,
                                       activeHandle: _gizmoDragHandle ?? _gizmoHover,
                                       dragging: _gizmoDragging,
-                                      locked: widget.transformGizmo!.target?.locked ?? false,
+                                      locked: _effectiveGizmo!.target?.locked ?? false,
                                     ),
                                     size: Size.infinite,
                                   ),
                                 ),
                               );
                             }),
-                          if (_gizmoBanner != null)
+                          if (_gizmoBanner != null && _effectiveGizmo?.target != null)
                             Builder(builder: (context) {
-                              final centre = _transformGizmoModel()?.project(widget.transformGizmo!.target!.pivot);
+                              final centre = _transformGizmoModel()?.project(_effectiveGizmo!.target!.pivot);
                               final at = centre ?? Offset(_viewportSize.width / 2, _viewportSize.height / 2);
                               return Positioned(
                                 left: (at.dx + 24.0).clamp(8.0, math.max(8.0, _viewportSize.width - 200.0)),
@@ -813,9 +812,14 @@ class _SubEditor3DViewportState extends _SubEditor3DViewportStateBase
                   ),
                 ),
 
-                if (widget.transformGizmo != null) ...[
+                if (widget.hasSceneLights) ...[
                   const SizedBox(width: 8),
-                  _gizmoToolCluster(widget.transformGizmo!),
+                  _sceneLightsToggle(),
+                ],
+
+                if (_effectiveGizmo != null) ...[
+                  const SizedBox(width: 8),
+                  _gizmoToolCluster(_effectiveGizmo!),
                 ],
 
                 if (widget.showShapeSelector) ...[
@@ -933,6 +937,57 @@ class _SubEditor3DViewportState extends _SubEditor3DViewportStateBase
 
           if (widget.overlayHUD != null) widget.overlayHUD!,
         ],
+      ),
+    );
+  }
+
+  Widget _sceneLightsToggle() {
+    final active = widget.renderSceneLights;
+    return Tooltip(
+      tooltip: (context) => TooltipContainer(
+        child: Text(
+          active
+              ? 'Scene Lights: Active (using authored lights in scene)'
+              : 'Scene Lights: Inactive (using studio daylight sun/sky)',
+        ),
+      ),
+      child: GestureDetector(
+        key: const ValueKey('sub_viewport_toggle_scene_lights'),
+        onTap: () => widget.onToggleSceneLights?.call(!active),
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 8,
+            vertical: 4,
+          ),
+          decoration: BoxDecoration(
+            color: active
+                ? EditorColors.primary.withValues(alpha: 0.25)
+                : Colors.black.withValues(alpha: 0.6),
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(
+              color: active ? EditorColors.primary : EditorColors.border,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                LucideIcons.lightbulb,
+                size: 11,
+                color: active ? EditorColors.primary : EditorColors.foreground,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                'SCENE LIGHTS',
+                style: TextStyle(
+                  fontSize: 8,
+                  fontWeight: active ? FontWeight.bold : FontWeight.normal,
+                  color: active ? EditorColors.primary : EditorColors.foreground,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

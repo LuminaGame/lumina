@@ -244,6 +244,11 @@ class BlueprintEditorViewModel extends _BlueprintEditorViewModelState
           interfaces: _assets?.interfaces,
           functionScope: function,
           macroScope: macro,
+          inheritedVariables: inheritedVariables,
+          inheritedComponents: inheritedComponents,
+          customEventOwners: _catalog?.actorEvents ?? const {},
+          variableOwners: _catalog?.actorVariables ?? const {},
+          componentOwners: _catalog?.actorComponents ?? const {},
         ),
         implementedInterfaces: _document.interfaces,
       );
@@ -290,8 +295,26 @@ class BlueprintEditorViewModel extends _BlueprintEditorViewModelState
   /// A preview without a renderer (widget tests).
   void startHeadlessPreview() => preview.attachHeadless();
 
+  /// Whether the blueprint has authored scene lights.
+  bool get hasSceneLights => preview.hasSceneLights;
+
+  /// Whether the preview is currently rendering with scene lights.
+  bool get renderSceneLights => preview.renderSceneLights;
+
+  /// Sets whether the preview is rendered using authored scene lights.
+  void setRenderSceneLights(bool value) {
+    preview.setRenderSceneLights(value);
+    notifyListeners();
+  }
+
+  /// Toggles whether the preview is rendered using authored scene lights.
+  void toggleRenderSceneLights() {
+    preview.toggleRenderSceneLights();
+    notifyListeners();
+  }
+
   @override
-  void _syncPreview() => preview.setDocument(_document, projectDir: _previewProjectDir);
+  void _syncPreview() => preview.setDocument(_document, projectDir: _previewProjectDir, components: allComponents);
 
   @override
   void notifyListeners() {
@@ -322,8 +345,12 @@ class BlueprintEditorViewModel extends _BlueprintEditorViewModelState
   String get generatedDartCode {
     final cached = _codeCache;
     if (cached != null && cached.$1 == _revision) return cached.$2;
-    final code = DartCodeGeneratorService()
-        .generateActorClassDart(fileBasename, engineDocument.toJson(), inputActions: _inputActions);
+    final code = DartCodeGeneratorService().generateActorClassDart(
+      fileBasename,
+      engineDocument.toJson(),
+      inputActions: _inputActions,
+      typeContext: buildTypeContext(),
+    );
     _codeCache = (_revision, code);
     return code;
   }

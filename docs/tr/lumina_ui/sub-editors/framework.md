@@ -632,9 +632,23 @@ Edit → Editor Preferences: the user's own editor settings — a category list 
 | `gridStep` | `final double? gridStep` |  |
 | `overlayLines` | `final List<SubEditorLineSet> overlayLines` | Coloured line sets drawn over the scene (a Blueprint's capsule, spring arm and camera), in the viewport's own frame. A set's native lines are rebuilt when its [SubEditorLineSet.signature] changes. |
 | `initialCameraYaw` | `final double? initialCameraYaw` | The orbit camera's starting (and Reset View) yaw in degrees; -35 when null. A Y-up preview at 145° looks at an actor facing −Z from its front. |
-| `transformGizmo` | `final SubEditorTransformGizmo? transformGizmo` | The transform gizmo drawn over the scene: its target gets translate / rotate / scale handles driven by the HUD's Q/W/E/R cluster, snap fields and Local/World toggle; a click that hits no handle picks through it. Null draws none (every other sub-editor). |
+| `transformGizmo` | `final SubEditorTransformGizmo? transformGizmo` | Sahne üzerinde çizilen dönüşüm gizmo'su: hedefi HUD'ın Q/W/E/R kümesi, snap alanları ve Yerel/Dünya geçişiyle kontrol edilen öteleme / döndürme / ölçekleme tutamaçlarına sahip olur; hiçbir tutamaca isabet etmeyen tıklama arkadaki nesneyi seçer. |
+| `showTransformGizmo` | `final bool? showTransformGizmo` | Dönüşüm gizmo'sunun gösterilip gösterilmeyeceği. Null olduğunda 3D sahneler için varsayılan olarak true'dur. |
+| `hasSceneLights` | `final bool hasSceneLights` | Bu 3D sahnenin yazar tarafından eklenmiş ışık bileşenleri içerip içermediği. True olduğunda viewport araç çubuğunda SCENE LIGHTS geçiş düğmesi görüntülenir. |
+| `renderSceneLights` | `final bool renderSceneLights` | Viewport'un stüdyo gün ışığı/gökyüzü yerine sahnede tanımlanan ışıklarla render edilip edilmediği. |
+| `onToggleSceneLights` | `final ValueChanged<bool>? onToggleSceneLights` | SCENE LIGHTS geçiş düğmesine tıklandığında tetiklenen geri çağırım. |
 | `ghostSkeletons` / `overlayMarkers` / `overlayPaths` | `final List<SubEditorGhostSkeleton> ghostSkeletons` / `final List<SubEditorOverlayMarker> overlayMarkers` / `final List<SubEditorOverlayPath> overlayPaths` | Kemiklerin çizildiği çerçevede tuval katmanları (`models/sub_editor_canvas_overlay.dart`): bir renk, opaklık ve etiketle tüm-poz hayalet iskeletleri (onion skin), işaretler (nokta / elmas / halka, etiket, bir noktaya isteğe bağlı kesikli çizgi; IK hedefleri ve pole'lar) ve numaralı noktalı çoklu çizgiler (çizilmiş kök yolu). Boş liste hiçbir şey çizmez. |
 | `usesNativePreview` | `static bool usesNativePreview({GlbMeshData? glbMesh, List<SubEditorMeshComponent>? meshComponents, Uint8List?...` | True when the viewport mounts the native Filament renderer: either a mesh payload or a compiled material to preview on a procedural primitive. |
+
+## `lib/ui/features/sub_editors/views/transform_gizmo_toolbar.dart`
+
+### `class TransformGizmoToolbar`
+
+3D viewport'lar ve alt editörler için yeniden kullanılabilir dönüşüm gizmo araç çubuğu bileşeni. Etkileşimli araç modu düğmeleri (Seç/Ötele/Döndür/Ölçekle), koordinat uzayı geçişi (Dünya/Yerel) ve sayısal yakalama (snap) kontrolleri (Izgara/Dönme/Ölçek) sunar.
+
+**Yapıcı Metotlar (Constructors):**
+
+- `const TransformGizmoToolbar({super.key, required this.gizmo})`
 
 ## `lib/ui/features/sub_editors/views/sub_editor_transform_gizmo_painter.dart`
 

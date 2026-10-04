@@ -632,9 +632,23 @@ Edit → Editor Preferences: the user's own editor settings — a category list 
 | `gridStep` | `final double? gridStep` |  |
 | `overlayLines` | `final List<SubEditorLineSet> overlayLines` | Coloured line sets drawn over the scene (a Blueprint's capsule, spring arm and camera), in the viewport's own frame. A set's native lines are rebuilt when its [SubEditorLineSet.signature] changes. |
 | `initialCameraYaw` | `final double? initialCameraYaw` | The orbit camera's starting (and Reset View) yaw in degrees; -35 when null. A Y-up preview at 145° looks at an actor facing −Z from its front. |
-| `transformGizmo` | `final SubEditorTransformGizmo? transformGizmo` | The transform gizmo drawn over the scene: its target gets translate / rotate / scale handles driven by the HUD's Q/W/E/R cluster, snap fields and Local/World toggle; a click that hits no handle picks through it. Null draws none (every other sub-editor). |
+| `transformGizmo` | `final SubEditorTransformGizmo? transformGizmo` | The transform gizmo drawn over the scene: its target gets translate / rotate / scale handles driven by the HUD's Q/W/E/R cluster, snap fields and Local/World toggle; a click that hits no handle picks through it. |
+| `showTransformGizmo` | `final bool? showTransformGizmo` | Whether the transform gizmo is shown. When null, defaults to true for 3D scenes. |
+| `hasSceneLights` | `final bool hasSceneLights` | Whether this 3D scene contains authored scene lights. When true, the SCENE LIGHTS toggle button appears on the viewport toolbar. |
+| `renderSceneLights` | `final bool renderSceneLights` | Whether the viewport is currently rendering using authored scene lights rather than studio daylight sun/sky. |
+| `onToggleSceneLights` | `final ValueChanged<bool>? onToggleSceneLights` | Callback fired when the SCENE LIGHTS toggle button is clicked. |
 | `ghostSkeletons` / `overlayMarkers` / `overlayPaths` | `final List<SubEditorGhostSkeleton> ghostSkeletons` / `final List<SubEditorOverlayMarker> overlayMarkers` / `final List<SubEditorOverlayPath> overlayPaths` | Canvas overlays in the frame the bones are drawn in (`models/sub_editor_canvas_overlay.dart`): whole-pose ghost skeletons (onion skins) in a colour and opacity with a label, markers (dot / diamond / ring, a label, an optional dashed line to a point; IK targets and poles) and polylines with numbered points (a drawn root path). Empty draws none. |
 | `usesNativePreview` | `static bool usesNativePreview({GlbMeshData? glbMesh, List<SubEditorMeshComponent>? meshComponents, Uint8List?...` | True when the viewport mounts the native Filament renderer: either a mesh payload or a compiled material to preview on a procedural primitive. |
+
+## `lib/ui/features/sub_editors/views/transform_gizmo_toolbar.dart`
+
+### `class TransformGizmoToolbar`
+
+Reusable transform gizmo toolbar component for 3D viewports and sub-editors. Provides interactive tool mode buttons (Select/Translate/Rotate/Scale), coordinate space toggle (World/Local), and numeric snapping controls (Grid/Rotation/Scale).
+
+**Constructors:**
+
+- `const TransformGizmoToolbar({super.key, required this.gizmo})`
 
 ## `lib/ui/features/sub_editors/views/sub_editor_transform_gizmo_painter.dart`
 

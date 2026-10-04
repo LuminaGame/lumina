@@ -520,4 +520,48 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await frames(tester, 3);
   });
+
+  testWidgets('SCENE LIGHTS toggle appears when scene has lights and updates renderSceneLights', (tester) async {
+    final state = await openViewport(tester, 'CameraBoom');
+    final vm = state.viewModel;
+
+    // Initially no scene lights toggle button
+    expect(find.byKey(const ValueKey('sub_viewport_toggle_scene_lights')), findsNothing);
+
+    // Add a light component to the Blueprint
+    vm.addComponent('SpotLightComponent');
+    await frames(tester, 5);
+
+    // Now hasSceneLights is true, SCENE LIGHTS toggle button appears
+    expect(vm.hasSceneLights, isTrue);
+    final toggleFinder = find.byKey(const ValueKey('sub_viewport_toggle_scene_lights'));
+    expect(toggleFinder, findsOneWidget);
+    expect(vm.renderSceneLights, isFalse);
+
+    // Tap toggle button -> toggles renderSceneLights
+    await tester.tap(toggleFinder);
+    await frames(tester, 2);
+    expect(vm.renderSceneLights, isTrue);
+
+    // Tap again -> toggles off
+    await tester.tap(toggleFinder);
+    await frames(tester, 2);
+    expect(vm.renderSceneLights, isFalse);
+
+    await tester.pumpWidget(const SizedBox());
+    await frames(tester, 3);
+  });
+
+  testWidgets('TransformGizmoToolbar renders tool buttons and snap toggles in the 3D viewport', (tester) async {
+    await openViewport(tester, 'CameraBoom');
+    expect(find.byType(TransformGizmoToolbar), findsOneWidget);
+    expect(find.byKey(const ValueKey('sub_gizmo_tool_translate')), findsOneWidget);
+    expect(find.byKey(const ValueKey('sub_gizmo_tool_rotate')), findsOneWidget);
+    expect(find.byKey(const ValueKey('sub_gizmo_tool_scale')), findsOneWidget);
+    expect(find.byKey(const ValueKey('sub_gizmo_space')), findsOneWidget);
+    expect(find.byKey(const ValueKey('sub_gizmo_snap_translate')), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox());
+    await frames(tester, 3);
+  });
 }
