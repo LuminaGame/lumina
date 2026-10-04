@@ -67,6 +67,15 @@ class _EngineKey {
 abstract final class FilamentEngineHost {
   static final Map<_EngineKey, _HostedEngine> _engines = {};
 
+  /// Default configuration for hosted engines: provides generous headroom (16 MB buffer)
+  /// so complex skeletal meshes with multiple skins (e.g. MetaHumans) do not exhaust the
+  /// circular command buffer.
+  static const EngineConfig defaultHostConfig = EngineConfig(
+    minCommandBufferSizeMB: 4,
+    commandBufferSizeMB: 16,
+    perRenderPassArenaSizeMB: 6,
+  );
+
   /// A lease on the shared engine for [backend] and [gpu], creating the engine
   /// (with [config], only used then) when there is none. Null when no engine
   /// can be created on this host.
@@ -79,7 +88,11 @@ abstract final class FilamentEngineHost {
     final key = _EngineKey(backend, gpu ?? FilamentEngine.defaultGpuPreference);
     var entry = _engines[key];
     if (entry == null || entry.engine.isDisposed) {
-      final engine = FilamentEngine.create(backend: backend, gpu: key.gpu, config: config);
+      final engine = FilamentEngine.create(
+        backend: backend,
+        gpu: key.gpu,
+        config: config ?? defaultHostConfig,
+      );
       if (engine == null) return null;
       entry = _HostedEngine(key, engine);
       final owned = entry;

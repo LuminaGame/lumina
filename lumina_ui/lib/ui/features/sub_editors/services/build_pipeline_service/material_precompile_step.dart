@@ -86,7 +86,12 @@ class FilamentMaterialCompiler {
     }
     if (_engineFailed) return const MaterialCompileOutcome.failed('Filament engine unavailable on this host');
     try {
-      _engine ??= FilamentEngine.create();
+      _engine ??= FilamentEngine.create(
+        config: const EngineConfig(
+          minCommandBufferSizeMB: 4,
+          commandBufferSizeMB: 16,
+        ),
+      );
     } catch (e) {
       _engineFailed = true;
       return MaterialCompileOutcome.failed('Filament engine could not be created: $e');
