@@ -489,6 +489,7 @@ abstract class _EditorViewModelState extends ChangeNotifier {
   void setViewportMode(String mode);
   void selectActor(EditorActorNode? actor);
   void selectActors(Iterable<String> ids);
+  void setActorSelection(Iterable<String> ids, {String? primaryId});
   void clearSelection();
   void duplicateSelectedActor();
   void applyPropertyToSelection(

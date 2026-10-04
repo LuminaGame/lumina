@@ -3,6 +3,7 @@ import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.
 import 'package:lumina/data/models/lumina_project.dart';
 
 
+import 'package:flutter/services.dart';
 import 'package:flutter/gestures.dart' show kSecondaryMouseButton;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/outliner_widget.dart';
@@ -198,6 +199,87 @@ void main() {
     // A is still selected and present
     expect(vm.selectedActorId, 'a');
     expect(vm.actors.any((x) => x.id == 'a'), true);
+    vm.dispose();
+  });
+
+  testWidgets('Shift-click selects range of actors in outliner', (WidgetTester tester) async {
+    final vm = EditorViewModel(initialProject: LuminaProject(projectName: 'T'), projectLocation: '/tmp');
+    final a = EditorActorNode(id: 's1', name: 'Stair_01', type: 'StaticMesh', location: [0, 0, 0]);
+    final b = EditorActorNode(id: 's2', name: 'Stair_02', type: 'StaticMesh', location: [0, 0, 0]);
+    final c = EditorActorNode(id: 's3', name: 'Stair_03', type: 'StaticMesh', location: [0, 0, 0]);
+    final d = EditorActorNode(id: 's4', name: 'Stair_04', type: 'StaticMesh', location: [0, 0, 0]);
+    final e = EditorActorNode(id: 's5', name: 'Stair_05', type: 'StaticMesh', location: [0, 0, 0]);
+    vm.addActorNodeForTest(a);
+    vm.addActorNodeForTest(b);
+    vm.addActorNodeForTest(c);
+    vm.addActorNodeForTest(d);
+    vm.addActorNodeForTest(e);
+
+    await tester.pumpWidget(
+      ShadcnApp(
+        theme: luminaEditorTheme(),
+        title: 'Test',
+        home: Scaffold(
+          child: ListenableBuilder(
+            listenable: vm,
+            builder: (context, _) => OutlinerWidget(viewModel: vm),
+          ),
+        ),
+      ),
+    );
+
+    // 1. Normal click on Stair_02
+    await tester.tap(find.text('Stair_02'));
+    await tester.pumpAndSettle();
+    expect(vm.selectedActorIds, equals({'s2'}));
+    expect(vm.selectedActorId, 's2');
+
+    // 2. Shift-click on Stair_04 -> selects Stair_02, Stair_03, Stair_04
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.tap(find.text('Stair_04'));
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.pumpAndSettle();
+
+    expect(vm.selectedActorIds, equals({'s2', 's3', 's4'}));
+    expect(vm.selectedActorId, 's4');
+
+    // 3. Subsequent Shift-click on Stair_01 -> adjusts range from anchor Stair_02 backwards to Stair_01
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.tap(find.text('Stair_01'));
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.pumpAndSettle();
+
+    expect(vm.selectedActorIds, equals({'s1', 's2'}));
+    expect(vm.selectedActorId, 's1');
+
+    // 4. Shift+Ctrl click adds range
+    // First, click empty area to clear selection
+    await tester.tap(find.byKey(const ValueKey('outliner_empty_area')));
+    await tester.pumpAndSettle();
+    expect(vm.selectedActorIds, isEmpty);
+
+    // Click Stair_01
+    await tester.tap(find.text('Stair_01'));
+    await tester.pumpAndSettle();
+    expect(vm.selectedActorIds, equals({'s1'}));
+
+    // Ctrl-click Stair_03 to add it and make it anchor
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.tap(find.text('Stair_03'));
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.pumpAndSettle();
+    expect(vm.selectedActorIds, equals({'s1', 's3'}));
+
+    // Shift+Ctrl click Stair_05 -> adds range Stair_03..Stair_05 to existing selection (s1, s3, s4, s5)
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.tap(find.text('Stair_05'));
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.pumpAndSettle();
+
+    expect(vm.selectedActorIds, equals({'s1', 's3', 's4', 's5'}));
+
     vm.dispose();
   });
 }

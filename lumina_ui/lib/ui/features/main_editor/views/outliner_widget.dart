@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:flutter/gestures.dart' show kDoubleTapTimeout;
 import 'package:flutter/services.dart';
@@ -41,6 +42,7 @@ class _OutlinerWidgetState extends State<OutlinerWidget> {
 
   String? _lastTapId;
   DateTime? _lastTapAt;
+  String? _selectionAnchorId;
 
   // The row being renamed, or the newly selected one, is scrolled into view.
   final ScrollController _scrollController = ScrollController();
@@ -274,7 +276,7 @@ class _OutlinerWidgetState extends State<OutlinerWidget> {
                 slivers: [
                   SliverList(
                     delegate: SliverChildBuilderDelegate(
-                      (context, index) => _buildActorRow(flatNodes[index]),
+                      (context, index) => _buildActorRow(flatNodes[index], flatNodes),
                       childCount: flatNodes.length,
                     ),
                   ),
@@ -341,6 +343,7 @@ class _OutlinerWidgetState extends State<OutlinerWidget> {
             MenuButton(
               leading: const Icon(LucideIcons.folderPlus, size: 14),
               onPressed: (ctx) {
+                _selectionAnchorId = null;
                 vm.clearSelection();
                 vm.createFolder();
               },
@@ -360,7 +363,12 @@ class _OutlinerWidgetState extends State<OutlinerWidget> {
           child: GestureDetector(
             key: const ValueKey('outliner_empty_area'),
             behavior: HitTestBehavior.opaque,
-            onTap: () => vm.clearSelection(),
+            onTap: () {
+              _lastTapId = null;
+              _lastTapAt = null;
+              _selectionAnchorId = null;
+              vm.clearSelection();
+            },
             child: Container(
               decoration: BoxDecoration(
                 color: candidateData.isNotEmpty ? EditorColors.primary.withValues(alpha: 0.08) : Colors.transparent,
@@ -375,7 +383,7 @@ class _OutlinerWidgetState extends State<OutlinerWidget> {
     );
   }
 
-  Widget _buildActorRow(_FlattenedNode fnode) {
+  Widget _buildActorRow(_FlattenedNode fnode, List<_FlattenedNode> flatNodes) {
     final vm = _vm;
     final node = fnode.node;
     final isFolder = node.type == 'Folder';
@@ -410,11 +418,20 @@ class _OutlinerWidgetState extends State<OutlinerWidget> {
               // for the double-tap timeout.
               onTap: () {
                 final now = DateTime.now();
-                final isDoubleClick = _lastTapId == node.id &&
+                final keys = HardwareKeyboard.instance.logicalKeysPressed;
+                final isAdditive = keys.contains(LogicalKeyboardKey.controlLeft) ||
+                    keys.contains(LogicalKeyboardKey.controlRight) ||
+                    keys.contains(LogicalKeyboardKey.metaLeft) ||
+                    keys.contains(LogicalKeyboardKey.metaRight);
+                final isShift = keys.contains(LogicalKeyboardKey.shiftLeft) ||
+                    keys.contains(LogicalKeyboardKey.shiftRight);
+
+                final isDoubleClick = !isShift &&
+                    _lastTapId == node.id &&
                     _lastTapAt != null &&
                     now.difference(_lastTapAt!) <= kDoubleTapTimeout;
-                _lastTapId = isDoubleClick ? null : node.id;
-                _lastTapAt = isDoubleClick ? null : now;
+                _lastTapId = (isDoubleClick || isShift) ? null : node.id;
+                _lastTapAt = (isDoubleClick || isShift) ? null : now;
                 if (isDoubleClick) {
                   if (isFolder) {
                     vm.toggleOutlinerExpanded(node.id);
@@ -423,12 +440,36 @@ class _OutlinerWidgetState extends State<OutlinerWidget> {
                   }
                   return;
                 }
-                final keys = HardwareKeyboard.instance.logicalKeysPressed;
-                final additive = keys.contains(LogicalKeyboardKey.controlLeft) ||
-                    keys.contains(LogicalKeyboardKey.controlRight) ||
-                    keys.contains(LogicalKeyboardKey.metaLeft) ||
-                    keys.contains(LogicalKeyboardKey.metaRight);
-                if (additive) {
+
+                if (isShift) {
+                  final anchorId = (_selectionAnchorId != null &&
+                          vm.selectedActorIds.contains(_selectionAnchorId))
+                      ? _selectionAnchorId
+                      : vm.selectedActorId;
+                  final anchorIndex = anchorId != null
+                      ? flatNodes.indexWhere((f) => f.node.id == anchorId)
+                      : -1;
+                  final targetIndex =
+                      flatNodes.indexWhere((f) => f.node.id == node.id);
+
+                  if (anchorIndex >= 0 && targetIndex >= 0) {
+                    final start = min(anchorIndex, targetIndex);
+                    final end = max(anchorIndex, targetIndex);
+                    final rangeIds = [
+                      for (var i = start; i <= end; i++) flatNodes[i].node.id
+                    ];
+
+                    if (isAdditive) {
+                      vm.selectActors(rangeIds);
+                    } else {
+                      vm.setActorSelection(rangeIds, primaryId: node.id);
+                    }
+                    return;
+                  }
+                }
+
+                _selectionAnchorId = node.id;
+                if (isAdditive) {
                   vm.toggleActorSelection(node.id);
                 } else {
                   vm.selectActorById(node.id);

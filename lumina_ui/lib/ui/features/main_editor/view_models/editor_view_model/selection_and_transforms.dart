@@ -101,6 +101,23 @@ mixin _EditorSelectionAndTransforms on _EditorViewModelState {
     notifyListeners();
   }
 
+  @override
+  void setActorSelection(Iterable<String> ids, {String? primaryId}) {
+    _selectedActorIds.clear();
+    _selectedActorIds.addAll(ids);
+    ids.forEach(_revealInOutliner);
+    final target = primaryId ?? (ids.isNotEmpty ? ids.last : null);
+    _selectedActor = target != null
+        ? _actors.where((a) => a.id == target).firstOrNull
+        : null;
+    _logger.log(
+      'Set selection to ${ids.length} actors',
+      level: 'info',
+      source: 'Outliner',
+    );
+    notifyListeners();
+  }
+
   void toggleActorSelection(String id) {
     if (_selectedActorIds.contains(id)) {
       _selectedActorIds.remove(id);
