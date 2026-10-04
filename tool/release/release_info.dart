@@ -59,6 +59,14 @@ Future<void> main(List<String> args) async {
       File(out).writeAsStringSync(text);
       stdout.write(text);
       outputs = const {};
+    case 'changelog':
+      final tag = option('--tag') ?? _fail('changelog needs --tag <tag>.', 64);
+      final fromTag = option('--from');
+      final text = generateChangelog(root, tag, fromTag: fromTag);
+      stdout.write(text);
+      final out = option('--out');
+      if (out != null) File(out).writeAsStringSync(text);
+      outputs = const {};
     default:
       _fail('Unknown command "$command".\n\n$_usage', 64);
   }
@@ -81,8 +89,9 @@ Usage: dart tool/release/release_info.dart <command> [options]
   pins                     Print the SHA each sibling repo is pinned to.
   overrides [--out <file>] Write pubspec_overrides.yaml for sibling checkouts.
   filament-dir             Print flutter_filament's filament_dir (repo-relative).
+  changelog --tag <tag>    Generate categorized markdown release notes between tags.
 
-Options: --root <dir>, --github-output
+Options: --root <dir>, --from <tag>, --out <file>, --github-output
 ''';
 
 Never _fail(String message, [int code = 1]) {
@@ -331,4 +340,97 @@ String filamentDir(String root) {
     stack.add((indent, m.group(2)!));
   }
   return 'filament';
+}
+
+// ---------------------------------------------------------------- changelog
+
+/// Generates categorized markdown release notes from git commits between tags.
+String generateChangelog(String root, String tag, {String? fromTag}) {
+  var prev = fromTag;
+  if (prev == null || prev.isEmpty) {
+    final res = Process.runSync(
+      'git',
+      ['describe', '--tags', '--abbrev=0', '$tag~1'],
+      workingDirectory: root,
+      runInShell: Platform.isWindows,
+    );
+    if (res.exitCode == 0) {
+      prev = (res.stdout as String).trim();
+    }
+  }
+
+  final range = (prev != null && prev.isNotEmpty) ? '$prev..$tag' : tag;
+  final res = Process.runSync(
+    'git',
+    ['log', range, '--no-merges', '--pretty=format:%s'],
+    workingDirectory: root,
+    runInShell: Platform.isWindows,
+  );
+
+  final lines = (res.exitCode == 0 ? (res.stdout as String) : '')
+      .split('\n')
+      .map((s) => s.trim())
+      .where((s) => s.isNotEmpty)
+      .toList();
+
+  final features = <String>[];
+  final fixes = <String>[];
+  final others = <String>[];
+
+  final featReg = RegExp(r'^feat(?:\(([^)]+)\))?:\s*(.*)$');
+  final fixReg = RegExp(r'^fix(?:\(([^)]+)\))?:\s*(.*)$');
+
+  for (final line in lines) {
+    if (line.startsWith('chore(release):') || line.startsWith('chore(deps):')) {
+      continue;
+    }
+    final featMatch = featReg.firstMatch(line);
+    if (featMatch != null) {
+      final scope = featMatch.group(1);
+      final msg = featMatch.group(2)!;
+      features.add(scope != null ? '**$scope**: $msg' : msg);
+      continue;
+    }
+    final fixMatch = fixReg.firstMatch(line);
+    if (fixMatch != null) {
+      final scope = fixMatch.group(1);
+      final msg = fixMatch.group(2)!;
+      fixes.add(scope != null ? '**$scope**: $msg' : msg);
+      continue;
+    }
+    others.add(line);
+  }
+
+  final buf = StringBuffer();
+  buf.writeln("## What's Changed");
+  buf.writeln();
+
+  if (features.isNotEmpty) {
+    buf.writeln('### New Features & Improvements');
+    buf.writeln();
+    for (final f in features) {
+      buf.writeln('- $f');
+    }
+    buf.writeln();
+  }
+
+  if (fixes.isNotEmpty) {
+    buf.writeln('### Bug Fixes');
+    buf.writeln();
+    for (final f in fixes) {
+      buf.writeln('- $f');
+    }
+    buf.writeln();
+  }
+
+  if (others.isNotEmpty) {
+    buf.writeln('### Other Changes');
+    buf.writeln();
+    for (final o in others) {
+      buf.writeln('- $o');
+    }
+    buf.writeln();
+  }
+
+  return buf.toString();
 }

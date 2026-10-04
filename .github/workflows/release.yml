@@ -556,6 +556,12 @@ jobs:
       GH_REPO: ${{ github.repository }}
       WINDOWS_SIGNING: ${{ vars.LUMINA_WINDOWS_SIGNING }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: dart-lang/setup-dart@v1
+
       # The editor, OpenRigLogic and the installers; Filament is in its own
       # release.
       - uses: actions/download-artifact@v8
@@ -600,8 +606,9 @@ jobs:
               echo "::notice::Release $TAG is a draft again: sign its Windows assets with tool/release/sign_windows_release.ps1 -Tag $TAG -Publish."
             fi
           else
-            flags=(--verify-tag --title "Lumina Studio $TAG" --generate-notes)
+            flags=(--verify-tag --title "Lumina Studio $TAG")
             if [ "$PRERELEASE" = true ]; then flags+=(--prerelease); fi
+            changelog="$(dart tool/release/release_info.dart changelog --tag "$TAG" 2>/dev/null || true)"
             notes="$(cat <<'EOF'
           ## Downloads
 
@@ -619,6 +626,9 @@ jobs:
           )"
             filament="Filament: the prebuilt Filament \`$FILAMENT_VERSION\` the editor downloads at first launch is in the [$FILAMENT_TAG](https://github.com/$GH_REPO/releases/tag/$FILAMENT_TAG) release."
             notes="$(printf '%s\n\n%s' "$notes" "$filament")"
+            if [ -n "$changelog" ]; then
+              notes="$(printf '%s\n\n%s' "$changelog" "$notes")"
+            fi
             if [ "$WINDOWS_SIGNING" = local ]; then
               flags+=(--draft)
               notes="$(printf '%s\n\n%s' "$marker" "$notes")"
