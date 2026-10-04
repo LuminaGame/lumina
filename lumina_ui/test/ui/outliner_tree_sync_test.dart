@@ -282,4 +282,50 @@ void main() {
 
     vm.dispose();
   });
+
+  test('importLevelDataFromJson deduplicates duplicate actor IDs preserving folders and hierarchy', () {
+    final vm = EditorViewModel(initialProject: LuminaProject(projectName: 'T'), projectLocation: '/tmp');
+    final levelData = {
+      'metadata': {
+        'actors': [
+          {'id': 'act_35', 'name': 'GroundF', 'type': 'Folder', 'parentId': null},
+          {'id': 'c1', 'name': 'Child1', 'type': 'StaticMesh', 'parentId': 'act_35'},
+          {'id': 'c2', 'name': 'Child2', 'type': 'StaticMesh', 'parentId': 'act_35'},
+          {'id': 'act_35', 'name': 'BP_LightTower_35', 'type': 'Blueprint', 'parentId': null},
+        ]
+      }
+    };
+
+    vm.importLevelDataFromJson(levelData);
+
+    expect(vm.actors.length, 4);
+    final folder = vm.actors.firstWhere((a) => a.name == 'GroundF');
+    final bp = vm.actors.firstWhere((a) => a.name == 'BP_LightTower_35');
+    final c1 = vm.actors.firstWhere((a) => a.name == 'Child1');
+    final c2 = vm.actors.firstWhere((a) => a.name == 'Child2');
+
+    // Folder keeps act_35
+    expect(folder.id, 'act_35');
+    expect(c1.parentId, 'act_35');
+    expect(c2.parentId, 'act_35');
+
+    // BP receives a unique ID, distinct from act_35
+    expect(bp.id, isNot('act_35'));
+
+    // Children of GroundF are c1 and c2
+    final folderChildren = vm.outlinerChildrenOf(folder.id);
+    expect(folderChildren.map((a) => a.id), containsAll(['c1', 'c2']));
+
+    // BP has no children in outliner
+    final bpChildren = vm.outlinerChildrenOf(bp.id);
+    expect(bpChildren, isEmpty);
+
+    // Selecting BP does NOT select GroundF
+    vm.selectActor(bp);
+    expect(vm.selectedActorIds, equals({bp.id}));
+    expect(vm.selectedActorIds.contains(folder.id), isFalse);
+
+    vm.dispose();
+  });
 }
+

@@ -358,8 +358,9 @@ mixin _EditorActorSpawning on _EditorViewModelState {
     RealAssetInfo asset, {
     List<double>? location,
   }) async {
-    final count = _actors.length + 1;
+    final id = _uniqueActorId();
     final baseName = asset.fileName.split('.').first;
+    final name = _uniqueActorName(baseName);
     // A Blueprint class dropped into the level is an
     // instance of that class (a GameMode Blueprint cannot be placed).
     if (asset.type == AssetType.actor && asset.lmasPath != null) {
@@ -370,7 +371,7 @@ mixin _EditorActorSpawning on _EditorViewModelState {
         return;
       }
       if (preview != null) {
-        await _spawnBlueprintActor(asset, preview, id: 'act_$count', name: '${baseName}_$count', location: location);
+        await _spawnBlueprintActor(asset, preview, id: id, name: name, location: location);
         return;
       }
     }
@@ -467,8 +468,8 @@ mixin _EditorActorSpawning on _EditorViewModelState {
     }
 
     final node = EditorActorNode(
-      id: 'act_$count',
-      name: '${baseName}_$count',
+      id: id,
+      name: name,
       type: typeName,
       location: spawnLoc,
       scale: initialScale,

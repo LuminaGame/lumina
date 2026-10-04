@@ -133,6 +133,7 @@ mixin _EditorProjectAndLevels on _EditorViewModelState {
                 loadedActors.add(node);
               }
             }
+            _sanitizeLoadedActorIds(loadedActors);
             _actors.clear();
             _actors.addAll(loadedActors);
           }
@@ -459,6 +460,7 @@ mixin _EditorProjectAndLevels on _EditorViewModelState {
           loadedActors.add(node);
         }
       }
+      _sanitizeLoadedActorIds(loadedActors);
       if (loadedActors.isNotEmpty) {
         _actors.clear();
         _actors.addAll(loadedActors);
@@ -471,5 +473,71 @@ mixin _EditorProjectAndLevels on _EditorViewModelState {
     _loadLevelNavigation(map['metadata']);
     _loadLevelWorldPartition(map['metadata']);
     _readLevelBlueprintMeta(map['metadata']);
+  }
+
+  /// Ensures every loaded actor has a unique ID. If historical duplicate IDs exist
+  /// (e.g. from prior spawner collisions), folders keep the ID so hierarchy remains
+  /// intact, while duplicates are reassigned unique IDs.
+  void _sanitizeLoadedActorIds(List<EditorActorNode> actors) {
+    if (actors.length <= 1) return;
+
+    final actorsById = <String, List<EditorActorNode>>{};
+    for (final a in actors) {
+      actorsById.putIfAbsent(a.id, () => []).add(a);
+    }
+
+    final hasDuplicates = actorsById.values.any((list) => list.length > 1);
+    if (!hasDuplicates) return;
+
+    final allIds = <String>{for (final a in actors) a.id};
+    var nextIndex = 1;
+    var reassignedAny = false;
+
+    for (final entry in actorsById.entries) {
+      final list = entry.value;
+      if (list.length <= 1) continue;
+
+      // When multiple actors share an ID, choose which one retains the ID:
+      // 1. A 'Folder' keeps the ID so its grouped children stay attached.
+      // 2. Otherwise, the earliest actor in the list keeps the ID.
+      EditorActorNode keeper = list.first;
+      var bestScore = -1;
+      for (var i = 0; i < list.length; i++) {
+        final candidate = list[i];
+        var score = list.length - i;
+        if (candidate.type == 'Folder') {
+          score += 100;
+        }
+        if (score > bestScore) {
+          bestScore = score;
+          keeper = candidate;
+        }
+      }
+
+      for (final node in list) {
+        if (identical(node, keeper)) continue;
+
+        while (allIds.contains('act_$nextIndex')) {
+          nextIndex++;
+        }
+        final newId = 'act_$nextIndex';
+        allIds.add(newId);
+
+        final idx = actors.indexOf(node);
+        if (idx != -1) {
+          actors[idx] = node.copy(id: newId);
+        }
+        reassignedAny = true;
+      }
+    }
+
+    if (reassignedAny) {
+      _logger.log(
+        'Sanitized duplicate actor IDs in loaded level.',
+        level: 'warning',
+        source: 'EditorViewModel',
+      );
+      _markDirty();
+    }
   }
 }
