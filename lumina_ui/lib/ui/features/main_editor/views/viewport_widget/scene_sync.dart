@@ -28,6 +28,11 @@ mixin _ViewportSceneSync on _ViewportWidgetStateBase {
   }
 
   void _onViewModelUpdated() {
+    if (widget.viewModel.activeTabIndex != 0 || widget.viewModel.buildManagerViewModel.isRunning) {
+      _pendingSceneSync = true;
+      return;
+    }
+    _pendingSceneSync = false;
     _syncPieSession();
     _syncActorAssets();
     _syncGrid();
@@ -357,9 +362,6 @@ mixin _ViewportSceneSync on _ViewportWidgetStateBase {
           FilamentTransformManager(
             _nativeEngine!,
           ).setTransform(handle.instance.root, m);
-          try {
-            handle.instance.animator.updateBoneMatrices();
-          } catch (_) {}
         } catch (e) {
           EngineLoggerService().log(
             'Transform update error for actor "${actor.name}": $e',
@@ -494,6 +496,7 @@ mixin _ViewportSceneSync on _ViewportWidgetStateBase {
         widget.viewModel.actors,
         enabled: wantsLighting,
         isVisible: widget.viewModel.isEffectivelyVisible,
+        registry: widget.viewModel.pieController.registry,
       );
       _syncAutoExposure();
       _syncLevelPostProcess();

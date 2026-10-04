@@ -216,6 +216,70 @@ void main() {
     await tester.tap(find.text('Static'));
     await tester.pump(const Duration(milliseconds: 50));
     expect(vm.actors.last.mobility, 'Static');
-    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('a placed Blueprint actor containing a light component lights the level viewport', (tester) async {
+    final vm = sunlessLevel();
+    // Register an open Blueprint document with a spot light
+    final bpDoc = LuminaBlueprintDocument.fromJson({
+      'parentClass': 'LuminaActor',
+      'components': [
+        {
+          'id': 'root',
+          'name': 'DefaultSceneRoot',
+          'type': 'LuminaSceneComponent',
+        },
+        {
+          'id': 'lamp',
+          'name': 'SpotLight',
+          'type': 'SpotLightComponent',
+          'parentId': 'root',
+          'properties': {
+            'intensity': 45000.0,
+            'attenuationRadius': 1500.0,
+          },
+        },
+      ],
+    });
+    vm.registerInMemoryBlueprintDocument('BP_LightTower', bpDoc);
+
+    final viewport = await mount(tester, vm);
+    final FilamentScene scene = viewport.nativeSceneForTest;
+    final lm = FilamentLightManager(viewport.nativeEngineForTest as FilamentEngine);
+
+    // Place an instance of BP_LightTower in the level
+    vm.restoreSnapshot([
+      EditorActorNode(
+        id: 'start',
+        name: 'PlayerStart',
+        type: 'PlayerStart',
+        location: [0, 0, 0],
+      ),
+      EditorActorNode(
+        id: 'tower_1',
+        name: 'BP_LightTower_1',
+        type: 'Actor',
+        blueprintClass: 'BP_LightTower',
+        location: [200.0, 100.0, 300.0],
+      ),
+    ]);
+    await tester.pump(const Duration(milliseconds: 16));
+
+    final cls = vm.pieController.registry.classFor('BP_LightTower');
+    expect(cls, isNotNull);
+    expect(cls!.hasErrors, isFalse, reason: 'diagnostics: ${cls.diagnostics.map((d) => d.message).toList()}');
+    final built = EditorPieGame.mapEditorActor(vm.actors.last, registry: vm.pieController.registry);
+    expect(built, isA<LuminaActor>());
+    final comps = (built as LuminaActor).components.whereType<LuminaLightComponent>().toList();
+    expect(comps.length, 1);
+
+    final entities = viewport.editorLightEntitiesForTest as List<int>;
+    expect(entities.length, 1, reason: 'the light inside BP_LightTower is realised in the scene');
+    final entity = entities.first;
+    expect(scene.hasEntity(entity), isTrue);
+    expect(lm.isSpot(entity), isTrue);
+    expect(lm.getIntensity(entity), closeTo(LuminaUnits.lightPower(45000) / math.pi, 50.0));
+
+    await unmount(tester, vm);
   });
 }

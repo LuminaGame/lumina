@@ -221,6 +221,7 @@ abstract class _EditorViewModelState extends ChangeNotifier {
 
   // --- Sub-editor tab sessions (save-on-close) ---
   final Map<String, EditorTabSession> _tabSessions = {};
+  final Map<String, LuminaBlueprintDocument> _inMemoryBlueprintDocuments = {};
 
   final Map<String, LevelBlueprintEditorViewModel> _levelBlueprintEditors = {};
 

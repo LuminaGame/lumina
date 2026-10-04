@@ -173,6 +173,7 @@ class EditorActorNode {
     this.thumbnailBytes,
     this.meshData,
     this.meshAssetPath,
+    this.blueprintClass,
     List<EditorComponentNode>? components,
   }) : rotation = rotation ?? [0.0, 0.0, 0.0],
        scale = scale ?? [1.0, 1.0, 1.0],

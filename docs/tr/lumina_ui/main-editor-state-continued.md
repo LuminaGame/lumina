@@ -110,7 +110,7 @@ How the level viewport draws a placed Blueprint: its first mesh component (the G
 
 ### `class EditorLevelLights`
 
-The level's own lights in the edit-mode viewport: every `DirectionalLight` / `PointLight` / `SpotLight` actor becomes the component PIE and the generated game build for it ([EditorPieGame.mapEditorActor] — one conversion, cm Z-up → runtime), in an editor world bound to the viewport's scene. Details edits, gizmo moves, visibility, deletion and undo are followed on every [sync]; a level without light actors is lit by nothing.
+Edit modu viewport'undaki seviye ışıkları: her `DirectionalLight` / `PointLight` / `SpotLight` aktörü ve ışık bileşenleri içeren yerleştirilmiş Blueprint aktörleri, viewport sahnesine ve yerel görünüme bağlı bir editör dünyasında PIE ve oyun derlemesi için bileşene dönüştürülür ([EditorPieGame.mapEditorActor]). Details düzenlemeleri, gizmo hareketleri, görünürlük ve silme işlemleri her [sync] çağrısında takip edilir.
 
 **Üyeler:**
 
@@ -120,8 +120,8 @@ The level's own lights in the edit-mode viewport: every `DirectionalLight` / `Po
 | `isAttached` | `bool get isAttached` |  |
 | `lightEntities` | `List<int> get lightEntities` | The Filament light entities in the scene now. |
 | `components` | `List<LuminaLightComponent> get components` | The light components realised now, for the viewport's exposure metering. |
-| `attach` | `void attach(FilamentEngine engine, FilamentScene scene)` | Binds to the viewport's engine and scene (an editor world: it runs no gameplay, only render prep). |
-| `sync` | `void sync(Iterable<EditorActorNode> actors, {required bool enabled, bool Function(String id)? isVisible})` | Makes the scene's lights match [actors]: the visible light actors when [enabled] (Lit, Lighting shown, no Play session lighting the scene), none otherwise. |
+| `attach` | `void attach(FilamentEngine engine, FilamentScene scene, [FilamentView? view])` | Binds to the viewport's engine, scene, and optional native view (an editor world: it runs no gameplay, only render prep). |
+| `sync` | `void sync(Iterable<EditorActorNode> actors, {required bool enabled, bool Function(String id)? isVisible, EditorBlueprintClassRegistry? registry})` | Makes the scene's lights match [actors]: visible light actors and placed Blueprint actors with light components when [enabled] (Lit, Lighting shown, no Play session lighting the scene), none otherwise. |
 | `detach` | `void detach()` | Removes every light from the scene and drops the world. |
 
 ## `lib/ui/features/main_editor/services/editor_level_post_process.dart`

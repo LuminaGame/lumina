@@ -117,6 +117,21 @@ mixin _SubEditor3DViewportCamera on _SubEditor3DViewportStateBase {
         upZ: 0,
       );
     }
+
+    final world = _previewWorld;
+    final bool sceneLights = widget.renderSceneLights;
+    final double ev100;
+    if (sceneLights && world != null) {
+      final lights = LuminaAutoExposure.lightsIn(world);
+      ev100 = LuminaAutoExposure.ev100For(lights, skyLight: false);
+    } else {
+      ev100 = LuminaAutoExposure.daylightEv100;
+    }
+    _nativeCamera!.setExposure(
+      aperture: LuminaAutoExposure.aperture,
+      shutterSpeed: LuminaAutoExposure.shutterSpeedFor(ev100),
+      sensitivity: LuminaAutoExposure.sensitivity,
+    );
   }
 
   void _moveWASD(String key) {

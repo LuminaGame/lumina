@@ -60,11 +60,16 @@ class EditorBlueprintClassRegistry extends LuminaBlueprintClassRegistry {
   LuminaBlueprintClass? classFor(String path) {
     _syncDefinitions();
     final openDocs = openDocuments();
-    final open = openDocs[path] ??
-        openDocs['contents/$path'] ??
-        (path.startsWith('contents/') ? openDocs[path.substring('contents/'.length)] : null);
-    if (open == null) return _diskClassFor(path);
-    return _compile(path, open);
+    final name = path.replaceAll('.lmas', '').split('/').last;
+    final entry = openDocs.entries
+        .where((e) =>
+            e.key == path ||
+            e.key == 'contents/$path' ||
+            (path.startsWith('contents/') && e.key == path.substring('contents/'.length)) ||
+            e.key.replaceAll('.lmas', '').split('/').last == name)
+        .firstOrNull;
+    if (entry == null) return _diskClassFor(path);
+    return _compile(entry.key, entry.value);
   }
 
   LuminaBlueprintClass _compile(String path, LuminaBlueprintDocument document) {

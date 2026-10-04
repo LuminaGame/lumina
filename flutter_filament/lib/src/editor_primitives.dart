@@ -76,6 +76,11 @@ class FilamentEditorGrid {
   int? get entityId => _mesh?.entityId;
   bool get isDisposed => _disposed;
 
+  /// Sets the grid's RGBA line color.
+  void setColor(double r, double g, double b, [double a = 1.0]) {
+    _mesh?.setColor(r, g, b, a);
+  }
+
   void addToScene(FilamentScene scene) {
     if (_mesh != null && !_disposed) {
       scene.addEntity(_mesh!.entityId);

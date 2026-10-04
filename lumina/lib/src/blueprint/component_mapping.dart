@@ -400,6 +400,7 @@ abstract final class LuminaBlueprintComponents {
         );
         _transform(mesh, p);
         return mesh;
+      case 'PointLightComponent':
       case 'LuminaPointLightComponent':
         final light = LuminaPointLightComponent(intensity: _num(p, 'intensity') ?? 1000.0);
         _transform(light, p);
@@ -407,6 +408,7 @@ abstract final class LuminaBlueprintComponents {
         final radius = _num(p, 'attenuationRadius') ?? _num(p, 'falloffRadius');
         if (radius != null) light.falloffRadius = radius;
         return light;
+      case 'DirectionalLightComponent':
       case 'LuminaDirectionalLightComponent':
         final light = LuminaDirectionalLightComponent(
           intensity: _num(p, 'intensity') ?? 100000.0,
@@ -418,6 +420,7 @@ abstract final class LuminaBlueprintComponents {
         _transform(light, p);
         _light(light, p);
         return light;
+      case 'SpotLightComponent':
       case 'LuminaSpotLightComponent':
         final inner = _num(p, 'innerConeAngle') ?? _num(p, 'innerConeAngleDegrees') ?? 30.0;
         final outer = _num(p, 'outerConeAngle') ?? _num(p, 'outerConeAngleDegrees') ?? 45.0;

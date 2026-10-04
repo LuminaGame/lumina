@@ -101,10 +101,19 @@ class _ViewportWidgetState extends _ViewportWidgetStateBase
       oldWidget.viewModel.removeListener(_onViewModelUpdated);
       widget.viewModel.addListener(_onViewModelUpdated);
     }
-    _syncActorAssets();
-    _syncGrid();
-    _syncSceneEnvironment();
-    _syncProceduralSky();
+    final isPaused = widget.viewModel.activeTabIndex != 0 || widget.viewModel.buildManagerViewModel.isRunning;
+    if (!isPaused) {
+      if (_pendingSceneSync) {
+        _pendingSceneSync = false;
+        _syncPieSession();
+        _syncActorAssets();
+        _syncGrid();
+        _syncSceneEnvironment();
+        _syncProceduralSky();
+        _syncAutoExposure();
+        if (_editorCameraPose != _pushedCameraPose) _updateNativeCamera();
+      }
+    }
   }
 
   @override
@@ -289,7 +298,8 @@ class _ViewportWidgetState extends _ViewportWidgetStateBase
                           // Play session switched.
                           _syncAutoExposure();
                         },
-                        isPaused: widget.viewModel.activeTabIndex != 0,
+                        isPaused: widget.viewModel.activeTabIndex != 0 || widget.viewModel.buildManagerViewModel.isRunning,
+                        pauseRendering: widget.viewModel.buildManagerViewModel.isRunning,
                         skipReadPixels: _skipReadPixelsFrames > 0,
                         debugLabel: 'Level viewport',
                         onDispose: _disposeNative,
@@ -316,7 +326,7 @@ class _ViewportWidgetState extends _ViewportWidgetStateBase
 
                             // The level's own lights, as PIE lights it: no
                             // preview sun or fill light.
-                            _levelLights.attach(engine, scene);
+                            _levelLights.attach(engine, scene, view);
                             _levelPostProcess.attach(engine, scene, view);
 
                             // The level's sky + image-based lighting, when it

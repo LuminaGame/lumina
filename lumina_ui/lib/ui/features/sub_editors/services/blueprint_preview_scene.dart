@@ -244,8 +244,9 @@ class BlueprintPreviewScene extends ChangeNotifier {
         root.intensity = _renderSceneLights ? 0.0 : 90000.0;
         root.visible = !_renderSceneLights;
       } else if (root is LuminaSkyComponent) {
-        root.iblIntensity = _renderSceneLights ? 200.0 : 22000.0;
-        root.skyIntensity = _renderSceneLights ? 100.0 : 14000.0;
+        root.visible = !_renderSceneLights;
+        root.color = _renderSceneLights ? Vector4(0.002, 0.002, 0.003, 1.0) : Vector4(0.10, 0.11, 0.14, 1.0);
+        root.iblIntensity = _renderSceneLights ? 0.0 : 22000.0;
       }
     }
   }

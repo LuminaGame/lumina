@@ -3,10 +3,12 @@ import 'package:lumina/lumina.dart';
 import 'package:vector_math/vector_math_64.dart' show Vector3;
 
 import '../view_models/editor_view_model.dart';
+import 'blueprint_play_support.dart' show EditorBlueprintClassRegistry;
 import 'light_actor_properties.dart';
 import 'pie_controller.dart';
 
-/// The level's own lights in the edit-mode viewport: every `DirectionalLight` / `PointLight` / `SpotLight` actor
+/// The level's own lights in the edit-mode viewport: every `DirectionalLight` /
+/// `PointLight` / `SpotLight` actor and placed Blueprint actor containing lights
 /// becomes the component PIE and the generated game build for it
 /// ([EditorPieGame.mapEditorActor] — one conversion, cm Z-up → runtime), in
 /// an editor world bound to the viewport's scene. Details edits, gizmo
@@ -25,30 +27,42 @@ class EditorLevelLights {
   /// The Filament light entities in the scene now.
   List<int> get lightEntities => [
         for (final l in _lights.values)
-          if (l.component.lightEntity != null) l.component.lightEntity!,
+          for (final c in l.components)
+            if (c.lightEntity != null) c.lightEntity!,
       ];
 
   /// The light components realised now, for the viewport's exposure
   /// metering.
-  List<LuminaLightComponent> get components => [for (final l in _lights.values) l.component];
+  List<LuminaLightComponent> get components => [
+        for (final l in _lights.values)
+          ...l.components,
+      ];
 
   /// Binds to the viewport's engine and scene (an editor world: it runs no
   /// gameplay, only render prep).
-  void attach(FilamentEngine engine, FilamentScene scene) {
+  void attach(FilamentEngine engine, FilamentScene scene, [FilamentView? view]) {
     detach();
-    _world = LuminaWorld(worldType: LuminaWorldType.editor)..initializeNativeContext(engine, scene);
+    _world = LuminaWorld(worldType: LuminaWorldType.editor)
+      ..initializeNativeContext(engine, scene, view: view);
   }
 
   /// Makes the scene's lights match [actors]: the visible light actors when
   /// [enabled] (Lit, Lighting shown, no Play session lighting the scene),
   /// none otherwise.
-  void sync(Iterable<EditorActorNode> actors, {required bool enabled, bool Function(String id)? isVisible}) {
+  void sync(
+    Iterable<EditorActorNode> actors, {
+    required bool enabled,
+    bool Function(String id)? isVisible,
+    EditorBlueprintClassRegistry? registry,
+  }) {
     final world = _world;
     if (world == null) return;
     final wanted = <String, EditorActorNode>{
       if (enabled)
         for (final a in actors)
-          if (lightTypes.contains(a.type) && (isVisible?.call(a.id) ?? a.isVisible)) a.id: a,
+          if ((lightTypes.contains(a.type) || (a.blueprintClass != null && a.blueprintClass!.isNotEmpty)) &&
+              (isVisible?.call(a.id) ?? a.isVisible))
+            a.id: a,
     };
     for (final id in _lights.keys.where((id) => !wanted.containsKey(id)).toList()) {
       _remove(world, id);
@@ -60,14 +74,14 @@ class EditorLevelLights {
       if (existing != null && existing.type == node.type) {
         if (existing.signature == signature) continue;
         // Same kind of light: update it in place (no new Filament light),
-        // unless something only the builder sets changed (the sun disc).
-        final built = EditorPieGame.mapEditorActor(node);
+        // unless something only the builder sets changed (the sun disc) or it's a multi-component actor.
+        final built = EditorPieGame.mapEditorActor(node, registry: registry);
         final fresh = built is LuminaActor ? built.rootComponent : null;
-        final c = existing.component;
+        final c = existing.components.firstOrNull;
         final rebuild = fresh is LuminaDirectionalLightComponent &&
             c is LuminaDirectionalLightComponent &&
             fresh.sunAngularRadius != c.sunAngularRadius;
-        if (fresh is LuminaLightComponent && !rebuild) {
+        if (fresh is LuminaLightComponent && c != null && !rebuild && existing.components.length == 1) {
           c.relativeLocation = fresh.relativeLocation;
           c.relativeRotation = fresh.relativeRotation;
           c.color = Vector3.copy(fresh.color);
@@ -88,10 +102,12 @@ class EditorLevelLights {
       } else if (existing != null) {
         _remove(world, node.id);
       }
-      final built = EditorPieGame.mapEditorActor(node);
-      if (built is! LuminaActor || built.rootComponent is! LuminaLightComponent) continue;
+      final built = EditorPieGame.mapEditorActor(node, registry: registry);
+      if (built is! LuminaActor) continue;
+      final lightComps = built.components.whereType<LuminaLightComponent>().toList();
+      if (lightComps.isEmpty) continue;
       world.persistentLevel.registerActor(built);
-      _lights[node.id] = _RealisedLight(node.type, built, built.rootComponent as LuminaLightComponent, signature);
+      _lights[node.id] = _RealisedLight(node.type, built, lightComps, signature);
       moved = true;
     }
     // Render prep pushes the components' transforms to Filament.
@@ -106,9 +122,11 @@ class EditorLevelLights {
 
   static String _signature(EditorActorNode a) => [
         a.type,
+        a.blueprintClass ?? '',
         ...a.location,
         ...a.rotation,
-        LightActorProperties.read(a).signature,
+        ...a.scale,
+        if (LightActorProperties.isLightActor(a)) LightActorProperties.read(a).signature,
       ].join('|');
 
   /// Removes every light from the scene and drops the world.
@@ -124,9 +142,11 @@ class EditorLevelLights {
 }
 
 class _RealisedLight {
-  _RealisedLight(this.type, this.actor, this.component, this.signature);
+  _RealisedLight(this.type, this.actor, this.components, this.signature);
   final String type;
   final LuminaActor actor;
-  final LuminaLightComponent component;
+  final List<LuminaLightComponent> components;
   String signature;
+
+  LuminaLightComponent get component => components.first;
 }

@@ -114,6 +114,18 @@ class _SubEditor3DViewportState extends _SubEditor3DViewportStateBase
         _drawsMeshes) {
       _rebuildComponentAssets(_nativeEngine!, _nativeScene!);
     }
+    if (widget.renderSceneLights != oldWidget.renderSceneLights) {
+      _updateNativeCamera();
+      if (_nativeGrid != null) {
+        final dark = widget.renderSceneLights;
+        _nativeGrid!.setColor(
+          dark ? 0.2 : 1.0,
+          dark ? 0.2 : 1.0,
+          dark ? 0.25 : 1.0,
+          dark ? 0.5 : 1.0,
+        );
+      }
+    }
     final glbMeshChanged =
         oldWidget.glbMesh?.rawPayload != widget.glbMesh?.rawPayload ||
         (oldWidget.glbMesh == null) != (widget.glbMesh == null) ||
@@ -501,7 +513,15 @@ class _SubEditor3DViewportState extends _SubEditor3DViewportStateBase
                                            extent: gridExtent,
                                            step: gridStep,
                                          );
+                                         if (widget.renderSceneLights == true) {
+                                           _nativeGrid!.setColor(0.2, 0.2, 0.25, 0.5);
+                                         }
                                          if (widget.showGrid) _nativeGrid!.addToScene(scene);
+
+                                         view.setDynamicLightingOptions(
+                                           LuminaUnits.dynamicLightingNear,
+                                           LuminaUnits.dynamicLightingFar,
+                                         );
 
                                         // Image-based lighting. Without a real
                                         // IndirectLight, Filament gives a PBR

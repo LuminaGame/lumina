@@ -184,6 +184,11 @@ mixin _EditorBlueprintsAndLevelBlueprints on _EditorViewModelState {
       source: 'ContentBrowser',
     );
     _refreshAssets();
+    final rel = '$target/$name.lmas';
+    final created = _realAssets.where((a) => a.relativePath == rel).firstOrNull;
+    if (created != null) {
+      openSubEditorTab('Blueprint', asset: created);
+    }
   }
 
   /// Creates a Widget Blueprint (a default designer canvas) under [folder]
@@ -216,9 +221,16 @@ mixin _EditorBlueprintsAndLevelBlueprints on _EditorViewModelState {
   /// Open Blueprint editors' documents by project-relative path: Play plays
   /// them as they are in the editor.
   Map<String, LuminaBlueprintDocument> get openBlueprintDocuments => {
+        ..._inMemoryBlueprintDocuments,
         for (final vm in openBlueprintEditors)
           BlueprintPlayPreflight.relativePath(projectDirPath, vm.assetPath): vm.document,
       };
+
+  /// Registers an in-memory Blueprint document (e.g. for testing, preview, or
+  /// without opening a tab session).
+  void registerInMemoryBlueprintDocument(String pathOrName, LuminaBlueprintDocument document) {
+    _inMemoryBlueprintDocuments[pathOrName] = document;
+  }
 }
 
 /// [folder] as a project-relative `contents/…` subfolder (`blueprints/doors`

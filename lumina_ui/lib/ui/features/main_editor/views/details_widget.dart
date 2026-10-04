@@ -4,7 +4,7 @@ import 'package:lumina/lumina.dart' show LuminaBlueprintComponent, LuminaBluepri
 import 'package:lumina_ui/ui/features/details/services/multi_edit_service.dart';
 
 import '../../../core/property_editors/vector_row.dart';
-import '../../../core/property_editors/rotation_row.dart';
+import '../../../core/property_editors/lumina_transform_widget.dart';
 import '../../../core/property_editors/scrub_numeric_field.dart';
 import '../../../core/property_editors/color_field.dart';
 import '../../../core/property_editors/slider_field.dart';
