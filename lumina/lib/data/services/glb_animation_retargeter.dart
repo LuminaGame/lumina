@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
+import 'package:lumina/lumina.dart' show EngineLoggerService;
 
 import 'glb_animation_merger.dart';
 
@@ -18,6 +19,15 @@ class GlbSkeletonMatch {
 
   /// Share of the clip's animated bones found in the skeleton, 0–1.
   double get score => animated == 0 ? 0 : matched / animated;
+}
+
+/// Detected humanoid arm rest pose layout.
+enum SkeletonArmPose {
+  /// Arms extended roughly horizontally (within ~20° of horizontal plane).
+  tPose,
+
+  /// Arms angled downward towards the ground (~35° to ~55° below horizontal).
+  aPose,
 }
 
 /// A clip retargeted into a skeletal mesh GLB.
@@ -49,6 +59,12 @@ class GlbRetargetResult {
   /// clip's leg length).
   final double pelvisTranslationScale;
 
+  /// Arm rest pose detected on the source animation clip.
+  final SkeletonArmPose sourceArmPose;
+
+  /// Arm rest pose detected on the target skeletal mesh.
+  final SkeletonArmPose targetArmPose;
+
   const GlbRetargetResult({
     required this.glb,
     required this.clipName,
@@ -58,6 +74,8 @@ class GlbRetargetResult {
     required this.restBones,
     required this.ignoredSourceBones,
     required this.pelvisTranslationScale,
+    this.sourceArmPose = SkeletonArmPose.tPose,
+    this.targetArmPose = SkeletonArmPose.tPose,
   });
 }
 
@@ -207,11 +225,52 @@ abstract final class GlbAnimationRetargeter {
     'rightfoot': ['rightfoot', 'foot_r'],
   };
 
+  /// Checks whether a bone is a facial joint or corrective bone that should not
+  /// be written as a static animation track into body animation clips.
+  static bool isCorrectiveOrFace(String name) {
+    final lower = name.toLowerCase();
+    final clean = lower.startsWith('mixamorig:') ? lower.substring(10) : lower;
+    return clean.startsWith('facial_') ||
+        clean.startsWith('facialroot') ||
+        clean.contains('corrective') ||
+        clean.contains('twistcor') ||
+        clean.contains('_bck') ||
+        clean.contains('_fwd') ||
+        clean.contains('_in_') ||
+        clean.contains('_out_') ||
+        clean.endsWith('_in') ||
+        clean.endsWith('_out') ||
+        clean.contains('_lwr_') ||
+        clean.endsWith('_lwr') ||
+        clean.contains('tricep') ||
+        clean.contains('bicep') ||
+        clean.contains('kneeback') ||
+        clean.contains('eyeball') ||
+        clean.contains('jaw') ||
+        clean.contains('tongue');
+  }
+
+  /// Checks whether a bone belongs to the arm/hand chain that requires
+  /// A-Pose <-> T-Pose alignment and orientation propagation.
+  static bool _isArmBone(String? name) {
+    if (name == null) return false;
+    final lower = name.toLowerCase();
+    final clean = lower.startsWith('mixamorig:') ? lower.substring(10) : lower;
+    return clean == 'upperarm_l' || clean == 'upperarm_r' ||
+           clean == 'lowerarm_l' || clean == 'lowerarm_r' ||
+           clean == 'hand_l' || clean == 'hand_r' ||
+           clean == 'leftarm' || clean == 'rightarm' ||
+           clean == 'leftforearm' || clean == 'rightforearm' ||
+           clean == 'lefthand' || clean == 'righthand';
+  }
+
   static int? _resolveSourceBone(
     String targetName,
     Map<String, int> srcByName,
     Map<String, int> srcByNameLower,
   ) {
+    if (isCorrectiveOrFace(targetName)) return null;
+
     final direct = srcByName[targetName] ?? srcByNameLower[targetName.toLowerCase()];
     if (direct != null) return direct;
 
@@ -371,14 +430,76 @@ abstract final class GlbAnimationRetargeter {
     final srcRestWorld = List<_Quat>.generate(src.count, (i) => src.restWorld(i));
     final tgtRestWorld = List<_Quat>.generate(tgt.count, (j) => tgt.restWorld(j));
 
+    // Detect source and target arm rest poses (A-Pose vs T-Pose).
+    final srcArmPose = src.detectArmPose();
+    final tgtArmPose = tgt.detectArmPose();
+    EngineLoggerService().log(
+      'Animation retargeting "$clipName": source arm pose is ${srcArmPose.name}, target arm pose is ${tgtArmPose.name}',
+      level: 'info',
+      source: 'ANIMATION RETARGETING',
+    );
+
+    // Precompute arm bone alignment (source arm direction -> target arm direction).
+    // This allows A-Pose <-> T-Pose retargeting without folding arms or twisting elbows.
+    final armAlign = <int, _Quat>{};
+    for (final entry in mapped.entries) {
+      final tgtJoint = entry.key;
+      final srcJoint = entry.value;
+      final name = tgt.names[tgtJoint];
+      if (!_isArmBone(name)) continue;
+
+      final vTgt = tgt.boneDirection(tgtJoint);
+      final vSrc = src.boneDirection(srcJoint);
+      if (vTgt != null && vSrc != null) {
+        armAlign[tgtJoint] = _Quat.fromTo(vSrc, vTgt);
+      }
+    }
+
+    // Propagate forearm alignment to hands and fingers so wrists and fingers follow the arm direction cleanly
+    for (final j in mapped.keys) {
+      final name = tgt.names[j]?.toLowerCase() ?? '';
+      if (name.contains('hand') || name.contains('wrist') || name.contains('thumb') ||
+          name.contains('index') || name.contains('middle') || name.contains('ring') || name.contains('pinky')) {
+        var p = tgt.parent[j];
+        while (p >= 0) {
+          if (armAlign.containsKey(p)) {
+            armAlign[j] = armAlign[p]!;
+            break;
+          }
+          p = tgt.parent[p];
+        }
+      }
+    }
+
+    // Standard humanoid twist rules (MetaHuman & UE mannequin rigs)
+    const twistRules = [
+      (bone: 'upperarm_twist_01_l', driver: 'upperarm_l', weight: -2.0 / 3.0),
+      (bone: 'upperarm_twist_02_l', driver: 'upperarm_l', weight: -1.0 / 3.0),
+      (bone: 'upperarm_twist_01_r', driver: 'upperarm_r', weight: -2.0 / 3.0),
+      (bone: 'upperarm_twist_02_r', driver: 'upperarm_r', weight: -1.0 / 3.0),
+      (bone: 'lowerarm_twist_01_l', driver: 'lowerarm_l', weight: 1.0 / 3.0),
+      (bone: 'lowerarm_twist_02_l', driver: 'lowerarm_l', weight: 2.0 / 3.0),
+      (bone: 'lowerarm_twist_01_r', driver: 'lowerarm_r', weight: 1.0 / 3.0),
+      (bone: 'lowerarm_twist_02_r', driver: 'lowerarm_r', weight: 2.0 / 3.0),
+      (bone: 'thigh_twist_01_l', driver: 'thigh_l', weight: -0.5),
+      (bone: 'calf_twist_01_l', driver: 'calf_l', weight: 0.5),
+      (bone: 'thigh_twist_01_r', driver: 'thigh_r', weight: -0.5),
+      (bone: 'calf_twist_01_r', driver: 'calf_r', weight: 0.5),
+    ];
+
+    final activeTwistRules = <({int bone, int driver, double weight})>[];
+    for (final r in twistRules) {
+      final bIdx = tgt.names.indexWhere((n) => n?.toLowerCase() == r.bone);
+      final dIdx = tgt.names.indexWhere((n) => n?.toLowerCase() == r.driver);
+      if (bIdx >= 0 && dIdx >= 0 && joints.contains(bIdx)) {
+        activeTwistRules.add((bone: bIdx, driver: dIdx, weight: r.weight));
+      }
+    }
+
+    final hasDynamicChannels = <int>{...mapped.keys};
+
     // Check whether the target skeleton shares the bone axis convention
-    // and rest pose orientation of the source skeleton (e.g. UE4 Manny → UE5 Quinn).
-    // When skeletons share the bone axes, direct model-space rotation transfer
-    // preserves the authored world orientations.
-    // When skeletons differ in bone axis convention (e.g. Unreal +X vs Blender/glTF +Y,
-    // where thigh or pelvis can differ by 90-180°), direct model-space transfer
-    // twists and contorts the mesh, so we apply the delta rotation relative
-    // to the target's own rest pose.
+    // and rest pose orientation of the source skeleton (e.g. UE4 Manny -> UE5 Quinn).
     final sharesRestAxes = !mapped.entries.any((e) {
       final name = tgt.names[e.key]?.toLowerCase() ?? '';
       if (name != 'pelvis' &&
@@ -392,14 +513,9 @@ abstract final class GlbAnimationRetargeter {
       }
       final diff = (rootAlign * srcRestWorld[e.value] * tgtRestWorld[e.key].inverse()).normalized();
       final angle = 2 * math.acos(diff.w.abs().clamp(0.0, 1.0));
-      return angle > (25.0 * math.pi / 180.0);
+      return angle > (45.0 * math.pi / 180.0);
     });
 
-    // When rest poses differ (e.g. source T-pose vs target A-pose, such as MetaHuman
-    // where arms slant down 50°+), align each target bone's rest world orientation to
-    // the source rest bone direction. This ensures animation deltas authored from
-    // T-pose apply relative to an aligned reference instead of compounding the slant
-    // and causing arms/hands to cross inward.
     final tgtRestAligned = List<_Quat>.generate(tgt.count, (j) {
       final s = mapped[j];
       if (s == null) return tgtRestWorld[j];
@@ -423,7 +539,16 @@ abstract final class GlbAnimationRetargeter {
         final parentWorld = p < 0 ? _Quat.identity : tgtWorld[p];
         final s = mapped[j];
         if (s != null) {
-          if (sharesRestAxes) {
+          final isArm = _isArmBone(tgt.names[j]);
+          if (isArm && armAlign.containsKey(j)) {
+            // A-Pose <-> T-Pose alignment:
+            // Delta rotation authored relative to source rest orientation,
+            // rotated into target arm frame via armAlign, then applied to target rest orientation.
+            final qAlign = armAlign[j]!;
+            final deltaSrc = (srcWorld[s] * srcRestWorld[s].inverse()).normalized();
+            final deltaTgt = (qAlign * deltaSrc * qAlign.inverse()).normalized();
+            tgtWorld[j] = (deltaTgt * tgtRestWorld[j]).normalized();
+          } else if (sharesRestAxes) {
             tgtWorld[j] = (rootAlign * srcWorld[s]).normalized();
           } else {
             final delta = (srcWorld[s] * srcRestWorld[s].inverse()).normalized();
@@ -435,6 +560,26 @@ abstract final class GlbAnimationRetargeter {
           tgtWorld[j] = parentWorld * local;
           if (joints.contains(j)) rotOut[j]!.add(local);
         }
+      }
+
+      // Evaluate active twist bones for the frame
+      for (final rule in activeTwistRules) {
+        final bIdx = rule.bone;
+        final dIdx = rule.driver;
+        final p = tgt.parent[bIdx];
+        if (p < 0) continue;
+        final parentWorld = tgtWorld[p];
+
+        final driverDelta = (tgtWorld[dIdx] * tgtRestWorld[dIdx].inverse()).normalized();
+        final axis = tgt.boneDirection(dIdx) ?? const [1.0, 0.0, 0.0];
+        final (_, twist) = _Quat.swingTwist(driverDelta, axis);
+        final twistShare = twist.scaled(rule.weight);
+
+        tgtWorld[bIdx] = (twistShare * tgtRestWorld[bIdx]).normalized();
+        if (joints.contains(bIdx) && rotOut[bIdx]!.isNotEmpty) {
+          rotOut[bIdx]!.last = (parentWorld.inverse() * tgtWorld[bIdx]).normalized();
+        }
+        hasDynamicChannels.add(bIdx);
       }
     }
 
@@ -499,10 +644,17 @@ abstract final class GlbAnimationRetargeter {
 
     final sortedJoints = joints.toList()..sort();
     for (final j in sortedJoints) {
+      final name = tgt.names[j] ?? '';
+      final isDynamic = hasDynamicChannels.contains(j);
+
+      // Retargeter isolation: do not generate animation tracks for unmapped face or corrective joints
+      if (!isDynamic && isCorrectiveOrFace(name)) {
+        continue;
+      }
+
       // Rotation.
       final keys = rotOut[j]!;
-      final varies = mapped.containsKey(j);
-      if (varies) {
+      if (isDynamic) {
         final data = Float32List(keys.length * 4);
         _Quat? prev;
         for (var k = 0; k < keys.length; k++) {
@@ -518,7 +670,7 @@ abstract final class GlbAnimationRetargeter {
         channel(j, 'rotation', constInput, addAccessor(data, 'VEC4', constTimes.length));
       }
 
-      // Translation.
+      // Translation: only root/pelvis get dynamic sampled translations; other unmapped bones don't need constant channels if isolated
       final sampled = j == rootT ? rootTranslation : (j == pelvisT ? pelvisTranslation : null);
       if (sampled != null) {
         final data = Float32List(sampled.length * 3);
@@ -526,7 +678,7 @@ abstract final class GlbAnimationRetargeter {
           data.setAll(k * 3, sampled[k]);
         }
         channel(j, 'translation', frameInput, addAccessor(data, 'VEC3', sampled.length));
-      } else {
+      } else if (!isCorrectiveOrFace(name) || isDynamic) {
         final t = tgt.restT[j];
         final data = Float32List.fromList([for (var k = 0; k < constTimes.length; k++) ...t]);
         channel(j, 'translation', constInput, addAccessor(data, 'VEC3', constTimes.length));
@@ -553,7 +705,7 @@ abstract final class GlbAnimationRetargeter {
     ];
 
     final mappedNames = [for (final j in sortedJoints) if (mapped.containsKey(j)) tgt.names[j]!];
-    final restNames = [for (final j in sortedJoints) if (!mapped.containsKey(j)) tgt.names[j] ?? '#$j'];
+    final restNames = [for (final j in sortedJoints) if (!mapped.containsKey(j) && !hasDynamicChannels.contains(j)) tgt.names[j] ?? '#$j'];
     final targetNames = {for (final j in joints) tgt.names[j]};
     final ignored = [
       for (final i in tracks.animatedNodes)
@@ -569,6 +721,8 @@ abstract final class GlbAnimationRetargeter {
       restBones: restNames,
       ignoredSourceBones: ignored,
       pelvisTranslationScale: pelvisScale,
+      sourceArmPose: srcArmPose,
+      targetArmPose: tgtArmPose,
     );
   }
 
@@ -633,6 +787,20 @@ class _Quat {
     final s = math.sin(theta);
     final wa = math.sin((1 - t) * theta) / s, wb = math.sin(t * theta) / s;
     return _Quat(a.x * wa + bb.x * wb, a.y * wa + bb.y * wb, a.z * wa + bb.z * wb, a.w * wa + bb.w * wb);
+  }
+
+  /// Scales rotation angle by [weight] (slerp from identity).
+  _Quat scaled(double weight) => slerp(identity, this, weight);
+
+  /// Decomposes rotation into swing (perpendicular to axis) and twist (around axis).
+  static (_Quat swing, _Quat twist) swingTwist(_Quat q, List<double> axis) {
+    final dot = q.x * axis[0] + q.y * axis[1] + q.z * axis[2];
+    final twist = _Quat(axis[0] * dot, axis[1] * dot, axis[2] * dot, q.w).normalized();
+    if (twist.w == 0 && twist.x == 0 && twist.y == 0 && twist.z == 0) {
+      return (q, identity);
+    }
+    final swing = (q * twist.inverse()).normalized();
+    return (swing, twist);
   }
 
   static _Quat fromTo(List<double> vFrom, List<double> vTo) {
@@ -802,6 +970,25 @@ class _Skeleton {
       if (l > 0.001) return [dx / l, dy / l, dz / l];
     }
     return null;
+  }
+
+  /// Detects whether this skeleton is in A-Pose or T-Pose based on upper arm downward slant.
+  SkeletonArmPose detectArmPose() {
+    for (final name in ['upperarm_l', 'upperarm_r', 'leftarm', 'rightarm']) {
+      final idx = names.indexWhere((n) {
+        if (n == null) return false;
+        final clean = n.toLowerCase().startsWith('mixamorig:') ? n.toLowerCase().substring(10) : n.toLowerCase();
+        return clean == name;
+      });
+      if (idx >= 0) {
+        final dir = boneDirection(idx);
+        if (dir != null) {
+          // In Y-up coordinate space, downward slant > 20° has dir[1] < -0.35.
+          return dir[1] < -0.35 ? SkeletonArmPose.aPose : SkeletonArmPose.tPose;
+        }
+      }
+    }
+    return SkeletonArmPose.tPose;
   }
 }
 
