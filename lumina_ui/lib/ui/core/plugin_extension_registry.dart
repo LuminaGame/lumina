@@ -596,14 +596,18 @@ class PluginExtensionRegistry extends ChangeNotifier implements LuminaEditorHost
 
   @override
   Widget build3DViewport(BuildContext context, Plugin3DViewportOptions options) {
-    return _Plugin3DViewportContainer(options: options);
+    return _Plugin3DViewportContainer(
+      options: options,
+      projectDir: _projectDir?.call(),
+    );
   }
 }
 
 class _Plugin3DViewportContainer extends StatefulWidget {
   final Plugin3DViewportOptions options;
+  final String? projectDir;
 
-  const _Plugin3DViewportContainer({required this.options});
+  const _Plugin3DViewportContainer({required this.options, this.projectDir});
 
   @override
   State<_Plugin3DViewportContainer> createState() => _Plugin3DViewportContainerState();
@@ -623,7 +627,8 @@ class _Plugin3DViewportContainerState extends State<_Plugin3DViewportContainer> 
   void didUpdateWidget(covariant _Plugin3DViewportContainer oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.options.meshPath != oldWidget.options.meshPath ||
-        widget.options.glbBytes != oldWidget.options.glbBytes) {
+        widget.options.glbBytes != oldWidget.options.glbBytes ||
+        widget.projectDir != oldWidget.projectDir) {
       _loadMesh();
     }
   }
@@ -637,12 +642,23 @@ class _Plugin3DViewportContainerState extends State<_Plugin3DViewportContainer> 
     }
     if (key == _loadedKey && _mesh != null) return;
 
+    if (mounted && _loadedKey != key) {
+      setState(() {
+        _mesh = null;
+        _loadedKey = key;
+      });
+    }
+
     try {
       Uint8List? bytes = opts.glbBytes;
       if (bytes == null && opts.meshPath != null) {
         final path = opts.meshPath!;
         var absPath = path;
-        final file = File(absPath);
+        var file = File(absPath);
+        if (!file.existsSync() && !path.startsWith('/') && !path.contains(':\\') && widget.projectDir != null) {
+          absPath = '${widget.projectDir}/$path'.replaceAll(r'\', '/');
+          file = File(absPath);
+        }
         if (absPath.toLowerCase().endsWith('.glb') && file.existsSync()) {
           bytes = await file.readAsBytes();
         } else {
@@ -671,6 +687,17 @@ class _Plugin3DViewportContainerState extends State<_Plugin3DViewportContainer> 
       jointLocalPose: widget.options.jointLocalPose,
       overlayHUD: widget.options.overlayHUD,
       initialCameraDistance: widget.options.cameraDistance,
+      ghostSkeletons: [
+        if (widget.options.ghostSkeletons != null)
+          for (final g in widget.options.ghostSkeletons!)
+            SubEditorGhostSkeleton(
+              jointLocalPose: g.jointLocalPose,
+              color: g.color,
+              opacity: g.opacity,
+              label: g.label,
+              volumetric: g.volumetric,
+            ),
+      ],
       yUpCamera: false,
     );
   }
