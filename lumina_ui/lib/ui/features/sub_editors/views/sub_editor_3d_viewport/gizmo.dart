@@ -265,10 +265,14 @@ mixin _SubEditor3DViewportGizmo on _SubEditor3DViewportStateBase {
     final spanZ = (maxZ - minZ).abs();
     final bool isZUp = (spanZ >= spanY);
 
+    final visibleLower = widget.visibleBoneNames?.map((n) => n.toLowerCase()).toSet();
     String? bestBone;
     double bestDist = maxDistance;
 
     for (final entry in positions.entries) {
+      if (visibleLower != null && !visibleLower.contains(entry.key.toLowerCase())) {
+        continue;
+      }
       final p = entry.value;
       final target = Vector3(cx + _cameraPan.dx, cy + _cameraPan.dy, cz);
       final proj = projectWorldToViewport(

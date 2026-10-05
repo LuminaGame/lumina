@@ -9,11 +9,18 @@ class SubEditorGhostSkeleton {
   final Map<String, List<double>> jointLocalPose;
   final Color color;
   final double opacity;
+  final bool volumetric;
 
   /// A short tag drawn at the skeleton's top joint (`15`, `seam`).
   final String? label;
 
-  const SubEditorGhostSkeleton({required this.jointLocalPose, required this.color, this.opacity = 0.6, this.label});
+  const SubEditorGhostSkeleton({
+    required this.jointLocalPose,
+    required this.color,
+    this.opacity = 0.6,
+    this.label,
+    this.volumetric = true,
+  });
 }
 
 enum SubEditorMarkerShape { dot, diamond, ring }

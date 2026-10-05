@@ -14,6 +14,7 @@ class _SubEditorGizmoPainter extends CustomPainter {
   /// `SubEditor3DViewport.jointLocalPose`) the bones are drawn in instead of
   /// the rest pose.
   final Map<String, List<double>>? jointLocalPose;
+  final Set<String>? visibleBoneNames;
 
   /// Onion-skin skeletons, IK markers and drawn paths (GLB frame).
   final List<SubEditorGhostSkeleton> ghostSkeletons;
@@ -34,6 +35,7 @@ class _SubEditorGizmoPainter extends CustomPainter {
     this.selectedSocket,
     this.jointDeltas,
     this.jointLocalPose,
+    this.visibleBoneNames,
     this.ghostSkeletons = const [],
     this.overlayMarkers = const [],
     this.overlayPaths = const [],
@@ -388,6 +390,8 @@ class _SubEditorGizmoPainter extends CustomPainter {
         ..color = Colors.amber
         ..style = PaintingStyle.fill;
 
+      final visibleLower = visibleBoneNames?.map((n) => n.toLowerCase()).toSet();
+
       void drawBoneNode(
         GlbNode node,
         Offset? parentProj,
@@ -395,10 +399,11 @@ class _SubEditorGizmoPainter extends CustomPainter {
       ) {
         final pos = boneWorldPositions[node.name];
         if (pos != null) {
+          final isVisible = visibleLower == null || visibleLower.contains(node.name.toLowerCase());
           final isSelected = selectedNode?.name == node.name || (selectedBoneName != null && selectedBoneName == node.name);
           final proj = projectPoint(pos[0], pos[1], pos[2]);
 
-          if (proj != null) {
+          if (proj != null && isVisible) {
             if (parentProj != null) {
               canvas.drawLine(
                 parentProj,
@@ -428,8 +433,11 @@ class _SubEditorGizmoPainter extends CustomPainter {
             }
           }
 
+          final nextParent = isVisible ? (proj ?? parentProj) : parentProj;
+          final nextSelected = isVisible ? isSelected : isParentSelected;
+
           for (final child in node.children) {
-            drawBoneNode(child, proj ?? parentProj, isSelected);
+            drawBoneNode(child, nextParent, nextSelected);
           }
         }
       }

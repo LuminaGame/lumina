@@ -14,6 +14,9 @@ class SubEditor3DViewport extends StatefulWidget {
   final String? meshSourcePath;
   final List<SubEditorMeshComponent>? meshComponents;
   final GlbNode? selectedNode;
+  final String? selectedBoneName;
+  final ValueChanged<String>? onBoneSelected;
+  final void Function(String boneName, List<double> newWorldPos, List<double> delta)? onBoneMoved;
   final PreviewShape initialShape;
   final bool showShapeSelector;
   final Widget? overlayHUD;
@@ -171,6 +174,9 @@ class SubEditor3DViewport extends StatefulWidget {
   /// Polylines drawn over the scene (a drawn root path), GLB frame.
   final List<SubEditorOverlayPath> overlayPaths;
 
+  /// Optional set of bone names to exclusively display and pick in the viewport.
+  final Set<String>? visibleBoneNames;
+
   const SubEditor3DViewport({
     super.key,
     required this.title,
@@ -178,6 +184,10 @@ class SubEditor3DViewport extends StatefulWidget {
     this.meshSourcePath,
     this.meshComponents,
     this.selectedNode,
+    this.selectedBoneName,
+    this.onBoneSelected,
+    this.onBoneMoved,
+    this.visibleBoneNames,
     PreviewShape? initialShape,
     this.showShapeSelector = true,
     this.overlayHUD,

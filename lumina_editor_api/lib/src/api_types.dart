@@ -122,6 +122,7 @@ class Plugin3DViewportOptions {
   final void Function(String boneName)? onBoneSelected;
   final void Function(String boneName, List<double> newWorldPos, List<double> delta)? onBoneMoved;
   final bool showGizmo;
+  final Set<String>? visibleBoneNames;
 
   const Plugin3DViewportOptions({
     this.title = 'Viewport',
@@ -136,6 +137,7 @@ class Plugin3DViewportOptions {
     this.onBoneSelected,
     this.onBoneMoved,
     this.showGizmo = true,
+    this.visibleBoneNames,
   });
 }
 

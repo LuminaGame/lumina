@@ -186,6 +186,7 @@ class _Plugin3DViewportContainerState extends State<Plugin3DViewportContainer> {
       initialCameraDistance: widget.options.cameraDistance,
       showBones: widget.options.showBones,
       selectedBoneName: _selectedBoneName,
+      visibleBoneNames: widget.options.visibleBoneNames,
       onBoneSelected: _handleBoneSelected,
       onBoneMoved: widget.options.onBoneMoved,
       transformGizmo: widget.options.showGizmo ? _transformGizmo : null,
