@@ -162,8 +162,91 @@ abstract final class GlbAnimationRetargeter {
   static GlbSkeletonMatch match({required Uint8List target, required Uint8List clip, int animationIndex = 0}) =>
       matchNames(jointNames(target), animatedNodeNames(clip, animationIndex: animationIndex));
 
+  static const Map<String, List<String>> _humanoidSynonyms = {
+    'pelvis': ['hips', 'pelvis', 'root'],
+    'hips': ['hips', 'pelvis', 'root'],
+    'spine_01': ['spine1', 'spine_01', 'spine'],
+    'spine1': ['spine1', 'spine_01', 'spine'],
+    'spine': ['spine1', 'spine_01', 'spine'],
+    'spine_02': ['spine2', 'spine_02'],
+    'spine2': ['spine2', 'spine_02'],
+    'spine_03': ['chest', 'spine3', 'spine_03'],
+    'spine3': ['chest', 'spine3', 'spine_03'],
+    'chest': ['chest', 'spine_03', 'spine3'],
+    'neck_01': ['neck1', 'neck_01', 'neck'],
+    'neck1': ['neck1', 'neck_01', 'neck'],
+    'neck': ['neck1', 'neck_01', 'neck'],
+    'head': ['head', 'head_01'],
+    'clavicle_l': ['leftshoulder', 'clavicle_l', 'shoulder_l'],
+    'leftshoulder': ['leftshoulder', 'clavicle_l', 'shoulder_l'],
+    'upperarm_l': ['leftarm', 'upperarm_l', 'arm_l'],
+    'leftarm': ['leftarm', 'upperarm_l', 'arm_l'],
+    'lowerarm_l': ['leftforearm', 'lowerarm_l', 'forearm_l'],
+    'leftforearm': ['leftforearm', 'lowerarm_l', 'forearm_l'],
+    'hand_l': ['lefthand', 'hand_l'],
+    'lefthand': ['lefthand', 'hand_l'],
+    'clavicle_r': ['rightshoulder', 'clavicle_r', 'shoulder_r'],
+    'rightshoulder': ['rightshoulder', 'clavicle_r', 'shoulder_r'],
+    'upperarm_r': ['rightarm', 'upperarm_r', 'arm_r'],
+    'rightarm': ['rightarm', 'upperarm_r', 'arm_r'],
+    'lowerarm_r': ['rightforearm', 'lowerarm_r', 'forearm_r'],
+    'rightforearm': ['rightforearm', 'lowerarm_r', 'forearm_r'],
+    'hand_r': ['righthand', 'hand_r'],
+    'righthand': ['righthand', 'hand_r'],
+    'thigh_l': ['leftupleg', 'thigh_l', 'upleg_l'],
+    'leftupleg': ['leftupleg', 'thigh_l', 'upleg_l'],
+    'calf_l': ['leftleg', 'calf_l', 'lowerleg_l'],
+    'leftleg': ['leftleg', 'calf_l', 'lowerleg_l'],
+    'foot_l': ['leftfoot', 'foot_l'],
+    'leftfoot': ['leftfoot', 'foot_l'],
+    'thigh_r': ['rightupleg', 'thigh_r', 'upleg_r'],
+    'rightupleg': ['rightupleg', 'thigh_r', 'upleg_r'],
+    'calf_r': ['rightleg', 'calf_r', 'lowerleg_r'],
+    'rightleg': ['rightleg', 'calf_r', 'lowerleg_r'],
+    'foot_r': ['rightfoot', 'foot_r'],
+    'rightfoot': ['rightfoot', 'foot_r'],
+  };
+
+  static int? _resolveSourceBone(
+    String targetName,
+    Map<String, int> srcByName,
+    Map<String, int> srcByNameLower,
+  ) {
+    final direct = srcByName[targetName] ?? srcByNameLower[targetName.toLowerCase()];
+    if (direct != null) return direct;
+
+    final lower = targetName.toLowerCase();
+    final clean = lower.startsWith('mixamorig:') ? lower.substring(10) : lower;
+    final directClean = srcByNameLower[clean];
+    if (directClean != null) return directClean;
+
+    final candidates = _humanoidSynonyms[clean];
+    if (candidates != null) {
+      for (final cand in candidates) {
+        final match = srcByNameLower[cand];
+        if (match != null) return match;
+      }
+    }
+    return null;
+  }
+
   static GlbSkeletonMatch matchNames(Set<String> targetJoints, Set<String> animated) {
-    final missing = [for (final n in animated) if (!targetJoints.contains(n)) n]..sort();
+    final targetLower = {for (final j in targetJoints) j.toLowerCase()};
+    bool matches(String animBone) {
+      if (targetJoints.contains(animBone)) return true;
+      final lower = animBone.toLowerCase();
+      if (targetLower.contains(lower)) return true;
+      final clean = lower.startsWith('mixamorig:') ? lower.substring(10) : lower;
+      if (targetLower.contains(clean)) return true;
+      final synonyms = _humanoidSynonyms[clean];
+      if (synonyms != null) {
+        for (final s in synonyms) {
+          if (targetLower.contains(s)) return true;
+        }
+      }
+      return false;
+    }
+    final missing = [for (final n in animated) if (!matches(n)) n]..sort();
     return GlbSkeletonMatch(matched: animated.length - missing.length, animated: animated.length, missing: missing);
   }
 
@@ -211,7 +294,7 @@ abstract final class GlbAnimationRetargeter {
     final mapped = <int, int>{}; // target node → source node
     for (final j in joints) {
       final name = tgt.names[j];
-      final s = name == null ? null : (srcByName[name] ?? srcByNameLower[name.toLowerCase()]);
+      final s = name == null ? null : _resolveSourceBone(name, srcByName, srcByNameLower);
       if (s != null) mapped[j] = s;
     }
     if (mapped.isEmpty) {
