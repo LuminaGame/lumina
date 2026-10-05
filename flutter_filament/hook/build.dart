@@ -410,7 +410,7 @@ void main(List<String> args) async {
   });
 }
 
-/// Filament's checkout (patched v1.77.0 with its prebuilt `out/` folders), in
+/// Filament's checkout (patched v1.77.2 with its prebuilt `out/` folders), in
 /// order:
 /// 1. `LUMINA_FILAMENT_DIR` — reaches the hook only when it runs directly: the
 ///    hooks runner forwards an allow-list of variables, never `LUMINA_*`;

@@ -14,7 +14,7 @@ The Lumina repositories are meant to be checked out side by side:
   tools/         https://github.com/LuminaGame/tools
   plugins/       https://github.com/LuminaGame/plugins
   marketplace/   https://github.com/LuminaGame/marketplace
-  filament/      patched Filament v1.77.0 with its prebuilt out/ folders
+  filament/      patched Filament v1.77.2 with its prebuilt out/ folders
   test-assets/   https://github.com/LuminaGame/test-assets (optional, Git LFS)
 ```
 
@@ -66,7 +66,7 @@ A package resolved from git lives in the pub cache and has no Filament next to i
 
 ## Build Filament
 
-The hooks expect the static libraries in `filament/out/cmake-release/` (Linux and macOS) or `filament/out/cmake-release-windows/` (Windows). Lumina uses upstream Filament v1.77.0 with three local patches, kept in `third_party/filament/patches/` and explained in `third_party/filament/README.md`:
+The hooks expect the static libraries in `filament/out/cmake-release/` (Linux and macOS) or `filament/out/cmake-release-windows/` (Windows). Lumina uses upstream Filament v1.77.2 with three local patches, kept in `third_party/filament/patches/` and explained in `third_party/filament/README.md`:
 
 - a bounds fix in the bundled `libassimp`;
 - a `RenderPass.cpp` change that keeps skinned and morphed renderables out of the screen-space reflections pass (without it the Vulkan backend loses the device);
@@ -74,7 +74,7 @@ The hooks expect the static libraries in `filament/out/cmake-release/` (Linux an
 
 ### Prebuilt archive
 
-The quickest way to get Filament is the prebuilt archive. `tool/filament/VERSION` names it (for example `1.77.0-lumina.2`), and each version is published once, in its own GitHub release `filament-<VERSION>` (for example [`filament-1.77.0-lumina.2`](https://github.com/LuminaGame/lumina/releases/tag/filament-1.77.0-lumina.2)): `filament-<VERSION>-windows-x64.zip` and `filament-<VERSION>-linux-x64.tar.gz`, each with a `.sha256` file. That release is a pre-release that is never marked Latest, its notes list the upstream tag and the patches, and its assets never change; a new build gets a new version. Lumina releases up to v0.0.1-dev.6 attached the archives to their own release instead, and still carry them. The archive holds one folder that works as `filament_dir`: the headers, sources and static libraries the hooks read (listed in `tool/filament/prebuilt_manifest.txt`), `matc`, the patches and a `lumina-filament.json` describing the build.
+The quickest way to get Filament is the prebuilt archive. `tool/filament/VERSION` names it (for example `1.77.2-lumina.1`), and each version is published once, in its own GitHub release `filament-<VERSION>` (for example [`filament-1.77.2-lumina.1`](https://github.com/LuminaGame/lumina/releases/tag/filament-1.77.2-lumina.1)): `filament-<VERSION>-windows-x64.zip` and `filament-<VERSION>-linux-x64.tar.gz`, each with a `.sha256` file. That release is a pre-release that is never marked Latest, its notes list the upstream tag and the patches, and its assets never change; a new build gets a new version. Lumina releases up to v0.0.1-dev.6 attached the archives to their own release instead, and still carry them. The archive holds one folder that works as `filament_dir`: the headers, sources and static libraries the hooks read (listed in `tool/filament/prebuilt_manifest.txt`), `matc`, the patches and a `lumina-filament.json` describing the build.
 
 Download, verify and unpack it with:
 

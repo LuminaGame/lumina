@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Filament upgraded to v1.77.2 (prebuilt `1.77.2-lumina.1`): Metal external image handles, correct
+  Vulkan depth/stencil render-target format reporting. The material version stays 77. The prebuilt
+  scripts re-apply the patches after a tag change (a forced checkout used to drop them silently).
 - Filament upgraded to v1.77.0 (from a 1.75.0 release-candidate cut).
 - `FilamentTransformManager.getTransformAt` implemented (new C function
   `filament_transform_manager_get_transform_i`); previously threw `UnimplementedError`.

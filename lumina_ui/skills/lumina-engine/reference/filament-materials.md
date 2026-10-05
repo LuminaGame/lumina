@@ -1,6 +1,6 @@
 # Filament materials: writing a material's source
 
-Upstream reference: https://google.github.io/filament/main/materials.html (Filament v1.77.0).
+Upstream reference: https://google.github.io/filament/main/materials.html (Filament v1.77.2).
 Condensed from the Filament Materials Guide, Copyright (C) Google LLC, Apache License 2.0.
 
 ## The workflow in Lumina
@@ -10,7 +10,7 @@ Condensed from the Filament Materials Guide, Copyright (C) Google LLC, Apache Li
 3. `compile_material {asset, save: true}` compiles the current source and, when `save` is true, writes the `.lmas` (source, parameter values, compiled package). Leave out `save: true` and nothing reaches disk.
 4. `set_material_parameter {asset, name, value}` sets a value for a float, float4/colour or bool parameter. `set_material_texture {asset, parameter, texture}` binds a texture asset to a sampler. `set_material_settings` changes the header's shading model, blending and `doubleSided`, then recompiles.
 
-Lumina compiles the whole source with Filament's own `.mat` parser, the one `matc` v1.77.0 runs, in process: every header key matc knows (`shadingModel`, `blending`, `transparency`, `maskThreshold`, `culling`, `colorWrite`, `depthWrite`, `depthCulling`, `doubleSided`, `requires`, `variables`, `vertexDomain`, `refractionMode`/`refractionType`, `specularAntiAliasing`, `quality`, `featureLevel`, `constants`, …), the `vertex` and `fragment` blocks in any order, and `#include "file"` resolved from the material's own folder. A source matc accepts compiles with the same meaning; one it rejects does not. Lumina only adds two things: the package targets every graphics API, and a header without `name` takes the asset's name.
+Lumina compiles the whole source with Filament's own `.mat` parser, the one `matc` v1.77.2 runs, in process: every header key matc knows (`shadingModel`, `blending`, `transparency`, `maskThreshold`, `culling`, `colorWrite`, `depthWrite`, `depthCulling`, `doubleSided`, `requires`, `variables`, `vertexDomain`, `refractionMode`/`refractionType`, `specularAntiAliasing`, `quality`, `featureLevel`, `constants`, …), the `vertex` and `fragment` blocks in any order, and `#include "file"` resolved from the material's own folder. A source matc accepts compiles with the same meaning; one it rejects does not. Lumina only adds two things: the package targets every graphics API, and a header without `name` takes the asset's name.
 
 Errors: `compile_material` / `get_material_issues` return matc's own messages verbatim, each with the `.mat` line it names (`line` 0 when it names none): header syntax errors (`Syntax error, … at line:3 position:18`), invalid values (`Value 'bogus' is invalid. Valid values are: …`), glslang errors in either block (`ERROR: 0:14: 'x' : undeclared identifier`, where 14 is the `.mat` line), `prepareMaterial() is not called`. Unknown header keys compile with a warning (`Ignoring config entry (unknown key): "…"`). While the text is being typed the editor also shows quick brace/block hints; they never stop a compile.
 

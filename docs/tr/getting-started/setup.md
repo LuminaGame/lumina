@@ -14,7 +14,7 @@ Lumina repository'leri yan yana checkout edilmek üzere tasarlanmıştır:
   tools/         https://github.com/LuminaGame/tools
   plugins/       https://github.com/LuminaGame/plugins
   marketplace/   https://github.com/LuminaGame/marketplace
-  filament/      prebuilt out/ klasörleriyle yamalı Filament v1.77.0
+  filament/      prebuilt out/ klasörleriyle yamalı Filament v1.77.2
   test-assets/   https://github.com/LuminaGame/test-assets (isteğe bağlı, Git LFS)
 ```
 
@@ -66,7 +66,7 @@ Git'ten çözülen bir paket pub cache'te durur ve yanında Filament yoktur; use
 
 ## Filament'i build etmek
 
-Hook'lar static kütüphaneleri `filament/out/cmake-release/` (Linux ve macOS) ya da `filament/out/cmake-release-windows/` (Windows) altında bekler. Lumina, upstream Filament v1.77.0'ı üç yerel yamayla kullanır; yamalar `third_party/filament/patches/` altındadır ve `third_party/filament/README.md` içinde açıklanır:
+Hook'lar static kütüphaneleri `filament/out/cmake-release/` (Linux ve macOS) ya da `filament/out/cmake-release-windows/` (Windows) altında bekler. Lumina, upstream Filament v1.77.2'ı üç yerel yamayla kullanır; yamalar `third_party/filament/patches/` altındadır ve `third_party/filament/README.md` içinde açıklanır:
 
 - gömülü `libassimp` içinde bir sınır (bounds) düzeltmesi;
 - skinned ve morph'lu renderable'ları screen-space reflections pass'inin dışında tutan bir `RenderPass.cpp` değişikliği (bu olmadan Vulkan backend'i device'ı kaybeder);
@@ -74,7 +74,7 @@ Hook'lar static kütüphaneleri `filament/out/cmake-release/` (Linux ve macOS) y
 
 ### Hazır arşiv
 
-Filament'i edinmenin en hızlı yolu hazır arşivdir. `tool/filament/VERSION` onu adlandırır (örneğin `1.77.0-lumina.2`) ve her sürüm bir kez, kendi GitHub release'inde yayımlanır: `filament-<VERSION>` (örneğin [`filament-1.77.0-lumina.2`](https://github.com/LuminaGame/lumina/releases/tag/filament-1.77.0-lumina.2)); içinde `filament-<VERSION>-windows-x64.zip` ve `filament-<VERSION>-linux-x64.tar.gz` dosyaları, her biri bir `.sha256` dosyasıyla birlikte bulunur. Bu release hiçbir zaman Latest olarak işaretlenmeyen bir pre-release'tir, notları upstream tag'ini ve yamaları listeler ve dosyaları asla değişmez; yeni bir build yeni bir sürüm alır. v0.0.1-dev.6'ya kadarki Lumina release'leri arşivleri kendi release'lerine ekliyordu ve hâlâ taşıyor. Arşivde `filament_dir` olarak kullanılabilen tek bir klasör vardır: hook'ların okuduğu header'lar, kaynaklar ve static kütüphaneler (`tool/filament/prebuilt_manifest.txt` içinde listelenir), `matc`, yamalar ve build'i tarif eden bir `lumina-filament.json`.
+Filament'i edinmenin en hızlı yolu hazır arşivdir. `tool/filament/VERSION` onu adlandırır (örneğin `1.77.2-lumina.1`) ve her sürüm bir kez, kendi GitHub release'inde yayımlanır: `filament-<VERSION>` (örneğin [`filament-1.77.2-lumina.1`](https://github.com/LuminaGame/lumina/releases/tag/filament-1.77.2-lumina.1)); içinde `filament-<VERSION>-windows-x64.zip` ve `filament-<VERSION>-linux-x64.tar.gz` dosyaları, her biri bir `.sha256` dosyasıyla birlikte bulunur. Bu release hiçbir zaman Latest olarak işaretlenmeyen bir pre-release'tir, notları upstream tag'ini ve yamaları listeler ve dosyaları asla değişmez; yeni bir build yeni bir sürüm alır. v0.0.1-dev.6'ya kadarki Lumina release'leri arşivleri kendi release'lerine ekliyordu ve hâlâ taşıyor. Arşivde `filament_dir` olarak kullanılabilen tek bir klasör vardır: hook'ların okuduğu header'lar, kaynaklar ve static kütüphaneler (`tool/filament/prebuilt_manifest.txt` içinde listelenir), `matc`, yamalar ve build'i tarif eden bir `lumina-filament.json`.
 
 İndirmek, doğrulamak ve açmak için:
 

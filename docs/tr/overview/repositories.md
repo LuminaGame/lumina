@@ -14,7 +14,7 @@ Lumina kod tabanı, LuminaGame organizasyonundaki birkaç repository'ye dağılm
 | [marketplace](https://github.com/LuminaGame/marketplace) | Lumina Marketplace: `shelf` API sunucusu, ortak paket (`lumina_marketplace_shared`, DTO'lar ve `MarketplaceClient`) ve Flutter web arayüzü. |
 | [test-assets](https://github.com/LuminaGame/test-assets) | Testlerin ve smoke testlerin kullandığı ortak 3D modeller ve fixture'lar (Git LFS, isteğe bağlı). |
 
-Google Filament hiçbir repository'de yer almaz. Lumina, birkaç yerel yamayla Filament v1.77.0 kullanır; Filament bir kez static kütüphaneler olarak build edilir (bkz. [Checkout ve kurulum](../getting-started/setup.md)).
+Google Filament hiçbir repository'de yer almaz. Lumina, birkaç yerel yamayla Filament v1.77.2 kullanır; Filament bir kez static kütüphaneler olarak build edilir (bkz. [Checkout ve kurulum](../getting-started/setup.md)).
 
 ## Workspace'ler
 

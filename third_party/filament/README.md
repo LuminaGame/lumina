@@ -1,9 +1,9 @@
 # Filament patches
 
 Lumina renders with [Google Filament](https://github.com/google/filament) at the
-upstream tag **v1.77.0**, plus the patches in `patches/`. Nothing else in the
+upstream tag **v1.77.2**, plus the patches in `patches/`. Nothing else in the
 Filament tree is changed: the prebuilt archives the engine and the editor link
-are upstream v1.77.0 with exactly these files applied in order.
+are upstream v1.77.2 with exactly these files applied in order.
 
 | Patch | Touches | Why |
 |---|---|---|
@@ -54,11 +54,11 @@ builds. `webp.js` is libwebp's demo viewer and requires SDL2
 
 ## Working with the patches
 
-The patches are `git format-patch` output against the v1.77.0 tag, and apply
+The patches are `git format-patch` output against the v1.77.2 tag, and apply
 with either `git apply` or `git am`:
 
 ```bash
-git clone --depth 1 --branch v1.77.0 https://github.com/google/filament.git
+git clone --depth 1 --branch v1.77.2 https://github.com/google/filament.git
 cd filament
 git apply ../lumina/third_party/filament/patches/*.patch
 ```
@@ -68,13 +68,13 @@ git apply ../lumina/third_party/filament/patches/*.patch
 libraries the native-assets hooks link, and pack them into the archives each
 Lumina release carries. To change a patch or add one:
 
-1. Apply the existing patches to a clean v1.77.0 checkout and commit them
+1. Apply the existing patches to a clean v1.77.2 checkout and commit them
    there (`git am patches/*.patch`).
 2. Make the change as a new commit, or amend the commit it belongs to.
 3. Regenerate the series with
-   `git format-patch --zero-commit --no-signature --no-stat -o <this folder> v1.77.0`
+   `git format-patch --zero-commit --no-signature --no-stat -o <this folder> v1.77.2`
    and give the new files short, descriptive names in the same `NNNN-` order.
-4. Bump the suffix in `tool/filament/VERSION` (`1.77.0-lumina.N`), so that
+4. Bump the suffix in `tool/filament/VERSION` (`1.77.2-lumina.N`), so that
    the release publishes a new archive and installed editors download it.
 
 Moving to a newer Filament release means rebasing the series onto the new tag,

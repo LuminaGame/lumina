@@ -11,7 +11,7 @@ Her ok, bir bağımlılıktan onu kullanan pakete doğru çizilmiştir. Hiçbir 
 ```mermaid
 graph TD
     subgraph C_Level [Native C/C++ kütüphaneleri]
-        FilamentCPP[Google Filament C++ v1.77.0]
+        FilamentCPP[Google Filament C++ v1.77.2]
         AssimpCPP[Open Asset Import Library]
         RigLogicCPP[MetaHuman RigLogic]
         GStreamerC[GStreamer 1.x]
@@ -62,7 +62,7 @@ Noktalı oklar yalnızca çalışma anına aittir: `flutter_gstreamer` sistemdek
 
 ## Katmanların sorumlulukları
 
-1. **`flutter_filament`**: Google Filament v1.77.0 fiziksel tabanlı renderer'ının Dart FFI binding'i (masaüstünde Vulkan, OpenGL ve Metal, web'de WebGL2). Engine'leri, sahneleri, kameraları, ışıkları, texture'ları, materyalleri ve GPU buffer'larını yönetir, glTF'i gltfio ile yükler. C wrapper'ı (`src/*_c.cpp`, `filament_*` önekli fonksiyonlar) paketin native-assets hook'u tarafından derlenir.
+1. **`flutter_filament`**: Google Filament v1.77.2 fiziksel tabanlı renderer'ının Dart FFI binding'i (masaüstünde Vulkan, OpenGL ve Metal, web'de WebGL2). Engine'leri, sahneleri, kameraları, ışıkları, texture'ları, materyalleri ve GPU buffer'larını yönetir, glTF'i gltfio ile yükler. C wrapper'ı (`src/*_c.cpp`, `filament_*` önekli fonksiyonlar) paketin native-assets hook'u tarafından derlenir.
 2. **`flutter_assimp`** (tools repository'si): Open Asset Import Library'nin Dart FFI binding'i. FBX, OBJ, DAE, STL, Blend gibi 40'tan fazla harici 3D formatı diskte ya da bellekte binary glTF 2.0'a (`.glb`) dönüştürür.
 3. **`flutter_riglogic`** (tools repository'si): MetaHuman RigLogic'in Dart FFI binding'i. DNA dosyalarını okur ve yüz rig'leri için PSD'leri, RBF'leri, joint transform'larını ve blend shape ağırlıklarını hesaplar.
 4. **`flutter_gstreamer`**, **`lumina_smoke`** ve **`lumina_mouse_capture`** (tools repository'si): video encode, smoke test sistemi (artifact'ler, video kontrolleri ve rapor çalıştırıcısı) ve oyunlar ile Play-In-Editor için pointer capture.

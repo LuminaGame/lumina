@@ -14,7 +14,7 @@ The Lumina code base is split across several repositories of the LuminaGame orga
 | [marketplace](https://github.com/LuminaGame/marketplace) | The Lumina Marketplace: the `shelf` API server, the shared package (`lumina_marketplace_shared`, DTOs and `MarketplaceClient`) and the Flutter web front end. |
 | [test-assets](https://github.com/LuminaGame/test-assets) | Shared 3D models and fixtures used by tests and smoke tests (Git LFS, optional). |
 
-Google Filament is not in any repository. Lumina uses Filament v1.77.0 with a few local patches, built once into static libraries (see [Checkout and setup](../getting-started/setup.md)).
+Google Filament is not in any repository. Lumina uses Filament v1.77.2 with a few local patches, built once into static libraries (see [Checkout and setup](../getting-started/setup.md)).
 
 ## Workspaces
 

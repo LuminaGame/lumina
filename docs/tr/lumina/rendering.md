@@ -50,7 +50,7 @@ What renders Lumina: the Filament release the engine is linked against and its m
 
 | Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
-| `filamentVersion` | `static String get filamentVersion` | The linked Filament release, e.g. `1.77.0`. |
+| `filamentVersion` | `static String get filamentVersion` | The linked Filament release, e.g. `1.77.2`. |
 | `filamentMaterialVersion` | `static int get filamentMaterialVersion` | The material package version the linked Filament accepts. |
 | `filamentLicense` | `static const String filamentLicense` |  |
 | `filamentUrl` | `static const String filamentUrl` |  |

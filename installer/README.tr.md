@@ -28,7 +28,7 @@ Release workflow'u (`.github/workflows/release.yml`) her `v*` tag'i için hepsin
 
 İki editör build'i de `--dart-define=LUMINA_VERSION=<tag>` ve `--dart-define=LUMINA_COMMIT=<sha>` taşır.
 
-Prebuilt Filament (upstream v1.77.0 + bu repo'nun patch'leri) Lumina release'lerine eklenmez. Her Filament sürümü
+Prebuilt Filament (upstream v1.77.2 + bu repo'nun patch'leri) Lumina release'lerine eklenmez. Her Filament sürümü
 (`tool/filament/VERSION`) bir kez, kendi release'inde yayımlanır: `filament-<VERSION>`; içinde
 `filament-<VERSION>-windows-x64.zip`, `filament-<VERSION>-linux-x64.tar.gz` ve `.sha256` sidecar'ları bulunur.
 Hiçbir zaman Latest olarak işaretlenmeyen ve tamamlandıktan sonra değişmeyen bir pre-release'tir; workflow onu

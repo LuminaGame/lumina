@@ -28,7 +28,7 @@ The release workflow (`.github/workflows/release.yml`) builds all of them for ev
 
 Both editor builds carry `--dart-define=LUMINA_VERSION=<tag>` and `--dart-define=LUMINA_COMMIT=<sha>`.
 
-The prebuilt Filament (upstream v1.77.0 with this repository's patches) is not attached to the Lumina releases.
+The prebuilt Filament (upstream v1.77.2 with this repository's patches) is not attached to the Lumina releases.
 Each Filament version (`tool/filament/VERSION`) is published once, in its own release `filament-<VERSION>`:
 `filament-<VERSION>-windows-x64.zip`, `filament-<VERSION>-linux-x64.tar.gz` and their `.sha256` sidecars. It is a
 pre-release that is never marked Latest and never changes once complete; the workflow creates it from the first

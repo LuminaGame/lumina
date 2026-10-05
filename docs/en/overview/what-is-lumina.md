@@ -32,7 +32,7 @@ Plugins extend the editor through `lumina_editor_api`, a small contract package 
 
 | Package | Repository | Role |
 |---|---|---|
-| `flutter_filament` | lumina | Dart FFI bindings to Google Filament v1.77.0 |
+| `flutter_filament` | lumina | Dart FFI bindings to Google Filament v1.77.2 |
 | `lumina` | lumina | Engine runtime and the editor-facing data layer |
 | `lumina_editor_api` | lumina | Plugin API of Lumina Studio |
 | `lumina_ui` | lumina | Lumina Studio, the editor app |

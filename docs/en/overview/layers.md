@@ -11,7 +11,7 @@ Every arrow points from a dependency to the package that uses it. Nothing depend
 ```mermaid
 graph TD
     subgraph C_Level [Native C/C++ libraries]
-        FilamentCPP[Google Filament C++ v1.77.0]
+        FilamentCPP[Google Filament C++ v1.77.2]
         AssimpCPP[Open Asset Import Library]
         RigLogicCPP[MetaHuman RigLogic]
         GStreamerC[GStreamer 1.x]
@@ -62,7 +62,7 @@ Dotted arrows are run-time only: `flutter_gstreamer` opens the system GStreamer 
 
 ## Layer responsibilities
 
-1. **`flutter_filament`**: Dart FFI binding to the Google Filament v1.77.0 physically based renderer (Vulkan, OpenGL and Metal on desktop, WebGL2 on the web). It manages engines, scenes, cameras, lights, textures, materials and GPU buffers, and loads glTF through gltfio. Its C wrapper (`src/*_c.cpp`, functions prefixed `filament_*`) is compiled by the package's native-assets hook.
+1. **`flutter_filament`**: Dart FFI binding to the Google Filament v1.77.2 physically based renderer (Vulkan, OpenGL and Metal on desktop, WebGL2 on the web). It manages engines, scenes, cameras, lights, textures, materials and GPU buffers, and loads glTF through gltfio. Its C wrapper (`src/*_c.cpp`, functions prefixed `filament_*`) is compiled by the package's native-assets hook.
 2. **`flutter_assimp`** (tools repository): Dart FFI binding to the Open Asset Import Library. It converts more than 40 external 3D formats (FBX, OBJ, DAE, STL, Blend and others) into binary glTF 2.0 (`.glb`), on disk or in memory.
 3. **`flutter_riglogic`** (tools repository): Dart FFI binding to MetaHuman RigLogic. It reads DNA files and evaluates PSDs, RBFs, joint transforms and blend shape weights for facial rigs.
 4. **`flutter_gstreamer`**, **`lumina_smoke`** and **`lumina_mouse_capture`** (tools repository): video encoding, the smoke-test system (artifacts, video checks and the report runner), and pointer capture for games and Play-In-Editor.

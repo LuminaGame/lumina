@@ -4,7 +4,7 @@ The web build is one WebAssembly module, `web/flutter_filament.{js,wasm}`. It co
 
 ## Toolchain
 
-- **emsdk 5.0.4**, the version Filament v1.77.0's CI uses (`filament/build/common/get-emscripten.sh`), installed in `~/emsdk`:
+- **emsdk 5.0.4**, the version Filament v1.77.2's CI uses (`filament/build/common/get-emscripten.sh`), installed in `~/emsdk`:
   ```bash
   git clone https://github.com/emscripten-core/emsdk.git ~/emsdk
   cd ~/emsdk && git checkout 5.0.4 && ./emsdk install 5.0.4 && ./emsdk activate 5.0.4

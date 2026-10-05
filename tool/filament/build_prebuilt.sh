@@ -73,6 +73,9 @@ if [ "$(git -C "$WORK" describe --tags --exact-match HEAD 2>/dev/null || true)" 
   log "fetching $TAG"
   "${GIT[@]}" -C "$WORK" fetch --depth 1 origin tag "$TAG"
   "${GIT[@]}" -C "$WORK" checkout -f "$TAG"
+  # The forced checkout dropped the applied patches; forget the stamp so they
+  # are applied again on the new tag.
+  rm -f "$WORK/.lumina-patches"
 fi
 UPSTREAM_COMMIT="$(git -C "$WORK" rev-parse HEAD)"
 PATCHES=("$REPO"/third_party/filament/patches/*.patch)

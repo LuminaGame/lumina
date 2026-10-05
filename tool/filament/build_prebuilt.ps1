@@ -62,17 +62,20 @@ if (-not (Test-Path (Join-Path $WorkDir '.git'))) {
 $ErrorActionPreference = 'Continue'
 $head = (& git -C $WorkDir describe --tags --exact-match HEAD 2>$null)
 $ErrorActionPreference = 'Stop'
+$stampFile = Join-Path $WorkDir '.lumina-patches'
 if ($head -ne $UpstreamTag) {
   Log "checkout is at '$head', fetching $UpstreamTag"
   Invoke-Native git ($git + @('-C', $WorkDir, 'fetch', '--depth', '1', 'origin', 'tag', $UpstreamTag))
   Invoke-Native git ($git + @('-C', $WorkDir, 'checkout', '-f', $UpstreamTag))
+  # The forced checkout dropped the applied patches; forget the stamp so they
+  # are applied again on the new tag.
+  if (Test-Path $stampFile) { Remove-Item -Force $stampFile }
 }
 $UpstreamCommit = (& git -C $WorkDir rev-parse HEAD).Trim()
 $patchInfo = @(foreach ($p in $Patches) {
   [ordered]@{ name = $p.Name; sha256 = (Get-FileHash $p.FullName -Algorithm SHA256).Hash.ToLower() }
 })
 $stamp = ($patchInfo | ForEach-Object { "$($_.name) $($_.sha256)" }) -join "`n"
-$stampFile = Join-Path $WorkDir '.lumina-patches'
 $applied = if (Test-Path $stampFile) { [IO.File]::ReadAllText($stampFile) } else { $null }
 if ($applied -ne $stamp) {
   Log "applying $($Patches.Count) patches"

@@ -77,7 +77,7 @@ grant trademark rights (section 6).
 ## Filament patches
 
 `third_party/filament/patches/` holds three patches applied to Filament
-v1.77.0 (see `third_party/filament/README.md`). They modify files of the
+v1.77.2 (see `third_party/filament/README.md`). They modify files of the
 Filament source tree and are provided under the license of the files they
 change:
 
