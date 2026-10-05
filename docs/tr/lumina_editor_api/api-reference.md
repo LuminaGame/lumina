@@ -392,6 +392,7 @@ A bare [LuminaEditorContext] (a plugin's own unit test, a registration smoke) ha
 | `onBoneSelected` | `final void Function(String boneName)? onBoneSelected` | Kullanıcı 3D görünümde bir iskelet eklemine tıkladığında tetiklenen geri çağırma. |
 | `onBoneMoved` | `final void Function(String boneName, List<double> newWorldPos, List<double> delta)? onBoneMoved` | Kullanıcı seçili ekleme bağlı 3D dönüştürme gizmosunu sürüklediğinde tetiklenen geri çağırma. |
 | `showGizmo` | `final bool showGizmo` | Seçili eklem üzerinde 3D dönüştürme gizmosunun (RGB eksenleri + düzlemsel kuadlar) etkin olup olmadığı. |
+| `visibleBoneNames` | `final Set<String>? visibleBoneNames` | Yalnızca görüntülenecek ve seçilecek kemik adları listesi; belirtildiğinde diğer eklemler (ör. yüz mimik veya düzeltme kemikleri) atlanır. |
 
 ## `lib/src/editor_panels.dart`
 
