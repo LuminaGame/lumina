@@ -6,6 +6,7 @@ class _SubEditorGizmoPainter extends CustomPainter {
   final bool showSockets;
   final List<SkeletalMeshSocket> sockets;
   final GlbNode? selectedNode;
+  final String? selectedBoneName;
   final SkeletalMeshSocket? selectedSocket;
   final Map<String, List<double>>? jointDeltas;
 
@@ -29,6 +30,7 @@ class _SubEditorGizmoPainter extends CustomPainter {
     required this.showSockets,
     required this.sockets,
     this.selectedNode,
+    this.selectedBoneName,
     this.selectedSocket,
     this.jointDeltas,
     this.jointLocalPose,
@@ -181,36 +183,110 @@ class _SubEditorGizmoPainter extends CustomPainter {
         ..color = ghost.color.withValues(alpha: ghost.opacity)
         ..style = PaintingStyle.fill;
       Offset? top;
-      void draw(GlbNode node, Offset? parentProj) {
+      void draw(GlbNode node, Offset? parentProj, String? parentName) {
         final p = positions[node.name];
         final proj = p == null || !ghost.jointLocalPose.containsKey(node.name) ? null : projectPoint(p.x, p.y, p.z);
         if (proj != null) {
-          if (parentProj != null) canvas.drawLine(parentProj, proj, line);
-          canvas.drawCircle(proj, 2.5, joint);
+          if (parentProj != null) {
+            if (ghost.volumetric) {
+              final n = node.name.toLowerCase();
+              final pn = parentName?.toLowerCase() ?? '';
+              double width = 8.0;
+              if (n.contains('spine') || n.contains('hips') || n.contains('pelvis')) {
+                width = 22.0;
+              } else if (n.contains('thigh') || n.contains('upleg') || pn.contains('pelvis') || pn.contains('hips')) {
+                width = 16.0;
+              } else if (n.contains('calf') || n.contains('leg')) {
+                width = 12.0;
+              } else if (n.contains('upperarm') || (n.contains('arm') && !n.contains('forearm'))) {
+                width = 13.0;
+              } else if (n.contains('lowerarm') || n.contains('forearm')) {
+                width = 9.0;
+              } else if (n.contains('neck') || n.contains('head')) {
+                width = 14.0;
+              }
+
+              // Outer volumetric translucent limb capsule
+              final bodyPaint = Paint()
+                ..color = ghost.color.withValues(alpha: (ghost.opacity * 0.45).clamp(0.0, 1.0))
+                ..strokeWidth = width
+                ..strokeCap = StrokeCap.round
+                ..style = PaintingStyle.stroke;
+              canvas.drawLine(parentProj, proj, bodyPaint);
+
+              // Inner core highlight
+              final corePaint = Paint()
+                ..color = ghost.color.withValues(alpha: (ghost.opacity * 0.85).clamp(0.0, 1.0))
+                ..strokeWidth = 2.0
+                ..strokeCap = StrokeCap.round
+                ..style = PaintingStyle.stroke;
+              canvas.drawLine(parentProj, proj, corePaint);
+            } else {
+              canvas.drawLine(parentProj, proj, line);
+            }
+          }
+
+          // Volumetric head sphere
+          final isHead = node.name.toLowerCase().contains('head');
+          if (ghost.volumetric && isHead) {
+            final headGlow = Paint()
+              ..color = ghost.color.withValues(alpha: (ghost.opacity * 0.5).clamp(0.0, 1.0))
+              ..style = PaintingStyle.fill;
+            canvas.drawCircle(proj, 14.0, headGlow);
+            final headRing = Paint()
+              ..color = ghost.color.withValues(alpha: ghost.opacity)
+              ..strokeWidth = 1.5
+              ..style = PaintingStyle.stroke;
+            canvas.drawCircle(proj, 14.0, headRing);
+          } else {
+            canvas.drawCircle(proj, ghost.volumetric ? 4.0 : 2.5, joint);
+          }
+
           if (top == null || proj.dy < top!.dy) top = proj;
         }
         for (final child in node.children) {
-          draw(child, proj ?? parentProj);
+          draw(child, proj ?? parentProj, node.name);
         }
       }
 
       for (final root in glbMesh!.rootNodes) {
-        draw(root, null);
+        draw(root, null, null);
       }
       if (ghost.label != null && top != null) {
         final tp = TextPainter(
           text: TextSpan(
             text: ghost.label,
             style: TextStyle(
-              fontSize: 9,
+              fontSize: 10,
               fontWeight: FontWeight.bold,
               color: ghost.color,
-              backgroundColor: Colors.black.withValues(alpha: 0.55),
             ),
           ),
           textDirection: TextDirection.ltr,
         )..layout();
-        tp.paint(canvas, Offset(top!.dx - tp.width / 2, top!.dy - 16));
+
+        final badgeRect = RRect.fromRectAndRadius(
+          Rect.fromLTWH(
+            top!.dx - tp.width / 2 - 8,
+            top!.dy - 24,
+            tp.width + 16,
+            tp.height + 6,
+          ),
+          const Radius.circular(5),
+        );
+
+        final bgPaint = Paint()
+          ..color = const Color(0xDD111115)
+          ..style = PaintingStyle.fill;
+        canvas.drawRRect(badgeRect, bgPaint);
+
+        final borderPaint = Paint()
+          ..color = ghost.color.withValues(alpha: 0.8)
+          ..strokeWidth = 1.0
+          ..style = PaintingStyle.stroke;
+        canvas.drawRRect(badgeRect, borderPaint);
+
+        tp.paint(canvas, Offset(top!.dx - tp.width / 2, top!.dy - 21));
       }
     }
 
@@ -319,7 +395,7 @@ class _SubEditorGizmoPainter extends CustomPainter {
       ) {
         final pos = boneWorldPositions[node.name];
         if (pos != null) {
-          final isSelected = selectedNode?.name == node.name;
+          final isSelected = selectedNode?.name == node.name || (selectedBoneName != null && selectedBoneName == node.name);
           final proj = projectPoint(pos[0], pos[1], pos[2]);
 
           if (proj != null) {
@@ -434,4 +510,78 @@ class _SubEditorGizmoPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _SubEditorGizmoPainter oldDelegate) => true;
+}
+
+/// Computes world positions of all bones in [glbMesh] given active [jointLocalPose] and [jointDeltas].
+Map<String, Vector3> computeSkeletonBonePositions({
+  required GlbMeshData glbMesh,
+  Map<String, List<double>>? jointLocalPose,
+  Map<String, List<double>>? jointDeltas,
+}) {
+  final Map<String, Vector3> boneWorldPositions = {};
+
+  Matrix4 computeNodeTransform(GlbNode node) {
+    final posed = jointLocalPose?[node.name];
+    if (posed != null && posed.length >= 10) {
+      return Matrix4.compose(
+        Vector3(posed[0], posed[1], posed[2]),
+        Quaternion(posed[3], posed[4], posed[5], posed[6]),
+        Vector3(posed[7], posed[8], posed[9]),
+      );
+    }
+    final t = node.translation;
+    final r = node.rotation;
+    final s = node.scale;
+    final translation = Vector3(
+      t != null && t.isNotEmpty ? t[0] : 0.0,
+      t != null && t.length > 1 ? t[1] : 0.0,
+      t != null && t.length > 2 ? t[2] : 0.0,
+    );
+    var rotation = Quaternion.identity();
+    if (r != null && r.length >= 4) {
+      final q = Quaternion(r[0], r[1], r[2], r[3]);
+      final len = q.length;
+      if (len.isFinite && len > 1e-12) rotation = q.normalized();
+    }
+    final scale = Vector3(
+      s != null && s.isNotEmpty ? s[0] : 1.0,
+      s != null && s.length > 1 ? s[1] : 1.0,
+      s != null && s.length > 2 ? s[2] : 1.0,
+    );
+    final restTransform = Matrix4.compose(translation, rotation, scale);
+
+    final deltas = jointDeltas?[node.name];
+    if (deltas != null && deltas.length >= 9) {
+      final radX = deltas[3] * math.pi / 180.0;
+      final radY = deltas[4] * math.pi / 180.0;
+      final radZ = deltas[5] * math.pi / 180.0;
+
+      final deltaMat = Matrix4.identity()
+        ..translateByDouble(deltas[0] * 0.01, deltas[1] * 0.01, deltas[2] * 0.01, 1.0)
+        ..rotateX(radX)
+        ..rotateY(radY)
+        ..rotateZ(radZ);
+      if (deltas[6] != 0.0 || deltas[7] != 0.0 || deltas[8] != 0.0) {
+        deltaMat.scaleByDouble(1.0 + deltas[6], 1.0 + deltas[7], 1.0 + deltas[8], 1.0);
+      }
+      return restTransform * deltaMat;
+    }
+    return restTransform;
+  }
+
+  void collectBonePositions(GlbNode node, Matrix4 parentTransform) {
+    final localTransform = computeNodeTransform(node);
+    final worldTransform = parentTransform * localTransform;
+    boneWorldPositions[node.name] = worldTransform.getTranslation();
+
+    for (final child in node.children) {
+      collectBonePositions(child, worldTransform);
+    }
+  }
+
+  for (final root in glbMesh.rootNodes) {
+    collectBonePositions(root, Matrix4.identity());
+  }
+
+  return boneWorldPositions;
 }

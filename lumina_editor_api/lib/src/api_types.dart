@@ -91,6 +91,23 @@ class EditorTabDescriptor {
   });
 }
 
+/// A ghost skeleton or volumetric character pose drawn over the plugin viewport.
+class PluginGhostSkeleton {
+  final Map<String, List<double>> jointLocalPose;
+  final Color color;
+  final double opacity;
+  final String? label;
+  final bool volumetric;
+
+  const PluginGhostSkeleton({
+    required this.jointLocalPose,
+    required this.color,
+    this.opacity = 0.6,
+    this.label,
+    this.volumetric = true,
+  });
+}
+
 /// Configuration for rendering a Filament 3D viewport inside a plugin editor.
 class Plugin3DViewportOptions {
   final String title;
@@ -99,6 +116,12 @@ class Plugin3DViewportOptions {
   final Map<String, List<double>>? jointLocalPose;
   final Widget? overlayHUD;
   final double? cameraDistance;
+  final List<PluginGhostSkeleton>? ghostSkeletons;
+  final bool showBones;
+  final String? selectedBoneName;
+  final void Function(String boneName)? onBoneSelected;
+  final void Function(String boneName, List<double> newWorldPos, List<double> delta)? onBoneMoved;
+  final bool showGizmo;
 
   const Plugin3DViewportOptions({
     this.title = 'Viewport',
@@ -107,6 +130,12 @@ class Plugin3DViewportOptions {
     this.jointLocalPose,
     this.overlayHUD,
     this.cameraDistance,
+    this.ghostSkeletons,
+    this.showBones = false,
+    this.selectedBoneName,
+    this.onBoneSelected,
+    this.onBoneMoved,
+    this.showGizmo = true,
   });
 }
 

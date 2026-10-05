@@ -7,7 +7,7 @@ import 'package:lumina/lumina.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart';
 
 import '../features/mcp_server/services/host_editor_mcp.dart';
-import '../features/sub_editors/views/sub_editor_3d_viewport.dart';
+import 'plugin_3d_viewport_container.dart';
 import 'property_editors/asset_picker_select.dart';
 import 'theme/editor_theme_access.dart';
 
@@ -596,109 +596,9 @@ class PluginExtensionRegistry extends ChangeNotifier implements LuminaEditorHost
 
   @override
   Widget build3DViewport(BuildContext context, Plugin3DViewportOptions options) {
-    return _Plugin3DViewportContainer(
+    return Plugin3DViewportContainer(
       options: options,
       projectDir: _projectDir?.call(),
-    );
-  }
-}
-
-class _Plugin3DViewportContainer extends StatefulWidget {
-  final Plugin3DViewportOptions options;
-  final String? projectDir;
-
-  const _Plugin3DViewportContainer({required this.options, this.projectDir});
-
-  @override
-  State<_Plugin3DViewportContainer> createState() => _Plugin3DViewportContainerState();
-}
-
-class _Plugin3DViewportContainerState extends State<_Plugin3DViewportContainer> {
-  GlbMeshData? _mesh;
-  String? _loadedKey;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadMesh();
-  }
-
-  @override
-  void didUpdateWidget(covariant _Plugin3DViewportContainer oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.options.meshPath != oldWidget.options.meshPath ||
-        widget.options.glbBytes != oldWidget.options.glbBytes ||
-        widget.projectDir != oldWidget.projectDir) {
-      _loadMesh();
-    }
-  }
-
-  Future<void> _loadMesh() async {
-    final opts = widget.options;
-    final key = opts.meshPath ?? opts.glbBytes?.hashCode.toString();
-    if (key == null) {
-      if (mounted) setState(() => _mesh = null);
-      return;
-    }
-    if (key == _loadedKey && _mesh != null) return;
-
-    if (mounted && _loadedKey != key) {
-      setState(() {
-        _mesh = null;
-        _loadedKey = key;
-      });
-    }
-
-    try {
-      Uint8List? bytes = opts.glbBytes;
-      if (bytes == null && opts.meshPath != null) {
-        final path = opts.meshPath!;
-        var absPath = path;
-        var file = File(absPath);
-        if (!file.existsSync() && !path.startsWith('/') && !path.contains(':\\') && widget.projectDir != null) {
-          absPath = '${widget.projectDir}/$path'.replaceAll(r'\', '/');
-          file = File(absPath);
-        }
-        if (absPath.toLowerCase().endsWith('.glb') && file.existsSync()) {
-          bytes = await file.readAsBytes();
-        } else {
-          bytes = AnimationImportBinder.meshGlb(absPath);
-        }
-      }
-      if (bytes != null && bytes.isNotEmpty) {
-        final mesh = await GlbParserService.parseGlb(bytes);
-        if (mounted && (opts.meshPath ?? opts.glbBytes?.hashCode.toString()) == key) {
-          setState(() {
-            _mesh = mesh;
-            _loadedKey = key;
-          });
-          return;
-        }
-      }
-    } catch (_) {}
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SubEditor3DViewport(
-      title: widget.options.title,
-      glbMesh: _mesh,
-      meshSourcePath: widget.options.meshPath,
-      jointLocalPose: widget.options.jointLocalPose,
-      overlayHUD: widget.options.overlayHUD,
-      initialCameraDistance: widget.options.cameraDistance,
-      ghostSkeletons: [
-        if (widget.options.ghostSkeletons != null)
-          for (final g in widget.options.ghostSkeletons!)
-            SubEditorGhostSkeleton(
-              jointLocalPose: g.jointLocalPose,
-              color: g.color,
-              opacity: g.opacity,
-              label: g.label,
-              volumetric: g.volumetric,
-            ),
-      ],
-      yUpCamera: false,
     );
   }
 }

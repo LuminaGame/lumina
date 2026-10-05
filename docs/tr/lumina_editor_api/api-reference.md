@@ -370,6 +370,28 @@ A bare [LuminaEditorContext] (a plugin's own unit test, a registration smoke) ha
 | Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `level` | `EditorLevelAccess get level` |  |
+| `build3DViewport` | `Widget build3DViewport(BuildContext context, Plugin3DViewportOptions options)` | Kemik görselleştirme, etkileşimli eklem seçimi ve dönüştürme gizmosu içeren tam Filament 3D önizleme görünümünü yerleştirir. |
+| `buildAssetPicker` | `Widget buildAssetPicker(BuildContext context, {...})` | Ana proje varlıklarına bağlı standart varlık seçici widget'ı. |
+
+### `class Plugin3DViewportOptions`
+
+[LuminaEditorHostContext.build3DViewport] metoduna aktarılan yapılandırma seçenekleri.
+
+**Üyeler:**
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `title` | `final String title` | Görünüm alanı başlığı. |
+| `meshPath` | `final String? meshPath` | İskeletli veya statik mesh varlığının proje göreli yolu (`.lmas`). |
+| `glbBytes` | `final Uint8List? glbBytes` | Proje varlığı yerine doğrudan önizlenecek ham glTF/GLB ikili verisi. |
+| `jointLocalPose` | `final Map<String, List<double>>? jointLocalPose` | Canlı kemik yerel dönüşümleri (4x4 matris veya pos+quat) ile duruş önizleme. |
+| `overlayHUD` | `final Widget? overlayHUD` | 3D görünüm üzerine bindirilen özel Flutter widget katmanı. |
+| `ghostSkeletons` | `final List<PluginGhostSkeleton>? ghostSkeletons` | Görsel referans veya anahtar kare noktaları için yarı saydam hayalet iskelet katmanları. |
+| `showBones` | `final bool showBones` | Doğru olduğunda eklemleri camgöbeği noktalar ve aralarındaki kemikleri çizer. |
+| `selectedBoneName` | `final String? selectedBoneName` | Amber rengi seçim halkası ile vurgulanan etkin seçili kemik/eklem. |
+| `onBoneSelected` | `final void Function(String boneName)? onBoneSelected` | Kullanıcı 3D görünümde bir iskelet eklemine tıkladığında tetiklenen geri çağırma. |
+| `onBoneMoved` | `final void Function(String boneName, List<double> newWorldPos, List<double> delta)? onBoneMoved` | Kullanıcı seçili ekleme bağlı 3D dönüştürme gizmosunu sürüklediğinde tetiklenen geri çağırma. |
+| `showGizmo` | `final bool showGizmo` | Seçili eklem üzerinde 3D dönüştürme gizmosunun (RGB eksenleri + düzlemsel kuadlar) etkin olup olmadığı. |
 
 ## `lib/src/editor_panels.dart`
 

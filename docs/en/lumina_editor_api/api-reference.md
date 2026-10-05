@@ -370,6 +370,28 @@ A bare [LuminaEditorContext] (a plugin's own unit test, a registration smoke) ha
 | Member | Signature | Description |
 | :--- | :--- | :--- |
 | `level` | `EditorLevelAccess get level` |  |
+| `build3DViewport` | `Widget build3DViewport(BuildContext context, Plugin3DViewportOptions options)` | Embeds a full Filament 3D preview viewport with bone visualization, interactive picking, and translation gizmo. |
+| `buildAssetPicker` | `Widget buildAssetPicker(BuildContext context, {...})` | Standard asset picker widget connected to the host project. |
+
+### `class Plugin3DViewportOptions`
+
+Configuration options passed to [LuminaEditorHostContext.build3DViewport].
+
+**Members:**
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `title` | `final String title` | Viewport overlay title. |
+| `meshPath` | `final String? meshPath` | Project-relative path to the skeletal or static mesh asset (`.lmas`). |
+| `glbBytes` | `final Uint8List? glbBytes` | Raw glTF/GLB binary bytes to preview in place of a project asset. |
+| `jointLocalPose` | `final Map<String, List<double>>? jointLocalPose` | Live bone local transforms (4x4 matrix or pos+quat) for previewing poses. |
+| `overlayHUD` | `final Widget? overlayHUD` | Custom Flutter overlay widget layered over the 3D viewport. |
+| `ghostSkeletons` | `final List<PluginGhostSkeleton>? ghostSkeletons` | Semi-transparent ghost skeleton overlays for visual reference or keyframe waypoints. |
+| `showBones` | `final bool showBones` | When true, renders joints as cyan dots and skeleton bones connecting them. |
+| `selectedBoneName` | `final String? selectedBoneName` | The active selected bone/joint highlighted with an amber selection ring. |
+| `onBoneSelected` | `final void Function(String boneName)? onBoneSelected` | Callback fired when the user clicks or taps on a skeleton joint in the 3D viewport. |
+| `onBoneMoved` | `final void Function(String boneName, List<double> newWorldPos, List<double> delta)? onBoneMoved` | Callback fired when the user drags the 3D translation gizmo attached to the selected bone. |
+| `showGizmo` | `final bool showGizmo` | Whether the 3D translation gizmo (RGB axes + planar quads) is active on the selected bone. |
 
 ## `lib/src/editor_panels.dart`
 

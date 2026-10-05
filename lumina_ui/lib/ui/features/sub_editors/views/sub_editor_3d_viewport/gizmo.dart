@@ -243,8 +243,63 @@ mixin _SubEditor3DViewportGizmo on _SubEditor3DViewportStateBase {
     if (wasDrag && target != null) gizmo?.onDragCancel?.call(target.id);
   }
 
+  /// Hit-tests projected screen positions of bone joints within [maxDistance] pixels.
+  String? _hitTestBone(Offset localPos, {double maxDistance = 22.0}) {
+    final mesh = widget.glbMesh;
+    if (mesh == null || !widget.showBones) return null;
+    final positions = computeSkeletonBonePositions(
+      glbMesh: mesh,
+      jointLocalPose: widget.jointLocalPose,
+      jointDeltas: widget.jointDeltas,
+    );
+    final minX = mesh.minBounds[0];
+    final minY = mesh.minBounds[1];
+    final minZ = mesh.minBounds[2];
+    final maxX = mesh.maxBounds[0];
+    final maxY = mesh.maxBounds[1];
+    final maxZ = mesh.maxBounds[2];
+    final cx = (minX + maxX) / 2.0;
+    final cy = (minY + maxY) / 2.0;
+    final cz = (minZ + maxZ) / 2.0;
+    final spanY = (maxY - minY).abs();
+    final spanZ = (maxZ - minZ).abs();
+    final bool isZUp = (spanZ >= spanY);
+
+    String? bestBone;
+    double bestDist = maxDistance;
+
+    for (final entry in positions.entries) {
+      final p = entry.value;
+      final target = Vector3(cx + _cameraPan.dx, cy + _cameraPan.dy, cz);
+      final proj = projectWorldToViewport(
+        worldPos: p,
+        size: _viewportSize,
+        yawDeg: _cameraYaw,
+        pitchDeg: _cameraPitch,
+        distance: _cameraDistance,
+        target: target,
+        isZUp: isZUp,
+      );
+      if (proj != null) {
+        final dist = (proj - localPos).distance;
+        if (dist < bestDist) {
+          bestDist = dist;
+          bestBone = entry.key;
+        }
+      }
+    }
+    return bestBone;
+  }
+
   /// A click that hit no handle: pick through the gizmo's owner.
   void _handleGizmoClick(Offset local) {
+    if (widget.showBones) {
+      final hitBone = _hitTestBone(local);
+      if (hitBone != null) {
+        widget.onBoneSelected?.call(hitBone);
+        return;
+      }
+    }
     final gizmo = _effectiveGizmo;
     if (gizmo == null || gizmo.pick == null) return;
     final ray = _brushRay(local);
