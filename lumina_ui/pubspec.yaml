@@ -2,7 +2,7 @@ name: lumina_ui
 description: Lumina Studio 3D Game Engine Editor UI
 publish_to: 'none'
 
-version: 0.0.1-dev.14+14
+version: 0.0.1-dev.15+15
 
 environment:
   sdk: ^3.12.0
@@ -21,19 +21,19 @@ dependencies:
     git:
       url: https://github.com/LuminaGame/tools.git
       path: flutter_assimp
-      ref: 1547d59790d2308fa88a32c963be6f50f1b33813
+      ref: 2cabddd9cafa5acba73937f676e5269a3041f46c
   flutter_riglogic:
     git:
       url: https://github.com/LuminaGame/tools.git
       path: flutter_riglogic
-      ref: 1547d59790d2308fa88a32c963be6f50f1b33813
+      ref: 2cabddd9cafa5acba73937f676e5269a3041f46c
   # The smoke-test system that lib/testing.dart exports (SmokeArtifacts,
   # SmokeRecorder, the report runner of tool/smoke_report.dart).
   lumina_smoke:
     git:
       url: https://github.com/LuminaGame/tools.git
       path: lumina_smoke
-      ref: 1547d59790d2308fa88a32c963be6f50f1b33813
+      ref: 2cabddd9cafa5acba73937f676e5269a3041f46c
   lumina_editor_api:
     path: ../lumina_editor_api
   # Play captures the mouse.
@@ -41,7 +41,7 @@ dependencies:
     git:
       url: https://github.com/LuminaGame/tools.git
       path: lumina_mouse_capture
-      ref: 1547d59790d2308fa88a32c963be6f50f1b33813
+      ref: 2cabddd9cafa5acba73937f676e5269a3041f46c
   # The Lumina Marketplace API client and DTOs, plus what the
   # installer needs (streamed downloads, zip archives, sha256, the encrypted
   # session file).

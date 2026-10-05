@@ -24,7 +24,7 @@ dependencies:
     git:
       url: https://github.com/LuminaGame/tools.git
       path: lumina_smoke
-      ref: 1547d59790d2308fa88a32c963be6f50f1b33813
+      ref: 2cabddd9cafa5acba73937f676e5269a3041f46c
   logging: ^1.3.0
   native_toolchain_c: ^0.17.4
   vector_math: ^2.1.4

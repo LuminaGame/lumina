@@ -281,6 +281,13 @@ packages:
       relative: true
     source: path
     version: "0.1.0"
+  flutter_kimodo:
+    dependency: "direct overridden"
+    description:
+      path: "../tools/flutter_kimodo"
+      relative: true
+    source: path
+    version: "0.0.1"
   flutter_lints:
     dependency: transitive
     description:
@@ -482,6 +489,13 @@ packages:
       relative: true
     source: path
     version: "0.0.1"
+  lumina_plugin_kimodo:
+    dependency: "direct overridden"
+    description:
+      path: "../kimodo"
+      relative: true
+    source: path
+    version: "0.1.0"
   lumina_plugin_metahuman:
     dependency: "direct overridden"
     description:
