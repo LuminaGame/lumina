@@ -55,6 +55,7 @@ class GenerateDartCodeUseCase {
       // registry, before the launcher that registers it (generated files of
       // earlier versions are migrated to snake_case first).
       final blueprintRegistry = _codeGenerator.writeProjectBlueprintRegistry(projectDir);
+      _codeGenerator.writeProjectInputDart(projectDir, project?.input);
       // Every level already generated can be opened (Open Level).
       final levelNames = DartCodeGeneratorService.generatedLevelNames(projectDir);
 

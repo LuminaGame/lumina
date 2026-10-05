@@ -239,6 +239,7 @@ class ProjectSettingsViewModel extends _ProjectSettingsViewModelState
       lastModifiedTimestamp: DateTime.now().toIso8601String(),
     );
     await _projectRepo.saveProject(stamped, projectDirPath);
+    DartCodeGeneratorService().writeProjectInputDart(projectDirPath, stamped.input);
     final previousBranding = _onDisk?.branding ?? const ProjectBrandingSettings();
     final brandingChanged = jsonEncode(previousBranding.toMap()) != jsonEncode(stamped.branding.toMap());
     if (brandingChanged) {

@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina/lumina.dart';
 import 'package:lumina/data/services/game_template_service.dart';
@@ -136,6 +139,51 @@ void main() {
     final bound = ProjectInputBinder.bind(GameTemplateCatalog.byId(kBlank3dTemplateId).input);
     expect(bound.contexts, isEmpty);
     expect(bound.unboundKeys, isEmpty);
+  });
+
+  test('writeProjectInputDart writes lib/input/project_input.g.dart with custom actions and mappings', () {
+    final tempDir = Directory.systemTemp.createTempSync('lumina_input_test_');
+    addTearDown(() => tempDir.deleteSync(recursive: true));
+
+    const settings = ProjectInputSettings(
+      actions: [
+        ProjectInputAction(name: 'IA_Move', valueType: ProjectInputValueType.axis2D),
+        ProjectInputAction(name: 'IA_Collect'),
+        ProjectInputAction(name: 'IA_ChangeCamera'),
+        ProjectInputAction(name: 'IA_ESC'),
+      ],
+      mappingContexts: [
+        ProjectMappingContext(
+          name: 'Gameplay',
+          mappings: [
+            ProjectInputMapping(action: 'IA_Move', keyId: 119, keyLabel: 'W', axis: 'Y', scale: 1.0),
+            ProjectInputMapping(action: 'IA_Collect', keyId: 101, keyLabel: 'E'),
+            ProjectInputMapping(action: 'IA_ChangeCamera', keyId: 118, keyLabel: 'V'),
+            ProjectInputMapping(action: 'IA_ESC', keyId: 4294967323, keyLabel: 'Escape'),
+          ],
+        ),
+      ],
+    );
+
+    final gen = DartCodeGeneratorService();
+    expect(gen.writeProjectInputDart(tempDir.path, settings), isTrue);
+
+    final file = File('${tempDir.path}/lib/input/project_input.g.dart');
+    expect(file.existsSync(), isTrue);
+    final content = file.readAsStringSync();
+
+    expect(content, contains("'IA_Collect': LuminaInputAction('IA_Collect', valueType: InputValueType.digitalBool)"));
+    expect(content, contains("'IA_ChangeCamera': LuminaInputAction('IA_ChangeCamera', valueType: InputValueType.digitalBool)"));
+    expect(content, contains("'IA_ESC': LuminaInputAction('IA_ESC', valueType: InputValueType.digitalBool)"));
+
+    expect(content, contains("context0.mapKey(LuminaKey.keyE, luminaProjectInputActions['IA_Collect']!);"));
+    expect(content, contains("context0.mapKey(LuminaKey.keyV, luminaProjectInputActions['IA_ChangeCamera']!);"));
+    expect(content, contains("context0.mapKey(LuminaKey.keyEscape, luminaProjectInputActions['IA_ESC']!);"));
+
+    // Also test reading from .lmproject manifest when settings parameter is null
+    final manifestFile = File('${tempDir.path}/test_proj.lmproject');
+    manifestFile.writeAsStringSync(jsonEncode({'input': settings.toMap()}));
+    expect(gen.writeProjectInputDart(tempDir.path), isTrue);
   });
 }
 

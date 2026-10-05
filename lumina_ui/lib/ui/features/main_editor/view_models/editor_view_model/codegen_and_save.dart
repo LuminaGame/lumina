@@ -124,6 +124,7 @@ mixin _EditorCodegenAndSave on _EditorViewModelState {
     // Generated files an earlier version named after their assets
     // (`lib/levels/L_Main.dart`) become snake_case first (`l_main.dart`).
     LuminaGeneratedCodeMigration.migrate(projectDirPath);
+    _codeGen.writeProjectInputDart(projectDirPath, currentProject.input);
 
     // The launcher installs the project's default game mode: without
     // it a Third Person game spawns a bare pawn instead of its character.

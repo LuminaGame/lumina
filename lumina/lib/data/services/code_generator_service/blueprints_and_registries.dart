@@ -163,6 +163,33 @@ mixin _BlueprintsAndRegistriesCodegen on _DartCodeGeneratorServiceState {
     return b.toString();
   }
 
+  /// Writes `lib/input/project_input.g.dart` from [settings] (or from the project's
+  /// manifest in [projectPath] if [settings] is omitted). Returns whether the file
+  /// exists and was written or is up to date.
+  bool writeProjectInputDart(String projectPath, [ProjectInputSettings? settings]) {
+    final effective = settings ?? () {
+      final dir = Directory(projectPath);
+      if (!dir.existsSync()) return null;
+      for (final f in dir.listSync().whereType<File>()) {
+        if (!f.path.endsWith('.lmproject')) continue;
+        try {
+          final project = LuminaProject.fromMap(jsonDecode(f.readAsStringSync()) as Map<String, dynamic>);
+          return project.input;
+        } catch (_) {
+          return null;
+        }
+      }
+      return null;
+    }();
+    if (effective == null) return false;
+    final file = File('$projectPath/lib/input/project_input.g.dart');
+    file.parent.createSync(recursive: true);
+    final content = generateProjectInputDart(effective);
+    if (file.existsSync() && file.readAsStringSync() == content) return true;
+    file.writeAsStringSync(content);
+    return true;
+  }
+
   /// Compiles a Blueprint document into the project's `lib/actors/` file
   /// (`BP_Door` → `lib/actors/bp_door.dart`, class `BpDoor`),
   /// typed against the project's input actions. Returns
