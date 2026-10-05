@@ -187,6 +187,7 @@ FBX ve OBJ dışında (onların kendi servisleri var) Assimp'in okuduğu her 3D 
 | :--- | :--- | :--- |
 | `generateActorRegistryDart` | `String generateActorRegistryDart(List<String> actorNames)` | Generates the actors.g.dart registry file. |
 | `compileAndWriteActor` | `Future<bool> compileAndWriteActor(String projectPath, String assetName, ...` | Compiles a blueprint document into a project's lib/actors/ file. |
+| `writeProjectInputDart` | `bool writeProjectInputDart(String projectPath, [ProjectInputSettings? settings])` | Proje ayarları veya manifestten lib/input/project_input.g.dart dosyasını üretip yazar. |
 
 ## `lib/data/services/engine_logger_service.dart`
 

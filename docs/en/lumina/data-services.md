@@ -187,6 +187,7 @@ Every 3D format Assimp reads besides FBX and OBJ (which have their own services)
 | :--- | :--- | :--- |
 | `generateActorRegistryDart` | `String generateActorRegistryDart(List<String> actorNames)` | Generates the actors.g.dart registry file. |
 | `compileAndWriteActor` | `Future<bool> compileAndWriteActor(String projectPath, String assetName, ...` | Compiles a blueprint document into a project's lib/actors/ file. |
+| `writeProjectInputDart` | `bool writeProjectInputDart(String projectPath, [ProjectInputSettings? settings])` | Writes `lib/input/project_input.g.dart` from settings or project manifest. |
 
 ## `lib/data/services/engine_logger_service.dart`
 
