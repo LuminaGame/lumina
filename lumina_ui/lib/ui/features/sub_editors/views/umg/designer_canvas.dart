@@ -12,6 +12,7 @@ import '../../services/umg_widget_codegen.dart';
 import '../../view_models/umg_editor_view_model.dart';
 import 'umg_components.dart';
 import 'umg_text_style.dart';
+import 'umg_theme_helper.dart';
 
 /// Visual Designer Canvas: renders the document with the real
 /// shadcn_flutter widgets (wrapped in [IgnorePointer]) under a design-time
@@ -717,7 +718,10 @@ class _UmgRuntimeTree extends StatelessWidget {
   const _UmgRuntimeTree({required this.vm, required this.keyFor, required this.onInteraction, required this.plainWidgets});
 
   @override
-  Widget build(BuildContext context) => _build(vm.document.root);
+  Widget build(BuildContext context) => Theme(
+        data: vm.activeThemeData,
+        child: _build(vm.document.root),
+      );
 
   Widget _measured(UmgNode node, Widget child) {
     return KeyedSubtree(
@@ -833,8 +837,9 @@ class _UmgRuntimeTree extends StatelessWidget {
               : Padding(padding: _padding(node.children.first.slot), child: _measured(node.children.first, _build(node.children.first))),
         );
       case UmgWidgetType.button:
-        return Button(
-          style: _buttonStyle(node.props['style']),
+        return UmgThemeHelper.buildThemedButton(
+          node: node,
+          theme: vm.themeForNode(node),
           onPressed: onInteraction,
           child: umgText(node.props['label']?.toString() ?? 'Button', node.props, null),
         );
@@ -1004,20 +1009,7 @@ class _UmgRuntimeTree extends StatelessWidget {
     return child;
   }
 
-  ButtonStyle _buttonStyle(dynamic v) {
-    switch (v?.toString()) {
-      case 'secondary':
-        return const ButtonStyle.secondary();
-      case 'outline':
-        return const ButtonStyle.outline();
-      case 'ghost':
-        return const ButtonStyle.ghost();
-      case 'destructive':
-        return const ButtonStyle.destructive();
-      default:
-        return const ButtonStyle.primary();
-    }
-  }
+
 
   BoxFit _drawAsFit(dynamic v) {
     switch (v?.toString()) {

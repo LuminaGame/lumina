@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter/widgets.dart' as widgets show Table, TableRow;
-import 'package:lumina/lumina.dart' show LuminaUmgElement, LuminaUmgElementBinding, LuminaUserWidgets;
+import 'package:lumina/lumina.dart' show LuminaUmgElement, LuminaUmgElementBinding, LuminaUserWidgets, LuminaThemeDocument;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
@@ -9,6 +9,7 @@ import '../../models/umg_document.dart';
 import '../../services/umg_widget_codegen.dart';
 import 'umg_components.dart';
 import 'umg_text_style.dart';
+import 'umg_theme_helper.dart';
 
 /// Renders a [UmgDocument] using real shadcn_flutter widgets and layout.
 /// Used by the Play-In-Editor (PIE) viewport overlay and widget previews.
@@ -30,6 +31,8 @@ class UmgRuntimeView extends StatelessWidget {
   /// components show the "requires the shadcn widget library" placeholder,
   /// as the built game cannot render them.
   final bool plainLibrary;
+  final LuminaThemeDocument? theme;
+  final Map<String, LuminaThemeDocument>? loadedThemes;
 
   const UmgRuntimeView({
     super.key,
@@ -38,11 +41,17 @@ class UmgRuntimeView extends StatelessWidget {
     this.textureBytes,
     this.onAction,
     this.plainLibrary = false,
+    this.theme,
+    this.loadedThemes,
   });
 
   @override
   Widget build(BuildContext context) {
-    return _buildNode(document.root);
+    final activeTheme = theme ?? LuminaThemeDocument.defaultShadcnDark();
+    return Theme(
+      data: UmgThemeHelper.themeDataFromLuminaDoc(activeTheme),
+      child: _buildNode(document.root),
+    );
   }
 
   /// The element event, into the instance's graph script
@@ -150,8 +159,14 @@ class UmgRuntimeView extends StatelessWidget {
         );
       case UmgWidgetType.button:
         final label = _string(e, node, 'label', 'Button');
-        return Button(
-          style: _buttonStyle(node.props['style']),
+        final resolvedTheme = UmgThemeHelper.resolveThemeForNode(
+          node: node,
+          documentTheme: theme ?? LuminaThemeDocument.defaultShadcnDark(),
+          loadedThemes: loadedThemes ?? const {},
+        );
+        return UmgThemeHelper.buildThemedButton(
+          node: node,
+          theme: resolvedTheme,
           onPressed: LuminaUmgElementBinding.isEnabled(e)
               ? () {
                   onAction?.call(node.id, 'clicked');
@@ -366,20 +381,7 @@ class UmgRuntimeView extends StatelessWidget {
     }
   }
 
-  ButtonStyle _buttonStyle(dynamic v) {
-    switch (v?.toString()) {
-      case 'secondary':
-        return const ButtonStyle.secondary();
-      case 'outline':
-        return const ButtonStyle.outline();
-      case 'ghost':
-        return const ButtonStyle.ghost();
-      case 'destructive':
-        return const ButtonStyle.destructive();
-      default:
-        return const ButtonStyle.primary();
-    }
-  }
+
 
   BoxFit _drawAsFit(dynamic v) {
     switch (v?.toString()) {

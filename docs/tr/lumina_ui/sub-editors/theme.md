@@ -22,6 +22,13 @@ Editör çalışma alanı birbiriyle senkronize iki ana panelden oluşur:
    - **"Stil Oluştur" Butonu**: Eğer sağdaki vitrinde yer alan bir bileşenin sol ağaçta henüz özel bir stil tanımı yoksa, ilgili bileşenin önizleme kartının altında "Stil Oluştur" butonu görüntülenir. Bu butona tıklandığında o bileşene ait stil oluşturulup ağaca eklenir ve doğrudan denetçide açılır.
    - **Özel Stiller Bölümü**: Tanımlanan özel stilleri önizler ve "Düzenle" butonuyla hızlı erişim sağlar.
 
+## UMG (Widget Tasarımcısı) ile Entegrasyon
+
+Temalar, UMG Widget Tasarımcısında (`AssetType.widget` tipindeki `.lmas` dosyaları) oluşturulan oyun arayüzlerine doğrudan uygulanır:
+- **Belge Düzeyinde Tema**: Tasarımcı üst araç çubuğu ve kök Canvas Panel'in Görünüm (Appearance) denetçisi üzerinden widget belgesinin temel `.lmas` tema asset'i seçilebilir (`themePath`). Kanvastaki bileşenler (örn. Butonlar) temanın renkleri ve geometrisiyle çizilir.
+- **Bileşen Düzeyinde Tema Ezmesi**: Tek tek bileşenler (örn. Butonlar), belge temasını herhangi bir proje tema asset'i ile ezebilir veya widget temasından devralacak şekilde ayarlanabilir.
+- **Stil Varyantları ve Özel Stiller**: Butonlar stillendirilirken, tasarımcılar standart varyantlardan (`primary`, `secondary`, `outline`, `ghost`, `destructive`) veya aktif temada tanımlanmış herhangi bir adlandırılmış özel stilden (`LuminaCustomStyle`) seçim yapabilir.
+
 ## Mimari
 
 - **Görünüm (View)**: `ThemeSubEditor` (`lib/ui/features/sub_editors/views/theme/theme_sub_editor.dart`), modüler olarak `theme_tree_panel.dart`, `theme_property_inspector.dart`, `theme_preview_showcase.dart`, `theme_preview_components.dart` ve `theme_custom_style_dialog.dart` dosyalarına ayrılmıştır.
@@ -31,3 +38,4 @@ Editör çalışma alanı birbiriyle senkronize iki ana panelden oluşur:
 ---
 
 [Önceki: Widget (UMG) tasarımcısı](umg.md) | [Üst: Alt editörler](index.md)
+

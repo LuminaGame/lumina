@@ -19,6 +19,7 @@ Oyun arayüzü için widget tasarımcısı: UMG belge modeli, tasarım kanvası,
 - [`lib/ui/features/sub_editors/views/umg/umg_components.dart`](#libuifeaturessub_editorsviewsumgumg_componentsdart)
 - [`lib/ui/features/sub_editors/views/umg/umg_runtime_view.dart`](#libuifeaturessub_editorsviewsumgumg_runtime_viewdart)
 - [`lib/ui/features/sub_editors/views/umg/umg_text_style.dart`](#libuifeaturessub_editorsviewsumgumg_text_styledart)
+- [`lib/ui/features/sub_editors/views/umg/umg_theme_helper.dart`](#libuifeaturessub_editorsviewsumgumg_theme_helperdart)
 
 ## `lib/ui/features/sub_editors/views/umg/designer_canvas.dart`
 
@@ -293,6 +294,17 @@ View model of the UMG designer: one persisted [UmgDocument] inside a real WIDGET
 | `bindTexture` | `void bindTexture(String id, RealAssetInfo? texture)` | Binds a real TEXTURE `.lmas` to an Image element. |
 | `textureBytesFor` | `Uint8List? textureBytesFor(String id)` | Raw image bytes of the texture bound to [id] (read from disk, cached). |
 | `refreshTextures` | `void refreshTextures()` | `refreshTextures` işlemini gerçekleştirir. |
+| `availableThemePaths` | `List<String> get availableThemePaths` | Aktif projede keşfedilen `.lmas` tema asset'lerinin göreli yolları. |
+| `activeThemePath` | `String? get activeThemePath` | Bu belgeye bağlı `.lmas` tema asset'inin göreli yolu (null = proje varsayılanı). |
+| `activeTheme` | `LuminaThemeDocument get activeTheme` | Bu widget belgesi için aktif olan ayrıştırılmış [LuminaThemeDocument]. |
+| `activeThemeData` | `ThemeData get activeThemeData` | [activeTheme]'den oluşturulan shadcn [ThemeData] örneği. |
+| `loadedThemes` | `Map<String, LuminaThemeDocument> get loadedThemes` | Göreli yollarına göre önbelleğe alınmış tema asset'leri haritası. |
+| `refreshAvailableThemes` | `Future<void> refreshAvailableThemes()` | Projedeki tema asset'lerini yeniden tarar ve [availableThemePaths]'i günceller. |
+| `loadThemeForDocument` | `Future<void> loadThemeForDocument()` | Belgeye atanmış temayı yükler veya proje varsayılan temasına döner. |
+| `setDocumentTheme` | `Future<void> setDocumentTheme(String? path)` | Belge düzeyindeki temel tema asset yolunu ayarlar veya temizler ve yeniden yükler. |
+| `setNodeTheme` | `Future<void> setNodeTheme(String nodeId, String? themePath)` | Belirli bir düğüm üzerinde bileşen düzeyinde tema ezme yolunu ayarlar veya kaldırır. |
+| `themeForNode` | `LuminaThemeDocument themeForNode(UmgNode node)` | [node] için geçerli olan [LuminaThemeDocument]'i çözümler (bileşen ezmesi varsa onu, yoksa belge temasını alır). |
+| `themeDataForNode` | `ThemeData themeDataForNode(UmgNode node)` | [node] için geçerli olan shadcn [ThemeData]'yı çözümler. |
 
 ## `lib/ui/features/sub_editors/services/umg_widget_codegen.dart`
 
@@ -515,6 +527,7 @@ The persisted designer document (`rawPayload` UTF-8 JSON of the WIDGET `.lmas`).
 | `root` | `UmgNode root` | `root` alanını (field/property) ve ilişkili veriyi saklar. |
 | `designResolution` | `UmgResolution designResolution` | `designResolution` alanını (field/property) ve ilişkili veriyi saklar. |
 | `dpiScale` | `double dpiScale` | `dpiScale` alanını (field/property) ve ilişkili veriyi saklar. |
+| `themePath` | `String? themePath` | Bu widget belgesine bağlı `.lmas` tema asset'inin isteğe bağlı göreli yolu. |
 | `logicalSize` | `Size get logicalSize` | `logicalSize` özelliğinin anlık değerini okuyan getter erişimcisi. |
 | `toJson` | `Map<String, dynamic> toJson()` | Nesneyi JSON haritasına serileştirir. |
 | `toFormattedJson` | `String toFormattedJson() => const JsonEncoder.withIndent('  ').convert(t...` | `toFormattedJson` işlemini gerçekleştirir. |
@@ -598,6 +611,8 @@ Renders a [UmgDocument] using real shadcn_flutter widgets and layout. Used by th
 | `textureBytes` | `final Map<String, Uint8List>? textureBytes` |  |
 | `onAction` | `final void Function(String nodeId, String action)? onAction` |  |
 | `plainLibrary` | `final bool plainLibrary` | The project uses plain Flutter widgets: shadcn components show the "requires the shadcn widget library" placeholder, as the built game cannot render them. |
+| `theme` | `final LuminaThemeDocument? theme` | Runtime görünümünün çizileceği isteğe bağlı tema (varsayılan: shadcn dark belirteçleri). |
+| `loadedThemes` | `final Map<String, LuminaThemeDocument>? loadedThemes` | Bileşen düzeyinde tema ezmeleri için yüklenmiş temalar önbelleği. |
 
 ## `lib/ui/features/sub_editors/views/umg/umg_text_style.dart`
 
@@ -609,6 +624,23 @@ Renders a [UmgDocument] using real shadcn_flutter widgets and layout. Used by th
 | `umgTextShadow` | `LuminaUmgTextShadow umgTextShadow(Map<String, dynamic> props, Map<String, Object?>? element)` | The drop shadow of [props] under the runtime [element]'s overrides. |
 | `umgTextOutline` | `LuminaUmgTextOutline umgTextOutline(Map<String, dynamic> props, Map<String, Object?>? element)` | The outline of [props] under the runtime [element]'s overrides. |
 | `umgText` | `Widget umgText(String text, Map<String, dynamic> props, Map<String, Object?>? element)` | A text of a designer element: [umgTextStyle] plus its outline drawn as a stroked layer under the fill ([LuminaUmgText], the widget the generated code uses too). |
+
+## `lib/ui/features/sub_editors/views/umg/umg_theme_helper.dart`
+
+### `class UmgThemeHelper`
+
+[LuminaThemeDocument]'i shadcn [ThemeData] ile köprüleyen ve UMG tasarım kanvası ile çalışma zamanı (runtime) görünümlerinde temalı bileşenleri (özel stiller ve bileşen tema ezmeleriyle Butonlar gibi) çizen yardımcı sınıf.
+
+**Fonksiyonlar, Metotlar ve Erişimciler:**
+
+| Metot / Getter | İmzası | Ne İşe Yarar? |
+| :--- | :--- | :--- |
+| `themeDataFromLuminaDoc` | `static ThemeData themeDataFromLuminaDoc(LuminaThemeDocument doc)` | [doc]'un belirteç ve ölçülerinden eksiksiz bir shadcn [ThemeData] ve [ColorScheme] oluşturur. |
+| `resolveThemeForNode` | `static LuminaThemeDocument resolveThemeForNode({required UmgNode node, required LuminaThemeDocument documentTheme, required Map<String, LuminaThemeDocument> loadedThemes})` | [node] için kullanılacak temayı belirler; `node.props['theme']` değerini [loadedThemes] üzerinden kontrol eder, yoksa [documentTheme]'e döner. |
+| `buildThemedButton` | `static Widget buildThemedButton({required BuildContext context, required UmgNode node, required LuminaThemeDocument theme, required Widget child, VoidCallback? onPressed})` | Temanın renklerini, yarıçapını, dolgusunu, buton varyantını ve özel stilini (`LuminaCustomStyle`) uygulayarak temalı bir Buton çizer. |
+| `buildDocumentThemePicker` | `static Widget buildDocumentThemePicker({required BuildContext context, required UmgEditorViewModel vm, bool compact = false})` | Kullanıcının belge düzeyindeki temel tema asset'ini seçmesini sağlayan bir açılır diyalog çizer. |
+| `buildNodeThemePicker` | `static Widget buildNodeThemePicker({required BuildContext context, required UmgEditorViewModel vm, required UmgNode node})` | Bileşen düzeyinde tema ezmesi için `(Widget Temasından Devral)` seçeneğini de içeren bir seçici çizer. |
+| `buildButtonStylePicker` | `static Widget buildButtonStylePicker({required BuildContext context, required UmgEditorViewModel vm, required UmgNode node})` | Buton varyantları (`primary`, `secondary`, `outline`, vb.) ve temadaki özel stiller (`LuminaCustomStyle`) için bir seçici çizer. |
 
 ---
 

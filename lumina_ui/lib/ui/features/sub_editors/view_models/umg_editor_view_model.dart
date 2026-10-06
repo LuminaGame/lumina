@@ -6,7 +6,10 @@ import 'package:flutter/widgets.dart';
 import 'package:lumina/data/models/lumina_asset.dart';
 import 'package:lumina/data/repositories/asset_repository.dart';
 import 'package:lumina/data/services/engine_logger_service.dart';
-import 'package:lumina/lumina.dart' show LuminaBlueprintDocument, LuminaBlueprintNode, LuminaBlueprintNodeLibrary;
+import 'package:lumina/lumina.dart'
+    show LuminaBlueprintDocument, LuminaBlueprintNode, LuminaBlueprintNodeLibrary, LuminaThemeDocument, LuminaThemeService;
+import 'package:shadcn_flutter/shadcn_flutter.dart' show ThemeData;
+import '../views/umg/umg_theme_helper.dart';
 
 import '../../main_editor/commands/editor_transaction.dart';
 import '../models/umg_document.dart';
@@ -46,12 +49,20 @@ class UmgEditorViewModel extends ChangeNotifier {
   String? _interactionLabel;
   WidgetBlueprintEditorViewModel? _graphEditor;
   bool _showGeneratedCode = false;
+  LuminaThemeDocument? _activeTheme;
+  final Map<String, LuminaThemeDocument> _loadedThemes = {};
+  List<String> _availableThemePaths = const [];
 
   UmgEditorViewModel({required this.assetPath, LuminaAsset? initialAsset, this.projectDirPathOverride}) : _asset = initialAsset {
     if (initialAsset != null) {
       _applyAsset(initialAsset);
       _loaded = true;
     }
+    _initThemes();
+  }
+
+  void _initThemes() {
+    refreshAvailableThemes().then((_) => loadThemeForDocument());
   }
 
   // ---------------------------------------------------------------------------
@@ -70,6 +81,11 @@ class UmgEditorViewModel extends ChangeNotifier {
   UmgCompileResult? get lastCompile => _lastCompile;
   String? get compileError => _compileError;
   List<RealAssetInfo> get textureAssets => List.unmodifiable(_textureAssets);
+  List<String> get availableThemePaths => List.unmodifiable(_availableThemePaths);
+  String? get activeThemePath => _document.themePath;
+  LuminaThemeDocument get activeTheme => _activeTheme ?? LuminaThemeDocument.defaultShadcnDark();
+  ThemeData get activeThemeData => UmgThemeHelper.themeDataFromLuminaDoc(activeTheme);
+  Map<String, LuminaThemeDocument> get loadedThemes => Map.unmodifiable(_loadedThemes);
 
   /// The designer tree or the graph differs from the `.lmas` on disk.
   bool get isDirty => _document.toFormattedJson(includeBlueprint: false) != _onDiskJson || (_graphEditor?.isDirty ?? false);
@@ -261,8 +277,110 @@ class UmgEditorViewModel extends ChangeNotifier {
     }
     _loaded = true;
     _refreshTextureAssets();
+    await refreshAvailableThemes();
+    await loadThemeForDocument();
     transactions.clear();
     notifyListeners();
+  }
+
+  LuminaThemeDocument? _findLoadedTheme(String? path) {
+    if (path == null || path.isEmpty) return null;
+    final norm = path.replaceAll('\\', '/');
+    if (_loadedThemes.containsKey(norm)) return _loadedThemes[norm];
+    for (final entry in _loadedThemes.entries) {
+      final k = entry.key.replaceAll('\\', '/');
+      if (k.endsWith(norm) || norm.endsWith(k.split('/').last)) {
+        return entry.value;
+      }
+    }
+    return null;
+  }
+
+  Future<void> refreshAvailableThemes() async {
+    final prj = projectDirPath;
+    if (prj == null || prj.isEmpty) return;
+    try {
+      await LuminaThemeService.ensureDefaultTheme(prj);
+      final paths = LuminaThemeService.listThemePaths(prj);
+      _availableThemePaths = paths;
+      for (final p in paths) {
+        if (!_loadedThemes.containsKey(p)) {
+          _loadedThemes[p] = await LuminaThemeService.loadTheme(p);
+        }
+      }
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  Future<void> loadThemeForDocument() async {
+    final prj = projectDirPath;
+    final tPath = _document.themePath;
+    if (tPath != null && tPath.isNotEmpty) {
+      final found = _findLoadedTheme(tPath);
+      if (found != null) {
+        _activeTheme = found;
+      } else {
+        final fullPath = (prj != null && !tPath.startsWith(prj)) ? '$prj/$tPath' : tPath;
+        final doc = await LuminaThemeService.loadTheme(fullPath);
+        _loadedThemes[tPath] = doc;
+        _activeTheme = doc;
+      }
+    } else if (prj != null) {
+      final defaultPath = '$prj/contents/themes/DefaultTheme.lmas'.replaceAll('\\', '/');
+      final found = _findLoadedTheme(defaultPath);
+      if (found != null) {
+        _activeTheme = found;
+      } else if (File(defaultPath).existsSync()) {
+        final doc = await LuminaThemeService.loadTheme(defaultPath);
+        _loadedThemes[defaultPath] = doc;
+        _activeTheme = doc;
+      } else {
+        _activeTheme = LuminaThemeDocument.defaultShadcnDark();
+      }
+    } else {
+      _activeTheme = LuminaThemeDocument.defaultShadcnDark();
+    }
+    notifyListeners();
+  }
+
+  Future<void> setDocumentTheme(String? path) async {
+    _mutate<bool>('Set Widget Theme', () {
+      _document.themePath = (path == null || path.isEmpty) ? null : path;
+      return true;
+    });
+    await loadThemeForDocument();
+    notifyListeners();
+  }
+
+  Future<void> setNodeTheme(String nodeId, String? themePath) async {
+    final node = _document.findNode(nodeId);
+    if (node == null) return;
+    _mutate<bool>('Set Component Theme', () {
+      if (themePath == null || themePath.isEmpty) {
+        node.props.remove('theme');
+      } else {
+        node.props['theme'] = themePath;
+      }
+      return true;
+    });
+    if (themePath != null && themePath.isNotEmpty && _findLoadedTheme(themePath) == null) {
+      final prj = projectDirPath;
+      final fullPath = (prj != null && !themePath.startsWith(prj)) ? '$prj/$themePath' : themePath;
+      _loadedThemes[themePath] = await LuminaThemeService.loadTheme(fullPath);
+    }
+    notifyListeners();
+  }
+
+  LuminaThemeDocument themeForNode(UmgNode node) {
+    return UmgThemeHelper.resolveThemeForNode(
+      node: node,
+      documentTheme: activeTheme,
+      loadedThemes: _loadedThemes,
+    );
+  }
+
+  ThemeData themeDataForNode(UmgNode node) {
+    return UmgThemeHelper.themeDataFromLuminaDoc(themeForNode(node));
   }
 
   void _refreshTextureAssets() {

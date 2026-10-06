@@ -780,6 +780,7 @@ class UmgDocument {
   UmgNode root;
   UmgResolution designResolution;
   double dpiScale;
+  String? themePath;
 
   /// The widget's own Blueprint graph, stored
   /// under `blueprint`; null for a widget that never had one.
@@ -789,13 +790,14 @@ class UmgDocument {
     required this.root,
     this.designResolution = const UmgResolution('1920x1080 Full HD', 1920, 1080),
     this.dpiScale = 1.0,
+    this.themePath,
     this.blueprint,
   });
 
   /// A new widget: one root Canvas Panel.
-  factory UmgDocument.createDefault() {
+  factory UmgDocument.createDefault({String? themePath}) {
     final root = UmgNode.create(UmgWidgetType.canvasPanel, name: 'Root Canvas', id: 'umg_root');
-    return UmgDocument(root: root);
+    return UmgDocument(root: root, themePath: themePath);
   }
 
   Size get logicalSize => Size(designResolution.width / dpiScale, designResolution.height / dpiScale);
@@ -806,6 +808,7 @@ class UmgDocument {
         'version': 1,
         'designResolution': {'width': designResolution.width, 'height': designResolution.height},
         'dpiScale': dpiScale,
+        if (themePath != null && themePath!.isNotEmpty) 'theme': themePath,
         'root': root.toJson(),
         if (includeBlueprint && blueprint != null) LuminaWidgetBlueprintDocument.payloadKey: blueprint!.toJson(),
       };
@@ -830,6 +833,7 @@ class UmgDocument {
       root: rootMap is Map ? UmgNode.fromJson(Map<String, dynamic>.from(rootMap)) : UmgDocument.createDefault().root,
       designResolution: resolution,
       dpiScale: (map['dpiScale'] as num?)?.toDouble() ?? 1.0,
+      themePath: map['theme'] as String?,
       blueprint: graph is Map ? LuminaBlueprintDocument.fromJson(Map<String, dynamic>.from(graph)) : null,
     );
   }

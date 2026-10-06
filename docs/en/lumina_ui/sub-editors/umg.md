@@ -19,6 +19,7 @@ The widget designer for game UI: the UMG document model, the designer canvas, pa
 - [`lib/ui/features/sub_editors/views/umg/umg_components.dart`](#libuifeaturessub_editorsviewsumgumg_componentsdart)
 - [`lib/ui/features/sub_editors/views/umg/umg_runtime_view.dart`](#libuifeaturessub_editorsviewsumgumg_runtime_viewdart)
 - [`lib/ui/features/sub_editors/views/umg/umg_text_style.dart`](#libuifeaturessub_editorsviewsumgumg_text_styledart)
+- [`lib/ui/features/sub_editors/views/umg/umg_theme_helper.dart`](#libuifeaturessub_editorsviewsumgumg_theme_helperdart)
 
 ## `lib/ui/features/sub_editors/views/umg/designer_canvas.dart`
 
@@ -293,6 +294,17 @@ View model of the UMG designer: one persisted [UmgDocument] inside a real WIDGET
 | `bindTexture` | `void bindTexture(String id, RealAssetInfo? texture)` | Binds a real TEXTURE `.lmas` to an Image element. |
 | `textureBytesFor` | `Uint8List? textureBytesFor(String id)` | Raw image bytes of the texture bound to [id] (read from disk, cached). |
 | `refreshTextures` | `void refreshTextures()` | Executes `refreshTextures` operation. |
+| `availableThemePaths` | `List<String> get availableThemePaths` | Relative paths of `.lmas` theme assets discovered in the active project. |
+| `activeThemePath` | `String? get activeThemePath` | Relative path to the `.lmas` theme asset bound to this document (null = project default). |
+| `activeTheme` | `LuminaThemeDocument get activeTheme` | Parsed [LuminaThemeDocument] currently active for this widget document. |
+| `activeThemeData` | `ThemeData get activeThemeData` | Constructed shadcn [ThemeData] from [activeTheme]. |
+| `loadedThemes` | `Map<String, LuminaThemeDocument> get loadedThemes` | Cache of loaded theme assets keyed by relative path. |
+| `refreshAvailableThemes` | `Future<void> refreshAvailableThemes()` | Re-scans the project for theme assets and updates [availableThemePaths]. |
+| `loadThemeForDocument` | `Future<void> loadThemeForDocument()` | Loads the document's assigned theme or falls back to project default. |
+| `setDocumentTheme` | `Future<void> setDocumentTheme(String? path)` | Sets or clears the document-level base theme asset path and reloads. |
+| `setNodeTheme` | `Future<void> setNodeTheme(String nodeId, String? themePath)` | Sets or clears a component-level theme override asset path on a specific node. |
+| `themeForNode` | `LuminaThemeDocument themeForNode(UmgNode node)` | Resolves the effective [LuminaThemeDocument] for [node] (taking component override if present, else document theme). |
+| `themeDataForNode` | `ThemeData themeDataForNode(UmgNode node)` | Resolves the effective shadcn [ThemeData] for [node]. |
 
 ## `lib/ui/features/sub_editors/services/umg_widget_codegen.dart`
 
@@ -515,6 +527,7 @@ The persisted designer document (`rawPayload` UTF-8 JSON of the WIDGET `.lmas`).
 | `root` | `UmgNode root` | Holds the `root` property or configuration state. |
 | `designResolution` | `UmgResolution designResolution` | Holds the `designResolution` property or configuration state. |
 | `dpiScale` | `double dpiScale` | Holds the `dpiScale` property or configuration state. |
+| `themePath` | `String? themePath` | Optional relative path to a `.lmas` theme asset bound to this widget document. |
 | `logicalSize` | `Size get logicalSize` | Getter accessor returning the current value of `logicalSize`. |
 | `toJson` | `Map<String, dynamic> toJson()` | Serializes the object to a JSON map. |
 | `toFormattedJson` | `String toFormattedJson() => const JsonEncoder.withIndent('  ').convert(t...` | Executes `toFormattedJson` operation. |
@@ -598,6 +611,8 @@ Renders a [UmgDocument] using real shadcn_flutter widgets and layout. Used by th
 | `textureBytes` | `final Map<String, Uint8List>? textureBytes` |  |
 | `onAction` | `final void Function(String nodeId, String action)? onAction` |  |
 | `plainLibrary` | `final bool plainLibrary` | The project uses plain Flutter widgets: shadcn components show the "requires the shadcn widget library" placeholder, as the built game cannot render them. |
+| `theme` | `final LuminaThemeDocument? theme` | Optional theme to render the runtime view with (defaults to shadcn dark tokens). |
+| `loadedThemes` | `final Map<String, LuminaThemeDocument>? loadedThemes` | Optional cache of loaded themes for component-level theme overrides. |
 
 ## `lib/ui/features/sub_editors/views/umg/umg_text_style.dart`
 
@@ -609,6 +624,23 @@ Renders a [UmgDocument] using real shadcn_flutter widgets and layout. Used by th
 | `umgTextShadow` | `LuminaUmgTextShadow umgTextShadow(Map<String, dynamic> props, Map<String, Object?>? element)` | The drop shadow of [props] under the runtime [element]'s overrides. |
 | `umgTextOutline` | `LuminaUmgTextOutline umgTextOutline(Map<String, dynamic> props, Map<String, Object?>? element)` | The outline of [props] under the runtime [element]'s overrides. |
 | `umgText` | `Widget umgText(String text, Map<String, dynamic> props, Map<String, Object?>? element)` | A text of a designer element: [umgTextStyle] plus its outline drawn as a stroked layer under the fill ([LuminaUmgText], the widget the generated code uses too). |
+
+## `lib/ui/features/sub_editors/views/umg/umg_theme_helper.dart`
+
+### `class UmgThemeHelper`
+
+Helper utilities bridging [LuminaThemeDocument] with shadcn [ThemeData] and rendering themed components (e.g. Buttons with custom styles and component theme overrides) in the UMG designer canvas and runtime views.
+
+**Functions, Methods & Accessors:**
+
+| Method / Getter | Signature | Purpose & Description |
+| :--- | :--- | :--- |
+| `themeDataFromLuminaDoc` | `static ThemeData themeDataFromLuminaDoc(LuminaThemeDocument doc)` | Builds a full shadcn [ThemeData] and [ColorScheme] from [doc]'s tokens and metrics. |
+| `resolveThemeForNode` | `static LuminaThemeDocument resolveThemeForNode({required UmgNode node, required LuminaThemeDocument documentTheme, required Map<String, LuminaThemeDocument> loadedThemes})` | Resolves the theme to use for [node], checking `node.props['theme']` against [loadedThemes] and falling back to [documentTheme]. |
+| `buildThemedButton` | `static Widget buildThemedButton({required BuildContext context, required UmgNode node, required LuminaThemeDocument theme, required Widget child, VoidCallback? onPressed})` | Renders a themed Button applying the theme's colors, radius, padding, button variant, and custom style (`LuminaCustomStyle`). |
+| `buildDocumentThemePicker` | `static Widget buildDocumentThemePicker({required BuildContext context, required UmgEditorViewModel vm, bool compact = false})` | Renders a dropdown dialog allowing the user to select the document-level base theme asset. |
+| `buildNodeThemePicker` | `static Widget buildNodeThemePicker({required BuildContext context, required UmgEditorViewModel vm, required UmgNode node})` | Renders a picker for component-level theme override with an `(Inherit from Widget)` option. |
+| `buildButtonStylePicker` | `static Widget buildButtonStylePicker({required BuildContext context, required UmgEditorViewModel vm, required UmgNode node})` | Renders a picker for button variants (`primary`, `secondary`, `outline`, etc.) and theme custom styles (`LuminaCustomStyle`). |
 
 ---
 

@@ -9,6 +9,7 @@ import 'package:lumina_ui/ui/core/property_editors/asset_picker_select.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import '../../models/umg_document.dart';
 import '../../view_models/umg_editor_view_model.dart';
+import 'umg_theme_helper.dart';
 
 /// The designer's right panel: Slot (anchors preset matrix, position/size/
 /// alignment, size-to-content, Z-order — or the honest box/overlay slot
@@ -278,6 +279,12 @@ class UmgSlotInspector extends StatelessWidget {
   Widget _appearanceSection(BuildContext context, UmgNode node) {
     final props = node.props;
     final rows = <Widget>[];
+    final isRoot = vm.document.parentOf(node.id) == null;
+    if (isRoot) {
+      rows.add(_label('Widget Theme'));
+      rows.add(UmgThemeHelper.buildDocumentThemePicker(vm: vm));
+      rows.add(const SizedBox(height: 8));
+    }
 
     if (props.containsKey('color')) {
       rows.add(_label('Color and Tint'));
@@ -290,12 +297,12 @@ class UmgSlotInspector extends StatelessWidget {
     if (node.type == UmgWidgetType.text) rows.add(_propText(node, 'Text', 'text'));
     if (node.type == UmgWidgetType.button) {
       rows.add(_propText(node, 'Label', 'label'));
+      rows.add(const SizedBox(height: 6));
+      rows.add(_label('Component Theme Override'));
+      rows.add(UmgThemeHelper.buildNodeThemePicker(vm: vm, node: node));
+      rows.add(const SizedBox(height: 6));
       rows.add(_label('Button Style'));
-      rows.add(EnumField(
-        value: props['style']?.toString() ?? 'primary',
-        enumValues: const ['primary', 'secondary', 'outline', 'ghost', 'destructive'],
-        onCommit: (v) => vm.setProp(node.id, 'style', v),
-      ));
+      rows.add(UmgThemeHelper.buildButtonStylePicker(vm: vm, node: node));
     }
     if (node.type == UmgWidgetType.checkBox) {
       rows.add(_propText(node, 'Label', 'label'));

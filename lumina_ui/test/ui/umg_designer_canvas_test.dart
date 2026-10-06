@@ -28,13 +28,16 @@ void main() {
   });
 
   tearDown(() {
-    if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
+    try {
+      if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
+    } on FileSystemException catch (_) {}
   });
 
   Future<UmgEditorViewModel> pumpEditor(WidgetTester tester) async {
     await tester.binding.setSurfaceSize(const Size(1500, 900));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final vm = UmgEditorViewModel(assetPath: lmasPath);
+    addTearDown(() => vm.dispose());
     // Real disk read: must run outside the FakeAsync zone.
     await tester.runAsync(() => vm.load());
     await tester.pumpWidget(

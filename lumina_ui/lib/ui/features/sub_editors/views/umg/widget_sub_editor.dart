@@ -11,6 +11,7 @@ import 'designer_canvas.dart';
 import 'hierarchy_tree.dart';
 import 'palette.dart';
 import 'slot_inspector.dart';
+import 'umg_theme_helper.dart';
 
 /// The UMG designer: Palette | Hierarchy tabs on the left, the live
 /// designer canvas in the center and the slot/appearance/events inspector
@@ -261,6 +262,8 @@ class _UMGWidgetSubEditorState extends State<UMGWidgetSubEditor> {
               ),
             ),
           ],
+          const SizedBox(width: 8),
+          UmgThemeHelper.buildDocumentThemePicker(vm: vm, compact: true),
           const SizedBox(width: 8),
           OutlineButton(
             key: const ValueKey('umg_save'),

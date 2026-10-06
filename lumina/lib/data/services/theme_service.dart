@@ -35,8 +35,15 @@ class LuminaThemeService {
       return LuminaThemeDocument.defaultShadcnDark();
     }
     final bytes = await file.readAsBytes();
-    final asset = LuminaAsset.fromBytes(bytes);
-    return LuminaThemeDocument.fromAsset(asset);
+    if (bytes.isEmpty) {
+      return LuminaThemeDocument.defaultShadcnDark();
+    }
+    try {
+      final asset = LuminaAsset.fromBytes(bytes);
+      return LuminaThemeDocument.fromAsset(asset);
+    } catch (_) {
+      return LuminaThemeDocument.defaultShadcnDark();
+    }
   }
 
   /// Saves a [LuminaThemeDocument] to a `.lmas` file at [lmasPath].
