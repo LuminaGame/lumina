@@ -569,6 +569,16 @@ void filament_camera_set_exposure(ffi.Pointer<ffi.Void> camera, double aperture,
   _m.filament_camera_set_exposure(camera.address.toJS, aperture.toJS, shutter_speed.toJS, sensitivity.toJS);
 }
 
+bool filament_view_motion_vectors_supported(ffi.Pointer<ffi.Void> engine) =>
+    _m.filament_view_motion_vectors_supported(engine.address.toJS).toDartInt != 0;
+
+void filament_view_set_motion_vector_texture(ffi.Pointer<ffi.Void> view, ffi.Pointer<ffi.Void> texture) {
+  _m.filament_view_set_motion_vector_texture(view.address.toJS, texture.address.toJS);
+}
+
+ffi.Pointer<ffi.Void> filament_view_get_motion_vector_texture(ffi.Pointer<ffi.Void> view) =>
+    ffi.Pointer<ffi.Void>.fromAddress(_m.filament_view_get_motion_vector_texture(view.address.toJS).toDartInt);
+
 ffi.Pointer<ffi.Void> filament_render_target_create_ex(ffi.Pointer<ffi.Void> engine, ffi.Pointer<filament_rt_attachment_t> color_attachments, int color_count, ffi.Pointer<filament_rt_attachment_t> depth_attachment, int samples) =>
     ffi.Pointer<ffi.Void>.fromAddress(_m.filament_render_target_create_ex(engine.address.toJS, color_attachments.address.toJS, color_count.toJS, depth_attachment.address.toJS, samples.toJS).toDartInt);
 
@@ -4695,6 +4705,9 @@ final class filament_temporal_anti_aliasing_options extends ffi.Struct {
 
   bool get historyReprojection => FlutterFilamentModule.heap.getUint8($address + 37) != 0;
   set historyReprojection(bool value) => FlutterFilamentModule.heap.setUint8($address + 37, value ? 1 : 0);
+
+  bool get motionVectors => FlutterFilamentModule.heap.getUint8($address + 38) != 0;
+  set motionVectors(bool value) => FlutterFilamentModule.heap.setUint8($address + 38, value ? 1 : 0);
 }
 
 final class filament_screen_space_reflections_options extends ffi.Struct {
@@ -6219,6 +6232,12 @@ extension type _Module._(JSObject _) implements JSObject {
   external void filament_camera_look_at(JSNumber camera, JSNumber eye_x, JSNumber eye_y, JSNumber eye_z, JSNumber center_x, JSNumber center_y, JSNumber center_z, JSNumber up_x, JSNumber up_y, JSNumber up_z);
   @JS('_filament_camera_set_exposure')
   external void filament_camera_set_exposure(JSNumber camera, JSNumber aperture, JSNumber shutter_speed, JSNumber sensitivity);
+  @JS('_filament_view_motion_vectors_supported')
+  external JSNumber filament_view_motion_vectors_supported(JSNumber engine);
+  @JS('_filament_view_set_motion_vector_texture')
+  external void filament_view_set_motion_vector_texture(JSNumber view, JSNumber texture);
+  @JS('_filament_view_get_motion_vector_texture')
+  external JSNumber filament_view_get_motion_vector_texture(JSNumber view);
   @JS('_filament_render_target_create_ex')
   external JSNumber filament_render_target_create_ex(JSNumber engine, JSNumber color_attachments, JSNumber color_count, JSNumber depth_attachment, JSNumber samples);
   @JS('_filament_render_target_get_supported_color_attachments_count')

@@ -1089,6 +1089,14 @@ class TemporalAntiAliasingOptions {
   final bool preventFlickering;
   final bool historyReprojection;
 
+  /// Renders per-pixel motion vectors in the structure pass (which then runs
+  /// at full resolution) and reprojects the TAA history with them instead of
+  /// with the camera matrices alone, so transform-animated and moving objects
+  /// stop ghosting. Skinning and morphing use the current pose. The buffer can
+  /// be exported with [FilamentView.motionVectorTexture]; needs
+  /// [FilamentView.motionVectorsSupported].
+  final bool motionVectors;
+
   const TemporalAntiAliasingOptions({
     this.filterWidth = 1.0,
     this.feedback = 0.12,
@@ -1106,6 +1114,7 @@ class TemporalAntiAliasingOptions {
     this.varianceGamma = 1.0,
     this.preventFlickering = false,
     this.historyReprojection = true,
+    this.motionVectors = false,
   });
 
   TemporalAntiAliasingOptions copyWith({
@@ -1125,6 +1134,7 @@ class TemporalAntiAliasingOptions {
     double? varianceGamma,
     bool? preventFlickering,
     bool? historyReprojection,
+    bool? motionVectors,
   }) {
     return TemporalAntiAliasingOptions(
       filterWidth: filterWidth ?? this.filterWidth,
@@ -1143,6 +1153,7 @@ class TemporalAntiAliasingOptions {
       varianceGamma: varianceGamma ?? this.varianceGamma,
       preventFlickering: preventFlickering ?? this.preventFlickering,
       historyReprojection: historyReprojection ?? this.historyReprojection,
+      motionVectors: motionVectors ?? this.motionVectors,
     );
   }
 
@@ -1166,7 +1177,8 @@ class TemporalAntiAliasingOptions {
           jitterPattern == other.jitterPattern &&
           varianceGamma == other.varianceGamma &&
           preventFlickering == other.preventFlickering &&
-          historyReprojection == other.historyReprojection;
+          historyReprojection == other.historyReprojection &&
+          motionVectors == other.motionVectors;
 
   @override
   int get hashCode => Object.hashAll([
@@ -1186,6 +1198,7 @@ class TemporalAntiAliasingOptions {
         varianceGamma,
         preventFlickering,
         historyReprojection,
+        motionVectors,
       ]);
 
   void copyToNative(ffi_gen.filament_temporal_anti_aliasing_options out) {
@@ -1205,6 +1218,7 @@ class TemporalAntiAliasingOptions {
     out.varianceGamma = varianceGamma;
     out.preventFlickering = preventFlickering;
     out.historyReprojection = historyReprojection;
+    out.motionVectors = motionVectors;
   }
 
   factory TemporalAntiAliasingOptions.fromNative(ffi_gen.filament_temporal_anti_aliasing_options out) {
@@ -1225,6 +1239,7 @@ class TemporalAntiAliasingOptions {
       varianceGamma: out.varianceGamma,
       preventFlickering: out.preventFlickering,
       historyReprojection: out.historyReprojection,
+      motionVectors: out.motionVectors,
     );
   }
 }

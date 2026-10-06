@@ -203,6 +203,9 @@ typedef struct filament_temporal_anti_aliasing_options {
     float varianceGamma;
     bool preventFlickering;
     bool historyReprojection;
+    // Render per-pixel motion vectors in the structure pass (full resolution) and reproject
+    // the TAA history with them. See filament_view_set_motion_vector_texture.
+    bool motionVectors;
 } filament_temporal_anti_aliasing_options;
 
 typedef struct filament_screen_space_reflections_options {
@@ -387,6 +390,20 @@ typedef struct filament_rt_attachment_t {
     int32_t  face;
     uint32_t layer;
 } filament_rt_attachment_t;
+
+// ==========================================
+// Motion vectors
+// ==========================================
+// Whether this engine can render motion vectors: a real GPU backend at feature level 1 or
+// higher with RG16F colour attachments. False on the noop backend.
+FFI_PLUGIN_EXPORT bool filament_view_motion_vectors_supported(void* engine);
+// Exports the motion vectors of a view whose TAA options have motionVectors on into
+// `texture` (a two-or-more-channel float colour texture, colour attachment + sampleable,
+// exactly the size of the view's render target; texels of screen motion since the previous
+// frame, x right, y up). NULL stops the export. The texture must outlive its use.
+FFI_PLUGIN_EXPORT void filament_view_set_motion_vector_texture(void* view, void* texture);
+// The texture set with filament_view_set_motion_vector_texture, or NULL.
+FFI_PLUGIN_EXPORT void* filament_view_get_motion_vector_texture(void* view);
 
 FFI_PLUGIN_EXPORT void* filament_render_target_create_ex(void* engine,
         const filament_rt_attachment_t* color_attachments, uint32_t color_count,

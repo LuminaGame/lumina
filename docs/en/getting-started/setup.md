@@ -66,11 +66,12 @@ A package resolved from git lives in the pub cache and has no Filament next to i
 
 ## Build Filament
 
-The hooks expect the static libraries in `filament/out/cmake-release/` (Linux and macOS) or `filament/out/cmake-release-windows/` (Windows). Lumina uses upstream Filament v1.77.2 with three local patches, kept in `third_party/filament/patches/` and explained in `third_party/filament/README.md`:
+The hooks expect the static libraries in `filament/out/cmake-release/` (Linux and macOS) or `filament/out/cmake-release-windows/` (Windows). Lumina uses upstream Filament v1.77.2 with four local patches, kept in `third_party/filament/patches/` and explained in `third_party/filament/README.md`:
 
 - a bounds fix in the bundled `libassimp`;
 - a `RenderPass.cpp` change that keeps skinned and morphed renderables out of the screen-space reflections pass (without it the Vulkan backend loses the device);
-- a `third_party/libwebp/tnt` change so that a WebAssembly build with WebP textures configures without SDL2.
+- a `third_party/libwebp/tnt` change so that a WebAssembly build with WebP textures configures without SDL2;
+- per-pixel motion vectors from the structure pass (`TemporalAntiAliasingOptions::motionVectors`), consumed by TAA and exportable through `View::setMotionVectorTexture`.
 
 ### Prebuilt archive
 

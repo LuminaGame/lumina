@@ -1,0 +1,824 @@
+diff --git a/filament/include/filament/Options.h b/filament/include/filament/Options.h
+index 6f836c8f..89551ea3 100644
+--- a/filament/include/filament/Options.h
++++ b/filament/include/filament/Options.h
+@@ -630,6 +630,15 @@ struct TemporalAntiAliasingOptions {
+     bool preventFlickering = false;
+     /** whether to apply history reprojection (debug option) */
+     bool historyReprojection = true;
++    /**
++     * Renders per-pixel motion vectors (the screen-space offset of every surface point since
++     * the previous frame, in texels of the render resolution, as RG16F) during the structure
++     * pass, and reprojects the TAA history with them instead of with the camera matrices alone.
++     * Rigid, camera and transform-animated motion is captured per renderable; skinning and
++     * morphing use the current pose. The structure pass then runs at full resolution. The
++     * velocity buffer can be exported through View::setMotionVectorTexture().
++     */
++    bool motionVectors = false;
+ };
+ 
+ /**
+diff --git a/filament/include/filament/View.h b/filament/include/filament/View.h
+index fe6d9138..df99e4c3 100644
+--- a/filament/include/filament/View.h
++++ b/filament/include/filament/View.h
+@@ -46,6 +46,7 @@ class Engine;
+ class MaterialInstance;
+ class RenderTarget;
+ class Scene;
++class Texture;
+ class Viewport;
+ 
+ /**
+@@ -395,6 +396,23 @@ public:
+      */
+     ScreenSpaceReflectionsOptions const& getScreenSpaceReflectionsOptions() const noexcept;
+ 
++    /**
++     * Exports the motion vectors rendered when TemporalAntiAliasingOptions::motionVectors is
++     * enabled into a user texture: a two-component (or wider) float color texture, usable as a
++     * color attachment and sampleable, with exactly the size of the view's render target. Each
++     * texel holds the screen-space offset of the surface since the previous frame, in texels,
++     * x to the right and y up. A texture of another size is ignored; null disables the export.
++     * The texture must outlive its use by the view.
++     *
++     * @param texture the texture to render the motion vectors into, or nullptr
++     */
++    void setMotionVectorTexture(Texture const* texture) noexcept;
++
++    /**
++     * Returns the motion-vector export texture set with setMotionVectorTexture(), or nullptr.
++     */
++    Texture const* getMotionVectorTexture() const noexcept;
++
+     /**
+      * Enables or disable screen-space guard band. Disabled by default.
+      *
+diff --git a/filament/src/FrameHistory.h b/filament/src/FrameHistory.h
+index c47b4e34..749b6e56 100644
+--- a/filament/src/FrameHistory.h
++++ b/filament/src/FrameHistory.h
+@@ -43,6 +43,11 @@ struct FrameHistoryEntry {
+         FrameGraphTexture::Descriptor desc;
+         math::mat4 projection;
+     } ssr;
++    // motion vectors: the unjittered clip <- world matrix the structure pass rendered with
++    struct {
++        math::mat4f clipFromWorld;
++        bool valid = false;
++    } velocity;
+ };
+ 
+ /*
+diff --git a/filament/src/PostProcessManager.cpp b/filament/src/PostProcessManager.cpp
+index b654755d..1259eda0 100644
+--- a/filament/src/PostProcessManager.cpp
++++ b/filament/src/PostProcessManager.cpp
+@@ -564,6 +564,7 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
+     struct StructurePassData {
+         FrameGraphId<FrameGraphTexture> depth;
+         FrameGraphId<FrameGraphTexture> picking;
++        FrameGraphId<FrameGraphTexture> velocity;
+     };
+ 
+     // sanitize a bit the user provided scaling factor
+@@ -574,6 +575,26 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
+     const size_t levelCount = std::min(8, FTexture::maxLevelCount(width, height) - 5);
+     assert_invariant(levelCount >= 1);
+ 
++    // Motion vectors are written by the picking variant (its second color attachment), so
++    // rendering them means running the structure pass with picking. Feature level 0 has
++    // no second attachment.
++    bool const velocity = config.velocity && mFeatureLevel != FeatureLevel::FEATURE_LEVEL_0;
++    bool const picking = config.picking || velocity;
++
++    // The user's export texture receives the motion vectors when it has the pass' size.
++    FrameGraphId<FrameGraphTexture> exportedVelocity;
++    if (velocity && config.velocityExport) {
++        FTexture const* const exported = config.velocityExport;
++        if (exported->getWidth() == width && exported->getHeight() == height) {
++            exportedVelocity = fg.import("Velocity Buffer (export)", {
++                    .width = width, .height = height,
++                    .format = exported->getFormat() },
++                    FrameGraphTexture::Usage::COLOR_ATTACHMENT |
++                    FrameGraphTexture::Usage::SAMPLEABLE,
++                    FrameGraphTexture{ .handle = exported->getHwHandle() });
++        }
++    }
++
+     // generate depth pass at the requested resolution
+     auto const& structurePass = fg.addPass<StructurePassData>("Structure Pass",
+             [&](FrameGraph::Builder& builder, auto& data) {
+@@ -586,7 +607,9 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
+                 data.depth = builder.write(data.depth,
+                         FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
+ 
+-                if (config.picking) {
++                TargetBufferFlags clearFlags = TargetBufferFlags::COLOR0 | TargetBufferFlags::DEPTH;
++
++                if (picking) {
+                     // FIXME: the DescriptorSetLayout must specify SAMPLER_FLOAT
+                     data.picking = builder.createTexture("Picking Buffer", {
+                             .width = width, .height = height,
+@@ -596,15 +619,30 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
+                             FrameGraphTexture::Usage::COLOR_ATTACHMENT);
+                 }
+ 
++                if (picking && !isES2) {
++                    // The picking variant always has a second output; without motion vectors
++                    // it lands in a transient buffer nobody reads (culled with the pass).
++                    if (exportedVelocity) {
++                        data.velocity = exportedVelocity;
++                    } else {
++                        data.velocity = builder.createTexture("Velocity Buffer", {
++                                .width = width, .height = height,
++                                .format = TextureFormat::RG16F });
++                    }
++                    data.velocity = builder.write(data.velocity,
++                            FrameGraphTexture::Usage::COLOR_ATTACHMENT);
++                    clearFlags |= TargetBufferFlags::COLOR1;
++                }
++
+                 builder.declareRenderPass("Structure Target", {
+-                        .attachments = { .color = { data.picking }, .depth = data.depth },
+-                        .clearFlags = TargetBufferFlags::COLOR0 | TargetBufferFlags::DEPTH
++                        .attachments = { .color = { data.picking, data.velocity }, .depth = data.depth },
++                        .clearFlags = clearFlags
+                 });
+             },
+             [=, this, passBuilder = passBuilder](FrameGraphResources const& resources,
+                     auto const&, DriverApi& driver) mutable {
+                 Variant structureVariant(Variant::DEPTH_VARIANT);
+-                structureVariant.setPicking(config.picking);
++                structureVariant.setPicking(picking);
+ 
+                 // bind the per-view descriptorSet that is used for the structure pass
+                 getStructureDescriptorSet().bind(driver);
+@@ -625,6 +663,22 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
+ 
+     auto const depth = structurePass->depth;
+ 
++    // The export texture lives outside the frame graph: without a reader in the graph the
++    // structure pass would be allowed to discard it at its end (Vulkan does). A side-effect
++    // pass that reads it keeps the store.
++    if (exportedVelocity) {
++        struct KeepVelocityExportData {
++            FrameGraphId<FrameGraphTexture> velocity;
++        };
++        fg.addPass<KeepVelocityExportData>("Keep Velocity Export",
++                [&](FrameGraph::Builder& builder, auto& data) {
++                    builder.sideEffect();
++                    data.velocity = builder.read(structurePass->velocity,
++                            FrameGraphTexture::Usage::SAMPLEABLE);
++                },
++                [](FrameGraphResources const&, auto const&, DriverApi&) {});
++    }
++
+     /*
+      * create depth mipmap chain
+     */
+@@ -677,7 +731,8 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
+                 unbindAllDescriptorSets(driver);
+             });
+ 
+-    return { depth, structurePass->picking };
++    return { depth, config.picking ? structurePass->picking : FrameGraphId<FrameGraphTexture>{},
++            velocity ? structurePass->velocity : FrameGraphId<FrameGraphTexture>{} };
+ }
+ 
+ FrameGraphId<FrameGraphTexture> PostProcessManager::transparentPicking(FrameGraph& fg,
+@@ -687,6 +742,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::transparentPicking(FrameGrap
+             struct PickingRenderPassData {
+                 FrameGraphId<FrameGraphTexture> depth;
+                 FrameGraphId<FrameGraphTexture> picking;
++                FrameGraphId<FrameGraphTexture> velocity;
+             };
+             auto const& pickingRenderPass = fg.addPass<PickingRenderPassData>("Picking Render Pass",
+                 [&](FrameGraph::Builder& builder, auto& data) {
+@@ -710,9 +766,20 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::transparentPicking(FrameGrap
+                     data.picking = builder.write(data.picking,
+                         FrameGraphTexture::Usage::COLOR_ATTACHMENT);
+ 
++                    TargetBufferFlags clearFlags = TargetBufferFlags::COLOR0 | TargetBufferFlags::DEPTH;
++                    if (!isFL0) {
++                        // the picking variant's second output (motion vectors), unused here
++                        data.velocity = builder.createTexture("Velocity Buffer (picking)", {
++                                .width = width, .height = height,
++                                .format = TextureFormat::RG16F });
++                        data.velocity = builder.write(data.velocity,
++                                FrameGraphTexture::Usage::COLOR_ATTACHMENT);
++                        clearFlags |= TargetBufferFlags::COLOR1;
++                    }
++
+                     builder.declareRenderPass("Picking Render Target", {
+-                            .attachments = {.color = { data.picking }, .depth = data.depth },
+-                            .clearFlags = TargetBufferFlags::COLOR0 | TargetBufferFlags::DEPTH
++                            .attachments = {.color = { data.picking, data.velocity }, .depth = data.depth },
++                            .clearFlags = clearFlags
+                         });
+                 },
+                 [=, this, passBuilder = passBuilder](FrameGraphResources const& resources,
+@@ -2965,6 +3032,7 @@ void PostProcessManager::configureTemporalAntiAliasingMaterial(backend::DriverAp
+     FMaterial* const ma = getPostProcessMaterial("taa").getMaterial(mEngine);
+     ma->getPrograms().setConstants({
+         { "upscaling", taaOptions.upscaling > 1.0f },
++        { "useVelocity", taaOptions.motionVectors },
+         { "historyReprojection", taaOptions.historyReprojection },
+         { "filterHistory", taaOptions.filterHistory },
+         { "filterInput", taaOptions.filterInput },
+@@ -3025,6 +3093,7 @@ FMaterialInstance* PostProcessManager::configureColorGradingMaterial(backend::Dr
+ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
+         FrameGraphId<FrameGraphTexture> input,
+         FrameGraphId<FrameGraphTexture> const depth,
++        FrameGraphId<FrameGraphTexture> const velocity,
+         filament::Viewport const& xvp,
+         filament::Viewport const& vp,
+         FrameHistory& frameHistory,
+@@ -3046,9 +3115,13 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
+     mat4 const& historyProjection = previous.color.handle ?
+             previous.projection : current.projection;
+ 
++    // per-pixel motion vectors from the structure pass replace the matrix reprojection
++    bool const useVelocity = taaOptions.motionVectors && velocity;
++
+     struct TAAData {
+         FrameGraphId<FrameGraphTexture> color;
+         FrameGraphId<FrameGraphTexture> depth;
++        FrameGraphId<FrameGraphTexture> velocity;
+         FrameGraphId<FrameGraphTexture> history;
+         FrameGraphId<FrameGraphTexture> output;
+         FrameGraphId<FrameGraphTexture> tonemappedOutput;
+@@ -3062,6 +3135,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
+                 }
+                 data.color = builder.sample(input);
+                 data.depth = builder.sample(depth);
++                if (useVelocity) {
++                    data.velocity = builder.sample(velocity);
++                }
+                 data.history = builder.sample(colorHistory);
+                 data.output = builder.createTexture("TAA output", desc);
+                 data.output = builder.write(data.output);
+@@ -3109,6 +3185,11 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
+                 FMaterialInstance* mi = getMaterialInstance(driver, ma, variant);
+                 mi->setParameter("color",  color, SamplerParams{});  // nearest
+                 mi->setParameter("depth",  depth, SamplerParams{});  // nearest
++                // the velocity sampler must always be bound; without motion vectors the
++                // (unused) depth buffer stands in
++                mi->setParameter("velocity",
++                        useVelocity ? resources.getTexture(data.velocity) : depth,
++                        SamplerParams{});  // nearest
+                 mi->setParameter("history", history, SamplerParams{
+                         .filterMag = SamplerMagFilter::LINEAR,
+                         .filterMin = SamplerMinFilter::LINEAR
+diff --git a/filament/src/PostProcessManager.h b/filament/src/PostProcessManager.h
+index 2f825ea1..f540fd99 100644
+--- a/filament/src/PostProcessManager.h
++++ b/filament/src/PostProcessManager.h
+@@ -63,6 +63,7 @@ class FColorGrading;
+ class FEngine;
+ class FMaterial;
+ class FMaterialInstance;
++class FTexture;
+ class FrameGraph;
+ class RenderPass;
+ class RenderPassBuilder;
+@@ -87,6 +88,10 @@ public:
+     struct StructurePassConfig {
+         float scale = 0.5f;
+         bool picking{};
++        // render per-pixel motion vectors (RG16F, texels) next to the depth; implies picking
++        bool velocity{};
++        // optional user texture the motion vectors are rendered into (same size as the pass)
++        FTexture const* velocityExport = nullptr;
+     };
+ 
+     explicit PostProcessManager(FEngine& engine) noexcept;
+@@ -104,6 +109,7 @@ public:
+     struct StructurePassOutput {
+         FrameGraphId<FrameGraphTexture> structure;
+         FrameGraphId<FrameGraphTexture> picking;
++        FrameGraphId<FrameGraphTexture> velocity;   // only with StructurePassConfig::velocity
+     };
+     StructurePassOutput structure(FrameGraph& fg,
+             RenderPassBuilder const& passBuilder, uint8_t structureRenderFlags,
+@@ -243,6 +249,7 @@ public:
+     FrameGraphId<FrameGraphTexture> taa(FrameGraph& fg,
+             FrameGraphId<FrameGraphTexture> input,
+             FrameGraphId<FrameGraphTexture> depth,
++            FrameGraphId<FrameGraphTexture> velocity,
+             Viewport const& xvp,
+             Viewport const& vp,
+             FrameHistory& frameHistory,
+diff --git a/filament/src/View.cpp b/filament/src/View.cpp
+index 1fc21785..752c1231 100644
+--- a/filament/src/View.cpp
++++ b/filament/src/View.cpp
+@@ -15,6 +15,7 @@
+  */
+ 
+ #include "details/View.h"
++#include "details/Texture.h"
+ 
+ #include <filament/View.h>
+ 
+@@ -159,6 +160,14 @@ const View::ScreenSpaceReflectionsOptions& View::getScreenSpaceReflectionsOption
+     return downcast(this)->getScreenSpaceReflectionsOptions();
+ }
+ 
++void View::setMotionVectorTexture(Texture const* texture) noexcept {
++    downcast(this)->setMotionVectorTexture(downcast(texture));
++}
++
++Texture const* View::getMotionVectorTexture() const noexcept {
++    return downcast(this)->getMotionVectorTexture();
++}
++
+ void View::setGuardBandOptions(GuardBandOptions const options) noexcept {
+     downcast(this)->setGuardBandOptions(options);
+ }
+diff --git a/filament/src/details/Renderer.cpp b/filament/src/details/Renderer.cpp
+index 53d556a0..f72d9df5 100644
+--- a/filament/src/details/Renderer.cpp
++++ b/filament/src/details/Renderer.cpp
+@@ -971,7 +971,8 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+      */
+ 
+     auto [bias, derivativeScale] = prepareUpscaler(scale, taaOptions, dsrOptions);
+-    view.prepare(engine, driver, arena, svp, taaCameraInfo, getShaderUserTime(), needsAlphaChannel);
++    view.prepare(engine, driver, arena, svp, taaCameraInfo, getShaderUserTime(), needsAlphaChannel,
++            mFrameId);
+     view.prepareLodBias(bias, derivativeScale);
+     view.prepareSSAO(aoOptions);
+     view.prepareSSR(engine, cameraInfo, ssrConfig.lodOffset, ssReflectionsOptions);
+@@ -992,17 +993,35 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+     // at the same resolution. We set only the values that are relevant to both user-materials
+     // and the concerned passes. The PER_VIEW UBO contains data that is needed by the user
+     // materials public APIs.
++    // Motion vectors (TemporalAntiAliasingOptions::motionVectors) are rendered by the structure
++    // pass, at full resolution so they can drive TAA and upscalers; they need a second color
++    // attachment, which feature level 0 cannot provide.
++    bool const motionVectors = taaOptions.motionVectors
++            && engine.getSupportedFeatureLevel() != FeatureLevel::FEATURE_LEVEL_0
++            && driver.isRenderTargetFormatSupported(TextureFormat::RG16F);
++    float const structureScale = motionVectors ? 1.0f : aoOptions.resolution;
++
+     { // the scope helps to guarantee that we're not modifying the descriptor-set later
+         StructureDescriptorSet& ds = ppm.getStructureDescriptorSet();
+         ds.prepareCamera(engine, cameraInfo);
+         ds.prepareTime(engine, getShaderUserTime());
+         ds.prepareViewport(svp, {
+-            int32_t(float(xvp.left) * aoOptions.resolution),
+-            int32_t(float(xvp.bottom) * aoOptions.resolution),
+-            uint32_t(float(xvp.width) * aoOptions.resolution),
+-            uint32_t(float(xvp.height) * aoOptions.resolution) });
++            int32_t(float(xvp.left) * structureScale),
++            int32_t(float(xvp.bottom) * structureScale),
++            uint32_t(float(xvp.width) * structureScale),
++            uint32_t(float(xvp.height) * structureScale) });
+         ds.prepareLodBias(bias, derivativeScale);
+         ds.prepareMaterialGlobals(view.getMaterialGlobals());
++
++        // The structure pass is not jittered, so both frames' clip <- world matrices are the
++        // plain camera matrices; without a previous frame the current one yields zero motion.
++        auto& history = view.getFrameHistory();
++        mat4f const clipFromWorld{ highPrecisionMultiply(cameraInfo.projection, cameraInfo.view) };
++        auto const& previous = history.getPrevious().velocity;
++        auto& current = history.getCurrent().velocity;
++        current.clipFromWorld = clipFromWorld;
++        current.valid = motionVectors;
++        ds.prepareVelocity(previous.valid ? previous.clipFromWorld : clipFromWorld, motionVectors);
+     }
+ 
+     /*
+@@ -1146,10 +1165,12 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+     // Also, picking is handled here if transparent picking is disabled.
+ 
+     // TODO: the scaling should depends on all passes that need the structure pass
+-    const auto [structure, picking_] = ppm.structure(fg,
++    const auto [structure, picking_, velocity] = ppm.structure(fg,
+             passBuilder, renderFlags, svp.width, svp.height, {
+-            .scale = aoOptions.resolution,
+-            .picking = view.hasPicking() && !view.isTransparentPickingEnabled()
++            .scale = structureScale,
++            .picking = view.hasPicking() && !view.isTransparentPickingEnabled(),
++            .velocity = motionVectors,
++            .velocityExport = view.getMotionVectorTexture()
+     });
+     auto picking = picking_;
+ 
+@@ -1182,7 +1203,7 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+                 },
+                 [=, &view](FrameGraphResources const& resources, auto&, DriverApi& driver) mutable {
+                     auto [target, params] = resources.getRenderPassInfo();
+-                    view.executePickingQueries(driver, target, scale * aoOptions.resolution);
++                    view.executePickingQueries(driver, target, scale * structureScale);
+                 });
+     }
+ 
+@@ -1449,7 +1470,7 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+ 
+     // TAA for color pass
+     if (taaOptions.enabled) {
+-        input = ppm.taa(fg, input, depth, xvp, vp,
++        input = ppm.taa(fg, input, depth, velocity, xvp, vp,
+                 view.getFrameHistory(), &FrameHistoryEntry::taa,
+                 taaOptions, colorGradingConfig);
+         if (taaOptions.upscaling > 1.0f) {
+diff --git a/filament/src/details/Scene.cpp b/filament/src/details/Scene.cpp
+index fd58a8d9..09907945 100644
+--- a/filament/src/details/Scene.cpp
++++ b/filament/src/details/Scene.cpp
+@@ -418,10 +418,21 @@ void FScene::prepare(JobSystem& js,
+     FILAMENT_TRACING_NAME_END(FILAMENT_TRACING_CATEGORY_FILAMENT);
+ }
+ 
+-void FScene::prepareVisibleRenderables(Range<uint32_t> visibleRenderables, SceneCacheData& cache) const noexcept {
++void FScene::prepareVisibleRenderables(Range<uint32_t> visibleRenderables, SceneCacheData& cache,
++        uint32_t const frameId) const noexcept {
+     FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
+     RenderableSoa& sceneData = cache.renderableData;
+-    
++
++    // Drop the previous transforms of renderables that have not been visible for a second or
++    // so (removed from the scene, culled, or destroyed); bounded work, done rarely.
++    auto& previousTransforms = mPreviousTransforms;
++    if (UTILS_UNLIKELY(frameId - mPreviousTransformsPruneFrame >= 256u)) {
++        mPreviousTransformsPruneFrame = frameId;
++        for (auto it = previousTransforms.begin(); it != previousTransforms.end();) {
++            it = (frameId - it->second.frameId >= 256u) ? previousTransforms.erase(it) : std::next(it);
++        }
++    }
++
+     cache.hasContactShadows = false;
+     for (uint32_t const i : visibleRenderables) {
+         PerRenderableData& uboData = sceneData.elementAt<UBO>(i);
+@@ -456,6 +467,19 @@ void FScene::prepareVisibleRenderables(Range<uint32_t> visibleRenderables, Scene
+ 
+         uboData.worldFromModelNormalMatrix = m;
+ 
++        // The transform this renderable had on the previous frame (its current one when it is
++        // seen for the first time, i.e. no motion). A renderable prepared again within the same
++        // frame (another view) keeps the same previous transform.
++        {
++            auto& entry = previousTransforms[entity.getId()];
++            if (entry.frameId != frameId) {
++                entry.previous = entry.frameId == 0 ? model : entry.current;
++                entry.current = model;
++                entry.frameId = frameId;
++            }
++            uboData.prevWorldFromModelMatrix = entry.previous;
++        }
++
+         uboData.flagsChannels = PerRenderableData::packFlagsChannels(
+                 skinning.skinning,
+                 static_cast<uint8_t>(skinning.morphType),
+diff --git a/filament/src/details/Scene.h b/filament/src/details/Scene.h
+index 459d68a1..e2e3eca0 100644
+--- a/filament/src/details/Scene.h
++++ b/filament/src/details/Scene.h
+@@ -74,7 +74,10 @@ public:
+     void prepare(utils::JobSystem& js, LinearAllocatorArena& arena,
+             math::mat4 const& worldTransform, bool shadowReceiversAreCasters, SceneCacheData& cache) noexcept;
+ 
+-    void prepareVisibleRenderables(utils::Range<uint32_t> visibleRenderables, SceneCacheData& cache) const noexcept;
++    // frameId identifies the renderer frame, so that the previous world transform kept per
++    // renderable (for motion vectors) advances once per frame however many views share the scene
++    void prepareVisibleRenderables(utils::Range<uint32_t> visibleRenderables, SceneCacheData& cache,
++            uint32_t frameId) const noexcept;
+ 
+     void prepareDynamicLights(const CameraInfo& camera,
+             backend::Handle<backend::HwBufferObject> lightUbh, SceneCacheData& cache) noexcept;
+@@ -256,6 +259,17 @@ private:
+     void unregisterView(FView* view) noexcept;
+     std::vector<FView*> mRegisteredViews;
+     EntitySet mEntities;
++
++    // World transform of every renderable on the frame before the one being prepared, for the
++    // motion vectors of the structure pass. Keyed by entity id; entries not seen for a while
++    // are dropped in prepareVisibleRenderables().
++    struct PreviousTransform {
++        math::mat4f previous;
++        math::mat4f current;
++        uint32_t frameId = 0;
++    };
++    mutable std::unordered_map<uint32_t, PreviousTransform> mPreviousTransforms;
++    mutable uint32_t mPreviousTransformsPruneFrame = 0;
+ };
+ 
+ FILAMENT_DOWNCAST(Scene)
+diff --git a/filament/src/details/View.cpp b/filament/src/details/View.cpp
+index 52e8a7a4..f593f240 100644
+--- a/filament/src/details/View.cpp
++++ b/filament/src/details/View.cpp
+@@ -716,7 +716,7 @@ CameraInfo FView::computeCameraInfo(FEngine const& engine) const noexcept {
+ 
+ void FView::prepare(FEngine& engine, DriverApi& driver, LinearAllocatorArena& arena,
+         filament::Viewport const viewport, CameraInfo cameraInfo,
+-        float4 const& userTime, bool const needsAlphaChannel) noexcept {
++        float4 const& userTime, bool const needsAlphaChannel, uint32_t const frameId) noexcept {
+ 
+         FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
+         FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_FILAMENT);
+@@ -919,7 +919,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, LinearAllocatorArena& ar
+         // TODO: when any spotlight is used, `merged` ends-up being the whole list. However,
+         //       some of the items will end-up not being visible by any light. Can we do better?
+         //       e.g. could we deffer some of the prepareVisibleRenderables() to later?
+-        scene->prepareVisibleRenderables(merged, *mSceneCache);
++        scene->prepareVisibleRenderables(merged, *mSceneCache, frameId);
+ 
+         // update those UBOs
+         if (!merged.empty()) {
+diff --git a/filament/src/details/View.h b/filament/src/details/View.h
+index d123affc..15c05933 100644
+--- a/filament/src/details/View.h
++++ b/filament/src/details/View.h
+@@ -92,6 +92,7 @@ class FEngine;
+ class FMaterialInstance;
+ class FRenderer;
+ class FScene;
++class FTexture;
+ 
+ // ------------------------------------------------------------------------------------------------
+ 
+@@ -120,7 +121,7 @@ public:
+     // keep references on them that would outlive the scope of prepare() (e.g. with JobSystem).
+     void prepare(FEngine& engine, backend::DriverApi& driver, LinearAllocatorArena& arena,
+             Viewport viewport, CameraInfo cameraInfo,
+-            math::float4 const& userTime, bool needsAlphaChannel) noexcept;
++            math::float4 const& userTime, bool needsAlphaChannel, uint32_t frameId) noexcept;
+ 
+     // call at the end of frame rendering to free per-frame data
+     void finish(LinearAllocatorArena& arena);
+@@ -303,6 +304,9 @@ public:
+ 
+     void setTemporalAntiAliasingOptions(TemporalAntiAliasingOptions options) noexcept ;
+ 
++    void setMotionVectorTexture(FTexture const* texture) noexcept { mMotionVectorTexture = texture; }
++    FTexture const* getMotionVectorTexture() const noexcept { return mMotionVectorTexture; }
++
+     const TemporalAntiAliasingOptions& getTemporalAntiAliasingOptions() const noexcept {
+         return mTemporalAntiAliasingOptions;
+     }
+@@ -638,6 +642,7 @@ private:
+     DepthOfFieldOptions mDepthOfFieldOptions;
+     VignetteOptions mVignetteOptions;
+     TemporalAntiAliasingOptions mTemporalAntiAliasingOptions;
++    FTexture const* mMotionVectorTexture = nullptr;
+     MultiSampleAntiAliasingOptions mMultiSampleAntiAliasingOptions;
+     ScreenSpaceReflectionsOptions mScreenSpaceReflectionsOptions;
+     GuardBandOptions mGuardBandOptions;
+diff --git a/filament/src/ds/StructureDescriptorSet.cpp b/filament/src/ds/StructureDescriptorSet.cpp
+index 5562f727..ac7c29c6 100644
+--- a/filament/src/ds/StructureDescriptorSet.cpp
++++ b/filament/src/ds/StructureDescriptorSet.cpp
+@@ -98,4 +98,11 @@ void StructureDescriptorSet::prepareMaterialGlobals(
+     PerViewDescriptorSetUtils::prepareMaterialGlobals(mUniforms.edit(), materialGlobals);
+ }
+ 
++void StructureDescriptorSet::prepareVelocity(math::mat4f const& prevClipFromWorld,
++        bool const enabled) noexcept {
++    auto& s = mUniforms.edit();
++    s.prevClipFromWorldMatrix = prevClipFromWorld;
++    s.velocityParams = { enabled ? 1.0f : 0.0f, 0.0f, 0.0f, 0.0f };
++}
++
+ } // namespace filament
+diff --git a/filament/src/ds/StructureDescriptorSet.h b/filament/src/ds/StructureDescriptorSet.h
+index 88f49d98..b6840490 100644
+--- a/filament/src/ds/StructureDescriptorSet.h
++++ b/filament/src/ds/StructureDescriptorSet.h
+@@ -61,6 +61,10 @@ public:
+ 
+     void prepareMaterialGlobals(std::array<math::float4, 4> const& materialGlobals) noexcept;
+ 
++    // motion vectors: the previous frame's unjittered clip <- world matrix, and whether the
++    // structure pass renders velocity at all
++    void prepareVelocity(math::mat4f const& prevClipFromWorld, bool enabled) noexcept;
++
+ private:
+     DescriptorSetLayout const* mDescriptorSetLayout = nullptr;
+     mutable DescriptorSet mDescriptorSet;
+diff --git a/filament/src/materials/antiAliasing/taa/taa.mat b/filament/src/materials/antiAliasing/taa/taa.mat
+index f174bb00..6e265dbe 100644
+--- a/filament/src/materials/antiAliasing/taa/taa.mat
++++ b/filament/src/materials/antiAliasing/taa/taa.mat
+@@ -48,6 +48,12 @@ material {
+             type : float4,
+             name : historyResolution,
+             precision: high
++        },
++        {
++            type : sampler2d,
++            name : velocity,
++            precision: high,
++            filterable: false
+         }
+     ],
+     constants : [
+@@ -56,6 +62,11 @@ material {
+             name : upscaling,
+             default : false
+         },
++        {
++            type : bool,
++            name : useVelocity,
++            default : false
++        },
+         {
+             type : bool,
+             name : historyReprojection,
+@@ -330,7 +341,14 @@ void postProcess(inout PostProcessInputs postProcess) {
+     // destination uv interpolated to pixel center
+     highp vec4 uv = variable_vertex;
+ 
+-    if (materialConstants_historyReprojection) {
++    if (materialConstants_useVelocity) {
++        // per-pixel motion vectors from the structure pass, in texels of the input
++        // (render) resolution: where this pixel's surface was on the previous frame
++        highp vec2 velocity = textureLod(materialParams_velocity, uv.xy, 0.0).xy;
++        uv.zw = uvToRenderTargetUV(uv.zw);
++        uv.zw -= velocity * materialParams.colorResolution.zw;
++        uv.zw = uvToRenderTargetUV(uv.zw);
++    } else if (materialConstants_historyReprojection) {
+         // read the depth buffer center sample for reprojection
+         highp float depth = textureLod(materialParams_depth, uv.xy, 0.0).r;
+         // reproject history to current frame
+diff --git a/libs/filabridge/include/private/filament/UibStructs.h b/libs/filabridge/include/private/filament/UibStructs.h
+index 2507ee79..cb25ca20 100644
+--- a/libs/filabridge/include/private/filament/UibStructs.h
++++ b/libs/filabridge/include/private/filament/UibStructs.h
+@@ -230,8 +230,14 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
+     int32_t extraDirReserved1;
+     int32_t extraDirReserved2;
+ 
++    // --------------------------------------------------------------------------------------------
++    // Motion vectors (structure pass, see TemporalAntiAliasingOptions::motionVectors)
++    // --------------------------------------------------------------------------------------------
++    math::mat4f prevClipFromWorldMatrix;    // clip <- world of the previous frame (unjittered)
++    math::float4 velocityParams;            // x: 1 when motion vectors are rendered, else 0
++
+     // bring PerViewUib to 2 KiB
+-    math::float4 reserved[9];
++    math::float4 reserved[4];
+ };
+ 
+ // 2 KiB == 128 float4s
+@@ -250,7 +256,10 @@ struct PerRenderableData {
+     // TODO: We need a better solution, this currently holds the average local scale for the renderable
+     float userData;
+ 
+-    math::float4 reserved[8];
++    // world <- model of the previous frame, for motion vectors
++    std140::mat44 prevWorldFromModelMatrix;
++
++    math::float4 reserved[4];
+ 
+     static uint32_t packFlagsChannels(
+             bool skinning, uint8_t morphing, bool contactShadows, bool hasInstanceBuffer,
+diff --git a/libs/filamat/src/shaders/UibGenerator.cpp b/libs/filamat/src/shaders/UibGenerator.cpp
+index f68aa003..8f2a27e6 100644
+--- a/libs/filamat/src/shaders/UibGenerator.cpp
++++ b/libs/filamat/src/shaders/UibGenerator.cpp
+@@ -241,6 +241,10 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
+             { "extraDirReserved1",        0, Type::INT                     },
+             { "extraDirReserved2",        0, Type::INT                     },
+ 
++            // motion vectors (structure pass)
++            { "prevClipFromWorldMatrix",  0, Type::MAT4,   Precision::HIGH },
++            { "velocityParams",           0, Type::FLOAT4, Precision::HIGH },
++
+             // bring PerViewUib to 2 KiB
+             { "reserved", sizeof(PerViewUib::reserved)/16, Type::FLOAT4 }
+             })
+diff --git a/shaders/src/surface_depth_main.fs b/shaders/src/surface_depth_main.fs
+index 315a72eb..1e7d6d7b 100644
+--- a/shaders/src/surface_depth_main.fs
++++ b/shaders/src/surface_depth_main.fs
+@@ -5,6 +5,9 @@ layout(location = 0) out highp vec4 fragColor;
+ layout(location = 0) out highp vec4 outPicking;
+ #   else
+ layout(location = 0) out highp uvec2 outPicking;
++// motion vectors, in texels of the render target (see TemporalAntiAliasingOptions::motionVectors):
++// the structure pass attaches a velocity buffer at location 1 whenever the picking variant runs
++layout(location = 1) out highp vec2 outVelocity;
+ #   endif
+ #else
+ // not color output
+@@ -61,6 +64,12 @@ void main() {
+ #else
+     outPicking.x = uint(object_uniforms_objectId);
+     outPicking.y = floatBitsToUint(vertex_position.z / vertex_position.w);
++    // screen-space motion since the previous frame: NDC delta over 2 (NDC spans two units)
++    // times the resolution gives texels; zero when motion vectors are off
++    // (vertex_prevPosition == vertex_position)
++    highp vec2 currentNdc = vertex_position.xy / vertex_position.w;
++    highp vec2 previousNdc = vertex_prevPosition.xy / vertex_prevPosition.w;
++    outVelocity = (currentNdc - previousNdc) * 0.5 * frameUniforms.resolution.xy;
+ #endif
+ 
+ #else
+diff --git a/shaders/src/surface_getters.vs b/shaders/src/surface_getters.vs
+index 5eb08579..12a0f1a2 100644
+--- a/shaders/src/surface_getters.vs
++++ b/shaders/src/surface_getters.vs
+@@ -271,6 +271,28 @@ vec4 getPosition() {
+     return pos;
+ }
+ 
++#if defined(VARIANT_DEPTH)
++/**
++ * Clip-space position of this vertex on the previous frame, for motion vectors: the object's
++ * previous world transform and the previous frame's (unjittered) clip <- world matrix. Skinning
++ * and morphing use the current pose. Returns [currentPosition] when motion vectors are off or
++ * the vertex domain carries no object motion (view, device), which yields a zero velocity.
++ */
++highp vec4 computePreviousClipPosition(const highp vec4 currentPosition) {
++    if (frameUniforms.velocityParams.x == 0.0) {
++        return currentPosition;
++    }
++#if defined(VERTEX_DOMAIN_OBJECT)
++    highp vec4 prevWorld = mulMat4x4Float3(object_uniforms_prevWorldFromModelMatrix, getPosition().xyz);
++    return frameUniforms.prevClipFromWorldMatrix * prevWorld;
++#elif defined(VERTEX_DOMAIN_WORLD)
++    return frameUniforms.prevClipFromWorldMatrix * vec4(getPosition().xyz, 1.0);
++#else
++    return currentPosition;
++#endif
++}
++#endif
++
+ #if defined(HAS_ATTRIBUTE_CUSTOM0)
+ vec4 getCustom0() { return mesh_custom0; }
+ #endif
+diff --git a/shaders/src/surface_instancing.glsl b/shaders/src/surface_instancing.glsl
+index 339978e4..87500b19 100644
+--- a/shaders/src/surface_instancing.glsl
++++ b/shaders/src/surface_instancing.glsl
+@@ -8,6 +8,7 @@ highp int object_uniforms_morphTargetCount;
+ highp int object_uniforms_flagsChannels;                   // see packFlags() below (0x00000fll)
+ highp int object_uniforms_objectId;                        // used for picking
+ highp float object_uniforms_userData;   // TODO: We need a better solution, this currently holds the average local scale for the renderable
++highp mat4 object_uniforms_prevWorldFromModelMatrix;       // previous frame, for motion vectors
+ 
+ //------------------------------------------------------------------------------
+ // Instance access
+@@ -45,6 +46,11 @@ void initObjectUniforms() {
+     object_uniforms_flagsChannels               = objectUniforms.data[i].flagsChannels;
+     object_uniforms_objectId                    = objectUniforms.data[i].objectId;
+     object_uniforms_userData                    = objectUniforms.data[i].userData;
++#if MATERIAL_FEATURE_LEVEL > 0
++    object_uniforms_prevWorldFromModelMatrix    = objectUniforms.data[i].prevWorldFromModelMatrix;
++#else
++    object_uniforms_prevWorldFromModelMatrix    = objectUniforms.data[i].worldFromModelMatrix;
++#endif
+ }
+ 
+ #if defined(FILAMENT_HAS_FEATURE_INSTANCING) && defined(MATERIAL_HAS_INSTANCES)
+diff --git a/shaders/src/surface_main.vs b/shaders/src/surface_main.vs
+index 2ab56c07..f240345d 100644
+--- a/shaders/src/surface_main.vs
++++ b/shaders/src/surface_main.vs
+@@ -226,6 +226,12 @@ void main() {
+     // this must happen before we compensate for vulkan below
+     vertex_position = position;
+ 
++#if defined(VARIANT_DEPTH)
++    // motion vectors: where this vertex was on the previous frame (same clip convention as
++    // vertex_position, i.e. before the Vulkan Y flip and the clip-control remap below)
++    vertex_prevPosition = computePreviousClipPosition(position);
++#endif
++
+ #if defined(VARIANT_HAS_STEREO) && defined(FILAMENT_STEREO_INSTANCED)
+     // We're transforming a vertex whose x coordinate is within the range (-w to w).
+     // To move it to the correct portion of the viewport, we need to modify the x coordinate.
+diff --git a/shaders/src/surface_types.glsl b/shaders/src/surface_types.glsl
+index 6dff64b0..c6d5a448 100644
+--- a/shaders/src/surface_types.glsl
++++ b/shaders/src/surface_types.glsl
+@@ -31,7 +31,8 @@ struct PerRenderableData {
+     highp int objectId;                        // used for picking
+     highp float userData;   // TODO: We need a better solution, this currently holds the average local scale for the renderable
+ #if MATERIAL_FEATURE_LEVEL > 0
+-    highp vec4 reserved[8];
++    highp mat4 prevWorldFromModelMatrix;        // previous frame, for motion vectors
++    highp vec4 reserved[4];
+ #endif
+ };
+ 
+diff --git a/shaders/src/surface_varyings.glsl b/shaders/src/surface_varyings.glsl
+index 4b5c1c19..54962183 100644
+--- a/shaders/src/surface_varyings.glsl
++++ b/shaders/src/surface_varyings.glsl
+@@ -36,6 +36,12 @@ highp int logical_instance_index;
+ LAYOUT_LOCATION(11) VARYING highp vec4 vertex_lightSpacePosition;
+ #endif
+ 
++#if defined(VARIANT_DEPTH)
++// clip-space position of the vertex on the previous frame (motion vectors); equal to
++// vertex_position when they are not rendered
++LAYOUT_LOCATION(12) VARYING highp vec4 vertex_prevPosition;
++#endif
++
+ // Note that fragColor is an output and is not declared here; see surface_main.fs and surface_depth_main.fs
+ 
+ #if defined(VARIANT_HAS_STEREO) && defined(FILAMENT_STEREO_INSTANCED)

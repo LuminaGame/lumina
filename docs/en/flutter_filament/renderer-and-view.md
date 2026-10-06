@@ -361,6 +361,26 @@ An offscreen render target (Frame Buffer Object / FBO) that can be associated wi
 | `dispose` | `void dispose()` | Destroys this RenderTarget. |
 | `isDisposed` | `bool get isDisposed` | Checks current state or capability and returns a boolean value. |
 
+### `lib/src/motion_vectors.dart`
+
+#### `class MotionVectorBuffer`
+
+`MotionVectorBuffer`: the motion vectors of a `FilamentView` as a readable buffer: an RGBA16F texture the view exports into while `TemporalAntiAliasingOptions.motionVectors` is on, the render target that reads it back, and the readback itself. The structure pass of Filament (Lumina patch `0004`) renders them from each renderable's previous world transform and the previous frame's camera; skinning and morphing use the current pose.
+
+**Constructors:**
+- `MotionVectorBuffer.attach({required FilamentEngine engine, required FilamentView view, required int width, required int height})`: creates the texture and render target (exactly the size of the view's render target) and makes `view` export into them; throws `StateError` when `view.motionVectorsSupported` is false.
+
+**Functions, Methods & Accessors:**
+
+| Method / Getter | Signature | Purpose & Description |
+| :--- | :--- | :--- |
+| `texture` | `FilamentTexture texture` | The RGBA16F export texture (`TextureUsage.colorAttachment | sampleable | blitSrc`). |
+| `renderTarget` | `FilamentRenderTarget renderTarget` | The render target over `texture` the readback uses. |
+| `read` | `Future<Float32List> read(FilamentRenderer renderer)` | The motion vectors of the last rendered frame: `width * height * 2` floats, two per texel (x, y), rows from the bottom of the image up. Reads the texture's own half floats and widens them. |
+| `velocityAt` | `(double, double) velocityAt(Float32List velocity, int x, int y)` | The (x, y) motion at a top-down pixel coordinate of a buffer returned by `read`. |
+| `halfToFloat` | `static double halfToFloat(int h)` | IEEE 754 binary16 to binary32. |
+| `dispose` | `void dispose()` | Stops the export (when the view still points at this texture) and destroys the render target and the texture. |
+
 ### `lib/src/renderer.dart`
 
 #### `class ClearOptions`
@@ -616,6 +636,8 @@ A View encompasses all the state needed for rendering a Scene.  A View specifies
 | `temporalAntiAliasingOptions` | `TemporalAntiAliasingOptions get temporalAntiAliasingOptions` | Getter accessor returning the current value of `temporalAntiAliasingOptions`. |
 | `multiSampleAntiAliasingOptions` | `multiSampleAntiAliasingOptions(MultiSampleAntiAliasingOptions options)` | Executes `multiSampleAntiAliasingOptions` operation. |
 | `multiSampleAntiAliasingOptions` | `MultiSampleAntiAliasingOptions get multiSampleAntiAliasingOptions` | Getter accessor returning the current value of `multiSampleAntiAliasingOptions`. |
+| `motionVectorsSupported` | `bool get motionVectorsSupported` | Whether the view's engine can render motion vectors (`TemporalAntiAliasingOptions.motionVectors`): a GPU backend at feature level 1 or higher with RG16F colour attachments. False on the noop backend. |
+| `motionVectorTexture` | `FilamentTexture? get motionVectorTexture` / `set motionVectorTexture(FilamentTexture? texture)` | The texture the motion vectors are exported into while `motionVectors` is on: a two-or-more-channel float colour texture (colour attachment + sampleable) exactly the size of the view's render target; another size is ignored. Texels hold the screen-space offset of the surface since the previous frame, in texels, x right and y up; the background is zero. Null disables the export. |
 | `screenSpaceReflectionsOptions` | `screenSpaceReflectionsOptions(ScreenSpaceReflectionsOptions options)` | Executes `screenSpaceReflectionsOptions` operation. |
 | `screenSpaceReflectionsOptions` | `ScreenSpaceReflectionsOptions get screenSpaceReflectionsOptions` | Getter accessor returning the current value of `screenSpaceReflectionsOptions`. |
 | `guardBandOptions` | `guardBandOptions(GuardBandOptions options)` | Executes `guardBandOptions` operation. |

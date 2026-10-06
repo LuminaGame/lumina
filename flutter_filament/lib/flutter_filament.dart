@@ -42,6 +42,7 @@ export 'src/indirect_light.dart';
 export 'src/light.dart';
 export 'src/manipulator.dart';
 export 'src/material.dart';
+export 'src/motion_vectors.dart';
 export 'src/render_target.dart';
 export 'src/renderable.dart';
 export 'src/renderer.dart';

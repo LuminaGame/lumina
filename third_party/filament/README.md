@@ -10,6 +10,7 @@ are upstream v1.77.2 with exactly these files applied in order.
 | `0001-libassimp-gltf2-replacedata-joint-bounds.patch` | `third_party/libassimp/code/glTF2/glTF2Asset.inl` | Memory-safety fix in the bundled Assimp's glTF 2 exporter. |
 | `0002-ssr-skip-skinned-morphed.patch` | `filament/src/RenderPass.cpp` | Keeps skinned and morphed renderables out of the screen-space reflections pass, which otherwise loses the Vulkan device. |
 | `0003-libwebp-wasm-no-webp-js.patch` | `third_party/libwebp/tnt/CMakeLists.txt` | Lets a WebAssembly build with WebP textures configure without SDL2. |
+| `0004-velocity-buffer-motion-vectors.patch` | `filament/include/filament/{Options,View}.h`, `filament/src/{PostProcessManager,FrameHistory,View}.*`, `filament/src/details/{Renderer,Scene,View}.*`, `filament/src/ds/StructureDescriptorSet.*`, `filament/src/materials/antiAliasing/taa/taa.mat`, `libs/filabridge/.../UibStructs.h`, `libs/filamat/src/shaders/UibGenerator.cpp`, `shaders/src/surface_*` | Per-pixel motion vectors from the structure pass (`TemporalAntiAliasingOptions::motionVectors`), consumed by TAA and exportable through `View::setMotionVectorTexture`. |
 
 ## 0001: libassimp glTF 2 `ReplaceData_joint` bounds
 
@@ -51,6 +52,25 @@ builds. `webp.js` is libwebp's demo viewer and requires SDL2
 `webpdecoder` library, so the patch turns the demo off. It matters for
 `flutter_filament`'s web module, which loads glTF assets that use
 `EXT_texture_webp`; desktop builds are unaffected.
+
+## 0004: motion vectors from the structure pass
+
+Filament's TAA reprojects its history with one camera matrix, which is only right for a
+still scene under a moving camera. With `TemporalAntiAliasingOptions::motionVectors` the
+structure pass (now at full resolution) also renders a velocity buffer: the picking
+variant of every material gets a second colour output, `outVelocity` (RG16F, texels of
+screen motion since the previous frame, x right and y up), computed from a new
+`vertex_prevPosition` varying. That varying comes from the renderable's previous world
+transform (`PerRenderableData::prevWorldFromModelMatrix`, kept per entity by `FScene`
+and advanced once per renderer frame) and the previous frame's unjittered
+`clipFromWorld` (`PerViewUib::prevClipFromWorldMatrix`, kept in the view's frame
+history). Both fields live in space the UBOs reserved, so their layout and
+`MATERIAL_VERSION` are unchanged; materials compiled before this patch still load and
+simply write no velocity. Skinning and morphing use the current pose, so bone and morph
+motion is not captured yet; custom vertex displacement is not either. The TAA material
+samples the velocity buffer (`useVelocity` constant) instead of reprojecting by matrix,
+and `View::setMotionVectorTexture` renders the buffer into a user texture of the render
+target's size for upscalers and tests.
 
 ## Working with the patches
 

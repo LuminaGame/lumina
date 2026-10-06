@@ -11,14 +11,34 @@ import 'package:flutter_test/flutter_test.dart';
 /// This walks every compiled material package in the repository and builds it
 /// against the engine that is actually linked, so the next engine upgrade
 /// cannot break one of them quietly.
+///
+/// A source under `../filament/` (Filament's own tree) may live in a full
+/// checkout rather than in the pruned prebuilt the `filament` link points at:
+/// `tool/build_materials.sh` looks in `LUMINA_FILAMENT_SRC`, `../filament` and
+/// `../build/filament-src`, and so does this test.
+bool _materialSourceExists(String source) {
+  const vendored = '../filament/';
+  if (!source.startsWith(vendored)) return File(source).existsSync();
+  final relative = source.substring(vendored.length);
+  final roots = [
+    Platform.environment['LUMINA_FILAMENT_SRC'],
+    '../filament',
+    '../build/filament-src',
+  ];
+  return roots.whereType<String>().where((r) => r.isNotEmpty).any((r) => File('$r/$relative').existsSync());
+}
+
 void main() {
+  // Paths are compared with `/` separators so a Windows checkout (`\`) filters
+  // and matches the same way as a POSIX one.
+  String posix(String path) => path.replaceAll('\\', '/');
   List<File> materialPackages() {
     final root = Directory.current;
     return root
         .listSync(recursive: true, followLinks: false)
         .whereType<File>()
         .where((f) => f.path.endsWith('.filamat'))
-        .where((f) => !f.path.contains('/build/') && !f.path.contains('/.dart_tool/'))
+        .where((f) => !posix(f.path).contains('/build/') && !posix(f.path).contains('/.dart_tool/'))
         .toList()
       ..sort((a, b) => a.path.compareTo(b.path));
   }
@@ -71,15 +91,17 @@ void main() {
 
     for (final row in rows) {
       expect(row.length, 3, reason: 'malformed row: ${row.join('|')}');
-      expect(File(row[1]).existsSync(), isTrue,
-          reason: 'material source ${row[1]} does not exist');
+      expect(_materialSourceExists(row[1]), isTrue,
+          reason: 'material source ${row[1]} does not exist (a `../filament/` source '
+              'is also looked for under LUMINA_FILAMENT_SRC and ../build/filament-src, '
+              'the way tool/build_materials.sh does)');
       expect(File(row[0]).existsSync(), isTrue,
           reason: 'material output ${row[0]} has not been built');
     }
 
     final listed = rows.map((r) => r[0]).toSet();
     final unlisted = materialPackages()
-        .map((f) => f.path.replaceFirst('${Directory.current.path}/', ''))
+        .map((f) => posix(f.path).replaceFirst('${posix(Directory.current.path)}/', ''))
         .where((p) => !listed.contains(p))
         .toList();
     expect(unlisted, isEmpty,

@@ -9,6 +9,7 @@ import 'package:flutter_filament/src/entity.dart';
 import 'package:flutter_filament/src/math/viewport.dart';
 import 'package:flutter_filament/src/render_target.dart';
 import 'package:flutter_filament/src/scene.dart';
+import 'package:flutter_filament/src/texture.dart';
 import 'package:flutter_filament/src/filament_bindings.dart' as c;
 import 'package:flutter_filament/src/view_options.dart';
 
@@ -412,6 +413,38 @@ class FilamentView {
     final result = TemporalAntiAliasingOptions.fromNative(ptr.ref);
     calloc.free(ptr);
     return result;
+  }
+
+  /// Whether this view's engine can render motion vectors
+  /// ([TemporalAntiAliasingOptions.motionVectors]): a GPU backend at feature
+  /// level 1 or higher with RG16F colour attachments. False on the noop backend.
+  bool get motionVectorsSupported {
+    _checkDisposed();
+    return c.filament_view_motion_vectors_supported(_engine.nativePointer);
+  }
+
+  FilamentTexture? _motionVectorTexture;
+
+  /// The texture the motion vectors are exported into while
+  /// [TemporalAntiAliasingOptions.motionVectors] is on, or null.
+  ///
+  /// The texture must be a two-or-more-channel float colour texture created
+  /// with [TextureUsage.colorAttachment] and [TextureUsage.sampleable], exactly
+  /// the size of the view's render target (a texture of another size is
+  /// ignored). Each texel holds the screen-space offset of the surface since
+  /// the previous frame, in texels, x to the right and y up; the background is
+  /// zero. [MotionVectorBuffer] wraps the texture, its render target and the
+  /// readback. The texture must outlive its use by the view.
+  FilamentTexture? get motionVectorTexture {
+    _checkDisposed();
+    final ptr = c.filament_view_get_motion_vector_texture(_ptr);
+    return ptr == ffi.nullptr ? null : _motionVectorTexture;
+  }
+
+  set motionVectorTexture(FilamentTexture? texture) {
+    _checkDisposed();
+    _motionVectorTexture = texture;
+    c.filament_view_set_motion_vector_texture(_ptr, texture?.nativePointer ?? ffi.nullptr);
   }
 
   set multiSampleAntiAliasingOptions(MultiSampleAntiAliasingOptions options) {

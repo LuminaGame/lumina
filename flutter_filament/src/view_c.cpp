@@ -276,6 +276,23 @@ void filament_view_get_temporal_anti_aliasing_options(void* view, filament_tempo
     FFI_TRY *reinterpret_cast<TemporalAntiAliasingOptions*>(out_options) = toView(view)->getTemporalAntiAliasingOptions(); FFI_CATCH()
 }
 
+bool filament_view_motion_vectors_supported(void* engine) {
+    FFI_TRY
+        Engine* const e = toEngine(engine);
+        if (e == nullptr || e->getBackend() == Engine::Backend::NOOP) return false;
+        if (e->getActiveFeatureLevel() == Engine::FeatureLevel::FEATURE_LEVEL_0) return false;
+        return Texture::isTextureFormatSupported(*e, Texture::InternalFormat::RG16F);
+    FFI_CATCH(false)
+}
+
+void filament_view_set_motion_vector_texture(void* view, void* texture) {
+    FFI_TRY toView(view)->setMotionVectorTexture(reinterpret_cast<Texture const*>(texture)); FFI_CATCH()
+}
+
+void* filament_view_get_motion_vector_texture(void* view) {
+    FFI_TRY return const_cast<Texture*>(toView(view)->getMotionVectorTexture()); FFI_CATCH(nullptr)
+}
+
 void filament_view_set_multi_sample_anti_aliasing_options(void* view, const filament_multi_sample_anti_aliasing_options* options) {
     FFI_TRY toView(view)->setMultiSampleAntiAliasingOptions(*reinterpret_cast<const MultiSampleAntiAliasingOptions*>(options)); FFI_CATCH()
 }

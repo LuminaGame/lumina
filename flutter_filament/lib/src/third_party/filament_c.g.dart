@@ -1105,6 +1105,22 @@ external void filament_camera_set_exposure(
   double sensitivity,
 );
 
+@ffi.Native<ffi.Bool Function(ffi.Pointer<ffi.Void>)>()
+external bool filament_view_motion_vectors_supported(
+  ffi.Pointer<ffi.Void> engine,
+);
+
+@ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>, ffi.Pointer<ffi.Void>)>()
+external void filament_view_set_motion_vector_texture(
+  ffi.Pointer<ffi.Void> view,
+  ffi.Pointer<ffi.Void> texture,
+);
+
+@ffi.Native<ffi.Pointer<ffi.Void> Function(ffi.Pointer<ffi.Void>)>()
+external ffi.Pointer<ffi.Void> filament_view_get_motion_vector_texture(
+  ffi.Pointer<ffi.Void> view,
+);
+
 @ffi.Native<
   ffi.Pointer<ffi.Void> Function(
     ffi.Pointer<ffi.Void>,
@@ -9857,6 +9873,9 @@ final class filament_temporal_anti_aliasing_options extends ffi.Struct {
 
   @ffi.Bool()
   external bool historyReprojection;
+
+  @ffi.Bool()
+  external bool motionVectors;
 }
 
 final class filament_screen_space_reflections_options extends ffi.Struct {

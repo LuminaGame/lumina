@@ -361,6 +361,26 @@ An offscreen render target (Frame Buffer Object / FBO) that can be associated wi
 | `dispose` | `void dispose()` | Destroys this RenderTarget. |
 | `isDisposed` | `bool get isDisposed` | Mevcut durumun veya yeteneğin doğruluğunu kontrol eder (`bool` döndürür). |
 
+### `lib/src/motion_vectors.dart`
+
+#### `class MotionVectorBuffer`
+
+`MotionVectorBuffer`: bir `FilamentView`'ın hareket vektörleri okunabilir bir tampon olarak: `TemporalAntiAliasingOptions.motionVectors` açıkken view'ın içine dışa aktardığı RGBA16F doku, onu geri okuyan render hedefi ve geri okumanın kendisi. Filament'in structure pass'i (Lumina yaması `0004`) vektörleri her renderable'ın önceki dünya dönüşümünden ve önceki karenin kamerasından üretir; skinning ve morphing güncel pozu kullanır.
+
+**Kurucular:**
+- `MotionVectorBuffer.attach({required FilamentEngine engine, required FilamentView view, required int width, required int height})`: dokuyu ve render hedefini (view'ın render hedefiyle tam aynı boyutta) oluşturur ve `view`'ın onlara dışa aktarmasını sağlar; `view.motionVectorsSupported` false ise `StateError` fırlatır.
+
+**Fonksiyonlar, Metotlar ve Erişimciler:**
+
+| Metot / Getter | İmza | Amaç ve Açıklama |
+| :--- | :--- | :--- |
+| `texture` | `FilamentTexture texture` | RGBA16F dışa aktarma dokusu (`TextureUsage.colorAttachment | sampleable | blitSrc`). |
+| `renderTarget` | `FilamentRenderTarget renderTarget` | Geri okumanın kullandığı, `texture` üzerindeki render hedefi. |
+| `read` | `Future<Float32List> read(FilamentRenderer renderer)` | Son render edilen karenin hareket vektörleri: `width * height * 2` float, texel başına iki (x, y), satırlar görüntünün altından yukarı. Dokunun kendi half float'larını okur ve genişletir. |
+| `velocityAt` | `(double, double) velocityAt(Float32List velocity, int x, int y)` | `read`'in döndürdüğü tamponda, yukarıdan aşağı piksel koordinatındaki (x, y) hareket. |
+| `halfToFloat` | `static double halfToFloat(int h)` | IEEE 754 binary16'dan binary32'ye. |
+| `dispose` | `void dispose()` | Dışa aktarımı durdurur (view hâlâ bu dokuya bakıyorsa) ve render hedefiyle dokuyu yok eder. |
+
 ### `lib/src/renderer.dart`
 
 #### `class ClearOptions`
@@ -616,6 +636,8 @@ A View encompasses all the state needed for rendering a Scene.  A View specifies
 | `temporalAntiAliasingOptions` | `TemporalAntiAliasingOptions get temporalAntiAliasingOptions` | `temporalAntiAliasingOptions` özelliğinin anlık değerini okuyan getter erişimcisi. |
 | `multiSampleAntiAliasingOptions` | `multiSampleAntiAliasingOptions(MultiSampleAntiAliasingOptions options)` | `multiSampleAntiAliasingOptions` işlemini gerçekleştirir. |
 | `multiSampleAntiAliasingOptions` | `MultiSampleAntiAliasingOptions get multiSampleAntiAliasingOptions` | `multiSampleAntiAliasingOptions` özelliğinin anlık değerini okuyan getter erişimcisi. |
+| `motionVectorsSupported` | `bool get motionVectorsSupported` | View'ın motorunun hareket vektörü üretip üretemeyeceği (`TemporalAntiAliasingOptions.motionVectors`): feature level 1 ve üstü bir GPU backend'i ve RG16F renk eki. Noop backend'de false. |
+| `motionVectorTexture` | `FilamentTexture? get motionVectorTexture` / `set motionVectorTexture(FilamentTexture? texture)` | `motionVectors` açıkken hareket vektörlerinin dışa aktarıldığı doku: en az iki kanallı float bir renk dokusu (renk eki + örneklenebilir), view'ın render hedefiyle tam aynı boyutta; başka boyut yok sayılır. Texel'ler yüzeyin önceki kareden bu yana ekrandaki kaymasını texel cinsinden tutar, x sağa ve y yukarı; arka plan sıfırdır. Null dışa aktarımı kapatır. |
 | `screenSpaceReflectionsOptions` | `screenSpaceReflectionsOptions(ScreenSpaceReflectionsOptions options)` | `screenSpaceReflectionsOptions` işlemini gerçekleştirir. |
 | `screenSpaceReflectionsOptions` | `ScreenSpaceReflectionsOptions get screenSpaceReflectionsOptions` | `screenSpaceReflectionsOptions` özelliğinin anlık değerini okuyan getter erişimcisi. |
 | `guardBandOptions` | `guardBandOptions(GuardBandOptions options)` | `guardBandOptions` işlemini gerçekleştirir. |
