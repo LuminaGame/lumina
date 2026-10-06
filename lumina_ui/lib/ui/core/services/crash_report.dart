@@ -32,6 +32,7 @@ class CrashReport {
     this.gpu = '',
     this.filament = '',
     this.project = '',
+    this.plugin = '',
     this.logTail = const [],
     this.sentId,
   });
@@ -60,6 +61,11 @@ class CrashReport {
   /// The open project's name, when one was open.
   final String project;
 
+  /// The plugin attributing this crash, or empty if from the engine/editor.
+  final String plugin;
+
+  bool get isPluginCrash => plugin.isNotEmpty;
+
   /// The last lines of the editor log before the crash.
   final List<String> logTail;
 
@@ -74,7 +80,7 @@ class CrashReport {
     return line.length > 160 ? '${line.substring(0, 157)}...' : line;
   }
 
-  CrashReport copyWith({String? sentId}) => CrashReport(
+  CrashReport copyWith({String? sentId, String? plugin}) => CrashReport(
         id: id,
         kind: kind,
         createdAt: createdAt,
@@ -88,6 +94,7 @@ class CrashReport {
         gpu: gpu,
         filament: filament,
         project: project,
+        plugin: plugin ?? this.plugin,
         logTail: logTail,
         sentId: sentId ?? this.sentId,
       );
@@ -106,6 +113,7 @@ class CrashReport {
         'gpu': gpu,
         'filament': filament,
         'project': project,
+        if (plugin.isNotEmpty) 'plugin': plugin,
         'logTail': logTail,
         if (sentId != null) 'sentId': sentId,
       };
@@ -124,6 +132,7 @@ class CrashReport {
         gpu: j['gpu'] as String? ?? '',
         filament: j['filament'] as String? ?? '',
         project: j['project'] as String? ?? '',
+        plugin: j['plugin'] as String? ?? '',
         logTail: [for (final l in (j['logTail'] as List?) ?? const []) l.toString()],
         sentId: j['sentId'] as String?,
       );
@@ -144,6 +153,7 @@ class CrashReport {
         if (gpu.isNotEmpty) 'gpu': gpu,
         if (filament.isNotEmpty) 'filament': filament,
         if (project.isNotEmpty) 'project': project,
+        if (plugin.isNotEmpty) 'plugin': plugin,
         if (includeLog) 'logTail': logTail,
         'reportId': id,
         'createdAt': createdAt.toUtc().toIso8601String(),
@@ -162,6 +172,7 @@ class CrashReport {
     if (gpu.isNotEmpty) b.writeln('GPU: $gpu');
     if (filament.isNotEmpty) b.writeln('Filament: $filament');
     if (project.isNotEmpty) b.writeln('Project: $project');
+    if (plugin.isNotEmpty) b.writeln('Plugin: $plugin');
     if (description.trim().isNotEmpty) b..writeln()..writeln('Description:')..writeln(description.trim());
     if (email.trim().isNotEmpty) b.writeln('Contact: ${email.trim()}');
     b..writeln()..writeln('Error:')..writeln(error.trim());

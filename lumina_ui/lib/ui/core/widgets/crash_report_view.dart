@@ -126,7 +126,11 @@ class _CrashReportViewState extends State<CrashReportView> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    _previousRun ? 'THE LAST SESSION ENDED UNEXPECTEDLY' : 'LUMINA STUDIO RAN INTO A PROBLEM',
+                    _previousRun
+                        ? 'THE LAST SESSION ENDED UNEXPECTEDLY'
+                        : report.isPluginCrash
+                            ? 'LUMINA PLUGIN ENCOUNTERED AN ERROR'
+                            : 'LUMINA STUDIO RAN INTO A PROBLEM',
                     style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 0.8, color: EditorColors.foreground),
                   ),
                 ),
@@ -143,7 +147,9 @@ class _CrashReportViewState extends State<CrashReportView> {
                   Text(
                     _previousRun
                         ? 'Lumina Studio did not close properly last time. Sending a report with the end of the log helps find out why; the editor is ready to use.'
-                        : 'An error nobody handled happened. The editor keeps running, but save your work soon. Sending a report helps fix it.',
+                        : report.isPluginCrash
+                            ? 'An error occurred inside plugin "${report.plugin}". The editor caught the issue and continues running, but sending a report helps diagnose the fault.'
+                            : 'An error nobody handled happened. The editor keeps running, but save your work soon. Sending a report helps fix it.',
                     style: const TextStyle(fontSize: 11, color: EditorColors.foreground),
                   ),
                   const SizedBox(height: 10),
@@ -161,6 +167,33 @@ class _CrashReportViewState extends State<CrashReportView> {
                       style: const TextStyle(fontSize: 11, fontFamily: 'monospace', color: EditorColors.destructive),
                     ),
                   ),
+                  if (report.isPluginCrash) ...[
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: EditorColors.card,
+                            borderRadius: BorderRadius.circular(3),
+                            border: Border.all(color: EditorColors.border),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(LucideIcons.plug, size: 12, color: EditorColors.primary),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Plugin: ${report.plugin}',
+                                key: const ValueKey('crash_plugin_badge'),
+                                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: EditorColors.foreground),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 12),
                   const Text('What happened? (optional)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: EditorColors.foreground)),
                   const SizedBox(height: 4),

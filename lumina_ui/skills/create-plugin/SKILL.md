@@ -7,7 +7,7 @@ description: Create a Lumina Studio editor plugin end to end — generate the pa
 
 A Lumina plugin is a **source-level Dart package**: the editor discovers it from a `<name>.lmplugin` manifest, and enabling it in the Plugin Manager patches the host's `pubspec.yaml` and `lib/generated/plugin_registrar.dart`, which statically imports the plugin and calls `register()` at the next editor boot. No runtime loading, no reflection. The reference example is `lumina_plugin_pcg` in the [LuminaGame/plugins](https://github.com/LuminaGame/plugins) repo (Procedural Content Generation); read it alongside this skill.
 
-Rules that apply: shadcn_flutter only (never Material), no mock data, every button works, atomic commit per task, PNG + ≥10 s video smoke evidence for editor-visible features.
+Rules that apply: shadcn_flutter only (never Material), no mock data, every button works, atomic commit per task, PNG + ≥10 s video smoke evidence for editor-visible features, mandatory try-catch around all FFI/native calls with crash reporting via `reportCrash` / `LuminaPluginCrashReporter.reportCrash`.
 
 ## 1. Generate the package
 
@@ -112,3 +112,20 @@ Then Plugins → Plugin Manager... → toggle the switch → the restart banner 
 - The wizard pins `shadcn_flutter: 0.0.55`; a `^` range can resolve a different copy than the host and break `showOverlay`.
 - Menu path rules (enforced by the host registry): `Plugins/<Group>/…` or `<your registered menu title>/…` only. `File/`, `Edit/`, `View/`, `Build/`, `Debug/`, `Window/`, `Help/` (and another plugin's menu) reject the item with an `invalidMenuPath` issue on your Plugin Manager row and an Output Log error; a title equal to a built-in or another plugin's menu is a `menuConflict`. Legacy `Tools/<Group>/…` still works (moved to `Plugins/<Group>/…`) with one deprecation warning.
 - `dart analyze` from the plugin dir is the cheap check; `flutter test` needs the batch (one test process at a time on this machine).
+
+## 8. FFI and Native Calls: Mandatory Try-Catch & Crash Reporting
+
+When a plugin makes FFI or native C/C++ calls:
+1. **Always wrap native calls in `try-catch`**:
+   ```dart
+   try {
+     final result = nativeBinding.computeData(ptr);
+   } catch (error, stack) {
+     // Report the crash attributed to this plugin so Lumina Studio can display the crash dialog gracefully
+     reportCrash(error, stack, context: 'computing PCG native mesh buffer');
+   }
+   ```
+2. **Crash reporting API**:
+   - `LuminaEditorPlugin.reportCrash(error, stack, context: '...')`: Available directly within your plugin class.
+   - `LuminaPluginCrashReporter.reportCrash(error, stack, plugin: '<pluginName>', context: '...')`: Available anywhere (services, workers, FFI wrappers) through `package:lumina_editor_api/lumina_editor_api.dart`.
+   - `context.reportCrash(error, stack, plugin: '<pluginName>', context: '...')`: Available via `LuminaEditorContext`.

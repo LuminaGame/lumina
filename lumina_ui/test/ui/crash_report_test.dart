@@ -3,8 +3,10 @@ import 'dart:io';
 
 import 'package:flutter/services.dart' show SystemChannels;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
 import 'package:http/io_client.dart';
 import 'package:lumina/lumina.dart' show EngineLoggerService;
+import 'package:lumina_editor_api/lumina_editor_api.dart' show LuminaPluginCrashReporter;
 import 'package:lumina_ui/ui/core/host/editor_host.dart';
 import 'package:lumina_ui/ui/core/services/crash_report.dart';
 import 'package:lumina_ui/ui/core/services/crash_reporter.dart';
@@ -101,6 +103,42 @@ void main() {
       expect(reporter.pending.value, isNull);
     });
 
+    test('a plugin crash is tagged with plugin name and persists across serialization', () async {
+      final reporter = reporterFor(dataDir)..install();
+      addTearDown(() {
+        reporter.uninstall();
+        reporter.dispose();
+      });
+
+      LuminaPluginCrashReporter.reportCrash(
+        StateError('Native memory allocation failure'),
+        StackTrace.current,
+        plugin: 'lumina_plugin_miniai',
+        context: 'generating response tokens',
+      );
+      await reporter.flush();
+
+      final report = reporter.pending.value;
+      expect(report, isNotNull);
+      expect(report!.plugin, 'lumina_plugin_miniai');
+      expect(report.isPluginCrash, isTrue);
+      expect(report.error, contains('Native memory allocation failure'));
+      expect(report.error, contains('while generating response tokens'));
+
+      final json = report.toJson();
+      expect(json['plugin'], 'lumina_plugin_miniai');
+
+      final restored = CrashReport.fromJson(json);
+      expect(restored.plugin, 'lumina_plugin_miniai');
+      expect(restored.isPluginCrash, isTrue);
+
+      final text = report.toText();
+      expect(text, contains('Plugin: lumina_plugin_miniai'));
+
+      final submission = report.toSubmission();
+      expect(submission['plugin'], 'lumina_plugin_miniai');
+    });
+
     test('a session marker left behind becomes a previous-run report with the log tail; a clean close leaves none', () async {
       final crashed = CrashReporter(dataDir: dataDir, logTailLines: 5);
       await crashed.startSession();
@@ -114,8 +152,10 @@ void main() {
       expect(crashed.sessionMarker.existsSync(), isTrue);
 
       // The next launch does what editor_entry does: start the session,
-      // which must report the old marker before writing its own.
-      final next = CrashReporter(dataDir: dataDir, logTailLines: 5);
+      // which must report the old marker before writing its own. (Every
+      // reporter here shares this test's pid: the liveness check is told
+      // the old one is gone.)
+      final next = CrashReporter(dataDir: dataDir, logTailLines: 5, isProcessAlive: (_) async => false);
       addTearDown(next.dispose);
       final report = await next.startSession();
       expect(report, isNotNull, reason: 'the old marker is reported, not hidden by the new one');
@@ -129,9 +169,68 @@ void main() {
 
       await next.endSession();
       expect(next.sessionMarker.existsSync(), isFalse);
-      final another = CrashReporter(dataDir: dataDir);
+      final another = CrashReporter(dataDir: dataDir, isProcessAlive: (_) async => false);
       addTearDown(another.dispose);
       expect(await another.detectPreviousCrash(), isNull, reason: 'a clean close is not a crash');
+    });
+
+    test('the launcher handing off and the project editor it starts keep separate markers and logs', () async {
+      // The launcher (pid 1000) is still running its exit hooks while the
+      // project editor (pid 2000) starts.
+      final launcher = CrashReporter(dataDir: dataDir, pid: 1000, isProcessAlive: (_) async => false);
+      await launcher.startSession();
+      EngineLoggerService().log('launcher line', level: 'info', source: 'Test');
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+      final running = {1000};
+      final editor = CrashReporter(dataDir: dataDir, pid: 2000, logTailLines: 5, isProcessAlive: (pid) async => running.contains(pid));
+      expect(await editor.startSession(), isNull, reason: 'the launcher is alive: its marker is not a crash');
+      expect(launcher.sessionMarker.existsSync(), isTrue, reason: 'and it is left where it is');
+      expect(editor.sessionMarker.path, isNot(launcher.sessionMarker.path));
+      expect(editor.logFile.path, isNot(launcher.logFile.path));
+      EngineLoggerService().log('editor line', level: 'info', source: 'Test');
+      await Future<void>.delayed(const Duration(milliseconds: 30));
+
+      // The launcher's clean exit removes only its own marker.
+      await launcher.endSession();
+      launcher.pending.dispose();
+      expect(launcher.sessionMarker.existsSync(), isFalse);
+      expect(editor.sessionMarker.existsSync(), isTrue, reason: 'the editor keeps its marker: a crash now is still reported');
+
+      // The editor dies; the next launcher reports it with the editor's log.
+      await editor.detachLog();
+      editor.pending.dispose();
+      running.clear();
+      final next = CrashReporter(dataDir: dataDir, pid: 3000, logTailLines: 5, isProcessAlive: (pid) async => running.contains(pid));
+      addTearDown(next.dispose);
+      final report = await next.startSession();
+      expect(report?.kind, CrashReportKind.previousRun);
+      expect(report!.logTail.join('\n'), contains('editor line'));
+      expect(report.logTail.join('\n'), isNot(contains('launcher line')), reason: 'the dead session\'s own log, not the launcher\'s');
+      expect(editor.sessionMarker.existsSync(), isFalse);
+    });
+
+    test('old per-process logs are pruned, never one a marker still points at', () async {
+      final logs = Directory(p.join(dataDir.path, 'logs'))..createSync(recursive: true);
+      for (var i = 0; i < 14; i++) {
+        final f = File(p.join(logs.path, 'editor-$i.log'))..writeAsStringSync('log $i\n');
+        f.setLastModifiedSync(DateTime(2026, 1, 1 + i));
+      }
+      // A session that died and is reported now; its log must survive the
+      // pruning that runs in the same start.
+      final dead = CrashReporter(dataDir: dataDir, pid: 3, isProcessAlive: (_) async => false);
+      await dead.startSession();
+      await dead.detachLog();
+      dead.pending.dispose();
+      final next = CrashReporter(dataDir: dataDir, pid: 99, keptLogs: 4, isProcessAlive: (_) async => false);
+      addTearDown(next.dispose);
+      final report = await next.startSession();
+      expect(report, isNotNull);
+      final left = logs.listSync().map((e) => p.basename(e.path)).toSet();
+      expect(left, contains('editor-99.log'));
+      expect(left.where((n) => RegExp(r'^editor-\d+\.log$').hasMatch(n) && n != 'editor-99.log').length, lessThanOrEqualTo(5),
+          reason: 'the four newest plus the just-reported session\'s log');
+      expect(left, contains('editor-13.log'));
+      expect(left, isNot(contains('editor-0.log')));
     });
 
     test('a restart or hand-off is a clean close: the exit hook removes the marker', () async {
@@ -299,6 +398,40 @@ void main() {
       await tester.pump();
       expect(find.byType(CrashReportView), findsNothing);
       expect(reporter.fileOf(reporter.filed.single).existsSync(), isTrue, reason: 'dismissing keeps the file');
+    });
+
+    testWidgets('shows plugin badge and plugin header when isPluginCrash is true', (tester) async {
+      final reporter = reporterFor(dataDir);
+      addTearDown(reporter.dispose);
+      late final CrashReport report;
+      await tester.runAsync(() async {
+        report = reporter.record(
+          Exception('FFI library crashed'),
+          StackTrace.current,
+          plugin: 'lumina_plugin_pcg',
+        )!;
+        await reporter.flush();
+      });
+
+      await tester.pumpWidget(
+        ShadcnApp(
+          theme: luminaEditorTheme(),
+          home: Scaffold(
+            child: Center(
+              child: CrashReportView(
+                report: report,
+                reporter: reporter,
+                onClose: () {},
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('LUMINA PLUGIN ENCOUNTERED AN ERROR'), findsOneWidget);
+      expect(find.byKey(const ValueKey('crash_plugin_badge')), findsOneWidget);
+      expect(find.text('Plugin: lumina_plugin_pcg'), findsOneWidget);
     });
   });
 }

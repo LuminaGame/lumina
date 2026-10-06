@@ -99,6 +99,22 @@ class PluginExtensionRegistry extends ChangeNotifier implements LuminaEditorHost
     }
   }
 
+  @override
+  void reportCrash(
+    Object error,
+    StackTrace? stack, {
+    String? plugin,
+    String? context,
+  }) {
+    final targetPlugin = plugin ?? _currentPlugin ?? builtInPlugin;
+    LuminaPluginCrashReporter.reportCrash(
+      error,
+      stack,
+      plugin: targetPlugin,
+      context: context,
+    );
+  }
+
   /// `(path, mtime)` → the custom type id read from the `.lmas`, so a
   /// content-browser rebuild never re-reads unchanged files.
   final Map<String, (int, String?)> _customTypeCache = {};

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:io' as io show pid;
 import 'dart:math';
 import 'dart:ui' show ErrorCallback;
 
@@ -8,6 +9,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:lumina/lumina.dart'
     show EditorHostInputs, EngineLogEntry, EngineLoggerService, LuminaDataDir, LuminaGraphicsDevices, LuminaRelease, LuminaRenderBackendInfo;
+import 'package:lumina_editor_api/lumina_editor_api.dart' show LuminaPluginCrashReporter;
 import 'package:lumina_marketplace_shared/lumina_marketplace_shared.dart';
 import 'package:path/path.dart' as p;
 
@@ -17,11 +19,15 @@ import 'crash_report.dart';
 /// crash report screen: [install] hooks Flutter's and the platform
 /// dispatcher's error handlers; [record] files a report under
 /// `<data dir>/crashes/` and publishes it on [pending] (the first one of a
-/// session; later ones are only filed). [startSession] writes a session
-/// marker and streams the engine log to `<data dir>/logs/editor.log`;
-/// [endSession] removes the marker on a clean close, so a marker still there
-/// at the next launch means the process died: [detectPreviousCrash] turns it
-/// into a report with the log's tail. [send] posts a report to the
+/// session; later ones are only filed). [startSession] writes this process's
+/// session marker (`crashes/session-<pid>.json`) and streams the engine log
+/// to its own file (`logs/editor-<pid>.log`); [endSession] removes the marker
+/// on a clean close, so a marker whose process is gone at the next launch
+/// means that process died: [detectPreviousCrash] turns it into a report with
+/// that log's tail. Markers and logs are per process because the launcher and
+/// the project editor it hands off to overlap for a moment: a shared marker
+/// was deleted by the one exiting after the other had written it, and a
+/// shared log was trimmed under the other's writes. [send] posts a report to the
 /// marketplace server's `POST /api/v1/crash-reports`; nothing is ever sent
 /// without the user pressing Send.
 class CrashReporter {
@@ -30,11 +36,16 @@ class CrashReporter {
     Uri Function()? serverUrl,
     http.Client Function()? httpClientFactory,
     DateTime Function()? clock,
+    Future<bool> Function(int pid)? isProcessAlive,
+    int? pid,
     this.logTailLines = 300,
+    this.keptLogs = 10,
   })  : _dataDir = dataDir,
         _serverUrl = serverUrl,
         _httpClientFactory = httpClientFactory,
         _clock = clock ?? DateTime.now,
+        _isProcessAlive = isProcessAlive ?? isProcessRunning,
+        pid = pid ?? io.pid,
         sessionId = _newSessionId();
 
   // ignore_for_file: prefer_initializing_formals
@@ -48,13 +59,21 @@ class CrashReporter {
   final Uri Function()? _serverUrl;
   final http.Client Function()? _httpClientFactory;
   final DateTime Function() _clock;
+  final Future<bool> Function(int pid) _isProcessAlive;
 
-  /// How many log lines a report carries (and the log file keeps when it is
-  /// trimmed at start-up).
+  /// How many log lines a report carries.
   final int logTailLines;
 
-  /// Random per process: the session marker names it, so a marker left by
-  /// another process is recognised as such.
+  /// How many per-process log files `logs/` keeps (the newest; a log a
+  /// marker still points at is never pruned).
+  final int keptLogs;
+
+  /// The process this session belongs to: names its marker and its log.
+  final int pid;
+
+  /// Random per session: the marker names it, so a marker left by another
+  /// session (another process, or this process before a hot restart) is
+  /// recognised as such.
   final String sessionId;
 
   /// The report the screen shows; null when there is none.
@@ -77,8 +96,38 @@ class CrashReporter {
 
   Directory get dataDir => _dataDir ?? LuminaDataDir.resolve();
   Directory get crashesDir => Directory(p.join(dataDir.path, 'crashes'));
-  File get logFile => File(p.join(dataDir.path, 'logs', 'editor.log'));
-  File get sessionMarker => File(p.join(crashesDir.path, 'session.json'));
+  Directory get logsDir => Directory(p.join(dataDir.path, 'logs'));
+
+  /// This process's log: `logs/editor-<pid>.log`.
+  File get logFile => File(p.join(logsDir.path, 'editor-$pid.log'));
+
+  /// This process's marker: `crashes/session-<pid>.json`.
+  File get sessionMarker => File(p.join(crashesDir.path, 'session-$pid.json'));
+
+  /// The single marker and log of editors before markers were per process.
+  static const String legacyMarkerName = 'session.json';
+  static const String legacyLogName = 'editor.log';
+
+  static bool _isMarkerName(String name) => name == legacyMarkerName || (name.startsWith('session-') && name.endsWith('.json'));
+
+  /// Whether the process [pid] is running (this process: yes). Windows asks
+  /// `tasklist`, Linux looks in `/proc`, elsewhere `kill -0`. When that
+  /// cannot be told, the process counts as gone: a report too many beats a
+  /// crash never reported.
+  static Future<bool> isProcessRunning(int pid) async {
+    if (pid == io.pid) return true;
+    try {
+      if (Platform.isWindows) {
+        final r = await Process.run('tasklist', ['/FI', 'PID eq $pid', '/NH', '/FO', 'CSV']);
+        return (r.stdout as String).contains('"$pid"');
+      }
+      if (Platform.isLinux) return await Directory('/proc/$pid').exists();
+      final r = await Process.run('kill', ['-0', '$pid']);
+      return r.exitCode == 0;
+    } catch (_) {
+      return false;
+    }
+  }
 
   /// The marketplace server the report goes to (its `/api/v1/crash-reports`).
   Uri get serverUrl => (_serverUrl ?? () => Uri.parse('http://127.0.0.1:8787'))();
@@ -88,6 +137,9 @@ class CrashReporter {
   /// run (Flutter's prints the red box).
   void install() {
     _instance = this;
+    LuminaPluginCrashReporter.setHandler((error, stack, {required plugin, context}) {
+      record(error, stack, context: context, plugin: plugin);
+    });
     _previousFlutterHandler = FlutterError.onError;
     FlutterError.onError = (details) {
       _previousFlutterHandler?.call(details);
@@ -103,28 +155,30 @@ class CrashReporter {
   /// Undoes [install] (tests).
   void uninstall() {
     if (_instance == this) _instance = null;
+    LuminaPluginCrashReporter.setHandler(null);
     FlutterError.onError = _previousFlutterHandler;
     PlatformDispatcher.instance.onError = _previousPlatformHandler;
   }
 
-  /// Starts this session: first looks for the marker a session that died
-  /// left behind ([detectPreviousCrash], returned), then writes this
-  /// session's marker and streams the engine log to [logFile] (trimmed to
-  /// the last [logTailLines] lines first). The order matters: the new marker
-  /// would hide the old one.
+  /// Starts this session: first looks for markers of sessions that died
+  /// ([detectPreviousCrash]; the first report is returned), prunes old
+  /// per-process logs, then writes this session's marker and streams the
+  /// engine log to [logFile]. The order matters: the new marker would hide
+  /// an old one of the same process.
   Future<CrashReport?> startSession() async {
     await crashesDir.create(recursive: true);
-    await logFile.parent.create(recursive: true);
+    await logsDir.create(recursive: true);
     final previous = await detectPreviousCrash();
-    await _trimLog();
+    await _pruneLogs();
     await sessionMarker.writeAsString(jsonEncode({
       'sessionId': sessionId,
       'pid': pid,
       'startedAt': _clock().toUtc().toIso8601String(),
       'release': LuminaRelease.version,
       'commit': LuminaRelease.commit,
+      'log': logFile.path,
     }), flush: true);
-    _logSink ??= logFile.openWrite(mode: FileMode.append);
+    _logSink ??= logFile.openWrite(mode: FileMode.writeOnly);
     _logSubscription ??= EngineLoggerService().logStream.listen(_onLog);
     for (final e in EngineLoggerService().logs) {
       _ring.add(_format(e));
@@ -153,48 +207,69 @@ class CrashReporter {
   /// Completes when every report file started so far is written.
   Future<void> flush() => Future.wait(_writes.toList());
 
-  /// A marker left by another process means that session never closed:
-  /// files a previous-run report with the log file's tail and publishes it
-  /// (unless a report is already pending). Null when the last session
-  /// closed cleanly.
+  /// A marker of another session whose process is gone means that session
+  /// never closed: files a previous-run report with that session's log tail
+  /// and publishes it (unless a report is already pending). A marker whose
+  /// process is still running (the launcher that is handing off to this
+  /// editor, or the other way round) is left alone. Null when nothing died.
   Future<CrashReport?> detectPreviousCrash() async {
-    if (!await sessionMarker.exists()) return null;
-    Map<String, Object?> marker;
-    try {
-      marker = (jsonDecode(await sessionMarker.readAsString()) as Map).cast<String, Object?>();
-    } on FormatException {
-      marker = const {};
+    if (!await crashesDir.exists()) return null;
+    CrashReport? first;
+    await for (final e in crashesDir.list()) {
+      if (e is! File || !_isMarkerName(p.basename(e.path))) continue;
+      Map<String, Object?> marker;
+      try {
+        marker = (jsonDecode(await e.readAsString()) as Map).cast<String, Object?>();
+      } on FormatException {
+        marker = const {};
+      }
+      if (marker['sessionId'] == sessionId) continue;
+      final markerPid = marker['pid'];
+      if (markerPid is int && await _isProcessAlive(markerPid)) continue;
+      await e.delete();
+      final logPath = marker['log'];
+      final log = logPath is String && logPath.isNotEmpty ? File(logPath) : File(p.join(logsDir.path, legacyLogName));
+      final tail = await _logFileTail(log);
+      final started = marker['startedAt'] as String? ?? 'an unknown time';
+      final release = marker['release'] as String? ?? '';
+      final report = _build(
+        kind: CrashReportKind.previousRun,
+        error: 'Lumina Studio ended without closing: the session started at $started'
+            '${release.isNotEmpty ? ' (release $release)' : ''} left no clean exit, so the process crashed or was killed.',
+        stackTrace: '',
+        logTail: tail,
+      );
+      await _file(report);
+      filed.add(report);
+      pending.value ??= report;
+      first ??= report;
     }
-    if (marker['sessionId'] == sessionId) return null;
-    await sessionMarker.delete();
-    final tail = await _logFileTail();
-    final started = marker['startedAt'] as String? ?? 'an unknown time';
-    final release = marker['release'] as String? ?? '';
-    final report = _build(
-      kind: CrashReportKind.previousRun,
-      error: 'Lumina Studio ended without closing: the session started at $started'
-          '${release.isNotEmpty ? ' (release $release)' : ''} left no clean exit, so the process crashed or was killed.',
-      stackTrace: '',
-      logTail: tail,
-    );
-    await _file(report);
-    filed.add(report);
-    pending.value ??= report;
-    return report;
+    return first;
   }
 
   /// Files [error] as a report and shows it when nothing else is pending.
-  CrashReport? record(Object error, StackTrace? stack, {String? context}) {
+  CrashReport? record(Object error, StackTrace? stack, {String? context, String? plugin}) {
     if (_handling) return null;
     _handling = true;
     try {
       final text = context == null || context.isEmpty ? error.toString() : '$error\n(while $context)';
-      final report = _build(kind: CrashReportKind.uncaught, error: text, stackTrace: stack?.toString() ?? '', logTail: List.of(_ring));
+      final report = _build(
+        kind: CrashReportKind.uncaught,
+        error: text,
+        stackTrace: stack?.toString() ?? '',
+        logTail: List.of(_ring),
+        plugin: plugin ?? '',
+      );
       filed.add(report);
       late final Future<void> write;
       write = _file(report).catchError((Object e) => debugPrint('[CrashReporter] could not write ${report.id}: $e')).whenComplete(() => _writes.remove(write));
       _writes.add(write);
-      EngineLoggerService().log('Uncaught error filed as crash report ${report.id}: ${report.headline}', level: 'error', source: 'CrashReporter');
+      final pluginTag = (plugin != null && plugin.isNotEmpty) ? ' (plugin: $plugin)' : '';
+      EngineLoggerService().log(
+        'Uncaught error$pluginTag filed as crash report ${report.id}: ${report.headline}',
+        level: 'error',
+        source: (plugin != null && plugin.isNotEmpty) ? 'Plugin:$plugin' : 'CrashReporter',
+      );
       pending.value ??= report;
       return report;
     } finally {
@@ -229,7 +304,7 @@ class CrashReporter {
     if (!await crashesDir.exists()) return const [];
     final reports = <CrashReport>[];
     await for (final e in crashesDir.list()) {
-      if (e is! File || !e.path.endsWith('.json') || p.basename(e.path) == 'session.json') continue;
+      if (e is! File || !e.path.endsWith('.json') || _isMarkerName(p.basename(e.path))) continue;
       try {
         reports.add(CrashReport.fromJson((jsonDecode(await e.readAsString()) as Map).cast<String, Object?>()));
       } on FormatException {
@@ -246,7 +321,13 @@ class CrashReporter {
     pending.dispose();
   }
 
-  CrashReport _build({required CrashReportKind kind, required String error, required String stackTrace, required List<String> logTail}) {
+  CrashReport _build({
+    required CrashReportKind kind,
+    required String error,
+    required String stackTrace,
+    required List<String> logTail,
+    String plugin = '',
+  }) {
     final now = _clock();
     String gpu;
     try {
@@ -274,6 +355,7 @@ class CrashReporter {
       gpu: gpu,
       filament: filament,
       project: projectName,
+      plugin: plugin,
       logTail: logTail,
     );
   }
@@ -296,15 +378,46 @@ class CrashReporter {
 
   static String _format(EngineLogEntry e) => '[${e.timestamp}] [${e.level.toUpperCase()}] [${e.source}] ${e.message}';
 
-  Future<void> _trimLog() async {
-    if (!await logFile.exists()) return;
-    final lines = await _logFileTail();
-    await logFile.writeAsString(lines.isEmpty ? '' : '${lines.join('\n')}\n', flush: true);
+  /// Keeps the newest [keptLogs] per-process logs, never one a marker still
+  /// points at (a running sibling, or a death not yet reported) and never
+  /// this process's own.
+  Future<void> _pruneLogs() async {
+    if (!await logsDir.exists()) return;
+    final referenced = <String>{};
+    if (await crashesDir.exists()) {
+      await for (final e in crashesDir.list()) {
+        if (e is! File || !_isMarkerName(p.basename(e.path))) continue;
+        try {
+          final marker = (jsonDecode(await e.readAsString()) as Map).cast<String, Object?>();
+          if (marker['log'] is String) referenced.add(p.normalize(marker['log'] as String));
+        } on FormatException {
+          // not a marker
+        }
+      }
+    }
+    final logs = <File>[];
+    await for (final e in logsDir.list()) {
+      if (e is! File) continue;
+      final name = p.basename(e.path);
+      if (!name.startsWith('editor-') || !name.endsWith('.log')) continue;
+      if (p.normalize(e.path) == p.normalize(logFile.path) || referenced.contains(p.normalize(e.path))) continue;
+      logs.add(e);
+    }
+    if (logs.length <= keptLogs) return;
+    final stats = <File, DateTime>{for (final f in logs) f: (await f.stat()).modified};
+    logs.sort((a, b) => stats[b]!.compareTo(stats[a]!));
+    for (final old in logs.skip(keptLogs)) {
+      try {
+        await old.delete();
+      } on FileSystemException {
+        // in use elsewhere; next time
+      }
+    }
   }
 
-  Future<List<String>> _logFileTail() async {
-    if (!await logFile.exists()) return const [];
-    final lines = const LineSplitter().convert(await logFile.readAsString());
+  Future<List<String>> _logFileTail(File log) async {
+    if (!await log.exists()) return const [];
+    final lines = const LineSplitter().convert(await log.readAsString()).where((l) => l.isNotEmpty).toList();
     return lines.length > logTailLines ? lines.sublist(lines.length - logTailLines) : lines;
   }
 

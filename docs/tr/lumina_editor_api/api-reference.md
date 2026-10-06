@@ -12,6 +12,7 @@ MCP tipleri dışında eklenti API'sinin tüm tipleri: `LuminaEditorPlugin` ve `
 - [`lib/src/editor_panels.dart`](#libsrceditor_panelsdart)
 - [`lib/src/editor_slot_button.dart`](#libsrceditor_slot_buttondart)
 - [`lib/src/editor_theme.dart`](#libsrceditor_themedart)
+- [`lib/src/plugin_crash_reporter.dart`](#libsrcplugin_crash_reporterdart)
 - [`lib/src/plugin_storage.dart`](#libsrcplugin_storagedart)
 - [`lib/src/project_settings_section.dart`](#libsrcproject_settings_sectiondart)
 
@@ -229,6 +230,7 @@ A top-level menu a plugin owns. Fill it with `registerMenuItem('<title>/…', co
 | `registerImporter` | `void registerImporter(EditorImporter importer)` |  |
 | `registerDetailsCustomization` | `void registerDetailsCustomization(DetailsCustomization c)` |  |
 | `registerConsoleCommand` | `void registerConsoleCommand(String name, String help, void Function(List<String> args) handler)` |  |
+| `reportCrash` | `void reportCrash(Object error, StackTrace? stack, {String? plugin, String? context})` | Bir eklenti tarafından yakalanan hatayı eklenti aidiyetiyle birlikte çökme raporu (crash report) olarak kaydeder. |
 
 ### `abstract class LuminaEditorPlugin`
 
@@ -242,6 +244,7 @@ A top-level menu a plugin owns. Fill it with `registerMenuItem('<title>/…', co
 | `onProjectOpened` | `void onProjectOpened(EditorProjectInfo project)` | The editor has [project] open; called after [register]. |
 | `onProjectClosing` | `Future<void> onProjectClosing() async` | The project is closing: finish pending writes. Bounded by a host timeout. |
 | `onEditorShutdown` | `Future<void> onEditorShutdown() async` | The editor is exiting: stop child processes. Bounded by a host timeout; not called after a crash. |
+| `reportCrash` | `void reportCrash(Object error, StackTrace? stack, {String? context})` | Bu eklenti (`pluginName`) tarafından yakalanan bir hatayı veya istisnayı (örneğin FFI sınır hatası) çökme raporlama servisine bildirir. |
 
 **Üst düzey fonksiyonlar ve değişkenler:**
 
@@ -249,6 +252,20 @@ A top-level menu a plugin owns. Fill it with `registerMenuItem('<title>/…', co
 | :--- | :--- | :--- |
 | `kCustomAssetTypeKey` | `const String kCustomAssetTypeKey` | `LuminaAsset.metadata` key a plugin asset type carries its [EditorAssetTypeHandler.customTypeId] under: an `.lmas` of `AssetType.unknown` with `metadata[kCustomAssetTypeKey] == customTypeId` is that plugin's asset, and the Content Browser opens it with the handler's `editorFactory`. |
 | `kAssetPathMetadataKey` | `const String kAssetPathMetadataKey` | `LuminaAsset.metadata` key the host sets on the asset it passes to [EditorAssetTypeHandler.editorFactory]: the absolute path of the `.lmas`, so the editor can write the asset back. |
+
+## `lib/src/plugin_crash_reporter.dart`
+
+### `class LuminaPluginCrashReporter`
+
+Eklentiler için global çökme raporu dağıtıcısı. Eklenti FFI sarmalayıcıları, arka plan izolatları ve statik servisler tarafından yakalanan istisnaları eklenti aidiyetiyle raporlamak için kullanılır.
+
+**Statik Metotlar:**
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `setHandler` | `static void setHandler(PluginCrashReportHandler? handler)` | Ana uygulama çökme raporlayıcı işleyicisini (handler) kurar veya kaldırır. |
+| `hasHandler` | `static bool get hasHandler` | Halihazırda kayıtlı bir çökme raporu işleyicisinin olup olmadığını belirtir. |
+| `reportCrash` | `static void reportCrash(Object error, StackTrace? stack, {required String plugin, String? context})` | Bir eklenti hatasını kayıtlı işleyiciye yönlendirir veya yedek olarak motor günlüğüne (logger) kaydeder. |
 
 ## `lib/src/editor_command.dart`
 

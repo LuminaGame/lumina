@@ -9,6 +9,7 @@ import 'editor_panels.dart';
 import 'mcp/editor_mcp.dart';
 import 'plugin_storage.dart';
 import 'project_settings_section.dart';
+import 'plugin_crash_reporter.dart';
 export 'editor_command.dart';
 export 'editor_level.dart';
 export 'editor_theme.dart';
@@ -18,6 +19,7 @@ export 'mcp/mcp_types.dart';
 export 'mcp/editor_mcp.dart';
 export 'plugin_storage.dart';
 export 'project_settings_section.dart';
+export 'plugin_crash_reporter.dart';
 
 /// `LuminaAsset.metadata` key a plugin asset type carries its
 /// [EditorAssetTypeHandler.customTypeId] under: an `.lmas` of `AssetType.unknown`
@@ -323,6 +325,21 @@ abstract class LuminaEditorContext {
     Uint8List? bytes,
     bool generateThumbnail = true,
   }) async {}
+
+  /// Reports an error or native/FFI crash attributed to a plugin.
+  void reportCrash(
+    Object error,
+    StackTrace? stack, {
+    String? plugin,
+    String? context,
+  }) {
+    LuminaPluginCrashReporter.reportCrash(
+      error,
+      stack,
+      plugin: plugin ?? 'unknown_plugin',
+      context: context,
+    );
+  }
 }
 
 abstract class LuminaEditorPlugin {
@@ -348,4 +365,14 @@ abstract class LuminaEditorPlugin {
   /// The editor is exiting: stop child processes. Bounded by a
   /// host timeout; not called after a crash.
   Future<void> onEditorShutdown() async {}
+
+  /// Reports an error or native/FFI crash attributed to this plugin.
+  void reportCrash(Object error, StackTrace? stack, {String? context}) {
+    LuminaPluginCrashReporter.reportCrash(
+      error,
+      stack,
+      plugin: pluginName,
+      context: context,
+    );
+  }
 }
