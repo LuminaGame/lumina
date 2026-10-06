@@ -1,4 +1,6 @@
 
+import 'package:flutter/gestures.dart' show kDoubleTapTimeout;
+import 'package:flutter/services.dart' show LogicalKeyboardKey;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina/lumina.dart' show LuminaBlueprintComponent, LuminaBlueprintDocument, LuminaMeshPhysics, MeshPhysicsService;
 import 'package:lumina_ui/ui/features/details/services/multi_edit_service.dart';
@@ -20,6 +22,7 @@ import '../../details/services/blueprint_collision_overrides.dart';
 import '../../sub_editors/models/blueprint_component_registry.dart';
 
 import '../../../core/theme/editor_theme.dart';
+import '../../../core/widgets/editor_context_menu.dart';
 import '../../../core/editor_level_access.dart';
 import '../../../core/services/editor_scene_environment.dart';
 import '../services/camera_actor_properties.dart';
@@ -34,6 +37,7 @@ import 'package:lumina_editor_api/lumina_editor_api.dart' show DetailsTarget;
 part 'details_widget/state.dart';
 part 'details_widget/level_and_blueprint_sections.dart';
 part 'details_widget/world_partition_section.dart';
+part 'details_widget/data_layer_tree.dart';
 part 'details_widget/single_selection.dart';
 part 'details_widget/multi_selection.dart';
 part 'details_widget/widgets.dart';

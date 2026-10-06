@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/gestures.dart' show kSecondaryMouseButton;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina/lumina.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
@@ -68,10 +69,14 @@ void main() {
       vm.addWorldPartitionDataLayer('Layer$i');
     }
     vm.addWorldPartitionDataLayer('Child', 'Layer0');
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(
       ShadcnApp(
         theme: luminaEditorTheme(),
-        home: SizedBox(width: 420, height: 900, child: DetailsWidget(viewModel: vm)),
+        home: Scaffold(child: SizedBox(width: 420, height: 900, child: DetailsWidget(viewModel: vm))),
       ),
     );
     await tester.pumpAndSettle();
@@ -86,8 +91,23 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('wp_layer_chevron_0')));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('wp_layer_name_1')), findsNothing, reason: 'folded away');
-    await tester.tap(find.byKey(const ValueKey('wp_layer_add_child_2')));
+    await tester.tap(find.byKey(const ValueKey('wp_layer_row_2')), buttons: kSecondaryMouseButton);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('wp_layer_menu_add_child_2')));
     await tester.pumpAndSettle();
     expect(vm.worldPartitionDataLayers.where((l) => l['parent'] == 'Layer1'), hasLength(1));
+
+    // The row carries the outliner's toggles: the eye flips unloaded/loaded,
+    // the bolt flips activated, and the badge names the state.
+    await tester.tap(find.byKey(const ValueKey('wp_layer_eye_0')));
+    await tester.pumpAndSettle();
+    expect(vm.worldPartitionDataLayers[0]['initialState'], 'loaded');
+    await tester.tap(find.byKey(const ValueKey('wp_layer_tick_0')));
+    await tester.pumpAndSettle();
+    expect(vm.worldPartitionDataLayers[0]['initialState'], 'activated');
+    expect(find.descendant(of: find.byKey(const ValueKey('wp_layer_state_0')), matching: find.text('activated')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('wp_layer_row_0')));
+    await tester.pumpAndSettle();
+    expect(vm.selectedWorldPartitionDataLayer, 'Layer0');
   });
 }

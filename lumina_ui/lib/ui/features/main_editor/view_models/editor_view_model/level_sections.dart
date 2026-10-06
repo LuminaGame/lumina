@@ -254,6 +254,16 @@ mixin _EditorLevelSections on _EditorViewModelState {
     _editWorldPartition('Move Data Layer $name', () => _setWorldPartitionField('dataLayers', layers));
   }
 
+  /// The data layer highlighted in the Details tree (by name), or null.
+  String? get selectedWorldPartitionDataLayer => _selectedDataLayer;
+  String? _selectedDataLayer;
+
+  void selectWorldPartitionDataLayer(String? name) {
+    if (_selectedDataLayer == name) return;
+    _selectedDataLayer = name;
+    notifyListeners();
+  }
+
   /// Layers whose children are folded away in the Details tree (by name).
   final Set<String> _collapsedDataLayers = {};
 

@@ -212,6 +212,7 @@ A live binding between an open sub-editor tab and its view model.
 | `worldPartitionDataLayers` | `List<Map<String, dynamic>> get worldPartitionDataLayers` | Yazılan data layer'lar (`name`, `initialState`, `isRuntime`, isteğe bağlı `parent` = başka bir katmanın adı), ağaç sırasında: bir katmanın alt katmanları onu izler. |
 | `worldPartitionDataLayerRows` | `List<({int index, int depth, bool hasChildren})> get worldPartitionDataLayerRows` | Katmanlar Details ağacının gösterdiği hâliyle: liste indeksi, derinlik ve çocuğu olup olmadığı; katlanmış bir katmanın çocukları dışarıda bırakılır. |
 | `isWorldPartitionDataLayerExpanded` | `bool isWorldPartitionDataLayerExpanded(String name)` | Katmanın çocuklarının gösterilip gösterilmediği (editör durumu, seviyeyle kaydedilmez). |
+| `selectedWorldPartitionDataLayer` | `String? get selectedWorldPartitionDataLayer` | Details ağacında vurgulanan data layer (adıyla); `selectWorldPartitionDataLayer(name)` ayarlar. Editör durumu, seviyeyle kaydedilmez. |
 | `toggleWorldPartitionDataLayerExpanded` | `void toggleWorldPartitionDataLayerExpanded(String name)` | Details ağacında katmanın alt ağacını katlar ya da açar. |
 | `setWorldPartitionEnabled` | `void setWorldPartitionEnabled(bool v)` | Turns the section on (seeding the runtime's own defaults) or off. Disabling keeps the authored values so toggling back does not lose them. |
 | `setWorldPartitionCellSize` | `void setWorldPartitionCellSize(double v)` | Cell edge length in metres; clamped to a positive value because the runtime divides by it. |

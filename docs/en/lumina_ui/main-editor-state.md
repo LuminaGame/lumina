@@ -212,6 +212,7 @@ A live binding between an open sub-editor tab and its view model.
 | `worldPartitionDataLayers` | `List<Map<String, dynamic>> get worldPartitionDataLayers` | The authored data layers (`name`, `initialState`, `isRuntime`, optional `parent` = another layer's name), in tree order: a layer's descendants follow it. |
 | `worldPartitionDataLayerRows` | `List<({int index, int depth, bool hasChildren})> get worldPartitionDataLayerRows` | The layers as the Details tree shows them: list index, depth and whether the layer has children; the children of a collapsed layer are left out. |
 | `isWorldPartitionDataLayerExpanded` | `bool isWorldPartitionDataLayerExpanded(String name)` | Whether the layer's children are shown (editor state, not saved with the level). |
+| `selectedWorldPartitionDataLayer` | `String? get selectedWorldPartitionDataLayer` | The data layer highlighted in the Details tree (by name); `selectWorldPartitionDataLayer(name)` sets it. Editor state, not saved with the level. |
 | `toggleWorldPartitionDataLayerExpanded` | `void toggleWorldPartitionDataLayerExpanded(String name)` | Folds or unfolds the layer's subtree in the Details tree. |
 | `setWorldPartitionEnabled` | `void setWorldPartitionEnabled(bool v)` | Turns the section on (seeding the runtime's own defaults) or off. Disabling keeps the authored values so toggling back does not lose them. |
 | `setWorldPartitionCellSize` | `void setWorldPartitionCellSize(double v)` | Cell edge length in metres; clamped to a positive value because the runtime divides by it. |

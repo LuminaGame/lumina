@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/gestures.dart' show kSecondaryMouseButton;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina/data/services/level_template_service.dart';
 import 'package:lumina/lumina.dart';
@@ -39,9 +40,13 @@ void main() {
   });
 
   Future<void> pumpDetails(WidgetTester tester, EditorViewModel vm) async {
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(ShadcnApp(
       theme: luminaEditorTheme(),
-      home: SizedBox(width: 340, height: 900, child: DetailsWidget(viewModel: vm)),
+      home: Scaffold(child: SizedBox(width: 340, height: 900, child: DetailsWidget(viewModel: vm))),
     ));
     await tester.pump(const Duration(milliseconds: 200));
   }
@@ -125,17 +130,26 @@ void main() {
     await tester.pump(const Duration(milliseconds: 200));
     expect(vm.worldPartitionDataLayers.length, 1);
 
-    await tester.enterText(find.byKey(const ValueKey('wp_layer_name_0')), 'Gameplay');
+    // Double-click the row to rename it, as in the outliner.
+    await tester.tap(find.byKey(const ValueKey('wp_layer_row_0')));
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.tap(find.byKey(const ValueKey('wp_layer_row_0')));
+    await tester.pump(const Duration(milliseconds: 200));
+    await tester.enterText(find.byKey(const ValueKey('wp_layer_rename_field')), 'Gameplay');
     await tester.testTextInput.receiveAction(TextInputAction.done);
     await tester.pump(const Duration(milliseconds: 200));
+    expect(vm.worldPartitionDataLayers[0]['name'], 'Gameplay');
     vm.setWorldPartitionDataLayerState(0, 'activated');
 
     await tester.runAsync(() => vm.saveLevelAndGenerateCode());
     final generated = File('${projDir.path}/lib/levels/l_main.dart').readAsStringSync();
     expect(generated, contains("registerLayer('Gameplay', initialState: DataLayerState.activated"));
 
-    await tester.tap(find.byKey(const ValueKey('wp_layer_remove_0')));
-    await tester.pump(const Duration(milliseconds: 200));
+    // The context menu removes the layer.
+    await tester.tap(find.byKey(const ValueKey('wp_layer_row_0')), buttons: kSecondaryMouseButton);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('wp_layer_menu_remove_0')));
+    await tester.pumpAndSettle();
     expect(vm.worldPartitionDataLayers, isEmpty);
   });
 
