@@ -251,11 +251,25 @@ A clip retargeted into a skeletal mesh GLB.
 
 Retargets a skeletal animation onto another skeleton that shares its bone names (the UE4 → UE5 mannequin case) and appends it to that skeleton's GLB, so one gltfio asset (one animator) plays it.
 
+GEM-X SOMA clips use a separate semantic mapping: `LeftLeg`/`RightLeg` drive
+thighs and `LeftShin`/`RightShin` drive calves. `Chest` drives the highest thoracic
+bone (`spine_05` when present). Their GLB nodes must contain a neutral reference
+pose, declared by `extras.somaReferencePose = "neutral"`. Retargeting transfers
+model-space motion relative to that reference onto the target bind axes. Target
+bone offsets stay intact, and root-relative displacement is added to the target
+pelvis placement. Twist/corrective bones follow their parents. A neutral source
+keeps the target skeleton unchanged. Older GEM-X exports without that reference
+are refused with a regeneration message.
+
+The implementation is divided into `glb_animation_retargeter/models.dart`,
+`operation.dart`, `pose_sampling.dart` and `soma_mapping.dart`; the public entry
+point remains `GlbAnimationRetargeter.retargetInto`.
+
 Unlike [GlbAnimationMerger], which copies channels verbatim onto an identical skeleton, this handles skeletons that differ in hierarchy and proportions (UE5's spine_04/05, neck_02 and metacarpals have no UE4 counterpart):
 
 - **Rotation only.** Every matched bone takes the clip bone's rotation in model space (the clip's forward kinematics); its local rotation follows from its target parent. Skeleton bones the clip lacks keep their rest rotation relative to their parent. When rest poses differ (e.g. source T-pose vs target A-pose, such as MetaHuman skeletons where arms slant downward), target bone rest orientations are aligned to source rest directions so animation deltas transfer without compounding rest angles or crossing limbs. - **Translations come from the target skeleton**, except the skeleton root (copied: root motion and placement) and the pelvis (copied, scaled by the target's leg length over the clip's). Clip bone translations are otherwise ignored: an Unreal FBX carries the authoring skeleton's proportions in them.
 
-Every skeleton joint gets a rotation and a translation channel (constant ones where nothing moves), so switching from another clip of the asset cannot leave a bone where that clip put it.
+Body joints receive dynamic or constant rotation/translation channels. Unmapped facial and corrective joints are excluded so body clips preserve their local reference transforms.
 
 **Members:**
 

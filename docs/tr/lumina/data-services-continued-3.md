@@ -251,11 +251,24 @@ A clip retargeted into a skeletal mesh GLB.
 
 Retargets a skeletal animation onto another skeleton that shares its bone names (the UE4 → UE5 mannequin case) and appends it to that skeleton's GLB, so one gltfio asset (one animator) plays it.
 
+GEM-X SOMA klipleri ayrı bir semantik eşleştirme kullanır: `LeftLeg`/`RightLeg`
+üst bacağı, `LeftShin`/`RightShin` alt bacağı sürer. `Chest`, en üst göğüs kemiğine
+(`spine_05` varsa ona) aktarılır. GLB düğümleri nötr referans pozunu taşımalı ve
+`extras.somaReferencePose = "neutral"` ile belirtmelidir. Model uzayındaki hareket,
+bu referansa göre hedef bind eksenlerine aktarılır. Hedef kemik konumları korunur;
+göreli kök hareketi hedef pelvis konumuna eklenir. Twist/düzeltici kemikler
+ebeveynlerini izler. Nötr kaynak hareketi hedef iskeleti değiştirmez. Bu referansı
+taşımayan eski GEM-X çıktıları yeniden üretim mesajıyla reddedilir.
+
+Uygulama `glb_animation_retargeter/models.dart`, `operation.dart`,
+`pose_sampling.dart` ve `soma_mapping.dart` dosyalarına ayrılmıştır. Genel giriş
+noktası `GlbAnimationRetargeter.retargetInto` olarak kalır.
+
 Unlike [GlbAnimationMerger], which copies channels verbatim onto an identical skeleton, this handles skeletons that differ in hierarchy and proportions (UE5's spine_04/05, neck_02 and metacarpals have no UE4 counterpart):
 
 - **Rotation only.** Her eşleşen kemik, model uzayında klip kemiğinin rotasyonunu alır (klibin ileri kinematiği); yerel rotasyonu hedef ebeveyninden türetilir. Klibin eksik olduğu iskelet kemikleri ebeveynlerine göre rest rotasyonlarını korur. Rest pozları farklı olduğunda (örneğin kolların aşağı eğimli olduğu MetaHuman iskeletlerinde kaynak T-pose ile hedef A-pose farkı), hedef kemik rest yönelimleri kaynak rest yönlerine hizalanır; böylece animasyon deltaları rest açılarını katlamadan ve kollar/bacaklar çaprazlanmadan aktarılır. - **Translations come from the target skeleton**, iskelet kökü (kopyalanır: root motion ve yerleşim) ve pelvis (kopyalanır, hedefin bacak uzunluğunun klibinkine oranıyla ölçeklenir) hariç hedeften gelir. Klip kemik ötelemeleri haricinde yok sayılır.
 
-Every skeleton joint gets a rotation and a translation channel (constant ones where nothing moves), so switching from another clip of the asset cannot leave a bone where that clip put it.
+Gövde kemiklerine dinamik veya sabit dönüş/konum kanalları yazılır. Eşleşmeyen yüz ve düzeltici kemikler hariç tutulur; gövde klibi bu kemiklerin yerel referans dönüşlerini korur.
 
 **Üyeler:**
 
