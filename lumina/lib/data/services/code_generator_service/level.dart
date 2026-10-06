@@ -147,8 +147,35 @@ mixin _LevelCodegen on _DartCodeGeneratorServiceState {
         begin.add("  partition.dataLayerManager.registerLayer('${_escape(name)}', "
             'initialState: DataLayerState.$state, bIsRuntime: $runtime);');
       }
+      // Level rows may name data layers (`dataLayers: [...]`, written by tools
+      // such as the map generator); the generated code assigns the actors by
+      // their keys.
+      final layersByActor = <String, List<String>>{};
+      for (final a in maps) {
+        if ((a['type'] ?? '').toString() == 'Folder') continue;
+        final names = a['dataLayers'] is List
+            ? (a['dataLayers'] as List).whereType<String>().where((n) => n.isNotEmpty).toList()
+            : const <String>[];
+        if (names.isEmpty) continue;
+        layersByActor[(a['id'] ?? a['name'] ?? '').toString()] = names;
+      }
+      if (layersByActor.isNotEmpty) {
+        begin.add('  const dataLayersByActor = <String, List<String>>{');
+        for (final entry in layersByActor.entries) {
+          begin.add("    '${_escape(entry.key)}': [${entry.value.map((n) => "'${_escape(n)}'").join(', ')}],");
+        }
+        begin.add('  };');
+      }
       begin.add('  for (final actor in w.actors) {');
       begin.add('    partition.addActor(actor, actor.actorLocation);');
+      if (layersByActor.isNotEmpty) {
+        begin.add('    final key = actor.key;');
+        begin.add('    if (key is ValueKey<String>) {');
+        begin.add('      for (final layer in dataLayersByActor[key.value] ?? const <String>[]) {');
+        begin.add('        partition.assignActorToLayer(actor, layer);');
+        begin.add('      }');
+        begin.add('    }');
+      }
       begin.add('    for (final component in actor.components) {');
       begin.add('      if (component is LuminaStreamingSourceComponent) {');
       begin.add('        partition.registerSource(component);');

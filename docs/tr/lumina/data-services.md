@@ -189,6 +189,8 @@ FBX ve OBJ dışında (onların kendi servisleri var) Assimp'in okuduğu her 3D 
 | `compileAndWriteActor` | `Future<bool> compileAndWriteActor(String projectPath, String assetName, ...` | Compiles a blueprint document into a project's lib/actors/ file. |
 | `writeProjectInputDart` | `bool writeProjectInputDart(String projectPath, [ProjectInputSettings? settings])` | Proje ayarları veya manifestten lib/input/project_input.g.dart dosyasını üretip yazar. |
 
+Üretilen seviyenin begin-play'i `LuminaWorldPartitionSubsystem`'i seviyenin `metadata.worldPartition` bölümüyle kaydeder (hücre boyutu, tick başına geçiş, başlangıç durumlarıyla data layer'lar), her aktörü partition'a ekler ve streaming kaynaklarını kaydeder. Bir seviye satırı `dataLayers: [<katman adı>, ...]` taşıyabilir (editör bunu henüz yazmaz; harita üreteci gibi araçlar yazar): üretilen kod o zaman aktörlerin `ValueKey` kimlikleriyle anahtarlanmış bir `dataLayersByActor` haritası tutar ve her ad için `partition.assignActorToLayer` çağırır; böylece yüklenmemiş ya da yalnızca yüklü katmanlar aktörlerinin tick almasını runtime'ın tanımladığı gibi engeller.
+
 ## `lib/data/services/engine_logger_service.dart`
 
 ### `class EngineLogEntry`

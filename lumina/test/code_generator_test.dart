@@ -540,6 +540,35 @@ dependencies:
       expect(code, contains('_LOpenWorldStreamingPlayerStart(key: const ValueKey(\'act_player_start\')'));
     });
 
+    test('a level row naming data layers is assigned to them by its key', () {
+      final actors = openWorldActors();
+      final start = actors.firstWhere((a) => a['type'] == 'PlayerStart');
+      start['dataLayers'] = ['Gameplay', 'Vodina 2'];
+      final code = generator.generateLevelDart(
+        levelName: 'L_OpenWorld',
+        actors: const [],
+        actorMaps: actors,
+        worldPartition: {
+          'enabled': true,
+          'dataLayers': [
+            {'name': 'Gameplay', 'initialState': 'activated', 'isRuntime': true},
+          ],
+        },
+      );
+      expect(code, contains("'${start['id']}': ['Gameplay', 'Vodina 2'],"));
+      expect(code, contains('partition.assignActorToLayer(actor, layer)'));
+      expect(code, contains('if (key is ValueKey<String>)'));
+
+      // Without any row naming a layer nothing is emitted for it.
+      final plain = generator.generateLevelDart(
+        levelName: 'L_OpenWorld',
+        actors: const [],
+        actorMaps: openWorldActors(),
+        worldPartition: {'enabled': true, 'dataLayers': const []},
+      );
+      expect(plain, isNot(contains('assignActorToLayer')));
+    });
+
     test('a component-authored loadingRadius wins over the section default', () {
       final actors = openWorldActors();
       final start = actors.firstWhere((a) => a['type'] == 'PlayerStart');
