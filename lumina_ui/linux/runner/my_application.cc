@@ -14,6 +14,26 @@ struct _MyApplication {
 
 G_DEFINE_TYPE(MyApplication, my_application, GTK_TYPE_APPLICATION)
 
+// Whether the editor started this executable to run one isolated plugin's
+// process part (`--lumina-plugin-process`, `PluginProcessLaunch.flag` in
+// Dart). Such a process never shows its window.
+//
+// It cannot be window-less on Linux: flutter_linux exports
+// fl_engine_new_headless but not fl_engine_start, and the engine starts only
+// when the implicit FlView is realized inside a GtkWindow (fl_view.cc
+// realize_cb). So a plugin process keeps a 1x1 window that is realized but
+// never mapped; the Dart side branches on the flag before anything that
+// needs a view, so no frame is drawn.
+static gboolean is_plugin_process(MyApplication *self) {
+  for (char **arg = self->dart_entrypoint_arguments; arg != nullptr && *arg;
+       arg++) {
+    if (g_strcmp0(*arg, "--lumina-plugin-process") == 0) {
+      return TRUE;
+    }
+  }
+  return FALSE;
+}
+
 // Called when first Flutter frame received.
 static void first_frame_cb(MyApplication *self, FlView *view) {
   gtk_widget_show(gtk_widget_get_toplevel(GTK_WIDGET(view)));
@@ -22,6 +42,7 @@ static void first_frame_cb(MyApplication *self, FlView *view) {
 // Implements GApplication::activate.
 static void my_application_activate(GApplication *application) {
   MyApplication *self = MY_APPLICATION(application);
+  const gboolean plugin_process = is_plugin_process(self);
   GtkWindow *window =
       GTK_WINDOW(gtk_application_window_new(GTK_APPLICATION(application)));
 
@@ -42,7 +63,7 @@ static void my_application_activate(GApplication *application) {
     }
   }
 #endif
-  if (use_header_bar) {
+  if (use_header_bar && !plugin_process) {
     GtkHeaderBar *header_bar = GTK_HEADER_BAR(gtk_header_bar_new());
     gtk_widget_show(GTK_WIDGET(header_bar));
     gtk_header_bar_set_title(header_bar, "lumina_ui");
@@ -52,7 +73,12 @@ static void my_application_activate(GApplication *application) {
     gtk_window_set_title(window, "lumina_ui");
   }
 
-  gtk_window_set_default_size(window, 1920, 1080);
+  if (plugin_process) {
+    gtk_window_set_default_size(window, 1, 1);
+    gtk_window_set_skip_taskbar_hint(window, TRUE);
+  } else {
+    gtk_window_set_default_size(window, 1920, 1080);
+  }
 
   g_autoptr(FlDartProject) project = fl_dart_project_new();
   fl_dart_project_set_dart_entrypoint_arguments(
@@ -67,15 +93,17 @@ static void my_application_activate(GApplication *application) {
   gtk_widget_show(GTK_WIDGET(view));
   gtk_container_add(GTK_CONTAINER(window), GTK_WIDGET(view));
 
-  // Show the window when Flutter renders.
+  // Show the window when Flutter renders (a plugin process never does).
   // Requires the view to be realized so we can start rendering.
-  g_signal_connect_swapped(view, "first-frame", G_CALLBACK(first_frame_cb),
-                           self);
+  if (!plugin_process) {
+    g_signal_connect_swapped(view, "first-frame", G_CALLBACK(first_frame_cb),
+                             self);
+  }
   gtk_widget_realize(GTK_WIDGET(view));
 
   fl_register_plugins(FL_PLUGIN_REGISTRY(view));
 
-  gtk_widget_grab_focus(GTK_WIDGET(view));
+  if (!plugin_process) gtk_widget_grab_focus(GTK_WIDGET(view));
 }
 
 // Implements GApplication::local_command_line.

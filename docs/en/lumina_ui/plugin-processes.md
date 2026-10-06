@@ -14,6 +14,17 @@ paths are relative to the `lumina_ui/` package directory.
   In that mode `runLuminaEditor` shows no window, starts no crash session and loads no plugin registry; it runs
   `LuminaEditorHost.pluginProcesses[name]` with `runPluginProcessMain` and exits with its code (an unknown name exits 64
   with a message on stderr).
+- **Headless on Windows**: the runner (`windows/runner/main.cpp`, copied into every project editor) sees the flag and
+  runs a `flutter::FlutterEngine` with the same entry point arguments and a message loop: no window, no view, no
+  surface, Impeller off and the low-power GPU preferred. It registers no native plugin (the editor's are window_manager,
+  media_kit, screen_retriever, mouse capture and volume, which need a view; media_kit_video dereferences it while
+  registering), and the plugin DLLs are delay-loaded (`windows/CMakeLists.txt`), so libmpv never loads either. A
+  process part therefore reaches native code through FFI; a method-channel plugin answers `MissingPluginException`.
+  Measured on a release project editor: about 102 MB working set / 117 MB private and 52 threads per plugin process,
+  from 136 MB / 157 MB and 118 threads with the hidden runner window.
+- **Linux keeps a hidden window**: flutter_linux exports `fl_engine_new_headless` but not `fl_engine_start`, and the
+  engine starts only when the implicit `FlView` is realized inside a `GtkWindow`. A plugin process therefore realizes a
+  1×1 window that is never mapped (no header bar, skipped by the taskbar, no first-frame show).
 - The editor binds a loopback socket on port 0 per plugin, checks the process's `host.hello` (protocol version and a
   random token), and registers the `host.register` contributions under the plugin's name: menu items, slot buttons, MCP
   tools, importers, console commands and declarative panels. Their actions run in the process. The project folder on

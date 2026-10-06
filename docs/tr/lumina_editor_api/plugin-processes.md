@@ -6,7 +6,7 @@ Bir eklenti, çökebilecek, takılabilecek ya da bloklayabilecek kısmını kend
 
 ## Bir eklenti süreci nasıl çalışır
 
-Bir eklenti `.lmplugin` dosyasında `"isolation": "process"` ile bunu seçer ve `LuminaPluginProcess` alt sınıfını editör modülünün `process_class` alanında adlandırır. Editör bir loopback portu bağlar ve kendi çalıştırılabilir dosyasını `--lumina-plugin-process <name> --lumina-plugin-port <port> --lumina-plugin-token <token> [--lumina-plugin-project <dir>]` ile yeniden başlatır (`PluginProcessLaunch`). Bu kipte çalıştırılabilir dosya pencere açmaz: eklentinin süreç parçasını oluşturur, `runPluginProcessMain(launch, process)` çağırır ve dönen kodla çıkar. Süreçte tam Flutter/Dart çalışma ortamı ve eklentinin editör build'ine zaten paketlenmiş native asset'leri vardır.
+Bir eklenti `.lmplugin` dosyasında `"isolation": "process"` ile bunu seçer ve `LuminaPluginProcess` alt sınıfını editör modülünün `process_class` alanında adlandırır. Editör bir loopback portu bağlar ve kendi çalıştırılabilir dosyasını `--lumina-plugin-process <name> --lumina-plugin-port <port> --lumina-plugin-token <token> [--lumina-plugin-project <dir>]` ile yeniden başlatır (`PluginProcessLaunch`). Bu kipte çalıştırılabilir dosya pencere açmaz (Windows'ta runner görünümsüz, başsız bir engine başlatır; editör tarafı için `lumina_ui/plugin-processes.md`): eklentinin süreç parçasını oluşturur, `runPluginProcessMain(launch, process)` çağırır ve dönen kodla çıkar. Süreçte tam Flutter/Dart çalışma ortamı ve eklentinin editör build'ine zaten paketlenmiş native asset'leri vardır.
 
 `runPluginProcessMain` (`lib/src/process/run_plugin_process.dart`):
 

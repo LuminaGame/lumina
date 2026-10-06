@@ -57,6 +57,17 @@ add_subdirectory("runner")
 # them to the application.
 include(flutter/generated_plugins.cmake)
 
+# The native plugin DLLs load when RegisterPlugins first calls into them, not
+# at process start: a plugin process (`--lumina-plugin-process`, a headless
+# engine, see runner/main.cpp) registers none, so it never loads them or what
+# they import (libmpv and its codecs for media_kit).
+foreach(plugin ${FLUTTER_PLUGIN_LIST})
+  target_link_options(${BINARY_NAME} PRIVATE "/DELAYLOAD:$<TARGET_FILE_NAME:${plugin}_plugin>")
+endforeach(plugin)
+if(FLUTTER_PLUGIN_LIST)
+  target_link_libraries(${BINARY_NAME} PRIVATE "delayimp.lib")
+endif()
+
 
 # === Installation ===
 # Support files are copied into place next to the executable, so that it can

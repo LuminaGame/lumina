@@ -6,7 +6,7 @@ A plugin can run the part of it that may crash, hang or block in its own process
 
 ## How a plugin process runs
 
-A plugin opts in with `"isolation": "process"` in its `.lmplugin` and names its `LuminaPluginProcess` subclass as the editor module's `process_class`. The editor binds a loopback port and starts its own executable again with `--lumina-plugin-process <name> --lumina-plugin-port <port> --lumina-plugin-token <token> [--lumina-plugin-project <dir>]` (`PluginProcessLaunch`). In that mode the executable opens no window: it creates the plugin's process part and calls `runPluginProcessMain(launch, process)`, then exits with the code it returns. The process has the full Flutter/Dart runtime and the plugin's native assets, which are already bundled with the editor build.
+A plugin opts in with `"isolation": "process"` in its `.lmplugin` and names its `LuminaPluginProcess` subclass as the editor module's `process_class`. The editor binds a loopback port and starts its own executable again with `--lumina-plugin-process <name> --lumina-plugin-port <port> --lumina-plugin-token <token> [--lumina-plugin-project <dir>]` (`PluginProcessLaunch`). In that mode the executable opens no window (on Windows the runner starts a headless engine with no view; see the editor side in `lumina_ui/plugin-processes.md`): it creates the plugin's process part and calls `runPluginProcessMain(launch, process)`, then exits with the code it returns. The process has the full Flutter/Dart runtime and the plugin's native assets, which are already bundled with the editor build.
 
 `runPluginProcessMain` (`lib/src/process/run_plugin_process.dart`):
 

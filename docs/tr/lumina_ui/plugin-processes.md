@@ -14,6 +14,18 @@ paketindedir. Dosya yolları `lumina_ui/` paket dizinine görelidir.
   ile yeniden başlatılır. Bu kipte `runLuminaEditor` pencere göstermez, çökme oturumu başlatmaz, eklenti kaydını
   yüklemez; `LuminaEditorHost.pluginProcesses[ad]` parçasını `runPluginProcessMain` ile çalıştırır ve onun koduyla
   çıkar (bilinmeyen ad stderr'e bir mesajla 64 koduyla çıkar).
+- **Windows'ta başsız (headless)**: runner (`windows/runner/main.cpp`, her proje editörüne kopyalanır) bayrağı görür
+  ve aynı giriş noktası argümanlarıyla bir `flutter::FlutterEngine` ile mesaj döngüsü çalıştırır: pencere, görünüm ve
+  yüzey yok, Impeller kapalı, düşük güçlü GPU tercih edilir. Hiçbir yerel eklentiyi kaydetmez (editörünküler
+  window_manager, media_kit, screen_retriever, fare yakalama ve ses düzeyidir; hepsi bir görünüm ister, media_kit_video
+  kayıt sırasında onu kullanır) ve eklenti DLL'leri gecikmeli yüklenir (`windows/CMakeLists.txt`), bu yüzden libmpv de
+  hiç yüklenmez. Süreç parçası yerel koda FFI ile ulaşır; method channel kullanan bir eklenti `MissingPluginException`
+  döner. Release bir proje editöründe ölçülen: eklenti süreci başına yaklaşık 102 MB çalışma kümesi / 117 MB özel bellek
+  ve 52 iş parçacığı; gizli runner penceresiyle 136 MB / 157 MB ve 118 iş parçacığıydı.
+- **Linux gizli pencereyi korur**: flutter_linux `fl_engine_new_headless` fonksiyonunu dışa açar ama `fl_engine_start`
+  fonksiyonunu açmaz; engine yalnızca örtük `FlView` bir `GtkWindow` içinde realize edildiğinde başlar. Bu yüzden
+  eklenti süreci hiç gösterilmeyen 1×1 bir pencere realize eder (başlık çubuğu yok, görev çubuğunda görünmez, ilk
+  karede gösterilmez).
 - Editör her eklenti için 0 portunda bir loopback soketi açar, sürecin `host.hello` mesajını (protokol sürümü ve rastgele
   token) denetler ve `host.register` katkılarını eklentinin adıyla kaydeder: menü öğeleri, yuva düğmeleri, MCP araçları,
   içe aktarıcılar, konsol komutları ve bildirimsel paneller. Eylemleri süreçte çalışır. Komut satırındaki proje
