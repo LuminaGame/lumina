@@ -124,6 +124,9 @@ in `fsr3_common.fs`.
 The patch also completes patch 0007 for clang's `-Werror` build on Linux and WebAssembly: the
 `ACCELERATION_STRUCTURE` descriptor type in `to_string`, the matdbg writer and the Vulkan resource
 manager's destroy switch, and a `struct` forward declaration of `VulkanContext`.
+It also completes patch 0004 for feature level 0 (the WebAssembly / GLES 2.0 build): the vertex shaders
+read the velocity uniforms only when `MATERIAL_FEATURE_LEVEL > 0`, since feature level 0 has no motion
+vectors and its uniform block omits them.
 
 ## Working with the patches
 

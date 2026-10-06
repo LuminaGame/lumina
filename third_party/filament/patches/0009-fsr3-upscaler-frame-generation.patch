@@ -3203,3 +3203,34 @@ index 40aba754..491eaab9 100644
      }
      return "--";
  }
+diff --git a/shaders/src/surface_getters.vs b/shaders/src/surface_getters.vs
+index 56b1c1ac..b7568814 100644
+--- a/shaders/src/surface_getters.vs
++++ b/shaders/src/surface_getters.vs
+@@ -271,7 +271,7 @@ vec4 getPosition() {
+     return pos;
+ }
+ 
+-#if defined(VARIANT_DEPTH)
++#if defined(VARIANT_DEPTH) && MATERIAL_FEATURE_LEVEL > 0
+ #if defined(VARIANT_HAS_SKINNING_OR_MORPHING)
+ // The previous frame's pose (motion vectors): the same morphing and skinning as getPosition(),
+ // read from the previous frame's weights and bone palette.
+diff --git a/shaders/src/surface_main.vs b/shaders/src/surface_main.vs
+index f240345d..f71f2c49 100644
+--- a/shaders/src/surface_main.vs
++++ b/shaders/src/surface_main.vs
+@@ -226,9 +226,11 @@ void main() {
+     // this must happen before we compensate for vulkan below
+     vertex_position = position;
+ 
+-#if defined(VARIANT_DEPTH)
++#if defined(VARIANT_DEPTH) && MATERIAL_FEATURE_LEVEL > 0
+     // motion vectors: where this vertex was on the previous frame (same clip convention as
+-    // vertex_position, i.e. before the Vulkan Y flip and the clip-control remap below)
++    // vertex_position, i.e. before the Vulkan Y flip and the clip-control remap below).
++    // Feature level 0 renders no motion vectors (its uniform block lacks the velocity
++    // parameters) and leaves the varying alone.
+     vertex_prevPosition = computePreviousClipPosition(position);
+ #endif
+ 
