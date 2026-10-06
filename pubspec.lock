@@ -49,13 +49,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.7.0"
-  asset_import_tools:
-    dependency: transitive
-    description:
-      path: "../metahuman_glb_assets/packages/asset_import_tools"
-      relative: true
-    source: path
-    version: "0.1.0"
   async:
     dependency: transitive
     description:
@@ -286,11 +279,13 @@ packages:
     source: sdk
     version: "0.0.0"
   flutter_assimp:
-    dependency: "direct overridden"
+    dependency: transitive
     description:
-      path: "../tools/flutter_assimp"
-      relative: true
-    source: path
+      path: flutter_assimp
+      ref: "227b3cd34ef0d41ff114b909545efb47f3e2a225"
+      resolved-ref: "227b3cd34ef0d41ff114b909545efb47f3e2a225"
+      url: "https://github.com/LuminaGame/tools.git"
+    source: git
     version: "0.0.1"
   flutter_driver:
     dependency: transitive
@@ -298,19 +293,14 @@ packages:
     source: sdk
     version: "0.0.0"
   flutter_gstreamer:
-    dependency: "direct overridden"
+    dependency: transitive
     description:
-      path: "../tools/flutter_gstreamer"
-      relative: true
-    source: path
+      path: flutter_gstreamer
+      ref: HEAD
+      resolved-ref: "227b3cd34ef0d41ff114b909545efb47f3e2a225"
+      url: "https://github.com/LuminaGame/tools.git"
+    source: git
     version: "0.1.0"
-  flutter_kimodo:
-    dependency: "direct overridden"
-    description:
-      path: "../tools/flutter_kimodo"
-      relative: true
-    source: path
-    version: "0.0.1"
   flutter_lints:
     dependency: transitive
     description:
@@ -328,11 +318,13 @@ packages:
     source: hosted
     version: "2.0.35"
   flutter_riglogic:
-    dependency: "direct overridden"
+    dependency: transitive
     description:
-      path: "../tools/flutter_riglogic"
-      relative: true
-    source: path
+      path: flutter_riglogic
+      ref: "227b3cd34ef0d41ff114b909545efb47f3e2a225"
+      resolved-ref: "227b3cd34ef0d41ff114b909545efb47f3e2a225"
+      url: "https://github.com/LuminaGame/tools.git"
+    source: git
     version: "0.0.1"
   flutter_svg:
     dependency: transitive
@@ -499,53 +491,49 @@ packages:
     source: hosted
     version: "1.3.0"
   lumina_marketplace_shared:
-    dependency: "direct overridden"
+    dependency: transitive
     description:
-      path: "../marketplace/shared"
-      relative: true
-    source: path
+      path: shared
+      ref: "5e6240fb68847b5a388aeb940c68dd92ec3ccd12"
+      resolved-ref: "5e6240fb68847b5a388aeb940c68dd92ec3ccd12"
+      url: "https://github.com/LuminaGame/marketplace.git"
+    source: git
     version: "0.1.0"
   lumina_mouse_capture:
-    dependency: "direct overridden"
+    dependency: transitive
     description:
-      path: "../tools/lumina_mouse_capture"
-      relative: true
-    source: path
+      path: lumina_mouse_capture
+      ref: "227b3cd34ef0d41ff114b909545efb47f3e2a225"
+      resolved-ref: "227b3cd34ef0d41ff114b909545efb47f3e2a225"
+      url: "https://github.com/LuminaGame/tools.git"
+    source: git
     version: "0.0.1"
-  lumina_plugin_kimodo:
-    dependency: "direct overridden"
-    description:
-      path: "../kimodo"
-      relative: true
-    source: path
-    version: "0.1.0"
-  lumina_plugin_metahuman:
-    dependency: "direct overridden"
-    description:
-      path: "../metahuman_test"
-      relative: true
-    source: path
-    version: "0.2.0"
   lumina_plugin_miniai:
-    dependency: "direct overridden"
+    dependency: transitive
     description:
-      path: "../plugins/lumina_plugin_miniai"
-      relative: true
-    source: path
+      path: lumina_plugin_miniai
+      ref: "1b87b9d89c7ed270685605066276b5de6e6609de"
+      resolved-ref: "1b87b9d89c7ed270685605066276b5de6e6609de"
+      url: "https://github.com/LuminaGame/plugins.git"
+    source: git
     version: "0.1.0"
   lumina_plugin_pcg:
-    dependency: "direct overridden"
+    dependency: transitive
     description:
-      path: "../plugins/lumina_plugin_pcg"
-      relative: true
-    source: path
+      path: lumina_plugin_pcg
+      ref: "1b87b9d89c7ed270685605066276b5de6e6609de"
+      resolved-ref: "1b87b9d89c7ed270685605066276b5de6e6609de"
+      url: "https://github.com/LuminaGame/plugins.git"
+    source: git
     version: "0.1.0"
   lumina_smoke:
-    dependency: "direct overridden"
+    dependency: transitive
     description:
-      path: "../tools/lumina_smoke"
-      relative: true
-    source: path
+      path: lumina_smoke
+      ref: "227b3cd34ef0d41ff114b909545efb47f3e2a225"
+      resolved-ref: "227b3cd34ef0d41ff114b909545efb47f3e2a225"
+      url: "https://github.com/LuminaGame/tools.git"
+    source: git
     version: "0.1.0"
   markdown:
     dependency: transitive
@@ -651,13 +639,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.19.0"
-  metahuman_glb_assets:
-    dependency: transitive
-    description:
-      path: "../metahuman_glb_assets"
-      relative: true
-    source: path
-    version: "0.1.0+1"
   mime:
     dependency: transitive
     description:
@@ -682,13 +663,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.0.6"
-  native_character_core:
-    dependency: transitive
-    description:
-      path: "../metahuman_glb_assets/packages/native_character_core"
-      relative: true
-    source: path
-    version: "0.1.0"
   native_toolchain_c:
     dependency: transitive
     description:
@@ -914,7 +888,7 @@ packages:
     source: hosted
     version: "0.2.2"
   shadcn_flutter:
-    dependency: "direct overridden"
+    dependency: transitive
     description:
       name: shadcn_flutter
       sha256: da1cb2f93176f62f1e869e38f2ff944d1af0a24ddf7fc8f02f7ef3066f397886
@@ -1070,13 +1044,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.1.0"
-  unreal_engine_importer:
-    dependency: "direct overridden"
-    description:
-      path: "../unreal_engine_importer"
-      relative: true
-    source: path
-    version: "0.1.0"
   uri_parser:
     dependency: transitive
     description:
@@ -1247,4 +1214,4 @@ packages:
     version: "2.2.4"
 sdks:
   dart: ">=3.13.0 <4.0.0"
-  flutter: ">=3.44.0"
+  flutter: ">=3.47.0"
