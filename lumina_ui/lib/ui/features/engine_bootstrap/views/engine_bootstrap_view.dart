@@ -1,9 +1,9 @@
-import 'dart:io';
 
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:lumina/lumina.dart' show EngineBootstrapStep, EngineCheckout, EnginePrerequisite;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
+import '../../../core/host/editor_host.dart';
 import '../../../core/theme/editor_theme.dart';
 import '../view_models/engine_bootstrap_view_model.dart';
 
@@ -133,7 +133,7 @@ class _EngineBootstrapViewState extends State<EngineBootstrapView> {
                   if (vm.failed || vm.running)
                     OutlineButton(
                       key: const Key('engine_bootstrap_quit'),
-                      onPressed: widget.onQuit ?? () => exit(0),
+                      onPressed: widget.onQuit ?? () => EditorHandOff.instance.quit(),
                       child: Text(widget.quitLabel),
                     ),
                   if (vm.failed) ...[

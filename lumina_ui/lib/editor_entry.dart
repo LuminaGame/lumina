@@ -105,6 +105,9 @@ Future<void> runLuminaEditor(List<String> args, {List<LuminaEditorPlugin> plugin
     await crashReporter.endSession();
     return true;
   });
+  // Restarts and hand-offs (a plugin install's restart, opening a project
+  // editor, returning to the launcher, Quit) exit on purpose: clean closes.
+  EditorHandOff.beforeExit.add(crashReporter.endSession);
   try {
     // Reports a session that died before it writes this one's marker.
     await crashReporter.startSession();

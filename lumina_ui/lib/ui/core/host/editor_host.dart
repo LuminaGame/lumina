@@ -246,6 +246,13 @@ class EditorHandOff {
     return true;
   }
 
+  /// Quits this process on purpose (a Quit button): the [beforeExit] hooks
+  /// run first, so the exit counts as a clean close.
+  Future<void> quit([int code = 0]) async {
+    await _runBeforeExit();
+    exitApp(code);
+  }
+
   /// Starts the launcher ([launcher], else
   /// [LuminaEditorHost.launcherExecutable]) on its project list and quits;
   /// without one, quits. Returns whether a launcher was started.

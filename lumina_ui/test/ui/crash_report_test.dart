@@ -5,6 +5,7 @@ import 'package:flutter/services.dart' show SystemChannels;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/io_client.dart';
 import 'package:lumina/lumina.dart' show EngineLoggerService;
+import 'package:lumina_ui/ui/core/host/editor_host.dart';
 import 'package:lumina_ui/ui/core/services/crash_report.dart';
 import 'package:lumina_ui/ui/core/services/crash_reporter.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
@@ -131,6 +132,27 @@ void main() {
       final another = CrashReporter(dataDir: dataDir);
       addTearDown(another.dispose);
       expect(await another.detectPreviousCrash(), isNull, reason: 'a clean close is not a crash');
+    });
+
+    test('a restart or hand-off is a clean close: the exit hook removes the marker', () async {
+      final reporter = reporterFor(dataDir);
+      addTearDown(reporter.dispose);
+      await reporter.startSession();
+      expect(reporter.sessionMarker.existsSync(), isTrue);
+      final original = EditorHandOff.instance;
+      final exits = <int>[];
+      EditorHandOff.instance = EditorHandOff(startDetached: (exe, args) async {}, exitApp: exits.add);
+      EditorHandOff.beforeExit.add(reporter.endSession);
+      addTearDown(() {
+        EditorHandOff.beforeExit.remove(reporter.endSession);
+        EditorHandOff.instance = original;
+      });
+      await EditorHandOff.instance.restartThroughLauncher('/some/project', rebuild: true, launcher: 'lumina_ui');
+      expect(exits, [0]);
+      expect(reporter.sessionMarker.existsSync(), isFalse, reason: 'the next launch must not call this a crash');
+      final next = reporterFor(dataDir);
+      addTearDown(next.dispose);
+      expect(await next.startSession(), isNull);
     });
 
     test('a running session does not report its own marker', () async {
