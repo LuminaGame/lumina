@@ -298,10 +298,18 @@ class HostLevel {
 
 class _LoopbackChannel implements PluginProcessChannel {
   _LoopbackChannel(this.host) {
-    host.connected.then((c) {
-      _state.value = const PluginProcessState(PluginProcessStatus.running);
+    void bind(PluginConnection c) {
+      _state.value = c.isClosed
+          ? const PluginProcessState(PluginProcessStatus.crashed, reason: 'connection closed')
+          : const PluginProcessState(PluginProcessStatus.running);
       c.done.then((_) => _state.value = const PluginProcessState(PluginProcessStatus.crashed, reason: 'connection closed'));
-    });
+    }
+
+    if (host._connected.isCompleted) {
+      bind(host.connection);
+    } else {
+      host.connected.then(bind);
+    }
   }
 
   final LoopbackHost host;
