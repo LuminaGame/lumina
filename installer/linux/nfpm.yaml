@@ -1,13 +1,14 @@
 # nfpm configuration of the lumina-studio .deb and .rpm packages.
 # Build with installer/linux/build.sh (it runs nfpm from the repository root,
-# which the `src` paths below are relative to, with LUMINA_VERSION set).
+# which the `src` paths below are relative to, with LUMINA_VERSION and
+# LUMINA_ARCH (amd64 or arm64; nfpm names the rpm x86_64 / aarch64) set).
 #
 # The package holds no editor binary: it declares what building and running
 # Lumina projects needs, installs a launcher, a .desktop entry and the icon,
 # and its postinstall script installs Flutter and downloads the latest
 # Lumina Studio release into /opt/lumina.
 name: lumina-studio
-arch: amd64
+arch: ${LUMINA_ARCH}
 platform: linux
 version: ${LUMINA_VERSION}
 version_schema: semver

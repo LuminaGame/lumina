@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds Lumina's prebuilt Filament for Linux x64 (macOS prepared, disabled):
+# Builds Lumina's prebuilt Filament for Linux x64 and arm64 (macOS prepared, disabled):
 # upstream google/filament at the tag tool/filament/VERSION names, plus
 # third_party/filament/patches, built with clang against the bundled libc++
 # (flutter_filament/third_party/libcxx), then pruned to what the native-assets
@@ -20,8 +20,8 @@
 # LUMINA_FILAMENT_UPSTREAM (clone URL), LUMINA_ENABLE_MACOS=1 (macOS branch),
 # JOBS (ninja -j).
 #
-# Writes <out>/filament-<VERSION>-<os>-x64.tar.gz and a .sha256 sidecar
-# (sha256sum format). The archive holds one folder, filament-<VERSION>-<os>-x64,
+# Writes <out>/filament-<VERSION>-<os>-<arch>.tar.gz and a .sha256 sidecar
+# (sha256sum format). The archive holds one folder, filament-<VERSION>-<os>-<arch>,
 # that works as the hooks' filament_dir.
 set -euo pipefail
 
@@ -59,7 +59,12 @@ case "$(uname -s)" in
     fi ;;
   *) echo "unsupported host: $(uname -s) (use build_prebuilt.ps1 on Windows)" >&2; exit 1 ;;
 esac
-[ "$(uname -m)" = x86_64 ] || { echo "only x86_64 hosts are supported (got $(uname -m))" >&2; exit 1; }
+# The host architecture names the archive and picks the bundled libc++ folder.
+case "$(uname -m)" in
+  x86_64) ARCH=x64; TRIPLET=x86_64-linux-gnu ;;
+  aarch64 | arm64) ARCH=arm64; TRIPLET=aarch64-linux-gnu ;;
+  *) echo "unsupported host architecture $(uname -m) (x86_64 or aarch64)" >&2; exit 1 ;;
+esac
 BUILD_OUT=out/cmake-release
 CC="${CC:-clang}"
 CXX="${CXX:-clang++}"
@@ -140,7 +145,8 @@ if [ "$OS" = linux ]; then
   # (USE_STATIC_LIBCXX), and the hooks link the same bundled libc++.
   [ -d "$LIBCXX/usr/lib/llvm-21/include/c++/v1" ] || { echo "bundled libc++ not found at $LIBCXX" >&2; exit 1; }
   CXX_FLAGS="-nostdinc++ -Wno-unused-command-line-argument -isystem $LIBCXX/usr/lib/llvm-21/include/c++/v1 -isystem $LIBCXX/usr/lib/llvm-21/include"
-  LINK_FLAGS="-L$LIBCXX/usr/lib/x86_64-linux-gnu"
+  [ -f "$LIBCXX/usr/lib/$TRIPLET/libc++.a" ] || { echo "bundled libc++ has no $TRIPLET libraries at $LIBCXX" >&2; exit 1; }
+  LINK_FLAGS="-L$LIBCXX/usr/lib/$TRIPLET"
   CMAKE_ARGS+=(
     "-DCMAKE_C_COMPILER=$CC" "-DCMAKE_CXX_COMPILER=$CXX"
     "-DCMAKE_CXX_FLAGS=$CXX_FLAGS"
@@ -161,7 +167,7 @@ if [ "$SKIP_BUILD" = 0 ]; then
 fi
 
 # --- 4. stage the pruned tree ----------------------------------------------
-NAME="filament-$VERSION-$OS-x64"
+NAME="filament-$VERSION-$OS-$ARCH"
 STAGE_ROOT="$OUT_DIR/stage"
 STAGE="$STAGE_ROOT/$NAME"
 rm -rf "$STAGE_ROOT"
@@ -194,7 +200,7 @@ json_str() { local s="${1//\\/\\\\}"; s="${s//\"/\\\"}"; printf '"%s"' "$s"; }
 {
   echo '{'
   echo "  \"version\": $(json_str "$VERSION"),"
-  echo "  \"platform\": \"$OS-x64\","
+  echo "  \"platform\": \"$OS-$ARCH\","
   echo '  "upstream": {'
   echo '    "repository": "https://github.com/google/filament",'
   echo "    \"tag\": \"$TAG\","

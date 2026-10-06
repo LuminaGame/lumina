@@ -255,6 +255,8 @@ jobs:
           # The same runners as release.yml, so tags restore these caches.
           - platform: linux
             runner: ubuntu-24.04
+          - platform: linux-arm64
+            runner: ubuntu-24.04-arm
           - platform: windows
             runner: windows-2022
     runs-on: ${{ matrix.runner }}
@@ -265,7 +267,7 @@ jobs:
           path: lumina
           persist-credentials: false
 
-      - if: matrix.platform == 'linux'
+      - if: startsWith(matrix.platform, 'linux')
         uses: ./lumina/.github/actions/linux-build-deps
 
       - uses: ./lumina/.github/actions/filament-prebuilt

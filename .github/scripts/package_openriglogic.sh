@@ -9,6 +9,7 @@
 #
 #   package_openriglogic.sh windows <flutter_riglogic dir> <out-dir>   # openriglogic-windows-x64.zip
 #   package_openriglogic.sh linux   <flutter_riglogic dir> <out-dir>   # openriglogic-linux-x64.tar.gz
+#   package_openriglogic.sh linux-arm64 <flutter_riglogic dir> <out-dir>   # openriglogic-linux-arm64.tar.gz
 #
 # The archive holds one folder, openriglogic-<os>-x64, with lib/<library>,
 # the OpenRigLogic LICENSE and lumina-openriglogic.json.
@@ -19,9 +20,9 @@ out="$3"
 
 case "$os" in
   windows) lib=riglogic.lib; ext=zip ;;
-  linux) lib=libriglogic.a; ext=tar.gz ;;
+  linux | linux-arm64) lib=libriglogic.a; ext=tar.gz ;;
   *)
-    echo "Unknown OS $os (windows|linux)" >&2
+    echo "Unknown platform $os (windows|linux|linux-arm64)" >&2
     exit 64
     ;;
 esac
@@ -31,7 +32,11 @@ if [ ! -f "$src/lib/$lib" ]; then
   exit 1
 fi
 
-folder="openriglogic-$os-x64"
+case "$os" in
+  linux-arm64) platform=linux-arm64 ;;
+  *) platform="$os-x64" ;;
+esac
+folder="openriglogic-$platform"
 name="$folder.$ext"
 mkdir -p "$out"
 out="$(cd "$out" && pwd)"
@@ -44,7 +49,7 @@ version="$(sed -n 's/^set(RL_VERSION \([^)]*\)).*/\1/p' "$src/CMakeLists.txt" | 
 commit="$(git -C "$pkg" rev-parse HEAD 2>/dev/null || echo unknown)"
 cat > "$stage/$folder/lumina-openriglogic.json" <<EOF
 {
-  "platform": "$os-x64",
+  "platform": "$platform",
   "library": "lib/$lib",
   "rigLogicVersion": "$version",
   "toolsCommit": "$commit"
@@ -59,7 +64,7 @@ case "$os" in
     (cd "$stage" && /c/Windows/System32/tar.exe -a -c -f "$name" "$folder")
     mv "$stage/$name" "$out/$name"
     ;;
-  linux)
+  linux | linux-arm64)
     tar -C "$stage" -czf "$out/$name" "$folder"
     ;;
 esac

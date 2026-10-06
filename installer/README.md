@@ -12,7 +12,8 @@ new installer.
 | Windows | `lumina-studio-setup-<tag>-windows-x64.exe` (Inno Setup) | `windows/build.ps1` | released |
 | Windows | `lumina-studio-<tag>-windows-x64-store.msix` (the editor, unsigned, for the Microsoft Store) | `lumina_ui/tool/package_windows.dart --store` | released |
 | Windows | `lumina-studio-<tag>-windows-x64.msix` (the editor itself) | `lumina_ui/tool/package_windows.dart` | released when the signing secrets exist |
-| Linux | `lumina-studio_<version>-1_amd64.deb`, `lumina-studio-<version>-1.x86_64.rpm` (nfpm) | `linux/build.sh` | released |
+| Linux x64 | `lumina-studio_<version>-1_amd64.deb`, `lumina-studio-<version>-1.x86_64.rpm` (nfpm) | `linux/build.sh` | released |
+| Linux arm64 | `lumina-studio_<version>-1_arm64.deb`, `lumina-studio-<version>-1.aarch64.rpm` (nfpm, `linux/build.sh <version> <tag> <out> arm64`) | `linux/build.sh` | released |
 | macOS | `lumina-studio-<tag>-macos.pkg` (pkgbuild + productbuild) | `macos/build-pkg.sh` | written, not verified, disabled in the workflow |
 
 The release workflow (`.github/workflows/release.yml`) builds all of them for every `v*` tag. Every asset has a
@@ -23,14 +24,14 @@ The release workflow (`.github/workflows/release.yml`) builds all of them for ev
 | Asset | Content |
 |---|---|
 | `lumina-studio-<tag>-windows-x64.zip` | `flutter build windows --release` output with the Visual C++ runtime DLLs next to `lumina_ui.exe`, at the archive root |
-| `lumina-studio-<tag>-linux-x64.tar.gz` | `flutter build linux --release` bundle (`lumina_ui`, `lib/`, `data/`), at the archive root |
+| `lumina-studio-<tag>-linux-x64.tar.gz`, `lumina-studio-<tag>-linux-arm64.tar.gz` | `flutter build linux --release` bundle (`lumina_ui`, `lib/`, `data/`), at the archive root |
 | `openriglogic-<os>-x64.{zip,tar.gz}` | Prebuilt OpenRigLogic static library (built from the pinned tools commit), downloaded by the editor at first launch |
 
 Both editor builds carry `--dart-define=LUMINA_VERSION=<tag>` and `--dart-define=LUMINA_COMMIT=<sha>`.
 
 The prebuilt Filament (upstream v1.77.2 with this repository's patches) is not attached to the Lumina releases.
 Each Filament version (`tool/filament/VERSION`) is published once, in its own release `filament-<VERSION>`:
-`filament-<VERSION>-windows-x64.zip`, `filament-<VERSION>-linux-x64.tar.gz` and their `.sha256` sidecars. It is a
+`filament-<VERSION>-windows-x64.zip`, `filament-<VERSION>-linux-x64.tar.gz`, `filament-<VERSION>-linux-arm64.tar.gz` and their `.sha256` sidecars. It is a
 pre-release that is never marked Latest and never changes once complete; the workflow creates it from the first
 tag that needs it (`.github/scripts/filament_release.sh`) and later tags only link it in their notes. The editor
 downloads from it at first launch and falls back to its own release's assets, which is where releases up to
@@ -217,7 +218,7 @@ The postinstall script:
 2. Keeps a Flutter already in `/opt/lumina/flutter` or on PATH. Otherwise it clones the stable channel into
    `/opt/lumina/flutter`, adds a `safe.directory` entry to the system git config, runs `flutter precache --linux`
    and hands the tree to the group.
-3. Downloads the latest `lumina-studio-<tag>-linux-x64.tar.gz` (see "Latest" above) into `/opt/lumina/studio`.
+3. Downloads the latest `lumina-studio-<tag>-linux-<x64|arm64>.tar.gz` (the machine's architecture) (see "Latest" above) into `/opt/lumina/studio`.
 4. Warns when `clang` is older than 19. The engine's native code builds against the libc++ 21 headers it
    bundles; on older distributions install a newer clang from <https://apt.llvm.org>.
 

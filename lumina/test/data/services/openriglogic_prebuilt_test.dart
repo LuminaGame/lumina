@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina/data/services/openriglogic_prebuilt.dart';
+import 'package:lumina/data/services/release_asset.dart';
 import 'package:path/path.dart' as p;
 
 /// A real archive, in the layout `.github/scripts/package_openriglogic.sh`
@@ -74,7 +75,9 @@ void main() {
 
   test('asset names follow package_openriglogic.sh', () {
     expect(OpenRigLogicPrebuilt.archiveName('windows'), 'openriglogic-windows-x64.zip');
-    expect(OpenRigLogicPrebuilt.archiveName('linux'), 'openriglogic-linux-x64.tar.gz');
+    expect(OpenRigLogicPrebuilt.archiveName('linux'), 'openriglogic-linux-${ReleaseAssets.hostArchitecture()}.tar.gz');
+    expect(ReleaseAssets.platformName('linux', 'arm64'), 'linux-arm64');
+    expect(ReleaseAssets.platformName('windows', 'arm64'), 'windows-x64');
     expect(OpenRigLogicPrebuilt.libraryName('windows'), 'riglogic.lib');
     expect(OpenRigLogicPrebuilt.libraryName('linux'), 'libriglogic.a');
     expect(OpenRigLogicPrebuilt.archiveUri('v0.2.0', operatingSystem: 'linux').toString(),

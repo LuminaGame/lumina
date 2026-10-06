@@ -4,6 +4,7 @@
 #
 #   package_studio.sh windows <tag> <out-dir>   # lumina-studio-<tag>-windows-x64.zip
 #   package_studio.sh linux   <tag> <out-dir>   # lumina-studio-<tag>-linux-x64.tar.gz
+#   package_studio.sh linux-arm64 <tag> <out-dir>   # lumina-studio-<tag>-linux-arm64.tar.gz
 #
 # Run from lumina_ui/ after `flutter build <os> --release`.
 set -euo pipefail
@@ -33,14 +34,15 @@ case "$os" in
         "Add-Type -AssemblyName System.IO.Compression.FileSystem; [IO.Compression.ZipFile]::CreateFromDirectory('$(cygpath -w "$bundle")', '$(cygpath -w "$out/$name")', 'Optimal', \$false)"
     fi
     ;;
-  linux)
-    bundle=build/linux/x64/release/bundle
-    name="lumina-studio-$tag-linux-x64.tar.gz"
+  linux | linux-arm64)
+    arch="${os#linux}"; arch="${arch#-}"; arch="${arch:-x64}"
+    bundle=build/linux/$arch/release/bundle
+    name="lumina-studio-$tag-linux-$arch.tar.gz"
     [ -f "$bundle/lumina_ui" ] || { echo "::error::No $bundle/lumina_ui" >&2; exit 1; }
     tar -C "$bundle" -czf "$out/$name" .
     ;;
   *)
-    echo "Unknown OS $os (windows|linux)" >&2
+    echo "Unknown platform $os (windows|linux|linux-arm64)" >&2
     exit 64
     ;;
 esac

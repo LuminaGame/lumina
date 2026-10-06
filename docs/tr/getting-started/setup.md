@@ -110,7 +110,7 @@ powershell -ExecutionPolicy Bypass -File tool\filament\build_prebuilt.ps1   # Wi
 ./build.sh -p desktop release
 ```
 
-Linux'ta sistemdeki clang libc++ header'ları olmadan gelebilir. Bu durumda hem `out/cmake-release` hem de `out/prebuilt-tools-release`'i `flutter_filament/third_party/libcxx` içindeki libc++ ile configure edin: `CMAKE_CXX_FLAGS`'e `-nostdinc++ -isystem <libcxx>/usr/lib/llvm-21/include/c++/v1 -isystem <libcxx>/usr/lib/llvm-21/include`, linker flag'lerine `-L<libcxx>/usr/lib/x86_64-linux-gnu` ekleyin. Tek bir kütüphane `ninja -C out/cmake-release filament` ile yeniden build edilebilir.
+Linux'ta sistemdeki clang libc++ header'ları olmadan gelebilir. Bu durumda hem `out/cmake-release` hem de `out/prebuilt-tools-release`'i `flutter_filament/third_party/libcxx` içindeki libc++ ile configure edin: `CMAKE_CXX_FLAGS`'e `-nostdinc++ -isystem <libcxx>/usr/lib/llvm-21/include/c++/v1 -isystem <libcxx>/usr/lib/llvm-21/include`, linker flag'lerine `-L<libcxx>/usr/lib/x86_64-linux-gnu` (arm64'te `aarch64-linux-gnu`) ekleyin. Tek bir kütüphane `ninja -C out/cmake-release filament` ile yeniden build edilebilir.
 
 **Windows**, `lumina` checkout'undan (C++ workload'lu Visual Studio 2022 ve Python 3 gerekir):
 
@@ -145,7 +145,7 @@ Lumina Studio'yu build etmeden kullanmak için [GitHub releases](https://github.
 | Platform | Installer | Kurdukları |
 |---|---|---|
 | Windows | `lumina-studio-setup-<tag>-windows-x64.exe` | Git, Visual Studio 2022 C++ Build Tools ve GStreamer (winget), PATH'te yoksa Flutter stable, ardından `%LOCALAPPDATA%\Programs\Lumina Studio` içine editör |
-| Linux | `lumina-studio_<version>-1_amd64.deb` / `lumina-studio-<version>-1.x86_64.rpm` | Build bağımlılıkları (clang, CMake, Ninja, GTK 3, GStreamer), `/opt/lumina/flutter` içine Flutter, `/opt/lumina/studio` içine editör; `lumina-studio` ile başlatılır |
+| Linux (x64 ve arm64) | `lumina-studio_<version>-1_amd64.deb` / `lumina-studio-<version>-1.x86_64.rpm`, `lumina-studio_<version>-1_arm64.deb` / `lumina-studio-<version>-1.aarch64.rpm` | Build bağımlılıkları (clang, CMake, Ninja, GTK 3, GStreamer), `/opt/lumina/flutter` içine Flutter, `/opt/lumina/studio` içine editör; `lumina-studio` ile başlatılır |
 
 Windows setup'ı `/DRYRUN` kabul eder: hiçbir şeyi değiştirmeden neyi kuracağını ve indireceğini listeler. Her release editörün kendisini de (`lumina-studio-<tag>-windows-x64.zip`, `lumina-studio-<tag>-linux-x64.tar.gz` Partner Center gönderimi için imzasız Microsoft Store paketi `lumina-studio-<tag>-windows-x64-store.msix` ve imzalama secret'ları varsa imzalı bir MSIX) ve prebuilt OpenRigLogic kütüphanesini de taşır. Her dosyanın bir `.sha256` sidecar'ı vardır. Prebuilt Filament Lumina release'lerine eklenmez: release notları yukarıda anlatılan `filament-<VERSION>` release'ine bağlantı verir; editör ilk açılışta oradan indirir (bulamazsa kendi release'inin dosyalarına döner; v0.0.1-dev.6'ya kadarki release'ler Filament'i orada tutar). Kurulum programlarının "latest"ı, platformun editörünü taşıyan en yeni Lumina release'idir; hiçbir zaman bir `filament-*` release'ini seçmezler.
 

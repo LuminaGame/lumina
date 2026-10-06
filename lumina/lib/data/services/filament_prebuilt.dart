@@ -21,9 +21,11 @@ class FilamentPrebuiltException implements Exception {
 /// Each [version] (`tool/filament/VERSION`, e.g. `1.77.0-lumina.2`) is
 /// published once, in its own GitHub release [releaseTagFor] =
 /// `filament-<version>` (a pre-release that never becomes "Latest"). Assets,
-/// per OS: `<baseUrl>/<tag>/filament-<version>-<os>-x64.<zip|tar.gz>` plus a
-/// `.sha256` sidecar (`sha256sum` format). The archive holds one folder,
-/// `filament-<version>-<os>-x64`, with a `lumina-filament.json` describing it.
+/// per platform: `<baseUrl>/<tag>/filament-<version>-<os>-<arch>.<zip|tar.gz>`
+/// plus a `.sha256` sidecar (`sha256sum` format); `<arch>` is `x64`, or
+/// `arm64` for the Linux arm64 build ([ReleaseAssets.platformName]). The
+/// archive holds one folder, `filament-<version>-<os>-<arch>`, with a
+/// `lumina-filament.json` describing it.
 /// Lumina releases up to v0.0.1-dev.6 attached the same assets to their own
 /// release instead; [ensure] falls back to such a tag.
 ///
@@ -50,19 +52,22 @@ abstract final class FilamentPrebuilt {
   static String osName([String? operatingSystem]) =>
       ReleaseAssets.osName(operatingSystem, (_) => FilamentPrebuiltException('No prebuilt Filament for ${operatingSystem ?? Platform.operatingSystem}.'));
 
-  /// `filament-<version>-<os>-x64`: the archive's folder, and its file name
-  /// without the extension.
-  static String baseName(String version, [String? operatingSystem]) => 'filament-$version-${osName(operatingSystem)}-x64';
+  /// `filament-<version>-<os>-<arch>`: the archive's folder, and its file
+  /// name without the extension. [architecture] (`x64` or `arm64`) defaults
+  /// to the host's and only matters on Linux.
+  static String baseName(String version, [String? operatingSystem, String? architecture]) =>
+      'filament-$version-${ReleaseAssets.platformName(osName(operatingSystem), architecture)}';
 
   /// The archive's file name: `.zip` on Windows, `.tar.gz` elsewhere.
-  static String archiveName(String version, [String? operatingSystem]) {
+  static String archiveName(String version, [String? operatingSystem, String? architecture]) {
     final os = osName(operatingSystem);
-    return '${baseName(version, os)}.${ReleaseAssets.archiveExtension(os)}';
+    return '${baseName(version, os, architecture)}.${ReleaseAssets.archiveExtension(os)}';
   }
 
   /// The archive's download URL.
-  static Uri archiveUri(String version, String releaseTag, {String? operatingSystem, String baseUrl = defaultBaseUrl}) =>
-      ReleaseAssets.assetUri(baseUrl, releaseTag, archiveName(version, operatingSystem));
+  static Uri archiveUri(String version, String releaseTag,
+          {String? operatingSystem, String? architecture, String baseUrl = defaultBaseUrl}) =>
+      ReleaseAssets.assetUri(baseUrl, releaseTag, archiveName(version, operatingSystem, architecture));
 
   /// `<cacheRoot>/<version>` when it holds a complete unpacked [version]
   /// (its `lumina-filament.json` names it), else null.

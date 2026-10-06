@@ -40,12 +40,13 @@ void main() {
         .map((e) => p.basename(e.path))
         .where((n) => n.endsWith('.patch'))
         .toList();
-    expect(patches, hasLength(3));
+    expect(patches.length, greaterThanOrEqualTo(3), reason: 'the series grows; every patch gets a row');
     for (final patch in patches) {
       // One table row per patch, with its subject.
       expect(notes, matches(RegExp('^\\| `${RegExp.escape(patch)}` \\| \\S.+ \\|\$', multiLine: true)));
     }
     expect(notes, contains('Leave skinned/morphed renderables out of the SSR pass'));
+    expect(notes, contains('filament-1.77.0-lumina.2-linux-arm64.tar.gz'));
     expect(notes, allOf(contains('filament-1.77.0-lumina.2-windows-x64.zip'), contains('filament-1.77.0-lumina.2-linux-x64.tar.gz')));
   }, skip: bash == null ? 'no bash (Git Bash) found' : false);
 

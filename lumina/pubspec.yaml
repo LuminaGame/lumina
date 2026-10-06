@@ -19,25 +19,25 @@ dependencies:
     git:
       url: https://github.com/LuminaGame/tools.git
       path: flutter_assimp
-      ref: 2cabddd9cafa5acba73937f676e5269a3041f46c
+      ref: 227b3cd34ef0d41ff114b909545efb47f3e2a225
   flutter_riglogic:
     git:
       url: https://github.com/LuminaGame/tools.git
       path: flutter_riglogic
-      ref: 2cabddd9cafa5acba73937f676e5269a3041f46c
+      ref: 227b3cd34ef0d41ff114b909545efb47f3e2a225
   # The smoke-test system that lib/testing.dart exports (SmokeArtifacts, the
   # video rules and recorders, the report runner of tool/smoke_report.dart).
   lumina_smoke:
     git:
       url: https://github.com/LuminaGame/tools.git
       path: lumina_smoke
-      ref: 2cabddd9cafa5acba73937f676e5269a3041f46c
+      ref: 227b3cd34ef0d41ff114b909545efb47f3e2a225
   # Pointer capture for games and Play (tools repo).
   lumina_mouse_capture:
     git:
       url: https://github.com/LuminaGame/tools.git
       path: lumina_mouse_capture
-      ref: 2cabddd9cafa5acba73937f676e5269a3041f46c
+      ref: 227b3cd34ef0d41ff114b909545efb47f3e2a225
   vector_math: ^2.1.4
 
   meta: any

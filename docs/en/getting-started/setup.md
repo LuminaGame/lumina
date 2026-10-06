@@ -108,7 +108,7 @@ Both clone Filament at the tag into `build/filament-src` (or the folder given as
 ./build.sh -p desktop release
 ```
 
-On Linux the system clang may ship without libc++ headers. In that case configure both `out/cmake-release` and `out/prebuilt-tools-release` with the libc++ bundled in `flutter_filament/third_party/libcxx`: add `-nostdinc++ -isystem <libcxx>/usr/lib/llvm-21/include/c++/v1 -isystem <libcxx>/usr/lib/llvm-21/include` to `CMAKE_CXX_FLAGS` and `-L<libcxx>/usr/lib/x86_64-linux-gnu` to the linker flags. A single library can be rebuilt with `ninja -C out/cmake-release filament`.
+On Linux the system clang may ship without libc++ headers. In that case configure both `out/cmake-release` and `out/prebuilt-tools-release` with the libc++ bundled in `flutter_filament/third_party/libcxx`: add `-nostdinc++ -isystem <libcxx>/usr/lib/llvm-21/include/c++/v1 -isystem <libcxx>/usr/lib/llvm-21/include` to `CMAKE_CXX_FLAGS` and `-L<libcxx>/usr/lib/x86_64-linux-gnu` (`aarch64-linux-gnu` on arm64) to the linker flags. A single library can be rebuilt with `ninja -C out/cmake-release filament`.
 
 **Windows**, from the `lumina` checkout (needs Visual Studio 2022 with the C++ workload and Python 3):
 
@@ -143,7 +143,7 @@ To use Lumina Studio without building it, install it from the [GitHub releases](
 | Platform | Installer | Installs |
 |---|---|---|
 | Windows | `lumina-studio-setup-<tag>-windows-x64.exe` | Git, the Visual Studio 2022 C++ Build Tools and GStreamer (winget), Flutter stable unless one is on PATH, then the editor in `%LOCALAPPDATA%\Programs\Lumina Studio` |
-| Linux | `lumina-studio_<version>-1_amd64.deb` / `lumina-studio-<version>-1.x86_64.rpm` | The build dependencies (clang, CMake, Ninja, GTK 3, GStreamer), Flutter in `/opt/lumina/flutter`, the editor in `/opt/lumina/studio`, started with `lumina-studio` |
+| Linux (x64 and arm64) | `lumina-studio_<version>-1_amd64.deb` / `lumina-studio-<version>-1.x86_64.rpm`, `lumina-studio_<version>-1_arm64.deb` / `lumina-studio-<version>-1.aarch64.rpm` | The build dependencies (clang, CMake, Ninja, GTK 3, GStreamer), Flutter in `/opt/lumina/flutter`, the editor in `/opt/lumina/studio`, started with `lumina-studio` |
 
 The Windows setup accepts `/DRYRUN`, which lists what it would install and download without changing anything. Every release also carries the editor on its own (`lumina-studio-<tag>-windows-x64.zip`, `lumina-studio-<tag>-linux-x64.tar.gz`, the unsigned Microsoft Store package `lumina-studio-<tag>-windows-x64-store.msix` for the Partner Center submission, and a signed MSIX when the signing secrets exist) and the prebuilt OpenRigLogic library. Each file has a `.sha256` sidecar. The prebuilt Filament is not attached to Lumina releases: the release notes link the `filament-<VERSION>` release described above, which the editor downloads from at first launch (falling back to its own release's assets, which is where releases up to v0.0.1-dev.6 keep them). The installers' "latest" is the newest Lumina release with the editor for the platform; they never pick a `filament-*` release.
 

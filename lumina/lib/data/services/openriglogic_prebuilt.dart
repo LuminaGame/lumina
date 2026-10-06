@@ -24,9 +24,10 @@ class OpenRigLogicPrebuiltException implements Exception {
 /// built; the root pubspec's `riglogic_lib_dir` user-define names the
 /// checkout's `openriglogic/lib`, which the bootstrap links here.
 ///
-/// Release assets, per OS: `<baseUrl>/<releaseTag>/openriglogic-<os>-x64.<zip|tar.gz>`
-/// plus a `.sha256` sidecar. The archive holds one folder,
-/// `openriglogic-<os>-x64`, with `lib/<riglogic.lib|libriglogic.a>`, the
+/// Release assets, per platform: `<baseUrl>/<releaseTag>/openriglogic-<os>-<arch>.<zip|tar.gz>`
+/// plus a `.sha256` sidecar (`<arch>` is `x64`, or `arm64` for Linux arm64;
+/// [ReleaseAssets.platformName]). The archive holds one folder,
+/// `openriglogic-<os>-<arch>`, with `lib/<riglogic.lib|libriglogic.a>`, the
 /// OpenRigLogic `LICENSE` and a `lumina-openriglogic.json` describing it.
 ///
 /// The library belongs to its release (the tools pin), so [ensure] unpacks it
@@ -40,9 +41,9 @@ abstract final class OpenRigLogicPrebuilt {
   static String osName([String? operatingSystem]) => ReleaseAssets.osName(
       operatingSystem, (_) => OpenRigLogicPrebuiltException('No prebuilt OpenRigLogic for ${operatingSystem ?? Platform.operatingSystem}.'));
 
-  /// `openriglogic-<os>-x64`: the archive's folder, and its file name without
-  /// the extension.
-  static String baseName([String? operatingSystem]) => 'openriglogic-${osName(operatingSystem)}-x64';
+  /// `openriglogic-<os>-<arch>`: the archive's folder, and its file name
+  /// without the extension (the host's architecture on Linux).
+  static String baseName([String? operatingSystem]) => 'openriglogic-${ReleaseAssets.platformName(osName(operatingSystem))}';
 
   /// The archive's file name: `.zip` on Windows, `.tar.gz` elsewhere.
   static String archiveName([String? operatingSystem]) {
@@ -68,7 +69,7 @@ abstract final class OpenRigLogicPrebuilt {
     final os = osName(operatingSystem);
     final dir = dirFor(cacheRoot, releaseTag);
     final info = ReleaseAssets.readInfo(dir, infoFileName);
-    if (info == null || info['platform'] != '$os-x64') return null;
+    if (info == null || info['platform'] != ReleaseAssets.platformName(os)) return null;
     return File(p.join(dir.path, 'lib', libraryName(os))).existsSync() ? dir : null;
   }
 
@@ -106,7 +107,7 @@ abstract final class OpenRigLogicPrebuilt {
       uri: archiveUri(releaseTag, operatingSystem: os, baseUrl: base),
       folder: baseName(os),
       infoFileName: infoFileName,
-      accept: (info) => info['platform'] == '$os-x64',
+      accept: (info) => info['platform'] == ReleaseAssets.platformName(os),
       target: dirFor(cacheRoot, releaseTag),
       label: 'OpenRigLogic',
       error: OpenRigLogicPrebuiltException.new,

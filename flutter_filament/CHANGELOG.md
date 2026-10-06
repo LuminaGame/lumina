@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Linux arm64: the native hook links the bundled libc++ of the target architecture
+  (`third_party/libcxx/usr/lib/aarch64-linux-gnu`), `tool/filament/build_prebuilt.sh` builds
+  `filament-<VERSION>-linux-arm64.tar.gz` on an aarch64 host, and CI and the release workflow build
+  Filament, Lumina Studio and the Linux packages on `ubuntu-24.04-arm` next to x64. DLSS stays x64 only.
 - FSR3 upscaler and frame generation (prebuilt `1.77.2-lumina.7`, Filament patch `0009`):
   `TemporalAntiAliasingOptions.algorithm = TaaAlgorithm.fsr3` replaces Filament's TAA with a fragment-shader
   port of the FidelityFX Super Resolution 3.1 upscaler fed by the structure pass motion vectors (`upscaling`,

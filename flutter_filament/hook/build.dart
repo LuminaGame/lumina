@@ -32,6 +32,16 @@ void main(List<String> args) async {
         .resolveUri(Uri.file('$filament/out/$filamentOut/$path'))
         .toFilePath();
 
+    // The bundled libc++ (third_party/libcxx) carries static libraries per
+    // Linux architecture: x86_64-linux-gnu and aarch64-linux-gnu.
+    final linuxTriplet = targetOS != OS.linux
+        ? null
+        : switch (input.config.code.targetArchitecture) {
+            Architecture.x64 => 'x86_64-linux-gnu',
+            Architecture.arm64 => 'aarch64-linux-gnu',
+            final other => throw UnsupportedError('Unsupported Linux architecture: $other'),
+          };
+
     final String? androidAbi;
     final List<String> androidLibs;
     if (targetOS == OS.android) {
@@ -343,8 +353,8 @@ void main(List<String> args) async {
           '$filament/out/cmake-release/third_party/stb/tnt/libstb.a',
           '-Wl,--no-whole-archive',
           if (dlssSdk != null) '$dlssSdk/lib/Linux_x86_64/libnvsdk_ngx.a',
-          'third_party/libcxx/usr/lib/x86_64-linux-gnu/libc++.a',
-          'third_party/libcxx/usr/lib/x86_64-linux-gnu/libc++abi.a',
+          'third_party/libcxx/usr/lib/$linuxTriplet/libc++.a',
+          'third_party/libcxx/usr/lib/$linuxTriplet/libc++abi.a',
           '-lpng',
           '-lz',
           '-lGL',
@@ -441,6 +451,7 @@ void main(List<String> args) async {
 /// and the platform's static entry-point library.
 List<String> _dlssSdkMarkers(BuildInput input, OS targetOS) {
   if (targetOS != OS.windows && targetOS != OS.linux) return const [];
+  if (input.config.code.targetArchitecture != Architecture.x64) return const [];
   final dir = input.packageRoot.resolveUri(Uri.file('build/dlss-sdk')).toFilePath();
   return [
     '$dir/include/nvsdk_ngx_vk.h',
@@ -642,6 +653,8 @@ const androidFilamentLibs = [
 /// for this target OS; null otherwise.
 String? _dlssSdkDir(BuildInput input, OS targetOS) {
   if (targetOS != OS.windows && targetOS != OS.linux) return null;
+  // The NGX SDK ships x64 libraries only.
+  if (input.config.code.targetArchitecture != Architecture.x64) return null;
   final dir = input.packageRoot.resolveUri(Uri.file('build/dlss-sdk')).toFilePath();
   final stub = targetOS == OS.windows
       ? '$dir/lib/Windows_x86_64/x64/nvsdk_ngx_s.lib'

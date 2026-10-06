@@ -3,8 +3,8 @@
 # launch, and the native installers, then publishes all of them as the GitHub
 # release of the tag.
 #
-#   check ──┬── filament (windows, linux) ──┬── filament-release ──────────┐
-#           │                               └── studio (windows, linux) ───┤
+#   check ──┬── filament (windows, linux, linux-arm64) ──┬── filament-release ──┐
+#           │                                           └── studio (same three) ─┤
 #           ├── web (flutter_filament WebAssembly module) ─────────────────┤
 #           └── installers (setup.exe; .deb + .rpm) ───────────────────────┴── release
 #
@@ -161,9 +161,17 @@ jobs:
             # VS 2022 (MSVC 14.44): static libraries built with a newer MSVC
             # do not link with an older one, and users run VS 2022 Build Tools.
             runner: windows-2022
+            os: windows
+            arch: x64
           # The bundled libc++ needs glibc 2.38+, so Linux builds run on 24.04.
           - platform: linux
             runner: ubuntu-24.04
+            os: linux
+            arch: x64
+          - platform: linux-arm64
+            runner: ubuntu-24.04-arm
+            os: linux
+            arch: arm64
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 360
     env:
@@ -196,7 +204,7 @@ jobs:
             echo "published=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - if: matrix.platform == 'linux' && steps.published.outputs.published != 'true'
+      - if: matrix.os == 'linux' && steps.published.outputs.published != 'true'
         uses: ./lumina/.github/actions/linux-build-deps
 
       - id: filament
@@ -289,8 +297,16 @@ jobs:
             # VS 2022 (MSVC 14.44): static libraries built with a newer MSVC
             # do not link with an older one, and users run VS 2022 Build Tools.
             runner: windows-2022
+            os: windows
+            arch: x64
           - platform: linux
             runner: ubuntu-24.04
+            os: linux
+            arch: x64
+          - platform: linux-arm64
+            runner: ubuntu-24.04-arm
+            os: linux
+            arch: arm64
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 120
     env:
@@ -307,7 +323,7 @@ jobs:
           path: lumina
           persist-credentials: false
 
-      - if: matrix.platform == 'linux'
+      - if: matrix.os == 'linux'
         uses: ./lumina/.github/actions/linux-build-deps
 
       - uses: subosito/flutter-action@v2
@@ -340,7 +356,7 @@ jobs:
           extract: 'true'
 
       - name: Build OpenRigLogic (Linux)
-        if: matrix.platform == 'linux'
+        if: matrix.os == 'linux'
         run: bash tools/flutter_riglogic/tool/build_openriglogic.sh
 
       - name: Build OpenRigLogic (Windows)
@@ -354,10 +370,10 @@ jobs:
       - name: Package OpenRigLogic
         run: bash lumina/.github/scripts/package_openriglogic.sh ${{ matrix.platform }} tools/flutter_riglogic dist
 
-      - name: flutter build ${{ matrix.platform }}
+      - name: flutter build ${{ matrix.os }}
         working-directory: lumina/lumina_ui
         run: >-
-          flutter build ${{ matrix.platform }} --release
+          flutter build ${{ matrix.os }} --release
           --dart-define=LUMINA_VERSION=${{ env.TAG }}
           --dart-define=LUMINA_COMMIT=${{ env.SHA }}
 
@@ -494,8 +510,16 @@ jobs:
             # VS 2022 (MSVC 14.44): static libraries built with a newer MSVC
             # do not link with an older one, and users run VS 2022 Build Tools.
             runner: windows-2022
+            os: windows
+            arch: x64
           - platform: linux
             runner: ubuntu-24.04
+            os: linux
+            arch: x64
+          - platform: linux-arm64
+            runner: ubuntu-24.04-arm
+            os: linux
+            arch: arm64
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
     env:
@@ -522,11 +546,11 @@ jobs:
           if ($p.ExitCode -ne 0) { throw "setup.exe /DRYRUN exited with $($p.ExitCode)" }
 
       - name: .deb and .rpm (nfpm)
-        if: matrix.platform == 'linux'
+        if: matrix.os == 'linux'
         shell: bash
         run: |
           set -euo pipefail
-          bash lumina/installer/linux/build.sh "$VERSION" "$TAG" dist
+          bash lumina/installer/linux/build.sh "$VERSION" "$TAG" dist "${{ matrix.arch }}"
           dpkg-deb -I dist/*.deb
           dpkg-deb -c dist/*.deb
 
@@ -679,8 +703,9 @@ jobs:
           | File | What it is |
           |---|---|
           | `lumina-studio-setup-*-windows-x64.exe` | Windows installer: installs Git, the Visual Studio 2022 C++ Build Tools, GStreamer and Flutter, then the latest Lumina Studio |
-          | `lumina-studio_*_amd64.deb`, `lumina-studio-*.x86_64.rpm` | Linux packages: build dependencies, Flutter in /opt/lumina/flutter and the latest Lumina Studio in /opt/lumina/studio |
-          | `lumina-studio-*-windows-x64.zip`, `lumina-studio-*-linux-x64.tar.gz` | The editor alone (what the installers download) |
+          | `lumina-studio_*_amd64.deb`, `lumina-studio-*.x86_64.rpm` | Linux x64 packages: build dependencies, Flutter in /opt/lumina/flutter and the latest Lumina Studio in /opt/lumina/studio |
+          | `lumina-studio_*_arm64.deb`, `lumina-studio-*.aarch64.rpm` | The same packages for Linux arm64 |
+          | `lumina-studio-*-windows-x64.zip`, `lumina-studio-*-linux-x64.tar.gz`, `lumina-studio-*-linux-arm64.tar.gz` | The editor alone (what the installers download) |
           | `lumina-studio-*-windows-x64-store.msix` | The editor as an unsigned Microsoft Store package (for the Partner Center submission; it installs once the Store has signed it) |
           | `lumina-studio-*-windows-x64.msix` | The editor as a signed MSIX package (when signed) |
           | `openriglogic-*` | Prebuilt OpenRigLogic library the editor downloads at first launch |

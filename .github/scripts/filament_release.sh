@@ -4,11 +4,11 @@
 # archives again. A pre-release that is never "Latest"; once both archives
 # and their .sha256 sidecars are uploaded it is never changed again.
 #
-#   filament_release.sh missing <tag> <version> [windows|linux ...]
+#   filament_release.sh missing <tag> <version> [windows|linux|linux-arm64 ...]
 #       Prints the assets of <tag> that are not complete yet, one per line:
 #       both files of every archive/sidecar pair that is not fully uploaded
-#       (all of them when the release does not exist). Default OSes: windows
-#       and linux. Exit 1 when GitHub cannot be asked.
+#       (all of them when the release does not exist). Default platforms:
+#       windows, linux (x64) and linux-arm64. Exit 1 when GitHub cannot be asked.
 #   filament_release.sh notes <version> <sha> <owner/repo>
 #       Prints the release notes: version, upstream tag, commit, patches.
 #   filament_release.sh publish <tag> <version> <sha> <dir>
@@ -24,11 +24,13 @@ set -euo pipefail
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 root="$(cd "$here/../.." && pwd)"
 
+# The platform keys: windows and linux are x64, linux-arm64 is the arm64 build.
 archive_name() {
   case "$1" in
     windows) echo "filament-$2-windows-x64.zip" ;;
     linux | macos) echo "filament-$2-$1-x64.tar.gz" ;;
-    *) echo "filament_release.sh: unknown OS $1" >&2; exit 64 ;;
+    linux-arm64) echo "filament-$2-linux-arm64.tar.gz" ;;
+    *) echo "filament_release.sh: unknown platform $1" >&2; exit 64 ;;
   esac
 }
 
@@ -58,7 +60,7 @@ missing() {
   local tag="$1" version="$2"
   shift 2
   local oses=("$@") have="" rc=0 os a
-  [ ${#oses[@]} -gt 0 ] || oses=(windows linux)
+  [ ${#oses[@]} -gt 0 ] || oses=(windows linux linux-arm64)
   have="$(release_assets "$tag")" || rc=$?
   if [ "$rc" -ne 0 ] && [ "$rc" -ne 3 ]; then return "$rc"; fi
   for os in "${oses[@]}"; do
@@ -86,6 +88,8 @@ EOF
     # The Subject header, folded lines joined.
     subject="$(awk '/^Subject: /{s=substr($0,10); f=1; next} f && /^[[:blank:]]/{s=s $0; next} f{print s; exit}' "$patch" |
       sed 's/^\[PATCH[^]]*\] //')"
+    # A plain `git diff` patch has no Subject: its file name, spelled out.
+    [ -n "$subject" ] || subject="$(basename "$patch" .patch | sed 's/^[0-9]*-//; s/-/ /g')"
     # shellcheck disable=SC2016 # Markdown code spans, not an expansion.
     printf '| `%s` | %s |\n' "$(basename "$patch")" "$subject"
   done
@@ -99,6 +103,7 @@ Details: [third_party/filament/README.md](https://github.com/$repo/blob/$sha/thi
 |---|---|
 | \`$(archive_name windows "$version")\` | Windows x64 (MSVC, static CRT) |
 | \`$(archive_name linux "$version")\` | Linux x64 (clang, bundled libc++) |
+| \`$(archive_name linux-arm64 "$version")\` | Linux arm64 (clang, bundled libc++) |
 
 Each archive holds one folder that works as the hooks' \`filament_dir\`, with a \`lumina-filament.json\` describing the build, and has a \`.sha256\` sidecar.
 EOF

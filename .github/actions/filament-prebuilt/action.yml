@@ -1,7 +1,7 @@
 name: Prebuilt Filament
 description: >
   Makes the prebuilt Filament of this runner's OS available: the archive
-  lumina/build/filament-prebuilt/filament-<VERSION>-<os>-x64.{zip|tar.gz}
+  lumina/build/filament-prebuilt/filament-<VERSION>-<os>-<arch>.{zip|tar.gz}
   plus its .sha256 sidecar, from the cache, else built from upstream Filament
   and third_party/filament/patches (tool/filament/build_prebuilt.*). An
   archive already in lumina/build/filament-prebuilt/ (an artifact of the
@@ -12,7 +12,7 @@ description: >
   (tool/release/release_info.dart filament-dir), which is what the hooks read.
 
   The cache key hashes the patches, tool/filament/VERSION, the build scripts
-  and the runner OS. Caches are scoped to a ref and readable from the default
+  and the runner OS and architecture (Linux x64 and arm64 are separate builds). Caches are scoped to a ref and readable from the default
   branch, so the CI workflow's runs on main keep a cache every release tag
   (and every pull request) can restore.
 
@@ -37,6 +37,9 @@ outputs:
   os:
     description: linux, windows or macos.
     value: ${{ steps.info.outputs.os }}
+  arch:
+    description: x64 or arm64.
+    value: ${{ steps.info.outputs.arch }}
   cache-hit:
     description: Whether the cache had the archive.
     value: ${{ steps.restore.outputs.cache-hit }}
@@ -61,10 +64,16 @@ runs:
           macOS) os=macos; ext=tar.gz ;;
           *) echo "::error::Unsupported runner OS $RUNNER_OS" >&2; exit 1 ;;
         esac
+        case "$RUNNER_ARCH" in
+          X64) arch=x64 ;;
+          ARM64) arch=arm64 ;;
+          *) echo "::error::Unsupported runner architecture $RUNNER_ARCH" >&2; exit 1 ;;
+        esac
         {
           echo "version=$version"
           echo "os=$os"
-          echo "archive=build/filament-prebuilt/filament-$version-$os-x64.$ext"
+          echo "arch=$arch"
+          echo "archive=build/filament-prebuilt/filament-$version-$os-$arch.$ext"
           # The runner image fixes the toolset the static libraries are built with.
           echo "image=${ImageOS:-unknown}"
         } >> "$GITHUB_OUTPUT"
@@ -87,8 +96,8 @@ runs:
       if: steps.present.outputs.present != 'true'
       uses: actions/cache/restore@v6
       with:
-        path: lumina/build/filament-prebuilt/filament-*-x64.*
-        key: filament-prebuilt-${{ runner.os }}-${{ steps.info.outputs.image }}-${{ hashFiles('lumina/third_party/filament/patches/**', 'lumina/tool/filament/VERSION', 'lumina/tool/filament/build_prebuilt.sh', 'lumina/tool/filament/build_prebuilt.ps1') }}
+        path: lumina/build/filament-prebuilt/filament-*
+        key: filament-prebuilt-${{ runner.os }}-${{ runner.arch }}-${{ steps.info.outputs.image }}-${{ hashFiles('lumina/third_party/filament/patches/**', 'lumina/tool/filament/VERSION', 'lumina/tool/filament/build_prebuilt.sh', 'lumina/tool/filament/build_prebuilt.ps1') }}
 
     - name: Fetch the published build
       if: steps.present.outputs.present != 'true' && steps.restore.outputs.cache-hit != 'true' && inputs.fetch == 'true'
@@ -175,7 +184,7 @@ runs:
       if: steps.need.outputs.build == 'true' && inputs.save == 'true'
       uses: actions/cache/save@v6
       with:
-        path: lumina/build/filament-prebuilt/filament-*-x64.*
+        path: lumina/build/filament-prebuilt/filament-*
         key: ${{ steps.restore.outputs.cache-primary-key }}
 
     - name: Unpack to the hooks' filament_dir

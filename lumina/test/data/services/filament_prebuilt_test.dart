@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina/data/services/filament_prebuilt.dart';
+import 'package:lumina/data/services/release_asset.dart';
 import 'package:path/path.dart' as p;
 
 /// A real archive, in the layout build_prebuilt.{sh,ps1} writes, served by a
@@ -77,7 +78,12 @@ void main() {
 
   test('asset names follow build_prebuilt', () {
     expect(FilamentPrebuilt.archiveName('1.77.0-lumina.1', 'windows'), 'filament-1.77.0-lumina.1-windows-x64.zip');
-    expect(FilamentPrebuilt.archiveName('1.77.0-lumina.1', 'linux'), 'filament-1.77.0-lumina.1-linux-x64.tar.gz');
+    expect(FilamentPrebuilt.archiveName('1.77.0-lumina.1', 'linux', 'x64'), 'filament-1.77.0-lumina.1-linux-x64.tar.gz');
+    expect(FilamentPrebuilt.archiveName('1.77.0-lumina.1', 'linux', 'arm64'), 'filament-1.77.0-lumina.1-linux-arm64.tar.gz');
+    expect(FilamentPrebuilt.archiveName('1.77.0-lumina.1', 'windows', 'arm64'), 'filament-1.77.0-lumina.1-windows-x64.zip',
+        reason: 'Windows builds are x64 only');
+    expect(FilamentPrebuilt.archiveName('1.77.0-lumina.1', 'linux'),
+        'filament-1.77.0-lumina.1-linux-${ReleaseAssets.hostArchitecture()}.tar.gz');
     expect(FilamentPrebuilt.archiveUri('1.77.0-lumina.1', 'v0.2.0', operatingSystem: 'linux').toString(),
         'https://github.com/LuminaGame/lumina/releases/download/v0.2.0/filament-1.77.0-lumina.1-linux-x64.tar.gz');
     expect(() => FilamentPrebuilt.osName('android'), throwsA(isA<FilamentPrebuiltException>()));

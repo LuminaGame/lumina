@@ -32,6 +32,21 @@ abstract final class ReleaseAssets {
   /// `tar.gz` elsewhere.
   static String archiveExtension(String os) => os == 'windows' ? 'zip' : 'tar.gz';
 
+  /// The CPU architecture this process runs on, as asset names spell it:
+  /// `x64` or `arm64` (from the Dart VM's `Platform.version`).
+  static String hostArchitecture() {
+    final v = Platform.version.toLowerCase();
+    return v.contains('arm64') || v.contains('aarch64') ? 'arm64' : 'x64';
+  }
+
+  /// The `<os>-<arch>` suffix of an asset for [os]: Linux builds exist for
+  /// x64 and arm64 ([architecture], default the host's); Windows and macOS
+  /// assets are x64 only.
+  static String platformName(String os, [String? architecture]) {
+    final arch = os == 'linux' ? (architecture ?? hostArchitecture()) : 'x64';
+    return '$os-$arch';
+  }
+
   /// `<baseUrl>/<releaseTag>/<asset>`.
   static Uri assetUri(String baseUrl, String releaseTag, String asset) =>
       Uri.parse('${baseUrl.endsWith('/') ? baseUrl.substring(0, baseUrl.length - 1) : baseUrl}'

@@ -5,7 +5,8 @@
 #
 #   install-studio.sh [--target <dir>] [--tag <tag>|latest] [--repo <owner/name>] [--dry-run]
 #
-# The release's lumina-studio-<tag>-linux-x64.tar.gz is checked against its
+# The release's lumina-studio-<tag>-linux-<x64|arm64>.tar.gz (the host's
+# architecture) is checked against its
 # .sha256 sidecar, unpacked next to <dir> and swapped in, so a failed
 # download never leaves a half-written editor behind.
 #
@@ -38,6 +39,12 @@ while [ $# -gt 0 ]; do
 done
 
 say() { printf '%s\n' "$*"; }
+
+# The editor build of this machine's architecture.
+case "$(uname -m)" in
+  aarch64 | arm64) STUDIO_ARCH=arm64 ;;
+  *) STUDIO_ARCH=x64 ;;
+esac
 fail_network() {
   say "Lumina Studio could not be downloaded: $*" >&2
   say "Check the internet connection, then run 'lumina-studio --update' (or just 'lumina-studio')." >&2
@@ -52,14 +59,14 @@ fail_network() {
 studio_tarball_url() {
   printf '%s' "$1" | tr ',' '\n' \
     | sed -n 's/.*"browser_download_url"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' \
-    | grep -E '/releases/download/[^/]+/lumina-studio-[^/]+-linux-x64\.tar\.gz$' \
+    | grep -E "/releases/download/[^/]+/lumina-studio-[^/]+-linux-$STUDIO_ARCH\\.tar\\.gz\$" \
     | grep -v -E '/releases/download/(filament-|untagged-)[^/]*/' \
     | head -n1 || true
 }
 
 if [ -n "$SELECT_FROM" ]; then
   url="$(studio_tarball_url "$(cat "$SELECT_FROM")")"
-  [ -n "$url" ] || { say "No release with a lumina-studio-*-linux-x64.tar.gz."; exit 30; }
+  [ -n "$url" ] || { say "No release with a lumina-studio-*-linux-$STUDIO_ARCH.tar.gz."; exit 30; }
   say "tag=$(basename "$(dirname "$url")")"
   say "asset=$(basename "$url")"
   exit 0
@@ -99,7 +106,7 @@ fi
 [ -n "$JSON" ] || JSON="$(curl_api "$API" 2>/dev/null)" || {
   if [ "$DRY_RUN" = 1 ]; then
     say "  [error]    could not read $API"
-    say "  [download] would download lumina-studio-<tag>-linux-x64.tar.gz from the $TAG release of $REPO into $TARGET"
+    say "  [download] would download lumina-studio-<tag>-linux-$STUDIO_ARCH.tar.gz from the $TAG release of $REPO into $TARGET"
     exit 0
   fi
   fail_network "no answer from $API"
@@ -115,10 +122,10 @@ else
 fi
 if [ -z "$TARBALL_URL" ]; then
   if [ "$DRY_RUN" = 1 ]; then
-    say "  [error]    release ${RELEASE_TAG:-$TAG} of $REPO has no lumina-studio-*-linux-x64.tar.gz"
+    say "  [error]    release ${RELEASE_TAG:-$TAG} of $REPO has no lumina-studio-*-linux-$STUDIO_ARCH.tar.gz"
     exit 0
   fi
-  fail_network "release ${RELEASE_TAG:-$TAG} of $REPO has no lumina-studio-*-linux-x64.tar.gz"
+  fail_network "release ${RELEASE_TAG:-$TAG} of $REPO has no lumina-studio-*-linux-$STUDIO_ARCH.tar.gz"
 fi
 SUM_URL="$(printf '%s\n' "$URLS" | grep -F "/$(basename "$TARBALL_URL").sha256" | head -n1 || true)"
 NAME="$(basename "$TARBALL_URL")"
