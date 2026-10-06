@@ -782,7 +782,7 @@ Everything a project editor build depends on.
 | `fingerprint` | `Future<String> fingerprint(EditorHostInputs inputs) async` | SHA-256 (hex) over [components] (or over [fingerprintComponents] of [inputs]). |
 | `fingerprintOf` | `String fingerprintOf(Map<String, String> components)` |  |
 | `diffInputs` | `List<String> diffInputs(Map<String, String> older, Map<String, String> newer)` | Human-readable reasons [newer] differs from [older], one per change: "plugin a_plugin changed", "editor source changed (lumina_ui)", "Flutter 3.41.0 → 3.44.0", "build mode release → debug". |
-| `engineRepoState` | `Future<String> engineRepoState(String dir) async` | A repo's source state: its git state when it is a checkout, else a content manifest (the project's copy of the engine). |
+| `engineRepoState` | `Future<String> engineRepoState(String dir) async` | Bir deponun kaynak durumu: checkout ise git durumu, değilse (projenin engine kopyası) `lib/`, `src/`, `hook/`, platform runner klasörleri `windows/`, `linux/`, `macos/` (`flutter/ephemeral` hariç, bağlantılar izlenmeden) ve `pubspec.yaml` içerik manifesti; böylece kopyadaki bir runner değişikliği proje editörünü yeniden derletir. |
 
 ---
 

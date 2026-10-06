@@ -231,8 +231,11 @@ String _pluginHash(String dir) {
 }
 
 /// The directories whose files make up a repo's build when it is not a git
-/// checkout (a sorted path + content-hash manifest).
-const List<String> _manifestDirs = ['lib', 'src', 'hook'];
+/// checkout (a sorted path + content-hash manifest): the Dart and native
+/// sources and the platform runners (a project editor's runner is generated
+/// from its copy of lumina_ui's, and a plugin package's native code lives
+/// there too).
+const List<String> _manifestDirs = ['lib', 'src', 'hook', 'windows', 'linux', 'macos'];
 
 bool _isInsideGit(String dir) {
   if (!Directory(dir).existsSync()) return false;
@@ -293,7 +296,11 @@ String _manifestHash(String root, List<String> dirs, {List<String> extraFiles = 
   for (final d in dirs) {
     final dir = Directory(d);
     if (!dir.existsSync()) continue;
-    for (final f in dir.listSync(recursive: true).whereType<File>()) {
+    // Links are not followed: a runner's flutter/ephemeral/.plugin_symlinks
+    // leads into other packages (their build folders too); the ephemeral
+    // folder is the Flutter tool's own output.
+    for (final f in dir.listSync(recursive: true, followLinks: false).whereType<File>()) {
+      if (p.split(p.relative(f.path, from: d)).contains('ephemeral')) continue;
       add(f);
     }
   }

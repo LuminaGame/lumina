@@ -79,6 +79,21 @@ void main() {
     expect(diffInputs(before, after), ['editor source changed (lumina_ui)']);
   });
 
+  test("a change in lumina_ui's platform runner changes it; the runner's flutter/ephemeral does not", () async {
+    final runner = Directory(p.join(engine.path, 'lumina_ui', 'windows', 'runner'))..createSync(recursive: true);
+    final main = File(p.join(runner.path, 'main.cpp'))..writeAsStringSync('int main() { return 0; }\n');
+    final ephemeral = Directory(p.join(engine.path, 'lumina_ui', 'windows', 'flutter', 'ephemeral'))..createSync(recursive: true);
+    final before = await fingerprintComponents(inputs());
+
+    File(p.join(ephemeral.path, 'generated_config.cmake')).writeAsStringSync('# tool output\n');
+    expect(fingerprintOf(await fingerprintComponents(inputs())), fingerprintOf(before));
+
+    main.writeAsStringSync('int main() { return 1; }\n');
+    final after = await fingerprintComponents(inputs());
+    expect(fingerprintOf(after), isNot(fingerprintOf(before)));
+    expect(diffInputs(before, after), ['editor source changed (lumina_ui)']);
+  });
+
   test('debug vs release and a Flutter upgrade each change it, and are named', () async {
     final release = await fingerprintComponents(inputs());
     final debug = await fingerprintComponents(inputs(mode: 'debug'));
