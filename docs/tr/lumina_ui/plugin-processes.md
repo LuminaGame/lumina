@@ -16,7 +16,9 @@ paketindedir. Dosya yolları `lumina_ui/` paket dizinine görelidir.
   çıkar (bilinmeyen ad stderr'e bir mesajla 64 koduyla çıkar).
 - Editör her eklenti için 0 portunda bir loopback soketi açar, sürecin `host.hello` mesajını (protokol sürümü ve rastgele
   token) denetler ve `host.register` katkılarını eklentinin adıyla kaydeder: menü öğeleri, yuva düğmeleri, MCP araçları,
-  içe aktarıcılar, konsol komutları ve bildirimsel paneller. Eylemleri süreçte çalışır.
+  içe aktarıcılar, konsol komutları ve bildirimsel paneller. Eylemleri süreçte çalışır. Komut satırındaki proje
+  klasörü ve hello yanıtındaki her klasör (proje, kullanıcı ve proje depolaması, eklentinin kurulu olduğu klasör)
+  normalleştirilir: tek bir ayırıcı biçimi, `.` ya da `..` parçası yok.
 - Süreçteki yerel bir çökme, takılma ya da sızıntı editörü asla düşürmez. Editör süreci 2 sn'de bir yoklar; art arda üç
   yanıtsız yoklama **hung** (takıldı) demektir: tüm süreç ağacı öldürülür ve eklenti yeniden başlar. Kendiliğinden biten
   süreç **crashed** (çöktü) olur: bir `plugin_crash` çökme raporu açılır ve eklenti yeniden başlar. Otomatik yeniden

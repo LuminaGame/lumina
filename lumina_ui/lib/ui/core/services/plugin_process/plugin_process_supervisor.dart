@@ -5,6 +5,7 @@ import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart';
+import 'package:path/path.dart' as p;
 import 'package:shadcn_flutter/shadcn_flutter.dart' show BuildContext, IconData, LucideIcons, Widget;
 
 import '../../host/editor_host.dart';
@@ -160,7 +161,7 @@ class PluginProcessSupervisor implements PluginProcessChannel {
       pluginName: pluginName,
       port: server.port,
       token: run.token,
-      projectDir: host.projectInfo?.dir,
+      projectDir: _normalized(host.projectInfo?.dir),
     );
     run.startTimer = Timer(timings.startTimeout, () => _kill(run, PluginProcessStatus.hung, 'did not start within ${timings.startTimeout.inSeconds} s'));
     final runner = inProcessRunner;
@@ -355,13 +356,18 @@ class PluginProcessSupervisor implements PluginProcessChannel {
     final storage = host.storageFor(pluginName);
     return {
       'v': kPluginProtocolVersion,
-      'project': project == null ? null : {'name': project.name, 'dir': project.dir},
+      'project': project == null ? null : {'name': project.name, 'dir': _normalized(project.dir)},
       'settings': host.settingsFor(pluginName).value,
-      'userDir': storage.userDir.path,
-      'projectDir': storage.projectDir?.path,
-      'pluginDir': LuminaEditorHost.pluginDirs[pluginName],
+      'userDir': _normalized(storage.userDir.path),
+      'projectDir': _normalized(storage.projectDir?.path),
+      'pluginDir': _normalized(LuminaEditorHost.pluginDirs[pluginName]),
     };
   }
+
+  /// A folder as the plugin process gets it: one separator style
+  /// (Windows listings and `/`-joined project paths mix them) and no `.`
+  /// or `..` segments.
+  static String? _normalized(String? path) => path == null || path.isEmpty ? path : p.normalize(path);
 
   void _registered(_Run run, PluginContributions contributions) {
     if (!identical(run, _run) || run.exited) return;

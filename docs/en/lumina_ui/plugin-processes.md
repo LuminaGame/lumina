@@ -16,7 +16,9 @@ paths are relative to the `lumina_ui/` package directory.
   with a message on stderr).
 - The editor binds a loopback socket on port 0 per plugin, checks the process's `host.hello` (protocol version and a
   random token), and registers the `host.register` contributions under the plugin's name: menu items, slot buttons, MCP
-  tools, importers, console commands and declarative panels. Their actions run in the process.
+  tools, importers, console commands and declarative panels. Their actions run in the process. The project folder on
+  the command line and every folder of the hello answer (project, user and project storage, the plugin's install
+  folder) are normalised: one separator style and no `.` or `..` segments.
 - A native crash, a hang or a leak in the process never takes the editor down. The editor pings the process every 2 s;
   three unanswered pings in a row mean **hung**: the whole process tree is killed and the plugin restarts. A process that
   ends on its own is **crashed**: a `plugin_crash` crash report is filed and the plugin restarts. Automatic restarts wait

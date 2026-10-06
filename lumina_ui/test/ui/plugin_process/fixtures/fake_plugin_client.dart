@@ -89,6 +89,8 @@ Future<int> runFakePlugin(PluginProcessLaunch launch, {required String controlPa
   final socket = await Socket.connect(InternetAddress.loopbackIPv4, launch.port);
   final conn = PluginConnection(input: socket, output: socket);
   var presses = 0;
+  // The editor's hello answer, returned by the `launch` call.
+  Object? helloAnswer;
   conn
     ..onRequest(PluginMethods.ping, (_) => const <String, Object?>{})
     ..onRequest(PluginMethods.call, (args) async {
@@ -96,6 +98,8 @@ Future<int> runFakePlugin(PluginProcessLaunch launch, {required String controlPa
       switch (args['method']) {
         case 'echo':
           return inner;
+        case 'launch':
+          return {'projectDir': launch.projectDir, 'hello': helloAnswer};
         case 'slow':
           return Completer<Object?>().future;
         case 'exit':
@@ -168,7 +172,7 @@ Future<int> runFakePlugin(PluginProcessLaunch launch, {required String controlPa
     });
   unawaited(conn.done.then((_) => finish(inEditor ? 0 : 2)));
 
-  await conn.request(PluginMethods.hello, {'v': kPluginProtocolVersion, 'plugin': launch.pluginName, 'token': launch.token, 'pid': pid});
+  helloAnswer = await conn.request(PluginMethods.hello, {'v': kPluginProtocolVersion, 'plugin': launch.pluginName, 'token': launch.token, 'pid': pid});
   if (mode == 'exit3') {
     stderr.writeln('fake plugin exiting with code 3 before registering');
     await finish(3);

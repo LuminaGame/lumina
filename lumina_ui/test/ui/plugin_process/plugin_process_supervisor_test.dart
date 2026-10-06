@@ -2,9 +2,13 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lumina/lumina.dart' show EngineLoggerService;
 import 'package:lumina_editor_api/lumina_editor_api.dart';
+import 'package:lumina_ui/ui/core/host/editor_host.dart';
+import 'package:lumina_ui/ui/core/plugin_extension_registry.dart';
 import 'package:lumina_ui/ui/core/services/crash_report.dart';
 import 'package:lumina_ui/ui/core/services/plugin_process/plugin_process_supervisor.dart';
+import 'package:path/path.dart' as p;
 
 import 'plugin_process_harness.dart';
 
@@ -256,6 +260,44 @@ void main() {
     await waitForStatus(s, PluginProcessStatus.running);
     expect(s.state.value.pid, isNot(pid));
     expect(identical(h.registry.processChannel(kFakePluginName), s), isTrue);
+  });
+
+  test('the process gets the project and plugin folders normalised, on its command line and in the hello', () async {
+    // Folders as an editor may hold them: `/`-joined onto a Windows path,
+    // with a `..` segment.
+    final root = await Directory.systemTemp.createTemp('lumina_plugin_paths_');
+    final mixedProject = '${root.path}/sub/../project';
+    final mixedPlugin = '${root.path}/plugins/./fake_plugin';
+    final registry = PluginExtensionRegistry(logger: EngineLoggerService())
+      ..attachStorage(dataRoot: () => Directory('${root.path}/data'), projectDir: () => mixedProject)
+      ..attachProjectInfo(() => EditorProjectInfo(name: 'Paths', dir: mixedProject));
+    final savedDirs = LuminaEditorHost.pluginDirs;
+    LuminaEditorHost.pluginDirs = {kFakePluginName: mixedPlugin};
+    addTearDown(() async {
+      LuminaEditorHost.pluginDirs = savedDirs;
+      try {
+        await root.delete(recursive: true);
+      } on FileSystemException catch (_) {}
+    });
+    h = await PluginProcessHarness.create(registry: registry);
+    h.mode = 'normal';
+    final s = h.supervisor;
+    await s.start();
+    await waitForStatus(s, PluginProcessStatus.running);
+
+    final seen = (await s.call('launch', const {}) as Map).cast<String, Object?>();
+    final hello = (seen['hello'] as Map).cast<String, Object?>();
+    expect(seen['projectDir'], p.normalize(mixedProject));
+    expect((hello['project'] as Map)['dir'], p.normalize(mixedProject));
+    expect(hello['pluginDir'], p.normalize(mixedPlugin));
+    for (final dir in [hello['userDir'], hello['projectDir']]) {
+      expect(dir, isA<String>());
+      expect(dir, p.normalize(dir! as String));
+    }
+    if (Platform.isWindows) {
+      expect(seen['projectDir'], isNot(contains('/')));
+      expect(hello['pluginDir'], isNot(contains('/')));
+    }
   });
 
   test('a hello with a wrong token is refused', () async {
