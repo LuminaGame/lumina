@@ -23,6 +23,7 @@ export 'project_settings_section.dart';
 export 'plugin_crash_reporter.dart';
 export 'process/plugin_process.dart';
 export 'process/plugin_process_channel.dart';
+export 'process/run_plugin_process.dart';
 export 'package:lumina_plugin_protocol/lumina_plugin_protocol.dart';
 
 /// `LuminaAsset.metadata` key a plugin asset type carries its

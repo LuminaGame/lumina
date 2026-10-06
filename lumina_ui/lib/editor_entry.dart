@@ -41,7 +41,12 @@ String? _dlssSdkDir() {
   return dir.existsSync() ? dir.path : null;
 }
 
-Future<void> runLuminaEditor(List<String> args, {List<LuminaEditorPlugin> plugins = const [], EditorHostInfo? host}) async {
+Future<void> runLuminaEditor(
+  List<String> args, {
+  List<LuminaEditorPlugin> plugins = const [],
+  Map<String, LuminaPluginProcess Function()> processes = const {},
+  EditorHostInfo? host,
+}) async {
   // Started by a process that enforces Windows redirection trust (an
   // installer's finish page does), the editor and everything it runs could
   // not traverse the junctions of the engine checkout and projects: a copy
@@ -63,6 +68,7 @@ Future<void> runLuminaEditor(List<String> args, {List<LuminaEditorPlugin> plugin
   // `--no-plugins` opens the project without its code plugins even in a
   // project editor (the escape hatch when a plugin breaks the editor).
   LuminaEditorHost.plugins = LuminaEditorHost.args.noPlugins ? const [] : plugins;
+  LuminaEditorHost.pluginProcesses = LuminaEditorHost.args.noPlugins ? const {} : processes;
   // An installed release (no source checkout around it) works on the engine
   // source of its own release, fetched once into the per-user data folder:
   // a complete checkout is used straight away (offline too), otherwise the

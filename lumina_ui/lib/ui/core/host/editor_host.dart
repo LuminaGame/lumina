@@ -72,6 +72,13 @@ class LuminaEditorHost {
   /// The code plugins compiled into this binary (the host's registrar).
   static List<LuminaEditorPlugin> plugins = const [];
 
+  /// The process parts of the compiled plugins whose `.lmplugin` asks for
+  /// `"isolation": "process"`, by plugin name (the host's registrar). The
+  /// editor starts each in its own process (this executable with
+  /// `--lumina-plugin-process <name>`) unless the project forces it in
+  /// process.
+  static Map<String, LuminaPluginProcess Function()> pluginProcesses = const {};
+
   /// The fingerprint this project editor was built with
   /// (`--dart-define=LUMINA_EDITOR_FINGERPRINT=…` from the build service).
   static const String compiledFingerprint = String.fromEnvironment('LUMINA_EDITOR_FINGERPRINT');
