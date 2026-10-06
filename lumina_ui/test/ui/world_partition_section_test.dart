@@ -58,7 +58,7 @@ void main() {
     expect(find.byKey(const ValueKey('wp_enabled')), findsOneWidget);
     // The honest boundary, said once.
     expect(
-      find.textContaining('does not stream cells in and out while editing'),
+      find.textContaining('the editor shows the whole level while editing'),
       findsOneWidget,
     );
     // Disabled level: the knobs are not shown until the section exists.
