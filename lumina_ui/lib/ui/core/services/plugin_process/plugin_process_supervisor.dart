@@ -510,8 +510,8 @@ class PluginProcessSupervisor implements PluginProcessChannel {
       });
     } else {
       _setState(PluginProcessState(PluginProcessStatus.stopped,
-          reason: '$reason; gave up after $_restarts restarts', exitCode: code, restarts: _restarts));
-      _note('gave up after $_restarts automatic restarts: use Restart', level: 'error');
+          reason: timings.maxRestarts == 0 ? reason : '$reason; gave up after $_restarts restarts', exitCode: code, restarts: _restarts));
+      _note(timings.maxRestarts == 0 ? 'stopped: use Restart' : 'gave up after $_restarts automatic restarts: use Restart', level: 'error');
     }
   }
 

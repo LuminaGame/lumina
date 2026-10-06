@@ -67,19 +67,37 @@ class _PluginProcessGuardState extends State<PluginProcessGuard> {
             ],
           );
         }
-        return Stack(
-          children: [
-            IgnorePointer(child: Opacity(opacity: 0.25, child: content)),
-            Positioned.fill(
-              child: Container(
-                color: EditorColors.background.withValues(alpha: 0.55),
-                alignment: Alignment.center,
-                padding: const EdgeInsets.all(12),
-                child: _stoppedCard(context, name, state),
-              ),
+        return LayoutBuilder(builder: (context, constraints) {
+          final card = _stoppedCard(context, name, state);
+          if (!constraints.hasBoundedHeight || !constraints.hasBoundedWidth) {
+            // A panel in a scroll view: the card, the panel kept alive but
+            // hidden under it.
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(padding: const EdgeInsets.all(12), child: card),
+                Visibility(visible: false, maintainState: true, child: content),
+              ],
+            );
+          }
+          // The whole area: the panel dimmed behind the card.
+          return SizedBox.expand(
+            child: Stack(
+              children: [
+                Positioned.fill(child: IgnorePointer(child: Opacity(opacity: 0.25, child: content))),
+                Positioned.fill(
+                  child: Container(
+                    color: EditorColors.background.withValues(alpha: 0.55),
+                    alignment: Alignment.topCenter,
+                    padding: const EdgeInsets.all(12),
+                    child: SingleChildScrollView(child: card),
+                  ),
+                ),
+              ],
             ),
-          ],
-        );
+          );
+        });
       },
     );
   }
