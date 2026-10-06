@@ -82,8 +82,8 @@ class _PluginPreview3dControlState extends State<PluginPreview3dControl> {
           Button(
             key: ValueKey('$key/node/${n.name}'),
             style: n.name == node.name
-                ? const ButtonStyle.secondary(density: ButtonDensity.compact)
-                : const ButtonStyle.ghost(density: ButtonDensity.compact),
+                ? const ButtonStyle.secondary(size: ButtonSize.small)
+                : const ButtonStyle.ghost(size: ButtonSize.small),
             leading: const Icon(LucideIcons.box, size: 10),
             onPressed: () {
               setState(() => _shown = n.name);

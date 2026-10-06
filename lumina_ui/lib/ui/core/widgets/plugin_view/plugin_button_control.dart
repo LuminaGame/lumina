@@ -38,9 +38,9 @@ class PluginButtonControl extends StatelessWidget {
           );
     final VoidCallback? onPressed = enabled ? () => PluginViewScope.of(context).emit(c.id, 'pressed') : null;
     final style = switch (tone) {
-      EditorTone.primary => const ButtonStyle.primary(density: ButtonDensity.compact),
-      EditorTone.destructive => const ButtonStyle.destructive(density: ButtonDensity.compact),
-      _ => const ButtonStyle.outline(density: ButtonDensity.compact),
+      EditorTone.primary => const ButtonStyle.primary(size: ButtonSize.small),
+      EditorTone.destructive => const ButtonStyle.destructive(size: ButtonSize.small),
+      _ => const ButtonStyle.outline(size: ButtonSize.small),
     };
     final button = Button(style: style, onPressed: onPressed, enabled: enabled, leading: leading, child: label);
     return withPluginTooltip(c.tooltip, Align(alignment: Alignment.centerLeft, child: button));

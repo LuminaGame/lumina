@@ -6,7 +6,8 @@ import 'plugin_view_scope.dart';
 /// [PluginControlKind.textField]: `value`, `placeholder`, `multiline`.
 /// Sends `changed` with the text when the user submits it (Enter on a
 /// single line; leaving the field commits a multi-line edit, or a single
-/// line the user changed without pressing Enter). While the field has focus
+/// line the user changed without pressing Enter; the window going to the
+/// background is not leaving). While the field has focus
 /// a new `value` from the plugin does not overwrite what is being typed.
 class PluginTextFieldControl extends StatefulWidget {
   const PluginTextFieldControl({super.key, required this.control});
@@ -52,7 +53,12 @@ class _PluginTextFieldControlState extends State<PluginTextFieldControl> {
   }
 
   void _onFocus() {
-    if (!_focus.hasFocus) _commit(_controller.text);
+    if (_focus.hasFocus) return;
+    // The window went to the background: Flutter parks focus and gives it
+    // back on return, so that is not the user leaving the field.
+    final lifecycle = WidgetsBinding.instance.lifecycleState;
+    if (lifecycle != null && lifecycle != AppLifecycleState.resumed) return;
+    _commit(_controller.text);
   }
 
   void _commit(String text) {

@@ -209,6 +209,33 @@ void main() {
     expect(tester.widget<EditableText>(name).controller.text, 'Sand');
   });
 
+  testWidgets('the window going to the background does not send a half-typed field', (tester) async {
+    // Desktop: focus is parked while the window is in the background.
+    tester.binding.focusManager.listenToApplicationLifecycleChangesIfSupported();
+    final h = PluginViewHarness(_panel());
+    await h.pump(tester);
+    addTearDown(() => tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed));
+
+    final name = find.descendant(of: byControl(_view, 'name'), matching: find.byType(EditableText));
+    await tester.tap(name);
+    await tester.pump();
+    await tester.enterText(name, 'Gr');
+    await tester.pump();
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    await tester.pump();
+    expect(tester.widget<EditableText>(name).focusNode.hasFocus, isFalse);
+    expect(h.sent, isEmpty);
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump();
+    expect(tester.widget<EditableText>(name).focusNode.hasFocus, isTrue);
+    await tester.enterText(name, 'Granite');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pump();
+    expect(h.sent, [('name', 'changed', 'Granite')]);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.windows));
+
   testWidgets('sections collapse locally and the indeterminate bar has no percentage', (tester) async {
     final h = PluginViewHarness(PluginViewSpec(id: _view, children: [
       PluginControl.section('advanced', 'Advanced', [PluginControl.text('hint', 'Seed and spacing')], collapsed: true),
