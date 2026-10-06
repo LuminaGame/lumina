@@ -196,6 +196,11 @@ void main() {
       final replaced = patched.apply(PluginViewPatch([PluginViewPatchOp.replace('go', PluginControl.text('go', 'Done'))]));
       expect(replaced.find('go')!.kind, PluginControlKind.text);
       expect(PluginViewSpec.fromJson(replaced.toJson()).toJson(), replaced.toJson());
+      expect(spec.duplicateControlIds(), isEmpty);
+      final clash = PluginViewSpec(id: 'v', children: [
+        PluginControl.section('device', 'Device', [PluginControl.enumField('device', value: 'q', options: const [('q', 'Quest')])]),
+      ]);
+      expect(clash.duplicateControlIds(), ['device']);
       const event = PluginViewEvent(viewId: 'gen', controlId: 'go', kind: 'pressed');
       expect(PluginViewEvent.fromJson(event.toJson()).toJson(), event.toJson());
     });

@@ -125,6 +125,8 @@ class PluginHostPatcherService {
     sb.writeln();
     sb.writeln('final List<LuminaEditorPlugin> kEnabledPlugins = [');
     for (final module in modules) {
+      // An isolated plugin without a UI shell registers nothing here.
+      if (module.registrationClass == null) continue;
       // Find the plugin for this module to get the prefix
       final plugin = enabledCodePlugins.firstWhere((p) => p.modules.contains(module));
       sb.writeln('  ${plugin.name}_plugin.${module.registrationClass}(),');

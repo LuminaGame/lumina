@@ -22,7 +22,7 @@
 |---|---|
 | [Uygulama kabuğu ve ortak UI](core.md) | Uygulama girişi, yerleşik eklenti, eklenti uzantı registry'si, tema, property editor'leri, sahne servisleri. |
 | [Uygulama kabuğu ve ortak UI (devamı, bölüm 1)](core-continued.md) | `lib/`, `lib/testing/`, `lib/ui/core/`, `lib/ui/core/host/`, `lib/ui/core/property_editors/`, `lib/ui/core/services/`, `lib/ui/core/theme/`, `lib/ui/core/widgets/` altındaki diğer dosyalar. |
-| [Uygulama kabuğu ve ortak UI (devamı, bölüm 2)](core-continued-2.md) | `lib/ui/core/window/` altındaki diğer dosyalar. |
+| [Uygulama kabuğu ve ortak UI (devamı, bölüm 2)](core-continued-2.md) | `lib/ui/core/window/` altındaki diğer dosyalar, medya oynatıcıları ve bildirimsel eklenti panelleri (`PluginViewRenderer`). |
 | [Ana editör: view'ler](main-editor-views.md) | Viewport, outliner, details, content browser, toolbar, menü çubuğu, output log, diyaloglar. |
 | [Ana editör: view'ler (devamı)](main-editor-views-continued.md) | `lib/ui/features/main_editor/views/` altındaki diğer dosyalar. |
 | [Ana editör: view model ve servisler](main-editor-state.md) | `EditorViewModel`, kalite ayarları, gizmo'lar, Play-In-Editor, snapping, picking, kısayollar, komutlar, transaction'lar. |

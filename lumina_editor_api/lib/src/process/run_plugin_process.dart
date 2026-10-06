@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:lumina_plugin_protocol/lumina_plugin_protocol.dart';
 
 import '../plugin_storage.dart';
+import '../plugin_crash_reporter.dart';
 import 'plugin_process.dart';
 import 'process_context.dart';
 import 'process_dispatch.dart';
@@ -73,6 +74,8 @@ Future<int> servePluginProcess({
   late final PluginConnection connection;
   final exit = Completer<int>();
   ConnectedPluginProcessContext? context;
+  PluginCrashReportHandler? installedCrashHandler;
+  var shuttingDown = false;
 
   void finish(int code) {
     if (!exit.isCompleted) exit.complete(code);
@@ -91,7 +94,6 @@ Future<int> servePluginProcess({
       output: output,
       onProtocolError: (e, s) => stderr.writeln('$pluginName: protocol error: $e'),
     );
-    var shuttingDown = false;
     connection.done.then((_) => finish(shuttingDown ? PluginProcessExitCodes.ok : PluginProcessExitCodes.connectionLost));
 
     final Map<String, Object?> hello;
@@ -131,6 +133,20 @@ Future<int> servePluginProcess({
       userDir: Directory(userDir ?? '${Directory.systemTemp.path}/lumina_plugin_$pluginName'),
       projectStoreDir: projectDir == null ? null : Directory(projectDir),
     );
+    // In a plugin process nothing else listens: the plugin's own crash
+    // reports (LuminaPluginCrashReporter.reportCrash) go to the editor log.
+    // Under the in-process override the editor's handler stays in charge.
+    if (!LuminaPluginCrashReporter.hasHandler) {
+      installedCrashHandler = (error, stack, {required plugin, context}) {
+        if (connection.isClosed) return;
+        connection.notify(PluginMethods.log, {
+          'level': 'error',
+          'source': plugin,
+          'message': 'crash report${context == null ? '' : ' (while $context)'}: $error${stack == null ? '' : '\n$stack'}',
+        });
+      };
+      LuminaPluginCrashReporter.setHandler(installedCrashHandler);
+    }
     installPluginProcessHandlers(ctx, process, onShutdown: () {
       shuttingDown = true;
       connection.close();
@@ -144,6 +160,12 @@ Future<int> servePluginProcess({
       ctx.watchLiveState();
       await registered;
     } catch (e, st) {
+      // A shutdown answered before the register reply arrived closed the
+      // link on purpose: that is a clean exit, not a failed registration.
+      if (shuttingDown) {
+        finish(PluginProcessExitCodes.ok);
+        return;
+      }
       final message = e is PluginRemoteError ? e.message : '$e';
       stderr.writeln('$pluginName: registration failed: $message');
       if (!connection.isClosed) {
@@ -165,6 +187,7 @@ Future<int> servePluginProcess({
   }, report);
 
   return exit.future.whenComplete(() async {
+    if (installedCrashHandler != null) LuminaPluginCrashReporter.setHandler(null);
     context?.dispose();
     await connection.close();
   });

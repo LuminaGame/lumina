@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart';
 
-import 'support/loopback_host.dart';
+import 'package:lumina_editor_api/testing.dart';
 import 'support/sample_process.dart';
 
 void main() {
@@ -93,6 +93,31 @@ void main() {
     expect(process.lifecycle, ['register']);
     await host.call(PluginMethods.shutdown);
     expect(await exit, 0);
+  });
+
+  test('a shutdown answered before the register reply is a clean exit', () async {
+    host = await LoopbackHost.start();
+    host.beforeRegisterReply = () async {
+      await host.call(PluginMethods.shutdown);
+    };
+    final code = await runPluginProcessMain(host.launch('sample'), SampleProcess());
+    expect(code, PluginProcessExitCodes.ok);
+  });
+
+  test("the plugin's own crash reports reach the editor log while the process runs, and the handler goes with it", () async {
+    host = await LoopbackHost.start();
+    expect(LuminaPluginCrashReporter.hasHandler, isFalse);
+    final exit = runPluginProcessMain(host.launch('sample'), SampleProcess());
+    await host.contributions;
+    expect(LuminaPluginCrashReporter.hasHandler, isTrue);
+    await host.call(PluginMethods.call, {'method': 'reportCrash'});
+    final log = await host.next(PluginMethods.log, where: (a) => '${a['message']}'.contains('native call failed'));
+    expect(log['level'], 'error');
+    expect(log['source'], 'sample');
+    expect(log['message'], contains('while loading the model'));
+    await host.call(PluginMethods.shutdown);
+    expect(await exit, PluginProcessExitCodes.ok);
+    expect(LuminaPluginCrashReporter.hasHandler, isFalse);
   });
 
   test('a register() that throws is logged and exits with registerFailed', () async {

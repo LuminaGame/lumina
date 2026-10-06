@@ -15,6 +15,23 @@ class PluginViewSpec {
         children: [for (final c in (json['children'] as List?) ?? const []) PluginControl.fromJson((c as Map).cast())],
       );
 
+  /// Control ids used more than once in the tree (sections and rows
+  /// included). Ids must be unique per view: events, patches and [find]
+  /// address a control by id alone.
+  List<String> duplicateControlIds() {
+    final seen = <String>{};
+    final dup = <String>{};
+    void walk(List<PluginControl> list) {
+      for (final c in list) {
+        if (!seen.add(c.id)) dup.add(c.id);
+        walk(c.children);
+      }
+    }
+
+    walk(children);
+    return dup.toList();
+  }
+
   /// The control with [controlId] anywhere in the tree, or null.
   PluginControl? find(String controlId) {
     PluginControl? walk(List<PluginControl> list) {
@@ -93,7 +110,9 @@ class PluginControl {
 
   final String kind;
 
-  /// Unique within its view; the host keys widgets as `<viewId>/<id>`.
+  /// Unique within its whole view, sections and rows included
+  /// ([PluginViewSpec.duplicateControlIds]); the host keys widgets as
+  /// `<viewId>/<id>`.
   final String id;
   final Map<String, Object?> props;
   final List<PluginControl> children;

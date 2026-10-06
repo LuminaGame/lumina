@@ -90,7 +90,8 @@ dependencies:
       // Analyze test is skipped because setting up a real dart package in a temp dir requires a pubspec.
     });
 
-    LuminaPluginDescriptor editorPlugin(String name, {PluginIsolation isolation = PluginIsolation.inProcess, String? processClass}) =>
+    LuminaPluginDescriptor editorPlugin(String name,
+            {PluginIsolation isolation = PluginIsolation.inProcess, String? processClass, String? shell = 'ShellPlugin'}) =>
         LuminaPluginDescriptor(
           name: name,
           version: Version.parse('1.0.0'),
@@ -102,7 +103,7 @@ dependencies:
               name: name,
               type: PluginModuleType.editor,
               entryLibrary: 'lib/$name.dart',
-              registrationClass: 'ShellPlugin',
+              registrationClass: shell,
               processClass: processClass,
             ),
           ],
@@ -140,6 +141,17 @@ final Map<String, LuminaPluginProcess Function()> kPluginProcesses = {
           else if (d is FunctionDeclaration) d.name.lexeme,
       ];
       expect(declared, ['kEnabledPlugins', 'kPluginProcesses', 'registerAllPlugins']);
+    });
+
+    test('an isolated plugin without a UI shell registers only its process part', () {
+      final source = service.registrarSource([
+        editorPlugin('e_plugin', isolation: PluginIsolation.process, processClass: 'EProcess', shell: null),
+      ]);
+      expect(source, contains("  'e_plugin': () => e_plugin_plugin.EProcess(),"));
+      expect(source, isNot(contains('e_plugin_plugin.null')));
+      expect(source, contains('final List<LuminaEditorPlugin> kEnabledPlugins = [\n];'));
+      final parsed = parseString(content: source, throwIfDiagnostics: false);
+      expect(parsed.errors, isEmpty, reason: parsed.errors.join('\n'));
     });
 
     test('without isolated plugins kPluginProcesses is an empty map (still declared, the main passes it)', () {
