@@ -468,6 +468,8 @@ Viewport'un DLSS, FSR3 ve RTX HUD düğmelerinin (kamera hızının yanında) ar
 
 - **`void registerAllPlugins(LuminaEditorContext registry)`**: `registerAllPlugins` işlemini gerçekleştirir.
 
+**Üst düzey değişkenler:** `kEnabledPlugins` (`List<LuminaEditorPlugin>`, etkin editor modülü başına bir tane, yalıtılmış eklentilerin UI kabukları dahil) ve `kPluginProcesses` (`Map<String, LuminaPluginProcess Function()>`, manifest'i `"isolation": "process"` diyen her etkin eklentinin process kısmı, eklenti adına göre; host `main`'i onu `runLuminaEditor`'a `processes` olarak verir).
+
 ---
 
 [Önceki: lumina_ui (Lumina Studio)](index.md) | [Üst: lumina_ui (Lumina Studio)](index.md) | [Sonraki: Uygulama kabuğu ve ortak UI (devamı, bölüm 1)](core-continued.md)

@@ -192,6 +192,7 @@ A square heightmap terrain plus its foliage layers — the single source of trut
 | `type` | `PluginModuleType type` | `type` alanını (field/property) ve ilişkili veriyi saklar. |
 | `entryLibrary` | `String entryLibrary` | `entryLibrary` alanını (field/property) ve ilişkili veriyi saklar. |
 | `registrationClass` | `String registrationClass` | `registrationClass` alanını (field/property) ve ilişkili veriyi saklar. |
+| `processClass` | `final String? processClass` | `entryLibrary` içinde, eklentinin kendi sürecinde çalışan `LuminaPluginProcess` alt sınıfı (`.lmplugin` `"process_class"`). `"isolation": "process"` diyen bir eklentinin editor modülünde zorunludur. |
 | `toJson` | `Map<String, dynamic> toJson()` | Nesneyi JSON haritasına serileştirir. |
 
 ### `class PluginDependencyRef`
@@ -228,6 +229,10 @@ A square heightmap terrain plus its foliage layers — the single source of trut
 | `modules` | `List<PluginModuleDescriptor> modules` | `modules` alanını (field/property) ve ilişkili veriyi saklar. |
 | `enabledByDefault` | `bool enabledByDefault` | `enabledByDefault` alanını (field/property) ve ilişkili veriyi saklar. |
 | `canContainContent` | `bool canContainContent` | `canContainContent` alanını (field/property) ve ilişkili veriyi saklar. |
+| `isolation` | `final PluginIsolation isolation` | Editor modülünün nerede çalıştığı (`.lmplugin` `"isolation"`, varsayılan `in_process`); `toJson` onu yalnızca `process` iken yazar. |
+| `processModule` | `PluginModuleDescriptor? get processModule` | Bir `process_class` adı veren editor modülü ya da null. |
+| `processClass` | `String? get processClass` | `processModule`'ün `process_class`'ı. |
+| `effectiveIsolation` | `PluginIsolation effectiveIsolation([LuminaProject? project])` | Eklentinin `project` içinde nerede çalıştığı: yalıtılmış bir eklenti (`process_class` ile `process`) projenin `plugin_isolation`'ı onu `in_process`'e zorlamadıkça kendi sürecinde çalışır; diğer her eklenti süreç içinde çalışır. |
 | `extras` | `Map<String, dynamic> extras` | `extras` alanını (field/property) ve ilişkili veriyi saklar. |
 | `pluginDir` | `Directory pluginDir` | `pluginDir` alanını (field/property) ve ilişkili veriyi saklar. |
 | `origin` | `PluginOrigin origin` | `origin` alanını (field/property) ve ilişkili veriyi saklar. |
@@ -236,7 +241,15 @@ A square heightmap terrain plus its foliage layers — the single source of trut
 | `toJson` | `Map<String, dynamic> toJson()` | Nesneyi JSON haritasına serileştirir. |
 | `hashCode` | `int get hashCode` | Mevcut durumun veya yeteneğin doğruluğunu kontrol eder (`bool` döndürür). |
 
+## `lib/data/models/plugin_isolation.dart`
+
+### `enum PluginIsolation`
+
+Bir code plugin'in editor modülünün nerede çalıştığı: `inProcess` (`in_process`, editörün içinde) ya da `process` (process kısmı kendi denetlenen sürecinde). `manifestValue`, `.lmplugin` / `.lmproject` dosyalarına yazılan dizgidir; `static PluginIsolation? tryParse(Object? value)` birini okur (başka her şey için null). `lumina_plugin_descriptor.dart` ve `lumina_project.dart` tarafından dışa aktarılır.
+
 ## `lib/data/models/lumina_project.dart`
+
+Girdi ayarları ile haritalar ve modlar (`ProjectInputValueType`, `ProjectInputAction`, `ProjectInputMapping`, `ProjectMappingContext`, `ProjectInputSettings`, `ProjectMapsAndModes`) `project_input_settings.dart` içinde, paketleme ayarları (`kPackagingPlatforms`, `packagingPlatformLabel`, `ProjectPackagingSettings`, …) `project_packaging_settings.dart` içinde durur; `lumina_project.dart` ikisini de dışa aktarır, import edenler bir değişiklik görmez.
 
 ### `class ScalabilityCategory`
 
@@ -465,6 +478,7 @@ One key binding inside a mapping context. [keyId] is the stable `LogicalKeyboard
 | `editorSnap` | `EditorSnapSettings editorSnap` | `editorSnap` alanını (field/property) ve ilişkili veriyi saklar. |
 | `editorViewport` | `EditorViewportSettings editorViewport` | `editorViewport` alanını (field/property) ve ilişkili veriyi saklar. |
 | `enabledPlugins` | `List<String>? enabledPlugins` | `enabledPlugins` alanını (field/property) ve ilişkili veriyi saklar. |
+| `pluginIsolation` | `final Map<String, PluginIsolation> pluginIsolation` | Eklenti başına yalıtım geçersiz kılmaları, `.lmproject` `plugin_isolation: {"<plugin>": "in_process" \| "process"}` (ada göre sıralı, yalnızca boş değilken yazılır; okurken bilinmeyen bir değer atılır). Hata ayıklamak için yalıtılmış bir eklentiyi süreç içine zorlar; bkz. `LuminaPluginDescriptor.effectiveIsolation`. |
 | `description` | `String description` | `description` alanını (field/property) ve ilişkili veriyi saklar. |
 | `template` | `String template` | Id of the game template the project was scaffolded from (`blank_3d` | `first_person` | `third_person`, see `data/services/game_template_service.dart`). Manifests written before templates existed default to `blank_3d`. |
 | `input` | `ProjectInputSettings input` | `input` alanını (field/property) ve ilişkili veriyi saklar. |
@@ -758,7 +772,7 @@ Represents a tracked project entry in the launcher's recent projects list.
 | `roots` | `List<PluginScanRoot> roots` | `roots` alanını (field/property) ve ilişkili veriyi saklar. |
 | `scanAll` | `Future<PluginScanResult> scanAll()` | `scanAll` işlemini gerçekleştirir. |
 | `load` | `Future<LuminaPluginDescriptor> load(File manifest)` | Veriyi diskten veya bellekten okuyarak motora yükler ve kullanılabilir hale getirir. |
-| `loadInternal` | `Future<LuminaPluginDescriptor> loadInternal(File manifest, PluginOrigin ...` | Veriyi diskten veya bellekten okuyarak motora yükler ve kullanılabilir hale getirir. |
+| `loadInternal` | `Future<LuminaPluginDescriptor> loadInternal(File manifest, PluginOrigin ...` | Veriyi diskten veya bellekten okuyarak motora yükler ve kullanılabilir hale getirir. `in_process` / `process` dışındaki bir `isolation`'ı, Dart sınıf adı olmayan bir `process_class`'ı ve `process_class` adı veren bir editor modülü olmadan `"isolation": "process"`'i (`schemaViolation` tarama hatası olarak) reddeder. |
 
 ## `lib/data/repositories/project_repository.dart`
 

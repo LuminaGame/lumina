@@ -468,6 +468,8 @@ Generated, not checked in: `PluginHostPatcherService.generateRegistrar` (lumina 
 
 - **`void registerAllPlugins(LuminaEditorContext registry)`**: Executes `registerAllPlugins` operation.
 
+**Top-level variables:** `kEnabledPlugins` (`List<LuminaEditorPlugin>`, one per enabled editor module, UI shells of isolated plugins included) and `kPluginProcesses` (`Map<String, LuminaPluginProcess Function()>`, the process part of every enabled plugin whose manifest says `"isolation": "process"`, by plugin name; the host main passes it to `runLuminaEditor` as `processes`).
+
 ---
 
 [Previous: lumina_ui (Lumina Studio)](index.md) | [Up: lumina_ui (Lumina Studio)](index.md) | [Next: App shell and shared UI (continued, part 1)](core-continued.md)

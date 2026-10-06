@@ -778,7 +778,7 @@ Everything a project editor build depends on.
 | Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `kEditorEngineRepos` | `const List<String> kEditorEngineRepos` | The engine packages a project editor is compiled from (the ones of other repos are found through the workspace's package config). |
-| `fingerprintComponents` | `Future<Map<String, String>> fingerprintComponents(EditorHostInputs inputs) async` | Per-input hashes: `host.pubspec`, `host.lock`, `engine:<repo>`, `plugin:<name>`, and the plain values `flutter`, `platform`, `mode` (kept readable, so a reason can say "Flutter 3.41 → 3.44"). |
+| `fingerprintComponents` | `Future<Map<String, String>> fingerprintComponents(EditorHostInputs inputs) async` | Per-input hashes: `host.pubspec`, `host.lock`, `engine:<repo>`, `plugin:<name>`, and the plain values `flutter`, `platform`, `mode` (kept readable, so a reason can say "Flutter 3.41 → 3.44"). `plugin:<name>`, eklentinin `lib/`, `hook/`, `pubspec.yaml` ve `.lmplugin` dosyalarını özetler (registrar'a neyin derleneceğine manifest karar verir: `registration_class`, `isolation`, `process_class`). |
 | `fingerprint` | `Future<String> fingerprint(EditorHostInputs inputs) async` | SHA-256 (hex) over [components] (or over [fingerprintComponents] of [inputs]). |
 | `fingerprintOf` | `String fingerprintOf(Map<String, String> components)` |  |
 | `diffInputs` | `List<String> diffInputs(Map<String, String> older, Map<String, String> newer)` | Human-readable reasons [newer] differs from [older], one per change: "plugin a_plugin changed", "editor source changed (lumina_ui)", "Flutter 3.41.0 → 3.44.0", "build mode release → debug". |
