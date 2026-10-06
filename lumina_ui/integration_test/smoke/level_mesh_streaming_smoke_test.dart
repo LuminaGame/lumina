@@ -105,8 +105,15 @@ void main() {
         if (!vm.meshesLoading && b >= actorCount) break;
       }
       await tester.runAsync(() => loading);
-      await settle(60);
-      await rec.hold(const Duration(seconds: 4));
+      await settle(30);
+      // Orbit the loaded level: the camera moves while every barrel is in.
+      for (var i = 0; i < 120; i++) {
+        vm.orbitCamera(3, i < 60 ? 0.5 : -0.5);
+        await tester.pump(const Duration(milliseconds: 16));
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 16)));
+        await rec.captureIfChanged();
+      }
+      await rec.hold(const Duration(seconds: 2));
       await shot('loaded');
       rec.save(name, usedAssets: usedAssets);
 
