@@ -258,8 +258,6 @@ export 'src/audio/audio_backend.dart';
 export 'src/audio/audio_subsystem.dart';
 export 'src/components/audio/audio_component.dart';
 
-// Media
-export 'src/media/media.dart';
 
 export 'data/services/thumbnail_service.dart';
 export 'data/services/filament_thumbnail_renderer.dart';
