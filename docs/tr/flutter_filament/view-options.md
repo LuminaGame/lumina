@@ -523,7 +523,7 @@ Fluent builder for creating a [ColorGrading] object.
 | `varianceGamma` | `double varianceGamma` | `varianceGamma` alanını (field/property) ve ilişkili veriyi saklar. |
 | `preventFlickering` | `bool preventFlickering` | `preventFlickering` alanını (field/property) ve ilişkili veriyi saklar. |
 | `historyReprojection` | `bool historyReprojection` | `historyReprojection` alanını (field/property) ve ilişkili veriyi saklar. |
-| `motionVectors` | `bool motionVectors` | Structure pass'te piksel başına hareket vektörü üretir (pass bu durumda tam çözünürlükte çalışır) ve TAA geçmişini yalnızca kamera matrisleri yerine bu vektörlerle yeniden projekte eder; hareket eden ve transform ile canlandırılan nesnelerdeki gölgelenme (ghosting) biter. Skinning ve morphing güncel pozu kullanır. Tamponu `FilamentView.motionVectorTexture` / `MotionVectorBuffer` ile dışa aktarın; `FilamentView.motionVectorsSupported` gerekir. Varsayılan `false`. |
+| `motionVectors` | `bool motionVectors` | Structure pass'te piksel başına hareket vektörü üretir (pass bu durumda tam çözünürlükte çalışır) ve TAA geçmişini yalnızca kamera matrisleri yerine bu vektörlerle yeniden projekte eder; hareket eden, transform ile canlandırılan, skinned ve morph'lu nesnelerdeki gölgelenme (ghosting) biter (paylaşılan bir `SkinningBuffer` önceki paleti tutmaz). Tamponu `FilamentView.motionVectorTexture` / `MotionVectorBuffer` ile dışa aktarın; `FilamentView.motionVectorsSupported` gerekir. Varsayılan `false`. |
 | `hashCode` | `int get hashCode` | Mevcut durumun veya yeteneğin doğruluğunu kontrol eder (`bool` döndürür). |
 | `copyToNative` | `void copyToNative(ffi_gen.filament_temporal_anti_aliasing_options out)` | `copyToNative` işlemini gerçekleştirir. |
 

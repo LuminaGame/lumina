@@ -365,7 +365,7 @@ An offscreen render target (Frame Buffer Object / FBO) that can be associated wi
 
 #### `class MotionVectorBuffer`
 
-`MotionVectorBuffer`: bir `FilamentView`'ın hareket vektörleri okunabilir bir tampon olarak: `TemporalAntiAliasingOptions.motionVectors` açıkken view'ın içine dışa aktardığı RGBA16F doku, onu geri okuyan render hedefi ve geri okumanın kendisi. Filament'in structure pass'i (Lumina yaması `0004`) vektörleri her renderable'ın önceki dünya dönüşümünden ve önceki karenin kamerasından üretir; skinning ve morphing güncel pozu kullanır.
+`MotionVectorBuffer`: bir `FilamentView`'ın hareket vektörleri okunabilir bir tampon olarak: `TemporalAntiAliasingOptions.motionVectors` açıkken view'ın içine dışa aktardığı RGBA16F doku, onu geri okuyan render hedefi ve geri okumanın kendisi. Filament'in structure pass'i (Lumina yaması `0004`) vektörleri her renderable'ın önceki dünya dönüşümünden, önceki kemik paleti ve morph ağırlıklarından ve önceki karenin kamerasından üretir.
 
 **Kurucular:**
 - `MotionVectorBuffer.attach({required FilamentEngine engine, required FilamentView view, required int width, required int height})`: dokuyu ve render hedefini (view'ın render hedefiyle tam aynı boyutta) oluşturur ve `view`'ın onlara dışa aktarmasını sağlar; `view.motionVectorsSupported` false ise `StateError` fırlatır.

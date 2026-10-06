@@ -523,7 +523,7 @@ Fluent builder for creating a [ColorGrading] object.
 | `varianceGamma` | `double varianceGamma` | Holds the `varianceGamma` property or configuration state. |
 | `preventFlickering` | `bool preventFlickering` | Holds the `preventFlickering` property or configuration state. |
 | `historyReprojection` | `bool historyReprojection` | Holds the `historyReprojection` property or configuration state. |
-| `motionVectors` | `bool motionVectors` | Renders per-pixel motion vectors in the structure pass (which then runs at full resolution) and reprojects the TAA history with them instead of the camera matrices alone, so moving and transform-animated objects stop ghosting. Skinning and morphing use the current pose. Export the buffer with `FilamentView.motionVectorTexture` / `MotionVectorBuffer`; needs `FilamentView.motionVectorsSupported`. Default `false`. |
+| `motionVectors` | `bool motionVectors` | Renders per-pixel motion vectors in the structure pass (which then runs at full resolution) and reprojects the TAA history with them instead of the camera matrices alone, so moving, transform-animated, skinned and morphed objects stop ghosting (a shared `SkinningBuffer` keeps no previous palette). Export the buffer with `FilamentView.motionVectorTexture` / `MotionVectorBuffer`; needs `FilamentView.motionVectorsSupported`. Default `false`. |
 | `hashCode` | `int get hashCode` | Checks current state or capability and returns a boolean value. |
 | `copyToNative` | `void copyToNative(ffi_gen.filament_temporal_anti_aliasing_options out)` | Executes `copyToNative` operation. |
 

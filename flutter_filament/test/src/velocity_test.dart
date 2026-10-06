@@ -212,10 +212,6 @@ void main() {
       final reference = run(taa: false, motionVectors: false);
       final withVelocity = run(taa: true, motionVectors: true);
       final withMatrix = run(taa: true, motionVectors: false);
-      // Disposing an engine right after TAA frames crashes (a Filament issue
-      // independent of motion vectors); a plain frame first avoids it.
-      r.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions();
-      r.renderFrame(warmup: 1);
 
       // Mean absolute difference to the un-antialiased reference over the
       // centre region the prop sweeps through.
@@ -267,10 +263,7 @@ void main() {
         if (velocity[i].abs() + velocity[i + 1].abs() > 1.0) moving++;
       }
       expect(moving, greaterThan(size * size ~/ 400), reason: 'limbs moving by over a texel must show up');
-    },
-        timeout: const Timeout(Duration(minutes: 3)),
-        skip: 'skinning and morphing use the current pose: bone motion is not captured yet '
-            '(the previous bone palette needs a second per-renderable binding)');
+    }, timeout: const Timeout(Duration(minutes: 3)));
   });
 }
 

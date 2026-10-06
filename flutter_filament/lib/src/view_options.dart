@@ -1091,9 +1091,10 @@ class TemporalAntiAliasingOptions {
 
   /// Renders per-pixel motion vectors in the structure pass (which then runs
   /// at full resolution) and reprojects the TAA history with them instead of
-  /// with the camera matrices alone, so transform-animated and moving objects
-  /// stop ghosting. Skinning and morphing use the current pose. The buffer can
-  /// be exported with [FilamentView.motionVectorTexture]; needs
+  /// with the camera matrices alone, so moving, transform-animated, skinned
+  /// and morphed objects stop ghosting (a shared skinning buffer keeps no
+  /// previous palette). The buffer can be exported with
+  /// [FilamentView.motionVectorTexture]; needs
   /// [FilamentView.motionVectorsSupported].
   final bool motionVectors;
 

@@ -1,8 +1,8 @@
 diff --git a/filament/include/filament/Options.h b/filament/include/filament/Options.h
-index 6f836c8f..89551ea3 100644
+index 6f836c8f..b2b8281f 100644
 --- a/filament/include/filament/Options.h
 +++ b/filament/include/filament/Options.h
-@@ -630,6 +630,15 @@ struct TemporalAntiAliasingOptions {
+@@ -630,6 +630,17 @@ struct TemporalAntiAliasingOptions {
      bool preventFlickering = false;
      /** whether to apply history reprojection (debug option) */
      bool historyReprojection = true;
@@ -10,9 +10,11 @@ index 6f836c8f..89551ea3 100644
 +     * Renders per-pixel motion vectors (the screen-space offset of every surface point since
 +     * the previous frame, in texels of the render resolution, as RG16F) during the structure
 +     * pass, and reprojects the TAA history with them instead of with the camera matrices alone.
-+     * Rigid, camera and transform-animated motion is captured per renderable; skinning and
-+     * morphing use the current pose. The structure pass then runs at full resolution. The
-+     * velocity buffer can be exported through View::setMotionVectorTexture().
++     * Rigid, camera and transform-animated motion is captured per renderable, as is skinning
++     * and morphing through RenderableManager::setBones / setMorphWeights (a shared
++     * SkinningBuffer keeps no previous palette; custom vertex displacement is not captured).
++     * The structure pass then runs at full resolution. The velocity buffer can be exported
++     * through View::setMotionVectorTexture().
 +     */
 +    bool motionVectors = false;
  };
@@ -71,10 +73,25 @@ index c47b4e34..749b6e56 100644
  
  /*
 diff --git a/filament/src/PostProcessManager.cpp b/filament/src/PostProcessManager.cpp
-index b654755d..1259eda0 100644
+index b654755d..0aa7fb55 100644
 --- a/filament/src/PostProcessManager.cpp
 +++ b/filament/src/PostProcessManager.cpp
-@@ -564,6 +564,7 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
+@@ -346,6 +346,14 @@ void PostProcessManager::init() noexcept {
+             +PerRenderableBindingPoints::MORPHING_UNIFORMS, engine.getDummyUniformBuffer(), 0,
+             sizeof(PerRenderableMorphingUib));
+ 
++    driver.updateDescriptorSetBuffer(mDummyPerRenderableDsh,
++            +PerRenderableBindingPoints::PREV_BONES_UNIFORMS, engine.getDummyUniformBuffer(), 0,
++            sizeof(PerRenderableBoneUib));
++
++    driver.updateDescriptorSetBuffer(mDummyPerRenderableDsh,
++            +PerRenderableBindingPoints::PREV_MORPHING_UNIFORMS, engine.getDummyUniformBuffer(), 0,
++            sizeof(PerRenderableMorphingUib));
++
+     driver.updateDescriptorSetTexture(mDummyPerRenderableDsh,
+             +PerRenderableBindingPoints::MORPH_TARGET_POSITIONS,
+             engine.getDummyMorphTargetBuffer()->getPositionsHandle(), {});
+@@ -564,6 +572,7 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
      struct StructurePassData {
          FrameGraphId<FrameGraphTexture> depth;
          FrameGraphId<FrameGraphTexture> picking;
@@ -82,7 +99,7 @@ index b654755d..1259eda0 100644
      };
  
      // sanitize a bit the user provided scaling factor
-@@ -574,6 +575,26 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
+@@ -574,6 +583,26 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
      const size_t levelCount = std::min(8, FTexture::maxLevelCount(width, height) - 5);
      assert_invariant(levelCount >= 1);
  
@@ -109,7 +126,7 @@ index b654755d..1259eda0 100644
      // generate depth pass at the requested resolution
      auto const& structurePass = fg.addPass<StructurePassData>("Structure Pass",
              [&](FrameGraph::Builder& builder, auto& data) {
-@@ -586,7 +607,9 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
+@@ -586,7 +615,9 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
                  data.depth = builder.write(data.depth,
                          FrameGraphTexture::Usage::DEPTH_ATTACHMENT);
  
@@ -120,7 +137,7 @@ index b654755d..1259eda0 100644
                      // FIXME: the DescriptorSetLayout must specify SAMPLER_FLOAT
                      data.picking = builder.createTexture("Picking Buffer", {
                              .width = width, .height = height,
-@@ -596,15 +619,30 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
+@@ -596,15 +627,30 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
                              FrameGraphTexture::Usage::COLOR_ATTACHMENT);
                  }
  
@@ -154,7 +171,7 @@ index b654755d..1259eda0 100644
  
                  // bind the per-view descriptorSet that is used for the structure pass
                  getStructureDescriptorSet().bind(driver);
-@@ -625,6 +663,22 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
+@@ -625,6 +671,22 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
  
      auto const depth = structurePass->depth;
  
@@ -177,7 +194,7 @@ index b654755d..1259eda0 100644
      /*
       * create depth mipmap chain
      */
-@@ -677,7 +731,8 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
+@@ -677,7 +739,8 @@ PostProcessManager::StructurePassOutput PostProcessManager::structure(FrameGraph
                  unbindAllDescriptorSets(driver);
              });
  
@@ -187,7 +204,7 @@ index b654755d..1259eda0 100644
  }
  
  FrameGraphId<FrameGraphTexture> PostProcessManager::transparentPicking(FrameGraph& fg,
-@@ -687,6 +742,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::transparentPicking(FrameGrap
+@@ -687,6 +750,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::transparentPicking(FrameGrap
              struct PickingRenderPassData {
                  FrameGraphId<FrameGraphTexture> depth;
                  FrameGraphId<FrameGraphTexture> picking;
@@ -195,7 +212,7 @@ index b654755d..1259eda0 100644
              };
              auto const& pickingRenderPass = fg.addPass<PickingRenderPassData>("Picking Render Pass",
                  [&](FrameGraph::Builder& builder, auto& data) {
-@@ -710,9 +766,20 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::transparentPicking(FrameGrap
+@@ -710,9 +774,20 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::transparentPicking(FrameGrap
                      data.picking = builder.write(data.picking,
                          FrameGraphTexture::Usage::COLOR_ATTACHMENT);
  
@@ -218,7 +235,7 @@ index b654755d..1259eda0 100644
                          });
                  },
                  [=, this, passBuilder = passBuilder](FrameGraphResources const& resources,
-@@ -2965,6 +3032,7 @@ void PostProcessManager::configureTemporalAntiAliasingMaterial(backend::DriverAp
+@@ -2965,6 +3040,7 @@ void PostProcessManager::configureTemporalAntiAliasingMaterial(backend::DriverAp
      FMaterial* const ma = getPostProcessMaterial("taa").getMaterial(mEngine);
      ma->getPrograms().setConstants({
          { "upscaling", taaOptions.upscaling > 1.0f },
@@ -226,7 +243,7 @@ index b654755d..1259eda0 100644
          { "historyReprojection", taaOptions.historyReprojection },
          { "filterHistory", taaOptions.filterHistory },
          { "filterInput", taaOptions.filterInput },
-@@ -3025,6 +3093,7 @@ FMaterialInstance* PostProcessManager::configureColorGradingMaterial(backend::Dr
+@@ -3025,6 +3101,7 @@ FMaterialInstance* PostProcessManager::configureColorGradingMaterial(backend::Dr
  FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
          FrameGraphId<FrameGraphTexture> input,
          FrameGraphId<FrameGraphTexture> const depth,
@@ -234,7 +251,7 @@ index b654755d..1259eda0 100644
          filament::Viewport const& xvp,
          filament::Viewport const& vp,
          FrameHistory& frameHistory,
-@@ -3046,9 +3115,13 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
+@@ -3046,9 +3123,13 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
      mat4 const& historyProjection = previous.color.handle ?
              previous.projection : current.projection;
  
@@ -248,7 +265,7 @@ index b654755d..1259eda0 100644
          FrameGraphId<FrameGraphTexture> history;
          FrameGraphId<FrameGraphTexture> output;
          FrameGraphId<FrameGraphTexture> tonemappedOutput;
-@@ -3062,6 +3135,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
+@@ -3062,6 +3143,9 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                  }
                  data.color = builder.sample(input);
                  data.depth = builder.sample(depth);
@@ -258,7 +275,7 @@ index b654755d..1259eda0 100644
                  data.history = builder.sample(colorHistory);
                  data.output = builder.createTexture("TAA output", desc);
                  data.output = builder.write(data.output);
-@@ -3109,6 +3185,11 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
+@@ -3109,6 +3193,11 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
                  FMaterialInstance* mi = getMaterialInstance(driver, ma, variant);
                  mi->setParameter("color",  color, SamplerParams{});  // nearest
                  mi->setParameter("depth",  depth, SamplerParams{});  // nearest
@@ -336,11 +353,333 @@ index 1fc21785..752c1231 100644
  void View::setGuardBandOptions(GuardBandOptions const options) noexcept {
      downcast(this)->setGuardBandOptions(options);
  }
+diff --git a/filament/src/components/RenderableManager.cpp b/filament/src/components/RenderableManager.cpp
+index cf66ecfe..fe13c907 100644
+--- a/filament/src/components/RenderableManager.cpp
++++ b/filament/src/components/RenderableManager.cpp
+@@ -711,19 +711,40 @@ void FRenderableManager::create(
+                         .skinningBufferMode = false };
+ 
+                 if (boneCount) {
++                    // Keep a CPU copy of the palette: motion vectors upload it as the previous
++                    // frame's pose when a later frame updates the bones.
++                    bones.shadow = new PerRenderableBoneUib::BoneData[boneCount];
+                     if (builder->mUserBones) {
++                        for (size_t i = 0; i < boneCount; i++) {
++                            mat4f transform(builder->mUserBones[i].unitQuaternion);
++                            transform[3] = float4{ builder->mUserBones[i].translation, 1.0f };
++                            bones.shadow[i] = FSkinningBuffer::makeBone(transform);
++                        }
+                         FSkinningBuffer::setBones(mEngine, bones.handle,
+                                 builder->mUserBones, boneCount, 0);
+                     } else if (builder->mUserBoneMatrices) {
++                        for (size_t i = 0; i < boneCount; i++) {
++                            bones.shadow[i] = FSkinningBuffer::makeBone(builder->mUserBoneMatrices[i]);
++                        }
+                         FSkinningBuffer::setBones(mEngine, bones.handle,
+                                 builder->mUserBoneMatrices, boneCount, 0);
+                     } else {
+                         // initialize the bones to identity
++                        std::uninitialized_fill_n(bones.shadow, boneCount, FSkinningBuffer::makeBone({}));
+                         auto* out = driver.allocatePod<PerRenderableBoneUib::BoneData>(boneCount);
+                         std::uninitialized_fill_n(out, boneCount, FSkinningBuffer::makeBone({}));
+                         driver.updateBufferObject(bones.handle, {
+                                 out, boneCount * sizeof(PerRenderableBoneUib::BoneData) }, 0);
+                     }
++                    // the previous palette starts as the current one (no motion)
++                    bones.prevHandle = driver.createBufferObject(
++                            sizeof(PerRenderableBoneUib),
++                            BufferObjectBinding::UNIFORM,
++                            BufferUsage::DYNAMIC);
++                    auto* prev = driver.allocatePod<PerRenderableBoneUib::BoneData>(boneCount);
++                    std::copy_n(bones.shadow, boneCount, prev);
++                    driver.updateBufferObject(bones.prevHandle, {
++                            prev, boneCount * sizeof(PerRenderableBoneUib::BoneData) }, 0);
+                 }
+                 else {
+                     // When boneCount is 0, do an initialization for the bones uniform array to
+@@ -769,6 +790,17 @@ void FRenderableManager::create(
+                         BufferObjectBinding::UNIFORM,
+                         BufferUsage::DYNAMIC),
+                 .count = targetCount };
++            if (targetCount > 0) {
++                // the previous frame's weights for motion vectors; both start at zero
++                morphWeights.shadow = new float4[targetCount]();
++                morphWeights.prevHandle = driver.createBufferObject(
++                        sizeof(PerRenderableMorphingUib),
++                        BufferObjectBinding::UNIFORM,
++                        BufferUsage::DYNAMIC);
++                auto* zero = static_cast<float4*>(driver.allocate(sizeof(float4) * targetCount));
++                std::fill_n(zero, targetCount, float4{});
++                driver.updateBufferObject(morphWeights.prevHandle, { zero, sizeof(float4) * targetCount }, 0);
++            }
+ 
+             Slice<FRenderPrimitive> const primitives = mManager[ci].primitives;
+             mManager[ci].morphTargetBuffer = morphTargetBuffer;
+@@ -843,12 +875,20 @@ void FRenderableManager::destroyComponent(Instance const ci, DriverApi& driver)
+         // when not in skinningBufferMode, we now the handle, so we destroy it
+         driver.destroyBufferObject(bones.handle);
+     }
++    if (bones.prevHandle) {
++        driver.destroyBufferObject(bones.prevHandle);
++    }
++    delete[] bones.shadow;
+     if (bones.handleTexture) {
+         driver.destroyTexture(bones.handleTexture);
+     }
+ 
+     // destroy the weights structures if any
+     MorphWeights const& morphWeights = manager[ci].morphWeights;
++    if (morphWeights.prevHandle) {
++        driver.destroyBufferObject(morphWeights.prevHandle);
++    }
++    delete[] morphWeights.shadow;
+     if (morphWeights.handle) {
+         driver.destroyBufferObject(morphWeights.handle);
+     }
+@@ -999,10 +1039,49 @@ void FRenderableManager::setPrimitives(Instance const instance, Slice<FRenderPri
+     }
+ }
+ 
++// The first bone update of a frame turns the palette the previous frame rendered with (the
++// CPU shadow) into the previous palette the motion vectors read; later updates in the same
++// frame only move the current one.
++void FRenderableManager::keepPreviousBones(Bones& bones) noexcept {
++    if (!bones.prevHandle || !bones.shadow || bones.prevFrame == mMotionFrame) {
++        return;
++    }
++    auto& driver = mEngine.getDriverApi();
++    auto* prev = driver.allocatePod<PerRenderableBoneUib::BoneData>(bones.count);
++    std::copy_n(bones.shadow, bones.count, prev);
++    driver.updateBufferObject(bones.prevHandle, {
++            prev, bones.count * sizeof(PerRenderableBoneUib::BoneData) }, 0);
++    bones.prevFrame = mMotionFrame;
++    bones.prevStale = true;
++}
++
++void FRenderableManager::syncPreviousPose(Instance const instance) noexcept {
++    if (!instance) {
++        return;
++    }
++    auto& driver = mEngine.getDriverApi();
++    Bones& bones = mManager[instance].bones;
++    if (bones.prevHandle && bones.shadow && bones.prevStale && bones.prevFrame != mMotionFrame) {
++        auto* prev = driver.allocatePod<PerRenderableBoneUib::BoneData>(bones.count);
++        std::copy_n(bones.shadow, bones.count, prev);
++        driver.updateBufferObject(bones.prevHandle, {
++                prev, bones.count * sizeof(PerRenderableBoneUib::BoneData) }, 0);
++        bones.prevStale = false;
++    }
++    MorphWeights& morphWeights = mManager[instance].morphWeights;
++    if (morphWeights.prevHandle && morphWeights.shadow && morphWeights.prevStale
++            && morphWeights.prevFrame != mMotionFrame) {
++        auto* prev = static_cast<float4*>(driver.allocate(sizeof(float4) * morphWeights.count));
++        std::copy_n(morphWeights.shadow, morphWeights.count, prev);
++        driver.updateBufferObject(morphWeights.prevHandle, { prev, sizeof(float4) * morphWeights.count }, 0);
++        morphWeights.prevStale = false;
++    }
++}
++
+ void FRenderableManager::setBones(Instance const ci,
+         Bone const* UTILS_RESTRICT transforms, size_t boneCount, size_t const offset) {
+     if (ci) {
+-        Bones const& bones = mManager[ci].bones;
++        Bones& bones = mManager[ci].bones;
+ 
+         FILAMENT_CHECK_PRECONDITION(!bones.skinningBufferMode)
+                 << "Disable skinning buffer mode to use this API";
+@@ -1020,6 +1099,14 @@ void FRenderableManager::setBones(Instance const ci,
+         assert_invariant(bones.handle && offset + boneCount <= bones.count);
+         if (bones.handle) {
+             boneCount = std::min(boneCount, bones.count - offset);
++            keepPreviousBones(bones);
++            if (bones.shadow) {
++                for (size_t i = 0; i < boneCount; i++) {
++                    mat4f transform(transforms[i].unitQuaternion);
++                    transform[3] = float4{ transforms[i].translation, 1.0f };
++                    bones.shadow[offset + i] = FSkinningBuffer::makeBone(transform);
++                }
++            }
+             FSkinningBuffer::setBones(mEngine, bones.handle, transforms, boneCount, offset);
+         }
+     }
+@@ -1028,7 +1115,7 @@ void FRenderableManager::setBones(Instance const ci,
+ void FRenderableManager::setBones(Instance const ci,
+         mat4f const* UTILS_RESTRICT transforms, size_t boneCount, size_t const offset) {
+     if (ci) {
+-        Bones const& bones = mManager[ci].bones;
++        Bones& bones = mManager[ci].bones;
+ 
+         FILAMENT_CHECK_PRECONDITION(!bones.skinningBufferMode)
+                 << "Disable skinning buffer mode to use this API";
+@@ -1046,6 +1133,12 @@ void FRenderableManager::setBones(Instance const ci,
+         assert_invariant(bones.handle && offset + boneCount <= bones.count);
+         if (bones.handle) {
+             boneCount = std::min(boneCount, bones.count - offset);
++            keepPreviousBones(bones);
++            if (bones.shadow) {
++                for (size_t i = 0; i < boneCount; i++) {
++                    bones.shadow[offset + i] = FSkinningBuffer::makeBone(transforms[i]);
++                }
++            }
+             FSkinningBuffer::setBones(mEngine, bones.handle, transforms, boneCount, offset);
+         }
+     }
+@@ -1105,8 +1198,23 @@ void FRenderableManager::setMorphWeights(Instance const instance, float const* w
+             return;
+         }
+ 
+-        MorphWeights const& morphWeights = mManager[instance].morphWeights;
++        MorphWeights& morphWeights = mManager[instance].morphWeights;
+         if (morphWeights.handle) {
++            // the first update of a frame keeps the weights the previous frame rendered with
++            if (morphWeights.prevHandle && morphWeights.shadow && morphWeights.prevFrame != mMotionFrame) {
++                auto& driver = mEngine.getDriverApi();
++                auto* prev = static_cast<float4*>(driver.allocate(sizeof(float4) * morphWeights.count));
++                std::copy_n(morphWeights.shadow, morphWeights.count, prev);
++                driver.updateBufferObject(morphWeights.prevHandle, { prev, sizeof(float4) * morphWeights.count }, 0);
++                morphWeights.prevFrame = mMotionFrame;
++                morphWeights.prevStale = true;
++            }
++            if (morphWeights.shadow) {
++                size_t const n = std::min(count, size_t(morphWeights.count) - std::min(offset, size_t(morphWeights.count)));
++                for (size_t i = 0; i < n; i++) {
++                    morphWeights.shadow[offset + i] = float4(weights[i], 0, 0, 0);
++                }
++            }
+             updateMorphWeights(mEngine, morphWeights.handle, weights, count, offset);
+         }
+     }
+diff --git a/filament/src/components/RenderableManager.h b/filament/src/components/RenderableManager.h
+index 71935af6..de64f841 100644
+--- a/filament/src/components/RenderableManager.h
++++ b/filament/src/components/RenderableManager.h
+@@ -28,6 +28,8 @@
+ #include <filament/MaterialEnums.h>
+ #include <filament/RenderableManager.h>
+ 
++#include <private/filament/UibStructs.h>
++
+ #include <backend/DriverApiForward.h>
+ #include <backend/Handle.h>
+ 
+@@ -89,6 +91,17 @@ public:
+     explicit FRenderableManager(FEngine& engine) noexcept;
+     ~FRenderableManager();
+ 
++    // Motion vectors keep, per skinned or morphed renderable, the pose the previous frame
++    // rendered with. The renderer advances this counter at the end of every frame; a bone or
++    // weight update in a later frame first turns the current pose into the previous one.
++    void advanceMotionFrame() noexcept { mMotionFrame++; }
++    uint32_t getMotionFrame() const noexcept { return mMotionFrame; }
++
++    // Called once per frame for every visible skinned or morphed renderable before it is
++    // drawn: when this frame did not update its pose, the previous-pose buffers are brought
++    // back to the current pose so the motion vectors read no stale motion.
++    void syncPreviousPose(Instance instance) noexcept;
++
+     // free-up all resources
+     void terminate(backend::DriverApi& driver) noexcept;
+ 
+@@ -210,6 +223,10 @@ public:
+         backend::Handle<backend::HwBufferObject> handle;
+         uint32_t offset;
+         backend::Handle<backend::HwTexture> boneIndicesAndWeightHandle;
++        // the palette of the previous frame (the current one when nothing changed this frame),
++        // with its byte offset; for motion vectors
++        backend::Handle<backend::HwBufferObject> prevHandle;
++        uint32_t prevByteOffset;
+     };
+ 
+     inline SkinningBindingInfo getSkinningBufferInfo(Instance instance) const noexcept;
+@@ -219,6 +236,8 @@ public:
+         backend::Handle<backend::HwBufferObject> handle;
+         uint32_t count;
+         FMorphTargetBuffer const* morphTargetBuffer;
++        // the weights of the previous frame (the current ones when nothing changed this frame)
++        backend::Handle<backend::HwBufferObject> prevHandle;
+     };
+     inline MorphingBindingInfo getMorphingBufferInfo(Instance instance) const noexcept;
+ 
+@@ -278,14 +297,23 @@ private:
+         uint16_t count = 0;
+         uint16_t offset = 0;
+         bool skinningBufferMode = false; // whether we own (false) handle or not (true)
++        // Motion vectors (owned palettes only): the palette the previous frame rendered with,
++        // the frame it was taken for, and a CPU copy of the current palette to take it from.
++        backend::Handle<backend::HwBufferObject> prevHandle;
++        uint32_t prevFrame = 0;
++        bool prevStale = false;         // prevHandle holds an older pose than handle
++        PerRenderableBoneUib::BoneData* shadow = nullptr;
+     };
+-    static_assert(sizeof(Bones) == 16);
+ 
+     struct MorphWeights {
+         backend::Handle<backend::HwBufferObject> handle;
+         uint32_t count = 0;
++        // Motion vectors: the weights of the previous frame, see Bones.
++        backend::Handle<backend::HwBufferObject> prevHandle;
++        uint32_t prevFrame = 0;
++        bool prevStale = false;
++        math::float4* shadow = nullptr;
+     };
+-    static_assert(sizeof(MorphWeights) == 8);
+ 
+     enum {
+         AABB,                   // user data
+@@ -350,9 +378,12 @@ private:
+         }
+     };
+ 
++    void keepPreviousBones(Bones& bones) noexcept;
++
+     Sim mManager;
+     FEngine& mEngine;
+     HwRenderPrimitiveFactory mHwRenderPrimitiveFactory;
++    uint32_t mMotionFrame = 1;
+ };
+ 
+ FILAMENT_DOWNCAST(RenderableManager)
+@@ -548,7 +579,13 @@ Box const& FRenderableManager::getAABB(Instance const instance) const noexcept {
+ FRenderableManager::SkinningBindingInfo
+ FRenderableManager::getSkinningBufferInfo(Instance const instance) const noexcept {
+     Bones const& bones = mManager[instance].bones;
+-    return { bones.handle, bones.offset, bones.handleTexture };
++    // The previous-palette binding never changes for a renderable (descriptor sets are not
++    // rewritten while frames are in flight): owned palettes bind their previous buffer, which
++    // syncPreviousPose() keeps equal to the current one when nothing changed; shared skinning
++    // buffers have no previous palette and bind the current one.
++    return { bones.handle, bones.offset, bones.handleTexture,
++            bones.prevHandle ? bones.prevHandle : bones.handle,
++            bones.prevHandle ? 0u : uint32_t(bones.offset * sizeof(PerRenderableBoneUib::BoneData)) };
+ }
+ 
+ inline uint32_t FRenderableManager::getBoneCount(Instance const instance) const noexcept {
+@@ -560,7 +597,8 @@ FRenderableManager::MorphingBindingInfo
+ FRenderableManager::getMorphingBufferInfo(Instance const instance) const noexcept {
+     MorphWeights const& morphWeights = mManager[instance].morphWeights;
+     FMorphTargetBuffer const* const buffer = mManager[instance].morphTargetBuffer;
+-    return { morphWeights.handle, morphWeights.count, buffer  };
++    return { morphWeights.handle, morphWeights.count, buffer,
++            morphWeights.prevHandle ? morphWeights.prevHandle : morphWeights.handle };
+ }
+ 
+ FRenderableManager::InstancesInfo
 diff --git a/filament/src/details/Renderer.cpp b/filament/src/details/Renderer.cpp
-index 53d556a0..f72d9df5 100644
+index 53d556a0..9ffdb8f0 100644
 --- a/filament/src/details/Renderer.cpp
 +++ b/filament/src/details/Renderer.cpp
-@@ -971,7 +971,8 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+@@ -556,6 +556,9 @@ void FRenderer::endFrame() {
+     mFrameInfoManager.endFrame(driver);
+     mFrameSkipper.submitFrame(driver);
+ 
++    // bone and morph updates after this point belong to the next frame's motion
++    engine.getRenderableManager().advanceMotionFrame();
++
+     engine.submitFrame();
+ 
+     driver.endFrame(mFrameId);
+@@ -971,7 +974,8 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
       */
  
      auto [bias, derivativeScale] = prepareUpscaler(scale, taaOptions, dsrOptions);
@@ -350,7 +689,7 @@ index 53d556a0..f72d9df5 100644
      view.prepareLodBias(bias, derivativeScale);
      view.prepareSSAO(aoOptions);
      view.prepareSSR(engine, cameraInfo, ssrConfig.lodOffset, ssReflectionsOptions);
-@@ -992,17 +993,35 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+@@ -992,17 +996,35 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
      // at the same resolution. We set only the values that are relevant to both user-materials
      // and the concerned passes. The PER_VIEW UBO contains data that is needed by the user
      // materials public APIs.
@@ -390,7 +729,7 @@ index 53d556a0..f72d9df5 100644
      }
  
      /*
-@@ -1146,10 +1165,12 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+@@ -1146,10 +1168,12 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
      // Also, picking is handled here if transparent picking is disabled.
  
      // TODO: the scaling should depends on all passes that need the structure pass
@@ -406,7 +745,7 @@ index 53d556a0..f72d9df5 100644
      });
      auto picking = picking_;
  
-@@ -1182,7 +1203,7 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+@@ -1182,7 +1206,7 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
                  },
                  [=, &view](FrameGraphResources const& resources, auto&, DriverApi& driver) mutable {
                      auto [target, params] = resources.getRenderPassInfo();
@@ -415,7 +754,7 @@ index 53d556a0..f72d9df5 100644
                  });
      }
  
-@@ -1449,7 +1470,7 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+@@ -1449,7 +1473,7 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
  
      // TAA for color pass
      if (taaOptions.enabled) {
@@ -507,10 +846,25 @@ index 459d68a1..e2e3eca0 100644
  
  FILAMENT_DOWNCAST(Scene)
 diff --git a/filament/src/details/View.cpp b/filament/src/details/View.cpp
-index 52e8a7a4..f593f240 100644
+index 52e8a7a4..5c100f30 100644
 --- a/filament/src/details/View.cpp
 +++ b/filament/src/details/View.cpp
-@@ -716,7 +716,7 @@ CameraInfo FView::computeCameraInfo(FEngine const& engine) const noexcept {
+@@ -124,6 +124,14 @@ FView::FView(FEngine& engine)
+             +PerRenderableBindingPoints::MORPHING_UNIFORMS,
+             engine.getDummyUniformBuffer(), 0, sizeof(PerRenderableMorphingUib));
+ 
++    mCommonRenderableDescriptorSet.setBuffer(layout,
++            +PerRenderableBindingPoints::PREV_BONES_UNIFORMS,
++            engine.getDummyUniformBuffer(), 0, sizeof(PerRenderableBoneUib));
++
++    mCommonRenderableDescriptorSet.setBuffer(layout,
++            +PerRenderableBindingPoints::PREV_MORPHING_UNIFORMS,
++            engine.getDummyUniformBuffer(), 0, sizeof(PerRenderableMorphingUib));
++
+     mCommonRenderableDescriptorSet.setSampler(layout,
+             +PerRenderableBindingPoints::MORPH_TARGET_POSITIONS,
+             engine.getDummyMorphTargetBuffer()->getPositionsHandle(), {});
+@@ -716,7 +724,7 @@ CameraInfo FView::computeCameraInfo(FEngine const& engine) const noexcept {
  
  void FView::prepare(FEngine& engine, DriverApi& driver, LinearAllocatorArena& arena,
          filament::Viewport const viewport, CameraInfo cameraInfo,
@@ -519,7 +873,7 @@ index 52e8a7a4..f593f240 100644
  
          FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
          FILAMENT_TRACING_CONTEXT(FILAMENT_TRACING_CATEGORY_FILAMENT);
-@@ -919,7 +919,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, LinearAllocatorArena& ar
+@@ -919,7 +927,7 @@ void FView::prepare(FEngine& engine, DriverApi& driver, LinearAllocatorArena& ar
          // TODO: when any spotlight is used, `merged` ends-up being the whole list. However,
          //       some of the items will end-up not being visible by any light. Can we do better?
          //       e.g. could we deffer some of the prepareVisibleRenderables() to later?
@@ -528,6 +882,27 @@ index 52e8a7a4..f593f240 100644
  
          // update those UBOs
          if (!merged.empty()) {
+@@ -968,6 +976,20 @@ void FView::prepare(FEngine& engine, DriverApi& driver, LinearAllocatorArena& ar
+                         +PerRenderableBindingPoints::MORPHING_UNIFORMS,
+                         engine.getDummyUniformBuffer(), 0, sizeof(PerRenderableMorphingUib));
+ 
++                // the previous frame's pose for motion vectors (brought back to the current
++                // one when it did not change this frame; the dummy when the renderable has none)
++                rcm.syncPreviousPose(ci);
++                descriptorSet.setBuffer(layout,
++                        +PerRenderableBindingPoints::PREV_BONES_UNIFORMS,
++                        skinning.prevHandle ? skinning.prevHandle : engine.getDummyUniformBuffer(),
++                        skinning.prevHandle ? skinning.prevByteOffset : 0,
++                        sizeof(PerRenderableBoneUib));
++
++                descriptorSet.setBuffer(layout,
++                        +PerRenderableBindingPoints::PREV_MORPHING_UNIFORMS,
++                        morphing.prevHandle ? morphing.prevHandle : engine.getDummyUniformBuffer(),
++                        0, sizeof(PerRenderableMorphingUib));
++
+                 descriptorSet.setSampler(layout,
+                         +PerRenderableBindingPoints::MORPH_TARGET_POSITIONS,
+                         engine.getDummyMorphTargetBuffer()->getPositionsHandle(), {});
 diff --git a/filament/src/details/View.h b/filament/src/details/View.h
 index d123affc..15c05933 100644
 --- a/filament/src/details/View.h
@@ -643,6 +1018,19 @@ index f174bb00..6e265dbe 100644
          // read the depth buffer center sample for reprojection
          highp float depth = textureLod(materialParams_depth, uv.xy, 0.0).r;
          // reproject history to current frame
+diff --git a/libs/filabridge/include/private/filament/EngineEnums.h b/libs/filabridge/include/private/filament/EngineEnums.h
+index 51b51443..442cebde 100644
+--- a/libs/filabridge/include/private/filament/EngineEnums.h
++++ b/libs/filabridge/include/private/filament/EngineEnums.h
+@@ -66,6 +66,8 @@ enum class PerRenderableBindingPoints : uint8_t  {
+     MORPH_TARGET_POSITIONS      =  3,
+     MORPH_TARGET_TANGENTS       =  4,
+     BONES_INDICES_AND_WEIGHTS   =  5,
++    PREV_BONES_UNIFORMS         =  6,   // previous frame's bones, for motion vectors
++    PREV_MORPHING_UNIFORMS      =  7,   // previous frame's morph weights, for motion vectors
+ };
+ 
+ enum class PerMaterialBindingPoints : uint8_t  {
 diff --git a/libs/filabridge/include/private/filament/UibStructs.h b/libs/filabridge/include/private/filament/UibStructs.h
 index 2507ee79..cb25ca20 100644
 --- a/libs/filabridge/include/private/filament/UibStructs.h
@@ -675,8 +1063,50 @@ index 2507ee79..cb25ca20 100644
  
      static uint32_t packFlagsChannels(
              bool skinning, uint8_t morphing, bool contactShadows, bool hasInstanceBuffer,
+diff --git a/libs/filabridge/src/DescriptorSets.cpp b/libs/filabridge/src/DescriptorSets.cpp
+index 86043b4f..bf6d43cc 100644
+--- a/libs/filabridge/src/DescriptorSets.cpp
++++ b/libs/filabridge/src/DescriptorSets.cpp
+@@ -94,6 +94,8 @@ static constexpr std::initializer_list<DescriptorSetLayoutDescriptor> perRendera
+     { DescriptorType::SAMPLER_2D_ARRAY_FLOAT,   ShaderStageFlags::VERTEX                             ,  +PerRenderableBindingPoints::MORPH_TARGET_POSITIONS, DescriptorFlags::UNFILTERABLE },
+     { DescriptorType::SAMPLER_2D_ARRAY_INT,     ShaderStageFlags::VERTEX                             ,  +PerRenderableBindingPoints::MORPH_TARGET_TANGENTS     },
+     { DescriptorType::SAMPLER_2D_FLOAT,   ShaderStageFlags::VERTEX                                   ,  +PerRenderableBindingPoints::BONES_INDICES_AND_WEIGHTS, DescriptorFlags::UNFILTERABLE },
++    { DescriptorType::UNIFORM_BUFFER,           ShaderStageFlags::VERTEX                             ,  +PerRenderableBindingPoints::PREV_BONES_UNIFORMS       },
++    { DescriptorType::UNIFORM_BUFFER,           ShaderStageFlags::VERTEX                             ,  +PerRenderableBindingPoints::PREV_MORPHING_UNIFORMS    },
+ };
+ 
+ struct PairSamplerTypeFormatHasher {
+@@ -192,6 +194,8 @@ utils::CString getDescriptorName(DescriptorSetBindingPoints const set,
+         { +PerRenderableBindingPoints::MORPH_TARGET_POSITIONS,      "sampler1_positions"sv },
+         { +PerRenderableBindingPoints::MORPH_TARGET_TANGENTS,       "sampler1_tangents"sv },
+         { +PerRenderableBindingPoints::BONES_INDICES_AND_WEIGHTS,   "sampler1_indicesAndWeights"sv },
++        { +PerRenderableBindingPoints::PREV_BONES_UNIFORMS,         "PrevBonesUniforms"sv },
++        { +PerRenderableBindingPoints::PREV_MORPHING_UNIFORMS,      "PrevMorphingUniforms"sv },
+     }};
+ 
+     switch (set) {
+diff --git a/libs/filamat/src/shaders/ShaderGenerator.cpp b/libs/filamat/src/shaders/ShaderGenerator.cpp
+index fbe2b1d4..2c39ebbc 100644
+--- a/libs/filamat/src/shaders/ShaderGenerator.cpp
++++ b/libs/filamat/src/shaders/ShaderGenerator.cpp
+@@ -511,6 +511,15 @@ std::string ShaderGenerator::createSurfaceVertexProgram(ShaderModel const shader
+                 DescriptorSetBindingPoints::PER_RENDERABLE,
+                 +PerRenderableBindingPoints::MORPHING_UNIFORMS,
+                 UibGenerator::getPerRenderableMorphingUib());
++        // the previous frame's pose, read by the depth variants for motion vectors
++        cg.generateUniforms(vs, ShaderStage::VERTEX,
++                DescriptorSetBindingPoints::PER_RENDERABLE,
++                +PerRenderableBindingPoints::PREV_BONES_UNIFORMS,
++                UibGenerator::getPerRenderablePrevBonesUib());
++        cg.generateUniforms(vs, ShaderStage::VERTEX,
++                DescriptorSetBindingPoints::PER_RENDERABLE,
++                +PerRenderableBindingPoints::PREV_MORPHING_UNIFORMS,
++                UibGenerator::getPerRenderablePrevMorphingUib());
+         cg.generateCommonSamplers(vs, DescriptorSetBindingPoints::PER_RENDERABLE,
+                 SibGenerator::getPerRenderableSib(variant));
+     }
 diff --git a/libs/filamat/src/shaders/UibGenerator.cpp b/libs/filamat/src/shaders/UibGenerator.cpp
-index f68aa003..8f2a27e6 100644
+index f68aa003..2659f8c1 100644
 --- a/libs/filamat/src/shaders/UibGenerator.cpp
 +++ b/libs/filamat/src/shaders/UibGenerator.cpp
 @@ -241,6 +241,10 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
@@ -690,6 +1120,46 @@ index f68aa003..8f2a27e6 100644
              // bring PerViewUib to 2 KiB
              { "reserved", sizeof(PerViewUib::reserved)/16, Type::FLOAT4 }
              })
+@@ -296,6 +300,25 @@ BufferInterfaceBlock const& UibGenerator::getPerRenderableMorphingUib() noexcept
+     return uib;
+ }
+ 
++BufferInterfaceBlock const& UibGenerator::getPerRenderablePrevBonesUib() noexcept {
++    static BufferInterfaceBlock const uib = BufferInterfaceBlock::Builder()
++            .name("PrevBonesUniforms")
++            .add({{ "bones", CONFIG_MAX_BONE_COUNT,
++                    BufferInterfaceBlock::Type::STRUCT, {}, {},
++                    "BoneData", sizeof(PerRenderableBoneUib::BoneData) }})
++            .build();
++    return uib;
++}
++
++BufferInterfaceBlock const& UibGenerator::getPerRenderablePrevMorphingUib() noexcept {
++    static BufferInterfaceBlock const uib = BufferInterfaceBlock::Builder()
++            .name("PrevMorphingUniforms")
++            .add({{ "weights", CONFIG_MAX_MORPH_TARGET_COUNT,
++                    BufferInterfaceBlock::Type::FLOAT4 }})
++            .build();
++    return uib;
++}
++
+ BufferInterfaceBlock const& UibGenerator::getFroxelRecordUib() noexcept {
+     static BufferInterfaceBlock const uib = BufferInterfaceBlock::Builder()
+             .name(FroxelRecordUib::_name)
+diff --git a/libs/filamat/src/shaders/UibGenerator.h b/libs/filamat/src/shaders/UibGenerator.h
+index a2250bda..94e2e7a4 100644
+--- a/libs/filamat/src/shaders/UibGenerator.h
++++ b/libs/filamat/src/shaders/UibGenerator.h
+@@ -67,6 +67,9 @@ public:
+     static BufferInterfaceBlock const& getShadowUib() noexcept;
+     static BufferInterfaceBlock const& getPerRenderableBonesUib() noexcept;
+     static BufferInterfaceBlock const& getPerRenderableMorphingUib() noexcept;
++    // previous frame's bones / morph weights (motion vectors); same layouts, other bindings
++    static BufferInterfaceBlock const& getPerRenderablePrevBonesUib() noexcept;
++    static BufferInterfaceBlock const& getPerRenderablePrevMorphingUib() noexcept;
+     static BufferInterfaceBlock const& getFroxelRecordUib() noexcept;
+     static BufferInterfaceBlock const& getFroxelsUib() noexcept;
+ };
 diff --git a/shaders/src/surface_depth_main.fs b/shaders/src/surface_depth_main.fs
 index 315a72eb..1e7d6d7b 100644
 --- a/shaders/src/surface_depth_main.fs
@@ -718,18 +1188,85 @@ index 315a72eb..1e7d6d7b 100644
  
  #else
 diff --git a/shaders/src/surface_getters.vs b/shaders/src/surface_getters.vs
-index 5eb08579..12a0f1a2 100644
+index 5eb08579..56b1c1ac 100644
 --- a/shaders/src/surface_getters.vs
 +++ b/shaders/src/surface_getters.vs
-@@ -271,6 +271,28 @@ vec4 getPosition() {
+@@ -271,6 +271,95 @@ vec4 getPosition() {
      return pos;
  }
  
 +#if defined(VARIANT_DEPTH)
++#if defined(VARIANT_HAS_SKINNING_OR_MORPHING)
++// The previous frame's pose (motion vectors): the same morphing and skinning as getPosition(),
++// read from the previous frame's weights and bone palette.
++vec3 mulBoneVertexPrev(vec3 v, uint i) {
++    highp mat4x3 m = transpose(prevBonesUniforms.bones[i].transform);
++    return v.x * m[0].xyz + (v.y * m[1].xyz + (v.z * m[2].xyz + m[3].xyz));
++}
++
++void skinPositionPrev(inout vec3 p, const uvec4 ids, const vec4 weights) {
++    if (weights.w >= 0.0) {
++        p = weights.x * mulBoneVertexPrev(p, uint(ids.x))
++            + weights.y * mulBoneVertexPrev(p, uint(ids.y))
++            + weights.z * mulBoneVertexPrev(p, uint(ids.z))
++            + weights.w * mulBoneVertexPrev(p, uint(ids.w));
++        return;
++    }
++    vec3 posSum = weights.x * mulBoneVertexPrev(p, uint(ids.x));
++    posSum += weights.y * mulBoneVertexPrev(p, uint(ids.y));
++    posSum += weights.z * mulBoneVertexPrev(p, uint(ids.z));
++    uint pairIndex = uint(-weights.w - 1.);
++    uint pairStop = pairIndex + uint(ids.w - 3u);
++    for (uint i = pairIndex; i < pairStop; ++i) {
++        ivec2 texcoord = ivec2(i % MAX_SKINNING_BUFFER_WIDTH, i / MAX_SKINNING_BUFFER_WIDTH);
++        vec2 indexWeight = texelFetch(sampler1_indicesAndWeights, texcoord, 0).rg;
++        posSum += mulBoneVertexPrev(p, uint(indexWeight.r)) * indexWeight.g;
++    }
++    p = posSum;
++}
++
++#if !defined(LEGACY_MORPHING)
++void morphPositionPrev(inout vec4 p) {
++    int index = getVertexIndex() + pushConstants.morphingBufferOffset;
++    ivec3 texcoord = ivec3(index % MAX_MORPH_TARGET_BUFFER_WIDTH, index / MAX_MORPH_TARGET_BUFFER_WIDTH, 0);
++    int c = object_uniforms_morphTargetCount;
++    for (int i = 0; i < c; ++i) {
++        float w = prevMorphingUniforms.weights[i][0];
++        if (w != 0.0) {
++            texcoord.z = i;
++            p += w * texelFetch(sampler1_positions, texcoord, 0);
++        }
++    }
++}
++#endif
++
++vec4 getPreviousPosition() {
++    vec4 pos = mesh_position;
++    if ((object_uniforms_flagsChannels & FILAMENT_OBJECT_MORPHING_POSITION_BIT) != 0) {
++#if defined(LEGACY_MORPHING)
++        pos += prevMorphingUniforms.weights[0] * mesh_custom0;
++        pos += prevMorphingUniforms.weights[1] * mesh_custom1;
++        pos += prevMorphingUniforms.weights[2] * mesh_custom2;
++        pos += prevMorphingUniforms.weights[3] * mesh_custom3;
++#else
++        morphPositionPrev(pos);
++#endif
++    }
++    if ((object_uniforms_flagsChannels & FILAMENT_OBJECT_SKINNING_ENABLED_BIT) != 0) {
++        skinPositionPrev(pos.xyz, mesh_bone_indices, mesh_bone_weights);
++    }
++    return pos;
++}
++#else
++vec4 getPreviousPosition() {
++    return getPosition();
++}
++#endif
++
 +/**
 + * Clip-space position of this vertex on the previous frame, for motion vectors: the object's
-+ * previous world transform and the previous frame's (unjittered) clip <- world matrix. Skinning
-+ * and morphing use the current pose. Returns [currentPosition] when motion vectors are off or
++ * previous world transform, its previous pose (bones, morph weights) and the previous frame's
++ * (unjittered) clip <- world matrix. Returns [currentPosition] when motion vectors are off or
 + * the vertex domain carries no object motion (view, device), which yields a zero velocity.
 + */
 +highp vec4 computePreviousClipPosition(const highp vec4 currentPosition) {
@@ -737,10 +1274,10 @@ index 5eb08579..12a0f1a2 100644
 +        return currentPosition;
 +    }
 +#if defined(VERTEX_DOMAIN_OBJECT)
-+    highp vec4 prevWorld = mulMat4x4Float3(object_uniforms_prevWorldFromModelMatrix, getPosition().xyz);
++    highp vec4 prevWorld = mulMat4x4Float3(object_uniforms_prevWorldFromModelMatrix, getPreviousPosition().xyz);
 +    return frameUniforms.prevClipFromWorldMatrix * prevWorld;
 +#elif defined(VERTEX_DOMAIN_WORLD)
-+    return frameUniforms.prevClipFromWorldMatrix * vec4(getPosition().xyz, 1.0);
++    return frameUniforms.prevClipFromWorldMatrix * vec4(getPreviousPosition().xyz, 1.0);
 +#else
 +    return currentPosition;
 +#endif

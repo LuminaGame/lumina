@@ -365,7 +365,7 @@ An offscreen render target (Frame Buffer Object / FBO) that can be associated wi
 
 #### `class MotionVectorBuffer`
 
-`MotionVectorBuffer`: the motion vectors of a `FilamentView` as a readable buffer: an RGBA16F texture the view exports into while `TemporalAntiAliasingOptions.motionVectors` is on, the render target that reads it back, and the readback itself. The structure pass of Filament (Lumina patch `0004`) renders them from each renderable's previous world transform and the previous frame's camera; skinning and morphing use the current pose.
+`MotionVectorBuffer`: the motion vectors of a `FilamentView` as a readable buffer: an RGBA16F texture the view exports into while `TemporalAntiAliasingOptions.motionVectors` is on, the render target that reads it back, and the readback itself. The structure pass of Filament (Lumina patch `0004`) renders them from each renderable's previous world transform, its previous bone palette and morph weights, and the previous frame's camera.
 
 **Constructors:**
 - `MotionVectorBuffer.attach({required FilamentEngine engine, required FilamentView view, required int width, required int height})`: creates the texture and render target (exactly the size of the view's render target) and makes `view` export into them; throws `StateError` when `view.motionVectorsSupported` is false.
