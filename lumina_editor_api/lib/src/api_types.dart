@@ -23,6 +23,12 @@ export 'project_settings_section.dart';
 export 'plugin_crash_reporter.dart';
 export 'process/plugin_process.dart';
 export 'process/plugin_process_channel.dart';
+export 'process/level_json.dart';
+export 'process/level_proxy.dart';
+export 'process/plugin_icons.dart';
+export 'process/plugin_process_adapter.dart';
+export 'process/process_context.dart';
+export 'process/process_dispatch.dart';
 export 'process/run_plugin_process.dart';
 export 'package:lumina_plugin_protocol/lumina_plugin_protocol.dart';
 

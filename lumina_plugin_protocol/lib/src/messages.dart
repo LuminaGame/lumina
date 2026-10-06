@@ -156,7 +156,9 @@ abstract final class PluginMethods {
   /// `{"task": <id>, "step": <label>, "done": <int|null>, "total": <int|null>, "message": <string|null>, "finished": <bool>}`
   static const String progress = 'host.progress';
 
-  /// `{"level": "info"|"warning"|"error"|"success", "message": <string>}`.
+  /// `{"level": "info"|"warning"|"error"|"success", "message": <string>}`,
+  /// optionally `"source": <string>` (the Output Log source an
+  /// `EditorLevelAccess.log` call names; the plugin's name otherwise).
   static const String log = 'host.log';
 
   /// `{"viewId": <id>, "spec": PluginViewSpec.toJson()}` or
@@ -180,6 +182,24 @@ abstract final class PluginMethods {
   /// `undoIfTop` `{"label"}` → bool, `saveLevel` → bool, `openLevel` `{"path"}` → bool,
   /// `openAssetEditor` `{"path"}` → bool, `beginTransaction` `{"label"}` → `{"tx": <id>}`,
   /// `endTransaction` `{"tx"}`.
+  ///
+  /// Additions (all optional, older peers ignore them):
+  /// - `snapshot` also answers `"undoTopLabel": <string|null>` (the label
+  ///   Edit ▸ Undo would revert, `EditorLevelAccess.undoTopLabel`); it answers
+  ///   null when no level is open.
+  /// - Actor JSON: `actors[]` are actor snapshots and `addActors.actors[]`
+  ///   actor specs in the shapes `EditorLevelJson` (lumina_editor_api)
+  ///   documents and encodes.
+  /// - Every edit op (`addActors`, `removeActors`, `setComponentProperty`,
+  ///   `selectActors`, `undoIfTop`, `saveLevel`, `openLevel`,
+  ///   `openAssetEditor`) may carry `"tx": <id>` from `beginTransaction`: the
+  ///   edit joins that open transaction (one undo step). The host ends a
+  ///   transaction left open when the connection closes.
+  /// - `setComponentProperty`: `componentId` carries the component **type**
+  ///   (`EditorLevelAccess.setComponentProperty` addresses the first
+  ///   component of a type); the same value is sent as `componentType`.
+  /// - `openLevel` also takes `"show": <bool>` (default true).
+  /// - `openAssetEditor` answers bool (or null).
   static const String level = 'host.level';
 
   /// `{"relativePath", "bytesBase64"?, "generateThumbnail"}` → null.
@@ -210,6 +230,10 @@ abstract final class PluginMethods {
   static const String canExecute = 'core.canExecute';
 
   /// An MCP tool call: `{"tool", "arguments"}` → `McpToolResult.toJson()`.
+  /// `tool` is the name the tool was registered with, or the host's
+  /// `<plugin>.<name>`. Arguments the tool rejects (`JsonRpcException`)
+  /// answer the error [PluginErrorCodes.badArguments]; a handler that throws
+  /// answers an error result (`isError: true`).
   static const String mcpTool = 'core.mcpTool';
 
   /// An importer: `{"importerId", "sourcePath", "targetDirectory"}` →
@@ -222,7 +246,9 @@ abstract final class PluginMethods {
   /// A declarative panel event: `PluginViewEvent.toJson()` → null.
   static const String viewEvent = 'core.viewEvent';
 
-  /// `{"name","dir"}` → null.
+  /// `{"name","dir"}` → null; optionally `"storageDir"`: the plugin's
+  /// per-project store (`PluginStorage.projectDir`), by default
+  /// `<dir>/.lumina/plugins/<plugin>`.
   static const String projectOpened = 'core.projectOpened';
 
   /// `{}` → null, bounded by the host's hook timeout.

@@ -259,6 +259,14 @@ class McpToolResult {
         if (structuredContent != null) 'structuredContent': structuredContent,
         'isError': isError,
       };
+
+  /// The result [toJson] wrote, e.g. one that crossed the plugin process
+  /// boundary.
+  factory McpToolResult.fromJson(Map<String, Object?> json) => McpToolResult(
+        [for (final c in (json['content'] as List?) ?? const []) (c as Map).cast<String, Object?>()],
+        structuredContent: (json['structuredContent'] as Map?)?.cast<String, Object?>(),
+        isError: json['isError'] == true,
+      );
 }
 
 /// The arguments of one `tools/call`, validated against the tool's schema.
