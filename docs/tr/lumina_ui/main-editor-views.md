@@ -69,6 +69,10 @@ Ana editör penceresinin widget'ları: ana editör view'i ve layout state'i, 3D 
 | `viewModel` | `EditorViewModel viewModel` | `viewModel` alanını (field/property) ve ilişkili veriyi saklar. |
 | `createState` | `State<DetailsWidget> createState() => _DetailsWidgetState()` | Yeni bir `State` örneği veya ilişkili GPU kaynağını oluşturur ve yapılandırır. |
 
+### `class _WorldPartitionSection`
+
+Seviyenin World Partition ayarları (hiçbir şey seçili değilken görünür; `details_widget/world_partition_section.dart`): akışın açık ya da kapalı olmasının oyun için ne anlama geldiğini söyleyen bir cümleyle bir anahtar, ardından üç grup. **GRID**: Cell Size (`wp_cell_size`, cm, hücre kenarının metre karşılığıyla). **STREAMING**: Loading Range (`wp_loading_range`, cm, mevcut hücre boyutunda kaç hücreye denk geldiğiyle) ve Transitions / Tick (`wp_max_transitions`). **DATA LAYERS**: bir sayaç, Add (`wp_add_layer`) ve katman başına adı (`wp_layer_name_<i>`), başlangıç durumu seçimi (`wp_layer_state_<i>`: unloaded, loaded, activated; her biri satırın altında açıklanır) ve Remove (`wp_layer_remove_<i>`) olan bir kart. Her alan seviyenin `metadata.worldPartition` bölümünü view model'in geri alınabilir setter'larıyla yazar; üretilen oyun ve Play `LuminaWorldPartitionSubsystem`'i bu değerlerle çalıştırır, editörün kendisi hücreleri hiç boşaltmaz. Aktörler X/Z konumlarının altındaki hücreye aittir (outliner gösterir); aktörleri data layer'lara atamanın henüz bir editör kontrolü yok.
+
 ### `class _DetailsWidgetState`
 
 `_DetailsWidgetState`: Kullanıcı arayüzünü (UI) oluşturan ve kullanıcı etkileşimlerini dinleyen shadcn_flutter bileşenidir.

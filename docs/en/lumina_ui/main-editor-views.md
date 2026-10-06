@@ -69,6 +69,10 @@ The widgets of the main editor window: the main editor view and its layout state
 | `viewModel` | `EditorViewModel viewModel` | Holds the `viewModel` property or configuration state. |
 | `createState` | `State<DetailsWidget> createState() => _DetailsWidgetState()` | Creates, configures, and returns a new `State` instance or associated GPU resource. |
 
+### `class _WorldPartitionSection`
+
+The level's World Partition settings (shown when nothing is selected; `details_widget/world_partition_section.dart`): a switch with a sentence saying what streaming on or off means for the game, then three groups. **GRID**: Cell Size (`wp_cell_size`, cm, with the metres per cell edge). **STREAMING**: Loading Range (`wp_loading_range`, cm, with how many cells that spans at the current cell size) and Transitions / Tick (`wp_max_transitions`). **DATA LAYERS**: a count, Add (`wp_add_layer`) and one card per layer with its name (`wp_layer_name_<i>`), initial state select (`wp_layer_state_<i>`: unloaded, loaded, activated, each explained under the row) and Remove (`wp_layer_remove_<i>`). Every field writes the level's `metadata.worldPartition` through the view model's undoable setters; the generated game and Play run `LuminaWorldPartitionSubsystem` with these values, the editor itself never unloads cells. Actors belong to the cell under their X/Z position (the outliner shows it); assigning actors to data layers has no editor control yet.
+
 ### `class _DetailsWidgetState`
 
 `_DetailsWidgetState`: shadcn_flutter UI component rendering interface elements and listening to interactions.

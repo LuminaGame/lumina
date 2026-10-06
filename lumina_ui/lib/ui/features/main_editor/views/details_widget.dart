@@ -33,6 +33,7 @@ import 'package:lumina_editor_api/lumina_editor_api.dart' show DetailsTarget;
 
 part 'details_widget/state.dart';
 part 'details_widget/level_and_blueprint_sections.dart';
+part 'details_widget/world_partition_section.dart';
 part 'details_widget/single_selection.dart';
 part 'details_widget/multi_selection.dart';
 part 'details_widget/widgets.dart';
