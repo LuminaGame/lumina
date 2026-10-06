@@ -325,13 +325,13 @@ class LuminaVideoController extends ValueNotifier<LuminaVideoPlayerValue> {
         ? Duration.zero
         : (position > max ? max : position);
 
+    value = value.copyWith(
+      position: clamped,
+      isCompleted: clamped >= max && max > Duration.zero,
+    );
+
     if (_player != null) {
       await _player!.seek(clamped);
-    } else {
-      value = value.copyWith(
-        position: clamped,
-        isCompleted: clamped >= max && max > Duration.zero,
-      );
     }
   }
 
