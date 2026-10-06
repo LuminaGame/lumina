@@ -411,6 +411,13 @@ class ShadowOptions {
   double penumbraRatioScale;
   double maxPenumbraRatio;
 
+  /// Trace hard shadows against the ray tracing acceleration structures of the
+  /// scene instead of rendering cascaded shadow maps. Directional lights only;
+  /// needs [FilamentEngine.supportsRayQuery] and
+  /// [FilamentScene.rayTracingEnabled], and falls back to the shadow maps
+  /// otherwise. Default false.
+  bool rayTraced;
+
   ShadowOptions({
     this.mapSize = 1024,
     this.shadowCascades = 1,
@@ -434,6 +441,7 @@ class ShadowOptions {
     this.penumbraScale = 1.0,
     this.penumbraRatioScale = 1.0,
     this.maxPenumbraRatio = 0.0,
+    this.rayTraced = false,
   });
 
   void _writeToNative(ffi.Pointer<c.FilamentShadowOptions> ptr) {
@@ -464,6 +472,7 @@ class ShadowOptions {
     ref.penumbra_scale = penumbraScale;
     ref.penumbra_ratio_scale = penumbraRatioScale;
     ref.max_penumbra_ratio = maxPenumbraRatio;
+    ref.ray_traced = rayTraced;
   }
 
   static ShadowOptions _fromNative(c.FilamentShadowOptions ref) {
@@ -499,6 +508,7 @@ class ShadowOptions {
       penumbraScale: ref.penumbra_scale,
       penumbraRatioScale: ref.penumbra_ratio_scale,
       maxPenumbraRatio: ref.max_penumbra_ratio,
+      rayTraced: ref.ray_traced,
     );
   }
 }

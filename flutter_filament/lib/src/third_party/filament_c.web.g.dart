@@ -589,6 +589,43 @@ void filament_dlss_clear_extension_request() {
   _m.filament_dlss_clear_extension_request();
 }
 
+bool filament_ray_tracing_request_extensions() =>
+    _m.filament_ray_tracing_request_extensions().toDartInt != 0;
+
+void filament_ray_tracing_clear_extension_request() {
+  _m.filament_ray_tracing_clear_extension_request();
+}
+
+bool filament_engine_supports_ray_query(ffi.Pointer<ffi.Void> engine) =>
+    _m.filament_engine_supports_ray_query(engine.address.toJS).toDartInt != 0;
+
+void filament_scene_set_ray_tracing_enabled(ffi.Pointer<ffi.Void> scene, bool enabled) {
+  _m.filament_scene_set_ray_tracing_enabled(scene.address.toJS, (enabled ? 1 : 0).toJS);
+}
+
+bool filament_scene_get_ray_tracing_enabled(ffi.Pointer<ffi.Void> scene) =>
+    _m.filament_scene_get_ray_tracing_enabled(scene.address.toJS).toDartInt != 0;
+
+int filament_scene_get_tlas_instance_count(ffi.Pointer<ffi.Void> scene) =>
+    _m.filament_scene_get_tlas_instance_count(scene.address.toJS).toDartInt.toUnsigned(32);
+
+int filament_scene_get_tlas_build_nanos(ffi.Pointer<ffi.Void> scene) =>
+    FlutterFilamentModule.fromBigInt(_m.filament_scene_get_tlas_build_nanos(scene.address.toJS));
+
+void filament_renderable_set_ray_tracing_visible(ffi.Pointer<ffi.Void> engine, int entity, bool visible) {
+  _m.filament_renderable_set_ray_tracing_visible(engine.address.toJS, entity.toJS, (visible ? 1 : 0).toJS);
+}
+
+bool filament_renderable_is_ray_tracing_visible(ffi.Pointer<ffi.Void> engine, int entity) =>
+    _m.filament_renderable_is_ray_tracing_visible(engine.address.toJS, entity.toJS).toDartInt != 0;
+
+bool filament_scene_trace_visibility(ffi.Pointer<ffi.Void> engine, ffi.Pointer<ffi.Void> scene, ffi.Pointer<ffi.Float> origin3, ffi.Pointer<ffi.Float> direction3, double max_distance, ffi.Pointer<ffi.Float> out_distance, ffi.Pointer<ffi.Uint32> out_entity, ffi.Pointer<ffi.Uint32> out_primitive) =>
+    _m.filament_scene_trace_visibility(engine.address.toJS, scene.address.toJS, origin3.address.toJS, direction3.address.toJS, max_distance.toJS, out_distance.address.toJS, out_entity.address.toJS, out_primitive.address.toJS).toDartInt != 0;
+
+void filament_view_trace_ray(ffi.Pointer<ffi.Void> view, ffi.Pointer<ffi.Float> origin3, ffi.Pointer<ffi.Float> direction3, double max_distance, FilamentRayHitCallback callback, ffi.Pointer<ffi.Void> user_data) {
+  _m.filament_view_trace_ray(view.address.toJS, origin3.address.toJS, direction3.address.toJS, max_distance.toJS, callback.address.toJS, user_data.address.toJS);
+}
+
 ffi.Pointer<ffi.Void> filament_dlss_create(ffi.Pointer<ffi.Void> engine, ffi.Pointer<ffi.Void> view, ffi.Pointer<filament_dlss_options_t> opts) =>
     ffi.Pointer<ffi.Void>.fromAddress(_m.filament_dlss_create(engine.address.toJS, view.address.toJS, opts.address.toJS).toDartInt);
 
@@ -4940,6 +4977,24 @@ typedef DartFilamentPickCallbackFunction =
     );
 typedef FilamentPickCallback =
     ffi.Pointer<ffi.NativeFunction<FilamentPickCallbackFunction>>;
+typedef FilamentRayHitCallbackFunction =
+    ffi.Void Function(
+      ffi.Bool hit,
+      ffi.Float distance,
+      ffi.Uint32 entity,
+      ffi.Uint32 primitive,
+      ffi.Pointer<ffi.Void> user_data,
+    );
+typedef DartFilamentRayHitCallbackFunction =
+    void Function(
+      bool hit,
+      double distance,
+      int entity,
+      int primitive,
+      ffi.Pointer<ffi.Void> user_data,
+    );
+typedef FilamentRayHitCallback =
+    ffi.Pointer<ffi.NativeFunction<FilamentRayHitCallbackFunction>>;
 
 final class filament_rt_attachment_t extends ffi.Struct {
   filament_rt_attachment_t.$at(super.$address) : super.$at();
@@ -5176,6 +5231,9 @@ final class FilamentShadowOptions extends ffi.Struct {
 
   double get max_penumbra_ratio => FlutterFilamentModule.heap.getFloat32($address + 96, Endian.little);
   set max_penumbra_ratio(double value) => FlutterFilamentModule.heap.setFloat32($address + 96, value, Endian.little);
+
+  bool get ray_traced => FlutterFilamentModule.heap.getUint8($address + 100) != 0;
+  set ray_traced(bool value) => FlutterFilamentModule.heap.setUint8($address + 100, value ? 1 : 0);
 }
 
 final class filament_gltfio_material_key_t extends ffi.Struct {
@@ -6335,6 +6393,28 @@ extension type _Module._(JSObject _) implements JSObject {
   external JSNumber filament_dlss_request_extensions();
   @JS('_filament_dlss_clear_extension_request')
   external void filament_dlss_clear_extension_request();
+  @JS('_filament_ray_tracing_request_extensions')
+  external JSNumber filament_ray_tracing_request_extensions();
+  @JS('_filament_ray_tracing_clear_extension_request')
+  external void filament_ray_tracing_clear_extension_request();
+  @JS('_filament_engine_supports_ray_query')
+  external JSNumber filament_engine_supports_ray_query(JSNumber engine);
+  @JS('_filament_scene_set_ray_tracing_enabled')
+  external void filament_scene_set_ray_tracing_enabled(JSNumber scene, JSNumber enabled);
+  @JS('_filament_scene_get_ray_tracing_enabled')
+  external JSNumber filament_scene_get_ray_tracing_enabled(JSNumber scene);
+  @JS('_filament_scene_get_tlas_instance_count')
+  external JSNumber filament_scene_get_tlas_instance_count(JSNumber scene);
+  @JS('_filament_scene_get_tlas_build_nanos')
+  external JSBigInt filament_scene_get_tlas_build_nanos(JSNumber scene);
+  @JS('_filament_renderable_set_ray_tracing_visible')
+  external void filament_renderable_set_ray_tracing_visible(JSNumber engine, JSNumber entity, JSNumber visible);
+  @JS('_filament_renderable_is_ray_tracing_visible')
+  external JSNumber filament_renderable_is_ray_tracing_visible(JSNumber engine, JSNumber entity);
+  @JS('_filament_scene_trace_visibility')
+  external JSNumber filament_scene_trace_visibility(JSNumber engine, JSNumber scene, JSNumber origin3, JSNumber direction3, JSNumber max_distance, JSNumber out_distance, JSNumber out_entity, JSNumber out_primitive);
+  @JS('_filament_view_trace_ray')
+  external void filament_view_trace_ray(JSNumber view, JSNumber origin3, JSNumber direction3, JSNumber max_distance, JSNumber callback, JSNumber user_data);
   @JS('_filament_dlss_create')
   external JSNumber filament_dlss_create(JSNumber engine, JSNumber view, JSNumber opts);
   @JS('_filament_dlss_get_render_resolution')
@@ -8312,7 +8392,7 @@ void $registerFilamentBindings() {
   ffi.$registerStruct<filament_stereoscopic_options>(1, 1, filament_stereoscopic_options.$at);
   ffi.$registerStruct<filament_rt_attachment_t>(16, 4, filament_rt_attachment_t.$at);
   ffi.$registerStruct<FilamentBone>(32, 4, FilamentBone.$at);
-  ffi.$registerStruct<FilamentShadowOptions>(100, 4, FilamentShadowOptions.$at);
+  ffi.$registerStruct<FilamentShadowOptions>(104, 4, FilamentShadowOptions.$at);
   ffi.$registerStruct<filament_gltfio_material_key_t>(44, 1, filament_gltfio_material_key_t.$at);
   ffi.$registerStruct<FilamentCallbackEnvelope>(24, 8, FilamentCallbackEnvelope.$at);
   ffi.$registerStruct<FilamentTextureDesc>(40, 4, FilamentTextureDesc.$at);
@@ -8329,6 +8409,7 @@ void $registerFilamentBindings() {
   ffi.$registerStruct<filament_gpu_info_t>(276, 4, filament_gpu_info_t.$at);
   ffi.$registerStruct<filament_gpu_memory_t>(32, 8, filament_gpu_memory_t.$at);
   ffi.$registerCallbackType<FilamentPickCallbackFunction>(const ffi.$CallbackSignature('v', ['u', 'f', 'f', 'f', 'p']));
+  ffi.$registerCallbackType<FilamentRayHitCallbackFunction>(const ffi.$CallbackSignature('v', ['b', 'f', 'u', 'u', 'p']));
   ffi.$registerCallbackType<FilamentRaycastCallbackFunction>(const ffi.$CallbackSignature('b', ['p', 'p', 'p', 'p']));
   ffi.$registerCallbackType<filament_buffer_free_fnFunction>(const ffi.$CallbackSignature('v', ['p', 'u', 'p']));
   ffi.$registerCallbackType<filament_callback_dispatch_fnFunction>(const ffi.$CallbackSignature('v', ['p']));

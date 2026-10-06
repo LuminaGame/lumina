@@ -487,6 +487,8 @@ Builder for creating multi-primitive renderables.
 | `setPriority` | `void setPriority(int entity, int priority)` | Sets the rendering priority of [entity] (0..7, where 7 renders first / behind). |
 | `setCulling` | `void setCulling(int entity, bool enabled)` | Enables or disables frustum culling for [entity]. |
 | `setCastShadows` | `void setCastShadows(int entity, bool enabled)` | Enables or disables shadow casting for [entity]. |
+| `setRayTracingVisible` | `void setRayTracingVisible(int entity, bool visible)` | [entity] geometrisinin sahnesinin ışın izleme hızlandırma yapılarında yer alıp almadığı (varsayılan true). |
+| `isRayTracingVisible` | `bool isRayTracingVisible(int entity)` | [entity] ışın izleme hızlandırma yapılarında mı, sorgular. |
 | `isShadowCaster` | `bool isShadowCaster(int entity) => c.filament_renderable_is_shadow_caste...` | Checks if [entity] casts shadows. |
 | `setReceiveShadows` | `void setReceiveShadows(int entity, bool enabled)` | Enables or disables receiving shadows for [entity]. |
 | `isShadowReceiver` | `bool isShadowReceiver(int entity) => c.filament_renderable_is_shadow_rec...` | Checks if [entity] receives shadows. |
@@ -530,6 +532,10 @@ A Scene is a flat container of Renderable and Light instances.  Renderables and 
 | `removeEntities` | `void removeEntities(List<int> entities)` | Removes a list of entities from the scene in a single batch FFI call. |
 | `removeAllEntities` | `void removeAllEntities()` | Removes all entities from the scene. |
 | `hasEntity` | `bool hasEntity(int entity)` | Returns true if the given entity is present in the scene. |
+| `rayTracingEnabled` | `bool rayTracingEnabled` (get/set) | Sahne için her karede yeniden kurulan ışın izleme hızlandırma yapılarını tutar; `FilamentEngine.supportsRayQuery` gerekir (bkz. [Işın izleme](ray-tracing.md)). Varsayılan false. |
+| `tlasInstanceCount` | `int get tlasInstanceCount` | Son kareden sonra üst düzey hızlandırma yapısındaki renderable sayısı (kapalı ya da desteksizken 0). |
+| `lastTlasBuildTime` | `Duration get lastTlasBuildTime` | Son üst düzey yapı kurulumunun GPU süresi (bir zamanlayıcı sorgusu çözülene dek `Duration.zero`). |
+| `traceVisibility` | `Future<RayHit?> traceVisibility(double ox, double oy, double oz, double dx, double dy, double dz, {double maxDistance = 1.0e5})` | Test kancası: geçici 1x1 bir view üzerinden tek bir görünürlük ışını izler ve yanıtı bekler; ıskalamada ya da ışın izleme yokken `null`. Kareler arasında çağrılır. |
 | `setIndirectLight` | `void setIndirectLight(FilamentIndirectLight? indirectLight)` | Sets the Image-Based Lighting (IBL) IndirectLight for this scene. |
 | `indirectLight` | `FilamentIndirectLight? get indirectLight` | The currently attached [FilamentIndirectLight], or null if none is set. |
 | `indirectLight` | `indirectLight(FilamentIndirectLight? value) => setIndirectLight(value)` | `indirectLight` işlemini gerçekleştirir. |

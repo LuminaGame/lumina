@@ -1130,6 +1130,89 @@ external bool filament_dlss_request_extensions();
 @ffi.Native<ffi.Void Function()>()
 external void filament_dlss_clear_extension_request();
 
+@ffi.Native<ffi.Bool Function()>()
+external bool filament_ray_tracing_request_extensions();
+
+@ffi.Native<ffi.Void Function()>()
+external void filament_ray_tracing_clear_extension_request();
+
+@ffi.Native<ffi.Bool Function(ffi.Pointer<ffi.Void>)>()
+external bool filament_engine_supports_ray_query(ffi.Pointer<ffi.Void> engine);
+
+@ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>, ffi.Bool)>()
+external void filament_scene_set_ray_tracing_enabled(
+  ffi.Pointer<ffi.Void> scene,
+  bool enabled,
+);
+
+@ffi.Native<ffi.Bool Function(ffi.Pointer<ffi.Void>)>()
+external bool filament_scene_get_ray_tracing_enabled(
+  ffi.Pointer<ffi.Void> scene,
+);
+
+@ffi.Native<ffi.Uint32 Function(ffi.Pointer<ffi.Void>)>()
+external int filament_scene_get_tlas_instance_count(
+  ffi.Pointer<ffi.Void> scene,
+);
+
+@ffi.Native<ffi.Uint64 Function(ffi.Pointer<ffi.Void>)>()
+external int filament_scene_get_tlas_build_nanos(ffi.Pointer<ffi.Void> scene);
+
+@ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>, ffi.Uint32, ffi.Bool)>()
+external void filament_renderable_set_ray_tracing_visible(
+  ffi.Pointer<ffi.Void> engine,
+  int entity,
+  bool visible,
+);
+
+@ffi.Native<ffi.Bool Function(ffi.Pointer<ffi.Void>, ffi.Uint32)>()
+external bool filament_renderable_is_ray_tracing_visible(
+  ffi.Pointer<ffi.Void> engine,
+  int entity,
+);
+
+@ffi.Native<
+  ffi.Bool Function(
+    ffi.Pointer<ffi.Void>,
+    ffi.Pointer<ffi.Void>,
+    ffi.Pointer<ffi.Float>,
+    ffi.Pointer<ffi.Float>,
+    ffi.Float,
+    ffi.Pointer<ffi.Float>,
+    ffi.Pointer<ffi.Uint32>,
+    ffi.Pointer<ffi.Uint32>,
+  )
+>()
+external bool filament_scene_trace_visibility(
+  ffi.Pointer<ffi.Void> engine,
+  ffi.Pointer<ffi.Void> scene,
+  ffi.Pointer<ffi.Float> origin3,
+  ffi.Pointer<ffi.Float> direction3,
+  double max_distance,
+  ffi.Pointer<ffi.Float> out_distance,
+  ffi.Pointer<ffi.Uint32> out_entity,
+  ffi.Pointer<ffi.Uint32> out_primitive,
+);
+
+@ffi.Native<
+  ffi.Void Function(
+    ffi.Pointer<ffi.Void>,
+    ffi.Pointer<ffi.Float>,
+    ffi.Pointer<ffi.Float>,
+    ffi.Float,
+    FilamentRayHitCallback,
+    ffi.Pointer<ffi.Void>,
+  )
+>()
+external void filament_view_trace_ray(
+  ffi.Pointer<ffi.Void> view,
+  ffi.Pointer<ffi.Float> origin3,
+  ffi.Pointer<ffi.Float> direction3,
+  double max_distance,
+  FilamentRayHitCallback callback,
+  ffi.Pointer<ffi.Void> user_data,
+);
+
 @ffi.Native<
   ffi.Pointer<ffi.Void> Function(
     ffi.Pointer<ffi.Void>,
@@ -10118,6 +10201,24 @@ typedef DartFilamentPickCallbackFunction =
     );
 typedef FilamentPickCallback =
     ffi.Pointer<ffi.NativeFunction<FilamentPickCallbackFunction>>;
+typedef FilamentRayHitCallbackFunction =
+    ffi.Void Function(
+      ffi.Bool hit,
+      ffi.Float distance,
+      ffi.Uint32 entity,
+      ffi.Uint32 primitive,
+      ffi.Pointer<ffi.Void> user_data,
+    );
+typedef DartFilamentRayHitCallbackFunction =
+    void Function(
+      bool hit,
+      double distance,
+      int entity,
+      int primitive,
+      ffi.Pointer<ffi.Void> user_data,
+    );
+typedef FilamentRayHitCallback =
+    ffi.Pointer<ffi.NativeFunction<FilamentRayHitCallbackFunction>>;
 
 final class filament_rt_attachment_t extends ffi.Struct {
   external ffi.Pointer<ffi.Void> texture;
@@ -10351,6 +10452,9 @@ final class FilamentShadowOptions extends ffi.Struct {
 
   @ffi.Float()
   external double max_penumbra_ratio;
+
+  @ffi.Bool()
+  external bool ray_traced;
 }
 
 final class filament_gltfio_material_key_t extends ffi.Struct {

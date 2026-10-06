@@ -13,6 +13,7 @@ are upstream v1.77.2 with exactly these files applied in order.
 | `0004-velocity-buffer-motion-vectors.patch` | `filament/include/filament/{Options,View}.h`, `filament/src/{PostProcessManager,FrameHistory,View}.*`, `filament/src/details/{Renderer,Scene,View}.*`, `filament/src/ds/StructureDescriptorSet.*`, `filament/src/materials/antiAliasing/taa/taa.mat`, `libs/filabridge/.../UibStructs.h`, `libs/filamat/src/shaders/UibGenerator.cpp`, `shaders/src/surface_*` | Per-pixel motion vectors from the structure pass (`TemporalAntiAliasingOptions::motionVectors`), consumed by TAA and exportable through `View::setMotionVectorTexture`. |
 | `0005-shutdown-terminates-views-before-cameras.patch` | `filament/src/details/Engine.cpp` | `Engine::shutdown` terminates leaked views before it frees the cameras their shadow maps own and the resource allocator disposer their frame history returns to; the upstream order reads freed memory and crashes `Engine::destroy`. |
 | `0006-external-upscaler-pass.patch` | `filament/backend/include/backend/ExternalPass.h` (new), `backend/{DriverEnums.h,platforms/VulkanPlatform.h}`, `backend/src/vulkan/{VulkanDriver,VulkanTexture,platform/VulkanPlatform}.cpp`, the other drivers' no-ops, `filament/include/filament/{Options,View}.h`, `filament/src/{PostProcessManager,View}.*`, `filament/src/details/{Renderer,View}.*` | An external upscaler (DLSS) behind dynamic resolution: `DynamicResolutionOptions::upscaler`, `View::setExternalUpscaler`, the `externalPass` driver command that hands Vulkan images and the recording command buffer to a client callback, and client-requested Vulkan extensions. |
+| `0007-vulkan-ray-query.patch` | `filament/backend/include/backend/AccelerationStructure.h` (new), `backend/src/vulkan/VulkanAccelerationStructure.*` (new), `backend/{DriverEnums.h,Handle.h,private/backend/{Driver.h,DriverAPI.inc}}`, the Vulkan driver, context, platform, handles, buffer and descriptor-set caches, the other drivers' no-ops, `filament/include/filament/{Engine,LightManager,RenderableManager,Scene,View}.h`, `filament/src/{PostProcessManager,RenderPrimitive,RendererUtils,MaterialParser,MaterialDefinition}.*`, `filament/src/details/{Renderer,Scene,View,VertexBuffer,IndexBuffer,Engine}.*`, `filament/src/ds/*`, `filament/src/materials/rt/` (new), `libs/filabridge` (binding points, chunk type), `libs/filamat` (the `rayQuery` material flag, GLSL 460 + `GL_EXT_ray_query`, SPIR-V 1.4), `shaders/src/surface_light_directional.fs`, `third_party/smol-v/source/smolv.cpp` | Vulkan ray query: acceleration structures as backend objects, a per-scene BLAS/TLAS kept by `Scene::setRayTracingEnabled`, hard ray-traced sun shadows (`ShadowOptions::rayTraced`) and single-ray visibility queries (`View::traceRay`). |
 
 ## 0001: libassimp glTF 2 `ReplaceData_joint` bounds
 
@@ -142,3 +143,60 @@ makes Filament fall back to FSR1 there. `VulkanPlatform::Customization` grows
 `extraInstanceExtensions` / `extraDeviceExtensions` (skipped with a log line when unavailable),
 and `VK_KHR_buffer_device_address` enables its feature when requested: NGX needs both before
 the device exists. The DLSS code itself lives in `flutter_filament` (`src/dlss_c.cpp`).
+
+## 0007: Vulkan ray query
+
+Filament has no notion of ray tracing. This patch adds the smallest foundation that lets
+fragment shaders trace rays against the scene on Vulkan (`VK_KHR_acceleration_structure`,
+`VK_KHR_ray_query`, `VK_KHR_buffer_device_address`), while every other backend and every
+device without the extensions behaves exactly as before.
+
+- **Backend.** `HwAccelerationStructure` is a new handle type with the driver commands
+  `createAccelerationStructureBlas` (one triangle geometry described by
+  `AccelerationStructureGeometry`: a position attribute inside a buffer object and an optional
+  index buffer), `createAccelerationStructureTlas(capacity)`, `updateTlasInstances` (an array
+  of `AccelerationStructureInstance`: 3x4 transform, custom index, mask, BLAS handle),
+  `buildAccelerationStructure(BUILD | REFIT)`, `destroyAccelerationStructure`,
+  `updateDescriptorSetAccelerationStructure` for the new `DescriptorType::ACCELERATION_STRUCTURE`
+  and the query `isRayQuerySupported()`. The Vulkan platform requests the three extensions and
+  chains their feature structs when the device offers them; the allocator is created with
+  buffer device addresses, and vertex / index buffers get the
+  `SHADER_DEVICE_ADDRESS` and `ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY` usages.
+  `VulkanAccelerationStructure` owns the structure, its storage and scratch buffers and records
+  the build with the required memory barriers. The other drivers implement the commands as
+  no-ops and report no support.
+- **Materials.** A post-process material declares `rayQuery : true` (stored in the new
+  `MAT_RAYQ` chunk) to be compiled as GLSL 460 with `GL_EXT_ray_query` for SPIR-V 1.4 on Vulkan
+  only, with `layout(set = 0, binding = 13) uniform accelerationStructureEXT sceneTlas` from the
+  per-view set (`PerViewBindingPoints::TLAS`). Such a material renders with the ray-query
+  post-process descriptor-set layout (frame uniforms + TLAS), selected by
+  `MaterialDefinition::hasRayQuery` (the `MAT_RAYQ` chunk is written for every material domain).
+  The Vulkan 1.1 device Filament creates has no core 1.2 entry points, so buffer addresses come
+  from `vkGetBufferDeviceAddressKHR`. Such shaders are SPIR-V 1.4, so the bundled smol-v
+  compressor accepts module headers up to 1.6 (the ray query opcodes it does not know are
+  stored as plain operand words). Lit surface shaders gain the `sampler0_rtShadow` sampler
+  (`PerViewBindingPoints::RT_SHADOW`); `surface_light_directional.fs` multiplies the sun's
+  visibility by it when bit 2 of `directionalShadows` is set.
+- **Engine.** `Engine::isRayQuerySupported()`. `Scene::setRayTracingEnabled()` makes
+  `FScene::updateAccelerationStructures` run at the start of every frame the scene renders
+  (from `FRenderer::renderJob`): one BLAS per distinct primitive geometry (vertex buffer,
+  index buffer, offset, count; built once, dropped after 120 unused frames) and a TLAS over
+  every renderable of the scene with `RenderableManager::isRayTracingVisible()` (default true,
+  `setRayTracingVisible(false)` removes one), rebuilt every frame from the current world
+  transforms with the instance custom index pointing back at the entity. The TLAS capacity
+  doubles when it runs out; a timer query measures the build
+  (`Scene::getLastTlasBuildTimeNanos`, `Scene::getTlasInstanceCount`). Skinned and morphed
+  renderables are traced in their bind pose, since the backend has no compute path to
+  deform them yet.
+- **Ray-traced sun shadows.** `LightManager::ShadowOptions::rayTraced` (after `lispsm`, no
+  layout change) replaces the directional cascades: `FView::prepareShadowing` skips the
+  shadow map when the device and scene support it, the structure pass runs at full
+  resolution (a view whose only shadows are ray-traced has no shadow map manager, and its
+  shadow uniforms stay the dummy buffer), and `PostProcessManager::rayTracedShadows` renders the built-in `rtShadow`
+  material into an R8 visibility mask (one ray per pixel from the structure depth toward the
+  light, with a distance-scaled bias) that the colour pass binds as `sampler0_rtShadow`. Point
+  and spot shadows keep their shadow maps.
+- **Ray queries.** `View::traceRay(origin, direction, maxDistance, callback)` queues a query
+  like `View::pick`. The next frame renders the built-in `rayVisibility` material into a 1x1
+  RGBA32F target and reads it back; the callback receives `RayQueryResult{hit, distance,
+  renderable, primitive}`. Without support the queries are answered with no hit.

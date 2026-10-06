@@ -185,5 +185,140 @@ void main() {
         Dlss.clearExtensionRequest();
       }
     }, timeout: const Timeout(Duration(minutes: 10)));
+
+    test('ray-traced sun shadows over props', () async {
+      if (smokeBackend != FilamentBackend.vulkan) {
+        markTestSkipped('ray tracing needs the Vulkan backend ($smokeBackendName)');
+        return;
+      }
+      // The engine of the shared rig was created without the ray query extensions;
+      // this scenario owns an engine created after the request.
+      rig.dispose();
+      smokeLog('rt-smoke: shared rig disposed');
+      expect(RayTracing.requestExtensions(), isTrue);
+      final engine = FilamentEngine.create(backend: FilamentBackend.vulkan)!;
+      rig = SmokeRig.adopt(engine, width: 1024, height: 768);
+      smokeLog('rt-smoke: engine ready');
+      if (!engine.supportsRayQuery) {
+        RayTracing.clearExtensionRequest();
+        markTestSkipped('this GPU or driver has no Vulkan ray query support');
+        return;
+      }
+      const name = 'rtx Smoke Tests ray-traced sun shadows over props';
+      final sun = rig.addSun(intensity: 110000);
+      rig.addIbl(intensity: 12000);
+      final lm = FilamentLightManager(engine);
+      final tm = FilamentTransformManager(engine);
+
+      // A lit floor that receives the shadows: a 14 m quad lying flat.
+      final floorMaterial = buildLitMaterial(engine);
+      final floorInstance = floorMaterial.createInstance()..setFloat3('baseColor', 0.82, 0.8, 0.76);
+      final floorQuad = SmokeQuad.create(engine, size: 14, tangents: true);
+      final floor = addQuadRenderable(rig, floorQuad, floorInstance, extent: 7);
+      // +Z of the quad becomes +Y: rotate -90 degrees about X.
+      tm.setTransform(floor, [1, 0, 0, 0, 0, 0, -1, 0, 0, 1, 0, 0, 0, 0, 0, 1]);
+      smokeLog('rt-smoke: floor ready');
+
+      // Four different props standing on the floor, a walking character among them.
+      const props = [
+        ('Props/Barrels/fuel_barrel_red.glb', -3.2, 0.6),
+        ('Props/AC_units/ac_unit_a_300x300.glb', -1.1, -0.4),
+        ('Props/Access_cards/access_card_blue.glb', 1.0, 0.9),
+        ('Props/Barrels/dented_barrel.glb', 3.0, -0.2),
+      ];
+      final loaded = <LoadedGltf>[];
+      void place(LoadedGltf gltf, double x, double z) {
+        final box = gltf.asset.getBoundingBox();
+        tm.setTransform(gltf.asset.rootEntity, [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, x - box.center.x, -box.min.y, z - box.center.z, 1]);
+      }
+
+      try {
+        for (final (path, x, z) in props) {
+          final gltf = loadGltfIntoScene(rig, path, frameCamera: false);
+          loaded.add(gltf);
+          place(gltf, x, z);
+        }
+        smokeLog('rt-smoke: props ready');
+        final character = loadGltfIntoScene(rig, 'mannequin/MF_Unarmed_Walk_Fwd.glb', frameCamera: false);
+        loaded.add(character);
+        final animator = character.asset.animator;
+        final duration = animator.getAnimationDuration(0);
+        animator.applyAnimation(0, 0);
+        animator.updateBoneMatrices();
+        place(character, 0.0, -2.2);
+
+        rig.camera.setProjection(fovDegrees: 40, aspect: rig.width / rig.height, near: 0.1, far: 200);
+        rig.camera.lookAt(eyeX: 0.5, eyeY: 4.2, eyeZ: 9.5, centerX: 0, centerY: 0.9, centerZ: -0.3);
+        rig.view.shadowingEnabled = true;
+        rig.scene.rayTracingEnabled = true;
+        lm.setShadowCaster(sun, true);
+
+        void orbitSun(double t) {
+          final a = t * math.pi * 1.2 - 0.4;
+          lm.setDirection(sun, math.sin(a) * 0.75, -1.0, math.cos(a) * 0.75);
+        }
+
+        void pose(int frame) {
+          animator.applyAnimation(0, (frame / smokeVideoFps) % duration);
+          animator.updateBoneMatrices();
+        }
+
+        lm.setShadowOptions(sun, ShadowOptions(mapSize: 2048, shadowCascades: 1, rayTraced: true));
+        orbitSun(0);
+        pose(0);
+        smokeLog('rt-smoke: character ready');
+        rig.renderFrame(warmup: 3);
+        smokeLog('rt-smoke: first frame');
+        expect(rig.scene.tlasInstanceCount, greaterThanOrEqualTo(6), reason: 'floor, four props and the character');
+
+        final buildTimes = <Duration>[];
+        final last = rig.video(name, onFrame: (frame, t) {
+          orbitSun(t);
+          pose(frame);
+          final build = rig.scene.lastTlasBuildTime;
+          if (build > Duration.zero) buildTimes.add(build);
+        }, alsoScreenshot: false);
+        expect(buildTimes, isNotEmpty, reason: 'the TLAS build timer resolved during the clip');
+        final averageMicros = buildTimes.fold<int>(0, (sum, d) => sum + d.inMicroseconds) / buildTimes.length;
+        smokeLog('tlas instances ${rig.scene.tlasInstanceCount}, average build ${averageMicros.toStringAsFixed(0)} us');
+        expect(averageMicros, lessThan(4000), reason: 'TLAS build under 4 ms on average');
+
+        // Side by side at the final pose: ray-traced on the left, cascaded shadow maps on the right.
+        lm.setShadowOptions(sun, ShadowOptions(mapSize: 2048, shadowCascades: 1, rayTraced: false));
+        Uint8List? csm;
+        for (var i = 0; i < 4; i++) {
+          csm = rig.renderFrame(warmup: 0);
+        }
+        final side = Uint8List(rig.width * 2 * rig.height * 4);
+        for (var y = 0; y < rig.height; y++) {
+          final row = y * rig.width * 4;
+          side.setRange(y * rig.width * 8, y * rig.width * 8 + rig.width * 4, last, row);
+          side.setRange(y * rig.width * 8 + rig.width * 4, (y + 1) * rig.width * 8, csm!, row);
+        }
+        SmokeArtifacts.saveScreenshot('$name (ray-traced left, shadow maps right)', SmokeArtifacts.encodePng(rig.width * 2, rig.height, side));
+        expect(frameStats(last).distinct, greaterThan(200), reason: 'a shaded scene must be visible');
+        expect(countChangedPixels(last, csm!, tolerance: 24), greaterThan(0), reason: 'the two shadow techniques differ somewhere');
+
+        final before = engine.resourceCounts;
+        for (final gltf in loaded) {
+          gltf.dispose(rig.scene);
+        }
+        loaded.clear();
+        engine.flushAndWait();
+        rig.renderFrame(warmup: 2);
+        expect(engine.resourceCounts.bufferObjects, lessThanOrEqualTo(before.bufferObjects), reason: 'no leaked handles');
+      } finally {
+        for (final gltf in loaded) {
+          gltf.dispose(rig.scene);
+        }
+        // the floor renderable goes before the material instance and buffers it uses
+        engine.destroyEntity(floor);
+        rig.entities.remove(floor);
+        floorInstance.dispose();
+        floorMaterial.dispose();
+        floorQuad.dispose();
+        RayTracing.clearExtensionRequest();
+      }
+    }, timeout: const Timeout(Duration(minutes: 10)));
   });
 }

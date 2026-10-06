@@ -33,6 +33,7 @@ Her sayfa bir subsystem'i kapsar: önce `src/*_c.h` header'larındaki C fonksiyo
 | [Renderer, view'ler ve frame pacing](renderer-and-view.md) | Renderer, swap chain'ler, view'ler, render target'lar, frame pacing, Flutter widget'ı. |
 | [View seçenekleri ve color grading](view-options.md) | View başına post-processing ve kalite seçenekleri, tone mapping ve color grading. |
 | [DLSS Super Resolution](dlss.md) | Dinamik çözünürlüğün arkasında NVIDIA DLSS: indirilen SDK, motor öncesi uzantı isteği, kalite modları, sınırlar. |
+| [Işın izleme](ray-tracing.md) | Vulkan ray query: uzantı isteği, sahne başına hızlandırma yapıları, ışın izlemeli güneş gölgeleri, görünürlük ışınları, sınırlar. |
 | [Sahne ve geometri](scene-and-geometry.md) | Sahneler, renderable'lar, transform'lar, vertex/index/instance/morph/skinning buffer'ları, filamesh. |
 | [Kamera ve manipulator](camera-and-manipulator.md) | Kameralar, projeksiyonlar, exposure ve orbit/map/free-flight kamera manipulator'ı. |
 | [Işıklandırma ve image-based lighting](lighting-and-ibl.md) | Işıklar, gölgeler, indirect light, skybox'lar, IBL bake ve prefilter. |

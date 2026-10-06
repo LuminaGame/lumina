@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Ray tracing foundation (prebuilt `1.77.2-lumina.5`, Filament patch `0007`): the Vulkan backend builds
+  acceleration structures (`VK_KHR_ray_query`). `RayTracing.requestExtensions()` before the engine is created,
+  `FilamentEngine.supportsRayQuery`, `FilamentScene.rayTracingEnabled` (a BLAS per primitive geometry and a TLAS
+  over the scene rebuilt every frame, `tlasInstanceCount`, `lastTlasBuildTime`),
+  `FilamentRenderableManager.setRayTracingVisible`, `ShadowOptions.rayTraced` (hard ray-traced sun shadows that
+  replace the cascaded shadow maps when supported), `FilamentView.traceRay` and the test hook
+  `FilamentScene.traceVisibility`. Post-process materials may declare `rayQuery : true` to trace rays
+  themselves. Skinned and morphed renderables are traced in their bind pose for now. Other backends, GPUs
+  without the extensions and the web report no support and render as before.
 - DLSS Super Resolution (prebuilt `1.77.2-lumina.4`, Filament patch `0006`): `Dlss` renders a view at the
   resolution NVIDIA NGX picks for a `DlssQuality` and reconstructs the output through Filament's new external
   upscaler pass (`DynamicResolutionOptions.upscaler`). The NGX SDK is fetched by `tool/dlss/fetch_sdk.dart`

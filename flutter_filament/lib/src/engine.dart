@@ -910,6 +910,18 @@ class FilamentEngine {
     return c.filament_engine_is_stereo_supported(_ptr, type.value);
   }
 
+  /// Whether this engine's device builds ray tracing acceleration structures
+  /// and traces rays from shaders (Vulkan ray query).
+  ///
+  /// True only on a Vulkan engine created after [RayTracing.requestExtensions]
+  /// on a GPU with the ray query extensions. Without it
+  /// [FilamentScene.rayTracingEnabled] builds nothing, [ShadowOptions.rayTraced]
+  /// falls back to the shadow maps and ray queries report no hit.
+  bool get supportsRayQuery {
+    _checkDisposed();
+    return c.filament_engine_supports_ray_query(_ptr);
+  }
+
   /// Whether the engine has encountered an unrecoverable failure (e.g. GPU crash).
   bool get hasUnrecoverableFailure {
     _checkDisposed();

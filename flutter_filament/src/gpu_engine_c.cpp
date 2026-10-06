@@ -14,10 +14,12 @@
 #include "gpu_c.h"
 #include "gpu_engine_internal.h"
 
+#include <algorithm>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <exception>
+#include <map>
 #include <mutex>
 #include <string>
 #include <unordered_map>
@@ -73,17 +75,25 @@ GpuPreference fromEnvironment() {
 
 #if FLUTTER_FILAMENT_GPU_PLATFORM
 // Extra Vulkan extensions requested for the engines created from now on (DLSS
-// needs some before the device exists); copied into each platform at creation.
+// and ray tracing need theirs before the device exists), one entry per
+// requester; their union is copied into each platform at creation.
 std::mutex gExtraExtensionsMutex;
-std::vector<std::string> gExtraInstanceExtensions;
-std::vector<std::string> gExtraDeviceExtensions;
+std::map<std::string, std::pair<std::vector<std::string>, std::vector<std::string>>> gExtraExtensions;
+
+static void appendUnique(std::vector<std::string>& into, const std::vector<std::string>& names) {
+    for (const auto& n : names) {
+        if (std::find(into.begin(), into.end(), n) == into.end()) into.push_back(n);
+    }
+}
 
 class PreferredGpuPlatform final : public DesktopVulkanPlatform {
 public:
     explicit PreferredGpuPlatform(GpuPreference pref) : mPref(std::move(pref)) {
         std::lock_guard<std::mutex> lock(gExtraExtensionsMutex);
-        mInstanceExtensions = gExtraInstanceExtensions;
-        mDeviceExtensions = gExtraDeviceExtensions;
+        for (const auto& entry : gExtraExtensions) {
+            appendUnique(mInstanceExtensions, entry.second.first);
+            appendUnique(mDeviceExtensions, entry.second.second);
+        }
     }
 
     Customization getCustomization() const noexcept override {
@@ -302,13 +312,19 @@ int filament_gpu_live_platform_count(void) {
 #endif
 }
 
-void flutter_filament_set_extra_vulkan_extensions(const std::vector<std::string>& instanceExtensions,
+void flutter_filament_set_extra_vulkan_extensions(const char* requester,
+        const std::vector<std::string>& instanceExtensions,
         const std::vector<std::string>& deviceExtensions) {
 #if FLUTTER_FILAMENT_GPU_PLATFORM
     std::lock_guard<std::mutex> lock(gExtraExtensionsMutex);
-    gExtraInstanceExtensions = instanceExtensions;
-    gExtraDeviceExtensions = deviceExtensions;
+    const std::string key = requester ? requester : "";
+    if (instanceExtensions.empty() && deviceExtensions.empty()) {
+        gExtraExtensions.erase(key);
+    } else {
+        gExtraExtensions[key] = { instanceExtensions, deviceExtensions };
+    }
 #else
+    (void) requester;
     (void) instanceExtensions;
     (void) deviceExtensions;
 #endif

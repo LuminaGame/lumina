@@ -15,8 +15,11 @@
 
 /// Extra Vulkan instance / device extensions every engine created from now on
 /// asks its platform for (unavailable ones are skipped by Filament with a log
-/// line). Empty lists clear the request.
-void flutter_filament_set_extra_vulkan_extensions(const std::vector<std::string>& instanceExtensions,
+/// line). Requests are kept per `requester` ("dlss", "ray_tracing", ...) and
+/// united at engine creation, so the order of the requests does not matter;
+/// empty lists clear that requester's entry.
+void flutter_filament_set_extra_vulkan_extensions(const char* requester,
+        const std::vector<std::string>& instanceExtensions,
         const std::vector<std::string>& deviceExtensions);
 
 /// The Vulkan objects behind an engine created through

@@ -488,6 +488,7 @@ Configuration options for shadow-map generation and cascaded shadow maps (CSM).
 | `shadowNearHint` | `double shadowNearHint` | Holds the `shadowNearHint` property or configuration state. |
 | `shadowFarHint` | `double shadowFarHint` | Holds the `shadowFarHint` property or configuration state. |
 | `stable` | `bool stable` | Holds the `stable` property or configuration state. |
+| `rayTraced` | `bool rayTraced` | Trace hard shadows against the scene's ray tracing acceleration structures instead of the cascaded shadow maps; directional lights only, falls back to the maps without ray query support (see [Ray tracing](ray-tracing.md)). Default false. |
 | `lispsm` | `bool lispsm` | Holds the `lispsm` property or configuration state. |
 | `polygonOffsetConstant` | `double polygonOffsetConstant` | Holds the `polygonOffsetConstant` property or configuration state. |
 | `polygonOffsetSlope` | `double polygonOffsetSlope` | Holds the `polygonOffsetSlope` property or configuration state. |

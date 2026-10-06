@@ -33,6 +33,7 @@ Each page covers one subsystem: the C functions of its `src/*_c.h` headers first
 | [Renderer, views and frame pacing](renderer-and-view.md) | Renderer, swap chains, views, render targets, frame pacing, the Flutter widget. |
 | [View options and color grading](view-options.md) | Per-view post-processing and quality options, tone mapping and color grading. |
 | [DLSS Super Resolution](dlss.md) | NVIDIA DLSS behind dynamic resolution: the fetched SDK, the extension request before engine creation, quality modes, limits. |
+| [Ray tracing](ray-tracing.md) | Vulkan ray query: the extension request, per-scene acceleration structures, ray-traced sun shadows, visibility rays, limits. |
 | [Scene and geometry](scene-and-geometry.md) | Scenes, renderables, transforms, vertex/index/instance/morph/skinning buffers, filamesh. |
 | [Camera and manipulator](camera-and-manipulator.md) | Cameras, projections, exposure and the orbit/map/free-flight camera manipulator. |
 | [Lighting and image-based lighting](lighting-and-ibl.md) | Lights, shadows, indirect light, skyboxes, IBL baking and prefiltering. |

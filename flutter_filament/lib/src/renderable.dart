@@ -538,6 +538,16 @@ class FilamentRenderableManager {
   /// Checks if [entity] casts shadows.
   bool isShadowCaster(int entity) => c.filament_renderable_is_shadow_caster(engine.nativePointer, entity);
 
+  /// Whether the geometry of [entity] is part of the ray tracing acceleration
+  /// structures of its scene (default true). `false` removes it from ray-traced
+  /// shadows and ray queries while it keeps rendering.
+  void setRayTracingVisible(int entity, bool visible) {
+    c.filament_renderable_set_ray_tracing_visible(engine.nativePointer, entity, visible);
+  }
+
+  /// Checks if [entity] is part of the ray tracing acceleration structures.
+  bool isRayTracingVisible(int entity) => c.filament_renderable_is_ray_tracing_visible(engine.nativePointer, entity);
+
   /// Enables or disables receiving shadows for [entity].
   void setReceiveShadows(int entity, bool enabled) {
     c.filament_renderable_set_receive_shadows(engine.nativePointer, entity, enabled);

@@ -121,6 +121,10 @@ typedef struct FilamentShadowOptions {
     float penumbra_scale;
     float penumbra_ratio_scale;
     float max_penumbra_ratio;
+    // Trace hard shadows against the scene's ray tracing acceleration structures instead
+    // of the cascaded shadow maps (directional lights; needs ray query support and
+    // filament_scene_set_ray_tracing_enabled, falls back to the maps otherwise).
+    bool ray_traced;
 } FilamentShadowOptions;
 
 FFI_PLUGIN_EXPORT size_t filament_sizeof_shadow_options(void);

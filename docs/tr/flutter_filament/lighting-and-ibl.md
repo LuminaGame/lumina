@@ -488,6 +488,7 @@ Configuration options for shadow-map generation and cascaded shadow maps (CSM).
 | `shadowNearHint` | `double shadowNearHint` | `shadowNearHint` alanını (field/property) ve ilişkili veriyi saklar. |
 | `shadowFarHint` | `double shadowFarHint` | `shadowFarHint` alanını (field/property) ve ilişkili veriyi saklar. |
 | `stable` | `bool stable` | `stable` alanını (field/property) ve ilişkili veriyi saklar. |
+| `rayTraced` | `bool rayTraced` | Sert gölgeleri kademeli gölge haritaları yerine sahnenin ışın izleme hızlandırma yapılarına karşı izler; yalnızca yönlü ışıklar, ray query desteği yoksa haritalara döner (bkz. [Işın izleme](ray-tracing.md)). Varsayılan false. |
 | `lispsm` | `bool lispsm` | `lispsm` alanını (field/property) ve ilişkili veriyi saklar. |
 | `polygonOffsetConstant` | `double polygonOffsetConstant` | `polygonOffsetConstant` alanını (field/property) ve ilişkili veriyi saklar. |
 | `polygonOffsetSlope` | `double polygonOffsetSlope` | `polygonOffsetSlope` alanını (field/property) ve ilişkili veriyi saklar. |

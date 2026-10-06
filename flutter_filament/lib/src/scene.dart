@@ -4,6 +4,7 @@ import 'ffi_package_platform.dart';
 
 import 'engine.dart';
 import 'indirect_light.dart';
+import 'ray_tracing.dart';
 import 'skybox.dart';
 import 'filament_bindings.dart' as c;
 import 'view.dart';
@@ -23,6 +24,74 @@ class FilamentScene {
   ffi.Pointer<ffi.Void> get nativePointer {
     _checkDisposed();
     return _ptr;
+  }
+
+  /// Whether the scene keeps ray tracing acceleration structures: one
+  /// bottom-level structure per primitive geometry and a top-level one over the
+  /// world transforms of its renderables, rebuilt every frame the scene renders.
+  ///
+  /// Needs [FilamentEngine.supportsRayQuery]; otherwise the flag is kept but
+  /// nothing is built. Default false. See [RayTracing].
+  bool get rayTracingEnabled {
+    _checkDisposed();
+    return c.filament_scene_get_ray_tracing_enabled(_ptr);
+  }
+
+  set rayTracingEnabled(bool enabled) {
+    _checkDisposed();
+    c.filament_scene_set_ray_tracing_enabled(_ptr, enabled);
+  }
+
+  /// How many renderables the top-level acceleration structure held after the
+  /// last rendered frame (0 while ray tracing is off or unsupported).
+  int get tlasInstanceCount {
+    _checkDisposed();
+    return c.filament_scene_get_tlas_instance_count(_ptr);
+  }
+
+  /// GPU time of the last top-level structure build ([Duration.zero] until a
+  /// timer query resolved).
+  Duration get lastTlasBuildTime {
+    _checkDisposed();
+    final nanos = c.filament_scene_get_tlas_build_nanos(_ptr);
+    return Duration(microseconds: nanos ~/ 1000);
+  }
+
+  /// Traces one visibility ray from ([ox], [oy], [oz]) along ([dx], [dy],
+  /// [dz]) against the acceleration structures and waits for the answer.
+  ///
+  /// A test and tooling hook: it renders the scene through a temporary 1x1 view
+  /// (which also rebuilds the structures from the current transforms), so call
+  /// it between frames, never while a frame of your renderer is open. Returns
+  /// `null` on a miss, when the hit is farther than [maxDistance], or when ray
+  /// tracing is off or unsupported. Use [FilamentView.traceRay] for queries
+  /// answered by the frames you render anyway.
+  Future<RayHit?> traceVisibility(double ox, double oy, double oz, double dx, double dy, double dz,
+      {double maxDistance = 1.0e5}) async {
+    _checkDisposed();
+    final origin = calloc<ffi.Float>(3);
+    final direction = calloc<ffi.Float>(3);
+    final distance = calloc<ffi.Float>();
+    final entity = calloc<ffi.Uint32>();
+    final primitive = calloc<ffi.Uint32>();
+    try {
+      origin[0] = ox;
+      origin[1] = oy;
+      origin[2] = oz;
+      direction[0] = dx;
+      direction[1] = dy;
+      direction[2] = dz;
+      final hit = c.filament_scene_trace_visibility(
+          _engine.nativePointer, _ptr, origin, direction, maxDistance, distance, entity, primitive);
+      if (!hit) return null;
+      return RayHit(t: distance.value, entity: entity.value, primitive: primitive.value);
+    } finally {
+      calloc.free(origin);
+      calloc.free(direction);
+      calloc.free(distance);
+      calloc.free(entity);
+      calloc.free(primitive);
+    }
   }
 
   /// Populates this scene with the official Filament 3D Suzanne Monkey model,

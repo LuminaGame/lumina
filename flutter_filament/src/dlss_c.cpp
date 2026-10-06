@@ -547,13 +547,13 @@ bool filament_dlss_request_extensions(void) {
     std::vector<std::string> instance, device;
     for (unsigned i = 0; i < instCount; ++i) if (instExts && instExts[i]) instance.emplace_back(instExts[i]);
     for (unsigned i = 0; i < devCount; ++i) if (devExts && devExts[i]) device.emplace_back(devExts[i]);
-    flutter_filament_set_extra_vulkan_extensions(instance, device);
+    flutter_filament_set_extra_vulkan_extensions("dlss", instance, device);
     clearError();
     return true;
 }
 
 void filament_dlss_clear_extension_request(void) {
-    flutter_filament_set_extra_vulkan_extensions({}, {});
+    flutter_filament_set_extra_vulkan_extensions("dlss", {}, {});
 }
 
 void* filament_dlss_create(void* engine, void* view, const filament_dlss_options_t* opts) {

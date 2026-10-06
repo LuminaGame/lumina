@@ -425,6 +425,31 @@ FilamentMaterial buildUnlitMaterial(FilamentEngine engine, {bool textured = fals
   return FilamentMaterial.fromBuffer(engine: engine, filamatBuffer: bytes);
 }
 
+/// A lit, rough, non-metallic material with a `baseColor` parameter: it
+/// receives the scene's shadows, unlike [buildUnlitMaterial].
+FilamentMaterial buildLitMaterial(FilamentEngine engine) {
+  FilamentMaterialBuilder.initEngine();
+  final b = FilamentMaterialBuilder.create();
+  b.setName('SmokeLit');
+  b.setShading(FilamatShading.lit);
+  b.setDoubleSided(true);
+  b.requireAttribute(VertexAttribute.position.value);
+  b.requireAttribute(VertexAttribute.tangents.value);
+  b.addParameter('baseColor', UniformType.float3);
+  b.setCode('''
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        material.baseColor.rgb = materialParams.baseColor;
+        material.roughness = 0.85;
+        material.metallic = 0.0;
+    }
+  ''');
+  final bytes = b.build();
+  b.dispose();
+  if (bytes == null) throw StateError('filamat build failed');
+  return FilamentMaterial.fromBuffer(engine: engine, filamatBuffer: bytes);
+}
+
 /// A quad in the XY plane (side [size]) with positions (float3) in buffer 0
 /// and uv0 (float2) in buffer 1; 6 ushort indices.
 class SmokeQuad {
@@ -432,19 +457,26 @@ class SmokeQuad {
   final FilamentVertexBuffer vb;
   final FilamentIndexBuffer ib;
 
-  static SmokeQuad create(FilamentEngine engine, {double size = 1.0, double z = 0.0}) {
+  /// With [tangents] the quad also carries a +Z tangent frame (the identity
+  /// quaternion) in buffer 2, which lit materials need for their normal.
+  static SmokeQuad create(FilamentEngine engine, {double size = 1.0, double z = 0.0, bool tangents = false}) {
     final vb = FilamentVertexBuffer.create(
       engine: engine,
       vertexCount: 4,
-      bufferCount: 2,
-      attributes: const [
-        VertexAttributeDesc(attribute: VertexAttribute.position, bufferIndex: 0, type: AttributeType.float3, byteOffset: 0, byteStride: 12),
-        VertexAttributeDesc(attribute: VertexAttribute.uv0, bufferIndex: 1, type: AttributeType.float2, byteOffset: 0, byteStride: 8),
+      bufferCount: tangents ? 3 : 2,
+      attributes: [
+        const VertexAttributeDesc(attribute: VertexAttribute.position, bufferIndex: 0, type: AttributeType.float3, byteOffset: 0, byteStride: 12),
+        const VertexAttributeDesc(attribute: VertexAttribute.uv0, bufferIndex: 1, type: AttributeType.float2, byteOffset: 0, byteStride: 8),
+        if (tangents)
+          const VertexAttributeDesc(attribute: VertexAttribute.tangents, bufferIndex: 2, type: AttributeType.float4, byteOffset: 0, byteStride: 16),
       ],
     );
     final s = size / 2;
     vb.setData(Float32List.fromList([-s, -s, z, s, -s, z, s, s, z, -s, s, z]), bufferIndex: 0);
     vb.setData(Float32List.fromList([0, 1, 1, 1, 1, 0, 0, 0]), bufferIndex: 1);
+    if (tangents) {
+      vb.setData(Float32List.fromList([0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1]), bufferIndex: 2);
+    }
     final ib = FilamentIndexBuffer.create(engine: engine, indexCount: 6, type: IndexType.ushort);
     ib.setUint16Data(Uint16List.fromList([0, 1, 2, 0, 2, 3]));
     return SmokeQuad(vb, ib);
@@ -462,6 +494,7 @@ int addQuadRenderable(SmokeRig rig, SmokeQuad quad, FilamentMaterialInstance mi,
   RenderableBuilder(1)
     ..boundingBox(-extent, -extent, -extent, extent, extent, extent)
     ..culling(false)
+    ..castShadows(true)
     ..material(0, mi)
     ..geometry(0, PrimitiveType.triangles, quad.vb, ib: quad.ib)
     ..build(rig.engine, e);

@@ -472,6 +472,7 @@ static inline void toFilamentShadowOptions(const LightManager::ShadowOptions& sr
     dst->penumbra_scale = src.penumbraScale;
     dst->penumbra_ratio_scale = src.penumbraRatioScale;
     dst->max_penumbra_ratio = src.maxPenumbraRatio;
+    dst->ray_traced = src.rayTraced;
 }
 
 static inline void fromFilamentShadowOptions(const FilamentShadowOptions* src, LightManager::ShadowOptions& dst) {
@@ -502,6 +503,7 @@ static inline void fromFilamentShadowOptions(const FilamentShadowOptions* src, L
     dst.penumbraScale = src->penumbra_scale;
     dst.penumbraRatioScale = src->penumbra_ratio_scale;
     dst.maxPenumbraRatio = src->max_penumbra_ratio;
+    dst.rayTraced = src->ray_traced;
 }
 
 size_t filament_sizeof_shadow_options(void) {

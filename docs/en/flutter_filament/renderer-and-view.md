@@ -651,6 +651,7 @@ A View encompasses all the state needed for rendering a Scene.  A View specifies
 | `transparentPickingEnabled` | `transparentPickingEnabled(bool enabled)` | Executes `transparentPickingEnabled` operation. |
 | `transparentPickingEnabled` | `bool get transparentPickingEnabled` | Getter accessor returning the current value of `transparentPickingEnabled`. |
 | `pick` | `Future<PickingResult> pick(int x, int y)` | Picks a pixel on the screen and returns the rendered entity and depth at that pixel. Note: The coordinates (x, y) are based on a bottom-left origin. |
+| `traceRay` | `Future<RayHit?> traceRay(double ox, double oy, double oz, double dx, double dy, double dz, {double maxDistance = 1.0e5})` | Traces one visibility ray against the scene's acceleration structures during the next frame this view renders, like `pick`; `null` on a miss or without ray tracing (see [Ray tracing](ray-tracing.md)). |
 | `dispose` | `void dispose()` | Destroys this view and releases its resources. |
 | `isDisposed` | `bool get isDisposed` | Checks current state or capability and returns a boolean value. |
 

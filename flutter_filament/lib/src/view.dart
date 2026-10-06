@@ -7,6 +7,7 @@ import 'package:flutter_filament/src/color_grading.dart';
 import 'package:flutter_filament/src/engine.dart';
 import 'package:flutter_filament/src/entity.dart';
 import 'package:flutter_filament/src/math/viewport.dart';
+import 'package:flutter_filament/src/ray_tracing.dart';
 import 'package:flutter_filament/src/render_target.dart';
 import 'package:flutter_filament/src/scene.dart';
 import 'package:flutter_filament/src/texture.dart';
@@ -579,6 +580,41 @@ class FilamentView {
       completer.complete(pickingResult);
     });
     c.filament_view_pick(_ptr, x, y, callable.nativeFunction, ffi.nullptr);
+    return completer.future;
+  }
+
+  /// Traces one visibility ray from ([ox], [oy], [oz]) along ([dx], [dy],
+  /// [dz]) against the ray tracing acceleration structures of the scene
+  /// ([FilamentScene.rayTracingEnabled]) during the next frame this view
+  /// renders, like [pick].
+  ///
+  /// Completes with `null` on a miss, past [maxDistance], and when ray tracing
+  /// is off or unsupported ([FilamentEngine.supportsRayQuery]). The future
+  /// only completes once a frame rendered this view.
+  Future<RayHit?> traceRay(double ox, double oy, double oz, double dx, double dy, double dz,
+      {double maxDistance = 1.0e5}) {
+    _checkDisposed();
+    final completer = Completer<RayHit?>();
+    late ffi.NativeCallable<c.FilamentRayHitCallbackFunction> callable;
+    callable = ffi.NativeCallable<c.FilamentRayHitCallbackFunction>.listener(
+        (bool hit, double distance, int entity, int primitive, ffi.Pointer<ffi.Void> userData) {
+      callable.close();
+      completer.complete(hit ? RayHit(t: distance, entity: entity, primitive: primitive) : null);
+    });
+    final origin = calloc<ffi.Float>(3);
+    final direction = calloc<ffi.Float>(3);
+    try {
+      origin[0] = ox;
+      origin[1] = oy;
+      origin[2] = oz;
+      direction[0] = dx;
+      direction[1] = dy;
+      direction[2] = dz;
+      c.filament_view_trace_ray(_ptr, origin, direction, maxDistance, callable.nativeFunction, ffi.nullptr);
+    } finally {
+      calloc.free(origin);
+      calloc.free(direction);
+    }
     return completer.future;
   }
 

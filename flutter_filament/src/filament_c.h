@@ -51,6 +51,7 @@
 #include "linear_image_c.h"
 #include "image_sampler_c.h"
 #include "dlss_c.h"
+#include "ray_tracing_c.h"
 #include "image_ops_c.h"
 #include "color_transform_c.h"
 #include "gpu_c.h"

@@ -473,6 +473,7 @@ The main entry point for the Filament rendering engine.  An [FilamentEngine] ins
 | `activeFeatureLevel` | `FeatureLevel get activeFeatureLevel` | The currently active feature level. |
 | `maxAutomaticInstances` | `int get maxAutomaticInstances` | Maximum number of automatic instances supported when automatic instancing is enabled. |
 | `isStereoSupported` | `bool isStereoSupported([StereoscopicType type = StereoscopicType.instanc...` | Whether stereoscopic rendering is supported for the given [type]. |
+| `supportsRayQuery` | `bool get supportsRayQuery` | Aygıtın ışın izleme hızlandırma yapıları kurup shader'lardan ışın izleyip izleyemediği (Vulkan ray query, bkz. [Işın izleme](ray-tracing.md)). |
 | `hasUnrecoverableFailure` | `bool get hasUnrecoverableFailure` | Whether the engine has encountered an unrecoverable failure (e.g. GPU crash). |
 | `backend` | `FilamentBackend get backend` | The backend driver used by this engine. |
 | `automaticInstancingEnabled` | `bool get automaticInstancingEnabled` | Whether automatic draw-call batching/instancing is enabled. |

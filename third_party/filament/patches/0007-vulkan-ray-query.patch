@@ -1,0 +1,3545 @@
+diff --git a/filament/CMakeLists.txt b/filament/CMakeLists.txt
+index 32479e06..2659ccb7 100644
+--- a/filament/CMakeLists.txt
++++ b/filament/CMakeLists.txt
+@@ -64,6 +64,7 @@ set(SRCS
+         src/materials/fsr/fsr.cpp
+         src/materials/sgsr/sgsr.cpp
+         src/materials/ssao/ssao.cpp
++        src/materials/rt/rt.cpp
+         src/AtlasAllocator.cpp
+         src/BufferObject.cpp
+         src/Camera.cpp
+@@ -322,6 +323,18 @@ if (NOT FILAMENT_DISABLE_GTAO)
+     )
+ endif()
+ 
++# Ray query materials compile for Vulkan only (GL_EXT_ray_query); they are loaded only when
++# the device supports ray queries.
++set(MATERIAL_VULKAN_SRCS)
++if (FILAMENT_SUPPORTS_VULKAN)
++    set(MATERIAL_VULKAN_SRCS
++        src/materials/rt/rtShadow.mat
++        src/materials/rt/rayVisibility.mat
++    )
++    list(APPEND MATERIAL_SRCS ${MATERIAL_VULKAN_SRCS})
++    set_source_files_properties(src/materials/rt/rt.cpp PROPERTIES COMPILE_DEFINITIONS FILAMENT_RAY_QUERY_MATERIALS)
++endif()
++
+ set(MATERIAL_MULTIVIEW_SRCS
+         src/materials/clearDepth.mat
+         src/materials/defaultMaterial.mat
+@@ -463,6 +476,16 @@ foreach(mat_dir ${MATERIAL_DIRS})
+             set(COMMENT_STR "Compiling material ${fullname} (Vulkan/Metal)")
+         endif()
+ 
++        check_in_list(MATERIAL_VULKAN_SRCS ${mat_src} is_vk_only)
++        if (is_vk_only)
++            string(REPLACE "-a;webgpu" "" MATC_CUSTOM_FLAGS "${MATC_CUSTOM_FLAGS}")
++            string(REPLACE "-a;opengl" "" MATC_CUSTOM_FLAGS "${MATC_CUSTOM_FLAGS}")
++            string(REPLACE "-a;metal" "" MATC_CUSTOM_FLAGS "${MATC_CUSTOM_FLAGS}")
++            string(REPLACE ";;" ";" MATC_CUSTOM_FLAGS "${MATC_CUSTOM_FLAGS}")
++            string(REGEX REPLACE "^;|;$" "" MATC_CUSTOM_FLAGS "${MATC_CUSTOM_FLAGS}")
++            set(COMMENT_STR "Compiling material ${fullname} (Vulkan ray query)")
++        endif()
++
+         compile_material(${output_path} ${fullname} MATC_CUSTOM_FLAGS "${COMMENT_STR}")
+ 
+         # --- Multiview variant ---
+diff --git a/filament/backend/CMakeLists.txt b/filament/backend/CMakeLists.txt
+index 2cf4db8d..bf9c4a46 100644
+--- a/filament/backend/CMakeLists.txt
++++ b/filament/backend/CMakeLists.txt
+@@ -207,6 +207,8 @@ if (FILAMENT_SUPPORTS_VULKAN)
+             src/vulkan/VulkanBlitter.h
+             src/vulkan/VulkanBuffer.h
+             src/vulkan/VulkanBufferCache.h
++            src/vulkan/VulkanAccelerationStructure.cpp
++            src/vulkan/VulkanAccelerationStructure.h
+             src/vulkan/VulkanBufferCache.cpp
+             src/vulkan/VulkanBufferProxy.h
+             src/vulkan/VulkanBufferProxy.cpp
+diff --git a/filament/backend/include/backend/AccelerationStructure.h b/filament/backend/include/backend/AccelerationStructure.h
+new file mode 100644
+index 00000000..f572bd9f
+--- /dev/null
++++ b/filament/backend/include/backend/AccelerationStructure.h
+@@ -0,0 +1,60 @@
++/*
++ * Copyright (C) 2025 The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++#ifndef TNT_FILAMENT_BACKEND_ACCELERATIONSTRUCTURE_H
++#define TNT_FILAMENT_BACKEND_ACCELERATIONSTRUCTURE_H
++
++#include <backend/DriverEnums.h>
++#include <backend/Handle.h>
++
++#include <stdint.h>
++
++namespace filament::backend {
++
++/**
++ * One triangle geometry a bottom-level acceleration structure is built from: the position
++ * attribute of a vertex buffer object (offset, stride and element type as declared on the
++ * vertex buffer) and, when indexed, the index buffer range of the primitive.
++ */
++struct AccelerationStructureGeometry {
++    Handle<HwBufferObject> vertexBuffer;    //!< buffer object holding the positions
++    uint32_t vertexOffset = 0;              //!< byte offset of the first position
++    uint32_t vertexStride = 12;             //!< byte stride between positions
++    ElementType vertexFormat = ElementType::FLOAT3;
++    uint32_t vertexCount = 0;               //!< positions addressable from vertexOffset
++    Handle<HwIndexBuffer> indexBuffer;      //!< null for non-indexed geometry
++    uint32_t indexOffset = 0;               //!< first index (in indices, not bytes)
++    uint32_t indexCount = 0;                //!< indices of the primitive (a multiple of 3)
++};
++
++/**
++ * One instance of a bottom-level structure inside a top-level one.
++ */
++struct AccelerationStructureInstance {
++    float transform[3][4] = {{1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}};  //!< row-major 3x4
++    uint32_t customIndex = 0;               //!< 24 bits, read back by ray queries
++    uint8_t mask = 0xFF;                    //!< instance mask ray queries test against
++    Handle<HwAccelerationStructure> blas;   //!< the bottom-level structure
++};
++
++enum class AccelerationStructureBuildMode : uint8_t {
++    BUILD,      //!< full build
++    REFIT,      //!< update in place (same topology, moved vertices or instances)
++};
++
++} // namespace filament::backend
++
++#endif // TNT_FILAMENT_BACKEND_ACCELERATIONSTRUCTURE_H
+diff --git a/filament/backend/include/backend/DriverEnums.h b/filament/backend/include/backend/DriverEnums.h
+index 31b8016f..717a6cde 100644
+--- a/filament/backend/include/backend/DriverEnums.h
++++ b/filament/backend/include/backend/DriverEnums.h
+@@ -329,6 +329,7 @@ constexpr std::string_view to_string(TextureType type) noexcept {
+      UNIFORM_BUFFER,
+      SHADER_STORAGE_BUFFER,
+      INPUT_ATTACHMENT,
++     ACCELERATION_STRUCTURE,   // a ray query top-level acceleration structure (Vulkan)
+  };
+ 
+ constexpr bool isDepthDescriptor(DescriptorType const type) noexcept {
+diff --git a/filament/backend/include/backend/Handle.h b/filament/backend/include/backend/Handle.h
+index c9b123c0..5424cbd5 100644
+--- a/filament/backend/include/backend/Handle.h
++++ b/filament/backend/include/backend/Handle.h
+@@ -46,6 +46,7 @@ struct HwVertexBuffer;
+ struct HwDescriptorSetLayout;
+ struct HwDescriptorSet;
+ struct HwMemoryMappedBuffer;
++struct HwAccelerationStructure;
+ 
+ /*
+  * A handle to a backend resource. HandleBase is for internal use only.
+@@ -159,6 +160,7 @@ using TimerQueryHandle          = Handle<HwTimerQuery>;
+ using VertexBufferHandle        = Handle<HwVertexBuffer>;
+ using VertexBufferInfoHandle    = Handle<HwVertexBufferInfo>;
+ using DescriptorSetLayoutHandle = Handle<HwDescriptorSetLayout>;
++using AccelerationStructureHandle = Handle<HwAccelerationStructure>;
+ using DescriptorSetHandle       = Handle<HwDescriptorSet>;
+ using MemoryMappedBufferHandle  = Handle<HwMemoryMappedBuffer>;
+ 
+diff --git a/filament/backend/include/private/backend/Driver.h b/filament/backend/include/private/backend/Driver.h
+index 3e9e1253..d90ea8ba 100644
+--- a/filament/backend/include/private/backend/Driver.h
++++ b/filament/backend/include/private/backend/Driver.h
+@@ -20,6 +20,7 @@
+ #include <backend/CallbackHandler.h>
+ #include <backend/DescriptorSetOffsetArray.h>
+ #include <backend/DriverApiForward.h>
++#include <backend/AccelerationStructure.h>
+ #include <backend/DriverEnums.h>
+ #include <backend/ExternalPass.h>
+ #include <backend/Handle.h>
+diff --git a/filament/backend/include/private/backend/DriverAPI.inc b/filament/backend/include/private/backend/DriverAPI.inc
+index e58e257f..c6f26dff 100644
+--- a/filament/backend/include/private/backend/DriverAPI.inc
++++ b/filament/backend/include/private/backend/DriverAPI.inc
+@@ -214,6 +214,15 @@ DECL_DRIVER_API_TAGGED_R_N(backend::BufferObjectHandle, createBufferObject,
+         backend::BufferObjectBinding, bindingType,
+         backend::BufferUsage, usage)
+ 
++// Ray tracing acceleration structures (Vulkan ray query). A bottom-level structure is built
++// over one triangle geometry; a top-level one over instances of bottom-level ones. The other
++// backends return null handles and ignore the commands; isRayQuerySupported() tells.
++DECL_DRIVER_API_TAGGED_R_N(backend::AccelerationStructureHandle, createAccelerationStructureBlas,
++        backend::AccelerationStructureGeometry, geometry)
++
++DECL_DRIVER_API_TAGGED_R_N(backend::AccelerationStructureHandle, createAccelerationStructureTlas,
++        uint32_t, instanceCapacity)
++
+ DECL_DRIVER_API_TAGGED_R_N(backend::BufferObjectHandle, createBufferObjectAsync,
+         uint32_t, byteCount,
+         backend::BufferObjectBinding, bindingType,
+@@ -372,6 +381,7 @@ DECL_DRIVER_API_N(destroyVertexBuffer,          backend::VertexBufferHandle, vbh
+ DECL_DRIVER_API_N(destroyVertexBufferInfo,      backend::VertexBufferInfoHandle, vbih)
+ DECL_DRIVER_API_N(destroyIndexBuffer,           backend::IndexBufferHandle, ibh)
+ DECL_DRIVER_API_N(destroyBufferObject,          backend::BufferObjectHandle, boh)
++DECL_DRIVER_API_N(destroyAccelerationStructure, backend::AccelerationStructureHandle, ash)
+ DECL_DRIVER_API_N(destroyRenderPrimitive,       backend::RenderPrimitiveHandle, rph)
+ DECL_DRIVER_API_N(destroyProgram,               backend::ProgramHandle, ph)
+ DECL_DRIVER_API_N(destroyTexture,               backend::TextureHandle, th)
+@@ -417,6 +427,7 @@ DECL_DRIVER_API_SYNCHRONOUS_0(bool, isProtectedContentSupported)
+ DECL_DRIVER_API_SYNCHRONOUS_0(bool, isStereoSupported)
+ DECL_DRIVER_API_SYNCHRONOUS_0(bool, isParallelShaderCompileSupported)
+ DECL_DRIVER_API_SYNCHRONOUS_0(bool, isDepthStencilResolveSupported)
++DECL_DRIVER_API_SYNCHRONOUS_0(bool, isRayQuerySupported)
+ DECL_DRIVER_API_SYNCHRONOUS_N(bool, isDepthStencilBlitSupported, backend::TextureFormat, format)
+ DECL_DRIVER_API_SYNCHRONOUS_0(bool, isProtectedTexturesSupported)
+ DECL_DRIVER_API_SYNCHRONOUS_0(bool, isDepthClampSupported)
+@@ -681,6 +692,23 @@ DECL_DRIVER_API_N(blit,
+ DECL_DRIVER_API_N(externalPass,
+         backend::ExternalPassDescriptor, descriptor)
+ 
++// Replaces the instances of a top-level acceleration structure: `instances` holds
++// backend::AccelerationStructureInstance records. Takes effect at the next build.
++DECL_DRIVER_API_N(updateTlasInstances,
++        backend::AccelerationStructureHandle, tlas,
++        backend::BufferDescriptor&&, instances)
++
++// Builds (or refits) an acceleration structure; must run outside a render pass.
++DECL_DRIVER_API_N(buildAccelerationStructure,
++        backend::AccelerationStructureHandle, ash,
++        backend::AccelerationStructureBuildMode, mode)
++
++// Binds a top-level acceleration structure to an ACCELERATION_STRUCTURE descriptor.
++DECL_DRIVER_API_N(updateDescriptorSetAccelerationStructure,
++        backend::DescriptorSetHandle, dsh,
++        backend::descriptor_binding_t, binding,
++        backend::AccelerationStructureHandle, ash)
++
+ DECL_DRIVER_API_N(draw2,
+         uint32_t, indexOffset,
+         uint32_t, indexCount,
+diff --git a/filament/backend/src/DriverBase.h b/filament/backend/src/DriverBase.h
+index c8d37b84..070eb3cb 100644
+--- a/filament/backend/src/DriverBase.h
++++ b/filament/backend/src/DriverBase.h
+@@ -122,6 +122,10 @@ struct HwDescriptorSet : public HwBase {
+     HwDescriptorSet() noexcept = default;
+ };
+ 
++struct HwAccelerationStructure : public HwBase {
++    HwAccelerationStructure() noexcept = default;
++};
++
+ struct HwTexture : public HwBase {
+     uint32_t width{};
+     uint32_t height{};
+diff --git a/filament/backend/src/metal/MetalDriver.mm b/filament/backend/src/metal/MetalDriver.mm
+index 90c4e5e3..9cfea122 100644
+--- a/filament/backend/src/metal/MetalDriver.mm
++++ b/filament/backend/src/metal/MetalDriver.mm
+@@ -2790,5 +2790,41 @@ bool MetalDriver::cancelAsyncJob(AsyncCallId jobId) {
+ // explicit instantiation of the Dispatcher
+ template class ConcreteDispatcher<MetalDriver>;
+ 
++
++Handle<HwAccelerationStructure> MetalDriver::createAccelerationStructureBlasS() noexcept {
++    return {};
++}
++
++void MetalDriver::createAccelerationStructureBlasR(Handle<HwAccelerationStructure>,
++        AccelerationStructureGeometry, utils::ImmutableCString&&) {
++}
++
++Handle<HwAccelerationStructure> MetalDriver::createAccelerationStructureTlasS() noexcept {
++    return {};
++}
++
++void MetalDriver::createAccelerationStructureTlasR(Handle<HwAccelerationStructure>, uint32_t,
++        utils::ImmutableCString&&) {
++}
++
++void MetalDriver::destroyAccelerationStructure(Handle<HwAccelerationStructure>) {
++}
++
++void MetalDriver::updateTlasInstances(Handle<HwAccelerationStructure>, BufferDescriptor&& instances) {
++    scheduleDestroy(std::move(instances));
++}
++
++void MetalDriver::buildAccelerationStructure(Handle<HwAccelerationStructure>,
++        AccelerationStructureBuildMode) {
++}
++
++void MetalDriver::updateDescriptorSetAccelerationStructure(Handle<HwDescriptorSet>,
++        descriptor_binding_t, Handle<HwAccelerationStructure>) {
++}
++
++bool MetalDriver::isRayQuerySupported() {
++    return false;
++}
++
+ } // namespace backend
+ } // namespace filament
+diff --git a/filament/backend/src/metal/MetalHandles.mm b/filament/backend/src/metal/MetalHandles.mm
+index 3e7621be..7b01abfd 100644
+--- a/filament/backend/src/metal/MetalHandles.mm
++++ b/filament/backend/src/metal/MetalHandles.mm
+@@ -1569,6 +1569,7 @@ id<MTLArgumentEncoder> MetalDescriptorSetLayout::getArgumentEncoderSlow(id<MTLDe
+                 break;
+             }
+             case DescriptorType::INPUT_ATTACHMENT:
++            case DescriptorType::ACCELERATION_STRUCTURE:
+                 // TODO: support INPUT_ATTACHMENT
+                 assert_invariant(false);
+                 break;
+@@ -1719,6 +1720,7 @@ id<MTLBuffer> MetalDescriptorSet::finalizeAndGetBuffer(MetalDriver* driver, Shad
+                 break;
+             }
+             case DescriptorType::INPUT_ATTACHMENT:
++            case DescriptorType::ACCELERATION_STRUCTURE:
+                 assert_invariant(false);
+                 break;
+         }
+diff --git a/filament/backend/src/noop/NoopDriver.cpp b/filament/backend/src/noop/NoopDriver.cpp
+index 4bed9be7..0371b396 100644
+--- a/filament/backend/src/noop/NoopDriver.cpp
++++ b/filament/backend/src/noop/NoopDriver.cpp
+@@ -498,4 +498,24 @@ bool NoopDriver::cancelAsyncJob(AsyncCallId jobId) {
+     return false;
+ }
+ 
++
++void NoopDriver::destroyAccelerationStructure(Handle<HwAccelerationStructure>) {
++}
++
++void NoopDriver::updateTlasInstances(Handle<HwAccelerationStructure>, BufferDescriptor&& instances) {
++    scheduleDestroy(std::move(instances));
++}
++
++void NoopDriver::buildAccelerationStructure(Handle<HwAccelerationStructure>,
++        AccelerationStructureBuildMode) {
++}
++
++void NoopDriver::updateDescriptorSetAccelerationStructure(Handle<HwDescriptorSet>,
++        descriptor_binding_t, Handle<HwAccelerationStructure>) {
++}
++
++bool NoopDriver::isRayQuerySupported() {
++    return false;
++}
++
+ } // namespace filament
+diff --git a/filament/backend/src/opengl/GLDescriptorSet.cpp b/filament/backend/src/opengl/GLDescriptorSet.cpp
+index 2b7011af..a6f78bf8 100644
+--- a/filament/backend/src/opengl/GLDescriptorSet.cpp
++++ b/filament/backend/src/opengl/GLDescriptorSet.cpp
+@@ -136,6 +136,7 @@ GLDescriptorSet::GLDescriptorSet(OpenGLState& gl, DescriptorSetLayoutHandle dslh
+                 }
+                 break;
+             case DescriptorType::INPUT_ATTACHMENT:
++            case DescriptorType::ACCELERATION_STRUCTURE:
+                 break;
+         }
+     }
+diff --git a/filament/backend/src/opengl/OpenGLDriver.cpp b/filament/backend/src/opengl/OpenGLDriver.cpp
+index e8f6db72..f860d0c4 100644
+--- a/filament/backend/src/opengl/OpenGLDriver.cpp
++++ b/filament/backend/src/opengl/OpenGLDriver.cpp
+@@ -5224,6 +5224,42 @@ bool OpenGLDriver::cancelAsyncJob(AsyncCallId jobId) {
+ // explicit instantiation of the Dispatcher
+ template class ConcreteDispatcher<OpenGLDriver>;
+ 
++
++Handle<HwAccelerationStructure> OpenGLDriver::createAccelerationStructureBlasS() noexcept {
++    return {};
++}
++
++void OpenGLDriver::createAccelerationStructureBlasR(Handle<HwAccelerationStructure>,
++        AccelerationStructureGeometry, utils::ImmutableCString&&) {
++}
++
++Handle<HwAccelerationStructure> OpenGLDriver::createAccelerationStructureTlasS() noexcept {
++    return {};
++}
++
++void OpenGLDriver::createAccelerationStructureTlasR(Handle<HwAccelerationStructure>, uint32_t,
++        utils::ImmutableCString&&) {
++}
++
++void OpenGLDriver::destroyAccelerationStructure(Handle<HwAccelerationStructure>) {
++}
++
++void OpenGLDriver::updateTlasInstances(Handle<HwAccelerationStructure>, BufferDescriptor&& instances) {
++    scheduleDestroy(std::move(instances));
++}
++
++void OpenGLDriver::buildAccelerationStructure(Handle<HwAccelerationStructure>,
++        AccelerationStructureBuildMode) {
++}
++
++void OpenGLDriver::updateDescriptorSetAccelerationStructure(Handle<HwDescriptorSet>,
++        descriptor_binding_t, Handle<HwAccelerationStructure>) {
++}
++
++bool OpenGLDriver::isRayQuerySupported() {
++    return false;
++}
++
+ } // namespace filament::backend
+ 
+ #if defined(__clang__)
+diff --git a/filament/backend/src/opengl/OpenGLProgram.cpp b/filament/backend/src/opengl/OpenGLProgram.cpp
+index 0c52eaef..d5f43f55 100644
+--- a/filament/backend/src/opengl/OpenGLProgram.cpp
++++ b/filament/backend/src/opengl/OpenGLProgram.cpp
+@@ -278,6 +278,7 @@ void OpenGLProgram::initializeProgramState(OpenGLState& gls, GLuint program,
+                     break;
+                 }
+                 case DescriptorType::INPUT_ATTACHMENT:
++                case DescriptorType::ACCELERATION_STRUCTURE:
+                     break;
+             }
+         }
+diff --git a/filament/backend/src/vulkan/VulkanAccelerationStructure.cpp b/filament/backend/src/vulkan/VulkanAccelerationStructure.cpp
+new file mode 100644
+index 00000000..b1b0a335
+--- /dev/null
++++ b/filament/backend/src/vulkan/VulkanAccelerationStructure.cpp
+@@ -0,0 +1,368 @@
++/*
++ * Copyright (C) 2025 The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++#include "VulkanAccelerationStructure.h"
++
++#include "VulkanCommands.h"
++#include "VulkanContext.h"
++#include "VulkanHandles.h"
++#include "VulkanMemory.h"
++
++#include <utils/Logger.h>
++#include <utils/Panic.h>
++
++#include <algorithm>
++#include <cstring>
++#include <vector>
++
++using namespace bluevk;
++
++namespace filament::backend {
++
++namespace {
++
++VkDeviceAddress bufferAddress(VkDevice device, VkBuffer buffer) {
++    VkBufferDeviceAddressInfo const info = {
++        .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
++        .buffer = buffer,
++    };
++    // the KHR entry point: Filament creates a Vulkan 1.1 device, where the core 1.2 one is absent
++    return vkGetBufferDeviceAddressKHR(device, &info);
++}
++
++VkFormat vertexFormat(ElementType const type) {
++    switch (type) {
++        case ElementType::FLOAT3:
++        case ElementType::FLOAT4:
++            return VK_FORMAT_R32G32B32_SFLOAT;
++        case ElementType::HALF3:
++        case ElementType::HALF4:
++            return VK_FORMAT_R16G16B16A16_SFLOAT;
++        case ElementType::SHORT3:
++        case ElementType::SHORT4:
++            return VK_FORMAT_R16G16B16A16_SNORM;
++        default:
++            return VK_FORMAT_R32G32B32_SFLOAT;
++    }
++}
++
++VkDeviceSize alignUp(VkDeviceSize const value, VkDeviceSize const alignment) {
++    return (value + alignment - 1) / alignment * alignment;
++}
++
++} // namespace
++
++struct VulkanAccelerationStructure::Impl {
++    struct Buffer {
++        VkBuffer buffer = VK_NULL_HANDLE;
++        VmaAllocation allocation = VK_NULL_HANDLE;
++        VkDeviceAddress address = 0;
++        void* mapped = nullptr;
++        VkDeviceSize size = 0;
++    };
++
++    Impl(VmaAllocator allocator, VkDevice device, bool topLevel, uint32_t scratchAlignment)
++            : allocator(allocator), device(device), isTopLevel(topLevel),
++              scratchAlignment(std::max(1u, scratchAlignment)) {}
++
++    ~Impl() {
++        if (handle != VK_NULL_HANDLE) {
++            vkDestroyAccelerationStructureKHR(device, handle, VKALLOC);
++        }
++        destroyBuffer(storage);
++        destroyBuffer(scratch);
++        destroyBuffer(instances);
++    }
++
++    void createBuffer(Buffer& out, VkDeviceSize size, VkBufferUsageFlags usage, bool hostVisible) {
++        VkBufferCreateInfo const bufferInfo = {
++            .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
++            .size = std::max<VkDeviceSize>(size, 16),
++            .usage = usage,
++        };
++        VmaAllocationCreateInfo allocInfo = {
++            .usage = VMA_MEMORY_USAGE_AUTO,
++        };
++        if (hostVisible) {
++            allocInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT |
++                    VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
++        } else {
++            allocInfo.requiredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
++        }
++        VmaAllocationInfo info{};
++        VkResult const result = vmaCreateBuffer(allocator, &bufferInfo, &allocInfo, &out.buffer,
++                &out.allocation, &info);
++        FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
++                << "acceleration structure buffer allocation failed, error=" << int32_t(result);
++        out.size = bufferInfo.size;
++        out.mapped = hostVisible ? info.pMappedData : nullptr;
++        out.address = bufferAddress(device, out.buffer);
++    }
++
++    void destroyBuffer(Buffer& buffer) {
++        if (buffer.buffer != VK_NULL_HANDLE) {
++            vmaDestroyBuffer(allocator, buffer.buffer, buffer.allocation);
++            buffer = {};
++        }
++    }
++
++    void createStructure(VkAccelerationStructureTypeKHR type, VkDeviceSize size) {
++        createBuffer(storage, size,
++                VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR |
++                        VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, false);
++        VkAccelerationStructureCreateInfoKHR const createInfo = {
++            .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR,
++            .buffer = storage.buffer,
++            .offset = 0,
++            .size = storage.size,
++            .type = type,
++        };
++        VkResult const result = vkCreateAccelerationStructureKHR(device, &createInfo, VKALLOC, &handle);
++        FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS)
++                << "vkCreateAccelerationStructureKHR failed, error=" << int32_t(result);
++        VkAccelerationStructureDeviceAddressInfoKHR const addressInfo = {
++            .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR,
++            .accelerationStructure = handle,
++        };
++        deviceAddress = vkGetAccelerationStructureDeviceAddressKHR(device, &addressInfo);
++    }
++
++    VkAccelerationStructureBuildGeometryInfoKHR buildInfo(bool refit) const {
++        return {
++            .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
++            .type = isTopLevel ? VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR
++                               : VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR,
++            .flags = VkBuildAccelerationStructureFlagsKHR(
++                    (isTopLevel ? VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_BUILD_BIT_KHR
++                                : VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR) |
++                    VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR),
++            .mode = refit ? VK_BUILD_ACCELERATION_STRUCTURE_MODE_UPDATE_KHR
++                          : VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
++            .srcAccelerationStructure = refit ? handle : VK_NULL_HANDLE,
++            .dstAccelerationStructure = handle,
++            .geometryCount = 1,
++            .pGeometries = &geometry,
++            .scratchData = { .deviceAddress = alignUp(scratch.address, scratchAlignment) },
++        };
++    }
++
++    void allocateForBuild(uint32_t maxPrimitives) {
++        VkAccelerationStructureBuildGeometryInfoKHR const info = buildInfo(false);
++        VkAccelerationStructureBuildSizesInfoKHR sizes = {
++            .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR,
++        };
++        vkGetAccelerationStructureBuildSizesKHR(device,
++                VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &info, &maxPrimitives, &sizes);
++        createStructure(info.type, sizes.accelerationStructureSize);
++        createBuffer(scratch,
++                alignUp(std::max(sizes.buildScratchSize, sizes.updateScratchSize), scratchAlignment) +
++                        scratchAlignment,
++                VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, false);
++    }
++
++    VmaAllocator const allocator;
++    VkDevice const device;
++    bool const isTopLevel;
++    uint32_t const scratchAlignment;
++    bool built = false;
++    VkDeviceAddress deviceAddress = 0;
++    VkAccelerationStructureKHR handle = VK_NULL_HANDLE;
++    Buffer storage;
++    Buffer scratch;
++    Buffer instances;               // top level only
++    uint32_t instanceCapacity = 0;  // top level only
++    uint32_t instanceCount = 0;     // top level only
++    uint32_t primitiveCount = 0;    // bottom level only
++    VkAccelerationStructureGeometryKHR geometry{};
++    // the inputs this structure reads, kept alive with it
++    fvkmemory::resource_ptr<VulkanBufferObject> vertexBuffer;
++    fvkmemory::resource_ptr<VulkanIndexBuffer> indexBuffer;
++    std::vector<fvkmemory::resource_ptr<VulkanAccelerationStructure>> referencedBlas;
++};
++
++VulkanAccelerationStructure::VulkanAccelerationStructure(VulkanContext const& context,
++        VmaAllocator allocator, VkDevice device, AccelerationStructureGeometry const& geometry,
++        fvkmemory::resource_ptr<VulkanBufferObject> vertexBuffer,
++        fvkmemory::resource_ptr<VulkanIndexBuffer> indexBuffer)
++        : mImpl(std::make_unique<Impl>(allocator, device, false,
++                  context.getAccelerationStructureScratchAlignment())) {
++    Impl& impl = *mImpl;
++    impl.vertexBuffer = std::move(vertexBuffer);
++    impl.indexBuffer = std::move(indexBuffer);
++
++    VkAccelerationStructureGeometryTrianglesDataKHR triangles = {
++        .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR,
++        .vertexFormat = vertexFormat(geometry.vertexFormat),
++        .vertexData = { .deviceAddress =
++                bufferAddress(device, impl.vertexBuffer->getVkBuffer()) + geometry.vertexOffset },
++        .vertexStride = geometry.vertexStride,
++        .maxVertex = geometry.vertexCount > 0 ? geometry.vertexCount - 1 : 0,
++        .indexType = VK_INDEX_TYPE_NONE_KHR,
++        .transformData = { .deviceAddress = 0 },
++    };
++    if (impl.indexBuffer) {
++        triangles.indexType = impl.indexBuffer->indexType;
++        triangles.indexData.deviceAddress =
++                bufferAddress(device, impl.indexBuffer->getVkBuffer()) +
++                VkDeviceSize(geometry.indexOffset) * impl.indexBuffer->elementSize;
++        impl.primitiveCount = geometry.indexCount / 3;
++    } else {
++        impl.primitiveCount = geometry.vertexCount / 3;
++    }
++    impl.geometry = {
++        .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
++        .geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR,
++        .geometry = { .triangles = triangles },
++        .flags = VK_GEOMETRY_OPAQUE_BIT_KHR,
++    };
++    impl.allocateForBuild(impl.primitiveCount);
++}
++
++VulkanAccelerationStructure::VulkanAccelerationStructure(VulkanContext const& context,
++        VmaAllocator allocator, VkDevice device, uint32_t const instanceCapacity)
++        : mImpl(std::make_unique<Impl>(allocator, device, true,
++                  context.getAccelerationStructureScratchAlignment())) {
++    Impl& impl = *mImpl;
++    impl.instanceCapacity = std::max(1u, instanceCapacity);
++    impl.createBuffer(impl.instances,
++            VkDeviceSize(impl.instanceCapacity) * sizeof(VkAccelerationStructureInstanceKHR),
++            VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
++                    VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR,
++            true);
++    std::memset(impl.instances.mapped, 0, size_t(impl.instances.size));
++    impl.geometry = {
++        .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
++        .geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR,
++        .geometry = { .instances = {
++            .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR,
++            .arrayOfPointers = VK_FALSE,
++            .data = { .deviceAddress = impl.instances.address },
++        }},
++    };
++    impl.allocateForBuild(impl.instanceCapacity);
++}
++
++VulkanAccelerationStructure::~VulkanAccelerationStructure() = default;
++
++VkAccelerationStructureKHR VulkanAccelerationStructure::getHandle() const noexcept {
++    return mImpl->handle;
++}
++
++VkDeviceAddress VulkanAccelerationStructure::getDeviceAddress() const noexcept {
++    return mImpl->deviceAddress;
++}
++
++bool VulkanAccelerationStructure::isTopLevel() const noexcept {
++    return mImpl->isTopLevel;
++}
++
++uint32_t VulkanAccelerationStructure::getInstanceCapacity() const noexcept {
++    return mImpl->instanceCapacity;
++}
++
++uint32_t VulkanAccelerationStructure::getInstanceCount() const noexcept {
++    return mImpl->instanceCount;
++}
++
++bool VulkanAccelerationStructure::isBuilt() const noexcept {
++    return mImpl->built;
++}
++
++void VulkanAccelerationStructure::setInstances(AccelerationStructureInstance const* instances,
++        uint32_t count, BlasResolver const& resolve) {
++    Impl& impl = *mImpl;
++    if (!impl.isTopLevel || !impl.instances.mapped) {
++        return;
++    }
++    count = std::min(count, impl.instanceCapacity);
++    auto* out = static_cast<VkAccelerationStructureInstanceKHR*>(impl.instances.mapped);
++    impl.referencedBlas.clear();
++    impl.referencedBlas.reserve(count);
++    uint32_t written = 0;
++    for (uint32_t i = 0; i < count; i++) {
++        AccelerationStructureInstance const& in = instances[i];
++        auto blas = resolve(in.blas);
++        if (!blas || !blas->isBuilt()) {
++            continue;
++        }
++        VkAccelerationStructureInstanceKHR& vk = out[written++];
++        std::memcpy(vk.transform.matrix, in.transform, sizeof(vk.transform.matrix));
++        vk.instanceCustomIndex = in.customIndex & 0xFFFFFFu;
++        vk.mask = in.mask;
++        vk.instanceShaderBindingTableRecordOffset = 0;
++        vk.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
++        vk.accelerationStructureReference = blas->getDeviceAddress();
++        impl.referencedBlas.push_back(std::move(blas));
++    }
++    impl.instanceCount = written;
++    vmaFlushAllocation(impl.allocator, impl.instances.allocation, 0, VK_WHOLE_SIZE);
++}
++
++void VulkanAccelerationStructure::build(VulkanCommandBuffer& commands,
++        AccelerationStructureBuildMode mode) {
++    Impl& impl = *mImpl;
++    uint32_t const primitiveCount = impl.isTopLevel ? impl.instanceCount : impl.primitiveCount;
++    // an update needs a previous build; an empty top level is still built (zero instances)
++    bool const refit = mode == AccelerationStructureBuildMode::REFIT && impl.built;
++    VkAccelerationStructureBuildGeometryInfoKHR const info = impl.buildInfo(refit);
++    VkAccelerationStructureBuildRangeInfoKHR const range = {
++        .primitiveCount = primitiveCount,
++        .primitiveOffset = 0,
++        .firstVertex = 0,
++        .transformOffset = 0,
++    };
++    VkAccelerationStructureBuildRangeInfoKHR const* ranges[] = { &range };
++
++    for (auto const& blas : impl.referencedBlas) {
++        commands.acquire(blas);
++    }
++    if (impl.vertexBuffer) commands.acquire(impl.vertexBuffer);
++    if (impl.indexBuffer) commands.acquire(impl.indexBuffer);
++
++    VkCommandBuffer const cmd = commands.buffer();
++
++    // the inputs (vertex/index/instance uploads, previous builds) must be complete
++    VkMemoryBarrier const before = {
++        .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER,
++        .srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_HOST_WRITE_BIT |
++                VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR,
++        .dstAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR |
++                VK_ACCESS_SHADER_READ_BIT,
++    };
++    vkCmdPipelineBarrier(cmd,
++            VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_HOST_BIT |
++                    VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
++            VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, 0, 1, &before, 0, nullptr, 0,
++            nullptr);
++
++    vkCmdBuildAccelerationStructuresKHR(cmd, 1, &info, ranges);
++
++    // the structure is read by ray queries in any shader stage and by later builds
++    VkMemoryBarrier const after = {
++        .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER,
++        .srcAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR,
++        .dstAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_SHADER_READ_BIT,
++    };
++    vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
++            VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR |
++                    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_VERTEX_SHADER_BIT |
++                    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
++            0, 1, &after, 0, nullptr, 0, nullptr);
++
++    impl.built = true;
++}
++
++} // namespace filament::backend
+diff --git a/filament/backend/src/vulkan/VulkanAccelerationStructure.h b/filament/backend/src/vulkan/VulkanAccelerationStructure.h
+new file mode 100644
+index 00000000..402ce2b6
+--- /dev/null
++++ b/filament/backend/src/vulkan/VulkanAccelerationStructure.h
+@@ -0,0 +1,90 @@
++/*
++ * Copyright (C) 2025 The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++#ifndef TNT_FILAMENT_BACKEND_VULKANACCELERATIONSTRUCTURE_H
++#define TNT_FILAMENT_BACKEND_VULKANACCELERATIONSTRUCTURE_H
++
++#include "DriverBase.h"
++#include "VulkanMemory.h"
++
++#include "vulkan/memory/Resource.h"
++#include "vulkan/memory/ResourcePointer.h"
++
++#include <backend/AccelerationStructure.h>
++#include <backend/DriverEnums.h>
++
++#include <bluevk/BlueVK.h>
++
++#include <functional>
++#include <memory>
++
++#include <stdint.h>
++
++namespace filament::backend {
++
++struct VulkanBufferObject;
++struct VulkanIndexBuffer;
++struct VulkanCommandBuffer;
++class VulkanContext;
++
++/**
++ * A ray tracing acceleration structure (VK_KHR_acceleration_structure): either a bottom-level
++ * structure over one triangle geometry, or a top-level structure over instances of bottom-level
++ * ones. The structure owns its backing buffer and a scratch buffer sized for its builds; the
++ * top-level one also owns a host-visible instance buffer. The state lives behind a pointer so
++ * the handle stays small enough for the handle allocator.
++ */
++struct VulkanAccelerationStructure : public HwAccelerationStructure, fvkmemory::Resource {
++    using BlasResolver = std::function<fvkmemory::resource_ptr<VulkanAccelerationStructure>(
++            Handle<HwAccelerationStructure>)>;
++
++    // bottom level
++    VulkanAccelerationStructure(VulkanContext const& context, VmaAllocator allocator,
++            VkDevice device, AccelerationStructureGeometry const& geometry,
++            fvkmemory::resource_ptr<VulkanBufferObject> vertexBuffer,
++            fvkmemory::resource_ptr<VulkanIndexBuffer> indexBuffer);
++
++    // top level
++    VulkanAccelerationStructure(VulkanContext const& context, VmaAllocator allocator,
++            VkDevice device, uint32_t instanceCapacity);
++
++    ~VulkanAccelerationStructure();
++
++    // Copies the backend-neutral instances into the instance buffer, resolving each
++    // bottom-level handle to its structure. Top level only.
++    void setInstances(AccelerationStructureInstance const* instances, uint32_t count,
++            BlasResolver const& resolve);
++
++    // Records the build (or refit) into the command buffer, followed by the barrier that makes
++    // the structure visible to ray queries and to later builds.
++    void build(VulkanCommandBuffer& commands, AccelerationStructureBuildMode mode);
++
++    VkAccelerationStructureKHR getHandle() const noexcept;
++    VkDeviceAddress getDeviceAddress() const noexcept;
++    bool isTopLevel() const noexcept;
++    uint32_t getInstanceCapacity() const noexcept;
++    uint32_t getInstanceCount() const noexcept;
++    bool isBuilt() const noexcept;
++
++    struct Impl;
++
++private:
++    std::unique_ptr<Impl> mImpl;
++};
++
++} // namespace filament::backend
++
++#endif // TNT_FILAMENT_BACKEND_VULKANACCELERATIONSTRUCTURE_H
+diff --git a/filament/backend/src/vulkan/VulkanBufferCache.cpp b/filament/backend/src/vulkan/VulkanBufferCache.cpp
+index df789e2b..f0578919 100644
+--- a/filament/backend/src/vulkan/VulkanBufferCache.cpp
++++ b/filament/backend/src/vulkan/VulkanBufferCache.cpp
+@@ -131,12 +131,19 @@ void VulkanBufferCache::release(VulkanGpuBuffer const* gpuBuffer) noexcept {
+ 
+ VulkanGpuBuffer const* VulkanBufferCache::allocate(VulkanBufferBinding binding,
+         uint32_t numBytes) noexcept {
++    VkBufferUsageFlags usage = getVkBufferUsage(binding) | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
++    // Geometry buffers feed bottom-level acceleration structures when ray queries are on.
++    if (mContext.isRayQuerySupported() &&
++            (binding == VulkanBufferBinding::VERTEX || binding == VulkanBufferBinding::INDEX)) {
++        usage |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
++                VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR;
++    }
+     VkBufferCreateInfo const bufferInfo{
+         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+         .size = numBytes,
+         // `VK_BUFFER_USAGE_TRANSFER_DST_BIT` is needed to allow updating the buffer through
+         // a staging using `vkCmdCopyBuffer`.
+-        .usage = getVkBufferUsage(binding) | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
++        .usage = usage,
+     };
+ 
+     VmaAllocationCreateFlags vmaFlags = 0;
+diff --git a/filament/backend/src/vulkan/VulkanContext.h b/filament/backend/src/vulkan/VulkanContext.h
+index 3cccebea..63ffbf50 100644
+--- a/filament/backend/src/vulkan/VulkanContext.h
++++ b/filament/backend/src/vulkan/VulkanContext.h
+@@ -195,6 +195,15 @@ public:
+         return mPhysicalDeviceFeatures.features.shaderClipDistance == VK_TRUE;
+     }
+ 
++    // VK_KHR_acceleration_structure + VK_KHR_ray_query + buffer device addresses, all enabled.
++    inline bool isRayQuerySupported() const noexcept {
++        return mRayQueryEnabled;
++    }
++
++    inline uint32_t getAccelerationStructureScratchAlignment() const noexcept {
++        return mAccelerationStructureProperties.minAccelerationStructureScratchOffsetAlignment;
++    }
++
+     inline bool isLazilyAllocatedMemorySupported() const noexcept {
+         return mLazilyAllocatedMemorySupported;
+     }
+@@ -294,6 +303,19 @@ private:
+         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_2_FEATURES_EXT,
+     };
+     VkExternalFenceHandleTypeFlags mFenceExportFlags = {};
++    VkPhysicalDeviceAccelerationStructureFeaturesKHR mAccelerationStructureFeatures = {
++        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR,
++    };
++    VkPhysicalDeviceRayQueryFeaturesKHR mRayQueryFeatures = {
++        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR,
++    };
++    VkPhysicalDeviceBufferDeviceAddressFeatures mBufferDeviceAddressFeatures = {
++        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES,
++    };
++    VkPhysicalDeviceAccelerationStructurePropertiesKHR mAccelerationStructureProperties = {
++        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_PROPERTIES_KHR,
++    };
++    bool mRayQueryEnabled = false;
+ 
+     // These are options that are either supported or not supported in the current
+     // device and instance.
+diff --git a/filament/backend/src/vulkan/VulkanDescriptorSetCache.cpp b/filament/backend/src/vulkan/VulkanDescriptorSetCache.cpp
+index 9a0ac8e4..789f9757 100644
+--- a/filament/backend/src/vulkan/VulkanDescriptorSetCache.cpp
++++ b/filament/backend/src/vulkan/VulkanDescriptorSetCache.cpp
+@@ -16,6 +16,8 @@
+ 
+ #include "VulkanDescriptorSetCache.h"
+ 
++#include "VulkanAccelerationStructure.h"
++
+ #include "VulkanCommands.h"
+ #include "VulkanConstants.h"
+ #include "VulkanHandles.h"
+@@ -71,7 +73,7 @@ public:
+           mSize(0),
+           mUnusedCount(0) {
+         DescriptorCount const actual = mCount * capacity;
+-        VkDescriptorPoolSize sizes[4];
++        VkDescriptorPoolSize sizes[5];
+         uint8_t npools = 0;
+         if (actual.ubo) {
+             sizes[npools++] = {
+@@ -97,6 +99,12 @@ public:
+                 .descriptorCount = actual.inputAttachment,
+             };
+         }
++        if (actual.accelerationStructure) {
++            sizes[npools++] = {
++                .type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR,
++                .descriptorCount = actual.accelerationStructure,
++            };
++        }
+         VkDescriptorPoolCreateInfo info{
+             .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+             .pNext = nullptr,
+@@ -388,6 +396,27 @@ void VulkanDescriptorSetCache::updateSampler(fvkmemory::resource_ptr<VulkanDescr
+     set->acquire(texture);
+ }
+ 
++void VulkanDescriptorSetCache::updateAccelerationStructure(
++        fvkmemory::resource_ptr<VulkanDescriptorSet> set, uint8_t binding,
++        fvkmemory::resource_ptr<VulkanAccelerationStructure> structure) noexcept {
++    VkAccelerationStructureKHR const handle = structure->getHandle();
++    VkWriteDescriptorSetAccelerationStructureKHR const asInfo = {
++        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR,
++        .accelerationStructureCount = 1,
++        .pAccelerationStructures = &handle,
++    };
++    VkWriteDescriptorSet const descriptorWrite = {
++        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
++        .pNext = &asInfo,
++        .dstSet = set->getVkSet(),
++        .dstBinding = binding,
++        .descriptorCount = 1,
++        .descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR,
++    };
++    vkUpdateDescriptorSets(mDevice, 1, &descriptorWrite, 0, nullptr);
++    set->acquire(structure);
++}
++
+ void VulkanDescriptorSetCache::updateInputAttachment(
+         fvkmemory::resource_ptr<VulkanDescriptorSet> set,
+         VulkanAttachment const& attachment) noexcept {
+@@ -421,7 +450,9 @@ void VulkanDescriptorSetCache::cloneSet(fvkmemory::resource_ptr<VulkanDescriptor
+     Bitmask const ubo = layout->bitmask.ubo | layout->bitmask.dynamicUbo;
+     // Don't copy the samplers in the mask
+     Bitmask samplers = layout->bitmask.sampler ^ samplerMask;
+-    Bitmask const copyBindings = foldBitsInHalf(ubo | samplers);
++    // acceleration structures are bound once per frame and keep their value across clones
++    Bitmask const copyBindings =
++            foldBitsInHalf(ubo | samplers | layout->bitmask.accelerationStructure);
+ 
+     VkDescriptorSet const srcSet = set->getVkSet();
+     copySet(srcSet, newSet, copyBindings);
+diff --git a/filament/backend/src/vulkan/VulkanDescriptorSetCache.h b/filament/backend/src/vulkan/VulkanDescriptorSetCache.h
+index 856f7260..6c09b39b 100644
+--- a/filament/backend/src/vulkan/VulkanDescriptorSetCache.h
++++ b/filament/backend/src/vulkan/VulkanDescriptorSetCache.h
+@@ -36,6 +36,8 @@
+ 
+ namespace filament::backend {
+ 
++struct VulkanAccelerationStructure;
++
+ // Abstraction over the descriptor set pool.
+ class VulkanDescriptorSetCache {
+ public:
+@@ -62,6 +64,9 @@ public:
+     void updateInputAttachment(fvkmemory::resource_ptr<VulkanDescriptorSet> set,
+             VulkanAttachment const& attachment) noexcept;
+ 
++    void updateAccelerationStructure(fvkmemory::resource_ptr<VulkanDescriptorSet> set,
++            uint8_t binding, fvkmemory::resource_ptr<VulkanAccelerationStructure> structure) noexcept;
++
+     void bind(uint8_t setIndex, fvkmemory::resource_ptr<VulkanDescriptorSet> set,
+             backend::DescriptorSetOffsetArray&& offsets);
+ 
+diff --git a/filament/backend/src/vulkan/VulkanDescriptorSetLayoutCache.cpp b/filament/backend/src/vulkan/VulkanDescriptorSetLayoutCache.cpp
+index dc939404..a8215690 100644
+--- a/filament/backend/src/vulkan/VulkanDescriptorSetLayoutCache.cpp
++++ b/filament/backend/src/vulkan/VulkanDescriptorSetLayoutCache.cpp
+@@ -150,6 +150,8 @@ VkDescriptorSetLayout VulkanDescriptorSetLayoutCache::getVkLayout(
+     count += appendSamplerBindings(&toBind[count], bitmasks.sampler, immutableSamplers);
+     count += appendBindings(&toBind[count], VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,
+             bitmasks.inputAttachment);
++    count += appendBindings(&toBind[count], VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR,
++            bitmasks.accelerationStructure);
+ 
+     assert_invariant(count != 0 && "Need at least one binding for descriptor set layout.");
+     assert_invariant(count <= VulkanDescriptorSetLayout::MAX_BINDINGS && "Exceeded MAX_BINDINGS.");
+diff --git a/filament/backend/src/vulkan/VulkanDescriptorSetLayoutCache.h b/filament/backend/src/vulkan/VulkanDescriptorSetLayoutCache.h
+index 482087f6..30d9628c 100644
+--- a/filament/backend/src/vulkan/VulkanDescriptorSetLayoutCache.h
++++ b/filament/backend/src/vulkan/VulkanDescriptorSetLayoutCache.h
+@@ -60,7 +60,7 @@ private:
+         uint64_t immutableSamplerHash = 0;
+         uint64_t padding = 0;
+     };
+-    static_assert(sizeof(LayoutKey) == 96);
++    static_assert(sizeof(LayoutKey) == 112);
+ 
+     using LayoutKeyHashFn = utils::hash::MurmurHashFn<LayoutKey>;
+     struct LayoutKeyEqual {
+diff --git a/filament/backend/src/vulkan/VulkanDriver.cpp b/filament/backend/src/vulkan/VulkanDriver.cpp
+index 060e1860..3050c9ac 100644
+--- a/filament/backend/src/vulkan/VulkanDriver.cpp
++++ b/filament/backend/src/vulkan/VulkanDriver.cpp
+@@ -18,6 +18,7 @@
+ 
+ #include "CommandStreamDispatcher.h"
+ #include "SystraceProfile.h"
++#include "VulkanAccelerationStructure.h"
+ #include "VulkanAsyncHandles.h"
+ #include "VulkanBufferCache.h"
+ #include "VulkanBufferProxy.h"
+@@ -133,7 +134,7 @@ void updateYUVStagingTexture(VulkanPlatform* platform, VulkanCommandBuffer& comm
+ }
+ 
+ VmaAllocator createAllocator(VkInstance instance, VkPhysicalDevice physicalDevice,
+-        VkDevice device) {
++        VkDevice device, bool const bufferDeviceAddress) {
+     VmaAllocator allocator;
+     VmaVulkanFunctions const funcs {
+ #if VMA_DYNAMIC_VULKAN_FUNCTIONS
+@@ -167,7 +168,8 @@ VmaAllocator createAllocator(VkInstance instance, VkPhysicalDevice physicalDevic
+         // Disable the internal VMA synchronization because the backend is singled threaded.
+         // Improve CPU performance when using VMA functions. The backend will guarantee that all
+         // access to VMA is done in a thread safe way.
+-        .flags = VMA_ALLOCATOR_CREATE_EXTERNALLY_SYNCHRONIZED_BIT,
++        .flags = VMA_ALLOCATOR_CREATE_EXTERNALLY_SYNCHRONIZED_BIT |
++                (bufferDeviceAddress ? VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT : 0u),
+         .physicalDevice = physicalDevice,
+         .device = device,
+         .pVulkanFunctions = &funcs,
+@@ -249,7 +251,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform, VulkanContext& context,
+           mDefaultRenderTarget(
+                   fvkmemory::resource_ptr<VulkanRenderTarget>::construct(&mResourceManager)),
+           mAllocator(createAllocator(mPlatform->getInstance(), mPlatform->getPhysicalDevice(),
+-                  mPlatform->getDevice())),
++                  mPlatform->getDevice(), context.isRayQuerySupported())),
+           mContext(context),
+           mSemaphoreManager(mPlatform->getDevice(), &mResourceManager),
+           mCommands(mPlatform->getDevice(), mPlatform->getGraphicsQueue(),
+@@ -787,6 +789,84 @@ void VulkanDriver::createBufferObjectAsyncR(Handle<HwBufferObject> boh, uint32_t
+     scheduleAsyncCallback(handler, callback, user, AsyncCallStatus::COMPLETED);
+ }
+ 
++void VulkanDriver::createAccelerationStructureBlasR(Handle<HwAccelerationStructure> ash,
++        AccelerationStructureGeometry geometry, utils::ImmutableCString&& tag) {
++    FVK_SYSTRACE_SCOPE();
++    if (!mContext.isRayQuerySupported() || !geometry.vertexBuffer) {
++        return;
++    }
++    auto vertexBuffer = resource_ptr<VulkanBufferObject>::cast(&mResourceManager, geometry.vertexBuffer);
++    resource_ptr<VulkanIndexBuffer> indexBuffer;
++    if (geometry.indexBuffer) {
++        indexBuffer = resource_ptr<VulkanIndexBuffer>::cast(&mResourceManager, geometry.indexBuffer);
++    }
++    auto as = resource_ptr<VulkanAccelerationStructure>::make(&mResourceManager, ash, mContext,
++            mAllocator, mPlatform->getDevice(), geometry, vertexBuffer, indexBuffer);
++    as.inc();
++    mResourceManager.associateHandle(ash.getId(), std::move(tag));
++}
++
++void VulkanDriver::createAccelerationStructureTlasR(Handle<HwAccelerationStructure> ash,
++        uint32_t instanceCapacity, utils::ImmutableCString&& tag) {
++    FVK_SYSTRACE_SCOPE();
++    if (!mContext.isRayQuerySupported()) {
++        return;
++    }
++    auto as = resource_ptr<VulkanAccelerationStructure>::make(&mResourceManager, ash, mContext,
++            mAllocator, mPlatform->getDevice(), instanceCapacity);
++    as.inc();
++    mResourceManager.associateHandle(ash.getId(), std::move(tag));
++}
++
++void VulkanDriver::destroyAccelerationStructure(Handle<HwAccelerationStructure> ash) {
++    if (!ash || !mContext.isRayQuerySupported()) {
++        return;
++    }
++    FVK_SYSTRACE_SCOPE();
++    auto as = resource_ptr<VulkanAccelerationStructure>::cast(&mResourceManager, ash);
++    as.dec();
++}
++
++void VulkanDriver::updateTlasInstances(Handle<HwAccelerationStructure> tlas,
++        BufferDescriptor&& instances) {
++    FVK_SYSTRACE_SCOPE();
++    if (tlas && mContext.isRayQuerySupported()) {
++        auto as = resource_ptr<VulkanAccelerationStructure>::cast(&mResourceManager, tlas);
++        auto const* records = static_cast<AccelerationStructureInstance const*>(instances.buffer);
++        uint32_t const count = uint32_t(instances.size / sizeof(AccelerationStructureInstance));
++        as->setInstances(records, count, [this](Handle<HwAccelerationStructure> const blas) {
++            return blas ? resource_ptr<VulkanAccelerationStructure>::cast(&mResourceManager, blas)
++                        : resource_ptr<VulkanAccelerationStructure>{};
++        });
++    }
++    scheduleDestroy(std::move(instances));
++}
++
++void VulkanDriver::buildAccelerationStructure(Handle<HwAccelerationStructure> ash,
++        AccelerationStructureBuildMode mode) {
++    FVK_SYSTRACE_SCOPE();
++    if (!ash || !mContext.isRayQuerySupported()) {
++        return;
++    }
++    FILAMENT_CHECK_PRECONDITION(!mCurrentRenderPass.renderPass)
++            << "buildAccelerationStructure() cannot be invoked inside a render pass.";
++    auto as = resource_ptr<VulkanAccelerationStructure>::cast(&mResourceManager, ash);
++    VulkanCommandBuffer& commands = mCommands.get();
++    commands.acquire(as);
++    as->build(commands, mode);
++}
++
++void VulkanDriver::updateDescriptorSetAccelerationStructure(Handle<HwDescriptorSet> dsh,
++        descriptor_binding_t binding, Handle<HwAccelerationStructure> ash) {
++    FVK_SYSTRACE_SCOPE();
++    if (!dsh || !ash || !mContext.isRayQuerySupported()) {
++        return;
++    }
++    auto set = resource_ptr<VulkanDescriptorSet>::cast(&mResourceManager, dsh);
++    auto as = resource_ptr<VulkanAccelerationStructure>::cast(&mResourceManager, ash);
++    mDescriptorSetCache.updateAccelerationStructure(set, binding, as);
++}
++
+ void VulkanDriver::destroyBufferObject(Handle<HwBufferObject> boh) {
+     if (!boh) {
+         return;
+@@ -1320,6 +1400,14 @@ Handle<HwBufferObject> VulkanDriver::createBufferObjectS() noexcept {
+     return mResourceManager.allocHandle<VulkanBufferObject>();
+ }
+ 
++Handle<HwAccelerationStructure> VulkanDriver::createAccelerationStructureBlasS() noexcept {
++    return mResourceManager.allocHandle<VulkanAccelerationStructure>();
++}
++
++Handle<HwAccelerationStructure> VulkanDriver::createAccelerationStructureTlasS() noexcept {
++    return mResourceManager.allocHandle<VulkanAccelerationStructure>();
++}
++
+ Handle<HwBufferObject> VulkanDriver::createBufferObjectAsyncS() noexcept {
+     return mResourceManager.allocHandle<VulkanBufferObject>();
+ }
+@@ -1840,6 +1928,10 @@ bool VulkanDriver::isDepthStencilResolveSupported() {
+     return false;
+ }
+ 
++bool VulkanDriver::isRayQuerySupported() {
++    return mContext.isRayQuerySupported();
++}
++
+ bool VulkanDriver::isDepthStencilBlitSupported(TextureFormat format) {
+     auto const& formats = mContext.getBlittableDepthStencilFormats();
+     return std::find(formats.begin(), formats.end(), fvkutils::getVkFormat(format)) !=
+diff --git a/filament/backend/src/vulkan/VulkanHandles.cpp b/filament/backend/src/vulkan/VulkanHandles.cpp
+index bfa51659..99eac20c 100644
+--- a/filament/backend/src/vulkan/VulkanHandles.cpp
++++ b/filament/backend/src/vulkan/VulkanHandles.cpp
+@@ -134,6 +134,10 @@ BitmaskGroup fromBackendLayout(DescriptorSetLayout const& layout) {
+                 fromStageFlags(descriptor.stageFlags, descriptor.binding, mask.inputAttachment);
+                 break;
+             }
++            case DescriptorType::ACCELERATION_STRUCTURE: {
++                fromStageFlags(descriptor.stageFlags, descriptor.binding, mask.accelerationStructure);
++                break;
++            }
+             case DescriptorType::SHADER_STORAGE_BUFFER:
+                 PANIC_POSTCONDITION("Shader storage is not supported");
+                 break;
+diff --git a/filament/backend/src/vulkan/VulkanHandles.h b/filament/backend/src/vulkan/VulkanHandles.h
+index 335cafa3..62e989f6 100644
+--- a/filament/backend/src/vulkan/VulkanHandles.h
++++ b/filament/backend/src/vulkan/VulkanHandles.h
+@@ -73,15 +73,19 @@ struct VulkanDescriptorSetLayout : public HwDescriptorSetLayout, fvkmemory::Reso
+         // This is a subset of the sampler field.
+         fvkutils::SamplerBitmask externalSampler; // 16 bytes
+ 
++        // ray query top-level acceleration structures
++        fvkutils::UniformBufferBitmask accelerationStructure; // 16 bytes
++
+         bool operator==(Bitmask const& right) const {
+             return ubo == right.ubo && dynamicUbo == right.dynamicUbo && sampler == right.sampler &&
+                    inputAttachment == right.inputAttachment &&
+-                   externalSampler == right.externalSampler;
++                   externalSampler == right.externalSampler &&
++                   accelerationStructure == right.accelerationStructure;
+         }
+ 
+         static Bitmask fromLayoutDescription(DescriptorSetLayout const& layout);
+     };
+-    static_assert(sizeof(Bitmask) == 80);
++    static_assert(sizeof(Bitmask) == 96);
+ 
+     // This is a convenience struct to quickly check layout compatibility in terms of descriptor set
+     // pools.
+@@ -90,14 +94,16 @@ struct VulkanDescriptorSetLayout : public HwDescriptorSetLayout, fvkmemory::Reso
+         uint32_t dynamicUbo = 0;
+         uint32_t sampler = 0;
+         uint32_t inputAttachment = 0;
++        uint32_t accelerationStructure = 0;
+ 
+         inline uint32_t total() const {
+-            return ubo + dynamicUbo + sampler + inputAttachment;
++            return ubo + dynamicUbo + sampler + inputAttachment + accelerationStructure;
+         }
+ 
+         bool operator==(Count const& right) const noexcept {
+             return ubo == right.ubo && dynamicUbo == right.dynamicUbo && sampler == right.sampler &&
+-                   inputAttachment == right.inputAttachment;
++                   inputAttachment == right.inputAttachment &&
++                   accelerationStructure == right.accelerationStructure;
+         }
+ 
+         static inline Count fromLayoutBitmask(Bitmask const& mask) {
+@@ -106,6 +112,7 @@ struct VulkanDescriptorSetLayout : public HwDescriptorSetLayout, fvkmemory::Reso
+                 .dynamicUbo = collapsedCount(mask.dynamicUbo),
+                 .sampler = collapsedCount(mask.sampler),
+                 .inputAttachment = collapsedCount(mask.inputAttachment),
++                .accelerationStructure = collapsedCount(mask.accelerationStructure),
+             };
+         }
+ 
+@@ -117,6 +124,7 @@ struct VulkanDescriptorSetLayout : public HwDescriptorSetLayout, fvkmemory::Reso
+             ret.dynamicUbo = dynamicUbo * mult;
+             ret.sampler = sampler * mult;
+             ret.inputAttachment = inputAttachment * mult;
++            ret.accelerationStructure = accelerationStructure * mult;
+             return ret;
+         }
+     };
+diff --git a/filament/backend/src/vulkan/memory/Resource.cpp b/filament/backend/src/vulkan/memory/Resource.cpp
+index 3b6bcb20..8928ee7b 100644
+--- a/filament/backend/src/vulkan/memory/Resource.cpp
++++ b/filament/backend/src/vulkan/memory/Resource.cpp
+@@ -18,6 +18,7 @@
+ 
+ #include "vulkan/memory/ResourceManager.h"
+ #include "vulkan/VulkanHandles.h"
++#include "vulkan/VulkanAccelerationStructure.h"
+ 
+ namespace filament::backend::fvkmemory {
+ 
+@@ -44,6 +45,7 @@ template ResourceType getTypeEnum<VulkanSemaphore>() noexcept;
+ template ResourceType getTypeEnum<VulkanStream>() noexcept;
+ template ResourceType getTypeEnum<VulkanFramebuffer>() noexcept;
+ template ResourceType getTypeEnum<VulkanRenderPass>() noexcept;
++template ResourceType getTypeEnum<VulkanAccelerationStructure>() noexcept;
+ 
+ template<typename D>
+ ResourceType getTypeEnum() noexcept {
+@@ -116,6 +118,9 @@ ResourceType getTypeEnum() noexcept {
+     if constexpr (std::is_same_v<D, VulkanRenderPass>) {
+         return ResourceType::RENDER_PASS;
+     }
++    if constexpr (std::is_same_v<D, VulkanAccelerationStructure>) {
++        return ResourceType::ACCELERATION_STRUCTURE;
++    }
+     return ResourceType::UNDEFINED_TYPE;
+ }
+ 
+@@ -167,6 +172,8 @@ std::string_view getTypeStr(ResourceType type) {
+             return "Framebuffer";
+         case ResourceType::RENDER_PASS:
+             return "RenderPass";
++        case ResourceType::ACCELERATION_STRUCTURE:
++            return "AccelerationStructure";
+         case ResourceType::UNDEFINED_TYPE:
+             return "";
+     }
+diff --git a/filament/backend/src/vulkan/memory/Resource.h b/filament/backend/src/vulkan/memory/Resource.h
+index 6bb72f70..741dbcc0 100644
+--- a/filament/backend/src/vulkan/memory/Resource.h
++++ b/filament/backend/src/vulkan/memory/Resource.h
+@@ -59,7 +59,8 @@ enum class ResourceType : uint8_t {
+     STREAM = 20,
+     FRAMEBUFFER = 21,
+     RENDER_PASS = 22,
+-    UNDEFINED_TYPE = 23,    // Must be the last enum because we use it for iterating over the enums.
++    ACCELERATION_STRUCTURE = 23,
++    UNDEFINED_TYPE = 24,    // Must be the last enum because we use it for iterating over the enums.
+ };
+ 
+ template<typename D>
+diff --git a/filament/backend/src/vulkan/platform/VulkanPlatform.cpp b/filament/backend/src/vulkan/platform/VulkanPlatform.cpp
+index 4d87876d..88826688 100644
+--- a/filament/backend/src/vulkan/platform/VulkanPlatform.cpp
++++ b/filament/backend/src/vulkan/platform/VulkanPlatform.cpp
+@@ -1135,6 +1135,19 @@ void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& dri
+         chainStruct(&context.mPhysicalDeviceFeatures, &context.mExtendedDynamicState2Features);
+     }
+ 
++    // Ray queries need the three extensions together; their features and the acceleration
++    // structure properties (scratch alignment) are queried when a client asked for them.
++    bool const rayQueryExtensions =
++            setContains(deviceExts, VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME) &&
++            setContains(deviceExts, VK_KHR_RAY_QUERY_EXTENSION_NAME) &&
++            setContains(deviceExts, VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME);
++    if (rayQueryExtensions) {
++        chainStruct(&context.mPhysicalDeviceFeatures, &context.mAccelerationStructureFeatures);
++        chainStruct(&context.mPhysicalDeviceFeatures, &context.mRayQueryFeatures);
++        chainStruct(&context.mPhysicalDeviceFeatures, &context.mBufferDeviceAddressFeatures);
++        chainStruct(&context.mPhysicalDeviceProperties, &context.mAccelerationStructureProperties);
++    }
++
+     if (vkGetPhysicalDeviceProperties2) {
+         chainStruct(&context.mPhysicalDeviceProperties, &context.mDriverProperties);
+         context.mDriverPropertiesSupported = true;
+@@ -1158,6 +1171,11 @@ void VulkanPlatform::queryAndSetDeviceFeatures(Platform::DriverConfig const& dri
+ 
+     vkGetPhysicalDeviceMemoryProperties(mImpl->mPhysicalDevice, &context.mMemoryProperties);
+ 
++    context.mRayQueryEnabled = rayQueryExtensions &&
++            context.mAccelerationStructureFeatures.accelerationStructure == VK_TRUE &&
++            context.mRayQueryFeatures.rayQuery == VK_TRUE &&
++            context.mBufferDeviceAddressFeatures.bufferDeviceAddress == VK_TRUE;
++
+     // Store the extension support in the context
+     if (sharedContext) {
+         VulkanSharedContext const* scontext = (VulkanSharedContext const*) sharedContext;
+@@ -1349,10 +1367,19 @@ void VulkanPlatform::createLogicalDeviceAndQueues(const ExtensionSet& deviceExte
+     }
+ 
+     // Features that go with the client's extra extensions: an external upscaler's compute
+-    // kernels address their buffers directly.
++    // kernels address their buffers directly, and ray queries need the acceleration structure
++    // and ray query features on top.
+     VkPhysicalDeviceBufferDeviceAddressFeatures bufferDeviceAddress = {
+         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES,
+     };
++    VkPhysicalDeviceAccelerationStructureFeaturesKHR accelerationStructure = {
++        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR,
++        .accelerationStructure = VK_TRUE,
++    };
++    VkPhysicalDeviceRayQueryFeaturesKHR rayQuery = {
++        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR,
++        .rayQuery = VK_TRUE,
++    };
+     if (setContains(deviceExtensions, VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME)) {
+         VkPhysicalDeviceBufferDeviceAddressFeatures supported = {
+             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES,
+@@ -1367,6 +1394,10 @@ void VulkanPlatform::createLogicalDeviceAndQueues(const ExtensionSet& deviceExte
+             chainStruct(&deviceCreateInfo, &bufferDeviceAddress);
+         }
+     }
++    if (mImpl->mContext.isRayQuerySupported()) {
++        chainStruct(&deviceCreateInfo, &accelerationStructure);
++        chainStruct(&deviceCreateInfo, &rayQuery);
++    }
+ 
+     VkPhysicalDeviceGlobalPriorityQueryFeaturesKHR globalPriority = {
+         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_GLOBAL_PRIORITY_QUERY_FEATURES_KHR,
+diff --git a/filament/backend/src/webgpu/WebGPUDescriptorSetLayout.cpp b/filament/backend/src/webgpu/WebGPUDescriptorSetLayout.cpp
+index 5a67cb41..3dd49ff7 100644
+--- a/filament/backend/src/webgpu/WebGPUDescriptorSetLayout.cpp
++++ b/filament/backend/src/webgpu/WebGPUDescriptorSetLayout.cpp
+@@ -150,6 +150,10 @@ WebGPUDescriptorSetLayout::WebGPUDescriptorSetLayout(DescriptorSetLayout const&
+                 PANIC_POSTCONDITION("Input Attachment is not supported");
+                 break;
+             }
++            case DescriptorType::ACCELERATION_STRUCTURE: {
++                PANIC_POSTCONDITION("Acceleration structures are not supported");
++                break;
++            }
+             case DescriptorType::SHADER_STORAGE_BUFFER: {
+                 PANIC_POSTCONDITION("Shader storage is not supported");
+                 break;
+diff --git a/filament/backend/src/webgpu/WebGPUDriver.cpp b/filament/backend/src/webgpu/WebGPUDriver.cpp
+index 2f7cc8e1..d636fa0b 100644
+--- a/filament/backend/src/webgpu/WebGPUDriver.cpp
++++ b/filament/backend/src/webgpu/WebGPUDriver.cpp
+@@ -2427,4 +2427,40 @@ bool WebGPUDriver::cancelAsyncJob(AsyncCallId jobId) {
+     return false;
+ }
+ 
++
++Handle<HwAccelerationStructure> WebGPUDriver::createAccelerationStructureBlasS() noexcept {
++    return {};
++}
++
++void WebGPUDriver::createAccelerationStructureBlasR(Handle<HwAccelerationStructure>,
++        AccelerationStructureGeometry, utils::ImmutableCString&&) {
++}
++
++Handle<HwAccelerationStructure> WebGPUDriver::createAccelerationStructureTlasS() noexcept {
++    return {};
++}
++
++void WebGPUDriver::createAccelerationStructureTlasR(Handle<HwAccelerationStructure>, uint32_t,
++        utils::ImmutableCString&&) {
++}
++
++void WebGPUDriver::destroyAccelerationStructure(Handle<HwAccelerationStructure>) {
++}
++
++void WebGPUDriver::updateTlasInstances(Handle<HwAccelerationStructure>, BufferDescriptor&& instances) {
++    scheduleDestroy(std::move(instances));
++}
++
++void WebGPUDriver::buildAccelerationStructure(Handle<HwAccelerationStructure>,
++        AccelerationStructureBuildMode) {
++}
++
++void WebGPUDriver::updateDescriptorSetAccelerationStructure(Handle<HwDescriptorSet>,
++        descriptor_binding_t, Handle<HwAccelerationStructure>) {
++}
++
++bool WebGPUDriver::isRayQuerySupported() {
++    return false;
++}
++
+ } // namespace filament::backend
+diff --git a/filament/backend/src/webgpu/WebGPUStrings.h b/filament/backend/src/webgpu/WebGPUStrings.h
+index 59448652..e5187715 100644
+--- a/filament/backend/src/webgpu/WebGPUStrings.h
++++ b/filament/backend/src/webgpu/WebGPUStrings.h
+@@ -315,6 +315,7 @@ template<typename WebGPUPrintable>
+      case DescriptorType::UNIFORM_BUFFER:            return "UNIFORM_BUFFER";
+      case DescriptorType::SHADER_STORAGE_BUFFER:     return "SHADER_STORAGE_BUFFER";
+      case DescriptorType::INPUT_ATTACHMENT:          return "INPUT_ATTACHMENT";
++     case DescriptorType::ACCELERATION_STRUCTURE:    return "ACCELERATION_STRUCTURE";
+     }
+ }
+ 
+diff --git a/filament/include/filament/Engine.h b/filament/include/filament/Engine.h
+index 44d283b7..32a42a09 100644
+--- a/filament/include/filament/Engine.h
++++ b/filament/include/filament/Engine.h
+@@ -825,6 +825,15 @@ public:
+      */
+     bool isStereoSupported(StereoscopicType stereoscopicType) const noexcept;
+ 
++    /**
++     * Whether the backend can build ray tracing acceleration structures and trace rays from
++     * shaders (Vulkan ray query). Scene::setRayTracingEnabled(), ray-traced shadows and
++     * View::traceRay() do nothing without it.
++     *
++     * @return true when ray queries are available on this device
++     */
++    bool isRayQuerySupported() const noexcept;
++
+     /**
+      * Checks if the engine is set up for asynchronous operation. If it returns true, the
+      * asynchronous versions of the APIs are available for use.
+diff --git a/filament/include/filament/LightManager.h b/filament/include/filament/LightManager.h
+index ce25d597..797890e8 100644
+--- a/filament/include/filament/LightManager.h
++++ b/filament/include/filament/LightManager.h
+@@ -319,6 +319,14 @@ public:
+          */
+         bool lispsm = true;
+ 
++        /**
++         * Trace hard shadows against the scene's ray tracing acceleration structures
++         * instead of rendering cascaded shadow maps. Directional lights only; it needs
++         * Engine::isRayQuerySupported() and Scene::setRayTracingEnabled(true), and falls
++         * back to the shadow maps otherwise. Default false.
++         */
++        bool rayTraced = false;
++
+         /**
+          * Constant bias in depth-resolution units by which shadows are moved away from the
+          * light. The default value of 0.5 is used to round depth values up.
+diff --git a/filament/include/filament/RenderableManager.h b/filament/include/filament/RenderableManager.h
+index 3c2dd712..b2e0c946 100644
+--- a/filament/include/filament/RenderableManager.h
++++ b/filament/include/filament/RenderableManager.h
+@@ -782,6 +782,20 @@ public:
+      */
+     void setCastShadows(Instance instance, bool enable) noexcept;
+ 
++    /**
++     * Whether the renderable's geometry is part of the scene's ray tracing acceleration
++     * structures (Scene::setRayTracingEnabled). Default true.
++     * @param instance Instance of the component obtained from getInstance().
++     * @param visible  false removes the renderable from ray-traced shadows and ray queries
++     */
++    void setRayTracingVisible(Instance instance, bool visible) noexcept;
++
++    /**
++     * @return whether the renderable is part of the ray tracing acceleration structures
++     * @see setRayTracingVisible
++     */
++    bool isRayTracingVisible(Instance instance) const noexcept;
++
+     /**
+      * Changes whether or not the renderable can receive shadows.
+      *
+diff --git a/filament/include/filament/Scene.h b/filament/include/filament/Scene.h
+index 6ee6a02b..235de770 100644
+--- a/filament/include/filament/Scene.h
++++ b/filament/include/filament/Scene.h
+@@ -82,6 +82,32 @@ public:
+      */
+     Skybox* UTILS_NULLABLE getSkybox() const noexcept;
+ 
++    /**
++     * Builds and keeps the ray tracing acceleration structures of this scene (one bottom-level
++     * structure per primitive geometry, a top-level one over the renderables' transforms,
++     * rebuilt every frame the scene renders). Needs Engine::isRayQuerySupported(); otherwise
++     * the flag is kept but nothing is built. Default false.
++     *
++     * @param enabled whether to maintain the acceleration structures
++     * @see Engine::isRayQuerySupported, View::traceRay, LightManager::ShadowOptions::rayTraced
++     */
++    void setRayTracingEnabled(bool enabled) noexcept;
++
++    /** @return the value set with setRayTracingEnabled() */
++    bool isRayTracingEnabled() const noexcept;
++
++    /**
++     * @return how many renderables the top-level acceleration structure held after the last
++     *         frame (0 when ray tracing is off or unsupported)
++     */
++    uint32_t getTlasInstanceCount() const noexcept;
++
++    /**
++     * @return the GPU time of the last top-level structure build, in nanoseconds (0 until a
++     *         timer result arrived)
++     */
++    uint64_t getLastTlasBuildTimeNanos() const noexcept;
++
+     /**
+      * Set the IndirectLight to use when rendering the Scene.
+      *
+diff --git a/filament/include/filament/View.h b/filament/include/filament/View.h
+index 6a4183fe..650da732 100644
+--- a/filament/include/filament/View.h
++++ b/filament/include/filament/View.h
+@@ -30,6 +30,7 @@
+ 
+ #include <math/mat4.h>
+ #include <math/mathfwd.h>
++#include <math/vec3.h>
+ 
+ #include <utility>
+ 
+@@ -1043,6 +1044,54 @@ public:
+             backend::CallbackHandler* UTILS_NULLABLE handler,
+             PickingQueryResultCallback UTILS_NONNULL callback) noexcept;
+ 
++    /** Result of a ray query traced against the view's scene (see traceRay()). */
++    struct RayQueryResult {
++        bool hit{};                     //! whether the ray hit a renderable
++        float distance{};               //! distance from the origin to the hit, in world units
++        utils::Entity renderable{};     //! the renderable hit
++        uint32_t primitive{};           //! index of the triangle hit within its geometry
++    };
++
++    /** User data for RayQueryResultCallback */
++    struct RayQuery {
++        void* UTILS_NULLABLE storage[4];
++    };
++
++    /** callback type used for ray queries. */
++    using RayQueryResultCallback =
++            void(*)(RayQueryResult const& result, RayQuery* UTILS_NONNULL query);
++
++    /**
++     * Traces one visibility ray against the scene's ray tracing acceleration structures
++     * (Scene::setRayTracingEnabled) during the next frame this view renders. The result is
++     * delivered through the callback, like pick(); without ray query support, or when the
++     * scene has no acceleration structures, the callback reports no hit.
++     *
++     * @param origin      ray origin, world space
++     * @param direction   ray direction, world space (normalized by the query)
++     * @param maxDistance how far the ray goes
++     * @param functor     callable receiving the RayQueryResult
++     * @param handler     where the callback runs (null: the engine's default handler)
++     */
++    template<typename T>
++    UTILS_NOAPIGEN
++    void traceRay(math::float3 origin, math::float3 direction, float maxDistance, T functor,
++            backend::CallbackHandler* UTILS_NULLABLE handler = nullptr) noexcept {
++        static_assert(sizeof(functor) <= sizeof(RayQuery::storage), "functor too large");
++        RayQuery& query = traceRay(origin, direction, maxDistance, handler,
++                (RayQueryResultCallback)[](RayQueryResult const& result, RayQuery* rq) {
++                    T* const that = static_cast<T*>(reinterpret_cast<void*>(rq->storage));
++                    that->operator()(result);
++                    that->~T();
++                });
++        new(query.storage) T(std::move(functor));
++    }
++
++    UTILS_NOAPIGEN
++    RayQuery& traceRay(math::float3 origin, math::float3 direction, float maxDistance,
++            backend::CallbackHandler* UTILS_NULLABLE handler,
++            RayQueryResultCallback UTILS_NONNULL callback) noexcept;
++
+     /**
+      * Set the value of material global variables. There are up-to four such variable each of
+      * type float4. These variables can be read in a user Material with
+diff --git a/filament/src/Engine.cpp b/filament/src/Engine.cpp
+index fb01c28f..067e50c8 100644
+--- a/filament/src/Engine.cpp
++++ b/filament/src/Engine.cpp
+@@ -475,6 +475,10 @@ bool Engine::isStereoSupported(StereoscopicType) const noexcept {
+     return downcast(this)->isStereoSupported();
+ }
+ 
++bool Engine::isRayQuerySupported() const noexcept {
++    return downcast(this)->isRayQuerySupported();
++}
++
+ bool Engine::isAsynchronousModeEnabled() const noexcept {
+     return downcast(this)->isAsynchronousModeEnabled();
+ }
+diff --git a/filament/src/MaterialDefinition.cpp b/filament/src/MaterialDefinition.cpp
+index f163d3a7..7dfd65b0 100644
+--- a/filament/src/MaterialDefinition.cpp
++++ b/filament/src/MaterialDefinition.cpp
+@@ -441,6 +441,7 @@ void MaterialDefinition::processMain() {
+     }
+ 
+     mMaterialParser->hasCustomDepthShader(&hasCustomDepthShader);
++    mMaterialParser->hasRayQuery(&hasRayQuery);
+ 
+     bool const isLit = isVariantLit || hasShadowMultiplier;
+     bool const isSSR = reflectionMode == ReflectionMode::SCREEN_SPACE ||
+@@ -708,11 +709,17 @@ void MaterialDefinition::processDescriptorSets(FEngine& engine) {
+             refractionMode == RefractionMode::SCREEN_SPACE;
+     bool const hasFog = !(variantFilterMask & UserVariantFilterMask(UserVariantFilterBit::FOG));
+ 
+-    this->perViewDescriptorSetLayoutPcfDescription = descriptor_sets::getPerViewDescriptorSetLayout(
+-            materialDomain, isLit, isSSR, hasFog, false);
++    if (materialDomain == MaterialDomain::POST_PROCESS && hasRayQuery) {
++        // ray query post-process materials see the scene's top-level acceleration structure
++        this->perViewDescriptorSetLayoutPcfDescription = descriptor_sets::getRayQueryPostProcessLayout();
++        this->perViewDescriptorSetLayoutS2dDescription = descriptor_sets::getRayQueryPostProcessLayout();
++    } else {
++        this->perViewDescriptorSetLayoutPcfDescription = descriptor_sets::getPerViewDescriptorSetLayout(
++                materialDomain, isLit, isSSR, hasFog, false);
+ 
+-    this->perViewDescriptorSetLayoutS2dDescription = descriptor_sets::getPerViewDescriptorSetLayout(
+-            materialDomain, isLit, isSSR, hasFog, true);
++        this->perViewDescriptorSetLayoutS2dDescription = descriptor_sets::getPerViewDescriptorSetLayout(
++                materialDomain, isLit, isSSR, hasFog, true);
++    }
+ 
+     // set the labels
+     this->descriptorSetLayoutDescription.label = CString{ name }.append("_perMat");
+diff --git a/filament/src/MaterialDefinition.h b/filament/src/MaterialDefinition.h
+index 21040edc..01fae919 100644
+--- a/filament/src/MaterialDefinition.h
++++ b/filament/src/MaterialDefinition.h
+@@ -141,6 +141,7 @@ struct MaterialDefinition {
+     bool doubleSidedCapability = false;
+     bool hasShadowMultiplier = false;
+     bool hasCustomDepthShader = false;
++    bool hasRayQuery = false;
+     bool specularAntiAliasing = false;
+ 
+     SamplerInterfaceBlock samplerInterfaceBlock;
+diff --git a/filament/src/MaterialParser.cpp b/filament/src/MaterialParser.cpp
+index 5c26349b..034ffc21 100644
+--- a/filament/src/MaterialParser.cpp
++++ b/filament/src/MaterialParser.cpp
+@@ -440,6 +440,10 @@ bool MaterialParser::hasShadowMultiplier(bool* value) const noexcept {
+     return mImpl.getFromSimpleChunk(MaterialShadowMultiplier, value);
+ }
+ 
++bool MaterialParser::hasRayQuery(bool* value) const noexcept {
++    return mImpl.getFromSimpleChunk(MaterialRayQuery, value);
++}
++
+ bool MaterialParser::getShading(Shading* value) const noexcept {
+     static_assert(sizeof(Shading) == sizeof(uint8_t),
+             "Shading expected size is wrong");
+@@ -774,6 +778,7 @@ constexpr bool isValidDescriptorType(uint8_t const value) noexcept {
+         case DescriptorType::UNIFORM_BUFFER:
+         case DescriptorType::SHADER_STORAGE_BUFFER:
+         case DescriptorType::INPUT_ATTACHMENT:
++        case DescriptorType::ACCELERATION_STRUCTURE:
+             return true;
+     }
+     return false;
+diff --git a/filament/src/MaterialParser.h b/filament/src/MaterialParser.h
+index d4af3dd9..9b5c0d05 100644
+--- a/filament/src/MaterialParser.h
++++ b/filament/src/MaterialParser.h
+@@ -133,6 +133,7 @@ public:
+     bool getRefractionType(RefractionType* value) const noexcept;
+     bool getReflectionMode(ReflectionMode* value) const noexcept;
+     bool hasCustomDepthShader(bool* value) const noexcept;
++    bool hasRayQuery(bool* value) const noexcept;
+     bool hasSpecularAntiAliasing(bool* value) const noexcept;
+     bool getSpecularAntiAliasingVariance(float* value) const noexcept;
+     bool getSpecularAntiAliasingThreshold(float* value) const noexcept;
+diff --git a/filament/src/PostProcessManager.cpp b/filament/src/PostProcessManager.cpp
+index 5204df99..ffe76604 100644
+--- a/filament/src/PostProcessManager.cpp
++++ b/filament/src/PostProcessManager.cpp
+@@ -37,6 +37,10 @@
+ #include "details/Texture.h"
+ #include "details/VertexBuffer.h"
+ 
++#include <private/filament/DescriptorSets.h>
++#include "details/View.h"
++#include "details/Scene.h"
++
+ #include "ds/DescriptorSet.h"
+ #include "ds/SsrPassDescriptorSet.h"
+ #include "ds/TypedUniformBuffer.h"
+@@ -59,6 +63,7 @@
+ #include "materials/fsr/fsr.h"
+ #include "materials/sgsr/sgsr.h"
+ #include "materials/ssao/ssao.h"
++#include "materials/rt/rt.h"
+ 
+ #include <private/filament/EngineEnums.h>
+ #include <private/filament/UibStructs.h>
+@@ -235,6 +240,7 @@ PostProcessManager::~PostProcessManager() noexcept = default;
+ void PostProcessManager::setFrameUniforms(DriverApi& driver,
+         TypedUniformBuffer<PerViewUib>& uniforms) noexcept {
+     mPostProcessDescriptorSet.setFrameUniforms(driver, uniforms);
++    mRayQueryDescriptorSet.setFrameUniforms(driver, uniforms);
+     mSsrPassDescriptorSet.setFrameUniforms(mEngine, uniforms);
+ }
+ 
+@@ -242,6 +248,130 @@ void PostProcessManager::bindPostProcessDescriptorSet(DriverApi& driver) const n
+     mPostProcessDescriptorSet.bind(driver);
+ }
+ 
++void PostProcessManager::setRayQueryAccelerationStructure(DriverApi& driver,
++        Handle<HwAccelerationStructure> const tlas) noexcept {
++    mRayQueryDescriptorSet.setAccelerationStructure(driver, tlas);
++}
++
++FrameGraphId<FrameGraphTexture> PostProcessManager::rayTracedShadows(FrameGraph& fg,
++        FrameGraphId<FrameGraphTexture> const depth, CameraInfo const& cameraInfo,
++        math::float3 const toLight) noexcept {
++
++    struct RayTracedShadowData {
++        FrameGraphId<FrameGraphTexture> depth;
++        FrameGraphId<FrameGraphTexture> mask;
++    };
++
++    auto const& pass = fg.addPass<RayTracedShadowData>("ray-traced shadows",
++            [&](FrameGraph::Builder& builder, auto& data) {
++                auto const& desc = fg.getDescriptor(depth);
++                data.depth = builder.sample(depth);
++                data.mask = builder.createTexture("ray-traced shadow mask", {
++                        .width = desc.width, .height = desc.height,
++                        .format = TextureFormat::R8 });
++                data.mask = builder.declareRenderPass(data.mask);
++            },
++            [=, this](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
++                mRayQueryDescriptorSet.bind(driver);
++                bindPerRenderableDescriptorSet(driver);
++                auto const& desc = resources.getDescriptor(data.depth);
++                auto const& depthTexture = resources.getTexture(data.depth);
++                auto const& out = resources.getRenderPassInfo();
++
++                auto const& material = getPostProcessMaterial("rtShadow");
++                FMaterialInstance* const mi = getMaterialInstance(mEngine, driver, material);
++                mi->setParameter("depth", depthTexture, SamplerParams{});
++                // The acceleration structures hold the renderables' true world transforms,
++                // while the camera (and everything shaded) lives in the world shifted by
++                // cameraInfo.worldTransform: reconstruct the pixel back in the true world.
++                math::mat4 const trueWorldFromShaderWorld = inverse(cameraInfo.worldTransform);
++                math::mat4 const worldFromClip = trueWorldFromShaderWorld *
++                        math::mat4(cameraInfo.model) * inverse(math::mat4(cameraInfo.projection));
++                mi->setParameter("worldFromClip", math::mat4f(worldFromClip));
++                mi->setParameter("resolution", math::float4{
++                        float(desc.width), float(desc.height),
++                        1.0f / float(desc.width), 1.0f / float(desc.height) });
++                mi->setParameter("toLight", toLight);
++                mi->setParameter("cameraPosition", math::float3(
++                        (trueWorldFromShaderWorld * math::double4(cameraInfo.getPosition(), 1.0)).xyz));
++                // a fraction of the depth range that keeps surfaces from shadowing themselves
++                mi->setParameter("bias", std::max(0.002f, cameraInfo.zn * 0.5f));
++
++                commitAndRenderFullScreenQuad(driver, out, mi);
++                unbindAllDescriptorSets(driver);
++            });
++
++    return pass->mask;
++}
++
++void PostProcessManager::rayQueries(FrameGraph& fg, FView& view) noexcept {
++    FView::FRayQuery* list = view.takeRayQueries();
++    while (list) {
++        FView::FRayQuery* const query = list;
++        list = query->next;
++        query->next = nullptr;
++        query->scene = view.getScene();
++
++        struct RayQueryData {
++            FrameGraphId<FrameGraphTexture> result;
++        };
++        // the ray's answer: one RGBA32F texel
++        auto const& pass = fg.addPass<RayQueryData>("ray query",
++                [&](FrameGraph::Builder& builder, auto& data) {
++                    data.result = builder.createTexture("ray query result", {
++                            .width = 1, .height = 1, .format = TextureFormat::RGBA32F });
++                    data.result = builder.declareRenderPass(data.result);
++                },
++                [=, this](FrameGraphResources const& resources, auto const&, DriverApi& driver) {
++                    mRayQueryDescriptorSet.bind(driver);
++                    bindPerRenderableDescriptorSet(driver);
++                    auto const& out = resources.getRenderPassInfo();
++
++                    auto const& material = getPostProcessMaterial("rayVisibility");
++                    FMaterialInstance* const mi = getMaterialInstance(mEngine, driver, material);
++                    mi->setParameter("origin", query->origin);
++                    mi->setParameter("direction", query->direction);
++                    mi->setParameter("maxDistance", query->maxDistance);
++                    commitAndRenderFullScreenQuad(driver, out, mi);
++                    unbindAllDescriptorSets(driver);
++                });
++
++        // read it back outside the frame graph, like the picking resolve pass: the texel is
++        // read as a blit source once the render pass that wrote it is over
++        struct RayQueryReadData {
++            FrameGraphId<FrameGraphTexture> result;
++        };
++        fg.addPass<RayQueryReadData>("ray query read-back",
++                [&](FrameGraph::Builder& builder, auto& data) {
++                    data.result = builder.read(pass->result,
++                            FrameGraphTexture::Usage::COLOR_ATTACHMENT |
++                            FrameGraphTexture::Usage::BLIT_SRC);
++                    builder.declareRenderPass("ray query read-back target", {
++                            .attachments = { .color = { data.result }}
++                    });
++                    builder.sideEffect();
++                },
++                [=](FrameGraphResources const& resources, auto const&, DriverApi& driver) {
++                    auto const& out = resources.getRenderPassInfo();
++                    driver.readPixels(out.target, 0, 0, 1, 1, PixelBufferDescriptor{
++                            query->raw, sizeof(query->raw),
++                            PixelDataFormat::RGBA, PixelDataType::FLOAT,
++                            query->handler, [](void*, size_t, void* user) {
++                                FView::FRayQuery* const q = static_cast<FView::FRayQuery*>(user);
++                                bool const hit = q->raw[3] > 0.5f;
++                                q->result.hit = hit;
++                                q->result.distance = hit ? q->raw[0] : 0.0f;
++                                q->result.primitive = hit ? uint32_t(q->raw[2] + 0.5f) : 0u;
++                                q->result.renderable = (hit && q->scene)
++                                        ? q->scene->getRayTracedEntity(uint32_t(q->raw[1] + 0.5f))
++                                        : utils::Entity{};
++                                q->callback(q->result, q);
++                                FView::FRayQuery::put(q);
++                            }, query });
++                });
++    }
++}
++
+ void PostProcessManager::bindPerRenderableDescriptorSet(DriverApi& driver) const noexcept {
+     driver.bindDescriptorSet(mDummyPerRenderableDsh, +DescriptorSetBindingPoints::PER_RENDERABLE,
+             { { 0, 0 }, driver });
+@@ -369,6 +499,15 @@ void PostProcessManager::init() noexcept {
+ 
+     mSsrPassDescriptorSet.init(engine);
+     mPostProcessDescriptorSet.init(engine);
++    mRayQueryDescriptorSet.init(engine, descriptor_sets::getRayQueryPostProcessLayout());
++    // ray query materials exist only in Vulkan builds and load only when the device traces rays
++    if (driver.isRayQuerySupported()) {
++        auto const rayQueryMaterials = getRayQueryMaterialList();
++        for (auto const& info: rayQueryMaterials) {
++            registerPostProcessMaterial(info.name, info);
++        }
++        mHasRayQueryMaterials = !rayQueryMaterials.empty();
++    }
+     mStructureDescriptorSet.init(engine);
+ 
+     mWorkaroundSplitEasu =
+@@ -460,6 +599,7 @@ void PostProcessManager::terminate(DriverApi& driver) noexcept {
+     }
+ 
+     mPostProcessDescriptorSet.terminate(engine.getDescriptorSetLayoutFactory(), driver);
++    mRayQueryDescriptorSet.terminate(engine.getDescriptorSetLayoutFactory(), driver);
+     mSsrPassDescriptorSet.terminate(driver);
+     mStructureDescriptorSet.terminate(driver);
+ }
+diff --git a/filament/src/PostProcessManager.h b/filament/src/PostProcessManager.h
+index 9b880e51..436220fd 100644
+--- a/filament/src/PostProcessManager.h
++++ b/filament/src/PostProcessManager.h
+@@ -64,6 +64,7 @@ class FEngine;
+ class FMaterial;
+ class FMaterialInstance;
+ class FTexture;
++class FView;
+ class FrameGraph;
+ class ExternalUpscaler;
+ class RenderPass;
+@@ -411,6 +412,21 @@ public:
+ 
+     void bindPostProcessDescriptorSet(backend::DriverApi& driver) const noexcept;
+ 
++    // ray tracing (Vulkan ray query): the scene's top-level acceleration structure for the
++    // ray query post-process materials, bound each frame by the renderer
++    void setRayQueryAccelerationStructure(backend::DriverApi& driver,
++            backend::Handle<backend::HwAccelerationStructure> tlas) noexcept;
++    bool hasRayQueryMaterials() const noexcept { return mHasRayQueryMaterials; }
++
++    // Hard directional shadows traced against the scene: a visibility mask (R8) at the
++    // structure buffer's resolution, sampled by the colour pass.
++    FrameGraphId<FrameGraphTexture> rayTracedShadows(FrameGraph& fg,
++            FrameGraphId<FrameGraphTexture> depth, CameraInfo const& cameraInfo,
++            math::float3 toLight) noexcept;
++
++    // Answers the view's pending View::traceRay() queries: one 1x1 pass each, read back.
++    void rayQueries(FrameGraph& fg, FView& view) noexcept;
++
+     void bindPerRenderableDescriptorSet(backend::DriverApi& driver) const noexcept;
+ 
+     backend::PipelineState getPipelineState(FMaterialInstance const* mi,
+@@ -502,6 +518,8 @@ private:
+     bool mDepthStencilBlitSupported;
+     mutable SsrPassDescriptorSet mSsrPassDescriptorSet;
+     mutable PostProcessDescriptorSet mPostProcessDescriptorSet;
++    mutable PostProcessDescriptorSet mRayQueryDescriptorSet;
++    bool mHasRayQueryMaterials = false;
+     mutable StructureDescriptorSet mStructureDescriptorSet;
+ 
+     struct BilateralPassConfig {
+diff --git a/filament/src/RenderPrimitive.cpp b/filament/src/RenderPrimitive.cpp
+index 3b843f61..715788f0 100644
+--- a/filament/src/RenderPrimitive.cpp
++++ b/filament/src/RenderPrimitive.cpp
+@@ -80,6 +80,8 @@ void FRenderPrimitive::set(HwRenderPrimitiveFactory& factory, backend::DriverApi
+     mCount = count;
+     mEnabledAttributes = enabledAttributes;
+     mIsIndexed = (indexBuffer != nullptr);
++    mVertexBuffer = vertexBuffer;
++    mIndexBuffer = indexBuffer;
+ }
+ 
+ } // namespace filament
+diff --git a/filament/src/RenderPrimitive.h b/filament/src/RenderPrimitive.h
+index 2cc1c822..4f32add0 100644
+--- a/filament/src/RenderPrimitive.h
++++ b/filament/src/RenderPrimitive.h
+@@ -68,6 +68,11 @@ public:
+     bool isGlobalBlendOrderEnabled() const noexcept { return mGlobalBlendOrderEnabled; }
+     bool isIndexed() const noexcept { return mIsIndexed; }
+ 
++    // The buffers this primitive draws from, for the ray tracing acceleration structures.
++    // The application keeps them alive for as long as the renderable exists.
++    FVertexBuffer const* getVertexBuffer() const noexcept { return mVertexBuffer; }
++    FIndexBuffer const* getIndexBuffer() const noexcept { return mIndexBuffer; }
++
+     void setMaterialInstance(FMaterialInstance const* mi) noexcept { mMaterialInstance = mi; }
+ 
+     void setBlendOrder(uint16_t const order) noexcept {
+@@ -89,6 +94,8 @@ private:
+     backend::Handle<backend::HwVertexBufferInfo> mVertexBufferInfoHandle = {};
+     uint32_t mOffset = 0;
+     uint32_t mCount = 0;
++    FVertexBuffer const* mVertexBuffer = nullptr;
++    FIndexBuffer const* mIndexBuffer = nullptr;
+     uint32_t mMorphingBufferOffset = 0;
+     // End PrimitiveInfo fields.
+ 
+diff --git a/filament/src/RenderableManager.cpp b/filament/src/RenderableManager.cpp
+index abc46a26..660fe6db 100644
+--- a/filament/src/RenderableManager.cpp
++++ b/filament/src/RenderableManager.cpp
+@@ -99,6 +99,14 @@ void RenderableManager::setCastShadows(Instance const instance, bool const enabl
+     downcast(this)->setCastShadows(instance, enable);
+ }
+ 
++void RenderableManager::setRayTracingVisible(Instance const instance, bool const visible) noexcept {
++    downcast(this)->setRayTracingVisible(instance, visible);
++}
++
++bool RenderableManager::isRayTracingVisible(Instance const instance) const noexcept {
++    return downcast(this)->isRayTracingVisible(instance);
++}
++
+ void RenderableManager::setReceiveShadows(Instance const instance, bool const enable) noexcept {
+     downcast(this)->setReceiveShadows(instance, enable);
+ }
+diff --git a/filament/src/RendererUtils.cpp b/filament/src/RendererUtils.cpp
+index 57fb25b5..ed4a3d36 100644
+--- a/filament/src/RendererUtils.cpp
++++ b/filament/src/RendererUtils.cpp
+@@ -71,6 +71,7 @@ RendererUtils::ColorPassOutput RendererUtils::colorPass(
+         FrameGraphId<FrameGraphTexture> ssao;
+         FrameGraphId<FrameGraphTexture> ssr;    // either screen-space reflections or refractions
+         FrameGraphId<FrameGraphTexture> structure;
++        FrameGraphId<FrameGraphTexture> rtShadow;
+     };
+ 
+     auto& colorPass = fg.addPass<ColorPassData>(name,
+@@ -107,6 +108,11 @@ RendererUtils::ColorPassOutput RendererUtils::colorPass(
+                     data.ssao = builder.sample(data.ssao);
+                 }
+ 
++                data.rtShadow = colorPassInput.rtShadow;
++                if (data.rtShadow) {
++                    data.rtShadow = builder.sample(data.rtShadow);
++                }
++
+                 if (!data.color) {
+                     data.color = builder.createTexture("Color Buffer", colorBufferDesc);
+                 }
+@@ -233,6 +239,10 @@ RendererUtils::ColorPassOutput RendererUtils::colorPass(
+                 // set structure sampler
+                 view.prepareStructure(structure);
+ 
++                // ray-traced sun shadow mask (white when there is none)
++                view.prepareRayTracedShadows(data.rtShadow ?
++                        resources.getTexture(data.rtShadow) : engine.getOneTexture());
++
+                 // set shadow sampler
+                 view.prepareShadowMapping(engine, shadows);
+ 
+diff --git a/filament/src/RendererUtils.h b/filament/src/RendererUtils.h
+index 42c8c0ad..2c3a4327 100644
+--- a/filament/src/RendererUtils.h
++++ b/filament/src/RendererUtils.h
+@@ -87,6 +87,7 @@ public:
+         FrameGraphId<FrameGraphTexture> ssao;
+         FrameGraphId<FrameGraphTexture> ssr;
+         FrameGraphId<FrameGraphTexture> structure;
++        FrameGraphId<FrameGraphTexture> rtShadow;
+     };
+     struct ColorPassOutput {
+         FrameGraphId<FrameGraphTexture> linearColor;
+diff --git a/filament/src/Scene.cpp b/filament/src/Scene.cpp
+index a4720192..b8012208 100644
+--- a/filament/src/Scene.cpp
++++ b/filament/src/Scene.cpp
+@@ -31,6 +31,22 @@ Skybox* Scene::getSkybox() const noexcept {
+     return downcast(this)->getSkybox();
+ }
+ 
++void Scene::setRayTracingEnabled(bool const enabled) noexcept {
++    downcast(this)->setRayTracingEnabled(enabled);
++}
++
++bool Scene::isRayTracingEnabled() const noexcept {
++    return downcast(this)->isRayTracingEnabled();
++}
++
++uint32_t Scene::getTlasInstanceCount() const noexcept {
++    return downcast(this)->getTlasInstanceCount();
++}
++
++uint64_t Scene::getLastTlasBuildTimeNanos() const noexcept {
++    return downcast(this)->getLastTlasBuildTimeNanos();
++}
++
+ void Scene::setIndirectLight(IndirectLight* ibl) noexcept {
+     downcast(this)->setIndirectLight(downcast(ibl));
+ }
+diff --git a/filament/src/View.cpp b/filament/src/View.cpp
+index 5645dcf8..ccdc982e 100644
+--- a/filament/src/View.cpp
++++ b/filament/src/View.cpp
+@@ -365,6 +365,12 @@ View::PickingQuery& View::pick(uint32_t const x, uint32_t const y, backend::Call
+     return downcast(this)->pick(x, y, handler, callback);
+ }
+ 
++View::RayQuery& View::traceRay(math::float3 const origin, math::float3 const direction,
++        float const maxDistance, backend::CallbackHandler* handler,
++        RayQueryResultCallback const callback) noexcept {
++    return downcast(this)->traceRay(origin, direction, maxDistance, handler, callback);
++}
++
+ void View::setMaterialGlobal(uint32_t const index, math::float4 const& value) {
+     downcast(this)->setMaterialGlobal(index, value);
+ }
+diff --git a/filament/src/components/RenderableManager.cpp b/filament/src/components/RenderableManager.cpp
+index fe13c907..39f0e0d0 100644
+--- a/filament/src/components/RenderableManager.cpp
++++ b/filament/src/components/RenderableManager.cpp
+@@ -658,6 +658,8 @@ void FRenderableManager::create(
+         setPriority(ci, builder->mPriority);
+         setChannel(ci, builder->mCommandChannel);
+         setCastShadows(ci, builder->mCastShadows);
++        // every renderable is in the ray tracing acceleration structures until told otherwise
++        setRayTracingVisible(ci, true);
+         setReceiveShadows(ci, builder->mReceiveShadows);
+         setScreenSpaceContactShadows(ci, builder->mScreenSpaceContactShadows);
+         setCulling(ci, builder->mCulling);
+diff --git a/filament/src/components/RenderableManager.h b/filament/src/components/RenderableManager.h
+index de64f841..5f4c45da 100644
+--- a/filament/src/components/RenderableManager.h
++++ b/filament/src/components/RenderableManager.h
+@@ -78,6 +78,7 @@ public:
+         bool reversedWindingOrder       : 1;
+         bool fog                        : 1;
+         GeometryType geometryType       : 2;
++        bool rayTracingVisible          : 1;
+     };
+ 
+     struct Skinning {
+@@ -166,6 +167,7 @@ public:
+     inline void setChannel(Instance instance, uint8_t channel) noexcept;
+ 
+     inline void setCastShadows(Instance instance, bool enable) noexcept;
++    inline void setRayTracingVisible(Instance instance, bool visible) noexcept;
+ 
+     inline void setLayerMask(Instance instance, uint8_t layerMask) noexcept;
+     inline void setReceiveShadows(Instance instance, bool enable) noexcept;
+@@ -204,6 +206,7 @@ public:
+     bool getLightChannel(Instance instance, unsigned int channel) const noexcept;
+ 
+     inline bool isShadowCaster(Instance instance) const noexcept;
++    inline bool isRayTracingVisible(Instance instance) const noexcept;
+     inline bool isShadowReceiver(Instance instance) const noexcept;
+     inline bool isCullingEnabled(Instance instance) const noexcept;
+     inline bool isScreenSpaceContactShadowsEnabled(Instance instance) const noexcept;
+@@ -544,6 +547,20 @@ bool FRenderableManager::isShadowCaster(Instance const instance) const noexcept
+     return getVisibility(instance).castShadows;
+ }
+ 
++void FRenderableManager::setRayTracingVisible(Instance const instance, bool const visible) noexcept {
++    if (instance) {
++        Visibility& visibility = mManager[instance].visibility;
++        if (visibility.rayTracingVisible != visible) {
++            visibility.rayTracingVisible = visible;
++            mManager.notifyChange(getEntity(instance));
++        }
++    }
++}
++
++bool FRenderableManager::isRayTracingVisible(Instance const instance) const noexcept {
++    return getVisibility(instance).rayTracingVisible;
++}
++
+ bool FRenderableManager::isShadowReceiver(Instance const instance) const noexcept {
+     return getVisibility(instance).receiveShadows;
+ }
+diff --git a/filament/src/details/Engine.h b/filament/src/details/Engine.h
+index 2ce2da0d..5fe8a77f 100644
+--- a/filament/src/details/Engine.h
++++ b/filament/src/details/Engine.h
+@@ -242,6 +242,10 @@ public:
+         return getDriver().isStereoSupported();
+     }
+ 
++    bool isRayQuerySupported() const noexcept {
++        return getDriver().isRayQuerySupported();
++    }
++
+     bool isAsynchronousModeEnabled() const noexcept;
+ 
+     static size_t getMaxStereoscopicEyes() noexcept {
+diff --git a/filament/src/details/IndexBuffer.h b/filament/src/details/IndexBuffer.h
+index e68ceff1..c086ac6d 100644
+--- a/filament/src/details/IndexBuffer.h
++++ b/filament/src/details/IndexBuffer.h
+@@ -56,6 +56,7 @@ public:
+     // Total capacity of the underlying buffer, in bytes. This is the upper bound that
+     // setBuffer()/setBufferAsync() validate their write range against.
+     size_t getByteCount() const noexcept { return size_t(mIndexCount) * mElementSize; }
++    uint8_t getElementSize() const noexcept { return mElementSize; }
+ 
+     void setBuffer(FEngine& engine, BufferDescriptor&& buffer, uint32_t byteOffset = 0);
+ 
+diff --git a/filament/src/details/Renderer.cpp b/filament/src/details/Renderer.cpp
+index 6c830802..5314c784 100644
+--- a/filament/src/details/Renderer.cpp
++++ b/filament/src/details/Renderer.cpp
+@@ -980,6 +980,20 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+     view.prepareSSAO(aoOptions);
+     view.prepareSSR(engine, cameraInfo, ssrConfig.lodOffset, ssReflectionsOptions);
+     view.prepareShadowMapping();
++
++    // Ray tracing: rebuild the scene's acceleration structures before any pass of this frame
++    // and hand the top-level one to the ray query post-process materials. Without support,
++    // pending ray queries are answered with "no hit".
++    FScene* const rtScene = view.getScene();
++    bool const rayTracing = rtScene && rtScene->isRayTracingEnabled() &&
++            engine.isRayQuerySupported() && ppm.hasRayQueryMaterials();
++    if (rayTracing) {
++        rtScene->updateAccelerationStructures(engine, driver);
++        ppm.setRayQueryAccelerationStructure(driver, rtScene->getTlas());
++    } else {
++        view.failRayQueries();
++    }
++    bool const rayTracedShadows = rayTracing && view.hasRayTracedDirectionalShadows();
+     // There might be a bug here with svp's origin; normally the origin could offset when the
+     // target is the swapchain (width/height are the same though). This would mean that we'd have
+     // to wait for the color pass to execute to set the viewport. For now, I wasn't able to
+@@ -1002,7 +1016,8 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+     bool const motionVectors = taaOptions.motionVectors
+             && engine.getSupportedFeatureLevel() != FeatureLevel::FEATURE_LEVEL_0
+             && driver.isRenderTargetFormatSupported(TextureFormat::RG16F);
+-    float const structureScale = motionVectors ? 1.0f : aoOptions.resolution;
++    // the ray-traced shadow mask is traced from the structure depth, at the colour pass's resolution
++    float const structureScale = (motionVectors || rayTracedShadows) ? 1.0f : aoOptions.resolution;
+ 
+     { // the scope helps to guarantee that we're not modifying the descriptor-set later
+         StructureDescriptorSet& ds = ppm.getStructureDescriptorSet();
+@@ -1219,6 +1234,17 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+         blackboard["ssao"] = ssao;
+     }
+ 
++    // --------------------------------------------------------------------------------------------
++    // ray tracing: sun shadow mask and the view's ray queries
++
++    if (rayTracedShadows) {
++        blackboard["rtShadow"] = ppm.rayTracedShadows(fg, structure, cameraInfo,
++                view.getRayTracedLightDirection());
++    }
++    if (rayTracing && view.hasRayQueries()) {
++        ppm.rayQueries(fg, view);
++    }
++
+     // --------------------------------------------------------------------------------------------
+     // screen-space reflections pass
+ 
+@@ -1395,7 +1421,8 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+                 .shadows = blackboard.get<FrameGraphTexture>("shadows"),
+                 .ssao = blackboard.get<FrameGraphTexture>("ssao"),
+                 .ssr = ssrConfig.ssr,
+-                .structure = structure
++                .structure = structure,
++                .rtShadow = blackboard.get<FrameGraphTexture>("rtShadow")
+             },
+             colorBufferDesc, config, colorGradingConfigForColor, pass.getExecutor());
+ 
+@@ -1406,7 +1433,8 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+                         .shadows = blackboard.get<FrameGraphTexture>("shadows"),
+                         .ssao = blackboard.get<FrameGraphTexture>("ssao"),
+                         .ssr = ssrConfig.ssr,
+-                .structure = structure
++                .structure = structure,
++                .rtShadow = blackboard.get<FrameGraphTexture>("rtShadow")
+             }, config, ssrConfig, colorGradingConfigForColor,
+              pass, firstRefractionCommand);
+     }
+diff --git a/filament/src/details/Scene.cpp b/filament/src/details/Scene.cpp
+index 09907945..3585a3ff 100644
+--- a/filament/src/details/Scene.cpp
++++ b/filament/src/details/Scene.cpp
+@@ -26,6 +26,9 @@
+ #include "details/Engine.h"
+ #include "details/Skybox.h"
+ #include "details/View.h"
++#include "details/IndexBuffer.h"
++#include "details/VertexBuffer.h"
++#include "RenderPrimitive.h"
+ 
+ #include <private/filament/UibStructs.h>
+ 
+@@ -34,6 +37,7 @@
+ #include <filament/RenderableManager.h>
+ #include <filament/TransformManager.h>
+ 
++#include <backend/AccelerationStructure.h>
+ #include <backend/Handle.h>
+ 
+ #include <private/utils/Tracing.h>
+@@ -54,6 +58,8 @@
+ #include <math/vec4.h>
+ 
+ #include <algorithm>
++#include <cstdlib>
++#include <cstring>
+ #include <cstddef>
+ #include <cstdint>
+ #include <functional>
+@@ -498,11 +504,177 @@ void FScene::prepareVisibleRenderables(Range<uint32_t> visibleRenderables, Scene
+     }
+ }
+ 
+-void FScene::terminate(FEngine&) {
++void FScene::terminate(FEngine& engine) {
+     for (FView* view : mRegisteredViews) {
+         view->detachScene(this);
+     }
+     mRegisteredViews.clear();
++
++    // release the ray tracing acceleration structures
++    DriverApi& driver = engine.getDriverApi();
++    for (auto& entry : mRayTracing.blas) {
++        driver.destroyAccelerationStructure(entry.second.handle);
++    }
++    mRayTracing.blas.clear();
++    if (mRayTracing.tlas) {
++        driver.destroyAccelerationStructure(mRayTracing.tlas);
++        mRayTracing.tlas = {};
++    }
++    if (mRayTracing.timer) {
++        driver.destroyTimerQuery(mRayTracing.timer);
++        mRayTracing.timer = {};
++    }
++}
++
++utils::Entity FScene::getRayTracedEntity(uint32_t const customIndex) const noexcept {
++    if (customIndex < mRayTracing.entities.size()) {
++        return mRayTracing.entities[customIndex];
++    }
++    return {};
++}
++
++void FScene::updateAccelerationStructures(FEngine& engine, DriverApi& driver) noexcept {
++    using namespace backend;
++    RayTracingState& rt = mRayTracing;
++    rt.frame++;
++
++    // the GPU time of the previous build, when its timer query resolved
++    if (rt.timerPending && rt.timer) {
++        uint64_t nanos = 0;
++        TimerQueryResult const result = driver.getTimerQueryValue(rt.timer, &nanos);
++        if (result == TimerQueryResult::AVAILABLE) {
++            rt.lastBuildNanos = nanos;
++            rt.timerPending = false;
++        } else if (result == TimerQueryResult::ERROR) {
++            rt.timerPending = false;
++        }
++    }
++
++    FRenderableManager const& rcm = engine.getRenderableManager();
++    FTransformManager const& tcm = engine.getTransformManager();
++
++    std::vector<AccelerationStructureInstance> instances;
++    rt.entities.clear();
++    uint32_t renderableCount = 0;
++
++    // every renderable of the scene, not only the ones visible to a view: shadows and ray
++    // queries see what is off-screen too
++    mEntities.forEachSetBit([&](uint32_t const bit) {
++        Entity const entity = Entity::import(int32_t(bit));
++        FRenderableManager::Instance const ri = rcm.getInstance(entity);
++        if (!ri || !rcm.isRayTracingVisible(ri)) {
++            return;
++        }
++        FTransformManager::Instance const ti = tcm.getInstance(entity);
++        math::mat4f const worldTransform = ti ? tcm.getWorldTransform(ti) : math::mat4f{};
++        auto const primitives = rcm.getRenderPrimitives(ri, 0);
++        bool contributed = false;
++        for (FRenderPrimitive const& primitive : primitives) {
++            if (primitive.getPrimitiveType() != PrimitiveType::TRIANGLES) {
++                continue;
++            }
++            FVertexBuffer const* const vb = primitive.getVertexBuffer();
++            if (!vb) {
++                continue;
++            }
++            BufferObjectHandle boh;
++            uint32_t positionOffset = 0;
++            uint32_t positionStride = 0;
++            ElementType positionType = ElementType::FLOAT3;
++            if (!vb->getPositionBinding(boh, positionOffset, positionStride, positionType)) {
++                continue; // the buffer object is not uploaded yet
++            }
++            FIndexBuffer const* const ib = primitive.getIndexBuffer();
++            // one bottom-level structure per geometry, shared by the renderables that draw it
++            uint64_t key = uint64_t(boh.getId());
++            key = key * 1000003u ^ uint64_t(ib ? ib->getHwHandle().getId() : 0u);
++            key = key * 1000003u ^ uint64_t(primitive.getOffset());
++            key = key * 1000003u ^ uint64_t(primitive.getCount());
++            key = key * 1000003u ^ uint64_t(positionOffset);
++            auto it = rt.blas.find(key);
++            if (it == rt.blas.end()) {
++                AccelerationStructureGeometry geometry{};
++                geometry.vertexBuffer = boh;
++                geometry.vertexStride = positionStride;
++                geometry.vertexFormat = positionType;
++                if (ib) {
++                    geometry.vertexOffset = positionOffset;
++                    geometry.vertexCount = uint32_t(vb->getVertexCount());
++                    geometry.indexBuffer = ib->getHwHandle();
++                    geometry.indexOffset = primitive.getOffset();
++                    geometry.indexCount = primitive.getCount();
++                } else {
++                    geometry.vertexOffset = positionOffset + primitive.getOffset() * positionStride;
++                    geometry.vertexCount = primitive.getCount();
++                }
++                if (geometry.vertexCount == 0 || (ib && geometry.indexCount < 3)) {
++                    return;
++                }
++                auto const handle = driver.createAccelerationStructureBlas(geometry);
++                driver.buildAccelerationStructure(handle, AccelerationStructureBuildMode::BUILD);
++                it = rt.blas.emplace(key, RayTracingState::Blas{ handle, rt.frame }).first;
++            }
++            it->second.lastUsedFrame = rt.frame;
++
++            AccelerationStructureInstance instance{};
++            for (size_t r = 0; r < 3; r++) {
++                for (size_t c = 0; c < 4; c++) {
++                    instance.transform[r][c] = worldTransform[c][r];
++                }
++            }
++            instance.customIndex = uint32_t(rt.entities.size()) & 0xFFFFFFu;
++            instance.mask = 0xFF;
++            instance.blas = it->second.handle;
++            instances.push_back(instance);
++            rt.entities.push_back(entity);
++            contributed = true;
++        }
++        if (contributed) {
++            renderableCount++;
++        }
++    });
++    rt.renderableCount = renderableCount;
++
++    // bottom-level structures nobody drew for a while go away
++    for (auto it = rt.blas.begin(); it != rt.blas.end();) {
++        if (rt.frame - it->second.lastUsedFrame > 120u) {
++            driver.destroyAccelerationStructure(it->second.handle);
++            it = rt.blas.erase(it);
++        } else {
++            ++it;
++        }
++    }
++
++    // the top-level structure grows with the instance count
++    uint32_t const needed = std::max<uint32_t>(1u, uint32_t(instances.size()));
++    if (!rt.tlas || needed > rt.tlasCapacity) {
++        if (rt.tlas) {
++            driver.destroyAccelerationStructure(rt.tlas);
++        }
++        rt.tlasCapacity = std::max<uint32_t>(16u, needed * 2u);
++        rt.tlas = driver.createAccelerationStructureTlas(rt.tlasCapacity);
++    }
++
++    size_t const bytes = instances.size() * sizeof(AccelerationStructureInstance);
++    void* const copy = ::malloc(std::max<size_t>(bytes, sizeof(AccelerationStructureInstance)));
++    if (bytes) {
++        std::memcpy(copy, instances.data(), bytes);
++    }
++    driver.updateTlasInstances(rt.tlas, BufferDescriptor(copy, bytes,
++            [](void* buffer, size_t, void*) { ::free(buffer); }));
++
++    if (!rt.timer) {
++        rt.timer = driver.createTimerQuery();
++    }
++    bool const timeThisBuild = !rt.timerPending;
++    if (timeThisBuild) {
++        driver.beginTimerQuery(rt.timer);
++    }
++    driver.buildAccelerationStructure(rt.tlas, AccelerationStructureBuildMode::BUILD);
++    if (timeThisBuild) {
++        driver.endTimerQuery(rt.timer);
++        rt.timerPending = true;
++    }
+ }
+ 
+ void FScene::prepareDynamicLights(const CameraInfo& camera,
+diff --git a/filament/src/details/Scene.h b/filament/src/details/Scene.h
+index e2e3eca0..70ecc86f 100644
+--- a/filament/src/details/Scene.h
++++ b/filament/src/details/Scene.h
+@@ -61,6 +61,19 @@ public:
+ 
+     FSkybox* getSkybox() const noexcept { return mSkybox; }
+ 
++    // ray tracing acceleration structures (Scene::setRayTracingEnabled)
++    void setRayTracingEnabled(bool const enabled) noexcept { mRayTracing.enabled = enabled; }
++    bool isRayTracingEnabled() const noexcept { return mRayTracing.enabled; }
++    uint32_t getTlasInstanceCount() const noexcept { return mRayTracing.renderableCount; }
++    uint64_t getLastTlasBuildTimeNanos() const noexcept { return mRayTracing.lastBuildNanos; }
++    backend::Handle<backend::HwAccelerationStructure> getTlas() const noexcept { return mRayTracing.tlas; }
++    // the entity behind an instance custom index a ray query returned
++    utils::Entity getRayTracedEntity(uint32_t customIndex) const noexcept;
++    // Rebuilds the top-level structure from the renderables' current transforms (bottom-level
++    // ones are built once per primitive geometry). Called by the renderer before the frame
++    // graph executes, when ray tracing is enabled and supported.
++    void updateAccelerationStructures(FEngine& engine, backend::DriverApi& driver) noexcept;
++
+     FIndirectLight* getIndirectLight() const noexcept { return mIndirectLight; }
+ 
+     // the directional light is always stored first in the LightSoA, so we need to account
+@@ -248,6 +261,23 @@ private:
+     FSkybox* mSkybox = nullptr;
+     FIndirectLight* mIndirectLight = nullptr;
+ 
++    struct RayTracingState {
++        struct Blas {
++            backend::Handle<backend::HwAccelerationStructure> handle;
++            uint32_t lastUsedFrame = 0;
++        };
++        bool enabled = false;
++        backend::Handle<backend::HwAccelerationStructure> tlas;
++        uint32_t tlasCapacity = 0;
++        uint32_t renderableCount = 0;
++        uint32_t frame = 0;
++        backend::Handle<backend::HwTimerQuery> timer;
++        bool timerPending = false;
++        uint64_t lastBuildNanos = 0;
++        std::unordered_map<uint64_t, Blas> blas;    // keyed by primitive geometry identity
++        std::vector<utils::Entity> entities;        // instance custom index -> entity
++    } mRayTracing;
++
+     /*
+      * The data below is valid only during a view pass. i.e. if a scene is used in multiple
+      * views, the data below is updated for each view.
+diff --git a/filament/src/details/VertexBuffer.h b/filament/src/details/VertexBuffer.h
+index 0b986d0f..35cfa2ad 100644
+--- a/filament/src/details/VertexBuffer.h
++++ b/filament/src/details/VertexBuffer.h
+@@ -101,6 +101,21 @@ public:
+         return mCreationStatus.load(std::memory_order_relaxed) == CreationStatus::CREATED;
+     }
+ 
++    // The buffer object, byte offset, stride and element type of the position attribute,
++    // for the ray tracing acceleration structures. False until the buffer object exists.
++    bool getPositionBinding(BufferObjectHandle& boh, uint32_t& offset, uint32_t& stride,
++            backend::ElementType& type) const noexcept {
++        backend::Attribute const& a = mAttributes[VertexAttribute::POSITION];
++        if (a.buffer == backend::Attribute::BUFFER_UNUSED || !mBufferObjects[a.buffer]) {
++            return false;
++        }
++        boh = mBufferObjects[a.buffer];
++        offset = a.offset;
++        stride = a.stride;
++        type = a.type;
++        return true;
++    }
++
+ private:
+     friend class VertexBuffer;
+     VertexBufferInfoHandle mVertexBufferInfoHandle;
+diff --git a/filament/src/details/View.cpp b/filament/src/details/View.cpp
+index 5c100f30..6eb34c54 100644
+--- a/filament/src/details/View.cpp
++++ b/filament/src/details/View.cpp
+@@ -239,6 +239,7 @@ void FView::terminate(FEngine& engine) {
+     // Here we would cleanly free resources we've allocated, or we own (currently none).
+ 
+     clearPickingQueries();
++    failRayQueries();
+ 
+     DriverApi& driver = engine.getDriverApi();
+     driver.destroyBufferObject(mLightUbh);
+@@ -450,6 +451,7 @@ void FView::prepareShadowing(FEngine& engine, DriverApi& driver,
+ 
+     mHasShadowing = false;
+     mNeedsShadowMap = false;
++    mRayTracedDirectionalShadows = false;
+     if (!mShadowingEnabled) {
+         return;
+     }
+@@ -466,7 +468,17 @@ void FView::prepareShadowing(FEngine& engine, DriverApi& driver,
+         const auto& shadowOptions = lcm.getShadowOptions(directionalLight);
+         assert_invariant(shadowOptions.shadowCascades >= 1 &&
+                 shadowOptions.shadowCascades <= CONFIG_MAX_SHADOW_CASCADES);
+-        builder.directionalShadowMap(entity, 0, &shadowOptions);
++        // Ray-traced sun shadows replace the cascaded shadow maps when the device traces rays
++        // and the scene keeps its acceleration structures; otherwise the maps are used.
++        bool const rayTraced = shadowOptions.rayTraced && engine.isRayQuerySupported() &&
++                mScene && mScene->isRayTracingEnabled();
++        if (rayTraced) {
++            mRayTracedDirectionalShadows = true;
++            // the direction towards the light, world space
++            mRayTracedLightDirection = normalize(-lightData.elementAt<FScene::DIRECTION>(0));
++        } else {
++            builder.directionalShadowMap(entity, 0, &shadowOptions);
++        }
+     }
+ 
+     // Find all shadow-casting spotlights.
+@@ -519,6 +531,10 @@ void FView::prepareShadowing(FEngine& engine, DriverApi& driver,
+         mHasShadowing = any(shadowTechnique);
+         mNeedsShadowMap = any(shadowTechnique & ShadowMapManager::ShadowTechnique::SHADOW_MAP);
+     }
++    if (mRayTracedDirectionalShadows) {
++        // the shadowing variants read the ray-traced mask
++        mHasShadowing = true;
++    }
+ }
+ 
+ void FView::prepareLighting(FEngine& engine, CameraInfo const& cameraInfo) noexcept {
+@@ -1276,13 +1292,18 @@ void FView::prepareStructure(Handle<HwTexture> structure) const noexcept {
+     getColorPassDescriptorSet().prepareStructure(structure);
+ }
+ 
++void FView::prepareRayTracedShadows(Handle<HwTexture> mask) const noexcept {
++    getColorPassDescriptorSet().prepareRayTracedShadows(mask);
++}
++
+ void FView::prepareShadowMapping(FEngine const& engine, Handle<HwTexture> texture) const noexcept {
+     // when needsShadowMap() is not set, this method only just sets a dummy texture
+     // in the needed samplers (in that case `texture` is actually a dummy texture).
+ 
+     BufferObjectHandle ubo{ engine.getDummyUniformBuffer() };
+-    if (mHasShadowing) {
+-        assert_invariant(mShadowMapManager);
++    // ray-traced sun shadows alone need no shadow maps, hence no manager: the shadow
++    // uniforms stay the dummy buffer and the shaders only read the ray-traced mask
++    if (mHasShadowing && mShadowMapManager) {
+         ubo = mShadowMapManager->getShadowUniformsHandle();
+     }
+     getColorPassDescriptorSet().prepareShadowMapping(ubo);
+@@ -1320,6 +1341,9 @@ void FView::prepareShadowMapping() const noexcept {
+     s.shadowAtlasResolution = uniforms.atlasResolution;
+     s.ssContactShadowDistance = uniforms.ssContactShadowDistance;
+     s.directionalShadows = int32_t(uniforms.directionalShadows);
++    if (mRayTracedDirectionalShadows) {
++        s.directionalShadows |= 0x4;    // ray-traced mask, see surface_light_directional.fs
++    }
+     s.cascades = int32_t(uniforms.cascades);
+     switch (mShadowType) {
+         case ShadowType::PCF:
+@@ -1721,6 +1745,25 @@ View::PickingQuery& FView::pick(uint32_t const x, uint32_t const y, CallbackHand
+     return *pQuery;
+ }
+ 
++View::RayQuery& FView::traceRay(math::float3 const origin, math::float3 const direction,
++        float const maxDistance, CallbackHandler* handler,
++        RayQueryResultCallback const callback) noexcept {
++    FRayQuery* query = FRayQuery::get(origin, direction, maxDistance, handler, callback);
++    query->next = mActiveRayQueriesList;
++    mActiveRayQueriesList = query;
++    return *query;
++}
++
++void FView::failRayQueries() noexcept {
++    while (mActiveRayQueriesList) {
++        FRayQuery* const query = mActiveRayQueriesList;
++        mActiveRayQueriesList = query->next;
++        query->result = {};
++        query->callback(query->result, query);
++        FRayQuery::put(query);
++    }
++}
++
+ void FView::setStereoscopicOptions(const StereoscopicOptions& options) noexcept {
+     mStereoscopicOptions = options;
+ }
+diff --git a/filament/src/details/View.h b/filament/src/details/View.h
+index 86f444bd..3fcbfe05 100644
+--- a/filament/src/details/View.h
++++ b/filament/src/details/View.h
+@@ -222,6 +222,49 @@ public:
+     bool hasVSM() const noexcept { return mShadowType == ShadowType::VSM; }
+     bool hasPCSS() const noexcept { return mShadowType == ShadowType::PCSS || mShadowType == ShadowType::DPCF; }
+     bool hasPicking() const noexcept { return mActivePickingQueriesList != nullptr; }
++
++    // ray queries (View::traceRay), consumed by the renderer each frame
++    struct FRayQuery : public RayQuery {
++    private:
++        FRayQuery(math::float3 const origin, math::float3 const direction, float const maxDistance,
++                backend::CallbackHandler* handler, RayQueryResultCallback const callback) noexcept
++                : RayQuery{}, origin(origin), direction(direction), maxDistance(maxDistance),
++                  handler(handler), callback(callback) {}
++        ~FRayQuery() noexcept = default;
++    public:
++        static FRayQuery* get(math::float3 const origin, math::float3 const direction,
++                float const maxDistance, backend::CallbackHandler* handler,
++                RayQueryResultCallback const callback) noexcept {
++            return new(std::nothrow) FRayQuery(origin, direction, maxDistance, handler, callback);
++        }
++        static void put(FRayQuery const* query) noexcept {
++            delete query;
++        }
++        math::float3 origin;
++        math::float3 direction;
++        float maxDistance;
++        backend::CallbackHandler* handler;
++        RayQueryResultCallback callback;
++        FRayQuery* next = nullptr;
++        FScene* scene = nullptr;
++        float raw[4] = {};              // (distance, custom index, primitive, hit) read back
++        RayQueryResult result{};
++    };
++
++    bool hasRayQueries() const noexcept { return mActiveRayQueriesList != nullptr; }
++    // Takes the pending ray queries (the caller owns them from then on).
++    FRayQuery* takeRayQueries() noexcept {
++        FRayQuery* const list = mActiveRayQueriesList;
++        mActiveRayQueriesList = nullptr;
++        return list;
++    }
++    // Answers every pending ray query with "no hit" (ray tracing unavailable).
++    void failRayQueries() noexcept;
++
++    // ray-traced directional shadows (LightManager::ShadowOptions::rayTraced)
++    bool hasRayTracedDirectionalShadows() const noexcept { return mRayTracedDirectionalShadows; }
++    math::float3 getRayTracedLightDirection() const noexcept { return mRayTracedLightDirection; }
++    void prepareRayTracedShadows(backend::Handle<backend::HwTexture> mask) const noexcept;
+     bool hasStereo() const noexcept {
+         return mIsStereoSupported && mStereoscopicOptions.enabled;
+     }
+@@ -516,6 +559,10 @@ public:
+     PickingQuery& pick(uint32_t x, uint32_t y, backend::CallbackHandler* handler,
+             PickingQueryResultCallback callback) noexcept;
+ 
++    // queue a ray query (View::traceRay)
++    RayQuery& traceRay(math::float3 origin, math::float3 direction, float maxDistance,
++            backend::CallbackHandler* handler, RayQueryResultCallback callback) noexcept;
++
+     void executePickingQueries(backend::DriverApi& driver,
+             backend::RenderTargetHandle handle, math::float2 scale) noexcept;
+ 
+@@ -671,6 +718,9 @@ private:
+     mutable FrameHistory mFrameHistory{};
+ 
+     FPickingQuery* mActivePickingQueriesList = nullptr;
++    FRayQuery* mActiveRayQueriesList = nullptr;
++    mutable bool mRayTracedDirectionalShadows = false;
++    mutable math::float3 mRayTracedLightDirection{ 0.0f, 1.0f, 0.0f };
+ 
+     utils::CString mName;
+ 
+diff --git a/filament/src/ds/ColorPassDescriptorSet.cpp b/filament/src/ds/ColorPassDescriptorSet.cpp
+index 37a83337..98e368dd 100644
+--- a/filament/src/ds/ColorPassDescriptorSet.cpp
++++ b/filament/src/ds/ColorPassDescriptorSet.cpp
+@@ -305,6 +305,11 @@ void ColorPassDescriptorSet::prepareStructure(Handle<HwTexture> structure) noexc
+     setSampler(+PerViewBindingPoints::STRUCTURE, structure, {});
+ }
+ 
++void ColorPassDescriptorSet::prepareRayTracedShadows(Handle<HwTexture> mask) noexcept {
++    // read with texelFetch at the colour pass resolution: no filtering
++    setSampler(+PerViewBindingPoints::RT_SHADOW, mask, {});
++}
++
+ void ColorPassDescriptorSet::prepareDirectionalLight(FEngine& engine,
+         float exposure,
+         float3 const& sceneSpaceDirection,
+diff --git a/filament/src/ds/ColorPassDescriptorSet.h b/filament/src/ds/ColorPassDescriptorSet.h
+index 70085803..ae354c78 100644
+--- a/filament/src/ds/ColorPassDescriptorSet.h
++++ b/filament/src/ds/ColorPassDescriptorSet.h
+@@ -102,6 +102,7 @@ public:
+             math::mat4 const& fogTransform, FogOptions const& options,
+             FIndirectLight const* ibl) noexcept;
+     void prepareStructure(TextureHandle structure) noexcept;
++    void prepareRayTracedShadows(TextureHandle mask) noexcept;
+     void prepareSSAO(TextureHandle ssao, AmbientOcclusionOptions const& options) noexcept;
+     void prepareBlending(bool needsAlphaChannel) noexcept;
+     void prepareMaterialGlobals(std::array<math::float4, 4> const& materialGlobals) noexcept;
+diff --git a/filament/src/ds/DescriptorSet.cpp b/filament/src/ds/DescriptorSet.cpp
+index 3663b1ab..9b560f94 100644
+--- a/filament/src/ds/DescriptorSet.cpp
++++ b/filament/src/ds/DescriptorSet.cpp
+@@ -94,7 +94,10 @@ void DescriptorSet::commitSlow(DescriptorSetLayout const& layout,
+             dsh = mDescriptorSetHandle, descriptors = mDescriptors.data()]
+             (backend::descriptor_binding_t const binding) {
+         assert_invariant(layout.isValid(binding));
+-        if (layout.isSampler(binding)) {
++        if (layout.getDescriptorType(binding) == backend::DescriptorType::ACCELERATION_STRUCTURE) {
++            driver.updateDescriptorSetAccelerationStructure(dsh, binding,
++                    descriptors[binding].accelerationStructure.ash);
++        } else if (layout.isSampler(binding)) {
+             driver.updateDescriptorSetTexture(dsh, binding,
+                     descriptors[binding].texture.th,
+                     descriptors[binding].texture.params);
+@@ -173,6 +176,20 @@ void DescriptorSet::setBuffer(DescriptorSetLayout const& layout,
+     mValid.set(binding, bool(boh));
+ }
+ 
++void DescriptorSet::setAccelerationStructure(DescriptorSetLayout const& layout,
++        backend::descriptor_binding_t const binding,
++        backend::Handle<backend::HwAccelerationStructure> const ash) {
++    using namespace backend;
++    FILAMENT_CHECK_PRECONDITION(
++            layout.getDescriptorType(binding) == DescriptorType::ACCELERATION_STRUCTURE)
++            << "descriptor " << +binding << " is not an acceleration structure";
++    if (mDescriptors[binding].accelerationStructure.ash != ash) {
++        mDescriptors[binding].accelerationStructure.ash = ash;
++        mDirty.set(binding);
++    }
++    mValid.set(binding);
++}
++
+ void DescriptorSet::setSampler(
+         DescriptorSetLayout const& layout,
+         backend::descriptor_binding_t const binding,
+@@ -293,6 +310,7 @@ bool DescriptorSet::isTextureCompatibleWithDescriptor(
+         case DescriptorType::UNIFORM_BUFFER:
+         case DescriptorType::SHADER_STORAGE_BUFFER:
+         case DescriptorType::INPUT_ATTACHMENT:
++        case DescriptorType::ACCELERATION_STRUCTURE:
+             return false;
+     }
+ 
+diff --git a/filament/src/ds/DescriptorSet.h b/filament/src/ds/DescriptorSet.h
+index 5bfcd411..ca4a4ff5 100644
+--- a/filament/src/ds/DescriptorSet.h
++++ b/filament/src/ds/DescriptorSet.h
+@@ -72,6 +72,10 @@ public:
+             uint32_t offset, uint32_t size);
+ 
+     // sets a sampler descriptor
++    void setAccelerationStructure(DescriptorSetLayout const& layout,
++            backend::descriptor_binding_t binding,
++            backend::Handle<backend::HwAccelerationStructure> ash);
++
+     void setSampler(DescriptorSetLayout const& layout,
+             backend::descriptor_binding_t binding,
+             backend::Handle<backend::HwTexture> th,
+@@ -106,6 +110,9 @@ private:
+                 backend::SamplerParams params;
+                 uint32_t padding;
+             } texture;
++            struct {
++                backend::Handle<backend::HwAccelerationStructure> ash;
++            } accelerationStructure;
+         };
+     };
+ 
+diff --git a/filament/src/ds/PostProcessDescriptorSet.cpp b/filament/src/ds/PostProcessDescriptorSet.cpp
+index 10e54df1..a00b9932 100644
+--- a/filament/src/ds/PostProcessDescriptorSet.cpp
++++ b/filament/src/ds/PostProcessDescriptorSet.cpp
+@@ -34,6 +34,22 @@ using namespace math;
+ 
+ PostProcessDescriptorSet::PostProcessDescriptorSet() noexcept = default;
+ 
++void PostProcessDescriptorSet::init(FEngine& engine, backend::DescriptorSetLayout const& layout) noexcept {
++    mDescriptorSetLayout = filament::DescriptorSetLayout{
++            engine.getDescriptorSetLayoutFactory(),
++            engine.getDriverApi(), layout };
++    mDescriptorSet = DescriptorSet{ "PostProcessDescriptorSet", mDescriptorSetLayout };
++}
++
++void PostProcessDescriptorSet::setAccelerationStructure(DriverApi& driver,
++        backend::Handle<backend::HwAccelerationStructure> const ash) noexcept {
++    if (!ash) {
++        return;
++    }
++    mDescriptorSet.setAccelerationStructure(mDescriptorSetLayout, +PerViewBindingPoints::TLAS, ash);
++    mDescriptorSet.commit(mDescriptorSetLayout, driver);
++}
++
+ void PostProcessDescriptorSet::init(FEngine& engine) noexcept {
+ 
+     // create the descriptor-set layout
+diff --git a/filament/src/ds/PostProcessDescriptorSet.h b/filament/src/ds/PostProcessDescriptorSet.h
+index 42a9b3bc..24acd43a 100644
+--- a/filament/src/ds/PostProcessDescriptorSet.h
++++ b/filament/src/ds/PostProcessDescriptorSet.h
+@@ -35,6 +35,8 @@ public:
+     explicit PostProcessDescriptorSet() noexcept;
+ 
+     void init(FEngine& engine) noexcept;
++    // a set over the given layout (the ray query layout adds the scene's acceleration structure)
++    void init(FEngine& engine, backend::DescriptorSetLayout const& layout) noexcept;
+ 
+     void terminate(HwDescriptorSetLayoutFactory& factory, backend::DriverApi& driver);
+ 
+@@ -43,6 +45,9 @@ public:
+ 
+     void bind(backend::DriverApi& driver) noexcept;
+ 
++    void setAccelerationStructure(backend::DriverApi& driver,
++            backend::Handle<backend::HwAccelerationStructure> ash) noexcept;
++
+     DescriptorSetLayout const& getLayout() const noexcept {
+         return mDescriptorSetLayout;
+     }
+diff --git a/filament/src/materials/rt/rayVisibility.mat b/filament/src/materials/rt/rayVisibility.mat
+new file mode 100644
+index 00000000..19daa73e
+--- /dev/null
++++ b/filament/src/materials/rt/rayVisibility.mat
+@@ -0,0 +1,53 @@
++material {
++    name : rayVisibility,
++    parameters : [
++        {
++            type : float3,
++            name : origin,
++            precision: high
++        },
++        {
++            type : float3,
++            name : direction,
++            precision: high
++        },
++        {
++            type : float,
++            name : maxDistance,
++            precision: high
++        }
++    ],
++    outputs : [
++        {
++            name : hit,
++            target : color,
++            type : float4
++        }
++    ],
++    domain : postprocess,
++    rayQuery : true,
++    depthWrite : false,
++    depthCulling : false
++}
++
++fragment {
++    // One visibility ray, read back by View::traceRay(): (distance, instance custom index,
++    // primitive index, 1) for a hit, zeros for a miss.
++    void postProcess(inout PostProcessInputs postProcess) {
++        rayQueryEXT rq;
++        rayQueryInitializeEXT(rq, sceneTlas, gl_RayFlagsOpaqueEXT, 0xFFu,
++                materialParams.origin, 0.0, normalize(materialParams.direction),
++                materialParams.maxDistance);
++        // every geometry is opaque, so one step completes the traversal
++        rayQueryProceedEXT(rq);
++        if (rayQueryGetIntersectionTypeEXT(rq, true) != gl_RayQueryCommittedIntersectionNoneEXT) {
++            postProcess.hit = vec4(
++                    rayQueryGetIntersectionTEXT(rq, true),
++                    float(rayQueryGetIntersectionInstanceCustomIndexEXT(rq, true)),
++                    float(rayQueryGetIntersectionPrimitiveIndexEXT(rq, true)),
++                    1.0);
++        } else {
++            postProcess.hit = vec4(0.0);
++        }
++    }
++}
+diff --git a/filament/src/materials/rt/rt.cpp b/filament/src/materials/rt/rt.cpp
+new file mode 100644
+index 00000000..831ecf4e
+--- /dev/null
++++ b/filament/src/materials/rt/rt.cpp
+@@ -0,0 +1,45 @@
++/*
++ * Copyright (C) 2025 The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++#include "rt.h"
++
++#include "materials/StaticMaterialInfo.h"
++
++#include <utils/Slice.h>
++
++#if defined(FILAMENT_RAY_QUERY_MATERIALS)
++#include "generated/resources/rt.h"
++#include <iterator>
++#endif
++
++namespace filament {
++
++#if defined(FILAMENT_RAY_QUERY_MATERIALS)
++static const StaticMaterialInfo sMaterialList[] = {
++    { "rtShadow",       MATERIAL(RT, RTSHADOW) },
++    { "rayVisibility",  MATERIAL(RT, RAYVISIBILITY) },
++};
++
++utils::Slice<const StaticMaterialInfo> getRayQueryMaterialList() noexcept {
++    return { std::begin(sMaterialList), std::end(sMaterialList) };
++}
++#else
++utils::Slice<const StaticMaterialInfo> getRayQueryMaterialList() noexcept {
++    return {};
++}
++#endif
++
++} // namespace filament
+diff --git a/filament/src/materials/rt/rt.h b/filament/src/materials/rt/rt.h
+new file mode 100644
+index 00000000..09b887a4
+--- /dev/null
++++ b/filament/src/materials/rt/rt.h
+@@ -0,0 +1,28 @@
++/*
++ * Copyright (C) 2025 The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++#pragma once
++
++#include "materials/StaticMaterialInfo.h"
++
++#include <utils/Slice.h>
++
++namespace filament {
++
++// Ray query post-process materials (Vulkan only). Empty when the build has no Vulkan backend.
++utils::Slice<const StaticMaterialInfo> getRayQueryMaterialList() noexcept;
++
++} // namespace filament
+diff --git a/filament/src/materials/rt/rtShadow.mat b/filament/src/materials/rt/rtShadow.mat
+new file mode 100644
+index 00000000..8d59f5fb
+--- /dev/null
++++ b/filament/src/materials/rt/rtShadow.mat
+@@ -0,0 +1,78 @@
++material {
++    name : rtShadow,
++    parameters : [
++        {
++            type : sampler2d,
++            name : depth,
++            precision: high,
++            filterable: false
++        },
++        {
++            type : mat4,
++            name : worldFromClip,
++            precision: high
++        },
++        {
++            type : float4,
++            name : resolution,
++            precision: high
++        },
++        {
++            type : float3,
++            name : toLight,
++            precision: high
++        },
++        {
++            type : float3,
++            name : cameraPosition,
++            precision: high
++        },
++        {
++            type : float,
++            name : bias,
++            precision: high
++        }
++    ],
++    outputs : [
++        {
++            name : visibility,
++            target : color,
++            type : float
++        }
++    ],
++    domain : postprocess,
++    rayQuery : true,
++    depthWrite : false,
++    depthCulling : false
++}
++
++fragment {
++    // Hard sun shadows traced against the scene's acceleration structure: one visibility
++    // ray per pixel from the surface the structure depth describes toward the light.
++    void postProcess(inout PostProcessInputs postProcess) {
++        ivec2 icoord = ivec2(gl_FragCoord.xy);
++        highp float depth = texelFetch(materialParams_depth, icoord, 0).r;
++        float visibility = 1.0;
++        // reversed-Z: 0 is the far plane, nothing to shadow there
++        if (depth > 0.0) {
++            highp vec2 uv = (vec2(icoord) + 0.5) * materialParams.resolution.zw;
++            highp vec4 clip = vec4(uv * 2.0 - 1.0, depth, 1.0);
++            highp vec4 world = materialParams.worldFromClip * clip;
++            world.xyz /= world.w;
++            // offset the origin along the ray, scaled with the distance to the camera so that
++            // depth quantization does not make surfaces shadow themselves
++            highp float distanceToCamera = length(world.xyz - materialParams.cameraPosition);
++            highp float bias = materialParams.bias * (1.0 + distanceToCamera * 0.02);
++            highp vec3 origin = world.xyz + materialParams.toLight * bias;
++            rayQueryEXT rq;
++            rayQueryInitializeEXT(rq, sceneTlas,
++                    gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT, 0xFFu,
++                    origin, 0.0, materialParams.toLight, 1.0e5);
++            rayQueryProceedEXT(rq);
++            if (rayQueryGetIntersectionTypeEXT(rq, true) != gl_RayQueryCommittedIntersectionNoneEXT) {
++                visibility = 0.0;
++            }
++        }
++        postProcess.visibility = visibility;
++    }
++}
+diff --git a/libs/filabridge/include/filament/MaterialChunkType.h b/libs/filabridge/include/filament/MaterialChunkType.h
+index 7f4e7bbf..7bf51b26 100644
+--- a/libs/filabridge/include/filament/MaterialChunkType.h
++++ b/libs/filabridge/include/filament/MaterialChunkType.h
+@@ -67,6 +67,7 @@ enum UTILS_PUBLIC ChunkType : uint64_t {
+     MaterialTransparencyMode = charTo64bitNum("MAT_TRMD"),
+     MaterialMaskThreshold = charTo64bitNum("MAT_THRS"),
+     MaterialShadowMultiplier = charTo64bitNum("MAT_SHML"),
++    MaterialRayQuery = charTo64bitNum("MAT_RAYQ"),
+     MaterialSpecularAntiAliasing = charTo64bitNum("MAT_SPAA"),
+     MaterialSpecularAntiAliasingVariance = charTo64bitNum("MAT_SVAR"),
+     MaterialSpecularAntiAliasingThreshold = charTo64bitNum("MAT_STHR"),
+diff --git a/libs/filabridge/include/private/filament/DescriptorSets.h b/libs/filabridge/include/private/filament/DescriptorSets.h
+index f279f710..021d8c30 100644
+--- a/libs/filabridge/include/private/filament/DescriptorSets.h
++++ b/libs/filabridge/include/private/filament/DescriptorSets.h
+@@ -30,6 +30,7 @@ namespace filament::descriptor_sets {
+ 
+ backend::DescriptorSetLayout const& getDepthVariantLayout() noexcept;
+ backend::DescriptorSetLayout const& getSsrVariantLayout() noexcept;
++backend::DescriptorSetLayout const& getRayQueryPostProcessLayout() noexcept;
+ 
+ backend::DescriptorSetLayout const& getPerRenderableLayout() noexcept;
+ 
+diff --git a/libs/filabridge/include/private/filament/EngineEnums.h b/libs/filabridge/include/private/filament/EngineEnums.h
+index 442cebde..8df407fe 100644
+--- a/libs/filabridge/include/private/filament/EngineEnums.h
++++ b/libs/filabridge/include/private/filament/EngineEnums.h
+@@ -56,7 +56,9 @@ enum class PerViewBindingPoints : uint8_t  {
+     SSAO            =  9,   // variable, RGB8 {AO, [depth]}
+     SSR             = 10,   // variable, 2d array, RGB_11_11_10, mipmapped
+     SSR_HISTORY     = 10,   // variable, 2d texture, RGB_11_11_10
+-    FOG             = 11    // variable, user defined, CUBEMAP
++    FOG             = 11,   // variable, user defined, CUBEMAP
++    RT_SHADOW       = 12,   // variable, R8: ray-traced directional shadow visibility
++    TLAS            = 13    // ray query acceleration structure (post-process ray query materials)
+ };
+ 
+ enum class PerRenderableBindingPoints : uint8_t  {
+diff --git a/libs/filabridge/src/DescriptorSets.cpp b/libs/filabridge/src/DescriptorSets.cpp
+index bf6d43cc..f962a8ec 100644
+--- a/libs/filabridge/src/DescriptorSets.cpp
++++ b/libs/filabridge/src/DescriptorSets.cpp
+@@ -85,6 +85,14 @@ static constexpr std::initializer_list<DescriptorSetLayoutDescriptor> perViewDes
+     { DescriptorType::SAMPLER_2D_ARRAY_FLOAT,                    ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::SSAO           },
+     { DescriptorType::SAMPLER_2D_ARRAY_FLOAT,                    ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::SSR            },
+     { DescriptorType::SAMPLER_CUBE_FLOAT,                        ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::FOG            },
++    { DescriptorType::SAMPLER_2D_FLOAT,                          ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::RT_SHADOW, DescriptorFlags::UNFILTERABLE },
++};
++
++// Post-process materials that trace rays (rayQuery: true): the frame uniforms plus the
++// scene's top-level acceleration structure.
++static constexpr std::initializer_list<DescriptorSetLayoutDescriptor> rayQueryPostProcessDescriptorSetLayoutList = {
++    { DescriptorType::UNIFORM_BUFFER,         ShaderStageFlags::VERTEX | ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::FRAME_UNIFORMS },
++    { DescriptorType::ACCELERATION_STRUCTURE,                            ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::TLAS           },
+ };
+ 
+ static constexpr std::initializer_list<DescriptorSetLayoutDescriptor> perRenderableDescriptorSetLayoutList = {
+@@ -147,6 +155,9 @@ static DescriptorSetLayout const depthVariantDescriptorSetLayout{
+ static DescriptorSetLayout const ssrVariantDescriptorSetLayout{ utils::StaticString("ssrVariant"),
+     ssrVariantDescriptorSetLayoutList };
+ 
++static DescriptorSetLayout const rayQueryPostProcessDescriptorSetLayout{
++    utils::StaticString("rayQueryPostProcess"), rayQueryPostProcessDescriptorSetLayoutList };
++
+ // Used for generating the color pass (i.e. the main pass). This is in fact a template that gets
+ // declined into 8 different layouts, based on variants.
+ static DescriptorSetLayout perViewDescriptorSetLayout = { utils::StaticString("perView"),
+@@ -164,6 +175,10 @@ DescriptorSetLayout const& getSsrVariantLayout() noexcept {
+     return ssrVariantDescriptorSetLayout;
+ }
+ 
++DescriptorSetLayout const& getRayQueryPostProcessLayout() noexcept {
++    return rayQueryPostProcessDescriptorSetLayout;
++}
++
+ DescriptorSetLayout const& getPerRenderableLayout() noexcept {
+     return perRenderableDescriptorSetLayout;
+ }
+@@ -185,6 +200,8 @@ utils::CString getDescriptorName(DescriptorSetBindingPoints const set,
+         { +PerViewBindingPoints::SSAO,           "sampler0_ssao"sv },
+         { +PerViewBindingPoints::SSR,            "sampler0_ssr"sv },
+         { +PerViewBindingPoints::FOG,            "sampler0_fog"sv },
++        { +PerViewBindingPoints::RT_SHADOW,     "sampler0_rtShadow"sv },
++        { +PerViewBindingPoints::TLAS,          "sceneTlas"sv },
+     }};
+ 
+     static std::unordered_map<descriptor_binding_t, std::string_view> const set1{{
+@@ -234,7 +251,8 @@ DescriptorSetLayout getPerViewDescriptorSetLayout(
+                         std::remove_if(layout.descriptors.begin(), layout.descriptors.end(),
+                                 [](auto const& entry) {
+                                     return  entry.binding == PerViewBindingPoints::IBL_DFG_LUT ||
+-                                            entry.binding == PerViewBindingPoints::IBL_SPECULAR;
++                                            entry.binding == PerViewBindingPoints::IBL_SPECULAR ||
++                                            entry.binding == PerViewBindingPoints::RT_SHADOW;
+                                 }),
+                         layout.descriptors.end());
+             }
+diff --git a/libs/filamat/include/filamat/MaterialBuilder.h b/libs/filamat/include/filamat/MaterialBuilder.h
+index 77aba595..7d1b1eb3 100644
+--- a/libs/filamat/include/filamat/MaterialBuilder.h
++++ b/libs/filamat/include/filamat/MaterialBuilder.h
+@@ -496,6 +496,13 @@ public:
+     //! The material output is multiplied by the shadowing factor (UNLIT model only).
+     MaterialBuilder& shadowMultiplier(bool shadowMultiplier) noexcept;
+ 
++    /**
++     * Lets the material trace rays against the scene's acceleration structure (Vulkan ray
++     * query): the generated shaders enable GL_EXT_ray_query and declare `sceneTlas`. Post-process
++     * materials only; the engine binds the top-level structure of the view's scene.
++     */
++    MaterialBuilder& rayQuery(bool rayQuery) noexcept;
++
+     //! This material casts transparent shadows. The blending mode must be TRANSPARENT or FADE.
+     MaterialBuilder& transparentShadow(bool transparentShadow) noexcept;
+ 
+@@ -959,6 +966,7 @@ private:
+     filament::math::uint3 mGroupSize = { 1, 1, 1 };
+ 
+     bool mShadowMultiplier = false;
++    bool mRayQuery = false;
+     bool mTransparentShadow = false;
+     bool mColoredPenumbra = false;
+ 
+diff --git a/libs/filamat/src/GLSLPostProcessor.cpp b/libs/filamat/src/GLSLPostProcessor.cpp
+index 556a9fbe..e4c00cde 100644
+--- a/libs/filamat/src/GLSLPostProcessor.cpp
++++ b/libs/filamat/src/GLSLPostProcessor.cpp
+@@ -488,6 +488,7 @@ void GLSLPostProcessor::spirvToMsl(const SpirvBlob* spirv, std::string* outMsl,
+             }
+             switch (info.type) {
+                 case DescriptorType::INPUT_ATTACHMENT:
++                case DescriptorType::ACCELERATION_STRUCTURE:
+                     // TODO: Handle INPUT_ATTACHMENT case
+                     break;
+                 case DescriptorType::UNIFORM_BUFFER:
+@@ -671,7 +672,8 @@ bool GLSLPostProcessor::process(const std::string& inputShader, Config const& co
+ 
+     internalConfig.langVersion = GLSLTools::getGlslDefaultVersion(config.shaderModel);
+     GLSLTools::prepareShaderParser(config.targetApi, config.targetLanguage, tShader,
+-            internalConfig.shLang, internalConfig.langVersion);
++            internalConfig.shLang, internalConfig.langVersion,
++            config.materialInfo && config.materialInfo->hasRayQuery);
+ 
+     EShMessages msg = GLSLTools::glslangFlagsFromTargetApi(config.targetApi, config.targetLanguage);
+     if (config.hasFramebufferFetch) {
+@@ -791,7 +793,8 @@ bool GLSLPostProcessor::preprocessOptimization(TShader& tShader,
+         const char* shaderCString = glsl.c_str();
+         spirvShader.setStrings(&shaderCString, 1);
+         GLSLTools::prepareShaderParser(config.targetApi, config.targetLanguage, spirvShader,
+-                internalConfig.shLang, internalConfig.langVersion);
++                internalConfig.shLang, internalConfig.langVersion,
++                config.materialInfo && config.materialInfo->hasRayQuery);
+         ok = spirvShader.parse(&DefaultTBuiltInResource, internalConfig.langVersion, false, msg);
+         program.addShader(&spirvShader);
+         // Even though we only have a single shader stage, linking is still necessary to finalize
+@@ -981,8 +984,8 @@ bool GLSLPostProcessor::fullOptimization(const TShader& tShader,
+     return true;
+ }
+ 
+-std::shared_ptr<Optimizer> GLSLPostProcessor::createEmptyOptimizer() {
+-    auto optimizer = std::make_shared<Optimizer>(SPV_ENV_UNIVERSAL_1_3);
++std::shared_ptr<Optimizer> GLSLPostProcessor::createEmptyOptimizer(bool const spirv14) {
++    auto optimizer = std::make_shared<Optimizer>(spirv14 ? SPV_ENV_VULKAN_1_1_SPIRV_1_4 : SPV_ENV_UNIVERSAL_1_3);
+     optimizer->SetMessageConsumer([](spv_message_level_t level,
+             const char* source, const spv_position_t& position, const char* message) {
+         if (!filterSpvOptimizerMessage(level)) {
+@@ -996,7 +999,7 @@ std::shared_ptr<Optimizer> GLSLPostProcessor::createEmptyOptimizer() {
+ 
+ std::shared_ptr<Optimizer> GLSLPostProcessor::createOptimizer(
+         MaterialBuilder::Optimization optimization, Config const& config) {
+-    auto optimizer = createEmptyOptimizer();
++    auto optimizer = createEmptyOptimizer(config.materialInfo && config.materialInfo->hasRayQuery);
+ 
+     if (optimization == MaterialBuilder::Optimization::SIZE) {
+         // When optimizing for size, we don't run the SPIR-V through any size optimization passes
+diff --git a/libs/filamat/src/GLSLPostProcessor.h b/libs/filamat/src/GLSLPostProcessor.h
+index 625717be..2827b0de 100644
+--- a/libs/filamat/src/GLSLPostProcessor.h
++++ b/libs/filamat/src/GLSLPostProcessor.h
+@@ -122,7 +122,7 @@ private:
+             MaterialBuilder::Optimization optimization,
+             Config const& config);
+ 
+-    static OptimizerPtr createEmptyOptimizer();
++    static OptimizerPtr createEmptyOptimizer(bool spirv14 = false);
+ 
+     static void registerSizePasses(spvtools::Optimizer& optimizer, Config const& config);
+ 
+diff --git a/libs/filamat/src/MaterialBuilder.cpp b/libs/filamat/src/MaterialBuilder.cpp
+index b1b74c54..46512d31 100644
+--- a/libs/filamat/src/MaterialBuilder.cpp
++++ b/libs/filamat/src/MaterialBuilder.cpp
+@@ -500,6 +500,11 @@ MaterialBuilder& MaterialBuilder::alphaToCoverage(bool const enable) noexcept {
+     return *this;
+ }
+ 
++MaterialBuilder& MaterialBuilder::rayQuery(bool const rayQuery) noexcept {
++    mRayQuery = rayQuery;
++    return *this;
++}
++
+ MaterialBuilder& MaterialBuilder::shadowMultiplier(bool const shadowMultiplier) noexcept {
+     mShadowMultiplier = shadowMultiplier;
+     return *this;
+@@ -733,6 +738,7 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
+     info.postLightingBlendingMode = mPostLightingBlendingMode;
+     info.shading = mShading;
+     info.hasShadowMultiplier = mShadowMultiplier;
++    info.hasRayQuery = mRayQuery;
+     info.hasTransparentShadow = mTransparentShadow;
+     info.hasColoredPenumbra = mColoredPenumbra;
+     info.multiBounceAO = mMultiBounceAO;
+@@ -1373,9 +1379,11 @@ error:
+ 
+     // For finding properties and running semantic analysis, we always use the same code gen
+     // permutation. This is the first permutation generated with default arguments passed to matc.
++    // Ray query materials exist only on desktop Vulkan (GL_EXT_ray_query needs GLSL 460 and
++    // an acceleration structure binding), so they are analyzed with that permutation.
+     CodeGenParams const semanticCodeGenParams = {
+-            .shaderModel = ShaderModel::MOBILE,
+-            .targetApi = TargetApi::OPENGL,
++            .shaderModel = mRayQuery ? ShaderModel::DESKTOP : ShaderModel::MOBILE,
++            .targetApi = mRayQuery ? TargetApi::VULKAN : TargetApi::OPENGL,
+             .targetLanguage = TargetLanguage::SPIRV,
+             .featureLevel = info.featureLevel,
+     };
+@@ -1630,6 +1638,8 @@ void MaterialBuilder::writeCommonChunks(ChunkContainer& container, MaterialInfo&
+             mCompilationParameters.c_str_safe());
+     container.emplace<uint32_t>(MaterialShaderModels, mShaderModels.getValue());
+     container.emplace<uint8_t>(ChunkType::MaterialDomain, static_cast<uint8_t>(mMaterialDomain));
++    // ray query post-process materials need the per-view layout with the acceleration structure
++    container.emplace<bool>(MaterialRayQuery, mRayQuery);
+ 
+     // if that ever needed to change, this would require a material version bump
+     static_assert(sizeof(uint32_t) >= sizeof(UserVariantFilterMask));
+diff --git a/libs/filamat/src/sca/GLSLTools.cpp b/libs/filamat/src/sca/GLSLTools.cpp
+index d24ece90..2c52871e 100644
+--- a/libs/filamat/src/sca/GLSLTools.cpp
++++ b/libs/filamat/src/sca/GLSLTools.cpp
+@@ -596,7 +596,7 @@ EShMessages GLSLTools::glslangFlagsFromTargetApi(
+ 
+ void GLSLTools::prepareShaderParser(MaterialBuilder::TargetApi targetApi,
+         MaterialBuilder::TargetLanguage targetLanguage, glslang::TShader& shader,
+-        EShLanguage stage, int version) {
++        EShLanguage stage, int version, bool const spirv14) {
+     // We must only set up the SPIRV environment when we actually need to output SPIRV
+     if (targetLanguage == MaterialBuilder::TargetLanguage::SPIRV) {
+         shader.setAutoMapBindings(true);
+@@ -616,7 +616,8 @@ void GLSLTools::prepareShaderParser(MaterialBuilder::TargetApi targetApi,
+                 // can't happen
+                 break;
+         }
+-        shader.setEnvTarget(EShTargetSpv, EShTargetSpv_1_3);
++        // ray queries (GL_EXT_ray_query) need SPIR-V 1.4
++        shader.setEnvTarget(EShTargetSpv, spirv14 ? EShTargetSpv_1_4 : EShTargetSpv_1_3);
+     }
+ }
+ 
+diff --git a/libs/filamat/src/sca/GLSLTools.h b/libs/filamat/src/sca/GLSLTools.h
+index 65f70d71..b1dc8f2f 100644
+--- a/libs/filamat/src/sca/GLSLTools.h
++++ b/libs/filamat/src/sca/GLSLTools.h
+@@ -169,7 +169,7 @@ public:
+ 
+     static void prepareShaderParser(MaterialBuilder::TargetApi targetApi,
+             MaterialBuilder::TargetLanguage targetLanguage, glslang::TShader& shader,
+-            EShLanguage stage, int version);
++            EShLanguage stage, int version, bool spirv14 = false);
+ 
+     static void textureLodBias(glslang::TShader& shader);
+ 
+diff --git a/libs/filamat/src/shaders/CodeGenerator.cpp b/libs/filamat/src/shaders/CodeGenerator.cpp
+index 80b4ff44..681a54c3 100644
+--- a/libs/filamat/src/shaders/CodeGenerator.cpp
++++ b/libs/filamat/src/shaders/CodeGenerator.cpp
+@@ -97,7 +97,7 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
+                 mFeatureLevel >= FeatureLevel::FEATURE_LEVEL_2) {
+                 // Vulkan requires binding specifiers on uniforms and samplers, which were not
+                 // supported in the OpenGL 4.1 GLSL profile.
+-                out << "#version 450 core\n\n";
++                out << (material.hasRayQuery ? "#version 460 core\n\n" : "#version 450 core\n\n");
+             } else {
+                 out << "#version 410 core\n\n";
+                 out << "#extension GL_ARB_shading_language_packing : enable\n\n";
+@@ -127,6 +127,9 @@ utils::io::sstream& CodeGenerator::generateCommonProlog(utils::io::sstream& out,
+ 
+     // This allows our includer system to use the #line directive to denote the source file for
+     // #included code. This way, glslang reports errors more accurately.
++    if (material.hasRayQuery && mTargetApi == TargetApi::VULKAN && stage == ShaderStage::FRAGMENT) {
++        out << "#extension GL_EXT_ray_query : require\n";
++    }
+     out << "#extension GL_GOOGLE_cpp_style_line_directive : enable\n\n";
+ 
+     if (v.hasStereo() && stage == ShaderStage::VERTEX) {
+diff --git a/libs/filamat/src/shaders/MaterialInfo.h b/libs/filamat/src/shaders/MaterialInfo.h
+index 8876dfd4..c1572eb4 100644
+--- a/libs/filamat/src/shaders/MaterialInfo.h
++++ b/libs/filamat/src/shaders/MaterialInfo.h
+@@ -40,6 +40,7 @@ struct UTILS_PUBLIC MaterialInfo {
+     bool hasExternalSamplers;
+     bool has3dSamplers;
+     bool hasShadowMultiplier;
++    bool hasRayQuery;
+     bool hasTransparentShadow;
+     bool specularAntiAliasing;
+     bool clearCoatIorChange;
+diff --git a/libs/filamat/src/shaders/ShaderGenerator.cpp b/libs/filamat/src/shaders/ShaderGenerator.cpp
+index 2c39ebbc..2a755993 100644
+--- a/libs/filamat/src/shaders/ShaderGenerator.cpp
++++ b/libs/filamat/src/shaders/ShaderGenerator.cpp
+@@ -854,6 +854,17 @@ std::string ShaderGenerator::createPostProcessFragmentProgram(ShaderModel const
+             +PerViewBindingPoints::FRAME_UNIFORMS,
+             UibGenerator::getPerViewUib());
+ 
++    if (material.hasRayQuery) {
++        // the scene's top-level acceleration structure, bound by the engine for ray query
++        // post-process materials (Vulkan only; other targets never load these materials)
++        CodeGenerator::generateValueDefine(fs, "MATERIAL_HAS_RAY_QUERY", 1u);
++        if (targetApi == MaterialBuilder::TargetApi::VULKAN) {
++            fs << "layout(binding = " << +PerViewBindingPoints::TLAS
++               << ", set = " << +DescriptorSetBindingPoints::PER_VIEW
++               << ") uniform accelerationStructureEXT sceneTlas;\n";
++        }
++    }
++
+     cg.generateUniforms(fs, ShaderStage::FRAGMENT,
+             DescriptorSetBindingPoints::PER_MATERIAL,
+             +PerMaterialBindingPoints::MATERIAL_PARAMS,
+diff --git a/libs/filamat/src/shaders/SibGenerator.cpp b/libs/filamat/src/shaders/SibGenerator.cpp
+index da8642a6..77393866 100644
+--- a/libs/filamat/src/shaders/SibGenerator.cpp
++++ b/libs/filamat/src/shaders/SibGenerator.cpp
+@@ -58,7 +58,8 @@ SamplerInterfaceBlock const& SibGenerator::getPerViewSib(Variant variant) noexce
+                     { "ssao",        +PerViewBindingPoints::SSAO,           Type::SAMPLER_2D_ARRAY, Format::FLOAT,  Precision::MEDIUM, FILTERABLE, !MULTISAMPLE, ALL_STAGES },
+                     { "ssr",         +PerViewBindingPoints::SSR,            Type::SAMPLER_2D_ARRAY, Format::FLOAT,  Precision::MEDIUM, FILTERABLE, !MULTISAMPLE, ALL_STAGES },
+                     { "structure",   +PerViewBindingPoints::STRUCTURE,      Type::SAMPLER_2D,       Format::FLOAT,  Precision::HIGH  , FILTERABLE, !MULTISAMPLE, ALL_STAGES },
+-                    { "fog",         +PerViewBindingPoints::FOG,            Type::SAMPLER_CUBEMAP,  Format::FLOAT,  Precision::MEDIUM, FILTERABLE, !MULTISAMPLE, ALL_STAGES }}
++                    { "fog",         +PerViewBindingPoints::FOG,            Type::SAMPLER_CUBEMAP,  Format::FLOAT,  Precision::MEDIUM, FILTERABLE, !MULTISAMPLE, ALL_STAGES },
++                    { "rtShadow",    +PerViewBindingPoints::RT_SHADOW,      Type::SAMPLER_2D,       Format::FLOAT,  Precision::MEDIUM, FILTERABLE, !MULTISAMPLE, ALL_STAGES }}
+             )
+             .build() };
+ 
+@@ -71,7 +72,8 @@ SamplerInterfaceBlock const& SibGenerator::getPerViewSib(Variant variant) noexce
+                     { "ssao",        +PerViewBindingPoints::SSAO,           Type::SAMPLER_2D_ARRAY, Format::FLOAT,  Precision::MEDIUM, FILTERABLE, !MULTISAMPLE, ALL_STAGES },
+                     { "ssr",         +PerViewBindingPoints::SSR,            Type::SAMPLER_2D_ARRAY, Format::FLOAT,  Precision::MEDIUM, FILTERABLE, !MULTISAMPLE, ALL_STAGES },
+                     { "structure",   +PerViewBindingPoints::STRUCTURE,      Type::SAMPLER_2D,       Format::FLOAT,  Precision::HIGH  , FILTERABLE, !MULTISAMPLE, ALL_STAGES },
+-                    { "fog",         +PerViewBindingPoints::FOG,            Type::SAMPLER_CUBEMAP,  Format::FLOAT,  Precision::MEDIUM, FILTERABLE, !MULTISAMPLE, ALL_STAGES }}
++                    { "fog",         +PerViewBindingPoints::FOG,            Type::SAMPLER_CUBEMAP,  Format::FLOAT,  Precision::MEDIUM, FILTERABLE, !MULTISAMPLE, ALL_STAGES },
++                    { "rtShadow",    +PerViewBindingPoints::RT_SHADOW,      Type::SAMPLER_2D,       Format::FLOAT,  Precision::MEDIUM, FILTERABLE, !MULTISAMPLE, ALL_STAGES }}
+             )
+             .build() };
+ 
+diff --git a/libs/filament-matp/src/ParametersProcessor.cpp b/libs/filament-matp/src/ParametersProcessor.cpp
+index d2c836cd..e0e42201 100644
+--- a/libs/filament-matp/src/ParametersProcessor.cpp
++++ b/libs/filament-matp/src/ParametersProcessor.cpp
+@@ -1151,6 +1151,11 @@ static Status processShadowMultiplier(MaterialBuilder& builder, const JsonishVal
+     return Status::ok();;
+ }
+ 
++static Status processRayQuery(MaterialBuilder& builder, const JsonishValue& value) {
++    builder.rayQuery(value.toJsonBool()->getBool());
++    return Status::ok();
++}
++
+ static Status processTransparentShadow(MaterialBuilder& builder, const JsonishValue& value) {
+     builder.transparentShadow(value.toJsonBool()->getBool());
+     return Status::ok();;
+@@ -1399,6 +1404,7 @@ ParametersProcessor::ParametersProcessor() {
+     mParameters["maskThreshold"]                 = { &processMaskThreshold, Type::NUMBER };
+     mParameters["alphaToCoverage"]               = { &processAlphaToCoverage, Type::BOOL };
+     mParameters["shadowMultiplier"]              = { &processShadowMultiplier, Type::BOOL };
++    mParameters["rayQuery"]                      = { &processRayQuery, Type::BOOL };
+     mParameters["transparentShadow"]             = { &processTransparentShadow, Type::BOOL };
+     mParameters["coloredPenumbra"]               = { &processColoredPenumbra, Type::BOOL };
+     mParameters["shadingModel"]                  = { &processShading, Type::STRING };
+diff --git a/shaders/src/surface_light_directional.fs b/shaders/src/surface_light_directional.fs
+index b2eb5d6d..9dc81c74 100644
+--- a/shaders/src/surface_light_directional.fs
++++ b/shaders/src/surface_light_directional.fs
+@@ -70,6 +70,11 @@ void evaluateDirectionalLight(const MaterialInputs material,
+             visibility = 1.0 - ((1.0 - visibility) * saturate(p.x - z * z * p.y));
+ #endif
+         }
++        // ray-traced sun shadows: the visibility mask the renderer traced at this resolution
++        if ((frameUniforms.directionalShadows & 0x4) != 0 && visibility > 0.0) {
++            visibility *= texelFetch(sampler0_rtShadow, ivec2(gl_FragCoord.xy), 0).r;
++        }
++
+         if ((frameUniforms.directionalShadows & 0x2) != 0 && visibility > 0.0) {
+             if ((object_uniforms_flagsChannels & FILAMENT_OBJECT_CONTACT_SHADOWS_BIT) != 0) {
+                 ssContactShadowOcclusion = screenSpaceContactShadow(light.l);
+diff --git a/third_party/smol-v/source/smolv.cpp b/third_party/smol-v/source/smolv.cpp
+index 9a504d80..b6adc4b6 100644
+--- a/third_party/smol-v/source/smolv.cpp
++++ b/third_party/smol-v/source/smolv.cpp
+@@ -1077,8 +1077,10 @@ static bool smolv_CheckGenericHeader(const uint32_t* words, size_t wordCount, ui
+ 	if (headerMagic != expectedMagic)
+ 		return false;
+ 	uint32_t headerVersion = words[1];
+-	if (headerVersion < 0x00010000 || headerVersion > 0x00010300)
+-		return false; // only support 1.0 through 1.3
++	// SPIR-V 1.4+ modules (ray query shaders) carry opcodes outside the known table; they
++	// are encoded as plain operand words, so the header version is the only gate.
++	if (headerVersion < 0x00010000 || headerVersion > 0x00010600)
++		return false; // only support 1.0 through 1.6
+ 	
+ 	return true;
+ }
