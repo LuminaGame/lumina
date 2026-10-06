@@ -1,0 +1,15 @@
+name: lumina_plugin_protocol
+description: "The wire protocol between Lumina Studio and a plugin running in its own process: framing, messages, the connection, and the data shapes of plugin contributions and declarative panels. Pure Dart."
+version: 0.0.1
+publish_to: none
+
+environment:
+  sdk: ^3.12.0
+resolution: workspace
+
+dependencies:
+  meta: ^1.15.0
+
+dev_dependencies:
+  test: ^1.25.0
+  lints: ^6.0.0

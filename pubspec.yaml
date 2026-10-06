@@ -12,6 +12,7 @@ workspace:
   - lumina
   - lumina/example
   - lumina_editor_api
+  - lumina_plugin_protocol
   - lumina_ui
 
 dev_dependencies:

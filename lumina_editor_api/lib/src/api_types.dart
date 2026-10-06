@@ -10,6 +10,7 @@ import 'mcp/editor_mcp.dart';
 import 'plugin_storage.dart';
 import 'project_settings_section.dart';
 import 'plugin_crash_reporter.dart';
+import 'process/plugin_process_channel.dart';
 export 'editor_command.dart';
 export 'editor_level.dart';
 export 'editor_theme.dart';
@@ -20,6 +21,9 @@ export 'mcp/editor_mcp.dart';
 export 'plugin_storage.dart';
 export 'project_settings_section.dart';
 export 'plugin_crash_reporter.dart';
+export 'process/plugin_process.dart';
+export 'process/plugin_process_channel.dart';
+export 'package:lumina_plugin_protocol/lumina_plugin_protocol.dart';
 
 /// `LuminaAsset.metadata` key a plugin asset type carries its
 /// [EditorAssetTypeHandler.customTypeId] under: an `.lmas` of `AssetType.unknown`
@@ -325,6 +329,12 @@ abstract class LuminaEditorContext {
     Uint8List? bytes,
     bool generateThumbnail = true,
   }) async {}
+
+  /// The line from [pluginName]'s in-process part (its UI shell) to its
+  /// plugin process (`.lmplugin` `"isolation": "process"`). The editor
+  /// starts, supervises and restarts the process; this channel reports its
+  /// state. A context with no editor behind it returns a detached channel.
+  PluginProcessChannel processChannel(String pluginName) => PluginProcessChannel.detached(pluginName);
 
   /// Reports an error or native/FFI crash attributed to a plugin.
   void reportCrash(
