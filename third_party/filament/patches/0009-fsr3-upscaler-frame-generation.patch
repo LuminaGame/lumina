@@ -1,0 +1,3149 @@
+diff --git a/filament/CMakeLists.txt b/filament/CMakeLists.txt
+index a8ca1e52..a6c9ab44 100644
+--- a/filament/CMakeLists.txt
++++ b/filament/CMakeLists.txt
+@@ -62,6 +62,7 @@ set(SRCS
+         src/materials/flare/flare.cpp
+         src/materials/fog/fog.cpp
+         src/materials/fsr/fsr.cpp
++        src/materials/fsr3/fsr3.cpp
+         src/materials/sgsr/sgsr.cpp
+         src/materials/ssao/ssao.cpp
+         src/materials/rt/rt.cpp
+@@ -267,6 +268,8 @@ set(PRIVATE_HDRS
+         src/materials/fsr/ffx_a.h
+         src/materials/fsr/ffx_fsr1.h
+         src/materials/fsr/ffx_fsr1_mobile.fs
++        src/materials/fsr3/fsr3.h
++        src/materials/fsr3/fsr3_common.fs
+         src/ZstdHelper.h
+ )
+ 
+@@ -304,6 +307,14 @@ set(MATERIAL_SRCS
+         src/materials/fsr/fsr_easu_mobile.mat
+         src/materials/fsr/fsr_easu_mobileF.mat
+         src/materials/fsr/fsr_rcas.mat
++        src/materials/fsr3/fsr3_accumulate.mat
++        src/materials/fsr3/fsr3_frame_interpolation.mat
++        src/materials/fsr3/fsr3_luma_diff.mat
++        src/materials/fsr3/fsr3_luma_instability.mat
++        src/materials/fsr3/fsr3_prepare_inputs.mat
++        src/materials/fsr3/fsr3_prepare_reactivity.mat
++        src/materials/fsr3/fsr3_reduce.mat
++        src/materials/fsr3/fsr3_shading_change.mat
+         src/materials/sgsr/sgsr1.mat
+         src/materials/resolveDepth.mat
+         src/materials/separableGaussianBlur.mat
+@@ -603,6 +614,18 @@ add_custom_command(
+         APPEND
+ )
+ 
++# The FSR3 passes share one include
++foreach (fsr3_material
++        fsr3_accumulate fsr3_frame_interpolation fsr3_luma_diff fsr3_luma_instability
++        fsr3_prepare_inputs fsr3_prepare_reactivity fsr3_shading_change)
++    add_custom_command(
++            OUTPUT "${MATERIAL_DIR}/${fsr3_material}.filamat"
++            DEPENDS src/materials/fsr3/fsr3_common.fs
++            APPEND
++    )
++endforeach()
++
++
+ if (NOT FILAMENT_DISABLE_GTAO)
+     add_custom_command(
+             OUTPUT "${MATERIAL_DIR}/gtao.filamat"
+diff --git a/filament/backend/include/backend/DriverEnums.h b/filament/backend/include/backend/DriverEnums.h
+index 717a6cde..01062010 100644
+--- a/filament/backend/include/backend/DriverEnums.h
++++ b/filament/backend/include/backend/DriverEnums.h
+@@ -111,6 +111,12 @@ static constexpr uint64_t SWAP_CHAIN_CONFIG_PROTECTED_CONTENT   = 0x40;
+  */
+ static constexpr uint64_t SWAP_CHAIN_CONFIG_MSAA_4_SAMPLES      = 0x80;
+ 
++/**
++ * Requests that presentation is not synchronized with the display's vertical refresh, which can
++ * cause tearing. This is a hint, only supported by Vulkan and WGL (Windows).
++ */
++static constexpr uint64_t SWAP_CHAIN_CONFIG_DISABLE_VSYNC        = 0x100;
++
+ static constexpr size_t MAX_VERTEX_ATTRIBUTE_COUNT  = 16;   // This is guaranteed by OpenGL ES.
+ static constexpr size_t MAX_SAMPLER_COUNT           = 62;   // Maximum needed at feature level 3.
+ static constexpr size_t MAX_VERTEX_BUFFER_COUNT     = 16;   // Max number of bound buffer objects.
+diff --git a/filament/backend/include/backend/platforms/PlatformWGL.h b/filament/backend/include/backend/platforms/PlatformWGL.h
+index cff0e53b..c2d3c58e 100644
+--- a/filament/backend/include/backend/platforms/PlatformWGL.h
++++ b/filament/backend/include/backend/platforms/PlatformWGL.h
+@@ -61,6 +61,7 @@ protected:
+ 
+ protected:
+     HGLRC mContext = NULL;
++    int mCurrentSwapInterval = -1;  // unknown until a swapchain is made current
+     HWND mHWnd = NULL;
+     HDC mWhdc = NULL;
+     PIXELFORMATDESCRIPTOR mPfd = {};
+diff --git a/filament/backend/src/opengl/platforms/PlatformWGL.cpp b/filament/backend/src/opengl/platforms/PlatformWGL.cpp
+index 31843028..a9f42a2d 100644
+--- a/filament/backend/src/opengl/platforms/PlatformWGL.cpp
++++ b/filament/backend/src/opengl/platforms/PlatformWGL.cpp
+@@ -70,10 +70,15 @@ struct WGLSwapChain {
+     HDC hDc = NULL;
+     HWND hWnd = NULL;
+     bool isHeadless = false;
++    int swapInterval = 1;   // 0 when vsync is disabled
+ };
+ 
+ static PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribs = nullptr;
+ 
++// WGL_EXT_swap_control, null if not supported
++typedef BOOL (WINAPI* PFNWGLSWAPINTERVALEXTPROC)(int interval);
++static PFNWGLSWAPINTERVALEXTPROC wglSwapInterval = nullptr;
++
+ Driver* PlatformWGL::createDriver(void* sharedGLContext,
+         const Platform::DriverConfig& driverConfig) {
+     int result = 0;
+@@ -122,6 +127,7 @@ Driver* PlatformWGL::createDriver(void* sharedGLContext,
+ 
+     wglCreateContextAttribs =
+             (PFNWGLCREATECONTEXTATTRIBSARBPROC) wglGetProcAddress("wglCreateContextAttribsARB");
++    wglSwapInterval = (PFNWGLSWAPINTERVALEXTPROC) wglGetProcAddress("wglSwapIntervalEXT");
+ 
+     // try all versions down, from GL 4.5 to 4.1
+     for (int minor = 5; minor >= 1; minor--) {
+@@ -227,6 +233,8 @@ Platform::SwapChain* PlatformWGL::createSwapChain(void* nativeWindow, uint64_t f
+     auto* swapChain = new WGLSwapChain();
+     swapChain->isHeadless = false;
+ 
++    swapChain->swapInterval = (flags & SWAP_CHAIN_CONFIG_DISABLE_VSYNC) ? 0 : 1;
++
+     // on Windows, the nativeWindow maps to a HWND
+     swapChain->hWnd = (HWND) nativeWindow;
+     swapChain->hDc = GetDC(swapChain->hWnd);
+@@ -296,6 +304,10 @@ bool PlatformWGL::makeCurrent(ContextType type, SwapChain* drawSwapChain,
+             ASSERT_POSTCONDITION_NON_FATAL(success, "wglMakeCurrent() failed. hdc = %p", hdc);
+             reportWindowsError(dwError);
+             wglMakeCurrent(0, NULL);
++        } else if (wglSwapInterval && wglSwapChain->swapInterval != mCurrentSwapInterval) {
++            // the swap interval applies to the context's current drawable
++            wglSwapInterval(wglSwapChain->swapInterval);
++            mCurrentSwapInterval = wglSwapChain->swapInterval;
+         }
+     }
+     return true;
+diff --git a/filament/backend/src/vulkan/platform/VulkanPlatformSwapChainImpl.cpp b/filament/backend/src/vulkan/platform/VulkanPlatformSwapChainImpl.cpp
+index 7c1e075e..c6c3eb00 100644
+--- a/filament/backend/src/vulkan/platform/VulkanPlatformSwapChainImpl.cpp
++++ b/filament/backend/src/vulkan/platform/VulkanPlatformSwapChainImpl.cpp
+@@ -160,6 +160,7 @@ VulkanPlatformSurfaceSwapChain::VulkanPlatformSurfaceSwapChain(VulkanContext con
+       mUsesRGB((flags & backend::SWAP_CHAIN_CONFIG_SRGB_COLORSPACE) != 0),
+       mHasStencil((flags & backend::SWAP_CHAIN_HAS_STENCIL_BUFFER) != 0),
+       mIsProtected((flags & backend::SWAP_CHAIN_CONFIG_PROTECTED_CONTENT) != 0),
++      mDisableVsync((flags & backend::SWAP_CHAIN_CONFIG_DISABLE_VSYNC) != 0),
+       mNativeWindow(nativeWindow) {
+     assert_invariant(surface);
+     create();
+@@ -237,7 +238,6 @@ VkResult VulkanPlatformSurfaceSwapChain::create() {
+ 
+     // Verify that our chosen present mode is supported. In practice all devices support the FIFO
+     // mode, but we check for it anyway for completeness.  (and to avoid validation warnings)
+-    VkPresentModeKHR const desiredPresentMode = VK_PRESENT_MODE_FIFO_KHR;
+     FixedCapacityVector<VkPresentModeKHR> presentModes = fvkutils::enumerate(
+             vkGetPhysicalDeviceSurfacePresentModesKHR, mPhysicalDevice, mSurface);
+ 
+@@ -247,8 +247,22 @@ VkResult VulkanPlatformSurfaceSwapChain::create() {
+         return VK_ERROR_SURFACE_LOST_KHR;
+     }
+ 
+-    bool const foundSuitablePresentMode = std::find(presentModes.begin(), presentModes.end(),
+-                                            desiredPresentMode) != presentModes.end();
++    auto const isPresentModeSupported = [&presentModes](VkPresentModeKHR const mode) {
++        return std::find(presentModes.begin(), presentModes.end(), mode) != presentModes.end();
++    };
++
++    // Without vsync, prefer IMMEDIATE (lowest latency, may tear) then MAILBOX (no tearing), and
++    // fall back to FIFO (vsync) if neither is supported.
++    VkPresentModeKHR desiredPresentMode = VK_PRESENT_MODE_FIFO_KHR;
++    if (mDisableVsync) {
++        if (isPresentModeSupported(VK_PRESENT_MODE_IMMEDIATE_KHR)) {
++            desiredPresentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
++        } else if (isPresentModeSupported(VK_PRESENT_MODE_MAILBOX_KHR)) {
++            desiredPresentMode = VK_PRESENT_MODE_MAILBOX_KHR;
++        }
++    }
++
++    bool const foundSuitablePresentMode = isPresentModeSupported(desiredPresentMode);
+     FILAMENT_CHECK_POSTCONDITION(foundSuitablePresentMode)
+             << "Desired present mode is not supported by this device.";
+ 
+diff --git a/filament/backend/src/vulkan/platform/VulkanPlatformSwapChainImpl.h b/filament/backend/src/vulkan/platform/VulkanPlatformSwapChainImpl.h
+index a44c62e7..7676f94e 100644
+--- a/filament/backend/src/vulkan/platform/VulkanPlatformSwapChainImpl.h
++++ b/filament/backend/src/vulkan/platform/VulkanPlatformSwapChainImpl.h
+@@ -133,6 +133,7 @@ private:
+     bool const mUsesRGB = false;
+     bool const mHasStencil = false;
+     bool const mIsProtected = false;
++    bool const mDisableVsync = false;
+     bool mSuboptimal;
+     UTILS_UNUSED void* mNativeWindow = nullptr;
+ 
+diff --git a/filament/include/filament/Options.h b/filament/include/filament/Options.h
+index 8413d8fe..beb22e21 100644
+--- a/filament/include/filament/Options.h
++++ b/filament/include/filament/Options.h
+@@ -658,6 +658,32 @@ struct TemporalAntiAliasingOptions {
+      * through View::setMotionVectorTexture().
+      */
+     bool motionVectors = false;
++
++    enum class Algorithm : uint8_t {
++        /** Filament's temporal anti-aliasing */
++        FILAMENT,
++        /**
++         * FidelityFX Super Resolution 3 temporal upscaler, as fragment passes. Uses the
++         * per-pixel motion vectors of the structure pass (motionVectors is implied). Only
++         * `upscaling`, `sharpness`, `lodBias` and `jitterPattern` apply. Requires feature
++         * level 1 and no stereo. An external upscaler (DynamicResolutionOptions::upscaler)
++         * takes precedence. [BETA]
++         */
++        FSR3
++    };
++
++    /** temporal anti-aliasing and upscaling algorithm */
++    Algorithm algorithm = Algorithm::FILAMENT;
++
++    /**
++     * Frame generation: an interpolated frame is presented before each rendered frame, which
++     * doubles the presented frame rate at the cost of half a frame of latency. With vsync, the
++     * SwapChain paces the frames; without (SwapChain::CONFIG_DISABLE_VSYNC), the rendered frame
++     * is presented half a frame interval after the interpolated one. The View must be rendered
++     * into the SwapChain without guard band, and Views rendered after it (e.g. UI) are rendered
++     * again on the rendered frame. Requires the FSR3 algorithm. [BETA]
++     */
++    bool frameGeneration = false;
+ };
+ 
+ /**
+diff --git a/filament/include/filament/SwapChain.h b/filament/include/filament/SwapChain.h
+index d1bf8389..e4dbb057 100644
+--- a/filament/include/filament/SwapChain.h
++++ b/filament/include/filament/SwapChain.h
+@@ -252,6 +252,13 @@ public:
+      */
+     static constexpr uint64_t CONFIG_MSAA_4_SAMPLES = backend::SWAP_CHAIN_CONFIG_MSAA_4_SAMPLES;
+ 
++    /**
++     * Requests that presentation is not synchronized with the display's vertical refresh (vsync),
++     * which lets the frame rate go above the refresh rate but can cause tearing. This is a hint,
++     * it's only supported by Vulkan and by OpenGL on Windows (WGL); it's ignored otherwise.
++     */
++    static constexpr uint64_t CONFIG_DISABLE_VSYNC = backend::SWAP_CHAIN_CONFIG_DISABLE_VSYNC;
++
+     /**
+      * Return whether createSwapChain supports the CONFIG_PROTECTED_CONTENT flag.
+      * The default implementation returns false.
+diff --git a/filament/src/FrameHistory.h b/filament/src/FrameHistory.h
+index 6b9a38a3..96f75c29 100644
+--- a/filament/src/FrameHistory.h
++++ b/filament/src/FrameHistory.h
+@@ -54,6 +54,26 @@ struct FrameHistoryEntry {
+         FrameGraphTexture::Descriptor desc;
+         math::mat4 clipFromWorld;
+     } restir;
++    // FSR3 upscaler, the jitter and projection are stored in `taa`
++    struct Fsr3 {
++        struct Texture {
++            FrameGraphTexture texture;
++            FrameGraphTexture::Descriptor desc;
++        };
++        Texture color;          // upscaled color and lock (upscaled resolution)
++        Texture luma;           // luma (render resolution)
++        Texture depth;          // dilated depth (render resolution)
++        Texture accumulation;   // accumulation and new locks (render resolution)
++        Texture lumaHistory;    // last 4 frames of luma (render resolution)
++        Texture motionVectors;  // dilated motion vectors (render resolution), frame generation
++        math::mat4f clipFromWorld;  // un-jittered, in the (possibly rebased) world space
++        float exposure = 1.0f;
++    } fsr3;
++    // frame generation: the final (rendered, not interpolated) frame
++    struct {
++        FrameGraphTexture color;
++        FrameGraphTexture::Descriptor desc;
++    } frameGeneration;
+ };
+ 
+ /*
+diff --git a/filament/src/PostProcessManager.cpp b/filament/src/PostProcessManager.cpp
+index 67da90ef..84a847e1 100644
+--- a/filament/src/PostProcessManager.cpp
++++ b/filament/src/PostProcessManager.cpp
+@@ -64,6 +64,9 @@
+ #include "materials/sgsr/sgsr.h"
+ #include "materials/ssao/ssao.h"
+ #include "materials/rt/rt.h"
++#include "materials/fsr3/fsr3.h"
++
++#include <filament/Exposure.h>
+ 
+ #include <private/filament/EngineEnums.h>
+ #include <private/filament/UibStructs.h>
+@@ -684,6 +687,9 @@ void PostProcessManager::init() noexcept {
+     mSsrPassDescriptorSet.init(engine);
+     mPostProcessDescriptorSet.init(engine);
+     mRayQueryDescriptorSet.init(engine, descriptor_sets::getRayQueryPostProcessLayout());
++    for (auto const& info: getFsr3MaterialList()) {
++        registerPostProcessMaterial(info.name, info);
++    }
+     // ray query materials exist only in Vulkan builds and load only when the device traces rays
+     if (driver.isRayQuerySupported()) {
+         auto const rayQueryMaterials = getRayQueryMaterialList();
+@@ -3598,6 +3604,667 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::taa(FrameGraph& fg,
+     return input;
+ }
+ 
++FrameGraphId<FrameGraphTexture> PostProcessManager::fsr3(FrameGraph& fg,
++        FrameGraphId<FrameGraphTexture> const input,
++        FrameGraphId<FrameGraphTexture> const depth,
++        FrameGraphId<FrameGraphTexture> const velocity,
++        FrameHistory& frameHistory,
++        CameraInfo const& cameraInfo,
++        TemporalAntiAliasingOptions const& taaOptions,
++        bool const translucent) noexcept {
++    assert_invariant(depth);
++    assert_invariant(velocity);
++
++    using Fsr3History = FrameHistoryEntry::Fsr3;
++
++    auto const& previousTaa = frameHistory.getPrevious().taa;
++    auto const& currentTaa = frameHistory.getCurrent().taa;
++    auto const& previous = frameHistory.getPrevious().fsr3;
++    auto& current = frameHistory.getCurrent().fsr3;
++
++    FrameGraphTexture::Descriptor const inputDesc = fg.getDescriptor(input);
++    uint32_t const renderWidth = inputDesc.width;
++    uint32_t const renderHeight = inputDesc.height;
++    uint32_t upscaleWidth = renderWidth;
++    uint32_t upscaleHeight = renderHeight;
++    if (taaOptions.upscaling > 1.0f) {
++        // same rounding as taa()
++        upscaleWidth  = uint32_t(float(renderWidth)  * taaOptions.upscaling);
++        upscaleHeight = uint32_t(float(renderHeight) * taaOptions.upscaling);
++    }
++    // the shading change and the farthest depth are computed at half resolution
++    uint32_t const halfWidth = std::max(1u, renderWidth / 2u);
++    uint32_t const halfHeight = std::max(1u, renderHeight / 2u);
++
++    float2 const renderSize{ float(renderWidth), float(renderHeight) };
++    float2 const upscaleSize{ float(upscaleWidth), float(upscaleHeight) };
++    float2 const halfSize{ float(halfWidth), float(halfHeight) };
++
++    // The history is only usable if all of it was produced at the current resolutions
++    auto const isHistoryValid = [](Fsr3History::Texture const& t, uint32_t w, uint32_t h) {
++        return t.texture.handle && t.desc.width == w && t.desc.height == h;
++    };
++    bool const hasHistory =
++            isHistoryValid(previous.color, upscaleWidth, upscaleHeight) &&
++            isHistoryValid(previous.luma, renderWidth, renderHeight) &&
++            isHistoryValid(previous.depth, renderWidth, renderHeight) &&
++            isHistoryValid(previous.accumulation, renderWidth, renderHeight) &&
++            isHistoryValid(previous.lumaHistory, renderWidth, renderHeight);
++
++    // Without history, the shaders never read the history textures, but they must be bound.
++    FrameGraphId<FrameGraphTexture> dummy;
++    if (!hasHistory) {
++        dummy = fg.import("FSR3 dummy history", { .width = 1, .height = 1 },
++                FrameGraphTexture::Usage::SAMPLEABLE, FrameGraphTexture{ getZeroTexture() });
++    }
++    auto const importHistory = [&](utils::StaticString const name,
++            Fsr3History::Texture const& t) {
++        return hasHistory ?
++                fg.import(name, t.desc, FrameGraphTexture::Usage::SAMPLEABLE, t.texture) : dummy;
++    };
++    auto const colorHistory = importHistory("FSR3 color history", previous.color);
++    auto const lumaHistory = importHistory("FSR3 luma history", previous.luma);
++    auto const depthHistory = importHistory("FSR3 depth history", previous.depth);
++    auto const accumulationHistory =
++            importHistory("FSR3 accumulation history", previous.accumulation);
++    auto const lumaHistoryHistory =
++            importHistory("FSR3 luma instability history", previous.lumaHistory);
++
++    // jitter, in pixels: the texel at pixel center c holds the scene at c - jitter
++    float2 const jitter = currentTaa.jitter;
++    float2 const previousJitter = hasHistory ? previousTaa.jitter : currentTaa.jitter;
++
++    // the color buffer is pre-exposed, the history must be rescaled if the exposure changes
++    current.exposure = Exposure::exposure(cameraInfo.ev100);
++    float const deltaPreExposure = hasHistory ? current.exposure / previous.exposure : 1.0f;
++
++    // un-jittered clip-from-user-world projections, see TaaJitterCamera()
++    mat4 const& currentProjection = currentTaa.projection;
++    mat4 const& previousProjection = hasHistory ? previousTaa.projection : currentTaa.projection;
++
++    // this frame's un-jittered NDC to last frame's clip space
++    mat4f const reprojection{ previousProjection * inverse(currentProjection) };
++
++    // last frame's un-jittered NDC to this frame's view space
++    mat4f const viewFromPreviousClip{
++            cameraInfo.getUserViewMatrix() * inverse(previousProjection) };
++
++    // see linearizeDepth()
++    mat4 const viewFromClip{ inverse(mat4(cameraInfo.projection)) };
++    float4 const depthParams{ viewFromClip[2].z, viewFromClip[3].z,
++                              viewFromClip[2].w, viewFromClip[3].w };
++
++    float const jitterSequenceLength = [pattern = taaOptions.jitterPattern]() {
++        using JitterPattern = TemporalAntiAliasingOptions::JitterPattern;
++        switch (pattern) {
++            case JitterPattern::RGSS_X4:            return 4.0f;
++            case JitterPattern::UNIFORM_HELIX_X4:   return 4.0f;
++            case JitterPattern::HALTON_23_X8:       return 8.0f;
++            case JitterPattern::HALTON_23_X16:      return 16.0f;
++            case JitterPattern::HALTON_23_X32:      return 32.0f;
++        }
++        return 16.0f;
++    }();
++
++    SamplerParams const nearest{};
++    SamplerParams const linear{
++            .filterMag = SamplerMagFilter::LINEAR,
++            .filterMin = SamplerMinFilter::LINEAR };
++
++    /*
++     * Prepare inputs: dilated depth and motion vectors, luma and farthest depth
++     */
++
++    struct PrepareInputsData {
++        FrameGraphId<FrameGraphTexture> color;
++        FrameGraphId<FrameGraphTexture> depth;
++        FrameGraphId<FrameGraphTexture> velocity;
++        FrameGraphId<FrameGraphTexture> dilatedMotionVectors;
++        FrameGraphId<FrameGraphTexture> dilatedDepth;
++        FrameGraphId<FrameGraphTexture> luma;
++        FrameGraphId<FrameGraphTexture> farthestDepth;
++    };
++    auto const& prepareInputs = fg.addPass<PrepareInputsData>("FSR3 Prepare Inputs",
++            [&](FrameGraph::Builder& builder, auto& data) {
++                data.color = builder.sample(input);
++                data.depth = builder.sample(depth);
++                data.velocity = builder.sample(velocity);
++                auto const create = [&](utils::StaticString const name,
++                        TextureFormat const format) {
++                    auto const id = builder.createTexture(name, {
++                            .width = renderWidth, .height = renderHeight, .format = format });
++                    return builder.write(id, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
++                };
++                data.dilatedMotionVectors =
++                        create("FSR3 Dilated Motion Vectors", TextureFormat::RG16F);
++                data.dilatedDepth = create("FSR3 Dilated Depth", TextureFormat::R32F);
++                data.luma = create("FSR3 Luma", TextureFormat::R16F);
++                data.farthestDepth = create("FSR3 Farthest Depth", TextureFormat::R16F);
++                builder.declareRenderPass("FSR3 Prepare Inputs Target", {
++                        .attachments = { .color = {
++                                data.dilatedMotionVectors, data.dilatedDepth,
++                                data.luma, data.farthestDepth }}});
++            },
++            [=, this](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
++                bindPostProcessDescriptorSet(driver);
++                bindPerRenderableDescriptorSet(driver);
++                auto const& material = getPostProcessMaterial("fsr3_prepare_inputs");
++                FMaterialInstance* const mi = getMaterialInstance(mEngine, driver, material);
++                mi->setParameter("color", resources.getTexture(data.color), nearest);
++                mi->setParameter("depth", resources.getTexture(data.depth), nearest);
++                mi->setParameter("velocity", resources.getTexture(data.velocity), nearest);
++                mi->setParameter("reprojection", reprojection);
++                mi->setParameter("depthParams", depthParams);
++                mi->setParameter("renderSize", renderSize);
++                mi->setParameter("jitter", jitter);
++                commitAndRenderFullScreenQuad(driver, resources.getRenderPassInfo(), mi);
++                unbindAllDescriptorSets(driver);
++            });
++
++    /*
++     * Reductions: farthest depth (mip 1 of the luma pyramid) and the shading change pyramid
++     */
++
++    // 2x2 average of `source` into level 0 of a new texture
++    auto const reduce = [&](utils::StaticString const name,
++            FrameGraphId<FrameGraphTexture> const source,
++            uint32_t const width, uint32_t const height, uint8_t const levels,
++            TextureFormat const format) {
++        struct ReduceData {
++            FrameGraphId<FrameGraphTexture> source;
++            FrameGraphId<FrameGraphTexture> output;
++        };
++        auto const& pass = fg.addPass<ReduceData>(name.c_str(),
++                [&](FrameGraph::Builder& builder, auto& data) {
++                    data.source = builder.sample(source);
++                    data.output = builder.createTexture(name, {
++                            .width = width, .height = height, .levels = levels,
++                            .format = format });
++                    data.output = builder.write(data.output,
++                            FrameGraphTexture::Usage::COLOR_ATTACHMENT);
++                    builder.declareRenderPass(name, {
++                            .attachments = { .color = { data.output }}});
++                },
++                [=, this](FrameGraphResources const& resources, auto const& data,
++                        DriverApi& driver) {
++                    bindPostProcessDescriptorSet(driver);
++                    bindPerRenderableDescriptorSet(driver);
++                    auto const& sourceDesc = resources.getDescriptor(data.source);
++                    auto const& material = getPostProcessMaterial("fsr3_reduce");
++                    FMaterialInstance* const mi = getMaterialInstance(mEngine, driver, material);
++                    mi->setParameter("source", resources.getTexture(data.source), nearest);
++                    mi->setParameter("sourceSize",
++                            int2{ int32_t(sourceDesc.width), int32_t(sourceDesc.height) });
++                    commitAndRenderFullScreenQuad(driver, resources.getRenderPassInfo(), mi);
++                    unbindAllDescriptorSets(driver);
++                });
++        return pass->output;
++    };
++
++    auto const farthestDepthMip1 = reduce("FSR3 Farthest Depth Mip1",
++            prepareInputs->farthestDepth, halfWidth, halfHeight, 1, TextureFormat::R16F);
++
++    struct LumaDiffData {
++        FrameGraphId<FrameGraphTexture> currentLuma;
++        FrameGraphId<FrameGraphTexture> previousLuma;
++        FrameGraphId<FrameGraphTexture> dilatedMotionVectors;
++        FrameGraphId<FrameGraphTexture> output;
++    };
++    auto const& lumaDiff = fg.addPass<LumaDiffData>("FSR3 Luma Diff",
++            [&](FrameGraph::Builder& builder, auto& data) {
++                data.currentLuma = builder.sample(prepareInputs->luma);
++                data.previousLuma = builder.sample(lumaHistory);
++                data.dilatedMotionVectors = builder.sample(prepareInputs->dilatedMotionVectors);
++                data.output = builder.createTexture("FSR3 Luma Diff", {
++                        .width = renderWidth, .height = renderHeight,
++                        .format = TextureFormat::RG16F });
++                data.output = builder.write(data.output,
++                        FrameGraphTexture::Usage::COLOR_ATTACHMENT);
++                builder.declareRenderPass("FSR3 Luma Diff Target", {
++                        .attachments = { .color = { data.output }}});
++            },
++            [=, this](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
++                bindPostProcessDescriptorSet(driver);
++                bindPerRenderableDescriptorSet(driver);
++                auto const& material = getPostProcessMaterial("fsr3_luma_diff");
++                FMaterialInstance* const mi = getMaterialInstance(mEngine, driver, material);
++                mi->setParameter("currentLuma", resources.getTexture(data.currentLuma), nearest);
++                mi->setParameter("previousLuma", resources.getTexture(data.previousLuma), nearest);
++                mi->setParameter("dilatedMotionVectors",
++                        resources.getTexture(data.dilatedMotionVectors), nearest);
++                mi->setParameter("renderSize", renderSize);
++                mi->setParameter("jitter", jitter);
++                mi->setParameter("previousJitter", previousJitter);
++                mi->setParameter("deltaPreExposure", deltaPreExposure);
++                mi->setParameter("hasHistory", hasHistory);
++                commitAndRenderFullScreenQuad(driver, resources.getRenderPassInfo(), mi);
++                unbindAllDescriptorSets(driver);
++            });
++
++    // The shading change pyramid has 3 levels, starting at half the render resolution
++    constexpr uint8_t SHADING_CHANGE_LEVELS = 3;
++    auto const shadingChangePyramid = reduce("FSR3 Shading Change Pyramid",
++            lumaDiff->output, halfWidth, halfHeight, SHADING_CHANGE_LEVELS, TextureFormat::RG16F);
++
++    struct PyramidMipmapData {
++        FrameGraphId<FrameGraphTexture> pyramid;
++    };
++    auto const& pyramidMipmap = fg.addPass<PyramidMipmapData>("FSR3 Shading Change Mipmap",
++            [&](FrameGraph::Builder& builder, auto& data) {
++                builder.reserveRenderTargets(SHADING_CHANGE_LEVELS - 1);
++                data.pyramid = builder.sample(shadingChangePyramid);
++                for (uint8_t level = 1; level < SHADING_CHANGE_LEVELS; level++) {
++                    auto out = builder.createSubresource(data.pyramid,
++                            "FSR3 Shading Change Pyramid mip", { .level = level });
++                    out = builder.write(out, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
++                    builder.declareRenderPass("FSR3 Shading Change Pyramid mip target", {
++                            .attachments = { .color = { out }}});
++                }
++            },
++            [=, this](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
++                bindPostProcessDescriptorSet(driver);
++                bindPerRenderableDescriptorSet(driver);
++                auto const in = resources.getTexture(data.pyramid);
++                auto const& material = getPostProcessMaterial("fsr3_reduce");
++                FMaterial const* const ma = material.getMaterial(mEngine);
++                FMaterialInstance* const mi = getMaterialInstance(driver, ma);
++                // Only the source texture is changing in the material instance (no UBO
++                // updates), we do not move getMaterialInstance() inside the loop.
++                auto const pipeline = getPipelineState(mi);
++                for (uint8_t level = 0; level < SHADING_CHANGE_LEVELS - 1; level++) {
++                    auto const out = resources.getRenderPassInfo(level);
++                    auto const th = driver.createTextureView(in, level, 1);
++                    mi->setParameter("source", th, SamplerParams{
++                            .filterMin = SamplerMinFilter::NEAREST_MIPMAP_NEAREST });
++                    mi->setParameter("sourceSize", int2{
++                            int32_t(std::max(1u, halfWidth >> level)),
++                            int32_t(std::max(1u, halfHeight >> level)) });
++                    mi->commit(driver, getUboManager());
++                    mi->use(driver);
++                    renderFullScreenQuad(out, pipeline, driver);
++                    DescriptorSet::unbind(driver, DescriptorSetBindingPoints::PER_MATERIAL);
++                    driver.destroyTexture(th);
++                }
++                unbindAllDescriptorSets(driver);
++            });
++
++    struct ShadingChangeData {
++        FrameGraphId<FrameGraphTexture> pyramid;
++        FrameGraphId<FrameGraphTexture> output;
++    };
++    auto const& shadingChange = fg.addPass<ShadingChangeData>("FSR3 Shading Change",
++            [&](FrameGraph::Builder& builder, auto& data) {
++                data.pyramid = builder.sample(pyramidMipmap->pyramid);
++                data.output = builder.createTexture("FSR3 Shading Change", {
++                        .width = halfWidth, .height = halfHeight,
++                        .format = TextureFormat::R8 });
++                data.output = builder.write(data.output,
++                        FrameGraphTexture::Usage::COLOR_ATTACHMENT);
++                builder.declareRenderPass("FSR3 Shading Change Target", {
++                        .attachments = { .color = { data.output }}});
++            },
++            [=, this](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
++                bindPostProcessDescriptorSet(driver);
++                bindPerRenderableDescriptorSet(driver);
++                auto const& material = getPostProcessMaterial("fsr3_shading_change");
++                FMaterialInstance* const mi = getMaterialInstance(mEngine, driver, material);
++                mi->setParameter("pyramid", resources.getTexture(data.pyramid), SamplerParams{
++                        .filterMag = SamplerMagFilter::LINEAR,
++                        .filterMin = SamplerMinFilter::LINEAR_MIPMAP_NEAREST });
++                mi->setParameter("renderSize", renderSize);
++                mi->setParameter("shadingChangeSize", halfSize);
++                mi->setParameter("jitter", jitter);
++                commitAndRenderFullScreenQuad(driver, resources.getRenderPassInfo(), mi);
++                unbindAllDescriptorSets(driver);
++            });
++
++    /*
++     * Reactivity: disocclusion, shading change, accumulation and new locks
++     */
++
++    struct PrepareReactivityData {
++        FrameGraphId<FrameGraphTexture> dilatedMotionVectors;
++        FrameGraphId<FrameGraphTexture> dilatedDepth;
++        FrameGraphId<FrameGraphTexture> previousDepth;
++        FrameGraphId<FrameGraphTexture> shadingChange;
++        FrameGraphId<FrameGraphTexture> previousAccumulation;
++        FrameGraphId<FrameGraphTexture> currentLuma;
++        FrameGraphId<FrameGraphTexture> reactiveMasks;
++        FrameGraphId<FrameGraphTexture> accumulation;
++    };
++    auto const& prepareReactivity = fg.addPass<PrepareReactivityData>("FSR3 Prepare Reactivity",
++            [&](FrameGraph::Builder& builder, auto& data) {
++                data.dilatedMotionVectors = builder.sample(prepareInputs->dilatedMotionVectors);
++                data.dilatedDepth = builder.sample(prepareInputs->dilatedDepth);
++                data.previousDepth = builder.sample(depthHistory);
++                data.shadingChange = builder.sample(shadingChange->output);
++                data.previousAccumulation = builder.sample(accumulationHistory);
++                data.currentLuma = builder.sample(prepareInputs->luma);
++                data.reactiveMasks = builder.createTexture("FSR3 Reactive Masks", {
++                        .width = renderWidth, .height = renderHeight,
++                        .format = TextureFormat::RGBA8 });
++                data.accumulation = builder.createTexture("FSR3 Accumulation", {
++                        .width = renderWidth, .height = renderHeight,
++                        .format = TextureFormat::RG8 });
++                data.reactiveMasks = builder.write(data.reactiveMasks,
++                        FrameGraphTexture::Usage::COLOR_ATTACHMENT);
++                data.accumulation = builder.write(data.accumulation,
++                        FrameGraphTexture::Usage::COLOR_ATTACHMENT);
++                builder.declareRenderPass("FSR3 Prepare Reactivity Target", {
++                        .attachments = { .color = { data.reactiveMasks, data.accumulation }}});
++            },
++            [=, this](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
++                bindPostProcessDescriptorSet(driver);
++                bindPerRenderableDescriptorSet(driver);
++                auto const& material = getPostProcessMaterial("fsr3_prepare_reactivity");
++                FMaterialInstance* const mi = getMaterialInstance(mEngine, driver, material);
++                mi->setParameter("dilatedMotionVectors",
++                        resources.getTexture(data.dilatedMotionVectors), nearest);
++                mi->setParameter("dilatedDepth", resources.getTexture(data.dilatedDepth), nearest);
++                mi->setParameter("previousDepth",
++                        resources.getTexture(data.previousDepth), nearest);
++                mi->setParameter("shadingChange",
++                        resources.getTexture(data.shadingChange), linear);
++                mi->setParameter("previousAccumulation",
++                        resources.getTexture(data.previousAccumulation), linear);
++                mi->setParameter("currentLuma", resources.getTexture(data.currentLuma), nearest);
++                mi->setParameter("viewFromPreviousClip", viewFromPreviousClip);
++                mi->setParameter("depthParams", depthParams);
++                mi->setParameter("renderSize", renderSize);
++                mi->setParameter("shadingChangeSize", halfSize);
++                mi->setParameter("jitter", jitter);
++                mi->setParameter("previousJitter", previousJitter);
++                // FSR3's defaults
++                mi->setParameter("accumulationAddedPerFrame", 1.0f / 3.0f);
++                mi->setParameter("minDisocclusionAccumulation", -1.0f / 3.0f);
++                mi->setParameter("hasHistory", hasHistory);
++                commitAndRenderFullScreenQuad(driver, resources.getRenderPassInfo(), mi);
++                unbindAllDescriptorSets(driver);
++            });
++
++    /*
++     * Luma instability
++     */
++
++    struct LumaInstabilityData {
++        FrameGraphId<FrameGraphTexture> dilatedMotionVectors;
++        FrameGraphId<FrameGraphTexture> reactiveMasks;
++        FrameGraphId<FrameGraphTexture> currentLuma;
++        FrameGraphId<FrameGraphTexture> previousLumaHistory;
++        FrameGraphId<FrameGraphTexture> lumaHistory;
++        FrameGraphId<FrameGraphTexture> lumaInstability;
++    };
++    auto const& lumaInstability = fg.addPass<LumaInstabilityData>("FSR3 Luma Instability",
++            [&](FrameGraph::Builder& builder, auto& data) {
++                data.dilatedMotionVectors = builder.sample(prepareInputs->dilatedMotionVectors);
++                data.reactiveMasks = builder.sample(prepareReactivity->reactiveMasks);
++                data.currentLuma = builder.sample(prepareInputs->luma);
++                data.previousLumaHistory = builder.sample(lumaHistoryHistory);
++                data.lumaHistory = builder.createTexture("FSR3 Luma History", {
++                        .width = renderWidth, .height = renderHeight,
++                        .format = TextureFormat::RGBA16F });
++                data.lumaInstability = builder.createTexture("FSR3 Luma Instability", {
++                        .width = renderWidth, .height = renderHeight,
++                        .format = TextureFormat::R16F });
++                data.lumaHistory = builder.write(data.lumaHistory,
++                        FrameGraphTexture::Usage::COLOR_ATTACHMENT);
++                data.lumaInstability = builder.write(data.lumaInstability,
++                        FrameGraphTexture::Usage::COLOR_ATTACHMENT);
++                builder.declareRenderPass("FSR3 Luma Instability Target", {
++                        .attachments = { .color = { data.lumaHistory, data.lumaInstability }}});
++            },
++            [=, this](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
++                bindPostProcessDescriptorSet(driver);
++                bindPerRenderableDescriptorSet(driver);
++                auto const& material = getPostProcessMaterial("fsr3_luma_instability");
++                FMaterialInstance* const mi = getMaterialInstance(mEngine, driver, material);
++                mi->setParameter("dilatedMotionVectors",
++                        resources.getTexture(data.dilatedMotionVectors), nearest);
++                mi->setParameter("reactiveMasks",
++                        resources.getTexture(data.reactiveMasks), linear);
++                mi->setParameter("currentLuma", resources.getTexture(data.currentLuma), linear);
++                mi->setParameter("lumaHistory",
++                        resources.getTexture(data.previousLumaHistory), linear);
++                mi->setParameter("renderSize", renderSize);
++                mi->setParameter("jitter", jitter);
++                mi->setParameter("previousJitter", previousJitter);
++                mi->setParameter("deltaPreExposure", deltaPreExposure);
++                commitAndRenderFullScreenQuad(driver, resources.getRenderPassInfo(), mi);
++                unbindAllDescriptorSets(driver);
++            });
++
++    /*
++     * Accumulation, at the upscaled resolution
++     */
++
++    struct AccumulateData {
++        FrameGraphId<FrameGraphTexture> color;
++        FrameGraphId<FrameGraphTexture> dilatedMotionVectors;
++        FrameGraphId<FrameGraphTexture> previousHistory;
++        FrameGraphId<FrameGraphTexture> lumaInstability;
++        FrameGraphId<FrameGraphTexture> farthestDepthMip1;
++        FrameGraphId<FrameGraphTexture> reactiveMasks;
++        FrameGraphId<FrameGraphTexture> accumulation;
++        FrameGraphId<FrameGraphTexture> history;
++        FrameGraphId<FrameGraphTexture> output;
++    };
++    auto const& accumulate = fg.addPass<AccumulateData>("FSR3 Accumulate",
++            [&](FrameGraph::Builder& builder, auto& data) {
++                data.color = builder.sample(input);
++                data.dilatedMotionVectors = builder.sample(prepareInputs->dilatedMotionVectors);
++                data.previousHistory = builder.sample(colorHistory);
++                data.lumaInstability = builder.sample(lumaInstability->lumaInstability);
++                data.farthestDepthMip1 = builder.sample(farthestDepthMip1);
++                data.reactiveMasks = builder.sample(prepareReactivity->reactiveMasks);
++                data.accumulation = builder.sample(prepareReactivity->accumulation);
++                data.history = builder.createTexture("FSR3 History", {
++                        .width = upscaleWidth, .height = upscaleHeight,
++                        .format = TextureFormat::RGBA16F });
++                data.output = builder.createTexture("FSR3 Output", {
++                        .width = upscaleWidth, .height = upscaleHeight,
++                        .format = inputDesc.format });
++                data.history = builder.write(data.history,
++                        FrameGraphTexture::Usage::COLOR_ATTACHMENT);
++                data.output = builder.write(data.output,
++                        FrameGraphTexture::Usage::COLOR_ATTACHMENT);
++                builder.declareRenderPass("FSR3 Accumulate Target", {
++                        .attachments = { .color = { data.history, data.output }}});
++            },
++            [=, this](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
++                bindPostProcessDescriptorSet(driver);
++                bindPerRenderableDescriptorSet(driver);
++                auto const& material = getPostProcessMaterial("fsr3_accumulate");
++                FMaterialInstance* const mi = getMaterialInstance(mEngine, driver, material);
++                mi->setParameter("color", resources.getTexture(data.color), nearest);
++                mi->setParameter("dilatedMotionVectors",
++                        resources.getTexture(data.dilatedMotionVectors), nearest);
++                mi->setParameter("history", resources.getTexture(data.previousHistory), nearest);
++                mi->setParameter("lumaInstability",
++                        resources.getTexture(data.lumaInstability), linear);
++                mi->setParameter("farthestDepthMip1",
++                        resources.getTexture(data.farthestDepthMip1), linear);
++                mi->setParameter("reactiveMasks",
++                        resources.getTexture(data.reactiveMasks), linear);
++                mi->setParameter("accumulationAndLocks",
++                        resources.getTexture(data.accumulation), nearest);
++                mi->setParameter("renderSize", renderSize);
++                mi->setParameter("upscaleSize", upscaleSize);
++                mi->setParameter("farthestDepthMip1Size", halfSize);
++                mi->setParameter("jitter", jitter);
++                mi->setParameter("deltaPreExposure", deltaPreExposure);
++                mi->setParameter("jitterSequenceLength", jitterSequenceLength);
++                mi->setParameter("velocityFactor", 1.0f);
++                mi->setParameter("hasHistory", hasHistory);
++                commitAndRenderFullScreenQuad(driver, resources.getRenderPassInfo(), mi);
++                unbindAllDescriptorSets(driver);
++            });
++
++    /*
++     * Export the history for the next frame
++     */
++
++    struct ExportHistoryData {
++        FrameGraphId<FrameGraphTexture> color;
++        FrameGraphId<FrameGraphTexture> luma;
++        FrameGraphId<FrameGraphTexture> depth;
++        FrameGraphId<FrameGraphTexture> accumulation;
++        FrameGraphId<FrameGraphTexture> lumaHistory;
++        FrameGraphId<FrameGraphTexture> motionVectors;
++    };
++    fg.addPass<ExportHistoryData>("Export FSR3 history",
++            [&](FrameGraph::Builder& builder, auto& data) {
++                // We need to use sideEffect here to ensure this pass won't be culled.
++                // The "output" of this pass is going to be used during the next frame as
++                // an "import".
++                builder.sideEffect();
++                data.color = builder.sample(accumulate->history);
++                data.luma = builder.sample(prepareInputs->luma);
++                data.depth = builder.sample(prepareInputs->dilatedDepth);
++                data.accumulation = builder.sample(prepareReactivity->accumulation);
++                data.lumaHistory = builder.sample(lumaInstability->lumaHistory);
++                data.motionVectors = builder.sample(prepareInputs->dilatedMotionVectors);
++            }, [&current](FrameGraphResources const& resources, auto const& data) {
++                resources.detach(data.color, &current.color.texture, &current.color.desc);
++                resources.detach(data.luma, &current.luma.texture, &current.luma.desc);
++                resources.detach(data.depth, &current.depth.texture, &current.depth.desc);
++                resources.detach(data.accumulation,
++                        &current.accumulation.texture, &current.accumulation.desc);
++                resources.detach(data.lumaHistory,
++                        &current.lumaHistory.texture, &current.lumaHistory.desc);
++                resources.detach(data.motionVectors,
++                        &current.motionVectors.texture, &current.motionVectors.desc);
++            });
++
++    // used by frame generation, see frameInterpolation()
++    auto& blackboard = fg.getBlackboard();
++    blackboard["fsr3DilatedMotionVectors"] = prepareInputs->dilatedMotionVectors;
++    blackboard["fsr3DilatedDepth"] = prepareInputs->dilatedDepth;
++    blackboard["fsr3ReactiveMasks"] = prepareReactivity->reactiveMasks;
++
++    FrameGraphId<FrameGraphTexture> output = accumulate->output;
++
++    // optional sharpen pass from FSR1
++    if (taaOptions.sharpness > 0.0f) {
++        output = rcas(fg, taaOptions.sharpness, output, fg.getDescriptor(output),
++                translucent ? RcasMode::ALPHA_PASSTHROUGH : RcasMode::OPAQUE);
++    }
++
++    return output;
++}
++
++FrameGraphId<FrameGraphTexture> PostProcessManager::frameInterpolation(FrameGraph& fg,
++        FrameGraphId<FrameGraphTexture> const current, FrameHistory& frameHistory) noexcept {
++    auto& blackboard = fg.getBlackboard();
++    auto const motionVectors = blackboard.get<FrameGraphTexture>("fsr3DilatedMotionVectors");
++    auto const depth = blackboard.get<FrameGraphTexture>("fsr3DilatedDepth");
++    auto const reactiveMasks = blackboard.get<FrameGraphTexture>("fsr3ReactiveMasks");
++    assert_invariant(motionVectors && depth && reactiveMasks);
++
++    auto const& previousEntry = frameHistory.getPrevious().frameGeneration;
++    auto& currentEntry = frameHistory.getCurrent().frameGeneration;
++
++    FrameGraphTexture::Descriptor const desc = fg.getDescriptor(current);
++    bool const hasHistory = previousEntry.color.handle &&
++            previousEntry.desc.width == desc.width &&
++            previousEntry.desc.height == desc.height &&
++            previousEntry.desc.format == desc.format;
++    FrameGraphId<FrameGraphTexture> const previous = hasHistory ?
++            fg.import("Frame generation history", previousEntry.desc,
++                    FrameGraphTexture::Usage::SAMPLEABLE, previousEntry.color) :
++            current;
++
++    // Last frame's motion vectors and depth, to check candidate motions against the previous
++    // frame too. Without them, this frame's are used and the check always passes.
++    auto const& previousFsr3 = frameHistory.getPrevious().fsr3;
++    FrameGraphTexture::Descriptor const mvDesc = fg.getDescriptor(motionVectors);
++    bool const hasPreviousMotion = hasHistory &&
++            previousFsr3.motionVectors.texture.handle && previousFsr3.depth.texture.handle &&
++            previousFsr3.motionVectors.desc.width == mvDesc.width &&
++            previousFsr3.motionVectors.desc.height == mvDesc.height &&
++            previousFsr3.depth.desc.width == mvDesc.width &&
++            previousFsr3.depth.desc.height == mvDesc.height;
++    FrameGraphId<FrameGraphTexture> const previousMotionVectors = hasPreviousMotion ?
++            fg.import("Frame generation previous motion vectors",
++                    previousFsr3.motionVectors.desc, FrameGraphTexture::Usage::SAMPLEABLE,
++                    previousFsr3.motionVectors.texture) :
++            motionVectors;
++    FrameGraphId<FrameGraphTexture> const previousDepth = hasPreviousMotion ?
++            fg.import("Frame generation previous depth",
++                    previousFsr3.depth.desc, FrameGraphTexture::Usage::SAMPLEABLE,
++                    previousFsr3.depth.texture) :
++            depth;
++
++    struct FrameInterpolationData {
++        FrameGraphId<FrameGraphTexture> previous;
++        FrameGraphId<FrameGraphTexture> current;
++        FrameGraphId<FrameGraphTexture> motionVectors;
++        FrameGraphId<FrameGraphTexture> depth;
++        FrameGraphId<FrameGraphTexture> reactiveMasks;
++        FrameGraphId<FrameGraphTexture> previousMotionVectors;
++        FrameGraphId<FrameGraphTexture> previousDepth;
++        FrameGraphId<FrameGraphTexture> output;
++    };
++    auto const& interpolation = fg.addPass<FrameInterpolationData>("FSR3 Frame Interpolation",
++            [&](FrameGraph::Builder& builder, auto& data) {
++                data.previous = builder.sample(previous);
++                data.current = builder.sample(current);
++                data.motionVectors = builder.sample(motionVectors);
++                data.depth = builder.sample(depth);
++                data.reactiveMasks = builder.sample(reactiveMasks);
++                data.previousMotionVectors = builder.sample(previousMotionVectors);
++                data.previousDepth = builder.sample(previousDepth);
++                data.output = builder.createTexture("Interpolated Frame", {
++                        .width = desc.width, .height = desc.height, .format = desc.format });
++                data.output = builder.write(data.output,
++                        FrameGraphTexture::Usage::COLOR_ATTACHMENT);
++                builder.declareRenderPass("FSR3 Frame Interpolation Target", {
++                        .attachments = { .color = { data.output }}});
++            },
++            [=, this](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
++                bindPostProcessDescriptorSet(driver);
++                bindPerRenderableDescriptorSet(driver);
++                auto const& mvDesc = resources.getDescriptor(data.motionVectors);
++                SamplerParams const linear{
++                        .filterMag = SamplerMagFilter::LINEAR,
++                        .filterMin = SamplerMinFilter::LINEAR };
++                auto const& material = getPostProcessMaterial("fsr3_frame_interpolation");
++                FMaterialInstance* const mi = getMaterialInstance(mEngine, driver, material);
++                mi->setParameter("previous", resources.getTexture(data.previous), linear);
++                mi->setParameter("current", resources.getTexture(data.current), linear);
++                mi->setParameter("dilatedMotionVectors",
++                        resources.getTexture(data.motionVectors), SamplerParams{});
++                mi->setParameter("dilatedDepth", resources.getTexture(data.depth), SamplerParams{});
++                mi->setParameter("reactiveMasks",
++                        resources.getTexture(data.reactiveMasks), linear);
++                mi->setParameter("previousMotionVectors",
++                        resources.getTexture(data.previousMotionVectors), SamplerParams{});
++                mi->setParameter("previousDepth",
++                        resources.getTexture(data.previousDepth), SamplerParams{});
++                mi->setParameter("hasPreviousMotion", hasPreviousMotion);
++                mi->setParameter("renderSize",
++                        float2{ float(mvDesc.width), float(mvDesc.height) });
++                mi->setParameter("outputSize", float2{ float(desc.width), float(desc.height) });
++                commitAndRenderFullScreenQuad(driver, resources.getRenderPassInfo(), mi);
++                unbindAllDescriptorSets(driver);
++            });
++
++    // The rendered frame is kept for the next frame's interpolation, and is presented by the
++    // Renderer after the interpolated one (hence BLIT_SRC).
++    struct ExportData {
++        FrameGraphId<FrameGraphTexture> color;
++    };
++    fg.addPass<ExportData>("Export frame generation history",
++            [&](FrameGraph::Builder& builder, auto& data) {
++                // the "output" of this pass is used during endFrame() and the next frame
++                builder.sideEffect();
++                data.color = builder.read(current, FrameGraphTexture::Usage::BLIT_SRC);
++            }, [&currentEntry](FrameGraphResources const& resources, auto const& data) {
++                resources.detach(data.color, &currentEntry.color, &currentEntry.desc);
++            });
++
++    return interpolation->output;
++}
++
+ FrameGraphId<FrameGraphTexture> PostProcessManager::rcas(
+         FrameGraph& fg,
+         float const sharpness,
+diff --git a/filament/src/PostProcessManager.h b/filament/src/PostProcessManager.h
+index 7b640824..94468276 100644
+--- a/filament/src/PostProcessManager.h
++++ b/filament/src/PostProcessManager.h
+@@ -427,6 +427,25 @@ public:
+     // Answers the view's pending View::traceRay() queries: one 1x1 pass each, read back.
+     void rayQueries(FrameGraph& fg, FView& view) noexcept;
+ 
++    // FSR3 temporal upscaler, used instead of taa(). The jitter and projections are taken from
++    // the `taa` frame history entry, see TaaJitterCamera(). cameraInfo must be un-jittered;
++    // `velocity` is the structure pass' motion vector buffer.
++    FrameGraphId<FrameGraphTexture> fsr3(FrameGraph& fg,
++            FrameGraphId<FrameGraphTexture> input,
++            FrameGraphId<FrameGraphTexture> depth,
++            FrameGraphId<FrameGraphTexture> velocity,
++            FrameHistory& frameHistory,
++            CameraInfo const& cameraInfo,
++            TemporalAntiAliasingOptions const& taaOptions,
++            bool translucent) noexcept;
++
++    // Frame generation: returns the frame interpolated half-way between last frame's `current`
++    // and this frame's `current`, which is saved for the next frame. It uses the motion vectors
++    // of fsr3(), which must have been called in the same FrameGraph. Without a previous frame
++    // the result is `current` warped by half its motion.
++    FrameGraphId<FrameGraphTexture> frameInterpolation(FrameGraph& fg,
++            FrameGraphId<FrameGraphTexture> current, FrameHistory& frameHistory) noexcept;
++
+     // ReSTIR direct lighting: initial candidates + temporal reuse, spatial reuse, visibility.
+     // Returns the (light index, W, visibility) texture the colour pass shades with and keeps the
+     // reservoirs in the frame history for the next frame.
+diff --git a/filament/src/details/Renderer.cpp b/filament/src/details/Renderer.cpp
+index a730fed1..0fb111ac 100644
+--- a/filament/src/details/Renderer.cpp
++++ b/filament/src/details/Renderer.cpp
+@@ -439,6 +439,9 @@ bool FRenderer::beginFrame(FSwapChain* swapChain, uint64_t vsyncSteadyClockTimeN
+ 
+     mBeginFrameInternal = {};
+ 
++    mFrameGenerationView = nullptr;
++    mViewsAfterFrameGeneration.clear();
++
+     mSwapChain = swapChain;
+     swapChain->makeCurrent(driver);
+ 
+@@ -550,7 +553,19 @@ void FRenderer::endFrame() {
+             << "SwapChain must remain valid until endFrame is called.";
+ 
+     // mSwapChain cannot be null by construction
++    // With frame generation, this presents the interpolated frame.
+     mSwapChain->commit(driver);
++
++    if (UTILS_UNLIKELY(mFrameGenerationView)) {
++        if (mSwapChain->isVsyncDisabled()) {
++            // without vsync, nothing spaces the two presents out: submit the interpolated frame
++            // now and wait to present the rendered one.
++            engine.flush();
++            paceRenderedFrame();
++        }
++        presentRenderedFrame(driver);
++    }
++
+     mSwapChain = nullptr;
+ 
+     mFrameInfoManager.endFrame(driver);
+@@ -716,10 +731,89 @@ void FRenderer::render(FView const* view) {
+     assert_invariant(mSwapChain);
+ 
+     if (UTILS_LIKELY(view && view->getScene() && view->hasCamera())) {
++        // Views rendered into the SwapChain after the frame generation View are drawn on top of
++        // the interpolated frame; they must be drawn again on top of the rendered frame.
++        bool const isAfterFrameGeneration = mFrameGenerationView && !view->getRenderTarget();
+         renderInternal(mEngine.getDriverApi(), view, false);
++        if (UTILS_UNLIKELY(isAfterFrameGeneration)) {
++            mViewsAfterFrameGeneration.push_back(view);
++        }
++    }
++}
++
++void FRenderer::paceRenderedFrame() noexcept {
++    auto const now = std::chrono::steady_clock::now();
++    if (mLastInterpolatedFramePresent.time_since_epoch().count()) {
++        double const interval =
++                std::chrono::duration<double>(now - mLastInterpolatedFramePresent).count();
++        // ignore long pauses (e.g. the first frame after frame generation is turned on)
++        if (interval < 0.25) {
++            mFrameGenerationInterval = mFrameGenerationInterval > 0.0 ?
++                    mFrameGenerationInterval * 0.9 + interval * 0.1 : interval;
++        }
++    }
++    mLastInterpolatedFramePresent = now;
++
++    if (mFrameGenerationInterval <= 0.0) {
++        return;
++    }
++
++    // Because the wait is part of the interval, the interval converges to twice the frame's
++    // work when the frame rate isn't limited otherwise.
++    auto const deadline = now + std::chrono::duration_cast<std::chrono::steady_clock::duration>(
++            std::chrono::duration<double>(mFrameGenerationInterval * 0.5));
++    // sleep() is coarse on some platforms, so we sleep most of the wait and yield the rest
++    constexpr auto sleepMargin = std::chrono::milliseconds(2);
++    if (deadline - std::chrono::steady_clock::now() > sleepMargin) {
++        std::this_thread::sleep_until(deadline - sleepMargin);
++    }
++    while (std::chrono::steady_clock::now() < deadline) {
++        std::this_thread::yield();
+     }
+ }
+ 
++void FRenderer::presentRenderedFrame(DriverApi& driver) {
++    FILAMENT_TRACING_CALL(FILAMENT_TRACING_CATEGORY_FILAMENT);
++
++    FView& view = *mFrameGenerationView;
++    mFrameGenerationView = nullptr;
++
++    // the frame history was committed at the end of renderJob()
++    auto const& rendered = view.getFrameHistory().getPrevious().frameGeneration;
++    assert_invariant(rendered.color.handle);
++
++    // acquire the next SwapChain image
++    mSwapChain->makeCurrent(driver);
++
++    RenderPassParams params = {};
++    params.clearColor = mClearOptions.clearColor;
++    params.flags.clear = TargetBufferFlags::COLOR;
++    params.flags.discardStart = TargetBufferFlags::ALL;
++    params.flags.discardEnd = TargetBufferFlags::NONE;
++    params.viewport.width = std::numeric_limits<uint32_t>::max();
++    params.viewport.height = std::numeric_limits<uint32_t>::max();
++    driver.beginRenderPass(mRenderTargetHandle, params);
++    driver.endRenderPass();
++
++    Handle<HwRenderTarget> const source = driver.createRenderTarget(TargetBufferFlags::COLOR0,
++            rendered.desc.width, rendered.desc.height, 1, 1, { rendered.color.handle }, {}, {},
++            "FrameGenerationRenderedFrame");
++    filament::Viewport const& viewport = view.getViewport();
++    driver.blitDEPRECATED(TargetBufferFlags::COLOR, mRenderTargetHandle, viewport, source,
++            { 0, 0, rendered.desc.width, rendered.desc.height }, SamplerMagFilter::NEAREST);
++    driver.destroyRenderTarget(source);
++
++    // draw the Views that were on top of the interpolated frame (the default RenderTarget is in
++    // mPreviousRenderTargets, so they won't clear it)
++    auto const views = std::move(mViewsAfterFrameGeneration);
++    mViewsAfterFrameGeneration.clear();
++    for (FView const* v : views) {
++        renderInternal(driver, v, false);
++    }
++
++    mSwapChain->commit(driver);
++}
++
+ void FRenderer::renderInternal(DriverApi& driver, FView const* view, bool const flush) {
+     FEngine& engine = mEngine;
+ 
+@@ -1018,9 +1112,14 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+     // Motion vectors (TemporalAntiAliasingOptions::motionVectors) are rendered by the structure
+     // pass, at full resolution so they can drive TAA and upscalers; they need a second color
+     // attachment, which feature level 0 cannot provide.
+-    bool const motionVectors = taaOptions.motionVectors
++    // The FSR3 upscaler replaces TAA; it implies the motion vectors and needs a mono view.
++    bool const fsr3Requested = taaOptions.enabled &&
++            taaOptions.algorithm == TemporalAntiAliasingOptions::Algorithm::FSR3 &&
++            !view.hasStereo() && view.hasPostProcessPass();
++    bool const motionVectors = (taaOptions.motionVectors || fsr3Requested)
+             && engine.getSupportedFeatureLevel() != FeatureLevel::FEATURE_LEVEL_0
+             && driver.isRenderTargetFormatSupported(TextureFormat::RG16F);
++    bool const useFsr3 = fsr3Requested && motionVectors;
+     // the ray-traced shadow mask is traced from the structure depth, at the colour pass's resolution
+     float const structureScale = (motionVectors || rayTracedShadows || restir) ? 1.0f : aoOptions.resolution;
+ 
+@@ -1530,9 +1629,14 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+ 
+     // TAA for color pass
+     if (taaOptions.enabled && !useExternalUpscaler) {
+-        input = ppm.taa(fg, input, depth, velocity, xvp, vp,
+-                view.getFrameHistory(), &FrameHistoryEntry::taa,
+-                taaOptions, colorGradingConfig);
++        if (useFsr3 && velocity) {
++            input = ppm.fsr3(fg, input, depth, velocity, view.getFrameHistory(), cameraInfo,
++                    taaOptions, colorGradingConfig.translucent);
++        } else {
++            input = ppm.taa(fg, input, depth, velocity, xvp, vp,
++                    view.getFrameHistory(), &FrameHistoryEntry::taa,
++                    taaOptions, colorGradingConfig);
++        }
+         if (taaOptions.upscaling > 1.0f) {
+             scale = 1.0f;
+             scaled = false;
+@@ -1717,6 +1821,15 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+                 engine.debug.shadowmap.display_shadow_texture_power);
+     }
+ 
++    // Frame generation: the interpolated frame goes into the SwapChain now, the rendered frame is
++    // presented after it, by endFrame().
++    if (UTILS_UNLIKELY(useFsr3 && velocity && !useExternalUpscaler && taaOptions.frameGeneration &&
++            mSwapChain && viewRenderTarget == mRenderTargetHandle && !blendModeTranslucent &&
++            !guardBandOptions.enabled && !mFrameGenerationView)) {
++        input = ppm.frameInterpolation(fg, input, view.getFrameHistory());
++        mFrameGenerationView = &view;
++    }
++
+ //    auto debug = structure
+ //    fg.forwardResource(fgViewRenderTarget, debug ? debug : input);
+ 
+diff --git a/filament/src/details/Renderer.h b/filament/src/details/Renderer.h
+index 3032e359..26bcaa46 100644
+--- a/filament/src/details/Renderer.h
++++ b/filament/src/details/Renderer.h
+@@ -48,6 +48,7 @@
+ #include <functional>
+ #include <memory>
+ #include <utility>
++#include <vector>
+ 
+ #include <stddef.h>
+ #include <stdint.h>
+@@ -261,6 +262,20 @@ private:
+     backend::TargetBufferFlags mDiscardStartFlags{};
+     backend::TargetBufferFlags mClearFlags{};
+     tsl::robin_set<FRenderTarget*> mPreviousRenderTargets;
++
++    // Frame generation: presents the rendered frame after the interpolated one, see endFrame()
++    void presentRenderedFrame(backend::DriverApi& driver);
++
++    // Frame generation without vsync: waits until half a frame after the interpolated frame was
++    // presented, so interpolated and rendered frames are evenly spaced.
++    void paceRenderedFrame() noexcept;
++    // Frame generation: the View whose interpolated frame is in the SwapChain this frame, and
++    // the Views rendered on top of it (e.g. UI), which must be rendered again on the rendered
++    // frame.
++    FView* mFrameGenerationView = nullptr;
++    std::vector<FView const*> mViewsAfterFrameGeneration;
++    std::chrono::steady_clock::time_point mLastInterpolatedFramePresent{};
++    double mFrameGenerationInterval = 0.0;  // smoothed interval between presents, in seconds
+     std::function<void()> mBeginFrameInternal;
+     uint64_t mVsyncSteadyClockTimeNano = 0;
+     std::chrono::steady_clock::time_point mRenderingDeadline{};
+diff --git a/filament/src/details/SwapChain.h b/filament/src/details/SwapChain.h
+index 7294f94d..8d1b5a4f 100644
+--- a/filament/src/details/SwapChain.h
++++ b/filament/src/details/SwapChain.h
+@@ -65,6 +65,10 @@ public:
+         return (mConfigFlags & CONFIG_HAS_STENCIL_BUFFER) != 0;
+     }
+ 
++    bool isVsyncDisabled() const noexcept {
++        return (mConfigFlags & CONFIG_DISABLE_VSYNC) != 0;
++    }
++
+     bool isProtected() const noexcept {
+         return (mConfigFlags & CONFIG_PROTECTED_CONTENT) != 0;
+     }
+diff --git a/filament/src/details/View.cpp b/filament/src/details/View.cpp
+index aed17870..334fd623 100644
+--- a/filament/src/details/View.cpp
++++ b/filament/src/details/View.cpp
+@@ -1573,6 +1573,16 @@ FrameGraphId<FrameGraphTexture> FView::renderShadowMaps(FEngine& engine, FrameGr
+     return mShadowMapManager->render(engine, fg, passBuilder, *this, cameraInfo, userTime);
+ }
+ 
++template<typename Disposer>
++static void destroyFsr3History(Disposer& disposer, FrameHistoryEntry::Fsr3& fsr3) noexcept {
++    disposer.destroy(std::move(fsr3.color.texture.handle));
++    disposer.destroy(std::move(fsr3.luma.texture.handle));
++    disposer.destroy(std::move(fsr3.depth.texture.handle));
++    disposer.destroy(std::move(fsr3.accumulation.texture.handle));
++    disposer.destroy(std::move(fsr3.lumaHistory.texture.handle));
++    disposer.destroy(std::move(fsr3.motionVectors.texture.handle));
++}
++
+ void FView::commitFrameHistory(FEngine& engine) noexcept {
+     // Here we need to destroy resources in mFrameHistory.back()
+     auto& disposer = engine.getResourceAllocatorDisposer();
+@@ -1582,6 +1592,8 @@ void FView::commitFrameHistory(FEngine& engine) noexcept {
+     disposer.destroy(std::move(last.taa.color.handle));
+     disposer.destroy(std::move(last.ssr.color.handle));
+     disposer.destroy(std::move(last.restir.reservoir.handle));
++    destroyFsr3History(disposer, last.fsr3);
++    disposer.destroy(std::move(last.frameGeneration.color.handle));
+ 
+     // and then push the new history entry to the history stack
+     frameHistory.commit();
+@@ -1596,6 +1608,8 @@ void FView::clearFrameHistory(FEngine& engine) noexcept {
+         disposer.destroy(std::move(last.taa.color.handle));
+         disposer.destroy(std::move(last.ssr.color.handle));
+         disposer.destroy(std::move(last.restir.reservoir.handle));
++        destroyFsr3History(disposer, last.fsr3);
++        disposer.destroy(std::move(last.frameGeneration.color.handle));
+     }
+ }
+ 
+diff --git a/filament/src/materials/fsr3/fsr3.cpp b/filament/src/materials/fsr3/fsr3.cpp
+new file mode 100644
+index 00000000..f9c25ba9
+--- /dev/null
++++ b/filament/src/materials/fsr3/fsr3.cpp
+@@ -0,0 +1,45 @@
++/*
++ * Copyright (C) 2026 The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++#include "fsr3.h"
++#include "generated/resources/fsr3.h"
++
++#include "materials/StaticMaterialInfo.h"
++
++#include <utils/Slice.h>
++
++#include <iterator>
++
++#include <stddef.h>
++
++namespace filament {
++
++static const StaticMaterialInfo sMaterialList[] = {
++    { "fsr3_prepare_inputs",        MATERIAL(FSR3, FSR3_PREPARE_INPUTS) },
++    { "fsr3_reduce",                MATERIAL(FSR3, FSR3_REDUCE) },
++    { "fsr3_luma_diff",             MATERIAL(FSR3, FSR3_LUMA_DIFF) },
++    { "fsr3_shading_change",        MATERIAL(FSR3, FSR3_SHADING_CHANGE) },
++    { "fsr3_prepare_reactivity",    MATERIAL(FSR3, FSR3_PREPARE_REACTIVITY) },
++    { "fsr3_luma_instability",      MATERIAL(FSR3, FSR3_LUMA_INSTABILITY) },
++    { "fsr3_accumulate",            MATERIAL(FSR3, FSR3_ACCUMULATE) },
++    { "fsr3_frame_interpolation",   MATERIAL(FSR3, FSR3_FRAME_INTERPOLATION) },
++};
++
++utils::Slice<const StaticMaterialInfo> getFsr3MaterialList() noexcept {
++    return { std::begin(sMaterialList), std::end(sMaterialList) };
++}
++
++} // namespace filament
+diff --git a/filament/src/materials/fsr3/fsr3.h b/filament/src/materials/fsr3/fsr3.h
+new file mode 100644
+index 00000000..daf6b33c
+--- /dev/null
++++ b/filament/src/materials/fsr3/fsr3.h
+@@ -0,0 +1,27 @@
++/*
++ * Copyright (C) 2026 The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++#pragma once
++
++#include "materials/StaticMaterialInfo.h"
++
++#include <utils/Slice.h>
++
++namespace filament {
++
++utils::Slice<const StaticMaterialInfo> getFsr3MaterialList() noexcept;
++
++} // namespace filament
+diff --git a/filament/src/materials/fsr3/fsr3_accumulate.mat b/filament/src/materials/fsr3/fsr3_accumulate.mat
+new file mode 100644
+index 00000000..a919b2fe
+--- /dev/null
++++ b/filament/src/materials/fsr3/fsr3_accumulate.mat
+@@ -0,0 +1,502 @@
++// Derived from ffx_fsr3upscaler_accumulate.h, ffx_fsr3upscaler_upsample.h,
++// ffx_fsr3upscaler_reproject.h and ffx_fsr3upscaler_sample.h (FidelityFX SDK v1.1.4), see
++// fsr3_common.fs for the license and conventions.
++//
++// Runs at the upscaled resolution. Differences with the original:
++// - New locks are produced at the render resolution by fsr3_prepare_reactivity.mat; here we find
++//   the render-resolution pixel that maps to this upscaled pixel (at most one does, since the
++//   upscaling ratio is >= 1) instead of the original scattered write.
++// - The 2nd output carries the upscaled color with the input's alpha.
++
++material {
++    name : fsr3_accumulate,
++    parameters : [
++        {
++            type : sampler2d,
++            name : color,
++            precision: high,
++            filterable: false
++        },
++        {
++            type : sampler2d,
++            name : dilatedMotionVectors,
++            precision: high,
++            filterable: false
++        },
++        {
++            type : sampler2d,
++            name : history,
++            precision: high,
++            filterable: false
++        },
++        {
++            type : sampler2d,
++            name : lumaInstability,
++            precision: high
++        },
++        {
++            type : sampler2d,
++            name : farthestDepthMip1,
++            precision: high
++        },
++        {
++            type : sampler2d,
++            name : reactiveMasks,
++            precision: high
++        },
++        {
++            type : sampler2d,
++            name : accumulationAndLocks,
++            precision: high,
++            filterable: false
++        },
++        {
++            type : float2,
++            name : renderSize,
++            precision: high
++        },
++        {
++            type : float2,
++            name : upscaleSize,
++            precision: high
++        },
++        {
++            type : float2,
++            name : farthestDepthMip1Size,
++            precision: high
++        },
++        {
++            type : float2,
++            name : jitter,
++            precision: high
++        },
++        {
++            type : float,
++            name : deltaPreExposure
++        },
++        {
++            type : float,
++            name : jitterSequenceLength
++        },
++        {
++            type : float,
++            name : velocityFactor
++        },
++        {
++            type : bool,
++            name : hasHistory
++        }
++    ],
++    outputs : [
++        {
++            name : history,
++            target : color,
++            type : float4
++        },
++        {
++            name : color,
++            target : color,
++            type : float4
++        }
++    ],
++    domain : postprocess,
++    depthWrite : false,
++    depthCulling : false
++}
++
++fragment {
++
++#include "fsr3_common.fs"
++
++struct RectificationBox {
++    highp vec3 boxCenter;
++    highp vec3 boxVec;
++    highp vec3 aabbMin;
++    highp vec3 aabbMax;
++    highp float boxCenterWeight;
++};
++
++struct AccumulationPassCommonParams {
++    ivec2 pxHrPos;
++    highp vec2 hrUv;
++    highp vec2 lrUvJittered;
++    highp vec2 lrUvHwSampler;
++    highp vec2 motionVector;
++    highp vec2 reprojectedHrUv;
++    highp float velocity4K;
++    highp float disocclusion;
++    highp float reactiveMask;
++    highp float shadingChange;
++    highp float accumulation;
++    highp float lumaInstabilityFactor;
++    highp float farthestDepthInMeters;
++    bool isExistingSample;
++    bool isNewSample;
++};
++
++struct AccumulationPassData {
++    RectificationBox clippingBox;
++    highp vec3 upsampledColor;
++    highp float upsampledWeight;
++    highp vec3 historyColor;
++    highp float historyWeight;
++    highp float lock;
++    highp float lockContributionThisFrame;
++};
++
++void rectificationBoxAddSample(bool initialSample, inout RectificationBox box,
++        highp vec3 colorSample, highp float sampleWeight) {
++    highp vec3 weightedSample = colorSample * sampleWeight;
++    if (initialSample) {
++        box.aabbMin = colorSample;
++        box.aabbMax = colorSample;
++        box.boxCenter = weightedSample;
++        box.boxVec = colorSample * weightedSample;
++        box.boxCenterWeight = sampleWeight;
++    } else {
++        box.aabbMin = min(box.aabbMin, colorSample);
++        box.aabbMax = max(box.aabbMax, colorSample);
++        box.boxCenter += weightedSample;
++        box.boxVec += colorSample * weightedSample;
++        box.boxCenterWeight += sampleWeight;
++    }
++}
++
++void rectificationBoxComputeVarianceBoxData(inout RectificationBox box) {
++    box.boxCenterWeight = abs(box.boxCenterWeight) > FSR3_FP32_MIN ? box.boxCenterWeight : 1.0;
++    box.boxCenter /= box.boxCenterWeight;
++    box.boxVec /= box.boxCenterWeight;
++    box.boxVec = sqrt(abs(box.boxVec - box.boxCenter * box.boxCenter));
++}
++
++// ------------------------------------------------------------------------------------------------
++// History reprojection, lanczos (reference) 4x4 with deringing
++// ------------------------------------------------------------------------------------------------
++
++highp vec4 loadHistory(ivec2 pos, ivec2 size, ivec2 offset) {
++    // ClampCoord() of ffx_fsr3upscaler_sample.h, which excludes the outer texels
++    ivec2 p = clamp(pos + offset, ivec2(1), size - 2);
++    return texelFetch(materialParams_history, p, 0);
++}
++
++highp vec4 lanczos2(highp vec4 c0, highp vec4 c1, highp vec4 c2, highp vec4 c3, highp float t) {
++    highp float w0 = fsr3Lanczos2(-1.0 - t);
++    highp float w1 = fsr3Lanczos2(-0.0 - t);
++    highp float w2 = fsr3Lanczos2(+1.0 - t);
++    highp float w3 = fsr3Lanczos2(+2.0 - t);
++    return (w0 * c0 + w1 * c1 + w2 * c2 + w3 * c3) / (w0 + w1 + w2 + w3);
++}
++
++highp vec4 historySample(highp vec2 uv, ivec2 size) {
++    highp vec2 pxSample = uv * vec2(size) - 0.5;
++    highp vec2 pxFrac = fract(pxSample);
++    pxSample = clamp(pxSample, vec2(0.0), vec2(size - 1));
++    ivec2 p = ivec2(floor(pxSample));
++
++    highp vec4 rows[4];
++    highp vec4 c11, c21, c12, c22;
++    for (int y = 0; y < 4; y++) {
++        highp vec4 c0 = loadHistory(p, size, ivec2(-1, y - 1));
++        highp vec4 c1 = loadHistory(p, size, ivec2( 0, y - 1));
++        highp vec4 c2 = loadHistory(p, size, ivec2( 1, y - 1));
++        highp vec4 c3 = loadHistory(p, size, ivec2( 2, y - 1));
++        rows[y] = lanczos2(c0, c1, c2, c3, pxFrac.x);
++        if (y == 1) { c11 = c1; c21 = c2; }
++        if (y == 2) { c12 = c1; c22 = c2; }
++    }
++    highp vec4 color = lanczos2(rows[0], rows[1], rows[2], rows[3], pxFrac.y);
++
++    // deringing
++    highp vec4 deringingMin = min(min(c11, c21), min(c12, c22));
++    highp vec4 deringingMax = max(max(c11, c21), max(c12, c22));
++    return clamp(color, deringingMin, deringingMax);
++}
++
++// ------------------------------------------------------------------------------------------------
++// New locks
++// ------------------------------------------------------------------------------------------------
++
++// Inverse of fsr3ComputeHrPosFromLrPos(): at most one render-resolution pixel maps to hrPos.
++highp float loadNewLocks(ivec2 hrPos) {
++    highp vec2 renderSize = materialParams.renderSize;
++    highp vec2 upscaleSize = materialParams.upscaleSize;
++    highp vec2 lo = vec2(hrPos) * renderSize / upscaleSize - 0.5 + materialParams.jitter;
++    ivec2 lrPos = ivec2(ceil(lo));
++    if (!fsr3IsOnScreen(lrPos, ivec2(renderSize))) {
++        return 0.0;
++    }
++    if (fsr3ComputeHrPosFromLrPos(lrPos, materialParams.jitter, renderSize, upscaleSize) != hrPos) {
++        return 0.0;
++    }
++    return texelFetch(materialParams_accumulationAndLocks, lrPos, 0).g;
++}
++
++// ------------------------------------------------------------------------------------------------
++// Accumulation
++// ------------------------------------------------------------------------------------------------
++
++void initPassData(ivec2 pxHrPos, out AccumulationPassCommonParams params,
++        out AccumulationPassData data) {
++    highp vec2 renderSize = materialParams.renderSize;
++
++    params.pxHrPos = pxHrPos;
++    params.hrUv = (vec2(pxHrPos) + 0.5) / materialParams.upscaleSize;
++    params.lrUvJittered = params.hrUv + materialParams.jitter / renderSize;
++    params.lrUvHwSampler = fsr3ClampUv(params.lrUvJittered, renderSize);
++
++    // low resolution motion vectors
++    params.motionVector = texelFetch(materialParams_dilatedMotionVectors,
++            ivec2(params.hrUv * renderSize), 0).rg;
++    params.velocity4K = fsr3Get4KVelocity(params.motionVector);
++
++    params.reprojectedHrUv = params.hrUv + params.motionVector;
++    params.isExistingSample = fsr3IsUvInside(params.reprojectedHrUv);
++
++    params.lumaInstabilityFactor = textureLod(materialParams_lumaInstability,
++            fsr3ClampUv(params.hrUv, renderSize), 0.0).r;
++
++    highp vec2 farthestDepthUv =
++            fsr3ClampUv(params.lrUvJittered, materialParams.farthestDepthMip1Size);
++    params.farthestDepthInMeters =
++            textureLod(materialParams_farthestDepthMip1, farthestDepthUv, 0.0).r;
++
++    params.isNewSample = !params.isExistingSample || !materialParams.hasHistory;
++
++    highp vec4 dilatedReactiveMasks =
++            textureLod(materialParams_reactiveMasks, params.lrUvHwSampler, 0.0);
++    params.reactiveMask = saturate(dilatedReactiveMasks[FSR3_REACTIVE]);
++    params.disocclusion = saturate(dilatedReactiveMasks[FSR3_DISOCCLUSION]);
++    params.shadingChange = saturate(dilatedReactiveMasks[FSR3_SHADING_CHANGE]);
++    params.accumulation = saturate(dilatedReactiveMasks[FSR3_ACCUMULATION]);
++    params.accumulation *= float(round(params.accumulation * 100.0) > 1.0);
++
++    data.clippingBox.boxCenter = vec3(0.0);
++    data.clippingBox.boxVec = vec3(0.0);
++    data.clippingBox.aabbMin = vec3(0.0);
++    data.clippingBox.aabbMax = vec3(0.0);
++    data.clippingBox.boxCenterWeight = 0.0;
++    data.upsampledColor = vec3(0.0);
++    data.historyColor = vec3(0.0);
++    data.historyWeight = 1.0;
++    data.upsampledWeight = 0.0;
++    data.lock = 0.0;
++    data.lockContributionThisFrame = 0.0;
++}
++
++void reprojectHistoryColor(AccumulationPassCommonParams params, inout AccumulationPassData data) {
++    highp vec4 reprojectedHistory =
++            historySample(params.reprojectedHrUv, ivec2(materialParams.upscaleSize));
++    data.historyColor = reprojectedHistory.rgb * materialParams.deltaPreExposure;
++    data.historyColor = fsr3RGBToYCoCg(data.historyColor);
++    data.lock = reprojectedHistory.w;
++}
++
++void updateLockStatus(AccumulationPassCommonParams params, inout AccumulationPassData data) {
++    data.lock *= float(!params.isNewSample);
++
++    highp float lifetimeDecreaseFactor = max(saturate(params.shadingChange),
++            max(params.reactiveMask, params.disocclusion));
++
++    data.lock = max(0.0, data.lock - lifetimeDecreaseFactor * FSR3_LOCK_MAX);
++
++    // compute this frame lock contribution
++    data.lockContributionThisFrame = saturate(
++            saturate(data.lock - FSR3_LOCK_THRESHOLD) * (FSR3_LOCK_MAX - FSR3_LOCK_THRESHOLD));
++
++    highp float newLockIntensity = loadNewLocks(params.pxHrPos) * (1.0 - params.reactiveMask);
++    data.lock = max(0.0, min(data.lock + newLockIntensity, FSR3_LOCK_MAX));
++
++    // preparing for next frame
++    highp float lifetimeDecrease =
++            (0.1 / materialParams.jitterSequenceLength) * (1.0 - lifetimeDecreaseFactor);
++    data.lock = max(0.0, data.lock - lifetimeDecrease);
++
++    // we expect similar motion for next frame, kill lock if that location is outside screen, avoid
++    // locks to be clamped to screen borders
++    highp vec2 estimatedUvNextFrame = params.hrUv - params.motionVector;
++    data.lock *= float(fsr3IsUvInside(estimatedUvNextFrame));
++}
++
++void computeBaseAccumulationWeight(AccumulationPassCommonParams params,
++        inout AccumulationPassData data) {
++    highp float baseAccumulation = params.accumulation;
++    baseAccumulation = min(baseAccumulation, mix(baseAccumulation, 0.15,
++            saturate(max(0.0, (params.velocity4K * materialParams.velocityFactor) / 0.5))));
++    data.historyWeight = baseAccumulation;
++}
++
++highp vec3 loadPreparedColor(ivec2 samplePos) {
++    highp vec3 rgb = max(vec3(0.0), texelFetch(materialParams_color, samplePos, 0).rgb);
++    return fsr3RGBToYCoCg(rgb);
++}
++
++void computeUpsampledColorAndWeight(AccumulationPassCommonParams params,
++        inout AccumulationPassData data) {
++    highp vec2 renderSize = materialParams.renderSize;
++    ivec2 iRenderSize = ivec2(renderSize);
++    highp vec2 downscaleFactor = renderSize / materialParams.upscaleSize;
++
++    // We compute a sliced lanczos filter with 2 lobes (other slices are accumulated temporally)
++    highp vec2 dstOutputPos = vec2(params.pxHrPos) + 0.5;
++    highp vec2 srcOutputPos = dstOutputPos * downscaleFactor;
++    ivec2 srcInputPos = ivec2(floor(srcOutputPos));
++    // this is the un-jittered position of the sample at offset 0,0
++    highp vec2 srcUnjitteredPos = (vec2(srcInputPos) + 0.5) - materialParams.jitter;
++    highp vec2 baseSampleOffset = srcUnjitteredPos - srcOutputPos;
++
++    ivec2 offsetTL;
++    offsetTL.x = (srcUnjitteredPos.x > srcOutputPos.x) ? -2 : -1;
++    offsetTL.y = (srcUnjitteredPos.y > srcOutputPos.y) ? -2 : -1;
++
++    // Flip row/column so that the first 3 rows/columns can always be used for the clip box
++    bool flipRow = srcUnjitteredPos.y > srcOutputPos.y;
++    bool flipCol = srcUnjitteredPos.x > srcOutputPos.x;
++    highp vec2 fOffsetTL = vec2(offsetTL);
++
++    bool isInitialSample = (params.accumulation == 0.0);
++
++    highp vec3 samples[9];
++    for (int row = 0; row < 3; row++) {
++        for (int col = 0; col < 3; col++) {
++            ivec2 sampleColRow = ivec2(flipCol ? (3 - col) : col, flipRow ? (3 - row) : row);
++            ivec2 srcSamplePos = srcInputPos + offsetTL + sampleColRow;
++            ivec2 sampleCoord = fsr3ClampLoad(srcSamplePos, ivec2(0), iRenderSize);
++            highp vec3 s = loadPreparedColor(sampleCoord);
++            if (isInitialSample) {
++                // YCoCg -> RGB -> Tonemap -> YCoCg (use RGB tonemapper to avoid color desaturation)
++                s = fsr3RGBToYCoCg(fsr3Tonemap(fsr3YCoCgToRGB(s)));
++            }
++            samples[row * 3 + col] = s;
++        }
++    }
++
++    // identify how much of each upsampled color to be used for this frame
++    highp float kernelBiasMax = min(1.99, 1.0 + (1.0 / downscaleFactor.x - 1.0));
++    highp float kernelBiasMin = max(1.0, (1.0 + kernelBiasMax) * 0.3);
++    highp float kernelBiasWeight = min(1.0 - params.disocclusion * 0.5,
++            min(1.0 - params.shadingChange, saturate(data.historyWeight * 5.0)));
++    highp float kernelBias = mix(kernelBiasMin, kernelBiasMax, kernelBiasWeight);
++
++    for (int row = 0; row < 3; row++) {
++        for (int col = 0; col < 3; col++) {
++            ivec2 sampleColRow = ivec2(flipCol ? (3 - col) : col, flipRow ? (3 - row) : row);
++            highp vec2 offset = fOffsetTL + vec2(sampleColRow);
++            highp vec2 srcSampleOffset = baseSampleOffset + offset;
++            ivec2 srcSamplePos = srcInputPos + offsetTL + sampleColRow;
++            highp float onScreenFactor = float(fsr3IsOnScreen(srcSamplePos, iRenderSize));
++            highp vec3 s = samples[row * 3 + col];
++
++            if (!isInitialSample) {
++                highp vec2 biased = srcSampleOffset * kernelBias;
++                highp float sampleWeight =
++                        onScreenFactor * fsr3Lanczos2ApproxSq(dot(biased, biased));
++                data.upsampledColor += s * sampleWeight;
++                data.upsampledWeight += sampleWeight;
++            }
++
++            // update rectification box
++            const highp float rectificationCurveBias = -2.3;
++            highp float srcSampleOffsetSq = dot(srcSampleOffset, srcSampleOffset);
++            highp float boxSampleWeight =
++                    exp(rectificationCurveBias * srcSampleOffsetSq) * onScreenFactor;
++            rectificationBoxAddSample(row == 0 && col == 0, data.clippingBox, s, boxSampleWeight);
++        }
++    }
++
++    rectificationBoxComputeVarianceBoxData(data.clippingBox);
++
++    data.upsampledWeight *= float(data.upsampledWeight > FSR3_EPSILON);
++
++    if (data.upsampledWeight > FSR3_EPSILON) {
++        // normalize for deringing (we need to compare colors)
++        data.upsampledColor = data.upsampledColor / data.upsampledWeight;
++        data.upsampledWeight *= FSR3_AVERAGE_LANCZOS_WEIGHT_PER_FRAME;
++        data.upsampledColor = clamp(data.upsampledColor,
++                data.clippingBox.aabbMin, data.clippingBox.aabbMax);
++    }
++
++    // initial samples using tonemapped upsampling
++    if (isInitialSample) {
++        data.upsampledColor = fsr3RGBToYCoCg(
++                fsr3InverseTonemap(fsr3YCoCgToRGB(data.clippingBox.boxCenter)));
++        data.upsampledWeight = 1.0;
++        data.historyWeight = 0.0;
++    }
++}
++
++void rectifyHistory(AccumulationPassCommonParams params, inout AccumulationPassData data) {
++    highp float velocity4kFactor = saturate(params.velocity4K / 20.0);
++    highp float distanceFactor = saturate(0.75 - params.farthestDepthInMeters / 20.0);
++    highp float accumulationFactor = 1.0 - params.accumulation;
++    highp float reactiveFactor = pow(params.reactiveMask, 1.0 / 2.0);
++    highp float shadingChangeFactor = params.shadingChange;
++    highp float boxScaleT = max(velocity4kFactor, max(distanceFactor,
++            max(accumulationFactor, max(reactiveFactor, shadingChangeFactor))));
++
++    highp float boxScale = mix(3.0, 1.0, boxScaleT);
++
++    highp vec3 scaledBoxVec = data.clippingBox.boxVec * vec3(1.7, 1.0, 1.0) * boxScale;
++    highp vec3 clampedScaledBoxVec = max(scaledBoxVec, vec3(1.193e-7));
++    highp vec3 transformedHistoryColor =
++            (data.historyColor - data.clippingBox.boxCenter) / clampedScaledBoxVec;
++
++    if (length(transformedHistoryColor) > 1.0) {
++        highp vec3 clampedHistoryColor = normalize(transformedHistoryColor);
++        highp vec3 finalClampedHistoryColor =
++                (clampedHistoryColor * scaledBoxVec) + data.clippingBox.boxCenter;
++
++        // scale history color using rectification info, also using accumulation mask to avoid
++        // potential invalid color protection
++        highp float historyContribution =
++                max(params.lumaInstabilityFactor, data.lockContributionThisFrame) *
++                params.accumulation * (1.0 - params.disocclusion);
++        data.historyColor = mix(finalClampedHistoryColor, data.historyColor,
++                saturate(historyContribution));
++    }
++}
++
++void accumulate(AccumulationPassCommonParams params, inout AccumulationPassData data) {
++    // avoid invalid values when accumulation and upsampled weight is 0
++    data.historyWeight *= float(data.historyWeight > FSR3_FP16_MIN);
++    data.historyWeight = max(FSR3_EPSILON, data.historyWeight + data.upsampledWeight);
++
++    // YCoCg -> RGB -> Tonemap -> YCoCg (use RGB tonemapper to avoid color desaturation)
++    data.upsampledColor = fsr3RGBToYCoCg(fsr3Tonemap(fsr3YCoCgToRGB(data.upsampledColor)));
++    data.historyColor = fsr3RGBToYCoCg(fsr3Tonemap(fsr3YCoCgToRGB(data.historyColor)));
++
++    highp float alpha = saturate(data.upsampledWeight / data.historyWeight);
++    data.historyColor = mix(data.historyColor, data.upsampledColor, alpha);
++    data.historyColor = fsr3YCoCgToRGB(data.historyColor);
++
++    data.historyColor = fsr3InverseTonemap(data.historyColor);
++}
++
++void postProcess(inout PostProcessInputs postProcess) {
++    ivec2 pxHrPos = ivec2(gl_FragCoord.xy);
++
++    AccumulationPassCommonParams params;
++    AccumulationPassData data;
++    initPassData(pxHrPos, params, data);
++
++    if (params.isExistingSample && !params.isNewSample) {
++        reprojectHistoryColor(params, data);
++    }
++
++    updateLockStatus(params, data);
++    computeBaseAccumulationWeight(params, data);
++    computeUpsampledColorAndWeight(params, data);
++    rectifyHistory(params, data);
++    accumulate(params, data);
++
++    highp vec3 historyColor = max(data.historyColor, vec3(0.0));
++
++    // alpha isn't upscaled, use the closest input sample
++    ivec2 lrPos = clamp(ivec2(floor(params.lrUvJittered * materialParams.renderSize)),
++            ivec2(0), ivec2(materialParams.renderSize) - 1);
++    highp float alpha = texelFetch(materialParams_color, lrPos, 0).a;
++
++    postProcess.history = vec4(historyColor, data.lock);
++    postProcess.color = vec4(historyColor, alpha);
++}
++
++}
+diff --git a/filament/src/materials/fsr3/fsr3_common.fs b/filament/src/materials/fsr3/fsr3_common.fs
+new file mode 100644
+index 00000000..e8b5d2e0
+--- /dev/null
++++ b/filament/src/materials/fsr3/fsr3_common.fs
+@@ -0,0 +1,180 @@
++// This file is derived from the FidelityFX SDK (FSR 3.1 upscaler, v1.1.4).
++//
++// Copyright (C) 2024 Advanced Micro Devices, Inc.
++//
++// Permission is hereby granted, free of charge, to any person obtaining a copy
++// of this software and associated documentation files(the "Software"), to deal
++// in the Software without restriction, including without limitation the rights
++// to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
++// copies of the Software, and to permit persons to whom the Software is
++// furnished to do so, subject to the following conditions :
++//
++// The above copyright notice and this permission notice shall be included in
++// all copies or substantial portions of the Software.
++//
++// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
++// THE SOFTWARE.
++
++//------------------------------------------------------------------------------
++// FSR3 upscaler, common code
++//
++// Conventions (these differ from the FidelityFX SDK where noted):
++// - All passes are fragment shaders; a pass' pixel position is ivec2(gl_FragCoord.xy), which is
++//   also the texel coordinate in the render target on all backends.
++// - uvs are render-target uvs (i.e. y-down on Vulkan/Metal, see uvToRenderTargetUV()).
++// - Motion vectors are in uv units and point to last frame's position: uvPrev = uv + mv.
++// - The jitter is in pixels: the texel at pixel center c holds the scene at c - jitter.
++// - Depth is Filament's reversed-Z, i.e. FFX_FSR3UPSCALER_OPTION_INVERTED_DEPTH.
++// - Color is HDR and already pre-exposed, i.e. FFX_FSR3UPSCALER_OPTION_HDR_COLOR_INPUT with an
++//   exposure of 1.
++// - The render size never differs from the resource size and doesn't change while the history
++//   is valid, so PreviousFrameRenderSize() == MaxRenderSize() == RenderSize().
++//------------------------------------------------------------------------------
++
++#define FSR3_FP16_MIN           6.10e-05
++#define FSR3_FP16_MAX           65504.0
++#define FSR3_EPSILON            FSR3_FP16_MIN
++#define FSR3_TONEMAP_EPSILON    FSR3_FP16_MIN
++#define FSR3_FP32_MAX           3.402823466e+38
++#define FSR3_FP32_MIN           1.175494351e-38
++
++// Must match surface_depth_main.fs
++#define FSR3_VELOCITY_INVALID   32768.0
++
++#define FSR3_RECONSTRUCTED_DEPTH_BILINEAR_WEIGHT_THRESHOLD (FSR3_EPSILON * 10.0)
++
++#define FSR3_UPSAMPLE_LANCZOS_WEIGHT_SCALE      (1.0 / 16.0)
++#define FSR3_AVERAGE_LANCZOS_WEIGHT_PER_FRAME   (0.74 * FSR3_UPSAMPLE_LANCZOS_WEIGHT_SCALE)
++
++#define FSR3_SHADING_CHANGE_SET_SIZE    5
++#define FSR3_LOCK_THRESHOLD             1.0
++#define FSR3_LOCK_MAX                   2.0
++
++// channels of the dilated reactive masks
++#define FSR3_REACTIVE       0
++#define FSR3_DISOCCLUSION   1
++#define FSR3_SHADING_CHANGE 2
++#define FSR3_ACCUMULATION   3
++
++highp float fsr3ReconstructedDepthMvPxThreshold(highp float nearestDepthInMeters) {
++    return mix(0.25, 0.75, saturate(nearestDepthInMeters / 100.0));
++}
++
++highp float fsr3Get4KVelocity(highp vec2 motionVector) {
++    return length(motionVector * vec2(3840.0, 2160.0));
++}
++
++highp float fsr3MinDividedByMax(highp float v0, highp float v1, highp float onZeroReturnValue) {
++    highp float m = max(v0, v1);
++    return m != 0.0 ? min(v0, v1) / m : onZeroReturnValue;
++}
++
++highp float fsr3MinDividedByMax(highp float v0, highp float v1) {
++    return fsr3MinDividedByMax(v0, v1, 0.0);
++}
++
++highp vec3 fsr3YCoCgToRGB(highp vec3 c) {
++    return vec3(c.x + c.y - c.z, c.x + c.z, c.x - c.y - c.z);
++}
++
++highp vec3 fsr3RGBToYCoCg(highp vec3 c) {
++    return vec3(
++             0.25 * c.r + 0.5 * c.g + 0.25 * c.b,
++             0.5  * c.r              - 0.5  * c.b,
++            -0.25 * c.r + 0.5 * c.g - 0.25 * c.b);
++}
++
++highp float fsr3RGBToLuma(highp vec3 linearRgb) {
++    return dot(linearRgb, vec3(0.2126, 0.7152, 0.0722));
++}
++
++highp vec3 fsr3Tonemap(highp vec3 rgb) {
++    return rgb / (max(max(0.0, rgb.r), max(rgb.g, rgb.b)) + 1.0);
++}
++
++highp vec3 fsr3InverseTonemap(highp vec3 rgb) {
++    return rgb / max(FSR3_TONEMAP_EPSILON, 1.0 - max(rgb.r, max(rgb.g, rgb.b)));
++}
++
++bool fsr3IsUvInside(highp vec2 uv) {
++    return all(greaterThanEqual(uv, vec2(0.0))) && all(lessThanEqual(uv, vec2(1.0)));
++}
++
++bool fsr3IsOnScreen(ivec2 pos, ivec2 size) {
++    return all(greaterThanEqual(pos, ivec2(0))) && all(lessThan(pos, size));
++}
++
++ivec2 fsr3ClampLoad(ivec2 pos, ivec2 offset, ivec2 size) {
++    return clamp(pos + offset, ivec2(0), size - 1);
++}
++
++// ClampUv() with the texture size equal to the resource size
++highp vec2 fsr3ClampUv(highp vec2 uv, highp vec2 size) {
++    return clamp(uv * size, vec2(0.5), size - 0.5) / size;
++}
++
++// Linear view-space distance from Filament's (reversed-Z) device depth. depthParams holds
++// {p[2].z, p[3].z, p[2].w, p[3].w} of the view-from-clip matrix, see linearizeDepth().
++highp float fsr3GetViewSpaceDepth(highp float depth, highp vec4 depthParams) {
++    const highp float preventDiv0 = 1.0 / 16777216.0;
++    highp float z = (depth * depthParams.x + depthParams.y) /
++            max(depth * depthParams.z + depthParams.w, preventDiv0);
++    return -z;
++}
++
++// Filament's world units are meters
++highp float fsr3GetViewSpaceDepthInMeters(highp float depth, highp vec4 depthParams) {
++    return fsr3GetViewSpaceDepth(depth, depthParams);
++}
++
++highp ivec2 fsr3ComputeHrPosFromLrPos(ivec2 lrPos, highp vec2 jitter,
++        highp vec2 renderSize, highp vec2 upscaleSize) {
++    highp vec2 srcJitteredPos = vec2(lrPos) + 0.5 - jitter;
++    highp vec2 lrPosInHr = (srcJitteredPos / renderSize) * upscaleSize;
++    return ivec2(floor(lrPosInHr));
++}
++
++struct Fsr3BilinearSamplingData {
++    ivec2 offsets[4];
++    highp float weights[4];
++    ivec2 basePos;
++};
++
++Fsr3BilinearSamplingData fsr3GetBilinearSamplingData(highp vec2 uv, highp vec2 size) {
++    Fsr3BilinearSamplingData data;
++    highp vec2 pxSample = (uv * size) - 0.5;
++    data.basePos = ivec2(floor(pxSample));
++    highp vec2 pxFrac = fract(pxSample);
++    data.offsets[0] = ivec2(0, 0);
++    data.offsets[1] = ivec2(1, 0);
++    data.offsets[2] = ivec2(0, 1);
++    data.offsets[3] = ivec2(1, 1);
++    data.weights[0] = (1.0 - pxFrac.x) * (1.0 - pxFrac.y);
++    data.weights[1] = (pxFrac.x) * (1.0 - pxFrac.y);
++    data.weights[2] = (1.0 - pxFrac.x) * (pxFrac.y);
++    data.weights[3] = (pxFrac.x) * (pxFrac.y);
++    return data;
++}
++
++highp float fsr3Lanczos2NoClamp(highp float x) {
++    // PI is defined by Filament's common_math.glsl
++    return abs(x) < FSR3_EPSILON ? 1.0 :
++            (sin(PI * x) / (PI * x)) * (sin(0.5 * PI * x) / (0.5 * PI * x));
++}
++
++highp float fsr3Lanczos2(highp float x) {
++    return fsr3Lanczos2NoClamp(min(abs(x), 2.0));
++}
++
++// FSR1 lanczos approximation. Input is x*x.
++highp float fsr3Lanczos2ApproxSq(highp float x2) {
++    x2 = min(x2, 4.0);
++    highp float a = (2.0 / 5.0) * x2 - 1.0;
++    highp float b = (1.0 / 4.0) * x2 - 1.0;
++    return ((25.0 / 16.0) * a * a - (25.0 / 16.0 - 1.0)) * (b * b);
++}
+diff --git a/filament/src/materials/fsr3/fsr3_frame_interpolation.mat b/filament/src/materials/fsr3/fsr3_frame_interpolation.mat
+new file mode 100644
+index 00000000..afcc79e3
+--- /dev/null
++++ b/filament/src/materials/fsr3/fsr3_frame_interpolation.mat
+@@ -0,0 +1,214 @@
++// Frame generation: interpolates the frame half-way between the previous and the current final
++// frames, using the game motion vectors (i.e. no optical flow). See fsr3_common.fs for the
++// conventions.
++//
++// Motion vectors point from this frame to the previous one: uvPrev = uv + mv. A surface at uv in
++// the interpolated frame is at uv - mv/2 in this frame and at uv + mv/2 in the previous one. We
++// don't know the motion vector at the interpolated position, so we gather candidates around it
++// (moving objects can cover uv in the interpolated frame without covering it in either frame)
++// and check each candidate against both frames: following the candidate into a frame must find
++// the same motion there (for the previous frame, we assume a constant velocity). The nearest
++// surface found in either frame is the one visible in the interpolated frame; the other frame
++// is blended in only if the same surface is visible there too.
++//
++// Regions where both frames disagree too much use a single frame. Motion that isn't captured by
++// the motion vectors (shadows, reflections, skinning, morphing, transparent objects) will show
++// as ghosting.
++
++material {
++    name : fsr3_frame_interpolation,
++    parameters : [
++        {
++            type : sampler2d,
++            name : previous,
++            precision: high
++        },
++        {
++            type : sampler2d,
++            name : current,
++            precision: high
++        },
++        {
++            type : sampler2d,
++            name : dilatedMotionVectors,
++            precision: high,
++            filterable: false
++        },
++        {
++            type : sampler2d,
++            name : dilatedDepth,
++            precision: high,
++            filterable: false
++        },
++        {
++            type : sampler2d,
++            name : reactiveMasks,
++            precision: high
++        },
++        {
++            type : sampler2d,
++            name : previousMotionVectors,
++            precision: high,
++            filterable: false
++        },
++        {
++            type : sampler2d,
++            name : previousDepth,
++            precision: high,
++            filterable: false
++        },
++        {
++            type : bool,
++            name : hasPreviousMotion
++        },
++        {
++            type : float2,
++            name : renderSize,
++            precision: high
++        },
++        {
++            type : float2,
++            name : outputSize,
++            precision: high
++        }
++    ],
++    outputs : [
++        {
++            name : color,
++            target : color,
++            type : float4
++        }
++    ],
++    domain : postprocess,
++    depthWrite : false,
++    depthCulling : false
++}
++
++fragment {
++
++#include "fsr3_common.fs"
++
++ivec2 renderPos(highp vec2 uv) {
++    return clamp(ivec2(uv * materialParams.renderSize),
++            ivec2(0), ivec2(materialParams.renderSize) - 1);
++}
++
++highp vec2 loadMotionVector(highp vec2 uv) {
++    return texelFetch(materialParams_dilatedMotionVectors, renderPos(uv), 0).rg;
++}
++
++highp float loadDepth(highp vec2 uv) {
++    return texelFetch(materialParams_dilatedDepth, renderPos(uv), 0).r;
++}
++
++highp vec2 loadPreviousMotionVector(highp vec2 uv) {
++    return texelFetch(materialParams_previousMotionVectors, renderPos(uv), 0).rg;
++}
++
++highp float loadPreviousDepth(highp vec2 uv) {
++    return texelFetch(materialParams_previousDepth, renderPos(uv), 0).r;
++}
++
++// Search pattern, in render pixels: two rings around the center
++#define CANDIDATE_COUNT 17
++const highp vec2 candidateOffsets[CANDIDATE_COUNT] = vec2[](
++        vec2(  0.0,   0.0),
++        vec2( -6.0,  -6.0), vec2(  0.0,  -6.0), vec2(  6.0,  -6.0), vec2( -6.0,   0.0),
++        vec2(  6.0,   0.0), vec2( -6.0,   6.0), vec2(  0.0,   6.0), vec2(  6.0,   6.0),
++        vec2(-18.0, -18.0), vec2(  0.0, -18.0), vec2( 18.0, -18.0), vec2(-18.0,   0.0),
++        vec2( 18.0,   0.0), vec2(-18.0,  18.0), vec2(  0.0,  18.0), vec2( 18.0,  18.0));
++
++highp float tolerance(highp vec2 mv, highp vec2 renderTexel) {
++    return 1.5 * max(renderTexel.x, renderTexel.y) + 0.15 * length(mv);
++}
++
++bool isConsistentWithCurrent(highp vec2 uv, highp vec2 mv, highp vec2 renderTexel) {
++    return length(loadMotionVector(uv - 0.5 * mv) - mv) <= tolerance(mv, renderTexel);
++}
++
++bool isConsistentWithPrevious(highp vec2 uv, highp vec2 mv, highp vec2 renderTexel) {
++    if (!materialParams.hasPreviousMotion) {
++        return true;
++    }
++    return length(loadPreviousMotionVector(uv + 0.5 * mv) - mv) <= tolerance(mv, renderTexel);
++}
++
++void postProcess(inout PostProcessInputs postProcess) {
++    highp vec2 uv = (gl_FragCoord.xy) / materialParams.outputSize;
++    highp vec2 renderTexel = 1.0 / materialParams.renderSize;
++
++    // nearest surface (reversed-Z: larger is nearer) consistent with each frame
++    bool foundCurrent = false;
++    bool foundPrevious = false;
++    highp vec2 mvCurrent = vec2(0.0);
++    highp vec2 mvPrevious = vec2(0.0);
++    highp float depthCurrent = -1.0;
++    highp float depthPrevious = -1.0;
++
++    for (int i = 0; i < CANDIDATE_COUNT; i++) {
++        highp vec2 candidate = loadMotionVector(uv + candidateOffsets[i] * renderTexel);
++        if (isConsistentWithCurrent(uv, candidate, renderTexel)) {
++            highp float depth = loadDepth(uv - 0.5 * candidate);
++            if (depth > depthCurrent) {
++                depthCurrent = depth;
++                mvCurrent = candidate;
++                foundCurrent = true;
++            }
++        }
++        if (materialParams.hasPreviousMotion &&
++                isConsistentWithPrevious(uv, candidate, renderTexel)) {
++            highp float depth = loadPreviousDepth(uv + 0.5 * candidate);
++            if (depth > depthPrevious) {
++                depthPrevious = depth;
++                mvPrevious = candidate;
++                foundPrevious = true;
++            }
++        }
++    }
++
++    // Which frame shows the surface visible at uv in the interpolated frame. Without the
++    // previous frame's motion, we trust this frame (and the disocclusion mask).
++    bool useCurrent;
++    highp vec2 mv;
++    if (foundCurrent && foundPrevious) {
++        useCurrent = depthCurrent >= depthPrevious;
++        mv = useCurrent ? mvCurrent : mvPrevious;
++    } else if (foundCurrent || foundPrevious) {
++        useCurrent = foundCurrent;
++        mv = foundCurrent ? mvCurrent : mvPrevious;
++    } else {
++        useCurrent = true;
++        mv = loadMotionVector(uv);
++    }
++
++    highp vec2 uvCurrent = uv - 0.5 * mv;
++    highp vec2 uvPrevious = uv + 0.5 * mv;
++    highp vec4 current = textureLod(materialParams_current,
++            fsr3ClampUv(uvCurrent, materialParams.outputSize), 0.0);
++    highp vec4 previous = textureLod(materialParams_previous,
++            fsr3ClampUv(uvPrevious, materialParams.outputSize), 0.0);
++
++    // the other frame is blended in only if the same surface is visible there too
++    highp float otherWeight;
++    if (useCurrent) {
++        bool visible = fsr3IsUvInside(uvPrevious) && isConsistentWithPrevious(uv, mv, renderTexel);
++        // surfaces disoccluded in this frame have no valid previous sample
++        highp float disocclusion = saturate(textureLod(materialParams_reactiveMasks,
++                fsr3ClampUv(uvCurrent, materialParams.renderSize), 0.0)[FSR3_DISOCCLUSION]);
++        otherWeight = visible ? 0.5 * (1.0 - disocclusion) : 0.0;
++    } else {
++        bool visible = fsr3IsUvInside(uvCurrent) && isConsistentWithCurrent(uv, mv, renderTexel);
++        otherWeight = visible ? 0.5 : 0.0;
++    }
++
++    // don't blend samples that disagree, it shows as double edges
++    highp float difference = length(current.rgb - previous.rgb) /
++            (max(fsr3RGBToLuma(current.rgb), fsr3RGBToLuma(previous.rgb)) + 0.05);
++    otherWeight *= 1.0 - saturate((difference - 0.05) * 8.0);
++
++    highp float previousWeight = useCurrent ? otherWeight : 1.0 - otherWeight;
++    highp vec4 color = mix(current, previous, previousWeight);
++    postProcess.color = vec4(color.rgb, current.a);
++}
++
++}
+diff --git a/filament/src/materials/fsr3/fsr3_luma_diff.mat b/filament/src/materials/fsr3/fsr3_luma_diff.mat
+new file mode 100644
+index 00000000..190ad228
+--- /dev/null
++++ b/filament/src/materials/fsr3/fsr3_luma_diff.mat
+@@ -0,0 +1,159 @@
++// Derived from SpdLoadSourceImage() of ffx_fsr3upscaler_shading_change_pyramid.h (FidelityFX SDK
++// v1.1.4), see fsr3_common.fs for the license and conventions.
++//
++// Outputs the signed luma difference with last frame and its sign, the pyramid of this texture is
++// then built with fsr3_reduce.mat.
++
++material {
++    name : fsr3_luma_diff,
++    parameters : [
++        {
++            type : sampler2d,
++            name : currentLuma,
++            precision: high,
++            filterable: false
++        },
++        {
++            type : sampler2d,
++            name : previousLuma,
++            precision: high,
++            filterable: false
++        },
++        {
++            type : sampler2d,
++            name : dilatedMotionVectors,
++            precision: high,
++            filterable: false
++        },
++        {
++            type : float2,
++            name : renderSize,
++            precision: high
++        },
++        {
++            type : float2,
++            name : jitter,
++            precision: high
++        },
++        {
++            type : float2,
++            name : previousJitter,
++            precision: high
++        },
++        {
++            type : float,
++            name : deltaPreExposure
++        },
++        {
++            type : bool,
++            name : hasHistory
++        }
++    ],
++    outputs : [
++        {
++            name : diff,
++            target : color,
++            type : float2
++        }
++    ],
++    domain : postprocess,
++    depthWrite : false,
++    depthCulling : false
++}
++
++fragment {
++
++#include "fsr3_common.fs"
++
++struct SampleSet {
++    highp float samples[FSR3_SHADING_CHANGE_SET_SIZE];
++};
++
++#define CompareSwap(i, j) { \
++    highp float tmp = min(set.samples[i], set.samples[j]); \
++    set.samples[j] = max(set.samples[i], set.samples[j]); \
++    set.samples[i] = tmp; \
++}
++
++void sortSet(inout SampleSet set) {
++    CompareSwap(0, 3);
++    CompareSwap(1, 4);
++    CompareSwap(0, 2);
++    CompareSwap(1, 3);
++    CompareSwap(0, 1);
++    CompareSwap(2, 4);
++    CompareSwap(1, 2);
++    CompareSwap(3, 4);
++    CompareSwap(2, 3);
++}
++
++const ivec2 sampleOffsets[5] = ivec2[](
++        ivec2(0, 0), ivec2(-1, 0), ivec2(1, 0), ivec2(0, -1), ivec2(0, 1));
++
++highp float computeMinimumDifference(SampleSet set0, SampleSet set1) {
++    highp float minDiff = FSR3_FP16_MAX - 1.0;
++    int a = 0;
++    int b = 0;
++
++    sortSet(set0);
++    sortSet(set1);
++
++    highp float maxValue = min(set0.samples[FSR3_SHADING_CHANGE_SET_SIZE - 1],
++            set1.samples[FSR3_SHADING_CHANGE_SET_SIZE - 1]);
++
++    if (maxValue > FSR3_FP32_MIN) {
++        for (int i = 0; i < FSR3_SHADING_CHANGE_SET_SIZE && (minDiff < FSR3_FP16_MAX); i++) {
++            highp float diff = set0.samples[a] - set1.samples[b];
++            if (abs(diff) > FSR3_FP16_MIN) {
++                diff = sign(diff) * (1.0 - fsr3MinDividedByMax(set0.samples[a], set1.samples[b]));
++                minDiff = (abs(diff) < abs(minDiff)) ? diff : minDiff;
++                a += int(set0.samples[a] < set1.samples[b]);
++                // 'a' can reach the set size on the last iteration, which would read out of
++                // bounds (undefined in GLSL)
++                b += int(set0.samples[min(a, FSR3_SHADING_CHANGE_SET_SIZE - 1)] >= set1.samples[b]);
++            } else {
++                minDiff = FSR3_FP16_MAX;
++            }
++        }
++    }
++    return minDiff * float(minDiff < (FSR3_FP16_MAX - 1.0));
++}
++
++SampleSet getCurrentLumaBilinearSamples(highp vec2 uv, ivec2 renderSize) {
++    highp vec2 uvJittered = uv + materialParams.jitter / materialParams.renderSize;
++    ivec2 basePos = ivec2(floor(uvJittered * materialParams.renderSize));
++    SampleSet set;
++    for (int i = 0; i < FSR3_SHADING_CHANGE_SET_SIZE; i++) {
++        ivec2 samplePos = fsr3ClampLoad(basePos, sampleOffsets[i], renderSize);
++        set.samples[i] = max(texelFetch(materialParams_currentLuma, samplePos, 0).r, FSR3_EPSILON);
++    }
++    return set;
++}
++
++void postProcess(inout PostProcessInputs postProcess) {
++    ivec2 renderSize = ivec2(materialParams.renderSize);
++    ivec2 pxPos = ivec2(gl_FragCoord.xy);
++    highp vec2 uv = (vec2(pxPos) + 0.5) / materialParams.renderSize;
++    highp vec2 motionVector = texelFetch(materialParams_dilatedMotionVectors, pxPos, 0).rg;
++
++    highp float diff = 0.0;
++    if (materialParams.hasHistory) {
++        highp vec2 uvJittered = uv + materialParams.previousJitter / materialParams.renderSize;
++        highp vec2 reprojectedUv = uvJittered + motionVector;
++        if (fsr3IsUvInside(reprojectedUv)) {
++            SampleSet current = getCurrentLumaBilinearSamples(uv, renderSize);
++            SampleSet previous;
++            ivec2 basePos = ivec2(floor(reprojectedUv * materialParams.renderSize));
++            for (int i = 0; i < FSR3_SHADING_CHANGE_SET_SIZE; i++) {
++                ivec2 samplePos = fsr3ClampLoad(basePos, sampleOffsets[i], renderSize);
++                previous.samples[i] = max(texelFetch(materialParams_previousLuma, samplePos, 0).r *
++                        materialParams.deltaPreExposure, FSR3_EPSILON);
++            }
++            diff = computeMinimumDifference(current, previous);
++        }
++    }
++
++    postProcess.diff = vec2(diff, diff != 0.0 ? sign(diff) : 0.0);
++}
++
++}
+diff --git a/filament/src/materials/fsr3/fsr3_luma_instability.mat b/filament/src/materials/fsr3/fsr3_luma_instability.mat
+new file mode 100644
+index 00000000..d10d3774
+--- /dev/null
++++ b/filament/src/materials/fsr3/fsr3_luma_instability.mat
+@@ -0,0 +1,144 @@
++// Derived from ffx_fsr3upscaler_luma_instability.h (FidelityFX SDK v1.1.4), see fsr3_common.fs for
++// the license and conventions.
++
++material {
++    name : fsr3_luma_instability,
++    parameters : [
++        {
++            type : sampler2d,
++            name : dilatedMotionVectors,
++            precision: high,
++            filterable: false
++        },
++        {
++            type : sampler2d,
++            name : reactiveMasks,
++            precision: high
++        },
++        {
++            type : sampler2d,
++            name : currentLuma,
++            precision: high
++        },
++        {
++            type : sampler2d,
++            name : lumaHistory,
++            precision: high
++        },
++        {
++            type : float2,
++            name : renderSize,
++            precision: high
++        },
++        {
++            type : float2,
++            name : jitter,
++            precision: high
++        },
++        {
++            type : float2,
++            name : previousJitter,
++            precision: high
++        },
++        {
++            type : float,
++            name : deltaPreExposure
++        }
++    ],
++    outputs : [
++        {
++            name : newLumaHistory,
++            target : color,
++            type : float4
++        },
++        {
++            name : lumaInstability,
++            target : color,
++            type : float
++        }
++    ],
++    domain : postprocess,
++    depthWrite : false,
++    depthCulling : false
++}
++
++fragment {
++
++#include "fsr3_common.fs"
++
++#define N_MINUS_1 0
++#define N_MINUS_2 1
++#define N_MINUS_3 2
++#define N_MINUS_4 3
++
++highp float computeLumaInstabilityFactor(inout highp vec4 lumaHistory,
++        highp float currentFrameLuma) {
++    highp float lumaInstability = 0.0;
++    highp float diffs0 = currentFrameLuma - lumaHistory[N_MINUS_1];
++    highp float similarity0 = fsr3MinDividedByMax(currentFrameLuma, lumaHistory[N_MINUS_1], 1.0);
++
++    highp float maxSimilarity = similarity0;
++    if (similarity0 < 1.0) {
++        for (int i = N_MINUS_2; i <= N_MINUS_4; i++) {
++            highp float diffs1 = currentFrameLuma - lumaHistory[i];
++            highp float similarity1 = fsr3MinDividedByMax(currentFrameLuma, lumaHistory[i]);
++            if (sign(diffs0) == sign(diffs1)) {
++                maxSimilarity = max(maxSimilarity, similarity1);
++            }
++        }
++        lumaInstability = float(maxSimilarity > similarity0);
++    }
++
++    // shift history
++    lumaHistory[N_MINUS_4] = lumaHistory[N_MINUS_3];
++    lumaHistory[N_MINUS_3] = lumaHistory[N_MINUS_2];
++    lumaHistory[N_MINUS_2] = lumaHistory[N_MINUS_1];
++    lumaHistory[N_MINUS_1] = currentFrameLuma;
++
++    return lumaInstability * float(lumaHistory[N_MINUS_4] != 0.0);
++}
++
++void postProcess(inout PostProcessInputs postProcess) {
++    ivec2 pxPos = ivec2(gl_FragCoord.xy);
++    highp vec2 renderSize = materialParams.renderSize;
++
++    highp float lumaInstabilityFactor = 0.0;
++    highp vec4 lumaHistory = vec4(0.0);
++
++    highp vec2 dilatedMotionVector = texelFetch(materialParams_dilatedMotionVectors, pxPos, 0).rg;
++    highp vec2 uv = (vec2(pxPos) + 0.5) / renderSize;
++    highp vec2 uvCurrFrameJittered = uv + materialParams.jitter / renderSize;
++    highp vec2 uvPrevFrameJittered = uv + materialParams.previousJitter / renderSize;
++    highp vec2 reprojectedUv = uvPrevFrameJittered + dilatedMotionVector;
++
++    if (fsr3IsUvInside(reprojectedUv)) {
++        highp vec2 uvReactiveHw = fsr3ClampUv(uvCurrFrameJittered, renderSize);
++        highp vec4 dilatedReactiveMasks =
++                textureLod(materialParams_reactiveMasks, uvReactiveHw, 0.0);
++        highp float reactiveMask = saturate(dilatedReactiveMasks[FSR3_REACTIVE]);
++        highp float disocclusion = saturate(dilatedReactiveMasks[FSR3_DISOCCLUSION]);
++        highp float shadingChange = saturate(dilatedReactiveMasks[FSR3_SHADING_CHANGE]);
++        highp float accumulation = saturate(dilatedReactiveMasks[FSR3_ACCUMULATION]);
++
++        // accumulation is 0 when there is no history
++        if (accumulation > 0.9) {
++            highp float currentFrameLuma =
++                    textureLod(materialParams_currentLuma, uvReactiveHw, 0.0).r;
++            highp vec2 reprojectedUvHw = fsr3ClampUv(reprojectedUv, renderSize);
++            lumaHistory = textureLod(materialParams_lumaHistory, reprojectedUvHw, 0.0) *
++                    materialParams.deltaPreExposure;
++
++            lumaInstabilityFactor = computeLumaInstabilityFactor(lumaHistory, currentFrameLuma);
++
++            highp float velocityWeight =
++                    1.0 - saturate(fsr3Get4KVelocity(dilatedMotionVector) / 20.0);
++            lumaInstabilityFactor *= velocityWeight * (1.0 - disocclusion) *
++                    (1.0 - reactiveMask) * (1.0 - shadingChange);
++        }
++    }
++
++    postProcess.newLumaHistory = lumaHistory;
++    postProcess.lumaInstability = lumaInstabilityFactor;
++}
++
++}
+diff --git a/filament/src/materials/fsr3/fsr3_prepare_inputs.mat b/filament/src/materials/fsr3/fsr3_prepare_inputs.mat
+new file mode 100644
+index 00000000..520f43d9
+--- /dev/null
++++ b/filament/src/materials/fsr3/fsr3_prepare_inputs.mat
+@@ -0,0 +1,150 @@
++// Derived from ffx_fsr3upscaler_prepare_inputs.h (FidelityFX SDK v1.1.4), see fsr3_common.fs
++// for the license and conventions.
++//
++// Differences with the original:
++// - The reconstructed previous depth isn't generated here (it needs scattered atomic writes), the
++//   disocclusion is instead computed from last frame's dilated depth, see
++//   fsr3_prepare_reactivity.mat.
++// - Pixels not covered by the velocity pass get a motion vector reprojected from the depth
++//   buffer, which only accounts for the camera motion.
++
++material {
++    name : fsr3_prepare_inputs,
++    parameters : [
++        {
++            type : sampler2d,
++            name : color,
++            precision: high
++        },
++        {
++            type : sampler2d,
++            name : depth,
++            precision: high,
++            filterable: false
++        },
++        {
++            type : sampler2d,
++            name : velocity,
++            precision: high,
++            filterable: false
++        },
++        {
++            type : mat4,
++            name : reprojection,
++            precision: high
++        },
++        {
++            type : float4,
++            name : depthParams,
++            precision: high
++        },
++        {
++            type : float2,
++            name : renderSize,
++            precision: high
++        },
++        {
++            type : float2,
++            name : jitter,
++            precision: high
++        }
++    ],
++    outputs : [
++        {
++            name : dilatedMotionVector,
++            target : color,
++            type : float2
++        },
++        {
++            name : dilatedDepth,
++            target : color,
++            type : float
++        },
++        {
++            name : luma,
++            target : color,
++            type : float
++        },
++        {
++            name : farthestDepth,
++            target : color,
++            type : float
++        }
++    ],
++    domain : postprocess,
++    depthWrite : false,
++    depthCulling : false
++}
++
++fragment {
++
++#include "fsr3_common.fs"
++
++highp float loadInputDepth(ivec2 pos) {
++    ivec2 renderSize = ivec2(materialParams.renderSize);
++    return texelFetch(materialParams_depth, fsr3ClampLoad(pos, ivec2(0), renderSize), 0).r;
++}
++
++highp vec2 loadInputMotionVector(ivec2 pos, highp float depth) {
++    if (depth > 0.0) {
++        // Covered by the structure pass: its velocity buffer holds the screen motion since the
++        // previous frame in texels (x right, y up); FSR3 wants render-target uvs pointing to
++        // last frame's position.
++        highp vec2 velocity = texelFetch(materialParams_velocity, pos, 0).rg;
++        highp vec2 uv = (vec2(pos) + 0.5) / materialParams.renderSize;
++        highp vec2 prevUv = uv - velocity / materialParams.renderSize;
++        return uvToRenderTargetUV(prevUv) - uvToRenderTargetUV(uv);
++    }
++    // Nothing was drawn here (the sky): reproject the (un-jittered) pixel center using the
++    // depth buffer and the camera transforms.
++    highp vec2 uv = (vec2(pos) + 0.5 - materialParams.jitter) / materialParams.renderSize;
++    highp vec2 ndc = uvToRenderTargetUV(uv) * 2.0 - 1.0;
++    highp vec4 q = materialParams.reprojection * vec4(ndc, depth, 1.0);
++    highp vec2 prevUv = uvToRenderTargetUV((q.xy / q.w) * 0.5 + 0.5);
++    return prevUv - uv;
++}
++
++void postProcess(inout PostProcessInputs postProcess) {
++    ivec2 pxPos = ivec2(gl_FragCoord.xy);
++    ivec2 renderSize = ivec2(materialParams.renderSize);
++
++    // FindDepthExtents(), with reversed-Z
++    const ivec2 sampleOffsets[9] = ivec2[](
++            ivec2( 0,  0), ivec2( 1,  0), ivec2( 0,  1), ivec2( 0, -1), ivec2(-1,  0),
++            ivec2(-1,  1), ivec2( 1,  1), ivec2(-1, -1), ivec2( 1, -1));
++
++    highp float depth[9];
++    for (int i = 0; i < 9; i++) {
++        depth[i] = loadInputDepth(pxPos + sampleOffsets[i]);
++    }
++
++    ivec2 nearestCoord = pxPos;
++    highp float nearest = depth[0];
++    highp float farthest = depth[0];
++    for (int i = 1; i < 9; i++) {
++        ivec2 pos = pxPos + sampleOffsets[i];
++        if (fsr3IsOnScreen(pos, renderSize)) {
++            highp float d = depth[i];
++            if (d > nearest) {
++                farthest = min(farthest, d);
++                nearestCoord = pos;
++                nearest = d;
++            }
++        }
++    }
++
++    // DilateMotionVector(), with low resolution motion vectors
++    highp vec2 dilatedMotionVector = loadInputMotionVector(nearestCoord, nearest);
++
++    highp float farthestDepthInMeters = min(
++            fsr3GetViewSpaceDepthInMeters(farthest, materialParams.depthParams), FSR3_FP16_MAX);
++
++    highp vec3 rgb = max(vec3(0.0), texelFetch(materialParams_color, pxPos, 0).rgb);
++
++    postProcess.dilatedMotionVector = dilatedMotionVector;
++    postProcess.dilatedDepth = nearest;
++    postProcess.luma = fsr3RGBToLuma(rgb);
++    postProcess.farthestDepth = farthestDepthInMeters;
++}
++
++}
+diff --git a/filament/src/materials/fsr3/fsr3_prepare_reactivity.mat b/filament/src/materials/fsr3/fsr3_prepare_reactivity.mat
+new file mode 100644
+index 00000000..ca54bc7a
+--- /dev/null
++++ b/filament/src/materials/fsr3/fsr3_prepare_reactivity.mat
+@@ -0,0 +1,301 @@
++// Derived from ffx_fsr3upscaler_prepare_reactivity.h (FidelityFX SDK v1.1.4), see fsr3_common.fs
++// for the license and conventions.
++//
++// Differences with the original:
++// - The disocclusion test uses last frame's dilated depth transformed into this frame's view
++//   space, instead of this frame's depth scattered to last frame's positions.
++// - There are no user-provided reactive or transparency-and-composition masks.
++// - New locks are stored at the render resolution in the 2nd output, the accumulation pass maps
++//   them to the upscaled resolution.
++
++material {
++    name : fsr3_prepare_reactivity,
++    parameters : [
++        {
++            type : sampler2d,
++            name : dilatedMotionVectors,
++            precision: high,
++            filterable: false
++        },
++        {
++            type : sampler2d,
++            name : dilatedDepth,
++            precision: high,
++            filterable: false
++        },
++        {
++            type : sampler2d,
++            name : previousDepth,
++            precision: high,
++            filterable: false
++        },
++        {
++            type : sampler2d,
++            name : shadingChange,
++            precision: high
++        },
++        {
++            type : sampler2d,
++            name : previousAccumulation,
++            precision: high
++        },
++        {
++            type : sampler2d,
++            name : currentLuma,
++            precision: high,
++            filterable: false
++        },
++        {
++            type : mat4,
++            name : viewFromPreviousClip,
++            precision: high
++        },
++        {
++            type : float4,
++            name : depthParams,
++            precision: high
++        },
++        {
++            type : float2,
++            name : renderSize,
++            precision: high
++        },
++        {
++            type : float2,
++            name : shadingChangeSize,
++            precision: high
++        },
++        {
++            type : float2,
++            name : jitter,
++            precision: high
++        },
++        {
++            type : float2,
++            name : previousJitter,
++            precision: high
++        },
++        {
++            type : float,
++            name : accumulationAddedPerFrame
++        },
++        {
++            type : float,
++            name : minDisocclusionAccumulation
++        },
++        {
++            type : bool,
++            name : hasHistory
++        }
++    ],
++    outputs : [
++        {
++            name : reactiveMasks,
++            target : color,
++            type : float4
++        },
++        {
++            name : accumulationAndLocks,
++            target : color,
++            type : float2
++        }
++    ],
++    domain : postprocess,
++    depthWrite : false,
++    depthCulling : false
++}
++
++fragment {
++
++#include "fsr3_common.fs"
++
++highp float getViewSpaceDepth(highp float depth) {
++    return fsr3GetViewSpaceDepth(depth, materialParams.depthParams);
++}
++
++// View-space distance, in this frame's view, of the surface visible last frame at pos
++highp float loadPreviousViewSpaceDepth(ivec2 pos) {
++    highp float depth = texelFetch(materialParams_previousDepth, pos, 0).r;
++    highp vec2 uv = (vec2(pos) + 0.5 - materialParams.previousJitter) / materialParams.renderSize;
++    highp vec2 ndc = uvToRenderTargetUV(uv) * 2.0 - 1.0;
++    highp vec4 p = materialParams.viewFromPreviousClip * vec4(ndc, depth, 1.0);
++    return -p.z / p.w;
++}
++
++highp float computeDisocclusions(highp vec2 uv, highp vec2 motionVector,
++        highp float currentDepthViewSpace) {
++    ivec2 renderSize = ivec2(materialParams.renderSize);
++    highp float nearestDepthInMeters = min(currentDepthViewSpace, FSR3_FP16_MAX);
++    highp float threshold = fsr3ReconstructedDepthMvPxThreshold(nearestDepthInMeters);
++    motionVector *= float(fsr3Get4KVelocity(motionVector) > threshold);
++
++    highp vec2 reprojectedUv = uv + motionVector;
++    Fsr3BilinearSamplingData bilinearInfo =
++            fsr3GetBilinearSamplingData(reprojectedUv, materialParams.renderSize);
++
++    highp float disocclusion = 0.0;
++    highp float weightSum = 0.0;
++    bool potentialDisocclusion = true;
++
++    for (int i = 0; i < 4 && potentialDisocclusion; i++) {
++        ivec2 samplePos = fsr3ClampLoad(bilinearInfo.basePos, bilinearInfo.offsets[i], renderSize);
++        highp float weight = bilinearInfo.weights[i];
++        if (weight > FSR3_RECONSTRUCTED_DEPTH_BILINEAR_WEIGHT_THRESHOLD) {
++            highp float prevDepthViewSpace = loadPreviousViewSpaceDepth(samplePos);
++            highp float depthDifference = currentDepthViewSpace - prevDepthViewSpace;
++            potentialDisocclusion = potentialDisocclusion && (depthDifference > FSR3_FP32_MIN);
++            if (potentialDisocclusion) {
++                highp float halfViewportWidth = length(materialParams.renderSize * 0.5);
++                highp float depthThreshold = max(currentDepthViewSpace, prevDepthViewSpace);
++                const highp float Ksep = 1.37e-05;
++                highp float requiredDepthSeparation = Ksep * halfViewportWidth * depthThreshold;
++                disocclusion += saturate(requiredDepthSeparation / depthDifference) * weight;
++                weightSum += weight;
++            }
++        }
++    }
++
++    return (potentialDisocclusion && weightSum > 0.0) ?
++            saturate(1.0 - disocclusion / weightSum) : 0.0;
++}
++
++highp float computeMotionDivergence(highp vec2 uv, highp vec2 motionVector,
++        highp float currentDepthSample) {
++    ivec2 renderSize = ivec2(materialParams.renderSize);
++    ivec2 reprojectedPos = clamp(ivec2((uv + motionVector) * materialParams.renderSize),
++            ivec2(0), renderSize - 1);
++    highp float reprojectedDepth = texelFetch(materialParams_dilatedDepth, reprojectedPos, 0).r;
++    highp vec2 reprojectedMotionVector =
++            texelFetch(materialParams_dilatedMotionVectors, reprojectedPos, 0).rg;
++
++    highp float reprojectedVelocity = fsr3Get4KVelocity(reprojectedMotionVector);
++    highp float velocity4K = fsr3Get4KVelocity(motionVector);
++    if (velocity4K <= 0.0) {
++        // avoids 0/0 below, the velocity factor is 0 in that case anyway
++        return 0.0;
++    }
++
++    highp float nucleusDepthInMeters =
++            fsr3GetViewSpaceDepthInMeters(reprojectedDepth, materialParams.depthParams);
++    highp float currentDepthInMeters =
++            fsr3GetViewSpaceDepthInMeters(currentDepthSample, materialParams.depthParams);
++    highp float distanceFactor = fsr3MinDividedByMax(nucleusDepthInMeters, currentDepthInMeters);
++    highp float velocityFactor = saturate(velocity4K / 10.0);
++    return (1.0 - saturate(reprojectedVelocity / velocity4K)) * distanceFactor * velocityFactor;
++}
++
++highp float computeThinFeatureConfidence(ivec2 pxPos) {
++    //  1 2 3
++    //  4 0 5
++    //  6 7 8
++    const int nucleusIndex = 0;
++    const ivec2 sampleOffsets[9] = ivec2[](
++            ivec2( 0,  0), ivec2(-1, -1), ivec2( 0, -1), ivec2( 1, -1), ivec2(-1,  0),
++            ivec2( 1,  0), ivec2(-1,  1), ivec2( 0,  1), ivec2( 1,  1));
++
++    ivec2 renderSize = ivec2(materialParams.renderSize);
++    highp float samples[9];
++    highp float lumaMin = FSR3_FP32_MAX;
++    highp float lumaMax = FSR3_FP32_MIN;
++    for (int i = 0; i < 9; i++) {
++        ivec2 samplePos = fsr3ClampLoad(pxPos, sampleOffsets[i], renderSize);
++        samples[i] = texelFetch(materialParams_currentLuma, samplePos, 0).r;
++        lumaMin = min(lumaMin, samples[i]);
++        lumaMax = max(lumaMax, samples[i]);
++    }
++
++    // A flat neighborhood can't be a ridge. The original relies on NaN comparisons (0/0 below)
++    // to reach the same result, which GLSL compilers don't reliably preserve.
++    if (lumaMax <= lumaMin) {
++        return 0.0;
++    }
++
++    const highp float threshold = 0.9;
++    highp float dissimilarLumaMin = FSR3_FP32_MAX;
++    highp float dissimilarLumaMax = 0.0;
++
++    uint patternMask = 1u << uint(nucleusIndex); // flag nucleus as similar
++    const uint rejectionMasks[4] = uint[](
++            (1u << 1u) | (1u << 2u) | (1u << 4u) | 1u,  // upper left
++            (1u << 2u) | (1u << 3u) | (1u << 5u) | 1u,  // upper right
++            (1u << 4u) | (1u << 6u) | (1u << 7u) | 1u,  // lower left
++            (1u << 5u) | (1u << 7u) | (1u << 8u) | 1u); // lower right
++
++    for (int i = 1; i < 9; i++) {
++        highp float difference = abs(samples[i] - samples[nucleusIndex]) / (lumaMax - lumaMin);
++        if (difference < threshold) {
++            patternMask |= 1u << uint(i);
++        } else {
++            dissimilarLumaMin = min(dissimilarLumaMin, samples[i]);
++            dissimilarLumaMax = max(dissimilarLumaMax, samples[i]);
++        }
++    }
++
++    bool isRidge = samples[nucleusIndex] > dissimilarLumaMax ||
++            samples[nucleusIndex] < dissimilarLumaMin;
++    if (!isRidge) {
++        return 0.0;
++    }
++
++    for (int i = 0; i < 4; i++) {
++        if ((patternMask & rejectionMasks[i]) == rejectionMasks[i]) {
++            return 0.0;
++        }
++    }
++
++    return 1.0 - lumaMin / lumaMax;
++}
++
++highp float updateAccumulation(highp vec2 uv, highp vec2 motionVector,
++        highp float disocclusion, highp float shadingChange, out highp float accumulationToStore) {
++    highp vec2 reprojectedUv = uv + motionVector;
++    highp float accumulation = 0.0;
++    if (materialParams.hasHistory && fsr3IsUvInside(reprojectedUv)) {
++        highp vec2 reprojectedUvHw = fsr3ClampUv(reprojectedUv, materialParams.renderSize);
++        accumulation = saturate(
++                textureLod(materialParams_previousAccumulation, reprojectedUvHw, 0.0).r);
++    }
++
++    accumulation = mix(accumulation, 0.0, shadingChange);
++    accumulation = mix(accumulation,
++            min(materialParams.minDisocclusionAccumulation, accumulation), disocclusion);
++    accumulation *= float(round(accumulation * 100.0) > 1.0);
++
++    // update for next frame, normalized to be stored in unorm
++    accumulationToStore = saturate(accumulation + materialParams.accumulationAddedPerFrame);
++    return accumulation;
++}
++
++highp float computeShadingChange(highp vec2 uv) {
++    // NOTE: Here we re-apply jitter, will be reverted again when sampled in accumulation pass
++    highp vec2 shadingChangeUv = fsr3ClampUv(uv - materialParams.jitter / materialParams.renderSize,
++            materialParams.shadingChangeSize);
++    return saturate(textureLod(materialParams_shadingChange, shadingChangeUv, 0.0).r);
++}
++
++void postProcess(inout PostProcessInputs postProcess) {
++    ivec2 pxPos = ivec2(gl_FragCoord.xy);
++    highp vec2 uv = (vec2(pxPos) + 0.5) / materialParams.renderSize;
++    highp vec2 motionVector = texelFetch(materialParams_dilatedMotionVectors, pxPos, 0).rg;
++    highp float dilatedDepth = texelFetch(materialParams_dilatedDepth, pxPos, 0).r;
++
++    highp float disocclusion = materialParams.hasHistory ?
++            computeDisocclusions(uv, motionVector, getViewSpaceDepth(dilatedDepth)) : 0.0;
++
++    // there are no reactive masks, so DilateReactiveMasks() is always 0
++    highp float shadingChange = computeShadingChange(uv);
++    highp float motionDivergence = computeMotionDivergence(uv, motionVector, dilatedDepth);
++    highp float finalReactiveness = motionDivergence;
++
++    highp float accumulationToStore;
++    highp float accumulation = updateAccumulation(uv, motionVector, disocclusion, shadingChange,
++            accumulationToStore);
++
++    highp float lockStrength = computeThinFeatureConfidence(pxPos);
++
++    postProcess.reactiveMasks = vec4(finalReactiveness, disocclusion, shadingChange, accumulation);
++    postProcess.accumulationAndLocks = vec2(accumulationToStore,
++            lockStrength > (1.0 / 100.0) ? lockStrength : 0.0);
++}
++
++}
+diff --git a/filament/src/materials/fsr3/fsr3_reduce.mat b/filament/src/materials/fsr3/fsr3_reduce.mat
+new file mode 100644
+index 00000000..8779e6d6
+--- /dev/null
++++ b/filament/src/materials/fsr3/fsr3_reduce.mat
+@@ -0,0 +1,37 @@
++// Replaces the single pass downsampler (SPD) used by the FSR3 upscaler for the luma and shading
++// change pyramids: each invocation averages 2x2 texels of the source, which
++// is SpdReduce4() of ffx_fsr3upscaler_luma_pyramid.h and ffx_fsr3upscaler_shading_change_pyramid.h.
++// The source is either another texture or a single-level view of the previous level.
++
++material {
++    name : fsr3_reduce,
++    parameters : [
++        {
++            type : sampler2d,
++            name : source,
++            precision: high,
++            filterable: false
++        },
++        {
++            type : int2,
++            name : sourceSize
++        }
++    ],
++    domain : postprocess,
++    depthWrite : false,
++    depthCulling : false
++}
++
++fragment {
++
++void postProcess(inout PostProcessInputs postProcess) {
++    ivec2 pos = ivec2(gl_FragCoord.xy) * 2;
++    ivec2 last = materialParams.sourceSize - 1;
++    highp vec4 s00 = texelFetch(materialParams_source, min(pos + ivec2(0, 0), last), 0);
++    highp vec4 s10 = texelFetch(materialParams_source, min(pos + ivec2(1, 0), last), 0);
++    highp vec4 s01 = texelFetch(materialParams_source, min(pos + ivec2(0, 1), last), 0);
++    highp vec4 s11 = texelFetch(materialParams_source, min(pos + ivec2(1, 1), last), 0);
++    postProcess.color = (s00 + s10 + s01 + s11) * 0.25;
++}
++
++}
+diff --git a/filament/src/materials/fsr3/fsr3_shading_change.mat b/filament/src/materials/fsr3/fsr3_shading_change.mat
+new file mode 100644
+index 00000000..a0fe6d56
+--- /dev/null
++++ b/filament/src/materials/fsr3/fsr3_shading_change.mat
+@@ -0,0 +1,66 @@
++// Derived from ffx_fsr3upscaler_shading_change.h (FidelityFX SDK v1.1.4), see fsr3_common.fs for
++// the license and conventions.
++//
++// Runs at half the render resolution. The pyramid's level 0 is half the render resolution.
++
++material {
++    name : fsr3_shading_change,
++    parameters : [
++        {
++            type : sampler2d,
++            name : pyramid,
++            precision: high
++        },
++        {
++            type : float2,
++            name : renderSize,
++            precision: high
++        },
++        {
++            type : float2,
++            name : shadingChangeSize,
++            precision: high
++        },
++        {
++            type : float2,
++            name : jitter,
++            precision: high
++        }
++    ],
++    outputs : [
++        {
++            name : shadingChange,
++            target : color,
++            type : float
++        }
++    ],
++    domain : postprocess,
++    depthWrite : false,
++    depthCulling : false
++}
++
++fragment {
++
++#include "fsr3_common.fs"
++
++#define MIP_LEVELS_TO_USE 3
++
++void postProcess(inout PostProcessInputs postProcess) {
++    ivec2 pxPos = ivec2(gl_FragCoord.xy);
++    highp vec2 uv = (vec2(pxPos) + 0.5) / materialParams.shadingChangeSize;
++    highp vec2 uvJittered = uv + materialParams.jitter / materialParams.renderSize;
++    highp vec2 mipUv = fsr3ClampUv(uvJittered, materialParams.shadingChangeSize);
++
++    highp float shadingChange = 0.0;
++    for (int level = 0; level < MIP_LEVELS_TO_USE; level++) {
++        highp vec2 s = textureLod(materialParams_pyramid, mipUv, float(level)).rg;
++        highp float value = abs(s.x * s.y);
++        if (value > 0.0) {
++            shadingChange = max(shadingChange, value);
++        }
++    }
++
++    postProcess.shadingChange = saturate(shadingChange);
++}
++
++}

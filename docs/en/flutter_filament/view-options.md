@@ -525,6 +525,8 @@ Fluent builder for creating a [ColorGrading] object.
 | `preventFlickering` | `bool preventFlickering` | Holds the `preventFlickering` property or configuration state. |
 | `historyReprojection` | `bool historyReprojection` | Holds the `historyReprojection` property or configuration state. |
 | `motionVectors` | `bool motionVectors` | Renders per-pixel motion vectors in the structure pass (which then runs at full resolution) and reprojects the TAA history with them instead of the camera matrices alone, so moving, transform-animated, skinned and morphed objects stop ghosting (a shared `SkinningBuffer` keeps no previous palette). Export the buffer with `FilamentView.motionVectorTexture` / `MotionVectorBuffer`; needs `FilamentView.motionVectorsSupported`. Default `false`. |
+| `algorithm` | `TaaAlgorithm algorithm` | `TaaAlgorithm.filament` (Filament's TAA) or `TaaAlgorithm.fsr3`: the FidelityFX Super Resolution 3.1 upscaler as fragment passes, fed by the structure pass motion vectors (implied); only `upscaling`, `sharpness`, `lodBias` and `jitterPattern` apply; feature level 1, no stereo; an external upscaler (DLSS) takes precedence. Default `filament`. |
+| `frameGeneration` | `bool frameGeneration` | FSR3 frame generation: an interpolated frame is presented before each rendered frame (double the presented rate, half a frame of latency). Needs `TaaAlgorithm.fsr3` and a view rendering into the swap chain without guard band; with `SwapChainConfig.disableVsync` the renderer paces the two presents. Default `false`. |
 | `hashCode` | `int get hashCode` | Checks current state or capability and returns a boolean value. |
 | `copyToNative` | `void copyToNative(ffi_gen.filament_temporal_anti_aliasing_options out)` | Executes `copyToNative` operation. |
 

@@ -212,7 +212,19 @@ typedef struct filament_temporal_anti_aliasing_options {
     // Render per-pixel motion vectors in the structure pass (full resolution) and reproject
     // the TAA history with them. See filament_view_set_motion_vector_texture.
     bool motionVectors;
+    // filament_taa_algorithm: 0 Filament's TAA, 1 the FSR3 upscaler (implies motionVectors;
+    // only upscaling, sharpness, lodBias and jitterPattern apply; needs feature level 1, no
+    // stereo; an external upscaler takes precedence).
+    uint8_t algorithm;
+    // FSR3 frame generation: an interpolated frame is presented before each rendered frame
+    // (the view must render into the swap chain without guard band).
+    bool frameGeneration;
 } filament_temporal_anti_aliasing_options;
+
+typedef enum filament_taa_algorithm {
+    FILAMENT_TAA_ALGORITHM_FILAMENT = 0,
+    FILAMENT_TAA_ALGORITHM_FSR3 = 1
+} filament_taa_algorithm;
 
 typedef struct filament_screen_space_reflections_options {
     float thickness;

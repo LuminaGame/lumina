@@ -15,6 +15,7 @@ are upstream v1.77.2 with exactly these files applied in order.
 | `0006-external-upscaler-pass.patch` | `filament/backend/include/backend/ExternalPass.h` (new), `backend/{DriverEnums.h,platforms/VulkanPlatform.h}`, `backend/src/vulkan/{VulkanDriver,VulkanTexture,platform/VulkanPlatform}.cpp`, the other drivers' no-ops, `filament/include/filament/{Options,View}.h`, `filament/src/{PostProcessManager,View}.*`, `filament/src/details/{Renderer,View}.*` | An external upscaler (DLSS) behind dynamic resolution: `DynamicResolutionOptions::upscaler`, `View::setExternalUpscaler`, the `externalPass` driver command that hands Vulkan images and the recording command buffer to a client callback, and client-requested Vulkan extensions. |
 | `0008-restir-direct-lighting.patch` | `filament/include/filament/{Options,View,LightManager}.h`, `filament/src/{PostProcessManager,RendererUtils,FrameHistory}.*`, `filament/src/details/{Renderer,View}.*`, `filament/src/components/LightManager.*`, `filament/src/ds/ColorPassDescriptorSet.*`, `filament/src/materials/rt/restir*.mat` (new), `libs/filabridge` (bindings 14/15, `restirMode` uniform), `libs/filamat/src/shaders/{Sib,Uib}Generator.cpp`, `shaders/src/surface_light_punctual.fs` | ReSTIR direct lighting: `RestirOptions` on the view, a per-frame light buffer texture of every punctual light, candidate / temporal / spatial resampling and visibility passes as ray query materials, and the lit shaders shading the one resampled light; also fixes the vertical flip of the ray query materials' depth reconstruction. |
 | `0007-vulkan-ray-query.patch` | `filament/backend/include/backend/AccelerationStructure.h` (new), `backend/src/vulkan/VulkanAccelerationStructure.*` (new), `backend/{DriverEnums.h,Handle.h,private/backend/{Driver.h,DriverAPI.inc}}`, the Vulkan driver, context, platform, handles, buffer and descriptor-set caches, the other drivers' no-ops, `filament/include/filament/{Engine,LightManager,RenderableManager,Scene,View}.h`, `filament/src/{PostProcessManager,RenderPrimitive,RendererUtils,MaterialParser,MaterialDefinition}.*`, `filament/src/details/{Renderer,Scene,View,VertexBuffer,IndexBuffer,Engine}.*`, `filament/src/ds/*`, `filament/src/materials/rt/` (new), `libs/filabridge` (binding points, chunk type), `libs/filamat` (the `rayQuery` material flag, GLSL 460 + `GL_EXT_ray_query`, SPIR-V 1.4), `shaders/src/surface_light_directional.fs`, `third_party/smol-v/source/smolv.cpp` | Vulkan ray query: acceleration structures as backend objects, a per-scene BLAS/TLAS kept by `Scene::setRayTracingEnabled`, hard ray-traced sun shadows (`ShadowOptions::rayTraced`) and single-ray visibility queries (`View::traceRay`). |
+| `0009-fsr3-upscaler-frame-generation.patch` | `filament/include/filament/{Options,SwapChain}.h`, `filament/src/{PostProcessManager,FrameHistory}.*`, `filament/src/details/{Renderer,View,SwapChain}.*`, `filament/src/materials/fsr3/*` (new), `filament/CMakeLists.txt`, `backend/DriverEnums.h`, `backend/src/vulkan/platform/VulkanPlatformSwapChainImpl.*`, `backend/{include/backend/platforms/PlatformWGL.h,src/opengl/platforms/PlatformWGL.cpp}` | The FidelityFX Super Resolution 3.1 upscaler and frame generation as fragment passes (`TemporalAntiAliasingOptions::algorithm`, `frameGeneration`), fed by the structure pass motion vectors of 0004, and the `SwapChain::CONFIG_DISABLE_VSYNC` flag (Vulkan, WGL). FidelityFX SDK shader code is MIT licensed (AMD). |
 
 ## 0001: libassimp glTF 2 `ReplaceData_joint` bounds
 
@@ -99,6 +100,27 @@ result and the light texture at per-view bindings 14 and 15 and sets `restirMode
 BRDF, weighted by W, instead of looping over the froxel. Transparent surfaces keep the froxel loop. The
 patch also fixes the ray query materials' depth reconstruction, which mirrored Y on Vulkan (window y grows
 downwards). The implementation is Lumina's own GLSL; it contains no RTXDI SDK code.
+
+## 0009: FSR3 upscaler and frame generation
+
+Filament's only temporal upscaler is its own TAA (`TemporalAntiAliasingOptions::upscaling`). This patch
+adds `TemporalAntiAliasingOptions::algorithm` (`FILAMENT` or `FSR3`) and `frameGeneration`. With `FSR3`
+the renderer forces the structure pass motion vectors of patch 0004 and `PostProcessManager::fsr3`
+replaces the TAA pass with a port of the AMD FidelityFX Super Resolution 3.1 upscaler to Filament
+post-process materials (`filament/src/materials/fsr3/`): `prepare_inputs` converts the texel-space
+velocity into the FSR UV motion the SDK expects (camera reprojection where no motion vector was
+written), then `prepare_reactivity`, `shading_change`, `luma_diff`, `luma_instability`, `reduce` and
+`accumulate` run as fragment passes instead of compute shaders, so the upscaler works on every backend
+and feature level 1 (no stereo). `upscaling`, `sharpness` (RCAS), `lodBias` and `jitterPattern` apply;
+the dilated depth, motion, reactive mask, luma history and accumulation are kept in the frame history.
+`frameGeneration` interpolates a frame between the previous and the current accumulated output
+(`fsr3_frame_interpolation`) and presents it before the rendered frame (`Renderer::endFrame`), doubling
+the presented rate at half a frame of latency; the view must render into the swap chain without guard
+band. `SwapChain::CONFIG_DISABLE_VSYNC` (Vulkan: `VK_PRESENT_MODE_IMMEDIATE_KHR`, WGL:
+`wglSwapIntervalEXT(0)`) presents without vertical sync; with frame generation the renderer paces the
+two presents. An external upscaler (patch 0006, DLSS) takes precedence. The shader code is derived from
+the FidelityFX SDK v1.1.4, MIT licensed, copyright Advanced Micro Devices; the licence header is kept
+in `fsr3_common.fs`.
 
 ## Working with the patches
 

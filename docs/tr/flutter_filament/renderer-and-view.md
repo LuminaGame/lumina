@@ -497,6 +497,7 @@ Configuration flags for swap chain creation.
 | :--- | :--- | :--- |
 | `value` | `int value` | Raw bitfield value. |
 | `contains` | `bool contains(SwapChainConfig flag)` | Checks if this configuration contains all flags in [flag]. |
+| `disableVsync` | `static const SwapChainConfig disableVsync` | Ekranın dikey yenilemesini beklemeden sunar (Vulkan, Windows'ta OpenGL); kareler yırtılabilir. FSR3 kare üretimiyle iki sunumu renderer zamanlar. |
 | `hashCode` | `int get hashCode` | Mevcut durumun veya yeteneğin doğruluğunu kontrol eder (`bool` döndürür). |
 | `toString` | `String toString()` | `toString` işlemini gerçekleştirir. |
 

@@ -4863,6 +4863,12 @@ final class filament_temporal_anti_aliasing_options extends ffi.Struct {
 
   bool get motionVectors => FlutterFilamentModule.heap.getUint8($address + 38) != 0;
   set motionVectors(bool value) => FlutterFilamentModule.heap.setUint8($address + 38, value ? 1 : 0);
+
+  int get algorithm => FlutterFilamentModule.heap.getUint8($address + 39);
+  set algorithm(int value) => FlutterFilamentModule.heap.setUint8($address + 39, value);
+
+  bool get frameGeneration => FlutterFilamentModule.heap.getUint8($address + 40) != 0;
+  set frameGeneration(bool value) => FlutterFilamentModule.heap.setUint8($address + 40, value ? 1 : 0);
 }
 
 final class filament_screen_space_reflections_options extends ffi.Struct {
@@ -8469,7 +8475,7 @@ void $registerFilamentBindings() {
   ffi.$registerStruct<filament_ambient_occlusion_options_gtao>(20, 4, filament_ambient_occlusion_options_gtao.$at);
   ffi.$registerStruct<filament_ambient_occlusion_options>(100, 4, filament_ambient_occlusion_options.$at);
   ffi.$registerStruct<filament_multi_sample_anti_aliasing_options>(3, 1, filament_multi_sample_anti_aliasing_options.$at);
-  ffi.$registerStruct<filament_temporal_anti_aliasing_options>(40, 4, filament_temporal_anti_aliasing_options.$at);
+  ffi.$registerStruct<filament_temporal_anti_aliasing_options>(44, 4, filament_temporal_anti_aliasing_options.$at);
   ffi.$registerStruct<filament_screen_space_reflections_options>(20, 4, filament_screen_space_reflections_options.$at);
   ffi.$registerStruct<filament_guard_band_options>(1, 1, filament_guard_band_options.$at);
   ffi.$registerStruct<filament_vsm_shadow_options>(12, 4, filament_vsm_shadow_options.$at);

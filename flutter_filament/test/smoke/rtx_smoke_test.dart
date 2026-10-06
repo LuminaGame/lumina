@@ -484,5 +484,88 @@ void main() {
         Dlss.clearExtensionRequest();
       }
     }, timeout: const Timeout(Duration(minutes: 15)));
+
+    test('FSR3 upscaling and frame generation of an animated character', () async {
+      if (!rig.view.motionVectorsSupported) {
+        markTestSkipped('FSR3 needs the structure pass motion vectors ($smokeBackendName)');
+        return;
+      }
+      const name = 'rtx Smoke Tests FSR3 upscaling and frame generation of an animated character';
+      final gltf = loadGltfIntoScene(rig, 'mannequin/MF_Unarmed_Walk_Fwd.glb');
+      try {
+        final animator = gltf.asset.animator;
+        final duration = animator.getAnimationDuration(0);
+        final box = gltf.asset.getBoundingBox();
+        final center = box.center;
+        final extent = box.max - box.min;
+        final radius = math.max(extent.x, math.max(extent.y, extent.z)) / 2;
+        final dist = radius * 2.4 + 0.1;
+        rig.camera.setProjection(fovDegrees: 45, aspect: rig.width / rig.height, near: dist * 0.01, far: dist * 20);
+
+        void orbit(double t) {
+          final angle = 0.6 + t * math.pi * 0.5;
+          rig.camera.lookAt(
+            eyeX: center.x + dist * math.sin(angle),
+            eyeY: center.y + dist * 0.35,
+            eyeZ: center.z + dist * math.cos(angle),
+            centerX: center.x,
+            centerY: center.y,
+            centerZ: center.z,
+          );
+        }
+
+        void pose(int frame) {
+          animator.applyAnimation(0, (frame / smokeVideoFps) % duration);
+          animator.updateBoneMatrices();
+        }
+
+        // Filament's TAA at the final pose: the reference half of the picture.
+        final frames = (10 * smokeVideoFps).round();
+        orbit(1.0);
+        pose(frames);
+        rig.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(enabled: true, motionVectors: true);
+        Uint8List? reference;
+        for (var i = 0; i < 8; i++) {
+          reference = rig.renderFrame(warmup: 0);
+        }
+
+        // FSR3 renders at two thirds of the viewport and upscales; frame generation presents an
+        // interpolated frame before each rendered one.
+        rig.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(
+          enabled: true,
+          algorithm: TaaAlgorithm.fsr3,
+          upscaling: 1.5,
+          frameGeneration: true,
+        );
+        rig.view.dynamicResolutionOptions = const DynamicResolutionOptions(
+          enabled: true,
+          minScaleX: 1 / 1.5,
+          minScaleY: 1 / 1.5,
+          maxScaleX: 1 / 1.5,
+          maxScaleY: 1 / 1.5,
+          homogeneousScaling: true,
+        );
+        orbit(0.0);
+        pose(0);
+        final last = rig.video(name, onFrame: (frame, t) {
+          orbit(t);
+          pose(frame);
+        }, alsoScreenshot: false);
+        expect(last.length, rig.width * rig.height * 4, reason: 'the output is the full frame');
+
+        final side = Uint8List(rig.width * 2 * rig.height * 4);
+        for (var y = 0; y < rig.height; y++) {
+          final row = y * rig.width * 4;
+          side.setRange(y * rig.width * 8, y * rig.width * 8 + rig.width * 4, last, row);
+          side.setRange(y * rig.width * 8 + rig.width * 4, (y + 1) * rig.width * 8, reference!, row);
+        }
+        SmokeArtifacts.saveScreenshot('$name (FSR3 left, Filament TAA right)', SmokeArtifacts.encodePng(rig.width * 2, rig.height, side));
+        expect(frameStats(last).distinct, greaterThan(200), reason: 'a shaded character must be visible in the FSR3 output');
+      } finally {
+        rig.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions();
+        rig.view.dynamicResolutionOptions = const DynamicResolutionOptions();
+        gltf.dispose(rig.scene);
+      }
+    }, timeout: const Timeout(Duration(minutes: 10)));
   });
 }

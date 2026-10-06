@@ -1084,6 +1084,23 @@ enum TaaBoxClipping {
   static TaaBoxClipping fromNative(int val) => TaaBoxClipping.values[val];
 }
 
+/// Which temporal anti-aliasing and upscaling algorithm a view runs.
+enum TaaAlgorithm {
+  /// Filament's temporal anti-aliasing.
+  filament,
+
+  /// The FidelityFX Super Resolution 3 upscaler as fragment passes: uses the
+  /// structure pass motion vectors (implied), honours `upscaling`, `sharpness`,
+  /// `lodBias` and `jitterPattern`; feature level 1 and no stereo. An external
+  /// upscaler (DLSS) takes precedence.
+  fsr3;
+
+  int toNative() => index;
+
+  static TaaAlgorithm fromNative(int value) =>
+      value >= 0 && value < TaaAlgorithm.values.length ? TaaAlgorithm.values[value] : TaaAlgorithm.filament;
+}
+
 enum TaaJitterPattern {
   rgssX4,
   uniformHelixX4,
@@ -1123,6 +1140,15 @@ class TemporalAntiAliasingOptions {
   /// [FilamentView.motionVectorsSupported].
   final bool motionVectors;
 
+  /// Filament's TAA or the FSR3 upscaler. Default [TaaAlgorithm.filament].
+  final TaaAlgorithm algorithm;
+
+  /// FSR3 frame generation: an interpolated frame is presented before each
+  /// rendered frame, doubling the presented rate at half a frame of latency.
+  /// Needs [TaaAlgorithm.fsr3] and a view rendering into the swap chain
+  /// without guard band. Default false.
+  final bool frameGeneration;
+
   const TemporalAntiAliasingOptions({
     this.filterWidth = 1.0,
     this.feedback = 0.12,
@@ -1141,6 +1167,8 @@ class TemporalAntiAliasingOptions {
     this.preventFlickering = false,
     this.historyReprojection = true,
     this.motionVectors = false,
+    this.algorithm = TaaAlgorithm.filament,
+    this.frameGeneration = false,
   });
 
   TemporalAntiAliasingOptions copyWith({
@@ -1161,6 +1189,8 @@ class TemporalAntiAliasingOptions {
     bool? preventFlickering,
     bool? historyReprojection,
     bool? motionVectors,
+    TaaAlgorithm? algorithm,
+    bool? frameGeneration,
   }) {
     return TemporalAntiAliasingOptions(
       filterWidth: filterWidth ?? this.filterWidth,
@@ -1180,6 +1210,8 @@ class TemporalAntiAliasingOptions {
       preventFlickering: preventFlickering ?? this.preventFlickering,
       historyReprojection: historyReprojection ?? this.historyReprojection,
       motionVectors: motionVectors ?? this.motionVectors,
+      algorithm: algorithm ?? this.algorithm,
+      frameGeneration: frameGeneration ?? this.frameGeneration,
     );
   }
 
@@ -1204,7 +1236,9 @@ class TemporalAntiAliasingOptions {
           varianceGamma == other.varianceGamma &&
           preventFlickering == other.preventFlickering &&
           historyReprojection == other.historyReprojection &&
-          motionVectors == other.motionVectors;
+          motionVectors == other.motionVectors &&
+          algorithm == other.algorithm &&
+          frameGeneration == other.frameGeneration;
 
   @override
   int get hashCode => Object.hashAll([
@@ -1225,6 +1259,8 @@ class TemporalAntiAliasingOptions {
         preventFlickering,
         historyReprojection,
         motionVectors,
+        algorithm,
+        frameGeneration,
       ]);
 
   void copyToNative(ffi_gen.filament_temporal_anti_aliasing_options out) {
@@ -1245,6 +1281,8 @@ class TemporalAntiAliasingOptions {
     out.preventFlickering = preventFlickering;
     out.historyReprojection = historyReprojection;
     out.motionVectors = motionVectors;
+    out.algorithm = algorithm.toNative();
+    out.frameGeneration = frameGeneration;
   }
 
   factory TemporalAntiAliasingOptions.fromNative(ffi_gen.filament_temporal_anti_aliasing_options out) {
@@ -1266,6 +1304,8 @@ class TemporalAntiAliasingOptions {
       preventFlickering: out.preventFlickering,
       historyReprojection: out.historyReprojection,
       motionVectors: out.motionVectors,
+      algorithm: TaaAlgorithm.fromNative(out.algorithm),
+      frameGeneration: out.frameGeneration,
     );
   }
 }

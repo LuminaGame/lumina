@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- FSR3 upscaler and frame generation (prebuilt `1.77.2-lumina.7`, Filament patch `0009`):
+  `TemporalAntiAliasingOptions.algorithm = TaaAlgorithm.fsr3` replaces Filament's TAA with a fragment-shader
+  port of the FidelityFX Super Resolution 3.1 upscaler fed by the structure pass motion vectors (`upscaling`,
+  `sharpness`, `lodBias`, `jitterPattern` apply), and `frameGeneration` presents an interpolated frame before
+  each rendered one. `SwapChainConfig.disableVsync` presents without vertical sync (Vulkan, WGL). Every backend;
+  an external upscaler (DLSS) takes precedence.
 - ReSTIR direct lighting (prebuilt `1.77.2-lumina.6`, Filament patch `0008`): `RestirOptions` on the view
   replaces the froxel light loop with per-pixel reservoir resampling of all the scene's punctual lights
   (initial candidates, temporal and spatial reuse) and one ray-traced visibility ray per pixel; the cost is

@@ -30,6 +30,11 @@ class SwapChainConfig {
   /// Enables automatic linear to sRGB encoding (if supported by backend).
   static const SwapChainConfig srgbColorspace = SwapChainConfig._(0x10);
 
+  /// Presents without waiting for the display's vertical refresh (Vulkan, and
+  /// OpenGL on Windows): the frame rate may exceed the refresh rate and frames
+  /// may tear. With FSR3 frame generation the renderer paces the two presents.
+  static const SwapChainConfig disableVsync = SwapChainConfig._(0x100);
+
   /// Allocates a stencil buffer in addition to a depth buffer.
   static const SwapChainConfig hasStencilBuffer = SwapChainConfig._(0x20);
 

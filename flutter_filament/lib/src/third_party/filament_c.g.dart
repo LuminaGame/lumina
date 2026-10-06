@@ -10110,6 +10110,12 @@ final class filament_temporal_anti_aliasing_options extends ffi.Struct {
 
   @ffi.Bool()
   external bool motionVectors;
+
+  @ffi.Uint8()
+  external int algorithm;
+
+  @ffi.Bool()
+  external bool frameGeneration;
 }
 
 final class filament_screen_space_reflections_options extends ffi.Struct {
