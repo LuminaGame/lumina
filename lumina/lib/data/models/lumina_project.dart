@@ -1,4 +1,9 @@
-import 'project_web_loading_style.dart';
+import 'plugin_isolation.dart';
+import 'project_input_settings.dart';
+import 'project_packaging_settings.dart';
+export 'plugin_isolation.dart';
+export 'project_input_settings.dart';
+export 'project_packaging_settings.dart';
 export 'project_web_loading_style.dart';
 
 class ScalabilityCategory {
@@ -81,168 +86,6 @@ extension ScalabilityPresets on ScalabilityCategory {
   }
 }
 
-/// Value type of an Enhanced-Input style action.
-enum ProjectInputValueType { digital, axis1D, axis2D }
-
-class ProjectInputAction {
-  final String name;
-  final ProjectInputValueType valueType;
-  const ProjectInputAction({required this.name, this.valueType = ProjectInputValueType.digital});
-
-  Map<String, dynamic> toMap() => {'name': name, 'value_type': valueType.name};
-
-  factory ProjectInputAction.fromMap(Map<String, dynamic> map) => ProjectInputAction(
-        name: map['name'] as String? ?? '',
-        valueType: ProjectInputValueType.values.firstWhere(
-          (v) => v.name == (map['value_type'] as String? ?? 'digital'),
-          orElse: () => ProjectInputValueType.digital,
-        ),
-      );
-
-  ProjectInputAction copyWith({String? name, ProjectInputValueType? valueType}) =>
-      ProjectInputAction(name: name ?? this.name, valueType: valueType ?? this.valueType);
-}
-
-/// One key binding inside a mapping context. [keyId] is the stable
-/// `LogicalKeyboardKey.keyId` and [keyLabel] its debug/display name; the
-/// runtime input task maps `keyId` back to its own key abstraction.
-class ProjectInputMapping {
-  final String action;
-  final int keyId;
-  final String keyLabel;
-  final double scale;
-  /// `X`, `Y` (axis component the key drives) or empty for digital actions.
-  final String axis;
-  const ProjectInputMapping({
-    required this.action,
-    required this.keyId,
-    required this.keyLabel,
-    this.scale = 1.0,
-    this.axis = '',
-  });
-
-  Map<String, dynamic> toMap() =>
-      {'action': action, 'key_id': keyId, 'key': keyLabel, 'scale': scale, 'axis': axis};
-
-  factory ProjectInputMapping.fromMap(Map<String, dynamic> map) => ProjectInputMapping(
-        action: map['action'] as String? ?? '',
-        keyId: (map['key_id'] as num?)?.toInt() ?? 0,
-        keyLabel: map['key'] as String? ?? '',
-        scale: (map['scale'] as num?)?.toDouble() ?? 1.0,
-        axis: map['axis'] as String? ?? '',
-      );
-
-  ProjectInputMapping copyWith({String? action, int? keyId, String? keyLabel, double? scale, String? axis}) =>
-      ProjectInputMapping(
-        action: action ?? this.action,
-        keyId: keyId ?? this.keyId,
-        keyLabel: keyLabel ?? this.keyLabel,
-        scale: scale ?? this.scale,
-        axis: axis ?? this.axis,
-      );
-}
-
-class ProjectMappingContext {
-  final String name;
-  final int priority;
-  final List<ProjectInputMapping> mappings;
-  const ProjectMappingContext({required this.name, this.priority = 0, this.mappings = const []});
-
-  Map<String, dynamic> toMap() =>
-      {'name': name, 'priority': priority, 'mappings': mappings.map((m) => m.toMap()).toList()};
-
-  factory ProjectMappingContext.fromMap(Map<String, dynamic> map) => ProjectMappingContext(
-        name: map['name'] as String? ?? '',
-        priority: (map['priority'] as num?)?.toInt() ?? 0,
-        mappings: (map['mappings'] as List? ?? const [])
-            .map((m) => ProjectInputMapping.fromMap(Map<String, dynamic>.from(m as Map)))
-            .toList(),
-      );
-
-  ProjectMappingContext copyWith({String? name, int? priority, List<ProjectInputMapping>? mappings}) =>
-      ProjectMappingContext(
-        name: name ?? this.name,
-        priority: priority ?? this.priority,
-        mappings: mappings ?? this.mappings,
-      );
-}
-
-class ProjectInputSettings {
-  final List<ProjectInputAction> actions;
-  final List<ProjectMappingContext> mappingContexts;
-  const ProjectInputSettings({this.actions = const [], this.mappingContexts = const []});
-
-  Map<String, dynamic> toMap() => {
-        'actions': actions.map((a) => a.toMap()).toList(),
-        'mapping_contexts': mappingContexts.map((c) => c.toMap()).toList(),
-      };
-
-  factory ProjectInputSettings.fromMap(Map<String, dynamic> map) => ProjectInputSettings(
-        actions: (map['actions'] as List? ?? const [])
-            .map((a) => ProjectInputAction.fromMap(Map<String, dynamic>.from(a as Map)))
-            .toList(),
-        mappingContexts: (map['mapping_contexts'] as List? ?? const [])
-            .map((c) => ProjectMappingContext.fromMap(Map<String, dynamic>.from(c as Map)))
-            .toList(),
-      );
-
-  ProjectInputSettings copyWith({List<ProjectInputAction>? actions, List<ProjectMappingContext>? mappingContexts}) =>
-      ProjectInputSettings(actions: actions ?? this.actions, mappingContexts: mappingContexts ?? this.mappingContexts);
-}
-
-class ProjectMapsAndModes {
-  /// `contents/`-relative path of the level the editor opens on startup.
-  final String editorStartupMap;
-  /// `contents/`-relative path of the level the shipped game starts in.
-  final String gameDefaultMap;
-  /// The game mode: a Dart class name (built-in `LuminaGameMode` or a class
-  /// under `lib/`), or the project-relative `.lmas` path of a GameMode
-  /// Blueprint.
-  final String defaultGameMode;
-
-  /// The `.lmas` path of a Blueprint pawn class. When set it overrides the
-  /// selected game mode's pawn, the way Maps & Modes edits the selected
-  /// mode's Default Pawn Class.
-  final String defaultPawnClass;
-
-  const ProjectMapsAndModes({
-    this.editorStartupMap = '',
-    this.gameDefaultMap = '',
-    this.defaultGameMode = 'LuminaGameMode',
-    this.defaultPawnClass = '',
-  });
-
-  /// Whether [defaultGameMode] names a GameMode Blueprint.
-  bool get gameModeIsBlueprint => defaultGameMode.endsWith('.lmas');
-
-  Map<String, dynamic> toMap() => {
-        'editor_startup_map': editorStartupMap,
-        'game_default_map': gameDefaultMap,
-        'default_game_mode': defaultGameMode,
-        'default_pawn_class': defaultPawnClass,
-      };
-
-  factory ProjectMapsAndModes.fromMap(Map<String, dynamic> map) => ProjectMapsAndModes(
-        editorStartupMap: map['editor_startup_map'] as String? ?? '',
-        gameDefaultMap: map['game_default_map'] as String? ?? '',
-        defaultGameMode: map['default_game_mode'] as String? ?? 'LuminaGameMode',
-        defaultPawnClass: map['default_pawn_class'] as String? ?? '',
-      );
-
-  ProjectMapsAndModes copyWith({
-    String? editorStartupMap,
-    String? gameDefaultMap,
-    String? defaultGameMode,
-    String? defaultPawnClass,
-  }) =>
-      ProjectMapsAndModes(
-        editorStartupMap: editorStartupMap ?? this.editorStartupMap,
-        gameDefaultMap: gameDefaultMap ?? this.gameDefaultMap,
-        defaultGameMode: defaultGameMode ?? this.defaultGameMode,
-        defaultPawnClass: defaultPawnClass ?? this.defaultPawnClass,
-      );
-}
-
 class ProjectPhysicsSettings {
   /// World gravity along Z in cm/s² (default -980).
   final double gravityZ;
@@ -293,133 +136,6 @@ class ProjectUiSettings {
   }
 
   ProjectUiSettings copyWith({String? widgetLibrary}) => ProjectUiSettings(widgetLibrary: widgetLibrary ?? this.widgetLibrary);
-}
-
-/// Platforms a project can be packaged for, in display order.
-const List<String> kPackagingPlatforms = ['linux', 'windows', 'macos', 'android', 'ios', 'web'];
-
-/// The name a platform id is shown under.
-String packagingPlatformLabel(String id) => switch (id) {
-      'linux' => 'Linux',
-      'windows' => 'Windows',
-      'macos' => 'macOS',
-      'android' => 'Android',
-      'ios' => 'iOS',
-      'web' => 'Web',
-      _ => id,
-    };
-
-/// The `flutter build` subcommand that packages [id] (`android` builds an APK).
-String flutterBuildSubcommand(String id) => id == 'android' ? 'apk' : id;
-
-/// The single `target_os` labels manifests stored before multi-target packaging, and
-/// the platform each one migrates to.
-const Map<String, String> kLegacyPackagingTargetLabels = {
-  'Linux x64': 'linux',
-  'Windows x64': 'windows',
-  'Android APK': 'android',
-};
-
-/// The legacy single-target label → `flutter build` subcommand map.
-@Deprecated('Use kPackagingPlatforms with flutterBuildSubcommand')
-const Map<String, String> kPackagingTargets = {
-  'Linux x64': 'linux',
-  'Windows x64': 'windows',
-  'Android APK': 'apk',
-};
-
-/// `packaging` section: the platforms Package Project builds, and where the
-/// packages go.
-class ProjectPackagingSettings {
-  /// Platform ids ([kPackagingPlatforms] order, no duplicates). Ids this
-  /// editor does not know are kept, so validation can name them.
-  final List<String> targets;
-
-  /// Relative to the project, or absolute.
-  final String outputDir;
-
-  /// The web build's HTML loading screen.
-  final ProjectWebLoadingStyle webLoadingStyle;
-
-  const ProjectPackagingSettings({
-    this.targets = const ['linux'],
-    this.outputDir = 'build',
-    this.webLoadingStyle = const ProjectWebLoadingStyle(),
-  });
-
-  /// [ids] in [kPackagingPlatforms] order, unknown ids last, no duplicates.
-  static List<String> ordered(Iterable<String> ids) {
-    final unique = <String>{...ids};
-    return [
-      for (final p in kPackagingPlatforms)
-        if (unique.contains(p)) p,
-      for (final id in unique)
-        if (!kPackagingPlatforms.contains(id)) id,
-    ];
-  }
-
-  bool isSelected(String id) => targets.contains(id);
-
-  /// The selection with [id] ticked or unticked.
-  ProjectPackagingSettings withTarget(String id, bool selected) => copyWith(
-        targets: ordered(selected ? [...targets, id] : targets.where((t) => t != id)),
-      );
-
-  /// [outputDir] resolved against [projectDir] (empty means `build`).
-  String outputDirIn(String projectDir) {
-    String trim(String p) => p.length > 1 && p.endsWith('/') ? p.substring(0, p.length - 1) : p;
-    final out = outputDir.trim().isEmpty ? 'build' : trim(outputDir.trim());
-    return out.startsWith('/') ? out : '${trim(projectDir)}/$out';
-  }
-
-  /// Where [id]'s package is copied: `<output dir>/package/<id>`. Not
-  /// `<output dir>/<id>`: with the default `build`, `build/linux` and
-  /// `build/web` are Flutter's own build trees.
-  String packageDirFor(String projectDir, String id) => '${outputDirIn(projectDir)}/package/$id';
-
-  /// The legacy single-target label of the first target, for code that still
-  /// reads the single-target field.
-  @Deprecated('Use targets')
-  String get targetOs {
-    if (targets.isEmpty) return '';
-    final first = targets.first;
-    return kLegacyPackagingTargetLabels.entries.firstWhere((e) => e.value == first, orElse: () => MapEntry(first, first)).key;
-  }
-
-  Map<String, dynamic> toMap() => {'targets': targets, 'output_dir': outputDir, 'web_loading_style': webLoadingStyle.toMap()};
-
-  /// A manifest with `targets` reads it; one written before multi-target
-  /// packaging migrates its `target_os` label; one with neither reads `['linux']`.
-  factory ProjectPackagingSettings.fromMap(Map<String, dynamic> map) {
-    final raw = map['targets'];
-    final legacy = map['target_os'];
-    final List<String> targets;
-    if (raw is List) {
-      targets = ordered(raw.whereType<String>());
-    } else if (legacy is String && legacy.isNotEmpty) {
-      targets = [kLegacyPackagingTargetLabels[legacy] ?? legacy];
-    } else {
-      targets = const ['linux'];
-    }
-    final style = map['web_loading_style'];
-    return ProjectPackagingSettings(
-      targets: targets,
-      outputDir: map['output_dir'] as String? ?? 'build',
-      webLoadingStyle: style is Map ? ProjectWebLoadingStyle.fromMap(Map<String, dynamic>.from(style)) : const ProjectWebLoadingStyle(),
-    );
-  }
-
-  ProjectPackagingSettings copyWith({
-    List<String>? targets,
-    String? outputDir,
-    ProjectWebLoadingStyle? webLoadingStyle,
-    @Deprecated('Use targets') String? targetOs,
-  }) =>
-      ProjectPackagingSettings(
-        targets: targets ?? (targetOs != null ? [kLegacyPackagingTargetLabels[targetOs] ?? targetOs] : this.targets),
-        outputDir: outputDir ?? this.outputDir,
-        webLoadingStyle: webLoadingStyle ?? this.webLoadingStyle,
-      );
 }
 
 /// `branding` section: the project's app icon.
@@ -693,6 +409,12 @@ class LuminaProject {
   /// edited in Project Settings ▸ Plugins. Never holds secrets.
   final Map<String, Map<String, Object?>> pluginSettings;
 
+  /// Per-plugin isolation overrides (`plugin_isolation.<plugin>`:
+  /// `in_process` | `process`): a plugin listed here runs that way in this
+  /// project whatever its `.lmplugin` says (forcing an isolated plugin in
+  /// process is how it is debugged). Unlisted plugins follow their manifest.
+  final Map<String, PluginIsolation> pluginIsolation;
+
   /// Top-level manifest keys this version does not know (a newer engine's,
   /// a tool's): written back unchanged so a save never drops them.
   final Map<String, Object?> extraFields;
@@ -722,6 +444,7 @@ class LuminaProject {
     this.worldUnits = kWorldUnitsCentimetres,
     this.upAxis = kUpAxisZ,
     this.pluginSettings = const {},
+    this.pluginIsolation = const {},
     this.extraFields = const {},
   });
 
@@ -747,6 +470,7 @@ class LuminaProject {
     String? worldUnits,
     String? upAxis,
     Map<String, Map<String, Object?>>? pluginSettings,
+    Map<String, PluginIsolation>? pluginIsolation,
   }) {
     return LuminaProject(
       projectName: projectName ?? this.projectName,
@@ -771,6 +495,7 @@ class LuminaProject {
       worldUnits: worldUnits ?? this.worldUnits,
       upAxis: upAxis ?? this.upAxis,
       pluginSettings: pluginSettings ?? this.pluginSettings,
+      pluginIsolation: pluginIsolation ?? this.pluginIsolation,
       extraFields: extraFields,
     );
   }
@@ -801,21 +526,34 @@ class LuminaProject {
       'up_axis': upAxis,
       if (pluginSettings.isNotEmpty)
         'plugin_settings': {for (final e in pluginSettings.entries) e.key: Map<String, Object?>.from(e.value)},
+      if (pluginIsolation.isNotEmpty)
+        'plugin_isolation': {
+          for (final name in pluginIsolation.keys.toList()..sort()) name: pluginIsolation[name]!.manifestValue,
+        },
     };
   }
 
-  /// The top-level keys [toMap] writes (plus `plugin_settings`); anything
+  /// The top-level keys [toMap] writes (plus `plugin_settings` and
+  /// `plugin_isolation`); anything
   /// else read from a manifest is kept in [extraFields].
   static const Set<String> knownKeys = {
     'project_name', 'engine_version', 'active_level', 'is_dirty', 'last_modified_timestamp',
     'last_code_generated_timestamp', 'settings', 'editor_snap', 'editor_viewport', 'enabled_plugins',
     'description', 'template', 'input', 'maps_and_modes', 'physics', 'packaging', 'ui', 'branding',
-    'world_units', 'up_axis', 'plugin_settings',
+    'world_units', 'up_axis', 'plugin_settings', 'plugin_isolation',
   };
 
   factory LuminaProject.fromMap(Map<String, dynamic> map) {
     final plugins = map['plugin_settings'];
+    final isolation = map['plugin_isolation'];
     return LuminaProject(
+      // An unknown value is dropped: the plugin follows its manifest.
+      pluginIsolation: isolation is Map
+          ? {
+              for (final e in isolation.entries)
+                '${e.key}': ?PluginIsolation.tryParse(e.value),
+            }
+          : const {},
       pluginSettings: plugins is Map
           ? {
               for (final e in plugins.entries)

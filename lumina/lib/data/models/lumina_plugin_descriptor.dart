@@ -1,6 +1,10 @@
 import 'dart:io';
 import 'package:pub_semver/pub_semver.dart';
 
+import 'lumina_project.dart';
+
+export 'plugin_isolation.dart';
+
 enum PluginOrigin { engine, project, user }
 
 enum PluginModuleType { editor, runtime }
@@ -11,11 +15,17 @@ class PluginModuleDescriptor {
   final String entryLibrary;
   final String registrationClass;
 
+  /// The `LuminaPluginProcess` subclass in [entryLibrary] that runs in the
+  /// plugin's own process (`.lmplugin` `"process_class"`). Required on an
+  /// editor module of a plugin with `"isolation": "process"`.
+  final String? processClass;
+
   PluginModuleDescriptor({
     required this.name,
     required this.type,
     required this.entryLibrary,
     required this.registrationClass,
+    this.processClass,
   });
 
   Map<String, dynamic> toJson() => {
@@ -23,6 +33,7 @@ class PluginModuleDescriptor {
         'type': type.name,
         'entry_library': entryLibrary,
         'registration_class': registrationClass,
+        if (processClass != null) 'process_class': processClass,
       };
 
   factory PluginModuleDescriptor.fromJson(Map<String, dynamic> json) {
@@ -31,6 +42,7 @@ class PluginModuleDescriptor {
       type: PluginModuleType.values.byName(json['type'] as String),
       entryLibrary: json['entry_library'] as String,
       registrationClass: json['registration_class'] as String,
+      processClass: json['process_class'] as String?,
     );
   }
 }
@@ -69,6 +81,10 @@ class LuminaPluginDescriptor {
   final List<PluginModuleDescriptor> modules;
   final bool enabledByDefault;
   final bool canContainContent;
+
+  /// Where the editor module runs (`.lmplugin` `"isolation"`); a project
+  /// can override it (see [effectiveIsolation]).
+  final PluginIsolation isolation;
   final Map<String, dynamic> extras;
 
   // Derived / set by discovery
@@ -76,6 +92,28 @@ class LuminaPluginDescriptor {
   final PluginOrigin origin;
 
   bool get isContentOnly => canContainContent && modules.isEmpty;
+
+  /// The editor module that names a `process_class`, or null.
+  PluginModuleDescriptor? get processModule {
+    for (final m in modules) {
+      if (m.type == PluginModuleType.editor && m.processClass != null) return m;
+    }
+    return null;
+  }
+
+  /// The process part's class name ([processModule]'s `process_class`).
+  String? get processClass => processModule?.processClass;
+
+  /// Where this plugin runs in [project]. An isolated plugin
+  /// (`"isolation": "process"` with a `process_class`) runs in its own
+  /// process unless the project's `plugin_isolation` forces it
+  /// `in_process` (the same process part, run inside the editor: how an
+  /// isolated plugin is debugged). Any other plugin runs in process: it has
+  /// no process part to start, whatever the project says.
+  PluginIsolation effectiveIsolation([LuminaProject? project]) {
+    if (isolation != PluginIsolation.process || processClass == null) return PluginIsolation.inProcess;
+    return project?.pluginIsolation[name] ?? PluginIsolation.process;
+  }
   
   File? get iconFile {
     final f = File('${pluginDir.path}/resources/icon128.png');
@@ -94,6 +132,7 @@ class LuminaPluginDescriptor {
     this.modules = const [],
     this.enabledByDefault = false,
     this.canContainContent = false,
+    this.isolation = PluginIsolation.inProcess,
     this.extras = const {},
     required this.pluginDir,
     required this.origin,
@@ -113,6 +152,7 @@ class LuminaPluginDescriptor {
       if (modules.isNotEmpty) 'modules': modules.map((e) => e.toJson()).toList(),
       if (enabledByDefault) 'enabled_by_default': true,
       if (canContainContent) 'can_contain_content': true,
+      if (isolation != PluginIsolation.inProcess) 'isolation': isolation.manifestValue,
     };
     json.addAll(extras);
     return json;
@@ -146,6 +186,12 @@ class LuminaPluginDescriptor {
     final enabledByDefault = extras.remove('enabled_by_default') as bool? ?? false;
     final canContainContent = extras.remove('can_contain_content') as bool? ?? false;
 
+    final rawIsolation = extras.remove('isolation');
+    final isolation = rawIsolation == null ? PluginIsolation.inProcess : PluginIsolation.tryParse(rawIsolation);
+    if (isolation == null) {
+      throw FormatException('"isolation" must be "in_process" or "process", got "$rawIsolation"');
+    }
+
     return LuminaPluginDescriptor(
       name: name,
       friendlyName: friendlyName,
@@ -158,6 +204,7 @@ class LuminaPluginDescriptor {
       modules: modules,
       enabledByDefault: enabledByDefault,
       canContainContent: canContainContent,
+      isolation: isolation,
       extras: extras,
       pluginDir: pluginDir,
       origin: origin,

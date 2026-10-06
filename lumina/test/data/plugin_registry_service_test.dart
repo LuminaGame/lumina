@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:test/test.dart';
 import 'package:pub_semver/pub_semver.dart';
@@ -177,6 +178,43 @@ void main() {
       try {
         temp.deleteSync(recursive: true);
       } on FileSystemException catch (_) {}
+    });
+
+    test('isolationOf follows the manifest; the project override forces it in process and is saved', () async {
+      final dir = Directory('${userDir.path}/iso_plugin')..createSync(recursive: true);
+      File('${dir.path}/iso_plugin.lmplugin').writeAsStringSync('{"name": "iso_plugin", "version": "1.0.0", '
+          '"isolation": "process", "modules": [{"name": "iso_plugin", "type": "editor", '
+          '"entry_library": "lib/iso_plugin.dart", "registration_class": "P", "process_class": "IsoProcess"}]}');
+      writePlugin(userDir, 'plain_plugin', 'plain_plugin');
+      await service.initialize(temp.path);
+      expect(service.isolationOf('iso_plugin'), PluginIsolation.process);
+      expect(service.isolationOf('plain_plugin'), PluginIsolation.inProcess);
+      expect(service.isolationOf('missing_plugin'), PluginIsolation.inProcess);
+      expect(service.isolationOverrideOf('iso_plugin'), isNull);
+
+      await service.setEnabled('iso_plugin', true);
+      service.entries.firstWhere((e) => e.descriptor.name == 'iso_plugin').restartPending = false;
+      expect(await service.setIsolationOverride('iso_plugin', PluginIsolation.inProcess), isTrue);
+      expect(service.isolationOf('iso_plugin'), PluginIsolation.inProcess);
+      expect(service.entries.firstWhere((e) => e.descriptor.name == 'iso_plugin').restartPending, isTrue);
+      final saved = jsonDecode(File('${temp.path}/project.lmproject').readAsStringSync()) as Map<String, dynamic>;
+      expect(saved['plugin_isolation'], {'iso_plugin': 'in_process'});
+
+      // A fresh registry reads the override back from the file.
+      final reread = PluginRegistryService(
+        repo: PluginRepository(roots: [PluginScanRoot(dir: userDir, origin: PluginOrigin.user)]),
+        projectRepo: ProjectRepository(),
+      );
+      await reread.initialize(temp.path);
+      expect(reread.isolationOf('iso_plugin'), PluginIsolation.inProcess);
+      expect(reread.isolationOverrideOf('iso_plugin'), PluginIsolation.inProcess);
+
+      // Clearing it: the manifest decides again; an override on a plugin
+      // without a process part changes nothing.
+      expect(await reread.setIsolationOverride('iso_plugin', null), isTrue);
+      expect(reread.isolationOf('iso_plugin'), PluginIsolation.process);
+      expect(await reread.setIsolationOverride('plain_plugin', PluginIsolation.process), isFalse);
+      expect(reread.isolationOf('plain_plugin'), PluginIsolation.inProcess);
     });
 
     test('a scan root skips dot folders (set-aside installs and removals)', () async {

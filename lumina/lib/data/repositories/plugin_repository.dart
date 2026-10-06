@@ -83,6 +83,8 @@ class PluginScanResult {
 class PluginRepository {
   final List<PluginScanRoot> roots;
 
+  static final RegExp _dartIdentifier = RegExp(r'^[A-Za-z_$][A-Za-z0-9_$]*$');
+
   PluginRepository({required this.roots});
 
   Future<PluginScanResult> scanAll() async {
@@ -255,6 +257,36 @@ class PluginRepository {
             message: '`modules[$i].type` must be "editor" or "runtime", got "$type"',
           ));
         }
+        final processClass = mod['process_class'];
+        if (processClass != null && (processClass is! String || !_dartIdentifier.hasMatch(processClass))) {
+          throw PluginManifestException(PluginScanError(
+            filePath: manifest.path,
+            kind: PluginErrorKind.schemaViolation,
+            message: '`modules[$i].process_class` must be a Dart class name, got "$processClass"',
+          ));
+        }
+      }
+    }
+
+    // Isolation: where the editor module runs.
+    final rawIsolation = parsed['isolation'];
+    final isolation = rawIsolation == null ? PluginIsolation.inProcess : PluginIsolation.tryParse(rawIsolation);
+    if (isolation == null) {
+      throw PluginManifestException(PluginScanError(
+        filePath: manifest.path,
+        kind: PluginErrorKind.schemaViolation,
+        message: '"isolation" must be "in_process" or "process", got "$rawIsolation"',
+      ));
+    }
+    if (isolation == PluginIsolation.process) {
+      final named = (mods ?? const []).any((m) => m is Map && m['type'] == 'editor' && m['process_class'] is String);
+      if (!named) {
+        throw PluginManifestException(PluginScanError(
+          filePath: manifest.path,
+          kind: PluginErrorKind.schemaViolation,
+          message: '"isolation": "process" needs an editor module naming its "process_class" '
+              '(the LuminaPluginProcess subclass in its entry_library)',
+        ));
       }
     }
 
