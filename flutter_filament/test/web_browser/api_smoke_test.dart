@@ -19,13 +19,7 @@ import 'package:web/web.dart' as web;
 const _w = 320;
 const _h = 240;
 
-Future<Uint8List> _fetch(String url) async {
-  final r = await web.window.fetch(url.toJS).toDart;
-  if (!r.ok) throw StateError('$url -> ${r.status}');
-  return (await r.arrayBuffer().toDart).toDart.asUint8List();
-}
-
-/// [_fetch], or null when the server has no such file (404).
+/// The file at [url], or null when the server has no such file (404).
 Future<Uint8List?> _fetchOrNull(String url) async {
   final r = await web.window.fetch(url.toJS).toDart;
   if (r.status == 404) return null;

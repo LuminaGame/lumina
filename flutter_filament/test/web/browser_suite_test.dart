@@ -32,6 +32,9 @@ void main() {
     }
     final log = const LineSplitter().convert(out).where((l) => !l.startsWith('SMOKE_PNG ')).join('\n');
     expect(result.exitCode, 0, reason: '$log\n${result.stderr}');
-    expect(published, greaterThan(0), reason: 'the API smoke prints its frame');
+    // Without the shared test models the API smoke skips and prints no frame.
+    if (!log.contains('needs test-assets')) {
+      expect(published, greaterThan(0), reason: 'the API smoke prints its frame');
+    }
   }, timeout: const Timeout(Duration(minutes: 10)));
 }
