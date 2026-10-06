@@ -183,9 +183,29 @@ class LuminaAudioController extends ValueNotifier<LuminaAudioPlayerValue> {
   Future<void> _openNativeSource(String src, {required bool autoPlay}) async {
     final p = _player;
     if (p == null) return;
+
+    Future<Duration> resolveDuration() async {
+      if (p.state.duration > Duration.zero) return p.state.duration;
+      try {
+        return await p.stream.duration
+            .firstWhere((dur) => dur > Duration.zero)
+            .timeout(const Duration(seconds: 3), onTimeout: () => p.state.duration);
+      } catch (_) {
+        return p.state.duration;
+      }
+    }
+
+    final durTask = resolveDuration();
     await p.open(Media(src), play: autoPlay);
+    final dur = await durTask;
+
+    final resolvedDuration = dur > Duration.zero
+        ? dur
+        : (p.state.duration > Duration.zero ? p.state.duration : value.duration);
+
     value = value.copyWith(
       isInitialized: true,
+      duration: resolvedDuration,
       source: src,
       clearError: true,
     );

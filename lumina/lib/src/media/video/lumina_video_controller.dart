@@ -207,9 +207,50 @@ class LuminaVideoController extends ValueNotifier<LuminaVideoPlayerValue> {
     final p = _player;
     if (p == null) return;
     final media = Media(src);
+
+    Future<Duration> resolveDuration() async {
+      if (p.state.duration > Duration.zero) return p.state.duration;
+      try {
+        return await p.stream.duration
+            .firstWhere((dur) => dur > Duration.zero)
+            .timeout(const Duration(seconds: 3), onTimeout: () => p.state.duration);
+      } catch (_) {
+        return p.state.duration;
+      }
+    }
+
+    Future<VideoParams> resolveVideoParams() async {
+      if ((p.state.width ?? 0) > 0 && (p.state.height ?? 0) > 0) {
+        return p.state.videoParams;
+      }
+      try {
+        return await p.stream.videoParams
+            .firstWhere((vp) => (vp.w ?? 0) > 0 && (vp.h ?? 0) > 0)
+            .timeout(const Duration(milliseconds: 1500), onTimeout: () => p.state.videoParams);
+      } catch (_) {
+        return p.state.videoParams;
+      }
+    }
+
+    final durTask = resolveDuration();
+    final paramsTask = resolveVideoParams();
+
     await p.open(media, play: autoPlay);
+
+    final dur = await durTask;
+    final vp = await paramsTask;
+
+    final resolvedDuration = dur > Duration.zero
+        ? dur
+        : (p.state.duration > Duration.zero ? p.state.duration : value.duration);
+    final w = (vp.w ?? p.state.width ?? 0).toDouble();
+    final h = (vp.h ?? p.state.height ?? 0).toDouble();
+    final resolvedSize = (w > 0 && h > 0) ? Size(w, h) : value.size;
+
     value = value.copyWith(
       isInitialized: true,
+      duration: resolvedDuration,
+      size: resolvedSize,
       source: src,
       clearError: true,
     );
