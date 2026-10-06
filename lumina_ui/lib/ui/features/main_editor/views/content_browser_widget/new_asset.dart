@@ -68,6 +68,14 @@ mixin _ContentBrowserNewAsset on _ContentBrowserWidgetStateBase {
                     _newAssetTypeBtn(
                       context,
                       vm,
+                      'User Interface → UI Theme (.lmas)',
+                      AssetType.theme,
+                      LucideIcons.palette,
+                      'themes',
+                    ),
+                    _newAssetTypeBtn(
+                      context,
+                      vm,
                       'Animation → Animation Sequence (.lmas)',
                       AssetType.animation,
                       LucideIcons.clapperboard,

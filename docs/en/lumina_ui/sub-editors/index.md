@@ -37,6 +37,7 @@ Previews are real: every 3D preview is a live Filament scene, usually driven thr
 | [Sequencer](sequencer.md) | Timeline, track tree, curve editor, evaluation and movie rendering. |
 | [Static and skeletal mesh editors](meshes.md) | Mesh preview, LODs, collision, material slots, sockets. |
 | [Texture editor](texture.md) | Texture preview, mip levels and texture settings. |
+| [Theme editor](theme.md) | UI theme authoring, color palette tokens, component styles, custom styles, and live showcase preview. |
 | [Widget (UMG) designer](umg.md) | Designer canvas, palette, hierarchy, slot inspector, widget code generation. |
 
 ---

@@ -86,11 +86,14 @@ String? subEditorCategoryFor(RealAssetInfo asset, {PluginExtensionRegistry? exte
       return 'AnimBlueprint';
     case AssetType.blendSpace:
       return 'BlendSpace';
+    case AssetType.theme:
+      return 'Theme';
     case AssetType.unknown:
       // An .lmas a plugin registered an asset type for opens with
       // that plugin's editor.
       final handler = extensions?.handlerForAsset(asset);
       if (handler != null) return '${PluginExtensionRegistry.pluginAssetCategoryPrefix}${handler.customTypeId}';
+      if (lower.contains('/themes/') || nameLower.startsWith('theme_') || nameLower.endsWith('_theme')) return 'Theme';
       if (nameLower.startsWith('bp_') || lower.contains('/blueprints/')) return 'Blueprint';
       if (looksSkeletal()) return 'Skeleton';
       if (lower.contains('/animations/') || lower.contains('/anim/') || nameLower.startsWith('anim_') || nameLower.startsWith('as_') || nameLower.startsWith('mf_')) {

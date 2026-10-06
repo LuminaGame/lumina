@@ -7,6 +7,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import '../models/lumina_asset.dart';
+import '../models/lumina_theme_document.dart';
 import '../services/animation_import_binder.dart';
 import '../services/asset_index.dart';
 import '../services/assimp_import_service.dart';

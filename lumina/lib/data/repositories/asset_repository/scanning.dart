@@ -165,6 +165,9 @@ mixin _AssetScanning on _AssetRepositoryState {
     if (lower.contains('/levels/')) {
       return AssetType.level;
     }
+    if (lower.contains('/themes/') || fileNameLower.startsWith('theme_') || fileNameLower.endsWith('_theme')) {
+      return AssetType.theme;
+    }
     if (lower.endsWith('.lmas')) {
       return AssetType.unknown;
     }
@@ -184,6 +187,9 @@ mixin _AssetScanning on _AssetRepositoryState {
     }
 
     final thumbBytes = await _generateThumbnailBytes(type);
+    final rawPayload = type == AssetType.theme
+        ? utf8.encode(LuminaThemeDocument.defaultShadcnDark(name: fileName.replaceAll('.lmas', '')).toJson())
+        : null;
 
     final asset = LuminaAsset(
       assetId: fileName.replaceAll('.', '_'),
@@ -192,6 +198,7 @@ mixin _AssetScanning on _AssetRepositoryState {
       hasThumbnail: thumbBytes != null,
       thumbnailPng: thumbBytes,
       rawMatSource: rawMatSource,
+      rawPayload: rawPayload,
     );
 
     file.writeAsStringSync(jsonEncode(asset.toMap()));

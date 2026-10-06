@@ -77,6 +77,12 @@ mixin _EditorProjectAndLevels on _EditorViewModelState {
         contentsDir.createSync(recursive: true);
       }
 
+      // Ensure default UI Theme exists for game widgets
+      await LuminaThemeService.ensureDefaultTheme(
+        projectDirPath,
+        seedTheme: LuminaThemeDocument.defaultShadcnDark(),
+      );
+
       final existing = _assetRepo.scanProjectContents(projectDirPath);
       if (existing.isEmpty) {
         await _assetRepo.createAsset(

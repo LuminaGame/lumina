@@ -286,6 +286,9 @@ class EditorColors {
   /// A Level Sequence: rose.
   static const Color assetTypeSequencer = EditorThemeColor('assetTypeSequencer', 0xFFE0607E);
 
+  /// A UI Theme: violet.
+  static const Color assetTypeTheme = EditorThemeColor('assetTypeTheme', 0xFF8B5CF6);
+
   // --- Transform axes -------------------------------------------------------
   // These must match `FilamentTransformGizmo.defaultHandleColor`, which paints
   // the manipulator in the 3D scene, or the Details panel and the viewport

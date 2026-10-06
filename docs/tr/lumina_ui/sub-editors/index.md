@@ -37,6 +37,7 @@ Content browser'dan bir asset açmak, onun alt editörünü ana editörde bir se
 | [Sequencer](sequencer.md) | Timeline, track ağacı, eğri editörü, değerlendirme ve film render'ı. |
 | [Static ve skeletal mesh editörleri](meshes.md) | Mesh önizlemesi, LOD'lar, çarpışma, materyal slot'ları, socket'ler. |
 | [Texture editörü](texture.md) | Texture önizlemesi, mip seviyeleri ve texture ayarları. |
+| [Tema editörü](theme.md) | Kullanıcı arayüzü teması oluşturma, renk belirteçleri, bileşen stilleri, özel stiller ve canlı önizleme vitrini. |
 | [Widget (UMG) tasarımcısı](umg.md) | Tasarım kanvası, palet, hiyerarşi, slot inspector'ı, widget kod üretimi. |
 
 ---

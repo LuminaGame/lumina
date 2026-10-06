@@ -1,8 +1,10 @@
 // Data & Manifest Models
 export 'data/models/lumina_asset.dart';
+export 'data/models/lumina_theme_document.dart';
 export 'data/models/sequencer_data.dart';
 export 'data/models/landscape_data.dart';
 export 'data/models/lumina_project.dart';
+export 'data/services/theme_service.dart';
 export 'data/models/recent_project_entry.dart';
 export 'data/repositories/project_repository.dart';
 export 'data/repositories/asset_repository.dart';

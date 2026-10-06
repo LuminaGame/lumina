@@ -29,6 +29,10 @@ enum AssetType {
   /// A Blend Space: `raw_payload` is a
   /// `LuminaBlendSpaceDocument` as JSON.
   blendSpace,
+
+  /// A UI Theme: `raw_payload` is a
+  /// `LuminaThemeDocument` as JSON.
+  theme,
 }
 
 class AssetReference {

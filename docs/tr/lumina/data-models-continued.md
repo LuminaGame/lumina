@@ -252,6 +252,44 @@ Reads and writes a project's level `.lmas` containers: the whole document, or on
 | `loadLevelBlueprint` | `LuminaLevelBlueprintDocument loadLevelBlueprint(String relativePath)` | The Level Blueprint of [relativePath]; an empty graph when the level has none (or does not exist yet). |
 | `saveLevelBlueprint` | `LuminaLevelDocument saveLevelBlueprint(LuminaLevelBlueprintDocument blueprint)` | Stores [blueprint] in its level (`metadata.levelBlueprint`), creating a level container when none exists. Returns the saved level. |
 
+## `lib/data/models/lumina_theme_document.dart`
+
+### `class LuminaComponentStyle`
+
+Bir widget türü (buton, kart, metin girişi, rozet, iletişim penceresi vb.) için bileşen düzeyinde stil geçersiz kılmaları: arka plan ve ön plan renkleri, kenarlık yuvarlaklığı, iç boşluk (padding) ve tipografi geçersiz kılmaları.
+
+**Yapıcı Metotlar (Constructors):**
+
+- `const LuminaComponentStyle({this.backgroundColor, this.foregroundColor, this.borderRadius, this.borderColor, this.borderWidth, this.paddingHorizontal, this.paddingVertical, this.fontSize, this.fontWeight})`
+
+### `class LuminaCustomStyle`
+
+Oyun widget'larına atanabilen, belirli bir hedef bileşeni özelleştiren adlandırılmış özel stil varyantı.
+
+**Yapıcı Metotlar (Constructors):**
+
+- `const LuminaCustomStyle({required this.name, required this.targetComponent, required this.style})`
+
+### `class LuminaThemeDocument`
+
+`AssetType.theme` türündeki `.lmas` varlıklarında serileştirilen kullanıcı arayüzü temaları için doküman modeli. Tasarım belirteçlerini (renk paleti, temel köşe yuvarlaklığı, tipografi), bileşene özel geçersiz kılmaları ve adlandırılmış özel stilleri saklar.
+
+**Yapıcı Metotlar (Constructors):**
+
+- `const LuminaThemeDocument({this.name, this.baseTheme, this.colors, this.radius, this.fontFamily, this.baseFontSize, this.headlineFontSize, this.componentStyles, this.customStyles})`
+- `factory LuminaThemeDocument.defaultShadcnDark({String name = 'DefaultTheme'})`
+- `factory LuminaThemeDocument.defaultGameTheme({String name = 'GameUITheme'})`
+- `factory LuminaThemeDocument.fromAsset(LuminaAsset asset)`
+
+**Üyeler:**
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `colorOf` | `Color colorOf(String token, {Color fallback})` | Tema renk paletinden belirtilen isimdeki renk belirtecini çözer. |
+| `hasComponentStyle` | `bool hasComponentStyle(String componentKey)` | Bileşen için özel bir stil geçersiz kılmasının bulunup bulunmadığını döner. |
+| `toAsset` | `LuminaAsset toAsset({String name})` | Tema dokümanını `AssetType.theme` türünde bir `LuminaAsset` varlığına serileştirir. |
+| `toJson` | `String toJson()` | Tema dokümanını JSON metnine serileştirir. |
+
 ---
 
 [Önceki: Veri katmanı: modeller ve repository'ler](data-models.md) | [Üst: lumina (engine çekirdeği)](index.md) | [Sonraki: lumina_editor_api](../lumina_editor_api/index.md)

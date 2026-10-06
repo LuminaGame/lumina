@@ -252,6 +252,44 @@ Reads and writes a project's level `.lmas` containers: the whole document, or on
 | `loadLevelBlueprint` | `LuminaLevelBlueprintDocument loadLevelBlueprint(String relativePath)` | The Level Blueprint of [relativePath]; an empty graph when the level has none (or does not exist yet). |
 | `saveLevelBlueprint` | `LuminaLevelDocument saveLevelBlueprint(LuminaLevelBlueprintDocument blueprint)` | Stores [blueprint] in its level (`metadata.levelBlueprint`), creating a level container when none exists. Returns the saved level. |
 
+## `lib/data/models/lumina_theme_document.dart`
+
+### `class LuminaComponentStyle`
+
+Component-level styling overrides for a widget type (button, card, input, badge, dialog, etc.): background and foreground colors, border radius, padding, and typography overrides.
+
+**Constructors:**
+
+- `const LuminaComponentStyle({this.backgroundColor, this.foregroundColor, this.borderRadius, this.borderColor, this.borderWidth, this.paddingHorizontal, this.paddingVertical, this.fontSize, this.fontWeight})`
+
+### `class LuminaCustomStyle`
+
+Named style variant targeting a specific component type that can be applied to game widgets.
+
+**Constructors:**
+
+- `const LuminaCustomStyle({required this.name, required this.targetComponent, required this.style})`
+
+### `class LuminaThemeDocument`
+
+Document model for UI themes serialized in `.lmas` assets with `AssetType.theme`. Stores design tokens (color palette, base border radius, typography), component-specific overrides, and custom named styles.
+
+**Constructors:**
+
+- `const LuminaThemeDocument({this.name, this.baseTheme, this.colors, this.radius, this.fontFamily, this.baseFontSize, this.headlineFontSize, this.componentStyles, this.customStyles})`
+- `factory LuminaThemeDocument.defaultShadcnDark({String name = 'DefaultTheme'})`
+- `factory LuminaThemeDocument.defaultGameTheme({String name = 'GameUITheme'})`
+- `factory LuminaThemeDocument.fromAsset(LuminaAsset asset)`
+
+**Members:**
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `colorOf` | `Color colorOf(String token, {Color fallback})` | Resolves a color token by name from the theme palette. |
+| `hasComponentStyle` | `bool hasComponentStyle(String componentKey)` | Returns true if an explicit style override exists for the component. |
+| `toAsset` | `LuminaAsset toAsset({String name})` | Serializes the theme document into a `LuminaAsset` of `AssetType.theme`. |
+| `toJson` | `String toJson()` | Serializes the theme document to a JSON string. |
+
 ---
 
 [Previous: Data layer: models and repositories](data-models.md) | [Up: lumina (engine core)](index.md) | [Next: lumina_editor_api](../lumina_editor_api/index.md)

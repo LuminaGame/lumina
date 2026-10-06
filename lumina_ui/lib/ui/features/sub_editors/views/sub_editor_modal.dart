@@ -52,6 +52,8 @@ import '../../main_editor/services/editor_preferences.dart';
 import 'environment_lighting_sub_editor.dart';
 import 'navigation_sub_editor.dart';
 import 'build_manager_sub_editor.dart';
+import 'theme/theme_sub_editor.dart';
+import '../view_models/theme_editor_view_model.dart';
 
 export 'material/material_sub_editor.dart';
 export 'material/material.dart';
@@ -76,6 +78,8 @@ export 'sequencer/sequencer_sub_editor.dart';
 export 'sequencer/sequencer.dart';
 export 'umg/widget_sub_editor.dart';
 export 'umg/umg.dart';
+export 'theme/theme_sub_editor.dart';
+export 'theme/theme.dart';
 export 'project_settings_sub_editor.dart';
 export 'environment_lighting_sub_editor.dart';
 export 'navigation_sub_editor.dart';
@@ -421,6 +425,17 @@ class _SubEditorDispatcher extends StatelessWidget {
           assetPath: asset?.lmasPath ?? (editorViewModel != null ? '${editorViewModel!.projectDirPath}/contents/widgets/$assetName.lmas' : asset?.relativePath),
           projectDirPath: editorViewModel?.projectDirPath,
           viewModel: _existingSession<UmgEditorViewModel>(),
+          onBind: _bind,
+          onClose: onClose,
+        );
+      case 'Theme':
+      case 'THEME':
+      case 'theme':
+        return ThemeSubEditor(
+          assetName: assetName,
+          assetPath: asset?.lmasPath ?? (editorViewModel != null ? '${editorViewModel!.projectDirPath}/contents/themes/$assetName.lmas' : asset?.relativePath),
+          asset: asset,
+          viewModel: _existingSession<ThemeEditorViewModel>(),
           onBind: _bind,
           onClose: onClose,
         );
