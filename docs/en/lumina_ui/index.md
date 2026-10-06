@@ -22,7 +22,7 @@
 |---|---|
 | [App shell and shared UI](core.md) | App entry, built-in plugin, plugin extension registry, theme, property editors, scene services. |
 | [App shell and shared UI (continued, part 1)](core-continued.md) | More files under `lib/`, `lib/testing/`, `lib/ui/core/`, `lib/ui/core/host/`, `lib/ui/core/property_editors/`, `lib/ui/core/services/`, `lib/ui/core/theme/`, `lib/ui/core/widgets/`. |
-| [App shell and shared UI (continued, part 2)](core-continued-2.md) | More files under `lib/ui/core/window/`. |
+| [App shell and shared UI (continued, part 2)](core-continued-2.md) | More files under `lib/ui/core/window/`, the media players and declarative plugin panels (`PluginViewRenderer`). |
 | [Main editor: views](main-editor-views.md) | Viewport, outliner, details, content browser, toolbar, menu bar, output log, dialogs. |
 | [Main editor: views (continued)](main-editor-views-continued.md) | More files under `lib/ui/features/main_editor/views/`. |
 | [Main editor: view model and services](main-editor-state.md) | `EditorViewModel`, quality settings, gizmos, Play-In-Editor, snapping, picking, shortcuts, commands, transactions. |

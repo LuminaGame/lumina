@@ -2,7 +2,7 @@
 
 # Uygulama kabuğu ve ortak UI (devamı, bölüm 2)
 
-Uygulama kabuğu ve ortak UI sayfasının devamı: `lib/ui/core/window/` altındaki diğer public dosyalar. Dosya yolları `lumina_ui/` paket dizinine görelidir.
+Uygulama kabuğu ve ortak UI sayfasının devamı: `lib/ui/core/window/` ve `lib/ui/core/widgets/` (medya oynatıcıları, bildirimsel eklenti panelleri) altındaki diğer public dosyalar. Dosya yolları `lumina_ui/` paket dizinine görelidir.
 
 **Bu sayfada:**
 
@@ -10,6 +10,7 @@ Uygulama kabuğu ve ortak UI sayfasının devamı: `lib/ui/core/window/` altınd
 - [`lib/ui/core/window/window_controls.dart`](#libuicorewindowwindow_controlsdart)
 - [`lib/ui/core/window/window_state_store.dart`](#libuicorewindowwindow_state_storedart)
 - [`lib/ui/core/widgets/media/editor_media_widgets.dart`](#libuicorewidgetsmediaeditor_media_widgetsdart)
+- [`lib/ui/core/widgets/plugin_view/`](#libuicorewidgetsplugin_view)
 
 ## `lib/ui/core/window/lumina_window.dart`
 
@@ -180,6 +181,83 @@ Oynatma kontrolleri, ilerleme çubuğu, zaman kodu göstergeleri, ses seviyesi a
 **Yapıcı Metotlar (Constructors):**
 
 - `const LuminaAudioPlayerWidget({super.key, required this.controller, this.showControls = true, this.autoPlay = false})`
+
+## `lib/ui/core/widgets/plugin_view/`
+
+Bildirimsel (declarative) eklenti panelleri. Kendi sürecinde çalışan bir eklenti widget gönderemez; paneli bir
+`PluginViewSpec` olarak tarif eder (`package:lumina_plugin_protocol`, `lumina_editor_api` yeniden dışa aktarır):
+her biri bir `kind`, görünümde benzersiz bir `id`, `props` ve kapsayıcılarda `children` taşıyan `PluginControl`
+ağacı. Editör bu tarifi kendi shadcn widget'larıyla (Details panelinin özellik editörleri) çizer, kullanıcı
+eylemlerini `PluginViewEvent` olarak iletir; eklenti yeni bir tarif ya da bir `PluginViewPatch` ile yanıt verir.
+
+### `class PluginViewRenderer`
+
+`const PluginViewRenderer({super.key, required PluginViewSpec spec, required void Function(PluginViewEvent) onEvent, String? projectDir})`
+
+[spec]'i yukarıdan aşağı çizer, her kontrol için bir widget, her biri `ValueKey('<viewId>/<controlId>')`
+anahtarıyla. [projectDir] göreli görsel yollarını çözer ve ana editör dışında asset-ref alanlarının asset listesini
+sağlar. Panel kendisi kaymaz; onu barındıran dock paneli kaydırır.
+
+**Güncelleme.** Yeni bir tarif verin, genellikle `spec.apply(patch)`. Öncekiyle aynı çizilen bir kontrol (aynı
+kind, id, props ve children, derinlemesine karşılaştırılır) widget örneğini korur ve Flutter onu atlar: bir yama
+yalnızca değiştirdiği kontrolleri yeniden kurar, değişmeyen bir metin alanı odağını, imlecini ve gönderilmemiş
+yazısını korur. Aynı tarifin tamamen yeniden gönderilmesi ekranda hiçbir şeyi değiştirmez. Girdiler eklenti farklı
+bir `value` gönderene kadar kullanıcının son seçimini gösterir; odaktaki bir metin alanı o durumda bile yazılanı
+korur ve alandan çıkılınca eklentinin değerini gösterir. Yeni bir görünüm kimliği ya da proje dizini her şeyi
+sıfırdan başlatır.
+
+**Kontroller.** `label` (Details panelindeki gibi 100 px soluk etiket sütunu) ve `tooltip` her türde çalışır;
+`enabled: false` bir girdiyi ya da butonu soluklaştırır ve hiçbir olay göndermez.
+
+| Tür | Props | Çizim | Olay |
+|---|---|---|---|
+| `section` | `title`, `collapsed` | Details kategori başlığı; tıklamak çocukları daraltır (yerel durum; eklentiden gelen yeni `collapsed` kazanır) | yok |
+| `row` | `gap` (varsayılan 8) | çocuklar yan yana: butonlar kendi genişliğini korur, metin küçülür, diğerleri kalanı paylaşır | yok |
+| `text` | `value`, `style` (`body`, `muted`, `heading`, `code`, `error`) | bir metin satırı (`code` JetBrains Mono ile) | yok |
+| `textField` | `value`, `placeholder`, `multiline` | shadcn `TextField` | Enter'da ya da kullanıcı değiştirdiği alandan çıkınca metinle `changed` (çok satırlı alan çıkışta gönderir) |
+| `numberField` | `value`, `min`, `max`, `step`, `unit` | `min` ve `max` varsa `SliderField`, yoksa `ScrubNumericField` | onaylanan sayıyla `changed`, `step`'e yuvarlanır, `step` ve `value` tam sayıysa `int`; sürükleme sırasında her adımda değil |
+| `boolField` | `value` | shadcn `Checkbox` | bool ile `changed` |
+| `enumField` | `value`, `options` (`[{"value","label"}]`) | etiketleri gösteren `EnumField` | seçeneğin değeriyle `changed` |
+| `assetRefField` | `value` (projeye göreli yol), `assetTypes` (`AssetType` adları) | türe göre süzülmüş `AssetPickerSelect`, temizleme butonu ve Content Browser kutucukları için bırakma hedefi | projeye göreli yolla, temizlenince null ile `changed` |
+| `colorField` | `value` (`#RRGGBB` ya da `#AARRGGBB`) | `ColorField` (renk kutusu, seçici, hex metni); 8 haneli değer alfayı da düzenler | değerin kendi biçimindeki renkle `changed` |
+| `button` | `text`, `tone` (`EditorTone` adı), `icon` (`PluginIconSpec` json) | shadcn `Button`: primary, destructive, outline (success ve warning metni renklendirir) | `pressed` |
+| `progress` | `value` (0..1, null = belirsiz), `text` | shadcn `LinearProgressIndicator`, metin ve yüzde | yok |
+| `log` | `lines` (en yenisi sonda), `maxLines` (varsayılan 200), `height` (varsayılan 160) | en yeni `maxLines` satırı tutan, seçilebilir, eş aralıklı kutu; en alttayken yeni satırları izler | yok |
+| `image` | `path` (mutlak ya da projeye göreli) veya `base64`, `height` (varsayılan 160) | sığdırılmış `Image.memory`; dosya asenkron okunur, 64 KB üstü base64 arka plan isolate'inde çözülür | yok |
+| `preview3d` | `scene` (`PluginSceneSpec` json), `height` (varsayılan 240) | düğümün mesh'i, `jointLocalPose`'u ve sahnenin `cameraDistance`'ı ile `Plugin3DViewportContainer`, altında sahne düğümlerinin listesi | listedeki bir düğüm tıklanınca `{"node": <ad>}` ile `picked` |
+| `divider` | yok | ince bir çizgi | yok |
+
+Editörün tanımadığı bir tür tek bir soluk satır çizer, `unsupported control <kind>`, ve asla hata fırlatmaz.
+
+**Yamalar.** `PluginViewPatchOp.set(id, props)` bir kontrolün props'una birleştirir;
+`PluginViewPatchOp.replace(id, control)` onu tümden değiştirir. Uzun bir iş ilerlemesini bir `progress` ve bir `log`
+kontrolünü yamalayarak bildirir:
+
+```dart
+spec = spec.apply(const PluginViewPatch([
+  PluginViewPatchOp.set('job', {'value': 0.6, 'text': 'Placing instances'}),
+  PluginViewPatchOp.set('log', {'lines': ['started', 'placed 72 / 120']}),
+]));
+```
+
+**Sınırlamalar.** 3B önizleme bir seferde tek sahne düğümü gösterir (ilkini ya da altındaki listede seçileni);
+düğümün `location`/`rotation`/`scale` değerleri ve sahnenin `cameraTarget`'ı uygulanmaz, viewport gösterilen mesh'i
+kendisi çerçeveler. Seçim viewport'a tıklayarak değil, düğüm listesinden yapılır. Buton ikonu adı verilen fonttaki
+glif olarak çizilir (çalışma zamanında `IconData` yok, böylece release derlemesi ikon fontlarını budamaya devam
+edebilir); editörün kendisinin hiç kullanmadığı bir glif budanmış bir release derlemesinde eksik olabilir.
+
+### Dosyalar
+
+Her tür için kendi dosyasında bir widget: `plugin_section_control.dart` (`PluginControlColumn` da burada),
+`plugin_row_control.dart`, `plugin_text_control.dart`, `plugin_text_field_control.dart`,
+`plugin_number_field_control.dart`, `plugin_bool_field_control.dart`, `plugin_enum_field_control.dart`,
+`plugin_asset_ref_field_control.dart` (arka plan isolate'inde proje taraması `PluginProjectAssets.scan` da burada),
+`plugin_color_field_control.dart`, `plugin_button_control.dart`, `plugin_progress_control.dart`,
+`plugin_log_control.dart`, `plugin_image_control.dart`, `plugin_preview3d_control.dart`,
+`plugin_divider_control.dart`, `plugin_unsupported_control.dart`. `plugin_control_cache.dart` (`PluginControlCache`)
+türleri widget'lara eşler ve değişmeyenleri yeniden kullanır; `plugin_view_scope.dart` `PluginViewHost` (görünüm
+kimliği, proje dizini, `emit`), `PluginViewScope`, tipli prop okuyucuları, `pluginControlEquals` ve
+`PluginFieldRow`'u içerir.
 
 ---
 
