@@ -60,6 +60,8 @@ import '../../source_control/view_models/source_control_view_model.dart';
 import '../../sub_editors/services/build_pipeline_service.dart';
 import '../../sub_editors/view_models/build_manager_view_model.dart';
 import '../../../core/services/crash_reporter.dart';
+import '../../../core/services/plugin_process/plugin_isolation_overrides.dart';
+import '../../../core/services/plugin_process/plugin_process_manager.dart';
 import '../../../core/services/editor_scene_environment.dart';
 import '../../../core/window/lumina_window.dart';
 import '../../mcp_server/services/mcp_server_service.dart';
@@ -477,6 +479,10 @@ class EditorViewModel extends _EditorViewModelState
     // Plugins read their applied `plugin_settings`.
     extensionRegistry.publishPluginSettings(_project.pluginSettings);
     extensionRegistry.onPluginRegistered = _pluginRegistered;
+    // Isolated plugins: one supervised process each (their channels exist
+    // before their shells register).
+    extensionRegistry.attachProjectInfo(() => EditorProjectInfo(name: project.projectName, dir: projectDirPath));
+    extensionRegistry.attachProcesses(pluginProcesses);
     EditorHandOff.beforeExit.add(_shutdownPluginsForExit);
     // Plugin MCP tools and in-process calls, on the server's
     // registry (created when a plugin first uses it).
@@ -496,6 +502,8 @@ class EditorViewModel extends _EditorViewModelState
         _logger.log('Registered code plugin ${plugin.pluginName}', level: 'info', source: 'Plugins');
       }
     }
+    // The isolated plugins' processes start after the shells registered.
+    if (pluginProcesses.pluginNames.isNotEmpty) unawaited(pluginProcesses.startAll());
     sourceControl = SourceControlViewModel(
       projectRoot: projectDirPath,
       logger: _logger,
@@ -584,6 +592,7 @@ class EditorViewModel extends _EditorViewModelState
   void dispose() {
     _cameraSaveTimer?.cancel();
     EditorHandOff.beforeExit.remove(_shutdownPluginsForExit);
+    unawaited(pluginProcesses.shutdownAll());
     removeListener(panelsController.refresh);
     panelsController.dispose();
     _frameStatsRevision.dispose();

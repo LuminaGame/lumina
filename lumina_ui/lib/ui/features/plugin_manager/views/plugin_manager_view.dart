@@ -6,6 +6,7 @@ import 'package:lumina/data/repositories/plugin_repository.dart';
 import 'package:lumina_ui/ui/features/plugin_manager/views/new_plugin_wizard.dart';
 import 'package:lumina_ui/ui/features/plugin_manager/views/plugin_import_dialogs.dart';
 import 'package:lumina_ui/ui/features/plugin_manager/views/plugin_remove_dialog.dart';
+import 'package:lumina_ui/ui/features/plugin_manager/views/plugin_process_status.dart';
 import 'package:lumina_ui/ui/features/plugin_manager/services/plugin_importer.dart';
 import 'dart:io';
 import 'package:flutter/services.dart';
@@ -271,6 +272,7 @@ class _PluginCard extends StatelessWidget {
                         Text(desc.friendlyName ?? desc.name, style: const TextStyle(fontWeight: FontWeight.bold)),
                         Text(desc.version.toString()).muted(),
                         SecondaryBadge(child: Text(desc.origin.name.toUpperCase())),
+                        if (vm.processFor(desc.name) case final process?) PluginProcessStatusBadge(process: process),
                       ],
                     ),
                     const SizedBox(height: 4),
@@ -514,6 +516,7 @@ class _PluginDetailsPane extends StatelessWidget {
           ),
         ],
         const SizedBox(height: 16),
+        if (vm.processFor(desc.name) case final process?) PluginProcessSection(viewModel: vm, process: process),
         if (desc.origin == PluginOrigin.engine) ...[
           Text(
             key: const ValueKey('plugin_built_in_note'),

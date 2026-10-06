@@ -183,6 +183,39 @@ void main() {
     expect(tester.widget<PrimaryButton>(find.widgetWithText(PrimaryButton, 'Create Plugin')).onPressed, isNotNull);
   });
 
+  testWidgets('"Run in its own process" scaffolds an isolated plugin; content-only has no such switch', (tester) async {
+    Future<ProcessResult> runner(String exec, List<String> args, {String? workingDirectory, bool runInShell = false}) async =>
+        ProcessResult(0, 0, 'ok', '');
+    final generatorService = PluginTemplateGeneratorService(projectRoot: projectDir, editorApiRoot: editorApiDir, runner: runner);
+    await tester.pumpWidget(buildApp(generatorService: generatorService));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Open Wizard'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Content-only'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('plugin_isolated_switch')), findsNothing);
+    await tester.tap(find.text('Blank editor plugin'));
+    await tester.pumpAndSettle();
+    final toggle = find.byKey(const Key('plugin_isolated_switch'));
+    expect(toggle, findsOneWidget);
+    await tester.ensureVisible(toggle);
+    await tester.tap(toggle);
+    await tester.pumpAndSettle();
+    expect(tester.widget<Switch>(toggle).value, isTrue);
+
+    await tester.enterText(find.byKey(const Key('plugin_name_field')), 'crash_safe_tool');
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(PrimaryButton, 'Create Plugin'));
+    for (int i = 0; i < 20; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    final manifest = File('${projectPluginsDir.path}/crash_safe_tool/crash_safe_tool.lmplugin');
+    expect(manifest.existsSync(), isTrue);
+    final json = jsonDecode(manifest.readAsStringSync()) as Map;
+    expect(json['isolation'], 'process');
+  });
+
   testWidgets('Wizard creation workflow triggers generator, persists author, and shows Enable prompt', (tester) async {
     Future<ProcessResult> mockRunner(String exec, List<String> args, {String? workingDirectory, bool runInShell = false}) async {
       if (args.contains('create')) {

@@ -17,6 +17,7 @@ import 'package:window_manager/window_manager.dart';
 import 'ui/core/host/editor_host.dart';
 import 'ui/core/host/redirection_trust_guard.dart';
 import 'ui/core/services/crash_reporter.dart';
+import 'ui/core/services/plugin_process/plugin_process_entry.dart';
 import 'ui/core/theme/editor_theme.dart';
 import 'ui/core/theme/editor_theme_store.dart';
 import 'ui/core/window/lumina_window.dart';
@@ -47,6 +48,17 @@ Future<void> runLuminaEditor(
   Map<String, LuminaPluginProcess Function()> processes = const {},
   EditorHostInfo? host,
 }) async {
+  // `--lumina-plugin-process <name>`: this executable runs one isolated
+  // plugin's process part for the editor that started it. No window is
+  // shown (the runner shows it on the first frame, and none is drawn), no
+  // crash session starts, no plugin registry loads.
+  if (args.contains(PluginProcessLaunch.flag)) {
+    LuminaEditorHost.pluginProcesses = processes;
+    // Platform channels (path_provider, …) work in the process part; no
+    // view is attached, so no frame is rendered.
+    WidgetsFlutterBinding.ensureInitialized();
+    exit(await runPluginProcessFromArgs(args, processes) ?? kPluginProcessUsageExit);
+  }
   // Started by a process that enforces Windows redirection trust (an
   // installer's finish page does), the editor and everything it runs could
   // not traverse the junctions of the engine checkout and projects: a copy

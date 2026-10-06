@@ -281,9 +281,61 @@ void main() {
       final onDisk = CrashReport.fromJson((jsonDecode(reporter.fileOf(report).readAsStringSync()) as Map).cast<String, Object?>());
       expect(onDisk.sentId, 'srv-1');
     });
+    test('a plugin process death is a plugin_crash report with its exit code and log; the session marker stays', () async {
+      final reporter = reporterFor(dataDir, url: server.url);
+      addTearDown(reporter.dispose);
+      await reporter.startSession();
+      final markerBefore = reporter.sessionMarker.readAsStringSync();
+      final report = reporter.recordPluginCrash(
+        plugin: 'kimodo',
+        reason: 'exited with code -1073741819',
+        exitCode: -1073741819,
+        logTail: const ['[stdout] loading model', '[stderr] access violation'],
+      );
+      await reporter.flush();
+      expect(report.kind, CrashReportKind.pluginCrash);
+      expect(report.kind.wire, 'plugin_crash');
+      expect(report.plugin, 'kimodo');
+      expect(report.exitCode, -1073741819);
+      expect(report.logTail, ['[stdout] loading model', '[stderr] access violation']);
+      expect(report.error, contains('kimodo'));
+      expect(reporter.pending.value?.id, report.id);
+      expect(reporter.sessionMarker.readAsStringSync(), markerBefore, reason: 'the editor did not crash');
+
+      final restored = CrashReport.fromJson((jsonDecode(reporter.fileOf(report).readAsStringSync()) as Map).cast<String, Object?>());
+      expect(restored.kind, CrashReportKind.pluginCrash);
+      expect(restored.exitCode, -1073741819);
+      expect(restored.plugin, 'kimodo');
+      expect(report.toText(), contains('Kind: plugin process ended unexpectedly'));
+      expect(report.toText(), contains('Exit code: -1073741819'));
+      final submission = report.toSubmission();
+      expect(submission['kind'], 'plugin_crash');
+      expect(submission['exitCode'], -1073741819);
+      expect(submission['logTail'], report.logTail);
+    });
   });
 
   group('CrashReportView', () {
+    testWidgets('a plugin process report says the editor is unaffected and shows the exit code', (tester) async {
+      final reporter = reporterFor(dataDir, url: server.url);
+      addTearDown(reporter.dispose);
+      late final CrashReport report;
+      await tester.runAsync(() async {
+        report = reporter.recordPluginCrash(plugin: 'fake_plugin', reason: 'exited with code 3', exitCode: 3, logTail: const ['[stderr] bye']);
+        await reporter.flush();
+      });
+      await tester.pumpWidget(
+        ShadcnApp(
+          theme: luminaEditorTheme(),
+          home: Scaffold(child: Center(child: CrashReportView(report: report, reporter: reporter, onClose: () {}))),
+        ),
+      );
+      await tester.pump();
+      expect(find.text('A PLUGIN PROCESS STOPPED'), findsOneWidget);
+      expect(find.textContaining('ended with exit code 3'), findsOneWidget);
+      expect(find.text('Plugin: fake_plugin'), findsOneWidget);
+    });
+
     testWidgets('shows the error, sends what the user typed and offers Continue afterwards', (tester) async {
       final reporter = reporterFor(dataDir, url: server.url);
       addTearDown(reporter.dispose);

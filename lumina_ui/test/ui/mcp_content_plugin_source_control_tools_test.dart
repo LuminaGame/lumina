@@ -356,6 +356,17 @@ void main() {
   });
 
   group('plugins', () {
+    test('create_plugin scaffolds an isolated plugin with isolated: true and refuses it for contentOnly', () async {
+      await expectInvalid('create_plugin', {'name': 'agent_iso_content', 'template': 'contentOnly', 'isolated': true}, contains('no code to isolate'));
+      final created = await ok('create_plugin', {'name': 'agent_iso_tools', 'template': 'blank', 'isolated': true});
+      final job = await finish(created['job_id'] as String, rounds: 40);
+      expect(job['state'], 'succeeded', reason: '${job['error']} ${job['log']}');
+      final dir = (job['result'] as Map)['plugin_dir'] as String;
+      final manifest = jsonDecode(File('$dir/agent_iso_tools.lmplugin').readAsStringSync()) as Map;
+      expect(manifest['isolation'], 'process');
+      expect(((manifest['modules'] as List).first as Map)['process_class'], isNotNull);
+    });
+
     test('create_plugin validates, generates content-only and code plugins as jobs; set_plugin_enabled reports restarts', () async {
       await expectInvalid('create_plugin', {'name': 'bad name!', 'template': 'contentOnly'}, contains('lowercase'));
       final content = await ok('create_plugin', {'name': 'lumina_plugin_agent_tools', 'template': 'contentOnly'});

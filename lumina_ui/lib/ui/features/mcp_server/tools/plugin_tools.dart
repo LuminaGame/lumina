@@ -202,6 +202,8 @@ void registerPluginTools(McpToolRegistry registry, EditorViewModel vm, McpJobReg
         'author': McpSchema.string('The author.'),
         'description': McpSchema.string('What the plugin does.'),
         'category': McpSchema.string('The Plugin Manager category; default "Utilities".'),
+        'isolated': McpSchema.boolean('Scaffold it to run in its own process (a supervised process part plus a UI '
+            'shell; a crash or hang there never takes the editor down). Not for contentOnly. Default false.'),
       }, required: ['name', 'template']),
       handler: (args) async {
         await vm.pluginsScanned;
@@ -213,6 +215,11 @@ void registerPluginTools(McpToolRegistry registry, EditorViewModel vm, McpJobReg
           throw JsonRpcException(JsonRpcErrorCode.invalidParams, invalid);
         }
         final template = PluginTemplateType.values.byName(args.string('template'));
+        final isolated = args.boolean('isolated');
+        if (isolated && template == PluginTemplateType.contentOnly) {
+          m.dispose();
+          throw JsonRpcException(JsonRpcErrorCode.invalidParams, 'A contentOnly plugin has no code to isolate: drop "isolated".');
+        }
         final friendly = args.optionalString('friendly_name')?.trim();
         final spec = PluginTemplateSpec(
           templateType: template,
@@ -221,6 +228,7 @@ void registerPluginTools(McpToolRegistry registry, EditorViewModel vm, McpJobReg
           author: args.optionalString('author') ?? '',
           description: args.optionalString('description') ?? '',
           category: args.optionalString('category') ?? 'Utilities',
+          isolated: isolated,
         );
         if (template != PluginTemplateType.contentOnly) {
           try {

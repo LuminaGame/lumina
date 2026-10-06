@@ -277,6 +277,30 @@ class CrashReporter {
     }
   }
 
+  /// Files the death of an isolated plugin's process: a
+  /// [CrashReportKind.pluginCrash] report naming [plugin], its [exitCode]
+  /// and the process's own [logTail], shown when nothing else is pending.
+  /// The editor's session marker is not touched: the editor did not crash.
+  CrashReport recordPluginCrash({required String plugin, required String reason, int? exitCode, List<String> logTail = const []}) {
+    final tail = logTail.length > logTailLines ? logTail.sublist(logTail.length - logTailLines) : List.of(logTail);
+    final report = _build(
+      kind: CrashReportKind.pluginCrash,
+      error: 'The process of plugin "$plugin" $reason. The editor kept running.',
+      stackTrace: '',
+      logTail: tail,
+      plugin: plugin,
+      exitCode: exitCode,
+    );
+    filed.add(report);
+    late final Future<void> write;
+    write = _file(report).catchError((Object e) => debugPrint('[CrashReporter] could not write ${report.id}: $e')).whenComplete(() => _writes.remove(write));
+    _writes.add(write);
+    EngineLoggerService().log('Plugin $plugin process $reason: filed crash report ${report.id}',
+        level: 'error', source: 'Plugin:$plugin');
+    pending.value ??= report;
+    return report;
+  }
+
   /// Sends [report] with what the user typed and marks it sent.
   Future<CrashReportReceipt> send(CrashReport report, {String description = '', String email = '', bool includeLog = true}) async {
     final client = MarketplaceClient(baseUrl: serverUrl, httpClient: _httpClientFactory?.call(), keepRefreshToken: false);
@@ -327,6 +351,7 @@ class CrashReporter {
     required String stackTrace,
     required List<String> logTail,
     String plugin = '',
+    int? exitCode,
   }) {
     final now = _clock();
     String gpu;
@@ -357,6 +382,7 @@ class CrashReporter {
       project: projectName,
       plugin: plugin,
       logTail: logTail,
+      exitCode: exitCode,
     );
   }
 

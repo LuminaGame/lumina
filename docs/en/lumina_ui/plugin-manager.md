@@ -12,6 +12,17 @@ The Plugin Manager window, which lists, enables, disables, imports and removes p
 
 The code plugins compiled into a project editor register while the editor starts, after the project's saved layout is loaded (a plugin may read or change its panels' visibility in `register`). A plugin whose `register` throws is left out: what it registered before the error is removed, the error is logged to the Output Log under the plugin's name (source `Plugins`), and its card shows an **Issue** badge whose tooltip holds the error (`PluginIssueType.registrationFailed`). The editor and the other plugins load as usual.
 
+## Isolated plugins: process status
+
+A plugin running in its own process (see [Plugin processes](plugin-processes.md)) shows a **Status** badge on its card
+(Running, Starting, Hung, Crashed, Stopped, In process; the tooltip gives the reason) and a **Process** section in the
+details pane: the status with its reason, pid, last exit code and automatic restarts, a **Restart** button, the
+**Run in editor process (debugging)** switch and the tail of the process's log. The switch writes the project's
+`plugin_isolation` override (`.lmproject`, through `PluginRegistryService.setIsolationOverride` and the editor's own
+project) and moves the plugin at once: same channel, restarted in the other mode. The New Plugin wizard's
+**Run in its own process** switch (not offered for content-only plugins) scaffolds an isolated plugin, as the MCP tool
+`create_plugin` does with `isolated: true`.
+
 ## Importing a plugin
 
 **Import from Folder** and **Import from Zip**, next to **New Plugin** in the list header, install a plugin into the per-user plugin folder (`UserPluginDir.resolve()`, where the Marketplace installs plugins too) by copying it; a plugin is never linked from where it was picked. Both open the system picker and validate before anything is written:
@@ -220,6 +231,9 @@ The removal is transactional (`FolderInstall.remove`): the folder is renamed to 
 | `importPlugin` | `Future<PluginImportResult> importPlugin(PluginImportSource source, String path)` | Validates the folder or zip at `path` and copies it into the user plugin folder; an `alreadyInstalled` result waits for `confirmReplace` or `cancelImport`; an installed plugin is listed and selected. |
 | `confirmReplace` | `Future<PluginImportResult> confirmReplace(PluginImportResult pending)` | Replace: installs the pending plugin over the installed copy. |
 | `cancelImport` | `void cancelImport(PluginImportResult pending)` | Cancel: drops what the pending import staged. |
+| `processOf` / `processFor` | `PluginProcessSupervisor? Function(String name)? processOf` | A plugin's process supervisor (the editor wires `pluginProcesses.supervisorOf`); null for an in-process plugin. |
+| `restartProcess` | `Future<void> restartProcess(String name)` | Restart in the Process section. |
+| `runsInEditorProcess` / `runsInEditor` / `onSetRunInEditorProcess` / `setRunInEditorProcess` | `Future<void> setRunInEditorProcess(String name, bool inEditorProcess)` | The "Run in editor process (debugging)" switch (the editor wires `EditorViewModel.pluginRunsInEditorProcess` / `setPluginRunsInEditorProcess`); `switchingIsolation` while it applies. |
 | `isPluginLoaded` | `bool Function(String name)? isPluginLoaded` | Whether this editor session registered a plugin (the editor wires `EditorViewModel.isPluginLoaded`); the removal dialog says it stays active until restart. |
 | `removerFactory` | `PluginRemover Function()? removerFactory` | Builds the `PluginRemover` for one removal (tests point it at temp data and Marketplace folders). |
 | `removing` | `bool get removing` | A removal is running (Remove is disabled meanwhile). |

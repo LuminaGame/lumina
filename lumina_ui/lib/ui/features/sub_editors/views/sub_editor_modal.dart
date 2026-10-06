@@ -261,6 +261,10 @@ class _SubEditorDispatcher extends StatelessWidget {
           folderPicker: editorViewModel!.pluginFolderPicker,
           zipPicker: editorViewModel!.pluginZipPicker,
           isPluginLoaded: editorViewModel!.isPluginLoaded,
+          // Isolated plugins: status, Restart, log, in-process override.
+          processOf: editorViewModel!.pluginProcesses.supervisorOf,
+          runsInEditorProcess: editorViewModel!.pluginRunsInEditorProcess,
+          onSetRunInEditorProcess: editorViewModel!.setPluginRunsInEditorProcess,
         );
         return PluginManagerView(viewModel: vm);
       case 'Material':

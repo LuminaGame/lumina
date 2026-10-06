@@ -7,6 +7,7 @@ import '../view_models/editor_view_model.dart';
 import '../commands/editor_command.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart' show EditorMenuPlacement;
 import '../../../core/plugin_extension_registry.dart' show PluginMenuEntry, PluginMenu;
+import '../../../core/services/plugin_process/plugin_process_supervisor.dart' show ProcessBackedCommand;
 import 'menu_tree_builder.dart';
 import '../../source_control/view_models/source_control_view_model.dart';
 import '../../source_control/views/init_repo_prompt.dart';
@@ -122,13 +123,28 @@ class MenuBarWidget extends StatelessWidget {
             )
           : null,
       onPressed: canExec ? (ctx) => cmd.execute(commandContext ?? ctx) : null,
-      child: Text(
-        cmd.label,
-        style: TextStyle(
-          fontSize: 10,
-          color: canExec ? null : EditorColors.mutedForeground,
+      child: _unavailableTooltip(
+        cmd,
+        Text(
+          cmd.label,
+          style: TextStyle(
+            fontSize: 10,
+            color: canExec ? null : EditorColors.mutedForeground,
+          ),
         ),
       ),
+    );
+  }
+
+  /// A command of a plugin whose process is not running says why
+  /// ("`<plugin>` stopped: `<reason>`") on hover.
+  Widget _unavailableTooltip(EditorCommand cmd, Widget child) {
+    final reason = cmd is ProcessBackedCommand ? cmd.unavailableReason : null;
+    if (reason == null) return child;
+    return Tooltip(
+      key: ValueKey('menu_unavailable_${cmd.id}'),
+      tooltip: (_) => TooltipContainer(child: Text(reason)),
+      child: child,
     );
   }
 

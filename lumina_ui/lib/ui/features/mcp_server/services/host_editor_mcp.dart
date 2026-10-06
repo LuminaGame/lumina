@@ -36,6 +36,15 @@ class HostEditorMcp {
     }
   }
 
+  /// Removes the tools [names] of [pluginName] (its process registering
+  /// again, or its shell while its process's tools stay).
+  void removeTools(String pluginName, Iterable<String> names) {
+    final mine = _byPlugin[pluginName];
+    for (final name in names.toList()) {
+      if (mine?.remove(name) ?? false) tools.unregister(name);
+    }
+  }
+
   /// The tools [pluginName] registered.
   Set<String> toolsOf(String pluginName) => Set.unmodifiable(_byPlugin[pluginName] ?? const <String>{});
 

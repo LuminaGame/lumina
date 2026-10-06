@@ -82,6 +82,8 @@ class _CrashReportViewState extends State<CrashReportView> {
 
   bool get _previousRun => widget.report.kind == CrashReportKind.previousRun;
 
+  bool get _pluginProcess => widget.report.kind == CrashReportKind.pluginCrash;
+
   String get _text => widget.report.toText(description: _description.text, email: _email.text, includeLog: _includeLog);
 
   Future<void> _send() async {
@@ -128,7 +130,9 @@ class _CrashReportViewState extends State<CrashReportView> {
                   child: Text(
                     _previousRun
                         ? 'THE LAST SESSION ENDED UNEXPECTEDLY'
-                        : report.isPluginCrash
+                        : _pluginProcess
+                            ? 'A PLUGIN PROCESS STOPPED'
+                            : report.isPluginCrash
                             ? 'LUMINA PLUGIN ENCOUNTERED AN ERROR'
                             : 'LUMINA STUDIO RAN INTO A PROBLEM',
                     style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 0.8, color: EditorColors.foreground),
@@ -147,7 +151,11 @@ class _CrashReportViewState extends State<CrashReportView> {
                   Text(
                     _previousRun
                         ? 'Lumina Studio did not close properly last time. Sending a report with the end of the log helps find out why; the editor is ready to use.'
-                        : report.isPluginCrash
+                        : _pluginProcess
+                            ? 'Plugin "${report.plugin}" runs in its own process, and that process ended${report.exitCode == null ? '' : ' with exit code ${report.exitCode}'}. '
+                                'The editor and your work are unaffected; the plugin restarts on its own or from the Plugin Manager. '
+                                'Sending a report with its log helps its author fix it.'
+                            : report.isPluginCrash
                             ? 'An error occurred inside plugin "${report.plugin}". The editor caught the issue and continues running, but sending a report helps diagnose the fault.'
                             : 'An error nobody handled happened. The editor keeps running, but save your work soon. Sending a report helps fix it.',
                     style: const TextStyle(fontSize: 11, color: EditorColors.foreground),

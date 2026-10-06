@@ -9,9 +9,15 @@ import 'package:lumina_editor_api/lumina_editor_api.dart';
 import '../features/mcp_server/services/host_editor_mcp.dart';
 import 'plugin_3d_viewport_container.dart';
 import 'property_editors/asset_picker_select.dart';
+import 'services/plugin_process/plugin_process_host.dart';
+import 'services/plugin_process/plugin_process_manager.dart';
 import 'theme/editor_theme_access.dart';
+import 'widgets/plugin_process_guard.dart';
 
-class PluginExtensionRegistry extends ChangeNotifier implements LuminaEditorHostContext, EditorThemeHost {
+part 'plugin_extension_registry_entries.dart';
+part 'plugin_extension_registry_processes.dart';
+
+class PluginExtensionRegistry extends ChangeNotifier implements LuminaEditorHostContext, EditorThemeHost, PluginProcessHost {
   final EngineLoggerService logger;
 
   PluginExtensionRegistry({required this.logger});
@@ -47,12 +53,7 @@ class PluginExtensionRegistry extends ChangeNotifier implements LuminaEditorHost
   /// The registering plugin's view of the editor's MCP tools; a bare
   /// registration context gets a detached one.
   @override
-  EditorMcp get mcp {
-    final plugin = _currentPlugin ?? builtInPlugin;
-    final factory = _mcpFactory;
-    if (factory == null) return EditorMcp.detached(pluginName: plugin);
-    return HostEditorMcp.lazyScoped(() => _mcpHost ??= factory(), plugin);
-  }
+  EditorMcp get mcp => mcpFor(_currentPlugin ?? builtInPlugin);
 
   /// Plugins read the active editor theme (read-only).
   @override
@@ -99,10 +100,69 @@ class PluginExtensionRegistry extends ChangeNotifier implements LuminaEditorHost
     }
   }
 
-  /// Until the plugin process supervisor is attached, every plugin's
-  /// channel is detached.
+  PluginProcessManager? _processes;
+
+  /// The supervisors of the isolated plugins: their channels, guards and
+  /// process contributions. Without one every channel is detached.
+  void attachProcesses(PluginProcessManager processes) => _processes = processes;
+
+  PluginProcessManager? get processes => _processes;
+
+  // PluginProcessHost: what plugin processes reach (see
+  // plugin_extension_registry_processes.dart).
+  final Map<String, Set<Object>> _processOwned = {};
+  final Map<String, Set<String>> _processTools = {};
+  EditorProjectInfo? Function()? _projectInfo;
+
+  /// The open project, told to plugin processes in their hello.
+  void attachProjectInfo(EditorProjectInfo? Function() info) => _projectInfo = info;
+
   @override
-  PluginProcessChannel processChannel(String pluginName) => PluginProcessChannel.detached(pluginName);
+  EditorProjectInfo? get projectInfo => _projectInfo?.call();
+
+  @override
+  void logPlugin(String plugin, String message, {String level = 'info'}) => logger.log(message, level: level, source: plugin);
+
+  @override
+  EditorLevelAccess? get levelAccess => _level;
+
+  @override
+  EditorMcp mcpFor(String plugin) =>
+      _mcpFactory == null ? EditorMcp.detached(pluginName: plugin) : HostEditorMcp.lazyScoped(() => _mcpHost ??= _mcpFactory!(), plugin);
+
+  @override
+  PluginStorage storageFor(String plugin) {
+    final root = _dataRoot?.call() ?? Directory('${Directory.systemTemp.path}/lumina_plugin_data');
+    final project = _projectDir?.call();
+    return PluginStorage(
+      userDir: Directory('${root.path}/$plugin'),
+      projectDir: project == null ? null : Directory('$project/.lumina/plugins/$plugin'),
+    );
+  }
+
+  @override
+  ValueListenable<Map<String, Object?>> settingsFor(String plugin) => _settingsNotifier(plugin);
+
+  @override
+  void registerProcessContributions(String plugin, void Function(LuminaEditorContext context) register) {
+    _registerProcess(plugin, register);
+    notifyListeners();
+  }
+
+  @override
+  void removeProcessContributions(String plugin) {
+    _removeProcessItems(plugin);
+    notifyListeners();
+  }
+
+  @override
+  void processStateChanged(String plugin) => notifyListeners();
+
+  /// [pluginName]'s supervisor when it has a process part, else a detached
+  /// channel.
+  @override
+  PluginProcessChannel processChannel(String pluginName) =>
+      _processes?.supervisorOf(pluginName) ?? PluginProcessChannel.detached(pluginName);
 
   @override
   void reportCrash(
@@ -206,10 +266,12 @@ class PluginExtensionRegistry extends ChangeNotifier implements LuminaEditorHost
       _consoleCommands,
       _settingsSections,
     ]) {
-      contributions.remove(pluginName);
+      _dropShellItems(contributions, pluginName);
     }
-    // Its MCP tools too.
-    _mcpHost?.removePlugin(pluginName);
+    // Its MCP tools too (its process's tools stay: they are registered again
+    // by the process itself).
+    final keepTools = _processTools[pluginName] ?? const <String>{};
+    _mcpHost?.removeTools(pluginName, (_mcpHost?.toolsOf(pluginName) ?? const <String>{}).difference(keepTools));
     _currentPlugin = pluginName;
   }
 
@@ -318,15 +380,7 @@ class PluginExtensionRegistry extends ChangeNotifier implements LuminaEditorHost
 
   /// The registering plugin's own store (captured, like [mcp]).
   @override
-  PluginStorage get storage {
-    final plugin = _currentPlugin ?? builtInPlugin;
-    final root = _dataRoot?.call() ?? Directory('${Directory.systemTemp.path}/lumina_plugin_data');
-    final project = _projectDir?.call();
-    return PluginStorage(
-      userDir: Directory('${root.path}/$plugin'),
-      projectDir: project == null ? null : Directory('$project/.lumina/plugins/$plugin'),
-    );
-  }
+  PluginStorage get storage => storageFor(_currentPlugin ?? builtInPlugin);
 
   @override
   void registerMenuItem(String menuPath, EditorCommand command,
@@ -492,13 +546,13 @@ class PluginExtensionRegistry extends ChangeNotifier implements LuminaEditorHost
         return;
       }
     }
-    _panels.putIfAbsent(plugin, () => []).add(panel);
+    _panels.putIfAbsent(plugin, () => []).add(_guardPanel(plugin, panel));
   }
 
   @override
   void registerAssetType(EditorAssetTypeHandler handler) {
     final plugin = _currentPlugin ?? 'BuiltIn';
-    _assetTypes.putIfAbsent(plugin, () => []).add(handler);
+    _assetTypes.putIfAbsent(plugin, () => []).add(_guardAssetType(plugin, handler));
   }
 
   @override
@@ -561,7 +615,7 @@ class PluginExtensionRegistry extends ChangeNotifier implements LuminaEditorHost
     final plugin = _currentPlugin ?? builtInPlugin;
     final list = _tabs.putIfAbsent(plugin, () => []);
     list.removeWhere((t) => t.id == tab.id);
-    list.add(tab);
+    list.add(_guardTab(plugin, tab));
   }
 
   @override
@@ -622,54 +676,4 @@ class PluginExtensionRegistry extends ChangeNotifier implements LuminaEditorHost
       projectDir: _projectDir?.call(),
     );
   }
-}
-
-/// One accepted menu item, placed at its effective path: a
-/// legacy `Tools/PCG/…` plugin item sits at `Plugins/PCG/…`.
-class PluginMenuEntry {
-  final String plugin;
-  final List<String> _segments;
-  final EditorCommand command;
-  final EditorMenuItemOptions options;
-
-  /// `Plugins/<Item>` with no group: filed under the plugin's title.
-  final bool ungrouped;
-
-  /// Registered under the deprecated `Tools/…` root.
-  final bool legacy;
-
-  PluginExtensionRegistry? _registry;
-
-  PluginMenuEntry._(this.plugin, this._segments, this.command, this.options, {this.ungrouped = false, this.legacy = false});
-
-  /// The effective path segments, the top-level menu first.
-  List<String> get segments => ungrouped
-      ? [_segments.first, _registry?.pluginTitle(plugin) ?? plugin, ..._segments.skip(1)]
-      : _segments;
-
-  String get path => segments.join('/');
-}
-
-/// A plugin-owned top-level menu.
-class PluginMenu {
-  final String plugin;
-  final EditorMenuDescriptor menu;
-  const PluginMenu(this.plugin, this.menu);
-}
-
-/// A console command as the host holds it: its help text and handler.
-class RegisteredConsoleCommand {
-  final String help;
-  final void Function(List<String>) handler;
-  RegisteredConsoleCommand(this.help, this.handler);
-}
-
-/// A slot button as the host holds it: its plugin and its
-/// effective id `<plugin>.<id>`.
-class RegisteredSlotButton {
-  final String plugin;
-  final String effectiveId;
-  final EditorSlotButton button;
-  final int _sequence;
-  const RegisteredSlotButton._(this.plugin, this.effectiveId, this.button, this._sequence);
 }
