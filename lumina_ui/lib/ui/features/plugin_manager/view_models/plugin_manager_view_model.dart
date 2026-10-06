@@ -7,6 +7,7 @@ import 'package:lumina/data/services/workspace_paths.dart';
 import 'package:lumina/data/models/lumina_plugin_descriptor.dart';
 import 'package:lumina/data/repositories/plugin_repository.dart';
 
+import '../../../core/services/plugin_process/plugin_process_supervisor.dart';
 import '../services/plugin_importer.dart';
 import '../services/plugin_remover.dart';
 
@@ -34,6 +35,16 @@ class PluginManagerViewModel extends ChangeNotifier {
   /// data folder and the Marketplace's install records.
   final PluginRemover Function()? removerFactory;
 
+  /// The supervisor of plugin `name`'s process, or null when it has none
+  /// (an in-process plugin, or no editor behind the manager).
+  final PluginProcessSupervisor? Function(String name)? processOf;
+
+  /// Whether the project forces plugin `name` into the editor process.
+  final bool Function(String name)? runsInEditorProcess;
+
+  /// Writes the project's `plugin_isolation` override for plugin `name`.
+  final Future<void> Function(String name, bool inEditorProcess)? onSetRunInEditorProcess;
+
   String _searchQuery = '';
   String _selectedCategory = 'ALL PLUGINS';
   String _selectedGroup = 'ALL'; // ALL, INSTALLED, BUILT-IN
@@ -48,7 +59,37 @@ class PluginManagerViewModel extends ChangeNotifier {
     this.importerFactory,
     this.isPluginLoaded,
     this.removerFactory,
+    this.processOf,
+    this.runsInEditorProcess,
+    this.onSetRunInEditorProcess,
   });
+
+  /// The process of plugin [name], when it runs in one.
+  PluginProcessSupervisor? processFor(String name) => processOf?.call(name);
+
+  /// Restarts plugin [name]'s process (resets its automatic restarts).
+  Future<void> restartProcess(String name) async => processFor(name)?.restart();
+
+  bool _switchingIsolation = false;
+
+  /// A plugin is being moved in or out of the editor process.
+  bool get switchingIsolation => _switchingIsolation;
+
+  /// "Run in editor process (debugging)" for plugin [name].
+  bool runsInEditor(String name) => runsInEditorProcess?.call(name) ?? false;
+
+  Future<void> setRunInEditorProcess(String name, bool inEditorProcess) async {
+    final set = onSetRunInEditorProcess;
+    if (set == null) return;
+    _switchingIsolation = true;
+    notifyListeners();
+    try {
+      await set(name, inEditorProcess);
+    } finally {
+      _switchingIsolation = false;
+      notifyListeners();
+    }
+  }
 
   bool _importing = false;
   bool _disposed = false;
