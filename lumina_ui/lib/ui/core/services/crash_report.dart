@@ -7,11 +7,19 @@ enum CrashReportKind {
 
   /// The previous editor session ended without closing (the process died or
   /// was killed): found at the next launch.
-  previousRun;
+  previousRun,
 
-  String get wire => switch (this) { uncaught => 'uncaught', previousRun => 'previous_run' };
+  /// A plugin's own process (an isolated plugin) died: the editor kept
+  /// running. Carries the plugin, its exit code and its log tail.
+  pluginCrash;
 
-  static CrashReportKind fromWire(String? value) => value == 'previous_run' ? previousRun : uncaught;
+  String get wire => switch (this) { uncaught => 'uncaught', previousRun => 'previous_run', pluginCrash => 'plugin_crash' };
+
+  static CrashReportKind fromWire(String? value) => switch (value) {
+        'previous_run' => previousRun,
+        'plugin_crash' => pluginCrash,
+        _ => uncaught,
+      };
 }
 
 /// What the crash report screen shows and, when the user agrees, sends:
@@ -34,6 +42,7 @@ class CrashReport {
     this.project = '',
     this.plugin = '',
     this.logTail = const [],
+    this.exitCode,
     this.sentId,
   });
 
@@ -66,8 +75,13 @@ class CrashReport {
 
   bool get isPluginCrash => plugin.isNotEmpty;
 
-  /// The last lines of the editor log before the crash.
+  /// The last lines of the editor log before the crash (for a
+  /// [CrashReportKind.pluginCrash], the plugin process's own log).
   final List<String> logTail;
+
+  /// The exit code of a plugin process that died (null when it is not
+  /// known, e.g. a process killed by a signal on some systems).
+  final int? exitCode;
 
   /// The server's id once the report was sent.
   final String? sentId;
@@ -96,6 +110,7 @@ class CrashReport {
         project: project,
         plugin: plugin ?? this.plugin,
         logTail: logTail,
+        exitCode: exitCode,
         sentId: sentId ?? this.sentId,
       );
 
@@ -115,6 +130,7 @@ class CrashReport {
         'project': project,
         if (plugin.isNotEmpty) 'plugin': plugin,
         'logTail': logTail,
+        if (exitCode != null) 'exitCode': exitCode,
         if (sentId != null) 'sentId': sentId,
       };
 
@@ -134,6 +150,7 @@ class CrashReport {
         project: j['project'] as String? ?? '',
         plugin: j['plugin'] as String? ?? '',
         logTail: [for (final l in (j['logTail'] as List?) ?? const []) l.toString()],
+        exitCode: j['exitCode'] as int?,
         sentId: j['sentId'] as String?,
       );
 
@@ -154,6 +171,7 @@ class CrashReport {
         if (filament.isNotEmpty) 'filament': filament,
         if (project.isNotEmpty) 'project': project,
         if (plugin.isNotEmpty) 'plugin': plugin,
+        if (exitCode != null) 'exitCode': exitCode,
         if (includeLog) 'logTail': logTail,
         'reportId': id,
         'createdAt': createdAt.toUtc().toIso8601String(),
@@ -164,7 +182,11 @@ class CrashReport {
   String toText({String description = '', String email = '', bool includeLog = true}) {
     final b = StringBuffer()
       ..writeln('Lumina Studio crash report $id')
-      ..writeln('Kind: ${kind == CrashReportKind.uncaught ? 'uncaught error' : 'previous session ended unexpectedly'}')
+      ..writeln('Kind: ${switch (kind) {
+        CrashReportKind.uncaught => 'uncaught error',
+        CrashReportKind.previousRun => 'previous session ended unexpectedly',
+        CrashReportKind.pluginCrash => 'plugin process ended unexpectedly',
+      }}')
       ..writeln('When: ${createdAt.toUtc().toIso8601String()}');
     if (release.isNotEmpty || commit.isNotEmpty) b.writeln('Release: $release ${commit.isNotEmpty ? '(${commit.length > 12 ? commit.substring(0, 12) : commit})' : ''}'.trim());
     if (editor.isNotEmpty) b.writeln('Editor: $editor');
@@ -173,6 +195,7 @@ class CrashReport {
     if (filament.isNotEmpty) b.writeln('Filament: $filament');
     if (project.isNotEmpty) b.writeln('Project: $project');
     if (plugin.isNotEmpty) b.writeln('Plugin: $plugin');
+    if (exitCode != null) b.writeln('Exit code: $exitCode');
     if (description.trim().isNotEmpty) b..writeln()..writeln('Description:')..writeln(description.trim());
     if (email.trim().isNotEmpty) b.writeln('Contact: ${email.trim()}');
     b..writeln()..writeln('Error:')..writeln(error.trim());
