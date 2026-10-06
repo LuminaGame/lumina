@@ -1,0 +1,30 @@
+diff --git a/filament/src/details/Engine.cpp b/filament/src/details/Engine.cpp
+index 82d3886c..8b6fb400 100644
+--- a/filament/src/details/Engine.cpp
++++ b/filament/src/details/Engine.cpp
+@@ -620,12 +620,9 @@ void FEngine::shutdown() {
+      */
+ 
+     mPostProcessManager.terminate(driver);  // free-up post-process manager resources
+-    mResourceAllocatorDisposer->terminate();
+-    mResourceAllocatorDisposer.reset();
+     mDFG.terminate(*this);                  // free-up the DFG
+     mRenderableManager.terminate(driver);   // free-up all renderables
+     mLightManager.terminate();              // free-up all lights
+-    mCameraManager.terminate(*this);        // free-up all cameras
+ 
+     mPerViewDescriptorSetLayoutDepthVariant.terminate(mHwDescriptorSetLayoutFactory, driver);
+     mPerViewDescriptorSetLayoutSsrVariant.terminate(mHwDescriptorSetLayoutFactory, driver);
+@@ -666,6 +663,12 @@ void FEngine::shutdown() {
+     // try to destroy objects in the inverse dependency
+     cleanupResourceList(std::move(mRenderers));
+     cleanupResourceList(std::move(mViews));
++    // A leaked View's terminate() destroys the cameras its shadow maps own and
++    // returns its frame history (TAA, SSR) through the resource allocator
++    // disposer, so both must outlive the views.
++    mCameraManager.terminate(*this);        // free-up all cameras
++    mResourceAllocatorDisposer->terminate();
++    mResourceAllocatorDisposer.reset();
+     cleanupResourceList(std::move(mScenes));
+     cleanupResourceList(std::move(mSkyboxes));
+     cleanupResourceList(std::move(mColorGradings));

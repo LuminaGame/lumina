@@ -11,6 +11,7 @@ are upstream v1.77.2 with exactly these files applied in order.
 | `0002-ssr-skip-skinned-morphed.patch` | `filament/src/RenderPass.cpp` | Keeps skinned and morphed renderables out of the screen-space reflections pass, which otherwise loses the Vulkan device. |
 | `0003-libwebp-wasm-no-webp-js.patch` | `third_party/libwebp/tnt/CMakeLists.txt` | Lets a WebAssembly build with WebP textures configure without SDL2. |
 | `0004-velocity-buffer-motion-vectors.patch` | `filament/include/filament/{Options,View}.h`, `filament/src/{PostProcessManager,FrameHistory,View}.*`, `filament/src/details/{Renderer,Scene,View}.*`, `filament/src/ds/StructureDescriptorSet.*`, `filament/src/materials/antiAliasing/taa/taa.mat`, `libs/filabridge/.../UibStructs.h`, `libs/filamat/src/shaders/UibGenerator.cpp`, `shaders/src/surface_*` | Per-pixel motion vectors from the structure pass (`TemporalAntiAliasingOptions::motionVectors`), consumed by TAA and exportable through `View::setMotionVectorTexture`. |
+| `0005-shutdown-terminates-views-before-cameras.patch` | `filament/src/details/Engine.cpp` | `Engine::shutdown` terminates leaked views before it frees the cameras their shadow maps own and the resource allocator disposer their frame history returns to; the upstream order reads freed memory and crashes `Engine::destroy`. |
 
 ## 0001: libassimp glTF 2 `ReplaceData_joint` bounds
 
@@ -66,8 +67,14 @@ and advanced once per renderer frame) and the previous frame's unjittered
 `clipFromWorld` (`PerViewUib::prevClipFromWorldMatrix`, kept in the view's frame
 history). Both fields live in space the UBOs reserved, so their layout and
 `MATERIAL_VERSION` are unchanged; materials compiled before this patch still load and
-simply write no velocity. Skinning and morphing use the current pose, so bone and morph
-motion is not captured yet; custom vertex displacement is not either. The TAA material
+simply write no velocity. Skinned and morphed renderables also keep the pose the previous
+frame rendered with: `FRenderableManager` shadows each owned bone palette and weight set on
+the CPU, and the first `setBones` / `setMorphWeights` of a frame (the renderer advances a
+motion-frame counter in `endFrame`) uploads that copy into a second buffer bound as
+`PrevBonesUniforms` / `PrevMorphingUniforms` (per-renderable bindings 6 and 7, emitted for
+the skinning variants). A renderable not updated in a frame binds its current pose as the
+previous one (no motion); a shared `SkinningBuffer` has no previous palette. Custom vertex
+displacement is not captured. The TAA material
 samples the velocity buffer (`useVelocity` constant) instead of reprojecting by matrix,
 and `View::setMotionVectorTexture` renders the buffer into a user texture of the render
 target's size for upscalers and tests.
@@ -100,3 +107,16 @@ Lumina release carries. To change a patch or add one:
 Moving to a newer Filament release means rebasing the series onto the new tag,
 dropping patches that upstream has absorbed, and setting `tool/filament/VERSION`
 to `<new version>-lumina.1`.
+
+## 0005: `Engine::shutdown` terminates views before cameras and the disposer
+
+`FEngine::shutdown` frees the camera components (`mCameraManager.terminate`) and resets the
+resource allocator disposer before it cleans up the objects the application did not destroy,
+among them the views. `FView::terminate` needs both: a view that rendered shadows owns a
+`ShadowMapManager` whose `ShadowMap`s hold two `FCamera` pointers each and destroy them in
+`ShadowMap::terminate`, and `clearFrameHistory` returns the TAA / SSR history textures
+through `getResourceAllocatorDisposer()`. By then the cameras are freed and the disposer is
+null, so the teardown reads freed memory and `Engine::destroy` crashes whenever the heap
+reused it (reliably after a few dozen TAA frames). The patch moves `mCameraManager.terminate`
+and the disposer's `terminate` / `reset` after `cleanupResourceList(mViews)`; nothing in
+between uses either.

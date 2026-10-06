@@ -2,11 +2,16 @@
 
 ## Unreleased
 
-- Motion vectors (prebuilt `1.77.2-lumina.2`, Filament patch `0004`): `TemporalAntiAliasingOptions.motionVectors`
+- Motion vectors (prebuilt `1.77.2-lumina.3`, Filament patch `0004`): `TemporalAntiAliasingOptions.motionVectors`
   makes the structure pass render per-pixel screen motion (texels, x right, y up) from each renderable's previous
   world transform and the previous frame's camera; TAA reprojects its history with it. `FilamentView.motionVectorsSupported`,
-  `FilamentView.motionVectorTexture` and `MotionVectorBuffer` export and read the buffer. Skinning and morphing use the
-  current pose for now.
+  `FilamentView.motionVectorTexture` and `MotionVectorBuffer` export and read the buffer. Skinned and morphed renderables
+  carry the pose of the previous frame too (bones and weights set through `RenderableManager`; a shared `SkinningBuffer`
+  does not).
+- Fixed: disposing an engine that still owned a view which had rendered shadows could crash the process
+  (Filament patch `0005`: `Engine::shutdown` now terminates leaked views before it frees the cameras their shadow
+  maps own and the disposer their TAA history returns to). It surfaced as a crash in `FilamentEngine.dispose()`
+  after frames rendered with TAA.
 - Filament upgraded to v1.77.2 (prebuilt `1.77.2-lumina.1`): Metal external image handles, correct
   Vulkan depth/stencil render-target format reporting. The material version stays 77. The prebuilt
   scripts re-apply the patches after a tag change (a forced checkout used to drop them silently).

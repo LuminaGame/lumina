@@ -66,12 +66,13 @@ Git'ten çözülen bir paket pub cache'te durur ve yanında Filament yoktur; use
 
 ## Filament'i build etmek
 
-Hook'lar static kütüphaneleri `filament/out/cmake-release/` (Linux ve macOS) ya da `filament/out/cmake-release-windows/` (Windows) altında bekler. Lumina, upstream Filament v1.77.2'ı dört yerel yamayla kullanır; yamalar `third_party/filament/patches/` altındadır ve `third_party/filament/README.md` içinde açıklanır:
+Hook'lar static kütüphaneleri `filament/out/cmake-release/` (Linux ve macOS) ya da `filament/out/cmake-release-windows/` (Windows) altında bekler. Lumina, upstream Filament v1.77.2'ı beş yerel yamayla kullanır; yamalar `third_party/filament/patches/` altındadır ve `third_party/filament/README.md` içinde açıklanır:
 
 - gömülü `libassimp` içinde bir sınır (bounds) düzeltmesi;
 - skinned ve morph'lu renderable'ları screen-space reflections pass'inin dışında tutan bir `RenderPass.cpp` değişikliği (bu olmadan Vulkan backend'i device'ı kaybeder);
 - WebP texture'lı bir WebAssembly build'inin SDL2 olmadan configure edilebilmesi için bir `third_party/libwebp/tnt` değişikliği;
-- structure pass'ten piksel başına hareket vektörleri (`TemporalAntiAliasingOptions::motionVectors`); TAA bunları kullanır ve `View::setMotionVectorTexture` ile dışa aktarılabilir.
+- structure pass'ten piksel başına hareket vektörleri (`TemporalAntiAliasingOptions::motionVectors`); TAA bunları kullanır ve `View::setMotionVectorTexture` ile dışa aktarılabilir;
+- bir `Engine::shutdown` sıralama düzeltmesi: temizliği motora bırakılan view'lar, shadow map'lerinin sahip olduğu kameralardan ve TAA geçmişlerini iade ettikleri disposer'dan önce sonlandırılır (önceden sonra sonlandırılıyor, serbest bırakılmış belleği okuyor ve `Engine::destroy` çöküyordu).
 
 ### Hazır arşiv
 

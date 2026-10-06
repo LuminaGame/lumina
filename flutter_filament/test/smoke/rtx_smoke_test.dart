@@ -86,10 +86,6 @@ void main() {
         final stats = frameStats(last);
         expect(stats.distinct, greaterThan(200), reason: 'a shaded character must be visible');
       } finally {
-        // Disposing an engine right after TAA frames crashes (a Filament issue
-        // independent of motion vectors); a plain frame first avoids it.
-        rig.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions();
-        rig.renderFrame(warmup: 1);
         motion.dispose();
         gltf.dispose(rig.scene);
       }
