@@ -29,6 +29,14 @@ void main() {
   Future<Object?> call(String method, [Map<String, Object?> args = const {}]) =>
       host.call(PluginMethods.call, {'method': method, 'args': args});
 
+  test('a handler updates a declarative view outside its events through context.view', () async {
+    expect(await call('setCount', {'n': 5}), {'found': true, 'unknown': true});
+    final update = await host.next(PluginMethods.view, where: (a) => a['viewId'] == 'sample.view' && a['patch'] != null);
+    final patch = PluginViewPatch.fromJson((update['patch'] as Map).cast());
+    expect(patch.ops.single.controlId, 'count');
+    expect(patch.ops.single.set['value'], '5');
+  });
+
   test('a UI shell reaches the process through the test host channel', () async {
     final channel = host.channel;
     expect(channel.state.value.status, PluginProcessStatus.running);

@@ -61,6 +61,10 @@ class LoopbackHost {
   final List<(String, Map<String, Object?>)> requests = [];
   Map<String, Object?>? helloArgs;
 
+  /// Runs before the answer to `host.register` is sent (a test can make the
+  /// editor shut the process down while it still waits for that answer).
+  Future<void> Function()? beforeRegisterReply;
+
   Future<PluginConnection> get connected => _connected.future;
   Future<PluginContributions> get contributions => _contributions.future;
 
@@ -96,8 +100,9 @@ class LoopbackHost {
         'projectDir': projectStoreDir,
       };
     });
-    c.onRequest(PluginMethods.register, (args) {
+    c.onRequest(PluginMethods.register, (args) async {
       _contributions.complete(PluginContributions.fromJson(args));
+      await beforeRegisterReply?.call();
       return null;
     });
     c.onRequest(PluginMethods.level, (args) => level.handle(args, project?.dir ?? ''));

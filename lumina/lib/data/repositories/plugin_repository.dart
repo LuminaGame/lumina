@@ -265,6 +265,18 @@ class PluginRepository {
             message: '`modules[$i].process_class` must be a Dart class name, got "$processClass"',
           ));
         }
+        // registration_class may be left out only when the module names a
+        // process_class (an isolated plugin without a UI shell).
+        final registrationClass = mod['registration_class'];
+        if (registrationClass == null ? processClass == null : (registrationClass is! String || !_dartIdentifier.hasMatch(registrationClass))) {
+          throw PluginManifestException(PluginScanError(
+            filePath: manifest.path,
+            kind: PluginErrorKind.schemaViolation,
+            message: registrationClass == null
+                ? '`modules[$i]` needs a "registration_class" (or, for an isolated plugin without a UI shell, a "process_class")'
+                : '`modules[$i].registration_class` must be a Dart class name, got "$registrationClass"',
+          ));
+        }
       }
     }
 

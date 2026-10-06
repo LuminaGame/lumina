@@ -594,7 +594,7 @@ class _PluginDetailsPane extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '${m.entryLibrary} → ${m.registrationClass}',
+                        '${m.entryLibrary} → ${[?m.registrationClass, ?m.processClass].join(' + ')}',
                         style: TextStyle(
                           fontFamily: EditorTypography.monoFamily,
                           fontSize: 10,

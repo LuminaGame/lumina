@@ -38,6 +38,16 @@ class SampleProcess extends LuminaPluginProcess {
       await context.storage.writeJson('state', args, project: true);
       return await context.storage.readJson('state', project: true);
     });
+    context.handle('reportCrash', (args) {
+      LuminaPluginCrashReporter.reportCrash(StateError('native call failed'), StackTrace.current,
+          plugin: pluginName, context: 'loading the model');
+      return null;
+    });
+    context.handle('setCount', (args) {
+      final view = context.view('sample.view');
+      view?.patch(PluginViewPatch([PluginViewPatchOp.set('count', {'value': '${args['n']}'})]));
+      return {'found': view != null, 'unknown': context.view('nope') == null};
+    });
     context.handle('notify', (args) {
       context.emit('hello', {'n': args['n']});
       context.progress('job', step: 'half', done: 1, total: 2);

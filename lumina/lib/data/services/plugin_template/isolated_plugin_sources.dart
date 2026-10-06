@@ -226,104 +226,46 @@ class _${pascalName}PanelState extends State<${pascalName}Panel> {
 ''';
   }
 
-  /// `test/<name>_process_test.dart`: drives the process part through a
-  /// recording [PluginProcessContext] (no editor, no child process).
+  /// `test/<name>_process_test.dart`: runs the process part with
+  /// `runPluginProcessMain` against `LoopbackHost` (the editor's side of the
+  /// link over a real loopback socket, from `lumina_editor_api/testing.dart`).
   static String processTest({required String pluginName, required String pascalName}) => '''// Shipped test for the $pascalName process part
-import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart' show ValueListenable, ValueNotifier;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart';
+import 'package:lumina_editor_api/testing.dart';
 import 'package:$pluginName/$pluginName.dart';
-
-class _RecordingProcessContext implements PluginProcessContext {
-  final Map<String, FutureOr<Object?> Function(Map<String, Object?> args)> handlers = {};
-  final Map<String, PluginProcessCommand> menuItems = {};
-  final List<PluginProcessViewPanel> viewPanels = [];
-  final List<PluginProcessImporter> importers = [];
-  final List<String> logs = [];
-
-  @override
-  String get pluginName => '$pluginName';
-  @override
-  EditorProjectInfo? get project => null;
-  @override
-  final ValueListenable<Map<String, Object?>> pluginSettings = ValueNotifier(const {});
-  @override
-  final PluginStorage storage = PluginStorage(userDir: Directory('\${Directory.systemTemp.path}/${pluginName}_process_test_storage'));
-  @override
-  EditorLevelAccess get level => throw UnsupportedError('no level in this test');
-
-  @override
-  void handle(String method, FutureOr<Object?> Function(Map<String, Object?> args) handler) => handlers[method] = handler;
-  @override
-  void emit(String name, [Object? data]) {}
-  @override
-  void progress(String task, {required String step, int? done, int? total, String? message, bool finished = false}) {}
-  @override
-  void log(String message, {String level = 'info'}) => logs.add(message);
-  @override
-  Future<void> saveAsset({required String relativePath, Uint8List? bytes, bool generateThumbnail = true}) async {}
-  @override
-  void registerMenu(PluginMenuSpec menu) {}
-  @override
-  void registerMenuItem(String menuPath, PluginProcessCommand command,
-          {int order = 0, String? section, ValueListenable<bool>? checked}) =>
-      menuItems[menuPath] = command;
-  @override
-  void registerSlotButton(PluginProcessSlotButton button) {}
-  @override
-  void registerMcpTool(McpTool tool) {}
-  @override
-  void registerImporter(PluginProcessImporter importer) => importers.add(importer);
-  @override
-  void registerConsoleCommand(String name, String help, FutureOr<void> Function(List<String> args) handler) {}
-  @override
-  void registerViewPanel(PluginProcessViewPanel panel) => viewPanels.add(panel);
-  @override
-  Future<void> showPanel(String panelId) async {}
-  @override
-  Future<void> hidePanel(String panelId) async {}
-  @override
-  Future<void> openTab(String tabId, {String? title}) async {}
-  @override
-  Future<McpToolResult> callMcpTool(String name, Map<String, Object?> arguments) =>
-      throw UnsupportedError('no editor MCP in this test');
-}
-
-class _View implements PluginViewHandle {
-  _View(this.current);
-
-  @override
-  PluginViewSpec current;
-  @override
-  String get viewId => current.id;
-  @override
-  void replace(PluginViewSpec spec) => current = spec;
-  @override
-  void patch(PluginViewPatch patch) => current = current.apply(patch);
-}
 
 void main() {
   test('$pascalName process answers ping, runs its command and updates its panel', () async {
-    final LuminaPluginProcess process = ${pascalName}Process();
-    final context = _RecordingProcessContext();
-    await process.register(context);
+    final host = await LoopbackHost.start();
+    addTearDown(host.close);
+    final exit = runPluginProcessMain(host.launch('$pluginName'), ${pascalName}Process());
+    final contributions = await host.contributions;
 
-    final reply = await context.handlers['ping']!(const {'from': 'test'}) as Map;
+    final reply = await host.channel.call('ping', const {'from': 'test'}) as Map;
     expect(reply['reply'], 'pong');
     expect(reply['pid'], pid);
 
-    final command = context.menuItems.values.single;
-    await command.run();
-    expect(context.logs.single, contains('Hello'));
+    final command = contributions.menuItems.single.command;
+    await host.call(PluginMethods.command, {'commandId': command.id});
+    final log = await host.next(PluginMethods.log, where: (a) => '\${a['message']}'.contains('Hello'));
+    expect(log['message'], contains('Hello'));
 
-    final panel = context.viewPanels.single;
-    final view = _View(panel.initial);
-    await panel.onEvent(PluginViewEvent(viewId: view.viewId, controlId: 'ping', kind: 'pressed'), view);
-    expect(view.current.find('status')!['value'], contains('Pinged'));
+    final panel = contributions.panels.single;
+    await host.call(
+      PluginMethods.viewEvent,
+      PluginViewEvent(viewId: panel.view.id, controlId: 'ping', kind: 'pressed').toJson(),
+    );
+    final update = await host.next(PluginMethods.view);
+    final spec = update['spec'] is Map
+        ? PluginViewSpec.fromJson((update['spec'] as Map).cast())
+        : panel.view.apply(PluginViewPatch.fromJson((update['patch'] as Map).cast()));
+    expect(spec.find('status')!['value'], contains('Pinged'));
+
+    await host.call(PluginMethods.shutdown);
+    expect(await exit, PluginProcessExitCodes.ok);
   });
 }
 ''';

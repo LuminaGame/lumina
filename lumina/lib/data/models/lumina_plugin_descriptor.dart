@@ -13,7 +13,13 @@ class PluginModuleDescriptor {
   final String name;
   final PluginModuleType type;
   final String entryLibrary;
-  final String registrationClass;
+
+  /// The in-process `LuminaEditorPlugin` class (`"registration_class"`): the
+  /// plugin itself, or the UI shell of an isolated plugin. Null only on an
+  /// editor module of an isolated plugin that has no shell (a
+  /// `PluginProcessAdapter` or declarative panels only): everything then
+  /// runs in its process, nothing registers in the editor process.
+  final String? registrationClass;
 
   /// The `LuminaPluginProcess` subclass in [entryLibrary] that runs in the
   /// plugin's own process (`.lmplugin` `"process_class"`). Required on an
@@ -24,7 +30,7 @@ class PluginModuleDescriptor {
     required this.name,
     required this.type,
     required this.entryLibrary,
-    required this.registrationClass,
+    this.registrationClass,
     this.processClass,
   });
 
@@ -32,7 +38,7 @@ class PluginModuleDescriptor {
         'name': name,
         'type': type.name,
         'entry_library': entryLibrary,
-        'registration_class': registrationClass,
+        if (registrationClass != null) 'registration_class': registrationClass,
         if (processClass != null) 'process_class': processClass,
       };
 
@@ -41,7 +47,7 @@ class PluginModuleDescriptor {
       name: json['name'] as String,
       type: PluginModuleType.values.byName(json['type'] as String),
       entryLibrary: json['entry_library'] as String,
-      registrationClass: json['registration_class'] as String,
+      registrationClass: json['registration_class'] as String?,
       processClass: json['process_class'] as String?,
     );
   }

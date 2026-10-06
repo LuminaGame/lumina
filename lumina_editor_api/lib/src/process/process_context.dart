@@ -177,6 +177,9 @@ class ConnectedPluginProcessContext implements PluginProcessContext {
     views[panel.initial.id] = ProcessViewHandle(connection, panel);
   }
 
+  @override
+  PluginViewHandle? view(String viewId) => views[viewId];
+
   /// Everything registered, as `host.register` sends it; from now on
   /// registrations are refused.
   PluginContributions contributions() {

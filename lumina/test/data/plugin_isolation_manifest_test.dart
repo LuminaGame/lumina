@@ -131,4 +131,16 @@ void main() {
     expect(plugins['iso_plugin']!.effectiveIsolation(const LuminaProject(projectName: 'p')), PluginIsolation.process);
     expect(plugins['plain_plugin']!.effectiveIsolation(forced), PluginIsolation.inProcess);
   });
+
+  test('an isolated plugin may leave out registration_class (no UI shell); an in-process one may not', () async {
+    writeManifest('shellless', {'isolation': 'process'}, module: {'registration_class': null, 'process_class': 'OnlyProcess'});
+    writeManifest('broken', {}, module: {'registration_class': null});
+    final result = await scan();
+    final ok = result.plugins.singleWhere((p) => p.name == 'shellless');
+    expect(ok.processModule!.registrationClass, isNull);
+    expect(ok.processClass, 'OnlyProcess');
+    expect(ok.modules.single.toJson().containsKey('registration_class'), isFalse);
+    expect(result.plugins.where((p) => p.name == 'broken'), isEmpty);
+    expect(result.errors.single.message, contains('registration_class'));
+  });
 }

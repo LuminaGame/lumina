@@ -201,6 +201,11 @@ abstract class PluginProcessContext {
   void registerConsoleCommand(String name, String help, FutureOr<void> Function(List<String> args) handler);
   void registerViewPanel(PluginProcessViewPanel panel);
 
+  /// The handle of a registered declarative view (its spec's id), to update
+  /// it outside its own events (after an MCP tool call, a finished job, …);
+  /// null for an unknown id.
+  PluginViewHandle? view(String viewId);
+
   /// Shows / hides one of this plugin's panels (shell or declarative) in the
   /// editor.
   Future<void> showPanel(String panelId);

@@ -177,7 +177,7 @@ void main() {
 
       expect(File('$dir/test/safe_tools_plugin_test.dart').readAsStringSync(), contains('SafeToolsPanel(channel: PluginProcessChannel.detached'));
       expect(File('$dir/test/safe_tools_process_test.dart').readAsStringSync(),
-          allOf(contains('implements PluginProcessContext'), contains("context.handlers['ping']!")));
+          allOf(contains('LoopbackHost.start()'), contains('runPluginProcessMain('), contains("host.channel.call('ping'")));
       expect(File('$dir/README.md').readAsStringSync(), contains('## Two halves'));
     });
 
