@@ -99,6 +99,11 @@ class PluginExtensionRegistry extends ChangeNotifier implements LuminaEditorHost
     }
   }
 
+  /// Until the plugin process supervisor is attached, every plugin's
+  /// channel is detached.
+  @override
+  PluginProcessChannel processChannel(String pluginName) => PluginProcessChannel.detached(pluginName);
+
   @override
   void reportCrash(
     Object error,
