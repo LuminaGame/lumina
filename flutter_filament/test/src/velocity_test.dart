@@ -264,6 +264,62 @@ void main() {
       }
       expect(moving, greaterThan(size * size ~/ 400), reason: 'limbs moving by over a texel must show up');
     }, timeout: const Timeout(Duration(minutes: 3)));
+
+    test('a morphed quad moves only where its target displaces it', () async {
+      final r = rig;
+      if (r == null) {
+        markTestSkipped('needs a Vulkan device');
+        return;
+      }
+      // A 1-unit (100 texel) quad whose single morph target pushes its two
+      // right-hand vertices by +0.3 units in x; the left edge stays put.
+      final quad = SmokeQuad.create(r.engine);
+      final mtb = MorphTargetBuffer.create(r.engine, vertexCount: 4, count: 1);
+      mtb.setPositionsAt(0, Float32List.fromList([0, 0, 0, 0.3, 0, 0, 0.3, 0, 0, 0, 0, 0]));
+      final material = buildUnlitMaterial(r.engine);
+      final mi = material.createInstance()..setFloat3('baseColor', 0.9, 0.5, 0.1);
+      final entity = r.engine.createEntity();
+      RenderableBuilder(1)
+        ..boundingBox(-1, -1, -1, 1, 1, 1)
+        ..culling(false)
+        ..material(0, mi)
+        ..morphing(1)
+        ..morphingBuffer(mtb)
+        ..geometry(0, PrimitiveType.triangles, quad.vb, ib: quad.ib)
+        ..build(r.engine, entity);
+      r.scene.addEntity(entity);
+      r.entities.add(entity);
+      final rm = FilamentRenderableManager(r.engine);
+      motion = MotionVectorBuffer.attach(engine: r.engine, view: r.view, width: size, height: size);
+      r.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(enabled: false, motionVectors: true);
+
+      try {
+        rm.setMorphWeights(entity, Float32List.fromList([0.0]));
+        r.renderFrame(warmup: 2);
+        rm.setMorphWeights(entity, Float32List.fromList([1.0]));
+        r.renderFrame(warmup: 0);
+
+        final velocity = await motion!.read(r.renderer);
+        // The surface now at x = +0.4 came from x = -0.5 + 1.3 t with
+        // t = 0.9 / 1.3, i.e. from x = 0.19: about 21 texels of motion.
+        final (rightX, rightY) = motion!.velocityAt(velocity, size ~/ 2 + 40, size ~/ 2);
+        expect(rightX, closeTo(20.8, 2.0), reason: 'the displaced half moves');
+        expect(rightY.abs(), lessThan(0.5));
+        // Two texels in from the undisplaced left edge the motion is under a texel.
+        final (leftX, _) = motion!.velocityAt(velocity, size ~/ 2 - 48, size ~/ 2);
+        expect(leftX.abs(), lessThan(1.0), reason: 'the fixed edge barely moves');
+        final (bx, by) = motion!.velocityAt(velocity, size ~/ 2 - 60, size ~/ 2);
+        expect(bx.abs() + by.abs(), lessThan(1e-3), reason: 'background outside the quad');
+      } finally {
+        r.scene.removeEntity(entity);
+        r.engine.destroyEntity(entity);
+        r.entities.remove(entity);
+        mi.dispose();
+        material.dispose();
+        mtb.dispose();
+        quad.dispose();
+      }
+    }, timeout: const Timeout(Duration(minutes: 3)));
   });
 }
 
