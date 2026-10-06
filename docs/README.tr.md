@@ -104,6 +104,7 @@ Engine, renderer binding'leri ya da native build üzerinde çalışırsınız.
 - [lumina_editor_api](tr/lumina_editor_api/index.md) - Lumina Studio'nun az bağımlılıklı eklenti API'si.
   - [API referansı](tr/lumina_editor_api/api-reference.md) - Plugin, context, komutlar, menüler, slot butonları, paneller, asset tipleri, importer'lar, level erişimi, tema, depolama, ayarlar.
   - [MCP araçları API'si](tr/lumina_editor_api/mcp.md) - MCP araç, şema, risk ve onay tipleri; eklentiler için editörün MCP araçları.
+  - [Eklenti süreçleri](tr/lumina_editor_api/plugin-processes.md) - bir eklentinin riskli kısmı kendi sürecinde: süreç API'si, editör proxy'leri, adaptör.
 
 ### Editör eklentileri
 

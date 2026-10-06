@@ -107,6 +107,7 @@ You work on the engine, the renderer bindings or the native build.
 - [lumina_editor_api](en/lumina_editor_api/index.md) - The dependency-light plugin API of Lumina Studio.
   - [API reference](en/lumina_editor_api/api-reference.md) - Plugin, context, commands, menus, slot buttons, panels, asset types, importers, level access, theme, storage, settings.
   - [MCP tools API](en/lumina_editor_api/mcp.md) - MCP tool, schema, risk and approval types; the editor's MCP tools for plugins.
+  - [Plugin processes](en/lumina_editor_api/plugin-processes.md) - a plugin's risky part in its own process: process API, editor proxies, adapter.
 
 ### Editor plugins
 

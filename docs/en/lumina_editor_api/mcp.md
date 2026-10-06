@@ -216,6 +216,7 @@ An MCP `tools/call` result.
 - `factory McpToolResult.json(Map<String, Object?> data)`: A successful result whose text is [data] pretty-printed as JSON; the same object is returned as `structuredContent` for clients that read it.
 - `factory McpToolResult.text(String text)`
 - `factory McpToolResult.error(String message)`: A tool error: the call was understood but could not be done; the text says what to change.
+- `factory McpToolResult.fromJson(Map<String, Object?> json)`: The result [toJson] wrote, e.g. one that crossed the plugin process boundary.
 
 **Members:**
 
@@ -359,4 +360,4 @@ Decides whether a `tools/call` may run. The server runs every call through its o
 
 ---
 
-[Previous: API reference](api-reference.md) | [Up: lumina_editor_api](index.md) | [Next: Editor plugins](../plugins/index.md)
+[Previous: API reference](api-reference.md) | [Up: lumina_editor_api](index.md) | [Next: Plugin processes](plugin-processes.md)

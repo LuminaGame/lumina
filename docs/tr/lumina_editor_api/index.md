@@ -17,6 +17,7 @@ Editör (`lumina_ui`) API'yi gerçekler, eklentiler onu kullanır. İkisi de `lu
 - `lib/src/editor_theme.dart`: editörün renk temasına salt okunur erişim.
 - `lib/src/plugin_storage.dart`, `lib/src/project_settings_section.dart`: eklentiye özel JSON depolama ve Project Settings sayfaları.
 - `lib/src/mcp/`: MCP araç, şema, risk ve onay tipleri ile `EditorMcp`.
+- `lib/src/process/`: kendi sürecinde çalışan eklentiler: `LuminaPluginProcess`, `PluginProcessContext`, `runPluginProcessMain`, level proxy'si, `PluginProcessAdapter` ve kabuğun `PluginProcessChannel`'ı.
 
 ## Referans sayfaları
 
@@ -24,6 +25,7 @@ Editör (`lumina_ui`) API'yi gerçekler, eklentiler onu kullanır. İkisi de `lu
 |---|---|
 | [API referansı](api-reference.md) | Plugin, context, komutlar, menüler, slot butonları, paneller, asset tipleri, importer'lar, level erişimi, tema, depolama, ayarlar. |
 | [MCP araçları API'si](mcp.md) | MCP araç, şema, risk ve onay tipleri; eklentiler için editörün MCP araçları. |
+| [Eklenti süreçleri](plugin-processes.md) | Bir eklentinin riskli kısmını kendi sürecinde çalıştırmak: süreç API'si, yaşam döngüsü ve çıkış kodları, editör proxy'leri (level, depolama, MCP) ve mevcut, yalnızca veriyle çalışan eklentiler için adaptör. |
 
 ---
 

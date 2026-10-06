@@ -17,6 +17,7 @@ The editor, `lumina_ui`, implements the API; plugins consume it. Both depend on 
 - `lib/src/editor_theme.dart`: read-only access to the editor's colour theme.
 - `lib/src/plugin_storage.dart`, `lib/src/project_settings_section.dart`: per-plugin JSON storage and Project Settings pages.
 - `lib/src/mcp/`: the MCP tool, schema, risk and approval types and `EditorMcp`.
+- `lib/src/process/`: plugins that run in their own process: `LuminaPluginProcess`, `PluginProcessContext`, `runPluginProcessMain`, the level proxy, `PluginProcessAdapter`, and the shell's `PluginProcessChannel`.
 
 ## Reference pages
 
@@ -24,6 +25,7 @@ The editor, `lumina_ui`, implements the API; plugins consume it. Both depend on 
 |---|---|
 | [API reference](api-reference.md) | Plugin, context, commands, menus, slot buttons, panels, asset types, importers, level access, theme, storage, settings. |
 | [MCP tools API](mcp.md) | MCP tool, schema, risk and approval types; the editor's MCP tools for plugins. |
+| [Plugin processes](plugin-processes.md) | Running a plugin's risky part in its own process: the process API, its lifecycle and exit codes, the editor proxies (level, storage, MCP), and the adapter for existing data-only plugins. |
 
 ---
 
