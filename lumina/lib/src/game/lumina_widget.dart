@@ -7,6 +7,28 @@ import '../world/frame_pacing.dart';
 import 'lumina_game.dart';
 import 'hud_overlay.dart';
 
+/// Controls whether embedded game previews allocate an additional frame driver.
+/// Configure this before mounting previews; changing it does not remount games.
+class LuminaGameHostConfiguration extends InheritedWidget {
+  const LuminaGameHostConfiguration({
+    super.key,
+    required super.child,
+    this.allowHeadlessFrameDriver = true,
+  });
+
+  final bool allowHeadlessFrameDriver;
+
+  static bool allowsHeadlessFrameDriver(BuildContext context) =>
+      context
+          .getInheritedWidgetOfExactType<LuminaGameHostConfiguration>()
+          ?.allowHeadlessFrameDriver ??
+      true;
+
+  @override
+  bool updateShouldNotify(LuminaGameHostConfiguration oldWidget) =>
+      allowHeadlessFrameDriver != oldWidget.allowHeadlessFrameDriver;
+}
+
 /// Flutter widget that embeds the `FilamentWidget` viewport and drives the [LuminaGame] loop via [LuminaFrameDriver].
 ///
 /// The widget is the game host: it calls [LuminaGame.mountGame] and `beginPlay()` on
@@ -61,7 +83,8 @@ class LuminaGameWidget extends StatefulWidget {
   State<LuminaGameWidget> createState() => _LuminaGameWidgetState();
 }
 
-class _LuminaGameWidgetState extends State<LuminaGameWidget> with SingleTickerProviderStateMixin {
+class _LuminaGameWidgetState extends State<LuminaGameWidget>
+    with SingleTickerProviderStateMixin {
   Ticker? _ticker;
   LuminaFrameDriver? _frameDriver;
   FilamentSwapChain? _headlessSwapChain;
@@ -114,7 +137,9 @@ class _LuminaGameWidgetState extends State<LuminaGameWidget> with SingleTickerPr
     final world = widget.game.world;
     // The widget is the game's host: begin play so the ticker may drive the world.
     world?.beginPlay();
-    if (world != null && widget.useHeadlessSwapChain) {
+    if (world != null &&
+        widget.useHeadlessSwapChain &&
+        LuminaGameHostConfiguration.allowsHeadlessFrameDriver(context)) {
       final renderer = engine.createRenderer();
       final swapChain = engine.createHeadlessSwapChain(1, 1);
       _headlessSwapChain = swapChain;
@@ -145,7 +170,9 @@ class _LuminaGameWidgetState extends State<LuminaGameWidget> with SingleTickerPr
       if (_frameDriver != null) {
         _frameDriver!.onVsync(vsyncNanos);
       } else {
-        final dt = widget.targetFps > 0 ? (1.0 / widget.targetFps) : 0.016666667;
+        final dt = widget.targetFps > 0
+            ? (1.0 / widget.targetFps)
+            : 0.016666667;
         widget.game.tickGame(dt);
       }
     });
