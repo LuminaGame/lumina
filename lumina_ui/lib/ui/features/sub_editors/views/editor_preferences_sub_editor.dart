@@ -4,6 +4,7 @@ import '../../../core/theme/editor_theme.dart';
 import '../../main_editor/services/editor_preferences.dart';
 import 'appearance_preferences_page.dart';
 import 'engine_source_preferences_page.dart';
+import 'graphics_device_preferences_page.dart';
 import 'project_editor_builds_preferences_page.dart';
 
 /// Edit → Editor Preferences: the user's own editor settings — a category
@@ -59,6 +60,7 @@ class _EditorPreferencesSubEditorState extends State<EditorPreferencesSubEditor>
                   for (final category in const [
                     viewportsCategory,
                     EditorPreferencesSubEditor.appearanceCategory,
+                    GraphicsDevicePreferencesPage.category,
                     ProjectEditorBuildsPreferencesPage.category,
                     EngineSourcePreferencesPage.category,
                   ])
@@ -69,6 +71,8 @@ class _EditorPreferencesSubEditorState extends State<EditorPreferencesSubEditor>
             Expanded(
               child: _category == EditorPreferencesSubEditor.appearanceCategory
                   ? const AppearancePreferencesPage()
+                  : _category == GraphicsDevicePreferencesPage.category
+                  ? GraphicsDevicePreferencesPage(configDir: preferences.file.parent)
                   : _category == ProjectEditorBuildsPreferencesPage.category
                   ? ProjectEditorBuildsPreferencesPage(preferences: preferences, projectDir: widget.projectDir)
                   : _category == EngineSourcePreferencesPage.category
@@ -163,6 +167,7 @@ class _EditorPreferencesSubEditorState extends State<EditorPreferencesSubEditor>
         viewportsCategory => 'editor_prefs_category_viewports',
         ProjectEditorBuildsPreferencesPage.category => 'editor_prefs_category_project_editor_builds',
         EngineSourcePreferencesPage.category => 'editor_prefs_category_engine_source',
+        GraphicsDevicePreferencesPage.category => 'editor_prefs_category_graphics_device',
         _ => 'editor_prefs_category_appearance',
       }),
       behavior: HitTestBehavior.opaque,
