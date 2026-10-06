@@ -159,7 +159,17 @@ class LoopbackHost {
   }
 
   /// Sends [method] to the process and returns its answer.
-  Future<Object?> call(String method, [Map<String, Object?> args = const {}]) => connection.request(method, args);
+  ///
+  /// A `core.shutdown` whose answer is lost because the process closed the
+  /// link right after answering counts as answered (null).
+  Future<Object?> call(String method, [Map<String, Object?> args = const {}]) async {
+    try {
+      return await connection.request(method, args);
+    } on PluginRemoteError catch (e) {
+      if (method == PluginMethods.shutdown && e.code == PluginErrorCodes.closed) return null;
+      rethrow;
+    }
+  }
 
   /// A [PluginProcessChannel] over this link, as a UI shell gets from the
   /// editor: `call` goes to the process's `handle` handlers, `events` and
