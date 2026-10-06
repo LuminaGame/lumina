@@ -47,6 +47,7 @@ Base class for all entities/objects that can be spawned or placed in a [LuminaWo
 | `actorScale` | `Vector3 get actorScale` | `actorScale` özelliğinin anlık değerini okuyan getter erişimcisi. |
 | `actorScale` | `actorScale(Vector3 v)` | `actorScale` işlemini gerçekleştirir. |
 | `addComponent` | `void addComponent(LuminaActorComponent component)` | Adds a component to this actor. |
+| `hiddenInGame` | `bool hiddenInGame` (yapıcı parametresi de) | Aktörün tüm scene bileşenlerini, sonradan eklenenleri de gizler; editörün outliner'ında (kendisi ya da bir klasör üzerinden) gizlenen bir seviye aktörü, üretilen seviye ve Play in Editor tarafından bu ayarla doğar. |
 | `removeComponent` | `void removeComponent(LuminaActorComponent component)` | Removes a component from this actor. |
 | `onRegister` | `void onRegister(LuminaWorld world)` | Called when spawned or registered in a world. |
 | `onInitialize` | `void onInitialize()` | Called after registration to initialize components. |

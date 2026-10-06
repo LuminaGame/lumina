@@ -67,7 +67,9 @@ class LuminaActor extends LuminaObject with LuminaSaveable {
     Quaternion? rotation,
     String? saveId,
     this.bSaveGame = false,
+    bool hiddenInGame = false,
   }) : _explicitSaveId = saveId,
+       _hiddenInGame = hiddenInGame, // ignore: prefer_initializing_formals
        _declarativeComponents = components {
     if (root != null) {
       rootComponent = root;
@@ -140,9 +142,11 @@ class LuminaActor extends LuminaObject with LuminaSaveable {
   final List<String> tags = [];
 
   /// Whether the actor is hidden in game: every scene component of the actor
-  /// is made invisible (`Set Actor Hidden In Game`).
+  /// is made invisible (`Set Actor Hidden In Game`), the ones added later
+  /// too. A level's actor hidden in the editor's outliner (itself or through
+  /// a folder) is spawned with it set.
   bool get hiddenInGame => _hiddenInGame;
-  bool _hiddenInGame = false;
+  bool _hiddenInGame;
   set hiddenInGame(bool hidden) {
     _hiddenInGame = hidden;
     for (final c in _components) {
@@ -298,6 +302,7 @@ class LuminaActor extends LuminaObject with LuminaSaveable {
     if (component is LuminaSceneComponent && component != rootComponent && component.parentComponent == null) {
       component.attachToComponent(rootComponent);
     }
+    if (_hiddenInGame && component is LuminaSceneComponent) component.isVisible = false;
     component.onRegister(this);
     final colSys = world?.subsystems.getSubsystem<LuminaCollisionSubsystem>();
     if (colSys != null && component is LuminaCollisionComponent) {

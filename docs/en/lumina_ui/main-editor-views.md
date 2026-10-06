@@ -358,6 +358,8 @@ One selectable template row. It is a real focusable button, so the list is keybo
 
 ## `lib/ui/features/main_editor/views/viewport_widget.dart`
 
+**Streamed mesh binding.** The viewport never binds every actor in one pass: unbound actors go into a queue and `MeshBindScheduler` hands out at most two per frame, nearest to the camera pivot first (`viewport_widget/mesh_bind_scheduler.dart`), so a level with thousands of actors fills in over frames while the editor keeps drawing. A bound asset is placed on its own (layer, scene, transform, material) and triggers one coalesced rebuild per frame instead of a rescan of every actor; a transform that did not change since the last sync is not pushed to Filament again. The stat strip shows `Meshes: a/b` while meshes still stream.
+
 The top-right HUD row holds, next to the camera speed, the **DLSS**, **FSR3** and **RTX** buttons (FSR3: FidelityFX Super Resolution 3 upscaling and frame generation on any GPU; `LuminaRtxController` gives DLSS precedence while both are on): the label toggles the feature for this viewport (per user, stored with the editor quality settings), the arrow opens its `RtxSettingsPopover`. RTX keeps the level's acceleration structures and, by choice, traces the sun's shadows and shades the punctual lights with ReSTIR; DLSS renders the viewport at the NGX resolution of the chosen quality mode. Both are greyed out when the live engine cannot do them (no Vulkan ray query, no NGX runtime); the editor asks for the Vulkan extensions at startup, before its shared engine exists.
 
 **Top-level Functions:**

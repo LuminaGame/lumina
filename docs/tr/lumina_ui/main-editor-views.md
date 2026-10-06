@@ -358,6 +358,8 @@ One selectable template row. It is a real focusable button, so the list is keybo
 
 ## `lib/ui/features/main_editor/views/viewport_widget.dart`
 
+**Akan mesh bağlama.** Viewport hiçbir zaman tüm aktörleri tek geçişte bağlamaz: bağlanmamış aktörler bir kuyruğa girer ve `MeshBindScheduler` kare başına en fazla ikisini, kamera pivotuna en yakın olandan başlayarak verir (`viewport_widget/mesh_bind_scheduler.dart`); böylece binlerce aktörlü bir seviye, editör çizmeye devam ederken kareler boyunca dolar. Bağlanan bir asset tek başına yerleştirilir (katman, sahne, dönüşüm, materyal) ve tüm aktörleri yeniden taramak yerine kare başına tek bir birleşik yeniden çizim tetikler; son senkrondan beri değişmeyen bir dönüşüm Filament'e yeniden gönderilmez. Mesh'ler akmaya devam ederken stat şeridi `Meshes: a/b` gösterir.
+
 Sağ üst HUD satırında, kamera hızının yanında **DLSS**, **FSR3** ve **RTX** düğmeleri durur (FSR3: her GPU'da FidelityFX Super Resolution 3 büyütme ve kare üretimi; ikisi de açıkken `LuminaRtxController` DLSS'e öncelik verir): etiket özelliği bu viewport için açıp kapatır (kullanıcı başına, editör kalite ayarlarıyla saklanır), ok onun `RtxSettingsPopover`'ını açar. RTX, level'ın hızlandırma yapılarını tutar ve tercihe göre güneşin gölgelerini izler, noktasal ışıkları ReSTIR ile gölgeler; DLSS viewport'u seçilen kalite modunun NGX çözünürlüğünde çizer. Canlı motor bunları yapamıyorsa (Vulkan ray query yok, NGX çalışma zamanı yok) ikisi de soluk görünür; editör Vulkan uzantılarını açılışta, paylaşılan motoru var olmadan önce ister.
 
 **Üst Düzey Fonksiyonlar (Top-level Functions):**

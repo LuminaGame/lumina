@@ -84,6 +84,9 @@ mixin _LevelCodegen on _DartCodeGeneratorServiceState {
     buffer.writeln('class $className extends LuminaLevel {');
     buffer.writeln('  $className({super.key})');
     buffer.writeln("      : super(name: '${_escape(levelName)}', scriptActor: _${className}Script(), children: [");
+    // An actor hidden in the outliner, itself or through a folder above it,
+    // is hidden in the game too.
+    final hidden = hiddenEditorActorIds(maps);
     for (final map in maps) {
       final emitted = _emitActor(
         map,
@@ -91,6 +94,7 @@ mixin _LevelCodegen on _DartCodeGeneratorServiceState {
         sectionLoadingRange: sectionLoadingRange,
         projectDir: projectDir,
         environment: environment,
+        hiddenInGame: hidden.contains((map['id'] ?? map['name'] ?? '').toString()),
       );
       if (emitted == null) continue;
       final label = (map['name'] ?? '').toString().replaceAll(RegExp(r'[\r\n]'), ' ');
@@ -347,6 +351,31 @@ mixin _LevelCodegen on _DartCodeGeneratorServiceState {
     double sectionLoadingRange = kWorldPartitionDefaultLoadingRange,
     String? projectDir,
     Map<String, dynamic>? environment,
+    bool hiddenInGame = false,
+  }) {
+    final expression = _emitActorExpression(
+      a,
+      streamingStartClass: streamingStartClass,
+      sectionLoadingRange: sectionLoadingRange,
+      projectDir: projectDir,
+      environment: environment,
+      hiddenInGame: hiddenInGame,
+    );
+    if (expression == null || !hiddenInGame) return expression;
+    // Every expression is one actor followed by the list's comma; the cascade
+    // hides the actor whatever class it is (a Blueprint factory, a mesh actor).
+    final trimmed = expression.trimRight();
+    if (!trimmed.endsWith(',')) return expression;
+    return '${trimmed.substring(0, trimmed.length - 1)}..hiddenInGame = true,';
+  }
+
+  String? _emitActorExpression(
+    Map<String, dynamic> a, {
+    String? streamingStartClass,
+    double sectionLoadingRange = kWorldPartitionDefaultLoadingRange,
+    String? projectDir,
+    Map<String, dynamic>? environment,
+    bool hiddenInGame = false,
   }) {
     final type = (a['type'] ?? 'actor').toString();
     if (type == 'Folder') return null;
@@ -355,7 +384,7 @@ mixin _LevelCodegen on _DartCodeGeneratorServiceState {
     final rot = _vec3(a['rotation'], [0, 0, 0]);
     final scale = _vec3(a['scale'], [1, 1, 1]);
     final castShadows = a['castShadows'] is bool ? a['castShadows'] as bool : true;
-    final visible = a['isVisible'] is bool ? a['isVisible'] as bool : true;
+    final visible = !hiddenInGame && (a['isVisible'] is bool ? a['isVisible'] as bool : true);
     final key = "key: const ValueKey('${_escape(id)}')";
     // Stored transforms are authored Z-up (the editor's); the
     // runtime is Y-up: convert once, here.
@@ -582,4 +611,26 @@ mixin _LevelCodegen on _DartCodeGeneratorServiceState {
         return 'LuminaActor($key, root: LuminaSceneComponent($transform, scale: $scaleCode, isVisible: $visible)),';
     }
   }
+}
+
+/// The ids of the editor actors in [maps] that are hidden in the outliner:
+/// their own `isVisible` is false, or a folder above them (by `parentId`) is
+/// hidden. The generated level and Play spawn them hidden.
+Set<String> hiddenEditorActorIds(List<Map<String, dynamic>> maps) {
+  final byId = {for (final m in maps) (m['id'] ?? m['name'] ?? '').toString(): m};
+  final hidden = <String>{};
+  for (final entry in byId.entries) {
+    var current = entry.value;
+    var guard = 0;
+    while (true) {
+      if (current['isVisible'] == false) {
+        hidden.add(entry.key);
+        break;
+      }
+      final parent = current['parentId'];
+      if (parent is! String || parent.isEmpty || !byId.containsKey(parent) || ++guard > 64) break;
+      current = byId[parent]!;
+    }
+  }
+  return hidden;
 }

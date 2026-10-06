@@ -333,6 +333,19 @@ class EditorPieGame extends LuminaGame {
     EditorBlueprintClassRegistry? registry,
     void Function(LuminaBlueprintInstance instance)? onBlueprintInstance,
   }) {
+    final mapped = _mapEditorActor(actor, registry: registry, onBlueprintInstance: onBlueprintInstance);
+    // Hidden in the outliner (the folders already baked in by the
+    // controller): hidden in Play, whatever class the actor became and
+    // however many components it has.
+    if (mapped is LuminaActor && !actor.isVisible) mapped.hiddenInGame = true;
+    return mapped;
+  }
+
+  static LuminaObject? _mapEditorActor(
+    EditorActorNode actor, {
+    EditorBlueprintClassRegistry? registry,
+    void Function(LuminaBlueprintInstance instance)? onBlueprintInstance,
+  }) {
     if (nonRuntimeTypes.contains(actor.type)) return null;
 
     // Stored Z-up (cm) → the runtime's Y-up, by the rule the generated game

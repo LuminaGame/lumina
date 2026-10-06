@@ -70,6 +70,18 @@ abstract class _ViewportWidgetStateBase extends State<ViewportWidget> with Ticke
   int _meshGeneration = 0;
   final Set<String> _visibleInScene = {};
 
+  /// Actors whose mesh waits to be bound: [_drainBindQueue] takes
+  /// [_kBindsPerFrame] of them per frame, nearest to the camera first, so a
+  /// level with thousands of actors fills in over frames instead of
+  /// freezing one (asset creation is native and synchronous).
+  final Set<String> _bindQueue = {};
+  bool _bindDrainScheduled = false;
+
+  /// The transform last pushed to Filament per actor: an unchanged one is
+  /// not pushed again on every sync.
+  final Map<String, List<double>> _pushedActorTransforms = {};
+  bool _rebuildScheduled = false;
+
   /// The level's sky background and image-based lighting, realised from the
   /// `Environment` (`Sky & Atmosphere`) actor. Filament takes a PBR surface's
   /// ambient diffuse *and all of its ambient specular* from the scene's
@@ -189,6 +201,10 @@ abstract class _ViewportWidgetStateBase extends State<ViewportWidget> with Ticke
 
   void _syncActorAssets();
 
+  /// How many actor meshes are bound and still queued (tests).
+  int get boundActorCountForTest => _actorAssets.length;
+  int get queuedBindCountForTest => _bindQueue.length;
+
   List<double> get _editorCameraEyeAuthoring;
 
   void _syncLevelPostProcess();
@@ -209,3 +225,7 @@ abstract class _ViewportWidgetStateBase extends State<ViewportWidget> with Ticke
 
   _CameraMatrix _overlayCamera(Size viewportSize);
 }
+
+/// How many actor meshes the viewport binds per frame (asset creation is
+/// native and synchronous; two keep 60 fps for props).
+const int _kBindsPerFrame = 2;

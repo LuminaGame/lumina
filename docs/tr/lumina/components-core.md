@@ -502,6 +502,7 @@ Transform component that has a position, rotation, and scale in 3D space.
 
 | Metot / Getter | İmzası | Ne İşe Yarar? |
 | :--- | :--- | :--- |
+| `isVisible`, `onVisibilityChanged` | `bool isVisible` (özellik), `void onVisibilityChanged(bool visible)` | Bileşenin çizilip çizilmediği; ayarlamak `onVisibilityChanged`'i çağırır, render kaynağı olan bileşenler bunu geçersiz kılar (bir static mesh sahneden çıkar ve geri girer; `visible` anahtarı ile `isVisible` eşit tutulur). |
 | `isVisibleAtDistance` | `bool isVisibleAtDistance(double distance)` | Evaluates whether this component should be rendered based on camera distance. |
 | `relativeLocation` | `Vector3 get relativeLocation` | `relativeLocation` özelliğinin anlık değerini okuyan getter erişimcisi. |
 | `relativeLocation` | `relativeLocation(Vector3 v)` | `relativeLocation` işlemini gerçekleştirir. |

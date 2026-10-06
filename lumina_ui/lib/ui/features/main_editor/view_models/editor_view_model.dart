@@ -12,6 +12,7 @@ import 'package:lumina_ui/ui/features/sub_editors/view_models/material_editor_vi
 import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_editor_nodes.dart';
 import 'package:flutter/scheduler.dart' show SchedulerBinding;
 import 'dart:async';
+import 'dart:collection';
 import 'dart:convert';
 import 'editor_layout_state.dart';
 import 'editor_panels_controller.dart';

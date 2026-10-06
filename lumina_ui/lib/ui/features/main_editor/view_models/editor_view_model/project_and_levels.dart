@@ -77,6 +77,12 @@ mixin _EditorProjectAndLevels on _EditorViewModelState {
         contentsDir.createSync(recursive: true);
       }
 
+      // Ensure default UI Theme exists for game widgets
+      await LuminaThemeService.ensureDefaultTheme(
+        projectDirPath,
+        seedTheme: LuminaThemeDocument.defaultShadcnDark(),
+      );
+
       final existing = _assetRepo.scanProjectContents(projectDirPath);
       if (existing.isEmpty) {
         await _assetRepo.createAsset(
@@ -150,15 +156,14 @@ mixin _EditorProjectAndLevels on _EditorViewModelState {
         }
       }
 
-      for (final actor in List.of(_actors)) {
-        if (actor.meshData == null) {
-          await _loadActorMeshData(actor);
-        }
-      }
       // The camera this project was last edited with; a first open frames the
-      // level's geometry instead (levels differ in scale, so a fixed default
-      // hides some).
-      if (!await restoreSavedCamera()) frameLevelBounds();
+      // level from the actor locations now and from the mesh bounds once they
+      // are in (levels differ in scale, so a fixed default hides some).
+      final restored = await restoreSavedCamera();
+      if (!restored) frameLevelBounds();
+      // Meshes stream in a few at a time, nearest the camera first; the
+      // viewport draws each as it arrives and the stat strip counts the rest.
+      unawaited(_streamActorMeshes(List.of(_actors), reframeWhenDone: !restored));
 
       _refreshAssets();
     } finally {}
@@ -173,11 +178,7 @@ mixin _EditorProjectAndLevels on _EditorViewModelState {
     sourceControl.refresh();
     // …and queue a thumbnail for every asset that has none or an old one.
     _enqueueStaleThumbnails();
-    for (final actor in List.of(_actors)) {
-      if (actor.meshData == null) {
-        _loadActorMeshData(actor);
-      }
-    }
+    unawaited(_streamActorMeshes(List.of(_actors)));
     pieController.registerWidgetClasses();
     notifyListeners();
   }
@@ -432,11 +433,7 @@ mixin _EditorProjectAndLevels on _EditorViewModelState {
       }
     }
 
-    for (final actor in List.of(_actors)) {
-      if (actor.meshData == null) {
-        _loadActorMeshData(actor);
-      }
-    }
+    unawaited(_streamActorMeshes(List.of(_actors)));
 
     _logger.log(
       'Switched to level: $levelRelativePath',

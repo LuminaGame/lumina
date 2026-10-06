@@ -176,6 +176,91 @@ mixin _ViewportSceneSync on _ViewportWidgetStateBase {
   /// Takes the engine's shared asset for [payload] (uploading it only when
   /// no viewport on this engine has it yet) and gives [actor] its own
   /// instance; placed and shown by the next [_syncActorAssets].
+  /// Material, layer, scene membership and transform of a bound actor.
+  void _placeBoundActor(EditorActorNode actor, LuminaMeshHandle handle) {
+    _syncActorMaterial(actor, handle);
+
+    // In Wireframe the solids stay in the scene for other views of it (a
+    // camera preview); the level view hides their layer.
+    final isVisible = _editorActorDrawn(actor.id);
+    final currentlyVisible = _visibleInScene.contains(actor.id);
+
+    if (isVisible && !currentlyVisible) {
+      EditorViewLayers.tag(_nativeEngine!, handle.instance.entities, EditorViewLayers.solids);
+      _nativeScene!.addEntities(handle.instance.entities);
+      _visibleInScene.add(actor.id);
+    } else if (!isVisible && currentlyVisible) {
+      _nativeScene!.removeEntities(handle.instance.entities);
+      _visibleInScene.remove(actor.id);
+    }
+
+    try {
+      // Stored Z-up cm → the scene's Y up, with the mesh's asset unit
+      // scale (glTF metres ×100), by the rule PIE and the game share.
+      final m = EditorTransforms.meshMatrix(actor).storage.toList();
+      final last = _pushedActorTransforms[actor.id];
+      if (last == null || !listEquals(last, m)) {
+        FilamentTransformManager(_nativeEngine!).setTransform(handle.instance.root, m);
+        _pushedActorTransforms[actor.id] = m;
+      }
+    } catch (e) {
+      EngineLoggerService().log(
+        'Transform update error for actor "${actor.name}": $e',
+        level: 'warning',
+        source: 'FilamentNative',
+      );
+    }
+  }
+
+  void _queueActorBind(String id) {
+    _bindQueue.add(id);
+    if (_bindDrainScheduled) return;
+    _bindDrainScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) => _drainBindQueue());
+    WidgetsBinding.instance.scheduleFrame();
+  }
+
+  /// Binds up to [_kBindsPerFrame] queued actors, nearest to the camera
+  /// first, and comes back next frame while the queue is not empty.
+  void _drainBindQueue() {
+    _bindDrainScheduled = false;
+    if (!mounted || _nativeScene == null || _nativeEngine == null) {
+      _bindQueue.clear();
+      return;
+    }
+    final vm = widget.viewModel;
+    final byId = {for (final a in vm.actors) a.id: a};
+    _bindQueue.removeWhere((id) => !byId.containsKey(id) || _actorAssets.containsKey(id) || _actorLoading.contains(id));
+    final (px, py, pz) = (vm.cameraPanX, vm.cameraPanY, vm.cameraPanZ);
+    final next = MeshBindScheduler.nearestFirst(
+      _bindQueue,
+      (id) => MeshBindScheduler.squaredDistance(byId[id]!.location, px, py, pz),
+      _kBindsPerFrame,
+    );
+    for (final id in next) {
+      _bindQueue.remove(id);
+      final actor = byId[id]!;
+      final payload = actor.meshData?.rawPayload;
+      if (payload != null) _loadActorMesh(actor, payload);
+    }
+    if (_bindQueue.isNotEmpty) {
+      _bindDrainScheduled = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _drainBindQueue());
+      WidgetsBinding.instance.scheduleFrame();
+    }
+  }
+
+  /// One `setState` per frame however many meshes arrived in it.
+  void _requestRebuild() {
+    if (_rebuildScheduled || !mounted) return;
+    _rebuildScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _rebuildScheduled = false;
+      if (mounted) setState(() {});
+    });
+    WidgetsBinding.instance.scheduleFrame();
+  }
+
   void _loadActorMesh(EditorActorNode actor, Uint8List payload) {
     final engine = _nativeEngine!;
     final generation = _meshGeneration;
@@ -216,8 +301,8 @@ mixin _ViewportSceneSync on _ViewportWidgetStateBase {
       // Give the GPU 15 frames to compile shaders/pipelines for the new
       // asset without waiting for the readPixels fence.
       _skipReadPixelsFrames = 15;
-      _syncActorAssets();
-      setState(() {});
+      _placeBoundActor(current, handle);
+      _requestRebuild();
     }, onError: (Object e, StackTrace stack) {
       if (generation != _meshGeneration) return;
       _actorLoading.remove(id);
@@ -237,6 +322,8 @@ mixin _ViewportSceneSync on _ViewportWidgetStateBase {
     final handle = _actorAssets.remove(id);
     _actorPayloads.remove(id);
     _visibleInScene.remove(id);
+    _pushedActorTransforms.remove(id);
+    _bindQueue.remove(id);
     if (handle == null) return;
     try {
       if (_nativeScene != null) _nativeScene!.removeEntities(handle.instance.entities);
@@ -338,39 +425,10 @@ mixin _ViewportSceneSync on _ViewportWidgetStateBase {
         }
         final handle = _actorAssets[actor.id];
         if (handle == null) {
-          if (!_actorLoading.contains(actor.id)) _loadActorMesh(actor, payload);
+          if (!_actorLoading.contains(actor.id)) _queueActorBind(actor.id);
           continue;
         }
-        _syncActorMaterial(actor, handle);
-
-        // In Wireframe the solids stay in the scene for other views of it (a
-        // camera preview); the level view hides their layer.
-        final isVisible = _editorActorDrawn(actor.id);
-        final currentlyVisible = _visibleInScene.contains(actor.id);
-
-        if (isVisible && !currentlyVisible) {
-          EditorViewLayers.tag(_nativeEngine!, handle.instance.entities, EditorViewLayers.solids);
-          _nativeScene!.addEntities(handle.instance.entities);
-          _visibleInScene.add(actor.id);
-        } else if (!isVisible && currentlyVisible) {
-          _nativeScene!.removeEntities(handle.instance.entities);
-          _visibleInScene.remove(actor.id);
-        }
-
-        try {
-          // Stored Z-up cm → the scene's Y up, with the mesh's asset unit
-          // scale (glTF metres ×100), by the rule PIE and the game share.
-          final m = EditorTransforms.meshMatrix(actor).storage.toList();
-          FilamentTransformManager(
-            _nativeEngine!,
-          ).setTransform(handle.instance.root, m);
-        } catch (e) {
-          EngineLoggerService().log(
-            'Transform update error for actor "${actor.name}": $e',
-            level: 'warning',
-            source: 'FilamentNative',
-          );
-        }
+        _placeBoundActor(actor, handle);
       } else if (_actorAssets.containsKey(actor.id)) {
         _releaseActorMesh(actor.id);
       }

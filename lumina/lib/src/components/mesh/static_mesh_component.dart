@@ -45,13 +45,16 @@ class LuminaStaticMeshComponent extends LuminaSceneComponent with LuminaPrimitiv
     super.rotation,
     super.scale,
     required this.meshAssetPath,
-    this._castShadows = true,
-    this._receiveShadows = true,
-    this._visible = true,
+    bool castShadows = true,
+    bool receiveShadows = true,
+    bool visible = true,
     this.assetProvider,
     this.assetUnitScale = LuminaUnits.unitsPerMetre,
     this.materialOverrideAsset,
-  });
+  })  : _castShadows = castShadows, // ignore: prefer_initializing_formals
+        _receiveShadows = receiveShadows, // ignore: prefer_initializing_formals
+        _visible = visible,
+        super(isVisible: visible);
 
   /// A material asset (a material `.lmas` or `.filamat`) drawn on every
   /// section in place of the mesh's own materials; null keeps them — or the
@@ -123,12 +126,18 @@ class LuminaStaticMeshComponent extends LuminaSceneComponent with LuminaPrimitiv
     _updateShadowFlags();
   }
 
+  /// Whether the mesh is drawn: the same switch as [isVisible] (an actor's
+  /// `hiddenInGame`, a Blueprint's Set Visibility), kept in step both ways.
   bool get visible => _visible;
   set visible(bool value) {
     if (_visible == value) return;
     _visible = value;
+    if (isVisible != value) isVisible = value;
     _updateVisibility();
   }
+
+  @override
+  void onVisibilityChanged(bool visible) => this.visible = visible;
 
   void _updateShadowFlags() {
     final w = owner?.world;

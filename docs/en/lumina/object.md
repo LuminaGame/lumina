@@ -47,6 +47,7 @@ Base class for all entities/objects that can be spawned or placed in a [LuminaWo
 | `actorScale` | `Vector3 get actorScale` | Getter accessor returning the current value of `actorScale`. |
 | `actorScale` | `actorScale(Vector3 v)` | Executes `actorScale` operation. |
 | `addComponent` | `void addComponent(LuminaActorComponent component)` | Adds a component to this actor. |
+| `hiddenInGame` | `bool hiddenInGame` (also a constructor parameter) | Hides every scene component of the actor, the ones added later too; a level actor hidden in the editor's outliner (itself or through a folder) is spawned with it set by the generated level and by Play in Editor. |
 | `removeComponent` | `void removeComponent(LuminaActorComponent component)` | Removes a component from this actor. |
 | `onRegister` | `void onRegister(LuminaWorld world)` | Called when spawned or registered in a world. |
 | `onInitialize` | `void onInitialize()` | Called after registration to initialize components. |

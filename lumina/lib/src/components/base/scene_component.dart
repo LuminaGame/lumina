@@ -1,3 +1,4 @@
+import 'package:meta/meta.dart' show protected;
 import 'package:vector_math/vector_math_64.dart';
 import '../../math/euler.dart';
 import 'actor_component.dart';
@@ -24,19 +25,33 @@ class LuminaSceneComponent extends LuminaActorComponent {
   LuminaSceneComponent? _parentComponent;
   final List<LuminaSceneComponent> _childComponents = [];
 
-  bool isVisible = true;
+  bool _isVisible;
   double minDrawDistance = 0.0;
   double maxDrawDistance = 0.0; // 0.0 means infinite / no distance culling limit
+
+  /// Whether the component is drawn. Components that own render resources
+  /// react in [onVisibilityChanged] (a mesh leaves and re-enters the scene);
+  /// [LuminaActor.hiddenInGame] sets it on every scene component of an actor.
+  bool get isVisible => _isVisible;
+  set isVisible(bool value) {
+    if (_isVisible == value) return;
+    _isVisible = value;
+    onVisibilityChanged(value);
+  }
+
+  /// Called after [isVisible] changed; the default does nothing.
+  @protected
+  void onVisibilityChanged(bool visible) {}
 
   LuminaSceneComponent({
     super.key,
     Vector3? location,
     Quaternion? rotation,
     Vector3? scale,
-    this.isVisible = true,
+    bool isVisible = true,
     this.minDrawDistance = 0.0,
     this.maxDrawDistance = 0.0,
-  }) {
+  }) : _isVisible = isVisible { // ignore: prefer_initializing_formals
     if (location != null) _relativeLocation.setFrom(location);
     if (rotation != null) _relativeRotation = rotation;
     if (scale != null) _relativeScale.setFrom(scale);

@@ -145,7 +145,7 @@ class PieController {
     _headless = false;
     _playingLevel = viewModel.project.activeLevel;
     _installHostHooks();
-    _game = createGame(_editorSnapshot!, input: boundInput);
+    _game = createGame(_actorsForPlay(_editorSnapshot!), input: boundInput);
     try {
       _mountAndBeginPlay(_game!);
       _followCursorOf(_game);
@@ -246,6 +246,28 @@ class PieController {
 
   /// The game Play mounts for [actors] (the level snapshot) of [levelPath]
   /// (default: the level Play is running, else the editor's).
+  /// The actors as Play spawns them: one hidden in the outliner, itself or
+  /// through a folder above it, is hidden in the game too (the editor keeps
+  /// its own per-actor flags; this bakes the folders in for the level code).
+  static List<EditorActorNode> _actorsForPlay(List<EditorActorNode> actors) {
+    final byId = {for (final a in actors) a.id: a};
+    bool effectivelyVisible(EditorActorNode a) {
+      EditorActorNode? current = a;
+      var guard = 0;
+      while (current != null && ++guard < 64) {
+        if (!current.isVisible) return false;
+        final parent = current.parentId;
+        if (parent == null) break;
+        current = byId[parent];
+      }
+      return true;
+    }
+    return [
+      for (final a in actors)
+        if (a.isVisible == effectivelyVisible(a)) a else EditorActorNode.fromMap({...a.toMap(), 'isVisible': false}),
+    ];
+  }
+
   EditorPieGame createGame(List<EditorActorNode> actors, {BoundProjectInput? input, String? levelPath}) {
     final templateKind = templateKindForProject();
     final logged = <String>{};
@@ -503,7 +525,7 @@ class PieController {
     _game = null;
     try {
       if (!_headless) previous?.disposeGame();
-      final game = createGame(actors, levelPath: path);
+      final game = createGame(_actorsForPlay(actors), levelPath: path);
       _game = game;
       if (_headless) {
         game.mountIntoWorldForTest(LuminaWorld());
@@ -567,7 +589,7 @@ class PieController {
     _headless = true;
     _playingLevel = viewModel.project.activeLevel;
     _installHostHooks();
-    final game = createGame(viewModel.actors.map((a) => EditorActorNode.fromMap(a.toMap())).toList());
+    final game = createGame(_actorsForPlay(viewModel.actors.map((a) => EditorActorNode.fromMap(a.toMap())).toList()));
     _game = game;
     // Playing from here: a breakpoint reached in BeginPlay must pause.
     isPlaying = true;

@@ -772,6 +772,7 @@ mixin _EditorCameraAndViewport on _EditorViewModelState {
   // ---- the remembered camera -----------------------------------------------
 
   /// The viewport camera as the store keeps it.
+  @override
   EditorCameraState get cameraState => EditorCameraState(
         yaw: _cameraYaw,
         pitch: _cameraPitch,

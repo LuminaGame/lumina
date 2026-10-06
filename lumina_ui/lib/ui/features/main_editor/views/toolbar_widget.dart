@@ -37,8 +37,10 @@ class ToolbarFrameStats {
     return ToolbarFrameStats(fps: vm.fps, frameMs: vm.fps > 0 ? 1000.0 / vm.fps : 0.0, cpuMs: vm.cpuMs, gpuMs: vm.gpuMs, fromWorld: false);
   }
 
-  /// `Tris: 1.2K  GPU: --  CPU: 1.2ms  60 FPS` (the stat strip).
-  String label(int triangles) =>
+  /// `Tris: 1.2K  GPU: --  CPU: 1.2ms  60 FPS` (the stat strip), with
+  /// `Meshes: 12/2000` in front while the level's meshes still stream in.
+  String label(int triangles, {int meshesLoaded = 0, int meshesToLoad = 0}) =>
+      '${meshesToLoad > meshesLoaded ? 'Meshes: $meshesLoaded/$meshesToLoad  ' : ''}'
       'Tris: $triangles  GPU: ${gpuMs < 0 ? '--' : gpuMs.toStringAsFixed(1)}ms  CPU: ${cpuMs.toStringAsFixed(1)}ms  ${fps.round()} FPS';
 }
 
@@ -551,7 +553,11 @@ class _ToolbarWidgetState extends State<ToolbarWidget> {
                 child: ListenableBuilder(
                   listenable: vm.frameStats,
                   builder: (context, _) => Text(
-                    ToolbarFrameStats.of(vm).label(vm.totalTriangles),
+                    ToolbarFrameStats.of(vm).label(
+                      vm.totalTriangles,
+                      meshesLoaded: vm.meshesLoading ? vm.meshesLoaded : 0,
+                      meshesToLoad: vm.meshesLoading ? vm.meshesToLoad : 0,
+                    ),
                     key: const ValueKey('toolbar_frame_stats'),
                     maxLines: 1,
                     softWrap: false,

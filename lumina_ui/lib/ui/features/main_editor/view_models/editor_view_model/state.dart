@@ -326,6 +326,17 @@ abstract class _EditorViewModelState extends ChangeNotifier {
   final EditorQualityStore _qualityStore;
   EditorQualitySettings _quality = const EditorQualitySettings();
 
+  /// Mesh streaming: how many actor meshes the running stream still has to
+  /// load, for the stat strip; both zero when nothing streams.
+  int _meshesToLoad = 0;
+  int _meshesLoaded = 0;
+  bool _meshStreamRunning = false;
+  bool _meshNotifyDirty = false;
+  DateTime _lastMeshNotify = DateTime.fromMillisecondsSinceEpoch(0);
+
+  /// Actor ids in the order their mesh loads were started (tests).
+  final List<String> meshLoadOrder = [];
+
   /// The viewport camera, remembered per project and put back on reopen.
   final EditorCameraStore _cameraStore;
   Timer? _cameraSaveTimer;
@@ -478,7 +489,7 @@ abstract class _EditorViewModelState extends ChangeNotifier {
   void requestNavigationBuild();
 
   // editor_view_model/actor_spawning.dart
-  Future<void> _loadActorMeshData(EditorActorNode actor);
+  Future<void> _streamActorMeshes(List<EditorActorNode> actors, {bool reframeWhenDone = false});
   void _refreshPrimitiveMesh(EditorActorNode actor);
   String _uniqueActorId();
 
@@ -515,6 +526,7 @@ abstract class _EditorViewModelState extends ChangeNotifier {
   void resetCamera();
   void frameLevelBounds();
   Future<bool> restoreSavedCamera();
+  EditorCameraState get cameraState;
   void focusCameraOnActor(EditorActorNode actor);
   void _setQuality(EditorQualitySettings next, String what);
   Future<void> loadQualitySettings();

@@ -141,7 +141,6 @@ mixin _EditorActorSpawning on _EditorViewModelState {
   /// The latest geometry rebuild asked for, per primitive actor id.
   static final Map<String, Object> _primitiveRebuilds = {};
 
-  @override
   Future<void> _loadActorMeshData(EditorActorNode actor) async {
     if (actor.meshData != null) return;
     if (actor.blueprintClass != null) {
@@ -166,7 +165,7 @@ mixin _EditorActorSpawning on _EditorViewModelState {
         final parsed = await AssetRepository.loadMeshFromDisk(file);
         if (parsed != null) {
           actor.meshData = parsed;
-          if (!_disposed) notifyListeners();
+          _meshDataArrived();
           return;
         }
       }
@@ -208,6 +207,93 @@ mixin _EditorActorSpawning on _EditorViewModelState {
         }
       }
     } catch (_) {}
+  }
+
+  /// How many actor meshes load at once: GLB parsing runs on isolates, the
+  /// disk reads overlap, and the UI isolate only receives results.
+  static const int meshLoadConcurrency = 4;
+
+  /// Every actor mesh the stream still has to load.
+  int get meshesToLoad => _meshesToLoad;
+  int get meshesLoaded => _meshesLoaded;
+
+  /// A stream of mesh loads is running (the stat strip counts it).
+  bool get meshesLoading => _meshStreamRunning && _meshesLoaded < _meshesToLoad;
+
+  /// Loads the meshes the current level's actors still lack, streamed:
+  /// nearest to the camera first, [meshLoadConcurrency] at a time.
+  Future<void> loadLevelMeshes({bool reframeWhenDone = false}) =>
+      _streamActorMeshes(List.of(_actors), reframeWhenDone: reframeWhenDone);
+
+  @override
+  Future<void> _streamActorMeshes(List<EditorActorNode> actors, {bool reframeWhenDone = false}) async {
+    final pending = [for (final a in actors) if (a.meshData == null && a.type != 'Folder') a];
+    if (pending.isEmpty) return;
+    // Nearest to the camera pivot first: what the user looks at fills in first.
+    final px = _cameraPanX, py = _cameraPanY, pz = _cameraPanZ;
+    double d2(EditorActorNode a) {
+      final dx = a.location[0] - px, dy = a.location[1] - py, dz = a.location[2] - pz;
+      return dx * dx + dy * dy + dz * dz;
+    }
+    pending.sort((a, b) => d2(a).compareTo(d2(b)));
+    if (!_meshStreamRunning) {
+      _meshesToLoad = 0;
+      _meshesLoaded = 0;
+      meshLoadOrder.clear();
+    }
+    _meshesToLoad += pending.length;
+    _meshStreamRunning = true;
+    final cameraBefore = cameraState;
+    final queue = Queue<EditorActorNode>.of(pending);
+    Future<void> worker() async {
+      while (queue.isNotEmpty && !_disposed) {
+        final actor = queue.removeFirst();
+        meshLoadOrder.add(actor.id);
+        try {
+          await _loadActorMeshData(actor);
+        } catch (e) {
+          _logger.log('Mesh of actor "${actor.name}" did not load: $e', level: 'warning', source: 'EditorViewModel');
+        } finally {
+          _meshesLoaded++;
+          _meshDataArrived();
+        }
+      }
+    }
+    await Future.wait([for (var i = 0; i < meshLoadConcurrency; i++) worker()]);
+    if (_disposed) return;
+    if (_meshesLoaded >= _meshesToLoad) {
+      _meshStreamRunning = false;
+      _meshesToLoad = 0;
+      _meshesLoaded = 0;
+      // A first open framed the level from actor locations; now that every
+      // mesh has bounds, frame it properly unless the user already moved.
+      if (reframeWhenDone && cameraState == cameraBefore) frameLevelBounds();
+    }
+    notifyListeners();
+  }
+
+  /// One mesh arrived: a single spawn notifies at once, a running stream at
+  /// most about twenty times a second (the viewport syncs on every notify).
+  void _meshDataArrived() {
+    if (_disposed) return;
+    if (!_meshStreamRunning) {
+      notifyListeners();
+      return;
+    }
+    final now = DateTime.now();
+    if (now.difference(_lastMeshNotify) >= const Duration(milliseconds: 50) || _meshesLoaded >= _meshesToLoad) {
+      _lastMeshNotify = now;
+      _meshNotifyDirty = false;
+      notifyListeners();
+    } else if (!_meshNotifyDirty) {
+      _meshNotifyDirty = true;
+      Future<void>.delayed(const Duration(milliseconds: 60), () {
+        if (_disposed || !_meshNotifyDirty) return;
+        _meshNotifyDirty = false;
+        _lastMeshNotify = DateTime.now();
+        notifyListeners();
+      });
+    }
   }
 
   /// Why [type] cannot be spawned right now, or null when it can.
