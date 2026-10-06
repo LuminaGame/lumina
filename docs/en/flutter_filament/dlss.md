@@ -29,6 +29,8 @@ dart run tool/dlss/fetch_sdk.dart --check    # verifies what is there
 
 The release tag is pinned in `tool/dlss/VERSION`, every file's SHA-256 and size in `tool/dlss/manifest.txt`; the licence text lands in `build/dlss-sdk/LICENSE.txt`. The native build (`hook/build.dart`) compiles `src/dlss_c.cpp` with `FLUTTER_FILAMENT_DLSS=1` and links the NGX stub only when that folder exists; a checkout without it builds, tests and renders exactly as before, and `Dlss.available` is false. At run time the `nvngx_dlss` library is looked up in `LUMINA_DLSS_DIR` (the folder or an SDK root), next to the executable, then in the fetched SDK folder.
 
+The hook declares the SDK's header and entry-point library as dependencies even while they are missing, so fetching (or deleting) the folder makes the next `flutter run` / `flutter test` of any package re-run the hook and build the DLSS path in (or out): no `flutter clean` is needed, only a relaunch of the app that was running before the fetch. Lumina Studio started from source (`flutter run` in `lumina_ui`) then shows the DLSS HUD button as available on an NVIDIA RTX GPU; an installed editor carries no NGX code and cannot gain it afterwards.
+
 ## Order of operations
 
 1. `Dlss.available` is true: the runtime was found and an NVIDIA Vulkan device exists.

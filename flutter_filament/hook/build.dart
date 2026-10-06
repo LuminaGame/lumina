@@ -429,8 +429,23 @@ void main(List<String> args) async {
       for (final flag in cbuilder.flags)
         if (flag.endsWith('.a')) input.packageRoot.resolveUri(Uri.file(flag)),
       for (final lib in windowsLibs) Uri.file(lib),
+      // The NGX SDK markers, whether or not the folder exists yet: fetching
+      // (or deleting) build/dlss-sdk makes the next build re-run this hook and
+      // compile the DLSS path in or out; a missing file hashes as "absent".
+      for (final marker in _dlssSdkMarkers(input, targetOS)) Uri.file(marker),
     ]);
   });
+}
+
+/// The files whose presence switches the DLSS build on: the NGX Vulkan header
+/// and the platform's static entry-point library.
+List<String> _dlssSdkMarkers(BuildInput input, OS targetOS) {
+  if (targetOS != OS.windows && targetOS != OS.linux) return const [];
+  final dir = input.packageRoot.resolveUri(Uri.file('build/dlss-sdk')).toFilePath();
+  return [
+    '$dir/include/nvsdk_ngx_vk.h',
+    targetOS == OS.windows ? '$dir/lib/Windows_x86_64/x64/nvsdk_ngx_s.lib' : '$dir/lib/Linux_x86_64/libnvsdk_ngx.a',
+  ];
 }
 
 /// Filament's checkout (patched v1.77.2 with its prebuilt `out/` folders), in

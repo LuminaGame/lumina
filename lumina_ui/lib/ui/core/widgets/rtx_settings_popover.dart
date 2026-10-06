@@ -81,7 +81,7 @@ class RtxSettingsPopover extends StatelessWidget {
                       Text(
                         switch (kind) {
                           RtxSettingsKind.dlss =>
-                            'The NGX runtime was not found or this GPU has no DLSS. Fetch the SDK (tool/dlss/fetch_sdk.dart) and run on an NVIDIA RTX GPU; the choices below are kept for when it is.',
+                            'The NGX runtime was not found or this GPU has no DLSS. Fetch the SDK (dart run tool/dlss/fetch_sdk.dart in flutter_filament) and start the editor again from source: the native library rebuilds with DLSS on the next run. Needs an NVIDIA RTX GPU; the choices below are kept for when it is.',
                           RtxSettingsKind.fsr3 =>
                             'This engine renders no motion vectors (feature level 0), which FSR3 needs. The choices below are kept for a machine that has them.',
                           RtxSettingsKind.rayTracing =>

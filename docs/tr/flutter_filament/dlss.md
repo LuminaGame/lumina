@@ -29,6 +29,8 @@ dart run tool/dlss/fetch_sdk.dart --check    # mevcut dosyaları doğrular
 
 Release etiketi `tool/dlss/VERSION` içinde, her dosyanın SHA-256'sı ve boyutu `tool/dlss/manifest.txt` içinde sabitlenmiştir; lisans metni `build/dlss-sdk/LICENSE.txt` olarak iner. Native build (`hook/build.dart`) `src/dlss_c.cpp` dosyasını `FLUTTER_FILAMENT_DLSS=1` ile derler ve NGX stub'ını yalnızca o klasör varsa bağlar; klasörsüz bir checkout eskisi gibi derlenir, test edilir ve render eder, `Dlss.available` false olur. Çalışma zamanında `nvngx_dlss` kütüphanesi `LUMINA_DLSS_DIR` (klasörün kendisi ya da bir SDK kökü), çalıştırılabilir dosyanın yanı ve indirilen SDK klasöründe aranır.
 
+Hook, SDK'nın başlığını ve giriş noktası kütüphanesini henüz yokken bile bağımlılık olarak bildirir; bu yüzden klasörü indirmek (ya da silmek) herhangi bir paketin bir sonraki `flutter run` / `flutter test` çalıştırmasında hook'u yeniden çalıştırır ve DLSS yolunu derlemeye katar (ya da çıkarır): `flutter clean` gerekmez, yalnızca indirmeden önce çalışan uygulamanın yeniden başlatılması gerekir. Kaynaktan başlatılan Lumina Studio (`lumina_ui` içinde `flutter run`) NVIDIA RTX GPU'da DLSS HUD düğmesini kullanılabilir gösterir; kurulu bir editör NGX kodu taşımaz ve sonradan kazanamaz.
+
 ## İşlem sırası
 
 1. `Dlss.available` true: runtime bulundu ve bir NVIDIA Vulkan cihazı var.
