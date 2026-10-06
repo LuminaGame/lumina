@@ -74,7 +74,9 @@ List<PluginScanRoot> editorPluginScanRoots(String projectDir) {
       origin: PluginOrigin.engine,
     ),
     PluginScanRoot(dir: Directory(enginePlugins), origin: PluginOrigin.engine),
-    PluginScanRoot(dir: Directory(p.join(projectDir, 'plugins')), origin: PluginOrigin.project),
+    // Normalised: a project path joined with `/` would give every project
+    // plugin a mixed-separator folder (shown, and handed to its process).
+    PluginScanRoot(dir: Directory(p.normalize(p.join(projectDir, 'plugins'))), origin: PluginOrigin.project),
     // <data>/plugins, where the Marketplace installs plugin
     // listings too.
     PluginScanRoot(dir: UserPluginDir.resolve(), origin: PluginOrigin.user),

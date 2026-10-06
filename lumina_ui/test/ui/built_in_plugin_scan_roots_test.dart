@@ -87,4 +87,21 @@ void main() {
     }
     expect((await scan())['lumina_plugin_pcg'], PluginOrigin.project);
   });
+
+  test("a project path with mixed separators gives project plugins a normalised folder", () async {
+    final plugin = Directory(p.join(project.path, 'plugins', 'mixed_plugin'))..createSync(recursive: true);
+    File(p.join(plugin.path, 'mixed_plugin.lmplugin')).writeAsStringSync(jsonEncode({
+      'name': 'mixed_plugin',
+      'version': '0.1.0',
+      'modules': [
+        {'name': 'mixed_plugin', 'type': 'editor', 'entry_library': 'lib/mixed_plugin.dart', 'registration_class': 'P'},
+      ],
+    }));
+    // As the editor may hold it: `/` joined onto a platform path, a `.` segment.
+    final mixed = '${temp.path}/./project';
+    final result = await PluginRepository(roots: editorPluginScanRoots(mixed)).scanAll();
+    final found = result.plugins.firstWhere((d) => d.name == 'mixed_plugin');
+    expect(found.origin, PluginOrigin.project);
+    expect(found.pluginDir.path, p.normalize(plugin.path));
+  });
 }
