@@ -37,6 +37,8 @@ void registerPluginTools(McpToolRegistry registry, EditorViewModel vm, McpJobReg
       'dependencies': [for (final dep in d.dependencies) {'name': dep.name, 'version': dep.version.toString()}],
       'issues': [for (final i in e.issues) {'type': i.type.name, 'message': i.message}],
       'plugin_dir': d.pluginDir.path,
+      if (e.overrides.isNotEmpty)
+        'overrides': [for (final o in e.overrides) {'origin': o.shadowedOrigin.name, 'manifest': o.shadowedManifestPath}],
     };
   }
 
@@ -49,7 +51,8 @@ void registerPluginTools(McpToolRegistry registry, EditorViewModel vm, McpJobReg
       groups: plugin,
       title: 'List plugins',
       description: 'The Plugin Manager\'s list: {name, friendly_name, version, category, origin (engine|project|user), '
-          'enabled, content_only, restart_pending, dependencies, issues}, plus restart_required (a code plugin changed '
+          'enabled, content_only, restart_pending, dependencies, issues, overrides (the same-named copies of lower roots '
+          'this one replaces, when any)}, plus restart_required (a code plugin changed '
           'since the editor started) and scan_errors. Filters as in the manager: group installed (project + user) or '
           'built_in (engine), category, query (name, friendly name, description, author).',
       inputSchema: McpSchema.object({

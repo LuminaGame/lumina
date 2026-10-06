@@ -162,4 +162,31 @@ void main() {
     
     expect(find.text('7 plugins · 0 enabled'), findsOneWidget);
   });
+
+  testWidgets('a project plugin overriding an engine one is noted on its card, not listed as an error', (tester) async {
+    // The engine ships its own water_system; the project's copy loads.
+    File('${enginePluginsDir.path}/water_system/water_system.lmplugin')
+      ..createSync(recursive: true)
+      ..writeAsStringSync(jsonEncode({
+        'name': 'water_system',
+        'version': '0.9.0',
+        'category': 'Physics',
+        'modules': [{'name': 'M', 'type': 'runtime', 'entry_library': 'm.dart', 'registration_class': 'MC'}],
+      }));
+    await tester.runAsync(registryService.refresh);
+    viewModel = PluginManagerViewModel(registryService: registryService);
+    tester.view.physicalSize = const Size(1600, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    expect(find.text('7 plugins · 0 enabled'), findsOneWidget);
+    expect(find.text('Overrides the engine copy'), findsOneWidget);
+    // Only the broken manifest is a scan error.
+    expect(registryService.scanErrors.map((e) => e.filePath), [endsWith('broken.lmplugin')]);
+    expect(find.text('Errors (1)'), findsOneWidget);
+    expect(find.textContaining('water_system.lmplugin'), findsNothing);
+  });
 }

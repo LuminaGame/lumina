@@ -759,7 +759,19 @@ Represents a tracked project entry in the launcher's recent projects list.
 | Metot / Getter | İmzası | Ne İşe Yarar? |
 | :--- | :--- | :--- |
 | `plugins` | `List<LuminaPluginDescriptor> plugins` | `plugins` alanını (field/property) ve ilişkili veriyi saklar. |
-| `errors` | `List<PluginScanError> errors` | `errors` alanını (field/property) ve ilişkili veriyi saklar. |
+| `errors` | `List<PluginScanError> errors` | `errors` alanını (field/property) ve ilişkili veriyi saklar. Aynı kökün iki klasörünün aynı eklenti adını taşıması `duplicateName` hatasıdır. |
+| `shadowed` | `List<PluginShadow> shadowed` | Daha öncelikli bir kökteki aynı adlı eklentinin geçersiz kıldığı kopyalar (proje > kullanıcı > engine). Bilinçli bir davranıştır, hiçbir zaman hata değildir: editör bunu info düzeyinde loglar, kazanan eklentinin Plugin Manager kartında "Overrides the engine copy" yazar. |
+
+### `class PluginShadow`
+
+Daha öncelikli bir kökte aynı adlı eklenti yüklendiği için yüklenmeyen eklenti kopyası.
+
+| Alan | Tür | Anlamı |
+| :--- | :--- | :--- |
+| `name` | `String` | İki kopyanın taşıdığı eklenti adı. |
+| `winner` | `LuminaPluginDescriptor` | Yüklenen kopya. |
+| `shadowedManifestPath` | `String` | Yüklenmeyen kopyanın `.lmplugin` dosyası. |
+| `shadowedOrigin` | `PluginOrigin` | Yüklenmeyen kopyanın kökü. |
 
 ### `class PluginRepository`
 

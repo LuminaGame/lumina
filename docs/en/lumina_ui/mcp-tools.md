@@ -835,7 +835,7 @@ Edit → Plugins as MCP tools (group `plugin`): list the plugins with their stat
 
 | Tool | Risk | Title | Description |
 | :--- | :--- | :--- | :--- |
-| `list_plugins` | readOnly | List plugins | The Plugin Manager's list: {name, friendly_name, version, category, origin (engine\|project\|user), enabled, content_only, restart_pending, dependencies, issues}, plus restart_required (a code plugin changed since the edit... |
+| `list_plugins` | readOnly | List plugins | The Plugin Manager's list: {name, friendly_name, version, category, origin (engine\|project\|user), enabled, content_only, restart_pending, dependencies, issues, overrides (the same-named copies of lower roots... |
 | `set_plugin_enabled` | mutating | Set plugin enabled | The Plugin Manager's Enabled checkbox: enables (with the dependencies it needs) or disables a plugin; the choice is saved in the .lmproject. |
 | `remove_plugin` | destructive | Remove plugin | The Plugin Manager's Remove: deletes a user or project plugin (never a built-in). dry_run: true returns the deletion list (plugin_dir, linked_from, file_count, bytes, every_project, enabled, also_disabled, restart_required, loaded_until_restart, marketplace, comes_back, data[]) and deletes nothing; delete_data: true also deletes the saved data. |
 | `create_plugin` | external | Create plugin | File → New Plugin (the wizard) as a job (kind create_plugin): generates the plugin under the project's plugins/ from a template — blank / editorPanel / importer are Dart packages (the generator runs dart pub get and dart... |

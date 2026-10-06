@@ -226,6 +226,41 @@ void main() {
       expect(service.projectDirPath, temp.path);
     });
 
+    test('a project plugin overriding a same-named engine plugin is a notice, not a scan error', () async {
+      final engineDir = Directory('${temp.path}/engine')..createSync();
+      final projectDir = Directory('${temp.path}/plugins')..createSync();
+      writePlugin(engineDir, 'shared_plugin', 'shared_plugin');
+      writePlugin(engineDir, 'engine_only', 'engine_only');
+      writePlugin(projectDir, 'shared_plugin', 'shared_plugin');
+      final registry = PluginRegistryService(
+        repo: PluginRepository(roots: [
+          PluginScanRoot(dir: engineDir, origin: PluginOrigin.engine),
+          PluginScanRoot(dir: projectDir, origin: PluginOrigin.project),
+        ]),
+        projectRepo: ProjectRepository(),
+      );
+      await registry.initialize(temp.path);
+
+      expect(registry.scanErrors, isEmpty);
+      final shared = registry.entries.firstWhere((e) => e.descriptor.name == 'shared_plugin');
+      expect(shared.descriptor.origin, PluginOrigin.project);
+      expect(shared.overrides.single.shadowedOrigin, PluginOrigin.engine);
+      expect(shared.overrides.single.shadowedManifestPath, endsWith('shared_plugin.lmplugin'));
+      expect(shared.overrides.single.shadowedManifestPath, startsWith(engineDir.path));
+      expect(registry.shadowed.map((s) => s.name), ['shared_plugin']);
+      expect(registry.entries.firstWhere((e) => e.descriptor.name == 'engine_only').overrides, isEmpty);
+    });
+
+    test('two folders of one root naming the same plugin stay a scan error', () async {
+      writePlugin(userDir, 'twin_a', 'twin');
+      writePlugin(userDir, 'twin_b', 'twin');
+      await service.initialize(temp.path);
+      expect(service.entries.map((e) => e.descriptor.name), ['twin']);
+      expect(service.scanErrors.single.kind, PluginErrorKind.duplicateName);
+      expect(service.scanErrors.single.message, contains('same user root'));
+      expect(service.shadowed, isEmpty);
+    });
+
     test('a rescan keeps the restart a code plugin change is waiting for', () async {
       writePlugin(userDir, 'a_plugin', 'a_plugin');
       writePlugin(userDir, 'b_plugin', 'b_plugin');

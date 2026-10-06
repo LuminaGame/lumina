@@ -283,6 +283,12 @@ class _PluginCard extends StatelessWidget {
                       ),
                     if (desc.description != null && desc.description!.isNotEmpty)
                       Text(desc.description!, maxLines: 2, overflow: TextOverflow.ellipsis),
+                    // A same-named plugin of a lower root does not load.
+                    for (final o in entry.overrides)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4.0),
+                        child: Text('Overrides the ${o.shadowedOrigin.name} copy', style: const TextStyle(fontSize: 11)).muted(),
+                      ),
                   ],
                 ),
               ),

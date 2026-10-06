@@ -73,11 +73,39 @@ class PluginScanRoot {
   }
 }
 
+/// A plugin copy that a higher-priority root overrides: a project plugin
+/// named like a user or engine one (or a user plugin named like an engine
+/// one) is the copy that loads. Overriding is intended, so it is not a
+/// [PluginScanError].
+class PluginShadow {
+  /// The plugin name both copies carry.
+  final String name;
+
+  /// The copy that loads.
+  final LuminaPluginDescriptor winner;
+
+  /// The `.lmplugin` of the copy that does not load.
+  final String shadowedManifestPath;
+
+  /// The root of the copy that does not load.
+  final PluginOrigin shadowedOrigin;
+
+  PluginShadow({required this.name, required this.winner, required this.shadowedManifestPath, required this.shadowedOrigin});
+
+  @override
+  String toString() =>
+      'The ${winner.origin.name} plugin "$name" overrides the ${shadowedOrigin.name} copy at $shadowedManifestPath';
+}
+
 class PluginScanResult {
   final List<LuminaPluginDescriptor> plugins;
   final List<PluginScanError> errors;
 
-  PluginScanResult({required this.plugins, required this.errors});
+  /// Copies overridden by a plugin of the same name in a higher-priority
+  /// root (project > user > engine).
+  final List<PluginShadow> shadowed;
+
+  PluginScanResult({required this.plugins, required this.errors, this.shadowed = const []});
 }
 
 class PluginRepository {
@@ -90,6 +118,7 @@ class PluginRepository {
   Future<PluginScanResult> scanAll() async {
     final allPlugins = <LuminaPluginDescriptor>[];
     final allErrors = <PluginScanError>[];
+    final shadowed = <PluginShadow>[];
 
     // Priority: project > user > engine
     final sortedRoots = List<PluginScanRoot>.from(roots)..sort((a, b) {
@@ -130,11 +159,23 @@ class PluginRepository {
         try {
           final plugin = await loadInternal(manifest, root.origin);
           
-          if (seenNames.containsKey(plugin.name)) {
+          final seen = seenNames[plugin.name];
+          if (seen != null && seen.origin != plugin.origin) {
+            // A project (or user) copy overriding a lower root's copy is
+            // documented behaviour, not an error.
+            shadowed.add(PluginShadow(
+              name: plugin.name,
+              winner: seen,
+              shadowedManifestPath: manifest.path,
+              shadowedOrigin: plugin.origin,
+            ));
+          } else if (seen != null) {
+            // Two folders of one root naming the same plugin: which one
+            // loads would depend on the listing order.
             allErrors.add(PluginScanError(
               filePath: manifest.path,
               kind: PluginErrorKind.duplicateName,
-              message: 'Plugin "${plugin.name}" is shadowed by ${seenNames[plugin.name]!.origin.name} root'
+              message: 'Plugin "${plugin.name}" is also defined in the same ${plugin.origin.name} root by ${seen.pluginDir.path}'
             ));
           } else {
             seenNames[plugin.name] = plugin;
@@ -152,7 +193,7 @@ class PluginRepository {
       }
     }
 
-    return PluginScanResult(plugins: allPlugins, errors: allErrors);
+    return PluginScanResult(plugins: allPlugins, errors: allErrors, shadowed: shadowed);
   }
 
   Future<LuminaPluginDescriptor> load(File manifest) async {

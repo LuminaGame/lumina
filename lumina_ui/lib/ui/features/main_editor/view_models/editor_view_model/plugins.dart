@@ -27,6 +27,10 @@ mixin _EditorPlugins on _EditorViewModelState {
         source: 'PluginDiscovery',
       );
     }
+    // A project or user plugin overriding a same-named one is intended.
+    for (final shadow in result.shadowed) {
+      _logger.log('$shadow.', level: 'info', source: 'PluginDiscovery');
+    }
     _logger.log(
       'Found ${result.plugins.length} plugins during discovery.',
       level: 'info',

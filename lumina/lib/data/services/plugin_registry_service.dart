@@ -40,11 +40,16 @@ class PluginEntry {
   bool restartPending;
   List<PluginIssue> issues;
 
+  /// The copies of this plugin in lower-priority roots that this one
+  /// overrides (a project plugin named like an engine plugin, say).
+  List<PluginShadow> overrides;
+
   PluginEntry({
     required this.descriptor,
     this.enabled = false,
     this.restartPending = false,
     this.issues = const [],
+    this.overrides = const [],
   });
 }
 
@@ -70,6 +75,7 @@ class PluginRegistryService {
 
   final Map<String, PluginEntry> _entries = {};
   final List<PluginScanError> _scanErrors = [];
+  final List<PluginShadow> _shadowed = [];
   
   LuminaProject? _currentProject;
   String? _currentProjectDirPath;
@@ -128,6 +134,10 @@ class PluginRegistryService {
   }
   List<PluginScanError> get scanErrors => _scanErrors;
 
+  /// Plugin copies overridden by a same-named plugin of a higher-priority
+  /// root; informational, never a scan error.
+  List<PluginShadow> get shadowed => _shadowed;
+
   /// The open project's folder (null before [initialize]).
   String? get projectDirPath => _currentProjectDirPath;
 
@@ -147,6 +157,7 @@ class PluginRegistryService {
   Future<void> initialize(String projectDirPath) async {
     _entries.clear();
     _scanErrors.clear();
+    _shadowed.clear();
     _currentProjectDirPath = projectDirPath;
     
     final proj = await projectRepo.loadProject('$projectDirPath/project.lmproject');
@@ -166,12 +177,16 @@ class PluginRegistryService {
     
     final scanResult = await repo.scanAll();
     _scanErrors.addAll(scanResult.errors);
+    _shadowed.addAll(scanResult.shadowed);
     
     final savedEnabled = _currentProject!.enabledPlugins;
     bool needsSave = false;
     
     for (final desc in scanResult.plugins) {
-      _entries[desc.name] = PluginEntry(descriptor: desc);
+      _entries[desc.name] = PluginEntry(
+        descriptor: desc,
+        overrides: [for (final s in scanResult.shadowed) if (s.name == desc.name) s],
+      );
     }
     
     if (savedEnabled == null) {

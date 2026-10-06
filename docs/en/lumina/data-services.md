@@ -553,6 +553,7 @@ Service for parsing Wavefront OBJ 3D model geometry.
 | `enabled` | `bool enabled` | Holds the `enabled` property or configuration state. |
 | `restartPending` | `bool restartPending` | Holds the `restartPending` property or configuration state. |
 | `issues` | `List<PluginIssue> issues` | Holds the `issues` property or configuration state. |
+| `overrides` | `List<PluginShadow> overrides` | The same-named copies of lower-priority roots this plugin overrides (shown on its Plugin Manager card, `overrides` in `list_plugins`). |
 
 ### `class PluginResolution`
 
@@ -591,6 +592,7 @@ Service for parsing Wavefront OBJ 3D model geometry.
 | `projectRepo` | `ProjectRepository projectRepo` | Holds the `projectRepo` property or configuration state. |
 | `entries` | `List<PluginEntry> get entries` | Getter accessor returning the current value of `entries`. |
 | `scanErrors` | `List<PluginScanError> get scanErrors` | Getter accessor returning the current value of `scanErrors`. |
+| `shadowed` | `List<PluginShadow> get shadowed` | Plugin copies overridden by a same-named plugin of a higher-priority root; informational, never a scan error. |
 | `refresh` | `Future<void> refresh()` | Executes `refresh` operation. |
 | `initialize` | `Future<void> initialize(String projectDirPath)` | Executes `initialize` operation. |
 | `resolve` | `PluginResolution resolve(Set<String> wantedEnabled)` | Executes `resolve` operation. |

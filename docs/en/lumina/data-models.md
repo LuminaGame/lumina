@@ -759,7 +759,19 @@ Represents a tracked project entry in the launcher's recent projects list.
 | Method / Getter | Signature | Purpose & Description |
 | :--- | :--- | :--- |
 | `plugins` | `List<LuminaPluginDescriptor> plugins` | Holds the `plugins` property or configuration state. |
-| `errors` | `List<PluginScanError> errors` | Holds the `errors` property or configuration state. |
+| `errors` | `List<PluginScanError> errors` | Holds the `errors` property or configuration state. Two folders of the same root naming one plugin are a `duplicateName` error. |
+| `shadowed` | `List<PluginShadow> shadowed` | Copies a same-named plugin of a higher-priority root overrides (project > user > engine). Intended, so never an error: the editor logs it at info level and the winner's Plugin Manager card says "Overrides the engine copy". |
+
+### `class PluginShadow`
+
+A plugin copy that does not load because a plugin of the same name in a higher-priority root does.
+
+| Field | Type | Meaning |
+| :--- | :--- | :--- |
+| `name` | `String` | The plugin name both copies carry. |
+| `winner` | `LuminaPluginDescriptor` | The copy that loads. |
+| `shadowedManifestPath` | `String` | The `.lmplugin` of the copy that does not load. |
+| `shadowedOrigin` | `PluginOrigin` | The root of the copy that does not load. |
 
 ### `class PluginRepository`
 

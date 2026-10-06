@@ -553,6 +553,7 @@ Service for parsing Wavefront OBJ 3D model geometry.
 | `enabled` | `bool enabled` | `enabled` alanını (field/property) ve ilişkili veriyi saklar. |
 | `restartPending` | `bool restartPending` | `restartPending` alanını (field/property) ve ilişkili veriyi saklar. |
 | `issues` | `List<PluginIssue> issues` | `issues` alanını (field/property) ve ilişkili veriyi saklar. |
+| `overrides` | `List<PluginShadow> overrides` | Bu eklentinin geçersiz kıldığı, daha düşük öncelikli köklerdeki aynı adlı kopyalar (Plugin Manager kartında ve `list_plugins` içinde `overrides` olarak görünür). |
 
 ### `class PluginResolution`
 
@@ -591,6 +592,7 @@ Service for parsing Wavefront OBJ 3D model geometry.
 | `projectRepo` | `ProjectRepository projectRepo` | `projectRepo` alanını (field/property) ve ilişkili veriyi saklar. |
 | `entries` | `List<PluginEntry> get entries` | `entries` özelliğinin anlık değerini okuyan getter erişimcisi. |
 | `scanErrors` | `List<PluginScanError> get scanErrors` | `scanErrors` özelliğinin anlık değerini okuyan getter erişimcisi. |
+| `shadowed` | `List<PluginShadow> get shadowed` | Daha öncelikli bir kökteki aynı adlı eklentinin geçersiz kıldığı eklenti kopyaları; bilgi amaçlıdır, tarama hatası değildir. |
 | `refresh` | `Future<void> refresh()` | `refresh` işlemini gerçekleştirir. |
 | `initialize` | `Future<void> initialize(String projectDirPath)` | `initialize` işlemini gerçekleştirir. |
 | `resolve` | `PluginResolution resolve(Set<String> wantedEnabled)` | `resolve` işlemini gerçekleştirir. |
