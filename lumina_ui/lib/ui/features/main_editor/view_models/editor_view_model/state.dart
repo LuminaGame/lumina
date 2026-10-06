@@ -325,6 +325,12 @@ abstract class _EditorViewModelState extends ChangeNotifier {
 
   final EditorQualityStore _qualityStore;
   EditorQualitySettings _quality = const EditorQualitySettings();
+
+  /// The viewport camera, remembered per project and put back on reopen.
+  final EditorCameraStore _cameraStore;
+  Timer? _cameraSaveTimer;
+  Future<void>? _pendingCameraSave;
+  EditorCameraState? _savedCamera;
   int _qualityRevision = 0;
 
   Future<void>? _pendingQualitySave;
@@ -366,9 +372,11 @@ abstract class _EditorViewModelState extends ChangeNotifier {
     String? projectLocation,
     required bool enableTimers,
     EditorQualityStore? qualityStore,
+    EditorCameraStore? cameraStore,
     ThumbnailService? thumbnailService,
     bool? autoGenerateThumbnails,
   }) : _qualityStore = qualityStore ?? EditorQualityStore(),
+       _cameraStore = cameraStore ?? EditorCameraStore(),
        _thumbnailService = thumbnailService ?? ThumbnailService(),
        _autoThumbnails = autoGenerateThumbnails ?? enableTimers,
        _customProjectLocation = projectDirPath ?? projectLocation,
@@ -506,6 +514,7 @@ abstract class _EditorViewModelState extends ChangeNotifier {
   void setViewMode(String mode);
   void resetCamera();
   void frameLevelBounds();
+  Future<bool> restoreSavedCamera();
   void focusCameraOnActor(EditorActorNode actor);
   void _setQuality(EditorQualitySettings next, String what);
   Future<void> loadQualitySettings();

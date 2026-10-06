@@ -252,7 +252,9 @@ A live binding between an open sub-editor tab and its view model.
 | `ensureActorMeshDataForTest` | `Future<void> ensureActorMeshDataForTest(EditorActorNode actor)` | `ensureActorMeshDataForTest` işlemini gerçekleştirir. |
 | `updateActorMaterial` | `void updateActorMaterial(String materialPath)` | Mevcut verileri veya durumu günceller. |
 | `replaceActorsForTest` | `void replaceActorsForTest(List<EditorActorNode> actors)` | `replaceActorsForTest` işlemini gerçekleştirir. |
-| `frameLevelBounds` | `void frameLevelBounds()` | Points the viewport camera at the whole level and pulls back far enough to hold it.  Levels do not all share a scale: imported props are authored in centimetres, while the game templates lay out rooms in metres. Framing what is actually in the level means either opens visible, instead of a distant speck or a wall of geometry. |
+| `frameLevelBounds` | `void frameLevelBounds()` | Mesh sınırları olan aktörleri çerçeveler (geometriden uzaktaki ışıklar, gökyüzü ve oyuncu başlangıçları kamerayı dışarı itmez). Points the viewport camera at the whole level and pulls back far enough to hold it.  Levels do not all share a scale: imported props are authored in centimetres, while the game templates lay out rooms in metres. Framing what is actually in the level means either opens visible, instead of a distant speck or a wall of geometry. |
+| `restoreSavedCamera` | `Future<bool> restoreSavedCamera()` | Kamerayı bu projenin en son düzenlendiği yere koyar (`EditorCameraStore`); proje bu makinede hiç açılmadıysa false. Proje açma yolu bunu çağırır ve yalnızca false dönerse seviyeyi çerçeveler. |
+| `cameraState`, `flushCameraState` | `EditorCameraState get cameraState`, `Future<void> flushCameraState()` | Kamera, deponun tuttuğu haliyle; her kamera değişikliği hareket durduktan 400 ms sonra kaydedilir, `flushCameraState` bekleyen kaydı bekler. |
 | `focusCameraOnActor` | `void focusCameraOnActor(EditorActorNode actor)` | `focusCameraOnActor` işlemini gerçekleştirir. |
 | `actorTypeNameForAssetType` | `static String actorTypeNameForAssetType(AssetType type)` | The outliner actor type an asset dropped into the level becomes.  Public so the landscape placement tests can assert it directly: a `LANDSCAPE` `.lmas` must become a `Landscape` actor, not an untyped `Mesh` with no geometry. |
 | `cancelActiveOperation` | `void cancelActiveOperation()` | `cancelActiveOperation` işlemini gerçekleştirir. |
@@ -350,6 +352,14 @@ How the **editor viewport** renders — an editor scalability setting, which is 
 | `toMap` | `Map<String, dynamic> toMap()` | `toMap` işlemini gerçekleştirir. |
 | `hashCode` | `int get hashCode` | Mevcut durumun veya yeteneğin doğruluğunu kontrol eder (`bool` döndürür). |
 | `toString` | `String toString()` | `toString` işlemini gerçekleştirir. |
+
+### `class EditorCameraState`
+
+Bir projenin viewport kamerası, `EditorCameraStore`'un tuttuğu haliyle: `yaw` ve `pitch` (derece), yörünge `distance`'ı, pivot `panX`/`panY`/`panZ` ve kamera `mode`'u; `toMap` / `fromMap` (eksik bir harita için null).
+
+### `class EditorCameraStore`
+
+Editörün yapılandırma dizinindeki (`LuminaConfigDir`) `editor_camera.json`, proje dizinine göre anahtarlı: `load(projectDirPath)` (ilk açılışta null) ve `save(projectDirPath, camera)`. Bir projeyi yeniden açmak, tüm seviyeyi çerçevelemek yerine kamerayı olduğu yere geri koyar.
 
 ### `class EditorQualityStore`
 

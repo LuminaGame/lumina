@@ -155,9 +155,10 @@ mixin _EditorProjectAndLevels on _EditorViewModelState {
           await _loadActorMeshData(actor);
         }
       }
-      // Now that every actor knows its bounds, put the camera where the level
-      // actually is — levels differ in scale, so a fixed default hides some.
-      frameLevelBounds();
+      // The camera this project was last edited with; a first open frames the
+      // level's geometry instead (levels differ in scale, so a fixed default
+      // hides some).
+      if (!await restoreSavedCamera()) frameLevelBounds();
 
       _refreshAssets();
     } finally {}

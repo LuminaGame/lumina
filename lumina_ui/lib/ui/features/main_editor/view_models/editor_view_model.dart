@@ -37,6 +37,7 @@ import '../services/editor_preferences.dart';
 import '../services/project_trash.dart';
 import '../services/camera_actor_properties.dart';
 import '../services/light_actor_properties.dart';
+import '../services/editor_camera_store.dart';
 import '../services/editor_quality_settings.dart';
 import '../services/editor_level_scene.dart';
 import '../commands/editor_command.dart';
@@ -424,6 +425,7 @@ class EditorViewModel extends _EditorViewModelState
     bool enableTimers = true,
     bool autoInitAssets = true,
     super.qualityStore,
+    super.cameraStore,
     super.thumbnailService,
     super.autoGenerateThumbnails,
   }) : super(enableTimers: enableTimers) {
@@ -579,6 +581,7 @@ class EditorViewModel extends _EditorViewModelState
 
   @override
   void dispose() {
+    _cameraSaveTimer?.cancel();
     EditorHandOff.beforeExit.remove(_shutdownPluginsForExit);
     removeListener(panelsController.refresh);
     panelsController.dispose();

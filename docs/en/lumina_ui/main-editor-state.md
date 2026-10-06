@@ -252,7 +252,9 @@ A live binding between an open sub-editor tab and its view model.
 | `ensureActorMeshDataForTest` | `Future<void> ensureActorMeshDataForTest(EditorActorNode actor)` | Executes `ensureActorMeshDataForTest` operation. |
 | `updateActorMaterial` | `void updateActorMaterial(String materialPath)` | Updates the current state or data values. |
 | `replaceActorsForTest` | `void replaceActorsForTest(List<EditorActorNode> actors)` | Executes `replaceActorsForTest` operation. |
-| `frameLevelBounds` | `void frameLevelBounds()` | Points the viewport camera at the whole level and pulls back far enough to hold it.  Levels do not all share a scale: imported props are authored in centimetres, while the game templates lay out rooms in metres. Framing what is actually in the level means either opens visible, instead of a distant speck or a wall of geometry. |
+| `frameLevelBounds` | `void frameLevelBounds()` | Frames the actors that have mesh bounds (lights, sky and player starts far from the geometry do not push the camera out). Points the viewport camera at the whole level and pulls back far enough to hold it.  Levels do not all share a scale: imported props are authored in centimetres, while the game templates lay out rooms in metres. Framing what is actually in the level means either opens visible, instead of a distant speck or a wall of geometry. |
+| `restoreSavedCamera` | `Future<bool> restoreSavedCamera()` | Puts the camera where this project was last edited (`EditorCameraStore`); false when the project was never opened on this machine. The project open path calls it and frames the level only when it returns false. |
+| `cameraState`, `flushCameraState` | `EditorCameraState get cameraState`, `Future<void> flushCameraState()` | The camera as the store keeps it; every camera change saves it 400 ms after the movement stops, `flushCameraState` awaits a pending save. |
 | `focusCameraOnActor` | `void focusCameraOnActor(EditorActorNode actor)` | Executes `focusCameraOnActor` operation. |
 | `actorTypeNameForAssetType` | `static String actorTypeNameForAssetType(AssetType type)` | The outliner actor type an asset dropped into the level becomes.  Public so the landscape placement tests can assert it directly: a `LANDSCAPE` `.lmas` must become a `Landscape` actor, not an untyped `Mesh` with no geometry. |
 | `cancelActiveOperation` | `void cancelActiveOperation()` | Executes `cancelActiveOperation` operation. |
@@ -350,6 +352,14 @@ How the **editor viewport** renders — an editor scalability setting, which is 
 | `toMap` | `Map<String, dynamic> toMap()` | Executes `toMap` operation. |
 | `hashCode` | `int get hashCode` | Checks current state or capability and returns a boolean value. |
 | `toString` | `String toString()` | Executes `toString` operation. |
+
+### `class EditorCameraState`
+
+The viewport camera of a project as `EditorCameraStore` keeps it: `yaw` and `pitch` (degrees), the orbit `distance`, the pivot `panX`/`panY`/`panZ` and the camera `mode`; `toMap` / `fromMap` (null for an incomplete map).
+
+### `class EditorCameraStore`
+
+`editor_camera.json` in the editor's config directory (`LuminaConfigDir`), keyed by project directory: `load(projectDirPath)` (null on a first open) and `save(projectDirPath, camera)`. Reopening a project puts the camera back where it was instead of framing the whole level.
 
 ### `class EditorQualityStore`
 

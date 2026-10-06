@@ -65,6 +65,7 @@ mixin _EditorCameraAndViewport on _EditorViewModelState {
     }
 
     _markDirty();
+    _scheduleCameraSave();
     notifyListeners();
   }
 
@@ -292,6 +293,7 @@ mixin _EditorCameraAndViewport on _EditorViewModelState {
     if (cameraMode != "Perspective") return;
     _cameraYaw += dx * 0.25;
     _cameraPitch = (_cameraPitch - dy * 0.25).clamp(-89.0, 89.0);
+    _scheduleCameraSave();
     notifyListeners();
   }
 
@@ -308,6 +310,7 @@ mixin _EditorCameraAndViewport on _EditorViewModelState {
 
     _cameraPanX += fwdX * moveStep;
     _cameraPanY += fwdY * moveStep;
+    _scheduleCameraSave();
     notifyListeners();
   }
 
@@ -331,6 +334,7 @@ mixin _EditorCameraAndViewport on _EditorViewModelState {
     _cameraPanX -= (rightX * dx - upX * dy) * speedFactor;
     _cameraPanY -= (rightY * dx - upY * dy) * speedFactor;
     _cameraPanZ += upZ * dy * speedFactor;
+    _scheduleCameraSave();
     notifyListeners();
   }
 
@@ -344,6 +348,7 @@ mixin _EditorCameraAndViewport on _EditorViewModelState {
     _cameraPanX -= rightX * dx * speedFactor;
     _cameraPanY -= rightY * dx * speedFactor;
     _cameraPanZ -= dy * speedFactor;
+    _scheduleCameraSave();
     notifyListeners();
   }
 
@@ -353,6 +358,7 @@ mixin _EditorCameraAndViewport on _EditorViewModelState {
     if (cameraMode != "Perspective") return;
     _cameraYaw += dx * 0.3;
     _cameraPitch = (_cameraPitch + dy * 0.3).clamp(-89.0, 89.0);
+    _scheduleCameraSave();
     notifyListeners();
   }
 
@@ -362,6 +368,7 @@ mixin _EditorCameraAndViewport on _EditorViewModelState {
     // The range scales with the level: a fixed 50 m cap made the
     // first scroll in a level framed from further out jump in to 50 m.
     _cameraDistance = (_cameraDistance + step).clamp(5.0, math.max(maxCameraDistance, _cameraDistance));
+    _scheduleCameraSave();
     notifyListeners();
   }
 
@@ -376,7 +383,7 @@ mixin _EditorCameraAndViewport on _EditorViewModelState {
 
   /// The editor-space box around every actor (selection and drop use the
   /// same one); null for an empty level.
-  ({List<double> min, List<double> max})? _levelBounds() {
+  ({List<double> min, List<double> max})? _levelBounds({bool visualOnly = false}) {
     var minX = double.infinity, minY = double.infinity, minZ = double.infinity;
     var maxX = -double.infinity,
         maxY = -double.infinity,
@@ -387,6 +394,7 @@ mixin _EditorCameraAndViewport on _EditorViewModelState {
       // The same editor-space box selection and drop use (asset axes and
       // unit scale converted).
       final box = ViewportPicker.editorSpaceBounds(actor);
+      if (visualOnly && box == null) continue;
       final lo = box == null ? [actor.location[0], actor.location[1], actor.location[2]] : [box.min.x, box.min.y, box.min.z];
       final hi = box == null ? [actor.location[0], actor.location[1], actor.location[2]] : [box.max.x, box.max.y, box.max.z];
       if (lo[0] < minX) minX = lo[0];
@@ -487,7 +495,8 @@ mixin _EditorCameraAndViewport on _EditorViewModelState {
       _cameraPanX += (moveX / len) * moveDist;
       _cameraPanY += (moveY / len) * moveDist;
       _cameraPanZ += (moveZ / len) * moveDist;
-      notifyListeners();
+      _scheduleCameraSave();
+    notifyListeners();
     }
   }
 
@@ -526,6 +535,7 @@ mixin _EditorCameraAndViewport on _EditorViewModelState {
       level: 'info',
       source: 'Viewport',
     );
+    _scheduleCameraSave();
     notifyListeners();
   }
 
@@ -585,7 +595,9 @@ mixin _EditorCameraAndViewport on _EditorViewModelState {
   @override
   void frameLevelBounds() {
     if (_actors.isEmpty) return;
-    final bounds = _levelBounds();
+    // Only actors with mesh bounds: a light, sky or player start far from the
+    // geometry would otherwise push the camera out until the level is a dot.
+    final bounds = _levelBounds(visualOnly: true) ?? _levelBounds();
     if (bounds == null) return;
 
     _cameraPanX = (bounds.min[0] + bounds.max[0]) / 2;
@@ -594,6 +606,7 @@ mixin _EditorCameraAndViewport on _EditorViewModelState {
 
     _cameraDistance = _framingDistance(bounds);
     _perspDistance = _cameraDistance;
+    _scheduleCameraSave();
     notifyListeners();
   }
 
@@ -615,6 +628,7 @@ mixin _EditorCameraAndViewport on _EditorViewModelState {
       level: 'info',
       source: 'Viewport',
     );
+    _scheduleCameraSave();
     notifyListeners();
   }
 
@@ -751,6 +765,63 @@ mixin _EditorCameraAndViewport on _EditorViewModelState {
     _cameraPanX = cam[3];
     _cameraPanY = cam[4];
     _cameraPanZ = cam[5];
+    _scheduleCameraSave();
     notifyListeners();
+  }
+
+  // ---- the remembered camera -----------------------------------------------
+
+  /// The viewport camera as the store keeps it.
+  EditorCameraState get cameraState => EditorCameraState(
+        yaw: _cameraYaw,
+        pitch: _cameraPitch,
+        distance: _cameraDistance,
+        panX: _cameraPanX,
+        panY: _cameraPanY,
+        panZ: _cameraPanZ,
+        mode: cameraMode,
+      );
+
+  /// Puts the camera where this project was last edited; false (and the
+  /// camera untouched) when the project was never opened on this machine.
+  /// The project open path calls this before it would frame the level.
+  @override
+  Future<bool> restoreSavedCamera() async {
+    final saved = await _cameraStore.load(projectDirPath);
+    if (saved == null) return false;
+    _cameraYaw = saved.yaw;
+    _cameraPitch = saved.pitch;
+    _cameraDistance = saved.distance;
+    _perspDistance = saved.distance;
+    _cameraPanX = saved.panX;
+    _cameraPanY = saved.panY;
+    _cameraPanZ = saved.panZ;
+    _savedCamera = saved;
+    notifyListeners();
+    return true;
+  }
+
+  /// Saves the camera a moment after it stopped moving (one write per pause,
+  /// not one per mouse event). Fire-and-forget; [flushCameraState] awaits it.
+  void _scheduleCameraSave() {
+    _cameraSaveTimer?.cancel();
+    _cameraSaveTimer = Timer(const Duration(milliseconds: 400), _saveCameraNow);
+  }
+
+  void _saveCameraNow() {
+    _cameraSaveTimer = null;
+    final state = cameraState;
+    if (state == _savedCamera) return;
+    _savedCamera = state;
+    _pendingCameraSave = _cameraStore.save(projectDirPath, state);
+  }
+
+  /// Writes a camera change that is still pending (a test, a close).
+  Future<void> flushCameraState() async {
+    if (_cameraSaveTimer != null) {
+      _cameraSaveTimer!.cancel();
+      _saveCameraNow();
+    }
+    await _pendingCameraSave;
   }
 }
