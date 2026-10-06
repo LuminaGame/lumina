@@ -56,6 +56,21 @@ void main() {
     expect(diffInputs(before, after), ['plugin a_plugin changed']);
   });
 
+  test("the .lmplugin's isolation and process_class change it (they change the registrar), and diffInputs names the plugin",
+      () async {
+    final before = await fingerprintComponents(inputs());
+    await fx.isolate();
+    final after = await fingerprintComponents(inputs());
+    expect(diffInputs(before, after), ['plugin a_plugin changed']);
+
+    // The manifest alone (sources unchanged): back to in process.
+    final manifest = File(p.join(fx.pluginDir.path, 'a_plugin.lmplugin'));
+    manifest.writeAsStringSync(manifest.readAsStringSync().replaceAll('"isolation":"process"', '"isolation":"in_process"'));
+    final reverted = await fingerprintComponents(inputs());
+    expect(reverted['plugin:a_plugin'], isNot(after['plugin:a_plugin']));
+    expect(fingerprintOf(reverted), isNot(fingerprintOf(after)));
+  });
+
   test('a new file in lumina_ui/lib of the engine changes it, and diffInputs names the engine repo', () async {
     final before = await fingerprintComponents(inputs());
     File(p.join(engine.path, 'lumina_ui', 'lib', 'new_panel.dart')).writeAsStringSync('// new\n');

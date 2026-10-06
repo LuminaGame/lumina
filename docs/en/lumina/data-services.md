@@ -519,6 +519,7 @@ Service for parsing Wavefront OBJ 3D model geometry.
 | :--- | :--- | :--- |
 | `patchPubspec` | `Future<void> patchPubspec(Directory hostRoot, List<LuminaPluginDescripto...` | Executes `patchPubspec` operation. |
 | `generateRegistrar` | `Future<void> generateRegistrar(Directory hostRoot, List<LuminaPluginDesc...` | Executes `generateRegistrar` operation. |
+| `registrarSource` | `String registrarSource(List<LuminaPluginDescriptor> enabledCodePlugins)` | The registrar library: `kEnabledPlugins` (one instance per editor module), `kPluginProcesses` and `registerAllPlugins`; deterministic for a plugin list. `kPluginProcesses` maps every plugin whose manifest says `"isolation": "process"` to a factory of its `process_class`, whatever a project's `plugin_isolation` says (the editor applies the override when it starts), for example `'my_tools': () => my_tools_plugin.MyToolsProcess(),`; with none it is `{}`. |
 
 ## `lib/data/services/plugin_registry_service.dart`
 
@@ -593,6 +594,10 @@ Service for parsing Wavefront OBJ 3D model geometry.
 | `refresh` | `Future<void> refresh()` | Executes `refresh` operation. |
 | `initialize` | `Future<void> initialize(String projectDirPath)` | Executes `initialize` operation. |
 | `resolve` | `PluginResolution resolve(Set<String> wantedEnabled)` | Executes `resolve` operation. |
+| `project` | `LuminaProject? get project` | The open project as last loaded or saved. |
+| `isolationOf` | `PluginIsolation isolationOf(String name)` | Where plugin `name` runs in the open project (`LuminaPluginDescriptor.effectiveIsolation`): its `plugin_isolation` override, else its manifest; a plugin without a process part (or an unknown one) runs in process. |
+| `isolationOverrideOf` | `PluginIsolation? isolationOverrideOf(String name)` | The open project's override for `name`, or null. |
+| `setIsolationOverride` | `Future<bool> setIsolationOverride(String name, PluginIsolation? isolation)` | Sets (null removes) the project's override and saves the `.lmproject`; true when the enabled plugin's effective isolation changed, which marks it `restartPending`. |
 
 ## `lib/data/services/plugin_template_generator_service.dart`
 
@@ -614,6 +619,7 @@ Service for parsing Wavefront OBJ 3D model geometry.
 | `author` | `String author` | Holds the `author` property or configuration state. |
 | `description` | `String description` | Holds the `description` property or configuration state. |
 | `category` | `String category` | Holds the `category` property or configuration state. |
+| `isolated` | `final bool isolated` | Scaffolds an isolated plugin: `lib/src/<name>_process.dart` (`<Pascal>Process extends LuminaPluginProcess`: a menu command, a `ping` handler, a declarative panel, and with the importer template its importer), a UI shell whose panel calls `ping` through `processChannel`, `test/<name>_process_test.dart` + `test/<name>_plugin_test.dart`, and `"isolation": "process"` + `"process_class"` in the manifest. A content-only plugin cannot be isolated (generation fails). The sources come from `plugin_template/isolated_plugin_sources.dart` (in-process templates: `plugin_template/code_plugin_sources.dart`). |
 
 ### `class PluginGenerationResult`
 

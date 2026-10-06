@@ -58,6 +58,28 @@ class APlugin extends LuminaEditorPlugin {
     return f;
   }
 
+  /// Makes `a_plugin` an isolated plugin: `"isolation": "process"` and a
+  /// `process_class` (`AProcess`, beside its `APlugin` shell in `lib/a.dart`).
+  Future<void> isolate() async {
+    final manifest = File(p.join(pluginDir.path, 'a_plugin.lmplugin'));
+    final json = jsonDecode(await manifest.readAsString()) as Map<String, dynamic>;
+    json['isolation'] = 'process';
+    ((json['modules'] as List).single as Map<String, dynamic>)['process_class'] = 'AProcess';
+    await manifest.writeAsString(jsonEncode(json));
+    final entry = File(p.join(pluginDir.path, 'lib', 'a.dart'));
+    await entry.writeAsString('''${await entry.readAsString()}
+class AProcess extends LuminaPluginProcess {
+  @override
+  String get pluginName => 'a_plugin';
+
+  @override
+  void register(PluginProcessContext context) {
+    context.handle('ping', (args) => 'pong');
+  }
+}
+''');
+  }
+
   Future<LuminaPluginDescriptor> plugin() =>
       PluginRepository(roots: []).loadInternal(File(p.join(pluginDir.path, 'a_plugin.lmplugin')), PluginOrigin.project);
 

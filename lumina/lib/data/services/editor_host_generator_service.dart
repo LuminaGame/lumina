@@ -430,6 +430,7 @@ import 'plugin_registrar.dart';
 void main(List<String> args) => runLuminaEditor(
       args,
       plugins: kEnabledPlugins,
+      processes: kPluginProcesses,
       host: const EditorHostInfo(
         packageName: '$packageName',
         engineRoot: r'${_slash(engineRoot)}',

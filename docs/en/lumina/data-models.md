@@ -192,6 +192,7 @@ A square heightmap terrain plus its foliage layers — the single source of trut
 | `type` | `PluginModuleType type` | Holds the `type` property or configuration state. |
 | `entryLibrary` | `String entryLibrary` | Holds the `entryLibrary` property or configuration state. |
 | `registrationClass` | `String registrationClass` | Holds the `registrationClass` property or configuration state. |
+| `processClass` | `final String? processClass` | The `LuminaPluginProcess` subclass in `entryLibrary` that runs in the plugin's own process (`.lmplugin` `"process_class"`). Required on an editor module of a plugin with `"isolation": "process"`. |
 | `toJson` | `Map<String, dynamic> toJson()` | Serializes the object to a JSON map. |
 
 ### `class PluginDependencyRef`
@@ -228,6 +229,10 @@ A square heightmap terrain plus its foliage layers — the single source of trut
 | `modules` | `List<PluginModuleDescriptor> modules` | Holds the `modules` property or configuration state. |
 | `enabledByDefault` | `bool enabledByDefault` | Holds the `enabledByDefault` property or configuration state. |
 | `canContainContent` | `bool canContainContent` | Holds the `canContainContent` property or configuration state. |
+| `isolation` | `final PluginIsolation isolation` | Where the editor module runs (`.lmplugin` `"isolation"`, default `in_process`); written by `toJson` only when `process`. |
+| `processModule` | `PluginModuleDescriptor? get processModule` | The editor module that names a `process_class`, or null. |
+| `processClass` | `String? get processClass` | `processModule`'s `process_class`. |
+| `effectiveIsolation` | `PluginIsolation effectiveIsolation([LuminaProject? project])` | Where the plugin runs in `project`: an isolated plugin (`process` with a `process_class`) runs in its own process unless the project's `plugin_isolation` forces it `in_process`; any other plugin runs in process. |
 | `extras` | `Map<String, dynamic> extras` | Holds the `extras` property or configuration state. |
 | `pluginDir` | `Directory pluginDir` | Holds the `pluginDir` property or configuration state. |
 | `origin` | `PluginOrigin origin` | Holds the `origin` property or configuration state. |
@@ -236,7 +241,15 @@ A square heightmap terrain plus its foliage layers — the single source of trut
 | `toJson` | `Map<String, dynamic> toJson()` | Serializes the object to a JSON map. |
 | `hashCode` | `int get hashCode` | Checks current state or capability and returns a boolean value. |
 
+## `lib/data/models/plugin_isolation.dart`
+
+### `enum PluginIsolation`
+
+Where a code plugin's editor module runs: `inProcess` (`in_process`, inside the editor) or `process` (its process part in its own supervised process). `manifestValue` is the string written in `.lmplugin` / `.lmproject` files; `static PluginIsolation? tryParse(Object? value)` reads one (null for anything else). Exported by `lumina_plugin_descriptor.dart` and `lumina_project.dart`.
+
 ## `lib/data/models/lumina_project.dart`
+
+The input settings and maps and modes (`ProjectInputValueType`, `ProjectInputAction`, `ProjectInputMapping`, `ProjectMappingContext`, `ProjectInputSettings`, `ProjectMapsAndModes`) live in `project_input_settings.dart`, the packaging settings (`kPackagingPlatforms`, `packagingPlatformLabel`, `ProjectPackagingSettings`, …) in `project_packaging_settings.dart`; `lumina_project.dart` exports both, so importers see no change.
 
 ### `class ScalabilityCategory`
 
@@ -471,6 +484,7 @@ One key binding inside a mapping context. [keyId] is the stable `LogicalKeyboard
 | `mapsAndModes` | `ProjectMapsAndModes mapsAndModes` | Holds the `mapsAndModes` property or configuration state. |
 | `physics` | `ProjectPhysicsSettings physics` | Holds the `physics` property or configuration state. |
 | `packaging` | `ProjectPackagingSettings packaging` | Holds the `packaging` property or configuration state. |
+| `pluginIsolation` | `final Map<String, PluginIsolation> pluginIsolation` | Per-plugin isolation overrides, `.lmproject` `plugin_isolation: {"<plugin>": "in_process" \| "process"}` (written sorted by name, only when not empty; an unknown value is dropped on read). Forces an isolated plugin in process for debugging; see `LuminaPluginDescriptor.effectiveIsolation`. |
 | `toMap` | `Map<String, dynamic> toMap()` | Executes `toMap` operation. |
 
 ## `lib/data/models/recent_project_entry.dart`
@@ -758,7 +772,7 @@ Represents a tracked project entry in the launcher's recent projects list.
 | `roots` | `List<PluginScanRoot> roots` | Holds the `roots` property or configuration state. |
 | `scanAll` | `Future<PluginScanResult> scanAll()` | Executes `scanAll` operation. |
 | `load` | `Future<LuminaPluginDescriptor> load(File manifest)` | Loads data from disk or memory buffer into the engine. |
-| `loadInternal` | `Future<LuminaPluginDescriptor> loadInternal(File manifest, PluginOrigin ...` | Loads data from disk or memory buffer into the engine. |
+| `loadInternal` | `Future<LuminaPluginDescriptor> loadInternal(File manifest, PluginOrigin ...` | Loads data from disk or memory buffer into the engine. Rejects (as a `schemaViolation` scan error) an `isolation` other than `in_process` / `process`, a `process_class` that is not a Dart class name, and `"isolation": "process"` without an editor module naming its `process_class`. |
 
 ## `lib/data/repositories/project_repository.dart`
 

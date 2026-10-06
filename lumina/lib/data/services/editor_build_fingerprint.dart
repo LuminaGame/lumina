@@ -207,9 +207,17 @@ String _fileHash(String path) {
   return f.existsSync() ? sha256.convert(f.readAsBytesSync()).toString() : 'absent';
 }
 
-/// A path plugin's `lib/`, `hook/` and `pubspec.yaml`, by path + content.
+/// A path plugin's `lib/`, `hook/`, `pubspec.yaml` and `.lmplugin`, by path +
+/// content. The manifest decides what the registrar compiles in (its
+/// `registration_class`, `isolation` and `process_class`).
 String _pluginHash(String dir) {
   final lines = <String>[];
+  final root = Directory(dir);
+  if (root.existsSync()) {
+    for (final f in root.listSync(followLinks: true).whereType<File>()) {
+      if (f.path.endsWith('.lmplugin')) lines.add('${p.basename(f.path)}:${sha256.convert(f.readAsBytesSync())}');
+    }
+  }
   for (final sub in ['lib', 'hook']) {
     final d = Directory(p.join(dir, sub));
     if (!d.existsSync()) continue;

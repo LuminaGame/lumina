@@ -87,9 +87,16 @@ class PluginHostPatcherService {
     await File('${libDir.path}/plugin_registrar.dart').writeAsString(registrarSource(enabledCodePlugins));
   }
 
-  /// The registrar library: `kEnabledPlugins` (one instance per editor module)
-  /// and `registerAllPlugins`. Deterministic for a given plugin list (it is
-  /// written into each project's editor host).
+  /// The registrar library: `kEnabledPlugins` (one instance per editor module),
+  /// `kPluginProcesses` (the process part of every plugin whose `.lmplugin`
+  /// says `"isolation": "process"`, by plugin name) and `registerAllPlugins`.
+  /// Deterministic for a given plugin list (it is written into each
+  /// project's editor host).
+  ///
+  /// `kPluginProcesses` follows the manifests, not a project's
+  /// `plugin_isolation` override: the editor applies the override when it
+  /// starts (a plugin forced in process runs the same process part inside
+  /// the editor), so one build serves both.
   String registrarSource(List<LuminaPluginDescriptor> enabledCodePlugins) {
     final sb = StringBuffer();
     sb.writeln('// GENERATED CODE - DO NOT MODIFY BY HAND');
@@ -123,6 +130,20 @@ class PluginHostPatcherService {
       sb.writeln('  ${plugin.name}_plugin.${module.registrationClass}(),');
     }
     sb.writeln('];');
+    sb.writeln();
+    final processes = [
+      for (final plugin in enabledCodePlugins)
+        if (!plugin.isContentOnly && plugin.isolation == PluginIsolation.process && plugin.processClass != null) plugin,
+    ];
+    if (processes.isEmpty) {
+      sb.writeln('final Map<String, LuminaPluginProcess Function()> kPluginProcesses = {};');
+    } else {
+      sb.writeln('final Map<String, LuminaPluginProcess Function()> kPluginProcesses = {');
+      for (final plugin in processes) {
+        sb.writeln("  '${plugin.name}': () => ${plugin.name}_plugin.${plugin.processClass}(),");
+      }
+      sb.writeln('};');
+    }
     sb.writeln();
     sb.writeln('void registerAllPlugins(LuminaEditorContext context) {');
     sb.writeln('  for (final p in kEnabledPlugins) {');

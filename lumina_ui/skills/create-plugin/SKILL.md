@@ -1,6 +1,6 @@
 ---
 name: create-plugin
-description: Create a Lumina Studio editor plugin end to end — generate the package with the plugin template generator, register contributions through lumina_editor_api (menu commands, importers, asset types + sub-editor tabs, panels, details customizations, level actors), depend on lumina runtime types without touching lumina_ui internals, install it by symlink into ~/.local/share/lumina/plugins, enable it in the Plugin Manager, and test it (unit + host integration + smoke). Use when the user asks to write, scaffold, extend or install a Lumina plugin, or asks how the plugin API works. lumina_plugin_pcg is the worked example.
+description: Create a Lumina Studio editor plugin end to end — generate the package with the plugin template generator (in process, or isolated in its own process), register contributions through lumina_editor_api (menu commands, importers, asset types + sub-editor tabs, panels, details customizations, level actors), depend on lumina runtime types without touching lumina_ui internals, install it by symlink into ~/.local/share/lumina/plugins, enable it in the Plugin Manager, and test it (unit + host integration + smoke). Use when the user asks to write, scaffold, extend or install a Lumina plugin, or asks how the plugin API works. lumina_plugin_pcg is the worked example.
 ---
 
 # create-plugin — write a Lumina Studio plugin
@@ -11,9 +11,9 @@ Rules that apply: shadcn_flutter only (never Material), no mock data, every butt
 
 ## 1. Generate the package
 
-**From the editor**: Plugins → **New Plugin...** → pick a template (Blank / Content-only / Editor panel / Importer), name it (`^[a-z][a-z0-9_]*$`, ≤ 64, not a Dart keyword or `flutter`/`lumina`/`lumina_ui`/`lumina_editor_api`/`test`), Create. The wizard runs `flutter create --template=package`, writes the files below, then `dart pub get` + `dart analyze --fatal-infos`; any failure rolls the directory back. The package lands in `<project>/plugins/<name>/`.
+**From the editor**: Plugins → **New Plugin...** → pick a template (Blank / Content-only / Editor panel / Importer), optionally isolated (see section 10), name it (`^[a-z][a-z0-9_]*$`, ≤ 64, not a Dart keyword or `flutter`/`lumina`/`lumina_ui`/`lumina_editor_api`/`test`), Create. The wizard runs `flutter create --template=package`, writes the files below, then `dart pub get` + `dart analyze --fatal-infos`; any failure rolls the directory back. The package lands in `<project>/plugins/<name>/`.
 
-**From a script**: `PluginTemplateGeneratorService(projectRoot:, editorApiRoot:).generate(PluginTemplateSpec(templateType:, name:, friendlyName:, author:, description:, category:))` in `lumina/lib/data/services/plugin_template_generator_service.dart`. It cannot run under plain `dart run` (`package:lumina` pulls Flutter in); call it from a Flutter test or the editor. For a standalone package (like `lumina_plugin_pcg`, a workspace sibling), run `flutter create --template=package --project-name <name> <dir>` yourself and write the same files:
+**From a script**: `PluginTemplateGeneratorService(projectRoot:, editorApiRoot:).generate(PluginTemplateSpec(templateType:, name:, friendlyName:, author:, description:, category:, isolated:))` in `lumina/lib/data/services/plugin_template_generator_service.dart`. It cannot run under plain `dart run` (`package:lumina` pulls Flutter in); call it from a Flutter test or the editor. For a standalone package (like `lumina_plugin_pcg`, a workspace sibling), run `flutter create --template=package --project-name <name> <dir>` yourself and write the same files:
 
 ```
 <name>/
@@ -26,7 +26,9 @@ Rules that apply: shadcn_flutter only (never Material), no mock data, every butt
   README.md · CHANGELOG.md · analysis_options.yaml · .gitignore · .metadata
 ```
 
-Manifest fields (`lumina/lib/data/models/lumina_plugin_descriptor.dart`): `name`, `friendly_name`, `version` (semver), `description`, `category`, `authors[]`, `engine_version` (constraint, e.g. `">=0.0.1 <1.0.0"`), `can_contain_content` (true + `content/` dir = content-only plugin, no restart), `dependencies[{name, version}]`, `modules[{name, type: editor|runtime, entry_library: "lib/<name>.dart", registration_class: "<PascalName>Plugin"}]`. `registration_class` becomes literal source in the registrar: a typo fails the host's next analyze, which is intended.
+With `isolated: true` the generator also writes `lib/src/<name>_process.dart` (`<PascalName>Process extends LuminaPluginProcess`), `test/<name>_process_test.dart`, exports both halves from `lib/<name>.dart`, and sets `"isolation": "process"` + `"process_class": "<PascalName>Process"` in the manifest (section 10).
+
+Manifest fields (`lumina/lib/data/models/lumina_plugin_descriptor.dart`): `name`, `friendly_name`, `version` (semver), `description`, `category`, `authors[]`, `engine_version` (constraint, e.g. `">=0.0.1 <1.0.0"`), `can_contain_content` (true + `content/` dir = content-only plugin, no restart), `dependencies[{name, version}]`, `modules[{name, type: editor|runtime, entry_library: "lib/<name>.dart", registration_class: "<PascalName>Plugin"}]`. `isolation` (`"in_process"`, the default, or `"process"`) and, on the editor module, `process_class` (the `LuminaPluginProcess` subclass in the same `entry_library`; required when `isolation` is `"process"`, else the manifest is a scan error in the Plugin Manager). `registration_class` and `process_class` become literal source in the registrar: a typo fails the host's next analyze, which is intended.
 
 ## 2. Depend on the API, never on lumina_ui
 
@@ -93,7 +95,7 @@ Then Plugins → Plugin Manager... → toggle the switch → the restart banner 
 
 ## 5. Test it
 
-- **Package unit tests** (`flutter test` in the plugin): pure logic + a registration test against a bare `implements LuminaEditorContext` double (the wizard ships one) and, for level features, a `LuminaEditorHostContext` double whose `EditorLevelAccess` keeps actors in memory and writes a real `.lmas` on `saveLevel` (`lumina_plugin_pcg/test/test_support.dart` `FileLevel`). Use real assets from the `test-assets` checkout ([LuminaGame/test-assets](https://github.com/LuminaGame/test-assets)) (copy into a temp project's `contents/`).
+- **Package unit tests** (`flutter test` in the plugin): pure logic + a registration test against a bare `extends LuminaEditorContext` double (the wizard ships one; an isolated plugin also gets a recording `PluginProcessContext` for its process part) and, for level features, a `LuminaEditorHostContext` double whose `EditorLevelAccess` keeps actors in memory and writes a real `.lmas` on `saveLevel` (`lumina_plugin_pcg/test/test_support.dart` `FileLevel`). Use real assets from the `test-assets` checkout ([LuminaGame/test-assets](https://github.com/LuminaGame/test-assets)) (copy into a temp project's `contents/`).
 - **Host integration test** (lumina_ui `integration_test/<name>_flow_test.dart`): add the plugin as a **dev** dependency of lumina_ui, symlink it into a temp project's `plugins/`, assert `vm.pluginRegistry.entries` discovers it, then `vm.extensionRegistry.beginRegistration(name); plugin.register(vm.extensionRegistry); endRegistration()` (exactly what the registrar does after a restart) and drive the commands; assert on disk. Never call `vm.enablePlugin` in tests — it patches the real host pubspec.
 - **Smoke** (`integration_test/smoke/plugins_smoke_test.dart`): boot `MainEditorView` in a `RepaintBoundary`, `SmokeRecorder` for ≥10 s at ≥1024×768/30 fps, drive the real menu and Details buttons, `SmokeArtifacts.saveScreenshot` + `rec.save`. Run on GPU 1 in the batch (`tool/ci.sh --smoke lumina_ui`).
 - Widget tests of your panels: `ShadcnApp(theme: ThemeData(colorScheme: ColorSchemes.darkZinc, radius: 0.5), home: Scaffold(child: …))`.
@@ -104,7 +106,7 @@ Then Plugins → Plugin Manager... → toggle the switch → the restart banner 
 
 ## 7. Pitfalls (from building lumina_plugin_pcg)
 
-- `implements LuminaEditorContext` must implement **every** member, so a new member breaks every test double: prefer `LuminaEditorHostContext` for new host capabilities (that is why the level lives there). Adding `registerMenu` and the `options` parameter of `registerMenuItem` to `LuminaEditorContext` itself meant updating the doubles (the wizard's generated test, lumina_plugin_pcg's test, lumina_editor_api's contract test).
+- `implements LuminaEditorContext` must implement **every** member, so a new member breaks every test double: `extends LuminaEditorContext` inherits the members that have a default (`saveAsset`, `processChannel`, `reportCrash`); prefer `LuminaEditorHostContext` for new host capabilities (that is why the level lives there). Adding `registerMenu` and the `options` parameter of `registerMenuItem` to `LuminaEditorContext` itself meant updating the doubles (the wizard's generated test, lumina_plugin_pcg's test, lumina_editor_api's contract test).
 - `LuminaAsset` has no path: the host puts the absolute `.lmas` path in `metadata[kAssetPathMetadataKey]` only for `editorFactory`; elsewhere resolve paths yourself against `level.projectDirPath`.
 - Units: the level is cm, Z up; `LandscapeData` is metres, Y up, centred on its actor; glTF meshes are metres and the viewport scales them ×100. `PcgLandscapeSurface` shows the mapping.
 - `meshAssetPath` must be absolute and the file must exist, or the instance draws nothing and codegen emits a bare scene actor.
@@ -153,3 +155,41 @@ Widget buildMeshSelector(LuminaEditorHostContext hostContext, String? currentPat
 ```
 `EditorAssetPicker` delegates directly to `LuminaEditorHostContext.buildAssetPicker` to provide the unified searchable asset catalog, live thumbnail rendering, clear action, and type filtering.
 
+## 10. Isolated plugins: a process part and a UI shell
+
+A plugin with `"isolation": "process"` runs its risky half in **its own process**: the editor starts its own executable again with `--lumina-plugin-process <name>`, supervises it (health ping every 2 s, three missed = hung → restart; automatic restarts 1 s / 2 s / 4 s, at most three) and files a `plugin_crash` report when it dies. The editor keeps running when the plugin hangs, leaks or crashes natively.
+
+| Half | Class | Lives in | What belongs there |
+|---|---|---|---|
+| Process part | `<PascalName>Process extends LuminaPluginProcess` (manifest `process_class`) | the plugin process | everything that can crash, hang or block: FFI / native libraries, `Process.start` child processes, network, heavy CPU (still inside `Isolate.run`, so the health ping answers), file generation, level edits (proxied to the editor as undoable transactions), MCP tools, importers, menu commands that do work |
+| UI shell | `<PascalName>Plugin extends LuminaEditorPlugin` (manifest `registration_class`) | the editor | panels, tabs, asset editors with full shadcn widgets, 3D viewports. It holds **no** native library, starts **no** process and does **no** heavy work |
+
+**Process side** (`PluginProcessContext`, everything crosses as data): `handle(method, handler)` answers the shell; `emit(name, data)` sends it events; `progress(task, step:, done:, total:, finished:)` reports long jobs; `log`; `registerMenuItem(path, PluginProcessCommand(id:, label:, run:))`, `registerSlotButton`, `registerImporter(PluginProcessImporter)`, `registerMcpTool`, `registerConsoleCommand`; `registerViewPanel(PluginProcessViewPanel(id:, title:, initial: PluginViewSpec, onEvent: (event, view) => view.patch(...)))` for a declarative panel the editor renders itself (no shell needed); `level` (proxied `EditorLevelAccess`), `storage`, `pluginSettings`, `saveAsset`, `showPanel` / `hidePanel` / `openTab`, `callMcpTool`. Lifecycle: `register`, `onProjectOpened`, `onProjectClosing` (bounded), `onShutdown` (stop child processes, free native resources).
+
+**Shell side** (`PluginProcessChannel`, from `context.processChannel(pluginName)` in `register`): `call(method, args, timeout)` (30 s default; long jobs answer early and report progress), `events([name])`, `progress`, `state` (`PluginProcessState`: starting / running / hung / crashed / stopped / inProcess / disabled) and `restart()`. A failed call throws `PluginRemoteError` (`code`: `unavailable`, `timeout`, or the handler's error); while the process is not running the editor covers the shell's panels with its state and a Restart button, so the shell only handles its own calls' errors.
+
+```dart
+// lib/src/my_tools_process.dart: runs in the plugin process
+class MyToolsProcess extends LuminaPluginProcess {
+  @override String get pluginName => 'my_tools';
+  @override
+  void register(PluginProcessContext context) {
+    context.handle('bake', (args) async {
+      final out = await Isolate.run(() => heavyBake(args['seed'] as int)); // or FFI, or Process.start
+      return {'path': out};
+    });
+  }
+}
+// lib/src/my_tools_plugin.dart: the in-editor shell
+class MyToolsPlugin extends LuminaEditorPlugin {
+  @override String get pluginName => 'my_tools';
+  @override
+  void register(LuminaEditorContext context) {
+    final channel = context.processChannel(pluginName);
+    context.registerPanel(EditorPanelDescriptor(id: 'panel.my_tools', title: 'My Tools',
+        builder: (_) => MyToolsPanel(channel: channel)));   // calls channel.call('bake', {'seed': 1})
+  }
+}
+```
+
+A plugin that is all data (menus, MCP tools, importers, storage, level access) needs no shell: `PluginProcessAdapter` runs an unchanged data-only `LuminaEditorPlugin` inside the process. A project forces an isolated plugin in process for debugging with `.lmproject` `"plugin_isolation": {"my_tools": "in_process"}` (Plugin Manager): the same process part runs inside the editor, over an in-memory connection. The registrar (`kPluginProcesses` in `plugin_registrar.dart`) lists every enabled plugin whose manifest says `process`, so one editor build serves both. Test the process part through a recording `PluginProcessContext` (the generated `test/<name>_process_test.dart`) and the shell's panel with `PluginProcessChannel.detached(name)` (every call fails with `unavailable`). Extension-point examples: `reference/extension_points.md` ▸ *Process part*.
