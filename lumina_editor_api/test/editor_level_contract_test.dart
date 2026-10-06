@@ -89,6 +89,8 @@ class _Level extends ChangeNotifier implements EditorLevelAccess {
 
 class _Host implements LuminaEditorHostContext {
   @override
+  void reportCrash(Object error, StackTrace? stack, {String? plugin, String? context}) {}
+  @override
   final EditorLevelAccess level = _Level();
   final List<String> menuPaths = [];
   @override
@@ -146,6 +148,8 @@ class _Host implements LuminaEditorHostContext {
 }
 
 class _Bare implements LuminaEditorContext {
+  @override
+  void reportCrash(Object error, StackTrace? stack, {String? plugin, String? context}) {}
   @override
   void registerMenuItem(String menuPath, EditorCommand command, {EditorMenuItemOptions options = const EditorMenuItemOptions()}) {}
   @override
