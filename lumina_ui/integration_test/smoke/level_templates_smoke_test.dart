@@ -191,7 +191,18 @@ void main() {
       vm.clearSelection();
       await settle(30);
       expect(find.text('WORLD PARTITION'), findsOneWidget);
-      expect(find.textContaining('does not stream cells in and out while editing'), findsOneWidget);
+      expect(find.textContaining('the editor shows the whole level while editing'), findsOneWidget);
+
+      // Data layers nest like outliner folders: the child row sits under its
+      // parent and the parent grows a chevron.
+      vm.addWorldPartitionDataLayer('Interiors');
+      vm.addWorldPartitionDataLayer('Rooms', 'Interiors');
+      await settle(10);
+      expect(find.byKey(const ValueKey('wp_layer_chevron_0')), findsOneWidget);
+      expect(find.byKey(const ValueKey('wp_layer_name_1')), findsOneWidget);
+      // Scroll the Details panel down so the tree is in the screenshot.
+      await tester.drag(find.text('WORLD PARTITION'), const Offset(0, -400));
+      await settle(10);
 
       final openPng = await SmokeArtifacts.captureIntegrationPng(binding, tester,
           boundary: find.byKey(boundaryKey));
@@ -207,6 +218,8 @@ void main() {
           'maxCellTransitionsPerTick: 10)'));
       expect(generated, contains('partition.registerSource(component)'));
       expect(generated, contains('loadingRadius: 25000.0000'));
+      expect(generated, contains("registerLayer('Interiors'"));
+      expect(generated, contains("registerLayer('Rooms'"));
 
       // --- Switching between the three levels, on video -----------------------
       for (final level in const [

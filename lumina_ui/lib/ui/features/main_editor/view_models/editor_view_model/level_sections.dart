@@ -184,7 +184,10 @@ mixin _EditorLevelSections on _EditorViewModelState {
   /// Appends a data layer the generated code really registers with
   /// `LuminaDataLayerManager.registerLayer`; returns its name, made unique
   /// among the level's layers.
-  String addWorldPartitionDataLayer([String name = 'DataLayer']) {
+  /// Adds a layer; with [parent] (an existing layer's name) it becomes that
+  /// layer's child, placed right after the parent's subtree so the list
+  /// order is the tree order. Returns the unique name given.
+  String addWorldPartitionDataLayer([String name = 'DataLayer', String? parent]) {
     final layers = worldPartitionDataLayers;
     final taken = layers.map((l) => l['name']).toSet();
     var unique = name;
@@ -193,23 +196,109 @@ mixin _EditorLevelSections on _EditorViewModelState {
       unique = '$name$i';
       i++;
     }
-    layers.add({'name': unique, 'initialState': 'unloaded', 'isRuntime': true});
+    final layer = <String, dynamic>{'name': unique, 'initialState': 'unloaded', 'isRuntime': true};
+    if (parent != null && taken.contains(parent)) {
+      layer['parent'] = parent;
+      // After the parent's last descendant.
+      final parentIndex = layers.indexWhere((l) => l['name'] == parent);
+      var insertAt = parentIndex + 1;
+      while (insertAt < layers.length && _isDataLayerDescendant(layers, layers[insertAt], parent)) {
+        insertAt++;
+      }
+      layers.insert(insertAt, layer);
+    } else {
+      layers.add(layer);
+    }
     _editWorldPartition('Add Data Layer $unique', () => _setWorldPartitionField('dataLayers', layers));
     return unique;
   }
 
+  /// Removes the layer and every layer under it.
   void removeWorldPartitionDataLayer(int index) {
     final layers = worldPartitionDataLayers;
     if (index < 0 || index >= layers.length) return;
-    final removed = layers.removeAt(index);
-    _editWorldPartition('Remove Data Layer ${removed['name']}', () => _setWorldPartitionField('dataLayers', layers));
+    final removed = layers[index];
+    final name = (removed['name'] ?? '').toString();
+    layers.removeWhere((l) => identical(l, removed) || _isDataLayerDescendant(layers, l, name));
+    _editWorldPartition('Remove Data Layer $name', () => _setWorldPartitionField('dataLayers', layers));
   }
 
+  /// Renames the layer; its children keep pointing at it.
   void setWorldPartitionDataLayerName(int index, String name) {
     final layers = worldPartitionDataLayers;
     if (index < 0 || index >= layers.length) return;
+    final old = (layers[index]['name'] ?? '').toString();
     layers[index]['name'] = name;
+    for (final l in layers) {
+      if (l['parent'] == old) l['parent'] = name;
+    }
     _editWorldPartition('Rename Data Layer', () => _setWorldPartitionField('dataLayers', layers));
+  }
+
+  /// Moves the layer (with its subtree) under [parent], or to the root with
+  /// null. A layer cannot become its own descendant.
+  void setWorldPartitionDataLayerParent(int index, String? parent) {
+    final layers = worldPartitionDataLayers;
+    if (index < 0 || index >= layers.length) return;
+    final layer = layers[index];
+    final name = (layer['name'] ?? '').toString();
+    if (parent != null) {
+      final target = layers.where((l) => l['name'] == parent).firstOrNull;
+      if (target == null || parent == name || _isDataLayerDescendant(layers, target, name)) return;
+    }
+    if (parent == null) {
+      layer.remove('parent');
+    } else {
+      layer['parent'] = parent;
+    }
+    _editWorldPartition('Move Data Layer $name', () => _setWorldPartitionField('dataLayers', layers));
+  }
+
+  /// Layers whose children are folded away in the Details tree (by name).
+  final Set<String> _collapsedDataLayers = {};
+
+  bool isWorldPartitionDataLayerExpanded(String name) => !_collapsedDataLayers.contains(name);
+
+  void toggleWorldPartitionDataLayerExpanded(String name) {
+    if (!_collapsedDataLayers.remove(name)) _collapsedDataLayers.add(name);
+    notifyListeners();
+  }
+
+  /// The layers as the Details tree shows them: in list order, each with its
+  /// index in [worldPartitionDataLayers], its depth and whether it has
+  /// children; the children of a collapsed layer are left out.
+  List<({int index, int depth, bool hasChildren})> get worldPartitionDataLayerRows {
+    final layers = worldPartitionDataLayers;
+    final byName = {for (final l in layers) (l['name'] ?? '').toString(): l};
+    final rows = <({int index, int depth, bool hasChildren})>[];
+    for (var i = 0; i < layers.length; i++) {
+      final layer = layers[i];
+      var depth = 0;
+      var hidden = false;
+      var parent = layer['parent'];
+      var guard = 0;
+      while (parent is String && parent.isNotEmpty && byName.containsKey(parent) && ++guard < 64) {
+        if (_collapsedDataLayers.contains(parent)) hidden = true;
+        depth++;
+        parent = byName[parent]!['parent'];
+      }
+      if (hidden) continue;
+      final name = (layer['name'] ?? '').toString();
+      rows.add((index: i, depth: depth, hasChildren: layers.any((l) => l['parent'] == name)));
+    }
+    return rows;
+  }
+
+  /// Whether [layer] sits anywhere under the layer named [ancestor].
+  static bool _isDataLayerDescendant(List<Map<String, dynamic>> layers, Map<String, dynamic> layer, String ancestor) {
+    final byName = {for (final l in layers) (l['name'] ?? '').toString(): l};
+    var parent = layer['parent'];
+    var guard = 0;
+    while (parent is String && parent.isNotEmpty && ++guard < 64) {
+      if (parent == ancestor) return true;
+      parent = byName[parent]?['parent'];
+    }
+    return false;
   }
 
   /// [state] is one of `unloaded`, `loaded`, `activated` — the three

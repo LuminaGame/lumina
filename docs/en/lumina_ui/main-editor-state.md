@@ -209,14 +209,18 @@ A live binding between an open sub-editor tab and its view model.
 | `worldPartitionCellSize` | `double get worldPartitionCellSize` | Grid cell edge length in metres (`LuminaWorldPartitionSubsystem.cellSize`). |
 | `worldPartitionLoadingRange` | `double get worldPartitionLoadingRange` | Streaming radius in metres applied to sources that author none (`LuminaStreamingSourceComponent.loadingRadius`). |
 | `worldPartitionMaxCellTransitionsPerTick` | `int get worldPartitionMaxCellTransitionsPerTick` | Cell state transitions the subsystem may run per tick. |
-| `worldPartitionDataLayers` | `List<Map<String, dynamic>> get worldPartitionDataLayers` | The authored data layers (`name`, `initialState`, `isRuntime`). |
+| `worldPartitionDataLayers` | `List<Map<String, dynamic>> get worldPartitionDataLayers` | The authored data layers (`name`, `initialState`, `isRuntime`, optional `parent` = another layer's name), in tree order: a layer's descendants follow it. |
+| `worldPartitionDataLayerRows` | `List<({int index, int depth, bool hasChildren})> get worldPartitionDataLayerRows` | The layers as the Details tree shows them: list index, depth and whether the layer has children; the children of a collapsed layer are left out. |
+| `isWorldPartitionDataLayerExpanded` | `bool isWorldPartitionDataLayerExpanded(String name)` | Whether the layer's children are shown (editor state, not saved with the level). |
+| `toggleWorldPartitionDataLayerExpanded` | `void toggleWorldPartitionDataLayerExpanded(String name)` | Folds or unfolds the layer's subtree in the Details tree. |
 | `setWorldPartitionEnabled` | `void setWorldPartitionEnabled(bool v)` | Turns the section on (seeding the runtime's own defaults) or off. Disabling keeps the authored values so toggling back does not lose them. |
 | `setWorldPartitionCellSize` | `void setWorldPartitionCellSize(double v)` | Cell edge length in metres; clamped to a positive value because the runtime divides by it. |
 | `setWorldPartitionLoadingRange` | `void setWorldPartitionLoadingRange(double v)` | Updates the `WorldPartitionLoadingRange` parameter and applies changes to the system. |
 | `setWorldPartitionMaxCellTransitionsPerTick` | `void setWorldPartitionMaxCellTransitionsPerTick(int v)` | Updates the `WorldPartitionMaxCellTransitionsPerTick` parameter and applies changes to the system. |
-| `addWorldPartitionDataLayer` | `void addWorldPartitionDataLayer([String name = 'DataLayer'])` | Appends a data layer the generated code really registers with `LuminaDataLayerManager.registerLayer`. |
-| `removeWorldPartitionDataLayer` | `void removeWorldPartitionDataLayer(int index)` | Releases and safely disposes the specified `WorldPartitionDataLayer` resource. |
-| `setWorldPartitionDataLayerName` | `void setWorldPartitionDataLayerName(int index, String name)` | Updates the `WorldPartitionDataLayerName` parameter and applies changes to the system. |
+| `addWorldPartitionDataLayer` | `String addWorldPartitionDataLayer([String name = 'DataLayer', String? parent])` | Adds a data layer the generated code really registers with `LuminaDataLayerManager.registerLayer`; the name is made unique and returned. With `parent` (an existing layer's name) the layer becomes that layer's child, inserted right after the parent's subtree. |
+| `removeWorldPartitionDataLayer` | `void removeWorldPartitionDataLayer(int index)` | Removes the layer and every layer under it. |
+| `setWorldPartitionDataLayerName` | `void setWorldPartitionDataLayerName(int index, String name)` | Renames the layer; its children's `parent` follows the new name. |
+| `setWorldPartitionDataLayerParent` | `void setWorldPartitionDataLayerParent(int index, String? parent)` | Moves the layer with its subtree under `parent`, or to the root with null; refused when `parent` is the layer itself or one of its descendants. |
 | `setWorldPartitionDataLayerState` | `void setWorldPartitionDataLayerState(int index, String state)` | [state] is one of `unloaded`, `loaded`, `activated` — the three `DataLayerState` values the runtime has. |
 | `worldPartitionCellLabel` | `String? worldPartitionCellLabel(EditorActorNode actor)` | `"x, y"` for the outliner's cell column, or null when the level authors no enabled partition. |
 | `navigationBuildRequests` | `int get navigationBuildRequests` | Monotonic counter bumped by `Build → Build Navigation`; the open Navigation sub-editor runs the real grid bake when it changes. |
