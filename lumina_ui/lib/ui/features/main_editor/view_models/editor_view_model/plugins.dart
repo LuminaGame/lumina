@@ -19,6 +19,7 @@ mixin _EditorPlugins on _EditorViewModelState {
     final repo = PluginRepository(roots: editorPluginScanRoots(projectDirPath));
 
     final result = await repo.scanAll();
+    LuminaEditorHost.pluginDirs = {for (final p in result.plugins) p.name: p.pluginDir.path};
     for (final err in result.errors) {
       _logger.log(
         'Plugin error: ${err.message} (${err.filePath})',

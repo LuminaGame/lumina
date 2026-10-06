@@ -59,6 +59,7 @@ What a plugin process registers with and reaches the editor through. Everything 
 | `registerMenu`, `registerMenuItem`, `registerSlotButton` | Menus, menu items (with an optional `checked` listenable) and slot buttons whose commands (`PluginProcessCommand`) run in the process; a command with `canExecute` is asked before the editor enables it. |
 | `registerMcpTool`, `registerImporter`, `registerConsoleCommand` | MCP tools, importers (`PluginProcessImporter`; throw `PluginImportError(message)` to fail with that message) and console commands handled in the process. |
 | `registerViewPanel(PluginProcessViewPanel)` | A declarative panel: the editor renders its `PluginViewSpec`, events arrive in `onEvent` with a `PluginViewHandle` whose `replace` / `patch` update it. Control ids must be unique in the whole view, sections and rows included (`PluginViewSpec.duplicateControlIds()` lists clashes). |
+| `pluginDir` | The folder the plugin is installed in (holding its `.lmplugin`), from the hello answer: where it finds files it ships (executables, models). `Isolate.resolvePackageUri` does not work in a release build. Null when the editor does not know it. |
 | `view(viewId)` | The `PluginViewHandle` of a registered view, to update it outside its own events (after an MCP tool call, a finished job); null for an unknown id. |
 | `showPanel`, `hidePanel`, `openTab`, `callMcpTool` | Panel visibility, the shell's tabs, and any editor MCP tool. |
 

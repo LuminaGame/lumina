@@ -167,6 +167,12 @@ abstract class PluginProcessContext {
   /// The same per-user / per-project JSON store the in-process shell sees.
   PluginStorage get storage;
 
+  /// The folder the plugin is installed in (the one holding its
+  /// `.lmplugin`), where it finds files it ships next to its code
+  /// (executables, models); null when the editor does not know it. A plugin
+  /// process cannot use `Isolate.resolvePackageUri` in a release build.
+  String? get pluginDir;
+
   /// The open level, proxied to the editor: every edit is an undoable editor
   /// transaction there. [EditorLevelAccess.changes] fires on the editor's
   /// `core.levelChanged` notifications; `runTransaction` groups proxied

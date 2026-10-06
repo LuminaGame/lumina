@@ -125,6 +125,7 @@ Future<int> servePluginProcess({
     final s = hello['settings'];
     final userDir = hello['userDir'] as String?;
     final projectDir = hello['projectDir'] as String?;
+    final pluginDir = hello['pluginDir'] as String?;
     final ctx = context = ConnectedPluginProcessContext(
       connection: connection,
       pluginName: pluginName,
@@ -132,6 +133,7 @@ Future<int> servePluginProcess({
       settings: s is Map ? s.cast<String, Object?>() : const {},
       userDir: Directory(userDir ?? '${Directory.systemTemp.path}/lumina_plugin_$pluginName'),
       projectStoreDir: projectDir == null ? null : Directory(projectDir),
+      pluginDir: pluginDir,
     );
     // In a plugin process nothing else listens: the plugin's own crash
     // reports (LuminaPluginCrashReporter.reportCrash) go to the editor log.

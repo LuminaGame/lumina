@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' show BuildContext, IconData, LucideIcons, Widget;
 
+import '../../host/editor_host.dart';
 import '../crash_reporter.dart';
 import 'lucide_icon_table.dart';
 import 'plugin_process_host.dart';
@@ -358,6 +359,7 @@ class PluginProcessSupervisor implements PluginProcessChannel {
       'settings': host.settingsFor(pluginName).value,
       'userDir': storage.userDir.path,
       'projectDir': storage.projectDir?.path,
+      'pluginDir': LuminaEditorHost.pluginDirs[pluginName],
     };
   }
 

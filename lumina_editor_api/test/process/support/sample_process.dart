@@ -34,6 +34,7 @@ class SampleProcess extends LuminaPluginProcess {
     });
     context.handle('settings', (_) => context.pluginSettings.value);
     context.handle('project', (_) => {'name': context.project?.name, 'store': context.storage.projectDir?.path});
+    context.handle('pluginDir', (_) => context.pluginDir);
     context.handle('store', (args) async {
       await context.storage.writeJson('state', args, project: true);
       return await context.storage.readJson('state', project: true);

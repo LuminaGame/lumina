@@ -73,9 +73,13 @@ void main() {
     expect(r['reopened'], isTrue);
 
     await host.call(PluginMethods.ping);
-    expect(host.level.selected, ['floor']);
+    // Saved as a real level document; reopening loads its actors and, as in
+    // the editor, clears the selection.
     final saved = jsonDecode(File('${host.project!.dir}/contents/levels/L_Main.lmas').readAsStringSync()) as Map;
-    expect(saved['actors'], isA<List>());
+    final rows = ((saved['metadata'] as Map)['actors'] as List).cast<Map>();
+    expect(rows.map((r) => r['name']), ['Floor', 'Rock0']);
+    expect(host.level.actors.map((a) => a.name), ['Floor', 'Rock0']);
+    expect(host.level.selected, isEmpty);
     final ops = [for (final a in host.level.received) a['op']].where((o) => o != 'snapshot').toList();
     expect(ops, containsAllInOrder(['selectActors', 'removeActors', 'undoIfTop', 'saveLevel', 'openLevel', 'openLevel']));
   });

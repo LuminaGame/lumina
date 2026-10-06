@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:lumina/data/models/lumina_level_document.dart';
+import 'package:lumina/data/repositories/level_repository.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart';
 
 /// The editor's side of a plugin process link, for plugin tests: a real loopback
@@ -19,6 +21,7 @@ class LoopbackHost {
     int answerVersion = kPluginProtocolVersion,
     bool withProject = true,
     Map<String, Object?> settings = const {'density': 3},
+    String? pluginDir,
   }) async {
     final root = await Directory.systemTemp.createTemp('lmpp_');
     final projectDir = Directory('${root.path}/Proj');
@@ -32,6 +35,7 @@ class LoopbackHost {
       withProject ? EditorProjectInfo(name: 'Proj', dir: projectDir.path) : null,
     );
     host.settings = settings;
+    host.pluginDir = pluginDir;
     late final StreamSubscription<Socket> sub;
     sub = server.listen((socket) {
       sub.cancel();
@@ -46,6 +50,9 @@ class LoopbackHost {
   final int answerVersion;
   final EditorProjectInfo? project;
   Map<String, Object?> settings = const {};
+
+  /// The plugin folder handed to the process in the hello answer.
+  String? pluginDir;
 
   late final PluginConnection connection;
   final Completer<PluginConnection> _connected = Completer();
@@ -98,6 +105,7 @@ class LoopbackHost {
         'settings': settings,
         'userDir': userDir,
         'projectDir': projectStoreDir,
+        'pluginDir': pluginDir,
       };
     });
     c.onRequest(PluginMethods.register, (args) async {
@@ -292,15 +300,26 @@ class HostLevel {
         undo.removeLast();
         return true;
       case 'saveLevel':
-        final file = File('$projectDir/$active');
-        await file.writeAsString(jsonEncode({
-          'actors': [for (final a in actors) EditorLevelJson.snapshotToJson(a)],
-        }));
+        // Writes the actors into the level document, keeping what the file
+        // holds besides them (other metadata, keys of rows the snapshot does
+        // not carry), as the editor's Save Level does.
+        final repo = LuminaLevelRepository(projectDir);
+        final level = repo.load(active) ?? LuminaLevelDocument(relativePath: active);
+        final before = {for (final r in level.actors) r['id']: r};
+        level.actors = [
+          for (final a in actors) {...?before[a.id], ...EditorLevelJson.snapshotToJson(a)},
+        ];
+        repo.save(level);
         return true;
       case 'openLevel':
         final path = args['path'] as String;
-        if (!await File('$projectDir/$path').exists()) return false;
+        final level = LuminaLevelRepository(projectDir).load(path);
+        if (level == null) return false;
         active = path;
+        actors
+          ..clear()
+          ..addAll([for (final r in level.actors) if (r['id'] is String) EditorLevelJson.snapshotFromJson(r)]);
+        selected.clear();
         return true;
       case 'openAssetEditor':
         return true;

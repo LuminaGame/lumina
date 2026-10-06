@@ -46,6 +46,15 @@ void main() {
     expect(process.lifecycle.last, 'shutdown');
   });
 
+  test('the hello hands the process its plugin folder', () async {
+    host = await LoopbackHost.start(pluginDir: r'C:\plugins\sample');
+    final exit = runPluginProcessMain(host.launch('sample'), SampleProcess());
+    await host.contributions;
+    expect(await host.call(PluginMethods.call, {'method': 'pluginDir'}), r'C:\plugins\sample');
+    await host.call(PluginMethods.shutdown);
+    expect(await exit, PluginProcessExitCodes.ok);
+  });
+
   test('a wrong token is refused and the process exits non-zero', () async {
     host = await LoopbackHost.start();
     final code = await runPluginProcessMain(host.launch('sample', token: 'forged'), SampleProcess());

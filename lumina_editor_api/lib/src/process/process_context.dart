@@ -33,6 +33,7 @@ class ConnectedPluginProcessContext implements PluginProcessContext {
     required Map<String, Object?> settings,
     required Directory userDir,
     required Directory? projectStoreDir,
+    this.pluginDir,
   })  : _project = project, // ignore: prefer_initializing_formals
         _settings = ValueNotifier(Map.unmodifiable(settings)),
         _storage = PluginStorage(userDir: userDir, projectDir: projectStoreDir) {
@@ -43,6 +44,9 @@ class ConnectedPluginProcessContext implements PluginProcessContext {
 
   @override
   final String pluginName;
+
+  @override
+  final String? pluginDir;
 
   EditorProjectInfo? _project;
   final ValueNotifier<Map<String, Object?>> _settings;

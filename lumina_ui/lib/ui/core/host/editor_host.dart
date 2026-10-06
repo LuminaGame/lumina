@@ -79,6 +79,11 @@ class LuminaEditorHost {
   /// process.
   static Map<String, LuminaPluginProcess Function()> pluginProcesses = const {};
 
+  /// The folder each discovered plugin is installed in, by name (set by the
+  /// plugin scan); handed to its plugin process so it finds the files it
+  /// ships.
+  static Map<String, String> pluginDirs = const {};
+
   /// The fingerprint this project editor was built with
   /// (`--dart-define=LUMINA_EDITOR_FINGERPRINT=…` from the build service).
   static const String compiledFingerprint = String.fromEnvironment('LUMINA_EDITOR_FINGERPRINT');

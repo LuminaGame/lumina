@@ -59,6 +59,7 @@ Bir eklenti sürecinin kayıt yaptığı ve editöre ulaştığı yer. Her şey 
 | `registerMenu`, `registerMenuItem`, `registerSlotButton` | Komutları (`PluginProcessCommand`) süreçte çalışan menüler, menü öğeleri (isteğe bağlı bir `checked` listenable ile) ve slot butonları; `canExecute`'u olan bir komut editör onu etkinleştirmeden önce sorulur. |
 | `registerMcpTool`, `registerImporter`, `registerConsoleCommand` | Süreçte işlenen MCP araçları, importer'lar (`PluginProcessImporter`; o mesajla başarısız olmak için `PluginImportError(message)` fırlatın) ve konsol komutları. |
 | `registerViewPanel(PluginProcessViewPanel)` | Bildirimsel bir panel: editör `PluginViewSpec`'ini çizer, olaylar `onEvent`'e, `replace` / `patch` ile onu güncelleyen bir `PluginViewHandle` ile gelir. Kontrol kimlikleri bölümler ve satırlar dahil tüm görünümde tekil olmalıdır (`PluginViewSpec.duplicateControlIds()` çakışmaları listeler). |
+| `pluginDir` | Eklentinin kurulu olduğu klasör (`.lmplugin` dosyasını tutan), hello yanıtından: birlikte gönderdiği dosyaları (çalıştırılabilirler, modeller) bulduğu yer. `Isolate.resolvePackageUri` release derlemesinde çalışmaz. Editör bilmiyorsa null. |
 | `view(viewId)` | Kayıtlı bir görünümün `PluginViewHandle`'ı; onu kendi olayları dışında (bir MCP aracı çağrısından, biten bir işten sonra) güncellemek için; bilinmeyen kimlikte null. |
 | `showPanel`, `hidePanel`, `openTab`, `callMcpTool` | Panel görünürlüğü, kabuğun sekmeleri ve herhangi bir editör MCP aracı. |
 

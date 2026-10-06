@@ -140,7 +140,8 @@ abstract final class PluginMethods {
   /// Process → host request, the first message:
   /// `{"v": kPluginProtocolVersion, "plugin": <name>, "token": <token>, "pid": <int>}`.
   /// Answer: `{"v": kPluginProtocolVersion, "project": {"name","dir"}|null, "settings": {...}, "userDir": <path>, "projectDir": <path>|null}`,
-  /// the last two being the PluginStorage directories.
+  /// the last two being the PluginStorage directories, plus `"pluginDir": <path>|null`, the folder the
+  /// plugin is installed in (its `.lmplugin`), where it finds files it ships (executables, models).
   static const String hello = 'host.hello';
 
   /// Process → host request, once after [hello]: `PluginContributions.toJson()`.
