@@ -129,3 +129,27 @@ When a plugin makes FFI or native C/C++ calls:
    - `LuminaEditorPlugin.reportCrash(error, stack, context: '...')`: Available directly within your plugin class.
    - `LuminaPluginCrashReporter.reportCrash(error, stack, plugin: '<pluginName>', context: '...')`: Available anywhere (services, workers, FFI wrappers) through `package:lumina_editor_api/lumina_editor_api.dart`.
    - `context.reportCrash(error, stack, plugin: '<pluginName>', context: '...')`: Available via `LuminaEditorContext`.
+
+## 9. Asset Selection: Mandatory EditorAssetPicker
+
+Whenever your plugin prompts or allows the user to select an asset (e.g. static mesh, skeletal mesh, material, texture, animation, audio, actor blueprint), you **MUST** use `EditorAssetPicker` from `package:lumina_editor_api/lumina_editor_api.dart`. Never use raw text fields, generic file dialogs, or custom dropdowns for selecting assets.
+
+### Usage Example:
+```dart
+import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_api/lumina_editor_api.dart';
+
+Widget buildMeshSelector(LuminaEditorHostContext hostContext, String? currentPath, ValueChanged<String?> onChanged) {
+  return EditorAssetPicker(
+    hostContext: hostContext,
+    selectedPath: currentPath,
+    typeFilter: const {AssetType.filamesh, AssetType.filameshSk},
+    placeholder: 'Select Mesh...',
+    allowClear: true,
+    expand: true,
+    onSelected: onChanged,
+  );
+}
+```
+`EditorAssetPicker` delegates directly to `LuminaEditorHostContext.buildAssetPicker` to provide the unified searchable asset catalog, live thumbnail rendering, clear action, and type filtering.
+

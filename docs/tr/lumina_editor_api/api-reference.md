@@ -432,6 +432,26 @@ A bare [LuminaEditorContext] (a plugin's own unit test, a registration smoke) ha
 | `showGizmo` | `final bool showGizmo` | Seçili eklem üzerinde 3D dönüştürme gizmosunun (RGB eksenleri + düzlemsel kuadlar) etkin olup olmadığı. |
 | `visibleBoneNames` | `final Set<String>? visibleBoneNames` | Yalnızca görüntülenecek ve seçilecek kemik adları listesi; belirtildiğinde diğer eklemler (ör. yüz mimik veya düzeltme kemikleri) atlanır. |
 
+### `class EditorAssetPicker`
+
+Eklentiler için standart aranabilir varlık seçici (asset picker) kutusu. Editörün canlı varlık kataloğunu küçük resimler (thumbnails) ve tip filtreleme ile sunmak için `LuminaEditorHostContext.buildAssetPicker` metoduna yönlendirir.
+
+**Yapıcı Metotlar (Constructors):**
+
+- `const EditorAssetPicker({Key? key, required LuminaEditorHostContext hostContext, required String? selectedPath, required ValueChanged<String?> onSelected, Set<AssetType>? typeFilter, String placeholder = 'None', bool allowClear = false, bool expand = true})`
+
+**Üyeler:**
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `hostContext` | `final LuminaEditorHostContext hostContext` | Varlık kataloğuna erişim sağlayan ana editör bağlamı. |
+| `selectedPath` | `final String? selectedPath` | Halihazırda seçili proje göreli varlık yolu. |
+| `onSelected` | `final ValueChanged<String?> onSelected` | Bir varlık seçildiğinde veya temizlendiğinde çağrılan geri çağırma metodu. |
+| `typeFilter` | `final Set<AssetType>? typeFilter` | Katalog girişlerini filtrelemek için isteğe bağlı varlık tipleri kümesi. |
+| `placeholder` | `final String placeholder` | Hiçbir varlık seçili olmadığında gösterilen yer tutucu metin. |
+| `allowClear` | `final bool allowClear` | Temizleme/sıfırlama işleminin sunulup sunulmayacağı. |
+| `expand` | `final bool expand` | Seçicinin kullanılabilir genişliği dolduracak şekilde yatay olarak genişleyip genişlemeyeceği. |
+
 ## `lib/src/editor_panels.dart`
 
 ### `abstract class EditorPanels`

@@ -432,6 +432,26 @@ Configuration options passed to [LuminaEditorHostContext.build3DViewport].
 | `showGizmo` | `final bool showGizmo` | Whether the 3D translation gizmo (RGB axes + planar quads) is active on the selected bone. |
 | `visibleBoneNames` | `final Set<String>? visibleBoneNames` | Optional whitelist of bone names to exclusively display and pick; when set, other joints (e.g. facial expression or corrective bones) are skipped. |
 
+### `class EditorAssetPicker`
+
+Standard searchable asset picker combobox for plugins. Delegates to `LuminaEditorHostContext.buildAssetPicker` to render the editor's live asset catalog with thumbnails and type filtering.
+
+**Constructors:**
+
+- `const EditorAssetPicker({Key? key, required LuminaEditorHostContext hostContext, required String? selectedPath, required ValueChanged<String?> onSelected, Set<AssetType>? typeFilter, String placeholder = 'None', bool allowClear = false, bool expand = true})`
+
+**Members:**
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `hostContext` | `final LuminaEditorHostContext hostContext` | Host editor context providing asset catalog access. |
+| `selectedPath` | `final String? selectedPath` | Currently selected project-relative asset path. |
+| `onSelected` | `final ValueChanged<String?> onSelected` | Callback invoked when an asset is selected or cleared. |
+| `typeFilter` | `final Set<AssetType>? typeFilter` | Optional set of asset types to filter catalog entries by. |
+| `placeholder` | `final String placeholder` | Text shown when no asset is selected. |
+| `allowClear` | `final bool allowClear` | Whether a clear/reset action is provided. |
+| `expand` | `final bool expand` | Whether the picker expands horizontally to fill available width. |
+
 ## `lib/src/editor_panels.dart`
 
 ### `abstract class EditorPanels`
