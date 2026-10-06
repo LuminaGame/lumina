@@ -198,6 +198,7 @@ Editor ve projeleri build ettiği libc++ glibc 2.38 ya da üstünü ister (Ubunt
 | `libwayland-dev`, `wayland-protocols` | `wayland-devel`, `wayland-protocols-devel` | pointer capture (Wayland) |
 | `libgstreamer1.0-0`, `gstreamer1.0-plugins-base`, `gstreamer1.0-plugins-good`, `gstreamer1.0-tools` | `gstreamer1`, `gstreamer1-plugins-base`, `gstreamer1-plugins-good`, `gstreamer1-plugins-base-tools` | video kaydı |
 | `libgl1`, `libvulkan1` | `libglvnd-glx`, `vulkan-loader` | renderer'ın OpenGL / Vulkan backend'leri |
+| `libasound2-dev`, `libmpv-dev` | `alsa-lib-devel`, `mpv-devel` | ses ve video oynatma (media_kit) |
 
 Paketin kurdukları:
 

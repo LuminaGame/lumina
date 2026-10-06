@@ -4,7 +4,9 @@ description: >
   native-assets hooks compile against the libc++ 21 headers bundled in
   flutter_filament/third_party/libcxx, which older clang releases reject),
   CMake, Ninja, the GTK 3 / Wayland development packages of the desktop
-  runner and the X11 headers the Filament build expects.
+  runner, the X11 headers the Filament build expects, and the ALSA and mpv
+  development packages the editor's audio/video playback (media_kit,
+  volume_controller) links against.
 
 runs:
   using: composite
@@ -18,7 +20,7 @@ runs:
           cmake ninja-build pkg-config python3 curl unzip xz-utils zip \
           libgtk-3-dev liblzma-dev libstdc++-12-dev \
           libwayland-dev wayland-protocols \
-          libglu1-mesa-dev libxi-dev libxcomposite-dev libxxf86vm-dev
+          libglu1-mesa-dev libxi-dev libxcomposite-dev libxxf86vm-dev           libasound2-dev libmpv-dev
         # clang 21 from apt.llvm.org, made the default `clang`.
         curl -fsSL https://apt.llvm.org/llvm.sh -o "$RUNNER_TEMP/llvm.sh"
         sudo bash "$RUNNER_TEMP/llvm.sh" 21
