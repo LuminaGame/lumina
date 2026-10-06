@@ -538,6 +538,8 @@ Edit → Editor Preferences → Appearance → Theme: pick a theme, duplicate it
 
 ### `class EditorPreferencesSubEditor`
 
+The **General › Graphics Device** category selects a detected Vulkan device, shows the current renderer device and saves the shared launcher preference. Restart the editor to apply the change. See [graphics device preferences](../graphics-device-preferences.md).
+
 Edit → Editor Preferences: the user's own editor settings — a category list on the left, the category's sections on the right. Every change is saved at once. General › Appearance picks and edits the JSON editor theme.
 
 **Constructors:**

@@ -538,6 +538,8 @@ Edit → Editor Preferences → Appearance → Theme: pick a theme, duplicate it
 
 ### `class EditorPreferencesSubEditor`
 
+**General › Graphics Device** kategorisi algılanan Vulkan cihazını seçer, mevcut render cihazını gösterir ve launcher ile ortak tercihi kaydeder. Değişikliği uygulamak için editörü yeniden başlatın. Bkz. [ekran kartı tercihleri](../graphics-device-preferences.md).
+
 Edit → Editor Preferences: the user's own editor settings — a category list on the left, the category's sections on the right. Every change is saved at once. General › Appearance picks and edits the JSON editor theme.
 
 **Yapıcı Metotlar (Constructors):**
