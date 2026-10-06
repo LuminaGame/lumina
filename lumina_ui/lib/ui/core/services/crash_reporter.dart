@@ -107,11 +107,15 @@ class CrashReporter {
     PlatformDispatcher.instance.onError = _previousPlatformHandler;
   }
 
-  /// Writes the session marker and starts streaming the engine log to
-  /// [logFile] (trimmed to the last [logTailLines] lines first).
-  Future<void> startSession() async {
+  /// Starts this session: first looks for the marker a session that died
+  /// left behind ([detectPreviousCrash], returned), then writes this
+  /// session's marker and streams the engine log to [logFile] (trimmed to
+  /// the last [logTailLines] lines first). The order matters: the new marker
+  /// would hide the old one.
+  Future<CrashReport?> startSession() async {
     await crashesDir.create(recursive: true);
     await logFile.parent.create(recursive: true);
+    final previous = await detectPreviousCrash();
     await _trimLog();
     await sessionMarker.writeAsString(jsonEncode({
       'sessionId': sessionId,
@@ -126,6 +130,7 @@ class CrashReporter {
       _ring.add(_format(e));
     }
     _trimRing();
+    return previous;
   }
 
   /// The clean close: the marker goes, the log is flushed.

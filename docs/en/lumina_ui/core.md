@@ -415,7 +415,7 @@ What the crash report screen shows and, when the user agrees, sends: the error t
 | Method / Getter | Signature | Purpose & Description |
 | :--- | :--- | :--- |
 | `install` | `void install()` | Hooks `FlutterError.onError` and `PlatformDispatcher.onError` (the previous handlers still run) and makes this `CrashReporter.instance`. |
-| `startSession` | `Future<void> startSession()` | Writes `crashes/session.json` (session id, pid, start time, release) and streams the engine log to `logs/editor.log` (trimmed to `logTailLines` first). |
+| `startSession` | `Future<CrashReport?> startSession()` | First reports a marker a dead session left (`detectPreviousCrash`, returned), then writes `crashes/session.json` (session id, pid, start time, release) and streams the engine log to `logs/editor.log` (trimmed to `logTailLines` first). |
 | `endSession` | `Future<void> endSession()` | The clean close: flushes the log and removes the marker. `detachLog()` closes the log but keeps the marker. |
 | `detectPreviousCrash` | `Future<CrashReport?> detectPreviousCrash()` | A marker another process left means that session died: files a `previousRun` report with the log file's tail and publishes it on `pending`. |
 | `record` | `CrashReport? record(Object error, StackTrace? stack, {String? context})` | Files an `uncaught` report (with the in-memory log tail) and publishes it when nothing is pending; later errors are only filed. |

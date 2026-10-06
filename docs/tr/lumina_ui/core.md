@@ -415,7 +415,7 @@ Viewport'un DLSS, FSR3 ve RTX HUD düğmelerinin (kamera hızının yanında) ar
 | Metot / Getter | İmza | Amaç ve Açıklama |
 | :--- | :--- | :--- |
 | `install` | `void install()` | `FlutterError.onError` ve `PlatformDispatcher.onError`'a bağlanır (önceki işleyiciler çalışmaya devam eder) ve bunu `CrashReporter.instance` yapar. |
-| `startSession` | `Future<void> startSession()` | `crashes/session.json` dosyasını yazar (oturum kimliği, pid, başlangıç zamanı, release) ve motor günlüğünü `logs/editor.log` dosyasına akıtır (önce `logTailLines` satıra kırpar). |
+| `startSession` | `Future<CrashReport?> startSession()` | Önce ölmüş bir oturumun bıraktığı işareti raporlar (`detectPreviousCrash`, döner), sonra `crashes/session.json` dosyasını yazar (oturum kimliği, pid, başlangıç zamanı, release) ve motor günlüğünü `logs/editor.log` dosyasına akıtır (önce `logTailLines` satıra kırpar). |
 | `endSession` | `Future<void> endSession()` | Temiz kapanış: günlüğü boşaltır ve işareti siler. `detachLog()` günlüğü kapatır ama işareti bırakır. |
 | `detectPreviousCrash` | `Future<CrashReport?> detectPreviousCrash()` | Başka bir sürecin bıraktığı işaret o oturumun öldüğü anlamına gelir: günlük dosyasının sonuyla bir `previousRun` raporu dosyalar ve `pending` üzerinde yayınlar. |
 | `record` | `CrashReport? record(Object error, StackTrace? stack, {String? context})` | Bir `uncaught` raporu dosyalar (bellekteki günlük sonuyla) ve bekleyen yoksa yayınlar; sonraki hatalar yalnızca dosyalanır. |

@@ -112,19 +112,20 @@ void main() {
       crashed.pending.dispose();
       expect(crashed.sessionMarker.existsSync(), isTrue);
 
+      // The next launch does what editor_entry does: start the session,
+      // which must report the old marker before writing its own.
       final next = CrashReporter(dataDir: dataDir, logTailLines: 5);
       addTearDown(next.dispose);
-      final report = await next.detectPreviousCrash();
-      expect(report, isNotNull);
+      final report = await next.startSession();
+      expect(report, isNotNull, reason: 'the old marker is reported, not hidden by the new one');
       expect(report!.kind, CrashReportKind.previousRun);
       expect(report.error, contains('ended without closing'));
       expect(report.logTail, hasLength(5), reason: 'only the tail of the log file');
       expect(report.logTail.last, contains('frame 7'));
       expect(next.pending.value?.id, report.id);
-      expect(next.sessionMarker.existsSync(), isFalse, reason: 'reported once');
-      expect(await next.detectPreviousCrash(), isNull);
+      expect(next.sessionMarker.existsSync(), isTrue, reason: 'the new session has its own marker now');
+      expect(await next.detectPreviousCrash(), isNull, reason: 'its own marker is not a crash');
 
-      await next.startSession();
       await next.endSession();
       expect(next.sessionMarker.existsSync(), isFalse);
       final another = CrashReporter(dataDir: dataDir);

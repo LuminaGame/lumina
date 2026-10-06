@@ -106,8 +106,8 @@ Future<void> runLuminaEditor(List<String> args, {List<LuminaEditorPlugin> plugin
     return true;
   });
   try {
+    // Reports a session that died before it writes this one's marker.
     await crashReporter.startSession();
-    await crashReporter.detectPreviousCrash();
   } on FileSystemException catch (e) {
     EngineLoggerService().log('Crash reporting is off: $e', level: 'warning', source: 'CrashReporter');
   }
