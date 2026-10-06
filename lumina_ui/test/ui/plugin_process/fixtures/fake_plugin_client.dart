@@ -22,6 +22,8 @@ const PluginIconSpec kFakeIcon = PluginIconSpec(58242, fontFamily: 'LucideIcons'
 const PluginContributions kFakeContributions = PluginContributions(
   menuItems: [
     PluginMenuItemSpec(path: kFakeMenuPath, command: PluginCommandSpec(id: kFakeCommandId, label: 'Do Thing', icon: kFakeIcon)),
+    PluginMenuItemSpec(path: 'Plugins/Fake/Fake Settings', command: PluginCommandSpec(id: 'fake.settings', label: 'Fake Settings')),
+    PluginMenuItemSpec(path: 'Plugins/Fake/Fake Preview', command: PluginCommandSpec(id: 'fake.preview', label: 'Fake Preview'), checked: false),
   ],
   slotButtons: [
     PluginSlotButtonSpec(

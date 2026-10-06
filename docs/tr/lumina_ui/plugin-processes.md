@@ -25,7 +25,8 @@ paketindedir. Dosya yolları `lumina_ui/` paket dizinine görelidir.
   başlatmalar 1, 2 ve 4 sn bekler; üçüncüden sonra eklenti kullanıcı Restart'a basana dek **stopped** (durdu) kalır
   (Restart sayacı sıfırlar; bir dakika sorunsuz çalışmak da).
 - Eklenti çalışmazken katkıları yerinde kalır ama kullanılamaz: menü öğeleri ve yuva düğmeleri "`<eklenti>` stopped:
-  `<neden>`" ipucuyla devre dışıdır, MCP araçları hata sonucu döner, panelleri, sekmeleri ve varlık editörleri süreç
+  `<neden>`" ipucuyla devre dışıdır (düz ya da işaretlenebilir, her menü satırı aynı biçimde: soluk etiket ve simge, üzerine
+  gelince vurgu yok), MCP araçları hata sonucu döner, panelleri, sekmeleri ve varlık editörleri süreç
   korumasını gösterir. Yeniden başlatma onları tekrar kaydeder (yerine koyar, asla çoğaltmaz).
 - **Run in editor process (debugging)**: projenin `.lmproject` `plugin_isolation: {"<ad>": "in_process"}` girdisi
   (Eklenti Yöneticisi'ndeki anahtar) aynı süreç parçasını aynı loopback protokolüyle editörün içinde çalıştırır, durum

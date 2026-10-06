@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:lumina_editor_api/lumina_editor_api.dart' show EditorMenuItemOptions;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
+import '../../../core/services/plugin_process/plugin_process_supervisor.dart' show ProcessBackedCommand;
 import '../../../core/theme/editor_theme.dart';
 import '../commands/editor_command.dart';
 
@@ -115,19 +116,31 @@ List<MenuItem> _build(List<MenuTreeNode> nodes, BuildContext? commandContext, Me
 
 /// The default menu button for [command]: icon, label, shortcut, disabled
 /// while `canExecute` is false.
-MenuButton menuTreeButton(EditorCommand command, {BuildContext? commandContext, String? label}) {
+MenuButton menuTreeButton(EditorCommand command, {BuildContext? commandContext, String? label, Key? key}) {
   final canExec = command.canExecute();
   return MenuButton(
-    key: ValueKey('menu_item_${command.id}'),
+    key: key ?? ValueKey('menu_item_${command.id}'),
     leading: command.icon != null ? Icon(command.icon, size: 14) : null,
     trailing: command.shortcutLabel.isNotEmpty
         ? Text(command.shortcutLabel, style: const TextStyle(fontSize: 10, color: EditorColors.mutedForeground))
         : null,
+    // `enabled` is what greys the row (label, icon, no hover highlight); a
+    // null onPressed alone leaves it looking enabled.
+    enabled: canExec,
     onPressed: canExec ? (ctx) => command.execute(commandContext ?? ctx) : null,
-    child: Text(
-      label ?? command.label,
-      style: TextStyle(fontSize: 10, color: canExec ? null : EditorColors.mutedForeground),
-    ),
+    child: menuUnavailableTooltip(command, Text(label ?? command.label, style: const TextStyle(fontSize: 10))),
+  );
+}
+
+/// A command of a plugin whose process is not running says why
+/// ("`<plugin>` stopped: `<reason>`") on hover.
+Widget menuUnavailableTooltip(EditorCommand command, Widget child) {
+  final reason = command is ProcessBackedCommand ? command.unavailableReason : null;
+  if (reason == null) return child;
+  return Tooltip(
+    key: ValueKey('menu_unavailable_${command.id}'),
+    tooltip: (_) => TooltipContainer(child: Text(reason)),
+    child: child,
   );
 }
 
@@ -169,7 +182,7 @@ class _CheckedMenuItem extends StatelessWidget implements MenuItem {
           trailing: command.shortcutLabel.isNotEmpty
               ? Text(command.shortcutLabel, style: const TextStyle(fontSize: 10, color: EditorColors.mutedForeground))
               : null,
-          child: Text(command.label, style: const TextStyle(fontSize: 10)),
+          child: menuUnavailableTooltip(command, Text(command.label, style: const TextStyle(fontSize: 10))),
         );
       },
     );

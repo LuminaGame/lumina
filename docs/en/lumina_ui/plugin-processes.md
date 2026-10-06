@@ -25,7 +25,8 @@ paths are relative to the `lumina_ui/` package directory.
   1 s, 2 s and 4 s; after the third the plugin is **stopped** until the user presses Restart (which starts the count
   again; so does a minute of running).
 - While a plugin is not running its contributions stay where they are but are unavailable: menu items and slot buttons
-  are disabled with the tooltip "`<plugin>` stopped: `<reason>`", its MCP tools answer an error result, and its panels,
+  are disabled (every menu row alike, plain or checkable: greyed label and icon, no hover highlight) with the tooltip
+  "`<plugin>` stopped: `<reason>`", its MCP tools answer an error result, and its panels,
   tabs and asset editors show the process guard. A restart registers them again (replacing, never duplicating).
 - **Run in editor process (debugging)**: the project's `.lmproject` `plugin_isolation: {"<name>": "in_process"}` (the
   Plugin Manager's switch) runs the same process part inside the editor over the same loopback protocol, status
