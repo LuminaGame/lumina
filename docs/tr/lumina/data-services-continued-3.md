@@ -257,7 +257,9 @@ GEM-X SOMA klipleri ayrı bir semantik eşleştirme kullanır: `LeftLeg`/`RightL
 `extras.somaReferencePose = "neutral"` ile belirtmelidir. Model uzayındaki hareket,
 bu referansa göre hedef bind eksenlerine aktarılır. Hedef kemik konumları korunur;
 göreli kök hareketi hedef pelvis konumuna eklenir. Twist/düzeltici kemikler
-ebeveynlerini izler. Nötr kaynak hareketi hedef iskeleti değiştirmez. Bu referansı
+ebeveynlerini izler. Üst kol ve ön kol referans yönleri semantik dirsek ve bilek
+çocukları üzerinden hizalanır; kaynak T-poz hareketine hedef A-poz açısı eklenmez.
+Nötr gövde ve bacak konumları korunur; nötr kollar kaynak referans yönünü izler. Bu referansı
 taşımayan eski GEM-X çıktıları yeniden üretim mesajıyla reddedilir.
 
 Uygulama `glb_animation_retargeter/models.dart`, `operation.dart`,

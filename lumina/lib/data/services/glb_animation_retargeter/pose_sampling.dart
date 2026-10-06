@@ -69,7 +69,12 @@ class _Quat {
   /// Decomposes rotation into swing (perpendicular to axis) and twist (around axis).
   static (_Quat swing, _Quat twist) swingTwist(_Quat q, List<double> axis) {
     final dot = q.x * axis[0] + q.y * axis[1] + q.z * axis[2];
-    final twist = _Quat(axis[0] * dot, axis[1] * dot, axis[2] * dot, q.w).normalized();
+    final twist = _Quat(
+      axis[0] * dot,
+      axis[1] * dot,
+      axis[2] * dot,
+      q.w,
+    ).normalized();
     if (twist.w == 0 && twist.x == 0 && twist.y == 0 && twist.z == 0) {
       return (q, identity);
     }
@@ -78,7 +83,8 @@ class _Quat {
   }
 
   static _Quat fromTo(List<double> vFrom, List<double> vTo) {
-    double len(List<double> v) => math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+    double len(List<double> v) =>
+        math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
     final lFrom = len(vFrom), lTo = len(vTo);
     if (lFrom < 1e-6 || lTo < 1e-6) return identity;
     final f = [vFrom[0] / lFrom, vFrom[1] / lFrom, vFrom[2] / lFrom];
@@ -86,7 +92,9 @@ class _Quat {
     final d = f[0] * t[0] + f[1] * t[1] + f[2] * t[2];
     if (d >= 1.0 - 1e-7) return identity;
     if (d <= -1.0 + 1e-7) {
-      final ortho = f[0].abs() < 0.9 ? const [1.0, 0.0, 0.0] : const [0.0, 1.0, 0.0];
+      final ortho = f[0].abs() < 0.9
+          ? const [1.0, 0.0, 0.0]
+          : const [0.0, 1.0, 0.0];
       final axis = [
         f[1] * ortho[2] - f[2] * ortho[1],
         f[2] * ortho[0] - f[0] * ortho[2],
@@ -95,7 +103,11 @@ class _Quat {
       final lAxis = len(axis);
       return _Quat(axis[0] / lAxis, axis[1] / lAxis, axis[2] / lAxis, 0.0);
     }
-    final axis = [f[1] * t[2] - f[2] * t[1], f[2] * t[0] - f[0] * t[2], f[0] * t[1] - f[1] * t[0]];
+    final axis = [
+      f[1] * t[2] - f[2] * t[1],
+      f[2] * t[0] - f[0] * t[2],
+      f[0] * t[1] - f[1] * t[0],
+    ];
     final s = math.sqrt((1.0 + d) * 2.0);
     return _Quat(axis[0] / s, axis[1] / s, axis[2] / s, s / 2.0).normalized();
   }
@@ -103,8 +115,11 @@ class _Quat {
   /// Rotation part of a column-major matrix (unit scale assumed after
   /// normalizing the columns).
   static _Quat fromMatrix(List<double> m) {
-    double col(int c) =>
-        math.sqrt(m[c * 4] * m[c * 4] + m[c * 4 + 1] * m[c * 4 + 1] + m[c * 4 + 2] * m[c * 4 + 2]);
+    double col(int c) => math.sqrt(
+      m[c * 4] * m[c * 4] +
+          m[c * 4 + 1] * m[c * 4 + 1] +
+          m[c * 4 + 2] * m[c * 4 + 2],
+    );
     final sx = col(0), sy = col(1), sz = col(2);
     double r(int row, int c, double s) => s == 0 ? 0 : m[c * 4 + row] / s;
     final r00 = r(0, 0, sx), r10 = r(1, 0, sx), r20 = r(2, 0, sx);
@@ -113,16 +128,36 @@ class _Quat {
     final trace = r00 + r11 + r22;
     if (trace > 0) {
       final s = math.sqrt(trace + 1.0) * 2;
-      return _Quat((r21 - r12) / s, (r02 - r20) / s, (r10 - r01) / s, 0.25 * s).normalized();
+      return _Quat(
+        (r21 - r12) / s,
+        (r02 - r20) / s,
+        (r10 - r01) / s,
+        0.25 * s,
+      ).normalized();
     } else if (r00 > r11 && r00 > r22) {
       final s = math.sqrt(1.0 + r00 - r11 - r22) * 2;
-      return _Quat(0.25 * s, (r01 + r10) / s, (r02 + r20) / s, (r21 - r12) / s).normalized();
+      return _Quat(
+        0.25 * s,
+        (r01 + r10) / s,
+        (r02 + r20) / s,
+        (r21 - r12) / s,
+      ).normalized();
     } else if (r11 > r22) {
       final s = math.sqrt(1.0 + r11 - r00 - r22) * 2;
-      return _Quat((r01 + r10) / s, 0.25 * s, (r12 + r21) / s, (r02 - r20) / s).normalized();
+      return _Quat(
+        (r01 + r10) / s,
+        0.25 * s,
+        (r12 + r21) / s,
+        (r02 - r20) / s,
+      ).normalized();
     }
     final s = math.sqrt(1.0 + r22 - r00 - r11) * 2;
-    return _Quat((r02 + r20) / s, (r12 + r21) / s, 0.25 * s, (r10 - r01) / s).normalized();
+    return _Quat(
+      (r02 + r20) / s,
+      (r12 + r21) / s,
+      0.25 * s,
+      (r10 - r01) / s,
+    ).normalized();
   }
 }
 
@@ -219,15 +254,18 @@ class _Skeleton {
   }
 
   /// Rest model-space direction of bone [node], pointing towards its primary child.
-  List<double>? boneDirection(int node) {
+  List<double>? boneDirection(int node, {String? childName}) {
     if (node < 0 || node >= count) return null;
     final nodePos = restWorldPos(node);
     int? bestChild;
     var maxL = 0.0;
     for (var i = 0; i < parent.length; i++) {
       if (parent[i] == node) {
+        if (childName != null && names[i] != childName) continue;
         final cPos = restWorldPos(i);
-        final dx = cPos[0] - nodePos[0], dy = cPos[1] - nodePos[1], dz = cPos[2] - nodePos[2];
+        final dx = cPos[0] - nodePos[0],
+            dy = cPos[1] - nodePos[1],
+            dz = cPos[2] - nodePos[2];
         final l = math.sqrt(dx * dx + dy * dy + dz * dz);
         if (l > maxL) {
           maxL = l;
@@ -246,7 +284,9 @@ class _Skeleton {
     final p = parent[node];
     if (p >= 0) {
       final pPos = restWorldPos(p);
-      final dx = nodePos[0] - pPos[0], dy = nodePos[1] - pPos[1], dz = nodePos[2] - pPos[2];
+      final dx = nodePos[0] - pPos[0],
+          dy = nodePos[1] - pPos[1],
+          dz = nodePos[2] - pPos[2];
       final l = math.sqrt(dx * dx + dy * dy + dz * dz);
       if (l > 0.001) return [dx / l, dy / l, dz / l];
     }
@@ -286,12 +326,18 @@ class _Tracks {
       final target = (c as Map)['target'] as Map;
       final node = target['node'] as int?;
       final path = target['path'] as String?;
-      if (node == null || (path != 'rotation' && path != 'translation')) continue;
+      if (node == null || (path != 'rotation' && path != 'translation')) {
+        continue;
+      }
       final sampler = samplers[c['sampler'] as int] as Map;
       final input = _readFloats(doc, sampler['input'] as int);
       final output = _readFloats(doc, sampler['output'] as int);
       final interpolation = (sampler['interpolation'] as String?) ?? 'LINEAR';
-      (path == 'rotation' ? _rotation : _translation)[node] = (input, output, interpolation);
+      (path == 'rotation' ? _rotation : _translation)[node] = (
+        input,
+        output,
+        interpolation,
+      );
     }
   }
 
@@ -324,7 +370,12 @@ class _Tracks {
     final (i, f) = _segment(input, t);
     _Quat at(int k) {
       final o = interp == 'CUBICSPLINE' ? (k * 3 + 1) * 4 : k * 4;
-      return _Quat(output[o], output[o + 1], output[o + 2], output[o + 3]).normalized();
+      return _Quat(
+        output[o],
+        output[o + 1],
+        output[o + 2],
+        output[o + 3],
+      ).normalized();
     }
 
     if (f == 0 || interp == 'STEP' || i + 1 >= input.length) return at(i);
@@ -367,18 +418,28 @@ class _Tracks {
   static Float32List _readFloats(GlbDocument doc, int index) {
     final acc = (doc.json['accessors'] as List)[index] as Map;
     final count = acc['count'] as int;
-    final components = const {'SCALAR': 1, 'VEC2': 2, 'VEC3': 3, 'VEC4': 4}[acc['type']] ?? 1;
+    final components =
+        const {'SCALAR': 1, 'VEC2': 2, 'VEC3': 3, 'VEC4': 4}[acc['type']] ?? 1;
     final out = Float32List(count * components);
     final bvIndex = acc['bufferView'] as int?;
     if (bvIndex == null) return out;
     final bv = (doc.json['bufferViews'] as List)[bvIndex] as Map;
     final componentType = acc['componentType'] as int;
-    final size = const {5120: 1, 5121: 1, 5122: 2, 5123: 2, 5126: 4}[componentType];
+    final size = const {
+      5120: 1,
+      5121: 1,
+      5122: 2,
+      5123: 2,
+      5126: 4,
+    }[componentType];
     if (size == null) {
-      throw FormatException('unsupported animation accessor componentType $componentType');
+      throw FormatException(
+        'unsupported animation accessor componentType $componentType',
+      );
     }
     final stride = (bv['byteStride'] as int?) ?? size * components;
-    final start = ((bv['byteOffset'] as int?) ?? 0) + ((acc['byteOffset'] as int?) ?? 0);
+    final start =
+        ((bv['byteOffset'] as int?) ?? 0) + ((acc['byteOffset'] as int?) ?? 0);
     final data = ByteData.sublistView(doc.bin);
     for (var i = 0; i < count; i++) {
       for (var c = 0; c < components; c++) {

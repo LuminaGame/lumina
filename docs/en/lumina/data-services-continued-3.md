@@ -257,8 +257,11 @@ bone (`spine_05` when present). Their GLB nodes must contain a neutral reference
 pose, declared by `extras.somaReferencePose = "neutral"`. Retargeting transfers
 model-space motion relative to that reference onto the target bind axes. Target
 bone offsets stay intact, and root-relative displacement is added to the target
-pelvis placement. Twist/corrective bones follow their parents. A neutral source
-keeps the target skeleton unchanged. Older GEM-X exports without that reference
+pelvis placement. Twist/corrective bones follow their parents. Upper-arm and
+forearm reference directions align through the semantic elbow and wrist children;
+T-pose source motion does not acquire the A-pose target's reference bend. Neutral
+torso and leg placement remain unchanged; neutral arms follow the source reference
+direction. Older GEM-X exports without that reference
 are refused with a regeneration message.
 
 The implementation is divided into `glb_animation_retargeter/models.dart`,
