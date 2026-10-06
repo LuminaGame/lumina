@@ -326,11 +326,23 @@ jobs:
       - if: matrix.os == 'linux'
         uses: ./lumina/.github/actions/linux-build-deps
 
-      - uses: subosito/flutter-action@v2
+      - if: matrix.arch != 'arm64'
+        uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
+
+      # Flutter publishes no Linux arm64 SDK archive, so the action cannot
+      # resolve one; the SDK is cloned at the pinned version instead and
+      # bootstraps its own arm64 Dart on first use.
+      - if: matrix.arch == 'arm64'
+        name: Flutter from git (Linux arm64)
+        run: |
+          git clone --depth 1 --branch "$FLUTTER_VERSION" https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/flutter/bin/flutter" --version
+          "$RUNNER_TEMP/flutter/bin/flutter" config --no-analytics --enable-linux-desktop
 
       - uses: ./lumina/.github/actions/checkout-siblings
 
