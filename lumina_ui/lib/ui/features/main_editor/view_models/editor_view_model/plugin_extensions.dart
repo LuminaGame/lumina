@@ -64,6 +64,46 @@ mixin _EditorPluginExtensions on _EditorViewModelState {
     panelsController.refresh();
   }
 
+  // --- Plugin processes ----------------------------------------
+
+  /// The isolated plugins compiled into this editor
+  /// (`LuminaEditorHost.pluginProcesses`), each in its own supervised
+  /// process, or in the editor process when the project says so.
+  late final PluginProcessManager pluginProcesses = PluginProcessManager(
+    host: extensionRegistry,
+    processes: LuminaEditorHost.pluginProcesses,
+    inEditorProcess: () => PluginIsolationOverrides.inEditorProcess(project),
+  );
+
+  /// Whether the project runs [plugin]'s process part inside the editor
+  /// (Plugin Manager ▸ "Run in editor process (debugging)").
+  bool pluginRunsInEditorProcess(String plugin) => PluginIsolationOverrides.runsInEditorProcess(project, plugin);
+
+  /// Writes the project's `plugin_isolation` override for [plugin] and, when
+  /// this editor has its process part, moves it there now.
+  Future<void> setPluginRunsInEditorProcess(String plugin, bool inEditorProcess) async {
+    // The plugin registry keeps its own copy of the project: both learn the
+    // override; the editor's copy (with everything else it holds) is saved last.
+    await pluginRegistry.setIsolationOverride(plugin, inEditorProcess ? PluginIsolation.inProcess : null);
+    _project = PluginIsolationOverrides.withInEditorProcess(project, plugin, inEditorProcess);
+    await _projectRepo.saveProject(_project, projectDirPath);
+    // This editor moves it now: no restart is pending.
+    if (pluginProcesses.isIsolated(plugin)) {
+      for (final e in pluginRegistry.entries) {
+        if (e.descriptor.name == plugin) e.restartPending = false;
+      }
+    }
+    _logger.log(
+      inEditorProcess
+          ? 'Plugin $plugin now runs in the editor process (debugging): a crash or hang in it affects the editor'
+          : 'Plugin $plugin runs in its own process again',
+      level: inEditorProcess ? 'warning' : 'info',
+      source: 'Plugins',
+    );
+    await pluginProcesses.setRunInEditorProcess(plugin, inEditorProcess);
+    notifyListeners();
+  }
+
   // --- Lifecycle -----------------------------------------------
 
   bool _pluginsClosed = false;
@@ -88,6 +128,9 @@ mixin _EditorPluginExtensions on _EditorViewModelState {
     _pluginsClosed = true;
     if (exiting) _pluginsShutDown = true;
     if (!closing && !shuttingDown) return;
+    // Plugin processes first, in parallel; each call is bounded.
+    if (closing) await pluginProcesses.projectClosing();
+    if (shuttingDown) await pluginProcesses.shutdownAll();
     for (final plugin in extensionRegistry.registeredPlugins) {
       if (closing) await _pluginHook(plugin, 'onProjectClosing', plugin.onProjectClosing, hookTimeout);
       if (shuttingDown) {
