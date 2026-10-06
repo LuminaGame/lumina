@@ -50,7 +50,7 @@ dependencies:
     git:
       url: https://github.com/LuminaGame/marketplace.git
       path: shared
-      ref: 5e6240fb68847b5a388aeb940c68dd92ec3ccd12
+      ref: 8eac3679ff4820a59e352189c9101bd79c173efa
   http: ^1.6.0
   archive: ^4.3.0
   crypto: ^3.0.6

@@ -494,8 +494,8 @@ packages:
     dependency: transitive
     description:
       path: shared
-      ref: "5e6240fb68847b5a388aeb940c68dd92ec3ccd12"
-      resolved-ref: "5e6240fb68847b5a388aeb940c68dd92ec3ccd12"
+      ref: "8eac3679ff4820a59e352189c9101bd79c173efa"
+      resolved-ref: "8eac3679ff4820a59e352189c9101bd79c173efa"
       url: "https://github.com/LuminaGame/marketplace.git"
     source: git
     version: "0.1.0"

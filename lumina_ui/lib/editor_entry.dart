@@ -4,6 +4,7 @@
 /// [runLuminaEditor]; a host passes its compiled-in plugins and [EditorHostInfo].
 library;
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:lumina/data/services/workspace_paths.dart';
@@ -15,14 +16,17 @@ import 'package:window_manager/window_manager.dart';
 
 import 'ui/core/host/editor_host.dart';
 import 'ui/core/host/redirection_trust_guard.dart';
+import 'ui/core/services/crash_reporter.dart';
 import 'ui/core/theme/editor_theme.dart';
 import 'ui/core/theme/editor_theme_store.dart';
 import 'ui/core/window/lumina_window.dart';
+import 'ui/core/widgets/crash_report_view.dart';
 import 'ui/core/window/window_controls.dart';
 import 'ui/features/engine_bootstrap/view_models/engine_bootstrap_view_model.dart';
 import 'ui/features/engine_bootstrap/views/engine_bootstrap_view.dart';
 import 'ui/features/launcher/views/launcher_view.dart';
 import 'ui/features/main_editor/services/editor_graphics_preferences.dart';
+import 'ui/features/main_editor/services/editor_preferences.dart';
 
 export 'ui/core/host/editor_host.dart' show EditorHostInfo, EditorLaunchArgs, LuminaEditorHost, EditorAssets, EditorHandOff;
 
@@ -44,6 +48,9 @@ Future<void> runLuminaEditor(List<String> args, {List<LuminaEditorPlugin> plugin
   // without the policy takes over before any window shows.
   if (!RedirectionTrustGuard.startup(args)) exit(0);
   WidgetsFlutterBinding.ensureInitialized();
+  // Uncaught errors become crash reports the user may send; a session that
+  // never closes cleanly is reported at the next launch.
+  final crashReporter = CrashReporter(serverUrl: () => Uri.parse(_crashReportServer))..install();
   LuminaMedia.ensureInitialized();
   EditorGraphicsPreferences().apply();
   // The viewport's shared Vulkan engine is created later; the ray query (and,
@@ -92,10 +99,35 @@ Future<void> runLuminaEditor(List<String> args, {List<LuminaEditorPlugin> plugin
   // editor asks about unsaved work first), then shows the window — all before
   // the first frame.
   await LuminaWindow.instance.startup(windowOptions);
+  // Registered before the editor's own guards, so it runs last: only a
+  // close every guard agreed to removes the session marker.
+  LuminaWindow.instance.addCloseGuard(() async {
+    await crashReporter.endSession();
+    return true;
+  });
+  try {
+    await crashReporter.startSession();
+    await crashReporter.detectPreviousCrash();
+  } on FileSystemException catch (e) {
+    EngineLoggerService().log('Crash reporting is off: $e', level: 'warning', source: 'CrashReporter');
+  }
+  unawaited(_loadCrashReportServer());
   // The remembered editor theme (a JSON file under
   // ~/.config/lumina/themes/, or a built-in) is active before the first frame.
   EditorThemeController.instance.reload();
   runApp(LuminaStudioApp(bootstrap: bootstrap));
+}
+
+/// Where crash reports go: the marketplace server of the editor preferences
+/// (the default until they are read).
+String _crashReportServer = EditorPreferences.defaultMarketplaceUrl;
+
+Future<void> _loadCrashReportServer() async {
+  try {
+    _crashReportServer = EditorPreferences.load().marketplaceUrl;
+  } catch (e) {
+    EngineLoggerService().log('Crash reports go to the default server: $e', level: 'warning', source: 'CrashReporter');
+  }
 }
 
 /// An engine checkout an older editor patched (a generated plugin
@@ -151,7 +183,9 @@ class LuminaStudioApp extends StatelessWidget {
               bundle: EditorAssets.bundle,
               child: LuminaWindowFrame(
                 window: LuminaWindow.instance,
-                child: child ?? const SizedBox.shrink(),
+                child: CrashReporter.instance == null
+                    ? (child ?? const SizedBox.shrink())
+                    : CrashReportOverlay(reporter: CrashReporter.instance!, child: child ?? const SizedBox.shrink()),
               ),
             ),
           );

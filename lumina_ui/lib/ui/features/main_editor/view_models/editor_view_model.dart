@@ -57,6 +57,7 @@ import '../../source_control/source_control_commands.dart';
 import '../../source_control/view_models/source_control_view_model.dart';
 import '../../sub_editors/services/build_pipeline_service.dart';
 import '../../sub_editors/view_models/build_manager_view_model.dart';
+import '../../../core/services/crash_reporter.dart';
 import '../../../core/services/editor_scene_environment.dart';
 import '../../../core/window/lumina_window.dart';
 import '../../mcp_server/services/mcp_server_service.dart';
@@ -426,6 +427,8 @@ class EditorViewModel extends _EditorViewModelState
     super.thumbnailService,
     super.autoGenerateThumbnails,
   }) : super(enableTimers: enableTimers) {
+    // Crash reports name the open project (its folder name only).
+    CrashReporter.instance?.projectName = p.basename(projectDirPath);
     commands = EditorCommandRegistry(
       onCommandExecuted: (id) {
         _logger.log(

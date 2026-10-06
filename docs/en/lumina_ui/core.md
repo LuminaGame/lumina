@@ -398,6 +398,41 @@ The settings behind the viewport's DLSS, FSR3 and RTX HUD buttons (next to the c
 | `supported` | `bool supported` | Whether the live engine can do what this popover sets. |
 | `onClose` | `VoidCallback onClose` | Closes the popover. |
 
+## `lib/ui/core/services/crash_report.dart`
+
+### `enum CrashReportKind`
+
+`uncaught` (an error nobody handled while the editor ran) or `previousRun` (the last session ended without closing, found at the next launch); `wire` is the server spelling (`uncaught`, `previous_run`).
+
+### `class CrashReport`
+
+What the crash report screen shows and, when the user agrees, sends: the error text and stack trace, the release tag and commit, the editor version, `<os>-<arch>`, the OS version, the GPU in use, the Filament version, the open project's name and the tail of the editor log. Value object with `toJson` / `fromJson` (the file under `<data dir>/crashes/<id>.json`), `toSubmission(description, email, includeLog)` (the body of `POST /api/v1/crash-reports`) and `toText(...)` (what Copy puts on the clipboard); `sentId` once sent.
+
+## `lib/ui/core/services/crash_reporter.dart`
+
+### `class CrashReporter`
+
+| Method / Getter | Signature | Purpose & Description |
+| :--- | :--- | :--- |
+| `install` | `void install()` | Hooks `FlutterError.onError` and `PlatformDispatcher.onError` (the previous handlers still run) and makes this `CrashReporter.instance`. |
+| `startSession` | `Future<void> startSession()` | Writes `crashes/session.json` (session id, pid, start time, release) and streams the engine log to `logs/editor.log` (trimmed to `logTailLines` first). |
+| `endSession` | `Future<void> endSession()` | The clean close: flushes the log and removes the marker. `detachLog()` closes the log but keeps the marker. |
+| `detectPreviousCrash` | `Future<CrashReport?> detectPreviousCrash()` | A marker another process left means that session died: files a `previousRun` report with the log file's tail and publishes it on `pending`. |
+| `record` | `CrashReport? record(Object error, StackTrace? stack, {String? context})` | Files an `uncaught` report (with the in-memory log tail) and publishes it when nothing is pending; later errors are only filed. |
+| `send` | `Future<CrashReportReceipt> send(CrashReport report, {String description, String email, bool includeLog})` | Posts the report to `serverUrl` (`MarketplaceClient.submitCrashReport`) and marks it sent. Nothing is sent without the user. |
+| `pending`, `dismiss`, `filed`, `stored`, `fileOf`, `flush` | | The report the screen shows, hiding it (the file stays), the reports of this session, every report on disk, a report's file, and waiting for the file writes. |
+| `dataDir`, `crashesDir`, `logFile`, `sessionMarker`, `serverUrl`, `projectName` | | Where it writes (`LuminaDataDir` by default), where it sends and the project named in reports. |
+
+## `lib/ui/core/widgets/crash_report_view.dart`
+
+### `class CrashReportOverlay`
+
+Lays the crash report screen over the whole app while `reporter.pending` holds a report; the editor underneath keeps running. `editor_entry.dart` wraps the app in it.
+
+### `class CrashReportView`
+
+The crash report screen: the headline of the error, a description field (key `crash_description`), an optional contact e-mail (`crash_email`), the log checkbox (`crash_include_log`), a "What is sent" toggle showing the exact text (`crash_toggle_details`, `crash_details_text`), and the buttons Copy report (`crash_copy`), Don't send (`crash_dismiss`) and Send report (`crash_send`); after a send `crash_sent` and Continue (`crash_continue`), after a refused send `crash_send_error` with the file's path.
+
 ## `lib/ui/core/widgets/quality_settings_popover.dart`
 
 ### `class QualitySettingsPopover`

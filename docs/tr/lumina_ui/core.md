@@ -398,6 +398,41 @@ Viewport'un DLSS, FSR3 ve RTX HUD düğmelerinin (kamera hızının yanında) ar
 | `supported` | `bool supported` | Canlı motorun bu popover'ın ayarladığını yapıp yapamadığı. |
 | `onClose` | `VoidCallback onClose` | Popover'ı kapatır. |
 
+## `lib/ui/core/services/crash_report.dart`
+
+### `enum CrashReportKind`
+
+`uncaught` (editör çalışırken kimsenin yakalamadığı bir hata) ya da `previousRun` (son oturum kapanmadan bitti, bir sonraki açılışta bulundu); `wire` sunucudaki yazımdır (`uncaught`, `previous_run`).
+
+### `class CrashReport`
+
+Çökme raporu ekranının gösterdiği ve kullanıcı onaylarsa gönderdiği şey: hata metni ve stack trace, release etiketi ve commit, editör sürümü, `<os>-<arch>`, işletim sistemi sürümü, kullanılan GPU, Filament sürümü, açık projenin adı ve editör günlüğünün sonu. `toJson` / `fromJson` (`<veri dizini>/crashes/<id>.json` dosyası), `toSubmission(description, email, includeLog)` (`POST /api/v1/crash-reports` gövdesi) ve `toText(...)` (Copy'nin panoya koyduğu) olan değer nesnesi; gönderildikten sonra `sentId`.
+
+## `lib/ui/core/services/crash_reporter.dart`
+
+### `class CrashReporter`
+
+| Metot / Getter | İmza | Amaç ve Açıklama |
+| :--- | :--- | :--- |
+| `install` | `void install()` | `FlutterError.onError` ve `PlatformDispatcher.onError`'a bağlanır (önceki işleyiciler çalışmaya devam eder) ve bunu `CrashReporter.instance` yapar. |
+| `startSession` | `Future<void> startSession()` | `crashes/session.json` dosyasını yazar (oturum kimliği, pid, başlangıç zamanı, release) ve motor günlüğünü `logs/editor.log` dosyasına akıtır (önce `logTailLines` satıra kırpar). |
+| `endSession` | `Future<void> endSession()` | Temiz kapanış: günlüğü boşaltır ve işareti siler. `detachLog()` günlüğü kapatır ama işareti bırakır. |
+| `detectPreviousCrash` | `Future<CrashReport?> detectPreviousCrash()` | Başka bir sürecin bıraktığı işaret o oturumun öldüğü anlamına gelir: günlük dosyasının sonuyla bir `previousRun` raporu dosyalar ve `pending` üzerinde yayınlar. |
+| `record` | `CrashReport? record(Object error, StackTrace? stack, {String? context})` | Bir `uncaught` raporu dosyalar (bellekteki günlük sonuyla) ve bekleyen yoksa yayınlar; sonraki hatalar yalnızca dosyalanır. |
+| `send` | `Future<CrashReportReceipt> send(CrashReport report, {String description, String email, bool includeLog})` | Raporu `serverUrl`'e gönderir (`MarketplaceClient.submitCrashReport`) ve gönderildi olarak işaretler. Kullanıcı olmadan hiçbir şey gönderilmez. |
+| `pending`, `dismiss`, `filed`, `stored`, `fileOf`, `flush` | | Ekranın gösterdiği rapor, gizlenmesi (dosya kalır), bu oturumun raporları, diskteki tüm raporlar, bir raporun dosyası ve dosya yazımlarını bekleme. |
+| `dataDir`, `crashesDir`, `logFile`, `sessionMarker`, `serverUrl`, `projectName` | | Nereye yazdığı (varsayılan `LuminaDataDir`), nereye gönderdiği ve raporlarda adı geçen proje. |
+
+## `lib/ui/core/widgets/crash_report_view.dart`
+
+### `class CrashReportOverlay`
+
+`reporter.pending` bir rapor tutarken çökme raporu ekranını tüm uygulamanın üzerine serer; alttaki editör çalışmaya devam eder. `editor_entry.dart` uygulamayı bununla sarar.
+
+### `class CrashReportView`
+
+Çökme raporu ekranı: hatanın başlığı, bir açıklama alanı (anahtar `crash_description`), isteğe bağlı iletişim e-postası (`crash_email`), günlük onay kutusu (`crash_include_log`), tam metni gösteren "What is sent" açma kapama (`crash_toggle_details`, `crash_details_text`) ve Copy report (`crash_copy`), Don't send (`crash_dismiss`), Send report (`crash_send`) düğmeleri; gönderimden sonra `crash_sent` ve Continue (`crash_continue`), reddedilen bir gönderimden sonra dosyanın yoluyla `crash_send_error`.
+
 ## `lib/ui/core/widgets/quality_settings_popover.dart`
 
 ### `class QualitySettingsPopover`
