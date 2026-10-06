@@ -57,6 +57,7 @@ You work on the engine, the renderer bindings or the native build.
   - [View options and color grading](en/flutter_filament/view-options.md) - Per-view post-processing and quality options, tone mapping and color grading.
   - [DLSS Super Resolution](en/flutter_filament/dlss.md) - NVIDIA DLSS behind dynamic resolution (Vulkan, NVIDIA GPUs, fetched SDK).
   - [Ray tracing](en/flutter_filament/ray-tracing.md) - Vulkan ray query: acceleration structures per scene, ray-traced sun shadows, visibility rays.
+  - [ReSTIR direct lighting](en/flutter_filament/restir.md) - Many punctual lights by reservoir resampling with ray-traced visibility.
   - [Scene and geometry](en/flutter_filament/scene-and-geometry.md) - Scenes, renderables, transforms, vertex/index/instance/morph/skinning buffers, filamesh.
   - [Camera and manipulator](en/flutter_filament/camera-and-manipulator.md) - Cameras, projections, exposure and the orbit/map/free-flight camera manipulator.
   - [Lighting and image-based lighting](en/flutter_filament/lighting-and-ibl.md) - Lights, shadows, indirect light, skyboxes, IBL baking and prefiltering.

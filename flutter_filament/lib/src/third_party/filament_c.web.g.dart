@@ -1117,6 +1117,29 @@ void filament_light_set_falloff(ffi.Pointer<ffi.Void> engine, int entity, double
   _m.filament_light_set_falloff(engine.address.toJS, entity.toJS, radius.toJS);
 }
 
+void filament_view_set_restir_options(ffi.Pointer<ffi.Void> view, ffi.Pointer<filament_restir_options> options) {
+  _m.filament_view_set_restir_options(view.address.toJS, options.address.toJS);
+}
+
+void filament_view_get_restir_options(ffi.Pointer<ffi.Void> view, ffi.Pointer<filament_restir_options> out_options) {
+  _m.filament_view_get_restir_options(view.address.toJS, out_options.address.toJS);
+}
+
+bool filament_view_restir_supported(ffi.Pointer<ffi.Void> view) =>
+    _m.filament_view_restir_supported(view.address.toJS).toDartInt != 0;
+
+void filament_view_get_restir_stats(ffi.Pointer<ffi.Void> view, ffi.Pointer<filament_restir_stats_t> out_stats) {
+  _m.filament_view_get_restir_stats(view.address.toJS, out_stats.address.toJS);
+}
+
+void filament_view_restir_reset_history(ffi.Pointer<ffi.Void> view) {
+  _m.filament_view_restir_reset_history(view.address.toJS);
+}
+
+void filament_light_set_restir_sampling_weight(ffi.Pointer<ffi.Void> engine, int entity, double weight) {
+  _m.filament_light_set_restir_sampling_weight(engine.address.toJS, entity.toJS, weight.toJS);
+}
+
 double filament_light_get_falloff(ffi.Pointer<ffi.Void> engine, int entity) =>
     _m.filament_light_get_falloff(engine.address.toJS, entity.toJS).toDartDouble;
 
@@ -4959,6 +4982,50 @@ final class filament_stereoscopic_options extends ffi.Struct {
   set enabled(bool value) => FlutterFilamentModule.heap.setUint8($address, value ? 1 : 0);
 }
 
+final class filament_restir_options extends ffi.Struct {
+  filament_restir_options.$at(super.$address) : super.$at();
+
+  bool get enabled => FlutterFilamentModule.heap.getUint8($address) != 0;
+  set enabled(bool value) => FlutterFilamentModule.heap.setUint8($address, value ? 1 : 0);
+
+  int get initialCandidates => FlutterFilamentModule.heap.getUint8($address + 1);
+  set initialCandidates(int value) => FlutterFilamentModule.heap.setUint8($address + 1, value);
+
+  int get spatialSamples => FlutterFilamentModule.heap.getUint8($address + 2);
+  set spatialSamples(int value) => FlutterFilamentModule.heap.setUint8($address + 2, value);
+
+  double get spatialRadiusPx => FlutterFilamentModule.heap.getFloat32($address + 4, Endian.little);
+  set spatialRadiusPx(double value) => FlutterFilamentModule.heap.setFloat32($address + 4, value, Endian.little);
+
+  bool get temporal => FlutterFilamentModule.heap.getUint8($address + 8) != 0;
+  set temporal(bool value) => FlutterFilamentModule.heap.setUint8($address + 8, value ? 1 : 0);
+
+  int get maxHistory => FlutterFilamentModule.heap.getUint8($address + 9);
+  set maxHistory(int value) => FlutterFilamentModule.heap.setUint8($address + 9, value);
+
+  bool get visibilityRays => FlutterFilamentModule.heap.getUint8($address + 10) != 0;
+  set visibilityRays(bool value) => FlutterFilamentModule.heap.setUint8($address + 10, value ? 1 : 0);
+
+  bool get shadeEmissive => FlutterFilamentModule.heap.getUint8($address + 11) != 0;
+  set shadeEmissive(bool value) => FlutterFilamentModule.heap.setUint8($address + 11, value ? 1 : 0);
+}
+
+final class filament_restir_stats_t extends ffi.Struct {
+  filament_restir_stats_t.$at(super.$address) : super.$at();
+
+  int get lightCount => FlutterFilamentModule.heap.getUint32($address, Endian.little);
+  set lightCount(int value) => FlutterFilamentModule.heap.setUint32($address, value, Endian.little);
+
+  int get emissiveTriangleCount => FlutterFilamentModule.heap.getUint32($address + 4, Endian.little);
+  set emissiveTriangleCount(int value) => FlutterFilamentModule.heap.setUint32($address + 4, value, Endian.little);
+
+  int get raysPerFrame => FlutterFilamentModule.heap.getUint32($address + 8, Endian.little);
+  set raysPerFrame(int value) => FlutterFilamentModule.heap.setUint32($address + 8, value, Endian.little);
+
+  int get gpuNanos => ffi.$readInt64($address + 16);
+  set gpuNanos(int value) => ffi.$writeInt64($address + 16, value);
+}
+
 typedef FilamentPickCallbackFunction =
     ffi.Void Function(
       ffi.Uint32 renderable,
@@ -6677,6 +6744,18 @@ extension type _Module._(JSObject _) implements JSObject {
   external void filament_light_get_position(JSNumber engine, JSNumber entity, JSNumber out_xyz);
   @JS('_filament_light_set_falloff')
   external void filament_light_set_falloff(JSNumber engine, JSNumber entity, JSNumber radius);
+  @JS('_filament_view_set_restir_options')
+  external void filament_view_set_restir_options(JSNumber view, JSNumber options);
+  @JS('_filament_view_get_restir_options')
+  external void filament_view_get_restir_options(JSNumber view, JSNumber out_options);
+  @JS('_filament_view_restir_supported')
+  external JSNumber filament_view_restir_supported(JSNumber view);
+  @JS('_filament_view_get_restir_stats')
+  external void filament_view_get_restir_stats(JSNumber view, JSNumber out_stats);
+  @JS('_filament_view_restir_reset_history')
+  external void filament_view_restir_reset_history(JSNumber view);
+  @JS('_filament_light_set_restir_sampling_weight')
+  external void filament_light_set_restir_sampling_weight(JSNumber engine, JSNumber entity, JSNumber weight);
   @JS('_filament_light_get_falloff')
   external JSNumber filament_light_get_falloff(JSNumber engine, JSNumber entity);
   @JS('_filament_light_set_spot_light_cone')
@@ -8390,6 +8469,8 @@ void $registerFilamentBindings() {
   ffi.$registerStruct<filament_vsm_shadow_options>(12, 4, filament_vsm_shadow_options.$at);
   ffi.$registerStruct<filament_soft_shadow_options>(16, 4, filament_soft_shadow_options.$at);
   ffi.$registerStruct<filament_stereoscopic_options>(1, 1, filament_stereoscopic_options.$at);
+  ffi.$registerStruct<filament_restir_options>(12, 4, filament_restir_options.$at);
+  ffi.$registerStruct<filament_restir_stats_t>(24, 8, filament_restir_stats_t.$at);
   ffi.$registerStruct<filament_rt_attachment_t>(16, 4, filament_rt_attachment_t.$at);
   ffi.$registerStruct<FilamentBone>(32, 4, FilamentBone.$at);
   ffi.$registerStruct<FilamentShadowOptions>(104, 4, FilamentShadowOptions.$at);

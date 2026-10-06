@@ -61,6 +61,7 @@ uint32_t filament_options_sizeof(int which) {
         case 11: return static_cast<uint32_t>(sizeof(VsmShadowOptions));
         case 12: return static_cast<uint32_t>(sizeof(SoftShadowOptions));
         case 13: return static_cast<uint32_t>(sizeof(StereoscopicOptions));
+        case 14: return static_cast<uint32_t>(sizeof(RestirOptions));
         default: return 0;
     }
 }

@@ -13,6 +13,7 @@ are upstream v1.77.2 with exactly these files applied in order.
 | `0004-velocity-buffer-motion-vectors.patch` | `filament/include/filament/{Options,View}.h`, `filament/src/{PostProcessManager,FrameHistory,View}.*`, `filament/src/details/{Renderer,Scene,View}.*`, `filament/src/ds/StructureDescriptorSet.*`, `filament/src/materials/antiAliasing/taa/taa.mat`, `libs/filabridge/.../UibStructs.h`, `libs/filamat/src/shaders/UibGenerator.cpp`, `shaders/src/surface_*` | Per-pixel motion vectors from the structure pass (`TemporalAntiAliasingOptions::motionVectors`), consumed by TAA and exportable through `View::setMotionVectorTexture`. |
 | `0005-shutdown-terminates-views-before-cameras.patch` | `filament/src/details/Engine.cpp` | `Engine::shutdown` terminates leaked views before it frees the cameras their shadow maps own and the resource allocator disposer their frame history returns to; the upstream order reads freed memory and crashes `Engine::destroy`. |
 | `0006-external-upscaler-pass.patch` | `filament/backend/include/backend/ExternalPass.h` (new), `backend/{DriverEnums.h,platforms/VulkanPlatform.h}`, `backend/src/vulkan/{VulkanDriver,VulkanTexture,platform/VulkanPlatform}.cpp`, the other drivers' no-ops, `filament/include/filament/{Options,View}.h`, `filament/src/{PostProcessManager,View}.*`, `filament/src/details/{Renderer,View}.*` | An external upscaler (DLSS) behind dynamic resolution: `DynamicResolutionOptions::upscaler`, `View::setExternalUpscaler`, the `externalPass` driver command that hands Vulkan images and the recording command buffer to a client callback, and client-requested Vulkan extensions. |
+| `0008-restir-direct-lighting.patch` | `filament/include/filament/{Options,View,LightManager}.h`, `filament/src/{PostProcessManager,RendererUtils,FrameHistory}.*`, `filament/src/details/{Renderer,View}.*`, `filament/src/components/LightManager.*`, `filament/src/ds/ColorPassDescriptorSet.*`, `filament/src/materials/rt/restir*.mat` (new), `libs/filabridge` (bindings 14/15, `restirMode` uniform), `libs/filamat/src/shaders/{Sib,Uib}Generator.cpp`, `shaders/src/surface_light_punctual.fs` | ReSTIR direct lighting: `RestirOptions` on the view, a per-frame light buffer texture of every punctual light, candidate / temporal / spatial resampling and visibility passes as ray query materials, and the lit shaders shading the one resampled light; also fixes the vertical flip of the ray query materials' depth reconstruction. |
 | `0007-vulkan-ray-query.patch` | `filament/backend/include/backend/AccelerationStructure.h` (new), `backend/src/vulkan/VulkanAccelerationStructure.*` (new), `backend/{DriverEnums.h,Handle.h,private/backend/{Driver.h,DriverAPI.inc}}`, the Vulkan driver, context, platform, handles, buffer and descriptor-set caches, the other drivers' no-ops, `filament/include/filament/{Engine,LightManager,RenderableManager,Scene,View}.h`, `filament/src/{PostProcessManager,RenderPrimitive,RendererUtils,MaterialParser,MaterialDefinition}.*`, `filament/src/details/{Renderer,Scene,View,VertexBuffer,IndexBuffer,Engine}.*`, `filament/src/ds/*`, `filament/src/materials/rt/` (new), `libs/filabridge` (binding points, chunk type), `libs/filamat` (the `rayQuery` material flag, GLSL 460 + `GL_EXT_ray_query`, SPIR-V 1.4), `shaders/src/surface_light_directional.fs`, `third_party/smol-v/source/smolv.cpp` | Vulkan ray query: acceleration structures as backend objects, a per-scene BLAS/TLAS kept by `Scene::setRayTracingEnabled`, hard ray-traced sun shadows (`ShadowOptions::rayTraced`) and single-ray visibility queries (`View::traceRay`). |
 
 ## 0001: libassimp glTF 2 `ReplaceData_joint` bounds
@@ -80,6 +81,24 @@ displacement is not captured. The TAA material
 samples the velocity buffer (`useVelocity` constant) instead of reprojecting by matrix,
 and `View::setMotionVectorTexture` renders the buffer into a user texture of the render
 target's size for upscalers and tests.
+
+## 0008: ReSTIR direct lighting
+
+Filament evaluates every punctual light overlapping a pixel's froxel, capped at 256 lights. This patch
+adds `RestirOptions` (`View::setRestirOptions`, `getRestirStats`, `isRestirSupported`,
+`resetRestirHistory`; `LightManager::setRestirSamplingWeight`). When enabled on a device with ray queries
+and a scene that keeps its acceleration structures, `FView::prepareRestirLights` packs every point and spot
+light of the scene into an RGBA32F texture (four texels per light) before the froxel culling shrinks the
+list, and `PostProcessManager::restir` runs three `rayQuery` post-process materials over the structure
+depth: `restirCandidates` (uniform candidates weighted by the unshadowed diffuse contribution, merged with
+the previous frame's reservoir at the reprojected position, history bounded by `maxHistory`),
+`restirSpatial` (neighbour reservoirs re-evaluated at the pixel) and `restirShade` (one visibility ray into
+the TLAS). The reservoirs after reuse are kept in the frame history. The colour pass binds the shading
+result and the light texture at per-view bindings 14 and 15 and sets `restirMode` (the former
+`reservedLight0` uniform); `surface_light_punctual.fs` then shades that single light with the material's
+BRDF, weighted by W, instead of looping over the froxel. Transparent surfaces keep the froxel loop. The
+patch also fixes the ray query materials' depth reconstruction, which mirrored Y on Vulkan (window y grows
+downwards). The implementation is Lumina's own GLSL; it contains no RTXDI SDK code.
 
 ## Working with the patches
 

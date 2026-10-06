@@ -34,6 +34,7 @@ void main() {
       expect(sizeOf<ffi_gen.filament_soft_shadow_options>(), ffi_gen.filament_options_sizeof(12));
       // 13: StereoscopicOptions
       expect(sizeOf<ffi_gen.filament_stereoscopic_options>(), ffi_gen.filament_options_sizeof(13));
+      expect(sizeOf<ffi_gen.filament_restir_options>(), ffi_gen.filament_options_sizeof(14));
     });
   });
 

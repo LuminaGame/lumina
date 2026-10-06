@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- ReSTIR direct lighting (prebuilt `1.77.2-lumina.6`, Filament patch `0008`): `RestirOptions` on the view
+  replaces the froxel light loop with per-pixel reservoir resampling of all the scene's punctual lights
+  (initial candidates, temporal and spatial reuse) and one ray-traced visibility ray per pixel; the cost is
+  nearly independent of the light count and every light casts a hard shadow. `FilamentView.restirOptions`,
+  `restirSupported`, `restirStats`, `resetRestirHistory()` and `FilamentLightManager.setRestirSamplingWeight`.
+  Lumina's own GLSL implementation, Vulkan ray query only. The patch also fixes the vertical flip of the
+  ray-traced shadow rays on Vulkan.
 - Ray tracing foundation (prebuilt `1.77.2-lumina.5`, Filament patch `0007`): the Vulkan backend builds
   acceleration structures (`VK_KHR_ray_query`). `RayTracing.requestExtensions()` before the engine is created,
   `FilamentEngine.supportsRayQuery`, `FilamentScene.rayTracingEnabled` (a BLAS per primitive geometry and a TLAS

@@ -328,6 +328,13 @@ class FilamentLightManager {
     c.filament_light_set_falloff(engine.nativePointer, entity, radius);
   }
 
+  /// Scales how much ReSTIR direct lighting favours this light when it
+  /// resamples the scene's lights: 0 removes it, values above 1 keep it more
+  /// often. Default 1; the froxel path ignores it.
+  void setRestirSamplingWeight(int entity, double weight) {
+    c.filament_light_set_restir_sampling_weight(engine.nativePointer, entity, weight);
+  }
+
   /// Gets the falloff distance of this light.
   double getFalloff(int entity) {
     return c.filament_light_get_falloff(engine.nativePointer, entity);

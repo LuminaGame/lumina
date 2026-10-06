@@ -651,6 +651,10 @@ A View encompasses all the state needed for rendering a Scene.  A View specifies
 | `transparentPickingEnabled` | `transparentPickingEnabled(bool enabled)` | `transparentPickingEnabled` işlemini gerçekleştirir. |
 | `transparentPickingEnabled` | `bool get transparentPickingEnabled` | `transparentPickingEnabled` özelliğinin anlık değerini okuyan getter erişimcisi. |
 | `pick` | `Future<PickingResult> pick(int x, int y)` | Picks a pixel on the screen and returns the rendered entity and depth at that pixel. Note: The coordinates (x, y) are based on a bottom-left origin. |
+| `restirOptions` | `RestirOptions restirOptions` (get/set) | Noktasal ışıklar için ReSTIR doğrudan aydınlatma; bkz. [ReSTIR doğrudan aydınlatma](restir.md). |
+| `restirSupported` | `bool get restirSupported` | Ray query var ve ReSTIR malzemeleri yüklü. |
+| `restirStats` | `RestirStats get restirStats` | Son ReSTIR karesinin ışık sayısı, kare başına ışın ve GPU süresi. |
+| `resetRestirHistory` | `void resetRestirHistory()` | ReSTIR zamansal geçmişini bırakır (kamera kesmeleri). |
 | `traceRay` | `Future<RayHit?> traceRay(double ox, double oy, double oz, double dx, double dy, double dz, {double maxDistance = 1.0e5})` | Bu view'ın bir sonraki karesinde sahnenin hızlandırma yapılarına karşı tek bir görünürlük ışını izler, `pick` gibi; ıskalamada ya da ışın izleme yokken `null` (bkz. [Işın izleme](ray-tracing.md)). |
 | `dispose` | `void dispose()` | Destroys this view and releases its resources. |
 | `isDisposed` | `bool get isDisposed` | Mevcut durumun veya yeteneğin doğruluğunu kontrol eder (`bool` döndürür). |

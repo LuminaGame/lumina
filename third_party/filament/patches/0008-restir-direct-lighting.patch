@@ -1,0 +1,1456 @@
+diff --git a/filament/CMakeLists.txt b/filament/CMakeLists.txt
+index 2659ccb7..a8ca1e52 100644
+--- a/filament/CMakeLists.txt
++++ b/filament/CMakeLists.txt
+@@ -330,6 +330,9 @@ if (FILAMENT_SUPPORTS_VULKAN)
+     set(MATERIAL_VULKAN_SRCS
+         src/materials/rt/rtShadow.mat
+         src/materials/rt/rayVisibility.mat
++        src/materials/rt/restirCandidates.mat
++        src/materials/rt/restirSpatial.mat
++        src/materials/rt/restirShade.mat
+     )
+     list(APPEND MATERIAL_SRCS ${MATERIAL_VULKAN_SRCS})
+     set_source_files_properties(src/materials/rt/rt.cpp PROPERTIES COMPILE_DEFINITIONS FILAMENT_RAY_QUERY_MATERIALS)
+diff --git a/filament/include/filament/LightManager.h b/filament/include/filament/LightManager.h
+index 797890e8..b39b014e 100644
+--- a/filament/include/filament/LightManager.h
++++ b/filament/include/filament/LightManager.h
+@@ -963,6 +963,18 @@ public:
+      */
+     float getFalloff(Instance i) const noexcept;
+ 
++    /**
++     * Scales how much ReSTIR direct lighting favours this light when it resamples the scene's
++     * lights (RestirOptions). 0 removes the light from ReSTIR shading, values above 1 make it
++     * more likely to be kept. Default 1. Ignored by the froxel path.
++     * @param i      Instance of the component obtained from getInstance().
++     * @param weight the sampling weight, clamped to 0 or more
++     */
++    void setRestirSamplingWeight(Instance i, float weight) noexcept;
++
++    /** @return the ReSTIR sampling weight of this light (default 1) */
++    float getRestirSamplingWeight(Instance i) const noexcept;
++
+     /**
+      * Dynamically updates a spot light's cone as angles
+      *
+diff --git a/filament/include/filament/Options.h b/filament/include/filament/Options.h
+index b60ba56b..8413d8fe 100644
+--- a/filament/include/filament/Options.h
++++ b/filament/include/filament/Options.h
+@@ -880,6 +880,32 @@ struct StereoscopicOptions {
+     bool enabled = false;
+ };
+ 
++/**
++ * Options for ReSTIR direct lighting.
++ *
++ * When enabled on a device with ray query support (Engine::isRayQuerySupported()) and a scene
++ * that keeps its acceleration structures (Scene::setRayTracingEnabled()), the punctual lights
++ * are no longer evaluated per froxel. Every pixel keeps a reservoir of candidate lights
++ * resampled from the whole scene (initialCandidates per frame), reuses the previous frame's
++ * reservoir (temporal) and its neighbours' (spatialSamples within spatialRadiusPx), traces one
++ * visibility ray to the surviving light (visibilityRays) and shades that light alone with the
++ * material's BRDF. The cost is nearly independent of the light count and every light casts a
++ * hard ray-traced shadow. Directional lights and image-based lighting keep their own paths;
++ * transparent surfaces are not shaded by ReSTIR. Without support the froxel path renders.
++ *
++ * @see View::setRestirOptions, LightManager::setRestirSamplingWeight
++ */
++struct RestirOptions {
++    bool enabled = false;               //!< use ReSTIR for the punctual lights
++    uint8_t initialCandidates = 8;      //!< lights sampled per pixel and frame before reuse
++    uint8_t spatialSamples = 2;         //!< neighbouring reservoirs merged per pixel (0 disables)
++    float spatialRadiusPx = 32.0f;      //!< radius of the neighbourhood, in pixels
++    bool temporal = true;               //!< reuse the previous frame's reservoir
++    uint8_t maxHistory = 20;            //!< how many frames of history one reservoir may weigh
++    bool visibilityRays = true;         //!< trace a visibility ray to the chosen light
++    bool shadeEmissive = false;         //!< reserved: emissive triangles as lights (not implemented)
++};
++
+ } // namespace filament
+ 
+ #endif //TNT_FILAMENT_OPTIONS_H
+diff --git a/filament/include/filament/View.h b/filament/include/filament/View.h
+index 650da732..6fad9b9b 100644
+--- a/filament/include/filament/View.h
++++ b/filament/include/filament/View.h
+@@ -134,6 +134,7 @@ public:
+     using VsmShadowOptions = filament::VsmShadowOptions;
+     using SoftShadowOptions = filament::SoftShadowOptions;
+     using ScreenSpaceReflectionsOptions = filament::ScreenSpaceReflectionsOptions;
++    using RestirOptions = filament::RestirOptions;
+     using GuardBandOptions = filament::GuardBandOptions;
+     using StereoscopicOptions = filament::StereoscopicOptions;
+ 
+@@ -426,6 +427,39 @@ public:
+      */
+     TemporalAntiAliasingOptions const& getTemporalAntiAliasingOptions() const noexcept;
+ 
++    /**
++     * Enables or disables ReSTIR direct lighting for the punctual lights. Disabled by default.
++     * @param options ReSTIR options
++     * @see RestirOptions
++     */
++    void setRestirOptions(RestirOptions options) noexcept;
++
++    /** @return the ReSTIR options */
++    RestirOptions const& getRestirOptions() const noexcept;
++
++    /**
++     * Whether this engine can run ReSTIR direct lighting: ray queries are available and the
++     * ray query materials are loaded. The scene must also keep its acceleration structures.
++     */
++    bool isRestirSupported() const noexcept;
++
++    /** Counters of the last frame rendered with ReSTIR direct lighting. */
++    struct RestirStats {
++        uint32_t lightCount = 0;            //!< punctual lights in the light buffer
++        uint32_t emissiveTriangleCount = 0; //!< always 0 (emissive lights are not implemented)
++        uint32_t raysPerFrame = 0;          //!< visibility rays traced last frame
++        uint64_t gpuNanos = 0;              //!< GPU time of the ReSTIR passes last measured
++    };
++
++    /** @return the counters of the last ReSTIR frame (zeros while it is off or unsupported) */
++    RestirStats getRestirStats() const noexcept;
++
++    /**
++     * Drops the ReSTIR temporal history: the next frame starts resampling from scratch (camera
++     * cuts, teleports).
++     */
++    void resetRestirHistory() noexcept;
++
+     /**
+      * Enables or disable screen-space reflections. Disabled by default.
+      *
+diff --git a/filament/src/FrameHistory.h b/filament/src/FrameHistory.h
+index 749b6e56..6b9a38a3 100644
+--- a/filament/src/FrameHistory.h
++++ b/filament/src/FrameHistory.h
+@@ -48,6 +48,12 @@ struct FrameHistoryEntry {
+         math::mat4f clipFromWorld;
+         bool valid = false;
+     } velocity;
++    // ReSTIR direct lighting: the reservoirs after spatial reuse and the matrix that frame used
++    struct {
++        FrameGraphTexture reservoir;
++        FrameGraphTexture::Descriptor desc;
++        math::mat4 clipFromWorld;
++    } restir;
+ };
+ 
+ /*
+diff --git a/filament/src/LightManager.cpp b/filament/src/LightManager.cpp
+index 62ba46f5..dd0d0b95 100644
+--- a/filament/src/LightManager.cpp
++++ b/filament/src/LightManager.cpp
+@@ -106,6 +106,14 @@ float LightManager::getFalloff(Instance const i) const noexcept {
+     return downcast(this)->getFalloff(i);
+ }
+ 
++void LightManager::setRestirSamplingWeight(Instance const i, float const weight) noexcept {
++    downcast(this)->setRestirSamplingWeight(i, weight);
++}
++
++float LightManager::getRestirSamplingWeight(Instance const i) const noexcept {
++    return downcast(this)->getRestirSamplingWeight(i);
++}
++
+ void LightManager::setSpotLightCone(Instance const i, float const inner, float const outer) noexcept {
+     downcast(this)->setSpotLightCone(i, inner, outer);
+ }
+diff --git a/filament/src/PostProcessManager.cpp b/filament/src/PostProcessManager.cpp
+index ffe76604..67da90ef 100644
+--- a/filament/src/PostProcessManager.cpp
++++ b/filament/src/PostProcessManager.cpp
+@@ -304,6 +304,190 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::rayTracedShadows(FrameGraph&
+     return pass->mask;
+ }
+ 
++FrameGraphId<FrameGraphTexture> PostProcessManager::restir(FrameGraph& fg,
++        FrameGraphId<FrameGraphTexture> const depth, CameraInfo const& cameraInfo,
++        FView& view, FrameHistory& frameHistory) noexcept {
++
++    RestirOptions const& options = view.getRestirOptions();
++    FView::RestirState& state = view.getRestirState();
++    auto const& previous = frameHistory.getPrevious().restir;
++    auto& current = frameHistory.getCurrent().restir;
++
++    // the GPU time of the previous frame's passes, once its timer resolved
++    if (state.timerPending && state.timer) {
++        uint64_t nanos = 0;
++        auto const result = mEngine.getDriverApi().getTimerQueryValue(state.timer, &nanos);
++        if (result == TimerQueryResult::AVAILABLE) {
++            state.gpuNanos = nanos;
++            state.timerPending = false;
++        } else if (result == TimerQueryResult::ERROR) {
++            state.timerPending = false;
++        }
++    }
++    if (!state.timer) {
++        state.timer = mEngine.getDriverApi().createTimerQuery();
++    }
++    bool const timeThisFrame = !state.timerPending;
++    state.frame++;
++
++    bool const historyValid = options.temporal && !state.resetHistory && previous.reservoir.handle;
++    state.resetHistory = false;
++    FrameGraphId<FrameGraphTexture> history;
++    if (historyValid) {
++        history = fg.import("ReSTIR history", previous.desc,
++                FrameGraphTexture::Usage::SAMPLEABLE, previous.reservoir);
++    }
++    math::mat4 const clipFromWorld = math::mat4(cameraInfo.projection) * math::mat4(cameraInfo.view);
++    math::mat4 const worldFromClip = math::mat4(cameraInfo.model) * inverse(math::mat4(cameraInfo.projection));
++    math::mat4 const prevClipFromWorld = historyValid ? previous.clipFromWorld : clipFromWorld;
++    current.clipFromWorld = clipFromWorld;
++    // the acceleration structures hold true world transforms; the camera lives in the world
++    // shifted by cameraInfo.worldTransform (a translation)
++    math::float3 const trueWorldOffset = math::float3(
++            (inverse(cameraInfo.worldTransform) * math::double4(0.0, 0.0, 0.0, 1.0)).xyz);
++    Handle<HwTexture> const lightTexture = state.lightTexture;
++    uint32_t const lightCount = state.lightCount;
++
++    struct CandidatesData {
++        FrameGraphId<FrameGraphTexture> depth;
++        FrameGraphId<FrameGraphTexture> history;
++        FrameGraphId<FrameGraphTexture> output;
++    };
++    auto const& candidates = fg.addPass<CandidatesData>("ReSTIR candidates",
++            [&](FrameGraph::Builder& builder, auto& data) {
++                auto const& desc = fg.getDescriptor(depth);
++                data.depth = builder.sample(depth);
++                if (history) {
++                    data.history = builder.sample(history);
++                }
++                data.output = builder.createTexture("ReSTIR reservoirs", {
++                        .width = desc.width, .height = desc.height,
++                        .format = TextureFormat::RGBA32F });
++                data.output = builder.declareRenderPass(data.output);
++            },
++            [=, this, &state](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
++                if (timeThisFrame) {
++                    driver.beginTimerQuery(state.timer);
++                }
++                mRayQueryDescriptorSet.bind(driver);
++                bindPerRenderableDescriptorSet(driver);
++                auto const& desc = resources.getDescriptor(data.depth);
++                auto const& out = resources.getRenderPassInfo();
++                auto const& material = getPostProcessMaterial("restirCandidates");
++                FMaterialInstance* const mi = getMaterialInstance(mEngine, driver, material);
++                mi->setParameter("depth", resources.getTexture(data.depth), SamplerParams{});
++                mi->setParameter("lights", lightTexture, SamplerParams{});
++                mi->setParameter("history", data.history ? resources.getTexture(data.history) : mEngine.getZeroTexture(), SamplerParams{});
++                mi->setParameter("worldFromClip", math::mat4f(worldFromClip));
++                mi->setParameter("prevClipFromWorld", math::mat4f(prevClipFromWorld));
++                mi->setParameter("resolution", math::float4{ float(desc.width), float(desc.height),
++                        1.0f / float(desc.width), 1.0f / float(desc.height) });
++                mi->setParameter("cameraPosition", cameraInfo.getPosition());
++                mi->setParameter("lightCount", int32_t(lightCount));
++                mi->setParameter("candidates", int32_t(options.initialCandidates));
++                mi->setParameter("temporal", int32_t(options.temporal ? 1 : 0));
++                mi->setParameter("historyValid", int32_t(data.history ? 1 : 0));
++                mi->setParameter("frame", int32_t(state.frame));
++                mi->setParameter("maxHistory", float(options.maxHistory));
++                commitAndRenderFullScreenQuad(driver, out, mi);
++                unbindAllDescriptorSets(driver);
++            });
++
++    FrameGraphId<FrameGraphTexture> reservoirs = candidates->output;
++    if (options.spatialSamples > 0) {
++        struct SpatialData {
++            FrameGraphId<FrameGraphTexture> depth;
++            FrameGraphId<FrameGraphTexture> input;
++            FrameGraphId<FrameGraphTexture> output;
++        };
++        auto const& spatial = fg.addPass<SpatialData>("ReSTIR spatial reuse",
++                [&](FrameGraph::Builder& builder, auto& data) {
++                    auto const& desc = fg.getDescriptor(depth);
++                    data.depth = builder.sample(depth);
++                    data.input = builder.sample(reservoirs);
++                    data.output = builder.createTexture("ReSTIR reservoirs (spatial)", {
++                            .width = desc.width, .height = desc.height,
++                            .format = TextureFormat::RGBA32F });
++                    data.output = builder.declareRenderPass(data.output);
++                },
++                [=, this, &state](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
++                    mRayQueryDescriptorSet.bind(driver);
++                    bindPerRenderableDescriptorSet(driver);
++                    auto const& desc = resources.getDescriptor(data.depth);
++                    auto const& out = resources.getRenderPassInfo();
++                    auto const& material = getPostProcessMaterial("restirSpatial");
++                    FMaterialInstance* const mi = getMaterialInstance(mEngine, driver, material);
++                    mi->setParameter("depth", resources.getTexture(data.depth), SamplerParams{});
++                    mi->setParameter("lights", lightTexture, SamplerParams{});
++                    mi->setParameter("reservoirs", resources.getTexture(data.input), SamplerParams{});
++                    mi->setParameter("worldFromClip", math::mat4f(worldFromClip));
++                    mi->setParameter("resolution", math::float4{ float(desc.width), float(desc.height),
++                            1.0f / float(desc.width), 1.0f / float(desc.height) });
++                    mi->setParameter("cameraPosition", cameraInfo.getPosition());
++                    mi->setParameter("samples", int32_t(options.spatialSamples));
++                    mi->setParameter("frame", int32_t(state.frame));
++                    mi->setParameter("radius", options.spatialRadiusPx);
++                    commitAndRenderFullScreenQuad(driver, out, mi);
++                    unbindAllDescriptorSets(driver);
++                });
++        reservoirs = spatial->output;
++    }
++
++    struct ShadeData {
++        FrameGraphId<FrameGraphTexture> depth;
++        FrameGraphId<FrameGraphTexture> input;
++        FrameGraphId<FrameGraphTexture> output;
++    };
++    auto const& shade = fg.addPass<ShadeData>("ReSTIR visibility",
++            [&](FrameGraph::Builder& builder, auto& data) {
++                auto const& desc = fg.getDescriptor(depth);
++                data.depth = builder.sample(depth);
++                data.input = builder.sample(reservoirs);
++                data.output = builder.createTexture("ReSTIR shading", {
++                        .width = desc.width, .height = desc.height,
++                        .format = TextureFormat::RGBA32F });
++                data.output = builder.declareRenderPass(data.output);
++            },
++            [=, this, &state](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
++                mRayQueryDescriptorSet.bind(driver);
++                bindPerRenderableDescriptorSet(driver);
++                auto const& desc = resources.getDescriptor(data.depth);
++                auto const& out = resources.getRenderPassInfo();
++                auto const& material = getPostProcessMaterial("restirShade");
++                FMaterialInstance* const mi = getMaterialInstance(mEngine, driver, material);
++                mi->setParameter("depth", resources.getTexture(data.depth), SamplerParams{});
++                mi->setParameter("lights", lightTexture, SamplerParams{});
++                mi->setParameter("reservoirs", resources.getTexture(data.input), SamplerParams{});
++                mi->setParameter("worldFromClip", math::mat4f(worldFromClip));
++                mi->setParameter("resolution", math::float4{ float(desc.width), float(desc.height),
++                        1.0f / float(desc.width), 1.0f / float(desc.height) });
++                mi->setParameter("cameraPosition", cameraInfo.getPosition());
++                mi->setParameter("trueWorldOffset", trueWorldOffset);
++                mi->setParameter("visibilityRays", int32_t(options.visibilityRays ? 1 : 0));
++                mi->setParameter("bias", std::max(0.002f, cameraInfo.zn * 0.5f));
++                commitAndRenderFullScreenQuad(driver, out, mi);
++                unbindAllDescriptorSets(driver);
++                if (timeThisFrame) {
++                    driver.endTimerQuery(state.timer);
++                    state.timerPending = true;
++                }
++            });
++
++    // the reservoirs after reuse become next frame's history
++    struct ExportData {
++        FrameGraphId<FrameGraphTexture> reservoirs;
++    };
++    fg.addPass<ExportData>("Export ReSTIR history",
++            [&](FrameGraph::Builder& builder, auto& data) {
++                builder.sideEffect();
++                data.reservoirs = builder.sample(reservoirs);
++            }, [&current](FrameGraphResources const& resources, auto const& data) {
++                resources.detach(data.reservoirs, &current.reservoir, &current.desc);
++            });
++
++    return shade->output;
++}
++
+ void PostProcessManager::rayQueries(FrameGraph& fg, FView& view) noexcept {
+     FView::FRayQuery* list = view.takeRayQueries();
+     while (list) {
+diff --git a/filament/src/PostProcessManager.h b/filament/src/PostProcessManager.h
+index 436220fd..7b640824 100644
+--- a/filament/src/PostProcessManager.h
++++ b/filament/src/PostProcessManager.h
+@@ -427,6 +427,13 @@ public:
+     // Answers the view's pending View::traceRay() queries: one 1x1 pass each, read back.
+     void rayQueries(FrameGraph& fg, FView& view) noexcept;
+ 
++    // ReSTIR direct lighting: initial candidates + temporal reuse, spatial reuse, visibility.
++    // Returns the (light index, W, visibility) texture the colour pass shades with and keeps the
++    // reservoirs in the frame history for the next frame.
++    FrameGraphId<FrameGraphTexture> restir(FrameGraph& fg,
++            FrameGraphId<FrameGraphTexture> depth, CameraInfo const& cameraInfo,
++            FView& view, FrameHistory& frameHistory) noexcept;
++
+     void bindPerRenderableDescriptorSet(backend::DriverApi& driver) const noexcept;
+ 
+     backend::PipelineState getPipelineState(FMaterialInstance const* mi,
+diff --git a/filament/src/RendererUtils.cpp b/filament/src/RendererUtils.cpp
+index ed4a3d36..fc41e5b6 100644
+--- a/filament/src/RendererUtils.cpp
++++ b/filament/src/RendererUtils.cpp
+@@ -72,6 +72,7 @@ RendererUtils::ColorPassOutput RendererUtils::colorPass(
+         FrameGraphId<FrameGraphTexture> ssr;    // either screen-space reflections or refractions
+         FrameGraphId<FrameGraphTexture> structure;
+         FrameGraphId<FrameGraphTexture> rtShadow;
++        FrameGraphId<FrameGraphTexture> restir;
+     };
+ 
+     auto& colorPass = fg.addPass<ColorPassData>(name,
+@@ -113,6 +114,11 @@ RendererUtils::ColorPassOutput RendererUtils::colorPass(
+                     data.rtShadow = builder.sample(data.rtShadow);
+                 }
+ 
++                data.restir = colorPassInput.restir;
++                if (data.restir) {
++                    data.restir = builder.sample(data.restir);
++                }
++
+                 if (!data.color) {
+                     data.color = builder.createTexture("Color Buffer", colorBufferDesc);
+                 }
+@@ -243,6 +249,11 @@ RendererUtils::ColorPassOutput RendererUtils::colorPass(
+                 view.prepareRayTracedShadows(data.rtShadow ?
+                         resources.getTexture(data.rtShadow) : engine.getOneTexture());
+ 
++                // ReSTIR reservoirs and light buffer (zero textures, mode 0 when off)
++                view.prepareRestir(engine,
++                        data.restir ? resources.getTexture(data.restir) : Handle<HwTexture>{},
++                        bool(data.restir));
++
+                 // set shadow sampler
+                 view.prepareShadowMapping(engine, shadows);
+ 
+diff --git a/filament/src/RendererUtils.h b/filament/src/RendererUtils.h
+index 2c3a4327..8076e01e 100644
+--- a/filament/src/RendererUtils.h
++++ b/filament/src/RendererUtils.h
+@@ -88,6 +88,7 @@ public:
+         FrameGraphId<FrameGraphTexture> ssr;
+         FrameGraphId<FrameGraphTexture> structure;
+         FrameGraphId<FrameGraphTexture> rtShadow;
++        FrameGraphId<FrameGraphTexture> restir;
+     };
+     struct ColorPassOutput {
+         FrameGraphId<FrameGraphTexture> linearColor;
+diff --git a/filament/src/View.cpp b/filament/src/View.cpp
+index ccdc982e..d2861d6f 100644
+--- a/filament/src/View.cpp
++++ b/filament/src/View.cpp
+@@ -140,6 +140,26 @@ void View::setTemporalAntiAliasingOptions(TemporalAntiAliasingOptions options) n
+     downcast(this)->setTemporalAntiAliasingOptions(options);
+ }
+ 
++void View::setRestirOptions(RestirOptions const options) noexcept {
++    downcast(this)->setRestirOptions(options);
++}
++
++View::RestirOptions const& View::getRestirOptions() const noexcept {
++    return downcast(this)->getRestirOptions();
++}
++
++bool View::isRestirSupported() const noexcept {
++    return downcast(this)->isRestirSupported();
++}
++
++View::RestirStats View::getRestirStats() const noexcept {
++    return downcast(this)->getRestirStats();
++}
++
++void View::resetRestirHistory() noexcept {
++    downcast(this)->resetRestirHistory();
++}
++
+ const View::TemporalAntiAliasingOptions& View::getTemporalAntiAliasingOptions() const noexcept {
+     return downcast(this)->getTemporalAntiAliasingOptions();
+ }
+diff --git a/filament/src/components/LightManager.cpp b/filament/src/components/LightManager.cpp
+index b01a80b9..e165d244 100644
+--- a/filament/src/components/LightManager.cpp
++++ b/filament/src/components/LightManager.cpp
+@@ -202,6 +202,7 @@ void FLightManager::create(const Builder& builder, Entity const entity) {
+         lightType.lightCaster = builder->mCastLight;
+ 
+         mManager[i].channels = builder->mChannels;
++        mManager[i].restirWeight = 1.0f;
+ 
+         // set default values by calling the setters
+         setShadowOptions(i, builder->mShadowOptions);
+@@ -414,6 +415,12 @@ void FLightManager::setIntensity(Instance const i, float const intensity, Intens
+     }
+ }
+ 
++void FLightManager::setRestirSamplingWeight(Instance const i, float const weight) noexcept {
++    if (i) {
++        mManager[i].restirWeight = std::max(0.0f, weight);
++    }
++}
++
+ void FLightManager::setFalloff(Instance const i, float const falloff) noexcept {
+     auto& manager = mManager;
+     if (i && !isDirectionalLight(i)) {
+diff --git a/filament/src/components/LightManager.h b/filament/src/components/LightManager.h
+index a5f2d79a..8a300c7f 100644
+--- a/filament/src/components/LightManager.h
++++ b/filament/src/components/LightManager.h
+@@ -222,6 +222,12 @@ public:
+         return mManager[i].squaredFallOffInv;
+     }
+ 
++    float getRestirSamplingWeight(Instance const i) const noexcept {
++        return mManager[i].restirWeight;
++    }
++
++    void setRestirSamplingWeight(Instance i, float weight) noexcept;
++
+     float getFalloff(Instance const i) const noexcept {
+         return getRadius(i);
+     }
+@@ -280,6 +286,7 @@ private:
+         INTENSITY,
+         FALLOFF,
+         CHANNELS,
++        RESTIR_WEIGHT,      // sampling weight for ReSTIR direct lighting
+     };
+ 
+     using Base = utils::SingleInstanceComponentManager<  // 120 bytes
+@@ -294,7 +301,8 @@ private:
+             float,          //  4
+             float,          //  4
+             float,          //  4
+-            uint8_t         //  1
++            uint8_t,        //  1
++            float           //  4
+     >;
+ 
+     struct Sim : public Base {
+@@ -322,6 +330,7 @@ private:
+                 Field<INTENSITY>            intensity;
+                 Field<FALLOFF>              squaredFallOffInv;
+                 Field<CHANNELS>             channels;
++                Field<RESTIR_WEIGHT>        restirWeight;
+             };
+         };
+ 
+diff --git a/filament/src/details/Renderer.cpp b/filament/src/details/Renderer.cpp
+index 5314c784..a730fed1 100644
+--- a/filament/src/details/Renderer.cpp
++++ b/filament/src/details/Renderer.cpp
+@@ -994,6 +994,11 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+         view.failRayQueries();
+     }
+     bool const rayTracedShadows = rayTracing && view.hasRayTracedDirectionalShadows();
++    // ReSTIR direct lighting needs the acceleration structures and at least one punctual light
++    RestirOptions const& restirOptions = view.getRestirOptions();
++    bool const restir = rayTracing && restirOptions.enabled && view.getRestirState().lightCount > 0;
++    view.getRestirState().raysPerFrame = (restir && restirOptions.visibilityRays) ?
++            uint32_t(svp.width) * uint32_t(svp.height) : 0u;
+     // There might be a bug here with svp's origin; normally the origin could offset when the
+     // target is the swapchain (width/height are the same though). This would mean that we'd have
+     // to wait for the color pass to execute to set the viewport. For now, I wasn't able to
+@@ -1017,7 +1022,7 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+             && engine.getSupportedFeatureLevel() != FeatureLevel::FEATURE_LEVEL_0
+             && driver.isRenderTargetFormatSupported(TextureFormat::RG16F);
+     // the ray-traced shadow mask is traced from the structure depth, at the colour pass's resolution
+-    float const structureScale = (motionVectors || rayTracedShadows) ? 1.0f : aoOptions.resolution;
++    float const structureScale = (motionVectors || rayTracedShadows || restir) ? 1.0f : aoOptions.resolution;
+ 
+     { // the scope helps to guarantee that we're not modifying the descriptor-set later
+         StructureDescriptorSet& ds = ppm.getStructureDescriptorSet();
+@@ -1244,6 +1249,9 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+     if (rayTracing && view.hasRayQueries()) {
+         ppm.rayQueries(fg, view);
+     }
++    if (restir) {
++        blackboard["restir"] = ppm.restir(fg, structure, cameraInfo, view, view.getFrameHistory());
++    }
+ 
+     // --------------------------------------------------------------------------------------------
+     // screen-space reflections pass
+@@ -1422,7 +1430,8 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+                 .ssao = blackboard.get<FrameGraphTexture>("ssao"),
+                 .ssr = ssrConfig.ssr,
+                 .structure = structure,
+-                .rtShadow = blackboard.get<FrameGraphTexture>("rtShadow")
++                .rtShadow = blackboard.get<FrameGraphTexture>("rtShadow"),
++                .restir = blackboard.get<FrameGraphTexture>("restir")
+             },
+             colorBufferDesc, config, colorGradingConfigForColor, pass.getExecutor());
+ 
+@@ -1434,7 +1443,8 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+                         .ssao = blackboard.get<FrameGraphTexture>("ssao"),
+                         .ssr = ssrConfig.ssr,
+                 .structure = structure,
+-                .rtShadow = blackboard.get<FrameGraphTexture>("rtShadow")
++                .rtShadow = blackboard.get<FrameGraphTexture>("rtShadow"),
++                .restir = blackboard.get<FrameGraphTexture>("restir")
+             }, config, ssrConfig, colorGradingConfigForColor,
+              pass, firstRefractionCommand);
+     }
+diff --git a/filament/src/details/View.cpp b/filament/src/details/View.cpp
+index 6eb34c54..aed17870 100644
+--- a/filament/src/details/View.cpp
++++ b/filament/src/details/View.cpp
+@@ -108,6 +108,7 @@ FView::FView(FEngine& engine)
+           mSharedState(std::make_shared<SharedState>())
+ {
+     DriverApi& driver = engine.getDriverApi();
++    mRestirSupported = engine.isRayQuerySupported() && engine.getPostProcessManager().hasRayQueryMaterials();
+ 
+     mIsHighPrecisionEvsmSupported = driver.isTextureFormatFilterable(TextureFormat::RGBA32F);
+ 
+@@ -242,6 +243,14 @@ void FView::terminate(FEngine& engine) {
+     failRayQueries();
+ 
+     DriverApi& driver = engine.getDriverApi();
++    if (mRestir.lightTexture) {
++        driver.destroyTexture(mRestir.lightTexture);
++        mRestir.lightTexture = {};
++    }
++    if (mRestir.timer) {
++        driver.destroyTimerQuery(mRestir.timer);
++        mRestir.timer = {};
++    }
+     driver.destroyBufferObject(mLightUbh);
+     driver.destroyBufferObject(mRenderableUbh);
+     clearFrameHistory(engine);
+@@ -786,6 +795,11 @@ void FView::prepare(FEngine& engine, DriverApi& driver, LinearAllocatorArena& ar
+     JobSystem::Job* froxelizeLightsJob = nullptr;
+     JobSystem::Job* prepareVisibleLightsJob = nullptr;
+     size_t const lightCount = mSceneCache->lightData.size();
++    if (mRestirOptions.enabled && engine.isRayQuerySupported()) {
++        prepareRestirLights(engine, mSceneCache->lightData);
++    } else {
++        mRestir.lightCount = 0;
++    }
+     if (lightCount > FScene::DIRECTIONAL_LIGHTS_COUNT) {
+         // create and start the prepareVisibleLights job
+         // note: this job updates LightData (non const)
+@@ -1567,6 +1581,7 @@ void FView::commitFrameHistory(FEngine& engine) noexcept {
+     FrameHistoryEntry& last = frameHistory.back();
+     disposer.destroy(std::move(last.taa.color.handle));
+     disposer.destroy(std::move(last.ssr.color.handle));
++    disposer.destroy(std::move(last.restir.reservoir.handle));
+ 
+     // and then push the new history entry to the history stack
+     frameHistory.commit();
+@@ -1580,6 +1595,7 @@ void FView::clearFrameHistory(FEngine& engine) noexcept {
+         FrameHistoryEntry& last = frameHistory[i];
+         disposer.destroy(std::move(last.taa.color.handle));
+         disposer.destroy(std::move(last.ssr.color.handle));
++        disposer.destroy(std::move(last.restir.reservoir.handle));
+     }
+ }
+ 
+@@ -1642,6 +1658,70 @@ void FView::clearPickingQueries() noexcept {
+     }
+ }
+ 
++void FView::setRestirOptions(RestirOptions options) noexcept {
++    options.initialCandidates = std::max<uint8_t>(1, options.initialCandidates);
++    options.spatialRadiusPx = std::max(0.0f, options.spatialRadiusPx);
++    options.maxHistory = std::max<uint8_t>(1, options.maxHistory);
++    if (options.enabled != mRestirOptions.enabled) {
++        mRestir.resetHistory = true;
++    }
++    mRestirOptions = options;
++}
++
++bool FView::isRestirSupported() const noexcept {
++    return mRestirSupported;
++}
++
++void FView::prepareRestirLights(FEngine& engine, FScene::LightSoa const& lightData) noexcept {
++    using namespace backend;
++    DriverApi& driver = engine.getDriverApi();
++    FLightManager const& lcm = engine.getLightManager();
++    size_t const total = lightData.size();
++    uint32_t const count = total > FScene::DIRECTIONAL_LIGHTS_COUNT ?
++            uint32_t(total - FScene::DIRECTIONAL_LIGHTS_COUNT) : 0u;
++    mRestir.lightCount = count;
++    if (count == 0) {
++        return;
++    }
++    // four RGBA32F texels per light: (position, 1/falloff^2), (direction, type),
++    // (colour, intensity), (spot scale, spot offset, sampling weight, channels)
++    if (!mRestir.lightTexture || count > mRestir.lightCapacity) {
++        if (mRestir.lightTexture) {
++            driver.destroyTexture(mRestir.lightTexture);
++        }
++        mRestir.lightCapacity = std::max<uint32_t>(64u, count * 2u);
++        mRestir.lightTexture = driver.createTexture(SamplerType::SAMPLER_2D, 1,
++                TextureFormat::RGBA32F, 1, 4, mRestir.lightCapacity, 1,
++                TextureUsage::SAMPLEABLE | TextureUsage::UPLOADABLE);
++    }
++    size_t const bytes = size_t(count) * 4 * sizeof(math::float4);
++    auto* const texels = static_cast<math::float4*>(::malloc(bytes));
++    auto const* const spheres = lightData.data<FScene::POSITION_RADIUS>();
++    auto const* const directions = lightData.data<FScene::DIRECTION>();
++    auto const* const entities = lightData.data<FScene::LIGHT_ENTITY>();
++    for (uint32_t i = 0; i < count; i++) {
++        size_t const li = i + FScene::DIRECTIONAL_LIGHTS_COUNT;
++        auto const instance = lcm.getInstance(entities[li]);
++        auto const& spot = lcm.getSpotParams(instance);
++        texels[i * 4 + 0] = { spheres[li].xyz, lcm.getSquaredFalloffInv(instance) };
++        texels[i * 4 + 1] = { directions[li], lcm.isPointLight(instance) ? 0.0f : 1.0f };
++        texels[i * 4 + 2] = { lcm.getColor(instance), lcm.getIntensity(instance) };
++        texels[i * 4 + 3] = { spot.scaleOffset.x, spot.scaleOffset.y,
++                lcm.getRestirSamplingWeight(instance), float(lcm.getLightChannels(instance)) };
++    }
++    driver.update3DImage(mRestir.lightTexture, 0, 0, 0, 0, 4, count, 1,
++            PixelBufferDescriptor(texels, bytes, PixelDataFormat::RGBA, PixelDataType::FLOAT,
++                    [](void* buffer, size_t, void*) { ::free(buffer); }));
++}
++
++void FView::prepareRestir(FEngine& engine, Handle<HwTexture> const reservoir, bool const active) const noexcept {
++    Handle<HwTexture> const zero = engine.getZeroTexture();
++    getColorPassDescriptorSet().prepareRestir(
++            active && reservoir ? reservoir : zero,
++            active && mRestir.lightTexture ? mRestir.lightTexture : zero,
++            active);
++}
++
+ void FView::setTemporalAntiAliasingOptions(TemporalAntiAliasingOptions options) noexcept {
+     options.feedback = clamp(options.feedback, 0.0f, 1.0f);
+     options.filterWidth = std::max(0.2f, options.filterWidth); // below 0.2 causes issues
+diff --git a/filament/src/details/View.h b/filament/src/details/View.h
+index 3fcbfe05..fa1f3b18 100644
+--- a/filament/src/details/View.h
++++ b/filament/src/details/View.h
+@@ -359,6 +359,36 @@ public:
+ 
+     void setMultiSampleAntiAliasingOptions(MultiSampleAntiAliasingOptions options) noexcept;
+ 
++    // ReSTIR direct lighting (View::setRestirOptions)
++    void setRestirOptions(RestirOptions options) noexcept;
++    RestirOptions const& getRestirOptions() const noexcept { return mRestirOptions; }
++    bool isRestirSupported() const noexcept;
++    RestirStats getRestirStats() const noexcept {
++        return { mRestir.lightCount, 0u, mRestir.raysPerFrame, mRestir.gpuNanos };
++    }
++    void resetRestirHistory() noexcept { mRestir.resetHistory = true; }
++
++    // The per-frame state of ReSTIR: the light buffer (an RGBA32F texture, four texels per
++    // light), the timer query of the passes and the counters View::getRestirStats reports.
++    struct RestirState {
++        backend::Handle<backend::HwTexture> lightTexture;
++        uint32_t lightCapacity = 0;
++        uint32_t lightCount = 0;
++        uint32_t raysPerFrame = 0;
++        backend::Handle<backend::HwTimerQuery> timer;
++        bool timerPending = false;
++        uint64_t gpuNanos = 0;
++        bool resetHistory = true;
++        uint32_t frame = 0;
++    };
++    RestirState& getRestirState() noexcept { return mRestir; }
++    // Rebuilds the light buffer from the scene's punctual lights (all of them, not only the
++    // ones the froxelizer keeps); called from prepare() before the lights are culled.
++    void prepareRestirLights(FEngine& engine, FScene::LightSoa const& lightData) noexcept;
++    // Binds the reservoir and light textures the colour pass shades with (zero textures and
++    // mode 0 when ReSTIR is off this frame).
++    void prepareRestir(FEngine& engine, backend::Handle<backend::HwTexture> reservoir, bool active) const noexcept;
++
+     const MultiSampleAntiAliasingOptions& getMultiSampleAntiAliasingOptions() const noexcept {
+         return mMultiSampleAntiAliasingOptions;
+     }
+@@ -721,6 +751,9 @@ private:
+     FRayQuery* mActiveRayQueriesList = nullptr;
+     mutable bool mRayTracedDirectionalShadows = false;
+     mutable math::float3 mRayTracedLightDirection{ 0.0f, 1.0f, 0.0f };
++    RestirOptions mRestirOptions;
++    RestirState mRestir;
++    bool mRestirSupported = false;
+ 
+     utils::CString mName;
+ 
+diff --git a/filament/src/ds/ColorPassDescriptorSet.cpp b/filament/src/ds/ColorPassDescriptorSet.cpp
+index 98e368dd..374cd8be 100644
+--- a/filament/src/ds/ColorPassDescriptorSet.cpp
++++ b/filament/src/ds/ColorPassDescriptorSet.cpp
+@@ -310,6 +310,13 @@ void ColorPassDescriptorSet::prepareRayTracedShadows(Handle<HwTexture> mask) noe
+     setSampler(+PerViewBindingPoints::RT_SHADOW, mask, {});
+ }
+ 
++void ColorPassDescriptorSet::prepareRestir(Handle<HwTexture> reservoir, Handle<HwTexture> lights,
++        bool const active) noexcept {
++    setSampler(+PerViewBindingPoints::RESTIR_RESERVOIR, reservoir, {});
++    setSampler(+PerViewBindingPoints::RESTIR_LIGHTS, lights, {});
++    mUniforms.edit().restirMode = active ? 1.0f : 0.0f;
++}
++
+ void ColorPassDescriptorSet::prepareDirectionalLight(FEngine& engine,
+         float exposure,
+         float3 const& sceneSpaceDirection,
+diff --git a/filament/src/ds/ColorPassDescriptorSet.h b/filament/src/ds/ColorPassDescriptorSet.h
+index ae354c78..5a0f83e3 100644
+--- a/filament/src/ds/ColorPassDescriptorSet.h
++++ b/filament/src/ds/ColorPassDescriptorSet.h
+@@ -103,6 +103,7 @@ public:
+             FIndirectLight const* ibl) noexcept;
+     void prepareStructure(TextureHandle structure) noexcept;
+     void prepareRayTracedShadows(TextureHandle mask) noexcept;
++    void prepareRestir(TextureHandle reservoir, TextureHandle lights, bool active) noexcept;
+     void prepareSSAO(TextureHandle ssao, AmbientOcclusionOptions const& options) noexcept;
+     void prepareBlending(bool needsAlphaChannel) noexcept;
+     void prepareMaterialGlobals(std::array<math::float4, 4> const& materialGlobals) noexcept;
+diff --git a/filament/src/materials/rt/restirCandidates.mat b/filament/src/materials/rt/restirCandidates.mat
+new file mode 100644
+index 00000000..8eaa8663
+--- /dev/null
++++ b/filament/src/materials/rt/restirCandidates.mat
+@@ -0,0 +1,192 @@
++material {
++    name : restirCandidates,
++    parameters : [
++        {
++            type : sampler2d,
++            name : depth,
++            precision: high,
++            filterable: false
++        },
++        {
++            type : sampler2d,
++            name : lights,
++            precision: high,
++            filterable: false
++        },
++        {
++            type : sampler2d,
++            name : history,
++            precision: high,
++            filterable: false
++        },
++        {
++            type : mat4,
++            name : worldFromClip,
++            precision: high
++        },
++        {
++            type : mat4,
++            name : prevClipFromWorld,
++            precision: high
++        },
++        {
++            type : float4,
++            name : resolution,
++            precision: high
++        },
++        {
++            type : float3,
++            name : cameraPosition,
++            precision: high
++        },
++        {
++            type : int,
++            name : lightCount
++        },
++        {
++            type : int,
++            name : candidates
++        },
++        {
++            type : int,
++            name : temporal
++        },
++        {
++            type : int,
++            name : historyValid
++        },
++        {
++            type : int,
++            name : frame
++        },
++        {
++            type : float,
++            name : maxHistory
++        }
++    ],
++    outputs : [
++        {
++            name : reservoir,
++            target : color,
++            type : float4
++        }
++    ],
++    domain : postprocess,
++    rayQuery : true,
++    depthWrite : false,
++    depthCulling : false
++}
++
++fragment {
++    // ReSTIR direct lighting, first pass: resampled importance sampling of the scene's
++    // punctual lights for every pixel of the structure depth, then temporal reuse of the
++    // previous frame's reservoir at the reprojected position. A reservoir texel holds
++    // (light index or -1, W, M, distance to the camera).
++
++    uint hashUint(uint x) {
++        x ^= x >> 16u;
++        x *= 0x7feb352du;
++        x ^= x >> 15u;
++        x *= 0x846ca68bu;
++        x ^= x >> 16u;
++        return x;
++    }
++
++    float nextRandom(inout uint seed) {
++        seed = hashUint(seed);
++        return float(seed & 0x00FFFFFFu) / 16777216.0;
++    }
++
++    highp vec3 worldPositionAt(ivec2 icoord, highp float depth) {
++        highp vec2 uv = (vec2(icoord) + 0.5) * materialParams.resolution.zw;
++        // window y grows downwards, NDC y upwards
++        highp vec4 clip = vec4(uv.x * 2.0 - 1.0, 1.0 - uv.y * 2.0, depth, 1.0);
++        highp vec4 world = materialParams.worldFromClip * clip;
++        return world.xyz / world.w;
++    }
++
++    // the unshadowed luminance the light would add to a diffuse surface at P with normal N,
++    // scaled by the light's sampling weight: the resampling target function
++    float targetPdf(int lightIndex, highp vec3 P, vec3 N) {
++        highp vec4 t0 = texelFetch(materialParams_lights, ivec2(0, lightIndex), 0);
++        highp vec4 t1 = texelFetch(materialParams_lights, ivec2(1, lightIndex), 0);
++        highp vec4 t2 = texelFetch(materialParams_lights, ivec2(2, lightIndex), 0);
++        highp vec4 t3 = texelFetch(materialParams_lights, ivec2(3, lightIndex), 0);
++        highp vec3 posToLight = t0.xyz - P;
++        highp float d2 = dot(posToLight, posToLight);
++        float factor = d2 * t0.w;
++        float smoothFactor = saturate(1.0 - factor * factor);
++        float attenuation = smoothFactor * smoothFactor / max(d2, 1e-4);
++        vec3 l = posToLight * inversesqrt(max(d2, 1e-8));
++        if (t1.w > 0.5) {
++            float cd = dot(-t1.xyz, l);
++            float angle = saturate(cd * t3.x + t3.y);
++            attenuation *= angle * angle;
++        }
++        float NoL = saturate(dot(N, l));
++        float luminance = dot(t2.rgb, vec3(0.2126, 0.7152, 0.0722)) * t2.w;
++        return luminance * attenuation * NoL * t3.z;
++    }
++
++    void postProcess(inout PostProcessInputs postProcess) {
++        ivec2 icoord = ivec2(gl_FragCoord.xy);
++        highp float depth = texelFetch(materialParams_depth, icoord, 0).r;
++        int lightCount = materialParams.lightCount;
++        if (depth <= 0.0 || lightCount <= 0) {
++            postProcess.reservoir = vec4(-1.0, 0.0, 0.0, 0.0);
++            return;
++        }
++        highp vec3 P = worldPositionAt(icoord, depth);
++        highp vec3 N = normalize(cross(dFdx(P), dFdy(P)));
++        highp vec3 toCamera = materialParams.cameraPosition - P;
++        if (dot(N, toCamera) < 0.0) N = -N;
++        highp float viewDistance = length(toCamera);
++
++        uint seed = hashUint(uint(icoord.x) * 1973u + uint(icoord.y) * 9277u + uint(materialParams.frame) * 26699u + 1u);
++
++        // initial candidates: uniform light selection, weighted by the target function
++        int selected = -1;
++        float selectedPdf = 0.0;
++        float weightSum = 0.0;
++        float M = 0.0;
++        int candidates = max(materialParams.candidates, 1);
++        for (int i = 0; i < candidates; i++) {
++            int j = min(int(nextRandom(seed) * float(lightCount)), lightCount - 1);
++            float pdf = targetPdf(j, P, N);
++            float w = pdf * float(lightCount);
++            weightSum += w;
++            M += 1.0;
++            if (w > 0.0 && nextRandom(seed) * weightSum < w) {
++                selected = j;
++                selectedPdf = pdf;
++            }
++        }
++
++        // temporal reuse: the previous frame's reservoir where this surface was
++        if (materialParams.temporal != 0 && materialParams.historyValid != 0) {
++            highp vec4 prevClip = materialParams.prevClipFromWorld * vec4(P, 1.0);
++            if (prevClip.w > 0.0) {
++                highp vec2 prevNdc = prevClip.xy / prevClip.w;
++                highp vec2 prevUv = vec2(prevNdc.x * 0.5 + 0.5, 0.5 - prevNdc.y * 0.5);
++                if (all(greaterThanEqual(prevUv, vec2(0.0))) && all(lessThan(prevUv, vec2(1.0)))) {
++                    ivec2 prevCoord = ivec2(prevUv * materialParams.resolution.xy);
++                    highp vec4 h = texelFetch(materialParams_history, prevCoord, 0);
++                    if (h.x >= 0.0 && h.z > 0.0 && abs(h.w - viewDistance) <= 0.1 * viewDistance) {
++                        float Mh = min(h.z, materialParams.maxHistory * max(M, 1.0));
++                        float pdf = targetPdf(int(h.x + 0.5), P, N);
++                        float w = pdf * h.y * Mh;
++                        weightSum += w;
++                        M += Mh;
++                        if (w > 0.0 && nextRandom(seed) * weightSum < w) {
++                            selected = int(h.x + 0.5);
++                            selectedPdf = pdf;
++                        }
++                    }
++                }
++            }
++        }
++
++        float W = (selected >= 0 && selectedPdf > 0.0) ? weightSum / (M * selectedPdf) : 0.0;
++        postProcess.reservoir = vec4(float(selected), W, M, viewDistance);
++    }
++}
+diff --git a/filament/src/materials/rt/restirShade.mat b/filament/src/materials/rt/restirShade.mat
+new file mode 100644
+index 00000000..56c91e3e
+--- /dev/null
++++ b/filament/src/materials/rt/restirShade.mat
+@@ -0,0 +1,108 @@
++material {
++    name : restirShade,
++    parameters : [
++        {
++            type : sampler2d,
++            name : depth,
++            precision: high,
++            filterable: false
++        },
++        {
++            type : sampler2d,
++            name : lights,
++            precision: high,
++            filterable: false
++        },
++        {
++            type : sampler2d,
++            name : reservoirs,
++            precision: high,
++            filterable: false
++        },
++        {
++            type : mat4,
++            name : worldFromClip,
++            precision: high
++        },
++        {
++            type : float4,
++            name : resolution,
++            precision: high
++        },
++        {
++            type : float3,
++            name : cameraPosition,
++            precision: high
++        },
++        {
++            type : float3,
++            name : trueWorldOffset,
++            precision: high
++        },
++        {
++            type : int,
++            name : visibilityRays
++        },
++        {
++            type : float,
++            name : bias
++        }
++    ],
++    outputs : [
++        {
++            name : shading,
++            target : color,
++            type : float4
++        }
++    ],
++    domain : postprocess,
++    rayQuery : true,
++    depthWrite : false,
++    depthCulling : false
++}
++
++fragment {
++    // ReSTIR direct lighting, last pass: one visibility ray from the surface to the chosen
++    // light. The colour pass reads (light index or -1, W, visibility, 1) and shades that one
++    // light with the material's full BRDF.
++    highp vec3 worldPositionAt(ivec2 icoord, highp float depth) {
++        highp vec2 uv = (vec2(icoord) + 0.5) * materialParams.resolution.zw;
++        // window y grows downwards, NDC y upwards
++        highp vec4 clip = vec4(uv.x * 2.0 - 1.0, 1.0 - uv.y * 2.0, depth, 1.0);
++        highp vec4 world = materialParams.worldFromClip * clip;
++        return world.xyz / world.w;
++    }
++
++    void postProcess(inout PostProcessInputs postProcess) {
++        ivec2 icoord = ivec2(gl_FragCoord.xy);
++        highp vec4 r = texelFetch(materialParams_reservoirs, icoord, 0);
++        if (r.x < 0.0 || r.y <= 0.0) {
++            postProcess.shading = vec4(-1.0, 0.0, 0.0, 1.0);
++            return;
++        }
++        float visibility = 1.0;
++        if (materialParams.visibilityRays != 0) {
++            highp float depth = texelFetch(materialParams_depth, icoord, 0).r;
++            highp vec3 P = worldPositionAt(icoord, depth);
++            highp vec3 N = normalize(cross(dFdx(P), dFdy(P)));
++            if (dot(N, materialParams.cameraPosition - P) < 0.0) N = -N;
++            highp vec4 t0 = texelFetch(materialParams_lights, ivec2(0, int(r.x + 0.5)), 0);
++            // the acceleration structures live in the true world, the camera in the shifted one
++            highp vec3 origin = P + materialParams.trueWorldOffset + N * materialParams.bias;
++            highp vec3 target = t0.xyz + materialParams.trueWorldOffset;
++            highp vec3 toLight = target - origin;
++            highp float distance = length(toLight);
++            if (distance > materialParams.bias) {
++                rayQueryEXT rq;
++                rayQueryInitializeEXT(rq, sceneTlas,
++                        gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT, 0xFFu,
++                        origin, 0.0, toLight / distance, distance - materialParams.bias);
++                rayQueryProceedEXT(rq);
++                if (rayQueryGetIntersectionTypeEXT(rq, true) != gl_RayQueryCommittedIntersectionNoneEXT) {
++                    visibility = 0.0;
++                }
++            }
++        }
++        postProcess.shading = vec4(r.x, r.y, visibility, 1.0);
++    }
++}
+diff --git a/filament/src/materials/rt/restirSpatial.mat b/filament/src/materials/rt/restirSpatial.mat
+new file mode 100644
+index 00000000..17c803f1
+--- /dev/null
++++ b/filament/src/materials/rt/restirSpatial.mat
+@@ -0,0 +1,151 @@
++material {
++    name : restirSpatial,
++    parameters : [
++        {
++            type : sampler2d,
++            name : depth,
++            precision: high,
++            filterable: false
++        },
++        {
++            type : sampler2d,
++            name : lights,
++            precision: high,
++            filterable: false
++        },
++        {
++            type : sampler2d,
++            name : reservoirs,
++            precision: high,
++            filterable: false
++        },
++        {
++            type : mat4,
++            name : worldFromClip,
++            precision: high
++        },
++        {
++            type : float4,
++            name : resolution,
++            precision: high
++        },
++        {
++            type : float3,
++            name : cameraPosition,
++            precision: high
++        },
++        {
++            type : int,
++            name : samples
++        },
++        {
++            type : int,
++            name : frame
++        },
++        {
++            type : float,
++            name : radius
++        }
++    ],
++    outputs : [
++        {
++            name : reservoir,
++            target : color,
++            type : float4
++        }
++    ],
++    domain : postprocess,
++    rayQuery : true,
++    depthWrite : false,
++    depthCulling : false
++}
++
++fragment {
++    // ReSTIR direct lighting, second pass: spatial reuse. Neighbouring reservoirs within a
++    // radius are merged into the pixel's own, re-evaluating each candidate's target function
++    // at this surface (the basic, slightly biased combination).
++
++    uint hashUint(uint x) {
++        x ^= x >> 16u;
++        x *= 0x7feb352du;
++        x ^= x >> 15u;
++        x *= 0x846ca68bu;
++        x ^= x >> 16u;
++        return x;
++    }
++
++    float nextRandom(inout uint seed) {
++        seed = hashUint(seed);
++        return float(seed & 0x00FFFFFFu) / 16777216.0;
++    }
++
++    highp vec3 worldPositionAt(ivec2 icoord, highp float depth) {
++        highp vec2 uv = (vec2(icoord) + 0.5) * materialParams.resolution.zw;
++        // window y grows downwards, NDC y upwards
++        highp vec4 clip = vec4(uv.x * 2.0 - 1.0, 1.0 - uv.y * 2.0, depth, 1.0);
++        highp vec4 world = materialParams.worldFromClip * clip;
++        return world.xyz / world.w;
++    }
++
++    float targetPdf(int lightIndex, highp vec3 P, vec3 N) {
++        highp vec4 t0 = texelFetch(materialParams_lights, ivec2(0, lightIndex), 0);
++        highp vec4 t1 = texelFetch(materialParams_lights, ivec2(1, lightIndex), 0);
++        highp vec4 t2 = texelFetch(materialParams_lights, ivec2(2, lightIndex), 0);
++        highp vec4 t3 = texelFetch(materialParams_lights, ivec2(3, lightIndex), 0);
++        highp vec3 posToLight = t0.xyz - P;
++        highp float d2 = dot(posToLight, posToLight);
++        float factor = d2 * t0.w;
++        float smoothFactor = saturate(1.0 - factor * factor);
++        float attenuation = smoothFactor * smoothFactor / max(d2, 1e-4);
++        vec3 l = posToLight * inversesqrt(max(d2, 1e-8));
++        if (t1.w > 0.5) {
++            float cd = dot(-t1.xyz, l);
++            float angle = saturate(cd * t3.x + t3.y);
++            attenuation *= angle * angle;
++        }
++        float NoL = saturate(dot(N, l));
++        float luminance = dot(t2.rgb, vec3(0.2126, 0.7152, 0.0722)) * t2.w;
++        return luminance * attenuation * NoL * t3.z;
++    }
++
++    void postProcess(inout PostProcessInputs postProcess) {
++        ivec2 icoord = ivec2(gl_FragCoord.xy);
++        highp vec4 own = texelFetch(materialParams_reservoirs, icoord, 0);
++        if (own.x < 0.0 || materialParams.samples <= 0) {
++            postProcess.reservoir = own;
++            return;
++        }
++        highp float depth = texelFetch(materialParams_depth, icoord, 0).r;
++        highp vec3 P = worldPositionAt(icoord, depth);
++        highp vec3 N = normalize(cross(dFdx(P), dFdy(P)));
++        if (dot(N, materialParams.cameraPosition - P) < 0.0) N = -N;
++        highp float viewDistance = own.w;
++
++        uint seed = hashUint(uint(icoord.x) * 7919u + uint(icoord.y) * 104729u + uint(materialParams.frame) * 15485863u + 3u);
++
++        int selected = int(own.x + 0.5);
++        float selectedPdf = targetPdf(selected, P, N);
++        float weightSum = selectedPdf * own.y * own.z;
++        float M = own.z;
++        ivec2 size = ivec2(materialParams.resolution.xy);
++        for (int i = 0; i < materialParams.samples; i++) {
++            float angle = nextRandom(seed) * 6.28318530718;
++            float r = materialParams.radius * sqrt(nextRandom(seed));
++            ivec2 ncoord = icoord + ivec2(round(vec2(cos(angle), sin(angle)) * r));
++            if (any(lessThan(ncoord, ivec2(0))) || any(greaterThanEqual(ncoord, size))) continue;
++            highp vec4 n = texelFetch(materialParams_reservoirs, ncoord, 0);
++            if (n.x < 0.0 || n.z <= 0.0 || abs(n.w - viewDistance) > 0.1 * viewDistance) continue;
++            int li = int(n.x + 0.5);
++            float pdf = targetPdf(li, P, N);
++            float w = pdf * n.y * n.z;
++            weightSum += w;
++            M += n.z;
++            if (w > 0.0 && nextRandom(seed) * weightSum < w) {
++                selected = li;
++                selectedPdf = pdf;
++            }
++        }
++        float W = selectedPdf > 0.0 ? weightSum / (M * selectedPdf) : 0.0;
++        postProcess.reservoir = vec4(float(selected), W, M, viewDistance);
++    }
++}
+diff --git a/filament/src/materials/rt/rt.cpp b/filament/src/materials/rt/rt.cpp
+index 831ecf4e..33e603b4 100644
+--- a/filament/src/materials/rt/rt.cpp
++++ b/filament/src/materials/rt/rt.cpp
+@@ -31,6 +31,9 @@ namespace filament {
+ static const StaticMaterialInfo sMaterialList[] = {
+     { "rtShadow",       MATERIAL(RT, RTSHADOW) },
+     { "rayVisibility",  MATERIAL(RT, RAYVISIBILITY) },
++    { "restirCandidates", MATERIAL(RT, RESTIRCANDIDATES) },
++    { "restirSpatial",  MATERIAL(RT, RESTIRSPATIAL) },
++    { "restirShade",    MATERIAL(RT, RESTIRSHADE) },
+ };
+ 
+ utils::Slice<const StaticMaterialInfo> getRayQueryMaterialList() noexcept {
+diff --git a/filament/src/materials/rt/rtShadow.mat b/filament/src/materials/rt/rtShadow.mat
+index 8d59f5fb..31e8702e 100644
+--- a/filament/src/materials/rt/rtShadow.mat
++++ b/filament/src/materials/rt/rtShadow.mat
+@@ -56,7 +56,8 @@ fragment {
+         // reversed-Z: 0 is the far plane, nothing to shadow there
+         if (depth > 0.0) {
+             highp vec2 uv = (vec2(icoord) + 0.5) * materialParams.resolution.zw;
+-            highp vec4 clip = vec4(uv * 2.0 - 1.0, depth, 1.0);
++            // window y grows downwards, NDC y upwards
++        highp vec4 clip = vec4(uv.x * 2.0 - 1.0, 1.0 - uv.y * 2.0, depth, 1.0);
+             highp vec4 world = materialParams.worldFromClip * clip;
+             world.xyz /= world.w;
+             // offset the origin along the ray, scaled with the distance to the camera so that
+diff --git a/libs/filabridge/include/private/filament/EngineEnums.h b/libs/filabridge/include/private/filament/EngineEnums.h
+index 8df407fe..344dfd22 100644
+--- a/libs/filabridge/include/private/filament/EngineEnums.h
++++ b/libs/filabridge/include/private/filament/EngineEnums.h
+@@ -58,7 +58,9 @@ enum class PerViewBindingPoints : uint8_t  {
+     SSR_HISTORY     = 10,   // variable, 2d texture, RGB_11_11_10
+     FOG             = 11,   // variable, user defined, CUBEMAP
+     RT_SHADOW       = 12,   // variable, R8: ray-traced directional shadow visibility
+-    TLAS            = 13    // ray query acceleration structure (post-process ray query materials)
++    TLAS            = 13,   // ray query acceleration structure (post-process ray query materials)
++    RESTIR_RESERVOIR = 14,  // variable, RGBA32F: ReSTIR reservoir (light index, W, visibility)
++    RESTIR_LIGHTS   = 15    // 4 x lights, RGBA32F: ReSTIR light buffer
+ };
+ 
+ enum class PerRenderableBindingPoints : uint8_t  {
+diff --git a/libs/filabridge/include/private/filament/UibStructs.h b/libs/filabridge/include/private/filament/UibStructs.h
+index cb25ca20..4edf77bb 100644
+--- a/libs/filabridge/include/private/filament/UibStructs.h
++++ b/libs/filabridge/include/private/filament/UibStructs.h
+@@ -164,7 +164,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
+     // bit 0-3: cascade count
+     // bit 8-11: cascade has visible shadows
+     int32_t cascades;
+-    float reservedLight0;
++    float restirMode;                           // 1 when ReSTIR shades the punctual lights
+     math::float2 lightFarAttenuationParams;     // a, a/far (a=1/pct-of-far)
+ 
+     // --------------------------------------------------------------------------------------------
+diff --git a/libs/filabridge/src/DescriptorSets.cpp b/libs/filabridge/src/DescriptorSets.cpp
+index f962a8ec..13f9b4e2 100644
+--- a/libs/filabridge/src/DescriptorSets.cpp
++++ b/libs/filabridge/src/DescriptorSets.cpp
+@@ -86,6 +86,8 @@ static constexpr std::initializer_list<DescriptorSetLayoutDescriptor> perViewDes
+     { DescriptorType::SAMPLER_2D_ARRAY_FLOAT,                    ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::SSR            },
+     { DescriptorType::SAMPLER_CUBE_FLOAT,                        ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::FOG            },
+     { DescriptorType::SAMPLER_2D_FLOAT,                          ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::RT_SHADOW, DescriptorFlags::UNFILTERABLE },
++    { DescriptorType::SAMPLER_2D_FLOAT,                          ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::RESTIR_RESERVOIR, DescriptorFlags::UNFILTERABLE },
++    { DescriptorType::SAMPLER_2D_FLOAT,                          ShaderStageFlags::FRAGMENT,  +PerViewBindingPoints::RESTIR_LIGHTS, DescriptorFlags::UNFILTERABLE },
+ };
+ 
+ // Post-process materials that trace rays (rayQuery: true): the frame uniforms plus the
+@@ -201,6 +203,8 @@ utils::CString getDescriptorName(DescriptorSetBindingPoints const set,
+         { +PerViewBindingPoints::SSR,            "sampler0_ssr"sv },
+         { +PerViewBindingPoints::FOG,            "sampler0_fog"sv },
+         { +PerViewBindingPoints::RT_SHADOW,     "sampler0_rtShadow"sv },
++        { +PerViewBindingPoints::RESTIR_RESERVOIR, "sampler0_restirReservoir"sv },
++        { +PerViewBindingPoints::RESTIR_LIGHTS, "sampler0_restirLights"sv },
+         { +PerViewBindingPoints::TLAS,          "sceneTlas"sv },
+     }};
+ 
+@@ -252,7 +256,9 @@ DescriptorSetLayout getPerViewDescriptorSetLayout(
+                                 [](auto const& entry) {
+                                     return  entry.binding == PerViewBindingPoints::IBL_DFG_LUT ||
+                                             entry.binding == PerViewBindingPoints::IBL_SPECULAR ||
+-                                            entry.binding == PerViewBindingPoints::RT_SHADOW;
++                                            entry.binding == PerViewBindingPoints::RT_SHADOW ||
++                                            entry.binding == PerViewBindingPoints::RESTIR_RESERVOIR ||
++                                            entry.binding == PerViewBindingPoints::RESTIR_LIGHTS;
+                                 }),
+                         layout.descriptors.end());
+             }
+diff --git a/libs/filamat/src/shaders/SibGenerator.cpp b/libs/filamat/src/shaders/SibGenerator.cpp
+index 77393866..5d8495c9 100644
+--- a/libs/filamat/src/shaders/SibGenerator.cpp
++++ b/libs/filamat/src/shaders/SibGenerator.cpp
+@@ -59,7 +59,9 @@ SamplerInterfaceBlock const& SibGenerator::getPerViewSib(Variant variant) noexce
+                     { "ssr",         +PerViewBindingPoints::SSR,            Type::SAMPLER_2D_ARRAY, Format::FLOAT,  Precision::MEDIUM, FILTERABLE, !MULTISAMPLE, ALL_STAGES },
+                     { "structure",   +PerViewBindingPoints::STRUCTURE,      Type::SAMPLER_2D,       Format::FLOAT,  Precision::HIGH  , FILTERABLE, !MULTISAMPLE, ALL_STAGES },
+                     { "fog",         +PerViewBindingPoints::FOG,            Type::SAMPLER_CUBEMAP,  Format::FLOAT,  Precision::MEDIUM, FILTERABLE, !MULTISAMPLE, ALL_STAGES },
+-                    { "rtShadow",    +PerViewBindingPoints::RT_SHADOW,      Type::SAMPLER_2D,       Format::FLOAT,  Precision::MEDIUM, FILTERABLE, !MULTISAMPLE, ALL_STAGES }}
++                    { "rtShadow",    +PerViewBindingPoints::RT_SHADOW,      Type::SAMPLER_2D,       Format::FLOAT,  Precision::MEDIUM, FILTERABLE, !MULTISAMPLE, ALL_STAGES },
++                    { "restirReservoir", +PerViewBindingPoints::RESTIR_RESERVOIR, Type::SAMPLER_2D, Format::FLOAT, Precision::HIGH, !FILTERABLE, !MULTISAMPLE, ALL_STAGES },
++                    { "restirLights", +PerViewBindingPoints::RESTIR_LIGHTS,  Type::SAMPLER_2D,       Format::FLOAT,  Precision::HIGH,   !FILTERABLE, !MULTISAMPLE, ALL_STAGES }}
+             )
+             .build() };
+ 
+@@ -73,7 +75,9 @@ SamplerInterfaceBlock const& SibGenerator::getPerViewSib(Variant variant) noexce
+                     { "ssr",         +PerViewBindingPoints::SSR,            Type::SAMPLER_2D_ARRAY, Format::FLOAT,  Precision::MEDIUM, FILTERABLE, !MULTISAMPLE, ALL_STAGES },
+                     { "structure",   +PerViewBindingPoints::STRUCTURE,      Type::SAMPLER_2D,       Format::FLOAT,  Precision::HIGH  , FILTERABLE, !MULTISAMPLE, ALL_STAGES },
+                     { "fog",         +PerViewBindingPoints::FOG,            Type::SAMPLER_CUBEMAP,  Format::FLOAT,  Precision::MEDIUM, FILTERABLE, !MULTISAMPLE, ALL_STAGES },
+-                    { "rtShadow",    +PerViewBindingPoints::RT_SHADOW,      Type::SAMPLER_2D,       Format::FLOAT,  Precision::MEDIUM, FILTERABLE, !MULTISAMPLE, ALL_STAGES }}
++                    { "rtShadow",    +PerViewBindingPoints::RT_SHADOW,      Type::SAMPLER_2D,       Format::FLOAT,  Precision::MEDIUM, FILTERABLE, !MULTISAMPLE, ALL_STAGES },
++                    { "restirReservoir", +PerViewBindingPoints::RESTIR_RESERVOIR, Type::SAMPLER_2D, Format::FLOAT, Precision::HIGH, !FILTERABLE, !MULTISAMPLE, ALL_STAGES },
++                    { "restirLights", +PerViewBindingPoints::RESTIR_LIGHTS,  Type::SAMPLER_2D,       Format::FLOAT,  Precision::HIGH,   !FILTERABLE, !MULTISAMPLE, ALL_STAGES }}
+             )
+             .build() };
+ 
+diff --git a/libs/filamat/src/shaders/UibGenerator.cpp b/libs/filamat/src/shaders/UibGenerator.cpp
+index 2659f8c1..f48c4086 100644
+--- a/libs/filamat/src/shaders/UibGenerator.cpp
++++ b/libs/filamat/src/shaders/UibGenerator.cpp
+@@ -176,7 +176,7 @@ BufferInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
+ 
+             { "cascadeSplits",             0, Type::FLOAT4, Precision::HIGH },
+             { "cascades",                  0, Type::INT                     },
+-            { "reservedLight0",            0, Type::FLOAT                   },
++            { "restirMode",                0, Type::FLOAT                   },
+             { "lightFarAttenuationParams", 0, Type::FLOAT2, Precision::HIGH },
+ 
+             // ------------------------------------------------------------------------------------
+diff --git a/shaders/src/surface_light_punctual.fs b/shaders/src/surface_light_punctual.fs
+index 9435c000..14a434a1 100644
+--- a/shaders/src/surface_light_punctual.fs
++++ b/shaders/src/surface_light_punctual.fs
+@@ -172,6 +172,55 @@ Light getLight(const uint lightIndex) {
+     return light;
+ }
+ 
++/**
++ * ReSTIR direct lighting: the renderer resampled the scene's punctual lights per pixel and
++ * left (light index, W, visibility) in the reservoir texture; this fragment shades that single
++ * light with the full BRDF, weighted by W.
++ */
++void evaluateRestirLight(const MaterialInputs material,
++        const PixelParams pixel, inout vec3 color) {
++    highp vec4 reservoir = texelFetch(sampler0_restirReservoir, ivec2(gl_FragCoord.xy), 0);
++    if (reservoir.x < 0.0 || reservoir.y <= 0.0 || reservoir.z <= 0.0) {
++        return;
++    }
++    int lightIndex = int(reservoir.x + 0.5);
++    highp vec4 t0 = texelFetch(sampler0_restirLights, ivec2(0, lightIndex), 0);
++    highp vec4 t1 = texelFetch(sampler0_restirLights, ivec2(1, lightIndex), 0);
++    highp vec4 t2 = texelFetch(sampler0_restirLights, ivec2(2, lightIndex), 0);
++    highp vec4 t3 = texelFetch(sampler0_restirLights, ivec2(3, lightIndex), 0);
++    int channels = object_uniforms_flagsChannels & 0xFF;
++    if ((int(t3.w + 0.5) & channels) == 0) {
++        return;
++    }
++    highp vec3 worldPosition = getWorldPosition();
++    highp vec3 posToLight = t0.xyz - worldPosition;
++    Light light;
++    light.colorIntensity.rgb = t2.rgb;
++    light.colorIntensity.w = computePreExposedIntensity(t2.w, frameUniforms.exposure);
++    light.l = normalize(posToLight);
++    light.attenuation = getDistanceAttenuation(posToLight, t0.w);
++    light.direction = t1.xyz;
++    light.NoL = saturate(dot(shading_normal, light.l));
++    light.worldPosition = t0.xyz;
++    light.channels = int(t3.w + 0.5);
++    light.contactShadows = false;
++    light.castsShadows = false;
++    light.shadowIndex = 0;
++    light.zLight = 0.0;
++    light.lightType = t1.w > 0.5 ? LIGHT_TYPE_SPOT : LIGHT_TYPE_POINT;
++    if (light.lightType == LIGHT_TYPE_SPOT) {
++        light.attenuation *= getAngleAttenuation(-light.direction, light.l, t3.xy);
++    }
++    if (light.NoL <= 0.0 || light.attenuation <= 0.0) {
++        return;
++    }
++#if defined(MATERIAL_HAS_CUSTOM_SURFACE_SHADING)
++    color.rgb += customSurfaceShading(material, pixel, light, reservoir.z) * reservoir.y;
++#else
++    color.rgb += surfaceShading(pixel, light, reservoir.z) * reservoir.y;
++#endif
++}
++
+ /**
+  * Evaluates all punctual lights that my affect the current fragment.
+  * The result of the lighting computations is accumulated in the color
+@@ -180,6 +229,14 @@ Light getLight(const uint lightIndex) {
+ void evaluatePunctualLights(const MaterialInputs material,
+         const PixelParams pixel, inout vec3 color) {
+ 
++    // ReSTIR direct lighting replaces the froxel loop for opaque surfaces
++#if !defined(BLEND_MODE_TRANSPARENT) && !defined(BLEND_MODE_FADE)
++    if (frameUniforms.restirMode > 0.5) {
++        evaluateRestirLight(material, pixel, color);
++        return;
++    }
++#endif
++
+     // Fetch the light information stored in the froxel that contains the
+     // current fragment
+     FroxelParams froxel = getFroxelParams(getFroxelIndex(getNormalizedPhysicalViewportCoord()));

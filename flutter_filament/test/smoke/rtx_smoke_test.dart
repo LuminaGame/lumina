@@ -320,5 +320,169 @@ void main() {
         RayTracing.clearExtensionRequest();
       }
     }, timeout: const Timeout(Duration(minutes: 10)));
+
+    test('ReSTIR direct lighting with 512 moving lights', () async {
+      if (smokeBackend != FilamentBackend.vulkan) {
+        markTestSkipped('ReSTIR needs the Vulkan backend ($smokeBackendName)');
+        return;
+      }
+      // The engine of the shared rig was created without the ray query extensions;
+      // this scenario owns an engine created after the request (and DLSS's, when present).
+      rig.dispose();
+      expect(RayTracing.requestExtensions(), isTrue);
+      final withDlss = Dlss.available && Dlss.requestExtensions();
+      final engine = FilamentEngine.create(backend: FilamentBackend.vulkan)!;
+      rig = SmokeRig.adopt(engine, width: 1024, height: 768);
+      if (!engine.supportsRayQuery) {
+        RayTracing.clearExtensionRequest();
+        Dlss.clearExtensionRequest();
+        markTestSkipped('this GPU or driver has no Vulkan ray query support');
+        return;
+      }
+      const name = 'rtx Smoke Tests ReSTIR direct lighting with 512 moving lights';
+      final lm = FilamentLightManager(engine);
+      final tm = FilamentTransformManager(engine);
+      rig.addSun(intensity: 2000);
+
+      // A lit floor, four props and a walking character; 512 coloured point lights orbit above.
+      final floorMaterial = buildLitMaterial(engine);
+      final floorInstance = floorMaterial.createInstance()..setFloat3('baseColor', 0.6, 0.6, 0.6);
+      final floorQuad = SmokeQuad.create(engine, size: 14, tangents: true);
+      final floor = addQuadRenderable(rig, floorQuad, floorInstance, extent: 7);
+      tm.setTransform(floor, [1, 0, 0, 0, 0, 0, -1, 0, 0, 1, 0, 0, 0, 0, 0, 1]);
+      const props = [
+        ('Props/Barrels/fuel_barrel_yellow.glb', -3.2, 0.6),
+        ('Props/AC_units/aircon_small.glb', -1.1, -0.4),
+        ('Props/Access_cards/access_card_red.glb', 1.0, 0.9),
+        ('Props/Barrels/radbarrel.glb', 3.0, -0.2),
+      ];
+      final loaded = <LoadedGltf>[];
+      void place(LoadedGltf gltf, double x, double z) {
+        final box = gltf.asset.getBoundingBox();
+        tm.setTransform(gltf.asset.rootEntity, [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, x - box.center.x, -box.min.y, z - box.center.z, 1]);
+      }
+
+      final lights = <int>[];
+      final rnd = math.Random(11);
+      final phases = <double>[];
+      final radii = <double>[];
+      final heights = <double>[];
+      Dlss? dlss;
+      try {
+        for (final (path, x, z) in props) {
+          final gltf = loadGltfIntoScene(rig, path, frameCamera: false);
+          loaded.add(gltf);
+          place(gltf, x, z);
+        }
+        final character = loadGltfIntoScene(rig, 'mannequin/MF_Unarmed_Walk_Fwd.glb', frameCamera: false);
+        loaded.add(character);
+        final animator = character.asset.animator;
+        final duration = animator.getAnimationDuration(0);
+        animator.applyAnimation(0, 0);
+        animator.updateBoneMatrices();
+        place(character, 0.0, 1.8);
+
+        for (var i = 0; i < 512; i++) {
+          final e = engine.createEntity();
+          LightBuilder(LightType.point)
+            ..color(0.2 + 0.8 * rnd.nextDouble(), 0.2 + 0.8 * rnd.nextDouble(), 0.2 + 0.8 * rnd.nextDouble())
+            ..intensity(1500 + rnd.nextDouble() * 2500)
+            ..position(0, 1, 0)
+            ..falloff(1.5 + rnd.nextDouble() * 2.5)
+            ..build(engine, e);
+          rig.scene.addEntity(e);
+          rig.entities.add(e);
+          lights.add(e);
+          phases.add(rnd.nextDouble() * math.pi * 2);
+          radii.add(0.8 + rnd.nextDouble() * 5.2);
+          heights.add(0.3 + rnd.nextDouble() * 2.2);
+        }
+        void orbitLights(double t) {
+          for (var i = 0; i < lights.length; i++) {
+            final a = phases[i] + t * math.pi * (i.isEven ? 0.8 : -0.6);
+            lm.setPosition(lights[i], math.cos(a) * radii[i], heights[i], math.sin(a) * radii[i]);
+          }
+        }
+
+        rig.camera.setProjection(fovDegrees: 40, aspect: rig.width / rig.height, near: 0.1, far: 200);
+        rig.camera.lookAt(eyeX: 0.5, eyeY: 4.2, eyeZ: 9.5, centerX: 0, centerY: 0.9, centerZ: -0.3);
+        rig.camera.setExposure(aperture: 16, shutterSpeed: 1 / 125, sensitivity: 400);
+        rig.scene.rayTracingEnabled = true;
+        if (withDlss) {
+          rig.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(enabled: true, motionVectors: true);
+          dlss = Dlss.create(
+            engine: engine,
+            view: rig.view,
+            options: DlssOptions(quality: DlssQuality.balanced, outputWidth: rig.width, outputHeight: rig.height),
+          );
+        }
+        expect(rig.view.restirSupported, isTrue);
+
+        void pose(int frame) {
+          animator.applyAnimation(0, (frame / smokeVideoFps) % duration);
+          animator.updateBoneMatrices();
+        }
+
+        // the froxel path at the final pose first (reference, capped at Filament's light limit)
+        orbitLights(1.0);
+        pose((10 * smokeVideoFps).round());
+        rig.view.restirOptions = const RestirOptions(enabled: false);
+        Uint8List? froxel;
+        for (var i = 0; i < 8; i++) {
+          froxel = rig.renderFrame(warmup: 0);
+        }
+
+        rig.view.restirOptions = const RestirOptions(enabled: true);
+        orbitLights(0.0);
+        pose(0);
+        rig.view.resetRestirHistory();
+        dlss?.resetHistory();
+        rig.renderFrame(warmup: 3);
+        expect(rig.view.restirStats.lightCount, 512);
+        final gpuTimes = <Duration>[];
+        final last = rig.video(name, onFrame: (frame, t) {
+          orbitLights(t);
+          pose(frame);
+          final gpu = rig.view.restirStats.gpuTime;
+          if (gpu > Duration.zero) gpuTimes.add(gpu);
+        }, alsoScreenshot: false);
+        expect(gpuTimes, isNotEmpty);
+        final averageMicros = gpuTimes.fold<int>(0, (s, d) => s + d.inMicroseconds) / gpuTimes.length;
+        smokeLog('restir: ${rig.view.restirStats.lightCount} lights, ${rig.view.restirStats.raysPerFrame} rays/frame, average ${averageMicros.toStringAsFixed(0)} us, dlss=$withDlss');
+        expect(averageMicros, lessThan(6000), reason: 'ReSTIR under 6 ms on average');
+
+        final side = Uint8List(rig.width * 2 * rig.height * 4);
+        for (var y = 0; y < rig.height; y++) {
+          final row = y * rig.width * 4;
+          side.setRange(y * rig.width * 8, y * rig.width * 8 + rig.width * 4, last, row);
+          side.setRange(y * rig.width * 8 + rig.width * 4, (y + 1) * rig.width * 8, froxel!, row);
+        }
+        SmokeArtifacts.saveScreenshot('$name (ReSTIR left, froxels right)', SmokeArtifacts.encodePng(rig.width * 2, rig.height, side));
+        expect(frameStats(last).distinct, greaterThan(200), reason: 'a lit scene must be visible');
+
+        final before = engine.resourceCounts;
+        dlss?.destroy();
+        dlss = null;
+        for (final gltf in loaded) {
+          gltf.dispose(rig.scene);
+        }
+        loaded.clear();
+        engine.flushAndWait();
+        rig.renderFrame(warmup: 2);
+        expect(engine.resourceCounts.textures, lessThanOrEqualTo(before.textures), reason: 'no leaked handles');
+      } finally {
+        dlss?.destroy();
+        for (final gltf in loaded) {
+          gltf.dispose(rig.scene);
+        }
+        engine.destroyEntity(floor);
+        rig.entities.remove(floor);
+        floorInstance.dispose();
+        floorMaterial.dispose();
+        floorQuad.dispose();
+        RayTracing.clearExtensionRequest();
+        Dlss.clearExtensionRequest();
+      }
+    }, timeout: const Timeout(Duration(minutes: 15)));
   });
 }

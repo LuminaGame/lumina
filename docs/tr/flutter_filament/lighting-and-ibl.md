@@ -467,6 +467,7 @@ Helper for managing and querying light components on entities.
 | `getSpotLightOuterCone` | `double getSpotLightOuterCone(int entity)` | Gets the outer cone angle in radians. |
 | `setShadowCaster` | `void setShadowCaster(int entity, bool enabled)` | Enables or disables shadow casting. |
 | `isShadowCaster` | `bool isShadowCaster(int entity)` | Whether this light is configured to cast shadows. |
+| `setRestirSamplingWeight` | `void setRestirSamplingWeight(int entity, double weight)` | ReSTIR doğrudan aydınlatmanın yeniden örneklerken bu ışığı ne kadar kayırdığı (0 ışığı çıkarır, varsayılan 1); bkz. [ReSTIR doğrudan aydınlatma](restir.md). |
 | `getLightChannel` | `bool getLightChannel(int entity, int channel)` | Whether a specific light channel (0 to 7) is enabled. |
 | `setShadowOptions` | `void setShadowOptions(int entity, ShadowOptions options)` | Sets the shadow options for [entity]. |
 | `getShadowOptions` | `ShadowOptions getShadowOptions(int entity)` | Gets the shadow options for [entity]. |

@@ -2443,6 +2443,43 @@ external void filament_light_set_falloff(
   double radius,
 );
 
+@ffi.Native<
+  ffi.Void Function(ffi.Pointer<ffi.Void>, ffi.Pointer<filament_restir_options>)
+>()
+external void filament_view_set_restir_options(
+  ffi.Pointer<ffi.Void> view,
+  ffi.Pointer<filament_restir_options> options,
+);
+
+@ffi.Native<
+  ffi.Void Function(ffi.Pointer<ffi.Void>, ffi.Pointer<filament_restir_options>)
+>()
+external void filament_view_get_restir_options(
+  ffi.Pointer<ffi.Void> view,
+  ffi.Pointer<filament_restir_options> out_options,
+);
+
+@ffi.Native<ffi.Bool Function(ffi.Pointer<ffi.Void>)>()
+external bool filament_view_restir_supported(ffi.Pointer<ffi.Void> view);
+
+@ffi.Native<
+  ffi.Void Function(ffi.Pointer<ffi.Void>, ffi.Pointer<filament_restir_stats_t>)
+>()
+external void filament_view_get_restir_stats(
+  ffi.Pointer<ffi.Void> view,
+  ffi.Pointer<filament_restir_stats_t> out_stats,
+);
+
+@ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>)>()
+external void filament_view_restir_reset_history(ffi.Pointer<ffi.Void> view);
+
+@ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>, ffi.Uint32, ffi.Float)>()
+external void filament_light_set_restir_sampling_weight(
+  ffi.Pointer<ffi.Void> engine,
+  int entity,
+  double weight,
+);
+
 @ffi.Native<ffi.Float Function(ffi.Pointer<ffi.Void>, ffi.Uint32)>()
 external double filament_light_get_falloff(
   ffi.Pointer<ffi.Void> engine,
@@ -10181,6 +10218,46 @@ final class filament_soft_shadow_options extends ffi.Struct {
 final class filament_stereoscopic_options extends ffi.Struct {
   @ffi.Bool()
   external bool enabled;
+}
+
+final class filament_restir_options extends ffi.Struct {
+  @ffi.Bool()
+  external bool enabled;
+
+  @ffi.Uint8()
+  external int initialCandidates;
+
+  @ffi.Uint8()
+  external int spatialSamples;
+
+  @ffi.Float()
+  external double spatialRadiusPx;
+
+  @ffi.Bool()
+  external bool temporal;
+
+  @ffi.Uint8()
+  external int maxHistory;
+
+  @ffi.Bool()
+  external bool visibilityRays;
+
+  @ffi.Bool()
+  external bool shadeEmissive;
+}
+
+final class filament_restir_stats_t extends ffi.Struct {
+  @ffi.Uint32()
+  external int lightCount;
+
+  @ffi.Uint32()
+  external int emissiveTriangleCount;
+
+  @ffi.Uint32()
+  external int raysPerFrame;
+
+  @ffi.Uint64()
+  external int gpuNanos;
 }
 
 typedef FilamentPickCallbackFunction =

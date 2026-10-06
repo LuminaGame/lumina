@@ -45,6 +45,7 @@ export 'src/material.dart';
 export 'src/motion_vectors.dart';
 export 'src/dlss.dart';
 export 'src/ray_tracing.dart';
+export 'src/restir.dart';
 export 'src/render_target.dart';
 export 'src/renderable.dart';
 export 'src/renderer.dart';

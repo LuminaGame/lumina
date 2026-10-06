@@ -8,6 +8,7 @@ import 'package:flutter_filament/src/engine.dart';
 import 'package:flutter_filament/src/entity.dart';
 import 'package:flutter_filament/src/math/viewport.dart';
 import 'package:flutter_filament/src/ray_tracing.dart';
+import 'package:flutter_filament/src/restir.dart';
 import 'package:flutter_filament/src/render_target.dart';
 import 'package:flutter_filament/src/scene.dart';
 import 'package:flutter_filament/src/texture.dart';
@@ -581,6 +582,52 @@ class FilamentView {
     });
     c.filament_view_pick(_ptr, x, y, callable.nativeFunction, ffi.nullptr);
     return completer.future;
+  }
+
+  /// ReSTIR direct lighting options for the punctual lights. See [RestirOptions].
+  RestirOptions get restirOptions {
+    _checkDisposed();
+    final ptr = calloc<c.filament_restir_options>();
+    c.filament_view_get_restir_options(_ptr, ptr);
+    final result = RestirOptions.fromNative(ptr.ref);
+    calloc.free(ptr);
+    return result;
+  }
+
+  set restirOptions(RestirOptions options) {
+    _checkDisposed();
+    final ptr = calloc<c.filament_restir_options>();
+    options.copyToNative(ptr.ref);
+    c.filament_view_set_restir_options(_ptr, ptr);
+    calloc.free(ptr);
+  }
+
+  /// Whether this engine can run ReSTIR direct lighting (ray queries and the
+  /// ray query materials). The scene must also keep its acceleration structures.
+  bool get restirSupported {
+    _checkDisposed();
+    return c.filament_view_restir_supported(_ptr);
+  }
+
+  /// Counters of the last ReSTIR frame (zeros while off or unsupported).
+  RestirStats get restirStats {
+    _checkDisposed();
+    final ptr = calloc<c.filament_restir_stats_t>();
+    c.filament_view_get_restir_stats(_ptr, ptr);
+    final stats = RestirStats(
+      lightCount: ptr.ref.lightCount,
+      emissiveTriangleCount: ptr.ref.emissiveTriangleCount,
+      raysPerFrame: ptr.ref.raysPerFrame,
+      gpuTime: Duration(microseconds: ptr.ref.gpuNanos ~/ 1000),
+    );
+    calloc.free(ptr);
+    return stats;
+  }
+
+  /// Drops the ReSTIR temporal history: the next frame resamples from scratch.
+  void resetRestirHistory() {
+    _checkDisposed();
+    c.filament_view_restir_reset_history(_ptr);
   }
 
   /// Traces one visibility ray from ([ox], [oy], [oz]) along ([dx], [dy],
