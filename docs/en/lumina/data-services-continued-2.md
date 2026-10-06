@@ -246,7 +246,7 @@ The host's `pubspec.lock` is seeded with every hosted package of the engine lock
 | `packageNameFor` | `static String packageNameFor(String projectName)` | `MyGame` → `my_game_editor`, always a valid Dart package name. |
 | `editorCodePlugins` | `static List<LuminaPluginDescriptor> editorCodePlugins(List<LuminaPluginDescriptor> plugins)` | The plugins that contribute editor code (the ones a host must compile). |
 | `projectNameIn` | `static String? projectNameIn(String projectDir)` | The project's name: the `.lmproject` file's base name. |
-| `generate` | `Future<EditorHostResult> generate(String projectDir, List<LuminaPluginDescriptor> enabledCodePlugins, {String?...` |  |
+| `generate` | `Future<EditorHostResult> generate(String projectDir, List<LuminaPluginDescriptor> enabledCodePlugins, {String?...` || Writes `pubspec.yaml`, `lib/plugin_registrar.dart` (`PluginHostPatcherService.registrarSource`) and `lib/main.dart`, whose `main` calls `runLuminaEditor(args, plugins: kEnabledPlugins, processes: kPluginProcesses, host: EditorHostInfo(...))`, plus the renamed runner. |
 | `engineLockOf` | `File engineLockOf(String hostDir)` | The lock the host's hosted packages are pinned to: the copy's `EditorSourceVendorService.engineLockFileName`, else `<workspaceRoot>/pubspec.lock`. |
 | `movedFromEngineLock` | `List<String> movedFromEngineLock(String hostDir)` | Engine-locked hosted packages the host's lock holds at another version (a code plugin's constraint moved them), as `name <engine> → <host>`; the build log warns about each. |
 | `isOldLayout` | `static bool isOldLayout(String hostDir)` | Whether the host at [hostDir] depends on `lumina_ui` anywhere but the project's copy beside it (a host from before per-project source copies). |

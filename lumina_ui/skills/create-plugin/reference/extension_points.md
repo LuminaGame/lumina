@@ -120,3 +120,34 @@ class _Bare implements LuminaEditorContext { /* 7 registrars, record what you ne
 class _Host extends _Bare implements LuminaEditorHostContext { @override final EditorLevelAccess level; _Host(this.level); }
 ```
 `lumina_plugin_pcg/test/test_support.dart` has `FileLevel`, an `EditorLevelAccess` over a real level file, reusable by copying.
+
+## Process part (isolated plugins)
+
+An isolated plugin (`"isolation": "process"` + `"process_class"`) registers from its `LuminaPluginProcess.register(PluginProcessContext context)`; every contribution is data, its callbacks run in the plugin process.
+
+```dart
+context.registerMenuItem('Plugins/My Tools/Bake', PluginProcessCommand(
+    id: 'tools.my_tools.bake', label: 'Bake', run: () => _bake(context)));
+
+context.handle('ping', (args) => {'reply': 'pong', 'pid': pid});           // shell: channel.call('ping')
+context.emit('baked', {'path': out});                                        // shell: channel.events('baked')
+context.progress('bake', step: 'meshes', done: 3, total: 10);               // shell: channel.progress
+
+context.registerViewPanel(PluginProcessViewPanel(
+  id: 'panel.my_tools.status', title: 'My Tools Status',
+  initial: const PluginViewSpec(id: 'my_tools.status', children: [
+    PluginControl(kind: PluginControlKind.text, id: 'status', props: {'value': 'Idle'}),
+    PluginControl(kind: PluginControlKind.button, id: 'run', props: {'text': 'Run'}),
+  ]),
+  onEvent: (event, view) {
+    if (event.controlId == 'run' && event.kind == 'pressed') {
+      view.patch(PluginViewPatch([PluginViewPatchOp.set('status', {'value': 'Running'})]));
+    }
+  },
+));
+
+context.registerImporter(PluginProcessImporter(id: 'my_tools.txt', extensions: const ['.txt'],
+    description: 'Text', import: (source, targetDirectory) async => '$targetDirectory/x.lmas'));
+```
+
+Routing: the editor shows the menu item / slot button / panel / importer as if registered in process and sends the action to the process; while the process is not running, the items are unavailable and the panels show the stop with Restart. The level (`context.level`) is a proxy: each edit is an undoable editor transaction and `runTransaction` groups proxied edits into one undo step.

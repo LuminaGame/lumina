@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina/data/models/lumina_project.dart';
@@ -126,6 +127,36 @@ void main() {
 
     test('empty plugin settings write no key', () {
       expect(const LuminaProject(projectName: 'P').toMap().containsKey('plugin_settings'), isFalse);
+    });
+  });
+
+  group('LuminaProject plugin_isolation', () {
+    test('round-trips through a real .lmproject file, sorted by plugin name, and survives copyWith', () {
+      final temp = Directory.systemTemp.createTempSync('lm_project_isolation_');
+      addTearDown(() => temp.deleteSync(recursive: true));
+      const project = LuminaProject(projectName: 'P', pluginIsolation: {
+        'z_plugin': PluginIsolation.process,
+        'a_plugin': PluginIsolation.inProcess,
+      });
+      final file = File('${temp.path}/P.lmproject')..writeAsStringSync(jsonEncode(project.toMap()));
+      final raw = jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
+      expect(raw['plugin_isolation'], {'a_plugin': 'in_process', 'z_plugin': 'process'});
+      expect((raw['plugin_isolation'] as Map).keys.toList(), ['a_plugin', 'z_plugin']);
+
+      final back = LuminaProject.fromMap(raw);
+      expect(back.pluginIsolation, {'a_plugin': PluginIsolation.inProcess, 'z_plugin': PluginIsolation.process});
+      expect(back.extraFields.containsKey('plugin_isolation'), isFalse, reason: 'a known key');
+      expect(back.copyWith(description: 'x').pluginIsolation, back.pluginIsolation);
+      expect(back.copyWith(pluginIsolation: const {}).toMap().containsKey('plugin_isolation'), isFalse);
+    });
+
+    test('an unknown value is dropped (the plugin follows its manifest); no overrides write no key', () {
+      final back = LuminaProject.fromMap({
+        'project_name': 'P',
+        'plugin_isolation': {'a_plugin': 'sandbox', 'b_plugin': 'in_process'},
+      });
+      expect(back.pluginIsolation, {'b_plugin': PluginIsolation.inProcess});
+      expect(const LuminaProject(projectName: 'P').toMap().containsKey('plugin_isolation'), isFalse);
     });
   });
 }

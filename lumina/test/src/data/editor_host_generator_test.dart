@@ -68,6 +68,7 @@ void main() {
     expect(main, contains("import 'package:lumina_ui/editor_entry.dart';"));
     expect(main, contains('runLuminaEditor('));
     expect(main, contains('plugins: kEnabledPlugins'));
+    expect(main, contains('processes: kPluginProcesses'));
     expect(File(p.join(host.path, 'lib', 'plugin_registrar.dart')).readAsStringSync(),
         contains("import 'package:a_plugin/a.dart' as a_plugin_plugin;"));
 
@@ -80,6 +81,19 @@ void main() {
       expect(second[k], first[k], reason: '$k is byte-identical');
     }
     expect(Directory('${host.path}.tmp').existsSync(), isFalse);
+  });
+
+  test('an isolated plugin: the registrar maps its name to its process class; the main passes the map', () async {
+    await fx.isolate();
+    final gen = EditorHostGeneratorService(engineRoot: engineRoot, platform: 'linux');
+    final result = await gen.generate(fx.projectDir.path, [await fx.plugin()]);
+    final host = result.hostDir!.path;
+    final registrar = File(p.join(host, 'lib', 'plugin_registrar.dart')).readAsStringSync();
+    expect(registrar, contains('final Map<String, LuminaPluginProcess Function()> kPluginProcesses = {\n'
+        "  'a_plugin': () => a_plugin_plugin.AProcess(),\n"
+        '};\n'));
+    expect(registrar, contains('  a_plugin_plugin.APlugin(),'), reason: 'the UI shell still registers in the editor');
+    expect(File(p.join(host, 'lib', 'main.dart')).readAsStringSync(), contains('      processes: kPluginProcesses,\n'));
   });
 
   test('the windows branch renames the binary, the version resource and the window title', () async {
@@ -185,8 +199,13 @@ void main() {
   });
 
   test('the generated host analyzes with 0 errors', () async {
+    // An isolated plugin: the registrar's kPluginProcesses names its process
+    // part and the main passes it to runLuminaEditor.
+    await fx.isolate();
     final gen = EditorHostGeneratorService(engineRoot: engineRoot);
     await gen.generate(fx.projectDir.path, [await fx.plugin()]);
+    final registrar = File(p.join(fx.projectDir.path, '.lumina', 'editor', 'lib', 'plugin_registrar.dart')).readAsStringSync();
+    expect(registrar, contains("  'a_plugin': () => a_plugin_plugin.AProcess(),\n"));
     final host = p.join(fx.projectDir.path, '.lumina', 'editor');
     // The copy's layout, as links into the engine (copying ~650 MB is the
     // build pipeline's job, covered by editor_source_vendor_service_test).

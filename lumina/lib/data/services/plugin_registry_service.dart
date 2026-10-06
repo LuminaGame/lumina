@@ -88,6 +88,44 @@ class PluginRegistryService {
   }
 
   List<PluginEntry> get entries => _entries.values.toList();
+
+  /// The open project as last loaded or saved (null before [initialize]).
+  LuminaProject? get project => _currentProject;
+
+  /// Where plugin [name] runs in the open project: the project's
+  /// `plugin_isolation` override, else its `.lmplugin` `isolation`. A
+  /// plugin without a `process_class` (or unknown) runs in process.
+  PluginIsolation isolationOf(String name) =>
+      _entries[name]?.descriptor.effectiveIsolation(_currentProject) ?? PluginIsolation.inProcess;
+
+  /// The open project's override for [name], or null when it follows its
+  /// manifest.
+  PluginIsolation? isolationOverrideOf(String name) => _currentProject?.pluginIsolation[name];
+
+  /// Sets the open project's isolation override for [name] (null removes
+  /// it, so the manifest decides again) and saves the project. Returns
+  /// whether the plugin's effective isolation changed while it is enabled:
+  /// the editor applies it when it next starts the plugin, so the entry is
+  /// marked [PluginEntry.restartPending].
+  Future<bool> setIsolationOverride(String name, PluginIsolation? isolation) async {
+    final project = _currentProject;
+    final dir = _currentProjectDirPath;
+    if (project == null || dir == null) return false;
+    final before = isolationOf(name);
+    final overrides = Map<String, PluginIsolation>.from(project.pluginIsolation);
+    if (isolation == null) {
+      overrides.remove(name);
+    } else {
+      overrides[name] = isolation;
+    }
+    final updated = project.copyWith(pluginIsolation: overrides);
+    _currentProject = updated;
+    await projectRepo.saveProject(updated, dir);
+    final entry = _entries[name];
+    final changed = entry != null && entry.enabled && isolationOf(name) != before;
+    if (changed) entry.restartPending = true;
+    return changed;
+  }
   List<PluginScanError> get scanErrors => _scanErrors;
 
   /// The open project's folder (null before [initialize]).

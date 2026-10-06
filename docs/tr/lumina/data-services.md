@@ -519,6 +519,7 @@ Service for parsing Wavefront OBJ 3D model geometry.
 | :--- | :--- | :--- |
 | `patchPubspec` | `Future<void> patchPubspec(Directory hostRoot, List<LuminaPluginDescripto...` | `patchPubspec` işlemini gerçekleştirir. |
 | `generateRegistrar` | `Future<void> generateRegistrar(Directory hostRoot, List<LuminaPluginDesc...` | `generateRegistrar` işlemini gerçekleştirir. |
+| `registrarSource` | `String registrarSource(List<LuminaPluginDescriptor> enabledCodePlugins)` | Registrar kütüphanesi: `kEnabledPlugins` (editor modülü başına bir örnek), `kPluginProcesses` ve `registerAllPlugins`; bir eklenti listesi için deterministiktir. `kPluginProcesses`, manifest'i `"isolation": "process"` diyen her eklentiyi `process_class`'ının bir fabrikasına eşler, projenin `plugin_isolation`'ı ne derse desin (editör geçersiz kılmayı başlarken uygular); örneğin `'my_tools': () => my_tools_plugin.MyToolsProcess(),`; hiç yoksa `{}` olur. |
 
 ## `lib/data/services/plugin_registry_service.dart`
 
@@ -593,6 +594,10 @@ Service for parsing Wavefront OBJ 3D model geometry.
 | `refresh` | `Future<void> refresh()` | `refresh` işlemini gerçekleştirir. |
 | `initialize` | `Future<void> initialize(String projectDirPath)` | `initialize` işlemini gerçekleştirir. |
 | `resolve` | `PluginResolution resolve(Set<String> wantedEnabled)` | `resolve` işlemini gerçekleştirir. |
+| `project` | `LuminaProject? get project` | Son yüklenen ya da kaydedilen haliyle açık proje. |
+| `isolationOf` | `PluginIsolation isolationOf(String name)` | `name` eklentisinin açık projede nerede çalıştığı (`LuminaPluginDescriptor.effectiveIsolation`): `plugin_isolation` geçersiz kılması, yoksa manifest'i; process kısmı olmayan (ya da bilinmeyen) bir eklenti süreç içinde çalışır. |
+| `isolationOverrideOf` | `PluginIsolation? isolationOverrideOf(String name)` | Açık projenin `name` için geçersiz kılması ya da null. |
+| `setIsolationOverride` | `Future<bool> setIsolationOverride(String name, PluginIsolation? isolation)` | Projenin geçersiz kılmasını ayarlar (null kaldırır) ve `.lmproject`'i kaydeder; etkin eklentinin etkin yalıtımı değiştiyse true döner ve eklentiyi `restartPending` olarak işaretler. |
 
 ## `lib/data/services/plugin_template_generator_service.dart`
 
@@ -614,6 +619,7 @@ Service for parsing Wavefront OBJ 3D model geometry.
 | `author` | `String author` | `author` alanını (field/property) ve ilişkili veriyi saklar. |
 | `description` | `String description` | `description` alanını (field/property) ve ilişkili veriyi saklar. |
 | `category` | `String category` | `category` alanını (field/property) ve ilişkili veriyi saklar. |
+| `isolated` | `final bool isolated` | Yalıtılmış bir eklenti iskeleti üretir: `lib/src/<name>_process.dart` (`<Pascal>Process extends LuminaPluginProcess`: bir menü komutu, bir `ping` handler'ı, bildirimsel bir panel ve importer şablonunda importer'ı), panelinden `processChannel` üzerinden `ping` çağıran bir UI kabuğu, `test/<name>_process_test.dart` + `test/<name>_plugin_test.dart` ve manifest'te `"isolation": "process"` + `"process_class"`. Yalnızca içerik eklentisi yalıtılamaz (üretim başarısız olur). Kaynaklar `plugin_template/isolated_plugin_sources.dart`'tan gelir (süreç içi şablonlar: `plugin_template/code_plugin_sources.dart`). |
 
 ### `class PluginGenerationResult`
 

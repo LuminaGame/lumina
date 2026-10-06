@@ -128,6 +128,95 @@ void main() {
       expect(desc.canContainContent, isFalse);
     });
 
+    test('an isolated plugin: process part, UI shell, both tests, and a manifest naming the process class', () async {
+      final service = PluginTemplateGeneratorService(
+        projectRoot: projectRoot,
+        editorApiRoot: editorApiRoot,
+        runner: (String exec, List<String> args, {String? workingDirectory, bool runInShell = false}) async {
+          if (args.contains('create')) Directory(args.last).createSync(recursive: true);
+          return ProcessResult(0, 0, 'ok', '');
+        },
+      );
+      final result = await service.generate(const PluginTemplateSpec(
+        templateType: PluginTemplateType.editorPanel,
+        name: 'safe_tools',
+        friendlyName: r"Safe's $Tools",
+        description: 'Runs its work in its own process',
+        isolated: true,
+      ));
+      expect(result.success, isTrue, reason: result.failureOutput);
+      final dir = result.pluginDir!.path;
+
+      final manifest = jsonDecode(File('$dir/safe_tools.lmplugin').readAsStringSync()) as Map<String, dynamic>;
+      expect(manifest['isolation'], 'process');
+      final module = (manifest['modules'] as List).single as Map<String, dynamic>;
+      expect(module['registration_class'], 'SafeToolsPlugin');
+      expect(module['process_class'], 'SafeToolsProcess');
+      expect(result.descriptor!.isolation, PluginIsolation.process);
+      expect(result.descriptor!.processClass, 'SafeToolsProcess');
+
+      expect(File('$dir/lib/safe_tools.dart').readAsStringSync(),
+          allOf(contains("export 'src/safe_tools_plugin.dart';"), contains("export 'src/safe_tools_process.dart';")));
+
+      final process = File('$dir/lib/src/safe_tools_process.dart').readAsStringSync();
+      expect(process, contains('class SafeToolsProcess extends LuminaPluginProcess'));
+      expect(process, contains("String get pluginName => 'safe_tools';"));
+      expect(process, contains('context.registerMenuItem('));
+      expect(process, contains("'Plugins/Safe\\'s \\\$Tools/Say Hello from Safe\\'s \\\$Tools'"),
+          reason: 'the friendly name is escaped inside Dart string literals');
+      expect(process, contains("context.handle('ping', (args) {"));
+      expect(process, contains('context.registerViewPanel('));
+      expect(process, isNot(contains('registerImporter')), reason: 'only the importer template imports');
+
+      final shell = File('$dir/lib/src/safe_tools_plugin.dart').readAsStringSync();
+      expect(shell, contains('class SafeToolsPlugin extends LuminaEditorPlugin'));
+      expect(shell, contains('context.processChannel(pluginName)'));
+      expect(shell, contains("widget.channel.call('ping', {'from': 'panel'})"));
+      expect(shell, isNot(contains('dart:ffi')));
+      expect(shell, isNot(contains('Process.')));
+
+      expect(File('$dir/test/safe_tools_plugin_test.dart').readAsStringSync(), contains('SafeToolsPanel(channel: PluginProcessChannel.detached'));
+      expect(File('$dir/test/safe_tools_process_test.dart').readAsStringSync(),
+          allOf(contains('implements PluginProcessContext'), contains("context.handlers['ping']!")));
+      expect(File('$dir/README.md').readAsStringSync(), contains('## Two halves'));
+    });
+
+    test('an isolated importer runs its importer in the process part', () async {
+      final service = PluginTemplateGeneratorService(
+        projectRoot: projectRoot,
+        editorApiRoot: editorApiRoot,
+        runner: (String exec, List<String> args, {String? workingDirectory, bool runInShell = false}) async {
+          if (args.contains('create')) Directory(args.last).createSync(recursive: true);
+          return ProcessResult(0, 0, 'ok', '');
+        },
+      );
+      final result = await service.generate(const PluginTemplateSpec(
+        templateType: PluginTemplateType.importer,
+        name: 'safe_importer',
+        friendlyName: 'Safe Importer',
+        isolated: true,
+      ));
+      expect(result.success, isTrue, reason: result.failureOutput);
+      final process = File('${result.pluginDir!.path}/lib/src/safe_importer_process.dart').readAsStringSync();
+      expect(process, contains('context.registerImporter('));
+      expect(process, contains("import 'package:lumina/lumina.dart' show LuminaAsset;"));
+      expect(File('${result.pluginDir!.path}/lib/src/safe_importer_plugin.dart').readAsStringSync(),
+          isNot(contains('registerImporter')));
+      expect(File('${result.pluginDir!.path}/pubspec.yaml').readAsStringSync(), contains('  lumina:\n    git:'));
+    });
+
+    test('a content-only plugin cannot be isolated', () async {
+      final result = await PluginTemplateGeneratorService(projectRoot: projectRoot).generate(const PluginTemplateSpec(
+        templateType: PluginTemplateType.contentOnly,
+        name: 'just_content',
+        friendlyName: 'Just Content',
+        isolated: true,
+      ));
+      expect(result.success, isFalse);
+      expect(result.failureOutput, contains('content-only'));
+      expect(Directory('${projectRoot.path}/plugins/just_content').existsSync(), isFalse);
+    });
+
     test('Content-only template generates directory structure with zero process spawn', () async {
       int processCount = 0;
       Future<ProcessResult> recordingRunner(String exec, List<String> args, {String? workingDirectory, bool runInShell = false}) async {
@@ -386,6 +475,28 @@ void main() {
         ));
         expect(result.success, isTrue, reason: result.failureOutput);
       }, tags: ['process'], timeout: const Timeout(Duration(minutes: 5)));
+    }
+
+    // Both halves of an isolated plugin compile against the real API, and the
+    // tests it ships pass.
+    for (final type in [PluginTemplateType.editorPanel, PluginTemplateType.importer]) {
+      test('Real process: the isolated ${type.name} template passes analyze and its own tests', () async {
+        final realEditorApiDir = Directory('${Directory.current.parent.path}/lumina_editor_api');
+        if (!realEditorApiDir.existsSync()) return;
+        final service = PluginTemplateGeneratorService(projectRoot: projectRoot, editorApiRoot: realEditorApiDir);
+        final result = await service.generate(PluginTemplateSpec(
+          templateType: type,
+          name: 'iso_${type.name.toLowerCase()}_plugin',
+          friendlyName: 'Isolated ${type.name}',
+          description: 'Testing the isolated ${type.name} template',
+          isolated: true,
+        ));
+        expect(result.success, isTrue, reason: result.failureOutput);
+        final tests = await Process.run('flutter', ['test'],
+            workingDirectory: result.pluginDir!.path, runInShell: Platform.isWindows);
+        expect(tests.exitCode, 0, reason: '${tests.stdout}\n${tests.stderr}');
+        expect('${tests.stdout}', contains('All tests passed'));
+      }, tags: ['process'], timeout: const Timeout(Duration(minutes: 10)));
     }
   });
 }

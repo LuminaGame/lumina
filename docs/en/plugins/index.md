@@ -42,6 +42,25 @@ A plugin is a Flutter package with a `<name>.lmplugin` manifest next to its `pub
 
 The manifest maps onto `LuminaPluginDescriptor`: name, friendly name, version, description, category, authors, the supported engine version range, dependencies on other plugins, and the modules. A plugin without code modules is content-only.
 
+Two more fields decide where the code runs (see [Isolated plugins](#isolated-plugins-own-process)): `"isolation"`, `"in_process"` (the default) or `"process"`, and, on the editor module, `"process_class"`, the `LuminaPluginProcess` subclass in the same `entry_library`. A plugin with `"isolation": "process"` must name a `process_class` on an editor module; an unknown `isolation` value, a `process_class` that is not a Dart class name or a missing one makes the manifest a scan error, listed in the Plugin Manager like any other broken manifest.
+
+```json
+{
+  "name": "my_tools",
+  "version": "0.1.0",
+  "isolation": "process",
+  "modules": [
+    {
+      "name": "my_tools",
+      "type": "editor",
+      "entry_library": "lib/my_tools.dart",
+      "registration_class": "MyToolsPlugin",
+      "process_class": "MyToolsProcess"
+    }
+  ]
+}
+```
+
 The registration class of an editor module extends `LuminaEditorPlugin`. In `register(LuminaEditorContext context)` it contributes its features, and `unregister` removes them again:
 
 ```dart
@@ -78,11 +97,26 @@ The context also gives the plugin `panels` (open, close and observe its panels),
 
 Lumina Studio scans three kinds of plugin roots, project first, then user, then built-in (a plugin found earlier hides a same-named one found later): `<project>/plugins/`; the per-user folder `~/.local/share/lumina/plugins/` (`%LOCALAPPDATA%\Lumina\plugins` on Windows; `LUMINA_USER_PLUGIN_DIR` overrides it), where the Lumina Marketplace and the Plugin Manager's Import from Folder / Import from Zip install plugins; and the **built-in** plugins, the plugin packages the engine workspace depends on. The built-ins (`lumina_plugin_pcg`, `lumina_plugin_miniai`) live in the plugins repository and are `lumina_ui` dev dependencies pinned by commit, so they are found through the workspace's resolved packages (`LuminaWorkspace.pluginPackageDirs`: every package in `.dart_tool/package_config.json` that ships `<name>.lmplugin`): the sibling `plugins` checkout in a source workspace (through `pubspec_overrides.yaml`), the pub cache's git checkout in a release checkout. An engine `plugins/` folder (`LUMINA_ENGINE_ROOT`) is still scanned when it exists. `PluginRepository` reads every manifest it finds and reports broken ones as scan errors; `PluginRegistryService` resolves the wanted set of enabled plugins against their dependencies and engine version and reports issues.
 
-Plugins are enabled in **Plugins > Plugin Manager**. Code plugins are compiled into the editor: `EditorHostGeneratorService` adds them to a project editor host's `pubspec.yaml` (a built-in resolved from git as the same git dependency, url, path and commit from the engine's `pubspec.lock`, never a path into the pub cache; any other plugin by its folder) and generates the registrar, whose `registerAllPlugins` registers every enabled editor module. Enabling a code plugin therefore asks for a restart, and the editor comes back with the plugin registered.
+Plugins are enabled in **Plugins > Plugin Manager**. Code plugins are compiled into the editor: `EditorHostGeneratorService` adds them to a project editor host's `pubspec.yaml` (a built-in resolved from git as the same git dependency, url, path and commit from the engine's `pubspec.lock`, never a path into the pub cache; any other plugin by its folder) and generates the registrar, whose `registerAllPlugins` registers every enabled editor module and whose `kPluginProcesses` maps each enabled plugin with `"isolation": "process"` to its process class (passed to `runLuminaEditor` as `processes`). A plugin's `.lmplugin` is part of the project editor's build fingerprint, so changing its `isolation` or `process_class` rebuilds the editor. Enabling a code plugin therefore asks for a restart, and the editor comes back with the plugin registered.
+
+## Isolated plugins (own process)
+
+A code plugin normally runs inside the editor: a synchronous loop freezes it, a native crash in the plugin's FFI library closes it. A plugin with `"isolation": "process"` runs its risky half in its own process instead: the editor starts its own executable again with `--lumina-plugin-process <name>`, supervises it (a health ping every 2 s; three missed pings = hung, killed and restarted; automatic restarts after 1 s, 2 s and 4 s, at most three, then stopped until the user restarts it) and files a `plugin_crash` report when it dies. The editor keeps running.
+
+Such a plugin has two halves:
+
+| Half | Class | Runs in | What belongs there |
+|---|---|---|---|
+| Process part | `LuminaPluginProcess` subclass, the manifest's `process_class` | the plugin process | everything that can crash, hang or block: native (FFI) libraries, child processes, network, heavy CPU work, file generation, proxied level edits, MCP tools, importers, menu commands that do work |
+| UI shell | the `LuminaEditorPlugin`, the manifest's `registration_class` | the editor | panels, tabs, asset editors and 3D viewports with full widgets; it holds no native library, starts no process and does no heavy work |
+
+The process part registers everything as data through `PluginProcessContext` (menu items, slot buttons, importers, MCP tools, console commands, declarative panels described by a `PluginViewSpec`) and answers the shell with `handle(method, handler)`. The shell reaches it through `context.processChannel(pluginName)` (`PluginProcessChannel`: `call`, `events`, `progress`, `state`, `restart`). While the process is not running, the editor covers the shell's panels with the process state and a Restart button. A plugin that is all data needs no shell at all.
+
+**Project override**: a project can force an isolated plugin in process, for debugging, with `.lmproject` `"plugin_isolation": {"<name>": "in_process"}` (`PluginRegistryService.setIsolationOverride`, the Plugin Manager). The same process part then runs inside the editor over an in-memory connection. The override only forces in process: a plugin without a process part always runs in process. The registrar lists every manifest-isolated plugin regardless of the override, so one editor build serves both.
 
 ## Creating and publishing a plugin
 
-**Plugins > New Plugin** opens a wizard that calls `PluginTemplateGeneratorService.generate` with a `PluginTemplateSpec` (template type, name, friendly name, author, description, category) and writes a ready-to-build plugin package.
+**Plugins > New Plugin** opens a wizard that calls `PluginTemplateGeneratorService.generate` with a `PluginTemplateSpec` (template type, name, friendly name, author, description, category, `isolated`) and writes a ready-to-build plugin package. With `isolated: true` the package is an isolated plugin: `lib/src/<name>_process.dart` (a process part that registers a menu command, a `ping` handler and a declarative panel; the importer template's importer runs there too), a UI shell whose panel calls `ping` through the channel, a test for each half and a manifest with `"isolation": "process"` and `"process_class"`.
 
 Plugins are packed for the marketplace with `dart run tool/pack_plugin.dart` inside the plugin folder; see the plugins repository for the details.
 
