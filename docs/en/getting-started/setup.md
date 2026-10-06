@@ -116,7 +116,7 @@ flutter_filament\tool\build_filament_windows.bat filament   :: rebuild one targe
 
 It builds `filament/out/cmake-release-windows/` with the static CRT (`/MT`), the same feature set as the Linux build.
 
-**Web**: `flutter_filament/tool/web/build_filament_web.sh` builds Filament for WebAssembly into `filament/out/cmake-wasm-release`, and `flutter_filament/tool/web/build_module.sh` links `flutter_filament/web/flutter_filament.{js,wasm}`. See `flutter_filament/tool/web/README.md`.
+**Web**: `flutter_filament/tool/web/build_host_tools.sh` builds Filament's host tools, `flutter_filament/tool/web/build_filament_web.sh` builds Filament for WebAssembly into `filament/out/cmake-wasm-release`, and `flutter_filament/tool/web/build_module.sh` links `flutter_filament/web/flutter_filament.{js,wasm}`. The scripts need a Filament source tree (`LUMINA_FILAMENT_SRC`, or the `filament` link when it is a full checkout), not the pruned prebuilt. CI builds the module too (`.github/actions/filament-web`): the `web` job of `ci.yml` tests it in headless Chrome, and every release attaches it as `flutter-filament-web-<tag>.zip`. See `flutter_filament/tool/web/README.md`.
 
 ## Build OpenRigLogic
 
@@ -144,7 +144,7 @@ To use Lumina Studio without building it, install it from the [GitHub releases](
 
 The Windows setup accepts `/DRYRUN`, which lists what it would install and download without changing anything. Every release also carries the editor on its own (`lumina-studio-<tag>-windows-x64.zip`, `lumina-studio-<tag>-linux-x64.tar.gz`, the unsigned Microsoft Store package `lumina-studio-<tag>-windows-x64-store.msix` for the Partner Center submission, and a signed MSIX when the signing secrets exist) and the prebuilt OpenRigLogic library. Each file has a `.sha256` sidecar. The prebuilt Filament is not attached to Lumina releases: the release notes link the `filament-<VERSION>` release described above, which the editor downloads from at first launch (falling back to its own release's assets, which is where releases up to v0.0.1-dev.6 keep them). The installers' "latest" is the newest Lumina release with the editor for the platform; they never pick a `filament-*` release.
 
-Pushing a `v*` tag that matches the version in `lumina_ui/pubspec.yaml` runs `.github/workflows/release.yml`. It checks the cross-repository pins, makes sure the `filament-<VERSION>` release exists and is complete (building Filament, or restoring it from the cache, only when it is not), builds Lumina Studio for Windows and Linux and the installers, and publishes the release. `installer/README.md` describes each installer, how to build it locally and the signing secrets.
+Pushing a `v*` tag that matches the version in `lumina_ui/pubspec.yaml` runs `.github/workflows/release.yml`. It checks the cross-repository pins, makes sure the `filament-<VERSION>` release exists and is complete (building Filament, or restoring it from the cache, only when it is not), builds Lumina Studio for Windows and Linux, flutter_filament's WebAssembly module and the installers, and publishes the release. `installer/README.md` describes each installer, how to build it locally and the signing secrets.
 
 ### Signing the Windows release (Certum)
 

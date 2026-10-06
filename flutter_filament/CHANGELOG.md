@@ -5,6 +5,10 @@
 - Filament upgraded to v1.77.2 (prebuilt `1.77.2-lumina.1`): Metal external image handles, correct
   Vulkan depth/stencil render-target format reporting. The material version stays 77. The prebuilt
   scripts re-apply the patches after a tag change (a forced checkout used to drop them silently).
+- The WebAssembly module is built in CI (`.github/actions/filament-web`): `tool/web/build_host_tools.sh`
+  exports Filament's host tools, the web scripts take `LUMINA_FILAMENT_SRC` (a patched source checkout,
+  `tool/filament/build_prebuilt.sh --checkout-only`), `build_module.sh` reads the hook's current source and
+  include lists again, and every release attaches `flutter-filament-web-<tag>.zip`.
 - Filament upgraded to v1.77.0 (from a 1.75.0 release-candidate cut).
 - `FilamentTransformManager.getTransformAt` implemented (new C function
   `filament_transform_manager_get_transform_i`); previously threw `UnimplementedError`.

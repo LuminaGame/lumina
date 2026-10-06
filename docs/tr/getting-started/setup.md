@@ -118,7 +118,7 @@ flutter_filament\tool\build_filament_windows.bat filament   :: tek bir target'ı
 
 Bu script `filament/out/cmake-release-windows/`'u static CRT (`/MT`) ile, Linux build'iyle aynı özellik setinde build eder.
 
-**Web**: `flutter_filament/tool/web/build_filament_web.sh` Filament'i WebAssembly için `filament/out/cmake-wasm-release`'e build eder, `flutter_filament/tool/web/build_module.sh` ise `flutter_filament/web/flutter_filament.{js,wasm}`'ı link eder. Bkz. `flutter_filament/tool/web/README.md`.
+**Web**: `flutter_filament/tool/web/build_host_tools.sh` Filament'in host araçlarını build eder, `flutter_filament/tool/web/build_filament_web.sh` Filament'i WebAssembly için `filament/out/cmake-wasm-release`'e build eder, `flutter_filament/tool/web/build_module.sh` ise `flutter_filament/web/flutter_filament.{js,wasm}`'ı link eder. Betikler bir Filament kaynak ağacı ister (`LUMINA_FILAMENT_SRC`, ya da tam bir checkout olduğunda `filament` bağlantısı); budanmış prebuilt yetmez. CI da modülü build eder (`.github/actions/filament-web`): `ci.yml`'ın `web` işi onu headless Chrome'da test eder, her release de `flutter-filament-web-<tag>.zip` olarak ekler. Bkz. `flutter_filament/tool/web/README.md`.
 
 ## OpenRigLogic'i build etmek
 
@@ -146,7 +146,7 @@ Lumina Studio'yu build etmeden kullanmak için [GitHub releases](https://github.
 
 Windows setup'ı `/DRYRUN` kabul eder: hiçbir şeyi değiştirmeden neyi kuracağını ve indireceğini listeler. Her release editörün kendisini de (`lumina-studio-<tag>-windows-x64.zip`, `lumina-studio-<tag>-linux-x64.tar.gz` Partner Center gönderimi için imzasız Microsoft Store paketi `lumina-studio-<tag>-windows-x64-store.msix` ve imzalama secret'ları varsa imzalı bir MSIX) ve prebuilt OpenRigLogic kütüphanesini de taşır. Her dosyanın bir `.sha256` sidecar'ı vardır. Prebuilt Filament Lumina release'lerine eklenmez: release notları yukarıda anlatılan `filament-<VERSION>` release'ine bağlantı verir; editör ilk açılışta oradan indirir (bulamazsa kendi release'inin dosyalarına döner; v0.0.1-dev.6'ya kadarki release'ler Filament'i orada tutar). Kurulum programlarının "latest"ı, platformun editörünü taşıyan en yeni Lumina release'idir; hiçbir zaman bir `filament-*` release'ini seçmezler.
 
-`lumina_ui/pubspec.yaml` içindeki sürümle eşleşen bir `v*` tag'i push etmek `.github/workflows/release.yml`'ı çalıştırır. Workflow repository'ler arası pin'leri kontrol eder, `filament-<VERSION>` release'inin var ve eksiksiz olduğundan emin olur (Filament'i yalnızca eksikse build eder ya da cache'ten alır), Windows ve Linux için Lumina Studio'yu ve installer'ları build eder ve release'i yayımlar. `installer/README.tr.md` her installer'ı, yerelde nasıl build edileceğini ve imzalama secret'larını anlatır.
+`lumina_ui/pubspec.yaml` içindeki sürümle eşleşen bir `v*` tag'i push etmek `.github/workflows/release.yml`'ı çalıştırır. Workflow repository'ler arası pin'leri kontrol eder, `filament-<VERSION>` release'inin var ve eksiksiz olduğundan emin olur (Filament'i yalnızca eksikse build eder ya da cache'ten alır), Windows ve Linux için Lumina Studio'yu, flutter_filament'in WebAssembly modülünü ve installer'ları build eder ve release'i yayımlar. `installer/README.tr.md` her installer'ı, yerelde nasıl build edileceğini ve imzalama secret'larını anlatır.
 
 ### Windows release'ini imzalamak (Certum)
 

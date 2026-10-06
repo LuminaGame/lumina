@@ -8,11 +8,13 @@
 # desktop library. Single-threaded, WebGL2, growable heap and function table.
 #   tool/web/build_module.sh            # release (-O3)
 #   OPT=-O1 tool/web/build_module.sh    # faster iteration
+# LUMINA_FILAMENT_SRC names the Filament source tree holding
+# out/cmake-wasm-release (default: the repository's ../filament link).
 set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 pkg="$(cd "${here}/../.." && pwd)"
-filament="$(cd "${pkg}/../filament" && pwd)"
+filament="${LUMINA_FILAMENT_SRC:-$(cd "${pkg}/../filament" && pwd)}"
 wasm="${filament}/out/cmake-wasm-release"
 EMSDK="${EMSDK:-$HOME/emsdk}"
 OPT="${OPT:--O3}"
@@ -25,10 +27,20 @@ cd "${pkg}"
 mkdir -p "${obj}" web
 
 # --- lockstep inputs --------------------------------------------------------
-mapfile -t sources < <(grep -oE "'(src/[a-z0-9_]+\.cpp|\.\./filament/third_party/smol-v/source/smolv\.cpp)'" hook/build.dart | tr -d "'")
-mapfile -t includes < <(sed -n '/includes: \[/,/\],/p' hook/build.dart | grep -oE "'[^']+'" | tr -d "'" |
-  sed -e "s#\.\./filament/out/cmake-release#../filament/out/cmake-wasm-release#" \
-      -e 's#\.\./filament/out/\$filamentOut#../filament/out/cmake-wasm-release#')
+# hook/build.dart lists the C wrapper sources (`src/*_c.cpp`), smol-v from the
+# Filament tree and the vendored matp parser (`third_party/filament_matp/`).
+# matp serves the runtime material compiler, which the web stubs replace
+# (filamat is not part of Filament's WebAssembly build), so it stays out.
+mapfile -t sources < <(grep -oE "'(src/[a-z0-9_]+\.cpp|[$]filament/third_party/smol-v/source/smolv\.cpp)'" hook/build.dart | tr -d "'" |
+  sed -e 's#^[$]filament#'"${filament}"'#')
+# The include list names Filament paths as `$filament/...` and the desktop
+# build folder as `$filament/out/$filamentOut`; both are re-rooted at the
+# Filament source tree in use and its WebAssembly build folder.
+mapfile -t includes < <(sed -n '/final includes = \[/,/^    \];/p' hook/build.dart | grep -oE "'[^']+'" | tr -d "'" |
+  sed -e 's#^[$]filament/out/[$]filamentOut#'"${filament}"'/out/cmake-wasm-release#' \
+      -e 's#^[$]filament#'"${filament}"'#')
+(( ${#sources[@]} > 0 )) || { echo "no sources found in hook/build.dart" >&2; exit 1; }
+(( ${#includes[@]} > 0 )) || { echo "no include list found in hook/build.dart" >&2; exit 1; }
 # The Filament version the module is built against (bare; the C
 # wrapper stringizes it), from the file bump-version.sh treats as primary.
 filament_version="$(sed -n 's/^VERSION_NAME=//p' "${filament}/android/gradle.properties" | tr -d '\r')"

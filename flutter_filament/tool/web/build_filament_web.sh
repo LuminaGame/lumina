@@ -10,20 +10,26 @@
 #
 # Output: filament/out/cmake-wasm-release (static libraries + filament-js).
 # Requires emsdk (see tool/web/README.md); EMSDK defaults to ~/emsdk.
+# LUMINA_FILAMENT_SRC names the Filament source tree (default: the
+# repository's ../filament link); JOBS sets ninja -j.
 set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-filament="$(cd "${here}/../../../filament" && pwd)"
+filament="${LUMINA_FILAMENT_SRC:-$(cd "${here}/../../../filament" && pwd)}"
 EMSDK="${EMSDK:-$HOME/emsdk}"
 prebuilt="${filament}/out/prebuilt-tools-release"
 out="${filament}/out/cmake-wasm-release"
 
+if [[ ! -f "${filament}/CMakeLists.txt" ]]; then
+  echo "not a Filament source tree: ${filament} (set LUMINA_FILAMENT_SRC)" >&2
+  exit 1
+fi
 if [[ ! -f "${EMSDK}/emsdk_env.sh" ]]; then
   echo "emsdk not found at ${EMSDK} (see tool/web/README.md)" >&2
   exit 1
 fi
 if [[ ! -f "${prebuilt}/ImportExecutables-Prebuilt.cmake" ]]; then
-  echo "host tools missing: ${prebuilt} (build them with filament/build.sh first)" >&2
+  echo "host tools missing: ${prebuilt} (build them with tool/web/build_host_tools.sh first)" >&2
   exit 1
 fi
 
@@ -43,4 +49,4 @@ cmake \
     -DFILAMENT_IMPORT_PREBUILT_EXECUTABLES_DIR=out/prebuilt-tools-release \
     -DFILAMENT_SUPPORTS_WEBP_TEXTURES=ON \
     "${filament}" > /dev/null
-ninja "$@"
+ninja ${JOBS:+-j "${JOBS}"} "$@"

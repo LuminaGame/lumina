@@ -5,7 +5,14 @@
 #
 #   check ──┬── filament (windows, linux) ──┬── filament-release ──────────┐
 #           │                               └── studio (windows, linux) ───┤
+#           ├── web (flutter_filament WebAssembly module) ─────────────────┤
 #           └── installers (setup.exe; .deb + .rpm) ───────────────────────┴── release
+#
+# The web job builds flutter_filament's WebAssembly module
+# (.github/actions/filament-web: patched Filament source, host tools, emsdk)
+# and the release carries it as flutter-filament-web-<tag>.zip, the files a
+# web game serves next to its index.html and the editor stages into web
+# builds.
 #
 # Prebuilt Filament is published once per tool/filament/VERSION, in its own
 # release `filament-<VERSION>` (a pre-release that is never "Latest", created
@@ -424,6 +431,58 @@ jobs:
           compression-level: 0
           retention-days: 7
 
+  web:
+    name: flutter_filament web module
+    needs: check
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    env:
+      TAG: ${{ needs.check.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.check.outputs.sha }}
+          path: lumina
+          persist-credentials: false
+
+      - uses: ./lumina/.github/actions/linux-build-deps
+
+      - id: web
+        uses: ./lumina/.github/actions/filament-web
+
+      - name: Package
+        env:
+          MODULE_DIR: ${{ steps.web.outputs.module-dir }}
+          EMSDK_VERSION: ${{ steps.web.outputs.emsdk-version }}
+        run: |
+          set -euo pipefail
+          name="flutter-filament-web-$TAG"
+          stage="$RUNNER_TEMP/$name"
+          mkdir -p "$stage" dist
+          cp "$MODULE_DIR/flutter_filament.js" "$MODULE_DIR/flutter_filament.wasm" "$stage/"
+          filament="$(tr -d '[:space:]' < lumina/tool/filament/VERSION)"
+          cat > "$stage/README.md" <<EOF
+          # flutter_filament web module $TAG
+
+          \`flutter_filament.js\` and \`flutter_filament.wasm\`: Filament's WebGL2 backend and
+          flutter_filament's C wrapper as one single-threaded WebAssembly module, built from
+          Lumina $TAG against Filament $filament with emsdk $EMSDK_VERSION.
+
+          A Lumina web game serves both files next to its \`index.html\` (Lumina Studio's web
+          build stages them from \`flutter_filament/web/\`), or loads them from another URL
+          through \`FilamentWeb.ensureInitialized(moduleUrl: ...)\`.
+          EOF
+          (cd "$RUNNER_TEMP" && zip -q -r "$GITHUB_WORKSPACE/dist/$name.zip" "$name")
+          (cd dist && sha256sum "$name.zip" > "$name.zip.sha256" && cat "$name.zip.sha256")
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: web-module
+          path: dist/flutter-filament-web-*
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
   installers:
     name: Installers (${{ matrix.platform }})
     needs: check
@@ -542,7 +601,7 @@ jobs:
 
   release:
     name: Publish the release
-    needs: [check, filament-release, studio, installers]
+    needs: [check, filament-release, studio, web, installers]
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
@@ -575,6 +634,11 @@ jobs:
           pattern: installer-*
           path: dist
           merge-multiple: true
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: web-module
+          path: dist
 
       - name: Verify checksums
         working-directory: dist
@@ -620,6 +684,7 @@ jobs:
           | `lumina-studio-*-windows-x64-store.msix` | The editor as an unsigned Microsoft Store package (for the Partner Center submission; it installs once the Store has signed it) |
           | `lumina-studio-*-windows-x64.msix` | The editor as a signed MSIX package (when signed) |
           | `openriglogic-*` | Prebuilt OpenRigLogic library the editor downloads at first launch |
+          | `flutter-filament-web-*.zip` | flutter_filament's WebAssembly module (`flutter_filament.js` + `.wasm`), the files a web game serves next to its `index.html` |
 
           Every file has a `.sha256` sidecar.
           EOF

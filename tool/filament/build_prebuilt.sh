@@ -5,13 +5,15 @@
 # (flutter_filament/third_party/libcxx), then pruned to what the native-assets
 # hooks read and packed.
 #
-#   tool/filament/build_prebuilt.sh [--skip-build] [--out <dir>] [<work-dir>]
+#   tool/filament/build_prebuilt.sh [--skip-build | --checkout-only] [--out <dir>] [<work-dir>]
 #
 # <work-dir>   Filament checkout + build tree (default: $LUMINA_FILAMENT_WORK,
 #              else build/filament-src under the repo root). Reused across runs:
 #              the clone, the patch state and the ninja tree are incremental.
 # --out        archive folder (default: build/filament-prebuilt).
 # --skip-build package an existing build only.
+# --checkout-only  stop after the patched checkout (the source tree the web
+#              build, flutter_filament/tool/web/, compiles from).
 #
 # Environment: CC / CXX (default clang / clang++, which must match the bundled
 # libc++ 21 headers: clang 19 or newer), LUMINA_LIBCXX_DIR (the bundled libc++),
@@ -28,11 +30,13 @@ VERSION="$(tr -d '[:space:]' < "$REPO/tool/filament/VERSION")"
 TAG="v${VERSION%%-*}"
 UPSTREAM="${LUMINA_FILAMENT_UPSTREAM:-https://github.com/google/filament.git}"
 SKIP_BUILD=0
+CHECKOUT_ONLY=0
 OUT_DIR="$REPO/build/filament-prebuilt"
 WORK="${LUMINA_FILAMENT_WORK:-$REPO/build/filament-src}"
 while [ $# -gt 0 ]; do
   case "$1" in
     --skip-build) SKIP_BUILD=1 ;;
+    --checkout-only) CHECKOUT_ONLY=1 ;;
     --out) OUT_DIR="$2"; shift ;;
     -h|--help) sed -n '2,23p' "$0"; exit 0 ;;
     -*) echo "unknown option: $1" >&2; exit 2 ;;
@@ -90,6 +94,10 @@ if [ "$(cat "$WORK/.lumina-patches" 2>/dev/null || true)"$'\n' != "$STAMP" ]; th
   printf '%s' "${STAMP%$'\n'}" > "$WORK/.lumina-patches"
 else
   log "patches already applied"
+fi
+if [ "$CHECKOUT_ONLY" = 1 ]; then
+  log "patched $TAG checkout ready in $WORK"
+  exit 0
 fi
 
 # --- 2. the manifest: what the hooks read ----------------------------------

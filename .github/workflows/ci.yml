@@ -2,6 +2,8 @@
 #
 #   analyze    `melos run analyze` (flutter analyze in every package)
 #   unit       a curated set of fast unit tests on the noop backend (no GPU)
+#   web        flutter_filament's WebAssembly module (.github/actions/filament-web)
+#              and its browser tests in headless Chrome
 #   packaging  release_info.dart checks and the Linux packages
 #
 # The GPU smoke suites (PNG + video evidence) need a real GPU and the shared
@@ -11,9 +13,11 @@
 # tests below, which cover the FFI bindings, the data layer, the editor API
 # and code generation without rendering.
 #
-# The unit tests take long, so they run only when a pull request is ready to
-# merge: it carries the `ready-to-merge` label (and is not a draft). They can
-# also be started by hand (Actions > ci > Run workflow).
+# The unit tests and the web module take long, so they run only when a pull
+# request is ready to merge: it carries the `ready-to-merge` label (and is not
+# a draft). They can also be started by hand (Actions > ci > Run workflow).
+# The web job also runs on pushes to main, which warms its cache (the Filament
+# WebAssembly build and the host tools) for the release workflow.
 #
 # The unit tests compile the native-assets hooks, so they need prebuilt
 # Filament: from the cache (key: patches + VERSION + build scripts + OS), else
@@ -166,6 +170,80 @@ jobs:
           flutter test
           test/data/landscape_data_test.dart
           test/data/sequencer_evaluator_test.dart
+
+  web:
+    name: Web module (WebAssembly)
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'pull_request' &&
+       !github.event.pull_request.draft &&
+       contains(github.event.pull_request.labels.*.name, 'ready-to-merge'))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          path: lumina
+          persist-credentials: false
+
+      - uses: ./lumina/.github/actions/linux-build-deps
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - uses: ./lumina/.github/actions/checkout-siblings
+
+      - name: Resolve the workspace
+        working-directory: lumina
+        run: flutter pub get
+
+      # The native library the tests' hooks link, and the matc the canvas
+      # smoke compiles its material with (out/prebuilt-tools-release/tools/matc).
+      - uses: ./lumina/.github/actions/filament-prebuilt
+        with:
+          fetch: 'true'
+          save: 'false'
+          extract: 'true'
+
+      - id: web
+        uses: ./lumina/.github/actions/filament-web
+
+      # Headless Chrome (the runner's google-chrome): the module's exports,
+      # heap and ABI parity under node, a WebGL2 canvas drawn through the C
+      # functions, the dart:ffi layer and the Dart API compiled by dart2js,
+      # and the example app presenting through FilamentWidget.
+      - name: Web tests
+        working-directory: lumina/flutter_filament
+        run: >-
+          flutter test
+          test/web/module_node_test.dart
+          test/web/abi_golden_test.dart
+          test/web/canvas_smoke_test.dart
+          test/web/browser_suite_test.dart
+          test/web/widget_web_smoke_test.dart
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: flutter-filament-web
+          path: |
+            lumina/flutter_filament/web/flutter_filament.js
+            lumina/flutter_filament/web/flutter_filament.wasm
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Summary
+        run: |
+          {
+            echo "### flutter_filament web module"
+            echo
+            echo "emsdk ${{ steps.web.outputs.emsdk-version }}; Filament WebAssembly build from cache: ${{ steps.web.outputs.cache-hit }}"
+            echo
+            ls -la "${{ steps.web.outputs.module-dir }}"/flutter_filament.* | sed 's/^/    /'
+          } >> "$GITHUB_STEP_SUMMARY"
 
   filament-cache:
     name: Filament cache (${{ matrix.platform }}, main)

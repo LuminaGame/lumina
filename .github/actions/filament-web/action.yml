@@ -1,0 +1,109 @@
+name: flutter_filament web module
+description: >
+  Builds flutter_filament's WebAssembly module, web/flutter_filament.{js,wasm}
+  (flutter_filament/tool/web): a patched Filament source checkout at the tag
+  tool/filament/VERSION names (tool/filament/build_prebuilt.sh
+  --checkout-only), Filament's host tools exported as prebuilt executables
+  (build_host_tools.sh), Filament for WebAssembly with emsdk
+  (build_filament_web.sh) and the module itself (build_module.sh).
+
+  The source tree with both build folders lives in
+  lumina/build/filament-web-src and is cached as a whole (key: the patches,
+  VERSION, the build scripts and the runner OS), so a cache hit only relinks
+  the module. The emsdk version is the one the Filament checkout's CI uses
+  (build/common/get-emscripten.sh).
+
+  Linux runners need the linux-build-deps action first (clang 19+, CMake,
+  Ninja); node must be on the PATH (tool/web/exported_symbols.mjs).
+
+outputs:
+  module-dir:
+    description: The folder holding flutter_filament.js and flutter_filament.wasm.
+    value: ${{ steps.module.outputs.dir }}
+  emsdk-version:
+    description: The emsdk version the module was built with.
+    value: ${{ steps.source.outputs.emsdk }}
+  cache-hit:
+    description: Whether the Filament WebAssembly build came from the cache.
+    value: ${{ steps.restore.outputs.cache-hit }}
+
+runs:
+  using: composite
+  steps:
+    - name: Paths
+      id: paths
+      shell: bash
+      run: |
+        echo "src=$GITHUB_WORKSPACE/lumina/build/filament-web-src" >> "$GITHUB_OUTPUT"
+
+    - name: Restore the Filament WebAssembly build
+      id: restore
+      uses: actions/cache/restore@v6
+      with:
+        path: lumina/build/filament-web-src
+        key: filament-web-${{ runner.os }}-${{ hashFiles('lumina/third_party/filament/patches/**', 'lumina/tool/filament/VERSION', 'lumina/tool/filament/build_prebuilt.sh', 'lumina/flutter_filament/tool/web/build_host_tools.sh', 'lumina/flutter_filament/tool/web/build_filament_web.sh') }}
+
+    # A no-op on a restored tree that is already at the tag with the patches.
+    - name: Patched Filament source
+      id: source
+      shell: bash
+      working-directory: lumina
+      env:
+        SRC: ${{ steps.paths.outputs.src }}
+      run: |
+        set -euo pipefail
+        bash tool/filament/build_prebuilt.sh --checkout-only "$SRC"
+        emsdk="$(sed -n 's/^EMSDK_VERSION=\${GITHUB_EMSDK_VERSION-\(.*\)}$/\1/p' "$SRC/build/common/get-emscripten.sh")"
+        if [ -z "$emsdk" ]; then
+          echo "::error::Could not read the emsdk version from build/common/get-emscripten.sh." >&2
+          exit 1
+        fi
+        echo "emsdk=$emsdk" >> "$GITHUB_OUTPUT"
+        echo "Filament $(sed -n 's/^VERSION_NAME=//p' "$SRC/android/gradle.properties") with emsdk $emsdk"
+
+    - name: emsdk
+      uses: mymindstorm/setup-emsdk@v14
+      with:
+        version: ${{ steps.source.outputs.emsdk }}
+        actions-cache-folder: emsdk-cache
+
+    - name: Host tools (matc, resgen, cmgen, …)
+      if: steps.restore.outputs.cache-hit != 'true'
+      shell: bash
+      working-directory: lumina
+      env:
+        LUMINA_FILAMENT_SRC: ${{ steps.paths.outputs.src }}
+      run: bash flutter_filament/tool/web/build_host_tools.sh
+
+    - name: Filament for WebAssembly
+      if: steps.restore.outputs.cache-hit != 'true'
+      shell: bash
+      working-directory: lumina
+      env:
+        LUMINA_FILAMENT_SRC: ${{ steps.paths.outputs.src }}
+      run: bash flutter_filament/tool/web/build_filament_web.sh
+
+    - name: Save the Filament WebAssembly build
+      if: steps.restore.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v6
+      with:
+        path: lumina/build/filament-web-src
+        key: ${{ steps.restore.outputs.cache-primary-key }}
+
+    - name: Module (web/flutter_filament.{js,wasm})
+      id: module
+      shell: bash
+      working-directory: lumina/flutter_filament
+      env:
+        LUMINA_FILAMENT_SRC: ${{ steps.paths.outputs.src }}
+      run: |
+        set -euo pipefail
+        node --version
+        bash tool/web/build_module.sh
+        for f in web/flutter_filament.js web/flutter_filament.wasm; do
+          if [ ! -s "$f" ]; then
+            echo "::error::$f was not built." >&2
+            exit 1
+          fi
+        done
+        echo "dir=$PWD/web" >> "$GITHUB_OUTPUT"

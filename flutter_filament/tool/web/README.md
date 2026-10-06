@@ -10,17 +10,24 @@ The web build is one WebAssembly module, `web/flutter_filament.{js,wasm}`. It co
   cd ~/emsdk && git checkout 5.0.4 && ./emsdk install 5.0.4 && ./emsdk activate 5.0.4
   ```
   Override the location with `EMSDK=...`.
-- **Host tools** (matc, resgen, cmgen, …) come from `filament/out/prebuilt-tools-release`, the same split build the desktop libraries use.
+- **Host tools** (matc, resgen, cmgen, …) are a native build exported as prebuilt executables into `filament/out/prebuilt-tools-release`; `tool/web/build_host_tools.sh` builds them (clang against the bundled libc++ on Linux, like `tool/filament/build_prebuilt.sh`).
+- **A Filament source tree.** The scripts default to the repository's `filament` link; `LUMINA_FILAMENT_SRC=<dir>` names another checkout, for example the patched one `tool/filament/build_prebuilt.sh --checkout-only <dir>` produces (the pruned prebuilt archive has no sources and cannot be built from).
 
 ## Build
 
 ```bash
+tool/web/build_host_tools.sh     # matc, resgen, cmgen, … → filament/out/prebuilt-tools-release
 tool/web/build_filament_web.sh   # Filament → filament/out/cmake-wasm-release (long; incremental after)
 tool/web/build_module.sh         # our wrapper + Filament → web/flutter_filament.{js,wasm} (-O3)
 OPT=-O1 tool/web/build_module.sh # faster iteration
 ```
 
 - `build_filament_web.sh` mirrors `filament/build.sh -p wasm`. That script cannot be used as-is on this machine: it also relinks the host tools in `out/cmake-release`, which fails here.
+- `JOBS=<n>` limits `ninja -j` in the two Filament builds.
+
+## Continuous integration
+
+`.github/actions/filament-web` runs the three scripts on a Linux runner: it checks out the patched Filament source at `tool/filament/VERSION` into `build/filament-web-src`, installs the emsdk version that checkout's CI uses (`build/common/get-emscripten.sh`), builds the host tools and Filament for WebAssembly (cached as one tree, keyed by the patches, the version and the scripts), and links the module. The `web` job of `ci.yml` then runs `test/web/` in headless Chrome and uploads `flutter-filament-web`; the `web` job of `release.yml` attaches `flutter-filament-web-<tag>.zip` (+ `.sha256`) to the Lumina release.
 - `build_module.sh` reads the source and include lists from `hook/build.dart`, and the exported symbols from the ffigen output (`tool/web/exported_symbols.mjs`), so the web module and the desktop library cannot drift.
 
 ## The Dart side
