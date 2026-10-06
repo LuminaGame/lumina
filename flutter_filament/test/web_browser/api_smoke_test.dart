@@ -25,6 +25,14 @@ Future<Uint8List> _fetch(String url) async {
   return (await r.arrayBuffer().toDart).toDart.asUint8List();
 }
 
+/// [_fetch], or null when the server has no such file (404).
+Future<Uint8List?> _fetchOrNull(String url) async {
+  final r = await web.window.fetch(url.toJS).toDart;
+  if (r.status == 404) return null;
+  if (!r.ok) throw StateError('$url -> ${r.status}');
+  return (await r.arrayBuffer().toDart).toDart.asUint8List();
+}
+
 void _printPng(String name, web.HTMLCanvasElement canvas) {
   final data = canvas.toDataURL('image/png');
   // ignore: avoid_print
@@ -67,7 +75,14 @@ void main() {
     expect(c.filament_gltfio_is_webp_supported(), isTrue, reason: 'the barrel texture is WebP (EXT_texture_webp)');
     final provider = FilamentMaterialProvider.createUbershader(engine: engine);
     final loader = FilamentAssetLoader.create(engine: engine, materialProvider: provider);
-    final asset = loader.createAsset(await _fetch('/web/test_assets/Props/Barrels/empty_barrel.glb'));
+    // The shared test models are not part of the repository: a checkout
+    // without them (CI) skips the barrel instead of failing on a 404.
+    final glb = await _fetchOrNull('/web/test_assets/Props/Barrels/empty_barrel.glb');
+    if (glb == null) {
+      markTestSkipped('needs test-assets/Props/Barrels/empty_barrel.glb served at /web/test_assets');
+      return;
+    }
+    final asset = loader.createAsset(glb);
     expect(asset, isNotNull, reason: 'gltfio rejected the GLB');
     final resources = FilamentResourceLoader.create(engine: engine)..registerDefaultProviders(engine);
     expect(resources.loadResources(asset!), isTrue, reason: 'textures and buffers');
