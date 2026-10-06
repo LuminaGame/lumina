@@ -108,6 +108,21 @@ void main() {
     expect(r.content.first['text'], contains('$kFakePluginName stopped'));
   });
 
+  test('calls pending when the process dies fail at once with closed, long before their timeout', () async {
+    h = await PluginProcessHarness.create();
+    h.mode = 'normal';
+    final s = h.supervisor;
+    await s.start();
+    await waitForStatus(s, PluginProcessStatus.running);
+    final sw = Stopwatch()..start();
+    final pending = s.call('slow', const {}, const Duration(minutes: 30));
+    final failure = expectLater(pending, throwsA(isA<PluginRemoteError>().having((e) => e.code, 'code', PluginErrorCodes.closed)));
+    await s.call('exit', {'code': 5}).catchError((_) => null);
+    await failure;
+    expect(sw.elapsed, lessThan(const Duration(seconds: 10)));
+    await waitForStatus(s, PluginProcessStatus.crashed);
+  });
+
   test('a hung process is detected after three missed pings, killed and restarted', () async {
     h = await PluginProcessHarness.create();
     h.mode = 'hang';

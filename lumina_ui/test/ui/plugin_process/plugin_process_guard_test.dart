@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart';
 import 'package:lumina_ui/ui/core/services/plugin_process/plugin_supervisor_timings.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/plugin_view/plugin_view_scope.dart' show pluginControlKey;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import 'plugin_process_harness.dart';
@@ -40,6 +41,14 @@ void main() {
     final stoppedCard = find.byKey(const ValueKey('plugin_process_stopped_$kFakePluginName'));
     expect(stoppedCard, findsNothing);
     expect(find.byKey(const ValueKey('plugin_process_guard_child')), findsOneWidget);
+
+    // The real renderer draws the process's spec; a press is answered with a patch.
+    expect(find.text('not pressed'), findsOneWidget);
+    await tester.tap(find.descendant(of: find.byKey(pluginControlKey(kFakeViewId, 'press')), matching: find.text('Press')));
+    await tester.pump();
+    await tester.runAsync(() => waitFor(() => s.viewOf(kFakeViewId)!.value.find('count')!['value'] == 'pressed 1', reason: 'the patch'));
+    await tester.pump();
+    expect(find.text('pressed 1'), findsOneWidget);
 
     // The process dies: the panel says so, the editor goes on.
     await tester.runAsync(() async {

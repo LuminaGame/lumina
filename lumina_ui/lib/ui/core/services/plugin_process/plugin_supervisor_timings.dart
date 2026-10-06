@@ -9,7 +9,8 @@ class PluginSupervisorTimings {
     this.startTimeout = const Duration(seconds: 60),
     this.callTimeout = const Duration(seconds: 30),
     this.commandTimeout = const Duration(seconds: 30),
-    this.importTimeout = const Duration(minutes: 10),
+    this.mcpToolTimeout = const Duration(minutes: 30),
+    this.importTimeout = const Duration(minutes: 30),
     this.projectClosingTimeout = const Duration(seconds: 5),
     this.shutdownTimeout = const Duration(seconds: 3),
     this.stableAfter = const Duration(minutes: 1),
@@ -34,10 +35,16 @@ class PluginSupervisorTimings {
   /// The default bound of a shell's `PluginProcessChannel.call`.
   final Duration callTimeout;
 
-  /// The bound of a menu / slot command, a console command and an MCP tool.
+  /// The bound of a menu / slot command and a console command.
   final Duration commandTimeout;
 
-  /// The bound of a plugin importer.
+  /// The bound of an MCP tool call routed to the process: tools may run a
+  /// long job (a whole generation). A hang is caught by the health pings,
+  /// and a process that dies fails the call at once, not by this bound.
+  final Duration mcpToolTimeout;
+
+  /// The bound of a plugin importer (large packages take long; as with
+  /// tools, a death or hang ends the call earlier).
   final Duration importTimeout;
 
   /// The bound of `core.projectClosing`.

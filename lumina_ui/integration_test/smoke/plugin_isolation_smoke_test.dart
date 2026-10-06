@@ -8,6 +8,7 @@ import 'package:lumina_editor_api/lumina_editor_api.dart';
 import 'package:lumina_ui/testing.dart';
 import 'package:lumina_ui/ui/core/services/plugin_process/plugin_supervisor_timings.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/plugin_view/plugin_view_scope.dart' show pluginControlKey;
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/main_editor_view.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
@@ -125,7 +126,19 @@ void main() {
       final stopped = find.byKey(const ValueKey('plugin_process_stopped_$kFakePluginName'));
       expect(find.byKey(const ValueKey('right_dock')), findsOneWidget);
       expect(stopped, findsNothing);
-      await rec.hold(const Duration(seconds: 3));
+      await rec.hold(const Duration(seconds: 2));
+      // The panel is rendered from the process's spec; a press runs there
+      // and comes back as a patch.
+      Future<void> press() async {
+        await tester.tap(find.descendant(of: find.byKey(pluginControlKey(kFakeViewId, 'press')), matching: find.text('Press')));
+        await tester.runAsync(() => waitFor(() => s.viewOf(kFakeViewId)!.value.find('count')!['value'] == 'pressed 1',
+            reason: 'the patched panel'));
+        await settle(tester, frames: 10);
+        expect(find.text('pressed 1'), findsOneWidget);
+      }
+
+      await press();
+      await rec.hold(const Duration(seconds: 2));
       await shot('running');
 
       // Killed from outside, as a native crash would end it.
@@ -150,7 +163,9 @@ void main() {
       await settle(tester, frames: 20);
       expect(stopped, findsNothing);
       expect(s.reportedPid, isNot(pid));
-      await rec.hold(const Duration(seconds: 3));
+      await rec.hold(const Duration(seconds: 1));
+      await press(); // a fresh process: its own count again
+      await rec.hold(const Duration(seconds: 2));
       await shot('restarted');
       rec.save(name, usedAssets: used);
     } finally {

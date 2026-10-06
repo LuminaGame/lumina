@@ -181,7 +181,7 @@ extension _Contributions on PluginProcessSupervisor {
 
   Future<McpToolResult> _callTool(String tool, Map<String, Object?> args) async {
     try {
-      final r = await _request(PluginMethods.mcpTool, {'tool': tool, 'arguments': args}, timings.commandTimeout);
+      final r = await _request(PluginMethods.mcpTool, {'tool': tool, 'arguments': args}, timings.mcpToolTimeout);
       return _toolResultOf(r);
     } on PluginRemoteError catch (e) {
       return McpToolResult.error(e.code == PluginErrorCodes.unavailable ? e.message : '$pluginName.$tool failed: ${e.message}');
