@@ -2,9 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart';
 
-/// The editor's side of a plugin process link, for tests: a real loopback
+/// The editor's side of a plugin process link, for plugin tests: a real loopback
 /// `ServerSocket` and a [PluginConnection] that answers the handshake, takes
 /// the contributions and serves `host.*` requests the way the editor does,
 /// against a small level kept here ([HostLevel]) and real directories.
@@ -64,10 +65,13 @@ class LoopbackHost {
   Future<PluginContributions> get contributions => _contributions.future;
 
   String get userDir => '${root.path}/user';
-  String? get projectStoreDir => project == null ? null : '${project!.dir}/.lumina/plugins/sample';
+  /// The project store directory handed to the process (the plugin name of
+  /// [launch], else `sample`).
+  String? get projectStoreDir => project == null ? null : '${project!.dir}/.lumina/plugins/${_pluginName ?? 'sample'}';
+  String? _pluginName;
 
   PluginProcessLaunch launch(String pluginName, {String? token}) => PluginProcessLaunch(
-        pluginName: pluginName,
+        pluginName: _pluginName = pluginName,
         port: _server.port,
         token: token ?? this.token,
         projectDir: project?.dir,
@@ -151,6 +155,12 @@ class LoopbackHost {
 
   /// Sends [method] to the process and returns its answer.
   Future<Object?> call(String method, [Map<String, Object?> args = const {}]) => connection.request(method, args);
+
+  /// A [PluginProcessChannel] over this link, as a UI shell gets from the
+  /// editor: `call` goes to the process's `handle` handlers, `events` and
+  /// `progress` carry its `emit` / `progress` reports. Its state is running
+  /// while the link is open and crashed once it closes.
+  late final PluginProcessChannel channel = _LoopbackChannel(this);
 
   Future<void> close() async {
     await _server.close();
@@ -283,4 +293,41 @@ class HostLevel {
         throw PluginRemoteError(code: PluginErrorCodes.badArguments, message: 'unknown level op $op');
     }
   }
+}
+
+
+class _LoopbackChannel implements PluginProcessChannel {
+  _LoopbackChannel(this.host) {
+    host.connected.then((c) {
+      _state.value = const PluginProcessState(PluginProcessStatus.running);
+      c.done.then((_) => _state.value = const PluginProcessState(PluginProcessStatus.crashed, reason: 'connection closed'));
+    });
+  }
+
+  final LoopbackHost host;
+  final ValueNotifier<PluginProcessState> _state = ValueNotifier(const PluginProcessState(PluginProcessStatus.starting));
+
+  @override
+  String get pluginName => host._pluginName ?? 'sample';
+
+  @override
+  ValueListenable<PluginProcessState> get state => _state;
+
+  @override
+  Future<Object?> call(String method, [Map<String, Object?> args = const {}, Duration? timeout]) async {
+    final c = await host.connected;
+    return c.request(PluginMethods.call, {'method': method, 'args': args}, timeout ?? const Duration(seconds: 30));
+  }
+
+  @override
+  Stream<PluginProcessEvent> events([String? name]) => host._notes.stream
+      .where((n) => n.method == PluginMethods.event && (name == null || n.args['name'] == name))
+      .map((n) => PluginProcessEvent(n.args['name'] as String? ?? '', n.args['data']));
+
+  @override
+  Stream<PluginProgress> get progress =>
+      host._notes.stream.where((n) => n.method == PluginMethods.progress).map((n) => PluginProgress.fromJson(n.args));
+
+  @override
+  Future<void> restart() async {}
 }

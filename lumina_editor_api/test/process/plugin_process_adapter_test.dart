@@ -4,7 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart';
 
-import 'support/loopback_host.dart';
+import 'package:lumina_editor_api/testing.dart';
 
 const IconData _icon = IconData(0xe145, fontFamily: 'MaterialIcons');
 

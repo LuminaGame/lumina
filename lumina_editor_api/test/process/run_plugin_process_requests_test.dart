@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart';
 
-import 'support/loopback_host.dart';
+import 'package:lumina_editor_api/testing.dart';
 import 'support/sample_process.dart';
 
 void main() {
@@ -28,6 +28,18 @@ void main() {
 
   Future<Object?> call(String method, [Map<String, Object?> args = const {}]) =>
       host.call(PluginMethods.call, {'method': method, 'args': args});
+
+  test('a UI shell reaches the process through the test host channel', () async {
+    final channel = host.channel;
+    expect(channel.state.value.status, PluginProcessStatus.running);
+    expect(await channel.call('echo', {'x': 1}), {'echo': {'x': 1}});
+    final event = channel.events('hello').first;
+    final progress = channel.progress.first;
+    await channel.call('notify', {'n': 7});
+    expect((await event).data, {'n': 7});
+    final p = await progress;
+    expect((p.task, p.step, p.fraction), ('job', 'half', 0.5));
+  });
 
   test('core.call reaches the handler; an unknown method answers unknown_method', () async {
     expect(await call('echo', {'a': 1}), {'echo': {'a': 1}});
