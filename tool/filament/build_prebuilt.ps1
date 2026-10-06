@@ -81,9 +81,15 @@ if ($applied -ne $stamp) {
   Log "applying $($Patches.Count) patches"
   # Back to the pristine tag (tracked files only: out\ survives).
   Invoke-Native git ($git + @('-C', $WorkDir, 'reset', '-q', '--hard', 'HEAD'))
-  $paths = @($Patches | ForEach-Object { $_.FullName })
-  Invoke-Native git ($git + @('-C', $WorkDir, 'apply', '--check') + $paths)
-  Invoke-Native git ($git + @('-C', $WorkDir, 'apply') + $paths)
+  # Files an earlier patch series added are untracked; drop them too (ignored paths
+  # such as out\ stay).
+  Invoke-Native git ($git + @('-C', $WorkDir, 'clean', '-q', '-fd'))
+  # One patch at a time: a later patch may touch lines an earlier one changed, which a
+  # single `git apply` of the whole series rejects.
+  foreach ($p in $Patches) {
+    Invoke-Native git ($git + @('-C', $WorkDir, 'apply', '--check', $p.FullName))
+    Invoke-Native git ($git + @('-C', $WorkDir, 'apply', $p.FullName))
+  }
   [IO.File]::WriteAllText($stampFile, $stamp, $Utf8)
 } else {
   Log 'patches already applied'

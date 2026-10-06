@@ -579,6 +579,38 @@ void filament_view_set_motion_vector_texture(ffi.Pointer<ffi.Void> view, ffi.Poi
 ffi.Pointer<ffi.Void> filament_view_get_motion_vector_texture(ffi.Pointer<ffi.Void> view) =>
     ffi.Pointer<ffi.Void>.fromAddress(_m.filament_view_get_motion_vector_texture(view.address.toJS).toDartInt);
 
+bool filament_dlss_available() =>
+    _m.filament_dlss_available().toDartInt != 0;
+
+bool filament_dlss_request_extensions() =>
+    _m.filament_dlss_request_extensions().toDartInt != 0;
+
+void filament_dlss_clear_extension_request() {
+  _m.filament_dlss_clear_extension_request();
+}
+
+ffi.Pointer<ffi.Void> filament_dlss_create(ffi.Pointer<ffi.Void> engine, ffi.Pointer<ffi.Void> view, ffi.Pointer<filament_dlss_options_t> opts) =>
+    ffi.Pointer<ffi.Void>.fromAddress(_m.filament_dlss_create(engine.address.toJS, view.address.toJS, opts.address.toJS).toDartInt);
+
+void filament_dlss_get_render_resolution(ffi.Pointer<ffi.Void> dlss, ffi.Pointer<ffi.Uint32> out_w, ffi.Pointer<ffi.Uint32> out_h) {
+  _m.filament_dlss_get_render_resolution(dlss.address.toJS, out_w.address.toJS, out_h.address.toJS);
+}
+
+void filament_dlss_set_quality(ffi.Pointer<ffi.Void> dlss, int quality) {
+  _m.filament_dlss_set_quality(dlss.address.toJS, quality.toJS);
+}
+
+void filament_dlss_reset_history(ffi.Pointer<ffi.Void> dlss) {
+  _m.filament_dlss_reset_history(dlss.address.toJS);
+}
+
+void filament_dlss_destroy(ffi.Pointer<ffi.Void> dlss) {
+  _m.filament_dlss_destroy(dlss.address.toJS);
+}
+
+ffi.Pointer<ffi.Char> filament_dlss_last_error() =>
+    ffi.Pointer<ffi.Char>.fromAddress(_m.filament_dlss_last_error().toDartInt);
+
 ffi.Pointer<ffi.Void> filament_render_target_create_ex(ffi.Pointer<ffi.Void> engine, ffi.Pointer<filament_rt_attachment_t> color_attachments, int color_count, ffi.Pointer<filament_rt_attachment_t> depth_attachment, int samples) =>
     ffi.Pointer<ffi.Void>.fromAddress(_m.filament_render_target_create_ex(engine.address.toJS, color_attachments.address.toJS, color_count.toJS, depth_attachment.address.toJS, samples.toJS).toDartInt);
 
@@ -4256,6 +4288,62 @@ enum filament_blend_mode {
   };
 }
 
+final class filament_dlss_options_t extends ffi.Struct {
+  filament_dlss_options_t.$at(super.$address) : super.$at();
+
+  int get quality => FlutterFilamentModule.heap.getUint8($address);
+  set quality(int value) => FlutterFilamentModule.heap.setUint8($address, value);
+
+  int get outputWidth => FlutterFilamentModule.heap.getUint32($address + 4, Endian.little);
+  set outputWidth(int value) => FlutterFilamentModule.heap.setUint32($address + 4, value, Endian.little);
+
+  int get outputHeight => FlutterFilamentModule.heap.getUint32($address + 8, Endian.little);
+  set outputHeight(int value) => FlutterFilamentModule.heap.setUint32($address + 8, value, Endian.little);
+
+  bool get hdr => FlutterFilamentModule.heap.getUint8($address + 12) != 0;
+  set hdr(bool value) => FlutterFilamentModule.heap.setUint8($address + 12, value ? 1 : 0);
+
+  bool get autoExposure => FlutterFilamentModule.heap.getUint8($address + 13) != 0;
+  set autoExposure(bool value) => FlutterFilamentModule.heap.setUint8($address + 13, value ? 1 : 0);
+
+  double get sharpness => FlutterFilamentModule.heap.getFloat32($address + 16, Endian.little);
+  set sharpness(double value) => FlutterFilamentModule.heap.setFloat32($address + 16, value, Endian.little);
+}
+
+enum filament_dlss_quality {
+  FILAMENT_DLSS_MAX_PERFORMANCE(0),
+  FILAMENT_DLSS_BALANCED(1),
+  FILAMENT_DLSS_MAX_QUALITY(2),
+  FILAMENT_DLSS_ULTRA_PERFORMANCE(3),
+  FILAMENT_DLSS_DLAA(4);
+
+  final int value;
+  const filament_dlss_quality(this.value);
+
+  static filament_dlss_quality fromValue(int value) => switch (value) {
+    0 => FILAMENT_DLSS_MAX_PERFORMANCE,
+    1 => FILAMENT_DLSS_BALANCED,
+    2 => FILAMENT_DLSS_MAX_QUALITY,
+    3 => FILAMENT_DLSS_ULTRA_PERFORMANCE,
+    4 => FILAMENT_DLSS_DLAA,
+    _ => throw ArgumentError('Unknown value for filament_dlss_quality: $value'),
+  };
+}
+
+enum filament_upscaler {
+  FILAMENT_UPSCALER_BUILTIN(0),
+  FILAMENT_UPSCALER_EXTERNAL(1);
+
+  final int value;
+  const filament_upscaler(this.value);
+
+  static filament_upscaler fromValue(int value) => switch (value) {
+    0 => FILAMENT_UPSCALER_BUILTIN,
+    1 => FILAMENT_UPSCALER_EXTERNAL,
+    _ => throw ArgumentError('Unknown value for filament_upscaler: $value'),
+  };
+}
+
 final class filament_dynamic_resolution_options extends ffi.Struct {
   filament_dynamic_resolution_options.$at(super.$address) : super.$at();
 
@@ -4274,6 +4362,9 @@ final class filament_dynamic_resolution_options extends ffi.Struct {
 
   int get quality => FlutterFilamentModule.heap.getUint8($address + 22);
   set quality(int value) => FlutterFilamentModule.heap.setUint8($address + 22, value);
+
+  int get upscaler => FlutterFilamentModule.heap.getUint8($address + 23);
+  set upscaler(int value) => FlutterFilamentModule.heap.setUint8($address + 23, value);
 }
 
 enum filament_bloom_blend_mode {
@@ -6238,6 +6329,24 @@ extension type _Module._(JSObject _) implements JSObject {
   external void filament_view_set_motion_vector_texture(JSNumber view, JSNumber texture);
   @JS('_filament_view_get_motion_vector_texture')
   external JSNumber filament_view_get_motion_vector_texture(JSNumber view);
+  @JS('_filament_dlss_available')
+  external JSNumber filament_dlss_available();
+  @JS('_filament_dlss_request_extensions')
+  external JSNumber filament_dlss_request_extensions();
+  @JS('_filament_dlss_clear_extension_request')
+  external void filament_dlss_clear_extension_request();
+  @JS('_filament_dlss_create')
+  external JSNumber filament_dlss_create(JSNumber engine, JSNumber view, JSNumber opts);
+  @JS('_filament_dlss_get_render_resolution')
+  external void filament_dlss_get_render_resolution(JSNumber dlss, JSNumber out_w, JSNumber out_h);
+  @JS('_filament_dlss_set_quality')
+  external void filament_dlss_set_quality(JSNumber dlss, JSNumber quality);
+  @JS('_filament_dlss_reset_history')
+  external void filament_dlss_reset_history(JSNumber dlss);
+  @JS('_filament_dlss_destroy')
+  external void filament_dlss_destroy(JSNumber dlss);
+  @JS('_filament_dlss_last_error')
+  external JSNumber filament_dlss_last_error();
   @JS('_filament_render_target_create_ex')
   external JSNumber filament_render_target_create_ex(JSNumber engine, JSNumber color_attachments, JSNumber color_count, JSNumber depth_attachment, JSNumber samples);
   @JS('_filament_render_target_get_supported_color_attachments_count')
@@ -8184,6 +8293,7 @@ _Module get _m => _Module._(FlutterFilamentModule.instance);
 void $registerFilamentBindings() {
   ffi.$registerStruct<filament_engine_config_t>(40, 4, filament_engine_config_t.$at);
   ffi.$registerStruct<filament_engine_resource_counts_t>(152, 8, filament_engine_resource_counts_t.$at);
+  ffi.$registerStruct<filament_dlss_options_t>(20, 4, filament_dlss_options_t.$at);
   ffi.$registerStruct<filament_dynamic_resolution_options>(24, 4, filament_dynamic_resolution_options.$at);
   ffi.$registerStruct<filament_bloom_options>(56, 4, filament_bloom_options.$at);
   ffi.$registerStruct<filament_fog_options>(56, 4, filament_fog_options.$at);

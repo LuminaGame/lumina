@@ -238,6 +238,7 @@ Fluent builder for creating a [ColorGrading] object.
 | `enabled` | `bool enabled` | `enabled` alanını (field/property) ve ilişkili veriyi saklar. |
 | `homogeneousScaling` | `bool homogeneousScaling` | `homogeneousScaling` alanını (field/property) ve ilişkili veriyi saklar. |
 | `quality` | `QualityLevel quality` | `quality` alanını (field/property) ve ilişkili veriyi saklar. |
+| `upscaler` | `Upscaler upscaler` | Çıktıyı hangi upscaler'ın oluşturacağı: `Upscaler.builtin` (`quality`'ye göre bilinear / SGSR1 / FSR1) ya da `Upscaler.external` (view'ın harici upscaler'ı, bkz. [DLSS Super Resolution](dlss.md); kayıtlı değilse FSR1'e döner). Varsayılan `builtin`. |
 | `hashCode` | `int get hashCode` | Mevcut durumun veya yeteneğin doğruluğunu kontrol eder (`bool` döndürür). |
 | `copyToNative` | `void copyToNative(ffi_gen.filament_dynamic_resolution_options out)` | `copyToNative` işlemini gerçekleştirir. |
 

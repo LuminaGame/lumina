@@ -21,7 +21,7 @@ index 6f836c8f..b2b8281f 100644
  
  /**
 diff --git a/filament/include/filament/View.h b/filament/include/filament/View.h
-index fe6d9138..df99e4c3 100644
+index fe6d9138..01ad5800 100644
 --- a/filament/include/filament/View.h
 +++ b/filament/include/filament/View.h
 @@ -46,6 +46,7 @@ class Engine;
@@ -46,12 +46,12 @@ index fe6d9138..df99e4c3 100644
 +     *
 +     * @param texture the texture to render the motion vectors into, or nullptr
 +     */
-+    void setMotionVectorTexture(Texture const* texture) noexcept;
++    void setMotionVectorTexture(Texture const* UTILS_NULLABLE texture) noexcept;
 +
 +    /**
 +     * Returns the motion-vector export texture set with setMotionVectorTexture(), or nullptr.
 +     */
-+    Texture const* getMotionVectorTexture() const noexcept;
++    Texture const* UTILS_NULLABLE getMotionVectorTexture() const noexcept;
 +
      /**
       * Enables or disable screen-space guard band. Disabled by default.
@@ -327,7 +327,7 @@ index 2f825ea1..f540fd99 100644
              Viewport const& vp,
              FrameHistory& frameHistory,
 diff --git a/filament/src/View.cpp b/filament/src/View.cpp
-index 1fc21785..752c1231 100644
+index 1fc21785..771f7698 100644
 --- a/filament/src/View.cpp
 +++ b/filament/src/View.cpp
 @@ -15,6 +15,7 @@
@@ -342,11 +342,11 @@ index 1fc21785..752c1231 100644
      return downcast(this)->getScreenSpaceReflectionsOptions();
  }
  
-+void View::setMotionVectorTexture(Texture const* texture) noexcept {
++void View::setMotionVectorTexture(Texture const* UTILS_NULLABLE texture) noexcept {
 +    downcast(this)->setMotionVectorTexture(downcast(texture));
 +}
 +
-+Texture const* View::getMotionVectorTexture() const noexcept {
++Texture const* UTILS_NULLABLE View::getMotionVectorTexture() const noexcept {
 +    return downcast(this)->getMotionVectorTexture();
 +}
 +

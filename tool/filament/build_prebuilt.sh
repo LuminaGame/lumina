@@ -89,8 +89,14 @@ if [ "$(cat "$WORK/.lumina-patches" 2>/dev/null || true)"$'\n' != "$STAMP" ]; th
   log "applying ${#PATCHES[@]} patches"
   # Back to the pristine tag (tracked files only: out/ survives).
   "${GIT[@]}" -C "$WORK" reset -q --hard HEAD
-  "${GIT[@]}" -C "$WORK" apply --check "${PATCHES[@]}"
-  "${GIT[@]}" -C "$WORK" apply "${PATCHES[@]}"
+  # Files an earlier patch series added are untracked; drop them too (ignored paths such as out/ stay).
+  "${GIT[@]}" -C "$WORK" clean -q -fd
+  # One patch at a time: a later patch may touch lines an earlier one changed, which a
+  # single `git apply` of the whole series rejects.
+  for p in "${PATCHES[@]}"; do
+    "${GIT[@]}" -C "$WORK" apply --check "$p"
+    "${GIT[@]}" -C "$WORK" apply "$p"
+  done
   printf '%s' "${STAMP%$'\n'}" > "$WORK/.lumina-patches"
 else
   log "patches already applied"

@@ -40,7 +40,13 @@ typedef struct filament_dynamic_resolution_options {
     bool enabled;
     bool homogeneousScaling;
     uint8_t quality; // filament_quality_level
+    uint8_t upscaler; // filament_upscaler
 } filament_dynamic_resolution_options;
+
+typedef enum filament_upscaler {
+    FILAMENT_UPSCALER_BUILTIN = 0,
+    FILAMENT_UPSCALER_EXTERNAL = 1
+} filament_upscaler;
 
 typedef enum filament_bloom_blend_mode {
     FILAMENT_BLOOM_BLEND_ADD = 0,

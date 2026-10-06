@@ -323,6 +323,7 @@ void filament_view_set_dynamic_resolution_options(void* view, const filament_dyn
     opts.enabled = options->enabled;
     opts.homogeneousScaling = options->homogeneousScaling;
     opts.quality = static_cast<QualityLevel>(options->quality);
+    opts.upscaler = static_cast<Upscaler>(options->upscaler);
     toView(view)->setDynamicResolutionOptions(opts);
     FFI_CATCH()
 }
@@ -337,6 +338,7 @@ void filament_view_get_dynamic_resolution_options(void* view, filament_dynamic_r
     out_options->enabled = opts.enabled;
     out_options->homogeneousScaling = opts.homogeneousScaling;
     out_options->quality = static_cast<uint8_t>(opts.quality);
+    out_options->upscaler = static_cast<uint8_t>(opts.upscaler);
     FFI_CATCH()
 }
 void filament_view_get_last_dynamic_resolution_scale(void* view, float* out_xy) {

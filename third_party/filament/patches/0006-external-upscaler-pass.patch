@@ -1,0 +1,771 @@
+diff --git a/filament/backend/include/backend/DriverEnums.h b/filament/backend/include/backend/DriverEnums.h
+index 7392178b..31b8016f 100644
+--- a/filament/backend/include/backend/DriverEnums.h
++++ b/filament/backend/include/backend/DriverEnums.h
+@@ -1170,6 +1170,7 @@ enum class UTILS_APIGEN_FLAGS TextureUsage : uint16_t {
+     BLIT_DST            = 0x0080,            //!< Texture can be used the destination of a blit()
+     PROTECTED           = 0x0100,            //!< Texture can be used for protected content
+     GEN_MIPMAPPABLE     = 0x0200,            //!< Texture can be used with generateMipmaps()
++    STORAGE             = 0x0400,            //!< Texture can be written by an external pass (storage image)
+     DEFAULT             = UPLOADABLE | SAMPLEABLE,   //!< Default texture usage
+     ALL_ATTACHMENTS     = COLOR_ATTACHMENT | DEPTH_ATTACHMENT | STENCIL_ATTACHMENT | SUBPASS_INPUT,   //!< Mask of all attachments
+ };
+diff --git a/filament/backend/include/backend/ExternalPass.h b/filament/backend/include/backend/ExternalPass.h
+new file mode 100644
+index 00000000..6d2fa037
+--- /dev/null
++++ b/filament/backend/include/backend/ExternalPass.h
+@@ -0,0 +1,96 @@
++/*
++ * Copyright (C) 2025 The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++#ifndef TNT_FILAMENT_BACKEND_EXTERNALPASS_H
++#define TNT_FILAMENT_BACKEND_EXTERNALPASS_H
++
++#include <backend/DriverEnums.h>
++#include <backend/Handle.h>
++
++#include <stddef.h>
++#include <stdint.h>
++
++namespace filament::backend {
++
++/**
++ * One texture handed to an external pass: the backend's native image objects, so that a
++ * library outside Filament (an upscaler, a denoiser) can read or write it. All handles are
++ * the backend's own types cast to 64 bits (Vulkan: VkImage, VkImageView, VkFormat,
++ * VkImageLayout). The image is in a general-purpose layout for the duration of the pass.
++ */
++struct ExternalPassImage {
++    uint64_t image = 0;
++    uint64_t imageView = 0;
++    uint32_t format = 0;
++    uint32_t layout = 0;
++    uint32_t width = 0;
++    uint32_t height = 0;
++    uint32_t aspect = 0;        // the image aspect the view selects (color or depth)
++};
++
++/**
++ * Per-pass parameters the client passes through the command stream unchanged.
++ */
++struct ExternalPassFrame {
++    float jitter[2] = { 0.0f, 0.0f };   // see ExternalUpscaler::evaluate()
++    uint32_t renderWidth = 0;
++    uint32_t renderHeight = 0;
++    uint32_t outputWidth = 0;
++    uint32_t outputHeight = 0;
++    uint32_t flags = 0;
++    uint32_t frameId = 0;
++};
++
++/**
++ * Everything an external pass callback receives: the backend's device objects, the command
++ * buffer that is currently recording (commands recorded into it execute in order with
++ * Filament's own) and the requested images.
++ */
++struct ExternalPassContext {
++    static constexpr size_t MAX_IMAGES = 4;
++    Backend backend = Backend::NOOP;
++    uint64_t instance = 0;          // VkInstance
++    uint64_t physicalDevice = 0;    // VkPhysicalDevice
++    uint64_t device = 0;            // VkDevice
++    uint64_t commandBuffer = 0;     // VkCommandBuffer, recording
++    uint32_t imageCount = 0;
++    ExternalPassImage images[MAX_IMAGES];
++    ExternalPassFrame frame;
++    void* user = nullptr;
++};
++
++/**
++ * The callback runs on the backend thread while the command stream executes; it must only
++ * record into the given command buffer and never submit, wait or create Filament objects.
++ */
++using ExternalPassCallback = void (*)(ExternalPassContext const& context);
++
++/**
++ * Describes an external pass: which textures to expose, which of them the pass writes, the
++ * callback and its user pointer.
++ */
++struct ExternalPassDescriptor {
++    ExternalPassCallback callback = nullptr;
++    void* user = nullptr;
++    uint32_t textureCount = 0;
++    Handle<HwTexture> textures[ExternalPassContext::MAX_IMAGES];
++    uint32_t writeMask = 0;         // bit i set when textures[i] is written by the pass
++    ExternalPassFrame frame;
++};
++
++} // namespace filament::backend
++
++#endif // TNT_FILAMENT_BACKEND_EXTERNALPASS_H
+diff --git a/filament/backend/include/backend/platforms/VulkanPlatform.h b/filament/backend/include/backend/platforms/VulkanPlatform.h
+index cf1d04ba..4b88a54d 100644
+--- a/filament/backend/include/backend/platforms/VulkanPlatform.h
++++ b/filament/backend/include/backend/platforms/VulkanPlatform.h
+@@ -172,6 +172,20 @@ public:
+          * Default is 3.
+          */
+         uint32_t timeBeforeEvictionFbo = 3;
++
++        /**
++         * Instance extensions the client needs on top of Filament's own (an external
++         * upscaler library for instance). Extensions the loader does not offer are skipped
++         * with a log line. Ignored with a shared context.
++         */
++        utils::FixedCapacityVector<utils::CString> extraInstanceExtensions;
++
++        /**
++         * Device extensions the client needs on top of Filament's own. Extensions the
++         * selected device does not offer are skipped with a log line. Ignored with a shared
++         * context.
++         */
++        utils::FixedCapacityVector<utils::CString> extraDeviceExtensions;
+     };
+ 
+     /**
+diff --git a/filament/backend/include/private/backend/Driver.h b/filament/backend/include/private/backend/Driver.h
+index db3d32ae..3e9e1253 100644
+--- a/filament/backend/include/private/backend/Driver.h
++++ b/filament/backend/include/private/backend/Driver.h
+@@ -21,6 +21,7 @@
+ #include <backend/DescriptorSetOffsetArray.h>
+ #include <backend/DriverApiForward.h>
+ #include <backend/DriverEnums.h>
++#include <backend/ExternalPass.h>
+ #include <backend/Handle.h>
+ #include <backend/PipelineState.h>
+ #include <backend/Platform.h>
+diff --git a/filament/backend/include/private/backend/DriverAPI.inc b/filament/backend/include/private/backend/DriverAPI.inc
+index 8f1199f2..e58e257f 100644
+--- a/filament/backend/include/private/backend/DriverAPI.inc
++++ b/filament/backend/include/private/backend/DriverAPI.inc
+@@ -675,6 +675,12 @@ DECL_DRIVER_API_N(blit,
+         math::uint2, srcOrigin,
+         math::uint2, size)
+ 
++// Hands the backend's native objects for the given textures and the recording command
++// buffer to a client callback (an external upscaler for instance). Vulkan only; the other
++// backends log once and do nothing.
++DECL_DRIVER_API_N(externalPass,
++        backend::ExternalPassDescriptor, descriptor)
++
+ DECL_DRIVER_API_N(draw2,
+         uint32_t, indexOffset,
+         uint32_t, indexCount,
+diff --git a/filament/backend/src/metal/MetalDriver.mm b/filament/backend/src/metal/MetalDriver.mm
+index 20af7acb..90c4e5e3 100644
+--- a/filament/backend/src/metal/MetalDriver.mm
++++ b/filament/backend/src/metal/MetalDriver.mm
+@@ -2116,6 +2116,16 @@ void MetalDriver::resolve(
+             { dstTexture->width, dstTexture->height });
+ }
+ 
++void MetalDriver::externalPass(ExternalPassDescriptor descriptor) {
++    // External passes need the backend's native objects, which only the Vulkan backend
++    // exposes. Say so once instead of silently dropping the client's pass.
++    static bool warned = false;
++    if (UTILS_UNLIKELY(!warned)) {
++        warned = true;
++        LOG(WARNING) << "externalPass() is not supported by this backend; the pass is skipped.";
++    }
++}
++
+ void MetalDriver::blit(
+         Handle<HwTexture> dst, uint8_t srcLevel, uint8_t srcLayer, math::uint2 dstOrigin,
+         Handle<HwTexture> src, uint8_t dstLevel, uint8_t dstLayer, math::uint2 srcOrigin,
+diff --git a/filament/backend/src/noop/NoopDriver.cpp b/filament/backend/src/noop/NoopDriver.cpp
+index fd8230bc..4bed9be7 100644
+--- a/filament/backend/src/noop/NoopDriver.cpp
++++ b/filament/backend/src/noop/NoopDriver.cpp
+@@ -416,6 +416,9 @@ void NoopDriver::blit(
+         math::uint2 size) {
+ }
+ 
++void NoopDriver::externalPass(ExternalPassDescriptor descriptor) {
++}
++
+ void NoopDriver::bindPipeline(PipelineState const& pipelineState) {
+ }
+ 
+diff --git a/filament/backend/src/opengl/OpenGLDriver.cpp b/filament/backend/src/opengl/OpenGLDriver.cpp
+index 8d2f64fa..e8f6db72 100644
+--- a/filament/backend/src/opengl/OpenGLDriver.cpp
++++ b/filament/backend/src/opengl/OpenGLDriver.cpp
+@@ -4740,6 +4740,16 @@ void OpenGLDriver::resolve(
+             { d->width, d->height });
+ }
+ 
++void OpenGLDriver::externalPass(ExternalPassDescriptor descriptor) {
++    // External passes need the backend's native objects, which only the Vulkan backend
++    // exposes. Say so once instead of silently dropping the client's pass.
++    static bool warned = false;
++    if (UTILS_UNLIKELY(!warned)) {
++        warned = true;
++        LOG(WARNING) << "externalPass() is not supported by this backend; the pass is skipped.";
++    }
++}
++
+ void OpenGLDriver::blit(
+         Handle<HwTexture> dst, uint8_t const srcLevel, uint8_t const srcLayer, uint2 const dstOrigin,
+         Handle<HwTexture> src, uint8_t const dstLevel, uint8_t const dstLayer, uint2 const srcOrigin,
+diff --git a/filament/backend/src/vulkan/VulkanDriver.cpp b/filament/backend/src/vulkan/VulkanDriver.cpp
+index d804bfce..060e1860 100644
+--- a/filament/backend/src/vulkan/VulkanDriver.cpp
++++ b/filament/backend/src/vulkan/VulkanDriver.cpp
+@@ -2658,6 +2658,65 @@ void VulkanDriver::blit(
+             { .texture = srcTexture, .level = srcLevel, .layer = srcLayer }, srcOffsets);
+ }
+ 
++void VulkanDriver::externalPass(ExternalPassDescriptor descriptor) {
++    FVK_SYSTRACE_SCOPE();
++
++    FILAMENT_CHECK_PRECONDITION(!mCurrentRenderPass.renderPass)
++            << "externalPass() cannot be invoked inside a render pass.";
++    if (UTILS_UNLIKELY(!descriptor.callback)) {
++        return;
++    }
++
++    VulkanCommandBuffer& commands = mCommands.get();
++
++    ExternalPassContext context{};
++    context.backend = Backend::VULKAN;
++    context.instance = reinterpret_cast<uint64_t>(mPlatform->getInstance());
++    context.physicalDevice = reinterpret_cast<uint64_t>(mPlatform->getPhysicalDevice());
++    context.device = reinterpret_cast<uint64_t>(mPlatform->getDevice());
++    context.commandBuffer = reinterpret_cast<uint64_t>(commands.buffer());
++    context.frame = descriptor.frame;
++    context.user = descriptor.user;
++
++    uint32_t const count = std::min(descriptor.textureCount,
++            uint32_t(ExternalPassContext::MAX_IMAGES));
++    for (uint32_t i = 0; i < count; i++) {
++        if (!descriptor.textures[i]) {
++            continue;
++        }
++        auto texture = resource_ptr<VulkanTexture>::cast(&mResourceManager, descriptor.textures[i]);
++        commands.acquire(texture);
++        VkImageSubresourceRange const range = texture->getPrimaryViewRange();
++        // A general layout is readable and writable by any stage; the layout tracking keeps
++        // it so the next pass transitions from the right state.
++        texture->transitionLayout(&commands, range, VulkanLayout::STAGING);
++        ExternalPassImage& image = context.images[i];
++        image.image = reinterpret_cast<uint64_t>(texture->getVkImage());
++        // a plain 2D view (no swizzle): usable as a storage image and a sampled image
++        image.imageView = reinterpret_cast<uint64_t>(
++                texture->getAttachmentView(range, VK_IMAGE_VIEW_TYPE_2D));
++        image.format = uint32_t(texture->getVkFormat());
++        image.layout = uint32_t(fvkutils::getVkLayout(VulkanLayout::STAGING));
++        image.width = texture->width;
++        image.height = texture->height;
++        image.aspect = uint32_t(range.aspectMask);
++    }
++    context.imageCount = count;
++
++    descriptor.callback(context);
++
++    // Whatever the pass recorded must be visible to the shaders and transfers that follow.
++    VkMemoryBarrier const barrier = {
++        .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER,
++        .srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_TRANSFER_WRITE_BIT,
++        .dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_TRANSFER_READ_BIT |
++                VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
++    };
++    vkCmdPipelineBarrier(commands.buffer(),
++            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT,
++            VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 1, &barrier, 0, nullptr, 0, nullptr);
++}
++
+ void VulkanDriver::blitDEPRECATED(TargetBufferFlags buffers,
+         Handle<HwRenderTarget> dst, Viewport dstRect,
+         Handle<HwRenderTarget> src, Viewport srcRect,
+diff --git a/filament/backend/src/vulkan/VulkanTexture.cpp b/filament/backend/src/vulkan/VulkanTexture.cpp
+index e30e0ae2..12591ade 100644
+--- a/filament/backend/src/vulkan/VulkanTexture.cpp
++++ b/filament/backend/src/vulkan/VulkanTexture.cpp
+@@ -171,6 +171,9 @@ VkImageUsageFlags getUsage(VulkanContext const& context, uint8_t samples,
+     if (any(tusage & TextureUsage::GEN_MIPMAPPABLE)) {
+         usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+     }
++    if (any(tusage & TextureUsage::STORAGE)) {
++        usage |= VK_IMAGE_USAGE_STORAGE_BIT;
++    }
+ 
+     constexpr TextureUsage DEPTH_STENCIL_USAGE =
+             TextureUsage::DEPTH_ATTACHMENT | TextureUsage::STENCIL_ATTACHMENT;
+diff --git a/filament/backend/src/vulkan/platform/VulkanPlatform.cpp b/filament/backend/src/vulkan/platform/VulkanPlatform.cpp
+index 6534e1c1..4d87876d 100644
+--- a/filament/backend/src/vulkan/platform/VulkanPlatform.cpp
++++ b/filament/backend/src/vulkan/platform/VulkanPlatform.cpp
+@@ -677,6 +677,26 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
+         for (auto const& ext: getRequiredInstanceExtensions()) {
+             setInsert(instExts, ext);
+         }
++
++        // The client's extra instance extensions, when the loader offers them.
++        auto const& extraInstExts = getCustomization().extraInstanceExtensions;
++        if (!extraInstExts.empty()) {
++            FixedCapacityVector<VkExtensionProperties> const availableExts =
++                    fvkutils::enumerate(vkEnumerateInstanceExtensionProperties,
++                            static_cast<char const*>(nullptr));
++            for (auto const& ext: extraInstExts) {
++                bool const available = std::any_of(availableExts.begin(), availableExts.end(),
++                        [&ext](VkExtensionProperties const& p) {
++                            return strcmp(p.extensionName, ext.c_str()) == 0;
++                        });
++                if (available) {
++                    setInsert(instExts, utils::ImmutableCString(ext.c_str()));
++                } else {
++                    FVK_LOGW << "Requested instance extension " << ext.c_str()
++                             << " is not available; skipped.";
++                }
++            }
++        }
+     }
+     if (mImpl->mInstance == VK_NULL_HANDLE) {
+         createInstance(instExts, enableRenderDocCapture);
+@@ -706,6 +726,26 @@ Driver* VulkanPlatform::createDriver(void* sharedContext,
+                 pruneExtensions(mImpl->mPhysicalDevice, driverConfig, instExts, deviceExts);
+         instExts = prunedInstExts;
+         deviceExts = prunedDeviceExts;
++
++        // The client's extra device extensions, when the selected device offers them.
++        auto const& extraDeviceExts = getCustomization().extraDeviceExtensions;
++        if (!extraDeviceExts.empty()) {
++            FixedCapacityVector<VkExtensionProperties> const availableExts =
++                    fvkutils::enumerate(vkEnumerateDeviceExtensionProperties,
++                            mImpl->mPhysicalDevice, static_cast<char const*>(nullptr));
++            for (auto const& ext: extraDeviceExts) {
++                bool const available = std::any_of(availableExts.begin(), availableExts.end(),
++                        [&ext](VkExtensionProperties const& p) {
++                            return strcmp(p.extensionName, ext.c_str()) == 0;
++                        });
++                if (available) {
++                    setInsert(deviceExts, utils::ImmutableCString(ext.c_str()));
++                } else {
++                    FVK_LOGW << "Requested device extension " << ext.c_str()
++                             << " is not available; skipped.";
++                }
++            }
++        }
+     }
+ 
+     // Query all the supported physical device features and enable/disable any feature as needed
+@@ -1308,6 +1348,26 @@ void VulkanPlatform::createLogicalDeviceAndQueues(const ExtensionSet& deviceExte
+         chainStruct(&deviceCreateInfo, &protectedMemory);
+     }
+ 
++    // Features that go with the client's extra extensions: an external upscaler's compute
++    // kernels address their buffers directly.
++    VkPhysicalDeviceBufferDeviceAddressFeatures bufferDeviceAddress = {
++        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES,
++    };
++    if (setContains(deviceExtensions, VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME)) {
++        VkPhysicalDeviceBufferDeviceAddressFeatures supported = {
++            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES,
++        };
++        VkPhysicalDeviceFeatures2 features2 = {
++            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
++        };
++        chainStruct(&features2, &supported);
++        vkGetPhysicalDeviceFeatures2(mImpl->mPhysicalDevice, &features2);
++        bufferDeviceAddress.bufferDeviceAddress = supported.bufferDeviceAddress;
++        if (bufferDeviceAddress.bufferDeviceAddress) {
++            chainStruct(&deviceCreateInfo, &bufferDeviceAddress);
++        }
++    }
++
+     VkPhysicalDeviceGlobalPriorityQueryFeaturesKHR globalPriority = {
+         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_GLOBAL_PRIORITY_QUERY_FEATURES_KHR,
+         .globalPriorityQuery = VK_TRUE,
+diff --git a/filament/backend/src/webgpu/WebGPUDriver.cpp b/filament/backend/src/webgpu/WebGPUDriver.cpp
+index ad409d39..2f7cc8e1 100644
+--- a/filament/backend/src/webgpu/WebGPUDriver.cpp
++++ b/filament/backend/src/webgpu/WebGPUDriver.cpp
+@@ -1963,6 +1963,16 @@ void WebGPUDriver::resolve(Handle<HwTexture> destinationTextureHandle, const uin
+     mMsaaTextureResolver.resolve(request);
+ }
+ 
++void WebGPUDriver::externalPass(ExternalPassDescriptor descriptor) {
++    // External passes need the backend's native objects, which only the Vulkan backend
++    // exposes. Say so once instead of silently dropping the client's pass.
++    static bool warned = false;
++    if (UTILS_UNLIKELY(!warned)) {
++        warned = true;
++        LOG(WARNING) << "externalPass() is not supported by this backend; the pass is skipped.";
++    }
++}
++
+ void WebGPUDriver::blit(Handle<HwTexture> destinationTextureHandle, const uint8_t sourceLevel,
+         const uint8_t sourceLayer, const math::uint2 destinationOrigin,
+         Handle<HwTexture> sourceTextureHandle, const uint8_t destinationLevel,
+diff --git a/filament/include/filament/Options.h b/filament/include/filament/Options.h
+index b2b8281f..b60ba56b 100644
+--- a/filament/include/filament/Options.h
++++ b/filament/include/filament/Options.h
+@@ -77,6 +77,15 @@ enum class BlendMode : uint8_t {
+  * @see Renderer.FrameRateOptions
+  *
+  */
++/**
++ * Which upscaler turns a dynamically scaled frame into the output.
++ * @see DynamicResolutionOptions
++ */
++enum class Upscaler : uint8_t {
++    BUILTIN,    //!< Filament's own: bilinear, SGSR1 or FSR1 by DynamicResolutionOptions::quality
++    EXTERNAL,   //!< the ExternalUpscaler registered with View::setExternalUpscaler()
++};
++
+ struct DynamicResolutionOptions {
+     /** minimum scale factors in x and y */
+     math::float2 minScale = {0.5f, 0.5f};           // %codegen_java_float%
+@@ -105,6 +114,14 @@ struct DynamicResolutionOptions {
+      * <p>caveat: currently, <code>quality</code> is always set to LOW if the View is TRANSLUCENT.</p>
+      */
+     QualityLevel quality = QualityLevel::LOW;
++
++    /**
++     * Which upscaler reconstructs the output. EXTERNAL hands the low-resolution colour, depth
++     * and motion vectors (TemporalAntiAliasingOptions::motionVectors) to the
++     * ExternalUpscaler registered with View::setExternalUpscaler(); when none is registered
++     * or it declines the resolution, Filament falls back to its FSR1 path. Default BUILTIN.
++     */
++    Upscaler upscaler = Upscaler::BUILTIN;
+ };
+ 
+ /**
+diff --git a/filament/include/filament/View.h b/filament/include/filament/View.h
+index 01ad5800..6a4183fe 100644
+--- a/filament/include/filament/View.h
++++ b/filament/include/filament/View.h
+@@ -22,6 +22,8 @@
+ #include <filament/FilamentAPI.h>
+ #include <filament/Options.h>
+ 
++#include <backend/ExternalPass.h>
++
+ #include <utils/compiler.h>
+ #include <utils/Entity.h>
+ #include <utils/FixedCapacityVector.h>
+@@ -47,6 +49,7 @@ class MaterialInstance;
+ class RenderTarget;
+ class Scene;
+ class Texture;
++class ExternalUpscaler;
+ class Viewport;
+ 
+ /**
+@@ -70,6 +73,46 @@ class Viewport;
+  *
+  * @see Renderer, Scene, Camera, RenderTarget
+  */
++/**
++ * An upscaler implemented outside Filament (DLSS for instance), driven by
++ * DynamicResolutionOptions::upscaler == Upscaler::EXTERNAL. Filament renders the frame at
++ * the dynamic resolution, jitters the camera as TAA does when TemporalAntiAliasingOptions is
++ * enabled (the TAA resolve itself is skipped, the upscaler owns the temporal accumulation),
++ * then hands the low-resolution colour, depth and motion vectors and the full-resolution
++ * output to evaluate() through an external pass.
++ *
++ * @see View::setExternalUpscaler
++ */
++class UTILS_PUBLIC ExternalUpscaler {
++public:
++    /** Indices of the images evaluate() receives in ExternalPassContext::images. */
++    enum Image : uint32_t {
++        COLOR = 0,      //!< the frame at the render resolution, after colour grading (LDR)
++        DEPTH = 1,      //!< the colour pass depth at the render resolution
++        VELOCITY = 2,   //!< motion vectors (RG16F, texels of uv_curr - uv_prev, y up)
++        OUTPUT = 3,     //!< the storage image to write, at the output resolution
++    };
++
++    /**
++     * Called on the main thread while the frame is set up. Return false to let Filament use
++     * its FSR1 path for this frame (the resolution is not supported, the runtime failed, ...).
++     */
++    virtual bool supports(uint32_t renderWidth, uint32_t renderHeight,
++            uint32_t outputWidth, uint32_t outputHeight) noexcept = 0;
++
++    /**
++     * Called on the backend thread while the frame's command buffer records. The context
++     * carries the four images (Image) and, in frame.jitter, the sub-pixel sample offset of
++     * this frame in texels of the render target, in the same orientation as the images and
++     * the motion vectors (x right, y up): the projection was translated by -jitter. Record
++     * into context.commandBuffer only; never submit or wait.
++     */
++    virtual void evaluate(backend::ExternalPassContext const& context) noexcept = 0;
++
++protected:
++    ~ExternalUpscaler() = default;
++};
++
+ class UTILS_PUBLIC View : public FilamentAPI {
+ public:
+     using QualityLevel = filament::QualityLevel;
+@@ -413,6 +456,21 @@ public:
+      */
+     Texture const* UTILS_NULLABLE getMotionVectorTexture() const noexcept;
+ 
++    /**
++     * Registers the upscaler used when DynamicResolutionOptions::upscaler is
++     * Upscaler::EXTERNAL. The upscaler runs inside Filament's frame on the backend thread
++     * (Vulkan only) and must outlive its registration; nullptr unregisters it.
++     *
++     * @param upscaler the external upscaler, or nullptr
++     * @see ExternalUpscaler
++     */
++    void setExternalUpscaler(ExternalUpscaler* UTILS_NULLABLE upscaler) noexcept;
++
++    /**
++     * Returns the upscaler registered with setExternalUpscaler(), or nullptr.
++     */
++    ExternalUpscaler* UTILS_NULLABLE getExternalUpscaler() const noexcept;
++
+     /**
+      * Enables or disable screen-space guard band. Disabled by default.
+      *
+diff --git a/filament/src/PostProcessManager.cpp b/filament/src/PostProcessManager.cpp
+index 0aa7fb55..5204df99 100644
+--- a/filament/src/PostProcessManager.cpp
++++ b/filament/src/PostProcessManager.cpp
+@@ -67,6 +67,7 @@
+ #include <filament/Material.h>
+ #include <filament/MaterialEnums.h>
+ #include <filament/Options.h>
++#include <filament/View.h>
+ #include <filament/Viewport.h>
+ 
+ #include <private/backend/BackendUtils.h>
+@@ -3353,6 +3354,74 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscale(FrameGraph& fg, bool
+     return upscaleFSR1(fg, dsrOptions, input, vp, outDesc);
+ }
+ 
++bool PostProcessManager::useExternalUpscaler(DynamicResolutionOptions const& dsrOptions,
++        ExternalUpscaleInputs const& external, filament::Viewport const& vp,
++        FrameGraphTexture::Descriptor const& outDesc) noexcept {
++    if (dsrOptions.upscaler != Upscaler::EXTERNAL || !external.upscaler) {
++        return false;
++    }
++    if (!external.depth || !external.velocity) {
++        return false;
++    }
++    return external.upscaler->supports(vp.width, vp.height, outDesc.width, outDesc.height);
++}
++
++FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleExternal(FrameGraph& fg,
++        ExternalUpscaleInputs const& external, FrameGraphId<FrameGraphTexture> const input,
++        filament::Viewport const& vp, FrameGraphTexture::Descriptor const& outDesc) noexcept {
++
++    struct ExternalData {
++        FrameGraphId<FrameGraphTexture> color;
++        FrameGraphId<FrameGraphTexture> depth;
++        FrameGraphId<FrameGraphTexture> velocity;
++        FrameGraphId<FrameGraphTexture> output;
++    };
++
++    auto const& pass = fg.addPass<ExternalData>("external upscaling",
++            [&](FrameGraph::Builder& builder, auto& data) {
++                data.color = builder.read(input, FrameGraphTexture::Usage::SAMPLEABLE);
++                data.depth = builder.read(external.depth, FrameGraphTexture::Usage::SAMPLEABLE);
++                data.velocity = builder.read(external.velocity, FrameGraphTexture::Usage::SAMPLEABLE);
++                auto desc = outDesc;
++                desc.samples = 1;
++                data.output = builder.createTexture("external upscaled output", desc);
++                data.output = builder.write(data.output,
++                        FrameGraphTexture::Usage::STORAGE | FrameGraphTexture::Usage::SAMPLEABLE |
++                        FrameGraphTexture::Usage::COLOR_ATTACHMENT | FrameGraphTexture::Usage::BLIT_SRC);
++                // A write-only texture is never materialized by the frame graph; declaring it as
++                // this pass's render target (never begun) gives it the reference the other
++                // upscalers get from their blit, so it is allocated before the callback runs.
++                builder.declareRenderPass(builder.getName(data.output), {
++                        .attachments = { .color = { data.output } } });
++                // the output is produced outside the frame graph's knowledge
++                builder.sideEffect();
++            },
++            [external, vp, outDesc](FrameGraphResources const& resources,
++                    auto const& data, DriverApi& driver) {
++                ExternalPassDescriptor descriptor{};
++                descriptor.callback = [](ExternalPassContext const& context) {
++                    static_cast<ExternalUpscaler*>(context.user)->evaluate(context);
++                };
++                descriptor.user = external.upscaler;
++                descriptor.textureCount = 4;
++                descriptor.textures[ExternalUpscaler::COLOR] = resources.getTexture(data.color);
++                descriptor.textures[ExternalUpscaler::DEPTH] = resources.getTexture(data.depth);
++                descriptor.textures[ExternalUpscaler::VELOCITY] = resources.getTexture(data.velocity);
++                descriptor.textures[ExternalUpscaler::OUTPUT] = resources.getTexture(data.output);
++                descriptor.writeMask = 1u << ExternalUpscaler::OUTPUT;
++                descriptor.frame.jitter[0] = external.jitter.x;
++                descriptor.frame.jitter[1] = external.jitter.y;
++                descriptor.frame.renderWidth = vp.width;
++                descriptor.frame.renderHeight = vp.height;
++                descriptor.frame.outputWidth = outDesc.width;
++                descriptor.frame.outputHeight = outDesc.height;
++                descriptor.frame.frameId = external.frameId;
++                driver.externalPass(descriptor);
++            });
++
++    return pass->output;
++}
++
+ FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleBilinear(FrameGraph& fg,
+         bool const translucent,
+         DynamicResolutionOptions dsrOptions, FrameGraphId<FrameGraphTexture> const input,
+diff --git a/filament/src/PostProcessManager.h b/filament/src/PostProcessManager.h
+index f540fd99..9b880e51 100644
+--- a/filament/src/PostProcessManager.h
++++ b/filament/src/PostProcessManager.h
+@@ -65,6 +65,7 @@ class FMaterial;
+ class FMaterialInstance;
+ class FTexture;
+ class FrameGraph;
++class ExternalUpscaler;
+ class RenderPass;
+ class RenderPassBuilder;
+ class ShadowMapManager;
+@@ -269,6 +270,25 @@ public:
+             FrameGraphId<FrameGraphTexture> input, Viewport const& vp,
+             FrameGraphTexture::Descriptor const& outDesc, backend::SamplerMagFilter filter) noexcept;
+ 
++    // What an external upscaler needs on top of the colour input.
++    struct ExternalUpscaleInputs {
++        ExternalUpscaler* upscaler = nullptr;
++        FrameGraphId<FrameGraphTexture> depth;
++        FrameGraphId<FrameGraphTexture> velocity;
++        math::float2 jitter{};
++        uint32_t frameId = 0;
++    };
++
++    // Whether the external upscaler takes this frame (registered, EXTERNAL requested, inputs
++    // present and the resolutions accepted); the renderer then calls upscaleExternal().
++    static bool useExternalUpscaler(DynamicResolutionOptions const& dsrOptions,
++            ExternalUpscaleInputs const& external, Viewport const& vp,
++            FrameGraphTexture::Descriptor const& outDesc) noexcept;
++
++    FrameGraphId<FrameGraphTexture> upscaleExternal(FrameGraph& fg,
++            ExternalUpscaleInputs const& external, FrameGraphId<FrameGraphTexture> input,
++            Viewport const& vp, FrameGraphTexture::Descriptor const& outDesc) noexcept;
++
+     FrameGraphId<FrameGraphTexture> upscaleBilinear(FrameGraph& fg, bool translucent,
+             DynamicResolutionOptions dsrOptions, FrameGraphId<FrameGraphTexture> input,
+             Viewport const& vp, FrameGraphTexture::Descriptor const& outDesc,
+diff --git a/filament/src/View.cpp b/filament/src/View.cpp
+index 771f7698..5645dcf8 100644
+--- a/filament/src/View.cpp
++++ b/filament/src/View.cpp
+@@ -168,6 +168,14 @@ Texture const* UTILS_NULLABLE View::getMotionVectorTexture() const noexcept {
+     return downcast(this)->getMotionVectorTexture();
+ }
+ 
++void View::setExternalUpscaler(ExternalUpscaler* UTILS_NULLABLE upscaler) noexcept {
++    downcast(this)->setExternalUpscaler(upscaler);
++}
++
++ExternalUpscaler* UTILS_NULLABLE View::getExternalUpscaler() const noexcept {
++    return downcast(this)->getExternalUpscaler();
++}
++
+ void View::setGuardBandOptions(GuardBandOptions const options) noexcept {
+     downcast(this)->setGuardBandOptions(options);
+ }
+diff --git a/filament/src/details/Renderer.cpp b/filament/src/details/Renderer.cpp
+index 9ffdb8f0..6c830802 100644
+--- a/filament/src/details/Renderer.cpp
++++ b/filament/src/details/Renderer.cpp
+@@ -1471,8 +1471,27 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+     //       dedicated TAA pass for the DoF, as explained in
+     //       "Life of a Bokeh" by Guillaume Abadie, SIGGRAPH 2018
+ 
++    // An external upscaler (DynamicResolutionOptions::upscaler == EXTERNAL) owns the temporal
++    // accumulation: the camera is jittered as for TAA, but Filament's TAA resolve is skipped
++    // and the upscaler gets the colour, depth and motion vectors instead.
++    PostProcessManager::ExternalUpscaleInputs externalUpscale{};
++    bool useExternalUpscaler = false;
++    if (dsrOptions.enabled && dsrOptions.upscaler == Upscaler::EXTERNAL) {
++        externalUpscale.upscaler = view.getExternalUpscaler();
++        externalUpscale.depth = depth;
++        externalUpscale.velocity = velocity;
++        if (taaOptions.enabled) {
++            auto const& taaHistory = view.getFrameHistory().getCurrent().taa;
++            // the sub-pixel sample offset of this frame, in texels of the render target
++            externalUpscale.jitter = taaHistory.jitter;
++            externalUpscale.frameId = taaHistory.frameId;
++        }
++        useExternalUpscaler = PostProcessManager::useExternalUpscaler(dsrOptions, externalUpscale,
++                xvp, { .width = vp.width, .height = vp.height, .format = colorGradingConfig.ldrFormat });
++    }
++
+     // TAA for color pass
+-    if (taaOptions.enabled) {
++    if (taaOptions.enabled && !useExternalUpscaler) {
+         input = ppm.taa(fg, input, depth, velocity, xvp, vp,
+                 view.getFrameHistory(), &FrameHistoryEntry::taa,
+                 taaOptions, colorGradingConfig);
+@@ -1552,16 +1571,29 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+             svp = xvp;
+         }
+ 
+-        if (scaled) {
++        // An external upscaler also runs unscaled (DLAA: anti-aliasing at the output size).
++        if (scaled || useExternalUpscaler) {
+             // upscale() below always performs the final blending if needed (View in `TRANSLUCENT`
+             // mode). So we can set `mightNeedFinalBlit` to `false` to avoid an extra copy.
+             mightNeedFinalBlit = false;
+             auto viewport = DEBUG_DYNAMIC_SCALING ? xvp : vp;
+             bool const sourceHasLuminance = !needsAlphaChannel &&
+                     (hasColorGrading && colorGradingConfig.outputLuminance);
+-            input = ppm.upscale(fg, needsAlphaChannel, sourceHasLuminance, dsrOptions, input, xvp, {
++            FrameGraphTexture::Descriptor const upscaledDesc = {
+                 .width = viewport.width, .height = viewport.height,
+-                .format = colorGradingConfig.ldrFormat }, SamplerMagFilter::LINEAR);
++                .format = colorGradingConfig.ldrFormat };
++            if (useExternalUpscaler) {
++                input = ppm.upscaleExternal(fg, externalUpscale, input, xvp, upscaledDesc);
++                // The external pass writes a storage image, which cannot stand in for the
++                // view's render target (forwardResource() below would replace it by the
++                // imported target and leave the pass with no image to write); copy it.
++                input = ppm.blit(fg, blendModeTranslucent, input,
++                        { 0, 0, viewport.width, viewport.height }, upscaledDesc,
++                        SamplerMagFilter::NEAREST, SamplerMinFilter::NEAREST);
++            } else {
++                input = ppm.upscale(fg, needsAlphaChannel, sourceHasLuminance, dsrOptions, input,
++                        xvp, upscaledDesc, SamplerMagFilter::LINEAR);
++            }
+             // scaling has been applied, and offset removed
+             xvp = viewport;
+             xvp.left = xvp.bottom = 0;
+diff --git a/filament/src/details/View.h b/filament/src/details/View.h
+index 15c05933..86f444bd 100644
+--- a/filament/src/details/View.h
++++ b/filament/src/details/View.h
+@@ -307,6 +307,9 @@ public:
+     void setMotionVectorTexture(FTexture const* texture) noexcept { mMotionVectorTexture = texture; }
+     FTexture const* getMotionVectorTexture() const noexcept { return mMotionVectorTexture; }
+ 
++    void setExternalUpscaler(ExternalUpscaler* upscaler) noexcept { mExternalUpscaler = upscaler; }
++    ExternalUpscaler* getExternalUpscaler() const noexcept { return mExternalUpscaler; }
++
+     const TemporalAntiAliasingOptions& getTemporalAntiAliasingOptions() const noexcept {
+         return mTemporalAntiAliasingOptions;
+     }
+@@ -643,6 +646,7 @@ private:
+     VignetteOptions mVignetteOptions;
+     TemporalAntiAliasingOptions mTemporalAntiAliasingOptions;
+     FTexture const* mMotionVectorTexture = nullptr;
++    ExternalUpscaler* mExternalUpscaler = nullptr;
+     MultiSampleAntiAliasingOptions mMultiSampleAntiAliasingOptions;
+     ScreenSpaceReflectionsOptions mScreenSpaceReflectionsOptions;
+     GuardBandOptions mGuardBandOptions;

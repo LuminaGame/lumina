@@ -112,6 +112,7 @@ void main(List<String> args) async {
         'src/instance_buffer_c.cpp',
         'src/linear_image_c.cpp',
         'src/image_sampler_c.cpp',
+        'src/dlss_c.cpp',
         'src/image_ops_c.cpp',
         'src/color_transform_c.cpp',
         'src/image_sdf_c.cpp',
@@ -172,8 +173,19 @@ void main(List<String> args) async {
     // On Windows the sources, includes and Filament libraries go to a
     // response file; cl runs through cmd.exe, whose command line holds 8 191
     // characters, and a long package root (a project's editor copy) passes it.
+    // The fetched NGX SDK, when present: its headers join the includes and its
+    // static entry-point library the link inputs (desktop Vulkan targets only).
+    final dlssSdk = _dlssSdkDir(input, targetOS);
+    if (dlssSdk != null) {
+      includes.add('build/dlss-sdk/include');
+    }
     final isWindows = targetOS == OS.windows;
-    final windowsLibs = isWindows ? [for (final lib in _windowsFilamentLibs) windowsLib(lib)] : const <String>[];
+    final windowsLibs = isWindows
+        ? [
+            for (final lib in _windowsFilamentLibs) windowsLib(lib),
+            if (dlssSdk != null) '$dlssSdk/lib/Windows_x86_64/x64/nvsdk_ngx_s.lib',
+          ]
+        : const <String>[];
     String abs(String rel) => input.packageRoot.resolveUri(Uri.file(rel)).toFilePath();
     final responseFile = input.outputDirectory.resolve('${packageName}_cl.rsp').toFilePath();
     if (isWindows) {
@@ -328,6 +340,7 @@ void main(List<String> args) async {
           '$filament/out/cmake-release/third_party/libwebp/libwebpdecoder.a',
           '$filament/out/cmake-release/third_party/stb/tnt/libstb.a',
           '-Wl,--no-whole-archive',
+          if (dlssSdk != null) '$dlssSdk/lib/Linux_x86_64/libnvsdk_ngx.a',
           'third_party/libcxx/usr/lib/x86_64-linux-gnu/libc++.a',
           'third_party/libcxx/usr/lib/x86_64-linux-gnu/libc++abi.a',
           '-lpng',
@@ -342,7 +355,15 @@ void main(List<String> args) async {
       // Unquoted: engine_c.cpp stringizes it. A quoted value breaks on
       // Windows, where cl runs through cmd and the embedded quotes end its
       // quoting ('C:\Program' is not recognized…).
-      defines: {'FLUTTER_FILAMENT_FILAMENT_VERSION': filamentVersion},
+      defines: {
+        'FLUTTER_FILAMENT_FILAMENT_VERSION': filamentVersion,
+        // DLSS: only when tool/dlss/fetch_sdk.dart filled build/dlss-sdk/ (the NGX SDK is
+        // NVIDIA-licensed and never committed); a checkout without it builds as before.
+        // (The folder itself is found at run time: LUMINA_DLSS_DIR, the executable's
+        // folder or build/dlss-sdk under the working directory; a quoted path define
+        // would break cl's command line.)
+        if (dlssSdk != null) 'FLUTTER_FILAMENT_DLSS': '1',
+      },
       libraries: [
         if (targetOS == OS.windows) ..._windowsSystemLibs,
       ],
@@ -600,3 +621,14 @@ const androidFilamentLibs = [
   'libsmol-v.a',
 ];
 
+/// `build/dlss-sdk` (absolute) when `tool/dlss/fetch_sdk.dart` has filled it
+/// for this target OS; null otherwise.
+String? _dlssSdkDir(BuildInput input, OS targetOS) {
+  if (targetOS != OS.windows && targetOS != OS.linux) return null;
+  final dir = input.packageRoot.resolveUri(Uri.file('build/dlss-sdk')).toFilePath();
+  final stub = targetOS == OS.windows
+      ? '$dir/lib/Windows_x86_64/x64/nvsdk_ngx_s.lib'
+      : '$dir/lib/Linux_x86_64/libnvsdk_ngx.a';
+  if (!File('$dir/include/nvsdk_ngx_vk.h').existsSync() || !File(stub).existsSync()) return null;
+  return dir;
+}

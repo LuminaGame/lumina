@@ -12,6 +12,7 @@
 // device can be read back.
 
 #include "gpu_c.h"
+#include "gpu_engine_internal.h"
 
 #include <cstdio>
 #include <cstdlib>
@@ -71,19 +72,43 @@ GpuPreference fromEnvironment() {
 }
 
 #if FLUTTER_FILAMENT_GPU_PLATFORM
+// Extra Vulkan extensions requested for the engines created from now on (DLSS
+// needs some before the device exists); copied into each platform at creation.
+std::mutex gExtraExtensionsMutex;
+std::vector<std::string> gExtraInstanceExtensions;
+std::vector<std::string> gExtraDeviceExtensions;
+
 class PreferredGpuPlatform final : public DesktopVulkanPlatform {
 public:
-    explicit PreferredGpuPlatform(GpuPreference pref) : mPref(std::move(pref)) {}
+    explicit PreferredGpuPlatform(GpuPreference pref) : mPref(std::move(pref)) {
+        std::lock_guard<std::mutex> lock(gExtraExtensionsMutex);
+        mInstanceExtensions = gExtraInstanceExtensions;
+        mDeviceExtensions = gExtraDeviceExtensions;
+    }
 
     Customization getCustomization() const noexcept override {
         Customization c = DesktopVulkanPlatform::getCustomization();
         if (!mPref.name.empty()) c.gpu.deviceName = utils::CString(mPref.name.c_str());
         if (mPref.index >= 0) c.gpu.index = static_cast<int8_t>(mPref.index);
+        c.extraInstanceExtensions = toCStrings(mInstanceExtensions);
+        c.extraDeviceExtensions = toCStrings(mDeviceExtensions);
         return c;
     }
 
+    bool hasExtraExtensions() const noexcept {
+        return !mInstanceExtensions.empty() || !mDeviceExtensions.empty();
+    }
+
 private:
+    static utils::FixedCapacityVector<utils::CString> toCStrings(const std::vector<std::string>& in) {
+        auto out = utils::FixedCapacityVector<utils::CString>::with_capacity(in.size());
+        for (const auto& s : in) out.push_back(utils::CString(s.c_str()));
+        return out;
+    }
+
     GpuPreference mPref;
+    std::vector<std::string> mInstanceExtensions;
+    std::vector<std::string> mDeviceExtensions;
 };
 
 std::mutex gPlatformsMutex;
@@ -277,3 +302,39 @@ int filament_gpu_live_platform_count(void) {
 #endif
 }
 
+void flutter_filament_set_extra_vulkan_extensions(const std::vector<std::string>& instanceExtensions,
+        const std::vector<std::string>& deviceExtensions) {
+#if FLUTTER_FILAMENT_GPU_PLATFORM
+    std::lock_guard<std::mutex> lock(gExtraExtensionsMutex);
+    gExtraInstanceExtensions = instanceExtensions;
+    gExtraDeviceExtensions = deviceExtensions;
+#else
+    (void) instanceExtensions;
+    (void) deviceExtensions;
+#endif
+}
+
+bool flutter_filament_engine_vulkan_handles(void* engine, void** outInstance, void** outPhysicalDevice,
+        void** outDevice, bool* hadExtraExtensions) {
+    if (outInstance) *outInstance = nullptr;
+    if (outPhysicalDevice) *outPhysicalDevice = nullptr;
+    if (outDevice) *outDevice = nullptr;
+    if (hadExtraExtensions) *hadExtraExtensions = false;
+#if FLUTTER_FILAMENT_GPU_PLATFORM
+    PreferredGpuPlatform* platform = nullptr;
+    {
+        std::lock_guard<std::mutex> lock(gPlatformsMutex);
+        auto it = gPlatforms.find(static_cast<Engine*>(engine));
+        if (it != gPlatforms.end()) platform = it->second;
+    }
+    if (!platform || platform->getDevice() == VK_NULL_HANDLE) return false;
+    if (outInstance) *outInstance = platform->getInstance();
+    if (outPhysicalDevice) *outPhysicalDevice = platform->getPhysicalDevice();
+    if (outDevice) *outDevice = platform->getDevice();
+    if (hadExtraExtensions) *hadExtraExtensions = platform->hasExtraExtensions();
+    return true;
+#else
+    (void) engine;
+    return false;
+#endif
+}

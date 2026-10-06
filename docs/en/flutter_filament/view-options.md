@@ -238,6 +238,7 @@ Fluent builder for creating a [ColorGrading] object.
 | `enabled` | `bool enabled` | Holds the `enabled` property or configuration state. |
 | `homogeneousScaling` | `bool homogeneousScaling` | Holds the `homogeneousScaling` property or configuration state. |
 | `quality` | `QualityLevel quality` | Holds the `quality` property or configuration state. |
+| `upscaler` | `Upscaler upscaler` | Which upscaler reconstructs the output: `Upscaler.builtin` (bilinear / SGSR1 / FSR1 by `quality`) or `Upscaler.external` (the view's external upscaler, see [DLSS Super Resolution](dlss.md); falls back to FSR1 when none is registered). Default `builtin`. |
 | `hashCode` | `int get hashCode` | Checks current state or capability and returns a boolean value. |
 | `copyToNative` | `void copyToNative(ffi_gen.filament_dynamic_resolution_options out)` | Executes `copyToNative` operation. |
 

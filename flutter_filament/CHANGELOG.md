@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- DLSS Super Resolution (prebuilt `1.77.2-lumina.4`, Filament patch `0006`): `Dlss` renders a view at the
+  resolution NVIDIA NGX picks for a `DlssQuality` and reconstructs the output through Filament's new external
+  upscaler pass (`DynamicResolutionOptions.upscaler`). The NGX SDK is fetched by `tool/dlss/fetch_sdk.dart`
+  (NVIDIA's licence, never committed); `Dlss.requestExtensions()` must run before the engine is created, and
+  the view needs TAA with motion vectors on. Vulkan on NVIDIA GPUs only; everything else keeps FSR1.
 - Motion vectors (prebuilt `1.77.2-lumina.3`, Filament patch `0004`): `TemporalAntiAliasingOptions.motionVectors`
   makes the structure pass render per-pixel screen motion (texels, x right, y up) from each renderable's previous
   world transform and the previous frame's camera; TAA reprojects its history with it. `FilamentView.motionVectorsSupported`,

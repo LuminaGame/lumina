@@ -12,6 +12,7 @@ are upstream v1.77.2 with exactly these files applied in order.
 | `0003-libwebp-wasm-no-webp-js.patch` | `third_party/libwebp/tnt/CMakeLists.txt` | Lets a WebAssembly build with WebP textures configure without SDL2. |
 | `0004-velocity-buffer-motion-vectors.patch` | `filament/include/filament/{Options,View}.h`, `filament/src/{PostProcessManager,FrameHistory,View}.*`, `filament/src/details/{Renderer,Scene,View}.*`, `filament/src/ds/StructureDescriptorSet.*`, `filament/src/materials/antiAliasing/taa/taa.mat`, `libs/filabridge/.../UibStructs.h`, `libs/filamat/src/shaders/UibGenerator.cpp`, `shaders/src/surface_*` | Per-pixel motion vectors from the structure pass (`TemporalAntiAliasingOptions::motionVectors`), consumed by TAA and exportable through `View::setMotionVectorTexture`. |
 | `0005-shutdown-terminates-views-before-cameras.patch` | `filament/src/details/Engine.cpp` | `Engine::shutdown` terminates leaked views before it frees the cameras their shadow maps own and the resource allocator disposer their frame history returns to; the upstream order reads freed memory and crashes `Engine::destroy`. |
+| `0006-external-upscaler-pass.patch` | `filament/backend/include/backend/ExternalPass.h` (new), `backend/{DriverEnums.h,platforms/VulkanPlatform.h}`, `backend/src/vulkan/{VulkanDriver,VulkanTexture,platform/VulkanPlatform}.cpp`, the other drivers' no-ops, `filament/include/filament/{Options,View}.h`, `filament/src/{PostProcessManager,View}.*`, `filament/src/details/{Renderer,View}.*` | An external upscaler (DLSS) behind dynamic resolution: `DynamicResolutionOptions::upscaler`, `View::setExternalUpscaler`, the `externalPass` driver command that hands Vulkan images and the recording command buffer to a client callback, and client-requested Vulkan extensions. |
 
 ## 0001: libassimp glTF 2 `ReplaceData_joint` bounds
 
@@ -120,3 +121,24 @@ null, so the teardown reads freed memory and `Engine::destroy` crashes whenever 
 reused it (reliably after a few dozen TAA frames). The patch moves `mCameraManager.terminate`
 and the disposer's `terminate` / `reset` after `cleanupResourceList(mViews)`; nothing in
 between uses either.
+
+## 0006: an external upscaler pass (DLSS)
+
+Filament upscales a dynamically scaled frame with its own bilinear, SGSR1 or FSR1 passes.
+This patch lets a library outside Filament do it instead. `DynamicResolutionOptions::upscaler`
+(`BUILTIN` or `EXTERNAL`, in padding so the struct keeps its size) selects the
+`ExternalUpscaler` registered with `View::setExternalUpscaler()`. When it is active the
+renderer still jitters the camera as for TAA (`TemporalAntiAliasingOptions` must be on, with
+`motionVectors` for the velocity buffer of patch 0004) but skips the TAA resolve, and
+`PostProcessManager::upscaleExternal()` adds a side-effect frame-graph pass that issues the
+new `DriverApi::externalPass` command with the low-resolution colour, depth and motion vectors
+and a full-resolution storage output (`TextureUsage::STORAGE` maps to
+`VK_IMAGE_USAGE_STORAGE_BIT`). The Vulkan driver transitions the four images to the general
+layout, fills an `ExternalPassContext` (instance, physical device, device, the recording
+`VkCommandBuffer`, each image's `VkImage` / `VkImageView` / format / extent, the frame's jitter
+and sizes) and calls the client's callback on the backend thread; a memory barrier follows the
+callback. The other backends log once and skip the pass, so the renderer's `supports()` check
+makes Filament fall back to FSR1 there. `VulkanPlatform::Customization` grows
+`extraInstanceExtensions` / `extraDeviceExtensions` (skipped with a log line when unavailable),
+and `VK_KHR_buffer_device_address` enables its feature when requested: NGX needs both before
+the device exists. The DLSS code itself lives in `flutter_filament` (`src/dlss_c.cpp`).

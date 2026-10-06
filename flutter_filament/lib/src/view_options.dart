@@ -12,6 +12,20 @@ enum QualityLevel {
   static QualityLevel fromNative(int val) => QualityLevel.values[val];
 }
 
+/// Which upscaler turns a dynamically scaled frame into the output.
+enum Upscaler {
+  /// Filament's own: bilinear, SGSR1 or FSR1 by [DynamicResolutionOptions.quality].
+  builtin,
+
+  /// An upscaler registered on the view from outside Filament ([Dlss]); falls
+  /// back to FSR1 when none is registered or it declines the resolution.
+  external;
+
+  int toNative() => index;
+
+  static Upscaler fromNative(int val) => Upscaler.values[val];
+}
+
 enum BlendMode {
   opaque,
   translucent;
@@ -31,6 +45,10 @@ class DynamicResolutionOptions {
   final bool homogeneousScaling;
   final QualityLevel quality;
 
+  /// Which upscaler reconstructs the output; [Upscaler.external] hands the
+  /// frame to the view's external upscaler (DLSS). Default [Upscaler.builtin].
+  final Upscaler upscaler;
+
   const DynamicResolutionOptions({
     this.minScaleX = 0.5,
     this.minScaleY = 0.5,
@@ -40,6 +58,7 @@ class DynamicResolutionOptions {
     this.enabled = false,
     this.homogeneousScaling = false,
     this.quality = QualityLevel.low,
+    this.upscaler = Upscaler.builtin,
   });
 
   DynamicResolutionOptions copyWith({
@@ -51,6 +70,7 @@ class DynamicResolutionOptions {
     bool? enabled,
     bool? homogeneousScaling,
     QualityLevel? quality,
+    Upscaler? upscaler,
   }) {
     return DynamicResolutionOptions(
       minScaleX: minScaleX ?? this.minScaleX,
@@ -61,6 +81,7 @@ class DynamicResolutionOptions {
       enabled: enabled ?? this.enabled,
       homogeneousScaling: homogeneousScaling ?? this.homogeneousScaling,
       quality: quality ?? this.quality,
+      upscaler: upscaler ?? this.upscaler,
     );
   }
 
@@ -76,7 +97,8 @@ class DynamicResolutionOptions {
           sharpness == other.sharpness &&
           enabled == other.enabled &&
           homogeneousScaling == other.homogeneousScaling &&
-          quality == other.quality;
+          quality == other.quality &&
+          upscaler == other.upscaler;
 
   @override
   int get hashCode => Object.hash(
@@ -88,6 +110,7 @@ class DynamicResolutionOptions {
         enabled,
         homogeneousScaling,
         quality,
+        upscaler,
       );
 
   void copyToNative(ffi_gen.filament_dynamic_resolution_options out) {
@@ -99,6 +122,7 @@ class DynamicResolutionOptions {
     out.enabled = enabled;
     out.homogeneousScaling = homogeneousScaling;
     out.quality = quality.toNative();
+    out.upscaler = upscaler.toNative();
   }
 
   factory DynamicResolutionOptions.fromNative(ffi_gen.filament_dynamic_resolution_options out) {
@@ -111,6 +135,7 @@ class DynamicResolutionOptions {
       enabled: out.enabled,
       homogeneousScaling: out.homogeneousScaling,
       quality: QualityLevel.fromNative(out.quality),
+      upscaler: Upscaler.fromNative(out.upscaler),
     );
   }
 }

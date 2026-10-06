@@ -55,6 +55,7 @@ You work on the engine, the renderer bindings or the native build.
   - [Engine, entities and core types](en/flutter_filament/engine.md) - Engine lifecycle, entities, shared enums, fences, exceptions, callbacks, diagnostics.
   - [Renderer, views and frame pacing](en/flutter_filament/renderer-and-view.md) - Renderer, swap chains, views, render targets, frame pacing, the Flutter widget.
   - [View options and color grading](en/flutter_filament/view-options.md) - Per-view post-processing and quality options, tone mapping and color grading.
+  - [DLSS Super Resolution](en/flutter_filament/dlss.md) - NVIDIA DLSS behind dynamic resolution (Vulkan, NVIDIA GPUs, fetched SDK).
   - [Scene and geometry](en/flutter_filament/scene-and-geometry.md) - Scenes, renderables, transforms, vertex/index/instance/morph/skinning buffers, filamesh.
   - [Camera and manipulator](en/flutter_filament/camera-and-manipulator.md) - Cameras, projections, exposure and the orbit/map/free-flight camera manipulator.
   - [Lighting and image-based lighting](en/flutter_filament/lighting-and-ibl.md) - Lights, shadows, indirect light, skyboxes, IBL baking and prefiltering.

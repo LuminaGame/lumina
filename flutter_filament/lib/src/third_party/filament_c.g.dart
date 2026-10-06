@@ -1121,6 +1121,60 @@ external ffi.Pointer<ffi.Void> filament_view_get_motion_vector_texture(
   ffi.Pointer<ffi.Void> view,
 );
 
+@ffi.Native<ffi.Bool Function()>()
+external bool filament_dlss_available();
+
+@ffi.Native<ffi.Bool Function()>()
+external bool filament_dlss_request_extensions();
+
+@ffi.Native<ffi.Void Function()>()
+external void filament_dlss_clear_extension_request();
+
+@ffi.Native<
+  ffi.Pointer<ffi.Void> Function(
+    ffi.Pointer<ffi.Void>,
+    ffi.Pointer<ffi.Void>,
+    ffi.Pointer<filament_dlss_options_t>,
+  )
+>()
+external ffi.Pointer<ffi.Void> filament_dlss_create(
+  ffi.Pointer<ffi.Void> engine,
+  ffi.Pointer<ffi.Void> view,
+  ffi.Pointer<filament_dlss_options_t> opts,
+);
+
+@ffi.Native<
+  ffi.Void Function(
+    ffi.Pointer<ffi.Void>,
+    ffi.Pointer<ffi.Uint32>,
+    ffi.Pointer<ffi.Uint32>,
+  )
+>()
+external void filament_dlss_get_render_resolution(
+  ffi.Pointer<ffi.Void> dlss,
+  ffi.Pointer<ffi.Uint32> out_w,
+  ffi.Pointer<ffi.Uint32> out_h,
+);
+
+@ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>, ffi.Uint8)>()
+external void filament_dlss_set_quality(
+  ffi.Pointer<ffi.Void> dlss,
+  int quality,
+);
+
+@ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>)>()
+external void filament_dlss_reset_history(
+  ffi.Pointer<ffi.Void> dlss,
+);
+
+@ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>)>()
+external void filament_dlss_destroy(
+  ffi.Pointer<ffi.Void> dlss,
+);
+
+@ffi.Native<ffi.Pointer<ffi.Char> Function()>()
+external ffi.Pointer<ffi.Char> filament_dlss_last_error();
+
 @ffi.Native<
   ffi.Pointer<ffi.Void> Function(
     ffi.Pointer<ffi.Void>,
@@ -9445,6 +9499,60 @@ enum filament_blend_mode {
   };
 }
 
+final class filament_dlss_options_t extends ffi.Struct {
+  @ffi.Uint8()
+  external int quality;
+
+  @ffi.Uint32()
+  external int outputWidth;
+
+  @ffi.Uint32()
+  external int outputHeight;
+
+  @ffi.Bool()
+  external bool hdr;
+
+  @ffi.Bool()
+  external bool autoExposure;
+
+  @ffi.Float()
+  external double sharpness;
+}
+
+enum filament_dlss_quality {
+  FILAMENT_DLSS_MAX_PERFORMANCE(0),
+  FILAMENT_DLSS_BALANCED(1),
+  FILAMENT_DLSS_MAX_QUALITY(2),
+  FILAMENT_DLSS_ULTRA_PERFORMANCE(3),
+  FILAMENT_DLSS_DLAA(4);
+
+  final int value;
+  const filament_dlss_quality(this.value);
+
+  static filament_dlss_quality fromValue(int value) => switch (value) {
+    0 => FILAMENT_DLSS_MAX_PERFORMANCE,
+    1 => FILAMENT_DLSS_BALANCED,
+    2 => FILAMENT_DLSS_MAX_QUALITY,
+    3 => FILAMENT_DLSS_ULTRA_PERFORMANCE,
+    4 => FILAMENT_DLSS_DLAA,
+    _ => throw ArgumentError('Unknown value for filament_dlss_quality: $value'),
+  };
+}
+
+enum filament_upscaler {
+  FILAMENT_UPSCALER_BUILTIN(0),
+  FILAMENT_UPSCALER_EXTERNAL(1);
+
+  final int value;
+  const filament_upscaler(this.value);
+
+  static filament_upscaler fromValue(int value) => switch (value) {
+    0 => FILAMENT_UPSCALER_BUILTIN,
+    1 => FILAMENT_UPSCALER_EXTERNAL,
+    _ => throw ArgumentError('Unknown value for filament_upscaler: $value'),
+  };
+}
+
 final class filament_dynamic_resolution_options extends ffi.Struct {
   @ffi.Array.multi([2])
   external ffi.Array<ffi.Float> minScale;
@@ -9463,6 +9571,9 @@ final class filament_dynamic_resolution_options extends ffi.Struct {
 
   @ffi.Uint8()
   external int quality;
+
+  @ffi.Uint8()
+  external int upscaler;
 }
 
 enum filament_bloom_blend_mode {
