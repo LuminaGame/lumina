@@ -17,6 +17,7 @@ import '../components/particles/particle_system_component.dart';
 import '../game/console.dart';
 import '../game/game_instance.dart';
 import '../material/dynamic_material_instance.dart';
+import '../media/media.dart';
 import '../save/save_game.dart';
 import '../save/save_game_subsystem.dart';
 import '../world/level.dart';
@@ -915,6 +916,19 @@ abstract final class LuminaBlueprintFunctionLibrary {
   static const setSoundPitch = _setSoundPitch;
   static const isSoundPlaying = _isSoundPlaying;
   static const setSoundClassVolume = _setSoundClassVolume;
+
+  static const openVideo = _openVideo;
+  static const playVideo = _playVideo;
+  static const pauseVideo = _pauseVideo;
+  static const stopVideo = _stopVideo;
+  static const seekVideo = _seekVideo;
+  static const setVideoVolume = _setVideoVolume;
+  static const setVideoRate = _setVideoRate;
+  static const setVideoLooping = _setVideoLooping;
+  static const isVideoPlaying = _isVideoPlaying;
+  static const getVideoPosition = _getVideoPosition;
+  static const getVideoDuration = _getVideoDuration;
+
   /// Play Anim Montage: plays the montage's clip on the skeletal mesh while
   /// the Anim Blueprint stands aside; returns the length in seconds at
   /// [playRate], 0 when the montage or mesh is missing.

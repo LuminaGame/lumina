@@ -165,6 +165,47 @@ final Map<String, LuminaBlueprintFunction> _gameFrameworkFunctions = <String, Lu
     LuminaBlueprintFunctionLibrary.setSoundClassVolume(c.self, i['sound_class'] as String? ?? 'Master', LuminaBlueprintFunctionLibrary._d(i['volume'], 1.0));
     return const {};
   },
+  'open_video': (c, i) => LuminaBlueprintFunctionLibrary._ret(LuminaBlueprintFunctionLibrary.openVideo(
+        c.self,
+        i['source'] as String? ?? '',
+        i['auto_play'] as bool? ?? false,
+        i['loop'] as bool? ?? false,
+        LuminaBlueprintFunctionLibrary._d(i['volume'], 1.0),
+      )),
+  'play_video': (c, i) {
+    LuminaBlueprintFunctionLibrary.playVideo(c.self, i['target']);
+    return const {};
+  },
+  'pause_video': (c, i) {
+    LuminaBlueprintFunctionLibrary.pauseVideo(c.self, i['target']);
+    return const {};
+  },
+  'stop_video': (c, i) {
+    LuminaBlueprintFunctionLibrary.stopVideo(c.self, i['target']);
+    return const {};
+  },
+  'seek_video': (c, i) {
+    LuminaBlueprintFunctionLibrary.seekVideo(c.self, i['target'], LuminaBlueprintFunctionLibrary._d(i['seconds'], 0.0));
+    return const {};
+  },
+  'set_video_volume': (c, i) {
+    LuminaBlueprintFunctionLibrary.setVideoVolume(c.self, i['target'], LuminaBlueprintFunctionLibrary._d(i['volume'], 1.0));
+    return const {};
+  },
+  'set_video_rate': (c, i) {
+    LuminaBlueprintFunctionLibrary.setVideoRate(c.self, i['target'], LuminaBlueprintFunctionLibrary._d(i['rate'], 1.0));
+    return const {};
+  },
+  'set_video_looping': (c, i) {
+    LuminaBlueprintFunctionLibrary.setVideoLooping(c.self, i['target'], i['loop'] as bool? ?? false);
+    return const {};
+  },
+  'is_video_playing': (c, i) =>
+      LuminaBlueprintFunctionLibrary._ret(LuminaBlueprintFunctionLibrary.isVideoPlaying(c.self, i['target'])),
+  'get_video_position': (c, i) =>
+      LuminaBlueprintFunctionLibrary._ret(LuminaBlueprintFunctionLibrary.getVideoPosition(c.self, i['target'])),
+  'get_video_duration': (c, i) =>
+      LuminaBlueprintFunctionLibrary._ret(LuminaBlueprintFunctionLibrary.getVideoDuration(c.self, i['target'])),
   'play_anim_montage': (c, i) => LuminaBlueprintFunctionLibrary._ret(LuminaBlueprintFunctionLibrary.playAnimMontage(c.self, i['montage'] as String? ?? '', LuminaBlueprintFunctionLibrary._d(i['play_rate'], 1.0), i['start_section'] as String? ?? '')),
   'stop_anim_montage': (c, i) {
     LuminaBlueprintFunctionLibrary.stopAnimMontage(c.self, LuminaBlueprintFunctionLibrary._d(i['blend_out_time'], 0.25));

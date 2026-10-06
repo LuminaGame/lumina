@@ -71,6 +71,57 @@ bool _isSoundPlaying(LuminaActor self, Object? target) => target is LuminaAudioC
 void _setSoundClassVolume(LuminaActor self, [String soundClass = 'Master', double volume = 1.0]) =>
     _audio(self)?.setClassVolume(soundClass, volume);
 
+// --- Video ----------------------------------------------------------
+
+Object? _openVideo(LuminaActor self, String source, [bool autoPlay = false, bool loop = false, double volume = 1.0]) {
+  if (source.isEmpty) return null;
+  final controller = LuminaVideoController(
+    source: source,
+    autoPlay: autoPlay,
+    loop: loop,
+    initialVolume: volume,
+  );
+  unawaited(controller.initialize());
+  return controller;
+}
+
+void _playVideo(LuminaActor self, Object? target) {
+  if (target is LuminaVideoController) target.play();
+}
+
+void _pauseVideo(LuminaActor self, Object? target) {
+  if (target is LuminaVideoController) target.pause();
+}
+
+void _stopVideo(LuminaActor self, Object? target) {
+  if (target is LuminaVideoController) target.stop();
+}
+
+void _seekVideo(LuminaActor self, Object? target, [double seconds = 0.0]) {
+  if (target is LuminaVideoController) target.seekToSeconds(seconds);
+}
+
+void _setVideoVolume(LuminaActor self, Object? target, [double volume = 1.0]) {
+  if (target is LuminaVideoController) target.setVolume(volume);
+}
+
+void _setVideoRate(LuminaActor self, Object? target, [double rate = 1.0]) {
+  if (target is LuminaVideoController) target.setPlaybackSpeed(rate);
+}
+
+void _setVideoLooping(LuminaActor self, Object? target, [bool loop = false]) {
+  if (target is LuminaVideoController) target.setLooping(loop);
+}
+
+bool _isVideoPlaying(LuminaActor self, Object? target) =>
+    target is LuminaVideoController && target.value.isPlaying;
+
+double _getVideoPosition(LuminaActor self, Object? target) =>
+    target is LuminaVideoController ? target.value.position.inMilliseconds / 1000.0 : 0.0;
+
+double _getVideoDuration(LuminaActor self, Object? target) =>
+    target is LuminaVideoController ? target.value.duration.inMilliseconds / 1000.0 : 0.0;
+
 // --- Animation ------------------------------------------------------
 
 LuminaAnimatedMeshComponent? _skeletalMesh(LuminaActor self) {

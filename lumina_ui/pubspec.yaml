@@ -63,6 +63,9 @@ dependencies:
   vector_math: ^2.1.4
   path: ^1.9.1
   window_manager: ^0.5.1
+  media_kit: ^1.1.11
+  media_kit_video: ^1.2.5
+  media_kit_libs_video: ^1.0.4
   # material_preview_renderer.dart decodes previews with it (lib code, so a
   # regular dependency: a project's editor host builds lumina_ui as a
   # dependency).

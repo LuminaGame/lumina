@@ -34,6 +34,7 @@ Runtime kodu dosyaları hiçbir zaman doğrudan `File(...)` ile okumaz: açık b
 | [Girdi (input)](input.md) | Input action'lar, mapping context'ler, tuşlar, modifier'lar ve trigger'lar. |
 | [Animasyon](animation.md) | Anim instance'lar, montage'lar, clip'ler, blend space'ler, keyframe track'leri, retargeting. |
 | [Ses](audio.md) | Ses backend'i, ses subsystem'i, sesler ve attenuation. |
+| [Medya alt sistemi (video & ses)](media.md) | Donanım hızlandırmalı video/ses oynatıcı (media-kit), controller'lar, UMG widget'ları, Blueprint node'ları. |
 | [Çarpışma](collision.md) | Çarpışma şekilleri, filtreler ve profiller, sorgular, GJK/EPA narrow phase. |
 | [Fizik](physics.md) | Rigid body'ler, kütle özellikleri, fiziksel materyaller, temaslar ve fizik subsystem'i. |
 | [Yapay zeka (AI)](ai.md) | AI controller, behavior tree'ler, blackboard, navigasyon, algı (perception). |

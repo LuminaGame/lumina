@@ -9,6 +9,7 @@ Continuation of App shell and shared UI: the remaining public files under `lib/u
 - [`lib/ui/core/window/lumina_window.dart`](#libuicorewindowlumina_windowdart)
 - [`lib/ui/core/window/window_controls.dart`](#libuicorewindowwindow_controlsdart)
 - [`lib/ui/core/window/window_state_store.dart`](#libuicorewindowwindow_state_storedart)
+- [`lib/ui/core/widgets/media/editor_media_widgets.dart`](#libuicorewidgetsmediaeditor_media_widgetsdart)
 
 ## `lib/ui/core/window/lumina_window.dart`
 
@@ -155,6 +156,30 @@ Keeps [WindowStateData] in the editor preferences — the `window` block of `edi
 | `file` | `final File file` |  |
 | `load` | `WindowStateData? load()` | The saved state, or null when there is none (first start) or it is unreadable. |
 | `save` | `void save(WindowStateData state)` |  |
+
+## `lib/ui/core/widgets/media/editor_media_widgets.dart`
+
+### `class LuminaVideoPlayerWidget`
+
+A full-featured desktop/editor video player widget built on `shadcn_flutter`. Integrates hardware-accelerated playback with:
+- Play / Pause / Stop controls.
+- Current position and total duration timecodes (`MM:SS` / `HH:MM:SS`).
+- Interactive scrubbing slider for exact position seeking.
+- Volume popover with mute toggle and slider.
+- Loop playback toggle.
+- Playback rate dropdown selector (`0.5x`, `1.0x`, `1.25x`, `1.5x`, `2.0x`).
+
+**Constructors:**
+
+- `const LuminaVideoPlayerWidget({super.key, required this.controller, this.fit = BoxFit.contain, this.showControls = true, this.autoPlay = false})`
+
+### `class LuminaAudioPlayerWidget`
+
+A dedicated audio player widget for the editor with playback controls, progress scrubbing bar, timecode indicators, volume adjustments, and loop controls.
+
+**Constructors:**
+
+- `const LuminaAudioPlayerWidget({super.key, required this.controller, this.showControls = true, this.autoPlay = false})`
 
 ---
 

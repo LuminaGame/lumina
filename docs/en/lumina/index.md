@@ -34,6 +34,7 @@ Runtime code never reads files with `File(...)` directly: asset loads without an
 | [Input](input.md) | Input actions, mapping contexts, keys, modifiers and triggers. |
 | [Animation](animation.md) | Anim instances, montages, clips, blend spaces, keyframe tracks, retargeting. |
 | [Audio](audio.md) | Audio backend, audio subsystem, sounds and attenuation. |
+| [Media subsystem (video & audio)](media.md) | Hardware-accelerated video/audio player (media-kit), controllers, UMG widgets, Blueprint nodes. |
 | [Collision](collision.md) | Collision shapes, filters and profiles, queries, GJK/EPA narrow phase. |
 | [Physics](physics.md) | Rigid bodies, mass properties, physical materials, contacts and the physics subsystem. |
 | [AI](ai.md) | AI controller, behavior trees, blackboard, navigation, perception. |

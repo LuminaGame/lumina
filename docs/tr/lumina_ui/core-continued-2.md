@@ -9,6 +9,7 @@ Uygulama kabuğu ve ortak UI sayfasının devamı: `lib/ui/core/window/` altınd
 - [`lib/ui/core/window/lumina_window.dart`](#libuicorewindowlumina_windowdart)
 - [`lib/ui/core/window/window_controls.dart`](#libuicorewindowwindow_controlsdart)
 - [`lib/ui/core/window/window_state_store.dart`](#libuicorewindowwindow_state_storedart)
+- [`lib/ui/core/widgets/media/editor_media_widgets.dart`](#libuicorewidgetsmediaeditor_media_widgetsdart)
 
 ## `lib/ui/core/window/lumina_window.dart`
 
@@ -155,6 +156,30 @@ Keeps [WindowStateData] in the editor preferences — the `window` block of `edi
 | `file` | `final File file` |  |
 | `load` | `WindowStateData? load()` | The saved state, or null when there is none (first start) or it is unreadable. |
 | `save` | `void save(WindowStateData state)` |  |
+
+## `lib/ui/core/widgets/media/editor_media_widgets.dart`
+
+### `class LuminaVideoPlayerWidget`
+
+`shadcn_flutter` kullanılarak geliştirilmiş, tam özellikli masaüstü/editör video oynatıcı bileşeni. Donanım hızlandırmalı video oynatmayı şunlarla birleştirir:
+- Oynat / Duraklat / Durdur denetimleri.
+- Geçerli konum ve toplam süre zaman kodları (`MM:SS` / `HH:MM:SS`).
+- Hassas konum arama için etkileşimli ilerleme çubuğu (slider).
+- Sessize alma geçişi ve ses ayar slider'ı içeren ses popover menüsü.
+- Döngü (loop) geçiş butonu.
+- Oynatma hızı açılır menü seçicisi (`0.5x`, `1.0x`, `1.25x`, `1.5x`, `2.0x`).
+
+**Yapıcı Metotlar (Constructors):**
+
+- `const LuminaVideoPlayerWidget({super.key, required this.controller, this.fit = BoxFit.contain, this.showControls = true, this.autoPlay = false})`
+
+### `class LuminaAudioPlayerWidget`
+
+Oynatma kontrolleri, ilerleme çubuğu, zaman kodu göstergeleri, ses seviyesi ayarları ve döngü denetimlerine sahip hafif editör ses oynatıcı bileşeni.
+
+**Yapıcı Metotlar (Constructors):**
+
+- `const LuminaAudioPlayerWidget({super.key, required this.controller, this.showControls = true, this.autoPlay = false})`
 
 ---
 

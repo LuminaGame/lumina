@@ -7,7 +7,7 @@ library;
 import 'dart:io';
 
 import 'package:lumina/data/services/workspace_paths.dart';
-import 'package:lumina/lumina.dart' show EngineBootstrap, EngineLoggerService, LuminaRtxController, PluginHostPatcherService;
+import 'package:lumina/lumina.dart' show EngineBootstrap, EngineLoggerService, LuminaMedia, LuminaRtxController, PluginHostPatcherService;
 import 'package:lumina_editor_api/lumina_editor_api.dart';
 import 'package:path/path.dart' as p;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
@@ -44,6 +44,7 @@ Future<void> runLuminaEditor(List<String> args, {List<LuminaEditorPlugin> plugin
   // without the policy takes over before any window shows.
   if (!RedirectionTrustGuard.startup(args)) exit(0);
   WidgetsFlutterBinding.ensureInitialized();
+  LuminaMedia.ensureInitialized();
   EditorGraphicsPreferences().apply();
   // The viewport's shared Vulkan engine is created later; the ray query (and,
   // with the NGX runtime, DLSS) extensions must be asked for before it exists.

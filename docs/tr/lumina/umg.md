@@ -8,6 +8,7 @@ Oyun arayüzünün runtime tarafı: derlenmiş widget asset'lerinin üzerine kur
 
 - [`lib/src/umg/element_binding.dart`](#libsrcumgelement_bindingdart)
 - [`lib/src/umg/umg_widgets.dart`](#libsrcumgumg_widgetsdart)
+- [`lib/src/umg/umg_media_widgets.dart`](#libsrcumgumg_media_widgetsdart)
 - [`lib/src/umg/user_widget.dart`](#libsrcumguser_widgetdart)
 - [`lib/src/umg/widget_layer.dart`](#libsrcumgwidget_layerdart)
 
@@ -497,6 +498,24 @@ Renders the widgets a world's [LuminaWidgetSubsystem] shows: the game host stack
 | `game` | `final LuminaGame? game` |  |
 | `resolveBuilder` | `final LuminaWidgetBuilder? Function(String className)? resolveBuilder` | Takes precedence over the registry: the editor renders a class from its designer document instead of a compiled Dart class. |
 | `fallbackBuilder` | `final LuminaWidgetBuilder? fallbackBuilder` | Replaces the default fallback card for classes nobody can build. |
+
+## `lib/src/umg/umg_media_widgets.dart`
+
+### `class LuminaUmgVideoPlayer`
+
+Oyun arayüzüne / HUD'a bir video oynatıcı yerleştiren UMG runtime widget'ı. `LuminaVideoController` ve `LuminaVideoPlayer` ile otomatik koordine olur. Otomatik oynatma, döngü, ses seviyesi, sığdırma (fit), hata geri çağrıları ve widget ağacından kaldırıldığında kaynak temizliğini destekler.
+
+**Yapıcı Metotlar (Constructors):**
+
+- `const LuminaUmgVideoPlayer({super.key, this.filePath, this.assetPath, this.networkUrl, this.autoPlay = false, this.looping = false, this.volume = 1.0, this.fit = BoxFit.contain, this.preferHeadless = false, this.onInitialized, this.onError})`
+
+### `class LuminaUmgAudioPlayer`
+
+Konumsal olmayan arka plan sesleri, tema müzikleri veya ara sahne seslendirmeleri için UMG runtime widget'ı. `LuminaAudioController` ile otomatik koordine olur.
+
+**Yapıcı Metotlar (Constructors):**
+
+- `const LuminaUmgAudioPlayer({super.key, this.filePath, this.assetPath, this.networkUrl, this.autoPlay = false, this.looping = false, this.volume = 1.0, this.preferHeadless = false, this.onInitialized, this.onError})`
 
 ---
 

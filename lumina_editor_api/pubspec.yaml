@@ -16,6 +16,8 @@ dependencies:
   shadcn_flutter: ^0.0.55
   path: ^1.9.0
   crypto: ^3.0.3
+  media_kit: ^1.1.11
+  media_kit_video: ^1.2.5
 
 dev_dependencies:
   flutter_test:

@@ -8,6 +8,7 @@ The runtime side of game UI: the plain Flutter widgets that compiled widget asse
 
 - [`lib/src/umg/element_binding.dart`](#libsrcumgelement_bindingdart)
 - [`lib/src/umg/umg_widgets.dart`](#libsrcumgumg_widgetsdart)
+- [`lib/src/umg/umg_media_widgets.dart`](#libsrcumgumg_media_widgetsdart)
 - [`lib/src/umg/user_widget.dart`](#libsrcumguser_widgetdart)
 - [`lib/src/umg/widget_layer.dart`](#libsrcumgwidget_layerdart)
 
@@ -497,6 +498,24 @@ Renders the widgets a world's [LuminaWidgetSubsystem] shows: the game host stack
 | `game` | `final LuminaGame? game` |  |
 | `resolveBuilder` | `final LuminaWidgetBuilder? Function(String className)? resolveBuilder` | Takes precedence over the registry: the editor renders a class from its designer document instead of a compiled Dart class. |
 | `fallbackBuilder` | `final LuminaWidgetBuilder? fallbackBuilder` | Replaces the default fallback card for classes nobody can build. |
+
+## `lib/src/umg/umg_media_widgets.dart`
+
+### `class LuminaUmgVideoPlayer`
+
+A UMG runtime widget embedding a video player in the game UI / HUD. Automatically coordinates with `LuminaVideoController` and `LuminaVideoPlayer`. Supports autoplay, looping, volume, box fit, error callbacks, and cleans up resources when removed from the widget tree.
+
+**Constructors:**
+
+- `const LuminaUmgVideoPlayer({super.key, this.filePath, this.assetPath, this.networkUrl, this.autoPlay = false, this.looping = false, this.volume = 1.0, this.fit = BoxFit.contain, this.preferHeadless = false, this.onInitialized, this.onError})`
+
+### `class LuminaUmgAudioPlayer`
+
+A UMG runtime widget for non-spatialized background audio, theme music, or cutscene dialog. Automatically coordinates with `LuminaAudioController`.
+
+**Constructors:**
+
+- `const LuminaUmgAudioPlayer({super.key, this.filePath, this.assetPath, this.networkUrl, this.autoPlay = false, this.looping = false, this.volume = 1.0, this.preferHeadless = false, this.onInitialized, this.onError})`
 
 ---
 
