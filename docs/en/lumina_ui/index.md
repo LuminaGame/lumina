@@ -29,6 +29,7 @@
 | [Main editor: view model and services (continued)](main-editor-state-continued.md) | More files under `lib/ui/features/main_editor/services/`, `lib/ui/features/main_editor/services/pie_controller/`, `lib/ui/features/main_editor/view_models/`, `lib/ui/features/main_editor/view_models/editor_view_model/`. |
 | [Launcher and details](launcher-and-details.md) | Project launcher, create-project dialog, component property registry, multi-edit. |
 | [Plugin manager](plugin-manager.md) | Plugin manager view and view model, new-plugin wizard. |
+| [Plugin processes](plugin-processes.md) | Isolated plugins: supervisor, states, restarts, the process guard, `plugin_crash` reports, the in-editor override, the plugin-process mode of the executable. |
 | [Source control](source-control.md) | Git service, source control view model, commit, history, revert and identity dialogs. |
 | [Marketplace](marketplace.md) | Signing in, browsing, installing listings and license records. |
 | [MCP server](mcp-server.md) | The editor's Model Context Protocol server: transport, sessions, registry, jobs, sandbox, snapshots, panel. |

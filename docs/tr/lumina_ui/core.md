@@ -81,6 +81,7 @@ Lumina Studio'nun ortak çekirdeği: uygulama giriş noktası, yerleşik editör
 | `allImporters` | `List<EditorImporter> get allImporters` | `allImporters` özelliğinin anlık değerini okuyan getter erişimcisi. |
 | `allDetailsCustomizations` | `List<DetailsCustomization> get allDetailsCustomizations` | `allDetailsCustomizations` özelliğinin anlık değerini okuyan getter erişimcisi. |
 | `allConsoleCommands` | `Map<String, _ConsoleCommand> get allConsoleCommands` | `allConsoleCommands` özelliğinin anlık değerini okuyan getter erişimcisi. |
+| `attachProcesses` / `processes` / `processChannel` | `void attachProcesses(PluginProcessManager processes)` | Yalıtılmış eklentilerin denetleyicileri: `processChannel(ad)` bir eklentinin denetleyicisini (canlı kanalını) ya da bağsız bir kanal döner. Kayıt `PluginProcessHost` arayüzünü uygular: bir sürecin katkıları (`registerProcessContributions`) kabuğunkilerden ayrı tutulur ve yalıtılmış bir eklentinin kabuk panelleri, sekmeleri ve varlık editörleri `PluginProcessGuard` ile sarılır. Bkz. [Eklenti süreçleri](plugin-processes.md). |
 
 ### `class _ConsoleCommand`
 
@@ -402,11 +403,11 @@ Viewport'un DLSS, FSR3 ve RTX HUD düğmelerinin (kamera hızının yanında) ar
 
 ### `enum CrashReportKind`
 
-`uncaught` (editör çalışırken kimsenin yakalamadığı bir hata) ya da `previousRun` (son oturum kapanmadan bitti, bir sonraki açılışta bulundu); `wire` sunucudaki yazımdır (`uncaught`, `previous_run`).
+`uncaught` (editör çalışırken kimsenin yakalamadığı bir hata), `previousRun` (son oturum kapanmadan bitti, bir sonraki açılışta bulundu) ya da `pluginCrash` (yalıtılmış bir eklentinin kendi süreci öldü; editör çalışmaya devam etti); `wire` sunucudaki yazımdır (`uncaught`, `previous_run`, `plugin_crash`).
 
 ### `class CrashReport`
 
-Çökme raporu ekranının gösterdiği ve kullanıcı onaylarsa gönderdiği şey: hata metni ve stack trace, release etiketi ve commit, editör sürümü, `<os>-<arch>`, işletim sistemi sürümü, kullanılan GPU, Filament sürümü, açık projenin adı ve editör günlüğünün sonu. `toJson` / `fromJson` (`<veri dizini>/crashes/<id>.json` dosyası), `toSubmission(description, email, includeLog)` (`POST /api/v1/crash-reports` gövdesi) ve `toText(...)` (Copy'nin panoya koyduğu) olan değer nesnesi; gönderildikten sonra `sentId`.
+Çökme raporu ekranının gösterdiği ve kullanıcı onaylarsa gönderdiği şey: hata metni ve stack trace, release etiketi ve commit, editör sürümü, `<os>-<arch>`, işletim sistemi sürümü, kullanılan GPU, Filament sürümü, açık projenin adı, eklenti (eklenti raporlarında), ölen bir eklenti sürecinin çıkış kodu (`exitCode`) ve editör günlüğünün sonu (`pluginCrash` için sürecin kendi günlüğü). `toJson` / `fromJson` (`<veri dizini>/crashes/<id>.json` dosyası), `toSubmission(description, email, includeLog)` (`POST /api/v1/crash-reports` gövdesi) ve `toText(...)` (Copy'nin panoya koyduğu) olan değer nesnesi; gönderildikten sonra `sentId`.
 
 ## `lib/ui/core/services/crash_reporter.dart`
 
@@ -419,6 +420,7 @@ Viewport'un DLSS, FSR3 ve RTX HUD düğmelerinin (kamera hızının yanında) ar
 | `endSession` | `Future<void> endSession()` | Temiz kapanış: günlüğü boşaltır ve işareti siler. `editor_entry.dart` bunu pencerenin kapanış korumasından ve `EditorHandOff.beforeExit`'ten çalıştırır; böylece yeniden başlatmalar, devirler ve Quit de temiz kapanış sayılır. `detachLog()` günlüğü kapatır ama işareti bırakır. |
 | `detectPreviousCrash` | `Future<CrashReport?> detectPreviousCrash()` | Süreci çalışmayan (`isProcessRunning`: Windows'ta `tasklist`, Linux'ta `/proc`, diğerlerinde `kill -0`; test `isProcessAlive` enjekte eder) başka bir oturumun her işareti o oturumun öldüğü anlamına gelir: o oturumun günlük kuyruğuyla bir `previousRun` raporu dosyalar, işareti siler ve ilk raporu `pending` üzerinde yayımlar. Süreci hâlâ canlı bir işaret (editör açılırken çıkış kancalarını çalıştıran launcher) olduğu gibi bırakılır. Süreç başına olmadan önceki `session.json` + `editor.log` çifti aynı biçimde raporlanır. |
 | `record` | `CrashReport? record(Object error, StackTrace? stack, {String? context})` | Bir `uncaught` raporu dosyalar (bellekteki günlük sonuyla) ve bekleyen yoksa yayınlar; sonraki hatalar yalnızca dosyalanır. |
+| `recordPluginCrash` | `CrashReport recordPluginCrash({required String plugin, required String reason, int? exitCode, List<String> logTail})` | Ölen yalıtılmış bir eklenti süreci için `pluginCrash` raporu dosyalar (denetleyici çağırır) ve bekleyen yoksa yayınlar; oturum işaretçisine dokunulmaz. |
 | `send` | `Future<CrashReportReceipt> send(CrashReport report, {String description, String email, bool includeLog})` | Raporu `serverUrl`'e gönderir (`MarketplaceClient.submitCrashReport`) ve gönderildi olarak işaretler. Kullanıcı olmadan hiçbir şey gönderilmez. |
 | `pending`, `dismiss`, `filed`, `stored`, `fileOf`, `flush` | | Ekranın gösterdiği rapor, gizlenmesi (dosya kalır), bu oturumun raporları, diskteki tüm raporlar, bir raporun dosyası ve dosya yazımlarını bekleme. |
 | `dataDir`, `crashesDir`, `logsDir`, `logFile`, `sessionMarker`, `pid`, `serverUrl`, `projectName` | | Nereye yazdığı (varsayılan `LuminaDataDir`; `logFile` ve `sessionMarker` bu sürecin `pid`'ini taşır, test ayarlayabilir), nereye gönderdiği ve raporlarda adı geçen proje. |
@@ -431,7 +433,7 @@ Viewport'un DLSS, FSR3 ve RTX HUD düğmelerinin (kamera hızının yanında) ar
 
 ### `class CrashReportView`
 
-Çökme raporu ekranı: hatanın başlığı, bir açıklama alanı (anahtar `crash_description`), isteğe bağlı iletişim e-postası (`crash_email`), günlük onay kutusu (`crash_include_log`), tam metni gösteren "What is sent" açma kapama (`crash_toggle_details`, `crash_details_text`) ve Copy report (`crash_copy`), Don't send (`crash_dismiss`), Send report (`crash_send`) düğmeleri; gönderimden sonra `crash_sent` ve Continue (`crash_continue`), reddedilen bir gönderimden sonra dosyanın yoluyla `crash_send_error`.
+Çökme raporu ekranı: hatanın başlığı, bir açıklama alanı (anahtar `crash_description`), isteğe bağlı iletişim e-postası (`crash_email`), günlük onay kutusu (`crash_include_log`), tam metni gösteren "What is sent" açma kapama (`crash_toggle_details`, `crash_details_text`) ve Copy report (`crash_copy`), Don't send (`crash_dismiss`), Send report (`crash_send`) düğmeleri; gönderimden sonra `crash_sent` ve Continue (`crash_continue`), reddedilen bir gönderimden sonra dosyanın yoluyla `crash_send_error`. Bir `pluginCrash` raporunun başlığı "A PLUGIN PROCESS STOPPED" olur, eklentiyi ve çıkış kodunu adlandırır.
 
 ## `lib/ui/core/widgets/quality_settings_popover.dart`
 

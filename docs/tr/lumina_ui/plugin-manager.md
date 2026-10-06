@@ -12,6 +12,17 @@ Eklentileri listeleyen, etkinleştiren, devre dışı bırakan, içe aktaran ve 
 
 Bir proje editörüne derlenmiş code plugin'ler editör açılırken, projenin kayıtlı layout'u yüklendikten sonra kaydolur (bir eklenti `register` içinde panellerinin görünürlüğünü okuyabilir ya da değiştirebilir). `register`'ı hata fırlatan bir eklenti yüklenmez: hatadan önce kaydettikleri kaldırılır, hata eklentinin adıyla Output Log'a yazılır (kaynak `Plugins`) ve kartında ipucu hatayı gösteren bir **Issue** rozeti çıkar (`PluginIssueType.registrationFailed`). Editör ve diğer eklentiler her zamanki gibi yüklenir.
 
+## Yalıtılmış eklentiler: süreç durumu
+
+Kendi sürecinde çalışan bir eklenti (bkz. [Eklenti süreçleri](plugin-processes.md)) kartında bir **Status** rozeti
+(Running, Starting, Hung, Crashed, Stopped, In process; ipucu nedeni verir) ve ayrıntılar bölmesinde bir **Process**
+bölümü gösterir: nedeniyle durum, pid, son çıkış kodu ve otomatik yeniden başlatmalar, bir **Restart** düğmesi,
+**Run in editor process (debugging)** anahtarı ve sürecin günlüğünün sonu. Anahtar projenin `plugin_isolation`
+geçersiz kılmasını yazar (`.lmproject`, `PluginRegistryService.setIsolationOverride` ve editörün kendi projesi
+üzerinden) ve eklentiyi hemen taşır: aynı kanal, diğer kipte yeniden başlatılmış. Yeni Eklenti sihirbazının
+**Run in its own process** anahtarı (içerik eklentilerinde sunulmaz) yalıtılmış bir eklenti iskeleti üretir; MCP aracı
+`create_plugin` da `isolated: true` ile aynısını yapar.
+
 ## Eklenti içe aktarma
 
 Liste başlığında **New Plugin**'in yanındaki **Import from Folder** ve **Import from Zip**, bir eklentiyi kopyalayarak kullanıcıya özel eklenti klasörüne (`UserPluginDir.resolve()`; Marketplace de eklentileri buraya kurar) kurar; eklenti seçildiği yerden asla bağlanmaz (link). İkisi de sistem seçicisini açar ve hiçbir şey yazmadan önce doğrular:
@@ -220,6 +231,9 @@ Kaldırma işlemseldir (`FolderInstall.remove`): klasör önce yanında `.<name>
 | `importPlugin` | `Future<PluginImportResult> importPlugin(PluginImportSource source, String path)` | `path`'teki klasörü veya zip'i doğrular ve kullanıcı eklenti klasörüne kopyalar; `alreadyInstalled` sonucu `confirmReplace` veya `cancelImport` bekler; kurulan eklenti listelenir ve seçilir. |
 | `confirmReplace` | `Future<PluginImportResult> confirmReplace(PluginImportResult pending)` | Replace: bekleyen eklentiyi kurulu kopyanın yerine kurar. |
 | `cancelImport` | `void cancelImport(PluginImportResult pending)` | Cancel: bekleyen içe aktarmanın hazırladıklarını siler. |
+| `processOf` / `processFor` | `PluginProcessSupervisor? Function(String name)? processOf` | Bir eklentinin süreç denetleyicisi (editör `pluginProcesses.supervisorOf` bağlar); süreç içi eklentide null. |
+| `restartProcess` | `Future<void> restartProcess(String name)` | Process bölümündeki Restart. |
+| `runsInEditorProcess` / `runsInEditor` / `onSetRunInEditorProcess` / `setRunInEditorProcess` | `Future<void> setRunInEditorProcess(String name, bool inEditorProcess)` | "Run in editor process (debugging)" anahtarı (editör `EditorViewModel.pluginRunsInEditorProcess` / `setPluginRunsInEditorProcess` bağlar); uygulanırken `switchingIsolation`. |
 | `isPluginLoaded` | `bool Function(String name)? isPluginLoaded` | Bu editör oturumunun bir eklentiyi kaydedip kaydetmediği (editör `EditorViewModel.isPluginLoaded`'ı bağlar); kaldırma penceresi eklentinin yeniden başlatmaya kadar etkin kaldığını söyler. |
 | `removerFactory` | `PluginRemover Function()? removerFactory` | Bir kaldırma için `PluginRemover`'ı kurar (testler geçici veri ve Marketplace klasörlerine yönlendirir). |
 | `removing` | `bool get removing` | Bir kaldırma sürüyor (bu sırada Remove devre dışıdır). |

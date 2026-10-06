@@ -81,6 +81,7 @@ The shared core of Lumina Studio: the app entry point, the built-in editor plugi
 | `allImporters` | `List<EditorImporter> get allImporters` | Getter accessor returning the current value of `allImporters`. |
 | `allDetailsCustomizations` | `List<DetailsCustomization> get allDetailsCustomizations` | Getter accessor returning the current value of `allDetailsCustomizations`. |
 | `allConsoleCommands` | `Map<String, _ConsoleCommand> get allConsoleCommands` | Getter accessor returning the current value of `allConsoleCommands`. |
+| `attachProcesses` / `processes` / `processChannel` | `void attachProcesses(PluginProcessManager processes)` | The supervisors of the isolated plugins: `processChannel(name)` returns a plugin's supervisor (its live channel) or a detached channel. The registry implements `PluginProcessHost`: a process's contributions (`registerProcessContributions`) are kept apart from its shell's, and the shell panels, tabs and asset editors of an isolated plugin are wrapped in `PluginProcessGuard`. See [Plugin processes](plugin-processes.md). |
 
 ### `class _ConsoleCommand`
 
@@ -402,11 +403,11 @@ The settings behind the viewport's DLSS, FSR3 and RTX HUD buttons (next to the c
 
 ### `enum CrashReportKind`
 
-`uncaught` (an error nobody handled while the editor ran) or `previousRun` (the last session ended without closing, found at the next launch); `wire` is the server spelling (`uncaught`, `previous_run`).
+`uncaught` (an error nobody handled while the editor ran), `previousRun` (the last session ended without closing, found at the next launch) or `pluginCrash` (an isolated plugin's own process died; the editor kept running); `wire` is the server spelling (`uncaught`, `previous_run`, `plugin_crash`).
 
 ### `class CrashReport`
 
-What the crash report screen shows and, when the user agrees, sends: the error text and stack trace, the release tag and commit, the editor version, `<os>-<arch>`, the OS version, the GPU in use, the Filament version, the open project's name and the tail of the editor log. Value object with `toJson` / `fromJson` (the file under `<data dir>/crashes/<id>.json`), `toSubmission(description, email, includeLog)` (the body of `POST /api/v1/crash-reports`) and `toText(...)` (what Copy puts on the clipboard); `sentId` once sent.
+What the crash report screen shows and, when the user agrees, sends: the error text and stack trace, the release tag and commit, the editor version, `<os>-<arch>`, the OS version, the GPU in use, the Filament version, the open project's name, the plugin (for plugin reports), the exit code of a plugin process that died (`exitCode`) and the tail of the editor log (for a `pluginCrash`, the process's own log). Value object with `toJson` / `fromJson` (the file under `<data dir>/crashes/<id>.json`), `toSubmission(description, email, includeLog)` (the body of `POST /api/v1/crash-reports`) and `toText(...)` (what Copy puts on the clipboard); `sentId` once sent.
 
 ## `lib/ui/core/services/crash_reporter.dart`
 
@@ -419,6 +420,7 @@ What the crash report screen shows and, when the user agrees, sends: the error t
 | `endSession` | `Future<void> endSession()` | The clean close: flushes the log and removes the marker. `editor_entry.dart` runs it from the window's close guard and from `EditorHandOff.beforeExit`, so restarts, hand-offs and Quit are clean closes too. `detachLog()` closes the log but keeps the marker. |
 | `detectPreviousCrash` | `Future<CrashReport?> detectPreviousCrash()` | Every marker of another session whose process is not running (`isProcessRunning`: `tasklist` on Windows, `/proc` on Linux, `kill -0` elsewhere; a test injects `isProcessAlive`) means that session died: files a `previousRun` report with that session's log tail, deletes the marker and publishes the first report on `pending`. A marker whose process is alive (the launcher still running its exit hooks while the editor starts) is left alone. The pre-per-process `session.json` + `editor.log` pair is reported the same way. |
 | `record` | `CrashReport? record(Object error, StackTrace? stack, {String? context})` | Files an `uncaught` report (with the in-memory log tail) and publishes it when nothing is pending; later errors are only filed. |
+| `recordPluginCrash` | `CrashReport recordPluginCrash({required String plugin, required String reason, int? exitCode, List<String> logTail})` | Files a `pluginCrash` report for an isolated plugin's process that died (the supervisor calls it) and publishes it when nothing is pending; the session marker is not touched. |
 | `send` | `Future<CrashReportReceipt> send(CrashReport report, {String description, String email, bool includeLog})` | Posts the report to `serverUrl` (`MarketplaceClient.submitCrashReport`) and marks it sent. Nothing is sent without the user. |
 | `pending`, `dismiss`, `filed`, `stored`, `fileOf`, `flush` | | The report the screen shows, hiding it (the file stays), the reports of this session, every report on disk, a report's file, and waiting for the file writes. |
 | `dataDir`, `crashesDir`, `logsDir`, `logFile`, `sessionMarker`, `pid`, `serverUrl`, `projectName` | | Where it writes (`LuminaDataDir` by default; `logFile` and `sessionMarker` carry this process's `pid`, which a test may set), where it sends and the project named in reports. |
@@ -431,7 +433,7 @@ Lays the crash report screen over the whole app while `reporter.pending` holds a
 
 ### `class CrashReportView`
 
-The crash report screen: the headline of the error, a description field (key `crash_description`), an optional contact e-mail (`crash_email`), the log checkbox (`crash_include_log`), a "What is sent" toggle showing the exact text (`crash_toggle_details`, `crash_details_text`), and the buttons Copy report (`crash_copy`), Don't send (`crash_dismiss`) and Send report (`crash_send`); after a send `crash_sent` and Continue (`crash_continue`), after a refused send `crash_send_error` with the file's path.
+The crash report screen: the headline of the error, a description field (key `crash_description`), an optional contact e-mail (`crash_email`), the log checkbox (`crash_include_log`), a "What is sent" toggle showing the exact text (`crash_toggle_details`, `crash_details_text`), and the buttons Copy report (`crash_copy`), Don't send (`crash_dismiss`) and Send report (`crash_send`); after a send `crash_sent` and Continue (`crash_continue`), after a refused send `crash_send_error` with the file's path. A `pluginCrash` report is titled "A PLUGIN PROCESS STOPPED" and names the plugin and its exit code.
 
 ## `lib/ui/core/widgets/quality_settings_popover.dart`
 
