@@ -251,6 +251,17 @@ dependency_overrides:
     expect(pubspec, contains("  custom_tool:\n    path: '${slash(extraPkg.path)}'"));
   });
 
+  test('a plugin compiled from its folder is also an override, so another plugin depending on it from git resolves', () async {
+    final gen = EditorHostGeneratorService(engineRoot: engineRoot, platform: 'linux');
+    final plugin = await fx.plugin();
+    await gen.generate(fx.projectDir.path, [plugin]);
+
+    final pubspec = loadYaml(File(p.join(fx.projectDir.path, '.lumina', 'editor', 'pubspec.yaml')).readAsStringSync()) as YamlMap;
+    final dir = slash(p.absolute(fx.pluginDir.path));
+    expect((pubspec['dependencies'] as YamlMap)['a_plugin'], {'path': dir});
+    expect((pubspec['dependency_overrides'] as YamlMap)['a_plugin'], {'path': dir});
+  });
+
   // The engine's versions, not pub.dev's newest: a temp engine whose lock
   // pins yaml 3.1.3 while 3.1.4 is published.
   group('the host resolves the engine lock', () {

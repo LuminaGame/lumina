@@ -370,7 +370,11 @@ class EditorHostGeneratorService {
         if (git.path != null) b.writeln("      path: '${git.path}'");
         b.writeln("      ref: '${git.ref}'");
       } else {
-        b.writeln("    path: '${_slash(p.absolute(plugin.pluginDir.path))}'");
+        final dir = _slash(p.absolute(plugin.pluginDir.path));
+        b.writeln("    path: '$dir'");
+        // Also an override: a plugin that depends on another enabled plugin
+        // (from git, as published) takes the folder the host compiles.
+        overrides[plugin.name] = dir;
       }
     }
     b
