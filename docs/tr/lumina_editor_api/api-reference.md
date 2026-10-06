@@ -61,11 +61,30 @@ A static icon button. The host turns it into an [EditorSlotButton]: [group] name
 | `defaultDock` | `final PanelDefaultDock defaultDock` |  |
 | `defaultAlwaysVisible` | `final bool defaultAlwaysVisible` | Bir `PanelDefaultDock.right` panelinin yalnızca level editöründe değil, her editör sekmesinde (sub-editor'ler dahil) görünüp görünmeyeceği; kullanıcı dock'un iğne butonuyla ya da Window menüsüyle seçene kadar geçerlidir. Kullanıcının seçimi editör yerleşimiyle kaydedilir; Reset Layout bu değere döner. İsteğe bağlı, varsayılanı `false`. |
 
+### `class EditorTabDescriptor`
+
+Bir eklentinin sağladığı tam sayfa çalışma alanı editör sekmesi.
+
+**Yapıcı Metotlar (Constructors):**
+
+- `const EditorTabDescriptor({required this.id, required this.title, this.icon = const IconData(0xe255, fontFamily: 'MaterialIcons'), required this.builder, this.contentDroppable = false, this.contentBrowserOpened = false})`
+
+**Üyeler:**
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `id` | `final String id` | Çalışma alanı sekmesi kimliği. |
+| `title` | `final String title` | Sekme başlığında gösterilecek metin. |
+| `icon` | `final IconData icon` | Sekme ikonu. |
+| `builder` | `final Widget Function(BuildContext context) builder` | Sekme gövdesi için widget kurucusu. |
+| `contentDroppable` | `final bool contentDroppable` | Bu sekmenin Content Browser'dan sürüklenen varlıkları kabul edip etmeyeceği. İsteğe bağlı, varsayılanı `false`. |
+| `contentBrowserOpened` | `final bool contentBrowserOpened` | Content Browser'ın sekmenin alt kısmında varsayılan olarak açık gelip gelmeyeceği. `false` olduğunda sol altta çekmece açma butonu gösterilir. İsteğe bağlı, varsayılanı `false`. |
+
 ### `class EditorAssetTypeHandler`
 
 **Yapıcı Metotlar (Constructors):**
 
-- `const EditorAssetTypeHandler({this.assetType, this.customTypeId, required this.displayName, required this.icon, required this.thumbnailBuilder, this.editorFacto...`
+- `const EditorAssetTypeHandler({this.assetType, this.customTypeId, required this.displayName, required this.icon, required this.thumbnailBuilder, this.editorFactory, this.contentDroppable = false, this.contentBrowserOpened = false})`
 
 **Üyeler:**
 
@@ -77,6 +96,8 @@ A static icon button. The host turns it into an [EditorSlotButton]: [group] name
 | `icon` | `final IconData icon` |  |
 | `thumbnailBuilder` | `final Future<Uint8List?> Function(LuminaAsset) thumbnailBuilder` |  |
 | `editorFactory` | `final Widget Function(BuildContext, LuminaAsset)? editorFactory` |  |
+| `contentDroppable` | `final bool contentDroppable` | Bu varlık alt editörünün Content Browser'dan sürüklenen varlıkları kabul edip etmeyeceği. İsteğe bağlı, varsayılanı `false`. |
+| `contentBrowserOpened` | `final bool contentBrowserOpened` | Content Browser'ın editörün altında varsayılan olarak açık gelip gelmeyeceği. `false` olduğunda sol altta çekmece açma butonu gösterilir. İsteğe bağlı, varsayılanı `false`. |
 
 ### `class ImportContext`
 

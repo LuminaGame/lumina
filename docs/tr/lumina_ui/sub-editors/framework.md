@@ -9,6 +9,7 @@ Tüm alt editörlerin paylaştığı parçalar: 3D önizleme viewport'u, hiyerar
 - [`lib/ui/features/sub_editors/views/sub_editor_3d_viewport.dart`](#libuifeaturessub_editorsviewssub_editor_3d_viewportdart)
 - [`lib/ui/features/sub_editors/views/sub_editor_hierarchy_widget.dart`](#libuifeaturessub_editorsviewssub_editor_hierarchy_widgetdart)
 - [`lib/ui/features/sub_editors/views/sub_editor_modal.dart`](#libuifeaturessub_editorsviewssub_editor_modaldart)
+- [`lib/ui/features/sub_editors/views/sub_editor_workspace_shell.dart`](#libuifeaturessub_editorsviewssub_editor_workspace_shelldart)
 - [`lib/ui/features/sub_editors/services/preview_mesh_factory.dart`](#libuifeaturessub_editorsservicespreview_mesh_factorydart)
 - [`lib/ui/features/sub_editors/models/sub_editor_line_set.dart`](#libuifeaturessub_editorsmodelssub_editor_line_setdart)
 - [`lib/ui/features/sub_editors/models/sub_editor_mesh_component.dart`](#libuifeaturessub_editorsmodelssub_editor_mesh_componentdart)
@@ -207,6 +208,28 @@ Main Dispatcher Widget for rendering full-page Sub-Editor Workspaces in tabs or 
 | `editorViewModel` | `EditorViewModel? editorViewModel` | `editorViewModel` alanını (field/property) ve ilişkili veriyi saklar. |
 | `tabId` | `String? tabId` | Id of the hosting workspace tab; when set together with [editorViewModel], the sub-editor's view model is bound to the tab so the shell can save it on close. |
 | `build` | `Widget build(BuildContext context)` | Deklaratif alt nesne veya widget ağacını inşa eder. |
+
+## `lib/ui/features/sub_editors/views/sub_editor_workspace_shell.dart`
+
+### `class SubEditorWorkspaceShell`
+
+Alt editörler ve eklentiler için panel bütünlüğü sağlayan, Content Browser sabitleme/çekmece açma, iğneleme ve sürükle-bırak varlık etkileşimlerini yöneten standart çalışma alanı kabuğu.
+
+**Yapıcı Metotlar (Constructors):**
+
+- `const SubEditorWorkspaceShell({super.key, required this.child, this.editorViewModel, this.asset, this.contentDroppable, this.contentBrowserOpened, this.onAssetDropped})`
+
+**Fonksiyonlar, Metotlar ve Erişimciler:**
+
+| Metot / Getter | İmzası | Ne İşe Yarar? |
+| :--- | :--- | :--- |
+| `child` | `final Widget child` | Ana alt editör çalışma alanı içeriği veya düzen widget'ı. |
+| `editorViewModel` | `final EditorViewModel? editorViewModel` | Proje ve Content Browser durumunu sağlayan aktif `EditorViewModel`. |
+| `asset` | `final RealAssetInfo? asset` | Bu alt editörde açık olan varlık. |
+| `contentDroppable` | `final bool? contentDroppable` | Bu çalışma alanının sürüklenen varlıkları kabul edip etmeyeceğinin açık belirteci. İşleyici/tanımlayıcıdan veya varsayılan `false` değerinden alınır. |
+| `contentBrowserOpened` | `final bool? contentBrowserOpened` | Content Browser'ın altta açık olarak başlayıp başlamayacağının belirteci. İşleyici/tanımlayıcıdan veya varsayılan `false` değerinden alınır. |
+| `onAssetDropped` | `final ValueChanged<RealAssetInfo>? onAssetDropped` | Content Browser'dan bir varlık çalışma alanına bırakıldığında tetiklenen geri çağırım. |
+| `createState` | `State<SubEditorWorkspaceShell> createState() => _SubEditorWorkspaceShellState()` | İğneli / çekmece sunum durumunu yöneten State nesnesini oluşturur. |
 
 ## `lib/ui/features/sub_editors/services/preview_mesh_factory.dart`
 

@@ -28,6 +28,7 @@ import 'package:lumina_ui/ui/features/sub_editors/view_models/texture_editor_vie
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina/lumina.dart';
 import 'material/material_sub_editor.dart';
+import 'sub_editor_workspace_shell.dart';
 import 'blueprint/blueprint_sub_editor.dart';
 import 'blueprint_enum/enum_sub_editor.dart';
 import 'blueprint_interface/interface_sub_editor.dart';
@@ -84,6 +85,7 @@ export 'project_settings_sub_editor.dart';
 export 'environment_lighting_sub_editor.dart';
 export 'navigation_sub_editor.dart';
 export 'build_manager_sub_editor.dart';
+export 'sub_editor_workspace_shell.dart';
 
 /// Main Dispatcher Widget for rendering full-page Sub-Editor Workspaces in tabs or dialogs
 class SubEditorWorkspaceWidget extends StatefulWidget {
@@ -98,6 +100,15 @@ class SubEditorWorkspaceWidget extends StatefulWidget {
   /// the shell can save it on close.
   final String? tabId;
 
+  /// Whether this tab/workspace accepts dragged assets from the Content Browser.
+  final bool? contentDroppable;
+
+  /// Whether the Content Browser is opened by default at the bottom of the tab.
+  final bool? contentBrowserOpened;
+
+  /// Callback when an asset is dropped onto the workspace shell.
+  final void Function(RealAssetInfo asset)? onAssetDropped;
+
   const SubEditorWorkspaceWidget({
     super.key,
     required this.assetType,
@@ -106,6 +117,9 @@ class SubEditorWorkspaceWidget extends StatefulWidget {
     this.onClose,
     this.tabId,
     this.editorViewModel,
+    this.contentDroppable,
+    this.contentBrowserOpened,
+    this.onAssetDropped,
   });
 
   @override
@@ -145,28 +159,33 @@ class _SubEditorWorkspaceWidgetState extends State<SubEditorWorkspaceWidget> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.editorViewModel != null) {
-      return ListenableBuilder(
-        listenable: widget.editorViewModel!,
-        builder: (context, _) => _SubEditorDispatcher(
-          assetType: widget.assetType,
-          assetName: widget.assetName,
-          asset: widget.asset,
-          onClose: widget.onClose,
-          tabId: widget.tabId,
-          editorViewModel: widget.editorViewModel,
-          bindings: _bindings,
-        ),
+    Widget buildDispatcher() {
+      return _SubEditorDispatcher(
+        assetType: widget.assetType,
+        assetName: widget.assetName,
+        asset: widget.asset,
+        onClose: widget.onClose,
+        tabId: widget.tabId,
+        editorViewModel: widget.editorViewModel,
+        bindings: _bindings,
       );
     }
-    return _SubEditorDispatcher(
+
+    final content = widget.editorViewModel != null
+        ? ListenableBuilder(
+            listenable: widget.editorViewModel!,
+            builder: (context, _) => buildDispatcher(),
+          )
+        : buildDispatcher();
+
+    return SubEditorWorkspaceShell(
       assetType: widget.assetType,
       assetName: widget.assetName,
-      asset: widget.asset,
-      onClose: widget.onClose,
-      tabId: widget.tabId,
       editorViewModel: widget.editorViewModel,
-      bindings: _bindings,
+      contentDroppable: widget.contentDroppable,
+      contentBrowserOpened: widget.contentBrowserOpened,
+      onAssetDropped: widget.onAssetDropped,
+      child: content,
     );
   }
 }

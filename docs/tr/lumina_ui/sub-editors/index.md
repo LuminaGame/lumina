@@ -16,6 +16,15 @@ Content browser'dan bir asset açmak, onun alt editörünü ana editörde bir se
 
 Önizlemeler gerçektir: her 3D önizleme, genellikle bir `LuminaWorld` üzerinden yönetilen canlı bir Filament sahnesidir ve bir editörün gösterdiği değerler oyunun çalıştırdığı engine tiplerinin kendisinden gelir.
 
+### Çalışma alanı düzeni, panel bütünlüğü ve Content Browser çekmecesi
+
+Alt editörler ve eklentiler sekmeler arasında görsel ve davranışsal uyumu garanti eden `SubEditorWorkspaceShell` içerisinde çalışır:
+- **Panel ve Ağaç Bütünlüğü**: Sol ve sağ yan paneller Level Editör stilini izler (`EditorColors.sidebar`, `EditorColors.card`, `EditorColors.cardHeader`, `EditorColors.border`). Hiyerarşi, outliner ve varlık ağaçları 22–24 px satır yüksekliği, standart açma/kapama okları ve 10–11 px tipografi belirteçlerine uyar.
+- **Yeniden Boyutlandırılabilir Düzenler**: Paneller her zaman `ResizablePanel` ve sürükleyiciler ile yeniden boyutlandırılabilir ve minimum boyut sınırlarına (`minSize: 120-200 px`) sahiptir.
+- **Content Browser Etkileşimi**:
+  - `contentDroppable`: Etkinleştirildiğinde çalışma alanı kanvası `DragTarget<RealAssetInfo>` olarak çalışır ve sürüklenen mesh, materyal, doku veya Blueprint varlıklarını kabul eder.
+  - `contentBrowserOpened`: `true` olduğunda Content Browser sekmenin altında dikey bir `ResizablePanel` olarak kenetlenmiş gelir. `false` olduğunda sol alt köşede klasör çekmece butonu (`LucideIcons.folder`) yer alır; kullanıcı buna tıklayarak alttaki Content Drawer'ı açabilir ve iğne butonuyla sekmeye sabitleyebilir.
+
 ## Alt editörler
 
 | Sayfa | Kapsam |

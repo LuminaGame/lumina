@@ -9,6 +9,7 @@ The pieces every sub-editor shares: the 3D preview viewport, the hierarchy widge
 - [`lib/ui/features/sub_editors/views/sub_editor_3d_viewport.dart`](#libuifeaturessub_editorsviewssub_editor_3d_viewportdart)
 - [`lib/ui/features/sub_editors/views/sub_editor_hierarchy_widget.dart`](#libuifeaturessub_editorsviewssub_editor_hierarchy_widgetdart)
 - [`lib/ui/features/sub_editors/views/sub_editor_modal.dart`](#libuifeaturessub_editorsviewssub_editor_modaldart)
+- [`lib/ui/features/sub_editors/views/sub_editor_workspace_shell.dart`](#libuifeaturessub_editorsviewssub_editor_workspace_shelldart)
 - [`lib/ui/features/sub_editors/services/preview_mesh_factory.dart`](#libuifeaturessub_editorsservicespreview_mesh_factorydart)
 - [`lib/ui/features/sub_editors/models/sub_editor_line_set.dart`](#libuifeaturessub_editorsmodelssub_editor_line_setdart)
 - [`lib/ui/features/sub_editors/models/sub_editor_mesh_component.dart`](#libuifeaturessub_editorsmodelssub_editor_mesh_componentdart)
@@ -207,6 +208,28 @@ Main Dispatcher Widget for rendering full-page Sub-Editor Workspaces in tabs or 
 | `editorViewModel` | `EditorViewModel? editorViewModel` | Holds the `editorViewModel` property or configuration state. |
 | `tabId` | `String? tabId` | Id of the hosting workspace tab; when set together with [editorViewModel], the sub-editor's view model is bound to the tab so the shell can save it on close. |
 | `build` | `Widget build(BuildContext context)` | Constructs and returns the declarative element or widget hierarchy. |
+
+## `lib/ui/features/sub_editors/views/sub_editor_workspace_shell.dart`
+
+### `class SubEditorWorkspaceShell`
+
+Standard workspace container for sub-editors and plugins that enforces panel uniformity, handles Content Browser docking, drawer slide-out, pinning, and drag-and-drop asset interactions.
+
+**Constructors:**
+
+- `const SubEditorWorkspaceShell({super.key, required this.child, this.editorViewModel, this.asset, this.contentDroppable, this.contentBrowserOpened, this.onAssetDropped})`
+
+**Functions, Methods & Accessors:**
+
+| Method / Getter | Signature | Purpose & Description |
+| :--- | :--- | :--- |
+| `child` | `final Widget child` | The main sub-editor canvas or layout widget. |
+| `editorViewModel` | `final EditorViewModel? editorViewModel` | The active `EditorViewModel` providing project and content browser state. |
+| `asset` | `final RealAssetInfo? asset` | The asset currently open in this sub-editor workspace. |
+| `contentDroppable` | `final bool? contentDroppable` | Explicit override for whether this workspace accepts dragged assets. Defaults to handler or descriptor value, or `false`. |
+| `contentBrowserOpened` | `final bool? contentBrowserOpened` | Explicit override for whether the Content Browser starts docked at the bottom. Defaults to handler or descriptor value, or `false`. |
+| `onAssetDropped` | `final ValueChanged<RealAssetInfo>? onAssetDropped` | Callback invoked when a Content Browser asset is dropped onto the canvas. |
+| `createState` | `State<SubEditorWorkspaceShell> createState() => _SubEditorWorkspaceShellState()` | Creates the shell's state object to manage pinned/drawer presentation. |
 
 ## `lib/ui/features/sub_editors/services/preview_mesh_factory.dart`
 

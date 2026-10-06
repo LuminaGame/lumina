@@ -83,11 +83,20 @@ class EditorTabDescriptor {
   final IconData icon;
   final Widget Function(BuildContext context) builder;
 
+  /// Whether this tab/workspace accepts dragged assets from the Content Browser.
+  final bool contentDroppable;
+
+  /// Whether the Content Browser is opened by default at the bottom of the tab.
+  /// When false, a Content Drawer toggle icon is rendered at the bottom-left corner.
+  final bool contentBrowserOpened;
+
   const EditorTabDescriptor({
     required this.id,
     required this.title,
     this.icon = const IconData(0xe255, fontFamily: 'MaterialIcons'),
     required this.builder,
+    this.contentDroppable = false,
+    this.contentBrowserOpened = false,
   });
 }
 
@@ -149,6 +158,12 @@ class EditorAssetTypeHandler {
   final Future<Uint8List?> Function(LuminaAsset) thumbnailBuilder;
   final Widget Function(BuildContext, LuminaAsset)? editorFactory;
 
+  /// Whether this asset editor accepts dragged assets from the Content Browser.
+  final bool contentDroppable;
+
+  /// Whether the Content Browser is opened by default at the bottom of the editor.
+  final bool contentBrowserOpened;
+
   const EditorAssetTypeHandler({
     this.assetType,
     this.customTypeId,
@@ -156,6 +171,8 @@ class EditorAssetTypeHandler {
     required this.icon,
     required this.thumbnailBuilder,
     this.editorFactory,
+    this.contentDroppable = false,
+    this.contentBrowserOpened = false,
   }) : assert(assetType != null || customTypeId != null);
 }
 

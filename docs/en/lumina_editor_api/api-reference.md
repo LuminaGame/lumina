@@ -61,11 +61,30 @@ A static icon button. The host turns it into an [EditorSlotButton]: [group] name
 | `defaultDock` | `final PanelDefaultDock defaultDock` |  |
 | `defaultAlwaysVisible` | `final bool defaultAlwaysVisible` | Whether a `PanelDefaultDock.right` panel shows in every editor tab (the sub-editors included) rather than in the level editor only, until the user chooses with the dock's pin button or the Window menu. The user's choice is saved with the editor layout; Reset Layout returns to this. Optional, `false` by default. |
 
+### `class EditorTabDescriptor`
+
+A full-page workspace editor tab a plugin provides.
+
+**Constructors:**
+
+- `const EditorTabDescriptor({required this.id, required this.title, this.icon = const IconData(0xe255, fontFamily: 'MaterialIcons'), required this.builder, this.contentDroppable = false, this.contentBrowserOpened = false})`
+
+**Members:**
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `id` | `final String id` | Identifier for the workspace tab. |
+| `title` | `final String title` | Display title for the tab header. |
+| `icon` | `final IconData icon` | Tab icon. |
+| `builder` | `final Widget Function(BuildContext context) builder` | Widget builder for the tab body. |
+| `contentDroppable` | `final bool contentDroppable` | Whether this tab accepts dragged assets from the Content Browser. Optional, `false` by default. |
+| `contentBrowserOpened` | `final bool contentBrowserOpened` | Whether the Content Browser is opened by default at the bottom of the tab. When false, a bottom-left drawer toggle icon is rendered. Optional, `false` by default. |
+
 ### `class EditorAssetTypeHandler`
 
 **Constructors:**
 
-- `const EditorAssetTypeHandler({this.assetType, this.customTypeId, required this.displayName, required this.icon, required this.thumbnailBuilder, this.editorFacto...`
+- `const EditorAssetTypeHandler({this.assetType, this.customTypeId, required this.displayName, required this.icon, required this.thumbnailBuilder, this.editorFactory, this.contentDroppable = false, this.contentBrowserOpened = false})`
 
 **Members:**
 
@@ -77,6 +96,8 @@ A static icon button. The host turns it into an [EditorSlotButton]: [group] name
 | `icon` | `final IconData icon` |  |
 | `thumbnailBuilder` | `final Future<Uint8List?> Function(LuminaAsset) thumbnailBuilder` |  |
 | `editorFactory` | `final Widget Function(BuildContext, LuminaAsset)? editorFactory` |  |
+| `contentDroppable` | `final bool contentDroppable` | Whether this asset editor accepts dragged assets from the Content Browser. Optional, `false` by default. |
+| `contentBrowserOpened` | `final bool contentBrowserOpened` | Whether the Content Browser is opened by default at the bottom of the editor. When false, a bottom-left drawer toggle icon is rendered. Optional, `false` by default. |
 
 ### `class ImportContext`
 

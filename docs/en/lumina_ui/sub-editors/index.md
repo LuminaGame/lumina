@@ -16,6 +16,15 @@ Opening an asset from the content browser opens its sub-editor in a tab of the m
 
 Previews are real: every 3D preview is a live Filament scene, usually driven through a `LuminaWorld`, and the values an editor shows come from the same engine types the game runs.
 
+### Workspace layout, panel uniformity and Content Browser drawer
+
+Sub-editors and plugins run inside `SubEditorWorkspaceShell`, which guarantees consistency across tabs:
+- **Panel & Tree Uniformity**: Left and right side panels follow Level Editor styling (`EditorColors.sidebar`, `EditorColors.card`, `EditorColors.cardHeader`, `EditorColors.border`). Outliner, hierarchy, and asset trees adhere strictly to 22–24 px row heights, standard expansion chevrons, and 10–11 px font tokens.
+- **Resizable Layouts**: Panels are always resizable via `ResizablePanel` and draggers, with sensible minimum sizes (`minSize: 120-200 px`).
+- **Content Browser Interop**:
+  - `contentDroppable`: When enabled, the workspace canvas acts as a `DragTarget<RealAssetInfo>` to accept dragged meshes, materials, textures, or Blueprints.
+  - `contentBrowserOpened`: When `true`, docks the Content Browser at the bottom in a vertical `ResizablePanel`. When `false`, a folder drawer icon button is positioned at the bottom-left corner (`LucideIcons.folder`), allowing the user to slide open the bottom Content Drawer and pin/dock it to the layout.
+
 ## Sub-editors
 
 | Page | Covers |
