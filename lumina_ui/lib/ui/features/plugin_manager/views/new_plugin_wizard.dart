@@ -66,6 +66,10 @@ class _NewPluginWizardDialogState extends State<NewPluginWizardDialog> {
   final TextEditingController _descriptionController = TextEditingController();
   String _category = 'Utilities';
 
+  /// "Run in its own process": the plugin is scaffolded isolated (a
+  /// process part plus a UI shell; not for content-only plugins).
+  bool _isolated = false;
+
   bool _isUserFriendlyName = false;
   String? _nameError;
   bool _isGenerating = false;
@@ -180,6 +184,7 @@ class _NewPluginWizardDialogState extends State<NewPluginWizardDialog> {
       author: _authorController.text.trim(),
       description: _descriptionController.text.trim(),
       category: _category,
+      isolated: _isolated && _selectedTemplate != PluginTemplateType.contentOnly,
     );
 
     // The generation lives in the view model, which the MCP
@@ -426,6 +431,34 @@ class _NewPluginWizardDialogState extends State<NewPluginWizardDialog> {
                                 maxLines: 2,
                               ),
                               const SizedBox(height: 12),
+
+                              // Isolation
+                              if (_selectedTemplate != PluginTemplateType.contentOnly) ...[
+                                Row(
+                                  children: [
+                                    Switch(
+                                      key: const Key('plugin_isolated_switch'),
+                                      value: _isolated,
+                                      onChanged: (v) => setState(() => _isolated = v),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          const Text('Run in its own process', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                                          Text(
+                                            'Native libraries, child processes and heavy work go in a process part the editor '
+                                            'supervises: a crash or hang there never takes the editor down.',
+                                            style: TextStyle(fontSize: 11, color: theme.colorScheme.mutedForeground),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                              ],
 
                               // Path preview
                               Text(
