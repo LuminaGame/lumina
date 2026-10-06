@@ -95,7 +95,6 @@ void main() {
           if ((fsr3[i] - taa[i]).abs() > 8 || (fsr3[i + 1] - taa[i + 1]).abs() > 8 || (fsr3[i + 2] - taa[i + 2]).abs() > 8) differing++;
         }
         expect(differing, greaterThan(200), reason: 'the FSR3 reconstruction is not the TAA output');
-        print('FSR3 ${backend.name}: ${differing} of ${r.width * r.height} pixels differ from the TAA frame');
       }, timeout: const Timeout(Duration(minutes: 3)));
 
       test('frame generation presents an interpolated frame before each rendered one without errors', () {
