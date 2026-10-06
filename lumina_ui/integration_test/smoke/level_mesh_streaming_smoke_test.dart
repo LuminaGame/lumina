@@ -71,7 +71,8 @@ void main() {
 
       await settle(40);
       final rec = SmokeRecorder(tester, boundary: find.byKey(boundaryKey));
-      await rec.hold(const Duration(seconds: 1));
+      // The empty grid first: the video must show the level before it fills.
+      await rec.hold(const Duration(seconds: 3));
 
       final viewportFinder = find.byType(ViewportWidget);
       final dynamic viewportState = viewportFinder.evaluate().isEmpty ? null : tester.state(viewportFinder);
@@ -105,7 +106,7 @@ void main() {
       }
       await tester.runAsync(() => loading);
       await settle(60);
-      await rec.hold(const Duration(seconds: 2));
+      await rec.hold(const Duration(seconds: 4));
       await shot('loaded');
       rec.save(name, usedAssets: usedAssets);
 
