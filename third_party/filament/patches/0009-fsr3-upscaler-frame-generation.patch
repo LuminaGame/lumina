@@ -54,7 +54,7 @@ index a8ca1e52..a6c9ab44 100644
      add_custom_command(
              OUTPUT "${MATERIAL_DIR}/gtao.filamat"
 diff --git a/filament/backend/include/backend/DriverEnums.h b/filament/backend/include/backend/DriverEnums.h
-index 717a6cde..01062010 100644
+index 717a6cde..746a8dce 100644
 --- a/filament/backend/include/backend/DriverEnums.h
 +++ b/filament/backend/include/backend/DriverEnums.h
 @@ -111,6 +111,12 @@ static constexpr uint64_t SWAP_CHAIN_CONFIG_PROTECTED_CONTENT   = 0x40;
@@ -70,6 +70,14 @@ index 717a6cde..01062010 100644
  static constexpr size_t MAX_VERTEX_ATTRIBUTE_COUNT  = 16;   // This is guaranteed by OpenGL ES.
  static constexpr size_t MAX_SAMPLER_COUNT           = 62;   // Maximum needed at feature level 3.
  static constexpr size_t MAX_VERTEX_BUFFER_COUNT     = 16;   // Max number of bound buffer objects.
+@@ -500,6 +506,7 @@ constexpr std::string_view to_string(DescriptorType type) noexcept {
+         DESCRIPTOR_TYPE_CASE(UNIFORM_BUFFER)
+         DESCRIPTOR_TYPE_CASE(SHADER_STORAGE_BUFFER)
+         DESCRIPTOR_TYPE_CASE(INPUT_ATTACHMENT)
++        DESCRIPTOR_TYPE_CASE(ACCELERATION_STRUCTURE)
+     }
+     return "UNKNOWN";
+     #undef DESCRIPTOR_TYPE_CASE
 diff --git a/filament/backend/include/backend/platforms/PlatformWGL.h b/filament/backend/include/backend/platforms/PlatformWGL.h
 index cff0e53b..c2d3c58e 100644
 --- a/filament/backend/include/backend/platforms/PlatformWGL.h
@@ -130,6 +138,41 @@ index 31843028..a9f42a2d 100644
          }
      }
      return true;
+diff --git a/filament/backend/src/vulkan/VulkanAccelerationStructure.h b/filament/backend/src/vulkan/VulkanAccelerationStructure.h
+index 402ce2b6..0bba9492 100644
+--- a/filament/backend/src/vulkan/VulkanAccelerationStructure.h
++++ b/filament/backend/src/vulkan/VulkanAccelerationStructure.h
+@@ -38,7 +38,7 @@ namespace filament::backend {
+ struct VulkanBufferObject;
+ struct VulkanIndexBuffer;
+ struct VulkanCommandBuffer;
+-class VulkanContext;
++struct VulkanContext;
+ 
+ /**
+  * A ray tracing acceleration structure (VK_KHR_acceleration_structure): either a bottom-level
+diff --git a/filament/backend/src/vulkan/memory/ResourceManager.cpp b/filament/backend/src/vulkan/memory/ResourceManager.cpp
+index fba61d05..9936a210 100644
+--- a/filament/backend/src/vulkan/memory/ResourceManager.cpp
++++ b/filament/backend/src/vulkan/memory/ResourceManager.cpp
+@@ -17,6 +17,7 @@
+ #include "vulkan/memory/ResourceManager.h"
+ 
+ #include "vulkan/VulkanHandles.h"
++#include "vulkan/VulkanAccelerationStructure.h"
+ 
+ #include <utils/Logger.h>
+ #include <utils/Panic.h>
+@@ -124,6 +125,9 @@ void ResourceManager::destroyWithType(ResourceType type, HandleId id) {
+         case ResourceType::SEMAPHORE:
+             destruct<VulkanSemaphore>(Handle<VulkanSemaphore>(id));
+             break;
++        case ResourceType::ACCELERATION_STRUCTURE:
++            destruct<VulkanAccelerationStructure>(Handle<VulkanAccelerationStructure>(id));
++            break;
+         case ResourceType::STREAM:
+             destruct<VulkanStream>(Handle<VulkanStream>(id));
+             break;
 diff --git a/filament/backend/src/vulkan/platform/VulkanPlatformSwapChainImpl.cpp b/filament/backend/src/vulkan/platform/VulkanPlatformSwapChainImpl.cpp
 index 7c1e075e..c6c3eb00 100644
 --- a/filament/backend/src/vulkan/platform/VulkanPlatformSwapChainImpl.cpp
@@ -3147,3 +3190,16 @@ index 00000000..a0fe6d56
 +}
 +
 +}
+diff --git a/libs/matdbg/src/CommonWriter.h b/libs/matdbg/src/CommonWriter.h
+index 40aba754..491eaab9 100644
+--- a/libs/matdbg/src/CommonWriter.h
++++ b/libs/matdbg/src/CommonWriter.h
+@@ -308,6 +308,8 @@ const char* toString(backend::DescriptorType type) noexcept {
+             return "shader storage buffer";
+         case backend::DescriptorType::INPUT_ATTACHMENT:
+             return "input attachment";
++        case backend::DescriptorType::ACCELERATION_STRUCTURE:
++            return "acceleration structure";
+     }
+     return "--";
+ }

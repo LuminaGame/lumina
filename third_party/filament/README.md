@@ -121,6 +121,9 @@ band. `SwapChain::CONFIG_DISABLE_VSYNC` (Vulkan: `VK_PRESENT_MODE_IMMEDIATE_KHR`
 two presents. An external upscaler (patch 0006, DLSS) takes precedence. The shader code is derived from
 the FidelityFX SDK v1.1.4, MIT licensed, copyright Advanced Micro Devices; the licence header is kept
 in `fsr3_common.fs`.
+The patch also completes patch 0007 for clang's `-Werror` build on Linux and WebAssembly: the
+`ACCELERATION_STRUCTURE` descriptor type in `to_string`, the matdbg writer and the Vulkan resource
+manager's destroy switch, and a `struct` forward declaration of `VulkanContext`.
 
 ## Working with the patches
 
