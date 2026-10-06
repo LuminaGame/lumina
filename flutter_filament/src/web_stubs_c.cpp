@@ -7,8 +7,7 @@
 #include "imageio_c.h"
 
 static void flutter_filament_web_unavailable(const char* function, const char* library) {
-  fprintf(stderr, "[flutter_filament] %s is not available in web builds: %s is desktop-only
-", function, library);
+  fprintf(stderr, "[flutter_filament] %s is not available in web builds: %s is desktop-only\n", function, library);
 }
 
 // --- filamat_c.h ---
