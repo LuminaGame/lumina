@@ -145,6 +145,7 @@ export 'src/post_process/post_process_blender.dart';
 export 'src/post_process/shadow_settings.dart';
 export 'src/post_process/scalability_profile.dart';
 export 'src/post_process/rtx_settings.dart';
+export 'src/post_process/fsr3_settings.dart';
 export 'src/animation/animation_clip.dart';
 export 'src/animation/anim_instance.dart';
 export 'src/animation/anim_montage.dart';

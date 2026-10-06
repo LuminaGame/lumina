@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:flutter_filament/flutter_filament.dart' show FilamentScene, FilamentView, QualityLevel;
+import 'package:flutter_filament/flutter_filament.dart' show FilamentScene, FilamentView, QualityLevel, TaaAlgorithm;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:integration_test/integration_test.dart';
@@ -238,6 +238,7 @@ void main() {
       final view = viewportState?.nativeViewForTest as FilamentView?;
       final scene = viewportState?.nativeSceneForTest as FilamentScene?;
       final rayTracingSupported = (viewportState?.rayTracingSupportedForTest as bool?) ?? false;
+      bool fsr3Active() => (viewportState?.fsr3ActiveForTest as bool?) ?? false;
       debugPrint('[rtx_hud_smoke] live view: ${view != null}, ray tracing supported: $rayTracingSupported');
 
       Future<void> shot(String label) async {
@@ -245,10 +246,40 @@ void main() {
         SmokeArtifacts.saveScreenshot('$name ($label)', png, usedAssets: usedAssets);
       }
 
-      // Both HUD buttons sit next to the camera speed.
+      // The three HUD buttons sit next to the camera speed.
       expect(find.byKey(const ValueKey('hud_rtx_toggle')), findsOneWidget);
       expect(find.byKey(const ValueKey('hud_dlss_toggle')), findsOneWidget);
+      expect(find.byKey(const ValueKey('hud_fsr3_toggle')), findsOneWidget);
       await shot('hud off');
+
+      // FSR3: the Performance preset from its popover, then the toggle puts the
+      // FSR3 TAA and half render resolution on the live view.
+      await tester.tap(find.byKey(const ValueKey('hud_fsr3_settings')));
+      await settle(10);
+      expect(find.byType(RtxSettingsPopover), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('fsr3_quality_performance')));
+      await settle(5);
+      await shot('fsr3 settings');
+      await tester.tap(find.byKey(const ValueKey('rtx_popover_close')));
+      await settle(10);
+      expect(vm.fsr3Settings.enabled, isFalse, reason: 'the preset does not switch FSR3 on');
+      await tester.tap(find.byKey(const ValueKey('hud_fsr3_toggle')));
+      await settle(30);
+      expect(vm.fsr3Settings.enabled, isTrue);
+      expect(vm.fsr3Settings.quality, LuminaFsr3Quality.performance);
+      await rec.hold(const Duration(seconds: 3));
+      await shot('fsr3 on');
+      if (view != null && fsr3Active()) {
+        expect(view.temporalAntiAliasingOptions.algorithm, TaaAlgorithm.fsr3, reason: 'FSR3 reaches the live view');
+        expect(view.temporalAntiAliasingOptions.upscaling, closeTo(2.0, 1e-5));
+        expect(view.dynamicResolutionOptions.maxScaleX, closeTo(0.5, 1e-5), reason: 'half render resolution is pinned');
+      } else {
+        debugPrint('[rtx_hud_smoke] FSR3 not active on this engine (no motion vectors): the choice is stored');
+      }
+      await tester.tap(find.byKey(const ValueKey('hud_fsr3_toggle')));
+      await settle(30);
+      expect(vm.fsr3Settings.enabled, isFalse);
+      if (view != null) expect(view.temporalAntiAliasingOptions.algorithm, TaaAlgorithm.filament);
 
       // The arrow opens the ray tracing settings; ReSTIR is switched on there.
       await tester.tap(find.byKey(const ValueKey('hud_rtx_settings')));

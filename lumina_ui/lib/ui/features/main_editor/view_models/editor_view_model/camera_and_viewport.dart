@@ -572,6 +572,7 @@ mixin _EditorCameraAndViewport on _EditorViewModelState {
   bool get screenSpaceReflectionsEnabled => _quality.screenSpaceReflections;
   LuminaRayTracingSettings get rayTracingSettings => _quality.rayTracing;
   LuminaDlssSettings get dlssSettings => _quality.dlss;
+  LuminaFsr3Settings get fsr3Settings => _quality.fsr3;
   bool get vsyncEnabled => _project.settings.vsyncEnabled;
 
   /// Points the viewport camera at the whole level and pulls back far enough
@@ -729,6 +730,14 @@ mixin _EditorCameraAndViewport on _EditorViewModelState {
   );
 
   void setDlssSettings(LuminaDlssSettings settings) => _setQuality(_quality.copyWith(dlss: settings), 'DLSS $settings');
+
+  /// The FSR3 HUD button: FSR3 on or off, keeping the preset and sharpness.
+  void toggleFsr3() => _setQuality(
+    _quality.copyWith(fsr3: _quality.fsr3.copyWith(enabled: !_quality.fsr3.enabled)),
+    'FSR3 ${!_quality.fsr3.enabled ? 'on' : 'off'}',
+  );
+
+  void setFsr3Settings(LuminaFsr3Settings settings) => _setQuality(_quality.copyWith(fsr3: settings), 'FSR3 $settings');
 
   void updateResolutionScale(double scale) => _setQuality(
     _quality.copyWith(resolutionScale: scale),

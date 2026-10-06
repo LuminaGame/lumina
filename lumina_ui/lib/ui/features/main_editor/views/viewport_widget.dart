@@ -862,6 +862,8 @@ class _ViewportWidgetState extends _ViewportWidgetStateBase
                           const SizedBox(width: 4),
                           _buildRtxFeatureHudBtn(RtxSettingsKind.dlss),
                           const SizedBox(width: 4),
+                          _buildRtxFeatureHudBtn(RtxSettingsKind.fsr3),
+                          const SizedBox(width: 4),
                           _buildRtxFeatureHudBtn(RtxSettingsKind.rayTracing),
                           const SizedBox(width: 4),
                           _buildHudBtn(

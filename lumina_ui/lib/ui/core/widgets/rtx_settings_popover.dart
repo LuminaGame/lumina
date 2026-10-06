@@ -1,15 +1,16 @@
 import 'package:flutter_filament/flutter_filament.dart' show DlssQuality;
+import 'package:lumina/lumina.dart' show LuminaFsr3Quality;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import '../../features/main_editor/view_models/editor_view_model.dart';
 import '../property_editors/slider_field.dart';
 import '../theme/editor_theme.dart';
 
-/// Which of the two viewport HUD controls opened the popover.
-enum RtxSettingsKind { dlss, rayTracing }
+/// Which of the three viewport HUD controls opened the popover.
+enum RtxSettingsKind { dlss, fsr3, rayTracing }
 
-/// The settings behind the viewport's DLSS and RTX HUD buttons: the arrow next
-/// to each button opens this popover for its [kind]. Every control changes the
+/// The settings behind the viewport's DLSS, FSR3 and RTX HUD buttons: the
+/// arrow next to each button opens this popover for its [kind]. Every control changes the
 /// editor's per-user [EditorQualitySettings] through the view model, which the
 /// live viewport re-applies at once.
 class RtxSettingsPopover extends StatelessWidget {
@@ -33,8 +34,16 @@ class RtxSettingsPopover extends StatelessWidget {
     return ListenableBuilder(
       listenable: viewModel,
       builder: (context, _) {
-        final title = kind == RtxSettingsKind.dlss ? 'DLSS SUPER RESOLUTION' : 'RTX RAY TRACING';
-        final enabled = kind == RtxSettingsKind.dlss ? viewModel.dlssSettings.enabled : viewModel.rayTracingSettings.enabled;
+        final title = switch (kind) {
+          RtxSettingsKind.dlss => 'DLSS SUPER RESOLUTION',
+          RtxSettingsKind.fsr3 => 'FSR3 UPSCALING',
+          RtxSettingsKind.rayTracing => 'RTX RAY TRACING',
+        };
+        final enabled = switch (kind) {
+          RtxSettingsKind.dlss => viewModel.dlssSettings.enabled,
+          RtxSettingsKind.fsr3 => viewModel.fsr3Settings.enabled,
+          RtxSettingsKind.rayTracing => viewModel.rayTracingSettings.enabled,
+        };
         return Container(
           width: 340,
           decoration: BoxDecoration(
@@ -70,14 +79,23 @@ class RtxSettingsPopover extends StatelessWidget {
                   children: [
                     if (!supported) ...[
                       Text(
-                        kind == RtxSettingsKind.dlss
-                            ? 'The NGX runtime was not found or this GPU has no DLSS. Fetch the SDK (tool/dlss/fetch_sdk.dart) and run on an NVIDIA RTX GPU; the choices below are kept for when it is.'
-                            : 'This GPU or driver has no Vulkan ray query support, or the editor engine was created without it. The choices below are kept for a machine that has it.',
+                        switch (kind) {
+                          RtxSettingsKind.dlss =>
+                            'The NGX runtime was not found or this GPU has no DLSS. Fetch the SDK (tool/dlss/fetch_sdk.dart) and run on an NVIDIA RTX GPU; the choices below are kept for when it is.',
+                          RtxSettingsKind.fsr3 =>
+                            'This engine renders no motion vectors (feature level 0), which FSR3 needs. The choices below are kept for a machine that has them.',
+                          RtxSettingsKind.rayTracing =>
+                            'This GPU or driver has no Vulkan ray query support, or the editor engine was created without it. The choices below are kept for a machine that has it.',
+                        },
                         style: const TextStyle(fontSize: 9, color: EditorColors.mutedForeground),
                       ),
                       const SizedBox(height: 10),
                     ],
-                    if (kind == RtxSettingsKind.dlss) _DlssBody(viewModel: viewModel) else _RayTracingBody(viewModel: viewModel),
+                    switch (kind) {
+                      RtxSettingsKind.dlss => _DlssBody(viewModel: viewModel),
+                      RtxSettingsKind.fsr3 => _Fsr3Body(viewModel: viewModel),
+                      RtxSettingsKind.rayTracing => _RayTracingBody(viewModel: viewModel),
+                    },
                     const SizedBox(height: 12),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
@@ -154,6 +172,87 @@ class _DlssBody extends StatelessWidget {
         const Text(
           'Ultra Performance renders at about a third of the viewport per axis, Balanced at 58%, Quality at 67%; DLAA keeps the full resolution and only anti-aliases.',
           style: TextStyle(fontSize: 9, color: EditorColors.mutedForeground),
+        ),
+      ],
+    );
+  }
+}
+
+class _Fsr3Body extends StatelessWidget {
+  final EditorViewModel viewModel;
+  const _Fsr3Body({required this.viewModel});
+
+  @override
+  Widget build(BuildContext context) {
+    final settings = viewModel.fsr3Settings;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _ToggleRow(
+          key: const ValueKey('fsr3_enabled'),
+          label: 'FSR3 upscaling',
+          help: 'Render smaller and let FidelityFX Super Resolution 3 reconstruct the viewport on any GPU. DLSS takes precedence while it is on.',
+          value: settings.enabled,
+          onChanged: (_) => viewModel.toggleFsr3(),
+        ),
+        const SizedBox(height: 10),
+        const _SectionLabel('QUALITY PRESET'),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            for (final (quality, label) in const [
+              (LuminaFsr3Quality.ultraPerformance, 'Ultra'),
+              (LuminaFsr3Quality.performance, 'Perf'),
+              (LuminaFsr3Quality.balanced, 'Bal'),
+              (LuminaFsr3Quality.quality, 'Qual'),
+              (LuminaFsr3Quality.nativeAA, 'Native'),
+            ])
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 1.5),
+                  child: Button(
+                    key: ValueKey('fsr3_quality_${quality.name}'),
+                    style: settings.quality == quality ? const ButtonStyle.primary() : const ButtonStyle.secondary(),
+                    onPressed: () => viewModel.setFsr3Settings(settings.copyWith(quality: quality)),
+                    child: Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                        color: settings.quality == quality ? Colors.black : EditorColors.foreground,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        const Text(
+          'Ultra Performance renders at a third of the viewport per axis, Performance at half, Balanced at 59%, Quality at 67%; Native AA keeps the full resolution and only anti-aliases.',
+          style: TextStyle(fontSize: 9, color: EditorColors.mutedForeground),
+        ),
+        const SizedBox(height: 10),
+        const Text('Sharpness', style: TextStyle(fontSize: 10, color: EditorColors.foreground)),
+        const SizedBox(height: 2),
+        SliderField(
+          key: const ValueKey('fsr3_sharpness'),
+          fractionDigits: 2,
+          value: settings.sharpness,
+          defaultValue: 0.5,
+          min: 0,
+          max: 1,
+          onChanged: (v) => viewModel.setFsr3Settings(settings.copyWith(sharpness: v)),
+          onCommit: (v) => viewModel.setFsr3Settings(settings.copyWith(sharpness: v)),
+          onReset: () => viewModel.setFsr3Settings(settings.copyWith(sharpness: 0.5)),
+        ),
+        const SizedBox(height: 8),
+        _ToggleRow(
+          key: const ValueKey('fsr3_frame_generation'),
+          label: 'Frame generation',
+          help: 'Present an interpolated frame before each rendered one: double the presented rate at half a frame of latency.',
+          value: settings.frameGeneration,
+          onChanged: (v) => viewModel.setFsr3Settings(settings.copyWith(frameGeneration: v)),
         ),
       ],
     );

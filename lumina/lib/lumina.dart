@@ -225,6 +225,7 @@ export 'src/post_process/post_process_blender.dart';
 export 'src/post_process/shadow_settings.dart';
 export 'src/post_process/scalability_profile.dart';
 export 'src/post_process/rtx_settings.dart';
+export 'src/post_process/fsr3_settings.dart';
 export 'src/world/subsystem/user_settings_subsystem.dart';
 
 // Animation
@@ -257,8 +258,8 @@ export 'src/audio/audio_backend.dart';
 export 'src/audio/audio_subsystem.dart';
 export 'src/components/audio/audio_component.dart';
 
-
-
+// Media
+export 'src/media/media.dart';
 
 export 'data/services/thumbnail_service.dart';
 export 'data/services/filament_thumbnail_renderer.dart';

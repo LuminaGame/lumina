@@ -34,6 +34,33 @@ void main() {
     });
   });
 
+  group('LuminaFsr3Settings', () {
+    test('defaults, map round trip and the Filament options they describe', () {
+      const d = LuminaFsr3Settings();
+      expect(d.enabled, isFalse);
+      expect(d.quality, LuminaFsr3Quality.quality);
+      expect(d.sharpness, 0.5);
+      expect(d.frameGeneration, isFalse);
+      const s = LuminaFsr3Settings(enabled: true, quality: LuminaFsr3Quality.performance, sharpness: 0.8, frameGeneration: true);
+      expect(LuminaFsr3Settings.fromMap(s.toMap()), s);
+      expect(LuminaFsr3Settings.fromMap(const {'quality': 'bogus', 'sharpness': 7}).quality, LuminaFsr3Quality.quality);
+      expect(LuminaFsr3Settings.fromMap(const {'sharpness': 7}).sharpness, 1.0);
+      final taa = s.taaOptions(const TemporalAntiAliasingOptions(feedback: 0.2));
+      expect(taa.enabled, isTrue);
+      expect(taa.algorithm, TaaAlgorithm.fsr3);
+      expect(taa.upscaling, 2.0);
+      expect(taa.sharpness, closeTo(0.8, 1e-9));
+      expect(taa.frameGeneration, isTrue);
+      expect(taa.feedback, closeTo(0.2, 1e-9), reason: 'the profile\'s other TAA values stay');
+      final dyn = s.dynamicResolutionOptions;
+      expect(dyn.enabled, isTrue);
+      expect(dyn.minScaleX, closeTo(0.5, 1e-9));
+      expect(dyn.maxScaleY, closeTo(0.5, 1e-9));
+      expect(const LuminaFsr3Settings(quality: LuminaFsr3Quality.nativeAA).dynamicResolutionOptions.enabled, isFalse);
+      expect(s.copyWith(sharpness: 3).sharpness, 1.0);
+    });
+  });
+
   group('LuminaShadowSettings', () {
     test('rayTraced reaches the Filament shadow options', () {
       final settings = LuminaShadowSettings(rayTraced: true);
@@ -78,6 +105,66 @@ void main() {
         controller.dispose();
       } finally {
         engine.destroyEntity(sun);
+        view.dispose();
+        scene.dispose();
+        engine.dispose();
+      }
+    });
+
+    test('FSR3 puts its TAA and dynamic resolution on the view and off again restores the profile', () {
+      final engine = FilamentEngine.create(backend: FilamentBackend.noop)!;
+      final scene = engine.createScene();
+      final view = engine.createView();
+      view.scene = scene;
+      view.setViewport(0, 0, 320, 240);
+      final controller = LuminaRtxController(engine: engine, view: view, scene: scene);
+      const base = TemporalAntiAliasingOptions(enabled: true, feedback: 0.3);
+      const baseDyn = DynamicResolutionOptions(enabled: true, minScaleX: 0.7, minScaleY: 0.7);
+      try {
+        final supported = controller.fsr3Supported;
+        controller.apply(
+          const LuminaRayTracingSettings(),
+          const LuminaDlssSettings(),
+          fsr3: const LuminaFsr3Settings(enabled: true, quality: LuminaFsr3Quality.performance, frameGeneration: true),
+          baseTaa: base,
+          baseDynamicResolution: baseDyn,
+        );
+        expect(controller.appliedFsr3?.enabled, isTrue);
+        expect(controller.fsr3Active, supported);
+        if (supported) {
+          expect(view.temporalAntiAliasingOptions.algorithm, TaaAlgorithm.fsr3);
+          expect(view.temporalAntiAliasingOptions.upscaling, closeTo(2.0, 1e-6));
+          expect(view.temporalAntiAliasingOptions.frameGeneration, isTrue);
+          expect(view.temporalAntiAliasingOptions.feedback, closeTo(0.3, 1e-6));
+          expect(view.dynamicResolutionOptions.maxScaleX, closeTo(0.5, 1e-6));
+        }
+        // the preset changes without toggling
+        controller.apply(
+          const LuminaRayTracingSettings(),
+          const LuminaDlssSettings(),
+          fsr3: const LuminaFsr3Settings(enabled: true, quality: LuminaFsr3Quality.nativeAA),
+          baseTaa: base,
+          baseDynamicResolution: baseDyn,
+        );
+        if (supported) {
+          expect(view.temporalAntiAliasingOptions.upscaling, closeTo(1.0, 1e-6));
+          expect(view.dynamicResolutionOptions.enabled, isFalse);
+        }
+        controller.apply(
+          const LuminaRayTracingSettings(),
+          const LuminaDlssSettings(),
+          baseTaa: base,
+          baseDynamicResolution: baseDyn,
+        );
+        expect(controller.fsr3Active, isFalse);
+        expect(view.temporalAntiAliasingOptions.algorithm, TaaAlgorithm.filament);
+        if (supported) {
+          // the profile's own options come back only where FSR3 had replaced them
+          expect(view.temporalAntiAliasingOptions.feedback, closeTo(0.3, 1e-6));
+          expect(view.dynamicResolutionOptions.minScaleX, closeTo(0.7, 1e-6));
+        }
+        controller.dispose();
+      } finally {
         view.dispose();
         scene.dispose();
         engine.dispose();

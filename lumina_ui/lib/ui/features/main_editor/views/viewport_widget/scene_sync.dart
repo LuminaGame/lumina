@@ -592,6 +592,7 @@ mixin _ViewportSceneSync on _ViewportWidgetStateBase {
     _rtxController?.apply(
       quality.rayTracing,
       quality.dlss,
+      fsr3: quality.fsr3,
       baseTaa: quality.profile.taa,
       baseDynamicResolution: quality.profile.dynamicResolution,
     );

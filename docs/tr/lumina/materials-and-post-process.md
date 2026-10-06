@@ -174,6 +174,24 @@ Bir view için donanımsal ışın izleme: sahnenin hızlandırma yapıları, ı
 | `quality` | `DlssQuality quality` | NGX kalite modu. Varsayılan `balanced`. |
 | `copyWith`, `toMap`, `fromMap` | | Değer semantiği ve editörün sakladığı JSON biçimi. |
 
+### `enum LuminaFsr3Quality`
+
+`nativeAA` (1.0), `quality` (1.5), `balanced` (1.7), `performance` (2.0), `ultraPerformance` (3.0): eksen başına FSR3 büyütme oranı (`scale`); view çıktının `1 / scale` katında çizilir.
+
+### `class LuminaFsr3Settings`
+
+Filament'in fragment pass portu (patch 0009) üzerinden bir view için FidelityFX Super Resolution 3: structure pass hareket vektörleri olan her backend'de çalışır. Aynı view'daki DLSS önceliklidir.
+
+| Üye | İmza | Amaç ve Açıklama |
+| :--- | :--- | :--- |
+| `enabled` | `bool enabled` | View'da FSR3. Varsayılan false. |
+| `quality` | `LuminaFsr3Quality quality` | Çizim çözünürlüğü ön ayarı. Varsayılan `quality`. |
+| `sharpness` | `double sharpness` | Büyütme sonrası RCAS keskinleştirme, 0 ile 1. Varsayılan 0.5. |
+| `frameGeneration` | `bool frameGeneration` | Her çizilen kareden önce ara değerlenmiş bir kare sunar. Varsayılan false. |
+| `taaOptions` | `TemporalAntiAliasingOptions taaOptions(TemporalAntiAliasingOptions base)` | `base`, TAA açık, `TaaAlgorithm.fsr3`, ön ayarın `upscaling`'i, `sharpness` ve `frameGeneration` ile. |
+| `dynamicResolutionOptions` | `DynamicResolutionOptions get dynamicResolutionOptions` | `1 / scale`'e sabitlenmiş dinamik çözünürlük (`nativeAA` için kapalı). |
+| `copyWith`, `toMap`, `fromMap` | | Değer semantiği; JSON anahtarları `enabled`, `quality`, `sharpness`, `frame_generation`. |
+
 ### `class LuminaRtxController`
 
 İki ayarı tek bir view'a uygular: sahnenin hızlandırma yapıları, yönlü ışıkların `ShadowOptions.rayTraced` değeri, view'ın `RestirOptions` değeri ve viewport boyutunu izleyen bir `Dlss` örneği.
@@ -183,8 +201,9 @@ Bir view için donanımsal ışın izleme: sahnenin hızlandırma yapıları, ı
 | `requestExtensions` | `static bool requestExtensions()` | Bundan sonra oluşturulan motorlardan ray query uzantılarını ve NGX çalışma zamanı varsa DLSS uzantılarını ister. Motor var olmadan önce çağrılır. |
 | `dlssAvailable` | `static bool get dlssAvailable` | NGX çalışma zamanı bulundu ve bir NVIDIA Vulkan aygıtı var. |
 | `rayTracingSupported` | `bool get rayTracingSupported` | Motor ışın izliyor. |
-| `apply` | `void apply(LuminaRayTracingSettings rayTracing, LuminaDlssSettings dlss, {required TemporalAntiAliasingOptions baseTaa, required DynamicResolutionOptions baseDynamicResolution})` | İkisini de uygular; değişiklik yoksa ucuzdur. DLSS kapanınca temel seçenekler geri yüklenir (DLSS'in kendisi hareket vektörlü TAA ister). |
+| `apply` | `void apply(LuminaRayTracingSettings rayTracing, LuminaDlssSettings dlss, {LuminaFsr3Settings fsr3 = const LuminaFsr3Settings(), required TemporalAntiAliasingOptions baseTaa, required DynamicResolutionOptions baseDynamicResolution})` | İkisini de uygular; değişiklik yoksa ucuzdur. DLSS kapanınca temel seçenekler geri yüklenir (DLSS'in kendisi hareket vektörlü TAA ister). |
 | `dlss`, `appliedRayTracing`, `appliedDlss` | | Canlı DLSS örneği ve son uygulanan ayarlar. |
+| `appliedFsr3`, `fsr3Active`, `fsr3Supported` | | Son uygulanan FSR3 ayarları, FSR3'ün şu an view'da olup olmadığı (açık, hareket vektörleri var, DLSS yok) ve motorun gereken hareket vektörlerini çizip çizmediği. |
 | `dispose` | `void dispose()` | DLSS örneğini bırakır. |
 
 ## `lib/src/material/dynamic_material_instance.dart`

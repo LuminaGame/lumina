@@ -174,6 +174,24 @@ Hardware ray tracing for a view: the scene's acceleration structures, ray-traced
 | `quality` | `DlssQuality quality` | The NGX quality mode. Default `balanced`. |
 | `copyWith`, `toMap`, `fromMap` | | Value semantics and the JSON form the editor stores. |
 
+### `enum LuminaFsr3Quality`
+
+`nativeAA` (1.0), `quality` (1.5), `balanced` (1.7), `performance` (2.0), `ultraPerformance` (3.0): the FSR3 upscaling ratio per axis (`scale`); the view renders at `1 / scale` of the output.
+
+### `class LuminaFsr3Settings`
+
+FidelityFX Super Resolution 3 for a view through Filament's fragment-pass port (patch 0009): works on every backend with the structure pass motion vectors. DLSS on the same view takes precedence.
+
+| Member | Signature | Purpose & Description |
+| :--- | :--- | :--- |
+| `enabled` | `bool enabled` | FSR3 on the view. Default false. |
+| `quality` | `LuminaFsr3Quality quality` | The render-resolution preset. Default `quality`. |
+| `sharpness` | `double sharpness` | RCAS sharpening after the upscale, 0 to 1. Default 0.5. |
+| `frameGeneration` | `bool frameGeneration` | Present an interpolated frame before each rendered frame. Default false. |
+| `taaOptions` | `TemporalAntiAliasingOptions taaOptions(TemporalAntiAliasingOptions base)` | `base` with TAA enabled, `TaaAlgorithm.fsr3`, the preset's `upscaling`, `sharpness` and `frameGeneration`. |
+| `dynamicResolutionOptions` | `DynamicResolutionOptions get dynamicResolutionOptions` | Dynamic resolution pinned at `1 / scale` (disabled for `nativeAA`). |
+| `copyWith`, `toMap`, `fromMap` | | Value semantics; JSON keys `enabled`, `quality`, `sharpness`, `frame_generation`. |
+
 ### `class LuminaRtxController`
 
 Applies both settings to one view: the scene's acceleration structures, the directional lights' `ShadowOptions.rayTraced`, the view's `RestirOptions` and a `Dlss` instance that follows the viewport size.
@@ -183,8 +201,9 @@ Applies both settings to one view: the scene's acceleration structures, the dire
 | `requestExtensions` | `static bool requestExtensions()` | Asks the engines created from now on for the ray query extensions and, with the NGX runtime present, the DLSS ones. Call it before the engine exists. |
 | `dlssAvailable` | `static bool get dlssAvailable` | The NGX runtime was found and an NVIDIA Vulkan device exists. |
 | `rayTracingSupported` | `bool get rayTracingSupported` | The engine traces rays. |
-| `apply` | `void apply(LuminaRayTracingSettings rayTracing, LuminaDlssSettings dlss, {required TemporalAntiAliasingOptions baseTaa, required DynamicResolutionOptions baseDynamicResolution})` | Applies both; cheap when nothing changed. The base options are restored when DLSS turns off (DLSS itself needs TAA with motion vectors). |
+| `apply` | `void apply(LuminaRayTracingSettings rayTracing, LuminaDlssSettings dlss, {LuminaFsr3Settings fsr3 = const LuminaFsr3Settings(), required TemporalAntiAliasingOptions baseTaa, required DynamicResolutionOptions baseDynamicResolution})` | Applies both; cheap when nothing changed. The base options are restored when DLSS turns off (DLSS itself needs TAA with motion vectors). |
 | `dlss`, `appliedRayTracing`, `appliedDlss` | | The live DLSS instance and the settings last applied. |
+| `appliedFsr3`, `fsr3Active`, `fsr3Supported` | | The FSR3 settings last applied, whether FSR3 is on the view now (enabled, motion vectors available, no DLSS) and whether the engine renders the motion vectors it needs. |
 | `dispose` | `void dispose()` | Releases the DLSS instance. |
 
 ## `lib/src/material/dynamic_material_instance.dart`

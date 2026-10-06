@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_filament/flutter_filament.dart' show DlssQuality;
+import 'package:flutter_filament/flutter_filament.dart' show DlssQuality, TemporalAntiAliasingOptions;
 import 'package:lumina/lumina.dart';
 import 'package:lumina_ui/ui/core/widgets/quality_settings_popover.dart';
 import 'package:lumina_ui/ui/core/widgets/rtx_settings_popover.dart';
@@ -195,12 +195,15 @@ void main() {
       const settings = EditorQualitySettings(
         rayTracing: LuminaRayTracingSettings(enabled: true, sunShadows: false, restir: true, restirCandidates: 12, restirSpatialSamples: 3),
         dlss: LuminaDlssSettings(enabled: true, quality: DlssQuality.maxQuality),
+        fsr3: LuminaFsr3Settings(enabled: true, quality: LuminaFsr3Quality.performance, sharpness: 0.25, frameGeneration: true),
       );
       await store.save('/some/project/Rtx', settings);
       expect(await store.load('/some/project/Rtx'), settings);
       final defaults = await store.load('/never/saved');
       expect(defaults.rayTracing.enabled, isFalse);
       expect(defaults.dlss.enabled, isFalse);
+      expect(defaults.fsr3.enabled, isFalse);
+      expect(EditorQualitySettings.fromMap(const {'preset': 'low'}).fsr3, const LuminaFsr3Settings());
       // a file written before these fields existed still loads
       expect(EditorQualitySettings.fromMap(const {'preset': 'low'}).rayTracing, const LuminaRayTracingSettings());
     });
@@ -226,9 +229,16 @@ void main() {
       expect(vm.dlssSettings.quality, DlssQuality.dlaa);
       expect(vm.qualityRevision, greaterThan(before));
 
+      vm.setFsr3Settings(vm.fsr3Settings.copyWith(quality: LuminaFsr3Quality.balanced, frameGeneration: true));
+      vm.toggleFsr3();
+      expect(vm.fsr3Settings.enabled, isTrue);
+      expect(vm.fsr3Settings.quality, LuminaFsr3Quality.balanced);
+      expect(vm.fsr3Settings.frameGeneration, isTrue);
+
       await vm.flushQualitySettings();
       final reloaded = await EditorQualityStore(configDir: Directory('${tempDir.path}/config')).load(vm.projectDirPath);
       expect(reloaded.dlss, const LuminaDlssSettings(enabled: true, quality: DlssQuality.dlaa));
+      expect(reloaded.fsr3, const LuminaFsr3Settings(enabled: true, quality: LuminaFsr3Quality.balanced, frameGeneration: true));
       expect(reloaded.rayTracing.restirCandidates, 16);
     });
 
@@ -263,6 +273,38 @@ void main() {
       expect(vm.rayTracingSettings.sunShadows, isFalse);
       await tester.tap(find.byKey(const ValueKey('rtx_popover_close')));
       expect(closed, 1);
+    });
+
+    testWidgets('the FSR3 popover drives the preset, sharpness and frame generation', (tester) async {
+      final vm = makeEditor();
+      addTearDown(vm.dispose);
+      await tester.pumpWidget(
+        ShadcnApp(
+          theme: luminaEditorTheme(),
+          home: Scaffold(
+            child: SizedBox(
+              width: 420,
+              height: 640,
+              child: RtxSettingsPopover(viewModel: vm, kind: RtxSettingsKind.fsr3, supported: true, onClose: () {}),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(find.text('FSR3 UPSCALING'), findsOneWidget);
+      expect(find.text('OFF'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('fsr3_quality_performance')));
+      await tester.pump();
+      expect(vm.fsr3Settings.quality, LuminaFsr3Quality.performance);
+      expect(vm.fsr3Settings.enabled, isFalse, reason: 'the preset does not switch FSR3 on');
+      await tester.tap(find.descendant(of: find.byKey(const ValueKey('fsr3_frame_generation')), matching: find.byType(Switch)));
+      await tester.pump();
+      expect(vm.fsr3Settings.frameGeneration, isTrue);
+      await tester.tap(find.descendant(of: find.byKey(const ValueKey('fsr3_enabled')), matching: find.byType(Switch)));
+      await tester.pump();
+      expect(vm.fsr3Settings.enabled, isTrue);
+      expect(find.text('ON'), findsOneWidget);
+      expect(vm.fsr3Settings.taaOptions(const TemporalAntiAliasingOptions()).upscaling, 2.0);
     });
 
     testWidgets('the DLSS popover drives the quality mode and says when DLSS is unavailable', (tester) async {

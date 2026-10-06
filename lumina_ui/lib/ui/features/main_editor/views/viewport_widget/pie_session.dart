@@ -117,6 +117,7 @@ mixin _ViewportPieSession on _ViewportWidgetStateBase {
   int? get viewLayersForTest => _nativeView?.visibleLayers;
   FilamentScene? get nativeSceneForTest => _nativeScene;
   bool get rayTracingSupportedForTest => _rtxController?.rayTracingSupported ?? false;
+  bool get fsr3ActiveForTest => _rtxController?.fsr3Active ?? false;
 
   /// Test seam: whether the editor's preview sun is in the scene.
   bool get editorSunInSceneForTest => editorLightEntitiesForTest.isNotEmpty;

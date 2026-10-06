@@ -389,12 +389,12 @@ Eksen harfi (varsayılan 12 px sütun), değer ve değer varsayılanından farkl
 
 ### `class RtxSettingsPopover`
 
-Viewport'un DLSS ve RTX HUD düğmelerinin (kamera hızının yanında) arkasındaki ayarlar: her düğmenin oku bu popover'ı kendi türü için açar. DLSS popover'ı DLSS Super Resolution'ı açıp kapatır ve NGX kalite modunu seçer (Ultra Performance, Performance, Balanced, Quality, DLAA); RTX popover'ı ışın izlemeyi, ışın izlemeli güneş gölgelerini ve ReSTIR doğrudan aydınlatmayı açıp kapatır, ReSTIR aday ve uzamsal örnek sayılarını ayarlar. Her denetim editörün kullanıcı başına `EditorQualitySettings` değerini view model üzerinden değiştirir; canlı viewport bunu `LuminaRtxController` ile hemen uygular. Motor bunu yapamıyorsa (`supported` false) başlık UNAVAILABLE yazar ve seçimler yine saklanır.
+Viewport'un DLSS, FSR3 ve RTX HUD düğmelerinin (kamera hızının yanında) arkasındaki ayarlar: her düğmenin oku bu popover'ı kendi türü için açar. FSR3 popover'ı FSR3 büyütmeyi açıp kapatır, kalite ön ayarını (Ultra Performance'tan Native AA'ya), keskinliği ve kare üretimini seçer (anahtarlar `fsr3_enabled`, `fsr3_quality_<name>`, `fsr3_sharpness`, `fsr3_frame_generation`). DLSS popover'ı DLSS Super Resolution'ı açıp kapatır ve NGX kalite modunu seçer (Ultra Performance, Performance, Balanced, Quality, DLAA); RTX popover'ı ışın izlemeyi, ışın izlemeli güneş gölgelerini ve ReSTIR doğrudan aydınlatmayı açıp kapatır, ReSTIR aday ve uzamsal örnek sayılarını ayarlar. Her denetim editörün kullanıcı başına `EditorQualitySettings` değerini view model üzerinden değiştirir; canlı viewport bunu `LuminaRtxController` ile hemen uygular. Motor bunu yapamıyorsa (`supported` false) başlık UNAVAILABLE yazar ve seçimler yine saklanır.
 
 | Metot / Getter | İmza | Amaç ve Açıklama |
 | :--- | :--- | :--- |
 | `viewModel` | `EditorViewModel viewModel` | Denetimlerin kalite ayarlarını değiştirdiği editör view model'i. |
-| `kind` | `RtxSettingsKind kind` | DLSS ya da ışın izleme. |
+| `kind` | `RtxSettingsKind kind` | DLSS, FSR3 ya da ışın izleme. |
 | `supported` | `bool supported` | Canlı motorun bu popover'ın ayarladığını yapıp yapamadığı. |
 | `onClose` | `VoidCallback onClose` | Popover'ı kapatır. |
 

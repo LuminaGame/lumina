@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_filament/flutter_filament.dart';
 
+import 'fsr3_settings.dart';
+
 /// Hardware ray tracing for a view: the scene's acceleration structures,
 /// ray-traced sun shadows and ReSTIR direct lighting of the punctual lights.
 ///
@@ -124,9 +126,11 @@ class LuminaDlssSettings {
   String toString() => 'LuminaDlssSettings(enabled: $enabled, quality: ${quality.name})';
 }
 
-/// Applies [LuminaRayTracingSettings] and [LuminaDlssSettings] to one view: the
-/// scene's acceleration structures, the directional lights' shadow options, the
-/// view's ReSTIR options and a [Dlss] instance that follows the viewport size.
+/// Applies [LuminaRayTracingSettings], [LuminaDlssSettings] and
+/// [LuminaFsr3Settings] to one view: the scene's acceleration structures, the
+/// directional lights' shadow options, the view's ReSTIR options, a [Dlss]
+/// instance that follows the viewport size, and the FSR3 TAA options when
+/// DLSS is not active.
 ///
 /// Call [requestExtensions] once before the engine exists. [apply] is cheap to
 /// call every frame: it only touches Filament when something changed.
@@ -140,6 +144,8 @@ class LuminaRtxController {
   Dlss? _dlss;
   LuminaRayTracingSettings? _appliedRayTracing;
   LuminaDlssSettings? _appliedDlss;
+  LuminaFsr3Settings? _appliedFsr3;
+  bool _fsr3OnView = false;
   (int, int)? _dlssOutputSize;
   final Set<int> _rayTracedSuns = <int>{};
 
@@ -184,17 +190,49 @@ class LuminaRtxController {
   /// The DLSS settings last applied.
   LuminaDlssSettings? get appliedDlss => _appliedDlss;
 
-  /// Applies both settings. [baseTaa] and [baseDynamicResolution] are the
-  /// view's values without DLSS (the scalability profile's), restored when DLSS
-  /// turns off; DLSS itself needs TAA with motion vectors.
+  /// The FSR3 settings last applied.
+  LuminaFsr3Settings? get appliedFsr3 => _appliedFsr3;
+
+  /// FSR3 is on the view right now (enabled, motion vectors available, no DLSS).
+  bool get fsr3Active => _fsr3OnView;
+
+  /// The engine renders the structure pass motion vectors FSR3 needs.
+  bool get fsr3Supported => view.motionVectorsSupported;
+
+  /// Applies the settings. [baseTaa] and [baseDynamicResolution] are the
+  /// view's values without DLSS or FSR3 (the scalability profile's), restored
+  /// when both are off; DLSS itself needs TAA with motion vectors and takes
+  /// precedence over [fsr3] while it runs.
   void apply(
     LuminaRayTracingSettings rayTracing,
     LuminaDlssSettings dlss, {
+    LuminaFsr3Settings fsr3 = const LuminaFsr3Settings(),
     required TemporalAntiAliasingOptions baseTaa,
     required DynamicResolutionOptions baseDynamicResolution,
   }) {
     _applyRayTracing(rayTracing);
     _applyDlss(dlss, baseTaa: baseTaa, baseDynamicResolution: baseDynamicResolution);
+    _applyFsr3(fsr3, baseTaa: baseTaa, baseDynamicResolution: baseDynamicResolution);
+  }
+
+  void _applyFsr3(
+    LuminaFsr3Settings settings, {
+    required TemporalAntiAliasingOptions baseTaa,
+    required DynamicResolutionOptions baseDynamicResolution,
+  }) {
+    final wanted = settings.enabled && _dlss == null && fsr3Supported;
+    if (wanted && (!_fsr3OnView || _appliedFsr3 != settings)) {
+      view.temporalAntiAliasingOptions = settings.taaOptions(baseTaa);
+      view.dynamicResolutionOptions = settings.dynamicResolutionOptions;
+      _fsr3OnView = true;
+    } else if (!wanted && _fsr3OnView) {
+      _fsr3OnView = false;
+      if (_dlss == null) {
+        view.temporalAntiAliasingOptions = baseTaa;
+        view.dynamicResolutionOptions = baseDynamicResolution;
+      }
+    }
+    _appliedFsr3 = settings;
   }
 
   void _applyRayTracing(LuminaRayTracingSettings settings) {
@@ -244,9 +282,11 @@ class LuminaRtxController {
         _dlssOutputSize = null;
         view.dynamicResolutionOptions = baseDynamicResolution;
         view.temporalAntiAliasingOptions = baseTaa;
+        _fsr3OnView = false; // FSR3, if wanted, is put back by _applyFsr3
       }
     }
     if (wanted && _dlss == null) {
+      _fsr3OnView = false; // DLSS owns the TAA options from here
       view.temporalAntiAliasingOptions = baseTaa.copyWith(enabled: true, motionVectors: true);
       try {
         _dlss = Dlss.create(
