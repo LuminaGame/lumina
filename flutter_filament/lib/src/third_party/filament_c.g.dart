@@ -1130,6 +1130,9 @@ external bool filament_dlss_request_extensions();
 @ffi.Native<ffi.Void Function()>()
 external void filament_dlss_clear_extension_request();
 
+@ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Char>)>()
+external void filament_dlss_set_runtime_dir(ffi.Pointer<ffi.Char> dir);
+
 @ffi.Native<ffi.Bool Function()>()
 external bool filament_ray_tracing_request_extensions();
 

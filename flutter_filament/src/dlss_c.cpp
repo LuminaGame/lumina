@@ -181,8 +181,14 @@ std::string workingDir() {
 // The folder the nvngx_dlss runtime is loaded from: LUMINA_DLSS_DIR (the folder
 // itself or an SDK root), the executable's folder, then the fetched SDK under
 // the working directory (build/dlss-sdk, where tool/dlss/fetch_sdk.dart puts it).
+std::string gRuntimeDirHint;
+
 std::string runtimeDir() {
     std::vector<std::string> candidates;
+    if (!gRuntimeDirHint.empty()) {
+        candidates.push_back(gRuntimeDirHint);
+        candidates.push_back(gRuntimeDirHint + kSdkRuntimeSubdir);
+    }
     if (const char* env = std::getenv("LUMINA_DLSS_DIR"); env && *env) {
         candidates.emplace_back(env);
         candidates.emplace_back(std::string(env) + kSdkRuntimeSubdir);
@@ -519,6 +525,17 @@ private:
 
 } // namespace
 
+void filament_dlss_set_runtime_dir(const char* dir) {
+    std::lock_guard<std::mutex> lock(gNgxMutex);
+    gRuntimeDirHint = dir ? dir : "";
+    if (!gRuntimeDir.empty() && !hasRuntime(gRuntimeDir)) {
+        gRuntimeDir.clear();
+    }
+    if (gRuntimeDir.empty() && !gRuntimeDirHint.empty()) {
+        // re-resolve with the hint at the next availability check
+    }
+}
+
 bool filament_dlss_available(void) {
     std::lock_guard<std::mutex> lock(gNgxMutex);
     if (gRuntimeDir.empty()) {
@@ -638,6 +655,10 @@ bool filament_dlss_request_extensions(void) {
 }
 
 void filament_dlss_clear_extension_request(void) {
+}
+
+void filament_dlss_set_runtime_dir(const char* dir) {
+    (void) dir;
 }
 
 void* filament_dlss_create(void* engine, void* view, const filament_dlss_options_t* opts) {

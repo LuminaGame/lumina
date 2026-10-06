@@ -7,7 +7,7 @@ library;
 import 'dart:io';
 
 import 'package:lumina/data/services/workspace_paths.dart';
-import 'package:lumina/lumina.dart' show EngineBootstrap, EngineLoggerService, PluginHostPatcherService;
+import 'package:lumina/lumina.dart' show EngineBootstrap, EngineLoggerService, LuminaRtxController, PluginHostPatcherService;
 import 'package:lumina_editor_api/lumina_editor_api.dart';
 import 'package:path/path.dart' as p;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
@@ -27,6 +27,15 @@ export 'ui/core/host/editor_host.dart' show EditorHostInfo, EditorLaunchArgs, Lu
 
 final ValueNotifier<ThemeMode> appThemeModeNotifier = ValueNotifier<ThemeMode>(ThemeMode.dark);
 
+/// The NGX SDK `tool/dlss/fetch_sdk.dart` fetched into the engine checkout, when
+/// there is one; the editor's DLSS button needs its runtime.
+String? _dlssSdkDir() {
+  final root = LuminaWorkspace.findSourceRoot();
+  if (root == null) return null;
+  final dir = Directory(p.join(root, 'lumina', 'flutter_filament', 'build', 'dlss-sdk'));
+  return dir.existsSync() ? dir.path : null;
+}
+
 Future<void> runLuminaEditor(List<String> args, {List<LuminaEditorPlugin> plugins = const [], EditorHostInfo? host}) async {
   // Started by a process that enforces Windows redirection trust (an
   // installer's finish page does), the editor and everything it runs could
@@ -34,6 +43,11 @@ Future<void> runLuminaEditor(List<String> args, {List<LuminaEditorPlugin> plugin
   // without the policy takes over before any window shows.
   if (!RedirectionTrustGuard.startup(args)) exit(0);
   WidgetsFlutterBinding.ensureInitialized();
+  // The viewport's shared Vulkan engine is created later; the ray query (and,
+  // with the NGX runtime, DLSS) extensions must be asked for before it exists.
+  if (Platform.isWindows || Platform.isLinux) {
+    LuminaRtxController.requestExtensions(dlssRuntimeDir: _dlssSdkDir());
+  }
   LuminaEditorHost.info = host;
   LuminaEditorHost.args = EditorLaunchArgs.parse(args);
   // `--no-plugins` opens the project without its code plugins even in a

@@ -358,6 +358,8 @@ One selectable template row. It is a real focusable button, so the list is keybo
 
 ## `lib/ui/features/main_editor/views/viewport_widget.dart`
 
+The top-right HUD row holds, next to the camera speed, the **DLSS** and **RTX** buttons: the label toggles the feature for this viewport (per user, stored with the editor quality settings), the arrow opens its `RtxSettingsPopover`. RTX keeps the level's acceleration structures and, by choice, traces the sun's shadows and shades the punctual lights with ReSTIR; DLSS renders the viewport at the NGX resolution of the chosen quality mode. Both are greyed out when the live engine cannot do them (no Vulkan ray query, no NGX runtime); the editor asks for the Vulkan extensions at startup, before its shared engine exists.
+
 **Top-level Functions:**
 
 - **`with TickerProviderStateMixin`**: Executes `TickerProviderStateMixin` operation.

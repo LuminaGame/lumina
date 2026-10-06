@@ -47,6 +47,7 @@ Yeniden boyutlanan bir view yeni çıktı boyutuyla yeni bir `Dlss` ister.
 | :--- | :--- | :--- |
 | `filament_dlss_available` | `bool filament_dlss_available(void);` | NGX runtime bulundu ve bir NVIDIA Vulkan cihazı var. |
 | `filament_dlss_request_extensions` | `bool filament_dlss_request_extensions(void);` | Bundan sonra oluşturulan motorlardan NGX Vulkan uzantılarını ister; NGX yoksa false. |
+| `filament_dlss_set_runtime_dir` | `void filament_dlss_set_runtime_dir(const char* dir);` | `nvngx_dlss` çalışma zamanının önce nerede aranacağı (bir SDK kökü ya da kitaplığın klasörü); `LUMINA_DLSS_DIR`, çalıştırılabilir klasörü ve çalışma dizininden önce gelir; NULL ipucunu unutur. |
 | `filament_dlss_clear_extension_request` | `void filament_dlss_clear_extension_request(void);` | Sonraki motorlar için isteği unutur. |
 | `filament_dlss_create` | `void* filament_dlss_create(void* engine, void* view, const filament_dlss_options_t* opts);` | NGX'i motorun cihazı için başlatır, optimum render boyutunu sorgular, upscaler'ı kaydeder ve dinamik çözünürlüğü açar; hata durumunda `filament_dlss_last_error` dolu olarak NULL. |
 | `filament_dlss_get_render_resolution` | `void filament_dlss_get_render_resolution(void* dlss, uint32_t* out_w, uint32_t* out_h);` | NGX'in seçtiği render çözünürlüğü (hata sonrası 0,0). |
@@ -79,6 +80,7 @@ Yeniden boyutlanan bir view yeni çıktı boyutuyla yeni bir `Dlss` ister.
 | :--- | :--- | :--- |
 | `available` | `static bool get available` | NGX runtime bulundu ve bir NVIDIA Vulkan cihazı var. |
 | `requestExtensions` | `static bool requestExtensions()` | Motor oluşturulmadan önce çağrılmalı; DLSS yoksa false (ve değişiklik yok). |
+| `runtimeDirectory` | `static set runtimeDirectory(String? dir)` | Çalışma zamanının önce nerede aranacağı (bir SDK kökü ya da kitaplığın klasörü); `available` okunmadan önce ayarlanır. |
 | `clearExtensionRequest` | `static void clearExtensionRequest()` | Sonraki motorlar NGX uzantıları olmadan oluşturulur. |
 | `lastErrorMessage` | `static String? get lastErrorMessage` | NGX ya da sarmalayıcının bildirdiği son hata, yoksa null. |
 | `Dlss.create` | `factory Dlss.create({required FilamentEngine engine, required FilamentView view, required DlssOptions options})` | Feature'ı oluşturur ve view'ı harici upscaler'a geçirir; DLSS yoksa, motor uzantısızsa ya da NGX reddederse hata mesajıyla `StateError` fırlatır. |

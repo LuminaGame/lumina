@@ -24,6 +24,11 @@ class LuminaShadowSettings {
   final double constantBias;
   final double normalBias;
 
+  /// Trace the directional light's shadows against the scene's acceleration
+  /// structures instead of rendering the cascades (needs ray query support and
+  /// a scene with ray tracing enabled; falls back to the maps otherwise).
+  final bool rayTraced;
+
   const LuminaShadowSettings._({
     this.shadowType = ShadowType.pcf,
     this.vsm = const VsmShadowOptions(),
@@ -38,6 +43,7 @@ class LuminaShadowSettings {
     this.contactShadowsStepCount = 8,
     this.constantBias = 0.1, // cm
     this.normalBias = 1.0,
+    this.rayTraced = false,
   });
 
   const LuminaShadowSettings.defaults() : this._();
@@ -56,6 +62,7 @@ class LuminaShadowSettings {
     int contactShadowsStepCount = 8,
     double constantBias = 0.1,
     double normalBias = 1.0,
+    bool rayTraced = false,
   }) {
     if (mapSize < 256 || mapSize > 4096 || (mapSize & (mapSize - 1)) != 0) {
       throw ArgumentError.value(
@@ -93,6 +100,7 @@ class LuminaShadowSettings {
       contactShadowsStepCount: contactShadowsStepCount,
       constantBias: constantBias,
       normalBias: normalBias,
+      rayTraced: rayTraced,
     );
   }
 
@@ -110,6 +118,7 @@ class LuminaShadowSettings {
     int? contactShadowsStepCount,
     double? constantBias,
     double? normalBias,
+    bool? rayTraced,
   }) {
     final newMapSize = mapSize ?? this.mapSize;
     final newCascades = cascades ?? this.cascades;
@@ -151,6 +160,7 @@ class LuminaShadowSettings {
       contactShadowsStepCount: contactShadowsStepCount ?? this.contactShadowsStepCount,
       constantBias: constantBias ?? this.constantBias,
       normalBias: normalBias ?? this.normalBias,
+      rayTraced: rayTraced ?? this.rayTraced,
     );
   }
 
@@ -208,6 +218,7 @@ class LuminaShadowSettings {
       penumbraScale: soft.penumbraScale,
       penumbraRatioScale: soft.penumbraRatioScale,
       maxPenumbraRatio: soft.maxPenumbraRatio,
+      rayTraced: rayTraced,
     );
   }
 
@@ -228,7 +239,8 @@ class LuminaShadowSettings {
           screenSpaceContactShadows == other.screenSpaceContactShadows &&
           contactShadowsStepCount == other.contactShadowsStepCount &&
           constantBias == other.constantBias &&
-          normalBias == other.normalBias;
+          normalBias == other.normalBias &&
+          rayTraced == other.rayTraced;
 
   @override
   int get hashCode => Object.hashAll([
@@ -245,5 +257,6 @@ class LuminaShadowSettings {
         contactShadowsStepCount,
         constantBias,
         normalBias,
+        rayTraced,
       ]);
 }

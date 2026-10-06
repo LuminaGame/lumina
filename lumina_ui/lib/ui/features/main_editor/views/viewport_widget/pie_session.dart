@@ -115,6 +115,8 @@ mixin _ViewportPieSession on _ViewportWidgetStateBase {
 
   /// Test seam: the visibility layers the level view shows.
   int? get viewLayersForTest => _nativeView?.visibleLayers;
+  FilamentScene? get nativeSceneForTest => _nativeScene;
+  bool get rayTracingSupportedForTest => _rtxController?.rayTracingSupported ?? false;
 
   /// Test seam: whether the editor's preview sun is in the scene.
   bool get editorSunInSceneForTest => editorLightEntitiesForTest.isNotEmpty;

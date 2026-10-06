@@ -268,6 +268,96 @@ mixin _ViewportCameraControls on _ViewportWidgetStateBase {
     );
   }
 
+  /// The DLSS and RTX HUD buttons: the label toggles the feature, the arrow
+  /// opens its settings. Greyed out (but still openable) when the live engine
+  /// cannot do it, so the choice survives for a machine that can.
+  Widget _buildRtxFeatureHudBtn(RtxSettingsKind kind) {
+    final vm = widget.viewModel;
+    final isDlss = kind == RtxSettingsKind.dlss;
+    final supported = isDlss ? LuminaRtxController.dlssAvailable : (_rtxController?.rayTracingSupported ?? false);
+    final active = isDlss ? vm.dlssSettings.enabled : vm.rayTracingSettings.enabled;
+    final label = isDlss ? 'DLSS' : 'RTX';
+    final detail = isDlss
+        ? (active ? ' ${_dlssQualityLabel(vm.dlssSettings.quality)}' : '')
+        : (active ? (vm.rayTracingSettings.restir ? ' ReSTIR' : ' Shadows') : '');
+    final color = !supported
+        ? EditorColors.mutedForeground
+        : (active ? const Color(0xFF76B900) : EditorColors.foreground);
+    final tooltip = isDlss
+        ? (supported
+            ? 'DLSS Super Resolution: ${active ? 'on' : 'off'}\nClick to toggle, the arrow opens the quality mode.'
+            : 'DLSS is unavailable: the NGX runtime was not found or this GPU has no DLSS.\nThe arrow still opens the settings.')
+        : (supported
+            ? 'RTX ray tracing: ${active ? 'on' : 'off'}\nClick to toggle, the arrow opens ray-traced shadows and ReSTIR.'
+            : 'Ray tracing is unavailable on this GPU or driver.\nThe arrow still opens the settings.');
+    return Tooltip(
+      tooltip: (context) => TooltipContainer(child: Text(tooltip)),
+      child: Container(
+        height: 24,
+        decoration: BoxDecoration(
+          color: EditorColors.hudSurface,
+          borderRadius: BorderRadius.circular(3),
+          border: Border.all(color: active && supported ? color.withValues(alpha: 0.7) : EditorColors.border),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            GestureDetector(
+              key: ValueKey('hud_${isDlss ? 'dlss' : 'rtx'}_toggle'),
+              behavior: HitTestBehavior.opaque,
+              onTap: () => isDlss ? vm.toggleDlss() : vm.toggleRayTracing(),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(isDlss ? LucideIcons.sparkles : LucideIcons.zap, size: 11, color: color),
+                    const SizedBox(width: 4),
+                    Text(
+                      '$label$detail',
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: color),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Container(width: 1, height: 14, color: EditorColors.border),
+            GestureDetector(
+              key: ValueKey('hud_${isDlss ? 'dlss' : 'rtx'}_settings'),
+              behavior: HitTestBehavior.opaque,
+              onTap: () => _showRtxSettings(kind, supported),
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                child: Icon(LucideIcons.chevronDown, size: 11, color: EditorColors.foreground),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _dlssQualityLabel(DlssQuality quality) => switch (quality) {
+        DlssQuality.ultraPerformance => 'Ultra Perf',
+        DlssQuality.maxPerformance => 'Performance',
+        DlssQuality.balanced => 'Balanced',
+        DlssQuality.maxQuality => 'Quality',
+        DlssQuality.dlaa => 'DLAA',
+      };
+
+  void _showRtxSettings(RtxSettingsKind kind, bool supported) {
+    showOverlay(
+      context,
+      const DialogConfiguration(),
+      builder: (context) => RtxSettingsPopover(
+        viewModel: widget.viewModel,
+        kind: kind,
+        supported: supported,
+        onClose: () => Navigator.of(context).pop(),
+      ),
+    );
+  }
+
   Widget _buildHudBtn(IconData icon, String tooltipStr, VoidCallback onTap) {
     return Tooltip(
       tooltip: (context) => TooltipContainer(child: Text(tooltipStr)),

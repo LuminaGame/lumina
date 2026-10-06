@@ -147,7 +147,45 @@ Immutable configuration for directional sun shadows and cascaded shadow maps.
 | `contactShadowsStepCount` | `int contactShadowsStepCount` | Holds the `contactShadowsStepCount` property or configuration state. |
 | `constantBias` | `double constantBias` | Holds the `constantBias` property or configuration state. |
 | `normalBias` | `double normalBias` | Holds the `normalBias` property or configuration state. |
+| `rayTraced` | `bool rayTraced` | Trace the directional light's shadows against the scene's acceleration structures instead of rendering the cascades (ray query support and a scene with ray tracing enabled; falls back to the maps otherwise). Default false. |
 | `hashCode` | `int get hashCode` | Checks current state or capability and returns a boolean value. |
+
+## `lib/src/post_process/rtx_settings.dart`
+
+### `class LuminaRayTracingSettings`
+
+Hardware ray tracing for a view: the scene's acceleration structures, ray-traced sun shadows and ReSTIR direct lighting of the punctual lights. Needs a Vulkan engine created after `LuminaRtxController.requestExtensions` on a GPU with ray query support; otherwise the settings are kept and the shadow maps and the froxel light loop render.
+
+| Method / Getter | Signature | Purpose & Description |
+| :--- | :--- | :--- |
+| `enabled` | `bool enabled` | Keep the scene's acceleration structures (the switch for everything below). Default false. |
+| `sunShadows` | `bool sunShadows` | Ray-traced hard shadows for the directional light instead of cascaded shadow maps. Default true. |
+| `restir` | `bool restir` | Shade the punctual lights with ReSTIR direct lighting instead of the froxel loop. Default false. |
+| `restirCandidates` | `int restirCandidates` | Lights sampled per pixel and frame (1 to 64). Default 8. |
+| `restirSpatialSamples` | `int restirSpatialSamples` | Neighbouring reservoirs merged per pixel (0 to 8). Default 2. |
+| `restirOptions` | `RestirOptions get restirOptions` | The Filament ReSTIR options these settings describe. |
+| `copyWith`, `toMap`, `fromMap` | | Value semantics and the JSON form the editor stores. |
+
+### `class LuminaDlssSettings`
+
+| Method / Getter | Signature | Purpose & Description |
+| :--- | :--- | :--- |
+| `enabled` | `bool enabled` | DLSS Super Resolution on the view. Default false. |
+| `quality` | `DlssQuality quality` | The NGX quality mode. Default `balanced`. |
+| `copyWith`, `toMap`, `fromMap` | | Value semantics and the JSON form the editor stores. |
+
+### `class LuminaRtxController`
+
+Applies both settings to one view: the scene's acceleration structures, the directional lights' `ShadowOptions.rayTraced`, the view's `RestirOptions` and a `Dlss` instance that follows the viewport size.
+
+| Method / Getter | Signature | Purpose & Description |
+| :--- | :--- | :--- |
+| `requestExtensions` | `static bool requestExtensions()` | Asks the engines created from now on for the ray query extensions and, with the NGX runtime present, the DLSS ones. Call it before the engine exists. |
+| `dlssAvailable` | `static bool get dlssAvailable` | The NGX runtime was found and an NVIDIA Vulkan device exists. |
+| `rayTracingSupported` | `bool get rayTracingSupported` | The engine traces rays. |
+| `apply` | `void apply(LuminaRayTracingSettings rayTracing, LuminaDlssSettings dlss, {required TemporalAntiAliasingOptions baseTaa, required DynamicResolutionOptions baseDynamicResolution})` | Applies both; cheap when nothing changed. The base options are restored when DLSS turns off (DLSS itself needs TAA with motion vectors). |
+| `dlss`, `appliedRayTracing`, `appliedDlss` | | The live DLSS instance and the settings last applied. |
+| `dispose` | `void dispose()` | Releases the DLSS instance. |
 
 ## `lib/src/material/dynamic_material_instance.dart`
 

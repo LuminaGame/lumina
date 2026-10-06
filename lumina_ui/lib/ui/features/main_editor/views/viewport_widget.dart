@@ -15,6 +15,7 @@ import 'package:lumina/lumina.dart';
 import '../../../core/services/editor_mesh_budget.dart';
 import '../../../core/services/editor_procedural_sky.dart';
 import '../../../core/services/editor_scene_environment.dart';
+import '../../../core/widgets/rtx_settings_popover.dart';
 import '../../../core/theme/editor_theme.dart';
 import '../view_models/editor_view_model.dart';
 import '../services/snap_service.dart';
@@ -320,6 +321,8 @@ class _ViewportWidgetState extends _ViewportWidgetStateBase
                             _nativeView = view;
                             _appliedViewLayers = null;
                             view.setDynamicLightingOptions(LuminaUnits.dynamicLightingNear, LuminaUnits.dynamicLightingFar);
+                            _rtxController?.dispose();
+                            _rtxController = LuminaRtxController(engine: engine, view: view, scene: scene);
                             _applyEditorQuality(force: true);
 
                             _updateNativeCamera();
@@ -856,6 +859,10 @@ class _ViewportWidgetState extends _ViewportWidgetStateBase
                       child: Row(
                         children: [
                           _buildCameraSpeedHudBtn(),
+                          const SizedBox(width: 4),
+                          _buildRtxFeatureHudBtn(RtxSettingsKind.dlss),
+                          const SizedBox(width: 4),
+                          _buildRtxFeatureHudBtn(RtxSettingsKind.rayTracing),
                           const SizedBox(width: 4),
                           _buildHudBtn(
                             LucideIcons.scan,

@@ -47,6 +47,7 @@ A resized view needs a new `Dlss` with the new output size.
 | :--- | :--- | :--- |
 | `filament_dlss_available` | `bool filament_dlss_available(void);` | The NGX runtime was found and an NVIDIA Vulkan device is present. |
 | `filament_dlss_request_extensions` | `bool filament_dlss_request_extensions(void);` | Asks the engines created from now on for the NGX Vulkan extensions; false when NGX is absent. |
+| `filament_dlss_set_runtime_dir` | `void filament_dlss_set_runtime_dir(const char* dir);` | Where to look for the `nvngx_dlss` runtime first (an SDK root or the library's folder), ahead of `LUMINA_DLSS_DIR`, the executable folder and the working directory; NULL forgets the hint. |
 | `filament_dlss_clear_extension_request` | `void filament_dlss_clear_extension_request(void);` | Forgets the request for later engines. |
 | `filament_dlss_create` | `void* filament_dlss_create(void* engine, void* view, const filament_dlss_options_t* opts);` | Initialises NGX for the engine's device, queries the optimal render size, registers the upscaler and enables dynamic resolution; NULL with `filament_dlss_last_error` set on failure. |
 | `filament_dlss_get_render_resolution` | `void filament_dlss_get_render_resolution(void* dlss, uint32_t* out_w, uint32_t* out_h);` | The render resolution NGX chose (0,0 after a failure). |
@@ -79,6 +80,7 @@ A resized view needs a new `Dlss` with the new output size.
 | :--- | :--- | :--- |
 | `available` | `static bool get available` | The NGX runtime was found and an NVIDIA Vulkan device is present. |
 | `requestExtensions` | `static bool requestExtensions()` | Must run before the engine is created; false (and no change) when DLSS is unavailable. |
+| `runtimeDirectory` | `static set runtimeDirectory(String? dir)` | Where the runtime is looked for first (an SDK root or the library's folder); set it before `available` is read. |
 | `clearExtensionRequest` | `static void clearExtensionRequest()` | Later engines are created without the NGX extensions. |
 | `lastErrorMessage` | `static String? get lastErrorMessage` | The last error NGX or the wrapper reported, or null. |
 | `Dlss.create` | `factory Dlss.create({required FilamentEngine engine, required FilamentView view, required DlssOptions options})` | Creates the feature and switches the view to the external upscaler; throws `StateError` with the error message when DLSS is unavailable, the engine lacks the extensions or NGX declines. |

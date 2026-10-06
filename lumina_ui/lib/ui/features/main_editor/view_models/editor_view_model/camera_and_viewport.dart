@@ -570,6 +570,8 @@ mixin _EditorCameraAndViewport on _EditorViewModelState {
   bool get ssaoEnabled => _quality.ssao;
   bool get bloomEnabled => _quality.bloom;
   bool get screenSpaceReflectionsEnabled => _quality.screenSpaceReflections;
+  LuminaRayTracingSettings get rayTracingSettings => _quality.rayTracing;
+  LuminaDlssSettings get dlssSettings => _quality.dlss;
   bool get vsyncEnabled => _project.settings.vsyncEnabled;
 
   /// Points the viewport camera at the whole level and pulls back far enough
@@ -710,6 +712,23 @@ mixin _EditorCameraAndViewport on _EditorViewModelState {
     _quality.copyWith(screenSpaceReflections: !_quality.screenSpaceReflections),
     'Screen-space reflections ${!_quality.screenSpaceReflections ? 'on' : 'off'}',
   );
+
+  /// The RTX HUD button: ray tracing on or off, keeping the sub-choices.
+  void toggleRayTracing() => _setQuality(
+    _quality.copyWith(rayTracing: _quality.rayTracing.copyWith(enabled: !_quality.rayTracing.enabled)),
+    'Ray tracing ${!_quality.rayTracing.enabled ? 'on' : 'off'}',
+  );
+
+  void setRayTracingSettings(LuminaRayTracingSettings settings) =>
+      _setQuality(_quality.copyWith(rayTracing: settings), 'Ray tracing $settings');
+
+  /// The DLSS HUD button: DLSS on or off, keeping the quality mode.
+  void toggleDlss() => _setQuality(
+    _quality.copyWith(dlss: _quality.dlss.copyWith(enabled: !_quality.dlss.enabled)),
+    'DLSS ${!_quality.dlss.enabled ? 'on' : 'off'}',
+  );
+
+  void setDlssSettings(LuminaDlssSettings settings) => _setQuality(_quality.copyWith(dlss: settings), 'DLSS $settings');
 
   void updateResolutionScale(double scale) => _setQuality(
     _quality.copyWith(resolutionScale: scale),

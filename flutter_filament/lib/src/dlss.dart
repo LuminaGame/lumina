@@ -118,6 +118,23 @@ class Dlss {
   /// extensions (and cannot host DLSS).
   static void clearExtensionRequest() => c.filament_dlss_clear_extension_request();
 
+  /// Where the `nvngx_dlss` runtime is looked for first: an SDK root (the
+  /// folder `tool/dlss/fetch_sdk.dart` fills) or the folder holding the library.
+  /// Checked ahead of `LUMINA_DLSS_DIR`, the executable folder and the working
+  /// directory; null forgets the hint. Set it before [available] is read.
+  static set runtimeDirectory(String? dir) {
+    if (dir == null || dir.isEmpty) {
+      c.filament_dlss_set_runtime_dir(ffi.nullptr);
+      return;
+    }
+    final ptr = dir.toNativeUtf8();
+    try {
+      c.filament_dlss_set_runtime_dir(ptr.cast());
+    } finally {
+      calloc.free(ptr);
+    }
+  }
+
   /// The last error NGX or the wrapper reported (process-wide), or null after a
   /// successful call; also readable per instance as [lastError].
   static String? get lastErrorMessage {

@@ -13,6 +13,9 @@ abstract class _ViewportWidgetStateBase extends State<ViewportWidget> with Ticke
   FilamentView? _nativeView;
   int _appliedQualityRevision = -1;
 
+  /// Applies the editor's ray tracing and DLSS choices to the live view.
+  LuminaRtxController? _rtxController;
+
   /// The [EditorViewLayers] the level view was last told to show.
   int? _appliedViewLayers;
 

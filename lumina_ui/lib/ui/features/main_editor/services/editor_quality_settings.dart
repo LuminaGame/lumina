@@ -34,12 +34,21 @@ class EditorQualitySettings {
   /// Screen-space reflections.
   final bool screenSpaceReflections;
 
+  /// Hardware ray tracing of the viewport: acceleration structures, ray-traced
+  /// sun shadows and ReSTIR direct lighting (the RTX HUD button).
+  final LuminaRayTracingSettings rayTracing;
+
+  /// DLSS Super Resolution of the viewport (the DLSS HUD button).
+  final LuminaDlssSettings dlss;
+
   const EditorQualitySettings({
     this.preset = 'epic',
     this.resolutionScale = 100,
     this.ssao = true,
     this.bloom = true,
     this.screenSpaceReflections = true,
+    this.rayTracing = const LuminaRayTracingSettings(),
+    this.dlss = const LuminaDlssSettings(),
   });
 
   /// The engine profile this preset and resolution scale describe.
@@ -78,6 +87,8 @@ class EditorQualitySettings {
     bool? ssao,
     bool? bloom,
     bool? screenSpaceReflections,
+    LuminaRayTracingSettings? rayTracing,
+    LuminaDlssSettings? dlss,
   }) {
     return EditorQualitySettings(
       preset: (preset ?? this.preset).toLowerCase(),
@@ -85,6 +96,8 @@ class EditorQualitySettings {
       ssao: ssao ?? this.ssao,
       bloom: bloom ?? this.bloom,
       screenSpaceReflections: screenSpaceReflections ?? this.screenSpaceReflections,
+      rayTracing: rayTracing ?? this.rayTracing,
+      dlss: dlss ?? this.dlss,
     );
   }
 
@@ -94,16 +107,22 @@ class EditorQualitySettings {
         'ssao': ssao,
         'bloom': bloom,
         'screen_space_reflections': screenSpaceReflections,
+        'ray_tracing': rayTracing.toMap(),
+        'dlss': dlss.toMap(),
       };
 
   factory EditorQualitySettings.fromMap(Map<String, dynamic> map) {
     final scale = map['resolution_scale'];
+    final rayTracing = map['ray_tracing'];
+    final dlss = map['dlss'];
     return EditorQualitySettings(
       preset: (map['preset'] as String? ?? 'epic').toLowerCase(),
       resolutionScale: scale is num ? scale.toDouble() : 100,
       ssao: map['ssao'] as bool? ?? true,
       bloom: map['bloom'] as bool? ?? true,
       screenSpaceReflections: map['screen_space_reflections'] as bool? ?? true,
+      rayTracing: rayTracing is Map ? LuminaRayTracingSettings.fromMap(Map<String, dynamic>.from(rayTracing)) : const LuminaRayTracingSettings(),
+      dlss: dlss is Map ? LuminaDlssSettings.fromMap(Map<String, dynamic>.from(dlss)) : const LuminaDlssSettings(),
     );
   }
 
@@ -114,14 +133,17 @@ class EditorQualitySettings {
       other.resolutionScale == resolutionScale &&
       other.ssao == ssao &&
       other.bloom == bloom &&
-      other.screenSpaceReflections == screenSpaceReflections;
+      other.screenSpaceReflections == screenSpaceReflections &&
+      other.rayTracing == rayTracing &&
+      other.dlss == dlss;
 
   @override
-  int get hashCode => Object.hash(preset, resolutionScale, ssao, bloom, screenSpaceReflections);
+  int get hashCode => Object.hash(preset, resolutionScale, ssao, bloom, screenSpaceReflections, rayTracing, dlss);
 
   @override
   String toString() =>
-      'EditorQualitySettings($preset, ${resolutionScale.toStringAsFixed(0)}%, ssao: $ssao, bloom: $bloom, ssr: $screenSpaceReflections)';
+      'EditorQualitySettings($preset, ${resolutionScale.toStringAsFixed(0)}%, ssao: $ssao, bloom: $bloom, ssr: $screenSpaceReflections, '
+      'rtx: ${rayTracing.enabled}, dlss: ${dlss.enabled})';
 }
 
 /// Per-user store for [EditorQualitySettings], one entry per project

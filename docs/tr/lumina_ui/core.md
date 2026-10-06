@@ -21,6 +21,7 @@ Lumina Studio'nun ortak çekirdeği: uygulama giriş noktası, yerleşik editör
 - [`lib/ui/core/property_editors/slider_field.dart`](#libuicoreproperty_editorsslider_fielddart)
 - [`lib/ui/core/property_editors/vector_row.dart`](#libuicoreproperty_editorsvector_rowdart)
 - [`lib/ui/core/widgets/quality_settings_popover.dart`](#libuicorewidgetsquality_settings_popoverdart)
+- [`lib/ui/core/widgets/rtx_settings_popover.dart`](#libuicorewidgetsrtx_settings_popoverdart)
 - [`lib/generated/plugin_registrar.dart`](#libgeneratedplugin_registrardart)
 
 ## `lib/main.dart`
@@ -379,6 +380,23 @@ Eksen harfi (varsayılan 12 px sütun), değer ve değer varsayılanından farkl
 | `labels` | `List<String> labels` | `labels` alanını (field/property) ve ilişkili veriyi saklar. |
 | `labelColors` | `List<Color> labelColors` | One colour per component. The editor's design paints the axis letters of a transform field in the manipulator's own axis colours, so the default is exactly [EditorColors.axisX] / [EditorColors.axisY] / [EditorColors.axisZ], which are pinned to `FilamentTransformGizmo.defaultHandleColor`. |
 | `build` | `Widget build(BuildContext context)` | Deklaratif alt nesne veya widget ağacını inşa eder. |
+
+## `lib/ui/core/widgets/rtx_settings_popover.dart`
+
+### `enum RtxSettingsKind`
+
+`dlss` ya da `rayTracing`: popover'ı viewport HUD'undaki iki denetimden hangisi açtı.
+
+### `class RtxSettingsPopover`
+
+Viewport'un DLSS ve RTX HUD düğmelerinin (kamera hızının yanında) arkasındaki ayarlar: her düğmenin oku bu popover'ı kendi türü için açar. DLSS popover'ı DLSS Super Resolution'ı açıp kapatır ve NGX kalite modunu seçer (Ultra Performance, Performance, Balanced, Quality, DLAA); RTX popover'ı ışın izlemeyi, ışın izlemeli güneş gölgelerini ve ReSTIR doğrudan aydınlatmayı açıp kapatır, ReSTIR aday ve uzamsal örnek sayılarını ayarlar. Her denetim editörün kullanıcı başına `EditorQualitySettings` değerini view model üzerinden değiştirir; canlı viewport bunu `LuminaRtxController` ile hemen uygular. Motor bunu yapamıyorsa (`supported` false) başlık UNAVAILABLE yazar ve seçimler yine saklanır.
+
+| Metot / Getter | İmza | Amaç ve Açıklama |
+| :--- | :--- | :--- |
+| `viewModel` | `EditorViewModel viewModel` | Denetimlerin kalite ayarlarını değiştirdiği editör view model'i. |
+| `kind` | `RtxSettingsKind kind` | DLSS ya da ışın izleme. |
+| `supported` | `bool supported` | Canlı motorun bu popover'ın ayarladığını yapıp yapamadığı. |
+| `onClose` | `VoidCallback onClose` | Popover'ı kapatır. |
 
 ## `lib/ui/core/widgets/quality_settings_popover.dart`
 

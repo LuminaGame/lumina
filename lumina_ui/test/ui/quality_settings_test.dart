@@ -2,8 +2,10 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_filament/flutter_filament.dart' show DlssQuality;
 import 'package:lumina/lumina.dart';
 import 'package:lumina_ui/ui/core/widgets/quality_settings_popover.dart';
+import 'package:lumina_ui/ui/core/widgets/rtx_settings_popover.dart';
 import 'package:lumina_ui/ui/features/main_editor/services/editor_quality_settings.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
@@ -170,7 +172,7 @@ void main() {
       for (final preset in ['Low', 'Med', 'Hig', 'Epi', 'Cin']) {
         expect(find.text(preset), findsOneWidget);
       }
-      expect(find.text('Ray Tracing'), findsNothing, reason: 'Filament has no ray tracing');
+      expect(find.text('Ray Tracing'), findsNothing, reason: 'ray tracing has its own popover behind the RTX HUD button');
       expect(find.text('Lumen'), findsNothing, reason: 'Filament has no Lumen');
       expect(find.text('SSAO'), findsOneWidget);
       expect(find.text('Bloom'), findsOneWidget);
@@ -184,6 +186,109 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('quality_feature_ssao')));
       await tester.pump();
       expect(vm.ssaoEnabled, isFalse);
+    });
+  });
+
+  group('Ray tracing and DLSS in the quality settings', () {
+    test('the new fields round-trip through the store and default off', () async {
+      final store = EditorQualityStore(configDir: Directory('${tempDir.path}/config'));
+      const settings = EditorQualitySettings(
+        rayTracing: LuminaRayTracingSettings(enabled: true, sunShadows: false, restir: true, restirCandidates: 12, restirSpatialSamples: 3),
+        dlss: LuminaDlssSettings(enabled: true, quality: DlssQuality.maxQuality),
+      );
+      await store.save('/some/project/Rtx', settings);
+      expect(await store.load('/some/project/Rtx'), settings);
+      final defaults = await store.load('/never/saved');
+      expect(defaults.rayTracing.enabled, isFalse);
+      expect(defaults.dlss.enabled, isFalse);
+      // a file written before these fields existed still loads
+      expect(EditorQualitySettings.fromMap(const {'preset': 'low'}).rayTracing, const LuminaRayTracingSettings());
+    });
+
+    test('the HUD toggles flip the features, keep the sub-choices and bump the revision', () async {
+      final vm = makeEditor();
+      addTearDown(vm.dispose);
+      final before = vm.qualityRevision;
+      expect(vm.rayTracingSettings.enabled, isFalse);
+      vm.setRayTracingSettings(vm.rayTracingSettings.copyWith(restir: true, restirCandidates: 16));
+      vm.toggleRayTracing();
+      expect(vm.rayTracingSettings.enabled, isTrue);
+      expect(vm.rayTracingSettings.restir, isTrue);
+      expect(vm.rayTracingSettings.restirCandidates, 16);
+      expect(vm.rayTracingSettings.restirOptions.enabled, isTrue, reason: 'ReSTIR options follow the switch');
+      vm.toggleRayTracing();
+      expect(vm.rayTracingSettings.enabled, isFalse);
+      expect(vm.rayTracingSettings.restir, isTrue, reason: 'the sub-choice survives the master switch');
+
+      vm.setDlssSettings(vm.dlssSettings.copyWith(quality: DlssQuality.dlaa));
+      vm.toggleDlss();
+      expect(vm.dlssSettings.enabled, isTrue);
+      expect(vm.dlssSettings.quality, DlssQuality.dlaa);
+      expect(vm.qualityRevision, greaterThan(before));
+
+      await vm.flushQualitySettings();
+      final reloaded = await EditorQualityStore(configDir: Directory('${tempDir.path}/config')).load(vm.projectDirPath);
+      expect(reloaded.dlss, const LuminaDlssSettings(enabled: true, quality: DlssQuality.dlaa));
+      expect(reloaded.rayTracing.restirCandidates, 16);
+    });
+
+    testWidgets('the RTX popover drives the ray tracing settings', (tester) async {
+      final vm = makeEditor();
+      addTearDown(vm.dispose);
+      var closed = 0;
+      await tester.pumpWidget(
+        ShadcnApp(
+          theme: luminaEditorTheme(),
+          home: Scaffold(
+            child: SizedBox(
+              width: 420,
+              height: 640,
+              child: RtxSettingsPopover(viewModel: vm, kind: RtxSettingsKind.rayTracing, supported: true, onClose: () => closed++),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(find.text('RTX RAY TRACING'), findsOneWidget);
+      expect(find.text('OFF'), findsOneWidget);
+      await tester.tap(find.descendant(of: find.byKey(const ValueKey('rtx_enabled')), matching: find.byType(Switch)));
+      await tester.pump();
+      expect(vm.rayTracingSettings.enabled, isTrue);
+      expect(find.text('ON'), findsOneWidget);
+      await tester.tap(find.descendant(of: find.byKey(const ValueKey('rtx_restir')), matching: find.byType(Switch)));
+      await tester.pump();
+      expect(vm.rayTracingSettings.restir, isTrue);
+      await tester.tap(find.descendant(of: find.byKey(const ValueKey('rtx_sun_shadows')), matching: find.byType(Switch)));
+      await tester.pump();
+      expect(vm.rayTracingSettings.sunShadows, isFalse);
+      await tester.tap(find.byKey(const ValueKey('rtx_popover_close')));
+      expect(closed, 1);
+    });
+
+    testWidgets('the DLSS popover drives the quality mode and says when DLSS is unavailable', (tester) async {
+      final vm = makeEditor();
+      addTearDown(vm.dispose);
+      await tester.pumpWidget(
+        ShadcnApp(
+          theme: luminaEditorTheme(),
+          home: Scaffold(
+            child: SizedBox(
+              width: 420,
+              height: 520,
+              child: RtxSettingsPopover(viewModel: vm, kind: RtxSettingsKind.dlss, supported: false, onClose: () {}),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(find.text('DLSS SUPER RESOLUTION'), findsOneWidget);
+      expect(find.text('UNAVAILABLE'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('dlss_quality_maxQuality')));
+      await tester.pump();
+      expect(vm.dlssSettings.quality, DlssQuality.maxQuality, reason: 'the choice is kept for a machine with DLSS');
+      await tester.tap(find.descendant(of: find.byKey(const ValueKey('dlss_enabled')), matching: find.byType(Switch)));
+      await tester.pump();
+      expect(vm.dlssSettings.enabled, isTrue);
     });
   });
 }

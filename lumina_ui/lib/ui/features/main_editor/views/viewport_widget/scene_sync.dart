@@ -73,6 +73,8 @@ mixin _ViewportSceneSync on _ViewportWidgetStateBase {
     }
     try {
       engine.flushAndWait();
+      _rtxController?.dispose();
+      _rtxController = null;
       _sceneEnvironment.detach();
       _proceduralSky.detach();
       // The meshes' own materials go back before the assigned ones are
@@ -581,8 +583,17 @@ mixin _ViewportSceneSync on _ViewportWidgetStateBase {
     final view = _nativeView;
     if (view == null) return;
     final revision = widget.viewModel.qualityRevision;
-    if (!force && revision == _appliedQualityRevision) return;
-    _appliedQualityRevision = revision;
-    widget.viewModel.quality.applyToView(view);
+    final quality = widget.viewModel.quality;
+    if (force || revision != _appliedQualityRevision) {
+      _appliedQualityRevision = revision;
+      quality.applyToView(view);
+    }
+    // Cheap when nothing changed; it also follows the viewport size for DLSS.
+    _rtxController?.apply(
+      quality.rayTracing,
+      quality.dlss,
+      baseTaa: quality.profile.taa,
+      baseDynamicResolution: quality.profile.dynamicResolution,
+    );
   }
 }

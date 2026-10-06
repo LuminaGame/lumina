@@ -56,6 +56,11 @@ FFI_PLUGIN_EXPORT bool filament_dlss_request_extensions(void);
 // without the NGX extensions (tests, or when the user turned DLSS off).
 FFI_PLUGIN_EXPORT void filament_dlss_clear_extension_request(void);
 
+// Where to look for the nvngx_dlss runtime first (an SDK root or the folder holding the
+// library), ahead of LUMINA_DLSS_DIR, the executable folder and the working directory.
+// NULL or empty forgets a previous hint. Takes effect at the next availability check.
+FFI_PLUGIN_EXPORT void filament_dlss_set_runtime_dir(const char* dir);
+
 // Initialises NGX for the engine's Vulkan device, queries the optimal render
 // resolution for the requested quality and output size, registers an external
 // upscaler on the view and enables dynamic resolution with that fixed scale.

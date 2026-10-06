@@ -9,6 +9,9 @@
   `restirSupported`, `restirStats`, `resetRestirHistory()` and `FilamentLightManager.setRestirSamplingWeight`.
   Lumina's own GLSL implementation, Vulkan ray query only. The patch also fixes the vertical flip of the
   ray-traced shadow rays on Vulkan.
+- `Dlss.runtimeDirectory` names the fetched NGX SDK (or its runtime folder) to look in first, ahead of
+  `LUMINA_DLSS_DIR`, the executable folder and the working directory; Lumina Studio points it at the engine
+  checkout's SDK folder at startup.
 - Ray tracing foundation (prebuilt `1.77.2-lumina.5`, Filament patch `0007`): the Vulkan backend builds
   acceleration structures (`VK_KHR_ray_query`). `RayTracing.requestExtensions()` before the engine is created,
   `FilamentEngine.supportsRayQuery`, `FilamentScene.rayTracingEnabled` (a BLAS per primitive geometry and a TLAS

@@ -147,7 +147,45 @@ Immutable configuration for directional sun shadows and cascaded shadow maps.
 | `contactShadowsStepCount` | `int contactShadowsStepCount` | `contactShadowsStepCount` alanını (field/property) ve ilişkili veriyi saklar. |
 | `constantBias` | `double constantBias` | `constantBias` alanını (field/property) ve ilişkili veriyi saklar. |
 | `normalBias` | `double normalBias` | `normalBias` alanını (field/property) ve ilişkili veriyi saklar. |
+| `rayTraced` | `bool rayTraced` | Yönlü ışığın gölgelerini kademeleri çizmek yerine sahnenin hızlandırma yapılarına karşı izler (ray query desteği ve ışın izlemesi açık bir sahne gerekir; aksi halde haritalara döner). Varsayılan false. |
 | `hashCode` | `int get hashCode` | Mevcut durumun veya yeteneğin doğruluğunu kontrol eder (`bool` döndürür). |
+
+## `lib/src/post_process/rtx_settings.dart`
+
+### `class LuminaRayTracingSettings`
+
+Bir view için donanımsal ışın izleme: sahnenin hızlandırma yapıları, ışın izlemeli güneş gölgeleri ve noktasal ışıkların ReSTIR doğrudan aydınlatması. Ray query destekli bir GPU'da `LuminaRtxController.requestExtensions` sonrası oluşturulmuş bir Vulkan motoru gerekir; aksi halde ayarlar saklanır, gölge haritaları ve froxel ışık döngüsü çizer.
+
+| Metot / Getter | İmza | Amaç ve Açıklama |
+| :--- | :--- | :--- |
+| `enabled` | `bool enabled` | Sahnenin hızlandırma yapılarını tut (aşağıdakilerin ana anahtarı). Varsayılan false. |
+| `sunShadows` | `bool sunShadows` | Yönlü ışık için kademeli gölge haritaları yerine ışın izlemeli sert gölgeler. Varsayılan true. |
+| `restir` | `bool restir` | Noktasal ışıkları froxel döngüsü yerine ReSTIR doğrudan aydınlatmayla gölgele. Varsayılan false. |
+| `restirCandidates` | `int restirCandidates` | Piksel ve kare başına örneklenen ışık (1–64). Varsayılan 8. |
+| `restirSpatialSamples` | `int restirSpatialSamples` | Piksel başına birleştirilen komşu rezervuar (0–8). Varsayılan 2. |
+| `restirOptions` | `RestirOptions get restirOptions` | Bu ayarların tarif ettiği Filament ReSTIR seçenekleri. |
+| `copyWith`, `toMap`, `fromMap` | | Değer semantiği ve editörün sakladığı JSON biçimi. |
+
+### `class LuminaDlssSettings`
+
+| Metot / Getter | İmza | Amaç ve Açıklama |
+| :--- | :--- | :--- |
+| `enabled` | `bool enabled` | View'da DLSS Super Resolution. Varsayılan false. |
+| `quality` | `DlssQuality quality` | NGX kalite modu. Varsayılan `balanced`. |
+| `copyWith`, `toMap`, `fromMap` | | Değer semantiği ve editörün sakladığı JSON biçimi. |
+
+### `class LuminaRtxController`
+
+İki ayarı tek bir view'a uygular: sahnenin hızlandırma yapıları, yönlü ışıkların `ShadowOptions.rayTraced` değeri, view'ın `RestirOptions` değeri ve viewport boyutunu izleyen bir `Dlss` örneği.
+
+| Metot / Getter | İmza | Amaç ve Açıklama |
+| :--- | :--- | :--- |
+| `requestExtensions` | `static bool requestExtensions()` | Bundan sonra oluşturulan motorlardan ray query uzantılarını ve NGX çalışma zamanı varsa DLSS uzantılarını ister. Motor var olmadan önce çağrılır. |
+| `dlssAvailable` | `static bool get dlssAvailable` | NGX çalışma zamanı bulundu ve bir NVIDIA Vulkan aygıtı var. |
+| `rayTracingSupported` | `bool get rayTracingSupported` | Motor ışın izliyor. |
+| `apply` | `void apply(LuminaRayTracingSettings rayTracing, LuminaDlssSettings dlss, {required TemporalAntiAliasingOptions baseTaa, required DynamicResolutionOptions baseDynamicResolution})` | İkisini de uygular; değişiklik yoksa ucuzdur. DLSS kapanınca temel seçenekler geri yüklenir (DLSS'in kendisi hareket vektörlü TAA ister). |
+| `dlss`, `appliedRayTracing`, `appliedDlss` | | Canlı DLSS örneği ve son uygulanan ayarlar. |
+| `dispose` | `void dispose()` | DLSS örneğini bırakır. |
 
 ## `lib/src/material/dynamic_material_instance.dart`
 

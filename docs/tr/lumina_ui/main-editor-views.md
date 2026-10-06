@@ -358,6 +358,8 @@ One selectable template row. It is a real focusable button, so the list is keybo
 
 ## `lib/ui/features/main_editor/views/viewport_widget.dart`
 
+Sağ üst HUD satırında, kamera hızının yanında **DLSS** ve **RTX** düğmeleri durur: etiket özelliği bu viewport için açıp kapatır (kullanıcı başına, editör kalite ayarlarıyla saklanır), ok onun `RtxSettingsPopover`'ını açar. RTX, level'ın hızlandırma yapılarını tutar ve tercihe göre güneşin gölgelerini izler, noktasal ışıkları ReSTIR ile gölgeler; DLSS viewport'u seçilen kalite modunun NGX çözünürlüğünde çizer. Canlı motor bunları yapamıyorsa (Vulkan ray query yok, NGX çalışma zamanı yok) ikisi de soluk görünür; editör Vulkan uzantılarını açılışta, paylaşılan motoru var olmadan önce ister.
+
 **Üst Düzey Fonksiyonlar (Top-level Functions):**
 
 - **`with TickerProviderStateMixin`**: `TickerProviderStateMixin` işlemini gerçekleştirir.

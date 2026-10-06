@@ -589,6 +589,10 @@ void filament_dlss_clear_extension_request() {
   _m.filament_dlss_clear_extension_request();
 }
 
+void filament_dlss_set_runtime_dir(ffi.Pointer<ffi.Char> dir) {
+  _m.filament_dlss_set_runtime_dir(dir.address.toJS);
+}
+
 bool filament_ray_tracing_request_extensions() =>
     _m.filament_ray_tracing_request_extensions().toDartInt != 0;
 
@@ -6460,6 +6464,8 @@ extension type _Module._(JSObject _) implements JSObject {
   external JSNumber filament_dlss_request_extensions();
   @JS('_filament_dlss_clear_extension_request')
   external void filament_dlss_clear_extension_request();
+  @JS('_filament_dlss_set_runtime_dir')
+  external void filament_dlss_set_runtime_dir(JSNumber dir);
   @JS('_filament_ray_tracing_request_extensions')
   external JSNumber filament_ray_tracing_request_extensions();
   @JS('_filament_ray_tracing_clear_extension_request')

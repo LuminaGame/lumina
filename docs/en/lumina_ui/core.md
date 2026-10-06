@@ -21,6 +21,7 @@ The shared core of Lumina Studio: the app entry point, the built-in editor plugi
 - [`lib/ui/core/property_editors/slider_field.dart`](#libuicoreproperty_editorsslider_fielddart)
 - [`lib/ui/core/property_editors/vector_row.dart`](#libuicoreproperty_editorsvector_rowdart)
 - [`lib/ui/core/widgets/quality_settings_popover.dart`](#libuicorewidgetsquality_settings_popoverdart)
+- [`lib/ui/core/widgets/rtx_settings_popover.dart`](#libuicorewidgetsrtx_settings_popoverdart)
 - [`lib/generated/plugin_registrar.dart`](#libgeneratedplugin_registrardart)
 
 ## `lib/main.dart`
@@ -379,6 +380,23 @@ The axis letter (12 px column by default), the value and, when the value is not 
 | `labels` | `List<String> labels` | Holds the `labels` property or configuration state. |
 | `labelColors` | `List<Color> labelColors` | One colour per component. The editor's design paints the axis letters of a transform field in the manipulator's own axis colours, so the default is exactly [EditorColors.axisX] / [EditorColors.axisY] / [EditorColors.axisZ], which are pinned to `FilamentTransformGizmo.defaultHandleColor`. |
 | `build` | `Widget build(BuildContext context)` | Constructs and returns the declarative element or widget hierarchy. |
+
+## `lib/ui/core/widgets/rtx_settings_popover.dart`
+
+### `enum RtxSettingsKind`
+
+`dlss` or `rayTracing`: which of the two viewport HUD controls opened the popover.
+
+### `class RtxSettingsPopover`
+
+The settings behind the viewport's DLSS and RTX HUD buttons (next to the camera speed): the arrow of each button opens this popover for its kind. The DLSS popover switches DLSS Super Resolution and picks the NGX quality mode (Ultra Performance, Performance, Balanced, Quality, DLAA); the RTX popover switches ray tracing, ray-traced sun shadows and ReSTIR direct lighting and tunes the ReSTIR candidate and spatial sample counts. Every control changes the editor's per-user `EditorQualitySettings` through the view model, which the live viewport re-applies at once through `LuminaRtxController`. When the engine cannot do it (`supported` false) the header reads UNAVAILABLE and the choices are still kept.
+
+| Method / Getter | Signature | Purpose & Description |
+| :--- | :--- | :--- |
+| `viewModel` | `EditorViewModel viewModel` | The editor view model whose quality settings the controls change. |
+| `kind` | `RtxSettingsKind kind` | DLSS or ray tracing. |
+| `supported` | `bool supported` | Whether the live engine can do what this popover sets. |
+| `onClose` | `VoidCallback onClose` | Closes the popover. |
 
 ## `lib/ui/core/widgets/quality_settings_popover.dart`
 
