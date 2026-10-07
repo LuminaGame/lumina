@@ -1,7 +1,4 @@
-import 'package:flutter/widgets.dart';
-import 'package:lumina/lumina.dart' show AssetType;
-
-import 'package:lumina_editor_api/src/api_types.dart';
+import 'package:lumina_core/lumina_core.dart' show ChangeSignal;
 
 /// One component of a placed actor, as a plugin sees it.
 class EditorComponentSnapshot {
@@ -102,22 +99,22 @@ class EditorActorSpec {
   });
 }
 
-/// The open level, as the host exposes it to plugins.
+/// What a plugin can read and do on the open level, shared by the editor's
+/// own view of it (`EditorLevelAccess` in `lumina_editor_api`, whose
+/// `changes` is a Flutter `Listenable`) and a plugin process's
+/// ([PluginLevelAccess], whose `changes` is a pure [ChangeSignal]).
 ///
 /// Every edit is an undoable editor transaction and marks the level dirty,
 /// exactly like the same edit made through the Outliner or the Details
 /// panel; nothing here bypasses the host's transaction, dirty-flag or
 /// auto-save path.
-abstract class EditorLevelAccess {
+abstract class EditorLevelOperations {
   /// Absolute path of the open project's directory.
   String get projectDirPath;
 
   /// The active level's `.lmas`, relative to [projectDirPath]
   /// (`contents/levels/L_Main.lmas`).
   String get activeLevelPath;
-
-  /// Notifies after any change to the level (actors, selection, save).
-  Listenable get changes;
 
   /// Every actor in the level, in outliner order.
   List<EditorActorSnapshot> get actors;
@@ -165,7 +162,7 @@ abstract class EditorLevelAccess {
 
   /// Opens the asset at [assetPath] (absolute, or relative to
   /// [projectDirPath]) in its editor: a plugin asset type opens through the
-  /// handler registered with [LuminaEditorContext.registerAssetType].
+  /// handler registered with `LuminaEditorContext.registerAssetType`.
   void openAssetEditor(String assetPath);
 
   /// Opens the level at [relativePath] (project-relative, e.g. a level the
@@ -182,64 +179,11 @@ abstract class EditorLevelAccess {
   void log(String message, {String level = 'info', String source = 'Plugin'});
 }
 
-/// The context a running Lumina Studio hands to [LuminaEditorPlugin.register]:
-/// the seven extension points plus the open level.
-///
-/// A bare [LuminaEditorContext] (a plugin's own unit test, a registration
-/// smoke) has no level, so plugins that edit the level check
-/// `context is LuminaEditorHostContext` and keep the [level] for later.
-abstract class LuminaEditorHostContext implements LuminaEditorContext {
-  EditorLevelAccess get level;
-
-  /// Builds a real Filament 3D viewport for a plugin editor.
-  Widget build3DViewport(BuildContext context, Plugin3DViewportOptions options);
-
-  /// Builds a standard searchable asset picker combobox with thumbnail preview,
-  /// type filtering, recent assets, and Content Browser browse integration.
-  Widget buildAssetPicker(
-    BuildContext context, {
-    required String? selectedPath,
-    required ValueChanged<String?> onSelected,
-    Set<AssetType>? typeFilter,
-    String placeholder = 'None',
-    bool allowClear = false,
-    bool expand = true,
-  });
-}
-
-/// Standard searchable asset picker combobox for plugins.
-/// Delegates to [LuminaEditorHostContext.buildAssetPicker] to render
-/// the editor's live asset catalog with thumbnails and type filtering.
-class EditorAssetPicker extends StatelessWidget {
-  final LuminaEditorHostContext hostContext;
-  final String? selectedPath;
-  final ValueChanged<String?> onSelected;
-  final Set<AssetType>? typeFilter;
-  final String placeholder;
-  final bool allowClear;
-  final bool expand;
-
-  const EditorAssetPicker({
-    super.key,
-    required this.hostContext,
-    required this.selectedPath,
-    required this.onSelected,
-    this.typeFilter,
-    this.placeholder = 'None',
-    this.allowClear = false,
-    this.expand = true,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return hostContext.buildAssetPicker(
-      context,
-      selectedPath: selectedPath,
-      onSelected: onSelected,
-      typeFilter: typeFilter,
-      placeholder: placeholder,
-      allowClear: allowClear,
-      expand: expand,
-    );
-  }
+/// The open level as a plugin process sees it (`PluginProcessContext.level`):
+/// [EditorLevelOperations] plus a pure [changes] signal. A Flutter shell
+/// gets the same level as an `EditorLevelAccess` (`asEditorLevelAccess()` in
+/// `lumina_editor_api`).
+abstract class PluginLevelAccess implements EditorLevelOperations {
+  /// Notifies after any change to the level (actors, selection, save).
+  ChangeSignal get changes;
 }

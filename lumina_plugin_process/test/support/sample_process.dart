@@ -1,17 +1,17 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart';
-import 'package:lumina_editor_api/lumina_editor_api.dart';
+import 'package:lumina_plugin_process/lumina_plugin_process.dart';
 
 const PluginIconSpec kSampleIcon = PluginIconSpec(0xe145, fontFamily: 'MaterialIcons');
 
 /// A plugin process that registers one of everything, for the tests.
 class SampleProcess extends LuminaPluginProcess {
-  final ValueNotifier<PluginButtonStateSpec> slotState =
-      ValueNotifier(const PluginButtonStateSpec(icon: kSampleIcon, tooltip: 'Idle'));
-  final ValueNotifier<bool> checked = ValueNotifier(false);
+  final ObservableValue<PluginButtonStateSpec> slotState =
+      ObservableValue(const PluginButtonStateSpec(icon: kSampleIcon, tooltip: 'Idle'));
+  final ObservableValue<bool> checked = ObservableValue(false);
   final List<String> lifecycle = [];
   int runs = 0;
   bool allowRun = true;

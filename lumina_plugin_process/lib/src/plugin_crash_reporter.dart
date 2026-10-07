@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-
 /// Callback signature invoked when a plugin reports an error or native crash.
 typedef PluginCrashReportHandler = void Function(
   Object error,
@@ -29,10 +27,11 @@ abstract final class LuminaPluginCrashReporter {
   /// Reports an error or native exception attributed to [plugin].
   ///
   /// When a host handler is registered, forwards the crash details to the host
-  /// [CrashReporter] so a structured crash report tagged with [plugin] is filed
+  /// crash reporter so a structured crash report tagged with [plugin] is filed
   /// and the user is presented with the crash dialog.
   /// If no handler is installed (e.g. running in isolated unit tests),
-  /// the error is output to the debug console via [debugPrint].
+  /// the error is printed (stdout of the process, the debug console of a
+  /// Flutter app).
   static void reportCrash(
     Object error,
     StackTrace? stack, {
@@ -44,7 +43,7 @@ abstract final class LuminaPluginCrashReporter {
       handler(error, stack, plugin: plugin, context: context);
     } else {
       final ctx = (context != null && context.isNotEmpty) ? ' (while $context)' : '';
-      debugPrint('[LuminaPluginCrashReporter] Plugin "$plugin" error$ctx: $error\n$stack');
+      print('[LuminaPluginCrashReporter] Plugin "$plugin" error$ctx: $error\n$stack');
     }
   }
 }

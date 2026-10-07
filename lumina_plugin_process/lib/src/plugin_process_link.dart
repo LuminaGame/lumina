@@ -1,7 +1,6 @@
-import 'dart:async';
-
-import 'package:flutter/foundation.dart';
+import 'package:lumina_core/lumina_core.dart' show Observable, ObservableValue;
 import 'package:lumina_plugin_protocol/lumina_plugin_protocol.dart';
+import 'package:meta/meta.dart';
 
 /// Where a plugin process is in its life, as the editor sees it.
 enum PluginProcessStatus {
@@ -108,19 +107,20 @@ class PluginProgress {
       );
 }
 
-/// The in-process shell's line to its plugin process
-/// (`LuminaEditorContext.processChannel`).
+/// The editor side's line to a plugin process, in pure Dart: what a UI
+/// shell calls (`PluginProcessChannel` in `lumina_editor_api` is the same
+/// line with a Flutter `ValueListenable` state; `PluginProcessChannel.ofLink`
+/// wraps one of these). The loopback test host's `LoopbackHost.link` is one.
 ///
 /// Calls fail with a [PluginRemoteError] when the process is not running
 /// ([PluginErrorCodes.unavailable]), does not answer in time
-/// ([PluginErrorCodes.timeout]) or its handler throws. The editor wraps the
-/// shell's panels and tabs in a guard that shows the state and a Restart
-/// button while [state] is not available, so a shell only handles errors of
-/// its own calls.
-abstract class PluginProcessChannel {
+/// ([PluginErrorCodes.timeout]) or its handler throws.
+abstract class PluginProcessLink {
+  const PluginProcessLink();
+
   String get pluginName;
 
-  ValueListenable<PluginProcessState> get state;
+  Observable<PluginProcessState> get state;
 
   /// Calls the handler the process registered for [method]. [timeout]
   /// defaults to 30 s; long jobs answer early and report progress instead.
@@ -135,22 +135,21 @@ abstract class PluginProcessChannel {
   /// Restarts the process (manual: resets the automatic restart count).
   Future<void> restart();
 
-  /// A channel for a context with no editor or no process behind it (tests,
-  /// an in-process plugin, a bare registration context): [state] is
+  /// A link with no process behind it: [state] is
   /// [PluginProcessStatus.disabled] and every call fails with
   /// [PluginErrorCodes.unavailable].
-  factory PluginProcessChannel.detached(String pluginName) = _DetachedChannel;
+  factory PluginProcessLink.detached(String pluginName) = _DetachedLink;
 }
 
-class _DetachedChannel implements PluginProcessChannel {
-  _DetachedChannel(this.pluginName);
+class _DetachedLink implements PluginProcessLink {
+  _DetachedLink(this.pluginName);
 
   @override
   final String pluginName;
 
   @override
-  final ValueListenable<PluginProcessState> state =
-      ValueNotifier(const PluginProcessState(PluginProcessStatus.disabled, reason: 'no plugin process'));
+  final Observable<PluginProcessState> state =
+      ObservableValue(const PluginProcessState(PluginProcessStatus.disabled, reason: 'no plugin process'));
 
   @override
   Future<Object?> call(String method, [Map<String, Object?> args = const {}, Duration? timeout]) =>

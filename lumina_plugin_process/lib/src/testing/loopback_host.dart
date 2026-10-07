@@ -2,20 +2,54 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:lumina_core/lumina_core.dart';
-import 'package:lumina_editor_api/lumina_editor_api.dart';
+import 'package:lumina_plugin_protocol/lumina_plugin_protocol.dart';
+
+import 'package:lumina_plugin_process/src/editor_level.dart';
+import 'package:lumina_plugin_process/src/level_json.dart';
+import 'package:lumina_plugin_process/src/mcp/mcp_types.dart';
+import 'package:lumina_plugin_process/src/plugin_process_link.dart';
+import 'package:lumina_plugin_process/src/plugin_storage.dart';
 
 /// The editor's side of a plugin process link, for plugin tests: a real loopback
 /// `ServerSocket` and a [PluginConnection] that answers the handshake, takes
 /// the contributions and serves `host.*` requests the way the editor does,
 /// against a small level kept here ([HostLevel]) and real directories.
+///
+/// Pure Dart: the process under test may run in this isolate
+/// (`runPluginProcessMain(host.launch(name), process)`) or in another `dart`
+/// process started with the [launch] arguments
+/// (`PluginProcessLaunch.toArgs`). A UI shell under test talks to the
+/// process through [link] (or, in Flutter, through `host.channel` from
+/// `package:lumina_editor_api/testing.dart`).
 class LoopbackHost {
-  LoopbackHost._(this._server, this.root, this.token, this.answerVersion, this.project);
+  /// A host on the already bound [server]; [start] and [bind] make one. For
+  /// subclasses (`lumina_editor_api`'s testing host adds a Flutter channel).
+  LoopbackHost.bound(this._server, this.root, this.token, this.answerVersion, this.project);
 
   /// Binds a port and waits for one plugin process. [root] holds the
   /// per-user store, the project and saved assets.
   static Future<LoopbackHost> start({
+    String token = 'token-1',
+    int answerVersion = kPluginProtocolVersion,
+    bool withProject = true,
+    Map<String, Object?> settings = const {'density': 3},
+    String? pluginDir,
+  }) =>
+      bind(
+        LoopbackHost.bound,
+        token: token,
+        answerVersion: answerVersion,
+        withProject: withProject,
+        settings: settings,
+        pluginDir: pluginDir,
+      );
+
+  /// [start] for a subclass: [create] is its constructor that forwards to
+  /// [LoopbackHost.bound].
+  static Future<H> bind<H extends LoopbackHost>(
+    H Function(ServerSocket server, Directory root, String token, int answerVersion, EditorProjectInfo? project)
+        create, {
     String token = 'token-1',
     int answerVersion = kPluginProtocolVersion,
     bool withProject = true,
@@ -26,7 +60,7 @@ class LoopbackHost {
     final projectDir = Directory('${root.path}/Proj');
     await Directory('${projectDir.path}/contents/levels').create(recursive: true);
     final server = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
-    final host = LoopbackHost._(
+    final host = create(
       server,
       root,
       token,
@@ -178,11 +212,13 @@ class LoopbackHost {
     }
   }
 
-  /// A [PluginProcessChannel] over this link, as a UI shell gets from the
-  /// editor: `call` goes to the process's `handle` handlers, `events` and
+  /// The shell's line to the process, as the editor hands it (pure Dart):
+  /// `call` goes to the process's `handle` handlers, `events` and
   /// `progress` carry its `emit` / `progress` reports. Its state is running
-  /// while the link is open and crashed once it closes.
-  late final PluginProcessChannel channel = _LoopbackChannel(this);
+  /// while the link is open and crashed once it closes. Flutter tests use
+  /// `host.channel` (`package:lumina_editor_api/testing.dart`), the same
+  /// line as a `PluginProcessChannel`.
+  late final PluginProcessLink link = _LoopbackLink(this);
 
   Future<void> close() async {
     await _server.close();
@@ -328,9 +364,8 @@ class HostLevel {
   }
 }
 
-
-class _LoopbackChannel implements PluginProcessChannel {
-  _LoopbackChannel(this.host) {
+class _LoopbackLink implements PluginProcessLink {
+  _LoopbackLink(this.host) {
     void bind(PluginConnection c) {
       _state.value = c.isClosed
           ? const PluginProcessState(PluginProcessStatus.crashed, reason: 'connection closed')
@@ -346,13 +381,14 @@ class _LoopbackChannel implements PluginProcessChannel {
   }
 
   final LoopbackHost host;
-  final ValueNotifier<PluginProcessState> _state = ValueNotifier(const PluginProcessState(PluginProcessStatus.starting));
+  final ObservableValue<PluginProcessState> _state =
+      ObservableValue(const PluginProcessState(PluginProcessStatus.starting));
 
   @override
   String get pluginName => host._pluginName ?? 'sample';
 
   @override
-  ValueListenable<PluginProcessState> get state => _state;
+  Observable<PluginProcessState> get state => _state;
 
   @override
   Future<Object?> call(String method, [Map<String, Object?> args = const {}, Duration? timeout]) async {

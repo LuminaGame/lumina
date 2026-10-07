@@ -1,9 +1,9 @@
 import 'dart:io';
 
-import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina_editor_api/lumina_editor_api.dart';
+import 'package:lumina_plugin_process/lumina_plugin_process.dart';
+import 'package:lumina_plugin_process/testing.dart';
+import 'package:test/test.dart';
 
-import 'package:lumina_editor_api/testing.dart';
 import 'support/sample_process.dart';
 
 void main() {
@@ -37,13 +37,13 @@ void main() {
     expect(patch.ops.single.set['value'], '5');
   });
 
-  test('a UI shell reaches the process through the test host channel', () async {
-    final channel = host.channel;
-    expect(channel.state.value.status, PluginProcessStatus.running);
-    expect(await channel.call('echo', {'x': 1}), {'echo': {'x': 1}});
-    final event = channel.events('hello').first;
-    final progress = channel.progress.first;
-    await channel.call('notify', {'n': 7});
+  test('a UI shell reaches the process through the test host link', () async {
+    final link = host.link;
+    expect(link.state.value.status, PluginProcessStatus.running);
+    expect(await link.call('echo', {'x': 1}), {'echo': {'x': 1}});
+    final event = link.events('hello').first;
+    final progress = link.progress.first;
+    await link.call('notify', {'n': 7});
     expect((await event).data, {'n': 7});
     final p = await progress;
     expect((p.task, p.step, p.fraction), ('job', 'half', 0.5));

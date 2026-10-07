@@ -60,6 +60,8 @@ const List<String> kEditorEngineRepos = [
   'lumina',
   'lumina_core',
   'lumina_editor_api',
+  'lumina_plugin_process',
+  'lumina_plugin_protocol',
   'flutter_filament',
   'flutter_assimp',
   'flutter_riglogic',

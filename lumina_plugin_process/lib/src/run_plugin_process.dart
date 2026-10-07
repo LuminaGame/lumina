@@ -3,11 +3,11 @@ import 'dart:io';
 
 import 'package:lumina_plugin_protocol/lumina_plugin_protocol.dart';
 
-import 'package:lumina_editor_api/src/plugin_storage.dart';
-import 'package:lumina_editor_api/src/plugin_crash_reporter.dart';
-import 'package:lumina_editor_api/src/process/plugin_process.dart';
-import 'package:lumina_editor_api/src/process/process_context.dart';
-import 'package:lumina_editor_api/src/process/process_dispatch.dart';
+import 'package:lumina_plugin_process/src/plugin_storage.dart';
+import 'package:lumina_plugin_process/src/plugin_crash_reporter.dart';
+import 'package:lumina_plugin_process/src/plugin_process.dart';
+import 'package:lumina_plugin_process/src/process_context.dart';
+import 'package:lumina_plugin_process/src/process_dispatch.dart';
 
 /// The exit codes [runPluginProcessMain] completes with.
 abstract final class PluginProcessExitCodes {

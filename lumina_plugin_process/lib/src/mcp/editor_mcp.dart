@@ -1,6 +1,7 @@
 import 'dart:async';
 
-import 'package:lumina_editor_api/src/mcp/mcp_types.dart';
+import 'package:lumina_core/lumina_core.dart' show ChangeEmitter;
+import 'package:lumina_plugin_process/src/mcp/mcp_types.dart';
 
 /// One `tools/call`, however it arrived: for logs and
 /// for a plugin that watches what agents do.
@@ -26,18 +27,10 @@ class McpToolCallEvent {
   });
 }
 
-/// A change notifier without Flutter (the MCP files stay pure Dart).
-class McpChangeSignal {
-  final List<void Function()> _listeners = [];
-
-  void addListener(void Function() listener) => _listeners.add(listener);
-  void removeListener(void Function() listener) => _listeners.remove(listener);
-
-  void notify() {
-    for (final l in List.of(_listeners)) {
-      l();
-    }
-  }
+/// Fires when the MCP tool list changes: a [ChangeEmitter] (pure Dart)
+/// whose [notify] is [notifyListeners].
+class McpChangeSignal extends ChangeEmitter {
+  void notify() => notifyListeners();
 }
 
 /// How an MCP client outside the editor starts a connection to it (MiniAI

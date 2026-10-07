@@ -18,12 +18,26 @@ Paket lumina deposunda (`lumina_core/`) durur ve deponun pub workspace'inin bir 
 
 | Alan | İçerik | Referans |
 | :--- | :--- | :--- |
+| Değişim bildirimi | `ChangeSignal`, `Observable<T>`, `ChangeEmitter`, `ObservableValue<T>`: Flutter'sız dinleyiciler, aşağıya bakın | bu sayfa |
 | Matematik | `LuminaUnits` (1 birim = 1 cm), `LuminaAxes` (saklanan Z-yukarı, runtime Y-yukarı), Euler ve control-rotation yardımcıları, interpolasyon, `LuminaTransformSnapshot` | [Matematik](math.md) |
 | Dosya formatları | `.lmas` asset'leri (`LuminaAsset`, `LuminaAssetSummary`), `.lmproject` manifest'i (`LuminaProject` ve ayarları), level dokümanları (`LuminaLevelDocument`), landscape ve sequencer verisi, `.lmplugin` tanımları (`LuminaPluginDescriptor`, `PluginIsolation`), tema dokümanları, son projeler | [Dosya formatları ve repository'ler](formats.md) |
 | Repository'ler | `LuminaLevelRepository` (level `.lmas` dosyaları), `PluginRepository` (eklenti keşfi ve `.lmplugin` doğrulaması) | [Dosya formatları ve repository'ler](formats.md) |
 | Servisler | `EngineLoggerService`, `LuminaWorkspace`, `LuminaDataDir`, `LuminaConfigDir`, config JSON dosyaları, asset indeksi, proje editörü build parmak izi ve önbelleği, engine kurulumu ve kaynak kopyalama, glTF paketleyici, primitive GLB fabrikası, TGA çözücü, GLB animasyon birleştirme ve retargeting, oyun ve level şablonları, eklenti paketleme, sürüm asset'leri | [Servisler](services.md), [Servisler (devamı)](services-continued.md) |
 
-Kütüphane tek bir barrel'dır: `package:lumina_core/lumina_core.dart`. Dosyalar `lib/src/math/`, `lib/src/formats/`, `lib/src/repositories/` ve `lib/src/services/` altındadır.
+Kütüphane tek bir barrel'dır: `package:lumina_core/lumina_core.dart`. Dosyalar `lib/src/foundation/`, `lib/src/math/`, `lib/src/formats/`, `lib/src/repositories/` ve `lib/src/services/` altındadır.
+
+## Flutter'sız değişim bildirimi
+
+`lib/src/foundation/observable.dart`, Flutter'ın `Listenable`, `ValueListenable`, `ChangeNotifier` ve `ValueNotifier` tiplerinin aynı üye adlarına sahip saf karşılıklarını tutar:
+
+| Tip | Rolü |
+| :--- | :--- |
+| `ChangeSignal` | `addListener` / `removeListener`: dinleyicilerine değiştiğini söyleyen bir şey. |
+| `Observable<T>` | Güncel bir `value`'su olan bir `ChangeSignal`. |
+| `ChangeEmitter` | Olağan `ChangeSignal`: `notifyListeners()` o anda kayıtlı her dinleyiciyi sırayla çağırır (hata fırlatan biri diğerlerini durdurmaz; ilk hata sonra yeniden fırlatılır); `hasListeners`, `dispose()` (ardından dinleyici eklemek bir `StateError`'dır). |
+| `ObservableValue<T>` | `value`'su atanabilen bir `Observable`; eşit bir değer atamak kimseyi bilgilendirmez. |
+
+Eklenti süreci API'si (`lumina_plugin_process`) canlı değerleri için bunları kullanır: `PluginProcessContext.pluginSettings`, bir slot butonunun `state`'i, bir menü öğesinin `checked`'i, level'ın `changes`'i. `lumina_editor_api` onları Flutter'ın tiplerine ve tiplerinden dönüştürür (`asValueListenable()`, `asListenable()`, `asObservable()`, `asChangeSignal()`).
 
 ## Engine'de kalanlar
 

@@ -4,7 +4,7 @@
 
 How Lumina Studio runs, watches and restarts the plugins whose `.lmplugin` asks for `"isolation": "process"`. The
 plugin side (`LuminaPluginProcess`, `runPluginProcessMain`, the proxies) is described in
-[Plugin processes](../lumina_editor_api/plugin-processes.md); the wire protocol in `lumina_plugin_protocol`. File
+[Plugin processes](../lumina_plugin_process/plugin-processes.md); the wire protocol in `lumina_plugin_protocol`. File
 paths are relative to the `lumina_ui/` package directory.
 
 ## In short

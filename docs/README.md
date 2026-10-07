@@ -2,7 +2,7 @@
 
 # Lumina documentation
 
-Lumina is a 3D game engine for Flutter and Dart, built on the Google Filament renderer, together with Lumina Studio, the desktop editor for Lumina projects. This documentation covers the architecture, how to set up a checkout, and the API reference of the packages in this repository: `flutter_filament`, `lumina_core`, `lumina`, `lumina_editor_api` and `lumina_ui`.
+Lumina is a 3D game engine for Flutter and Dart, built on the Google Filament renderer, together with Lumina Studio, the desktop editor for Lumina projects. This documentation covers the architecture, how to set up a checkout, and the API reference of the packages in this repository: `flutter_filament`, `lumina_core`, `lumina`, `lumina_plugin_process`, `lumina_editor_api` and `lumina_ui`.
 
 ## Where to start
 
@@ -115,7 +115,11 @@ You work on the engine, the renderer bindings or the native build.
 - [lumina_editor_api](en/lumina_editor_api/index.md) - The dependency-light plugin API of Lumina Studio.
   - [API reference](en/lumina_editor_api/api-reference.md) - Plugin, context, commands, menus, slot buttons, panels, asset types, importers, level access, theme, storage, settings.
   - [MCP tools API](en/lumina_editor_api/mcp.md) - MCP tool, schema, risk and approval types; the editor's MCP tools for plugins.
-  - [Plugin processes](en/lumina_editor_api/plugin-processes.md) - a plugin's risky part in its own process: process API, editor proxies, adapter.
+
+### lumina_plugin_process
+
+- [lumina_plugin_process](en/lumina_plugin_process/index.md) - The pure-Dart process side of a plugin: process API, runtime, change types, loopback test host.
+  - [Plugin processes](en/lumina_plugin_process/plugin-processes.md) - a plugin's risky part in its own process: process API, editor proxies, adapter.
 
 ### Editor plugins
 

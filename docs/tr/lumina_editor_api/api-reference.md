@@ -2,7 +2,7 @@
 
 # API referansı
 
-MCP tipleri dışında eklenti API'sinin tüm tipleri: `LuminaEditorPlugin` ve `LuminaEditorContext`, editör komutları, menüler ve menü öğeleri, toolbar ve slot butonları, panel tanımları ve `EditorPanels`, asset type handler'ları, importer'lar, details özelleştirmeleri, eklentilerin gördüğü haliyle açık level, editör teması, eklentiye özel depolama ve Project Settings bölümleri. Dosya yolları `lumina_editor_api/` paket dizinine görelidir.
+MCP tipleri dışında eklenti API'sinin tüm tipleri: `LuminaEditorPlugin` ve `LuminaEditorContext`, editör komutları, menüler ve menü öğeleri, toolbar ve slot butonları, panel tanımları ve `EditorPanels`, asset type handler'ları, importer'lar, details özelleştirmeleri, eklentilerin gördüğü haliyle açık level, editör teması, eklentiye özel depolama ve Project Settings bölümleri. Dosya yolları `lumina_editor_api/` paket dizinine görelidir. Level anlık görüntü ve tanım tipleri (`lib/src/editor_level.dart`), `LuminaPluginCrashReporter` (`lib/src/plugin_crash_reporter.dart`) ve `PluginStorage` / `EditorProjectInfo` (`lib/src/plugin_storage.dart`) saf Dart [lumina_plugin_process](../lumina_plugin_process/index.md) paketinde aynı dosya adlarıyla tanımlıdır ve burada değiştirilmeden yeniden dışa aktarılır.
 
 **Bu sayfada:**
 
@@ -265,7 +265,7 @@ Eklentiler için global çökme raporu dağıtıcısı. Eklenti FFI sarmalayıc�
 | :--- | :--- | :--- |
 | `setHandler` | `static void setHandler(PluginCrashReportHandler? handler)` | Ana uygulama çökme raporlayıcı işleyicisini (handler) kurar veya kaldırır. |
 | `hasHandler` | `static bool get hasHandler` | Halihazırda kayıtlı bir çökme raporu işleyicisinin olup olmadığını belirtir. |
-| `reportCrash` | `static void reportCrash(Object error, StackTrace? stack, {required String plugin, String? context})` | Bir eklenti hatasını kayıtlı işleyiciye yönlendirir veya yedek olarak motor günlüğüne (logger) kaydeder. |
+| `reportCrash` | `static void reportCrash(Object error, StackTrace? stack, {required String plugin, String? context})` | Bir eklenti hatasını kayıtlı işleyiciye yönlendirir veya yedek olarak yazdırır (print). |
 
 ## `lib/src/editor_command.dart`
 
@@ -370,11 +370,13 @@ An actor a plugin asks the host to place: same units and axes as [EditorActorSna
 | `meshAssetPath` | `final String? meshAssetPath` |  |
 | `components` | `final List<EditorComponentSpec> components` |  |
 
-### `abstract class EditorLevelAccess`
+### `abstract class EditorLevelAccess implements EditorLevelOperations`
 
 The open level, as the host exposes it to plugins.
 
 Every edit is an undoable editor transaction and marks the level dirty, exactly like the same edit made through the Outliner or the Details panel; nothing here bypasses the host's transaction, dirty-flag or auto-save path.
+
+`changes` dışındaki her üye, bir eklenti sürecinin `PluginLevelAccess`'inin de paylaştığı `EditorLevelOperations`'tan (`lumina_plugin_process`) gelir; orada `changes` saf bir `ChangeSignal`'dir. `level.asPluginLevelAccess()` ve `pluginLevel.asEditorLevelAccess()` ikisi arasında dönüştürür (aynı level hep aynı görünümü verir).
 
 **Üyeler:**
 

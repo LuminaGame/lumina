@@ -154,6 +154,19 @@ jobs:
           test/asset_test.dart
           test/data/dart_identifiers_test.dart
           test/data/project_settings_model_test.dart
+          test/foundation/observable_test.dart
+
+      # The plugin process API, runtime and test host, also pure Dart; the
+      # two-process test starts `dart run example/pure_process.dart`.
+      - name: lumina_plugin_process
+        working-directory: lumina/lumina_plugin_process
+        run: >-
+          dart test
+          test/architecture/pure_dart_test.dart
+          test/run_plugin_process_handshake_test.dart
+          test/run_plugin_process_requests_test.dart
+          test/level_proxy_test.dart
+          test/two_process_test.dart
 
       - name: lumina
         working-directory: lumina/lumina
@@ -173,6 +186,7 @@ jobs:
           test/editor_level_contract_test.dart
           test/plugin_storage_test.dart
           test/project_settings_section_test.dart
+          test/process/flutter_adapters_test.dart
 
       - name: lumina_ui
         working-directory: lumina/lumina_ui

@@ -2,7 +2,7 @@
 
 # Lumina dokümantasyonu
 
-Lumina, Google Filament renderer'ı üzerine kurulmuş, Flutter ve Dart için bir 3D oyun motoru ve Lumina projeleri için masaüstü editörü olan Lumina Studio'dan oluşur. Bu dokümantasyon mimariyi, bir checkout'un nasıl kurulacağını ve bu repository'deki paketlerin API referansını kapsar: `flutter_filament`, `lumina_core`, `lumina`, `lumina_editor_api` ve `lumina_ui`.
+Lumina, Google Filament renderer'ı üzerine kurulmuş, Flutter ve Dart için bir 3D oyun motoru ve Lumina projeleri için masaüstü editörü olan Lumina Studio'dan oluşur. Bu dokümantasyon mimariyi, bir checkout'un nasıl kurulacağını ve bu repository'deki paketlerin API referansını kapsar: `flutter_filament`, `lumina_core`, `lumina`, `lumina_plugin_process`, `lumina_editor_api` ve `lumina_ui`.
 
 ## Nereden başlamalı
 
@@ -112,7 +112,11 @@ Engine, renderer binding'leri ya da native build üzerinde çalışırsınız.
 - [lumina_editor_api](tr/lumina_editor_api/index.md) - Lumina Studio'nun az bağımlılıklı eklenti API'si.
   - [API referansı](tr/lumina_editor_api/api-reference.md) - Plugin, context, komutlar, menüler, slot butonları, paneller, asset tipleri, importer'lar, level erişimi, tema, depolama, ayarlar.
   - [MCP araçları API'si](tr/lumina_editor_api/mcp.md) - MCP araç, şema, risk ve onay tipleri; eklentiler için editörün MCP araçları.
-  - [Eklenti süreçleri](tr/lumina_editor_api/plugin-processes.md) - bir eklentinin riskli kısmı kendi sürecinde: süreç API'si, editör proxy'leri, adaptör.
+
+### lumina_plugin_process
+
+- [lumina_plugin_process](tr/lumina_plugin_process/index.md) - Bir eklentinin saf Dart süreç tarafı: süreç API'si, çalışma zamanı, değişim tipleri, loopback test host'u.
+  - [Eklenti süreçleri](tr/lumina_plugin_process/plugin-processes.md) - bir eklentinin riskli kısmı kendi sürecinde: süreç API'si, editör proxy'leri, adaptör.
 
 ### Editör eklentileri
 

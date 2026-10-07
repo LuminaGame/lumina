@@ -1,12 +1,12 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
+import 'package:lumina_core/lumina_core.dart' show ChangeEmitter, ChangeSignal;
 import 'package:lumina_plugin_protocol/lumina_plugin_protocol.dart';
 
-import 'package:lumina_editor_api/src/editor_level.dart';
-import 'package:lumina_editor_api/src/process/level_json.dart';
+import 'package:lumina_plugin_process/src/editor_level.dart';
+import 'package:lumina_plugin_process/src/level_json.dart';
 
-/// [EditorLevelAccess] in a plugin process: every member is a `host.level`
+/// [PluginLevelAccess] in a plugin process: every member is a `host.level`
 /// request to the editor, which makes the edit as an undoable transaction
 /// of its own level, exactly as for an in-process plugin.
 ///
@@ -25,7 +25,7 @@ import 'package:lumina_editor_api/src/process/level_json.dart';
 /// `endTransaction`; every edit made inside it carries the transaction id,
 /// so the editor records them as one undo step. A call inside another
 /// joins it.
-class PluginLevelProxy extends ChangeNotifier implements EditorLevelAccess {
+class PluginLevelProxy extends ChangeEmitter implements PluginLevelAccess {
   PluginLevelProxy(this._connection, {required this.onError});
 
   final PluginConnection _connection;
@@ -54,7 +54,7 @@ class PluginLevelProxy extends ChangeNotifier implements EditorLevelAccess {
   String get activeLevelPath => _activeLevel;
 
   @override
-  Listenable get changes => this;
+  ChangeSignal get changes => this;
 
   @override
   List<EditorActorSnapshot> get actors => List.unmodifiable(_actors);

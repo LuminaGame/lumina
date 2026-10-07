@@ -18,12 +18,26 @@ The package lives in the lumina repository (`lumina_core/`) and is a member of i
 
 | Area | Contents | Reference |
 | :--- | :--- | :--- |
+| Change notification | `ChangeSignal`, `Observable<T>`, `ChangeEmitter`, `ObservableValue<T>`: listeners without Flutter, see below | this page |
 | Math | `LuminaUnits` (1 unit = 1 cm), `LuminaAxes` (stored Z-up, runtime Y-up), Euler and control-rotation helpers, interpolation, `LuminaTransformSnapshot` | [Math](math.md) |
 | File formats | `.lmas` assets (`LuminaAsset`, `LuminaAssetSummary`), the `.lmproject` manifest (`LuminaProject` and its settings), level documents (`LuminaLevelDocument`), landscape and sequencer data, `.lmplugin` descriptors (`LuminaPluginDescriptor`, `PluginIsolation`), theme documents, recent projects | [File formats and repositories](formats.md) |
 | Repositories | `LuminaLevelRepository` (level `.lmas` files), `PluginRepository` (plugin discovery and `.lmplugin` validation) | [File formats and repositories](formats.md) |
 | Services | `EngineLoggerService`, `LuminaWorkspace`, `LuminaDataDir`, `LuminaConfigDir`, config JSON files, the asset index, the project editor build fingerprint and cache, engine bootstrap and source vendoring, the glTF packer, the primitive GLB factory, the TGA decoder, GLB animation merging and retargeting, game and level templates, plugin packaging, release assets | [Services](services.md), [Services (continued)](services-continued.md) |
 
-The library is one barrel, `package:lumina_core/lumina_core.dart`. The files are under `lib/src/math/`, `lib/src/formats/`, `lib/src/repositories/` and `lib/src/services/`.
+The library is one barrel, `package:lumina_core/lumina_core.dart`. The files are under `lib/src/foundation/`, `lib/src/math/`, `lib/src/formats/`, `lib/src/repositories/` and `lib/src/services/`.
+
+## Change notification without Flutter
+
+`lib/src/foundation/observable.dart` holds the pure counterparts of Flutter's `Listenable`, `ValueListenable`, `ChangeNotifier` and `ValueNotifier`, with the same member names:
+
+| Type | Role |
+| :--- | :--- |
+| `ChangeSignal` | `addListener` / `removeListener`: something that tells its listeners it changed. |
+| `Observable<T>` | A `ChangeSignal` with a current `value`. |
+| `ChangeEmitter` | The usual `ChangeSignal`: `notifyListeners()` calls every listener registered at that moment, in order (one that throws does not stop the others; the first error is rethrown afterwards); `hasListeners`, `dispose()` (adding a listener afterwards is a `StateError`). |
+| `ObservableValue<T>` | An `Observable` with a settable `value`; setting an equal value notifies nobody. |
+
+The plugin process API (`lumina_plugin_process`) uses them for its live values: `PluginProcessContext.pluginSettings`, a slot button's `state`, a menu item's `checked`, the level's `changes`. `lumina_editor_api` converts them to and from Flutter's types (`asValueListenable()`, `asListenable()`, `asObservable()`, `asChangeSignal()`).
 
 ## What stays in the engine
 

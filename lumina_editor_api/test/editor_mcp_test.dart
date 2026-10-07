@@ -83,7 +83,11 @@ void main() {
   });
 
   test('the MCP files import no Flutter (the stdio bridge and CLI tools use them)', () {
-    for (final f in Directory('lib/src/mcp').listSync().whereType<File>()) {
+    // They live in the pure-Dart lumina_plugin_process (its own guard walks
+    // their whole import graph) and are re-exported from here.
+    final files = Directory('../lumina_plugin_process/lib/src/mcp').listSync().whereType<File>().toList();
+    expect(files, isNotEmpty);
+    for (final f in files) {
       expect(f.readAsStringSync(), isNot(contains('package:flutter')), reason: f.path);
     }
   });

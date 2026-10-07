@@ -32,6 +32,7 @@ graph TD
     end
 
     subgraph Plugin_Level [Eklenti sözleşmesi]
+        PluginProcess[lumina_plugin_process]
         EditorAPI[lumina_editor_api]
     end
 
@@ -52,6 +53,8 @@ graph TD
 
     PureCore --> LuminaCore
     PureCore --> LuminaData
+    PureCore --> PluginProcess
+    PluginProcess --> EditorAPI
     PureCore --> EditorAPI
     PureCore --> LuminaUI
     LuminaCore --> EditorAPI
@@ -73,7 +76,7 @@ Noktalı oklar yalnızca çalışma anına aittir: `flutter_gstreamer` sistemdek
 4. **`flutter_gstreamer`**, **`lumina_smoke`** ve **`lumina_mouse_capture`** (tools repository'si): video encode, smoke test sistemi (artifact'ler, video kontrolleri ve rapor çalıştırıcısı) ve oyunlar ile Play-In-Editor için pointer capture.
 5. **`lumina_core`**: üstteki her katmanın paylaştığı saf Dart temeli: matematik (birimler, eksenler, Euler), dosya formatları (`.lmas`, `.lmproject`, level'lar, `.lmplugin`, landscape, sequencer, temalar) ve level ile eklenti repository'leri, engine logger, çalışma alanı ve veri yolları ve saf araç servisleri (build parmak izi ve önbelleği, glTF paketleyici, TGA çözücü, primitive GLB fabrikası, şablonlar). Flutter, `dart:ui` ya da FFI içermez; eklenti süreçleri ve komut satırı araçları onu `dart run` ile kullanabilir. Bkz. [lumina_core](../lumina_core/index.md).
 6. **`lumina`**: engine. Runtime yarısı (`lib/src/`) deklaratif element ağacı (`build()`), actor hiyerarşisi (`LuminaActor`, `LuminaPawn`, `LuminaCharacter`), fizik ve çarpışma (GJK/EPA), yapay zeka (behavior tree'ler, navigasyon), iskelet animasyonu harmanlama, uzamsal ses ve action tabanlı input'tur. Veri yarısı (`lib/data/`, `lib/domain/`) engine'e ya da native kütüphanelere ihtiyaç duyan editör servislerini tutar: asset ve proje repository'leri, GLB ve OBJ parser'ları, importer'lar, thumbnail'lar ve Dart kod üreteci. `lumina_core`'u yeniden export eder.
-7. **`lumina_editor_api`**: komutları, toolbar butonlarını, panelleri, importer'ları ve details özelleştirmelerini tanımlayan hafif bir eklenti API'si. Yalnızca `lumina`'ya bağımlıdır; böylece editör ile eklentileri arasındaki bağımlılık döngüsünü kırar.
+7. **`lumina_plugin_process`** ve **`lumina_editor_api`**: eklenti sözleşmesi. `lumina_plugin_process` bir eklentinin saf Dart süreç tarafıdır (süreç API'si ve çalışma zamanı, level, depolama ve MCP veri tipleri, `lumina_core`'un değişim tipleri ve bir loopback test host'u; Flutter yok), bkz. [lumina_plugin_process](../lumina_plugin_process/index.md). `lumina_editor_api` komutları, toolbar butonlarını, panelleri, importer'ları ve details özelleştirmelerini tanımlayan hafif eklenti API'sidir; `lumina_plugin_process`'i Flutter adaptörleriyle yeniden dışa aktarır ve hiçbir editör koduna bağımlı değildir; böylece editör ile eklentileri arasındaki bağımlılık döngüsünü kırar.
 8. **`lumina_ui`**: `shadcn_flutter` ile geliştirilmiş masaüstü editör Lumina Studio: 3D viewport, outliner, details inspector, content browser, output log ve asset alt editörleri. Yeni 3D özellikleri `lumina` üzerinden geçer; viewport'lar ayrıca `flutter_filament`'i doğrudan kullanır.
 
 ## Web build'leri

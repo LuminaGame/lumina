@@ -2,7 +2,7 @@
 
 # MCP araçları API'si
 
-Editörün MCP sunucusunun ve eklentilerin paylaştığı Model Context Protocol tipleri: şemaları, argümanları ve sonuçlarıyla araçlar, risk seviyeleri ve gruplar, onay politikaları ve bir eklentinin harici agent'ların kullandığı araçları çağırdığı ve kendi araçlarını kaydettiği `EditorMcp`. Dosya yolları `lumina_editor_api/` paket dizinine görelidir.
+Editörün MCP sunucusunun ve eklentilerin paylaştığı Model Context Protocol tipleri: şemaları, argümanları ve sonuçlarıyla araçlar, risk seviyeleri ve gruplar, onay politikaları ve bir eklentinin harici agent'ların kullandığı araçları çağırdığı ve kendi araçlarını kaydettiği `EditorMcp`. Dosyalar saf Dart `lumina_plugin_process` paketindedir (aşağıdaki yollar `lumina_plugin_process/`'e görelidir); böylece bir eklenti süreci, stdio köprüsü ve komut satırı araçları onları Flutter olmadan kullanır; `lumina_editor_api` onları yeniden dışa aktarır.
 
 ## `lib/src/mcp/editor_mcp.dart`
 
@@ -27,7 +27,7 @@ One `tools/call`, however it arrived: for logs and for a plugin that watches wha
 
 ### `class McpChangeSignal`
 
-A change notifier without Flutter (the MCP files stay pure Dart).
+MCP araç listesi değiştiğinde tetiklenir: `notify`'ı `notifyListeners`'ı çağıran, `lumina_core`'dan (saf Dart) bir `ChangeEmitter`.
 
 **Üyeler:**
 
@@ -360,4 +360,4 @@ Decides whether a `tools/call` may run. The server runs every call through its o
 
 ---
 
-[Önceki: API referansı](api-reference.md) | [Üst: lumina_editor_api](index.md) | [Sonraki: Eklenti süreçleri](plugin-processes.md)
+[Önceki: API referansı](api-reference.md) | [Üst: lumina_editor_api](index.md) | [Sonraki: lumina_plugin_process](../lumina_plugin_process/index.md)

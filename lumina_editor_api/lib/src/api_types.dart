@@ -3,34 +3,26 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:lumina/lumina.dart'; // For LuminaAsset
 
+import 'package:lumina_plugin_process/lumina_plugin_process.dart';
+
 import 'package:lumina_editor_api/src/editor_command.dart';
 import 'package:lumina_editor_api/src/editor_slot_button.dart';
 import 'package:lumina_editor_api/src/editor_panels.dart';
-import 'package:lumina_editor_api/src/mcp/editor_mcp.dart';
-import 'package:lumina_editor_api/src/plugin_storage.dart';
 import 'package:lumina_editor_api/src/project_settings_section.dart';
-import 'package:lumina_editor_api/src/plugin_crash_reporter.dart';
 import 'package:lumina_editor_api/src/process/plugin_process_channel.dart';
 export 'editor_command.dart';
 export 'editor_level.dart';
 export 'editor_theme.dart';
 export 'editor_slot_button.dart';
 export 'editor_panels.dart';
-export 'mcp/mcp_types.dart';
-export 'mcp/editor_mcp.dart';
-export 'plugin_storage.dart';
 export 'project_settings_section.dart';
-export 'plugin_crash_reporter.dart';
-export 'process/plugin_process.dart';
+export 'process/observable_adapters.dart';
 export 'process/plugin_process_channel.dart';
-export 'process/level_json.dart';
-export 'process/level_proxy.dart';
 export 'process/plugin_icons.dart';
 export 'process/plugin_process_adapter.dart';
-export 'process/process_context.dart';
-export 'process/process_dispatch.dart';
-export 'process/run_plugin_process.dart';
-export 'package:lumina_plugin_protocol/lumina_plugin_protocol.dart';
+// The plugin process API, its runtime, the level/storage/MCP data types and
+// the wire protocol, in pure Dart.
+export 'package:lumina_plugin_process/lumina_plugin_process.dart';
 
 /// `LuminaAsset.metadata` key a plugin asset type carries its
 /// [EditorAssetTypeHandler.customTypeId] under: an `.lmas` of `AssetType.unknown`

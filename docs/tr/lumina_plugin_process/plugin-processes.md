@@ -1,14 +1,14 @@
-[English](../../en/lumina_editor_api/plugin-processes.md)
+[English](../../en/lumina_plugin_process/plugin-processes.md)
 
 # Eklenti süreçleri
 
-Bir eklenti, çökebilecek, takılabilecek ya da bloklayabilecek kısmını kendi sürecinde çalıştırabilir: FFI üzerinden native kütüphaneler, alt süreçler, ağ çağrıları, ağır CPU işi, dosya üretimi. Orada bir native çökme ya da sonsuz döngü yalnızca o süreci bitirir; Lumina Studio çalışmaya devam eder, eklentiyi durmuş olarak işaretler, bir eklenti çökme raporu kaydeder ve Restart önerir. Bu sayfa bu ayrımın süreç tarafını anlatır: bir eklenti sürecinin kayıt yaptığı API, nasıl başlayıp bittiği, editöre ulaştığı proxy'ler ve mevcut, yalnızca veriyle çalışan bir eklentiyi değiştirmeden bir süreçte çalıştıran adaptör. Dosya yolları `lumina_editor_api/` paket dizinine görelidir; tel protokolünün kendisi `lumina_plugin_protocol` paketidir.
+Bir eklenti, çökebilecek, takılabilecek ya da bloklayabilecek kısmını kendi sürecinde çalıştırabilir: FFI üzerinden native kütüphaneler, alt süreçler, ağ çağrıları, ağır CPU işi, dosya üretimi. Orada bir native çökme ya da sonsuz döngü yalnızca o süreci bitirir; Lumina Studio çalışmaya devam eder, eklentiyi durmuş olarak işaretler, bir eklenti çökme raporu kaydeder ve Restart önerir. Bu sayfa bu ayrımın süreç tarafını anlatır: bir eklenti sürecinin kayıt yaptığı API, nasıl başlayıp bittiği, editöre ulaştığı proxy'ler ve mevcut, yalnızca veriyle çalışan bir eklentiyi değiştirmeden bir süreçte çalıştıran adaptör. Süreç tarafı saf Dart paketi `lumina_plugin_process`'tir (bkz. [lumina_plugin_process](index.md)); dosya yolları, `lumina_editor_api/` ile başlamadıkça onun `lumina_plugin_process/` dizinine görelidir. `lumina_editor_api` hepsini yeniden dışa aktarır ve Flutter parçalarını (adaptör, ikonlar, `PluginProcessChannel`) ekler. Tel protokolünün kendisi `lumina_plugin_protocol` paketidir.
 
 ## Bir eklenti süreci nasıl çalışır
 
-Bir eklenti `.lmplugin` dosyasında `"isolation": "process"` ile bunu seçer ve `LuminaPluginProcess` alt sınıfını editör modülünün `process_class` alanında adlandırır. Editör bir loopback portu bağlar ve kendi çalıştırılabilir dosyasını `--lumina-plugin-process <name> --lumina-plugin-port <port> --lumina-plugin-token <token> [--lumina-plugin-project <dir>]` ile yeniden başlatır (`PluginProcessLaunch`). Bu kipte çalıştırılabilir dosya pencere açmaz (Windows'ta runner görünümsüz, başsız bir engine başlatır, Linux'ta görünümü hiç gösterilmeyen bir pencerede realize eder; editör tarafı için `lumina_ui/plugin-processes.md`): eklentinin süreç parçasını oluşturur, `runPluginProcessMain(launch, process)` çağırır ve dönen kodla çıkar. Süreçte tam Flutter/Dart çalışma ortamı ve eklentinin editör build'ine zaten paketlenmiş native asset'leri vardır.
+Bir eklenti `.lmplugin` dosyasında `"isolation": "process"` ile bunu seçer ve `LuminaPluginProcess` alt sınıfını editör modülünün `process_class` alanında adlandırır. Editör bir loopback portu bağlar ve kendi çalıştırılabilir dosyasını `--lumina-plugin-process <name> --lumina-plugin-port <port> --lumina-plugin-token <token> [--lumina-plugin-project <dir>]` ile yeniden başlatır (`PluginProcessLaunch`). Bu kipte çalıştırılabilir dosya pencere açmaz (Windows'ta runner görünümsüz, başsız bir engine başlatır, Linux'ta görünümü hiç gösterilmeyen bir pencerede realize eder; editör tarafı için `lumina_ui/plugin-processes.md`): eklentinin süreç parçasını oluşturur, `runPluginProcessMain(launch, process)` çağırır ve dönen kodla çıkar. Süreçte tam Flutter/Dart çalışma ortamı ve eklentinin editör build'ine zaten paketlenmiş native asset'leri vardır. Yine de süreç API'si Flutter'ın hiçbir parçasına ihtiyaç duymaz: düz bir `dart` programı aynı editöre karşı bir eklenti süreci gerçekleyip çalıştırabilir (`example/pure_process.dart`, `test/two_process_test.dart` ile test edilir); editör çalıştırılabilir dosyası yerine böyle bir programı başlatmak sonraki bir adımdır.
 
-`runPluginProcessMain` (`lib/src/process/run_plugin_process.dart`):
+`runPluginProcessMain` (`lib/src/run_plugin_process.dart`):
 
 1. `127.0.0.1:<port>` adresine bağlanır ve protokol sürümü, eklenti adı, token ve pid ile `host.hello` gönderir. Reddedilen bir hello (yanlış token, başka protokol sürümü) sıfır olmayan bir kodla biter.
 2. Yanıttan `PluginProcessContext`'i kurar: açık proje, eklentinin proje ayarları, `PluginStorage` dizinleri. Açık bir proje varsa level anlık görüntüsünü alır.
@@ -33,7 +33,7 @@ Hata fırlatan bir handler isteğini bir hatayla yanıtlar ve hatayı eklentinin
 
 ## LuminaPluginProcess
 
-`lib/src/process/plugin_process.dart`. Bir eklentinin süreç parçası.
+`lib/src/plugin_process.dart`. Bir eklentinin süreç parçası.
 
 | Üye | Açıklama |
 |---|---|
@@ -49,36 +49,40 @@ Bir eklenti sürecinin kayıt yaptığı ve editöre ulaştığı yer. Her şey 
 
 | Üye | Açıklama |
 |---|---|
-| `project`, `pluginSettings`, `storage` | Açık proje, eklentinin uygulanmış proje ayarları (`core.settings` ile güncellenir) ve `PluginStorage`'ı (editörün hello'da verdiği dizinler; proje deposu `core.projectOpened` / `core.projectClosing`'i izler). |
-| `level` | Açık level, bir `EditorLevelAccess` proxy'si olarak; aşağıya bakın. |
+| `project`, `pluginSettings`, `storage` | Açık proje, eklentinin uygulanmış proje ayarları (bir `Observable<Map<String, Object?>>`, `core.settings` ile güncellenir) ve `PluginStorage`'ı (editörün hello'da verdiği dizinler; proje deposu `core.projectOpened` / `core.projectClosing`'i izler). |
+| `level` | Açık level, bir `PluginLevelAccess` proxy'si olarak; aşağıya bakın. |
 | `handle(method, handler)` | Kabuğun `PluginProcessChannel.call(method, args)` çağrısını yanıtlar; handler JSON döner. |
 | `emit(name, [data])` | Kabuk için bir olay (`PluginProcessChannel.events`). |
 | `progress(task, step:, done:, total:, message:, finished:)` | Uzun bir işin ilerlemesi; kabuk ve Plugin Manager gösterir. |
 | `log(message, level:)` | Editör logunda eklentinin adıyla bir satır. |
 | `saveAsset(relativePath:, bytes:, generateThumbnail:)` | Bir asset'i editör üzerinden kaydeder (küçük resim, Content Browser yenilemesi). |
-| `registerMenu`, `registerMenuItem`, `registerSlotButton` | Komutları (`PluginProcessCommand`) süreçte çalışan menüler, menü öğeleri (isteğe bağlı bir `checked` listenable ile) ve slot butonları; `canExecute`'u olan bir komut editör onu etkinleştirmeden önce sorulur. |
+| `registerMenu`, `registerMenuItem`, `registerSlotButton` | Komutları (`PluginProcessCommand`) süreçte çalışan menüler, menü öğeleri (isteğe bağlı bir `checked` `Observable<bool>` ile) ve slot butonları (`state`'leri bir `Observable<PluginButtonStateSpec>`, genellikle bir `ObservableValue`); `canExecute`'u olan bir komut editör onu etkinleştirmeden önce sorulur. |
 | `registerMcpTool`, `registerImporter`, `registerConsoleCommand` | Süreçte işlenen MCP araçları, importer'lar (`PluginProcessImporter`; o mesajla başarısız olmak için `PluginImportError(message)` fırlatın) ve konsol komutları. |
 | `registerViewPanel(PluginProcessViewPanel)` | Bildirimsel bir panel: editör `PluginViewSpec`'ini çizer, olaylar `onEvent`'e, `replace` / `patch` ile onu güncelleyen bir `PluginViewHandle` ile gelir. Kontrol kimlikleri bölümler ve satırlar dahil tüm görünümde tekil olmalıdır (`PluginViewSpec.duplicateControlIds()` çakışmaları listeler). |
 | `pluginDir` | Eklentinin kurulu olduğu klasör (`.lmplugin` dosyasını tutan), hello yanıtından: birlikte gönderdiği dosyaları (çalıştırılabilirler, modeller) bulduğu yer. `Isolate.resolvePackageUri` release derlemesinde çalışmaz. Editör bilmiyorsa null. |
 | `view(viewId)` | Kayıtlı bir görünümün `PluginViewHandle`'ı; onu kendi olayları dışında (bir MCP aracı çağrısından, biten bir işten sonra) güncellemek için; bilinmeyen kimlikte null. |
 | `showPanel`, `hidePanel`, `openTab`, `callMcpTool` | Panel görünürlüğü, kabuğun sekmeleri ve herhangi bir editör MCP aracı. |
 
-Katkılar bir kez gönderilir: `register` döndükten sonra bir menü öğesi, buton, araç, importer, konsol komutu ya da panel kaydetmek bir `StateError`'dır. `handle` her zaman çalışır. Gerçekleme `ConnectedPluginProcessContext`'tir (`lib/src/process/process_context.dart`); istek handler'larını `installPluginProcessHandlers` kurar (`lib/src/process/process_dispatch.dart`).
+Katkılar bir kez gönderilir: `register` döndükten sonra bir menü öğesi, buton, araç, importer, konsol komutu ya da panel kaydetmek bir `StateError`'dır. `handle` her zaman çalışır. Gerçekleme `ConnectedPluginProcessContext`'tir (`lib/src/process_context.dart`); istek handler'larını `installPluginProcessHandlers` kurar (`lib/src/process_dispatch.dart`).
+
+Canlı değerler `lumina_core`'un saf değişim tipleridir (`Observable`, `ObservableValue`, `ChangeSignal`). Flutter'ın `ValueListenable`'ı ile aynı `value` / `addListener` / `removeListener` üyelerine sahiptirler, bu yüzden yalnızca bunları çağıran süreç kodu aynı okunur. Bir Flutter programı `asValueListenable()` / `asObservable()` ile dönüştürür (`lumina_editor_api`).
 
 ## Level proxy'si
 
-`PluginLevelProxy` (`lib/src/process/level_proxy.dart`), `EditorLevelAccess`'i `host.level` istekleri üzerinden gerçekler; editör her düzenlemeyi, süreç içi bir eklentide olduğu gibi, kendi level'ının geri alınabilir bir transaction'ı olarak yapar.
+`PluginLevelProxy` (`lib/src/level_proxy.dart`), `PluginLevelAccess`'i `host.level` istekleri üzerinden gerçekler; editör her düzenlemeyi, süreç içi bir eklentide olduğu gibi, kendi level'ının geri alınabilir bir transaction'ı olarak yapar.
 
 - Senkron getter'lar (`actors`, `selectedActorIds`, `undoTopLabel`, `activeLevelPath`, `projectDirPath`) son `snapshot`'ı okur: el sıkışmadan sonra, proxy'nin kendi her düzenlemesinden sonra ve her `core.levelChanged`'de, `changes` tetiklenmeden önce alınır.
 - `removeActors`, `setComponentProperty` ve `selectActors` API'de senkrondur: yerel kopyayı hemen günceller, isteği gönderir ve yanıtlanınca yeniler; bir hata editör loguna yazılır. Transaction dışında yapılan etiketli bir düzenleme hemen `undoTopLabel` olur ve `undoIfTop` bu etiketten yanıt verir (editör geri almadan önce yeniden denetler).
 - `addActors`, `saveLevel` ve `openLevel` editörü bekler (dosya yükledikleri için 60 sn'ye kadar).
 - `runTransaction(label, body)` `beginTransaction` gönderir, `body`'yi zone'unda transaction kimliğiyle çalıştırır ve `endTransaction` gönderir; içinde yapılan her düzenleme kimliği taşır, böylece editör onları tek bir geri alma adımı olarak kaydeder. Bir başkasının içindeki çağrı ona katılır.
 
-`EditorLevelJson` (`lib/src/process/level_json.dart`) iki tarafın kullandığı aktör anlık görüntüsü ve aktör tanımı JSON'unu kodlar ve çözer.
+`EditorLevelJson` (`lib/src/level_json.dart`) iki tarafın kullandığı aktör anlık görüntüsü ve aktör tanımı JSON'unu kodlar ve çözer.
+
+`PluginLevelAccess` ile editörün `EditorLevelAccess`'i (`lumina_editor_api`) tüm işlemleri paylaşır (`EditorLevelOperations`, `lib/src/editor_level.dart`) ve yalnızca `changes`'te ayrılır: süreçte saf bir `ChangeSignal`, editörde bir Flutter `Listenable`. `level.asEditorLevelAccess()` ve `level.asPluginLevelAccess()` birini diğerine çevirir; aşağıdaki adaptör yalnızca veriyle çalışan bir eklentiye ilkini verir.
 
 ## Mevcut bir eklentiyi süreçte çalıştırmak: PluginProcessAdapter
 
-`PluginProcessAdapter(plugin)` (`lib/src/process/plugin_process_adapter.dart`), katkıları veri olan değiştirilmemiş bir `LuminaEditorPlugin`'i çalıştıran bir `LuminaPluginProcess`'tir. `register`'ı şunları eşleyen bir `LuminaEditorHostContext` (`PluginAdapterContext`) alır:
+`PluginProcessAdapter(plugin)` (`lumina_editor_api/lib/src/process/plugin_process_adapter.dart`; bir Flutter `LuminaEditorPlugin`'i sardığı için `lumina_editor_api`'de kalır), katkıları veri olan değiştirilmemiş bir `LuminaEditorPlugin`'i çalıştıran bir `LuminaPluginProcess`'tir. `register`'ı şunları eşleyen bir `LuminaEditorHostContext` (`PluginAdapterContext`) alır:
 
 | Süreç içi API | Eklenti sürecinde |
 |---|---|
@@ -86,7 +90,7 @@ Katkılar bir kez gönderilir: `register` döndükten sonra bir menü öğesi, b
 | `registerSlotButton`, `registerToolbarButton` | slot butonları; `EditorButtonState` değişiklikleri oldukları anda gönderilir; bir toolbar butonu `group`'unun adlandırdığı slota (yoksa `levelToolbarEnd`) gider |
 | `registerConsoleCommand`, `registerImporter`, `mcp.registerTool` | konsol komutları, importer'lar (bir `ImportResult.failure` editörün hatası olur) ve MCP araçları |
 | `mcp.callTool`, `storage`, `pluginSettings`, `saveAsset`, `openTab`, `panels.show` / `hide` | süreç context'i üzerinden editör; `panels.isVisible` / `visibility` eklentinin kendi çağrılarını izler |
-| `level` (`context is LuminaEditorHostContext` ile) | level proxy'si |
+| `level` (`context is LuminaEditorHostContext` ile) | level proxy'si, bir `EditorLevelAccess` olarak |
 | `reportCrash` | editör logunda bir hata satırı |
 | `onProjectOpened`, `onProjectClosing` | iletilir |
 | `onEditorShutdown`, ardından `unregister` | `core.shutdown`'da |
@@ -102,8 +106,8 @@ class MyPluginProcess extends PluginProcessAdapter {
 
 ## Veri olarak ikonlar
 
-Komutlar, slot butonu durumları ve bildirimsel butonlar ikonları `PluginIconSpec` olarak taşır (kod noktası, font ailesi, font paketi, metin yönü). `pluginIconOf(IconData)` bir Flutter ikonundan bir tane kurar; `iconDataOf(PluginIconSpec)` onu editörün çizmesi için bir `IconData`'ya geri çevirir (`lib/src/process/plugin_icons.dart`). Glif editörün paketlenmiş ikon fontlarından gelir: süreç editörün çalıştırılabilir dosyasından çalışır, böylece bir eklentinin adlandırdığı const ikonlar, release build'ler fontları tree-shake ettiğinde gliflerini korur.
+Komutlar, slot butonu durumları ve bildirimsel butonlar ikonları `PluginIconSpec` olarak taşır (kod noktası, font ailesi, font paketi, metin yönü). `pluginIconOf(IconData)` bir Flutter ikonundan bir tane kurar; `iconDataOf(PluginIconSpec)` onu editörün çizmesi için bir `IconData`'ya geri çevirir (`lumina_editor_api/lib/src/process/plugin_icons.dart`; saf Dart bir süreç `PluginIconSpec`'i kendisi yazar). Glif editörün paketlenmiş ikon fontlarından gelir: süreç editörün çalıştırılabilir dosyasından çalışır, böylece bir eklentinin adlandırdığı const ikonlar, release build'ler fontları tree-shake ettiğinde gliflerini korur.
 
 ---
 
-[Önceki: MCP araçları API'si](mcp.md) | [Üst: lumina_editor_api](index.md) | [Sonraki: Editör eklentileri](../plugins/index.md)
+[Önceki: lumina_plugin_process](index.md) | [Üst: lumina_plugin_process](index.md) | [Sonraki: Editör eklentileri](../plugins/index.md)

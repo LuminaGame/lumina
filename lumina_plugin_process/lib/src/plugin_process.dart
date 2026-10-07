@@ -1,12 +1,14 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
+import 'dart:typed_data';
+
+import 'package:lumina_core/lumina_core.dart' show Observable;
 import 'package:lumina_plugin_protocol/lumina_plugin_protocol.dart';
 
-import 'package:lumina_editor_api/src/editor_level.dart';
-import 'package:lumina_editor_api/src/mcp/mcp_types.dart';
-import 'package:lumina_editor_api/src/plugin_storage.dart';
+import 'package:lumina_plugin_process/src/editor_level.dart';
+import 'package:lumina_plugin_process/src/mcp/mcp_types.dart';
+import 'package:lumina_plugin_process/src/plugin_storage.dart';
 
 /// The part of a plugin that runs in its own process (the "plugin
 /// process"), started by the editor from its own executable with
@@ -65,8 +67,8 @@ class PluginProcessCommand {
   final String id;
   final String label;
 
-  /// The icon as data; build one from an `IconData` with
-  /// `pluginIconOf(icon)`.
+  /// The icon as data; a Flutter program builds one from an `IconData` with
+  /// `pluginIconOf(icon)` (`lumina_editor_api`).
   final PluginIconSpec? icon;
   final String shortcutLabel;
   final FutureOr<void> Function() run;
@@ -76,7 +78,9 @@ class PluginProcessCommand {
 }
 
 /// A slot button registered from the plugin process; changes of [state]
-/// are sent to the editor.
+/// are sent to the editor. [state] is an [Observable] (an `ObservableValue`
+/// to set it from the process; `asObservable()` adapts a Flutter
+/// `ValueListenable`).
 class PluginProcessSlotButton {
   const PluginProcessSlotButton({
     required this.id,
@@ -91,7 +95,7 @@ class PluginProcessSlotButton {
 
   /// `EditorSlot.name`.
   final String slot;
-  final ValueListenable<PluginButtonStateSpec> state;
+  final Observable<PluginButtonStateSpec> state;
   final PluginProcessCommand command;
   final int order;
   final List<PluginProcessCommand>? menu;
@@ -162,7 +166,7 @@ abstract class PluginProcessContext {
 
   /// This plugin's applied project settings; updates when Project Settings
   /// applies.
-  ValueListenable<Map<String, Object?>> get pluginSettings;
+  Observable<Map<String, Object?>> get pluginSettings;
 
   /// The same per-user / per-project JSON store the in-process shell sees.
   PluginStorage get storage;
@@ -174,10 +178,10 @@ abstract class PluginProcessContext {
   String? get pluginDir;
 
   /// The open level, proxied to the editor: every edit is an undoable editor
-  /// transaction there. [EditorLevelAccess.changes] fires on the editor's
+  /// transaction there. [PluginLevelAccess.changes] fires on the editor's
   /// `core.levelChanged` notifications; `runTransaction` groups proxied
   /// edits into one undo step on the editor.
-  EditorLevelAccess get level;
+  PluginLevelAccess get level;
 
   /// Answers the shell's `PluginProcessChannel.call(method, args)`.
   /// The handler returns JSON (or a future of it).
@@ -200,7 +204,7 @@ abstract class PluginProcessContext {
 
   void registerMenu(PluginMenuSpec menu);
   void registerMenuItem(String menuPath, PluginProcessCommand command,
-      {int order = 0, String? section, ValueListenable<bool>? checked});
+      {int order = 0, String? section, Observable<bool>? checked});
   void registerSlotButton(PluginProcessSlotButton button);
   void registerMcpTool(McpTool tool);
   void registerImporter(PluginProcessImporter importer);

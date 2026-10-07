@@ -32,6 +32,7 @@ graph TD
     end
 
     subgraph Plugin_Level [Plugin contract]
+        PluginProcess[lumina_plugin_process]
         EditorAPI[lumina_editor_api]
     end
 
@@ -52,6 +53,8 @@ graph TD
 
     PureCore --> LuminaCore
     PureCore --> LuminaData
+    PureCore --> PluginProcess
+    PluginProcess --> EditorAPI
     PureCore --> EditorAPI
     PureCore --> LuminaUI
     LuminaCore --> EditorAPI
@@ -73,7 +76,7 @@ Dotted arrows are run-time only: `flutter_gstreamer` opens the system GStreamer 
 4. **`flutter_gstreamer`**, **`lumina_smoke`** and **`lumina_mouse_capture`** (tools repository): video encoding, the smoke-test system (artifacts, video checks and the report runner), and pointer capture for games and Play-In-Editor.
 5. **`lumina_core`**: the pure-Dart foundation every layer above shares: math (units, axes, Euler), the file formats (`.lmas`, `.lmproject`, levels, `.lmplugin`, landscape, sequencer, themes) and their level and plugin repositories, the engine logger, workspace and data paths, and pure tooling services (build fingerprint and cache, glTF packer, TGA decoder, primitive GLB factory, templates). No Flutter, `dart:ui` or FFI, so plugin processes and command-line tools can use it with `dart run`. See [lumina_core](../lumina_core/index.md).
 6. **`lumina`**: the engine. The runtime half (`lib/src/`) is the declarative element tree (`build()`), the actor hierarchy (`LuminaActor`, `LuminaPawn`, `LuminaCharacter`), physics and collision (GJK/EPA), AI (behavior trees, navigation), skeletal animation blending, spatial audio and action-based input. The data half (`lib/data/`, `lib/domain/`) holds the editor services that need the engine or native libraries: the asset and project repositories, the GLB and OBJ parsers, importers, thumbnails and the Dart code generator. It re-exports `lumina_core`.
-7. **`lumina_editor_api`**: a lightweight plugin API that defines commands, toolbar buttons, panels, importers and details customizations. It depends only on `lumina`, which breaks the dependency cycle between the editor and its plugins.
+7. **`lumina_plugin_process`** and **`lumina_editor_api`**: the plugin contract. `lumina_plugin_process` is the pure-Dart process side of a plugin (the process API and runtime, the level, storage and MCP data types, `lumina_core`'s change types and a loopback test host; no Flutter), see [lumina_plugin_process](../lumina_plugin_process/index.md). `lumina_editor_api` is the lightweight plugin API that defines commands, toolbar buttons, panels, importers and details customizations; it re-exports `lumina_plugin_process` with Flutter adapters and depends on no editor code, which breaks the dependency cycle between the editor and its plugins.
 8. **`lumina_ui`**: Lumina Studio, the desktop editor built with `shadcn_flutter`: 3D viewport, outliner, details inspector, content browser, output log and the asset sub-editors. New 3D features go through `lumina`; the viewports also use `flutter_filament` directly.
 
 ## Web builds

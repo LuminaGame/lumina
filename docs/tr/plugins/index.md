@@ -129,4 +129,4 @@ Eklentiler marketplace için, eklenti klasöründe `dart run tool/pack_plugin.da
 
 ---
 
-[Önceki: Eklenti süreçleri](../lumina_editor_api/plugin-processes.md) | [Üst: Lumina dokümantasyonu](../../README.tr.md) | [Sonraki: lumina_ui (Lumina Studio)](../lumina_ui/index.md)
+[Önceki: Eklenti süreçleri](../lumina_plugin_process/plugin-processes.md) | [Üst: Lumina dokümantasyonu](../../README.tr.md) | [Sonraki: lumina_ui (Lumina Studio)](../lumina_ui/index.md)

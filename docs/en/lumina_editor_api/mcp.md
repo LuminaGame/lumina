@@ -2,7 +2,7 @@
 
 # MCP tools API
 
-The Model Context Protocol types that the editor's MCP server and plugins share: tools with their schemas, arguments and results, risk levels and groups, approval policies, and `EditorMcp`, through which a plugin calls the same tools external agents use and registers its own. File paths are relative to the `lumina_editor_api/` package directory.
+The Model Context Protocol types that the editor's MCP server and plugins share: tools with their schemas, arguments and results, risk levels and groups, approval policies, and `EditorMcp`, through which a plugin calls the same tools external agents use and registers its own. The files live in the pure-Dart `lumina_plugin_process` package (paths below are relative to `lumina_plugin_process/`), so a plugin process, the stdio bridge and command-line tools use them without Flutter; `lumina_editor_api` re-exports them.
 
 ## `lib/src/mcp/editor_mcp.dart`
 
@@ -27,7 +27,7 @@ One `tools/call`, however it arrived: for logs and for a plugin that watches wha
 
 ### `class McpChangeSignal`
 
-A change notifier without Flutter (the MCP files stay pure Dart).
+Fires when the MCP tool list changes: a `ChangeEmitter` from `lumina_core` (pure Dart) whose `notify` calls `notifyListeners`.
 
 **Members:**
 
@@ -360,4 +360,4 @@ Decides whether a `tools/call` may run. The server runs every call through its o
 
 ---
 
-[Previous: API reference](api-reference.md) | [Up: lumina_editor_api](index.md) | [Next: Plugin processes](plugin-processes.md)
+[Previous: API reference](api-reference.md) | [Up: lumina_editor_api](index.md) | [Next: lumina_plugin_process](../lumina_plugin_process/index.md)

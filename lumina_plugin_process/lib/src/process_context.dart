@@ -1,14 +1,15 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart';
+import 'package:lumina_core/lumina_core.dart' show Observable, ObservableValue;
 import 'package:lumina_plugin_protocol/lumina_plugin_protocol.dart';
 
-import 'package:lumina_editor_api/src/mcp/mcp_types.dart';
-import 'package:lumina_editor_api/src/plugin_storage.dart';
-import 'package:lumina_editor_api/src/process/level_proxy.dart';
-import 'package:lumina_editor_api/src/process/plugin_process.dart';
+import 'package:lumina_plugin_process/src/mcp/mcp_types.dart';
+import 'package:lumina_plugin_process/src/plugin_storage.dart';
+import 'package:lumina_plugin_process/src/level_proxy.dart';
+import 'package:lumina_plugin_process/src/plugin_process.dart';
 
 /// A console command registered from a plugin process.
 class PluginProcessConsoleCommand {
@@ -35,7 +36,7 @@ class ConnectedPluginProcessContext implements PluginProcessContext {
     required Directory? projectStoreDir,
     this.pluginDir,
   })  : _project = project, // ignore: prefer_initializing_formals
-        _settings = ValueNotifier(Map.unmodifiable(settings)),
+        _settings = ObservableValue(Map.unmodifiable(settings)),
         _storage = PluginStorage(userDir: userDir, projectDir: projectStoreDir) {
     _level = PluginLevelProxy(connection, onError: (m) => log(m, level: 'error'));
   }
@@ -49,7 +50,7 @@ class ConnectedPluginProcessContext implements PluginProcessContext {
   final String? pluginDir;
 
   EditorProjectInfo? _project;
-  final ValueNotifier<Map<String, Object?>> _settings;
+  final ObservableValue<Map<String, Object?>> _settings;
   PluginStorage _storage;
   late final PluginLevelProxy _level;
 
@@ -59,7 +60,7 @@ class ConnectedPluginProcessContext implements PluginProcessContext {
   final Map<String, FutureOr<Object?> Function(Map<String, Object?>)> handlers = {};
   final Map<String, PluginProcessCommand> commands = {};
   final List<PluginMenuSpec> _menus = [];
-  final List<(PluginMenuItemSpec, ValueListenable<bool>?)> _menuItems = [];
+  final List<(PluginMenuItemSpec, Observable<bool>?)> _menuItems = [];
   final List<PluginProcessSlotButton> slotButtons = [];
   final Map<String, McpTool> mcpTools = {};
   final Map<String, PluginProcessImporter> importers = {};
@@ -73,7 +74,7 @@ class ConnectedPluginProcessContext implements PluginProcessContext {
   EditorProjectInfo? get project => _project;
 
   @override
-  ValueListenable<Map<String, Object?>> get pluginSettings => _settings;
+  Observable<Map<String, Object?>> get pluginSettings => _settings;
 
   @override
   PluginStorage get storage => _storage;
@@ -128,7 +129,7 @@ class ConnectedPluginProcessContext implements PluginProcessContext {
 
   @override
   void registerMenuItem(String menuPath, PluginProcessCommand command,
-      {int order = 0, String? section, ValueListenable<bool>? checked}) {
+      {int order = 0, String? section, Observable<bool>? checked}) {
     _checkOpen('registerMenuItem');
     _addCommand(command);
     _menuItems.add((

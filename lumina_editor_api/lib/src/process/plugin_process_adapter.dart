@@ -91,13 +91,13 @@ class PluginAdapterContext extends LuminaEditorHostContext {
       );
 
   @override
-  EditorLevelAccess get level => process.level;
+  EditorLevelAccess get level => process.level.asEditorLevelAccess();
 
   @override
   void registerMenuItem(String menuPath, EditorCommand command,
       {EditorMenuItemOptions options = const EditorMenuItemOptions()}) {
     process.registerMenuItem(menuPath, commandOf(command),
-        order: options.order, section: options.section, checked: options.checked);
+        order: options.order, section: options.section, checked: options.checked?.asObservable());
   }
 
   @override
@@ -110,7 +110,7 @@ class PluginAdapterContext extends LuminaEditorHostContext {
     process.registerSlotButton(PluginProcessSlotButton(
       id: button.id,
       slot: slot.name,
-      state: ValueNotifier(PluginButtonStateSpec(icon: pluginIconOf(button.icon), tooltip: button.tooltip)),
+      state: ObservableValue(PluginButtonStateSpec(icon: pluginIconOf(button.icon), tooltip: button.tooltip)),
       command: commandOf(button.command),
     ));
   }
@@ -120,7 +120,7 @@ class PluginAdapterContext extends LuminaEditorHostContext {
     process.registerSlotButton(PluginProcessSlotButton(
       id: button.id,
       slot: button.slot.name,
-      state: _MappedListenable(button.state, stateOf),
+      state: _MappedObservable(button.state, stateOf),
       command: commandOf(button.command),
       order: button.order,
       menu: button.menu?.map(commandOf).toList(),
@@ -137,7 +137,7 @@ class PluginAdapterContext extends LuminaEditorHostContext {
   PluginStorage get storage => process.storage;
 
   @override
-  ValueListenable<Map<String, Object?>> get pluginSettings => process.pluginSettings;
+  ValueListenable<Map<String, Object?>> get pluginSettings => process.pluginSettings.asValueListenable();
 
   @override
   void registerProjectSettingsSection(ProjectSettingsSection section) =>
@@ -279,15 +279,19 @@ class _ProcessMcp extends EditorMcp {
   McpChangeSignal get toolsChanged => _changed;
 }
 
-/// [source] seen through [map].
-class _MappedListenable<S, T> extends ChangeNotifier implements ValueListenable<T> {
-  _MappedListenable(this.source, this.map) {
-    source.addListener(notifyListeners);
-  }
+/// [source] seen through [map], as a pure [Observable].
+class _MappedObservable<S, T> extends Observable<T> {
+  _MappedObservable(this.source, this.map);
 
   final ValueListenable<S> source;
   final T Function(S) map;
 
   @override
   T get value => map(source.value);
+
+  @override
+  void addListener(void Function() listener) => source.addListener(listener);
+
+  @override
+  void removeListener(void Function() listener) => source.removeListener(listener);
 }

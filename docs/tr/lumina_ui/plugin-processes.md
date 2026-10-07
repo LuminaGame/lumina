@@ -4,7 +4,7 @@
 
 Lumina Studio'nun `.lmplugin` dosyası `"isolation": "process"` isteyen eklentileri nasıl çalıştırdığı, izlediği ve
 yeniden başlattığı. Eklenti tarafı (`LuminaPluginProcess`, `runPluginProcessMain`, vekiller)
-[Eklenti süreçleri](../lumina_editor_api/plugin-processes.md) sayfasında, tel protokolü `lumina_plugin_protocol`
+[Eklenti süreçleri](../lumina_plugin_process/plugin-processes.md) sayfasında, tel protokolü `lumina_plugin_protocol`
 paketindedir. Dosya yolları `lumina_ui/` paket dizinine görelidir.
 
 ## Kısaca

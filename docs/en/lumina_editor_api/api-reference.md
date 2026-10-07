@@ -2,7 +2,7 @@
 
 # API reference
 
-Every type of the plugin API except the MCP types: `LuminaEditorPlugin` and `LuminaEditorContext`, editor commands, menus and menu items, toolbar and slot buttons, panel descriptors and `EditorPanels`, asset type handlers, importers, details customizations, the open level as plugins see it, the editor theme, per-plugin storage and Project Settings sections. File paths are relative to the `lumina_editor_api/` package directory.
+Every type of the plugin API except the MCP types: `LuminaEditorPlugin` and `LuminaEditorContext`, editor commands, menus and menu items, toolbar and slot buttons, panel descriptors and `EditorPanels`, asset type handlers, importers, details customizations, the open level as plugins see it, the editor theme, per-plugin storage and Project Settings sections. File paths are relative to the `lumina_editor_api/` package directory. The level snapshot and spec types (`lib/src/editor_level.dart`), `LuminaPluginCrashReporter` (`lib/src/plugin_crash_reporter.dart`) and `PluginStorage` / `EditorProjectInfo` (`lib/src/plugin_storage.dart`) are defined in the pure-Dart [lumina_plugin_process](../lumina_plugin_process/index.md) package under the same file names and re-exported here unchanged.
 
 **On this page:**
 
@@ -265,7 +265,7 @@ Global crash reporting dispatcher for plugins. Used by plugin FFI wrappers, back
 | :--- | :--- | :--- |
 | `setHandler` | `static void setHandler(PluginCrashReportHandler? handler)` | Installs or uninstalls the host crash reporting handler. |
 | `hasHandler` | `static bool get hasHandler` | Whether a host crash report handler is currently active. |
-| `reportCrash` | `static void reportCrash(Object error, StackTrace? stack, {required String plugin, String? context})` | Dispatches an exception to the host crash reporter or logs to the engine logger as fallback. |
+| `reportCrash` | `static void reportCrash(Object error, StackTrace? stack, {required String plugin, String? context})` | Dispatches an exception to the host crash reporter or prints it as fallback. |
 
 ## `lib/src/editor_command.dart`
 
@@ -370,11 +370,13 @@ An actor a plugin asks the host to place: same units and axes as [EditorActorSna
 | `meshAssetPath` | `final String? meshAssetPath` |  |
 | `components` | `final List<EditorComponentSpec> components` |  |
 
-### `abstract class EditorLevelAccess`
+### `abstract class EditorLevelAccess implements EditorLevelOperations`
 
 The open level, as the host exposes it to plugins.
 
 Every edit is an undoable editor transaction and marks the level dirty, exactly like the same edit made through the Outliner or the Details panel; nothing here bypasses the host's transaction, dirty-flag or auto-save path.
+
+Every member except `changes` comes from `EditorLevelOperations` (`lumina_plugin_process`), which a plugin process's `PluginLevelAccess` shares; there `changes` is a pure `ChangeSignal`. `level.asPluginLevelAccess()` and `pluginLevel.asEditorLevelAccess()` convert between the two (the same level always gives the same view).
 
 **Members:**
 

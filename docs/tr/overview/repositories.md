@@ -8,7 +8,7 @@ Lumina kod tabanı, LuminaGame organizasyonundaki birkaç repository'ye dağılm
 
 | Repository | İçerik |
 |---|---|
-| [lumina](https://github.com/LuminaGame/lumina) | Bu repository: `flutter_filament`, `lumina_core`, `lumina`, `lumina_plugin_protocol`, `lumina_editor_api` ve `lumina_ui`, ayrıca `tool/ci.sh` ve bu dokümantasyon. |
+| [lumina](https://github.com/LuminaGame/lumina) | Bu repository: `flutter_filament`, `lumina_core`, `lumina`, `lumina_plugin_protocol`, `lumina_plugin_process`, `lumina_editor_api` ve `lumina_ui`, ayrıca `tool/ci.sh` ve bu dokümantasyon. |
 | [tools](https://github.com/LuminaGame/tools) | Engine'in üzerine kurulduğu native ve FFI paketleri: `flutter_assimp`, `flutter_riglogic`, `flutter_gstreamer`, `lumina_smoke` (smoke test sistemi) ve `lumina_mouse_capture`. [tools dokümantasyonunda](https://github.com/LuminaGame/tools/tree/main/docs) anlatılır. |
 | [plugins](https://github.com/LuminaGame/plugins) | Örnek editör eklentileri: `lumina_plugin_pcg` (prosedürel içerik üretimi, eklenti API'sinin referans örneği) ve `lumina_plugin_miniai` (bir yapay zeka asistanı paneli). |
 | [marketplace](https://github.com/LuminaGame/marketplace) | Lumina Marketplace: `shelf` API sunucusu, ortak paket (`lumina_marketplace_shared`, DTO'lar ve `MarketplaceClient`) ve Flutter web arayüzü. |
@@ -18,7 +18,7 @@ Google Filament hiçbir repository'de yer almaz. Lumina, birkaç yerel yamayla F
 
 ## Workspace'ler
 
-Birden fazla paket barındıran her repository, melos 7 ile yönetilen bir Dart pub workspace'idir: kök `pubspec.yaml` paketleri `workspace:` altında listeler, her paket `resolution: workspace` bildirir ve tek bir `pubspec.lock` hepsini kapsar. Bu repository'nin kök pubspec'i `flutter_filament`, `lumina`, `lumina_core`, `lumina_plugin_protocol`, `lumina_editor_api` ve `lumina_ui`'ı (ve örnek uygulamaları) listeler ve `analyze`, `format`, `format:check`, `test` ve `smoke` melos script'lerini tanımlar.
+Birden fazla paket barındıran her repository, melos 7 ile yönetilen bir Dart pub workspace'idir: kök `pubspec.yaml` paketleri `workspace:` altında listeler, her paket `resolution: workspace` bildirir ve tek bir `pubspec.lock` hepsini kapsar. Bu repository'nin kök pubspec'i `flutter_filament`, `lumina`, `lumina_core`, `lumina_plugin_protocol`, `lumina_plugin_process`, `lumina_editor_api` ve `lumina_ui`'ı (ve örnek uygulamaları) listeler ve `analyze`, `format`, `format:check`, `test` ve `smoke` melos script'lerini tanımlar.
 
 ## Repository'ler birbirine nasıl bağlanır
 

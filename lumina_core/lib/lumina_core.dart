@@ -6,6 +6,9 @@
 /// plugin process can read and write Lumina's files with `dart run`.
 library;
 
+// Change notification without Flutter: ChangeSignal, Observable, ObservableValue.
+export 'package:lumina_core/src/foundation/observable.dart';
+
 // Math: units, axes, Euler/control rotations, transform snapshots.
 export 'package:lumina_core/src/math/axes.dart';
 export 'package:lumina_core/src/math/camera_math.dart';

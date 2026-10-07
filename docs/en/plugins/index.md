@@ -129,4 +129,4 @@ The [plugins repository](https://github.com/LuminaGame/plugins) holds two MIT-li
 
 ---
 
-[Previous: Plugin processes](../lumina_editor_api/plugin-processes.md) | [Up: Lumina documentation](../../README.md) | [Next: lumina_ui (Lumina Studio)](../lumina_ui/index.md)
+[Previous: Plugin processes](../lumina_plugin_process/plugin-processes.md) | [Up: Lumina documentation](../../README.md) | [Next: lumina_ui (Lumina Studio)](../lumina_ui/index.md)
