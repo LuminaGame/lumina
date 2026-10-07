@@ -9,8 +9,8 @@
 library;
 
 // Platform-neutral data the runtime builds on.
-export 'package:lumina/data/models/landscape_data.dart';
-export 'package:lumina/data/services/primitive_glb_factory.dart';
+export 'package:lumina_core/src/formats/landscape_data.dart';
+export 'package:lumina_core/src/services/primitive_glb_factory.dart';
 
 export 'package:lumina/src/services/mesh_decimation_service.dart';
 export 'package:lumina/src/declarative/lumina_object.dart';
@@ -133,10 +133,10 @@ export 'package:lumina/src/game/play_state.dart';
 export 'package:lumina/src/game/lumina_game.dart';
 export 'package:lumina/src/game/console.dart';
 export 'package:lumina/src/game/lumina_widget.dart';
-export 'package:lumina/src/math/transform_snapshot.dart';
-export 'package:lumina/src/math/euler.dart';
-export 'package:lumina/src/math/units.dart';
-export 'package:lumina/src/math/axes.dart';
+export 'package:lumina_core/src/math/transform_snapshot.dart';
+export 'package:lumina_core/src/math/euler.dart';
+export 'package:lumina_core/src/math/units.dart';
+export 'package:lumina_core/src/math/axes.dart';
 export 'package:lumina/src/blueprint/blueprint.dart';
 export 'package:lumina/src/save/save_game.dart';
 export 'package:lumina/src/save/save_game_subsystem.dart';

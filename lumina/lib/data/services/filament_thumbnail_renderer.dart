@@ -10,12 +10,8 @@ import 'package:image/image.dart' as img;
 import 'package:vector_math/vector_math_64.dart';
 
 import 'package:lumina/src/game/primitive_actor.dart' show luminaPrimitiveSize;
-import 'package:lumina/src/math/axes.dart';
-import 'package:lumina/src/math/units.dart';
-import 'package:lumina/data/models/lumina_asset.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/data/services/derived_data_cache.dart';
-import 'package:lumina/data/services/engine_logger_service.dart';
-import 'package:lumina/data/services/primitive_glb_factory.dart';
 
 part 'filament_thumbnail_renderer/state.dart';
 part 'filament_thumbnail_renderer/material_preview.dart';

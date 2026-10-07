@@ -5,8 +5,7 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:lumina/data/services/encoded_image_decoder.dart';
-import 'package:lumina/data/services/encoded_image_format.dart';
-import 'package:lumina/data/services/glb_animation_merger.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/testing.dart';
 
 /// The decoder follows the bytes' real format, and decodes alike on

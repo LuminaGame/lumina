@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:lumina/lumina.dart' show LuminaBlueprintDocument, LuminaWidgetBlueprintDocument, LuminaWidgetEvents;
-import 'package:lumina/data/services/dart_identifiers.dart';
+import 'package:lumina_core/lumina_core.dart';
 
 /// Palette categories of the UMG designer; [shadcn] shows
 /// only for projects whose widget library is shadcn_flutter.

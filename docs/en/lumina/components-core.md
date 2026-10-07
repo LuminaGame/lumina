@@ -2,7 +2,7 @@
 
 # Components: base, movement, camera, light, audio, collision
 
-The core component set: actor and scene components, character, projectile, rotating and interpolated movement, the camera component and spring arm, player input bindings, directional, point and spot lights, the audio component and collision components. File paths are relative to the `lumina/` package directory.
+The core component set: actor and scene components, character, projectile, rotating and interpolated movement, the camera component and spring arm, player input bindings, directional, point and spot lights, the audio component and collision components. File paths are relative to the `lumina/` package directory. The camera interpolation helpers (`fInterpTo`, `rInterpTo`, control rotations) live in `lumina_core`: see [Math](../lumina_core/math.md).
 
 **On this page:**
 
@@ -13,7 +13,6 @@ The core component set: actor and scene components, character, projectile, rotat
 - [`lib/src/components/movement/rotating_movement_component.dart`](#libsrccomponentsmovementrotating_movement_componentdart)
 - [`lib/src/components/audio/audio_component.dart`](#libsrccomponentsaudioaudio_componentdart)
 - [`lib/src/components/camera/camera_component.dart`](#libsrccomponentscameracamera_componentdart)
-- [`lib/src/components/camera/camera_math.dart`](#libsrccomponentscameracamera_mathdart)
 - [`lib/src/components/camera/spring_arm_component.dart`](#libsrccomponentscameraspring_arm_componentdart)
 - [`lib/src/components/player/input_binding.dart`](#libsrccomponentsplayerinput_bindingdart)
 - [`lib/src/components/player/lumina_player_component.dart`](#libsrccomponentsplayerlumina_player_componentdart)
@@ -310,23 +309,6 @@ A camera's authored settings as one property map, read the one way every consume
 | `fromProperties` | `factory LuminaCameraSettings.fromProperties(Map<String, dynamic>? properties)` | Reads a property map; a missing, mistyped or out-of-range value keeps the default (field of view clamped to 5–170°, the far plane kept beyond the near one). |
 | `toProperties` | `Map<String, dynamic> toProperties()` | The property map `fromProperties` reads back. |
 | `applyTo` | `void applyTo(LuminaCameraComponent camera)` | Writes the settings onto a camera component (not its activation). |
-
-## `lib/src/components/camera/camera_math.dart`
-
-**Top-level Functions:**
-
-- **`double fInterpTo(double current, double target, double deltaTime, double interpSpeed)`**: Smoothly interpolates a double from [current] to [target] at [interpSpeed].
-
-### `extension QuaternionEuler`
-
-`QuaternionEuler`: `extension` representing the data model or functionality of the module.
-
-**Functions, Methods & Accessors:**
-
-| Method / Getter | Signature | Purpose & Description |
-| :--- | :--- | :--- |
-| `eulerAngles` | `Vector3 get eulerAngles` | Extracts Euler angles (Pitch, Yaw, Roll) to a Vector3 (X=Pitch, Y=Yaw, Z=Roll) |
-| `setFromEulerAngles` | `void setFromEulerAngles(Vector3 euler)` | Sets the quaternion from Euler angles (Pitch, Yaw, Roll) in Vector3 (X=Pitch, Y=Yaw, Z=Roll) |
 
 ## `lib/src/components/camera/spring_arm_component.dart`
 

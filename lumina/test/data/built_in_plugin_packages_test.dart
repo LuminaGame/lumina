@@ -1,11 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:lumina/data/models/lumina_plugin_descriptor.dart';
-import 'package:lumina/data/repositories/plugin_repository.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/data/services/editor_host_generator_service.dart';
-import 'package:lumina/data/services/plugin_host_patcher_service.dart';
-import 'package:lumina/data/services/workspace_paths.dart';
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 

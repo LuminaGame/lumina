@@ -1,8 +1,6 @@
 import 'dart:io';
 
-import 'package:lumina/data/services/engine_bootstrap.dart';
-import 'package:lumina/data/services/lumina_data_dir.dart';
-import 'package:lumina/data/services/workspace_paths.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 

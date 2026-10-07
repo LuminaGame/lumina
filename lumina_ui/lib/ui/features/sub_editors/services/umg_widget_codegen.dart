@@ -6,8 +6,7 @@ import 'package:flutter/painting.dart' show Alignment, EdgeInsets;
 
 import 'package:lumina/data/services/blueprint_codegen/blueprint_dart_generator.dart'
     show BlueprintDartGenerator, BlueprintGenerationResult;
-import 'package:lumina/data/services/dart_identifiers.dart';
-import 'package:lumina/data/services/generated_code_migration.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/lumina.dart'
     show
         AssetType,

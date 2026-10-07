@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:vector_math/vector_math_64.dart' show Vector3;
 
-import 'package:lumina/data/models/landscape_data.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/src/components/landscape/landscape_mesh_builder.dart';
 import 'package:lumina/src/components/landscape/landscape_section_map.dart';
 

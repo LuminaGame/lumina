@@ -3,7 +3,7 @@ import 'package:flutter_filament/flutter_filament.dart' show FogOptions;
 import 'package:vector_math/vector_math_64.dart';
 
 import 'package:lumina/src/game/primitive_actor.dart' show luminaHexToRgb, luminaRgbToHex;
-import 'package:lumina/src/math/units.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/src/object/actor.dart';
 import 'package:lumina/src/post_process/post_process_blender.dart';
 import 'package:lumina/src/world/world.dart';

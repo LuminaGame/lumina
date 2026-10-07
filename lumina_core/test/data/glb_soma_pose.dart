@@ -1,5 +1,5 @@
 import 'dart:typed_data';
-import 'package:lumina/data/services/glb_animation_merger.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:vector_math/vector_math_64.dart';
 
 /// Forward kinematics from real GLB node transforms and animation accessors.

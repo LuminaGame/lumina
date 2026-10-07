@@ -4,9 +4,9 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:yaml/yaml.dart';
 
-import 'package:lumina/data/services/directory_link.dart';
-import 'package:lumina/data/services/editor_source_vendor_service.dart';
-import 'package:lumina/data/services/workspace_paths.dart';
+import 'package:lumina_core/src/services/directory_link.dart';
+import 'package:lumina_core/src/services/editor_source_vendor_service.dart';
+import 'package:lumina_core/src/services/workspace_paths.dart';
 
 /// How a game project reaches the engine.
 ///

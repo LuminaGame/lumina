@@ -6,7 +6,7 @@ import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.
 import 'package:lumina_ui/ui/features/mcp_server/services/mcp_protocol.dart';
 import 'package:lumina_ui/ui/features/mcp_server/services/mcp_tool.dart';
 import 'package:lumina_ui/ui/features/mcp_server/tools/core_tools.dart' show mcpUndoState;
-import 'package:lumina/data/services/dart_identifiers.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/lumina.dart' show AssetType, LuminaLevelActorMaterial;
 import 'package:lumina_ui/ui/features/mcp_server/tools/rotation_convention.dart';
 

@@ -29,6 +29,7 @@ flutter test test/src/engine_test.dart
 - `flutter_filament` unit tests run on Filament's noop backend and need no GPU.
 - Tests use real files and real native libraries. Tests that need models from `test-assets/` are skipped when the assets are missing; `LUMINA_TEST_ASSETS` points them at another folder.
 - `lumina_ui` also has integration flows under `integration_test/` (`flutter test integration_test/<file>`).
+- `lumina_core` is pure Dart: its tests run with `dart test` (for example `dart test test/architecture/pure_dart_test.dart`), not `flutter test`.
 
 ## Smoke tests and the HTML report
 

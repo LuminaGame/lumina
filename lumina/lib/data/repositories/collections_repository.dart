@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:lumina/data/services/engine_logger_service.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/data/repositories/asset_repository.dart';
 
 class CollectionAsset {

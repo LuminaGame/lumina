@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina/lumina.dart';
-import 'package:lumina/data/services/game_template_service.dart';
+import 'package:lumina_core/lumina_core.dart';
 
 import 'package:lumina_ui/ui/core/host/editor_host.dart';
 import 'package:lumina_ui/ui/features/main_editor/services/editor_preferences.dart';

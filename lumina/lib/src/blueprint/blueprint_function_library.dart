@@ -45,7 +45,7 @@ import 'package:lumina/src/input/input_component.dart';
 import 'package:lumina/src/controller/player_controller.dart';
 import 'package:lumina/src/game/lumina_game.dart';
 import 'package:lumina/src/game/player_camera_manager.dart';
-import 'package:lumina/src/math/euler.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/src/object/actor.dart';
 import 'package:lumina/src/object/character.dart';
 import 'package:lumina/src/object/pawn.dart';

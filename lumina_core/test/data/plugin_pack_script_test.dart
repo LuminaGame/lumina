@@ -2,9 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:archive/archive.dart';
-import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina/data/services/plugin_pack_script.dart';
-import 'package:lumina/data/services/workspace_paths.dart';
+import 'package:test/test.dart';
+import 'package:lumina_core/lumina_core.dart';
 
 /// The `tool/pack_plugin.dart` every Lumina plugin carries (the plugin
 /// template generator emits [kPluginPackScript]): run for real with `dart` on

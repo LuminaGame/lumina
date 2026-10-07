@@ -1,8 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:lumina/data/services/config_json_file.dart';
-import 'package:lumina/data/services/lumina_config_dir.dart';
+import 'package:lumina_core/lumina_core.dart';
 
 import 'package:lumina_ui/ui/features/mcp_server/services/mcp_tool_risk.dart';
 

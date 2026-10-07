@@ -2,8 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina/data/models/lumina_asset.dart';
-import 'package:lumina/lumina.dart' show LuminaProject;
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/content_browser_widget.dart';

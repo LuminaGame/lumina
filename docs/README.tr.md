@@ -2,7 +2,7 @@
 
 # Lumina dokümantasyonu
 
-Lumina, Google Filament renderer'ı üzerine kurulmuş, Flutter ve Dart için bir 3D oyun motoru ve Lumina projeleri için masaüstü editörü olan Lumina Studio'dan oluşur. Bu dokümantasyon mimariyi, bir checkout'un nasıl kurulacağını ve bu repository'deki dört paketin API referansını kapsar: `flutter_filament`, `lumina`, `lumina_editor_api` ve `lumina_ui`.
+Lumina, Google Filament renderer'ı üzerine kurulmuş, Flutter ve Dart için bir 3D oyun motoru ve Lumina projeleri için masaüstü editörü olan Lumina Studio'dan oluşur. Bu dokümantasyon mimariyi, bir checkout'un nasıl kurulacağını ve bu repository'deki paketlerin API referansını kapsar: `flutter_filament`, `lumina_core`, `lumina`, `lumina_editor_api` ve `lumina_ui`.
 
 ## Nereden başlamalı
 
@@ -22,7 +22,7 @@ Lumina Studio'yu eklentilerle genişletir ya da editörün kendisi üzerinde ça
 1. [Lumina nedir](tr/overview/what-is-lumina.md) ve [Checkout ve kurulum](tr/getting-started/setup.md)
 2. [Editör eklentileri](tr/plugins/index.md) ve [lumina_editor_api referansı](tr/lumina_editor_api/api-reference.md)
 3. [lumina_ui (Lumina Studio)](tr/lumina_ui/index.md), [Ana editör: view model ve servisler](tr/lumina_ui/main-editor-state.md) ve [Alt editörler](tr/lumina_ui/sub-editors/index.md)
-4. Editörün okuyup yazdığı veri katmanı: [modeller ve repository'ler](tr/lumina/data-models.md) ile [use case'ler ve servisler](tr/lumina/data-services.md)
+4. Editörün ve eklentilerin okuyup yazdığı dosyalar: [lumina_core](tr/lumina_core/index.md) (dosya formatları, yollar, logger, saf servisler), ardından engine'in [modeller ve repository'ler](tr/lumina/data-models.md) ile [use case'ler ve servisler](tr/lumina/data-services.md) sayfaları
 
 ### Engine katkıcıları
 
@@ -65,6 +65,14 @@ Engine, renderer binding'leri ya da native build üzerinde çalışırsınız.
   - [Editör primitifleri, araçlar ve test](tr/flutter_filament/editor-tools-and-testing.md) - Grid, seçim kutusu, transform gizmo, offline araçlar, smoke test giriş noktası.
   - [Platform entegrasyonu ve GPU seçimi](tr/flutter_filament/platform.md) - Paylaşılan engine host, Vulkan GPU listeleme ve tercihi, web başlatma ve platforma özel widget varyantları.
 
+### lumina_core (saf Dart temeli)
+
+- [lumina_core (saf Dart temeli)](tr/lumina_core/index.md) - Engine, editör ve eklenti süreçlerinin paylaştığı temel; Flutter, `dart:ui` ya da FFI yok.
+  - [Matematik: birimler, eksenler ve dönüşler](tr/lumina_core/math.md) - `LuminaUnits`, `LuminaAxes`, Euler ve control rotation'lar, interpolasyon, transform anlık görüntüleri.
+  - [Dosya formatları ve repository'ler](tr/lumina_core/formats.md) - `.lmas` asset'leri, `.lmproject` manifest'leri, level dokümanları, eklenti tanımları, landscape, sequencer ve tema verisi, level ve eklenti repository'leri.
+  - [Servisler](tr/lumina_core/services.md) - Animasyon yazımı, asset indeksi, config dosyaları, build parmak izi ve önbelleği, engine kurulumu, engine logger, şablonlar.
+  - [Servisler (devamı)](tr/lumina_core/services-continued.md) - Üretilmiş kod göçü, GLB animasyon araçları, glTF paketleyici, config ve veri klasörleri, eklenti paketleme, primitive GLB fabrikası, TGA çözücü, çalışma alanı yolları.
+
 ### lumina (engine çekirdeği)
 
 - [lumina (engine çekirdeği)](tr/lumina/index.md) - Deklaratif 3D oyun motoru ve editöre dönük veri katmanı.
@@ -96,7 +104,7 @@ Engine, renderer binding'leri ya da native build üzerinde çalışırsınız.
   - [Veri katmanı: use case'ler ve servisler (devamı, bölüm 1)](tr/lumina/data-services-continued.md) - `lib/data/services/`, `lib/data/services/blueprint_codegen/` altındaki diğer dosyalar.
   - [Veri katmanı: use case'ler ve servisler (devamı, bölüm 2)](tr/lumina/data-services-continued-2.md) - `lib/data/services/` altındaki diğer dosyalar.
   - [Veri katmanı: use case'ler ve servisler (devamı, bölüm 3)](tr/lumina/data-services-continued-3.md) - `lib/data/services/` altındaki diğer dosyalar.
-  - [Veri katmanı: modeller ve repository'ler](tr/lumina/data-models.md) - `.lmas` asset'leri, `.lmproject` manifest'leri, eklenti tanımları, sequencer ve landscape verisi, repository'ler.
+  - [Veri katmanı: modeller ve repository'ler](tr/lumina/data-models.md) - Asset, koleksiyon ve proje repository'leri (modeller `lumina_core`'da).
   - [Veri katmanı: modeller ve repository'ler (devamı)](tr/lumina/data-models-continued.md) - `lib/data/models/`, `lib/data/repositories/`, `lib/data/repositories/asset_repository/` altındaki diğer dosyalar.
 
 ### lumina_editor_api

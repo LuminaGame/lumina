@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina/data/services/lumina_config_dir.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina_mouse_capture/lumina_mouse_capture.dart';
 
 /// Wraps every integration test and smoke under integration_test/:

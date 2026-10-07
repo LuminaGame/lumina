@@ -29,7 +29,7 @@ import 'package:lumina_ui/ui/features/launcher/view_models/create_project_view_m
 import '../../test/helpers/desktop_window.dart';
 import '../../test/helpers/mcp_test_client.dart';
 import '../../test/helpers/scaffold_game_project.dart' show offlineScaffoldRunner;
-import 'package:lumina/data/services/workspace_paths.dart';
+import 'package:lumina_core/lumina_core.dart';
 
 /// The editor viewport runs tickers for as long as it is on screen (fly
 /// camera, procedural sky), so `pumpAndSettle` never settles with it mounted.

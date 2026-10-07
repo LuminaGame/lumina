@@ -2,9 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:test/test.dart';
 import 'package:pub_semver/pub_semver.dart';
-import 'package:lumina/data/models/lumina_plugin_descriptor.dart';
-import 'package:lumina/data/models/lumina_project.dart';
-import 'package:lumina/data/repositories/plugin_repository.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/data/repositories/project_repository.dart';
 import 'package:lumina/data/services/plugin_registry_service.dart';
 

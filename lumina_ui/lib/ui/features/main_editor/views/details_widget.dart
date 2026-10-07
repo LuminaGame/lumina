@@ -31,7 +31,7 @@ import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.
 import 'package:lumina_ui/ui/features/main_editor/views/play_blocked_dialog.dart' show openBlueprintAtNode;
 import 'package:lumina_ui/ui/features/details/models/component_property_registry.dart';
 import 'package:lumina_ui/ui/features/details/models/editor_component_node.dart';
-import 'package:lumina/data/services/level_template_service.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart' show DetailsTarget;
 
 part 'details_widget/state.dart';

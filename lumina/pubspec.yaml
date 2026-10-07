@@ -13,6 +13,10 @@ dependencies:
     sdk: flutter
   flutter_filament:
     path: ../flutter_filament
+  # The pure-Dart foundation (math, file formats, paths, logger) the engine,
+  # the editor and plugin processes share.
+  lumina_core:
+    path: ../lumina_core
   # From the tools repo; pubspec_overrides.yaml at the workspace root points
   # them at a local ../tools checkout.
   flutter_assimp:

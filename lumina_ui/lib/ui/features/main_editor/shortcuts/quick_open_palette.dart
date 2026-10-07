@@ -1,4 +1,4 @@
-import 'package:lumina/data/models/lumina_asset.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:flutter/widgets.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as shadcn;
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';

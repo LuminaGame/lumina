@@ -2,9 +2,8 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina/data/services/engine_logger_service.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/data/services/glb_parser_service.dart';
-import 'package:lumina/data/services/tga_decoder_service.dart';
 
 /// `convertGlbTgaToPng` enforces a texture budget, which means decoding and
 /// resizing oversized source images — ~37 s for an asset carrying fourteen

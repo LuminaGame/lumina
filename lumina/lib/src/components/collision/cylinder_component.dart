@@ -1,5 +1,5 @@
 import 'package:vector_math/vector_math_64.dart';
-import 'package:lumina/src/math/euler.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/src/components/collision/collision_component.dart';
 import 'package:lumina/src/components/collision/shape_wireframes.dart';
 

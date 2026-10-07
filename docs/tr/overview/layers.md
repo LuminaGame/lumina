@@ -26,6 +26,7 @@ graph TD
     end
 
     subgraph Core_Level [Engine çekirdeği ve veri katmanı]
+        PureCore[lumina_core saf Dart temeli]
         LuminaCore[lumina runtime]
         LuminaData[lumina veri katmanı]
     end
@@ -49,6 +50,10 @@ graph TD
     MouseCapture --> LuminaCore
     FlutterGStreamer -.-> FlutterFilament
 
+    PureCore --> LuminaCore
+    PureCore --> LuminaData
+    PureCore --> EditorAPI
+    PureCore --> LuminaUI
     LuminaCore --> EditorAPI
     LuminaData --> EditorAPI
 
@@ -66,9 +71,10 @@ Noktalı oklar yalnızca çalışma anına aittir: `flutter_gstreamer` sistemdek
 2. **`flutter_assimp`** (tools repository'si): Open Asset Import Library'nin Dart FFI binding'i. FBX, OBJ, DAE, STL, Blend gibi 40'tan fazla harici 3D formatı diskte ya da bellekte binary glTF 2.0'a (`.glb`) dönüştürür.
 3. **`flutter_riglogic`** (tools repository'si): MetaHuman RigLogic'in Dart FFI binding'i. DNA dosyalarını okur ve yüz rig'leri için PSD'leri, RBF'leri, joint transform'larını ve blend shape ağırlıklarını hesaplar.
 4. **`flutter_gstreamer`**, **`lumina_smoke`** ve **`lumina_mouse_capture`** (tools repository'si): video encode, smoke test sistemi (artifact'ler, video kontrolleri ve rapor çalıştırıcısı) ve oyunlar ile Play-In-Editor için pointer capture.
-5. **`lumina`**: engine. Runtime yarısı (`lib/src/`) deklaratif element ağacı (`build()`), actor hiyerarşisi (`LuminaActor`, `LuminaPawn`, `LuminaCharacter`), fizik ve çarpışma (GJK/EPA), yapay zeka (behavior tree'ler, navigasyon), iskelet animasyonu harmanlama, uzamsal ses ve action tabanlı input'tur. Veri yarısı (`lib/data/`, `lib/domain/`) `.lmas` asset'lerini ve `.lmproject` manifest'lerini okuyup yazar, GLB, OBJ ve TGA dosyalarını parse eder ve oyunun Dart kodunu üretir.
-6. **`lumina_editor_api`**: komutları, toolbar butonlarını, panelleri, importer'ları ve details özelleştirmelerini tanımlayan hafif bir eklenti API'si. Yalnızca `lumina`'ya bağımlıdır; böylece editör ile eklentileri arasındaki bağımlılık döngüsünü kırar.
-7. **`lumina_ui`**: `shadcn_flutter` ile geliştirilmiş masaüstü editör Lumina Studio: 3D viewport, outliner, details inspector, content browser, output log ve asset alt editörleri. Yeni 3D özellikleri `lumina` üzerinden geçer; viewport'lar ayrıca `flutter_filament`'i doğrudan kullanır.
+5. **`lumina_core`**: üstteki her katmanın paylaştığı saf Dart temeli: matematik (birimler, eksenler, Euler), dosya formatları (`.lmas`, `.lmproject`, level'lar, `.lmplugin`, landscape, sequencer, temalar) ve level ile eklenti repository'leri, engine logger, çalışma alanı ve veri yolları ve saf araç servisleri (build parmak izi ve önbelleği, glTF paketleyici, TGA çözücü, primitive GLB fabrikası, şablonlar). Flutter, `dart:ui` ya da FFI içermez; eklenti süreçleri ve komut satırı araçları onu `dart run` ile kullanabilir. Bkz. [lumina_core](../lumina_core/index.md).
+6. **`lumina`**: engine. Runtime yarısı (`lib/src/`) deklaratif element ağacı (`build()`), actor hiyerarşisi (`LuminaActor`, `LuminaPawn`, `LuminaCharacter`), fizik ve çarpışma (GJK/EPA), yapay zeka (behavior tree'ler, navigasyon), iskelet animasyonu harmanlama, uzamsal ses ve action tabanlı input'tur. Veri yarısı (`lib/data/`, `lib/domain/`) engine'e ya da native kütüphanelere ihtiyaç duyan editör servislerini tutar: asset ve proje repository'leri, GLB ve OBJ parser'ları, importer'lar, thumbnail'lar ve Dart kod üreteci. `lumina_core`'u yeniden export eder.
+7. **`lumina_editor_api`**: komutları, toolbar butonlarını, panelleri, importer'ları ve details özelleştirmelerini tanımlayan hafif bir eklenti API'si. Yalnızca `lumina`'ya bağımlıdır; böylece editör ile eklentileri arasındaki bağımlılık döngüsünü kırar.
+8. **`lumina_ui`**: `shadcn_flutter` ile geliştirilmiş masaüstü editör Lumina Studio: 3D viewport, outliner, details inspector, content browser, output log ve asset alt editörleri. Yeni 3D özellikleri `lumina` üzerinden geçer; viewport'lar ayrıca `flutter_filament`'i doğrudan kullanır.
 
 ## Web build'leri
 

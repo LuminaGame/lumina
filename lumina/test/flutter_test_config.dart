@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina/data/services/lumina_config_dir.dart';
+import 'package:lumina_core/lumina_core.dart';
 
 /// Wraps every test file under test/: the editor's config directory
 /// (recent projects, launcher and quality settings) is a fresh temp directory

@@ -11,11 +11,11 @@
 ## İki yarı
 
 - **Runtime** (`lib/src/`): bir oyunun çalıştırdığı kısım. Oyun, dünyasını deklaratif bir `build()` ağacıyla tanımlar ([Deklaratif ağaç](declarative.md)); engine bunu, [controller'ların](controller.md) possess ettiği ve [oyun çatısının](game.md) yönettiği, component'li [actor'lerden](object.md) oluşan bir [dünyaya](world.md) dönüştürür. Runtime sınıfları `Lumina` önekini taşır (`LuminaWorld`, `LuminaActor`, `LuminaStaticMeshComponent`, ...).
-- **Veri katmanı** (`lib/data/`, `lib/domain/`): editörün projeleri okuyup yazmak için kullandığı kısım. `.lmas` asset ve `.lmproject` manifest modellerini, repository'leri, GLB, OBJ ve TGA parser'larını, Dart kod üretecini, şablonları, eklenti servislerini, logger'ı ve otomatik kaydı barındırır.
+- **Veri katmanı** (`lib/data/`, `lib/domain/`): editörün projeleri okuyup yazmak için kullandığı kısım. Asset ve proje repository'lerini, GLB ve OBJ parser'larını, importer'ları, thumbnail'ları, Dart kod üretecini ve eklenti servislerini barındırır. Saf kısımlar (`.lmas`, `.lmproject`, level ve `.lmplugin` modelleri, level ve eklenti repository'leri, logger, yollar, şablonlar, otomatik kayıt ve TGA çözücü) `lumina`'nın yeniden export ettiği [lumina_core](../lumina_core/index.md) paketindedir.
 
 ## Kütüphaneler
 
-- `package:lumina/lumina.dart` veri katmanı dahil her şeyi export eder. Lumina Studio bunu import eder.
+- `package:lumina/lumina.dart` veri katmanı ve her zaman export ettiği `lumina_core` kütüphaneleri dahil her şeyi export eder. Lumina Studio bunu import eder.
 - `package:lumina/lumina_runtime.dart` runtime'ı editör veri katmanı, Assimp ve RigLogic olmadan export eder; yalnızca bu kütüphaneyi import eden bir oyun web için de build edilebilir. Üretilen oyunlar bunu import eder.
 
 Barrel'lar paketin kullanıcıları içindir: `lumina/lib` içindeki hiçbir kütüphane `lumina.dart` ya da `lumina_runtime.dart`'ı import etmez; her biri kullandığı dosyaları import eder, böylece barrel'lar import grafiğinin yaprakları olarak kalır ve hiçbir döngü onlardan geçmez. Engine nesneleri engine'in kendi `LuminaObjectKey`'ini taşır ve `lumina_object.dart` hiçbir Flutter kütüphanesine ulaşmaz. İkisini de `test/architecture/` korur (`import_cycles_test.dart`, `flutter_free_object_root_test.dart`).

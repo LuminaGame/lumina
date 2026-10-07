@@ -2,7 +2,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina/data/models/lumina_asset.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/material_preview_renderer.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/preview_mesh_factory.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/material_editor_view_model.dart';

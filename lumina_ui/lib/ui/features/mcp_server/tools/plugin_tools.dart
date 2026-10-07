@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:lumina/data/models/lumina_plugin_descriptor.dart' show PluginOrigin;
+import 'package:lumina_core/lumina_core.dart' show PluginOrigin;
 import 'package:lumina/data/services/plugin_registry_service.dart';
 import 'package:lumina/data/services/plugin_template_generator_service.dart';
 

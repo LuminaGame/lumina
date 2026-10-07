@@ -2,9 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
-import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina/data/services/openriglogic_prebuilt.dart';
-import 'package:lumina/data/services/release_asset.dart';
+import 'package:test/test.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:path/path.dart' as p;
 
 /// A real archive, in the layout `.github/scripts/package_openriglogic.sh`

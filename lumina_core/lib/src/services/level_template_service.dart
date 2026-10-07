@@ -1,4 +1,4 @@
-import 'package:lumina/data/services/game_template_service.dart';
+import 'package:lumina_core/src/services/game_template_service.dart';
 
 /// The three templates `File → New Level…` offers.
 ///

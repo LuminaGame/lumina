@@ -11,11 +11,11 @@
 ## Two halves
 
 - **Runtime** (`lib/src/`): what a game runs. A game describes its world with a declarative `build()` tree ([Declarative tree](declarative.md)); the engine turns it into a [world](world.md) of [actors](object.md) with components, possessed by [controllers](controller.md) and driven by the [game framework](game.md). Runtime classes carry the `Lumina` prefix (`LuminaWorld`, `LuminaActor`, `LuminaStaticMeshComponent`, ...).
-- **Data layer** (`lib/data/`, `lib/domain/`): what the editor uses to read and write projects. It holds the `.lmas` asset and `.lmproject` manifest models, repositories, the GLB, OBJ and TGA parsers, the Dart code generator, templates, the plugin services, the logger and auto-save.
+- **Data layer** (`lib/data/`, `lib/domain/`): what the editor uses to read and write projects. It holds the asset and project repositories, the GLB and OBJ parsers, importers, thumbnails, the Dart code generator and the plugin services. The pure parts (the `.lmas`, `.lmproject`, level and `.lmplugin` models, the level and plugin repositories, the logger, paths, templates, auto-save and the TGA decoder) live in [lumina_core](../lumina_core/index.md), which `lumina` re-exports.
 
 ## Libraries
 
-- `package:lumina/lumina.dart` exports everything, including the data layer. Lumina Studio imports it.
+- `package:lumina/lumina.dart` exports everything, including the data layer and the `lumina_core` libraries it always exported. Lumina Studio imports it.
 - `package:lumina/lumina_runtime.dart` exports the runtime without the editor data layer, Assimp and RigLogic, so a game that imports only this library also builds for the web. Generated games import it.
 
 The barrels are for users of the package: no library inside `lumina/lib` imports `lumina.dart` or `lumina_runtime.dart`; each imports the files it uses, so the barrels stay leaves of the import graph and no cycle runs through them. Engine objects carry the engine's own `LuminaObjectKey`, and `lumina_object.dart` reaches no Flutter library. `test/architecture/` guards both (`import_cycles_test.dart`, `flutter_free_object_root_test.dart`).

@@ -1,4 +1,4 @@
-import 'package:lumina/data/models/lumina_asset.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/data/repositories/asset_repository.dart';
 
 class ResolvedReference {

@@ -5,7 +5,7 @@ import 'dart:typed_data';
 
 import 'package:vector_math/vector_math_64.dart';
 
-import 'package:lumina/data/services/glb_animation_merger.dart';
+import 'package:lumina_core/src/services/glb_animation_merger.dart';
 
 /// How a channel of an authored clip moves between its keys: the three
 /// sampler interpolations of glTF 2.0.

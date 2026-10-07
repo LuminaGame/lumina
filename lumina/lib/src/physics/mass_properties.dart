@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import 'package:vector_math/vector_math_64.dart';
 
 import 'package:lumina/src/collision/shapes.dart';
-import 'package:lumina/src/math/axes.dart';
+import 'package:lumina_core/lumina_core.dart';
 
 /// What a static mesh asset says about its body: the
 /// Static Mesh editor's `metadata.physics = {massKg, centerOfMassOffset}`.

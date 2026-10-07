@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:lumina/src/physics/mass_properties.dart';
-import 'package:lumina/data/models/lumina_asset.dart';
+import 'package:lumina_core/lumina_core.dart';
 
 /// A static mesh asset's physics as the Static Mesh editor stores it
 /// (`metadata.physics = {massKg, centerOfMassOffset}`):

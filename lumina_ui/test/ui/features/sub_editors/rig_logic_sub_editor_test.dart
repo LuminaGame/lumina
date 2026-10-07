@@ -1,12 +1,11 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina/lumina.dart' hide BoxShape;
 import 'package:shadcn_flutter/shadcn_flutter.dart' as shad;
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/skeletal_mesh/skeletal_mesh_sub_editor.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/skeletal_mesh_editor_view_model.dart';
-import 'package:lumina/data/services/workspace_paths.dart';
+import 'package:lumina_core/lumina_core.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

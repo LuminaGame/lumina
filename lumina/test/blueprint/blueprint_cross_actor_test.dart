@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina/data/models/lumina_asset.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/data/services/blueprint_class_registry.dart';
 import 'package:lumina/data/services/blueprint_codegen/blueprint_dart_generator.dart';
 import 'package:lumina/lumina_runtime.dart';

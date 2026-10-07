@@ -4,7 +4,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina/data/services/glb_parser_service.dart';
-import 'package:lumina/data/services/tga_decoder_service.dart';
+import 'package:lumina_core/lumina_core.dart';
 
 /// Regression coverage: a GLB import must not keep 8K textures uncompressed
 /// and exhaust VRAM.

@@ -5,7 +5,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina/lumina.dart';
-import 'package:lumina/data/services/workspace_paths.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:path/path.dart' as p;
 
 import '../helpers/editor_host_fixture.dart';

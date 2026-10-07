@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_filament/flutter_filament.dart';
 import 'package:lumina/lumina.dart';
-import 'package:lumina/data/services/workspace_paths.dart';
+import 'package:lumina_core/lumina_core.dart';
 
 class _FakeDnaFilamentAsset implements FilamentAsset {
   final Map<int, List<String?>> _entitiesToTargets = {};

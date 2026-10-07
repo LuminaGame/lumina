@@ -1,8 +1,7 @@
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
-import 'package:lumina/data/repositories/plugin_repository.dart';
-import 'package:lumina/data/models/lumina_plugin_descriptor.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/data/repositories/project_repository.dart';
 import 'package:lumina/data/services/plugin_registry_service.dart';
 import 'package:lumina_ui/ui/features/plugin_manager/view_models/plugin_manager_view_model.dart';

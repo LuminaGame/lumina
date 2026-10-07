@@ -1,8 +1,7 @@
 import 'dart:io';
 
-import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina/data/models/lumina_project.dart';
-import 'package:lumina/data/services/umg_widget_library_service.dart';
+import 'package:test/test.dart';
+import 'package:lumina_core/lumina_core.dart';
 
 /// A project's pubspec follows its UMG widget library through one
 /// marked, idempotent block.

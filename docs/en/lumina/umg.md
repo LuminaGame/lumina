@@ -11,6 +11,7 @@ The runtime side of game UI: the plain Flutter widgets that compiled widget asse
 - [`lib/src/umg/umg_media_widgets.dart`](#libsrcumgumg_media_widgetsdart)
 - [`lib/src/umg/user_widget.dart`](#libsrcumguser_widgetdart)
 - [`lib/src/umg/widget_layer.dart`](#libsrcumgwidget_layerdart)
+- [`lib/src/umg/theme_document_colors.dart`](#libsrcumgtheme_document_colorsdart)
 
 ## `lib/src/umg/element_binding.dart`
 
@@ -516,6 +517,24 @@ A UMG runtime widget for non-spatialized background audio, theme music, or cutsc
 **Constructors:**
 
 - `const LuminaUmgAudioPlayer({super.key, this.filePath, this.assetPath, this.networkUrl, this.autoPlay = false, this.looping = false, this.volume = 1.0, this.preferHeadless = false, this.onInitialized, this.onError})`
+
+## `lib/src/umg/theme_document_colors.dart`
+
+`lumina_core` stores a theme's colours as ARGB ints (`0xAARRGGBB`). These extensions give Flutter code `Color`s.
+
+### `extension LuminaThemeDocumentColors on LuminaThemeDocument`
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `colorOf` | `Color colorOf(String token, {Color fallback = const Color(0xFF888888)})` | The colour of [token] from the theme palette, or [fallback] when the theme does not set it. |
+
+### `extension LuminaComponentStyleColors on LuminaComponentStyle`
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `bgColor` | `Color? get bgColor` | `backgroundColor` as a `Color`, or null. |
+| `fgColor` | `Color? get fgColor` | `foregroundColor` as a `Color`, or null. |
+| `bColor` | `Color? get bColor` | `borderColor` as a `Color`, or null. |
 
 ---
 

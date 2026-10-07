@@ -2,7 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:lumina/src/material/material_cache.dart';
-import 'package:lumina/data/models/lumina_asset.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/data/services/level_asset_manifest.dart';
 
 /// The material a placed level mesh draws on every section in place of the

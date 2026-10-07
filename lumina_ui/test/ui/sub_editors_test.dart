@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
-import 'package:lumina/data/models/lumina_asset.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/static_mesh_editor_view_model.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/blueprint/blueprint_sub_editor.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/sub_editor_3d_viewport.dart';

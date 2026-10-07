@@ -3,7 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina/lumina.dart';
-import 'package:lumina/data/services/game_template_service.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina_ui/ui/features/main_editor/services/pie_controller.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 import 'package:vector_math/vector_math_64.dart' show Vector3;

@@ -29,6 +29,7 @@ flutter test test/src/engine_test.dart
 - `flutter_filament` unit testleri Filament'in noop backend'inde çalışır ve GPU gerektirmez.
 - Testler gerçek dosyalar ve gerçek native kütüphaneler kullanır. `test-assets/` içindeki modellere ihtiyaç duyan testler, dosyalar yoksa atlanır; `LUMINA_TEST_ASSETS` onları başka bir klasöre yönlendirir.
 - `lumina_ui`'ın ayrıca `integration_test/` altında integration akışları vardır (`flutter test integration_test/<dosya>`).
+- `lumina_core` saf Dart'tır: testleri `flutter test` ile değil, `dart test` ile çalışır (örneğin `dart test test/architecture/pure_dart_test.dart`).
 
 ## Smoke testler ve HTML raporu
 

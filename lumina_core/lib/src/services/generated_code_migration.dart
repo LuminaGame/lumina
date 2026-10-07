@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:lumina/data/services/dart_identifiers.dart';
+import 'package:lumina_core/src/services/dart_identifiers.dart';
 
 /// Brings a project's generated Dart written by earlier Lumina versions to
 /// the current naming rules ([dartTypeName], [dartFileName]).

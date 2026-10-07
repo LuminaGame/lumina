@@ -2,8 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart' show Rect;
-import 'package:lumina/data/services/config_json_file.dart';
-import 'package:lumina/data/services/lumina_config_dir.dart';
+import 'package:lumina_core/lumina_core.dart';
 
 /// The editor window's placement as the user left it: the restored
 /// (un-maximized) bounds in logical pixels, plus whether it was maximized or

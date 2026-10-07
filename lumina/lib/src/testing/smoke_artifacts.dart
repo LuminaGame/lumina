@@ -5,7 +5,7 @@ import 'dart:typed_data';
 import 'package:flutter_filament/flutter_filament.dart';
 import 'package:lumina_smoke/lumina_smoke.dart' as smoke;
 
-import 'package:lumina/src/math/units.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/src/testing/smoke_render.dart';
 
 /// The smoke-test artifact API of lumina's tests: lumina_smoke's

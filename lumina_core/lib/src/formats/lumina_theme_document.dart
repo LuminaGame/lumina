@@ -1,9 +1,10 @@
 import 'dart:convert';
-import 'package:flutter/widgets.dart' show Color;
 
-import 'package:lumina/data/models/lumina_asset.dart';
+import 'package:lumina_core/src/formats/lumina_asset.dart';
 
 /// Style overrides for a specific UI component in a [LuminaThemeDocument].
+/// Colours are ARGB ints (`0xAARRGGBB`); Flutter code reads them as `Color`s
+/// through `bgColor` / `fgColor` / `bColor` (`package:lumina`).
 class LuminaComponentStyle {
   final int? backgroundColor;
   final int? foregroundColor;
@@ -28,10 +29,6 @@ class LuminaComponentStyle {
     this.fontWeight,
     this.customProperties = const {},
   });
-
-  Color? get bgColor => backgroundColor != null ? Color(backgroundColor!) : null;
-  Color? get fgColor => foregroundColor != null ? Color(foregroundColor!) : null;
-  Color? get bColor => borderColor != null ? Color(borderColor!) : null;
 
   LuminaComponentStyle copyWith({
     int? backgroundColor,
@@ -153,12 +150,8 @@ class LuminaThemeDocument {
     this.customStyles = const {},
   });
 
-  Color colorOf(String token, {Color fallback = const Color(0xFF888888)}) {
-    final val = colors[token];
-    if (val == null) return fallback;
-    return Color(val);
-  }
-
+  /// The ARGB colour of [token] (`0xAARRGGBB`), or [fallback]. Flutter code
+  /// reads it as a `Color` through `colorOf` (`package:lumina`).
   int colorInt(String token, {int fallback = 0xFF888888}) => colors[token] ?? fallback;
 
   bool hasComponentStyle(String key) => componentStyles.containsKey(key);

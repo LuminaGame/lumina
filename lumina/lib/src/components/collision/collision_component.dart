@@ -6,7 +6,7 @@ import 'package:lumina/src/collision/collision_preset.dart';
 import 'package:lumina/src/collision/collision_query.dart';
 import 'package:lumina/src/collision/shapes.dart';
 import 'package:lumina/src/components/base/scene_component.dart';
-import 'package:lumina/src/math/euler.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/src/physics/primitive_physics.dart';
 
 export 'package:lumina/src/collision/collision_filter.dart';

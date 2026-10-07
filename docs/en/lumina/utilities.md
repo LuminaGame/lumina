@@ -2,7 +2,7 @@
 
 # Utilities, math and testing
 
-Engine utilities: gameplay statics, gameplay volumes (trigger, blocking, kill-Z), the timer manager, viewport picking, Euler and transform-snapshot math, the mesh decimation service and the engine's `SmokeArtifacts`. File paths are relative to the `lumina/` package directory.
+Engine utilities: gameplay statics, gameplay volumes (trigger, blocking, kill-Z), the timer manager, viewport picking, the mesh decimation service and the engine's `SmokeArtifacts`. File paths are relative to the `lumina/` package directory. The math rules (units, axes, Euler, transform snapshots) live in `lumina_core`: see [Math](../lumina_core/math.md).
 
 **On this page:**
 
@@ -11,10 +11,6 @@ Engine utilities: gameplay statics, gameplay volumes (trigger, blocking, kill-Z)
 - [`lib/src/utility/gameplay_volumes.dart`](#libsrcutilitygameplay_volumesdart)
 - [`lib/src/utility/timer_manager.dart`](#libsrcutilitytimer_managerdart)
 - [`lib/src/utility/viewport_statics.dart`](#libsrcutilityviewport_staticsdart)
-- [`lib/src/math/euler.dart`](#libsrcmatheulerdart)
-- [`lib/src/math/transform_snapshot.dart`](#libsrcmathtransform_snapshotdart)
-- [`lib/src/math/axes.dart`](#libsrcmathaxesdart)
-- [`lib/src/math/units.dart`](#libsrcmathunitsdart)
 - [`lib/src/testing/asset_project_fixture.dart`](#libsrctestingasset_project_fixturedart)
 - [`lib/src/testing/import_folder_fixture.dart`](#libsrctestingimport_folder_fixturedart)
 - [`lib/src/testing/smoke_artifacts.dart`](#libsrctestingsmoke_artifactsdart)
@@ -179,72 +175,6 @@ Stateless static utility facade for GPU viewport operations (pixel picking, ray 
 | :--- | :--- | :--- |
 | `cancelAllPending` | `static void cancelAllPending(String reason)` | Cancels and fails all currently pending pick and screenshot operations. |
 | `flipRowsVertically` | `static Uint8List flipRowsVertically(Uint8List source, int width, int hei...` | Vertically flips RGBA pixel buffer rows (from bottom-left to top-down convention). |
-
-## `lib/src/math/euler.dart`
-
-**Top-level Functions:**
-
-- **`Quaternion luminaEulerDegreesToQuaternion(double xDeg, double yDeg, double zDeg)`**: Converts editor Euler angles in degrees (pitch X, yaw Y, roll Z) into a unit quaternion using the `Rz · Ry · Rx` composition the editor viewport, Play-In-Editor and generated level code all share.  Built through a rotation matrix rather than quaternion multiplication so it matches `Matrix4.rotationZ * rotationY * rotationX` exactly (vector_math's `Quaternion.rotate` uses the opposite handedness from its matrices).
-- **`Quaternion luminaEulerListToQuaternion(List<num>? euler)`**: Same as [luminaEulerDegreesToQuaternion] for a `[x, y, z]` list; missing components default to 0.
-
-## `lib/src/math/transform_snapshot.dart`
-
-### `class LuminaTransformSnapshot`
-
-A snapshot of a location and rotation.
-
-**Constructors:**
-- `LuminaTransformSnapshot.zero()`: Creates a [LuminaTransformSnapshot] at the origin with zero rotation.
-
-**Functions, Methods & Accessors:**
-
-| Method / Getter | Signature | Purpose & Description |
-| :--- | :--- | :--- |
-| `location` | `Vector3 location` | The location vector. |
-| `rotation` | `Quaternion rotation` | The rotation quaternion. |
-
-## `lib/src/math/axes.dart`
-
-### `abstract final class LuminaAxes`
-
-Authoring ↔ runtime axes.
-
-Levels are authored and stored **Z-up**: `location`, `rotation` and `scale` in `metadata.actors` (and a basic shape's `sizeX` / `sizeY` / `sizeZ`) are what the Details panel shows. The runtime (Filament, glTF) is **Y-up**. This is the one place the rule is written; the level code generator, Play-In-Editor and the editor viewport all go through it, so the editor and the game agree.
-
-**Members:**
-
-| Member | Signature | Description |
-| :--- | :--- | :--- |
-| `location` | `static Vector3 location(List<num> authoring)` | Authoring `(x, y, z)` (Z up) → runtime `(x, z, −y)` (Y up). |
-| `toAuthoringLocation` | `static List<double> toAuthoringLocation(Vector3 runtime)` | Runtime `(x, y, z)` → authoring `(x, −z, y)`. |
-| `scale` | `static Vector3 scale(List<num> authoring)` | Per-axis scale follows its axis: `(sx, sy, sz)` → `(sx, sz, sy)`. |
-| `extent` | `static Vector3 extent(List<num> authoring)` | An extent (a size along each axis, like a basic shape's `sizeX` / `sizeY` / `sizeZ`) follows its axis with no sign: `(x, y, z)` → `(x, z, y)`, so the authored Z (the height) is the runtime Y. |
-| `toAuthoringExtent` | `static List<double> toAuthoringExtent(Vector3 runtime)` | Runtime extent `(x, y, z)` → authoring `(x, z, y)`. |
-| `rotation` | `static Quaternion rotation(List<num> authoringDegrees)` | Authoring rotation `[x, y, z]` in degrees about the authoring X, Y and Z axes: authoring forward is +Y, so x is **pitch**, y **roll** and z **yaw**, applied yaw first, then pitch, then roll. Positive yaw turns right (yaw 90 faces +X), positive pitch looks up, positive roll dips the left side (the up vector leans to −X). These are the numbers a Blueprint rotator (`LuminaRotator`) holds and the controller's yaw means, so an actor placed at yaw 90 reads yaw 90 from Get Actor Rotation. In runtime axes this is `Ry(−z) · Rx(x) · Rz(y)`. |
-
-**Top-level functions and variables:**
-
-| Member | Signature | Description |
-| :--- | :--- | :--- |
-| `luminaAuthoringRotation` | `Quaternion luminaAuthoringRotation(double xDeg, double yDeg, double zDeg)` | [LuminaAxes.rotation] for three angles: what generated level code calls with the authored values, so the level file still reads like the Details panel. |
-
-## `lib/src/math/units.dart`
-
-### `abstract final class LuminaUnits`
-
-World units: one world unit is one **centimetre**. This is the only place the metre ↔ unit factor is written; every conversion goes through it.
-
-**Members:**
-
-| Member | Signature | Description |
-| :--- | :--- | :--- |
-| `unitsPerMetre` | `static const double unitsPerMetre` | World units in one metre. |
-| `gravity` | `static const double gravity` | Standard gravity, cm/s² (magnitude; it pulls down). |
-| `metres` | `static double metres(double m)` | [m] metres in world units. |
-| `toMetres` | `static double toMetres(double units)` | [units] world units in metres. |
-| `lightPower` | `static double lightPower(double physical)` | The Filament power for a physical point/spot light value (lumens or candela). Filament is physically based in metres: illuminance is I/d² with d in world units, so a centimetre world needs the power scaled by the square of [unitsPerMetre] to light the same at the same physical distance. |
-| `dynamicLightingNear` | `static const double dynamicLightingNear` | Range the froxel light grid covers, in world units (10 cm to 500 m). |
-| `dynamicLightingFar` | `static const double dynamicLightingFar` |  |
 
 ## `lib/src/testing/asset_project_fixture.dart`
 

@@ -3,9 +3,8 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
-import 'package:lumina/data/models/lumina_asset.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/data/repositories/asset_repository.dart';
-import 'package:lumina/data/services/engine_logger_service.dart';
 import 'package:lumina/lumina.dart'
     show LuminaBlueprintDocument, LuminaBlueprintNode, LuminaBlueprintNodeLibrary, LuminaThemeDocument, LuminaThemeService;
 import 'package:shadcn_flutter/shadcn_flutter.dart' show ThemeData;

@@ -1,9 +1,8 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina/data/services/glb_animation_merger.dart';
-import 'package:lumina/data/services/glb_animation_retargeter.dart';
+import 'package:test/test.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:vector_math/vector_math_64.dart';
 
 import 'glb_soma_pose.dart';

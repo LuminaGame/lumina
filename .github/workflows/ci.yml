@@ -141,19 +141,29 @@ jobs:
           test/src/engine_test.dart
           test/web/bindings_lockstep_test.dart
 
+      # Pure Dart: `dart test`, which is itself the proof that nothing it
+      # reaches needs Flutter.
+      - name: lumina_core
+        working-directory: lumina/lumina_core
+        run: >-
+          dart test
+          test/architecture/pure_dart_test.dart
+          test/formats_round_trip_test.dart
+          test/project_manifest_test.dart
+          test/tga_decoder_test.dart
+          test/asset_test.dart
+          test/data/dart_identifiers_test.dart
+          test/data/project_settings_model_test.dart
+
       - name: lumina
         working-directory: lumina/lumina
         run: >-
           flutter test
-          test/project_manifest_test.dart
           test/obj_parser_test.dart
-          test/tga_decoder_test.dart
           test/glb_parser_test.dart
-          test/asset_test.dart
           test/repository_test.dart
           test/web/runtime_import_graph_test.dart
-          test/data/dart_identifiers_test.dart
-          test/data/project_settings_model_test.dart
+          test/architecture/import_cycles_test.dart
 
       - name: lumina_editor_api
         working-directory: lumina/lumina_editor_api

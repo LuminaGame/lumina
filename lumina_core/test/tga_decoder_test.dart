@@ -1,11 +1,9 @@
 import 'dart:typed_data';
-import 'dart:ui' as ui;
-import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina/data/services/tga_decoder_service.dart';
+import 'package:image/image.dart' as img;
+import 'package:lumina_core/lumina_core.dart';
+import 'package:test/test.dart';
 
 void main() {
-  TestWidgetsFlutterBinding.ensureInitialized();
-
   group('TgaDecoderService Tests', () {
     test('Should decode uncompressed 24-bit TGA and convert to valid PNG bytes', () async {
       // Create a 2x2 24-bit uncompressed TGA in memory
@@ -37,11 +35,10 @@ void main() {
       expect(pngBytes, isNotNull);
       expect(pngBytes!.length, greaterThan(20));
 
-      // Verify that Flutter can natively decode the generated PNG
-      final codec = await ui.instantiateImageCodec(pngBytes);
-      final frame = await codec.getNextFrame();
-      expect(frame.image.width, equals(2));
-      expect(frame.image.height, equals(2));
+      // A standard PNG decoder reads the generated PNG.
+      final png = img.decodePng(pngBytes)!;
+      expect(png.width, equals(2));
+      expect(png.height, equals(2));
     });
 
     test('Should decode RLE 32-bit TGA and convert to PNG', () async {
@@ -69,9 +66,10 @@ void main() {
       final pngBytes = TgaDecoderService.tgaToPng(tgaBytes);
       expect(pngBytes, isNotNull);
 
-      final codec = await ui.instantiateImageCodec(pngBytes!);
-      final frame = await codec.getNextFrame();
-      expect(frame.image.width, equals(2));
+      final png = img.decodePng(pngBytes!)!;
+      expect(png.width, equals(2));
+      final red = png.getPixel(0, 0);
+      expect([red.r, red.g, red.b, red.a], [255, 0, 0, 255]);
     });
   });
 }

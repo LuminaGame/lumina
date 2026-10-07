@@ -2,8 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina/data/models/lumina_asset.dart';
-import 'package:lumina/data/services/tga_decoder_service.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/material_preview_renderer.dart';
 
 /// Regression coverage: assigned textures never reached the material

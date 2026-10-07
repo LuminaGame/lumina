@@ -22,7 +22,7 @@ import 'package:lumina/src/components/collision/collision_component.dart';
 import 'package:lumina/src/components/mesh/animated_mesh_component.dart';
 import 'package:lumina/src/components/mesh/static_mesh_component.dart';
 import 'package:lumina/src/components/movement/character_movement_component.dart';
-import 'package:lumina/src/math/axes.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/src/object/actor.dart';
 import 'package:lumina/src/object/character.dart';
 import 'package:lumina/src/physics/mass_properties.dart';

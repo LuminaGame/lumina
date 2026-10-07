@@ -6,7 +6,7 @@ import 'package:vector_math/vector_math_64.dart';
 import 'package:lumina/src/components/base/actor_component.dart';
 import 'package:lumina/src/components/mesh/animated_mesh_component.dart';
 import 'package:lumina/src/object/actor.dart';
-import 'package:lumina/src/math/euler.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/src/blueprint/blueprint_model.dart';
 import 'package:lumina/src/blueprint/blueprint_runtime.dart';
 import 'package:lumina/src/blueprint/anim/anim_blueprint_model.dart';

@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter_filament/flutter_filament.dart' show FilamentWidget;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina/data/models/lumina_asset.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/material_editor_view_model.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/sub_editor_3d_viewport.dart';

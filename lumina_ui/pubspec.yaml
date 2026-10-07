@@ -13,6 +13,8 @@ dependencies:
     sdk: flutter
   lumina:
     path: ../lumina
+  lumina_core:
+    path: ../lumina_core
   flutter_filament:
     path: ../flutter_filament
   # From the tools repo; pubspec_overrides.yaml at the workspace root points

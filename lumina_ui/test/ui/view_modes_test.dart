@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina/data/models/lumina_project.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 
 void main() {

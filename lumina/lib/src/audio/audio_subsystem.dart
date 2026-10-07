@@ -4,7 +4,7 @@ import 'package:lumina/src/components/audio/audio_component.dart';
 import 'package:lumina/src/world/subsystem/world_subsystem.dart';
 import 'package:lumina/src/audio/audio_backend.dart';
 import 'package:lumina/src/audio/sound_base.dart';
-import 'package:lumina/src/math/euler.dart';
+import 'package:lumina_core/lumina_core.dart';
 
 /// Central audio subsystem managing spatial listener coordinates, master volume, and spatial parameter updates.
 class LuminaAudioSubsystem extends LuminaWorldSubsystem {

@@ -3,7 +3,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_filament/flutter_filament.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina/data/services/game_template_service.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/lumina_runtime.dart';
 import 'package:vector_math/vector_math_64.dart';
 

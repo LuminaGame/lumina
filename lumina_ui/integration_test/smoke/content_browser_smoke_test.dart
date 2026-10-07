@@ -6,7 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:integration_test/integration_test.dart';
-import 'package:lumina/data/services/game_template_service.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/lumina.dart';
 import 'package:lumina/testing.dart' show ImportFolderFixture;
 import 'package:lumina_ui/testing.dart';

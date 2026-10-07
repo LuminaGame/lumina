@@ -3,14 +3,13 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:lumina/lumina.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart';
 import 'package:lumina_plugin_pcg/lumina_plugin_pcg.dart';
 import 'package:lumina_ui/ui/core/host/editor_host.dart';
 import 'package:lumina_ui/testing.dart';
 import 'package:lumina_ui/ui/core/plugin_extension_registry.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
-import 'package:lumina/data/services/workspace_paths.dart';
+import 'package:lumina_core/lumina_core.dart';
 
 /// The PCG example plugin end to end on the real host:
 /// installed into a temp project's `plugins/` root, discovered by

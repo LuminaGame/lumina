@@ -7,7 +7,7 @@ import 'package:lumina/src/components/camera/camera_component.dart';
 import 'package:lumina/src/components/camera/spring_arm_component.dart';
 import 'package:lumina/src/components/mesh/animated_mesh_component.dart';
 import 'package:lumina/src/input/input_action.dart';
-import 'package:lumina/src/math/euler.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/src/object/character.dart';
 import 'package:lumina/src/game/template_content.dart';
 

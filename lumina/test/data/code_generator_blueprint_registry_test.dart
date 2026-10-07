@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina/data/services/blueprint_class_registry.dart';
-import 'package:lumina/data/services/game_template_service.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/lumina.dart';
 
 import '../blueprint/generated/project_registry/blueprint_registry.g.dart';

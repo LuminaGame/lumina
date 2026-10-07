@@ -8,7 +8,7 @@ import 'package:lumina/src/object/pawn.dart';
 import 'package:lumina/src/world/debug_shapes.dart';
 import 'package:lumina/src/world/subsystem/world_subsystem.dart';
 import 'package:lumina/src/world/world.dart';
-import 'package:lumina/src/math/euler.dart';
+import 'package:lumina_core/lumina_core.dart';
 
 /// Configuration parameters for the visual perception sense.
 class AISenseConfigSight {

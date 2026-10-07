@@ -2,7 +2,7 @@
 
 # Bileşenler: temel, hareket, kamera, ışık, ses, çarpışma
 
-Temel component seti: actor ve scene component'leri, character, projectile, rotating ve interpolated movement, kamera component'i ve spring arm, oyuncu input binding'leri, directional, point ve spot ışıklar, ses component'i ve collision component'leri. Dosya yolları `lumina/` paket dizinine görelidir.
+Temel component seti: actor ve scene component'leri, character, projectile, rotating ve interpolated movement, kamera component'i ve spring arm, oyuncu input binding'leri, directional, point ve spot ışıklar, ses component'i ve collision component'leri. Dosya yolları `lumina/` paket dizinine görelidir. Kamera interpolasyon yardımcıları (`fInterpTo`, `rInterpTo`, control rotation'lar) `lumina_core`'dadır: bkz. [Matematik](../lumina_core/math.md).
 
 **Bu sayfada:**
 
@@ -13,7 +13,6 @@ Temel component seti: actor ve scene component'leri, character, projectile, rota
 - [`lib/src/components/movement/rotating_movement_component.dart`](#libsrccomponentsmovementrotating_movement_componentdart)
 - [`lib/src/components/audio/audio_component.dart`](#libsrccomponentsaudioaudio_componentdart)
 - [`lib/src/components/camera/camera_component.dart`](#libsrccomponentscameracamera_componentdart)
-- [`lib/src/components/camera/camera_math.dart`](#libsrccomponentscameracamera_mathdart)
 - [`lib/src/components/camera/spring_arm_component.dart`](#libsrccomponentscameraspring_arm_componentdart)
 - [`lib/src/components/player/input_binding.dart`](#libsrccomponentsplayerinput_bindingdart)
 - [`lib/src/components/player/lumina_player_component.dart`](#libsrccomponentsplayerlumina_player_componentdart)
@@ -310,23 +309,6 @@ Bir kameranın yazılmış ayarları tek bir özellik haritası olarak; her tük
 | `fromProperties` | `factory LuminaCameraSettings.fromProperties(Map<String, dynamic>? properties)` | Bir özellik haritasını okur; eksik, yanlış tipte ya da aralık dışı bir değer varsayılanı korur (görüş alanı 5–170°'ye sıkıştırılır, uzak düzlem yakın düzlemin ötesinde tutulur). |
 | `toProperties` | `Map<String, dynamic> toProperties()` | `fromProperties`'in geri okuduğu özellik haritası. |
 | `applyTo` | `void applyTo(LuminaCameraComponent camera)` | Ayarları bir kamera bileşenine yazar (etkinleştirmesine dokunmaz). |
-
-## `lib/src/components/camera/camera_math.dart`
-
-**Üst Düzey Fonksiyonlar (Top-level Functions):**
-
-- **`double fInterpTo(double current, double target, double deltaTime, double interpSpeed)`**: Smoothly interpolates a double from [current] to [target] at [interpSpeed].
-
-### `extension QuaternionEuler`
-
-`QuaternionEuler`: İlgili modülün veri modelini veya temel işlevselliğini temsil eden `extension` yapısıdır.
-
-**Fonksiyonlar, Metotlar ve Erişimciler:**
-
-| Metot / Getter | İmzası | Ne İşe Yarar? |
-| :--- | :--- | :--- |
-| `eulerAngles` | `Vector3 get eulerAngles` | Extracts Euler angles (Pitch, Yaw, Roll) to a Vector3 (X=Pitch, Y=Yaw, Z=Roll) |
-| `setFromEulerAngles` | `void setFromEulerAngles(Vector3 euler)` | Sets the quaternion from Euler angles (Pitch, Yaw, Roll) in Vector3 (X=Pitch, Y=Yaw, Z=Roll) |
 
 ## `lib/src/components/camera/spring_arm_component.dart`
 

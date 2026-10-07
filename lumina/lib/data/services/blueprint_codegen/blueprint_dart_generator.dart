@@ -3,7 +3,7 @@ import 'package:vector_math/vector_math_64.dart';
 import 'package:lumina/src/blueprint/blueprint.dart';
 import 'package:lumina/src/blueprint/vm/blueprint_vm.dart';
 import 'package:lumina/src/input/input_action.dart';
-import 'package:lumina/data/services/dart_identifiers.dart';
+import 'package:lumina_core/lumina_core.dart';
 
 part 'blueprint_dart_generator/graph_compiler.dart';
 part 'blueprint_dart_generator/class_writer.dart';

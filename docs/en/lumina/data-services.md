@@ -2,7 +2,7 @@
 
 # Data layer: use cases and services
 
-The editor-facing data layer, part one: the domain use cases (save level, import asset, generate Dart code) and the services behind them: asset reference graph, auto-save, the Dart code generator, the engine logger, game and level templates, the GLB, OBJ and TGA parsers, plugin registry, template generator and host patcher, primitive GLB factory, project input binder and thumbnails. File paths are relative to the `lumina/` package directory.
+The editor-facing data layer, part one: the domain use cases (save level, import asset, generate Dart code) and the services behind them: asset reference graph, the Dart code generator, the GLB and OBJ parsers, the plugin registry and template generator, the project input binder and thumbnails. The pure services (auto-save timer, engine logger, game and level templates, TGA decoder, host patcher, primitive GLB factory, workspace and data paths, build fingerprint and cache, glTF tools and others) live in `lumina_core`: see [Services](../lumina_core/services.md). File paths are relative to the `lumina/` package directory.
 
 **On this page:**
 
@@ -13,20 +13,13 @@ The editor-facing data layer, part one: the domain use cases (save level, import
 - [`lib/domain/models/use_case_results.dart`](#libdomainmodelsuse_case_resultsdart)
 - [`lib/data/services/asset_reference_graph.dart`](#libdataservicesasset_reference_graphdart)
 - [`lib/data/services/assimp_import_service.dart`](#libdataservicesassimp_import_servicedart)
-- [`lib/data/services/auto_save_timer_service.dart`](#libdataservicesauto_save_timer_servicedart)
 - [`lib/data/services/code_generator_service.dart`](#libdataservicescode_generator_servicedart)
-- [`lib/data/services/engine_logger_service.dart`](#libdataservicesengine_logger_servicedart)
-- [`lib/data/services/game_template_service.dart`](#libdataservicesgame_template_servicedart)
 - [`lib/data/services/glb_parser_service.dart`](#libdataservicesglb_parser_servicedart)
-- [`lib/data/services/level_template_service.dart`](#libdataserviceslevel_template_servicedart)
 - [`lib/data/services/obj_import_service.dart`](#libdataservicesobj_import_servicedart)
 - [`lib/data/services/obj_parser_service.dart`](#libdataservicesobj_parser_servicedart)
-- [`lib/data/services/plugin_host_patcher_service.dart`](#libdataservicesplugin_host_patcher_servicedart)
 - [`lib/data/services/plugin_registry_service.dart`](#libdataservicesplugin_registry_servicedart)
 - [`lib/data/services/plugin_template_generator_service.dart`](#libdataservicesplugin_template_generator_servicedart)
-- [`lib/data/services/primitive_glb_factory.dart`](#libdataservicesprimitive_glb_factorydart)
 - [`lib/data/services/project_input_binder.dart`](#libdataservicesproject_input_binderdart)
-- [`lib/data/services/tga_decoder_service.dart`](#libdataservicestga_decoder_servicedart)
 - [`lib/data/services/thumbnail_service.dart`](#libdataservicesthumbnail_servicedart)
 
 ## `lib/domain/use_cases/generate_dart_code_use_case.dart`
@@ -161,20 +154,6 @@ Every 3D format Assimp reads besides FBX and OBJ (which have their own services)
 | `convert` | `static Future<AssimpImportResult> convert(String path, {List<String> textureSearchDirs = const []})` | [convertSync] in a background isolate. |
 | `convertSync` | `static AssimpImportResult convertSync(String path, {List<String> textureSearchDirs = const []})` | Throws [AssimpImportException] when Assimp cannot read the file. |
 
-## `lib/data/services/auto_save_timer_service.dart`
-
-### `class AutoSaveTimerService`
-
-`AutoSaveTimerService`: Service class encapsulating business logic, file I/O, or engine processing.
-
-**Functions, Methods & Accessors:**
-
-| Method / Getter | Signature | Purpose & Description |
-| :--- | :--- | :--- |
-| `onPerformSave` | `SaveCallback onPerformSave` | Holds the `onPerformSave` property or configuration state. |
-| `stop` | `void stop()` | Executes `stop` operation. |
-| `checkAndExecuteAutoSave` | `Future<LuminaProject> checkAndExecuteAutoSave(LuminaProject project)` | Executes `checkAndExecuteAutoSave` operation. |
-
 ## `lib/data/services/code_generator_service.dart`
 
 ### `class DartCodeGeneratorService`
@@ -190,88 +169,6 @@ Every 3D format Assimp reads besides FBX and OBJ (which have their own services)
 | `writeProjectInputDart` | `bool writeProjectInputDart(String projectPath, [ProjectInputSettings? settings])` | Writes `lib/input/project_input.g.dart` from settings or project manifest. |
 
 The generated level's begin-play registers `LuminaWorldPartitionSubsystem` with the level's `metadata.worldPartition` section (cell size, transitions per tick, the data layers with their initial state), adds every actor to the partition and registers the streaming sources. A level row may carry `dataLayers: [<layer name>, ...]` (the editor does not author it yet; tools such as the map generator write it): the generated code then holds a `dataLayersByActor` map keyed by the actors' `LuminaObjectKey` ids and calls `partition.assignActorToLayer` for each name, so unloaded or merely loaded layers keep their actors from ticking exactly as the runtime defines it.
-
-## `lib/data/services/engine_logger_service.dart`
-
-### `class EngineLogEntry`
-
-`EngineLogEntry`: `class` representing the data model or functionality of the module.
-
-**Constructors:**
-- `EngineLogEntry.fromJson(Map<String, dynamic> json)`: Initializes `EngineLogEntry.fromJson(Map<String, dynamic> json)`.
-
-**Functions, Methods & Accessors:**
-
-| Method / Getter | Signature | Purpose & Description |
-| :--- | :--- | :--- |
-| `timestamp` | `String timestamp` | Holds the `timestamp` property or configuration state. |
-| `level` | `String level` | Holds the `level` property or configuration state. |
-| `source` | `String source` | Holds the `source` property or configuration state. |
-| `message` | `String message` | Holds the `message` property or configuration state. |
-| `toJson` | `Map<String, dynamic> toJson()` | Serializes the object to a JSON map. |
-
-### `class EngineLoggerService`
-
-`EngineLoggerService`: Service class encapsulating business logic, file I/O, or engine processing.
-
-**Constructors:**
-- `EngineLoggerService()`: Initializes `EngineLoggerService()`.
-- `EngineLoggerService._internal()`: Initializes `EngineLoggerService._internal()`.
-
-**Functions, Methods & Accessors:**
-
-| Method / Getter | Signature | Purpose & Description |
-| :--- | :--- | :--- |
-| `logStream` | `Stream<EngineLogEntry> get logStream` | Getter accessor returning the current value of `logStream`. |
-| `logs` | `List<EngineLogEntry> get logs` | Getter accessor returning the current value of `logs`. |
-| `clear` | `void clear()` | Clears all elements from the collection or buffer. |
-
-## `lib/data/services/game_template_service.dart`
-
-**Top-level Functions:**
-
-- **`Map<String, dynamic> luminaTemplateSunActor() => _sun()`**: The directional sun actor map shared by the game and level templates.
-- **`Map<String, dynamic> luminaTemplateSkyActor() => _sky()`**: The sky/atmosphere actor map shared by the game and level templates.
-
-### `enum GameTemplateKind`
-
-Which runtime pawn shape a template scaffolds.
-
-### `class GameTemplate`
-
-One entry of the shared template catalog.  This is the single source of truth both the launcher UI and `ProjectRepository.createProjectStream` read: the chip label and blurb, the actors seeded into `contents/levels/L_DefaultLevel.lmas`, the input actions and mapping context written into the manifest, and whether user-owned character / game-mode source is generated.
-
-**Functions, Methods & Accessors:**
-
-| Method / Getter | Signature | Purpose & Description |
-| :--- | :--- | :--- |
-| `id` | `String id` | Holds the `id` property or configuration state. |
-| `title` | `String title` | Holds the `title` property or configuration state. |
-| `description` | `String description` | Holds the `description` property or configuration state. |
-| `icon` | `String icon` | Short icon hint the launcher maps to a shadcn icon. |
-| `kind` | `GameTemplateKind kind` | Holds the `kind` property or configuration state. |
-| `levelActors` | `List<Map<String, dynamic>> get levelActors` | A fresh, independently mutable copy of the seeded actor maps (`EditorActorNode.toMap()` shape). |
-| `input` | `ProjectInputSettings get input` | A fresh copy of the input actions and mapping contexts for the manifest. |
-| `generatesGameSource` | `bool get generatesGameSource` | Whether this template writes `lib/pawns/…` and `lib/game/…` source the user owns. |
-| `classPrefix` | `static String classPrefix(String projectName)` | `my_first_game` → `MyFirstGame`. |
-| `characterClass` | `String characterClass(String projectName)` | Dart class name of the generated character for [projectName]. |
-| `gameModeClass` | `String gameModeClass(String projectName)` | Dart class name of the generated game mode, or the engine default for the blank template. This is what lands in [ProjectMapsAndModes.defaultGameMode]. |
-| `characterPath` | `String characterPath(String projectName)` | `lib/`-relative path of the generated character file. |
-| `gameModePath` | `String gameModePath(String projectName)` | `lib/`-relative path of the generated game mode file. |
-| `manifestStepMessages` | `List<String> manifestStepMessages(String projectName)` | Human-readable step lines the creation progress log names for this template, so the user sees what is actually being written. |
-
-### `class GameTemplateCatalog`
-
-The three templates offered by the launcher.
-
-**Constructors:**
-- `GameTemplateCatalog._()`: Initializes `GameTemplateCatalog._()`.
-
-**Functions, Methods & Accessors:**
-
-| Method / Getter | Signature | Purpose & Description |
-| :--- | :--- | :--- |
-| `byId` | `static GameTemplate byId(String? id)` | Resolves [id] to a template, tolerating the legacy `'Blank 3D'` label and unknown ids (both fall back to [blank3d]). |
 
 ## `lib/data/services/glb_parser_service.dart`
 
@@ -437,39 +334,6 @@ The three templates offered by the launcher.
 | :--- | :--- | :--- |
 | `parseGlb` | `static Future<GlbMeshData?> parseGlb(Uint8List bytes)` | Executes `parseGlb` operation. |
 
-## `lib/data/services/level_template_service.dart`
-
-**Top-level Functions:**
-
-- **`Map<String, dynamic> defaultWorldPartitionSection()`**: A fresh `metadata.worldPartition` section carrying the runtime's own defaults and no data layers (a level authors those itself).
-
-### `class LevelTemplate`
-
-One entry in the New Level dialog.
-
-**Functions, Methods & Accessors:**
-
-| Method / Getter | Signature | Purpose & Description |
-| :--- | :--- | :--- |
-| `id` | `String id` | Holds the `id` property or configuration state. |
-| `title` | `String title` | Holds the `title` property or configuration state. |
-| `description` | `String description` | One line describing exactly what this template seeds — shown in the dialog, so it must stay truthful. |
-| `levelActors` | `List<Map<String, dynamic>> get levelActors` | Fresh actor maps (`EditorActorNode.toMap()` shape) for a new level. |
-| `worldPartition` | `Map<String, dynamic>? get worldPartition` | Fresh `metadata.worldPartition` section, or null when the template does not author one (`Empty`, `Default`). |
-
-### `class LevelTemplateCatalog`
-
-The templates `File → New Level…` offers, in dialog order.
-
-**Constructors:**
-- `LevelTemplateCatalog._()`: Initializes `LevelTemplateCatalog._()`.
-
-**Functions, Methods & Accessors:**
-
-| Method / Getter | Signature | Purpose & Description |
-| :--- | :--- | :--- |
-| `byId` | `static LevelTemplate byId(String? id)` | Resolves [id] to a template; unknown ids fall back to [standard]. |
-
 ## `lib/data/services/obj_import_service.dart`
 
 ### `class MtlMaterial`
@@ -506,20 +370,6 @@ OBJ → GLB for the import pipeline. The asset repository stages every `.obj` th
 ### `class ObjParserService`
 
 Service for parsing Wavefront OBJ 3D model geometry.
-
-## `lib/data/services/plugin_host_patcher_service.dart`
-
-### `class PluginHostPatcherService`
-
-`PluginHostPatcherService`: Service class encapsulating business logic, file I/O, or engine processing.
-
-**Functions, Methods & Accessors:**
-
-| Method / Getter | Signature | Purpose & Description |
-| :--- | :--- | :--- |
-| `patchPubspec` | `Future<void> patchPubspec(Directory hostRoot, List<LuminaPluginDescripto...` | Executes `patchPubspec` operation. |
-| `generateRegistrar` | `Future<void> generateRegistrar(Directory hostRoot, List<LuminaPluginDesc...` | Executes `generateRegistrar` operation. |
-| `registrarSource` | `String registrarSource(List<LuminaPluginDescriptor> enabledCodePlugins)` | The registrar library: `kEnabledPlugins` (one instance per editor module), `kPluginProcesses` and `registerAllPlugins`; deterministic for a plugin list. `kPluginProcesses` maps every plugin whose manifest says `"isolation": "process"` to a factory of its `process_class`, whatever a project's `plugin_isolation` says (the editor applies the override when it starts), for example `'my_tools': () => my_tools_plugin.MyToolsProcess(),`; with none it is `{}`. |
 
 ## `lib/data/services/plugin_registry_service.dart`
 
@@ -652,31 +502,6 @@ Service for parsing Wavefront OBJ 3D model geometry.
 | `nameToPascal` | `static String nameToPascal(String name)` | Executes `nameToPascal` operation. |
 | `generate` | `Future<PluginGenerationResult> generate(PluginTemplateSpec spec)` | Executes `generate` operation. |
 
-## `lib/data/services/primitive_glb_factory.dart`
-
-### `class PrimitiveGlbFactory`
-
-Builds a real glTF 2.0 binary (`.glb`) for an engine primitive.  `Primitive` actors — the template test rooms, and "spawn a cube" — carry a shape and a size instead of an imported model. Rather than teaching every consumer a second geometry path, the shape is turned into an ordinary glTF binary here, so it flows through the same parser, the same renderer, the same picking and the same triangle counter as any imported mesh.  Geometry is centred on the origin and sized in world units (cm), so the actor's own transform places it. Output is deterministic for a given request.  Every shape carries `TEXCOORD_0` and `TANGENT`, so a textured (or normal-mapped) material assigned to it draws its texture: each box face and the plane map the whole 0..1 square upright, a sphere and a cylinder wall wrap it once around (u) from top (v = 0) to bottom (v = 1), and cylinder caps map it as a disc. UVs follow glTF (v runs down the image); tangents point along +u, with `w` making `cross(normal, tangent) * w` point up the image, as glTF defines it.
-
-**Constructors:**
-- `PrimitiveGlbFactory._()`: Initializes `PrimitiveGlbFactory._()`.
-
-### `class _Geometry`
-
-`_Geometry`: `class` representing the data model or functionality of the module.
-
-**Constructors:**
-- `_Geometry(this.positions, this.normals, this.uvs, this.indices)`: Initializes `_Geometry(this.positions, this.normals, this.uvs, this.indices)`.
-
-**Functions, Methods & Accessors:**
-
-| Method / Getter | Signature | Purpose & Description |
-| :--- | :--- | :--- |
-| `positions` | `List<double> positions` | Holds the `positions` property or configuration state. |
-| `normals` | `List<double> normals` | Holds the `normals` property or configuration state. |
-| `uvs` | `List<double> uvs` | Holds the `uvs` property or configuration state. |
-| `indices` | `List<int> indices` | Holds the `indices` property or configuration state. |
-
 ## `lib/data/services/project_input_binder.dart`
 
 ### `class LuminaAxisPlacementModifier`
@@ -728,33 +553,6 @@ Turns the `.lmproject` manifest's [ProjectInputSettings] — the same structures
 | Method / Getter | Signature | Purpose & Description |
 | :--- | :--- | :--- |
 | `bind` | `static BoundProjectInput bind(ProjectInputSettings settings)` | Executes `bind` operation. |
-
-## `lib/data/services/tga_decoder_service.dart`
-
-### `class TgaImage`
-
-`TgaImage`: `class` representing the data model or functionality of the module.
-
-**Functions, Methods & Accessors:**
-
-| Method / Getter | Signature | Purpose & Description |
-| :--- | :--- | :--- |
-| `width` | `int width` | Holds the `width` property or configuration state. |
-| `height` | `int height` | Holds the `height` property or configuration state. |
-| `rgbaBytes` | `Uint8List rgbaBytes` | Holds the `rgbaBytes` property or configuration state. |
-
-### `class TgaDecoderService`
-
-`TgaDecoderService`: Service class encapsulating business logic, file I/O, or engine processing.
-
-**Functions, Methods & Accessors:**
-
-| Method / Getter | Signature | Purpose & Description |
-| :--- | :--- | :--- |
-| `isTga` | `static bool isTga(Uint8List bytes)` | Checks if given bytes match a valid TGA image header |
-| `decode` | `static TgaImage? decode(Uint8List bytes)` | Decodes TGA binary bytes into raw RGBA8888 pixels |
-| `tgaToPng` | `static Uint8List? tgaToPng(Uint8List tgaBytes)` | Converts TGA bytes directly to standard PNG bytes |
-| `encodePng` | `static Uint8List encodePng(Uint8List rgba, int width, int height)` | Pure Dart standard PNG encoder with zlib compression |
 
 ## `lib/data/services/thumbnail_service.dart`
 

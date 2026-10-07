@@ -5,9 +5,8 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:lumina/data/services/fbx_import_service.dart';
-import 'package:lumina/data/services/glb_animation_merger.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/data/services/glb_parser_service.dart';
-import 'package:lumina/data/services/tga_decoder_service.dart';
 import 'package:lumina/testing.dart';
 
 import '../../helpers/oversized_glb_fixture.dart';

@@ -5,7 +5,7 @@ import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart' show GlobalKey;
-import 'package:lumina/data/services/lumina_config_dir.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart' show McpClientLaunch;
 import 'package:lumina_ui/ui/core/host/editor_host.dart' show LuminaEditorHost;
 

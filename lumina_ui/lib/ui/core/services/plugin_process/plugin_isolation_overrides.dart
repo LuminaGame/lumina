@@ -1,4 +1,4 @@
-import 'package:lumina/data/models/lumina_project.dart';
+import 'package:lumina_core/lumina_core.dart';
 
 /// The project's per-plugin isolation override for the editor:
 /// `.lmproject` `plugin_isolation: {"<plugin>": "in_process"}` runs that

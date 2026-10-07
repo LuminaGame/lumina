@@ -1,7 +1,7 @@
 import 'package:vector_math/vector_math_64.dart';
 
 import 'package:lumina/src/components/base/scene_component.dart';
-import 'package:lumina/src/math/axes.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/src/physics/mass_properties.dart';
 import 'package:lumina/src/physics/physical_material.dart';
 import 'package:lumina/src/physics/physics_subsystem.dart';

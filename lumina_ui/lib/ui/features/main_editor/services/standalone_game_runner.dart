@@ -4,7 +4,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:lumina/data/repositories/project_repository.dart';
-import 'package:lumina/data/services/engine_logger_service.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/lumina.dart' show LuminaGraphicsDevices, ProjectEngineLink, SpaceFreeBuildDir;
 
 /// Where Play Standalone is.

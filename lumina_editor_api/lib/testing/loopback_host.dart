@@ -3,8 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:lumina/data/models/lumina_level_document.dart';
-import 'package:lumina/data/repositories/level_repository.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart';
 
 /// The editor's side of a plugin process link, for plugin tests: a real loopback

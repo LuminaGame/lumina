@@ -3,7 +3,7 @@ import 'package:vector_math/vector_math_64.dart';
 import 'package:lumina/src/collision/collision_subsystem.dart';
 import 'package:lumina/src/collision/gjk_epa.dart';
 import 'package:lumina/src/collision/narrow_phase.dart';
-import 'package:lumina/src/math/units.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/src/object/actor.dart';
 import 'package:lumina/src/physics/contact_generation.dart';
 import 'package:lumina/src/physics/rigid_body.dart';

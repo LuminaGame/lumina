@@ -1,7 +1,7 @@
 import 'dart:io';
 
-import 'package:lumina/data/models/lumina_asset.dart';
-import 'package:lumina/data/models/lumina_theme_document.dart';
+import 'package:lumina_core/src/formats/lumina_asset.dart';
+import 'package:lumina_core/src/formats/lumina_theme_document.dart';
 
 /// Service for managing Lumina UI Theme `.lmas` files in projects.
 class LuminaThemeService {

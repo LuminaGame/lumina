@@ -1,7 +1,5 @@
 import 'dart:io';
-import 'package:lumina/data/models/lumina_plugin_descriptor.dart';
-import 'package:lumina/data/models/lumina_project.dart';
-import 'package:lumina/data/repositories/plugin_repository.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/data/repositories/project_repository.dart';
 import 'package:lumina/data/services/editor_host_generator_service.dart';
 

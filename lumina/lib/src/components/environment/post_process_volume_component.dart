@@ -1,6 +1,6 @@
 import 'package:vector_math/vector_math_64.dart';
 
-import 'package:lumina/src/math/axes.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/src/object/actor.dart';
 import 'package:lumina/src/post_process/post_process_blender.dart';
 import 'package:lumina/src/world/world.dart';

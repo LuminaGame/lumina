@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-import 'package:lumina/data/services/tga_decoder_service.dart';
+import 'package:lumina_core/src/services/tga_decoder_service.dart';
 
 /// The container an encoded image is stored in, told from its bytes.
 ///

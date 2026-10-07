@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:lumina/data/models/lumina_asset.dart';
+import 'package:lumina_core/lumina_core.dart';
 
 /// Loads an asset's bytes by path (a mesh GLB, a compiled material, an IBL).
 typedef LuminaAssetProvider = Future<Uint8List> Function(String path);

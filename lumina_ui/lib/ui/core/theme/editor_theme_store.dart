@@ -6,8 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart' show BoxDecoration, RenderDecoratedBox, RenderObject, RendererBinding;
 import 'package:flutter/services.dart' show ServicesBinding, SystemChannels;
 import 'package:flutter/widgets.dart' show BuildContext, Element, InheritedNotifier, WidgetsBinding;
-import 'package:lumina/data/services/config_json_file.dart';
-import 'package:lumina/data/services/lumina_config_dir.dart';
+import 'package:lumina_core/lumina_core.dart';
 
 import 'package:lumina_ui/ui/core/theme/editor_theme_data.dart';
 

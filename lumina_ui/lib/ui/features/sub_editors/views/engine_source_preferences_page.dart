@@ -1,5 +1,4 @@
-import 'package:lumina/data/services/workspace_paths.dart';
-import 'package:lumina/lumina.dart' show EngineBootstrap, EngineCheckout, LuminaRelease;
+import 'package:lumina_core/lumina_core.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';

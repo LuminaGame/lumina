@@ -3,7 +3,7 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
-import 'package:lumina/data/models/lumina_asset.dart';
+import 'package:lumina_core/src/formats/lumina_asset.dart';
 
 /// Where a base64 string value (`thumbnail_png`, `raw_payload`) sits inside a
 /// `.lmas` file: the byte offset of its first character (after the opening

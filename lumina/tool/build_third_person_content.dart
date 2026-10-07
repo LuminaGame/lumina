@@ -30,7 +30,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:image/image.dart' as img;
-import 'package:lumina/data/services/glb_animation_merger.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/src/game/template_clips.dart';
 
 const characterPath = 'Universal Base Characters[Standard]/Base Characters/Godot - UE/Superhero_Female_FullBody.gltf';

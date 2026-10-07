@@ -8,7 +8,7 @@ import 'package:http/io_client.dart';
 import 'package:lumina_marketplace_shared/lumina_marketplace_shared.dart';
 
 import 'temp_project.dart';
-import 'package:lumina/data/services/workspace_paths.dart';
+import 'package:lumina_core/lumina_core.dart';
 
 /// A real Lumina Marketplace server (lumina_marketplace/server) for the
 /// marketplace tests: started as its own `dart run bin/server.dart --seed`

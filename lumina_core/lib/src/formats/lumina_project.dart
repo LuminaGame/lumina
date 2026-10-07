@@ -1,10 +1,10 @@
-import 'package:lumina/data/models/plugin_isolation.dart';
-import 'package:lumina/data/models/project_input_settings.dart';
-import 'package:lumina/data/models/project_packaging_settings.dart';
-export 'plugin_isolation.dart';
-export 'project_input_settings.dart';
-export 'project_packaging_settings.dart';
-export 'project_web_loading_style.dart';
+import 'package:lumina_core/src/formats/plugin_isolation.dart';
+import 'package:lumina_core/src/formats/project_input_settings.dart';
+import 'package:lumina_core/src/formats/project_packaging_settings.dart';
+export 'package:lumina_core/src/formats/plugin_isolation.dart';
+export 'package:lumina_core/src/formats/project_input_settings.dart';
+export 'package:lumina_core/src/formats/project_packaging_settings.dart';
+export 'package:lumina_core/src/formats/project_web_loading_style.dart';
 
 class ScalabilityCategory {
   final String viewDistance;
@@ -383,7 +383,7 @@ class LuminaProject {
 
   /// Id of the game template the project was scaffolded from
   /// (`blank_3d` | `first_person` | `third_person`, see
-  /// `data/services/game_template_service.dart`). Manifests written before
+  /// `GameTemplateCatalog`). Manifests written before
   /// templates existed default to `blank_3d`.
   final String template;
   final ProjectInputSettings input;

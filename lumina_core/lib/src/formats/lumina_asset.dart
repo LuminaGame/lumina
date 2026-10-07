@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:lumina/data/models/lumina_asset_summary.dart';
+import 'package:lumina_core/src/formats/lumina_asset_summary.dart';
 
-export 'lumina_asset_summary.dart';
+export 'package:lumina_core/src/formats/lumina_asset_summary.dart';
 
 enum AssetType {
   unknown,

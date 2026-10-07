@@ -7,7 +7,7 @@ library;
 import 'dart:async';
 import 'dart:io';
 
-import 'package:lumina/data/services/workspace_paths.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/lumina.dart' show EngineBootstrap, EngineLoggerService, LuminaMedia, LuminaRtxController, PluginHostPatcherService;
 import 'package:lumina_editor_api/lumina_editor_api.dart';
 import 'package:path/path.dart' as p;

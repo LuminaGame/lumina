@@ -11,6 +11,7 @@ Oyun arayüzünün runtime tarafı: derlenmiş widget asset'lerinin üzerine kur
 - [`lib/src/umg/umg_media_widgets.dart`](#libsrcumgumg_media_widgetsdart)
 - [`lib/src/umg/user_widget.dart`](#libsrcumguser_widgetdart)
 - [`lib/src/umg/widget_layer.dart`](#libsrcumgwidget_layerdart)
+- [`lib/src/umg/theme_document_colors.dart`](#libsrcumgtheme_document_colorsdart)
 
 ## `lib/src/umg/element_binding.dart`
 
@@ -516,6 +517,24 @@ Konumsal olmayan arka plan sesleri, tema müzikleri veya ara sahne seslendirmele
 **Yapıcı Metotlar (Constructors):**
 
 - `const LuminaUmgAudioPlayer({super.key, this.filePath, this.assetPath, this.networkUrl, this.autoPlay = false, this.looping = false, this.volume = 1.0, this.preferHeadless = false, this.onInitialized, this.onError})`
+
+## `lib/src/umg/theme_document_colors.dart`
+
+`lumina_core` bir temanın renklerini ARGB int (`0xAARRGGBB`) olarak saklar. Bu extension'lar Flutter koduna `Color` verir.
+
+### `extension LuminaThemeDocumentColors on LuminaThemeDocument`
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `colorOf` | `Color colorOf(String token, {Color fallback = const Color(0xFF888888)})` | Tema paletinden [token] rengi; tema onu tanımlamıyorsa [fallback]. |
+
+### `extension LuminaComponentStyleColors on LuminaComponentStyle`
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `bgColor` | `Color? get bgColor` | `backgroundColor` bir `Color` olarak, ya da null. |
+| `fgColor` | `Color? get fgColor` | `foregroundColor` bir `Color` olarak, ya da null. |
+| `bColor` | `Color? get bColor` | `borderColor` bir `Color` olarak, ya da null. |
 
 ---
 

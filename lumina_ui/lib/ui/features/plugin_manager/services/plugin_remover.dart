@@ -1,7 +1,6 @@
 import 'dart:io';
 
-import 'package:lumina/data/models/lumina_plugin_descriptor.dart';
-import 'package:lumina/data/repositories/plugin_repository.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/data/services/plugin_registry_service.dart';
 import 'package:lumina_marketplace_shared/lumina_marketplace_shared.dart' show InstallKind;
 import 'package:path/path.dart' as p;

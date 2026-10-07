@@ -2,21 +2,15 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:path/path.dart' as p;
-import 'package:lumina/data/models/lumina_plugin_descriptor.dart';
-import 'package:lumina/data/repositories/plugin_repository.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/data/repositories/project_repository.dart';
-import 'package:lumina/data/services/editor_source_vendor_service.dart';
-import 'package:lumina/data/services/plugin_pack_script.dart';
 import 'package:lumina/data/services/plugin_template/code_plugin_sources.dart';
-import 'package:lumina/data/services/plugin_template/isolated_plugin_sources.dart';
-import 'package:lumina/data/services/tga_decoder_service.dart';
-import 'package:lumina/data/services/workspace_paths.dart';
 import 'package:yaml/yaml.dart';
 
 export 'package:lumina/data/repositories/project_repository.dart' show ProcessRunner;
 // The lumina repo generated plugins take `lumina_editor_api` (and, for
 // importers, `lumina`) from; defined beside the workspace paths.
-export 'package:lumina/data/services/workspace_paths.dart' show kLuminaGitUrl;
+export 'package:lumina_core/src/services/workspace_paths.dart' show kLuminaGitUrl;
 
 enum PluginTemplateType {
   blank,

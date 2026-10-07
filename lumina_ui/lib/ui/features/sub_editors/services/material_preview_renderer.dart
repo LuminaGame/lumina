@@ -4,7 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show debugPrint, visibleForTesting;
 import 'package:flutter_filament/flutter_filament.dart';
 import 'package:image/image.dart' as imglib;
-import 'package:lumina/data/models/lumina_asset.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:vector_math/vector_math_64.dart' as vm;
 
 import 'package:lumina_ui/ui/features/sub_editors/view_models/material_editor_view_model.dart' show MaterialParamModel, MaterialParamType;

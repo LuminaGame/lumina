@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:lumina/data/services/game_template_service.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/lumina.dart';
 
 /// A [ProcessRunner] for [ProjectRepository] that writes what `flutter create`

@@ -1,8 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart' show debugPrint;
-import 'package:lumina/data/services/config_json_file.dart';
-import 'package:lumina/data/services/lumina_config_dir.dart';
+import 'package:lumina_core/lumina_core.dart';
 
 /// Where the viewport camera was when a project was last edited: yaw and
 /// pitch in degrees, the orbit distance and the pivot, plus the camera mode.

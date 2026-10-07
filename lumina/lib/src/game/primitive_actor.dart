@@ -6,9 +6,8 @@ import 'dart:typed_data';
 import 'package:vector_math/vector_math_64.dart';
 
 import 'package:lumina/src/components/collision/collision_component.dart';
-import 'package:lumina/data/services/primitive_glb_factory.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/src/components/mesh/static_mesh_component.dart';
-import 'package:lumina/src/math/axes.dart';
 import 'package:lumina/src/object/actor.dart';
 import 'package:lumina/src/utility/lumina_assets.dart';
 

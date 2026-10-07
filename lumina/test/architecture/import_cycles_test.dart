@@ -36,12 +36,6 @@ void main() {
   // unit when the data layer moves; any other cycle, and any cycle growing
   // past its pair, fails.
   const companions = <Set<String>>[
-    {'lib/data/models/lumina_asset.dart', 'lib/data/models/lumina_asset_summary.dart'},
-    {
-      'lib/data/models/lumina_project.dart',
-      'lib/data/models/project_packaging_settings.dart',
-      'lib/data/models/project_web_loading_style.dart',
-    },
     {'lib/data/repositories/asset_repository.dart', 'lib/data/services/asset_reference_graph.dart'},
     {'lib/data/services/level_actor_material.dart', 'lib/data/services/level_asset_manifest.dart'},
     {'lib/data/services/plugin_template/code_plugin_sources.dart', 'lib/data/services/plugin_template_generator_service.dart'},

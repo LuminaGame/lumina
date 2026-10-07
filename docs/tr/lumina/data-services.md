@@ -2,7 +2,7 @@
 
 # Veri katmanı: use case'ler ve servisler
 
-Editöre dönük veri katmanı, birinci bölüm: domain use case'leri (level kaydetme, asset içe aktarma, Dart kodu üretme) ve arkalarındaki servisler: asset referans grafiği, otomatik kayıt, Dart kod üreteci, engine logger, oyun ve level şablonları, GLB, OBJ ve TGA parser'ları, eklenti registry'si, şablon üreteci ve host patcher, primitive GLB fabrikası, proje input binder'ı ve thumbnail'lar. Dosya yolları `lumina/` paket dizinine görelidir.
+Editöre dönük veri katmanı, birinci bölüm: domain use case'leri (level kaydetme, asset içe aktarma, Dart kodu üretme) ve arkalarındaki servisler: asset referans grafiği, Dart kod üreteci, GLB ve OBJ parser'ları, eklenti registry'si ve şablon üreteci, proje input binder'ı ve thumbnail'lar. Saf servisler (otomatik kayıt zamanlayıcısı, engine logger, oyun ve level şablonları, TGA çözücü, host patcher, primitive GLB fabrikası, çalışma alanı ve veri yolları, build parmak izi ve önbelleği, glTF araçları ve diğerleri) `lumina_core`'dadır: bkz. [Servisler](../lumina_core/services.md). Dosya yolları `lumina/` paket dizinine görelidir.
 
 **Bu sayfada:**
 
@@ -13,20 +13,13 @@ Editöre dönük veri katmanı, birinci bölüm: domain use case'leri (level kay
 - [`lib/domain/models/use_case_results.dart`](#libdomainmodelsuse_case_resultsdart)
 - [`lib/data/services/asset_reference_graph.dart`](#libdataservicesasset_reference_graphdart)
 - [`lib/data/services/assimp_import_service.dart`](#libdataservicesassimp_import_servicedart)
-- [`lib/data/services/auto_save_timer_service.dart`](#libdataservicesauto_save_timer_servicedart)
 - [`lib/data/services/code_generator_service.dart`](#libdataservicescode_generator_servicedart)
-- [`lib/data/services/engine_logger_service.dart`](#libdataservicesengine_logger_servicedart)
-- [`lib/data/services/game_template_service.dart`](#libdataservicesgame_template_servicedart)
 - [`lib/data/services/glb_parser_service.dart`](#libdataservicesglb_parser_servicedart)
-- [`lib/data/services/level_template_service.dart`](#libdataserviceslevel_template_servicedart)
 - [`lib/data/services/obj_import_service.dart`](#libdataservicesobj_import_servicedart)
 - [`lib/data/services/obj_parser_service.dart`](#libdataservicesobj_parser_servicedart)
-- [`lib/data/services/plugin_host_patcher_service.dart`](#libdataservicesplugin_host_patcher_servicedart)
 - [`lib/data/services/plugin_registry_service.dart`](#libdataservicesplugin_registry_servicedart)
 - [`lib/data/services/plugin_template_generator_service.dart`](#libdataservicesplugin_template_generator_servicedart)
-- [`lib/data/services/primitive_glb_factory.dart`](#libdataservicesprimitive_glb_factorydart)
 - [`lib/data/services/project_input_binder.dart`](#libdataservicesproject_input_binderdart)
-- [`lib/data/services/tga_decoder_service.dart`](#libdataservicestga_decoder_servicedart)
 - [`lib/data/services/thumbnail_service.dart`](#libdataservicesthumbnail_servicedart)
 
 ## `lib/domain/use_cases/generate_dart_code_use_case.dart`
@@ -161,20 +154,6 @@ FBX ve OBJ dışında (onların kendi servisleri var) Assimp'in okuduğu her 3D 
 | `convert` | `static Future<AssimpImportResult> convert(String path, {List<String> textureSearchDirs = const []})` | [convertSync]'i arka plan isolate'inde çalıştırır. |
 | `convertSync` | `static AssimpImportResult convertSync(String path, {List<String> textureSearchDirs = const []})` | Assimp dosyayı okuyamazsa [AssimpImportException] fırlatır. |
 
-## `lib/data/services/auto_save_timer_service.dart`
-
-### `class AutoSaveTimerService`
-
-`AutoSaveTimerService`: Dosya işlemleri, veri dönüşümleri veya motor mantığını yürüten servis sınıfıdır.
-
-**Fonksiyonlar, Metotlar ve Erişimciler:**
-
-| Metot / Getter | İmzası | Ne İşe Yarar? |
-| :--- | :--- | :--- |
-| `onPerformSave` | `SaveCallback onPerformSave` | `onPerformSave` alanını (field/property) ve ilişkili veriyi saklar. |
-| `stop` | `void stop()` | `stop` işlemini gerçekleştirir. |
-| `checkAndExecuteAutoSave` | `Future<LuminaProject> checkAndExecuteAutoSave(LuminaProject project)` | `checkAndExecuteAutoSave` işlemini gerçekleştirir. |
-
 ## `lib/data/services/code_generator_service.dart`
 
 ### `class DartCodeGeneratorService`
@@ -190,88 +169,6 @@ FBX ve OBJ dışında (onların kendi servisleri var) Assimp'in okuduğu her 3D 
 | `writeProjectInputDart` | `bool writeProjectInputDart(String projectPath, [ProjectInputSettings? settings])` | Proje ayarları veya manifestten lib/input/project_input.g.dart dosyasını üretip yazar. |
 
 Üretilen seviyenin begin-play'i `LuminaWorldPartitionSubsystem`'i seviyenin `metadata.worldPartition` bölümüyle kaydeder (hücre boyutu, tick başına geçiş, başlangıç durumlarıyla data layer'lar), her aktörü partition'a ekler ve streaming kaynaklarını kaydeder. Bir seviye satırı `dataLayers: [<katman adı>, ...]` taşıyabilir (editör bunu henüz yazmaz; harita üreteci gibi araçlar yazar): üretilen kod o zaman aktörlerin `LuminaObjectKey` kimlikleriyle anahtarlanmış bir `dataLayersByActor` haritası tutar ve her ad için `partition.assignActorToLayer` çağırır; böylece yüklenmemiş ya da yalnızca yüklü katmanlar aktörlerinin tick almasını runtime'ın tanımladığı gibi engeller.
-
-## `lib/data/services/engine_logger_service.dart`
-
-### `class EngineLogEntry`
-
-`EngineLogEntry`: İlgili modülün veri modelini veya temel işlevselliğini temsil eden `class` yapısıdır.
-
-**Yapıcı Metotlar (Constructors):**
-- `EngineLogEntry.fromJson(Map<String, dynamic> json)`: `EngineLogEntry.fromJson(Map<String, dynamic> json)` nesnesini ilklendirir.
-
-**Fonksiyonlar, Metotlar ve Erişimciler:**
-
-| Metot / Getter | İmzası | Ne İşe Yarar? |
-| :--- | :--- | :--- |
-| `timestamp` | `String timestamp` | `timestamp` alanını (field/property) ve ilişkili veriyi saklar. |
-| `level` | `String level` | `level` alanını (field/property) ve ilişkili veriyi saklar. |
-| `source` | `String source` | `source` alanını (field/property) ve ilişkili veriyi saklar. |
-| `message` | `String message` | `message` alanını (field/property) ve ilişkili veriyi saklar. |
-| `toJson` | `Map<String, dynamic> toJson()` | Nesneyi JSON haritasına serileştirir. |
-
-### `class EngineLoggerService`
-
-`EngineLoggerService`: Dosya işlemleri, veri dönüşümleri veya motor mantığını yürüten servis sınıfıdır.
-
-**Yapıcı Metotlar (Constructors):**
-- `EngineLoggerService()`: `EngineLoggerService()` nesnesini ilklendirir.
-- `EngineLoggerService._internal()`: `EngineLoggerService._internal()` nesnesini ilklendirir.
-
-**Fonksiyonlar, Metotlar ve Erişimciler:**
-
-| Metot / Getter | İmzası | Ne İşe Yarar? |
-| :--- | :--- | :--- |
-| `logStream` | `Stream<EngineLogEntry> get logStream` | `logStream` özelliğinin anlık değerini okuyan getter erişimcisi. |
-| `logs` | `List<EngineLogEntry> get logs` | `logs` özelliğinin anlık değerini okuyan getter erişimcisi. |
-| `clear` | `void clear()` | Koleksiyon veya tampon içeriğini tamamen temizler. |
-
-## `lib/data/services/game_template_service.dart`
-
-**Üst Düzey Fonksiyonlar (Top-level Functions):**
-
-- **`Map<String, dynamic> luminaTemplateSunActor() => _sun()`**: The directional sun actor map shared by the game and level templates.
-- **`Map<String, dynamic> luminaTemplateSkyActor() => _sky()`**: The sky/atmosphere actor map shared by the game and level templates.
-
-### `enum GameTemplateKind`
-
-Which runtime pawn shape a template scaffolds.
-
-### `class GameTemplate`
-
-One entry of the shared template catalog.  This is the single source of truth both the launcher UI and `ProjectRepository.createProjectStream` read: the chip label and blurb, the actors seeded into `contents/levels/L_DefaultLevel.lmas`, the input actions and mapping context written into the manifest, and whether user-owned character / game-mode source is generated.
-
-**Fonksiyonlar, Metotlar ve Erişimciler:**
-
-| Metot / Getter | İmzası | Ne İşe Yarar? |
-| :--- | :--- | :--- |
-| `id` | `String id` | `id` alanını (field/property) ve ilişkili veriyi saklar. |
-| `title` | `String title` | `title` alanını (field/property) ve ilişkili veriyi saklar. |
-| `description` | `String description` | `description` alanını (field/property) ve ilişkili veriyi saklar. |
-| `icon` | `String icon` | Short icon hint the launcher maps to a shadcn icon. |
-| `kind` | `GameTemplateKind kind` | `kind` alanını (field/property) ve ilişkili veriyi saklar. |
-| `levelActors` | `List<Map<String, dynamic>> get levelActors` | A fresh, independently mutable copy of the seeded actor maps (`EditorActorNode.toMap()` shape). |
-| `input` | `ProjectInputSettings get input` | A fresh copy of the input actions and mapping contexts for the manifest. |
-| `generatesGameSource` | `bool get generatesGameSource` | Whether this template writes `lib/pawns/…` and `lib/game/…` source the user owns. |
-| `classPrefix` | `static String classPrefix(String projectName)` | `my_first_game` → `MyFirstGame`. |
-| `characterClass` | `String characterClass(String projectName)` | Dart class name of the generated character for [projectName]. |
-| `gameModeClass` | `String gameModeClass(String projectName)` | Dart class name of the generated game mode, or the engine default for the blank template. This is what lands in [ProjectMapsAndModes.defaultGameMode]. |
-| `characterPath` | `String characterPath(String projectName)` | `lib/`-relative path of the generated character file. |
-| `gameModePath` | `String gameModePath(String projectName)` | `lib/`-relative path of the generated game mode file. |
-| `manifestStepMessages` | `List<String> manifestStepMessages(String projectName)` | Human-readable step lines the creation progress log names for this template, so the user sees what is actually being written. |
-
-### `class GameTemplateCatalog`
-
-The three templates offered by the launcher.
-
-**Yapıcı Metotlar (Constructors):**
-- `GameTemplateCatalog._()`: `GameTemplateCatalog._()` nesnesini ilklendirir.
-
-**Fonksiyonlar, Metotlar ve Erişimciler:**
-
-| Metot / Getter | İmzası | Ne İşe Yarar? |
-| :--- | :--- | :--- |
-| `byId` | `static GameTemplate byId(String? id)` | Resolves [id] to a template, tolerating the legacy `'Blank 3D'` label and unknown ids (both fall back to [blank3d]). |
 
 ## `lib/data/services/glb_parser_service.dart`
 
@@ -437,39 +334,6 @@ The three templates offered by the launcher.
 | :--- | :--- | :--- |
 | `parseGlb` | `static Future<GlbMeshData?> parseGlb(Uint8List bytes)` | `parseGlb` işlemini gerçekleştirir. |
 
-## `lib/data/services/level_template_service.dart`
-
-**Üst Düzey Fonksiyonlar (Top-level Functions):**
-
-- **`Map<String, dynamic> defaultWorldPartitionSection()`**: A fresh `metadata.worldPartition` section carrying the runtime's own defaults and no data layers (a level authors those itself).
-
-### `class LevelTemplate`
-
-One entry in the New Level dialog.
-
-**Fonksiyonlar, Metotlar ve Erişimciler:**
-
-| Metot / Getter | İmzası | Ne İşe Yarar? |
-| :--- | :--- | :--- |
-| `id` | `String id` | `id` alanını (field/property) ve ilişkili veriyi saklar. |
-| `title` | `String title` | `title` alanını (field/property) ve ilişkili veriyi saklar. |
-| `description` | `String description` | One line describing exactly what this template seeds — shown in the dialog, so it must stay truthful. |
-| `levelActors` | `List<Map<String, dynamic>> get levelActors` | Fresh actor maps (`EditorActorNode.toMap()` shape) for a new level. |
-| `worldPartition` | `Map<String, dynamic>? get worldPartition` | Fresh `metadata.worldPartition` section, or null when the template does not author one (`Empty`, `Default`). |
-
-### `class LevelTemplateCatalog`
-
-The templates `File → New Level…` offers, in dialog order.
-
-**Yapıcı Metotlar (Constructors):**
-- `LevelTemplateCatalog._()`: `LevelTemplateCatalog._()` nesnesini ilklendirir.
-
-**Fonksiyonlar, Metotlar ve Erişimciler:**
-
-| Metot / Getter | İmzası | Ne İşe Yarar? |
-| :--- | :--- | :--- |
-| `byId` | `static LevelTemplate byId(String? id)` | Resolves [id] to a template; unknown ids fall back to [standard]. |
-
 ## `lib/data/services/obj_import_service.dart`
 
 ### `class MtlMaterial`
@@ -506,20 +370,6 @@ Import hattı için OBJ → GLB. Asset deposu her `.obj`'yi bunun üzerinden haz
 ### `class ObjParserService`
 
 Service for parsing Wavefront OBJ 3D model geometry.
-
-## `lib/data/services/plugin_host_patcher_service.dart`
-
-### `class PluginHostPatcherService`
-
-`PluginHostPatcherService`: Dosya işlemleri, veri dönüşümleri veya motor mantığını yürüten servis sınıfıdır.
-
-**Fonksiyonlar, Metotlar ve Erişimciler:**
-
-| Metot / Getter | İmzası | Ne İşe Yarar? |
-| :--- | :--- | :--- |
-| `patchPubspec` | `Future<void> patchPubspec(Directory hostRoot, List<LuminaPluginDescripto...` | `patchPubspec` işlemini gerçekleştirir. |
-| `generateRegistrar` | `Future<void> generateRegistrar(Directory hostRoot, List<LuminaPluginDesc...` | `generateRegistrar` işlemini gerçekleştirir. |
-| `registrarSource` | `String registrarSource(List<LuminaPluginDescriptor> enabledCodePlugins)` | Registrar kütüphanesi: `kEnabledPlugins` (editor modülü başına bir örnek), `kPluginProcesses` ve `registerAllPlugins`; bir eklenti listesi için deterministiktir. `kPluginProcesses`, manifest'i `"isolation": "process"` diyen her eklentiyi `process_class`'ının bir fabrikasına eşler, projenin `plugin_isolation`'ı ne derse desin (editör geçersiz kılmayı başlarken uygular); örneğin `'my_tools': () => my_tools_plugin.MyToolsProcess(),`; hiç yoksa `{}` olur. |
 
 ## `lib/data/services/plugin_registry_service.dart`
 
@@ -652,31 +502,6 @@ Service for parsing Wavefront OBJ 3D model geometry.
 | `nameToPascal` | `static String nameToPascal(String name)` | `nameToPascal` işlemini gerçekleştirir. |
 | `generate` | `Future<PluginGenerationResult> generate(PluginTemplateSpec spec)` | `generate` işlemini gerçekleştirir. |
 
-## `lib/data/services/primitive_glb_factory.dart`
-
-### `class PrimitiveGlbFactory`
-
-Builds a real glTF 2.0 binary (`.glb`) for an engine primitive.  `Primitive` actors — the template test rooms, and "spawn a cube" — carry a shape and a size instead of an imported model. Rather than teaching every consumer a second geometry path, the shape is turned into an ordinary glTF binary here, so it flows through the same parser, the same renderer, the same picking and the same triangle counter as any imported mesh.  Geometri orijinde ortalanır ve dünya birimiyle (cm) boyutlanır; aktörün kendi dönüşümü onu yerleştirir. Aynı istek her zaman aynı çıktıyı verir.  Her şekil `TEXCOORD_0` ve `TANGENT` taşır; böylece atanan dokulu (ya da normal haritalı) bir materyal dokusunu çizer: kutunun her yüzü ve düzlem 0..1 karesinin tamamını dik olarak eşler, küre ve silindir yüzeyi dokuyu bir kez çevresine sarar (u), üstten (v = 0) alta (v = 1); silindir kapakları dokuyu disk olarak eşler. UV'ler glTF'i izler (v görüntüde aşağı doğru artar); teğetler +u yönündedir ve `w`, glTF'in tanımladığı gibi `cross(normal, tangent) * w` vektörünü görüntüde yukarı çevirir.
-
-**Yapıcı Metotlar (Constructors):**
-- `PrimitiveGlbFactory._()`: `PrimitiveGlbFactory._()` nesnesini ilklendirir.
-
-### `class _Geometry`
-
-`_Geometry`: İlgili modülün veri modelini veya temel işlevselliğini temsil eden `class` yapısıdır.
-
-**Yapıcı Metotlar (Constructors):**
-- `_Geometry(this.positions, this.normals, this.uvs, this.indices)`: `_Geometry(this.positions, this.normals, this.uvs, this.indices)` nesnesini ilklendirir.
-
-**Fonksiyonlar, Metotlar ve Erişimciler:**
-
-| Metot / Getter | İmzası | Ne İşe Yarar? |
-| :--- | :--- | :--- |
-| `positions` | `List<double> positions` | `positions` alanını (field/property) ve ilişkili veriyi saklar. |
-| `normals` | `List<double> normals` | `normals` alanını (field/property) ve ilişkili veriyi saklar. |
-| `uvs` | `List<double> uvs` | `uvs` alanını (field/property) ve ilişkili veriyi saklar. |
-| `indices` | `List<int> indices` | `indices` alanını (field/property) ve ilişkili veriyi saklar. |
-
 ## `lib/data/services/project_input_binder.dart`
 
 ### `class LuminaAxisPlacementModifier`
@@ -728,33 +553,6 @@ Turns the `.lmproject` manifest's [ProjectInputSettings] — the same structures
 | Metot / Getter | İmzası | Ne İşe Yarar? |
 | :--- | :--- | :--- |
 | `bind` | `static BoundProjectInput bind(ProjectInputSettings settings)` | `bind` işlemini gerçekleştirir. |
-
-## `lib/data/services/tga_decoder_service.dart`
-
-### `class TgaImage`
-
-`TgaImage`: İlgili modülün veri modelini veya temel işlevselliğini temsil eden `class` yapısıdır.
-
-**Fonksiyonlar, Metotlar ve Erişimciler:**
-
-| Metot / Getter | İmzası | Ne İşe Yarar? |
-| :--- | :--- | :--- |
-| `width` | `int width` | `width` alanını (field/property) ve ilişkili veriyi saklar. |
-| `height` | `int height` | `height` alanını (field/property) ve ilişkili veriyi saklar. |
-| `rgbaBytes` | `Uint8List rgbaBytes` | `rgbaBytes` alanını (field/property) ve ilişkili veriyi saklar. |
-
-### `class TgaDecoderService`
-
-`TgaDecoderService`: Dosya işlemleri, veri dönüşümleri veya motor mantığını yürüten servis sınıfıdır.
-
-**Fonksiyonlar, Metotlar ve Erişimciler:**
-
-| Metot / Getter | İmzası | Ne İşe Yarar? |
-| :--- | :--- | :--- |
-| `isTga` | `static bool isTga(Uint8List bytes)` | Checks if given bytes match a valid TGA image header |
-| `decode` | `static TgaImage? decode(Uint8List bytes)` | Decodes TGA binary bytes into raw RGBA8888 pixels |
-| `tgaToPng` | `static Uint8List? tgaToPng(Uint8List tgaBytes)` | Converts TGA bytes directly to standard PNG bytes |
-| `encodePng` | `static Uint8List encodePng(Uint8List rgba, int width, int height)` | Pure Dart standard PNG encoder with zlib compression |
 
 ## `lib/data/services/thumbnail_service.dart`
 

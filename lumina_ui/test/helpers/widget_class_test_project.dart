@@ -3,7 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/painting.dart' show Offset;
-import 'package:lumina/data/services/game_template_service.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/lumina.dart';
 import 'package:lumina_ui/ui/features/main_editor/services/widget_blueprint_assets.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/umg_document.dart';

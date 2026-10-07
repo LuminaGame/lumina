@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:lumina/data/models/lumina_asset.dart';
-import 'package:lumina/data/services/glb_animation_merger.dart';
-import 'package:lumina/data/services/glb_animation_retargeter.dart';
+import 'package:lumina_core/src/formats/lumina_asset.dart';
+import 'package:lumina_core/src/services/glb_animation_merger.dart';
+import 'package:lumina_core/src/services/glb_animation_retargeter.dart';
 
 /// A project skeletal mesh an imported animation could play on.
 class SkeletonCandidate {

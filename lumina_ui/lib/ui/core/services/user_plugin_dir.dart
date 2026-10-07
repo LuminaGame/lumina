@@ -1,9 +1,6 @@
 import 'dart:io';
 
-import 'package:lumina/data/models/lumina_plugin_descriptor.dart' show PluginOrigin;
-import 'package:lumina/data/services/lumina_data_dir.dart' show LuminaDataDir;
-import 'package:lumina/data/repositories/plugin_repository.dart' show PluginScanRoot;
-import 'package:lumina/data/services/workspace_paths.dart' show LuminaWorkspace;
+import 'package:lumina_core/lumina_core.dart' show LuminaDataDir, LuminaWorkspace, PluginOrigin, PluginScanRoot;
 import 'package:path/path.dart' as p;
 
 import 'package:lumina_ui/ui/core/host/editor_host.dart' show LuminaEditorHost;

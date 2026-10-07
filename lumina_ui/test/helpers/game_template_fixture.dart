@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:archive/archive.dart';
 import 'package:image/image.dart' as img;
-import 'package:lumina/data/services/game_template_service.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/lumina.dart';
 import 'package:lumina_marketplace_shared/lumina_marketplace_shared.dart';
 

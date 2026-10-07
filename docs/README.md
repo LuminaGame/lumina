@@ -2,7 +2,7 @@
 
 # Lumina documentation
 
-Lumina is a 3D game engine for Flutter and Dart, built on the Google Filament renderer, together with Lumina Studio, the desktop editor for Lumina projects. This documentation covers the architecture, how to set up a checkout, and the API reference of the four packages in this repository: `flutter_filament`, `lumina`, `lumina_editor_api` and `lumina_ui`.
+Lumina is a 3D game engine for Flutter and Dart, built on the Google Filament renderer, together with Lumina Studio, the desktop editor for Lumina projects. This documentation covers the architecture, how to set up a checkout, and the API reference of the packages in this repository: `flutter_filament`, `lumina_core`, `lumina`, `lumina_editor_api` and `lumina_ui`.
 
 ## Where to start
 
@@ -22,7 +22,7 @@ You extend Lumina Studio with plugins, or work on the editor itself.
 1. [What is Lumina](en/overview/what-is-lumina.md) and [Checkout and setup](en/getting-started/setup.md)
 2. [Editor plugins](en/plugins/index.md) and the [lumina_editor_api reference](en/lumina_editor_api/api-reference.md)
 3. [lumina_ui (Lumina Studio)](en/lumina_ui/index.md), [Main editor: view model and services](en/lumina_ui/main-editor-state.md) and [Sub-editors](en/lumina_ui/sub-editors/index.md)
-4. The data layer the editor reads and writes: [models and repositories](en/lumina/data-models.md) and [use cases and services](en/lumina/data-services.md)
+4. The files the editor and plugins read and write: [lumina_core](en/lumina_core/index.md) (file formats, paths, logger, pure services), then the engine's [models and repositories](en/lumina/data-models.md) and [use cases and services](en/lumina/data-services.md)
 
 ### Engine contributors
 
@@ -68,6 +68,14 @@ You work on the engine, the renderer bindings or the native build.
   - [Editor primitives, tools and testing](en/flutter_filament/editor-tools-and-testing.md) - Grid, selection box, transform gizmo, offline tools, smoke-test entry point.
   - [Platform integration and GPU selection](en/flutter_filament/platform.md) - Shared engine host, Vulkan GPU listing and preference, web start-up and the platform widget variants.
 
+### lumina_core (pure-Dart foundation)
+
+- [lumina_core (pure-Dart foundation)](en/lumina_core/index.md) - Shared by the engine, the editor and plugin processes; no Flutter, `dart:ui` or FFI.
+  - [Math: units, axes and rotations](en/lumina_core/math.md) - `LuminaUnits`, `LuminaAxes`, Euler and control rotations, interpolation, transform snapshots.
+  - [File formats and repositories](en/lumina_core/formats.md) - `.lmas` assets, `.lmproject` manifests, level documents, plugin descriptors, landscape, sequencer and theme data, level and plugin repositories.
+  - [Services](en/lumina_core/services.md) - Animation authoring, asset index, config files, build fingerprint and cache, engine bootstrap, the engine logger, templates.
+  - [Services (continued)](en/lumina_core/services-continued.md) - Generated-code migration, GLB animation tools, glTF packer, config and data folders, plugin packaging, primitive GLB factory, TGA decoder, workspace paths.
+
 ### lumina (engine core)
 
 - [lumina (engine core)](en/lumina/index.md) - The declarative 3D game engine and the editor-facing data layer.
@@ -99,7 +107,7 @@ You work on the engine, the renderer bindings or the native build.
   - [Data layer: use cases and services (continued, part 1)](en/lumina/data-services-continued.md) - More files under `lib/data/services/`, `lib/data/services/blueprint_codegen/`.
   - [Data layer: use cases and services (continued, part 2)](en/lumina/data-services-continued-2.md) - More files under `lib/data/services/`.
   - [Data layer: use cases and services (continued, part 3)](en/lumina/data-services-continued-3.md) - More files under `lib/data/services/`.
-  - [Data layer: models and repositories](en/lumina/data-models.md) - `.lmas` assets, `.lmproject` manifests, plugin descriptors, sequencer and landscape data, repositories.
+  - [Data layer: models and repositories](en/lumina/data-models.md) - The asset, collections and project repositories (the models are in `lumina_core`).
   - [Data layer: models and repositories (continued)](en/lumina/data-models-continued.md) - More files under `lib/data/models/`, `lib/data/repositories/`, `lib/data/repositories/asset_repository/`.
 
 ### lumina_editor_api

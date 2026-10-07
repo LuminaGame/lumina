@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_filament/flutter_filament.dart' show BlendingMode, FilamatShading;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina/data/models/lumina_asset.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/data/repositories/asset_repository.dart';
 import 'package:lumina/lumina.dart' show LuminaBlueprintGraph, LuminaBlueprintWire;
 import 'package:lumina_ui/testing.dart';

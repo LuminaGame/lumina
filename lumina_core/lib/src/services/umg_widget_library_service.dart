@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:lumina/data/models/lumina_project.dart';
+import 'package:lumina_core/src/formats/lumina_project.dart';
 
 /// Keeps a game project's `pubspec.yaml` in line with its UMG widget library:
 /// a `shadcn` project depends on shadcn_flutter at the editor's

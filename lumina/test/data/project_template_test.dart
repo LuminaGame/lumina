@@ -2,13 +2,10 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina/data/models/lumina_project.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/data/repositories/project_repository.dart';
 import 'package:lumina/data/services/code_generator_service.dart';
-import 'package:lumina/data/services/game_template_service.dart';
-import 'package:lumina/data/models/lumina_asset.dart';
 import 'package:lumina/data/repositories/asset_repository.dart';
-import 'package:lumina/data/services/glb_animation_merger.dart';
 import 'package:lumina/src/game/template_content.dart';
 import 'package:lumina/data/services/blueprint_class_registry.dart';
 import 'package:lumina/lumina.dart' show LuminaBlueprintDocument, LuminaTemplateCharacterTuning;

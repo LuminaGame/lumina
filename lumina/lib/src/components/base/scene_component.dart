@@ -1,6 +1,6 @@
 import 'package:meta/meta.dart' show protected;
 import 'package:vector_math/vector_math_64.dart';
-import 'package:lumina/src/math/euler.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/src/components/base/actor_component.dart';
 
 /// Transform component that has a position, rotation, and scale in 3D space.

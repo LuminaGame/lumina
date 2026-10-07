@@ -3,8 +3,7 @@ import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:test/test.dart';
 import 'package:pub_semver/pub_semver.dart';
-import 'package:lumina/data/models/lumina_plugin_descriptor.dart';
-import 'package:lumina/data/services/plugin_host_patcher_service.dart';
+import 'package:lumina_core/lumina_core.dart';
 
 void main() {
   group('PluginHostPatcherService', () {

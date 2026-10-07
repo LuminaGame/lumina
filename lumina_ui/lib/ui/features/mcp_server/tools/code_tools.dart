@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:lumina/lumina.dart' show AssetType;
 import 'package:path/path.dart' as p;
 
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
@@ -13,7 +12,7 @@ import 'package:lumina_ui/ui/features/mcp_server/services/project_dart_sdk.dart'
 import 'package:lumina_ui/ui/features/mcp_server/services/project_sandbox.dart';
 import 'package:lumina_ui/ui/features/mcp_server/tools/blueprint_tool_support.dart' show mcpRefuseWhilePlaying;
 import 'package:lumina_ui/ui/features/mcp_server/tools/fs_tools.dart' show mcpFileSnapshotsOf, mcpSandboxed;
-import 'package:lumina/data/services/dart_identifiers.dart';
+import 'package:lumina_core/lumina_core.dart';
 
 /// One line of `dart analyze --format=machine`.
 class DartDiagnostic {

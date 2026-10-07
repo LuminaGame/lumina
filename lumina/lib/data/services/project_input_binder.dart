@@ -1,7 +1,7 @@
 import 'package:lumina/src/game/template_character.dart';
 import 'package:lumina/src/input/input_component.dart';
 import 'package:lumina/src/world/world.dart';
-import 'package:lumina/data/models/lumina_project.dart';
+import 'package:lumina_core/lumina_core.dart';
 
 /// One mapping context from the manifest, with the priority it was authored at.
 class BoundMappingContext {

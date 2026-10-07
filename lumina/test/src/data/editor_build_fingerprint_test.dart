@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:lumina/data/services/editor_build_fingerprint.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 

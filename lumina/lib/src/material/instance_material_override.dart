@@ -2,7 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_filament/flutter_filament.dart';
 
-import 'package:lumina/data/models/lumina_asset.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/src/utility/lumina_assets.dart';
 import 'package:lumina/src/material/material_cache.dart';
 import 'package:lumina/src/material/material_textures.dart';

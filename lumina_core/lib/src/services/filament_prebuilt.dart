@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
-import 'package:lumina/data/services/release_asset.dart';
+import 'package:lumina_core/src/services/release_asset.dart';
 
 /// A prebuilt Filament archive could not be fetched, verified or unpacked.
 class FilamentPrebuiltException implements Exception {

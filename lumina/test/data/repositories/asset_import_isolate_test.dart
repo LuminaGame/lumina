@@ -3,9 +3,8 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina/data/models/lumina_asset.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/data/repositories/asset_repository.dart';
-import 'package:lumina/data/services/tga_decoder_service.dart';
 
 /// Regression coverage: asset import must not downscale textures on the UI
 /// isolate and freeze the editor.

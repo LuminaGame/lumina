@@ -2,7 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
-import 'package:lumina/data/services/tga_decoder_service.dart';
+import 'package:lumina_core/lumina_core.dart';
 
 /// The conversion an image import runs on its source file: TGA and WebP are
 /// stored as PNG, every other format as it is. The

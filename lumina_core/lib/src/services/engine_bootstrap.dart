@@ -4,11 +4,11 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
-import 'package:lumina/data/models/lumina_project.dart' show kLuminaEngineDisplayVersion;
-import 'package:lumina/data/services/filament_prebuilt.dart';
-import 'package:lumina/data/services/lumina_data_dir.dart';
-import 'package:lumina/data/services/openriglogic_prebuilt.dart';
-import 'package:lumina/data/services/workspace_paths.dart';
+import 'package:lumina_core/src/formats/lumina_project.dart' show kLuminaEngineDisplayVersion;
+import 'package:lumina_core/src/services/filament_prebuilt.dart';
+import 'package:lumina_core/src/services/lumina_data_dir.dart';
+import 'package:lumina_core/src/services/openriglogic_prebuilt.dart';
+import 'package:lumina_core/src/services/workspace_paths.dart';
 
 /// What the release workflow compiles into a Lumina Studio build
 /// (`--dart-define`): the release tag, its commit and the engine repo. All

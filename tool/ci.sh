@@ -6,7 +6,7 @@
 #   tool/ci.sh --unit     # unit suites only (no GPU needed)
 #   tool/ci.sh --smoke    # smoke reports only (GPU 1)
 #   tool/ci.sh --package  # also let lumina_ui's MSIX packaging test build a Release app (Windows)
-#   tool/ci.sh lumina     # restrict to one package (flutter_filament|lumina|lumina_ui|lumina_editor_api)
+#   tool/ci.sh lumina     # restrict to one package (lumina_core|flutter_filament|lumina|lumina_ui|lumina_editor_api)
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MODE=all
@@ -54,7 +54,7 @@ unit_targets() {
 }
 
 # flutter_assimp and flutter_riglogic live in the tools repo (their own CI).
-PACKAGES=(flutter_filament lumina lumina_editor_api lumina_ui)
+PACKAGES=(lumina_core flutter_filament lumina lumina_editor_api lumina_ui)
 FAILED=()
 run() {
   local pkg="$1"; shift
@@ -73,8 +73,13 @@ for pkg in "${PACKAGES[@]}"; do
   fi
   if [ "$MODE" != smoke ]; then
     targets=$(cd "$ROOT/$pkg" && unit_targets | tr '\n' ' ')
+    # A pure-Dart package (no flutter dependency) runs under `dart test`.
     # shellcheck disable=SC2086
-    run "$pkg" flock "$LOCK" flutter test $targets
+    if grep -q '^  flutter:' "$ROOT/$pkg/pubspec.yaml"; then
+      run "$pkg" flock "$LOCK" flutter test $targets
+    else
+      run "$pkg" dart test $targets
+    fi
   fi
   if [ "$MODE" != unit ] && [ -f "$ROOT/$pkg/tool/smoke_report.dart" ]; then
     smoke_args=()

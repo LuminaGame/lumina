@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:lumina/data/repositories/project_repository.dart';
-import 'package:lumina/data/services/game_template_service.dart';
+import 'package:lumina_core/lumina_core.dart';
 
 /// Shared by the web build test and the web smoke: a real Third
 /// Person project — real `flutter create`, `pub get` and template content —

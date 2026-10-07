@@ -3,7 +3,7 @@ import 'package:lumina/src/object/pawn.dart';
 import 'package:lumina/src/controller/player_controller.dart';
 import 'package:lumina/src/controller/player_state.dart';
 import 'package:lumina/src/world/world.dart';
-import 'package:lumina/src/math/transform_snapshot.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/src/game/game_state.dart';
 import 'package:lumina/src/game/camera_actor.dart';
 import 'package:lumina/src/game/player_start.dart';

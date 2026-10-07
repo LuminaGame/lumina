@@ -13,6 +13,8 @@ dependencies:
     sdk: flutter
   lumina:
     path: ../lumina
+  lumina_core:
+    path: ../lumina_core
   lumina_plugin_protocol:
     path: ../lumina_plugin_protocol
   shadcn_flutter: ^0.0.55

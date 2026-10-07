@@ -1,10 +1,9 @@
 import 'package:vector_math/vector_math_64.dart';
 import 'package:lumina/src/collision/collision_subsystem.dart';
-import 'package:lumina/src/math/units.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/src/components/base/actor_component.dart';
 import 'package:lumina/src/components/base/scene_component.dart';
 import 'package:lumina/src/components/collision/collision_component.dart';
-import 'package:lumina/src/math/euler.dart';
 
 /// Actor component that updates an actor's position along a simulated ballistic projectile trajectory.
 class LuminaProjectileMovementComponent extends LuminaActorComponent {

@@ -5,8 +5,8 @@ import 'dart:typed_data';
 
 import 'package:vector_math/vector_math_64.dart';
 
-import 'package:lumina/data/models/lumina_asset.dart';
-import 'package:lumina/data/services/authored_animation_clip.dart';
+import 'package:lumina_core/src/formats/lumina_asset.dart';
+import 'package:lumina_core/src/services/authored_animation_clip.dart';
 
 Quaternion _rotationOf(Matrix4 m) {
   final t = Vector3.zero();

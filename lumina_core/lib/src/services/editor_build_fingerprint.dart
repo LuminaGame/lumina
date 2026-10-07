@@ -6,7 +6,7 @@ import 'package:crypto/crypto.dart';
 import 'package:path/path.dart' as p;
 import 'package:yaml/yaml.dart';
 
-import 'package:lumina/data/services/workspace_paths.dart';
+import 'package:lumina_core/src/services/workspace_paths.dart';
 
 /// Everything a project editor build depends on.
 class EditorHostInputs {
@@ -58,6 +58,7 @@ class EditorHostInputs {
 const List<String> kEditorEngineRepos = [
   'lumina_ui',
   'lumina',
+  'lumina_core',
   'lumina_editor_api',
   'flutter_filament',
   'flutter_assimp',

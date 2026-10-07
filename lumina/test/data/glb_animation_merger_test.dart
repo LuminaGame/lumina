@@ -2,7 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina/data/services/glb_animation_merger.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/testing.dart';
 
 /// Gltfio only plays animations that live in the same asset as

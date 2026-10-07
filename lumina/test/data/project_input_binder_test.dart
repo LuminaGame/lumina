@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina/lumina.dart';
-import 'package:lumina/data/services/game_template_service.dart';
+import 'package:lumina_core/lumina_core.dart';
 
 /// Play-In-Editor must honour the actions and keys the user edits in
 /// Project Settings, not a second hardcoded list. The manifest's

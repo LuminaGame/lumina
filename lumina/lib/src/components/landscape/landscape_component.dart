@@ -6,11 +6,9 @@ import 'dart:typed_data';
 import 'package:flutter_filament/flutter_filament.dart';
 import 'package:vector_math/vector_math_64.dart' hide Frustum;
 
-import 'package:lumina/data/models/landscape_data.dart';
-import 'package:lumina/data/models/lumina_asset.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/data/services/glb_parser_service.dart';
 import 'package:lumina/src/collision/collision_subsystem.dart';
-import 'package:lumina/src/math/units.dart';
 import 'package:lumina/src/components/collision/collision_component.dart';
 import 'package:lumina/src/object/actor.dart';
 import 'package:lumina/src/utility/lumina_assets.dart';

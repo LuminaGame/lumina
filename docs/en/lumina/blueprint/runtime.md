@@ -9,6 +9,7 @@ How Blueprints run: the node library that the palette, the VM and the code gener
 - [`lib/src/blueprint/blueprint_function_registry.dart`](#libsrcblueprintblueprint_function_registrydart)
 - [`lib/src/blueprint/blueprint_runtime.dart`](#libsrcblueprintblueprint_runtimedart)
 - [`lib/src/blueprint/level_blueprint.dart`](#libsrcblueprintlevel_blueprintdart)
+- [`lib/src/blueprint/level_blueprint_storage.dart`](#libsrcblueprintlevel_blueprint_storagedart)
 - [`lib/src/blueprint/node_library.dart`](#libsrcblueprintnode_librarydart)
 - [`lib/src/blueprint/node_library/type_context.dart`](#libsrcblueprintnode_librarytype_contextdart)
 - [`lib/src/blueprint/vm/blueprint_vm.dart`](#libsrcblueprintvmblueprint_vmdart)
@@ -265,6 +266,25 @@ What a level script needs to find the level's placed actors by name: the VM's `L
 | `levelActor` | `LuminaActor? levelActor(String name)` | The live placed actor named [name], or null (unknown, destroyed or removed from the level). |
 | `liveLevelActor` | `LuminaActor? liveLevelActor(LuminaActor? actor)` | [actor] while it is still in play; null once destroyed or removed. |
 | `levelActorsOfClass` | `List<Object?> levelActorsOfClass(String cls)` | The live placed actors of class string [cls], in level order. |
+
+## `lib/src/blueprint/level_blueprint_storage.dart`
+
+A level `.lmas` stores its Level Blueprint as JSON (`LuminaLevelDocument.levelBlueprintJson` in `lumina_core`). These extensions read it into the engine's [`LuminaLevelBlueprintDocument`](#libsrcblueprintlevel_blueprintdart) and write it back.
+
+### `extension LuminaLevelDocumentBlueprint on LuminaLevelDocument`
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `levelBlueprint` | `LuminaLevelBlueprintDocument get levelBlueprint` | The level's Blueprint: an empty graph when none is stored. |
+| `levelBlueprint` | `set levelBlueprint(LuminaLevelBlueprintDocument? value)` | Stores [value] under `metadata.levelBlueprint`; an empty Blueprint removes the key, so a level without a script stays as it was. |
+| `levelActorRefs` | `List<LuminaBlueprintLevelActorRef> get levelActorRefs` | The placed actors a Level Blueprint refers to by name. |
+
+### `extension LuminaLevelRepositoryBlueprint on LuminaLevelRepository`
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `loadLevelBlueprint` | `LuminaLevelBlueprintDocument loadLevelBlueprint(String relativePath)` | The Level Blueprint of [relativePath]; an empty graph when the level has none (or does not exist yet). |
+| `saveLevelBlueprint` | `LuminaLevelDocument saveLevelBlueprint(LuminaLevelBlueprintDocument blueprint)` | Stores [blueprint] in its level (`metadata.levelBlueprint`), creating a level container when none exists. Returns the saved level. |
 
 ## `lib/src/blueprint/node_library.dart`
 

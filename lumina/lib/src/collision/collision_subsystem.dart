@@ -7,7 +7,7 @@ import 'package:lumina/src/collision/gjk_epa.dart';
 import 'package:lumina/src/collision/heightfield.dart';
 import 'package:lumina/src/collision/narrow_phase.dart';
 import 'package:lumina/src/collision/raycast_math.dart';
-import 'package:lumina/src/math/euler.dart';
+import 'package:lumina_core/lumina_core.dart';
 
 /// Central world subsystem managing broad-phase filtering, overlap/hit event dispatch, and geometric queries.
 class LuminaCollisionSubsystem extends LuminaWorldSubsystem {

@@ -7,7 +7,7 @@ import 'package:lumina/src/world/world.dart';
 import 'package:lumina/src/components/base/scene_component.dart';
 import 'package:lumina/src/components/mesh/procedural_mesh_component.dart';
 import 'package:lumina/src/components/particles/particle_emitter_config.dart';
-import 'package:lumina/src/math/euler.dart';
+import 'package:lumina_core/lumina_core.dart';
 
 /// Scene component that simulates CPU particles and renders them as a pool of Filament instanced meshes.
 class LuminaParticleSystemComponent extends LuminaSceneComponent {

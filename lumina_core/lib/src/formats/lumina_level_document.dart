@@ -1,7 +1,5 @@
 import 'dart:convert';
 
-import 'package:lumina/src/blueprint/level_blueprint.dart';
-
 /// A level `.lmas` as Lumina Studio writes it (a JSON container): `assetId`,
 /// `name`, `type: 'level'`, `relativePath`, `rawPayload: null` and
 /// `metadata` — the placed actors (`metadata.actors`), the level's sections
@@ -56,25 +54,29 @@ class LuminaLevelDocument {
       ];
   set actors(List<Map<String, dynamic>> value) => metadata['actors'] = value;
 
-  /// The level's Blueprint: an empty graph when none is stored.
-  LuminaLevelBlueprintDocument get levelBlueprint =>
-      LuminaLevelBlueprintDocument.fromLevelMetadata(metadata, levelPath: relativePath);
+  /// The `metadata` key a level stores its Level Blueprint under.
+  static const String levelBlueprintKey = 'levelBlueprint';
 
-  /// Stores [value] under `metadata.levelBlueprint`; an empty Blueprint
-  /// removes the key, so a level without a script stays as it was.
-  set levelBlueprint(LuminaLevelBlueprintDocument? value) {
-    if (value == null || value.isEmpty) {
-      metadata.remove(LuminaLevelBlueprintDocument.metadataKey);
+  /// The stored Level Blueprint as JSON (`metadata.levelBlueprint`), or null
+  /// when the level has none. The engine reads it into its
+  /// `LuminaLevelBlueprintDocument` (`levelBlueprint`, from `package:lumina`).
+  Map<String, dynamic>? get levelBlueprintJson {
+    final stored = metadata[levelBlueprintKey];
+    return stored is Map ? Map<String, dynamic>.from(stored) : null;
+  }
+
+  /// Stores [value] under `metadata.levelBlueprint`; null removes the key,
+  /// so a level without a script stays as it was.
+  set levelBlueprintJson(Map<String, dynamic>? value) {
+    if (value == null) {
+      metadata.remove(levelBlueprintKey);
     } else {
-      metadata[LuminaLevelBlueprintDocument.metadataKey] = value.toJson();
+      metadata[levelBlueprintKey] = value;
     }
   }
 
   /// Whether the level carries a Blueprint.
-  bool get hasLevelBlueprint => metadata[LuminaLevelBlueprintDocument.metadataKey] is Map;
-
-  /// The placed actors a Level Blueprint refers to by name.
-  List<LuminaBlueprintLevelActorRef> get levelActorRefs => LuminaBlueprintLevelActorRef.fromActorMaps(actors);
+  bool get hasLevelBlueprint => metadata[levelBlueprintKey] is Map;
 
   Map<String, dynamic> toJson() => container;
 

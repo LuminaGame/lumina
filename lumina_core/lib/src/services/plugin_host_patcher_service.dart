@@ -1,6 +1,6 @@
 import 'dart:io';
-import 'package:lumina/data/models/lumina_plugin_descriptor.dart';
-import 'package:lumina/data/services/workspace_paths.dart';
+import 'package:lumina_core/src/formats/lumina_plugin_descriptor.dart';
+import 'package:lumina_core/src/services/workspace_paths.dart';
 
 class PluginHostPatcherService {
   final String beginMarker = '  # BEGIN LUMINA PLUGINS (generated)';

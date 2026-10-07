@@ -1,8 +1,7 @@
 import 'dart:io';
 
 import 'package:lumina/data/services/editor_host_generator_service.dart';
-import 'package:lumina/data/services/editor_source_vendor_service.dart';
-import 'package:lumina/data/services/workspace_paths.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 import 'package:yaml/yaml.dart';

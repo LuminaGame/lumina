@@ -2,12 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:lumina/data/models/lumina_plugin_descriptor.dart';
-import 'package:lumina/data/services/editor_build_cache.dart';
-import 'package:lumina/data/services/editor_build_fingerprint.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/data/services/editor_host_generator_service.dart';
-import 'package:lumina/data/services/editor_source_vendor_service.dart';
-import 'package:lumina/data/services/space_free_build_dir.dart';
 import 'package:path/path.dart' as p;
 
 /// The phases of a project editor build, with their share of the bar.

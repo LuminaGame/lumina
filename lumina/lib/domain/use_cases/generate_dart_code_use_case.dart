@@ -1,12 +1,8 @@
 import 'dart:io';
 
-import 'package:lumina/data/models/lumina_asset.dart';
-import 'package:lumina/data/models/lumina_project.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/data/repositories/project_repository.dart';
 import 'package:lumina/data/services/code_generator_service.dart';
-import 'package:lumina/data/services/dart_identifiers.dart';
-import 'package:lumina/data/services/engine_logger_service.dart';
-import 'package:lumina/data/services/umg_widget_library_service.dart';
 import 'package:lumina/domain/models/use_case_results.dart';
 import 'package:lumina/domain/use_cases/use_case_validation.dart';
 

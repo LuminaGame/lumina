@@ -2,8 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:lumina/src/game/template_character.dart';
-import 'package:lumina/data/models/lumina_asset.dart';
-import 'package:lumina/data/services/dart_identifiers.dart';
+import 'package:lumina_core/lumina_core.dart';
 
 /// What [BaseEyeHeightMigration.run] did to one project.
 class BaseEyeHeightMigrationReport {

@@ -4,7 +4,7 @@ import 'dart:math';
 
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter/foundation.dart';
-import 'package:lumina/data/services/lumina_config_dir.dart';
+import 'package:lumina_core/lumina_core.dart';
 
 /// A signed-in Marketplace session as the editor keeps it between runs.
 class StoredMarketplaceSession {

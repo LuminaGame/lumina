@@ -4,11 +4,11 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 import 'package:yaml/yaml.dart';
 
-import 'package:lumina/data/models/lumina_project.dart' show kLuminaEngineVersion;
-import 'package:lumina/data/services/directory_link.dart';
-import 'package:lumina/data/services/editor_build_fingerprint.dart' show engineRepoState;
-import 'package:lumina/data/services/engine_identity.dart';
-import 'package:lumina/data/services/workspace_paths.dart';
+import 'package:lumina_core/src/formats/lumina_project.dart' show kLuminaEngineVersion;
+import 'package:lumina_core/src/services/directory_link.dart';
+import 'package:lumina_core/src/services/editor_build_fingerprint.dart' show engineRepoState;
+import 'package:lumina_core/src/services/engine_identity.dart';
+import 'package:lumina_core/src/services/workspace_paths.dart';
 
 /// A project's copy of the engine source comes from another engine than the
 /// running one (see [EditorSourceVendorService.engineUpdate]).

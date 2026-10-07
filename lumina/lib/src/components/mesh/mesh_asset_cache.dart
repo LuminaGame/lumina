@@ -5,7 +5,7 @@ import 'dart:typed_data';
 import 'package:flutter_filament/flutter_filament.dart';
 import 'package:path/path.dart' as p;
 
-import 'package:lumina/data/models/lumina_asset.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/src/utility/lumina_assets.dart';
 
 /// One mesh drawn from the engine-scoped cache: an instance of a shared

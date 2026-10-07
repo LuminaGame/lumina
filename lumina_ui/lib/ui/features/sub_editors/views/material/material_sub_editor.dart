@@ -1,6 +1,6 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_ui/ui/features/sub_editors/sub_editor_binding.dart';
-import 'package:lumina/data/models/lumina_asset.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/material_editor_view_model.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/material/glsl_editor_widget.dart';

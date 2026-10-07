@@ -3,10 +3,8 @@ import 'dart:isolate';
 
 import 'package:path/path.dart' as p;
 
-import 'package:lumina/data/models/lumina_asset.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/data/repositories/asset_repository.dart';
-import 'package:lumina/data/services/gltf_packer.dart';
-import 'package:lumina/data/services/import_formats.dart';
 import 'package:lumina/data/services/import_queue.dart';
 
 /// One primary file a folder import brings in, with the files that travel

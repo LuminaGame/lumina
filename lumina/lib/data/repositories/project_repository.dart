@@ -4,25 +4,13 @@ import 'dart:isolate';
 import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:lumina/src/game/template_content.dart';
-import 'package:lumina/data/models/lumina_asset.dart';
-import 'package:lumina/data/models/lumina_project.dart';
-import 'package:lumina/data/models/recent_project_entry.dart';
-import 'package:lumina/data/services/asset_index.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/data/services/derived_data_cache.dart';
 import 'package:lumina/data/services/thumbnail_sidecar_migration.dart';
 import 'package:lumina/data/services/base_eye_height_migration.dart';
-import 'package:lumina/data/services/generated_code_migration.dart';
-import 'package:lumina/data/services/engine_logger_service.dart';
-import 'package:lumina/data/services/config_json_file.dart';
-import 'package:lumina/data/services/lumina_config_dir.dart';
 import 'package:lumina/data/services/code_generator_service.dart';
-import 'package:lumina/data/services/dart_identifiers.dart';
-import 'package:lumina/data/services/umg_widget_library_service.dart';
-import 'package:lumina/data/services/game_template_service.dart';
 import 'package:lumina/data/services/glb_parser_service.dart';
 import 'package:lumina/data/services/project_input_binder.dart';
-import 'package:lumina/data/services/project_engine_link.dart';
-import 'package:lumina/data/services/workspace_paths.dart';
 import 'package:lumina/data/repositories/asset_repository.dart';
 
 enum ProjectCreationStep {

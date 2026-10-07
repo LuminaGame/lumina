@@ -5,7 +5,7 @@ import 'dart:typed_data';
 import 'package:flutter_assimp/flutter_assimp.dart';
 
 import 'package:lumina/data/services/fbx_import_service.dart';
-import 'package:lumina/data/services/fbx_texture_locator.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/data/services/obj_import_service.dart';
 
 /// A model file Assimp could not convert.

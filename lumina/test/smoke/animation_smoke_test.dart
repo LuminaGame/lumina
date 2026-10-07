@@ -8,7 +8,7 @@ import 'package:flutter_filament/flutter_filament.dart';
 import 'package:vector_math/vector_math_64.dart';
 import 'package:lumina/lumina.dart';
 import 'package:lumina/testing.dart';
-import 'package:lumina/data/services/game_template_service.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:flutter_filament/src/third_party/filament_c.g.dart' as c;
 import 'package:image/image.dart' as img;
 

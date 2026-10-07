@@ -1,6 +1,5 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
-import 'package:lumina/data/services/game_template_service.dart';
-import 'package:lumina/data/models/lumina_project.dart' show kUmgWidgetLibraryFlutter, kUmgWidgetLibraryShadcn;
+import 'package:lumina_core/lumina_core.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/features/launcher/view_models/create_project_view_model.dart';

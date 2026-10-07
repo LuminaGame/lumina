@@ -4,7 +4,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/gestures.dart' show kSecondaryButton;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina/data/services/game_template_service.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/lumina.dart';
 import 'package:lumina_ui/testing/smoke_artifacts.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';

@@ -1,6 +1,6 @@
 import 'package:flutter_filament/flutter_filament.dart';
 import 'package:vector_math/vector_math_64.dart' show Vector3, Quaternion;
-import 'package:lumina/src/math/units.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/src/declarative/lumina_object.dart';
 import 'package:lumina/src/declarative/build_context.dart';
 import 'package:lumina/src/declarative/build_owner.dart';
@@ -23,7 +23,6 @@ import 'package:lumina/src/components/light/auto_exposure.dart';
 import 'package:lumina/src/world/entity_registry.dart';
 import 'package:lumina/src/utility/viewport_statics.dart';
 import 'package:lumina/src/world/debug_shapes.dart';
-import 'package:lumina/src/math/euler.dart';
 import 'package:lumina/src/game/player_camera_manager.dart' show LuminaMinimalViewInfo;
 
 class _PendingSpawnItem {

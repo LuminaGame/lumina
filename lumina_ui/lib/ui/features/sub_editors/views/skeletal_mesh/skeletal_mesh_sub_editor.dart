@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_ui/ui/features/sub_editors/sub_editor_binding.dart';
 import 'package:lumina/lumina.dart' hide BoxShape;
-import 'package:lumina/data/services/workspace_paths.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/core/property_editors/slider_field.dart';
 import 'package:lumina_ui/ui/core/property_editors/synced_text_field.dart';

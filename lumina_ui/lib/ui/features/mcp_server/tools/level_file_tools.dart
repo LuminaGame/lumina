@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:lumina/data/services/level_template_service.dart';
+import 'package:lumina_core/lumina_core.dart';
 
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 import 'package:lumina_ui/ui/features/mcp_server/services/mcp_protocol.dart';

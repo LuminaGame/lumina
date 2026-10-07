@@ -5,9 +5,7 @@ import 'package:vector_math/vector_math_64.dart';
 
 import 'package:lumina/src/collision/collision_hull.dart';
 import 'package:lumina/src/collision/collision_primitive.dart';
-import 'package:lumina/src/math/axes.dart';
-import 'package:lumina/src/math/units.dart';
-import 'package:lumina/data/models/lumina_asset.dart';
+import 'package:lumina_core/lumina_core.dart';
 
 /// A mesh asset's simple collision: convex [hulls]
 /// (imported `UCX_` pieces, then authored convex shapes), authored box /

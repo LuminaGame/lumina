@@ -3,7 +3,7 @@ import 'package:lumina/src/collision/collision_query.dart';
 import 'package:lumina/src/collision/collision_subsystem.dart';
 import 'package:lumina/src/collision/shapes.dart';
 import 'package:lumina/src/components/base/scene_component.dart';
-import 'package:lumina/src/components/camera/camera_math.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/src/object/pawn.dart';
 
 class LuminaSpringArmComponent extends LuminaSceneComponent {

@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter_filament/flutter_filament.dart';
 import 'package:vector_math/vector_math_64.dart' show Vector3;
-import 'package:lumina/src/math/units.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/src/components/light/light_component.dart';
 
 /// Omnidirectional point light component with luminous flux intensity in lumens (or candela).

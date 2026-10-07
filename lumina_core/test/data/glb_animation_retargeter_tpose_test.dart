@@ -1,6 +1,6 @@
 import 'dart:io';
-import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina/data/services/glb_animation_retargeter.dart';
+import 'package:test/test.dart';
+import 'package:lumina_core/lumina_core.dart';
 
 void main() {
   group('GlbAnimationRetargeter T-pose to A-pose alignment', () {

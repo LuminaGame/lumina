@@ -2,7 +2,7 @@
 
 # Animation
 
-Skeletal animation: animation clips and bone tracks, the anim instance with its state machine and montage blending, montages with sections and notifies, 1D and 2D blend spaces, editable keyframe tracks and the skeleton retargeter. File paths are relative to the `lumina/` package directory. Clips a game plays are glTF animations in the skeletal mesh's GLB, played by name through gltfio; clips authored in the editor are written there too (`AuthoredAnimationClip`, `GlbAuthoredClipWriter`, `AuthoredAnimationStore` in [the data layer](data-services-continued-3.md#libdataservicesauthored_animation_clipdart)).
+Skeletal animation: animation clips and bone tracks, the anim instance with its state machine and montage blending, montages with sections and notifies, 1D and 2D blend spaces, editable keyframe tracks and the skeleton retargeter. File paths are relative to the `lumina/` package directory. Clips a game plays are glTF animations in the skeletal mesh's GLB, played by name through gltfio; clips authored in the editor are written there too (`AuthoredAnimationClip`, `GlbAuthoredClipWriter`, `AuthoredAnimationStore` in [the data layer](../lumina_core/services.md#libsrcservicesauthored_animation_clipdart)).
 
 **On this page:**
 

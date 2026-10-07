@@ -11,6 +11,7 @@ workspace:
   - flutter_filament/example
   - lumina
   - lumina/example
+  - lumina_core
   - lumina_editor_api
   - lumina_plugin_protocol
   - lumina_ui

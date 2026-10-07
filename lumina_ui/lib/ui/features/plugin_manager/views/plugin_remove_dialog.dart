@@ -1,4 +1,4 @@
-import 'package:lumina/data/models/lumina_plugin_descriptor.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/data/services/plugin_registry_service.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 

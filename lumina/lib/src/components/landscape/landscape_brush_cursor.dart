@@ -3,7 +3,7 @@ import 'dart:typed_data';
 
 import 'package:vector_math/vector_math_64.dart' show Vector3;
 
-import 'package:lumina/data/models/landscape_data.dart';
+import 'package:lumina_core/lumina_core.dart';
 
 /// Where and how a sculpt or foliage brush is drawn on a terrain.
 ///

@@ -1,11 +1,10 @@
 import 'dart:io';
 
-import 'package:lumina/src/blueprint/level_blueprint.dart';
-import 'package:lumina/data/models/lumina_level_document.dart';
+import 'package:lumina_core/src/formats/lumina_level_document.dart';
 
 /// Reads and writes a project's level `.lmas` containers:
-/// the whole document, or only its Level Blueprint, keeping every other key
-/// of the level as it is on disk.
+/// the whole document, keeping every key of the level as it is on disk. The
+/// engine adds `loadLevelBlueprint` / `saveLevelBlueprint` (`package:lumina`).
 class LuminaLevelRepository {
   /// The project directory the level paths are relative to.
   final String projectDir;
@@ -26,20 +25,5 @@ class LuminaLevelRepository {
   void save(LuminaLevelDocument level) {
     final file = _file(level.relativePath)..parent.createSync(recursive: true);
     file.writeAsStringSync(level.encode());
-  }
-
-  /// The Level Blueprint of [relativePath]; an empty graph when the level has
-  /// none (or does not exist yet).
-  LuminaLevelBlueprintDocument loadLevelBlueprint(String relativePath) =>
-      load(relativePath)?.levelBlueprint ?? LuminaLevelBlueprintDocument(levelPath: relativePath);
-
-  /// Stores [blueprint] in its level (`metadata.levelBlueprint`), creating a
-  /// level container when none exists. Returns the saved level.
-  LuminaLevelDocument saveLevelBlueprint(LuminaLevelBlueprintDocument blueprint) {
-    final path = blueprint.levelPath;
-    final level = load(path) ?? LuminaLevelDocument(relativePath: path);
-    level.levelBlueprint = blueprint;
-    save(level);
-    return level;
   }
 }

@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:vector_math/vector_math_64.dart';
 
-import 'package:lumina/data/models/landscape_data.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/src/collision/narrow_phase.dart';
 import 'package:lumina/src/collision/shapes.dart';
 

@@ -7,12 +7,11 @@ import 'package:vector_math/vector_math_64.dart';
 import 'package:lumina/src/material/lumina_material.dart';
 import 'package:lumina/src/material/lumina_material_instance.dart';
 import 'package:lumina/src/material/dynamic_material_instance.dart';
-import 'package:lumina/data/models/lumina_asset.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/src/utility/lumina_assets.dart';
 import 'package:lumina/src/object/actor.dart';
 import 'package:lumina/src/world/world.dart';
 import 'package:lumina/src/components/base/scene_component.dart';
-import 'package:lumina/src/math/units.dart';
 import 'package:lumina/src/physics/primitive_physics.dart';
 
 /// Scene component rendering a static (non-skinned) 3D mesh via Filament and gltfio.
