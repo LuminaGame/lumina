@@ -2,6 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina/lumina.dart';
+import 'package:lumina_mouse_capture/lumina_mouse_capture.dart';
 import 'package:lumina_widgets/lumina_widgets.dart';
 
 /// A level game with the input subsystem a generated game registers.
@@ -16,6 +17,7 @@ class _LevelGame extends LuminaGame {
     if (world != null && world.getSubsystem<LuminaInputSubsystem>() == null) {
       world.registerSubsystem(LuminaInputSubsystem());
     }
+    world?.gameMode ??= LuminaGameMode();
     return LuminaNodeGroup(children: [LuminaActor()]);
   }
 }
@@ -93,5 +95,51 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
     expect(LuminaGame.onChangeLevelRequested, isNull, reason: 'a disposed host stops answering');
+  });
+
+  testWidgets('the host captures the mouse at start, turns with its motion, frees it for the cursor and takes it back', (tester) async {
+    final backend = RecordingMouseCaptureBackend(simulateLock: true);
+    final previous = LuminaMouseCapture.backend;
+    LuminaMouseCapture.backend = backend;
+    addTearDown(() => LuminaMouseCapture.backend = previous);
+
+    final state = await pumpHost(tester);
+    await tester.pump();
+    expect(backend.requests.first, startsWith('capture('), reason: 'captured once the first frame laid out');
+    final size = tester.getSize(find.byType(LuminaGameHost));
+    expect(backend.lastCentre, Offset(size.width / 2, size.height / 2), reason: 'held at the centre of the game');
+    expect(backend.isCaptured, isTrue);
+
+    // Relative motion from the captured mouse is Mouse X / Mouse Y.
+    final world = state.game.world!;
+    final input = world.getSubsystem<LuminaInputSubsystem>()!;
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.keyW);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.keyW);
+    expect(input.lastInputDevice, 'Keyboard');
+    backend.emitMotion(12, -3);
+    await tester.pump();
+    expect(input.lastInputDevice, 'Mouse', reason: 'the captured motion reached the input subsystem');
+
+    // Show Mouse Cursor frees the pointer; hiding it takes it back.
+    // Player 0 logs in (a game's own game mode does it at BeginPlay); the
+    // host follows its controller from the next frame.
+    world.gameMode!.login();
+    await tester.pump();
+    final controller = LuminaGameplayStatics.getPlayerController(world, playerIndex: 0);
+    expect(controller, isNotNull, reason: 'the game mode gave player 0 a controller');
+    {
+      controller!.setShowMouseCursor(true);
+      await tester.pump();
+      expect(state.freeCursor, isTrue);
+      expect(backend.requests.last, 'release');
+      controller.setShowMouseCursor(false);
+      await tester.pump();
+      expect(state.freeCursor, isFalse);
+      expect(backend.requests.last, startsWith('capture('));
+    }
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    expect(backend.requests.last, 'release', reason: 'a closed game gives the mouse back');
   });
 }
