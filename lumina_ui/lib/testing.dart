@@ -6,4 +6,4 @@ library;
 
 export 'package:lumina_smoke/flutter.dart' hide SmokeArtifacts;
 
-export 'testing/smoke_artifacts.dart';
+export 'package:lumina_ui/testing/smoke_artifacts.dart';

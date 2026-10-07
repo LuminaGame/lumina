@@ -49,7 +49,7 @@ See [Utilities](../lumina/utilities.md) and [Input](../lumina/input.md).
 
 ## Moving editor code over
 
-There are no deprecated `package:lumina/data/...` re-exports for the files that moved here: `lumina` cannot depend on this package. Editor code and plugins import the umbrella instead:
+The old `package:lumina/data/...` and `package:lumina/domain/...` paths are gone. Editor code and plugins import the umbrella, or a narrower package when that is all they use:
 
 | Before | After |
 | :--- | :--- |
@@ -58,7 +58,7 @@ There are no deprecated `package:lumina/data/...` re-exports for the files that 
 | `package:lumina/data/services/<service>.dart` | `package:lumina_editor_data/lumina_editor.dart` |
 | `package:lumina/domain/...` | `package:lumina_editor_data/lumina_editor.dart` |
 
-A package that does this adds `lumina_editor_data` to its dependencies. Engine-only code keeps `package:lumina/lumina.dart`. The `@Deprecated` re-exports of `lumina_core` files under `package:lumina/data/` still work for one release ([lumina_core](../lumina_core/index.md#deprecated-import-paths)).
+A package that does this adds `lumina_editor_data` to its dependencies. Engine-only code keeps `package:lumina/lumina.dart`; code that only reads or writes formats (`LuminaAsset`, `LuminaProject`, levels, plugin descriptors) imports `package:lumina_core/lumina_core.dart` ([removed import paths](../lumina_core/index.md#removed-import-paths)), and a plugin's process part `package:lumina_plugin_process/lumina_plugin_process.dart`.
 
 ## Tests and smoke
 

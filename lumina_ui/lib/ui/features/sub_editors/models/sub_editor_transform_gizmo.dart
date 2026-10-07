@@ -5,8 +5,8 @@ import 'package:lumina_ui/ui/features/main_editor/services/gizmo_controller.dart
 import 'package:lumina_ui/ui/features/main_editor/services/transform_gizmo.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/viewport_ray.dart';
 
-export '../../main_editor/services/gizmo_controller.dart' show GizmoMode, GizmoSpace;
-export '../../main_editor/services/transform_gizmo.dart' show TransformGizmoSnap;
+export 'package:lumina_ui/ui/features/main_editor/services/gizmo_controller.dart' show GizmoMode, GizmoSpace;
+export 'package:lumina_ui/ui/features/main_editor/services/transform_gizmo.dart' show TransformGizmoSnap;
 
 /// What a sub-editor viewport's transform gizmo sits on: one object with a
 /// world transform in the **authoring** frame (Z up, cm — what the Details

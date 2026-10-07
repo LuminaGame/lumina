@@ -152,7 +152,7 @@ context.registerImporter(PluginProcessImporter(id: 'my_tools.txt', extensions: c
 
 Routing: the editor shows the menu item / slot button / panel / importer as if registered in process and sends the action to the process; while the process is not running, the items are unavailable and the panels show the stop with Restart. The level (`context.level`) is a proxy: each edit is an undoable editor transaction and `runTransaction` groups proxied edits into one undo step.
 
-The types above come from the pure-Dart `package:lumina_plugin_process` (re-exported by `lumina_editor_api`). A slot button with live state takes an `ObservableValue`:
+The types above come from the pure-Dart `package:lumina_plugin_process` (re-exported by `lumina_editor_api`). Import them from there in the process part, so `test/architecture/process_part_reach_test.dart` (`PluginProcessReach`) can keep it Flutter-free. A slot button with live state takes an `ObservableValue`:
 
 ```dart
 final status = ObservableValue(const PluginButtonStateSpec(icon: PluginIconSpec(0xe88e), tooltip: 'Idle'));

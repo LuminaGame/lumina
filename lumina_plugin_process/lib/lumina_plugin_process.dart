@@ -9,6 +9,8 @@
 /// - The editor data it reads and writes: the open level
 ///   ([PluginLevelAccess], [EditorActorSnapshot], [EditorActorSpec]),
 ///   [PluginStorage], [EditorProjectInfo] and the MCP tool types.
+/// - Model and file downloads with checksums and progress ([PluginDownloader])
+///   and the asset metadata keys of plugin asset types ([kCustomAssetTypeKey]).
 /// - The editor side's line to a process ([PluginProcessLink]) and its state.
 /// - The wire protocol (`package:lumina_plugin_protocol`) and the pure change
 ///   notification types of `lumina_core` ([Observable], [ObservableValue],
@@ -30,7 +32,9 @@ export 'package:lumina_plugin_process/src/level_json.dart';
 export 'package:lumina_plugin_process/src/level_proxy.dart';
 export 'package:lumina_plugin_process/src/mcp/editor_mcp.dart';
 export 'package:lumina_plugin_process/src/mcp/mcp_types.dart';
+export 'package:lumina_plugin_process/src/plugin_asset_keys.dart';
 export 'package:lumina_plugin_process/src/plugin_crash_reporter.dart';
+export 'package:lumina_plugin_process/src/plugin_downloader.dart';
 export 'package:lumina_plugin_process/src/plugin_process.dart';
 export 'package:lumina_plugin_process/src/plugin_process_link.dart';
 export 'package:lumina_plugin_process/src/plugin_storage.dart';

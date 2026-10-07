@@ -151,7 +151,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart';
-import 'package:lumina/lumina.dart';
+import 'package:lumina_core/lumina_core.dart' show LuminaAsset;
 
 class ${pascalName}Plugin extends LuminaEditorPlugin {
   @override

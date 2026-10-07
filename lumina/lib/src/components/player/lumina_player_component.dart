@@ -2,7 +2,7 @@ import 'package:lumina/src/components/base/actor_component.dart';
 import 'package:lumina/src/object/actor.dart';
 import 'package:lumina/src/object/pawn.dart';
 import 'package:lumina/src/components/player/input_binding.dart';
-export 'input_binding.dart';
+export 'package:lumina/src/components/player/input_binding.dart';
 
 /// Player component attached to player-controlled pawns or actors for handling input bindings.
 class LuminaPlayerComponent extends LuminaActorComponent {

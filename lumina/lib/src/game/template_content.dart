@@ -8,7 +8,7 @@ import 'package:lumina/src/input/input_action.dart';
 import 'package:lumina/src/game/template_character.dart';
 import 'package:lumina/src/game/template_clips.dart';
 
-export 'template_clips.dart';
+export 'package:lumina/src/game/template_clips.dart';
 
 /// The art the Third Person template ships: a CC0 character with its idle,
 /// eight-direction walk / jog and movement clips merged into one GLB, so a

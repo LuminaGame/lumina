@@ -29,7 +29,7 @@ import 'package:lumina_ui/ui/features/launcher/views/launcher_view.dart';
 import 'package:lumina_ui/ui/features/main_editor/services/editor_graphics_preferences.dart';
 import 'package:lumina_ui/ui/features/main_editor/services/editor_preferences.dart';
 
-export 'ui/core/host/editor_host.dart' show EditorHostInfo, EditorLaunchArgs, LuminaEditorHost, EditorAssets, EditorHandOff;
+export 'package:lumina_ui/ui/core/host/editor_host.dart' show EditorHostInfo, EditorLaunchArgs, LuminaEditorHost, EditorAssets, EditorHandOff;
 
 final ValueNotifier<ThemeMode> appThemeModeNotifier = ValueNotifier<ThemeMode>(ThemeMode.dark);
 

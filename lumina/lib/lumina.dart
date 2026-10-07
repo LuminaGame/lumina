@@ -186,6 +186,7 @@ export 'package:lumina/src/game/console.dart';
 // Math
 export 'package:lumina_core/src/math/transform_snapshot.dart';
 export 'package:lumina_core/src/math/euler.dart';
+export 'package:lumina_core/src/math/camera_math.dart';
 export 'package:lumina_core/src/math/units.dart';
 export 'package:lumina_core/src/math/axes.dart';
 export 'package:lumina/src/blueprint/blueprint.dart';

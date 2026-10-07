@@ -49,7 +49,7 @@ Bkz. [Yardımcılar](../lumina/utilities.md) ve [Girdi](../lumina/input.md).
 
 ## Editör kodunu taşımak
 
-Buraya taşınan dosyalar için `package:lumina/data/...` altında kullanımdan kaldırılmış yeniden export'lar yoktur: `lumina` bu pakete bağımlı olamaz. Editör kodu ve eklentiler bunun yerine şemsiye kütüphaneyi import eder:
+Eski `package:lumina/data/...` ve `package:lumina/domain/...` yolları kaldırıldı. Editör kodu ve eklentiler şemsiye kütüphaneyi, yalnızca onu kullanıyorlarsa daha dar bir paketi import eder:
 
 | Önce | Sonra |
 | :--- | :--- |
@@ -58,7 +58,7 @@ Buraya taşınan dosyalar için `package:lumina/data/...` altında kullanımdan 
 | `package:lumina/data/services/<servis>.dart` | `package:lumina_editor_data/lumina_editor.dart` |
 | `package:lumina/domain/...` | `package:lumina_editor_data/lumina_editor.dart` |
 
-Bunu yapan bir paket `lumina_editor_data`'yı bağımlılıklarına ekler. Yalnızca engine kullanan kod `package:lumina/lumina.dart`'ta kalır. `package:lumina/data/` altındaki `lumina_core` dosyalarının `@Deprecated` yeniden export'ları bir sürüm daha çalışır ([lumina_core](../lumina_core/index.md#kullanımdan-kalkan-import-yolları)).
+Bunu yapan bir paket `lumina_editor_data`'yı bağımlılıklarına ekler. Yalnızca engine kullanan kod `package:lumina/lumina.dart`'ta kalır; yalnızca formatları (`LuminaAsset`, `LuminaProject`, level'lar, eklenti tanımlayıcıları) okuyan ya da yazan kod `package:lumina_core/lumina_core.dart`'ı ([kaldırılan import yolları](../lumina_core/index.md#kaldırılan-import-yolları)), bir eklentinin süreç bölümü ise `package:lumina_plugin_process/lumina_plugin_process.dart`'ı import eder.
 
 ## Testler ve smoke
 

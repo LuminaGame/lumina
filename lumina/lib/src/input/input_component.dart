@@ -7,11 +7,11 @@ import 'package:lumina/src/input/input_key.dart';
 import 'package:lumina/src/input/input_mapping_context.dart';
 import 'package:lumina/src/input/input_trigger.dart';
 
-export 'input_action.dart';
-export 'input_key.dart';
-export 'input_modifier.dart';
-export 'input_trigger.dart';
-export 'input_mapping_context.dart';
+export 'package:lumina/src/input/input_action.dart';
+export 'package:lumina/src/input/input_key.dart';
+export 'package:lumina/src/input/input_modifier.dart';
+export 'package:lumina/src/input/input_trigger.dart';
+export 'package:lumina/src/input/input_mapping_context.dart';
 
 class _ContextStackEntry {
   final LuminaInputMappingContext context;

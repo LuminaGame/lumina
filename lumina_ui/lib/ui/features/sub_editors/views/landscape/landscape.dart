@@ -1,2 +1,2 @@
-export 'brush_overlay.dart';
-export 'foliage_sub_editor.dart';
+export 'package:lumina_ui/ui/features/sub_editors/views/landscape/brush_overlay.dart';
+export 'package:lumina_ui/ui/features/sub_editors/views/landscape/foliage_sub_editor.dart';

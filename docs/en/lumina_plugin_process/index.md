@@ -101,6 +101,24 @@ or as a separate program started with `host.launch(name).toArgs()`. `test/two_pr
 
 Flutter tests import `package:lumina_editor_api/testing.dart` instead: its `LoopbackHost` is the same host with `channel`, the `PluginProcessChannel` a shell widget takes.
 
+## What a plugin's process part reaches
+
+`package:lumina_plugin_process/testing.dart` also has `PluginProcessReach`, which a plugin's `test/architecture/process_part_reach_test.dart` uses to record what its process part imports:
+
+```dart
+const allowed = {'lumina_core', 'lumina_plugin_process', 'path'};
+const flutterBound = <String, String>{};   // package → why it needs Flutter
+
+final reach = PluginProcessReach.ofPlugin(Directory.current);
+expect(reach.directPackages, allowed, reason: reach.ownLibraries.join('\n'));
+expect(reach.directFlutterPackages, flutterBound.keys.toSet(), reason: reach.describeFlutter());
+if (flutterBound.isEmpty) expect(reach.flutterPackages, isEmpty, reason: reach.describeFlutter());
+```
+
+`ofPlugin` reads the `.lmplugin`, finds the library under `lib/` that declares each `process_class` and walks its `import` / `export` directives (conditional variants included; directives are read from the library header, so `import` lines inside string templates do not count) through the plugin's `.dart_tool/package_config.json`. `directPackages` are the packages the plugin's own reached libraries import; `allPackages` everything reached; `flutterPackages` the reached packages that are part of the Flutter SDK or whose pubspec depends on `sdk: flutter` (`dart:ui` counts as `flutter`); `directFlutterPackages` the direct ones among them; `describeFlutter()` the import chain of each. A process part whose `flutterBound` is empty can run as a plain `dart` program; one that is not names the reason for each package (the engine, `lumina_editor_data`'s Draco-decoding `GlbParserService`, a Flutter plugin package). The plugin template writes this test for every isolated plugin.
+
+`PluginDownloader` (with `PluginFileDef`, `PluginDownloadProgress`, `PluginDownloadCancellationException`) downloads model and data files with SHA-256 checks, authorization headers, free-space checks and progress, and `kCustomAssetTypeKey` / `kAssetPathMetadataKey` are the `.lmas` metadata keys of plugin asset types: both are here so a process part can use them without the Flutter plugin API.
+
 ## Tests of the package
 
 Run with `dart test` from `lumina_plugin_process/` (no Flutter involved):
@@ -112,6 +130,8 @@ Run with `dart test` from `lumina_plugin_process/` (no Flutter involved):
 | `test/run_plugin_process_requests_test.dart` | `core.call`, commands, MCP tools, importers, console commands, declarative views, live slot and menu state, settings, events, progress, editor calls, project hooks. |
 | `test/level_proxy_test.dart` | The level proxy: snapshots, transactions, synchronous edits, `core.levelChanged`, the JSON codecs. |
 | `test/two_process_test.dart` | A pure-Dart plugin process as a real `dart run` child. |
+| `test/process_reach_test.dart` | `PluginProcessReach` on real temp plugin folders: header scan, a pure process part, one that reaches Flutter, a plugin without a process part. |
+| `test/plugin_downloader_test.dart` | `PluginDownloader`: free-space check, verified files skipped, cancellation, the server's content length. |
 
 ---
 

@@ -12,7 +12,7 @@ import 'package:path/path.dart' as p;
 /// import, and must not reach:
 /// - `lumina_editor_data`, the editor data layer;
 /// - the analyzer (the Blueprint function scanner), Assimp or RigLogic;
-/// - the editor's repositories or anything left under `lumina/data/` or
+/// - the editor's repositories or a `lumina/data/` or
 ///   `lumina/domain/`.
 void main() {
   for (final barrel in ['lumina.dart', 'lumina_runtime.dart']) {

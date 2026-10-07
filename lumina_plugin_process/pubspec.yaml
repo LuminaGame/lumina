@@ -14,6 +14,7 @@ dependencies:
     path: ../lumina_core
   lumina_plugin_protocol:
     path: ../lumina_plugin_protocol
+  crypto: ^3.0.3
   meta: ^1.15.0
   path: ^1.9.1
 

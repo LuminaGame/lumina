@@ -90,6 +90,8 @@ dev_dependencies:
   integration_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  # Parses import directives for the architecture tests.
+  analyzer: ^13.3.0
   puppeteer: ^3.26.0
   # Tests boot the editor with the reference plugin (a project
   # editor host compiles it in for real; the engine app never does).

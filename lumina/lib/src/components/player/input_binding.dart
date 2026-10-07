@@ -1,6 +1,6 @@
 import 'package:lumina/src/input/input_action.dart';
 
-export '../../input/input_action.dart' show TriggerState;
+export 'package:lumina/src/input/input_action.dart' show TriggerState;
 
 /// Typedef aligning legacy InputTriggerState to canonical TriggerState.
 typedef InputTriggerState = TriggerState;

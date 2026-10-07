@@ -13,8 +13,8 @@ import 'package:lumina/src/components/collision/collision_component.dart';
 import 'package:lumina/src/components/movement/floor_finder.dart';
 import 'package:lumina/src/components/movement/kinematic_move_solver.dart';
 
-export 'floor_finder.dart';
-export 'kinematic_move_solver.dart';
+export 'package:lumina/src/components/movement/floor_finder.dart';
+export 'package:lumina/src/components/movement/kinematic_move_solver.dart';
 
 enum MovementMode { walking, falling, swimming, flying, custom }
 

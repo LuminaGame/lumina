@@ -167,6 +167,8 @@ jobs:
           test/run_plugin_process_requests_test.dart
           test/level_proxy_test.dart
           test/two_process_test.dart
+          test/process_reach_test.dart
+          test/plugin_downloader_test.dart
 
       - name: lumina
         working-directory: lumina/lumina
@@ -210,6 +212,7 @@ jobs:
         working-directory: lumina/lumina_ui
         run: >-
           flutter test
+          test/architecture/no_deprecated_lumina_paths_test.dart
           test/data/landscape_data_test.dart
           test/data/sequencer_evaluator_test.dart
 

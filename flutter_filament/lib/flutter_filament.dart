@@ -22,5 +22,5 @@
 /// ```
 library;
 
-export 'filament.dart';
-export 'src/widget.dart';
+export 'package:flutter_filament/filament.dart';
+export 'package:flutter_filament/src/widget.dart';

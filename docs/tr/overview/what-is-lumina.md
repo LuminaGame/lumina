@@ -26,7 +26,7 @@ Lumina Studio, shadcn_flutter ile geliştirilmiş masaüstü bir Flutter uygulam
 
 Projeler, `.lmproject` manifest'i olan disk üzerindeki klasörlerdir; her asset bir `.lmas` dosyasıdır. Editör bu dosyalardan oyunun Dart kodunu üretir; dolayısıyla yayınlanan bir oyun sıradan bir Flutter uygulamasıdır.
 
-Eklentiler editörü, yalnızca `lumina`'ya bağımlı küçük bir sözleşme paketi olan `lumina_editor_api` üzerinden genişletir.
+Eklentiler editörü, `lumina_core`, `lumina_plugin_process` ve `lumina_widgets`'a bağımlı (editör uygulamasına asla) küçük bir sözleşme paketi olan `lumina_editor_api` üzerinden genişletir.
 
 ## Paketler
 
@@ -37,7 +37,7 @@ Eklentiler editörü, yalnızca `lumina`'ya bağımlı küçük bir sözleşme p
 | `lumina` | lumina | Engine: runtime ve Filament binding'i |
 | `lumina_widgets` | lumina | Oyunun Flutter tarafı: oyun widget'ı ve host'u, input, HUD, UMG, medya, web yükleme |
 | `lumina_editor_data` | lumina | Editör veri katmanı: repository'ler, içe aktarıcılar, thumbnail'lar, kod üreteçleri, proje editörü build'leri, eklenti servisleri |
-| `lumina_editor_api` | lumina | Lumina Studio'nun eklenti API'si |
+| `lumina_editor_api` | lumina_core, lumina_plugin_process, lumina_widgets | Lumina Studio'nun eklenti API'si |
 | `lumina_ui` | lumina | Editör uygulaması Lumina Studio |
 | `flutter_assimp` | tools | Assimp için Dart FFI binding'leri: GLB'ye model içe aktarma |
 | `flutter_riglogic` | tools | MetaHuman RigLogic için Dart FFI binding'leri |

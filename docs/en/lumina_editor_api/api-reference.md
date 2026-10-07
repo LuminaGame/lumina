@@ -248,6 +248,8 @@ A top-level menu a plugin owns. Fill it with `registerMenuItem('<title>/…', co
 
 **Top-level functions and variables:**
 
+Defined in `lumina_plugin_process` (`lib/src/plugin_asset_keys.dart`) so a process part can use them; re-exported here.
+
 | Member | Signature | Description |
 | :--- | :--- | :--- |
 | `kCustomAssetTypeKey` | `const String kCustomAssetTypeKey` | `LuminaAsset.metadata` key a plugin asset type carries its [EditorAssetTypeHandler.customTypeId] under: an `.lmas` of `AssetType.unknown` with `metadata[kCustomAssetTypeKey] == customTypeId` is that plugin's asset, and the Content Browser opens it with the handler's `editorFactory`. |
@@ -682,6 +684,8 @@ Global registry tracking active and minimized plugin dialog controllers.
 - `activeDialogs`: Unmodifiable list of non-closed dialog controllers.
 
 ### `class PluginDownloader`
+
+Defined in `lumina_plugin_process` (`lib/src/plugin_downloader.dart`, pure Dart, so a process part can download models without Flutter) and re-exported here with `PluginFileDef`, `PluginDownloadProgress` and `PluginDownloadCancellationException`.
 
 HTTP file downloader supporting SHA-256 validation, authorization headers (e.g. Hugging Face tokens), free disk space checks, and streaming progress updates.
 

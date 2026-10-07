@@ -1,6 +1,6 @@
 import 'package:lumina_ui/editor_entry.dart';
 
-export 'editor_entry.dart';
+export 'package:lumina_ui/editor_entry.dart';
 
 /// The stock editor, which is also the launcher: project editors
 /// with code plugins are separate binaries generated per project.

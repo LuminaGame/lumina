@@ -2,11 +2,11 @@
 
 # lumina_editor_api
 
-`lumina_editor_api`, Lumina Studio ile eklentileri arasındaki küçük sözleşme paketidir. Engine paketlerine (`lumina`, `lumina_core`) ve saf Dart eklenti süreci paketine (`lumina_plugin_process`) bağımlıdır, editör uygulamasına asla; böylece eklentiler editör uygulamasının kendisine bağımlı olmadan build edilebilir.
+`lumina_editor_api`, Lumina Studio ile eklentileri arasındaki küçük sözleşme paketidir. `lumina_core`'a (dosya formatları), saf Dart eklenti süreci paketine (`lumina_plugin_process`) ve `lumina_widgets`'a (medya widget'ları ve observable'ların Flutter görünümleri; engine onunla gelir) bağımlıdır, editör uygulamasına asla; böylece eklentiler editör uygulamasının kendisine bağımlı olmadan build edilebilir.
 
 ## Mimarideki yeri
 
-Editör (`lumina_ui`) API'yi gerçekler, eklentiler onu kullanır. İkisi de `lumina_editor_api`'ya bağımlıdır; `lumina_editor_api` ise yalnızca `lumina`, `lumina_core` ve `lumina_plugin_process`'e (ve ikonlar ile widget'lar için `shadcn_flutter`'a) bağımlıdır. Bu, pub bağımlılık grafiğini döngüsüz tutar: bir eklentinin hiçbir zaman editör uygulamasına bağımlı olması gerekmez. New Plugin sihirbazının ürettiği eklentiler de bu pakete bağımlıdır. Eklentilerin nasıl bulunduğu, etkinleştirildiği ve derlenip editöre eklendiği için bkz. [Editör eklentileri](../plugins/index.md).
+Editör (`lumina_ui`) API'yi gerçekler, eklentiler onu kullanır. İkisi de `lumina_editor_api`'ya bağımlıdır; `lumina_editor_api` ise yalnızca `lumina_core`, `lumina_plugin_process` ve `lumina_widgets`'a (ve ikonlar ile widget'lar için `shadcn_flutter`'a) bağımlıdır. Bu, pub bağımlılık grafiğini döngüsüz tutar: bir eklentinin hiçbir zaman editör uygulamasına bağımlı olması gerekmez. New Plugin sihirbazının ürettiği eklentiler de bu pakete bağımlıdır. Eklentilerin nasıl bulunduğu, etkinleştirildiği ve derlenip editöre eklendiği için bkz. [Editör eklentileri](../plugins/index.md).
 
 ## Paketin içeriği
 

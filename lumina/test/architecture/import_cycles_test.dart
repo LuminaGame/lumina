@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 
 import 'import_graph.dart';
@@ -11,7 +13,7 @@ void main() {
   const barrels = {'lib/lumina.dart', 'lib/lumina_runtime.dart', 'lib/testing.dart'};
 
   test('the import graph covers the package', () {
-    expect(graph.edges.length, greaterThan(250));
+    expect(graph.edges.length, greaterThan(200));
   });
 
   test('no library inside lib imports a package barrel', () {
@@ -32,18 +34,15 @@ void main() {
   });
 
   // The editor data layer lives in lumina_editor_data (its own cycle guard is
-  // lumina_editor_data/test/architecture/import_cycles_test.dart). What is
-  // left under lib/data is the one-release `@Deprecated` re-exports of
-  // lumina_core files (the level and theme ones with the engine extensions
-  // their types gained).
-  test('lib/data holds only deprecated lumina_core re-exports and lib/domain is gone', () {
-    bool reexport(Set<String> deps) =>
-        deps.any((u) => u.startsWith('package:lumina_core/src/')) &&
-        deps.every((u) => u.startsWith('package:lumina_core/src/') || u.startsWith('lib/src/'));
+  // lumina_editor_data/test/architecture/import_cycles_test.dart) and the
+  // shared formats in lumina_core; the engine keeps no lib/data, lib/domain
+  // or deprecated re-export of a moved file.
+  test('lib/data and lib/domain are gone and no library is a deprecated re-export', () {
     final offenders = [
       for (final e in graph.edges.entries)
-        if (e.key.startsWith('lib/domain/') || (e.key.startsWith('lib/data/') && !reexport(e.value)))
-          '${e.key} -> ${e.value.join(', ')}',
+        if (e.key.startsWith('lib/domain/') || e.key.startsWith('lib/data/')) e.key,
+      for (final f in Directory('lib').listSync(recursive: true).whereType<File>())
+        if (f.path.endsWith('.dart') && f.readAsStringSync().trimLeft().startsWith('@Deprecated(')) f.path,
     ];
     expect(offenders, isEmpty, reason: offenders.join('\n'));
   });

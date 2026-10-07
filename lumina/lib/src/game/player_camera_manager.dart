@@ -4,6 +4,7 @@ import 'package:lumina/src/components/camera/camera_component.dart';
 import 'package:lumina/src/controller/player_controller.dart';
 import 'package:lumina/src/object/actor.dart';
 import 'package:lumina/src/object/pawn.dart';
+import 'package:lumina_core/lumina_core.dart' show luminaControlRotationToQuaternion;
 
 class LuminaMinimalViewInfo {
   Vector3 location = Vector3.zero();

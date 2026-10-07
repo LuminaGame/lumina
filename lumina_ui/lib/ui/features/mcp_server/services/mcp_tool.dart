@@ -9,8 +9,8 @@ import 'package:lumina_editor_api/lumina_editor_api.dart' show McpArgs, McpTool,
 // Moved to lumina_editor_api, re-exported for the server's importers.
 export 'package:lumina_editor_api/lumina_editor_api.dart' show McpArgs, McpTool, McpToolHandler, McpSchema, McpChangeSignal, McpToolCallEvent, EditorMcp;
 
-export 'mcp_approval_policy.dart';
-export 'mcp_tool_risk.dart';
+export 'package:lumina_ui/ui/features/mcp_server/services/mcp_approval_policy.dart';
+export 'package:lumina_ui/ui/features/mcp_server/services/mcp_tool_risk.dart';
 
 /// The tools a server offers, by name; validates a call's arguments against
 /// the declared schema before running the handler.

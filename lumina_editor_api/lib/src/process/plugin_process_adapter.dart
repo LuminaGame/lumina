@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
-import 'package:lumina/lumina.dart' show AssetType;
+import 'package:lumina_core/lumina_core.dart' show AssetType;
 
 import 'package:lumina_editor_api/src/api_types.dart';
 

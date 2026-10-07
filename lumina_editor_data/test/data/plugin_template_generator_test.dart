@@ -80,7 +80,7 @@ void main() {
 
       final entryFile = File('${pluginDir.path}/lib/hello_tools.dart');
       expect(entryFile.existsSync(), isTrue);
-      expect(entryFile.readAsStringSync(), contains("export 'src/hello_tools_plugin.dart';"));
+      expect(entryFile.readAsStringSync(), contains("export 'package:hello_tools/src/hello_tools_plugin.dart';"));
 
       final pluginSourceFile = File('${pluginDir.path}/lib/src/hello_tools_plugin.dart');
       expect(pluginSourceFile.existsSync(), isTrue);
@@ -153,10 +153,13 @@ void main() {
       expect(result.descriptor!.processClass, 'SafeToolsProcess');
 
       expect(File('$dir/lib/safe_tools.dart').readAsStringSync(),
-          allOf(contains("export 'src/safe_tools_plugin.dart';"), contains("export 'src/safe_tools_process.dart';")));
+          allOf(contains("export 'package:safe_tools/src/safe_tools_plugin.dart';"),
+              contains("export 'package:safe_tools/src/safe_tools_process.dart';")));
 
       final process = File('$dir/lib/src/safe_tools_process.dart').readAsStringSync();
       expect(process, contains('class SafeToolsProcess extends LuminaPluginProcess'));
+      expect(process, contains("import 'package:lumina_plugin_process/lumina_plugin_process.dart';"));
+      expect(process, isNot(contains('lumina_editor_api')), reason: 'the process part imports pure packages only');
       expect(process, contains("String get pluginName => 'safe_tools';"));
       expect(process, contains('context.registerMenuItem('));
       expect(process, contains("'Plugins/Safe\\'s \\\$Tools/Say Hello from Safe\\'s \\\$Tools'"),
@@ -176,6 +179,9 @@ void main() {
       expect(File('$dir/test/safe_tools_process_test.dart').readAsStringSync(),
           allOf(contains('LoopbackHost.start()'), contains('runPluginProcessMain('), contains("host.channel.call('ping'")));
       expect(File('$dir/README.md').readAsStringSync(), contains('## Two halves'));
+      final reachTest = File('$dir/test/architecture/process_part_reach_test.dart').readAsStringSync();
+      expect(reachTest, allOf(contains('PluginProcessReach.ofPlugin(Directory.current)'), contains("const allowed = {'lumina_plugin_process'};")));
+      expect(File('$dir/pubspec.yaml').readAsStringSync(), contains('  lumina_plugin_process:\n    git:'));
     });
 
     test('an isolated importer runs its importer in the process part', () async {
@@ -196,10 +202,14 @@ void main() {
       expect(result.success, isTrue, reason: result.failureOutput);
       final process = File('${result.pluginDir!.path}/lib/src/safe_importer_process.dart').readAsStringSync();
       expect(process, contains('context.registerImporter('));
-      expect(process, contains("import 'package:lumina/lumina.dart' show LuminaAsset;"));
+      expect(process, contains("import 'package:lumina_core/lumina_core.dart' show AssetType, LuminaAsset;"));
       expect(File('${result.pluginDir!.path}/lib/src/safe_importer_plugin.dart').readAsStringSync(),
           isNot(contains('registerImporter')));
-      expect(File('${result.pluginDir!.path}/pubspec.yaml').readAsStringSync(), contains('  lumina:\n    git:'));
+      final pubspec = File('${result.pluginDir!.path}/pubspec.yaml').readAsStringSync();
+      expect(pubspec, contains('  lumina_core:\n    git:'));
+      expect(pubspec, isNot(contains('  lumina:\n')), reason: 'an importer needs the formats, not the engine');
+      expect(File('${result.pluginDir!.path}/test/architecture/process_part_reach_test.dart').readAsStringSync(),
+          contains("const allowed = {'lumina_core', 'lumina_plugin_process'};"));
     });
 
     test('a content-only plugin cannot be isolated', () async {
@@ -317,7 +327,7 @@ void main() {
       expect(result.success, isTrue);
 
       final pubspec = File('${result.pluginDir!.path}/pubspec.yaml').readAsStringSync();
-      expect(pubspec, contains('  lumina:\n    git:\n      url: $kLuminaGitUrl\n      path: lumina\n'));
+      expect(pubspec, contains('  lumina_core:\n    git:\n      url: $kLuminaGitUrl\n      path: lumina_core\n'));
 
       final source = File('${result.pluginDir!.path}/lib/src/notes_importer_plugin.dart').readAsStringSync();
       expect(source, contains('registerImporter'));

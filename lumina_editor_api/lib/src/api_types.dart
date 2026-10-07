@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
-import 'package:lumina/lumina.dart'; // For LuminaAsset
+import 'package:lumina_core/lumina_core.dart' show AssetType, LuminaAsset;
 
 import 'package:lumina_plugin_process/lumina_plugin_process.dart';
 
@@ -10,31 +10,20 @@ import 'package:lumina_editor_api/src/editor_slot_button.dart';
 import 'package:lumina_editor_api/src/editor_panels.dart';
 import 'package:lumina_editor_api/src/project_settings_section.dart';
 import 'package:lumina_editor_api/src/process/plugin_process_channel.dart';
-export 'editor_command.dart';
-export 'editor_level.dart';
-export 'editor_theme.dart';
-export 'editor_slot_button.dart';
-export 'editor_panels.dart';
-export 'project_settings_section.dart';
+export 'package:lumina_editor_api/src/editor_command.dart';
+export 'package:lumina_editor_api/src/editor_level.dart';
+export 'package:lumina_editor_api/src/editor_theme.dart';
+export 'package:lumina_editor_api/src/editor_slot_button.dart';
+export 'package:lumina_editor_api/src/editor_panels.dart';
+export 'package:lumina_editor_api/src/project_settings_section.dart';
 export 'package:lumina_widgets/lumina_widgets.dart'
     show ObservableAsValueListenable, ChangeSignalAsListenable, ValueListenableAsObservable, ListenableAsChangeSignal;
-export 'process/plugin_process_channel.dart';
-export 'process/plugin_icons.dart';
-export 'process/plugin_process_adapter.dart';
+export 'package:lumina_editor_api/src/process/plugin_process_channel.dart';
+export 'package:lumina_editor_api/src/process/plugin_icons.dart';
+export 'package:lumina_editor_api/src/process/plugin_process_adapter.dart';
 // The plugin process API, its runtime, the level/storage/MCP data types and
 // the wire protocol, in pure Dart.
 export 'package:lumina_plugin_process/lumina_plugin_process.dart';
-
-/// `LuminaAsset.metadata` key a plugin asset type carries its
-/// [EditorAssetTypeHandler.customTypeId] under: an `.lmas` of `AssetType.unknown`
-/// with `metadata[kCustomAssetTypeKey] == customTypeId` is that plugin's asset,
-/// and the Content Browser opens it with the handler's `editorFactory`.
-const String kCustomAssetTypeKey = 'custom_type';
-
-/// `LuminaAsset.metadata` key the host sets on the asset it passes to
-/// [EditorAssetTypeHandler.editorFactory]: the absolute path of the `.lmas`,
-/// so the editor can write the asset back.
-const String kAssetPathMetadataKey = 'asset_path';
 
 /// A static icon button. The host turns it into an
 /// [EditorSlotButton]: [group] names an [EditorSlot]

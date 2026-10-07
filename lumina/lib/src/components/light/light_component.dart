@@ -5,7 +5,7 @@ import 'package:lumina/src/world/world.dart';
 import 'package:lumina/src/components/base/scene_component.dart';
 import 'package:lumina/src/post_process/shadow_settings.dart';
 
-export 'auto_exposure.dart';
+export 'package:lumina/src/components/light/auto_exposure.dart';
 
 /// Abstract base scene component representing an illumination source bound to FilamentLightManager.
 abstract class LuminaLightComponent extends LuminaSceneComponent {

@@ -26,7 +26,7 @@ Lumina Studio is the `lumina_ui` package, a desktop Flutter app built with shadc
 
 Projects are folders on disk with a `.lmproject` manifest; every asset is a `.lmas` file. The editor generates Dart code for the game from those files, so a shipped game is an ordinary Flutter app.
 
-Plugins extend the editor through `lumina_editor_api`, a small contract package that depends only on `lumina`.
+Plugins extend the editor through `lumina_editor_api`, a small contract package that depends on `lumina_core`, `lumina_plugin_process` and `lumina_widgets`, never on the editor app.
 
 ## The packages
 
@@ -37,7 +37,7 @@ Plugins extend the editor through `lumina_editor_api`, a small contract package 
 | `lumina` | lumina | The engine: runtime and its Filament binding; no widget |
 | `lumina_widgets` | lumina | The game's Flutter side: game widget and host, input, HUD, UMG, media, web loading |
 | `lumina_editor_data` | lumina | The editor data layer: repositories, importers, thumbnails, code generators, project editor builds, plugin services |
-| `lumina_editor_api` | lumina | Plugin API of Lumina Studio |
+| `lumina_editor_api` | lumina_core, lumina_plugin_process, lumina_widgets | Plugin API of Lumina Studio |
 | `lumina_ui` | lumina | Lumina Studio, the editor app |
 | `flutter_assimp` | tools | Dart FFI bindings to Assimp: model import to GLB |
 | `flutter_riglogic` | tools | Dart FFI bindings to MetaHuman RigLogic |

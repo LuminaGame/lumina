@@ -6,9 +6,9 @@ import 'package:lumina/src/world/streaming_source.dart';
 import 'package:lumina/src/world/subsystem/world_subsystem.dart';
 import 'package:lumina/src/world/world_partition_cell.dart';
 
-export 'data_layer.dart';
-export 'streaming_source.dart';
-export 'world_partition_cell.dart';
+export 'package:lumina/src/world/data_layer.dart';
+export 'package:lumina/src/world/streaming_source.dart';
+export 'package:lumina/src/world/world_partition_cell.dart';
 
 /// Spatially partitioned world subsystem managing 2D grid cells, data layers, and seamless streaming.
 class LuminaWorldPartitionSubsystem extends LuminaWorldSubsystem {

@@ -8,4 +8,4 @@
 /// import this instead of `dart:ffi`, so they build for the web too.
 library;
 
-export 'src/ffi_platform.dart';
+export 'package:flutter_filament/src/ffi_platform.dart';

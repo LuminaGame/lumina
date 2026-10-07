@@ -8,4 +8,4 @@
 /// `package:flutter_filament/ffi.dart`.
 library;
 
-export 'src/ffi_package_platform.dart';
+export 'package:flutter_filament/src/ffi_package_platform.dart';

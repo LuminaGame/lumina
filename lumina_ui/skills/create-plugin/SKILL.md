@@ -28,18 +28,30 @@ Rules that apply: shadcn_flutter only (never Material), no mock data, every butt
 
 With `isolated: true` the generator also writes `lib/src/<name>_process.dart` (`<PascalName>Process extends LuminaPluginProcess`), `test/<name>_process_test.dart`, exports both halves from `lib/<name>.dart`, and sets `"isolation": "process"` + `"process_class": "<PascalName>Process"` in the manifest (section 10).
 
-Manifest fields (`lumina/lib/data/models/lumina_plugin_descriptor.dart`): `name`, `friendly_name`, `version` (semver), `description`, `category`, `authors[]`, `engine_version` (constraint, e.g. `">=0.0.1 <1.0.0"`), `can_contain_content` (true + `content/` dir = content-only plugin, no restart), `dependencies[{name, version}]`, `modules[{name, type: editor|runtime, entry_library: "lib/<name>.dart", registration_class: "<PascalName>Plugin"}]`. `isolation` (`"in_process"`, the default, or `"process"`) and, on the editor module, `process_class` (the `LuminaPluginProcess` subclass in the same `entry_library`; required when `isolation` is `"process"`, else the manifest is a scan error in the Plugin Manager). `registration_class` and `process_class` become literal source in the registrar: a typo fails the host's next analyze, which is intended.
+Manifest fields (`lumina_core/lib/src/formats/lumina_plugin_descriptor.dart`): `name`, `friendly_name`, `version` (semver), `description`, `category`, `authors[]`, `engine_version` (constraint, e.g. `">=0.0.1 <1.0.0"`), `can_contain_content` (true + `content/` dir = content-only plugin, no restart), `dependencies[{name, version}]`, `modules[{name, type: editor|runtime, entry_library: "lib/<name>.dart", registration_class: "<PascalName>Plugin"}]`. `isolation` (`"in_process"`, the default, or `"process"`) and, on the editor module, `process_class` (the `LuminaPluginProcess` subclass in the same `entry_library`; required when `isolation` is `"process"`, else the manifest is a scan error in the Plugin Manager). `registration_class` and `process_class` become literal source in the registrar: a typo fails the host's next analyze, which is intended.
 
 ## 2. Depend on the API, never on lumina_ui
 
 ```yaml
 dependencies:
-  lumina_editor_api: {path: ../lumina_editor_api}   # the plugin API (host ↔ plugin cycle breaker)
-  lumina:            {path: ../lumina}              # runtime/data types: LuminaAsset, AssetType, LandscapeData, GlbMeshData …
-  shadcn_flutter: 0.0.55                             # exact host version
+  lumina_editor_api:     {path: ../lumina_editor_api}      # the plugin API, Flutter side (host ↔ plugin cycle breaker)
+  lumina_plugin_process: {path: ../lumina_plugin_process}  # isolated plugins: the pure-Dart process API
+  lumina_core:           {path: ../lumina_core}            # pure formats and services: LuminaAsset, AssetType, LuminaProject, GlbReader, LandscapeData …
+  shadcn_flutter: 0.0.55                                    # exact host version
 ```
 
-`package:lumina/lumina.dart` (or a specific `lumina/data/models/*.dart`) is fine — that is the engine and its data layer. `package:lumina_ui/...` is not: it does not resolve from a plugin and would recreate the pub cycle. Everything editor-side reaches you through `LuminaEditorContext` / `LuminaEditorHostContext` (`lumina_editor_api/lib/src/api_types.dart`, `editor_level.dart`).
+(Generated plugins take them as git dependencies of the lumina repo, `path: <package>`, with a gitignored `pubspec_overrides.yaml` pointing at a local checkout.) Import the narrowest package that has what you use:
+
+| Package | Import | For |
+|---|---|---|
+| `lumina_core` (pure Dart) | `package:lumina_core/lumina_core.dart` | `.lmas` / `.lmproject` / level / plugin formats, `PluginRepository`, `EngineLoggerService`, `LuminaWorkspace`, `LuminaDataDir`, units and axes, `GlbReader`, observables |
+| `lumina_plugin_process` (pure Dart) | `package:lumina_plugin_process/lumina_plugin_process.dart` | a process part: `LuminaPluginProcess`, `PluginProcessContext`, MCP types, `PluginStorage`, `PluginDownloader`, `kCustomAssetTypeKey` |
+| `lumina` (engine, Flutter package without widgets) | `package:lumina/lumina.dart` | actors, components, the world, materials: only when you use engine types |
+| `lumina_widgets` | `package:lumina_widgets/lumina_widgets.dart` | `LuminaGameWidget`, UMG and media widgets in a shell |
+| `lumina_editor_data` | `package:lumina_editor_data/lumina_editor.dart` (umbrella: core + engine + editor data + widgets) | the asset repository, `GlbParserService` (Filament's Draco decoder), importers, codegen |
+| `lumina_editor_api` | `package:lumina_editor_api/lumina_editor_api.dart` | the shell: `LuminaEditorPlugin`, panels, `EditorAssetPicker`, `PluginProcessChannel` (re-exports `lumina_plugin_process`) |
+
+Never `package:lumina/data/...` or `package:lumina/src/...` (those paths are gone), and never `package:lumina_ui/...`: it does not resolve from a plugin and would recreate the pub cycle. Everything editor-side reaches you through `LuminaEditorContext` / `LuminaEditorHostContext` (`lumina_editor_api/lib/src/api_types.dart`, `editor_level.dart`). Inside the plugin, import its own files by `package:<name>/...` URI, never by a relative path (enable `always_use_package_imports` in `analysis_options.yaml`).
 
 ## 3. Register contributions
 
@@ -138,7 +150,7 @@ Whenever your plugin prompts or allows the user to select an asset (e.g. static 
 
 ### Usage Example:
 ```dart
-import 'package:lumina/lumina.dart';
+import 'package:lumina_core/lumina_core.dart' show AssetType;
 import 'package:lumina_editor_api/lumina_editor_api.dart';
 
 Widget buildMeshSelector(LuminaEditorHostContext hostContext, String? currentPath, ValueChanged<String?> onChanged) {
@@ -167,6 +179,8 @@ A plugin with `"isolation": "process"` runs its risky half in **its own process*
 **Process side** (`PluginProcessContext`, everything crosses as data): `handle(method, handler)` answers the shell; `emit(name, data)` sends it events; `progress(task, step:, done:, total:, finished:)` reports long jobs; `log`; `registerMenuItem(path, PluginProcessCommand(id:, label:, run:))`, `registerSlotButton`, `registerImporter(PluginProcessImporter)`, `registerMcpTool`, `registerConsoleCommand`; `registerViewPanel(PluginProcessViewPanel(id:, title:, initial: PluginViewSpec, onEvent: (event, view) => view.patch(...)))` for a declarative panel the editor renders itself (no shell needed); `level` (proxied `PluginLevelAccess`: the `EditorLevelAccess` operations, `changes` a pure `ChangeSignal`), `storage`, `pluginSettings` (`Observable`), `saveAsset`, `showPanel` / `hidePanel` / `openTab`, `callMcpTool`. Lifecycle: `register`, `onProjectOpened`, `onProjectClosing` (bounded), `onShutdown` (stop child processes, free native resources).
 
 The process side is the **pure-Dart package `package:lumina_plugin_process`** (no Flutter, `dart:ui` or FFI; `lumina_editor_api` re-exports all of it, so importing `lumina_editor_api.dart` keeps working). Live values are `lumina_core`'s `Observable` / `ObservableValue` / `ChangeSignal` (same `value` / `addListener` / `removeListener` as Flutter's): a slot button's `state` is an `ObservableValue<PluginButtonStateSpec>`, a menu item's `checked` an `Observable<bool>`; from Flutter code adapt with `notifier.asObservable()` / `observable.asValueListenable()`. Icons cross as `PluginIconSpec` (`pluginIconOf(IconData)` is the Flutter helper). A process part that imports only `lumina_plugin_process` + `lumina_core` (+ its own FFI package) is Flutter-free and its tests run with `dart test` against `package:lumina_plugin_process/testing.dart`'s `LoopbackHost` (see that package's `example/pure_process.dart` and `test/two_process_test.dart`).
+
+**Keep the process part pure.** Its library (the one declaring `process_class`) and the plugin libraries it imports use `lumina_plugin_process` + `lumina_core` (+ the plugin's own FFI package and pure pub packages), not `lumina_editor_api`, `shadcn_flutter` or `package:flutter/...`: icons as `PluginIconSpec(codePoint, fontFamily: 'LucideIcons', fontPackage: 'shadcn_flutter')`, `ChangeEmitter` / `ObservableValue` instead of `ChangeNotifier` / `ValueNotifier`, `Isolate.run` instead of `compute`, `EngineLoggerService` instead of `debugPrint`, data models in files of their own (a model file that imports shadcn for an icon drags Flutter in). `test/architecture/process_part_reach_test.dart` (generated with every isolated plugin) records it: `PluginProcessReach.ofPlugin(Directory.current)` walks the process part's imports through the plugin's package config; `allowed` lists the packages it imports directly, `flutterBound` the ones among them that tie it to Flutter, each with the reason (for example the engine, or `lumina_editor_data`'s Draco-decoding `GlbParserService`). An empty `flutterBound` means the process part could run as a plain `dart` program.
 
 **Shell side** (`PluginProcessChannel`, from `context.processChannel(pluginName)` in `register`): `call(method, args, timeout)` (30 s default; long jobs answer early and report progress), `events([name])`, `progress`, `state` (`PluginProcessState`: starting / running / hung / crashed / stopped / inProcess / disabled) and `restart()`. A failed call throws `PluginRemoteError` (`code`: `unavailable`, `timeout`, or the handler's error); while the process is not running the editor covers the shell's panels with its state and a Restart button, so the shell only handles its own calls' errors.
 

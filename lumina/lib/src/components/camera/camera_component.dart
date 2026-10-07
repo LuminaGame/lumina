@@ -4,8 +4,7 @@ import 'package:vector_math/vector_math_64.dart';
 import 'package:lumina/src/components/base/scene_component.dart';
 import 'package:lumina_core/lumina_core.dart';
 
-export 'camera_math.dart';
-export 'camera_settings.dart';
+export 'package:lumina/src/components/camera/camera_settings.dart';
 
 enum CameraProjectionMode { perspective, orthographic }
 

@@ -16,7 +16,7 @@ import 'package:lumina/lumina.dart';
 import 'package:lumina_editor_data/src/services/blueprint_codegen/blueprint_dart_generator.dart';
 import 'package:lumina_editor_data/src/services/blueprint_function_manifest.dart';
 
-export 'blueprint_function_manifest.dart';
+export 'package:lumina_editor_data/src/services/blueprint_function_manifest.dart';
 
 /// A type as generated code names it: `double`, `Vector3`, `LuminaActor`,
 /// or a project class through its library's import prefix.

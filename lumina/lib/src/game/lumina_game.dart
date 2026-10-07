@@ -10,7 +10,7 @@ import 'package:lumina/src/world/world.dart';
 import 'package:lumina/src/game/game_instance.dart';
 import 'package:lumina/src/game/play_state.dart';
 
-export 'play_state.dart';
+export 'package:lumina/src/game/play_state.dart';
 
 /// Entrypoint class for building declarative Lumina game applications.
 ///

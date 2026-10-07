@@ -48,9 +48,18 @@ Two `lumina_core` types have engine-side additions in `lumina`, exported by `pac
 - **Level Blueprints.** A level document stores its Level Blueprint as JSON: `LuminaLevelDocument.levelBlueprintJson`, `hasLevelBlueprint` and `LuminaLevelDocument.levelBlueprintKey` (`'levelBlueprint'`). The engine's `lib/src/blueprint/level_blueprint_storage.dart` reads it into its own graph type. It adds the `levelBlueprint` getter and setter and `levelActorRefs` on `LuminaLevelDocument`, and `loadLevelBlueprint` / `saveLevelBlueprint` on `LuminaLevelRepository`. Setting an empty Blueprint removes the key, as before.
 - **Theme colours.** A theme document stores colours as ARGB ints (`0xAARRGGBB`), and `colorInt(token)` reads one. The engine's `lib/src/umg/theme_document_colors.dart` adds the Flutter `Color` views: `colorOf(token)` on `LuminaThemeDocument`, and `bgColor` / `fgColor` / `bColor` on `LuminaComponentStyle`.
 
-## Deprecated import paths
+## Removed import paths
 
-The old paths under `package:lumina/` still work for one release. Each is a one-line re-export marked `@Deprecated('Import package:lumina_core/lumina_core.dart instead.')`, so the analyzer flags every use. Examples: `package:lumina/data/models/lumina_asset.dart`, `package:lumina/data/services/workspace_paths.dart`, `package:lumina/data/models/lumina_plugin_descriptor.dart`, `package:lumina/src/math/units.dart` and `package:lumina/src/components/camera/camera_math.dart`. The level document and level repository paths also re-export the Level Blueprint extension, and the theme document path re-exports the colour extension. New code imports `package:lumina_core/lumina_core.dart` (plus `package:lumina/lumina.dart` where it needs the engine).
+The `@Deprecated` one-line re-exports that kept the old paths working for one release are gone, and so is `package:lumina/data/`. Import the barrel instead:
+
+| Old path | Now |
+| :--- | :--- |
+| `package:lumina/data/models/*.dart` (asset, project, level, plugin descriptor, landscape, sequencer, theme formats) | `package:lumina_core/lumina_core.dart` |
+| `package:lumina/data/repositories/level_repository.dart`, `plugin_repository.dart` | `package:lumina_core/lumina_core.dart` |
+| `package:lumina/data/services/<pure service>.dart` (workspace paths, data/config dirs, logger, glTF packer, TGA decoder, …) | `package:lumina_core/lumina_core.dart` |
+| `package:lumina/src/math/*.dart`, `package:lumina/src/components/camera/camera_math.dart` | `package:lumina_core/lumina_core.dart` (also re-exported by `lumina.dart` / `lumina_runtime.dart`) |
+
+The Level Blueprint extension of the level document and repository and the colour extension of the theme document come with `package:lumina/lumina.dart` and `package:lumina_widgets/lumina_widgets.dart`. Lumina Studio's `test/architecture/no_deprecated_lumina_paths_test.dart` fails on any import of a removed, deep or `@Deprecated` Lumina path, and on a `@Deprecated` library left in the engine.
 
 ## Using it from a pure-Dart program
 

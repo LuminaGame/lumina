@@ -14,12 +14,12 @@
 ///       [--force]           download again even when unpacked
 ///
 /// The folder is `<dest>/<version>`. The logic lives in
-/// `package:lumina/data/services/filament_prebuilt.dart` (FilamentPrebuilt.ensure).
+/// `package:lumina_core` (`FilamentPrebuilt.ensure`).
 library;
 
 import 'dart:io';
 
-import 'package:lumina/data/services/filament_prebuilt.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:path/path.dart' as p;
 
 Future<void> main(List<String> args) async {

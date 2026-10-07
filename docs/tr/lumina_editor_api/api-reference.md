@@ -248,6 +248,8 @@ A top-level menu a plugin owns. Fill it with `registerMenuItem('<title>/…', co
 
 **Üst düzey fonksiyonlar ve değişkenler:**
 
+Bir süreç bölümü kullanabilsin diye `lumina_plugin_process`'te (`lib/src/plugin_asset_keys.dart`) tanımlıdır; burada yeniden dışa aktarılır.
+
 | Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `kCustomAssetTypeKey` | `const String kCustomAssetTypeKey` | `LuminaAsset.metadata` key a plugin asset type carries its [EditorAssetTypeHandler.customTypeId] under: an `.lmas` of `AssetType.unknown` with `metadata[kCustomAssetTypeKey] == customTypeId` is that plugin's asset, and the Content Browser opens it with the handler's `editorFactory`. |
@@ -682,6 +684,8 @@ Aktif ve küçültülmüş eklenti diyalog controller'larını takip eden genel 
 - `activeDialogs`: Kapatılmamış olan tüm controller'ların değiştirilemez listesi.
 
 ### `class PluginDownloader`
+
+`lumina_plugin_process`'te (`lib/src/plugin_downloader.dart`; saf Dart, böylece bir süreç bölümü Flutter olmadan model indirebilir) tanımlıdır ve burada `PluginFileDef`, `PluginDownloadProgress` ve `PluginDownloadCancellationException` ile birlikte yeniden dışa aktarılır.
 
 SHA-256 doğrulaması, yetkilendirme başlıkları (ör. Hugging Face tokenları), boş disk alanı denetimi ve akışlı (streaming) ilerleme güncellemelerini destekleyen HTTP dosya indiricisi.
 

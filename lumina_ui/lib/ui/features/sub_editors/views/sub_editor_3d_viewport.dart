@@ -30,11 +30,11 @@ import 'package:lumina_ui/ui/features/main_editor/services/transform_gizmo.dart'
 import 'package:lumina_ui/ui/features/sub_editors/views/sub_editor_transform_gizmo_painter.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/transform_gizmo_toolbar.dart';
 
-export '../models/sub_editor_canvas_overlay.dart';
-export '../models/sub_editor_line_set.dart';
-export '../models/sub_editor_mesh_component.dart';
-export '../models/skeletal_socket_attachment.dart';
-export 'transform_gizmo_toolbar.dart';
+export 'package:lumina_ui/ui/features/sub_editors/models/sub_editor_canvas_overlay.dart';
+export 'package:lumina_ui/ui/features/sub_editors/models/sub_editor_line_set.dart';
+export 'package:lumina_ui/ui/features/sub_editors/models/sub_editor_mesh_component.dart';
+export 'package:lumina_ui/ui/features/sub_editors/models/skeletal_socket_attachment.dart';
+export 'package:lumina_ui/ui/features/sub_editors/views/transform_gizmo_toolbar.dart';
 
 part 'sub_editor_3d_viewport/state.dart';
 part 'sub_editor_3d_viewport/camera.dart';

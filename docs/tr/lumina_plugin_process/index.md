@@ -101,6 +101,24 @@ ya da `host.launch(name).toArgs()` ile başlatılan ayrı bir program olarak. `t
 
 Flutter testleri bunun yerine `package:lumina_editor_api/testing.dart`'ı import eder: onun `LoopbackHost`'u, bir kabuk widget'ının aldığı `PluginProcessChannel` olan `channel` eklenmiş aynı host'tur.
 
+## Bir eklentinin süreç bölümünün ulaştıkları
+
+`package:lumina_plugin_process/testing.dart` ayrıca `PluginProcessReach`'i içerir; bir eklentinin `test/architecture/process_part_reach_test.dart` testi süreç bölümünün neyi import ettiğini onunla kaydeder:
+
+```dart
+const allowed = {'lumina_core', 'lumina_plugin_process', 'path'};
+const flutterBound = <String, String>{};   // paket → neden Flutter'a ihtiyaç duyduğu
+
+final reach = PluginProcessReach.ofPlugin(Directory.current);
+expect(reach.directPackages, allowed, reason: reach.ownLibraries.join('\n'));
+expect(reach.directFlutterPackages, flutterBound.keys.toSet(), reason: reach.describeFlutter());
+if (flutterBound.isEmpty) expect(reach.flutterPackages, isEmpty, reason: reach.describeFlutter());
+```
+
+`ofPlugin` `.lmplugin`'i okur, `lib/` altında her `process_class`'ı tanımlayan kütüphaneyi bulur ve onun `import` / `export` direktiflerini (koşullu varyantlar dahil; direktifler kütüphane başlığından okunur, bu yüzden string şablonlarındaki `import` satırları sayılmaz) eklentinin `.dart_tool/package_config.json`'u üzerinden gezer. `directPackages` eklentinin ulaşılan kendi kütüphanelerinin import ettiği paketlerdir; `allPackages` ulaşılan her şey; `flutterPackages` ulaşılan paketlerden Flutter SDK'sının parçası olanlar ya da pubspec'i `sdk: flutter`'a bağımlı olanlar (`dart:ui` `flutter` sayılır); `directFlutterPackages` bunların doğrudan olanları; `describeFlutter()` her birinin import zinciri. `flutterBound`'u boş olan bir süreç bölümü düz bir `dart` programı olarak çalışabilir; boş olmayan her paketin nedenini yazar (engine, `lumina_editor_data`'nın Draco çözen `GlbParserService`'i, bir Flutter eklenti paketi). Eklenti şablonu bu testi her yalıtılmış eklenti için yazar.
+
+`PluginDownloader` (`PluginFileDef`, `PluginDownloadProgress`, `PluginDownloadCancellationException` ile) model ve veri dosyalarını SHA-256 denetimi, yetkilendirme başlıkları, boş alan denetimi ve ilerlemeyle indirir; `kCustomAssetTypeKey` / `kAssetPathMetadataKey` eklenti asset türlerinin `.lmas` metadata anahtarlarıdır: ikisi de bir süreç bölümü Flutter eklenti API'si olmadan kullanabilsin diye buradadır.
+
 ## Paketin testleri
 
 `lumina_plugin_process/` içinden `dart test` ile çalışır (Flutter devrede değildir):
@@ -112,6 +130,8 @@ Flutter testleri bunun yerine `package:lumina_editor_api/testing.dart`'ı import
 | `test/run_plugin_process_requests_test.dart` | `core.call`, komutlar, MCP araçları, importer'lar, konsol komutları, bildirimsel görünümler, canlı slot ve menü durumu, ayarlar, olaylar, ilerleme, editör çağrıları, proje kancaları. |
 | `test/level_proxy_test.dart` | Level proxy'si: anlık görüntüler, transaction'lar, senkron düzenlemeler, `core.levelChanged`, JSON kodlayıcıları. |
 | `test/two_process_test.dart` | Gerçek bir `dart run` alt süreci olarak saf Dart bir eklenti süreci. |
+| `test/process_reach_test.dart` | Gerçek geçici eklenti klasörlerinde `PluginProcessReach`: başlık taraması, saf bir süreç bölümü, Flutter'a ulaşan bir süreç bölümü, süreç bölümü olmayan bir eklenti. |
+| `test/plugin_downloader_test.dart` | `PluginDownloader`: boş alan denetimi, doğrulanmış dosyaların atlanması, iptal, sunucunun içerik uzunluğu. |
 
 ---
 

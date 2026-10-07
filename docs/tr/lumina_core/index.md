@@ -48,9 +48,18 @@ Eklenti süreci API'si (`lumina_plugin_process`) canlı değerleri için bunlar�
 - **Level Blueprint'leri.** Bir level dokümanı Level Blueprint'ini JSON olarak saklar: `LuminaLevelDocument.levelBlueprintJson`, `hasLevelBlueprint` ve `LuminaLevelDocument.levelBlueprintKey` (`'levelBlueprint'`). Engine'in `lib/src/blueprint/level_blueprint_storage.dart` dosyası onu kendi graf tipine okur. `LuminaLevelDocument` üzerine `levelBlueprint` getter ve setter'ını ve `levelActorRefs`'i, `LuminaLevelRepository` üzerine `loadLevelBlueprint` / `saveLevelBlueprint`'i ekler. Boş bir Blueprint atamak, önceden olduğu gibi anahtarı siler.
 - **Tema renkleri.** Bir tema dokümanı renkleri ARGB int (`0xAARRGGBB`) olarak saklar; `colorInt(token)` bir rengi okur. Engine'in `lib/src/umg/theme_document_colors.dart` dosyası Flutter `Color` görünümlerini ekler: `LuminaThemeDocument` üzerinde `colorOf(token)`, `LuminaComponentStyle` üzerinde `bgColor` / `fgColor` / `bColor`.
 
-## Kullanımdan kalkan import yolları
+## Kaldırılan import yolları
 
-`package:lumina/` altındaki eski yollar bir sürüm boyunca çalışmaya devam eder. Her biri `@Deprecated('Import package:lumina_core/lumina_core.dart instead.')` ile işaretli tek satırlık bir yeniden dışa aktarımdır, bu yüzden analyzer her kullanımı işaretler. Örnekler: `package:lumina/data/models/lumina_asset.dart`, `package:lumina/data/services/workspace_paths.dart`, `package:lumina/data/models/lumina_plugin_descriptor.dart`, `package:lumina/src/math/units.dart` ve `package:lumina/src/components/camera/camera_math.dart`. Level dokümanı ve level repository yolları ayrıca Level Blueprint extension'ını, tema dokümanı yolu da renk extension'ını yeniden dışa aktarır. Yeni kod `package:lumina_core/lumina_core.dart`'ı import eder (engine'e ihtiyaç duyduğu yerde `package:lumina/lumina.dart` ile birlikte).
+Eski yolları bir sürüm boyunca çalışır tutan `@Deprecated` tek satırlık yeniden dışa aktarımlar kaldırıldı; `package:lumina/data/` de artık yok. Bunun yerine barrel'ı import edin:
+
+| Eski yol | Şimdi |
+| :--- | :--- |
+| `package:lumina/data/models/*.dart` (asset, proje, level, eklenti tanımlayıcısı, landscape, sequencer, tema formatları) | `package:lumina_core/lumina_core.dart` |
+| `package:lumina/data/repositories/level_repository.dart`, `plugin_repository.dart` | `package:lumina_core/lumina_core.dart` |
+| `package:lumina/data/services/<saf servis>.dart` (workspace yolları, veri/config klasörleri, logger, glTF packer, TGA decoder, …) | `package:lumina_core/lumina_core.dart` |
+| `package:lumina/src/math/*.dart`, `package:lumina/src/components/camera/camera_math.dart` | `package:lumina_core/lumina_core.dart` (`lumina.dart` / `lumina_runtime.dart` de yeniden dışa aktarır) |
+
+Level dokümanının ve repository'sinin Level Blueprint extension'ı ile tema dokümanının renk extension'ı `package:lumina/lumina.dart` ve `package:lumina_widgets/lumina_widgets.dart` ile gelir. Lumina Studio'nun `test/architecture/no_deprecated_lumina_paths_test.dart` testi kaldırılmış, derin ya da `@Deprecated` bir Lumina yolunun her import'unda ve engine'de kalmış `@Deprecated` bir kütüphanede başarısız olur.
 
 ## Saf bir Dart programından kullanım
 

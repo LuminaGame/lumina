@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
-import 'package:lumina/lumina.dart' show EngineLoggerService;
+import 'package:lumina_core/lumina_core.dart' show EngineLoggerService;
 import 'package:path/path.dart' as p;
 
 /// Definition of a single file to be downloaded and verified by [PluginDownloader].

@@ -15,9 +15,9 @@
 /// with `dart run`.
 library;
 
-export 'src/contributions.dart';
-export 'src/frame_codec.dart';
-export 'src/launch.dart';
-export 'src/messages.dart';
-export 'src/plugin_connection.dart';
-export 'src/view_spec.dart';
+export 'package:lumina_plugin_protocol/src/contributions.dart';
+export 'package:lumina_plugin_protocol/src/frame_codec.dart';
+export 'package:lumina_plugin_protocol/src/launch.dart';
+export 'package:lumina_plugin_protocol/src/messages.dart';
+export 'package:lumina_plugin_protocol/src/plugin_connection.dart';
+export 'package:lumina_plugin_protocol/src/view_spec.dart';

@@ -1,6 +1,6 @@
 import 'dart:io';
-import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina_editor_api/lumina_editor_api.dart';
+import 'package:lumina_plugin_process/lumina_plugin_process.dart';
+import 'package:test/test.dart';
 
 void main() {
   late Directory tempDir;

@@ -7,8 +7,8 @@ library;
 
 export 'package:lumina_smoke/lumina_smoke.dart' hide SmokeArtifacts;
 
-export 'src/testing/asset_project_fixture.dart';
-export 'src/testing/import_folder_fixture.dart';
-export 'src/testing/smoke_artifacts.dart';
-export 'src/testing/smoke_render.dart';
-export 'src/testing/texture_orientation_fixture.dart';
+export 'package:lumina/src/testing/asset_project_fixture.dart';
+export 'package:lumina/src/testing/import_folder_fixture.dart';
+export 'package:lumina/src/testing/smoke_artifacts.dart';
+export 'package:lumina/src/testing/smoke_render.dart';
+export 'package:lumina/src/testing/texture_orientation_fixture.dart';

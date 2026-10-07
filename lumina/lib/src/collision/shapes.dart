@@ -1,7 +1,7 @@
 import 'package:vector_math/vector_math_64.dart';
 
-export 'convex_hull.dart';
-export 'heightfield.dart' show HeightfieldShape;
+export 'package:lumina/src/collision/convex_hull.dart';
+export 'package:lumina/src/collision/heightfield.dart' show HeightfieldShape;
 
 /// Base class for geometric collision shape descriptors decoupled from the scene graph.
 abstract class CollisionShape {

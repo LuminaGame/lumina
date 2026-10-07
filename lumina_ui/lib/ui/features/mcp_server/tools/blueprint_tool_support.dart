@@ -8,7 +8,7 @@ import 'package:lumina_ui/ui/features/sub_editors/view_models/blueprint_graph_ed
 import 'package:lumina_ui/ui/features/mcp_server/services/mcp_protocol.dart';
 
 // The node / pin / wire JSON moved to graph_json.dart.
-export 'graph_json.dart' show mcpPinSpec, mcpNodeJson, mcpWireJson;
+export 'package:lumina_ui/ui/features/mcp_server/tools/graph_json.dart' show mcpPinSpec, mcpNodeJson, mcpWireJson;
 
 /// Shared by the Blueprint tool sets.
 
