@@ -266,7 +266,7 @@ void main() {
       expect(await tester.runAsync(reopened.requestPlay), isTrue, reason: '${reopened.playBlockers}');
       final world = LuminaWorld();
       reopened.pieController.startHeadlessForTest(world);
-      LuminaActor runtimeOf(String id) => world.persistentLevel.actors.firstWhere((a) => a.key == ValueKey(id));
+      LuminaActor runtimeOf(String id) => world.persistentLevel.actors.firstWhere((a) => a.key == LuminaObjectKey(id));
       final runtimeCopy = runtimeOf(copy.id);
       expect(runtimeCopy, isA<LuminaBlueprintActor>(), reason: 'Play spawns the copy as the Blueprint');
       expect(runtimeCopy.actorLocation, LuminaAxes.location([500.0, -600.0, 0.0]));

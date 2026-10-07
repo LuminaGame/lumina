@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:flutter/foundation.dart' show ValueKey;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina/data/services/blueprint_class_registry.dart';
 import 'package:lumina/lumina.dart';
@@ -34,12 +33,12 @@ void main() {
       ..writeAsStringSync(code);
 
     expect(code, contains('class _LTestScript extends LuminaLevelScriptActor with LuminaBlueprintRuntime, LuminaBlueprintLevelActors {'));
-    expect(code, contains("_LTestScript() : super(key: const ValueKey('L_Test_script'))"));
+    expect(code, contains("_LTestScript() : super(key: const LuminaObjectKey('L_Test_script'))"));
     expect(code, contains("'Door_01': 'door_01',"));
     expect(code, contains('LuminaActor? door01;'));
     expect(code, contains('LuminaTriggerVolume? trigger01;'));
     expect(code, contains("door01 = super.levelActor('Door_01');"));
-    expect(code, contains('LuminaTriggerVolume(key: const ValueKey(\'trigger_01\')'));
+    expect(code, contains('LuminaTriggerVolume(key: const LuminaObjectKey(\'trigger_01\')'));
     expect(code, contains('void _setUpLevel() {'), reason: 'the level\'s own setup still runs');
     expect(code, contains('playerController = mode.login();'));
     expect(code, isNot(contains('void onLevelUnloaded()')), reason: 'written only when the graph has the event');
@@ -72,10 +71,10 @@ void main() {
     final vmWorld = LuminaWorld(worldType: LuminaWorldType.game);
     vmWorld.registerSubsystem<LuminaCollisionSubsystem>(LuminaCollisionSubsystem());
     vmWorld.persistentLevel.registerActor(
-        registry.classFor(levelDoorPath)!.instantiate(key: const ValueKey('door_01'), location: LuminaAxes.location([0.0, 400.0, 0.0])));
+        registry.classFor(levelDoorPath)!.instantiate(key: const LuminaObjectKey('door_01'), location: LuminaAxes.location([0.0, 400.0, 0.0])));
     vmWorld.persistentLevel.registerActor(
-        LuminaTriggerVolume(key: const ValueKey('trigger_01'), extent: Vector3(100, 100, 100), location: LuminaAxes.location([0.0, 1500.0, 50.0])));
-    vmWorld.persistentLevel.registerActor(LuminaPlayerStart(key: const ValueKey('player_start'), location: LuminaAxes.location([0.0, -300.0, 100.0])));
+        LuminaTriggerVolume(key: const LuminaObjectKey('trigger_01'), extent: Vector3(100, 100, 100), location: LuminaAxes.location([0.0, 1500.0, 50.0])));
+    vmWorld.persistentLevel.registerActor(LuminaPlayerStart(key: const LuminaObjectKey('player_start'), location: LuminaAxes.location([0.0, -300.0, 100.0])));
     final vmScript = registry.levelScriptFor(levelTestPath)!;
     final vmTrace = <LuminaBlueprintTraceEvent>[];
     vmScript.trace = vmTrace.add;
@@ -103,7 +102,7 @@ void main() {
     }
     final door01 = (genScript as dynamic).door01 as LuminaActor?;
     expect(door01, isNotNull, reason: 'resolved once the level loaded');
-    expect(door01!.key, const ValueKey('door_01'));
+    expect(door01!.key, const LuminaObjectKey('door_01'));
     expect(genScript.blueprintClassName, vmScript.blueprintClassName);
 
     String step(LuminaBlueprintTraceEvent e) => '${e.eventNodeId}/${e.nodeId}/${e.registryId}${e.printed == null ? '' : ' "${e.printed}"'}';
@@ -115,7 +114,7 @@ void main() {
     expect(pawnLines.single, isNot('player pawn None'), reason: 'Get Player Pawn is null on BeginPlay');
     // The door turned in both.
     for (final w in [vmWorld, genWorld]) {
-      final door = w.actors.firstWhere((a) => a.key == const ValueKey('door_01'));
+      final door = w.actors.firstWhere((a) => a.key == const LuminaObjectKey('door_01'));
       expect(LuminaBlueprintFunctionLibrary.getActorRotation(door).z.abs(), closeTo(90.0, 0.5));
     }
     level.unloadActors();

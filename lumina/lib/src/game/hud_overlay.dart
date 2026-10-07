@@ -1,5 +1,9 @@
 import 'package:flutter/widgets.dart';
-import 'package:lumina/lumina_runtime.dart';
+import 'package:lumina/src/controller/player_state.dart';
+import 'package:lumina/src/game/game_state.dart';
+import 'package:lumina/src/game/lumina_game.dart';
+import 'package:lumina/src/world/debug_shapes.dart';
+import 'package:lumina/src/world/world.dart';
 
 typedef LuminaHudBuilder = Widget Function(BuildContext context, LuminaGame game);
 

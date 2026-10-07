@@ -8,6 +8,7 @@ The runtime object hierarchy: `LuminaActor`, the base of everything placed in a 
 
 - [`lib/src/object/actor.dart`](#libsrcobjectactordart)
 - [`lib/src/object/character.dart`](#libsrcobjectcharacterdart)
+- [`lib/src/object/lumina_object_key.dart`](#libsrcobjectlumina_object_keydart)
 - [`lib/src/object/pawn.dart`](#libsrcobjectpawndart)
 
 ## `lib/src/object/actor.dart`
@@ -34,7 +35,7 @@ Base class for all entities/objects that can be spawned or placed in a [LuminaWo
 | `rootComponent` | `final LuminaSceneComponent rootComponent` | Holds the `rootComponent` property or configuration state. |
 | `owningLevel` | `LuminaLevel? owningLevel` | Holds the `owningLevel` property or configuration state. |
 | `bSaveGame` | `bool bSaveGame` | Whether this actor should be persisted when saving the world state. |
-| `saveId` | `String get saveId` | Stable unique identifier for this actor across save/load sessions. |
+| `saveId` | `String get saveId` | Stable unique identifier for this actor across save/load sessions: `<level type>/<actor type>_<key>` with the key's `[<'id'>]` text (unchanged from earlier versions, so old saves restore), or the explicit `saveId` passed to the constructor. |
 | `world` | `LuminaWorld? get world` | The world instance this actor is active in. |
 | `isRegistered` | `bool get isRegistered` | Whether this actor has been explicitly registered with a world. |
 | `isInitialized` | `bool get isInitialized` | Checks current state or capability and returns a boolean value. |
@@ -73,6 +74,21 @@ Character pawn class equipped with capsule collision, movement component, and me
 | `characterMovement` | `final LuminaCharacterMovementComponent characterMovement` | Holds the `characterMovement` property or configuration state. |
 | `meshComponent` | `final LuminaSkinnedMeshComponent meshComponent` | Holds the `meshComponent` property or configuration state. |
 | `jump` | `void jump()` | Executes `jump` operation. |
+
+## `lib/src/object/lumina_object_key.dart`
+
+### `final class LuminaObjectKey`
+
+The identity of an engine object: an actor, a component, a level or a level script. Two keys are equal when their `value`s are. The declarative tree matches a rebuilt node with its live element by it, the world finds placed actors by it (a level row's `id` is its key: generated levels and Play-In-Editor mount each placed actor with `LuminaObjectKey('<id>')`), and its `toString` is part of an actor's `saveId`. It has no Flutter dependency; widgets keep Flutter's `Key`. The input key of a keyboard, mouse or gamepad is a different class, `LuminaKey`.
+
+**Functions, Methods & Accessors:**
+
+| Method / Getter | Signature | Purpose & Description |
+| :--- | :--- | :--- |
+| `LuminaObjectKey` | `const LuminaObjectKey(String value)` | A key named [value] (a level row's actor id, `L_Main_script`, ...). |
+| `value` | `final String value` | The key's text. |
+| `operator ==` / `hashCode` | `bool operator ==(Object other)` | Equal by `value`. |
+| `toString` | `String toString()` | `[<'value'>]`: the text `saveId`s and level names embedded when objects carried Flutter's string `ValueKey`, so saves written before keep matching their actors. |
 
 ## `lib/src/object/pawn.dart`
 

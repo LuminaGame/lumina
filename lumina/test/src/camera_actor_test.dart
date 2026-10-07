@@ -129,7 +129,7 @@ void main() {
         ],
       },
     ]);
-    expect(code, contains("LuminaCameraActor(key: const ValueKey('cam_1'), location: Vector3(0.0000, 150.0000, 500.0000)"));
+    expect(code, contains("LuminaCameraActor(key: const LuminaObjectKey('cam_1'), location: Vector3(0.0000, 150.0000, 500.0000)"));
     expect(code, contains('settings: LuminaCameraSettings.fromProperties('));
     expect(code, contains("'fieldOfView': 30.0"));
     expect(code, contains("'autoActivateForPlayer': true"));

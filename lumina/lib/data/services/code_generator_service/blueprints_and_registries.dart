@@ -71,7 +71,6 @@ mixin _BlueprintsAndRegistriesCodegen on _DartCodeGeneratorServiceState {
     b.writeln('// Blueprint, by its project-relative .lmas path.');
     b.writeln('// ignore_for_file: unused_import');
     b.writeln();
-    b.writeln("import 'package:flutter/foundation.dart' show Key;");
     b.writeln("import 'package:lumina/lumina_runtime.dart';");
     b.writeln("import 'package:vector_math/vector_math_64.dart';");
     for (final e in sorted) {
@@ -79,7 +78,7 @@ mixin _BlueprintsAndRegistriesCodegen on _DartCodeGeneratorServiceState {
     }
     b.writeln();
     b.writeln("/// A Blueprint actor class's constructor, as a level places it.");
-    b.writeln('typedef LuminaBlueprintActorFactory = LuminaActor Function({Key? key, Vector3? location, Quaternion? rotation});');
+    b.writeln('typedef LuminaBlueprintActorFactory = LuminaActor Function({LuminaObjectKey? key, Vector3? location, Quaternion? rotation});');
     b.writeln();
     b.writeln('/// Every compiled Blueprint actor class, by its `.lmas` path.');
     b.writeln('final Map<String, LuminaBlueprintActorFactory> luminaBlueprintFactories = {');

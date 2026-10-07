@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart' show ValueKey;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina/lumina.dart' hide BoxShape;
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
@@ -186,15 +185,15 @@ void main() {
     expect(File('$dir/Saved/SaveGames/PieSlot_user_0.sav').existsSync(), isTrue, reason: 'Play saves under the project');
 
     // Open Level (the node's host call), after the tick that asked for it.
-    final spawner = world.persistentLevel.actors.firstWhere((a) => a.key == ValueKey(placed.id));
+    final spawner = world.persistentLevel.actors.firstWhere((a) => a.key == LuminaObjectKey(placed.id));
     LuminaBlueprintFunctionLibrary.openLevel(spawner, 'L_Arena');
     expect(pie.playingLevelPath, vm.project.activeLevel, reason: 'nothing switches inside the tick');
     await tester.pump();
     expect(pie.playingLevelPath, arenaPath);
     final arena = pie.game!.gameInstance.world!;
     expect(arena, isNot(same(world)));
-    expect(arena.persistentLevel.actors.where((a) => a.key == const ValueKey('arena_door')), hasLength(1));
-    expect(arena.persistentLevel.actors.where((a) => a.key == ValueKey(placed.id)), isEmpty, reason: 'L_Arena has no spawner');
+    expect(arena.persistentLevel.actors.where((a) => a.key == const LuminaObjectKey('arena_door')), hasLength(1));
+    expect(arena.persistentLevel.actors.where((a) => a.key == LuminaObjectKey(placed.id)), isEmpty, reason: 'L_Arena has no spawner');
     expect(messages(arena), contains('BP_Door ready'));
     expect(pie.possessedPawn, isNotNull, reason: 'the player session starts again in the new level');
     expect(vm.actors.any((a) => a.id == placed.id), isTrue, reason: 'the editor keeps its own level');
@@ -203,7 +202,7 @@ void main() {
     expect(pie.playingLevelPath, arenaPath);
 
     // Quit Game stops Play.
-    final door = arena.persistentLevel.actors.firstWhere((a) => a.key == const ValueKey('arena_door'));
+    final door = arena.persistentLevel.actors.firstWhere((a) => a.key == const LuminaObjectKey('arena_door'));
     LuminaBlueprintFunctionLibrary.quitGame(door);
     await tester.pump();
     expect(pie.isPlaying, isFalse);

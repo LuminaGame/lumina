@@ -193,10 +193,10 @@ void main() {
     test('bakes the hulls as constants; a mesh without hulls is emitted as before', () {
       if (!haveAssets) return markTestSkipped('test-assets/FBX missing');
       final code = generate();
-      expect(code, contains("LuminaStaticMeshActor(key: const ValueKey('chair'), meshAssetPath: 'contents/meshes/static/SM_Casino_Chair.lmas', "));
+      expect(code, contains("LuminaStaticMeshActor(key: const LuminaObjectKey('chair'), meshAssetPath: 'contents/meshes/static/SM_Casino_Chair.lmas', "));
       expect(code, contains("LuminaCollisionHull('UCX_SM_Casino_Chair_1', ["));
       expect(code, contains("LuminaCollisionHull('UCX_SM_Casino_Chair_4', ["));
-      expect(code, contains("LuminaActor(key: const ValueKey('counter'), root: LuminaStaticMeshComponent(meshAssetPath: 'contents/meshes/static/SM_Counter_1.lmas', "));
+      expect(code, contains("LuminaActor(key: const LuminaObjectKey('counter'), root: LuminaStaticMeshComponent(meshAssetPath: 'contents/meshes/static/SM_Counter_1.lmas', "));
       expect(code, contains("LuminaCollisionHull('UCX_SM_Laptop_1', ["), reason: 'contents/… resolves under projectDir');
       expect(code, contains("LuminaCollisionHull('UCX_SM_Laptop_2', ["));
       expect(code, isNot(contains(project.path)), reason: 'a shipped game never names the developer\'s disk');

@@ -170,7 +170,7 @@ void main() {
       expect(level, contains("import '../actors/actors.g.dart';"));
       expect(
           level,
-          contains("luminaBlueprintFactories['$cratePath']!(key: const ValueKey('crate_1'), "
+          contains("luminaBlueprintFactories['$cratePath']!(key: const LuminaObjectKey('crate_1'), "
               'location: ${_vector3(LuminaAxes.location([100.0, 200.0, 50.0]))}, '
               'rotation: luminaAuthoringRotation(0.0000, 0.0000, 90.0000)),'));
       final main = generator.generateMainDart(

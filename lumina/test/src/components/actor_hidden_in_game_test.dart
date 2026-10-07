@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart' show ValueKey;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina/lumina.dart';
 
@@ -16,7 +15,7 @@ void main() {
   });
 
   test('an actor constructed hidden hides its root and every component added to it', () {
-    final actor = LuminaActor(key: const ValueKey('crate'), hiddenInGame: true);
+    final actor = LuminaActor(key: const LuminaObjectKey('crate'), hiddenInGame: true);
     expect(actor.hiddenInGame, isTrue);
     expect(actor.rootComponent.isVisible, isFalse);
     final mesh = LuminaStaticMeshComponent(meshAssetPath: 'contents/meshes/SM_Barrel.lmas');
@@ -33,7 +32,7 @@ void main() {
   });
 
   test('the cascade the level generator emits hides a factory-made actor', () {
-    final actor = LuminaActor(key: const ValueKey('bp'))..hiddenInGame = true;
+    final actor = LuminaActor(key: const LuminaObjectKey('bp'))..hiddenInGame = true;
     expect(actor.rootComponent.isVisible, isFalse);
   });
 }

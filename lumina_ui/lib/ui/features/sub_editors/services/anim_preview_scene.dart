@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart' show ValueKey, debugPrint;
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:lumina/lumina.dart';
 import 'package:vector_math/vector_math_64.dart';
 
@@ -13,7 +13,7 @@ class AnimPreviewOwnerMovement extends LuminaCharacterMovementComponent {
   final Vector3 standInVelocity = Vector3.zero();
   bool standInFalling = false;
 
-  AnimPreviewOwnerMovement() : super(key: const ValueKey('anim_preview_owner_movement'));
+  AnimPreviewOwnerMovement() : super(key: const LuminaObjectKey('anim_preview_owner_movement'));
 
   @override
   Vector3 get velocity => standInVelocity;
@@ -105,7 +105,7 @@ class AnimPreviewScene {
 
     try {
       add(LuminaActor(
-        key: const ValueKey('anim_preview_sun'),
+        key: const LuminaObjectKey('anim_preview_sun'),
         root: LuminaDirectionalLightComponent(
           rotation: Quaternion.euler(35 * math.pi / 180, -50 * math.pi / 180, 0),
           color: Vector3(1.0, 0.97, 0.92),
@@ -115,7 +115,7 @@ class AnimPreviewScene {
         ),
       ));
       add(LuminaActor(
-        key: const ValueKey('anim_preview_sky'),
+        key: const LuminaObjectKey('anim_preview_sky'),
         root: LuminaSkyComponent.color(
           color: Vector4(0.10, 0.11, 0.14, 1.0),
           skyIntensity: 14000.0,
@@ -129,7 +129,7 @@ class AnimPreviewScene {
 
   void _mountOwner() {
     final w = _world!;
-    final owner = LuminaActor(key: const ValueKey('anim_preview_owner'));
+    final owner = LuminaActor(key: const LuminaObjectKey('anim_preview_owner'));
     owner.addComponent(movement);
     _owner = owner;
     w.persistentLevel.registerActor(owner);

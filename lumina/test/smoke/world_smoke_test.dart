@@ -8,6 +8,8 @@ import 'package:lumina/testing.dart';
 import 'package:vector_math/vector_math_64.dart' show Vector3;
 
 class WorldSmokeActor extends LuminaActor {
+  WorldSmokeActor({super.key});
+
   int tickCount = 0;
 
   @override
@@ -21,7 +23,8 @@ void main() {
   group('World Module Smoke Tests', () {
     test('Scenario 01: 5-phase deterministic tick pipeline and deferred commands', () async {
       final world = LuminaWorld(worldType: LuminaWorldType.game);
-      final actor = WorldSmokeActor();
+      // Placed actors carry the engine's own key, as generated levels mount them.
+      final actor = WorldSmokeActor(key: const LuminaObjectKey('act_tick'));
       world.persistentLevel.registerActor(actor);
 
       // Explicit beginPlay
@@ -38,7 +41,7 @@ void main() {
       expect(actor.tickCount, equals(3));
 
       // Test deferred spawn
-      final dynamicActor = WorldSmokeActor();
+      final dynamicActor = WorldSmokeActor(key: const LuminaObjectKey('act_spawned'));
       world.spawnActor(dynamicActor);
 
       // Before tick, dynamicActor is not yet registered or ticked
@@ -51,6 +54,10 @@ void main() {
 
       world.tick(1.0 / 60.0);
       expect(dynamicActor.tickCount, equals(1));
+      // Both are found by key, the spawned one once the tick registered it.
+      LuminaActor? byKey(String id) => world.actors.where((a) => a.key == LuminaObjectKey(id)).singleOrNull;
+      expect(byKey('act_tick'), same(actor));
+      expect(byKey('act_spawned'), same(dynamicActor));
 
       final usedAssets = [
         'Props/AC_units/ac_unit_a_300x300.glb',

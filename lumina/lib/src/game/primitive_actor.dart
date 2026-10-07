@@ -1,16 +1,16 @@
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart' show Key;
+import 'package:lumina/src/object/lumina_object_key.dart';
 import 'dart:typed_data';
 
 import 'package:vector_math/vector_math_64.dart';
 
-import '../components/collision/collision_component.dart';
-import '../../data/services/primitive_glb_factory.dart';
-import '../components/mesh/static_mesh_component.dart';
-import '../math/axes.dart';
-import '../object/actor.dart';
-import '../utility/lumina_assets.dart';
+import 'package:lumina/src/components/collision/collision_component.dart';
+import 'package:lumina/data/services/primitive_glb_factory.dart';
+import 'package:lumina/src/components/mesh/static_mesh_component.dart';
+import 'package:lumina/src/math/axes.dart';
+import 'package:lumina/src/object/actor.dart';
+import 'package:lumina/src/utility/lumina_assets.dart';
 
 /// Shapes a [LuminaPrimitiveActor] can take.
 enum LuminaPrimitiveShape { box, plane, sphere, cylinder }
@@ -264,7 +264,7 @@ class LuminaPrimitiveActor extends LuminaActor {
   /// ([luminaPrimitiveSize]).
   factory LuminaPrimitiveActor.fromComponentProperties(
     Map<String, dynamic> properties, {
-    Key? key,
+    LuminaObjectKey? key,
     Vector3? location,
     Quaternion? rotation,
     Vector3? scale,

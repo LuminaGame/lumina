@@ -1,14 +1,14 @@
-import 'package:flutter/foundation.dart' show ValueKey;
+import 'package:lumina/src/object/lumina_object_key.dart';
 
-import '../object/actor.dart';
-import '../world/level_script_actor.dart';
-import 'blueprint_function_library.dart';
-import 'blueprint_model.dart';
+import 'package:lumina/src/object/actor.dart';
+import 'package:lumina/src/world/level_script_actor.dart';
+import 'package:lumina/src/blueprint/blueprint_function_library.dart';
+import 'package:lumina/src/blueprint/blueprint_model.dart';
 
 /// A placed actor a Level Blueprint refers to by name: its
 /// outliner name (`Door_01`), its class as an object pin types it
 /// (`Actor:BP_Door`, `Actor:LuminaPlayerStart`) and the id the level mounts
-/// it with (`ValueKey(id)`, in Play-In-Editor and in the generated level).
+/// it with (`LuminaObjectKey(id)`, in Play-In-Editor and in the generated level).
 class LuminaBlueprintLevelActorRef {
   final String name;
   final String actorClass;
@@ -129,7 +129,7 @@ class LuminaLevelBlueprintDocument {
 /// What a level script needs to find the level's placed actors by name:
 /// the VM's `LuminaBlueprintLevelScript` and every generated
 /// `_<Level>Script` mix it in. The level mounts each placed actor with
-/// `ValueKey(id)`; [levelActor] finds it among the owning level's actors,
+/// `LuminaObjectKey(id)`; [levelActor] finds it among the owning level's actors,
 /// then the world's, and answers null once it was destroyed or removed.
 mixin LuminaBlueprintLevelActors on LuminaLevelScriptActor {
   /// Placed actor name → the id the level mounts it with.
@@ -140,7 +140,7 @@ mixin LuminaBlueprintLevelActors on LuminaLevelScriptActor {
   LuminaActor? levelActor(String name) {
     final id = levelActorIds[name];
     if (id == null) return null;
-    final key = ValueKey(id);
+    final key = LuminaObjectKey(id);
     for (final a in level?.actors ?? const <LuminaActor>[]) {
       if (a.key == key) return liveLevelActor(a);
     }

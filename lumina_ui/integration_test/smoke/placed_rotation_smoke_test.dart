@@ -150,7 +150,7 @@ void main() {
       final pie = vm.pieController;
       expect(pie.isPlaying, isTrue, reason: 'PIE error: ${pie.lastError}');
       final world = pie.game!.world!;
-      final runtime = world.persistentLevel.actors.firstWhere((r) => r.key == ValueKey(pointer.id));
+      final runtime = world.persistentLevel.actors.firstWhere((r) => r.key == LuminaObjectKey(pointer.id));
       final placed = runtime.rootComponent.worldTransform;
       for (var i = 0; i < 16; i++) {
         expect(placed.storage[i], closeTo(editorMatrix.storage[i], 1e-3), reason: 'Play places the pointer as the editor, element $i');

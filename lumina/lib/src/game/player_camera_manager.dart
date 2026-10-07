@@ -1,6 +1,9 @@
 import 'dart:math' as math;
 import 'package:vector_math/vector_math_64.dart';
-import 'package:lumina/lumina_runtime.dart';
+import 'package:lumina/src/components/camera/camera_component.dart';
+import 'package:lumina/src/controller/player_controller.dart';
+import 'package:lumina/src/object/actor.dart';
+import 'package:lumina/src/object/pawn.dart';
 
 class LuminaMinimalViewInfo {
   Vector3 location = Vector3.zero();

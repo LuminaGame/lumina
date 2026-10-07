@@ -18,6 +18,8 @@
 - `package:lumina/lumina.dart` veri katmanı dahil her şeyi export eder. Lumina Studio bunu import eder.
 - `package:lumina/lumina_runtime.dart` runtime'ı editör veri katmanı, Assimp ve RigLogic olmadan export eder; yalnızca bu kütüphaneyi import eden bir oyun web için de build edilebilir. Üretilen oyunlar bunu import eder.
 
+Barrel'lar paketin kullanıcıları içindir: `lumina/lib` içindeki hiçbir kütüphane `lumina.dart` ya da `lumina_runtime.dart`'ı import etmez; her biri kullandığı dosyaları import eder, böylece barrel'lar import grafiğinin yaprakları olarak kalır ve hiçbir döngü onlardan geçmez. Engine nesneleri engine'in kendi `LuminaObjectKey`'ini taşır ve `lumina_object.dart` hiçbir Flutter kütüphanesine ulaşmaz. İkisini de `test/architecture/` korur (`import_cycles_test.dart`, `flutter_free_object_root_test.dart`).
+
 Runtime kodu dosyaları hiçbir zaman doğrudan `File(...)` ile okumaz: açık bir asset provider verilmeyen asset yüklemeleri `LuminaAssets.defaultProvider` üzerinden geçer; üretilen `main()` bunu Flutter'ın `rootBundle`'ına ayarlar (null, editör ve testler için dosya sistemi anlamına gelir). Pointer geçiren kod `dart:ffi` ve `package:ffi` yerine `package:flutter_filament/ffi.dart` ve `ffi_package.dart`'ı import eder.
 
 ## Referans sayfaları

@@ -1414,7 +1414,7 @@ void applyDamage(LuminaActor self, double amount) {
     final pie = editor.pieController;
     expect(pie.isPlaying, isTrue, reason: 'blocked: ${editor.playBlockers} error: ${pie.lastError}');
     final world = pie.game!.world!;
-    final chair = world.persistentLevel.actors.firstWhere((a) => a.key == const ValueKey('chair_01')) as LuminaBlueprintInstance;
+    final chair = world.persistentLevel.actors.firstWhere((a) => a.key == const LuminaObjectKey('chair_01')) as LuminaBlueprintInstance;
     final box = chair.blueprintComponents['box'] as LuminaBoxComponent;
     expect(box.isSimulatingPhysics, isTrue);
     expect(box.resolvedMassKg, 23.0);
@@ -1707,7 +1707,7 @@ void logDoor(LuminaActor self, String text) {
     expect(pie.isPlaying, isTrue, reason: 'blocked: ${vm.playBlockers} error: ${pie.lastError}');
     final world = pie.game!.gameInstance.world!;
     expect(world.persistentLevel.scriptActor, isA<LuminaBlueprintLevelScript>());
-    final doorActor = world.persistentLevel.actors.firstWhere((a) => a.key == const ValueKey('door_01'));
+    final doorActor = world.persistentLevel.actors.firstWhere((a) => a.key == const LuminaObjectKey('door_01'));
     final startRotation = doorActor.actorRotation.clone();
     var sawOpened = false;
     for (var i = 0; i < 60; i++) {
@@ -1901,7 +1901,7 @@ void logDoor(LuminaActor self, String text) {
     final pie = editor.pieController;
     expect(pie.isPlaying, isTrue, reason: 'blocked: ${editor.playBlockers} error: ${pie.lastError}');
     final world = pie.game!.world!;
-    final lantern = world.persistentLevel.actors.firstWhere((a) => a.key == const ValueKey('lantern_01')) as LuminaBlueprintInstance;
+    final lantern = world.persistentLevel.actors.firstWhere((a) => a.key == const LuminaObjectKey('lantern_01')) as LuminaBlueprintInstance;
     final light = lantern.blueprintComponents[lamp.id] as LuminaPointLightComponent;
     for (var i = 0; i < 40; i++) {
       await settle(2);

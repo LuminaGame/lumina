@@ -8,7 +8,6 @@ import 'package:flutter_filament/flutter_filament.dart';
 import 'package:flutter_filament/src/third_party/filament_c.g.dart' as c;
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart' show ValueKey;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina/data/services/blueprint_class_registry.dart';
 import 'package:lumina/data/services/blueprint_function_scanner.dart';
@@ -1717,15 +1716,15 @@ void main() {
     addTearDown(yard.dispose);
     final world = yard.world;
     final doorAt = yard.start + Vector3(0, 0, -400);
-    final door = registry.classFor(levelDoorPath)!.instantiate(key: const ValueKey('door_01'), location: doorAt.clone());
+    final door = registry.classFor(levelDoorPath)!.instantiate(key: const LuminaObjectKey('door_01'), location: doorAt.clone());
     final trace = <String>[];
     (door as LuminaBlueprintRuntime).trace = (e) {
       if (e.printed != null) trace.add('BP_Door: ${e.printed}');
     };
     world.persistentLevel.registerActor(door);
     world.persistentLevel.registerActor(
-        LuminaTriggerVolume(key: const ValueKey('trigger_01'), extent: Vector3(100, 100, 100), location: yard.start + Vector3(0, 50, -1500)));
-    world.persistentLevel.registerActor(LuminaPlayerStart(key: const ValueKey('player_start'), location: yard.start.clone()));
+        LuminaTriggerVolume(key: const LuminaObjectKey('trigger_01'), extent: Vector3(100, 100, 100), location: yard.start + Vector3(0, 50, -1500)));
+    world.persistentLevel.registerActor(LuminaPlayerStart(key: const LuminaObjectKey('player_start'), location: yard.start.clone()));
     final script = registry.levelScriptFor(levelTestPath);
     expect(script, isNotNull, reason: '${registry.diagnostics}');
     script!.trace = (e) {
@@ -1837,15 +1836,15 @@ void main() {
     // The saved level, as the generator and the game read it.
     final placed = LuminaLevelRepository(project.path).load(levelPath)!.actors;
     final level = DartCodeGeneratorService().generateLevelDart(levelName: 'L_Walls', actors: const [], actorMaps: placed);
-    expect(level, contains("luminaWithCollisionOverrides(luminaBlueprintFactories['$wallPath']!(key: const ValueKey('wall_pass')"));
-    expect(level, contains("luminaBlueprintFactories['$wallPath']!(key: const ValueKey('wall_block')"));
-    expect(level, isNot(contains("luminaWithCollisionOverrides(luminaBlueprintFactories['$wallPath']!(key: const ValueKey('wall_block')")));
+    expect(level, contains("luminaWithCollisionOverrides(luminaBlueprintFactories['$wallPath']!(key: const LuminaObjectKey('wall_pass')"));
+    expect(level, contains("luminaBlueprintFactories['$wallPath']!(key: const LuminaObjectKey('wall_block')"));
+    expect(level, isNot(contains("luminaWithCollisionOverrides(luminaBlueprintFactories['$wallPath']!(key: const LuminaObjectKey('wall_block')")));
 
     final registry = LuminaBlueprintClassRegistry(project.path, inputActions: const []);
     final walls = <String, LuminaBlueprintRuntime>{};
     for (final a in placed) {
       final actor = registry.classFor(wallPath)!.instantiate(
-          key: ValueKey(a['id']), location: LuminaAxes.location((a['location'] as List).cast<num>()));
+          key: LuminaObjectKey(a['id']), location: LuminaAxes.location((a['location'] as List).cast<num>()));
       walls[a['id'] as String] = luminaWithCollisionOverrides(actor, LuminaBlueprintCollisionOverrides.fromActorMap(a)) as LuminaBlueprintRuntime;
       world.persistentLevel.registerActor(actor);
     }

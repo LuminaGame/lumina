@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart' show ValueKey;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina/data/services/blueprint_class_registry.dart';
 import 'package:lumina/lumina.dart';
@@ -160,12 +159,12 @@ void main() {
     final world = LuminaWorld(worldType: LuminaWorldType.game);
     world.registerSubsystem<LuminaCollisionSubsystem>(LuminaCollisionSubsystem());
     final log = <String>[];
-    final door = registry.classFor(levelDoorPath)!.instantiate(key: const ValueKey('door_01'), location: LuminaAxes.location([0.0, 400.0, 0.0]));
+    final door = registry.classFor(levelDoorPath)!.instantiate(key: const LuminaObjectKey('door_01'), location: LuminaAxes.location([0.0, 400.0, 0.0]));
     (door as LuminaBlueprintRuntime).trace = (e) {
       if (e.printed != null) log.add(e.printed!);
     };
-    final trigger = LuminaTriggerVolume(key: const ValueKey('trigger_01'), extent: Vector3(100, 100, 100), location: LuminaAxes.location([0.0, 1500.0, 50.0]));
-    final start = LuminaPlayerStart(key: const ValueKey('player_start'), location: LuminaAxes.location([0.0, -300.0, 100.0]));
+    final trigger = LuminaTriggerVolume(key: const LuminaObjectKey('trigger_01'), extent: Vector3(100, 100, 100), location: LuminaAxes.location([0.0, 1500.0, 50.0]));
+    final start = LuminaPlayerStart(key: const LuminaObjectKey('player_start'), location: LuminaAxes.location([0.0, -300.0, 100.0]));
     for (final a in [door, trigger, start]) {
       world.persistentLevel.registerActor(a);
     }
@@ -211,7 +210,7 @@ void main() {
   test('the level\'s OnTriggerEnter, bound to Trigger_01\'s OnActorBeginOverlap, fires when the pawn enters the trigger', () {
     final run = playLevel();
     final pawn = LuminaPawn(
-      key: const ValueKey('pawn'),
+      key: const LuminaObjectKey('pawn'),
       location: LuminaAxes.location([0.0, 0.0, 50.0]),
       root: LuminaCollisionComponent(shapeType: CollisionShapeType.box)..boxExtent.setFrom(Vector3(30, 30, 30)),
     );

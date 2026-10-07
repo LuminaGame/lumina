@@ -90,7 +90,7 @@ void main() {
       final level = generator.generateLevelDart(levelName: 'L_Doors', actors: const [], actorMaps: [placedDoor()]);
       expect(
           level,
-          contains("luminaWithCollisionOverrides(luminaBlueprintFactories['$doorPath']!(key: const ValueKey('door_1'), "
+          contains("luminaWithCollisionOverrides(luminaBlueprintFactories['$doorPath']!(key: const LuminaObjectKey('door_1'), "
               '$transform), const <String, Map<String, dynamic>>{'
               "'box': <String, dynamic>{'preset': 'overlapAll', 'collisionEnabled': true}}),"));
     });
@@ -98,7 +98,7 @@ void main() {
     test('a placed Blueprint without overrides emits the plain factory line unchanged', () {
       final level = generator.generateLevelDart(
           levelName: 'L_Doors', actors: const [], actorMaps: [placedDoor(withOverride: false)]);
-      expect(level, contains("luminaBlueprintFactories['$doorPath']!(key: const ValueKey('door_1'), $transform),"));
+      expect(level, contains("luminaBlueprintFactories['$doorPath']!(key: const LuminaObjectKey('door_1'), $transform),"));
       expect(level, isNot(contains('luminaWithCollisionOverrides')));
     });
   });

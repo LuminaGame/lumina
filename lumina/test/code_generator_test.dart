@@ -136,8 +136,11 @@ void main() {
       expect(code, contains('class LDefaultLevel extends LuminaLevel'));
       expect(code, contains('scriptActor: _LDefaultLevelScript()'));
       expect(code, contains('LuminaActor('));
-      expect(code, contains("ValueKey('actor-1')"));
-      expect(code, contains("ValueKey('actor-2')"));
+      expect(code, contains("LuminaObjectKey('actor-1')"));
+      expect(code, contains("LuminaObjectKey('actor-2')"));
+      expect(code, contains("key: const LuminaObjectKey('L_DefaultLevel_script')"));
+      expect(code, isNot(contains('ValueKey')), reason: 'engine objects carry the engine key');
+      expect(code, isNot(contains('package:flutter/foundation.dart')));
       expect(code, isNot(contains('StatelessWidget')), reason: 'levels are runtime LuminaLevel subclasses, not widgets');
     });
   });
@@ -192,7 +195,7 @@ void main() {
       final code = generator.generateLevelDart(levelName: 'L_Env', actors: const [], actorMaps: actorMaps, environment: environment);
       expect(code, contains('class LEnv extends LuminaLevel'));
       // Stored Z-up [-60, 40, 0] lands at runtime (x, z, −y).
-      expect(code, contains("LuminaPawn(key: const ValueKey('act_1'), location: Vector3(-60.0000, 0.0000, -40.0000), rotation: luminaAuthoringRotation(0.0000, 90.0000, 0.0000))"));
+      expect(code, contains("LuminaPawn(key: const LuminaObjectKey('act_1'), location: Vector3(-60.0000, 0.0000, -40.0000), rotation: luminaAuthoringRotation(0.0000, 90.0000, 0.0000))"));
       // component properties win over the actor-level fallbacks
       expect(code, contains('LuminaDirectionalLightComponent('));
       expect(code, contains('intensity: 90000.0000'));
@@ -354,7 +357,7 @@ dependencies:
         ],
       );
 
-      expect(code, contains("LuminaPlayerStart(key: const ValueKey('ps'), location: Vector3(0.0000, 100.0000, 600.0000)"));
+      expect(code, contains("LuminaPlayerStart(key: const LuminaObjectKey('ps'), location: Vector3(0.0000, 100.0000, 600.0000)"));
       expect(code, contains("luminaPrimitiveShapeFrom('plane')"));
       expect(code, contains("luminaPrimitiveShapeFrom('box')"));
       // Stored Z up (sizeZ = 3 is the height), emitted as the runtime's Y-up extent.
@@ -438,7 +441,7 @@ dependencies:
           ],
         },
       ]);
-      expect(code, contains("LuminaActor(key: const ValueKey('act_1'), root: LuminaExponentialHeightFogComponent(location: Vector3(0.0000, 250.0000, 0.0000)"));
+      expect(code, contains("LuminaActor(key: const LuminaObjectKey('act_1'), root: LuminaExponentialHeightFogComponent(location: Vector3(0.0000, 250.0000, 0.0000)"));
       expect(code, contains('fogDensity: 0.0500'));
       expect(code, contains('fogHeightFalloff: 0.2000, startDistance: 0.0000, fogCutoffDistance: 0.0000, fogMaxOpacity: 1.0000'));
       expect(code, contains('inscatteringColor: Vector3(0.4470, 0.6380, 1.0000), useSkyColor: true, visible: true))'));
@@ -478,8 +481,8 @@ dependencies:
       ]);
       expect(code, contains('fogDensity: 0.0200'));
       expect(code, contains('LuminaPostProcessVolumeComponent.fromProperties(const <String, dynamic>{}, '));
-      expect(code, contains("LuminaActor(key: const ValueKey('c'), root: LuminaSkyComponent.color(color: Vector4(0.3608, 0.4980, 0.7216, 1.0)"));
-      expect(code, contains("LuminaActor(key: const ValueKey('d'), root: LuminaSkyComponent.color(color: Vector4(0.3608, 0.4980, 0.7216, 1.0)"));
+      expect(code, contains("LuminaActor(key: const LuminaObjectKey('c'), root: LuminaSkyComponent.color(color: Vector4(0.3608, 0.4980, 0.7216, 1.0)"));
+      expect(code, contains("LuminaActor(key: const LuminaObjectKey('d'), root: LuminaSkyComponent.color(color: Vector4(0.3608, 0.4980, 0.7216, 1.0)"));
     });
   });
 
@@ -537,7 +540,7 @@ dependencies:
       // inherits the section's loadingRange because the template authored none.
       expect(code, contains('class _LOpenWorldStreamingPlayerStart extends LuminaPlayerStart'));
       expect(code, contains('loadingRadius: 400.0000'));
-      expect(code, contains('_LOpenWorldStreamingPlayerStart(key: const ValueKey(\'act_player_start\')'));
+      expect(code, contains('_LOpenWorldStreamingPlayerStart(key: const LuminaObjectKey(\'act_player_start\')'));
     });
 
     test('a level row naming data layers is assigned to them by its key', () {
@@ -557,7 +560,8 @@ dependencies:
       );
       expect(code, contains("'${start['id']}': ['Gameplay', 'Vodina 2'],"));
       expect(code, contains('partition.assignActorToLayer(actor, layer)'));
-      expect(code, contains('if (key is ValueKey<String>)'));
+      expect(code, contains('if (key != null)'));
+      expect(code, contains('dataLayersByActor[key.value]'));
 
       // Without any row naming a layer nothing is emitted for it.
       final plain = generator.generateLevelDart(
@@ -585,7 +589,7 @@ dependencies:
         levelName: 'L_Plain', actors: const [], actorMaps: openWorldActors());
       expect(without, isNot(contains('LuminaWorldPartitionSubsystem')));
       expect(without, isNot(contains('LuminaStreamingSourceComponent')));
-      expect(without, contains("LuminaPlayerStart(key: const ValueKey('act_player_start')"));
+      expect(without, contains("LuminaPlayerStart(key: const LuminaObjectKey('act_player_start')"));
 
       final disabled = generator.generateLevelDart(
         levelName: 'L_Plain', actors: const [], actorMaps: openWorldActors(),

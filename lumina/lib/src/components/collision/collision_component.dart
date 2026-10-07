@@ -1,19 +1,19 @@
 import 'dart:math' as math;
-import 'package:flutter/foundation.dart' show Key;
+import 'package:lumina/src/object/lumina_object_key.dart';
 import 'package:vector_math/vector_math_64.dart';
-import '../../collision/collision_filter.dart';
-import '../../collision/collision_preset.dart';
-import '../../collision/collision_query.dart';
-import '../../collision/shapes.dart';
-import '../base/scene_component.dart';
-import '../../math/euler.dart';
-import '../../physics/primitive_physics.dart';
+import 'package:lumina/src/collision/collision_filter.dart';
+import 'package:lumina/src/collision/collision_preset.dart';
+import 'package:lumina/src/collision/collision_query.dart';
+import 'package:lumina/src/collision/shapes.dart';
+import 'package:lumina/src/components/base/scene_component.dart';
+import 'package:lumina/src/math/euler.dart';
+import 'package:lumina/src/physics/primitive_physics.dart';
 
-export '../../collision/collision_filter.dart';
-export '../../collision/collision_preset.dart';
-export '../../collision/collision_query.dart';
-export '../../collision/shapes.dart';
-export '../../physics/primitive_physics.dart';
+export 'package:lumina/src/collision/collision_filter.dart';
+export 'package:lumina/src/collision/collision_preset.dart';
+export 'package:lumina/src/collision/collision_query.dart';
+export 'package:lumina/src/collision/shapes.dart';
+export 'package:lumina/src/physics/primitive_physics.dart';
 
 /// [convex] is a [ConvexHullShape]: imported `UCX_` hulls.
 /// [heightfield] is a [HeightfieldShape]: a landscape's heightmap.
@@ -105,7 +105,7 @@ class LuminaCollisionComponent extends LuminaSceneComponent with LuminaPrimitive
   /// A landscape's collider: [shape]'s heightmap, transformed by
   /// this component's world transform including its own [scale].
   LuminaCollisionComponent.heightfield({
-    Key? key,
+    LuminaObjectKey? key,
     Vector3? location,
     Quaternion? rotation,
     Vector3? scale,
@@ -123,7 +123,7 @@ class LuminaCollisionComponent extends LuminaSceneComponent with LuminaPrimitive
   /// units), transformed by this component's world transform including its
   /// own [scale].
   LuminaCollisionComponent.convexHull({
-    Key? key,
+    LuminaObjectKey? key,
     Vector3? location,
     Quaternion? rotation,
     Vector3? scale,

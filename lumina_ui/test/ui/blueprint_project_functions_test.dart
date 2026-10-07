@@ -278,7 +278,7 @@ Future<void> regenerate(LuminaActor self) async {}
     for (var i = 0; i < 10; i++) {
       world.tick(1 / 60);
     }
-    final runtime = world.persistentLevel.actors.firstWhere((a) => a.key == ValueKey(placed.id));
+    final runtime = world.persistentLevel.actors.firstWhere((a) => a.key == LuminaObjectKey(placed.id));
     // Set Actor Location after the skipped node ran: the rest of the graph plays.
     expect((runtime.actorLocation - LuminaAxes.location([0.0, 0.0, 500.0])).length, lessThan(1e-6),
         reason: 'at ${runtime.actorLocation}');

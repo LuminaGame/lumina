@@ -2,7 +2,6 @@
 // Lumina Engine 0.0.1 Auto-Generated Level Code
 // ignore_for_file: unused_import, prefer_const_constructors, camel_case_types, non_constant_identifier_names, unnecessary_this, dead_code, unused_local_variable, dead_null_aware_expression
 
-import 'package:flutter/foundation.dart' show ValueKey;
 import 'package:lumina/lumina_runtime.dart';
 import 'package:vector_math/vector_math_64.dart';
 import '../actors/actors.g.dart';
@@ -12,11 +11,11 @@ class LTest extends LuminaLevel {
   LTest({super.key})
       : super(name: 'L_Test', scriptActor: _LTestScript(), children: [
           // Door_01
-          luminaBlueprintFactories['contents/blueprints/BP_Door.lmas']!(key: const ValueKey('door_01'), location: Vector3(0.0000, 0.0000, -400.0000), rotation: luminaAuthoringRotation(0.0000, 0.0000, 0.0000)),
+          luminaBlueprintFactories['contents/blueprints/BP_Door.lmas']!(key: const LuminaObjectKey('door_01'), location: Vector3(0.0000, 0.0000, -400.0000), rotation: luminaAuthoringRotation(0.0000, 0.0000, 0.0000)),
           // Trigger_01
-          LuminaTriggerVolume(key: const ValueKey('trigger_01'), location: Vector3(0.0000, 50.0000, -1500.0000), rotation: luminaAuthoringRotation(0.0000, 0.0000, 0.0000), extent: Vector3(100.0000, 100.0000, 100.0000)),
+          LuminaTriggerVolume(key: const LuminaObjectKey('trigger_01'), location: Vector3(0.0000, 50.0000, -1500.0000), rotation: luminaAuthoringRotation(0.0000, 0.0000, 0.0000), extent: Vector3(100.0000, 100.0000, 100.0000)),
           // PlayerStart
-          LuminaPlayerStart(key: const ValueKey('player_start'), location: Vector3(0.0000, 100.0000, 300.0000), rotation: luminaAuthoringRotation(0.0000, 0.0000, 0.0000)),
+          LuminaPlayerStart(key: const LuminaObjectKey('player_start'), location: Vector3(0.0000, 100.0000, 300.0000), rotation: luminaAuthoringRotation(0.0000, 0.0000, 0.0000)),
         ]);
 
   /// Every asset this level's actors load, for Load Level / Change Level.
@@ -27,7 +26,7 @@ class LTest extends LuminaLevel {
 
 /// Level `L_Test`'s script: its Level Blueprint, compiled by Lumina.
 class _LTestScript extends LuminaLevelScriptActor with LuminaBlueprintRuntime, LuminaBlueprintLevelActors {
-  _LTestScript() : super(key: const ValueKey('L_Test_script')) {
+  _LTestScript() : super(key: const LuminaObjectKey('L_Test_script')) {
     blueprintComponentTree = _components;
     blueprintComponents = LuminaBlueprintComponents.construct(this, _components);
   }

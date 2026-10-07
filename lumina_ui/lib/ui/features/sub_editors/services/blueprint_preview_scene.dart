@@ -3,13 +3,13 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart' show ChangeNotifier, ValueKey, debugPrint;
+import 'package:flutter/foundation.dart' show ChangeNotifier, debugPrint;
 import 'package:lumina/data/services/blueprint_class_registry.dart';
 import 'package:lumina/lumina.dart';
 import 'package:vector_math/vector_math_64.dart';
 
-import '../models/sub_editor_line_set.dart';
-import '../models/viewport_ray.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/sub_editor_line_set.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/viewport_ray.dart';
 
 /// The Blueprint editor's 3D Viewport: the Blueprint's actor built
 /// the way Play builds it, in the viewport's preview world.
@@ -260,7 +260,7 @@ class BlueprintPreviewScene extends ChangeNotifier {
     try {
       for (final a in [
         LuminaActor(
-          key: const ValueKey('blueprint_preview_sun'),
+          key: const LuminaObjectKey('blueprint_preview_sun'),
           root: LuminaDirectionalLightComponent(
             rotation: Quaternion.euler(215 * math.pi / 180, -50 * math.pi / 180, 0),
             color: Vector3(1.0, 0.97, 0.92),
@@ -270,7 +270,7 @@ class BlueprintPreviewScene extends ChangeNotifier {
           ),
         ),
         LuminaActor(
-          key: const ValueKey('blueprint_preview_sky'),
+          key: const LuminaObjectKey('blueprint_preview_sky'),
           root: LuminaSkyComponent.color(color: Vector4(0.10, 0.11, 0.14, 1.0), skyIntensity: 14000.0, iblIntensity: 22000.0),
         ),
       ]) {
@@ -302,7 +302,7 @@ class BlueprintPreviewScene extends ChangeNotifier {
     final dir = _projectDir;
     final registry = dir == null ? null : (_registry ??= LuminaBlueprintClassRegistry(dir, inputActions: const []));
     final registryIssues = registry?.diagnostics.length ?? 0;
-    const key = ValueKey('blueprint_preview_actor');
+    const key = LuminaObjectKey('blueprint_preview_actor');
     final LuminaActor actor = switch (doc.parentClass) {
       'LuminaCharacter' => LuminaCharacter(key: key),
       'LuminaPawn' => LuminaPawn(key: key),

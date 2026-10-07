@@ -131,7 +131,7 @@ void main() {
       final level = File(result.levelDartPath!).readAsStringSync();
       expect(level, contains('class LMain'));
       // One typed runtime object per non-folder actor (pawns emit LuminaPawn, meshes/lights LuminaActor).
-      expect('key: const ValueKey('.allMatches(level).length, 2 + 1 /* level script actor */); // the Folder row is skipped
+      expect('key: const LuminaObjectKey('.allMatches(level).length, 2 + 1 /* level script actor */); // the Folder row is skipped
 
       expect(result.updatedProject, isNotNull);
       expect(result.updatedProject!.isDirty, isFalse);

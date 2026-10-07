@@ -1,34 +1,34 @@
 import 'dart:developer' as developer;
 import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart' show Key;
+import 'package:lumina/src/object/lumina_object_key.dart';
 import 'package:vector_math/vector_math_64.dart';
 
-import '../../components/collision/collision_component.dart';
-import '../../controller/controller.dart';
-import '../../controller/player_controller.dart';
-import '../../game/game_mode.dart';
-import '../../input/input_component.dart';
-import '../../object/actor.dart';
-import '../../object/character.dart';
-import '../../object/pawn.dart';
-import '../../umg/user_widget.dart';
-import '../../world/level_script_actor.dart';
-import '../blueprint_function_library.dart';
-import '../blueprint_function_registry.dart';
-import '../blueprint_model.dart';
-import '../blueprint_validator.dart';
-import '../editor_nodes.dart';
-import '../anim/anim_blueprint_instance.dart';
-import '../blueprint_runtime.dart';
-import '../component_mapping.dart';
-import '../blueprint_enums_interfaces.dart';
-import '../level_blueprint.dart';
-import '../macro_expander.dart';
-import '../node_library.dart';
-import '../timeline_curve.dart';
-import '../widget_blueprint.dart';
-import '../widget_classes.dart';
+import 'package:lumina/src/components/collision/collision_component.dart';
+import 'package:lumina/src/controller/controller.dart';
+import 'package:lumina/src/controller/player_controller.dart';
+import 'package:lumina/src/game/game_mode.dart';
+import 'package:lumina/src/input/input_component.dart';
+import 'package:lumina/src/object/actor.dart';
+import 'package:lumina/src/object/character.dart';
+import 'package:lumina/src/object/pawn.dart';
+import 'package:lumina/src/umg/user_widget.dart';
+import 'package:lumina/src/world/level_script_actor.dart';
+import 'package:lumina/src/blueprint/blueprint_function_library.dart';
+import 'package:lumina/src/blueprint/blueprint_function_registry.dart';
+import 'package:lumina/src/blueprint/blueprint_model.dart';
+import 'package:lumina/src/blueprint/blueprint_validator.dart';
+import 'package:lumina/src/blueprint/editor_nodes.dart';
+import 'package:lumina/src/blueprint/anim/anim_blueprint_instance.dart';
+import 'package:lumina/src/blueprint/blueprint_runtime.dart';
+import 'package:lumina/src/blueprint/component_mapping.dart';
+import 'package:lumina/src/blueprint/blueprint_enums_interfaces.dart';
+import 'package:lumina/src/blueprint/level_blueprint.dart';
+import 'package:lumina/src/blueprint/macro_expander.dart';
+import 'package:lumina/src/blueprint/node_library.dart';
+import 'package:lumina/src/blueprint/timeline_curve.dart';
+import 'package:lumina/src/blueprint/widget_blueprint.dart';
+import 'package:lumina/src/blueprint/widget_classes.dart';
 
 part 'blueprint_vm/instance.dart';
 part 'blueprint_vm/frame.dart';
@@ -303,7 +303,7 @@ class LuminaBlueprintClass {
 
   /// A new level script of this Level Blueprint, to set as the level's
   /// `scriptActor` before the world begins play.
-  LuminaBlueprintLevelScript instantiateLevelScript({Key? key}) {
+  LuminaBlueprintLevelScript instantiateLevelScript({LuminaObjectKey? key}) {
     if (!isLevelScript) throw StateError('$name is not a Level Blueprint (parent ${document.parentClass}).');
     return instantiate(key: key) as LuminaBlueprintLevelScript;
   }
@@ -466,7 +466,7 @@ class LuminaBlueprintClass {
   /// A new actor of this class: a [LuminaBlueprintCharacter],
   /// [LuminaBlueprintPawn] or [LuminaBlueprintActor] by `rootEngineClass`, with
   /// its components built and class defaults applied.
-  LuminaActor instantiate({Key? key, Vector3? location, Quaternion? rotation}) {
+  LuminaActor instantiate({LuminaObjectKey? key, Vector3? location, Quaternion? rotation}) {
     if (hasErrors) {
       throw LuminaBlueprintCompileError(name, diagnostics.where((d) => d.isError).toList());
     }

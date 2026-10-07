@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart' show ValueKey;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina/lumina.dart' hide BoxShape;
 import 'package:lumina/testing.dart';
@@ -153,12 +152,12 @@ void main() {
     final arena = pie.game!.gameInstance.world!;
     expect(arena, isNot(same(world)));
     expect(messages(arena), contains('Door ready'), reason: "the new level's BeginPlay ran before On Success");
-    expect(arena.persistentLevel.actors.where((a) => a.key == const ValueKey('arena_barrel')), hasLength(1));
+    expect(arena.persistentLevel.actors.where((a) => a.key == const LuminaObjectKey('arena_barrel')), hasLength(1));
     expect(vm.actors.any((a) => a.id == placed.id), isTrue, reason: 'the editor keeps its own level');
     expect(LuminaLevelPreloader.instance.isLoaded('L_Arena'), isFalse, reason: 'handed to the level that plays');
 
     // Change Level to a level the project does not have: On Error.
-    final loaderActor = world.persistentLevel.actors.firstWhere((a) => a.key == ValueKey(placed.id));
+    final loaderActor = world.persistentLevel.actors.firstWhere((a) => a.key == LuminaObjectKey(placed.id));
     await tester.runAsync(() async => (loaderActor as LuminaBlueprintCallable).callBlueprint('TryBadLevel', const {}));
     await until(() => messages(world).any((m) => m.startsWith('bad: ')));
     expect(messages(world).firstWhere((m) => m.startsWith('bad: ')), contains("no level named 'L_Nowhere'"));

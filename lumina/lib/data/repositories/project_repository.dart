@@ -3,26 +3,27 @@ import 'dart:io';
 import 'dart:isolate';
 import 'dart:math' as math;
 import 'dart:typed_data';
-import '../../src/game/template_content.dart';
-import '../models/lumina_asset.dart';
-import '../models/lumina_project.dart';
-import '../models/recent_project_entry.dart';
-import '../services/asset_index.dart';
-import '../services/derived_data_cache.dart';
-import '../services/thumbnail_sidecar_migration.dart';
-import '../services/base_eye_height_migration.dart';
-import '../services/engine_logger_service.dart';
-import '../services/config_json_file.dart';
-import '../services/lumina_config_dir.dart';
-import '../services/code_generator_service.dart';
-import '../services/dart_identifiers.dart';
-import '../services/umg_widget_library_service.dart';
-import '../services/game_template_service.dart';
-import '../services/glb_parser_service.dart';
-import '../services/project_input_binder.dart';
-import '../services/project_engine_link.dart';
-import '../services/workspace_paths.dart';
-import 'asset_repository.dart';
+import 'package:lumina/src/game/template_content.dart';
+import 'package:lumina/data/models/lumina_asset.dart';
+import 'package:lumina/data/models/lumina_project.dart';
+import 'package:lumina/data/models/recent_project_entry.dart';
+import 'package:lumina/data/services/asset_index.dart';
+import 'package:lumina/data/services/derived_data_cache.dart';
+import 'package:lumina/data/services/thumbnail_sidecar_migration.dart';
+import 'package:lumina/data/services/base_eye_height_migration.dart';
+import 'package:lumina/data/services/generated_code_migration.dart';
+import 'package:lumina/data/services/engine_logger_service.dart';
+import 'package:lumina/data/services/config_json_file.dart';
+import 'package:lumina/data/services/lumina_config_dir.dart';
+import 'package:lumina/data/services/code_generator_service.dart';
+import 'package:lumina/data/services/dart_identifiers.dart';
+import 'package:lumina/data/services/umg_widget_library_service.dart';
+import 'package:lumina/data/services/game_template_service.dart';
+import 'package:lumina/data/services/glb_parser_service.dart';
+import 'package:lumina/data/services/project_input_binder.dart';
+import 'package:lumina/data/services/project_engine_link.dart';
+import 'package:lumina/data/services/workspace_paths.dart';
+import 'package:lumina/data/repositories/asset_repository.dart';
 
 enum ProjectCreationStep {
   folderSetup,
@@ -934,8 +935,26 @@ class ProjectRepository {
     return report;
   }
 
-  /// What opening a project does before the editor scans it: the sidecar
-  /// and Base Eye Height migrations, then the asset index brought up to date
+  /// Once per project: generated Dart written by earlier versions is brought
+  /// to the current generator's names and engine keys
+  /// ([LuminaGeneratedCodeMigration]), off the UI isolate. Logged when it
+  /// changed anything.
+  Future<void> migrateGeneratedCode(String projectDir) async {
+    final changed = await _migrateGeneratedCodeOffThread(projectDir);
+    if (changed.isNotEmpty) {
+      _logger.log('Generated code migrated: ${changed.join(', ')}', level: 'info', source: 'ProjectRepository');
+    }
+  }
+
+  /// A static helper so the isolate closure captures nothing but [dir].
+  static Future<List<String>> _migrateGeneratedCodeOffThread(String dir) => Isolate.run(() {
+        final keys = LuminaGeneratedCodeMigration.migrateObjectKeys(dir);
+        final renamed = LuminaGeneratedCodeMigration.migrate(dir);
+        return [...keys, ...renamed.values];
+      });
+
+  /// What opening a project does before the editor scans it: the sidecar,
+  /// Base Eye Height and generated-code migrations, then the asset index brought up to date
   /// off the UI isolate (a cold index of a large project is summarised by an
   /// isolate pool), so every later scan only stats files.
   Future<void> prepareAssetIndex(String projectDir) async {
@@ -948,6 +967,11 @@ class ProjectRepository {
       migrateBaseEyeHeight(projectDir);
     } catch (e) {
       _logger.log('Base Eye Height migration failed: $e', level: 'warning', source: 'ProjectRepository');
+    }
+    try {
+      await migrateGeneratedCode(projectDir);
+    } catch (e) {
+      _logger.log('Generated code migration failed: $e', level: 'warning', source: 'ProjectRepository');
     }
     try {
       final sw = Stopwatch()..start();

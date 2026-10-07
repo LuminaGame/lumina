@@ -834,12 +834,17 @@ Brings a project's generated Dart written by earlier Lumina versions to the curr
 
 Earlier generators named the files in `lib/levels/`, `lib/actors/`, `lib/anim/` and `lib/widgets/` after their assets (`L_Main.dart`, `BP_Door.dart`) and their classes `L_Main`, `BPDoor`, `WBPHud`. Today the files are snake_case (`l_main.dart`, `bp_door.dart`) and the classes UpperCamelCase (`LMain`, `BpDoor`, `WbpHud`). [migrate] renames the legacy files — keeping their contents, so `BEGIN USER CODE` regions survive — renames the classes they declare, and rewrites the imports and class references of every Dart file under `lib/`, so a project regenerates cleanly and still compiles in between. A legacy file whose snake_case file already exists is stale and is deleted.
 
+Önceki üreteçler yerleştirilmiş actor'leri ve seviye script'lerini Flutter'ın `ValueKey`'iyle de anahtarlıyordu (`key: const ValueKey('act_floor')`, `{Key? key, ...}` imzalı bir Blueprint actor fabrikası, data layer atamasında `key is ValueKey<String>`) ve bunun için `package:flutter/foundation.dart`'ı import ediyordu. Üretilen seviyeler, Blueprint'ler ve kayıt dosyaları artık `LuminaObjectKey('<id>')` yazar; [migrateObjectKeys] `lib/levels/`, `lib/actors/` ve `lib/anim/` altındaki eski dosyaları yerinde yeniden yazar (widget'lar Flutter anahtarlarını korur). [migrate] önce bunu çalıştırır; bir proje açılırken (`ProjectRepository.loadProject` → `prepareAssetIndex` → `migrateGeneratedCode`) ikisi de arka plan isolate'inde çalışır.
+
 **Üyeler:**
 
 | Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `generatedFolders` | `static const List<String> generatedFolders` | The `lib/` folders whose files are named after assets. |
 | `migrate` | `static Map<String, String> migrate(String projectDir)` | Migrates [projectDir]'s generated Dart; returns the renamed files, `lib/…` old path → new path (empty when there was nothing to migrate). |
+| `objectKeyFolders` | `static const List<String> objectKeyFolders` | Kodu engine nesnelerini anahtarlayan üretilmiş klasörler: `levels`, `actors`, `anim`. |
+| `migrateObjectKeys` | `static List<String> migrateObjectKeys(String projectDir)` | [objectKeyFolders] içinde engine nesnelerindeki Flutter `Key` / `ValueKey`'i `LuminaObjectKey`'e çevirir; yeniden yazılan dosyaları (`lib/...`) döndürür, gerek yoksa boş. |
+| `rewriteObjectKeys` | `static String rewriteObjectKeys(String source)` | `ValueKey<String>` / `ValueKey(` / `Key? key` yerine `LuminaObjectKey` yazılmış ve `foundation.dart` import'u kaldırılmış [source] (diğer gösterilen adlar kalır). İdempotent. |
 
 ---
 

@@ -1,13 +1,13 @@
 import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart' show Key;
+import 'package:lumina/src/object/lumina_object_key.dart';
 import 'package:vector_math/vector_math_64.dart';
 
-import '../collision/collision_hull.dart';
-import '../collision/collision_primitive.dart';
-import '../components/collision/collision_component.dart';
-import '../components/mesh/static_mesh_component.dart';
-import '../object/actor.dart';
+import 'package:lumina/src/collision/collision_hull.dart';
+import 'package:lumina/src/collision/collision_primitive.dart';
+import 'package:lumina/src/components/collision/collision_component.dart';
+import 'package:lumina/src/components/mesh/static_mesh_component.dart';
+import 'package:lumina/src/object/actor.dart';
 
 /// A placed static mesh and its simple collision.
 ///
@@ -44,7 +44,7 @@ class LuminaStaticMeshActor extends LuminaActor {
   final List<LuminaCollisionComponent> primitiveComponents = [];
 
   LuminaStaticMeshActor({
-    Key? key,
+    LuminaObjectKey? key,
     Vector3? location,
     Quaternion? rotation,
     Vector3? scale,
@@ -71,7 +71,7 @@ class LuminaStaticMeshActor extends LuminaActor {
           collisionPrimitives,
         );
 
-  LuminaStaticMeshActor._(Key? key, this.meshComponent, this.collisionHulls, this.collisionPrimitives)
+  LuminaStaticMeshActor._(LuminaObjectKey? key, this.meshComponent, this.collisionHulls, this.collisionPrimitives)
       : super(key: key, root: meshComponent) {
     for (final hull in collisionHulls) {
       final points = hull.runtimePoints;

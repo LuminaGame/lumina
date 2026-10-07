@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart' show ValueKey;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina/lumina.dart' hide BoxShape;
 import 'package:lumina_ui/ui/features/details/services/blueprint_collision_overrides.dart';
@@ -154,7 +153,7 @@ void main() {
     final world = LuminaWorld();
     final game = vm.pieController.startHeadlessForTest(world);
     final pawn = game.possessedPawn!;
-    final runtimeTrigger = world.persistentLevel.actors.firstWhere((a) => a.key == ValueKey(trigger.id)) as LuminaBlueprintInstance;
+    final runtimeTrigger = world.persistentLevel.actors.firstWhere((a) => a.key == LuminaObjectKey(trigger.id)) as LuminaBlueprintInstance;
     final sphere = runtimeTrigger.blueprintComponents['sphere'] as LuminaSphereComponent;
     expect(sphere.preset, LuminaCollisionPreset.trigger);
     final recorder = BlueprintPieDebugger.instance.recorderFor(triggerPath);
@@ -193,7 +192,7 @@ void main() {
     expect(await tester.runAsync(vm.requestPlay), isTrue, reason: '${vm.playBlockers}');
     final world = LuminaWorld();
     final game = vm.pieController.startHeadlessForTest(world);
-    final runtime = world.persistentLevel.actors.firstWhere((a) => a.key == ValueKey(wall.id)) as LuminaBlueprintInstance;
+    final runtime = world.persistentLevel.actors.firstWhere((a) => a.key == LuminaObjectKey(wall.id)) as LuminaBlueprintInstance;
     expect((runtime.blueprintComponents['box'] as LuminaBoxComponent).preset, LuminaCollisionPreset.overlapAll);
     final track = walk(game, world, game.possessedPawn!, w, 300);
     expect(track.last, greaterThan(400 + 20 + 40), reason: 'through the overlapping wall (${track.last})');

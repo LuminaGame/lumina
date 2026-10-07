@@ -3,12 +3,12 @@ import 'dart:typed_data';
 
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart' show ValueKey, debugPrint;
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:lumina/lumina.dart';
 import 'package:vector_math/vector_math_64.dart' show Matrix4, Quaternion, Vector3, Vector4;
 
-import '../models/landscape_terrain_sink.dart';
-import '../view_models/landscape_editor_view_model.dart' show LandscapeEditorViewModel;
+import 'package:lumina_ui/ui/features/sub_editors/models/landscape_terrain_sink.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/landscape_editor_view_model.dart' show LandscapeEditorViewModel;
 
 /// Mounts the engine's terrain component in the Landscape sub-editor's preview
 /// world.
@@ -145,9 +145,9 @@ class LandscapePreviewScene implements LandscapeTerrainSink {
         castShadows: true,
         isSun: true,
       );
-      _register(LuminaActor(key: const ValueKey('landscape_preview_sun'), root: _sun!));
+      _register(LuminaActor(key: const LuminaObjectKey('landscape_preview_sun'), root: _sun!));
       _register(LuminaActor(
-        key: const ValueKey('landscape_preview_sky'),
+        key: const LuminaObjectKey('landscape_preview_sky'),
         root: LuminaSkyComponent.color(
           color: Vector4(0.42, 0.55, 0.72, 1.0),
           skyIntensity: 30000.0,
@@ -158,7 +158,7 @@ class LandscapePreviewScene implements LandscapeTerrainSink {
       // glTF foliage is drawn at the asset unit scale by the engine itself,
       // so the preview passes no mesh-scale correction.
       _landscape = LuminaLandscapeComponent.editable(unitsPerMetre: LandscapeEditorViewModel.unitsPerMetre);
-      _terrainActor = LuminaActor(key: const ValueKey('landscape_preview_terrain'), root: _landscape!);
+      _terrainActor = LuminaActor(key: const LuminaObjectKey('landscape_preview_terrain'), root: _landscape!);
       _register(_terrainActor!);
       _landscape!.ensureTerrainMesh();
       world.tick(_tickSeconds);

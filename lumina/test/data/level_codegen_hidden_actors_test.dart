@@ -50,7 +50,7 @@ void main() {
 
   test('the generated level hides them whatever class they are, and only them', () {
     final code = generator.generateLevelDart(levelName: 'L_Hidden', actors: const [], actorMaps: actors());
-    String lineOf(String id) => code.split('\n').firstWhere((l) => l.contains("ValueKey('$id')"), orElse: () => '');
+    String lineOf(String id) => code.split('\n').firstWhere((l) => l.contains("LuminaObjectKey('$id')"), orElse: () => '');
     expect(lineOf('crate_in_hidden_folder'), contains('visible: false'), reason: 'the folder above it is hidden');
     expect(lineOf('crate_in_hidden_folder'), contains('..hiddenInGame = true,'));
     expect(lineOf('barrel_hidden'), contains('visible: false'));
@@ -59,6 +59,6 @@ void main() {
     expect(lineOf('barrel_shown'), contains('visible: true'));
     expect(lineOf('barrel_shown'), isNot(contains('hiddenInGame')));
     expect(lineOf('start'), isNot(contains('hiddenInGame')));
-    expect(code, isNot(contains("ValueKey('props')")), reason: 'folders are not actors');
+    expect(code, isNot(contains("LuminaObjectKey('props')")), reason: 'folders are not actors');
   });
 }

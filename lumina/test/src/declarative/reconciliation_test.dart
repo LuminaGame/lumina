@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina/lumina.dart';
 
@@ -88,8 +87,8 @@ class DynamicParentNode extends LuminaObject {
 void main() {
   group('Tree Reconciliation Tests (Task 02)', () {
     test('canUpdate returns true only for matching runtimeType and key', () {
-      const k1 = ValueKey(1);
-      const k2 = ValueKey(2);
+      const k1 = LuminaObjectKey('1');
+      const k2 = LuminaObjectKey('2');
 
       final a1 = ConfigNodeA(key: k1);
       final a1Prime = ConfigNodeA(key: k1, label: 'A_prime');
@@ -145,8 +144,8 @@ void main() {
     });
 
     test('Keyed reorder [A(k1), B(k2)] -> [B(k2), A(k1)] reuses elements without unmount', () {
-      const k1 = ValueKey('k1');
-      const k2 = ValueKey('k2');
+      const k1 = LuminaObjectKey('k1');
+      const k2 = LuminaObjectKey('k2');
 
       final nodeA = ConfigNodeA(key: k1, label: 'A');
       final nodeB = ConfigNodeA(key: k2, label: 'B');

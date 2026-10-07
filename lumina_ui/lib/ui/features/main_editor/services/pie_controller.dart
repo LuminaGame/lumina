@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart' show Listenable, ValueKey;
+import 'package:flutter/foundation.dart' show Listenable;
 import 'package:flutter/services.dart';
 
 import 'package:flutter_filament/flutter_filament.dart';
@@ -13,14 +13,14 @@ import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.
 import 'package:lumina_ui/ui/features/sub_editors/services/blueprint_debugger.dart';
 import 'package:vector_math/vector_math_64.dart' as vm64;
 
-import '../../sub_editors/services/umg_widget_codegen.dart';
-import '../../sub_editors/services/widget_class_catalog.dart';
-import 'blueprint_play_support.dart';
-import 'camera_actor_properties.dart';
-import 'environment_actor_properties.dart';
-import 'light_actor_properties.dart';
-import 'pie_mouse_capture.dart';
-import '../../details/services/blueprint_collision_overrides.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/umg_widget_codegen.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/widget_class_catalog.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/blueprint_play_support.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/camera_actor_properties.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/environment_actor_properties.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/light_actor_properties.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/pie_mouse_capture.dart';
+import 'package:lumina_ui/ui/features/details/services/blueprint_collision_overrides.dart';
 
 part 'pie_controller/editor_pie_game.dart';
 
@@ -310,7 +310,7 @@ class PieController {
       return null;
     }
     viewModel.logger.log('Level Blueprint of ${cls.name} runs in Play', level: 'info', source: 'PIE');
-    return cls.instantiateLevelScript(key: ValueKey('${cls.name}_script'));
+    return cls.instantiateLevelScript(key: LuminaObjectKey('${cls.name}_script'));
   }
 
   /// Makes the project's widget Blueprints known to the runtime before Play:
@@ -717,7 +717,7 @@ class PieController {
     final placedPath = selected?.blueprintClass;
     final world = game.gameInstance.world;
     if (selected != null && placedPath != null && placedPath.isNotEmpty && world != null) {
-      final runtime = world.persistentLevel.actors.where((a) => a.key == ValueKey(selected.id)).firstOrNull;
+      final runtime = world.persistentLevel.actors.where((a) => a.key == LuminaObjectKey(selected.id)).firstOrNull;
       if (runtime is LuminaBlueprintInstance) targets[placedPath] = runtime;
     }
     _debugSelection = selected?.id;

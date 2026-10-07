@@ -1,5 +1,10 @@
 import 'package:vector_math/vector_math_64.dart';
-import 'package:lumina/lumina_runtime.dart'; // for LuminaPawn
+import 'package:lumina/src/collision/collision_query.dart';
+import 'package:lumina/src/collision/collision_subsystem.dart';
+import 'package:lumina/src/collision/shapes.dart';
+import 'package:lumina/src/components/base/scene_component.dart';
+import 'package:lumina/src/components/camera/camera_math.dart';
+import 'package:lumina/src/object/pawn.dart';
 
 class LuminaSpringArmComponent extends LuminaSceneComponent {
   double targetArmLength = 300.0; // cm

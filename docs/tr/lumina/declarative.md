@@ -16,7 +16,7 @@ Engine'in deklaratif katmanı: bir oyun, dünyasını `LuminaObject`'lerden olu�
 
 ### `class LuminaBuildContext`
 
-Context interface provided to [LuminaObject.build] during tree construction.
+Context interface provided to [LuminaObject.build] during tree construction. `LuminaObjectContext`'i (ata aramaları) uygular; dünyayı, seviyeyi ve actor'ü ekler.
 
 **Fonksiyonlar, Metotlar ve Erişimciler:**
 
@@ -112,9 +112,13 @@ Base root class for all declarative nodes in the Lumina Game Engine. Inspired by
 
 | Metot / Getter | İmzası | Ne İşe Yarar? |
 | :--- | :--- | :--- |
-| `key` | `Key? key` | Unique key for element identity reconciliation. |
-| `build` | `LuminaObject? build(LuminaBuildContext context)` | Builds the child or hierarchy of sub-nodes for this node. |
+| `key` | `LuminaObjectKey? key` | Unique key for element identity reconciliation (the engine's own key, see [object](object.md#libsrcobjectlumina_object_keydart)). |
+| `build` | `LuminaObject? build(covariant LuminaObjectContext context)` | Builds the child or hierarchy of sub-nodes for this node. The tree passes a `LuminaBuildContext`; overrides declare that type. |
 | `children` | `List<LuminaObject> get children` | Returns children of this node if it contains multiple nodes. |
+
+### `abstract interface class LuminaObjectContext`
+
+`LuminaObject.build`'in dünyayı bilmeden ağaçtan isteyebildikleri: ataları (`findAncestorOfExactType`, `findAncestorOfType`, `visitAncestorElements`). `LuminaBuildContext` bunu uygular ve dünyayı, seviyeyi ve kapsayan actor'ü ekler. `lumina_object.dart` yalnızca `LuminaObjectKey`'i import eder; böylece nesne modelinin kökü hiçbir Flutter kütüphanesine ulaşmaz (`test/architecture/flutter_free_object_root_test.dart` bunu korur).
 
 ### `class LuminaNodeGroup`
 
@@ -125,7 +129,7 @@ Helper container node for multiple children.
 | Metot / Getter | İmzası | Ne İşe Yarar? |
 | :--- | :--- | :--- |
 | `children` | `List<LuminaObject> children` | `children` alanını (field/property) ve ilişkili veriyi saklar. |
-| `build` | `LuminaObject? build(LuminaBuildContext context)` | Deklaratif alt nesne veya widget ağacını inşa eder. |
+| `build` | `LuminaObject? build(LuminaObjectContext context)` | Deklaratif alt nesne veya widget ağacını inşa eder. |
 
 ## `lib/src/declarative/runtime_object.dart`
 

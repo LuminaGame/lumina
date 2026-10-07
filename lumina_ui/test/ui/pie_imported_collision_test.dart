@@ -4,7 +4,6 @@
 // test-assets/FBX/ through lumina's real import pipeline into a temp project.
 import 'dart:io';
 
-import 'package:flutter/foundation.dart' show ValueKey;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina/lumina.dart';
 import 'package:lumina_ui/ui/features/details/models/editor_component_node.dart';
@@ -104,7 +103,7 @@ void main() {
       final world = LuminaWorld(worldType: LuminaWorldType.game);
       game.mountIntoWorldForTest(world);
       final collision = world.getSubsystem<LuminaCollisionSubsystem>()!;
-      final chair = world.persistentLevel.actors.firstWhere((a) => a.key == const ValueKey('chair'));
+      final chair = world.persistentLevel.actors.firstWhere((a) => a.key == const LuminaObjectKey('chair'));
       final hullComponents = chair.components.whereType<LuminaCollisionComponent>().toList();
       expect(hullComponents, hasLength(withHulls ? 4 : 0));
 

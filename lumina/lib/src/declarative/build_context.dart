@@ -1,10 +1,10 @@
-import 'lumina_object.dart';
-import '../world/world.dart';
-import '../world/level.dart';
-import '../object/actor.dart';
+import 'package:lumina/src/declarative/lumina_object.dart';
+import 'package:lumina/src/world/world.dart';
+import 'package:lumina/src/world/level.dart';
+import 'package:lumina/src/object/actor.dart';
 
 /// Context interface provided to [LuminaObject.build] during tree construction.
-abstract class LuminaBuildContext {
+abstract class LuminaBuildContext implements LuminaObjectContext {
   /// Reference to the current [LuminaWorld] context.
   LuminaWorld? get world;
 
@@ -24,12 +24,15 @@ abstract class LuminaBuildContext {
   LuminaActor? findAncestorActor();
 
   /// Searches up the tree for the nearest ancestor matching exact runtimeType [T].
+  @override
   T? findAncestorOfExactType<T extends LuminaObject>();
 
   /// Searches up the tree for the nearest ancestor matching subtype [T].
+  @override
   T? findAncestorOfType<T extends LuminaObject>();
 
   /// Walks up the ancestor chain from parent to root, stopping when visitor returns false.
+  @override
   void visitAncestorElements(bool Function(LuminaObject node) visitor);
 }
 

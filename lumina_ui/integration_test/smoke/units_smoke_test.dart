@@ -109,7 +109,7 @@ void main() {
     // Every primitive the template seeds sits where the viewport draws it.
     var compared = 0;
     for (final actor in vm.actors.where((a) => a.type == 'Primitive')) {
-      final runtime = world.persistentLevel.actors.firstWhere((r) => r.key == ValueKey(actor.id));
+      final runtime = world.persistentLevel.actors.firstWhere((r) => r.key == LuminaObjectKey(actor.id));
       final viewport = EditorTransforms.actorMatrix(actor);
       final placed = runtime.rootComponent.worldTransform;
       for (var i = 0; i < 16; i++) {
@@ -119,7 +119,7 @@ void main() {
     }
     expect(compared, greaterThanOrEqualTo(20), reason: 'the yard seeds at least 20 primitives');
     final platform = vm.actors.firstWhere((a) => a.name == 'Platform');
-    final platformRuntime = world.persistentLevel.actors.firstWhere((r) => r.key == ValueKey(platform.id));
+    final platformRuntime = world.persistentLevel.actors.firstWhere((r) => r.key == LuminaObjectKey(platform.id));
     expect(platformRuntime.rootComponent.worldLocation.y, closeTo(platform.location[2], 1e-6), reason: 'stored Z is runtime Y');
 
     await settle(20);

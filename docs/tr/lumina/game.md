@@ -251,7 +251,7 @@ Bir levele yerleştirilmiş kamera: levelin `LuminaCameraSettings`'ini taşıyan
 
 | Metot / Getter | İmzası | Ne İşe Yarar? |
 | :--- | :--- | :--- |
-| `LuminaCameraActor` | `LuminaCameraActor({Key? key, Vector3? location, Quaternion? rotation, Vector3? scale, LuminaCameraSettings settings})` | Ayarlar uygulanmış, verilen dönüşümde bir kamera. |
+| `LuminaCameraActor` | `LuminaCameraActor({LuminaObjectKey? key, Vector3? location, Quaternion? rotation, Vector3? scale, LuminaCameraSettings settings})` | Ayarlar uygulanmış, verilen dönüşümde bir kamera. |
 | `settings` | `final LuminaCameraSettings settings` | Kameranın kurulduğu ayarlar. |
 | `cameraComponent` | `final LuminaCameraComponent cameraComponent` | İçinden bakılan kamera; aktörün kökü. |
 | `autoActivateForPlayer` | `bool get autoActivateForPlayer` | Bir oyuncunun oturum açtığı andan itibaren bu kameradan bakıp bakmadığı. |
@@ -380,7 +380,7 @@ A mesh with neither has no collision.
 
 **Yapıcı Metotlar (Constructors):**
 
-- `LuminaStaticMeshActor({Key? key, Vector3? location, Quaternion? rotation, Vector3? scale, required String meshAssetPath, bool castShadows = true, bool visible =...`
+- `LuminaStaticMeshActor({LuminaObjectKey? key, Vector3? location, Quaternion? rotation, Vector3? scale, required String meshAssetPath, bool castShadows = true, bool visible =...`
 
 **Üyeler:**
 

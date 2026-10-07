@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:flutter/foundation.dart' show ValueKey;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina/lumina.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
@@ -57,7 +56,7 @@ void main() {
 
     final world = LuminaWorld();
     vm.pieController.startHeadlessForTest(world);
-    LuminaActor runtimeOf(String id) => world.persistentLevel.actors.firstWhere((a) => a.key == ValueKey(id));
+    LuminaActor runtimeOf(String id) => world.persistentLevel.actors.firstWhere((a) => a.key == LuminaObjectKey(id));
     expect(runtimeOf('crate').hiddenInGame, isTrue);
     expect(runtimeOf('crate').rootComponent.isVisible, isFalse);
     expect(runtimeOf('barrel').hiddenInGame, isTrue);

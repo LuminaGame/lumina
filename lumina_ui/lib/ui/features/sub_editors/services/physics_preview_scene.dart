@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart' show ValueKey, debugPrint;
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_filament/flutter_filament.dart'
     show
         CullingMode,
@@ -14,7 +14,7 @@ import 'package:flutter_filament/flutter_filament.dart'
 import 'package:lumina/lumina.dart';
 import 'package:vector_math/vector_math_64.dart';
 
-import '../models/physics_asset_document.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/physics_asset_document.dart';
 
 /// Triangulated body geometry for the `Solid Bodies` view mode.
 class PhysicsSolidMesh {
@@ -369,7 +369,7 @@ class PhysicsPreviewScene {
   /// the GLB [payload] at lumina's default asset unit scale (glTF metres ->
   /// cm), the scale `PhysicsAssetEditorViewModel.meshUnitScale` authors at.
   static LuminaStaticMeshComponent meshComponentFor(String path, Uint8List payload) => LuminaStaticMeshComponent(
-        key: const ValueKey('physics_preview_mesh'),
+        key: const LuminaObjectKey('physics_preview_mesh'),
         meshAssetPath: path,
         assetProvider: (_) async => payload,
       );
@@ -393,7 +393,7 @@ class PhysicsPreviewScene {
     try {
       final mesh = meshComponentFor(path, payload);
       _mesh = mesh;
-      _meshActor = LuminaActor(key: const ValueKey('physics_preview_mesh_actor'), root: mesh);
+      _meshActor = LuminaActor(key: const LuminaObjectKey('physics_preview_mesh_actor'), root: mesh);
       world.persistentLevel.registerActor(_meshActor!);
       // A skinned mesh needs its joint matrices once to draw its bind pose.
       mesh.loaded.then((_) {
@@ -426,7 +426,7 @@ class PhysicsPreviewScene {
     try {
       for (final actor in [
         LuminaActor(
-          key: const ValueKey('physics_preview_sun'),
+          key: const LuminaObjectKey('physics_preview_sun'),
           root: LuminaDirectionalLightComponent(
             rotation: Quaternion.euler(35 * math.pi / 180, -50 * math.pi / 180, 0),
             color: Vector3(1.0, 0.97, 0.92),
@@ -436,7 +436,7 @@ class PhysicsPreviewScene {
           ),
         ),
         LuminaActor(
-          key: const ValueKey('physics_preview_sky'),
+          key: const LuminaObjectKey('physics_preview_sky'),
           root: LuminaSkyComponent.color(
             color: Vector4(0.10, 0.11, 0.14, 1.0),
             skyIntensity: 14000.0,
@@ -460,7 +460,7 @@ class PhysicsPreviewScene {
     _mountMesh();
     try {
       _solid = LuminaProceduralMeshComponent();
-      _solidActor = LuminaActor(key: const ValueKey('physics_solid_overlay'), root: _solid!);
+      _solidActor = LuminaActor(key: const LuminaObjectKey('physics_solid_overlay'), root: _solid!);
       world.persistentLevel.registerActor(_solidActor!);
     } catch (e) {
       debugPrint('[PhysicsPreviewScene] solid overlay actor failed: $e');

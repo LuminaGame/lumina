@@ -361,7 +361,7 @@ class EditorPieGame extends LuminaGame {
     if (blueprintClass != null && blueprintClass.isNotEmpty && registry != null) {
       final cls = registry.classFor(blueprintClass);
       if (cls != null && !cls.hasErrors && !cls.isGameMode) {
-        final instance = cls.instantiate(key: ValueKey(actor.id), location: location, rotation: rotation);
+        final instance = cls.instantiate(key: LuminaObjectKey(actor.id), location: location, rotation: rotation);
         if (instance is LuminaBlueprintInstance) {
           // This placement's collision overrides.
           BlueprintCollisionOverrides.applyTo(instance, actor);
@@ -375,7 +375,7 @@ class EditorPieGame extends LuminaGame {
       case 'PlayerStart':
         // A real player start, so LuminaGameMode.findPlayerStart can see it.
         return LuminaPlayerStart(
-          key: ValueKey(actor.id),
+          key: LuminaObjectKey(actor.id),
           location: location,
           rotation: rotation,
         );
@@ -383,7 +383,7 @@ class EditorPieGame extends LuminaGame {
         final properties = _componentProperties(actor, 'LuminaProceduralMeshComponent');
         return LuminaPrimitiveActor.fromComponentProperties(
           properties,
-          key: ValueKey(actor.id),
+          key: LuminaObjectKey(actor.id),
           location: location,
           rotation: rotation,
           scale: scale,
@@ -393,7 +393,7 @@ class EditorPieGame extends LuminaGame {
         // A placed camera, looked through as a view target with its
         // Details settings.
         return LuminaCameraActor(
-          key: ValueKey(actor.id),
+          key: LuminaObjectKey(actor.id),
           location: location,
           rotation: rotation,
           scale: scale,
@@ -401,7 +401,7 @@ class EditorPieGame extends LuminaGame {
         );
       case 'Pawn':
         return LuminaPawn(
-          key: ValueKey(actor.id),
+          key: LuminaObjectKey(actor.id),
           location: location,
           rotation: rotation,
         );
@@ -413,7 +413,7 @@ class EditorPieGame extends LuminaGame {
           // No geometry resolved on disk: keep the actor's transform in the
           // world so gameplay logic can still reference it.
           return LuminaActor(
-            key: ValueKey(actor.id),
+            key: LuminaObjectKey(actor.id),
             root: LuminaSceneComponent(location: location, rotation: rotation, scale: scale, isVisible: actor.isVisible),
           );
         }
@@ -427,7 +427,7 @@ class EditorPieGame extends LuminaGame {
         final material = _assignedMaterial(actor);
         if (!collision.isEmpty) {
           return LuminaStaticMeshActor(
-            key: ValueKey(actor.id),
+            key: LuminaObjectKey(actor.id),
             location: location,
             rotation: rotation,
             scale: scale,
@@ -440,7 +440,7 @@ class EditorPieGame extends LuminaGame {
           );
         }
         return LuminaActor(
-          key: ValueKey(actor.id),
+          key: LuminaObjectKey(actor.id),
           root: LuminaStaticMeshComponent(
             location: location,
             rotation: rotation,
@@ -456,7 +456,7 @@ class EditorPieGame extends LuminaGame {
         // The light's Details section, else the actor fields.
         final sun = LightActorProperties.read(actor);
         return LuminaActor(
-          key: ValueKey(actor.id),
+          key: LuminaObjectKey(actor.id),
           root: LuminaDirectionalLightComponent(
             location: location,
             rotation: rotation,
@@ -470,7 +470,7 @@ class EditorPieGame extends LuminaGame {
       case 'PointLight':
         final point = LightActorProperties.read(actor);
         return LuminaActor(
-          key: ValueKey(actor.id),
+          key: LuminaObjectKey(actor.id),
           root: LuminaPointLightComponent(
             location: location,
             rotation: rotation,
@@ -485,12 +485,12 @@ class EditorPieGame extends LuminaGame {
         final landscapePath = actor.meshAssetPath;
         if (landscapePath == null || landscapePath.isEmpty) {
           return LuminaActor(
-            key: ValueKey(actor.id),
+            key: LuminaObjectKey(actor.id),
             root: LuminaSceneComponent(location: location, rotation: rotation, scale: scale, isVisible: actor.isVisible),
           );
         }
         return LuminaActor(
-          key: ValueKey(actor.id),
+          key: LuminaObjectKey(actor.id),
           root: LuminaLandscapeComponent(assetPath: landscapePath, location: location, rotation: rotation, scale: scale, isVisible: actor.isVisible),
         );
       case 'ProceduralSky':
@@ -499,7 +499,7 @@ class EditorPieGame extends LuminaGame {
         // Environment actor's skybox and image-based lighting — and it lights
         // nothing itself.
         return LuminaActor(
-          key: ValueKey(actor.id),
+          key: LuminaObjectKey(actor.id),
           root: LuminaProceduralSkyComponent.fromProperties(
             _componentProperties(actor, 'LuminaProceduralSkyComponent'),
           )..visible = actor.isVisible,
@@ -508,7 +508,7 @@ class EditorPieGame extends LuminaGame {
         // Exponential height fog over Filament's per-view fog:
         // the actor's Z is the fog height.
         return LuminaActor(
-          key: ValueKey(actor.id),
+          key: LuminaObjectKey(actor.id),
           root: LuminaExponentialHeightFogComponent.fromProperties(
             EnvironmentActorProperties.propertiesOf(actor),
             location: location,
@@ -520,7 +520,7 @@ class EditorPieGame extends LuminaGame {
         // A Post Process Volume: blends by camera
         // position through the world's blender.
         return LuminaActor(
-          key: ValueKey(actor.id),
+          key: LuminaObjectKey(actor.id),
           root: LuminaPostProcessVolumeComponent.fromProperties(
             EnvironmentActorProperties.propertiesOf(actor),
             location: location,
@@ -533,7 +533,7 @@ class EditorPieGame extends LuminaGame {
         // A Local Fog Volume: a fog-shell
         // approximation — Filament has no volumetric scattering.
         return LuminaActor(
-          key: ValueKey(actor.id),
+          key: LuminaObjectKey(actor.id),
           root: LuminaLocalFogVolumeComponent.fromProperties(
             EnvironmentActorProperties.propertiesOf(actor),
             location: location,
@@ -545,7 +545,7 @@ class EditorPieGame extends LuminaGame {
       case 'SpotLight':
         final spot = LightActorProperties.read(actor);
         return LuminaActor(
-          key: ValueKey(actor.id),
+          key: LuminaObjectKey(actor.id),
           root: LuminaSpotLightComponent(
             location: location,
             rotation: rotation,
@@ -562,7 +562,7 @@ class EditorPieGame extends LuminaGame {
         // Environment, Trigger and any plugin-defined type: a plain
         // actor at the authored transform.
         return LuminaActor(
-          key: ValueKey(actor.id),
+          key: LuminaObjectKey(actor.id),
           root: LuminaSceneComponent(location: location, rotation: rotation, scale: scale, isVisible: actor.isVisible),
         );
     }

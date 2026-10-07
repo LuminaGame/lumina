@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart' show ValueKey, debugPrint;
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:lumina/lumina.dart';
 import 'package:vector_math/vector_math_64.dart';
 
@@ -53,7 +53,7 @@ class ParticlePreviewScene {
 
     try {
       _register(LuminaActor(
-        key: const ValueKey('particle_preview_sun'),
+        key: const LuminaObjectKey('particle_preview_sun'),
         root: LuminaDirectionalLightComponent(
           rotation: _eulerDegrees(-55.0, 30.0),
           color: Vector3(1.0, 0.98, 0.94),
@@ -63,7 +63,7 @@ class ParticlePreviewScene {
         ),
       ));
       _register(LuminaActor(
-        key: const ValueKey('particle_preview_sky'),
+        key: const LuminaObjectKey('particle_preview_sky'),
         root: LuminaSkyComponent.color(
           color: Vector4(0.06, 0.07, 0.11, 1.0),
           skyIntensity: 12000.0,
@@ -102,7 +102,7 @@ class ParticlePreviewScene {
     if (w == null || w.isCleanedUp) return;
     for (var i = 0; i < _components.length; i++) {
       final actor = LuminaActor(
-        key: ValueKey('particle_preview_emitter_$i'),
+        key: LuminaObjectKey('particle_preview_emitter_$i'),
         root: _components[i],
       );
       _emitterActors.add(actor);

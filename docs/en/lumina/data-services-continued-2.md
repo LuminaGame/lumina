@@ -834,12 +834,17 @@ Brings a project's generated Dart written by earlier Lumina versions to the curr
 
 Earlier generators named the files in `lib/levels/`, `lib/actors/`, `lib/anim/` and `lib/widgets/` after their assets (`L_Main.dart`, `BP_Door.dart`) and their classes `L_Main`, `BPDoor`, `WBPHud`. Today the files are snake_case (`l_main.dart`, `bp_door.dart`) and the classes UpperCamelCase (`LMain`, `BpDoor`, `WbpHud`). [migrate] renames the legacy files — keeping their contents, so `BEGIN USER CODE` regions survive — renames the classes they declare, and rewrites the imports and class references of every Dart file under `lib/`, so a project regenerates cleanly and still compiles in between. A legacy file whose snake_case file already exists is stale and is deleted.
 
+Earlier generators also keyed placed actors and level scripts with Flutter's `ValueKey` (`key: const ValueKey('act_floor')`, a `{Key? key, ...}` Blueprint actor factory, `key is ValueKey<String>` in the data-layer assignment) and imported `package:flutter/foundation.dart` for it. Generated levels, Blueprints and registries now write `LuminaObjectKey('<id>')`; [migrateObjectKeys] rewrites the old files of `lib/levels/`, `lib/actors/` and `lib/anim/` in place (widgets keep Flutter's keys). [migrate] runs it first, and opening a project (`ProjectRepository.loadProject` → `prepareAssetIndex` → `migrateGeneratedCode`) runs both on a background isolate.
+
 **Members:**
 
 | Member | Signature | Description |
 | :--- | :--- | :--- |
 | `generatedFolders` | `static const List<String> generatedFolders` | The `lib/` folders whose files are named after assets. |
 | `migrate` | `static Map<String, String> migrate(String projectDir)` | Migrates [projectDir]'s generated Dart; returns the renamed files, `lib/…` old path → new path (empty when there was nothing to migrate). |
+| `objectKeyFolders` | `static const List<String> objectKeyFolders` | The generated folders whose code keys engine objects: `levels`, `actors`, `anim`. |
+| `migrateObjectKeys` | `static List<String> migrateObjectKeys(String projectDir)` | Rewrites Flutter `Key` / `ValueKey` on engine objects to `LuminaObjectKey` in [objectKeyFolders]; returns the rewritten files (`lib/...`), empty when none needed it. |
+| `rewriteObjectKeys` | `static String rewriteObjectKeys(String source)` | [source] with `ValueKey<String>` / `ValueKey(` / `Key? key` replaced by `LuminaObjectKey` and their `foundation.dart` import dropped (other shown names kept). Idempotent. |
 
 ---
 

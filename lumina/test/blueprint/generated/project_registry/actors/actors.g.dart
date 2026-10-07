@@ -3,13 +3,12 @@
 // Blueprint, by its project-relative .lmas path.
 // ignore_for_file: unused_import
 
-import 'package:flutter/foundation.dart' show Key;
 import 'package:lumina/lumina_runtime.dart';
 import 'package:vector_math/vector_math_64.dart';
 import 'bp_door.dart';
 
 /// A Blueprint actor class's constructor, as a level places it.
-typedef LuminaBlueprintActorFactory = LuminaActor Function({Key? key, Vector3? location, Quaternion? rotation});
+typedef LuminaBlueprintActorFactory = LuminaActor Function({LuminaObjectKey? key, Vector3? location, Quaternion? rotation});
 
 /// Every compiled Blueprint actor class, by its `.lmas` path.
 final Map<String, LuminaBlueprintActorFactory> luminaBlueprintFactories = {

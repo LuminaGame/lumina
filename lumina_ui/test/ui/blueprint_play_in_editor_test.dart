@@ -214,7 +214,7 @@ void main() {
     expect(await tester.runAsync(vm.requestPlay), isTrue, reason: '${vm.playBlockers}');
     final world = LuminaWorld();
     vm.pieController.startHeadlessForTest(world);
-    final runtime = world.persistentLevel.actors.firstWhere((a) => a.key == ValueKey(placed.id));
+    final runtime = world.persistentLevel.actors.firstWhere((a) => a.key == LuminaObjectKey(placed.id));
     expect(runtime, isA<LuminaBlueprintActor>());
     expect(runtime.actorLocation, LuminaAxes.location([300.0, 0.0, 50.0]));
     final crate = (runtime as LuminaBlueprintInstance).blueprintComponents['crate'] as LuminaStaticMeshComponent;

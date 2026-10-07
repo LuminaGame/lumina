@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'dart_identifiers.dart';
+import 'package:lumina/data/services/dart_identifiers.dart';
 
 /// Brings a project's generated Dart written by earlier Lumina versions to
 /// the current naming rules ([dartTypeName], [dartFileName]).
@@ -14,7 +14,9 @@ import 'dart_identifiers.dart';
 /// renames the classes they declare, and rewrites the imports and class
 /// references of every Dart file under `lib/`, so a project regenerates
 /// cleanly and still compiles in between. A legacy file whose snake_case
-/// file already exists is stale and is deleted.
+/// file already exists is stale and is deleted. Generated code that keyed
+/// engine objects with Flutter's `ValueKey` moves to `LuminaObjectKey`
+/// ([migrateObjectKeys]).
 class LuminaGeneratedCodeMigration {
   LuminaGeneratedCodeMigration._();
 
@@ -33,6 +35,7 @@ class LuminaGeneratedCodeMigration {
   static Map<String, String> migrate(String projectDir) {
     final lib = Directory('$projectDir/lib');
     if (!lib.existsSync()) return const {};
+    migrateObjectKeys(projectDir);
 
     // 1. Legacy files and the classes they declare.
     final renames = <String, String>{}; // lib-relative old path → new path
@@ -107,6 +110,58 @@ class LuminaGeneratedCodeMigration {
       File(temp).renameSync(e.value);
     }
     return renames;
+  }
+
+  /// The generated folders whose code keys engine objects (widgets keep
+  /// Flutter's keys).
+  static const List<String> objectKeyFolders = ['levels', 'actors', 'anim'];
+
+  static final RegExp _foundationKeyImport =
+      RegExp(r"^import 'package:flutter/foundation\.dart' show ([\w, ]+);[ \t]*\r?\n", multiLine: true);
+
+  /// Earlier generators keyed placed actors and level scripts with Flutter's
+  /// `ValueKey` (`key: const ValueKey('act_floor')`, a `{Key? key, …}` actor
+  /// factory, `key is ValueKey<String>` in the data-layer assignment) and
+  /// imported `package:flutter/foundation.dart` for it. Engine objects carry
+  /// a `LuminaObjectKey` now: this rewrites those files of [objectKeyFolders]
+  /// in place and returns them (`lib/…`; empty when none needed it).
+  /// [migrate] runs it first.
+  static List<String> migrateObjectKeys(String projectDir) {
+    final rewritten = <String>[];
+    for (final folder in objectKeyFolders) {
+      final dir = Directory('$projectDir/lib/$folder');
+      if (!dir.existsSync()) continue;
+      for (final file in dir.listSync(recursive: true).whereType<File>()) {
+        if (!file.path.endsWith('.dart')) continue;
+        String source;
+        try {
+          source = file.readAsStringSync();
+        } catch (_) {
+          continue;
+        }
+        if (!source.contains('Key')) continue;
+        final updated = rewriteObjectKeys(source);
+        if (updated == source) continue;
+        file.writeAsStringSync(updated);
+        final rel = file.absolute.path.replaceAll(r'\', '/').substring(dir.absolute.path.replaceAll(r'\', '/').length + 1);
+        rewritten.add('lib/$folder/$rel');
+      }
+    }
+    return rewritten..sort();
+  }
+
+  /// [source] with Flutter's `Key` / `ValueKey` on engine objects replaced
+  /// by `LuminaObjectKey`, and their `foundation.dart` import dropped.
+  static String rewriteObjectKeys(String source) {
+    var out = source.replaceAllMapped(_foundationKeyImport, (m) {
+      final kept = m.group(1)!.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty && s != 'Key' && s != 'ValueKey');
+      return kept.isEmpty ? '' : "import 'package:flutter/foundation.dart' show ${kept.join(', ')};\n";
+    });
+    out = out
+        .replaceAll(RegExp(r'\bValueKey<String>'), 'LuminaObjectKey')
+        .replaceAll(RegExp(r'\bValueKey\('), 'LuminaObjectKey(')
+        .replaceAll(RegExp(r'(?<![\w.])Key\? key\b'), 'LuminaObjectKey? key');
+    return out;
   }
 
   /// Matches a reference to one of [oldClasses] — bare, `_`-prefixed and

@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart' show ValueKey;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/rendering.dart' show RenderBox;
 import 'package:flutter/scheduler.dart' show SchedulerBinding;
@@ -9,14 +8,14 @@ import 'package:flutter/widgets.dart' show EditableTextState, FocusManager, Glob
 import 'package:lumina/lumina.dart';
 import 'package:vector_math/vector_math_64.dart' show Quaternion;
 
-import '../../main_editor/view_models/editor_view_model.dart';
-import '../../main_editor/views/pie_widget_layer.dart';
-import '../services/mcp_frame_capture.dart';
-import '../services/mcp_play_testing.dart';
-import '../services/mcp_protocol.dart';
-import '../services/mcp_tool.dart';
-import 'project_settings_tools.dart' show mcpKeyNamed;
-import 'rotation_convention.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/main_editor/views/pie_widget_layer.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_frame_capture.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_play_testing.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_protocol.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_tool.dart';
+import 'package:lumina_ui/ui/features/mcp_server/tools/project_settings_tools.dart' show mcpKeyNamed;
+import 'package:lumina_ui/ui/features/mcp_server/tools/rotation_convention.dart';
 
 /// `pie_advance`'s frame limit.
 const int kMcpMaxAdvanceFrames = 600;
@@ -92,7 +91,7 @@ void registerPlayTestingTools(
     final key = a.key;
     final bp = a is LuminaBlueprintInstance ? a.blueprintClass.name : null;
     return {
-      'id': key is ValueKey ? '${key.value}' : null,
+      'id': key?.value,
       'class': bp ?? a.runtimeType.toString(),
       'native_class': a.runtimeType.toString(),
       'location': _cm(LuminaAxes.toAuthoringLocation(a.actorLocation)),

@@ -294,7 +294,7 @@ class _ClassWriter {
       levelImports.addAll(imports.toString().split('\n').where((l) => l.isNotEmpty));
       b.writeln('/// Level `${level.levelName}`\'s script: its Level Blueprint, compiled by Lumina.');
       b.writeln('class $className extends LuminaLevelScriptActor with LuminaBlueprintRuntime, LuminaBlueprintLevelActors {');
-      b.writeln("  $className() : super(key: const ValueKey(${_str('${level.levelName}_script')})) {");
+      b.writeln("  $className() : super(key: const LuminaObjectKey(${_str('${level.levelName}_script')})) {");
     } else {
       final parentRef = blueprintClasses[doc.parentClass];
       final isBlueprintParent = parentRef != null ||

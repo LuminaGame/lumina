@@ -251,7 +251,7 @@ A camera placed in a level: a `LuminaCameraComponent` (its root, looking down it
 
 | Method / Getter | Signature | Purpose & Description |
 | :--- | :--- | :--- |
-| `LuminaCameraActor` | `LuminaCameraActor({Key? key, Vector3? location, Quaternion? rotation, Vector3? scale, LuminaCameraSettings settings})` | A camera at the transform with the settings applied. |
+| `LuminaCameraActor` | `LuminaCameraActor({LuminaObjectKey? key, Vector3? location, Quaternion? rotation, Vector3? scale, LuminaCameraSettings settings})` | A camera at the transform with the settings applied. |
 | `settings` | `final LuminaCameraSettings settings` | The settings the camera was built with. |
 | `cameraComponent` | `final LuminaCameraComponent cameraComponent` | The camera looked through; the actor's root. |
 | `autoActivateForPlayer` | `bool get autoActivateForPlayer` | Whether a player looks through this camera from login on. |
@@ -380,7 +380,7 @@ A mesh with neither has no collision.
 
 **Constructors:**
 
-- `LuminaStaticMeshActor({Key? key, Vector3? location, Quaternion? rotation, Vector3? scale, required String meshAssetPath, bool castShadows = true, bool visible =...`
+- `LuminaStaticMeshActor({LuminaObjectKey? key, Vector3? location, Quaternion? rotation, Vector3? scale, required String meshAssetPath, bool castShadows = true, bool visible =...`
 
 **Members:**
 

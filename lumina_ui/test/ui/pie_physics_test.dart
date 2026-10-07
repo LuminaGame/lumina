@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart' show ValueKey;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina/lumina.dart' hide BoxShape;
 import 'package:lumina_ui/ui/features/details/services/blueprint_collision_overrides.dart';
@@ -115,7 +114,7 @@ void main() {
     expect(await tester.runAsync(vm.requestPlay), isTrue, reason: '${vm.playBlockers}');
     final world = LuminaWorld();
     final game = vm.pieController.startHeadlessForTest(world);
-    final runtime = world.persistentLevel.actors.firstWhere((a) => a.key == ValueKey(chair.id)) as LuminaBlueprintInstance;
+    final runtime = world.persistentLevel.actors.firstWhere((a) => a.key == LuminaObjectKey(chair.id)) as LuminaBlueprintInstance;
     final box = runtime.blueprintComponents['box'] as LuminaBoxComponent;
     expect(box.isSimulatingPhysics, isTrue);
     expect(box.resolvedMassKg, 23.0, reason: 'inherited from SM_Chair.lmas');
@@ -149,7 +148,7 @@ void main() {
     expect(await tester.runAsync(vm.requestPlay), isTrue, reason: '${vm.playBlockers}');
     final world = LuminaWorld();
     vm.pieController.startHeadlessForTest(world);
-    final runtime = world.persistentLevel.actors.firstWhere((a) => a.key == ValueKey(chair.id)) as LuminaBlueprintInstance;
+    final runtime = world.persistentLevel.actors.firstWhere((a) => a.key == LuminaObjectKey(chair.id)) as LuminaBlueprintInstance;
     final built = runtime.blueprintComponents['box'] as LuminaBoxComponent;
     final y = built.worldLocation.y;
     run(world, 60);

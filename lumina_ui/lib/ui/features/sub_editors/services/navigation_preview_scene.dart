@@ -3,16 +3,16 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart' show ValueKey, debugPrint;
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_filament/flutter_filament.dart'
     show CullingMode, FilamentMaterialInstance, FilamentMaterialProvider, MaterialKey;
 import 'package:lumina/lumina.dart';
 import 'package:vector_math/vector_math_64.dart';
 
-import '../../main_editor/services/editor_transform.dart' show EditorTransforms;
-import '../../main_editor/services/pie_controller.dart' show EditorPieGame;
-import '../../main_editor/view_models/editor_view_model.dart' show EditorActorNode;
-import '../models/navigation_editor_state.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/editor_transform.dart' show EditorTransforms;
+import 'package:lumina_ui/ui/features/main_editor/services/pie_controller.dart' show EditorPieGame;
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart' show EditorActorNode;
+import 'package:lumina_ui/ui/features/sub_editors/models/navigation_editor_state.dart';
 
 /// Drives the Navigation sub-editor's live viewport through lumina.
 ///
@@ -97,11 +97,11 @@ class NavigationPreviewScene {
         mesh.loaded.catchError((Object e) {
           debugPrint('[NavigationPreviewScene] mesh ${actor.name} failed to load: $e');
         });
-        _register(LuminaActor(key: ValueKey('nav_preview_${actor.id}'), root: mesh));
+        _register(LuminaActor(key: LuminaObjectKey('nav_preview_${actor.id}'), root: mesh));
         _meshActorCount++;
       }
       _register(LuminaActor(
-        key: const ValueKey('nav_preview_sun'),
+        key: const LuminaObjectKey('nav_preview_sun'),
         root: LuminaDirectionalLightComponent(
           rotation: EditorPieGame.eulerDegreesToQuaternion([-55.0, 30.0, 0.0]),
           color: Vector3(1.0, 0.98, 0.94),
@@ -111,11 +111,11 @@ class NavigationPreviewScene {
         ),
       ));
       _register(LuminaActor(
-        key: const ValueKey('nav_preview_sky'),
+        key: const LuminaObjectKey('nav_preview_sky'),
         root: LuminaSkyComponent.color(color: Vector4(0.36, 0.44, 0.56, 1.0), skyIntensity: 25000.0, iblIntensity: 25000.0),
       ));
       _overlay = LuminaProceduralMeshComponent();
-      _overlayActor = LuminaActor(key: const ValueKey('nav_preview_overlay'), root: _overlay!);
+      _overlayActor = LuminaActor(key: const LuminaObjectKey('nav_preview_overlay'), root: _overlay!);
       _register(_overlayActor!);
       world.tick(_tickSeconds);
     } catch (e, st) {

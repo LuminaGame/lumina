@@ -1,8 +1,8 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
-import 'package:lumina/lumina.dart' show EngineLoggerService;
 
-import 'glb_animation_merger.dart';
+import 'package:lumina/data/services/glb_animation_merger.dart';
+import 'package:lumina/data/services/engine_logger_service.dart';
 
 part 'glb_animation_retargeter/models.dart';
 part 'glb_animation_retargeter/pose_sampling.dart';

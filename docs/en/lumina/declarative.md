@@ -16,7 +16,7 @@ The declarative layer of the engine: a game describes its world with a `build()`
 
 ### `class LuminaBuildContext`
 
-Context interface provided to [LuminaObject.build] during tree construction.
+Context interface provided to [LuminaObject.build] during tree construction. It implements `LuminaObjectContext` (the ancestor lookups) and adds the world, the level and the actor.
 
 **Functions, Methods & Accessors:**
 
@@ -112,9 +112,13 @@ Base root class for all declarative nodes in the Lumina Game Engine. Inspired by
 
 | Method / Getter | Signature | Purpose & Description |
 | :--- | :--- | :--- |
-| `key` | `Key? key` | Unique key for element identity reconciliation. |
-| `build` | `LuminaObject? build(LuminaBuildContext context)` | Builds the child or hierarchy of sub-nodes for this node. |
+| `key` | `LuminaObjectKey? key` | Unique key for element identity reconciliation (the engine's own key, see [object](object.md#libsrcobjectlumina_object_keydart)). |
+| `build` | `LuminaObject? build(covariant LuminaObjectContext context)` | Builds the child or hierarchy of sub-nodes for this node. The tree passes a `LuminaBuildContext`; overrides declare that type. |
 | `children` | `List<LuminaObject> get children` | Returns children of this node if it contains multiple nodes. |
+
+### `abstract interface class LuminaObjectContext`
+
+What `LuminaObject.build` can ask of the tree without knowing the world: its ancestors (`findAncestorOfExactType`, `findAncestorOfType`, `visitAncestorElements`). `LuminaBuildContext` implements it and adds the world, the level and the enclosing actor. `lumina_object.dart` imports nothing but `LuminaObjectKey`, so the root of the object model reaches no Flutter library (`test/architecture/flutter_free_object_root_test.dart` guards it).
 
 ### `class LuminaNodeGroup`
 
@@ -125,7 +129,7 @@ Helper container node for multiple children.
 | Method / Getter | Signature | Purpose & Description |
 | :--- | :--- | :--- |
 | `children` | `List<LuminaObject> children` | Holds the `children` property or configuration state. |
-| `build` | `LuminaObject? build(LuminaBuildContext context)` | Constructs and returns the declarative element or widget hierarchy. |
+| `build` | `LuminaObject? build(LuminaObjectContext context)` | Constructs and returns the declarative element or widget hierarchy. |
 
 ## `lib/src/declarative/runtime_object.dart`
 

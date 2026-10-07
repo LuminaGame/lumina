@@ -71,7 +71,7 @@ void main() {
           'materialPath': material,
         };
 
-    String lineOf(String code, String id) => code.split('\n').firstWhere((l) => l.contains("ValueKey('$id')"));
+    String lineOf(String code, String id) => code.split('\n').firstWhere((l) => l.contains("LuminaObjectKey('$id')"));
 
     test("a placed mesh's material is passed to the actor the level builds", () {
       if (!haveAssets) return markTestSkipped('test-assets/Props/Barrels missing');

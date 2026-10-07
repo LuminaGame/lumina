@@ -268,7 +268,7 @@ void main() {
         actors: const [],
         actorMaps: [meshActor('counter', lmas('SM_Counter_1')), meshActor('chair', lmas('SM_Casino_Chair'))],
       );
-      final counterLine = code.split('\n').firstWhere((l) => l.contains("ValueKey('counter')"));
+      final counterLine = code.split('\n').firstWhere((l) => l.contains("LuminaObjectKey('counter')"));
       expect(counterLine, contains('LuminaStaticMeshActor('));
       expect(counterLine, contains('collisionPrimitives: const ['));
       expect(counterLine, isNot(contains('collisionHulls')));

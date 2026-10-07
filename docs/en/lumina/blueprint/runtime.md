@@ -210,7 +210,7 @@ What a running Blueprint needs besides its graph, shared by the VM and generated
 
 ### `class LuminaBlueprintLevelActorRef`
 
-A placed actor a Level Blueprint refers to by name: its outliner name (`Door_01`), its class as an object pin types it (`Actor:BP_Door`, `Actor:LuminaPlayerStart`) and the id the level mounts it with (`ValueKey(id)`, in Play-In-Editor and in the generated level).
+A placed actor a Level Blueprint refers to by name: its outliner name (`Door_01`), its class as an object pin types it (`Actor:BP_Door`, `Actor:LuminaPlayerStart`) and the id the level mounts it with (`LuminaObjectKey(id)`, in Play-In-Editor and in the generated level).
 
 **Constructors:**
 
@@ -255,7 +255,7 @@ A level's own Blueprint (the Level Blueprint): the graph that scripts the level 
 
 ### `mixin LuminaBlueprintLevelActors`
 
-What a level script needs to find the level's placed actors by name: the VM's `LuminaBlueprintLevelScript` and every generated `_<Level>Script` mix it in. The level mounts each placed actor with `ValueKey(id)`; [levelActor] finds it among the owning level's actors, then the world's, and answers null once it was destroyed or removed.
+What a level script needs to find the level's placed actors by name: the VM's `LuminaBlueprintLevelScript` and every generated `_<Level>Script` mix it in. The level mounts each placed actor with `LuminaObjectKey(id)`; [levelActor] finds it among the owning level's actors, then the world's, and answers null once it was destroyed or removed.
 
 **Members:**
 
@@ -541,13 +541,13 @@ A Blueprint document ready to run in the VM: validated once, then instantiated a
 | `isLevelScript` | `bool get isLevelScript` | Whether this is a Level Blueprint (use [instantiateLevelScript]). |
 | `typeContext` | `LuminaBlueprintTypeContext typeContext({LuminaBlueprintFunctionGraph? function, LuminaBlueprintMacroGraph? mac...` | The type context the class's graphs resolve in — [function]'s or [macro]'s graph when given. |
 | `instantiateUserWidget` | `LuminaBlueprintUserWidget instantiateUserWidget()` | A new script of this Widget Blueprint, for [LuminaUserWidgets.register]. |
-| `instantiateLevelScript` | `LuminaBlueprintLevelScript instantiateLevelScript({Key? key})` | A new level script of this Level Blueprint, to set as the level's `scriptActor` before the world begins play. |
+| `instantiateLevelScript` | `LuminaBlueprintLevelScript instantiateLevelScript({LuminaObjectKey? key})` | A new level script of this Level Blueprint, to set as the level's `scriptActor` before the world begins play. |
 | `gameModeParent` | `static const String gameModeParent` | The parent class of a GameMode Blueprint. |
 | `isGameMode` | `bool get isGameMode` | Whether this is a GameMode Blueprint (use [createGameMode]). |
 | `isPawn` | `bool get isPawn` | Whether instances are pawns (a Pawn or Character Blueprint). |
 | `defaultPawnClass` | `String get defaultPawnClass` | A GameMode Blueprint's Default Pawn Class (its `.lmas` path), or ''. |
 | `hasErrors` | `bool get hasErrors` |  |
-| `instantiate` | `LuminaActor instantiate({Key? key, Vector3? location, Quaternion? rotation})` | A new actor of this class: a [LuminaBlueprintCharacter], [LuminaBlueprintPawn] or [LuminaBlueprintActor] by `parentClass`, with its components built and class defaults applied. |
+| `instantiate` | `LuminaActor instantiate({LuminaObjectKey? key, Vector3? location, Quaternion? rotation})` | A new actor of this class: a [LuminaBlueprintCharacter], [LuminaBlueprintPawn] or [LuminaBlueprintActor] by `parentClass`, with its components built and class defaults applied. |
 | `createGameMode` | `LuminaGameMode createGameMode({LuminaPawn Function()? pawnOverride})` | The game mode of a GameMode Blueprint: its Default Pawn Class (resolved through [resolveClass] at every spawn) at the player start, possessed by a [LuminaPlayerController]. [pawnOverride] is the project's Maps & Modes Default Pawn Class, which wins when given. |
 
 ### `abstract interface class LuminaBlueprintGraphHost`

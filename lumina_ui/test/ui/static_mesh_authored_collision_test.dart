@@ -6,7 +6,6 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart' show ValueKey;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' show ShadcnApp, Scaffold, Size;
 import 'package:lumina/lumina.dart';
@@ -306,7 +305,7 @@ void main() {
       final world = LuminaWorld(worldType: LuminaWorldType.game);
       game.mountIntoWorldForTest(world);
       final collision = world.getSubsystem<LuminaCollisionSubsystem>()!;
-      final prop = world.persistentLevel.actors.firstWhere((a) => a.key == const ValueKey('counter')) as LuminaStaticMeshActor;
+      final prop = world.persistentLevel.actors.firstWhere((a) => a.key == const LuminaObjectKey('counter')) as LuminaStaticMeshActor;
       // Yaw 90 turns the counter's length (authoring +X) to authoring −Y, so
       // it runs along runtime +z from its pivot at z 40, and its depth
       // (authoring −Y) to −X, ending at x 250. Walk at its middle along −x.

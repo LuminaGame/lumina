@@ -8,6 +8,7 @@ Runtime nesne hiyerarşisi: dünyaya yerleştirilen her şeyin temeli olan `Lumi
 
 - [`lib/src/object/actor.dart`](#libsrcobjectactordart)
 - [`lib/src/object/character.dart`](#libsrcobjectcharacterdart)
+- [`lib/src/object/lumina_object_key.dart`](#libsrcobjectlumina_object_keydart)
 - [`lib/src/object/pawn.dart`](#libsrcobjectpawndart)
 
 ## `lib/src/object/actor.dart`
@@ -34,7 +35,7 @@ Base class for all entities/objects that can be spawned or placed in a [LuminaWo
 | `rootComponent` | `final LuminaSceneComponent rootComponent` | `rootComponent` alanını (field/property) ve ilişkili veriyi saklar. |
 | `owningLevel` | `LuminaLevel? owningLevel` | `owningLevel` alanını (field/property) ve ilişkili veriyi saklar. |
 | `bSaveGame` | `bool bSaveGame` | Whether this actor should be persisted when saving the world state. |
-| `saveId` | `String get saveId` | Stable unique identifier for this actor across save/load sessions. |
+| `saveId` | `String get saveId` | Stable unique identifier for this actor across save/load sessions: `<level type>/<actor type>_<key>` with the key's `[<'id'>]` text (unchanged from earlier versions, so old saves restore), or the explicit `saveId` passed to the constructor. |
 | `world` | `LuminaWorld? get world` | The world instance this actor is active in. |
 | `isRegistered` | `bool get isRegistered` | Whether this actor has been explicitly registered with a world. |
 | `isInitialized` | `bool get isInitialized` | Mevcut durumun veya yeteneğin doğruluğunu kontrol eder (`bool` döndürür). |
@@ -73,6 +74,21 @@ Character pawn class equipped with capsule collision, movement component, and me
 | `characterMovement` | `final LuminaCharacterMovementComponent characterMovement` | `characterMovement` alanını (field/property) ve ilişkili veriyi saklar. |
 | `meshComponent` | `final LuminaSkinnedMeshComponent meshComponent` | `meshComponent` alanını (field/property) ve ilişkili veriyi saklar. |
 | `jump` | `void jump()` | `jump` işlemini gerçekleştirir. |
+
+## `lib/src/object/lumina_object_key.dart`
+
+### `final class LuminaObjectKey`
+
+Bir engine nesnesinin kimliği: actor, component, seviye ya da seviye script'i. İki anahtar `value`'ları eşitse eşittir. Declarative ağaç yeniden kurulan bir düğümü canlı element'iyle bununla eşleştirir, dünya yerleştirilmiş actor'leri bununla bulur (bir seviye satırının `id`'si anahtarıdır: üretilen seviyeler ve Play-In-Editor her yerleştirilmiş actor'ü `LuminaObjectKey('<id>')` ile bağlar) ve `toString`'i bir actor'ün `saveId`'sinin parçasıdır. Flutter bağımlılığı yoktur; widget'lar Flutter'ın `Key`'ini kullanmaya devam eder. Klavye, fare ya da gamepad giriş tuşu ayrı bir sınıftır: `LuminaKey`.
+
+**Fonksiyonlar, Metotlar ve Erişimciler:**
+
+| Metot / Getter | İmzası | Ne İşe Yarar? |
+| :--- | :--- | :--- |
+| `LuminaObjectKey` | `const LuminaObjectKey(String value)` | [value] adlı bir anahtar (bir seviye satırının actor id'si, `L_Main_script`, ...). |
+| `value` | `final String value` | Anahtarın metni. |
+| `operator ==` / `hashCode` | `bool operator ==(Object other)` | `value`'ya göre eşitlik. |
+| `toString` | `String toString()` | `[<'value'>]`: nesneler Flutter'ın string `ValueKey`'ini taşırken `saveId`'lerin ve seviye adlarının gömdüğü metin; böylece önceden yazılmış kayıtlar actor'leriyle eşleşmeye devam eder. |
 
 ## `lib/src/object/pawn.dart`
 

@@ -72,7 +72,6 @@ mixin _LevelCodegen on _DartCodeGeneratorServiceState {
     buffer.writeln('// Lumina Engine $kLuminaEngineVersion Auto-Generated Level Code');
     buffer.writeln('// ignore_for_file: unused_import, prefer_const_constructors');
     buffer.writeln();
-    buffer.writeln("import 'package:flutter/foundation.dart' show ValueKey;");
     buffer.writeln("import 'package:lumina/lumina_runtime.dart';");
     buffer.writeln("import 'package:vector_math/vector_math_64.dart';");
     if (gameModeBinding != null) {
@@ -170,7 +169,7 @@ mixin _LevelCodegen on _DartCodeGeneratorServiceState {
       begin.add('    partition.addActor(actor, actor.actorLocation);');
       if (layersByActor.isNotEmpty) {
         begin.add('    final key = actor.key;');
-        begin.add('    if (key is ValueKey<String>) {');
+        begin.add('    if (key != null) {');
         begin.add('      for (final layer in dataLayersByActor[key.value] ?? const <String>[]) {');
         begin.add('        partition.assignActorToLayer(actor, layer);');
         begin.add('      }');
@@ -270,7 +269,7 @@ mixin _LevelCodegen on _DartCodeGeneratorServiceState {
       buffer.writeln('/// and — when the level authors a PlayerStart — makes sure the game');
       buffer.writeln('/// mode is installed and the local player is logged in and possessed.');
       buffer.writeln('class _${className}Script extends LuminaLevelScriptActor {');
-      buffer.writeln('  _${className}Script() : super(key: const ValueKey(\'${_escape(levelName)}_script\'));');
+      buffer.writeln('  _${className}Script() : super(key: const LuminaObjectKey(\'${_escape(levelName)}_script\'));');
       buffer.writeln();
       if (hasPlayerStart) {
         buffer.writeln('  /// The controller created by the game mode at begin play.');
@@ -412,7 +411,7 @@ mixin _LevelCodegen on _DartCodeGeneratorServiceState {
     final scale = _vec3(a['scale'], [1, 1, 1]);
     final castShadows = a['castShadows'] is bool ? a['castShadows'] as bool : true;
     final visible = !hiddenInGame && (a['isVisible'] is bool ? a['isVisible'] as bool : true);
-    final key = "key: const ValueKey('${_escape(id)}')";
+    final key = "key: const LuminaObjectKey('${_escape(id)}')";
     // Stored transforms are authored Z-up (the editor's); the
     // runtime is Y-up: convert once, here.
     final transform = 'location: ${_vector3(LuminaAxes.location(loc).storage)}, '

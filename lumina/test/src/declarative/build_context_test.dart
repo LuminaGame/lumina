@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina/lumina.dart';
 
@@ -170,11 +169,11 @@ void main() {
 
     test('Moving a keyed actor subtree across levels updates context.level query on rebuild', () {
       final comp = ContextCaptureComponent();
-      const actorKey = ValueKey('hero_actor');
+      const actorKey = LuminaObjectKey('hero_actor');
       final actor = LuminaActor(key: actorKey, components: [comp]);
 
-      final level1 = MyLevel1(key: const ValueKey('lvl1'), children: [actor]);
-      final level2 = MyLevel2(key: const ValueKey('lvl2'), children: const []);
+      final level1 = MyLevel1(key: const LuminaObjectKey('lvl1'), children: [actor]);
+      final level2 = MyLevel2(key: const LuminaObjectKey('lvl2'), children: const []);
 
       final holder = KeyedDynamicLevelHolder([level1, level2]);
       final owner = LuminaBuildOwner();
@@ -184,8 +183,8 @@ void main() {
       expect(comp.capturedLevel, equals(level1));
 
       // Move actor to level2
-      final newLevel1 = MyLevel1(key: const ValueKey('lvl1'), children: const []);
-      final newLevel2 = MyLevel2(key: const ValueKey('lvl2'), children: [actor]);
+      final newLevel1 = MyLevel1(key: const LuminaObjectKey('lvl1'), children: const []);
+      final newLevel2 = MyLevel2(key: const LuminaObjectKey('lvl2'), children: [actor]);
       holder.childrenList = [newLevel1, newLevel2];
 
       rootElem.markNeedsBuild();

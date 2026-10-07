@@ -18,6 +18,8 @@
 - `package:lumina/lumina.dart` exports everything, including the data layer. Lumina Studio imports it.
 - `package:lumina/lumina_runtime.dart` exports the runtime without the editor data layer, Assimp and RigLogic, so a game that imports only this library also builds for the web. Generated games import it.
 
+The barrels are for users of the package: no library inside `lumina/lib` imports `lumina.dart` or `lumina_runtime.dart`; each imports the files it uses, so the barrels stay leaves of the import graph and no cycle runs through them. Engine objects carry the engine's own `LuminaObjectKey`, and `lumina_object.dart` reaches no Flutter library. `test/architecture/` guards both (`import_cycles_test.dart`, `flutter_free_object_root_test.dart`).
+
 Runtime code never reads files with `File(...)` directly: asset loads without an explicit asset provider go through `LuminaAssets.defaultProvider`, which the generated `main()` sets to Flutter's `rootBundle` (null means the file system, for the editor and tests). Code that passes pointers imports `package:flutter_filament/ffi.dart` and `ffi_package.dart` instead of `dart:ffi` and `package:ffi`.
 
 ## Reference pages

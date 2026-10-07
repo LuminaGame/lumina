@@ -2,12 +2,12 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart' show ValueKey, debugPrint;
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:lumina/lumina.dart';
 import 'package:vector_math/vector_math_64.dart';
 
-import '../../main_editor/view_models/editor_view_model.dart' show EditorActorNode;
-import '../view_models/environment_lighting_view_model.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart' show EditorActorNode;
+import 'package:lumina_ui/ui/features/sub_editors/view_models/environment_lighting_view_model.dart';
 
 /// Drives the Environment Lighting mixer's live viewport through lumina.
 ///
@@ -72,7 +72,7 @@ class EnvironmentPreviewScene {
         mesh.loaded.catchError((Object e) {
           debugPrint('[EnvironmentPreviewScene] mesh ${actor.name} failed to load: $e');
         });
-        _register(LuminaActor(key: ValueKey('env_preview_${actor.id}'), root: mesh));
+        _register(LuminaActor(key: LuminaObjectKey('env_preview_${actor.id}'), root: mesh));
         _meshActorCount++;
       }
       _spawnSun(state);
@@ -169,7 +169,7 @@ class EnvironmentPreviewScene {
       castShadows: state.castShadows,
       isSun: true,
     );
-    _sunActor = LuminaActor(key: const ValueKey('env_preview_sun'), root: _sun!);
+    _sunActor = LuminaActor(key: const LuminaObjectKey('env_preview_sun'), root: _sun!);
     _register(_sunActor!);
   }
 
@@ -217,7 +217,7 @@ class EnvironmentPreviewScene {
     }
     sky.rotationDegrees = state.skyRotationDeg;
     _sky = sky;
-    _skyActor = LuminaActor(key: const ValueKey('env_preview_sky'), root: sky);
+    _skyActor = LuminaActor(key: const LuminaObjectKey('env_preview_sky'), root: sky);
     _register(_skyActor!);
     _skyBuiltFrom = state;
   }
