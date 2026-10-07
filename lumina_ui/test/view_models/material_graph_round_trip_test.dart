@@ -246,7 +246,8 @@ fragment {
       expect(describe(MaterialGraphParser.parse(generated).graph), describe(result.graph));
     });
 
-    test('control flow makes the whole fragment one Custom (Fragment) node, emitted verbatim', () async {
+    test('an if whose branches write material fields makes the whole fragment one Custom (Fragment) node, emitted verbatim',
+        () async {
       const fragmentBody = '''
     void material(inout MaterialInputs material) {
         prepareMaterial(material);
@@ -262,7 +263,7 @@ fragment {
           'fragment {\n$fragmentBody\n}\n';
       final result = MaterialGraphParser.parse(source);
       expect(result.isFallback, isTrue);
-      expect(result.fallbackReason, contains("'if'"));
+      expect(result.fallbackReason, contains('material.baseColor'));
       final fragment = result.graph.nodes.singleWhere((n) => n.registryId == MaterialNodes.customFragment);
       expect(fragment.literals['code'], fragmentBody);
       expect(result.graph.nodes.where((n) => n.registryId == MaterialNodes.scalarParameter).single.literals['name'], 'strength');

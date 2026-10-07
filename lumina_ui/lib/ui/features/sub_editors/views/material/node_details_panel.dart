@@ -3,6 +3,7 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/material_graph.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/material_logic_nodes.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/material_editor_view_model.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/material_graph_editor.dart';
 import 'package:lumina_ui/ui/core/property_editors/asset_picker_select.dart';
@@ -11,7 +12,8 @@ import 'package:lumina_ui/ui/features/sub_editors/views/blueprint/pin_literal_ed
 /// The Details panel of the material graph: the selected
 /// expression's settings — constant
 /// values, parameter names and defaults, the texture a TextureSample reads,
-/// TexCoord tiling, mask channels, and a Custom node's inputs and GLSL.
+/// TexCoord tiling, mask channels, a Compare's operator, and a Custom node's
+/// inputs and GLSL.
 /// Every committed edit is one undo step.
 class MaterialNodeDetailsPanel extends StatelessWidget {
   final MaterialEditorViewModel viewModel;
@@ -362,6 +364,25 @@ class MaterialNodeDetailsPanel extends StatelessWidget {
                 ]),
               ).call,
             ),
+          ),
+        ];
+      case MaterialLogicNodes.compare:
+        return [
+          _row(
+            'Operator',
+            MaterialGraphEditor.compareOperatorSelect(
+              node,
+              keyPrefix: 'material_details_compare_op',
+              onChanged: (op) => _editor.setProperty(node.id, 'op', op),
+            ),
+          ),
+        ];
+      case MaterialLogicNodes.ifNode:
+        return [
+          const Text(
+            'Written as the GLSL conditional (Condition ? Then : Else): picks Then where Condition holds, else Else; both are evaluated, '
+            'so an if / else chain that only assigns locals reads back as If nodes.',
+            style: TextStyle(fontSize: 10, color: EditorColors.mutedForeground),
           ),
         ];
       case MaterialNodes.customFragment:

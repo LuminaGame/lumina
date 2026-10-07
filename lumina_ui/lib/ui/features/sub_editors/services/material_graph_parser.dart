@@ -4,10 +4,13 @@ import 'package:lumina_editor_data/lumina_editor.dart' show LuminaBlueprintGraph
 
 import 'package:lumina_ui/ui/features/sub_editors/models/material_fragment_pins.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/material_graph.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/material_logic_nodes.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/mat_source.dart';
 
 part 'material_graph_parser/lexer_and_parser.dart';
 part 'material_graph_parser/lowering.dart';
+part 'material_graph_parser/lowering_control_flow.dart';
+part 'material_graph_parser/lowering_values.dart';
 part 'material_graph_parser/layout.dart';
 
 /// What [MaterialGraphParser.parse] made of a `.mat` source.
@@ -31,8 +34,11 @@ class MaterialGraphParseResult {
 /// The fragment's `material()` body is parsed statement by statement into
 /// expressions; the generator's own output parses back into the graph it came
 /// from. A call the catalog has no node for becomes a Custom expression node
-/// holding its GLSL; anything that cannot be expressed statement by statement
-/// (control flow, unknown fields or declarations) makes the whole fragment one
+/// holding its GLSL; comparisons, `&&` / `||` / `!` and `?:` become logic
+/// nodes, and an `if` / `else if` / `else` chain whose branches only assign
+/// locals becomes one If node per assigned local. Anything else that cannot be
+/// expressed statement by statement (loops, an `if` branch writing a material
+/// field, unknown fields or declarations) makes the whole fragment one
 /// Custom (Fragment) node, kept verbatim. Header parameters always become
 /// parameter nodes, so a graph edit never drops a declaration.
 class MaterialGraphParser {

@@ -1,6 +1,7 @@
 import 'package:lumina_editor_data/lumina_editor.dart' show LuminaBlueprintGraph, LuminaBlueprintNode;
 
 import 'package:lumina_ui/ui/features/sub_editors/models/material_graph.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/material_logic_nodes.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/material_vertex_variables.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/mat_source.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/material_graph_types.dart';
@@ -14,7 +15,9 @@ import 'package:lumina_ui/ui/features/sub_editors/services/material_graph_types.
 /// `fragment` are kept as written.
 /// The fragment is the graph: expressions inline, a local for every value used
 /// more than once (or named in the source it was parsed from), what feeds
-/// Normal before `prepareMaterial(material)`, everything else after it. A
+/// Normal before `prepareMaterial(material)`, everything else after it. Logic
+/// nodes are expressions too: Compare `(a >= b)`, And / Or / Not `(a && b)`,
+/// `(a || b)`, `(!a)`, If the conditional `(c ? t : f)`. A
 /// Custom (Fragment) node replaces the generated fragment with its code,
 /// verbatim.
 ///
@@ -449,6 +452,18 @@ class _Emitter {
         return channels == 'rgba'.substring(0, width) ? input : '$input.$channels';
       case MaterialNodes.appendVector:
         return '${_typeOf(n.id, 'out').glsl}(${_operand(n, 'a')}, ${_operand(n, 'b')})';
+      case MaterialLogicNodes.compare:
+        return '(${_operand(n, 'a')} ${MaterialLogicNodes.operatorOf(n)} ${_operand(n, 'b')})';
+      case MaterialLogicNodes.and:
+      case MaterialLogicNodes.or:
+        final op = n.registryId == MaterialLogicNodes.and ? '&&' : '||';
+        return '(${_operand(n, 'a')} $op ${_operand(n, 'b')})';
+      case MaterialLogicNodes.not:
+        return '(!${_operand(n, 'a')})';
+      case MaterialLogicNodes.ifNode:
+        // The GLSL conditional: both values are evaluated, one is kept.
+        final t = _typeOf(n.id, 'out');
+        return '(${_operand(n, 'condition')} ? ${_operand(n, 'then', castTo: t)} : ${_operand(n, 'else', castTo: t)})';
       case MaterialNodes.custom:
         final index = _customIndex.putIfAbsent(n.id, () {
           final k = _customIndex.length;

@@ -127,15 +127,18 @@ void registerMaterialGraphTools(McpToolRegistry registry, EditorViewModel vm, Mc
       title: 'List material nodes',
       description: 'The Material editor\'s expression catalog: id (pass it as `node` to '
           'add_material_node, e.g. mat_scalar_parameter, mat_texture_sample, mat_lerp), title, category, keywords, '
-          'tooltip, typed pins (float, float2, float3, float4, Texture2D; "any float" takes its type from the wire) '
-          'and the default settings. The Material output node is not listed: every material has exactly one. '
+          'tooltip, typed pins (float, float2, float3, float4, Texture2D, bool; "any float" takes its type from the '
+          'wire) and the default settings. The Material output node is not listed: every material has exactly one. '
+          'Logic category: mat_compare (A, B floats; setting `op` one of > >= < <= == !=) yields a bool, mat_and / '
+          'mat_or / mat_not combine bools, mat_if picks Then where its bool Condition holds, else Else (inputs condition / then / else, output Result; written as `c ? t : f`; '
+          'an if / else chain that only assigns locals reads back as mat_if nodes). '
           'Vertex category: mat_set_vertex_variable computes its Value once per vertex (the .mat vertex block) '
           'and hands it to the fragment as a float4 interpolant named by its `name` setting (a `variables` '
           'entry); mat_vertex_variable reads it in the fragment (RGBA outputs). Only vertex-available '
           'expressions (constants, parameters, TexCoord, VertexColor, Time, mat_world_position, math, Custom) '
           'may feed a setter, and a material has at most 5 variables (4 when it reads the vertex colour).',
       inputSchema: McpSchema.object({
-        'category': McpSchema.string('Only this category (Constants, Parameters, Texture, Math, Utility, Vertex, Custom, …).'),
+        'category': McpSchema.string('Only this category (Constants, Parameters, Texture, Math, Utility, Logic, Vertex, Custom, …).'),
         'query': McpSchema.string('Case-insensitive match on id, title or keywords.'),
       }),
       handler: (args) {
@@ -362,7 +365,8 @@ void registerMaterialGraphTools(McpToolRegistry registry, EditorViewModel vm, Mc
       description: 'Sets one node setting, as the node\'s Details do: a constant\'s `value` (number or [2–4 '
           'numbers]), a parameter\'s `name` / `default`, a Texture Sample\'s sampler `parameter`, a mask\'s r/g/b/a, a '
           'Custom node\'s code / inputs / outputType, a variable `name` (renaming the only Set Vertex Variable of a '
-          'variable renames its Vertex Variable readers too), a WorldPosition\'s `space`, or an unconnected input\'s '
+          'variable renames its Vertex Variable readers too), a WorldPosition\'s `space`, a Compare\'s `op` (> >= < <= == !=), or an unconnected '
+          'input\'s '
           'constant (Multiply\'s B, Lerp\'s Alpha). Keys: list_material_nodes settings. One graph undo step.',
       inputSchema: McpSchema.object({
         'asset': McpSchema.string(assetArg),

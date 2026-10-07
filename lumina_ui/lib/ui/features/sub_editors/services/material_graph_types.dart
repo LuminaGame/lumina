@@ -2,6 +2,7 @@ import 'package:flutter_filament/flutter_filament.dart' show FilamatShading;
 import 'package:lumina_editor_data/lumina_editor.dart' show LuminaBlueprintGraph, LuminaBlueprintNode;
 
 import 'package:lumina_ui/ui/features/sub_editors/models/material_graph.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/material_logic_nodes.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/material_vertex_variables.dart';
 
 /// A problem the type checker found on a node (or one of its inputs), worded
@@ -50,7 +51,8 @@ class MaterialGraphAnalysis {
 }
 
 /// Infers every pin's type (float1–float4 with implicit scalar
-/// broadcast, or a texture) and reports what cannot compile.
+/// broadcast, a texture, or a comparison's bool) and reports what cannot
+/// compile.
 class MaterialGraphChecker {
   final LuminaBlueprintGraph graph;
   final MaterialSurface surface;
@@ -102,7 +104,7 @@ class MaterialGraphChecker {
       if (!MaterialNodes.isVertexAvailable(n.registryId)) {
         final feeds = setters.where((s) => _feeds(n.id, s.id)).map((s) => "'${s.literals['name']}'").join(', ');
         _error(n, 'not available in the vertex stage (it feeds Set Vertex Variable $feeds); only constants, '
-            'parameters, TexCoord, VertexColor, Time, WorldPosition, math and Custom run per vertex');
+            'parameters, TexCoord, VertexColor, Time, WorldPosition, math, logic and Custom run per vertex');
       }
     }
     final output = graph.node(MaterialNodes.outputNodeId);
@@ -237,7 +239,48 @@ class MaterialGraphChecker {
       _error(node, '${pin.name} cannot take a Texture2D; sample it with a TextureSample', pinId: pin.id);
       return null;
     }
+    if (t == MaterialValueType.boolean && pin.type != MaterialValueType.boolean) {
+      _error(node, '${pin.name} cannot take a bool; pick a value with an If node', pinId: pin.id);
+      return null;
+    }
     return t;
+  }
+
+  /// A bool input of a logic node (an If's Condition, And / Or / Not).
+  void _requiredBool(LuminaBlueprintNode node, MaterialPinDef pin) {
+    final t = _in(node, pin);
+    if (t == null && graph.wireInto(node.id, pin.id) == null) {
+      _error(node, "missing input '${pin.name}'", pinId: pin.id);
+    } else if (t != null && t != MaterialValueType.boolean) {
+      _error(node, '${pin.name} expects bool, got ${t.label} (compare it with a Compare node)', pinId: pin.id);
+    }
+  }
+
+  /// Compare, And, Or, Not and If.
+  Map<String, MaterialValueType?> _logicTypes(LuminaBlueprintNode node, MaterialNodeSpec spec) {
+    if (node.registryId == MaterialLogicNodes.compare) {
+      for (final p in spec.inputs) {
+        final t = _required(node, p);
+        if (t != null && t != MaterialValueType.float1) _error(node, '${p.name} expects float, got ${t.label}', pinId: p.id);
+      }
+      final op = node.literals['op'];
+      if (op != null && !MaterialLogicNodes.operators.contains(op)) _error(node, "'$op' is not a comparison operator");
+      return {'out': MaterialValueType.boolean};
+    }
+    if (node.registryId != MaterialLogicNodes.ifNode) {
+      for (final p in spec.inputs) {
+        _requiredBool(node, p);
+      }
+      return {'out': MaterialValueType.boolean};
+    }
+    _requiredBool(node, _pin(spec, 'condition'));
+    final t = _required(node, _pin(spec, 'then'));
+    final f = _required(node, _pin(spec, 'else'));
+    if (t != null && f != null && t != f && t != MaterialValueType.float1 && f != MaterialValueType.float1) {
+      _error(node, 'Then and Else must be the same type (${t.label} vs ${f.label})', pinId: 'else');
+      return {'out': null};
+    }
+    return {'out': _broadcast(node, t, f, 'If')};
   }
 
   /// The arithmetic rule: equal types, or a float with anything.
@@ -387,6 +430,12 @@ class MaterialGraphChecker {
       case MaterialNodes.setVertexVariable:
         _required(node, _pin(spec, 'value'));
         return const {};
+      case MaterialLogicNodes.compare:
+      case MaterialLogicNodes.and:
+      case MaterialLogicNodes.or:
+      case MaterialLogicNodes.not:
+      case MaterialLogicNodes.ifNode:
+        return _logicTypes(node, spec);
       case MaterialNodes.custom:
         final outType = MaterialValueType.parse(node.literals['outputType'] as String?);
         if (outType == null) _error(node, "output type '${node.literals['outputType']}' is not float/float2/float3/float4");
@@ -400,6 +449,7 @@ class MaterialGraphChecker {
           } else {
             final t = _in(node, pin);
             if (t == MaterialValueType.texture) _error(node, "input '$name' cannot take a Texture2D", pinId: name);
+            if (t == MaterialValueType.boolean) _error(node, "input '$name' cannot take a bool", pinId: name);
           }
         }
         final code = node.literals['code'];

@@ -6,6 +6,7 @@ import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/testing.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/material_graph.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/material_logic_nodes.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/material_editor_view_model.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/material/material_sub_editor.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
@@ -195,6 +196,65 @@ void main() {
     expect(vm.currentCode, contains('material.uvTint = vec4(material.uv0, 0.0, 1.0);'));
     expect(vm.currentCode, contains('variable_uvTint.rgb'));
     expect(vm.currentCode, isNot(contains('variable_Var')));
+    expect(await tester.runAsync(vm.compile), isTrue, reason: vm.issues.map((i) => i.message).join('\n'));
+  });
+
+  testWidgets('the palette lists the Logic nodes, and changing Compare\'s operator on the node rewrites the code',
+      (tester) async {
+    if (!barrel.existsSync()) return markTestSkipped('test-assets missing');
+    final vm = await open(tester);
+    await tester.tap(find.byKey(const ValueKey('material_graph_add_node')));
+    await _settle(tester);
+    await tester.enterText(find.byKey(const ValueKey('palette_search')), 'condition');
+    await _settle(tester);
+    expect(find.text('LOGIC'), findsOneWidget);
+    for (final id in [
+      MaterialLogicNodes.compare,
+      MaterialLogicNodes.and,
+      MaterialLogicNodes.or,
+      MaterialLogicNodes.not,
+      MaterialLogicNodes.ifNode,
+    ]) {
+      expect(find.byKey(ValueKey('palette_entry_$id')), findsOneWidget, reason: id);
+    }
+    for (final title in ['Compare', 'And', 'Or', 'Not', 'If']) {
+      expect(find.text(title), findsOneWidget, reason: title);
+    }
+    await tester.tap(find.text('Cancel'));
+    await _settle(tester);
+
+    final cmp = await addFromPalette(tester, vm, MaterialLogicNodes.compare, search: 'compare');
+    final branch = await addFromPalette(tester, vm, MaterialLogicNodes.ifNode, search: 'ternary');
+    vm.graph.graph.node(branch)!.x -= 260;
+    final editor = vm.graph.editor;
+    expect(editor.addWire(fromNodeId: cmp, fromPinId: 'out', toNodeId: branch, toPinId: 'condition'), isNotNull);
+    expect(
+        editor.addWire(fromNodeId: branch, fromPinId: 'out', toNodeId: MaterialNodes.outputNodeId, toPinId: MaterialNodes.roughness),
+        isNotNull);
+    expect(editor.setLiteral(cmp, 'a', 0.75), isTrue);
+    await _settle(tester);
+    expect(vm.graph.analysis.hasErrors, isFalse, reason: '${vm.graph.analysis.diagnostics}');
+    expect(vm.currentCode, contains('material.roughness = ((0.75 >= 0.0) ? 1.0 : 0.0);'));
+    expect(find.text('Compare (A >= B)'), findsOneWidget);
+
+    // The operator select on the node.
+    await tester.tap(find.byKey(ValueKey('node_compare_op_$cmp')));
+    await _settle(tester);
+    await tester.tap(find.byKey(const ValueKey('node_compare_op_option_<')));
+    await _settle(tester);
+    expect(MaterialLogicNodes.operatorOf(vm.graph.graph.node(cmp)!), '<');
+    expect(vm.currentCode, contains('material.roughness = ((0.75 < 0.0) ? 1.0 : 0.0);'));
+    expect(find.text('Compare (A < B)'), findsOneWidget);
+
+    // The same select in the Details panel.
+    editor.clearSelection();
+    editor.select(cmp);
+    await _settle(tester);
+    await tester.tap(find.byKey(ValueKey('material_details_compare_op_$cmp')));
+    await _settle(tester);
+    await tester.tap(find.byKey(const ValueKey('material_details_compare_op_option_!=')));
+    await _settle(tester);
+    expect(vm.currentCode, contains('material.roughness = ((0.75 != 0.0) ? 1.0 : 0.0);'));
     expect(await tester.runAsync(vm.compile), isTrue, reason: vm.issues.map((i) => i.message).join('\n'));
   });
 

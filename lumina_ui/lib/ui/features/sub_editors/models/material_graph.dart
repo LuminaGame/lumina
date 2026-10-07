@@ -2,20 +2,23 @@ import 'package:flutter_filament/flutter_filament.dart' show BlendingMode, Filam
 import 'package:lumina_editor_data/lumina_editor.dart'
     show LuminaBlueprintGraph, LuminaBlueprintNode, LuminaBlueprintWire;
 import 'package:lumina_ui/ui/features/sub_editors/models/material_fragment_pins.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/material_logic_nodes.dart';
 
 /// The value a material expression pin carries: a float vector of one to four
-/// components, or a texture object.
+/// components, a texture object, or a bool (a comparison's result, which only
+/// logic nodes and an If's Condition take).
 enum MaterialValueType {
   float1(1),
   float2(2),
   float3(3),
   float4(4),
-  texture(0);
+  texture(0),
+  boolean(0);
 
   final int width;
   const MaterialValueType(this.width);
 
-  bool get isNumeric => this != texture;
+  bool get isNumeric => this != texture && this != boolean;
 
   /// The type's name, as compiler messages use it.
   String get label => switch (this) {
@@ -24,6 +27,7 @@ enum MaterialValueType {
         float3 => 'float3',
         float4 => 'float4',
         texture => 'Texture2D',
+        boolean => 'bool',
       };
 
   /// The GLSL type a local of this type is declared with.
@@ -33,6 +37,7 @@ enum MaterialValueType {
         float3 => 'vec3',
         float4 => 'vec4',
         texture => 'sampler2D',
+        boolean => 'bool',
       };
 
   static MaterialValueType ofWidth(int width) => switch (width) {
@@ -528,6 +533,7 @@ abstract final class MaterialNodes {
       defaults: {'code': ''},
       tooltip: 'Hand-written fragment code the graph cannot express, kept verbatim.',
     ),
+    ...MaterialLogicNodes.specs,
   ];
 
   static final Map<String, MaterialNodeSpec> _byId = {for (final s in all) s.id: s};
@@ -624,7 +630,7 @@ abstract final class MaterialNodes {
       case worldPosition:
         return l['space'] == cameraRelativeSpace ? 'WorldPosition (Camera-relative)' : 'WorldPosition';
       default:
-        return spec(node.registryId)?.title ?? node.registryId;
+        return MaterialLogicNodes.titleOf(node) ?? spec(node.registryId)?.title ?? node.registryId;
     }
   }
 

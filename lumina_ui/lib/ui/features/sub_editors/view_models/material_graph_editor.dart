@@ -1,12 +1,15 @@
 import 'dart:ui' show Color, Offset;
 
 import 'package:flutter/widgets.dart' show BuildContext, Widget, ValueKey, Padding, EdgeInsets;
+import 'package:shadcn_flutter/shadcn_flutter.dart'
+    show Select, SelectItemButton, SelectItemList, SelectPopup, Text, TextStyle;
 
 import 'package:lumina_editor_data/lumina_editor.dart';
 
 import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_palette.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/material_fragment_pins.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/material_graph.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/material_logic_nodes.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/material_vertex_variables.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/material_graph_parser.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/material_graph_types.dart';
@@ -53,12 +56,16 @@ class MaterialGraphEditor extends BlueprintGraphEditor {
   static const double textureBodyHeight = MaterialGraphLayout.textureBodyHeight;
 
   @override
-  double nodeBodyHeight(LuminaBlueprintNode node) => samplerOf(node) == null ? 0 : textureBodyHeight;
+  double nodeBodyHeight(LuminaBlueprintNode node) {
+    if (node.registryId == MaterialLogicNodes.compare) return MaterialLogicNodes.compareBodyHeight;
+    return samplerOf(node) == null ? 0 : textureBodyHeight;
+  }
 
   /// The Texture Sample node: the bound texture's thumbnail and name;
-  /// a click opens the searchable picker.
+  /// a click opens the searchable picker. The Compare node: its operator.
   @override
   Widget? nodeBody(BuildContext context, LuminaBlueprintNode node) {
+    if (node.registryId == MaterialLogicNodes.compare) return _compareBody(node);
     final parameter = samplerOf(node);
     if (parameter == null) return null;
     final bound = textureFor(parameter);
@@ -78,12 +85,41 @@ class MaterialGraphEditor extends BlueprintGraphEditor {
     );
   }
 
+  /// The operator select on a Compare node (also in its Details).
+  Widget _compareBody(LuminaBlueprintNode node) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        child: compareOperatorSelect(
+          node,
+          keyPrefix: 'node_compare_op',
+          onChanged: (op) => setProperty(node.id, 'op', op),
+        ),
+      );
+
+  /// A select over Compare's operators, `A >= B` style.
+  static Widget compareOperatorSelect(LuminaBlueprintNode node,
+          {required String keyPrefix, required void Function(String op) onChanged}) =>
+      Select<String>(
+        key: ValueKey('${keyPrefix}_${node.id}'),
+        value: MaterialLogicNodes.operatorOf(node),
+        itemBuilder: (context, v) => Text('A $v B', style: const TextStyle(fontSize: 10)),
+        onChanged: (v) {
+          if (v != null) onChanged(v);
+        },
+        popup: SelectPopup(
+          items: SelectItemList(children: [
+            for (final op in MaterialLogicNodes.operators)
+              SelectItemButton(key: ValueKey('${keyPrefix}_option_$op'), value: op, child: Text('A $op B')),
+          ]),
+        ).call,
+      );
+
   /// The Blueprint pin type the canvas uses to pick an inline editor.
   static LuminaPinType displayType(MaterialValueType? t) => switch (t) {
         MaterialValueType.float2 => LuminaPinType.vector2D,
         MaterialValueType.float3 => LuminaPinType.vector,
         MaterialValueType.float4 => LuminaPinType.structEnum,
         MaterialValueType.texture => LuminaPinType.object,
+        MaterialValueType.boolean => LuminaPinType.boolean,
         _ => LuminaPinType.float,
       };
 
@@ -95,6 +131,7 @@ class MaterialGraphEditor extends BlueprintGraphEditor {
         MaterialValueType.float3 => EditorColors.materialPinFloat3,
         MaterialValueType.float4 => EditorColors.materialPinFloat4,
         MaterialValueType.texture => EditorColors.materialPinTexture,
+        MaterialValueType.boolean => EditorColors.pinBoolean,
         null => EditorColors.materialPinUnknown,
       };
 
@@ -157,24 +194,35 @@ class MaterialGraphEditor extends BlueprintGraphEditor {
 
   @override
   List<BlueprintPaletteEntry> compatibleEntries(List<BlueprintPaletteEntry> entries, BlueprintPinRef from) {
-    final texture = from.type == LuminaPinType.object;
+    final kind = _kindOfPin(from.type);
     return [
       for (final e in entries)
-        if (_compatiblePin(e.registryId, texture: texture, wantInput: from.isOutput) != null) e,
+        if (_compatiblePin(e.registryId, kind: kind, wantInput: from.isOutput) != null) e,
     ];
   }
 
-  /// The pin of a new [registryId] node that joins a wire carrying a texture
-  /// (or a number): an input when the wire comes from an output.
-  static String? _compatiblePin(String registryId, {required bool texture, required bool wantInput}) {
+  /// What a wire carries: a texture, a bool or a number.
+  static MaterialValueType? _kindOfPin(LuminaPinType type) => switch (type) {
+        LuminaPinType.object => MaterialValueType.texture,
+        LuminaPinType.boolean => MaterialValueType.boolean,
+        _ => null,
+      };
+
+  static MaterialValueType? _kindOf(MaterialValueType? t) =>
+      t == MaterialValueType.texture || t == MaterialValueType.boolean ? t : null;
+
+  /// The pin of a new [registryId] node that joins a wire carrying a texture,
+  /// a bool or (null [kind]) a number: an input when the wire comes from an
+  /// output.
+  static String? _compatiblePin(String registryId, {required MaterialValueType? kind, required bool wantInput}) {
     final spec = MaterialNodes.spec(registryId);
     if (spec == null) return null;
     final pins = wantInput ? spec.inputs : spec.outputs;
     for (final p in pins) {
-      if ((p.type == MaterialValueType.texture) == texture) return p.id;
+      if (_kindOf(p.type) == kind) return p.id;
     }
     // A Custom node's inputs are named per node; a new one gets 'In'.
-    if (wantInput && !texture && registryId == MaterialNodes.custom) return 'In';
+    if (wantInput && kind == null && registryId == MaterialNodes.custom) return 'In';
     return null;
   }
 
@@ -342,8 +390,7 @@ class MaterialGraphEditor extends BlueprintGraphEditor {
       final n = _create(entry.registryId, position, entry.literals.isEmpty ? null : entry.literals);
       graph.nodes.add(n);
       if (from != null) {
-        final texture = from.type == LuminaPinType.object;
-        final pin = _compatiblePin(entry.registryId, texture: texture, wantInput: from.isOutput);
+        final pin = _compatiblePin(entry.registryId, kind: _kindOfPin(from.type), wantInput: from.isOutput);
         if (pin != null) {
           if (from.isOutput) {
             if (whyNotConnect(from.nodeId, from.pinId, n.id, pin) == null) _wire(from.nodeId, from.pinId, n.id, pin);
@@ -374,6 +421,7 @@ class MaterialGraphEditor extends BlueprintGraphEditor {
       'name' when isVariable => 'Rename variable',
       'name' || 'parameter' => 'Rename parameter',
       'space' => 'Edit WorldPosition space',
+      'op' => 'Edit Compare operator',
       'code' => 'Edit Custom code',
       _ => 'Edit $key',
     };

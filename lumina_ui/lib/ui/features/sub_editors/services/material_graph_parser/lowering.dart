@@ -4,33 +4,6 @@ part of '../material_graph_parser.dart';
 // Lowering into nodes
 // ---------------------------------------------------------------------------
 
-/// A value during lowering: a node output, or a literal not yet given a node.
-class _Val {
-  final String? nodeId;
-  final String? pinId;
-  final List<double>? literal;
-  final MaterialValueType type;
-
-  /// `vec3(x)` of a float: the float, which every consumer broadcasts.
-  final int? broadcastTo;
-
-  const _Val.node(this.nodeId, this.pinId, this.type, {this.broadcastTo}) : literal = null;
-  _Val.lit(List<double> values, {this.broadcastTo})
-      : literal = values,
-        nodeId = null,
-        pinId = null,
-        type = MaterialValueType.ofWidth(values.length);
-
-  bool get isLiteral => literal != null;
-  bool get isScalarLiteral => literal != null && literal!.length == 1;
-
-  /// Width as a `vecN(...)` argument sees it.
-  int get argWidth => broadcastTo ?? type.width;
-
-  _Val withBroadcast(int n) =>
-      isLiteral ? _Val.lit(literal!, broadcastTo: n) : _Val.node(nodeId, pinId, type, broadcastTo: n);
-}
-
 class _Helper {
   final String name;
   final String returnType;
@@ -101,11 +74,12 @@ const _fieldDefaults = <String, List<double>>{
   'normal': [0, 0, 1],
 };
 
-class _Lowering {
+class _Lowering with _ControlFlow {
   final MatSource src;
   final LuminaBlueprintGraph graph;
   int _ids = 0;
 
+  @override
   final Map<String, _Val> _locals = {};
   final Map<String, _Val> _fields = {};
   final Map<String, String> _paramNodes = {};
@@ -119,6 +93,7 @@ class _Lowering {
 
   String _newId() => 'n${++_ids}';
 
+  @override
   LuminaBlueprintNode _add(String kind, [Map<String, dynamic>? literals]) {
     final node = MaterialNodes.create(kind, id: _newId(), literals: literals);
     graph.nodes.add(node);
@@ -231,7 +206,7 @@ class _Lowering {
       return const {};
     } finally {
       _vertex = false;
-      _locals.clear();
+      _resetLocals();
       _helpers.clear();
       _calledHelpers.clear();
       _vertexWrites.clear();
@@ -325,17 +300,18 @@ class _Lowering {
     if (!_prepared) throw _Unsupported('material() never calls prepareMaterial(material)');
   }
 
-  static const _types = {'float': 1, 'vec2': 2, 'vec3': 3, 'vec4': 4};
-
+  @override
   void _statement(_Parser p) {
     final first = p.next();
     if (!first.isIdent) throw _Unsupported("unexpected '${first.text}' in material()");
     final word = first.text;
-    if (const {'if', 'for', 'while', 'do', 'return', 'switch', 'discard', 'else', 'break', 'continue'}.contains(word)) {
+    if (word == 'if') return _ifChain(p);
+    if (const {'for', 'while', 'do', 'return', 'switch', 'discard', 'else', 'break', 'continue'}.contains(word)) {
       throw _Unsupported("'$word' statements have no material node");
     }
     if (word == 'prepareMaterial') {
       if (_vertex) throw _Unsupported('prepareMaterial belongs in the fragment');
+      if (_branchDepth > 0) throw _Unsupported('an if branch calls prepareMaterial');
       p.expect('(');
       final arg = p.next();
       if (arg.text != 'material') throw _Unsupported('prepareMaterial takes material');
@@ -350,19 +326,7 @@ class _Lowering {
       typeWord = p.next().text;
       if (const {'highp', 'mediump', 'lowp'}.contains(typeWord)) typeWord = p.next().text;
     }
-    if (_types.containsKey(typeWord)) {
-      final name = p.next();
-      if (!name.isIdent) throw _Unsupported('expected a variable name');
-      if (p.peek != '=') throw _Unsupported('a declaration without a value has no material node');
-      p.next();
-      final value = _lower(p.expr());
-      p.expect(';');
-      if (value.argWidth != _types[typeWord]) {
-        throw _Unsupported('$typeWord ${name.text} is given a ${value.type.label}');
-      }
-      _locals[name.text] = _bindLocal(name.text, value);
-      return;
-    }
+    if (_localTypes.containsKey(typeWord)) return _declaration(p, typeWord);
     // An assignment: local, material field, or baseColor.a / baseColor.rgb.
     final path = <String>[word];
     while (p.peek == '.') {
@@ -373,14 +337,9 @@ class _Lowering {
     if (!const {'=', '+=', '-=', '*=', '/='}.contains(op)) throw _Unsupported("unexpected '$op' after ${path.join('.')}");
     final rhs = p.expr();
     p.expect(';');
-    if (path.length == 1) {
-      final current = _locals[word];
-      if (current == null) throw _Unsupported("'$word' is not declared");
-      final value = op == '=' ? _lower(rhs) : _arith(op.substring(0, 1), current, _lower(rhs));
-      _locals[word] = value;
-      return;
-    }
+    if (path.length == 1) return _assignLocal(word, op, rhs);
     if (path.first != 'material') throw _Unsupported('only material fields and locals can be assigned');
+    if (_branchDepth > 0) throw _Unsupported('an if branch writes ${path.join('.')}; only branches that assign locals become If nodes');
     if (_vertex) {
       _assignVariable(path.sublist(1), op, rhs);
       return;
@@ -427,6 +386,7 @@ class _Lowering {
 
   /// A literal bound to a local becomes a Constant node named after it, so a
   /// generated `float k = 2.0;` reads back as the Constant it came from.
+  @override
   _Val _bindLocal(String name, _Val value) {
     if (value.isLiteral && value.broadcastTo == null) {
       final node = _constantNode(value.literal!);
@@ -521,12 +481,14 @@ class _Lowering {
           callee == 'lumina_fresnel' || callee.startsWith('getWorld') || args.any(_readsShading),
         _Mem(:final target) => _readsShading(target),
         _Bin(:final a, :final b) => _readsShading(a) || _readsShading(b),
-        _Neg(:final e) => _readsShading(e),
+        _Neg(:final e) || _Not(:final e) => _readsShading(e),
+        _Cond(:final c, :final t, :final f) => _readsShading(c) || _readsShading(t) || _readsShading(f),
         _Num() || _ValExpr() => false,
       };
 
   // -- Expressions --------------------------------------------------------
 
+  @override
   _Val _lower(_E e) {
     switch (e) {
       case _Num(:final value):
@@ -542,7 +504,9 @@ class _Lowering {
         }
         final known = (_vertex ? _vertexKnownValues : _knownValues)[name];
         if (known != null) return _customExpr('return $name;', const [], known);
-        throw _Unsupported("'$name' is not declared");
+        throw _undeclared(name);
+      case _Bin(:final op, :final a, :final b) when _logicOps.contains(op):
+        return _logicBin(op, a, b);
       case _Bin(:final op, :final a, :final b):
         if (op == '-' && a is _Num && a.value == 1.0 && b is! _Num) {
           final v = _lower(b);
@@ -571,6 +535,8 @@ class _Lowering {
         return _call(e);
       case _ValExpr(:final value):
         return value;
+      case _Cond() || _Not():
+        return _logic(e);
     }
   }
 
@@ -578,7 +544,9 @@ class _Lowering {
 
   /// Connects [v] to [node].[pin]: a float literal stays an inline constant
   /// where the pin has one, anything else is wired.
+  @override
   void _input(LuminaBlueprintNode node, String pin, _Val v, {bool inline = true}) {
+    _checkBoolPin(node, pin, v);
     if (inline && v.isScalarLiteral) {
       final def = MaterialNodes.inputsOf(node).where((p) => p.id == pin).firstOrNull;
       if (def?.defaultValue is num && (def!.defaultValue as num).toDouble() == v.literal!.single) {
@@ -609,14 +577,17 @@ class _Lowering {
     return _add(kind, {'value': values.length == 1 ? values.single : List<double>.of(values)});
   }
 
+  @override
   MaterialValueType _broadcastType(_Val a, _Val b) {
     final ta = a.type, tb = b.type;
+    if (ta == MaterialValueType.boolean || tb == MaterialValueType.boolean) throw _Unsupported('a bool in float math');
     if (ta == tb) return ta;
     if (ta == MaterialValueType.float1) return b.broadcastTo != null ? MaterialValueType.ofWidth(b.broadcastTo!) : tb;
     if (tb == MaterialValueType.float1) return ta;
     throw _Unsupported('arithmetic between ${ta.label} and ${tb.label}');
   }
 
+  @override
   _Val _arith(String op, _Val a, _Val b) {
     final kind = switch (op) {
       '+' => MaterialNodes.add,
@@ -1054,10 +1025,4 @@ class _Lowering {
       _wire(source.nodeId!, source.pinId!, MaterialNodes.outputNodeId, e.value);
     }
   }
-}
-
-/// A lowered value handed back to [_Lowering._member] as if it were syntax.
-class _ValExpr extends _E {
-  final _Val value;
-  _ValExpr(this.value);
 }

@@ -507,6 +507,33 @@ void main() {
       await ok('undo', {'asset': mat, 'stack': 'graph'});
       expect(((await ok('get_material_graph', {'asset': mat}))['sync'] as Map)['ahead'], isFalse);
     });
+
+    test('the Logic nodes are listed and creatable: a Compare picks a roughness through an If, and compiles', () async {
+      Future<String> add(String node, double x, double y, [Map<String, Object?>? settings]) async =>
+          ((await ok('add_material_node', {'asset': mat, 'node': node, 'x': x, 'y': y, 'settings': ?settings}))['node']
+              as Map)['id'] as String;
+      Future<Map<String, Object?>> connect(String from, String fromPin, String to, String toPin) => ok(
+          'connect_material_pins', {'asset': mat, 'from_node': from, 'from_pin': fromPin, 'to_node': to, 'to_pin': toPin});
+
+      final listed = ((await ok('list_material_nodes', {'category': 'Logic'}))['nodes'] as List).cast<Map>();
+      expect(listed.map((n) => n['id']), ['mat_compare', 'mat_and', 'mat_or', 'mat_not', 'mat_if']);
+      final compareSpec = listed.firstWhere((n) => n['id'] == 'mat_compare');
+      expect((compareSpec['outputs'] as List).cast<Map>().single['type'], 'bool');
+      expect(compareSpec['settings'], {'op': '>='});
+
+      final time = await add('mat_time', -700, 300);
+      final cmp = await add('mat_compare', -500, 300, {'b': 2.0});
+      final pick = await add('mat_if', -300, 300, {'then': 0.2, 'else': 0.8});
+      await connect(time, 'out', cmp, 'a');
+      await connect(cmp, 'out', pick, 'condition');
+      final wired = await connect(pick, 'out', 'material_output', 'roughness');
+      expect((wired['sync'] as Map)['ahead'], isFalse, reason: '${wired['diagnostics']}');
+      await ok('set_material_node_setting', {'asset': mat, 'node': cmp, 'key': 'op', 'value': '<'});
+      final source = (await ok('get_material_source', {'asset': mat}))['source'] as String;
+      expect(source, contains('material.roughness = ((getUserTime().x < 2.0) ? 0.2 : 0.8);'));
+      final compiled = await client.callTool('compile_material', {'asset': mat});
+      expect(compiled.data['ok'], isTrue, reason: compiled.text);
+    });
   });
 
   group('asset_editor_screenshot', () {

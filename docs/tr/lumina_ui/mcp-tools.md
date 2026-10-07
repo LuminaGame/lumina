@@ -593,6 +593,8 @@ The Material editor's node graph as MCP tools: the expression catalog, the graph
 
 Vertex → fragment interpolant'ları: `mat_set_vertex_variable` (Vertex kategorisi, `name` ayarı) `value` girdisini vertex başına bir kez hesaplar; codegen bunu `.mat` `vertex` bloğu ve bir `variables` girdisi olarak yazar. `mat_vertex_variable` değeri fragment'ta okur (RGBA çıkışları). `mat_world_position` (`space` ayarı: `absolute` / `camera_relative`) geometrinin konumunu iki aşamada da verir. Bir setter'ı yalnızca sabitler, parametreler, TexCoord, VertexColor, Time, WorldPosition, matematik ve Custom besleyebilir; bir materyalde en çok 5 değişken olur (vertex rengi okunuyorsa 4). `get_material_graph`, `variables[{name, set_by, read_by}]` ve `vertex_block` (`graph`, `vertex_block_reason` ile `hand_written` ya da `none`) döndürür.
 
+Mantık (Logic kategorisi): `mat_compare` (`a`, `b` float girişleri; `op` ayarı: `>`, `>=`, `<`, `<=`, `==`, `!=`) bir `bool` üretir; `mat_and` / `mat_or` (`a`, `b`) ve `mat_not` (`a`) bool'ları birleştirir; `mat_if` (`condition` bool, aynı sayısal türde `then`, `else`; çıkış Result) koşul sağlandığında Then'i, aksi halde Else'i seçer ve `(c ? t : f)` olarak yazılır. Yalnızca yerel değişkenlere atama yapan elle yazılmış bir `if` / `else if` / `else` zinciri bu düğümler olarak geri okunur; başka herhangi bir pine bağlanan bool bir tanılamadır.
+
 **Araçlar:**
 
 | Araç | Risk | Başlık | Açıklama |

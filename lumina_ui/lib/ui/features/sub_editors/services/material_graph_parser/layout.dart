@@ -14,7 +14,7 @@ abstract final class MaterialGraphLayout {
     final rows = math.max(MaterialNodes.inputsOf(n).length, MaterialNodes.outputsOf(n).length);
     final body = n.registryId == MaterialNodes.textureSample || n.registryId == MaterialNodes.textureParameter
         ? textureBodyHeight
-        : 0.0;
+        : (n.registryId == MaterialLogicNodes.compare ? MaterialLogicNodes.compareBodyHeight : 0.0);
     return 26 + 6 + body + rows * 26 + 8 + 10;
   }
 

@@ -15,6 +15,7 @@ The Material editor: editing material source, compiling the whole `.mat` definit
 - [`lib/ui/features/sub_editors/view_models/material_editor_view_model.dart`](#libuifeaturessub_editorsview_modelsmaterial_editor_view_modeldart)
 - [`lib/ui/features/sub_editors/services/material_preview_renderer.dart`](#libuifeaturessub_editorsservicesmaterial_preview_rendererdart)
 - [`lib/ui/features/sub_editors/models/material_graph.dart`](#libuifeaturessub_editorsmodelsmaterial_graphdart)
+- [`lib/ui/features/sub_editors/models/material_logic_nodes.dart`](#libuifeaturessub_editorsmodelsmaterial_logic_nodesdart)
 - [`lib/ui/features/sub_editors/models/material_fragment_pins.dart`](#libuifeaturessub_editorsmodelsmaterial_fragment_pinsdart)
 - [`lib/ui/features/sub_editors/models/material_vertex_variables.dart`](#libuifeaturessub_editorsmodelsmaterial_vertex_variablesdart)
 - [`lib/ui/features/sub_editors/models/material_slot_binding.dart`](#libuifeaturessub_editorsmodelsmaterial_slot_bindingdart)
@@ -323,7 +324,7 @@ Owns the Filament objects that show a compiled `.filamat` package on a procedura
 
 ### `enum MaterialValueType`
 
-The value a material expression pin carries: a float vector of one to four components, or a texture object.
+The value a material expression pin carries: a float vector of one to four components, a texture object, or a `bool` (`boolean`: a comparison's result, which only logic nodes and an If's Condition take; width 0, never broadcast or mixed with floats).
 
 **Values:**
 
@@ -332,6 +333,7 @@ The value a material expression pin carries: a float vector of one to four compo
 - `float3`
 - `float4`
 - `texture`
+- `boolean`
 
 **Constructors:**
 
@@ -474,6 +476,37 @@ The material expression catalog and the helpers that read a node's settings. A m
 | `create` | `static LuminaBlueprintNode create(String registryId, {required String id, double x = 0, double y = 0, Map<Stri...` | A new node of [registryId] with its default settings. |
 | `ensureOutput` | `static LuminaBlueprintNode ensureOutput(LuminaBlueprintGraph graph, {String? materialName})` | The Material output node of [graph], created at [x]/[y] if missing. |
 | `wireInto` | `static LuminaBlueprintWire? wireInto(LuminaBlueprintGraph graph, String nodeId, String pinId)` | The wire into input [pinId] of [nodeId], if any. |
+
+## `lib/ui/features/sub_editors/models/material_logic_nodes.dart`
+
+### `abstract final class MaterialLogicNodes`
+
+The material graph's logic expressions (palette category **Logic**): Compare, And, Or, Not and If. A comparison yields a `bool` ([MaterialValueType.boolean]); bools feed only And / Or / Not and an If's Condition, never float math (a node that needs 0/1 takes `If(c, 1.0, 0.0)`). If is written as the GLSL conditional `(c ? t : f)`, so both values are evaluated: fine for pure expressions and texture samples. All five are vertex-available.
+
+| Node | Id | Inputs | Output | Settings / code |
+| :--- | :--- | :--- | :--- | :--- |
+| Compare | `mat_compare` | A, B (float, inline constants) | bool | `op`: `>`, `>=` (default), `<`, `<=`, `==`, `!=`; a select on the node and in the Details. `(a >= b)` |
+| And / Or | `mat_and` / `mat_or` | A, B (bool) | bool | `(a && b)` / `(a \|\| b)` |
+| Not | `mat_not` | A (bool) | bool | `(!a)` |
+| If | `mat_if` | Condition (bool), Then, Else (ids `condition`, `then`, `else`; the same numeric type; a float broadcasts; inline constants 1.0 / 0.0) | Result (`out`), that type | Picks Then where Condition holds, else Else; both are evaluated. `(c ? t : f)` |
+
+**Members:**
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `compare` | `static const String compare` | `mat_compare`. |
+| `and` | `static const String and` | `mat_and`. |
+| `or` | `static const String or` | `mat_or`. |
+| `not` | `static const String not` | `mat_not`. |
+| `ifNode` | `static const String ifNode` | `mat_if`. |
+| `category` | `static const String category` | `Logic`. |
+| `operators` | `static const List<String> operators` | Compare's operators, in the order the editor lists them. |
+| `defaultOperator` | `static const String defaultOperator` | `>=`. |
+| `compareBodyHeight` | `static const double compareBodyHeight` | Height of the operator select a Compare node draws under its header. |
+| `specs` | `static const List<MaterialNodeSpec> specs` | The five node specs, spread into [MaterialNodes.all]. |
+| `isLogic` | `static bool isLogic(String registryId)` |  |
+| `operatorOf` | `static String operatorOf(LuminaBlueprintNode node)` | A Compare node's operator (`>=` when unset or unknown). |
+| `titleOf` | `static String? titleOf(LuminaBlueprintNode node)` | The canvas title of a logic node: a Compare shows its operator (`Compare (A >= B)`). |
 
 ## `lib/ui/features/sub_editors/models/material_fragment_pins.dart`
 
@@ -770,7 +803,7 @@ A custom interpolant the header's `variables` declares: `tint`, or `{ name : tin
 
 Writes a material graph as `.mat` source.
 
-The `material` header is the current source's, with `parameters`, `requires` and `variables` rewritten from the graph (every other key kept as written; a source without a header gets one declaring `flipUV : false`, as the new-material template does); blocks other than `vertex` and `fragment` are kept as written. The fragment is the graph: expressions inline, a local for every value used more than once (or named in the source it was parsed from), what feeds Normal before `prepareMaterial(material)`, everything else after it. A Custom (Fragment) node replaces the generated fragment with its code, verbatim.
+The `material` header is the current source's, with `parameters`, `requires` and `variables` rewritten from the graph (every other key kept as written; a source without a header gets one declaring `flipUV : false`, as the new-material template does); blocks other than `vertex` and `fragment` are kept as written. The fragment is the graph: expressions inline, a local for every value used more than once (or named in the source it was parsed from), what feeds Normal before `prepareMaterial(material)`, everything else after it. Logic nodes are expressions too: Compare `(a >= b)`, And / Or / Not `(a && b)`, `(a || b)`, `(!a)`, If the conditional `(c ? t : f)` (a float input of a wider If is cast, `vec3(x)`); the generator never writes an `if` statement or a declaration without a value. A Custom (Fragment) node replaces the generated fragment with its code, verbatim.
 
 The `vertex` block is the Set Vertex Variable nodes: each writes its interpolant (`material.<name> = …`, widened to `vec4`: `vec4(x)`, `vec4(xy, 0.0, 1.0)`, `vec4(xyz, 1.0)`) from the expressions upstream of it, evaluated per vertex with the vertex stage's reads (`material.uv0`, `material.color`, `material.worldPosition`). With no such node a hand-written vertex block stays as written; one the graph wrote goes away with its last setter.
 
@@ -803,9 +836,9 @@ What [MaterialGraphParser.parse] made of a `.mat` source.
 
 Reads a `.mat` source into a material graph.
 
-The fragment's `material()` body is parsed statement by statement into expressions; the generator's own output parses back into the graph it came from. A call the catalog has no node for becomes a Custom expression node holding its GLSL; anything that cannot be expressed statement by statement (control flow, unknown fields or declarations) makes the whole fragment one Custom (Fragment) node, kept verbatim, whose pins and wires show its code's flow (the parameters it reads wired in, the fields it writes wired into the Material node; see [MaterialFragmentPins]). Header parameters always become parameter nodes, so a graph edit never drops a declaration.
+The fragment's `material()` body is parsed statement by statement into expressions; the generator's own output parses back into the graph it came from. A call the catalog has no node for becomes a Custom expression node holding its GLSL (`abs(…)`, `getWorldGeometricNormalVector()` and the other Filament getters included). Comparisons (`>`, `>=`, `<`, `<=`, `==`, `!=`), `&&`, `||`, `!` and `?:` (lowest precedence, right associative) become logic nodes. An `if (c) { … } else if (c2) { … } else { … }` chain (braces or single statements, nested ifs inside a branch too) whose branches only assign (`=`, `+=`, `-=`, `*=`, `/=`) locals declared before it becomes, per assigned local, `If(c, v1, If(c2, v2, … v_else))`; a branch that does not assign it keeps the value from before the `if`. A declaration without a value (`vec2 finalUV;`) is accepted; reading it before every path assigned it falls back ("finalUV may be read unassigned"). A branch that writes `material.*`, calls `prepareMaterial` or declares a local read after it, a loop, and anything else that cannot be expressed statement by statement (unknown fields or declarations) makes the whole fragment one Custom (Fragment) node, kept verbatim, with a reason naming what, whose pins and wires show its code's flow (the parameters it reads wired in, the fields it writes wired into the Material node; see [MaterialFragmentPins]). Header parameters always become parameter nodes, so a graph edit never drops a declaration.
 
-The header's `variables` and the `vertex` block are read too: `material.<variable> = …` in `materialVertex()` becomes a Set Vertex Variable node (the codegen's `vec4` widening reads back as the unwidened value), `variable_<name>` in the fragment one Vertex Variable node per name, `getUserWorldPosition()` / `getWorldPosition()` (and their vertex-block forms) a WorldPosition. A Time, VertexColor, TexCoord, WorldPosition or parameter used by both stages is one node. A vertex block that writes anything else (moves vertices, writes `material.color`) or uses control flow is kept as written (`notes` says why) and its declared variables stay readable.
+The header's `variables` and the `vertex` block are read too: `material.<variable> = …` in `materialVertex()` becomes a Set Vertex Variable node (the codegen's `vec4` widening reads back as the unwidened value), `variable_<name>` in the fragment one Vertex Variable node per name, `getUserWorldPosition()` / `getWorldPosition()` (and their vertex-block forms) a WorldPosition. A Time, VertexColor, TexCoord, WorldPosition or parameter used by both stages is one node. A vertex block that writes anything else (moves vertices, writes `material.color`) or uses a loop is kept as written (`notes` says why) and its declared variables stay readable.
 
 **Members:**
 
@@ -870,7 +903,7 @@ The resolved types and diagnostics of one material graph.
 
 ### `class MaterialGraphChecker`
 
-Infers every pin's type (float1–float4 with implicit scalar broadcast, or a texture) and reports what cannot compile, including the vertex stage's rules: a fragment-only node (TextureSample, TextureParameter, Fresnel, Vertex Variable) feeding a Set Vertex Variable, an invalid or duplicate variable name, more variables than matc allows (5; 4 with the vertex colour), a Vertex Variable whose name nothing writes or declares, a setter while the source's vertex block is hand-written code the graph would overwrite, and a wire into the Material node next to a Custom (Fragment) node (that node writes the whole fragment, so such a wire would be ignored; the node's own wires, which only show its code's flow, are not reported).
+Infers every pin's type (float1–float4 with implicit scalar broadcast, a texture, or a comparison's bool) and reports what cannot compile, including the logic rules (an If's Condition and And / Or / Not's inputs take a bool, an If's Then and Else the same numeric type or a float, Compare's inputs a float, and a bool reaches no other pin: each an error on that pin), the vertex stage's rules: a fragment-only node (TextureSample, TextureParameter, Fresnel, Vertex Variable) feeding a Set Vertex Variable, an invalid or duplicate variable name, more variables than matc allows (5; 4 with the vertex colour), a Vertex Variable whose name nothing writes or declares, a setter while the source's vertex block is hand-written code the graph would overwrite, and a wire into the Material node next to a Custom (Fragment) node (that node writes the whole fragment, so such a wire would be ignored; the node's own wires, which only show its code's flow, are not reported).
 
 **Members:**
 
@@ -936,7 +969,7 @@ Graph and source are two views of one material. A graph edit is one undo step on
 
 ### `class MaterialGraphEditor`
 
-Edits a material graph through the shared Blueprint graph canvas: material expressions instead of lumina's Blueprint node library, float1–float4 and texture pins instead of Blueprint pin types, and the material wiring rule — a wire is refused only for a loop or a texture/number mix-up; any other mismatch is drawn red and reported by the type checker.
+Edits a material graph through the shared Blueprint graph canvas: material expressions instead of lumina's Blueprint node library, float1–float4, texture and bool pins (bool pins in the Blueprint boolean colour) instead of Blueprint pin types, and the material wiring rule — a wire is refused only for a loop or a texture/number mix-up; any other mismatch is drawn red and reported by the type checker.
 
 **Constructors:**
 
@@ -953,7 +986,8 @@ Edits a material graph through the shared Blueprint graph canvas: material expre
 | `bindTexture` | `final bool Function(String parameter, RealAssetInfo? asset) bindTexture` |  |
 | `samplerOf` | `String? samplerOf(LuminaBlueprintNode node)` | The `.mat` sampler a Texture Sample / TextureParameter node reads: its own parameter, or the TextureParameter wired into Tex. |
 | `textureBodyHeight` | `static const double textureBodyHeight` |  |
-| `nodeBody` | `Widget? nodeBody(BuildContext context, LuminaBlueprintNode node)` | The Texture Sample node: the bound texture's thumbnail and name; a click opens the searchable picker. |
+| `nodeBody` | `Widget? nodeBody(BuildContext context, LuminaBlueprintNode node)` | The Texture Sample node: the bound texture's thumbnail and name; a click opens the searchable picker. The Compare node: its operator select. |
+| `compareOperatorSelect` | `static Widget compareOperatorSelect(LuminaBlueprintNode node, {required String keyPrefix, required void Function(String op) onChanged})` | A select over Compare's operators (`A >= B` …), shared by the node and the Details panel. |
 | `displayType` | `static LuminaPinType displayType(MaterialValueType? t)` | The Blueprint pin type the canvas uses to pick an inline editor. |
 | `colorFor` | `static Color colorFor(MaterialValueType? t)` |  |
 | `typeOf` | `MaterialValueType? typeOf(String nodeId, String pinId, {required bool output})` | The resolved type of a pin: its fixed type, else what flows through it. |
@@ -992,7 +1026,7 @@ The Material Editor's Node Graph tab: the material as material expressions on th
 
 ### `class MaterialNodeDetailsPanel`
 
-The Details panel of the material graph: the selected expression's settings — constant values, parameter names and defaults, the texture a TextureSample reads, TexCoord tiling, mask channels, and a Custom node's inputs and GLSL. Every committed edit is one undo step.
+The Details panel of the material graph: the selected expression's settings — constant values, parameter names and defaults, the texture a TextureSample reads, TexCoord tiling, mask channels, a Compare's operator, and a Custom node's inputs and GLSL. Every committed edit is one undo step.
 
 **Constructors:**
 

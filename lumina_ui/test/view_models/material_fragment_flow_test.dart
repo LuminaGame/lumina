@@ -6,8 +6,9 @@ import 'package:lumina_ui/ui/features/sub_editors/services/material_graph_codege
 import 'package:lumina_ui/ui/features/sub_editors/services/material_graph_parser.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/material_graph_types.dart';
 
-/// A triplanar material whose `if`/`else` the graph cannot express: the
-/// fragment stays one verbatim node, but its flow is still drawn.
+/// A triplanar material with an `if` that writes a material field, which the
+/// graph cannot express: the fragment stays one verbatim node, but its flow is
+/// still drawn.
 const _triplanar = '''material {
     name : "Mobile_Optimized_PBR_Triplanar",
     shadingModel : lit,
@@ -38,7 +39,9 @@ fragment {
         float roughness = texture(materialParams_mapRoughness, finalUV).r;
         float ao = texture(materialParams_mapAO, finalUV).r;
         material.normal = normal * 2.0 - 1.0;
-        material.ambientOcclusion = ao;
+        if (ao < 0.99) {
+            material.ambientOcclusion = ao;
+        }
         prepareMaterial(material);
         material.baseColor = vec4(albedo, 1.0);
         material.roughness = roughness;
@@ -51,7 +54,8 @@ void main() {
 
   test('a verbatim fragment is wired from the parameters it reads to the fields it writes', () {
     final result = MaterialGraphParser.parse(_triplanar);
-    expect(result.isFallback, isTrue, reason: 'control flow keeps the fragment verbatim');
+    expect(result.isFallback, isTrue, reason: 'a branch writing a material field keeps the fragment verbatim');
+    expect(result.fallbackReason, contains('material.ambientOcclusion'));
     final g = result.graph;
     final fragment = g.nodes.singleWhere((n) => n.registryId == MaterialNodes.customFragment);
 

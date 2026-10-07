@@ -15,6 +15,7 @@ Materyal editörü: materyal kaynağını düzenleme, bütün `.mat` tanımını
 - [`lib/ui/features/sub_editors/view_models/material_editor_view_model.dart`](#libuifeaturessub_editorsview_modelsmaterial_editor_view_modeldart)
 - [`lib/ui/features/sub_editors/services/material_preview_renderer.dart`](#libuifeaturessub_editorsservicesmaterial_preview_rendererdart)
 - [`lib/ui/features/sub_editors/models/material_graph.dart`](#libuifeaturessub_editorsmodelsmaterial_graphdart)
+- [`lib/ui/features/sub_editors/models/material_logic_nodes.dart`](#libuifeaturessub_editorsmodelsmaterial_logic_nodesdart)
 - [`lib/ui/features/sub_editors/models/material_fragment_pins.dart`](#libuifeaturessub_editorsmodelsmaterial_fragment_pinsdart)
 - [`lib/ui/features/sub_editors/models/material_vertex_variables.dart`](#libuifeaturessub_editorsmodelsmaterial_vertex_variablesdart)
 - [`lib/ui/features/sub_editors/models/material_slot_binding.dart`](#libuifeaturessub_editorsmodelsmaterial_slot_bindingdart)
@@ -323,7 +324,7 @@ Owns the Filament objects that show a compiled `.filamat` package on a procedura
 
 ### `enum MaterialValueType`
 
-The value a material expression pin carries: a float vector of one to four components, or a texture object.
+Bir materyal ifadesi pininin taşıdığı değer: bir ile dört bileşenli bir float vektör, bir doku nesnesi ya da bir `bool` (`boolean`: bir karşılaştırmanın sonucu; yalnızca mantık düğümleri ve bir If'in Condition girişi alır; genişliği 0'dır, asla yayınlanmaz ve float'larla karışmaz).
 
 **Değerler:**
 
@@ -332,6 +333,7 @@ The value a material expression pin carries: a float vector of one to four compo
 - `float3`
 - `float4`
 - `texture`
+- `boolean`
 
 **Yapıcı Metotlar (Constructors):**
 
@@ -474,6 +476,37 @@ The material expression catalog and the helpers that read a node's settings. A m
 | `create` | `static LuminaBlueprintNode create(String registryId, {required String id, double x = 0, double y = 0, Map<Stri...` | A new node of [registryId] with its default settings. |
 | `ensureOutput` | `static LuminaBlueprintNode ensureOutput(LuminaBlueprintGraph graph, {String? materialName})` | The Material output node of [graph], created at [x]/[y] if missing. |
 | `wireInto` | `static LuminaBlueprintWire? wireInto(LuminaBlueprintGraph graph, String nodeId, String pinId)` | The wire into input [pinId] of [nodeId], if any. |
+
+## `lib/ui/features/sub_editors/models/material_logic_nodes.dart`
+
+### `abstract final class MaterialLogicNodes`
+
+Materyal grafiğinin mantık ifadeleri (palet kategorisi **Logic**): Compare, And, Or, Not ve If. Bir karşılaştırma `bool` üretir ([MaterialValueType.boolean]); bool'lar yalnızca And / Or / Not'u ve bir If'in Condition girişini besler, asla float matematiğine girmez (0/1 isteyen bir düğüm `If(c, 1.0, 0.0)` alır). If, GLSL koşul ifadesi `(c ? t : f)` olarak yazılır; bu yüzden iki değer de hesaplanır: saf ifadeler ve doku örneklemeleri için sorun değildir. Beşi de vertex aşamasında kullanılabilir.
+
+| Düğüm | Kimlik | Girişler | Çıkış | Ayarlar / kod |
+| :--- | :--- | :--- | :--- | :--- |
+| Compare | `mat_compare` | A, B (float, satır içi sabitler) | bool | `op`: `>`, `>=` (varsayılan), `<`, `<=`, `==`, `!=`; düğümün üzerinde ve Details panelinde bir seçim kutusu. `(a >= b)` |
+| And / Or | `mat_and` / `mat_or` | A, B (bool) | bool | `(a && b)` / `(a \|\| b)` |
+| Not | `mat_not` | A (bool) | bool | `(!a)` |
+| If | `mat_if` | Condition (bool), Then, Else (kimlikler `condition`, `then`, `else`; aynı sayısal tür; float yayınlanır; satır içi sabitler 1.0 / 0.0) | Result (`out`), o tür | Koşul sağlandığında Then'i, aksi halde Else'i seçer; ikisi de hesaplanır. `(c ? t : f)` |
+
+**Üyeler:**
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `compare` | `static const String compare` | `mat_compare`. |
+| `and` | `static const String and` | `mat_and`. |
+| `or` | `static const String or` | `mat_or`. |
+| `not` | `static const String not` | `mat_not`. |
+| `ifNode` | `static const String ifNode` | `mat_if`. |
+| `category` | `static const String category` | `Logic`. |
+| `operators` | `static const List<String> operators` | Compare'in operatörleri, editörün listelediği sırayla. |
+| `defaultOperator` | `static const String defaultOperator` | `>=`. |
+| `compareBodyHeight` | `static const double compareBodyHeight` | Bir Compare düğümünün başlığının altına çizdiği operatör seçim kutusunun yüksekliği. |
+| `specs` | `static const List<MaterialNodeSpec> specs` | Beş düğüm tanımı; [MaterialNodes.all] içine yayılır. |
+| `isLogic` | `static bool isLogic(String registryId)` |  |
+| `operatorOf` | `static String operatorOf(LuminaBlueprintNode node)` | Bir Compare düğümünün operatörü (ayarlanmamış ya da bilinmiyorsa `>=`). |
+| `titleOf` | `static String? titleOf(LuminaBlueprintNode node)` | Bir mantık düğümünün tuvaldeki başlığı: Compare operatörünü gösterir (`Compare (A >= B)`). |
 
 ## `lib/ui/features/sub_editors/models/material_fragment_pins.dart`
 
@@ -770,7 +803,7 @@ A custom interpolant the header's `variables` declares: `tint`, or `{ name : tin
 
 Writes a material graph as `.mat` source.
 
-The `material` header is the current source's, with `parameters`, `requires` and `variables` rewritten from the graph (every other key kept as written; a source without a header gets one declaring `flipUV : false`, as the new-material template does); blocks other than `vertex` and `fragment` are kept as written. The fragment is the graph: expressions inline, a local for every value used more than once (or named in the source it was parsed from), what feeds Normal before `prepareMaterial(material)`, everything else after it. A Custom (Fragment) node replaces the generated fragment with its code, verbatim.
+`material` başlığı mevcut kaynağınkidir; `parameters`, `requires` ve `variables` grafikten yeniden yazılır (diğer her anahtar yazıldığı gibi kalır; başlığı olmayan bir kaynak, yeni materyal şablonunun yaptığı gibi `flipUV : false` bildiren bir başlık alır); `vertex` ve `fragment` dışındaki bloklar yazıldığı gibi kalır. Fragment grafiğin kendisidir: ifadeler satır içi, birden çok kullanılan (ya da ayrıştırıldığı kaynakta adlandırılmış) her değer için bir yerel değişken, Normal'i besleyenler `prepareMaterial(material)`'dan önce, geri kalan her şey sonra. Mantık düğümleri de birer ifadedir: Compare `(a >= b)`, And / Or / Not `(a && b)`, `(a || b)`, `(!a)`, If ise koşul ifadesi `(c ? t : f)` (daha geniş bir If'in float girişi dönüştürülür, `vec3(x)`); üreteç hiçbir zaman `if` deyimi ya da değersiz bildirim yazmaz. Bir Custom (Fragment) düğümü, üretilen fragment'in yerine kodunu birebir koyar.
 
 The `vertex` block is the Set Vertex Variable nodes: each writes its interpolant (`material.<name> = …`, widened to `vec4`: `vec4(x)`, `vec4(xy, 0.0, 1.0)`, `vec4(xyz, 1.0)`) from the expressions upstream of it, evaluated per vertex with the vertex stage's reads (`material.uv0`, `material.color`, `material.worldPosition`). With no such node a hand-written vertex block stays as written; one the graph wrote goes away with its last setter.
 
@@ -803,9 +836,9 @@ What [MaterialGraphParser.parse] made of a `.mat` source.
 
 Reads a `.mat` source into a material graph.
 
-Fragment'in `material()` gövdesi deyim deyim ifadelere ayrıştırılır; üretecin kendi çıktısı geldiği grafiğe geri ayrışır. Katalogda düğümü olmayan bir çağrı, GLSL'ini tutan bir Custom ifade düğümü olur; deyim deyim ifade edilemeyen her şey (akış denetimi, bilinmeyen alanlar veya bildirimler) fragment'in tamamını birebir korunan tek bir Custom (Fragment) düğümü yapar; bu düğümün pinleri ve kabloları kodunun akışını gösterir (okuduğu parametreler içeri, yazdığı alanlar Material düğümüne kablolanır; bkz. [MaterialFragmentPins]). Başlık parametreleri her zaman parametre düğümü olur, böylece bir grafik düzenlemesi hiçbir bildirimi düşürmez.
+Fragment'in `material()` gövdesi deyim deyim ifadelere ayrıştırılır; üretecin kendi çıktısı geldiği grafiğe geri ayrışır. Katalogda düğümü olmayan bir çağrı, GLSL'ini tutan bir Custom ifade düğümü olur (`abs(…)`, `getWorldGeometricNormalVector()` ve diğer Filament getter'ları dahil). Karşılaştırmalar (`>`, `>=`, `<`, `<=`, `==`, `!=`), `&&`, `||`, `!` ve `?:` (en düşük öncelik, sağdan birleşimli) mantık düğümleri olur. Dalları yalnızca kendisinden önce bildirilmiş yerel değişkenlere atama yapan (`=`, `+=`, `-=`, `*=`, `/=`) bir `if (c) { … } else if (c2) { … } else { … }` zinciri (süslü parantezli ya da tek deyimli; dal içindeki iç içe if'ler de) atanan her yerel değişken için `If(c, v1, If(c2, v2, … v_else))` olur; o değişkeni atamayan bir dal, `if`'ten önceki değeri korur. Değersiz bir bildirim (`vec2 finalUV;`) kabul edilir; her yol atamadan önce okunması geri dönüşe düşer ("finalUV may be read unassigned"). `material.*` yazan, `prepareMaterial` çağıran ya da kendisinden sonra okunan bir yerel değişken bildiren bir dal, bir döngü ve deyim deyim ifade edilemeyen diğer her şey (bilinmeyen alanlar veya bildirimler) fragment'in tamamını, nedenini adıyla belirten bir açıklamayla birebir korunan tek bir Custom (Fragment) düğümü yapar; bu düğümün pinleri ve kabloları kodunun akışını gösterir (okuduğu parametreler içeri, yazdığı alanlar Material düğümüne kablolanır; bkz. [MaterialFragmentPins]). Başlık parametreleri her zaman parametre düğümü olur, böylece bir grafik düzenlemesi hiçbir bildirimi düşürmez.
 
-The header's `variables` and the `vertex` block are read too: `material.<variable> = …` in `materialVertex()` becomes a Set Vertex Variable node (the codegen's `vec4` widening reads back as the unwidened value), `variable_<name>` in the fragment one Vertex Variable node per name, `getUserWorldPosition()` / `getWorldPosition()` (and their vertex-block forms) a WorldPosition. A Time, VertexColor, TexCoord, WorldPosition or parameter used by both stages is one node. A vertex block that writes anything else (moves vertices, writes `material.color`) or uses control flow is kept as written (`notes` says why) and its declared variables stay readable.
+The header's `variables` and the `vertex` block are read too: `material.<variable> = …` in `materialVertex()` becomes a Set Vertex Variable node (the codegen's `vec4` widening reads back as the unwidened value), `variable_<name>` in the fragment one Vertex Variable node per name, `getUserWorldPosition()` / `getWorldPosition()` (and their vertex-block forms) a WorldPosition. A Time, VertexColor, TexCoord, WorldPosition or parameter used by both stages is one node. A vertex block that writes anything else (moves vertices, writes `material.color`) or uses a loop is kept as written (`notes` says why) and its declared variables stay readable.
 
 **Üyeler:**
 
@@ -870,7 +903,7 @@ The resolved types and diagnostics of one material graph.
 
 ### `class MaterialGraphChecker`
 
-Her pinin türünü çıkarır (örtük skaler yayınlamalı float1–float4 ya da doku) ve derlenemeyecek olanı raporlar; vertex aşamasının kuralları da dahil: bir Set Vertex Variable'ı besleyen yalnızca-fragment düğüm (TextureSample, TextureParameter, Fresnel, Vertex Variable), geçersiz veya yinelenen değişken adı, matc'nin izin verdiğinden fazla değişken (5; vertex rengiyle 4), adını hiçbir şeyin yazmadığı ya da bildirmediği bir Vertex Variable, kaynağın vertex bloğu grafiğin üzerine yazacağı elle yazılmış kodken bir setter, ve bir Custom (Fragment) düğümünün yanında Material düğümüne giren bir kablo (o düğüm fragment'in tamamını yazar, böyle bir kablo yok sayılırdı; düğümün yalnızca kodunun akışını gösteren kendi kabloları raporlanmaz).
+Her pinin türünü çıkarır (örtük skaler yayınlamalı float1–float4, doku ya da bir karşılaştırmanın bool'u) ve derlenemeyecek olanı raporlar; mantık kuralları (bir If'in Condition'ı ile And / Or / Not girişleri bool alır, If'in Then ve Else girişleri aynı sayısal türü ya da bir float'ı, Compare'in girişleri bir float'ı alır ve bool başka hiçbir pine ulaşmaz: her biri o pinde bir hata) ve vertex aşamasının kuralları da dahil: bir Set Vertex Variable'ı besleyen yalnızca-fragment düğüm (TextureSample, TextureParameter, Fresnel, Vertex Variable), geçersiz veya yinelenen değişken adı, matc'nin izin verdiğinden fazla değişken (5; vertex rengiyle 4), adını hiçbir şeyin yazmadığı ya da bildirmediği bir Vertex Variable, kaynağın vertex bloğu grafiğin üzerine yazacağı elle yazılmış kodken bir setter, ve bir Custom (Fragment) düğümünün yanında Material düğümüne giren bir kablo (o düğüm fragment'in tamamını yazar, böyle bir kablo yok sayılırdı; düğümün yalnızca kodunun akışını gösteren kendi kabloları raporlanmaz).
 
 **Üyeler:**
 
@@ -936,7 +969,7 @@ Graph and source are two views of one material. A graph edit is one undo step on
 
 ### `class MaterialGraphEditor`
 
-Edits a material graph through the shared Blueprint graph canvas: material expressions instead of lumina's Blueprint node library, float1–float4 and texture pins instead of Blueprint pin types, and the material wiring rule — a wire is refused only for a loop or a texture/number mix-up; any other mismatch is drawn red and reported by the type checker.
+Bir materyal grafiğini paylaşılan Blueprint grafik tuvali üzerinden düzenler: lumina'nın Blueprint düğüm kütüphanesi yerine materyal ifadeleri, Blueprint pin türleri yerine float1–float4, doku ve bool pinleri (bool pinleri Blueprint boolean renginde) ve materyal kablolama kuralı — bir kablo yalnızca bir döngü ya da doku/sayı karışıklığı için reddedilir; diğer her uyumsuzluk kırmızı çizilir ve tür denetleyicisi tarafından raporlanır.
 
 **Yapıcı Metotlar (Constructors):**
 
@@ -953,7 +986,8 @@ Edits a material graph through the shared Blueprint graph canvas: material expre
 | `bindTexture` | `final bool Function(String parameter, RealAssetInfo? asset) bindTexture` |  |
 | `samplerOf` | `String? samplerOf(LuminaBlueprintNode node)` | The `.mat` sampler a Texture Sample / TextureParameter node reads: its own parameter, or the TextureParameter wired into Tex. |
 | `textureBodyHeight` | `static const double textureBodyHeight` |  |
-| `nodeBody` | `Widget? nodeBody(BuildContext context, LuminaBlueprintNode node)` | The Texture Sample node: the bound texture's thumbnail and name; a click opens the searchable picker. |
+| `nodeBody` | `Widget? nodeBody(BuildContext context, LuminaBlueprintNode node)` | Texture Sample düğümü: bağlı dokunun küçük resmi ve adı; bir tıklama aranabilir seçiciyi açar. Compare düğümü: operatör seçim kutusu. |
+| `compareOperatorSelect` | `static Widget compareOperatorSelect(LuminaBlueprintNode node, {required String keyPrefix, required void Function(String op) onChanged})` | Compare'in operatörleri (`A >= B` …) üzerinde bir seçim kutusu; düğüm ve Details paneli ortak kullanır. |
 | `displayType` | `static LuminaPinType displayType(MaterialValueType? t)` | The Blueprint pin type the canvas uses to pick an inline editor. |
 | `colorFor` | `static Color colorFor(MaterialValueType? t)` |  |
 | `typeOf` | `MaterialValueType? typeOf(String nodeId, String pinId, {required bool output})` | The resolved type of a pin: its fixed type, else what flows through it. |
@@ -992,7 +1026,7 @@ The Material Editor's Node Graph tab: the material as material expressions on th
 
 ### `class MaterialNodeDetailsPanel`
 
-The Details panel of the material graph: the selected expression's settings — constant values, parameter names and defaults, the texture a TextureSample reads, TexCoord tiling, mask channels, and a Custom node's inputs and GLSL. Every committed edit is one undo step.
+Materyal grafiğinin Details paneli: seçili ifadenin ayarları — sabit değerler, parametre adları ve varsayılanları, bir TextureSample'ın okuduğu doku, TexCoord döşemesi, maske kanalları, bir Compare'in operatörü ve bir Custom düğümünün girişleri ile GLSL'i. İşlenen her düzenleme bir geri alma adımıdır.
 
 **Yapıcı Metotlar (Constructors):**
 

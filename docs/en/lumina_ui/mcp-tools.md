@@ -593,6 +593,8 @@ The Material editor's node graph as MCP tools: the expression catalog, the graph
 
 Vertex → fragment interpolants: `mat_set_vertex_variable` (category Vertex, setting `name`) computes its `value` once per vertex, which the codegen writes as the `.mat` `vertex` block and a `variables` entry; `mat_vertex_variable` reads it in the fragment (RGBA outputs); `mat_world_position` (setting `space`: `absolute` / `camera_relative`) gives the geometry's position in either stage. Only constants, parameters, TexCoord, VertexColor, Time, WorldPosition, math and Custom can feed a setter; a material has at most 5 variables (4 when it reads the vertex colour). `get_material_graph` returns `variables[{name, set_by, read_by}]` and `vertex_block` (`graph`, `hand_written` with `vertex_block_reason`, or `none`).
 
+Logic (category Logic): `mat_compare` (inputs `a`, `b` floats; setting `op`: `>`, `>=`, `<`, `<=`, `==`, `!=`) yields a `bool`; `mat_and` / `mat_or` (`a`, `b`) and `mat_not` (`a`) combine bools; `mat_if` (`condition` bool, `then`, `else` of one numeric type; output Result) picks Then where Condition holds, else Else and is written as `(c ? t : f)`. A hand-written `if` / `else if` / `else` chain that only assigns locals reads back as these nodes; a bool wired into any other pin is a diagnostic.
+
 **Tools:**
 
 | Tool | Risk | Title | Description |

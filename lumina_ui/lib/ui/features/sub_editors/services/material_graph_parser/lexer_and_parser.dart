@@ -99,6 +99,23 @@ class _Neg extends _E {
   _Neg(this.e);
 }
 
+/// `!e`.
+class _Not extends _E {
+  final _E e;
+  _Not(this.e);
+}
+
+/// `c ? t : f`.
+class _Cond extends _E {
+  final _E c;
+  final _E t;
+  final _E f;
+  _Cond(this.c, this.t, this.f);
+}
+
+/// The comparison and logic operators a [_Bin] can carry besides arithmetic.
+const _logicOps = {'>', '>=', '<', '<=', '==', '!=', '&&', '||'};
+
 class _Parser {
   final List<_Tok> t;
   int i = 0;
@@ -116,18 +133,44 @@ class _Parser {
     if (tok.text != s) throw _Unsupported("expected '$s', found '${tok.text}'");
   }
 
+  /// An expression, GLSL precedence from the lowest: `?:` (right
+  /// associative), `||`, `&&`, `==` `!=`, `<` `>` `<=` `>=`, `+` `-`, `*` `/`,
+  /// unary `-` `+` `!`.
   _E expr() {
-    var left = _term();
-    while (peek == '+' || peek == '-') {
-      final op = next().text;
-      left = _Bin(op, left, _term());
-    }
+    final e = _conditional();
     _refuseUnsupportedOperator();
+    return e;
+  }
+
+  _E _conditional() {
+    final c = _binary(0);
+    if (peek != '?') return c;
+    next();
+    final t = expr();
+    expect(':');
+    return _Cond(c, t, _conditional());
+  }
+
+  static const _levels = [
+    {'||'},
+    {'&&'},
+    {'==', '!='},
+    {'<', '>', '<=', '>='},
+    {'+', '-'},
+  ];
+
+  _E _binary(int level) {
+    if (level == _levels.length) return _term();
+    var left = _binary(level + 1);
+    while (_levels[level].contains(peek)) {
+      final op = next().text;
+      left = _Bin(op, left, _binary(level + 1));
+    }
     return left;
   }
 
   void _refuseUnsupportedOperator() {
-    const unsupported = ['?', '<', '>', '<=', '>=', '==', '!=', '&&', '||', '!', '%', '++', '--'];
+    const unsupported = ['%', '++', '--', '^', '^^', '&', '|', '<<', '>>'];
     if (unsupported.contains(peek)) throw _Unsupported("the '$peek' operator has no material node");
   }
 
@@ -149,6 +192,10 @@ class _Parser {
     if (peek == '+') {
       next();
       return _unary();
+    }
+    if (peek == '!') {
+      next();
+      return _Not(_unary());
     }
     return _postfix();
   }
