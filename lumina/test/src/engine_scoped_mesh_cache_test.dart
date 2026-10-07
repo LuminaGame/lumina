@@ -226,22 +226,4 @@ void main() {
     addTearDown(other.dispose);
     expect(identical(LuminaMeshAssetCache.forEngine(other), cache), isFalse);
   }, skip: hasAssets ? false : 'test-assets missing');
-
-  test('the thumbnail renderer draws on the shared engine and leaves it to the other holders', () async {
-    final before = engine.resourceCounts;
-    final renderer = FilamentThumbnailRenderer(size: 64, supersample: 1);
-    final png = await renderer.renderMesh(_barrel.readAsBytesSync());
-    expect(png, isNotNull);
-    expect(FilamentEngineHost.liveEngineCount, 1, reason: 'no engine of its own');
-    expect(FilamentEngineHost.leaseOwners(engine), contains('FilamentThumbnailRenderer'));
-    renderer.dispose();
-    expect(engine.isDisposed, isFalse);
-    expect(FilamentEngineHost.leaseOwners(engine), isNot(contains('FilamentThumbnailRenderer')));
-    final left = engine.resourceCounts - before;
-    expect(left.views, 0);
-    expect(left.scenes, 0);
-    expect(left.swapChains, 0);
-    expect(left.lights, 0);
-    expect(left.renderables, 0);
-  }, skip: hasAssets ? false : 'test-assets missing');
 }

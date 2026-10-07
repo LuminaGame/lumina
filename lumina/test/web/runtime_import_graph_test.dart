@@ -5,8 +5,9 @@ import 'package:flutter_test/flutter_test.dart';
 /// A game imports `package:lumina/lumina_runtime.dart`; nothing it
 /// reaches may need `dart:ffi` directly (only through
 /// `package:flutter_filament/ffi.dart`), Assimp, RigLogic, `package:ffi`, the
-/// editor's repositories, the analyzer (the Blueprint function scanner) or the full
-/// `lumina.dart` barrel — each of those breaks `flutter build web`.
+/// editor data layer (`lumina_editor_data`) or its repositories, the analyzer
+/// (the Blueprint function scanner) or the full `lumina.dart` barrel — each of
+/// those breaks `flutter build web`.
 final _directive = RegExp(r"^(?:import|export)\s+'([^'$]+)'", multiLine: true);
 
 String? _resolve(String from, String uri) {
@@ -20,6 +21,7 @@ bool _forbidden(String uri) =>
     uri.startsWith('package:flutter_assimp/') ||
     uri.startsWith('package:flutter_riglogic/') ||
     uri.startsWith('package:ffi/') ||
+    uri.startsWith('package:lumina_editor_data/') ||
     // The Blueprint function scanner is editor-only.
     uri.startsWith('package:analyzer/') ||
     uri.startsWith('package:flutter_filament/src/third_party/') ||
