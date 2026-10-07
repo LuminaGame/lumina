@@ -365,20 +365,29 @@ class SkeletalMeshEditorViewModel extends ChangeNotifier {
       }
 
       // Load Associated DNA Rig if recorded or auto-detected
-      if (_asset?.metadata.containsKey('dna_path') == true) {
-        final path = _asset!.metadata['dna_path']!;
-        if (File(path).existsSync()) {
-          await loadDnaFile(path);
+      final recordedDna = _asset?.metadata['face_dna_path'] ?? _asset?.metadata['dna_path'];
+      if (recordedDna != null && recordedDna.isNotEmpty) {
+        if (File(recordedDna).existsSync()) {
+          await loadDnaFile(recordedDna);
+        } else {
+          final siblingName = recordedDna.split(RegExp(r'[\\/]')).last;
+          final sibling = File('${file.parent.path}/$siblingName');
+          if (sibling.existsSync()) {
+            await loadDnaFile(sibling.path);
+          }
         }
       }
       if (_rigLogicEvaluator == null) {
-        // Auto-detect matching .dna file next to the asset
+        // Auto-detect matching .dna file next to the asset (prefer face DNA, avoid _body.dna)
         final dnaSibling = File(assetPath.replaceAll('.lmas', '.dna'));
         if (dnaSibling.existsSync()) {
           await loadDnaFile(dnaSibling.path);
         } else if (file.parent.existsSync()) {
           for (final entity in file.parent.listSync()) {
-            if (entity is File && entity.path.endsWith('.dna')) {
+            if (entity is File &&
+                entity.path.endsWith('.dna') &&
+                !entity.path.endsWith('_body.dna') &&
+                !entity.path.endsWith('_combined.dna')) {
               await loadDnaFile(entity.path);
               break;
             }
@@ -997,8 +1006,10 @@ class SkeletalMeshEditorViewModel extends ChangeNotifier {
     // DNA Rig Path serialization
     if (_dnaPath != null) {
       updatedMetadata['dna_path'] = _dnaPath!;
+      updatedMetadata['face_dna_path'] = _dnaPath!;
     } else {
       updatedMetadata.remove('dna_path');
+      updatedMetadata.remove('face_dna_path');
     }
 
     // Material slot bindings: one AssetReference per bound slot, replacing any

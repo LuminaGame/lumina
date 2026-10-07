@@ -128,5 +128,80 @@ void main() {
         reason: 'Legitimate colored COLOR_0 attribute should be preserved',
       );
     });
+
+    test('Strips custom vertex attributes starting with underscore', () {
+      final json = {
+        'asset': {'version': '2.0'},
+        'buffers': [
+          {'byteLength': 12},
+        ],
+        'bufferViews': [
+          {'buffer': 0, 'byteOffset': 0, 'byteLength': 12},
+        ],
+        'accessors': [
+          {
+            'bufferView': 0,
+            'byteOffset': 0,
+            'componentType': 5126,
+            'count': 1,
+            'type': 'VEC3',
+          },
+        ],
+        'meshes': [
+          {
+            'primitives': [
+              {
+                'attributes': {
+                  'POSITION': 0,
+                  '_METALLIC_ROUGHNESS': 0,
+                  '_CUSTOM_PROP': 0,
+                },
+              },
+            ],
+          },
+        ],
+      };
+
+      final jsonBytes = utf8.encode(jsonEncode(json));
+      final paddedJsonLen = (jsonBytes.length + 3) & ~3;
+      final paddedJsonBytes = Uint8List(paddedJsonLen)..setRange(0, jsonBytes.length, jsonBytes);
+      for (int i = jsonBytes.length; i < paddedJsonLen; i++) {
+        paddedJsonBytes[i] = 0x20;
+      }
+
+      final dummyBuf = Uint8List(12);
+      final builder = BytesBuilder();
+      final header = ByteData(12)
+        ..setUint32(0, 0x46546C67, Endian.little)
+        ..setUint32(4, 2, Endian.little)
+        ..setUint32(8, 12 + 8 + paddedJsonLen + 8 + dummyBuf.length, Endian.little);
+      builder.add(header.buffer.asUint8List());
+
+      final jsonHeader = ByteData(8)
+        ..setUint32(0, paddedJsonLen, Endian.little)
+        ..setUint32(4, 0x4E4F534A, Endian.little);
+      builder.add(jsonHeader.buffer.asUint8List());
+      builder.add(paddedJsonBytes);
+
+      final binHeader = ByteData(8)
+        ..setUint32(0, dummyBuf.length, Endian.little)
+        ..setUint32(4, 0x004E4942, Endian.little);
+      builder.add(binHeader.buffer.asUint8List());
+      builder.add(dummyBuf);
+
+      final syntheticGlb = builder.toBytes();
+      final result = GlbParserService.convertGlbTgaToPng(syntheticGlb);
+
+      final outByteData = ByteData.sublistView(result);
+      final outJsonLen = outByteData.getUint32(12, Endian.little);
+      final outJsonBytes = result.sublist(20, 20 + outJsonLen);
+      final outJson = jsonDecode(utf8.decode(outJsonBytes)) as Map;
+
+      final meshes = outJson['meshes'] as List;
+      final attrs = (meshes[0]['primitives'][0] as Map)['attributes'] as Map;
+      expect(attrs.containsKey('POSITION'), isTrue);
+      expect(attrs.containsKey('_METALLIC_ROUGHNESS'), isFalse);
+      expect(attrs.containsKey('_CUSTOM_PROP'), isFalse);
+    });
   });
 }

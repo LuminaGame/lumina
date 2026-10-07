@@ -965,7 +965,7 @@ class BlueprintComponentRegistry {
           type: ComponentPropertyType.number,
           defaultValue: 10000.0, // lumens
           min: 0.0,
-          max: 100000.0,
+          max: 10000000.0,
         ),
         ComponentPropertySchema(
           group: 'LIGHT',

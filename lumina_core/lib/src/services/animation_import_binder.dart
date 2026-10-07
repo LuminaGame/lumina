@@ -158,6 +158,8 @@ abstract final class AnimationImportBinder {
           'preview_mesh_path': meshLmasPath,
         }),
         'retarget_mode': 'rotation_only',
+        'retarget_source_arm_pose': result.sourceArmPose.name,
+        'retarget_target_arm_pose': result.targetArmPose.name,
         'retarget_mapped_bones': '${result.mappedBones.length}',
         'retarget_rest_bones': result.restBones.join(','),
         'retarget_ignored_bones': result.ignoredSourceBones.join(','),

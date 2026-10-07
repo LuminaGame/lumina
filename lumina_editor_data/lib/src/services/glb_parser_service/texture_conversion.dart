@@ -433,6 +433,32 @@ Uint8List _convertGlbTgaToPng(
       );
     }
 
+    // 5. Inspect and strip unsupported custom vertex attributes (starting with '_', e.g. '_METALLIC_ROUGHNESS')
+    // Filament gltfio AssetLoader rejects any unrecognized attribute semantics with
+    // "Unrecognized vertex semantic in <name>" and fails the entire asset load.
+    if (meshes != null) {
+      for (final mesh in meshes) {
+        if (mesh is! Map) continue;
+        final primitives = mesh['primitives'] as List?;
+        if (primitives == null) continue;
+        for (final prim in primitives) {
+          if (prim is! Map) continue;
+          final attrs = prim['attributes'] as Map?;
+          if (attrs == null) continue;
+          final customKeys = attrs.keys.where((k) => k is String && k.startsWith('_')).toList();
+          for (final key in customKeys) {
+            attrs.remove(key);
+            modified = true;
+            GlbParserService._logger.log(
+              'Stripped unsupported custom vertex attribute "$key" from mesh primitive for Filament compatibility.',
+              level: 'info',
+              source: 'GlbParserService',
+            );
+          }
+        }
+      }
+    }
+
     if (!modified) return glbBytes;
 
     Uint8List newBinBytes;

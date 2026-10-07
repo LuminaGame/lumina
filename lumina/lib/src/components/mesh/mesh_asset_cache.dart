@@ -343,8 +343,11 @@ class LuminaMeshAssetCache {
     bool Function()? cancelled,
   }) async {
     _checkNotDisposed();
-    final key = contentDigest(bytes);
     final canonical = LuminaAssets.defaultProvider == null ? canonicalSourcePath(sourcePath) : sourcePath;
+    final filter = sourceFilter;
+    if (filter != null) bytes = await filter(canonical, bytes);
+    if (_isDisposed) return null;
+    final key = contentDigest(bytes);
     final entry = await _entryFor(key, bytes, canonical);
     if (entry == null || _isDisposed) return null;
     return _handleFor(entry, cancelled);
