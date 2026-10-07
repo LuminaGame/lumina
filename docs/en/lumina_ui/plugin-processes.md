@@ -22,9 +22,26 @@ paths are relative to the `lumina_ui/` package directory.
   process part therefore reaches native code through FFI; a method-channel plugin answers `MissingPluginException`.
   Measured on a release project editor: about 102 MB working set / 117 MB private and 52 threads per plugin process,
   from 136 MB / 157 MB and 118 threads with the hidden runner window.
-- **Linux keeps a hidden window**: flutter_linux exports `fl_engine_new_headless` but not `fl_engine_start`, and the
-  engine starts only when the implicit `FlView` is realized inside a `GtkWindow`. A plugin process therefore realizes a
-  1×1 window that is never mapped (no header bar, skipped by the taskbar, no first-frame show).
+- **Linux keeps a never-shown window**: flutter_linux 3.47 exports `fl_engine_new_headless` (a plain `fl_engine_new`)
+  but not `fl_engine_start`, and the only public way to start an engine is realizing an `FlView` inside a `GtkWindow`
+  (an `FlView` in a `GtkOffscreenWindow` starts too, but GDK then asserts in the engine's monitor lookup, on Wayland
+  every time). So the runner (`linux/runner/my_application.cc`, copied into every project editor) realizes the view in
+  a plain 1×1 toplevel that is never mapped and never takes focus: on X11 an unmapped window that no window manager,
+  taskbar or pager lists, on Wayland a surface with no shell role that no compositor shows. The engine uses
+  flutter_linux's software renderer (`FLUTTER_LINUX_RENDERER=software` while the view is created, restored after, its
+  warning filtered), so the view creates no GDK GL context or GL compositor, and, as on Windows, no native plugin is
+  registered (registering them also opened audio devices). Plugin `.so` files stay linked, Linux has no delay-loading.
+  Measured on a release project editor under WSLg (Mesa llvmpipe): about 209 MB RSS / 77 MB private dirty and 77
+  threads per plugin process, from 271 MB / 131 MB and 142 threads with a hidden `GtkApplicationWindow`, the GL
+  renderer and the plugins registered.
+- **Verified on Linux** (Ubuntu 26.04 in WSL2 with WSLg, Flutter 3.47.5): `flutter build linux` (debug and release)
+  of `lumina_ui` and of a project editor with three isolated plugins; the plugin-process tests of `lumina_ui`,
+  `lumina_editor_api` and `lumina_plugin_protocol`; an unknown plugin name exits 64 in under half a second; under X11
+  (`GDK_BACKEND=x11`) `xwininfo` lists each plugin process's window as `IsUnMapped` 1×1 and the active window stays
+  the editor's, Windows lists only the editor's WSLg window, and under Wayland `WAYLAND_DEBUG` shows no
+  `xdg_surface`/`get_toplevel`, `attach` or `commit` request; the plugins' MCP tools answer; `kill -9` on a plugin
+  process files a `plugin_crash` report and restarts it after 1, 2 and 4 s, then the plugin is stopped until Restart;
+  the in-process override and switching back work; killing the editor ends every plugin process.
 - The editor binds a loopback socket on port 0 per plugin, checks the process's `host.hello` (protocol version and a
   random token), and registers the `host.register` contributions under the plugin's name: menu items, slot buttons, MCP
   tools, importers, console commands and declarative panels. Their actions run in the process. The project folder on

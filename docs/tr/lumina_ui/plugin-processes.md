@@ -22,10 +22,28 @@ paketindedir. Dosya yolları `lumina_ui/` paket dizinine görelidir.
   hiç yüklenmez. Süreç parçası yerel koda FFI ile ulaşır; method channel kullanan bir eklenti `MissingPluginException`
   döner. Release bir proje editöründe ölçülen: eklenti süreci başına yaklaşık 102 MB çalışma kümesi / 117 MB özel bellek
   ve 52 iş parçacığı; gizli runner penceresiyle 136 MB / 157 MB ve 118 iş parçacığıydı.
-- **Linux gizli pencereyi korur**: flutter_linux `fl_engine_new_headless` fonksiyonunu dışa açar ama `fl_engine_start`
-  fonksiyonunu açmaz; engine yalnızca örtük `FlView` bir `GtkWindow` içinde realize edildiğinde başlar. Bu yüzden
-  eklenti süreci hiç gösterilmeyen 1×1 bir pencere realize eder (başlık çubuğu yok, görev çubuğunda görünmez, ilk
-  karede gösterilmez).
+- **Linux hiç gösterilmeyen bir pencereyi korur**: flutter_linux 3.47 `fl_engine_new_headless` fonksiyonunu (düz bir
+  `fl_engine_new`) dışa açar ama `fl_engine_start` fonksiyonunu açmaz; bir engine'i başlatmanın tek açık yolu bir
+  `FlView`'ı bir `GtkWindow` içinde realize etmektir (`GtkOffscreenWindow` içindeki bir `FlView` da başlar, ama GDK
+  engine'in monitör aramasında assertion verir, Wayland'de her seferinde). Bu yüzden runner
+  (`linux/runner/my_application.cc`, her proje editörüne kopyalanır) görünümü hiç map edilmeyen ve odak almayan düz 1×1
+  bir üst düzey pencerede realize eder: X11'de hiçbir pencere yöneticisinin, görev çubuğunun ya da çalışma alanı
+  değiştiricinin listelemediği map edilmemiş bir pencere, Wayland'de hiçbir compositor'ın göstermediği, kabuk rolü
+  olmayan bir yüzey. Engine flutter_linux'un yazılım çizicisini kullanır (görünüm oluşturulurken
+  `FLUTTER_LINUX_RENDERER=software`, sonra eski değeri geri yüklenir, uyarısı süzülür); böylece görünüm GDK GL bağlamı ya
+  da GL compositor oluşturmaz ve Windows'taki gibi hiçbir yerel eklenti kaydedilmez (kaydetmek ses aygıtlarını da
+  açıyordu). Eklenti `.so` dosyaları bağlı kalır, Linux'ta gecikmeli yükleme yoktur. WSLg altında (Mesa llvmpipe)
+  release bir proje editöründe ölçülen: eklenti süreci başına yaklaşık 209 MB RSS / 77 MB özel kirli bellek ve 77 iş
+  parçacığı; gizli bir `GtkApplicationWindow`, GL çizici ve kayıtlı eklentilerle 271 MB / 131 MB ve 142 iş parçacığıydı.
+- **Linux'ta doğrulandı** (WSL2 + WSLg içinde Ubuntu 26.04, Flutter 3.47.5): `lumina_ui`'nin ve üç yalıtılmış eklentili
+  bir proje editörünün `flutter build linux` derlemesi (debug ve release); `lumina_ui`, `lumina_editor_api` ve
+  `lumina_plugin_protocol` eklenti süreci testleri; bilinmeyen bir eklenti adı yarım saniyenin altında 64 ile çıkar;
+  X11 altında (`GDK_BACKEND=x11`) `xwininfo` her eklenti sürecinin penceresini `IsUnMapped` 1×1 olarak listeler ve
+  etkin pencere editörünki kalır, Windows yalnızca editörün WSLg penceresini listeler, Wayland altında `WAYLAND_DEBUG`
+  hiçbir `xdg_surface`/`get_toplevel`, `attach` ya da `commit` isteği göstermez; eklentilerin MCP araçları yanıt verir;
+  bir eklenti sürecine `kill -9` bir `plugin_crash` raporu oluşturur ve süreci 1, 2 ve 4 sn sonra yeniden başlatır,
+  ardından eklenti Restart'a kadar durur; editör içi çalıştırma ve geri dönüş çalışır; editörü öldürmek her eklenti
+  sürecini sonlandırır.
 - Editör her eklenti için 0 portunda bir loopback soketi açar, sürecin `host.hello` mesajını (protokol sürümü ve rastgele
   token) denetler ve `host.register` katkılarını eklentinin adıyla kaydeder: menü öğeleri, yuva düğmeleri, MCP araçları,
   içe aktarıcılar, konsol komutları ve bildirimsel paneller. Eylemleri süreçte çalışır. Komut satırındaki proje

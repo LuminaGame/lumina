@@ -10,20 +10,15 @@
 struct _MyApplication {
   GtkApplication parent_instance;
   char **dart_entrypoint_arguments;
+  // A plugin process's never-shown window (see activate_plugin_process).
+  GtkWidget *plugin_process_window;
 };
 
 G_DEFINE_TYPE(MyApplication, my_application, GTK_TYPE_APPLICATION)
 
 // Whether the editor started this executable to run one isolated plugin's
 // process part (`--lumina-plugin-process`, `PluginProcessLaunch.flag` in
-// Dart). Such a process never shows its window.
-//
-// It cannot be window-less on Linux: flutter_linux exports
-// fl_engine_new_headless but not fl_engine_start, and the engine starts only
-// when the implicit FlView is realized inside a GtkWindow (fl_view.cc
-// realize_cb). So a plugin process keeps a 1x1 window that is realized but
-// never mapped; the Dart side branches on the flag before anything that
-// needs a view, so no frame is drawn.
+// Dart).
 static gboolean is_plugin_process(MyApplication *self) {
   for (char **arg = self->dart_entrypoint_arguments; arg != nullptr && *arg;
        arg++) {
@@ -34,6 +29,78 @@ static gboolean is_plugin_process(MyApplication *self) {
   return FALSE;
 }
 
+// flutter_linux warns on stderr whenever the software renderer is chosen; a
+// plugin process chooses it on purpose (activate_plugin_process).
+static void skip_software_renderer_warning(const gchar *domain,
+                                           GLogLevelFlags level,
+                                           const gchar *message,
+                                           gpointer user_data) {
+  if (message != nullptr &&
+      g_str_has_prefix(message, "Using the software renderer")) {
+    return;
+  }
+  g_log_default_handler(domain, level, message, user_data);
+}
+
+// A plugin process runs the same Dart entry point (it branches on the flag
+// before anything that needs a view) and never draws a frame.
+//
+// It cannot run without a view: flutter_linux 3.47 exports
+// fl_engine_new_headless (a plain fl_engine_new) but not fl_engine_start, and
+// the only public path that starts an engine is realizing an FlView inside a
+// GtkWindow. An FlView in a GtkOffscreenWindow does start it, but GDK then
+// asserts in the engine's monitor lookup (Gdk-CRITICAL on every start, and
+// gdk_wayland_display_get_monitor_at_window rejects the window on Wayland).
+// So the view is realized in a plain 1x1 toplevel that is never shown: on X11
+// an unmapped window that no window manager, taskbar or pager lists; on
+// Wayland a surface with no shell role, which no compositor displays. It
+// never takes focus.
+//
+// The engine uses flutter_linux's software renderer: the realized view then
+// creates no GDK GL context and no GL compositor (on Mesa that alone is about
+// 30 MB and 65 threads per process). No native plugin is registered, as on
+// Windows: the editor's (window_manager, media_kit, screen_retriever, mouse
+// capture, volume) all serve a visible window, and registering them opens
+// audio devices; a process part reaches native code through FFI. The process
+// ends when its Dart code calls exit().
+static void activate_plugin_process(MyApplication *self) {
+  // No GtkApplicationWindow keeps the application running: hold it.
+  g_application_hold(G_APPLICATION(self));
+
+  g_autoptr(FlDartProject) project = fl_dart_project_new();
+  fl_dart_project_set_dart_entrypoint_arguments(
+      project, self->dart_entrypoint_arguments);
+
+  // The engine reads FLUTTER_LINUX_RENDERER once, when the view creates it;
+  // the plugin's own child processes inherit the editor's value again.
+  g_autofree gchar *previous_renderer =
+      g_strdup(g_getenv("FLUTTER_LINUX_RENDERER"));
+  g_setenv("FLUTTER_LINUX_RENDERER", "software", TRUE);
+  const guint handler = g_log_set_handler(
+      nullptr, G_LOG_LEVEL_WARNING, skip_software_renderer_warning, nullptr);
+  FlView *view = fl_view_new(project);
+  g_log_remove_handler(nullptr, handler);
+  if (previous_renderer != nullptr) {
+    g_setenv("FLUTTER_LINUX_RENDERER", previous_renderer, TRUE);
+  } else {
+    g_unsetenv("FLUTTER_LINUX_RENDERER");
+  }
+
+  GtkWindow *hidden = GTK_WINDOW(gtk_window_new(GTK_WINDOW_TOPLEVEL));
+  gtk_window_set_title(hidden, "lumina_ui plugin process");
+  gtk_window_set_default_size(hidden, 1, 1);
+  gtk_window_set_skip_taskbar_hint(hidden, TRUE);
+  gtk_window_set_skip_pager_hint(hidden, TRUE);
+  gtk_window_set_accept_focus(hidden, FALSE);
+  self->plugin_process_window = GTK_WIDGET(g_object_ref(hidden));
+
+  gtk_widget_show(GTK_WIDGET(view));
+  gtk_container_add(GTK_CONTAINER(hidden), GTK_WIDGET(view));
+  // Realizing the view realizes the window too (never mapped) and starts the
+  // engine.
+  gtk_widget_realize(GTK_WIDGET(view));
+}
+
 // Called when first Flutter frame received.
 static void first_frame_cb(MyApplication *self, FlView *view) {
   gtk_widget_show(gtk_widget_get_toplevel(GTK_WIDGET(view)));
@@ -42,7 +109,10 @@ static void first_frame_cb(MyApplication *self, FlView *view) {
 // Implements GApplication::activate.
 static void my_application_activate(GApplication *application) {
   MyApplication *self = MY_APPLICATION(application);
-  const gboolean plugin_process = is_plugin_process(self);
+  if (is_plugin_process(self)) {
+    activate_plugin_process(self);
+    return;
+  }
   GtkWindow *window =
       GTK_WINDOW(gtk_application_window_new(GTK_APPLICATION(application)));
 
@@ -63,7 +133,7 @@ static void my_application_activate(GApplication *application) {
     }
   }
 #endif
-  if (use_header_bar && !plugin_process) {
+  if (use_header_bar) {
     GtkHeaderBar *header_bar = GTK_HEADER_BAR(gtk_header_bar_new());
     gtk_widget_show(GTK_WIDGET(header_bar));
     gtk_header_bar_set_title(header_bar, "lumina_ui");
@@ -73,12 +143,7 @@ static void my_application_activate(GApplication *application) {
     gtk_window_set_title(window, "lumina_ui");
   }
 
-  if (plugin_process) {
-    gtk_window_set_default_size(window, 1, 1);
-    gtk_window_set_skip_taskbar_hint(window, TRUE);
-  } else {
-    gtk_window_set_default_size(window, 1920, 1080);
-  }
+  gtk_window_set_default_size(window, 1920, 1080);
 
   g_autoptr(FlDartProject) project = fl_dart_project_new();
   fl_dart_project_set_dart_entrypoint_arguments(
@@ -93,17 +158,15 @@ static void my_application_activate(GApplication *application) {
   gtk_widget_show(GTK_WIDGET(view));
   gtk_container_add(GTK_CONTAINER(window), GTK_WIDGET(view));
 
-  // Show the window when Flutter renders (a plugin process never does).
+  // Show the window when Flutter renders.
   // Requires the view to be realized so we can start rendering.
-  if (!plugin_process) {
-    g_signal_connect_swapped(view, "first-frame", G_CALLBACK(first_frame_cb),
-                             self);
-  }
+  g_signal_connect_swapped(view, "first-frame", G_CALLBACK(first_frame_cb),
+                           self);
   gtk_widget_realize(GTK_WIDGET(view));
 
   fl_register_plugins(FL_PLUGIN_REGISTRY(view));
 
-  if (!plugin_process) gtk_widget_grab_focus(GTK_WIDGET(view));
+  gtk_widget_grab_focus(GTK_WIDGET(view));
 }
 
 // Implements GApplication::local_command_line.
@@ -149,6 +212,10 @@ static void my_application_shutdown(GApplication *application) {
 static void my_application_dispose(GObject *object) {
   MyApplication *self = MY_APPLICATION(object);
   g_clear_pointer(&self->dart_entrypoint_arguments, g_strfreev);
+  if (self->plugin_process_window != nullptr) {
+    gtk_widget_destroy(self->plugin_process_window);
+    g_clear_object(&self->plugin_process_window);
+  }
   G_OBJECT_CLASS(my_application_parent_class)->dispose(object);
 }
 
