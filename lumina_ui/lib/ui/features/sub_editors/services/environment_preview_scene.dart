@@ -3,7 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart' show debugPrint;
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:vector_math/vector_math_64.dart';
 
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart' show EditorActorNode;

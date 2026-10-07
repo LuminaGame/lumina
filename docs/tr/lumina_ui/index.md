@@ -6,7 +6,7 @@
 
 ## Mimarideki yeri
 
-`lumina_ui` en üst katmandır. `lumina`'ya (runtime ve veri katmanı), `lumina_editor_api`'ya (gerçeklediği eklenti sözleşmesi), `flutter_filament`'e (viewport'lar ve önizlemeler tarafından doğrudan kullanılır), tools repository'sinin native paketlerine ve marketplace repository'sinden `lumina_marketplace_shared`'a bağımlıdır. Yeni 3D özellikleri doğrudan `flutter_filament` çağrılarıyla değil, `lumina` üzerinden yapılır. Bkz. [Katmanlı mimari](../overview/layers.md).
+`lumina_ui` en üst katmandır. `lumina`'ya (engine), `lumina_editor_data`'ya (editör veri katmanı; editör kodu onun `lumina_editor.dart` şemsiye kütüphanesini import eder), `lumina_editor_api`'ya (gerçeklediği eklenti sözleşmesi), `flutter_filament`'e (viewport'lar ve önizlemeler tarafından doğrudan kullanılır), tools repository'sinin native paketlerine ve marketplace repository'sinden `lumina_marketplace_shared`'a bağımlıdır. Yeni 3D özellikleri doğrudan `flutter_filament` çağrılarıyla değil, `lumina` üzerinden yapılır. Bkz. [Katmanlı mimari](../overview/layers.md).
 
 ## Yapı
 

@@ -4,7 +4,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/ui/core/property_editors/scrub_numeric_field.dart';
 import 'package:lumina_ui/ui/core/property_editors/slider_field.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';

@@ -5,7 +5,7 @@ import 'package:flutter/gestures.dart' show kSecondaryButton, kSecondaryMouseBut
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/testing.dart';
 import 'package:lumina_ui/ui/features/launcher/view_models/launcher_view_model.dart';
 import 'package:lumina_ui/ui/features/launcher/views/launcher_view.dart';

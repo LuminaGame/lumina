@@ -201,66 +201,6 @@ void main() {
     });
   });
 
-  group('Procedural sky code generation', () {
-    test('a ProceduralSky actor round-trips through metadata.actors into Dart', () {
-      final gen = DartCodeGeneratorService();
-      final dart = gen.generateLevelDart(
-        levelName: 'L_Ocean',
-        actors: const [],
-        actorMaps: [
-          {
-            'id': 'act_proc_sky',
-            'name': 'ProceduralSky_Ocean',
-            'type': 'ProceduralSky',
-            'location': [0.0, 0.0, 0.0],
-            'isVisible': true,
-            'components': [
-              {
-                'id': 'act_proc_sky_c',
-                'type': 'LuminaProceduralSkyComponent',
-                'name': 'Procedural Sky',
-                'properties': {
-                  'timeOfDay': 17.5,
-                  'turbidity': 4.0,
-                  'cloudCoverage': 0.72,
-                  'waterStrength': 55.0,
-                  'dayCycleSpeed': 0.25,
-                },
-              },
-            ],
-          },
-        ],
-      );
-
-      expect(dart, contains('LuminaProceduralSkyComponent('));
-      expect(dart, contains('timeOfDay: 17.5'));
-      expect(dart, contains('turbidity: 4.0'));
-      expect(dart, contains('cloudCoverage: 0.72'));
-      expect(dart, contains('waterStrength: 55.0'));
-      expect(dart, contains('dayCycleSpeed: 0.25'));
-      expect(dart, contains('visible: true'));
-    });
-
-    test('a ProceduralSky actor with no component falls back to the defaults', () {
-      final gen = DartCodeGeneratorService();
-      final dart = gen.generateLevelDart(
-        levelName: 'L_Ocean',
-        actors: const [],
-        actorMaps: [
-          {
-            'id': 'act_proc_sky',
-            'name': 'ProceduralSky',
-            'type': 'ProceduralSky',
-            'location': [0.0, 0.0, 0.0],
-            'isVisible': true,
-          },
-        ],
-      );
-      expect(dart, contains('timeOfDay: 12.0'));
-      expect(dart, contains('cloudCoverage: 0.4'));
-    });
-  });
-
   group('LuminaProceduralSkyDescription', () {
     test('fromProperties reads the property map the editor writes', () {
       final d = LuminaProceduralSkyDescription.fromProperties(const {

@@ -1,5 +1,5 @@
 name: lumina_workspace
-description: "Lumina: the Flutter/Filament 3D game engine (flutter_filament, lumina) and its editor, Lumina Studio (lumina_ui, lumina_editor_api)."
+description: "Lumina: the Flutter/Filament 3D game engine (flutter_filament, lumina_core, lumina) and its editor, Lumina Studio (lumina_editor_data, lumina_ui, lumina_editor_api)."
 publish_to: none
 
 environment:
@@ -12,6 +12,7 @@ workspace:
   - lumina
   - lumina/example
   - lumina_core
+  - lumina_editor_data
   - lumina_editor_api
   - lumina_plugin_process
   - lumina_plugin_protocol

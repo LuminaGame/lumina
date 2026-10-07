@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart' show debugPrint;
-import 'package:lumina/lumina.dart' show LuminaUnits;
+import 'package:lumina_editor_data/lumina_editor.dart' show LuminaUnits;
 
 import 'package:lumina_ui/ui/features/sub_editors/models/landscape_brush.dart';
 

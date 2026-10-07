@@ -1,4 +1,4 @@
-import 'package:lumina/lumina.dart'
+import 'package:lumina_editor_data/lumina_editor.dart'
     show CollisionObjectType, CollisionResponse, LuminaCollisionPreset, LuminaCollisionProfile, luminaParseCollisionObjectType;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 

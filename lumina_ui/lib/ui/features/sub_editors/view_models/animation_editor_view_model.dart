@@ -3,7 +3,7 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/foundation.dart';
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:vector_math/vector_math_64.dart' show Matrix4, Quaternion, Vector3;
 import 'package:lumina_ui/ui/features/main_editor/commands/editor_transaction.dart';
 import 'package:lumina_ui/ui/features/main_editor/services/transform_gizmo.dart' show AuthoringRotation, TransformGizmoModel;

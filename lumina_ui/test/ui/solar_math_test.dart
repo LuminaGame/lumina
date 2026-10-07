@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina/lumina.dart' show LuminaAxes, LuminaDirectionalLightComponent;
+import 'package:lumina_editor_data/lumina_editor.dart' show LuminaAxes, LuminaDirectionalLightComponent;
 import 'package:lumina_ui/ui/features/sub_editors/models/solar_math.dart';
 import 'package:vector_math/vector_math_64.dart';
 

@@ -3,7 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/ui/features/source_control/services/git_service.dart';
 
 /// GitService scenarios.

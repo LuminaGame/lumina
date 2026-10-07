@@ -1,6 +1,6 @@
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_filament/flutter_filament.dart' show FilamentCamera, FilamentEngine, FilamentScene, FilamentView, FilamentWidget;
-import 'package:lumina/lumina.dart' show LuminaUnits;
+import 'package:lumina_editor_data/lumina_editor.dart' show LuminaUnits;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import 'package:lumina_ui/ui/features/main_editor/services/editor_level_scene.dart';

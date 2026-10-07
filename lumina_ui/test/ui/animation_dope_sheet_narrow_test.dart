@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina/lumina.dart' hide BoxShape;
+import 'package:lumina_editor_data/lumina_editor.dart' hide BoxShape;
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/anim_notify_and_curves.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/anim_graph_asset_service.dart';

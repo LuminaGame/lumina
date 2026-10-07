@@ -4,7 +4,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/rendering.dart' show RenderRepaintBoundary;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina/lumina.dart' hide BoxShape;
+import 'package:lumina_editor_data/lumina_editor.dart' hide BoxShape;
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme_data.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme_store.dart';

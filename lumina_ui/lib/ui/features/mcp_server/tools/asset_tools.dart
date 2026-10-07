@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 
 import 'package:lumina_ui/ui/features/main_editor/services/project_trash.dart' show TrashConflict;
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';

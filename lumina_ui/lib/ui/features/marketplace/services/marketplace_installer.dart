@@ -5,7 +5,7 @@ import 'dart:io';
 import 'package:archive/archive.dart';
 import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
-import 'package:lumina/lumina.dart'
+import 'package:lumina_editor_data/lumina_editor.dart'
     show ImportConflictPolicy, ImportFolderOptions, ImportFolderPlan, ImportFolderScanner, ImportProgress, ImportRequest, ImportStage;
 import 'package:lumina_marketplace_shared/lumina_marketplace_shared.dart';
 

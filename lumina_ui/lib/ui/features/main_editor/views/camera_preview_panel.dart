@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:lumina/lumina.dart' show LuminaUnits;
+import 'package:lumina_editor_data/lumina_editor.dart' show LuminaUnits;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';

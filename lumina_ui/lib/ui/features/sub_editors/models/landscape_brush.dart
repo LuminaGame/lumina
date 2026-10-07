@@ -1,13 +1,13 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 
 // The heightmap payload, the dirty-rect type and the section/tile map live in
 // package:lumina so the engine's LuminaLandscapeComponent and this editor
 // share exactly one implementation. Re-exported here so the editor's own
 // imports stay stable.
-export 'package:lumina/lumina.dart'
+export 'package:lumina_editor_data/lumina_editor.dart'
     show
         FoliageInstance,
         FoliageLayer,

@@ -3,10 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
-import 'package:lumina_core/lumina_core.dart';
-import 'package:lumina/data/repositories/asset_repository.dart';
-import 'package:lumina/lumina.dart'
-    show LuminaBlueprintDocument, LuminaBlueprintNode, LuminaBlueprintNodeLibrary, LuminaThemeDocument, LuminaThemeService;
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' show ThemeData;
 import 'package:lumina_ui/ui/features/sub_editors/views/umg/umg_theme_helper.dart';
 

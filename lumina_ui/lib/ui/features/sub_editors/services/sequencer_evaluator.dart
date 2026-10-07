@@ -1,4 +1,4 @@
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 
 /// The sampled state of one [SequencerTrack] at a given frame.
 ///

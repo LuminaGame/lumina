@@ -6,7 +6,7 @@
 
 ## Place in the architecture
 
-`lumina_ui` is the top layer. It depends on `lumina` (runtime and data layer), `lumina_editor_api` (the plugin contract it implements), `flutter_filament` (used directly by the viewports and previews), the native packages of the tools repository and `lumina_marketplace_shared` from the marketplace repository. New 3D features are routed through `lumina` rather than through direct `flutter_filament` calls. See [Layered architecture](../overview/layers.md).
+`lumina_ui` is the top layer. It depends on `lumina` (the engine), `lumina_editor_data` (the editor data layer; editor code imports its `lumina_editor.dart` umbrella), `lumina_editor_api` (the plugin contract it implements), `flutter_filament` (used directly by the viewports and previews), the native packages of the tools repository and `lumina_marketplace_shared` from the marketplace repository. New 3D features are routed through `lumina` rather than through direct `flutter_filament` calls. See [Layered architecture](../overview/layers.md).
 
 ## Structure
 

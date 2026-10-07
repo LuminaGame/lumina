@@ -2,7 +2,7 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/services.dart';
-import 'package:lumina/lumina.dart' hide BoxShape;
+import 'package:lumina_editor_data/lumina_editor.dart' hide BoxShape;
 import 'package:lumina_ui/ui/features/sub_editors/services/blueprint_debugger.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_ui/ui/core/property_editors/collision_section_editor.dart';

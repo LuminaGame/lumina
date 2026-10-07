@@ -14,7 +14,6 @@
 - [`lib/src/animation/skeleton_retargeter.dart`](#libsrcanimationskeleton_retargeterdart)
 - [`lib/src/animation/directional_locomotion_component.dart`](#libsrcanimationdirectional_locomotion_componentdart)
 - [`lib/src/animation/locomotion_clip_set.dart`](#libsrcanimationlocomotion_clip_setdart)
-- [`lib/src/animation/rig_logic_evaluator.dart`](#libsrcanimationrig_logic_evaluatordart)
 
 ## `lib/src/animation/anim_instance.dart`
 
@@ -421,65 +420,6 @@ What a locomotion driver should play this frame.
 | Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `selectLocomotionPose` | `LuminaLocomotionPose selectLocomotionPose({required LuminaLocomotionClipSet clips, required Vector3 velocity,...` | Chooses idle or one of the eight walk cycles for a character moving with [velocity] while facing [facing] (both world space, Y up). |
-
-## `lib/src/animation/rig_logic_evaluator.dart`
-
-### `class RigLogicEvaluationResult`
-
-Evaluation result containing calculated blend shapes, joint deltas, and animated maps.
-
-**Yapıcı Metotlar (Constructors):**
-
-- `const RigLogicEvaluationResult({required this.blendShapeWeights, required this.rawBlendShapes, required this.jointOutputs, required this.animatedMapOutputs,})`
-
-**Üyeler:**
-
-| Üye | İmza | Açıklama |
-| :--- | :--- | :--- |
-| `blendShapeWeights` | `final Map<String, double> blendShapeWeights` | Calculated blend shape channel weights mapped by channel name. |
-| `rawBlendShapes` | `final List<double> rawBlendShapes` | Raw float list of blend shape weights in channel index order. |
-| `jointOutputs` | `final List<double> jointOutputs` | Raw joint outputs (9 floats per joint: Tx, Ty, Tz, Rx, Ry, Rz, Sx, Sy, Sz). |
-| `animatedMapOutputs` | `final List<double> animatedMapOutputs` | Raw animated map (wrinkle map) multiplier outputs. |
-
-### `class RigLogicEvaluator`
-
-Evaluates MetaHuman DNA facial rigs using OpenRigLogic C++ engine.
-
-Converts raw/GUI control inputs into microsecond-evaluated blend shape weights and skeletal joint transforms that drive 3D facial animation.
-
-**Yapıcı Metotlar (Constructors):**
-
-- `factory RigLogicEvaluator.fromFile(String path)`: Creates a [RigLogicEvaluator] by reading a binary `.dna` file from disk.
-- `factory RigLogicEvaluator.fromMemory(Uint8List bytes)`: Creates a [RigLogicEvaluator] from an in-memory byte buffer containing `.dna` data.
-
-**Üyeler:**
-
-| Üye | İmza | Açıklama |
-| :--- | :--- | :--- |
-| `isDisposed` | `bool get isDisposed` |  |
-| `characterName` | `String get characterName` |  |
-| `lodCount` | `int get lodCount` |  |
-| `jointCount` | `int get jointCount` |  |
-| `blendShapeCount` | `int get blendShapeCount` |  |
-| `rawControlCount` | `int get rawControlCount` |  |
-| `guiControlCount` | `int get guiControlCount` |  |
-| `animatedMapCount` | `int get animatedMapCount` |  |
-| `rawControlNames` | `List<String> get rawControlNames` |  |
-| `blendShapeNames` | `List<String> get blendShapeNames` |  |
-| `jointNames` | `List<String> get jointNames` |  |
-| `animatedMapNames` | `List<String> get animatedMapNames` |  |
-| `lod` | `int get lod` |  |
-| `lod` | `set lod(int value)` |  |
-| `indexOfRawControl` | `int? indexOfRawControl(String name)` |  |
-| `getRawControl` | `double getRawControl(int index)` |  |
-| `getControlByName` | `double? getControlByName(String name)` |  |
-| `setRawControl` | `void setRawControl(int index, double value)` |  |
-| `setControlByName` | `bool setControlByName(String name, double value)` |  |
-| `applyControls` | `void applyControls(Map<String, double> controls)` |  |
-| `resetControls` | `void resetControls()` |  |
-| `evaluate` | `RigLogicEvaluationResult evaluate()` | Evaluates the rig logic graph with current control inputs and returns blend shape weights, joint deltas, and animated maps. |
-| `applyToSkinnedMesh` | `RigLogicEvaluationResult applyToSkinnedMesh(LuminaSkinnedMeshComponent mesh)` | Evaluates current control state and pushes matching blend shape weights directly into [mesh] (via [LuminaSkinnedMeshComponent.setMorphTarget]). |
-| `dispose` | `void dispose()` |  |
 
 ---
 

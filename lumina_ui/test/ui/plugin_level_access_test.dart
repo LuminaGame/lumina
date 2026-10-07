@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart';
 import 'package:lumina_ui/ui/core/editor_level_access.dart';
 import 'package:lumina_ui/ui/core/plugin_extension_registry.dart';

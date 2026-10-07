@@ -34,7 +34,8 @@ Plugins extend the editor through `lumina_editor_api`, a small contract package 
 |---|---|---|
 | `flutter_filament` | lumina | Dart FFI bindings to Google Filament v1.77.2 |
 | `lumina_core` | lumina | Pure-Dart foundation: math, file formats, paths, logger, pure tooling services |
-| `lumina` | lumina | Engine runtime and the editor-facing data layer |
+| `lumina` | lumina | The engine: runtime and its Filament binding |
+| `lumina_editor_data` | lumina | The editor data layer: repositories, importers, thumbnails, code generators, project editor builds, plugin services |
 | `lumina_editor_api` | lumina | Plugin API of Lumina Studio |
 | `lumina_ui` | lumina | Lumina Studio, the editor app |
 | `flutter_assimp` | tools | Dart FFI bindings to Assimp: model import to GLB |

@@ -26,7 +26,7 @@ import 'package:lumina_ui/ui/features/sub_editors/view_models/physics_asset_edit
 import 'package:lumina_ui/ui/features/sub_editors/view_models/static_mesh_editor_view_model.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/texture_editor_view_model.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/material/material_sub_editor.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/sub_editor_workspace_shell.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/blueprint/blueprint_sub_editor.dart';

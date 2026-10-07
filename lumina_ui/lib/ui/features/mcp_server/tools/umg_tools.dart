@@ -1,6 +1,6 @@
 import 'dart:ui' show Offset, Size;
 
-import 'package:lumina/lumina.dart' show AssetType, LuminaBlueprintNodeLibrary, RealAssetInfo, kUmgWidgetLibraryShadcn;
+import 'package:lumina_editor_data/lumina_editor.dart' show AssetType, LuminaBlueprintNodeLibrary, RealAssetInfo, kUmgWidgetLibraryShadcn;
 
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/umg_document.dart';

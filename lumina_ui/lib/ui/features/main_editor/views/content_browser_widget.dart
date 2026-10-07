@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/services.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart';
 import 'package:lumina_ui/ui/core/services/file_reveal.dart';
 import 'package:lumina_ui/ui/core/theme/asset_type_style.dart';

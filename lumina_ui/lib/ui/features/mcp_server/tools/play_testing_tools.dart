@@ -5,7 +5,7 @@ import 'package:flutter/rendering.dart' show RenderBox;
 import 'package:flutter/scheduler.dart' show SchedulerBinding;
 import 'package:flutter/services.dart' show TextEditingValue, TextInputAction, TextSelection;
 import 'package:flutter/widgets.dart' show EditableTextState, FocusManager, GlobalKey, SelectionChangedCause;
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:vector_math/vector_math_64.dart' show Quaternion;
 
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';

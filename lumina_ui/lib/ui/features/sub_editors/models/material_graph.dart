@@ -1,5 +1,5 @@
 import 'package:flutter_filament/flutter_filament.dart' show BlendingMode, FilamatShading;
-import 'package:lumina/lumina.dart'
+import 'package:lumina_editor_data/lumina_editor.dart'
     show LuminaBlueprintGraph, LuminaBlueprintNode, LuminaBlueprintWire;
 
 /// The value a material expression pin carries: a float vector of one to four

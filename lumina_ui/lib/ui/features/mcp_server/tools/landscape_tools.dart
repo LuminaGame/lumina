@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'dart:math' as math;
 
-import 'package:lumina/lumina.dart' show AssetType, FoliageRules, LandscapeData, LuminaUnits;
+import 'package:lumina_editor_data/lumina_editor.dart' show AssetType, FoliageRules, LandscapeData, LuminaUnits;
 
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/landscape_brush.dart';

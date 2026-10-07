@@ -4,7 +4,7 @@ import 'dart:typed_data';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show debugPrint;
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:vector_math/vector_math_64.dart' show Matrix4, Quaternion, Vector3, Vector4;
 
 import 'package:lumina_ui/ui/features/sub_editors/models/landscape_terrain_sink.dart';

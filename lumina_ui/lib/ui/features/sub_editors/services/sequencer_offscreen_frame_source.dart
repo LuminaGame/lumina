@@ -6,7 +6,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_filament/flutter_filament.dart';
 import 'package:flutter_filament/src/third_party/filament_c.g.dart' as c;
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:vector_math/vector_math_64.dart' as vm;
 
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart' show EditorActorNode;

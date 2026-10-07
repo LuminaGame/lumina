@@ -1,4 +1,4 @@
-import 'package:lumina/lumina.dart' show LuminaBlueprintGraph, LuminaBlueprintNode;
+import 'package:lumina_editor_data/lumina_editor.dart' show LuminaBlueprintGraph, LuminaBlueprintNode;
 
 import 'package:lumina_ui/ui/features/sub_editors/models/material_graph.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/mat_source.dart';

@@ -1,6 +1,6 @@
 
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
-import 'package:lumina/lumina.dart' show EngineBootstrapStep, EngineCheckout, EnginePrerequisite;
+import 'package:lumina_editor_data/lumina_editor.dart' show EngineBootstrapStep, EngineCheckout, EnginePrerequisite;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import 'package:lumina_ui/ui/core/host/editor_host.dart';

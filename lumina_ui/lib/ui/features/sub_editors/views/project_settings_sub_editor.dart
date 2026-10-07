@@ -1,6 +1,6 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart' show ProjectSettingsSection;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 

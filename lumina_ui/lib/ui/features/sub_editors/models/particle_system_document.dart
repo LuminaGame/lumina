@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:vector_math/vector_math_64.dart';
 
 /// Versioned persistence model for a PARTICLE `.lmas`.

@@ -31,31 +31,20 @@ void main() {
     expect(through, isEmpty, reason: through.join('\n'));
   });
 
-  // A file and its companion that import each other (a model and its
-  // summary, a service and the template sources it renders). Each stays one
-  // unit when the data layer moves; any other cycle, and any cycle growing
-  // past its pair, fails.
-  const companions = <Set<String>>[
-    {'lib/data/repositories/asset_repository.dart', 'lib/data/services/asset_reference_graph.dart'},
-    {'lib/data/services/level_actor_material.dart', 'lib/data/services/level_asset_manifest.dart'},
-    {'lib/data/services/plugin_template/code_plugin_sources.dart', 'lib/data/services/plugin_template_generator_service.dart'},
-  ];
-
-  test('the editor data layer (lib/data, lib/domain) forms no import cycle beyond its companion files', () {
-    bool editorData(String f) => f.startsWith('lib/data/') || f.startsWith('lib/domain/');
-    final cycles = [
-      for (final c in graph.cycles())
-        if (c.any(editorData) && !companions.any((pair) => pair.containsAll(c))) (c.toList()..sort()).join('\n  '),
+  // The editor data layer lives in lumina_editor_data (its own cycle guard is
+  // lumina_editor_data/test/architecture/import_cycles_test.dart). What is
+  // left under lib/data is the one-release `@Deprecated` re-exports of
+  // lumina_core files (the level and theme ones with the engine extensions
+  // their types gained).
+  test('lib/data holds only deprecated lumina_core re-exports and lib/domain is gone', () {
+    bool reexport(Set<String> deps) =>
+        deps.any((u) => u.startsWith('package:lumina_core/src/')) &&
+        deps.every((u) => u.startsWith('package:lumina_core/src/') || u.startsWith('lib/src/'));
+    final offenders = [
+      for (final e in graph.edges.entries)
+        if (e.key.startsWith('lib/domain/') || (e.key.startsWith('lib/data/') && !reexport(e.value)))
+          '${e.key} -> ${e.value.join(', ')}',
     ];
-    expect(cycles, isEmpty, reason: 'cycles:\n  ${cycles.join('\n---\n  ')}');
-  });
-
-  test('the editor data layer reaches the engine only one way: no cycle mixes lib/data and lib/src', () {
-    final mixed = [
-      for (final c in graph.cycles())
-        if (c.any((f) => f.startsWith('lib/src/')) && c.any((f) => f.startsWith('lib/data/') || f.startsWith('lib/domain/')))
-          '${c.length} libraries: ${(c.where((f) => !f.startsWith('lib/src/')).toList()..sort()).join(', ')}',
-    ];
-    expect(mixed, isEmpty, reason: mixed.join('\n'));
+    expect(offenders, isEmpty, reason: offenders.join('\n'));
   });
 }

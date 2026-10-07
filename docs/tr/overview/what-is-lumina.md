@@ -34,7 +34,8 @@ Eklentiler editörü, yalnızca `lumina`'ya bağımlı küçük bir sözleşme p
 |---|---|---|
 | `flutter_filament` | lumina | Google Filament v1.77.2 için Dart FFI binding'leri |
 | `lumina_core` | lumina | Saf Dart temeli: matematik, dosya formatları, yollar, logger, saf araç servisleri |
-| `lumina` | lumina | Engine runtime'ı ve editöre dönük veri katmanı |
+| `lumina` | lumina | Engine: runtime ve Filament binding'i |
+| `lumina_editor_data` | lumina | Editör veri katmanı: repository'ler, içe aktarıcılar, thumbnail'lar, kod üreteçleri, proje editörü build'leri, eklenti servisleri |
 | `lumina_editor_api` | lumina | Lumina Studio'nun eklenti API'si |
 | `lumina_ui` | lumina | Editör uygulaması Lumina Studio |
 | `flutter_assimp` | tools | Assimp için Dart FFI binding'leri: GLB'ye model içe aktarma |

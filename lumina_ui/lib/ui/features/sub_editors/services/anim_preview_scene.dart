@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show debugPrint;
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:vector_math/vector_math_64.dart';
 
 /// The Anim Preview's stand-in pawn movement: Get Velocity and Is Falling

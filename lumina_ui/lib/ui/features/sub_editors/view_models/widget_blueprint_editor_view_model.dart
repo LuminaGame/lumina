@@ -1,7 +1,6 @@
 import 'dart:ui' show Offset;
 
-import 'package:lumina/data/services/blueprint_codegen/blueprint_dart_generator.dart';
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 
 import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_editor_nodes.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_editor_type_context.dart';

@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:lumina/lumina.dart' show ConvexHullShape;
+import 'package:lumina_editor_data/lumina_editor.dart' show ConvexHullShape;
 import 'package:vector_math/vector_math_64.dart' show Vector3;
 
 enum StaticMeshCollisionShapeType {

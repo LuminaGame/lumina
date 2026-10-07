@@ -4,7 +4,7 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/ui/core/services/rgba_png_encoder.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/texture_editor_models.dart';
 

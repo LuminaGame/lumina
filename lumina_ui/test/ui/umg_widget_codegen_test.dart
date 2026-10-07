@@ -6,7 +6,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'dart:convert';
 
-import 'package:lumina/lumina.dart' show AssetType, GenerateDartCodeUseCase, LuminaAsset, kUmgWidgetLibraryShadcn, kUmgWidgetLibraryFlutter, kGameShadcnFlutterVersion;
+import 'package:lumina_editor_data/lumina_editor.dart' show AssetType, GenerateDartCodeUseCase, LuminaAsset, kUmgWidgetLibraryShadcn, kUmgWidgetLibraryFlutter, kGameShadcnFlutterVersion;
 import 'package:lumina_ui/ui/features/sub_editors/models/umg_document.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/umg_widget_codegen.dart';
 

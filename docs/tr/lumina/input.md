@@ -2,7 +2,7 @@
 
 # Girdi (input)
 
-Action tabanlı input sistemi: input action'lar ve değerleri, tuşları action'lara bağlayan mapping context'ler, input subsystem ve component ile ham girdiyi şekillendiren modifier'lar (dead zone, negate, scalar, response curve) ve trigger'lar (pressed, released, hold, tap, pulse). Dosya yolları `lumina/` paket dizinine görelidir.
+Action tabanlı input sistemi: input action'lar ve değerleri, tuşları action'lara bağlayan mapping context'ler, input subsystem ve component ile ham girdiyi şekillendiren modifier'lar (dead zone, negate, scalar, response curve) ve trigger'lar (pressed, released, hold, tap, pulse) ile bir `.lmproject`'in input ayarlarını action'lara ve mapping context'lere çeviren proje input binder'ı. Dosya yolları `lumina/` paket dizinine görelidir.
 
 **Bu sayfada:**
 
@@ -12,6 +12,7 @@ Action tabanlı input sistemi: input action'lar ve değerleri, tuşları action'
 - [`lib/src/input/input_mapping_context.dart`](#libsrcinputinput_mapping_contextdart)
 - [`lib/src/input/input_modifier.dart`](#libsrcinputinput_modifierdart)
 - [`lib/src/input/input_trigger.dart`](#libsrcinputinput_triggerdart)
+- [`lib/src/input/project_input_binder.dart`](#libsrcinputproject_input_binderdart)
 
 ## `lib/src/input/input_action.dart`
 
@@ -296,6 +297,58 @@ Triggers repeatedly at [interval] seconds while held.
 | `triggerOnStart` | `bool triggerOnStart` | `triggerOnStart` alanını (field/property) ve ilişkili veriyi saklar. |
 | `update` | `TriggerEvaluation update(LuminaInputActionValue value, double deltaTime)` | Mevcut verileri veya durumu günceller. |
 | `reset` | `void reset()` | Değerleri veya durumları varsayılan ayarlarına sıfırlar. |
+
+## `lib/src/input/project_input_binder.dart`
+
+### `class LuminaAxisPlacementModifier`
+
+Places a key's raw 1D value onto one axis of a 2D action, scaled — a swizzle-axis and a scalar modifier in one.
+
+**Fonksiyonlar, Metotlar ve Erişimciler:**
+
+| Metot / Getter | İmzası | Ne İşe Yarar? |
+| :--- | :--- | :--- |
+| `toX` | `double toX` | `toX` alanını (field/property) ve ilişkili veriyi saklar. |
+| `toY` | `double toY` | `toY` alanını (field/property) ve ilişkili veriyi saklar. |
+| `modify` | `LuminaInputActionValue modify(LuminaInputActionValue rawValue, double de...` | `modify` işlemini gerçekleştirir. |
+
+### `class BoundMappingContext`
+
+One mapping context from the manifest, with the priority it was authored at.
+
+**Fonksiyonlar, Metotlar ve Erişimciler:**
+
+| Metot / Getter | İmzası | Ne İşe Yarar? |
+| :--- | :--- | :--- |
+| `name` | `String name` | `name` alanını (field/property) ve ilişkili veriyi saklar. |
+| `priority` | `int priority` | `priority` alanını (field/property) ve ilişkili veriyi saklar. |
+| `context` | `LuminaInputMappingContext context` | `context` alanını (field/property) ve ilişkili veriyi saklar. |
+
+### `class BoundProjectInput`
+
+The result of binding a project's input settings to the runtime.
+
+**Fonksiyonlar, Metotlar ve Erişimciler:**
+
+| Metot / Getter | İmzası | Ne İşe Yarar? |
+| :--- | :--- | :--- |
+| `contexts` | `List<BoundMappingContext> contexts` | `contexts` alanını (field/property) ve ilişkili veriyi saklar. |
+| `actions` | `Map<String, LuminaInputAction> actions` | `actions` alanını (field/property) ve ilişkili veriyi saklar. |
+| `unboundKeys` | `List<String> unboundKeys` | Labels of keys the manifest binds that the runtime has no equivalent for. Reported rather than silently dropped, so the editor can say so. |
+| `actionByName` | `LuminaInputAction? actionByName(String name)` | `actionByName` işlemini gerçekleştirir. |
+
+### `class ProjectInputBinder`
+
+Turns the `.lmproject` manifest's [ProjectInputSettings] — the same structures the Project Settings input editor edits — into the runtime's actions and mapping contexts.  Play-In-Editor binds through this, so rebinding a key in Project Settings changes what Play does, instead of PIE keeping a second hardcoded list.
+
+**Yapıcı Metotlar (Constructors):**
+- `ProjectInputBinder._()`: `ProjectInputBinder._()` nesnesini ilklendirir.
+
+**Fonksiyonlar, Metotlar ve Erişimciler:**
+
+| Metot / Getter | İmzası | Ne İşe Yarar? |
+| :--- | :--- | :--- |
+| `bind` | `static BoundProjectInput bind(ProjectInputSettings settings)` | `bind` işlemini gerçekleştirir. |
 
 ---
 

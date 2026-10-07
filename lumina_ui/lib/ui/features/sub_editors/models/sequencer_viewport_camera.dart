@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:vector_math/vector_math_64.dart';
 
 import 'package:lumina_ui/ui/features/main_editor/services/camera_actor_view.dart';

@@ -2,7 +2,7 @@
 
 # Utilities, math and testing
 
-Engine utilities: gameplay statics, gameplay volumes (trigger, blocking, kill-Z), the timer manager, viewport picking, the mesh decimation service and the engine's `SmokeArtifacts`. File paths are relative to the `lumina/` package directory. The math rules (units, axes, Euler, transform snapshots) live in `lumina_core`: see [Math](../lumina_core/math.md).
+Engine utilities: gameplay statics, gameplay volumes (trigger, blocking, kill-Z), the timer manager, viewport picking, the mesh decimation service, the engine's asset readers (`lib/src/assets/`: the encoded image decoder, the GLB loader with the engine's Draco and image decoders, the level asset manifest and level mesh material lookup) and the engine's `SmokeArtifacts`. File paths are relative to the `lumina/` package directory. The math rules (units, axes, Euler, transform snapshots) live in `lumina_core`: see [Math](../lumina_core/math.md).
 
 **On this page:**
 
@@ -19,6 +19,9 @@ Engine utilities: gameplay statics, gameplay volumes (trigger, blocking, kill-Z)
 - [`lib/src/utility/web_loading.dart`](#libsrcutilityweb_loadingdart)
 - [`lib/src/utility/web_loading_hook_stub.dart`](#libsrcutilityweb_loading_hook_stubdart)
 - [`lib/src/utility/web_loading_hook_web.dart`](#libsrcutilityweb_loading_hook_webdart)
+- [`lib/src/assets/encoded_image_decoder.dart`](#libsrcassetsencoded_image_decoderdart)
+- [`lib/src/assets/glb_loader.dart`](#libsrcassetsglb_loaderdart)
+- [`lib/src/assets/level_asset_manifest.dart`](#libsrcassetslevel_asset_manifestdart)
 
 ## `lib/src/services/mesh_decimation_service.dart`
 
@@ -367,6 +370,80 @@ Native builds skip all of it: [prepareGame] returns at once and nothing here imp
 | `progress` | `void progress(double fraction, String label)` | Reports to `window.luminaLoading.progress`; a page without the loading screen (a hand-written index.html) is left alone. |
 | `loadRenderer` | `Future<void> loadRenderer()` | Downloads and instantiates the renderer's WebAssembly module. |
 
+## `lib/src/assets/encoded_image_decoder.dart`
+
+### `class DecodedRgbaImage`
+
+Decoded pixels: `width * height` RGBA8 texels, row-major, alpha premultiplied (what `dart:ui`'s `ImageByteFormat.rawRgba` hands back).
+
+**Constructors:**
+
+- `const DecodedRgbaImage(this.width, this.height, this.rgba)`
+
+**Members:**
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `width` | `final int width` |  |
+| `height` | `final int height` |  |
+| `rgba` | `final Uint8List rgba` |  |
+
+### `abstract final class EncodedImageDecoder`
+
+Decodes an encoded image with the decoder for its [EncodedImageFormat], the same way on every isolate.
+
+`dart:ui`'s image codec only exists on a root isolate (the editor's UI isolate, a test's main isolate, the web's only isolate). There it decodes PNG, JPEG, WebP, GIF and BMP; on any other isolate — an `Isolate.run` worker, a save or streaming worker — `package:image` decodes the same formats. TGA always goes through [TgaDecoderService]. KTX2 (Basis) and unrecognised bytes are not decoded to pixels here.
+
+**Members:**
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `platformCodecAvailable` | `static bool get platformCodecAvailable` | Whether this isolate can use `dart:ui`'s image codec. |
+| `platformCodecProxy` | `static Future<DecodedRgbaImage> Function(Uint8List bytes)? platformCodecProxy` | Decodes with the UI isolate's platform codec on behalf of an isolate that has none: the import worker sets this to a round trip to the UI isolate, so what it decodes — the texels a mesh thumbnail samples — matches a UI-isolate decode bit for bit (JPEG decoders disagree in the last bits). Used only where [platformCodecAvailable] is false. |
+| `decodeRgba` | `static Future<DecodedRgbaImage?> decodeRgba(Uint8List bytes) async` | [bytes] decoded to premultiplied RGBA8, or `null` when its format is not one this decoder turns into pixels (KTX2, unknown). Throws a [FormatException] for bytes that carry a recognised signature but do not decode. |
+
+## `lib/src/assets/glb_loader.dart`
+
+### `abstract final class LuminaGlbLoader`
+
+Reads GLB mesh data at run time: lumina_core's pure `GlbReader` with the decoders only the engine has. Draco-compressed primitives decode with Filament's native decoder (flutter_filament); base colour textures decode with `EncodedImageDecoder` and are sampled into vertex colours. The landscape's foliage meshes and editor proxy read through it. The editor's `GlbParserService.parseGlb` (lumina_editor_data) adds its import sanitizer as `GlbDecoders.prepare`.
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `decoders` | `static const GlbDecoders decoders` | The engine's Draco and image decoders, for `GlbReader.parse`. |
+| `parse` | `static Future<GlbMeshData?> parse(Uint8List bytes)` | A `.glb`, or a `.lmas` wrapping one, read into mesh data; null when it is not a readable GLB. |
+
+## `lib/src/assets/level_asset_manifest.dart`
+
+### `abstract final class LuminaLevelAssetManifest`
+
+What a level loads: the assets its placed actors name — meshes, landscapes, sky environments, textures, materials, sounds, animation assets and the Blueprint classes placed in it with the assets their components name. The level code generator emits it as the level class's `assetManifest`; Play-In-Editor builds it from the level `.lmas` found through the project's asset index. Either way a [LuminaLevelPreloader] preloads it. A placed mesh's assigned material is listed only when it can be drawn ([LuminaLevelActorMaterial]).
+
+**Members:**
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `fromActorMaps` | `static List<LuminaAssetRef> fromActorMaps(List<Map<String, dynamic>> actorMaps, {String? projectDir})` | The assets [actorMaps] (`metadata.actors`) name, in first-seen order and without duplicates, as bundle paths (`contents/…`). A placed Blueprint adds its class `.lmas` and — with [projectDir] to read the class from — the assets its components name. |
+| `kindOf` | `static LuminaAssetKind kindOf(String path, {String? key})` | The kind of [path], from the key that named it (`staticMeshAsset`, `soundAsset`…) or its extension. |
+| `bundlePath` | `static String bundlePath(String path)` | [path] as the game bundle names it: `contents/…` (a path through the project's `contents/` is cut there); any other path as it is. |
+| `levelPath` | `static String? levelPath(LuminaAssetIndex index, String levelName)` | The project-relative `.lmas` of level [levelName] (`L_Arena`, `L_Arena.lmas` or `contents/…/L_Arena.lmas`), found through [index] (up to date): `contents/levels/<name>.lmas`, else the level asset of that name anywhere under `contents/`. Null when there is none. |
+| `levelNames` | `static List<String> levelNames(LuminaAssetIndex index)` | The names of the project's levels, from [index] (up to date). |
+| `forProjectLevel` | `static Future<List<LuminaAssetRef>?> forProjectLevel(String projectDir, String levelName) async` | Level [levelName] of [projectDir]'s asset list for Play-In-Editor: found and read through the asset index (refreshed first), paths absolute (the editor reads the disk). Null when there is no such level. |
+| `toDartLiteral` | `static String toDartLiteral(List<LuminaAssetRef> refs, {String indent = ' '})` | [refs] as the `const` list literal a generated level's `assetManifest` holds. |
+
+### `abstract final class LuminaLevelActorMaterial`
+
+The material a placed level mesh or basic shape draws on every section in place of its own: the actor's `materialPath` (the Details panel's Material field, `set_actor_property material`). The level viewport, Play-In-Editor and the level code generator (`materialOverrideAsset`) all read it here.
+
+**Members:**
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `actorTypes` | `static const Set<String> actorTypes` | `Mesh`, `StaticMesh`, `SkeletalMesh`, `Primitive`. |
+| `pathOf` | `static String? pathOf(Map<String, dynamic> actor)` | The assigned material as a bundle path (`contents/…`); null when none, for a placed Blueprint, or for a value that names no `.lmas` / `.filamat` (the placeholder names older editors wrote). |
+| `problem` | `static String? problem(String path, {String? projectDir})` | Why the material cannot be drawn (not found, no compiled material), or null. The generator then emits a comment instead of the argument, Play and the viewport log it, and the mesh keeps its own. |
+| `revision` | `static String revision(String path, {String? projectDir, Iterable<String> textures = const []})` | What the level viewport draws for the material: the material file's and each of [textures]' (its samplers' textures) modified time and size. The viewport rebuilds an actor's material when it changes: recompiled, or a texture saved, reimported or its settings changed. |
+
 ---
 
-[Previous: Animation Blueprints](blueprint/animation.md) | [Up: lumina (engine core)](index.md) | [Next: Data layer: use cases and services](data-services.md)
+[Previous: Animation Blueprints](blueprint/animation.md) | [Up: lumina (engine core)](index.md) | [Next: lumina_editor_data (editor data layer)](../lumina_editor_data/index.md)

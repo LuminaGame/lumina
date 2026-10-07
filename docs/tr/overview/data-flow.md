@@ -19,12 +19,12 @@ Her satır bir iş akışıdır. Soldan sağa, editörde başladığı yerden i�
 
 ## Daha fazlası için
 
-- Model içe aktarma: [Veri katmanı: use case'ler ve servisler](../lumina/data-services.md) ve [flutter_assimp referansı](https://github.com/LuminaGame/tools/tree/main/docs).
+- Model içe aktarma: [Veri katmanı: use case'ler ve servisler](../lumina_editor_data/services.md) ve [flutter_assimp referansı](https://github.com/LuminaGame/tools/tree/main/docs).
 - Yüz deformasyonu: [Bileşenler: mesh'ler ve parçacıklar](../lumina/components-mesh-and-particles.md), [Animasyon](../lumina/animation.md) ve [flutter_riglogic referansı](https://github.com/LuminaGame/tools/tree/main/docs).
 - Render: [Renderer, view'ler ve frame pacing](../flutter_filament/renderer-and-view.md) ve [Ana editör: view'ler](../lumina_ui/main-editor-views.md).
 - Görsel programlama: [Blueprint editörü](../lumina_ui/sub-editors/blueprint.md).
 - Streaming: [Dünya, level'lar ve streaming](../lumina/world.md).
-- Kayıt: [Veri katmanı: modeller ve repository'ler](../lumina/data-models.md).
+- Kayıt: [Veri katmanı: modeller ve repository'ler](../lumina_editor_data/repositories.md).
 
 ---
 

@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/ui/core/property_editors/slider_field.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/build_pipeline_service.dart';

@@ -11,7 +11,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_filament/flutter_filament.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina/testing.dart' show TextureOrientationFixture, TextureQuadrant;
 import 'package:lumina_ui/ui/features/sub_editors/models/material_graph.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/material_editor_view_model.dart';

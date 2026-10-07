@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_filament/flutter_filament.dart' show FilamentEngine, FilamentScene, FilamentView;
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 
 import 'package:lumina_ui/ui/features/sub_editors/models/solar_math.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';

@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart';
 import 'package:lumina_plugin_miniai/lumina_plugin_miniai.dart';
 import 'package:lumina_ui/ui/core/host/editor_host.dart';

@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/solar_math.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/environment_lighting_view_model.dart';

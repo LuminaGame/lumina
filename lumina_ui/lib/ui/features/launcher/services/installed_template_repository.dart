@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:lumina/lumina.dart' show EngineLoggerService;
+import 'package:lumina_editor_data/lumina_editor.dart' show EngineLoggerService;
 import 'package:lumina_marketplace_shared/lumina_marketplace_shared.dart'
     show GameTemplateCheck, InstallKind, checkGameTemplate, kGameTemplatePubspecOverrides, kGameTemplateThumbnailNames;
 

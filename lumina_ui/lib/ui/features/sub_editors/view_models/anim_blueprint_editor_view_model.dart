@@ -4,8 +4,7 @@ import 'dart:math' as math;
 import 'dart:ui' show Offset;
 
 import 'package:flutter/foundation.dart';
-import 'package:lumina/data/services/blueprint_codegen/blueprint_dart_generator.dart';
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:vector_math/vector_math_64.dart' show Vector3;
 
 import 'package:lumina_ui/ui/features/main_editor/commands/editor_transaction.dart';

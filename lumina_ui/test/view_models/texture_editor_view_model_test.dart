@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina/testing.dart' show ImportFolderFixture;
 import 'package:lumina_ui/testing/smoke_artifacts.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/texture_editor_view_model.dart';

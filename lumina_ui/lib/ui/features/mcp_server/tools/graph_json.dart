@@ -1,6 +1,6 @@
 import 'dart:ui' show Offset;
 
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 
 import 'package:lumina_ui/ui/features/sub_editors/view_models/blueprint_graph_editor.dart';
 import 'package:lumina_ui/ui/features/mcp_server/services/mcp_protocol.dart';

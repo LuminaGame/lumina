@@ -1,5 +1,5 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/animation_editor_view_model.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/core/property_editors/asset_picker_select.dart';

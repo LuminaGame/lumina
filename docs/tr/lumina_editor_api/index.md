@@ -32,4 +32,4 @@ Editör (`lumina_ui`) API'yi gerçekler, eklentiler onu kullanır. İkisi de `lu
 
 ---
 
-[Önceki: Veri katmanı: modeller ve repository'ler (devamı)](../lumina/data-models-continued.md) | [Üst: Lumina dokümantasyonu](../../README.tr.md) | [Sonraki: API referansı](api-reference.md)
+[Önceki: Veri katmanı: modeller ve repository'ler (devamı)](../lumina_editor_data/repositories-continued.md) | [Üst: Lumina dokümantasyonu](../../README.tr.md) | [Sonraki: API referansı](api-reference.md)

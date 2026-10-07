@@ -12,7 +12,7 @@ import 'package:lumina_ui/ui/features/main_editor/views/main_editor_view.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/toolbar_widget.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/viewport_widget.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/testing.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/features/main_editor/services/editor_preferences.dart';

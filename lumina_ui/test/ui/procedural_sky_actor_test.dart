@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/ui/core/services/editor_procedural_sky.dart';
 import 'package:lumina_ui/ui/core/services/editor_scene_environment.dart';
 import 'package:lumina_ui/ui/features/details/models/editor_component_node.dart';

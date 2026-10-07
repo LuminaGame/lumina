@@ -5,7 +5,7 @@ import 'dart:typed_data';
 
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/navigation_editor_state.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/viewport_ray.dart';

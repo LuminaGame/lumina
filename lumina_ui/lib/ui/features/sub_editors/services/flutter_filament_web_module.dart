@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:lumina/lumina.dart' show ProjectRepository;
+import 'package:lumina_editor_data/lumina_editor.dart' show ProjectRepository;
 import 'package:lumina_ui/ui/core/host/editor_host.dart' show LuminaEditorHost;
 
 /// flutter_filament's WebAssembly module — `web/flutter_filament.{js,wasm}`,

@@ -2,7 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/anim_notify_and_curves.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/anim_bone_track_info.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/animation_editor_view_model.dart';

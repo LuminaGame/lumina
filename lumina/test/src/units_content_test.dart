@@ -156,15 +156,6 @@ void main() {
       }
     });
 
-    test('the level code generator converts stored Z-up transforms to the runtime', () {
-      final code = DartCodeGeneratorService().generateLevelDart(levelName: 'L_Axes', actors: const [], actorMaps: [
-        {'id': 'm', 'name': 'Marker', 'type': 'StaticMesh', 'location': [400.0, 0.0, 60.0], 'rotation': [0.0, 0.0, 90.0], 'scale': [1.0, 2.0, 3.0]},
-      ]);
-      expect(code, contains('location: Vector3(400.0000, 60.0000, 0.0000)'));
-      expect(code, contains('rotation: luminaAuthoringRotation(0.0000, 0.0000, 90.0000)'));
-      expect(code, contains('scale: Vector3(1.0000, 3.0000, 2.0000)'));
-    });
-
     test('new manifests declare cm / Z up; older ones read as legacy metres', () {
       const project = LuminaProject(projectName: 'u');
       expect(project.toMap()['world_units'], 'cm');

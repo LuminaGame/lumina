@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/anim_graph_asset_service.dart';
 
 /// ABP_Character, BS_Walk and BS_Locomotion (the Walk state's walk / jog blend

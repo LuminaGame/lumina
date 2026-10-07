@@ -2,7 +2,7 @@ import 'dart:ui' show Color, Offset;
 
 import 'package:flutter/widgets.dart' show BuildContext, Widget, ValueKey, Padding, EdgeInsets;
 
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 
 import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_palette.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/material_graph.dart';

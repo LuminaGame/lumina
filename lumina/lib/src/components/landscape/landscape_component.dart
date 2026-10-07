@@ -7,7 +7,7 @@ import 'package:flutter_filament/flutter_filament.dart';
 import 'package:vector_math/vector_math_64.dart' hide Frustum;
 
 import 'package:lumina_core/lumina_core.dart';
-import 'package:lumina/data/services/glb_parser_service.dart';
+import 'package:lumina/src/assets/glb_loader.dart';
 import 'package:lumina/src/collision/collision_subsystem.dart';
 import 'package:lumina/src/components/collision/collision_component.dart';
 import 'package:lumina/src/object/actor.dart';
@@ -615,7 +615,7 @@ class LuminaLandscapeComponent extends _LuminaLandscapeComponentState
         if (payload == null || payload.isEmpty) return null;
         bytes = payload;
       }
-      final parsed = await GlbParserService.parseGlb(bytes);
+      final parsed = await LuminaGlbLoader.parse(bytes);
       if (parsed == null || parsed.positions.isEmpty || parsed.indices.isEmpty) return null;
       return _FoliageGeometry.fromParsed(parsed.positions, parsed.indices, baseColor: parsed.baseColor);
     } catch (_) {

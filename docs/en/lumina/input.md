@@ -2,7 +2,7 @@
 
 # Input
 
-The action-based input system: input actions and their values, mapping contexts that bind keys to actions, the input subsystem and component, and the modifiers (dead zone, negate, scalar, response curve) and triggers (pressed, released, hold, tap, pulse) that shape raw input. File paths are relative to the `lumina/` package directory.
+The action-based input system: input actions and their values, mapping contexts that bind keys to actions, the input subsystem and component, and the modifiers (dead zone, negate, scalar, response curve) and triggers (pressed, released, hold, tap, pulse) that shape raw input, and the project input binder that turns a `.lmproject`'s input settings into actions and mapping contexts. File paths are relative to the `lumina/` package directory.
 
 **On this page:**
 
@@ -12,6 +12,7 @@ The action-based input system: input actions and their values, mapping contexts 
 - [`lib/src/input/input_mapping_context.dart`](#libsrcinputinput_mapping_contextdart)
 - [`lib/src/input/input_modifier.dart`](#libsrcinputinput_modifierdart)
 - [`lib/src/input/input_trigger.dart`](#libsrcinputinput_triggerdart)
+- [`lib/src/input/project_input_binder.dart`](#libsrcinputproject_input_binderdart)
 
 ## `lib/src/input/input_action.dart`
 
@@ -296,6 +297,58 @@ Triggers repeatedly at [interval] seconds while held.
 | `triggerOnStart` | `bool triggerOnStart` | Holds the `triggerOnStart` property or configuration state. |
 | `update` | `TriggerEvaluation update(LuminaInputActionValue value, double deltaTime)` | Updates the current state or data values. |
 | `reset` | `void reset()` | Resets values or state back to defaults. |
+
+## `lib/src/input/project_input_binder.dart`
+
+### `class LuminaAxisPlacementModifier`
+
+Places a key's raw 1D value onto one axis of a 2D action, scaled — a swizzle-axis and a scalar modifier in one.
+
+**Functions, Methods & Accessors:**
+
+| Method / Getter | Signature | Purpose & Description |
+| :--- | :--- | :--- |
+| `toX` | `double toX` | Holds the `toX` property or configuration state. |
+| `toY` | `double toY` | Holds the `toY` property or configuration state. |
+| `modify` | `LuminaInputActionValue modify(LuminaInputActionValue rawValue, double de...` | Executes `modify` operation. |
+
+### `class BoundMappingContext`
+
+One mapping context from the manifest, with the priority it was authored at.
+
+**Functions, Methods & Accessors:**
+
+| Method / Getter | Signature | Purpose & Description |
+| :--- | :--- | :--- |
+| `name` | `String name` | Holds the `name` property or configuration state. |
+| `priority` | `int priority` | Holds the `priority` property or configuration state. |
+| `context` | `LuminaInputMappingContext context` | Holds the `context` property or configuration state. |
+
+### `class BoundProjectInput`
+
+The result of binding a project's input settings to the runtime.
+
+**Functions, Methods & Accessors:**
+
+| Method / Getter | Signature | Purpose & Description |
+| :--- | :--- | :--- |
+| `contexts` | `List<BoundMappingContext> contexts` | Holds the `contexts` property or configuration state. |
+| `actions` | `Map<String, LuminaInputAction> actions` | Holds the `actions` property or configuration state. |
+| `unboundKeys` | `List<String> unboundKeys` | Labels of keys the manifest binds that the runtime has no equivalent for. Reported rather than silently dropped, so the editor can say so. |
+| `actionByName` | `LuminaInputAction? actionByName(String name)` | Executes `actionByName` operation. |
+
+### `class ProjectInputBinder`
+
+Turns the `.lmproject` manifest's [ProjectInputSettings] — the same structures the Project Settings input editor edits — into the runtime's actions and mapping contexts.  Play-In-Editor binds through this, so rebinding a key in Project Settings changes what Play does, instead of PIE keeping a second hardcoded list.
+
+**Constructors:**
+- `ProjectInputBinder._()`: Initializes `ProjectInputBinder._()`.
+
+**Functions, Methods & Accessors:**
+
+| Method / Getter | Signature | Purpose & Description |
+| :--- | :--- | :--- |
+| `bind` | `static BoundProjectInput bind(ProjectInputSettings settings)` | Executes `bind` operation. |
 
 ---
 

@@ -1,4 +1,4 @@
-import 'package:lumina/lumina.dart' show LuminaProceduralSkyDescription;
+import 'package:lumina_editor_data/lumina_editor.dart' show LuminaProceduralSkyDescription;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import 'package:lumina_ui/ui/features/details/models/editor_component_node.dart';

@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart';
 import 'package:lumina_ui/testing.dart';
 import 'package:lumina_ui/ui/core/services/plugin_process/plugin_supervisor_timings.dart';

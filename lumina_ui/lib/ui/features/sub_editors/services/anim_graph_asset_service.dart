@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 
 /// A skeletal mesh as a preview component loads it: a GLB path and, for a
 /// mesh whose GLB lives inside its `.lmas` payload, a provider handing those

@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart' show Listenable;
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 
 import 'package:lumina_ui/ui/features/details/models/component_property_registry.dart';
 import 'package:lumina_ui/ui/features/details/models/editor_component_node.dart';

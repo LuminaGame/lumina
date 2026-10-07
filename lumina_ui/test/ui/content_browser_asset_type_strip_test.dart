@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina/lumina.dart' hide BoxShape;
+import 'package:lumina_editor_data/lumina_editor.dart' hide BoxShape;
 import 'package:lumina_ui/ui/core/property_editors/asset_picker_select.dart';
 import 'package:lumina_ui/ui/core/services/content_folders.dart';
 import 'package:lumina_ui/ui/core/theme/asset_type_style.dart';

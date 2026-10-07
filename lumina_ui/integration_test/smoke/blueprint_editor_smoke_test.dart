@@ -8,8 +8,7 @@ import 'package:flutter_filament/flutter_filament.dart' show FilamentLightManage
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:integration_test/integration_test.dart';
-import 'package:lumina_core/lumina_core.dart' show kThirdPersonTemplateId;
-import 'package:lumina/lumina.dart' hide BoxShape;
+import 'package:lumina_editor_data/lumina_editor.dart' hide BoxShape;
 import 'package:lumina_ui/testing.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/features/main_editor/services/standalone_game_runner.dart';

@@ -1,5 +1,5 @@
 import 'package:flutter_filament/flutter_filament.dart' show DlssQuality;
-import 'package:lumina/lumina.dart' show LuminaFsr3Quality;
+import 'package:lumina_editor_data/lumina_editor.dart' show LuminaFsr3Quality;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';

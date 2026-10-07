@@ -41,7 +41,7 @@ The plugin process API (`lumina_plugin_process`) uses them for its live values: 
 
 ## What stays in the engine
 
-`lumina_core` is shared foundation, not engine logic. World, actors, components, collision, physics, AI, animation, Blueprints and save games stay in `lumina`. So do the editor data layer files that need Flutter, the renderer, Assimp or the analyzer: the asset repository, the GLB parser, importers, thumbnails, the code generator and the project repository.
+`lumina_core` is shared foundation, not engine logic. World, actors, components, collision, physics, AI, animation, Blueprints and save games stay in `lumina`. The editor data layer files that need Flutter, the renderer, Assimp or the analyzer (the asset and project repositories, the GLB import service, importers, thumbnails, the code generators) are [lumina_editor_data](../lumina_editor_data/index.md). The GLB reader itself is here (`GlbReader`, pure Dart); the engine adds Filament's Draco decoder and the platform image codec through `LuminaGlbLoader`.
 
 Two `lumina_core` types have engine-side additions in `lumina`, exported by `package:lumina/lumina.dart`:
 

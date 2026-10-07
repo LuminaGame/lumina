@@ -11,7 +11,7 @@ import 'package:lumina_ui/ui/features/sub_editors/views/project_settings_sub_edi
 import 'package:lumina_ui/ui/features/main_editor/views/details_widget.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/main_editor_view.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart';
 import 'package:lumina_plugin_pcg/lumina_plugin_pcg.dart';
 import 'package:lumina_plugin_miniai/lumina_plugin_miniai.dart';
@@ -29,7 +29,6 @@ import 'package:lumina_ui/ui/features/launcher/view_models/create_project_view_m
 import '../../test/helpers/desktop_window.dart';
 import '../../test/helpers/mcp_test_client.dart';
 import '../../test/helpers/scaffold_game_project.dart' show offlineScaffoldRunner;
-import 'package:lumina_core/lumina_core.dart';
 
 /// The editor viewport runs tickers for as long as it is on screen (fly
 /// camera, procedural sky), so `pumpAndSettle` never settles with it mounted.

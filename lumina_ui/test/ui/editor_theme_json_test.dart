@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme_data.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme_store.dart';
-import 'package:lumina/lumina.dart' show EngineLoggerService;
+import 'package:lumina_editor_data/lumina_editor.dart' show EngineLoggerService;
 import 'package:lumina_editor_api/lumina_editor_api.dart';
 import 'package:lumina_ui/ui/core/plugin_extension_registry.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';

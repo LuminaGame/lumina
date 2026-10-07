@@ -1,4 +1,4 @@
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 
 /// lumina's type context plus what only the editor's palette needs:
 /// the interfaces the document implements, so

@@ -2,7 +2,7 @@
 import 'package:flutter/gestures.dart' show kDoubleTapTimeout;
 import 'package:flutter/services.dart' show LogicalKeyboardKey;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
-import 'package:lumina/lumina.dart' show LuminaBlueprintComponent, LuminaBlueprintDocument, LuminaMeshPhysics, MeshPhysicsService;
+import 'package:lumina_editor_data/lumina_editor.dart' show LuminaBlueprintComponent, LuminaBlueprintDocument, LuminaMeshPhysics, MeshPhysicsService;
 import 'package:lumina_ui/ui/features/details/services/multi_edit_service.dart';
 
 import 'package:lumina_ui/ui/core/property_editors/vector_row.dart';

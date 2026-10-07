@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter_filament/flutter_filament.dart' show FilamentCamera;
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:vector_math/vector_math_64.dart';
 
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart' show EditorActorNode;

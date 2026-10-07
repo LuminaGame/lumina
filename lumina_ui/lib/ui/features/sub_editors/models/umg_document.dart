@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:ui';
 
-import 'package:lumina/lumina.dart' show LuminaBlueprintDocument, LuminaWidgetBlueprintDocument, LuminaWidgetEvents;
+import 'package:lumina_editor_data/lumina_editor.dart' show LuminaBlueprintDocument, LuminaWidgetBlueprintDocument, LuminaWidgetEvents;
 import 'package:lumina_core/lumina_core.dart';
 
 /// Palette categories of the UMG designer; [shadcn] shows

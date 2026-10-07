@@ -32,4 +32,4 @@ Re-exported unchanged from [lumina_plugin_process](../lumina_plugin_process/inde
 
 ---
 
-[Previous: Data layer: models and repositories (continued)](../lumina/data-models-continued.md) | [Up: Lumina documentation](../../README.md) | [Next: API reference](api-reference.md)
+[Previous: Data layer: models and repositories (continued)](../lumina_editor_data/repositories-continued.md) | [Up: Lumina documentation](../../README.md) | [Next: API reference](api-reference.md)

@@ -1,4 +1,4 @@
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 
 import 'package:lumina_ui/ui/core/plugin_extension_registry.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/blueprint_asset_catalog.dart';

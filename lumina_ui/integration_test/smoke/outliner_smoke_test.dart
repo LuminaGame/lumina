@@ -3,14 +3,13 @@ import 'dart:io';
 import 'package:flutter/gestures.dart' show PointerDeviceKind, kSecondaryButton;
 import 'package:flutter/material.dart' hide ThemeData, Colors, Icon, Icons, DropdownMenu, TextField, Scaffold;
 import 'package:flutter/services.dart' show LogicalKeyboardKey;
-import 'package:lumina_core/lumina_core.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/main_editor_view.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/outliner_widget.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/testing.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 

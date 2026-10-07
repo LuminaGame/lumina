@@ -1,7 +1,6 @@
 import 'dart:io';
 
-import 'package:lumina_core/lumina_core.dart';
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 
 /// A [ProcessRunner] for [ProjectRepository] that writes what `flutter create`
 /// needs for analysis (pubspec, lib/) and runs the real `flutter pub get

@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/services.dart' show LogicalKeyboardKey;
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/project_settings_view_model.dart';

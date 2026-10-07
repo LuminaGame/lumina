@@ -3,7 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/services.dart' show LogicalKeyboardKey;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina/lumina.dart' hide BoxShape;
+import 'package:lumina_editor_data/lumina_editor.dart' hide BoxShape;
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/features/main_editor/services/transform_gizmo.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/sub_editor_transform_gizmo.dart';

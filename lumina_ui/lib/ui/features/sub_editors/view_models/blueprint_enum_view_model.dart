@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 
 import 'package:lumina_ui/ui/features/main_editor/commands/editor_transaction.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/blueprint_asset_catalog.dart';

@@ -1,4 +1,4 @@
-import 'package:lumina/lumina.dart' show CameraProjectionMode, LuminaCameraSettings;
+import 'package:lumina_editor_data/lumina_editor.dart' show CameraProjectionMode, LuminaCameraSettings;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import 'package:lumina_ui/ui/core/property_editors/enum_field.dart';

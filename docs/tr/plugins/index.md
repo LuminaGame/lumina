@@ -9,8 +9,8 @@ Lumina Studio eklentilerle genişletilebilir: `lumina_editor_api` üzerinden men
 | Parça | Paket | Görevi |
 |---|---|---|
 | `LuminaEditorPlugin`, `LuminaEditorContext` ve uzantı tipleri | `lumina_editor_api` | Bir eklentinin karşısına yazıldığı sözleşme ([API referansı](../lumina_editor_api/api-reference.md)). |
-| `LuminaPluginDescriptor`, `PluginRepository` | `lumina` (veri katmanı) | `.lmplugin` manifest'lerini parse eder ve eklenti köklerini tarar ([modeller ve repository'ler](../lumina/data-models.md)). |
-| `PluginRegistryService`, `PluginTemplateGeneratorService`, `PluginHostPatcherService` | `lumina` (veri katmanı) | Hangi eklentilerin etkin olduğunu çözer, şablonlardan yeni eklentiler üretir ve code plugin'leri bir editor host'una derler ([use case'ler ve servisler](../lumina/data-services.md)). |
+| `LuminaPluginDescriptor`, `PluginRepository` | `lumina_core` | `.lmplugin` manifest'lerini parse eder ve eklenti köklerini tarar ([modeller ve repository'ler](../lumina_editor_data/repositories.md)). |
+| `PluginRegistryService`, `PluginTemplateGeneratorService`, `PluginHostPatcherService` | `lumina_editor_data` (`PluginHostPatcherService`: `lumina_core`) | Hangi eklentilerin etkin olduğunu çözer, şablonlardan yeni eklentiler üretir ve code plugin'leri bir editor host'una derler ([use case'ler ve servisler](../lumina_editor_data/services.md)). |
 | `PluginExtensionRegistry`, `BuiltInEditorPlugin` | `lumina_ui` | Eklentilerin kaydettiği her şeyi toplar ve editörde gösterir ([Uygulama kabuğu ve ortak UI](../lumina_ui/core.md)). |
 | Plugin Manager, New Plugin sihirbazı | `lumina_ui` | Eklentileri etkinleştirir, devre dışı bırakır ve oluşturur ([Eklenti yöneticisi](../lumina_ui/plugin-manager.md)). |
 

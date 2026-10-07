@@ -172,11 +172,19 @@ jobs:
         working-directory: lumina/lumina
         run: >-
           flutter test
+          test/web/runtime_import_graph_test.dart
+          test/architecture/import_cycles_test.dart
+          test/architecture/engine_without_editor_data_test.dart
+
+      - name: lumina_editor_data
+        working-directory: lumina/lumina_editor_data
+        run: >-
+          flutter test
+          test/architecture/no_widgets_test.dart
+          test/architecture/import_cycles_test.dart
           test/obj_parser_test.dart
           test/glb_parser_test.dart
           test/repository_test.dart
-          test/web/runtime_import_graph_test.dart
-          test/architecture/import_cycles_test.dart
 
       - name: lumina_editor_api
         working-directory: lumina/lumina_editor_api

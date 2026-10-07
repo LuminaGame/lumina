@@ -119,19 +119,4 @@ void main() {
       expect(controller.cameraManager.viewTarget, same(controller.pawn));
     });
   });
-
-  test('the generated level builds a placed camera as a camera actor with its saved settings', () {
-    final code = DartCodeGeneratorService().generateLevelDart(levelName: 'L_Cam', actors: const [], actorMaps: [
-      {
-        'id': 'cam_1', 'name': 'Camera_1', 'type': 'Camera', 'location': [0.0, -500.0, 150.0], 'rotation': [0.0, 0.0, 0.0],
-        'components': [
-          {'id': 'cam_1_camera', 'type': 'LuminaCameraComponent', 'name': 'Camera', 'properties': {'fieldOfView': 30.0, 'nearClipPlane': 5.0, 'autoActivateForPlayer': true}},
-        ],
-      },
-    ]);
-    expect(code, contains("LuminaCameraActor(key: const LuminaObjectKey('cam_1'), location: Vector3(0.0000, 150.0000, 500.0000)"));
-    expect(code, contains('settings: LuminaCameraSettings.fromProperties('));
-    expect(code, contains("'fieldOfView': 30.0"));
-    expect(code, contains("'autoActivateForPlayer': true"));
-  });
 }

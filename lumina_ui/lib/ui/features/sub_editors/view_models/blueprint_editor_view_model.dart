@@ -6,10 +6,7 @@ import 'package:path/path.dart' as p;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
-import 'package:lumina/data/services/blueprint_function_manifest.dart';
-import 'package:lumina/data/services/blueprint_codegen/blueprint_dart_generator.dart'
-    show BlueprintAnimClassRef, BlueprintClassRef;
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 
 import 'package:lumina_ui/ui/features/main_editor/commands/editor_transaction.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_compile_status.dart';

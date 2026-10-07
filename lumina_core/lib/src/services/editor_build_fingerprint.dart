@@ -59,6 +59,7 @@ const List<String> kEditorEngineRepos = [
   'lumina_ui',
   'lumina',
   'lumina_core',
+  'lumina_editor_data',
   'lumina_editor_api',
   'lumina_plugin_process',
   'lumina_plugin_protocol',

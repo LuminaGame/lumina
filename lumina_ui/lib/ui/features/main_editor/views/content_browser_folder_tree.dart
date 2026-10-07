@@ -1,6 +1,6 @@
 import 'package:flutter/gestures.dart' show kDoubleTapTimeout;
 import 'package:flutter/services.dart';
-import 'package:lumina/lumina.dart' show RealAssetInfo;
+import 'package:lumina_editor_data/lumina_editor.dart' show RealAssetInfo;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import 'package:lumina_ui/ui/core/services/content_folders.dart';

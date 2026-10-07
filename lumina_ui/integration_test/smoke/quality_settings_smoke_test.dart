@@ -6,8 +6,7 @@ import 'package:flutter_filament/flutter_filament.dart' show FilamentScene, Fila
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:integration_test/integration_test.dart';
-import 'package:lumina_core/lumina_core.dart';
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/testing.dart';
 import 'package:lumina_ui/ui/core/widgets/quality_settings_popover.dart';
 import 'package:lumina_ui/ui/core/widgets/rtx_settings_popover.dart';

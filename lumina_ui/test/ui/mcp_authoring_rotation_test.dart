@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/ui/features/mcp_server/tools/play_testing_tools.dart';
 
 /// The play-testing tools report an actor's rotation in the Details panel's

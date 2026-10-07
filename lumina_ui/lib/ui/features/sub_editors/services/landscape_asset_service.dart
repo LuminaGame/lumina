@@ -2,7 +2,7 @@ import 'dart:io';
 import 'dart:isolate';
 import 'dart:typed_data';
 
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 
 
 /// A decoded heightmap image: normalised `[0, 1]` samples, one per pixel.

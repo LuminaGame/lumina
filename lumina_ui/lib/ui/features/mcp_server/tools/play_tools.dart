@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 
 import 'package:lumina_ui/ui/features/main_editor/services/blueprint_play_support.dart';
 import 'package:lumina_ui/ui/features/main_editor/services/standalone_game_runner.dart';

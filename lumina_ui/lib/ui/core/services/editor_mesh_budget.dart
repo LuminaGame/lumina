@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 
 /// The editor's texture budget on every mesh the shared
 /// engine loads by path — Blueprint previews, PIE, preview worlds — not only

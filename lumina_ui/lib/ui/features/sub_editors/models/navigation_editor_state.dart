@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart' show immutable;
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:vector_math/vector_math_64.dart';
 
 import 'package:lumina_ui/ui/features/main_editor/services/editor_transform.dart' show EditorTransforms;

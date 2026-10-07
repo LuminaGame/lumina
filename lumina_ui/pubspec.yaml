@@ -15,6 +15,11 @@ dependencies:
     path: ../lumina
   lumina_core:
     path: ../lumina_core
+  # The editor data layer (repositories, importers, thumbnails, code
+  # generators, project editor builds) and the umbrella library editor code
+  # imports (package:lumina_editor_data/lumina_editor.dart).
+  lumina_editor_data:
+    path: ../lumina_editor_data
   flutter_filament:
     path: ../flutter_filament
   # From the tools repo; pubspec_overrides.yaml at the workspace root points

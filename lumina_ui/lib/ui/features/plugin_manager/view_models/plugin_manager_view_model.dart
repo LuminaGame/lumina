@@ -1,9 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:lumina/data/services/plugin_registry_service.dart';
-import 'package:lumina/data/services/plugin_template_generator_service.dart';
-import 'package:lumina_core/lumina_core.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 
 import 'package:lumina_ui/ui/core/services/plugin_process/plugin_process_supervisor.dart';
 import 'package:lumina_ui/ui/features/plugin_manager/services/plugin_importer.dart';

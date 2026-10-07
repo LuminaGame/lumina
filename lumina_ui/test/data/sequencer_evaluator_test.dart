@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/sequencer_evaluator.dart';
 
 SequencerChannel _channel(List<SequencerKey> keys, {String name = 'Location.X'}) =>

@@ -4,10 +4,10 @@ import 'dart:ui';
 
 import 'package:flutter/painting.dart' show Alignment, EdgeInsets;
 
-import 'package:lumina/data/services/blueprint_codegen/blueprint_dart_generator.dart'
+import 'package:lumina_editor_data/lumina_editor.dart'
     show BlueprintDartGenerator, BlueprintGenerationResult;
 import 'package:lumina_core/lumina_core.dart';
-import 'package:lumina/lumina.dart'
+import 'package:lumina_editor_data/lumina_editor.dart'
     show
         AssetType,
         LuminaAssetIndex,

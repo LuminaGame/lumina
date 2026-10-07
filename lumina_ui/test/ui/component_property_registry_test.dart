@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina/lumina.dart' show LuminaCameraSettings;
+import 'package:lumina_editor_data/lumina_editor.dart' show LuminaCameraSettings;
 import 'package:lumina_ui/ui/features/details/models/component_property_registry.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_component_registry.dart';
 

@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 
 /// The Blueprint-side assets of a project that are not actor Blueprints:
 /// enum (`contents/enums/E_*.lmas`) and interface

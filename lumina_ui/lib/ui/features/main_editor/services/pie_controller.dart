@@ -7,8 +7,7 @@ import 'package:flutter/foundation.dart' show Listenable;
 import 'package:flutter/services.dart';
 
 import 'package:flutter_filament/flutter_filament.dart';
-import 'package:lumina/lumina.dart';
-import 'package:lumina_core/lumina_core.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/blueprint_debugger.dart';
 import 'package:vector_math/vector_math_64.dart' as vm64;

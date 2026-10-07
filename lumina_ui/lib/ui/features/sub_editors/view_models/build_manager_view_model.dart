@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/ui/core/host/editor_host.dart' show LuminaEditorHost;
 
 import 'package:lumina_ui/ui/features/sub_editors/services/build_pipeline_service.dart';
