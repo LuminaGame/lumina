@@ -16,6 +16,15 @@ typedef FilamentSceneCreatedCallback =
       FilamentView view,
     );
 
+/// Selects the views to render into one surface, within one GPU frame.
+/// Each view supplies its own viewport in physical pixels (bottom-left origin).
+typedef FilamentFrameViewsCallback =
+    List<FilamentView> Function(
+      FilamentView defaultView,
+      int width,
+      int height,
+    );
+
 /// A Flutter widget for rendering 3D Filament scenes natively.
 ///
 /// Manages its viewport's render objects, frame loop and dimensions. The
@@ -67,6 +76,8 @@ class FilamentWidget extends StatefulWidget {
   /// Who this widget's engine lease is for (`FilamentEngineHost.leaseOwners`).
   final String? debugLabel;
 
+  final FilamentFrameViewsCallback? frameViews;
+
   const FilamentWidget({
     super.key,
     this.onSceneCreated,
@@ -79,6 +90,7 @@ class FilamentWidget extends StatefulWidget {
     this.onFrame,
     this.sharedEngine = true,
     this.debugLabel,
+    this.frameViews,
     this.backend = FilamentBackend.defaultBackend,
     this.width = double.infinity,
     this.height = double.infinity,

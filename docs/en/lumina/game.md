@@ -161,6 +161,15 @@ Wrap embedded previews in `LuminaGameHostConfiguration(allowHeadlessFrameDriver:
 
 ### `class LuminaGameWidget`
 
+`frameViews` optionally selects multiple `FilamentView` camera regions for the
+widget's single GPU frame. Its callback receives the default view and physical
+surface width/height; set each view's viewport using bottom-left coordinates.
+Views may use independent scenes and cameras. The host owns any additional
+views and must release them in `game.disposeGame()` before its engine lease is
+released. For this arrangement use `useHeadlessSwapChain: false` so the widget
+provides the only frame driver and swap chain. Without the callback, the default
+view renders as before.
+
 Flutter widget that embeds the `FilamentWidget` viewport and drives the [LuminaGame] loop via [LuminaFrameDriver].  The widget is the game host: it calls [LuminaGame.mountGame] and `beginPlay()` on the mounted world once `FilamentWidget` has created the scene.  Play control: - [paused] is declarative: flipping it calls [LuminaGame.pause] / [LuminaGame.resume] once the scene exists (and on scene creation if it starts `true`). - [onPlayStateChanged] receives every [LuminaPlayState] transition of [game] for the widget's lifetime — bind an editor toolbar to it.  Swap chain: - With [useHeadlessSwapChain] (default `true`, today's behaviour) the widget creates a 1×1 headless swap chain plus a [LuminaFrameDriver], so the world is ticked with a vsync-derived, frame-paced delta time and [LuminaFrameDriver.frameStats] is available to the HUD overlay. - With `false` no extra swap chain or driver is created: the ticker calls [LuminaGame.tickGame] with a fixed 1/60 s delta and `FilamentWidget` presents through its own swap chain. Use this for hosts that must not allocate a second swap chain; note that no frame stats are produced in that mode.
 
 **Functions, Methods & Accessors:**

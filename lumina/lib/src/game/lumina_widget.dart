@@ -68,6 +68,10 @@ class LuminaGameWidget extends StatefulWidget {
   /// Whether VSync is enabled.
   final bool vsyncEnabled;
 
+  /// Camera views sharing this widget's frame, swap chain and presentation.
+  /// The callback configures each view's viewport in physical pixels.
+  final FilamentFrameViewsCallback? frameViews;
+
   const LuminaGameWidget({
     super.key,
     required this.game,
@@ -77,6 +81,7 @@ class LuminaGameWidget extends StatefulWidget {
     this.useHeadlessSwapChain = true,
     this.targetFps = 0,
     this.vsyncEnabled = false,
+    this.frameViews,
   });
 
   @override
@@ -206,6 +211,7 @@ class _LuminaGameWidgetState extends State<LuminaGameWidget>
       onSceneCreated: _onSceneCreated,
       onDispose: _onDispose,
       targetFps: widget.targetFps > 0 ? widget.targetFps : null,
+      frameViews: widget.frameViews,
     );
 
     if (widget.hudBuilder != null) {
