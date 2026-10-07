@@ -425,6 +425,11 @@ Future<GlbMeshData?> _parseGlb(Uint8List bytes, GlbDecoders decoders) async {
                         indices: subIndices,
                         vertexColors: Uint8List.fromList(subColorList),
                         baseColor: matColor,
+                        // Draco primitives keep their material slot like plain ones.
+                        materialName: (matIdx != null && parsedMaterialNames.length > matIdx)
+                            ? parsedMaterialNames[matIdx]
+                            : null,
+                        materialIndex: matIdx,
                       ),
                     );
 

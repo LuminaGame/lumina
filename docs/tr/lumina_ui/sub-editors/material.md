@@ -7,11 +7,16 @@ Materyal editörü: materyal kaynağını düzenleme, bütün `.mat` tanımını
 **Bu sayfada:**
 
 - [`lib/ui/features/sub_editors/views/material/glsl_editor_widget.dart`](#libuifeaturessub_editorsviewsmaterialglsl_editor_widgetdart)
+- [`lib/ui/features/sub_editors/views/material/glsl_syntax_highlighter.dart`](#libuifeaturessub_editorsviewsmaterialglsl_syntax_highlighterdart)
 - [`lib/ui/features/sub_editors/views/material/parameter_panel.dart`](#libuifeaturessub_editorsviewsmaterialparameter_paneldart)
+- [`lib/ui/features/sub_editors/views/material/material_settings_section.dart`](#libuifeaturessub_editorsviewsmaterialmaterial_settings_sectiondart)
+- [`lib/ui/features/sub_editors/views/material/material_preview_pane.dart`](#libuifeaturessub_editorsviewsmaterialmaterial_preview_panedart)
 - [`lib/ui/features/sub_editors/views/material/material_sub_editor.dart`](#libuifeaturessub_editorsviewsmaterialmaterial_sub_editordart)
 - [`lib/ui/features/sub_editors/view_models/material_editor_view_model.dart`](#libuifeaturessub_editorsview_modelsmaterial_editor_view_modeldart)
 - [`lib/ui/features/sub_editors/services/material_preview_renderer.dart`](#libuifeaturessub_editorsservicesmaterial_preview_rendererdart)
 - [`lib/ui/features/sub_editors/models/material_graph.dart`](#libuifeaturessub_editorsmodelsmaterial_graphdart)
+- [`lib/ui/features/sub_editors/models/material_fragment_pins.dart`](#libuifeaturessub_editorsmodelsmaterial_fragment_pinsdart)
+- [`lib/ui/features/sub_editors/models/material_vertex_variables.dart`](#libuifeaturessub_editorsmodelsmaterial_vertex_variablesdart)
 - [`lib/ui/features/sub_editors/models/material_slot_binding.dart`](#libuifeaturessub_editorsmodelsmaterial_slot_bindingdart)
 - [`lib/ui/features/sub_editors/services/build_pipeline_service/material_precompile_step.dart`](#libuifeaturessub_editorsservicesbuild_pipeline_servicematerial_precompile_stepdart)
 - [`lib/ui/features/sub_editors/services/mat_source.dart`](#libuifeaturessub_editorsservicesmat_sourcedart)
@@ -29,7 +34,7 @@ Materyal editörü: materyal kaynağını düzenleme, bütün `.mat` tanımını
 
 ### `class MaterialGlslEditorWidget`
 
-Monospace GLSL Source Editor with line number gutter and parameter autocomplete.
+Tek aralıklı (monospace) `.mat` kaynak düzenleyicisi: sözdizimi renklendirme (denetleyici bir [GlslCodeController] olduğunda), kodla satır satır hizalı satır numarası oluğu (her satır zorlanmış bir strut ile 20 px'e sabitlenir, böylece oluk satırı ile kod satırı hiçbir zaman kaymaz) ve parametre otomatik tamamlama. Kod alanı, oluğun da paylaştığı koyu bir düzenleyici yüzeyi (`#1E1E1E`) üzerinde kenarlıksız bir alandır.
 
 **Fonksiyonlar, Metotlar ve Erişimciler:**
 
@@ -54,11 +59,77 @@ Monospace GLSL Source Editor with line number gutter and parameter autocomplete.
 | `jumpToLine` | `void jumpToLine(int line1Indexed)` | Jumps the editor cursor to a specific 1-indexed line number. |
 | `build` | `Widget build(BuildContext context)` | Deklaratif alt nesne veya widget ağacını inşa eder. |
 
+## `lib/ui/features/sub_editors/views/material/glsl_syntax_highlighter.dart`
+
+### `enum GlslTokenKind`
+
+`.mat` kaynağının bir parçasının renklendirme açısından ne olduğu.
+
+**Değerler:**
+
+- `plain`
+- `comment`
+- `string`
+- `number`
+- `keyword`
+- `type`
+- `function`
+- `builtin`: Filament'in materyal API'si (`material`, `materialParams_x`, `getUV0`, ...).
+- `headerKey`: `material { }` başlığının bir anahtarı (`name`, `shadingModel`, ...) ve blok adları (`material`, `vertex`, `fragment`).
+- `preprocessor`
+- `punctuation`
+
+### `class GlslToken`
+
+Kaynağın renklendirilmiş bir parçası.
+
+**Yapıcı Metotlar (Constructors):**
+
+- `const GlslToken(this.kind, this.start, this.end)`
+
+**Üyeler:**
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `kind` | `final GlslTokenKind kind` |  |
+| `start` | `final int start` | Parçanın ilk karakterinin konumu. |
+| `end` | `final int end` | Parçanın son karakterinden bir sonraki konum. |
+
+### `abstract final class GlslSyntaxHighlighter`
+
+Filament `.mat` kaynağını (JSON benzeri başlık ve GLSL blokları) renkli parçalara böler. Tamamen sözcüksel (lexical) çalışır; her tuş vuruşunda çalıştırılacak kadar ucuzdur ve derleyiciye hiç ihtiyaç duymaz.
+
+**Üyeler:**
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `keywords` | `static const Set<String> keywords` | GLSL akış denetimi ve niteleyici anahtar sözcükleri. |
+| `types` | `static const Set<String> types` | GLSL türleri (`float`, `vec3`, `mat4`, `sampler2d`, ...). |
+| `builtins` | `static const Set<String> builtins` | Filament materyal API adları; her `materialParams_*` tanımlayıcısı da bu gruba girer. |
+| `headerKeys` | `static const Set<String> headerKeys` | `material` başlık anahtarları ve blok adları; yalnızca ardından `:` veya `{` geldiğinde renklendirilir. |
+| `tokenize` | `static List<GlslToken> tokenize(String source)` | [source]'un renkli parçaları, sırasıyla; aradaki kapsanmayan boşluklar düz metindir. Ardından `(` gelen tanımlayıcı `function` sayılır. |
+| `palette` | `static const Map<GlslTokenKind, Color> palette` | Düzenleyici paleti (koyu tema): her tür için bir renk. |
+| `highlight` | `static TextSpan highlight(String source, TextStyle base)` | [source]'u [base] üzerinde renkli span'ler olarak döndürür (yorumlar italik). |
+
+### `class GlslCodeController`
+
+`.mat` kaynağını [GlslSyntaxHighlighter] renkleriyle çizen bir `TextEditingController`; bir IME yazım (composing) yaparken düz, altı çizili span'e geri döner. Materyal editörünün kod denetleyicisidir.
+
+**Yapıcı Metotlar (Constructors):**
+
+- `GlslCodeController({super.text})`
+
+**Üyeler:**
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `buildTextSpan` | `TextSpan buildTextSpan({required BuildContext context, TextStyle? style, required bool withComposing})` | Geçerli metnin renklendirilmiş span'i. |
+
 ## `lib/ui/features/sub_editors/views/material/parameter_panel.dart`
 
 ### `class MaterialParameterPanel`
 
-Reflection-driven inspector panel for Material settings, PBR parameters, and texture slots.
+Materyalin PBR parametreleri ve doku yuvaları için yansıma (reflection) tabanlı denetçi paneli. Başlık ayarları (domain, blend mode, shading, two sided) 3B önizlemenin altındaki [MaterialSettingsSection]'dadır.
 
 **Fonksiyonlar, Metotlar ve Erişimciler:**
 
@@ -76,6 +147,46 @@ Reflection-driven inspector panel for Material settings, PBR parameters, and tex
 | Metot / Getter | İmzası | Ne İşe Yarar? |
 | :--- | :--- | :--- |
 | `build` | `Widget build(BuildContext context)` | Deklaratif alt nesne veya widget ağacını inşa eder. |
+
+## `lib/ui/features/sub_editors/views/material/material_settings_section.dart`
+
+### `class MaterialSettingsSection`
+
+Materyal başlığının ayarları; Materyal editörünün 3B önizlemesinin altında gösterilir: Domain (Surface olarak gösterilir), Blend Mode, Shading ve Two Sided. Blend Mode, Shading ve Two Sided, kaynağın `material { }` başlığındaki ilgili anahtarı `MaterialEditorViewModel.updateHeaderSettings` üzerinden yeniden yazar.
+
+**Yapıcı Metotlar (Constructors):**
+
+- `const MaterialSettingsSection({super.key, required this.viewModel})`
+
+**Üyeler:**
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `viewModel` | `final MaterialEditorViewModel viewModel` |  |
+| `build` | `Widget build(BuildContext context)` |  |
+
+## `lib/ui/features/sub_editors/views/material/material_preview_pane.dart`
+
+### `class MaterialPreviewPane`
+
+Materyal editörünün sol sütunu: [MaterialSettingsSection]'ın üstündeki 3B önizleme; ikisi sürüklenebilir bir ayraçla bölünür (`ResizablePanel.vertical`; ayarlar bölmesi 190 px ile başlar, en az 120 px). Önizleme derlenmiş materyali bir Sphere, Cube, Cylinder veya Plane üzerinde ya da bir proje mesh'i (Custom) üzerinde gösterir ve bir Grid anahtarı sunar; viewport'un kendi araç çubuğunu ve şekil seçicisini gizler.
+
+Custom, projenin mesh varlıklarını (statik ve iskeletli) arka plan isolate'inde tarar ve bir varlık seçicide sunar. Seçilen mesh diskten yüklenir (hâlâ süren eski bir yüklemeye karşı en yeni seçim kazanır); mesh'in birden fazla materyal yuvası varsa bir **Material slot** seçicisi düzenlenen materyali hangi yuvanın giyeceğini belirler, diğer bölümler mesh'in kendi materyallerini korur.
+
+**Yapıcı Metotlar (Constructors):**
+
+- `const MaterialPreviewPane({super.key, required this.viewModel, required this.parameterRevision})`
+
+**Üyeler:**
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `viewModel` | `final MaterialEditorViewModel viewModel` |  |
+| `parameterRevision` | `final int parameterRevision` | Editör her view-model değişikliğinde artırır; önizleme parametre değerlerini yeniden uygular. |
+| `meshTypes` | `static const Set<AssetType> meshTypes` | Custom önizlemenin sunduğu mesh varlık türleri: `filamesh` ve `filameshSk`. |
+| `sectionsOfSlot` | `static Set<int> sectionsOfSlot(GlbMeshData mesh, int slot)` | [mesh]'in [slot] materyal yuvasına ait geometri bölümleri (`materialIndex` ile, indeksi olmayan bölümde `materialName` ile); mesh'in en fazla bir yuvası varsa tüm bölümler. |
+| `scanMeshes` | `static Future<List<RealAssetInfo>> scanMeshes(String projectRoot)` | [projectRoot] altındaki proje mesh varlıkları; arka plan isolate'inde (`Isolate.run`) taranır. |
+| `createState` | `State<MaterialPreviewPane> createState()` |  |
 
 ## `lib/ui/features/sub_editors/views/material/material_sub_editor.dart`
 
@@ -188,7 +299,7 @@ Editörün derleyicisi: `FilamentMatc` üzerinden Filament'in kendi `.mat` ayrı
 
 ### `class MaterialPreviewRenderer`
 
-Owns the Filament objects that show a compiled `.filamat` package on a procedural preview primitive inside a sub-editor viewport.  Lifecycle: [mount] once the engine/scene exist, [applyParameters] whenever the editor's parameter values change, [setShape] when the user picks another primitive, [dispose] on teardown. Every native call is guarded: a material that fails to load leaves [isMounted] false and the caller keeps its software fallback.
+Owns the Filament objects that show a compiled `.filamat` package on a procedural preview primitive inside a sub-editor viewport.  Yaşam döngüsü: motor/sahne hazır olunca [mount] (materyal başka bir renderable'a, bir mesh'in materyal yuvasına gidecekse [mountMaterialOnly]), editörün parametre değerleri değiştikçe [applyParameters], kullanıcı başka bir primitif seçtiğinde [setShape], kapanışta [dispose]. Every native call is guarded: a material that fails to load leaves [isMounted] false and the caller keeps its software fallback.
 
 **Fonksiyonlar, Metotlar ve Erişimciler:**
 
@@ -202,7 +313,9 @@ Owns the Filament objects that show a compiled `.filamat` package on a procedura
 | `isFilamatPackage` | `static bool isFilamatPackage(Uint8List? bytes)` | Whether [bytes] look like a compiled `.filamat` package. Filament aborts the process (uncatchable panic) when handed arbitrary bytes, so callers must check this before [mount]. |
 | `packageMaterialVersion` | `static int? packageMaterialVersion(Uint8List? bytes)` | The MATERIAL_VERSION a package was compiled with, or null if not a package. |
 | `applyParameters` | `void applyParameters(List<MaterialParamModel> parameters)` | Pushes the editor's parameter values into the material instance. Unknown or sampler parameters are skipped; each setter is guarded so one bad value never blocks the rest. |
-| `setShape` | `void setShape(PreviewShape shape)` | Rebuilds the geometry for [shape] keeping the same material instance. |
+| `setShape` | `void setShape(PreviewShape shape)` | Aynı materyal örneğini koruyarak [shape] için geometriyi yeniden kurar. Bir sahne gerektirir: [mountMaterialOnly] sonrasında hiçbir şey yapmaz. |
+| `mountMaterialOnly` | `bool mountMaterialOnly({required FilamentEngine engine, required Uint8List filamatBytes, List<MaterialParamModel> parameters = const []})` | Materyali ve örneğini [filamatBytes]'tan [parameters] uygulanmış olarak, kendi primitifi olmadan oluşturur: çağıran taraf [materialInstance]'ı başka bir renderable'a (bir mesh'in materyal yuvasının bölümlerine) takar. Başarıda true döner; paket olmayan veya yüklenemeyen veri [lastError]'ı ayarlar. |
+| `hasMaterial` | `bool get hasMaterial` | Bir materyal örneğinin (kendi primitifi olsun ya da olmasın) var olup olmadığı. |
 | `packVertices` | `static Uint8List packVertices(PreviewMeshData mesh)` | Packs [mesh] into the interleaved layout Filament expects. Exposed for tests (no engine required). |
 | `dispose` | `void dispose()` | Yerel FFI göstericilerini, dinleyicileri ve bellek bloklarını serbest bırakır. |
 
@@ -350,12 +463,9 @@ The material expression catalog and the helpers that read a node's settings. A m
 | `all` | `static const List<MaterialNodeSpec> all` |  |
 | `spec` | `static MaterialNodeSpec? spec(String? id)` |  |
 | `isVertexAvailable` | `static bool isVertexAvailable(String registryId)` | Kinds the vertex stage can evaluate (everything that feeds a Set Vertex Variable): no textures, no shading values, no interpolants. |
-| `variableName` | `static String? variableName(LuminaBlueprintNode node)` | The variable a Set Vertex Variable writes or a Vertex Variable reads. |
-| `declaredVariableName` | `static String? declaredVariableName(String entry)` | The name a `variables` header entry declares (`tint`, `"tint"` or `{ name : tint, precision : medium }`). |
-| `extraVariables` | `static List<String> extraVariables(LuminaBlueprintGraph graph)` | Header `variables` entries no Set Vertex Variable node stands for, kept on the Material node (`extraVariables`) so they survive a graph edit. |
 | `isParameter` | `static bool isParameter(String registryId)` | Kinds that declare a `.mat` parameter. |
-| `inputsOf` | `static List<MaterialPinDef> inputsOf(LuminaBlueprintNode node, [MaterialSurface surface = const MaterialSurfac...` | The node's inputs, resolved for its settings and the [surface]: a Custom node's named inputs; the output node's pins, the unused ones marked. |
-| `outputsOf` | `static List<MaterialPinDef> outputsOf(LuminaBlueprintNode node)` |  |
+| `inputsOf` | `static List<MaterialPinDef> inputsOf(LuminaBlueprintNode node, [MaterialSurface surface = const MaterialSurfac...` | Düğümün ayarlarına ve [surface]'a göre çözümlenmiş girişleri: Custom düğümünün adlandırılmış girişleri; Custom (Fragment) düğümünün kodunun okuduğu parametreler ([MaterialFragmentPins.inputPins]); çıkış düğümünün pinleri, kullanılmayanlar işaretli. |
+| `outputsOf` | `static List<MaterialPinDef> outputsOf(LuminaBlueprintNode node)` | Düğümün çıkışları: Custom (Fragment) düğümünde kodunun atadığı `MaterialInputs` alanları ([MaterialFragmentPins.outputPins]); diğer tüm türlerde spec'ten gelir. |
 | `customInputs` | `static List<String> customInputs(LuminaBlueprintNode node)` |  |
 | `maskChannels` | `static String maskChannels(LuminaBlueprintNode node)` | A ComponentMask's selected channels, in RGBA order (`'rg'`). |
 | `parameterName` | `static String? parameterName(LuminaBlueprintNode node)` | The `.mat` parameter a TextureSample, parameter node or wired TextureParameter names, or null for other nodes. |
@@ -364,6 +474,36 @@ The material expression catalog and the helpers that read a node's settings. A m
 | `create` | `static LuminaBlueprintNode create(String registryId, {required String id, double x = 0, double y = 0, Map<Stri...` | A new node of [registryId] with its default settings. |
 | `ensureOutput` | `static LuminaBlueprintNode ensureOutput(LuminaBlueprintGraph graph, {String? materialName})` | The Material output node of [graph], created at [x]/[y] if missing. |
 | `wireInto` | `static LuminaBlueprintWire? wireInto(LuminaBlueprintGraph graph, String nodeId, String pinId)` | The wire into input [pinId] of [nodeId], if any. |
+
+## `lib/ui/features/sub_editors/models/material_fragment_pins.dart`
+
+### `abstract final class MaterialFragmentPins`
+
+Bir Custom (Fragment) düğümünün, birebir (verbatim) kodundan okunan pinleri ve kabloları: okuduğu başlık parametreleri (`materialParams.x` / `materialParams_x`) parametre düğümlerinden kablolanan girişler, atadığı `MaterialInputs` alanları (`material.normal = …`, ayrıca `+=` biçimli ve swizzle'lı yazımlar) Material düğümüne kablolanan çıkışlar olur. Doğruluğun kaynağı koddur: kablolar yalnızca akışını gösterir ve kod her değiştiğinde yeniden kurulur (ayrıştırıcının Custom (Fragment) geri dönüşü ve `code` için `MaterialGraphEditor.setProperty` [syncWires]'ı çağırır).
+
+**Üyeler:**
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `parameters` | `static List<String> parameters(LuminaBlueprintNode node)` | [node]'un kodunun okuduğu parametreler, ilk kullanım sırasıyla. |
+| `outputs` | `static List<String> outputs(LuminaBlueprintNode node)` | [node]'un kodunun alanlarını atadığı Material düğümü pinleri, Material düğümünün pin sırasıyla. |
+| `inputPins` | `static List<MaterialPinDef> inputPins(LuminaBlueprintNode node)` | Kodun okuduğu her parametre için bir dinamik giriş pini. |
+| `outputPins` | `static List<MaterialPinDef> outputPins(LuminaBlueprintNode node)` | Atanan her alan için, eşleşen Material düğümü pini gibi adlandırılmış ve türlenmiş bir çıkış pini. |
+| `syncWires` | `static void syncWires(LuminaBlueprintGraph graph)` | [graph]'taki bir Custom (Fragment) düğümüne dokunan her kabloyu kodunun gerektirdikleriyle değiştirir: parametre düğümü → fragment girişi, fragment çıkışı → Material düğümü pini. Grafikte düğümü olmayan parametre kablo almaz. |
+
+## `lib/ui/features/sub_editors/models/material_vertex_variables.dart`
+
+### `abstract final class MaterialVertexVariables`
+
+Materyal grafiğinin vertex değişkeni yardımcıları: bir Set / Vertex Variable düğümünün hangi değişkeni adlandırdığı, `variables` başlık girdilerinin bildirdiği adlar ve Material düğümünde tutulan girdiler.
+
+**Üyeler:**
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `variableName` | `static String? variableName(LuminaBlueprintNode node)` | Bir Set Vertex Variable'ın yazdığı ya da bir Vertex Variable'ın okuduğu değişken. |
+| `declaredVariableName` | `static String? declaredVariableName(String entry)` | Bir `variables` başlık girdisinin bildirdiği ad (`tint`, `"tint"` veya `{ name : tint, precision : medium }`). |
+| `extraVariables` | `static List<String> extraVariables(LuminaBlueprintGraph graph)` | Hiçbir Set Vertex Variable düğümünün karşılamadığı başlık `variables` girdileri; bir grafik düzenlemesinden sağ çıksınlar diye Material düğümünde (`extraVariables`) tutulur. |
 
 ## `lib/ui/features/sub_editors/models/material_slot_binding.dart`
 
@@ -663,7 +803,7 @@ What [MaterialGraphParser.parse] made of a `.mat` source.
 
 Reads a `.mat` source into a material graph.
 
-The fragment's `material()` body is parsed statement by statement into expressions; the generator's own output parses back into the graph it came from. A call the catalog has no node for becomes a Custom expression node holding its GLSL; anything that cannot be expressed statement by statement (control flow, unknown fields or declarations) makes the whole fragment one Custom (Fragment) node, kept verbatim. Header parameters always become parameter nodes, so a graph edit never drops a declaration.
+Fragment'in `material()` gövdesi deyim deyim ifadelere ayrıştırılır; üretecin kendi çıktısı geldiği grafiğe geri ayrışır. Katalogda düğümü olmayan bir çağrı, GLSL'ini tutan bir Custom ifade düğümü olur; deyim deyim ifade edilemeyen her şey (akış denetimi, bilinmeyen alanlar veya bildirimler) fragment'in tamamını birebir korunan tek bir Custom (Fragment) düğümü yapar; bu düğümün pinleri ve kabloları kodunun akışını gösterir (okuduğu parametreler içeri, yazdığı alanlar Material düğümüne kablolanır; bkz. [MaterialFragmentPins]). Başlık parametreleri her zaman parametre düğümü olur, böylece bir grafik düzenlemesi hiçbir bildirimi düşürmez.
 
 The header's `variables` and the `vertex` block are read too: `material.<variable> = …` in `materialVertex()` becomes a Set Vertex Variable node (the codegen's `vec4` widening reads back as the unwidened value), `variable_<name>` in the fragment one Vertex Variable node per name, `getUserWorldPosition()` / `getWorldPosition()` (and their vertex-block forms) a WorldPosition. A Time, VertexColor, TexCoord, WorldPosition or parameter used by both stages is one node. A vertex block that writes anything else (moves vertices, writes `material.color`) or uses control flow is kept as written (`notes` says why) and its declared variables stay readable.
 
@@ -730,7 +870,7 @@ The resolved types and diagnostics of one material graph.
 
 ### `class MaterialGraphChecker`
 
-Infers every pin's type (float1–float4 with implicit scalar broadcast, or a texture) and reports what cannot compile, including the vertex stage's rules: a fragment-only node (TextureSample, TextureParameter, Fresnel, Vertex Variable) feeding a Set Vertex Variable, an invalid or duplicate variable name, more variables than matc allows (5; 4 with the vertex colour), a Vertex Variable whose name nothing writes or declares, and a setter while the source's vertex block is hand-written code the graph would overwrite.
+Her pinin türünü çıkarır (örtük skaler yayınlamalı float1–float4 ya da doku) ve derlenemeyecek olanı raporlar; vertex aşamasının kuralları da dahil: bir Set Vertex Variable'ı besleyen yalnızca-fragment düğüm (TextureSample, TextureParameter, Fresnel, Vertex Variable), geçersiz veya yinelenen değişken adı, matc'nin izin verdiğinden fazla değişken (5; vertex rengiyle 4), adını hiçbir şeyin yazmadığı ya da bildirmediği bir Vertex Variable, kaynağın vertex bloğu grafiğin üzerine yazacağı elle yazılmış kodken bir setter, ve bir Custom (Fragment) düğümünün yanında Material düğümüne giren bir kablo (o düğüm fragment'in tamamını yazar, böyle bir kablo yok sayılırdı; düğümün yalnızca kodunun akışını gösteren kendi kabloları raporlanmaz).
 
 **Üyeler:**
 
@@ -822,7 +962,7 @@ Edits a material graph through the shared Blueprint graph canvas: material expre
 | `declaredVariables` | `List<String> get declaredVariables` | The vertex variables the material has: the names Set Vertex Variable nodes write (graph order), then those the header declares without one. |
 | `uniqueVariableName` | `String uniqueVariableName(String base)` | A variable name no Set Vertex Variable writes yet: [base], `base_1`, … (a new setter's default; a new Vertex Variable reads the first declared name). |
 | `removeNodes` | `bool removeNodes(Set<String> ids)` | Every node but the Material output can be deleted. |
-| `setProperty` | `bool setProperty(String nodeId, String key, Object? value)` | Sets node setting [key] (a constant's value, a parameter's name, a Custom node's code) as one undo step. Renaming a Custom input keeps its wire; removing one drops it. Renaming the only Set Vertex Variable of a variable renames the Vertex Variable nodes that read it. |
+| `setProperty` | `bool setProperty(String nodeId, String key, Object? value)` | Düğüm ayarı [key]'i (bir sabitin değeri, bir parametrenin adı, bir Custom düğümünün kodu) tek bir geri alma adımı olarak ayarlar. Bir Custom girişini yeniden adlandırmak kablosunu korur; birini kaldırmak kablosunu düşürür. Bir değişkenin tek Set Vertex Variable'ını yeniden adlandırmak onu okuyan Vertex Variable düğümlerini de yeniden adlandırır. Bir Custom (Fragment) düğümünün `code`'unu değiştirmek pinlerini ve kablolarını yeniden kurar ([MaterialFragmentPins.syncWires]). |
 
 ## `lib/ui/features/sub_editors/views/material/graph_view.dart`
 

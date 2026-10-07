@@ -219,6 +219,7 @@ mixin _SubEditor3DViewportNativeScene on _SubEditor3DViewportStateBase {
       _applyMorphWeights(force: true);
       _applyJointTransforms(force: true);
       _applySectionMaterials(force: true);
+      _applyPreviewMaterialToSections();
       _updateSelectedNodeWireframe();
       _updateCollisionLines(force: true);
       _syncSocketAttachments();
@@ -324,7 +325,6 @@ mixin _SubEditor3DViewportNativeScene on _SubEditor3DViewportStateBase {
         pw.cleanup();
         engine.flushAndWait();
       }
-      _materialPreview.dispose();
       if (_nativeWireframeMesh != null) {
         scene?.removeEntity(_nativeWireframeMesh!.entityId);
         _nativeWireframeMesh!.dispose();
@@ -378,6 +378,8 @@ mixin _SubEditor3DViewportNativeScene on _SubEditor3DViewportStateBase {
         instance.dispose();
       }
       _sectionMaterialInstances.clear();
+      // After the mesh: its sections may wear the edited material's instance.
+      _materialPreview.dispose();
       for (final material in _sectionMaterials.values) {
         material.dispose();
       }

@@ -97,6 +97,38 @@ class MaterialPreviewRenderer {
     }
   }
 
+  /// Creates the material and its instance from [filamatBytes] with
+  /// [parameters] applied, without a primitive of its own: the caller puts
+  /// [materialInstance] on another renderable (a mesh's material slot).
+  /// Returns true on success.
+  bool mountMaterialOnly({
+    required FilamentEngine engine,
+    required Uint8List filamatBytes,
+    List<MaterialParamModel> parameters = const [],
+  }) {
+    dispose();
+    if (!isFilamatPackage(filamatBytes)) {
+      _lastError = 'not a compiled filamat package (${filamatBytes.length} bytes)';
+      return false;
+    }
+    _engine = engine;
+    try {
+      _material = FilamentMaterial.fromBuffer(engine: engine, filamatBuffer: filamatBytes);
+      _instance = _material!.createInstance('LuminaMaterialPreview');
+      applyParameters(parameters);
+      _lastError = null;
+      return true;
+    } catch (e) {
+      _lastError = e.toString();
+      debugPrint('[MaterialPreviewRenderer] material mount failed: $e');
+      dispose();
+      return false;
+    }
+  }
+
+  /// Whether a material instance exists (with or without its own primitive).
+  bool get hasMaterial => _instance != null;
+
   /// Pushes the editor's parameter values into the material instance. Unknown
   /// or sampler parameters are skipped; each setter is guarded so one bad
   /// value never blocks the rest.
@@ -147,7 +179,7 @@ class MaterialPreviewRenderer {
 
   /// Rebuilds the geometry for [shape] keeping the same material instance.
   void setShape(PreviewShape shape) {
-    if (_engine == null || _instance == null) return;
+    if (_engine == null || _scene == null || _instance == null) return;
     if (shape == _shape && _entity != 0) return;
     _shape = shape;
     try {

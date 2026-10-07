@@ -5,7 +5,9 @@ import 'package:flutter/widgets.dart' show BuildContext, Widget, ValueKey, Paddi
 import 'package:lumina_editor_data/lumina_editor.dart';
 
 import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_palette.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/material_fragment_pins.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/material_graph.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/material_vertex_variables.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/material_graph_parser.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/material_graph_types.dart';
 import 'package:lumina_ui/ui/core/property_editors/asset_picker_select.dart';
@@ -264,8 +266,8 @@ class MaterialGraphEditor extends BlueprintGraphEditor {
       final name = n.registryId == MaterialNodes.setVertexVariable ? n.literals['name'] : null;
       if (name is String && name.isNotEmpty && !names.contains(name)) names.add(name);
     }
-    for (final raw in MaterialNodes.extraVariables(graph)) {
-      final name = MaterialNodes.declaredVariableName(raw);
+    for (final raw in MaterialVertexVariables.extraVariables(graph)) {
+      final name = MaterialVertexVariables.declaredVariableName(raw);
       if (name != null && !names.contains(name)) names.add(name);
     }
     return names;
@@ -406,6 +408,8 @@ class MaterialGraphEditor extends BlueprintGraphEditor {
       } else {
         target.literals[key] = value;
       }
+      // A Custom (Fragment) node's pins and wires follow its code.
+      if (key == 'code' && target.registryId == MaterialNodes.customFragment) MaterialFragmentPins.syncWires(graph);
       target.title = MaterialNodes.titleOf(target);
       return true;
     });

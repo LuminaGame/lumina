@@ -223,14 +223,15 @@ class PreviewMeshFactory {
     );
   }
 
-  /// Square plane in the XZ plane facing +Y (double-sided materials render
-  /// both faces; single-sided ones show the top).
-  static PreviewMeshData plane({double halfExtent = 1.2}) {
+  /// Square plane parallel to XZ facing +Y (double-sided materials render
+  /// both faces; single-sided ones show the top), lifted [lift] above the
+  /// editor grid at y = 0 so the grid lines do not z-fight with it.
+  static PreviewMeshData plane({double halfExtent = 1.2, double lift = 0.002}) {
     final positions = Float32List.fromList([
-      -halfExtent, 0, -halfExtent,
-      halfExtent, 0, -halfExtent,
-      halfExtent, 0, halfExtent,
-      -halfExtent, 0, halfExtent,
+      -halfExtent, lift, -halfExtent,
+      halfExtent, lift, -halfExtent,
+      halfExtent, lift, halfExtent,
+      -halfExtent, lift, halfExtent,
     ]);
     final normals = Float32List.fromList([0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0]);
     final uv0 = Float32List.fromList([0, 0, 1, 0, 1, 1, 0, 1]);
@@ -240,8 +241,8 @@ class PreviewMeshFactory {
       normals: normals,
       uv0: uv0,
       indices: indices,
-      minBounds: [-halfExtent, -0.001, -halfExtent],
-      maxBounds: [halfExtent, 0.001, halfExtent],
+      minBounds: [-halfExtent, lift - 0.001, -halfExtent],
+      maxBounds: [halfExtent, lift + 0.001, halfExtent],
     );
   }
 }

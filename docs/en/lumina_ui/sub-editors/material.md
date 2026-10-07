@@ -7,11 +7,16 @@ The Material editor: editing material source, compiling the whole `.mat` definit
 **On this page:**
 
 - [`lib/ui/features/sub_editors/views/material/glsl_editor_widget.dart`](#libuifeaturessub_editorsviewsmaterialglsl_editor_widgetdart)
+- [`lib/ui/features/sub_editors/views/material/glsl_syntax_highlighter.dart`](#libuifeaturessub_editorsviewsmaterialglsl_syntax_highlighterdart)
 - [`lib/ui/features/sub_editors/views/material/parameter_panel.dart`](#libuifeaturessub_editorsviewsmaterialparameter_paneldart)
+- [`lib/ui/features/sub_editors/views/material/material_settings_section.dart`](#libuifeaturessub_editorsviewsmaterialmaterial_settings_sectiondart)
+- [`lib/ui/features/sub_editors/views/material/material_preview_pane.dart`](#libuifeaturessub_editorsviewsmaterialmaterial_preview_panedart)
 - [`lib/ui/features/sub_editors/views/material/material_sub_editor.dart`](#libuifeaturessub_editorsviewsmaterialmaterial_sub_editordart)
 - [`lib/ui/features/sub_editors/view_models/material_editor_view_model.dart`](#libuifeaturessub_editorsview_modelsmaterial_editor_view_modeldart)
 - [`lib/ui/features/sub_editors/services/material_preview_renderer.dart`](#libuifeaturessub_editorsservicesmaterial_preview_rendererdart)
 - [`lib/ui/features/sub_editors/models/material_graph.dart`](#libuifeaturessub_editorsmodelsmaterial_graphdart)
+- [`lib/ui/features/sub_editors/models/material_fragment_pins.dart`](#libuifeaturessub_editorsmodelsmaterial_fragment_pinsdart)
+- [`lib/ui/features/sub_editors/models/material_vertex_variables.dart`](#libuifeaturessub_editorsmodelsmaterial_vertex_variablesdart)
 - [`lib/ui/features/sub_editors/models/material_slot_binding.dart`](#libuifeaturessub_editorsmodelsmaterial_slot_bindingdart)
 - [`lib/ui/features/sub_editors/services/build_pipeline_service/material_precompile_step.dart`](#libuifeaturessub_editorsservicesbuild_pipeline_servicematerial_precompile_stepdart)
 - [`lib/ui/features/sub_editors/services/mat_source.dart`](#libuifeaturessub_editorsservicesmat_sourcedart)
@@ -29,7 +34,7 @@ The Material editor: editing material source, compiling the whole `.mat` definit
 
 ### `class MaterialGlslEditorWidget`
 
-Monospace GLSL Source Editor with line number gutter and parameter autocomplete.
+Monospace `.mat` source editor: syntax colours (when the controller is a [GlslCodeController]), a line-number gutter aligned row for row with the code (every line is fixed to 20 px through a forced strut, so a gutter row and its code line never drift apart), and parameter autocomplete. The code area is a borderless field on a dark editor surface (`#1E1E1E`) shared with the gutter.
 
 **Functions, Methods & Accessors:**
 
@@ -54,11 +59,77 @@ Monospace GLSL Source Editor with line number gutter and parameter autocomplete.
 | `jumpToLine` | `void jumpToLine(int line1Indexed)` | Jumps the editor cursor to a specific 1-indexed line number. |
 | `build` | `Widget build(BuildContext context)` | Constructs and returns the declarative element or widget hierarchy. |
 
+## `lib/ui/features/sub_editors/views/material/glsl_syntax_highlighter.dart`
+
+### `enum GlslTokenKind`
+
+What a stretch of `.mat` source is, for colouring.
+
+**Values:**
+
+- `plain`
+- `comment`
+- `string`
+- `number`
+- `keyword`
+- `type`
+- `function`
+- `builtin`: Filament's material API (`material`, `materialParams_x`, `getUV0`, ...).
+- `headerKey`: a key of the `material { }` header (`name`, `shadingModel`, ...) and the block names (`material`, `vertex`, `fragment`).
+- `preprocessor`
+- `punctuation`
+
+### `class GlslToken`
+
+One coloured run of the source.
+
+**Constructors:**
+
+- `const GlslToken(this.kind, this.start, this.end)`
+
+**Members:**
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `kind` | `final GlslTokenKind kind` |  |
+| `start` | `final int start` | Offset of the run's first character. |
+| `end` | `final int end` | Offset one past the run's last character. |
+
+### `abstract final class GlslSyntaxHighlighter`
+
+Splits Filament `.mat` source (the JSON-like header plus GLSL blocks) into coloured runs. Purely lexical, so it is cheap enough to run on every keystroke and never needs the compiler.
+
+**Members:**
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `keywords` | `static const Set<String> keywords` | GLSL control-flow and qualifier keywords. |
+| `types` | `static const Set<String> types` | GLSL types (`float`, `vec3`, `mat4`, `sampler2d`, ...). |
+| `builtins` | `static const Set<String> builtins` | Filament material API names; any `materialParams_*` identifier counts too. |
+| `headerKeys` | `static const Set<String> headerKeys` | `material` header keys and block names; coloured only when followed by `:` or `{`. |
+| `tokenize` | `static List<GlslToken> tokenize(String source)` | The coloured runs of [source], in order; uncovered gaps are plain. An identifier followed by `(` is a `function`. |
+| `palette` | `static const Map<GlslTokenKind, Color> palette` | The editor palette (dark theme): one colour per kind. |
+| `highlight` | `static TextSpan highlight(String source, TextStyle base)` | [source] as coloured spans over [base] (comments in italics). |
+
+### `class GlslCodeController`
+
+A `TextEditingController` that draws `.mat` source with [GlslSyntaxHighlighter] colours; while an IME composes, it falls back to the plain underlined span. The Material editor's code controller.
+
+**Constructors:**
+
+- `GlslCodeController({super.text})`
+
+**Members:**
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `buildTextSpan` | `TextSpan buildTextSpan({required BuildContext context, TextStyle? style, required bool withComposing})` | The highlighted span of the current text. |
+
 ## `lib/ui/features/sub_editors/views/material/parameter_panel.dart`
 
 ### `class MaterialParameterPanel`
 
-Reflection-driven inspector panel for Material settings, PBR parameters, and texture slots.
+Reflection-driven inspector panel for the material's PBR parameters and texture slots. The header settings (domain, blend mode, shading, two sided) live in [MaterialSettingsSection], under the 3D preview.
 
 **Functions, Methods & Accessors:**
 
@@ -76,6 +147,46 @@ Reflection-driven inspector panel for Material settings, PBR parameters, and tex
 | Method / Getter | Signature | Purpose & Description |
 | :--- | :--- | :--- |
 | `build` | `Widget build(BuildContext context)` | Constructs and returns the declarative element or widget hierarchy. |
+
+## `lib/ui/features/sub_editors/views/material/material_settings_section.dart`
+
+### `class MaterialSettingsSection`
+
+The material header's settings, shown under the Material editor's 3D preview: Domain (shown as Surface), Blend Mode, Shading and Two Sided. Blend Mode, Shading and Two Sided rewrite the matching key of the source's `material { }` header through `MaterialEditorViewModel.updateHeaderSettings`.
+
+**Constructors:**
+
+- `const MaterialSettingsSection({super.key, required this.viewModel})`
+
+**Members:**
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `viewModel` | `final MaterialEditorViewModel viewModel` |  |
+| `build` | `Widget build(BuildContext context)` |  |
+
+## `lib/ui/features/sub_editors/views/material/material_preview_pane.dart`
+
+### `class MaterialPreviewPane`
+
+The Material editor's left column: the 3D preview above [MaterialSettingsSection], split by a draggable divider (`ResizablePanel.vertical`; the settings pane starts at 190 px, minimum 120). The preview shows the compiled material on a Sphere, Cube, Cylinder or Plane, or on a project mesh (Custom), with a Grid toggle; it hides the viewport's own toolbar and shape selector.
+
+Custom scans the project's mesh assets (static and skeletal) on a background isolate and offers them in an asset picker. The picked mesh is loaded from disk (a newer pick wins over an older load still running); when it has more than one material slot, a **Material slot** select chooses which slot wears the edited material, and the other sections keep the mesh's own materials.
+
+**Constructors:**
+
+- `const MaterialPreviewPane({super.key, required this.viewModel, required this.parameterRevision})`
+
+**Members:**
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `viewModel` | `final MaterialEditorViewModel viewModel` |  |
+| `parameterRevision` | `final int parameterRevision` | Bumped by the editor on every view-model change so the preview re-applies the parameter values. |
+| `meshTypes` | `static const Set<AssetType> meshTypes` | The mesh asset types the Custom preview offers: `filamesh` and `filameshSk`. |
+| `sectionsOfSlot` | `static Set<int> sectionsOfSlot(GlbMeshData mesh, int slot)` | The geometry sections of [mesh] that belong to material slot [slot] (by `materialIndex`, or by `materialName` for a section without an index); every section when the mesh has at most one slot. |
+| `scanMeshes` | `static Future<List<RealAssetInfo>> scanMeshes(String projectRoot)` | The project's mesh assets under [projectRoot], scanned on a background isolate (`Isolate.run`). |
+| `createState` | `State<MaterialPreviewPane> createState()` |  |
 
 ## `lib/ui/features/sub_editors/views/material/material_sub_editor.dart`
 
@@ -188,7 +299,7 @@ The editor's compiler: Filament's own `.mat` parser (the one `matc` uses) throug
 
 ### `class MaterialPreviewRenderer`
 
-Owns the Filament objects that show a compiled `.filamat` package on a procedural preview primitive inside a sub-editor viewport.  Lifecycle: [mount] once the engine/scene exist, [applyParameters] whenever the editor's parameter values change, [setShape] when the user picks another primitive, [dispose] on teardown. Every native call is guarded: a material that fails to load leaves [isMounted] false and the caller keeps its software fallback.
+Owns the Filament objects that show a compiled `.filamat` package on a procedural preview primitive inside a sub-editor viewport.  Lifecycle: [mount] once the engine/scene exist (or [mountMaterialOnly] when the material goes onto another renderable, a mesh's material slot), [applyParameters] whenever the editor's parameter values change, [setShape] when the user picks another primitive, [dispose] on teardown. Every native call is guarded: a material that fails to load leaves [isMounted] false and the caller keeps its software fallback.
 
 **Functions, Methods & Accessors:**
 
@@ -202,7 +313,9 @@ Owns the Filament objects that show a compiled `.filamat` package on a procedura
 | `isFilamatPackage` | `static bool isFilamatPackage(Uint8List? bytes)` | Whether [bytes] look like a compiled `.filamat` package. Filament aborts the process (uncatchable panic) when handed arbitrary bytes, so callers must check this before [mount]. |
 | `packageMaterialVersion` | `static int? packageMaterialVersion(Uint8List? bytes)` | The MATERIAL_VERSION a package was compiled with, or null if not a package. |
 | `applyParameters` | `void applyParameters(List<MaterialParamModel> parameters)` | Pushes the editor's parameter values into the material instance. Unknown or sampler parameters are skipped; each setter is guarded so one bad value never blocks the rest. |
-| `setShape` | `void setShape(PreviewShape shape)` | Rebuilds the geometry for [shape] keeping the same material instance. |
+| `setShape` | `void setShape(PreviewShape shape)` | Rebuilds the geometry for [shape] keeping the same material instance. Needs a scene: after [mountMaterialOnly] it does nothing. |
+| `mountMaterialOnly` | `bool mountMaterialOnly({required FilamentEngine engine, required Uint8List filamatBytes, List<MaterialParamModel> parameters = const []})` | Creates the material and its instance from [filamatBytes] with [parameters] applied, without a primitive of its own: the caller puts [materialInstance] on another renderable (the sections of a mesh's material slot). Returns true on success; a non-package or failing load sets [lastError]. |
+| `hasMaterial` | `bool get hasMaterial` | Whether a material instance exists (with or without its own primitive). |
 | `packVertices` | `static Uint8List packVertices(PreviewMeshData mesh)` | Packs [mesh] into the interleaved layout Filament expects. Exposed for tests (no engine required). |
 | `dispose` | `void dispose()` | Releases native FFI pointers, event subscriptions, and allocated memory. |
 
@@ -350,12 +463,9 @@ The material expression catalog and the helpers that read a node's settings. A m
 | `all` | `static const List<MaterialNodeSpec> all` |  |
 | `spec` | `static MaterialNodeSpec? spec(String? id)` |  |
 | `isVertexAvailable` | `static bool isVertexAvailable(String registryId)` | Kinds the vertex stage can evaluate (everything that feeds a Set Vertex Variable): no textures, no shading values, no interpolants. |
-| `variableName` | `static String? variableName(LuminaBlueprintNode node)` | The variable a Set Vertex Variable writes or a Vertex Variable reads. |
-| `declaredVariableName` | `static String? declaredVariableName(String entry)` | The name a `variables` header entry declares (`tint`, `"tint"` or `{ name : tint, precision : medium }`). |
-| `extraVariables` | `static List<String> extraVariables(LuminaBlueprintGraph graph)` | Header `variables` entries no Set Vertex Variable node stands for, kept on the Material node (`extraVariables`) so they survive a graph edit. |
 | `isParameter` | `static bool isParameter(String registryId)` | Kinds that declare a `.mat` parameter. |
-| `inputsOf` | `static List<MaterialPinDef> inputsOf(LuminaBlueprintNode node, [MaterialSurface surface = const MaterialSurfac...` | The node's inputs, resolved for its settings and the [surface]: a Custom node's named inputs; the output node's pins, the unused ones marked. |
-| `outputsOf` | `static List<MaterialPinDef> outputsOf(LuminaBlueprintNode node)` |  |
+| `inputsOf` | `static List<MaterialPinDef> inputsOf(LuminaBlueprintNode node, [MaterialSurface surface = const MaterialSurfac...` | The node's inputs, resolved for its settings and the [surface]: a Custom node's named inputs; a Custom (Fragment) node's parameters read by its code ([MaterialFragmentPins.inputPins]); the output node's pins, the unused ones marked. |
+| `outputsOf` | `static List<MaterialPinDef> outputsOf(LuminaBlueprintNode node)` | The node's outputs: a Custom (Fragment) node's are the `MaterialInputs` fields its code assigns ([MaterialFragmentPins.outputPins]); every other kind's come from its spec. |
 | `customInputs` | `static List<String> customInputs(LuminaBlueprintNode node)` |  |
 | `maskChannels` | `static String maskChannels(LuminaBlueprintNode node)` | A ComponentMask's selected channels, in RGBA order (`'rg'`). |
 | `parameterName` | `static String? parameterName(LuminaBlueprintNode node)` | The `.mat` parameter a TextureSample, parameter node or wired TextureParameter names, or null for other nodes. |
@@ -364,6 +474,36 @@ The material expression catalog and the helpers that read a node's settings. A m
 | `create` | `static LuminaBlueprintNode create(String registryId, {required String id, double x = 0, double y = 0, Map<Stri...` | A new node of [registryId] with its default settings. |
 | `ensureOutput` | `static LuminaBlueprintNode ensureOutput(LuminaBlueprintGraph graph, {String? materialName})` | The Material output node of [graph], created at [x]/[y] if missing. |
 | `wireInto` | `static LuminaBlueprintWire? wireInto(LuminaBlueprintGraph graph, String nodeId, String pinId)` | The wire into input [pinId] of [nodeId], if any. |
+
+## `lib/ui/features/sub_editors/models/material_fragment_pins.dart`
+
+### `abstract final class MaterialFragmentPins`
+
+The pins and wires of a Custom (Fragment) node, read from its verbatim code: the header parameters it reads (`materialParams.x` / `materialParams_x`) become inputs wired from their parameter nodes, and the `MaterialInputs` fields it assigns (`material.normal = …`, also `+=`-style and swizzled writes) become outputs wired into the Material node. The code stays the source of truth: the wires only show its flow and are rebuilt whenever the code changes (the parser's Custom (Fragment) fallback and `MaterialGraphEditor.setProperty` on `code` call [syncWires]).
+
+**Members:**
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `parameters` | `static List<String> parameters(LuminaBlueprintNode node)` | The parameters [node]'s code reads, in first-use order. |
+| `outputs` | `static List<String> outputs(LuminaBlueprintNode node)` | The Material node pins whose fields [node]'s code assigns, in the Material node's pin order. |
+| `inputPins` | `static List<MaterialPinDef> inputPins(LuminaBlueprintNode node)` | One dynamic input pin per parameter the code reads. |
+| `outputPins` | `static List<MaterialPinDef> outputPins(LuminaBlueprintNode node)` | One output pin per assigned field, named and typed like the matching Material node pin. |
+| `syncWires` | `static void syncWires(LuminaBlueprintGraph graph)` | Replaces every wire touching a Custom (Fragment) node in [graph] with the ones its code implies: parameter node → fragment input, fragment output → Material node pin. A parameter with no node in the graph gets no wire. |
+
+## `lib/ui/features/sub_editors/models/material_vertex_variables.dart`
+
+### `abstract final class MaterialVertexVariables`
+
+The vertex-variable helpers of the material graph: which variable a Set / Vertex Variable node names, the names `variables` header entries declare, and the entries kept on the Material node.
+
+**Members:**
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `variableName` | `static String? variableName(LuminaBlueprintNode node)` | The variable a Set Vertex Variable writes or a Vertex Variable reads. |
+| `declaredVariableName` | `static String? declaredVariableName(String entry)` | The name a `variables` header entry declares (`tint`, `"tint"` or `{ name : tint, precision : medium }`). |
+| `extraVariables` | `static List<String> extraVariables(LuminaBlueprintGraph graph)` | Header `variables` entries no Set Vertex Variable node stands for, kept on the Material node (`extraVariables`) so they survive a graph edit. |
 
 ## `lib/ui/features/sub_editors/models/material_slot_binding.dart`
 
@@ -663,7 +803,7 @@ What [MaterialGraphParser.parse] made of a `.mat` source.
 
 Reads a `.mat` source into a material graph.
 
-The fragment's `material()` body is parsed statement by statement into expressions; the generator's own output parses back into the graph it came from. A call the catalog has no node for becomes a Custom expression node holding its GLSL; anything that cannot be expressed statement by statement (control flow, unknown fields or declarations) makes the whole fragment one Custom (Fragment) node, kept verbatim. Header parameters always become parameter nodes, so a graph edit never drops a declaration.
+The fragment's `material()` body is parsed statement by statement into expressions; the generator's own output parses back into the graph it came from. A call the catalog has no node for becomes a Custom expression node holding its GLSL; anything that cannot be expressed statement by statement (control flow, unknown fields or declarations) makes the whole fragment one Custom (Fragment) node, kept verbatim, whose pins and wires show its code's flow (the parameters it reads wired in, the fields it writes wired into the Material node; see [MaterialFragmentPins]). Header parameters always become parameter nodes, so a graph edit never drops a declaration.
 
 The header's `variables` and the `vertex` block are read too: `material.<variable> = …` in `materialVertex()` becomes a Set Vertex Variable node (the codegen's `vec4` widening reads back as the unwidened value), `variable_<name>` in the fragment one Vertex Variable node per name, `getUserWorldPosition()` / `getWorldPosition()` (and their vertex-block forms) a WorldPosition. A Time, VertexColor, TexCoord, WorldPosition or parameter used by both stages is one node. A vertex block that writes anything else (moves vertices, writes `material.color`) or uses control flow is kept as written (`notes` says why) and its declared variables stay readable.
 
@@ -730,7 +870,7 @@ The resolved types and diagnostics of one material graph.
 
 ### `class MaterialGraphChecker`
 
-Infers every pin's type (float1–float4 with implicit scalar broadcast, or a texture) and reports what cannot compile, including the vertex stage's rules: a fragment-only node (TextureSample, TextureParameter, Fresnel, Vertex Variable) feeding a Set Vertex Variable, an invalid or duplicate variable name, more variables than matc allows (5; 4 with the vertex colour), a Vertex Variable whose name nothing writes or declares, and a setter while the source's vertex block is hand-written code the graph would overwrite.
+Infers every pin's type (float1–float4 with implicit scalar broadcast, or a texture) and reports what cannot compile, including the vertex stage's rules: a fragment-only node (TextureSample, TextureParameter, Fresnel, Vertex Variable) feeding a Set Vertex Variable, an invalid or duplicate variable name, more variables than matc allows (5; 4 with the vertex colour), a Vertex Variable whose name nothing writes or declares, a setter while the source's vertex block is hand-written code the graph would overwrite, and a wire into the Material node next to a Custom (Fragment) node (that node writes the whole fragment, so such a wire would be ignored; the node's own wires, which only show its code's flow, are not reported).
 
 **Members:**
 
@@ -822,7 +962,7 @@ Edits a material graph through the shared Blueprint graph canvas: material expre
 | `declaredVariables` | `List<String> get declaredVariables` | The vertex variables the material has: the names Set Vertex Variable nodes write (graph order), then those the header declares without one. |
 | `uniqueVariableName` | `String uniqueVariableName(String base)` | A variable name no Set Vertex Variable writes yet: [base], `base_1`, … (a new setter's default; a new Vertex Variable reads the first declared name). |
 | `removeNodes` | `bool removeNodes(Set<String> ids)` | Every node but the Material output can be deleted. |
-| `setProperty` | `bool setProperty(String nodeId, String key, Object? value)` | Sets node setting [key] (a constant's value, a parameter's name, a Custom node's code) as one undo step. Renaming a Custom input keeps its wire; removing one drops it. Renaming the only Set Vertex Variable of a variable renames the Vertex Variable nodes that read it. |
+| `setProperty` | `bool setProperty(String nodeId, String key, Object? value)` | Sets node setting [key] (a constant's value, a parameter's name, a Custom node's code) as one undo step. Renaming a Custom input keeps its wire; removing one drops it. Renaming the only Set Vertex Variable of a variable renames the Vertex Variable nodes that read it. Changing a Custom (Fragment) node's `code` rebuilds its pins and wires ([MaterialFragmentPins.syncWires]). |
 
 ## `lib/ui/features/sub_editors/views/material/graph_view.dart`
 

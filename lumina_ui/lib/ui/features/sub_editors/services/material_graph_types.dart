@@ -2,6 +2,7 @@ import 'package:flutter_filament/flutter_filament.dart' show FilamatShading;
 import 'package:lumina_editor_data/lumina_editor.dart' show LuminaBlueprintGraph, LuminaBlueprintNode;
 
 import 'package:lumina_ui/ui/features/sub_editors/models/material_graph.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/material_vertex_variables.dart';
 
 /// A problem the type checker found on a node (or one of its inputs), worded
 /// as a material compiler message.
@@ -106,7 +107,7 @@ class MaterialGraphChecker {
     }
     final output = graph.node(MaterialNodes.outputNodeId);
     final handWritten = output?.literals['vertexVerbatim'];
-    final extras = {for (final e in MaterialNodes.extraVariables(graph)) ?MaterialNodes.declaredVariableName(e)};
+    final extras = {for (final e in MaterialVertexVariables.extraVariables(graph)) ?MaterialVertexVariables.declaredVariableName(e)};
     final usesColor = graph.nodes.any((n) =>
         n.registryId == MaterialNodes.vertexColor && (fragment.contains(n.id) || vertex.contains(n.id)));
     final limit = usesColor ? MaterialNodes.maxVariablesWithColor : MaterialNodes.maxVariables;
@@ -279,7 +280,9 @@ class MaterialGraphChecker {
         _checkOutput(node);
         return const {};
       case MaterialNodes.customFragment:
-        final wired = graph.wires.any((w) => w.toNodeId == MaterialNodes.outputNodeId);
+        // Its own wires only show the code's flow; any other wire into the
+        // Material node would be silently ignored.
+        final wired = graph.wires.any((w) => w.toNodeId == MaterialNodes.outputNodeId && w.fromNodeId != node.id);
         if (wired) {
           _error(node, 'it writes the whole fragment, so wires into the Material node are ignored; '
               'delete it to build the material from the graph');

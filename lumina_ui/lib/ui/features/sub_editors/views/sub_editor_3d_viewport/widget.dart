@@ -80,6 +80,17 @@ class SubEditor3DViewport extends StatefulWidget {
   /// Bump to re-apply [previewMaterialParams] without recreating the widget.
   final int previewMaterialRevision;
 
+  /// On a mesh payload ([glbMesh]), the geometry sections that wear
+  /// [previewMaterialBytes] with [previewMaterialParams] (the Material
+  /// Editor's custom preview mesh, one material slot's sections); the other
+  /// sections keep the mesh's own materials. Empty: the mesh is shown as is.
+  final Set<int> previewMaterialSections;
+
+  /// Whether the top HUD (shading mode, projection label, shape selector,
+  /// scene-lights toggle, gizmo tools) is drawn. A host with its own
+  /// controls turns it off.
+  final bool showToolbar;
+
   /// Level/environment preview (Environment Lighting mixer): when set, the
   /// viewport mounts the native renderer without a mesh payload, wraps the
   /// engine/scene/view in a lumina [LuminaWorld] (editor world type) and
@@ -207,6 +218,8 @@ class SubEditor3DViewport extends StatefulWidget {
     this.previewMaterialBytes,
     this.previewMaterialParams = const [],
     this.previewMaterialRevision = 0,
+    this.previewMaterialSections = const {},
+    this.showToolbar = true,
     this.onPreviewWorldReady,
     this.onPreviewWorldDisposing,
     this.yUpCamera = false,

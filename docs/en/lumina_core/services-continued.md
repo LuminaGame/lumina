@@ -634,8 +634,8 @@ The engine provides the first two (`LuminaGlbLoader` in `lumina`, see [Utilities
 | `indices` | `List<int> indices` | Holds the `indices` property or configuration state. |
 | `vertexColors` | `Uint8List? vertexColors` | Holds the `vertexColors` property or configuration state. |
 | `baseColor` | `List<double> baseColor` | Holds the `baseColor` property or configuration state. |
-| `materialName` | `String? materialName` | Holds the `materialName` property or configuration state. |
-| `materialIndex` | `int? materialIndex` | Holds the `materialIndex` property or configuration state. |
+| `materialName` | `String? materialName` | Name of the glTF material the primitive uses (its material slot), or null when it has none. Set for Draco-compressed primitives too. |
+| `materialIndex` | `int? materialIndex` | Index of the glTF material the primitive uses (its material slot), or null when it has none. Set for Draco-compressed primitives too. |
 | `vertexCount` | `int get vertexCount` | Getter accessor returning the current value of `vertexCount`. |
 | `triangleCount` | `int get triangleCount` | Getter accessor returning the current value of `triangleCount`. |
 

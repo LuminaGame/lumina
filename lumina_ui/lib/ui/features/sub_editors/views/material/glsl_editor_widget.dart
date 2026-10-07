@@ -1,8 +1,11 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/material_editor_view_model.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/material/glsl_syntax_highlighter.dart';
 
-/// Monospace GLSL Source Editor with line number gutter and parameter autocomplete.
+/// Monospace `.mat` source editor: syntax colours (when the controller is a
+/// [GlslCodeController]), a line-number gutter aligned row for row, and
+/// parameter autocomplete.
 class MaterialGlslEditorWidget extends StatefulWidget {
   final MaterialEditorViewModel viewModel;
   final TextEditingController controller;
@@ -24,6 +27,13 @@ class MaterialGlslEditorWidget extends StatefulWidget {
 class MaterialGlslEditorWidgetState extends State<MaterialGlslEditorWidget> {
   late final ScrollController _scrollController;
   final ScrollController _gutterScrollController = ScrollController();
+
+  /// One code line and one gutter row, in logical pixels.
+  static const double _lineHeight = 20.0;
+
+  /// The code area's background (a dark editor surface, darker than the
+  /// panels around it).
+  static const Color _editorBackground = Color(0xFF1E1E1E);
 
   List<String> _autocompleteSuggestions = [];
   bool _showAutocomplete = false;
@@ -180,8 +190,7 @@ class MaterialGlslEditorWidgetState extends State<MaterialGlslEditorWidget> {
 
     // Scroll roughly to line
     if (_scrollController.hasClients) {
-      final double estimatedLineHeight = 20.0;
-      final targetScroll = (line1Indexed - 1) * estimatedLineHeight;
+      final targetScroll = (line1Indexed - 1) * _lineHeight;
       _scrollController.animateTo(
         targetScroll.clamp(0.0, _scrollController.position.maxScrollExtent),
         duration: const Duration(milliseconds: 200),
@@ -200,7 +209,7 @@ class MaterialGlslEditorWidgetState extends State<MaterialGlslEditorWidget> {
     return Stack(
       children: [
         Container(
-          color: theme.colorScheme.background,
+          color: _editorBackground,
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -209,9 +218,9 @@ class MaterialGlslEditorWidgetState extends State<MaterialGlslEditorWidget> {
                 width: 48,
                 padding: const EdgeInsets.only(top: 8, right: 8),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.card,
+                  color: _editorBackground,
                   border: Border(
-                    right: BorderSide(color: theme.colorScheme.border),
+                    right: BorderSide(color: theme.colorScheme.border.withValues(alpha: 0.5)),
                   ),
                 ),
                 child: ListView.builder(
@@ -222,7 +231,7 @@ class MaterialGlslEditorWidgetState extends State<MaterialGlslEditorWidget> {
                     final lineNum = index + 1;
                     final hasIssue = widget.viewModel.issues.any((i) => i.line == lineNum);
                     return SizedBox(
-                      height: 20,
+                      height: _lineHeight,
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
@@ -243,7 +252,7 @@ class MaterialGlslEditorWidgetState extends State<MaterialGlslEditorWidget> {
                               fontFamily: EditorTypography.monoFamily,
                               color: hasIssue
                                   ? theme.colorScheme.destructive
-                                  : theme.colorScheme.mutedForeground,
+                                  : const Color(0xFF858585),
                             ),
                           ),
                         ],
@@ -260,15 +269,27 @@ class MaterialGlslEditorWidgetState extends State<MaterialGlslEditorWidget> {
                   child: NotificationListener<ScrollNotification>(
                     onNotification: _onScrollNotification,
                     child: TextField(
+                      key: const ValueKey('material_glsl_code'),
                       controller: widget.controller,
                       focusNode: widget.focusNode,
                       scrollController: _scrollController,
                       maxLines: null,
                       expands: true,
+                      filled: false,
+                      border: const Border(),
+                      padding: EdgeInsets.zero,
+                      cursorColor: const Color(0xFFAEAFAD),
                       style: const TextStyle(
                         fontFamily: EditorTypography.monoFamily,
                         fontSize: 13,
-                        height: 1.4,
+                        height: _lineHeight / 13,
+                      ),
+                      // Every line exactly as tall as a gutter row.
+                      strutStyle: const StrutStyle(
+                        fontFamily: EditorTypography.monoFamily,
+                        fontSize: 13,
+                        height: _lineHeight / 13,
+                        forceStrutHeight: true,
                       ),
                     ),
                   ),

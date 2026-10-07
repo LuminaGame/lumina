@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:lumina_editor_data/lumina_editor.dart' show LuminaBlueprintGraph, LuminaBlueprintNode, LuminaBlueprintWire;
 
+import 'package:lumina_ui/ui/features/sub_editors/models/material_fragment_pins.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/material_graph.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/mat_source.dart';
 
@@ -81,6 +82,8 @@ class MaterialGraphParser {
       id: 'fragment',
       literals: {'code': _trimBlankLines(fragmentBody)},
     ));
+    // Show the verbatim code's flow: parameters in, written fields out.
+    MaterialFragmentPins.syncWires(graph);
     MaterialGraphLayout.arrange(graph);
     return MaterialGraphParseResult(graph, fallbackReason: reason);
   }

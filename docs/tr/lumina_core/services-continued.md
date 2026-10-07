@@ -632,8 +632,8 @@ Saf Dart GLB okuyucusu. `GlbReader.parse(bytes, decoders:)` bir binary glTF'i (`
 | `indices` | `List<int> indices` | `indices` alanını (field/property) ve ilişkili veriyi saklar. |
 | `vertexColors` | `Uint8List? vertexColors` | `vertexColors` alanını (field/property) ve ilişkili veriyi saklar. |
 | `baseColor` | `List<double> baseColor` | `baseColor` alanını (field/property) ve ilişkili veriyi saklar. |
-| `materialName` | `String? materialName` | `materialName` alanını (field/property) ve ilişkili veriyi saklar. |
-| `materialIndex` | `int? materialIndex` | `materialIndex` alanını (field/property) ve ilişkili veriyi saklar. |
+| `materialName` | `String? materialName` | Primitifin kullandığı glTF materyalinin adı (materyal yuvası); yoksa null. Draco ile sıkıştırılmış primitiflerde de doldurulur. |
+| `materialIndex` | `int? materialIndex` | Primitifin kullandığı glTF materyalinin indeksi (materyal yuvası); yoksa null. Draco ile sıkıştırılmış primitiflerde de doldurulur. |
 | `vertexCount` | `int get vertexCount` | `vertexCount` özelliğinin anlık değerini okuyan getter erişimcisi. |
 | `triangleCount` | `int get triangleCount` | `triangleCount` özelliğinin anlık değerini okuyan getter erişimcisi. |
 

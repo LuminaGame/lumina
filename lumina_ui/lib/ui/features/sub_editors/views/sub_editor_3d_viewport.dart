@@ -173,6 +173,10 @@ class _SubEditor3DViewportState extends _SubEditor3DViewportStateBase
           _updateNativeCamera();
         }
       }
+    } else if (widget.previewMaterialSections.isNotEmpty &&
+        oldWidget.previewMaterialRevision != widget.previewMaterialRevision &&
+        _materialPreview.hasMaterial) {
+      _materialPreview.applyParameters(widget.previewMaterialParams);
     }
     _updateNodeVisibilities();
     _updateSelectedNodeWireframe();
@@ -761,6 +765,7 @@ class _SubEditor3DViewportState extends _SubEditor3DViewportStateBase
           ),
 
           // Top Toolbar HUD
+          if (widget.showToolbar)
           Positioned(
             top: 8,
             left: 8,

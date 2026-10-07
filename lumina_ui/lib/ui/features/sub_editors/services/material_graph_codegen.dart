@@ -1,6 +1,7 @@
 import 'package:lumina_editor_data/lumina_editor.dart' show LuminaBlueprintGraph, LuminaBlueprintNode;
 
 import 'package:lumina_ui/ui/features/sub_editors/models/material_graph.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/material_vertex_variables.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/mat_source.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/material_graph_types.dart';
 
@@ -164,8 +165,8 @@ class MaterialGraphCodegen {
           ? MatObject([MatEntry('name', MatAtom(name)), MatEntry('precision', MatAtom(precision))])
           : MatAtom(name));
     }
-    for (final raw in MaterialNodes.extraVariables(graph)) {
-      final name = MaterialNodes.declaredVariableName(raw);
+    for (final raw in MaterialVertexVariables.extraVariables(graph)) {
+      final name = MaterialVertexVariables.declaredVariableName(raw);
       if (name != null && !names.add(name)) continue;
       out.add(MatAtom(raw));
     }

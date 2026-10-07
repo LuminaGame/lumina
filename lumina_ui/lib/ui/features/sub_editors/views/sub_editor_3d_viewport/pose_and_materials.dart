@@ -61,6 +61,42 @@ mixin _SubEditor3DViewportPoseAndMaterials on _SubEditor3DViewportStateBase {
     }
   }
 
+  /// Puts the material being edited on the loaded mesh's
+  /// [SubEditor3DViewport.previewMaterialSections]: one instance, with the
+  /// editor's parameters, shared by every section of the chosen slot.
+  @override
+  void _applyPreviewMaterialToSections() {
+    final engine = _nativeEngine;
+    final asset = _nativeAsset;
+    final bytes = widget.previewMaterialBytes;
+    final sections = widget.previewMaterialSections;
+    if (engine == null || asset == null || sections.isEmpty) return;
+    if (!MaterialPreviewRenderer.isFilamatPackage(bytes)) return;
+    if (!_materialPreview.hasMaterial &&
+        !_materialPreview.mountMaterialOnly(
+          engine: engine,
+          filamatBytes: bytes!,
+          parameters: widget.previewMaterialParams,
+        )) {
+      return;
+    }
+    final instance = _materialPreview.materialInstance;
+    if (instance == null) return;
+    try {
+      final rm = FilamentRenderableManager(engine);
+      var section = 0;
+      for (final entity in asset.renderableEntities) {
+        if (!rm.hasComponent(entity)) continue;
+        final primitiveCount = rm.getPrimitiveCount(entity);
+        for (var primitive = 0; primitive < primitiveCount; primitive++, section++) {
+          if (sections.contains(section)) rm.setMaterialInstanceAt(entity, primitive, instance);
+        }
+      }
+    } catch (e) {
+      debugPrint('[SubEditor3DViewport] preview material on sections failed: $e');
+    }
+  }
+
   bool _bytesMapEquals(Map<int, Uint8List> a, Map<int, Uint8List> b) {
     if (a.length != b.length) return false;
     for (final entry in a.entries) {

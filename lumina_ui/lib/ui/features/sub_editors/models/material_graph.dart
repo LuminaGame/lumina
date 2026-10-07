@@ -1,6 +1,7 @@
 import 'package:flutter_filament/flutter_filament.dart' show BlendingMode, FilamatShading;
 import 'package:lumina_editor_data/lumina_editor.dart'
     show LuminaBlueprintGraph, LuminaBlueprintNode, LuminaBlueprintWire;
+import 'package:lumina_ui/ui/features/sub_editors/models/material_fragment_pins.dart';
 
 /// The value a material expression pin carries: a float vector of one to four
 /// components, or a texture object.
@@ -545,27 +546,6 @@ abstract final class MaterialNodes {
         setVertexVariable,
       }.contains(registryId);
 
-  /// The variable a Set Vertex Variable writes or a Vertex Variable reads.
-  static String? variableName(LuminaBlueprintNode node) =>
-      node.registryId == setVertexVariable || node.registryId == vertexVariable ? node.literals['name'] as String? : null;
-
-  /// The name a `variables` header entry declares (`tint`, `"tint"` or
-  /// `{ name : tint, precision : medium }` as rendered).
-  static String? declaredVariableName(String entry) {
-    final t = entry.trim();
-    if (t.startsWith('{')) return RegExp(r'\bname\s*:\s*"?([A-Za-z_][A-Za-z0-9_]*)').firstMatch(t)?.group(1);
-    final m = RegExp(r'^"?([A-Za-z_][A-Za-z0-9_]*)"?$').firstMatch(t);
-    return m?.group(1);
-  }
-
-  /// Header `variables` entries no Set Vertex Variable node stands for, kept on
-  /// the Material node (`extraVariables`) so they survive a graph edit.
-  static List<String> extraVariables(LuminaBlueprintGraph graph) {
-    final raw = graph.node(outputNodeId)?.literals['extraVariables'];
-    if (raw is! List) return const [];
-    return [for (final e in raw) if (e is String && e.trim().isNotEmpty) e];
-  }
-
   /// Kinds that declare a `.mat` parameter.
   static bool isParameter(String registryId) =>
       registryId == scalarParameter || registryId == vectorParameter || registryId == textureParameter;
@@ -578,13 +558,16 @@ abstract final class MaterialNodes {
     if (node.registryId == custom) {
       return [for (final name in customInputs(node)) MaterialPinDef(name, name)];
     }
+    if (node.registryId == customFragment) return MaterialFragmentPins.inputPins(node);
     if (node.registryId == output) {
       return [for (final p in s.inputs) surface.uses(p.id) ? p : p.asUnused()];
     }
     return s.inputs;
   }
 
-  static List<MaterialPinDef> outputsOf(LuminaBlueprintNode node) => spec(node.registryId)?.outputs ?? const [];
+  static List<MaterialPinDef> outputsOf(LuminaBlueprintNode node) => node.registryId == customFragment
+      ? MaterialFragmentPins.outputPins(node)
+      : spec(node.registryId)?.outputs ?? const [];
 
   static List<String> customInputs(LuminaBlueprintNode node) {
     final raw = node.literals['inputs'];

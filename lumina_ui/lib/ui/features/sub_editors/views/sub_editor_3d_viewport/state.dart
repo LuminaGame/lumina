@@ -143,6 +143,8 @@ abstract class _SubEditor3DViewportStateBase extends State<SubEditor3DViewport> 
 
   void _applySectionMaterials({bool force = false});
 
+  void _applyPreviewMaterialToSections();
+
   void _applyMorphWeights({bool force = false});
 
   void _applyJointTransforms({bool force = false});

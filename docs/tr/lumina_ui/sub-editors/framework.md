@@ -61,10 +61,12 @@ Tüm alt editörlerin paylaştığı parçalar: 3D önizleme viewport'u, hiyerar
 | `showSockets` | `bool showSockets` | `showSockets` alanını (field/property) ve ilişkili veriyi saklar. |
 | `sockets` | `List<SkeletalMeshSocket> sockets` | `sockets` alanını (field/property) ve ilişkili veriyi saklar. |
 | `selectedSocket` | `SkeletalMeshSocket? selectedSocket` | `selectedSocket` alanını (field/property) ve ilişkili veriyi saklar. |
-| `previewMaterialBytes` | `Uint8List? previewMaterialBytes` | Compiled `.filamat` package to shade the procedural preview primitive with (Material Editor). When set and no [glbMesh] payload exists, the viewport still mounts the real Filament renderer. |
+| `previewMaterialBytes` | `Uint8List? previewMaterialBytes` | Compiled `.filamat` package to shade the procedural preview primitive with (Material Editor). When set and no [glbMesh] payload exists, the viewport still mounts the real Filament renderer. [glbMesh] ve [previewMaterialSections] ile birlikte materyal bunun yerine mesh'in o bölümlerine takılır. |
 | `previewMaterialParams` | `List<MaterialParamModel> previewMaterialParams` | Editor parameter values pushed into the preview material instance. |
 | `previewMaterialRevision` | `int previewMaterialRevision` | Bump to re-apply [previewMaterialParams] without recreating the widget. |
-| `yUpCamera` | `bool yUpCamera` | Use a Y-up camera (lumina world convention) instead of inferring the up axis from the mesh bounds. |
+| `previewMaterialSections` | `Set<int> previewMaterialSections` | Bir mesh yükünün ([glbMesh]) [previewMaterialBytes]'ı [previewMaterialParams] ile giyen geometri bölümleri (Materyal editörünün Custom önizleme mesh'i: tek bir materyal yuvasının bölümleri); diğer bölümler mesh'in kendi materyallerini korur. Boşsa mesh olduğu gibi gösterilir. |
+| `showToolbar` | `bool showToolbar` | Üstteki HUD'un (gölgelendirme modu, projeksiyon etiketi, şekil seçici, sahne ışıkları anahtarı, gizmo araçları) çizilip çizilmediği. Kendi denetimleri olan bir barındırıcı (Materyal editörünün önizlemesi) bunu kapatır. |
+| `yUpCamera` | `bool yUpCamera` | Use a Y-up camera (lumina world convention) instead of inferring the up axis from the mesh bounds. Mesh'siz bir materyal önizlemesi ([previewMaterialBytes] var, [glbMesh] yok) her zaman Y-up kamerayı kullanır; böylece prosedürel primitif yatay bir ızgaranın üzerinde durur. |
 | `initialCameraDistance` | `double? initialCameraDistance` | Initial orbit distance override (world units). |
 | `statsLabel` | `String? statsLabel` | Replaces the bottom stats strip (used by previews whose content is not a single mesh, so the mesh-derived counts would be meaningless). |
 | `floorTapPlaneY` | `double floorTapPlaneY` | Height of the floor plane [onFloorTap] rays are intersected with. |
@@ -262,6 +264,7 @@ Procedural preview geometry (unit-scale) used by the Material Editor's 3D previe
 | Metot / Getter | İmzası | Ne İşe Yarar? |
 | :--- | :--- | :--- |
 | `build` | `static PreviewMeshData build(PreviewShape shape)` | Builds the geometry for [shape]. [PreviewShape.mesh] has no procedural form and falls back to the sphere. |
+| `plane` | `static PreviewMeshData plane({double halfExtent = 1.2, double lift = 0.002})` | XZ'ye paralel, +Y'ye bakan kare düzlem (çift yüzlü materyaller iki yüzü de çizer; tek yüzlüler üstü gösterir); ızgara çizgileri onunla z-fighting yapmasın diye y = 0'daki editör ızgarasının [lift] kadar üstüne kaldırılır. |
 
 ## `lib/ui/features/sub_editors/models/sub_editor_line_set.dart`
 
@@ -639,12 +642,14 @@ Edit → Editor Preferences: the user's own editor settings — a category list 
 | `hiddenSectionIndices` | `final Set<int> hiddenSectionIndices` | Geometry section indices to leave out of the preview, driven by the mesh editors' per-slot Isolate toggle. |
 | `highlightedSectionIndices` | `final Set<int> highlightedSectionIndices` | Geometry section indices to tint in the preview, driven by the mesh editors' per-slot Highlight toggle. Same CPU-path caveat as [hiddenSectionIndices]. |
 | `sectionMaterialOverrides` | `final Map<int, Uint8List> sectionMaterialOverrides` | Compiled `.filamat` bytes to swap onto a geometry section's primitive, keyed by section index. Drives the mesh editors' per-slot material binding on the native path: sections are the primitives of the asset's renderable entities, walked in glTF order — the same order the parser builds `subPrimitives` in. |
-| `previewMaterialBytes` | `final Uint8List? previewMaterialBytes` | Compiled `.filamat` package to shade the procedural preview primitive with (Material Editor). When set and no [glbMesh] payload exists, the viewport still mounts the real Filament renderer. |
+| `previewMaterialBytes` | `final Uint8List? previewMaterialBytes` | Compiled `.filamat` package to shade the procedural preview primitive with (Material Editor). When set and no [glbMesh] payload exists, the viewport still mounts the real Filament renderer. [glbMesh] ve [previewMaterialSections] ile birlikte materyal bunun yerine mesh'in o bölümlerine takılır. |
 | `previewMaterialParams` | `final List<MaterialParamModel> previewMaterialParams` | Editor parameter values pushed into the preview material instance. |
 | `previewMaterialRevision` | `final int previewMaterialRevision` | Bump to re-apply [previewMaterialParams] without recreating the widget. |
+| `previewMaterialSections` | `final Set<int> previewMaterialSections` | Bir mesh yükünün ([glbMesh]) [previewMaterialBytes]'ı [previewMaterialParams] ile giyen geometri bölümleri (Materyal editörünün Custom önizleme mesh'i: tek bir materyal yuvasının bölümleri); diğer bölümler mesh'in kendi materyallerini korur. Boşsa mesh olduğu gibi gösterilir. |
+| `showToolbar` | `final bool showToolbar` | Üstteki HUD'un (gölgelendirme modu, projeksiyon etiketi, şekil seçici, sahne ışıkları anahtarı, gizmo araçları) çizilip çizilmediği. Kendi denetimleri olan bir barındırıcı (Materyal editörünün önizlemesi) bunu kapatır. |
 | `onPreviewWorldReady` | `final void Function(LuminaWorld world)? onPreviewWorldReady` | Level/environment preview (Environment Lighting mixer): when set, the viewport mounts the native renderer without a mesh payload, wraps the engine/scene/view in a lumina [LuminaWorld] (editor world type) and hands it over. The caller populates the world through lumina components (lights, sky, meshes, post-process); the built-in studio lights are skipped so the world's own lighting drives the frame. |
 | `onPreviewWorldDisposing` | `final void Function(LuminaWorld world)? onPreviewWorldDisposing` | Fired right before the preview world is cleaned up on dispose. |
-| `yUpCamera` | `final bool yUpCamera` | Use a Y-up camera (lumina world convention) instead of inferring the up axis from the mesh bounds. |
+| `yUpCamera` | `final bool yUpCamera` | Use a Y-up camera (lumina world convention) instead of inferring the up axis from the mesh bounds. Mesh'siz bir materyal önizlemesi ([previewMaterialBytes] var, [glbMesh] yok) her zaman Y-up kamerayı kullanır; böylece prosedürel primitif yatay bir ızgaranın üzerinde durur. |
 | `initialCameraDistance` | `final double? initialCameraDistance` | Initial orbit distance override (world units). |
 | `initialCameraTarget` | `final Vector3? initialCameraTarget` | What the orbit camera looks at in a preview world (runtime space, world units), with [initialCameraDistance]; the origin when null. The Anim Blueprint preview frames the character's torso rather than its feet. |
 | `statsLabel` | `final String? statsLabel` | Replaces the bottom stats strip (used by previews whose content is not a single mesh, so the mesh-derived counts would be meaningless). |

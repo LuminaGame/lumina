@@ -5,8 +5,9 @@ import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/material_editor_view_model.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/material/glsl_editor_widget.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/material/graph_view.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/material/glsl_syntax_highlighter.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/material/parameter_panel.dart';
-import 'package:lumina_ui/ui/features/sub_editors/views/sub_editor_3d_viewport.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/material/material_preview_pane.dart';
 
 class MaterialSubEditor extends StatefulWidget {
   final String assetName;
@@ -35,10 +36,8 @@ class _MaterialSubEditorState extends State<MaterialSubEditor> {
   late final bool _ownsViewModel;
 
   int _activeCenterTab = 0; // 0: GLSL Editor, 1: Node Graph
-  String _previewGeometry = 'Sphere';
-  bool _gridEnabled = true;
 
-  late final TextEditingController _codeController;
+  late final GlslCodeController _codeController;
   final FocusNode _codeFocusNode = FocusNode();
   final GlobalKey<MaterialGlslEditorWidgetState> _editorKey = GlobalKey<MaterialGlslEditorWidgetState>();
 
@@ -53,7 +52,7 @@ class _MaterialSubEditorState extends State<MaterialSubEditor> {
         );
     widget.onBind?.call(_viewModel, _viewModel.save, () => _viewModel.isDirty);
 
-    _codeController = TextEditingController(text: _viewModel.currentCode);
+    _codeController = GlslCodeController(text: _viewModel.currentCode);
     _viewModel.addListener(_onViewModelChanged);
 
     if (_ownsViewModel && _viewModel.currentCode.isEmpty) {
@@ -217,56 +216,11 @@ class _MaterialSubEditorState extends State<MaterialSubEditor> {
           Expanded(
             child: ResizablePanel.horizontal(
               children: [
-                // Left Pane: 3D Preview Mesh Viewport
+                // Left Pane: 3D preview above the material settings
                 ResizablePane(
                   initialSize: 300,
                   minSize: 200,
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    color: EditorColors.background,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Text('3D PREVIEW MESH', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: EditorColors.mutedForeground)),
-                            const Spacer(),
-                            Switch(
-                              value: _gridEnabled,
-                              onChanged: (val) => setState(() => _gridEnabled = val),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 4,
-                          runSpacing: 4,
-                          children: ['Sphere', 'Cube', 'Cylinder', 'Plane', 'Custom'].map((geo) {
-                            final active = _previewGeometry == geo;
-                            return SecondaryButton(
-                              onPressed: () => setState(() => _previewGeometry = geo),
-                              child: Text(geo, style: TextStyle(fontSize: 9, color: active ? EditorColors.primary : EditorColors.foreground)),
-                            );
-                          }).toList(),
-                        ),
-                        const SizedBox(height: 12),
-                        Expanded(
-                          child: SubEditor3DViewport(
-                            title: 'Material 3D Preview Viewport',
-                            initialShape: _previewGeometry == 'Sphere'
-                                ? PreviewShape.sphere
-                                : (_previewGeometry == 'Cube'
-                                    ? PreviewShape.cube
-                                    : (_previewGeometry == 'Cylinder' ? PreviewShape.cylinder : PreviewShape.plane)),
-                            showShapeSelector: true,
-                            previewMaterialBytes: _viewModel.compiledBytes,
-                            previewMaterialParams: _viewModel.parameters,
-                            previewMaterialRevision: _paramRevision,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  child: MaterialPreviewPane(viewModel: _viewModel, parameterRevision: _paramRevision),
                 ),
 
                 // Center Pane: GLSL Editor & Compiler Log Panel
@@ -416,7 +370,7 @@ class _MaterialSubEditorState extends State<MaterialSubEditor> {
                   ),
                 ),
 
-                // Right Pane: Reflection-driven Parameter Inspector
+                // Right Pane: parameters and texture slots
                 ResizablePane(
                   initialSize: 260,
                   minSize: 200,

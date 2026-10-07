@@ -61,10 +61,12 @@ The pieces every sub-editor shares: the 3D preview viewport, the hierarchy widge
 | `showSockets` | `bool showSockets` | Holds the `showSockets` property or configuration state. |
 | `sockets` | `List<SkeletalMeshSocket> sockets` | Holds the `sockets` property or configuration state. |
 | `selectedSocket` | `SkeletalMeshSocket? selectedSocket` | Holds the `selectedSocket` property or configuration state. |
-| `previewMaterialBytes` | `Uint8List? previewMaterialBytes` | Compiled `.filamat` package to shade the procedural preview primitive with (Material Editor). When set and no [glbMesh] payload exists, the viewport still mounts the real Filament renderer. |
+| `previewMaterialBytes` | `Uint8List? previewMaterialBytes` | Compiled `.filamat` package to shade the procedural preview primitive with (Material Editor). When set and no [glbMesh] payload exists, the viewport still mounts the real Filament renderer. With [glbMesh] and [previewMaterialSections], the material goes onto those sections of the mesh instead. |
 | `previewMaterialParams` | `List<MaterialParamModel> previewMaterialParams` | Editor parameter values pushed into the preview material instance. |
 | `previewMaterialRevision` | `int previewMaterialRevision` | Bump to re-apply [previewMaterialParams] without recreating the widget. |
-| `yUpCamera` | `bool yUpCamera` | Use a Y-up camera (lumina world convention) instead of inferring the up axis from the mesh bounds. |
+| `previewMaterialSections` | `Set<int> previewMaterialSections` | Geometry sections of a mesh payload ([glbMesh]) that wear [previewMaterialBytes] with [previewMaterialParams] (the Material editor's Custom preview mesh: the sections of one material slot); the other sections keep the mesh's own materials. Empty shows the mesh as is. |
+| `showToolbar` | `bool showToolbar` | Whether the top HUD (shading mode, projection label, shape selector, scene-lights toggle, gizmo tools) is drawn. A host with its own controls (the Material editor's preview) turns it off. |
+| `yUpCamera` | `bool yUpCamera` | Use a Y-up camera (lumina world convention) instead of inferring the up axis from the mesh bounds. A material preview without a mesh ([previewMaterialBytes] and no [glbMesh]) always uses the Y-up camera, so the procedural primitive sits on a horizontal grid. |
 | `initialCameraDistance` | `double? initialCameraDistance` | Initial orbit distance override (world units). |
 | `statsLabel` | `String? statsLabel` | Replaces the bottom stats strip (used by previews whose content is not a single mesh, so the mesh-derived counts would be meaningless). |
 | `floorTapPlaneY` | `double floorTapPlaneY` | Height of the floor plane [onFloorTap] rays are intersected with. |
@@ -262,6 +264,7 @@ Procedural preview geometry (unit-scale) used by the Material Editor's 3D previe
 | Method / Getter | Signature | Purpose & Description |
 | :--- | :--- | :--- |
 | `build` | `static PreviewMeshData build(PreviewShape shape)` | Builds the geometry for [shape]. [PreviewShape.mesh] has no procedural form and falls back to the sphere. |
+| `plane` | `static PreviewMeshData plane({double halfExtent = 1.2, double lift = 0.002})` | Square plane parallel to XZ facing +Y (double-sided materials render both faces; single-sided ones show the top), lifted [lift] above the editor grid at y = 0 so the grid lines do not z-fight with it. |
 
 ## `lib/ui/features/sub_editors/models/sub_editor_line_set.dart`
 
@@ -639,12 +642,14 @@ Edit → Editor Preferences: the user's own editor settings — a category list 
 | `hiddenSectionIndices` | `final Set<int> hiddenSectionIndices` | Geometry section indices to leave out of the preview, driven by the mesh editors' per-slot Isolate toggle. |
 | `highlightedSectionIndices` | `final Set<int> highlightedSectionIndices` | Geometry section indices to tint in the preview, driven by the mesh editors' per-slot Highlight toggle. Same CPU-path caveat as [hiddenSectionIndices]. |
 | `sectionMaterialOverrides` | `final Map<int, Uint8List> sectionMaterialOverrides` | Compiled `.filamat` bytes to swap onto a geometry section's primitive, keyed by section index. Drives the mesh editors' per-slot material binding on the native path: sections are the primitives of the asset's renderable entities, walked in glTF order — the same order the parser builds `subPrimitives` in. |
-| `previewMaterialBytes` | `final Uint8List? previewMaterialBytes` | Compiled `.filamat` package to shade the procedural preview primitive with (Material Editor). When set and no [glbMesh] payload exists, the viewport still mounts the real Filament renderer. |
+| `previewMaterialBytes` | `final Uint8List? previewMaterialBytes` | Compiled `.filamat` package to shade the procedural preview primitive with (Material Editor). When set and no [glbMesh] payload exists, the viewport still mounts the real Filament renderer. With [glbMesh] and [previewMaterialSections], the material goes onto those sections of the mesh instead. |
 | `previewMaterialParams` | `final List<MaterialParamModel> previewMaterialParams` | Editor parameter values pushed into the preview material instance. |
 | `previewMaterialRevision` | `final int previewMaterialRevision` | Bump to re-apply [previewMaterialParams] without recreating the widget. |
+| `previewMaterialSections` | `final Set<int> previewMaterialSections` | Geometry sections of a mesh payload ([glbMesh]) that wear [previewMaterialBytes] with [previewMaterialParams] (the Material editor's Custom preview mesh: the sections of one material slot); the other sections keep the mesh's own materials. Empty shows the mesh as is. |
+| `showToolbar` | `final bool showToolbar` | Whether the top HUD (shading mode, projection label, shape selector, scene-lights toggle, gizmo tools) is drawn. A host with its own controls (the Material editor's preview) turns it off. |
 | `onPreviewWorldReady` | `final void Function(LuminaWorld world)? onPreviewWorldReady` | Level/environment preview (Environment Lighting mixer): when set, the viewport mounts the native renderer without a mesh payload, wraps the engine/scene/view in a lumina [LuminaWorld] (editor world type) and hands it over. The caller populates the world through lumina components (lights, sky, meshes, post-process); the built-in studio lights are skipped so the world's own lighting drives the frame. |
 | `onPreviewWorldDisposing` | `final void Function(LuminaWorld world)? onPreviewWorldDisposing` | Fired right before the preview world is cleaned up on dispose. |
-| `yUpCamera` | `final bool yUpCamera` | Use a Y-up camera (lumina world convention) instead of inferring the up axis from the mesh bounds. |
+| `yUpCamera` | `final bool yUpCamera` | Use a Y-up camera (lumina world convention) instead of inferring the up axis from the mesh bounds. A material preview without a mesh ([previewMaterialBytes] and no [glbMesh]) always uses the Y-up camera, so the procedural primitive sits on a horizontal grid. |
 | `initialCameraDistance` | `final double? initialCameraDistance` | Initial orbit distance override (world units). |
 | `initialCameraTarget` | `final Vector3? initialCameraTarget` | What the orbit camera looks at in a preview world (runtime space, world units), with [initialCameraDistance]; the origin when null. The Anim Blueprint preview frames the character's torso rather than its feet. |
 | `statsLabel` | `final String? statsLabel` | Replaces the bottom stats strip (used by previews whose content is not a single mesh, so the mesh-derived counts would be meaningless). |

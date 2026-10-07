@@ -67,10 +67,13 @@ mixin _SubEditor3DViewportCamera on _SubEditor3DViewportStateBase {
     final cy = _cameraPan.dy + _targetCenterY;
     final cz = _targetCenterZ;
 
+    // The procedural material primitives and the grid are Y-up: without a
+    // mesh to infer from, a material preview never takes the Z-up camera.
     final bool isZUp =
         !widget.yUpCamera &&
-        (widget.glbMesh == null ||
-            (widget.glbMesh!.maxBounds[2] - widget.glbMesh!.minBounds[2])
+        (widget.glbMesh == null
+            ? !_isMaterialPreview
+            : (widget.glbMesh!.maxBounds[2] - widget.glbMesh!.minBounds[2])
                     .abs() >=
                 (widget.glbMesh!.maxBounds[1] - widget.glbMesh!.minBounds[1])
                     .abs());
