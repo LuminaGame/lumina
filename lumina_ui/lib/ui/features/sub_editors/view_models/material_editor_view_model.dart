@@ -1,3 +1,4 @@
+import 'dart:isolate';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
@@ -83,12 +84,9 @@ class DefaultFilamatCompilerRunner implements FilamatCompilerRunner {
     String? includeDirectory,
   }) async {
     try {
-      final result = FilamentMatc.compile(
-        source,
-        fileName: '$name.mat',
-        defaultName: name,
-        includeDirectory: includeDirectory,
-      );
+      // matc takes about a second: off the UI isolate, so typing, the
+      // viewport and the rest of the editor keep running while it compiles.
+      final result = await _compileOnWorker((source: source, name: name, include: includeDirectory));
       return MaterialCompileResult(
         bytes: result.package,
         issues: [for (final d in result.diagnostics) MaterialCompileIssue.fromMatc(d)],
@@ -101,6 +99,15 @@ class DefaultFilamatCompilerRunner implements FilamatCompilerRunner {
       );
     }
   }
+
+  /// Static, so the worker's closure captures only [job].
+  static Future<MatcResult> _compileOnWorker(({String source, String name, String? include}) job) =>
+      Isolate.run(() => FilamentMatc.compile(
+            job.source,
+            fileName: '${job.name}.mat',
+            defaultName: job.name,
+            includeDirectory: job.include,
+          ));
 }
 
 /// Maps an editor-side parameter type onto the builder's [UniformType].
