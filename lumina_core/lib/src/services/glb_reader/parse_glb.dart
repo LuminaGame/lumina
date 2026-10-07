@@ -1,8 +1,8 @@
-part of '../glb_parser_service.dart';
+part of '../glb_reader.dart';
 
-Future<GlbMeshData?> _parseGlb(Uint8List bytes) async {
+Future<GlbMeshData?> _parseGlb(Uint8List bytes, GlbDecoders decoders) async {
   if (bytes.length < 20) {
-    GlbParserService._logger.log(
+    GlbReader._logger.log(
       'GLB parse failed: Input buffer too small (${bytes.length} bytes). Minimum 20 bytes required for header.',
       level: 'error',
       source: 'GlbParserService',
@@ -24,11 +24,11 @@ Future<GlbMeshData?> _parseGlb(Uint8List bytes) async {
           payload = Uint8List.fromList(raw.cast<int>());
         }
         if (payload != null && payload.isNotEmpty) {
-          return await GlbParserService.parseGlb(payload);
+          return await _parseGlb(payload, decoders);
         }
       }
     } catch (e) {
-      GlbParserService._logger.log(
+      GlbReader._logger.log(
         'LMAS container JSON parse notice: $e',
         level: 'warning',
         source: 'GlbParserService',
@@ -36,7 +36,7 @@ Future<GlbMeshData?> _parseGlb(Uint8List bytes) async {
     }
   }
 
-  final glb = await _readGlbChunks(bytes);
+  final glb = await _readGlbChunks(bytes, decoders);
   if (glb == null) return null;
   bytes = glb.bytes;
   final json = glb.json;
@@ -71,7 +71,7 @@ Future<GlbMeshData?> _parseGlb(Uint8List bytes) async {
 
   final Map<int, _GlbDecodedImage> decodedImages = {};
 
-  await _decodeBaseColorImages(json, bytes, binStart, decodedImages);
+  await _decodeBaseColorImages(json, bytes, binStart, decodedImages, decoders);
 
   try {
     final meshes = json['meshes'] as List?;
@@ -341,7 +341,8 @@ Future<GlbMeshData?> _parseGlb(Uint8List bytes) async {
           final posBufViewIdx = posAccessor['bufferView'] as int?;
 
           if (posBufViewIdx == null || posBufViewIdx >= bufferViews.length) {
-            // Decode Draco compressed geometry via Filament C++ native decoder!
+            // Decode Draco compressed geometry with the decoder the caller provides
+            // (the engine's: Filament's native Draco decoder).
             final dracoExt =
                 (prim['extensions'] as Map?)?['KHR_draco_mesh_compression']
                     as Map?;
@@ -357,7 +358,7 @@ Future<GlbMeshData?> _parseGlb(Uint8List bytes) async {
                     dracoTotalOffset,
                     dracoTotalOffset + dracoBvLen,
                   );
-                  final decoded = FilamentDracoDecoder.decode(dracoBytes);
+                  final decoded = decoders.draco?.call(dracoBytes);
                   if (decoded != null && decoded.positions.isNotEmpty) {
                     final globalBaseIdx = positions.length ~/ 3;
                     final nodeBaseIdx = node.positions.length ~/ 3;
@@ -936,7 +937,7 @@ Future<GlbMeshData?> _parseGlb(Uint8List bytes) async {
       }
     }
   } catch (e, st) {
-    GlbParserService._logger.log(
+    GlbReader._logger.log(
       'GLB parsing exception: $e\n$st',
       level: 'error',
       source: 'GlbParserService',
@@ -944,7 +945,7 @@ Future<GlbMeshData?> _parseGlb(Uint8List bytes) async {
   }
 
   if (positions.isEmpty) {
-    GlbParserService._logger.log(
+    GlbReader._logger.log(
       'GLB warning: Parsed 0 valid 3D vertex positions.',
       level: 'warning',
       source: 'GlbParserService',
@@ -1008,7 +1009,7 @@ Future<GlbMeshData?> _parseGlb(Uint8List bytes) async {
   // 8. Parse Animations
   final List<GlbAnimationClip> parsedAnimations = _parseAnimations(json, bytes, binStart);
 
-  GlbParserService._logger.log(
+  GlbReader._logger.log(
     'Parsed GLB model with node hierarchy transforms ($vertCount vertices, ${indices.length ~/ 3} triangles, ${parsedAnimations.length} animations).',
     level: 'success',
     source: 'GlbParserService',

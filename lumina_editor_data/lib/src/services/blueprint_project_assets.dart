@@ -2,9 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:isolate';
 
-import 'package:lumina/src/blueprint/blueprint.dart';
-import 'package:lumina/src/components/particles/particle_emitter_config.dart';
-import 'package:lumina_core/lumina_core.dart';
+import 'package:lumina/lumina.dart';
 
 /// A Blueprint class asset of a project: its project-relative `.lmas` path,
 /// its class name (the file name, what `Actor:<name>` pins and `Spawn Actor

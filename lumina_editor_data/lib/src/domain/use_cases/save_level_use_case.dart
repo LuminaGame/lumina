@@ -1,10 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:lumina_core/lumina_core.dart';
-import 'package:lumina/src/blueprint/level_blueprint.dart';
-import 'package:lumina/domain/models/use_case_results.dart';
-import 'package:lumina/domain/use_cases/use_case_validation.dart';
+import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/src/domain/models/use_case_results.dart';
+import 'package:lumina_editor_data/src/domain/use_cases/use_case_validation.dart';
 
 /// Writes the active level as a `contents/levels/<levelName>.lmas` JSON container.
 ///

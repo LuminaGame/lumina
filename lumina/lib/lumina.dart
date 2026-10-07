@@ -7,63 +7,37 @@ export 'package:lumina_core/src/formats/landscape_data.dart';
 export 'package:lumina_core/src/formats/lumina_project.dart';
 export 'package:lumina_core/src/services/theme_service.dart';
 export 'package:lumina_core/src/formats/recent_project_entry.dart';
-export 'package:lumina/data/repositories/project_repository.dart';
-export 'package:lumina/data/repositories/asset_repository.dart';
-export 'package:lumina/data/repositories/collections_repository.dart';
 export 'package:lumina_core/src/repositories/level_repository.dart';
 export 'package:lumina_core/src/formats/lumina_level_document.dart';
 export 'package:lumina/src/blueprint/level_blueprint_storage.dart';
-export 'package:lumina/data/services/code_generator_service.dart';
 export 'package:lumina_core/src/services/dart_identifiers.dart';
 export 'package:lumina_core/src/services/generated_code_migration.dart';
-export 'package:lumina/data/services/blueprint_project_assets.dart';
 export 'package:lumina_core/src/services/umg_widget_library_service.dart';
-export 'package:lumina/data/services/app_icon_service.dart';
-export 'package:lumina/data/services/web_loading_screen_service.dart';
-export 'package:lumina/data/services/project_input_binder.dart';
 export 'package:lumina_core/src/services/auto_save_timer_service.dart';
 export 'package:lumina_core/src/services/engine_logger_service.dart';
 export 'package:lumina_core/src/services/lumina_config_dir.dart';
 export 'package:lumina_core/src/services/config_json_file.dart';
-export 'package:lumina/data/services/glb_parser_service.dart';
-export 'package:lumina/data/services/derived_data_cache.dart';
 export 'package:lumina_core/src/services/asset_index.dart';
-export 'package:lumina/data/services/level_asset_manifest.dart';
-export 'package:lumina/data/services/level_actor_material.dart';
-export 'package:lumina/data/services/thumbnail_sidecar_migration.dart';
 export 'package:lumina_core/src/services/primitive_glb_factory.dart';
 export 'package:lumina_core/src/services/glb_animation_merger.dart';
 export 'package:lumina_core/src/services/glb_animation_retargeter.dart';
-export 'package:lumina/data/services/assimp_import_service.dart';
-export 'package:lumina/data/services/fbx_import_service.dart';
 export 'package:lumina_core/src/services/fbx_material_mapper.dart';
 export 'package:lumina_core/src/services/fbx_texture_locator.dart';
-export 'package:lumina/data/services/obj_import_service.dart';
 export 'package:lumina_core/src/services/imported_asset_names.dart';
-export 'package:lumina/data/services/mesh_collision_service.dart';
-export 'package:lumina/data/services/mesh_physics_service.dart';
 export 'package:lumina_core/src/services/animation_import_binder.dart';
 export 'package:lumina_core/src/services/authored_animation_clip.dart';
 export 'package:lumina_core/src/services/authored_animation_writer.dart';
 export 'package:lumina_core/src/services/authored_pose_tools.dart';
-export 'package:lumina/data/services/obj_parser_service.dart';
 export 'package:lumina_core/src/services/tga_decoder_service.dart';
 export 'package:lumina_core/src/services/encoded_image_format.dart';
-export 'package:lumina/data/services/import_image_conversion.dart';
-export 'package:lumina/data/services/encoded_image_decoder.dart';
-export 'package:lumina/data/services/import_queue.dart';
+export 'package:lumina/src/assets/encoded_image_decoder.dart';
+export 'package:lumina/src/assets/glb_loader.dart';
+export 'package:lumina/src/assets/level_asset_manifest.dart';
+export 'package:lumina/src/assets/level_actor_material.dart';
+export 'package:lumina_core/src/services/glb_reader.dart';
 export 'package:lumina_core/src/services/import_formats.dart';
-export 'package:lumina/data/services/import_folder_scanner.dart';
 export 'package:lumina_core/src/services/gltf_packer.dart';
 export 'package:lumina/src/services/mesh_decimation_service.dart';
-export 'package:flutter_assimp/flutter_assimp.dart';
-export 'package:flutter_riglogic/flutter_riglogic.dart';
-
-// Domain: use-case layer
-export 'package:lumina/domain/models/use_case_results.dart';
-export 'package:lumina/domain/use_cases/save_level_use_case.dart';
-export 'package:lumina/domain/use_cases/generate_dart_code_use_case.dart';
-export 'package:lumina/domain/use_cases/import_asset_use_case.dart';
 
 // Declarative & BuildContext
 export 'package:lumina/src/declarative/lumina_object.dart';
@@ -186,6 +160,7 @@ export 'package:lumina/src/material/material_textures.dart';
 
 // Input
 export 'package:lumina/src/input/input_component.dart';
+export 'package:lumina/src/input/project_input_binder.dart';
 
 // Particles
 export 'package:lumina/src/components/particles/particle_emitter_config.dart';
@@ -240,7 +215,6 @@ export 'package:lumina/src/animation/anim_montage.dart';
 export 'package:lumina/src/animation/blend_space.dart';
 export 'package:lumina/src/animation/skeleton_retargeter.dart';
 export 'package:lumina/src/animation/keyframe_track.dart';
-export 'package:lumina/src/animation/rig_logic_evaluator.dart';
 export 'package:lumina/src/animation/locomotion_clip_set.dart';
 export 'package:lumina/src/animation/directional_locomotion_component.dart';
 
@@ -266,20 +240,13 @@ export 'package:lumina/src/components/audio/audio_component.dart';
 // Media
 export 'package:lumina/src/media/media.dart';
 
-export 'package:lumina/data/services/thumbnail_service.dart';
-export 'package:lumina/data/services/filament_thumbnail_renderer.dart';
-export 'package:lumina/data/services/asset_reference_graph.dart';
 export 'package:lumina_core/src/formats/lumina_plugin_descriptor.dart';
 export 'package:lumina_core/src/repositories/plugin_repository.dart';
-export 'package:lumina/data/services/plugin_registry_service.dart';
 export 'package:lumina_core/src/services/plugin_host_patcher_service.dart';
-export 'package:lumina/data/services/editor_host_generator_service.dart';
 export 'package:lumina_core/src/services/editor_build_fingerprint.dart';
 export 'package:lumina_core/src/services/editor_source_vendor_service.dart';
 export 'package:lumina_core/src/services/editor_build_cache.dart';
-export 'package:lumina/data/services/editor_build_service.dart';
 export 'package:lumina_core/src/services/space_free_build_dir.dart';
-export 'package:lumina/data/services/plugin_template_generator_service.dart';
 export 'package:lumina_core/src/services/project_engine_link.dart';
 export 'package:lumina_core/src/services/lumina_data_dir.dart';
 export 'package:lumina_core/src/services/engine_bootstrap.dart';

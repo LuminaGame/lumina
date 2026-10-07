@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:lumina/src/assets/level_actor_material.dart';
 import 'package:lumina/src/world/level_preloader.dart';
 import 'package:lumina_core/lumina_core.dart';
-import 'package:lumina/data/services/level_actor_material.dart';
 
 /// What a level loads: the assets its placed actors name —
 /// meshes, landscapes, sky environments, textures, materials, sounds,

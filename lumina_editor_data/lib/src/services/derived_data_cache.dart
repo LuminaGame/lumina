@@ -7,7 +7,7 @@ import 'package:crypto/crypto.dart';
 import 'package:yaml/yaml.dart';
 
 import 'package:lumina_core/lumina_core.dart';
-import 'package:lumina/data/services/glb_parser_service.dart';
+import 'package:lumina_editor_data/src/services/glb_parser_service.dart';
 
 /// Header stored in front of every derived-data entry's payload.
 class DerivedDataEntryHeader {

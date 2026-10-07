@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 import 'package:flutter_riglogic/flutter_riglogic.dart';
-import 'package:lumina/src/components/mesh/skeletal_mesh_component.dart';
+import 'package:lumina/lumina.dart';
 
 /// Evaluation result containing calculated blend shapes, joint deltas, and animated maps.
 class RigLogicEvaluationResult {

@@ -58,6 +58,7 @@ export 'package:lumina_core/src/services/game_template_service.dart';
 export 'package:lumina_core/src/services/generated_code_migration.dart';
 export 'package:lumina_core/src/services/glb_animation_merger.dart';
 export 'package:lumina_core/src/services/glb_animation_retargeter.dart';
+export 'package:lumina_core/src/services/glb_reader.dart';
 export 'package:lumina_core/src/services/gltf_packer.dart';
 export 'package:lumina_core/src/services/import_formats.dart';
 export 'package:lumina_core/src/services/imported_asset_names.dart';

@@ -4,8 +4,8 @@ import 'dart:isolate';
 import 'package:path/path.dart' as p;
 
 import 'package:lumina_core/lumina_core.dart';
-import 'package:lumina/data/repositories/asset_repository.dart';
-import 'package:lumina/data/services/import_queue.dart';
+import 'package:lumina_editor_data/src/repositories/asset_repository.dart';
+import 'package:lumina_editor_data/src/services/import_queue.dart';
 
 /// One primary file a folder import brings in, with the files that travel
 /// with it.

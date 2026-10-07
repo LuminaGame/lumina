@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:lumina_core/lumina_core.dart';
-import 'package:lumina/data/services/editor_host_generator_service.dart';
+import 'package:lumina_editor_data/src/services/editor_host_generator_service.dart';
 import 'package:path/path.dart' as p;
 
 /// The phases of a project editor build, with their share of the bar.

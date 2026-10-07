@@ -3,7 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:lumina_core/lumina_core.dart';
-import 'package:lumina/data/services/glb_parser_service.dart';
+import 'package:lumina/src/assets/glb_loader.dart';
 
 /// Turns a landscape payload into an ordinary glTF 2.0 binary.
 ///
@@ -265,7 +265,7 @@ class LandscapeGlbBuilder {
         data.readSidecar(sidecar);
       }
       final glb = build(data, unitsPerMetre: unitsPerMetre, maxResolution: maxResolution);
-      return await GlbParserService.parseGlb(glb);
+      return await LuminaGlbLoader.parse(glb);
     } catch (_) {
       return null;
     }

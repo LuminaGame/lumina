@@ -3,9 +3,8 @@ import 'dart:collection';
 import 'dart:isolate';
 import 'dart:typed_data';
 
-import 'package:lumina/data/repositories/asset_repository.dart';
-import 'package:lumina/data/services/encoded_image_decoder.dart';
-import 'package:lumina_core/lumina_core.dart';
+import 'package:lumina_editor_data/src/repositories/asset_repository.dart';
+import 'package:lumina/lumina.dart';
 
 /// Where one file of an import batch is. A file moves
 /// queued → converting → writing → thumbnail → done, or ends failed /

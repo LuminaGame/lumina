@@ -3,11 +3,11 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:path/path.dart' as p;
 import 'package:lumina_core/lumina_core.dart';
-import 'package:lumina/data/repositories/project_repository.dart';
-import 'package:lumina/data/services/plugin_template/code_plugin_sources.dart';
+import 'package:lumina_editor_data/src/repositories/project_repository.dart';
+import 'package:lumina_editor_data/src/services/plugin_template/code_plugin_sources.dart';
 import 'package:yaml/yaml.dart';
 
-export 'package:lumina/data/repositories/project_repository.dart' show ProcessRunner;
+export 'package:lumina_editor_data/src/repositories/project_repository.dart' show ProcessRunner;
 // The lumina repo generated plugins take `lumina_editor_api` (and, for
 // importers, `lumina`) from; defined beside the workspace paths.
 export 'package:lumina_core/src/services/workspace_paths.dart' show kLuminaGitUrl;
@@ -190,6 +190,8 @@ class PluginTemplateGeneratorService {
     'flutter',
     'flutter_test',
     'lumina',
+    'lumina_core',
+    'lumina_editor_data',
     'lumina_ui',
     'lumina_editor_api',
     'test',

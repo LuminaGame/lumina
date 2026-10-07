@@ -7,10 +7,9 @@ import 'dart:typed_data';
 
 import 'package:image/image.dart' as img;
 
-import 'package:lumina/src/blueprint/anim/anim_blueprint_model.dart';
-import 'package:lumina_core/lumina_core.dart';
-import 'package:lumina/data/repositories/asset_repository.dart';
-import 'package:lumina/data/services/filament_thumbnail_renderer.dart';
+import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/src/repositories/asset_repository.dart';
+import 'package:lumina_editor_data/src/services/filament_thumbnail_renderer.dart';
 
 /// A generated thumbnail and what produced it.
 class ThumbnailResult {

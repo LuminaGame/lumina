@@ -1,24 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:lumina_core/lumina_core.dart';
-import 'package:lumina/src/game/primitive_actor.dart' show luminaPrimitiveSize;
-import 'package:lumina/src/game/template_character.dart';
-import 'package:lumina/src/game/template_content.dart';
-import 'package:lumina/src/collision/collision_hull.dart';
-import 'package:lumina/src/components/camera/camera_settings.dart' show LuminaCameraSettings;
-import 'package:lumina/src/collision/collision_primitive.dart';
-import 'package:lumina/src/components/environment/exponential_height_fog_component.dart' show LuminaHeightFogSettings;
-import 'package:lumina/src/components/light/auto_exposure.dart' show luminaLightColorFromHex;
-import 'package:lumina/src/blueprint/blueprint.dart';
-import 'package:lumina/src/blueprint/level_blueprint_storage.dart';
-import 'package:lumina/src/input/input_action.dart';
-import 'package:lumina/src/input/input_key.dart';
-import 'package:lumina/data/services/blueprint_codegen/blueprint_dart_generator.dart';
-import 'package:lumina/data/services/blueprint_project_assets.dart';
-import 'package:lumina/data/services/level_actor_material.dart';
-import 'package:lumina/data/services/level_asset_manifest.dart';
-import 'package:lumina/data/services/mesh_collision_service.dart';
-import 'package:lumina/data/services/project_input_binder.dart';
+import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/src/services/blueprint_codegen/blueprint_dart_generator.dart';
+import 'package:lumina_editor_data/src/services/blueprint_project_assets.dart';
+import 'package:lumina_editor_data/src/services/mesh_collision_service.dart';
 
 part 'code_generator_service/state.dart';
 part 'code_generator_service/level.dart';

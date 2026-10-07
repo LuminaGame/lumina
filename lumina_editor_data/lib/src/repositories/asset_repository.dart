@@ -1,19 +1,19 @@
 import 'dart:async';
 import 'dart:convert';
-import 'package:lumina/data/services/asset_reference_graph.dart';
+import 'package:lumina_editor_data/src/services/asset_reference_graph.dart';
 import 'dart:io';
 import 'dart:isolate';
 import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:lumina_core/lumina_core.dart';
-import 'package:lumina/data/services/assimp_import_service.dart';
-import 'package:lumina/data/services/derived_data_cache.dart';
-import 'package:lumina/data/services/fbx_import_service.dart';
-import 'package:lumina/data/services/glb_parser_service.dart';
-import 'package:lumina/data/services/import_image_conversion.dart';
-import 'package:lumina/data/services/obj_import_service.dart';
-import 'package:lumina/data/services/obj_parser_service.dart';
+import 'package:lumina_editor_data/src/services/assimp_import_service.dart';
+import 'package:lumina_editor_data/src/services/derived_data_cache.dart';
+import 'package:lumina_editor_data/src/services/fbx_import_service.dart';
+import 'package:lumina_editor_data/src/services/glb_parser_service.dart';
+import 'package:lumina_editor_data/src/services/import_image_conversion.dart';
+import 'package:lumina_editor_data/src/services/obj_import_service.dart';
+import 'package:lumina_editor_data/src/services/obj_parser_service.dart';
 import 'package:flutter_assimp/flutter_assimp.dart';
 
 part 'asset_repository/state.dart';

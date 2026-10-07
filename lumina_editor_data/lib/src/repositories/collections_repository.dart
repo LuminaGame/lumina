@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:lumina_core/lumina_core.dart';
-import 'package:lumina/data/repositories/asset_repository.dart';
+import 'package:lumina_editor_data/src/repositories/asset_repository.dart';
 
 class CollectionAsset {
   final String assetId;

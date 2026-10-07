@@ -1,8 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:lumina/src/utility/web_loading.dart';
-import 'package:lumina_core/lumina_core.dart';
+import 'package:lumina/lumina.dart';
 
 /// What [WebLoadingScreenService.write] did.
 class WebLoadingScreenReport {

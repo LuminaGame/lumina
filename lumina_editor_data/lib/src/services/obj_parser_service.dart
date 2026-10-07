@@ -1,4 +1,3 @@
-import 'package:lumina/data/services/glb_parser_service.dart';
 import 'package:lumina_core/lumina_core.dart';
 
 /// Service for parsing Wavefront OBJ 3D model geometry.

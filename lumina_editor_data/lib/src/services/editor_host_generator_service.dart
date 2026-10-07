@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:lumina_core/lumina_core.dart';
-import 'package:lumina/data/services/code_generator_service.dart';
+import 'package:lumina_editor_data/src/services/code_generator_service.dart';
 import 'package:path/path.dart' as p;
 import 'package:yaml/yaml.dart';
 

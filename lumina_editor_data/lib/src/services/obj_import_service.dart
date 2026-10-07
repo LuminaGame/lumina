@@ -7,7 +7,7 @@ import 'package:flutter_assimp/flutter_assimp.dart';
 import 'package:image/image.dart' as img;
 
 import 'package:lumina_core/lumina_core.dart';
-import 'package:lumina/data/services/fbx_import_service.dart';
+import 'package:lumina_editor_data/src/services/fbx_import_service.dart';
 
 /// One `newmtl` block of a Wavefront `.mtl` file: the values the importer
 /// maps to glTF. Texture paths are as written (options such as `-bm 1`

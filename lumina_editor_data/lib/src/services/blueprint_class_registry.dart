@@ -1,18 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:lumina/src/object/lumina_object_key.dart';
+import 'package:lumina/lumina.dart';
 
-import 'package:lumina/src/blueprint/blueprint.dart';
-import 'package:lumina/src/blueprint/level_blueprint_storage.dart';
-import 'package:lumina/src/blueprint/vm/anim_blueprint_vm.dart';
-import 'package:lumina/src/blueprint/vm/blueprint_vm.dart';
-import 'package:lumina/src/game/game_mode.dart';
-import 'package:lumina/src/input/input_action.dart';
-import 'package:lumina/src/object/pawn.dart';
-import 'package:lumina_core/lumina_core.dart';
-import 'package:lumina/data/services/blueprint_project_assets.dart';
-import 'package:lumina/data/services/code_generator_service.dart';
+import 'package:lumina_editor_data/src/services/blueprint_project_assets.dart';
+import 'package:lumina_editor_data/src/services/code_generator_service.dart';
 
 /// A project's Blueprint classes for the VM: what the editor's
 /// Play resolves a class reference — a project-relative `.lmas` path — to,

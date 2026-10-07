@@ -1,0 +1,67 @@
+name: lumina_editor_data
+description: "Lumina Studio's tooling data layer, outside the engine: the asset, project and collections repositories, importers (Assimp FBX/OBJ, GLB), thumbnails, the Dart and Blueprint code generators, the project editor host generator and build service, the plugin registry and template generator, the derived data cache, the import queue and the editor use cases."
+version: 0.0.1
+publish_to: none
+
+environment:
+  sdk: ^3.12.0
+  flutter: ">=1.17.0"
+resolution: workspace
+
+# Editor tooling only: generated games import package:lumina/lumina_runtime.dart
+# and never reach this package (lumina/test/architecture/
+# engine_without_editor_data_test.dart). No widget library either
+# (test/architecture/no_widgets_test.dart).
+dependencies:
+  flutter:
+    sdk: flutter
+  # The engine: templates, Blueprint types and the code generators' targets.
+  lumina:
+    path: ../lumina
+  lumina_core:
+    path: ../lumina_core
+  # Thumbnails (offscreen Filament renders) and the GLB reader's Draco decoder.
+  flutter_filament:
+    path: ../flutter_filament
+  # From the tools repo; pubspec_overrides.yaml at the workspace root points
+  # them at a local ../tools checkout.
+  flutter_assimp:
+    git:
+      url: https://github.com/LuminaGame/tools.git
+      path: flutter_assimp
+      ref: 227b3cd34ef0d41ff114b909545efb47f3e2a225
+  flutter_riglogic:
+    git:
+      url: https://github.com/LuminaGame/tools.git
+      path: flutter_riglogic
+      ref: 227b3cd34ef0d41ff114b909545efb47f3e2a225
+  # The editor-side scanner that reads @BlueprintCallable / @BlueprintPure
+  # functions.
+  analyzer: ^13.3.0
+  image: ^4.9.2
+  path: ^1.9.1
+  # Content hashes of derived-data keys.
+  crypto: ^3.0.7
+  # Reads a project pubspec's asset list for the Cook & Package guard.
+  yaml: ^3.1.3
+  vector_math: ^2.1.4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  test: ^1.31.1
+  ffi: any
+  pub_semver: ^2.2.0
+  # The plugin registry tests load a real editor plugin.
+  lumina_editor_api:
+    path: ../lumina_editor_api
+  # The smoke report (tool/smoke_report.dart); the artifact API comes through
+  # package:lumina/testing.dart.
+  lumina_smoke:
+    git:
+      url: https://github.com/LuminaGame/tools.git
+      path: lumina_smoke
+      ref: 227b3cd34ef0d41ff114b909545efb47f3e2a225
+  # The web smoke drives the built game in a headless browser.
+  puppeteer: ^3.26.0

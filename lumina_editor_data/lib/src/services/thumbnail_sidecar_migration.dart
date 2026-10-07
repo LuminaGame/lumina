@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:lumina_core/lumina_core.dart';
-import 'package:lumina/data/services/thumbnail_service.dart';
+import 'package:lumina_editor_data/src/services/thumbnail_service.dart';
 
 /// What [ThumbnailSidecarMigration.run] did to one project.
 class ThumbnailSidecarMigrationReport {

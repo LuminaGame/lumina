@@ -1,4 +1,4 @@
-part of '../glb_parser_service.dart';
+part of '../glb_reader.dart';
 
 _NodeTransform _combineTransforms(
   _NodeTransform parent,
@@ -99,23 +99,28 @@ int? _baseColorImageIndex(Object? material, List? textures) {
   return imgIdx;
 }
 
-/// The GLB header, JSON chunk and BIN chunk start of [bytes] (TGA
-/// textures already converted to PNG), or null when they are not valid.
-Future<({Uint8List bytes, Map<String, dynamic> json, int binStart})?> _readGlbChunks(Uint8List bytes) async {
+/// The GLB header, JSON chunk and BIN chunk start of [bytes] (after
+/// [GlbDecoders.prepare], which the editor uses to convert TGA textures to PNG
+/// and sanitize skinning), or null when they are not valid.
+Future<({Uint8List bytes, Map<String, dynamic> json, int binStart})?> _readGlbChunks(
+  Uint8List bytes,
+  GlbDecoders decoders,
+) async {
   final initialByteData = ByteData.sublistView(bytes);
   final magic = initialByteData.getUint32(0, Endian.little);
   if (magic != 0x46546C67) {
     return null;
   }
 
-  bytes = await GlbParserService.convertGlbTgaToPngAsync(bytes);
+  final prepare = decoders.prepare;
+  if (prepare != null) bytes = await prepare(bytes);
 
   final byteData = ByteData.sublistView(bytes);
 
   final jsonLength = byteData.getUint32(12, Endian.little);
   final jsonType = byteData.getUint32(16, Endian.little);
   if (jsonType != 0x4E4F534A) {
-    GlbParserService._logger.log(
+    GlbReader._logger.log(
       'GLB parse failed: Invalid JSON chunk type 0x${jsonType.toRadixString(16)} (expected 0x4e4f534a "JSON").',
       level: 'error',
       source: 'GlbParserService',
@@ -124,7 +129,7 @@ Future<({Uint8List bytes, Map<String, dynamic> json, int binStart})?> _readGlbCh
   }
 
   if (bytes.length < 20 + jsonLength) {
-    GlbParserService._logger.log(
+    GlbReader._logger.log(
       'GLB parse failed: File truncated before JSON chunk end (specified JSON length $jsonLength bytes).',
       level: 'error',
       source: 'GlbParserService',
@@ -143,7 +148,7 @@ Future<({Uint8List bytes, Map<String, dynamic> json, int binStart})?> _readGlbCh
   try {
     json = jsonDecode(jsonStr) as Map<String, dynamic>;
   } catch (e) {
-    GlbParserService._logger.log(
+    GlbReader._logger.log(
       'GLB parse failed: JSON chunk parsing exception: $e',
       level: 'error',
       source: 'GlbParserService',
@@ -153,7 +158,7 @@ Future<({Uint8List bytes, Map<String, dynamic> json, int binStart})?> _readGlbCh
 
   final binChunkOffset = 20 + jsonLength;
   if (bytes.length < binChunkOffset + 8) {
-    GlbParserService._logger.log(
+    GlbReader._logger.log(
       'GLB parse failed: Missing binary payload chunk (BIN header missing).',
       level: 'error',
       source: 'GlbParserService',
@@ -165,13 +170,16 @@ Future<({Uint8List bytes, Map<String, dynamic> json, int binStart})?> _readGlbCh
   return (bytes: bytes, json: json, binStart: binStart);
 }
 
-/// Decodes the base colour images [GlbParserService.parseGlb] samples into vertex colours.
+/// Decodes the base colour images [GlbReader.parse] samples into vertex colours.
 Future<void> _decodeBaseColorImages(
   Map<String, dynamic> json,
   Uint8List bytes,
   int binStart,
   Map<int, _GlbDecodedImage> decodedImages,
+  GlbDecoders decoders,
 ) async {
+  final decode = decoders.image;
+  if (decode == null) return;
   try {
     final images = json['images'] as List?;
     final bufferViews = json['bufferViews'] as List?;
@@ -203,7 +211,7 @@ Future<void> _decodeBaseColorImages(
               // never a fallback to the TGA reader, which reads a PNG's IHDR
               // tag as an 18505x21060 header.
               try {
-                final decoded = await EncodedImageDecoder.decodeRgba(imgBytes);
+                final decoded = await decode(imgBytes);
                 if (decoded != null) {
                   decodedImages[imgIdx] = _GlbDecodedImage(
                     decoded.width,
@@ -211,7 +219,7 @@ Future<void> _decodeBaseColorImages(
                     decoded.rgba,
                   );
                 } else {
-                  GlbParserService._logger.log(
+                  GlbReader._logger.log(
                     'GLB image $imgIdx (${EncodedImageFormat.sniff(imgBytes).name}) is not decoded to pixels; '
                     'its material keeps its base colour factor in vertex colours.',
                     level: 'info',
@@ -219,7 +227,7 @@ Future<void> _decodeBaseColorImages(
                   );
                 }
               } catch (e) {
-                GlbParserService._logger.log(
+                GlbReader._logger.log(
                   'GLB image $imgIdx decode notice: $e',
                   level: 'warning',
                   source: 'GlbParserService',
@@ -231,7 +239,7 @@ Future<void> _decodeBaseColorImages(
       }
     }
   } catch (e) {
-    GlbParserService._logger.log(
+    GlbReader._logger.log(
       'GLB texture/material parse notice: $e',
       level: 'warning',
       source: 'GlbParserService',

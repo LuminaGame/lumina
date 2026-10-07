@@ -1,5 +1,5 @@
 import 'package:lumina_core/lumina_core.dart';
-import 'package:lumina/data/repositories/asset_repository.dart';
+import 'package:lumina_editor_data/src/repositories/asset_repository.dart';
 
 /// Result of [SaveLevelUseCase]: where the `.lmas` level container landed on disk.
 class SaveLevelResult {

@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:lumina/src/blueprint/blueprint.dart';
+import 'package:lumina/lumina.dart';
 
 /// A scanner finding on an annotated function: the file and
 /// line, the function (`name` or `Class.name`), the parameter when one is at

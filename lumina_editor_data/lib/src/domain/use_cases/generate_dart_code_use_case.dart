@@ -1,10 +1,10 @@
 import 'dart:io';
 
 import 'package:lumina_core/lumina_core.dart';
-import 'package:lumina/data/repositories/project_repository.dart';
-import 'package:lumina/data/services/code_generator_service.dart';
-import 'package:lumina/domain/models/use_case_results.dart';
-import 'package:lumina/domain/use_cases/use_case_validation.dart';
+import 'package:lumina_editor_data/src/repositories/project_repository.dart';
+import 'package:lumina_editor_data/src/services/code_generator_service.dart';
+import 'package:lumina_editor_data/src/domain/models/use_case_results.dart';
+import 'package:lumina_editor_data/src/domain/use_cases/use_case_validation.dart';
 
 /// Generates the live declarative Dart code for a level (`lib/main.dart` +
 /// `lib/levels/<level_name>.dart`, [dartFileName]) via [DartCodeGeneratorService] and, when a

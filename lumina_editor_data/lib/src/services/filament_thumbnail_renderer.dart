@@ -9,9 +9,8 @@ import 'package:flutter_filament/flutter_filament.dart';
 import 'package:image/image.dart' as img;
 import 'package:vector_math/vector_math_64.dart';
 
-import 'package:lumina/src/game/primitive_actor.dart' show luminaPrimitiveSize;
-import 'package:lumina_core/lumina_core.dart';
-import 'package:lumina/data/services/derived_data_cache.dart';
+import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/src/services/derived_data_cache.dart';
 
 part 'filament_thumbnail_renderer/state.dart';
 part 'filament_thumbnail_renderer/material_preview.dart';

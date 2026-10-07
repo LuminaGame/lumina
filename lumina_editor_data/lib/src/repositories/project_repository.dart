@@ -3,15 +3,14 @@ import 'dart:io';
 import 'dart:isolate';
 import 'dart:math' as math;
 import 'dart:typed_data';
-import 'package:lumina/src/game/template_content.dart';
+import 'package:lumina/lumina.dart';
 import 'package:lumina_core/lumina_core.dart';
-import 'package:lumina/data/services/derived_data_cache.dart';
-import 'package:lumina/data/services/thumbnail_sidecar_migration.dart';
-import 'package:lumina/data/services/base_eye_height_migration.dart';
-import 'package:lumina/data/services/code_generator_service.dart';
-import 'package:lumina/data/services/glb_parser_service.dart';
-import 'package:lumina/data/services/project_input_binder.dart';
-import 'package:lumina/data/repositories/asset_repository.dart';
+import 'package:lumina_editor_data/src/services/derived_data_cache.dart';
+import 'package:lumina_editor_data/src/services/thumbnail_sidecar_migration.dart';
+import 'package:lumina_editor_data/src/services/base_eye_height_migration.dart';
+import 'package:lumina_editor_data/src/services/code_generator_service.dart';
+import 'package:lumina_editor_data/src/services/glb_parser_service.dart';
+import 'package:lumina_editor_data/src/repositories/asset_repository.dart';
 
 enum ProjectCreationStep {
   folderSetup,
