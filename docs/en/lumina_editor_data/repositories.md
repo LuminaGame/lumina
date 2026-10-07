@@ -1,16 +1,16 @@
-[Türkçe](../../tr/lumina/data-models.md)
+[Türkçe](../../tr/lumina_editor_data/repositories.md)
 
 # Data layer: models and repositories
 
-The editor-facing data layer, part two: the repositories that need the engine or native libraries (assets with thumbnails and imports, collections, projects). The persisted models themselves (`.lmas` assets, the `.lmproject` manifest and its settings, level documents, plugin descriptors, landscape and sequencer data, recent projects) and the level and plugin repositories are pure Dart and live in `lumina_core`: see [File formats and repositories](../lumina_core/formats.md). File paths are relative to the `lumina/` package directory.
+The editor-facing data layer, part two: the repositories that need the engine or native libraries (assets with thumbnails and imports, collections, projects). The persisted models themselves (`.lmas` assets, the `.lmproject` manifest and its settings, level documents, plugin descriptors, landscape and sequencer data, recent projects) and the level and plugin repositories are pure Dart and live in `lumina_core`: see [File formats and repositories](../lumina_core/formats.md). File paths are relative to the `lumina_editor_data/` package directory.
 
 **On this page:**
 
-- [`lib/data/repositories/asset_repository.dart`](#libdatarepositoriesasset_repositorydart)
-- [`lib/data/repositories/collections_repository.dart`](#libdatarepositoriescollections_repositorydart)
-- [`lib/data/repositories/project_repository.dart`](#libdatarepositoriesproject_repositorydart)
+- [`lib/src/repositories/asset_repository.dart`](#libsrcrepositoriesasset_repositorydart)
+- [`lib/src/repositories/collections_repository.dart`](#libsrcrepositoriescollections_repositorydart)
+- [`lib/src/repositories/project_repository.dart`](#libsrcrepositoriesproject_repositorydart)
 
-## `lib/data/repositories/asset_repository.dart`
+## `lib/src/repositories/asset_repository.dart`
 
 ### `class RealAssetInfo`
 
@@ -64,7 +64,7 @@ The editor-facing data layer, part two: the repositories that need the engine or
 | `i1` | `int i1` | Holds the `i1` property or configuration state. |
 | `i2` | `int i2` | Holds the `i2` property or configuration state. |
 
-## `lib/data/repositories/collections_repository.dart`
+## `lib/src/repositories/collections_repository.dart`
 
 ### `class CollectionAsset`
 
@@ -108,7 +108,7 @@ The editor-facing data layer, part two: the repositories that need the engine or
 | `saveCollections` | `void saveCollections(String projectPath, List<Collection> collections)` | Serializes and writes the current state or asset to disk. |
 | `healPaths` | `void healPaths(String projectPath, List<RealAssetInfo> currentAssets)` | Executes `healPaths` operation. |
 
-## `lib/data/repositories/project_repository.dart`
+## `lib/src/repositories/project_repository.dart`
 
 ### `enum ProjectCreationStep`
 
@@ -169,4 +169,4 @@ The editor-facing data layer, part two: the repositories that need the engine or
 
 ---
 
-[Previous: Data layer: use cases and services (continued, part 3)](data-services-continued-3.md) | [Up: lumina (engine core)](index.md) | [Next: Data layer: models and repositories (continued)](data-models-continued.md)
+[Previous: Data layer: use cases and services (continued, part 3)](services-continued-3.md) | [Up: lumina_editor_data (editor data layer)](index.md) | [Next: Data layer: models and repositories (continued)](repositories-continued.md)

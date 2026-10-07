@@ -24,6 +24,7 @@ Saf servisler, ikinci bölüm: üretilmiş kod göçü, GLB animasyon birleştir
 - [`lib/src/services/tga_decoder_service.dart`](#libsrcservicestga_decoder_servicedart)
 - [`lib/src/services/umg_widget_library_service.dart`](#libsrcservicesumg_widget_library_servicedart)
 - [`lib/src/services/workspace_paths.dart`](#libsrcservicesworkspace_pathsdart)
+- [`lib/src/services/glb_reader.dart`](#libsrcservicesglb_readerdart)
 
 ## `lib/src/services/game_template_service.dart`
 
@@ -570,6 +571,138 @@ Packages from the other repos (flutter_assimp, flutter_riglogic, flutter_gstream
 | `gitSourceOf` | `static LuminaGitSource? gitSourceOf(String root, String name, {String? packageDir})` | `<root>/pubspec.lock` dosyasının [name] paketini çözdüğü git bağımlılığı (url, path, çözülmüş commit); path override veya hosted paket için null, [packageDir] verilirse o klasör o commit'in checkout'u değilse de null. |
 | `testAssets` | `static String get testAssets` | The shared 3D test assets (`<root>/test-assets`). |
 | `findRootFrom` | `static String? findRootFrom(String start)` | The first of [start] and its ancestors holding `lumina/pubspec.yaml`. |
+
+## `lib/src/services/glb_reader.dart`
+
+Saf Dart GLB okuyucusu. `GlbReader.parse(bytes, decoders:)` bir binary glTF'i (`.glb`) ya da onu `raw_payload` olarak taşıyan bir `.lmas` JSON kabını `GlbMeshData`'ya okur: node hiyerarşisi, primitive başına dünya uzayı pozisyonları ve indeksler, UV'ler, vertex renkleri, skinning, morph target'lar ve animasyon clip'leri. Saf Dart'ın çözemediği şeyler çağırandan `GlbDecoders` ile gelir:
+
+- `draco` (`GlbDracoDecoder`): `KHR_draco_mesh_compression` kullanan bir primitive'i `GlbDracoMesh`'e (pozisyonlar, UV'ler, indeksler) çözer. Olmadığında böyle bir primitive yalnızca accessor sınırlarını tutar.
+- `image` (`GlbImageDecoder`): bir base colour dokusunu `GlbDecodedPixels`'e (`width`, `height`, `rgba`) çözer; okuyucu bunu vertex renklerine örnekler. Olmadığında materyalin base colour çarpanı kullanılır.
+- `prepare` (`GlbBytesTransform`): byte'ları okumadan önce yeniden yazar. Editör içe aktarma temizleyicisini verir.
+
+İlk ikisini engine sağlar (`lumina`'daki `LuminaGlbLoader`, bkz. [Yardımcılar](../lumina/utilities.md)); üçüncüsünü editör ekler ([lumina_editor_data](../lumina_editor_data/services.md) içindeki `GlbParserService.parseGlb`).
+
+
+### `enum GlbNodeType`
+
+`GlbNodeType`: Sistemde kullanılan seçenekleri ve durumları listeleyen numaralandırma türüdür.
+
+### `class GlbNode`
+
+`GlbNode`: İlgili modülün veri modelini veya temel işlevselliğini temsil eden `class` yapısıdır.
+
+**Fonksiyonlar, Metotlar ve Erişimciler:**
+
+| Metot / Getter | İmzası | Ne İşe Yarar? |
+| :--- | :--- | :--- |
+| `index` | `int index` | `index` alanını (field/property) ve ilişkili veriyi saklar. |
+| `name` | `String name` | `name` alanını (field/property) ve ilişkili veriyi saklar. |
+| `meshIndex` | `int? meshIndex` | `meshIndex` alanını (field/property) ve ilişkili veriyi saklar. |
+| `meshName` | `String? meshName` | `meshName` alanını (field/property) ve ilişkili veriyi saklar. |
+| `primitiveCount` | `int primitiveCount` | `primitiveCount` alanını (field/property) ve ilişkili veriyi saklar. |
+| `children` | `List<GlbNode> children` | `children` alanını (field/property) ve ilişkili veriyi saklar. |
+| `translation` | `List<double>? translation` | `translation` alanını (field/property) ve ilişkili veriyi saklar. |
+| `rotation` | `List<double>? rotation` | `rotation` alanını (field/property) ve ilişkili veriyi saklar. |
+| `scale` | `List<double>? scale` | `scale` alanını (field/property) ve ilişkili veriyi saklar. |
+| `type` | `GlbNodeType type` | `type` alanını (field/property) ve ilişkili veriyi saklar. |
+| `positions` | `List<double> positions` | `positions` alanını (field/property) ve ilişkili veriyi saklar. |
+| `indices` | `List<int> indices` | `indices` alanını (field/property) ve ilişkili veriyi saklar. |
+| `isVisible` | `bool isVisible` | `isVisible` alanını (field/property) ve ilişkili veriyi saklar. |
+| `totalDescendantCount` | `int get totalDescendantCount` | `totalDescendantCount` özelliğinin anlık değerini okuyan getter erişimcisi. |
+| `directChildCount` | `int get directChildCount` | `directChildCount` özelliğinin anlık değerini okuyan getter erişimcisi. |
+| `getAllDescendantNodeIndices` | `List<int> getAllDescendantNodeIndices()` | `AllDescendantNodeIndices` bilgisini veya alt nesnesini sorgulayıp döndürür. |
+| `getAllDescendantPositions` | `List<double> getAllDescendantPositions()` | `AllDescendantPositions` bilgisini veya alt nesnesini sorgulayıp döndürür. |
+| `getAllDescendantIndices` | `List<int> getAllDescendantIndices()` | `AllDescendantIndices` bilgisini veya alt nesnesini sorgulayıp döndürür. |
+
+### `class GlbSubPrimitive`
+
+`GlbSubPrimitive`: İlgili modülün veri modelini veya temel işlevselliğini temsil eden `class` yapısıdır.
+
+**Fonksiyonlar, Metotlar ve Erişimciler:**
+
+| Metot / Getter | İmzası | Ne İşe Yarar? |
+| :--- | :--- | :--- |
+| `positions` | `List<double> positions` | `positions` alanını (field/property) ve ilişkili veriyi saklar. |
+| `indices` | `List<int> indices` | `indices` alanını (field/property) ve ilişkili veriyi saklar. |
+| `vertexColors` | `Uint8List? vertexColors` | `vertexColors` alanını (field/property) ve ilişkili veriyi saklar. |
+| `baseColor` | `List<double> baseColor` | `baseColor` alanını (field/property) ve ilişkili veriyi saklar. |
+| `materialName` | `String? materialName` | `materialName` alanını (field/property) ve ilişkili veriyi saklar. |
+| `materialIndex` | `int? materialIndex` | `materialIndex` alanını (field/property) ve ilişkili veriyi saklar. |
+| `vertexCount` | `int get vertexCount` | `vertexCount` özelliğinin anlık değerini okuyan getter erişimcisi. |
+| `triangleCount` | `int get triangleCount` | `triangleCount` özelliğinin anlık değerini okuyan getter erişimcisi. |
+
+### `class GlbMorphTarget`
+
+`GlbMorphTarget`: İlgili modülün veri modelini veya temel işlevselliğini temsil eden `class` yapısıdır.
+
+**Fonksiyonlar, Metotlar ve Erişimciler:**
+
+| Metot / Getter | İmzası | Ne İşe Yarar? |
+| :--- | :--- | :--- |
+| `name` | `String name` | `name` alanını (field/property) ve ilişkili veriyi saklar. |
+| `positionDeltas` | `List<double> positionDeltas` | `positionDeltas` alanını (field/property) ve ilişkili veriyi saklar. |
+| `vertexCount` | `int get vertexCount` | `vertexCount` özelliğinin anlık değerini okuyan getter erişimcisi. |
+
+### `class GlbAnimationChannel`
+
+`GlbAnimationChannel`: İlgili modülün veri modelini veya temel işlevselliğini temsil eden `class` yapısıdır.
+
+**Fonksiyonlar, Metotlar ve Erişimciler:**
+
+| Metot / Getter | İmzası | Ne İşe Yarar? |
+| :--- | :--- | :--- |
+| `nodeIndex` | `int nodeIndex` | `nodeIndex` alanını (field/property) ve ilişkili veriyi saklar. |
+| `nodeName` | `String nodeName` | `nodeName` alanını (field/property) ve ilişkili veriyi saklar. |
+| `path` | `String path` | `path` alanını (field/property) ve ilişkili veriyi saklar. |
+| `keyframeTimes` | `List<double> keyframeTimes` | `keyframeTimes` alanını (field/property) ve ilişkili veriyi saklar. |
+| `values` | `List<double> values` | `values` alanını (field/property) ve ilişkili veriyi saklar. |
+| `interpolation` | `String interpolation` | `interpolation` alanını (field/property) ve ilişkili veriyi saklar. |
+
+### `class GlbAnimationClip`
+
+`GlbAnimationClip`: İlgili modülün veri modelini veya temel işlevselliğini temsil eden `class` yapısıdır.
+
+**Fonksiyonlar, Metotlar ve Erişimciler:**
+
+| Metot / Getter | İmzası | Ne İşe Yarar? |
+| :--- | :--- | :--- |
+| `name` | `String name` | `name` alanını (field/property) ve ilişkili veriyi saklar. |
+| `duration` | `double duration` | `duration` alanını (field/property) ve ilişkili veriyi saklar. |
+| `animatedNodeIndices` | `animatedNodeIndices` | `animatedNodeIndices` alanını (field/property) ve ilişkili veriyi saklar. |
+| `channelTargetPaths` | `channelTargetPaths` | `channelTargetPaths` alanını (field/property) ve ilişkili veriyi saklar. |
+| `channels` | `List<GlbAnimationChannel> channels` | `channels` alanını (field/property) ve ilişkili veriyi saklar. |
+| `compositeKeyframeTimes` | `List<double> compositeKeyframeTimes` | `compositeKeyframeTimes` alanını (field/property) ve ilişkili veriyi saklar. |
+
+### `class GlbMeshData`
+
+`GlbMeshData`: İlgili modülün veri modelini veya temel işlevselliğini temsil eden `class` yapısıdır.
+
+**Fonksiyonlar, Metotlar ve Erişimciler:**
+
+| Metot / Getter | İmzası | Ne İşe Yarar? |
+| :--- | :--- | :--- |
+| `subPrimitives` | `List<GlbSubPrimitive> subPrimitives` | `subPrimitives` alanını (field/property) ve ilişkili veriyi saklar. |
+| `positions` | `List<double> positions` | `positions` alanını (field/property) ve ilişkili veriyi saklar. |
+| `indices` | `List<int> indices` | `indices` alanını (field/property) ve ilişkili veriyi saklar. |
+| `uvs` | `List<double> uvs` | `uvs` alanını (field/property) ve ilişkili veriyi saklar. |
+| `minBounds` | `List<double> minBounds` | `minBounds` alanını (field/property) ve ilişkili veriyi saklar. |
+| `maxBounds` | `List<double> maxBounds` | `maxBounds` alanını (field/property) ve ilişkili veriyi saklar. |
+| `baseColor` | `List<double> baseColor` | `baseColor` alanını (field/property) ve ilişkili veriyi saklar. |
+| `vertexColors` | `vertexColors` | `vertexColors` alanını (field/property) ve ilişkili veriyi saklar. |
+| `rawPayload` | `Uint8List? rawPayload` | `rawPayload` alanını (field/property) ve ilişkili veriyi saklar. |
+| `rootNodes` | `List<GlbNode> rootNodes` | `rootNodes` alanını (field/property) ve ilişkili veriyi saklar. |
+| `allNodes` | `List<GlbNode> allNodes` | `allNodes` alanını (field/property) ve ilişkili veriyi saklar. |
+| `materialNames` | `List<String> materialNames` | `materialNames` alanını (field/property) ve ilişkili veriyi saklar. |
+| `skeletonJointIndices` | `Set<int> skeletonJointIndices` | `skeletonJointIndices` alanını (field/property) ve ilişkili veriyi saklar. |
+| `morphTargets` | `List<GlbMorphTarget> morphTargets` | `morphTargets` alanını (field/property) ve ilişkili veriyi saklar. |
+| `jointsPerVertex` | `Uint16List? jointsPerVertex` | `jointsPerVertex` alanını (field/property) ve ilişkili veriyi saklar. |
+| `weightsPerVertex` | `Float32List? weightsPerVertex` | `weightsPerVertex` alanını (field/property) ve ilişkili veriyi saklar. |
+| `maxInfluences` | `int maxInfluences` | `maxInfluences` alanını (field/property) ve ilişkili veriyi saklar. |
+| `animations` | `List<GlbAnimationClip> animations` | `animations` alanını (field/property) ve ilişkili veriyi saklar. |
+| `vertexCount` | `int get vertexCount` | `vertexCount` özelliğinin anlık değerini okuyan getter erişimcisi. |
+| `triangleCount` | `int get triangleCount` | `triangleCount` özelliğinin anlık değerini okuyan getter erişimcisi. |
+| `boneCount` | `int get boneCount` | `boneCount` özelliğinin anlık değerini okuyan getter erişimcisi. |
+| `animatedNodeIndices` | `Set<int> get animatedNodeIndices` | `animatedNodeIndices` özelliğinin anlık değerini okuyan getter erişimcisi. |
 
 ---
 

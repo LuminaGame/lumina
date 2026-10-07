@@ -2,21 +2,22 @@
 
 # lumina (engine core)
 
-`lumina` is the engine package: a declarative 3D game runtime built on `flutter_filament`, plus the data layer the editor uses to read and write projects and assets.
+`lumina` is the engine package: a declarative 3D game runtime built on `flutter_filament`. The data layer the editor uses to read and write projects and assets is its own package, [lumina_editor_data](../lumina_editor_data/index.md).
 
 ## Place in the architecture
 
-`lumina` builds on `flutter_filament` for rendering, on `flutter_riglogic` for facial rigs and on `flutter_assimp` for model import (the last two from the tools repository). `lumina_editor_api` and `lumina_ui` build on it. See [Layered architecture](../overview/layers.md).
+`lumina` builds on `lumina_core` (the pure-Dart foundation) and on `flutter_filament` for rendering. Assimp and RigLogic are editor tooling: `lumina_editor_data` depends on them, the engine does not. `lumina_editor_data`, `lumina_editor_api` and `lumina_ui` build on it. See [Layered architecture](../overview/layers.md).
 
-## Two halves
+## What it holds
 
 - **Runtime** (`lib/src/`): what a game runs. A game describes its world with a declarative `build()` tree ([Declarative tree](declarative.md)); the engine turns it into a [world](world.md) of [actors](object.md) with components, possessed by [controllers](controller.md) and driven by the [game framework](game.md). Runtime classes carry the `Lumina` prefix (`LuminaWorld`, `LuminaActor`, `LuminaStaticMeshComponent`, ...).
-- **Data layer** (`lib/data/`, `lib/domain/`): what the editor uses to read and write projects. It holds the asset and project repositories, the GLB and OBJ parsers, importers, thumbnails, the Dart code generator and the plugin services. The pure parts (the `.lmas`, `.lmproject`, level and `.lmplugin` models, the level and plugin repositories, the logger, paths, templates, auto-save and the TGA decoder) live in [lumina_core](../lumina_core/index.md), which `lumina` re-exports.
+- **Asset readers the runtime uses** (`lib/src/assets/`): the encoded image decoder, `LuminaGlbLoader` (lumina_core's pure `GlbReader` with Filament's Draco decoder and the platform image codec), the level asset manifest and the level mesh material lookup. The project input binder (`lib/src/input/project_input_binder.dart`) turns a `.lmproject`'s input settings into actions and mapping contexts.
+- **Not here:** the editor data layer (asset and project repositories, importers, thumbnails, the code generators, project editor builds, the plugin registry and template generator, the use cases) is [lumina_editor_data](../lumina_editor_data/index.md). The pure formats and services are [lumina_core](../lumina_core/index.md), which `lumina` re-exports. `test/architecture/engine_without_editor_data_test.dart` walks every library `lumina.dart` and `lumina_runtime.dart` reach and fails on `lumina_editor_data`, the analyzer, Assimp, RigLogic or an editor repository.
 
 ## Libraries
 
-- `package:lumina/lumina.dart` exports everything, including the data layer and the `lumina_core` libraries it always exported. Lumina Studio imports it.
-- `package:lumina/lumina_runtime.dart` exports the runtime without the editor data layer, Assimp and RigLogic, so a game that imports only this library also builds for the web. Generated games import it.
+- `package:lumina/lumina.dart` exports the engine and the `lumina_core` libraries it always exported. Editor code imports `package:lumina_editor_data/lumina_editor.dart` instead, which adds the editor data layer.
+- `package:lumina/lumina_runtime.dart` exports the runtime a game needs, so a game that imports only this library also builds for the web. Generated games import it.
 
 The barrels are for users of the package: no library inside `lumina/lib` imports `lumina.dart` or `lumina_runtime.dart`; each imports the files it uses, so the barrels stay leaves of the import graph and no cycle runs through them. Engine objects carry the engine's own `LuminaObjectKey`, and `lumina_object.dart` reaches no Flutter library. `test/architecture/` guards both (`import_cycles_test.dart`, `flutter_free_object_root_test.dart`).
 
@@ -46,13 +47,7 @@ Runtime code never reads files with `File(...)` directly: asset loads without an
 | [Game UI widgets (UMG runtime)](umg.md) | Runtime UMG widgets, element bindings, user widgets and the widget layer. |
 | [Save games](save.md) | Save game objects and the save game subsystem. |
 | [Blueprints](blueprint/index.md) | Visual scripting: documents, node library, VM, generated code. |
-| [Utilities, math and testing](utilities.md) | Gameplay statics, volumes, timers, viewport picking, math helpers, mesh decimation, smoke artifacts. |
-| [Data layer: use cases and services](data-services.md) | Use cases, GLB/OBJ/TGA parsers, code generator, templates, plugin services, logger, thumbnails. |
-| [Data layer: use cases and services (continued, part 1)](data-services-continued.md) | More files under `lib/data/services/`, `lib/data/services/blueprint_codegen/`. |
-| [Data layer: use cases and services (continued, part 2)](data-services-continued-2.md) | More files under `lib/data/services/`. |
-| [Data layer: use cases and services (continued, part 3)](data-services-continued-3.md) | More files under `lib/data/services/`. |
-| [Data layer: models and repositories](data-models.md) | `.lmas` assets, `.lmproject` manifests, plugin descriptors, sequencer and landscape data, repositories. |
-| [Data layer: models and repositories (continued)](data-models-continued.md) | More files under `lib/data/models/`, `lib/data/repositories/`, `lib/data/repositories/asset_repository/`. |
+| [Utilities, math and testing](utilities.md) | Gameplay statics, volumes, timers, viewport picking, math helpers, mesh decimation, the asset readers (image decoder, GLB loader, level asset manifest), smoke artifacts. |
 
 ---
 

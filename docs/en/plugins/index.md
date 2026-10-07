@@ -9,8 +9,8 @@ Lumina Studio can be extended with plugins: Flutter packages that register menu 
 | Piece | Package | Role |
 |---|---|---|
 | `LuminaEditorPlugin`, `LuminaEditorContext` and the extension types | `lumina_editor_api` | The contract a plugin is written against ([API reference](../lumina_editor_api/api-reference.md)). |
-| `LuminaPluginDescriptor`, `PluginRepository` | `lumina` (data layer) | Parse `.lmplugin` manifests and scan the plugin roots ([models and repositories](../lumina/data-models.md)). |
-| `PluginRegistryService`, `PluginTemplateGeneratorService`, `PluginHostPatcherService` | `lumina` (data layer) | Resolve which plugins are enabled, generate new plugins from templates and compile code plugins into an editor host ([use cases and services](../lumina/data-services.md)). |
+| `LuminaPluginDescriptor`, `PluginRepository` | `lumina_core` | Parse `.lmplugin` manifests and scan the plugin roots ([models and repositories](../lumina_editor_data/repositories.md)). |
+| `PluginRegistryService`, `PluginTemplateGeneratorService`, `PluginHostPatcherService` | `lumina_editor_data` (`PluginHostPatcherService`: `lumina_core`) | Resolve which plugins are enabled, generate new plugins from templates and compile code plugins into an editor host ([use cases and services](../lumina_editor_data/services.md)). |
 | `PluginExtensionRegistry`, `BuiltInEditorPlugin` | `lumina_ui` | Collect everything plugins register and show it in the editor ([App shell and shared UI](../lumina_ui/core.md)). |
 | Plugin Manager, New Plugin wizard | `lumina_ui` | Enable, disable and create plugins ([Plugin manager](../lumina_ui/plugin-manager.md)). |
 

@@ -1,18 +1,17 @@
-[English](../../en/lumina/data-services-continued-2.md)
+[English](../../en/lumina_editor_data/services-continued-2.md)
 
 # Veri katmanı: use case'ler ve servisler (devamı, bölüm 2)
 
-Veri katmanı: use case'ler ve servisler sayfasının devamı: `lib/data/services/` altındaki diğer public dosyalar. Dosya yolları `lumina/` paket dizinine görelidir.
+Veri katmanı: use case'ler ve servisler sayfasının devamı: `lib/src/services/` altındaki diğer public dosyalar. Dosya yolları `lumina_editor_data/` paket dizinine görelidir.
 
 **Bu sayfada:**
 
-- [`lib/data/services/editor_build_service.dart`](#libdataserviceseditor_build_servicedart)
-- [`lib/data/services/editor_host_generator_service.dart`](#libdataserviceseditor_host_generator_servicedart)
-- [`lib/data/services/encoded_image_decoder.dart`](#libdataservicesencoded_image_decoderdart)
-- [`lib/data/services/fbx_import_service.dart`](#libdataservicesfbx_import_servicedart)
-- [`lib/data/services/filament_thumbnail_renderer.dart`](#libdataservicesfilament_thumbnail_rendererdart)
+- [`lib/src/services/editor_build_service.dart`](#libsrcserviceseditor_build_servicedart)
+- [`lib/src/services/editor_host_generator_service.dart`](#libsrcserviceseditor_host_generator_servicedart)
+- [`lib/src/services/fbx_import_service.dart`](#libsrcservicesfbx_import_servicedart)
+- [`lib/src/services/filament_thumbnail_renderer.dart`](#libsrcservicesfilament_thumbnail_rendererdart)
 
-## `lib/data/services/editor_build_service.dart`
+## `lib/src/services/editor_build_service.dart`
 
 ### `enum EditorBuildPhase`
 
@@ -178,7 +177,7 @@ Generates, resolves, builds and installs a project editor: **generate → pub ge
 | `defaultEditorBuildProcessStarter` | `Future<Process> defaultEditorBuildProcessStarter(String executable, List<String> arguments, {String? workingDi...` |  |
 | `killProcessTree` | `Future<void> killProcessTree(int pid) async` | Kills [pid] and its children (`flutter` is a script that runs the tool, which runs MSBuild/CMake/ninja and the hooks). |
 
-## `lib/data/services/editor_host_generator_service.dart`
+## `lib/src/services/editor_host_generator_service.dart`
 
 ### `enum EditorHostStatus`
 
@@ -231,39 +230,7 @@ Host'un `pubspec.lock` dosyası engine lock'undaki her hosted paketle doldurulur
 | `movedFromEngineLock` | `List<String> movedFromEngineLock(String hostDir)` | Host lock'unun başka bir sürümde tuttuğu (bir code plugin'in kısıtının kaydırdığı) engine-locked hosted paketler, `name <engine> → <host>` biçiminde; build log'u her biri için uyarır. |
 | `isOldLayout` | `static bool isOldLayout(String hostDir)` | Whether the host at [hostDir] depends on `lumina_ui` anywhere but the project's copy beside it (a host from before per-project source copies). |
 
-## `lib/data/services/encoded_image_decoder.dart`
-
-### `class DecodedRgbaImage`
-
-Decoded pixels: `width * height` RGBA8 texels, row-major, alpha premultiplied (what `dart:ui`'s `ImageByteFormat.rawRgba` hands back).
-
-**Yapıcı Metotlar (Constructors):**
-
-- `const DecodedRgbaImage(this.width, this.height, this.rgba)`
-
-**Üyeler:**
-
-| Üye | İmza | Açıklama |
-| :--- | :--- | :--- |
-| `width` | `final int width` |  |
-| `height` | `final int height` |  |
-| `rgba` | `final Uint8List rgba` |  |
-
-### `abstract final class EncodedImageDecoder`
-
-Decodes an encoded image with the decoder for its [EncodedImageFormat], the same way on every isolate.
-
-`dart:ui`'s image codec only exists on a root isolate (the editor's UI isolate, a test's main isolate, the web's only isolate). There it decodes PNG, JPEG, WebP, GIF and BMP; on any other isolate — an `Isolate.run` worker, a save or streaming worker — `package:image` decodes the same formats. TGA always goes through [TgaDecoderService]. KTX2 (Basis) and unrecognised bytes are not decoded to pixels here.
-
-**Üyeler:**
-
-| Üye | İmza | Açıklama |
-| :--- | :--- | :--- |
-| `platformCodecAvailable` | `static bool get platformCodecAvailable` | Whether this isolate can use `dart:ui`'s image codec. |
-| `platformCodecProxy` | `static Future<DecodedRgbaImage> Function(Uint8List bytes)? platformCodecProxy` | Decodes with the UI isolate's platform codec on behalf of an isolate that has none: the import worker sets this to a round trip to the UI isolate, so what it decodes — the texels a mesh thumbnail samples — matches a UI-isolate decode bit for bit (JPEG decoders disagree in the last bits). Used only where [platformCodecAvailable] is false. |
-| `decodeRgba` | `static Future<DecodedRgbaImage?> decodeRgba(Uint8List bytes) async` | [bytes] decoded to premultiplied RGBA8, or `null` when its format is not one this decoder turns into pixels (KTX2, unknown). Throws a [FormatException] for bytes that carry a recognised signature but do not decode. |
-
-## `lib/data/services/fbx_import_service.dart`
+## `lib/src/services/fbx_import_service.dart`
 
 ### `class FbxImportException`
 
@@ -326,7 +293,7 @@ flutter_assimp's bridge does the heavy lifting natively: it bakes the FBX unit s
 | `resolveExternalImages` | `static ({Uint8List glb, List<String> embedded, List<String> missing, List<Map<String, dynamic>> missingDetails...` | Makes every image of [glb] self-contained. An FBX names its textures by the path they had on the author's machine; Assimp's exporter keeps that as the image `uri`. Each one is looked up by [locator] (default: one for [sourceDir]; see [FbxTextureLocator.locateReference]). Found images are embedded (TGA re-encoded as PNG) under the name the FBX gave the file; the rest are removed together with the textures and material slots that sampled them, so the import never writes a texture asset without an image, and are listed per material in `missingDetails`. |
 | `decomposeMatrix` | `static ({List<double> translation, List<double> rotation, List<double> scale}) decomposeMatrix(List<double> m)` | Column-major 4×4 → translation, unit quaternion (x, y, z, w) and scale. A mirrored basis (negative determinant) is carried by a negative X scale. |
 
-## `lib/data/services/filament_thumbnail_renderer.dart`
+## `lib/src/services/filament_thumbnail_renderer.dart`
 
 ### `class ThumbnailMeshPart`
 
@@ -400,4 +367,4 @@ Renders are serialized: callers may overlap, the engine never does.
 
 ---
 
-[Önceki: Veri katmanı: use case'ler ve servisler (devamı, bölüm 1)](data-services-continued.md) | [Üst: lumina (engine çekirdeği)](index.md) | [Sonraki: Veri katmanı: use case'ler ve servisler (devamı, bölüm 3)](data-services-continued-3.md)
+[Önceki: Veri katmanı: use case'ler ve servisler (devamı, bölüm 1)](services-continued.md) | [Üst: lumina_editor_data (editör veri katmanı)](index.md) | [Sonraki: Veri katmanı: use case'ler ve servisler (devamı, bölüm 3)](services-continued-3.md)

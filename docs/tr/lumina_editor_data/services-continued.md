@@ -1,33 +1,33 @@
-[Türkçe](../../tr/lumina/data-services-continued.md)
+[English](../../en/lumina_editor_data/services-continued.md)
 
-# Data layer: use cases and services (continued, part 1)
+# Veri katmanı: use case'ler ve servisler (devamı, bölüm 1)
 
-Continuation of Data layer: use cases and services: the remaining public files under `lib/data/services/`, `lib/data/services/blueprint_codegen/`. File paths are relative to the `lumina/` package directory.
+Veri katmanı: use case'ler ve servisler sayfasının devamı: `lib/src/services/`, `lib/src/services/blueprint_codegen/` altındaki diğer public dosyalar. Dosya yolları `lumina_editor_data/` paket dizinine görelidir.
 
-**On this page:**
+**Bu sayfada:**
 
-- [`lib/data/services/app_icon_service.dart`](#libdataservicesapp_icon_servicedart)
-- [`lib/data/services/base_eye_height_migration.dart`](#libdataservicesbase_eye_height_migrationdart)
-- [`lib/data/services/blueprint_class_registry.dart`](#libdataservicesblueprint_class_registrydart)
-- [`lib/data/services/blueprint_codegen/blueprint_dart_generator.dart`](#libdataservicesblueprint_codegenblueprint_dart_generatordart)
-- [`lib/data/services/blueprint_function_manifest.dart`](#libdataservicesblueprint_function_manifestdart)
-- [`lib/data/services/blueprint_function_scanner.dart`](#libdataservicesblueprint_function_scannerdart)
-- [`lib/data/services/blueprint_project_assets.dart`](#libdataservicesblueprint_project_assetsdart)
-- [`lib/data/services/derived_data_cache.dart`](#libdataservicesderived_data_cachedart)
+- [`lib/src/services/app_icon_service.dart`](#libsrcservicesapp_icon_servicedart)
+- [`lib/src/services/base_eye_height_migration.dart`](#libsrcservicesbase_eye_height_migrationdart)
+- [`lib/src/services/blueprint_class_registry.dart`](#libsrcservicesblueprint_class_registrydart)
+- [`lib/src/services/blueprint_codegen/blueprint_dart_generator.dart`](#libsrcservicesblueprint_codegenblueprint_dart_generatordart)
+- [`lib/src/services/blueprint_function_manifest.dart`](#libsrcservicesblueprint_function_manifestdart)
+- [`lib/src/services/blueprint_function_scanner.dart`](#libsrcservicesblueprint_function_scannerdart)
+- [`lib/src/services/blueprint_project_assets.dart`](#libsrcservicesblueprint_project_assetsdart)
+- [`lib/src/services/derived_data_cache.dart`](#libsrcservicesderived_data_cachedart)
 
-## `lib/data/services/app_icon_service.dart`
+## `lib/src/services/app_icon_service.dart`
 
 ### `class AppIconPlatformResult`
 
 What [AppIconService.write] did for one platform.
 
-**Constructors:**
+**Yapıcı Metotlar (Constructors):**
 
 - `const AppIconPlatformResult(this.platform, {this.files = const [], this.skippedReason, this.warnings = const []})`
 
-**Members:**
+**Üyeler:**
 
-| Member | Signature | Description |
+| Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `platform` | `final String platform` |  |
 | `files` | `final List<String> files` | Project-relative paths of the files written. |
@@ -37,13 +37,13 @@ What [AppIconService.write] did for one platform.
 
 ### `class AppIconReport`
 
-**Constructors:**
+**Yapıcı Metotlar (Constructors):**
 
 - `const AppIconReport(this.platforms)`
 
-**Members:**
+**Üyeler:**
 
-| Member | Signature | Description |
+| Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `platforms` | `final Map<String, AppIconPlatformResult> platforms` |  |
 | `writtenFiles` | `List<String> get writtenFiles` |  |
@@ -53,9 +53,9 @@ What [AppIconService.write] did for one platform.
 
 Writes a game project's app-icon files for every platform from one high-resolution master PNG: Windows ICO, macOS and iOS icon sets, Android legacy and adaptive mipmaps, the web favicon, icons and manifest, and the Linux runner icon plus the runner/CMake patches that show it. The master is resampled with `package:image`; rasterizing an SVG into that master is the caller's job (the editor uses flutter_svg).
 
-**Members:**
+**Üyeler:**
 
-| Member | Signature | Description |
+| Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `linuxIconBegin` | `static const String linuxIconBegin` |  |
 | `linuxIconEnd` | `static const String linuxIconEnd` |  |
@@ -77,13 +77,13 @@ Writes a game project's app-icon files for every platform from one high-resoluti
 
 What [LinuxBundleBranding.finish] did to a packaged Linux bundle.
 
-**Constructors:**
+**Yapıcı Metotlar (Constructors):**
 
 - `const LinuxBundleReport({required this.ok, this.desktopFile, this.gioAvailable = false, this.gioIconSet = false, this.messages = const []})`
 
-**Members:**
+**Üyeler:**
 
-| Member | Signature | Description |
+| Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `ok` | `final bool ok` |  |
 | `desktopFile` | `final String? desktopFile` |  |
@@ -95,25 +95,25 @@ What [LinuxBundleBranding.finish] did to a packaged Linux bundle.
 
 Finishes a built Linux bundle so it presents the project icon outside the running window too: a `.desktop` entry in the bundle, and the executable's file-manager icon on this host. An ELF file carries no icon of its own; the file manager reads GIO metadata (`metadata::custom-icon`), which is stored per user on this machine and does not travel with a copy.
 
-**Members:**
+**Üyeler:**
 
-| Member | Signature | Description |
+| Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `finish` | `static Future<LinuxBundleReport> finish({required String bundleDir, required String executableName, required S...` |  |
 
-## `lib/data/services/base_eye_height_migration.dart`
+## `lib/src/services/base_eye_height_migration.dart`
 
 ### `class BaseEyeHeightMigrationReport`
 
 What [BaseEyeHeightMigration.run] did to one project.
 
-**Constructors:**
+**Yapıcı Metotlar (Constructors):**
 
 - `const BaseEyeHeightMigrationReport({this.migratedBlueprints = const [], this.patchedGeneratedFiles = const [], this.alreadyMigrated = false,})`
 
-**Members:**
+**Üyeler:**
 
-| Member | Signature | Description |
+| Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `migratedBlueprints` | `final List<String> migratedBlueprints` | Project-relative `.lmas` paths whose class default was rewritten. |
 | `patchedGeneratedFiles` | `final List<String> patchedGeneratedFiles` | Project-relative generated `lib/actors/*.dart` files patched to match. |
@@ -128,9 +128,9 @@ The one-time move of the Third Person template's Base Eye Height to the capsule-
 
 Runs once per project: [markerPath] under `.lumina/` records it, so a value set back to 160 on purpose later is never touched again.
 
-**Members:**
+**Üyeler:**
 
-| Member | Signature | Description |
+| Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `markerPath` | `static const String markerPath` |  |
 | `legacyValue` | `static const double legacyValue` | The feet-based template value older projects carry. |
@@ -138,7 +138,7 @@ Runs once per project: [markerPath] under `.lumina/` records it, so a value set 
 | `isMigrated` | `static bool isMigrated(String projectDir)` |  |
 | `run` | `static BaseEyeHeightMigrationReport run(String projectDir)` |  |
 
-## `lib/data/services/blueprint_class_registry.dart`
+## `lib/src/services/blueprint_class_registry.dart`
 
 ### `class LuminaBlueprintClassRegistry`
 
@@ -146,13 +146,13 @@ A project's Blueprint classes for the VM: what the editor's Play resolves a clas
 
 Classes are compiled once and cached by path. A path whose file changed on disk (its modification time) is compiled again on its next use, so a Blueprint saved or recompiled in the editor is what the next Play spawns. Animation Blueprints a mesh names as its Anim Class are served the same way, with the blend spaces their states play.
 
-**Constructors:**
+**Yapıcı Metotlar (Constructors):**
 
 - `LuminaBlueprintClassRegistry(this.projectDir, {List<LuminaInputAction>? inputActions, LuminaBlueprintAssetResolver? resolveAsset,})`
 
-**Members:**
+**Üyeler:**
 
-| Member | Signature | Description |
+| Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `projectDir` | `final String projectDir` |  |
 | `inputActions` | `final List<LuminaInputAction> inputActions` |  |
@@ -166,19 +166,19 @@ Classes are compiled once and cached by path. A path whose file changed on disk 
 | `resolvePawnFactory` | `LuminaPawn Function()? resolvePawnFactory(ProjectMapsAndModes mapsAndModes)` | The pawn factory [mapsAndModes] selects: its Default Pawn Class, else the Default Pawn Class of its GameMode Blueprint; null when neither names a Blueprint (the caller's game mode keeps its own pawn). The class is resolved again at every spawn. |
 | `createGameMode` | `LuminaGameMode? createGameMode(ProjectMapsAndModes mapsAndModes)` | The game mode of the GameMode Blueprint [mapsAndModes] selects, with its Default Pawn Class overridden by Maps & Modes when that is set; null when the project's game mode is a Dart class or the Blueprint has errors. |
 
-## `lib/data/services/blueprint_codegen/blueprint_dart_generator.dart`
+## `lib/src/services/blueprint_codegen/blueprint_dart_generator.dart`
 
 ### `class BlueprintGenerationResult`
 
 What [BlueprintDartGenerator.generate] produced: the Dart source, or null when an error stopped generation, and every issue found on the way.
 
-**Constructors:**
+**Yapıcı Metotlar (Constructors):**
 
 - `const BlueprintGenerationResult(this.code, this.issues, {this.imports = const []})`
 
-**Members:**
+**Üyeler:**
 
-| Member | Signature | Description |
+| Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `code` | `final String? code` |  |
 | `issues` | `final List<LuminaBlueprintDiagnostic> issues` |  |
@@ -190,13 +190,13 @@ What [BlueprintDartGenerator.generate] produced: the Dart source, or null when a
 
 A generated class another generated class refers to by its `.lmas` path — a mesh's Anim Class, a GameMode's Default Pawn Class: the class, and the file generated code imports it from.
 
-**Constructors:**
+**Yapıcı Metotlar (Constructors):**
 
 - `const BlueprintClassRef(this.className, [this.importUri])`
 
-**Members:**
+**Üyeler:**
 
-| Member | Signature | Description |
+| Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `className` | `final String className` |  |
 | `importUri` | `final String? importUri` |  |
@@ -209,13 +209,13 @@ Compiles a Blueprint document into a Dart class that behaves exactly like the VM
 
 A node of a Dart function exposed with `@BlueprintCallable` / `@BlueprintPure` (registered or declared in [LuminaBlueprintFunctionRegistry]) compiles to a direct call through its library's import prefix ([functionPrefix]); `functionImports` overrides the URI a library is imported by.
 
-**Constructors:**
+**Yapıcı Metotlar (Constructors):**
 
 - `const BlueprintDartGenerator()`
 
-**Members:**
+**Üyeler:**
 
-| Member | Signature | Description |
+| Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `functionPrefix` | `static String functionPrefix(String libraryUri)` | The import prefix generated code uses for the exposed-function library [libraryUri]: `package:my_game/combat/health.dart` → `fn_my_game_combat_health`. A prefix, because an unprefixed top-level function would lose to an inherited member of the same name inside a generated class (`jump`), or clash with vector_math's top-level functions. |
 | `generate` | `BlueprintGenerationResult generate(LuminaBlueprintDocument doc, {required String className, String? assetPath,...` |  |
@@ -226,20 +226,20 @@ A node of a Dart function exposed with `@BlueprintCallable` / `@BlueprintPure` (
 | `generateInterface` | `String generateInterface(LuminaBlueprintInterfaceDocument doc, {String? assetPath})` | A Blueprint interface asset as an abstract Dart mixin over [LuminaBlueprintRuntime]: one method per function taking its argument map, plus the document for the registry. |
 | `typeNameOf` | `static String typeNameOf(String name)` | The Dart type [generateEnum] / [generateInterface] emit for the asset [name] (`E_DoorState` → `EDoorState`); the project registry names it. |
 
-## `lib/data/services/blueprint_function_manifest.dart`
+## `lib/src/services/blueprint_function_manifest.dart`
 
 ### `class BlueprintFunctionDiagnostic`
 
 A scanner finding on an annotated function: the file and line, the function (`name` or `Class.name`), the parameter when one is at fault, and what is wrong. The function gets no node.
 
-**Constructors:**
+**Yapıcı Metotlar (Constructors):**
 
 - `const BlueprintFunctionDiagnostic({required this.path, required this.line, required this.function, this.parameter, required this.message,})`
 - `factory BlueprintFunctionDiagnostic.fromJson(Map<String, dynamic> json)`
 
-**Members:**
+**Üyeler:**
 
-| Member | Signature | Description |
+| Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `path` | `final String path` | Project-relative (`lib/health.dart`). |
 | `line` | `final int line` |  |
@@ -252,14 +252,14 @@ A scanner finding on an annotated function: the file and line, the function (`na
 
 An annotated Dart function as a Blueprint node: its [spec], how generated code calls it ([call]), and where it is declared.
 
-**Constructors:**
+**Yapıcı Metotlar (Constructors):**
 
 - `const BlueprintExposedFunction({required this.spec, required this.call, required this.path, required this.line})`
 - `factory BlueprintExposedFunction.fromJson(Map<String, dynamic> json)`
 
-**Members:**
+**Üyeler:**
 
-| Member | Signature | Description |
+| Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `spec` | `final LuminaBlueprintNodeSpec spec` |  |
 | `call` | `final LuminaBlueprintCallShape call` |  |
@@ -271,14 +271,14 @@ An annotated Dart function as a Blueprint node: its [spec], how generated code c
 
 `project.blueprint_functions.json`, next to the `.lmproject`: what the scanner found in the project's `lib/`, so the editor lists the project's functions in the palette, validates and compiles Blueprints that use them, and reports the scanner's errors, without compiling project code.
 
-**Constructors:**
+**Yapıcı Metotlar (Constructors):**
 
 - `const BlueprintFunctionManifest({this.functions = const [], this.diagnostics = const []})`
 - `factory BlueprintFunctionManifest.fromJson(Map<String, dynamic> json)`
 
-**Members:**
+**Üyeler:**
 
-| Member | Signature | Description |
+| Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `fileName` | `static const String fileName` |  |
 | `format` | `static const int format` |  |
@@ -290,19 +290,19 @@ An annotated Dart function as a Blueprint node: its [spec], how generated code c
 | `write` | `void write(Directory projectDir)` |  |
 | `declareAll` | `void declareAll()` | Makes these functions known to this process without running them ([LuminaBlueprintFunctionRegistry.declare]), replacing earlier declarations. Functions this process registered as callable keep their registration. |
 
-## `lib/data/services/blueprint_function_scanner.dart`
+## `lib/src/services/blueprint_function_scanner.dart`
 
 ### `class BlueprintFunctionScan`
 
 What [BlueprintFunctionScanner.scan] found in a project's `lib/`: a node per valid annotated function, sorted by id, and a diagnostic per refused one.
 
-**Constructors:**
+**Yapıcı Metotlar (Constructors):**
 
 - `const BlueprintFunctionScan.empty([this.diagnostics = const []])`
 
-**Members:**
+**Üyeler:**
 
-| Member | Signature | Description |
+| Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `functions` | `final List<BlueprintExposedFunction> functions` |  |
 | `diagnostics` | `final List<BlueprintFunctionDiagnostic> diagnostics` |  |
@@ -316,13 +316,13 @@ Lumina's function scanner: reads the `@BlueprintCallable` / `@BlueprintPure` fun
 
 Types are resolved, not matched by name: a project class called `Vector3` is not vector_math's, and any `LuminaActor` subclass is an object pin. The project needs its `.dart_tool/package_config.json` (`flutter pub get`); the Dart SDK is the one of the Flutter SDK that wrote it, unless [sdkPath] names one. Editor side only: games never import the analyzer.
 
-**Constructors:**
+**Yapıcı Metotlar (Constructors):**
 
 - `const BlueprintFunctionScanner({this.sdkPath, this.keepWarm = false})`
 
-**Members:**
+**Üyeler:**
 
-| Member | Signature | Description |
+| Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `sdkPath` | `final String? sdkPath` | The Dart SDK to resolve against (`<flutter>/bin/cache/dart-sdk`); found from the project's package config, `FLUTTER_ROOT` or the running `dart` when null. |
 | `keepWarm` | `final bool keepWarm` | Keep the analysis context of each scanned `lib/` alive between scans, telling it only which files changed (the editor rescans on every save; a cold scan takes seconds, a warm one a fraction of that). Release it with [release] when the project closes. |
@@ -332,19 +332,19 @@ Types are resolved, not matched by name: a project class called `Vector3` is not
 | `generateRegistration` | `String generateRegistration(BlueprintFunctionScan scan, {String? libraryName})` | `lib/blueprint/blueprint_functions.g.dart`: `registerProjectBlueprintFunctions()` registers each function of [scan] with a closure that unpacks the pin values, calls the function and packs its outputs. Libraries of the project package [libraryName] (default: the scanned one) are imported relatively, others by URI. Byte-stable for the same scan. |
 | `writeProjectOutputs` | `void writeProjectOutputs(Directory projectDir, BlueprintFunctionScan scan, {String? libraryName})` | Writes [registrationPath] and `project.blueprint_functions.json` (next to the `.lmproject`) for the project at [projectDir]. |
 
-## `lib/data/services/blueprint_project_assets.dart`
+## `lib/src/services/blueprint_project_assets.dart`
 
 ### `class LuminaProjectBlueprintClass`
 
 A Blueprint class asset of a project: its project-relative `.lmas` path, its class name (the file name, what `Actor:<name>` pins and `Spawn Actor from Class` use) and its parent class.
 
-**Constructors:**
+**Yapıcı Metotlar (Constructors):**
 
 - `const LuminaProjectBlueprintClass({required this.path, required this.name, required this.parentClass})`
 
-**Members:**
+**Üyeler:**
 
-| Member | Signature | Description |
+| Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `path` | `final String path` |  |
 | `name` | `final String name` |  |
@@ -355,14 +355,14 @@ A Blueprint class asset of a project: its project-relative `.lmas` path, its cla
 
 Every asset the Blueprint runtime resolves through a registry, read from a project's `contents/`: enum, interface, save-game and montage `.lmas` payloads (by their `kind`), particle systems (the first enabled emitter of `metadata['particle_system']`) and the actor Blueprint classes. The code generator writes `lib/blueprint_registry.g.dart` from it; Play-In-Editor registers it straight into lumina's registries.
 
-**Constructors:**
+**Yapıcı Metotlar (Constructors):**
 
 - `const LuminaProjectBlueprintAssets({this.enums = const [], this.interfaces = const [], this.saveGameClasses = const [], this.montages = const [], this.particleT...`
 - `factory LuminaProjectBlueprintAssets.fromJson(Map<String, dynamic> json)`
 
-**Members:**
+**Üyeler:**
 
-| Member | Signature | Description |
+| Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `enums` | `final List<({String path, LuminaBlueprintEnumDocument document})> enums` |  |
 | `interfaces` | `final List<({String path, LuminaBlueprintInterfaceDocument document})> interfaces` |  |
@@ -379,20 +379,20 @@ Every asset the Blueprint runtime resolves through a registry, read from a proje
 | `toJson` | `Map<String, dynamic> toJson()` |  |
 | `registerRuntime` | `void registerRuntime()` | Registers the enums, interfaces, save-game classes, montages (by name and path) and particle templates into lumina's registries — what the generated `registerProjectBlueprints()` does, for Play-In-Editor. Actor classes are the caller's: PIE compiles them through its class registry. |
 
-## `lib/data/services/derived_data_cache.dart`
+## `lib/src/services/derived_data_cache.dart`
 
 ### `class DerivedDataEntryHeader`
 
 Header stored in front of every derived-data entry's payload.
 
-**Constructors:**
+**Yapıcı Metotlar (Constructors):**
 
 - `const DerivedDataEntryHeader({required this.key, required this.payloadBytes, required this.payloadSha256, this.sourceBytes = 0, this.buildMicros = 0, this.label...`
 - `factory DerivedDataEntryHeader.fromJson(Map<String, dynamic> json)`
 
-**Members:**
+**Üyeler:**
 
-| Member | Signature | Description |
+| Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `key` | `final String key` | The cache key the entry was written under; must match its file name. |
 | `payloadBytes` | `final int payloadBytes` |  |
@@ -407,13 +407,13 @@ Header stored in front of every derived-data entry's payload.
 
 Entry count and bytes on disk of a cache (or of what a clear freed).
 
-**Constructors:**
+**Yapıcı Metotlar (Constructors):**
 
 - `const DerivedDataCacheUsage(this.entries, this.bytes)`
 
-**Members:**
+**Üyeler:**
 
-| Member | Signature | Description |
+| Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `entries` | `final int entries` |  |
 | `bytes` | `final int bytes` |  |
@@ -422,9 +422,9 @@ Entry count and bytes on disk of a cache (or of what a clear freed).
 
 What the derived-data caches of this process did since it started.
 
-**Members:**
+**Üyeler:**
 
-| Member | Signature | Description |
+| Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `hits` | `int hits` |  |
 | `misses` | `int misses` |  |
@@ -439,13 +439,13 @@ A project's local derived-data cache: `<project>/DerivedDataCache/`.
 
 It stores data that is expensive to derive from project content and cheap to rebuild — today the texture-budgeted GLB [GlbParserService] makes of an asset that still carries oversized source art (~37 s for a mesh with fourteen 8192x8192 PNGs). Entries are keyed by what they were derived from, validated on every read (magic, format version, key, payload length, payload SHA-256), written atomically (temp file + rename), bounded by [maxBytes] with least-recently-used eviction, and never committed (the folder carries its own `.gitignore`) or cooked (it is outside `contents/`; see [packagedEntriesIncludingCache]). Hits, misses, corrupt entries, evictions and clears are logged to the Output Log.
 
-**Constructors:**
+**Yapıcı Metotlar (Constructors):**
 
 - `DerivedDataCache(this.projectRoot, {this.maxBytes = defaultMaxBytes})`
 
-**Members:**
+**Üyeler:**
 
-| Member | Signature | Description |
+| Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `directoryName` | `static const String directoryName` | Project-root folder the cache lives in. |
 | `sanitizedGlbBucket` | `static const String sanitizedGlbBucket` | Bucket of texture-budgeted GLBs ([sanitizedGlb]). |
@@ -475,4 +475,4 @@ It stores data that is expensive to derive from project content and cheap to reb
 
 ---
 
-[Previous: Data layer: use cases and services](data-services.md) | [Up: lumina (engine core)](index.md) | [Next: Data layer: use cases and services (continued, part 2)](data-services-continued-2.md)
+[Önceki: Veri katmanı: use case'ler ve servisler](services.md) | [Üst: lumina_editor_data (editör veri katmanı)](index.md) | [Sonraki: Veri katmanı: use case'ler ve servisler (devamı, bölüm 2)](services-continued-2.md)

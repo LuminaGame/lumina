@@ -1,16 +1,16 @@
-[English](../../en/lumina/data-models.md)
+[English](../../en/lumina_editor_data/repositories.md)
 
 # Veri katmanı: modeller ve repository'ler
 
-Editöre dönük veri katmanı, ikinci bölüm: engine'e ya da native kütüphanelere ihtiyaç duyan repository'ler (küçük resimli ve içe aktarmalı asset'ler, koleksiyonlar, projeler). Kalıcı modellerin kendileri (`.lmas` asset'leri, `.lmproject` manifest'i ve ayarları, level dokümanları, eklenti tanımları, landscape ve sequencer verisi, son projeler) ile level ve eklenti repository'leri saf Dart'tır ve `lumina_core`'dadır: bkz. [Dosya formatları ve repository'ler](../lumina_core/formats.md). Dosya yolları `lumina/` paket dizinine görelidir.
+Editöre dönük veri katmanı, ikinci bölüm: engine'e ya da native kütüphanelere ihtiyaç duyan repository'ler (küçük resimli ve içe aktarmalı asset'ler, koleksiyonlar, projeler). Kalıcı modellerin kendileri (`.lmas` asset'leri, `.lmproject` manifest'i ve ayarları, level dokümanları, eklenti tanımları, landscape ve sequencer verisi, son projeler) ile level ve eklenti repository'leri saf Dart'tır ve `lumina_core`'dadır: bkz. [Dosya formatları ve repository'ler](../lumina_core/formats.md). Dosya yolları `lumina_editor_data/` paket dizinine görelidir.
 
 **Bu sayfada:**
 
-- [`lib/data/repositories/asset_repository.dart`](#libdatarepositoriesasset_repositorydart)
-- [`lib/data/repositories/collections_repository.dart`](#libdatarepositoriescollections_repositorydart)
-- [`lib/data/repositories/project_repository.dart`](#libdatarepositoriesproject_repositorydart)
+- [`lib/src/repositories/asset_repository.dart`](#libsrcrepositoriesasset_repositorydart)
+- [`lib/src/repositories/collections_repository.dart`](#libsrcrepositoriescollections_repositorydart)
+- [`lib/src/repositories/project_repository.dart`](#libsrcrepositoriesproject_repositorydart)
 
-## `lib/data/repositories/asset_repository.dart`
+## `lib/src/repositories/asset_repository.dart`
 
 ### `class RealAssetInfo`
 
@@ -64,7 +64,7 @@ Editöre dönük veri katmanı, ikinci bölüm: engine'e ya da native kütüphan
 | `i1` | `int i1` | `i1` alanını (field/property) ve ilişkili veriyi saklar. |
 | `i2` | `int i2` | `i2` alanını (field/property) ve ilişkili veriyi saklar. |
 
-## `lib/data/repositories/collections_repository.dart`
+## `lib/src/repositories/collections_repository.dart`
 
 ### `class CollectionAsset`
 
@@ -108,7 +108,7 @@ Editöre dönük veri katmanı, ikinci bölüm: engine'e ya da native kütüphan
 | `saveCollections` | `void saveCollections(String projectPath, List<Collection> collections)` | Mevcut durumu veya varlığı diske dosya olarak serileştirip yazar. |
 | `healPaths` | `void healPaths(String projectPath, List<RealAssetInfo> currentAssets)` | `healPaths` işlemini gerçekleştirir. |
 
-## `lib/data/repositories/project_repository.dart`
+## `lib/src/repositories/project_repository.dart`
 
 ### `enum ProjectCreationStep`
 
@@ -169,4 +169,4 @@ Editöre dönük veri katmanı, ikinci bölüm: engine'e ya da native kütüphan
 
 ---
 
-[Önceki: Veri katmanı: use case'ler ve servisler (devamı, bölüm 3)](data-services-continued-3.md) | [Üst: lumina (engine çekirdeği)](index.md) | [Sonraki: Veri katmanı: modeller ve repository'ler (devamı)](data-models-continued.md)
+[Önceki: Veri katmanı: use case'ler ve servisler (devamı, bölüm 3)](services-continued-3.md) | [Üst: lumina_editor_data (editör veri katmanı)](index.md) | [Sonraki: Veri katmanı: modeller ve repository'ler (devamı)](repositories-continued.md)

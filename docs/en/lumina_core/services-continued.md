@@ -24,6 +24,7 @@ The pure services, part two: generated-code migration, GLB animation merging and
 - [`lib/src/services/tga_decoder_service.dart`](#libsrcservicestga_decoder_servicedart)
 - [`lib/src/services/umg_widget_library_service.dart`](#libsrcservicesumg_widget_library_servicedart)
 - [`lib/src/services/workspace_paths.dart`](#libsrcservicesworkspace_pathsdart)
+- [`lib/src/services/glb_reader.dart`](#libsrcservicesglb_readerdart)
 
 ## `lib/src/services/game_template_service.dart`
 
@@ -572,6 +573,138 @@ Packages from the other repos (flutter_assimp, flutter_riglogic, flutter_gstream
 | `gitSourceOf` | `static LuminaGitSource? gitSourceOf(String root, String name, {String? packageDir})` | The git dependency `<root>/pubspec.lock` resolved [name] from (url, path, resolved commit); null for a path override or a hosted package, and, with [packageDir], unless that folder is the checkout of that commit. |
 | `testAssets` | `static String get testAssets` | The shared 3D test assets (`<root>/test-assets`). |
 | `findRootFrom` | `static String? findRootFrom(String start)` | The first of [start] and its ancestors holding `lumina/pubspec.yaml`. |
+
+## `lib/src/services/glb_reader.dart`
+
+The pure-Dart GLB reader. `GlbReader.parse(bytes, decoders:)` reads a binary glTF (`.glb`), or a `.lmas` JSON container that carries one as `raw_payload`, into `GlbMeshData`: the node hierarchy, world-space positions and indices per primitive, UVs, vertex colours, skinning, morph targets and animation clips. What pure Dart cannot decode comes from the caller through `GlbDecoders`:
+
+- `draco` (`GlbDracoDecoder`): decodes a `KHR_draco_mesh_compression` primitive to a `GlbDracoMesh` (positions, UVs, indices). Without it such a primitive keeps only its accessor bounds.
+- `image` (`GlbImageDecoder`): decodes a base colour texture to `GlbDecodedPixels` (`width`, `height`, `rgba`), which the reader samples into vertex colours. Without it the material's base colour factor is used.
+- `prepare` (`GlbBytesTransform`): rewrites the bytes before reading. The editor passes its import sanitizer.
+
+The engine provides the first two (`LuminaGlbLoader` in `lumina`, see [Utilities](../lumina/utilities.md)); the editor adds the third (`GlbParserService.parseGlb` in [lumina_editor_data](../lumina_editor_data/services.md)).
+
+
+### `enum GlbNodeType`
+
+`GlbNodeType`: Enumeration listing system options and state constants.
+
+### `class GlbNode`
+
+`GlbNode`: `class` representing the data model or functionality of the module.
+
+**Functions, Methods & Accessors:**
+
+| Method / Getter | Signature | Purpose & Description |
+| :--- | :--- | :--- |
+| `index` | `int index` | Holds the `index` property or configuration state. |
+| `name` | `String name` | Holds the `name` property or configuration state. |
+| `meshIndex` | `int? meshIndex` | Holds the `meshIndex` property or configuration state. |
+| `meshName` | `String? meshName` | Holds the `meshName` property or configuration state. |
+| `primitiveCount` | `int primitiveCount` | Holds the `primitiveCount` property or configuration state. |
+| `children` | `List<GlbNode> children` | Holds the `children` property or configuration state. |
+| `translation` | `List<double>? translation` | Holds the `translation` property or configuration state. |
+| `rotation` | `List<double>? rotation` | Holds the `rotation` property or configuration state. |
+| `scale` | `List<double>? scale` | Holds the `scale` property or configuration state. |
+| `type` | `GlbNodeType type` | Holds the `type` property or configuration state. |
+| `positions` | `List<double> positions` | Holds the `positions` property or configuration state. |
+| `indices` | `List<int> indices` | Holds the `indices` property or configuration state. |
+| `isVisible` | `bool isVisible` | Holds the `isVisible` property or configuration state. |
+| `totalDescendantCount` | `int get totalDescendantCount` | Getter accessor returning the current value of `totalDescendantCount`. |
+| `directChildCount` | `int get directChildCount` | Getter accessor returning the current value of `directChildCount`. |
+| `getAllDescendantNodeIndices` | `List<int> getAllDescendantNodeIndices()` | Queries and returns the `AllDescendantNodeIndices` value or child object. |
+| `getAllDescendantPositions` | `List<double> getAllDescendantPositions()` | Queries and returns the `AllDescendantPositions` value or child object. |
+| `getAllDescendantIndices` | `List<int> getAllDescendantIndices()` | Queries and returns the `AllDescendantIndices` value or child object. |
+
+### `class GlbSubPrimitive`
+
+`GlbSubPrimitive`: `class` representing the data model or functionality of the module.
+
+**Functions, Methods & Accessors:**
+
+| Method / Getter | Signature | Purpose & Description |
+| :--- | :--- | :--- |
+| `positions` | `List<double> positions` | Holds the `positions` property or configuration state. |
+| `indices` | `List<int> indices` | Holds the `indices` property or configuration state. |
+| `vertexColors` | `Uint8List? vertexColors` | Holds the `vertexColors` property or configuration state. |
+| `baseColor` | `List<double> baseColor` | Holds the `baseColor` property or configuration state. |
+| `materialName` | `String? materialName` | Holds the `materialName` property or configuration state. |
+| `materialIndex` | `int? materialIndex` | Holds the `materialIndex` property or configuration state. |
+| `vertexCount` | `int get vertexCount` | Getter accessor returning the current value of `vertexCount`. |
+| `triangleCount` | `int get triangleCount` | Getter accessor returning the current value of `triangleCount`. |
+
+### `class GlbMorphTarget`
+
+`GlbMorphTarget`: `class` representing the data model or functionality of the module.
+
+**Functions, Methods & Accessors:**
+
+| Method / Getter | Signature | Purpose & Description |
+| :--- | :--- | :--- |
+| `name` | `String name` | Holds the `name` property or configuration state. |
+| `positionDeltas` | `List<double> positionDeltas` | Holds the `positionDeltas` property or configuration state. |
+| `vertexCount` | `int get vertexCount` | Getter accessor returning the current value of `vertexCount`. |
+
+### `class GlbAnimationChannel`
+
+`GlbAnimationChannel`: `class` representing the data model or functionality of the module.
+
+**Functions, Methods & Accessors:**
+
+| Method / Getter | Signature | Purpose & Description |
+| :--- | :--- | :--- |
+| `nodeIndex` | `int nodeIndex` | Holds the `nodeIndex` property or configuration state. |
+| `nodeName` | `String nodeName` | Holds the `nodeName` property or configuration state. |
+| `path` | `String path` | Holds the `path` property or configuration state. |
+| `keyframeTimes` | `List<double> keyframeTimes` | Holds the `keyframeTimes` property or configuration state. |
+| `values` | `List<double> values` | Holds the `values` property or configuration state. |
+| `interpolation` | `String interpolation` | Holds the `interpolation` property or configuration state. |
+
+### `class GlbAnimationClip`
+
+`GlbAnimationClip`: `class` representing the data model or functionality of the module.
+
+**Functions, Methods & Accessors:**
+
+| Method / Getter | Signature | Purpose & Description |
+| :--- | :--- | :--- |
+| `name` | `String name` | Holds the `name` property or configuration state. |
+| `duration` | `double duration` | Holds the `duration` property or configuration state. |
+| `animatedNodeIndices` | `animatedNodeIndices` | Holds the `animatedNodeIndices` property or configuration state. |
+| `channelTargetPaths` | `channelTargetPaths` | Holds the `channelTargetPaths` property or configuration state. |
+| `channels` | `List<GlbAnimationChannel> channels` | Holds the `channels` property or configuration state. |
+| `compositeKeyframeTimes` | `List<double> compositeKeyframeTimes` | Holds the `compositeKeyframeTimes` property or configuration state. |
+
+### `class GlbMeshData`
+
+`GlbMeshData`: `class` representing the data model or functionality of the module.
+
+**Functions, Methods & Accessors:**
+
+| Method / Getter | Signature | Purpose & Description |
+| :--- | :--- | :--- |
+| `subPrimitives` | `List<GlbSubPrimitive> subPrimitives` | Holds the `subPrimitives` property or configuration state. |
+| `positions` | `List<double> positions` | Holds the `positions` property or configuration state. |
+| `indices` | `List<int> indices` | Holds the `indices` property or configuration state. |
+| `uvs` | `List<double> uvs` | Holds the `uvs` property or configuration state. |
+| `minBounds` | `List<double> minBounds` | Holds the `minBounds` property or configuration state. |
+| `maxBounds` | `List<double> maxBounds` | Holds the `maxBounds` property or configuration state. |
+| `baseColor` | `List<double> baseColor` | Holds the `baseColor` property or configuration state. |
+| `vertexColors` | `vertexColors` | Holds the `vertexColors` property or configuration state. |
+| `rawPayload` | `Uint8List? rawPayload` | Holds the `rawPayload` property or configuration state. |
+| `rootNodes` | `List<GlbNode> rootNodes` | Holds the `rootNodes` property or configuration state. |
+| `allNodes` | `List<GlbNode> allNodes` | Holds the `allNodes` property or configuration state. |
+| `materialNames` | `List<String> materialNames` | Holds the `materialNames` property or configuration state. |
+| `skeletonJointIndices` | `Set<int> skeletonJointIndices` | Holds the `skeletonJointIndices` property or configuration state. |
+| `morphTargets` | `List<GlbMorphTarget> morphTargets` | Holds the `morphTargets` property or configuration state. |
+| `jointsPerVertex` | `Uint16List? jointsPerVertex` | Holds the `jointsPerVertex` property or configuration state. |
+| `weightsPerVertex` | `Float32List? weightsPerVertex` | Holds the `weightsPerVertex` property or configuration state. |
+| `maxInfluences` | `int maxInfluences` | Holds the `maxInfluences` property or configuration state. |
+| `animations` | `List<GlbAnimationClip> animations` | Holds the `animations` property or configuration state. |
+| `vertexCount` | `int get vertexCount` | Getter accessor returning the current value of `vertexCount`. |
+| `triangleCount` | `int get triangleCount` | Getter accessor returning the current value of `triangleCount`. |
+| `boneCount` | `int get boneCount` | Getter accessor returning the current value of `boneCount`. |
+| `animatedNodeIndices` | `Set<int> get animatedNodeIndices` | Getter accessor returning the current value of `animatedNodeIndices`. |
 
 ---
 

@@ -27,7 +27,7 @@ Kütüphane tek bir barrel'dır: `package:lumina_core/lumina_core.dart`. Dosyala
 
 ## Engine'de kalanlar
 
-`lumina_core` paylaşılan temeldir, engine mantığı değildir. World, actor'ler, component'ler, çarpışma, fizik, AI, animasyon, Blueprint'ler ve kayıt oyunları `lumina`'da kalır. Flutter, renderer, Assimp ya da analyzer gerektiren editör veri katmanı dosyaları da orada kalır: asset repository, GLB ayrıştırıcı, içe aktarıcılar, küçük resimler, kod üreteci ve proje repository'si.
+`lumina_core` paylaşılan temeldir, engine mantığı değildir. World, actor'ler, component'ler, çarpışma, fizik, AI, animasyon, Blueprint'ler ve kayıt oyunları `lumina`'da kalır. Flutter, renderer, Assimp ya da analyzer gerektiren editör veri katmanı dosyaları (asset ve proje repository'leri, GLB içe aktarma servisi, içe aktarıcılar, küçük resimler, kod üreteçleri) [lumina_editor_data](../lumina_editor_data/index.md) paketindedir. GLB okuyucusunun kendisi buradadır (`GlbReader`, saf Dart); engine Filament'in Draco çözücüsünü ve platform görüntü codec'ini `LuminaGlbLoader` ile ekler.
 
 İki `lumina_core` tipinin `lumina`'da engine tarafı eklemeleri vardır; bunları `package:lumina/lumina.dart` dışa aktarır:
 

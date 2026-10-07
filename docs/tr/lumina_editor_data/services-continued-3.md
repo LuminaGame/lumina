@@ -1,21 +1,21 @@
-[English](../../en/lumina/data-services-continued-3.md)
+[English](../../en/lumina_editor_data/services-continued-3.md)
 
 # Veri katmanı: use case'ler ve servisler (devamı, bölüm 3)
 
-Veri katmanı: use case'ler ve servisler sayfasının devamı: `lib/data/services/` altındaki diğer public dosyalar. Dosya yolları `lumina/` paket dizinine görelidir.
+Veri katmanı: use case'ler ve servisler sayfasının devamı: RigLogic değerlendiricisi (MetaHuman DNA yüz rig'leri, Skeletal Mesh editörü kullanır) dahil `lib/src/services/` altındaki diğer public dosyalar. Dosya yolları `lumina_editor_data/` paket dizinine görelidir.
 
 **Bu sayfada:**
 
-- [`lib/data/services/import_folder_scanner.dart`](#libdataservicesimport_folder_scannerdart)
-- [`lib/data/services/import_image_conversion.dart`](#libdataservicesimport_image_conversiondart)
-- [`lib/data/services/import_queue.dart`](#libdataservicesimport_queuedart)
-- [`lib/data/services/level_asset_manifest.dart`](#libdataserviceslevel_asset_manifestdart)
-- [`lib/data/services/mesh_collision_service.dart`](#libdataservicesmesh_collision_servicedart)
-- [`lib/data/services/mesh_physics_service.dart`](#libdataservicesmesh_physics_servicedart)
-- [`lib/data/services/thumbnail_sidecar_migration.dart`](#libdataservicesthumbnail_sidecar_migrationdart)
-- [`lib/data/services/web_loading_screen_service.dart`](#libdataservicesweb_loading_screen_servicedart)
+- [`lib/src/services/import_folder_scanner.dart`](#libsrcservicesimport_folder_scannerdart)
+- [`lib/src/services/import_image_conversion.dart`](#libsrcservicesimport_image_conversiondart)
+- [`lib/src/services/import_queue.dart`](#libsrcservicesimport_queuedart)
+- [`lib/src/services/mesh_collision_service.dart`](#libsrcservicesmesh_collision_servicedart)
+- [`lib/src/services/mesh_physics_service.dart`](#libsrcservicesmesh_physics_servicedart)
+- [`lib/src/services/thumbnail_sidecar_migration.dart`](#libsrcservicesthumbnail_sidecar_migrationdart)
+- [`lib/src/services/web_loading_screen_service.dart`](#libsrcservicesweb_loading_screen_servicedart)
+- [`lib/src/services/rig_logic_evaluator.dart`](#libsrcservicesrig_logic_evaluatordart)
 
-## `lib/data/services/import_folder_scanner.dart`
+## `lib/src/services/import_folder_scanner.dart`
 
 ### `class ImportFolderFile`
 
@@ -155,7 +155,7 @@ A scan turned into import requests under [ImportFolderOptions]: target folders (
 | `normalizeFolder` | `static String normalizeFolder(String folder)` | `contents/Imported/` → `contents/Imported` (and `\` → `/`). |
 | `build` | `static ImportFolderPlan build(ImportFolderScan scan, {required String projectPath, required ImportFolderOption...` |  |
 
-## `lib/data/services/import_image_conversion.dart`
+## `lib/src/services/import_image_conversion.dart`
 
 ### `abstract final class ImportImageConversion`
 
@@ -168,7 +168,7 @@ The conversion an image import runs on its source file: TGA and WebP are stored 
 | `convertsToPng` | `static bool convertsToPng(String fileName)` | Whether an image named [fileName] is stored as PNG rather than as it is. |
 | `importBytes` | `static Future<Uint8List> importBytes(File source) async` | The bytes an import stores for the image [source]. |
 
-## `lib/data/services/import_queue.dart`
+## `lib/src/services/import_queue.dart`
 
 ### `enum ImportStage`
 
@@ -323,38 +323,7 @@ An error raised in an import worker, carried back as its text.
 | `timeSynchronousSlices` | `Future<T> timeSynchronousSlices<T>(FutureOr<T> Function() body, void Function(Duration longest) report) async` | Runs [body] and reports the longest stretch it held this isolate without yielding — each synchronous run of its code and of every callback it schedules (future continuations, microtasks), not the time it spent waiting on I/O, other isolates or the engine (a codec, a raster). That is the most a step can delay a frame. |
 | `describeImportError` | `String describeImportError(Object error)` | [error] as one readable line (no `Exception:` / `FormatException:` prefix). |
 
-## `lib/data/services/level_asset_manifest.dart`
-
-### `abstract final class LuminaLevelAssetManifest`
-
-What a level loads: the assets its placed actors name — meshes, landscapes, sky environments, textures, materials, sounds, animation assets and the Blueprint classes placed in it with the assets their components name. The level code generator emits it as the level class's `assetManifest`; Play-In-Editor builds it from the level `.lmas` found through the project's asset index. Either way a [LuminaLevelPreloader] preloads it. Yerleştirilmiş bir mesh'e atanmış materyal yalnızca çizilebiliyorsa listelenir ([LuminaLevelActorMaterial]).
-
-**Üyeler:**
-
-| Üye | İmza | Açıklama |
-| :--- | :--- | :--- |
-| `fromActorMaps` | `static List<LuminaAssetRef> fromActorMaps(List<Map<String, dynamic>> actorMaps, {String? projectDir})` | The assets [actorMaps] (`metadata.actors`) name, in first-seen order and without duplicates, as bundle paths (`contents/…`). A placed Blueprint adds its class `.lmas` and — with [projectDir] to read the class from — the assets its components name. |
-| `kindOf` | `static LuminaAssetKind kindOf(String path, {String? key})` | The kind of [path], from the key that named it (`staticMeshAsset`, `soundAsset`…) or its extension. |
-| `bundlePath` | `static String bundlePath(String path)` | [path] as the game bundle names it: `contents/…` (a path through the project's `contents/` is cut there); any other path as it is. |
-| `levelPath` | `static String? levelPath(LuminaAssetIndex index, String levelName)` | The project-relative `.lmas` of level [levelName] (`L_Arena`, `L_Arena.lmas` or `contents/…/L_Arena.lmas`), found through [index] (up to date): `contents/levels/<name>.lmas`, else the level asset of that name anywhere under `contents/`. Null when there is none. |
-| `levelNames` | `static List<String> levelNames(LuminaAssetIndex index)` | The names of the project's levels, from [index] (up to date). |
-| `forProjectLevel` | `static Future<List<LuminaAssetRef>?> forProjectLevel(String projectDir, String levelName) async` | Level [levelName] of [projectDir]'s asset list for Play-In-Editor: found and read through the asset index (refreshed first), paths absolute (the editor reads the disk). Null when there is no such level. |
-| `toDartLiteral` | `static String toDartLiteral(List<LuminaAssetRef> refs, {String indent = ' '})` | [refs] as the `const` list literal a generated level's `assetManifest` holds. |
-
-### `abstract final class LuminaLevelActorMaterial`
-
-Seviyeye yerleştirilmiş bir mesh'in ya da temel şeklin kendi materyali yerine her bölümde çizdiği materyal: aktörün `materialPath` alanı (Details panelinin Material alanı, `set_actor_property material`). Seviye görünümü, Play-In-Editor ve seviye kod üreticisi (`materialOverrideAsset`) bunu buradan okur.
-
-**Üyeler:**
-
-| Üye | İmza | Açıklama |
-| :--- | :--- | :--- |
-| `actorTypes` | `static const Set<String> actorTypes` | `Mesh`, `StaticMesh`, `SkeletalMesh`, `Primitive`. |
-| `pathOf` | `static String? pathOf(Map<String, dynamic> actor)` | Atanmış materyal, paket yolu olarak (`contents/…`); atama yoksa, yerleştirilmiş bir Blueprint için ya da `.lmas` / `.filamat` adı taşımayan bir değer için (eski editörlerin yazdığı yer tutucu adlar) null. |
-| `problem` | `static String? problem(String path, {String? projectDir})` | Materyalin neden çizilemediği (bulunamadı, derlenmiş materyal yok) ya da null. Üretici o zaman argüman yerine bir yorum yazar, Play ve görünüm bunu günlüğe yazar, mesh kendi materyalini korur. |
-| `revision` | `static String revision(String path, {String? projectDir, Iterable<String> textures = const []})` | Seviye görünümünün materyal için çizdiği: materyal dosyasının ve [textures]'ın (sampler'larının dokuları) her birinin değiştirilme zamanı ve boyutu. Değişince görünüm aktörün materyalini yeniden kurar: yeniden derlenince ya da bir doku kaydedilince, yeniden içe aktarılınca veya ayarı değişince. |
-
-## `lib/data/services/mesh_collision_service.dart`
+## `lib/src/services/mesh_collision_service.dart`
 
 ### `class MeshSimpleCollision`
 
@@ -400,7 +369,7 @@ Editor-side only (it reads `.lmas` files): the level code generator bakes the re
 | `toAuthoring` | `static List<double> toAuthoring(double x, double y, double z)` | A glTF point (metres, Y up) in the authoring frame (cm, Z up), with float noise from the unit conversion rounded away. |
 | `connectedPieces` | `static List<List<int>> connectedPieces(List<double> points, List<int> triangles)` | Groups the vertices of a triangle mesh into its connected pieces. Vertices at the same position are one vertex (Assimp splits a hull's corners by face normal); vertices no triangle uses are left out. |
 
-## `lib/data/services/mesh_physics_service.dart`
+## `lib/src/services/mesh_physics_service.dart`
 
 ### `abstract final class MeshPhysicsService`
 
@@ -416,7 +385,7 @@ Editor-side only (it reads `.lmas` files): Play-In-Editor sets `LuminaBlueprintC
 | `forMeshAsset` | `static LuminaMeshPhysics? forMeshAsset(String meshAssetPath, {String? projectDir})` | The physics of the mesh asset at [meshAssetPath] (absolute, or a project path resolved under [projectDir]); null for a file that is not a readable `.lmas` or has no `physics` metadata. Cached per file until its size or modification time changes. |
 | `fromMetadata` | `static LuminaMeshPhysics? fromMetadata(Map<String, String> metadata)` | The physics in a mesh asset's [metadata]; null without any. |
 
-## `lib/data/services/thumbnail_sidecar_migration.dart`
+## `lib/src/services/thumbnail_sidecar_migration.dart`
 
 ### `class ThumbnailSidecarMigrationReport`
 
@@ -459,7 +428,7 @@ Every `contents/**/.thumbnails/<name>.png` is checked against its `<name>.lmas`:
 | `run` | `static ThumbnailSidecarMigrationReport run(String projectDir)` |  |
 | `ensureGitignoreRules` | `static List<String> ensureGitignoreRules(String projectDir)` | Appends the [gitignoreRules] an existing `.gitignore` of [projectDir] lacks; returns what it appended. |
 
-## `lib/data/services/web_loading_screen_service.dart`
+## `lib/src/services/web_loading_screen_service.dart`
 
 ### `class WebLoadingScreenReport`
 
@@ -499,6 +468,65 @@ Packaging (Package Project, Cook & Package) writes these files into the project'
 | `loadingJs` | `static String loadingJs(ResolvedWebLoadingStyle style, {bool preview = false})` | The loading screen's script. [LuminaWebLoading.rendererStart] and [LuminaWebLoading.rendererEnd] are the phase boundaries the generated `main()` reports against. |
 | `flutterBootstrapJs` | `static String flutterBootstrapJs()` | The `web/flutter_bootstrap.js` template: Flutter substitutes its loader and build config at build time; the loading screen is attached to the loader before it starts. |
 
+## `lib/src/services/rig_logic_evaluator.dart`
+
+### `class RigLogicEvaluationResult`
+
+Evaluation result containing calculated blend shapes, joint deltas, and animated maps.
+
+**Yapıcı Metotlar (Constructors):**
+
+- `const RigLogicEvaluationResult({required this.blendShapeWeights, required this.rawBlendShapes, required this.jointOutputs, required this.animatedMapOutputs,})`
+
+**Üyeler:**
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `blendShapeWeights` | `final Map<String, double> blendShapeWeights` | Calculated blend shape channel weights mapped by channel name. |
+| `rawBlendShapes` | `final List<double> rawBlendShapes` | Raw float list of blend shape weights in channel index order. |
+| `jointOutputs` | `final List<double> jointOutputs` | Raw joint outputs (9 floats per joint: Tx, Ty, Tz, Rx, Ry, Rz, Sx, Sy, Sz). |
+| `animatedMapOutputs` | `final List<double> animatedMapOutputs` | Raw animated map (wrinkle map) multiplier outputs. |
+
+### `class RigLogicEvaluator`
+
+Evaluates MetaHuman DNA facial rigs using OpenRigLogic C++ engine.
+
+Converts raw/GUI control inputs into microsecond-evaluated blend shape weights and skeletal joint transforms that drive 3D facial animation.
+
+**Yapıcı Metotlar (Constructors):**
+
+- `factory RigLogicEvaluator.fromFile(String path)`: Creates a [RigLogicEvaluator] by reading a binary `.dna` file from disk.
+- `factory RigLogicEvaluator.fromMemory(Uint8List bytes)`: Creates a [RigLogicEvaluator] from an in-memory byte buffer containing `.dna` data.
+
+**Üyeler:**
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `isDisposed` | `bool get isDisposed` |  |
+| `characterName` | `String get characterName` |  |
+| `lodCount` | `int get lodCount` |  |
+| `jointCount` | `int get jointCount` |  |
+| `blendShapeCount` | `int get blendShapeCount` |  |
+| `rawControlCount` | `int get rawControlCount` |  |
+| `guiControlCount` | `int get guiControlCount` |  |
+| `animatedMapCount` | `int get animatedMapCount` |  |
+| `rawControlNames` | `List<String> get rawControlNames` |  |
+| `blendShapeNames` | `List<String> get blendShapeNames` |  |
+| `jointNames` | `List<String> get jointNames` |  |
+| `animatedMapNames` | `List<String> get animatedMapNames` |  |
+| `lod` | `int get lod` |  |
+| `lod` | `set lod(int value)` |  |
+| `indexOfRawControl` | `int? indexOfRawControl(String name)` |  |
+| `getRawControl` | `double getRawControl(int index)` |  |
+| `getControlByName` | `double? getControlByName(String name)` |  |
+| `setRawControl` | `void setRawControl(int index, double value)` |  |
+| `setControlByName` | `bool setControlByName(String name, double value)` |  |
+| `applyControls` | `void applyControls(Map<String, double> controls)` |  |
+| `resetControls` | `void resetControls()` |  |
+| `evaluate` | `RigLogicEvaluationResult evaluate()` | Evaluates the rig logic graph with current control inputs and returns blend shape weights, joint deltas, and animated maps. |
+| `applyToSkinnedMesh` | `RigLogicEvaluationResult applyToSkinnedMesh(LuminaSkinnedMeshComponent mesh)` | Evaluates current control state and pushes matching blend shape weights directly into [mesh] (via [LuminaSkinnedMeshComponent.setMorphTarget]). |
+| `dispose` | `void dispose()` |  |
+
 ---
 
-[Önceki: Veri katmanı: use case'ler ve servisler (devamı, bölüm 2)](data-services-continued-2.md) | [Üst: lumina (engine çekirdeği)](index.md) | [Sonraki: Veri katmanı: modeller ve repository'ler](data-models.md)
+[Önceki: Veri katmanı: use case'ler ve servisler (devamı, bölüm 2)](services-continued-2.md) | [Üst: lumina_editor_data (editör veri katmanı)](index.md) | [Sonraki: Veri katmanı: modeller ve repository'ler](repositories.md)

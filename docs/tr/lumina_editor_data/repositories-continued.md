@@ -1,15 +1,15 @@
-[English](../../en/lumina/data-models-continued.md)
+[English](../../en/lumina_editor_data/repositories-continued.md)
 
 # Veri katmanı: modeller ve repository'ler (devamı)
 
-Veri katmanı: modeller ve repository'ler sayfasının devamı: `lib/data/models/`, `lib/data/repositories/`, `lib/data/repositories/asset_repository/` altındaki diğer public dosyalar. Dosya yolları `lumina/` paket dizinine görelidir.
+Veri katmanı: modeller ve repository'ler sayfasının devamı: `lib/src/repositories/`, `lib/src/repositories/asset_repository/` altındaki diğer public dosyalar. Dosya yolları `lumina_editor_data/` paket dizinine görelidir.
 
 **Bu sayfada:**
 
-- [`lib/data/repositories/asset_repository/file_operations.dart`](#libdatarepositoriesasset_repositoryfile_operationsdart)
-- [`lib/data/repositories/asset_repository/mesh_thumbnail_geometry.dart`](#libdatarepositoriesasset_repositorymesh_thumbnail_geometrydart)
+- [`lib/src/repositories/asset_repository/file_operations.dart`](#libsrcrepositoriesasset_repositoryfile_operationsdart)
+- [`lib/src/repositories/asset_repository/mesh_thumbnail_geometry.dart`](#libsrcrepositoriesasset_repositorymesh_thumbnail_geometrydart)
 
-## `lib/data/repositories/asset_repository/file_operations.dart`
+## `lib/src/repositories/asset_repository/file_operations.dart`
 
 ### `class AssetMigrateEntry`
 
@@ -28,7 +28,7 @@ One file of a Migrate: its `contents/`-relative path, size, whether the target a
 | `conflict` | `final bool conflict` |  |
 | `copied` | `final bool copied` |  |
 
-## `lib/data/repositories/asset_repository/mesh_thumbnail_geometry.dart`
+## `lib/src/repositories/asset_repository/mesh_thumbnail_geometry.dart`
 
 ### `class MeshThumbnailGeometry`
 
@@ -48,7 +48,7 @@ A mesh's thumbnail drawing, worked out without `dart:ui` rendering so it can be 
 | `forPayload` | `static Future<MeshThumbnailGeometry?> forPayload(AssetType type, Uint8List? payload) async` | The geometry of [type]'s thumbnail drawn from [payload] (a GLB, or OBJ text): null when the type does not draw its mesh or the payload holds none, as the thumbnail then falls back to the type's badge. |
 | `fromMesh` | `static MeshThumbnailGeometry fromMesh(GlbMeshData glb)` | Projects [glb] isometrically into the thumbnail (at most ~5000 triangles), shades each triangle by a fixed light and colours it from its vertex colours or the mesh's base colour. |
 
-## `lib/data/repositories/asset_repository/imported_material.dart`
+## `lib/src/repositories/asset_repository/imported_material.dart`
 
 ### `String buildImportedMaterialSource({name, baseColor, textureSlots, metallic, roughness, emissive, doubleSided, alphaMode, alphaCutoff})`
 
@@ -79,4 +79,4 @@ döndürür. Unreal Engine importer eklentisi bağımsız materyal import'ların
 
 ---
 
-[Önceki: Veri katmanı: modeller ve repository'ler](data-models.md) | [Üst: lumina (engine çekirdeği)](index.md) | [Sonraki: lumina_editor_api](../lumina_editor_api/index.md)
+[Önceki: Veri katmanı: modeller ve repository'ler](repositories.md) | [Üst: lumina_editor_data (editör veri katmanı)](index.md) | [Sonraki: lumina_editor_api](../lumina_editor_api/index.md)

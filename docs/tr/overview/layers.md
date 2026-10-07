@@ -2,7 +2,7 @@
 
 # Katmanlı mimari
 
-Lumina, aşağıdan yukarıya katı katmanlarla kurulur: native C/C++ kütüphaneleri, Dart FFI binding paketleri, engine çekirdeği ve veri katmanı, eklenti sözleşmesi ve editör. Bu sayfa bağımlılık grafiğini ve her katmanın sorumluluğunu gösterir.
+Lumina, aşağıdan yukarıya katı katmanlarla kurulur: native C/C++ kütüphaneleri, Dart FFI binding paketleri, engine çekirdeği, editör veri katmanı, eklenti sözleşmesi ve editör. Bu sayfa bağımlılık grafiğini ve her katmanın sorumluluğunu gösterir.
 
 ## Katman diyagramı
 
@@ -25,10 +25,13 @@ graph TD
         MouseCapture[lumina_mouse_capture]
     end
 
-    subgraph Core_Level [Engine çekirdeği ve veri katmanı]
+    subgraph Core_Level [Engine çekirdeği]
         PureCore[lumina_core saf Dart temeli]
-        LuminaCore[lumina runtime]
-        LuminaData[lumina veri katmanı]
+        LuminaCore[lumina engine]
+    end
+
+    subgraph Data_Level [Editör veri katmanı]
+        LuminaData[lumina_editor_data]
     end
 
     subgraph Plugin_Level [Eklenti sözleşmesi]
@@ -45,8 +48,9 @@ graph TD
     GStreamerC -.-> FlutterGStreamer
 
     FlutterFilament --> LuminaCore
+    FlutterFilament --> LuminaData
     FlutterAssimp --> LuminaData
-    FlutterRiglogic --> LuminaCore
+    FlutterRiglogic --> LuminaData
     MouseCapture --> LuminaCore
     FlutterGStreamer -.-> FlutterFilament
 
@@ -54,8 +58,8 @@ graph TD
     PureCore --> LuminaData
     PureCore --> EditorAPI
     PureCore --> LuminaUI
+    LuminaCore --> LuminaData
     LuminaCore --> EditorAPI
-    LuminaData --> EditorAPI
 
     EditorAPI --> LuminaUI
     LuminaCore --> LuminaUI
@@ -72,9 +76,10 @@ Noktalı oklar yalnızca çalışma anına aittir: `flutter_gstreamer` sistemdek
 3. **`flutter_riglogic`** (tools repository'si): MetaHuman RigLogic'in Dart FFI binding'i. DNA dosyalarını okur ve yüz rig'leri için PSD'leri, RBF'leri, joint transform'larını ve blend shape ağırlıklarını hesaplar.
 4. **`flutter_gstreamer`**, **`lumina_smoke`** ve **`lumina_mouse_capture`** (tools repository'si): video encode, smoke test sistemi (artifact'ler, video kontrolleri ve rapor çalıştırıcısı) ve oyunlar ile Play-In-Editor için pointer capture.
 5. **`lumina_core`**: üstteki her katmanın paylaştığı saf Dart temeli: matematik (birimler, eksenler, Euler), dosya formatları (`.lmas`, `.lmproject`, level'lar, `.lmplugin`, landscape, sequencer, temalar) ve level ile eklenti repository'leri, engine logger, çalışma alanı ve veri yolları ve saf araç servisleri (build parmak izi ve önbelleği, glTF paketleyici, TGA çözücü, primitive GLB fabrikası, şablonlar). Flutter, `dart:ui` ya da FFI içermez; eklenti süreçleri ve komut satırı araçları onu `dart run` ile kullanabilir. Bkz. [lumina_core](../lumina_core/index.md).
-6. **`lumina`**: engine. Runtime yarısı (`lib/src/`) deklaratif element ağacı (`build()`), actor hiyerarşisi (`LuminaActor`, `LuminaPawn`, `LuminaCharacter`), fizik ve çarpışma (GJK/EPA), yapay zeka (behavior tree'ler, navigasyon), iskelet animasyonu harmanlama, uzamsal ses ve action tabanlı input'tur. Veri yarısı (`lib/data/`, `lib/domain/`) engine'e ya da native kütüphanelere ihtiyaç duyan editör servislerini tutar: asset ve proje repository'leri, GLB ve OBJ parser'ları, importer'lar, thumbnail'lar ve Dart kod üreteci. `lumina_core`'u yeniden export eder.
-7. **`lumina_editor_api`**: komutları, toolbar butonlarını, panelleri, importer'ları ve details özelleştirmelerini tanımlayan hafif bir eklenti API'si. Yalnızca `lumina`'ya bağımlıdır; böylece editör ile eklentileri arasındaki bağımlılık döngüsünü kırar.
-8. **`lumina_ui`**: `shadcn_flutter` ile geliştirilmiş masaüstü editör Lumina Studio: 3D viewport, outliner, details inspector, content browser, output log ve asset alt editörleri. Yeni 3D özellikleri `lumina` üzerinden geçer; viewport'lar ayrıca `flutter_filament`'i doğrudan kullanır.
+6. **`lumina`**: engine (`lib/src/`): deklaratif element ağacı (`build()`), actor hiyerarşisi (`LuminaActor`, `LuminaPawn`, `LuminaCharacter`), fizik ve çarpışma (GJK/EPA), yapay zeka (behavior tree'ler, navigasyon), iskelet animasyonu harmanlama, uzamsal ses, action tabanlı input ve çalışan bir oyunun kullandığı asset okuyucuları (Filament'in Draco çözücüsüyle GLB yükleyici, level asset manifestosu). `lumina_core`'u yeniden export eder ve hiçbir editör aracına ulaşmaz.
+7. **`lumina_editor_data`**: engine dışındaki editör veri katmanı: asset, proje ve koleksiyon repository'leri, içe aktarıcılar (Assimp FBX/OBJ, GLB içe aktarma temizleyicisi), thumbnail'lar, Dart ve Blueprint kod üreteçleri, proje editörü host üreteci ve build servisi, eklenti registry'si ve şablon üreteci, derived data cache, import kuyruğu ve use case'ler. `lumina`, `flutter_assimp` ve `flutter_riglogic`'e bağımlıdır; editör kodunun import ettiği `lumina_editor.dart` şemsiye kütüphanesi buradadır. Bkz. [lumina_editor_data](../lumina_editor_data/index.md).
+8. **`lumina_editor_api`**: komutları, toolbar butonlarını, panelleri, importer'ları ve details özelleştirmelerini tanımlayan hafif bir eklenti API'si. Yalnızca `lumina`'ya bağımlıdır; böylece editör ile eklentileri arasındaki bağımlılık döngüsünü kırar.
+9. **`lumina_ui`**: `shadcn_flutter` ile geliştirilmiş masaüstü editör Lumina Studio: 3D viewport, outliner, details inspector, content browser, output log ve asset alt editörleri. Yeni 3D özellikleri `lumina` üzerinden geçer; viewport'lar ayrıca `flutter_filament`'i doğrudan kullanır.
 
 ## Web build'leri
 

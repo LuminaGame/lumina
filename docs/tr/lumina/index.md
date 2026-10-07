@@ -2,21 +2,22 @@
 
 # lumina (engine çekirdeği)
 
-`lumina` engine paketidir: `flutter_filament` üzerine kurulmuş deklaratif bir 3D oyun runtime'ı ve editörün proje ve asset okuyup yazmak için kullandığı veri katmanı.
+`lumina` engine paketidir: `flutter_filament` üzerine kurulmuş deklaratif bir 3D oyun runtime'ı. Editörün proje ve asset okuyup yazmak için kullandığı veri katmanı ayrı bir pakettir: [lumina_editor_data](../lumina_editor_data/index.md).
 
 ## Mimarideki yeri
 
-`lumina`, render için `flutter_filament`, yüz rig'leri için `flutter_riglogic` ve model içe aktarma için `flutter_assimp` üzerine kurulur (son ikisi tools repository'sinden gelir). `lumina_editor_api` ve `lumina_ui` onun üzerine kurulur. Bkz. [Katmanlı mimari](../overview/layers.md).
+`lumina`, `lumina_core` (saf Dart temeli) ve render için `flutter_filament` üzerine kurulur. Assimp ve RigLogic editör araçlarıdır: `lumina_editor_data` onlara bağımlıdır, engine değildir. `lumina_editor_data`, `lumina_editor_api` ve `lumina_ui` onun üzerine kurulur. Bkz. [Katmanlı mimari](../overview/layers.md).
 
-## İki yarı
+## Neleri barındırır
 
 - **Runtime** (`lib/src/`): bir oyunun çalıştırdığı kısım. Oyun, dünyasını deklaratif bir `build()` ağacıyla tanımlar ([Deklaratif ağaç](declarative.md)); engine bunu, [controller'ların](controller.md) possess ettiği ve [oyun çatısının](game.md) yönettiği, component'li [actor'lerden](object.md) oluşan bir [dünyaya](world.md) dönüştürür. Runtime sınıfları `Lumina` önekini taşır (`LuminaWorld`, `LuminaActor`, `LuminaStaticMeshComponent`, ...).
-- **Veri katmanı** (`lib/data/`, `lib/domain/`): editörün projeleri okuyup yazmak için kullandığı kısım. Asset ve proje repository'lerini, GLB ve OBJ parser'larını, importer'ları, thumbnail'ları, Dart kod üretecini ve eklenti servislerini barındırır. Saf kısımlar (`.lmas`, `.lmproject`, level ve `.lmplugin` modelleri, level ve eklenti repository'leri, logger, yollar, şablonlar, otomatik kayıt ve TGA çözücü) `lumina`'nın yeniden export ettiği [lumina_core](../lumina_core/index.md) paketindedir.
+- **Runtime'ın kullandığı asset okuyucuları** (`lib/src/assets/`): kodlanmış görüntü çözücü, `LuminaGlbLoader` (lumina_core'un saf `GlbReader`'ı, Filament'in Draco çözücüsü ve platform görüntü codec'iyle), level asset manifestosu ve level mesh materyal araması. Proje input binder'ı (`lib/src/input/project_input_binder.dart`) bir `.lmproject`'in input ayarlarını action'lara ve mapping context'lere çevirir.
+- **Burada olmayanlar:** editör veri katmanı (asset ve proje repository'leri, içe aktarıcılar, thumbnail'lar, kod üreteçleri, proje editörü build'leri, eklenti registry'si ve şablon üreteci, use case'ler) [lumina_editor_data](../lumina_editor_data/index.md) paketindedir. Saf formatlar ve servisler `lumina`'nın yeniden export ettiği [lumina_core](../lumina_core/index.md) paketindedir. `test/architecture/engine_without_editor_data_test.dart`, `lumina.dart` ve `lumina_runtime.dart`'ın ulaştığı her kütüphaneyi gezer ve `lumina_editor_data`, analyzer, Assimp, RigLogic ya da bir editör repository'si bulursa başarısız olur.
 
 ## Kütüphaneler
 
-- `package:lumina/lumina.dart` veri katmanı ve her zaman export ettiği `lumina_core` kütüphaneleri dahil her şeyi export eder. Lumina Studio bunu import eder.
-- `package:lumina/lumina_runtime.dart` runtime'ı editör veri katmanı, Assimp ve RigLogic olmadan export eder; yalnızca bu kütüphaneyi import eden bir oyun web için de build edilebilir. Üretilen oyunlar bunu import eder.
+- `package:lumina/lumina.dart` engine'i ve her zaman export ettiği `lumina_core` kütüphanelerini export eder. Editör kodu bunun yerine editör veri katmanını da ekleyen `package:lumina_editor_data/lumina_editor.dart`'ı import eder.
+- `package:lumina/lumina_runtime.dart` bir oyunun ihtiyaç duyduğu runtime'ı export eder; yalnızca bu kütüphaneyi import eden bir oyun web için de build edilebilir. Üretilen oyunlar bunu import eder.
 
 Barrel'lar paketin kullanıcıları içindir: `lumina/lib` içindeki hiçbir kütüphane `lumina.dart` ya da `lumina_runtime.dart`'ı import etmez; her biri kullandığı dosyaları import eder, böylece barrel'lar import grafiğinin yaprakları olarak kalır ve hiçbir döngü onlardan geçmez. Engine nesneleri engine'in kendi `LuminaObjectKey`'ini taşır ve `lumina_object.dart` hiçbir Flutter kütüphanesine ulaşmaz. İkisini de `test/architecture/` korur (`import_cycles_test.dart`, `flutter_free_object_root_test.dart`).
 
@@ -46,13 +47,7 @@ Runtime kodu dosyaları hiçbir zaman doğrudan `File(...)` ile okumaz: açık b
 | [Oyun arayüzü widget'ları (UMG runtime)](umg.md) | Runtime UMG widget'ları, element binding'leri, user widget'lar ve widget katmanı. |
 | [Kayıt (save game)](save.md) | Save game nesneleri ve save game subsystem'i. |
 | [Blueprint'ler](blueprint/index.md) | Görsel programlama: belgeler, node kütüphanesi, VM, üretilen kod. |
-| [Yardımcılar, matematik ve test](utilities.md) | Gameplay statics, volume'lar, timer'lar, viewport picking, matematik yardımcıları, mesh decimation, smoke artifact'leri. |
-| [Veri katmanı: use case'ler ve servisler](data-services.md) | Use case'ler, GLB/OBJ/TGA parser'ları, kod üreteci, şablonlar, eklenti servisleri, logger, thumbnail'lar. |
-| [Veri katmanı: use case'ler ve servisler (devamı, bölüm 1)](data-services-continued.md) | `lib/data/services/`, `lib/data/services/blueprint_codegen/` altındaki diğer dosyalar. |
-| [Veri katmanı: use case'ler ve servisler (devamı, bölüm 2)](data-services-continued-2.md) | `lib/data/services/` altındaki diğer dosyalar. |
-| [Veri katmanı: use case'ler ve servisler (devamı, bölüm 3)](data-services-continued-3.md) | `lib/data/services/` altındaki diğer dosyalar. |
-| [Veri katmanı: modeller ve repository'ler](data-models.md) | `.lmas` asset'leri, `.lmproject` manifest'leri, eklenti tanımları, sequencer ve landscape verisi, repository'ler. |
-| [Veri katmanı: modeller ve repository'ler (devamı)](data-models-continued.md) | `lib/data/models/`, `lib/data/repositories/`, `lib/data/repositories/asset_repository/` altındaki diğer dosyalar. |
+| [Yardımcılar, matematik ve test](utilities.md) | Gameplay statics, volume'lar, timer'lar, viewport picking, matematik yardımcıları, mesh decimation, asset okuyucuları (görüntü çözücü, GLB yükleyici, level asset manifestosu), smoke artifact'leri. |
 
 ---
 

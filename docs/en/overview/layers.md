@@ -2,7 +2,7 @@
 
 # Layered architecture
 
-Lumina is built bottom-up in strict layers: native C/C++ libraries, Dart FFI binding packages, the engine core and data layer, the plugin contract, and the editor. This page shows the dependency graph and the responsibility of every layer.
+Lumina is built bottom-up in strict layers: native C/C++ libraries, Dart FFI binding packages, the engine core, the editor data layer, the plugin contract, and the editor. This page shows the dependency graph and the responsibility of every layer.
 
 ## Layer diagram
 
@@ -25,10 +25,13 @@ graph TD
         MouseCapture[lumina_mouse_capture]
     end
 
-    subgraph Core_Level [Engine core and data layer]
+    subgraph Core_Level [Engine core]
         PureCore[lumina_core pure-Dart foundation]
-        LuminaCore[lumina runtime]
-        LuminaData[lumina data layer]
+        LuminaCore[lumina engine]
+    end
+
+    subgraph Data_Level [Editor data layer]
+        LuminaData[lumina_editor_data]
     end
 
     subgraph Plugin_Level [Plugin contract]
@@ -45,8 +48,9 @@ graph TD
     GStreamerC -.-> FlutterGStreamer
 
     FlutterFilament --> LuminaCore
+    FlutterFilament --> LuminaData
     FlutterAssimp --> LuminaData
-    FlutterRiglogic --> LuminaCore
+    FlutterRiglogic --> LuminaData
     MouseCapture --> LuminaCore
     FlutterGStreamer -.-> FlutterFilament
 
@@ -54,8 +58,8 @@ graph TD
     PureCore --> LuminaData
     PureCore --> EditorAPI
     PureCore --> LuminaUI
+    LuminaCore --> LuminaData
     LuminaCore --> EditorAPI
-    LuminaData --> EditorAPI
 
     EditorAPI --> LuminaUI
     LuminaCore --> LuminaUI
@@ -72,9 +76,10 @@ Dotted arrows are run-time only: `flutter_gstreamer` opens the system GStreamer 
 3. **`flutter_riglogic`** (tools repository): Dart FFI binding to MetaHuman RigLogic. It reads DNA files and evaluates PSDs, RBFs, joint transforms and blend shape weights for facial rigs.
 4. **`flutter_gstreamer`**, **`lumina_smoke`** and **`lumina_mouse_capture`** (tools repository): video encoding, the smoke-test system (artifacts, video checks and the report runner), and pointer capture for games and Play-In-Editor.
 5. **`lumina_core`**: the pure-Dart foundation every layer above shares: math (units, axes, Euler), the file formats (`.lmas`, `.lmproject`, levels, `.lmplugin`, landscape, sequencer, themes) and their level and plugin repositories, the engine logger, workspace and data paths, and pure tooling services (build fingerprint and cache, glTF packer, TGA decoder, primitive GLB factory, templates). No Flutter, `dart:ui` or FFI, so plugin processes and command-line tools can use it with `dart run`. See [lumina_core](../lumina_core/index.md).
-6. **`lumina`**: the engine. The runtime half (`lib/src/`) is the declarative element tree (`build()`), the actor hierarchy (`LuminaActor`, `LuminaPawn`, `LuminaCharacter`), physics and collision (GJK/EPA), AI (behavior trees, navigation), skeletal animation blending, spatial audio and action-based input. The data half (`lib/data/`, `lib/domain/`) holds the editor services that need the engine or native libraries: the asset and project repositories, the GLB and OBJ parsers, importers, thumbnails and the Dart code generator. It re-exports `lumina_core`.
-7. **`lumina_editor_api`**: a lightweight plugin API that defines commands, toolbar buttons, panels, importers and details customizations. It depends only on `lumina`, which breaks the dependency cycle between the editor and its plugins.
-8. **`lumina_ui`**: Lumina Studio, the desktop editor built with `shadcn_flutter`: 3D viewport, outliner, details inspector, content browser, output log and the asset sub-editors. New 3D features go through `lumina`; the viewports also use `flutter_filament` directly.
+6. **`lumina`**: the engine (`lib/src/`): the declarative element tree (`build()`), the actor hierarchy (`LuminaActor`, `LuminaPawn`, `LuminaCharacter`), physics and collision (GJK/EPA), AI (behavior trees, navigation), skeletal animation blending, spatial audio, action-based input and the asset readers a running game uses (the GLB loader with Filament's Draco decoder, the level asset manifest). It re-exports `lumina_core` and reaches no editor tooling.
+7. **`lumina_editor_data`**: the editor data layer outside the engine: the asset, project and collections repositories, importers (Assimp FBX/OBJ, the GLB import sanitizer), thumbnails, the Dart and Blueprint code generators, the project editor host generator and build service, the plugin registry and template generator, the derived data cache, the import queue and the use cases. It depends on `lumina`, `flutter_assimp` and `flutter_riglogic`, and its `lumina_editor.dart` umbrella is what editor code imports. See [lumina_editor_data](../lumina_editor_data/index.md).
+8. **`lumina_editor_api`**: a lightweight plugin API that defines commands, toolbar buttons, panels, importers and details customizations. It depends only on `lumina`, which breaks the dependency cycle between the editor and its plugins.
+9. **`lumina_ui`**: Lumina Studio, the desktop editor built with `shadcn_flutter`: 3D viewport, outliner, details inspector, content browser, output log and the asset sub-editors. New 3D features go through `lumina`; the viewports also use `flutter_filament` directly.
 
 ## Web builds
 

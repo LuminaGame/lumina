@@ -1,53 +1,52 @@
-[English](../../en/lumina/data-services.md)
+[English](../../en/lumina_editor_data/services.md)
 
 # Veri katmanı: use case'ler ve servisler
 
-Editöre dönük veri katmanı, birinci bölüm: domain use case'leri (level kaydetme, asset içe aktarma, Dart kodu üretme) ve arkalarındaki servisler: asset referans grafiği, Dart kod üreteci, GLB ve OBJ parser'ları, eklenti registry'si ve şablon üreteci, proje input binder'ı ve thumbnail'lar. Saf servisler (otomatik kayıt zamanlayıcısı, engine logger, oyun ve level şablonları, TGA çözücü, host patcher, primitive GLB fabrikası, çalışma alanı ve veri yolları, build parmak izi ve önbelleği, glTF araçları ve diğerleri) `lumina_core`'dadır: bkz. [Servisler](../lumina_core/services.md). Dosya yolları `lumina/` paket dizinine görelidir.
+Editöre dönük veri katmanı, birinci bölüm: domain use case'leri (level kaydetme, asset içe aktarma, Dart kodu üretme) ve arkalarındaki servisler: asset referans grafiği, Dart kod üreteci, GLB servisi (engine'in GLB okuyucusu ve içe aktarma temizleyicisi) ve OBJ parser'ı, eklenti registry'si ve şablon üreteci ve thumbnail'lar. Proje input binder'ı engine runtime'ındadır ([Girdi](../lumina/input.md)). Saf servisler (otomatik kayıt zamanlayıcısı, engine logger, oyun ve level şablonları, TGA çözücü, host patcher, primitive GLB fabrikası, çalışma alanı ve veri yolları, build parmak izi ve önbelleği, glTF araçları ve diğerleri) `lumina_core`'dadır: bkz. [Servisler](../lumina_core/services.md). Dosya yolları `lumina_editor_data/` paket dizinine görelidir.
 
 **Bu sayfada:**
 
-- [`lib/domain/use_cases/generate_dart_code_use_case.dart`](#libdomainuse_casesgenerate_dart_code_use_casedart)
-- [`lib/domain/use_cases/import_asset_use_case.dart`](#libdomainuse_casesimport_asset_use_casedart)
-- [`lib/domain/use_cases/save_level_use_case.dart`](#libdomainuse_casessave_level_use_casedart)
-- [`lib/domain/use_cases/use_case_validation.dart`](#libdomainuse_casesuse_case_validationdart)
-- [`lib/domain/models/use_case_results.dart`](#libdomainmodelsuse_case_resultsdart)
-- [`lib/data/services/asset_reference_graph.dart`](#libdataservicesasset_reference_graphdart)
-- [`lib/data/services/assimp_import_service.dart`](#libdataservicesassimp_import_servicedart)
-- [`lib/data/services/code_generator_service.dart`](#libdataservicescode_generator_servicedart)
-- [`lib/data/services/glb_parser_service.dart`](#libdataservicesglb_parser_servicedart)
-- [`lib/data/services/obj_import_service.dart`](#libdataservicesobj_import_servicedart)
-- [`lib/data/services/obj_parser_service.dart`](#libdataservicesobj_parser_servicedart)
-- [`lib/data/services/plugin_registry_service.dart`](#libdataservicesplugin_registry_servicedart)
-- [`lib/data/services/plugin_template_generator_service.dart`](#libdataservicesplugin_template_generator_servicedart)
-- [`lib/data/services/project_input_binder.dart`](#libdataservicesproject_input_binderdart)
-- [`lib/data/services/thumbnail_service.dart`](#libdataservicesthumbnail_servicedart)
+- [`lib/src/domain/use_cases/generate_dart_code_use_case.dart`](#libsrcdomainuse_casesgenerate_dart_code_use_casedart)
+- [`lib/src/domain/use_cases/import_asset_use_case.dart`](#libsrcdomainuse_casesimport_asset_use_casedart)
+- [`lib/src/domain/use_cases/save_level_use_case.dart`](#libsrcdomainuse_casessave_level_use_casedart)
+- [`lib/src/domain/use_cases/use_case_validation.dart`](#libsrcdomainuse_casesuse_case_validationdart)
+- [`lib/src/domain/models/use_case_results.dart`](#libsrcdomainmodelsuse_case_resultsdart)
+- [`lib/src/services/asset_reference_graph.dart`](#libsrcservicesasset_reference_graphdart)
+- [`lib/src/services/assimp_import_service.dart`](#libsrcservicesassimp_import_servicedart)
+- [`lib/src/services/code_generator_service.dart`](#libsrcservicescode_generator_servicedart)
+- [`lib/src/services/obj_import_service.dart`](#libsrcservicesobj_import_servicedart)
+- [`lib/src/services/obj_parser_service.dart`](#libsrcservicesobj_parser_servicedart)
+- [`lib/src/services/plugin_registry_service.dart`](#libsrcservicesplugin_registry_servicedart)
+- [`lib/src/services/plugin_template_generator_service.dart`](#libsrcservicesplugin_template_generator_servicedart)
+- [`lib/src/services/thumbnail_service.dart`](#libsrcservicesthumbnail_servicedart)
+- [`lib/src/services/glb_parser_service.dart`](#libsrcservicesglb_parser_servicedart)
 
-## `lib/domain/use_cases/generate_dart_code_use_case.dart`
+## `lib/src/domain/use_cases/generate_dart_code_use_case.dart`
 
 ### `class GenerateDartCodeUseCase`
 
 Generates the live declarative Dart code for a level (`lib/main.dart` + `lib/levels/<levelName>.dart`) via [DartCodeGeneratorService] and, when a [LuminaProject] is supplied, clears its dirty flag and stamps `lastCodeGeneratedTimestamp` through [ProjectRepository.saveProject].
 
-## `lib/domain/use_cases/import_asset_use_case.dart`
+## `lib/src/domain/use_cases/import_asset_use_case.dart`
 
 ### `class ImportAssetUseCase`
 
 Imports an external model/texture/audio file into a project's `contents/` tree through [AssetRepository.importExternalFile] (stage → convert → resolve paths → emit `.lmas` family). Unsupported formats and thrown pipeline errors become a failure result.
 
-## `lib/domain/use_cases/save_level_use_case.dart`
+## `lib/src/domain/use_cases/save_level_use_case.dart`
 
 ### `class SaveLevelUseCase`
 
 Writes the active level as a `contents/levels/<levelName>.lmas` JSON container.  The container is exactly what Lumina Studio writes on Save Level: `assetId` (`level_<name>`), `name`, `type: 'level'`, `relativePath`, `rawPayload: null` and `metadata.actors` — the actor maps (`EditorActorNode.toMap()`) are passed through untouched. Validation and I/O failures are reported in the result, never thrown.
 
-## `lib/domain/use_cases/use_case_validation.dart`
+## `lib/src/domain/use_cases/use_case_validation.dart`
 
 **Üst Düzey Fonksiyonlar (Top-level Functions):**
 
 - **`String? validateProjectDir(String projectDir)`**: Shared input validation for the use-case layer. Returns an error message or null.
 - **`String? validateLevelName(String levelName)`**: A level name must be a plain file stem: no separators, no parent references.
 
-## `lib/domain/models/use_case_results.dart`
+## `lib/src/domain/models/use_case_results.dart`
 
 ### `class SaveLevelResult`
 
@@ -103,7 +102,7 @@ Result of [ImportAssetUseCase]: the imported asset's `.lmas` description.
 | `error` | `String? error` | `error` alanını (field/property) ve ilişkili veriyi saklar. |
 | `toString` | `String toString()` | `toString` işlemini gerçekleştirir. |
 
-## `lib/data/services/asset_reference_graph.dart`
+## `lib/src/services/asset_reference_graph.dart`
 
 ### `class ResolvedReference`
 
@@ -132,7 +131,7 @@ Result of [ImportAssetUseCase]: the imported asset's `.lmas` description.
 | `dependencyClosure` | `Set<String> dependencyClosure(String assetId)` | `dependencyClosure` işlemini gerçekleştirir. |
 | `resolve` | `ResolvedReference resolve(AssetReference ref)` | `resolve` işlemini gerçekleştirir. |
 
-## `lib/data/services/assimp_import_service.dart`
+## `lib/src/services/assimp_import_service.dart`
 
 ### `class AssimpImportException`
 
@@ -154,7 +153,7 @@ FBX ve OBJ dışında (onların kendi servisleri var) Assimp'in okuduğu her 3D 
 | `convert` | `static Future<AssimpImportResult> convert(String path, {List<String> textureSearchDirs = const []})` | [convertSync]'i arka plan isolate'inde çalıştırır. |
 | `convertSync` | `static AssimpImportResult convertSync(String path, {List<String> textureSearchDirs = const []})` | Assimp dosyayı okuyamazsa [AssimpImportException] fırlatır. |
 
-## `lib/data/services/code_generator_service.dart`
+## `lib/src/services/code_generator_service.dart`
 
 ### `class DartCodeGeneratorService`
 
@@ -170,171 +169,7 @@ FBX ve OBJ dışında (onların kendi servisleri var) Assimp'in okuduğu her 3D 
 
 Üretilen seviyenin begin-play'i `LuminaWorldPartitionSubsystem`'i seviyenin `metadata.worldPartition` bölümüyle kaydeder (hücre boyutu, tick başına geçiş, başlangıç durumlarıyla data layer'lar), her aktörü partition'a ekler ve streaming kaynaklarını kaydeder. Bir seviye satırı `dataLayers: [<katman adı>, ...]` taşıyabilir (editör bunu henüz yazmaz; harita üreteci gibi araçlar yazar): üretilen kod o zaman aktörlerin `LuminaObjectKey` kimlikleriyle anahtarlanmış bir `dataLayersByActor` haritası tutar ve her ad için `partition.assignActorToLayer` çağırır; böylece yüklenmemiş ya da yalnızca yüklü katmanlar aktörlerinin tick almasını runtime'ın tanımladığı gibi engeller.
 
-## `lib/data/services/glb_parser_service.dart`
-
-### `enum GlbNodeType`
-
-`GlbNodeType`: Sistemde kullanılan seçenekleri ve durumları listeleyen numaralandırma türüdür.
-
-### `class GlbNode`
-
-`GlbNode`: İlgili modülün veri modelini veya temel işlevselliğini temsil eden `class` yapısıdır.
-
-**Fonksiyonlar, Metotlar ve Erişimciler:**
-
-| Metot / Getter | İmzası | Ne İşe Yarar? |
-| :--- | :--- | :--- |
-| `index` | `int index` | `index` alanını (field/property) ve ilişkili veriyi saklar. |
-| `name` | `String name` | `name` alanını (field/property) ve ilişkili veriyi saklar. |
-| `meshIndex` | `int? meshIndex` | `meshIndex` alanını (field/property) ve ilişkili veriyi saklar. |
-| `meshName` | `String? meshName` | `meshName` alanını (field/property) ve ilişkili veriyi saklar. |
-| `primitiveCount` | `int primitiveCount` | `primitiveCount` alanını (field/property) ve ilişkili veriyi saklar. |
-| `children` | `List<GlbNode> children` | `children` alanını (field/property) ve ilişkili veriyi saklar. |
-| `translation` | `List<double>? translation` | `translation` alanını (field/property) ve ilişkili veriyi saklar. |
-| `rotation` | `List<double>? rotation` | `rotation` alanını (field/property) ve ilişkili veriyi saklar. |
-| `scale` | `List<double>? scale` | `scale` alanını (field/property) ve ilişkili veriyi saklar. |
-| `type` | `GlbNodeType type` | `type` alanını (field/property) ve ilişkili veriyi saklar. |
-| `positions` | `List<double> positions` | `positions` alanını (field/property) ve ilişkili veriyi saklar. |
-| `indices` | `List<int> indices` | `indices` alanını (field/property) ve ilişkili veriyi saklar. |
-| `isVisible` | `bool isVisible` | `isVisible` alanını (field/property) ve ilişkili veriyi saklar. |
-| `totalDescendantCount` | `int get totalDescendantCount` | `totalDescendantCount` özelliğinin anlık değerini okuyan getter erişimcisi. |
-| `directChildCount` | `int get directChildCount` | `directChildCount` özelliğinin anlık değerini okuyan getter erişimcisi. |
-| `getAllDescendantNodeIndices` | `List<int> getAllDescendantNodeIndices()` | `AllDescendantNodeIndices` bilgisini veya alt nesnesini sorgulayıp döndürür. |
-| `getAllDescendantPositions` | `List<double> getAllDescendantPositions()` | `AllDescendantPositions` bilgisini veya alt nesnesini sorgulayıp döndürür. |
-| `getAllDescendantIndices` | `List<int> getAllDescendantIndices()` | `AllDescendantIndices` bilgisini veya alt nesnesini sorgulayıp döndürür. |
-
-### `class GlbSubPrimitive`
-
-`GlbSubPrimitive`: İlgili modülün veri modelini veya temel işlevselliğini temsil eden `class` yapısıdır.
-
-**Fonksiyonlar, Metotlar ve Erişimciler:**
-
-| Metot / Getter | İmzası | Ne İşe Yarar? |
-| :--- | :--- | :--- |
-| `positions` | `List<double> positions` | `positions` alanını (field/property) ve ilişkili veriyi saklar. |
-| `indices` | `List<int> indices` | `indices` alanını (field/property) ve ilişkili veriyi saklar. |
-| `vertexColors` | `Uint8List? vertexColors` | `vertexColors` alanını (field/property) ve ilişkili veriyi saklar. |
-| `baseColor` | `List<double> baseColor` | `baseColor` alanını (field/property) ve ilişkili veriyi saklar. |
-| `materialName` | `String? materialName` | `materialName` alanını (field/property) ve ilişkili veriyi saklar. |
-| `materialIndex` | `int? materialIndex` | `materialIndex` alanını (field/property) ve ilişkili veriyi saklar. |
-| `vertexCount` | `int get vertexCount` | `vertexCount` özelliğinin anlık değerini okuyan getter erişimcisi. |
-| `triangleCount` | `int get triangleCount` | `triangleCount` özelliğinin anlık değerini okuyan getter erişimcisi. |
-
-### `class GlbMorphTarget`
-
-`GlbMorphTarget`: İlgili modülün veri modelini veya temel işlevselliğini temsil eden `class` yapısıdır.
-
-**Fonksiyonlar, Metotlar ve Erişimciler:**
-
-| Metot / Getter | İmzası | Ne İşe Yarar? |
-| :--- | :--- | :--- |
-| `name` | `String name` | `name` alanını (field/property) ve ilişkili veriyi saklar. |
-| `positionDeltas` | `List<double> positionDeltas` | `positionDeltas` alanını (field/property) ve ilişkili veriyi saklar. |
-| `vertexCount` | `int get vertexCount` | `vertexCount` özelliğinin anlık değerini okuyan getter erişimcisi. |
-
-### `class GlbAnimationChannel`
-
-`GlbAnimationChannel`: İlgili modülün veri modelini veya temel işlevselliğini temsil eden `class` yapısıdır.
-
-**Fonksiyonlar, Metotlar ve Erişimciler:**
-
-| Metot / Getter | İmzası | Ne İşe Yarar? |
-| :--- | :--- | :--- |
-| `nodeIndex` | `int nodeIndex` | `nodeIndex` alanını (field/property) ve ilişkili veriyi saklar. |
-| `nodeName` | `String nodeName` | `nodeName` alanını (field/property) ve ilişkili veriyi saklar. |
-| `path` | `String path` | `path` alanını (field/property) ve ilişkili veriyi saklar. |
-| `keyframeTimes` | `List<double> keyframeTimes` | `keyframeTimes` alanını (field/property) ve ilişkili veriyi saklar. |
-| `values` | `List<double> values` | `values` alanını (field/property) ve ilişkili veriyi saklar. |
-| `interpolation` | `String interpolation` | `interpolation` alanını (field/property) ve ilişkili veriyi saklar. |
-
-### `class GlbAnimationClip`
-
-`GlbAnimationClip`: İlgili modülün veri modelini veya temel işlevselliğini temsil eden `class` yapısıdır.
-
-**Fonksiyonlar, Metotlar ve Erişimciler:**
-
-| Metot / Getter | İmzası | Ne İşe Yarar? |
-| :--- | :--- | :--- |
-| `name` | `String name` | `name` alanını (field/property) ve ilişkili veriyi saklar. |
-| `duration` | `double duration` | `duration` alanını (field/property) ve ilişkili veriyi saklar. |
-| `animatedNodeIndices` | `animatedNodeIndices` | `animatedNodeIndices` alanını (field/property) ve ilişkili veriyi saklar. |
-| `channelTargetPaths` | `channelTargetPaths` | `channelTargetPaths` alanını (field/property) ve ilişkili veriyi saklar. |
-| `channels` | `List<GlbAnimationChannel> channels` | `channels` alanını (field/property) ve ilişkili veriyi saklar. |
-| `compositeKeyframeTimes` | `List<double> compositeKeyframeTimes` | `compositeKeyframeTimes` alanını (field/property) ve ilişkili veriyi saklar. |
-
-### `class GlbMeshData`
-
-`GlbMeshData`: İlgili modülün veri modelini veya temel işlevselliğini temsil eden `class` yapısıdır.
-
-**Fonksiyonlar, Metotlar ve Erişimciler:**
-
-| Metot / Getter | İmzası | Ne İşe Yarar? |
-| :--- | :--- | :--- |
-| `subPrimitives` | `List<GlbSubPrimitive> subPrimitives` | `subPrimitives` alanını (field/property) ve ilişkili veriyi saklar. |
-| `positions` | `List<double> positions` | `positions` alanını (field/property) ve ilişkili veriyi saklar. |
-| `indices` | `List<int> indices` | `indices` alanını (field/property) ve ilişkili veriyi saklar. |
-| `uvs` | `List<double> uvs` | `uvs` alanını (field/property) ve ilişkili veriyi saklar. |
-| `minBounds` | `List<double> minBounds` | `minBounds` alanını (field/property) ve ilişkili veriyi saklar. |
-| `maxBounds` | `List<double> maxBounds` | `maxBounds` alanını (field/property) ve ilişkili veriyi saklar. |
-| `baseColor` | `List<double> baseColor` | `baseColor` alanını (field/property) ve ilişkili veriyi saklar. |
-| `vertexColors` | `vertexColors` | `vertexColors` alanını (field/property) ve ilişkili veriyi saklar. |
-| `rawPayload` | `Uint8List? rawPayload` | `rawPayload` alanını (field/property) ve ilişkili veriyi saklar. |
-| `rootNodes` | `List<GlbNode> rootNodes` | `rootNodes` alanını (field/property) ve ilişkili veriyi saklar. |
-| `allNodes` | `List<GlbNode> allNodes` | `allNodes` alanını (field/property) ve ilişkili veriyi saklar. |
-| `materialNames` | `List<String> materialNames` | `materialNames` alanını (field/property) ve ilişkili veriyi saklar. |
-| `skeletonJointIndices` | `Set<int> skeletonJointIndices` | `skeletonJointIndices` alanını (field/property) ve ilişkili veriyi saklar. |
-| `morphTargets` | `List<GlbMorphTarget> morphTargets` | `morphTargets` alanını (field/property) ve ilişkili veriyi saklar. |
-| `jointsPerVertex` | `Uint16List? jointsPerVertex` | `jointsPerVertex` alanını (field/property) ve ilişkili veriyi saklar. |
-| `weightsPerVertex` | `Float32List? weightsPerVertex` | `weightsPerVertex` alanını (field/property) ve ilişkili veriyi saklar. |
-| `maxInfluences` | `int maxInfluences` | `maxInfluences` alanını (field/property) ve ilişkili veriyi saklar. |
-| `animations` | `List<GlbAnimationClip> animations` | `animations` alanını (field/property) ve ilişkili veriyi saklar. |
-| `vertexCount` | `int get vertexCount` | `vertexCount` özelliğinin anlık değerini okuyan getter erişimcisi. |
-| `triangleCount` | `int get triangleCount` | `triangleCount` özelliğinin anlık değerini okuyan getter erişimcisi. |
-| `boneCount` | `int get boneCount` | `boneCount` özelliğinin anlık değerini okuyan getter erişimcisi. |
-| `animatedNodeIndices` | `Set<int> get animatedNodeIndices` | `animatedNodeIndices` özelliğinin anlık değerini okuyan getter erişimcisi. |
-
-### `class _GlbDecodedImage`
-
-`_GlbDecodedImage`: İlgili modülün veri modelini veya temel işlevselliğini temsil eden `class` yapısıdır.
-
-**Yapıcı Metotlar (Constructors):**
-- `_GlbDecodedImage(this.width, this.height, this.rawPixels)`: `_GlbDecodedImage(this.width, this.height, this.rawPixels)` nesnesini ilklendirir.
-
-**Fonksiyonlar, Metotlar ve Erişimciler:**
-
-| Metot / Getter | İmzası | Ne İşe Yarar? |
-| :--- | :--- | :--- |
-| `width` | `int width` | `width` alanını (field/property) ve ilişkili veriyi saklar. |
-| `height` | `int height` | `height` alanını (field/property) ve ilişkili veriyi saklar. |
-| `rawPixels` | `Uint8List rawPixels` | `rawPixels` alanını (field/property) ve ilişkili veriyi saklar. |
-| `sample` | `List<int> sample(double u, double v)` | `sample` işlemini gerçekleştirir. |
-
-### `class _NodeTransform`
-
-`_NodeTransform`: İlgili modülün veri modelini veya temel işlevselliğini temsil eden `class` yapısıdır.
-
-**Yapıcı Metotlar (Constructors):**
-- `_NodeTransform(this.translation, this.rotation, this.scale)`: `_NodeTransform(this.translation, this.rotation, this.scale)` nesnesini ilklendirir.
-
-**Fonksiyonlar, Metotlar ve Erişimciler:**
-
-| Metot / Getter | İmzası | Ne İşe Yarar? |
-| :--- | :--- | :--- |
-| `translation` | `List<double> translation` | `translation` alanını (field/property) ve ilişkili veriyi saklar. |
-| `rotation` | `List<double> rotation` | `rotation` alanını (field/property) ve ilişkili veriyi saklar. |
-| `scale` | `List<double> scale` | `scale` alanını (field/property) ve ilişkili veriyi saklar. |
-
-### `class GlbParserService`
-
-`GlbParserService`: Dosya işlemleri, veri dönüşümleri veya motor mantığını yürüten servis sınıfıdır.
-
-**Fonksiyonlar, Metotlar ve Erişimciler:**
-
-| Metot / Getter | İmzası | Ne İşe Yarar? |
-| :--- | :--- | :--- |
-| `parseGlb` | `static Future<GlbMeshData?> parseGlb(Uint8List bytes)` | `parseGlb` işlemini gerçekleştirir. |
-
-## `lib/data/services/obj_import_service.dart`
+## `lib/src/services/obj_import_service.dart`
 
 ### `class MtlMaterial`
 
@@ -365,13 +200,13 @@ Import hattı için OBJ → GLB. Asset deposu her `.obj`'yi bunun üzerinden haz
 | `locateMaterialLibrary` | `static File? locateMaterialLibrary(File objFile, String name)` | Bir `mtllib` [name]'inin gösterdiği dosya: OBJ'ye göre yazıldığı gibi (veya mutlak), klasörleri ve dosyası büyük/küçük harf fark etmeksizin ([FbxTextureLocator.findIgnoringCase]), sonra OBJ'nin klasöründe büyük/küçük harf fark etmeksizin dosya adıyla. |
 | `parseMtl` | `static List<MtlMaterial> parseMtl(String source)` | Bir MTL [source]'unun materyalleri. |
 
-## `lib/data/services/obj_parser_service.dart`
+## `lib/src/services/obj_parser_service.dart`
 
 ### `class ObjParserService`
 
 Service for parsing Wavefront OBJ 3D model geometry.
 
-## `lib/data/services/plugin_registry_service.dart`
+## `lib/src/services/plugin_registry_service.dart`
 
 ### `enum PluginIssueType`
 
@@ -451,7 +286,7 @@ Service for parsing Wavefront OBJ 3D model geometry.
 | `isolationOverrideOf` | `PluginIsolation? isolationOverrideOf(String name)` | Açık projenin `name` için geçersiz kılması ya da null. |
 | `setIsolationOverride` | `Future<bool> setIsolationOverride(String name, PluginIsolation? isolation)` | Projenin geçersiz kılmasını ayarlar (null kaldırır) ve `.lmproject`'i kaydeder; etkin eklentinin etkin yalıtımı değiştiyse true döner ve eklentiyi `restartPending` olarak işaretler. |
 
-## `lib/data/services/plugin_template_generator_service.dart`
+## `lib/src/services/plugin_template_generator_service.dart`
 
 ### `enum PluginTemplateType`
 
@@ -502,59 +337,7 @@ Service for parsing Wavefront OBJ 3D model geometry.
 | `nameToPascal` | `static String nameToPascal(String name)` | `nameToPascal` işlemini gerçekleştirir. |
 | `generate` | `Future<PluginGenerationResult> generate(PluginTemplateSpec spec)` | `generate` işlemini gerçekleştirir. |
 
-## `lib/data/services/project_input_binder.dart`
-
-### `class LuminaAxisPlacementModifier`
-
-Places a key's raw 1D value onto one axis of a 2D action, scaled — a swizzle-axis and a scalar modifier in one.
-
-**Fonksiyonlar, Metotlar ve Erişimciler:**
-
-| Metot / Getter | İmzası | Ne İşe Yarar? |
-| :--- | :--- | :--- |
-| `toX` | `double toX` | `toX` alanını (field/property) ve ilişkili veriyi saklar. |
-| `toY` | `double toY` | `toY` alanını (field/property) ve ilişkili veriyi saklar. |
-| `modify` | `LuminaInputActionValue modify(LuminaInputActionValue rawValue, double de...` | `modify` işlemini gerçekleştirir. |
-
-### `class BoundMappingContext`
-
-One mapping context from the manifest, with the priority it was authored at.
-
-**Fonksiyonlar, Metotlar ve Erişimciler:**
-
-| Metot / Getter | İmzası | Ne İşe Yarar? |
-| :--- | :--- | :--- |
-| `name` | `String name` | `name` alanını (field/property) ve ilişkili veriyi saklar. |
-| `priority` | `int priority` | `priority` alanını (field/property) ve ilişkili veriyi saklar. |
-| `context` | `LuminaInputMappingContext context` | `context` alanını (field/property) ve ilişkili veriyi saklar. |
-
-### `class BoundProjectInput`
-
-The result of binding a project's input settings to the runtime.
-
-**Fonksiyonlar, Metotlar ve Erişimciler:**
-
-| Metot / Getter | İmzası | Ne İşe Yarar? |
-| :--- | :--- | :--- |
-| `contexts` | `List<BoundMappingContext> contexts` | `contexts` alanını (field/property) ve ilişkili veriyi saklar. |
-| `actions` | `Map<String, LuminaInputAction> actions` | `actions` alanını (field/property) ve ilişkili veriyi saklar. |
-| `unboundKeys` | `List<String> unboundKeys` | Labels of keys the manifest binds that the runtime has no equivalent for. Reported rather than silently dropped, so the editor can say so. |
-| `actionByName` | `LuminaInputAction? actionByName(String name)` | `actionByName` işlemini gerçekleştirir. |
-
-### `class ProjectInputBinder`
-
-Turns the `.lmproject` manifest's [ProjectInputSettings] — the same structures the Project Settings input editor edits — into the runtime's actions and mapping contexts.  Play-In-Editor binds through this, so rebinding a key in Project Settings changes what Play does, instead of PIE keeping a second hardcoded list.
-
-**Yapıcı Metotlar (Constructors):**
-- `ProjectInputBinder._()`: `ProjectInputBinder._()` nesnesini ilklendirir.
-
-**Fonksiyonlar, Metotlar ve Erişimciler:**
-
-| Metot / Getter | İmzası | Ne İşe Yarar? |
-| :--- | :--- | :--- |
-| `bind` | `static BoundProjectInput bind(ProjectInputSettings settings)` | `bind` işlemini gerçekleştirir. |
-
-## `lib/data/services/thumbnail_service.dart`
+## `lib/src/services/thumbnail_service.dart`
 
 ### `class ThumbnailService`
 
@@ -567,6 +350,21 @@ Turns the `.lmproject` manifest's [ProjectInputSettings] — the same structures
 | `writeThumbnailCache` | `void writeThumbnailCache(String lmasPath, Uint8List png)` | `writeThumbnailCache` işlemini gerçekleştirir. |
 | `readThumbnailCache` | `Uint8List? readThumbnailCache(String lmasPath)` | `readThumbnailCache` işlemini gerçekleştirir. |
 
+## `lib/src/services/glb_parser_service.dart`
+
+### `class GlbParserService`
+
+`GlbParserService`: editörün GLB servisi. `parseGlb`, mesh verisini lumina_core'un `GlbReader`'ı (modeller [lumina_core servisleri](../lumina_core/services-continued.md) sayfasında), engine'in çözücüleri (`LuminaGlbLoader.decoders`: Filament'in Draco çözücüsü ve platform görüntü codec'i) ve `prepare` olarak bu servisin temizleyicisiyle okur. Temizleyici (`convertGlbTgaToPng`, `convertGlbTgaToPngAsync`, `inspectImageWork`) TGA dokuları PNG'ye çevirir, dış görüntüleri gömer, `defaultMaxTextureSize` üstündeki dokuları küçültür ve skin'leri dört normalize etkiye indirir; çıktı sürümü `sanitizerVersion`'dır.
+
+**Fonksiyonlar, Metotlar ve Erişimciler:**
+
+| Metot / Getter | İmzası | Ne İşe Yarar? |
+| :--- | :--- | :--- |
+| `parseGlb` | `static Future<GlbMeshData?> parseGlb(Uint8List bytes)` | Temizleyiciden sonra okunan GLB'nin ya da onu saran `.lmas`'ın mesh verisi. |
+| `convertGlbTgaToPng` | `static Uint8List convertGlbTgaToPng(Uint8List glbBytes, {List<String>? searchDirs, int maxTextureSize})` | Temizlenmiş GLB byte'ları. |
+| `convertGlbTgaToPngAsync` | `static Future<Uint8List> convertGlbTgaToPngAsync(Uint8List glbBytes, {List<String>? searchDirs, int maxTextureSize})` | Görüntü çözmek gerektiğinde aynısı, arka plan isolate'inde. |
+| `inspectImageWork` | `static ({bool needsDecoding, bool selfContained}) inspectImageWork(Uint8List glbBytes, {int maxTextureSize})` | Temizlemenin maliyeti, yalnızca görüntü başlıklarından okunur. |
+
 ---
 
-[Önceki: Yardımcılar, matematik ve test](utilities.md) | [Üst: lumina (engine çekirdeği)](index.md) | [Sonraki: Veri katmanı: use case'ler ve servisler (devamı, bölüm 1)](data-services-continued.md)
+[Önceki: lumina_editor_data (editör veri katmanı)](index.md) | [Üst: lumina_editor_data (editör veri katmanı)](index.md) | [Sonraki: Veri katmanı: use case'ler ve servisler (devamı, bölüm 1)](services-continued.md)

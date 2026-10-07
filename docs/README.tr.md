@@ -2,7 +2,7 @@
 
 # Lumina dokümantasyonu
 
-Lumina, Google Filament renderer'ı üzerine kurulmuş, Flutter ve Dart için bir 3D oyun motoru ve Lumina projeleri için masaüstü editörü olan Lumina Studio'dan oluşur. Bu dokümantasyon mimariyi, bir checkout'un nasıl kurulacağını ve bu repository'deki paketlerin API referansını kapsar: `flutter_filament`, `lumina_core`, `lumina`, `lumina_editor_api` ve `lumina_ui`.
+Lumina, Google Filament renderer'ı üzerine kurulmuş, Flutter ve Dart için bir 3D oyun motoru ve Lumina projeleri için masaüstü editörü olan Lumina Studio'dan oluşur. Bu dokümantasyon mimariyi, bir checkout'un nasıl kurulacağını ve bu repository'deki paketlerin API referansını kapsar: `flutter_filament`, `lumina_core`, `lumina`, `lumina_editor_data`, `lumina_editor_api` ve `lumina_ui`.
 
 ## Nereden başlamalı
 
@@ -22,7 +22,7 @@ Lumina Studio'yu eklentilerle genişletir ya da editörün kendisi üzerinde ça
 1. [Lumina nedir](tr/overview/what-is-lumina.md) ve [Checkout ve kurulum](tr/getting-started/setup.md)
 2. [Editör eklentileri](tr/plugins/index.md) ve [lumina_editor_api referansı](tr/lumina_editor_api/api-reference.md)
 3. [lumina_ui (Lumina Studio)](tr/lumina_ui/index.md), [Ana editör: view model ve servisler](tr/lumina_ui/main-editor-state.md) ve [Alt editörler](tr/lumina_ui/sub-editors/index.md)
-4. Editörün ve eklentilerin okuyup yazdığı dosyalar: [lumina_core](tr/lumina_core/index.md) (dosya formatları, yollar, logger, saf servisler), ardından engine'in [modeller ve repository'ler](tr/lumina/data-models.md) ile [use case'ler ve servisler](tr/lumina/data-services.md) sayfaları
+4. Editörün ve eklentilerin okuyup yazdığı dosyalar: [lumina_core](tr/lumina_core/index.md) (dosya formatları, yollar, logger, saf servisler), ardından editör veri katmanı [lumina_editor_data](tr/lumina_editor_data/index.md): [repository'ler](tr/lumina_editor_data/repositories.md) ile [use case'ler ve servisler](tr/lumina_editor_data/services.md) sayfaları
 
 ### Engine katkıcıları
 
@@ -75,7 +75,7 @@ Engine, renderer binding'leri ya da native build üzerinde çalışırsınız.
 
 ### lumina (engine çekirdeği)
 
-- [lumina (engine çekirdeği)](tr/lumina/index.md) - Deklaratif 3D oyun motoru ve editöre dönük veri katmanı.
+- [lumina (engine çekirdeği)](tr/lumina/index.md) - Deklaratif 3D oyun motoru ve Filament binding'i.
   - [Deklaratif ağaç](tr/lumina/declarative.md) - Build context, build owner, element'ler, object'ler ve runtime object'ler.
   - [Dünya, level'lar ve streaming](tr/lumina/world.md) - World, level'lar, subsystem'ler, world partition, level streaming, HLOD, data layer'lar.
   - [Actor'ler, pawn'lar ve character'lar](tr/lumina/object.md) - LuminaActor, LuminaPawn, LuminaCharacter ve saveable mixin'i.
@@ -100,12 +100,16 @@ Engine, renderer binding'leri ya da native build üzerinde çalışırsınız.
     - [Blueprint fonksiyon kütüphanesi](tr/lumina/blueprint/function-library.md) - VM ve üretilen kodun paylaştığı, her pure ve impure node'un davranışı.
     - [Animation Blueprint'ler](tr/lumina/blueprint/animation.md) - Animation Blueprint belgeleri, state machine'ler, blend space'ler, aim offset'ler ve instance'ları.
   - [Yardımcılar, matematik ve test](tr/lumina/utilities.md) - Gameplay statics, volume'lar, timer'lar, viewport picking, matematik yardımcıları, mesh decimation, smoke artifact'leri.
-  - [Veri katmanı: use case'ler ve servisler](tr/lumina/data-services.md) - Use case'ler, GLB/OBJ/TGA parser'ları, kod üreteci, şablonlar, eklenti servisleri, logger, thumbnail'lar.
-  - [Veri katmanı: use case'ler ve servisler (devamı, bölüm 1)](tr/lumina/data-services-continued.md) - `lib/data/services/`, `lib/data/services/blueprint_codegen/` altındaki diğer dosyalar.
-  - [Veri katmanı: use case'ler ve servisler (devamı, bölüm 2)](tr/lumina/data-services-continued-2.md) - `lib/data/services/` altındaki diğer dosyalar.
-  - [Veri katmanı: use case'ler ve servisler (devamı, bölüm 3)](tr/lumina/data-services-continued-3.md) - `lib/data/services/` altındaki diğer dosyalar.
-  - [Veri katmanı: modeller ve repository'ler](tr/lumina/data-models.md) - Asset, koleksiyon ve proje repository'leri (modeller `lumina_core`'da).
-  - [Veri katmanı: modeller ve repository'ler (devamı)](tr/lumina/data-models-continued.md) - `lib/data/models/`, `lib/data/repositories/`, `lib/data/repositories/asset_repository/` altındaki diğer dosyalar.
+
+### lumina_editor_data (editör veri katmanı)
+
+- [lumina_editor_data (editör veri katmanı)](tr/lumina_editor_data/index.md) - Lumina Studio'nun engine dışındaki araç veri katmanı ve editör kodunun `lumina_editor.dart` şemsiye kütüphanesi.
+  - [Veri katmanı: use case'ler ve servisler](tr/lumina_editor_data/services.md) - Use case'ler, GLB servisi, OBJ içe aktarma, kod üreteci, eklenti servisleri, thumbnail'lar.
+  - [Veri katmanı: use case'ler ve servisler (devamı, bölüm 1)](tr/lumina_editor_data/services-continued.md) - `lib/src/services/`, `lib/src/services/blueprint_codegen/` altındaki diğer dosyalar.
+  - [Veri katmanı: use case'ler ve servisler (devamı, bölüm 2)](tr/lumina_editor_data/services-continued-2.md) - `lib/src/services/` altındaki diğer dosyalar.
+  - [Veri katmanı: use case'ler ve servisler (devamı, bölüm 3)](tr/lumina_editor_data/services-continued-3.md) - `lib/src/services/` altındaki diğer dosyalar.
+  - [Veri katmanı: modeller ve repository'ler](tr/lumina_editor_data/repositories.md) - Asset, koleksiyon ve proje repository'leri (modeller `lumina_core`'da).
+  - [Veri katmanı: modeller ve repository'ler (devamı)](tr/lumina_editor_data/repositories-continued.md) - `lib/src/repositories/`, `lib/src/repositories/asset_repository/` altındaki diğer dosyalar.
 
 ### lumina_editor_api
 
