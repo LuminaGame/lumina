@@ -232,6 +232,70 @@ void assign(LuminaActor actor) {
     expect(LuminaGeneratedCodeMigration.migrateObjectKeys(temp.path), isEmpty);
   });
 
+  test('code using the game UI moves from lumina_runtime.dart to lumina_game.dart; engine-only files stay', () {
+    void write(String rel, String content) => File('${temp.path}/lib/$rel')
+      ..parent.createSync(recursive: true)
+      ..writeAsStringSync(content);
+    // The launcher and a UMG widget class as earlier generators wrote them.
+    write('main.dart', '''
+import 'package:flutter/material.dart';
+import 'package:lumina/lumina_runtime.dart';
+
+Widget host(LuminaGame game) => Stack(children: [
+      LuminaGameWidget(game: game),
+      LuminaWidgetLayer.forGame(game: game),
+    ]);
+Future<void> capture() => LuminaMouseCapture.backend.capture();
+''');
+    write('widgets/wbp_hud.dart', '''
+import 'package:flutter/widgets.dart';
+import 'package:lumina/lumina_runtime.dart' show LuminaUmgElement, LuminaUmgElementBinding;
+''');
+    const blueprint = "import 'package:lumina/lumina_runtime.dart';\n\nclass BpDoor extends LuminaActor {}\n";
+    write('actors/bp_door.dart', blueprint);
+    File('${temp.path}/pubspec.yaml').writeAsStringSync('''
+name: old_game
+dependencies:
+  flutter:
+    sdk: flutter
+  lumina:
+    git:
+      url: https://github.com/LuminaGame/lumina.git
+      path: lumina
+      ref: 0123abc
+  vector_math: ^2.1.4
+''');
+
+    expect(LuminaGeneratedCodeMigration.migrateGameImports(temp.path), ['lib/main.dart', 'lib/widgets/wbp_hud.dart']);
+    final main = File('${temp.path}/lib/main.dart').readAsStringSync();
+    expect(main, contains("import 'package:lumina_widgets/lumina_game.dart';"));
+    expect(main, isNot(contains('lumina_runtime')));
+    expect(File('${temp.path}/lib/widgets/wbp_hud.dart').readAsStringSync(),
+        contains("import 'package:lumina_widgets/lumina_game.dart' show LuminaUmgElement, LuminaUmgElementBinding;"));
+    expect(File('${temp.path}/lib/actors/bp_door.dart').readAsStringSync(), blueprint,
+        reason: 'a Blueprint class uses the engine only and compiles as it is');
+    expect(LuminaGeneratedCodeMigration.migrateGameImports(temp.path), isEmpty, reason: 'a migrated project migrates to nothing');
+
+    expect(LuminaGeneratedCodeMigration.migratePubspecGameDependency(temp.path), isTrue);
+    final pubspec = File('${temp.path}/pubspec.yaml').readAsStringSync();
+    expect(pubspec, contains('''
+  lumina:
+    git:
+      url: https://github.com/LuminaGame/lumina.git
+      path: lumina
+      ref: 0123abc
+  lumina_widgets:
+    git:
+      url: https://github.com/LuminaGame/lumina.git
+      path: lumina_widgets
+      ref: 0123abc
+  vector_math: ^2.1.4
+'''));
+    expect(LuminaGeneratedCodeMigration.migratePubspecGameDependency(temp.path), isFalse);
+    expect(LuminaGeneratedCodeMigration.withGameDependency('dependencies:\n  lumina:\n    path: ../engine/lumina\n'),
+        'dependencies:\n  lumina:\n    path: ../engine/lumina\n  lumina_widgets:\n    path: ../engine/lumina_widgets\n');
+  });
+
   test('a project whose generated level keys actors with ValueKey is rewritten on open and analyzes clean', () async {
     final root = Directory('${temp.path}/p')..createSync();
     final config = Directory('${temp.path}/cfg')..createSync();
@@ -266,7 +330,10 @@ dependencies:
     );
     expect(current, contains("key: const LuminaObjectKey('act_floor')"));
     expect(current, contains('if (key != null) {'));
+    expect(current, contains("import 'package:lumina_widgets/lumina_game.dart';"));
+    // Levels imported the engine runtime then.
     final legacyLevel = current
+        .replaceFirst("import 'package:lumina_widgets/lumina_game.dart';", "import 'package:lumina/lumina_runtime.dart';")
         .replaceFirst("import 'package:lumina/lumina_runtime.dart';",
             "import 'package:flutter/foundation.dart' show ValueKey;\nimport 'package:lumina/lumina_runtime.dart';")
         .replaceAll('LuminaObjectKey(', 'ValueKey(')
@@ -292,6 +359,8 @@ dependencies:
     expect(level, contains('if (key is LuminaObjectKey) {'));
     expect(level, isNot(contains('ValueKey')));
     expect(level, isNot(contains('package:flutter/foundation.dart')));
+    expect(File('${root.path}/pubspec.yaml').readAsStringSync(), contains('  lumina_widgets:\n    path: '),
+        reason: 'the game library comes with the lumina_widgets dependency, next to lumina');
     final registry = File('${root.path}/lib/actors/actors.g.dart').readAsStringSync();
     expect(registry, contains('Function({LuminaObjectKey? key,'));
     expect(registry, isNot(contains('package:flutter/foundation.dart')));

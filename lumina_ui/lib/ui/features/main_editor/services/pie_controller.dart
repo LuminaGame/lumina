@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart' show Listenable;
 import 'package:flutter/services.dart';
 
 import 'package:flutter_filament/flutter_filament.dart';
@@ -63,7 +62,7 @@ class PieController {
 
   /// The possessed controller whose cursor state Play follows: Set Show Mouse Cursor / Set Input Mode free or take the
   /// pointer as the game runs.
-  Listenable? _followedCursor;
+  ChangeSignal? _followedCursor;
 
   void _followCursorOf(EditorPieGame? game) {
     final next = game?.playerController?.cursorState;
@@ -116,6 +115,10 @@ class PieController {
     LuminaPostProcessSettings? postProcessBaseline,
   }) {
     if (isPlaying) return;
+    // Play needs the engine's Flutter services (the procedural sky's bundled
+    // assets, the Blueprint video player) even where the editor's start-up
+    // did not run (tests, an embedded editor). Idempotent.
+    LuminaWidgets.ensureInitialized();
 
     _editorSnapshot = viewModel.actors.map((a) => EditorActorNode.fromMap(a.toMap())).toList();
     _selectedActorIdSnapshot = viewModel.selectedActorId;

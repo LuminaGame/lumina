@@ -323,7 +323,7 @@ void main() {
       expect(bm.lastPipelineStatus, BuildStepStatus.ok, reason: log);
       // Code-gen really ran through the editor before the spawn.
       final projDir = vm.projectDirPath;
-      expect(File('$projDir/lib/main.dart').readAsStringSync(), contains('package:lumina/lumina_runtime.dart'));
+      expect(File('$projDir/lib/main.dart').readAsStringSync(), contains('package:lumina_widgets/lumina_game.dart'));
       expect(File('$projDir/lib/levels/${dartFileName(vm.activeLevelName)}').existsSync(), isTrue);
       // The real flutter output streamed into the console, and the artifact is a real executable.
       expect(bm.logLines.any((l) => l.message.contains('flutter build linux --release')), isTrue, reason: log);

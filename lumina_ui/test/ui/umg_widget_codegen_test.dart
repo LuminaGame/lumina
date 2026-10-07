@@ -138,7 +138,7 @@ void main() {
     final image = doc.addChild(doc.root.id, UmgNode.create(UmgWidgetType.image, name: 'Crosshair'), canvasPosition: const Offset(0, 0))!;
     image.props['texture'] = 'contents/textures/T_Crosshair.lmas';
     final src = UmgWidgetCodegen.generateWidgetDart(doc, assetName: 'WBP_Reticle');
-    expect(src, contains(RegExp(r"import 'package:lumina/lumina_runtime.dart' show [A-Za-z, ]*LuminaAssets[A-Za-z, ]*;")));
+    expect(src, contains(RegExp(r"import 'package:lumina_widgets/lumina_game.dart' show [A-Za-z, ]*LuminaAssets[A-Za-z, ]*;")));
     expect(src, isNot(contains('package:lumina/lumina.dart')), reason: 'the editor barrel reaches dart:ffi, which a web build cannot compile');
     expect(src, isNot(contains('dart:io')));
     expect(src, isNot(contains('File(')), reason: 'a relative File path depends on the working directory the game was started from');
@@ -240,7 +240,7 @@ void main() {
         final src = UmgWidgetCodegen.generateWidgetDart(everything(), assetName: 'WBP_Everything', library: library);
         const shadow = "LuminaUmgElementBinding.shadow(e, const LuminaUmgTextShadow(enabled: true, color: Color(0x80FF0000), offsetX: 3.0, offsetY: 4.0, blur: 2.0))";
         const outline = "LuminaUmgElementBinding.outline(e, const LuminaUmgTextOutline(size: 2.0, color: Color(0xFF000000)))";
-        final shown = RegExp(r"import 'package:lumina/lumina_runtime.dart' show ([A-Za-z, ]*);").firstMatch(src)!.group(1)!.split(', ');
+        final shown = RegExp(r"import 'package:lumina_widgets/lumina_game.dart' show ([A-Za-z, ]*);").firstMatch(src)!.group(1)!.split(', ');
         expect(shown, containsAll(['LuminaUmgText', 'LuminaUmgTextOutline', 'LuminaUmgTextShadow']));
         // The Text block: the outline is a stroked layer under the fill.
         expect(src, contains("LuminaUmgText(\n"));
@@ -309,7 +309,7 @@ void main() {
         final main = File('$project/lib/main.dart').readAsStringSync();
         expect(main, contains("import 'widgets/widget_registry.g.dart';"));
         expect(main, contains('registerProjectWidgetClasses();'));
-        expect(main, contains('LuminaWidgetLayer.forGame(game: _game)'));
+        expect(main, contains('LuminaGameHost('), reason: 'the game host stacks the widget layer over the game');
         final analysis = await analyzeGameProject(project);
         expect(analysis.exitCode, 0, reason: '${analysis.stdout}${analysis.stderr}');
       }, timeout: const Timeout(Duration(minutes: 4)));
@@ -321,7 +321,7 @@ void main() {
       final src = UmgWidgetCodegen.generateWidgetDart(playerHud(), assetName: 'WBP_PlayerHUD');
       expect(src, contains('const WbpPlayerHUD({super.key, this.instance});'));
       expect(src, contains('final Map<String, Object?>? instance;'));
-      expect(src, contains("import 'package:lumina/lumina_runtime.dart' show LuminaUmgElement, LuminaUmgElementBinding;"));
+      expect(src, contains("import 'package:lumina_widgets/lumina_game.dart' show LuminaUmgElement, LuminaUmgElementBinding;"));
       expect(src, contains("name: 'HUD Overlay',"));
       expect(src, contains("name: 'HealthBar Progress',"));
       expect(src, contains("progress: LuminaUmgElementBinding.value<double>(e, 'percent', 0.8),"), reason: 'the designer value is the fallback');
@@ -358,7 +358,7 @@ void main() {
       final registry = File(UmgWidgetCodegen.registryPath(project));
       expect(registry.existsSync(), isTrue);
       var src = registry.readAsStringSync();
-      expect(src, contains("import 'package:lumina/lumina_runtime.dart';"));
+      expect(src, contains("import 'package:lumina_widgets/lumina_game.dart';"));
       expect(src, contains("import 'wbp_player_hud.dart';"));
       expect(src, contains('void registerProjectWidgetClasses() {'));
       expect(src, contains("LuminaWidgetBuilderRegistry.register(\n    'WBP_PlayerHUD',"));

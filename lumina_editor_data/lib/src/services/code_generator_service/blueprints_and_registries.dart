@@ -121,7 +121,7 @@ mixin _BlueprintsAndRegistriesCodegen on _DartCodeGeneratorServiceState {
     b.writeln("// Lumina Engine $kLuminaEngineVersion: the project's Enhanced Input (Project Settings > Input).");
     b.writeln('// ignore_for_file: prefer_const_constructors, unused_import');
     b.writeln();
-    b.writeln("import 'package:lumina/lumina_runtime.dart';");
+    b.writeln("import '$kLuminaGameLibrary';");
     b.writeln();
     b.writeln("/// The project's input actions, by name.");
     b.writeln('const Map<String, LuminaInputAction> luminaProjectInputActions = {');

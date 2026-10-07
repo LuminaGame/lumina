@@ -923,8 +923,9 @@ class ProjectRepository {
   }
 
   /// Once per project: generated Dart written by earlier versions is brought
-  /// to the current generator's names and engine keys
-  /// ([LuminaGeneratedCodeMigration]), off the UI isolate. Logged when it
+  /// to the current generator's names, engine keys and game library import
+  /// (and the pubspec gains `lumina_widgets`) ([LuminaGeneratedCodeMigration]),
+  /// off the UI isolate. Logged when it
   /// changed anything.
   Future<void> migrateGeneratedCode(String projectDir) async {
     final changed = await _migrateGeneratedCodeOffThread(projectDir);
@@ -936,8 +937,10 @@ class ProjectRepository {
   /// A static helper so the isolate closure captures nothing but [dir].
   static Future<List<String>> _migrateGeneratedCodeOffThread(String dir) => Isolate.run(() {
         final keys = LuminaGeneratedCodeMigration.migrateObjectKeys(dir);
+        final imports = LuminaGeneratedCodeMigration.migrateGameImports(dir);
+        final pubspec = LuminaGeneratedCodeMigration.migratePubspecGameDependency(dir);
         final renamed = LuminaGeneratedCodeMigration.migrate(dir);
-        return [...keys, ...renamed.values];
+        return {...keys, ...imports, if (pubspec) 'pubspec.yaml', ...renamed.values}.toList();
       });
 
   /// What opening a project does before the editor scans it: the sidecar,

@@ -2,7 +2,7 @@
 // Lumina Engine 0.0.1 Auto-Generated Level Code
 // ignore_for_file: unused_import, prefer_const_constructors, camel_case_types, non_constant_identifier_names, unnecessary_this, dead_code, unused_local_variable, dead_null_aware_expression
 
-import 'package:lumina/lumina_runtime.dart';
+import 'package:lumina_widgets/lumina_game.dart';
 import 'package:vector_math/vector_math_64.dart';
 import '../actors/actors.g.dart';
 

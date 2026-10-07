@@ -16,7 +16,14 @@ import 'package:lumina_core/src/services/dart_identifiers.dart';
 /// cleanly and still compiles in between. A legacy file whose snake_case
 /// file already exists is stale and is deleted. Generated code that keyed
 /// engine objects with Flutter's `ValueKey` moves to `LuminaObjectKey`
-/// ([migrateObjectKeys]).
+/// ([migrateObjectKeys]). Generated code that imported the engine's
+/// `lumina_runtime.dart` imports the game library of `lumina_widgets` now,
+/// and the project depends on `lumina_widgets` ([migrateGameImports],
+/// [migratePubspecGameDependency]).
+/// The library a generated game imports: the engine runtime plus its
+/// Flutter side (`lumina_widgets`).
+const String kLuminaGameLibrary = 'package:lumina_widgets/lumina_game.dart';
+
 class LuminaGeneratedCodeMigration {
   LuminaGeneratedCodeMigration._();
 
@@ -36,6 +43,8 @@ class LuminaGeneratedCodeMigration {
     final lib = Directory('$projectDir/lib');
     if (!lib.existsSync()) return const {};
     migrateObjectKeys(projectDir);
+    migrateGameImports(projectDir);
+    migratePubspecGameDependency(projectDir);
 
     // 1. Legacy files and the classes they declare.
     final renames = <String, String>{}; // lib-relative old path → new path
@@ -162,6 +171,104 @@ class LuminaGeneratedCodeMigration {
         .replaceAll(RegExp(r'\bValueKey\('), 'LuminaObjectKey(')
         .replaceAll(RegExp(r'(?<![\w.])Key\? key\b'), 'LuminaObjectKey? key');
     return out;
+  }
+
+  static final RegExp _runtimeImport = RegExp(r"^import 'package:lumina/lumina_runtime\.dart'", multiLine: true);
+
+  /// A name `lumina_runtime.dart` exported before the game's Flutter side
+  /// moved to `lumina_widgets`: the game widget and host configuration, the
+  /// HUD, UMG widgets and bindings, the widget layer and builders, media
+  /// players, web loading, mouse capture, the theme colour extensions.
+  static final RegExp _gameUiName = RegExp(r'\b(LuminaGame(Widget|HostConfiguration)|LuminaHud\w*|'
+      r'LuminaScreenMessagesView|LuminaUmg\w*|LuminaWidget(Layer|Builder\w*)|Lumina(Video|Audio)(Controller|Player|PlayerValue)|'
+      r'LuminaMedia|LuminaWebLoading|\w*MouseCapture\w*|Lumina(ThemeDocument|ComponentStyle)Colors)\b');
+
+  /// Earlier generators imported the engine's `lumina_runtime.dart`, which
+  /// also carried the game widget, UMG, media and mouse capture. Those moved
+  /// to `lumina_widgets`: this rewrites the Dart files under `lib/` that use
+  /// one of them ([_gameUiName]: the launcher `main.dart`, UMG widget classes
+  /// and their registry) to import [kLuminaGameLibrary] instead (a `show` /
+  /// `hide` clause is kept; the game library re-exports the runtime) and
+  /// returns them (`lib/…`; empty when none needed it). Engine-only files
+  /// (levels, Blueprint classes) compile as they are and are regenerated
+  /// with the current imports. [migrate] runs it.
+  static List<String> migrateGameImports(String projectDir) {
+    final lib = Directory('$projectDir/lib');
+    if (!lib.existsSync()) return const [];
+    final rewritten = <String>[];
+    final root = lib.absolute.path.replaceAll(r'\', '/');
+    for (final file in lib.listSync(recursive: true).whereType<File>()) {
+      if (!file.path.endsWith('.dart')) continue;
+      String source;
+      try {
+        source = file.readAsStringSync();
+      } catch (_) {
+        continue;
+      }
+      if (!source.contains('package:lumina/lumina_runtime.dart') || !_gameUiName.hasMatch(source)) continue;
+      final updated = rewriteGameImports(source);
+      if (updated == source) continue;
+      file.writeAsStringSync(updated);
+      rewritten.add('lib/${file.absolute.path.replaceAll(r'\', '/').substring(root.length + 1)}');
+    }
+    return rewritten..sort();
+  }
+
+  /// [source] with `import 'package:lumina/lumina_runtime.dart'` replaced
+  /// by [kLuminaGameLibrary]; a second plain import of the game library it
+  /// would duplicate is dropped.
+  static String rewriteGameImports(String source) {
+    final out = source.replaceAll(_runtimeImport, "import '$kLuminaGameLibrary'");
+    final plain = "import '$kLuminaGameLibrary';\n";
+    final first = out.indexOf(plain);
+    if (first < 0) return out;
+    final head = out.substring(0, first + plain.length);
+    return head + out.substring(head.length).replaceAll(plain, '');
+  }
+
+  /// Adds `lumina_widgets` to [projectDir]'s `pubspec.yaml` next to its
+  /// `lumina` dependency, in the same form: a git dependency gets the same
+  /// url and ref with `path: lumina_widgets`, a path dependency the
+  /// `lumina_widgets` folder beside `lumina`. True when the pubspec changed;
+  /// false when it has no `lumina` dependency or already has `lumina_widgets`.
+  static bool migratePubspecGameDependency(String projectDir) {
+    final file = File('$projectDir/pubspec.yaml');
+    if (!file.existsSync()) return false;
+    final text = file.readAsStringSync();
+    final updated = withGameDependency(text);
+    if (updated == text) return false;
+    file.writeAsStringSync(updated);
+    return true;
+  }
+
+  static final RegExp _luminaPath = RegExp(r'''^(\s+path:\s*['"]?)(.*?)lumina(['"]?\s*)$''');
+
+  /// [pubspec] with a `lumina_widgets` dependency copied from its `lumina`
+  /// one (see [migratePubspecGameDependency]).
+  static String withGameDependency(String pubspec) {
+    final nl = pubspec.contains('\r\n') ? '\r\n' : '\n';
+    final lines = pubspec.replaceAll('\r\n', '\n').split('\n');
+    final deps = lines.indexWhere((l) => RegExp(r'^dependencies:\s*(#.*)?$').hasMatch(l));
+    if (deps < 0) return pubspec;
+    var end = deps + 1;
+    while (end < lines.length && (lines[end].isEmpty || lines[end].startsWith(' ') || lines[end].startsWith('#'))) {
+      end++;
+    }
+    final section = lines.sublist(deps + 1, end);
+    if (section.any((l) => RegExp(r'^  lumina_widgets:(\s|$)').hasMatch(l))) return pubspec;
+    final at = section.indexWhere((l) => RegExp(r'^  lumina:(\s|$)').hasMatch(l));
+    if (at < 0) return pubspec;
+    final start = deps + 1 + at;
+    var stop = start + 1;
+    while (stop < end && lines[stop].startsWith('    ')) {
+      stop++;
+    }
+    final block = [
+      lines[start].replaceFirst('  lumina:', '  lumina_widgets:'),
+      for (final l in lines.sublist(start + 1, stop)) l.replaceFirstMapped(_luminaPath, (m) => '${m[1]}${m[2]}lumina_widgets${m[3]}'),
+    ];
+    lines.insertAll(stop, block);
+    return lines.join(nl);
   }
 
   /// Matches a reference to one of [oldClasses] — bare, `_`-prefixed and

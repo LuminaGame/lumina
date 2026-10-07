@@ -72,7 +72,7 @@ mixin _LevelCodegen on _DartCodeGeneratorServiceState {
     buffer.writeln('// Lumina Engine $kLuminaEngineVersion Auto-Generated Level Code');
     buffer.writeln('// ignore_for_file: unused_import, prefer_const_constructors');
     buffer.writeln();
-    buffer.writeln("import 'package:lumina/lumina_runtime.dart';");
+    buffer.writeln("import '$kLuminaGameLibrary';");
     buffer.writeln("import 'package:vector_math/vector_math_64.dart';");
     if (gameModeBinding != null) {
       buffer.writeln("import '${_escape(gameModeBinding.$2)}';");

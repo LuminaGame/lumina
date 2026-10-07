@@ -133,7 +133,7 @@ Future<Uint8List> loadBundledAsset(String path) async {
 
 import 'dart:math' as math;
 $mannequinImports
-import 'package:lumina/lumina_runtime.dart';
+import '$kLuminaGameLibrary';
 import 'package:vector_math/vector_math_64.dart';
 
 /// The input actions the `Gameplay` mapping context drives. They mirror the
@@ -277,7 +277,7 @@ $cameraSetup
 // ordinary source you own: the editor's level and main.dart regeneration never
 // rewrites it.
 
-import 'package:lumina/lumina_runtime.dart';
+import '$kLuminaGameLibrary';
 
 import '../pawns/${dartFileName(characterClass)}';
 

@@ -85,7 +85,7 @@ class LauncherEngineVersionsPane extends StatelessWidget {
                 ),
                 _buildSettingRow('3D Render Backend', 'Filament (Vulkan)'),
                 ValueListenableBuilder<String?>(
-                  valueListenable: LuminaGraphicsDevices.inUse,
+                  valueListenable: LuminaGraphicsDevices.inUse.asValueListenable(),
                   builder: (context, inUse, _) => _buildSettingRow(
                     'Target Graphics Device',
                     inUse ?? (_viewModel.graphicsDevice ?? 'Automatic'),
@@ -192,7 +192,7 @@ class LauncherSettingsPane extends StatelessWidget {
         border: Border.all(color: EditorColors.border),
       ),
       child: ValueListenableBuilder<String?>(
-        valueListenable: LuminaGraphicsDevices.inUse,
+        valueListenable: LuminaGraphicsDevices.inUse.asValueListenable(),
         builder: (context, inUse, _) {
           String labelFor(String value) {
             if (value.isEmpty) return 'Automatic (let Filament choose)';

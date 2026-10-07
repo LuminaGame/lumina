@@ -20,6 +20,9 @@ dependencies:
   # imports (package:lumina_editor_data/lumina_editor.dart).
   lumina_editor_data:
     path: ../lumina_editor_data
+  # The game UI: game widget (Play), UMG widgets, media players.
+  lumina_widgets:
+    path: ../lumina_widgets
   flutter_filament:
     path: ../flutter_filament
   # From the tools repo; pubspec_overrides.yaml at the workspace root points

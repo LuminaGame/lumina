@@ -78,7 +78,7 @@ class _GraphicsDevicePreferencesPageState
         ),
         const SizedBox(height: 12),
         ValueListenableBuilder<String?>(
-          valueListenable: LuminaGraphicsDevices.inUse,
+          valueListenable: LuminaGraphicsDevices.inUse.asValueListenable(),
           builder: (context, device, _) =>
               Text('Currently in use: ${device ?? 'No render engine started'}'),
         ),

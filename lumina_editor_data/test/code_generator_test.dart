@@ -11,15 +11,17 @@ void main() {
     test('Should generate valid main.dart declarative code', () {
       final code = generator.generateMainDart(projectName: 'my_lumina_game');
       expect(code, contains('import \'package:flutter/material.dart\';'));
-      // Games import the runtime only: no editor data layer, no FFI packages.
-      expect(code, contains('import \'package:lumina/lumina_runtime.dart\';'));
+      // Games import the game library only (the engine runtime and its
+      // Flutter side): no editor data layer, no FFI packages.
+      expect(code, contains("import 'package:lumina_widgets/lumina_game.dart';"));
+      expect(code, isNot(contains('package:lumina/lumina_runtime.dart')));
       expect(code, isNot(contains('package:lumina/lumina.dart')));
       expect(code, contains('Future<void> main() async {'));
       expect(code, contains('class MyLuminaGameGame extends LuminaGame'));
       // The level comes from the Open Level table.
       expect(code, contains("'L_DefaultLevel': () => LDefaultLevel(),"));
       expect(code, contains("final level = (_projectLevels[levelName] ?? _projectLevels['L_DefaultLevel']!)();"));
-      expect(code, contains('LuminaGameWidget(game: _game)'));
+      expect(code, contains('LuminaGameHost('));
       expect(generator.generateMainDart(projectName: 'p', levelName: 'L_Env'), contains("import 'levels/l_env.dart';"));
     });
 
@@ -38,73 +40,42 @@ void main() {
       expect(templated, isNot(contains('world.gameMode ??= LuminaGameMode();')));
     });
 
-    test('every generated game file imports the runtime, not the editor barrel', () {
+    test('every generated game file imports the game library, not the runtime or the editor barrel', () {
       final files = <String>[
         generator.generateMainDart(projectName: 'my_game'),
         generator.generateLevelDart(levelName: 'L_Test', actors: const []),
         generator.generateCharacterDart(projectName: 'my_game', thirdPerson: true),
         generator.generateCharacterDart(projectName: 'my_game', thirdPerson: false),
         generator.generateGameModeDart(projectName: 'my_game'),
-        generator.generateActorRegistryDart(const ['BP_Door']),
+        generator.generateProjectInputDart(const ProjectInputSettings()),
       ];
+      // The actor registry, like the compiled Blueprint classes it lists, is
+      // engine-only code: the runtime.
+      final registry = generator.generateActorRegistryDart(const ['BP_Door']);
+      expect(registry, contains("import 'package:lumina/lumina_runtime.dart';"));
+      expect(registry, isNot(contains('package:lumina/lumina.dart')));
       for (final code in files) {
-        expect(code, contains("import 'package:lumina/lumina_runtime.dart';"));
+        expect(code, contains("import 'package:lumina_widgets/lumina_game.dart';"));
+        expect(code, isNot(contains('package:lumina/lumina_runtime.dart')));
         expect(code, isNot(contains('package:lumina/lumina.dart')));
       }
     });
 
-    test('emits the Flutter keyboard/mouse bridge into the input subsystem', () {
-      final code = generator.generateMainDart(projectName: 'my_game');
-      expect(code, contains('LuminaInputSubsystem'));
-      expect(code, contains('input.injectKeyDown(key)'));
-      expect(code, contains('input.injectKeyUp(key)'));
-      expect(code, contains('input.injectAnalog(LuminaKey.mouseX'));
-      // Every keyboard key, through the engine's one key table.
-      expect(code, contains('LuminaKey.fromKeyId(event.logicalKey.keyId)'));
-      expect(code, isNot(contains('_keyMap')));
-    });
-
-    test('the game hides the mouse cursor over its window and still reads mouse look', () {
-      final code = generator.generateMainDart(projectName: 'my_game');
-      expect(code, contains('cursor: _freeCursor ? SystemMouseCursors.basic : SystemMouseCursors.none'));
-      expect(code, contains('onHover: _onPointerDelta'));
-    });
-
-    test('the built game follows the player controller: Show Mouse Cursor / a UI input mode frees the pointer', () {
-      final code = generator.generateMainDart(projectName: 'my_game');
-      // It follows player 0's controller, whichever game (level) is running…
-      expect(code, contains('LuminaGameplayStatics.getPlayerController(world, playerIndex: 0)'));
-      expect(code, contains('.cursorState.addListener(_onCursorState)'));
-      // …releases the pointer and shows the cursor while the game wants it free…
-      expect(code, contains('final free = _followedController?.wantsFreeCursor ?? false;'));
-      expect(code, contains('cursor: _freeCursor ? SystemMouseCursors.basic : SystemMouseCursors.none'));
-      // …and neither a click nor the pointer arriving takes it while free.
-      expect(code, contains('if (!_isCaptured && !_freeCursor) _capture(_centre());'));
-      expect(code, contains('if (_hadLock || _captureInFlight || _freeCursor) return;'));
-    });
-
-    test('the built game captures the mouse on start, listens to motion events, and recaptures on click', () {
-      final code = generator.generateMainDart(projectName: 'my_game');
-      expect(code, contains('LuminaMouseCapture.backend.capture'));
-      expect(code, contains('backend.events.listen'));
-      expect(code, contains('MouseCaptureMotion'));
-      expect(code, contains('onPointerDown:'));
-      expect(code, contains('LuminaMouseCapture.backend.release()'));
-    });
-
-    test('the capture result counts, the first capture is retried when the pointer arrives, hover turns while uncaptured', () {
-      final code = generator.generateMainDart(projectName: 'my_game');
-      // A failed capture (no Wayland pointer yet) is not recorded as captured…
-      expect(code, contains('final ok = await LuminaMouseCapture.backend.capture(centre: centre);'));
-      expect(code, contains('_isCaptured = ok;'));
-      // …the first capture is tried again when the pointer enters or moves
-      // over the game, until one succeeds; after a loss a click takes it back.
-      expect(code, contains('onEnter: (_) => _captureUntilFirstLock()'));
-      expect(code, contains('_captureUntilFirstLock();'));
-      expect(code, contains('if (_hadLock || _captureInFlight || _freeCursor) return;'));
-      // …and hover deltas turn the camera whenever nothing is captured.
-      expect(code, contains('if (_isCaptured && _captureSupport?.relativeMotion == true) return;'));
-      expect(code, isNot(contains('    if (_captureSupport?.relativeMotion == true) return;')));
+    test('the game screen is the LuminaGameHost: input, mouse capture and Open Level live in lumina_widgets', () {
+      final code = generator.generateMainDart(projectName: 'my_game', levelName: 'L_Main', levelNames: const ['L_Second'], targetFps: 60);
+      // The engine gets Flutter's platform, asset bundle and video player first.
+      expect(code, contains('  LuminaWidgets.ensureInitialized();'));
+      expect(code, contains('LuminaGameHost('));
+      expect(code, contains("initialLevel: 'L_Main',"));
+      expect(code, contains("levelNames: {'L_Main', 'L_Second'},"));
+      expect(code, contains('createGame: _createGame,'));
+      expect(code, contains('MyGameGame _createGame(String levelName) => MyGameGame(levelName: levelName);'));
+      expect(code, contains('targetFps: 60,'));
+      // The keyboard/mouse bridge and the capture are the host's
+      // (lumina_widgets/test/game/game_host_test.dart), not generated.
+      for (final moved in ['_GameHost', 'LuminaMouseCapture', 'onKeyEvent', 'cursorState', 'LuminaGameWidget(']) {
+        expect(code, isNot(contains(moved)), reason: moved);
+      }
     });
 
     test('Should generate valid level declarative code for actors', () {
@@ -290,6 +261,8 @@ dependencies:
     sdk: flutter
   lumina:
     path: $luminaDir
+  lumina_widgets:
+    path: $luminaDir/../lumina_widgets
   vector_math: ^2.1.4
 """);
       Directory('${tempDir.path}/lib/levels').createSync(recursive: true);
@@ -612,6 +585,8 @@ dependencies:
     sdk: flutter
   lumina:
     path: $luminaDir
+  lumina_widgets:
+    path: $luminaDir/../lumina_widgets
   vector_math: ^2.1.4
 """);
       Directory('${tempDir.path}/lib/levels').createSync(recursive: true);

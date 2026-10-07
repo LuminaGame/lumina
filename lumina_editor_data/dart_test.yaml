@@ -1,0 +1,4 @@
+tags:
+  # flutter build of a generated game (minutes); run by name.
+  native-build:
+  web-build:

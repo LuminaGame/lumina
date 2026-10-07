@@ -39,11 +39,15 @@ flutter:
 ''';
 
   group('withGitEngineDependency', () {
-    test('adds lumina as a git dependency under dependencies:', () {
+    test('adds lumina and lumina_widgets as git dependencies under dependencies:', () {
       final out = ProjectEngineLink.withGitEngineDependency(flutterCreatePubspec);
-      expect(out, contains('dependencies:\n  lumina:\n    git:\n      url: $kLuminaGitUrl\n      path: lumina\n  flutter:\n'));
+      expect(
+          out,
+          contains('dependencies:\n  lumina:\n    git:\n      url: $kLuminaGitUrl\n      path: lumina\n'
+              '  lumina_widgets:\n    git:\n      url: $kLuminaGitUrl\n      path: lumina_widgets\n  flutter:\n'));
       final deps = (loadYaml(out) as YamlMap)['dependencies'] as YamlMap;
       expect((deps['lumina'] as YamlMap)['git'], {'url': kLuminaGitUrl, 'path': 'lumina'});
+      expect((deps['lumina_widgets'] as YamlMap)['git'], {'url': kLuminaGitUrl, 'path': 'lumina_widgets'});
     });
 
     test('replaces a path dependency (an old project or template) and is idempotent', () {
@@ -53,6 +57,7 @@ flutter:
       expect(out, isNot(contains('/home/someone')));
       expect(ProjectEngineLink.withGitEngineDependency(out), out);
       expect(RegExp(r'^  lumina:', multiLine: true).allMatches(out).length, 1);
+      expect(RegExp(r'^  lumina_widgets:', multiLine: true).allMatches(out).length, 1);
       expect(out, contains('  cupertino_icons: ^1.0.8\n'));
     });
 
@@ -74,8 +79,9 @@ flutter:
 
     test('an explicit ref pins the git dependency', () {
       final out = ProjectEngineLink.withGitEngineDependency(flutterCreatePubspec, ref: sha);
-      final git = ((loadYaml(out) as YamlMap)['dependencies'] as YamlMap)['lumina']['git'] as YamlMap;
-      expect(git, {'url': kLuminaGitUrl, 'path': 'lumina', 'ref': sha});
+      final deps = (loadYaml(out) as YamlMap)['dependencies'] as YamlMap;
+      expect(deps['lumina']['git'], {'url': kLuminaGitUrl, 'path': 'lumina', 'ref': sha});
+      expect(deps['lumina_widgets']['git'], {'url': kLuminaGitUrl, 'path': 'lumina_widgets', 'ref': sha});
       expect(ProjectEngineLink.withGitEngineDependency(out, ref: sha), out, reason: 'idempotent');
     });
 
@@ -94,7 +100,15 @@ flutter:
       final repinned = ProjectEngineLink.withGitEngineDependency(old);
       expect(repinned, contains('      ref: $sha\n'));
       expect(repinned, isNot(contains('aaaaaaa')));
-      expect(RegExp(r'^      ref:', multiLine: true).allMatches(repinned).length, 1);
+      expect(RegExp(r'^      ref:', multiLine: true).allMatches(repinned).length, 2, reason: 'one per engine package');
+    });
+
+    test('an older project with lumina only gets lumina_widgets at the same ref', () {
+      final old = flutterCreatePubspec.replaceFirst('dependencies:\n',
+          'dependencies:\n  lumina:\n    git:\n      url: $kLuminaGitUrl\n      path: lumina\n      ref: bbbbbbb\n');
+      final deps = (loadYaml(ProjectEngineLink.withGitEngineDependency(old)) as YamlMap)['dependencies'] as YamlMap;
+      expect(deps['lumina']['git']['ref'], 'bbbbbbb');
+      expect(deps['lumina_widgets']['git'], {'url': kLuminaGitUrl, 'path': 'lumina_widgets', 'ref': 'bbbbbbb'});
     });
 
     test('apply() from a release checkout without overrides writes the ref and the hook settings', () {
@@ -207,12 +221,16 @@ flutter:
 
     final overrides = File(p.join(project.path, 'pubspec_overrides.yaml')).readAsStringSync();
     final pinned = ((loadYaml(overrides) as YamlMap)['dependency_overrides'] as YamlMap);
-    for (final name in ['lumina', 'flutter_filament', 'flutter_assimp', 'flutter_riglogic', 'flutter_gstreamer', 'lumina_smoke', 'lumina_mouse_capture']) {
+    // The engine, the game's Flutter side and their closure; the editor's
+    // importers (Assimp, RigLogic) are not a game's.
+    for (final name in ['lumina', 'lumina_widgets', 'lumina_core', 'flutter_filament', 'flutter_gstreamer', 'lumina_smoke', 'lumina_mouse_capture']) {
       expect(pinned.keys, contains(name));
       final dir = (pinned[name] as YamlMap)['path'] as String;
       expect(File(p.join(dir, 'pubspec.yaml')).existsSync(), isTrue, reason: '$name at $dir');
     }
+    expect(pinned.keys, isNot(contains('flutter_assimp')));
     expect(slash((pinned['lumina'] as YamlMap)['path'] as String), slash(p.join(engineRoot, 'lumina')));
+    expect(slash((pinned['lumina_widgets'] as YamlMap)['path'] as String), slash(p.join(engineRoot, 'lumina_widgets')));
     expect(File(p.join(project.path, '.gitignore')).readAsLinesSync(), contains('pubspec_overrides.yaml'));
 
     // A second link changes nothing.

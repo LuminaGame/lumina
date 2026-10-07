@@ -8,7 +8,7 @@ import '../helpers/analyze_generated_project.dart';
 import 'project_template_test.dart' show realFilesystemRunner;
 
 /// The generated launcher registers the project's compiled widget
-/// classes and stacks [LuminaWidgetLayer] over the game. The widget class and
+/// classes; its [LuminaGameHost] stacks [LuminaWidgetLayer] over the game. The widget class and
 /// the registry file are written here in the exact shape lumina_ui's
 /// `UmgWidgetCodegen` emits (its own tests cover the emission); this test
 /// proves the launcher + registry + layer compile together in a real
@@ -16,18 +16,19 @@ import 'project_template_test.dart' show realFilesystemRunner;
 void main() {
   final generator = DartCodeGeneratorService();
 
-  test('generateMainDart registers the widget classes and stacks LuminaWidgetLayer over the game', () {
+  test('generateMainDart registers the widget classes before the game host starts', () {
     final withWidgets = generator.generateMainDart(projectName: 'my_game', widgetClasses: true);
     expect(withWidgets, contains("import 'widgets/widget_registry.g.dart';"));
     expect(withWidgets, contains('registerProjectWidgetClasses();'));
     expect(withWidgets.indexOf('registerProjectWidgetClasses();'), lessThan(withWidgets.indexOf('runApp(')), reason: 'registered before the world starts');
-    expect(withWidgets, contains('LuminaWidgetLayer.forGame(game: _game)'));
-    expect(withWidgets.indexOf('LuminaGameWidget(game: _game)'), lessThan(withWidgets.indexOf('LuminaWidgetLayer.forGame')), reason: 'the layer is stacked above the 3D view');
+    // The host stacks the widget layer above the 3D view
+    // (lumina_widgets/test/game/game_host_test.dart).
+    expect(withWidgets, contains('LuminaGameHost('));
 
     final without = generator.generateMainDart(projectName: 'my_game');
     expect(without, isNot(contains('widget_registry.g.dart')));
     expect(without, isNot(contains('registerProjectWidgetClasses')));
-    expect(without, contains('LuminaWidgetLayer.forGame(game: _game)'), reason: 'unknown classes still render their fallback card');
+    expect(without, contains('LuminaGameHost('), reason: 'the layer is always there: unknown classes still render their fallback card');
   });
 
   for (final library in [kUmgWidgetLibraryFlutter, kUmgWidgetLibraryShadcn]) {
@@ -51,7 +52,7 @@ void main() {
 // ignore_for_file: file_names, unused_import, prefer_const_constructors
 
 ${plain ? "import 'package:flutter/widgets.dart';" : "import 'package:shadcn_flutter/shadcn_flutter.dart';"}
-import 'package:lumina/lumina_runtime.dart' show LuminaUmgElement, LuminaUmgElementBinding;
+import 'package:lumina_widgets/lumina_game.dart' show LuminaUmgElement, LuminaUmgElementBinding;
 
 /// `WBP_HUD` as designed in Lumina Studio.
 class WBPHUD extends StatelessWidget {
@@ -78,7 +79,7 @@ class WBPHUD extends StatelessWidget {
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: prefer_const_constructors
 
-import 'package:lumina/lumina_runtime.dart';
+import 'package:lumina_widgets/lumina_game.dart';
 
 import 'wbp_hud.dart';
 
@@ -101,7 +102,7 @@ void registerProjectWidgetClasses() {
       expect(result.isSuccess, isTrue, reason: result.error);
       final main = File('$projectDir/lib/main.dart').readAsStringSync();
       expect(main, contains('registerProjectWidgetClasses();'));
-      expect(main, contains('LuminaWidgetLayer.forGame(game: _game)'));
+      expect(main, contains('LuminaGameHost('));
       final registry = File('$projectDir/lib/widgets/widget_registry.g.dart').readAsStringSync();
       expect(registry, contains("'WBP_HUD'"));
       expect(registry, contains("name: 'FPSCounter'"));

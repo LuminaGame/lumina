@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:vector_math/vector_math_64.dart';
 
-import '../../../lumina/test/blueprint/generated/level_script/levels/l_test.dart';
+import 'generated/level_script/levels/l_test.dart';
 import '../../../lumina/test/blueprint/level_blueprint_fixture.dart';
 
 /// A Level Blueprint compiles into its level's `_<Level>Script`
@@ -13,7 +13,7 @@ import '../../../lumina/test/blueprint/level_blueprint_fixture.dart';
 /// in-process against the VM, trace for trace. Regenerate after an
 /// intentional generator change with
 /// `UPDATE_GOLDENS=1 flutter test test/blueprint/level_script_codegen_test.dart`.
-const String _goldenDir = '../lumina/test/blueprint/generated/level_script';
+const String _goldenDir = 'test/blueprint/generated/level_script';
 const List<String> _goldenFiles = ['levels/l_test.dart', 'actors/actors.g.dart', 'actors/bp_door.dart'];
 
 void main() {

@@ -178,16 +178,17 @@ class UmgWidgetCodegen {
     }
     if (plain) b.writeln("import 'package:flutter/widgets.dart';");
     if (usesGrid) b.writeln("import 'package:flutter/widgets.dart' as widgets show Table, TableRow;");
-    // The runtime barrel (not the editor's): it compiles for the web. The
-    // graph script uses the whole runtime.
+    // The game library (the engine runtime and its Flutter side, not the
+    // editor's barrel): it compiles for the web. The graph script uses the
+    // whole runtime.
     if (script != null) {
-      b.writeln("import 'package:lumina/lumina_runtime.dart';");
+      b.writeln("import '$kLuminaGameLibrary';");
       b.writeln("import 'package:vector_math/vector_math_64.dart' show Vector2, Vector3;");
       for (final i in script.imports) {
         b.writeln(i);
       }
     } else if (runtimeNames.isNotEmpty) {
-      b.writeln("import 'package:lumina/lumina_runtime.dart' show ${runtimeNames.join(', ')};");
+      b.writeln("import '$kLuminaGameLibrary' show ${runtimeNames.join(', ')};");
     }
     if (!plain) b.writeln("import 'package:shadcn_flutter/shadcn_flutter.dart';");
     b.writeln();
@@ -460,7 +461,7 @@ class UmgWidgetCodegen {
     b.writeln('// Lumina Studio UMG Designer: the widget classes of this project');
     b.writeln('// ignore_for_file: unused_import, prefer_const_constructors, prefer_const_literals_to_create_immutables');
     b.writeln();
-    b.writeln("import 'package:lumina/lumina_runtime.dart';");
+    b.writeln("import '$kLuminaGameLibrary';");
     b.writeln();
     for (final n in names) {
       b.writeln("import '${dartFileName(n)}';");

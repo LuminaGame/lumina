@@ -2,7 +2,7 @@
 // Lumina Studio UMG Designer: WBP_Clicker (designed at 1920x1080, DPI 1.0)
 // ignore_for_file: file_names, unused_import, unnecessary_import, unused_shown_name, unused_element, unused_field, unused_local_variable, prefer_const_constructors, camel_case_types, non_constant_identifier_names, unnecessary_this, dead_code, dead_null_aware_expression
 
-import 'package:lumina/lumina_runtime.dart';
+import 'package:lumina_widgets/lumina_game.dart';
 import 'package:vector_math/vector_math_64.dart' show Vector2, Vector3;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 

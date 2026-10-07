@@ -8,8 +8,8 @@ environment:
   flutter: ">=1.17.0"
 resolution: workspace
 
-# Editor tooling only: generated games import package:lumina/lumina_runtime.dart
-# and never reach this package (lumina/test/architecture/
+# Editor tooling only: generated games import
+# package:lumina_widgets/lumina_game.dart and never reach this package (lumina/test/architecture/
 # engine_without_editor_data_test.dart). No widget library either
 # (test/architecture/no_widgets_test.dart).
 dependencies:
@@ -20,6 +20,10 @@ dependencies:
     path: ../lumina
   lumina_core:
     path: ../lumina_core
+  # The game's Flutter side, re-exported by the editor umbrella
+  # (lumina_editor.dart) for Lumina Studio and plugins.
+  lumina_widgets:
+    path: ../lumina_widgets
   # Thumbnails (offscreen Filament renders) and the GLB reader's Draco decoder.
   flutter_filament:
     path: ../flutter_filament

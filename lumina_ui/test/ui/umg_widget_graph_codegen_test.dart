@@ -34,7 +34,7 @@ void main() {
     expect(src, contains('class WbpClickerGraph extends LuminaUserWidget with LuminaBlueprintRuntime {'));
     expect(src, contains("LuminaUserWidgets.fire(widget.instance, 'StartButton', 'OnClicked');"));
     expect(src, contains('// BEGIN USER CODE: on_clicked_startButton'));
-    expect(src, contains("import 'package:lumina/lumina_runtime.dart';"));
+    expect(src, contains("import 'package:lumina_widgets/lumina_game.dart';"));
     final golden = File(_golden);
     if (Platform.environment['UPDATE_GOLDENS'] == '1') golden.writeAsStringSync(src);
     expect(src, golden.readAsStringSync(), reason: '$_golden changed; UPDATE_GOLDENS=1 regenerates it');

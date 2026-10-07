@@ -446,7 +446,7 @@ class _MainEditorViewState extends State<MainEditorView> {
                         const Icon(LucideIcons.circleCheck, size: 10, color: EditorColors.logSuccess),
                         const SizedBox(width: 4),
                         ValueListenableBuilder<String?>(
-                          valueListenable: LuminaGraphicsDevices.inUse,
+                          valueListenable: LuminaGraphicsDevices.inUse.asValueListenable(),
                           builder: (context, gpu, _) => Text(
                             // What this renderer really is doing, not borrowed
                             // feature names: the quality preset in force, the

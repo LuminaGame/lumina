@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:lumina/lumina.dart';
+import 'package:lumina_widgets/lumina_widgets.dart' show LuminaWebLoading;
 
 /// What [WebLoadingScreenService.write] did.
 class WebLoadingScreenReport {

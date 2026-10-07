@@ -385,8 +385,9 @@ void main() {
       final character = blueprint(LuminaThirdPersonContent.characterBlueprintPath);
       expect(character.eventGraph.nodes.map((n) => n.literals['action']), contains('IA_FreeLook'));
       expect(character.eventGraph.nodes.map((n) => n.registryId), containsAll(['set_free_look', 'is_free_looking']));
-      // The generated main forwards every key through LuminaKey.fromKeyId (Left Alt included).
-      expect(File('$projectDir/lib/main.dart').readAsStringSync(), contains('LuminaKey.fromKeyId(event.logicalKey.keyId)'));
+      // The generated main's game host forwards every key through
+      // LuminaKey.fromKeyId (Left Alt included; lumina_widgets' game host test).
+      expect(File('$projectDir/lib/main.dart').readAsStringSync(), contains('LuminaGameHost('));
     });
 
     test('the mannequin plays ABP_Character, and the scaffold compiles exactly the committed goldens', () {
@@ -695,8 +696,8 @@ void main() {
             expect(input, contains("mapKey(LuminaKey.$key, luminaProjectInputActions['IA_ChangeCamera']!)"), reason: key);
           }
           File('$projectDir/lib/input/project_input.g.dart').writeAsStringSync(input);
-          expect(File('$projectDir/lib/main.dart').readAsStringSync(), contains('LuminaKey.fromKeyId(event.logicalKey.keyId)'),
-              reason: "the built game's key bridge takes every key");
+          expect(File('$projectDir/lib/main.dart').readAsStringSync(), contains('LuminaGameHost('),
+              reason: "the built game's key bridge (the game host) takes every key");
         }
         final analyze = await analyzeGeneratedProject(projectDir);
         expect(
@@ -705,17 +706,69 @@ void main() {
           reason: 'generated $label project must analyze clean:\n'
               '${analyze.stdout}\n${analyze.stderr}',
         );
-        // The game reaches the engine through lumina_runtime.dart only: never
-        // lumina.dart, an engine src file, lumina_core directly or the editor
-        // data layer.
-        final engineImport = RegExp(r"^import '(package:lumina(?:_core|_editor_data|_editor_api|_ui)?/[^']+)'", multiLine: true);
-        final engineImports = <String>{
+        // The game reaches the engine through the game library
+        // (lumina_widgets' lumina_game.dart: launcher, levels, input,
+        // character, game mode) and the engine-only runtime (compiled
+        // Blueprint classes and their registries): never lumina.dart, an
+        // engine src file, lumina_core directly or the editor data layer.
+        final engineImport = RegExp(r"^import '(package:lumina(?:_core|_editor_data|_editor_api|_ui|_widgets)?/[^']+)'", multiLine: true);
+        final importsByFile = <String, Set<String>>{
           for (final f in Directory('$projectDir/lib').listSync(recursive: true).whereType<File>())
             if (f.path.endsWith('.dart'))
-              for (final m in engineImport.allMatches(f.readAsStringSync())) m.group(1)!,
+              f.path.replaceAll(r'\', '/').split('/lib/').last: {
+                for (final m in engineImport.allMatches(f.readAsStringSync())) m.group(1)!,
+              },
         };
-        expect(engineImports, {'package:lumina/lumina_runtime.dart'}, reason: '$label game imports');
+        final engineImports = {for (final s in importsByFile.values) ...s};
+        expect(engineImports, contains('package:lumina_widgets/lumina_game.dart'), reason: '$label game imports');
+        expect(engineImports.difference({'package:lumina_widgets/lumina_game.dart', 'package:lumina/lumina_runtime.dart'}), isEmpty,
+            reason: '$label game imports');
+        expect(importsByFile['main.dart'], {'package:lumina_widgets/lumina_game.dart'});
+        for (final level in importsByFile.keys.where((f) => f.startsWith('levels/'))) {
+          expect(importsByFile[level], {'package:lumina_widgets/lumina_game.dart'}, reason: level);
+        }
       }, timeout: const Timeout(Duration(minutes: 5)));
     }
+  });
+
+  // A real Third Person project (real `flutter create` and `pub get`, linked
+  // to this engine checkout) builds: the game library resolves through the
+  // project's lumina_widgets dependency. Minutes each; run by name.
+  group('a generated Third Person project builds', () {
+    Future<String> create(String name) async {
+      // Short paths: MSBuild fails past 260 characters.
+      final root = Directory.systemTemp.createTempSync('ltp_');
+      final configDir = Directory.systemTemp.createTempSync('ltp_cfg_');
+      addTearDown(() {
+        for (final d in [root, configDir]) {
+          try {
+            if (d.existsSync()) d.deleteSync(recursive: true);
+          } on FileSystemException catch (_) {}
+        }
+      });
+      await ProjectRepository(configDir: configDir).createProject(projectName: name, projectLocation: root.path, template: kThirdPersonTemplateId);
+      final dir = '${root.path}/$name';
+      expect(File('$dir/lib/main.dart').readAsStringSync(), contains("import 'package:lumina_widgets/lumina_game.dart';"));
+      expect(File('$dir/pubspec.yaml').readAsStringSync(), contains('  lumina_widgets:'));
+      return dir;
+    }
+
+    test('for Windows (flutter build windows --debug)', () async {
+      final dir = await create('tp_build');
+      final build = await Process.run('flutter', ['build', 'windows', '--debug'], workingDirectory: dir, runInShell: true);
+      expect(build.exitCode, 0, reason: 'flutter build windows:\n${build.stdout}\n${build.stderr}');
+      expect(File('$dir/build/windows/x64/runner/Debug/tp_build.exe').existsSync(), isTrue);
+    }, skip: Platform.isWindows ? false : 'Windows only', timeout: const Timeout(Duration(minutes: 30)), tags: ['native-build']);
+
+    test('for the web (flutter build web)', () async {
+      final dir = await create('tp_web');
+      final build = await Process.run('flutter', ['build', 'web'], workingDirectory: dir, runInShell: Platform.isWindows);
+      expect(build.exitCode, 0, reason: 'flutter build web:\n${build.stdout}\n${build.stderr}');
+    },
+        skip: File('${LuminaWorkspace.package('flutter_filament')}/web/flutter_filament.wasm').existsSync()
+            ? false
+            : "no flutter_filament WebAssembly module (flutter_filament/tool/web builds it from filament/out/cmake-wasm-release)",
+        timeout: const Timeout(Duration(minutes: 30)),
+        tags: ['web-build']);
   });
 }
