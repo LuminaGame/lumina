@@ -2,6 +2,15 @@
 
 # Engine, entities and core types
 
+`FilamentWidget.frameViews` accepts a `FilamentFrameViewsCallback(defaultView,
+width, height)`. Configure and return multiple views to render them inside one
+`beginFrame` / `endFrame` pair, on one swap chain. Native presentation reads the
+combined surface once. Viewport coordinates are physical pixels with a
+bottom-left origin. The callback runs before `beginFrame`; additional resources
+are owned by the caller and must be disposed through `onDispose` while the engine
+is alive. Omitting the callback retains single-view behavior. This callback is
+also supported by the web renderer.
+
 The engine lifecycle and the core object model: creating and destroying a `FilamentEngine` with its `EngineConfig`, entities and the entity and name managers, the enums shared by every builder, fences, the exception type, the callback bridge that carries native callbacks back into Dart, the debug registry and the diagnostics log. File paths are relative to the `flutter_filament/` package directory.
 
 **On this page:**

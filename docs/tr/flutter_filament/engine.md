@@ -2,6 +2,15 @@
 
 # Engine, entity'ler ve temel tipler
 
+`FilamentWidget.frameViews`, `FilamentFrameViewsCallback(defaultView, width,
+height)` callback'ini alır. Birden fazla view ayarlayıp döndürerek tek
+`beginFrame` / `endFrame` çifti ve swap chain üzerinde render edin. Native
+gösterim birleşik yüzeyi bir kez okur. Viewport koordinatları fiziksel piksel
+cinsindedir; başlangıç sol alt köşedir. Callback `beginFrame` öncesinde çalışır.
+Ek kaynakların sahibi çağırandır; engine hayattayken `onDispose` üzerinden
+serbest bırakılmalıdır. Callback verilmezse tek view davranışı korunur. Web
+renderer da bu callback'i destekler.
+
 Engine yaşam döngüsü ve temel nesne modeli: `EngineConfig` ile `FilamentEngine` oluşturmak ve yok etmek, entity'ler ile entity ve name manager'ları, tüm builder'ların paylaştığı enum'lar, fence'ler, exception tipi, native callback'leri Dart'a taşıyan callback bridge, debug registry ve tanılama (diagnostics) log'u. Dosya yolları `flutter_filament/` paket dizinine görelidir.
 
 **Bu sayfada:**

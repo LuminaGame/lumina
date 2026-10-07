@@ -144,8 +144,12 @@ class WebFilamentWidgetState extends State<FilamentWidget> with SingleTickerProv
       if (widget.cameraManipulator != null && _camera != null) {
         widget.cameraManipulator!.updateCamera(_camera!);
       }
+      final selectedViews = widget.frameViews?.call(_view!, _pixelWidth, _pixelHeight);
+      final views = selectedViews == null || selectedViews.isEmpty ? [_view!] : selectedViews;
       if (renderer.beginFrame(_swapChain!)) {
-        renderer.render(_view!);
+        for (final view in views) {
+          renderer.render(view);
+        }
         renderer.endFrame();
         // Single-threaded WebGL: run the driver now so the canvas holds the
         // frame when the browser composites.

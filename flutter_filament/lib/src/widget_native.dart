@@ -185,8 +185,12 @@ class NativeFilamentWidgetState extends State<FilamentWidget>
         widget.cameraManipulator!.updateCamera(_camera!);
       }
 
+      final selectedViews = widget.frameViews?.call(_view!, _viewWidth, _viewHeight);
+      final views = selectedViews == null || selectedViews.isEmpty ? [_view!] : selectedViews;
       if (_renderer!.beginFrame(_swapChain!)) {
-        _renderer!.render(_view!);
+        for (final view in views) {
+          _renderer!.render(view);
+        }
         
         if (!widget.skipReadPixels) {
           c.filament_renderer_read_pixels(
