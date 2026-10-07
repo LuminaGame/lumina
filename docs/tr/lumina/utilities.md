@@ -16,9 +16,8 @@ Engine yardımcıları: gameplay statics, gameplay volume'ları (trigger, blocki
 - [`lib/src/testing/smoke_artifacts.dart`](#libsrctestingsmoke_artifactsdart)
 - [`lib/src/testing/smoke_render.dart`](#libsrctestingsmoke_renderdart)
 - [`lib/src/utility/lumina_assets.dart`](#libsrcutilitylumina_assetsdart)
-- [`lib/src/utility/web_loading.dart`](#libsrcutilityweb_loadingdart)
-- [`lib/src/utility/web_loading_hook_stub.dart`](#libsrcutilityweb_loading_hook_stubdart)
-- [`lib/src/utility/web_loading_hook_web.dart`](#libsrcutilityweb_loading_hook_webdart)
+- [`lib/src/utility/lumina_platform.dart`](#libsrcutilitylumina_platformdart)
+- [`lib/src/media/video_playback.dart`](#libsrcmediavideo_playbackdart)
 - [`lib/src/assets/encoded_image_decoder.dart`](#libsrcassetsencoded_image_decoderdart)
 - [`lib/src/assets/glb_loader.dart`](#libsrcassetsglb_loaderdart)
 - [`lib/src/assets/level_asset_manifest.dart`](#libsrcassetslevel_asset_manifestdart)
@@ -311,6 +310,7 @@ Where the runtime reads assets that a component was not handed a provider for. T
 | Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `defaultProvider` | `static LuminaAssetProvider? defaultProvider` | Used by the mesh cache, the material cache and the sky whenever their own `assetProvider` is null. Null reads the file system. |
+| `bundleProvider` | `static LuminaAssetProvider? bundleProvider` | Uygulamayla paketlenmiş bir asset'i bundle anahtarıyla okur (bir paketin kendi asset'i: `packages/lumina/assets/sky/…`). Motorun asset bundle'ı yoktur: `LuminaWidgets.ensureInitialized` (`lumina_widgets`) bunu Flutter'ın `rootBundle`'ına ayarlar. Null: bileşenler [resolve]'a döner. |
 | `projectDir` | `static String? projectDir` | Editörün açık projenin klasörüne ayarladığı yol: diskten okunan projeye göreli bir yol (`contents/…`, Blueprint'lerin sakladığı biçim) buna göre çözülür. Null ise her yol olduğu gibi okunur. |
 | `resolve` | `static LuminaAssetProvider resolve(LuminaAssetProvider? explicit)` | Resolves the provider for a load: [explicit], else [defaultProvider], else a disk read. Paths a level preload pinned ([pinResident]) are served from memory first. |
 | `pinResident` | `static void pinResident(Object owner, Map<String, Uint8List> bytes, [Map<String, Object> misses = const {}])` | Serves [bytes] (and fails [misses] with their error) by path from [resolve] until [unpinResident] with the same [owner]: what a level preload read, handed to the level's components. The maps are live — entries the owner adds later are served too. |
@@ -318,57 +318,28 @@ Where the runtime reads assets that a component was not handed a provider for. T
 | `isResident` | `static bool isResident(String path)` | Whether a preload serves [path] from memory. |
 | `loadPayload` | `static Future<Uint8List?> loadPayload(String path, {LuminaAssetProvider? provider}) async` | What generated game code needs from a project asset: the payload of the `.lmas` at [path] (a texture's image bytes, …), or a plain file's bytes, loaded through [resolve]. Null when the `.lmas` carries no payload. |
 
-## `lib/src/utility/web_loading.dart`
+## `lib/src/utility/lumina_platform.dart`
 
-### `abstract final class LuminaWebLoading`
+### `enum LuminaPlatform`
 
-The generated game's side of the web loading screen.
-
-A web build's `index.html` shows a plain HTML/CSS screen from the first byte; its `loading.js` tracks the Flutter engine's download itself and exposes `window.luminaLoading.progress(fraction, label)`. Once Dart runs, the generated `main()` calls [prepareGame], which loads the renderer's WebAssembly module and preloads the game's bundled assets, reporting each step there, before `runApp`. The screen fades out on Flutter's first frame, so it covers the whole download.
-
-Native builds skip all of it: [prepareGame] returns at once and nothing here imports `dart:js_interop` outside the web (conditional import).
-
-**Üyeler:**
+Bir oyunun çalıştığı işletim sistemi, motorun gördüğü biçimde (`Get Platform Name`'in bildirdiği), Flutter olmadan okunur: `android`, `fuchsia`, `iOS`, `linux`, `macOS`, `windows`, `web`.
 
 | Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
-| `engineEnd` | `static const double engineEnd` | The loading bar's phases: the Flutter engine fills it up to [engineEnd] (tracked by `loading.js` alone), the renderer's wasm from [rendererStart] to [rendererEnd] (its bytes mapped by `loading.js`, which holds the same numbers), the asset preload the rest. |
-| `rendererStart` | `static const double rendererStart` |  |
-| `rendererEnd` | `static const double rendererEnd` |  |
-| `isWeb` | `static bool get isWeb` | Whether this is a web build. |
-| `progress` | `static void progress(double fraction, String label)` | Moves the page's loading screen to [fraction] (0–1, never backwards) with [label] under it. A no-op on native builds and on pages without the loading screen. |
-| `preloadedCount` | `static int get preloadedCount` | Preloaded assets not handed out yet. |
-| `prepareGame` | `static Future<void> prepareGame({AssetBundle? bundle, String contentsPrefix = 'contents/'}) async` | Web builds: loads the renderer, then every asset under [contentsPrefix] in [bundle]'s manifest, reporting progress to the loading screen. Call after `LuminaAssets.defaultProvider` is set and before `runApp`. |
-| `preloadAssets` | `static Future<int> preloadAssets(AssetBundle bundle, {String prefix = 'contents/', int concurrency = 4, void F...` | Loads every asset of [bundle]'s manifest whose key starts with [prefix], [concurrency] at a time, calling [onProgress] with the count done (from 0 to the total). The bytes are kept until the runtime first asks for that path: [LuminaAssets.defaultProvider] is wrapped to hand each one out once, so the level's meshes and textures do not download twice. Whatever is not asked for within [keepFor] is dropped (null: kept until [releasePreloaded]). Returns the number of assets loaded. |
-| `releasePreloaded` | `static void releasePreloaded()` | Drops every preloaded asset not handed out yet. |
+| `isWeb` | `static const bool isWeb` | `bool.fromEnvironment('dart.library.js_interop')`: bunun bir web derlemesi olup olmadığı. |
+| `override` | `static LuminaPlatform? override` | Host ayarlar: `lumina_widgets` açılışta Flutter'ın hedef platformunu ayarlar; bir test kendi değerini verebilir. |
+| `current` | `static LuminaPlatform get current` | [override], yoksa web derlemesinde `web`, yoksa `dart:io`'nun bildirdiği işletim sistemi. |
+| `displayName` | `static String get displayName` | `Windows`, `Linux`, `MacOS`, `IOS`, `Android`, `Fuchsia`; web derlemesinde `Web`. |
 
-## `lib/src/utility/web_loading_hook_stub.dart`
+## `lib/src/media/video_playback.dart`
 
-**Üst düzey fonksiyonlar ve değişkenler:**
+### `abstract interface class LuminaVideoPlayback`
+
+Motorun nasıl olduğunu bilmeden oynattığı bir video: `Open Video`'nun döndürdüğü ve diğer Blueprint video node'larının sürdüğü nesne. Motor hiçbir medya oynatıcısı tutmaz; `lumina_widgets` açılışta [factory]'yi kaydeder (kendi `LuminaVideoController`'ı, media_kit). Üyeler: `initialize`, `play`, `pause`, `stop`, `seekToSeconds`, `setVolume`, `setPlaybackSpeed`, `setLooping`, `isPlaying`, `position`, `duration`.
 
 | Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
-| `isWeb` | `const bool isWeb` |  |
-| `progress` | `void progress(double fraction, String label)` |  |
-| `loadRenderer` | `Future<void> loadRenderer() async` |  |
-
-## `lib/src/utility/web_loading_hook_web.dart`
-
-### `extension type _LuminaLoadingJs._(JSObject _)`
-
-**Üyeler:**
-
-| Üye | İmza | Açıklama |
-| :--- | :--- | :--- |
-| `progress` | `external void progress(JSNumber fraction, JSString label)` |  |
-
-**Üst düzey fonksiyonlar ve değişkenler:**
-
-| Üye | İmza | Açıklama |
-| :--- | :--- | :--- |
-| `isWeb` | `const bool isWeb` |  |
-| `progress` | `void progress(double fraction, String label)` | Reports to `window.luminaLoading.progress`; a page without the loading screen (a hand-written index.html) is left alone. |
-| `loadRenderer` | `Future<void> loadRenderer()` | Downloads and instantiates the renderer's WebAssembly module. |
+| `factory` | `static LuminaVideoPlayback Function({required String source, bool autoPlay, bool loop, double initialVolume})? factory` | Bir oynatma oluşturur; host'un oynatıcısı yoksa (başsız bir dünya, bir test) null'dır ve o zaman `Open Video` hiçbir şey döndürmez. |
 
 ## `lib/src/assets/encoded_image_decoder.dart`
 

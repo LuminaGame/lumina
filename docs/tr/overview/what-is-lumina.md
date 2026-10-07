@@ -18,7 +18,7 @@ Engine, `lumina` paketidir. Bir oyun dünyasını deklaratif olarak tanımlar: e
 - post-processing, scalability profilleri ve gölge ayarları;
 - save game'ler.
 
-Render işlemi, Google Filament'in Dart FFI binding'i olan `flutter_filament` üzerinden yapılır; masaüstünde Vulkan, OpenGL ya da Metal, tarayıcıda WebGL2 ile çizer. Yalnızca `package:lumina/lumina_runtime.dart`'ı (editör veri katmanı, Assimp ve RigLogic olmadan runtime) import eden bir oyun web için de build edilebilir.
+Render işlemi, Google Filament'in Dart FFI binding'i olan `flutter_filament` üzerinden yapılır; masaüstünde Vulkan, OpenGL ya da Metal, tarayıcıda WebGL2 ile çizer. Bir oyun `package:lumina_widgets/lumina_game.dart`'ı (editör veri katmanı, Assimp ve RigLogic olmadan motor runtime'ı ve oyunun Flutter tarafı) import eder ve web için de build edilebilir.
 
 ## Editör
 
@@ -35,6 +35,7 @@ Eklentiler editörü, yalnızca `lumina`'ya bağımlı küçük bir sözleşme p
 | `flutter_filament` | lumina | Google Filament v1.77.2 için Dart FFI binding'leri |
 | `lumina_core` | lumina | Saf Dart temeli: matematik, dosya formatları, yollar, logger, saf araç servisleri |
 | `lumina` | lumina | Engine: runtime ve Filament binding'i |
+| `lumina_widgets` | lumina | Oyunun Flutter tarafı: oyun widget'ı ve host'u, input, HUD, UMG, medya, web yükleme |
 | `lumina_editor_data` | lumina | Editör veri katmanı: repository'ler, içe aktarıcılar, thumbnail'lar, kod üreteçleri, proje editörü build'leri, eklenti servisleri |
 | `lumina_editor_api` | lumina | Lumina Studio'nun eklenti API'si |
 | `lumina_ui` | lumina | Editör uygulaması Lumina Studio |

@@ -16,6 +16,12 @@
 - **Dart wrappers**: `lib/src/*.dart` wrap the C functions in classes such as `FilamentEngine`, `FilamentScene`, `FilamentView` and `FilamentAssetLoader`. They import the package's platform shims (`src/ffi_platform.dart`, `src/ffi_package_platform.dart`, `src/filament_bindings.dart`) instead of `dart:ffi`, so the same code runs natively and on the web.
 - **Web**: `tool/web/` builds one WebAssembly module (`web/flutter_filament.{js,wasm}`) from the same C wrapper and a WebGL2 Filament build; `lib/src/web_ffi/` provides a `dart:ffi`-compatible layer over the module's heap. Web apps call `await FilamentWeb.ensureInitialized()` before using the engine. Desktop-only libraries (filamat, the full imageio, matdbg, the gltfio JIT) are stubbed on the web so every `filament_*` symbol stays exported.
 
+## Libraries
+
+- `package:flutter_filament/filament.dart`: the Dart API without the view widget; it imports no Flutter library. The engine (`lumina`) imports this one.
+- `package:flutter_filament/flutter_filament.dart`: the same plus `FilamentWidget`, which hosts a view in a Flutter app (`lumina_widgets`, `lumina_ui`).
+- `package:flutter_filament/ffi.dart` / `ffi_package.dart`: the pointer types for code that passes buffers.
+
 ## Adding a native function
 
 1. Write the failing Dart test.

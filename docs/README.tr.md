@@ -2,7 +2,7 @@
 
 # Lumina dokümantasyonu
 
-Lumina, Google Filament renderer'ı üzerine kurulmuş, Flutter ve Dart için bir 3D oyun motoru ve Lumina projeleri için masaüstü editörü olan Lumina Studio'dan oluşur. Bu dokümantasyon mimariyi, bir checkout'un nasıl kurulacağını ve bu repository'deki paketlerin API referansını kapsar: `flutter_filament`, `lumina_core`, `lumina`, `lumina_editor_data`, `lumina_plugin_process`, `lumina_editor_api` ve `lumina_ui`.
+Lumina, Google Filament renderer'ı üzerine kurulmuş, Flutter ve Dart için bir 3D oyun motoru ve Lumina projeleri için masaüstü editörü olan Lumina Studio'dan oluşur. Bu dokümantasyon mimariyi, bir checkout'un nasıl kurulacağını ve bu repository'deki paketlerin API referansını kapsar: `flutter_filament`, `lumina_core`, `lumina`, `lumina_widgets`, `lumina_editor_data`, `lumina_plugin_process`, `lumina_editor_api` ve `lumina_ui`.
 
 ## Nereden başlamalı
 
@@ -92,7 +92,7 @@ Engine, renderer binding'leri ya da native build üzerinde çalışırsınız.
   - [Materyaller ve post-processing](tr/lumina/materials-and-post-process.md) - Engine materyalleri, dynamic material instance'lar, materyal cache'i, post-process, ölçeklenebilirlik, gölgeler.
   - [Render cihazları](tr/lumina/rendering.md) - GPU seçimi ve kullanılan render backend'i.
   - [Oyun çatısı (game framework)](tr/lumina/game.md) - Game instance, game mode, game state, HUD, oyun widget'ı, player camera manager.
-  - [Oyun arayüzü widget'ları (UMG runtime)](tr/lumina/umg.md) - Runtime UMG widget'ları, element binding'leri, user widget'lar ve widget katmanı.
+  - [User widget'lar](tr/lumina/user-widgets.md) - Bir Widget Blueprint graph'ının üzerinde çalıştığı script.
   - [Kayıt (save game)](tr/lumina/save.md) - Save game nesneleri ve save game subsystem'i.
   - [Blueprint'ler](tr/lumina/blueprint/index.md) - Görsel programlama: belgeler, node kütüphanesi, VM, üretilen kod.
     - [Blueprint belgeleri ve asset'leri](tr/lumina/blueprint/model.md) - Pin'ler, node'lar, wire'lar, graph'lar, fonksiyonlar, macro'lar, interface'ler, enum'lar, save-game ve montage asset'leri, doğrulama.
@@ -100,6 +100,12 @@ Engine, renderer binding'leri ya da native build üzerinde çalışırsınız.
     - [Blueprint fonksiyon kütüphanesi](tr/lumina/blueprint/function-library.md) - VM ve üretilen kodun paylaştığı, her pure ve impure node'un davranışı.
     - [Animation Blueprint'ler](tr/lumina/blueprint/animation.md) - Animation Blueprint belgeleri, state machine'ler, blend space'ler, aim offset'ler ve instance'ları.
   - [Yardımcılar, matematik ve test](tr/lumina/utilities.md) - Gameplay statics, volume'lar, timer'lar, viewport picking, matematik yardımcıları, mesh decimation, smoke artifact'leri.
+
+### lumina_widgets (oyunun Flutter tarafı)
+
+- [lumina_widgets](tr/lumina_widgets/index.md) - Oyun widget'ı ve oyun host'u (klavye, işaretçi, fare yakalama), HUD, web yükleme, observable adaptörleri, `lumina_game.dart`.
+  - [Oyun arayüzü widget'ları (UMG runtime)](tr/lumina_widgets/umg.md) - Runtime UMG widget'ları, element binding'leri ve widget katmanı.
+  - [Medya (video & ses)](tr/lumina_widgets/media.md) - media_kit oynatıcıları, controller'lar, UMG medya widget'ları, Blueprint video node'ları.
 
 ### lumina_editor_data (editör veri katmanı)
 

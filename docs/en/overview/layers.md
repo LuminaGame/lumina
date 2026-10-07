@@ -28,6 +28,7 @@ graph TD
     subgraph Core_Level [Engine core]
         PureCore[lumina_core pure-Dart foundation]
         LuminaCore[lumina engine]
+        LuminaWidgets[lumina_widgets game UI]
     end
 
     subgraph Data_Level [Editor data layer]
@@ -52,7 +53,11 @@ graph TD
     FlutterFilament --> LuminaData
     FlutterAssimp --> LuminaData
     FlutterRiglogic --> LuminaData
-    MouseCapture --> LuminaCore
+    MouseCapture --> LuminaWidgets
+    LuminaCore --> LuminaWidgets
+    FlutterFilament --> LuminaWidgets
+    LuminaWidgets --> LuminaData
+    LuminaWidgets --> EditorAPI
     FlutterGStreamer -.-> FlutterFilament
 
     PureCore --> LuminaCore
@@ -79,14 +84,15 @@ Dotted arrows are run-time only: `flutter_gstreamer` opens the system GStreamer 
 3. **`flutter_riglogic`** (tools repository): Dart FFI binding to MetaHuman RigLogic. It reads DNA files and evaluates PSDs, RBFs, joint transforms and blend shape weights for facial rigs.
 4. **`flutter_gstreamer`**, **`lumina_smoke`** and **`lumina_mouse_capture`** (tools repository): video encoding, the smoke-test system (artifacts, video checks and the report runner), and pointer capture for games and Play-In-Editor.
 5. **`lumina_core`**: the pure-Dart foundation every layer above shares: math (units, axes, Euler), the file formats (`.lmas`, `.lmproject`, levels, `.lmplugin`, landscape, sequencer, themes) and their level and plugin repositories, the engine logger, workspace and data paths, and pure tooling services (build fingerprint and cache, glTF packer, TGA decoder, primitive GLB factory, templates). No Flutter, `dart:ui` or FFI, so plugin processes and command-line tools can use it with `dart run`. See [lumina_core](../lumina_core/index.md).
-6. **`lumina`**: the engine (`lib/src/`): the declarative element tree (`build()`), the actor hierarchy (`LuminaActor`, `LuminaPawn`, `LuminaCharacter`), physics and collision (GJK/EPA), AI (behavior trees, navigation), skeletal animation blending, spatial audio, action-based input and the asset readers a running game uses (the GLB loader with Filament's Draco decoder, the level asset manifest). It re-exports `lumina_core` and reaches no editor tooling.
-7. **`lumina_editor_data`**: the editor data layer outside the engine: the asset, project and collections repositories, importers (Assimp FBX/OBJ, the GLB import sanitizer), thumbnails, the Dart and Blueprint code generators, the project editor host generator and build service, the plugin registry and template generator, the derived data cache, the import queue and the use cases. It depends on `lumina`, `flutter_assimp` and `flutter_riglogic`, and its `lumina_editor.dart` umbrella is what editor code imports. See [lumina_editor_data](../lumina_editor_data/index.md).
-8. **`lumina_plugin_process`** and **`lumina_editor_api`**: the plugin contract. `lumina_plugin_process` is the pure-Dart process side of a plugin (the process API and runtime, the level, storage and MCP data types, `lumina_core`'s change types and a loopback test host; no Flutter), see [lumina_plugin_process](../lumina_plugin_process/index.md). `lumina_editor_api` is the lightweight plugin API that defines commands, toolbar buttons, panels, importers and details customizations; it re-exports `lumina_plugin_process` with Flutter adapters and depends on no editor code, which breaks the dependency cycle between the editor and its plugins.
-9. **`lumina_ui`**: Lumina Studio, the desktop editor built with `shadcn_flutter`: 3D viewport, outliner, details inspector, content browser, output log and the asset sub-editors. New 3D features go through `lumina`; the viewports also use `flutter_filament` directly.
+6. **`lumina`**: the engine (`lib/src/`): the declarative element tree (`build()`), the actor hierarchy (`LuminaActor`, `LuminaPawn`, `LuminaCharacter`), physics and collision (GJK/EPA), AI (behavior trees, navigation), skeletal animation blending, spatial audio, action-based input and the asset readers a running game uses (the GLB loader with Filament's Draco decoder, the level asset manifest). It re-exports `lumina_core` and reaches no editor tooling and no Flutter UI: no widget, UMG or media player, and its state notifies through `lumina_core`'s pure change types (`lumina/test/architecture/engine_has_no_widgets_test.dart`).
+7. **`lumina_widgets`**: the Flutter side of a game, on top of the engine: the game widget that hosts the Filament view, the game host that bridges keyboard, pointer and mouse capture (`lumina_mouse_capture`) into the world, the HUD, UMG widgets, media players (media_kit), web loading and the Flutter views of the engine's observables. Its `lumina_game.dart` (the engine runtime plus this package) is what generated games import. See [lumina_widgets](../lumina_widgets/index.md).
+8. **`lumina_editor_data`**: the editor data layer outside the engine: the asset, project and collections repositories, importers (Assimp FBX/OBJ, the GLB import sanitizer), thumbnails, the Dart and Blueprint code generators, the project editor host generator and build service, the plugin registry and template generator, the derived data cache, the import queue and the use cases. It depends on `lumina`, `flutter_assimp` and `flutter_riglogic`, and its `lumina_editor.dart` umbrella is what editor code imports. See [lumina_editor_data](../lumina_editor_data/index.md).
+9. **`lumina_plugin_process`** and **`lumina_editor_api`**: the plugin contract. `lumina_plugin_process` is the pure-Dart process side of a plugin (the process API and runtime, the level, storage and MCP data types, `lumina_core`'s change types and a loopback test host; no Flutter), see [lumina_plugin_process](../lumina_plugin_process/index.md). `lumina_editor_api` is the lightweight plugin API that defines commands, toolbar buttons, panels, importers and details customizations; it re-exports `lumina_plugin_process` with Flutter adapters and depends on no editor code, which breaks the dependency cycle between the editor and its plugins.
+10. **`lumina_ui`**: Lumina Studio, the desktop editor built with `shadcn_flutter`: 3D viewport, outliner, details inspector, content browser, output log and the asset sub-editors. New 3D features go through `lumina`; the viewports also use `flutter_filament` directly.
 
 ## Web builds
 
-`flutter_filament` also builds as one WebAssembly module (Filament's WebGL2 backend plus the same C wrapper), so the same `filament_*` functions exist on the web. On the Dart side every wrapper imports the package's platform shims instead of `dart:ffi`, which resolve to a `dart:ffi`-compatible layer over the WebAssembly heap in the browser. Generated games import `package:lumina/lumina_runtime.dart`, which leaves out everything that cannot run in a browser.
+`flutter_filament` also builds as one WebAssembly module (Filament's WebGL2 backend plus the same C wrapper), so the same `filament_*` functions exist on the web. On the Dart side every wrapper imports the package's platform shims instead of `dart:ffi`, which resolve to a `dart:ffi`-compatible layer over the WebAssembly heap in the browser. Generated games import `package:lumina_widgets/lumina_game.dart` (the engine's `lumina_runtime.dart` plus the game UI), which leaves out everything that cannot run in a browser.
 
 ---
 

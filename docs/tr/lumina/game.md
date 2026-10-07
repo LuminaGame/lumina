@@ -9,9 +9,7 @@ Bir dünyayı çalışan uygulamaya bağlayan oyun çatısı: game instance ve s
 - [`lib/src/game/game_instance.dart`](#libsrcgamegame_instancedart)
 - [`lib/src/game/game_mode.dart`](#libsrcgamegame_modedart)
 - [`lib/src/game/game_state.dart`](#libsrcgamegame_statedart)
-- [`lib/src/game/hud_overlay.dart`](#libsrcgamehud_overlaydart)
 - [`lib/src/game/lumina_game.dart`](#libsrcgamelumina_gamedart)
-- [`lib/src/game/lumina_widget.dart`](#libsrcgamelumina_widgetdart)
 - [`lib/src/game/play_state.dart`](#libsrcgameplay_statedart)
 - [`lib/src/game/player_camera_manager.dart`](#libsrcgameplayer_camera_managerdart)
 - [`lib/src/game/player_start.dart`](#libsrcgameplayer_startdart)
@@ -39,7 +37,7 @@ Base class for global, lifetime-bound services attached to a [LuminaGameInstance
 
 ### `class LuminaGameInstance`
 
-The engine-lifetime singleton surviving world transitions.
+The engine-lifetime singleton surviving world transitions. Bir `ChangeEmitter`'dır (`lumina_core`): dinleyiciler dünya değişince haber alır; bir widget `asListenable()` ile dinler (`lumina_widgets`). Bir oyunu gösteren oyun widget'ı, oyun host'u ve HUD [lumina_widgets](../lumina_widgets/index.md) içindedir.
 
 **Fonksiyonlar, Metotlar ve Erişimciler:**
 
@@ -103,33 +101,6 @@ The shared, observable snapshot of match state and player states.
 | `removeListener` | `void removeListener(void Function() listener)` | Removes a listener from this game state. |
 | `notifyChanged` | `void notifyChanged()` | Notifies listeners that the state has changed. |
 
-## `lib/src/game/hud_overlay.dart`
-
-### `class LuminaHudOverlay`
-
-`LuminaHudOverlay`: İlgili modülün veri modelini veya temel işlevselliğini temsil eden `class` yapısıdır.
-
-**Fonksiyonlar, Metotlar ve Erişimciler:**
-
-| Metot / Getter | İmzası | Ne İşe Yarar? |
-| :--- | :--- | :--- |
-| `game` | `LuminaGame game` | `game` alanını (field/property) ve ilişkili veriyi saklar. |
-| `hudBuilder` | `LuminaHudBuilder hudBuilder` | `hudBuilder` alanını (field/property) ve ilişkili veriyi saklar. |
-| `createState` | `State<LuminaHudOverlay> createState() => _LuminaHudOverlayState()` | Yeni bir `State` örneği veya ilişkili GPU kaynağını oluşturur ve yapılandırır. |
-
-### `class _LuminaHudOverlayState`
-
-`_LuminaHudOverlayState`: İlgili modülün veri modelini veya temel işlevselliğini temsil eden `class` yapısıdır.
-
-**Fonksiyonlar, Metotlar ve Erişimciler:**
-
-| Metot / Getter | İmzası | Ne İşe Yarar? |
-| :--- | :--- | :--- |
-| `initState` | `void initState()` | `initState` işlemini gerçekleştirir. |
-| `didUpdateWidget` | `void didUpdateWidget(LuminaHudOverlay oldWidget)` | `didUpdateWidget` işlemini gerçekleştirir. |
-| `dispose` | `void dispose()` | Yerel FFI göstericilerini, dinleyicileri ve bellek bloklarını serbest bırakır. |
-| `build` | `Widget build(BuildContext context)` | Deklaratif alt nesne veya widget ağacını inşa eder. |
-
 ## `lib/src/game/lumina_game.dart`
 
 ### `class LuminaGame`
@@ -152,39 +123,6 @@ Entrypoint class for building declarative Lumina game applications.  Besides the
 | `mountGame` | `void mountGame(FilamentEngine engine, FilamentScene scene)` | Initializes declarative game tree and mounts [LuminaWorld]. |
 | `tickGame` | `void tickGame(double deltaTime)` | Ticks the game loop and mounted world. No-op while [isPaused] (use [step]). |
 | `disposeGame` | `void disposeGame()` | Disposes game tree and world resources. |
-
-## `lib/src/game/lumina_widget.dart`
-
-### `class LuminaGameHostConfiguration`
-
-Her viewport kendi karelerini sunuyorsa ?nizlemeleri mount i?leminden ?nce `LuminaGameHostConfiguration(allowHeadlessFrameDriver: false, child: ...)` ile sar?n. Bu ayar alt oyun widgetlar?n?n ek 1?1 swap chain ve frame driver olu?turmas?n? engeller; oyun ticker ?al??maya devam eder. Mount ?ncesinde ayarlay?n; sonradan de?i?tirmek mevcut native sahneleri yeniden olu?turmaz.
-
-### `class LuminaGameWidget`
-
-Flutter widget that embeds the `FilamentWidget` viewport and drives the [LuminaGame] loop via [LuminaFrameDriver].  The widget is the game host: it calls [LuminaGame.mountGame] and `beginPlay()` on the mounted world once `FilamentWidget` has created the scene.  Play control: - [paused] is declarative: flipping it calls [LuminaGame.pause] / [LuminaGame.resume] once the scene exists (and on scene creation if it starts `true`). - [onPlayStateChanged] receives every [LuminaPlayState] transition of [game] for the widget's lifetime — bind an editor toolbar to it.  Swap chain: - With [useHeadlessSwapChain] (default `true`, today's behaviour) the widget creates a 1×1 headless swap chain plus a [LuminaFrameDriver], so the world is ticked with a vsync-derived, frame-paced delta time and [LuminaFrameDriver.frameStats] is available to the HUD overlay. - With `false` no extra swap chain or driver is created: the ticker calls [LuminaGame.tickGame] with a fixed 1/60 s delta and `FilamentWidget` presents through its own swap chain. Use this for hosts that must not allocate a second swap chain; note that no frame stats are produced in that mode.
-
-**Fonksiyonlar, Metotlar ve Erişimciler:**
-
-| Metot / Getter | İmzası | Ne İşe Yarar? |
-| :--- | :--- | :--- |
-| `game` | `LuminaGame game` | `game` alanını (field/property) ve ilişkili veriyi saklar. |
-| `hudBuilder` | `LuminaHudBuilder? hudBuilder` | `hudBuilder` alanını (field/property) ve ilişkili veriyi saklar. |
-| `paused` | `bool paused` | Declarative pause flag forwarded to [LuminaGame.pause] / [LuminaGame.resume]. |
-| `useHeadlessSwapChain` | `bool useHeadlessSwapChain` | Whether to create the 1×1 headless swap chain + [LuminaFrameDriver] (see class docs). |
-| `createState` | `State<LuminaGameWidget> createState() => _LuminaGameWidgetState()` | Yeni bir `State` örneği veya ilişkili GPU kaynağını oluşturur ve yapılandırır. |
-
-### `class _LuminaGameWidgetState`
-
-`_LuminaGameWidgetState`: Kullanıcı arayüzünü (UI) oluşturan ve kullanıcı etkileşimlerini dinleyen shadcn_flutter bileşenidir.
-
-**Fonksiyonlar, Metotlar ve Erişimciler:**
-
-| Metot / Getter | İmzası | Ne İşe Yarar? |
-| :--- | :--- | :--- |
-| `initState` | `void initState()` | `initState` işlemini gerçekleştirir. |
-| `didUpdateWidget` | `void didUpdateWidget(LuminaGameWidget oldWidget)` | `didUpdateWidget` özelliğinin anlık değerini okuyan getter erişimcisi. |
-| `dispose` | `void dispose()` | Yerel FFI göstericilerini, dinleyicileri ve bellek bloklarını serbest bırakır. |
-| `build` | `Widget build(BuildContext context)` | Deklaratif alt nesne veya widget ağacını inşa eder. |
 
 ## `lib/src/game/play_state.dart`
 
@@ -482,4 +420,4 @@ The art the Third Person template ships: a CC0 character with its idle, eight-di
 
 ---
 
-[Önceki: Render cihazları](rendering.md) | [Üst: lumina (engine çekirdeği)](index.md) | [Sonraki: Oyun arayüzü widget'ları (UMG runtime)](umg.md)
+[Önceki: Render cihazları](rendering.md) | [Üst: lumina (engine çekirdeği)](index.md) | [Sonraki: User widget'lar](user-widgets.md)

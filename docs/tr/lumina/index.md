@@ -2,7 +2,7 @@
 
 # lumina (engine çekirdeği)
 
-`lumina` engine paketidir: `flutter_filament` üzerine kurulmuş deklaratif bir 3D oyun runtime'ı. Editörün proje ve asset okuyup yazmak için kullandığı veri katmanı ayrı bir pakettir: [lumina_editor_data](../lumina_editor_data/index.md).
+`lumina` engine paketidir: `flutter_filament` üzerine kurulmuş deklaratif bir 3D oyun runtime'ı. Editörün proje ve asset okuyup yazmak için kullandığı veri katmanı ayrı bir pakettir: [lumina_editor_data](../lumina_editor_data/index.md). Hiçbir Flutter arayüzü tutmaz: oyun widget'ı, input bağlantısı, HUD, UMG widget'ları ve medya oynatıcıları [lumina_widgets](../lumina_widgets/index.md) içindedir.
 
 ## Mimarideki yeri
 
@@ -17,7 +17,9 @@
 ## Kütüphaneler
 
 - `package:lumina/lumina.dart` engine'i ve her zaman export ettiği `lumina_core` kütüphanelerini export eder. Editör kodu bunun yerine editör veri katmanını da ekleyen `package:lumina_editor_data/lumina_editor.dart`'ı import eder.
-- `package:lumina/lumina_runtime.dart` bir oyunun ihtiyaç duyduğu runtime'ı export eder; yalnızca bu kütüphaneyi import eden bir oyun web için de build edilebilir. Üretilen oyunlar bunu import eder.
+- `package:lumina/lumina_runtime.dart` bir oyunun ihtiyaç duyduğu motor runtime'ını export eder, web için güvenlidir. Üretilen oyunlar onu oyun arayüzüyle birlikte yeniden export eden `package:lumina_widgets/lumina_game.dart`'ı import eder; derlenmiş Blueprint sınıfları doğrudan bunu import eder.
+
+İki barrel'ın ulaştığı hiçbir kütüphane bir Flutter arayüz kütüphanesini (`widgets`, `material`, `rendering`, `gestures`, `services`, …), media_kit, shadcn_flutter ya da lumina_mouse_capture'ı import etmez; motor flutter_filament'in widget'sız `package:flutter_filament/filament.dart`'ını import eder. `dart:ui` yalnızca `test/architecture/engine_has_no_widgets_test.dart`'ın listelediği üç görüntü-codec kütüphanesinde, `package:flutter/foundation.dart` hiçbir yerde kullanılmaz. Motor durumu `lumina_core`'un `ChangeSignal` / `Observable` türleriyle haber verir (`LuminaGameInstance`, `LuminaPlayerController.cursorState`, `LuminaWidgetSubsystem.activeWidgets`, `LuminaGraphicsDevices.inUse`). Motorun uygulamadan ihtiyaç duyduğu şeyler `lumina_widgets`'ın açılışta doldurduğu bağlantı noktalarından gelir: `LuminaPlatform` (platform, `isWeb`), `LuminaAssets.bundleProvider` (paketle gelen asset'ler) ve `LuminaVideoPlayback.factory` (Blueprint video node'larının oynatıcısı).
 
 Barrel'lar paketin kullanıcıları içindir: `lumina/lib` içindeki hiçbir kütüphane `lumina.dart` ya da `lumina_runtime.dart`'ı import etmez; her biri kullandığı dosyaları import eder, böylece barrel'lar import grafiğinin yaprakları olarak kalır ve hiçbir döngü onlardan geçmez. Engine nesneleri engine'in kendi `LuminaObjectKey`'ini taşır ve `lumina_object.dart` hiçbir Flutter kütüphanesine ulaşmaz. İkisini de `test/architecture/` korur (`import_cycles_test.dart`, `flutter_free_object_root_test.dart`).
 
@@ -37,14 +39,13 @@ Runtime kodu dosyaları hiçbir zaman doğrudan `File(...)` ile okumaz: açık b
 | [Girdi (input)](input.md) | Input action'lar, mapping context'ler, tuşlar, modifier'lar ve trigger'lar. |
 | [Animasyon](animation.md) | Anim instance'lar, montage'lar, clip'ler, blend space'ler, keyframe track'leri, retargeting. |
 | [Ses](audio.md) | Ses backend'i, ses subsystem'i, sesler ve attenuation. |
-| [Medya alt sistemi (video & ses)](media.md) | Donanım hızlandırmalı video/ses oynatıcı (media-kit), controller'lar, UMG widget'ları, Blueprint node'ları. |
 | [Çarpışma](collision.md) | Çarpışma şekilleri, filtreler ve profiller, sorgular, GJK/EPA narrow phase. |
 | [Fizik](physics.md) | Rigid body'ler, kütle özellikleri, fiziksel materyaller, temaslar ve fizik subsystem'i. |
 | [Yapay zeka (AI)](ai.md) | AI controller, behavior tree'ler, blackboard, navigasyon, algı (perception). |
 | [Materyaller ve post-processing](materials-and-post-process.md) | Engine materyalleri, dynamic material instance'lar, materyal cache'i, post-process, ölçeklenebilirlik, gölgeler. |
 | [Render cihazları](rendering.md) | GPU seçimi ve kullanılan render backend'i. |
 | [Oyun çatısı (game framework)](game.md) | Game instance, game mode, game state, HUD, oyun widget'ı, player camera manager. |
-| [Oyun arayüzü widget'ları (UMG runtime)](umg.md) | Runtime UMG widget'ları, element binding'leri, user widget'lar ve widget katmanı. |
+| [User widget'lar](user-widgets.md) | Bir Widget Blueprint graph'ının üzerinde çalıştığı script (`LuminaUserWidget`, `LuminaUserWidgets`). Widget'ların kendisi, oyun widget'ı, HUD ve medya oynatıcıları [lumina_widgets](../lumina_widgets/index.md) içindedir. |
 | [Kayıt (save game)](save.md) | Save game nesneleri ve save game subsystem'i. |
 | [Blueprint'ler](blueprint/index.md) | Görsel programlama: belgeler, node kütüphanesi, VM, üretilen kod. |
 | [Yardımcılar, matematik ve test](utilities.md) | Gameplay statics, volume'lar, timer'lar, viewport picking, matematik yardımcıları, mesh decimation, asset okuyucuları (görüntü çözücü, GLB yükleyici, level asset manifestosu), smoke artifact'leri. |

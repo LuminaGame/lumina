@@ -37,7 +37,7 @@ The library is one barrel, `package:lumina_core/lumina_core.dart`. The files are
 | `ChangeEmitter` | The usual `ChangeSignal`: `notifyListeners()` calls every listener registered at that moment, in order (one that throws does not stop the others; the first error is rethrown afterwards); `hasListeners`, `dispose()` (adding a listener afterwards is a `StateError`). |
 | `ObservableValue<T>` | An `Observable` with a settable `value`; setting an equal value notifies nobody. |
 
-The plugin process API (`lumina_plugin_process`) uses them for its live values: `PluginProcessContext.pluginSettings`, a slot button's `state`, a menu item's `checked`, the level's `changes`. `lumina_editor_api` converts them to and from Flutter's types (`asValueListenable()`, `asListenable()`, `asObservable()`, `asChangeSignal()`).
+The plugin process API (`lumina_plugin_process`) uses them for its live values: `PluginProcessContext.pluginSettings`, a slot button's `state`, a menu item's `checked`, the level's `changes`. The engine notifies through them too (`LuminaGameInstance`, a player controller's `cursorState`, the widget subsystem's `activeWidgets`, the GPU in use). `lumina_widgets` converts them to and from Flutter's types (`asValueListenable()`, `asListenable()`, `asObservable()`, `asChangeSignal()`); `lumina_editor_api` re-exports those views.
 
 ## What stays in the engine
 

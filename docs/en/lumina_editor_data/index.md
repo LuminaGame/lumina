@@ -13,13 +13,13 @@ The package holds no widgets: `test/architecture/no_widgets_test.dart` fails on 
 ## Libraries
 
 - `package:lumina_editor_data/lumina_editor_data.dart`: the editor data layer alone (what `lumina.dart` exported from `lib/data` and `lib/domain` before the split).
-- `package:lumina_editor_data/lumina_editor.dart`: the umbrella for editor code (Lumina Studio, editor plugins). It exports `lumina_core`, `lumina`, `lumina_editor_data`, `flutter_assimp` and `flutter_riglogic`: what `package:lumina/lumina.dart` exported before the split.
+- `package:lumina_editor_data/lumina_editor.dart`: the umbrella for editor code (Lumina Studio, editor plugins). It exports `lumina_core`, `lumina`, `lumina_widgets`, `lumina_editor_data`, `flutter_assimp` and `flutter_riglogic`: what `package:lumina/lumina.dart` exported before the split.
 
 ```dart
 import 'package:lumina_editor_data/lumina_editor.dart';
 ```
 
-Generated games keep importing `package:lumina/lumina_runtime.dart`.
+Generated games import `package:lumina_widgets/lumina_game.dart` (`kLuminaGameLibrary`): the launcher (`main.dart`, which shows a `LuminaGameHost` and calls `LuminaWidgets.ensureInitialized()`), levels, `input/project_input.g.dart`, the character and game mode, and the UMG widget classes. Compiled Blueprint classes and their registries use the engine only and import `package:lumina/lumina_runtime.dart`.
 
 ## What it holds
 

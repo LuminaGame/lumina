@@ -753,7 +753,7 @@ Manages active UMG widgets added to the viewport in a [LuminaWorld].
 
 | Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
-| `activeWidgets` | `final ValueNotifier<List<Map<String, Object?>>> activeWidgets` | ValueNotifier emitting the active widgets list whenever widgets are added, removed, reordered, or visibility changes. |
+| `activeWidgets` | `final ObservableValue<List<Map<String, Object?>>> activeWidgets` | Etkin widget listesi (`lumina_core`'un `ObservableValue`'su); widget eklenince, çıkarılınca, yeniden sıralanınca ya da görünürlüğü değişince yenilenir; `lumina_widgets`'ın widget katmanı onu dinler. |
 | `widgets` | `List<Map<String, Object?>> get widgets` | Read-only snapshot of current active widgets sorted by zOrder ascending. |
 | `addWidget` | `void addWidget(Map<String, Object?> widget)` | Adds a widget to the viewport. |
 | `removeWidget` | `void removeWidget(Map<String, Object?> widget)` | Removes a widget from the viewport. |

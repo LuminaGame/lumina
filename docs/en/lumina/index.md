@@ -2,7 +2,7 @@
 
 # lumina (engine core)
 
-`lumina` is the engine package: a declarative 3D game runtime built on `flutter_filament`. The data layer the editor uses to read and write projects and assets is its own package, [lumina_editor_data](../lumina_editor_data/index.md).
+`lumina` is the engine package: a declarative 3D game runtime built on `flutter_filament`. It holds no Flutter UI: the game widget, input glue, HUD, UMG widgets and media players are [lumina_widgets](../lumina_widgets/index.md). The data layer the editor uses to read and write projects and assets is its own package, [lumina_editor_data](../lumina_editor_data/index.md).
 
 ## Place in the architecture
 
@@ -17,7 +17,9 @@
 ## Libraries
 
 - `package:lumina/lumina.dart` exports the engine and the `lumina_core` libraries it always exported. Editor code imports `package:lumina_editor_data/lumina_editor.dart` instead, which adds the editor data layer.
-- `package:lumina/lumina_runtime.dart` exports the runtime a game needs, so a game that imports only this library also builds for the web. Generated games import it.
+- `package:lumina/lumina_runtime.dart` exports the engine runtime a game needs, web-safe. Generated games import `package:lumina_widgets/lumina_game.dart`, which re-exports it with the game UI; compiled Blueprint classes import it directly.
+
+No library either barrel reaches imports a Flutter UI library (`widgets`, `material`, `rendering`, `gestures`, `services`, …), media_kit, shadcn_flutter or lumina_mouse_capture; the engine imports flutter_filament's widget-free `package:flutter_filament/filament.dart`. `dart:ui` is used only by the three image-codec libraries `test/architecture/engine_has_no_widgets_test.dart` lists, `package:flutter/foundation.dart` by none. Engine state notifies through `lumina_core`'s `ChangeSignal` / `Observable` (`LuminaGameInstance`, `LuminaPlayerController.cursorState`, `LuminaWidgetSubsystem.activeWidgets`, `LuminaGraphicsDevices.inUse`). What the engine needs from the app comes through seams `lumina_widgets` fills at start-up: `LuminaPlatform` (the platform, `isWeb`), `LuminaAssets.bundleProvider` (bundled package assets) and `LuminaVideoPlayback.factory` (the Blueprint video nodes' player).
 
 The barrels are for users of the package: no library inside `lumina/lib` imports `lumina.dart` or `lumina_runtime.dart`; each imports the files it uses, so the barrels stay leaves of the import graph and no cycle runs through them. Engine objects carry the engine's own `LuminaObjectKey`, and `lumina_object.dart` reaches no Flutter library. `test/architecture/` guards both (`import_cycles_test.dart`, `flutter_free_object_root_test.dart`).
 
@@ -37,14 +39,13 @@ Runtime code never reads files with `File(...)` directly: asset loads without an
 | [Input](input.md) | Input actions, mapping contexts, keys, modifiers and triggers. |
 | [Animation](animation.md) | Anim instances, montages, clips, blend spaces, keyframe tracks, retargeting. |
 | [Audio](audio.md) | Audio backend, audio subsystem, sounds and attenuation. |
-| [Media subsystem (video & audio)](media.md) | Hardware-accelerated video/audio player (media-kit), controllers, UMG widgets, Blueprint nodes. |
 | [Collision](collision.md) | Collision shapes, filters and profiles, queries, GJK/EPA narrow phase. |
 | [Physics](physics.md) | Rigid bodies, mass properties, physical materials, contacts and the physics subsystem. |
 | [AI](ai.md) | AI controller, behavior trees, blackboard, navigation, perception. |
 | [Materials and post-processing](materials-and-post-process.md) | Engine materials, dynamic material instances, material cache, post-process, scalability, shadows. |
 | [Rendering devices](rendering.md) | GPU selection and the render backend in use. |
 | [Game framework](game.md) | Game instance, game mode, game state, HUD, game widget, player camera manager. |
-| [Game UI widgets (UMG runtime)](umg.md) | Runtime UMG widgets, element bindings, user widgets and the widget layer. |
+| [User widgets](user-widgets.md) | The script a Widget Blueprint graph runs on (`LuminaUserWidget`, `LuminaUserWidgets`). The widgets themselves, the game widget, the HUD and media players are in [lumina_widgets](../lumina_widgets/index.md). |
 | [Save games](save.md) | Save game objects and the save game subsystem. |
 | [Blueprints](blueprint/index.md) | Visual scripting: documents, node library, VM, generated code. |
 | [Utilities, math and testing](utilities.md) | Gameplay statics, volumes, timers, viewport picking, math helpers, mesh decimation, the asset readers (image decoder, GLB loader, level asset manifest), smoke artifacts. |

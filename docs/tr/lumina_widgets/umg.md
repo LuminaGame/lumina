@@ -1,15 +1,14 @@
-[Türkçe](../../tr/lumina/umg.md)
+[English](../../en/lumina_widgets/umg.md)
 
-# Game UI widgets (UMG runtime)
+# Oyun arayüzü widget'ları (UMG runtime)
 
-The runtime side of game UI: the plain Flutter widgets that compiled widget assets are built from (buttons, sliders, text, containers and more), the bindings that connect a widget instance's per-element state to those widgets, the user widget that a Widget Blueprint graph runs on, and the widget layer that shows a world's widgets over the game view. File paths are relative to the `lumina/` package directory.
+Oyun arayüzünün runtime tarafı: derlenmiş widget asset'lerinin üzerine kurulduğu sade Flutter widget'ları (butonlar, slider'lar, metin, container'lar ve daha fazlası), bir widget instance'ının element başına durumunu bu widget'lara bağlayan binding'ler ve bir dünyanın widget'larını oyun görüntüsünün üzerinde gösteren widget katmanı. Bir Widget Blueprint graph'ının üzerinde çalıştığı user widget motor kodudur ([lumina: user widget'lar](../lumina/user-widgets.md)); dünyanın widget listesi motorun `LuminaWidgetSubsystem.activeWidgets` değeridir, katmanın dinlediği bir `ObservableValue`. Dosya yolları `lumina_widgets/` paket dizinine görelidir.
 
-**On this page:**
+**Bu sayfada:**
 
 - [`lib/src/umg/element_binding.dart`](#libsrcumgelement_bindingdart)
 - [`lib/src/umg/umg_widgets.dart`](#libsrcumgumg_widgetsdart)
 - [`lib/src/umg/umg_media_widgets.dart`](#libsrcumgumg_media_widgetsdart)
-- [`lib/src/umg/user_widget.dart`](#libsrcumguser_widgetdart)
 - [`lib/src/umg/widget_layer.dart`](#libsrcumgwidget_layerdart)
 - [`lib/src/umg/theme_document_colors.dart`](#libsrcumgtheme_document_colorsdart)
 
@@ -21,9 +20,9 @@ Reads and watches the per-element runtime state of a widget instance. A widget i
 
 The element setters (`Set Text (Text)`, `Set Percent`, …) write into that map and call [LuminaWidgetSubsystem.notifyChanged]; a [LuminaWidgetLayer] turns that into a [LuminaUmgInstanceBinding] refresh, and every [LuminaUmgElement] bound to the instance rebuilds only when its own element's state changed.
 
-**Members:**
+**Üyeler:**
 
-| Member | Signature | Description |
+| Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `designerKeys` | `static const Map<String, String> designerKeys` | Runtime keys the element nodes write, and the designer key the same value was seeded under (`Set Is Checked` writes `isChecked`, the designer stored `checked`). A read of the runtime key falls back to the designer key. The text shadow and outline keys (`shadowEnabled`, `shadowColor`, `shadowOffsetX`, `shadowOffsetY`, `shadowBlur`, `outlineSize`, `outlineColor`) are the same in both, so they need no entry. |
 | `elements` | `static Map<String, Object?>? elements(Map<String, Object?>? instance)` | The elements map of [instance], or null. |
@@ -49,13 +48,13 @@ The element setters (`Set Text (Text)`, `Set Percent`, …) write into that map 
 
 One widget instance as a [ValueListenable]: [value] is the instance map itself (mutated in place by the element nodes) and [refresh] is what the [LuminaWidgetLayer] calls when the widget subsystem notified.
 
-**Constructors:**
+**Yapıcı Metotlar (Constructors):**
 
 - `LuminaUmgInstanceBinding(this.instance)`
 
-**Members:**
+**Üyeler:**
 
-| Member | Signature | Description |
+| Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `instance` | `final Map<String, Object?> instance` |  |
 | `refresh` | `void refresh()` | Tells every bound element to compare its state and rebuild if it changed. |
@@ -64,13 +63,13 @@ One widget instance as a [ValueListenable]: [value] is the instance map itself (
 
 Makes a [LuminaUmgInstanceBinding] available to the compiled widget class built for that instance.
 
-**Constructors:**
+**Yapıcı Metotlar (Constructors):**
 
 - `const LuminaUmgInstanceScope({super.key, required this.binding, required super.child})`
 
-**Members:**
+**Üyeler:**
 
-| Member | Signature | Description |
+| Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `binding` | `final LuminaUmgInstanceBinding binding` |  |
 
@@ -80,13 +79,13 @@ Builds the state of one element of [instance], rebuilding only when that element
 
 Generated widget classes (umg_widget_codegen) wrap every designer element in one of these; without an [instance] (a preview) the builder sees `null` and the designer's defaults apply.
 
-**Constructors:**
+**Yapıcı Metotlar (Constructors):**
 
 - `const LuminaUmgElement({super.key, required this.instance, required this.name, required this.builder,})`
 
-**Members:**
+**Üyeler:**
 
-| Member | Signature | Description |
+| Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `instance` | `final Map<String, Object?>? instance` |  |
 | `name` | `final String name` |  |
@@ -100,9 +99,9 @@ The UMG widgets a game uses when its project picks plain Flutter widgets: built 
 
 The look follows a dark neutral palette close to shadcn's, so a menu reads the same whichever library the project picked.
 
-**Members:**
+**Üyeler:**
 
-| Member | Signature | Description |
+| Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `foreground` | `static const Color foreground` |  |
 | `muted` | `static const Color muted` |  |
@@ -116,7 +115,7 @@ The look follows a dark neutral palette close to shadcn's, so a menu reads the s
 
 The five button styles the UMG designer offers.
 
-**Values:**
+**Değerler:**
 
 - `primary`
 - `secondary`
@@ -128,13 +127,13 @@ The five button styles the UMG designer offers.
 
 A clickable button with hover reporting (UMG `OnClicked` / `OnHovered` / `OnUnhovered`). Without [onPressed] it is disabled.
 
-**Constructors:**
+**Yapıcı Metotlar (Constructors):**
 
 - `const LuminaUmgButton({super.key, this.style = LuminaUmgButtonStyle.primary, this.onPressed, this.onHovered, required this.child,})`
 
-**Members:**
+**Üyeler:**
 
-| Member | Signature | Description |
+| Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `style` | `final LuminaUmgButtonStyle style` |  |
 | `onPressed` | `final VoidCallback? onPressed` |  |
@@ -145,13 +144,13 @@ A clickable button with hover reporting (UMG `OnClicked` / `OnHovered` / `OnUnho
 
 A horizontal slider: tap or drag anywhere on the track (UMG `OnValueChanged`).
 
-**Constructors:**
+**Yapıcı Metotlar (Constructors):**
 
 - `const LuminaUmgSlider({super.key, required this.value, this.onChanged, this.min = 0, this.max = 1, this.color})`
 
-**Members:**
+**Üyeler:**
 
-| Member | Signature | Description |
+| Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `value` | `final double value` |  |
 | `onChanged` | `final ValueChanged<double>? onChanged` |  |
@@ -163,13 +162,13 @@ A horizontal slider: tap or drag anywhere on the track (UMG `OnValueChanged`).
 
 A check box with an optional label; tapping either toggles it (UMG `OnCheckStateChanged`).
 
-**Constructors:**
+**Yapıcı Metotlar (Constructors):**
 
 - `const LuminaUmgCheckbox({super.key, required this.value, this.onChanged, this.label})`
 
-**Members:**
+**Üyeler:**
 
-| Member | Signature | Description |
+| Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `value` | `final bool value` |  |
 | `onChanged` | `final ValueChanged<bool>? onChanged` |  |
@@ -179,13 +178,13 @@ A check box with an optional label; tapping either toggles it (UMG `OnCheckState
 
 A single-line text input with a placeholder (UMG Editable Text, `OnTextChanged`).
 
-**Constructors:**
+**Yapıcı Metotlar (Constructors):**
 
 - `const LuminaUmgTextField({super.key, this.initialValue, this.placeholder, this.style, this.onChanged, this.onSubmitted})`
 
-**Members:**
+**Üyeler:**
 
-| Member | Signature | Description |
+| Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `initialValue` | `final String? initialValue` |  |
 | `placeholder` | `final String? placeholder` |  |
@@ -197,13 +196,13 @@ A single-line text input with a placeholder (UMG Editable Text, `OnTextChanged`)
 
 A drop-down of string options (UMG Combo Box, `OnSelectionChanged`). The list opens in the nearest [Overlay], which every game app has.
 
-**Constructors:**
+**Yapıcı Metotlar (Constructors):**
 
 - `const LuminaUmgComboBox({super.key, required this.value, required this.options, this.onChanged, this.placeholder, this.style, this.outline = LuminaUmgTextOutlin...`
 
-**Members:**
+**Üyeler:**
 
-| Member | Signature | Description |
+| Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `value` | `final String? value` |  |
 | `options` | `final List<String> options` |  |
@@ -216,13 +215,13 @@ A drop-down of string options (UMG Combo Box, `OnSelectionChanged`). The list op
 
 A horizontal progress bar; [progress] is clamped to 0..1 (UMG Progress Bar `Percent`).
 
-**Constructors:**
+**Yapıcı Metotlar (Constructors):**
 
 - `const LuminaUmgProgressBar({super.key, required this.progress, this.color, this.trackColor})`
 
-**Members:**
+**Üyeler:**
 
-| Member | Signature | Description |
+| Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `fillKey` | `static const Key fillKey` | Key of the filled part, for tests and tools that measure it. |
 | `progress` | `final double progress` |  |
@@ -233,13 +232,13 @@ A horizontal progress bar; [progress] is clamped to 0..1 (UMG Progress Bar `Perc
 
 A loading placeholder (the shadcn Skeleton component): [lines] stretched rows of [text], each drawn as a rounded bone over the text's own line boxes, so the placeholder takes the space the text would. The bones pulse between 5 % and 10 % of [color]'s alpha over [duration], back and forth (shadcn passes its primary colour).
 
-**Constructors:**
+**Yapıcı Metotlar (Constructors):**
 
 - `const LuminaUmgSkeleton({super.key, this.lines = 3, this.text = 'Loading placeholder text line', this.color = LuminaUmgColors.foreground, this.duration = const Duration(seconds: 1)})`
 
-**Members:**
+**Üyeler:**
 
-| Member | Signature | Description |
+| Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `lines` | `final int lines` |  |
 | `text` | `final String text` |  |
@@ -250,13 +249,13 @@ A loading placeholder (the shadcn Skeleton component): [lines] stretched rows of
 
 A filled, rounded panel around one child (UMG Border).
 
-**Constructors:**
+**Yapıcı Metotlar (Constructors):**
 
 - `const LuminaUmgBorder({super.key, this.color, this.padding = EdgeInsets.zero, this.radius = 6, this.child})`
 
-**Members:**
+**Üyeler:**
 
-| Member | Signature | Description |
+| Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `color` | `final Color? color` |  |
 | `padding` | `final EdgeInsetsGeometry padding` |  |
@@ -267,13 +266,13 @@ A filled, rounded panel around one child (UMG Border).
 
 The drop shadow of a text-bearing UMG element (Shadow Offset / Shadow Color): stored under `shadowEnabled`, `shadowColor` (`#RRGGBBAA`, or the `[r, g, b, a]` the Blueprint nodes write), `shadowOffsetX` / `shadowOffsetY` and `shadowBlur` (design px).
 
-**Constructors:**
+**Yapıcı Metotlar (Constructors):**
 
 - `const LuminaUmgTextShadow({this.enabled = false, this.color = const Color(0xB3000000), this.offsetX = 1.0, this.offsetY = 1.0, this.blur = 0.0,})`
 
-**Members:**
+**Üyeler:**
 
-| Member | Signature | Description |
+| Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `defaults` | `static const LuminaUmgTextShadow defaults` | The designer's defaults: off, 70 % black, (1, 1), sharp. |
 | `enabled` | `final bool enabled` |  |
@@ -287,13 +286,13 @@ The drop shadow of a text-bearing UMG element (Shadow Offset / Shadow Color): st
 
 The outline of a text-bearing UMG element (Font Outline Settings): `outlineSize` in design px (0 = off) and `outlineColor`.
 
-**Constructors:**
+**Yapıcı Metotlar (Constructors):**
 
 - `const LuminaUmgTextOutline({this.size = 0.0, this.color = const Color(0xFF000000)})`
 
-**Members:**
+**Üyeler:**
 
-| Member | Signature | Description |
+| Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `defaults` | `static const LuminaUmgTextOutline defaults` | The designer's defaults: no outline, opaque black. |
 | `size` | `final double size` |  |
@@ -306,13 +305,13 @@ The outline of a text-bearing UMG element (Font Outline Settings): `outlineSize`
 
 A UMG text with an optional [outline]: Flutter has no text outline, so the outline is a second [Text] painted with a stroke under the fill, laid out identically (same style, lines and overflow) so the glyphs align. The drop shadow of [style] is drawn by the stroked layer, under both.
 
-**Constructors:**
+**Yapıcı Metotlar (Constructors):**
 
 - `const LuminaUmgText(this.data, {super.key, this.style, this.outline = LuminaUmgTextOutline.defaults, this.maxLines, this.overflow, this.textAlign,})`
 
-**Members:**
+**Üyeler:**
 
-| Member | Signature | Description |
+| Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `data` | `final String data` |  |
 | `style` | `final TextStyle? style` |  |
@@ -325,13 +324,13 @@ A UMG text with an optional [outline]: Flutter has no text outline, so the outli
 
 The background gradient of a UMG Container: Flutter's linear ([begin] → [end]) or radial ([center], [radius]) gradient.
 
-**Constructors:**
+**Yapıcı Metotlar (Constructors):**
 
 - `const LuminaUmgGradient({this.type = 'linear', required this.colors, this.stops, this.begin = Alignment.centerLeft, this.end = Alignment.centerRight, this.cente...`
 
-**Members:**
+**Üyeler:**
 
-| Member | Signature | Description |
+| Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `type` | `final String type` | `linear` or `radial`. |
 | `colors` | `final List<Color> colors` |  |
@@ -347,9 +346,9 @@ The background gradient of a UMG Container: Flutter's linear ([begin] → [end])
 
 JSON-plain readers for the UMG style props (designer values and element state alike).
 
-**Members:**
+**Üyeler:**
 
-| Member | Signature | Description |
+| Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `color` | `static Color? color(Object? v)` | `#RRGGBB` / `#RRGGBBAA` or `[r, g, b, a]` (0–1). |
 | `number` | `static double? number(Object? v)` |  |
@@ -365,13 +364,13 @@ JSON-plain readers for the UMG style props (designer values and element state al
 
 The look of a UMG Container, Flutter `Container`'s styling: background colour / gradient / image, border (colour, width, sides), corner radius, padding, margin, box shadows, size limits and the child's alignment. The designer stores it as JSON-plain props ([fromProps]); `LuminaUmgElementBinding.containerStyle` lays the Blueprint-written element state over the designer style.
 
-**Constructors:**
+**Yapıcı Metotlar (Constructors):**
 
 - `const LuminaUmgContainerStyle({this.backgroundColor = const Color(0x00000000), this.gradient, this.backgroundFit = BoxFit.cover, this.borderColor = const Color(...`
 
-**Members:**
+**Üyeler:**
 
-| Member | Signature | Description |
+| Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `backgroundColor` | `final Color backgroundColor` |  |
 | `gradient` | `final LuminaUmgGradient? gradient` |  |
@@ -402,65 +401,17 @@ The look of a UMG Container, Flutter `Container`'s styling: background colour / 
 
 A UMG Container: a Flutter [Container] painting [style] (with the loaded background [image]) around one [child]. The designer, the PIE view and the generated widget all build this, so the styling is identical everywhere and whichever widget library the game uses.
 
-**Constructors:**
+**Yapıcı Metotlar (Constructors):**
 
 - `const LuminaUmgContainer({super.key, this.style = const LuminaUmgContainerStyle(), this.image, this.child})`
 
-**Members:**
+**Üyeler:**
 
-| Member | Signature | Description |
+| Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `style` | `final LuminaUmgContainerStyle style` |  |
 | `image` | `final ImageProvider? image` |  |
 | `child` | `final Widget? child` |  |
-
-## `lib/src/umg/user_widget.dart`
-
-### `abstract class LuminaUserWidget`
-
-A widget's own script: the object a Widget Blueprint graph runs on, bound to one widget instance map (the one `Create Widget` built). It is a hidden actor with no components so every Blueprint node that reaches `self.world` (the widget subsystem, the player, timers) keeps working.
-
-The VM (`LuminaBlueprintUserWidget`) and each generated `WBP<Name>Graph` override the hooks: Pre Construct and Construct when the widget is added to the viewport, Destruct when it is removed, Tick every world tick while it is on screen, and [onWidgetEvent] when one of its elements is pressed, hovered or changed.
-
-**Constructors:**
-
-- `LuminaUserWidget({super.key})`
-
-**Members:**
-
-| Member | Signature | Description |
-| :--- | :--- | :--- |
-| `widgetInstance` | `Map<String, Object?> get widgetInstance` | The widget instance map this script scripts. |
-| `widgetClassName` | `String get widgetClassName` | The widget class (`WBP_Clicker`). |
-| `isWidgetConstructed` | `bool get isWidgetConstructed` | Whether Construct ran since the widget last entered the viewport. |
-| `isWidgetInViewport` | `bool get isWidgetInViewport` | Whether the widget is on screen now. |
-| `widgetElement` | `Map<String, Object?>? widgetElement(String name)` | The state map of the element named [name] (its designer name), or null. |
-| `bindWidgetInstance` | `void bindWidgetInstance(Map<String, Object?> instance)` | Binds this script to [instance] (done once, by [LuminaUserWidgets.attach]). |
-| `onWidgetPreConstruct` | `void onWidgetPreConstruct(bool isDesignTime)` | Event Pre Construct; [isDesignTime] is false at run time. |
-| `onWidgetConstruct` | `void onWidgetConstruct()` | Event Construct. |
-| `onWidgetDestruct` | `void onWidgetDestruct()` | Event Destruct. |
-| `onWidgetTick` | `void onWidgetTick(double inDeltaTime)` | Event Tick (In Delta Time), while the widget is on screen. |
-| `onWidgetEvent` | `void onWidgetEvent(String element, String event, Map<String, Object?> args)` | A bound element event: [event] (`OnClicked`, `OnValueChanged`, …) of the element named [element], with the event's outputs in [args] (`value`, `text`, `commit_method`). |
-
-### `abstract final class LuminaUserWidgets`
-
-The widget classes whose instances run a graph: the factory of each class's script, registered by the generated `widget_registry.g.dart` (the compiled `WBP<Name>Graph`) or by Play-In-Editor (a VM script over the editor's graph). The widget nodes call into here, so the VM and generated code share one lifecycle.
-
-**Members:**
-
-| Member | Signature | Description |
-| :--- | :--- | :--- |
-| `register` | `static void register(String className, LuminaUserWidget Function() factory)` |  |
-| `registerAll` | `static void registerAll(Map<String, LuminaUserWidget Function()> factories)` |  |
-| `unregister` | `static void unregister(String className)` |  |
-| `clear` | `static void clear()` |  |
-| `has` | `static bool has(String className)` |  |
-| `classNames` | `static Iterable<String> get classNames` |  |
-| `of` | `static LuminaUserWidget? of(Object? instance)` | The script of widget instance [instance], or null (no graph, or not a widget). |
-| `attach` | `static LuminaUserWidget? attach(LuminaWorld? world, Map<String, Object?> instance)` | Creates [instance]'s script when its class has a graph, binds it and spawns it into [world] (`Create Widget`). Returns the script, or null. |
-| `addedToViewport` | `static void addedToViewport(Object? instance)` | `Add to Viewport`: Pre Construct then Construct, once per stay on screen. |
-| `removedFromParent` | `static void removedFromParent(Object? instance)` | `Remove from Parent`: Destruct. |
-| `fire` | `static void fire(Map<String, Object?>? instance, String element, String event, [Map<String, Object?> args = co...` | A generated widget's (or Play-In-Editor's) element event: runs the graph's `On <Event> (<element>)` node, if the widget has one. |
 
 ## `lib/src/umg/widget_layer.dart`
 
@@ -472,9 +423,9 @@ Builds the compiled Flutter widget of one widget instance (the map `Create Widge
 
 The compiled widget classes of a running game: the generated `widgets/widget_registry.g.dart` registers each class's description (into [LuminaWidgetClassRegistry], so `Create Widget` seeds its elements) together with the builder that renders an instance of it in a [LuminaWidgetLayer].
 
-**Members:**
+**Üyeler:**
 
-| Member | Signature | Description |
+| Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `register` | `static void register(String name, LuminaBlueprintWidgetClass cls, LuminaWidgetBuilder builder)` | Registers [cls] under [name] with the [builder] that renders it. |
 | `builderFor` | `static LuminaWidgetBuilder? builderFor(String? className)` | The builder of [className], or null (an unknown class renders as a fallback card naming it). |
@@ -486,14 +437,14 @@ The compiled widget classes of a running game: the generated `widgets/widget_reg
 
 Renders the widgets a world's [LuminaWidgetSubsystem] shows: the game host stacks it over [LuminaGameWidget], the editor over its PIE viewport. Widgets are laid out full-screen in `zOrder` order; `Hidden` and `Collapsed` instances are skipped; each instance is built through [resolveBuilder], then [LuminaWidgetBuilderRegistry], and an unknown class renders as a small card naming it. Element nodes writing an instance's state refresh only the elements that changed.
 
-**Constructors:**
+**Yapıcı Metotlar (Constructors):**
 
 - `const LuminaWidgetLayer({super.key, required this.world, this.resolveBuilder, this.fallbackBuilder})`: Renders the widgets of [world]; null renders nothing.
 - `const LuminaWidgetLayer.forGame({super.key, required LuminaGame this.game, this.resolveBuilder, this.fallbackBuilder})`: Renders the widgets of [game]'s world, following the game as it mounts and stops (the world exists only after [LuminaGame.mountGame]).
 
-**Members:**
+**Üyeler:**
 
-| Member | Signature | Description |
+| Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `world` | `final LuminaWorld? world` |  |
 | `game` | `final LuminaGame? game` |  |
@@ -504,38 +455,38 @@ Renders the widgets a world's [LuminaWidgetSubsystem] shows: the game host stack
 
 ### `class LuminaUmgVideoPlayer`
 
-A UMG runtime widget embedding a video player in the game UI / HUD. Automatically coordinates with `LuminaVideoController` and `LuminaVideoPlayer`. Supports autoplay, looping, volume, box fit, error callbacks, and cleans up resources when removed from the widget tree.
+Oyun arayüzüne / HUD'a bir video oynatıcı yerleştiren UMG runtime widget'ı. `LuminaVideoController` ve `LuminaVideoPlayer` ile otomatik koordine olur. Otomatik oynatma, döngü, ses seviyesi, sığdırma (fit), hata geri çağrıları ve widget ağacından kaldırıldığında kaynak temizliğini destekler.
 
-**Constructors:**
+**Yapıcı Metotlar (Constructors):**
 
 - `const LuminaUmgVideoPlayer({super.key, this.filePath, this.assetPath, this.networkUrl, this.autoPlay = false, this.looping = false, this.volume = 1.0, this.fit = BoxFit.contain, this.preferHeadless = false, this.onInitialized, this.onError})`
 
 ### `class LuminaUmgAudioPlayer`
 
-A UMG runtime widget for non-spatialized background audio, theme music, or cutscene dialog. Automatically coordinates with `LuminaAudioController`.
+Konumsal olmayan arka plan sesleri, tema müzikleri veya ara sahne seslendirmeleri için UMG runtime widget'ı. `LuminaAudioController` ile otomatik koordine olur.
 
-**Constructors:**
+**Yapıcı Metotlar (Constructors):**
 
 - `const LuminaUmgAudioPlayer({super.key, this.filePath, this.assetPath, this.networkUrl, this.autoPlay = false, this.looping = false, this.volume = 1.0, this.preferHeadless = false, this.onInitialized, this.onError})`
 
 ## `lib/src/umg/theme_document_colors.dart`
 
-`lumina_core` stores a theme's colours as ARGB ints (`0xAARRGGBB`). These extensions give Flutter code `Color`s.
+`lumina_core` bir temanın renklerini ARGB int (`0xAARRGGBB`) olarak saklar. Bu extension'lar Flutter koduna `Color` verir.
 
 ### `extension LuminaThemeDocumentColors on LuminaThemeDocument`
 
-| Member | Signature | Description |
+| Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
-| `colorOf` | `Color colorOf(String token, {Color fallback = const Color(0xFF888888)})` | The colour of [token] from the theme palette, or [fallback] when the theme does not set it. |
+| `colorOf` | `Color colorOf(String token, {Color fallback = const Color(0xFF888888)})` | Tema paletinden [token] rengi; tema onu tanımlamıyorsa [fallback]. |
 
 ### `extension LuminaComponentStyleColors on LuminaComponentStyle`
 
-| Member | Signature | Description |
+| Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
-| `bgColor` | `Color? get bgColor` | `backgroundColor` as a `Color`, or null. |
-| `fgColor` | `Color? get fgColor` | `foregroundColor` as a `Color`, or null. |
-| `bColor` | `Color? get bColor` | `borderColor` as a `Color`, or null. |
+| `bgColor` | `Color? get bgColor` | `backgroundColor` bir `Color` olarak, ya da null. |
+| `fgColor` | `Color? get fgColor` | `foregroundColor` bir `Color` olarak, ya da null. |
+| `bColor` | `Color? get bColor` | `borderColor` bir `Color` olarak, ya da null. |
 
 ---
 
-[Previous: Game framework](game.md) | [Up: lumina (engine core)](index.md) | [Next: Save games](save.md)
+[Önceki: lumina_widgets](index.md) | [Üst: lumina_widgets](index.md) | [Sonraki: Medya](media.md)

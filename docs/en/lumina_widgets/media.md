@@ -1,10 +1,10 @@
-[Türkçe](../../tr/lumina/media.md)
+[Türkçe](../../tr/lumina_widgets/media.md)
 
 # Media Subsystem (Video & Audio Player)
 
 The media subsystem provides high-performance video and audio playback across desktop and mobile platforms powered by `media-kit` (libmpv hardware decoding), integrated seamlessly into Lumina's runtime, UMG widgets, Blueprint scripting system, and Lumina Studio UI.
 
-File paths are relative to the `lumina/` package directory.
+File paths are relative to the `lumina_widgets/` package directory. The engine (`lumina`) holds no player: the Blueprint video nodes drive the engine interface `LuminaVideoPlayback`, which `LuminaVideoController` implements and `LuminaWidgets.ensureInitialized` registers (`LuminaVideoPlayback.factory`).
 
 **On this page:**
 
@@ -149,7 +149,7 @@ A UMG widget for in-game audio playback and soundtrack orchestration.
 
 ## Blueprint Video Nodes
 
-Lumina Blueprints include 11 standard media nodes available in the node palette under `Media`:
+Lumina Blueprints include 11 standard media nodes available in the node palette under `Media`. They work on the `LuminaVideoPlayback` the registered factory creates (a `LuminaVideoController` in a game or in Play); without a factory `Open Video` returns nothing:
 
 | Node Name | Type | Description |
 | :--- | :--- | :--- |
@@ -180,3 +180,7 @@ Exported from `lumina_ui` (`package:lumina_ui/lumina_ui.dart` and `lib/ui/core/w
    - Loop toggle button.
    - Playback rate dropdown menu (`0.5x`, `1.0x`, `1.25x`, `1.5x`, `2.0x`).
 2. **`LuminaAudioPlayerWidget`**: Lightweight `shadcn_flutter` audio player with playback bar, timecode, volume, and looping options.
+
+---
+
+[Previous: UMG](umg.md) | [Up: lumina_widgets](index.md)

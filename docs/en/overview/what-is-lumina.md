@@ -18,7 +18,7 @@ The engine is the `lumina` package. A game describes its world declaratively: a 
 - post-processing, scalability profiles and shadow settings;
 - save games.
 
-Rendering goes through `flutter_filament`, the Dart FFI binding to Google Filament, which draws with Vulkan, OpenGL or Metal on desktop and with WebGL2 in the browser. A game that imports only `package:lumina/lumina_runtime.dart` (the runtime without the editor data layer, Assimp and RigLogic) also builds for the web.
+Rendering goes through `flutter_filament`, the Dart FFI binding to Google Filament, which draws with Vulkan, OpenGL or Metal on desktop and with WebGL2 in the browser. A game imports `package:lumina_widgets/lumina_game.dart` (the engine runtime without the editor data layer, Assimp and RigLogic, plus the game's Flutter side) and also builds for the web.
 
 ## The editor
 
@@ -34,7 +34,8 @@ Plugins extend the editor through `lumina_editor_api`, a small contract package 
 |---|---|---|
 | `flutter_filament` | lumina | Dart FFI bindings to Google Filament v1.77.2 |
 | `lumina_core` | lumina | Pure-Dart foundation: math, file formats, paths, logger, pure tooling services |
-| `lumina` | lumina | The engine: runtime and its Filament binding |
+| `lumina` | lumina | The engine: runtime and its Filament binding; no widget |
+| `lumina_widgets` | lumina | The game's Flutter side: game widget and host, input, HUD, UMG, media, web loading |
 | `lumina_editor_data` | lumina | The editor data layer: repositories, importers, thumbnails, code generators, project editor builds, plugin services |
 | `lumina_editor_api` | lumina | Plugin API of Lumina Studio |
 | `lumina_ui` | lumina | Lumina Studio, the editor app |

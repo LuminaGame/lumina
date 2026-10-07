@@ -16,6 +16,12 @@
 - **Dart wrapper'ları**: `lib/src/*.dart`, C fonksiyonlarını `FilamentEngine`, `FilamentScene`, `FilamentView` ve `FilamentAssetLoader` gibi sınıflarla sarar. `dart:ffi` yerine paketin platform shim'lerini (`src/ffi_platform.dart`, `src/ffi_package_platform.dart`, `src/filament_bindings.dart`) import ederler; böylece aynı kod hem native hem de web'de çalışır.
 - **Web**: `tool/web/`, aynı C wrapper'ından ve WebGL2'li bir Filament build'inden tek bir WebAssembly modülü (`web/flutter_filament.{js,wasm}`) üretir; `lib/src/web_ffi/`, modülün heap'i üzerinde `dart:ffi` uyumlu bir katman sağlar. Web uygulamaları engine'i kullanmadan önce `await FilamentWeb.ensureInitialized()` çağırır. Yalnızca masaüstünde olan kütüphaneler (filamat, tam imageio, matdbg, gltfio JIT) web'de stub'lanır; böylece her `filament_*` sembolü export edilmeye devam eder.
 
+## Kütüphaneler
+
+- `package:flutter_filament/filament.dart`: görüntü widget'ı olmadan Dart API'si; hiçbir Flutter kütüphanesi import etmez. Motor (`lumina`) bunu import eder.
+- `package:flutter_filament/flutter_filament.dart`: aynısı ve bir Flutter uygulamasında bir view'ı barındıran `FilamentWidget` (`lumina_widgets`, `lumina_ui`).
+- `package:flutter_filament/ffi.dart` / `ffi_package.dart`: buffer geçiren kod için pointer türleri.
+
 ## Native fonksiyon eklemek
 
 1. Başarısız olan Dart testini yazın.

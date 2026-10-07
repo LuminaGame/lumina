@@ -2,16 +2,14 @@
 
 # Game framework
 
-The game framework that ties a world to a running app: the game instance and its subsystems, game mode and game state, the HUD overlay, `LuminaGame` and `LuminaGameWidget`, play state, the player camera manager, player starts, primitive actors and the template character. File paths are relative to the `lumina/` package directory.
+The game framework that ties a world to a running app: the game instance and its subsystems, game mode and game state, `LuminaGame`, play state, the player camera manager, player starts, primitive actors and the template character. File paths are relative to the `lumina/` package directory.
 
 **On this page:**
 
 - [`lib/src/game/game_instance.dart`](#libsrcgamegame_instancedart)
 - [`lib/src/game/game_mode.dart`](#libsrcgamegame_modedart)
 - [`lib/src/game/game_state.dart`](#libsrcgamegame_statedart)
-- [`lib/src/game/hud_overlay.dart`](#libsrcgamehud_overlaydart)
 - [`lib/src/game/lumina_game.dart`](#libsrcgamelumina_gamedart)
-- [`lib/src/game/lumina_widget.dart`](#libsrcgamelumina_widgetdart)
 - [`lib/src/game/play_state.dart`](#libsrcgameplay_statedart)
 - [`lib/src/game/player_camera_manager.dart`](#libsrcgameplayer_camera_managerdart)
 - [`lib/src/game/player_start.dart`](#libsrcgameplayer_startdart)
@@ -39,7 +37,7 @@ Base class for global, lifetime-bound services attached to a [LuminaGameInstance
 
 ### `class LuminaGameInstance`
 
-The engine-lifetime singleton surviving world transitions.
+The engine-lifetime singleton surviving world transitions. It is a `ChangeEmitter` (`lumina_core`): listeners hear when the world changes; a widget listens through `asListenable()` (`lumina_widgets`). The game widget, the game host and the HUD that show a game are in [lumina_widgets](../lumina_widgets/index.md).
 
 **Functions, Methods & Accessors:**
 
@@ -103,33 +101,6 @@ The shared, observable snapshot of match state and player states.
 | `removeListener` | `void removeListener(void Function() listener)` | Removes a listener from this game state. |
 | `notifyChanged` | `void notifyChanged()` | Notifies listeners that the state has changed. |
 
-## `lib/src/game/hud_overlay.dart`
-
-### `class LuminaHudOverlay`
-
-`LuminaHudOverlay`: `class` representing the data model or functionality of the module.
-
-**Functions, Methods & Accessors:**
-
-| Method / Getter | Signature | Purpose & Description |
-| :--- | :--- | :--- |
-| `game` | `LuminaGame game` | Holds the `game` property or configuration state. |
-| `hudBuilder` | `LuminaHudBuilder hudBuilder` | Holds the `hudBuilder` property or configuration state. |
-| `createState` | `State<LuminaHudOverlay> createState() => _LuminaHudOverlayState()` | Creates, configures, and returns a new `State` instance or associated GPU resource. |
-
-### `class _LuminaHudOverlayState`
-
-`_LuminaHudOverlayState`: `class` representing the data model or functionality of the module.
-
-**Functions, Methods & Accessors:**
-
-| Method / Getter | Signature | Purpose & Description |
-| :--- | :--- | :--- |
-| `initState` | `void initState()` | Executes `initState` operation. |
-| `didUpdateWidget` | `void didUpdateWidget(LuminaHudOverlay oldWidget)` | Executes `didUpdateWidget` operation. |
-| `dispose` | `void dispose()` | Releases native FFI pointers, event subscriptions, and allocated memory. |
-| `build` | `Widget build(BuildContext context)` | Constructs and returns the declarative element or widget hierarchy. |
-
 ## `lib/src/game/lumina_game.dart`
 
 ### `class LuminaGame`
@@ -152,39 +123,6 @@ Entrypoint class for building declarative Lumina game applications.  Besides the
 | `mountGame` | `void mountGame(FilamentEngine engine, FilamentScene scene)` | Initializes declarative game tree and mounts [LuminaWorld]. |
 | `tickGame` | `void tickGame(double deltaTime)` | Ticks the game loop and mounted world. No-op while [isPaused] (use [step]). |
 | `disposeGame` | `void disposeGame()` | Disposes game tree and world resources. |
-
-## `lib/src/game/lumina_widget.dart`
-
-### `class LuminaGameHostConfiguration`
-
-Wrap embedded previews in `LuminaGameHostConfiguration(allowHeadlessFrameDriver: false, child: ...)` before mounting when each viewport already presents its own frames. This disables the additional 1?1 swap chain and frame driver for descendant game widgets; their game ticker remains active. Configure it before mounting; changing this option does not rebuild existing native scenes.
-
-### `class LuminaGameWidget`
-
-Flutter widget that embeds the `FilamentWidget` viewport and drives the [LuminaGame] loop via [LuminaFrameDriver].  The widget is the game host: it calls [LuminaGame.mountGame] and `beginPlay()` on the mounted world once `FilamentWidget` has created the scene.  Play control: - [paused] is declarative: flipping it calls [LuminaGame.pause] / [LuminaGame.resume] once the scene exists (and on scene creation if it starts `true`). - [onPlayStateChanged] receives every [LuminaPlayState] transition of [game] for the widget's lifetime — bind an editor toolbar to it.  Swap chain: - With [useHeadlessSwapChain] (default `true`, today's behaviour) the widget creates a 1×1 headless swap chain plus a [LuminaFrameDriver], so the world is ticked with a vsync-derived, frame-paced delta time and [LuminaFrameDriver.frameStats] is available to the HUD overlay. - With `false` no extra swap chain or driver is created: the ticker calls [LuminaGame.tickGame] with a fixed 1/60 s delta and `FilamentWidget` presents through its own swap chain. Use this for hosts that must not allocate a second swap chain; note that no frame stats are produced in that mode.
-
-**Functions, Methods & Accessors:**
-
-| Method / Getter | Signature | Purpose & Description |
-| :--- | :--- | :--- |
-| `game` | `LuminaGame game` | Holds the `game` property or configuration state. |
-| `hudBuilder` | `LuminaHudBuilder? hudBuilder` | Holds the `hudBuilder` property or configuration state. |
-| `paused` | `bool paused` | Declarative pause flag forwarded to [LuminaGame.pause] / [LuminaGame.resume]. |
-| `useHeadlessSwapChain` | `bool useHeadlessSwapChain` | Whether to create the 1×1 headless swap chain + [LuminaFrameDriver] (see class docs). |
-| `createState` | `State<LuminaGameWidget> createState() => _LuminaGameWidgetState()` | Creates, configures, and returns a new `State` instance or associated GPU resource. |
-
-### `class _LuminaGameWidgetState`
-
-`_LuminaGameWidgetState`: shadcn_flutter UI component rendering interface elements and listening to interactions.
-
-**Functions, Methods & Accessors:**
-
-| Method / Getter | Signature | Purpose & Description |
-| :--- | :--- | :--- |
-| `initState` | `void initState()` | Executes `initState` operation. |
-| `didUpdateWidget` | `void didUpdateWidget(LuminaGameWidget oldWidget)` | Getter accessor returning the current value of `didUpdateWidget`. |
-| `dispose` | `void dispose()` | Releases native FFI pointers, event subscriptions, and allocated memory. |
-| `build` | `Widget build(BuildContext context)` | Constructs and returns the declarative element or widget hierarchy. |
 
 ## `lib/src/game/play_state.dart`
 
@@ -482,4 +420,4 @@ The art the Third Person template ships: a CC0 character with its idle, eight-di
 
 ---
 
-[Previous: Rendering devices](rendering.md) | [Up: lumina (engine core)](index.md) | [Next: Game UI widgets (UMG runtime)](umg.md)
+[Previous: Rendering devices](rendering.md) | [Up: lumina (engine core)](index.md) | [Next: User widgets](user-widgets.md)

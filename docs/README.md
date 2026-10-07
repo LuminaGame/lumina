@@ -2,7 +2,7 @@
 
 # Lumina documentation
 
-Lumina is a 3D game engine for Flutter and Dart, built on the Google Filament renderer, together with Lumina Studio, the desktop editor for Lumina projects. This documentation covers the architecture, how to set up a checkout, and the API reference of the packages in this repository: `flutter_filament`, `lumina_core`, `lumina`, `lumina_editor_data`, `lumina_plugin_process`, `lumina_editor_api` and `lumina_ui`.
+Lumina is a 3D game engine for Flutter and Dart, built on the Google Filament renderer, together with Lumina Studio, the desktop editor for Lumina projects. This documentation covers the architecture, how to set up a checkout, and the API reference of the packages in this repository: `flutter_filament`, `lumina_core`, `lumina`, `lumina_widgets`, `lumina_editor_data`, `lumina_plugin_process`, `lumina_editor_api` and `lumina_ui`.
 
 ## Where to start
 
@@ -94,8 +94,8 @@ You work on the engine, the renderer bindings or the native build.
   - [AI](en/lumina/ai.md) - AI controller, behavior trees, blackboard, navigation, perception.
   - [Materials and post-processing](en/lumina/materials-and-post-process.md) - Engine materials, dynamic material instances, material cache, post-process, scalability, shadows.
   - [Rendering devices](en/lumina/rendering.md) - GPU selection and the render backend in use.
-  - [Game framework](en/lumina/game.md) - Game instance, game mode, game state, HUD, game widget, player camera manager.
-  - [Game UI widgets (UMG runtime)](en/lumina/umg.md) - Runtime UMG widgets, element bindings, user widgets and the widget layer.
+  - [Game framework](en/lumina/game.md) - Game instance, game mode, game state, play state, player camera manager.
+  - [User widgets](en/lumina/user-widgets.md) - The script a Widget Blueprint graph runs on.
   - [Save games](en/lumina/save.md) - Save game objects and the save game subsystem.
   - [Blueprints](en/lumina/blueprint/index.md) - Visual scripting: documents, node library, VM, generated code.
     - [Blueprint documents and assets](en/lumina/blueprint/model.md) - Pins, nodes, wires, graphs, functions, macros, interfaces, enums, save-game and montage assets, validation.
@@ -103,6 +103,12 @@ You work on the engine, the renderer bindings or the native build.
     - [Blueprint function library](en/lumina/blueprint/function-library.md) - The behaviour of every pure and impure node, shared by the VM and generated code.
     - [Animation Blueprints](en/lumina/blueprint/animation.md) - Animation Blueprint documents, state machines, blend spaces, aim offsets and their instances.
   - [Utilities, math and testing](en/lumina/utilities.md) - Gameplay statics, volumes, timers, viewport picking, math helpers, mesh decimation, smoke artifacts.
+
+### lumina_widgets (the game's Flutter side)
+
+- [lumina_widgets](en/lumina_widgets/index.md) - The game widget and game host (keyboard, pointer, mouse capture), the HUD, web loading, the observable adapters, `lumina_game.dart`.
+  - [Game UI widgets (UMG runtime)](en/lumina_widgets/umg.md) - Runtime UMG widgets, element bindings and the widget layer.
+  - [Media (video & audio)](en/lumina_widgets/media.md) - media_kit players, controllers, UMG media widgets, the Blueprint video nodes.
 
 ### lumina_editor_data (editor data layer)
 

@@ -1,10 +1,10 @@
-[English](../../en/lumina/media.md)
+[English](../../en/lumina_widgets/media.md)
 
 # Medya Alt Sistemi (Video & Ses Oynatıcı)
 
 Medya alt sistemi, `media-kit` (libmpv donanım kod çözümü) ile desteklenen, Lumina runtime'ı, UMG widget'ları, Blueprint görsel programlama sistemi ve Lumina Studio arayüzü ile sorunsuz entegre edilmiş yüksek performanslı video ve ses oynatma özellikleri sunar.
 
-Dosya yolları `lumina/` paket dizinine görelidir.
+Dosya yolları `lumina_widgets/` paket dizinine görelidir. Motor (`lumina`) hiçbir oynatıcı tutmaz: Blueprint video node'ları motorun `LuminaVideoPlayback` arayüzünü sürer; bunu `LuminaVideoController` uygular ve `LuminaWidgets.ensureInitialized` kaydeder (`LuminaVideoPlayback.factory`).
 
 **Bu sayfada:**
 
@@ -149,7 +149,7 @@ Oyun içi ses ve müzik yönetimi için UMG widget'ı.
 
 ## Blueprint Video Node'ları
 
-Lumina Blueprint kütüphanesi, `Media` kategorisi altında 11 standart medya node'u içerir:
+Lumina Blueprint kütüphanesi, `Media` kategorisi altında 11 standart medya node'u içerir. Node'lar kayıtlı factory'nin oluşturduğu `LuminaVideoPlayback` üzerinde çalışır (bir oyunda ya da Play'de bir `LuminaVideoController`); factory yoksa `Open Video` hiçbir şey döndürmez:
 
 | Node Adı | Tür | Açıklama |
 | :--- | :--- | :--- |
@@ -180,3 +180,7 @@ Lumina Blueprint kütüphanesi, `Media` kategorisi altında 11 standart medya no
    - Döngü butonu.
    - Oynatma hızı açılır menüsü (`0.5x`, `1.0x`, `1.25x`, `1.5x`, `2.0x`).
 2. **`LuminaAudioPlayerWidget`**: Oynatma çubuğu, zaman kodu, ses seviyesi ve döngü seçenekleri içeren hafif `shadcn_flutter` ses oynatıcı bileşeni.
+
+---
+
+[Önceki: UMG](umg.md) | [Üst: lumina_widgets](index.md)

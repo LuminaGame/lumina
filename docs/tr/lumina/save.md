@@ -127,4 +127,4 @@ Subsystem managing asynchronous Game Save & Load operations on disk with atomic 
 
 ---
 
-[Önceki: Oyun arayüzü widget'ları (UMG runtime)](umg.md) | [Üst: lumina (engine çekirdeği)](index.md) | [Sonraki: Blueprint'ler](blueprint/index.md)
+[Önceki: User widget'lar](user-widgets.md) | [Üst: lumina (engine çekirdeği)](index.md) | [Sonraki: Blueprint'ler](blueprint/index.md)

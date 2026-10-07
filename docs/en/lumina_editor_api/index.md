@@ -16,7 +16,7 @@ The editor, `lumina_ui`, implements the API; plugins consume it. Both depend on 
 - `lib/src/editor_level.dart`: the open level as plugins see it (`EditorLevelAccess`, whose `changes` is a Flutter `Listenable`; `LuminaEditorHostContext`; `EditorAssetPicker`) and the conversions to and from a plugin process's `PluginLevelAccess`.
 - `lib/src/editor_theme.dart`: read-only access to the editor's colour theme.
 - `lib/src/project_settings_section.dart`: Project Settings pages.
-- `lib/src/process/`: the Flutter side of plugin processes: the shell's `PluginProcessChannel` (`PluginProcessChannel.ofLink`, `.detached`), `PluginProcessAdapter`, `pluginIconOf` / `iconDataOf`, and the adapters between `lumina_core`'s pure change types and Flutter's (`asValueListenable()`, `asListenable()`, `asObservable()`, `asChangeSignal()`).
+- `lib/src/process/`: the Flutter side of plugin processes: the shell's `PluginProcessChannel` (`PluginProcessChannel.ofLink`, `.detached`), `PluginProcessAdapter`, `pluginIconOf` / `iconDataOf`, and the re-exported adapters between `lumina_core`'s pure change types and Flutter's (`asValueListenable()`, `asListenable()`, `asObservable()`, `asChangeSignal()`; they live in `lumina_widgets`, as do the media players this package re-exports).
 - `lib/testing.dart`: the loopback test host with its Flutter `channel`.
 
 Re-exported unchanged from [lumina_plugin_process](../lumina_plugin_process/index.md), so a plugin keeps importing only `package:lumina_editor_api/lumina_editor_api.dart`: the level snapshot and spec types, `PluginStorage` and `EditorProjectInfo`, `LuminaPluginCrashReporter`, the MCP types and `EditorMcp`, the plugin process API and runtime, and the wire protocol (`lumina_plugin_protocol`).

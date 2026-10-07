@@ -37,7 +37,7 @@ Kütüphane tek bir barrel'dır: `package:lumina_core/lumina_core.dart`. Dosyala
 | `ChangeEmitter` | Olağan `ChangeSignal`: `notifyListeners()` o anda kayıtlı her dinleyiciyi sırayla çağırır (hata fırlatan biri diğerlerini durdurmaz; ilk hata sonra yeniden fırlatılır); `hasListeners`, `dispose()` (ardından dinleyici eklemek bir `StateError`'dır). |
 | `ObservableValue<T>` | `value`'su atanabilen bir `Observable`; eşit bir değer atamak kimseyi bilgilendirmez. |
 
-Eklenti süreci API'si (`lumina_plugin_process`) canlı değerleri için bunları kullanır: `PluginProcessContext.pluginSettings`, bir slot butonunun `state`'i, bir menü öğesinin `checked`'i, level'ın `changes`'i. `lumina_editor_api` onları Flutter'ın tiplerine ve tiplerinden dönüştürür (`asValueListenable()`, `asListenable()`, `asObservable()`, `asChangeSignal()`).
+Eklenti süreci API'si (`lumina_plugin_process`) canlı değerleri için bunları kullanır: `PluginProcessContext.pluginSettings`, bir slot butonunun `state`'i, bir menü öğesinin `checked`'i, level'ın `changes`'i. Motor da onlarla haber verir (`LuminaGameInstance`, bir player controller'ın `cursorState`'i, widget alt sisteminin `activeWidgets`'ı, kullanılan GPU). `lumina_widgets` onları Flutter'ın tiplerine ve tiplerinden dönüştürür (`asValueListenable()`, `asListenable()`, `asObservable()`, `asChangeSignal()`); `lumina_editor_api` bu görünümleri yeniden export eder.
 
 ## Engine'de kalanlar
 

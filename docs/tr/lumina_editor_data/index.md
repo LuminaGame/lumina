@@ -13,13 +13,13 @@ Paket widget içermez: `test/architecture/no_widgets_test.dart`, paketin `packag
 ## Kütüphaneler
 
 - `package:lumina_editor_data/lumina_editor_data.dart`: yalnızca editör veri katmanı (bölünmeden önce `lumina.dart`'ın `lib/data` ve `lib/domain`'den export ettikleri).
-- `package:lumina_editor_data/lumina_editor.dart`: editör kodu (Lumina Studio, editör eklentileri) için şemsiye kütüphane. `lumina_core`, `lumina`, `lumina_editor_data`, `flutter_assimp` ve `flutter_riglogic`'i export eder: bölünmeden önce `package:lumina/lumina.dart`'ın export ettiklerini.
+- `package:lumina_editor_data/lumina_editor.dart`: editör kodu (Lumina Studio, editör eklentileri) için şemsiye kütüphane. `lumina_core`, `lumina`, `lumina_widgets`, `lumina_editor_data`, `flutter_assimp` ve `flutter_riglogic`'i export eder: bölünmeden önce `package:lumina/lumina.dart`'ın export ettiklerini.
 
 ```dart
 import 'package:lumina_editor_data/lumina_editor.dart';
 ```
 
-Üretilen oyunlar `package:lumina/lumina_runtime.dart`'ı import etmeye devam eder.
+Üretilen oyunlar `package:lumina_widgets/lumina_game.dart`'ı (`kLuminaGameLibrary`) import eder: launcher (`LuminaGameHost` gösteren ve `LuminaWidgets.ensureInitialized()` çağıran `main.dart`), level'lar, `input/project_input.g.dart`, karakter ve game mode ile UMG widget sınıfları. Derlenmiş Blueprint sınıfları ve kayıtları yalnızca motoru kullanır ve `package:lumina/lumina_runtime.dart`'ı import eder.
 
 ## Neleri barındırır
 

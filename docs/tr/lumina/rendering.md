@@ -32,7 +32,7 @@ Which GPU the editor renders on: lists the Vulkan devices, applies the saved cho
 
 | Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
-| `inUse` | `static final ValueNotifier<String?> inUse` | The device of the most recent engine [reportEngine] saw; null until one exists (or on a non-Vulkan backend). |
+| `inUse` | `static final ObservableValue<String?> inUse` | [reportEngine]'in gördüğü son engine'in cihazı; biri oluşana dek (ya da Vulkan olmayan bir backend'de) null. Bir widget `asValueListenable()` ile dinler (`lumina_widgets`). |
 | `list` | `static List<LuminaGraphicsDevice> list()` |  |
 | `matches` | `static bool matches(String deviceName)` | Whether [deviceName] still names one of this machine's devices. |
 | `describeOverride` | `static String? describeOverride(Map<String, String> environment)` | `FILAMENT_GPU=…` or `VK_DEVICE_INDEX=…` when the environment chooses the GPU (smoke and CI runs); null otherwise. |
