@@ -25,14 +25,42 @@ class PreviewMeshData {
 
   int get vertexCount => positions.length ~/ 3;
   int get triangleCount => indices.length ~/ 3;
+
+  /// The largest extent along any axis.
+  double get largestDimension {
+    var d = 0.0;
+    for (var k = 0; k < 3; k++) {
+      final e = maxBounds[k] - minBounds[k];
+      if (e > d) d = e;
+    }
+    return d;
+  }
+
+  /// This mesh uniformly scaled by [factor] about the origin.
+  PreviewMeshData scaled(double factor) => PreviewMeshData(
+        positions: Float32List.fromList([for (final v in positions) v * factor]),
+        normals: normals,
+        uv0: uv0,
+        indices: indices,
+        minBounds: [for (final v in minBounds) v * factor],
+        maxBounds: [for (final v in maxBounds) v * factor],
+      );
 }
 
 class PreviewMeshFactory {
   const PreviewMeshFactory._();
 
-  /// Builds the geometry for [shape]. [PreviewShape.mesh] has no procedural
+  /// Builds the geometry for [shape]; with [size], scaled so its largest
+  /// dimension (a sphere's diameter, a cube's or cylinder's height, a plane's
+  /// width) is [size] world units. [PreviewShape.mesh] has no procedural
   /// form and falls back to the sphere.
-  static PreviewMeshData build(PreviewShape shape) {
+  static PreviewMeshData build(PreviewShape shape, {double? size}) {
+    final mesh = _build(shape);
+    if (size == null || size <= 0) return mesh;
+    return mesh.scaled(size / mesh.largestDimension);
+  }
+
+  static PreviewMeshData _build(PreviewShape shape) {
     switch (shape) {
       case PreviewShape.cube:
         return cube();

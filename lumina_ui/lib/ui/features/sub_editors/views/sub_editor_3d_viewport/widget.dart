@@ -86,6 +86,12 @@ class SubEditor3DViewport extends StatefulWidget {
   /// sections keep the mesh's own materials. Empty: the mesh is shown as is.
   final Set<int> previewMaterialSections;
 
+  /// The material preview primitive's largest dimension in world units
+  /// (cm): a sphere's diameter, a cube's or cylinder's height, a plane's
+  /// width. Null keeps the unit-scale primitives. The grid and the zoom range
+  /// follow it.
+  final double? previewShapeSize;
+
   /// Whether the top HUD (shading mode, projection label, shape selector,
   /// scene-lights toggle, gizmo tools) is drawn. A host with its own
   /// controls turns it off.
@@ -220,6 +226,7 @@ class SubEditor3DViewport extends StatefulWidget {
     this.previewMaterialRevision = 0,
     this.previewMaterialSections = const {},
     this.showToolbar = true,
+    this.previewShapeSize,
     this.onPreviewWorldReady,
     this.onPreviewWorldDisposing,
     this.yUpCamera = false,
@@ -269,6 +276,17 @@ class SubEditor3DViewport extends StatefulWidget {
       previewMaterialBytes,
     );
     return hasPayload || hasMaterial;
+  }
+
+  /// [raw] rounded to a 1, 2 or 5 × 10ⁿ length (a grid cell that reads as a
+  /// round number of centimetres or metres).
+  static double roundGridStep(double raw) {
+    if (raw <= 0) return 1.0;
+    final exponent = (math.log(raw) / math.ln10).floor();
+    final base = math.pow(10, exponent).toDouble();
+    final m = raw / base;
+    final nice = m < 1.5 ? 1.0 : (m < 3.5 ? 2.0 : (m < 7.5 ? 5.0 : 10.0));
+    return nice * base;
   }
 
   @override

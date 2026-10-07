@@ -228,6 +228,8 @@ Custom scans the project's mesh assets (static and skeletal) on a background iso
 | `parameterRevision` | `final int parameterRevision` | Bumped by the editor on every view-model change so the preview re-applies the parameter values. |
 | `meshTypes` | `static const Set<AssetType> meshTypes` | The mesh asset types the Custom preview offers: `filamesh` and `filameshSk`. |
 | `sectionsOfSlot` | `static Set<int> sectionsOfSlot(GlbMeshData mesh, int slot)` | The geometry sections of [mesh] that belong to material slot [slot] (by `materialIndex`, or by `materialName` for a section without an index); every section when the mesh has at most one slot. |
+| `sizePresets` | `static final Map<double, String> sizePresets` | The primitive sizes the Size select offers, in cm: 10 cm, 25 cm, 50 cm, 1 m, 2 m, 5 m, 10 m. |
+| `defaultSize` | `static const double defaultSize` | 100 (1 m): the size a material's preview starts at; the last pick is remembered per material for the editor session. The Custom mesh keeps its own size (no Size select). |
 | `scanMeshes` | `static Future<List<RealAssetInfo>> scanMeshes(String projectRoot)` | The project's mesh assets under [projectRoot], scanned on a background isolate (`Isolate.run`). |
 | `createState` | `State<MaterialPreviewPane> createState()` |  |
 
@@ -357,6 +359,7 @@ Owns the Filament objects that show a compiled `.filamat` package on a procedura
 | `packageMaterialVersion` | `static int? packageMaterialVersion(Uint8List? bytes)` | The MATERIAL_VERSION a package was compiled with, or null if not a package. |
 | `applyParameters` | `void applyParameters(List<MaterialParamModel> parameters)` | Pushes the editor's parameter values into the material instance. Unknown or sampler parameters are skipped; each setter is guarded so one bad value never blocks the rest. |
 | `setShape` | `void setShape(PreviewShape shape)` | Rebuilds the geometry for [shape] keeping the same material instance. Needs a scene: after [mountMaterialOnly] it does nothing. |
+| `setSize` | `void setSize(double? size)` | Rebuilds the primitive at [size] world units (largest dimension; null: unit scale), keeping the material instance. `mount` takes the same `size`. |
 | `mountMaterialOnly` | `bool mountMaterialOnly({required FilamentEngine engine, required Uint8List filamatBytes, List<MaterialParamModel> parameters = const []})` | Creates the material and its instance from [filamatBytes] with [parameters] applied, without a primitive of its own: the caller puts [materialInstance] on another renderable (the sections of a mesh's material slot). Returns true on success; a non-package or failing load sets [lastError]. |
 | `hasMaterial` | `bool get hasMaterial` | Whether a material instance exists (with or without its own primitive). |
 | `packVertices` | `static Uint8List packVertices(PreviewMeshData mesh)` | Packs [mesh] into the interleaved layout Filament expects. Exposed for tests (no engine required). |

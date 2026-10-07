@@ -228,6 +228,8 @@ Custom, projenin mesh varlıklarını (statik ve iskeletli) arka plan isolate'in
 | `parameterRevision` | `final int parameterRevision` | Editör her view-model değişikliğinde artırır; önizleme parametre değerlerini yeniden uygular. |
 | `meshTypes` | `static const Set<AssetType> meshTypes` | Custom önizlemenin sunduğu mesh varlık türleri: `filamesh` ve `filameshSk`. |
 | `sectionsOfSlot` | `static Set<int> sectionsOfSlot(GlbMeshData mesh, int slot)` | [mesh]'in [slot] materyal yuvasına ait geometri bölümleri (`materialIndex` ile, indeksi olmayan bölümde `materialName` ile); mesh'in en fazla bir yuvası varsa tüm bölümler. |
+| `sizePresets` | `static final Map<double, String> sizePresets` | Size seçicisinin sunduğu şekil boyutları, cm: 10 cm, 25 cm, 50 cm, 1 m, 2 m, 5 m, 10 m. |
+| `defaultSize` | `static const double defaultSize` | 100 (1 m): bir materyalin önizlemesinin başladığı boyut; son seçim editör oturumu boyunca materyal başına hatırlanır. Custom mesh kendi boyutunu korur (Size seçicisi yoktur). |
 | `scanMeshes` | `static Future<List<RealAssetInfo>> scanMeshes(String projectRoot)` | [projectRoot] altındaki proje mesh varlıkları; arka plan isolate'inde (`Isolate.run`) taranır. |
 | `createState` | `State<MaterialPreviewPane> createState()` |  |
 
@@ -357,6 +359,7 @@ Owns the Filament objects that show a compiled `.filamat` package on a procedura
 | `packageMaterialVersion` | `static int? packageMaterialVersion(Uint8List? bytes)` | The MATERIAL_VERSION a package was compiled with, or null if not a package. |
 | `applyParameters` | `void applyParameters(List<MaterialParamModel> parameters)` | Pushes the editor's parameter values into the material instance. Unknown or sampler parameters are skipped; each setter is guarded so one bad value never blocks the rest. |
 | `setShape` | `void setShape(PreviewShape shape)` | Aynı materyal örneğini koruyarak [shape] için geometriyi yeniden kurar. Bir sahne gerektirir: [mountMaterialOnly] sonrasında hiçbir şey yapmaz. |
+| `setSize` | `void setSize(double? size)` | Şekli [size] dünya biriminde (en büyük boyut; null: birim ölçek) yeniden kurar, materyal örneğini korur. `mount` aynı `size` değerini alır. |
 | `mountMaterialOnly` | `bool mountMaterialOnly({required FilamentEngine engine, required Uint8List filamatBytes, List<MaterialParamModel> parameters = const []})` | Materyali ve örneğini [filamatBytes]'tan [parameters] uygulanmış olarak, kendi primitifi olmadan oluşturur: çağıran taraf [materialInstance]'ı başka bir renderable'a (bir mesh'in materyal yuvasının bölümlerine) takar. Başarıda true döner; paket olmayan veya yüklenemeyen veri [lastError]'ı ayarlar. |
 | `hasMaterial` | `bool get hasMaterial` | Bir materyal örneğinin (kendi primitifi olsun ya da olmasın) var olup olmadığı. |
 | `packVertices` | `static Uint8List packVertices(PreviewMeshData mesh)` | Packs [mesh] into the interleaved layout Filament expects. Exposed for tests (no engine required). |

@@ -400,6 +400,7 @@ mixin _SubEditor3DViewportNativeScene on _SubEditor3DViewportStateBase {
       filamatBytes: bytes,
       shape: _shape == PreviewShape.mesh ? PreviewShape.sphere : _shape,
       parameters: widget.previewMaterialParams,
+      size: widget.previewShapeSize,
     );
     if (ok) {
       // Unit-scale primitive: frame it tightly around the origin.
@@ -412,12 +413,20 @@ mixin _SubEditor3DViewportNativeScene on _SubEditor3DViewportStateBase {
     }
   }
 
+  /// [distance] kept between a tenth of the fit distance and four times it,
+  /// whatever the primitive's size (the far plane is 10000 units).
+  double _materialZoomClamp(double distance) {
+    final fit = _materialFitDistance();
+    return distance.clamp(fit * 0.1, math.min(fit * 4.0, 9000.0));
+  }
+
   /// The distance at which the preview primitive's bounding sphere fits the
   /// narrower of the two fields of view, with a margin. The projection's 45°
   /// is vertical, so a tall, narrow pane sees much less across.
   @override
   double _materialFitDistance() {
-    final mesh = PreviewMeshFactory.build(_shape == PreviewShape.mesh ? PreviewShape.sphere : _shape);
+    final mesh = PreviewMeshFactory.build(_shape == PreviewShape.mesh ? PreviewShape.sphere : _shape,
+        size: widget.previewShapeSize);
     var r2 = 0.0;
     for (var k = 0; k < 3; k++) {
       final e = math.max(mesh.minBounds[k].abs(), mesh.maxBounds[k].abs());

@@ -21,7 +21,24 @@ class MaterialPreviewPane extends StatefulWidget {
 
   const MaterialPreviewPane({super.key, required this.viewModel, required this.parameterRevision});
 
-  /// The mesh asset types the custom preview offers.
+  /// The primitive sizes offered, in world units (cm), with their labels.
+  static final Map<double, String> sizePresets = {
+    10.0: '10 cm',
+    25.0: '25 cm',
+    50.0: '50 cm',
+    100.0: '1 m',
+    200.0: '2 m',
+    500.0: '5 m',
+    1000.0: '10 m',
+  };
+
+  /// The size a new preview starts at: one metre.
+  static const double defaultSize = 100.0;
+
+  /// The size last picked per material asset path, for this editor session.
+  static final Map<String, double> _sizeByMaterial = {};
+
+    /// The mesh asset types the custom preview offers.
   static const Set<AssetType> meshTypes = {AssetType.filamesh, AssetType.filameshSk};
 
   /// The geometry sections of [mesh] that belong to material slot [slot]:
@@ -54,6 +71,13 @@ enum _PreviewGeometry { sphere, cube, cylinder, plane, custom }
 class _MaterialPreviewPaneState extends State<MaterialPreviewPane> {
   _PreviewGeometry _geometry = _PreviewGeometry.sphere;
   bool _gridEnabled = true;
+  late double _size =
+      MaterialPreviewPane._sizeByMaterial[widget.viewModel.assetPath] ?? MaterialPreviewPane.defaultSize;
+
+  void _setSize(double size) {
+    MaterialPreviewPane._sizeByMaterial[widget.viewModel.assetPath] = size;
+    setState(() => _size = size);
+  }
 
   List<RealAssetInfo>? _meshes;
   bool _scanning = false;
@@ -171,7 +195,7 @@ class _MaterialPreviewPaneState extends State<MaterialPreviewPane> {
                       ),
                   ],
                 ),
-                if (_geometry == _PreviewGeometry.custom) ..._customControls(),
+                if (_geometry == _PreviewGeometry.custom) ..._customControls() else _sizeControl(),
                 const SizedBox(height: 12),
                 Expanded(child: _viewport()),
               ],
@@ -186,6 +210,39 @@ class _MaterialPreviewPaneState extends State<MaterialPreviewPane> {
       ],
     );
   }
+
+  /// The primitive's largest dimension in world units (the mesh preview
+  /// keeps the mesh's own size).
+  Widget _sizeControl() => Padding(
+        padding: const EdgeInsets.only(top: 8),
+        child: Row(
+          children: [
+            const SizedBox(
+              width: 80,
+              child: Text('Size', style: TextStyle(fontSize: 10, color: EditorColors.mutedForeground)),
+            ),
+            Expanded(
+              child: Select<double>(
+                key: const ValueKey('material_preview_size'),
+                value: _size,
+                onChanged: (v) {
+                  if (v != null) _setSize(v);
+                },
+                itemBuilder: (context, v) => Text(MaterialPreviewPane.sizePresets[v] ?? '${v.round()} cm',
+                    style: const TextStyle(fontSize: 11)),
+                popup: SelectPopup(
+                  items: SelectItemList(
+                    children: [
+                      for (final e in MaterialPreviewPane.sizePresets.entries)
+                        SelectItemButton(value: e.key, child: Text(e.value)),
+                    ],
+                  ),
+                ).call,
+              ),
+            ),
+          ],
+        ),
+      );
 
   List<Widget> _customControls() {
     final meshes = _meshes;
@@ -277,9 +334,12 @@ class _MaterialPreviewPaneState extends State<MaterialPreviewPane> {
       );
     }
     return SubEditor3DViewport(
-      key: ValueKey('material_preview_primitive:$_gridEnabled'),
+      // The grid is sized when the scene is created: a new size or grid toggle
+      // mounts a fresh preview.
+      key: ValueKey('material_preview_primitive:$_gridEnabled:$_size'),
       title: 'Material 3D Preview Viewport',
       initialShape: _shape,
+      previewShapeSize: _size,
       showShapeSelector: false,
       showToolbar: false,
       showGrid: _gridEnabled,

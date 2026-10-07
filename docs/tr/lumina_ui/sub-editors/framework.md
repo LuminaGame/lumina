@@ -65,6 +65,7 @@ Tüm alt editörlerin paylaştığı parçalar: 3D önizleme viewport'u, hiyerar
 | `previewMaterialParams` | `List<MaterialParamModel> previewMaterialParams` | Editor parameter values pushed into the preview material instance. |
 | `previewMaterialRevision` | `int previewMaterialRevision` | Bump to re-apply [previewMaterialParams] without recreating the widget. |
 | `previewMaterialSections` | `Set<int> previewMaterialSections` | Bir mesh yükünün ([glbMesh]) [previewMaterialBytes]'ı [previewMaterialParams] ile giyen geometri bölümleri (Materyal editörünün Custom önizleme mesh'i: tek bir materyal yuvasının bölümleri); diğer bölümler mesh'in kendi materyallerini korur. Boşsa mesh olduğu gibi gösterilir. |
+| `previewShapeSize` | `double? previewShapeSize` | Materyal önizleme şeklinin en büyük boyutu, dünya biriminde (cm): kürenin çapı, küpün ya da silindirin yüksekliği, düzlemin genişliği. Null ise birim ölçekli şekiller kalır. Grid (on boyut genişliğinde, hücreler [roundGridStep] ile yuvarlanır) ve zoom aralığı (sığdırma mesafesinin onda biri ile dört katı arası, orantılı adımlar) buna göre ayarlanır. |
 | `showToolbar` | `bool showToolbar` | Üstteki HUD'un (gölgelendirme modu, projeksiyon etiketi, şekil seçici, sahne ışıkları anahtarı, gizmo araçları) çizilip çizilmediği. Kendi denetimleri olan bir barındırıcı (Materyal editörünün önizlemesi) bunu kapatır. |
 | `yUpCamera` | `bool yUpCamera` | Use a Y-up camera (lumina world convention) instead of inferring the up axis from the mesh bounds. Mesh'siz bir materyal önizlemesi ([previewMaterialBytes] var, [glbMesh] yok) her zaman Y-up kamerayı kullanır; böylece prosedürel primitif yatay bir ızgaranın üzerinde durur. |
 | `initialCameraDistance` | `double? initialCameraDistance` | Initial orbit distance override (world units). |
@@ -263,7 +264,9 @@ Procedural preview geometry (unit-scale) used by the Material Editor's 3D previe
 
 | Metot / Getter | İmzası | Ne İşe Yarar? |
 | :--- | :--- | :--- |
-| `build` | `static PreviewMeshData build(PreviewShape shape)` | Builds the geometry for [shape]. [PreviewShape.mesh] has no procedural form and falls back to the sphere. |
+| `build` | `static PreviewMeshData build(PreviewShape shape, {double? size})` | [shape] için geometriyi kurar; [size] verilirse en büyük boyutu [size] dünya birimi olacak şekilde ölçekler. [PreviewShape.mesh]'in prosedürel karşılığı yoktur, küre kullanılır. |
+| `largestDimension` | `double get largestDimension` (`PreviewMeshData` üzerinde) | Herhangi bir eksendeki en büyük uzunluk. |
+| `scaled` | `PreviewMeshData scaled(double factor)` (`PreviewMeshData` üzerinde) | Mesh'in orijin etrafında eşit ölçeklenmiş hâli. |
 | `plane` | `static PreviewMeshData plane({double halfExtent = 1.2, double lift = 0.002})` | XZ'ye paralel, +Y'ye bakan kare düzlem (çift yüzlü materyaller iki yüzü de çizer; tek yüzlüler üstü gösterir); ızgara çizgileri onunla z-fighting yapmasın diye y = 0'daki editör ızgarasının [lift] kadar üstüne kaldırılır. |
 
 ## `lib/ui/features/sub_editors/models/sub_editor_line_set.dart`
@@ -646,6 +649,8 @@ Edit → Editor Preferences: the user's own editor settings — a category list 
 | `previewMaterialParams` | `final List<MaterialParamModel> previewMaterialParams` | Editor parameter values pushed into the preview material instance. |
 | `previewMaterialRevision` | `final int previewMaterialRevision` | Bump to re-apply [previewMaterialParams] without recreating the widget. |
 | `previewMaterialSections` | `final Set<int> previewMaterialSections` | Bir mesh yükünün ([glbMesh]) [previewMaterialBytes]'ı [previewMaterialParams] ile giyen geometri bölümleri (Materyal editörünün Custom önizleme mesh'i: tek bir materyal yuvasının bölümleri); diğer bölümler mesh'in kendi materyallerini korur. Boşsa mesh olduğu gibi gösterilir. |
+| `previewShapeSize` | `final double? previewShapeSize` | Materyal önizleme şeklinin en büyük boyutu, dünya biriminde (cm): kürenin çapı, küpün ya da silindirin yüksekliği, düzlemin genişliği. Null ise birim ölçekli şekiller kalır. Grid (on boyut genişliğinde, hücreler [roundGridStep] ile yuvarlanır) ve zoom aralığı (sığdırma mesafesinin onda biri ile dört katı arası, orantılı adımlar) buna göre ayarlanır. |
+| `roundGridStep` | `static double roundGridStep(double raw)` | [raw] değerini 1, 2 ya da 5 × 10ⁿ uzunluğa yuvarlar; grid hücreleri yuvarlak bir santimetre ya da metre değeri olur. |
 | `showToolbar` | `final bool showToolbar` | Üstteki HUD'un (gölgelendirme modu, projeksiyon etiketi, şekil seçici, sahne ışıkları anahtarı, gizmo araçları) çizilip çizilmediği. Kendi denetimleri olan bir barındırıcı (Materyal editörünün önizlemesi) bunu kapatır. |
 | `onPreviewWorldReady` | `final void Function(LuminaWorld world)? onPreviewWorldReady` | Level/environment preview (Environment Lighting mixer): when set, the viewport mounts the native renderer without a mesh payload, wraps the engine/scene/view in a lumina [LuminaWorld] (editor world type) and hands it over. The caller populates the world through lumina components (lights, sky, meshes, post-process); the built-in studio lights are skipped so the world's own lighting drives the frame. |
 | `onPreviewWorldDisposing` | `final void Function(LuminaWorld world)? onPreviewWorldDisposing` | Fired right before the preview world is cleaned up on dispose. |

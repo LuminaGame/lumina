@@ -165,6 +165,12 @@ class _SubEditor3DViewportState extends _SubEditor3DViewportStateBase
           widget.previewMaterialRevision) {
         _materialPreview.applyParameters(widget.previewMaterialParams);
       }
+      if (oldWidget.previewShapeSize != widget.previewShapeSize) {
+        _materialPreview.setSize(widget.previewShapeSize);
+        _cameraDistance = _materialFitDistance();
+        _materialFramed = true;
+        _updateNativeCamera();
+      }
       if (oldWidget.initialShape != widget.initialShape) {
         _shape = widget.initialShape;
         _materialPreview.setShape(_shape);
@@ -292,18 +298,24 @@ class _SubEditor3DViewportState extends _SubEditor3DViewportStateBase
                     onPointerSignal: (pointerSignal) {
                       if (pointerSignal is PointerScrollEvent) {
                         setState(() {
-                          final zoomStep = hasNativePayload
-                              ? (widget.initialCameraDistance != null
-                                    ? widget.initialCameraDistance! / 800.0
-                                    : 0.01)
-                              : 0.4;
                           _materialFramed = false;
-                          _cameraDistance +=
-                              pointerSignal.scrollDelta.dy * zoomStep;
-                          _cameraDistance = _cameraDistance.clamp(
-                            hasNativePayload ? 0.5 : 40.0,
-                            1500.0,
-                          );
+                          if (_isMaterialPreview) {
+                            // Proportional, so a 10 cm and a 10 m preview zoom alike.
+                            _cameraDistance = _materialZoomClamp(
+                                _cameraDistance * (1.0 + pointerSignal.scrollDelta.dy * 0.001));
+                          } else {
+                            final zoomStep = hasNativePayload
+                                ? (widget.initialCameraDistance != null
+                                      ? widget.initialCameraDistance! / 800.0
+                                      : 0.01)
+                                : 0.4;
+                            _cameraDistance +=
+                                pointerSignal.scrollDelta.dy * zoomStep;
+                            _cameraDistance = _cameraDistance.clamp(
+                              hasNativePayload ? 0.5 : 40.0,
+                              1500.0,
+                            );
+                          }
                           _updateNativeCamera();
                         });
                       }
@@ -372,12 +384,16 @@ class _SubEditor3DViewportState extends _SubEditor3DViewportStateBase
                             } else if (isRmb && isAlt) {
                               // Alt + RMB smooth dolly
                               _materialFramed = false;
-                              final zoomStep = hasNativePayload ? 0.02 : 0.8;
-                              _cameraDistance =
-                                  (_cameraDistance - delta.dy * zoomStep).clamp(
-                                    hasNativePayload ? 0.5 : 40.0,
-                                    1500.0,
-                                  );
+                              if (_isMaterialPreview) {
+                                _cameraDistance = _materialZoomClamp(_cameraDistance * (1.0 - delta.dy * 0.01));
+                              } else {
+                                final zoomStep = hasNativePayload ? 0.02 : 0.8;
+                                _cameraDistance =
+                                    (_cameraDistance - delta.dy * zoomStep).clamp(
+                                      hasNativePayload ? 0.5 : 40.0,
+                                      1500.0,
+                                    );
+                              }
                             } else if (isRmb) {
                               // RMB free-look mouselook
                               _cameraYaw += delta.dx * 0.4;
@@ -468,10 +484,15 @@ class _SubEditor3DViewportState extends _SubEditor3DViewportStateBase
                                          final mesh = widget.glbMesh;
                                          final double gridExtent;
                                          final double gridStep;
+                                         final previewSize = widget.previewShapeSize;
                                          if (widget.gridExtent != null &&
                                              widget.gridStep != null) {
                                            gridExtent = widget.gridExtent!;
                                            gridStep = widget.gridStep!;
+                                         } else if (mesh == null && previewSize != null && previewSize > 0) {
+                                           // Ten shape sizes across, cells of a round length.
+                                           gridExtent = previewSize * 5.0;
+                                           gridStep = SubEditor3DViewport.roundGridStep(previewSize / 4.0);
                                          } else if (mesh != null &&
                                              mesh.positions.isNotEmpty) {
                                            final spanX = (mesh.maxBounds[0] -

@@ -65,6 +65,7 @@ The pieces every sub-editor shares: the 3D preview viewport, the hierarchy widge
 | `previewMaterialParams` | `List<MaterialParamModel> previewMaterialParams` | Editor parameter values pushed into the preview material instance. |
 | `previewMaterialRevision` | `int previewMaterialRevision` | Bump to re-apply [previewMaterialParams] without recreating the widget. |
 | `previewMaterialSections` | `Set<int> previewMaterialSections` | Geometry sections of a mesh payload ([glbMesh]) that wear [previewMaterialBytes] with [previewMaterialParams] (the Material editor's Custom preview mesh: the sections of one material slot); the other sections keep the mesh's own materials. Empty shows the mesh as is. |
+| `previewShapeSize` | `double? previewShapeSize` | The material preview primitive's largest dimension in world units (cm): a sphere's diameter, a cube's or cylinder's height, a plane's width. Null keeps the unit-scale primitives. The grid (ten sizes across, cells rounded by [roundGridStep]) and the zoom range (a tenth to four times the fit distance, proportional steps) follow it. |
 | `showToolbar` | `bool showToolbar` | Whether the top HUD (shading mode, projection label, shape selector, scene-lights toggle, gizmo tools) is drawn. A host with its own controls (the Material editor's preview) turns it off. |
 | `yUpCamera` | `bool yUpCamera` | Use a Y-up camera (lumina world convention) instead of inferring the up axis from the mesh bounds. A material preview without a mesh ([previewMaterialBytes] and no [glbMesh]) always uses the Y-up camera, so the procedural primitive sits on a horizontal grid. |
 | `initialCameraDistance` | `double? initialCameraDistance` | Initial orbit distance override (world units). |
@@ -263,7 +264,9 @@ Procedural preview geometry (unit-scale) used by the Material Editor's 3D previe
 
 | Method / Getter | Signature | Purpose & Description |
 | :--- | :--- | :--- |
-| `build` | `static PreviewMeshData build(PreviewShape shape)` | Builds the geometry for [shape]. [PreviewShape.mesh] has no procedural form and falls back to the sphere. |
+| `build` | `static PreviewMeshData build(PreviewShape shape, {double? size})` | Builds the geometry for [shape]; with [size], scaled so its largest dimension is [size] world units. [PreviewShape.mesh] has no procedural form and falls back to the sphere. |
+| `largestDimension` | `double get largestDimension` (on `PreviewMeshData`) | The largest extent along any axis. |
+| `scaled` | `PreviewMeshData scaled(double factor)` (on `PreviewMeshData`) | The mesh uniformly scaled about the origin. |
 | `plane` | `static PreviewMeshData plane({double halfExtent = 1.2, double lift = 0.002})` | Square plane parallel to XZ facing +Y (double-sided materials render both faces; single-sided ones show the top), lifted [lift] above the editor grid at y = 0 so the grid lines do not z-fight with it. |
 
 ## `lib/ui/features/sub_editors/models/sub_editor_line_set.dart`
@@ -646,6 +649,8 @@ Edit → Editor Preferences: the user's own editor settings — a category list 
 | `previewMaterialParams` | `final List<MaterialParamModel> previewMaterialParams` | Editor parameter values pushed into the preview material instance. |
 | `previewMaterialRevision` | `final int previewMaterialRevision` | Bump to re-apply [previewMaterialParams] without recreating the widget. |
 | `previewMaterialSections` | `final Set<int> previewMaterialSections` | Geometry sections of a mesh payload ([glbMesh]) that wear [previewMaterialBytes] with [previewMaterialParams] (the Material editor's Custom preview mesh: the sections of one material slot); the other sections keep the mesh's own materials. Empty shows the mesh as is. |
+| `previewShapeSize` | `final double? previewShapeSize` | The material preview primitive's largest dimension in world units (cm): a sphere's diameter, a cube's or cylinder's height, a plane's width. Null keeps the unit-scale primitives. The grid (ten sizes across, cells rounded by [roundGridStep]) and the zoom range (a tenth to four times the fit distance, proportional steps) follow it. |
+| `roundGridStep` | `static double roundGridStep(double raw)` | [raw] rounded to a 1, 2 or 5 × 10ⁿ length, for grid cells that read as a round number of centimetres or metres. |
 | `showToolbar` | `final bool showToolbar` | Whether the top HUD (shading mode, projection label, shape selector, scene-lights toggle, gizmo tools) is drawn. A host with its own controls (the Material editor's preview) turns it off. |
 | `onPreviewWorldReady` | `final void Function(LuminaWorld world)? onPreviewWorldReady` | Level/environment preview (Environment Lighting mixer): when set, the viewport mounts the native renderer without a mesh payload, wraps the engine/scene/view in a lumina [LuminaWorld] (editor world type) and hands it over. The caller populates the world through lumina components (lights, sky, meshes, post-process); the built-in studio lights are skipped so the world's own lighting drives the frame. |
 | `onPreviewWorldDisposing` | `final void Function(LuminaWorld world)? onPreviewWorldDisposing` | Fired right before the preview world is cleaned up on dispose. |

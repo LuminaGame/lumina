@@ -34,6 +34,10 @@ class MaterialPreviewRenderer {
   final Map<String, String?> _samplerSources = {};
   final Map<String, TextureFormat> _samplerFormats = {};
   PreviewShape _shape = PreviewShape.sphere;
+
+  /// The primitive's largest dimension in world units; null keeps the
+  /// factory's unit-scale primitives.
+  double? _size;
   String? _lastError;
 
   bool get isMounted => _entity != 0 && _instance != null;
@@ -72,8 +76,10 @@ class MaterialPreviewRenderer {
     required Uint8List filamatBytes,
     required PreviewShape shape,
     List<MaterialParamModel> parameters = const [],
+    double? size,
   }) {
     dispose();
+    _size = size;
     if (!isFilamatPackage(filamatBytes)) {
       _lastError = 'not a compiled filamat package (${filamatBytes.length} bytes)';
       debugPrint('[MaterialPreviewRenderer] refusing to load: $_lastError');
@@ -191,6 +197,20 @@ class MaterialPreviewRenderer {
     }
   }
 
+  /// Rebuilds the geometry at [size] world units (largest dimension).
+  void setSize(double? size) {
+    if (size == _size) return;
+    _size = size;
+    if (_engine == null || _scene == null || _instance == null) return;
+    try {
+      _destroyGeometry();
+      _buildGeometry(_shape);
+    } catch (e) {
+      _lastError = e.toString();
+      debugPrint('[MaterialPreviewRenderer] setSize failed: $e');
+    }
+  }
+
   /// Interleaved vertex layout: position float3 | tangents snorm16x4 | uv0 float2.
   static const int _strideBytes = 12 + 8 + 8;
 
@@ -238,7 +258,7 @@ class MaterialPreviewRenderer {
   void _buildGeometry(PreviewShape shape) {
     final engine = _engine!;
     final scene = _scene!;
-    final mesh = PreviewMeshFactory.build(shape);
+    final mesh = PreviewMeshFactory.build(shape, size: _size);
     final attributes = <VertexAttributeDesc>[
       const VertexAttributeDesc(
         attribute: VertexAttribute.position,
