@@ -7,6 +7,7 @@ import 'package:hooks/hooks.dart';
 import 'package:logging/logging.dart';
 import 'package:native_toolchain_c/native_toolchain_c.dart';
 
+import 'dlss_sdk_dependencies.dart';
 import 'native_library_cache.dart';
 import 'windows_cl_response.dart';
 
@@ -439,10 +440,12 @@ void main(List<String> args) async {
       for (final flag in cbuilder.flags)
         if (flag.endsWith('.a')) input.packageRoot.resolveUri(Uri.file(flag)),
       for (final lib in windowsLibs) Uri.file(lib),
-      // The NGX SDK markers, whether or not the folder exists yet: fetching
-      // (or deleting) build/dlss-sdk makes the next build re-run this hook and
-      // compile the DLSS path in or out; a missing file hashes as "absent".
-      for (final marker in _dlssSdkMarkers(input, targetOS)) Uri.file(marker),
+      // The NGX SDK markers, or (while one is missing) the deepest existing
+      // folder on its path, build/dlss-sdk created empty if need be: fetching
+      // (or deleting) the SDK makes the next build re-run this hook once and
+      // compile the DLSS path in or out. Never a missing file: the runner
+      // dates one "now" and would re-run the hook on every build.
+      ...dlssSdkDependencies(_dlssSdkRoot(input), _dlssSdkMarkers(input, targetOS)),
     ]);
   });
 }
@@ -452,12 +455,16 @@ void main(List<String> args) async {
 List<String> _dlssSdkMarkers(BuildInput input, OS targetOS) {
   if (targetOS != OS.windows && targetOS != OS.linux) return const [];
   if (input.config.code.targetArchitecture != Architecture.x64) return const [];
-  final dir = input.packageRoot.resolveUri(Uri.file('build/dlss-sdk')).toFilePath();
+  final dir = _dlssSdkRoot(input);
   return [
     '$dir/include/nvsdk_ngx_vk.h',
     targetOS == OS.windows ? '$dir/lib/Windows_x86_64/x64/nvsdk_ngx_s.lib' : '$dir/lib/Linux_x86_64/libnvsdk_ngx.a',
   ];
 }
+
+/// `build/dlss-sdk` under the package root (absolute), where
+/// `tool/dlss/fetch_sdk.dart` puts the NGX SDK.
+String _dlssSdkRoot(BuildInput input) => input.packageRoot.resolveUri(Uri.file('build/dlss-sdk')).toFilePath();
 
 /// Filament's checkout (patched v1.77.2 with its prebuilt `out/` folders), in
 /// order:
@@ -655,7 +662,7 @@ String? _dlssSdkDir(BuildInput input, OS targetOS) {
   if (targetOS != OS.windows && targetOS != OS.linux) return null;
   // The NGX SDK ships x64 libraries only.
   if (input.config.code.targetArchitecture != Architecture.x64) return null;
-  final dir = input.packageRoot.resolveUri(Uri.file('build/dlss-sdk')).toFilePath();
+  final dir = _dlssSdkRoot(input);
   final stub = targetOS == OS.windows
       ? '$dir/lib/Windows_x86_64/x64/nvsdk_ngx_s.lib'
       : '$dir/lib/Linux_x86_64/libnvsdk_ngx.a';
