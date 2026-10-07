@@ -7,6 +7,7 @@ Materyal editörü: materyal kaynağını düzenleme, bütün `.mat` tanımını
 **Bu sayfada:**
 
 - [`lib/ui/features/sub_editors/views/material/glsl_editor_widget.dart`](#libuifeaturessub_editorsviewsmaterialglsl_editor_widgetdart)
+- [`lib/ui/features/sub_editors/views/material/mat_completion_popup.dart`](#libuifeaturessub_editorsviewsmaterialmat_completion_popupdart)
 - [`lib/ui/features/sub_editors/views/material/glsl_syntax_highlighter.dart`](#libuifeaturessub_editorsviewsmaterialglsl_syntax_highlighterdart)
 - [`lib/ui/features/sub_editors/views/material/parameter_panel.dart`](#libuifeaturessub_editorsviewsmaterialparameter_paneldart)
 - [`lib/ui/features/sub_editors/views/material/material_settings_section.dart`](#libuifeaturessub_editorsviewsmaterialmaterial_settings_sectiondart)
@@ -21,6 +22,8 @@ Materyal editörü: materyal kaynağını düzenleme, bütün `.mat` tanımını
 - [`lib/ui/features/sub_editors/models/material_slot_binding.dart`](#libuifeaturessub_editorsmodelsmaterial_slot_bindingdart)
 - [`lib/ui/features/sub_editors/services/build_pipeline_service/material_precompile_step.dart`](#libuifeaturessub_editorsservicesbuild_pipeline_servicematerial_precompile_stepdart)
 - [`lib/ui/features/sub_editors/services/mat_source.dart`](#libuifeaturessub_editorsservicesmat_sourcedart)
+- [`.mat` kod tamamlama (`lib/ui/features/sub_editors/services/mat_language/`)](#mat-kod-tamamlama-libuifeaturessub_editorsservicesmat_language)
+- [`tool/generate_filament_material_api.dart`](#toolgenerate_filament_material_apidart)
 - [`lib/ui/features/sub_editors/services/material_graph_codegen.dart`](#libuifeaturessub_editorsservicesmaterial_graph_codegendart)
 - [`lib/ui/features/sub_editors/services/material_graph_parser.dart`](#libuifeaturessub_editorsservicesmaterial_graph_parserdart)
 - [`lib/ui/features/sub_editors/services/material_graph_parser/layout.dart`](#libuifeaturessub_editorsservicesmaterial_graph_parserlayoutdart)
@@ -35,7 +38,20 @@ Materyal editörü: materyal kaynağını düzenleme, bütün `.mat` tanımını
 
 ### `class MaterialGlslEditorWidget`
 
-Tek aralıklı (monospace) `.mat` kaynak düzenleyicisi: sözdizimi renklendirme (denetleyici bir [GlslCodeController] olduğunda), kodla satır satır hizalı satır numarası oluğu (her satır zorlanmış bir strut ile 20 px'e sabitlenir, böylece oluk satırı ile kod satırı hiçbir zaman kaymaz) ve parametre otomatik tamamlama. Kod alanı, oluğun da paylaştığı koyu bir düzenleyici yüzeyi (`#1E1E1E`) üzerinde kenarlıksız bir alandır.
+Tek aralıklı (monospace) `.mat` kaynak düzenleyicisi: sözdizimi renklendirme (denetleyici bir [GlslCodeController] olduğunda), kodla satır satır hizalı satır numarası oluğu (her satır zorlanmış bir strut ile 20 px'e sabitlenir, böylece oluk satırı ile kod satırı hiçbir zaman kaymaz) ve VS Code tarzı kod tamamlama. Kod alanı, oluğun da paylaştığı koyu bir düzenleyici yüzeyi (`#1E1E1E`) üzerinde kenarlıksız bir alandır.
+
+Kod tamamlama, imleç konumunda [`MatCompletion`](#mat-kod-tamamlama-libuifeaturessub_editorsservicesmat_language)'a sorar ve sonucu imlecin hemen altına sabitlenen bir [`MatCompletionPopup`](#libuifeaturessub_editorsviewsmaterialmat_completion_popupdart) içinde gösterir (alt kenara yakınken imlecin üstüne çevrilir). İmleç konumu satır ve sütundan hesaplanır: satır numarası çarpı 20 px satır yüksekliği artı 8 px kod dolgusu, eksi alanın kaydırma ofseti; sütun numarası çarpı bir kez `TextPainter` ile ölçülen tek aralıklı karakter genişliği. Açılır pencerenin sol kenarı, etiketleri değiştirilen kelimenin başıyla hizalar.
+
+| Girdi | Etkisi |
+| :--- | :--- |
+| Bir tanımlayıcı karakteri (ilkinden itibaren), `_` veya `.` yazmak | Öneri varsa pencereyi açar; açıkken her düzenleme listeyi yeniden süzer |
+| Ctrl+Space | Hiçbir şey yazılmamışken de pencereyi açıkça açar |
+| ↑ / ↓ | Seçimi taşır (başa/sona sarar) |
+| PageUp / PageDown | Seçimi bir sayfa (9 satır) taşır |
+| Enter, Tab veya bir satıra tıklama | İmlecin etrafındaki kelimeyi öğeyle değiştirir ve imleci yerleştirir (argüman alan bir fonksiyonda `()` içine) |
+| Esc, düzenleme olmadan imleç hareketi, odağın kaybı | Pencereyi kapatır |
+
+Tuşlar alanın `FocusNode.onKeyEvent`'i üzerinden (önceden atanmış işleyiciye zincirlenerek) ve yalnızca pencere açıkken işlenir; böylece kapalıyken düzenleme tuşları olağan davranır.
 
 **Fonksiyonlar, Metotlar ve Erişimciler:**
 
@@ -58,7 +74,33 @@ Tek aralıklı (monospace) `.mat` kaynak düzenleyicisi: sözdizimi renklendirme
 | `initState` | `void initState()` | `initState` işlemini gerçekleştirir. |
 | `dispose` | `void dispose()` | Yerel FFI göstericilerini, dinleyicileri ve bellek bloklarını serbest bırakır. |
 | `jumpToLine` | `void jumpToLine(int line1Indexed)` | Jumps the editor cursor to a specific 1-indexed line number. |
+| `completionItems` | `List<MatCompletionItem> get completionItems` | Açık pencerenin önerileri, en iyisi önce; kapalıyken boş. |
+| `selectedCompletionIndex` | `int get selectedCompletionIndex` | Açık pencerede seçili satır. |
 | `build` | `Widget build(BuildContext context)` | Deklaratif alt nesne veya widget ağacını inşa eder. |
+
+## `lib/ui/features/sub_editors/views/material/mat_completion_popup.dart`
+
+### `class MatCompletionPopup`
+
+`.mat` kaynak bölmesinin öneri listesi: her öğe için 22 px'lik bir satır; türün Lucide simgesi türün renginde, eşleşen karakterleri kalın (`EditorColors.accent`) yazılmış etiket ve sağa yaslı, soluk ayrıntı (imza veya tip). En çok 10 satır görünür, gerisi kaydırılır; seçili satır `EditorColors.selectionBg` kullanır. Listenin yanında bir ayrıntı bölmesi seçili öğenin imzasını ve belgesini (açıklama, varsayılan değer, kullanılabilirlik) gösterir: sağda, sağda yer yoksa solda, hiç yer yoksa gösterilmez. Yüzeyler `EditorColors.sidebar`, kenarlık `EditorColors.borderSolid`.
+
+**Üyeler:**
+
+| Üye | İmzası | Açıklama |
+| :--- | :--- | :--- |
+| `items` | `final List<MatCompletionItem> items` | Öneriler, en iyisi önce. |
+| `selectedIndex` | `final int selectedIndex` | Vurgulanan satır; ayrıntı bölmesi onun ayrıntılarını gösterir. |
+| `scrollController` | `final ScrollController scrollController` | Listenin kaydırma konumu; düzenleyici seçimi `offsetRevealing` ile görünür tutar. |
+| `onAccept` | `final ValueChanged<int> onAccept` | Bir satıra tıklandığında onun indeksiyle çağrılır. |
+| `detailsSide` | `final MatDetailsSide detailsSide` | `right`, `left` veya `none`. |
+| `rowHeight` / `maxVisibleRows` / `listWidth` / `detailsWidth` | `static const double 22` / `int 10` / `double 380` / `double 300` | Pencerenin ölçüleri. |
+| `listHeight` | `static double listHeight(int count)` | `count` öğe için liste yüksekliği, kenarlıklar dahil. |
+| `offsetRevealing` | `static double offsetRevealing(int index, double offset)` | `index` satırını görünür tutan kaydırma ofseti. |
+
+| Fonksiyon | İmzası | Açıklama |
+| :--- | :--- | :--- |
+| `matCompletionKindIcon` | `IconData matCompletionKindIcon(MatCompletionKind kind)` | keyword `key`, type `type`, function `box`, field `tag`, property `wrench`, value `listOrdered`, variable `variable`, parameter `atSign`, constant `pi`, snippet `squareCode`. |
+| `matCompletionKindColor` | `Color matCompletionKindColor(MatCompletionKind kind)` | Türün `EditorColors` jetonu: fonksiyonlar `chart4`, alanlar ve özellikler `accent`, tipler `primary`, değerler `warning`, değişkenler ve parametreler `chart3`, sabitler `materialPinFloat2`, anahtar kelimeler `mutedForeground`. |
 
 ## `lib/ui/features/sub_editors/views/material/glsl_syntax_highlighter.dart`
 
@@ -796,6 +838,51 @@ A custom interpolant the header's `variables` declares: `tint`, or `{ name : tin
 | `parse` | `static MatSource parse(String source)` | Splits [source] into blocks. Throws [FormatException] on unbalanced braces. |
 | `matchingBrace` | `static int matchingBrace(String s, int open)` | The index of the brace closing the one at [open], skipping strings and comments. |
 | `renderHeader` | `static String renderHeader(List<MatEntry> entries)` | Renders a `material` header block from [entries]. |
+
+## `.mat` kod tamamlama (`lib/ui/features/sub_editors/services/mat_language/`)
+
+Saf Dart (Flutter içe aktarımı yok); aynı motor başka ön yüzlere de hizmet edebilir. API tabloları Filament'in kendi materyal belgesinden [`tool/generate_filament_material_api.dart`](#toolgenerate_filament_material_apidart) ile üretilir.
+
+| Dosya | İçerik |
+| :--- | :--- |
+| `mat_api_types.dart` | Tablo değer tipleri: `MatHeaderKeyInfo` (ad, grup, tip, izin verilen `values`, `defaultValue`, açıklama), `MatEntryKeyInfo` (bir `parameters` / `constants` / `variables` girdisinin veya `blendFunction`'ın anahtarı), `MatParamTypeInfo`, `MatStructFieldInfo` (ad, GLSL tipi, varsayılan, kullanılabildiği `shadingModels` — boşsa hepsi —, kullanılabilirlik notu, açıklama, API seviyesi; `availableWith(model)`), `MatFunctionInfo` (ad, tam imza, dönüş tipi, `MatStage` `any` / `vertex` / `fragment`, açıklama, API seviyesi, kategori; `hasArguments`, `availableIn(stage)`), `MatTypeInfo`, `MatConstantInfo`. |
+| `filament_material_api.g.dart` | Üretilmiş, depoya eklenmiş, elle düzenlenmez. `filamentMaterialApiVersion` (`1.77.2`), `filamentHeaderKeys` (42: 41 `### <Grup>: <anahtar>` bölümü artı `apiLevel`), `filamentParameterTypes` (22) ve `filamentConstantTypes` (3), `filamentPrecisions`, `filamentParameterEntryKeys` / `filamentConstantEntryKeys` / `filamentVariableEntryKeys` / `filamentBlendFunctionKeys`, `filamentMaterialInputs` (28 `MaterialInputs` alanı; açıklamalar, aralıklar ve API seviyeleri materyal modellerinin özellik tablolarından, varsayılanlar ve gölgelendirme modelleri yapının yorumlarından), `filamentMaterialVertexInputs` (10 alan; `variable0`… başlığın `variables` adlarının yerini tutar), `filamentFunctions` (64 girdi, 62 ad: Math, Matrices, Frame constants, Material globals, Vertex only ve Fragment only tablolarından, `getCustom0()`–`getCustom7()` açılmış, artı `prepareMaterial`), `filamentTypeAliases` (14) ve `filamentConstants` (`PI`, `HALF_PI`). |
+| `glsl_builtins.dart` | Elle yazılmış: `glslBuiltinFunctions` (yaygın GLSL ES 3.0 yerleşikleri — `texture`, `textureLod`, `textureSize`, `texelFetch`, `mix`, `clamp`, `step`, `smoothstep`, `min`, `max`, `abs`, `sign`, `floor`, `ceil`, `fract`, `mod`, `pow`, `exp`, `exp2`, `log`, `log2`, `sqrt`, `inversesqrt`, `length`, `distance`, `dot`, `cross`, `normalize`, `reflect`, `refract`, trigonometri, `dFdx` / `dFdy` / `fwidth` (yalnızca fragment), `any`, `all`, `not`, `transpose`, `inverse`, `determinant` ve vektör / matris kurucuları — imzaları ve tek satırlık açıklamalarıyla), `glslTypes`, `glslKeywords`, `glslFragmentKeywords` (`discard`). |
+| `mat_document.dart` | `MatDocumentIndex.of(source)`: kaynağın üzerinden tek geçiş; yarım yazılmış bir kaynakta bile hata fırlatmaz. Üst düzey bloklar (`MatBlockRange`), yorum ve dize aralıkları (`isInCommentOrString`, ikili arama), başlığın `shadingModel`'i (`effectiveShadingModel` belgelenen varsayılan `lit`'e düşer), `parameters` ve `constants` (`MatDeclaredParam`), `variables`, `requires` ve `vertex` / `fragment` bloklarındaki bildirimler (`MatLocal`: değişkenler, fonksiyon parametreleri, fonksiyonlar, struct'lar; `localsBefore(block, offset)`). Son indeks metne göre önbelleğe alınır; aynı metin sürümündeki sorgular onu bir kez tarar. |
+| `mat_header_context.dart` | `MatHeaderContext.at(doc, block, offset)`: başlığı imlece kadar yürür ve imlecin bir anahtarda mı yoksa bir değerde mi olduğunu, anahtarı, içinde bulunduğu nesne ya da listeyi (`owner`: başlığın kendisi, bir `parameters` / `constants` / `variables` girdisi, `blendFunction`, `requires`, …) ve orada zaten yazılmış anahtarları bildirir. |
+| `mat_fuzzy_match.dart` | VS Code tarzı eşleştirme: `matchLabel(label, query)` bir `MatMatch` döndürür: kademe (0 büyük/küçük harf birebir önek, 1 büyük/küçük harfe duyarsız önek, 2 camelCase / kelime başları, örn. `gwp` → `getWorldPosition`, 3 alt dize), eşleşen konumlar ve aynı kademedeki eşleşmeleri sıralayan bir puan (atlanan kelimeler, alt dizenin başlangıcı). |
+| `mat_completion_item.dart` | `MatCompletionKind` (`keyword`, `type`, `function`, `field`, `property`, `value`, `variable`, `parameter`, `constant`, `snippet`; her biri bir alaka sırasıyla) ve `MatCompletionItem` (`label`, `kind`, `detail`, `documentation`, `insertText`, `cursorOffsetInInsert`, `highlights`; `caretOffset`). |
+| `mat_completion_sources.dart` | Her bağlamın adayları (aşağıda); aşamaya göre statik listeler bir kez kurulur. |
+| `mat_completion.dart` | `MatCompletion.suggest(String source, int offset, {bool explicit = false}) → MatCompletionResult {replaceStart, replaceEnd, items}` ve `MatCompletion.rank(candidates, prefix)`. |
+
+**Bağlamlar.** Değiştirilen aralık imlecin etrafındaki tanımlayıcıdır. Boş önekle yalnızca açık bir istek (Ctrl+Space) veya bir üye erişimi (`material.`) öneri üretir; yorum ve dizelerin içinde hiçbir şey önerilmez.
+
+| Nerede | Öneriler |
+| :--- | :--- |
+| Her bloğun dışında | Kaynakta henüz bulunmayan `material`, `fragment` ve `vertex` blok kalıpları (`fragment`, `material()` ve `prepareMaterial(material);` ile; imleç boş satırda). |
+| `material { }` içinde anahtar konumunda | Henüz yazılmamış başlık anahtarları, `key : ` olarak eklenir; bir `parameters` girdisinde `type`, `name`, `precision`, `format`, `multisample`, `filterable`, `transformName`; bir `constants` girdisinde `name`, `type`, `default`; bir `variables` girdisinde `name`, `precision`; `blendFunction` içinde `srcRGB`, `srcA`, `dstRGB`, `dstA`. |
+| `material { }` içinde `<anahtar> :` sonrasında veya listesinde | Anahtarın belgelenmiş değerleri: `shadingModel` → `lit`, `subsurface`, `cloth`, `unlit`, `specularGlossiness`; `blending` → `opaque`, `transparent`, `fade`, `add`, `masked`, `multiply`, `screen`, `custom`; `requires : [ ]` → `uv0`, `uv1`, `color`, `position`, `tangents`, `custom0`…`custom7`; boolean'lar → `true`, `false`; bir parametrenin `type :`'ı → parametre tipleri (`float`…`float4`, `int`…, `uint`…, `bool`…, `float3x3`, `float4x4`, `sampler2d`, `sampler2dArray`, `samplerExternal`, `samplerCubemap`); `precision :` → `default`, `low`, `medium`, `high`. |
+| `fragment { }` içinde `material.` sonrasında | Başlığın gölgelendirme modeliyle kullanılabilen `MaterialInputs` alanları (`unlit` yalnızca `baseColor`, `emissive`, `postLightingColor`'ı bırakır; `cloth` `metallic`, `clearCoat`, … alanlarını çıkarıp `subsurfaceColor`'ı ekler). |
+| `vertex { }` içinde `material.` sonrasında | `MaterialVertexInputs` alanları; `variable0`… yerine başlığın `variables` adları. |
+| `materialParams.` sonrasında | Başlığın sampler olmayan parametreleri. |
+| `fragment` / `vertex` içinde bir tanımlayıcı | Blokta daha önce bildirilmiş yereller, `materialParams`, `materialParams_<sampler>`, `materialConstants_<sabit>`, `variable_<ad>` (yalnızca fragment), bloğun aşamasındaki Filament fonksiyonları, GLSL yerleşikleri, tipler (`vec3` gibi bir kurucu bir kez, tip olarak görünür), sabitler ve anahtar kelimeler. |
+
+**Sıralama.** Önce birebir aynı etiket, sonra eşleşme kademesi ve puanı, sonra tür (yereller ve parametreler, alanlar / özellikler / değerler, fonksiyonlar, sabitler, tipler, anahtar kelimeler, kalıplar), sonra alfabetik. Bir fonksiyon `name()` olarak eklenir; aşırı yüklemelerinden biri argüman alıyorsa imleç parantezlerin içine, yoksa arkasına gider; aşırı yüklemeler bir kez görünür (ayrıntıda `(+1 overload)`). 200 satırlık bir kaynakta bir sorgu bir milisaniyenin çok altında sürer (`test/view_models/mat_completion_test.dart` her yeni metin sürümü için 5 ms sınırını denetler).
+
+## `tool/generate_filament_material_api.dart`
+
+`lib/ui/features/sub_editors/services/mat_language/filament_material_api.g.dart` dosyasını Filament'in materyal belgesinden, `docs_src/src_markdeep/Materials.md.html`'den (<https://google.github.io/filament/Materials.md.html> olarak yayımlanan sayfa) üretir.
+
+```bash
+dart run tool/generate_filament_material_api.dart [<Materials.md.html>] [--version <x.y.z>]
+```
+
+| Girdi | Varsayılan |
+| :--- | :--- |
+| Belge | `tool/filament/build_prebuilt.*`'ın derlediği Filament kopyasındaki `docs_src/src_markdeep/Materials.md.html`: `LUMINA_FILAMENT_WORK`, yoksa `<çalışma alanı>/build/filament-src` (`LuminaWorkspace.root`) |
+| `--version` | Kopyanın `android/gradle.properties` dosyasındaki `VERSION_NAME`; üretilen başlık yorumuna ve `filamentMaterialApiVersion`'a yazılır |
+
+Ayrıştırıcı (`tool/src/filament_material_doc.dart`, `FilamentMaterialDoc.parse`), `### <Grup>: <anahtar>` bölümlerinin `Type` / `Value` / `Description` tanımlarını (izin verilen değerler "Defaults to"dan önceki ters tırnaklı kelimelerden, `custom0` through `custom7` açılarak; varsayılan "Defaults to"dan sonra), `[materialParamsTypes]` ve `[materialConstantsTypes]` tablolarını, sampler alanlarını, yorumlarıyla `struct MaterialInputs` / `struct MaterialVertexInputs` bloklarını, materyal modellerinin özellik tablolarını ve Shader public APIs tablolarını okur. `tool/src/filament_material_api_writer.dart` tabloları her satıra bir girdi olacak biçimde yazar (`// dart format off`). `test/view_models/filament_material_api_test.dart` belge varsa onu yeniden ayrıştırır (yoksa nedenini belirterek atlanır), API tablolarındaki her fonksiyon adının üretilen tabloda olduğunu ve üretilen tabloların taze bir ayrıştırmayla eşleştiğini denetler.
 
 ## `lib/ui/features/sub_editors/services/material_graph_codegen.dart`
 

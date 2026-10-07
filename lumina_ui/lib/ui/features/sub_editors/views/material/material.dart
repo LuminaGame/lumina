@@ -1,6 +1,7 @@
 export 'package:lumina_ui/ui/features/sub_editors/views/material/glsl_editor_widget.dart';
 export 'package:lumina_ui/ui/features/sub_editors/views/material/glsl_syntax_highlighter.dart';
 export 'package:lumina_ui/ui/features/sub_editors/views/material/graph_view.dart';
+export 'package:lumina_ui/ui/features/sub_editors/views/material/mat_completion_popup.dart';
 export 'package:lumina_ui/ui/features/sub_editors/views/material/material_preview_pane.dart';
 export 'package:lumina_ui/ui/features/sub_editors/views/material/material_settings_section.dart';
 export 'package:lumina_ui/ui/features/sub_editors/views/material/material_sub_editor.dart';

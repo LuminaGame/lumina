@@ -7,6 +7,7 @@ The Material editor: editing material source, compiling the whole `.mat` definit
 **On this page:**
 
 - [`lib/ui/features/sub_editors/views/material/glsl_editor_widget.dart`](#libuifeaturessub_editorsviewsmaterialglsl_editor_widgetdart)
+- [`lib/ui/features/sub_editors/views/material/mat_completion_popup.dart`](#libuifeaturessub_editorsviewsmaterialmat_completion_popupdart)
 - [`lib/ui/features/sub_editors/views/material/glsl_syntax_highlighter.dart`](#libuifeaturessub_editorsviewsmaterialglsl_syntax_highlighterdart)
 - [`lib/ui/features/sub_editors/views/material/parameter_panel.dart`](#libuifeaturessub_editorsviewsmaterialparameter_paneldart)
 - [`lib/ui/features/sub_editors/views/material/material_settings_section.dart`](#libuifeaturessub_editorsviewsmaterialmaterial_settings_sectiondart)
@@ -21,6 +22,8 @@ The Material editor: editing material source, compiling the whole `.mat` definit
 - [`lib/ui/features/sub_editors/models/material_slot_binding.dart`](#libuifeaturessub_editorsmodelsmaterial_slot_bindingdart)
 - [`lib/ui/features/sub_editors/services/build_pipeline_service/material_precompile_step.dart`](#libuifeaturessub_editorsservicesbuild_pipeline_servicematerial_precompile_stepdart)
 - [`lib/ui/features/sub_editors/services/mat_source.dart`](#libuifeaturessub_editorsservicesmat_sourcedart)
+- [`.mat` code completion (`lib/ui/features/sub_editors/services/mat_language/`)](#mat-code-completion-libuifeaturessub_editorsservicesmat_language)
+- [`tool/generate_filament_material_api.dart`](#toolgenerate_filament_material_apidart)
 - [`lib/ui/features/sub_editors/services/material_graph_codegen.dart`](#libuifeaturessub_editorsservicesmaterial_graph_codegendart)
 - [`lib/ui/features/sub_editors/services/material_graph_parser.dart`](#libuifeaturessub_editorsservicesmaterial_graph_parserdart)
 - [`lib/ui/features/sub_editors/services/material_graph_parser/layout.dart`](#libuifeaturessub_editorsservicesmaterial_graph_parserlayoutdart)
@@ -35,7 +38,20 @@ The Material editor: editing material source, compiling the whole `.mat` definit
 
 ### `class MaterialGlslEditorWidget`
 
-Monospace `.mat` source editor: syntax colours (when the controller is a [GlslCodeController]), a line-number gutter aligned row for row with the code (every line is fixed to 20 px through a forced strut, so a gutter row and its code line never drift apart), and parameter autocomplete. The code area is a borderless field on a dark editor surface (`#1E1E1E`) shared with the gutter.
+Monospace `.mat` source editor: syntax colours (when the controller is a [GlslCodeController]), a line-number gutter aligned row for row with the code (every line is fixed to 20 px through a forced strut, so a gutter row and its code line never drift apart), and VS Code-style code completion. The code area is a borderless field on a dark editor surface (`#1E1E1E`) shared with the gutter.
+
+Code completion asks [`MatCompletion`](#mat-code-completion-libuifeaturessub_editorsservicesmat_language) at the caret and shows the result in a [`MatCompletionPopup`](#libuifeaturessub_editorsviewsmaterialmat_completion_popupdart) anchored just below the caret (flipped above it near the bottom edge). The caret position comes from the line and column: the line times the 20 px line height plus the 8 px code padding, minus the field's scroll offset; the column times the monospace character width measured once with a `TextPainter`. The popup's left edge lines its labels up with the start of the word being replaced.
+
+| Input | Effect |
+| :--- | :--- |
+| Typing an identifier character (from the first one), `_` or `.` | Opens the popup when there are suggestions; while it is open every edit filters it again |
+| Ctrl+Space | Opens it explicitly, also with nothing typed |
+| ↑ / ↓ | Moves the selection (wraps around) |
+| PageUp / PageDown | Moves the selection by a page (9 rows) |
+| Enter, Tab or a click on a row | Replaces the word around the caret with the item and places the caret (inside `()` for a function that takes arguments) |
+| Esc, a caret move without an edit, losing focus | Closes it |
+
+The keys are handled through the field's `FocusNode.onKeyEvent` (chained to any handler it had before) and only while the popup is open, so editing keys behave normally otherwise.
 
 **Functions, Methods & Accessors:**
 
@@ -58,7 +74,33 @@ Monospace `.mat` source editor: syntax colours (when the controller is a [GlslCo
 | `initState` | `void initState()` | Executes `initState` operation. |
 | `dispose` | `void dispose()` | Releases native FFI pointers, event subscriptions, and allocated memory. |
 | `jumpToLine` | `void jumpToLine(int line1Indexed)` | Jumps the editor cursor to a specific 1-indexed line number. |
+| `completionItems` | `List<MatCompletionItem> get completionItems` | The open popup's suggestions, best first; empty when it is closed. |
+| `selectedCompletionIndex` | `int get selectedCompletionIndex` | The selected row of the open popup. |
 | `build` | `Widget build(BuildContext context)` | Constructs and returns the declarative element or widget hierarchy. |
+
+## `lib/ui/features/sub_editors/views/material/mat_completion_popup.dart`
+
+### `class MatCompletionPopup`
+
+The suggestion list of the `.mat` source pane: one 22 px row per item with the kind's Lucide icon in the kind's colour, the label with the matched characters bold (in `EditorColors.accent`) and the detail (signature or type) right-aligned and muted. At most 10 rows are visible, the rest scroll; the selected row uses `EditorColors.selectionBg`. Beside the list a details pane shows the selected item's signature and documentation (description, default, availability), on the right, or on the left when the right side has no room, or not at all. Surfaces are `EditorColors.sidebar` with an `EditorColors.borderSolid` border.
+
+**Members:**
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `items` | `final List<MatCompletionItem> items` | The suggestions, best first. |
+| `selectedIndex` | `final int selectedIndex` | The highlighted row, whose details the pane shows. |
+| `scrollController` | `final ScrollController scrollController` | The list's scroll position; the editor keeps the selection visible with `offsetRevealing`. |
+| `onAccept` | `final ValueChanged<int> onAccept` | Called with a row's index when it is clicked. |
+| `detailsSide` | `final MatDetailsSide detailsSide` | `right`, `left` or `none`. |
+| `rowHeight` / `maxVisibleRows` / `listWidth` / `detailsWidth` | `static const double 22` / `int 10` / `double 380` / `double 300` | The popup's metrics. |
+| `listHeight` | `static double listHeight(int count)` | The list's height for `count` items, borders included. |
+| `offsetRevealing` | `static double offsetRevealing(int index, double offset)` | The scroll offset that keeps row `index` visible. |
+
+| Function | Signature | Description |
+| :--- | :--- | :--- |
+| `matCompletionKindIcon` | `IconData matCompletionKindIcon(MatCompletionKind kind)` | keyword `key`, type `type`, function `box`, field `tag`, property `wrench`, value `listOrdered`, variable `variable`, parameter `atSign`, constant `pi`, snippet `squareCode`. |
+| `matCompletionKindColor` | `Color matCompletionKindColor(MatCompletionKind kind)` | The kind's `EditorColors` token: functions `chart4`, fields and properties `accent`, types `primary`, values `warning`, variables and parameters `chart3`, constants `materialPinFloat2`, keywords `mutedForeground`. |
 
 ## `lib/ui/features/sub_editors/views/material/glsl_syntax_highlighter.dart`
 
@@ -796,6 +838,51 @@ A custom interpolant the header's `variables` declares: `tint`, or `{ name : tin
 | `parse` | `static MatSource parse(String source)` | Splits [source] into blocks. Throws [FormatException] on unbalanced braces. |
 | `matchingBrace` | `static int matchingBrace(String s, int open)` | The index of the brace closing the one at [open], skipping strings and comments. |
 | `renderHeader` | `static String renderHeader(List<MatEntry> entries)` | Renders a `material` header block from [entries]. |
+
+## `.mat` code completion (`lib/ui/features/sub_editors/services/mat_language/`)
+
+Pure Dart (no Flutter imports), so the same engine can serve other front ends. The API tables come from Filament's own material documentation through [`tool/generate_filament_material_api.dart`](#toolgenerate_filament_material_apidart).
+
+| File | Contents |
+| :--- | :--- |
+| `mat_api_types.dart` | The table value types: `MatHeaderKeyInfo` (name, group, type, allowed `values`, `defaultValue`, description), `MatEntryKeyInfo` (a key of a `parameters` / `constants` / `variables` entry or of `blendFunction`), `MatParamTypeInfo`, `MatStructFieldInfo` (name, GLSL type, default, `shadingModels` it is available with — empty means all —, availability note, description, API level; `availableWith(model)`), `MatFunctionInfo` (name, full signature, return type, `MatStage` `any` / `vertex` / `fragment`, description, API level, category; `hasArguments`, `availableIn(stage)`), `MatTypeInfo`, `MatConstantInfo`. |
+| `filament_material_api.g.dart` | Generated, checked in, not edited by hand. `filamentMaterialApiVersion` (`1.77.2`), `filamentHeaderKeys` (42: the 41 `### <Group>: <key>` sections plus `apiLevel`), `filamentParameterTypes` (22) and `filamentConstantTypes` (3), `filamentPrecisions`, `filamentParameterEntryKeys` / `filamentConstantEntryKeys` / `filamentVariableEntryKeys` / `filamentBlendFunctionKeys`, `filamentMaterialInputs` (28 `MaterialInputs` fields; the property tables of the material models give the descriptions, ranges and API levels, the struct's comments the defaults and the shading models), `filamentMaterialVertexInputs` (10 fields; `variable0`… stand for the header's `variables`), `filamentFunctions` (64 entries, 62 names, from the Math, Matrices, Frame constants, Material globals, Vertex only and Fragment only tables, `getCustom0()` to `getCustom7()` expanded, plus `prepareMaterial`), `filamentTypeAliases` (14) and `filamentConstants` (`PI`, `HALF_PI`). |
+| `glsl_builtins.dart` | Hand-written: `glslBuiltinFunctions` (the common GLSL ES 3.0 built-ins — `texture`, `textureLod`, `textureSize`, `texelFetch`, `mix`, `clamp`, `step`, `smoothstep`, `min`, `max`, `abs`, `sign`, `floor`, `ceil`, `fract`, `mod`, `pow`, `exp`, `exp2`, `log`, `log2`, `sqrt`, `inversesqrt`, `length`, `distance`, `dot`, `cross`, `normalize`, `reflect`, `refract`, the trigonometry, `dFdx` / `dFdy` / `fwidth` (fragment only), `any`, `all`, `not`, `transpose`, `inverse`, `determinant` and the vector / matrix constructors — with signatures and one-line docs), `glslTypes`, `glslKeywords`, `glslFragmentKeywords` (`discard`). |
+| `mat_document.dart` | `MatDocumentIndex.of(source)`: one pass over the source that never throws on a half-typed one. Top-level blocks (`MatBlockRange`), comment and string spans (`isInCommentOrString`, binary search), the header's `shadingModel` (`effectiveShadingModel` falls back to the documented default `lit`), `parameters` and `constants` (`MatDeclaredParam`), `variables`, `requires`, and the declarations of the `vertex` / `fragment` blocks (`MatLocal`: variables, function parameters, functions, structs; `localsBefore(block, offset)`). The last index is cached by text, so queries on the same text version scan it once. |
+| `mat_header_context.dart` | `MatHeaderContext.at(doc, block, offset)`: walks the header to the caret and reports whether it is at a key or at a value, the key, the object or list it is in (`owner`: the header, a `parameters` / `constants` / `variables` entry, `blendFunction`, `requires`, …) and the keys already written there. |
+| `mat_fuzzy_match.dart` | VS Code-style matching: `matchLabel(label, query)` returns a `MatMatch` with the tier (0 exact-case prefix, 1 case-insensitive prefix, 2 camelCase / word starts such as `gwp` → `getWorldPosition`, 3 substring), the matched positions and a score that orders matches of a tier (words skipped, substring start). |
+| `mat_completion_item.dart` | `MatCompletionKind` (`keyword`, `type`, `function`, `field`, `property`, `value`, `variable`, `parameter`, `constant`, `snippet`, each with a relevance rank) and `MatCompletionItem` (`label`, `kind`, `detail`, `documentation`, `insertText`, `cursorOffsetInInsert`, `highlights`; `caretOffset`). |
+| `mat_completion_sources.dart` | The candidates of each context (below); the static per-stage lists are built once. |
+| `mat_completion.dart` | `MatCompletion.suggest(String source, int offset, {bool explicit = false}) → MatCompletionResult {replaceStart, replaceEnd, items}` and `MatCompletion.rank(candidates, prefix)`. |
+
+**Contexts.** The replaced range is the identifier around the caret. With an empty prefix only an explicit request (Ctrl+Space) or a member access (`material.`) suggests anything; inside comments and strings nothing is suggested.
+
+| Where | Suggestions |
+| :--- | :--- |
+| Outside every block | The `material`, `fragment` and `vertex` block snippets the source does not have yet (`fragment` with `material()` and `prepareMaterial(material);`, the caret on the empty line). |
+| `material { }` at a key | The header keys not written yet, inserted as `key : `; inside a `parameters` entry `type`, `name`, `precision`, `format`, `multisample`, `filterable`, `transformName`; inside a `constants` entry `name`, `type`, `default`; inside a `variables` entry `name`, `precision`; inside `blendFunction` `srcRGB`, `srcA`, `dstRGB`, `dstA`. |
+| `material { }` after `<key> :` or in its list | The key's documented values: `shadingModel` → `lit`, `subsurface`, `cloth`, `unlit`, `specularGlossiness`; `blending` → `opaque`, `transparent`, `fade`, `add`, `masked`, `multiply`, `screen`, `custom`; `requires : [ ]` → `uv0`, `uv1`, `color`, `position`, `tangents`, `custom0`…`custom7`; booleans → `true`, `false`; a parameter's `type :` → the parameter types (`float`…`float4`, `int`…, `uint`…, `bool`…, `float3x3`, `float4x4`, `sampler2d`, `sampler2dArray`, `samplerExternal`, `samplerCubemap`); `precision :` → `default`, `low`, `medium`, `high`. |
+| `fragment { }` after `material.` | The `MaterialInputs` fields available with the header's shading model (`unlit` keeps `baseColor`, `emissive`, `postLightingColor`; `cloth` drops `metallic`, `clearCoat`, … and adds `subsurfaceColor`). |
+| `vertex { }` after `material.` | The `MaterialVertexInputs` fields, with the header's `variables` in place of `variable0`…. |
+| after `materialParams.` | The header's non-sampler parameters. |
+| An identifier in `fragment` / `vertex` | Locals declared earlier in the block, `materialParams`, `materialParams_<sampler>`, `materialConstants_<constant>`, `variable_<name>` (fragment only), the Filament functions of the block's stage, the GLSL built-ins, types (a constructor such as `vec3` appears once, as the type), constants and keywords. |
+
+**Ranking.** The exact label first, then the match tier and its score, then the kind (locals and parameters, fields / properties / values, functions, constants, types, keywords, snippets), then alphabetically. A function inserts `name()` with the caret inside the parentheses when any overload takes arguments, after them otherwise; overloads appear once (`(+1 overload)` in the detail). A query on a 200-line source takes well under a millisecond (`test/view_models/mat_completion_test.dart` checks a 5 ms bound per new text version).
+
+## `tool/generate_filament_material_api.dart`
+
+Generates `lib/ui/features/sub_editors/services/mat_language/filament_material_api.g.dart` from Filament's material documentation, `docs_src/src_markdeep/Materials.md.html` (the page published as <https://google.github.io/filament/Materials.md.html>).
+
+```bash
+dart run tool/generate_filament_material_api.dart [<Materials.md.html>] [--version <x.y.z>]
+```
+
+| Input | Default |
+| :--- | :--- |
+| The document | `docs_src/src_markdeep/Materials.md.html` in the Filament checkout `tool/filament/build_prebuilt.*` builds from: `LUMINA_FILAMENT_WORK`, else `<workspace>/build/filament-src` (`LuminaWorkspace.root`) |
+| `--version` | The checkout's `android/gradle.properties` `VERSION_NAME`, written into the generated header comment and `filamentMaterialApiVersion` |
+
+The parser (`tool/src/filament_material_doc.dart`, `FilamentMaterialDoc.parse`) reads the `### <Group>: <key>` sections' `Type` / `Value` / `Description` definitions (allowed values from the backticked words before "Defaults to", `custom0` through `custom7` expanded, the default after "Defaults to"), the `[materialParamsTypes]` and `[materialConstantsTypes]` tables, the sampler fields, the `struct MaterialInputs` / `struct MaterialVertexInputs` blocks with their comments, the material model property tables and the Shader public APIs tables. `tool/src/filament_material_api_writer.dart` renders the tables one entry per line (`// dart format off`). `test/view_models/filament_material_api_test.dart` re-parses the document when it exists (skipping with the reason otherwise) and checks that every function name of the API tables is in the generated table and that the generated tables match a fresh parse.
 
 ## `lib/ui/features/sub_editors/services/material_graph_codegen.dart`
 

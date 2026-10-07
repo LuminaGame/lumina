@@ -159,6 +159,11 @@ fragment {
 
     await tester.tap(find.text('Compile'));
     await tester.pump();
+    // matc runs on a background isolate: wait for it in real time.
+    for (var i = 0; i < 400 && find.textContaining('prepareMaterial() is not called').evaluate().isEmpty; i++) {
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 25)));
+      await tester.pump();
+    }
 
     expect(find.textContaining('prepareMaterial() is not called'), findsWidgets);
     expect(find.text('ERROR'), findsWidgets);
