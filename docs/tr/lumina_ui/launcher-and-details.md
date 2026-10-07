@@ -675,10 +675,22 @@ The project editor build splash — key art, "Lumina Studio", the engine and pro
 | `onSucceeded` | `final void Function(EditorBuildViewModel viewModel) onSucceeded` | The build finished: exec the project editor. |
 | `onOpenWithoutPlugins` | `final VoidCallback onOpenWithoutPlugins` | Open the project in this (stock) editor without its code plugins. |
 | `onClose` | `final VoidCallback onClose` | Back to the launcher (Cancel, or Close after a failure). |
-| `manageWindow` | `final bool manageWindow` | Switch the OS window to the 720×400 frameless splash window (off in widget tests, which have no native window). |
+| `manageWindow` | `final bool manageWindow` | İşletim sistemi penceresini [`SplashWindow`](#libuifeatureslauncherviewssplash_windowdart) ile 720×400 çerçevesiz splash penceresine çevirir: büyütülmüş ya da tam ekran pencere önce normale alınır, sonra eski hâline döner (yerel pencere olmayan widget testlerinde kapalıdır). |
 | `manageNativeWindow` | `static bool manageNativeWindow` | Whether the launcher lets the splash resize the native window. A smoke run that records the splash inside its fixed-size test window turns it off; widget tests (no native window) never manage it. |
 | `windowSize` | `static const Size windowSize` |  |
 | `splashArt` | `static const String splashArt` |  |
+
+## `lib/ui/features/launcher/views/splash_window.dart`
+
+### `class SplashWindow`
+
+Uygulama penceresini sabit boyutlu, ortalanmış, her zaman üstte duran bir splash penceresine küçültür ve iş bitince eski hâline getirir. Büyütülmüş ya da tam ekran pencere önce normal duruma alınır, çünkü platform böyle bir pencerede boyut değişikliğini yok sayar (splash ekranı kaplardı); `leave` önce eski sınırları, sonra büyütülmüş ya da tam ekran durumunu geri yükler. `EditorBuildSplash` ve `LuminaSplashScreen` kullanır.
+
+| Üye | İmza | Açıklama |
+|---|---|---|
+| `size` | `final Size size` | Splash penceresinin boyutu. |
+| `enter` | `Future<void> enter()` | Tam ekrandan çıkar / büyütmeyi kaldırır, sınırları kaydeder, boyutlandırır, ortalar, üstte tutar. |
+| `leave` | `Future<void> leave()` | Kaydedilen sınırları ve büyütülmüş / tam ekran durumunu geri yükler. |
 
 ## `lib/ui/features/launcher/views/lumina_splash_screen.dart`
 
@@ -700,7 +712,7 @@ Lumina Studio açılış ve yükleme ekranı — parlayan Lumina logosu, "Lumina
 | `statusText` | `final String statusText` | Canlı ilerleme veya çözümleme durumu mesajı. |
 | `progress` | `final double? progress` | İlerleme oranı 0.0 - 1.0 (veya belirsiz durumlar için animasyonlu çubuk için null). |
 | `failed` | `final bool failed` | Hata durumunda durum ve ilerleme çubuğunu kırmızı (destructive) renkte çizer. |
-| `manageWindow` | `final bool manageWindow` | İşletim sistemi penceresini 720×400 çerçevesiz olarak ortalar ve işlem bitince eski boyutuna geri getirir. |
+| `manageWindow` | `final bool manageWindow` | İşletim sistemi penceresini `SplashWindow` ile 720×400 çerçevesiz olarak ortalar (önce büyütmeyi ya da tam ekranı kaldırır) ve işlem bitince eski hâline geri getirir. |
 | `onCancel` | `final VoidCallback? onCancel` | İsteğe bağlı iptal geri çağırımı. |
 | `alwaysShowActions` | `final bool alwaysShowActions` | Fare ile üzerine gelme gerekmeksizin eylem/iptal düğmelerini görünür tutar. |
 

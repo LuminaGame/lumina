@@ -675,10 +675,22 @@ The project editor build splash — key art, "Lumina Studio", the engine and pro
 | `onSucceeded` | `final void Function(EditorBuildViewModel viewModel) onSucceeded` | The build finished: exec the project editor. |
 | `onOpenWithoutPlugins` | `final VoidCallback onOpenWithoutPlugins` | Open the project in this (stock) editor without its code plugins. |
 | `onClose` | `final VoidCallback onClose` | Back to the launcher (Cancel, or Close after a failure). |
-| `manageWindow` | `final bool manageWindow` | Switch the OS window to the 720×400 frameless splash window (off in widget tests, which have no native window). |
+| `manageWindow` | `final bool manageWindow` | Switch the OS window to the 720×400 frameless splash window through [`SplashWindow`](#libuifeatureslauncherviewssplash_windowdart): a maximized or full-screen window is restored first and put back afterwards (off in widget tests, which have no native window). |
 | `manageNativeWindow` | `static bool manageNativeWindow` | Whether the launcher lets the splash resize the native window. A smoke run that records the splash inside its fixed-size test window turns it off; widget tests (no native window) never manage it. |
 | `windowSize` | `static const Size windowSize` |  |
 | `splashArt` | `static const String splashArt` |  |
+
+## `lib/ui/features/launcher/views/splash_window.dart`
+
+### `class SplashWindow`
+
+Shrinks the app window to a fixed, centred, always-on-top splash and puts it back afterwards. A maximized or full-screen window is restored to its normal state first, because the platform ignores a size change on such a window (the splash would fill the screen); `leave` restores the bounds, then the maximized or full-screen state. Used by `EditorBuildSplash` and `LuminaSplashScreen`.
+
+| Member | Signature | Description |
+|---|---|---|
+| `size` | `final Size size` | The splash window size. |
+| `enter` | `Future<void> enter()` | Leaves full screen / un-maximizes, records the bounds, resizes, centres, keeps on top. |
+| `leave` | `Future<void> leave()` | Restores the recorded bounds and the maximized / full-screen state. |
 
 ## `lib/ui/features/launcher/views/lumina_splash_screen.dart`
 
@@ -700,7 +712,7 @@ Lumina Studio splash and loading screen — frameless 720×400 centered window w
 | `statusText` | `final String statusText` | Live progress or resolution status message. |
 | `progress` | `final double? progress` | Progress fraction 0.0 to 1.0 (or null for animated indeterminate bar). |
 | `failed` | `final bool failed` | Renders status and progress in destructive red. |
-| `manageWindow` | `final bool manageWindow` | Resizes and centers native OS window to 720×400 and restores on completion. |
+| `manageWindow` | `final bool manageWindow` | Resizes and centers the native OS window to 720×400 through `SplashWindow` (un-maximizing or leaving full screen first) and restores it on completion. |
 | `onCancel` | `final VoidCallback? onCancel` | Optional cancellation callback. |
 | `alwaysShowActions` | `final bool alwaysShowActions` | Keeps action/cancel buttons visible without requiring hover. |
 

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:window_manager/window_manager.dart';
+import 'package:lumina_ui/ui/features/launcher/views/splash_window.dart';
 
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/features/launcher/view_models/editor_build_view_model.dart';
@@ -48,7 +49,8 @@ class EditorBuildSplash extends StatefulWidget {
 }
 
 class _EditorBuildSplashState extends State<EditorBuildSplash> {
-  Rect? _launcherBounds;
+  /// Shrinks the window to the splash and restores it (maximized too).
+  late final SplashWindow _window = SplashWindow(EditorBuildSplash.windowSize);
   bool _hovering = false;
 
   EditorBuildViewModel get vm => widget.viewModel;
@@ -57,7 +59,7 @@ class _EditorBuildSplashState extends State<EditorBuildSplash> {
   void initState() {
     super.initState();
     vm.addListener(_changed);
-    if (widget.manageWindow) unawaited(_enterSplashWindow());
+    if (widget.manageWindow) unawaited(_window.enter());
     _run();
   }
 
@@ -81,28 +83,13 @@ class _EditorBuildSplashState extends State<EditorBuildSplash> {
     }
   }
 
-  Future<void> _enterSplashWindow() => _guard(() async {
-        _launcherBounds = await windowManager.getBounds();
-        await windowManager.setResizable(false);
-        await windowManager.setSize(EditorBuildSplash.windowSize);
-        await windowManager.center();
-        await windowManager.setAlwaysOnTop(true);
-      });
-
-  Future<void> _leaveSplashWindow() => _guard(() async {
-        await windowManager.setAlwaysOnTop(false);
-        await windowManager.setResizable(true);
-        final bounds = _launcherBounds;
-        if (bounds != null) await windowManager.setBounds(bounds);
-      });
-
   void _close() {
-    if (widget.manageWindow) unawaited(_leaveSplashWindow());
+    if (widget.manageWindow) unawaited(_window.leave());
     widget.onClose();
   }
 
   void _openWithoutPlugins() {
-    if (widget.manageWindow) unawaited(_leaveSplashWindow());
+    if (widget.manageWindow) unawaited(_window.leave());
     widget.onOpenWithoutPlugins();
   }
 

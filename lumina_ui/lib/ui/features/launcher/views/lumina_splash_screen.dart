@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:window_manager/window_manager.dart';
+import 'package:lumina_ui/ui/features/launcher/views/splash_window.dart';
 
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 
@@ -84,8 +85,8 @@ class LuminaSplashScreen extends StatefulWidget {
 }
 
 class _LuminaSplashScreenState extends State<LuminaSplashScreen> with SingleTickerProviderStateMixin {
-  Rect? _launcherBounds;
-  bool _wasMaximized = false;
+  /// Shrinks the window to the splash and restores it (maximized too).
+  late final SplashWindow _window = SplashWindow(LuminaSplashScreen.windowSize);
   bool _hovering = false;
   AnimationController? _indeterminateController;
 
@@ -99,7 +100,7 @@ class _LuminaSplashScreenState extends State<LuminaSplashScreen> with SingleTick
       )..repeat();
     }
     if (widget.manageWindow) {
-      unawaited(_enterSplashWindow());
+      unawaited(_window.enter());
     }
   }
 
@@ -125,33 +126,11 @@ class _LuminaSplashScreenState extends State<LuminaSplashScreen> with SingleTick
     }
   }
 
-  Future<void> _enterSplashWindow() => _guard(() async {
-        _wasMaximized = await windowManager.isMaximized();
-        _launcherBounds = await windowManager.getBounds();
-        if (_wasMaximized) {
-          await windowManager.unmaximize();
-        }
-        await windowManager.setResizable(false);
-        await windowManager.setSize(LuminaSplashScreen.windowSize);
-        await windowManager.center();
-        await windowManager.setAlwaysOnTop(true);
-      });
-
-  Future<void> _leaveSplashWindow() => _guard(() async {
-        await windowManager.setAlwaysOnTop(false);
-        await windowManager.setResizable(true);
-        if (_wasMaximized) {
-          await windowManager.maximize();
-        } else if (_launcherBounds != null) {
-          await windowManager.setBounds(_launcherBounds!);
-        }
-      });
-
   @override
   void dispose() {
     _indeterminateController?.dispose();
     if (widget.manageWindow) {
-      unawaited(_leaveSplashWindow());
+      unawaited(_window.leave());
     }
     super.dispose();
   }
