@@ -1,4 +1,4 @@
-import 'filament_bindings.dart' as c;
+import 'package:flutter_filament/src/filament_bindings.dart' as c;
 
 /// ReSTIR direct lighting for the punctual lights of a view.
 ///

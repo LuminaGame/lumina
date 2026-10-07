@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:lumina/lumina.dart';
 
-import '../../../core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 
 // These are the Blueprint pin colours (white exec, red boolean, green
 // numbers, violet vectors, teal-green Vector2D, lavender rotators, pink names,

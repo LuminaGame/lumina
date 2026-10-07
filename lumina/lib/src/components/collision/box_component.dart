@@ -1,7 +1,7 @@
 import 'package:vector_math/vector_math_64.dart';
-import '../../math/euler.dart';
-import 'collision_component.dart';
-import 'shape_wireframes.dart';
+import 'package:lumina/src/math/euler.dart';
+import 'package:lumina/src/components/collision/collision_component.dart';
+import 'package:lumina/src/components/collision/shape_wireframes.dart';
 
 /// A box collider: [boxExtent] is
 /// its half size in world units, oriented by the component's transform.

@@ -4,14 +4,14 @@ import 'package:lumina/lumina.dart' show LuminaUnits;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:vector_math/vector_math_64.dart' show Vector3;
 
-import '../../../core/property_editors/scrub_numeric_field.dart';
-import '../../../core/property_editors/slider_field.dart';
-import '../../../core/theme/editor_theme.dart';
-import '../../main_editor/view_models/editor_view_model.dart';
-import '../models/navigation_editor_state.dart';
-import '../sub_editor_binding.dart';
-import '../view_models/navigation_editor_view_model.dart';
-import 'sub_editor_3d_viewport.dart';
+import 'package:lumina_ui/ui/core/property_editors/scrub_numeric_field.dart';
+import 'package:lumina_ui/ui/core/property_editors/slider_field.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/navigation_editor_state.dart';
+import 'package:lumina_ui/ui/features/sub_editors/sub_editor_binding.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/navigation_editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/sub_editor_3d_viewport.dart';
 import 'package:lumina_ui/ui/core/widgets/editor_context_menu.dart';
 
 /// Navigation sub-editor: bounds volumes, agent / grid parameters,

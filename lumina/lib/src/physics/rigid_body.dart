@@ -2,10 +2,10 @@ import 'dart:math' as math;
 
 import 'package:vector_math/vector_math_64.dart';
 
-import '../components/base/scene_component.dart';
-import '../components/collision/collision_component.dart';
-import 'mass_properties.dart';
-import 'physical_material.dart';
+import 'package:lumina/src/components/base/scene_component.dart';
+import 'package:lumina/src/components/collision/collision_component.dart';
+import 'package:lumina/src/physics/mass_properties.dart';
+import 'package:lumina/src/physics/physical_material.dart';
 
 /// One convex piece of a rigid body: [shape] posed in the body's frame by
 /// [position] / [rotation], in world units. A box's half extents already

@@ -1,6 +1,6 @@
 import 'package:lumina/lumina.dart';
 
-import 'blueprint_editor_type_context.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_editor_type_context.dart';
 
 /// A palette row that is an editor action rather than a library node, such
 /// as the pinned "Promote to Variable".

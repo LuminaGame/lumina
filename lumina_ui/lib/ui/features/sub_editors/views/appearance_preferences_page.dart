@@ -3,10 +3,10 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../core/property_editors/color_field.dart';
-import '../../../core/theme/editor_theme.dart';
-import '../../../core/theme/editor_theme_data.dart';
-import '../../../core/theme/editor_theme_store.dart';
+import 'package:lumina_ui/ui/core/property_editors/color_field.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme_data.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme_store.dart';
 
 /// Where Import and Export ask for a file. The defaults are the system file
 /// dialogs; a test points them at files it created.

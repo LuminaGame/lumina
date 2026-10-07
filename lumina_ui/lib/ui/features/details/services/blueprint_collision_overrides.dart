@@ -3,11 +3,11 @@ import 'dart:io';
 
 import 'package:lumina/lumina.dart';
 
-import '../../../core/property_editors/collision_section_editor.dart';
-import '../../../core/property_editors/physics_section_editor.dart';
-import '../../main_editor/view_models/editor_view_model.dart';
-import '../../sub_editors/models/blueprint_component_registry.dart';
-import '../models/editor_component_node.dart';
+import 'package:lumina_ui/ui/core/property_editors/collision_section_editor.dart';
+import 'package:lumina_ui/ui/core/property_editors/physics_section_editor.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_component_registry.dart';
+import 'package:lumina_ui/ui/features/details/models/editor_component_node.dart';
 
 /// A placed Blueprint actor's per-instance collision,
 /// as the level Details edits it: instance overrides of a

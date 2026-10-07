@@ -19,7 +19,7 @@ import 'dart:io';
 
 import 'package:ffi/ffi.dart';
 
-import 'package_identity.dart';
+import 'package:lumina_ui/ui/core/host/package_identity.dart';
 
 /// What startup does about the process's redirection trust policy.
 enum RedirectionTrustAction {

@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
-import '../services/engine_logger_service.dart';
-import 'asset_repository.dart';
+import 'package:lumina/data/services/engine_logger_service.dart';
+import 'package:lumina/data/repositories/asset_repository.dart';
 
 class CollectionAsset {
   final String assetId;

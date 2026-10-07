@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:pub_semver/pub_semver.dart';
 
-import 'lumina_project.dart';
+import 'package:lumina/data/models/lumina_project.dart';
 
 export 'plugin_isolation.dart';
 

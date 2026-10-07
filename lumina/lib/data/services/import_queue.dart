@@ -3,9 +3,9 @@ import 'dart:collection';
 import 'dart:isolate';
 import 'dart:typed_data';
 
-import '../repositories/asset_repository.dart';
-import 'encoded_image_decoder.dart';
-import 'engine_logger_service.dart';
+import 'package:lumina/data/repositories/asset_repository.dart';
+import 'package:lumina/data/services/encoded_image_decoder.dart';
+import 'package:lumina/data/services/engine_logger_service.dart';
 
 /// Where one file of an import batch is. A file moves
 /// queued → converting → writing → thumbnail → done, or ends failed /

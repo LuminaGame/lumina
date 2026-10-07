@@ -3,14 +3,14 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:lumina/lumina.dart'; // For LuminaAsset
 
-import 'editor_command.dart';
-import 'editor_slot_button.dart';
-import 'editor_panels.dart';
-import 'mcp/editor_mcp.dart';
-import 'plugin_storage.dart';
-import 'project_settings_section.dart';
-import 'plugin_crash_reporter.dart';
-import 'process/plugin_process_channel.dart';
+import 'package:lumina_editor_api/src/editor_command.dart';
+import 'package:lumina_editor_api/src/editor_slot_button.dart';
+import 'package:lumina_editor_api/src/editor_panels.dart';
+import 'package:lumina_editor_api/src/mcp/editor_mcp.dart';
+import 'package:lumina_editor_api/src/plugin_storage.dart';
+import 'package:lumina_editor_api/src/project_settings_section.dart';
+import 'package:lumina_editor_api/src/plugin_crash_reporter.dart';
+import 'package:lumina_editor_api/src/process/plugin_process_channel.dart';
 export 'editor_command.dart';
 export 'editor_level.dart';
 export 'editor_theme.dart';

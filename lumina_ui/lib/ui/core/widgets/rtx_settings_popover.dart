@@ -2,9 +2,9 @@ import 'package:flutter_filament/flutter_filament.dart' show DlssQuality;
 import 'package:lumina/lumina.dart' show LuminaFsr3Quality;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../features/main_editor/view_models/editor_view_model.dart';
-import '../property_editors/slider_field.dart';
-import '../theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/core/property_editors/slider_field.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 
 /// Which of the three viewport HUD controls opened the popover.
 enum RtxSettingsKind { dlss, fsr3, rayTracing }

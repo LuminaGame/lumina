@@ -1,7 +1,7 @@
 /// The project's packaging targets (`.lmproject` `packaging`).
 library;
 
-import 'project_web_loading_style.dart';
+import 'package:lumina/data/models/project_web_loading_style.dart';
 
 /// Platforms a project can be packaged for, in display order.
 const List<String> kPackagingPlatforms = ['linux', 'windows', 'macos', 'android', 'ios', 'web'];

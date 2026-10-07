@@ -1,8 +1,8 @@
 import 'package:lumina_editor_api/lumina_editor_api.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../property_editors/color_field.dart';
-import 'plugin_view_scope.dart';
+import 'package:lumina_ui/ui/core/property_editors/color_field.dart';
+import 'package:lumina_ui/ui/core/widgets/plugin_view/plugin_view_scope.dart';
 
 /// [PluginControlKind.colorField]: `value` as `#RRGGBB` or `#AARRGGBB`, edited
 /// with the Details panel's [ColorField] (swatch + picker + hex). An

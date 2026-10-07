@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:lumina/lumina.dart' show LuminaUnits;
 
-import '../models/landscape_brush.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/landscape_brush.dart';
 
 /// The Landscape editor's brush settings — the sculpt brush and the foliage
 /// brush — as this user left them in this project.

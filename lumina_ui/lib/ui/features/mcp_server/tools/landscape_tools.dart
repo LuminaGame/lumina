@@ -3,12 +3,12 @@ import 'dart:math' as math;
 
 import 'package:lumina/lumina.dart' show AssetType, FoliageRules, LandscapeData, LuminaUnits;
 
-import '../../main_editor/view_models/editor_view_model.dart';
-import '../../sub_editors/models/landscape_brush.dart';
-import '../../sub_editors/view_models/landscape_editor_view_model.dart';
-import '../services/mcp_editor_sessions.dart';
-import '../services/mcp_protocol.dart';
-import '../services/mcp_tool.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/landscape_brush.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/landscape_editor_view_model.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_editor_sessions.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_protocol.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_tool.dart';
 
 /// The Landscape editor as MCP tools: create a terrain,
 /// import a heightmap, set the sculpt and foliage brushes, replay stroke

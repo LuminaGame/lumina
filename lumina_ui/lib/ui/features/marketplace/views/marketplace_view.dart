@@ -1,13 +1,13 @@
 import 'package:lumina_marketplace_shared/lumina_marketplace_shared.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../core/theme/editor_theme.dart';
-import '../services/marketplace_license_records.dart';
-import '../view_models/marketplace_view_model.dart';
-import 'marketplace_folder_rail.dart';
-import 'marketplace_listing_card.dart';
-import 'marketplace_listing_detail.dart';
-import 'marketplace_sign_in_dialog.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/marketplace/services/marketplace_license_records.dart';
+import 'package:lumina_ui/ui/features/marketplace/view_models/marketplace_view_model.dart';
+import 'package:lumina_ui/ui/features/marketplace/views/marketplace_folder_rail.dart';
+import 'package:lumina_ui/ui/features/marketplace/views/marketplace_listing_card.dart';
+import 'package:lumina_ui/ui/features/marketplace/views/marketplace_listing_detail.dart';
+import 'package:lumina_ui/ui/features/marketplace/views/marketplace_sign_in_dialog.dart';
 
 /// Window → Marketplace: a workspace tab that signs in to
 /// the Lumina Marketplace, browses and searches the catalogue the web front

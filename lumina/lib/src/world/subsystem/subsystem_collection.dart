@@ -1,5 +1,5 @@
-import '../world.dart';
-import 'world_subsystem.dart';
+import 'package:lumina/src/world/world.dart';
+import 'package:lumina/src/world/subsystem/world_subsystem.dart';
 
 /// Collection manager for [LuminaWorldSubsystem] instances.
 /// Provides O(1) dual-indexed generic lookup and deterministic registration-order execution.

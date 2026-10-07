@@ -1,8 +1,8 @@
-import '../declarative/lumina_object.dart';
-import '../declarative/build_context.dart';
-import '../object/actor.dart';
-import 'level_script_actor.dart';
-import 'world.dart';
+import 'package:lumina/src/declarative/lumina_object.dart';
+import 'package:lumina/src/declarative/build_context.dart';
+import 'package:lumina/src/object/actor.dart';
+import 'package:lumina/src/world/level_script_actor.dart';
+import 'package:lumina/src/world/world.dart';
 
 /// 7-state asynchronous streaming and lifecycle state for a [LuminaLevel].
 enum LevelState {

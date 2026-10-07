@@ -11,3 +11,8 @@ include: package:flutter_lints/flutter.yaml
 
 # Additional information about this file can be found at
 # https://dart.dev/guides/language/analysis-options
+
+linter:
+  rules:
+    # Own-package files are imported by package URI, never by a relative path.
+    always_use_package_imports: true

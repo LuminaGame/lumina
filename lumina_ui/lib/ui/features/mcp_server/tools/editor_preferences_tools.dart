@@ -1,7 +1,7 @@
-import '../../main_editor/services/editor_preferences.dart';
-import '../../main_editor/view_models/editor_view_model.dart';
-import '../services/mcp_protocol.dart';
-import '../services/mcp_tool.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/editor_preferences.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_protocol.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_tool.dart';
 
 /// Editor Preferences (Edit → Editor Preferences) as MCP tools
 /// (group `settings`): the user's own editor settings in

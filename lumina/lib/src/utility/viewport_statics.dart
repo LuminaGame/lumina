@@ -2,9 +2,9 @@ import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter_filament/flutter_filament.dart';
 import 'package:vector_math/vector_math_64.dart';
-import '../object/actor.dart';
-import '../components/base/scene_component.dart';
-import '../world/world.dart';
+import 'package:lumina/src/object/actor.dart';
+import 'package:lumina/src/components/base/scene_component.dart';
+import 'package:lumina/src/world/world.dart';
 
 /// Result descriptor from a GPU pixel-exact picking query.
 class LuminaPickResult {

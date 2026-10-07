@@ -1,5 +1,5 @@
-import 'ffi_platform.dart' as ffi;
-import 'ffi_package_platform.dart';
+import 'package:flutter_filament/src/ffi_platform.dart' as ffi;
+import 'package:flutter_filament/src/ffi_package_platform.dart';
 
 import 'package:flutter_filament/src/filament_bindings.dart' as c;
 

@@ -1,13 +1,13 @@
-import 'ffi_platform.dart' as ffi;
+import 'package:flutter_filament/src/ffi_platform.dart' as ffi;
 
-import 'ffi_package_platform.dart';
+import 'package:flutter_filament/src/ffi_package_platform.dart';
 
-import 'engine.dart';
-import 'indirect_light.dart';
-import 'ray_tracing.dart';
-import 'skybox.dart';
-import 'filament_bindings.dart' as c;
-import 'view.dart';
+import 'package:flutter_filament/src/engine.dart';
+import 'package:flutter_filament/src/indirect_light.dart';
+import 'package:flutter_filament/src/ray_tracing.dart';
+import 'package:flutter_filament/src/skybox.dart';
+import 'package:flutter_filament/src/filament_bindings.dart' as c;
+import 'package:flutter_filament/src/view.dart';
 
 /// A Scene is a flat container of Renderable and Light instances.
 ///

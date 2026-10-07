@@ -3,9 +3,9 @@ import 'package:flutter_filament/flutter_filament.dart' show FilamentCamera, Fil
 import 'package:lumina/lumina.dart' show LuminaUnits;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../services/editor_level_scene.dart';
-import '../services/editor_view_layers.dart';
-import '../view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/editor_level_scene.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/editor_view_layers.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 
 /// Aims a [LevelSceneView]'s camera: called when its scene is created, when
 /// the level's scene comes or goes, on a resize and on every rendered frame,

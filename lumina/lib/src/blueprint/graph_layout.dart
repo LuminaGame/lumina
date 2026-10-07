@@ -1,8 +1,8 @@
 import 'dart:math' as math;
 
-import 'blueprint_model.dart';
-import 'editor_nodes.dart';
-import 'node_library.dart';
+import 'package:lumina/src/blueprint/blueprint_model.dart';
+import 'package:lumina/src/blueprint/editor_nodes.dart';
+import 'package:lumina/src/blueprint/node_library.dart';
 
 /// One titled chain of a generated graph: an event and the nodes it runs,
 /// in reading order.

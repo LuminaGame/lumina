@@ -4,9 +4,9 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:lumina/lumina.dart';
 
-import '../../main_editor/commands/editor_transaction.dart';
-import '../services/anim_graph_asset_service.dart';
-import '../services/anim_preview_scene.dart';
+import 'package:lumina_ui/ui/features/main_editor/commands/editor_transaction.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/anim_graph_asset_service.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/anim_preview_scene.dart';
 
 /// The Blend Space editor's state: lumina's
 /// [LuminaBlendSpaceDocument] from the BLEND_SPACE `.lmas`,

@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:lumina/data/services/config_json_file.dart';
 import 'package:lumina/data/services/lumina_config_dir.dart';
 
-import 'android_sdk.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/android_sdk.dart';
 
 /// Starts a child process for Play on Device (adb, the emulator, flutter).
 /// Tests pass one that records the command lines.

@@ -1,9 +1,9 @@
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../services/crash_report.dart';
-import '../services/crash_reporter.dart';
-import '../theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/services/crash_report.dart';
+import 'package:lumina_ui/ui/core/services/crash_reporter.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 
 /// Lays the crash report screen over the whole app while the reporter has a
 /// pending report: an uncaught error while the editor runs, or a previous

@@ -3,13 +3,13 @@ import 'dart:math' as math;
 
 import 'package:vector_math/vector_math_64.dart';
 
-import '../../components/base/actor_component.dart';
-import '../../components/mesh/animated_mesh_component.dart';
-import '../../object/actor.dart';
-import '../../math/euler.dart';
-import '../blueprint_model.dart';
-import '../blueprint_runtime.dart';
-import 'anim_blueprint_model.dart';
+import 'package:lumina/src/components/base/actor_component.dart';
+import 'package:lumina/src/components/mesh/animated_mesh_component.dart';
+import 'package:lumina/src/object/actor.dart';
+import 'package:lumina/src/math/euler.dart';
+import 'package:lumina/src/blueprint/blueprint_model.dart';
+import 'package:lumina/src/blueprint/blueprint_runtime.dart';
+import 'package:lumina/src/blueprint/anim/anim_blueprint_model.dart';
 
 /// Makes the Animation Blueprint instance for a skeletal mesh component.
 typedef LuminaAnimBlueprintFactory = LuminaAnimBlueprintInstance Function(LuminaAnimatedMeshComponent mesh);

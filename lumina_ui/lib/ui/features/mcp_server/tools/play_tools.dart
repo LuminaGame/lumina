@@ -2,14 +2,14 @@ import 'dart:async';
 
 import 'package:lumina/lumina.dart';
 
-import '../../main_editor/services/blueprint_play_support.dart';
-import '../../main_editor/services/standalone_game_runner.dart';
-import '../../main_editor/view_models/editor_view_model.dart';
-import '../services/mcp_jobs.dart';
-import '../services/mcp_play_testing.dart';
-import '../services/mcp_protocol.dart';
-import '../services/mcp_tool.dart';
-import 'play_testing_tools.dart' show mcpShowPlayViewport;
+import 'package:lumina_ui/ui/features/main_editor/services/blueprint_play_support.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/standalone_game_runner.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_jobs.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_play_testing.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_protocol.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_tool.dart';
+import 'package:lumina_ui/ui/features/mcp_server/tools/play_testing_tools.dart' show mcpShowPlayViewport;
 
 /// The key of Play Standalone's one game process.
 const String kMcpStandalone = 'standalone';

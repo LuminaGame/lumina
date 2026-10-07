@@ -2,9 +2,9 @@ import 'dart:math' as math;
 
 import 'package:vector_math/vector_math_64.dart';
 
-import '../collision/gjk_epa.dart';
-import '../collision/narrow_phase.dart';
-import '../collision/shapes.dart';
+import 'package:lumina/src/collision/gjk_epa.dart';
+import 'package:lumina/src/collision/narrow_phase.dart';
+import 'package:lumina/src/collision/shapes.dart';
 
 /// One side of a contact test: a convex [shape] at world [transform] (with
 /// scale, which a box and a convex hull honour, as in the collision queries).

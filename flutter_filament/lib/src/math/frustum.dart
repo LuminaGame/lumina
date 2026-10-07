@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 import 'package:vector_math/vector_math_64.dart';
-import 'box.dart';
+import 'package:flutter_filament/src/math/box.dart';
 
 /// Frustum plane indices in Filament's exact order:
 /// [left], [right], [bottom], [top], [far], [near].

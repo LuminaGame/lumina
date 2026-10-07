@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:lumina/lumina.dart';
 import 'package:path/path.dart' as p;
 
-import '../../../core/host/editor_host.dart';
+import 'package:lumina_ui/ui/core/host/editor_host.dart';
 
 /// The projects whose "Update this project's editor?" question the user
 /// answered with "Don't ask again for this version", on this machine: per

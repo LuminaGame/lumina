@@ -1,10 +1,10 @@
 import 'package:vector_math/vector_math_64.dart';
 
-import '../../math/axes.dart';
-import '../../object/actor.dart';
-import '../../post_process/post_process_blender.dart';
-import '../../world/world.dart';
-import '../base/scene_component.dart';
+import 'package:lumina/src/math/axes.dart';
+import 'package:lumina/src/object/actor.dart';
+import 'package:lumina/src/post_process/post_process_blender.dart';
+import 'package:lumina/src/world/world.dart';
+import 'package:lumina/src/components/base/scene_component.dart';
 
 /// The runtime form of a Post Process Volume: an
 /// oriented box (or unbound volume) with a priority, a blend radius and a

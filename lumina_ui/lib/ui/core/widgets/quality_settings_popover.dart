@@ -1,7 +1,7 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
-import '../theme/editor_theme.dart';
-import '../property_editors/slider_field.dart';
-import '../../features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/property_editors/slider_field.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 
 class QualitySettingsPopover extends StatelessWidget {
   final EditorViewModel viewModel;

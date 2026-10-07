@@ -1,8 +1,8 @@
 // design-token-exempt: node-graph painter colours (node headers, pose wires, the active-state glow) follow node-graph conventions, not the editor chrome palette.
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../../core/theme/editor_theme.dart';
-import '../../view_models/anim_blueprint_editor_view_model.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/anim_blueprint_editor_view_model.dart';
 
 /// The AnimGraph: the state machine node feeding Output Pose, as lumina's
 /// anim blueprint document defines it (the first state machine drives the

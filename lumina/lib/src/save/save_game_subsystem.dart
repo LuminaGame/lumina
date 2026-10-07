@@ -5,11 +5,11 @@ import 'dart:io';
 import 'dart:isolate';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:vector_math/vector_math_64.dart';
-import '../object/actor.dart';
-import '../world/world_partition.dart';
-import '../world/subsystem/world_subsystem.dart';
-import '../world/world.dart';
-import 'save_game.dart';
+import 'package:lumina/src/object/actor.dart';
+import 'package:lumina/src/world/world_partition.dart';
+import 'package:lumina/src/world/subsystem/world_subsystem.dart';
+import 'package:lumina/src/world/world.dart';
+import 'package:lumina/src/save/save_game.dart';
 
 /// The directory saves went to before the built game and Play-In-Editor
 /// got their own: relative to the process's working directory.

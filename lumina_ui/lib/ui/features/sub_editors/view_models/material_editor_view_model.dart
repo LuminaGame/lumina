@@ -6,9 +6,9 @@ import 'package:lumina/data/repositories/asset_repository.dart';
 import 'package:lumina/data/services/engine_logger_service.dart';
 import 'package:flutter_filament/flutter_filament.dart';
 
-import '../../main_editor/commands/editor_transaction.dart';
-import '../services/mat_source.dart';
-import 'material_graph_controller.dart';
+import 'package:lumina_ui/ui/features/main_editor/commands/editor_transaction.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/mat_source.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/material_graph_controller.dart';
 
 enum MaterialCompileSeverity {
   error,

@@ -1,9 +1,9 @@
 import 'package:flutter/foundation.dart' show ChangeNotifier;
 import 'package:vector_math/vector_math_64.dart';
 
-import '../../main_editor/services/gizmo_controller.dart';
-import '../../main_editor/services/transform_gizmo.dart';
-import 'viewport_ray.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/gizmo_controller.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/transform_gizmo.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/viewport_ray.dart';
 
 export '../../main_editor/services/gizmo_controller.dart' show GizmoMode, GizmoSpace;
 export '../../main_editor/services/transform_gizmo.dart' show TransformGizmoSnap;

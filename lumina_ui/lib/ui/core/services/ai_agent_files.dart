@@ -5,7 +5,7 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/services.dart';
 import 'package:lumina/lumina.dart';
 
-import '../host/editor_host.dart' show EditorAssets;
+import 'package:lumina_ui/ui/core/host/editor_host.dart' show EditorAssets;
 
 /// One editor skill shipped in lumina_ui's `skills/<name>/` assets.
 class AgentSkill {

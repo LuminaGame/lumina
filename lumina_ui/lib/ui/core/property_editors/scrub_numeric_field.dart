@@ -1,7 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 
 class ScrubNumericField extends StatefulWidget {
   final bool isMixed;

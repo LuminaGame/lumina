@@ -1,7 +1,7 @@
 import 'dart:developer' as developer;
 
-import '../world/world.dart';
-import 'lumina_game.dart';
+import 'package:lumina/src/world/world.dart';
+import 'package:lumina/src/game/lumina_game.dart';
 
 /// A console command: the arguments after the command name and the world it
 /// runs against (null outside play).

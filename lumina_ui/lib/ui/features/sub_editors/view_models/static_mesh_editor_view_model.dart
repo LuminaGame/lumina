@@ -4,9 +4,9 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:lumina/lumina.dart';
 import 'package:vector_math/vector_math_64.dart' show Vector3;
-import '../models/static_mesh_collision.dart';
-import '../models/material_slot_binding.dart';
-import '../models/static_mesh_lod.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/static_mesh_collision.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/material_slot_binding.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/static_mesh_lod.dart';
 
 class StaticMeshEditorViewModel extends ChangeNotifier {
   final String assetPath;

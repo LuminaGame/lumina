@@ -5,30 +5,30 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_filament/flutter_filament.dart' hide GizmoMode;
-import '../services/material_preview_renderer.dart';
-import '../services/viewport_mesh.dart';
-import '../services/preview_mesh_factory.dart';
-import '../view_models/material_editor_view_model.dart'
+import 'package:lumina_ui/ui/features/sub_editors/services/material_preview_renderer.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/viewport_mesh.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/preview_mesh_factory.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/material_editor_view_model.dart'
     show MaterialParamModel, MaterialParamType;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina/lumina.dart';
-import '../../../core/services/editor_mesh_budget.dart';
-import '../../../core/services/editor_scene_environment.dart';
-import '../../../core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/services/editor_mesh_budget.dart';
+import 'package:lumina_ui/ui/core/services/editor_scene_environment.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:vector_math/vector_math_64.dart'
     show Vector3, Matrix4, Quaternion, Ray;
 
-import '../models/animation_playback_controller.dart';
-import '../models/skeletal_mesh_socket.dart';
-import '../models/skeletal_socket_attachment.dart';
-import '../models/sub_editor_canvas_overlay.dart';
-import '../models/sub_editor_line_set.dart';
-import '../models/sub_editor_mesh_component.dart';
-import '../models/viewport_ray.dart';
-import '../models/sub_editor_transform_gizmo.dart';
-import '../../main_editor/services/transform_gizmo.dart';
-import 'sub_editor_transform_gizmo_painter.dart';
-import 'transform_gizmo_toolbar.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/animation_playback_controller.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/skeletal_mesh_socket.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/skeletal_socket_attachment.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/sub_editor_canvas_overlay.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/sub_editor_line_set.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/sub_editor_mesh_component.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/viewport_ray.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/sub_editor_transform_gizmo.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/transform_gizmo.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/sub_editor_transform_gizmo_painter.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/transform_gizmo_toolbar.dart';
 
 export '../models/sub_editor_canvas_overlay.dart';
 export '../models/sub_editor_line_set.dart';

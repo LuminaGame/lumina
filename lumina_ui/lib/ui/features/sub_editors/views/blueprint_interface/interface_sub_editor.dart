@@ -1,10 +1,10 @@
 import 'package:lumina/lumina.dart' hide BoxShape;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../../core/theme/editor_theme.dart';
-import '../../sub_editor_binding.dart';
-import '../../view_models/blueprint_interface_view_model.dart';
-import '../blueprint/signature_editor.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/sub_editors/sub_editor_binding.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/blueprint_interface_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/blueprint/signature_editor.dart';
 
 /// The Blueprint Interface sub-editor: the interface's
 /// functions with their signatures. A function with outputs is implemented

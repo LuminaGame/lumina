@@ -1,6 +1,6 @@
 import 'package:vector_math/vector_math_64.dart';
-import '../object/actor.dart';
-import 'data_layer.dart';
+import 'package:lumina/src/object/actor.dart';
+import 'package:lumina/src/world/data_layer.dart';
 
 /// 6-state lifecycle for World Partition cells.
 enum CellState {

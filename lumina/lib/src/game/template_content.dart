@@ -1,12 +1,12 @@
-import '../animation/locomotion_clip_set.dart';
-import '../blueprint/anim/anim_blueprint_instance.dart';
-import '../blueprint/anim/anim_blueprint_model.dart';
-import '../blueprint/blueprint_model.dart';
-import '../blueprint/graph_layout.dart';
-import '../blueprint/node_library.dart';
-import '../input/input_action.dart';
-import 'template_character.dart';
-import 'template_clips.dart';
+import 'package:lumina/src/animation/locomotion_clip_set.dart';
+import 'package:lumina/src/blueprint/anim/anim_blueprint_instance.dart';
+import 'package:lumina/src/blueprint/anim/anim_blueprint_model.dart';
+import 'package:lumina/src/blueprint/blueprint_model.dart';
+import 'package:lumina/src/blueprint/graph_layout.dart';
+import 'package:lumina/src/blueprint/node_library.dart';
+import 'package:lumina/src/input/input_action.dart';
+import 'package:lumina/src/game/template_character.dart';
+import 'package:lumina/src/game/template_clips.dart';
 
 export 'template_clips.dart';
 

@@ -4,8 +4,8 @@ import 'dart:math' as math;
 import 'package:lumina/lumina.dart' hide BoxShape;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../../../core/theme/editor_theme.dart';
-import '../../../view_models/blueprint_editor_view_model.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/blueprint_editor_view_model.dart';
 
 /// The Timeline tab: the
 /// node's length / loop / auto-play, its float / vector / colour tracks

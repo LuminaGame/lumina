@@ -10,8 +10,8 @@ library;
 
 import 'dart:convert';
 
-import 'ffi.dart';
-import 'module.dart';
+import 'package:flutter_filament/src/web_ffi/ffi.dart';
+import 'package:flutter_filament/src/web_ffi/module.dart';
 
 final class _WasmAllocator implements Allocator {
   final bool zero;

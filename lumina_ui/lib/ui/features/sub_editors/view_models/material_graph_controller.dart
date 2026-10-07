@@ -3,14 +3,14 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:lumina/lumina.dart';
 
-import '../../main_editor/commands/editor_transaction.dart';
-import '../models/material_graph.dart';
-import '../services/material_graph_codegen.dart';
-import '../services/material_graph_parser.dart';
-import '../services/material_graph_types.dart';
-import 'blueprint_graph_editor.dart';
-import 'material_editor_view_model.dart';
-import 'material_graph_editor.dart';
+import 'package:lumina_ui/ui/features/main_editor/commands/editor_transaction.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/material_graph.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/material_graph_codegen.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/material_graph_parser.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/material_graph_types.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/blueprint_graph_editor.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/material_editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/material_graph_editor.dart';
 
 /// The Material Editor's node graph and its link to the `.mat` source.
 ///

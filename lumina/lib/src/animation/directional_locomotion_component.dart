@@ -2,10 +2,10 @@ import 'dart:math' as math;
 
 import 'package:vector_math/vector_math_64.dart';
 
-import '../components/base/actor_component.dart';
-import '../components/mesh/animated_mesh_component.dart';
-import '../components/movement/character_movement_component.dart';
-import 'locomotion_clip_set.dart';
+import 'package:lumina/src/components/base/actor_component.dart';
+import 'package:lumina/src/components/mesh/animated_mesh_component.dart';
+import 'package:lumina/src/components/movement/character_movement_component.dart';
+import 'package:lumina/src/animation/locomotion_clip_set.dart';
 
 /// Drives an animated character mesh from its owner's movement: idle when
 /// still, one of eight walk cycles by the direction it moves relative to the

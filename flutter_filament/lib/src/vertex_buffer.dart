@@ -3,9 +3,9 @@
  * Licensed under the Apache License, Version 2.0.
  */
 
-import 'ffi_platform.dart' as ffi;
+import 'package:flutter_filament/src/ffi_platform.dart' as ffi;
 import 'dart:typed_data';
-import 'ffi_package_platform.dart';
+import 'package:flutter_filament/src/ffi_package_platform.dart';
 
 import 'package:flutter_filament/src/buffer_descriptor.dart';
 import 'package:flutter_filament/src/buffer_object.dart';

@@ -5,8 +5,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:lumina/lumina.dart';
 
-import '../../main_editor/services/widget_blueprint_assets.dart';
-import '../models/umg_document.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/widget_blueprint_assets.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/umg_document.dart';
 
 /// The project's classes as the Blueprint type context needs them:
 /// every widget `.lmas` under `contents/` as a

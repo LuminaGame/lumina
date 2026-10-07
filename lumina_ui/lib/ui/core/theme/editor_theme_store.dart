@@ -9,7 +9,7 @@ import 'package:flutter/widgets.dart' show BuildContext, Element, InheritedNotif
 import 'package:lumina/data/services/config_json_file.dart';
 import 'package:lumina/data/services/lumina_config_dir.dart';
 
-import 'editor_theme_data.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme_data.dart';
 
 /// The theme every [EditorThemeColor] — so every `EditorColors` token —
 /// resolves through. [apply] swaps it and refreshes the

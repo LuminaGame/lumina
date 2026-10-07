@@ -1,16 +1,16 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
-import '../sub_editor_binding.dart';
+import 'package:lumina_ui/ui/features/sub_editors/sub_editor_binding.dart';
 import 'package:lumina/lumina.dart';
-import '../../../core/theme/editor_theme.dart';
-import '../../../core/property_editors/slider_field.dart';
-import '../../../core/property_editors/synced_text_field.dart';
-import '../models/static_mesh_collision.dart';
-import '../models/material_slot_binding.dart';
-import '../models/static_mesh_lod.dart';
-import '../view_models/static_mesh_editor_view_model.dart';
-import '../../../core/property_editors/asset_picker_select.dart';
-import 'sub_editor_3d_viewport.dart';
-import 'sub_editor_hierarchy_widget.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/property_editors/slider_field.dart';
+import 'package:lumina_ui/ui/core/property_editors/synced_text_field.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/static_mesh_collision.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/material_slot_binding.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/static_mesh_lod.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/static_mesh_editor_view_model.dart';
+import 'package:lumina_ui/ui/core/property_editors/asset_picker_select.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/sub_editor_3d_viewport.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/sub_editor_hierarchy_widget.dart';
 
 class StaticMeshSubEditor extends StatefulWidget {
   final String assetName;

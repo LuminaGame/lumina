@@ -1,11 +1,11 @@
 import 'dart:math' as math;
 import 'package:vector_math/vector_math_64.dart';
-import '../object/actor.dart';
-import '../object/pawn.dart';
-import '../controller/controller.dart';
-import '../controller/player_controller.dart';
-import '../world/world.dart';
-import 'timer_manager.dart';
+import 'package:lumina/src/object/actor.dart';
+import 'package:lumina/src/object/pawn.dart';
+import 'package:lumina/src/controller/controller.dart';
+import 'package:lumina/src/controller/player_controller.dart';
+import 'package:lumina/src/world/world.dart';
+import 'package:lumina/src/utility/timer_manager.dart';
 
 /// Stateless static facade providing one-line accessors for actor spawning, player lookup, queries, and damage.
 abstract final class LuminaGameplayStatics {

@@ -3,15 +3,15 @@ import 'package:lumina/data/models/lumina_asset.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
-import '../../sub_editor_binding.dart';
-import '../../view_models/umg_editor_view_model.dart';
-import '../../services/umg_widget_codegen.dart' show UmgWidgetCodegen;
-import '../blueprint/blueprint_sub_editor.dart';
-import 'designer_canvas.dart';
-import 'hierarchy_tree.dart';
-import 'palette.dart';
-import 'slot_inspector.dart';
-import 'umg_theme_helper.dart';
+import 'package:lumina_ui/ui/features/sub_editors/sub_editor_binding.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/umg_editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/umg_widget_codegen.dart' show UmgWidgetCodegen;
+import 'package:lumina_ui/ui/features/sub_editors/views/blueprint/blueprint_sub_editor.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/umg/designer_canvas.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/umg/hierarchy_tree.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/umg/palette.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/umg/slot_inspector.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/umg/umg_theme_helper.dart';
 
 /// The UMG designer: Palette | Hierarchy tabs on the left, the live
 /// designer canvas in the center and the slot/appearance/events inspector

@@ -6,8 +6,8 @@ import 'dart:typed_data';
 import 'package:lumina_editor_api/lumina_editor_api.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../theme/editor_theme.dart';
-import 'plugin_view_scope.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/plugin_view/plugin_view_scope.dart';
 
 /// [PluginControlKind.image]: a PNG/JPEG from `path` (an absolute file, or
 /// one relative to the project) or from `base64` bytes, `height` (default

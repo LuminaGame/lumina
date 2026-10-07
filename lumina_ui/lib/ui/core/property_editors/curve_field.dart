@@ -1,5 +1,5 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
-import '../theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 
 class CurveField extends StatefulWidget {
   final Map<String, dynamic> value; // { 'keys': [[t,v], [t,v]], 'interpolation': 'linear' }

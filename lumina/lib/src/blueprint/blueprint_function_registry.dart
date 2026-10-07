@@ -1,5 +1,5 @@
-import 'blueprint_function_library.dart';
-import 'node_library.dart';
+import 'package:lumina/src/blueprint/blueprint_function_library.dart';
+import 'package:lumina/src/blueprint/node_library.dart';
 
 /// A node added to the library at run time: its spec, how
 /// generated code calls it, and its VM callable — null for a function that is

@@ -3,11 +3,11 @@ import 'dart:typed_data';
 import 'package:vector_math/vector_math_64.dart';
 import 'dart:math' as math;
 import 'package:flutter_filament/flutter_filament.dart';
-import '../base/scene_component.dart';
-import '../../object/actor.dart';
-import 'skinning_buffer.dart';
-import 'morph_target_set.dart';
-import '../../animation/anim_instance.dart';
+import 'package:lumina/src/components/base/scene_component.dart';
+import 'package:lumina/src/object/actor.dart';
+import 'package:lumina/src/components/mesh/skinning_buffer.dart';
+import 'package:lumina/src/components/mesh/morph_target_set.dart';
+import 'package:lumina/src/animation/anim_instance.dart';
 
 class LuminaSocket {
   final String name;

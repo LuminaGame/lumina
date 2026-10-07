@@ -6,11 +6,11 @@ import 'package:lumina/data/services/plugin_registry_service.dart';
 import 'package:lumina_marketplace_shared/lumina_marketplace_shared.dart' show InstallKind;
 import 'package:path/path.dart' as p;
 
-import '../../../core/services/folder_install.dart';
-import '../../../core/services/user_plugin_dir.dart';
-import '../../marketplace/services/marketplace_install_dirs.dart';
-import '../../marketplace/services/marketplace_installer.dart';
-import '../../marketplace/services/marketplace_license_records.dart';
+import 'package:lumina_ui/ui/core/services/folder_install.dart';
+import 'package:lumina_ui/ui/core/services/user_plugin_dir.dart';
+import 'package:lumina_ui/ui/features/marketplace/services/marketplace_install_dirs.dart';
+import 'package:lumina_ui/ui/features/marketplace/services/marketplace_installer.dart';
+import 'package:lumina_ui/ui/features/marketplace/services/marketplace_license_records.dart';
 
 /// Whose saved data a [PluginDataFolder] is.
 enum PluginDataKind {

@@ -1,4 +1,4 @@
-import 'filament_bindings.dart' as c;
+import 'package:flutter_filament/src/filament_bindings.dart' as c;
 
 /// Ray tracing on the Vulkan backend (`VK_KHR_ray_query`): the device
 /// extensions are requested before the engine exists, the scene keeps

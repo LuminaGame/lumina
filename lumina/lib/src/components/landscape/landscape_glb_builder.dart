@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
-import '../../../data/models/landscape_data.dart';
-import '../../../data/models/lumina_asset.dart';
-import '../../../data/services/glb_parser_service.dart';
+import 'package:lumina/data/models/landscape_data.dart';
+import 'package:lumina/data/models/lumina_asset.dart';
+import 'package:lumina/data/services/glb_parser_service.dart';
 
 /// Turns a landscape payload into an ordinary glTF 2.0 binary.
 ///

@@ -1,11 +1,11 @@
 import 'dart:ui' as ui;
 import 'package:flutter/gestures.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
-import '../sub_editor_binding.dart';
+import 'package:lumina_ui/ui/features/sub_editors/sub_editor_binding.dart';
 import 'package:lumina/lumina.dart';
-import '../../../core/theme/editor_theme.dart';
-import '../../../core/property_editors/slider_field.dart';
-import '../view_models/texture_editor_view_model.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/property_editors/slider_field.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/texture_editor_view_model.dart';
 
 class TextureSubEditor extends StatefulWidget {
   final String assetName;

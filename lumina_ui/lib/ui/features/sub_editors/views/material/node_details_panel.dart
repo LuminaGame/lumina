@@ -1,12 +1,12 @@
 import 'package:lumina/lumina.dart' hide BoxShape;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../../core/theme/editor_theme.dart';
-import '../../models/material_graph.dart';
-import '../../view_models/material_editor_view_model.dart';
-import '../../view_models/material_graph_editor.dart';
-import '../../../../core/property_editors/asset_picker_select.dart';
-import '../blueprint/pin_literal_editor.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/material_graph.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/material_editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/material_graph_editor.dart';
+import 'package:lumina_ui/ui/core/property_editors/asset_picker_select.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/blueprint/pin_literal_editor.dart';
 
 /// The Details panel of the material graph: the selected
 /// expression's settings — constant

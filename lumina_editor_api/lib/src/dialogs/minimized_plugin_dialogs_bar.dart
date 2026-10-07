@@ -1,6 +1,6 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import 'plugin_dialog_controller.dart';
+import 'package:lumina_editor_api/src/dialogs/plugin_dialog_controller.dart';
 
 /// Renders minimized plugin dialog chips in the editor's status bar.
 ///

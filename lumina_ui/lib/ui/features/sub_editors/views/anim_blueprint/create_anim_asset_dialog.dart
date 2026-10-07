@@ -1,9 +1,9 @@
 import 'package:lumina/lumina.dart' hide BoxShape;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../../core/property_editors/asset_picker_select.dart';
-import '../../../../core/theme/editor_theme.dart';
-import '../../services/anim_graph_asset_service.dart';
+import 'package:lumina_ui/ui/core/property_editors/asset_picker_select.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/anim_graph_asset_service.dart';
 
 /// Which animation asset the Content Browser's Animation menu creates.
 enum AnimAssetKind { animBlueprint, blendSpace, animationSequence }

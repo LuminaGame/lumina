@@ -1,9 +1,9 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina/lumina.dart';
-import '../../../core/theme/editor_theme.dart';
-import '../../../core/plugin_extension_registry.dart';
-import '../../main_editor/view_models/editor_view_model.dart';
-import '../../main_editor/views/content_browser_widget.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/plugin_extension_registry.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/main_editor/views/content_browser_widget.dart';
 
 /// Workspace shell for Sub-Editors and Plugin Editor Tabs.
 ///

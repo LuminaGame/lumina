@@ -1,10 +1,10 @@
 import 'dart:math' as math;
 import 'package:vector_math/vector_math_64.dart';
-import '../object/actor.dart';
-import 'data_layer.dart';
-import 'streaming_source.dart';
-import 'subsystem/world_subsystem.dart';
-import 'world_partition_cell.dart';
+import 'package:lumina/src/object/actor.dart';
+import 'package:lumina/src/world/data_layer.dart';
+import 'package:lumina/src/world/streaming_source.dart';
+import 'package:lumina/src/world/subsystem/world_subsystem.dart';
+import 'package:lumina/src/world/world_partition_cell.dart';
 
 export 'data_layer.dart';
 export 'streaming_source.dart';

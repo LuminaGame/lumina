@@ -3,12 +3,12 @@ import 'dart:math' as math;
 import 'package:lumina/lumina.dart' show LuminaUnits;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../core/theme/editor_theme.dart';
-import '../services/camera_actor_view.dart';
-import '../services/editor_preferences.dart';
-import '../services/editor_view_layers.dart';
-import '../view_models/editor_view_model.dart';
-import 'level_scene_view.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/camera_actor_view.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/editor_preferences.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/editor_view_layers.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/main_editor/views/level_scene_view.dart';
 
 /// The level viewport's camera preview: while exactly one camera actor is
 /// selected (and no Play session runs), a picture-in-picture panel anchored

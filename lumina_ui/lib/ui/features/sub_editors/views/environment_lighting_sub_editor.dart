@@ -6,16 +6,16 @@ import 'package:vector_math/vector_math_64.dart' show Vector3;
 
 import 'package:lumina/lumina.dart' show AssetType, RealAssetInfo;
 
-import '../../../core/property_editors/asset_picker_select.dart';
-import '../../../core/property_editors/color_field.dart';
-import '../../../core/property_editors/slider_field.dart';
-import '../../../core/theme/editor_theme.dart';
-import '../../main_editor/services/environment_actor_properties.dart';
-import '../../main_editor/view_models/editor_view_model.dart';
-import '../models/solar_math.dart';
-import '../sub_editor_binding.dart';
-import '../view_models/environment_lighting_view_model.dart';
-import 'sub_editor_3d_viewport.dart';
+import 'package:lumina_ui/ui/core/property_editors/asset_picker_select.dart';
+import 'package:lumina_ui/ui/core/property_editors/color_field.dart';
+import 'package:lumina_ui/ui/core/property_editors/slider_field.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/environment_actor_properties.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/solar_math.dart';
+import 'package:lumina_ui/ui/features/sub_editors/sub_editor_binding.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/environment_lighting_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/sub_editor_3d_viewport.dart';
 
 /// Environment Lighting mixer: sun + time of day, sky/IBL, height
 /// fog and post-process controls that drive a real lumina world in the

@@ -1,4 +1,4 @@
-import 'collision_filter.dart';
+import 'package:lumina/src/collision/collision_filter.dart';
 
 /// Collision presets:
 ///

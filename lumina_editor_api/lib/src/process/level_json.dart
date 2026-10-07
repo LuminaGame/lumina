@@ -1,4 +1,4 @@
-import '../editor_level.dart';
+import 'package:lumina_editor_api/src/editor_level.dart';
 
 /// The JSON shapes of the level types on the plugin protocol (`host.level`):
 /// the plugin process encodes specs and decodes snapshots with these, the

@@ -3,8 +3,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina/lumina.dart';
 import 'package:lumina_ui/ui/core/widgets/editor_context_menu.dart';
-import '../../../core/theme/editor_theme.dart';
-import '../view_models/launcher_view_model.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/launcher/view_models/launcher_view_model.dart';
 
 /// The launcher's Recent Projects pane: the searchable project cards with
 /// their Open / Locate… actions and context menu (rename, reveal, duplicate,

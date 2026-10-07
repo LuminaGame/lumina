@@ -2,9 +2,9 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina/data/services/game_template_service.dart';
 import 'package:lumina/data/models/lumina_project.dart' show kUmgWidgetLibraryFlutter, kUmgWidgetLibraryShadcn;
 import 'package:file_picker/file_picker.dart';
-import '../../../core/theme/editor_theme.dart';
-import '../view_models/create_project_view_model.dart';
-import 'installed_template_widgets.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/launcher/view_models/create_project_view_model.dart';
+import 'package:lumina_ui/ui/features/launcher/views/installed_template_widgets.dart';
 
 class CreateProjectDialog extends StatefulWidget {
   final CreateProjectViewModel viewModel;

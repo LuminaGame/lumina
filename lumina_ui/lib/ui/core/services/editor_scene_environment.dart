@@ -1,12 +1,12 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import '../host/editor_host.dart' show EditorAssets;
+import 'package:lumina_ui/ui/core/host/editor_host.dart' show EditorAssets;
 import 'package:flutter_filament/flutter_filament.dart' show FilamentEngine, FilamentScene;
 import 'package:lumina/lumina.dart';
 
-import '../../features/details/models/editor_component_node.dart';
-import '../../features/main_editor/view_models/editor_view_model.dart' show EditorActorNode;
+import 'package:lumina_ui/ui/features/details/models/editor_component_node.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart' show EditorActorNode;
 
 /// Owns the sky background and the image-based lighting of one Lumina Studio
 /// Filament viewport (the level viewport and every sub-editor preview).

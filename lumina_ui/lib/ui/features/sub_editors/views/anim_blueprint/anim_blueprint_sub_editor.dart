@@ -3,20 +3,20 @@ import 'package:lumina/lumina.dart' hide BoxShape;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:vector_math/vector_math_64.dart' show Vector3;
 
-import '../../../../core/theme/editor_theme.dart';
-import '../../../../core/property_editors/asset_picker_select.dart';
-import '../../sub_editor_binding.dart';
-import '../../view_models/anim_blueprint_editor_view_model.dart';
-import '../blueprint/compile_results.dart';
-import '../blueprint/graph_canvas.dart';
-import '../blueprint/my_blueprint_panel.dart';
-import '../blueprint/pin_literal_editor.dart';
-import '../sub_editor_3d_viewport.dart';
-import 'anim_graph_view.dart';
-import 'anim_preview_editor.dart';
-import 'state_machine_graph.dart';
-import 'state_pose_editor.dart';
-import '../../widgets/anim_blueprint_retarget_modal.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/property_editors/asset_picker_select.dart';
+import 'package:lumina_ui/ui/features/sub_editors/sub_editor_binding.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/anim_blueprint_editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/blueprint/compile_results.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/blueprint/graph_canvas.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/blueprint/my_blueprint_panel.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/blueprint/pin_literal_editor.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/sub_editor_3d_viewport.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/anim_blueprint/anim_graph_view.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/anim_blueprint/anim_preview_editor.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/anim_blueprint/state_machine_graph.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/anim_blueprint/state_pose_editor.dart';
+import 'package:lumina_ui/ui/features/sub_editors/widgets/anim_blueprint_retarget_modal.dart';
 
 /// The Animation Blueprint editor: preview viewport and My Blueprint on the left, the AnimGraph /
 /// state machine / state pose / transition rule / EventGraph in the centre

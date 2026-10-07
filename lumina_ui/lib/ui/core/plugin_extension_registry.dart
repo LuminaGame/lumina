@@ -6,13 +6,13 @@ import 'package:flutter/widgets.dart';
 import 'package:lumina/lumina.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart';
 
-import '../features/mcp_server/services/host_editor_mcp.dart';
-import 'plugin_3d_viewport_container.dart';
-import 'property_editors/asset_picker_select.dart';
-import 'services/plugin_process/plugin_process_host.dart';
-import 'services/plugin_process/plugin_process_manager.dart';
-import 'theme/editor_theme_access.dart';
-import 'widgets/plugin_process_guard.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/host_editor_mcp.dart';
+import 'package:lumina_ui/ui/core/plugin_3d_viewport_container.dart';
+import 'package:lumina_ui/ui/core/property_editors/asset_picker_select.dart';
+import 'package:lumina_ui/ui/core/services/plugin_process/plugin_process_host.dart';
+import 'package:lumina_ui/ui/core/services/plugin_process/plugin_process_manager.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme_access.dart';
+import 'package:lumina_ui/ui/core/widgets/plugin_process_guard.dart';
 
 part 'plugin_extension_registry_entries.dart';
 part 'plugin_extension_registry_processes.dart';

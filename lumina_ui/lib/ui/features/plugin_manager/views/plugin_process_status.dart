@@ -1,9 +1,9 @@
 import 'package:lumina_editor_api/lumina_editor_api.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../core/services/plugin_process/plugin_process_supervisor.dart';
-import '../../../core/theme/editor_theme.dart';
-import '../view_models/plugin_manager_view_model.dart';
+import 'package:lumina_ui/ui/core/services/plugin_process/plugin_process_supervisor.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/plugin_manager/view_models/plugin_manager_view_model.dart';
 
 /// The Plugin Manager's word for a process state.
 String pluginProcessStatusLabel(PluginProcessStatus status) => switch (status) {

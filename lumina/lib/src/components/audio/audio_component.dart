@@ -1,8 +1,8 @@
-import '../../audio/audio_backend.dart';
-import '../../audio/audio_subsystem.dart';
-import '../../audio/sound_base.dart';
-import '../../object/actor.dart';
-import '../base/scene_component.dart';
+import 'package:lumina/src/audio/audio_backend.dart';
+import 'package:lumina/src/audio/audio_subsystem.dart';
+import 'package:lumina/src/audio/sound_base.dart';
+import 'package:lumina/src/object/actor.dart';
+import 'package:lumina/src/components/base/scene_component.dart';
 
 /// Scene component that emits 2D or spatialized 3D audio instances via a pluggable audio backend.
 class LuminaAudioComponent extends LuminaSceneComponent {

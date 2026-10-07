@@ -1,5 +1,5 @@
 import 'dart:collection';
-import '../controller/player_state.dart';
+import 'package:lumina/src/controller/player_state.dart';
 
 /// The phase of a match.
 enum LuminaMatchState {

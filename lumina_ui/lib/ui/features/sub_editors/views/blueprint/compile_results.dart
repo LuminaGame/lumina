@@ -1,8 +1,8 @@
 import 'package:lumina/lumina.dart' hide BoxShape;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../../core/theme/editor_theme.dart';
-import '../../models/blueprint_compile_status.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_compile_status.dart';
 
 /// The toolbar's compile status badge with its states: Unknown (not
 /// compiled this session), Dirty (edited since), Error, Warnings, Up to date.

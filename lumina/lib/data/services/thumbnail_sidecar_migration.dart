@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
-import '../models/lumina_asset.dart';
-import 'thumbnail_service.dart';
+import 'package:lumina/data/models/lumina_asset.dart';
+import 'package:lumina/data/services/thumbnail_service.dart';
 
 /// What [ThumbnailSidecarMigration.run] did to one project.
 class ThumbnailSidecarMigrationReport {

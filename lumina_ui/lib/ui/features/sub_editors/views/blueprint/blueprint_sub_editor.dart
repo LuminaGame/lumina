@@ -24,14 +24,14 @@ import 'package:lumina_ui/ui/features/sub_editors/view_models/blueprint_graph_ed
 import 'package:lumina_ui/ui/features/main_editor/services/transform_gizmo.dart' show AuthoringRotation, TransformGizmoModel, TransformGizmoSnap;
 import 'package:lumina_ui/ui/features/sub_editors/models/sub_editor_transform_gizmo.dart';
 import 'package:vector_math/vector_math_64.dart' show Quaternion, Vector3;
-import 'compile_results.dart';
-import 'component_tree.dart';
-import 'graph_canvas.dart';
-import 'my_blueprint_panel.dart';
-import 'pin_literal_editor.dart';
-import 'signature_editor.dart';
-import 'timeline/timeline.dart';
-import '../sub_editor_3d_viewport.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/blueprint/compile_results.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/blueprint/component_tree.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/blueprint/graph_canvas.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/blueprint/my_blueprint_panel.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/blueprint/pin_literal_editor.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/blueprint/signature_editor.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/blueprint/timeline/timeline.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/sub_editor_3d_viewport.dart';
 
 part 'sub_editor/state.dart';
 part 'sub_editor/viewport_gizmo.dart';

@@ -4,13 +4,13 @@ import 'dart:ui' show Offset;
 import 'package:flutter_filament/flutter_filament.dart' show BlendingMode, FilamatShading;
 import 'package:lumina/lumina.dart' show AssetType, LuminaBlueprintNode, LuminaBlueprintWire;
 
-import '../../main_editor/view_models/editor_view_model.dart';
-import '../../sub_editors/models/material_graph.dart';
-import '../../sub_editors/services/mat_source.dart';
-import '../../sub_editors/view_models/material_editor_view_model.dart';
-import '../services/mcp_editor_sessions.dart';
-import '../services/mcp_protocol.dart';
-import '../services/mcp_tool.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/material_graph.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/mat_source.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/material_editor_view_model.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_editor_sessions.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_protocol.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_tool.dart';
 
 /// The Material editor's node graph as MCP tools: the
 /// expression catalog, the graph with typed pins, wires, the output pins the

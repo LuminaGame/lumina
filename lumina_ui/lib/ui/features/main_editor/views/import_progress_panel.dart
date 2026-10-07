@@ -1,8 +1,8 @@
 import 'package:lumina/lumina.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../core/theme/editor_theme.dart';
-import '../view_models/import_jobs_view_model.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/import_jobs_view_model.dart';
 
 /// The background import's progress, as a
 /// bottom-right import notification: `Importing 12 / 51 · file`, the batch's

@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import '../../src/blueprint/level_blueprint.dart';
+import 'package:lumina/src/blueprint/level_blueprint.dart';
 
 /// A level `.lmas` as Lumina Studio writes it (a JSON container): `assetId`,
 /// `name`, `type: 'level'`, `relativePath`, `rawPayload: null` and

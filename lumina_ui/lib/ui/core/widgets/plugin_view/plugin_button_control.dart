@@ -1,8 +1,8 @@
 import 'package:lumina_editor_api/lumina_editor_api.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../features/main_editor/views/editor_slot_bar.dart' show editorToneColor;
-import 'plugin_view_scope.dart';
+import 'package:lumina_ui/ui/features/main_editor/views/editor_slot_bar.dart' show editorToneColor;
+import 'package:lumina_ui/ui/core/widgets/plugin_view/plugin_view_scope.dart';
 
 /// [PluginControlKind.button]: `text`, `tone` ([EditorTone] name), `icon`
 /// ([PluginIconSpec] json). Sends `pressed`.

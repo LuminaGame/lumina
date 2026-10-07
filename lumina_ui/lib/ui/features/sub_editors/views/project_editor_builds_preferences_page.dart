@@ -3,10 +3,10 @@ import 'dart:io';
 import 'package:lumina/lumina.dart' show EditorBuildCache;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../core/theme/editor_theme.dart';
-import '../../../core/host/editor_host.dart';
-import '../../main_editor/services/editor_preferences.dart';
-import 'project_editor_source_section.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/host/editor_host.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/editor_preferences.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/project_editor_source_section.dart';
 
 /// Editor Preferences → General › Project Editor Builds: how
 /// project editors (a project's code plugins compiled into its own editor)

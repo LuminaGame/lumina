@@ -5,8 +5,8 @@ import 'dart:isolate';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
-import '../models/lumina_asset.dart';
-import 'engine_logger_service.dart';
+import 'package:lumina/data/models/lumina_asset.dart';
+import 'package:lumina/data/services/engine_logger_service.dart';
 
 /// One `.lmas` of a project as the asset index knows it: its project-relative
 /// path, the size and modification time the summary was read at, and the

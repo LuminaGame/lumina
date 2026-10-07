@@ -2,12 +2,12 @@ import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_filament/flutter_filament.dart' show FogOptions;
 import 'package:vector_math/vector_math_64.dart';
 
-import '../../game/primitive_actor.dart' show luminaHexToRgb, luminaRgbToHex;
-import '../../math/units.dart';
-import '../../object/actor.dart';
-import '../../post_process/post_process_blender.dart';
-import '../../world/world.dart';
-import '../base/scene_component.dart';
+import 'package:lumina/src/game/primitive_actor.dart' show luminaHexToRgb, luminaRgbToHex;
+import 'package:lumina/src/math/units.dart';
+import 'package:lumina/src/object/actor.dart';
+import 'package:lumina/src/post_process/post_process_blender.dart';
+import 'package:lumina/src/world/world.dart';
+import 'package:lumina/src/components/base/scene_component.dart';
 
 /// Exponential Height Fog settings, mapped onto Filament's per-view
 /// `FogOptions`. Filament's fog is global and exponential in

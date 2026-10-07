@@ -1,11 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
 
-import '../../data/models/lumina_level_document.dart';
-import '../../data/services/engine_logger_service.dart';
-import '../../src/blueprint/level_blueprint.dart';
-import '../models/use_case_results.dart';
-import 'use_case_validation.dart';
+import 'package:lumina/data/models/lumina_level_document.dart';
+import 'package:lumina/data/services/engine_logger_service.dart';
+import 'package:lumina/src/blueprint/level_blueprint.dart';
+import 'package:lumina/domain/models/use_case_results.dart';
+import 'package:lumina/domain/use_cases/use_case_validation.dart';
 
 /// Writes the active level as a `contents/levels/<levelName>.lmas` JSON container.
 ///

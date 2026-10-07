@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import 'package:lumina/lumina.dart' show GlbMeshData, GlbNode;
 import 'package:vector_math/vector_math_64.dart' show Matrix4, Quaternion, Vector3;
 
-import 'skeletal_mesh_socket.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/skeletal_mesh_socket.dart';
 
 /// A mesh previewed on a skeletal socket:
 /// the Skeletal Mesh editor's viewport draws [mesh] at

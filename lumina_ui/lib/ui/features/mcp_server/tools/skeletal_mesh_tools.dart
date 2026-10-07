@@ -1,13 +1,13 @@
 import 'package:lumina/lumina.dart';
 
-import '../../main_editor/view_models/editor_view_model.dart';
-import '../../sub_editors/models/material_slot_binding.dart';
-import '../../sub_editors/models/skeletal_mesh_socket.dart';
-import '../../sub_editors/view_models/skeletal_mesh_editor_view_model.dart';
-import '../services/mcp_editor_sessions.dart';
-import '../services/mcp_protocol.dart';
-import '../services/mcp_tool.dart';
-import 'rotation_convention.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/material_slot_binding.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/skeletal_mesh_socket.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/skeletal_mesh_editor_view_model.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_editor_sessions.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_protocol.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_tool.dart';
+import 'package:lumina_ui/ui/features/mcp_server/tools/rotation_convention.dart';
 
 /// The Skeletal Mesh editor as MCP tools: bones and sockets, material slots and their texture
 /// bindings, per-bone retargeting, morph-target and RigLogic preview

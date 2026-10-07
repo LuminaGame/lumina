@@ -5,14 +5,14 @@ import 'dart:io';
 import 'package:lumina/lumina.dart' show AssetType;
 import 'package:path/path.dart' as p;
 
-import '../../main_editor/view_models/editor_view_model.dart';
-import '../services/mcp_file_snapshots.dart';
-import '../services/mcp_protocol.dart';
-import '../services/mcp_tool.dart';
-import '../services/project_dart_sdk.dart';
-import '../services/project_sandbox.dart';
-import 'blueprint_tool_support.dart' show mcpRefuseWhilePlaying;
-import 'fs_tools.dart' show mcpFileSnapshotsOf, mcpSandboxed;
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_file_snapshots.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_protocol.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_tool.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/project_dart_sdk.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/project_sandbox.dart';
+import 'package:lumina_ui/ui/features/mcp_server/tools/blueprint_tool_support.dart' show mcpRefuseWhilePlaying;
+import 'package:lumina_ui/ui/features/mcp_server/tools/fs_tools.dart' show mcpFileSnapshotsOf, mcpSandboxed;
 import 'package:lumina/data/services/dart_identifiers.dart';
 
 /// One line of `dart analyze --format=machine`.

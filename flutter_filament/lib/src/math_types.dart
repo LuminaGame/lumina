@@ -3,7 +3,7 @@
  * Licensed under the Apache License, Version 2.0.
  */
 
-import 'ffi_platform.dart' as ffi;
+import 'package:flutter_filament/src/ffi_platform.dart' as ffi;
 import 'dart:typed_data';
 
 /// 2D float vector (8 bytes).

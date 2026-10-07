@@ -2,8 +2,8 @@ import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter_filament/src/engine.dart';
 import 'package:flutter_filament/src/filament_bindings.dart' as ffi_gen;
-import 'ffi_platform.dart' as ffi;
-import 'ffi_package_platform.dart';
+import 'package:flutter_filament/src/ffi_platform.dart' as ffi;
+import 'package:flutter_filament/src/ffi_package_platform.dart';
 
 /// A lightweight handle to an entity in Filament's Entity Component System (ECS).
 ///

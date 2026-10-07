@@ -6,7 +6,7 @@ import 'package:flutter/services.dart' show MissingPluginException;
 import 'package:flutter/widgets.dart';
 import 'package:window_manager/window_manager.dart';
 
-import 'window_state_store.dart';
+import 'package:lumina_ui/ui/core/window/window_state_store.dart';
 
 export 'package:window_manager/window_manager.dart' show ResizeEdge, TitleBarStyle, WindowOptions;
 

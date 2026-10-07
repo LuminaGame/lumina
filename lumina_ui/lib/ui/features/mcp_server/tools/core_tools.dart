@@ -1,12 +1,12 @@
 import 'package:lumina/lumina.dart' show AssetType;
 
-import '../../main_editor/commands/editor_transaction.dart';
-import '../../main_editor/view_models/editor_view_model.dart';
-import '../../sub_editors/services/blueprint_asset_catalog.dart';
-import '../../sub_editors/view_models/landscape_editor_view_model.dart';
-import '../services/mcp_editor_sessions.dart';
-import '../services/mcp_protocol.dart';
-import '../services/mcp_tool.dart';
+import 'package:lumina_ui/ui/features/main_editor/commands/editor_transaction.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/blueprint_asset_catalog.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/landscape_editor_view_model.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_editor_sessions.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_protocol.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_tool.dart';
 
 /// Undo state of [stack] as the tools report it: labels, who
 /// made the steps, how many own steps are on top, and the recent history.

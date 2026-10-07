@@ -1,8 +1,8 @@
 import 'package:lumina_editor_api/lumina_editor_api.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../property_editors/enum_field.dart';
-import 'plugin_view_scope.dart';
+import 'package:lumina_ui/ui/core/property_editors/enum_field.dart';
+import 'package:lumina_ui/ui/core/widgets/plugin_view/plugin_view_scope.dart';
 
 /// [PluginControlKind.enumField]: `value` and `options` (`{"value","label"}`),
 /// shown with the Details panel's [EnumField] by label. Sends `changed` with

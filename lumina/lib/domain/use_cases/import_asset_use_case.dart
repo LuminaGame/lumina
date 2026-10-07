@@ -1,9 +1,9 @@
 import 'dart:io';
 
-import '../../data/repositories/asset_repository.dart';
-import '../../data/services/engine_logger_service.dart';
-import '../models/use_case_results.dart';
-import 'use_case_validation.dart';
+import 'package:lumina/data/repositories/asset_repository.dart';
+import 'package:lumina/data/services/engine_logger_service.dart';
+import 'package:lumina/domain/models/use_case_results.dart';
+import 'package:lumina/domain/use_cases/use_case_validation.dart';
 
 /// Imports an external model/texture/audio file into a project's `contents/` tree
 /// through [AssetRepository.importExternalFile] (stage → convert → resolve paths → emit

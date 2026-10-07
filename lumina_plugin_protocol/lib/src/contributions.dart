@@ -1,4 +1,4 @@
-import 'view_spec.dart';
+import 'package:lumina_plugin_protocol/src/view_spec.dart';
 
 /// An icon as data: the fields of Flutter's `IconData`.
 class PluginIconSpec {

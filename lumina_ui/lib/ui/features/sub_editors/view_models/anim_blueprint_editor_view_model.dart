@@ -8,12 +8,12 @@ import 'package:lumina/data/services/blueprint_codegen/blueprint_dart_generator.
 import 'package:lumina/lumina.dart';
 import 'package:vector_math/vector_math_64.dart' show Vector3;
 
-import '../../main_editor/commands/editor_transaction.dart';
-import '../models/blueprint_compile_status.dart';
-import '../models/blueprint_pin_style.dart';
-import '../services/anim_graph_asset_service.dart';
-import '../services/anim_preview_scene.dart';
-import 'blueprint_graph_editor.dart';
+import 'package:lumina_ui/ui/features/main_editor/commands/editor_transaction.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_compile_status.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_pin_style.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/anim_graph_asset_service.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/anim_preview_scene.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/blueprint_graph_editor.dart';
 
 part 'anim_blueprint_editor_view_model/state.dart';
 part 'anim_blueprint_editor_view_model/load_save_and_retarget.dart';

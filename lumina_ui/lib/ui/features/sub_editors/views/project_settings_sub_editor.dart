@@ -4,14 +4,14 @@ import 'package:lumina/lumina.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart' show ProjectSettingsSection;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../core/theme/editor_theme.dart';
-import '../../../core/property_editors/slider_field.dart';
-import '../services/build_pipeline_service.dart';
-import '../services/project_icon_rasterizer.dart';
-import '../sub_editor_binding.dart';
-import '../view_models/project_settings_view_model.dart';
-import 'project_settings/key_binding_dialog.dart';
-import 'project_settings/web_loading_style_section.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/property_editors/slider_field.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/build_pipeline_service.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/project_icon_rasterizer.dart';
+import 'package:lumina_ui/ui/features/sub_editors/sub_editor_binding.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/project_settings_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/project_settings/key_binding_dialog.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/project_settings/web_loading_style_section.dart';
 
 part 'project_settings/sub_editor/state.dart';
 part 'project_settings/sub_editor/layout.dart';

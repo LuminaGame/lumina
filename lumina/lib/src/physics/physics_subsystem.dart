@@ -2,21 +2,21 @@ import 'dart:math' as math;
 
 import 'package:vector_math/vector_math_64.dart';
 
-import '../collision/collision_subsystem.dart';
-import '../components/base/scene_component.dart';
-import '../components/collision/box_component.dart';
-import '../components/collision/collision_component.dart';
-import '../components/mesh/static_mesh_component.dart';
-import '../math/euler.dart';
-import '../math/units.dart';
-import '../object/actor.dart';
-import '../world/subsystem/world_subsystem.dart';
-import '../world/world.dart';
-import 'contact_generation.dart';
-import 'contact_solver.dart';
-import 'mass_properties.dart';
-import 'physical_material.dart';
-import 'rigid_body.dart';
+import 'package:lumina/src/collision/collision_subsystem.dart';
+import 'package:lumina/src/components/base/scene_component.dart';
+import 'package:lumina/src/components/collision/box_component.dart';
+import 'package:lumina/src/components/collision/collision_component.dart';
+import 'package:lumina/src/components/mesh/static_mesh_component.dart';
+import 'package:lumina/src/math/euler.dart';
+import 'package:lumina/src/math/units.dart';
+import 'package:lumina/src/object/actor.dart';
+import 'package:lumina/src/world/subsystem/world_subsystem.dart';
+import 'package:lumina/src/world/world.dart';
+import 'package:lumina/src/physics/contact_generation.dart';
+import 'package:lumina/src/physics/contact_solver.dart';
+import 'package:lumina/src/physics/mass_properties.dart';
+import 'package:lumina/src/physics/physical_material.dart';
+import 'package:lumina/src/physics/rigid_body.dart';
 
 class _BodyRecord {
   final bool drivesRoot;

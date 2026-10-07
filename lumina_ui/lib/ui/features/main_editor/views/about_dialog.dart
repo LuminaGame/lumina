@@ -3,7 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:lumina/lumina.dart' show LuminaGraphicsDevices, LuminaRelease, LuminaRenderBackendInfo;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 
 /// The renderer the status bar and About name: `RHI: Vulkan · <gpu>`, the GPU
 /// the editor renders on.

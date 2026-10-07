@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import 'plugin_view/plugin_view_renderer.dart';
+import 'package:lumina_ui/ui/core/widgets/plugin_view/plugin_view_renderer.dart';
 
 /// The body of an isolated plugin's declarative panel: the view the
 /// process last sent ([view], replaced or patched by `host.view`), rendered

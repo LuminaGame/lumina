@@ -1,11 +1,11 @@
-import '../../details/models/component_property_registry.dart';
-import '../../details/services/multi_edit_service.dart';
-import '../../main_editor/view_models/editor_view_model.dart';
-import '../services/mcp_protocol.dart';
-import '../services/mcp_tool.dart';
-import 'blueprint_tool_support.dart' show mcpRefuseWhilePlaying;
-import 'core_tools.dart' show mcpUndoState;
-import 'rotation_convention.dart';
+import 'package:lumina_ui/ui/features/details/models/component_property_registry.dart';
+import 'package:lumina_ui/ui/features/details/services/multi_edit_service.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_protocol.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_tool.dart';
+import 'package:lumina_ui/ui/features/mcp_server/tools/blueprint_tool_support.dart' show mcpRefuseWhilePlaying;
+import 'package:lumina_ui/ui/features/mcp_server/tools/core_tools.dart' show mcpUndoState;
+import 'package:lumina_ui/ui/features/mcp_server/tools/rotation_convention.dart';
 
 /// The multi-select Details panel as MCP tools: several
 /// actors selected and edited at once — shared transform rows (absolute, or

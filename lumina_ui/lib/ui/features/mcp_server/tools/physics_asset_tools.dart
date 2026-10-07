@@ -2,12 +2,12 @@ import 'dart:math' as math;
 
 import 'package:lumina/lumina.dart' show AssetType;
 
-import '../../main_editor/view_models/editor_view_model.dart';
-import '../../sub_editors/models/physics_asset_document.dart';
-import '../../sub_editors/view_models/physics_asset_editor_view_model.dart';
-import '../services/mcp_editor_sessions.dart';
-import '../services/mcp_protocol.dart';
-import '../services/mcp_tool.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/physics_asset_document.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/physics_asset_editor_view_model.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_editor_sessions.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_protocol.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_tool.dart';
 
 /// The bones of [names] closest to [wanted] by edit distance (at most
 /// [count]), for a tool error that names what the agent probably meant.

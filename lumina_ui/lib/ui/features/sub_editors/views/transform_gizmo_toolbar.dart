@@ -1,6 +1,6 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
-import '../../../core/theme/editor_theme.dart';
-import '../models/sub_editor_transform_gizmo.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/sub_editor_transform_gizmo.dart';
 
 /// Reusable transform gizmo toolbar component for 3D viewports and sub-editors.
 ///

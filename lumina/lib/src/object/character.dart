@@ -1,8 +1,8 @@
-import 'pawn.dart';
-import '../components/collision/capsule_component.dart';
-import '../components/collision/collision_component.dart';
-import '../components/movement/character_movement_component.dart';
-import '../components/mesh/skeletal_mesh_component.dart';
+import 'package:lumina/src/object/pawn.dart';
+import 'package:lumina/src/components/collision/capsule_component.dart';
+import 'package:lumina/src/components/collision/collision_component.dart';
+import 'package:lumina/src/components/movement/character_movement_component.dart';
+import 'package:lumina/src/components/mesh/skeletal_mesh_component.dart';
 
 /// Character pawn class equipped with capsule collision, movement component, and mesh.
 class LuminaCharacter extends LuminaPawn {

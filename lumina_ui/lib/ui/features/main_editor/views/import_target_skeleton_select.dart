@@ -1,8 +1,8 @@
 import 'package:lumina/lumina.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../core/property_editors/asset_picker_select.dart';
-import '../../../core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/property_editors/asset_picker_select.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 
 /// The Import Asset Options dialog's **Target Skeleton** row:
 /// which project skeletal mesh an imported FBX

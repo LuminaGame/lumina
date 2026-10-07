@@ -3,12 +3,12 @@ import 'dart:developer' as developer;
 
 import 'package:flutter/foundation.dart' show debugPrint, objectRuntimeType;
 import 'package:flutter_filament/flutter_filament.dart';
-import '../declarative/lumina_object.dart';
-import '../declarative/build_context.dart';
-import '../declarative/element.dart';
-import '../world/world.dart';
-import 'game_instance.dart';
-import 'play_state.dart';
+import 'package:lumina/src/declarative/lumina_object.dart';
+import 'package:lumina/src/declarative/build_context.dart';
+import 'package:lumina/src/declarative/element.dart';
+import 'package:lumina/src/world/world.dart';
+import 'package:lumina/src/game/game_instance.dart';
+import 'package:lumina/src/game/play_state.dart';
 
 export 'play_state.dart';
 

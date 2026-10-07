@@ -1,8 +1,8 @@
 import 'package:flutter_filament/ffi.dart' as ffi;
 import 'package:flutter_filament/flutter_filament.dart';
-import '../world/world.dart';
-import 'post_process_settings.dart';
-import 'shadow_settings.dart';
+import 'package:lumina/src/world/world.dart';
+import 'package:lumina/src/post_process/post_process_settings.dart';
+import 'package:lumina/src/post_process/shadow_settings.dart';
 
 /// World-owned controller that diffs and applies [LuminaPostProcessSettings] and [LuminaShadowSettings] to a bound [FilamentView].
 ///

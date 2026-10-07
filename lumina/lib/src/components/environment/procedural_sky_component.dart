@@ -4,10 +4,10 @@ import 'dart:typed_data';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_filament/flutter_filament.dart' show FilamentSkybox;
 
-import '../../object/actor.dart';
-import '../../world/world.dart';
-import '../base/scene_component.dart';
-import 'procedural_sky_binding.dart';
+import 'package:lumina/src/object/actor.dart';
+import 'package:lumina/src/world/world.dart';
+import 'package:lumina/src/components/base/scene_component.dart';
+import 'package:lumina/src/components/environment/procedural_sky_binding.dart';
 
 /// A fully procedural sky and ocean: single-pass atmospheric scattering
 /// (Preetham & Hoffman), volumetric FBM clouds, a day/night cycle with stars

@@ -3,8 +3,8 @@ import 'dart:typed_data';
 
 import 'package:vector_math/vector_math_64.dart' show Vector3;
 
-import '../../../data/models/landscape_data.dart';
-import 'landscape_section_map.dart';
+import 'package:lumina/data/models/landscape_data.dart';
+import 'package:lumina/src/components/landscape/landscape_section_map.dart';
 
 /// The vertex/index arrays of one terrain tile, in the exact layout
 /// `LuminaProceduralMeshComponent.createMeshSection` expects.

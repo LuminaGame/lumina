@@ -9,16 +9,16 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:web/web.dart' as web;
 
-import 'camera.dart';
-import 'engine.dart';
-import 'ffi_platform.dart' as ffi;
-import 'renderer.dart';
-import 'scene.dart';
-import 'swap_chain.dart';
-import 'view.dart';
-import 'web_ffi/module.dart';
-import 'web_init.dart';
-import 'widget.dart';
+import 'package:flutter_filament/src/camera.dart';
+import 'package:flutter_filament/src/engine.dart';
+import 'package:flutter_filament/src/ffi_platform.dart' as ffi;
+import 'package:flutter_filament/src/renderer.dart';
+import 'package:flutter_filament/src/scene.dart';
+import 'package:flutter_filament/src/swap_chain.dart';
+import 'package:flutter_filament/src/view.dart';
+import 'package:flutter_filament/src/web_ffi/module.dart';
+import 'package:flutter_filament/src/web_init.dart';
+import 'package:flutter_filament/src/widget.dart';
 
 /// Web builds: Filament's WebGL2 backend presents straight
 /// into a `<canvas>` hosted by a platform view — no readback, no decode.

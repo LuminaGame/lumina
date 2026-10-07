@@ -5,11 +5,11 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:lumina_marketplace_shared/lumina_marketplace_shared.dart';
 
-import '../services/marketplace_install_dirs.dart';
-import '../services/marketplace_installer.dart';
-import '../services/marketplace_license_records.dart';
-import '../services/marketplace_service.dart';
-import '../services/marketplace_session_store.dart';
+import 'package:lumina_ui/ui/features/marketplace/services/marketplace_install_dirs.dart';
+import 'package:lumina_ui/ui/features/marketplace/services/marketplace_installer.dart';
+import 'package:lumina_ui/ui/features/marketplace/services/marketplace_license_records.dart';
+import 'package:lumina_ui/ui/features/marketplace/services/marketplace_service.dart';
+import 'package:lumina_ui/ui/features/marketplace/services/marketplace_session_store.dart';
 
 /// What the Marketplace window needs from the editor around it.
 class MarketplaceHost {

@@ -1,8 +1,8 @@
 import 'dart:math' as math;
 import 'package:vector_math/vector_math_64.dart';
-import 'narrow_phase.dart';
-import 'heightfield.dart';
-import 'shapes.dart';
+import 'package:lumina/src/collision/narrow_phase.dart';
+import 'package:lumina/src/collision/heightfield.dart';
+import 'package:lumina/src/collision/shapes.dart';
 
 /// Support point on the Minkowski difference $A - B$.
 class SimplexVertex {

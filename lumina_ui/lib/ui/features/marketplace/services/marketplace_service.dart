@@ -4,7 +4,7 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:lumina_marketplace_shared/lumina_marketplace_shared.dart';
 
-import 'marketplace_session_store.dart';
+import 'package:lumina_ui/ui/features/marketplace/services/marketplace_session_store.dart';
 
 /// The editor's side of the Lumina Marketplace API, over the
 /// shared [MarketplaceClient]: sign-in with the session kept between runs

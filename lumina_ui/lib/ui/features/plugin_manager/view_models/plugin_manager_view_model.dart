@@ -7,9 +7,9 @@ import 'package:lumina/data/services/workspace_paths.dart';
 import 'package:lumina/data/models/lumina_plugin_descriptor.dart';
 import 'package:lumina/data/repositories/plugin_repository.dart';
 
-import '../../../core/services/plugin_process/plugin_process_supervisor.dart';
-import '../services/plugin_importer.dart';
-import '../services/plugin_remover.dart';
+import 'package:lumina_ui/ui/core/services/plugin_process/plugin_process_supervisor.dart';
+import 'package:lumina_ui/ui/features/plugin_manager/services/plugin_importer.dart';
+import 'package:lumina_ui/ui/features/plugin_manager/services/plugin_remover.dart';
 
 class PluginManagerViewModel extends ChangeNotifier {
   final PluginRegistryService registryService;

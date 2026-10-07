@@ -1,6 +1,6 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 
 /// Shown under the menu bar for a project created before Lumina switched to
 /// centimetres and Z-up authoring. Such a project is not migrated

@@ -1,8 +1,8 @@
 import 'package:flutter/widgets.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 
-import 'lumina_video_controller.dart';
-import 'lumina_video_player_value.dart';
+import 'package:lumina/src/media/video/lumina_video_controller.dart';
+import 'package:lumina/src/media/video/lumina_video_player_value.dart';
 
 /// Renders video output driven by a [LuminaVideoController].
 ///

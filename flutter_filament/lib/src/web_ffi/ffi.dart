@@ -16,7 +16,7 @@ library;
 import 'dart:js_interop';
 import 'dart:typed_data';
 
-import 'module.dart';
+import 'package:flutter_filament/src/web_ffi/module.dart';
 
 const Endian _le = Endian.little;
 ByteData get _heap => FlutterFilamentModule.heap;

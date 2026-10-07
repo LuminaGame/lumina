@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import 'plugin_dialog_controller.dart';
+import 'package:lumina_editor_api/src/dialogs/plugin_dialog_controller.dart';
 
 /// Standard frame for all Lumina Studio plugin dialogs.
 ///

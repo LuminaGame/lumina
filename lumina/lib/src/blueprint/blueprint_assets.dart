@@ -1,8 +1,8 @@
 import 'dart:convert';
 
-import '../components/particles/particle_emitter_config.dart';
-import '../save/save_game.dart';
-import 'blueprint_model.dart';
+import 'package:lumina/src/components/particles/particle_emitter_config.dart';
+import 'package:lumina/src/save/save_game.dart';
+import 'package:lumina/src/blueprint/blueprint_model.dart';
 
 /// A Blueprint save-game class asset: the `.lmas` payload
 /// `{"kind": "savegame", "name": …, "fields": […]}`. `Create Save Game

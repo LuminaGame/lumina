@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 import 'package:vector_math/vector_math_64.dart';
-import 'collision_component.dart';
+import 'package:lumina/src/components/collision/collision_component.dart';
 
 /// 3D Capsule collision component for character bounding geometry and sweep collision.
 class LuminaCapsuleComponent extends LuminaCollisionComponent {

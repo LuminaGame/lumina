@@ -5,7 +5,7 @@ import 'dart:typed_data';
 
 import 'package:lumina/lumina.dart';
 
-import 'sequencer_evaluator.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/sequencer_evaluator.dart';
 
 /// The one output format this stack can honestly produce.
 ///

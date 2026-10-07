@@ -1,4 +1,4 @@
-import '../world.dart';
+import 'package:lumina/src/world/world.dart';
 export 'subsystem_collection.dart';
 export 'physics_world_subsystem.dart';
 export 'widget_subsystem.dart';

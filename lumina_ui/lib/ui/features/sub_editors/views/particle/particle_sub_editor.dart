@@ -6,10 +6,10 @@ import 'package:vector_math/vector_math_64.dart' show Vector3, Vector4;
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/core/property_editors/slider_field.dart';
 import 'package:lumina_ui/ui/core/property_editors/asset_picker_select.dart';
-import '../../sub_editor_binding.dart';
-import '../../view_models/particle_editor_view_model.dart';
-import '../sub_editor_3d_viewport.dart';
-import 'curve_editors.dart';
+import 'package:lumina_ui/ui/features/sub_editors/sub_editor_binding.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/particle_editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/sub_editor_3d_viewport.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/particle/curve_editors.dart';
 import 'package:lumina_ui/ui/core/widgets/editor_context_menu.dart';
 
 /// Particle sub-editor.

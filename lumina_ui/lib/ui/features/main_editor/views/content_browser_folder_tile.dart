@@ -1,11 +1,11 @@
 import 'package:lumina/lumina.dart' show RealAssetInfo;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../core/services/file_reveal.dart';
-import '../../../core/theme/editor_theme.dart';
-import '../view_models/editor_view_model.dart';
-import 'affected_actors_note.dart';
-import 'import_asset_folder_dialog.dart';
+import 'package:lumina_ui/ui/core/services/file_reveal.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/main_editor/views/affected_actors_note.dart';
+import 'package:lumina_ui/ui/features/main_editor/views/import_asset_folder_dialog.dart';
 import 'package:lumina_ui/ui/core/widgets/editor_context_menu.dart';
 
 /// A subfolder tile at the top of the content browser grid:

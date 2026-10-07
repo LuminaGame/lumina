@@ -2,9 +2,9 @@ import 'dart:ui' show Offset;
 
 import 'package:lumina/lumina.dart';
 
-import '../../sub_editors/view_models/blueprint_graph_editor.dart';
-import '../services/mcp_protocol.dart';
-import '../services/mcp_tool.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/blueprint_graph_editor.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_protocol.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_tool.dart';
 
 /// The node, pin and wire JSON and the node / wire / literal edits of a
 /// Blueprint node graph, over any [BlueprintGraphEditor] (extracted from

@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:window_manager/window_manager.dart';
 
-import '../../../core/theme/editor_theme.dart';
-import '../view_models/editor_build_view_model.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/launcher/view_models/editor_build_view_model.dart';
 
 /// The project editor build splash — key art, "Lumina Studio", the engine and project line, a
 /// `NN% - <phase>` status line and a 2 px bar along the bottom edge; a log

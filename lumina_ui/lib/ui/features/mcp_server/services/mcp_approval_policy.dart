@@ -1,4 +1,4 @@
-import 'mcp_tool_risk.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_tool_risk.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart' show McpApprovalPolicy, McpApprovalDecision, McpCallContext;
 
 // The call context, decision and policy interface live in

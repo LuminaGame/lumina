@@ -3,7 +3,7 @@ import 'package:lumina/lumina.dart'
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
-import '../../models/umg_document.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/umg_document.dart';
 
 /// How the designer canvas and [UmgRuntimeView] draw a
 /// Container and the shadcn components, from the designer props under the

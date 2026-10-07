@@ -1,8 +1,8 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../../core/theme/editor_theme.dart';
-import '../../sub_editor_binding.dart';
-import '../../view_models/blueprint_enum_view_model.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/sub_editors/sub_editor_binding.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/blueprint_enum_view_model.dart';
 
 /// The Enumeration sub-editor:
 /// the enum's ordered values with add, rename (double-click or the pencil),

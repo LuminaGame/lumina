@@ -1,7 +1,7 @@
-import '../../main_editor/services/snap_service.dart';
-import '../../main_editor/view_models/editor_view_model.dart';
-import '../services/mcp_protocol.dart';
-import '../services/mcp_tool.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/snap_service.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_protocol.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_tool.dart';
 
 /// The six show flags the viewport toolbar's Show menu toggles.
 const List<String> kMcpShowFlags = [

@@ -1,7 +1,7 @@
 import 'package:lumina/lumina.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../core/services/ai_agent_files.dart';
+import 'package:lumina_ui/ui/core/services/ai_agent_files.dart';
 
 /// Installs the AI agent files into [projectDir] (see [AiAgentFiles]): the
 /// skills always, `AGENTS.md` / `CLAUDE.md` when missing or unedited. When

@@ -1,9 +1,9 @@
 import 'package:lumina/lumina.dart' hide BoxShape;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../../core/theme/editor_theme.dart';
-import '../../../../core/property_editors/slider_field.dart';
-import '../../view_models/anim_blueprint_editor_view_model.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/property_editors/slider_field.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/anim_blueprint_editor_view_model.dart';
 
 /// The Anim Preview Editor: the stand-in owner's speed, direction and
 /// falling state (what Get Velocity / Is Falling return to the update graph),

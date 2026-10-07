@@ -1,9 +1,9 @@
 import 'dart:math' as math;
 import 'package:vector_math/vector_math_64.dart';
-import '../components/base/actor_component.dart';
-import '../object/actor.dart';
-import 'ai_controller.dart';
-import 'blackboard.dart';
+import 'package:lumina/src/components/base/actor_component.dart';
+import 'package:lumina/src/object/actor.dart';
+import 'package:lumina/src/ai/ai_controller.dart';
+import 'package:lumina/src/ai/blackboard.dart';
 
 /// Execution status result returned by behavior tree nodes.
 enum BTNodeResult {

@@ -1,7 +1,7 @@
 import 'package:lumina/lumina.dart' show AssetType;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import 'editor_theme.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 
 /// How the editor shows an asset kind: its colour (an
 /// [EditorColors] token, so a theme slot), the human-readable type name the

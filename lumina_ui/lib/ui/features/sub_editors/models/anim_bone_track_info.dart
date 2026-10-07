@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:lumina/data/services/glb_parser_service.dart';
-import 'selected_keyframe_details.dart';
-import '../../../core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/selected_keyframe_details.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 
 /// Metadata and active animation range for a bone track.
 class AnimBoneTrackInfo {

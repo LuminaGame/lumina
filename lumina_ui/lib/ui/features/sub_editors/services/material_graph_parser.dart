@@ -2,8 +2,8 @@ import 'dart:math' as math;
 
 import 'package:lumina/lumina.dart' show LuminaBlueprintGraph, LuminaBlueprintNode, LuminaBlueprintWire;
 
-import '../models/material_graph.dart';
-import 'mat_source.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/material_graph.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/mat_source.dart';
 
 part 'material_graph_parser/lexer_and_parser.dart';
 part 'material_graph_parser/lowering.dart';

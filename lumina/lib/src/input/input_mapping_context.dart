@@ -1,7 +1,7 @@
-import 'input_action.dart';
-import 'input_key.dart';
-import 'input_modifier.dart';
-import 'input_trigger.dart';
+import 'package:lumina/src/input/input_action.dart';
+import 'package:lumina/src/input/input_key.dart';
+import 'package:lumina/src/input/input_modifier.dart';
+import 'package:lumina/src/input/input_trigger.dart';
 
 /// Represents a mapping between an input key and an input action with optional modifiers and triggers.
 class LuminaActionKeyMapping {

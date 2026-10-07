@@ -6,7 +6,7 @@ import 'package:lumina/data/services/config_json_file.dart';
 import 'package:lumina/data/services/lumina_config_dir.dart';
 import 'package:lumina/data/services/plugin_template_generator_service.dart';
 import 'package:lumina_ui/ui/features/plugin_manager/view_models/plugin_manager_view_model.dart';
-import '../../../core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 
 /// Shows the New Plugin Wizard modal dialog.
 void showNewPluginWizard(

@@ -1,23 +1,23 @@
 import 'package:lumina_editor_api/lumina_editor_api.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import 'plugin_asset_ref_field_control.dart';
-import 'plugin_bool_field_control.dart';
-import 'plugin_button_control.dart';
-import 'plugin_color_field_control.dart';
-import 'plugin_divider_control.dart';
-import 'plugin_enum_field_control.dart';
-import 'plugin_image_control.dart';
-import 'plugin_log_control.dart';
-import 'plugin_number_field_control.dart';
-import 'plugin_preview3d_control.dart';
-import 'plugin_progress_control.dart';
-import 'plugin_row_control.dart';
-import 'plugin_section_control.dart';
-import 'plugin_text_control.dart';
-import 'plugin_text_field_control.dart';
-import 'plugin_unsupported_control.dart';
-import 'plugin_view_scope.dart';
+import 'package:lumina_ui/ui/core/widgets/plugin_view/plugin_asset_ref_field_control.dart';
+import 'package:lumina_ui/ui/core/widgets/plugin_view/plugin_bool_field_control.dart';
+import 'package:lumina_ui/ui/core/widgets/plugin_view/plugin_button_control.dart';
+import 'package:lumina_ui/ui/core/widgets/plugin_view/plugin_color_field_control.dart';
+import 'package:lumina_ui/ui/core/widgets/plugin_view/plugin_divider_control.dart';
+import 'package:lumina_ui/ui/core/widgets/plugin_view/plugin_enum_field_control.dart';
+import 'package:lumina_ui/ui/core/widgets/plugin_view/plugin_image_control.dart';
+import 'package:lumina_ui/ui/core/widgets/plugin_view/plugin_log_control.dart';
+import 'package:lumina_ui/ui/core/widgets/plugin_view/plugin_number_field_control.dart';
+import 'package:lumina_ui/ui/core/widgets/plugin_view/plugin_preview3d_control.dart';
+import 'package:lumina_ui/ui/core/widgets/plugin_view/plugin_progress_control.dart';
+import 'package:lumina_ui/ui/core/widgets/plugin_view/plugin_row_control.dart';
+import 'package:lumina_ui/ui/core/widgets/plugin_view/plugin_section_control.dart';
+import 'package:lumina_ui/ui/core/widgets/plugin_view/plugin_text_control.dart';
+import 'package:lumina_ui/ui/core/widgets/plugin_view/plugin_text_field_control.dart';
+import 'package:lumina_ui/ui/core/widgets/plugin_view/plugin_unsupported_control.dart';
+import 'package:lumina_ui/ui/core/widgets/plugin_view/plugin_view_scope.dart';
 
 /// Builds the widget of each control and remembers it by control id. When a
 /// new spec arrives, a control that renders the same as before

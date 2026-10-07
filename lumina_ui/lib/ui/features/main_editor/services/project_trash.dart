@@ -5,7 +5,7 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 
-import '../commands/editor_transaction.dart';
+import 'package:lumina_ui/ui/features/main_editor/commands/editor_transaction.dart';
 
 /// One file in a trash entry.
 class TrashedFile {

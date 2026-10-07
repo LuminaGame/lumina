@@ -5,9 +5,9 @@ import 'package:lumina/lumina.dart' show EngineLoggerService;
 import 'package:lumina_marketplace_shared/lumina_marketplace_shared.dart'
     show GameTemplateCheck, InstallKind, checkGameTemplate, kGameTemplatePubspecOverrides, kGameTemplateThumbnailNames;
 
-import '../../marketplace/services/marketplace_install_dirs.dart';
-import '../../marketplace/services/marketplace_installer.dart';
-import '../../marketplace/services/marketplace_license_records.dart';
+import 'package:lumina_ui/ui/features/marketplace/services/marketplace_install_dirs.dart';
+import 'package:lumina_ui/ui/features/marketplace/services/marketplace_installer.dart';
+import 'package:lumina_ui/ui/features/marketplace/services/marketplace_license_records.dart';
 
 /// The `id` prefix of a folder template in the Create Project dialog; the
 /// built-in templates use their bare catalog ids (`blank_3d`, …).

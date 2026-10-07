@@ -1,16 +1,16 @@
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
-import '../../../core/theme/editor_theme.dart';
-import '../../../core/window/lumina_window.dart';
-import '../../../core/window/window_controls.dart';
-import '../view_models/editor_view_model.dart';
-import '../commands/editor_command.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/window/lumina_window.dart';
+import 'package:lumina_ui/ui/core/window/window_controls.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/main_editor/commands/editor_command.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart' show EditorMenuPlacement;
-import '../../../core/plugin_extension_registry.dart' show PluginMenuEntry, PluginMenu;
-import 'menu_tree_builder.dart';
-import '../../source_control/view_models/source_control_view_model.dart';
-import '../../source_control/views/init_repo_prompt.dart';
-import 'legacy_units_banner.dart';
+import 'package:lumina_ui/ui/core/plugin_extension_registry.dart' show PluginMenuEntry, PluginMenu;
+import 'package:lumina_ui/ui/features/main_editor/views/menu_tree_builder.dart';
+import 'package:lumina_ui/ui/features/source_control/view_models/source_control_view_model.dart';
+import 'package:lumina_ui/ui/features/source_control/views/init_repo_prompt.dart';
+import 'package:lumina_ui/ui/features/main_editor/views/legacy_units_banner.dart';
 
 class MenuBarWidget extends StatelessWidget {
   final String engineVersion;

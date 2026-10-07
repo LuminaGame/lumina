@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:lumina/data/services/lumina_config_dir.dart';
 import 'package:lumina_marketplace_shared/lumina_marketplace_shared.dart';
 
-import '../../../core/services/user_plugin_dir.dart';
+import 'package:lumina_ui/ui/core/services/user_plugin_dir.dart';
 
 /// Where each install kind of a Marketplace listing lands.
 ///

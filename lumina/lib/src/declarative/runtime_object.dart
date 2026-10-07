@@ -1,5 +1,5 @@
-import 'build_context.dart';
-import 'lumina_object.dart';
+import 'package:lumina/src/declarative/build_context.dart';
+import 'package:lumina/src/declarative/lumina_object.dart';
 
 /// Heavy runtime tier object that holds persistent native handles (Filament entities, physics bodies).
 /// Survives declarative rebuilds and is updated in place to prevent frame drops.

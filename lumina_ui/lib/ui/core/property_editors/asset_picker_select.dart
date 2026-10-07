@@ -4,10 +4,10 @@ import 'package:flutter/services.dart';
 import 'package:lumina/lumina.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../services/asset_picker_catalog.dart';
-import '../services/file_reveal.dart';
-import '../theme/asset_type_style.dart';
-import '../theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/services/asset_picker_catalog.dart';
+import 'package:lumina_ui/ui/core/services/file_reveal.dart';
+import 'package:lumina_ui/ui/core/theme/asset_type_style.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/core/widgets/editor_context_menu.dart';
 
 /// What the editor lends every [AssetPickerSelect] below it: the

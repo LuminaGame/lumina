@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'level.dart';
+import 'package:lumina/src/world/level.dart';
 
 /// Handles asynchronous level streaming, 7-state lifecycle management, and visibility transitions per sub-level.
 class LuminaLevelStreaming {

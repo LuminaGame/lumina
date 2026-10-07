@@ -1,5 +1,5 @@
-import 'blueprint_model.dart';
-import 'widget_classes.dart';
+import 'package:lumina/src/blueprint/blueprint_model.dart';
+import 'package:lumina/src/blueprint/widget_classes.dart';
 
 /// A widget asset's own Blueprint graph (the Widget Blueprint Graph): the
 /// widget class it scripts, its `Is Variable` elements (typed

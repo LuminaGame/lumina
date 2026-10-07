@@ -1,4 +1,4 @@
-import 'blueprint_model.dart';
+import 'package:lumina/src/blueprint/blueprint_model.dart';
 
 /// One named element of a widget class: what `Get <Name>`
 /// returns on a `Widget:<class>` pin. [typeName] is the UmgWidgetType name

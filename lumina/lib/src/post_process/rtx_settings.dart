@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_filament/flutter_filament.dart';
 
-import 'fsr3_settings.dart';
+import 'package:lumina/src/post_process/fsr3_settings.dart';
 
 /// Hardware ray tracing for a view: the scene's acceleration structures,
 /// ray-traced sun shadows and ReSTIR direct lighting of the punctual lights.

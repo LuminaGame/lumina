@@ -4,11 +4,11 @@ import 'dart:typed_data';
 import 'package:lumina/lumina.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../services/pie_controller.dart';
-import '../../sub_editors/models/umg_document.dart';
-import '../../sub_editors/services/umg_widget_codegen.dart';
-import '../../sub_editors/view_models/umg_editor_view_model.dart';
-import '../../sub_editors/views/umg/umg_runtime_view.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/pie_controller.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/umg_document.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/umg_widget_codegen.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/umg_editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/umg/umg_runtime_view.dart';
 
 /// Renders the UMG widgets a Play-In-Editor session adds to the viewport
 /// through the engine's [LuminaWidgetLayer], so PIE and the

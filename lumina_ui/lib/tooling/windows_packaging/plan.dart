@@ -7,8 +7,8 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
-import 'certificates.dart';
-import 'options.dart';
+import 'package:lumina_ui/tooling/windows_packaging/certificates.dart';
+import 'package:lumina_ui/tooling/windows_packaging/options.dart';
 
 /// Where the packaging runs and reports.
 class PackagingContext {

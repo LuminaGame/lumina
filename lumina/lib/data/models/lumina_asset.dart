@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'lumina_asset_summary.dart';
+import 'package:lumina/data/models/lumina_asset_summary.dart';
 
 export 'lumina_asset_summary.dart';
 

@@ -2,15 +2,15 @@ import 'dart:io';
 
 import 'package:lumina/lumina.dart';
 
-import '../../../core/services/content_folders.dart';
-import '../../main_editor/commands/editor_transaction.dart';
-import '../../main_editor/view_models/editor_view_model.dart';
-import '../../main_editor/views/import_asset_folder_dialog.dart' show importFolderTargetError;
-import '../services/mcp_editor_sessions.dart';
-import '../services/mcp_jobs.dart';
-import '../services/mcp_protocol.dart';
-import '../services/mcp_tool.dart';
-import 'blueprint_tool_support.dart' show mcpRefuseWhilePlaying;
+import 'package:lumina_ui/ui/core/services/content_folders.dart';
+import 'package:lumina_ui/ui/features/main_editor/commands/editor_transaction.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/main_editor/views/import_asset_folder_dialog.dart' show importFolderTargetError;
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_editor_sessions.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_jobs.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_protocol.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_tool.dart';
+import 'package:lumina_ui/ui/features/mcp_server/tools/blueprint_tool_support.dart' show mcpRefuseWhilePlaying;
 
 /// The Content Browser folder tile's rename error (content_browser_folder_tile).
 const String kMcpFolderNameError = 'That name is empty, invalid or already taken.';

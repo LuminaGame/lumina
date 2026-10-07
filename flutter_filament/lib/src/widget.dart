@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
-import 'camera.dart';
-import 'engine.dart';
-import 'manipulator.dart';
-import 'scene.dart';
-import 'view.dart';
-import 'widget_state.dart';
+import 'package:flutter_filament/src/camera.dart';
+import 'package:flutter_filament/src/engine.dart';
+import 'package:flutter_filament/src/manipulator.dart';
+import 'package:flutter_filament/src/scene.dart';
+import 'package:flutter_filament/src/view.dart';
+import 'package:flutter_filament/src/widget_state.dart';
 
 /// Controller callback for configuring a 3D Filament scene.
 typedef FilamentSceneCreatedCallback =

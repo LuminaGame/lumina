@@ -4,14 +4,14 @@ import 'dart:typed_data';
 
 import 'package:vector_math/vector_math_64.dart';
 
-import '../../game/primitive_actor.dart' show luminaHexToRgb, luminaRgbToHex;
-import '../../math/axes.dart';
-import '../../math/units.dart';
-import '../../object/actor.dart';
-import '../../post_process/post_process_blender.dart';
-import '../../world/world.dart';
-import '../base/scene_component.dart';
-import '../mesh/static_mesh_component.dart';
+import 'package:lumina/src/game/primitive_actor.dart' show luminaHexToRgb, luminaRgbToHex;
+import 'package:lumina/src/math/axes.dart';
+import 'package:lumina/src/math/units.dart';
+import 'package:lumina/src/object/actor.dart';
+import 'package:lumina/src/post_process/post_process_blender.dart';
+import 'package:lumina/src/world/world.dart';
+import 'package:lumina/src/components/base/scene_component.dart';
+import 'package:lumina/src/components/mesh/static_mesh_component.dart';
 
 /// Shapes a [LuminaLocalFogVolumeComponent] can take.
 enum LuminaLocalFogShape { sphere, box }

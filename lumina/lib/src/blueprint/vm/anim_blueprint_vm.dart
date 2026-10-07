@@ -1,12 +1,12 @@
-import '../../components/mesh/animated_mesh_component.dart';
-import '../../object/actor.dart';
-import '../anim/anim_blueprint_instance.dart';
-import '../anim/anim_blueprint_model.dart';
-import '../anim/anim_blueprint_validator.dart';
-import '../blueprint_model.dart';
-import '../blueprint_validator.dart';
-import '../node_library.dart';
-import 'blueprint_vm.dart';
+import 'package:lumina/src/components/mesh/animated_mesh_component.dart';
+import 'package:lumina/src/object/actor.dart';
+import 'package:lumina/src/blueprint/anim/anim_blueprint_instance.dart';
+import 'package:lumina/src/blueprint/anim/anim_blueprint_model.dart';
+import 'package:lumina/src/blueprint/anim/anim_blueprint_validator.dart';
+import 'package:lumina/src/blueprint/blueprint_model.dart';
+import 'package:lumina/src/blueprint/blueprint_validator.dart';
+import 'package:lumina/src/blueprint/node_library.dart';
+import 'package:lumina/src/blueprint/vm/blueprint_vm.dart';
 
 /// An Animation Blueprint ready to run in the VM: its update
 /// graph and every transition rule validated once.

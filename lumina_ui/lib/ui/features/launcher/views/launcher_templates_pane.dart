@@ -1,8 +1,8 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../core/theme/editor_theme.dart';
-import '../view_models/launcher_view_model.dart';
-import 'installed_template_widgets.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/launcher/view_models/launcher_view_model.dart';
+import 'package:lumina_ui/ui/features/launcher/views/installed_template_widgets.dart';
 
 /// The launcher's Templates pane: the built-in templates
 /// (`GameTemplateCatalog`) and, below them, the game templates installed

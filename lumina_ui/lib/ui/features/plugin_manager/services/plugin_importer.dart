@@ -7,8 +7,8 @@ import 'package:lumina_marketplace_shared/lumina_marketplace_shared.dart'
     show PluginPackageProblem, PluginPackageProblemCode, checkPluginPackage, isSafeRelativePath, singleTopFolder;
 import 'package:path/path.dart' as p;
 
-import '../../../core/services/folder_install.dart';
-import '../../../core/services/user_plugin_dir.dart';
+import 'package:lumina_ui/ui/core/services/folder_install.dart';
+import 'package:lumina_ui/ui/core/services/user_plugin_dir.dart';
 
 /// Where an imported plugin comes from.
 enum PluginImportSource { folder, zip }

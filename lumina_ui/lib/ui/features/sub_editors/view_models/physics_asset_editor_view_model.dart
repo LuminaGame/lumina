@@ -6,8 +6,8 @@ import 'package:flutter/foundation.dart';
 import 'package:lumina/lumina.dart';
 import 'package:vector_math/vector_math_64.dart';
 
-import '../models/physics_asset_document.dart';
-import '../services/physics_preview_scene.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/physics_asset_document.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/physics_preview_scene.dart';
 
 /// Drives the Physics Asset sub-editor.
 ///

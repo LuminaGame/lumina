@@ -2,17 +2,17 @@ import 'dart:io';
 
 import 'package:lumina/lumina.dart';
 
-import '../../main_editor/view_models/editor_view_model.dart';
-import '../../sub_editors/models/blueprint_compile_status.dart';
-import '../../sub_editors/view_models/blueprint_editor_view_model.dart';
-import '../../sub_editors/view_models/blueprint_graph_editor.dart';
-import '../../sub_editors/view_models/level_blueprint_editor_view_model.dart';
-import '../services/mcp_editor_sessions.dart';
-import '../services/mcp_protocol.dart';
-import '../services/mcp_tool.dart';
-import 'blueprint_tool_support.dart';
-import 'graph_json.dart';
-import 'rotation_convention.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_compile_status.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/blueprint_editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/blueprint_graph_editor.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/level_blueprint_editor_view_model.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_editor_sessions.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_protocol.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_tool.dart';
+import 'package:lumina_ui/ui/features/mcp_server/tools/blueprint_tool_support.dart';
+import 'package:lumina_ui/ui/features/mcp_server/tools/graph_json.dart';
+import 'package:lumina_ui/ui/features/mcp_server/tools/rotation_convention.dart';
 
 /// The Blueprint editor as MCP tools: the node library,
 /// a Blueprint's components, members and graphs (the event graph, function

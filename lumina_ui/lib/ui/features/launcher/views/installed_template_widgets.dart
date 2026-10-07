@@ -2,8 +2,8 @@ import 'dart:io';
 
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../core/theme/editor_theme.dart';
-import '../services/installed_template_repository.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/launcher/services/installed_template_repository.dart';
 
 /// The pieces the launcher shows an installed game template
 /// with — its screenshot, license badge and the "publisher · version" line —

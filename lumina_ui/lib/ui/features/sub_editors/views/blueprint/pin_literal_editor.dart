@@ -2,8 +2,8 @@ import 'package:flutter/services.dart';
 import 'package:lumina/lumina.dart' hide BoxShape;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../../core/property_editors/asset_picker_select.dart';
-import '../../../../core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/property_editors/asset_picker_select.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 
 /// The inline editor for an unconnected input pin's literal, by pin type:
 /// a switch for booleans, a number field for integers and floats, a text

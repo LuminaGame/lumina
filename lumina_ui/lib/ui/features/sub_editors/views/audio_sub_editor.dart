@@ -5,13 +5,13 @@ import 'package:flutter/scheduler.dart' show Ticker;
 import 'package:lumina/lumina.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../core/property_editors/scrub_numeric_field.dart';
-import '../../../core/property_editors/slider_field.dart';
-import '../../../core/theme/editor_theme.dart';
-import '../models/audio_editor_state.dart';
-import '../services/audio_wav_decoder_service.dart';
-import '../sub_editor_binding.dart';
-import '../view_models/audio_editor_view_model.dart';
+import 'package:lumina_ui/ui/core/property_editors/scrub_numeric_field.dart';
+import 'package:lumina_ui/ui/core/property_editors/slider_field.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/audio_editor_state.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/audio_wav_decoder_service.dart';
+import 'package:lumina_ui/ui/features/sub_editors/sub_editor_binding.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/audio_editor_view_model.dart';
 
 /// AudioEditor.
 ///

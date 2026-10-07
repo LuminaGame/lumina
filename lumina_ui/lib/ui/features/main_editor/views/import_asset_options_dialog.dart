@@ -3,10 +3,10 @@ import 'dart:io';
 import 'package:lumina/lumina.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../core/theme/editor_theme.dart';
-import '../view_models/editor_view_model.dart';
-import 'import_target_skeleton_select.dart';
-import 'import_textures_folder_row.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/main_editor/views/import_target_skeleton_select.dart';
+import 'package:lumina_ui/ui/features/main_editor/views/import_textures_folder_row.dart';
 
 /// The Content Browser's Import Asset Options dialog for [filePaths]
 /// (auto organize, LODs, an animation's target skeleton, an FBX's textures

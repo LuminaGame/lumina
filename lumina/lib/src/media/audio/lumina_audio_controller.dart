@@ -4,8 +4,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:media_kit/media_kit.dart';
 
-import '../lumina_media.dart';
-import 'lumina_audio_player_value.dart';
+import 'package:lumina/src/media/lumina_media.dart';
+import 'package:lumina/src/media/audio/lumina_audio_player_value.dart';
 
 /// Controller managing audio playback through media_kit native integration,
 /// with a deterministic headless fallback for unit test and CLI environments.

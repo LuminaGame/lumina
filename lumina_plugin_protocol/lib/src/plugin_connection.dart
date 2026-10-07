@@ -1,8 +1,8 @@
 // ignore_for_file: prefer_initializing_formals
 import 'dart:async';
 
-import 'frame_codec.dart';
-import 'messages.dart';
+import 'package:lumina_plugin_protocol/src/frame_codec.dart';
+import 'package:lumina_plugin_protocol/src/messages.dart';
 
 /// Handles a request: returns the JSON result (or a future of it). Throwing
 /// a [PluginRemoteError] answers with its code; anything else answers

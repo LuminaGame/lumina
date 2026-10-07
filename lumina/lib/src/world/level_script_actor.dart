@@ -1,6 +1,6 @@
-import '../controller/player_controller.dart';
-import '../object/actor.dart';
-import 'level.dart';
+import 'package:lumina/src/controller/player_controller.dart';
+import 'package:lumina/src/object/actor.dart';
+import 'package:lumina/src/world/level.dart';
 
 /// Special actor attached to a level for executing level-specific scenarios and events.
 class LuminaLevelScriptActor extends LuminaActor {

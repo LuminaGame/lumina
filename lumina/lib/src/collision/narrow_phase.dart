@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 import 'package:vector_math/vector_math_64.dart';
-import 'shapes.dart';
+import 'package:lumina/src/collision/shapes.dart';
 
 /// Mutable container for contact geometry and penetration information.
 class ContactResult {

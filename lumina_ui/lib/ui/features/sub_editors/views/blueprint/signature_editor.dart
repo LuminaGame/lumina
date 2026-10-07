@@ -1,9 +1,9 @@
 import 'package:lumina/lumina.dart' hide BoxShape;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../../core/theme/editor_theme.dart';
-import '../../models/blueprint_pin_style.dart';
-import 'pin_literal_editor.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_pin_style.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/blueprint/pin_literal_editor.dart';
 
 /// A parameter list of a signature: the inputs or
 /// outputs of a function, macro, dispatcher, custom event or interface

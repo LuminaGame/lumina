@@ -1,10 +1,10 @@
 import 'package:lumina/lumina.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../core/theme/editor_theme.dart';
-import '../../../core/property_editors/asset_picker_select.dart';
-import '../services/anim_graph_asset_service.dart';
-import '../view_models/anim_blueprint_editor_view_model.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/property_editors/asset_picker_select.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/anim_graph_asset_service.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/anim_blueprint_editor_view_model.dart';
 
 /// Modal dialog for retargeting an Animation Blueprint and all its linked
 /// animation clips and Blend Spaces onto another skeletal mesh character.

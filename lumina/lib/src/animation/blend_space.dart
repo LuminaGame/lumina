@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 import 'package:vector_math/vector_math_64.dart';
-import 'animation_clip.dart';
+import 'package:lumina/src/animation/animation_clip.dart';
 
 /// Single scatter point sample mapping an animation clip to 1D or 2D parameter space coordinates.
 class BlendSample {

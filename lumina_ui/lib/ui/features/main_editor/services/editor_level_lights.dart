@@ -2,10 +2,10 @@ import 'package:flutter_filament/flutter_filament.dart';
 import 'package:lumina/lumina.dart';
 import 'package:vector_math/vector_math_64.dart' show Vector3;
 
-import '../view_models/editor_view_model.dart';
-import 'blueprint_play_support.dart' show EditorBlueprintClassRegistry;
-import 'light_actor_properties.dart';
-import 'pie_controller.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/blueprint_play_support.dart' show EditorBlueprintClassRegistry;
+import 'package:lumina_ui/ui/features/main_editor/services/light_actor_properties.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/pie_controller.dart';
 
 /// The level's own lights in the edit-mode viewport: every `DirectionalLight` /
 /// `PointLight` / `SpotLight` actor and placed Blueprint actor containing lights

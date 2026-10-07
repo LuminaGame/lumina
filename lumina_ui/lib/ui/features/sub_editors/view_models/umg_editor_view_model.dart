@@ -9,13 +9,13 @@ import 'package:lumina/data/services/engine_logger_service.dart';
 import 'package:lumina/lumina.dart'
     show LuminaBlueprintDocument, LuminaBlueprintNode, LuminaBlueprintNodeLibrary, LuminaThemeDocument, LuminaThemeService;
 import 'package:shadcn_flutter/shadcn_flutter.dart' show ThemeData;
-import '../views/umg/umg_theme_helper.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/umg/umg_theme_helper.dart';
 
-import '../../main_editor/commands/editor_transaction.dart';
-import '../models/umg_document.dart';
-import '../services/umg_widget_codegen.dart';
-import '../services/umg_widget_validator.dart';
-import 'widget_blueprint_editor_view_model.dart';
+import 'package:lumina_ui/ui/features/main_editor/commands/editor_transaction.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/umg_document.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/umg_widget_codegen.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/umg_widget_validator.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/widget_blueprint_editor_view_model.dart';
 
 /// Designer mode of the center panel.
 enum UmgEditorMode { designer, graph }

@@ -2,12 +2,12 @@ import 'dart:math' as math;
 
 import 'package:vector_math/vector_math_64.dart';
 
-import '../../world/world.dart';
-import '../camera/camera_component.dart';
-import 'directional_light_component.dart';
-import 'light_component.dart';
-import 'point_light_component.dart';
-import 'spot_light_component.dart';
+import 'package:lumina/src/world/world.dart';
+import 'package:lumina/src/components/camera/camera_component.dart';
+import 'package:lumina/src/components/light/directional_light_component.dart';
+import 'package:lumina/src/components/light/light_component.dart';
+import 'package:lumina/src/components/light/point_light_component.dart';
+import 'package:lumina/src/components/light/spot_light_component.dart';
 
 /// The camera exposure a level's lights call for, the
 /// default auto exposure that the editor viewport,

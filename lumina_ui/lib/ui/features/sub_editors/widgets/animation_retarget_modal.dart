@@ -1,8 +1,8 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina/lumina.dart';
-import '../view_models/animation_editor_view_model.dart';
-import '../../../core/theme/editor_theme.dart';
-import '../../../core/property_editors/asset_picker_select.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/animation_editor_view_model.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/property_editors/asset_picker_select.dart';
 
 /// Modal dialog for retargeting an animation sequence to a different skeletal mesh character.
 class AnimationRetargetModal extends StatefulWidget {

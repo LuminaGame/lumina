@@ -1,4 +1,4 @@
-import '../components/collision/collision_component.dart';
+import 'package:lumina/src/components/collision/collision_component.dart';
 
 /// Semantic object-type channel for collision interaction.
 enum CollisionObjectType { worldStatic, worldDynamic, pawn }

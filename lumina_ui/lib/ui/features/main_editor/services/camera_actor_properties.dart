@@ -1,7 +1,7 @@
 import 'package:lumina/lumina.dart' show LuminaCameraSettings;
 
-import '../../details/models/editor_component_node.dart';
-import '../view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/details/models/editor_component_node.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 
 /// A placed `Camera` actor's settings live on its `LuminaCameraComponent`
 /// (`<actorId>_camera`), under the names and units

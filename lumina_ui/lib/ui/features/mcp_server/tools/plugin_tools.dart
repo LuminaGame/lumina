@@ -4,11 +4,11 @@ import 'package:lumina/data/models/lumina_plugin_descriptor.dart' show PluginOri
 import 'package:lumina/data/services/plugin_registry_service.dart';
 import 'package:lumina/data/services/plugin_template_generator_service.dart';
 
-import '../../main_editor/view_models/editor_view_model.dart';
-import '../../plugin_manager/view_models/plugin_manager_view_model.dart';
-import '../services/mcp_jobs.dart';
-import '../services/mcp_protocol.dart';
-import '../services/mcp_tool.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/plugin_manager/view_models/plugin_manager_view_model.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_jobs.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_protocol.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_tool.dart';
 
 /// What `set_plugin_enabled` says when a code plugin changed: the editor
 /// needs a restart the agent must never trigger (the user owns it).

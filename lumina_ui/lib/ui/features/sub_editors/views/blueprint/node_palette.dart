@@ -3,9 +3,9 @@ import 'dart:math' as math;
 import 'package:lumina/lumina.dart' show LuminaBlueprintTypeContext;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../../core/theme/editor_theme.dart';
-import '../../models/blueprint_palette.dart';
-import '../../models/blueprint_pin_style.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_palette.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_pin_style.dart';
 
 /// The node palette ("All Actions for this Blueprint"): lumina's node
 /// library grouped by category and searchable by title, category and

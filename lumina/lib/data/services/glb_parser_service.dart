@@ -5,10 +5,10 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:flutter_filament/flutter_filament.dart';
 import 'package:image/image.dart' as imglib;
-import 'encoded_image_decoder.dart';
-import 'encoded_image_format.dart';
-import 'engine_logger_service.dart';
-import 'tga_decoder_service.dart';
+import 'package:lumina/data/services/encoded_image_decoder.dart';
+import 'package:lumina/data/services/encoded_image_format.dart';
+import 'package:lumina/data/services/engine_logger_service.dart';
+import 'package:lumina/data/services/tga_decoder_service.dart';
 
 part 'glb_parser_service/parse_glb.dart';
 part 'glb_parser_service/chunks_images_animations.dart';

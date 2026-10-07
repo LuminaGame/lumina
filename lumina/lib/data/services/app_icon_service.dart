@@ -5,7 +5,7 @@ import 'dart:typed_data';
 
 import 'package:image/image.dart' as img;
 
-import '../models/lumina_project.dart';
+import 'package:lumina/data/models/lumina_project.dart';
 
 /// What [AppIconService.write] did for one platform.
 class AppIconPlatformResult {

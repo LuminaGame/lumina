@@ -3,8 +3,8 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
-import 'filament_prebuilt.dart';
-import 'release_asset.dart';
+import 'package:lumina/data/services/filament_prebuilt.dart';
+import 'package:lumina/data/services/release_asset.dart';
 
 /// A prebuilt OpenRigLogic archive could not be fetched, verified or
 /// unpacked.

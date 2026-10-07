@@ -9,10 +9,10 @@ import 'package:lumina/lumina.dart'
     show ImportConflictPolicy, ImportFolderOptions, ImportFolderPlan, ImportFolderScanner, ImportProgress, ImportRequest, ImportStage;
 import 'package:lumina_marketplace_shared/lumina_marketplace_shared.dart';
 
-import '../../../core/services/content_folders.dart';
-import '../../../core/services/folder_install.dart';
-import 'marketplace_install_dirs.dart';
-import 'marketplace_license_records.dart';
+import 'package:lumina_ui/ui/core/services/content_folders.dart';
+import 'package:lumina_ui/ui/core/services/folder_install.dart';
+import 'package:lumina_ui/ui/features/marketplace/services/marketplace_install_dirs.dart';
+import 'package:lumina_ui/ui/features/marketplace/services/marketplace_license_records.dart';
 
 /// Runs import requests on the editor's background import queue
 /// and completes with each file's final state.

@@ -1,6 +1,6 @@
-import '../../declarative/lumina_object.dart';
-import '../../object/actor.dart';
-import '../../world/world.dart';
+import 'package:lumina/src/declarative/lumina_object.dart';
+import 'package:lumina/src/object/actor.dart';
+import 'package:lumina/src/world/world.dart';
 
 /// Base non-transform component that can be attached to a [LuminaActor].
 abstract class LuminaActorComponent extends LuminaObject with LuminaSaveable {

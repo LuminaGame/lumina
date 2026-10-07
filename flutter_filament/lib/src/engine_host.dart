@@ -1,5 +1,5 @@
-import 'engine.dart';
-import 'gpu.dart';
+import 'package:flutter_filament/src/engine.dart';
+import 'package:flutter_filament/src/gpu.dart';
 
 /// A claim on a shared [FilamentEngine].
 ///

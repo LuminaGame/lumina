@@ -1,8 +1,8 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../theme/editor_theme.dart';
-import 'rotation_row.dart';
-import 'vector_row.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/property_editors/rotation_row.dart';
+import 'package:lumina_ui/ui/core/property_editors/vector_row.dart';
 
 /// Unified Engine-Wide Transform Property Editor.
 ///

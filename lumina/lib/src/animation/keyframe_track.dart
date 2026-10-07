@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 import 'package:vector_math/vector_math_64.dart';
-import 'animation_clip.dart';
+import 'package:lumina/src/animation/animation_clip.dart';
 
 /// Interpolation mode for animation keyframes.
 enum KeyframeInterpolation {

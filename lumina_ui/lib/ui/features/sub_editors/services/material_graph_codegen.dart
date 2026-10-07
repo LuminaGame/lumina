@@ -1,8 +1,8 @@
 import 'package:lumina/lumina.dart' show LuminaBlueprintGraph, LuminaBlueprintNode;
 
-import '../models/material_graph.dart';
-import 'mat_source.dart';
-import 'material_graph_types.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/material_graph.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/mat_source.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/material_graph_types.dart';
 
 /// Writes a material graph as `.mat` source.
 ///

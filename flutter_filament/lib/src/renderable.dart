@@ -1,6 +1,6 @@
-import 'ffi_platform.dart' as ffi;
+import 'package:flutter_filament/src/ffi_platform.dart' as ffi;
 import 'dart:typed_data';
-import 'ffi_package_platform.dart' as pkg_ffi;
+import 'package:flutter_filament/src/ffi_package_platform.dart' as pkg_ffi;
 import 'package:flutter_filament/src/engine.dart';
 import 'package:flutter_filament/src/enums.dart';
 import 'package:flutter_filament/src/exception.dart';

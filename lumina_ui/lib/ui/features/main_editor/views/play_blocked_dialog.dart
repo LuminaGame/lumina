@@ -1,9 +1,9 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../core/theme/editor_theme.dart';
-import '../../sub_editors/services/blueprint_debugger.dart';
-import '../services/blueprint_play_support.dart';
-import '../view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/blueprint_debugger.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/blueprint_play_support.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 
 /// Opens Blueprint [path] (project-relative) in its editor tab and asks the
 /// editor to select and frame [nodeId].

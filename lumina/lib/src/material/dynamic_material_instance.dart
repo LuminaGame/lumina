@@ -1,11 +1,11 @@
 import 'dart:typed_data';
 import 'package:flutter_filament/flutter_filament.dart';
 import 'package:vector_math/vector_math_64.dart';
-import '../../data/models/lumina_asset.dart';
-import '../utility/lumina_assets.dart';
-import 'lumina_material.dart';
-import 'lumina_material_instance.dart';
-import 'material_textures.dart';
+import 'package:lumina/data/models/lumina_asset.dart';
+import 'package:lumina/src/utility/lumina_assets.dart';
+import 'package:lumina/src/material/lumina_material.dart';
+import 'package:lumina/src/material/lumina_material_instance.dart';
+import 'package:lumina/src/material/material_textures.dart';
 
 /// A dynamic material instance.
 ///

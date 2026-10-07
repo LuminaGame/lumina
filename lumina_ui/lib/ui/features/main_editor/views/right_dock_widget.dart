@@ -1,8 +1,8 @@
 import 'package:lumina_editor_api/lumina_editor_api.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../core/theme/editor_theme.dart';
-import '../view_models/editor_panels_controller.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_panels_controller.dart';
 
 /// The right dock: the open `PanelDefaultDock.right` plugin
 /// panels. A header names the active one; with several shown, a tab strip

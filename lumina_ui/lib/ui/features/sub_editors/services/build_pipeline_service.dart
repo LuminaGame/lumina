@@ -7,7 +7,7 @@ import 'package:flutter_filament/flutter_filament.dart';
 import 'package:lumina/lumina.dart';
 import 'package:vector_math/vector_math_64.dart' show Aabb3, Vector3;
 
-import 'flutter_filament_web_module.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/flutter_filament_web_module.dart';
 
 export 'flutter_filament_web_module.dart' show FlutterFilamentWebModule;
 

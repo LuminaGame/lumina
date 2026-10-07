@@ -4,8 +4,8 @@ import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:path/path.dart' as p;
 
-import '../../main_editor/commands/editor_transaction.dart';
-import '../../main_editor/services/project_trash.dart';
+import 'package:lumina_ui/ui/features/main_editor/commands/editor_transaction.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/project_trash.dart';
 
 /// Who took a snapshot: the MCP session and client, and — for an in-process
 /// call (a plugin such as MiniAI) — the `caller` string it passed to

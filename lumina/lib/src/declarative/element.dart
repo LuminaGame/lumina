@@ -1,11 +1,11 @@
-import 'build_context.dart';
-import 'build_owner.dart';
-import 'lumina_object.dart';
-import 'runtime_object.dart';
-import '../world/world.dart';
-import '../world/level.dart';
-import '../object/actor.dart';
-import '../components/base/actor_component.dart';
+import 'package:lumina/src/declarative/build_context.dart';
+import 'package:lumina/src/declarative/build_owner.dart';
+import 'package:lumina/src/declarative/lumina_object.dart';
+import 'package:lumina/src/declarative/runtime_object.dart';
+import 'package:lumina/src/world/world.dart';
+import 'package:lumina/src/world/level.dart';
+import 'package:lumina/src/object/actor.dart';
+import 'package:lumina/src/components/base/actor_component.dart';
 
 /// Lifecycle state of a [LuminaElement].
 enum LuminaElementLifecycle {

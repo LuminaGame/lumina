@@ -1,7 +1,7 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import 'editor_theme_data.dart';
-import 'editor_theme_store.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme_data.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme_store.dart';
 
 /// Lumina Studio's palette.
 ///

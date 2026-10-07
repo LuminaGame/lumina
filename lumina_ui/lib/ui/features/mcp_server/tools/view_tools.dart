@@ -3,11 +3,11 @@ import 'package:flutter/scheduler.dart' show SchedulerBinding;
 import 'package:flutter/widgets.dart';
 import 'package:lumina/lumina.dart' show AssetType;
 
-import '../../main_editor/view_models/editor_view_model.dart';
-import '../services/mcp_editor_sessions.dart';
-import '../services/mcp_frame_capture.dart';
-import '../services/mcp_protocol.dart';
-import '../services/mcp_tool.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_editor_sessions.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_frame_capture.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_protocol.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_tool.dart';
 
 /// The level viewport as MCP tools: a screenshot of the
 /// viewport or the whole editor window as MCP image content, and the

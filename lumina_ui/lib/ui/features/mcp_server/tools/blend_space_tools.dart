@@ -1,11 +1,11 @@
 import 'package:lumina/lumina.dart';
 
-import '../../main_editor/view_models/editor_view_model.dart';
-import '../../sub_editors/view_models/blend_space_editor_view_model.dart';
-import '../services/mcp_editor_sessions.dart';
-import '../services/mcp_protocol.dart';
-import '../services/mcp_tool.dart';
-import 'core_tools.dart' show mcpUndoState;
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/blend_space_editor_view_model.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_editor_sessions.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_protocol.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_tool.dart';
+import 'package:lumina_ui/ui/features/mcp_server/tools/core_tools.dart' show mcpUndoState;
 
 /// The Blend Space editor as MCP tools: axes (name, range,
 /// 1D ⇄ 2D), grid divisions, samples (dropped clips snapped to the grid),

@@ -3,8 +3,8 @@ import 'dart:ui' as ui;
 
 import 'package:image/image.dart' as imglib;
 
-import 'encoded_image_format.dart';
-import 'tga_decoder_service.dart';
+import 'package:lumina/data/services/encoded_image_format.dart';
+import 'package:lumina/data/services/tga_decoder_service.dart';
 
 /// Decoded pixels: `width * height` RGBA8 texels, row-major, alpha
 /// premultiplied (what `dart:ui`'s `ImageByteFormat.rawRgba` hands back).

@@ -1,9 +1,9 @@
 import 'package:vector_math/vector_math_64.dart';
-import 'actor.dart';
-import '../controller/controller.dart';
-import '../math/euler.dart';
-import '../controller/player_controller.dart';
-import '../components/player/lumina_player_component.dart';
+import 'package:lumina/src/object/actor.dart';
+import 'package:lumina/src/controller/controller.dart';
+import 'package:lumina/src/math/euler.dart';
+import 'package:lumina/src/controller/player_controller.dart';
+import 'package:lumina/src/components/player/lumina_player_component.dart';
 
 /// Base class for actors that can be possessed by a [LuminaController] (Player or AI).
 class LuminaPawn extends LuminaActor {

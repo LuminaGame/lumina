@@ -1,5 +1,5 @@
-import '../models/lumina_project.dart';
-import 'dart_identifiers.dart';
+import 'package:lumina/data/models/lumina_project.dart';
+import 'package:lumina/data/services/dart_identifiers.dart';
 
 /// Template ids persisted in the `.lmproject` manifest (`template` key).
 const String kBlank3dTemplateId = 'blank_3d';

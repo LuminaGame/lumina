@@ -1,4 +1,4 @@
-import 'world_subsystem.dart';
+import 'package:lumina/src/world/subsystem/world_subsystem.dart';
 
 /// Reference physics world subsystem providing simulation stepping and collision integration.
 class LuminaPhysicsWorldSubsystem extends LuminaWorldSubsystem {

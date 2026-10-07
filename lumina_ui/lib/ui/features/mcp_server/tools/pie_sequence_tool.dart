@@ -4,13 +4,13 @@ import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart' show GlobalKey;
 
-import '../../main_editor/commands/editor_transaction.dart';
-import '../../main_editor/view_models/editor_view_model.dart';
-import '../services/mcp_frame_capture.dart';
-import '../services/mcp_play_testing.dart';
-import '../services/mcp_protocol.dart';
-import '../services/mcp_tool.dart';
-import 'play_testing_tools.dart';
+import 'package:lumina_ui/ui/features/main_editor/commands/editor_transaction.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_frame_capture.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_play_testing.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_protocol.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_tool.dart';
+import 'package:lumina_ui/ui/features/mcp_server/tools/play_testing_tools.dart';
 
 /// `pie_sequence`'s step limit.
 const int kMcpMaxSequenceSteps = 50;

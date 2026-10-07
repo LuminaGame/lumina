@@ -2,7 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina/lumina.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
-import '../../view_models/sequencer_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/sequencer_view_model.dart';
 import 'package:lumina_ui/ui/core/widgets/editor_context_menu.dart';
 
 class SequencerTimelineWidget extends StatefulWidget {

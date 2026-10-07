@@ -2,7 +2,7 @@ import 'package:lumina/lumina.dart'
     show LuminaUmgElementBinding, LuminaUmgText, LuminaUmgTextOutline, LuminaUmgTextShadow;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../services/umg_widget_codegen.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/umg_widget_codegen.dart';
 
 /// The text look of a designer element, shared by the
 /// designer canvas and [UmgRuntimeView] so both draw what the generated

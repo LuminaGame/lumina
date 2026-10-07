@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:vector_math/vector_math_64.dart';
 
-import '../components/camera/camera_math.dart';
+import 'package:lumina/src/components/camera/camera_math.dart';
 
 /// Rotating vectors the way Lumina means a rotation.
 ///

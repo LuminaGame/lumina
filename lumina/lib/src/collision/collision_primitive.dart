@@ -2,8 +2,8 @@ import 'dart:math' as math;
 
 import 'package:vector_math/vector_math_64.dart';
 
-import '../components/collision/collision_component.dart';
-import '../math/axes.dart';
+import 'package:lumina/src/components/collision/collision_component.dart';
+import 'package:lumina/src/math/axes.dart';
 
 /// The kinds of authored primitive simple collision.
 enum LuminaCollisionPrimitiveKind { box, sphere, capsule }

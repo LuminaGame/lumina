@@ -1,11 +1,11 @@
 import 'package:lumina/lumina.dart' show CameraProjectionMode, LuminaCameraSettings;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../core/property_editors/enum_field.dart';
-import '../../../core/property_editors/scrub_numeric_field.dart';
-import '../../../core/theme/editor_theme.dart';
-import '../../main_editor/services/camera_actor_properties.dart';
-import '../../main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/core/property_editors/enum_field.dart';
+import 'package:lumina_ui/ui/core/property_editors/scrub_numeric_field.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/camera_actor_properties.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 
 /// The Details panel's Camera section of a placed `Camera` actor: the
 /// settings of its `LuminaCameraComponent`, under [LuminaCameraSettings]'

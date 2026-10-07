@@ -1,7 +1,7 @@
 import 'dart:io';
 
-import '../../src/blueprint/level_blueprint.dart';
-import '../models/lumina_level_document.dart';
+import 'package:lumina/src/blueprint/level_blueprint.dart';
+import 'package:lumina/data/models/lumina_level_document.dart';
 
 /// Reads and writes a project's level `.lmas` containers:
 /// the whole document, or only its Level Blueprint, keeping every other key

@@ -1,11 +1,11 @@
 import 'package:vector_math/vector_math_64.dart';
-import '../components/base/actor_component.dart';
-import '../object/actor.dart';
-import '../world/subsystem/world_subsystem.dart';
-import 'input_action.dart';
-import 'input_key.dart';
-import 'input_mapping_context.dart';
-import 'input_trigger.dart';
+import 'package:lumina/src/components/base/actor_component.dart';
+import 'package:lumina/src/object/actor.dart';
+import 'package:lumina/src/world/subsystem/world_subsystem.dart';
+import 'package:lumina/src/input/input_action.dart';
+import 'package:lumina/src/input/input_key.dart';
+import 'package:lumina/src/input/input_mapping_context.dart';
+import 'package:lumina/src/input/input_trigger.dart';
 
 export 'input_action.dart';
 export 'input_key.dart';

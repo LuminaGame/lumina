@@ -1,5 +1,5 @@
 import 'package:vector_math/vector_math_64.dart';
-import '../object/pawn.dart';
+import 'package:lumina/src/object/pawn.dart';
 
 /// Abstract controller base class that can possess and manage a [LuminaPawn].
 abstract class LuminaController {

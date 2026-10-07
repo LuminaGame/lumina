@@ -2,7 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:lumina/lumina.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../../core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 
 /// Supported key categories in the picker.
 const List<String> kKeyCategories = [

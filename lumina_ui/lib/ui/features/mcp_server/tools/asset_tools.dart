@@ -2,21 +2,21 @@ import 'dart:io';
 
 import 'package:lumina/lumina.dart';
 
-import '../../main_editor/services/project_trash.dart' show TrashConflict;
-import '../../main_editor/view_models/editor_view_model.dart';
-import '../../sub_editors/services/anim_graph_asset_service.dart';
-import '../../sub_editors/services/blueprint_asset_catalog.dart';
-import '../../sub_editors/services/landscape_asset_service.dart';
-import '../../sub_editors/view_models/animation_editor_view_model.dart';
-import '../../sub_editors/view_models/blueprint_editor_view_model.dart';
-import '../../sub_editors/view_models/material_editor_view_model.dart';
-import '../../sub_editors/view_models/particle_editor_view_model.dart';
-import '../../sub_editors/view_models/sequencer_view_model.dart';
-import '../services/mcp_editor_sessions.dart';
-import '../services/mcp_protocol.dart';
-import '../services/mcp_tool.dart';
-import 'blueprint_tool_support.dart' show mcpRefuseWhilePlaying;
-import 'level_file_tools.dart' show mcpDiscardRisk, mcpIfDirtySchema, mcpLeaveLevel;
+import 'package:lumina_ui/ui/features/main_editor/services/project_trash.dart' show TrashConflict;
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/anim_graph_asset_service.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/blueprint_asset_catalog.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/landscape_asset_service.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/animation_editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/blueprint_editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/material_editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/particle_editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/sequencer_view_model.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_editor_sessions.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_protocol.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_tool.dart';
+import 'package:lumina_ui/ui/features/mcp_server/tools/blueprint_tool_support.dart' show mcpRefuseWhilePlaying;
+import 'package:lumina_ui/ui/features/mcp_server/tools/level_file_tools.dart' show mcpDiscardRisk, mcpIfDirtySchema, mcpLeaveLevel;
 
 /// The Content Browser as MCP tools: list and search
 /// assets, import a file through the real import pipeline, create an asset,

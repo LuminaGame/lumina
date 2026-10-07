@@ -1,11 +1,11 @@
-import '../world/level_preloader.dart';
-import '../input/input_action.dart';
-import 'blueprint_function_library.dart';
-import 'blueprint_function_registry.dart';
-import 'blueprint_model.dart';
-import 'editor_nodes.dart';
-import 'level_blueprint.dart';
-import 'node_library.dart';
+import 'package:lumina/src/world/level_preloader.dart';
+import 'package:lumina/src/input/input_action.dart';
+import 'package:lumina/src/blueprint/blueprint_function_library.dart';
+import 'package:lumina/src/blueprint/blueprint_function_registry.dart';
+import 'package:lumina/src/blueprint/blueprint_model.dart';
+import 'package:lumina/src/blueprint/editor_nodes.dart';
+import 'package:lumina/src/blueprint/level_blueprint.dart';
+import 'package:lumina/src/blueprint/node_library.dart';
 
 enum LuminaBlueprintSeverity { error, warning }
 

@@ -1,5 +1,5 @@
-import 'anim_instance.dart';
-import 'animation_clip.dart';
+import 'package:lumina/src/animation/anim_instance.dart';
+import 'package:lumina/src/animation/animation_clip.dart';
 
 /// Single section within an animation montage defining sub-segment start points and chaining.
 class MontageSection {

@@ -1,11 +1,11 @@
-import 'ffi_platform.dart' as ffi;
+import 'package:flutter_filament/src/ffi_platform.dart' as ffi;
 import 'dart:typed_data';
-import 'ffi_package_platform.dart';
+import 'package:flutter_filament/src/ffi_package_platform.dart';
 
-import 'camera.dart';
-import 'scene.dart';
-import 'filament_bindings.dart' as ffi_bind;
-import 'view.dart';
+import 'package:flutter_filament/src/camera.dart';
+import 'package:flutter_filament/src/scene.dart';
+import 'package:flutter_filament/src/filament_bindings.dart' as ffi_bind;
+import 'package:flutter_filament/src/view.dart';
 
 /// Mipmap generation result container.
 class MipmapResult {

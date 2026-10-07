@@ -5,11 +5,11 @@ import 'package:flutter/foundation.dart';
 import 'package:lumina/data/services/blueprint_codegen/blueprint_dart_generator.dart';
 import 'package:lumina/lumina.dart';
 
-import '../models/blueprint_editor_nodes.dart';
-import '../models/blueprint_editor_type_context.dart';
-import '../models/blueprint_graph_ref.dart';
-import '../models/blueprint_palette.dart';
-import 'blueprint_editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_editor_nodes.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_editor_type_context.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_graph_ref.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_palette.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/blueprint_editor_view_model.dart';
 
 /// The Level Blueprint editor's state: the Blueprint editor configured for a level. Its document
 /// is the level's [LuminaLevelBlueprintDocument], read from and saved into

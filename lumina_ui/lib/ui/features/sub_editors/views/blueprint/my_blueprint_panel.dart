@@ -1,10 +1,10 @@
 import 'package:lumina/lumina.dart' hide BoxShape;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../../core/theme/editor_theme.dart';
-import '../../models/blueprint_graph_ref.dart';
-import '../../models/blueprint_pin_style.dart';
-import 'graph_canvas.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_graph_ref.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_pin_style.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/blueprint/graph_canvas.dart';
 
 /// One named row of a My Blueprint list (a function, macro or dispatcher).
 typedef BlueprintNamedRowActions = ({

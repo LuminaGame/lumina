@@ -1,6 +1,6 @@
-import '../components/mesh/skeletal_mesh_component.dart';
-import 'animation_clip.dart';
-import 'anim_montage.dart';
+import 'package:lumina/src/components/mesh/skeletal_mesh_component.dart';
+import 'package:lumina/src/animation/animation_clip.dart';
+import 'package:lumina/src/animation/anim_montage.dart';
 
 enum _MontageBlendState {
   inactive,

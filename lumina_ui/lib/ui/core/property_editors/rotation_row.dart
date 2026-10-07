@@ -1,7 +1,7 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../theme/editor_theme.dart';
-import 'vector_row.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/property_editors/vector_row.dart';
 
 class RotationRow extends StatelessWidget {
   final List<double> value;

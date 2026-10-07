@@ -10,7 +10,7 @@ import 'package:lumina_ui/ui/features/plugin_manager/views/plugin_process_status
 import 'package:lumina_ui/ui/features/plugin_manager/services/plugin_importer.dart';
 import 'dart:io';
 import 'package:flutter/services.dart';
-import '../../../core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 
 class PluginManagerView extends StatelessWidget {
   final PluginManagerViewModel viewModel;

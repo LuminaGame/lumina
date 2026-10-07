@@ -1,10 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:lumina/lumina.dart';
-import '../../../core/services/ai_agent_files.dart';
-import '../../../core/services/content_folders.dart';
-import '../services/installed_template_repository.dart';
-import '../services/template_project_creator.dart';
-import 'launcher_view_model.dart';
+import 'package:lumina_ui/ui/core/services/ai_agent_files.dart';
+import 'package:lumina_ui/ui/core/services/content_folders.dart';
+import 'package:lumina_ui/ui/features/launcher/services/installed_template_repository.dart';
+import 'package:lumina_ui/ui/features/launcher/services/template_project_creator.dart';
+import 'package:lumina_ui/ui/features/launcher/view_models/launcher_view_model.dart';
 
 class CreateProjectViewModel extends ChangeNotifier {
   final LauncherViewModel launcherVM;

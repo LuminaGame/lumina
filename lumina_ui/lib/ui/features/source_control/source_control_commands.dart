@@ -1,12 +1,12 @@
 import 'package:lumina/lumina.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../main_editor/commands/editor_command.dart';
-import '../main_editor/view_models/editor_view_model.dart';
-import 'view_models/source_control_view_model.dart';
-import 'views/commit_dialog.dart';
-import 'views/history_dialog.dart';
-import 'views/revert_dialog.dart';
+import 'package:lumina_ui/ui/features/main_editor/commands/editor_command.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/source_control/view_models/source_control_view_model.dart';
+import 'package:lumina_ui/ui/features/source_control/views/commit_dialog.dart';
+import 'package:lumina_ui/ui/features/source_control/views/history_dialog.dart';
+import 'package:lumina_ui/ui/features/source_control/views/revert_dialog.dart';
 
 /// `Tools → Source Control` commands registered into the editor's command
 /// registry (Commit…, History for Active Level, Refresh, Initialize).

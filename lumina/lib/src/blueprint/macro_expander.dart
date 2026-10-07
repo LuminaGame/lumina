@@ -1,5 +1,5 @@
-import 'blueprint_model.dart';
-import 'node_library.dart';
+import 'package:lumina/src/blueprint/blueprint_model.dart';
+import 'package:lumina/src/blueprint/node_library.dart';
 
 /// Expands every `call_macro` node of a graph into the macro's body
 /// (inlining each macro instance): body nodes are

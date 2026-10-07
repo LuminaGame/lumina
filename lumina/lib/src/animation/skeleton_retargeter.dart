@@ -1,6 +1,6 @@
 import 'package:vector_math/vector_math_64.dart';
-import '../components/mesh/skeletal_mesh_component.dart';
-import 'animation_clip.dart';
+import 'package:lumina/src/components/mesh/skeletal_mesh_component.dart';
+import 'package:lumina/src/animation/animation_clip.dart';
 
 /// Translation scaling mode used when transferring motion between skeletons.
 enum RetargetTranslationMode {

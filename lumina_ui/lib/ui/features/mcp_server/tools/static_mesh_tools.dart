@@ -1,11 +1,11 @@
 import 'package:lumina/lumina.dart' show AssetType;
 
-import '../../main_editor/view_models/editor_view_model.dart';
-import '../../sub_editors/models/static_mesh_collision.dart';
-import '../../sub_editors/view_models/static_mesh_editor_view_model.dart';
-import '../services/mcp_editor_sessions.dart';
-import '../services/mcp_protocol.dart';
-import '../services/mcp_tool.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/static_mesh_collision.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/static_mesh_editor_view_model.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_editor_sessions.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_protocol.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_tool.dart';
 
 /// The Static Mesh editor as MCP tools: stats, LODs (add,
 /// remove, ratio, screen size, material overrides, LOD group, forced preview

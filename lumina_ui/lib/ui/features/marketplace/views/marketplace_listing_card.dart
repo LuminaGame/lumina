@@ -1,8 +1,8 @@
 import 'package:lumina_marketplace_shared/lumina_marketplace_shared.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../core/theme/editor_theme.dart';
-import '../view_models/marketplace_view_model.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/marketplace/view_models/marketplace_view_model.dart';
 
 /// What a Marketplace card carries when it is dragged onto a Content
 /// Browser folder (manual placement).

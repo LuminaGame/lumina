@@ -1,5 +1,5 @@
 import 'dart:math' as math;
-import '../world/subsystem/world_subsystem.dart';
+import 'package:lumina/src/world/subsystem/world_subsystem.dart';
 
 /// Opaque identifier for an active or expired timer managed by [LuminaTimerManager].
 class LuminaTimerHandle {

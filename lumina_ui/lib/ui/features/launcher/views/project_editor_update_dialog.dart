@@ -1,6 +1,6 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 
 /// The answers of [ProjectEditorUpdateDialog].
 enum ProjectEditorUpdateChoice { update, openWithOldEditor, cancel }

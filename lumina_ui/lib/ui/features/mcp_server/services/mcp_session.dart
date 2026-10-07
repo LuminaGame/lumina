@@ -1,5 +1,5 @@
-import 'mcp_protocol.dart';
-import 'mcp_tool_risk.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_protocol.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_tool_risk.dart';
 
 /// One MCP session: issued by `initialize`, echoed by the
 /// client as `Mcp-Session-Id`.

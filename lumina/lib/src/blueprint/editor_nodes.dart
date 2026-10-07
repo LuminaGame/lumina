@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'blueprint_model.dart';
+import 'package:lumina/src/blueprint/blueprint_model.dart';
 
 /// Graph nodes that only the editor draws:
 /// comment boxes and reroute dots. The node library has neither. They are

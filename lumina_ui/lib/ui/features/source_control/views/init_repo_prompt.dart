@@ -1,8 +1,8 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../core/theme/editor_theme.dart';
-import '../view_models/source_control_view_model.dart';
-import 'identity_form.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/source_control/view_models/source_control_view_model.dart';
+import 'package:lumina_ui/ui/features/source_control/views/identity_form.dart';
 
 /// Dismissible banner shown under the menu bar when the opened project has
 /// no `.git`: `Initialize Git Repository` runs `git init` + `.gitignore` +

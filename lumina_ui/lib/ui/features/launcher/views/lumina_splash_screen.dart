@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:window_manager/window_manager.dart';
 
-import '../../../core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 
 /// Lumina Studio splash and loading screen — frameless 720×400 centered window
 /// with glowing Lumina logo, "Lumina Studio", engine/project subtitle, live

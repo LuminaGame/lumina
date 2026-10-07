@@ -5,7 +5,7 @@ import 'dart:io';
 import 'package:flutter/widgets.dart';
 import 'package:lumina/lumina.dart';
 
-import '../services/git_service.dart';
+import 'package:lumina_ui/ui/features/source_control/services/git_service.dart';
 
 /// One entry of the `Tools → Source Control` submenu model. The menu bar
 /// renders [enabled] as the item's enabled state and [tooltip] as a label

@@ -7,12 +7,12 @@ import 'package:lumina/lumina.dart'
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
-import '../../models/umg_document.dart';
-import '../../services/umg_widget_codegen.dart';
-import '../../view_models/umg_editor_view_model.dart';
-import 'umg_components.dart';
-import 'umg_text_style.dart';
-import 'umg_theme_helper.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/umg_document.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/umg_widget_codegen.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/umg_editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/umg/umg_components.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/umg/umg_text_style.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/umg/umg_theme_helper.dart';
 
 /// Visual Designer Canvas: renders the document with the real
 /// shadcn_flutter widgets (wrapped in [IgnorePointer]) under a design-time

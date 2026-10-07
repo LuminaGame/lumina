@@ -2,10 +2,10 @@ import 'dart:math' as math;
 
 import 'package:flutter/services.dart' show HardwareKeyboard;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
-import '../../../core/theme/editor_theme.dart';
-import '../models/anim_notify_and_curves.dart';
-import '../models/anim_bone_track_info.dart';
-import '../view_models/animation_editor_view_model.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/anim_notify_and_curves.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/anim_bone_track_info.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/animation_editor_view_model.dart';
 
 part 'animation_dope_sheet/state.dart';
 part 'animation_dope_sheet/top_header.dart';

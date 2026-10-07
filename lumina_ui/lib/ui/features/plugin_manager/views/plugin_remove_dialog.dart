@@ -2,9 +2,9 @@ import 'package:lumina/data/models/lumina_plugin_descriptor.dart';
 import 'package:lumina/data/services/plugin_registry_service.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../core/theme/editor_theme.dart';
-import '../services/plugin_remover.dart';
-import '../view_models/plugin_manager_view_model.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/plugin_manager/services/plugin_remover.dart';
+import 'package:lumina_ui/ui/features/plugin_manager/view_models/plugin_manager_view_model.dart';
 
 /// The details pane's Remove: works out what removing [entry] deletes and
 /// shows it in a confirmation dialog before anything is deleted; Remove

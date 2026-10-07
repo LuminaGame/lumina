@@ -1,7 +1,7 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
-import '../../view_models/theme_editor_view_model.dart';
-import 'theme_custom_style_dialog.dart';
-import 'theme_property_inspector.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/theme_editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/theme/theme_custom_style_dialog.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/theme/theme_property_inspector.dart';
 
 /// Left panel of the Theme Sub-Editor: Tree view of theme objects, tokens,
 /// and custom styles on top, with property inspector on the bottom.

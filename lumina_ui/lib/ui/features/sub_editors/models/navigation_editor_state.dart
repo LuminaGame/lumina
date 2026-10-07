@@ -4,8 +4,8 @@ import 'package:flutter/foundation.dart' show immutable;
 import 'package:lumina/lumina.dart';
 import 'package:vector_math/vector_math_64.dart';
 
-import '../../main_editor/services/editor_transform.dart' show EditorTransforms;
-import '../../main_editor/view_models/editor_view_model.dart' show EditorActorNode;
+import 'package:lumina_ui/ui/features/main_editor/services/editor_transform.dart' show EditorTransforms;
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart' show EditorActorNode;
 
 /// `NavMeshBoundsVolume` is a plain level actor: a 1 m box whose `scale` *is*
 /// its size in metres along the authoring X / Y / Z (Z up), centred on

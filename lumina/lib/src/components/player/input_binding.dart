@@ -1,4 +1,4 @@
-import '../../input/input_action.dart';
+import 'package:lumina/src/input/input_action.dart';
 
 export '../../input/input_action.dart' show TriggerState;
 

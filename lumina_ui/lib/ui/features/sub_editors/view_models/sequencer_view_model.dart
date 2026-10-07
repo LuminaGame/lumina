@@ -2,10 +2,10 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:lumina/lumina.dart';
-import '../../main_editor/commands/editor_transaction.dart';
-import '../../main_editor/view_models/editor_view_model.dart';
-import '../services/sequencer_evaluator.dart';
-import '../services/sequencer_movie_render_service.dart';
+import 'package:lumina_ui/ui/features/main_editor/commands/editor_transaction.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/sequencer_evaluator.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/sequencer_movie_render_service.dart';
 
 part 'sequencer_view_model/state.dart';
 part 'sequencer_view_model/tracks_and_keys.dart';

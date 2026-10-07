@@ -3,9 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_filament/flutter_filament.dart';
-import '../world/frame_pacing.dart';
-import 'lumina_game.dart';
-import 'hud_overlay.dart';
+import 'package:lumina/src/world/frame_pacing.dart';
+import 'package:lumina/src/game/lumina_game.dart';
+import 'package:lumina/src/game/hud_overlay.dart';
 
 /// Controls whether embedded game previews allocate an additional frame driver.
 /// Configure this before mounting previews; changing it does not remount games.

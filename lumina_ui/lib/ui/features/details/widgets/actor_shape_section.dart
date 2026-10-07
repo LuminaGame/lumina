@@ -1,10 +1,10 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../core/property_editors/color_field.dart';
-import '../../../core/property_editors/enum_field.dart';
-import '../../../core/property_editors/scrub_numeric_field.dart';
-import '../../../core/theme/editor_theme.dart';
-import '../../main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/core/property_editors/color_field.dart';
+import 'package:lumina_ui/ui/core/property_editors/enum_field.dart';
+import 'package:lumina_ui/ui/core/property_editors/scrub_numeric_field.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 
 /// The Details panel's Shape section of a basic shape (`Primitive`): its
 /// shape, its size and its colour, kept on the actor's

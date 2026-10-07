@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:lumina_plugin_protocol/lumina_plugin_protocol.dart';
 
-import '../editor_level.dart';
-import 'level_json.dart';
+import 'package:lumina_editor_api/src/editor_level.dart';
+import 'package:lumina_editor_api/src/process/level_json.dart';
 
 /// [EditorLevelAccess] in a plugin process: every member is a `host.level`
 /// request to the editor, which makes the edit as an undoable transaction

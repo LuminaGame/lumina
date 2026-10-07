@@ -2,8 +2,8 @@ import 'dart:math' as math;
 
 import 'package:vector_math/vector_math_64.dart';
 
-import '../components/environment/exponential_height_fog_component.dart';
-import 'post_process_settings.dart';
+import 'package:lumina/src/components/environment/exponential_height_fog_component.dart';
+import 'package:lumina/src/post_process/post_process_settings.dart';
 
 /// Post-process volume blending on top of Filament's single
 /// per-`View` post-processing state.

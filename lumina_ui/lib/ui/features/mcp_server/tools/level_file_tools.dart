@@ -2,11 +2,11 @@ import 'dart:io';
 
 import 'package:lumina/data/services/level_template_service.dart';
 
-import '../../main_editor/view_models/editor_view_model.dart';
-import '../services/mcp_protocol.dart';
-import '../services/mcp_tool.dart';
-import 'blueprint_tool_support.dart' show mcpRefuseWhilePlaying;
-import 'core_tools.dart' show mcpUndoState;
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_protocol.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_tool.dart';
+import 'package:lumina_ui/ui/features/mcp_server/tools/blueprint_tool_support.dart' show mcpRefuseWhilePlaying;
+import 'package:lumina_ui/ui/features/mcp_server/tools/core_tools.dart' show mcpUndoState;
 
 /// The `if_dirty` choices of the level-switching tools.
 const List<String> kMcpIfDirtyChoices = ['refuse', 'save', 'discard'];

@@ -3,8 +3,8 @@ import 'dart:typed_data';
 import 'package:flutter_filament/ffi_package.dart';
 import 'package:flutter_filament/flutter_filament.dart';
 import 'package:vector_math/vector_math_64.dart';
-import '../../world/world.dart';
-import '../base/scene_component.dart';
+import 'package:lumina/src/world/world.dart';
+import 'package:lumina/src/components/base/scene_component.dart';
 
 class _ProceduralMeshSection {
   final int sectionIndex;

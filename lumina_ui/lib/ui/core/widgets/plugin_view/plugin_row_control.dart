@@ -1,8 +1,8 @@
 import 'package:lumina_editor_api/lumina_editor_api.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../theme/editor_theme.dart';
-import 'plugin_view_scope.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/plugin_view/plugin_view_scope.dart';
 
 /// [PluginControlKind.row]: children side by side, `gap` px apart (default
 /// 8). Buttons keep their own width; text shrinks to fit; every other

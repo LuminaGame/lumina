@@ -1,8 +1,8 @@
 import 'package:flutter/services.dart' show LogicalKeyboardKey;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../theme/editor_theme.dart';
-import 'lumina_window.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/window/lumina_window.dart';
 
 /// Lumina's own window buttons at the right end of the menu bar row (and of
 /// the launcher header): minimize, maximize ⇄ restore (the

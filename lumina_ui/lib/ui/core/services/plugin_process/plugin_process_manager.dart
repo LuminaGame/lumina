@@ -2,11 +2,11 @@ import 'dart:async';
 
 import 'package:lumina_editor_api/lumina_editor_api.dart';
 
-import '../crash_reporter.dart';
-import 'plugin_process_host.dart';
-import 'plugin_process_launcher.dart';
-import 'plugin_process_supervisor.dart';
-import 'plugin_supervisor_timings.dart';
+import 'package:lumina_ui/ui/core/services/crash_reporter.dart';
+import 'package:lumina_ui/ui/core/services/plugin_process/plugin_process_host.dart';
+import 'package:lumina_ui/ui/core/services/plugin_process/plugin_process_launcher.dart';
+import 'package:lumina_ui/ui/core/services/plugin_process/plugin_process_supervisor.dart';
+import 'package:lumina_ui/ui/core/services/plugin_process/plugin_supervisor_timings.dart';
 
 /// Runs a plugin's process part inside the editor (the in-process
 /// override): the default is `runPluginProcessMain(launch, factory())`.

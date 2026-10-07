@@ -1,7 +1,7 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina/lumina.dart';
-import '../../../core/theme/editor_theme.dart';
-import '../view_models/launcher_view_model.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/launcher/view_models/launcher_view_model.dart';
 
 /// The launcher's Engine Versions pane: the running engine, its render
 /// backend and the graphics device in use.

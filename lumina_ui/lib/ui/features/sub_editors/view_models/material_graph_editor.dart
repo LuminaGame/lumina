@@ -4,13 +4,13 @@ import 'package:flutter/widgets.dart' show BuildContext, Widget, ValueKey, Paddi
 
 import 'package:lumina/lumina.dart';
 
-import '../models/blueprint_palette.dart';
-import '../models/material_graph.dart';
-import '../services/material_graph_parser.dart';
-import '../services/material_graph_types.dart';
-import '../../../core/property_editors/asset_picker_select.dart';
-import '../../../core/theme/editor_theme.dart';
-import 'blueprint_graph_editor.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_palette.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/material_graph.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/material_graph_parser.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/material_graph_types.dart';
+import 'package:lumina_ui/ui/core/property_editors/asset_picker_select.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/blueprint_graph_editor.dart';
 
 /// Edits a material graph through the shared Blueprint graph canvas:
 /// material expressions instead of lumina's Blueprint

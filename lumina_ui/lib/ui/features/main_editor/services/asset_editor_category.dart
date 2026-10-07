@@ -1,8 +1,8 @@
 import 'package:lumina/lumina.dart';
 
-import '../../../core/plugin_extension_registry.dart';
-import '../../sub_editors/services/blueprint_asset_catalog.dart';
-import 'widget_blueprint_assets.dart';
+import 'package:lumina_ui/ui/core/plugin_extension_registry.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/blueprint_asset_catalog.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/widget_blueprint_assets.dart';
 
 /// The sub-editor tab category [asset] opens in (`openSubEditorTab`'s first
 /// argument) — the one mapping the Content Browser's double-click,

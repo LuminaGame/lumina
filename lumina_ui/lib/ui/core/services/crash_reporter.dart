@@ -13,7 +13,7 @@ import 'package:lumina_editor_api/lumina_editor_api.dart' show LuminaPluginCrash
 import 'package:lumina_marketplace_shared/lumina_marketplace_shared.dart';
 import 'package:path/path.dart' as p;
 
-import 'crash_report.dart';
+import 'package:lumina_ui/ui/core/services/crash_report.dart';
 
 /// Catches what nobody else caught and turns it into a [CrashReport] for the
 /// crash report screen: [install] hooks Flutter's and the platform

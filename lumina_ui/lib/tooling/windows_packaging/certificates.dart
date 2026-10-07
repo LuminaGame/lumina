@@ -9,7 +9,7 @@ import 'dart:math';
 
 import 'package:path/path.dart' as p;
 
-import 'options.dart';
+import 'package:lumina_ui/tooling/windows_packaging/options.dart';
 
 /// The code-signing extended key usage (1.3.6.1.5.5.7.3.3).
 const String codeSigningEku = '1.3.6.1.5.5.7.3.3';

@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:lumina/data/services/config_json_file.dart';
 import 'package:lumina/data/services/lumina_config_dir.dart';
 
-import 'mcp_tool_risk.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_tool_risk.dart';
 
 /// Whether the editor offers its MCP server to AI agents, and on which port,
 /// per user in `mcp_server_settings.json` of the editor's config directory

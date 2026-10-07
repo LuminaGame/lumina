@@ -3,9 +3,9 @@ import 'dart:typed_data';
 
 import 'package:vector_math/vector_math_64.dart';
 
-import '../components/collision/collision_component.dart';
-import 'contact_generation.dart';
-import 'rigid_body.dart';
+import 'package:lumina/src/components/collision/collision_component.dart';
+import 'package:lumina/src/physics/contact_generation.dart';
+import 'package:lumina/src/physics/rigid_body.dart';
 
 /// One persistent contact point of a [LuminaContactManifold].
 class LuminaContactPoint {

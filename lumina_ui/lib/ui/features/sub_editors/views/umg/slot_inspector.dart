@@ -7,9 +7,9 @@ import 'package:lumina_ui/ui/core/property_editors/scrub_numeric_field.dart';
 import 'package:lumina_ui/ui/core/property_editors/slider_field.dart';
 import 'package:lumina_ui/ui/core/property_editors/asset_picker_select.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
-import '../../models/umg_document.dart';
-import '../../view_models/umg_editor_view_model.dart';
-import 'umg_theme_helper.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/umg_document.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/umg_editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/umg/umg_theme_helper.dart';
 
 /// The designer's right panel: Slot (anchors preset matrix, position/size/
 /// alignment, size-to-content, Z-order — or the honest box/overlay slot

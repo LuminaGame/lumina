@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
-import '../views/sub_editor_3d_viewport.dart' show PreviewShape;
+import 'package:lumina_ui/ui/features/sub_editors/views/sub_editor_3d_viewport.dart' show PreviewShape;
 
 /// Procedural preview geometry (unit-scale) used by the Material Editor's 3D
 /// preview so a compiled material can be shaded on a real Filament renderable

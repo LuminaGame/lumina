@@ -14,20 +14,20 @@ import 'package:path/path.dart' as p;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:window_manager/window_manager.dart';
 
-import 'ui/core/host/editor_host.dart';
-import 'ui/core/host/redirection_trust_guard.dart';
-import 'ui/core/services/crash_reporter.dart';
-import 'ui/core/services/plugin_process/plugin_process_entry.dart';
-import 'ui/core/theme/editor_theme.dart';
-import 'ui/core/theme/editor_theme_store.dart';
-import 'ui/core/window/lumina_window.dart';
-import 'ui/core/widgets/crash_report_view.dart';
-import 'ui/core/window/window_controls.dart';
-import 'ui/features/engine_bootstrap/view_models/engine_bootstrap_view_model.dart';
-import 'ui/features/engine_bootstrap/views/engine_bootstrap_view.dart';
-import 'ui/features/launcher/views/launcher_view.dart';
-import 'ui/features/main_editor/services/editor_graphics_preferences.dart';
-import 'ui/features/main_editor/services/editor_preferences.dart';
+import 'package:lumina_ui/ui/core/host/editor_host.dart';
+import 'package:lumina_ui/ui/core/host/redirection_trust_guard.dart';
+import 'package:lumina_ui/ui/core/services/crash_reporter.dart';
+import 'package:lumina_ui/ui/core/services/plugin_process/plugin_process_entry.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme_store.dart';
+import 'package:lumina_ui/ui/core/window/lumina_window.dart';
+import 'package:lumina_ui/ui/core/widgets/crash_report_view.dart';
+import 'package:lumina_ui/ui/core/window/window_controls.dart';
+import 'package:lumina_ui/ui/features/engine_bootstrap/view_models/engine_bootstrap_view_model.dart';
+import 'package:lumina_ui/ui/features/engine_bootstrap/views/engine_bootstrap_view.dart';
+import 'package:lumina_ui/ui/features/launcher/views/launcher_view.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/editor_graphics_preferences.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/editor_preferences.dart';
 
 export 'ui/core/host/editor_host.dart' show EditorHostInfo, EditorLaunchArgs, LuminaEditorHost, EditorAssets, EditorHandOff;
 

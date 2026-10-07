@@ -1,6 +1,6 @@
-import '../components/collision/collision_component.dart';
-import '../object/actor.dart';
-import 'blueprint_runtime.dart';
+import 'package:lumina/src/components/collision/collision_component.dart';
+import 'package:lumina/src/object/actor.dart';
+import 'package:lumina/src/blueprint/blueprint_runtime.dart';
 
 /// A placed Blueprint actor's per-instance collision: the level
 /// Details' overrides of its class's collision components, stored in the level `.lmas` and applied by

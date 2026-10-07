@@ -1,8 +1,8 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../core/theme/editor_theme.dart';
-import '../services/git_service.dart';
-import '../view_models/source_control_view_model.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/source_control/services/git_service.dart';
+import 'package:lumina_ui/ui/features/source_control/view_models/source_control_view_model.dart';
 
 void showHistoryDialog(BuildContext context, SourceControlViewModel viewModel, String path) {
   showOverlay(

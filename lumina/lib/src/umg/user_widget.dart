@@ -1,5 +1,5 @@
-import '../object/actor.dart';
-import '../world/world.dart';
+import 'package:lumina/src/object/actor.dart';
+import 'package:lumina/src/world/world.dart';
 
 /// A widget's own script: the object a
 /// Widget Blueprint graph runs on, bound to one widget instance map (the one

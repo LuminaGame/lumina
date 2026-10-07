@@ -1,7 +1,7 @@
 import 'package:lumina_editor_api/lumina_editor_api.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import 'plugin_view_scope.dart';
+import 'package:lumina_ui/ui/core/widgets/plugin_view/plugin_view_scope.dart';
 
 /// [PluginControlKind.boolField]: `value`; the Details panel's checkbox.
 /// Sends `changed` with the new bool; the box shows it at once and follows

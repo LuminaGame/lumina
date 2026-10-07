@@ -6,7 +6,7 @@ import 'package:lumina/data/repositories/plugin_repository.dart' show PluginScan
 import 'package:lumina/data/services/workspace_paths.dart' show LuminaWorkspace;
 import 'package:path/path.dart' as p;
 
-import '../host/editor_host.dart' show LuminaEditorHost;
+import 'package:lumina_ui/ui/core/host/editor_host.dart' show LuminaEditorHost;
 
 /// The per-user plugin install directory the editor scans with the
 /// [PluginOrigin.user] origin and the Marketplace installs

@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter_filament/flutter_filament.dart';
-import '../../object/actor.dart';
-import '../base/scene_component.dart';
+import 'package:lumina/src/object/actor.dart';
+import 'package:lumina/src/components/base/scene_component.dart';
 
 /// Cache and factory for shared IBL prefiltering GPU objects per engine/world.
 class LuminaReflectionFilterCache {

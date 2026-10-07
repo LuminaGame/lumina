@@ -1,5 +1,5 @@
-import '../../details/models/editor_component_node.dart';
-import '../view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/details/models/editor_component_node.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 
 /// A light actor's settings, resolved the one way every consumer agrees on:
 /// the Details panel's "Light" section, the edit-mode viewport

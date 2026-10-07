@@ -1,14 +1,14 @@
 import 'dart:io';
 
-import '../../main_editor/services/camera_actor_properties.dart';
-import '../../main_editor/models/editor_actor_catalog.dart';
-import '../../main_editor/view_models/editor_view_model.dart';
-import '../services/mcp_protocol.dart';
-import '../services/mcp_tool.dart';
-import 'core_tools.dart' show mcpUndoState;
+import 'package:lumina_ui/ui/features/main_editor/services/camera_actor_properties.dart';
+import 'package:lumina_ui/ui/features/main_editor/models/editor_actor_catalog.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_protocol.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_tool.dart';
+import 'package:lumina_ui/ui/features/mcp_server/tools/core_tools.dart' show mcpUndoState;
 import 'package:lumina/data/services/dart_identifiers.dart';
 import 'package:lumina/lumina.dart' show AssetType, LuminaLevelActorMaterial;
-import 'rotation_convention.dart';
+import 'package:lumina_ui/ui/features/mcp_server/tools/rotation_convention.dart';
 
 /// The project and level tools: what the Outliner, the
 /// Details panel and the Edit menu let a user do, as MCP tools over the real

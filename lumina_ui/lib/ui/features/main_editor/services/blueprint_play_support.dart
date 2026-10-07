@@ -5,12 +5,12 @@ import 'package:lumina/data/services/blueprint_class_registry.dart';
 import 'package:lumina/lumina.dart';
 import 'package:vector_math/vector_math_64.dart';
 
-import '../../sub_editors/models/blueprint_compile_status.dart';
-import '../../sub_editors/models/blueprint_editor_nodes.dart';
-import '../../sub_editors/services/blueprint_asset_catalog.dart';
-import '../../sub_editors/view_models/blueprint_editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_compile_status.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_editor_nodes.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/blueprint_asset_catalog.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/blueprint_editor_view_model.dart';
 
-import '../../sub_editors/services/widget_class_catalog.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/widget_class_catalog.dart';
 
 /// Play's Blueprint classes: lumina's
 /// [LuminaBlueprintClassRegistry], except that a Blueprint open in an editor

@@ -1,5 +1,5 @@
 import 'package:flutter_filament/flutter_filament.dart';
-import '../math/units.dart';
+import 'package:lumina/src/math/units.dart';
 
 /// Calculation scheme for cascaded shadow map (CSM) split planes.
 enum CsmSplitMode {

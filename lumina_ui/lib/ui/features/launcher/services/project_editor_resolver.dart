@@ -4,8 +4,8 @@ import 'dart:io';
 import 'package:lumina/lumina.dart';
 import 'package:path/path.dart' as p;
 
-import '../../../core/host/editor_host.dart';
-import '../../../core/services/user_plugin_dir.dart';
+import 'package:lumina_ui/ui/core/host/editor_host.dart';
+import 'package:lumina_ui/ui/core/services/user_plugin_dir.dart';
 
 /// What the launcher does with a project on Open.
 sealed class ProjectEditorDecision {

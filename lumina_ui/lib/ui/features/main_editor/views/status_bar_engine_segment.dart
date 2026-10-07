@@ -1,7 +1,7 @@
 import 'package:lumina/lumina.dart' show LuminaRenderBackendInfo;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 
 /// The status bar's `Filament <version>` segment: Filament's
 /// logo tinted to the muted foreground (so it reads on every theme), the

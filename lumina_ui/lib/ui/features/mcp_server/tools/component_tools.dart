@@ -1,14 +1,14 @@
 import 'package:lumina/lumina.dart';
 
-import '../../../core/property_editors/collision_section_editor.dart';
-import '../../details/models/component_property_registry.dart';
-import '../../details/models/editor_component_node.dart';
-import '../../details/services/blueprint_collision_overrides.dart';
-import '../../main_editor/view_models/editor_view_model.dart';
-import '../../sub_editors/models/blueprint_component_registry.dart';
-import '../services/mcp_protocol.dart';
-import '../services/mcp_tool.dart';
-import 'blueprint_tool_support.dart';
+import 'package:lumina_ui/ui/core/property_editors/collision_section_editor.dart';
+import 'package:lumina_ui/ui/features/details/models/component_property_registry.dart';
+import 'package:lumina_ui/ui/features/details/models/editor_component_node.dart';
+import 'package:lumina_ui/ui/features/details/services/blueprint_collision_overrides.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_component_registry.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_protocol.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_tool.dart';
+import 'package:lumina_ui/ui/features/mcp_server/tools/blueprint_tool_support.dart';
 
 /// The Physics section's keys, shared with the Blueprint
 /// component tools.

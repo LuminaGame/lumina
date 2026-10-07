@@ -1,9 +1,9 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import '../../src/material/material_cache.dart';
-import '../models/lumina_asset.dart';
-import 'level_asset_manifest.dart';
+import 'package:lumina/src/material/material_cache.dart';
+import 'package:lumina/data/models/lumina_asset.dart';
+import 'package:lumina/data/services/level_asset_manifest.dart';
 
 /// The material a placed level mesh draws on every section in place of the
 /// mesh's own: the actor's `materialPath` (the level Details panel's Material

@@ -11,19 +11,19 @@ import 'package:lumina/data/services/blueprint_codegen/blueprint_dart_generator.
     show BlueprintAnimClassRef, BlueprintClassRef;
 import 'package:lumina/lumina.dart';
 
-import '../../main_editor/commands/editor_transaction.dart';
-import '../models/blueprint_compile_status.dart';
-import '../models/blueprint_editor_nodes.dart';
-import '../models/blueprint_editor_type_context.dart';
-import '../models/blueprint_graph_ref.dart';
-import '../models/blueprint_palette.dart';
-import '../models/blueprint_component_registry.dart';
-import '../models/blueprint_pin_style.dart';
-import '../services/blueprint_asset_catalog.dart';
-import '../services/blueprint_preview_scene.dart';
-import '../services/widget_class_catalog.dart';
-import 'anim_blueprint_editor_view_model.dart' show AnimBlueprintEditorViewModel;
-import 'blueprint_graph_editor.dart';
+import 'package:lumina_ui/ui/features/main_editor/commands/editor_transaction.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_compile_status.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_editor_nodes.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_editor_type_context.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_graph_ref.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_palette.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_component_registry.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_pin_style.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/blueprint_asset_catalog.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/blueprint_preview_scene.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/widget_class_catalog.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/anim_blueprint_editor_view_model.dart' show AnimBlueprintEditorViewModel;
+import 'package:lumina_ui/ui/features/sub_editors/view_models/blueprint_graph_editor.dart';
 
 part 'blueprint_editor_view_model/state.dart';
 part 'blueprint_editor_view_model/graph_and_variables.dart';

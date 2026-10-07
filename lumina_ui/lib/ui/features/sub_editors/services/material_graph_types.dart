@@ -1,7 +1,7 @@
 import 'package:flutter_filament/flutter_filament.dart' show FilamatShading;
 import 'package:lumina/lumina.dart' show LuminaBlueprintGraph, LuminaBlueprintNode;
 
-import '../models/material_graph.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/material_graph.dart';
 
 /// A problem the type checker found on a node (or one of its inputs), worded
 /// as a material compiler message.

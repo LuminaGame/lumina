@@ -1,15 +1,15 @@
 import 'package:lumina/lumina.dart';
 
-import '../../../core/property_editors/collision_section_editor.dart';
-import '../../main_editor/view_models/editor_view_model.dart';
-import '../../sub_editors/models/blueprint_component_registry.dart';
-import '../../sub_editors/view_models/blueprint_editor_view_model.dart';
-import '../services/mcp_editor_sessions.dart';
-import '../services/mcp_protocol.dart';
-import '../services/mcp_tool.dart';
-import 'blueprint_tool_support.dart';
-import 'component_tools.dart' show mcpApplyCollision, mcpApplyPhysics;
-import 'rotation_convention.dart';
+import 'package:lumina_ui/ui/core/property_editors/collision_section_editor.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_component_registry.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/blueprint_editor_view_model.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_editor_sessions.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_protocol.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_tool.dart';
+import 'package:lumina_ui/ui/features/mcp_server/tools/blueprint_tool_support.dart';
+import 'package:lumina_ui/ui/features/mcp_server/tools/component_tools.dart' show mcpApplyCollision, mcpApplyPhysics;
+import 'package:lumina_ui/ui/features/mcp_server/tools/rotation_convention.dart';
 
 /// A Blueprint class's Components panel, Class Defaults and parent class as
 /// MCP tools. Each edit is one undo step on the Blueprint

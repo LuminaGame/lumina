@@ -1,7 +1,7 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 
 /// The Import Asset Options dialog's **Textures Folder** row: a folder the FBX importer searches first for the FBX's
 /// textures. Without one it looks next to the FBX and in its `Textures/`,

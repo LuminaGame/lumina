@@ -1,4 +1,4 @@
-import 'lumina_project.dart';
+import 'package:lumina/data/models/lumina_project.dart';
 
 /// `packaging.web_loading_style` in the `.lmproject`: how a web build's plain HTML loading screen
 /// looks while the engine, the renderer and the game's assets download.

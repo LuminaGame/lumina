@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 
-import 'lumina_audio_controller.dart';
-import 'lumina_audio_player_value.dart';
+import 'package:lumina/src/media/audio/lumina_audio_controller.dart';
+import 'package:lumina/src/media/audio/lumina_audio_player_value.dart';
 
 /// Renders a compact, sleek audio player control bar for a [LuminaAudioController].
 class LuminaAudioPlayer extends StatelessWidget {

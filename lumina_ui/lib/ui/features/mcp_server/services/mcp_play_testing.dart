@@ -1,8 +1,8 @@
 import 'package:lumina/lumina.dart';
 
-import '../../main_editor/commands/editor_transaction.dart';
-import '../../main_editor/services/pie_controller.dart';
-import '../../main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/main_editor/commands/editor_transaction.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/pie_controller.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 
 /// The MCP layer's side of play-testing: the keys agents
 /// hold down in the running game, the frames they advanced, and the release

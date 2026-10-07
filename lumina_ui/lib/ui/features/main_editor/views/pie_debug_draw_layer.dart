@@ -6,7 +6,7 @@ import 'package:lumina/lumina.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:vector_math/vector_math_64.dart' hide Colors;
 
-import '../services/pie_debug_projection.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/pie_debug_projection.dart';
 
 /// Projects a runtime point to the viewport, or null when off camera.
 typedef PieDebugProject = Offset? Function(Vector3 runtime);

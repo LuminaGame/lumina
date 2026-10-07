@@ -1,14 +1,14 @@
 import 'package:lumina/lumina.dart' show AssetType, LuminaBlueprintVariable;
 
-import '../../main_editor/view_models/editor_view_model.dart';
-import '../../sub_editors/services/blueprint_asset_catalog.dart';
-import '../../sub_editors/view_models/blueprint_enum_view_model.dart';
-import '../../sub_editors/view_models/blueprint_interface_view_model.dart';
-import '../services/mcp_editor_sessions.dart';
-import '../services/mcp_protocol.dart';
-import '../services/mcp_tool.dart';
-import 'blueprint_tool_support.dart' show mcpParseParams;
-import 'core_tools.dart' show mcpUndoState;
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/blueprint_asset_catalog.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/blueprint_enum_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/blueprint_interface_view_model.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_editor_sessions.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_protocol.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_tool.dart';
+import 'package:lumina_ui/ui/features/mcp_server/tools/blueprint_tool_support.dart' show mcpParseParams;
+import 'package:lumina_ui/ui/features/mcp_server/tools/core_tools.dart' show mcpUndoState;
 
 /// The Enumeration and Blueprint Interface editors as MCP tools:
 /// an enum's ordered values, an interface's function

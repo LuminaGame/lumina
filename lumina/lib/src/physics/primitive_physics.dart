@@ -1,11 +1,11 @@
 import 'package:vector_math/vector_math_64.dart';
 
-import '../components/base/scene_component.dart';
-import '../math/axes.dart';
-import 'mass_properties.dart';
-import 'physical_material.dart';
-import 'physics_subsystem.dart';
-import 'rigid_body.dart';
+import 'package:lumina/src/components/base/scene_component.dart';
+import 'package:lumina/src/math/axes.dart';
+import 'package:lumina/src/physics/mass_properties.dart';
+import 'package:lumina/src/physics/physical_material.dart';
+import 'package:lumina/src/physics/physics_subsystem.dart';
+import 'package:lumina/src/physics/rigid_body.dart';
 
 /// The Physics section of a primitive component, mixed into
 /// collision components and static mesh components.

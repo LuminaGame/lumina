@@ -6,11 +6,11 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:lumina/lumina.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../../core/property_editors/color_field.dart';
-import '../../../../core/property_editors/slider_field.dart';
-import '../../../../core/theme/editor_theme.dart';
-import '../../services/project_icon_rasterizer.dart';
-import '../../view_models/project_settings_view_model.dart';
+import 'package:lumina_ui/ui/core/property_editors/color_field.dart';
+import 'package:lumina_ui/ui/core/property_editors/slider_field.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/project_icon_rasterizer.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/project_settings_view_model.dart';
 
 /// Builds a titled settings section (the sub-editor's own look).
 typedef SettingsSectionBuilder = Widget Function(String title, List<Widget> children);

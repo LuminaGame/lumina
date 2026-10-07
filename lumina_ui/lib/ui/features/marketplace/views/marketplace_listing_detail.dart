@@ -1,9 +1,9 @@
 import 'package:lumina_marketplace_shared/lumina_marketplace_shared.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../core/theme/editor_theme.dart';
-import '../view_models/marketplace_view_model.dart';
-import 'marketplace_listing_card.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/marketplace/view_models/marketplace_view_model.dart';
+import 'package:lumina_ui/ui/features/marketplace/views/marketplace_listing_card.dart';
 
 /// The selected listing: screenshots, description, version, the licenses it
 /// is published under, and Get / Add to Project (or Install Plugin / Theme /

@@ -1,11 +1,11 @@
 import 'package:lumina/lumina.dart';
 import 'package:vector_math/vector_math_64.dart' show Vector3, Vector4;
 
-import '../../main_editor/view_models/editor_view_model.dart';
-import '../../sub_editors/view_models/particle_editor_view_model.dart';
-import '../services/mcp_editor_sessions.dart';
-import '../services/mcp_protocol.dart';
-import '../services/mcp_tool.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/particle_editor_view_model.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_editor_sessions.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_protocol.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_tool.dart';
 
 /// The Particle editor as MCP tools: the emitter stack
 /// (add, duplicate, rename, enable, delete), each emitter's stage values

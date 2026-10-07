@@ -1,6 +1,6 @@
-import '../services/lumina_guide.dart';
-import '../services/mcp_protocol.dart';
-import '../services/mcp_tool.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/lumina_guide.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_protocol.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_tool.dart';
 
 /// `get_lumina_guide` (group `core`, read-only): how the Lumina engine
 /// works, for AI models: the overview and the topic list, or one topic.

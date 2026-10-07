@@ -8,13 +8,13 @@ import 'package:lumina_editor_api/lumina_editor_api.dart';
 import 'package:path/path.dart' as p;
 import 'package:shadcn_flutter/shadcn_flutter.dart' show BuildContext, IconData, LucideIcons, Widget;
 
-import '../../host/editor_host.dart';
-import '../crash_reporter.dart';
-import 'lucide_icon_table.dart';
-import 'plugin_process_host.dart';
-import 'plugin_process_launcher.dart';
-import 'plugin_supervisor_timings.dart';
-import '../../widgets/plugin_process_view_panel.dart';
+import 'package:lumina_ui/ui/core/host/editor_host.dart';
+import 'package:lumina_ui/ui/core/services/crash_reporter.dart';
+import 'package:lumina_ui/ui/core/services/plugin_process/lucide_icon_table.dart';
+import 'package:lumina_ui/ui/core/services/plugin_process/plugin_process_host.dart';
+import 'package:lumina_ui/ui/core/services/plugin_process/plugin_process_launcher.dart';
+import 'package:lumina_ui/ui/core/services/plugin_process/plugin_supervisor_timings.dart';
+import 'package:lumina_ui/ui/core/widgets/plugin_process_view_panel.dart';
 
 part 'supervisor_contributions.dart';
 part 'supervisor_host_handlers.dart';

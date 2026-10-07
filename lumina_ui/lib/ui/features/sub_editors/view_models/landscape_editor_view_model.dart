@@ -6,12 +6,12 @@ import 'package:lumina/lumina.dart'
     show AssetType, LandscapeData, LandscapeMeshBuilder, LuminaLandscapeComponent, LuminaUnits, RealAssetInfo;
 import 'package:vector_math/vector_math_64.dart' show Matrix4, Vector3;
 
-import '../../main_editor/commands/editor_transaction.dart' show TransactionManager, TransactionOrigin;
-import '../../main_editor/view_models/editor_view_model.dart';
-import '../models/landscape_brush.dart';
-import '../models/landscape_terrain_sink.dart';
-import '../services/landscape_asset_service.dart';
-import '../services/landscape_brush_preferences.dart';
+import 'package:lumina_ui/ui/features/main_editor/commands/editor_transaction.dart' show TransactionManager, TransactionOrigin;
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/landscape_brush.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/landscape_terrain_sink.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/landscape_asset_service.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/landscape_brush_preferences.dart';
 
 part 'landscape_editor_view_model/state.dart';
 part 'landscape_editor_view_model/brush.dart';

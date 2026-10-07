@@ -4,11 +4,11 @@ import 'package:flutter/foundation.dart';
 import 'package:lumina/lumina.dart';
 import 'package:vector_math/vector_math_64.dart';
 
-import '../../details/models/editor_component_node.dart';
-import '../../main_editor/commands/editor_transaction.dart';
-import '../../main_editor/view_models/editor_view_model.dart';
-import '../models/solar_math.dart';
-import '../services/environment_preview_scene.dart';
+import 'package:lumina_ui/ui/features/details/models/editor_component_node.dart';
+import 'package:lumina_ui/ui/features/main_editor/commands/editor_transaction.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/solar_math.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/environment_preview_scene.dart';
 
 /// Sky background mode of the level's `LuminaSkyComponent`.
 enum EnvironmentSkyMode { color, environment }

@@ -2,13 +2,13 @@ import 'dart:ui' show Offset, Size;
 
 import 'package:lumina/lumina.dart' show AssetType, LuminaBlueprintNodeLibrary, RealAssetInfo, kUmgWidgetLibraryShadcn;
 
-import '../../main_editor/view_models/editor_view_model.dart';
-import '../../sub_editors/models/umg_document.dart';
-import '../../sub_editors/services/umg_widget_codegen.dart';
-import '../../sub_editors/view_models/umg_editor_view_model.dart';
-import '../services/mcp_editor_sessions.dart';
-import '../services/mcp_protocol.dart';
-import '../services/mcp_tool.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/umg_document.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/umg_widget_codegen.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/umg_editor_view_model.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_editor_sessions.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_protocol.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_tool.dart';
 
 /// The UMG designer as MCP tools: the palette, the widget
 /// tree, add / remove / move / wrap / replace, names and Is Variable, slots,

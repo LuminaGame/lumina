@@ -2,9 +2,9 @@ import 'dart:math' as math;
 
 import 'package:vector_math/vector_math_64.dart' show Vector3;
 
-import '../../../data/models/landscape_data.dart';
-import 'landscape_mesh_builder.dart';
-import 'landscape_section_map.dart';
+import 'package:lumina/data/models/landscape_data.dart';
+import 'package:lumina/src/components/landscape/landscape_mesh_builder.dart';
+import 'package:lumina/src/components/landscape/landscape_section_map.dart';
 
 /// What a landscape is allowed to keep mounted at once.
 ///

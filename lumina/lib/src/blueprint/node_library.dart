@@ -1,11 +1,11 @@
-import '../input/input_action.dart';
-import 'blueprint_assets.dart';
-import 'blueprint_enums_interfaces.dart';
-import 'blueprint_function_registry.dart';
-import 'blueprint_model.dart';
-import 'level_blueprint.dart';
-import 'widget_blueprint.dart';
-import 'widget_classes.dart';
+import 'package:lumina/src/input/input_action.dart';
+import 'package:lumina/src/blueprint/blueprint_assets.dart';
+import 'package:lumina/src/blueprint/blueprint_enums_interfaces.dart';
+import 'package:lumina/src/blueprint/blueprint_function_registry.dart';
+import 'package:lumina/src/blueprint/blueprint_model.dart';
+import 'package:lumina/src/blueprint/level_blueprint.dart';
+import 'package:lumina/src/blueprint/widget_blueprint.dart';
+import 'package:lumina/src/blueprint/widget_classes.dart';
 
 part 'node_library/events_pawn_ui_input.dart';
 part 'node_library/math_objects_components.dart';

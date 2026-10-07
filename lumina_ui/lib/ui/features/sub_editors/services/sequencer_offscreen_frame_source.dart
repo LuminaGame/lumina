@@ -9,9 +9,9 @@ import 'package:flutter_filament/src/third_party/filament_c.g.dart' as c;
 import 'package:lumina/lumina.dart';
 import 'package:vector_math/vector_math_64.dart' as vm;
 
-import '../../main_editor/view_models/editor_view_model.dart' show EditorActorNode;
-import 'sequencer_evaluator.dart';
-import 'sequencer_movie_render_service.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart' show EditorActorNode;
+import 'package:lumina_ui/ui/features/sub_editors/services/sequencer_evaluator.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/sequencer_movie_render_service.dart';
 
 /// One actor the movie render queue draws: its mesh on disk plus the pose the
 /// level gave it, which the sampled channels then override per frame.

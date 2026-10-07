@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/widgets.dart' show Color;
 
-import 'lumina_asset.dart';
+import 'package:lumina/data/models/lumina_asset.dart';
 
 /// Style overrides for a specific UI component in a [LuminaThemeDocument].
 class LuminaComponentStyle {

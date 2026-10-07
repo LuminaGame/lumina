@@ -2,7 +2,7 @@ import 'dart:typed_data';
 
 import 'package:vector_math/vector_math_64.dart' show Matrix4;
 
-import 'landscape_brush.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/landscape_brush.dart';
 
 /// The engine seam of the Landscape editor.
 ///

@@ -1,4 +1,4 @@
-import 'camera_component.dart';
+import 'package:lumina/src/components/camera/camera_component.dart';
 
 /// A camera's authored settings as one property map, read the one way every
 /// consumer agrees on: the level editor's Camera section (a placed `Camera`

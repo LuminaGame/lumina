@@ -3,9 +3,9 @@
  * Licensed under the Apache License, Version 2.0.
  */
 
-import 'math_types.web.g.dart' show $registerMathTypes;
-import 'third_party/filament_c.web.g.dart' show $registerFilamentBindings;
-import 'web_ffi/module.dart';
+import 'package:flutter_filament/src/math_types.web.g.dart' show $registerMathTypes;
+import 'package:flutter_filament/src/third_party/filament_c.web.g.dart' show $registerFilamentBindings;
+import 'package:flutter_filament/src/web_ffi/module.dart';
 
 /// Platform initialisation for flutter_filament.
 abstract final class FilamentWeb {

@@ -1,6 +1,6 @@
-import 'plugin_isolation.dart';
-import 'project_input_settings.dart';
-import 'project_packaging_settings.dart';
+import 'package:lumina/data/models/plugin_isolation.dart';
+import 'package:lumina/data/models/project_input_settings.dart';
+import 'package:lumina/data/models/project_packaging_settings.dart';
 export 'plugin_isolation.dart';
 export 'project_input_settings.dart';
 export 'project_packaging_settings.dart';

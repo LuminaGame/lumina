@@ -4,8 +4,8 @@ import 'dart:ui' show Offset;
 import 'package:lumina/lumina.dart' show LuminaAxes;
 import 'package:vector_math/vector_math_64.dart';
 
-import 'gizmo_controller.dart';
-import 'snap_service.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/gizmo_controller.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/snap_service.dart';
 
 /// The transform manipulator both viewports share: the
 /// handle layout of the translate / rotate / scale tools, hover hit-testing

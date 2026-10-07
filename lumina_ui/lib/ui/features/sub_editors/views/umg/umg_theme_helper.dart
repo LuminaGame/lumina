@@ -1,8 +1,8 @@
 import 'package:lumina/lumina.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
-import '../../models/umg_document.dart';
-import '../../view_models/umg_editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/umg_document.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/umg_editor_view_model.dart';
 
 /// Utilities for converting and resolving [LuminaThemeDocument] styles
 /// within the UMG Designer canvas, inspector, and runtime views.

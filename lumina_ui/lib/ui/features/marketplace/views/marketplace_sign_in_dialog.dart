@@ -1,7 +1,7 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../core/theme/editor_theme.dart';
-import '../view_models/marketplace_view_model.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/marketplace/view_models/marketplace_view_model.dart';
 
 /// Sign in to the Marketplace (email or username + password), or create an
 /// account. The session is kept for the next editor run.

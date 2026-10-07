@@ -5,8 +5,8 @@ import 'package:lumina/lumina.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../property_editors/asset_picker_select.dart';
-import 'plugin_view_scope.dart';
+import 'package:lumina_ui/ui/core/property_editors/asset_picker_select.dart';
+import 'package:lumina_ui/ui/core/widgets/plugin_view/plugin_view_scope.dart';
 
 /// [PluginControlKind.assetRefField]: `value` (a project-relative path or
 /// null) and `assetTypes` (`AssetType` names; absent = any asset), picked

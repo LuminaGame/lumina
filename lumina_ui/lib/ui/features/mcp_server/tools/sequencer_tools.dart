@@ -1,15 +1,15 @@
 import 'package:lumina/lumina.dart';
 
-import '../../main_editor/view_models/editor_view_model.dart';
-import '../../sub_editors/services/sequencer_movie_render_service.dart';
-import '../../sub_editors/services/sequencer_offscreen_frame_source.dart';
-import '../../sub_editors/view_models/sequencer_view_model.dart';
-import '../services/mcp_editor_sessions.dart';
-import '../services/mcp_jobs.dart';
-import '../services/mcp_protocol.dart';
-import '../services/mcp_tool.dart';
-import 'core_tools.dart' show mcpUndoState;
-import 'rotation_convention.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/sequencer_movie_render_service.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/sequencer_offscreen_frame_source.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/sequencer_view_model.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_editor_sessions.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_jobs.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_protocol.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_tool.dart';
+import 'package:lumina_ui/ui/features/mcp_server/tools/core_tools.dart' show mcpUndoState;
+import 'package:lumina_ui/ui/features/mcp_server/tools/rotation_convention.dart';
 
 /// The job key one movie render holds.
 const String kMcpMovieRender = 'movie_render';

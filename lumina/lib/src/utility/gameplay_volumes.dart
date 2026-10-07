@@ -1,7 +1,7 @@
 import 'package:vector_math/vector_math_64.dart';
-import '../object/actor.dart';
-import '../components/collision/collision_component.dart';
-import '../math/euler.dart';
+import 'package:lumina/src/object/actor.dart';
+import 'package:lumina/src/components/collision/collision_component.dart';
+import 'package:lumina/src/math/euler.dart';
 
 /// Base volume actor providing oriented bounding box tests and standardized collision component root.
 class LuminaVolume extends LuminaActor {

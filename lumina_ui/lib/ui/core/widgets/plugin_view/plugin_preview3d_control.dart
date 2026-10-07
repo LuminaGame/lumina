@@ -1,9 +1,9 @@
 import 'package:lumina_editor_api/lumina_editor_api.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../plugin_3d_viewport_container.dart';
-import '../../theme/editor_theme.dart';
-import 'plugin_view_scope.dart';
+import 'package:lumina_ui/ui/core/plugin_3d_viewport_container.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/plugin_view/plugin_view_scope.dart';
 
 /// [PluginControlKind.preview3d]: `scene` ([PluginSceneSpec] json) and
 /// `height` (default 240), drawn with the editor's plugin viewport

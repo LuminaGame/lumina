@@ -17,9 +17,9 @@ import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.
 import 'package:lumina_ui/ui/features/main_editor/views/level_scene_view.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/viewport_widget.dart' show kViewportFovDegrees;
 import 'package:vector_math/vector_math_64.dart' show Ray, Vector3;
-import '../../models/sequencer_viewport_camera.dart';
-import '../../view_models/sequencer_view_model.dart';
-import '../sub_editor_transform_gizmo_painter.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/sequencer_viewport_camera.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/sequencer_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/sub_editor_transform_gizmo_painter.dart';
 
 /// The Sequencer's viewport: the level the sequence drives, drawn from the
 /// level viewport's own Filament scene by a second view, so every scrub and

@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:pub_semver/pub_semver.dart';
 import 'package:path/path.dart' as p;
 
-import '../models/lumina_plugin_descriptor.dart';
+import 'package:lumina/data/models/lumina_plugin_descriptor.dart';
 
 enum PluginErrorKind {
   missingManifest,

@@ -1,11 +1,11 @@
 import 'package:lumina/lumina.dart' show LuminaProceduralSkyDescription;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../details/models/editor_component_node.dart';
-import '../services/camera_actor_properties.dart';
-import '../services/environment_actor_properties.dart';
-import '../services/light_actor_properties.dart';
-import '../../../core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/details/models/editor_component_node.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/camera_actor_properties.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/environment_actor_properties.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/light_actor_properties.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 
 /// One actor type the editor can place in a level.
 class EditorActorType {

@@ -4,8 +4,8 @@ import 'package:lumina/lumina.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
-import '../../services/sequencer_movie_render_service.dart';
-import '../../view_models/sequencer_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/sequencer_movie_render_service.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/sequencer_view_model.dart';
 
 /// One entry of the resolution `Select`.
 class _ResolutionPreset {

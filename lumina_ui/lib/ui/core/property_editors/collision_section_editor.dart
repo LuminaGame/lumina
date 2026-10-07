@@ -2,7 +2,7 @@ import 'package:lumina/lumina.dart'
     show CollisionObjectType, CollisionResponse, LuminaCollisionPreset, LuminaCollisionProfile, luminaParseCollisionObjectType;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 
 /// The editor's reading and writing of lumina's collision JSON:
 /// `{'preset', 'objectType', 'responses': {'worldStatic': 'block', …},

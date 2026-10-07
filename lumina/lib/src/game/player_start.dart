@@ -1,4 +1,4 @@
-import '../object/actor.dart';
+import 'package:lumina/src/object/actor.dart';
 
 /// An actor that specifies a spawn point for players in the level.
 class LuminaPlayerStart extends LuminaActor {

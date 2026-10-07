@@ -1,11 +1,11 @@
 import 'package:lumina/lumina.dart' show AssetType, LuminaAttenuationModel;
 
-import '../../main_editor/view_models/editor_view_model.dart';
-import '../../sub_editors/models/audio_editor_state.dart';
-import '../../sub_editors/view_models/audio_editor_view_model.dart';
-import '../services/mcp_editor_sessions.dart';
-import '../services/mcp_protocol.dart';
-import '../services/mcp_tool.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/audio_editor_state.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/audio_editor_view_model.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_editor_sessions.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_protocol.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_tool.dart';
 
 /// The Sound editor as MCP tools: the decoded wave's facts,
 /// the sound's settings (volume, pitch, class, looping, spatialisation,

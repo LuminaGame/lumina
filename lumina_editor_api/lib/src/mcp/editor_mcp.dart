@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'mcp_types.dart';
+import 'package:lumina_editor_api/src/mcp/mcp_types.dart';
 
 /// One `tools/call`, however it arrived: for logs and
 /// for a plugin that watches what agents do.

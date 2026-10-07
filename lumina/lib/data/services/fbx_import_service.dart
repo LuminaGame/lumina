@@ -6,12 +6,12 @@ import 'dart:typed_data';
 
 import 'package:flutter_assimp/flutter_assimp.dart';
 
-import 'encoded_image_format.dart';
-import 'fbx_material_mapper.dart';
-import 'fbx_texture_locator.dart';
-import 'glb_animation_merger.dart';
-import 'imported_asset_names.dart';
-import 'tga_decoder_service.dart';
+import 'package:lumina/data/services/encoded_image_format.dart';
+import 'package:lumina/data/services/fbx_material_mapper.dart';
+import 'package:lumina/data/services/fbx_texture_locator.dart';
+import 'package:lumina/data/services/glb_animation_merger.dart';
+import 'package:lumina/data/services/imported_asset_names.dart';
+import 'package:lumina/data/services/tga_decoder_service.dart';
 
 /// Thrown when an FBX file cannot be turned into a GLB.
 class FbxImportException implements Exception {

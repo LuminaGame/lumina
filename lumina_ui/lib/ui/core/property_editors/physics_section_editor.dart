@@ -1,9 +1,9 @@
 import 'package:lumina/lumina.dart' show LuminaMeshPhysics, LuminaPhysicalMaterial;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../theme/editor_theme.dart';
-import 'scrub_numeric_field.dart';
-import 'slider_field.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/property_editors/scrub_numeric_field.dart';
+import 'package:lumina_ui/ui/core/property_editors/slider_field.dart';
 
 /// The editor's reading and writing of a component's `physics` JSON:
 /// `{simulate, massKg, overrideMass, centerOfMassOffset,

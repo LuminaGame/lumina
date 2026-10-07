@@ -2,7 +2,7 @@
 import 'package:lumina/lumina.dart' hide BoxShape;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../../core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 
 /// What a clip row carries when dragged onto a Blend Space grid.
 class BlendSpaceClipDrag {

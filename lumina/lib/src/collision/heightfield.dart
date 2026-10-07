@@ -2,9 +2,9 @@ import 'dart:math' as math;
 
 import 'package:vector_math/vector_math_64.dart';
 
-import '../../data/models/landscape_data.dart';
-import 'narrow_phase.dart';
-import 'shapes.dart';
+import 'package:lumina/data/models/landscape_data.dart';
+import 'package:lumina/src/collision/narrow_phase.dart';
+import 'package:lumina/src/collision/shapes.dart';
 
 /// A landscape's heightmap as a collision shape: the walkable,
 /// sweep-able heightfield collider.

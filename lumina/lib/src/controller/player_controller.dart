@@ -1,8 +1,8 @@
 import 'package:flutter/foundation.dart';
 
-import 'controller.dart';
-import 'player_state.dart';
-import '../game/player_camera_manager.dart';
+import 'package:lumina/src/controller/controller.dart';
+import 'package:lumina/src/controller/player_state.dart';
+import 'package:lumina/src/game/player_camera_manager.dart';
 
 /// Player controller that handles human player input and state.
 class LuminaPlayerController extends LuminaController {

@@ -6,8 +6,8 @@ import 'package:flutter/services.dart';
 import 'package:lumina/lumina.dart' hide BoxShape;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../../core/theme/editor_theme.dart';
-import '../../view_models/anim_blueprint_editor_view_model.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/anim_blueprint_editor_view_model.dart';
 
 /// Geometry of the state machine canvas, shared by the painter, the widgets
 /// and hit-testing.

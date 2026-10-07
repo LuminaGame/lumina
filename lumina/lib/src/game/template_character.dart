@@ -2,14 +2,14 @@ import 'dart:math' as math;
 
 import 'package:vector_math/vector_math_64.dart';
 
-import '../animation/directional_locomotion_component.dart';
-import '../components/camera/camera_component.dart';
-import '../components/camera/spring_arm_component.dart';
-import '../components/mesh/animated_mesh_component.dart';
-import '../input/input_action.dart';
-import '../math/euler.dart';
-import '../object/character.dart';
-import 'template_content.dart';
+import 'package:lumina/src/animation/directional_locomotion_component.dart';
+import 'package:lumina/src/components/camera/camera_component.dart';
+import 'package:lumina/src/components/camera/spring_arm_component.dart';
+import 'package:lumina/src/components/mesh/animated_mesh_component.dart';
+import 'package:lumina/src/input/input_action.dart';
+import 'package:lumina/src/math/euler.dart';
+import 'package:lumina/src/object/character.dart';
+import 'package:lumina/src/game/template_content.dart';
 
 /// The movement and camera numbers the First Person / Third Person templates
 /// are built from.

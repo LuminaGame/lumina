@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 import 'package:vector_math/vector_math_64.dart';
-import 'input_action.dart';
+import 'package:lumina/src/input/input_action.dart';
 
 /// Base class for input modifiers that transform raw action values.
 abstract class LuminaInputModifier {

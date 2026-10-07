@@ -2,9 +2,9 @@ import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:lumina_editor_api/lumina_editor_api.dart' show EditorMenuItemOptions;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../core/services/plugin_process/plugin_process_supervisor.dart' show ProcessBackedCommand;
-import '../../../core/theme/editor_theme.dart';
-import '../commands/editor_command.dart';
+import 'package:lumina_ui/ui/core/services/plugin_process/plugin_process_supervisor.dart' show ProcessBackedCommand;
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/main_editor/commands/editor_command.dart';
 
 /// One menu item to place: [path] runs from the first submenu
 /// under the menu it belongs to down to the item's own slot (its last

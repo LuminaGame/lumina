@@ -2,10 +2,10 @@ import 'dart:typed_data';
 
 import 'package:flutter_filament/flutter_filament.dart';
 
-import '../../data/models/lumina_asset.dart';
-import '../utility/lumina_assets.dart';
-import 'material_cache.dart';
-import 'material_textures.dart';
+import 'package:lumina/data/models/lumina_asset.dart';
+import 'package:lumina/src/utility/lumina_assets.dart';
+import 'package:lumina/src/material/material_cache.dart';
+import 'package:lumina/src/material/material_textures.dart';
 
 /// One material asset drawn on every section of a gltfio instance that no
 /// world owns — the editor's level viewport, where a placed mesh shows the

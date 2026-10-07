@@ -4,12 +4,12 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina/lumina.dart';
 import 'package:lumina/data/services/game_template_service.dart';
 
-import '../../../core/host/editor_host.dart';
-import '../../main_editor/services/editor_preferences.dart';
-import '../services/installed_template_repository.dart';
-import '../services/project_editor_resolver.dart';
-import '../services/project_editor_update.dart';
-import 'editor_build_view_model.dart';
+import 'package:lumina_ui/ui/core/host/editor_host.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/editor_preferences.dart';
+import 'package:lumina_ui/ui/features/launcher/services/installed_template_repository.dart';
+import 'package:lumina_ui/ui/features/launcher/services/project_editor_resolver.dart';
+import 'package:lumina_ui/ui/features/launcher/services/project_editor_update.dart';
+import 'package:lumina_ui/ui/features/launcher/view_models/editor_build_view_model.dart';
 
 /// Maps a [GameTemplate.icon] hint to the launcher's Lucide icon.
 const Map<String, IconData> kLauncherTemplateIcons = {

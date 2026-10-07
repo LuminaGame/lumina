@@ -1,10 +1,10 @@
 import 'dart:math' as math;
 import 'package:vector_math/vector_math_64.dart';
-import '../components/audio/audio_component.dart';
-import '../world/subsystem/world_subsystem.dart';
-import 'audio_backend.dart';
-import 'sound_base.dart';
-import '../math/euler.dart';
+import 'package:lumina/src/components/audio/audio_component.dart';
+import 'package:lumina/src/world/subsystem/world_subsystem.dart';
+import 'package:lumina/src/audio/audio_backend.dart';
+import 'package:lumina/src/audio/sound_base.dart';
+import 'package:lumina/src/math/euler.dart';
 
 /// Central audio subsystem managing spatial listener coordinates, master volume, and spatial parameter updates.
 class LuminaAudioSubsystem extends LuminaWorldSubsystem {

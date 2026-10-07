@@ -6,9 +6,9 @@ import 'package:lumina/lumina.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart';
 import 'package:vector_math/vector_math_64.dart';
 
-import '../features/main_editor/services/transform_gizmo.dart';
-import '../features/sub_editors/models/sub_editor_transform_gizmo.dart';
-import '../features/sub_editors/views/sub_editor_3d_viewport.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/transform_gizmo.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/sub_editor_transform_gizmo.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/sub_editor_3d_viewport.dart';
 
 /// Renders a Filament 3D viewport inside a plugin editor with full support for
 /// skeleton bones, joint picking, and interactive 3D translation gizmo manipulation.

@@ -2,8 +2,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:lumina/lumina.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../core/theme/editor_theme.dart';
-import '../view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 
 /// File → Import Asset Folder…: picks a folder, walks
 /// it ([ImportFolderScanner], off the UI isolate) and shows the summary

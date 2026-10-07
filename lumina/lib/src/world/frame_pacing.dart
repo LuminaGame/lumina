@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter_filament/flutter_filament.dart';
-import 'world.dart';
+import 'package:lumina/src/world/world.dart';
 
 /// Immutable telemetry snapshot for a single rendered or processed frame.
 class LuminaFrameStats {

@@ -1,8 +1,8 @@
 import 'dart:math' as math;
 import 'package:vector_math/vector_math_64.dart';
-import '../../collision/collision_subsystem.dart';
-import '../collision/capsule_component.dart';
-import '../collision/collision_component.dart';
+import 'package:lumina/src/collision/collision_subsystem.dart';
+import 'package:lumina/src/components/collision/capsule_component.dart';
+import 'package:lumina/src/components/collision/collision_component.dart';
 
 /// Holds the results of a character floor finding sweep.
 class FloorResult {

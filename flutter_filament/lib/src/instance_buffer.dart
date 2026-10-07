@@ -1,9 +1,9 @@
-import 'ffi_platform.dart' as ffi;
+import 'package:flutter_filament/src/ffi_platform.dart' as ffi;
 import 'dart:typed_data';
-import 'ffi_package_platform.dart';
+import 'package:flutter_filament/src/ffi_package_platform.dart';
 import 'package:vector_math/vector_math_64.dart';
-import 'filament_bindings.dart' as c;
-import 'engine.dart';
+import 'package:flutter_filament/src/filament_bindings.dart' as c;
+import 'package:flutter_filament/src/engine.dart';
 
 /// Helper to pack a list of [Matrix4] objects into a contiguous column-major [Float32List] of length 16 * N.
 Float32List packMatrices(List<Matrix4> matrices) {

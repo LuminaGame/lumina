@@ -7,13 +7,13 @@ import 'package:lumina/lumina.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart' show ProjectSettingsSection, PluginSettingsHandle;
 import 'package:lumina_ui/ui/core/host/editor_host.dart' show LuminaEditorHost;
 
-import '../services/build_pipeline_service.dart';
-import '../services/project_icon_packaging.dart';
-import '../services/project_icon_rasterizer.dart';
-import '../services/umg_widget_codegen.dart';
-import '../services/umg_widget_validator.dart';
-import '../services/web_preview_server.dart';
-import 'build_manager_view_model.dart' show BuildManagerViewModel;
+import 'package:lumina_ui/ui/features/sub_editors/services/build_pipeline_service.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/project_icon_packaging.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/project_icon_rasterizer.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/umg_widget_codegen.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/umg_widget_validator.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/web_preview_server.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/build_manager_view_model.dart' show BuildManagerViewModel;
 
 part 'project_settings_view_model/state.dart';
 part 'project_settings_view_model/widget_library_and_icon.dart';

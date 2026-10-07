@@ -1,11 +1,11 @@
 import 'package:lumina/lumina.dart';
 
-import '../../main_editor/view_models/editor_view_model.dart';
-import '../../sub_editors/models/blueprint_graph_ref.dart';
-import '../../sub_editors/models/blueprint_pin_style.dart';
-import '../../sub_editors/view_models/blueprint_editor_view_model.dart';
-import '../../sub_editors/view_models/blueprint_graph_editor.dart';
-import '../services/mcp_protocol.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_graph_ref.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_pin_style.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/blueprint_editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/blueprint_graph_editor.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_protocol.dart';
 
 // The node / pin / wire JSON moved to graph_json.dart.
 export 'graph_json.dart' show mcpPinSpec, mcpNodeJson, mcpWireJson;

@@ -1,4 +1,4 @@
-import 'input_action.dart';
+import 'package:lumina/src/input/input_action.dart';
 
 /// Per-trigger evaluation state for a single frame.
 enum TriggerEvaluation { none, ongoing, triggered }

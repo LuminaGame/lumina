@@ -8,8 +8,8 @@ import 'dart:io';
 
 import 'package:archive/archive.dart';
 
-import 'certificates.dart';
-import 'options.dart';
+import 'package:lumina_ui/tooling/windows_packaging/certificates.dart';
+import 'package:lumina_ui/tooling/windows_packaging/options.dart';
 
 /// What a package must be.
 class MsixExpectation {

@@ -1,8 +1,8 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../core/theme/editor_theme.dart';
-import '../view_models/marketplace_view_model.dart';
-import 'marketplace_listing_card.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/marketplace/view_models/marketplace_view_model.dart';
+import 'package:lumina_ui/ui/features/marketplace/views/marketplace_listing_card.dart';
 
 /// The open project's Content Browser folders beside the catalogue: drop an
 /// asset listing's card on one to install it there

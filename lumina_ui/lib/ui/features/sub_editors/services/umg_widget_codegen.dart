@@ -23,8 +23,8 @@ import 'package:lumina/lumina.dart'
         kUmgWidgetLibraryFlutter,
         kUmgWidgetLibraryShadcn;
 
-import '../models/blueprint_editor_nodes.dart';
-import '../models/umg_document.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_editor_nodes.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/umg_document.dart';
 
 part 'umg_widget_codegen/emission.dart';
 part 'umg_widget_codegen/containers_and_shadcn.dart';

@@ -1,4 +1,4 @@
-import 'blueprint_model.dart';
+import 'package:lumina/src/blueprint/blueprint_model.dart';
 
 /// The project's enum assets a running game or the editor knows:
 /// `Switch on Enum`, `Int → Enum` and `Get Enum Value Count`

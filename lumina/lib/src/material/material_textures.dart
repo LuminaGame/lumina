@@ -8,8 +8,8 @@ import 'dart:ui' as ui;
 import 'package:flutter_filament/flutter_filament.dart';
 import 'package:image/image.dart' as imglib;
 
-import '../../data/models/lumina_asset.dart';
-import '../utility/lumina_assets.dart';
+import 'package:lumina/data/models/lumina_asset.dart';
+import 'package:lumina/src/utility/lumina_assets.dart';
 
 /// One texture bound to a material's sampler.
 class LuminaBoundTexture {

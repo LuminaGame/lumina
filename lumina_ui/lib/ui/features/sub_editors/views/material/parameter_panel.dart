@@ -3,7 +3,7 @@ import 'package:flutter_filament/flutter_filament.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/material_editor_view_model.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/core/property_editors/slider_field.dart';
-import '../../../../core/property_editors/asset_picker_select.dart';
+import 'package:lumina_ui/ui/core/property_editors/asset_picker_select.dart';
 
 /// Reflection-driven inspector panel for Material settings, PBR parameters, and texture slots.
 class MaterialParameterPanel extends StatefulWidget {

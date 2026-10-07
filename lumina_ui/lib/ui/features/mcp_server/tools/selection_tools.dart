@@ -1,26 +1,26 @@
 import 'package:flutter/foundation.dart' show Listenable;
 import 'package:lumina/lumina.dart';
 
-import '../../details/models/component_property_registry.dart';
-import '../../details/models/editor_component_node.dart';
-import '../../main_editor/view_models/editor_view_model.dart';
-import '../../sub_editors/models/blueprint_graph_ref.dart';
-import '../../sub_editors/view_models/anim_blueprint_editor_view_model.dart';
-import '../../sub_editors/view_models/animation_editor_view_model.dart';
-import '../../sub_editors/view_models/blend_space_editor_view_model.dart';
-import '../../sub_editors/view_models/blueprint_editor_view_model.dart';
-import '../../sub_editors/view_models/blueprint_enum_view_model.dart';
-import '../../sub_editors/view_models/blueprint_graph_editor.dart';
-import '../../sub_editors/view_models/blueprint_interface_view_model.dart';
-import '../../sub_editors/view_models/material_editor_view_model.dart';
-import '../../sub_editors/view_models/particle_editor_view_model.dart';
-import '../../sub_editors/view_models/physics_asset_editor_view_model.dart';
-import '../../sub_editors/view_models/sequencer_view_model.dart';
-import '../../sub_editors/view_models/skeletal_mesh_editor_view_model.dart';
-import '../../sub_editors/view_models/umg_editor_view_model.dart';
-import '../services/mcp_protocol.dart';
-import '../services/mcp_tool.dart';
-import 'graph_json.dart';
+import 'package:lumina_ui/ui/features/details/models/component_property_registry.dart';
+import 'package:lumina_ui/ui/features/details/models/editor_component_node.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_graph_ref.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/anim_blueprint_editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/animation_editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/blend_space_editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/blueprint_editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/blueprint_enum_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/blueprint_graph_editor.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/blueprint_interface_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/material_editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/particle_editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/physics_asset_editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/sequencer_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/skeletal_mesh_editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/umg_editor_view_model.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_protocol.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_tool.dart';
+import 'package:lumina_ui/ui/features/mcp_server/tools/graph_json.dart';
 
 /// The editor's current selection as one read-only tool: the selected level
 /// actors (the primary one is the Details panel's subject), the Content

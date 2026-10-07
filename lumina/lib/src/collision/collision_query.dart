@@ -1,6 +1,6 @@
 import 'package:vector_math/vector_math_64.dart';
-import '../components/collision/collision_component.dart';
-import '../object/actor.dart';
+import 'package:lumina/src/components/collision/collision_component.dart';
+import 'package:lumina/src/object/actor.dart';
 
 /// Container describing a raycast or geometric sweep impact.
 class HitResult {

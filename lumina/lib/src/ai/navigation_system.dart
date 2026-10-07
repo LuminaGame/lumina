@@ -1,8 +1,8 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:vector_math/vector_math_64.dart';
-import '../components/collision/collision_component.dart';
-import '../world/subsystem/world_subsystem.dart';
+import 'package:lumina/src/components/collision/collision_component.dart';
+import 'package:lumina/src/world/subsystem/world_subsystem.dart';
 
 /// Configuration properties for rasterizing a navigation grid and sizing agent clearances.
 class NavGridConfig {

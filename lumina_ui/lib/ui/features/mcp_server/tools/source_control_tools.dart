@@ -1,8 +1,8 @@
-import '../../main_editor/view_models/editor_view_model.dart';
-import '../../source_control/services/git_service.dart';
-import '../../source_control/view_models/source_control_view_model.dart';
-import '../services/mcp_protocol.dart';
-import '../services/mcp_tool.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/source_control/services/git_service.dart';
+import 'package:lumina_ui/ui/features/source_control/view_models/source_control_view_model.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_protocol.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_tool.dart';
 
 /// Source Control as MCP tools (group `scm`), over the
 /// editor's own [SourceControlViewModel] (the status bar, the Content

@@ -1,4 +1,4 @@
-import '../plugin_template_generator_service.dart' show PluginTemplateType;
+import 'package:lumina/data/services/plugin_template_generator_service.dart' show PluginTemplateType;
 
 /// The Dart sources the plugin template generator writes for an in-process
 /// code plugin: `lib/src/<name>_plugin.dart` per template and its test.

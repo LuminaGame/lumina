@@ -2,8 +2,8 @@ import 'dart:typed_data';
 
 import 'package:lumina/lumina.dart';
 
-import 'build_pipeline_service.dart';
-import 'project_icon_rasterizer.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/build_pipeline_service.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/project_icon_rasterizer.dart';
 
 /// The project icon's part of a packaging run, plugged
 /// into [PackageTargetsStep]:

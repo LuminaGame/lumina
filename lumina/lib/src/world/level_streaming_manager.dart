@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'dart:isolate';
 import 'package:vector_math/vector_math_64.dart';
-import 'level.dart';
-import 'level_streaming.dart';
-import 'level_streaming_volume.dart';
-import 'subsystem/world_subsystem.dart';
+import 'package:lumina/src/world/level.dart';
+import 'package:lumina/src/world/level_streaming.dart';
+import 'package:lumina/src/world/level_streaming_volume.dart';
+import 'package:lumina/src/world/subsystem/world_subsystem.dart';
 
 /// Lightweight pure-data payload describing level actor descriptors parsed off the main thread.
 class LuminaLevelPayload {

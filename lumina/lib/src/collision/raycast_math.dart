@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 import 'package:vector_math/vector_math_64.dart';
 
-import 'convex_hull.dart';
+import 'package:lumina/src/collision/convex_hull.dart';
 
 /// Tests whether [point] is inside or on the boundary of a capsule.
 bool pointInCapsule(

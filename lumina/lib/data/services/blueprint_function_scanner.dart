@@ -12,9 +12,9 @@ import 'package:analyzer/dart/element/type.dart';
 import 'package:analyzer/diagnostic/diagnostic.dart';
 import 'package:path/path.dart' as p;
 
-import '../../src/blueprint/blueprint.dart';
-import 'blueprint_codegen/blueprint_dart_generator.dart';
-import 'blueprint_function_manifest.dart';
+import 'package:lumina/src/blueprint/blueprint.dart';
+import 'package:lumina/data/services/blueprint_codegen/blueprint_dart_generator.dart';
+import 'package:lumina/data/services/blueprint_function_manifest.dart';
 
 export 'blueprint_function_manifest.dart';
 

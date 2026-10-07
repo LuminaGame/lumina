@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:vector_math/vector_math_64.dart';
 
-import 'shapes.dart';
+import 'package:lumina/src/collision/shapes.dart';
 
 /// One face plane of a [ConvexHullShape]: points `p` of the hull satisfy
 /// `normal · p <= offset`, and `normal` points out of the hull.

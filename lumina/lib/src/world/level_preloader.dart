@@ -3,8 +3,8 @@ import 'dart:typed_data';
 
 import 'package:flutter_filament/flutter_filament.dart' show FilamentEngine;
 
-import '../components/mesh/mesh_asset_cache.dart';
-import '../utility/lumina_assets.dart';
+import 'package:lumina/src/components/mesh/mesh_asset_cache.dart';
+import 'package:lumina/src/utility/lumina_assets.dart';
 
 /// The levels of the open project, by name (`L_Arena`): what the Blueprint
 /// validator checks a Load Level / Change Level node's Level Name against.

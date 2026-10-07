@@ -6,7 +6,7 @@ import 'package:crypto/crypto.dart';
 import 'package:path/path.dart' as p;
 import 'package:yaml/yaml.dart';
 
-import 'workspace_paths.dart';
+import 'package:lumina/data/services/workspace_paths.dart';
 
 /// Everything a project editor build depends on.
 class EditorHostInputs {

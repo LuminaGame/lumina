@@ -4,11 +4,11 @@ import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:lumina/lumina.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../core/theme/editor_theme.dart';
-import '../../main_editor/view_models/editor_view_model.dart';
-import '../services/build_pipeline_service.dart';
-import '../sub_editor_binding.dart';
-import '../view_models/build_manager_view_model.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/build_pipeline_service.dart';
+import 'package:lumina_ui/ui/features/sub_editors/sub_editor_binding.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/build_manager_view_model.dart';
 
 /// Build Manager (honestly scoped): the four real build steps
 /// (material precompile, navigation bake, thumbnail regeneration, asset

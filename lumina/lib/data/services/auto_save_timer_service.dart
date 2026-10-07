@@ -1,6 +1,6 @@
 import 'dart:async';
-import '../../data/models/lumina_project.dart';
-import 'engine_logger_service.dart';
+import 'package:lumina/data/models/lumina_project.dart';
+import 'package:lumina/data/services/engine_logger_service.dart';
 
 typedef SaveCallback = Future<LuminaProject> Function(LuminaProject currentProject);
 

@@ -1,6 +1,6 @@
 import 'package:vector_math/vector_math_64.dart';
 
-import '../math/axes.dart';
+import 'package:lumina/src/math/axes.dart';
 
 /// One convex element of a static mesh's simple collision, as authored.
 ///

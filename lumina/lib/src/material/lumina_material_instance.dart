@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter_filament/flutter_filament.dart';
 import 'package:vector_math/vector_math_64.dart';
-import 'lumina_material.dart';
+import 'package:lumina/src/material/lumina_material.dart';
 
 /// Wrapped instance of a [LuminaMaterial] assigned to mesh renderables.
 class LuminaMaterialInstance {

@@ -5,8 +5,8 @@ import 'dart:typed_data';
 import 'package:flutter_filament/flutter_filament.dart';
 import 'package:lumina_smoke/lumina_smoke.dart' as smoke;
 
-import '../math/units.dart';
-import 'smoke_render.dart';
+import 'package:lumina/src/math/units.dart';
+import 'package:lumina/src/testing/smoke_render.dart';
 
 /// The smoke-test artifact API of lumina's tests: lumina_smoke's
 /// `SmokeArtifacts` (every member forwards to it, so both share one state:

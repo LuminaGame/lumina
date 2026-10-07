@@ -1,7 +1,7 @@
 import 'package:vector_math/vector_math_64.dart';
-import '../components/base/actor_component.dart';
-import '../object/actor.dart';
-import 'world_partition.dart';
+import 'package:lumina/src/components/base/actor_component.dart';
+import 'package:lumina/src/object/actor.dart';
+import 'package:lumina/src/world/world_partition.dart';
 
 /// Operational state of a streaming source.
 enum LuminaStreamingSourceState {

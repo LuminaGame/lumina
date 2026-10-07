@@ -1,6 +1,6 @@
 import 'package:vector_math/vector_math_64.dart';
-import 'collision_component.dart';
-import 'shape_wireframes.dart';
+import 'package:lumina/src/components/collision/collision_component.dart';
+import 'package:lumina/src/components/collision/shape_wireframes.dart';
 
 /// A convex collider around an authored hull (e.g. `UCX_` hulls):
 /// [points] are the hull's vertices in the component's local

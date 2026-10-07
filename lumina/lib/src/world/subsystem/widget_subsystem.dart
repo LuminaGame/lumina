@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 
-import 'world_subsystem.dart';
+import 'package:lumina/src/world/subsystem/world_subsystem.dart';
 
 /// Manages active UMG widgets added to the viewport in a [LuminaWorld].
 class LuminaWidgetSubsystem extends LuminaWorldSubsystem {

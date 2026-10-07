@@ -5,8 +5,8 @@ import 'package:flutter/widgets.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 
-import '../lumina_media.dart';
-import 'lumina_video_player_value.dart';
+import 'package:lumina/src/media/lumina_media.dart';
+import 'package:lumina/src/media/video/lumina_video_player_value.dart';
 
 /// Controller managing the playback lifecycle of video and audio streams
 /// through media_kit native integration, with a built-in deterministic fallback

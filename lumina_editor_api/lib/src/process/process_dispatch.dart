@@ -3,10 +3,10 @@ import 'dart:io';
 
 import 'package:lumina_plugin_protocol/lumina_plugin_protocol.dart';
 
-import '../mcp/mcp_types.dart';
-import '../plugin_storage.dart';
-import 'plugin_process.dart';
-import 'process_context.dart';
+import 'package:lumina_editor_api/src/mcp/mcp_types.dart';
+import 'package:lumina_editor_api/src/plugin_storage.dart';
+import 'package:lumina_editor_api/src/process/plugin_process.dart';
+import 'package:lumina_editor_api/src/process/process_context.dart';
 
 /// Installs the `core.*` request and notification handlers of a plugin
 /// process on [context]'s connection. Every handler that throws answers its

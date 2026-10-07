@@ -1,10 +1,10 @@
 import 'dart:typed_data';
 import 'package:flutter_filament/flutter_filament.dart';
 import 'package:vector_math/vector_math_64.dart';
-import '../world/world.dart';
-import 'lumina_material_instance.dart';
-import 'material_cache.dart';
-import 'material_textures.dart';
+import 'package:lumina/src/world/world.dart';
+import 'package:lumina/src/material/lumina_material_instance.dart';
+import 'package:lumina/src/material/material_cache.dart';
+import 'package:lumina/src/material/material_textures.dart';
 
 /// Asset-level wrapper around a compiled Filament material (.filamat) package.
 class LuminaMaterial {

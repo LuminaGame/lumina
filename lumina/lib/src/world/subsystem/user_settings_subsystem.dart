@@ -1,10 +1,10 @@
 import 'package:flutter_filament/flutter_filament.dart';
 
-import '../../components/camera/camera_component.dart';
-import '../../post_process/scalability_profile.dart';
-import '../../post_process/shadow_settings.dart';
-import '../world.dart';
-import 'world_subsystem.dart';
+import 'package:lumina/src/components/camera/camera_component.dart';
+import 'package:lumina/src/post_process/scalability_profile.dart';
+import 'package:lumina/src/post_process/shadow_settings.dart';
+import 'package:lumina/src/world/world.dart';
+import 'package:lumina/src/world/subsystem/world_subsystem.dart';
 
 /// World subsystem managing engine scalability settings, quality presets,
 /// view distance, resolution scale, frame pacing, and graphics configuration.

@@ -2,8 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart' show Brightness, Color;
 import 'package:lumina_editor_api/lumina_editor_api.dart';
 
-import 'editor_theme_data.dart';
-import 'editor_theme_store.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme_data.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme_store.dart';
 
 /// The host's side of `EditorThemeAccess`: plugins read
 /// the active editor theme through it and are notified when it changes.

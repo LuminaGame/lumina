@@ -4,9 +4,9 @@ import 'package:flutter/foundation.dart' show Listenable;
 import 'package:lumina/lumina.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart';
 
-import '../features/details/models/editor_component_node.dart';
-import '../features/main_editor/commands/editor_transaction.dart';
-import '../features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/details/models/editor_component_node.dart';
+import 'package:lumina_ui/ui/features/main_editor/commands/editor_transaction.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 
 /// The open level as plugins see it: a thin adapter over
 /// [EditorViewModel] that hands out immutable snapshots and routes every

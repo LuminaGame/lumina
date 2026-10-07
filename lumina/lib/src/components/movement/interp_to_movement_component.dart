@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 import 'package:vector_math/vector_math_64.dart';
-import '../base/actor_component.dart';
+import 'package:lumina/src/components/base/actor_component.dart';
 
 /// Traversal behavior modes when reaching the end of the interpolation control polyline.
 enum InterpToBehaviourType {

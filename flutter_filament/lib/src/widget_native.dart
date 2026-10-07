@@ -1,20 +1,20 @@
-import 'ffi_platform.dart' as ffi;
+import 'package:flutter_filament/src/ffi_platform.dart' as ffi;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
-import 'ffi_package_platform.dart';
+import 'package:flutter_filament/src/ffi_package_platform.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
-import 'camera.dart';
-import 'engine.dart';
-import 'engine_host.dart';
-import 'filamat_builder.dart';
-import 'renderer.dart';
-import 'scene.dart';
-import 'swap_chain.dart';
-import 'filament_bindings.dart' as c;
-import 'view.dart';
-import 'widget.dart';
+import 'package:flutter_filament/src/camera.dart';
+import 'package:flutter_filament/src/engine.dart';
+import 'package:flutter_filament/src/engine_host.dart';
+import 'package:flutter_filament/src/filamat_builder.dart';
+import 'package:flutter_filament/src/renderer.dart';
+import 'package:flutter_filament/src/scene.dart';
+import 'package:flutter_filament/src/swap_chain.dart';
+import 'package:flutter_filament/src/filament_bindings.dart' as c;
+import 'package:flutter_filament/src/view.dart';
+import 'package:flutter_filament/src/widget.dart';
 
 /// Native platforms: render into a headless swap chain and present the
 /// readback through a [RawImage].

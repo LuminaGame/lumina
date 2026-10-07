@@ -1,9 +1,9 @@
 import 'package:lumina/lumina.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../core/property_editors/asset_picker_select.dart';
-import '../../../core/theme/editor_theme.dart';
-import '../../main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/core/property_editors/asset_picker_select.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 
 /// The Details panel's Static Mesh (or Skeletal Mesh) section of a placed
 /// mesh actor: the

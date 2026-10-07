@@ -2,12 +2,12 @@ import 'dart:async';
 
 import 'package:lumina/lumina.dart' show kPackagingPlatforms;
 
-import '../../main_editor/view_models/editor_view_model.dart';
-import '../../sub_editors/services/build_pipeline_service.dart';
-import '../../sub_editors/view_models/build_manager_view_model.dart';
-import '../services/mcp_jobs.dart';
-import '../services/mcp_protocol.dart';
-import '../services/mcp_tool.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/build_pipeline_service.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/build_manager_view_model.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_jobs.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_protocol.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_tool.dart';
 
 /// The key of the one Build Manager pipeline an editor runs at a time.
 const String kMcpBuildPipeline = 'build_pipeline';

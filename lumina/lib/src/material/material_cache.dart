@@ -2,11 +2,11 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter_filament/flutter_filament.dart';
-import '../../data/models/lumina_asset.dart';
-import '../utility/lumina_assets.dart';
-import '../world/world.dart';
-import 'lumina_material.dart';
-import 'material_textures.dart';
+import 'package:lumina/data/models/lumina_asset.dart';
+import 'package:lumina/src/utility/lumina_assets.dart';
+import 'package:lumina/src/world/world.dart';
+import 'package:lumina/src/material/lumina_material.dart';
+import 'package:lumina/src/material/material_textures.dart';
 
 class _MaterialCacheKey {
   final String assetPath;

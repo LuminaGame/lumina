@@ -1,11 +1,11 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../core/theme/editor_theme.dart';
-import '../../main_editor/services/editor_preferences.dart';
-import 'appearance_preferences_page.dart';
-import 'engine_source_preferences_page.dart';
-import 'graphics_device_preferences_page.dart';
-import 'project_editor_builds_preferences_page.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/editor_preferences.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/appearance_preferences_page.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/engine_source_preferences_page.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/graphics_device_preferences_page.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/project_editor_builds_preferences_page.dart';
 
 /// Edit → Editor Preferences: the user's own editor settings — a category
 /// list on the left, the category's sections on the right. Every change is

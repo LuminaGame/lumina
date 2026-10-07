@@ -1,9 +1,9 @@
 import 'package:lumina_editor_api/lumina_editor_api.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import 'plugin_control_cache.dart';
-import 'plugin_section_control.dart';
-import 'plugin_view_scope.dart';
+import 'package:lumina_ui/ui/core/widgets/plugin_view/plugin_control_cache.dart';
+import 'package:lumina_ui/ui/core/widgets/plugin_view/plugin_section_control.dart';
+import 'package:lumina_ui/ui/core/widgets/plugin_view/plugin_view_scope.dart';
 
 /// Renders a plugin's declarative panel ([PluginViewSpec]) with the
 /// editor's shadcn widgets, one widget per control kind, keyed

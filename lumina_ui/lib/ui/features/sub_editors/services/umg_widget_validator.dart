@@ -1,6 +1,6 @@
 import 'package:lumina/lumina.dart' show kUmgWidgetLibraryFlutter;
 
-import '../models/umg_document.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/umg_document.dart';
 
 /// Checks a widget document against the project's widget library:
 /// a plain-Flutter game cannot import shadcn_flutter, so a

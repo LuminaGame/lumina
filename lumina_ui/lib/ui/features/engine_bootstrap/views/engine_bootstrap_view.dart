@@ -3,9 +3,9 @@ import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:lumina/lumina.dart' show EngineBootstrapStep, EngineCheckout, EnginePrerequisite;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../core/host/editor_host.dart';
-import '../../../core/theme/editor_theme.dart';
-import '../view_models/engine_bootstrap_view_model.dart';
+import 'package:lumina_ui/ui/core/host/editor_host.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/engine_bootstrap/view_models/engine_bootstrap_view_model.dart';
 
 /// The first-launch screen of an installed Lumina Studio: it fetches the
 /// engine source of its own release before the launcher opens. Steps with

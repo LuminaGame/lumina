@@ -2,16 +2,16 @@ import 'dart:async';
 
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart' show EditorSlot;
-import '../../../core/theme/editor_theme.dart';
-import '../../../core/widgets/quality_settings_popover.dart';
-import '../view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/widgets/quality_settings_popover.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 import 'package:lumina/lumina.dart' show AssetType;
-import '../services/standalone_game_runner.dart' show StandaloneState;
-import '../services/android_device_runner.dart' show AndroidRunState;
-import 'play_on_device_menu.dart';
-import '../services/snap_service.dart';
-import 'editor_slot_bar.dart';
-import 'toolbar_priority_row.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/standalone_game_runner.dart' show StandaloneState;
+import 'package:lumina_ui/ui/features/main_editor/services/android_device_runner.dart' show AndroidRunState;
+import 'package:lumina_ui/ui/features/main_editor/views/play_on_device_menu.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/snap_service.dart';
+import 'package:lumina_ui/ui/features/main_editor/views/editor_slot_bar.dart';
+import 'package:lumina_ui/ui/features/main_editor/views/toolbar_priority_row.dart';
 
 /// The frame stats the toolbar shows: while Play runs,
 /// the frame rate and frame time are the running `LuminaWorld`'s own

@@ -1,9 +1,9 @@
 import 'dart:async';
 
-import '../../main_editor/commands/editor_transaction.dart';
-import 'mcp_approval_policy.dart';
-import 'mcp_protocol.dart';
-import 'mcp_tool_risk.dart';
+import 'package:lumina_ui/ui/features/main_editor/commands/editor_transaction.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_approval_policy.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_protocol.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_tool_risk.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart' show McpArgs, McpTool, McpChangeSignal, McpToolCallEvent;
 
 // Moved to lumina_editor_api, re-exported for the server's importers.

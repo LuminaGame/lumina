@@ -4,9 +4,9 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:lumina_plugin_protocol/lumina_plugin_protocol.dart';
 
-import '../editor_level.dart';
-import '../mcp/mcp_types.dart';
-import '../plugin_storage.dart';
+import 'package:lumina_editor_api/src/editor_level.dart';
+import 'package:lumina_editor_api/src/mcp/mcp_types.dart';
+import 'package:lumina_editor_api/src/plugin_storage.dart';
 
 /// The part of a plugin that runs in its own process (the "plugin
 /// process"), started by the editor from its own executable with

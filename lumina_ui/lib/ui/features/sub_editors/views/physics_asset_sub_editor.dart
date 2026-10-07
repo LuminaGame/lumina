@@ -5,13 +5,13 @@ import 'package:lumina/lumina.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:vector_math/vector_math_64.dart' show Vector3;
 
-import '../../../core/property_editors/asset_picker_select.dart';
-import '../../../core/theme/editor_theme.dart';
-import '../models/physics_asset_document.dart';
-import '../services/physics_preview_scene.dart';
-import '../sub_editor_binding.dart';
-import '../view_models/physics_asset_editor_view_model.dart';
-import 'sub_editor_3d_viewport.dart';
+import 'package:lumina_ui/ui/core/property_editors/asset_picker_select.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/physics_asset_document.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/physics_preview_scene.dart';
+import 'package:lumina_ui/ui/features/sub_editors/sub_editor_binding.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/physics_asset_editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/sub_editor_3d_viewport.dart';
 
 part 'physics_asset/state.dart';
 part 'physics_asset/toolbar_workspace.dart';

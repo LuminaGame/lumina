@@ -1,7 +1,7 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../services/git_service.dart';
-import '../../../core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/source_control/services/git_service.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 
 /// Colour per working-tree state (amber modified, green added/untracked,
 /// red deleted, purple conflict, blue renamed).

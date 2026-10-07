@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:lumina/lumina.dart' show AssetType;
 
-import '../api_types.dart';
+import 'package:lumina_editor_api/src/api_types.dart';
 
 /// Runs an unchanged [LuminaEditorPlugin] in a plugin process.
 ///

@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'ffi_platform.dart' as ffi;
+import 'package:flutter_filament/src/ffi_platform.dart' as ffi;
 
 import 'package:flutter_filament/src/engine.dart';
 import 'package:flutter_filament/src/filament_bindings.dart' as c;

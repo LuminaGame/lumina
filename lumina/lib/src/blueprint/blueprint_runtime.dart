@@ -1,16 +1,16 @@
-import '../components/base/actor_component.dart';
-import '../components/mesh/animated_mesh_component.dart';
-import 'anim/anim_blueprint_instance.dart';
-import 'blueprint_assets.dart';
-import '../controller/player_controller.dart';
-import '../input/input_component.dart';
-import '../object/actor.dart';
-import '../object/character.dart';
-import '../object/pawn.dart';
-import '../utility/timer_manager.dart';
-import '../world/debug_shapes.dart';
-import 'timeline_curve.dart';
-import 'blueprint_model.dart';
+import 'package:lumina/src/components/base/actor_component.dart';
+import 'package:lumina/src/components/mesh/animated_mesh_component.dart';
+import 'package:lumina/src/blueprint/anim/anim_blueprint_instance.dart';
+import 'package:lumina/src/blueprint/blueprint_assets.dart';
+import 'package:lumina/src/controller/player_controller.dart';
+import 'package:lumina/src/input/input_component.dart';
+import 'package:lumina/src/object/actor.dart';
+import 'package:lumina/src/object/character.dart';
+import 'package:lumina/src/object/pawn.dart';
+import 'package:lumina/src/utility/timer_manager.dart';
+import 'package:lumina/src/world/debug_shapes.dart';
+import 'package:lumina/src/blueprint/timeline_curve.dart';
+import 'package:lumina/src/blueprint/blueprint_model.dart';
 
 /// One step of a Blueprint run, for tests, the editor's live highlighting
 /// and VM ↔ generated-code parity.

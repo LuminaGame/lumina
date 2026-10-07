@@ -1,9 +1,9 @@
 import 'package:lumina_editor_api/lumina_editor_api.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../property_editors/scrub_numeric_field.dart';
-import '../../property_editors/slider_field.dart';
-import 'plugin_view_scope.dart';
+import 'package:lumina_ui/ui/core/property_editors/scrub_numeric_field.dart';
+import 'package:lumina_ui/ui/core/property_editors/slider_field.dart';
+import 'package:lumina_ui/ui/core/widgets/plugin_view/plugin_view_scope.dart';
 
 /// [PluginControlKind.numberField]: `value`, `min`, `max`, `step`, `unit`.
 /// The Details panel's fields: a slider plus a scrub field when both `min`

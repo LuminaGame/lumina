@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:lumina/lumina.dart' show AssetType;
 
-import 'api_types.dart';
+import 'package:lumina_editor_api/src/api_types.dart';
 
 /// One component of a placed actor, as a plugin sees it.
 class EditorComponentSnapshot {

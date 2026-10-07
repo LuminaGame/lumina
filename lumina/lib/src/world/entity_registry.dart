@@ -1,5 +1,5 @@
-import '../object/actor.dart';
-import '../components/base/scene_component.dart';
+import 'package:lumina/src/object/actor.dart';
+import 'package:lumina/src/components/base/scene_component.dart';
 
 /// Central world registry mapping native Filament renderable entity IDs to owning components and actors.
 class LuminaEntityRegistry {

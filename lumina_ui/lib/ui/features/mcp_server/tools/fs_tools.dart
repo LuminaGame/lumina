@@ -5,12 +5,12 @@ import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:path/path.dart' as p;
 
-import '../../main_editor/commands/editor_transaction.dart';
-import '../../main_editor/view_models/editor_view_model.dart';
-import '../services/mcp_file_snapshots.dart';
-import '../services/mcp_protocol.dart';
-import '../services/mcp_tool.dart';
-import '../services/project_sandbox.dart';
+import 'package:lumina_ui/ui/features/main_editor/commands/editor_transaction.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_file_snapshots.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_protocol.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_tool.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/project_sandbox.dart';
 
 final Expando<McpFileSnapshots> _snapshotStores = Expando('mcp_file_snapshots');
 

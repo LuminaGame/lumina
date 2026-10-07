@@ -1,7 +1,7 @@
-import '../blueprint_model.dart';
-import '../blueprint_validator.dart';
-import '../node_library.dart';
-import 'anim_blueprint_model.dart';
+import 'package:lumina/src/blueprint/blueprint_model.dart';
+import 'package:lumina/src/blueprint/blueprint_validator.dart';
+import 'package:lumina/src/blueprint/node_library.dart';
+import 'package:lumina/src/blueprint/anim/anim_blueprint_model.dart';
 
 /// Checks an Animation Blueprint the way the VM and the code
 /// generator both need it: the update graph as a Blueprint graph without

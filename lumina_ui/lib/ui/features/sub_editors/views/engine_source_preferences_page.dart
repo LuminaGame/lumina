@@ -2,9 +2,9 @@ import 'package:lumina/data/services/workspace_paths.dart';
 import 'package:lumina/lumina.dart' show EngineBootstrap, EngineCheckout, LuminaRelease;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../core/theme/editor_theme.dart';
-import '../../engine_bootstrap/view_models/engine_bootstrap_view_model.dart';
-import '../../engine_bootstrap/views/engine_bootstrap_view.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/engine_bootstrap/view_models/engine_bootstrap_view_model.dart';
+import 'package:lumina_ui/ui/features/engine_bootstrap/views/engine_bootstrap_view.dart';
 
 /// Editor Preferences → General › Engine Source: which engine source this
 /// editor generates and builds games against — the release version and

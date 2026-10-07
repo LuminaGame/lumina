@@ -4,8 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina/lumina.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
-import '../../services/sequencer_evaluator.dart';
-import '../../view_models/sequencer_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/sequencer_evaluator.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/sequencer_view_model.dart';
 import 'package:lumina_ui/ui/core/widgets/editor_context_menu.dart';
 
 /// The visible window of the curve canvas in data space (frames × values).

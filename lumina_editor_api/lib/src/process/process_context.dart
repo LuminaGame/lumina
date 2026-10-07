@@ -5,10 +5,10 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:lumina_plugin_protocol/lumina_plugin_protocol.dart';
 
-import '../mcp/mcp_types.dart';
-import '../plugin_storage.dart';
-import 'level_proxy.dart';
-import 'plugin_process.dart';
+import 'package:lumina_editor_api/src/mcp/mcp_types.dart';
+import 'package:lumina_editor_api/src/plugin_storage.dart';
+import 'package:lumina_editor_api/src/process/level_proxy.dart';
+import 'package:lumina_editor_api/src/process/plugin_process.dart';
 
 /// A console command registered from a plugin process.
 class PluginProcessConsoleCommand {

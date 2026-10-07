@@ -9,7 +9,7 @@ import 'package:flutter_filament/flutter_filament.dart';
 import 'package:lumina_smoke/lumina_smoke.dart';
 import 'package:vector_math/vector_math_64.dart';
 
-import '../math/units.dart';
+import 'package:lumina/src/math/units.dart';
 
 /// Called for every frame [SmokeRender.renderRealAssetMedia] films, before it
 /// is rendered.

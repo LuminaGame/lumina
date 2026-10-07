@@ -1,4 +1,4 @@
-import '../../../core/host/editor_host.dart' show EditorAssets;
+import 'package:lumina_ui/ui/core/host/editor_host.dart' show EditorAssets;
 
 /// One topic of the Lumina engine guide: its id (the `reference/<id>.md`
 /// file) and title.

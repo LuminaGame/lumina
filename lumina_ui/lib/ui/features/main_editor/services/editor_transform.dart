@@ -1,7 +1,7 @@
 import 'package:lumina/lumina.dart';
 import 'package:vector_math/vector_math_64.dart';
 
-import '../view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 
 /// Where an editor actor is drawn. Stored transforms are
 /// centimetres, Z up; the viewport's Filament scene is the runtime's Y up.

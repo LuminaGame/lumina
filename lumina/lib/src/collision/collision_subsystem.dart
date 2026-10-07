@@ -1,13 +1,13 @@
 import 'dart:math' as math;
 import 'package:vector_math/vector_math_64.dart';
-import '../components/collision/collision_component.dart';
-import '../object/actor.dart';
-import '../world/subsystem/world_subsystem.dart';
-import 'gjk_epa.dart';
-import 'heightfield.dart';
-import 'narrow_phase.dart';
-import 'raycast_math.dart';
-import '../math/euler.dart';
+import 'package:lumina/src/components/collision/collision_component.dart';
+import 'package:lumina/src/object/actor.dart';
+import 'package:lumina/src/world/subsystem/world_subsystem.dart';
+import 'package:lumina/src/collision/gjk_epa.dart';
+import 'package:lumina/src/collision/heightfield.dart';
+import 'package:lumina/src/collision/narrow_phase.dart';
+import 'package:lumina/src/collision/raycast_math.dart';
+import 'package:lumina/src/math/euler.dart';
 
 /// Central world subsystem managing broad-phase filtering, overlap/hit event dispatch, and geometric queries.
 class LuminaCollisionSubsystem extends LuminaWorldSubsystem {

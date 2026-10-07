@@ -1,6 +1,6 @@
-import 'ffi_platform.dart' as ffi;
+import 'package:flutter_filament/src/ffi_platform.dart' as ffi;
 import 'dart:async';
-import 'ffi_package_platform.dart';
+import 'package:flutter_filament/src/ffi_package_platform.dart';
 
 import 'package:flutter_filament/src/camera.dart';
 import 'package:flutter_filament/src/color_grading.dart';

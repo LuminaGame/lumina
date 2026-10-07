@@ -1,11 +1,11 @@
-import 'ffi_platform.dart' as ffi;
+import 'package:flutter_filament/src/ffi_platform.dart' as ffi;
 import 'dart:typed_data';
-import 'ffi_package_platform.dart';
+import 'package:flutter_filament/src/ffi_package_platform.dart';
 import 'package:vector_math/vector_math_64.dart';
 
-import 'engine.dart';
-import 'texture.dart';
-import 'filament_bindings.dart' as c;
+import 'package:flutter_filament/src/engine.dart';
+import 'package:flutter_filament/src/texture.dart';
+import 'package:flutter_filament/src/filament_bindings.dart' as c;
 
 /// A Skybox fills all untouched background pixels in a scene.
 ///

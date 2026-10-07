@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
-import 'engine_bootstrap.dart';
+import 'package:lumina/data/services/engine_bootstrap.dart';
 
 /// Which engine a Lumina Studio runs on, or which engine a project's copy of
 /// the engine source was taken from: a release tag and its commit, or for a

@@ -6,14 +6,14 @@ import 'package:flutter/services.dart';
 import 'package:lumina/lumina.dart' hide BoxShape;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../../core/theme/editor_theme.dart';
-import '../../models/blueprint_editor_nodes.dart';
-import '../../models/blueprint_palette.dart';
-import '../../models/blueprint_pin_style.dart';
-import '../../services/blueprint_debugger.dart';
-import '../../view_models/blueprint_graph_editor.dart';
-import 'node_palette.dart';
-import 'pin_literal_editor.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_editor_nodes.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_palette.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_pin_style.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/blueprint_debugger.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/blueprint_graph_editor.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/blueprint/node_palette.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/blueprint/pin_literal_editor.dart';
 
 part 'graph_canvas/state.dart';
 part 'graph_canvas/view_controls.dart';

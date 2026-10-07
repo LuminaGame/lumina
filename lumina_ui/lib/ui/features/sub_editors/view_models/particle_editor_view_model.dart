@@ -4,8 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:lumina/lumina.dart';
 import 'package:vector_math/vector_math_64.dart';
 
-import '../models/particle_system_document.dart';
-import '../services/particle_preview_scene.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/particle_system_document.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/particle_preview_scene.dart';
 
 /// View model of the Particle sub-editor.
 ///

@@ -1,8 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_filament/flutter_filament.dart';
-import '../world/world.dart';
-import '../controller/player_controller.dart';
-import '../world/level.dart';
+import 'package:lumina/src/world/world.dart';
+import 'package:lumina/src/controller/player_controller.dart';
+import 'package:lumina/src/world/level.dart';
 
 /// Base class for global, lifetime-bound services attached to a [LuminaGameInstance].
 abstract class LuminaGameInstanceSubsystem {

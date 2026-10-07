@@ -1,6 +1,6 @@
 import 'package:flutter_filament/flutter_filament.dart';
 import 'package:vector_math/vector_math_64.dart' show Vector3;
-import 'light_component.dart';
+import 'package:lumina/src/components/light/light_component.dart';
 
 /// Directional or Sun light component with illuminance intensity in lux.
 class LuminaDirectionalLightComponent extends LuminaLightComponent {

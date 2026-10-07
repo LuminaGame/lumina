@@ -4,9 +4,9 @@ import 'package:flutter/gestures.dart' show kPrimaryMouseButton;
 import 'package:flutter/scheduler.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../core/theme/editor_theme.dart';
-import '../services/pie_controller.dart';
-import '../services/pie_mouse_capture.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/pie_controller.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/pie_mouse_capture.dart';
 
 /// Play's mouse capture on the game view, one child of the
 /// viewport's Stack:

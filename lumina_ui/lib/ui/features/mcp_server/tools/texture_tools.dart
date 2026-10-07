@@ -2,11 +2,11 @@ import 'dart:io';
 
 import 'package:lumina/lumina.dart' show AssetType;
 
-import '../../main_editor/view_models/editor_view_model.dart';
-import '../../sub_editors/view_models/texture_editor_view_model.dart';
-import '../services/mcp_editor_sessions.dart';
-import '../services/mcp_protocol.dart';
-import '../services/mcp_tool.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/texture_editor_view_model.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_editor_sessions.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_protocol.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_tool.dart';
 
 /// The Texture editor as MCP tools: the texture's size, mip
 /// chain and settings, every setting the Details column's selects offer

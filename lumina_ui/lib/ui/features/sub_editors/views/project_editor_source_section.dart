@@ -4,7 +4,7 @@ import 'dart:isolate';
 import 'package:lumina/lumina.dart' show EditorHostGeneratorService, EditorSourceVendorService;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 
 /// Editor Preferences › Project Editor Builds › Editor Source:
 /// the open project's copy of the engine source under `.lumina/editor/`,

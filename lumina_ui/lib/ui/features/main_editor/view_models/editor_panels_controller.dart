@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart';
 
-import 'editor_layout_state.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_layout_state.dart';
 
 /// The host's [EditorPanels]: plugin panel visibility over the
 /// editor layout.

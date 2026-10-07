@@ -2,9 +2,9 @@ import 'dart:math' as math;
 
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../core/theme/editor_theme.dart';
-import '../../main_editor/services/gizmo_controller.dart';
-import '../../main_editor/services/transform_gizmo.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/gizmo_controller.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/transform_gizmo.dart';
 
 /// Draws a [TransformGizmoModel] over a sub-editor viewport:
 /// translate arrows with plane quads, rotate rings

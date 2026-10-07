@@ -5,8 +5,8 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:lumina/lumina.dart';
 
-import '../models/audio_editor_state.dart';
-import '../services/audio_wav_decoder_service.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/audio_editor_state.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/audio_wav_decoder_service.dart';
 
 /// View model behind the AudioEditor.
 ///

@@ -1,5 +1,5 @@
 import 'dart:io';
-import 'lumina_project.dart';
+import 'package:lumina/data/models/lumina_project.dart';
 
 /// Represents a tracked project entry in the launcher's recent projects list.
 class RecentProjectEntry {

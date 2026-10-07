@@ -5,11 +5,11 @@ import 'package:lumina/lumina.dart' show LuminaUmgElement, LuminaUmgElementBindi
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
-import '../../models/umg_document.dart';
-import '../../services/umg_widget_codegen.dart';
-import 'umg_components.dart';
-import 'umg_text_style.dart';
-import 'umg_theme_helper.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/umg_document.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/umg_widget_codegen.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/umg/umg_components.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/umg/umg_text_style.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/umg/umg_theme_helper.dart';
 
 /// Renders a [UmgDocument] using real shadcn_flutter widgets and layout.
 /// Used by the Play-In-Editor (PIE) viewport overlay and widget previews.

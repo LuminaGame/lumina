@@ -1,4 +1,4 @@
-import 'element.dart';
+import 'package:lumina/src/declarative/element.dart';
 
 /// Manages the build and reconciliation cycle of [LuminaElement] trees.
 class LuminaBuildOwner {

@@ -8,9 +8,9 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
-import 'options.dart';
-import 'plan.dart';
-import 'verify.dart';
+import 'package:lumina_ui/tooling/windows_packaging/options.dart';
+import 'package:lumina_ui/tooling/windows_packaging/plan.dart';
+import 'package:lumina_ui/tooling/windows_packaging/verify.dart';
 
 /// The Dart SDK executable to run `msix` with: this process when it is dart,
 /// else the Flutter SDK's (FLUTTER_ROOT, the ancestors of this executable,

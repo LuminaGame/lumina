@@ -1,5 +1,5 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
-import 'scrub_numeric_field.dart';
+import 'package:lumina_ui/ui/core/property_editors/scrub_numeric_field.dart';
 
 class SliderField extends StatefulWidget {
   final double value;

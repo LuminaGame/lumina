@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../core/theme/editor_theme.dart';
-import '../services/android_devices.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/android_devices.dart';
 
 /// The Play on Device section of Play's dropdown: the Android devices and
 /// emulators as a tree (Connected devices / Emulators), each with its status

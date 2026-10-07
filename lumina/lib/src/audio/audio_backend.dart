@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'sound_base.dart';
+import 'package:lumina/src/audio/sound_base.dart';
 
 /// Opaque integer handle representing an active audio instance in the audio backend.
 extension type const LuminaAudioHandle(int value) {}

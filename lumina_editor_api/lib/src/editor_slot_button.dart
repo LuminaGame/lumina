@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart' show IconData;
 
-import 'editor_command.dart';
+import 'package:lumina_editor_api/src/editor_command.dart';
 
 /// A named place in the editor chrome a plugin button goes.
 enum EditorSlot {

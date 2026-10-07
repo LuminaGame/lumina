@@ -1,10 +1,10 @@
-import 'ffi_platform.dart' as ffi;
+import 'package:flutter_filament/src/ffi_platform.dart' as ffi;
 import 'dart:typed_data';
-import 'ffi_package_platform.dart';
+import 'package:flutter_filament/src/ffi_package_platform.dart';
 import 'package:vector_math/vector_math_64.dart';
-import 'filament_bindings.dart' as c;
-import 'engine.dart';
-import 'math/norm.dart';
+import 'package:flutter_filament/src/filament_bindings.dart' as c;
+import 'package:flutter_filament/src/engine.dart';
+import 'package:flutter_filament/src/math/norm.dart';
 
 /// Packs a quaternion (or 4D tangent frame) into an [Int16List] of 4 snorm16 values.
 ///

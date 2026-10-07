@@ -1,11 +1,11 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../core/theme/editor_theme.dart';
-import '../services/git_service.dart';
-import '../view_models/source_control_view_model.dart';
-import 'identity_form.dart';
-import 'revert_dialog.dart';
-import 'source_control_badge.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/source_control/services/git_service.dart';
+import 'package:lumina_ui/ui/features/source_control/view_models/source_control_view_model.dart';
+import 'package:lumina_ui/ui/features/source_control/views/identity_form.dart';
+import 'package:lumina_ui/ui/features/source_control/views/revert_dialog.dart';
+import 'package:lumina_ui/ui/features/source_control/views/source_control_badge.dart';
 
 /// Opens the changelist commit dialog. [preChecked] limits the initial
 /// selection (Content Browser context-menu invocation pre-checks that asset).

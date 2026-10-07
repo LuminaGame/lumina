@@ -2,10 +2,10 @@ import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_filament/flutter_filament.dart' show FilamentEngine, FilamentScene, FilamentView;
 import 'package:lumina/lumina.dart';
 
-import '../../sub_editors/models/solar_math.dart';
-import '../view_models/editor_view_model.dart';
-import 'environment_actor_properties.dart';
-import 'pie_controller.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/solar_math.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/environment_actor_properties.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/pie_controller.dart';
 
 /// The level's environment actors in the edit-mode viewport, the way [EditorLevelLights] runs the level's
 /// lights: every `ExponentialHeightFog`, `PostProcessVolume` and

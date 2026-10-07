@@ -3,12 +3,12 @@ import 'package:lumina/lumina.dart' hide BoxShape;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:vector_math/vector_math_64.dart' show Vector3;
 
-import '../../../../core/theme/editor_theme.dart';
-import '../../sub_editor_binding.dart';
-import '../../view_models/blend_space_editor_view_model.dart';
-import '../blueprint/pin_literal_editor.dart';
-import '../sub_editor_3d_viewport.dart';
-import 'blend_space_grid.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/sub_editors/sub_editor_binding.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/blend_space_editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/blueprint/pin_literal_editor.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/sub_editor_3d_viewport.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/blend_space/blend_space_grid.dart';
 
 /// The Blend Space editor: the target mesh's clips on the left to drag onto the grid, the
 /// grid with samples snapped to its divisions and a preview point, the

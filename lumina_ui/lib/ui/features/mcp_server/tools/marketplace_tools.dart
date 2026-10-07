@@ -1,12 +1,12 @@
 import 'package:lumina_marketplace_shared/lumina_marketplace_shared.dart';
 
-import '../../main_editor/view_models/editor_view_model.dart';
-import '../../marketplace/services/marketplace_license_records.dart';
-import '../../marketplace/view_models/marketplace_view_model.dart';
-import '../services/mcp_jobs.dart';
-import '../services/mcp_protocol.dart';
-import '../services/mcp_tool.dart';
-import 'content_tools.dart' show mcpContentFolder;
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/marketplace/services/marketplace_license_records.dart';
+import 'package:lumina_ui/ui/features/marketplace/view_models/marketplace_view_model.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_jobs.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_protocol.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_tool.dart';
+import 'package:lumina_ui/ui/features/mcp_server/tools/content_tools.dart' show mcpContentFolder;
 
 /// What every account-bound Marketplace tool says when nobody is signed in:
 /// credentials stay with the user.

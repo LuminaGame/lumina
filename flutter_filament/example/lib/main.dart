@@ -2,21 +2,21 @@ import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 
-import 'samples/gltf_viewer_sample.dart';
-import 'samples/hello_pbr_sample.dart';
-import 'samples/hello_triangle_sample.dart';
-import 'samples/lightbulb_sample.dart';
-import 'samples/material_sandbox_sample.dart';
-import 'samples/procedural_texture_sample.dart';
-import 'samples/rendertarget_sample.dart';
-import 'samples/sample_cloth.dart';
-import 'samples/sample_normal_map.dart';
-import 'samples/strobe_color_sample.dart';
-import 'samples/suzanne_sample.dart';
-import 'samples/skybox_sample.dart';
-import 'samples/simulated_skybox_sample.dart';
-import 'samples/textured_quad_sample.dart';
-import 'samples/view_test_sample.dart';
+import 'package:flutter_filament_example/samples/gltf_viewer_sample.dart';
+import 'package:flutter_filament_example/samples/hello_pbr_sample.dart';
+import 'package:flutter_filament_example/samples/hello_triangle_sample.dart';
+import 'package:flutter_filament_example/samples/lightbulb_sample.dart';
+import 'package:flutter_filament_example/samples/material_sandbox_sample.dart';
+import 'package:flutter_filament_example/samples/procedural_texture_sample.dart';
+import 'package:flutter_filament_example/samples/rendertarget_sample.dart';
+import 'package:flutter_filament_example/samples/sample_cloth.dart';
+import 'package:flutter_filament_example/samples/sample_normal_map.dart';
+import 'package:flutter_filament_example/samples/strobe_color_sample.dart';
+import 'package:flutter_filament_example/samples/suzanne_sample.dart';
+import 'package:flutter_filament_example/samples/skybox_sample.dart';
+import 'package:flutter_filament_example/samples/simulated_skybox_sample.dart';
+import 'package:flutter_filament_example/samples/textured_quad_sample.dart';
+import 'package:flutter_filament_example/samples/view_test_sample.dart';
 
 void main() {
   // Global Flutter UI Exception Trap - Log to console without crashing app

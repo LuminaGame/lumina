@@ -1,10 +1,10 @@
 import 'package:flutter/services.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../../core/theme/editor_theme.dart';
-import '../../view_models/material_editor_view_model.dart';
-import '../blueprint/graph_canvas.dart';
-import 'node_details_panel.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/material_editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/blueprint/graph_canvas.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/material/node_details_panel.dart';
 
 /// The Material Editor's Node Graph tab: the material as
 /// material expressions on the Blueprint editor's graph canvas, with a

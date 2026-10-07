@@ -7,9 +7,9 @@ import 'package:image/image.dart' as imglib;
 import 'package:lumina/data/models/lumina_asset.dart';
 import 'package:vector_math/vector_math_64.dart' as vm;
 
-import '../view_models/material_editor_view_model.dart' show MaterialParamModel, MaterialParamType;
-import '../views/sub_editor_3d_viewport.dart' show PreviewShape;
-import 'preview_mesh_factory.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/material_editor_view_model.dart' show MaterialParamModel, MaterialParamType;
+import 'package:lumina_ui/ui/features/sub_editors/views/sub_editor_3d_viewport.dart' show PreviewShape;
+import 'package:lumina_ui/ui/features/sub_editors/services/preview_mesh_factory.dart';
 
 /// Owns the Filament objects that show a compiled `.filamat` package on a
 /// procedural preview primitive inside a sub-editor viewport.

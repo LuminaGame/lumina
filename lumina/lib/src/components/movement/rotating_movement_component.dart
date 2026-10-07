@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 import 'package:vector_math/vector_math_64.dart';
-import '../base/actor_component.dart';
-import '../../math/euler.dart';
+import 'package:lumina/src/components/base/actor_component.dart';
+import 'package:lumina/src/math/euler.dart';
 
 /// Actor component that continuously spins an actor at a constant angular rate about an optional pivot.
 class LuminaRotatingMovementComponent extends LuminaActorComponent {

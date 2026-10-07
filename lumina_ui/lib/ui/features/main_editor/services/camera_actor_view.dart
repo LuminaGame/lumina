@@ -4,8 +4,8 @@ import 'package:flutter_filament/flutter_filament.dart' show FilamentCamera;
 import 'package:lumina/lumina.dart';
 import 'package:vector_math/vector_math_64.dart';
 
-import '../view_models/editor_view_model.dart' show EditorActorNode;
-import 'camera_actor_properties.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart' show EditorActorNode;
+import 'package:lumina_ui/ui/features/main_editor/services/camera_actor_properties.dart';
 
 /// Where a view of the level looks from: runtime axes (Y up), centimetres,
 /// and the vertical field of view.

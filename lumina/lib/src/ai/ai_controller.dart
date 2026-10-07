@@ -1,9 +1,9 @@
 import 'dart:math' as math;
 import 'package:vector_math/vector_math_64.dart';
-import '../controller/controller.dart';
-import '../object/actor.dart';
-import '../object/pawn.dart';
-import 'navigation_system.dart';
+import 'package:lumina/src/controller/controller.dart';
+import 'package:lumina/src/object/actor.dart';
+import 'package:lumina/src/object/pawn.dart';
+import 'package:lumina/src/ai/navigation_system.dart';
 
 /// Result of issuing a path following or moveTo request.
 enum PathFollowingRequestResult {

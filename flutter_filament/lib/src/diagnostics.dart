@@ -1,8 +1,8 @@
 import 'dart:async';
-import 'ffi_platform.dart' as ffi;
-import 'ffi_package_platform.dart';
+import 'package:flutter_filament/src/ffi_platform.dart' as ffi;
+import 'package:flutter_filament/src/ffi_package_platform.dart';
 
-import 'filament_bindings.dart' as ffi_gen;
+import 'package:flutter_filament/src/filament_bindings.dart' as ffi_gen;
 
 /// Represents an intercepted Filament `PANIC_PRECONDITION` or assertion.
 class FilamentPanicException implements Exception {

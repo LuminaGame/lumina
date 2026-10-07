@@ -1,8 +1,8 @@
 import 'package:lumina/lumina.dart';
 import 'package:vector_math/vector_math_64.dart' show Matrix4, Vector3;
 
-import '../../details/models/editor_component_node.dart';
-import '../view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/details/models/editor_component_node.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 
 /// The placeable environment actors, resolved
 /// the one way every consumer agrees on, as `LightActorProperties` does for

@@ -1,4 +1,4 @@
-import 'editor_entry.dart';
+import 'package:lumina_ui/editor_entry.dart';
 
 export 'editor_entry.dart';
 

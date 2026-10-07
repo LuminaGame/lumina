@@ -1,5 +1,5 @@
 import 'package:lumina_editor_api/lumina_editor_api.dart';
-import '../features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 
 /// The host's own contributions through the plugin API. Its former demo
 /// registrations — a "Test Panel" panel and menu item, a toolbar Play button

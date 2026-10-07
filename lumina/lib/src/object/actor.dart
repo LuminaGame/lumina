@@ -1,13 +1,13 @@
 import 'package:vector_math/vector_math_64.dart';
-import '../declarative/lumina_object.dart';
-import '../declarative/build_context.dart';
-import '../components/base/actor_component.dart';
-import '../components/base/scene_component.dart';
-import '../components/collision/collision_component.dart';
-import '../collision/collision_subsystem.dart';
-import '../controller/controller.dart';
-import '../world/world.dart';
-import '../world/level.dart';
+import 'package:lumina/src/declarative/lumina_object.dart';
+import 'package:lumina/src/declarative/build_context.dart';
+import 'package:lumina/src/components/base/actor_component.dart';
+import 'package:lumina/src/components/base/scene_component.dart';
+import 'package:lumina/src/components/collision/collision_component.dart';
+import 'package:lumina/src/collision/collision_subsystem.dart';
+import 'package:lumina/src/controller/controller.dart';
+import 'package:lumina/src/world/world.dart';
+import 'package:lumina/src/world/level.dart';
 
 /// Mixin defining serialization hooks for persistent actors and components.
 mixin LuminaSaveable {

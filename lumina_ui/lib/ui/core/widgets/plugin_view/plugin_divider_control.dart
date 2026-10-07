@@ -1,7 +1,7 @@
 import 'package:lumina_editor_api/lumina_editor_api.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 
 /// [PluginControlKind.divider]: a thin rule between controls.
 class PluginDividerControl extends StatelessWidget {

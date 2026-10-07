@@ -10,8 +10,8 @@ import 'package:lumina_ui/ui/features/sub_editors/models/viewport_ray.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/landscape_preview_scene.dart';
 import 'package:lumina_ui/ui/features/sub_editors/sub_editor_binding.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/landscape_editor_view_model.dart';
-import 'brush_overlay.dart';
-import '../sub_editor_3d_viewport.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/landscape/brush_overlay.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/sub_editor_3d_viewport.dart';
 
 /// Landscape / Foliage sub-editor.
 ///

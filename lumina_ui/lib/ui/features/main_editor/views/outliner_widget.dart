@@ -6,10 +6,10 @@ import 'package:flutter/gestures.dart' show kDoubleTapTimeout;
 import 'package:flutter/services.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../core/services/file_reveal.dart';
-import '../../../core/theme/editor_theme.dart';
-import '../models/editor_actor_catalog.dart';
-import '../view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/core/services/file_reveal.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/main_editor/models/editor_actor_catalog.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 import 'package:lumina_ui/ui/core/widgets/editor_context_menu.dart';
 
 /// What an outliner row carries while it is dragged: the node itself, or the

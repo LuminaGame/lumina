@@ -1,10 +1,10 @@
 import 'package:lumina/lumina.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../../core/theme/editor_theme.dart';
-import '../../models/material_slot_binding.dart';
-import '../../view_models/skeletal_mesh_editor_view_model.dart';
-import '../../../../core/property_editors/asset_picker_select.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/material_slot_binding.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/skeletal_mesh_editor_view_model.dart';
+import 'package:lumina_ui/ui/core/property_editors/asset_picker_select.dart';
 
 /// `MATERIAL SLOTS` section of the Skeletal Mesh editor's right inspector.
 ///

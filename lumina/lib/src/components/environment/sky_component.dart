@@ -3,10 +3,10 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:flutter_filament/flutter_filament.dart';
 import 'package:vector_math/vector_math_64.dart';
-import '../../object/actor.dart';
-import '../../utility/lumina_assets.dart';
-import '../../world/world.dart';
-import '../base/scene_component.dart';
+import 'package:lumina/src/object/actor.dart';
+import 'package:lumina/src/utility/lumina_assets.dart';
+import 'package:lumina/src/world/world.dart';
+import 'package:lumina/src/components/base/scene_component.dart';
 
 /// Environment skybox and Image-Based Lighting (IBL) indirect light component for a world.
 class LuminaSkyComponent extends LuminaSceneComponent {

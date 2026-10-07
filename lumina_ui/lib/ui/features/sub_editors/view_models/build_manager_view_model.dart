@@ -5,9 +5,9 @@ import 'package:flutter/foundation.dart';
 import 'package:lumina/lumina.dart';
 import 'package:lumina_ui/ui/core/host/editor_host.dart' show LuminaEditorHost;
 
-import '../services/build_pipeline_service.dart';
-import '../services/project_icon_packaging.dart';
-import '../services/web_preview_server.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/build_pipeline_service.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/project_icon_packaging.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/web_preview_server.dart';
 
 /// Per-step UI state derived from real pipeline events.
 class BuildStepState {

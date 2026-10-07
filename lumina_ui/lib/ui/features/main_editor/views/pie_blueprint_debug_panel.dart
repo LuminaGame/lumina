@@ -2,13 +2,13 @@ import 'dart:io';
 
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../core/theme/editor_theme.dart';
-import '../../sub_editors/services/blueprint_debugger.dart';
-import '../../sub_editors/view_models/blueprint_editor_view_model.dart';
-import '../../sub_editors/view_models/level_blueprint_editor_view_model.dart';
-import '../../sub_editors/views/blueprint/graph_canvas.dart';
-import '../view_models/editor_view_model.dart';
-import 'play_blocked_dialog.dart' show openBlueprintAtNode;
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/blueprint_debugger.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/blueprint_editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/level_blueprint_editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/blueprint/graph_canvas.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/main_editor/views/play_blocked_dialog.dart' show openBlueprintAtNode;
 
 /// The level editor's docked Blueprint tab: during
 /// Play it shows the event graph of the Blueprint the debugger follows (the

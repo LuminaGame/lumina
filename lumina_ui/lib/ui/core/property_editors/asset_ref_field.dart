@@ -2,7 +2,7 @@ import 'package:lumina/lumina.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import 'asset_picker_select.dart';
+import 'package:lumina_ui/ui/core/property_editors/asset_picker_select.dart';
 
 /// An asset reference property of a placed actor's component:
 /// the shared searchable [AssetPickerSelect] over the project's

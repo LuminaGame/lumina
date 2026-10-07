@@ -1,10 +1,10 @@
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../core/theme/editor_theme.dart';
-import '../services/mcp_server_service.dart';
-import '../services/mcp_tool.dart';
-import 'mcp_tool_catalogue.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_server_service.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_tool.dart';
+import 'package:lumina_ui/ui/features/mcp_server/views/mcp_tool_catalogue.dart';
 
 /// Tools → AI Agent Access (MCP): the on/off switch for the editor's MCP
 /// server, its status and port, the exact registration commands with copy

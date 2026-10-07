@@ -3,9 +3,9 @@ import 'dart:async';
 import 'package:file_picker/file_picker.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../core/theme/editor_theme.dart';
-import '../services/plugin_importer.dart';
-import '../view_models/plugin_manager_view_model.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/plugin_manager/services/plugin_importer.dart';
+import 'package:lumina_ui/ui/features/plugin_manager/view_models/plugin_manager_view_model.dart';
 
 /// The Plugin Manager's Import from Folder / Import from Zip: picks a plugin
 /// folder or a plugin package zip, validates and copies it into the user

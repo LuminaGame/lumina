@@ -4,16 +4,16 @@ import 'dart:typed_data';
 import 'package:flutter_filament/flutter_filament.dart';
 import 'package:meta/meta.dart';
 import 'package:vector_math/vector_math_64.dart';
-import '../../material/lumina_material.dart';
-import '../../material/lumina_material_instance.dart';
-import '../../material/dynamic_material_instance.dart';
-import '../../../data/models/lumina_asset.dart';
-import '../../utility/lumina_assets.dart';
-import '../../object/actor.dart';
-import '../../world/world.dart';
-import '../base/scene_component.dart';
-import '../../math/units.dart';
-import '../../physics/primitive_physics.dart';
+import 'package:lumina/src/material/lumina_material.dart';
+import 'package:lumina/src/material/lumina_material_instance.dart';
+import 'package:lumina/src/material/dynamic_material_instance.dart';
+import 'package:lumina/data/models/lumina_asset.dart';
+import 'package:lumina/src/utility/lumina_assets.dart';
+import 'package:lumina/src/object/actor.dart';
+import 'package:lumina/src/world/world.dart';
+import 'package:lumina/src/components/base/scene_component.dart';
+import 'package:lumina/src/math/units.dart';
+import 'package:lumina/src/physics/primitive_physics.dart';
 
 /// Scene component rendering a static (non-skinned) 3D mesh via Filament and gltfio.
 ///

@@ -3,9 +3,9 @@ import 'dart:io';
 
 import 'package:lumina/lumina.dart';
 
-import '../../marketplace/services/marketplace_license_records.dart';
-import '../../sub_editors/services/umg_widget_codegen.dart';
-import 'installed_template_repository.dart';
+import 'package:lumina_ui/ui/features/marketplace/services/marketplace_license_records.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/umg_widget_codegen.dart';
+import 'package:lumina_ui/ui/features/launcher/services/installed_template_repository.dart';
 
 /// Creates a project from an installed folder template, the
 /// way [ProjectRepository.createProjectStream] creates one from a built-in

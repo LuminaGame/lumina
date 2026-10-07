@@ -3,10 +3,10 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
-import '../models/lumina_asset.dart';
-import 'animation_import_binder.dart';
-import 'authored_animation_clip.dart';
-import 'glb_animation_merger.dart';
+import 'package:lumina/data/models/lumina_asset.dart';
+import 'package:lumina/data/services/animation_import_binder.dart';
+import 'package:lumina/data/services/authored_animation_clip.dart';
+import 'package:lumina/data/services/glb_animation_merger.dart';
 
 /// Writes an [AuthoredAnimationClip] into a skinned GLB as a glTF animation,
 /// the form every player in the engine reads (gltfio's animator, by clip

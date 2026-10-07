@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:lumina_editor_api/lumina_editor_api.dart';
 
-import 'mcp_tool.dart';
+import 'package:lumina_ui/ui/features/mcp_server/services/mcp_tool.dart';
 
 /// The editor's MCP tools as plugins see them: one
 /// [McpToolRegistry] — the server's — shared by host tools, plugin tools,

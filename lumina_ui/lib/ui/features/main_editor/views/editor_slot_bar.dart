@@ -1,8 +1,8 @@
 import 'package:lumina_editor_api/lumina_editor_api.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
-import '../../../core/plugin_extension_registry.dart';
-import '../../../core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/core/plugin_extension_registry.dart';
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 
 /// The plugin buttons of one named [slot]. The row rebuilds
 /// when plugins register; each button rebuilds only on its own state.

@@ -3,8 +3,8 @@ import 'dart:math' as math;
 import 'package:lumina/lumina.dart';
 import 'package:vector_math/vector_math_64.dart';
 
-import '../../main_editor/services/camera_actor_view.dart';
-import '../../main_editor/view_models/editor_view_model.dart' show EditorActorNode, EditorViewModel;
+import 'package:lumina_ui/ui/features/main_editor/services/camera_actor_view.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart' show EditorActorNode, EditorViewModel;
 
 /// Where a view of the level looks from (the level's shared pose type).
 typedef SequencerViewPose = LevelViewPose;

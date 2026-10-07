@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import '../blueprint_model.dart';
+import 'package:lumina/src/blueprint/blueprint_model.dart';
 
 /// One axis of a blend space.
 class LuminaBlendSpaceAxis {

@@ -1,5 +1,5 @@
-import '../models/lumina_asset.dart';
-import '../repositories/asset_repository.dart';
+import 'package:lumina/data/models/lumina_asset.dart';
+import 'package:lumina/data/repositories/asset_repository.dart';
 
 class ResolvedReference {
   final RealAssetInfo? asset;

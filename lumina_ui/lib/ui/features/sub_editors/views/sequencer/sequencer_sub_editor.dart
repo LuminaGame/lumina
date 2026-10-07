@@ -2,15 +2,15 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina/lumina.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
-import '../../sub_editor_binding.dart';
-import '../../services/sequencer_offscreen_frame_source.dart';
-import '../../view_models/sequencer_view_model.dart';
-import 'curve_editor_widget.dart';
-import 'key_details_panel.dart';
-import 'level_viewport.dart';
-import 'render_dialog.dart';
-import 'timeline_widget.dart';
-import 'track_tree_widget.dart';
+import 'package:lumina_ui/ui/features/sub_editors/sub_editor_binding.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/sequencer_offscreen_frame_source.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/sequencer_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/sequencer/curve_editor_widget.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/sequencer/key_details_panel.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/sequencer/level_viewport.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/sequencer/render_dialog.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/sequencer/timeline_widget.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/sequencer/track_tree_widget.dart';
 
 class SequencerSubEditor extends StatefulWidget {
   final String assetName;

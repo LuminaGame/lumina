@@ -2,12 +2,12 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:flutter_filament/flutter_filament.dart';
 import 'package:vector_math/vector_math_64.dart';
-import '../../object/actor.dart';
-import '../../world/world.dart';
-import '../base/scene_component.dart';
-import '../mesh/procedural_mesh_component.dart';
-import 'particle_emitter_config.dart';
-import '../../math/euler.dart';
+import 'package:lumina/src/object/actor.dart';
+import 'package:lumina/src/world/world.dart';
+import 'package:lumina/src/components/base/scene_component.dart';
+import 'package:lumina/src/components/mesh/procedural_mesh_component.dart';
+import 'package:lumina/src/components/particles/particle_emitter_config.dart';
+import 'package:lumina/src/math/euler.dart';
 
 /// Scene component that simulates CPU particles and renders them as a pool of Filament instanced meshes.
 class LuminaParticleSystemComponent extends LuminaSceneComponent {

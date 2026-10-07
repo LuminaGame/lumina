@@ -1,6 +1,6 @@
 import 'package:vector_math/vector_math_64.dart';
-import 'subsystem/world_subsystem.dart';
-import 'world_partition.dart';
+import 'package:lumina/src/world/subsystem/world_subsystem.dart';
+import 'package:lumina/src/world/world_partition.dart';
 
 /// Runtime visibility and cross-fade states for HLOD proxy meshes.
 enum HlodProxyState {

@@ -5,9 +5,9 @@ import 'dart:typed_data';
 import 'package:image/image.dart' as img;
 import 'package:lumina_smoke/lumina_smoke.dart';
 
-import '../../data/models/lumina_asset.dart';
-import '../../data/models/lumina_project.dart';
-import '../blueprint/blueprint.dart';
+import 'package:lumina/data/models/lumina_asset.dart';
+import 'package:lumina/data/models/lumina_project.dart';
+import 'package:lumina/src/blueprint/blueprint.dart';
 
 /// A generated project with many real `.lmas` files of every kind the
 /// editor scans (for the derived-data tests and smoke): static meshes

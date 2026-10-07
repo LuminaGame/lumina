@@ -7,9 +7,9 @@ import 'package:lumina/data/repositories/project_repository.dart';
 import 'package:lumina/data/services/engine_logger_service.dart';
 import 'package:lumina/lumina.dart' show ProjectEngineLink, SpaceFreeBuildDir;
 
-import '../../sub_editors/services/build_pipeline_service.dart' show HostBuildTargets;
-import 'android_devices.dart';
-import 'android_sdk.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/build_pipeline_service.dart' show HostBuildTargets;
+import 'package:lumina_ui/ui/features/main_editor/services/android_devices.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/android_sdk.dart';
 
 /// Where a Play on Device run is.
 enum AndroidRunState { idle, booting, building, installing, running }

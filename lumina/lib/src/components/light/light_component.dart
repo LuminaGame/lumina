@@ -1,9 +1,9 @@
 import 'package:flutter_filament/flutter_filament.dart';
 import 'package:vector_math/vector_math_64.dart';
-import '../../object/actor.dart';
-import '../../world/world.dart';
-import '../base/scene_component.dart';
-import '../../post_process/shadow_settings.dart';
+import 'package:lumina/src/object/actor.dart';
+import 'package:lumina/src/world/world.dart';
+import 'package:lumina/src/components/base/scene_component.dart';
+import 'package:lumina/src/post_process/shadow_settings.dart';
 
 export 'auto_exposure.dart';
 
