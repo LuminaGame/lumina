@@ -29,7 +29,7 @@ description: |-
 # pkg-config and the GTK 3 / liblzma / libstdc++ development files; the
 # engine's pointer capture builds against the Wayland ones; GStreamer (base +
 # good: appsrc, vp8enc, webmmux) records videos; libGL / libvulkan load the
-# renderer's backends.
+# renderer's backends; ALSA and mpv build and run audio/video playback.
 depends:
   # The bundled libc++ the engine builds with needs glibc 2.38+.
   - libc6 (>= 2.38)
@@ -49,6 +49,8 @@ depends:
   - libstdc++-14-dev | libstdc++-13-dev | libstdc++-12-dev
   - libwayland-dev
   - wayland-protocols
+  - libasound2-dev
+  - libmpv-dev
   - libgstreamer1.0-0
   - gstreamer1.0-plugins-base
   - gstreamer1.0-plugins-good
@@ -77,6 +79,8 @@ overrides:
       - libstdc++-devel
       - wayland-devel
       - wayland-protocols-devel
+      - alsa-lib-devel
+      - mpv-devel
       - gstreamer1
       - gstreamer1-plugins-base
       - gstreamer1-plugins-good

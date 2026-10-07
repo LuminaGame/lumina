@@ -350,7 +350,9 @@ String generateChangelog(String root, String tag, {String? fromTag}) {
   if (prev == null || prev.isEmpty) {
     final res = Process.runSync(
       'git',
-      ['describe', '--tags', '--abbrev=0', '$tag~1'],
+      // Only release tags: the Filament prebuilt tags (filament-*) sit in
+      // between and would cut the range short.
+      ['describe', '--tags', '--abbrev=0', '--match', 'v*', '$tag~1'],
       workingDirectory: root,
       runInShell: Platform.isWindows,
     );
