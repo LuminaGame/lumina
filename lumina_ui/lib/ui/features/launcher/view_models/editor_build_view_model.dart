@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 enum EditorBuildSplashState { running, failed, succeeded, cancelled }

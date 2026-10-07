@@ -4,7 +4,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/ui/core/host/editor_host.dart' show EditorAssets;
 
 /// Turns a project's icon into the square master PNG that

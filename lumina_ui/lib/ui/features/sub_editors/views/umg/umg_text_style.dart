@@ -1,4 +1,4 @@
-import 'package:lumina/lumina.dart'
+import 'package:lumina_editor_data/lumina_editor.dart'
     show LuminaUmgElementBinding, LuminaUmgText, LuminaUmgTextOutline, LuminaUmgTextShadow;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 

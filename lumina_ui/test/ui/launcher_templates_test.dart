@@ -2,8 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina_core/lumina_core.dart';
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/ui/features/launcher/view_models/create_project_view_model.dart';
 import 'package:lumina_ui/ui/features/launcher/view_models/launcher_view_model.dart';
 import 'package:lumina_ui/ui/features/launcher/views/create_project_dialog.dart';

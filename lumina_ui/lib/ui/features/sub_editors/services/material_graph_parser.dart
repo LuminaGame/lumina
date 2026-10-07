@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:lumina/lumina.dart' show LuminaBlueprintGraph, LuminaBlueprintNode, LuminaBlueprintWire;
+import 'package:lumina_editor_data/lumina_editor.dart' show LuminaBlueprintGraph, LuminaBlueprintNode, LuminaBlueprintWire;
 
 import 'package:lumina_ui/ui/features/sub_editors/models/material_graph.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/mat_source.dart';

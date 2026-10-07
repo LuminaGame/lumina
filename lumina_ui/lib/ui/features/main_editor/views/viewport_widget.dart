@@ -12,7 +12,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_filament/flutter_filament.dart' hide GizmoMode;
 import 'package:flutter_filament/flutter_filament.dart' as fil show GizmoMode;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/ui/core/services/editor_mesh_budget.dart';
 import 'package:lumina_ui/ui/core/services/editor_procedural_sky.dart';
 import 'package:lumina_ui/ui/core/services/editor_scene_environment.dart';

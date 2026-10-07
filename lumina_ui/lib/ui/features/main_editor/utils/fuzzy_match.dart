@@ -1,4 +1,4 @@
-import 'package:lumina/data/repositories/asset_repository.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 
 class QuickOpenMatch {
   final RealAssetInfo asset;

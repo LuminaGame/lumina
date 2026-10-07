@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_filament/flutter_filament.dart' show DlssQuality, TemporalAntiAliasingOptions;
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/ui/core/widgets/quality_settings_popover.dart';
 import 'package:lumina_ui/ui/core/widgets/rtx_settings_popover.dart';
 import 'package:lumina_ui/ui/features/main_editor/services/editor_quality_settings.dart';

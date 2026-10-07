@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:path/path.dart' as p;
 
 import 'package:lumina_ui/ui/core/host/editor_host.dart';

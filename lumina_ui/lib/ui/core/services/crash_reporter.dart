@@ -7,7 +7,7 @@ import 'dart:ui' show ErrorCallback;
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:lumina/lumina.dart'
+import 'package:lumina_editor_data/lumina_editor.dart'
     show EditorHostInputs, EngineLogEntry, EngineLoggerService, LuminaDataDir, LuminaGraphicsDevices, LuminaRelease, LuminaRenderBackendInfo;
 import 'package:lumina_editor_api/lumina_editor_api.dart' show LuminaPluginCrashReporter;
 import 'package:lumina_marketplace_shared/lumina_marketplace_shared.dart';

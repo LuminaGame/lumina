@@ -1,6 +1,6 @@
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:lumina/lumina.dart' show LuminaGraphicsDevices, LuminaRelease, LuminaRenderBackendInfo;
+import 'package:lumina_editor_data/lumina_editor.dart' show LuminaGraphicsDevices, LuminaRelease, LuminaRenderBackendInfo;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';

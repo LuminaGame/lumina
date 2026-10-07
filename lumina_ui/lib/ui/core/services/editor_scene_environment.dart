@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:lumina_ui/ui/core/host/editor_host.dart' show EditorAssets;
 import 'package:flutter_filament/flutter_filament.dart' show FilamentEngine, FilamentScene;
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 
 import 'package:lumina_ui/ui/features/details/models/editor_component_node.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart' show EditorActorNode;

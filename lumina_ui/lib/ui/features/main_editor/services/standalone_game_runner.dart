@@ -3,9 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:lumina/data/repositories/project_repository.dart';
-import 'package:lumina_core/lumina_core.dart';
-import 'package:lumina/lumina.dart' show LuminaGraphicsDevices, ProjectEngineLink, SpaceFreeBuildDir;
+import 'package:lumina_editor_data/lumina_editor.dart';
 
 /// Where Play Standalone is.
 enum StandaloneState { idle, building, running }

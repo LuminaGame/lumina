@@ -2,7 +2,7 @@ import 'dart:ui' show Offset;
 
 // Enum types only (the Material editor's shading / blending selects).
 import 'package:flutter_filament/flutter_filament.dart' show BlendingMode, FilamatShading;
-import 'package:lumina/lumina.dart' show AssetType, LuminaBlueprintNode, LuminaBlueprintWire;
+import 'package:lumina_editor_data/lumina_editor.dart' show AssetType, LuminaBlueprintNode, LuminaBlueprintWire;
 
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/material_graph.dart';

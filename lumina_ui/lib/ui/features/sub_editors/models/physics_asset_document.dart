@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:lumina/lumina.dart'
+import 'package:lumina_editor_data/lumina_editor.dart'
     show BoxShape, CapsuleShape, CollisionShape, LuminaUnits, SphereShape, kWorldUnitsCentimetres;
 import 'package:vector_math/vector_math_64.dart';
 

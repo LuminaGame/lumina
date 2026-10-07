@@ -4,7 +4,7 @@ import 'dart:math' as math;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:vector_math/vector_math_64.dart' show Vector3;
 
-import 'package:lumina/lumina.dart' show AssetType, RealAssetInfo;
+import 'package:lumina_editor_data/lumina_editor.dart' show AssetType, RealAssetInfo;
 
 import 'package:lumina_ui/ui/core/property_editors/asset_picker_select.dart';
 import 'package:lumina_ui/ui/core/property_editors/color_field.dart';

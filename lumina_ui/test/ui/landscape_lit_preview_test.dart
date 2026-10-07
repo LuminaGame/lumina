@@ -4,7 +4,7 @@ import 'dart:math' as math;
 
 import 'package:flutter_filament/flutter_filament.dart' show FilamentBackend, FilamentEngine;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina/lumina.dart' show LuminaWorld, LuminaWorldType;
+import 'package:lumina_editor_data/lumina_editor.dart' show LuminaWorld, LuminaWorldType;
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/landscape_brush.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/landscape_preview_scene.dart';

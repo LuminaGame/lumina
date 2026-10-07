@@ -2,7 +2,7 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
-import 'package:lumina/lumina.dart'
+import 'package:lumina_editor_data/lumina_editor.dart'
     show AssetType, LandscapeData, LandscapeMeshBuilder, LuminaLandscapeComponent, LuminaUnits, RealAssetInfo;
 import 'package:vector_math/vector_math_64.dart' show Matrix4, Vector3;
 

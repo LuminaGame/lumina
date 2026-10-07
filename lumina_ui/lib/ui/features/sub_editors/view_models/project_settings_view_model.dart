@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart' show ProjectSettingsSection, PluginSettingsHandle;
 import 'package:lumina_ui/ui/core/host/editor_host.dart' show LuminaEditorHost;
 

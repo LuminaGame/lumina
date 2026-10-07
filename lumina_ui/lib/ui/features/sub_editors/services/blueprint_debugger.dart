@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 
 /// Live execution of one running Blueprint instance (the Blueprint
 /// debugger): the nodes it ran and the exec wires it

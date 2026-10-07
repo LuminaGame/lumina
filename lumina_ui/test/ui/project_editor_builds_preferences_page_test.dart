@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina/lumina.dart' show EditorSourceVendorService;
+import 'package:lumina_editor_data/lumina_editor.dart' show EditorSourceVendorService;
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/features/main_editor/services/editor_preferences.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/project_editor_builds_preferences_page.dart';

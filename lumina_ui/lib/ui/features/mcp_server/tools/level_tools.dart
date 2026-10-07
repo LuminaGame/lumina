@@ -7,7 +7,7 @@ import 'package:lumina_ui/ui/features/mcp_server/services/mcp_protocol.dart';
 import 'package:lumina_ui/ui/features/mcp_server/services/mcp_tool.dart';
 import 'package:lumina_ui/ui/features/mcp_server/tools/core_tools.dart' show mcpUndoState;
 import 'package:lumina_core/lumina_core.dart';
-import 'package:lumina/lumina.dart' show AssetType, LuminaLevelActorMaterial;
+import 'package:lumina_editor_data/lumina_editor.dart' show AssetType, LuminaLevelActorMaterial;
 import 'package:lumina_ui/ui/features/mcp_server/tools/rotation_convention.dart';
 
 /// The project and level tools: what the Outliner, the

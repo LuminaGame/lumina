@@ -4,7 +4,7 @@ import 'dart:ui' show Color, Offset, Rect;
 import 'package:flutter/widgets.dart' show BuildContext, Widget;
 
 import 'package:flutter/foundation.dart';
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 
 import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_editor_nodes.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_palette.dart';

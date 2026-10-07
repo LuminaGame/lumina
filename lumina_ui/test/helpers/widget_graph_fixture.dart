@@ -1,5 +1,5 @@
 import 'package:flutter/widgets.dart' show Offset;
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/umg_document.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/umg_widget_codegen.dart';
 

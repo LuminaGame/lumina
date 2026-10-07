@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter_filament/flutter_filament.dart';
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 
 /// A sub-editor viewport's mesh: its own instance of the asset its engine
 /// shares with every other viewport, behind

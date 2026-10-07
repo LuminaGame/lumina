@@ -1,9 +1,8 @@
-import 'package:lumina_core/lumina_core.dart';
 import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
-import 'package:lumina/data/repositories/asset_repository.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/toolbar_widget.dart';
 import 'package:lumina_ui/ui/features/main_editor/shortcuts/editor_shortcuts_scope.dart';

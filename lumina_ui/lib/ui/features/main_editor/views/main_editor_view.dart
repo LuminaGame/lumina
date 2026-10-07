@@ -4,7 +4,7 @@ import 'dart:math' as math;
 import 'dart:ui' show AppExitResponse, AppExitType;
 import 'package:flutter/services.dart' show ServicesBinding;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart' show EditorSlot, MinimizedPluginDialogsBar;
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/core/window/lumina_window.dart';

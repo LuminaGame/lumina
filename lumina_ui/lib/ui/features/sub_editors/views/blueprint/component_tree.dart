@@ -1,7 +1,7 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_component_registry.dart';
-import 'package:lumina/lumina.dart' show LuminaBlueprintComponent;
+import 'package:lumina_editor_data/lumina_editor.dart' show LuminaBlueprintComponent;
 import 'package:lumina_ui/ui/features/sub_editors/view_models/blueprint_editor_view_model.dart';
 
 /// Real Component Hierarchy Tree for Blueprint Editor.

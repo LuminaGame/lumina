@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/ui/core/services/ai_agent_files.dart';
 import 'package:lumina_ui/ui/core/services/content_folders.dart';
 import 'package:lumina_ui/ui/features/launcher/services/installed_template_repository.dart';

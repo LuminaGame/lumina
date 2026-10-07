@@ -1,5 +1,5 @@
 import 'package:file_picker/file_picker.dart';
-import 'package:lumina/lumina.dart' show LuminaUnits, RealAssetInfo;
+import 'package:lumina_editor_data/lumina_editor.dart' show LuminaUnits, RealAssetInfo;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import 'package:lumina_ui/ui/core/property_editors/slider_field.dart';

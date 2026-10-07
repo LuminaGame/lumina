@@ -6,8 +6,7 @@ import 'package:ffi/ffi.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_filament/flutter_filament.dart';
 import 'package:flutter_filament/src/third_party/filament_c.g.dart' as c;
-import 'package:lumina/lumina.dart';
-import 'package:lumina/data/services/glb_parser_service.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/testing.dart';
 
 

@@ -2,7 +2,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/gestures.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_ui/ui/features/sub_editors/sub_editor_binding.dart';
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/core/property_editors/slider_field.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/texture_editor_view_model.dart';

@@ -1,4 +1,4 @@
-import 'package:lumina/data/services/glb_parser_service.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 
 /// Represents a 3D mesh component (such as a skeletal or static mesh)
 /// positioned within an actor composite preview in [SubEditor3DViewport].

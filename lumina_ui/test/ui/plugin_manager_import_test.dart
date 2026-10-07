@@ -3,9 +3,7 @@ import 'dart:io';
 
 import 'package:archive/archive.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina_core/lumina_core.dart';
-import 'package:lumina/data/repositories/project_repository.dart';
-import 'package:lumina/data/services/plugin_registry_service.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/features/plugin_manager/services/plugin_importer.dart';
 import 'package:lumina_ui/ui/features/plugin_manager/view_models/plugin_manager_view_model.dart';

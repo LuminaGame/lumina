@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 
 import 'package:lumina_ui/ui/features/sub_editors/services/build_pipeline_service.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/project_icon_rasterizer.dart';

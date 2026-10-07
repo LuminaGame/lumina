@@ -1,5 +1,4 @@
-import 'package:lumina/lumina.dart' show LuminaParticleEmitterConfig;
-import 'package:lumina/data/repositories/asset_repository.dart' show RealAssetInfo;
+import 'package:lumina_editor_data/lumina_editor.dart' show LuminaParticleEmitterConfig, RealAssetInfo;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:vector_math/vector_math_64.dart' show Vector3, Vector4;
 

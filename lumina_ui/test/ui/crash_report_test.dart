@@ -5,7 +5,7 @@ import 'package:flutter/services.dart' show SystemChannels;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:http/io_client.dart';
-import 'package:lumina/lumina.dart' show EngineLoggerService;
+import 'package:lumina_editor_data/lumina_editor.dart' show EngineLoggerService;
 import 'package:lumina_editor_api/lumina_editor_api.dart' show LuminaPluginCrashReporter;
 import 'package:lumina_ui/ui/core/host/editor_host.dart';
 import 'package:lumina_ui/ui/core/services/crash_report.dart';

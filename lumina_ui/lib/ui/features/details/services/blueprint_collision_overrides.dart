@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 
 import 'package:lumina_ui/ui/core/property_editors/collision_section_editor.dart';
 import 'package:lumina_ui/ui/core/property_editors/physics_section_editor.dart';

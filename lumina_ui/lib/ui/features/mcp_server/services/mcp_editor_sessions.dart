@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart' show SchedulerBinding;
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 
 import 'package:lumina_ui/ui/features/main_editor/services/widget_blueprint_assets.dart' show isWidgetBlueprintLmas;
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';

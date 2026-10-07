@@ -1,4 +1,4 @@
-import 'package:lumina/lumina.dart' show LuminaAttenuationModel;
+import 'package:lumina_editor_data/lumina_editor.dart' show LuminaAttenuationModel;
 
 /// Mixer bus an AUDIO asset belongs to: the Audio editor's `Sound Class`,
 /// stored verbatim in the `.lmas` metadata.

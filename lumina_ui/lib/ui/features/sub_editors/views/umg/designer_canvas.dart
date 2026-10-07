@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart' show PointerHoverEvent;
 import 'package:flutter/widgets.dart' as widgets show Table, TableRow;
-import 'package:lumina/lumina.dart'
+import 'package:lumina_editor_data/lumina_editor.dart'
     show LuminaUmgBorder, LuminaUmgButton, LuminaUmgButtonStyle, LuminaUmgCheckbox, LuminaUmgComboBox, LuminaUmgProgressBar, LuminaUmgSlider, LuminaUmgTextField, kUmgWidgetLibraryFlutter;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 

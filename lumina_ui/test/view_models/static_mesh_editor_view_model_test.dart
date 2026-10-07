@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina_core/lumina_core.dart';
-import 'package:lumina/data/repositories/asset_repository.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/static_mesh_collision.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/static_mesh_editor_view_model.dart';
 

@@ -1,4 +1,4 @@
-import 'package:lumina/lumina.dart' show AssetType, LuminaBlueprintVariable;
+import 'package:lumina_editor_data/lumina_editor.dart' show AssetType, LuminaBlueprintVariable;
 
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/blueprint_asset_catalog.dart';

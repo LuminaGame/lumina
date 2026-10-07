@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:lumina/lumina.dart' show EngineLoggerService;
+import 'package:lumina_editor_data/lumina_editor.dart' show EngineLoggerService;
 import 'package:lumina_editor_api/lumina_editor_api.dart';
 import 'package:lumina_ui/ui/core/plugin_extension_registry.dart';
 import 'package:lumina_ui/ui/core/services/crash_reporter.dart';

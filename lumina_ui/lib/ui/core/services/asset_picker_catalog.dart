@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 
 /// The pure half of the shared asset picker: how an asset is
 /// named and where it lives, which assets a query matches and in what order,

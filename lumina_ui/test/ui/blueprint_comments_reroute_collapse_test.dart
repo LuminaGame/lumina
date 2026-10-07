@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart' show Rect;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina/lumina.dart' hide BoxShape;
+import 'package:lumina_editor_data/lumina_editor.dart' hide BoxShape;
 import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_editor_nodes.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/blueprint_editor_view_model.dart';
 

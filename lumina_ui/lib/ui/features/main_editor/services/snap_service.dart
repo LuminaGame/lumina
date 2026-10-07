@@ -1,4 +1,4 @@
-import 'package:lumina/lumina.dart' show LuminaUnits;
+import 'package:lumina_editor_data/lumina_editor.dart' show LuminaUnits;
 
 class SnapService {
   static const List<double> translateSteps = [1.0, 5.0, 10.0, 50.0, 100.0, 500.0, 1000.0, 5000.0, 10000.0];

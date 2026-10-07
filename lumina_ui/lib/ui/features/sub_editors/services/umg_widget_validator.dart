@@ -1,4 +1,4 @@
-import 'package:lumina/lumina.dart' show kUmgWidgetLibraryFlutter;
+import 'package:lumina_editor_data/lumina_editor.dart' show kUmgWidgetLibraryFlutter;
 
 import 'package:lumina_ui/ui/features/sub_editors/models/umg_document.dart';
 

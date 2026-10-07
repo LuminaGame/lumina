@@ -13,7 +13,7 @@ import 'package:lumina_ui/ui/features/sub_editors/views/animation_sub_editor.dar
 import 'package:lumina_ui/ui/features/sub_editors/views/sub_editor_3d_viewport.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/animation_editor_view_model.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/anim_notify_and_curves.dart';
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/testing.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 

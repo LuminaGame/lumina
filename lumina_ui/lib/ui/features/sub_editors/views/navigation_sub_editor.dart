@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:lumina/lumina.dart' show LuminaUnits;
+import 'package:lumina_editor_data/lumina_editor.dart' show LuminaUnits;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:vector_math/vector_math_64.dart' show Vector3;
 

@@ -1,4 +1,4 @@
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 /// Full-featured, shadcn_flutter styled audio player widget for Lumina Studio.

@@ -11,7 +11,7 @@ import 'package:lumina_ui/ui/features/sub_editors/services/preview_mesh_factory.
 import 'package:lumina_ui/ui/features/sub_editors/view_models/material_editor_view_model.dart'
     show MaterialParamModel, MaterialParamType;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/ui/core/services/editor_mesh_budget.dart';
 import 'package:lumina_ui/ui/core/services/editor_scene_environment.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';

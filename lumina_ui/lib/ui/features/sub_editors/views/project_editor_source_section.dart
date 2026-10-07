@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'dart:isolate';
 
-import 'package:lumina/lumina.dart' show EditorHostGeneratorService, EditorSourceVendorService;
+import 'package:lumina_editor_data/lumina_editor.dart' show EditorHostGeneratorService, EditorSourceVendorService;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';

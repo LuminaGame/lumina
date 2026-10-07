@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/material_slot_binding.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/skeletal_mesh_socket.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/skeletal_socket_attachment.dart';

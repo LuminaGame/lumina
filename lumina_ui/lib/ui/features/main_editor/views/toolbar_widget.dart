@@ -5,7 +5,7 @@ import 'package:lumina_editor_api/lumina_editor_api.dart' show EditorSlot;
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/core/widgets/quality_settings_popover.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
-import 'package:lumina/lumina.dart' show AssetType;
+import 'package:lumina_editor_data/lumina_editor.dart' show AssetType;
 import 'package:lumina_ui/ui/features/main_editor/services/standalone_game_runner.dart' show StandaloneState;
 import 'package:lumina_ui/ui/features/main_editor/services/android_device_runner.dart' show AndroidRunState;
 import 'package:lumina_ui/ui/features/main_editor/views/play_on_device_menu.dart';

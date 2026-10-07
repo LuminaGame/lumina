@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 
 /// The graphics preference shared by the launcher and project editors.
 class EditorGraphicsPreferences {

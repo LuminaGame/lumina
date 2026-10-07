@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart' show ChangeNotifier;
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 
 /// Selection target in the Theme Editor tree.
 class ThemeTreeSelection {

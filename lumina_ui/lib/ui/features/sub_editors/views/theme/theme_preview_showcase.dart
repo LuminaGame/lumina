@@ -2,7 +2,7 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/theme_editor_view_model.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/theme/theme_custom_style_dialog.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/theme/theme_preview_components.dart';
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 
 /// Right panel of the Theme Sub-Editor: Live preview showcase of all widgets
 /// receiving styles from the theme. If a component does not have a dedicated style

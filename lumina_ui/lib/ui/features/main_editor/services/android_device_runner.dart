@@ -3,8 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:lumina/data/repositories/project_repository.dart';
-import 'package:lumina_core/lumina_core.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 
 import 'package:lumina_ui/ui/features/sub_editors/services/build_pipeline_service.dart' show HostBuildTargets;
 import 'package:lumina_ui/ui/features/main_editor/services/android_devices.dart';

@@ -4,7 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter_filament/flutter_filament.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina_core/lumina_core.dart';
-import 'package:lumina/lumina.dart' show LuminaBlueprintGraph, LuminaBlueprintWire;
+import 'package:lumina_editor_data/lumina_editor.dart' show LuminaBlueprintGraph, LuminaBlueprintWire;
 import 'package:lumina_ui/ui/features/sub_editors/models/material_graph.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/mat_source.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/material_graph_codegen.dart';

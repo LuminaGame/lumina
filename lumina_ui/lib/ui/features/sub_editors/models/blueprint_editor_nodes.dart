@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 
 /// Editor-only graph nodes: comment boxes and reroute
 /// dots. lumina's node library has neither (it runs graphs, it does not draw

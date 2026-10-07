@@ -4,7 +4,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/umg_document.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/umg_editor_view_model.dart';
 

@@ -4,7 +4,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_filament/flutter_filament.dart' show FilamentMaterialBuilder, FilamatShading;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/build_pipeline_service.dart';
 
 import '../helpers/flutter_build_stand_in.dart';

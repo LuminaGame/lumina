@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 import 'dart:ui' show Offset;
 
-import 'package:lumina/lumina.dart' show LuminaAxes;
+import 'package:lumina_editor_data/lumina_editor.dart' show LuminaAxes;
 import 'package:vector_math/vector_math_64.dart';
 
 import 'package:lumina_ui/ui/features/main_editor/services/gizmo_controller.dart';

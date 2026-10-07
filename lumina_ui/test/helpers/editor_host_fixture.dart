@@ -1,8 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:lumina/lumina.dart';
-import 'package:lumina_core/lumina_core.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:path/path.dart' as p;
 
 /// A real temp project (`<temp>/<Name>/<Name>.lmproject`) that

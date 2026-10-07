@@ -1,4 +1,4 @@
-import 'package:lumina/lumina.dart' show AssetType;
+import 'package:lumina_editor_data/lumina_editor.dart' show AssetType;
 
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/static_mesh_collision.dart';

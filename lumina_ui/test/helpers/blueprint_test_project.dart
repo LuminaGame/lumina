@@ -2,8 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:lumina_core/lumina_core.dart';
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/blueprint_editor_view_model.dart';
 
 /// A real project on disk for Blueprint editor tests: a `.lmproject` carrying

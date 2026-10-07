@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 
 /// What the import progress panel shows: the batch the
 /// editor's [ImportQueue] is running — every file's latest state, counts,

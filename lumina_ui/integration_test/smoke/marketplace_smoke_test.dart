@@ -4,7 +4,7 @@ import 'package:flutter/gestures.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/testing.dart';
 import 'package:lumina_ui/ui/core/services/user_plugin_dir.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';

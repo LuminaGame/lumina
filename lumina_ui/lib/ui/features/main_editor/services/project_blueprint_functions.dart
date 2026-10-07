@@ -2,8 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:lumina/data/services/blueprint_function_scanner.dart';
-import 'package:lumina_core/lumina_core.dart';
+import 'package:lumina_editor_data/lumina_editor.dart';
 
 /// The project's Dart functions exposed to Blueprints: lumina's [BlueprintFunctionScanner] over the
 /// project's `lib/`, run when the project opens and whenever a Dart file

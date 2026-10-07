@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter/widgets.dart' as widgets show Table, TableRow;
-import 'package:lumina/lumina.dart' show LuminaUmgElement, LuminaUmgElementBinding, LuminaUserWidgets, LuminaThemeDocument;
+import 'package:lumina_editor_data/lumina_editor.dart' show LuminaUmgElement, LuminaUmgElementBinding, LuminaUserWidgets, LuminaThemeDocument;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
