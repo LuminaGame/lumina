@@ -1,15 +1,20 @@
-/// The Lumina game runtime: everything a shipped game
-/// uses — world, levels, actors, components, controllers, input, game
-/// framework, animation, physics — and nothing from the editor side.
+/// The Lumina game runtime: everything a shipped game uses from the engine —
+/// world, levels, actors, components, controllers, input, game framework,
+/// animation, physics, rendering through flutter_filament — and nothing from
+/// the editor side or from Flutter's widget layer.
 ///
-/// Unlike `lumina.dart` it leaves out the editor data layer (repositories,
-/// importers, code generation), Assimp and MetaHuman RigLogic, so a game
-/// that imports only this library builds for the web. Generated games import
-/// it; Lumina Studio keeps importing `lumina.dart`.
+/// Unlike `lumina.dart` it leaves out the shared editor data (`lumina_core`'s
+/// project formats and tooling services), so a game that imports only this
+/// library builds for the web. Generated games import
+/// `package:lumina_widgets/lumina_game.dart`, which re-exports this library
+/// plus the game's Flutter side (the game widget, input, HUD, UMG, media).
 library;
 
 // Platform-neutral data the runtime builds on.
 export 'package:lumina_core/src/formats/landscape_data.dart';
+// The pure change types engine state notifies through (a widget listens
+// through lumina_widgets' asListenable() / asValueListenable()).
+export 'package:lumina_core/src/foundation/observable.dart';
 export 'package:lumina_core/src/services/primitive_glb_factory.dart';
 
 export 'package:lumina/src/services/mesh_decimation_service.dart';
@@ -121,7 +126,6 @@ export 'package:lumina/src/components/particles/particle_system_component.dart';
 export 'package:lumina/src/game/game_instance.dart';
 export 'package:lumina/src/game/game_mode.dart';
 export 'package:lumina/src/game/player_camera_manager.dart';
-export 'package:lumina/src/game/hud_overlay.dart';
 export 'package:lumina/src/game/game_state.dart';
 export 'package:lumina/src/game/camera_actor.dart';
 export 'package:lumina/src/game/player_start.dart';
@@ -132,7 +136,6 @@ export 'package:lumina/src/game/template_content.dart';
 export 'package:lumina/src/game/play_state.dart';
 export 'package:lumina/src/game/lumina_game.dart';
 export 'package:lumina/src/game/console.dart';
-export 'package:lumina/src/game/lumina_widget.dart';
 export 'package:lumina_core/src/math/transform_snapshot.dart';
 export 'package:lumina_core/src/math/euler.dart';
 export 'package:lumina_core/src/math/units.dart';
@@ -161,13 +164,10 @@ export 'package:lumina/src/utility/gameplay_statics.dart';
 export 'package:lumina/src/utility/gameplay_volumes.dart';
 export 'package:lumina/src/utility/viewport_statics.dart';
 export 'package:lumina/src/utility/lumina_assets.dart';
-export 'package:lumina/src/utility/web_loading.dart';
-export 'package:lumina/src/umg/umg_widgets.dart';
-export 'package:lumina/src/umg/element_binding.dart';
-export 'package:lumina/src/umg/widget_layer.dart';
+export 'package:lumina/src/utility/lumina_platform.dart';
 export 'package:lumina/src/umg/user_widget.dart';
+export 'package:lumina/src/media/video_playback.dart';
 export 'package:lumina/src/audio/sound_base.dart';
 export 'package:lumina/src/audio/audio_backend.dart';
 export 'package:lumina/src/audio/audio_subsystem.dart';
 export 'package:lumina/src/components/audio/audio_component.dart';
-export 'package:lumina_mouse_capture/lumina_mouse_capture.dart';

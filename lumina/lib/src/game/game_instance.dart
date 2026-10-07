@@ -1,5 +1,5 @@
-import 'package:flutter/foundation.dart';
-import 'package:flutter_filament/flutter_filament.dart';
+import 'package:lumina_core/lumina_core.dart' show ChangeEmitter;
+import 'package:flutter_filament/filament.dart';
 import 'package:lumina/src/world/world.dart';
 import 'package:lumina/src/controller/player_controller.dart';
 import 'package:lumina/src/world/level.dart';
@@ -28,8 +28,10 @@ abstract class LuminaGameInstanceSubsystem {
   }
 }
 
-/// The engine-lifetime singleton surviving world transitions.
-class LuminaGameInstance extends ChangeNotifier {
+/// The engine-lifetime singleton surviving world transitions. Listeners are
+/// told when the world changes (a widget listens through `asListenable()`,
+/// lumina_widgets).
+class LuminaGameInstance extends ChangeEmitter {
   /// The instance of the running game, set by [init] and cleared by
   /// [shutdown]: what `Get Game Instance` returns.
   static LuminaGameInstance? current;

@@ -2,6 +2,7 @@ import 'package:flutter/services.dart' show LogicalKeyboardKey;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina/lumina_runtime.dart';
+import 'package:lumina_widgets/lumina_widgets.dart';
 
 /// Reading a widget instance's per-element state.
 void main() {

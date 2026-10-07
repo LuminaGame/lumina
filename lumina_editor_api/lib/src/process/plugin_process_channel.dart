@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:lumina_plugin_process/lumina_plugin_process.dart';
 
-import 'package:lumina_editor_api/src/process/observable_adapters.dart';
+import 'package:lumina_widgets/lumina_widgets.dart' show ObservableAsValueListenable, ValueListenableAsObservable;
 
 /// The in-process shell's line to its plugin process
 /// (`LuminaEditorContext.processChannel`): the Flutter face of a

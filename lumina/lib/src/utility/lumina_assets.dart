@@ -15,6 +15,13 @@ abstract final class LuminaAssets {
   /// own `assetProvider` is null. Null reads the file system.
   static LuminaAssetProvider? defaultProvider;
 
+  /// Reads an asset bundled with the app by its bundle key (a package's own
+  /// asset: `packages/lumina/assets/sky/…`). The engine has no asset bundle
+  /// of its own: the game's Flutter side (`lumina_widgets`) sets this to
+  /// Flutter's root bundle at start-up. Null: components fall back to
+  /// [resolve].
+  static LuminaAssetProvider? bundleProvider;
+
   /// The open project's folder, set by the editor: a disk read of a
   /// project-relative path (`contents/…`, what Blueprints store) resolves
   /// against it. Null reads every path as given.

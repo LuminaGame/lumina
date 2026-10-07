@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/services.dart';
 
-import 'package:lumina/src/utility/lumina_assets.dart';
-import 'package:lumina/src/utility/web_loading_hook_stub.dart' if (dart.library.js_interop) 'web_loading_hook_web.dart' as hook;
+import 'package:lumina/lumina_runtime.dart';
+import 'package:lumina_widgets/src/utility/web_loading_hook_stub.dart' if (dart.library.js_interop) 'web_loading_hook_web.dart' as hook;
 
 /// The generated game's side of the web loading screen.
 ///

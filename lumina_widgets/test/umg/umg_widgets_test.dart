@@ -1,7 +1,7 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina/lumina_runtime.dart';
+import 'package:lumina_widgets/lumina_widgets.dart';
 
 /// The plain-Flutter UMG widget set: no Material, no shadcn ancestor,
 /// only an Overlay (which every game app has) for the combo box.

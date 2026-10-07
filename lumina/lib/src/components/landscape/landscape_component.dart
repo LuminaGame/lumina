@@ -3,7 +3,7 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
-import 'package:flutter_filament/flutter_filament.dart';
+import 'package:flutter_filament/filament.dart';
 import 'package:vector_math/vector_math_64.dart' hide Frustum;
 
 import 'package:lumina_core/lumina_core.dart';

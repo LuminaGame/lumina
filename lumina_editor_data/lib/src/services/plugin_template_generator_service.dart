@@ -192,6 +192,7 @@ class PluginTemplateGeneratorService {
     'lumina',
     'lumina_core',
     'lumina_editor_data',
+    'lumina_widgets',
     'lumina_ui',
     'lumina_editor_api',
     'test',

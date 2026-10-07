@@ -1,4 +1,4 @@
-import 'package:flutter_filament/flutter_filament.dart';
+import 'package:flutter_filament/filament.dart';
 import 'package:vector_math/vector_math_64.dart' show Vector3, Quaternion;
 import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/src/declarative/lumina_object.dart';

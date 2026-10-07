@@ -3,9 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_filament/flutter_filament.dart';
-import 'package:lumina/src/world/frame_pacing.dart';
-import 'package:lumina/src/game/lumina_game.dart';
-import 'package:lumina/src/game/hud_overlay.dart';
+import 'package:lumina/lumina_runtime.dart';
+import 'package:lumina_widgets/src/lumina_widgets_binding.dart';
+import 'package:lumina_widgets/src/game/hud_overlay.dart';
 
 /// Controls whether embedded game previews allocate an additional frame driver.
 /// Configure this before mounting previews; changing it does not remount games.
@@ -95,6 +95,7 @@ class _LuminaGameWidgetState extends State<LuminaGameWidget>
   @override
   void initState() {
     super.initState();
+    LuminaWidgets.ensureInitialized();
     _subscribePlayState();
   }
 

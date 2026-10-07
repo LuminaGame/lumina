@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina/lumina_runtime.dart';
+import 'package:lumina_widgets/lumina_widgets.dart';
 
 /// The standalone widget layer over a real world: registered
 /// builders, zOrder, visibility, per-element rebuilds and the common element

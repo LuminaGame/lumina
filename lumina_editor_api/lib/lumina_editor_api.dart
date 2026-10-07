@@ -1,6 +1,6 @@
-export 'package:lumina/lumina.dart'
+export 'package:lumina/lumina.dart' show AssetType;
+export 'package:lumina_widgets/lumina_widgets.dart'
     show
-        AssetType,
         LuminaMedia,
         LuminaVideoController,
         LuminaVideoPlayer,

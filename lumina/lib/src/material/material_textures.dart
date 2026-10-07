@@ -5,7 +5,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
-import 'package:flutter_filament/flutter_filament.dart';
+import 'package:flutter_filament/filament.dart';
 import 'package:image/image.dart' as imglib;
 
 import 'package:lumina_core/lumina_core.dart';

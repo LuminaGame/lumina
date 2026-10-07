@@ -1,0 +1,48 @@
+import 'package:flutter/foundation.dart' show TargetPlatform, defaultTargetPlatform;
+import 'package:flutter/services.dart' show rootBundle;
+
+import 'package:lumina/lumina_runtime.dart';
+import 'package:lumina_widgets/src/media/video/lumina_video_controller.dart';
+
+/// Connects the engine to Flutter at start-up. The engine (`lumina`) holds no
+/// Flutter UI, so the services it needs from the app are handed to it here:
+/// - [LuminaPlatform.override]: Flutter's target platform (what
+///   `Get Platform Name` reports);
+/// - [LuminaAssets.bundleProvider]: the app's asset bundle (the procedural
+///   sky's shader and textures ship in the lumina package);
+/// - [LuminaVideoPlayback.factory]: media_kit video ([LuminaVideoController]),
+///   what the Blueprint video nodes open.
+///
+/// A generated game calls [ensureInitialized] in `main()`; the game widget
+/// calls it too, so Play-In-Editor and tests that only mount a
+/// `LuminaGameWidget` get the same services. Values a host already set are
+/// kept.
+abstract final class LuminaWidgets {
+  static bool _initialized = false;
+
+  /// Whether [ensureInitialized] ran.
+  static bool get isInitialized => _initialized;
+
+  /// Idempotent; call after `WidgetsFlutterBinding.ensureInitialized()`.
+  static void ensureInitialized() {
+    if (_initialized) return;
+    _initialized = true;
+    LuminaPlatform.override ??= platformOf(defaultTargetPlatform);
+    LuminaAssets.bundleProvider ??= (key) async {
+      final data = await rootBundle.load(key);
+      return data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+    };
+    LuminaVideoPlayback.factory ??= ({required String source, bool autoPlay = false, bool loop = false, double initialVolume = 1.0}) =>
+        LuminaVideoController(source: source, autoPlay: autoPlay, loop: loop, initialVolume: initialVolume);
+  }
+
+  /// The engine's platform for Flutter's [platform].
+  static LuminaPlatform platformOf(TargetPlatform platform) => switch (platform) {
+        TargetPlatform.android => LuminaPlatform.android,
+        TargetPlatform.fuchsia => LuminaPlatform.fuchsia,
+        TargetPlatform.iOS => LuminaPlatform.iOS,
+        TargetPlatform.linux => LuminaPlatform.linux,
+        TargetPlatform.macOS => LuminaPlatform.macOS,
+        TargetPlatform.windows => LuminaPlatform.windows,
+      };
+}

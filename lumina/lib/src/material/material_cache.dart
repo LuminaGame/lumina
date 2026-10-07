@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
-import 'package:flutter_filament/flutter_filament.dart';
+import 'package:flutter_filament/filament.dart';
 import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/src/utility/lumina_assets.dart';
 import 'package:lumina/src/world/world.dart';

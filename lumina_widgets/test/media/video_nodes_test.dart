@@ -1,7 +1,19 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina/lumina.dart';
+import 'package:lumina_widgets/lumina_widgets.dart';
 
+/// The Blueprint video nodes open a [LuminaVideoController] once
+/// [LuminaWidgets.ensureInitialized] registered it as the engine's player.
 void main() {
+  setUpAll(LuminaWidgets.ensureInitialized);
+
+  test('without a registered player, Open Video opens nothing', () {
+    final factory = LuminaVideoPlayback.factory;
+    LuminaVideoPlayback.factory = null;
+    addTearDown(() => LuminaVideoPlayback.factory = factory);
+    expect(LuminaBlueprintFunctionLibrary.openVideo(LuminaActor(), 'test_video.mp4', false, false, 1.0), isNull);
+  });
+
   test('Blueprint Video nodes: open, play, pause, seek, volume, rate, loop, query', () async {
     final actor = LuminaActor();
 

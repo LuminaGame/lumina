@@ -1,6 +1,5 @@
 import 'dart:math' as math;
 
-import 'package:flutter/widgets.dart';
 import 'package:flutter_filament/flutter_filament.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina/lumina.dart';
@@ -18,15 +17,6 @@ LuminaCameraComponent _activeCamera() => LuminaCameraComponent(
       rotation: Quaternion.axisAngle(Vector3(0, 1, 0), math.pi / 3),
       fieldOfViewInDegrees: 70.0,
     )..isActive = true;
-
-class _CameraGame extends LuminaGame {
-  _CameraGame(this.camera);
-  final LuminaCameraComponent camera;
-
-  @override
-  LuminaObject? build(LuminaBuildContext context) =>
-      LuminaNodeGroup(children: [_cameraActor(camera)]);
-}
 
 void _expectViewThrough(FilamentCamera viewCamera, LuminaCameraComponent camera, {required double aspect}) {
   final eye = camera.worldLocation;
@@ -70,32 +60,6 @@ void main() {
       view.dispose();
       scene.dispose();
       engine.dispose();
-    });
-
-    testWidgets('LuminaGameWidget renders the game through its active camera', (tester) async {
-      final camera = _activeCamera();
-      final game = _CameraGame(camera);
-      await tester.pumpWidget(Directionality(
-        textDirection: TextDirection.ltr,
-        child: SizedBox(width: 320, height: 180, child: LuminaGameWidget(game: game)),
-      ));
-      await tester.pump();
-      await tester.pump();
-      if (game.playState == LuminaPlayState.stopped) {
-        await tester.pumpWidget(const SizedBox.shrink());
-        markTestSkipped('FilamentWidget did not create a scene in the test binding');
-        return;
-      }
-      await tester.pump(const Duration(milliseconds: 20));
-      await tester.pump(const Duration(milliseconds: 20));
-
-      final view = game.world!.filamentViewOrNull;
-      expect(view, isNotNull, reason: "the widget must bind its Filament view into the game's world");
-      final (_, _, w, h) = view!.viewport;
-      _expectViewThrough(view.camera!, camera, aspect: w / h);
-
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump();
     });
   });
 }

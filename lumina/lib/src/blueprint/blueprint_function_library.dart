@@ -3,7 +3,6 @@ import 'dart:collection';
 import 'dart:developer' as developer;
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb;
 import 'package:vector_math/vector_math_64.dart';
 
 import 'package:lumina/src/audio/audio_subsystem.dart';
@@ -17,7 +16,8 @@ import 'package:lumina/src/components/particles/particle_system_component.dart';
 import 'package:lumina/src/game/console.dart';
 import 'package:lumina/src/game/game_instance.dart';
 import 'package:lumina/src/material/dynamic_material_instance.dart';
-import 'package:lumina/src/media/media.dart';
+import 'package:lumina/src/media/video_playback.dart';
+import 'package:lumina/src/utility/lumina_platform.dart';
 import 'package:lumina/src/save/save_game.dart';
 import 'package:lumina/src/save/save_game_subsystem.dart';
 import 'package:lumina/src/world/level.dart';

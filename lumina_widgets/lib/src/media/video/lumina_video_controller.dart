@@ -5,13 +5,19 @@ import 'package:flutter/widgets.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 
-import 'package:lumina/src/media/lumina_media.dart';
-import 'package:lumina/src/media/video/lumina_video_player_value.dart';
+import 'package:lumina/lumina_runtime.dart' show LuminaVideoPlayback;
+
+import 'package:lumina_widgets/src/media/lumina_media.dart';
+import 'package:lumina_widgets/src/media/video/lumina_video_player_value.dart';
 
 /// Controller managing the playback lifecycle of video and audio streams
 /// through media_kit native integration, with a built-in deterministic fallback
 /// for headless and testing environments.
-class LuminaVideoController extends ValueNotifier<LuminaVideoPlayerValue> {
+///
+/// It is the engine's [LuminaVideoPlayback] too: what the Blueprint
+/// `Open Video` node creates once `LuminaWidgets.ensureInitialized` has
+/// registered it.
+class LuminaVideoController extends ValueNotifier<LuminaVideoPlayerValue> implements LuminaVideoPlayback {
   LuminaVideoController({
     String? source,
     this.autoPlay = false,
@@ -116,6 +122,7 @@ class LuminaVideoController extends ValueNotifier<LuminaVideoPlayerValue> {
   bool get isDisposed => _isDisposed;
 
   /// Initializes the video player and loads the source if specified.
+  @override
   Future<void> initialize() async {
     if (_initCompleter != null) return _initCompleter!.future;
     _initCompleter = Completer<void>();
@@ -273,6 +280,7 @@ class LuminaVideoController extends ValueNotifier<LuminaVideoPlayerValue> {
   }
 
   /// Starts or resumes video playback.
+  @override
   Future<void> play() async {
     if (_isDisposed) return;
     if (_player != null) {
@@ -284,6 +292,7 @@ class LuminaVideoController extends ValueNotifier<LuminaVideoPlayerValue> {
   }
 
   /// Pauses video playback.
+  @override
   Future<void> pause() async {
     if (_isDisposed) return;
     if (_player != null) {
@@ -305,6 +314,7 @@ class LuminaVideoController extends ValueNotifier<LuminaVideoPlayerValue> {
   }
 
   /// Stops video playback and resets playhead to start.
+  @override
   Future<void> stop() async {
     if (_isDisposed) return;
     if (_player != null) {
@@ -335,11 +345,22 @@ class LuminaVideoController extends ValueNotifier<LuminaVideoPlayerValue> {
     }
   }
 
+  @override
+  bool get isPlaying => value.isPlaying;
+
+  @override
+  Duration get position => value.position;
+
+  @override
+  Duration get duration => value.duration;
+
   /// Seeks to specified position in fractional seconds.
+  @override
   Future<void> seekToSeconds(double seconds) =>
       seekTo(Duration(milliseconds: (seconds * 1000).round()));
 
   /// Sets audio output volume in 0.0 .. 1.0 range.
+  @override
   Future<void> setVolume(double volume) async {
     if (_isDisposed) return;
     final v = volume.clamp(0.0, 1.0);
@@ -350,6 +371,7 @@ class LuminaVideoController extends ValueNotifier<LuminaVideoPlayerValue> {
   }
 
   /// Sets playback speed multiplier (e.g. 1.0 = normal, 2.0 = 2x).
+  @override
   Future<void> setPlaybackSpeed(double speed) async {
     if (_isDisposed) return;
     final r = speed <= 0 ? 1.0 : speed;
@@ -363,6 +385,7 @@ class LuminaVideoController extends ValueNotifier<LuminaVideoPlayerValue> {
   Future<void> setRate(double rate) => setPlaybackSpeed(rate);
 
   /// Sets looping behavior.
+  @override
   Future<void> setLooping(bool loop) async {
     if (_isDisposed) return;
     if (_player != null) {

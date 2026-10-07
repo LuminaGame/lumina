@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:flutter_filament/flutter_filament.dart';
+import 'package:flutter_filament/filament.dart';
 import 'package:lumina/src/world/world.dart';
 
 /// Immutable telemetry snapshot for a single rendered or processed frame.

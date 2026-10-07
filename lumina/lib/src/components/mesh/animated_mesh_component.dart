@@ -1,6 +1,6 @@
 import 'dart:developer' as developer;
 
-import 'package:flutter_filament/flutter_filament.dart';
+import 'package:flutter_filament/filament.dart';
 import 'package:vector_math/vector_math_64.dart';
 
 import 'package:lumina/src/components/mesh/static_mesh_component.dart';

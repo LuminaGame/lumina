@@ -1,0 +1,50 @@
+name: lumina_widgets
+description: "The Flutter side of a Lumina game: the game widget that hosts the Filament view, keyboard/pointer input and mouse capture, the HUD overlay, UMG widgets, media players, web loading, and Flutter views of the engine's observables."
+version: 0.0.1
+publish_to: none
+
+environment:
+  sdk: ^3.12.0
+  flutter: ">=1.17.0"
+resolution: workspace
+
+# Generated games import lib/lumina_game.dart (the engine's lumina_runtime.dart
+# plus this package). The engine itself has no widget
+# (lumina/test/architecture/engine_has_no_widgets_test.dart).
+dependencies:
+  flutter:
+    sdk: flutter
+  # The engine.
+  lumina:
+    path: ../lumina
+  # The pure change types (ChangeSignal, Observable) the adapters wrap.
+  lumina_core:
+    path: ../lumina_core
+  # FilamentWidget, the view the game widget hosts.
+  flutter_filament:
+    path: ../flutter_filament
+  # Pointer capture for games and Play (tools repo); pubspec_overrides.yaml
+  # at the workspace root points it at a local ../tools checkout.
+  lumina_mouse_capture:
+    git:
+      url: https://github.com/LuminaGame/tools.git
+      path: lumina_mouse_capture
+      ref: 227b3cd34ef0d41ff114b909545efb47f3e2a225
+  # Video and audio players (UMG media widgets, the Blueprint video nodes).
+  media_kit: ^1.1.11
+  media_kit_video: ^1.2.5
+  media_kit_libs_video: ^1.0.4
+  meta: any
+  vector_math: ^2.1.4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  path: ^1.9.1
+  # The smoke-test system (lumina's testing.dart re-exports it).
+  lumina_smoke:
+    git:
+      url: https://github.com/LuminaGame/tools.git
+      path: lumina_smoke
+      ref: 227b3cd34ef0d41ff114b909545efb47f3e2a225

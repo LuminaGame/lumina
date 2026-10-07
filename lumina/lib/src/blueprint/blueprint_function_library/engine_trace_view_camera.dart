@@ -24,11 +24,7 @@ void _setTimeDilation(LuminaActor self, [double timeDilation = 1.0]) {
   _worldOf(self)?.timeDilation = timeDilation < 0.0 ? 0.0 : timeDilation;
 }
 
-String _getPlatformName() {
-  if (kIsWeb) return 'Web';
-  final n = defaultTargetPlatform.name;
-  return n == 'iOS' ? 'IOS' : n == 'macOS' ? 'MacOS' : n[0].toUpperCase() + n.substring(1);
-}
+String _getPlatformName() => LuminaPlatform.displayName;
 
 bool _isEditor() => LuminaBlueprintRuntime.isEditor;
 

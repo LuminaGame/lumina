@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 
-import 'package:flutter_filament/flutter_filament.dart' show FilamentEngine;
+import 'package:flutter_filament/filament.dart' show FilamentEngine;
 
 import 'package:lumina/src/components/mesh/mesh_asset_cache.dart';
 import 'package:lumina/src/utility/lumina_assets.dart';

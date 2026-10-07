@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:lumina_core/lumina_core.dart' show ChangeEmitter, ChangeSignal;
 
 import 'package:lumina/src/controller/controller.dart';
 import 'package:lumina/src/controller/player_state.dart';
@@ -12,12 +12,13 @@ class LuminaPlayerController extends LuminaController {
   bool bShowMouseCursor = false;
   String inputMode = 'GameOnly';
 
-  final _CursorStateNotifier _cursorState = _CursorStateNotifier();
+  final ChangeEmitter _cursorState = ChangeEmitter();
 
   /// Notified whenever [bShowMouseCursor] or [inputMode] changes through the
   /// setters: Play-In-Editor and the built game follow it to
   /// capture or free the pointer.
-  Listenable get cursorState => _cursorState;
+  /// A Flutter widget listens through `asListenable()` (lumina_widgets).
+  ChangeSignal get cursorState => _cursorState;
 
   /// The game wants a free, visible pointer: the cursor is shown, or input
   /// goes to the UI (UI Only / Game and UI).
@@ -27,7 +28,7 @@ class LuminaPlayerController extends LuminaController {
     final changed = (show != null && show != bShowMouseCursor) || (mode != null && mode != inputMode);
     if (show != null) bShowMouseCursor = show;
     if (mode != null) inputMode = mode;
-    if (changed) _cursorState.changed();
+    if (changed) _cursorState.notifyListeners();
   }
 
   LuminaPlayerController({
@@ -74,8 +75,4 @@ class LuminaPlayerController extends LuminaController {
     }
     cameraManager.updateCamera(deltaTime);
   }
-}
-
-class _CursorStateNotifier extends ChangeNotifier {
-  void changed() => notifyListeners();
 }

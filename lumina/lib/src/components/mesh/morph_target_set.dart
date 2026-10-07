@@ -1,5 +1,5 @@
 
-import 'package:flutter_filament/flutter_filament.dart';
+import 'package:flutter_filament/filament.dart';
 
 class MorphTargetHandle {
   final String name;

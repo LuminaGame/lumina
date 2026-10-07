@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
-import 'package:flutter_filament/flutter_filament.dart';
+import 'package:flutter_filament/filament.dart';
 import 'package:lumina/src/object/actor.dart';
 import 'package:lumina/src/components/base/scene_component.dart';
 

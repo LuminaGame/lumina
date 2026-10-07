@@ -1,4 +1,4 @@
-import 'package:flutter_filament/flutter_filament.dart';
+import 'package:flutter_filament/filament.dart';
 import 'package:lumina/src/post_process/shadow_settings.dart';
 
 /// Bundled engine scalability profile governing shadows, quality buffers, and anti-aliasing.

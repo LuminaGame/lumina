@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina/lumina.dart';
+import 'package:lumina_widgets/lumina_widgets.dart';
 
 void main() {
   group('LuminaVideoController headless tests', () {

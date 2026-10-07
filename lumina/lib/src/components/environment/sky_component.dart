@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'dart:typed_data';
-import 'package:flutter_filament/flutter_filament.dart';
+import 'package:flutter_filament/filament.dart';
 import 'package:vector_math/vector_math_64.dart';
 import 'package:lumina/src/object/actor.dart';
 import 'package:lumina/src/utility/lumina_assets.dart';

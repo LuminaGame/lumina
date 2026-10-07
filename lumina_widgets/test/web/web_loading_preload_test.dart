@@ -4,6 +4,7 @@
 import 'package:flutter/services.dart' show AssetManifest, rootBundle;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina/lumina.dart';
+import 'package:lumina_widgets/lumina_widgets.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -26,9 +27,9 @@ void main() {
         return data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
       };
       final reports = <(int, int)>[];
-      final count = await LuminaWebLoading.preloadAssets(rootBundle, prefix: 'assets/sky/', onProgress: (d, t) => reports.add((d, t)), keepFor: null);
+      final count = await LuminaWebLoading.preloadAssets(rootBundle, prefix: 'packages/lumina/assets/sky/', onProgress: (d, t) => reports.add((d, t)), keepFor: null);
       final manifest = await AssetManifest.loadFromAssetBundle(rootBundle);
-      final sky = manifest.listAssets().where((a) => a.startsWith('assets/sky/')).toList();
+      final sky = manifest.listAssets().where((a) => a.startsWith('packages/lumina/assets/sky/')).toList();
       expect(sky, isNotEmpty);
       expect(count, sky.length);
       expect(reports.first, (0, sky.length));

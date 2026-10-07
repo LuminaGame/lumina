@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_filament/flutter_filament.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina/lumina.dart';
+import 'package:lumina_widgets/lumina_widgets.dart';
 
 /// A game that counts how often it is mounted.
 class _CountingGame extends LuminaGame {
@@ -73,30 +74,6 @@ void main() {
       expect(game.playState, LuminaPlayState.stopped, reason: 'the widget disposed the game');
     } finally {
       debugPrint = previous;
-    }
-  });
-
-  test('a second mountGame is ignored with a warning; after disposeGame the game mounts again', () {
-    final engine = FilamentEngine.create()!;
-    final scene = engine.createScene();
-    final printed = <String>[];
-    final previous = debugPrint;
-    debugPrint = (String? message, {int? wrapWidth}) => printed.add(message ?? '');
-    try {
-      final game = _CountingGame();
-      expect(game.mountGame(engine, scene), isTrue);
-      final world = game.world;
-      expect(game.mountGame(engine, scene), isFalse);
-      expect(identical(game.world, world), isTrue, reason: 'the running world is kept');
-      expect(printed.single, contains('already mounted'));
-      game.disposeGame();
-      expect(game.mountGame(engine, scene), isTrue, reason: 'a disposed game can be mounted again');
-      expect(game.mounts, 2);
-      game.disposeGame();
-    } finally {
-      debugPrint = previous;
-      scene.dispose();
-      engine.dispose();
     }
   });
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:vector_math/vector_math_64.dart' as math;
 import 'package:lumina/lumina.dart';
+import 'package:lumina_widgets/lumina_widgets.dart';
 
 class MyChar extends LuminaPlayerComponent {
   bool isJumping = false;

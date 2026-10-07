@@ -1,7 +1,7 @@
 import 'package:flutter_filament/ffi.dart' as ffi;
 import 'dart:typed_data';
 import 'package:flutter_filament/ffi_package.dart';
-import 'package:flutter_filament/flutter_filament.dart';
+import 'package:flutter_filament/filament.dart';
 import 'package:vector_math/vector_math_64.dart';
 import 'package:lumina/src/components/mesh/skeletal_mesh_component.dart';
 

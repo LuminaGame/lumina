@@ -1,4 +1,4 @@
-import 'package:flutter_filament/flutter_filament.dart';
+import 'package:flutter_filament/filament.dart';
 import 'package:vector_math/vector_math_64.dart';
 import 'package:lumina/src/object/actor.dart';
 import 'package:lumina/src/world/world.dart';

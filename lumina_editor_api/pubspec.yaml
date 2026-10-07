@@ -19,6 +19,9 @@ dependencies:
     path: ../lumina_plugin_process
   lumina_plugin_protocol:
     path: ../lumina_plugin_protocol
+  # The game UI (media players, Flutter views of the engine's observables).
+  lumina_widgets:
+    path: ../lumina_widgets
   shadcn_flutter: ^0.0.55
   path: ^1.9.0
   crypto: ^3.0.3

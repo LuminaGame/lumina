@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:lumina_core/lumina_core.dart' show ObservableValue;
 
 import 'package:lumina/src/world/subsystem/world_subsystem.dart';
 
@@ -6,10 +6,11 @@ import 'package:lumina/src/world/subsystem/world_subsystem.dart';
 class LuminaWidgetSubsystem extends LuminaWorldSubsystem {
   final List<Map<String, Object?>> _widgets = [];
 
-  /// ValueNotifier emitting the active widgets list whenever widgets are added,
-  /// removed, reordered, or visibility changes.
-  final ValueNotifier<List<Map<String, Object?>>> activeWidgets =
-      ValueNotifier<List<Map<String, Object?>>>(const []);
+  /// The active widgets list, replaced whenever widgets are added, removed,
+  /// reordered, or their visibility changes. The widget layer
+  /// (lumina_widgets) listens to it.
+  final ObservableValue<List<Map<String, Object?>>> activeWidgets =
+      ObservableValue<List<Map<String, Object?>>>(const []);
 
   /// Read-only snapshot of current active widgets sorted by zOrder ascending.
   List<Map<String, Object?>> get widgets => List.unmodifiable(_widgets);

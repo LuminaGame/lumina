@@ -3,13 +3,13 @@ import 'dart:convert';
 import 'dart:developer' as developer;
 import 'dart:io';
 import 'dart:isolate';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:vector_math/vector_math_64.dart';
 import 'package:lumina/src/object/actor.dart';
 import 'package:lumina/src/world/world_partition.dart';
 import 'package:lumina/src/world/subsystem/world_subsystem.dart';
 import 'package:lumina/src/world/world.dart';
 import 'package:lumina/src/save/save_game.dart';
+import 'package:lumina/src/utility/lumina_platform.dart';
 
 /// The directory saves went to before the built game and Play-In-Editor
 /// got their own: relative to the process's working directory.
@@ -156,7 +156,7 @@ class LuminaSaveGameSubsystem extends LuminaWorldSubsystem {
   /// and on platforms whose directory only a plugin knows (Android, iOS), where
   /// [defaultSaveDirectoryPath] stays as it is.
   static String? platformSaveDirectory(String appName, {Map<String, String>? environment, String? operatingSystem}) {
-    if (kIsWeb) return null;
+    if (LuminaPlatform.isWeb) return null;
     final env = environment ?? Platform.environment;
     final os = operatingSystem ?? Platform.operatingSystem;
     final app = appName.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');

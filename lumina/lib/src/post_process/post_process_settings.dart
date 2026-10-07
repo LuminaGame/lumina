@@ -1,4 +1,4 @@
-import 'package:flutter_filament/flutter_filament.dart';
+import 'package:flutter_filament/filament.dart';
 import 'package:vector_math/vector_math_64.dart';
 
 /// Immutable configuration for the Filament color grading pipeline and tone mapping.

@@ -1,4 +1,4 @@
-import 'package:flutter_filament/flutter_filament.dart' show FilamentInfo;
+import 'package:flutter_filament/filament.dart' show FilamentInfo;
 
 /// What renders Lumina: the Filament release the
 /// engine is linked against and its material version, read from the library

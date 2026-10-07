@@ -1,5 +1,4 @@
-import 'package:flutter/foundation.dart' show debugPrint;
-import 'package:flutter_filament/flutter_filament.dart' show FogOptions;
+import 'package:flutter_filament/filament.dart' show FogOptions;
 import 'package:vector_math/vector_math_64.dart';
 
 import 'package:lumina/src/game/primitive_actor.dart' show luminaHexToRgb, luminaRgbToHex;
@@ -286,7 +285,7 @@ class LuminaExponentialHeightFogComponent extends LuminaSceneComponent {
     final s = settings;
     if (identical(_blender, blender) && _published == s) return;
     if (blender.heightFogOwner != null && !identical(blender.heightFogOwner, this)) {
-      debugPrint('[Lumina] A level has more than one Exponential Height Fog; Filament has one fog per view, the latest wins.');
+      EngineLoggerService().log('A level has more than one Exponential Height Fog; Filament has one fog per view, the latest wins.', level: 'warning', source: 'Lumina');
     }
     blender.setHeightFog(s, owner: this);
     _blender = blender;

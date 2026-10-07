@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:developer' as developer;
 
-import 'package:flutter/foundation.dart' show debugPrint, objectRuntimeType;
-import 'package:flutter_filament/flutter_filament.dart';
+import 'package:flutter_filament/filament.dart';
+import 'package:lumina_core/lumina_core.dart' show EngineLoggerService;
 import 'package:lumina/src/declarative/lumina_object.dart';
 import 'package:lumina/src/declarative/build_context.dart';
 import 'package:lumina/src/declarative/element.dart';
@@ -198,7 +198,7 @@ abstract class LuminaGame extends LuminaObject {
   /// [disposeGame] the game can be mounted again.
   bool mountGame(FilamentEngine engine, FilamentScene scene, {FilamentView? view}) {
     if (_playState != LuminaPlayState.stopped) {
-      debugPrint('[LuminaGame] mountGame: ${objectRuntimeType(this, 'LuminaGame')} is already mounted; the second scene is ignored.');
+      EngineLoggerService().log('mountGame: $runtimeType is already mounted; the second scene is ignored.', level: 'warning', source: 'LuminaGame');
       return false;
     }
     _engine = engine;

@@ -2,11 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 
-import 'package:lumina/src/blueprint/widget_classes.dart';
-import 'package:lumina/src/game/lumina_game.dart';
-import 'package:lumina/src/world/subsystem/widget_subsystem.dart';
-import 'package:lumina/src/world/world.dart';
-import 'package:lumina/src/umg/element_binding.dart';
+import 'package:lumina/lumina_runtime.dart';
+import 'package:lumina_widgets/src/umg/element_binding.dart';
 
 /// Builds the compiled Flutter widget of one widget instance (the map
 /// `Create Widget` made) — what `widgets/widget_registry.g.dart` registers

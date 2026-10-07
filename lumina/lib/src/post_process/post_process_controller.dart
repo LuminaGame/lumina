@@ -1,5 +1,5 @@
 import 'package:flutter_filament/ffi.dart' as ffi;
-import 'package:flutter_filament/flutter_filament.dart';
+import 'package:flutter_filament/filament.dart';
 import 'package:lumina/src/world/world.dart';
 import 'package:lumina/src/post_process/post_process_settings.dart';
 import 'package:lumina/src/post_process/shadow_settings.dart';

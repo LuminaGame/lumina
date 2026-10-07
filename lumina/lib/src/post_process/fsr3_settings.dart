@@ -1,4 +1,4 @@
-import 'package:flutter_filament/flutter_filament.dart';
+import 'package:flutter_filament/filament.dart';
 
 /// The render-resolution presets of FSR3 upscaling: the view renders at
 /// `1 / scale` of the output per axis and the upscaler reconstructs the rest.

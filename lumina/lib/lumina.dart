@@ -1,9 +1,11 @@
 // Data & Manifest Models
 export 'package:lumina_core/src/formats/lumina_asset.dart';
 export 'package:lumina_core/src/formats/lumina_theme_document.dart';
-export 'package:lumina/src/umg/theme_document_colors.dart';
 export 'package:lumina_core/src/formats/sequencer_data.dart';
 export 'package:lumina_core/src/formats/landscape_data.dart';
+// The pure change types engine state notifies through (a widget listens
+// through lumina_widgets' asListenable() / asValueListenable()).
+export 'package:lumina_core/src/foundation/observable.dart';
 export 'package:lumina_core/src/formats/lumina_project.dart';
 export 'package:lumina_core/src/services/theme_service.dart';
 export 'package:lumina_core/src/formats/recent_project_entry.dart';
@@ -170,7 +172,6 @@ export 'package:lumina/src/components/particles/particle_system_component.dart';
 export 'package:lumina/src/game/game_instance.dart';
 export 'package:lumina/src/game/game_mode.dart';
 export 'package:lumina/src/game/player_camera_manager.dart';
-export 'package:lumina/src/game/hud_overlay.dart';
 export 'package:lumina/src/game/game_state.dart';
 export 'package:lumina/src/game/camera_actor.dart';
 export 'package:lumina/src/game/player_start.dart';
@@ -181,7 +182,6 @@ export 'package:lumina/src/game/template_content.dart';
 export 'package:lumina/src/game/play_state.dart';
 export 'package:lumina/src/game/lumina_game.dart';
 export 'package:lumina/src/game/console.dart';
-export 'package:lumina/src/game/lumina_widget.dart';
 
 // Math
 export 'package:lumina_core/src/math/transform_snapshot.dart';
@@ -225,11 +225,9 @@ export 'package:lumina/src/utility/gameplay_statics.dart';
 export 'package:lumina/src/utility/gameplay_volumes.dart';
 export 'package:lumina/src/utility/viewport_statics.dart';
 export 'package:lumina/src/utility/lumina_assets.dart';
-export 'package:lumina/src/utility/web_loading.dart';
-export 'package:lumina/src/umg/umg_widgets.dart';
-export 'package:lumina/src/umg/element_binding.dart';
-export 'package:lumina/src/umg/widget_layer.dart';
+export 'package:lumina/src/utility/lumina_platform.dart';
 export 'package:lumina/src/umg/user_widget.dart';
+export 'package:lumina/src/media/video_playback.dart';
 
 // Audio
 export 'package:lumina/src/audio/sound_base.dart';
@@ -238,7 +236,6 @@ export 'package:lumina/src/audio/audio_subsystem.dart';
 export 'package:lumina/src/components/audio/audio_component.dart';
 
 // Media
-export 'package:lumina/src/media/media.dart';
 
 export 'package:lumina_core/src/formats/lumina_plugin_descriptor.dart';
 export 'package:lumina_core/src/repositories/plugin_repository.dart';

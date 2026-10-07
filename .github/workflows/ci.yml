@@ -175,6 +175,16 @@ jobs:
           test/web/runtime_import_graph_test.dart
           test/architecture/import_cycles_test.dart
           test/architecture/engine_without_editor_data_test.dart
+          test/architecture/engine_has_no_widgets_test.dart
+
+      - name: lumina_widgets
+        working-directory: lumina/lumina_widgets
+        run: >-
+          flutter test
+          test/web/game_import_graph_test.dart
+          test/foundation/engine_observables_test.dart
+          test/umg/umg_widgets_test.dart
+          test/umg/element_binding_test.dart
 
       - name: lumina_editor_data
         working-directory: lumina/lumina_editor_data

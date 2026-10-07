@@ -1,4 +1,3 @@
-import 'package:flutter/widgets.dart';
 import 'package:flutter_filament/flutter_filament.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina/lumina.dart';
@@ -362,51 +361,6 @@ void main() {
       game.restart();
       expect(game.world!.hasBegunPlay, isFalse);
       game.disposeGame();
-    });
-  });
-
-  group('LuminaGameWidget play control', () {
-    testWidgets('paused flag and onPlayStateChanged are wired to the game', (tester) async {
-      final game = PlayControlGame();
-      final states = <LuminaPlayState>[];
-
-      Widget build(bool paused) => Directionality(
-            textDirection: TextDirection.ltr,
-            child: SizedBox(
-              width: 64,
-              height: 64,
-              child: LuminaGameWidget(
-                game: game,
-                paused: paused,
-                useHeadlessSwapChain: false,
-                onPlayStateChanged: states.add,
-              ),
-            ),
-          );
-
-      await tester.pumpWidget(build(true));
-      await tester.pump();
-      await tester.pump();
-
-      if (game.playState == LuminaPlayState.stopped) {
-        // FilamentWidget could not create a scene in this test binding.
-        await tester.pumpWidget(const SizedBox.shrink());
-        markTestSkipped('FilamentWidget did not create a scene in the test binding');
-        return;
-      }
-
-      expect(game.isPaused, isTrue);
-      expect(states.first, LuminaPlayState.playing);
-      expect(states.last, LuminaPlayState.paused);
-
-      await tester.pumpWidget(build(false));
-      await tester.pump();
-      expect(game.isPaused, isFalse);
-      expect(states.last, LuminaPlayState.playing);
-
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump();
-      expect(game.playState, LuminaPlayState.stopped);
     });
   });
 }

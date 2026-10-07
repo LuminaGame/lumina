@@ -1,4 +1,4 @@
-import 'package:flutter_filament/flutter_filament.dart';
+import 'package:flutter_filament/filament.dart';
 import 'package:lumina_core/lumina_core.dart';
 
 /// Calculation scheme for cascaded shadow map (CSM) split planes.

@@ -1,4 +1,4 @@
-import 'package:flutter_filament/flutter_filament.dart';
+import 'package:flutter_filament/filament.dart';
 
 import 'package:lumina/src/components/camera/camera_component.dart';
 import 'package:lumina/src/post_process/scalability_profile.dart';

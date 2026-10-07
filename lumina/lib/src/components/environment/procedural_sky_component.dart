@@ -1,13 +1,13 @@
 import 'dart:async';
 import 'dart:typed_data';
 
-import 'package:flutter/services.dart' show rootBundle;
-import 'package:flutter_filament/flutter_filament.dart' show FilamentSkybox;
+import 'package:flutter_filament/filament.dart' show FilamentSkybox;
 
 import 'package:lumina/src/object/actor.dart';
 import 'package:lumina/src/world/world.dart';
 import 'package:lumina/src/components/base/scene_component.dart';
 import 'package:lumina/src/components/environment/procedural_sky_binding.dart';
+import 'package:lumina/src/utility/lumina_assets.dart';
 
 /// A fully procedural sky and ocean: single-pass atmospheric scattering
 /// (Preetham & Hoffman), volumetric FBM clouds, a day/night cycle with stars
@@ -189,10 +189,11 @@ class LuminaProceduralSkyComponent extends LuminaSceneComponent {
     }));
   }
 
-  static Future<Uint8List> _bundleAsset(String key) async {
-    final data = await rootBundle.load(key);
-    return data.buffer.asUint8List();
-  }
+  /// The sky's shader and textures ship in the lumina package
+  /// (`packages/lumina/assets/sky/…`): read from the app's asset bundle
+  /// ([LuminaAssets.bundleProvider], set by the game's Flutter side), else
+  /// through [LuminaAssets.resolve].
+  static Future<Uint8List> _bundleAsset(String key) => (LuminaAssets.bundleProvider ?? LuminaAssets.resolve(null))(key);
 
   @override
   void onRenderPrep(LuminaWorld world) {

@@ -1,7 +1,7 @@
 import 'dart:io' show Platform;
 
-import 'package:flutter/foundation.dart';
-import 'package:flutter_filament/flutter_filament.dart';
+import 'package:lumina_core/lumina_core.dart' show ObservableValue;
+import 'package:flutter_filament/filament.dart';
 
 /// A GPU the engine can render on (Vulkan device).
 class LuminaGraphicsDevice {
@@ -21,8 +21,9 @@ class LuminaGraphicsDevice {
 /// tracks the device the running engine actually uses.
 abstract final class LuminaGraphicsDevices {
   /// The device of the most recent engine [reportEngine] saw; null until one
-  /// exists (or on a non-Vulkan backend).
-  static final ValueNotifier<String?> inUse = ValueNotifier<String?>(null);
+  /// exists (or on a non-Vulkan backend). A widget listens through
+  /// `asValueListenable()` (lumina_widgets).
+  static final ObservableValue<String?> inUse = ObservableValue<String?>(null);
 
   static List<LuminaGraphicsDevice> list() {
     try {

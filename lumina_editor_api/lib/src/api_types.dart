@@ -16,7 +16,8 @@ export 'editor_theme.dart';
 export 'editor_slot_button.dart';
 export 'editor_panels.dart';
 export 'project_settings_section.dart';
-export 'process/observable_adapters.dart';
+export 'package:lumina_widgets/lumina_widgets.dart'
+    show ObservableAsValueListenable, ChangeSignalAsListenable, ValueListenableAsObservable, ListenableAsChangeSignal;
 export 'process/plugin_process_channel.dart';
 export 'process/plugin_icons.dart';
 export 'process/plugin_process_adapter.dart';

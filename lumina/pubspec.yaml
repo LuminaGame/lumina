@@ -1,5 +1,5 @@
 name: lumina
-description: "Declarative 3D Game Engine built on top of flutter_filament."
+description: "The Lumina game engine: a declarative 3D world, its objects, physics, animation, Blueprint VM and rendering through flutter_filament. No Flutter widgets: the game UI is lumina_widgets."
 version: 0.0.1
 publish_to: none
 
@@ -11,6 +11,8 @@ resolution: workspace
 dependencies:
   flutter:
     sdk: flutter
+  # Its Dart API only (`package:flutter_filament/filament.dart`): the view
+  # widget is hosted by lumina_widgets.
   flutter_filament:
     path: ../flutter_filament
   # The pure-Dart foundation (math, file formats, paths, logger) the engine,
@@ -27,21 +29,12 @@ dependencies:
       url: https://github.com/LuminaGame/tools.git
       path: lumina_smoke
       ref: 227b3cd34ef0d41ff114b909545efb47f3e2a225
-  # Pointer capture for games and Play (tools repo).
-  lumina_mouse_capture:
-    git:
-      url: https://github.com/LuminaGame/tools.git
-      path: lumina_mouse_capture
-      ref: 227b3cd34ef0d41ff114b909545efb47f3e2a225
   vector_math: ^2.1.4
 
   meta: any
   ffi: any
   image: ^4.9.2
   path: ^1.9.1
-  media_kit: ^1.1.11
-  media_kit_video: ^1.2.5
-  media_kit_libs_video: ^1.0.4
 dev_dependencies:
   pub_semver: ^2.2.0
   flutter_test:

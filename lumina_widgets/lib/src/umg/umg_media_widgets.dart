@@ -2,8 +2,8 @@ import 'dart:io';
 
 import 'package:flutter/widgets.dart';
 
-import 'package:lumina/src/media/media.dart';
-import 'package:lumina/src/umg/umg_widgets.dart';
+import 'package:lumina_widgets/src/media/media.dart';
+import 'package:lumina_widgets/src/umg/umg_widgets.dart';
 
 /// UMG Video Player widget: can be initialized with a [source] string (file path,
 /// network URL, or asset), or driven by an external [controller].

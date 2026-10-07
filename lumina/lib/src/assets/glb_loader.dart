@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-import 'package:flutter_filament/flutter_filament.dart' show FilamentDracoDecoder;
+import 'package:flutter_filament/filament.dart' show FilamentDracoDecoder;
 import 'package:lumina/src/assets/encoded_image_decoder.dart';
 import 'package:lumina_core/lumina_core.dart';
 

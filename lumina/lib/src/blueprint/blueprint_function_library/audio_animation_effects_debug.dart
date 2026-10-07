@@ -75,52 +75,51 @@ void _setSoundClassVolume(LuminaActor self, [String soundClass = 'Master', doubl
 
 Object? _openVideo(LuminaActor self, String source, [bool autoPlay = false, bool loop = false, double volume = 1.0]) {
   if (source.isEmpty) return null;
-  final controller = LuminaVideoController(
-    source: source,
-    autoPlay: autoPlay,
-    loop: loop,
-    initialVolume: volume,
-  );
-  unawaited(controller.initialize());
-  return controller;
+  // The game's Flutter side registers the player (lumina_widgets); a world
+  // without one opens nothing.
+  final create = LuminaVideoPlayback.factory;
+  if (create == null) return null;
+  final playback = create(source: source, autoPlay: autoPlay, loop: loop, initialVolume: volume);
+  unawaited(playback.initialize());
+  return playback;
 }
 
 void _playVideo(LuminaActor self, Object? target) {
-  if (target is LuminaVideoController) target.play();
+  if (target is LuminaVideoPlayback) target.play();
 }
 
 void _pauseVideo(LuminaActor self, Object? target) {
-  if (target is LuminaVideoController) target.pause();
+  if (target is LuminaVideoPlayback) target.pause();
 }
 
 void _stopVideo(LuminaActor self, Object? target) {
-  if (target is LuminaVideoController) target.stop();
+  if (target is LuminaVideoPlayback) target.stop();
 }
 
 void _seekVideo(LuminaActor self, Object? target, [double seconds = 0.0]) {
-  if (target is LuminaVideoController) target.seekToSeconds(seconds);
+  if (target is LuminaVideoPlayback) target.seekToSeconds(seconds);
 }
 
 void _setVideoVolume(LuminaActor self, Object? target, [double volume = 1.0]) {
-  if (target is LuminaVideoController) target.setVolume(volume);
+  if (target is LuminaVideoPlayback) target.setVolume(volume);
 }
 
 void _setVideoRate(LuminaActor self, Object? target, [double rate = 1.0]) {
-  if (target is LuminaVideoController) target.setPlaybackSpeed(rate);
+  if (target is LuminaVideoPlayback) target.setPlaybackSpeed(rate);
 }
 
 void _setVideoLooping(LuminaActor self, Object? target, [bool loop = false]) {
-  if (target is LuminaVideoController) target.setLooping(loop);
+  if (target is LuminaVideoPlayback) target.setLooping(loop);
 }
 
 bool _isVideoPlaying(LuminaActor self, Object? target) =>
-    target is LuminaVideoController && target.value.isPlaying;
+    target is LuminaVideoPlayback && target.isPlaying;
 
 double _getVideoPosition(LuminaActor self, Object? target) =>
-    target is LuminaVideoController ? target.value.position.inMilliseconds / 1000.0 : 0.0;
+    target is LuminaVideoPlayback ? target.position.inMilliseconds / 1000.0 : 0.0;
 
 double _getVideoDuration(LuminaActor self, Object? target) =>
-    target is LuminaVideoController ? target.value.duration.inMilliseconds / 1000.0 : 0.0;
+    target is LuminaVideoPlayback ? target.duration.inMilliseconds / 1000.0 : 0.0;
 
 // --- Animation ------------------------------------------------------
 

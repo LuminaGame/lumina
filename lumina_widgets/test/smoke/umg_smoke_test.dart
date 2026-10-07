@@ -8,9 +8,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina/lumina.dart' show LuminaBlueprintClass;
 import 'package:lumina/lumina_runtime.dart';
 import 'package:lumina/testing.dart';
+import 'package:lumina_widgets/lumina_widgets.dart';
 
-import '../blueprint/generated/widget_script/wbp_clicker.g.dart';
-import '../blueprint/widget_blueprint_fixture.dart';
+import '../../../lumina/test/blueprint/generated/widget_script/wbp_clicker.g.dart';
+import '../../../lumina/test/blueprint/widget_blueprint_fixture.dart';
 
 /// UMG smoke — the plain-Flutter UMG widget set drawn in one real frame (a
 /// pause menu as a game would show it), with no Material and no shadcn above

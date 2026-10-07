@@ -1,5 +1,5 @@
-import 'package:flutter/foundation.dart' show debugPrint;
-import 'package:flutter_filament/flutter_filament.dart';
+import 'package:flutter_filament/filament.dart';
+import 'package:lumina_core/lumina_core.dart' show EngineLoggerService;
 
 import 'package:lumina/src/post_process/fsr3_settings.dart';
 
@@ -158,13 +158,13 @@ class LuminaRtxController {
     try {
       requested = RayTracing.requestExtensions();
     } catch (e) {
-      debugPrint('[LuminaRtxController] ray tracing extensions not requested: $e');
+      EngineLoggerService().log('ray tracing extensions not requested: $e', level: 'warning', source: 'LuminaRtxController');
     }
     try {
       if (dlssRuntimeDir != null) Dlss.runtimeDirectory = dlssRuntimeDir;
       if (Dlss.available) Dlss.requestExtensions();
     } catch (e) {
-      debugPrint('[LuminaRtxController] DLSS extensions not requested: $e');
+      EngineLoggerService().log('DLSS extensions not requested: $e', level: 'warning', source: 'LuminaRtxController');
     }
     return requested;
   }
@@ -296,7 +296,7 @@ class LuminaRtxController {
         );
         _dlssOutputSize = (width, height);
       } catch (e) {
-        debugPrint('[LuminaRtxController] DLSS not created: $e');
+        EngineLoggerService().log('DLSS not created: $e', level: 'warning', source: 'LuminaRtxController');
         view.temporalAntiAliasingOptions = baseTaa;
         view.dynamicResolutionOptions = baseDynamicResolution;
       }

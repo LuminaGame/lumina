@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
-import 'package:lumina/src/umg/umg_widgets.dart';
+import 'package:lumina_widgets/src/umg/umg_widgets.dart';
 
 /// Reads and watches the per-element runtime state of a widget instance.
 /// A widget instance is the JSON-plain map `Create Widget` builds:
