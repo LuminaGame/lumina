@@ -227,6 +227,13 @@ export 'package:lumina/src/animation/motion_matching/motion_matching_player.dart
 export 'package:lumina/src/animation/motion_matching/pose_search_database_runtime.dart';
 export 'package:lumina/src/animation/motion_matching/spring_math.dart';
 export 'package:lumina/src/animation/motion_matching/trajectory_predictor.dart';
+export 'package:lumina/src/animation/root_motion/anim_slot_player.dart';
+export 'package:lumina/src/animation/root_motion/motion_warping.dart';
+export 'package:lumina/src/animation/root_motion/root_motion_montage_player.dart';
+export 'package:lumina/src/animation/root_motion/root_motion_track.dart';
+export 'package:lumina/src/components/movement/traversal/traversal_check.dart';
+export 'package:lumina/src/components/movement/traversal/traversal_chooser.dart';
+export 'package:lumina/src/components/movement/traversal/traversal_component.dart';
 export 'package:lumina/src/components/mesh/mesh_pose_driver.dart';
 export 'package:lumina_core/src/pose_search/glb_animation_sampler.dart';
 export 'package:lumina_core/src/pose_search/pose_math.dart';

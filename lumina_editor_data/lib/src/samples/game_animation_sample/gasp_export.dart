@@ -1,6 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:lumina/lumina.dart';
+
+import 'package:lumina_editor_data/src/samples/game_animation_sample/gasp_traversal.dart';
+
 /// One animation sequence of the exported sample: its FBX file and what the
 /// export's `metadata.json` records about it.
 class GaspSequence {
@@ -76,7 +80,11 @@ class GaspExport {
   final List<GaspSequence> sequences;
   final Map<String, GaspDatabase> databases;
 
-  GaspExport._(this.root, this.sequences, this.databases);
+  /// The traversal chooser's rows with their montages' warp windows
+  /// ([GaspTraversal.rows]); empty when the metadata has none.
+  final List<LuminaTraversalAnimation> traversal;
+
+  GaspExport._(this.root, this.sequences, this.databases, [this.traversal = const []]);
 
   /// Reads [root]'s `metadata.json` (when present) and lists its FBX files.
   /// A sequence without an FBX (the export skipped it) is left out.
@@ -122,7 +130,7 @@ class GaspExport {
       final db = parseDatabase(Map<String, dynamic>.from(d as Map));
       databases.putIfAbsent(db.name, () => db);
     }
-    return GaspExport._(root, sequences, databases);
+    return GaspExport._(root, sequences, databases, GaspTraversal.rows(metadata));
   }
 
   static final _assetLine = RegExp(r'^\s*DatabaseAnimationAssets\(\d+\)=\((.*)\)\s*$', multiLine: true);

@@ -23,6 +23,7 @@ import 'package:lumina/src/components/mesh/animated_mesh_component.dart';
 import 'package:lumina/src/components/mesh/spring_morph_component.dart';
 import 'package:lumina/src/components/mesh/static_mesh_component.dart';
 import 'package:lumina/src/components/movement/character_movement_component.dart';
+import 'package:lumina/src/components/movement/traversal/traversal_component.dart';
 import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/src/object/actor.dart';
 import 'package:lumina/src/object/character.dart';
@@ -185,6 +186,7 @@ abstract final class LuminaBlueprintComponents {
     if (c is LuminaStaticMeshComponent) return 'LuminaStaticMeshComponent';
     if (c is LuminaCharacterMovementComponent) return 'LuminaCharacterMovementComponent';
     if (c is LuminaSpringMorphComponent) return 'LuminaSpringMorphComponent';
+    if (c is LuminaTraversalComponent) return 'LuminaTraversalComponent';
     if (c is LuminaSceneComponent) return 'LuminaSceneComponent';
     return 'LuminaActorComponent';
   }
@@ -387,6 +389,8 @@ abstract final class LuminaBlueprintComponents {
         return camera;
       case 'LuminaSpringMorphComponent':
         return LuminaSpringMorphComponent.fromProperties(p);
+      case 'LuminaTraversalComponent':
+        return LuminaTraversalComponent.fromProperties(p);
       case 'LuminaSkeletalMeshComponent':
       case 'LuminaAnimatedMeshComponent':
         final stored = p['skeletalMeshAsset'] as String? ?? '';

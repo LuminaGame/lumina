@@ -105,6 +105,37 @@ class LuminaPoseSearchDatabaseRuntime {
   /// is parsed and hashed once, not once per database).
   static final Map<String, Future<(LuminaGlbAnimationSampler, String)>> _meshes = {};
 
+  /// The clips of the mesh at [meshAssetPath] on the CPU, parsed once on a
+  /// background isolate and shared with every database [load] reads for the
+  /// same mesh (so a root-motion montage samples the very poses motion
+  /// matching shows).
+  static Future<LuminaGlbAnimationSampler> meshSampler(String meshAssetPath, {LuminaAssetProvider? provider}) async {
+    final (sampler, _) = await _mesh(meshAssetPath, LuminaAssets.resolve(provider));
+    return sampler;
+  }
+
+  static Future<(LuminaGlbAnimationSampler, String)> _mesh(String meshAssetPath, LuminaAssetProvider read, {Uint8List? bytes}) =>
+      _meshes.putIfAbsent(meshAssetPath, () => _parseMesh(meshAssetPath, read, bytes));
+
+  /// Reads and parses the mesh once; a failure forgets the entry (the next
+  /// call retries) and is rethrown to every waiting caller.
+  static Future<(LuminaGlbAnimationSampler, String)> _parseMesh(
+      String meshAssetPath, LuminaAssetProvider read, Uint8List? bytes) async {
+    try {
+      final glb = bytes ?? await LuminaMeshAssetCache.meshBytes(read, meshAssetPath);
+      (LuminaGlbAnimationSampler, String) work() =>
+          (LuminaGlbAnimationSampler.fromGlb(glb), LuminaPoseSearchBuilder.glbHash(glb));
+      try {
+        return await Isolate.run(work, debugName: 'pose search mesh');
+      } on UnsupportedError {
+        return work();
+      }
+    } catch (_) {
+      _meshes.remove(meshAssetPath);
+      rethrow;
+    }
+  }
+
   /// Forgets the shared runtimes ([load] reloads them).
   static void clearShared() {
     _shared.clear();
@@ -145,17 +176,7 @@ class LuminaPoseSearchDatabaseRuntime {
     try {
       cache = await read(cachePath);
     } catch (_) {}
-    final (sampler, glbHash) = await _meshes.putIfAbsent(doc.targetMesh, () async {
-      (LuminaGlbAnimationSampler, String) work() => (LuminaGlbAnimationSampler.fromGlb(glb), LuminaPoseSearchBuilder.glbHash(glb));
-      try {
-        return await Isolate.run(work, debugName: 'pose search mesh');
-      } on UnsupportedError {
-        return work();
-      }
-    }).catchError((Object e) {
-      _meshes.remove(doc.targetMesh);
-      throw e;
-    });
+    final (sampler, glbHash) = await _mesh(doc.targetMesh, read, bytes: glb);
     // A current cache needs no rebuild: the index is decoded next to the
     // mesh's shared clips.
     final runtime = cache != null &&

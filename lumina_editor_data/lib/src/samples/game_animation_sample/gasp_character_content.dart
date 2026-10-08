@@ -2,6 +2,7 @@ import 'package:lumina/lumina.dart';
 import 'package:lumina_core/lumina_core.dart';
 
 import 'package:lumina_editor_data/src/samples/game_animation_sample/gasp_databases.dart';
+import 'package:lumina_editor_data/src/samples/game_animation_sample/gasp_traversal.dart';
 
 /// The example's playable character as project assets: its input, the
 /// character Blueprint (gaits, crouch, jump, a spring-arm camera), its
@@ -76,9 +77,14 @@ abstract final class GaspCharacterContent {
   /// mesh animated by [animBlueprintPath]; Move / Look / Jump, held run and
   /// sprint keys, the crouch toggle, and a Tick that eases the speed cap
   /// toward the gait's speed.
+  ///
+  /// With [traversal] rows the character also gets a traversal component
+  /// and Jump first tries a traversal action (hurdle, vault, mantle),
+  /// jumping only when none fits the obstacle ahead.
   static LuminaBlueprintDocument characterBlueprint({
     required String meshAssetPath,
     List<LuminaInputAction> inputActions = const [],
+    List<LuminaTraversalAnimation> traversal = const [],
   }) {
     final variables = [
       const LuminaBlueprintVariable(name: 'LookSensitivity', typeName: 'Float', defaultValue: lookSensitivity),
@@ -122,6 +128,10 @@ abstract final class GaspCharacterContent {
       ]),
       LuminaBlueprintGraphSection('Jump', [
         input('jump_input', 'IA_Jump'),
+        if (traversal.isNotEmpty) ...[
+          place('traverse', 'try_traversal_action'),
+          place('traversal_fits', 'branch'),
+        ],
         place('jump', 'jump'),
         place('stop_jumping', 'stop_jumping'),
       ]),
@@ -190,7 +200,14 @@ abstract final class GaspCharacterContent {
       wire('yaw_scaled', 'return_value', 'yaw', 'val'),
       wire('yaw', 'exec_out', 'pitch', 'exec_in'),
       wire('pitch_scaled', 'return_value', 'pitch', 'val'),
-      wire('jump_input', 'started', 'jump', 'exec_in'),
+      if (traversal.isEmpty)
+        wire('jump_input', 'started', 'jump', 'exec_in')
+      else ...[
+        wire('jump_input', 'started', 'traverse', 'exec_in'),
+        wire('traverse', 'exec_out', 'traversal_fits', 'exec_in'),
+        wire('traverse', 'return_value', 'traversal_fits', 'condition'),
+        wire('traversal_fits', 'false_out', 'jump', 'exec_in'),
+      ],
       wire('jump_input', 'completed', 'stop_jumping', 'exec_in'),
       wire('run_input', 'started', 'start_run', 'exec_in'),
       wire('run_input', 'completed', 'end_run', 'exec_in'),
@@ -255,6 +272,17 @@ abstract final class GaspCharacterContent {
           isSceneComponent: false,
           properties: {'maxWalkSpeed': walkSpeed, 'jumpZVelocity': jumpZVelocity, 'airControl': 0.35, 'jumpCutMultiplier': 1.0},
         ),
+        if (traversal.isNotEmpty)
+          LuminaBlueprintComponent(
+            id: 'traversal',
+            name: 'Traversal',
+            type: 'LuminaTraversalComponent',
+            isSceneComponent: false,
+            properties: {
+              'animations': [for (final a in traversal) a.toJson()],
+              'rootBone': GaspTraversal.rootBone,
+            },
+          ),
         LuminaBlueprintComponent(
           id: 'mesh',
           name: 'Mesh',

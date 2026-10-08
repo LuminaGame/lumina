@@ -16,6 +16,7 @@ import '../../../lumina/test/blueprint/motion_matching_blueprint.dart';
 import '../../../lumina/test/blueprint/no_begin_play_blueprint.dart';
 import '../../../lumina/test/blueprint/reusable_graphs_blueprint.dart';
 import '../../../lumina/test/blueprint/third_person_blueprint.dart';
+import '../../../lumina/test/blueprint/traversal_blueprint.dart';
 import '../../../lumina/test/blueprint/typed_pins_blueprint.dart';
 
 /// Generated Blueprint Dart is committed under
@@ -55,6 +56,12 @@ Map<String, (LuminaBlueprintDocument, String, List<LuminaInputAction>)> goldens(
       'bp_level_load': (levelLoadBlueprint(), 'BpLevelLoad', const <LuminaInputAction>[]),
       // No Event BeginPlay, only a custom event with a latent Delay.
       'bp_no_begin_play': (noBeginPlayBlueprint(), 'BpNoBeginPlay', const <LuminaInputAction>[]),
+      // A traversal component and Jump → Try Traversal Action → Branch → Jump.
+      'bp_traversal_character': (
+        TraversalBlueprintFixture.characterBlueprint(inputActions: templateInputActions()),
+        'BpTraversalCharacter',
+        templateInputActions(),
+      ),
     };
 
 void main() {

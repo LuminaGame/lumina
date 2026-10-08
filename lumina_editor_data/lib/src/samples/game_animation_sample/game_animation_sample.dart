@@ -9,3 +9,4 @@ export 'package:lumina_editor_data/src/samples/game_animation_sample/gasp_charac
 export 'package:lumina_editor_data/src/samples/game_animation_sample/gasp_databases.dart';
 export 'package:lumina_editor_data/src/samples/game_animation_sample/gasp_export.dart';
 export 'package:lumina_editor_data/src/samples/game_animation_sample/gasp_sandbox_level.dart';
+export 'package:lumina_editor_data/src/samples/game_animation_sample/gasp_traversal.dart';

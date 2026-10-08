@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina_editor_data/lumina_editor.dart';
+import 'package:lumina_ui/ui/features/details/models/component_property_registry.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 import 'package:lumina_ui/ui/features/mcp_server/services/mcp_server_service.dart';
 import 'package:lumina_ui/ui/features/mcp_server/services/mcp_server_settings.dart';
@@ -94,9 +95,10 @@ void main() {
   }
 
   group('level actor components', () {
-    test('list_component_types: 17 Details types, 17 Blueprint types with availability', () async {
+    test('list_component_types: every Details type, every Blueprint type with availability', () async {
       final actor = await ok('list_component_types', {'context': 'actor'});
-      expect(actor['count'], 17);
+      expect(actor['count'], ComponentPropertyRegistry.descriptors.length);
+      expect((actor['types'] as List).cast<Map>().map((t) => t['type']), contains('LuminaTraversalComponent'));
       final light = (actor['types'] as List).cast<Map>().firstWhere((t) => t['type'] == 'LuminaPointLightComponent');
       expect((light['properties'] as List).cast<Map>().map((p) => p['id']), contains('intensity'));
       final bp = await ok('list_component_types', {'context': 'blueprint'});

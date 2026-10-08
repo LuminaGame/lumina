@@ -1,5 +1,7 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart' show IconData, LucideIcons;
 
+import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_component_registry/traversal_component_descriptor.dart';
+
 enum ComponentPropertyType {
   number,
   boolean,
@@ -1060,6 +1062,7 @@ class BlueprintComponentRegistry {
         ),
       ],
     ),
+    traversalComponentDescriptor,
   ];
 
   static ComponentTypeDescriptor? getDescriptor(String typeName) {

@@ -40,6 +40,8 @@ import 'package:lumina/src/components/mesh/animated_mesh_component.dart';
 import 'package:lumina/src/components/mesh/skeletal_mesh_component.dart';
 import 'package:lumina/src/components/mesh/static_mesh_component.dart';
 import 'package:lumina/src/components/movement/character_movement_component.dart';
+import 'package:lumina/src/components/movement/traversal/traversal_check.dart';
+import 'package:lumina/src/components/movement/traversal/traversal_component.dart';
 import 'package:lumina/src/controller/controller.dart';
 import 'package:lumina/src/input/input_component.dart';
 import 'package:lumina/src/controller/player_controller.dart';
@@ -82,6 +84,7 @@ part 'blueprint_function_library/actor_events_enums_timers.dart';
 part 'blueprint_function_library/game_framework_save_input.dart';
 part 'blueprint_function_library/audio_animation_effects_debug.dart';
 part 'blueprint_function_library/widget_blueprint.dart';
+part 'blueprint_function_library/traversal.dart';
 
 /// What a node function gets when the VM calls it: the
 /// Blueprint instance it runs on.
@@ -941,6 +944,11 @@ abstract final class LuminaBlueprintFunctionLibrary {
   static const getAnimInstance = _getAnimInstance;
   static const setAnimVariable = _setAnimVariable;
   static const getAnimVariable = _getAnimVariable;
+
+  /// Traversal through the owner's traversal component (see its class).
+  static const tryTraversalAction = _tryTraversalAction;
+  static const traversalCheck = _traversalCheck;
+  static const isTraversing = _isTraversing;
   static const spawnEmitterAtLocation = _spawnEmitterAtLocation;
   static const spawnEmitterAttached = _spawnEmitterAttached;
   static const activateParticleSystem = _activateParticleSystem;
@@ -1003,6 +1011,7 @@ abstract final class LuminaBlueprintFunctionLibrary {
     ..._engineCallShapes,
     ..._gameFrameworkCallShapes,
     ..._widgetBlueprintCallShapes,
+    ..._traversalCallShapes,
     // @@CALL_SHAPES_END
   });
 
@@ -1032,6 +1041,7 @@ abstract final class LuminaBlueprintFunctionLibrary {
     ..._graphMemberFunctions,
     ..._gameFrameworkFunctions,
     ..._widgetBlueprintFunctions,
+    ..._traversalFunctions,
     // @@FUNCTIONS_END
   });
 }

@@ -547,6 +547,9 @@ Vectors and rotators are **authoring space** (cm, Z up; rotators about X/Y/Z lik
 | `getAnimInstance` | `static const getAnimInstance` |  |
 | `setAnimVariable` | `static const setAnimVariable` |  |
 | `getAnimVariable` | `static const getAnimVariable` |  |
+| `tryTraversalAction` | `static const tryTraversalAction` | Try Traversal Action: sahibin `LuminaTraversalComponent`'i öndeki engeli ölçer ve hurdle, vault ya da mantle oynatır; hiçbiri uymazsa false (bkz. [Traversal](../traversal.md)). |
+| `traversalCheck` | `static const traversalCheck` | Traversal Check: eylemsiz olarak ölçülen engel (eylem türü, yükseklik, derinlik, arka kenar yüksekliği, ön kenar var mı). |
+| `isTraversing` | `static const isTraversing` | Is Traversing: bir traversal eyleminin oynayıp oynamadığı. |
 | `spawnEmitterAtLocation` | `static const spawnEmitterAtLocation` |  |
 | `spawnEmitterAttached` | `static const spawnEmitterAttached` |  |
 | `activateParticleSystem` | `static const activateParticleSystem` |  |

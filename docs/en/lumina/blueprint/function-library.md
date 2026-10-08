@@ -547,6 +547,9 @@ Vectors and rotators are **authoring space** (cm, Z up; rotators about X/Y/Z lik
 | `getAnimInstance` | `static const getAnimInstance` |  |
 | `setAnimVariable` | `static const setAnimVariable` |  |
 | `getAnimVariable` | `static const getAnimVariable` |  |
+| `tryTraversalAction` | `static const tryTraversalAction` | Try Traversal Action: the owner's `LuminaTraversalComponent` checks the obstacle ahead and plays a hurdle, vault or mantle; false when none fits (see [Traversal](../traversal.md)). |
+| `traversalCheck` | `static const traversalCheck` | Traversal Check: the measured obstacle (action type, height, depth, back ledge height, has front ledge) without acting. |
+| `isTraversing` | `static const isTraversing` | Is Traversing: whether a traversal action plays. |
 | `spawnEmitterAtLocation` | `static const spawnEmitterAtLocation` |  |
 | `spawnEmitterAttached` | `static const spawnEmitterAttached` |  |
 | `activateParticleSystem` | `static const activateParticleSystem` |  |

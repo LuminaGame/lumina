@@ -102,6 +102,18 @@ class ComponentPropertyRegistry {
         PropertyDescriptor(id: 'dampingScale', label: 'Damping Scale', group: 'Secondary Motion', editor: PropertyEditorType.float, unit: 'x', min: 0.1, max: 5.0, defaultValue: 1.0),
       ],
     ),
+    'LuminaTraversalComponent': ComponentDescriptor(
+      type: 'LuminaTraversalComponent',
+      sections: ['Traversal'],
+      properties: [
+        PropertyDescriptor(id: 'enabled', label: 'Enabled', group: 'Traversal', editor: PropertyEditorType.boolean, defaultValue: true),
+        PropertyDescriptor(id: 'minLedgeHeight', label: 'Min Ledge Height', group: 'Traversal', editor: PropertyEditorType.float, unit: 'cm', min: 10.0, max: 200.0, defaultValue: 50.0),
+        PropertyDescriptor(id: 'maxLedgeHeight', label: 'Max Ledge Height', group: 'Traversal', editor: PropertyEditorType.float, unit: 'cm', min: 50.0, max: 500.0, defaultValue: 275.0),
+        PropertyDescriptor(id: 'minTraceDistance', label: 'Min Trace Distance', group: 'Traversal', editor: PropertyEditorType.float, unit: 'cm', min: 10.0, max: 500.0, defaultValue: 75.0),
+        PropertyDescriptor(id: 'maxTraceDistance', label: 'Max Trace Distance', group: 'Traversal', editor: PropertyEditorType.float, unit: 'cm', min: 10.0, max: 1000.0, defaultValue: 350.0),
+        PropertyDescriptor(id: 'debugDraw', label: 'Debug Draw', group: 'Traversal', editor: PropertyEditorType.boolean, defaultValue: false),
+      ],
+    ),
     'LuminaSkeletalMeshComponent': ComponentDescriptor(
       type: 'LuminaSkeletalMeshComponent',
       sections: ['Mesh & Geometry', 'Materials', 'Transform & Attachment', 'Render Distance & Culling'],

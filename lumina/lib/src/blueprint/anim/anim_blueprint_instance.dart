@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:developer' as developer;
 import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:vector_math/vector_math_64.dart';
 
+import 'package:lumina/src/animation/root_motion/anim_slot_player.dart';
 import 'package:lumina/src/components/base/actor_component.dart';
 import 'package:lumina/src/components/mesh/animated_mesh_component.dart';
 import 'package:lumina/src/object/actor.dart';
@@ -227,10 +229,81 @@ abstract class LuminaAnimBlueprintInstance extends LuminaActorComponent {
   /// keeps its state and time but leaves the mesh's clip alone.
   bool montagePlaying = false;
 
+  LuminaAnimSlotPlayer? _slot;
+
+  /// The montage playing in the default slot, if any.
+  LuminaAnimSlotPlayer? get slotPlayer => _slot;
+
+  /// Plays [player] in the default slot, over the state machine: it starts
+  /// from the pose the mesh shows (the Motion Matching state's, blended by
+  /// inertialization), shows its pose while it plays (the state machine
+  /// keeps its state and time) and, when it finishes, hands the pose back to
+  /// the state machine — a Motion Matching state blends from the montage's
+  /// last pose. A montage already in the slot is ended as interrupted.
+  void playSlot(LuminaAnimSlotPlayer player) {
+    final previous = _slot;
+    if (previous != null) {
+      _slot = null;
+      previous.end(interrupted: true);
+    }
+    final mm = motionMatching.active ? motionMatching.player : null;
+    final from = _slotPose ?? (mm == null ? null : (mm.pose, mm.poseVelocity, mm.poseNodeNames));
+    player.begin(fromPose: from?.$1, fromVelocity: from?.$2, fromNodes: from?.$3);
+    _slot = player;
+    mesh.poseDriver = player;
+  }
+
+  /// The pose of the slot montage being replaced, for the next to start from.
+  (Float64List, Float64List, List<String>)? get _slotPose {
+    final s = _slot;
+    return s == null ? null : (s.pose, s.poseVelocity, s.poseNodeNames);
+  }
+
+  /// Ends the slot's montage now (interrupted) and hands the pose back.
+  void stopSlot() {
+    final s = _slot;
+    if (s == null) return;
+    _leaveSlot(s, interrupted: true);
+  }
+
+  LuminaAnimSlotPlayer? _leftSlot;
+
+  /// Hands the pose back: a Motion Matching state blends from the montage's
+  /// pose. A montage that finished on its own still shows its last pose this
+  /// frame; the state machine takes the mesh from the next tick.
+  void _leaveSlot(LuminaAnimSlotPlayer s, {required bool interrupted}) {
+    _slot = null;
+    final mm = motionMatching.player;
+    final toMotionMatching = mm != null && _currentPose?.kind == LuminaAnimPoseKind.motionMatching;
+    if (toMotionMatching) mm.blendFrom(s.pose, s.poseVelocity);
+    if (interrupted) {
+      if (mesh.poseDriver == s) mesh.poseDriver = toMotionMatching ? mm : null;
+    } else {
+      _leftSlot = s;
+    }
+    s.end(interrupted: interrupted);
+  }
+
+  /// Advances the slot montage; true while it holds the mesh this tick.
+  bool _tickSlot(double deltaTime) {
+    final s = _slot;
+    if (s == null) return false;
+    _stateTime += deltaTime;
+    if (mesh.poseDriver != s) mesh.poseDriver = s;
+    if (!s.advance(deltaTime)) _leaveSlot(s, interrupted: false);
+    return true;
+  }
+
   @override
   void onTick(double deltaTime) {
     super.onTick(deltaTime);
     if (owner == null || _state == null) return;
+    if (_tickSlot(deltaTime)) return;
+    final left = _leftSlot;
+    if (left != null) {
+      _leftSlot = null;
+      if (mesh.poseDriver == left) mesh.poseDriver = null;
+    }
     if (montagePlaying) {
       _stateTime += deltaTime;
       return;

@@ -14,6 +14,7 @@ import 'package:lumina_editor_data/src/samples/game_animation_sample/gasp_charac
 import 'package:lumina_editor_data/src/samples/game_animation_sample/gasp_databases.dart';
 import 'package:lumina_editor_data/src/samples/game_animation_sample/gasp_export.dart';
 import 'package:lumina_editor_data/src/samples/game_animation_sample/gasp_sandbox_level.dart';
+import 'package:lumina_editor_data/src/samples/game_animation_sample/gasp_traversal.dart';
 import 'package:lumina_editor_data/src/services/code_generator_service.dart';
 
 /// What [GameAnimationSampleBuilder.build] did, with its numbers.
@@ -110,7 +111,9 @@ class GameAnimationSampleBuilder {
   /// character mesh, the rest into the library; the jump clips lose their
   /// root height. [categories] limits the import (null: everything).
   static List<GaspClipJob> jobsFor(GaspExport export, {Set<String>? categories}) {
-    final runtime = GaspDatabases.clipsUsed(export);
+    // The traversal clips play from the character mesh too (with their
+    // root motion: they move the character).
+    final runtime = {...GaspDatabases.clipsUsed(export), ...GaspTraversal.clips(export.traversal)};
     return [
       for (final s in export.sequences)
         if (categories == null || categories.contains(s.category))
@@ -190,8 +193,13 @@ class GameAnimationSampleBuilder {
           '${built.stats.buildMicroseconds ~/ 1000} ms, ${(built.cache.length / 1e6).toStringAsFixed(1)} MB');
     }
 
-    // 3. Character, Animation Blueprint, game mode.
-    await _writeCharacter();
+    // 3. Character (with the traversal rows whose clips made it in),
+    // Animation Blueprint, game mode.
+    final traversal = await GaspTraversal.measureWarpPoints(
+        [for (final r in export.traversal) if (available.contains(r.clip)) r], (clip) => export.sequence(clip)?.fbxPath);
+    await _saveTraversal(traversal);
+    _log('Traversal: ${traversal.length} chooser rows (${GaspTraversal.clips(traversal).length} clips)');
+    await _writeCharacter(traversal);
 
     // 4. Level.
     await _writeMaterials();
@@ -232,7 +240,7 @@ class GameAnimationSampleBuilder {
       throw FileSystemException('No skeletal mesh asset', '$projectDir/$meshAssetPath');
     }
     await _retagDatabases();
-    await _writeCharacter();
+    await _writeCharacter(await _loadTraversal());
     final manifest = await Directory(projectDir).list().firstWhere((e) => e is File && e.path.endsWith('.lmproject')) as File;
     final project = LuminaProject.fromMap(Map<String, dynamic>.from(jsonDecode(await manifest.readAsString()) as Map));
     await manifest.writeAsString(jsonEncode(project
@@ -343,12 +351,31 @@ class GameAnimationSampleBuilder {
     ).toProtoBufferBytes());
   }
 
-  Future<void> _writeCharacter() async {
+  /// The traversal rows of the last build, kept under `Saved/` so
+  /// [updateCharacter] keeps them without the export.
+  File get _traversalFile => File('$projectDir/Saved/GameAnimationSample/traversal.json');
+
+  Future<void> _saveTraversal(List<LuminaTraversalAnimation> rows) async {
+    await _traversalFile.parent.create(recursive: true);
+    await _traversalFile.writeAsString(const JsonEncoder.withIndent(' ').convert([for (final r in rows) r.toJson()]));
+  }
+
+  Future<List<LuminaTraversalAnimation>> _loadTraversal() async {
+    if (!await _traversalFile.exists()) return const [];
+    final list = jsonDecode(await _traversalFile.readAsString()) as List;
+    return [for (final r in list) LuminaTraversalAnimation.fromJson(Map<String, dynamic>.from(r as Map))];
+  }
+
+  Future<void> _writeCharacter(List<LuminaTraversalAnimation> traversal) async {
     final actions = ProjectInputBinder.bind(GaspCharacterContent.input).actions.values.toList();
     await _writeDocument(GaspCharacterContent.animBlueprintPath(meshAssetPath), AssetType.animBlueprint,
         GaspCharacterContent.animBlueprint(meshAssetPath: meshAssetPath).toJson(), meshAssetPath);
-    await _writeDocument(GaspCharacterContent.characterPath, AssetType.actor,
-        GaspCharacterContent.characterBlueprint(meshAssetPath: meshAssetPath, inputActions: actions).toJson(), null);
+    await _writeDocument(
+        GaspCharacterContent.characterPath,
+        AssetType.actor,
+        GaspCharacterContent.characterBlueprint(meshAssetPath: meshAssetPath, inputActions: actions, traversal: traversal)
+            .toJson(),
+        null);
     final gameMode = GaspCharacterContent.gameModeBlueprint.toJson();
     await _writeDocument(GaspCharacterContent.gameModePath, AssetType.actor, gameMode, null);
     final ok = await DartCodeGeneratorService().compileAndWriteActor(projectDir, GaspCharacterContent.gameModeName, gameMode,

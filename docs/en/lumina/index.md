@@ -39,6 +39,7 @@ Runtime code never reads files with `File(...)` directly: asset loads without an
 | [Input](input.md) | Input actions, mapping contexts, keys, modifiers and triggers. |
 | [Animation](animation.md) | Anim instances, montages, clips, blend spaces, keyframe tracks, retargeting. |
 | [Motion matching](motion-matching.md) | Pose search databases, trajectory prediction, inertialization, the Motion Matching state pose. |
+| [Traversal](traversal.md) | Obstacle check, hurdle / vault / mantle chooser, root-motion slot montages with motion warping. |
 | [Audio](audio.md) | Audio backend, audio subsystem, sounds and attenuation. |
 | [Collision](collision.md) | Collision shapes, filters and profiles, queries, GJK/EPA narrow phase. |
 | [Physics](physics.md) | Rigid bodies, mass properties, physical materials, contacts and the physics subsystem. |

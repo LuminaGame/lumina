@@ -45,7 +45,11 @@ class LuminaAnimMotionMatchingDriver {
   /// Starts loading [database] (once) and completes when it is ready.
   Future<LuminaPoseSearchDatabaseRuntime> load(String database) => _loading.putIfAbsent(database, () {
         final future = LuminaPoseSearchDatabaseRuntime.load(database, document: documents[database]);
-        future.then((r) => _ready[database] = r, onError: (Object e) {
+        // Typed void: an error handler of a value-typed `then` must return
+        // a value, or a failing load throws from the handler itself.
+        future.then<void>((r) {
+          _ready[database] = r;
+        }, onError: (Object e) {
           lastError = '$e';
           developer.log('Motion matching: cannot load $database: $e', name: 'LuminaAnimBlueprint', level: 900);
         });

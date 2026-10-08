@@ -160,6 +160,31 @@ class LuminaMotionMatchingPlayer implements LuminaMeshPoseDriver {
   /// Makes the next update search at once.
   void forceSearch() => _sinceSearch = double.infinity;
 
+  /// The velocity of the shown pose (6 doubles per node: linear, angular).
+  Float64List get poseVelocity => _shownVelocity;
+
+  /// Takes the mesh back from another pose source (a montage in an Animation
+  /// Blueprint's slot) showing [pose] moving at [velocity] (in
+  /// [poseNodeNames]' order): the next frames blend from it to the matched
+  /// frame by inertialization, and the next update searches at once. Does
+  /// nothing for a pose of another layout.
+  void blendFrom(Float64List pose, Float64List velocity) {
+    if (pose.length != _shown.length || velocity.length != _shownVelocity.length) return;
+    _shown.setAll(0, pose);
+    _shownPrevious.setAll(0, pose);
+    _shownVelocity.setAll(0, velocity);
+    _hasShown = true;
+    forceSearch();
+    if (_clip < 0) return;
+    final s = database.samplerClips[_clip];
+    if (s == null) return;
+    const h = 1.0 / 60.0;
+    database.poser.pose(s, _time, _mirrored, _target);
+    database.poser.pose(s, math.min(_time + h, database.sampler.clips[s].duration), _mirrored, _targetAhead);
+    LuminaInertializer.velocities(_target, _targetAhead, h, database.sampler.nodeCount, _targetVelocity);
+    inertializer.transition(_shown, _shownVelocity, _target, _targetVelocity);
+  }
+
   /// Starts from the pose [previous] shows (another database of the same
   /// mesh, for example when an Animation Blueprint moves from one Motion
   /// Matching state to the next): this player's first match then blends

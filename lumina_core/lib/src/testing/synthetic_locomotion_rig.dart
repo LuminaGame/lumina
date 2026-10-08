@@ -21,8 +21,11 @@ class LuminaSyntheticClip {
   /// −1 swings the right foot forward first (the mirror of +1).
   final double footSign;
 
+  /// The root's height (metres) at time t; null keeps it on the ground.
+  final double Function(double t)? height;
+
   LuminaSyntheticClip(this.name, this.duration, this.root,
-      {this.stride = 0.3, this.cadence = 2.0, this.footSign = 1.0, bool Function(double t)? moving})
+      {this.stride = 0.3, this.cadence = 2.0, this.footSign = 1.0, this.height, bool Function(double t)? moving})
       : moving = moving ?? ((_) => true);
 }
 
@@ -131,7 +134,7 @@ abstract final class LuminaSyntheticLocomotionRig {
       final rootT = <double>[], rootR = <double>[], footL = <double>[], footR = <double>[];
       for (final t in times) {
         final r = clip.root(t);
-        rootT.addAll([r.x, 0.0, r.z]);
+        rootT.addAll([r.x, clip.height?.call(t) ?? 0.0, r.z]);
         rootR.addAll([0.0, math.sin(r.yaw / 2), 0.0, math.cos(r.yaw / 2)]);
         final swing = clip.footSign * (clip.moving(t) ? clip.stride * math.sin(2 * math.pi * clip.cadence / 2 * t) : 0.0);
         footL.addAll([0.1, -0.85, swing]);

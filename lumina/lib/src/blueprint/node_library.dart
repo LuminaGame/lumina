@@ -17,6 +17,7 @@ part 'node_library/game_framework.dart';
 part 'node_library/media_and_debug.dart';
 part 'node_library/type_context.dart';
 part 'node_library/widget_blueprint.dart';
+part 'node_library/traversal.dart';
 
 /// How a node takes part in execution.
 enum LuminaBlueprintNodeKind {
@@ -621,6 +622,7 @@ abstract final class LuminaBlueprintNodeLibrary {
     ..._gameFrameworkNodes,
     ..._mediaAndDebugNodes,
     ..._widgetBlueprintNodes,
+    ..._traversalNodes,
   ]);
 
   static final Map<String, LuminaBlueprintNodeSpec> _byId = {for (final s in builtIns) s.id: s};
