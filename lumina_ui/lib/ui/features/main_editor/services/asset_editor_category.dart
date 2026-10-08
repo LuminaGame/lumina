@@ -86,6 +86,8 @@ String? subEditorCategoryFor(RealAssetInfo asset, {PluginExtensionRegistry? exte
       return 'AnimBlueprint';
     case AssetType.blendSpace:
       return 'BlendSpace';
+    case AssetType.poseSearchDatabase:
+      return 'PoseSearchDatabase';
     case AssetType.theme:
       return 'Theme';
     case AssetType.unknown:

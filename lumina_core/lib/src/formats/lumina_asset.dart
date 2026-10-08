@@ -33,6 +33,11 @@ enum AssetType {
   /// A UI Theme: `raw_payload` is a
   /// `LuminaThemeDocument` as JSON.
   theme,
+
+  /// A Pose Search Database (motion matching): `raw_payload` is a
+  /// `LuminaPoseSearchDatabaseDocument` as JSON; its feature cache is the
+  /// `.posedb` file next to the `.lmas`.
+  poseSearchDatabase,
 }
 
 class AssetReference {

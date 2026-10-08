@@ -52,6 +52,8 @@ class AssetTypeStyle {
             EditorColors.assetTypeAnimBlueprint, 'Animation Blueprint', 'animBlueprint', LucideIcons.workflow),
         AssetType.blendSpace =>
           const AssetTypeStyle._(EditorColors.assetTypeBlendSpace, 'Blend Space', 'blendSpace', LucideIcons.grid2x2),
+        AssetType.poseSearchDatabase => const AssetTypeStyle._(
+            EditorColors.assetTypeBlendSpace, 'Pose Search Database', 'poseSearchDatabase', LucideIcons.database),
         AssetType.theme =>
           const AssetTypeStyle._(EditorColors.assetTypeTheme, 'Theme', 'theme', LucideIcons.palette),
         AssetType.unknown => const AssetTypeStyle._(EditorColors.mutedForeground, 'Asset', 'unknown', LucideIcons.file),

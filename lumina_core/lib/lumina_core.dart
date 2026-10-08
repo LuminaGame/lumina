@@ -33,6 +33,14 @@ export 'package:lumina_core/src/formats/recent_project_entry.dart';
 export 'package:lumina_core/src/formats/sequencer_data.dart';
 
 // Repositories that read and write them.
+// Motion matching: pose search databases (document, clip sampler, features, search).
+export 'package:lumina_core/src/pose_search/glb_animation_sampler.dart';
+export 'package:lumina_core/src/pose_search/pose_math.dart';
+export 'package:lumina_core/src/pose_search/pose_search_builder.dart';
+export 'package:lumina_core/src/pose_search/pose_search_document.dart';
+export 'package:lumina_core/src/pose_search/pose_search_index.dart';
+export 'package:lumina_core/src/pose_search/pose_search_poser.dart';
+
 export 'package:lumina_core/src/repositories/level_repository.dart';
 export 'package:lumina_core/src/repositories/plugin_repository.dart';
 

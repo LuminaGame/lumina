@@ -343,6 +343,25 @@ abstract final class _RetargetOperation {
         ? null
         : sampledTranslation(pelvisT, pelvisScale, isPelvis: true);
 
+    // Root motion on a bone between the skeleton root and the pelvis: when
+    // the matched top node is a scene node above the root bone (an FBX
+    // `RootNode` whose mesh's root bone carries no skin weights), the root
+    // bone's own translation keys are the root motion and are copied too.
+    final intermediateTranslation = <int, List<List<double>>>{};
+    if (pelvisT != null && !soma) {
+      var p = tgt.parent[pelvisT];
+      while (p >= 0 && p != rootT) {
+        final s = mapped[p];
+        if (s != null && tracks.hasTranslation(s)) {
+          final align = (tgt.restWorld(tgt.parent[p]) * src.restWorld(src.parent[s]).inverse()).normalized();
+          intermediateTranslation[p] = [
+            for (final t in frames) align.rotateVector(tracks.translation(s, t)!),
+          ];
+        }
+        p = tgt.parent[p];
+      }
+    }
+
     // ---- Write the animation into the target GLB.
     final json = tDoc.json;
     final bin = BytesBuilder(copy: false)..add(tDoc.bin);
@@ -457,7 +476,7 @@ abstract final class _RetargetOperation {
       // Translation: only root/pelvis get dynamic sampled translations; other unmapped bones don't need constant channels if isolated
       final sampled = j == pelvisT
           ? pelvisTranslation
-          : (j == rootT ? rootTranslation : null);
+          : (j == rootT ? rootTranslation : intermediateTranslation[j]);
       if (sampled != null) {
         final data = Float32List(sampled.length * 3);
         for (var k = 0; k < sampled.length; k++) {
