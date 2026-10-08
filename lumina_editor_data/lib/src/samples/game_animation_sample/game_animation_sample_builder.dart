@@ -13,9 +13,11 @@ import 'package:lumina_editor_data/src/samples/game_animation_sample/gasp_animat
 import 'package:lumina_editor_data/src/samples/game_animation_sample/gasp_character_content.dart';
 import 'package:lumina_editor_data/src/samples/game_animation_sample/gasp_databases.dart';
 import 'package:lumina_editor_data/src/samples/game_animation_sample/gasp_export.dart';
+import 'package:lumina_editor_data/src/samples/game_animation_sample/gasp_ragdoll.dart';
 import 'package:lumina_editor_data/src/samples/game_animation_sample/gasp_sandbox_level.dart';
 import 'package:lumina_editor_data/src/samples/game_animation_sample/gasp_traversal.dart';
 import 'package:lumina_editor_data/src/services/code_generator_service.dart';
+import 'package:lumina_editor_data/src/services/physics_asset_generation.dart';
 
 /// What [GameAnimationSampleBuilder.build] did, with its numbers.
 class GameAnimationSampleReport {
@@ -113,7 +115,12 @@ class GameAnimationSampleBuilder {
   static List<GaspClipJob> jobsFor(GaspExport export, {Set<String>? categories}) {
     // The traversal clips play from the character mesh too (with their
     // root motion: they move the character).
-    final runtime = {...GaspDatabases.clipsUsed(export), ...GaspTraversal.clips(export.traversal)};
+    final runtime = {
+      ...GaspDatabases.clipsUsed(export),
+      ...GaspTraversal.clips(export.traversal),
+      // The ragdoll's get-up, flail and heavy landing clips.
+      ...GaspRagdoll.clips(export),
+    };
     return [
       for (final s in export.sequences)
         if (categories == null || categories.contains(s.category))
@@ -368,6 +375,8 @@ class GameAnimationSampleBuilder {
 
   Future<void> _writeCharacter(List<LuminaTraversalAnimation> traversal) async {
     final actions = ProjectInputBinder.bind(GaspCharacterContent.input).actions.values.toList();
+    // The ragdoll's bodies (an edited physics asset is kept).
+    await PhysicsAssetGeneration.generateForSkeletalMesh(projectDir, meshAssetPath);
     await _writeDocument(GaspCharacterContent.animBlueprintPath(meshAssetPath), AssetType.animBlueprint,
         GaspCharacterContent.animBlueprint(meshAssetPath: meshAssetPath).toJson(), meshAssetPath);
     await _writeDocument(

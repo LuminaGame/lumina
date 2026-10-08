@@ -2,6 +2,8 @@ import 'package:lumina/lumina.dart';
 import 'package:lumina_core/lumina_core.dart';
 
 import 'package:lumina_editor_data/src/samples/game_animation_sample/gasp_databases.dart';
+import 'package:lumina_editor_data/src/samples/game_animation_sample/gasp_ragdoll.dart';
+import 'package:lumina_editor_data/src/services/physics_asset_generation.dart';
 import 'package:lumina_editor_data/src/samples/game_animation_sample/gasp_traversal.dart';
 
 /// The example's playable character as project assets: its input, the
@@ -45,6 +47,7 @@ abstract final class GaspCharacterContent {
       ProjectInputAction(name: 'IA_Run'),
       ProjectInputAction(name: 'IA_Sprint'),
       ProjectInputAction(name: 'IA_Crouch'),
+      GaspRagdoll.action,
     ],
     mappingContexts: [
       ProjectMappingContext(name: 'Gameplay', mappings: [
@@ -58,6 +61,7 @@ abstract final class GaspCharacterContent {
         ProjectInputMapping(action: 'IA_Run', keyId: kKeyIdShiftLeft, keyLabel: 'Left Shift'),
         ProjectInputMapping(action: 'IA_Sprint', keyId: kKeyIdControlLeft, keyLabel: 'Left Ctrl'),
         ProjectInputMapping(action: 'IA_Crouch', keyId: keyIdC, keyLabel: 'C'),
+        GaspRagdoll.mapping,
       ]),
     ],
   );
@@ -158,6 +162,11 @@ abstract final class GaspCharacterContent {
         get('crouched', 'IsCrouching'),
         place('tell_crouch', 'set_anim_variable', {'name': 'IsCrouching', 'type': 'boolean'}),
       ]),
+      // R toggles the ragdoll (limp, or get up).
+      LuminaBlueprintGraphSection('Ragdoll', [
+        input('ragdoll_input', GaspRagdoll.inputAction),
+        place('toggle_ragdoll', 'toggle_ragdoll'),
+      ]),
       // Tick: ease the speed cap toward the gait's speed (crouch > Shift +
       // Ctrl sprint > Shift run > walk) and tell the Animation Blueprint the
       // gait keys, so it searches the gait's clips.
@@ -216,6 +225,7 @@ abstract final class GaspCharacterContent {
       wire('sprint_input', 'completed', 'end_sprint', 'exec_in'),
       wire('sprint_input', 'canceled', 'end_sprint', 'exec_in'),
       wire('crouch_input', 'started', 'set_crouch', 'exec_in'),
+      wire('ragdoll_input', 'started', 'toggle_ragdoll', 'exec_in'),
       wire('crouching', 'value', 'toggle_crouch', 'a'),
       wire('toggle_crouch', 'return_value', 'set_crouch', 'value'),
       wire('set_crouch', 'exec_out', 'tell_crouch', 'exec_in'),
@@ -283,6 +293,7 @@ abstract final class GaspCharacterContent {
               'rootBone': GaspTraversal.rootBone,
             },
           ),
+        GaspRagdoll.component(PhysicsAssetGeneration.assetPathFor(meshAssetPath)),
         LuminaBlueprintComponent(
           id: 'mesh',
           name: 'Mesh',
