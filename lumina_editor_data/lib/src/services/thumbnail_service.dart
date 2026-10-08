@@ -10,6 +10,7 @@ import 'package:image/image.dart' as img;
 import 'package:lumina/lumina.dart';
 import 'package:lumina_editor_data/src/repositories/asset_repository.dart';
 import 'package:lumina_editor_data/src/services/filament_thumbnail_renderer.dart';
+import 'package:lumina_editor_data/src/services/thumbnail_mesh_loader.dart';
 
 /// A generated thumbnail and what produced it.
 class ThumbnailResult {
@@ -159,25 +160,25 @@ class ThumbnailService {
   /// again, so the thumbnail never lags the file.
   Future<ThumbnailResult?> generate(String lmasPath, {bool force = false}) async {
     final file = File(lmasPath);
-    if (!file.existsSync()) return null;
+    if (!await file.exists()) return null;
     if (!force && !isStale(lmasPath)) return null;
     for (var attempt = 0; attempt < 3; attempt++) {
-      final before = file.lastModifiedSync();
+      final before = await file.lastModified();
       // The stamp: when this render started. A companion (`.entity.glb`)
       // saved while it renders is newer, so the thumbnail reads as stale.
       // (Never older than the files it was made from, whatever their clock.)
-      final companion = File(lmasPath.replaceAll(RegExp(r'\.lmas$'), '.entity.glb'));
+      final companion = await FileStat.stat(ThumbnailMeshLoader.companionOf(lmasPath));
       final started = DateTime.fromMillisecondsSinceEpoch([
         DateTime.now().millisecondsSinceEpoch,
         before.millisecondsSinceEpoch,
-        if (companion.existsSync()) companion.lastModifiedSync().millisecondsSinceEpoch,
+        if (companion.type == FileSystemEntityType.file) companion.modified.millisecondsSinceEpoch,
       ].reduce(math.max));
-      final bytes = file.readAsBytesSync();
+      final bytes = await file.readAsBytes();
       final result = await _renderFile(lmasPath, bytes);
       if (result == null) return null;
-      if (!file.existsSync()) return null;
-      if (file.lastModifiedSync() != before) continue;
-      embedThumbnail(lmasPath, result.png, source: result.source, stamp: started);
+      if (!await file.exists()) return null;
+      if (await file.lastModified() != before) continue;
+      await embedThumbnailAsync(lmasPath, result.png, source: result.source, stamp: started);
       _logger.log(
         'Thumbnail (${result.source}) written for ${file.uri.pathSegments.last}',
         level: 'info',
@@ -186,6 +187,15 @@ class ThumbnailService {
       return result;
     }
     return null;
+  }
+
+  /// Lets go of what consecutive thumbnails share: the last mesh's prepared
+  /// GLB and the renderer's posed asset (the thumbnail queue calls this when
+  /// it runs dry, so a 300 MB skeletal mesh is not held while nothing renders).
+  Future<void> releaseCaches() async {
+    ThumbnailMeshLoader.clear();
+    final renderer = _renderer ?? FilamentThumbnailRenderer.sharedIfCreated;
+    await renderer?.releasePosedMesh();
   }
 
   /// The thumbnail the Content Browser shows for [lmasPath], for a file
@@ -473,9 +483,32 @@ class ThumbnailService {
   /// thumbnail stays stale).
   static void embedThumbnail(String lmasPath, Uint8List png, {String? source, DateTime? stamp}) {
     final file = File(lmasPath);
-    final bytes = file.readAsBytesSync();
+    final out = _withThumbnail(file.readAsBytesSync(), png, source: source, stamp: stamp);
+    if (out == null) return;
+    file.writeAsBytesSync(out.bytes, flush: true);
+    if (source != null) file.setLastModifiedSync(out.at);
+  }
+
+  /// [embedThumbnail] for the editor: async file I/O, and the JSON rewrite of
+  /// a large `.lmas` (an embedded mesh) on a background isolate.
+  static Future<void> embedThumbnailAsync(String lmasPath, Uint8List png, {String? source, DateTime? stamp}) async {
+    final file = File(lmasPath);
+    final bytes = await file.readAsBytes();
+    final out = bytes.length >= _embedWorkerThreshold
+        ? await Isolate.run(() => _withThumbnail(bytes, png, source: source, stamp: stamp))
+        : _withThumbnail(bytes, png, source: source, stamp: stamp);
+    if (out == null) return;
+    await file.writeAsBytes(out.bytes, flush: true);
+    if (source != null) await file.setLastModified(out.at);
+  }
+
+  /// `.lmas` files of at least this many bytes are rewritten off the UI isolate.
+  static const int _embedWorkerThreshold = 1024 * 1024;
+
+  /// The `.lmas` [bytes] with [png] as its thumbnail, and the stamp time.
+  static ({Uint8List bytes, DateTime at})? _withThumbnail(Uint8List bytes, Uint8List png, {String? source, DateTime? stamp}) {
     final map = _rawMap(bytes);
-    if (map == null) return;
+    if (map == null) return null;
     final metadata = map['metadata'] is Map ? Map<String, dynamic>.from(map['metadata'] as Map) : <String, dynamic>{};
     final at = DateTime.fromMillisecondsSinceEpoch((stamp ?? DateTime.now()).millisecondsSinceEpoch);
     if (source != null) {
@@ -488,11 +521,10 @@ class ThumbnailService {
       ..['thumbnail_png'] = base64Encode(png)
       ..['metadata'] = metadata;
     final json = utf8.encode(jsonEncode(LuminaAsset.withTrailingPayload(map)));
-    file.writeAsBytesSync(
-      _hasLmasHeader(bytes) ? (BytesBuilder()..add(const [0x4C, 0x4D, 0x41, 0x53])..add(json)).toBytes() : json,
-      flush: true,
+    return (
+      bytes: _hasLmasHeader(bytes) ? (BytesBuilder()..add(const [0x4C, 0x4D, 0x41, 0x53])..add(json)).toBytes() : json,
+      at: at,
     );
-    if (source != null) file.setLastModifiedSync(at);
   }
 
   // ---------------------------------------------------------------------------

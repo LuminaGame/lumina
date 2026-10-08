@@ -102,7 +102,7 @@ A live binding between an open sub-editor tab and its view model.
 | `activeCollection` | `activeCollection(String? value)` | Executes `activeCollection` operation. |
 | `showRecentlyModified` | `bool get showRecentlyModified` | Getter accessor returning the current value of `showRecentlyModified`. |
 | `showRecentlyModified` | `showRecentlyModified(bool value)` | Executes `showRecentlyModified` operation. |
-| `sourceFolders` | `List<String> get sourceFolders` | Getter accessor returning the current value of `sourceFolders`. |
+| `sourceFolders` | `List<String> get sourceFolders` | The project's content folders plus the plugins' content roots. The folder walk is cached until the asset list is rescanned or a folder is created, so a rebuild never walks `contents/`. |
 | `loadCollections` | `Future<void> loadCollections()` | Loads data from disk or memory buffer into the engine. |
 | `createCollection` | `void createCollection(String name)` | Creates, configures, and returns a new `Collection` instance or associated GPU resource. |
 | `deleteCollection` | `void deleteCollection(String name)` | Releases and safely disposes the specified `Collection` resource. |

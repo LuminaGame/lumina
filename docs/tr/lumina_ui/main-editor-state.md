@@ -102,7 +102,7 @@ A live binding between an open sub-editor tab and its view model.
 | `activeCollection` | `activeCollection(String? value)` | `activeCollection` işlemini gerçekleştirir. |
 | `showRecentlyModified` | `bool get showRecentlyModified` | `showRecentlyModified` özelliğinin anlık değerini okuyan getter erişimcisi. |
 | `showRecentlyModified` | `showRecentlyModified(bool value)` | `showRecentlyModified` işlemini gerçekleştirir. |
-| `sourceFolders` | `List<String> get sourceFolders` | `sourceFolders` özelliğinin anlık değerini okuyan getter erişimcisi. |
+| `sourceFolders` | `List<String> get sourceFolders` | Projenin içerik klasörleri ve eklentilerin içerik kökleri. Klasör taraması, asset listesi yeniden taranana ya da bir klasör oluşturulana kadar önbellekte tutulur; bir rebuild `contents/`'i asla dolaşmaz. |
 | `loadCollections` | `Future<void> loadCollections()` | Veriyi diskten veya bellekten okuyarak motora yükler ve kullanılabilir hale getirir. |
 | `createCollection` | `void createCollection(String name)` | Yeni bir `Collection` örneği veya ilişkili GPU kaynağını oluşturur ve yapılandırır. |
 | `deleteCollection` | `void deleteCollection(String name)` | Belirtilen `Collection` nesnesini/bileşenini serbest bırakır ve güvenle temizler. |

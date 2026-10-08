@@ -341,6 +341,8 @@ Every render is lit by the same studio rig (a sun, image-based lighting and a ne
 
 Renders are serialized: callers may overlap, the engine never does.
 
+A single mesh drawn from the GLB `ThumbnailMeshLoader` keeps (an animation clip posed on its skeletal mesh, the mesh at rest, an Animation Blueprint or a Blend Space) is drawn from a **kept asset**: the first render loads it into gltfio and records every node's transform; the next render of the same GLB puts the nodes back to those transforms and applies its clip, instead of loading and destroying a 300 MB asset per clip. A different mesh, `releasePosedMesh` or `dispose` destroys it. A GLB whose clips drive morph-target weights is never kept (the weights cannot be read back).
+
 **Constructors:**
 
 - `FilamentThumbnailRenderer({super.size, super.supersample, super.sunIntensity, super.iblIntensity, super.backdrop, super.iblKtx,})`
@@ -360,10 +362,26 @@ Renders are serialized: callers may overlap, the engine never does.
 | `levelParts` | `static Future<List<ThumbnailMeshPart>> levelParts(List<Map<String, dynamic>> actors, {String? projectRoot}) as...` | The drawable pieces of a level: primitives (built in world units) and mesh actors (glTF metres), each placed by its stored transform converted from Z up to the runtime's Y up. |
 | `authoringTransform` | `static Matrix4 authoringTransform(dynamic location, dynamic rotation, dynamic scale)` | A stored (Z up, cm, degrees) transform as a runtime (Y up) matrix, the conversion the level code generator emits ([LuminaAxes]). |
 | `resolveProjectPath` | `static String? resolveProjectPath(String path, String? projectRoot)` | [path] as an openable file: absolute and existing paths as they are, project-relative ones (`contents/…`) under [projectRoot]. |
-| `loadMeshGlb` | `static Future<Uint8List?> loadMeshGlb(String path) async` | The GLB a mesh file draws: a `.glb`/`.gltf` as it is, a `.lmas`'s embedded payload or its `.entity.glb` companion. Run through the import sanitizer (TGA → PNG, texture budget, four skin influences) so gltfio can load it; already-sanitized files pass straight through. |
+| `loadMeshGlb` | `static Future<Uint8List?> loadMeshGlb(String path)` | The GLB a mesh file draws: a `.glb`/`.gltf` as it is, a `.lmas`'s embedded payload or its `.entity.glb` companion. Run through the import sanitizer (TGA → PNG, texture budget, four skin influences) so gltfio can load it; already-sanitized files pass straight through. Delegates to `ThumbnailMeshLoader.load` (below): a big mesh is prepared on a background isolate and the last mesh is kept. |
+| `sharedIfCreated` | `static FilamentThumbnailRenderer? get sharedIfCreated` | `shared` when something already created it. |
+| `releasePosedMesh` / `posedMeshLoads` | `Future<void> releasePosedMesh()`, `int posedMeshLoads` | The kept asset (below) is destroyed; how many times one was loaded (tests). |
 | `dispose` | `void dispose()` | Releases the engine and everything on it. |
 | `isFilamatPackage` | `static bool isFilamatPackage(Uint8List? bytes)` | Whether [bytes] is a compiled `.filamat` package: a `MAT_VERS` chunk of size 4. Filament aborts the process on anything else. |
 | `materialParameterValues` | `static Map<String, Object?> materialParameterValues(LuminaAsset material)` | The values a material instance starts with: the `.mat` header's `default :` entries, overridden by what the Material Editor saved in `metadata.parameter_defaults`. |
+
+## `lib/src/services/thumbnail_mesh_loader.dart`
+
+### `abstract final class ThumbnailMeshLoader`
+
+The GLB a thumbnail draws for a mesh file, prepared off the UI isolate and kept for the next thumbnail of the same mesh. A file of `workerThreshold` bytes or more (8 MB; a MetaHuman skeletal mesh with hundreds of clips is over 300 MB) is read, decoded and sanitized on a background isolate and comes back without a copy; smaller files are prepared inline. The last mesh loaded is kept, keyed by the path and the size and modification time of the `.lmas` and its `.entity.glb`: hundreds of clip thumbnails on one mesh get the same bytes (the same `Uint8List` instance) without touching the disk, and a saved mesh is never served stale.
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `load` | `static Future<Uint8List?> load(String path)` | The sanitized GLB of [path], or null when it has none. |
+| `animatesMorphWeights` | `static bool? animatesMorphWeights(Uint8List glb)` | Whether the kept mesh's clips drive morph weights; null when [glb] is not the kept mesh. |
+| `clear` | `static void clear()` | Forgets the kept mesh. |
+| `workerThreshold` / `preparedCount` / `workerCount` | `static int` | The worker threshold; how many loads read a file and how many of those ran on a worker (tests). |
+| `glbAnimatesMorphWeights` | `static bool glbAnimatesMorphWeights(Uint8List glb)` | Whether an animation channel targets `weights` (reads only the JSON chunk). |
 
 ## `lib/src/services/model_file_thumbnailer.dart`
 

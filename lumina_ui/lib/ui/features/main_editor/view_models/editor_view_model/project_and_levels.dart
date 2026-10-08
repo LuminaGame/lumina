@@ -172,6 +172,7 @@ mixin _EditorProjectAndLevels on _EditorViewModelState {
   @override
   void _refreshAssets() {
     _realAssets = _assetRepo.scanProjectContents(projectDirPath);
+    _sourceFolderCache = null;
     _referenceGraph = null;
     // Save/import/delete/move all funnel through here: refresh git badges
     // (single-flight inside the view model, so bursts cost one `git status`).

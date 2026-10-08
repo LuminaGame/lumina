@@ -167,7 +167,7 @@ class FilamentMaterialProvider {
       );
       return FilamentMaterialProvider._(providerPtr, engine);
     }
-    final ptr = calloc<ffi.Uint8>(archiveData.length);
+    final ptr = malloc<ffi.Uint8>(archiveData.length);
     ptr.asTypedList(archiveData.length).setAll(0, archiveData);
 
     final providerPtr = c.filament_gltfio_create_ubershader_provider(
@@ -446,7 +446,10 @@ class FilamentAssetLoader {
   /// Parses a GLB or glTF 2.0 byte buffer and creates a [FilamentAsset].
   FilamentAsset? createAsset(Uint8List bytes) {
     _checkDisposed();
-    final ptr = calloc<ffi.Uint8>(bytes.length);
+    // Overwritten in full right away: malloc, not calloc (zeroing a 300 MB
+    // GLB first doubles the copy on the calling isolate). Freed by calloc.free
+    // like the rest: both allocators share one heap.
+    final ptr = malloc<ffi.Uint8>(bytes.length);
     ptr.asTypedList(bytes.length).setAll(0, bytes);
 
     final assetPtr = c.filament_gltfio_asset_loader_create_asset(
@@ -467,7 +470,7 @@ class FilamentAssetLoader {
   /// Parses a GLB or glTF 2.0 byte buffer and creates an instanced [FilamentAsset] with [instanceCount] instances.
   (FilamentAsset?, List<FilamentAssetInstance>) createInstancedAsset(Uint8List bytes, int instanceCount) {
     _checkDisposed();
-    final ptr = calloc<ffi.Uint8>(bytes.length);
+    final ptr = malloc<ffi.Uint8>(bytes.length);
     ptr.asTypedList(bytes.length).setAll(0, bytes);
 
     final outInstances = calloc<ffi.Pointer<ffi.Void>>(instanceCount);
@@ -973,7 +976,7 @@ class FilamentResourceLoader {
   void addResourceData(String uri, Uint8List data) {
     _checkDisposed();
     final nativeUri = uri.toNativeUtf8();
-    final ptr = calloc<ffi.Uint8>(data.length);
+    final ptr = malloc<ffi.Uint8>(data.length);
     ptr.asTypedList(data.length).setAll(0, data);
 
     c.filament_gltfio_resource_loader_add_resource_data(

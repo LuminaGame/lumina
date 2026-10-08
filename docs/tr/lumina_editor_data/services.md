@@ -353,9 +353,10 @@ Content Browser thumbnail'ları: her asset'i onu gösteren thumbnail'a yönlendi
 | `renderer` | `FilamentThumbnailRenderer get renderer` | Verilen renderer, yoksa süreç genelindeki. |
 | `isStale` | `bool isStale(String lmasPath)` | Asset'in (yeni) bir thumbnail'a ihtiyacı var mı (yalnızca özetini okur). |
 | `isStaleInfo` / `staleFor` | `static bool isStaleInfo(RealAssetInfo info)`, `static bool staleFor(...)` | Taranmış bir asset için aynı kural. |
-| `generate` | `Future<ThumbnailResult?> generate(String lmasPath, {bool force = false})` | Eskimiş (ya da `force` ile her) asset'i çizer ve sonucu `.lmas`'a gömer. |
+| `generate` | `Future<ThumbnailResult?> generate(String lmasPath, {bool force = false})` | Eskimiş (ya da `force` ile her) asset'i çizer ve sonucu `.lmas`'a gömer (`embedThumbnailAsync`: async dosya G/Ç; 1 MB ve üzeri bir `.lmas`'ın JSON yeniden yazımı arka plan isolate'inde). |
+| `releaseCaches` | `Future<void> releaseCaches()` | Ardışık thumbnail'lerin paylaştığını bırakır: `ThumbnailMeshLoader`'ın sakladığı son mesh ve renderer'ın sakladığı asset (`releasePosedMesh`). Editörün thumbnail kuyruğu boşaldığında çağırır. |
 | `preview` | `Future<ThumbnailResult?> preview(String lmasPath)` | Content Browser'ın asset için gösterdiği görüntü, **hiçbir şey yazmadan** (dosya yöneticilerinin thumbnailer'ı): güncel gömülü thumbnail olduğu gibi, renderer başlatılmadan; proje dışında (Windows shell'in verdiği gibi bir kopya) bu servisin ürettiği gömülü thumbnail; aksi halde `generate` ile aynı yönlendirmeyle çizilir; o da sonuç vermezse gömülü görsel (eskimiş olsa da), sonra rozet. Dosya bir asset değilse null. |
-| `embedThumbnail` | `static void embedThumbnail(String lmasPath, Uint8List png, {String? source, DateTime? stamp})` | PNG'yi `.lmas`'a kendi container biçiminde yazar ve damgalar. |
+| `embedThumbnail` / `embedThumbnailAsync` | `static void embedThumbnail(String lmasPath, Uint8List png, {String? source, DateTime? stamp})`, `static Future<void> embedThumbnailAsync(...)` | PNG'yi `.lmas`'a kendi container biçiminde yazar ve damgalar; editör async biçimini kullanır. |
 | `renderAssetThumbnail` | `Future<Uint8List> renderAssetThumbnail(LuminaAsset asset, {int size})` | Bellekteki bir asset'in thumbnail'ı (Build Manager). |
 | `renderTypeIconThumbnail` | `Future<Uint8List> renderTypeIconThumbnail(AssetType type, {int size})` | Tür rozeti. |
 | `animationPart` / `blueprintParts` | `static Future<...>` | Bir animasyon asset'inin pozlanmış mesh'i; bir Blueprint'in mesh component'leri. |

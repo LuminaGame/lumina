@@ -341,6 +341,8 @@ Every render is lit by the same studio rig (a sun, image-based lighting and a ne
 
 Renders are serialized: callers may overlap, the engine never does.
 
+`ThumbnailMeshLoader`'ın sakladığı GLB'den çizilen tek bir mesh (iskelet mesh'ine oturtulmuş bir animasyon klibi, dinlenme pozundaki mesh, bir Animation Blueprint ya da Blend Space) **saklanan bir asset'ten** çizilir: ilk render onu gltfio'ya yükler ve her düğümün transform'unu kaydeder; aynı GLB'nin sonraki render'ı düğümleri bu transform'lara geri getirip kendi klibini uygular; böylece her klip için 300 MB'lık bir asset yüklenip yok edilmez. Farklı bir mesh, `releasePosedMesh` ya da `dispose` onu yok eder. Klipleri morph-target ağırlıklarını süren bir GLB asla saklanmaz (ağırlıklar geri okunamaz).
+
 **Yapıcı Metotlar (Constructors):**
 
 - `FilamentThumbnailRenderer({super.size, super.supersample, super.sunIntensity, super.iblIntensity, super.backdrop, super.iblKtx,})`
@@ -360,10 +362,26 @@ Renders are serialized: callers may overlap, the engine never does.
 | `levelParts` | `static Future<List<ThumbnailMeshPart>> levelParts(List<Map<String, dynamic>> actors, {String? projectRoot}) as...` | The drawable pieces of a level: primitives (built in world units) and mesh actors (glTF metres), each placed by its stored transform converted from Z up to the runtime's Y up. |
 | `authoringTransform` | `static Matrix4 authoringTransform(dynamic location, dynamic rotation, dynamic scale)` | A stored (Z up, cm, degrees) transform as a runtime (Y up) matrix, the conversion the level code generator emits ([LuminaAxes]). |
 | `resolveProjectPath` | `static String? resolveProjectPath(String path, String? projectRoot)` | [path] as an openable file: absolute and existing paths as they are, project-relative ones (`contents/…`) under [projectRoot]. |
-| `loadMeshGlb` | `static Future<Uint8List?> loadMeshGlb(String path) async` | The GLB a mesh file draws: a `.glb`/`.gltf` as it is, a `.lmas`'s embedded payload or its `.entity.glb` companion. Run through the import sanitizer (TGA → PNG, texture budget, four skin influences) so gltfio can load it; already-sanitized files pass straight through. |
+| `loadMeshGlb` | `static Future<Uint8List?> loadMeshGlb(String path)` | Bir mesh dosyasının çizdiği GLB: `.glb`/`.gltf` olduğu gibi, bir `.lmas`'ın gömülü payload'ı ya da `.entity.glb` eşi; gltfio yükleyebilsin diye import sanitizer'ından geçer. `ThumbnailMeshLoader.load`'a devreder: büyük bir mesh arka plan isolate'inde hazırlanır ve son mesh saklanır. |
+| `sharedIfCreated` | `static FilamentThumbnailRenderer? get sharedIfCreated` | Önceden oluşturulduysa `shared`. |
+| `releasePosedMesh` / `posedMeshLoads` | `Future<void> releasePosedMesh()`, `int posedMeshLoads` | Saklanan asset'i yok eder; kaç kez yüklendiği (testler). |
 | `dispose` | `void dispose()` | Releases the engine and everything on it. |
 | `isFilamatPackage` | `static bool isFilamatPackage(Uint8List? bytes)` | Whether [bytes] is a compiled `.filamat` package: a `MAT_VERS` chunk of size 4. Filament aborts the process on anything else. |
 | `materialParameterValues` | `static Map<String, Object?> materialParameterValues(LuminaAsset material)` | The values a material instance starts with: the `.mat` header's `default :` entries, overridden by what the Material Editor saved in `metadata.parameter_defaults`. |
+
+## `lib/src/services/thumbnail_mesh_loader.dart`
+
+### `abstract final class ThumbnailMeshLoader`
+
+Bir mesh dosyası için thumbnail'in çizdiği GLB; UI isolate'i dışında hazırlanır ve aynı mesh'in sonraki thumbnail'i için saklanır. `workerThreshold` bayt (8 MB) ve üzeri bir dosya (yüzlerce klipli bir MetaHuman skeletal mesh 300 MB'ı aşar) arka plan isolate'inde okunur, çözülür ve sanitize edilir, kopyalanmadan geri gelir; küçük dosyalar yerinde hazırlanır. Son yüklenen mesh; yol ile `.lmas` ve `.entity.glb` dosyalarının boyutu ve değişiklik zamanıyla anahtarlanarak saklanır: tek mesh üzerindeki yüzlerce klip thumbnail'i diske dokunmadan aynı baytları (aynı `Uint8List` örneğini) alır; kaydedilmiş bir mesh asla eskimiş haliyle verilmez.
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `load` | `static Future<Uint8List?> load(String path)` | [path]'in sanitize edilmiş GLB'si; yoksa null. |
+| `animatesMorphWeights` | `static bool? animatesMorphWeights(Uint8List glb)` | Saklanan mesh'in klipleri morph ağırlıklarını sürüyor mu; [glb] saklanan mesh değilse null. |
+| `clear` | `static void clear()` | Saklanan mesh'i bırakır. |
+| `workerThreshold` / `preparedCount` / `workerCount` | `static int` | Worker eşiği; kaç yüklemenin dosya okuduğu ve bunların kaçının worker'da çalıştığı (testler). |
+| `glbAnimatesMorphWeights` | `static bool glbAnimatesMorphWeights(Uint8List glb)` | Bir animasyon kanalı `weights` hedefliyor mu (yalnızca JSON chunk'ı okunur). |
 
 ## `lib/src/services/model_file_thumbnailer.dart`
 

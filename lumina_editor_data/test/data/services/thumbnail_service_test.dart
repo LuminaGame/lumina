@@ -398,5 +398,26 @@ void main() {
       final rest = await service.renderer.renderMesh((await FilamentThumbnailRenderer.loadMeshGlb('$tp/$quinn'))!);
       expect(_meanAbsDiff(thumb.png, rest!), greaterThan(2.0), reason: 'the dealer idle poses the mannequin');
     }, timeout: const Timeout(Duration(minutes: 4)));
+
+    test('consecutive clip thumbnails of one mesh load it once and match a fresh load', () async {
+      await service.releaseCaches();
+      final loadsBefore = service.renderer.posedMeshLoads;
+      final preparedBefore = ThumbnailMeshLoader.preparedCount;
+      final walkLmas = '$tp/$clipDir/Walk_Fwd_Loop.lmas';
+      final idleLmas = '$tp/$clipDir/Idle_Loop.lmas';
+      final walk = (await service.generate(walkLmas, force: true))!.png;
+      final idle = (await service.generate(idleLmas, force: true))!.png;
+      final walkAgain = (await service.generate(walkLmas, force: true))!.png;
+      expect(ThumbnailMeshLoader.preparedCount - preparedBefore, 1, reason: 'the mesh GLB is read and sanitized once');
+      expect(service.renderer.posedMeshLoads - loadsBefore, 1, reason: 'gltfio loads the mesh once for three clips');
+      expect(_meanAbsDiff(walk, walkAgain), lessThan(0.5), reason: 'the kept asset is back at rest before each pose');
+
+      // The same clips drawn on a freshly loaded asset.
+      await service.releaseCaches();
+      final idleFresh = (await service.generate(idleLmas, force: true))!.png;
+      expect(service.renderer.posedMeshLoads - loadsBefore, 2, reason: 'releasing the caches drops the kept asset');
+      expect(_meanAbsDiff(idle, idleFresh), lessThan(0.5), reason: 'a pose drawn after another clip equals a fresh one');
+      expect(_meanAbsDiff(walk, idle), greaterThan(1.0), reason: 'two clips, two poses');
+    }, timeout: const Timeout(Duration(minutes: 4)));
   });
 }

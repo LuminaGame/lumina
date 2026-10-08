@@ -110,7 +110,7 @@ mixin _EditorThumbnails on _EditorViewModelState {
         try {
           final result = await _thumbnailService.generate(lmasPath, force: force);
           if (result != null && !_disposed) {
-            _applyThumbnail(lmasPath, result);
+            await _applyThumbnail(lmasPath, result);
           }
         } catch (e) {
           _logger.log(
@@ -135,6 +135,11 @@ mixin _EditorThumbnails on _EditorViewModelState {
       }
     } finally {
       _isProcessingThumbnails = false;
+      // Nothing left to draw: let go of the last mesh (its prepared GLB and
+      // the renderer's posed asset), which can be hundreds of megabytes.
+      try {
+        await _thumbnailService.releaseCaches();
+      } catch (_) {}
       final idle = _thumbnailIdle;
       _thumbnailIdle = null;
       if (idle != null && !idle.isCompleted) idle.complete();
@@ -144,23 +149,24 @@ mixin _EditorThumbnails on _EditorViewModelState {
 
   /// Puts a freshly rendered thumbnail on its tile without rescanning the
   /// project.
-  void _applyThumbnail(String lmasPath, ThumbnailResult result) {
+  Future<void> _applyThumbnail(String lmasPath, ThumbnailResult result) async {
+    final stat = await FileStat.stat(lmasPath);
+    final exists = stat.type == FileSystemEntityType.file;
     final index = _realAssets.indexWhere((a) => a.lmasPath == lmasPath);
-    if (index == -1) return;
+    if (index == -1 || _disposed) return;
     final old = _realAssets[index];
-    final file = File(lmasPath);
     _realAssets = List.of(_realAssets)
       ..[index] = RealAssetInfo(
         fileName: old.fileName,
         relativePath: old.relativePath,
         type: old.type,
-        bytes: file.existsSync() ? file.lengthSync() : old.bytes,
+        bytes: exists ? stat.size : old.bytes,
         thumbnailBytes: result.png,
         thumbnailSource: result.source,
         lmasPath: old.lmasPath,
         assetId: old.assetId,
         references: old.references,
-        lastModified: file.existsSync() ? file.lastModifiedSync() : old.lastModified,
+        lastModified: exists ? stat.modified : old.lastModified,
       );
   }
 

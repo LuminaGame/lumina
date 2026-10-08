@@ -100,8 +100,10 @@ class BlueprintEditorViewModel extends _BlueprintEditorViewModelState
 
   @override
   String get fileBasename {
-    final file = File(assetPath);
-    return file.uri.pathSegments.isNotEmpty ? file.uri.pathSegments.last.replaceAll('.lmas', '') : 'BP_Actor';
+    // Read for every pin while the graph paints: a plain string split, not a
+    // `File(...).uri` parse per call.
+    final name = assetPath.split(RegExp(r'[\\/]')).last;
+    return name.isNotEmpty ? name.replaceAll('.lmas', '') : 'BP_Actor';
   }
 
   /// Whether this editor edits a level's Blueprint:

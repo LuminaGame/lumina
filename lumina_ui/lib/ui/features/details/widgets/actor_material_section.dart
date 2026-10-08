@@ -1,3 +1,5 @@
+import 'dart:isolate';
+
 import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
@@ -24,7 +26,37 @@ class ActorMaterialSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final assigned = LuminaLevelActorMaterial.pathOf(actor.toMap());
-    final problem = assigned == null ? null : LuminaLevelActorMaterial.problem(assigned, projectDir: viewModel.projectDirPath);
+    final check = assigned == null ? null : _problemOf(assigned, viewModel);
+    return FutureBuilder<String?>(
+      future: check,
+      initialData: check == null ? null : _settled[check],
+      builder: (context, snapshot) => _section(assigned, snapshot.data),
+    );
+  }
+
+  /// Why the assigned material cannot be drawn, checked off the UI isolate
+  /// (it reads and decodes the material's `.lmas`) once per material save:
+  /// the check is keyed by the path and the asset's modification time, so a
+  /// rebuild (every selection change, every landed thumbnail) reuses it.
+  static final Map<String, Future<String?>> _checks = {};
+  static final Map<Future<String?>, String?> _settled = {};
+
+  static Future<String?> _problemOf(String path, EditorViewModel vm) {
+    final projectDir = vm.projectDirPath;
+    final modified = vm.realAssets.where((a) => a.relativePath == path).firstOrNull?.lastModified;
+    final key = '$projectDir|$path|${modified?.microsecondsSinceEpoch}';
+    return _checks[key] ??= () {
+      if (_checks.length > 64) {
+        _checks.clear();
+        _settled.clear();
+      }
+      final future = Isolate.run(() => LuminaLevelActorMaterial.problem(path, projectDir: projectDir));
+      future.then((value) => _settled[future] = value).ignore();
+      return future;
+    }();
+  }
+
+  Widget _section(String? assigned, String? problem) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [

@@ -54,6 +54,7 @@ export 'package:lumina_editor_data/src/services/asset_reference_graph.dart';
 export 'package:lumina_editor_data/src/services/thumbnail_service.dart';
 export 'package:lumina_editor_data/src/services/thumbnail_sidecar_migration.dart';
 export 'package:lumina_editor_data/src/services/filament_thumbnail_renderer.dart';
+export 'package:lumina_editor_data/src/services/thumbnail_mesh_loader.dart';
 export 'package:lumina_editor_data/src/services/model_file_thumbnailer.dart';
 
 // Plugins and project editor builds

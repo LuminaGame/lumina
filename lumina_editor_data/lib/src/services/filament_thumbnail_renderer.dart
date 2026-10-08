@@ -10,10 +10,11 @@ import 'package:image/image.dart' as img;
 import 'package:vector_math/vector_math_64.dart';
 
 import 'package:lumina/lumina.dart';
-import 'package:lumina_editor_data/src/services/derived_data_cache.dart';
+import 'package:lumina_editor_data/src/services/thumbnail_mesh_loader.dart';
 
 part 'filament_thumbnail_renderer/state.dart';
 part 'filament_thumbnail_renderer/material_preview.dart';
+part 'filament_thumbnail_renderer/posed_mesh_cache.dart';
 
 /// One glTF binary placed in a thumbnail scene.
 ///
@@ -75,7 +76,8 @@ class ThumbnailPose {
 /// Renders are serialized: callers may overlap, the engine never does.
 class FilamentThumbnailRenderer extends _FilamentThumbnailRendererState
     with
-        _ThumbnailMaterialPreview {
+        _ThumbnailMaterialPreview,
+        _ThumbnailPosedMeshCache {
   FilamentThumbnailRenderer({
     super.size,
     super.supersample,
@@ -89,6 +91,9 @@ class FilamentThumbnailRenderer extends _FilamentThumbnailRendererState
 
   /// The process-wide renderer the editor's thumbnail queue uses.
   static FilamentThumbnailRenderer get shared => _shared ??= FilamentThumbnailRenderer();
+
+  /// [shared] when something already created it, without creating it.
+  static FilamentThumbnailRenderer? get sharedIfCreated => _shared;
 
   int get _px => size * supersample;
 
@@ -199,34 +204,10 @@ class FilamentThumbnailRenderer extends _FilamentThumbnailRendererState
   /// The GLB a mesh file draws: a `.glb`/`.gltf` as it is, a `.lmas`'s
   /// embedded payload or its `.entity.glb` companion. Run through the import
   /// sanitizer (TGA → PNG, texture budget, four skin influences) so gltfio can
-  /// load it; already-sanitized files pass straight through.
-  static Future<Uint8List?> loadMeshGlb(String path) async {
-    final file = File(path);
-    if (!file.existsSync()) return null;
-    Uint8List? glb;
-    if (path.endsWith('.lmas')) {
-      final companion = File(path.replaceAll(RegExp(r'\.lmas$'), '.entity.glb'));
-      try {
-        final payload = LuminaAsset.fromBytes(file.readAsBytesSync()).rawPayload;
-        if (_isGltf(payload)) glb = payload;
-      } catch (_) {}
-      if (glb == null && companion.existsSync()) glb = companion.readAsBytesSync();
-    } else {
-      final bytes = file.readAsBytesSync();
-      if (_isGltf(bytes)) glb = bytes;
-    }
-    if (glb == null) return null;
-    try {
-      final parent = file.parent.path;
-      // Oversized source art is budgeted once per project, not per session.
-      return await DerivedDataCache.sanitizeGlbForAsset(path, glb, searchDirs: [parent, '$parent/../../textures']);
-    } catch (_) {
-      return glb;
-    }
-  }
-
-  static bool _isGltf(Uint8List? b) =>
-      b != null && b.length > 20 && ((b[0] == 0x67 && b[1] == 0x6C && b[2] == 0x54 && b[3] == 0x46) || b[0] == 0x7B);
+  /// load it; already-sanitized files pass straight through. A big mesh is
+  /// prepared on a background isolate, and the last mesh is kept for the next
+  /// thumbnail drawn on it ([ThumbnailMeshLoader]).
+  static Future<Uint8List?> loadMeshGlb(String path) => ThumbnailMeshLoader.load(path);
 
   static Map<String, dynamic> _componentProperties(Map<String, dynamic> actor, String type) {
     final components = actor['components'];
@@ -365,6 +346,7 @@ class FilamentThumbnailRenderer extends _FilamentThumbnailRendererState
   void _teardownEngine() {
     final engine = _engine;
     if (engine == null) return;
+    _dropPosedMesh();
     try {
       _sphereIb?.dispose();
       _sphereVb?.dispose();
@@ -426,17 +408,25 @@ class FilamentThumbnailRenderer extends _FilamentThumbnailRendererState
     Aabb3? bounds;
     try {
       for (final part in parts) {
-        final (asset, instances) = loader.createInstancedAsset(part.glb, 1);
-        if (asset == null) continue;
-        loaded.add(asset);
-        if (instances.isEmpty) continue;
-        try {
-          await _resources!.loadAsync(asset).timeout(const Duration(seconds: 60));
-        } on TimeoutException {
-          _resources!.asyncCancelLoad();
-          continue;
+        final FilamentAssetInstance instance;
+        if (parts.length == 1 && _posedCacheable(part)) {
+          // A clip of the mesh drawn last: the kept asset, back at rest.
+          final kept = await _posedInstanceFor(part, tm);
+          if (kept == null) continue;
+          instance = kept;
+        } else {
+          final (asset, instances) = loader.createInstancedAsset(part.glb, 1);
+          if (asset == null) continue;
+          loaded.add(asset);
+          if (instances.isEmpty) continue;
+          try {
+            await _resources!.loadAsync(asset).timeout(const Duration(seconds: 60));
+          } on TimeoutException {
+            _resources!.asyncCancelLoad();
+            continue;
+          }
+          instance = instances.first;
         }
-        final instance = instances.first;
         final pose = part.pose;
         if (pose != null) _applyPose(instance.animator, pose);
         if (instance.skinCount > 0) {

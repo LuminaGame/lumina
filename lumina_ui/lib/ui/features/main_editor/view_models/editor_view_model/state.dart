@@ -69,6 +69,9 @@ abstract class _EditorViewModelState extends ChangeNotifier {
 
   LuminaProject _project;
   List<RealAssetInfo> _realAssets = [];
+
+  /// `sourceFolders`' folder walk, for the project it was made in.
+  (String, List<String>)? _sourceFolderCache;
   StreamSubscription<EngineLogEntry>? _logSub;
   StreamSubscription<void>? _assetsChangedSub;
 

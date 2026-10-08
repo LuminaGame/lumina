@@ -125,10 +125,18 @@ mixin _EditorAssetsAndContentBrowser on _EditorViewModelState {
     }
   }
 
+  /// The project's content folders (and the plugins' content roots). The
+  /// folder walk is cached: widgets read this on every build, and a build
+  /// runs per landed thumbnail, so walking `contents/` each time stalled the
+  /// UI. The cache is dropped whenever the asset list is rescanned
+  /// ([_refreshAssets]: import, save, move, delete, rename) or a folder is
+  /// created.
   List<String> get sourceFolders {
-    final list = _assetRepo.scanContentFolders(projectDirPath);
-    list.addAll(_pluginContentRoots.values);
-    return list;
+    final cached = _sourceFolderCache;
+    final scanned = cached != null && cached.$1 == projectDirPath
+        ? cached.$2
+        : (_sourceFolderCache = (projectDirPath, List<String>.unmodifiable(_assetRepo.scanContentFolders(projectDirPath)))).$2;
+    return [...scanned, ..._pluginContentRoots.values];
   }
 
   Future<void> loadCollections() async {
@@ -289,6 +297,7 @@ mixin _EditorAssetsAndContentBrowser on _EditorViewModelState {
   /// Content Browser → New Folder: creates [name] (made unique with `_1`,
   /// `_2`…) under [parent] with a keep-marker and returns its path.
   String createContentFolder(String parent, String name) {
+    _sourceFolderCache = null;
     final clean = name.trim().replaceAll(RegExp(r'[\\/]'), '_');
     final base = clean.isEmpty ? 'NewFolder' : clean;
     var candidate = '$parent/$base';
