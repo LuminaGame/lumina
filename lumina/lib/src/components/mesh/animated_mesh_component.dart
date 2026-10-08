@@ -3,6 +3,7 @@ import 'dart:developer' as developer;
 import 'package:flutter_filament/filament.dart';
 import 'package:vector_math/vector_math_64.dart';
 
+import 'package:lumina/src/components/mesh/mesh_pose_driver.dart';
 import 'package:lumina/src/components/mesh/morph_targets.dart';
 import 'package:lumina/src/components/mesh/static_mesh_component.dart';
 
@@ -86,6 +87,58 @@ class LuminaAnimatedMeshComponent extends LuminaStaticMeshComponent with LuminaM
   final Map<String, List<double>> _overrideBase = {};
   final Map<String, List<double>> _overrideWritten = {};
   final Set<String> _warnedBones = {};
+
+  LuminaMeshPoseDriver? _poseDriver;
+  List<int?> _driverJoints = const [];
+
+  /// A CPU pose source that replaces gltfio's animator while set (motion
+  /// matching): every frame its pose is written to the skin joints of the
+  /// same names, then joint overrides apply and the bone matrices update.
+  /// Setting null hands the joints back to the playing clip.
+  LuminaMeshPoseDriver? get poseDriver => _poseDriver;
+  set poseDriver(LuminaMeshPoseDriver? driver) {
+    _poseDriver = driver;
+    _driverJoints = const [];
+  }
+
+  final List<double> _driverMatrix = List<double>.filled(16, 0.0);
+
+  /// Writes the driver's pose onto the joints; false when it gave none.
+  bool _applyPoseDriver(FilamentTransformManager tm, double deltaTime) {
+    final driver = _poseDriver!;
+    final pose = driver.evaluatePose(deltaTime);
+    if (pose == null) return false;
+    if (_driverJoints.length != driver.poseNodeNames.length) {
+      _driverJoints = [for (final name in driver.poseNodeNames) _joint(name)];
+    }
+    final m = _driverMatrix;
+    for (var i = 0; i < _driverJoints.length; i++) {
+      final entity = _driverJoints[i];
+      if (entity == null) continue;
+      final o = i * 10;
+      final x = pose[o + 3], y = pose[o + 4], z = pose[o + 5], w = pose[o + 6];
+      final sx = pose[o + 7], sy = pose[o + 8], sz = pose[o + 9];
+      final xx = x * x, yy = y * y, zz = z * z, xy = x * y, xz = x * z, yz = y * z, wx = w * x, wy = w * y, wz = w * z;
+      m[0] = (1 - 2 * (yy + zz)) * sx;
+      m[1] = 2 * (xy + wz) * sx;
+      m[2] = 2 * (xz - wy) * sx;
+      m[3] = 0.0;
+      m[4] = 2 * (xy - wz) * sy;
+      m[5] = (1 - 2 * (xx + zz)) * sy;
+      m[6] = 2 * (yz + wx) * sy;
+      m[7] = 0.0;
+      m[8] = 2 * (xz + wy) * sz;
+      m[9] = 2 * (yz - wx) * sz;
+      m[10] = (1 - 2 * (xx + yy)) * sz;
+      m[11] = 0.0;
+      m[12] = pose[o];
+      m[13] = pose[o + 1];
+      m[14] = pose[o + 2];
+      m[15] = 1.0;
+      tm.setTransform(entity, m);
+    }
+    return true;
+  }
 
   /// The joint overrides in force, by bone name.
   Map<String, LuminaJointOverride> get jointOverrides => Map.unmodifiable(_jointOverrides);
@@ -274,6 +327,7 @@ class LuminaAnimatedMeshComponent extends LuminaStaticMeshComponent with LuminaM
     _animator = animator;
     _jointSet.clear();
     _jointEntities.clear();
+    _driverJoints = const [];
     _overrideBase.clear();
     _overrideWritten.clear();
     _asset = instance.getAsset();
@@ -316,6 +370,12 @@ class LuminaAnimatedMeshComponent extends LuminaStaticMeshComponent with LuminaM
   void _apply(double deltaTime) {
     final animator = _animator;
     if (animator == null) return;
+    final engine = owner?.world?.nativeEngine;
+    if (_poseDriver != null && engine != null && _applyPoseDriver(FilamentTransformManager(engine), deltaTime)) {
+      _applyJointOverrides(FilamentTransformManager(engine));
+      animator.updateBoneMatrices();
+      return;
+    }
     if (_current < 0 && _jointOverrides.isEmpty) return;
 
     if (_current >= 0) {
@@ -337,7 +397,6 @@ class LuminaAnimatedMeshComponent extends LuminaStaticMeshComponent with LuminaM
     }
     // Joint overrides go on after the clip and before the bone matrices, or
     // the clip would overwrite them.
-    final engine = owner?.world?.nativeEngine;
     if (engine != null) _applyJointOverrides(FilamentTransformManager(engine));
     animator.updateBoneMatrices();
   }

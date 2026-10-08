@@ -156,9 +156,17 @@ class LuminaCharacterMovementComponent extends LuminaActorComponent {
     _inputVector.add(worldDirection * scale);
   }
 
+  final Vector3 _lastInputVector = Vector3.zero();
+
+  /// The input the last move consumed (world space): what the player asked
+  /// for in the last frame, after [consumeInputVector] cleared it — what a
+  /// motion matching trajectory prediction steers toward.
+  Vector3 get lastInputVector => _lastInputVector;
+
   /// Consumes and clears the accumulated input vector.
   Vector3 consumeInputVector() {
     _consumedInputScratch.setFrom(_inputVector);
+    _lastInputVector.setFrom(_inputVector);
     _inputVector.setZero();
     return _consumedInputScratch;
   }
