@@ -47,6 +47,10 @@ The animation editor: the sub-editor view and view model, the playback controlle
   - Additive layers are not part of the tab: glTF stores none, and a layer baked into the clip could not be edited as one again.
 - **Undo, delete, restore**: creating a sequence is one undo step. Undoing it, deleting the asset (to the project trash) or trashing its folder takes its clip out of the mesh's GLB and `animation_clips` with the `.lmas` (the clip's data leaves the GLB); redo, undoing the delete or restoring the trash entry puts the clip back at its place in the mesh's clip list. Other sequences on the same mesh keep their clips.
 
+## Pose Search Database editor
+
+Opened for a `poseSearchDatabase` asset (Content Browser → New → Animation → Pose Search Database, for a skeletal mesh): `lib/ui/features/sub_editors/views/pose_search/` (`PoseSearchDatabaseSubEditor`, `PoseSearchClipTree`, `PoseSearchDatabaseClipList`, `PoseSearchDetailsPanel`) over `PoseSearchDatabaseEditorViewModel` and `PoseSearchDatabaseService`. Three resizable panels: the target mesh's clips as a tree grouped by movement (click adds or removes a clip, "+" adds a group, the filter and **Add matching** add every clip containing the text, **Add all clips** without a filter), the database's clips with Loop / Mirror / Use and the feature cache's state and statistics, and the Details (per clip tags, cost bias and search range; search interval, biases, blend time, excluded end; the schema: sample rate, trajectory times and weights, root bone, mesh yaw offset, bones with position / velocity weights). **Build** saves, then builds the `.posedb` on a background isolate and reports frames, features, build time and a timed sample search; every edit is one undo step. The Animation Blueprint editor's state pose editor has a **Motion Matching** kind with the database picker (databases made for the ABP's target mesh), blend time, pose / trajectory weights, required tags, orient to movement and debug draw. See [Motion matching](../../lumina/motion-matching.md).
+
 ## `lib/ui/features/sub_editors/views/animation_sub_editor.dart`
 
 ### `class AnimationSubEditor`

@@ -6,11 +6,13 @@ import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/anim_graph_asset_service.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/anim_blueprint_editor_view_model.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/blend_space/blend_space_grid.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/pose_search/pose_search_fields.dart';
 
 /// A state's pose (a state graph, reduced to what lumina's anim blueprints
 /// play): Play Clip from the target mesh's clips, a Blend Space Player on
 /// Blend Spaces made for this mesh sampled by X / Y variables with a play
-/// rate from a speed variable, or Hold Pose.
+/// rate from a speed variable, Hold Pose, or Motion Matching over a pose
+/// search database made for this mesh.
 class AnimStatePoseEditor extends StatelessWidget {
   final AnimBlueprintEditorViewModel viewModel;
   final String state;
@@ -52,6 +54,9 @@ class AnimStatePoseEditor extends StatelessWidget {
                     xVariable: numeric.isEmpty ? '' : numeric.first));
           case LuminaAnimPoseKind.hold:
             vm.setStatePose(state, const LuminaAnimPose.hold());
+          case LuminaAnimPoseKind.motionMatching:
+            vm.setStatePose(state,
+                LuminaAnimPose.motionMatching(vm.poseDatabasePaths.isEmpty ? '' : vm.poseDatabasePaths.first, orientToMovement: true));
         }
       }
 
@@ -125,10 +130,11 @@ class AnimStatePoseEditor extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          Row(children: [
+          Wrap(runSpacing: 6, children: [
             kindButton(LuminaAnimPoseKind.clip, 'Play Clip', LucideIcons.clapperboard),
             kindButton(LuminaAnimPoseKind.blendSpace, 'Blend Space Player', LucideIcons.grid2x2),
             kindButton(LuminaAnimPoseKind.hold, 'Hold Pose', LucideIcons.pause),
+            kindButton(LuminaAnimPoseKind.motionMatching, 'Motion Matching', LucideIcons.database),
           ]),
           const SizedBox(height: 16),
           if (pose.kind == LuminaAnimPoseKind.clip) ...[
@@ -225,6 +231,71 @@ class AnimStatePoseEditor extends StatelessWidget {
               ),
             ],
           ],
+          if (pose.kind == LuminaAnimPoseKind.motionMatching) ...[
+            field(
+              'Database',
+              AssetPickerSelect(
+                key: const ValueKey('pose_mm_database'),
+                keyPrefix: 'pose_mm_database',
+                assets: vm.poseDatabaseAssets,
+                selectedPath: pose.database,
+                placeholder: vm.poseDatabasePaths.isEmpty ? 'No Pose Search Database for this mesh' : 'Pick a database',
+                allowClear: false,
+                onSelected: (a) => vm.setStatePose(state, _mm(pose, database: a.relativePath)),
+              ),
+            ),
+            field(
+              'Blend Time (s)',
+              _NumberField(
+                key: const ValueKey('pose_mm_blend'),
+                value: pose.blendTime,
+                onCommit: (v) => v > 0 ? vm.setStatePose(state, _mm(pose, blendTime: v)) : null,
+              ),
+            ),
+            field(
+              'Pose Weight',
+              _NumberField(
+                key: const ValueKey('pose_mm_pose_weight'),
+                value: pose.poseWeight,
+                onCommit: (v) => vm.setStatePose(state, _mm(pose, poseWeight: v < 0 ? 0 : v)),
+              ),
+            ),
+            field(
+              'Trajectory Weight',
+              _NumberField(
+                key: const ValueKey('pose_mm_trajectory_weight'),
+                value: pose.trajectoryWeight,
+                onCommit: (v) => vm.setStatePose(state, _mm(pose, trajectoryWeight: v < 0 ? 0 : v)),
+              ),
+            ),
+            field(
+              'Required Tags',
+              PoseSearchTextField(
+                key: const ValueKey('pose_mm_tags'),
+                value: pose.requiredTags.join(', '),
+                placeholder: 'e.g. walk',
+                onCommit: (t) => vm.setStatePose(state,
+                    _mm(pose, requiredTags: {for (final x in t.split(',')) if (x.trim().isNotEmpty) x.trim()}.toList())),
+              ),
+            ),
+            field(
+                'Orient To Movement',
+                Align(
+                    alignment: Alignment.centerLeft,
+                    child: poseSearchCheck('pose_mm_orient', 'turn the pawn toward its movement', pose.orientToMovement,
+                        (v) => vm.setStatePose(state, _mm(pose, orientToMovement: v))))),
+            field(
+                'Debug Draw',
+                Align(
+                    alignment: Alignment.centerLeft,
+                    child: poseSearchCheck('pose_mm_debug', 'desired and matched trajectories', pose.debugDraw,
+                        (v) => vm.setStatePose(state, _mm(pose, debugDraw: v))))),
+            Text(
+              'Matched clip: ${anim?.variables[LuminaAnimBlueprintInstance.matchedClipVariable] ?? '—'}',
+              key: const ValueKey('pose_mm_matched'),
+              style: const TextStyle(fontSize: 10, color: EditorColors.mutedForeground),
+            ),
+          ],
           if (pose.kind == LuminaAnimPoseKind.hold)
             const Text('The state keeps the pose it entered with (the clip freezes).',
                 style: TextStyle(fontSize: 10, color: EditorColors.mutedForeground)),
@@ -232,6 +303,26 @@ class AnimStatePoseEditor extends StatelessWidget {
       ),
     );
   }
+
+  static LuminaAnimPose _mm(
+    LuminaAnimPose p, {
+    String? database,
+    double? blendTime,
+    double? poseWeight,
+    double? trajectoryWeight,
+    List<String>? requiredTags,
+    bool? orientToMovement,
+    bool? debugDraw,
+  }) =>
+      LuminaAnimPose.motionMatching(
+        database ?? p.database ?? '',
+        blendTime: blendTime ?? p.blendTime,
+        poseWeight: poseWeight ?? p.poseWeight,
+        trajectoryWeight: trajectoryWeight ?? p.trajectoryWeight,
+        requiredTags: requiredTags ?? p.requiredTags,
+        orientToMovement: orientToMovement ?? p.orientToMovement,
+        debugDraw: debugDraw ?? p.debugDraw,
+      );
 
   static LuminaAnimPose _bs(
     LuminaAnimPose p, {

@@ -35,6 +35,8 @@ import 'package:lumina_ui/ui/features/sub_editors/views/blueprint_interface/inte
 import 'package:lumina_ui/ui/features/sub_editors/models/sub_editor_transform_gizmo.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/anim_blueprint/anim_blueprint_sub_editor.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/blend_space/blend_space_sub_editor.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/pose_search_database_editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/pose_search/pose_search_database_sub_editor.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/static_mesh_sub_editor.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/skeletal_mesh/skeletal_mesh_sub_editor.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/animation_sub_editor.dart';
@@ -64,6 +66,7 @@ export 'package:lumina_ui/ui/features/sub_editors/views/blueprint_enum/blueprint
 export 'package:lumina_ui/ui/features/sub_editors/views/blueprint_interface/blueprint_interface.dart';
 export 'package:lumina_ui/ui/features/sub_editors/views/anim_blueprint/anim_blueprint.dart';
 export 'package:lumina_ui/ui/features/sub_editors/views/blend_space/blend_space.dart';
+export 'package:lumina_ui/ui/features/sub_editors/views/pose_search/pose_search.dart';
 export 'package:lumina_ui/ui/features/sub_editors/views/static_mesh_sub_editor.dart';
 export 'package:lumina_ui/ui/features/sub_editors/views/skeletal_mesh/skeletal_mesh_sub_editor.dart';
 export 'package:lumina_ui/ui/features/sub_editors/views/skeletal_mesh/skeletal_mesh.dart';
@@ -347,6 +350,14 @@ class _SubEditorDispatcher extends StatelessWidget {
           assetName: assetName,
           assetPath: asset?.lmasPath ?? asset?.relativePath ?? '',
           viewModel: _existingSession<BlendSpaceEditorViewModel>(),
+          onBind: _bind,
+          onClose: onClose,
+        );
+      case 'PoseSearchDatabase':
+        return PoseSearchDatabaseSubEditor(
+          assetName: assetName,
+          assetPath: asset?.lmasPath ?? asset?.relativePath ?? '',
+          viewModel: _existingSession<PoseSearchDatabaseEditorViewModel>(),
           onBind: _bind,
           onClose: onClose,
         );

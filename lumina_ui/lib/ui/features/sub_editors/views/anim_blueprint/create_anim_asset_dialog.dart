@@ -6,7 +6,7 @@ import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/anim_graph_asset_service.dart';
 
 /// Which animation asset the Content Browser's Animation menu creates.
-enum AnimAssetKind { animBlueprint, blendSpace, animationSequence }
+enum AnimAssetKind { animBlueprint, blendSpace, animationSequence, poseSearchDatabase }
 
 /// Content Browser → Animation → Animation Blueprint / Blend Space /
 /// Animation Sequence: pick the target skeletal mesh and a name (and, for a
@@ -66,12 +66,14 @@ class _CreateAnimAssetDialogState extends State<CreateAnimAssetDialog> {
   String get _prefix => switch (widget.kind) {
         AnimAssetKind.animBlueprint => 'ABP_',
         AnimAssetKind.blendSpace => 'BS_',
+        AnimAssetKind.poseSearchDatabase => 'PSD_',
         AnimAssetKind.animationSequence => '',
       };
 
   String get _kindLabel => switch (widget.kind) {
         AnimAssetKind.animBlueprint => 'Animation Blueprint',
         AnimAssetKind.blendSpace => 'Blend Space',
+        AnimAssetKind.poseSearchDatabase => 'Pose Search Database',
         AnimAssetKind.animationSequence => 'Animation Sequence',
       };
 
@@ -101,6 +103,7 @@ class _CreateAnimAssetDialogState extends State<CreateAnimAssetDialog> {
     _name.text = switch (widget.kind) {
       AnimAssetKind.animBlueprint => 'ABP_$base',
       AnimAssetKind.blendSpace => 'BS_${base}_Locomotion',
+      AnimAssetKind.poseSearchDatabase => 'PSD_${base}_Locomotion',
       AnimAssetKind.animationSequence => 'NewAnimation',
     };
   }
@@ -123,6 +126,8 @@ class _CreateAnimAssetDialogState extends State<CreateAnimAssetDialog> {
           path = AnimGraphAssetService.createAnimBlueprint(widget.projectDir, name: _name.text, meshRelPath: mesh);
         case AnimAssetKind.blendSpace:
           path = AnimGraphAssetService.createBlendSpace(widget.projectDir, name: _name.text, meshRelPath: mesh);
+        case AnimAssetKind.poseSearchDatabase:
+          path = AnimGraphAssetService.createPoseSearchDatabase(widget.projectDir, name: _name.text, meshRelPath: mesh);
         case AnimAssetKind.animationSequence:
           final frames = _lengthFrames;
           final fps = _frameRate;

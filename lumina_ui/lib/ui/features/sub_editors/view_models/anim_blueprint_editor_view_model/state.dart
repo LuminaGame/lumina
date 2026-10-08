@@ -18,6 +18,8 @@ abstract class _AnimBlueprintEditorViewModelState extends ChangeNotifier impleme
   List<String> _clips = const [];
   List<String> _blendSpacePaths = const [];
   final Map<String, LuminaBlendSpaceDocument> _blendSpaces = {};
+  List<String> _poseDatabasePaths = const [];
+  final Map<String, LuminaPoseSearchDatabaseDocument> _poseDatabases = {};
 
   AnimGraphLocation _location = const AnimGraphLocation.animGraph();
   String? _selectedState;
@@ -83,6 +85,8 @@ abstract class _AnimBlueprintEditorViewModelState extends ChangeNotifier impleme
   void _reloadBlendSpaces();
 
   Map<String, LuminaBlendSpaceDocument> get stateBlendSpaces;
+
+  Map<String, LuminaPoseSearchDatabaseDocument> get statePoseDatabases;
 
   String _snapshot();
 

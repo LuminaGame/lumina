@@ -234,6 +234,29 @@ abstract final class AnimGraphAssetService {
   static void writeAnimBlueprint(String projectDir, String relPath, LuminaAnimBlueprintDocument doc) =>
       _write(projectDir, relPath, AssetType.animBlueprint, doc.toJson(), doc.targetMesh);
 
+  /// Creates `PSD_<name>.lmas` (an empty pose search database for
+  /// [meshRelPath]) and returns its project relative path.
+  static String createPoseSearchDatabase(String projectDir, {required String name, required String meshRelPath}) {
+    final rel = _uniquePath(projectDir, _folderFor(meshRelPath), withPrefix(name, 'PSD_'));
+    writePoseSearchDatabase(projectDir, rel, LuminaPoseSearchDatabaseDocument(targetMesh: meshRelPath));
+    return rel;
+  }
+
+  static LuminaPoseSearchDatabaseDocument? readPoseSearchDatabase(String projectDir, String relPath) {
+    final map = _payload(File('$projectDir/$relPath'));
+    return map == null ? null : LuminaPoseSearchDatabaseDocument.fromJson(map);
+  }
+
+  static void writePoseSearchDatabase(String projectDir, String relPath, LuminaPoseSearchDatabaseDocument doc) =>
+      _write(projectDir, relPath, AssetType.poseSearchDatabase, doc.toJson(), doc.targetMesh);
+
+  /// Pose search databases made for [meshRelPath] (their document's target).
+  static List<String> poseSearchDatabasesFor(String projectDir, String meshRelPath) => [
+        for (final a in AssetRepository().scanProjectContents(projectDir))
+          if (a.type == AssetType.poseSearchDatabase && readPoseSearchDatabase(projectDir, a.relativePath)?.targetMesh == meshRelPath)
+            a.relativePath,
+      ]..sort();
+
   static void writeBlendSpace(String projectDir, String relPath, LuminaBlendSpaceDocument doc, {required String targetMesh}) =>
       _write(projectDir, relPath, AssetType.blendSpace, doc.toJson(), targetMesh);
 

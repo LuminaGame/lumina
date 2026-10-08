@@ -122,6 +122,15 @@ class AnimBlueprintEditorViewModel extends _AnimBlueprintEditorViewModelState
     ];
   }
 
+  /// Pose search databases made for the target mesh.
+  List<String> get poseDatabasePaths => _poseDatabasePaths;
+
+  /// [poseDatabasePaths] as assets for the shared asset picker.
+  List<RealAssetInfo> get poseDatabaseAssets {
+    final wanted = _poseDatabasePaths.toSet();
+    return [for (final a in _projectAssets()) if (wanted.contains(a.relativePath)) a];
+  }
+
   /// [blendSpacePaths] as assets for the shared asset picker.
   List<RealAssetInfo> get blendSpaceAssets {
     final wanted = _blendSpacePaths.toSet();

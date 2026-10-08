@@ -94,7 +94,8 @@ mixin _AnimBlueprintEditorPreview on _AnimBlueprintEditorViewModelState {
     _previewOverrideKeys = keys;
     final current = preview.animInstance;
     final doc = previewDocument(keys, resumeState: current?.currentState);
-    final cls = LuminaAnimBlueprintClass.fromDocument(doc, name: name, blendSpaces: stateBlendSpaces);
+    final cls = LuminaAnimBlueprintClass.fromDocument(doc,
+        name: name, blendSpaces: stateBlendSpaces, poseDatabases: statePoseDatabases);
     if (cls.hasErrors) {
       _previewError = 'Preview paused: ${cls.diagnostics.firstWhere((d) => d.isError).message}';
       preview.setAnimInstance(null);

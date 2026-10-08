@@ -100,6 +100,14 @@ mixin _ContentBrowserNewAsset on _ContentBrowserWidgetStateBase {
                     _newAssetTypeBtn(
                       context,
                       vm,
+                      'Animation → Pose Search Database (.lmas)',
+                      AssetType.poseSearchDatabase,
+                      LucideIcons.database,
+                      'animations',
+                    ),
+                    _newAssetTypeBtn(
+                      context,
+                      vm,
                       'New Sequencer (.lmas)',
                       AssetType.sequencer,
                       LucideIcons.film,
@@ -294,7 +302,10 @@ mixin _ContentBrowserNewAsset on _ContentBrowserWidgetStateBase {
               // shell.
               Navigator.of(context).pop();
               vm?.createWidgetBlueprint(folder: vm.selectedFolder);
-            } else if (type == AssetType.animBlueprint || type == AssetType.blendSpace || type == AssetType.animation) {
+            } else if (type == AssetType.animBlueprint ||
+                type == AssetType.blendSpace ||
+                type == AssetType.animation ||
+                type == AssetType.poseSearchDatabase) {
               // Animation → Animation Sequence / Animation Blueprint / Blend
               // Space: pick the target skeletal mesh, create the asset, open
               // its editor.
@@ -310,6 +321,7 @@ mixin _ContentBrowserNewAsset on _ContentBrowserWidgetStateBase {
                   kind: switch (type) {
                     AssetType.animBlueprint => AnimAssetKind.animBlueprint,
                     AssetType.blendSpace => AnimAssetKind.blendSpace,
+                    AssetType.poseSearchDatabase => AnimAssetKind.poseSearchDatabase,
                     _ => AnimAssetKind.animationSequence,
                   },
                   onCreated: (path) {

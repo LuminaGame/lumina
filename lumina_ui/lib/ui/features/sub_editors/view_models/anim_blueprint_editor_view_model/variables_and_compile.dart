@@ -189,6 +189,7 @@ mixin _AnimBlueprintEditorVariablesAndCompile on _AnimBlueprintEditorViewModelSt
       className: AnimBlueprintEditorViewModel.className(name),
       assetPath: relativePath,
       blendSpaces: stateBlendSpaces,
+      poseDatabases: statePoseDatabases,
       existingContent: existing,
     );
     issues.addAll(result.issues);

@@ -64,7 +64,27 @@ mixin _AnimBlueprintEditorLoadSaveAndRetarget on _AnimBlueprintEditorViewModelSt
       final bs = AnimGraphAssetService.readBlendSpace(dir, path);
       if (bs != null) _blendSpaces[path] = bs;
     }
+    _poseDatabasePaths = AnimGraphAssetService.poseSearchDatabasesFor(dir, _document.targetMesh);
+    _poseDatabases.clear();
+    final databases = {
+      ..._poseDatabasePaths,
+      for (final m in _document.stateMachines)
+        for (final s in m.states)
+          if (s.pose.database != null && s.pose.database!.isNotEmpty) s.pose.database!,
+    };
+    for (final path in databases) {
+      final db = AnimGraphAssetService.readPoseSearchDatabase(dir, path);
+      if (db != null) _poseDatabases[path] = db;
+    }
   }
+
+  /// Pose search databases the Motion Matching states play.
+  @override
+  Map<String, LuminaPoseSearchDatabaseDocument> get statePoseDatabases => {
+        for (final m in _document.stateMachines)
+          for (final s in m.states)
+            if (s.pose.database != null && _poseDatabases.containsKey(s.pose.database)) s.pose.database!: _poseDatabases[s.pose.database]!,
+      };
 
   /// Blend Spaces the states play, as the validator and preview read them.
   @override
