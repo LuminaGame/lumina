@@ -36,7 +36,9 @@ part 'glb_animation_retargeter/operation.dart';
 ///
 /// Every skeleton joint gets a rotation and a translation channel (constant
 /// ones where nothing moves), so switching from another clip of the asset
-/// cannot leave a bone where that clip put it.
+/// cannot leave a bone where that clip put it. [GlbRetargetBatch] imports
+/// many clips at once and writes a rest channel only for bones another clip
+/// of the asset moves.
 ///
 /// GEM-X SOMA clips require a neutral reference pose. Their model-space motion
 /// deltas drive the target bind axes, with explicit thigh/shin mapping and

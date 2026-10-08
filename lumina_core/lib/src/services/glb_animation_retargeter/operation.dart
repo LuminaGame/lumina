@@ -7,10 +7,27 @@ abstract final class _RetargetOperation {
     required String clipName,
     int animationIndex = 0,
   }) {
-    final tDoc = GlbDocument.parse(target, label: 'target');
+    final into = _RetargetTarget.parse(target, compact: false);
+    final result = retarget(
+      into,
+      clip: clip,
+      clipName: clipName,
+      animationIndex: animationIndex,
+    );
+    return result._withGlb(into.encode());
+  }
+
+  /// Retargets one clip into [into]; the result's `glb` is empty (the GLB
+  /// comes from [_RetargetTarget.encode]).
+  static GlbRetargetResult retarget(
+    _RetargetTarget into, {
+    required Uint8List clip,
+    required String clipName,
+    int animationIndex = 0,
+  }) {
     final cDoc = GlbDocument.parse(clip, label: 'clip');
     final src = _Skeleton(cDoc);
-    final tgt = _Skeleton(tDoc);
+    final tgt = into.skeleton;
     final soma = _isSomaClip(cDoc);
     if (soma &&
         (cDoc.json['extras'] as Map?)?['somaReferencePose'] != 'neutral') {
@@ -19,19 +36,7 @@ abstract final class _RetargetOperation {
       );
     }
 
-    final buffers = (tDoc.json['buffers'] as List?) ?? const [];
-    if (buffers.length > 1) {
-      throw FormatException(
-        'target uses ${buffers.length} buffers; only single-buffer GLBs can be merged into',
-      );
-    }
-
-    final joints = GlbAnimationRetargeter._skeletonNodeIndices(tDoc.json);
-    if (joints.isEmpty) {
-      throw const FormatException(
-        'target has no skin; there is no skeleton to retarget onto',
-      );
-    }
+    final joints = into.joints;
 
     final animations = (cDoc.json['animations'] as List?) ?? const [];
     if (animationIndex < 0 || animationIndex >= animations.length) {
@@ -363,45 +368,7 @@ abstract final class _RetargetOperation {
     }
 
     // ---- Write the animation into the target GLB.
-    final json = tDoc.json;
-    final bin = BytesBuilder(copy: false)..add(tDoc.bin);
-    var binLength = tDoc.bin.length;
-    final bufferViews = (json['bufferViews'] as List?)?.toList() ?? <dynamic>[];
-    final accessors = (json['accessors'] as List?)?.toList() ?? <dynamic>[];
-
-    int addAccessor(
-      Float32List data,
-      String type,
-      int count, {
-      List<double>? min,
-      List<double>? max,
-    }) {
-      final padding = ((binLength + 3) & ~3) - binLength;
-      if (padding > 0) bin.add(Uint8List(padding));
-      final offset = binLength + padding;
-      final bytes = data.buffer.asUint8List(
-        data.offsetInBytes,
-        data.lengthInBytes,
-      );
-      bin.add(Uint8List.fromList(bytes));
-      binLength = offset + bytes.length;
-      bufferViews.add(<String, dynamic>{
-        'buffer': 0,
-        'byteOffset': offset,
-        'byteLength': bytes.length,
-      });
-      accessors.add(<String, dynamic>{
-        'bufferView': bufferViews.length - 1,
-        'componentType': 5126,
-        'count': count,
-        'type': type,
-        'min': ?min,
-        'max': ?max,
-      });
-      return accessors.length - 1;
-    }
-
-    final frameInput = addAccessor(
+    final frameInput = into.addAccessor(
       Float32List.fromList(frames),
       'SCALAR',
       frames.length,
@@ -409,7 +376,7 @@ abstract final class _RetargetOperation {
       max: [frames.last],
     );
     final constTimes = duration > 0 ? [0.0, duration] : [0.0];
-    final constInput = addAccessor(
+    final constInput = into.addAccessor(
       Float32List.fromList(constTimes),
       'SCALAR',
       constTimes.length,
@@ -417,20 +384,7 @@ abstract final class _RetargetOperation {
       max: [constTimes.last],
     );
 
-    final samplers = <Map<String, dynamic>>[];
-    final channels = <Map<String, dynamic>>[];
-    void channel(int node, String path, int input, int output) {
-      samplers.add({
-        'input': input,
-        'output': output,
-        'interpolation': 'LINEAR',
-      });
-      channels.add({
-        'sampler': samplers.length - 1,
-        'target': {'node': node, 'path': path},
-      });
-    }
-
+    final animation = _PendingAnimation(clipName, constInput, constTimes.length);
     final sortedJoints = joints.toList()..sort();
     for (final j in sortedJoints) {
       final name = tgt.names[j] ?? '';
@@ -438,6 +392,11 @@ abstract final class _RetargetOperation {
 
       // Retargeter isolation: do not generate animation tracks for unmapped face or corrective joints
       if (!isDynamic && GlbAnimationRetargeter.isCorrectiveOrFace(name)) {
+        continue;
+      }
+      if (!isDynamic && into.compact) {
+        // Written by [_RetargetTarget.encode], and only when another clip of
+        // the asset moves this bone.
         continue;
       }
 
@@ -454,22 +413,19 @@ abstract final class _RetargetOperation {
           prev = q;
           data.setAll(k * 4, [q.x, q.y, q.z, q.w]);
         }
-        channel(
+        animation.channel(
           j,
           'rotation',
           frameInput,
-          addAccessor(data, 'VEC4', keys.length),
+          into.addAccessor(data, 'VEC4', keys.length),
         );
+        animation.moved.add(j);
       } else {
-        final q = tgt.restR[j];
-        final data = Float32List.fromList([
-          for (var k = 0; k < constTimes.length; k++) ...[q.x, q.y, q.z, q.w],
-        ]);
-        channel(
+        animation.channel(
           j,
           'rotation',
           constInput,
-          addAccessor(data, 'VEC4', constTimes.length),
+          into.restAccessor(j, 'rotation', constTimes.length),
         );
       }
 
@@ -482,49 +438,24 @@ abstract final class _RetargetOperation {
         for (var k = 0; k < sampled.length; k++) {
           data.setAll(k * 3, sampled[k]);
         }
-        channel(
+        animation.channel(
           j,
           'translation',
           frameInput,
-          addAccessor(data, 'VEC3', sampled.length),
+          into.addAccessor(data, 'VEC3', sampled.length),
         );
+        animation.moved.add(j);
       } else if (!GlbAnimationRetargeter.isCorrectiveOrFace(name) ||
           isDynamic) {
-        final t = tgt.restT[j];
-        final data = Float32List.fromList([
-          for (var k = 0; k < constTimes.length; k++) ...t,
-        ]);
-        channel(
+        animation.channel(
           j,
           'translation',
           constInput,
-          addAccessor(data, 'VEC3', constTimes.length),
+          into.restAccessor(j, 'translation', constTimes.length),
         );
       }
     }
-
-    final existing = ((json['animations'] as List?) ?? const []).toList();
-    final replaced = existing.indexWhere((a) => (a as Map)['name'] == clipName);
-    final animation = <String, dynamic>{
-      'name': clipName,
-      'channels': channels,
-      'samplers': samplers,
-    };
-    final int clipIndex;
-    if (replaced >= 0) {
-      existing[replaced] = animation;
-      clipIndex = replaced;
-    } else {
-      existing.add(animation);
-      clipIndex = existing.length - 1;
-    }
-    json['animations'] = existing;
-    json['bufferViews'] = bufferViews;
-    json['accessors'] = accessors;
-    final merged = bin.takeBytes();
-    json['buffers'] = [
-      <String, dynamic>{'byteLength': merged.length},
-    ];
+    final clipIndex = into.addAnimation(animation);
 
     final mappedNames = [
       for (final j in sortedJoints)
@@ -543,7 +474,7 @@ abstract final class _RetargetOperation {
     ]..sort();
 
     return GlbRetargetResult(
-      glb: GlbDocument(json, merged).encode(),
+      glb: Uint8List(0),
       clipName: clipName,
       clipIndex: clipIndex,
       duration: duration,
@@ -554,5 +485,187 @@ abstract final class _RetargetOperation {
       sourceArmPose: srcArmPose,
       targetArmPose: tgtArmPose,
     );
+  }
+}
+
+/// One retargeted animation before it is written into the target's JSON.
+final class _PendingAnimation {
+  _PendingAnimation(this.name, this.constInput, this.constKeys);
+
+  final String name;
+
+  /// The clip's two-key (start, end) time accessor; a single key for a
+  /// one-frame clip.
+  final int constInput;
+  final int constKeys;
+
+  final channels = <Map<String, dynamic>>[];
+  final samplers = <Map<String, dynamic>>[];
+
+  /// Joints this clip keys away from their rest pose.
+  final moved = <int>{};
+
+  /// Joints that have a channel of this clip.
+  final keyed = <int>{};
+
+  void channel(int node, String path, int input, int output) {
+    samplers.add({'input': input, 'output': output, 'interpolation': 'LINEAR'});
+    channels.add({
+      'sampler': samplers.length - 1,
+      'target': {'node': node, 'path': path},
+    });
+    keyed.add(node);
+  }
+
+  Map<String, dynamic> toJson() => {'name': name, 'channels': channels, 'samplers': samplers};
+}
+
+/// A target GLB that clips are retargeted into: parsed once, its binary
+/// chunk and accessor lists grown in place, encoded once.
+///
+/// [compact] (batch imports) writes a rest channel only for a bone some
+/// other animation of the asset moves (so switching clips still resets it),
+/// and shares the rest values between clips; otherwise every skeleton joint
+/// of every clip gets its channels.
+final class _RetargetTarget {
+  _RetargetTarget._(this.doc, this.skeleton, this.joints, this.compact)
+    : _bin = BytesBuilder(copy: false)..add(doc.bin),
+      _binLength = doc.bin.length,
+      _bufferViews = (doc.json['bufferViews'] as List?)?.toList() ?? <dynamic>[],
+      _accessors = (doc.json['accessors'] as List?)?.toList() ?? <dynamic>[],
+      _animations = ((doc.json['animations'] as List?) ?? const []).toList();
+
+  factory _RetargetTarget.parse(Uint8List bytes, {required bool compact}) {
+    final doc = GlbDocument.parse(bytes, label: 'target');
+    final buffers = (doc.json['buffers'] as List?) ?? const [];
+    if (buffers.length > 1) {
+      throw FormatException(
+        'target uses ${buffers.length} buffers; only single-buffer GLBs can be merged into',
+      );
+    }
+    final joints = GlbAnimationRetargeter._skeletonNodeIndices(doc.json);
+    if (joints.isEmpty) {
+      throw const FormatException(
+        'target has no skin; there is no skeleton to retarget onto',
+      );
+    }
+    return _RetargetTarget._(doc, _Skeleton(doc), joints, compact);
+  }
+
+  final GlbDocument doc;
+  final _Skeleton skeleton;
+  final Set<int> joints;
+  final bool compact;
+
+  final BytesBuilder _bin;
+  int _binLength;
+  final List<dynamic> _bufferViews;
+  final List<dynamic> _accessors;
+  final List<dynamic> _animations;
+  final _pending = <int, _PendingAnimation>{};
+  final _rest = <String, int>{};
+
+  int addAccessor(
+    Float32List data,
+    String type,
+    int count, {
+    List<double>? min,
+    List<double>? max,
+  }) {
+    final padding = ((_binLength + 3) & ~3) - _binLength;
+    if (padding > 0) _bin.add(Uint8List(padding));
+    final offset = _binLength + padding;
+    final bytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+    _bin.add(Uint8List.fromList(bytes));
+    _binLength = offset + bytes.length;
+    _bufferViews.add(<String, dynamic>{
+      'buffer': 0,
+      'byteOffset': offset,
+      'byteLength': bytes.length,
+    });
+    _accessors.add(<String, dynamic>{
+      'bufferView': _bufferViews.length - 1,
+      'componentType': 5126,
+      'count': count,
+      'type': type,
+      'min': ?min,
+      'max': ?max,
+    });
+    return _accessors.length - 1;
+  }
+
+  /// [keys] copies of joint [j]'s rest rotation or translation; shared by
+  /// every clip in compact mode.
+  int restAccessor(int j, String path, int keys) {
+    Float32List data() {
+      if (path == 'rotation') {
+        final q = skeleton.restR[j];
+        return Float32List.fromList([for (var k = 0; k < keys; k++) ...[q.x, q.y, q.z, q.w]]);
+      }
+      final t = skeleton.restT[j];
+      return Float32List.fromList([for (var k = 0; k < keys; k++) ...t]);
+    }
+
+    final type = path == 'rotation' ? 'VEC4' : 'VEC3';
+    if (!compact) return addAccessor(data(), type, keys);
+    return _rest.putIfAbsent('$j/$path/$keys', () => addAccessor(data(), type, keys));
+  }
+
+  /// Adds [animation] (replacing one of the same name); returns its index.
+  int addAnimation(_PendingAnimation animation) {
+    final replaced = _animations.indexWhere((a) => (a as Map)['name'] == animation.name);
+    final index = replaced >= 0 ? replaced : _animations.length;
+    if (replaced >= 0) {
+      _animations[replaced] = animation.toJson();
+    } else {
+      _animations.add(animation.toJson());
+    }
+    _pending[index] = animation;
+    return index;
+  }
+
+  /// Joints an animation that was in the target before moves (a channel
+  /// with more than two keys).
+  Set<int> _movedByEarlierAnimations() {
+    final moved = <int>{};
+    for (final (i, a) in _animations.indexed) {
+      if (_pending.containsKey(i) || a is! Map) continue;
+      final samplers = (a['samplers'] as List?) ?? const [];
+      for (final c in (a['channels'] as List?) ?? const []) {
+        final node = ((c as Map)['target'] as Map?)?['node'];
+        final sampler = c['sampler'];
+        if (node is! int || sampler is! int || sampler >= samplers.length) continue;
+        final input = (samplers[sampler] as Map)['input'];
+        final count = input is int && input < _accessors.length ? (_accessors[input] as Map)['count'] : null;
+        if (count is int && count > 2) moved.add(node);
+      }
+    }
+    return moved;
+  }
+
+  Uint8List encode() {
+    if (compact) {
+      // Every bone some clip moves gets a rest channel in the clips that do
+      // not, so a clip never inherits the pose the previous one left.
+      final moved = {..._movedByEarlierAnimations(), for (final a in _pending.values) ...a.moved};
+      final sorted = moved.toList()..sort();
+      for (final MapEntry(key: index, value: a) in _pending.entries) {
+        for (final j in sorted) {
+          if (a.keyed.contains(j) || !joints.contains(j)) continue;
+          a.channel(j, 'rotation', a.constInput, restAccessor(j, 'rotation', a.constKeys));
+          a.channel(j, 'translation', a.constInput, restAccessor(j, 'translation', a.constKeys));
+        }
+        _animations[index] = a.toJson();
+      }
+    }
+    final json = doc.json;
+    json['animations'] = _animations;
+    json['bufferViews'] = _bufferViews;
+    json['accessors'] = _accessors;
+    final merged = _bin.takeBytes();
+    json['buffers'] = [
+      <String, dynamic>{'byteLength': merged.length},
+    ];
+    return GlbDocument(json, merged).encode();
   }
 }

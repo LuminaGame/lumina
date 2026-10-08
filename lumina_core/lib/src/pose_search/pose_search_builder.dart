@@ -153,9 +153,16 @@ class LuminaPoseSearchBuildStats {
 /// Builds the feature matrix of a pose search database from its mesh's GLB.
 abstract final class LuminaPoseSearchBuilder {
   /// The cache key of [document] over [glb]: changes when either does.
-  static String fingerprint(Uint8List glb, LuminaPoseSearchDatabaseDocument document) {
+  static String fingerprint(Uint8List glb, LuminaPoseSearchDatabaseDocument document) =>
+      fingerprintOfHash(glbHash(glb), document);
+
+  /// The GLB part of [fingerprint] (hashing a large mesh once serves every
+  /// database of it).
+  static String glbHash(Uint8List glb) => sha1.convert(glb).toString();
+
+  /// [fingerprint] from the mesh's [glbHash].
+  static String fingerprintOfHash(String glbHash, LuminaPoseSearchDatabaseDocument document) {
     final docHash = sha1.convert(utf8.encode(jsonEncode(document.toJson())));
-    final glbHash = sha1.convert(glb);
     return 'v${LuminaPoseSearchIndex.formatVersion}-$glbHash-$docHash';
   }
 

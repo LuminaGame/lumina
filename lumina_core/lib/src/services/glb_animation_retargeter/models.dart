@@ -73,4 +73,55 @@ class GlbRetargetResult {
     this.sourceArmPose = SkeletonArmPose.tPose,
     this.targetArmPose = SkeletonArmPose.tPose,
   });
+
+  GlbRetargetResult _withGlb(Uint8List glb) => GlbRetargetResult(
+    glb: glb,
+    clipName: clipName,
+    clipIndex: clipIndex,
+    duration: duration,
+    mappedBones: mappedBones,
+    restBones: restBones,
+    ignoredSourceBones: ignoredSourceBones,
+    pelvisTranslationScale: pelvisTranslationScale,
+    sourceArmPose: sourceArmPose,
+    targetArmPose: targetArmPose,
+  );
+}
+
+/// Many clips retargeted into one skeletal mesh GLB: the target is parsed
+/// once, each [add] appends a clip, and [finish] encodes the GLB once.
+///
+/// Rest channels are compact: a bone gets a constant rest channel in a clip
+/// only when another animation of the asset moves it (so switching clips
+/// still resets it), and those constant values are shared between clips.
+/// For a set of clips that all animate the same bones this keeps the GLB
+/// close to the size of the keyed motion alone.
+class GlbRetargetBatch {
+  GlbRetargetBatch(Uint8List target) : _target = _RetargetTarget.parse(target, compact: true);
+
+  final _RetargetTarget _target;
+  final _results = <GlbRetargetResult>[];
+  bool _finished = false;
+
+  /// Clips added so far.
+  int get length => _results.length;
+
+  /// Retargets animation [animationIndex] of [clip] as [clipName] (replacing
+  /// an animation of that name). The result's `glb` is empty: the GLB comes
+  /// from [finish]. Throws like [GlbAnimationRetargeter.retargetInto].
+  GlbRetargetResult add({required Uint8List clip, required String clipName, int animationIndex = 0}) {
+    if (_finished) throw StateError('GlbRetargetBatch.add after finish');
+    final r = _RetargetOperation.retarget(_target, clip: clip, clipName: clipName, animationIndex: animationIndex);
+    _results.add(r);
+    return r;
+  }
+
+  /// The target GLB with every added clip, and the per-clip results (each
+  /// carrying that GLB).
+  ({Uint8List glb, List<GlbRetargetResult> clips}) finish() {
+    if (_finished) throw StateError('GlbRetargetBatch.finish called twice');
+    _finished = true;
+    final glb = _target.encode();
+    return (glb: glb, clips: [for (final r in _results) r._withGlb(glb)]);
+  }
 }

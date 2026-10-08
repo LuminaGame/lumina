@@ -100,8 +100,16 @@ class LuminaPoseSearchDatabaseRuntime {
 
   static final Map<String, Future<LuminaPoseSearchDatabaseRuntime>> _shared = {};
 
+  /// Per target mesh: its clips on the CPU and its GLB hash, shared by every
+  /// database of the mesh [load] reads (a MetaHuman with hundreds of clips
+  /// is parsed and hashed once, not once per database).
+  static final Map<String, Future<(LuminaGlbAnimationSampler, String)>> _meshes = {};
+
   /// Forgets the shared runtimes ([load] reloads them).
-  static void clearShared() => _shared.clear();
+  static void clearShared() {
+    _shared.clear();
+    _meshes.clear();
+  }
 
   /// The `.posedb` cache path of a database `.lmas`.
   static String cachePathOf(String databasePath) =>
@@ -137,7 +145,23 @@ class LuminaPoseSearchDatabaseRuntime {
     try {
       cache = await read(cachePath);
     } catch (_) {}
-    final runtime = await fromGlb(glb, doc, cache: cache, path: databasePath);
+    final (sampler, glbHash) = await _meshes.putIfAbsent(doc.targetMesh, () async {
+      (LuminaGlbAnimationSampler, String) work() => (LuminaGlbAnimationSampler.fromGlb(glb), LuminaPoseSearchBuilder.glbHash(glb));
+      try {
+        return await Isolate.run(work, debugName: 'pose search mesh');
+      } on UnsupportedError {
+        return work();
+      }
+    }).catchError((Object e) {
+      _meshes.remove(doc.targetMesh);
+      throw e;
+    });
+    // A current cache needs no rebuild: the index is decoded next to the
+    // mesh's shared clips.
+    final runtime = cache != null &&
+            LuminaPoseSearchIndex.fingerprintOf(cache) == LuminaPoseSearchBuilder.fingerprintOfHash(glbHash, doc)
+        ? LuminaPoseSearchDatabaseRuntime._(databasePath, doc, sampler, LuminaPoseSearchIndex.decode(cache), false)
+        : await fromGlb(glb, doc, path: databasePath);
     final onDisk = provider == null && LuminaAssets.defaultProvider == null;
     if (runtime.built && onDisk) {
       try {

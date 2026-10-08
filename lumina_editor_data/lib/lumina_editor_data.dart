@@ -62,6 +62,9 @@ export 'package:lumina_editor_data/src/services/plugin_template_generator_servic
 export 'package:lumina_editor_data/src/services/editor_host_generator_service.dart';
 export 'package:lumina_editor_data/src/services/editor_build_service.dart';
 
+// Example projects
+export 'package:lumina_editor_data/src/samples/game_animation_sample/game_animation_sample.dart';
+
 // Use cases
 export 'package:lumina_editor_data/src/domain/models/use_case_results.dart';
 export 'package:lumina_editor_data/src/domain/use_cases/save_level_use_case.dart';

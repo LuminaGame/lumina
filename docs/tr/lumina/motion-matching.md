@@ -47,6 +47,8 @@ Game Animation Sample (UEFN mannequin) kümesinde, Windows, Dart JIT ile ölçü
 
 `LuminaPoseSearchBuilder.buildWithStats(glb, document)` dizini kurar ve `LuminaPoseSearchBuildStats` raporlar (clip'ler, satırlar, aynalı satırlar, boyutlar, mesh'te olmayan clip'ler, eksik kemikler, kök hareketi olmayan clip'ler, derleme süresi). `buildInBackground` bunu arka plan isolate'inde çalıştırır. Önbellek başlığı mesh GLB'sinin ve belgenin parmak izini taşır (`LuminaPoseSearchBuilder.fingerprint`); `LuminaPoseSearchIndex.decode` / `encode` onu okur ve yazar.
 
+`LuminaPoseSearchDatabaseRuntime.load(path)` bir veritabanını yol başına bir kez yükler. Mesh'in CPU'daki clip'leri (`LuminaGlbAnimationSampler`) ve GLB hash'i (`LuminaPoseSearchBuilder.glbHash`) hedef mesh başına bir kez, arka plan isolate'inde üretilir ve o mesh'in tüm veritabanlarınca paylaşılır. `.posedb` parmak izi (`fingerprintOfHash`) güncel olan veritabanı bunların yanında çözülür; eksik ya da eskimiş olan yeniden kurulur. GLB'si 700 clip taşıyan (320 MB) bir MetaHuman'da dört veritabanı, her biri 2,6 s yerine toplam yaklaşık 4 s'de yüklenir.
+
 ## Çalışma zamanı
 
 ### Yörünge tahmini
@@ -61,7 +63,7 @@ Game Animation Sample (UEFN mannequin) kümesinde, Windows, Dart JIT ile ölçü
 
 ### Pozu göstermek
 
-`LuminaAnimatedMeshComponent.poseDriver` bir `LuminaMeshPoseDriver` alır: atanmışken mesh, bir gltfio clip'i uygulamak yerine sürücünün pozunu (adıyla düğüm başına yerel TRS) skin eklemlerine yazar, sonra joint override'ları uygular ve kemik matrislerini günceller. Aynalı kareler CPU'da aynalanır (`LuminaPoseSearchPoser`, dinlenme pozuna göre düzeltilmiş); gltfio bunu yapamazdı.
+`LuminaAnimatedMeshComponent.poseDriver` bir `LuminaMeshPoseDriver` alır: atanmışken mesh, bir gltfio clip'i uygulamak yerine sürücünün pozunu (adıyla düğüm başına yerel TRS) skin eklemlerine yazar, sonra joint override'ları uygular ve kemik matrislerini günceller. Kemikler skin eklemleri ve onların üstündeki her düğümdür; böylece kendisi hiçbir vertex'i ağırlıklandırmayan bir kemik (vertex'leri twist ve corrective eklemlere ağırlıklı bir MetaHuman'ın uylukları ve üst kolları) da pozlanır; yoksa altındaki her şey dinlenme pozunda kalırdı. Aynalı kareler CPU'da aynalanır (`LuminaPoseSearchPoser`, dinlenme pozuna göre düzeltilmiş); gltfio bunu yapamazdı.
 
 ### `LuminaMotionMatchingComponent`
 
@@ -69,7 +71,7 @@ Kodla sürülen bir karakter için: `LuminaMotionMatchingComponent(databasePath:
 
 ## Bir Animation Blueprint'te
 
-Bir state'in pozu `LuminaAnimPose.motionMatching(database, blendTime:, poseWeight:, trajectoryWeight:, requiredTags:, orientToMovement:, debugDraw:)` olabilir. Böyle bir state etkinken instance mesh'i, sahip pawn'ın hareketiyle beslenen bir motion matching oynatıcısıyla sürer ve oynattığı clip'i ayrılmış `MatchedClip` değişkenine yazar (kurallarda ya da update grafiğinde okumak için tanımlayın). State'ten çıkmak mesh'i eşleşen clip ve zamanda gltfio'ya geri verir, böylece geçişin crossfade'i oradan başlar. VM `LuminaAnimBlueprintClass.fromDocument(document, poseDatabases: {...})` ile kurulur; üretilen sınıf belgeleri satır içi taşır (`_poseDatabases`); doğrulayıcı eksik veritabanını raporlar. Bkz. [Animation Blueprint'ler](blueprint/animation.md).
+Bir state'in pozu `LuminaAnimPose.motionMatching(database, blendTime:, poseWeight:, trajectoryWeight:, requiredTags:, orientToMovement:, debugDraw:)` olabilir. Böyle bir state etkinken instance mesh'i, sahip pawn'ın hareketiyle beslenen bir motion matching oynatıcısıyla sürer ve oynattığı clip'i ayrılmış `MatchedClip` değişkenine yazar (kurallarda ya da update grafiğinde okumak için tanımlayın). State'ten çıkmak mesh'i eşleşen clip ve zamanda gltfio'ya geri verir, böylece geçişin crossfade'i oradan başlar. Her Motion Matching state'inin veritabanı begin play'de yüklenmeye başlar (önce giriş state'ininki, sırayla); böylece bir state'e sonradan girmek, veritabanı yüklenirken pozu bekletmez; `LuminaAnimMotionMatchingDriver.isLoaded(path)` birinin yüklenip yüklenmediğini söyler. Bir Motion Matching state'inden doğrudan başka birine geçmek (aynı mesh'in başka bir veritabanı, örneğin Stand → Crouch) yörünge geçmişini korur ve yeni veritabanının ilk eşleşmesine sıçramak yerine gösterilen pozdan inertialization ile karışır (`LuminaMotionMatchingPlayer.continueFrom`). VM `LuminaAnimBlueprintClass.fromDocument(document, poseDatabases: {...})` ile kurulur; üretilen sınıf belgeleri satır içi taşır (`_poseDatabases`); doğrulayıcı eksik veritabanını raporlar. Bkz. [Animation Blueprint'ler](blueprint/animation.md).
 
 ## Veritabanı oluşturmak
 

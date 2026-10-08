@@ -253,6 +253,8 @@ Uygulama `glb_animation_retargeter/models.dart`, `operation.dart`,
 `pose_sampling.dart`, `rest_alignment.dart` ve `soma_mapping.dart` dosyalarına ayrılmıştır. Genel giriş
 noktası `GlbAnimationRetargeter.retargetInto` olarak kalır.
 
+**Toplu retarget.** `GlbRetargetBatch(target)` bir mesh'e çok sayıda klip alır: hedef GLB bir kez ayrıştırılır, her `add(clip:, clipName:, animationIndex:)` bir klibi `retargetInto` ile birebir aynı biçimde retarget eder (aynı pozlar, aynı klip indeksleri; sonucu boş bir `glb` taşır) ve `finish()` GLB'yi bir kez kodlayıp `(glb:, clips:)` döndürür; her klip sonucu bu GLB'yi taşır. Rest kanalları sıkıdır: bir kemik bir klipte sabit rest kanalını yalnızca varlığın başka bir animasyonu onu hareket ettiriyorsa alır (klip değişince kemik yine sıfırlanır) ve sabit değerler klipler arasında paylaşılır. Aynı kemikleri canlandıran bir klip seti böylece neredeyse yalnızca anahtarlanmış hareketi kadar yer tutar; klip başına bir `retargetInto` büyüyen GLB'nin tamamını her seferinde ayrıştırıp kopyalar ve her klipte her gövde ekleminin iki kanalını yazar; 926 eklemli bir MetaHuman'a yüzlerce klipte bu karesel büyür.
+
 Unlike [GlbAnimationMerger], which copies channels verbatim onto an identical skeleton, this handles skeletons that differ in hierarchy and proportions (UE5's spine_04/05, neck_02 and metacarpals have no UE4 counterpart):
 
 - **Yalnızca rotasyon.** Klibin eksik olduğu iskelet kemikleri ebeveynlerine göre rest rotasyonlarını korur. Eşleşen kemikler, iki iskeletin kemik eksen kuralını paylaşıp paylaşmadığına bağlıdır (rest pozunda pelvis, spine_01 ve uyluklar 45° içinde):
@@ -272,6 +274,15 @@ Gövde kemiklerine dinamik veya sabit dönüş/konum kanalları yazılır. Eşle
 | `match` | `static GlbSkeletonMatch match({required Uint8List target, required Uint8List clip, int animationIndex = 0})` | How well [clip]'s animation matches [target]'s skeleton. |
 | `matchNames` | `static GlbSkeletonMatch matchNames(Set<String> targetJoints, Set<String> animated)` |  |
 | `retargetInto` | `static GlbRetargetResult retargetInto({required Uint8List target, required Uint8List clip, required String cli...` | Retargets animation [animationIndex] of [clip] onto [target]'s skeleton and returns [target] with it appended as [clipName] (replacing an animation of that name). |
+
+### `class GlbRetargetBatch`
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| yapıcı | `GlbRetargetBatch(Uint8List target)` | [target]'ı ayrıştırır (deri içermeyen ya da birden çok buffer'lı bir GLB'de `retargetInto` gibi hata fırlatır). |
+| `add` | `GlbRetargetResult add({required Uint8List clip, required String clipName, int animationIndex = 0})` | Bir klibi retarget eder (aynı adlı animasyonun yerine geçer); sonucun `glb` alanı boştur. `finish` sonrasında `StateError` fırlatır. |
+| `length` | `int get length` | Şimdiye dek eklenen klipler. |
+| `finish` | `({Uint8List glb, List<GlbRetargetResult> clips}) finish()` | Tüm klipleri içeren hedef ve onu taşıyan klip sonuçları. Yalnızca bir kez. |
 
 ## `lib/src/services/gltf_packer.dart`
 

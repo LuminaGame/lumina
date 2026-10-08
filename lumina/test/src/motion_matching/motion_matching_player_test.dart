@@ -194,6 +194,51 @@ void main() {
     });
   });
 
+  group('database switch', () {
+    test('a player continuing from another database blends from the pose shown instead of popping', () async {
+      final glb = LuminaSyntheticLocomotionRig.build([
+        LuminaSyntheticLocomotionRig.idle('Idle'),
+        LuminaSyntheticLocomotionRig.walk('WalkF', 0, 1),
+      ]);
+      final walking = await LuminaPoseSearchDatabaseRuntime.fromGlb(
+          glb, const LuminaPoseSearchDatabaseDocument(clips: [LuminaPoseSearchClip('WalkF', loop: true)]));
+      final standing = await LuminaPoseSearchDatabaseRuntime.fromGlb(
+          glb, const LuminaPoseSearchDatabaseDocument(clips: [LuminaPoseSearchClip('Idle', loop: true)]));
+      const dt = 1 / 60;
+      final a = LuminaMotionMatchingPlayer(walking);
+      final position = Vector3.zero();
+      for (var i = 0; i < 45; i++) {
+        position.z += 150 * dt;
+        a.update(dt, LuminaMotionMatchingInput(
+            position: position.clone(), facingYaw: 0, velocity: Vector3(0, 0, 150), desiredVelocity: Vector3(0, 0, 150)));
+      }
+      double distance(Float64List x, Float64List y) {
+        var m = 0.0;
+        for (var i = 0; i < x.length; i++) {
+          m = math.max(m, (x[i] - y[i]).abs());
+        }
+        return m;
+      }
+
+      final input = LuminaMotionMatchingInput(
+          position: position.clone(), facingYaw: 0, velocity: Vector3(0, 0, 150), desiredVelocity: Vector3.zero());
+      final fresh = LuminaMotionMatchingPlayer(standing)..update(dt, input);
+      final continued = LuminaMotionMatchingPlayer(standing, predictor: a.predictor)..continueFrom(a);
+      continued.update(dt, input);
+      expect(fresh.matchedClip, 'Idle');
+      expect(continued.matchedClip, 'Idle');
+      final pop = distance(fresh.pose, a.pose);
+      expect(pop, greaterThan(0.05), reason: 'idle and mid-stride differ');
+      expect(distance(continued.pose, a.pose), lessThan(pop * 0.25), reason: 'the first frame starts at the shown pose');
+      for (var i = 0; i < 30; i++) {
+        continued.update(dt, input);
+        fresh.update(dt, input);
+      }
+      expect(distance(continued.pose, fresh.pose), lessThan(pop * 0.1), reason: 'and settles on the matched frame');
+      expect(identical(continued.predictor, a.predictor), isTrue);
+    });
+  });
+
   group('mesh pose driver', () {
     late FilamentEngine engine;
     late FilamentScene scene;
@@ -210,6 +255,47 @@ void main() {
       world.cleanup();
       scene.dispose();
       engine.dispose();
+    });
+
+    test('a bone that is no skin joint (only its children are) follows the driver too', () async {
+      // The synthetic rig with `leg_l` inserted between the pelvis and
+      // foot_l: a node of the skeleton that weights no vertex.
+      final doc = GlbDocument.parse(LuminaSyntheticLocomotionRig.build([LuminaSyntheticLocomotionRig.idle('Idle')]));
+      final nodes = (doc.json['nodes'] as List).cast<Map<String, dynamic>>();
+      final pelvis = nodes.indexWhere((n) => n['name'] == 'pelvis');
+      final foot = nodes.indexWhere((n) => n['name'] == 'foot_l');
+      final footTranslation = (nodes[foot]['translation'] as List?) ?? const [0, 0, 0];
+      nodes.add({'name': 'leg_l', 'translation': footTranslation, 'children': [foot]});
+      nodes[foot]['translation'] = [0.0, 0.0, 0.0];
+      final leg = nodes.length - 1;
+      final children = (nodes[pelvis]['children'] as List).cast<int>();
+      nodes[pelvis]['children'] = [for (final c in children) c == foot ? leg : c];
+      final file = File('${Directory.systemTemp.createTempSync('lumina_pose_driver_').path}/rig.glb')
+        ..writeAsBytesSync(GlbDocument(doc.json, doc.bin).encode());
+      addTearDown(() => file.parent.deleteSync(recursive: true));
+
+      final mesh = LuminaAnimatedMeshComponent(meshAssetPath: file.path);
+      world.persistentLevel.registerActor(LuminaActor(root: mesh));
+      world.beginPlay();
+      await mesh.loaded;
+      final names = [for (final n in nodes) n['name'] as String? ?? ''];
+      final pose = Float64List(names.length * 10);
+      for (var i = 0; i < names.length; i++) {
+        final t = (nodes[i]['translation'] as List?) ?? const [0, 0, 0];
+        final r = (nodes[i]['rotation'] as List?) ?? const [0, 0, 0, 1];
+        pose.setAll(i * 10, [for (final v in [...t, ...r, 1, 1, 1]) (v as num).toDouble()]);
+      }
+      // leg_l turned 90° about X.
+      pose.setAll(leg * 10 + 3, [math.sin(math.pi / 4), 0.0, 0.0, math.cos(math.pi / 4)]);
+      mesh.poseDriver = _FixedPose(names, pose);
+      world.tick(1 / 60);
+      final local = mesh.jointLocalTransform('leg_l');
+      expect(local, isNotNull, reason: 'leg_l is a bone of the skeleton');
+      final expected = Quaternion(math.sin(math.pi / 4), 0, 0, math.cos(math.pi / 4)).asRotationMatrix();
+      final rotation = local!.getRotation();
+      for (var k = 0; k < 9; k++) {
+        expect(rotation.storage[k], closeTo(expected.storage[k], 1e-5));
+      }
     });
 
     test('the mannequin shows the matched frame with root motion removed', () async {
@@ -255,4 +341,16 @@ void main() {
       expect(player.pose[root * 10].abs() + player.pose[root * 10 + 2].abs(), lessThan(1e-6));
     });
   });
+}
+
+/// A pose driver that always shows one pose.
+class _FixedPose implements LuminaMeshPoseDriver {
+  _FixedPose(this.poseNodeNames, this.pose);
+
+  @override
+  final List<String> poseNodeNames;
+  final Float64List pose;
+
+  @override
+  Float64List? evaluatePose(double deltaTime) => pose;
 }

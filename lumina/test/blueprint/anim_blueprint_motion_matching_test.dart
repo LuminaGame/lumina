@@ -111,6 +111,44 @@ void main() {
 
     final databases = {MotionMatchingBlueprintFixture.databasePath: MotionMatchingBlueprintFixture.database};
 
+    test('every Motion Matching state starts loading its database at begin play, before it is entered', () async {
+      final base = MotionMatchingBlueprintFixture.animBlueprint();
+      final machine = base.stateMachine!;
+      const second = 'contents/animations/PSD_Rig_Second.lmas';
+      final doc = LuminaAnimBlueprintDocument(
+        targetMesh: base.targetMesh,
+        variables: base.variables,
+        eventGraph: base.eventGraph,
+        stateMachines: [
+          LuminaAnimStateMachine(
+            name: machine.name,
+            entryState: machine.entryState,
+            states: [machine.states.first, const LuminaAnimState('Frozen', LuminaAnimPose.motionMatching(second))],
+            transitions: machine.transitions,
+          ),
+        ],
+      );
+      final cls = LuminaAnimBlueprintClass.fromDocument(doc,
+          poseDatabases: {...databases, second: MotionMatchingBlueprintFixture.database});
+      final world = LuminaWorld(worldType: LuminaWorldType.game);
+      world.initializeNativeContext(engine, scene);
+      final mesh = LuminaAnimatedMeshComponent(meshAssetPath: MotionMatchingBlueprintFixture.meshPath);
+      final anim = cls.instantiate(mesh);
+      world.persistentLevel.registerActor(LuminaActor(root: LuminaSceneComponent())
+        ..addComponent(LuminaCharacterMovementComponent())
+        ..addComponent(anim)
+        ..addComponent(mesh));
+      world.beginPlay();
+      await mesh.loaded;
+      for (var i = 0; i < 500 && !anim.motionMatching.isLoaded(second); i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
+      expect(anim.currentState, 'Locomotion');
+      expect(anim.motionMatching.isLoaded(MotionMatchingBlueprintFixture.databasePath), isTrue);
+      expect(anim.motionMatching.isLoaded(second), isTrue, reason: 'loaded without entering Frozen');
+      world.cleanup();
+    });
+
     test('the VM plays idle, start, loop, stop and idle as the pawn walks and stops', () async {
       final cls = LuminaAnimBlueprintClass.fromDocument(MotionMatchingBlueprintFixture.animBlueprint(), poseDatabases: databases);
       final (played, _, _) = await run(cls.instantiate);

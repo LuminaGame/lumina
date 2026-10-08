@@ -36,6 +36,9 @@ class LuminaAnimMotionMatchingDriver {
   /// Whether a Motion Matching state drives the mesh now.
   bool get active => _active;
 
+  /// Whether [database] has loaded.
+  bool isLoaded(String database) => _ready.containsKey(database);
+
   /// Why the last database failed to load, if one did.
   String? lastError;
 
@@ -60,7 +63,11 @@ class LuminaAnimMotionMatchingDriver {
     }
     var player = _player;
     if (player == null || player.database != runtime) {
-      player = _player = LuminaMotionMatchingPlayer(runtime, blendTime: pose.blendTime);
+      // From another Motion Matching state: keep its trajectory history and
+      // blend from the pose it shows.
+      final previous = _active ? player : null;
+      player = _player = LuminaMotionMatchingPlayer(runtime, blendTime: pose.blendTime, predictor: previous?.predictor);
+      if (previous != null) player.continueFrom(previous);
     } else if (!_active) {
       player.forceSearch();
     }

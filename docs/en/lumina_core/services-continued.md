@@ -265,6 +265,8 @@ Unlike [GlbAnimationMerger], which copies channels verbatim onto an identical sk
 
 Body joints receive dynamic or constant rotation/translation channels. Unmapped facial and corrective joints are excluded so body clips preserve their local reference transforms.
 
+**Batch retargeting.** `GlbRetargetBatch(target)` imports many clips into one mesh: the target GLB is parsed once, each `add(clip:, clipName:, animationIndex:)` retargets one clip exactly as `retargetInto` does (same poses, same clip indices; its result carries an empty `glb`), and `finish()` encodes the GLB once and returns `(glb:, clips:)`, every clip result carrying that GLB. Rest channels are compact: a bone gets a constant rest channel in a clip only when another animation of the asset moves it (so switching clips still resets it), and the constant values are shared between clips. A set of clips that animate the same bones then costs little more than their keyed motion; one `retargetInto` per clip parses and copies the whole growing GLB each time and writes both channels of every body joint per clip, which on a 926-joint MetaHuman with hundreds of clips is quadratic.
+
 **Members:**
 
 | Member | Signature | Description |
@@ -274,6 +276,15 @@ Body joints receive dynamic or constant rotation/translation channels. Unmapped 
 | `match` | `static GlbSkeletonMatch match({required Uint8List target, required Uint8List clip, int animationIndex = 0})` | How well [clip]'s animation matches [target]'s skeleton. |
 | `matchNames` | `static GlbSkeletonMatch matchNames(Set<String> targetJoints, Set<String> animated)` |  |
 | `retargetInto` | `static GlbRetargetResult retargetInto({required Uint8List target, required Uint8List clip, required String cli...` | Retargets animation [animationIndex] of [clip] onto [target]'s skeleton and returns [target] with it appended as [clipName] (replacing an animation of that name). |
+
+### `class GlbRetargetBatch`
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| constructor | `GlbRetargetBatch(Uint8List target)` | Parses [target] (throws like `retargetInto` for a GLB without a skin or with several buffers). |
+| `add` | `GlbRetargetResult add({required Uint8List clip, required String clipName, int animationIndex = 0})` | Retargets one clip (replacing an animation of that name); the result's `glb` is empty. Throws `StateError` after `finish`. |
+| `length` | `int get length` | Clips added so far. |
+| `finish` | `({Uint8List glb, List<GlbRetargetResult> clips}) finish()` | The target with every clip, and the clip results carrying it. Once only. |
 
 ## `lib/src/services/gltf_packer.dart`
 

@@ -47,6 +47,8 @@ Measured on the Game Animation Sample (UEFN mannequin) set, Windows, Dart JIT:
 
 `LuminaPoseSearchBuilder.buildWithStats(glb, document)` builds the index and reports `LuminaPoseSearchBuildStats` (clips, rows, mirrored rows, dimensions, clips missing from the mesh, bones missing, clips with no root motion, build time). `buildInBackground` runs it on a background isolate. The cache's header carries a fingerprint of the mesh GLB and the document (`LuminaPoseSearchBuilder.fingerprint`); `LuminaPoseSearchIndex.decode` / `encode` read and write it.
 
+`LuminaPoseSearchDatabaseRuntime.load(path)` loads a database once per path. The mesh's clips on the CPU (`LuminaGlbAnimationSampler`) and its GLB hash (`LuminaPoseSearchBuilder.glbHash`) are made once per target mesh, on a background isolate, and shared by every database of that mesh. A database whose `.posedb` fingerprint (`fingerprintOfHash`) is current is decoded next to them; a missing or stale one is rebuilt. For a MetaHuman whose GLB carries 700 clips (320 MB), four databases load in about 4 s instead of 2.6 s each.
+
 ## Runtime
 
 ### Trajectory prediction
@@ -61,7 +63,7 @@ Measured on the Game Animation Sample (UEFN mannequin) set, Windows, Dart JIT:
 
 ### Showing the pose
 
-`LuminaAnimatedMeshComponent.poseDriver` takes a `LuminaMeshPoseDriver`: while set, the mesh writes the driver's pose (local TRS per node, by name) to its skin joints instead of applying a gltfio clip, then applies joint overrides and updates the bone matrices. Mirrored frames are mirrored on the CPU (`LuminaPoseSearchPoser`, rest-pose corrected), which gltfio could not do.
+`LuminaAnimatedMeshComponent.poseDriver` takes a `LuminaMeshPoseDriver`: while set, the mesh writes the driver's pose (local TRS per node, by name) to its skin joints instead of applying a gltfio clip, then applies joint overrides and updates the bone matrices. The bones are the skin joints and every node above them, so a bone that weights no vertex itself (a MetaHuman's thighs and upper arms, whose vertices are weighted to twist and corrective joints) is posed too; otherwise everything below it would keep its rest pose. Mirrored frames are mirrored on the CPU (`LuminaPoseSearchPoser`, rest-pose corrected), which gltfio could not do.
 
 ### `LuminaMotionMatchingComponent`
 
@@ -69,7 +71,7 @@ For a code-driven character: `LuminaMotionMatchingComponent(databasePath: …)` 
 
 ## In an Animation Blueprint
 
-A state's pose can be `LuminaAnimPose.motionMatching(database, blendTime:, poseWeight:, trajectoryWeight:, requiredTags:, orientToMovement:, debugDraw:)`. While such a state is active the instance drives the mesh with a motion matching player fed by the owning pawn's movement and writes the clip it plays into the reserved variable `MatchedClip` (declare it to read it in rules or the update graph). Leaving the state hands the mesh back to gltfio at the matched clip and time, so the transition's crossfade starts from it. The VM is built with `LuminaAnimBlueprintClass.fromDocument(document, poseDatabases: {...})`; the generated class carries the documents inline (`_poseDatabases`); the validator reports a missing database. See [Animation Blueprints](blueprint/animation.md).
+A state's pose can be `LuminaAnimPose.motionMatching(database, blendTime:, poseWeight:, trajectoryWeight:, requiredTags:, orientToMovement:, debugDraw:)`. While such a state is active the instance drives the mesh with a motion matching player fed by the owning pawn's movement and writes the clip it plays into the reserved variable `MatchedClip` (declare it to read it in rules or the update graph). Leaving the state hands the mesh back to gltfio at the matched clip and time, so the transition's crossfade starts from it. Every Motion Matching state's database starts loading at begin play (the entry state's first, one after the other), so entering a state later does not hold the pose while its database loads; `LuminaAnimMotionMatchingDriver.isLoaded(path)` tells whether one has. Moving from one Motion Matching state straight to another (another database of the same mesh, say Stand → Crouch) keeps the trajectory history and blends from the pose shown with inertialization (`LuminaMotionMatchingPlayer.continueFrom`) instead of popping to the new database's first match. The VM is built with `LuminaAnimBlueprintClass.fromDocument(document, poseDatabases: {...})`; the generated class carries the documents inline (`_poseDatabases`); the validator reports a missing database. See [Animation Blueprints](blueprint/animation.md).
 
 ## Authoring a database
 

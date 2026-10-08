@@ -34,6 +34,7 @@ Generated games import `package:lumina_widgets/lumina_game.dart` (`kLuminaGameLi
 | Derived data | `DerivedDataCache`, `AssetReferenceGraph` | [Use cases and services](services.md), [part 1](services-continued.md) |
 | Rigs | `RigLogicEvaluator` (MetaHuman DNA facial rigs) | [Use cases and services, part 3](services-continued-3.md) |
 | Use cases | `SaveLevelUseCase`, `GenerateDartCodeUseCase`, `ImportAssetUseCase` and their results | [Use cases and services](services.md) |
+| Example projects | `GameAnimationSampleBuilder`, `GaspExport`, `GaspAnimationImport`, `GaspDatabases`, `GaspCharacterContent`, `GaspSandboxLevel` (the Game Animation Sample on a skeletal mesh of the project, motion matching, a sandbox level) | [Game Animation Sample](game-animation-sample.md) |
 
 The files are under `lib/src/repositories/`, `lib/src/services/` and `lib/src/domain/`.
 

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:developer' as developer;
 import 'dart:math' as math;
 
@@ -188,6 +189,7 @@ abstract class LuminaAnimBlueprintInstance extends LuminaActorComponent {
   void onBeginPlay() {
     super.onBeginPlay();
     _enterState(stateMachine.entryState);
+    unawaited(_preloadPoseDatabases());
     _lastOwnerYaw = _ownerYaw;
     if (mesh.currentClip == null) {
       final pose = _currentPose;
@@ -201,6 +203,24 @@ abstract class LuminaAnimBlueprintInstance extends LuminaActorComponent {
       }
     }
     _faceOwnerForward();
+  }
+
+  /// Loads every Motion Matching state's database one after the other, the
+  /// entry state's first, so entering a state later does not hold the pose
+  /// while its database loads.
+  Future<void> _preloadPoseDatabases() async {
+    final entry = stateMachine.state(stateMachine.entryState);
+    final paths = <String>{
+      for (final s in [?entry, ...stateMachine.states])
+        if (s.pose.kind == LuminaAnimPoseKind.motionMatching && (s.pose.database ?? '').isNotEmpty) s.pose.database!,
+    };
+    for (final path in paths) {
+      try {
+        await motionMatching.load(path);
+      } catch (_) {
+        // Reported by the driver (lastError) when the state runs.
+      }
+    }
   }
 
   /// While a montage plays on the mesh the state machine

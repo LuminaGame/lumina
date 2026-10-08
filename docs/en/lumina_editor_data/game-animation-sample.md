@@ -1,0 +1,49 @@
+[Türkçe](../../tr/lumina_editor_data/game-animation-sample.md)
+
+# Game Animation Sample example project
+
+`lib/src/samples/game_animation_sample/` builds an example project that plays like the Game Animation Sample: a character driven by [motion matching](../lumina/motion-matching.md) over the sample's animation set, with gaits, crouch and jump, in a playground level. The sample's animations and level belong to their publisher and a MetaHuman character to its own: neither is part of Lumina. The builder reads a local export of the sample and a skeletal mesh already in the project, and writes everything else; the project stays on the machine that built it.
+
+Exported by `package:lumina_editor_data/lumina_editor_data.dart`.
+
+## Inputs
+
+- **The animation export**: a folder holding `Game/Characters/UEFN_Mannequin/Animations/<category>/…/*.fbx` (one clip per FBX, root motion on the `root` bone) and a `metadata.json` next to it: `anim_sequences` (path, `length_s`) and `assets.PoseSearchDatabase` (path, `schema`, `tags`, `base_cost_bias`, `looping_cost_bias`, and the database's text export `t3d` with its `DatabaseAnimationAssets(i)=(AnimAsset=…, SamplingRange=(Min=…,Max=…), MirrorOption=…, bEnabled=…)` lines). `GaspExport.open(root)` reads it; clip names are the FBX base names (the first of two clips with one name wins).
+- **The character**: a skeletal mesh asset in the project (for example a MetaHuman exported by the MetaHuman Creator plugin), its GLB without animations.
+- **Optionally** a level export: `{actors: [{class, label, transform, components: [{mesh, corners}]}]}`, where `corners` are the eight world corners of a corner-pivot cube in a left-handed Z-up frame (X forward, Y right), and model files to place as props.
+
+## What it builds
+
+| Step | Class | Result |
+| :--- | :--- | :--- |
+| Project | `GameAnimationSampleBuilder.createProject` | `<projects>/<name>` through `ProjectRepository.createProject` (blank template), unless it exists. |
+| Clips | `GaspAnimationImport.run` | Every FBX converted on background isolates (`FbxImportService.convert`, six at a time) while a worker isolate retargets them in order with `GlbRetargetBatch` ([lumina_core services](../lumina_core/services-continued.md)). Clips a database uses go into the character mesh's `.entity.glb`; the rest into `<mesh>_Library.lmas` + `.entity.glb` (same mesh), so the game loads only the clips it plays. Jump clips lose their root height (`removeRootHeight`: the capsule carries the arc). One animation `.lmas` per clip under `contents/animations/<mesh>/<category>/`. The mesh as exported is kept in `Saved/GameAnimationSample/<mesh>.base.glb` so a rebuild starts from it. |
+| Databases | `GaspDatabases` | `PSD_Stand` (idle, turn in place, walk / run / sprint loops, starts, stops, pivots, spins), `PSD_Crouch`, `PSD_Jump`, `PSD_Land`, merged from the sample's dense databases with each clip tagged by its gait (`Idle`, `Walk`, `Run`, `Sprint`, `Crouch`, `Jump`) and its database's tags, the database's looping cost bias on loops and its sampling ranges; schema: trajectory at −0.05, 0.35, 0.7 and 1.0 s, feet position + velocity, pelvis velocity. The sample's base cost biases are left out: they rank databases its chooser picked for one moment, and merged into one database they would keep a standing character turning. `.posedb` caches built on a background isolate. |
+| Character | `GaspCharacterContent` | `BP_SandboxCharacter`: capsule 35 × 90, spring arm 320 cm with lag, character movement; Move / Look / Jump, held Left Shift sprint, Left Ctrl walk toggle, C crouch toggle, and a Tick that caps the walk speed by gait (crouch 225 > sprint 700 > walk 200 > run 500 cm/s, the speeds the sample's loops move at). `ABP_SandboxCharacter`: Stand, Crouch, Air and Land, each a Motion Matching state (orient to movement) on its database, so no root-motion clip is ever played by gltfio. `BP_SandboxGameMode` spawns the character. Compiled into `lib/` with `DartCodeGeneratorService.compileAndWriteActor`. |
+| Level | `GaspSandboxLevel` | `L_Sandbox`: the level export's blocks (`GaspLevelBlock.fromCorners`: the export's X and Y swap into authoring space, the box's own X follows the cube's Y edge, the rotation comes back as authoring `[pitch, roll, yaw]` through `authoringRotation`) or `defaultBlocks()` (low / mid / high blocks, a wall, a 20 cm beam, a 20° ramp, ten 20 cm stairs, a platform), box primitives with world-aligned grid materials (`M_Grid_Floor`, `M_Grid_Block`, `M_Grid_Traversable`, compiled by the in-process material compiler), a floor, the player start bound to the game mode, sun, sky, height fog, props. |
+| Project | | Input, Maps & Modes (`L_Sandbox` as editor startup and game default map, the game mode), the level's code, the input code, the Blueprint registry and `lib/main.dart`. |
+
+`GameAnimationSampleBuilder.build` returns a `GameAnimationSampleReport` (clips, failures, import / convert / retarget times, GLB sizes, database stats); the runner writes it to `Saved/GameAnimationSample/report.json`.
+
+## Running it
+
+From `lumina_editor_data` (Flutter is needed: the importer and thumbnails use it):
+
+```bash
+LUMINA_GASP_EXPORT=<export folder> \
+LUMINA_GASP_MESH=contents/meshes/skeletal/SK_MH_Sandbox.lmas \
+LUMINA_GASP_LEVEL=<level export .json> LUMINA_GASP_PROPS='<model>;<model>' \
+flutter test tool/game_animation_sample/build_game_animation_sample_test.dart
+```
+
+`LUMINA_GASP_PROJECTS` (default `~/Lumina Projects`) and `LUMINA_GASP_PROJECT` (default `game_animation_sample`) name the project; `LUMINA_GASP_CATEGORIES=Idle,Sprint` limits the clips. Without `LUMINA_GASP_MESH` the runner only creates the project: put the character's skeletal mesh into it (MetaHuman Creator → Export), then run again. Without `LUMINA_GASP_EXPORT` it skips.
+
+Measured on the sample's 1879 clips onto a MetaHuman (1201 nodes, Windows): 33 s for the clips (190 s of FBX conversion over six isolates, 31 s of retargeting), 704 clips in the character's GLB (320 MB with the 200 MB mesh), 1175 in the library (422 MB); `PSD_Stand` 447 clips / 51 195 rows (6.8 MB cache), `PSD_Crouch` 199 / 22 413, `PSD_Jump` 19 / 1 292, `PSD_Land` 39 / 3 765; the whole build about 55 s.
+
+## Verifying
+
+`test/smoke/game_animation_sample_smoke_test.dart` plays the built project's `L_Sandbox` on the GPU (skipped where the project is not built; `LUMINA_GASP_PROJECT_DIR` names another one): the game mode spawns the character, the project input drives idle → walk → run → sprint → stop → crouch walk → stand up → jump → running jump, and it checks the gait speeds, the matched clips per phase and the Air state; PNG per phase, a video, and the per-frame cost (game tick, motion matching update and search) in the metrics. `test/samples/game_animation_sample_test.dart` covers the parts that need no sample data.
+
+## Not covered
+
+The sample's traversal (vault, mantle, hurdle, climb), interactions, slides, aim offsets, look-at and ragdoll clips are imported into the library asset but nothing plays them: the engine has no traversal, interaction or slide logic, no aim offset on Motion Matching states and no ragdoll. Crouching does not shrink the capsule. The level export's landscape and Blueprint actors (teleporters, buttons, target dummy) are not rebuilt.

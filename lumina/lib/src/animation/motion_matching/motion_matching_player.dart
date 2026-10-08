@@ -160,6 +160,25 @@ class LuminaMotionMatchingPlayer implements LuminaMeshPoseDriver {
   /// Makes the next update search at once.
   void forceSearch() => _sinceSearch = double.infinity;
 
+  /// Starts from the pose [previous] shows (another database of the same
+  /// mesh, for example when an Animation Blueprint moves from one Motion
+  /// Matching state to the next): this player's first match then blends
+  /// from that pose with inertialization instead of popping to it. Does
+  /// nothing when [previous] has shown no pose yet, plays other nodes, or
+  /// this player has already shown one.
+  void continueFrom(LuminaMotionMatchingPlayer previous) {
+    if (_hasShown || !previous._hasShown) return;
+    final a = previous.poseNodeNames, b = poseNodeNames;
+    if (a.length != b.length) return;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return;
+    }
+    _shown.setAll(0, previous._shown);
+    _shownPrevious.setAll(0, previous._shownPrevious);
+    _shownVelocity.setAll(0, previous._shownVelocity);
+    _hasShown = true;
+  }
+
   @override
   Float64List? evaluatePose(double deltaTime) {
     final i = input;
