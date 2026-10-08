@@ -9,7 +9,10 @@
 //   flutter test tool/game_animation_sample/build_game_animation_sample_test.dart
 //
 // Without LUMINA_GASP_MESH it only creates the project (put the character's
-// skeletal mesh into it, then run again). Skips without LUMINA_GASP_EXPORT.
+// skeletal mesh into it, then run again). LUMINA_GASP_CHARACTER_ONLY=1 with
+// LUMINA_GASP_MESH rewrites only the character, its Animation Blueprint, the
+// game mode and the input of a built project (no export needed). Skips
+// without LUMINA_GASP_EXPORT otherwise.
 import 'dart:convert';
 import 'dart:io';
 
@@ -20,6 +23,7 @@ import 'package:lumina_editor_data/lumina_editor_data.dart';
 void main() {
   final env = Platform.environment;
   final exportRoot = env['LUMINA_GASP_EXPORT'];
+  final characterOnly = env['LUMINA_GASP_CHARACTER_ONLY'] == '1';
 
   test('build the Game Animation Sample example project', () async {
     final projects = env['LUMINA_GASP_PROJECTS'] ?? '${LuminaWorkspace.home}/Lumina Projects';
@@ -30,6 +34,10 @@ void main() {
     final mesh = env['LUMINA_GASP_MESH'];
     if (mesh == null || mesh.isEmpty) {
       stdout.writeln('No LUMINA_GASP_MESH: the project is created; add the character mesh and run again.');
+      return;
+    }
+    if (characterOnly) {
+      await GameAnimationSampleBuilder(projectDir: projectDir, meshAssetPath: mesh, log: stdout.writeln).updateCharacter();
       return;
     }
     final export = await GaspExport.open(exportRoot!);
@@ -47,5 +55,5 @@ void main() {
     await out.writeAsString(const JsonEncoder.withIndent('  ').convert(report.toJson()));
     stdout.writeln('Report: ${out.path}');
     expect(report.import.clips, isNotEmpty);
-  }, skip: exportRoot == null ? 'LUMINA_GASP_EXPORT names no sample export' : false, timeout: Timeout.none);
+  }, skip: exportRoot == null && !characterOnly ? 'LUMINA_GASP_EXPORT names no sample export' : false, timeout: Timeout.none);
 }

@@ -21,6 +21,11 @@ abstract final class GaspCharacterContent {
   static const double sprintSpeed = 700.0;
   static const double crouchSpeed = 225.0;
 
+  /// How fast the speed cap follows a gait change (`FInterp To` speed, 1/s):
+  /// releasing Shift eases from run to walk over about a second instead of
+  /// cutting the speed in one frame.
+  static const double gaitInterpSpeed = 4.0;
+
   static const double capsuleRadius = 35.0;
   static const double capsuleHalfHeight = 90.0;
   static const double jumpZVelocity = 500.0;
@@ -29,15 +34,15 @@ abstract final class GaspCharacterContent {
   /// The C key (`LogicalKeyboardKey.keyC.keyId`).
   static const int keyIdC = 0x00000063;
 
-  /// WASD move, mouse look, Space jump, held Left Shift sprint, Left Ctrl
-  /// walk toggle, C crouch toggle.
+  /// WASD move, mouse look, Space jump, C crouch toggle. Walking is the
+  /// default gait; held Left Shift runs, held Left Shift + Left Ctrl sprints.
   static const ProjectInputSettings input = ProjectInputSettings(
     actions: [
       ProjectInputAction(name: 'IA_Move', valueType: ProjectInputValueType.axis2D),
       ProjectInputAction(name: 'IA_Look', valueType: ProjectInputValueType.axis2D),
       ProjectInputAction(name: 'IA_Jump'),
+      ProjectInputAction(name: 'IA_Run'),
       ProjectInputAction(name: 'IA_Sprint'),
-      ProjectInputAction(name: 'IA_Walk'),
       ProjectInputAction(name: 'IA_Crouch'),
     ],
     mappingContexts: [
@@ -49,8 +54,8 @@ abstract final class GaspCharacterContent {
         ProjectInputMapping(action: 'IA_Look', keyId: kMouseXAxisKeyId, keyLabel: 'Mouse X', axis: 'X'),
         ProjectInputMapping(action: 'IA_Look', keyId: kMouseYAxisKeyId, keyLabel: 'Mouse Y', scale: -1.0, axis: 'Y'),
         ProjectInputMapping(action: 'IA_Jump', keyId: kKeyIdSpace, keyLabel: 'Space'),
-        ProjectInputMapping(action: 'IA_Sprint', keyId: kKeyIdShiftLeft, keyLabel: 'Left Shift'),
-        ProjectInputMapping(action: 'IA_Walk', keyId: kKeyIdControlLeft, keyLabel: 'Left Ctrl'),
+        ProjectInputMapping(action: 'IA_Run', keyId: kKeyIdShiftLeft, keyLabel: 'Left Shift'),
+        ProjectInputMapping(action: 'IA_Sprint', keyId: kKeyIdControlLeft, keyLabel: 'Left Ctrl'),
         ProjectInputMapping(action: 'IA_Crouch', keyId: keyIdC, keyLabel: 'C'),
       ]),
     ],
@@ -68,16 +73,17 @@ abstract final class GaspCharacterContent {
   static String _meshName(String path) => path.split('/').last.replaceAll('.lmas', '');
 
   /// The character: capsule, spring arm + camera, character movement, the
-  /// mesh animated by [animBlueprintPath]; Move / Look / Jump, held sprint,
-  /// walk and crouch toggles, and a Tick that caps the walk speed by gait.
+  /// mesh animated by [animBlueprintPath]; Move / Look / Jump, held run and
+  /// sprint keys, the crouch toggle, and a Tick that eases the speed cap
+  /// toward the gait's speed.
   static LuminaBlueprintDocument characterBlueprint({
     required String meshAssetPath,
     List<LuminaInputAction> inputActions = const [],
   }) {
     final variables = [
       const LuminaBlueprintVariable(name: 'LookSensitivity', typeName: 'Float', defaultValue: lookSensitivity),
+      const LuminaBlueprintVariable(name: 'WantsRun', typeName: 'Bool', defaultValue: false),
       const LuminaBlueprintVariable(name: 'WantsSprint', typeName: 'Bool', defaultValue: false),
-      const LuminaBlueprintVariable(name: 'WantsWalk', typeName: 'Bool', defaultValue: false),
       const LuminaBlueprintVariable(name: 'IsCrouching', typeName: 'Bool', defaultValue: false),
     ];
     final context = LuminaBlueprintTypeContext(variables: variables, inputActions: inputActions);
@@ -119,18 +125,17 @@ abstract final class GaspCharacterContent {
         place('jump', 'jump'),
         place('stop_jumping', 'stop_jumping'),
       ]),
-      // Sprint while Left Shift is held.
+      // Run while Left Shift is held.
+      LuminaBlueprintGraphSection('Run', [
+        input('run_input', 'IA_Run'),
+        set('start_run', 'WantsRun', true),
+        set('end_run', 'WantsRun', false),
+      ]),
+      // Left Ctrl held while running sprints.
       LuminaBlueprintGraphSection('Sprint', [
         input('sprint_input', 'IA_Sprint'),
         set('start_sprint', 'WantsSprint', true),
         set('end_sprint', 'WantsSprint', false),
-      ]),
-      // Left Ctrl toggles walking.
-      LuminaBlueprintGraphSection('Walk', [
-        input('walk_input', 'IA_Walk'),
-        get('walking', 'WantsWalk'),
-        place('toggle_walk', 'bool_not'),
-        set('set_walk', 'WantsWalk'),
       ]),
       // C toggles crouching and tells the Animation Blueprint.
       LuminaBlueprintGraphSection('Crouch', [
@@ -143,16 +148,25 @@ abstract final class GaspCharacterContent {
         get('crouched', 'IsCrouching'),
         place('tell_crouch', 'set_anim_variable', {'name': 'IsCrouching', 'type': 'boolean'}),
       ]),
-      // Tick: the walk speed cap of the gait (crouch > sprint > walk > run).
+      // Tick: ease the speed cap toward the gait's speed (crouch > Shift +
+      // Ctrl sprint > Shift run > walk) and tell the Animation Blueprint the
+      // gait keys, so it searches the gait's clips.
       LuminaBlueprintGraphSection('Gait', [
         place('tick', 'event_tick'),
-        get('gait_walk', 'WantsWalk'),
+        get('gait_run', 'WantsRun'),
         get('gait_sprint', 'WantsSprint'),
         get('gait_crouch', 'IsCrouching'),
-        place('walk_or_run', 'select_float', {'a': walkSpeed, 'b': runSpeed}),
+        place('run_and_sprint', 'bool_and'),
+        place('run_or_walk', 'select_float', {'a': runSpeed, 'b': walkSpeed}),
         place('or_sprint', 'select_float', {'a': sprintSpeed}),
         place('or_crouch', 'select_float', {'a': crouchSpeed}),
+        place('current_speed', 'get_max_walk_speed'),
+        place('ease_speed', 'float_interp_to', {'interp_speed': gaitInterpSpeed}),
         place('gait_speed', 'set_max_walk_speed'),
+        get('anim_run', 'WantsRun'),
+        place('tell_run', 'set_anim_variable', {'name': 'WantsRun', 'type': 'boolean'}),
+        get('anim_sprint', 'WantsSprint'),
+        place('tell_sprint', 'set_anim_variable', {'name': 'WantsSprint', 'type': 'boolean'}),
       ]),
     ];
     final wires = [
@@ -178,24 +192,33 @@ abstract final class GaspCharacterContent {
       wire('pitch_scaled', 'return_value', 'pitch', 'val'),
       wire('jump_input', 'started', 'jump', 'exec_in'),
       wire('jump_input', 'completed', 'stop_jumping', 'exec_in'),
+      wire('run_input', 'started', 'start_run', 'exec_in'),
+      wire('run_input', 'completed', 'end_run', 'exec_in'),
+      wire('run_input', 'canceled', 'end_run', 'exec_in'),
       wire('sprint_input', 'started', 'start_sprint', 'exec_in'),
       wire('sprint_input', 'completed', 'end_sprint', 'exec_in'),
       wire('sprint_input', 'canceled', 'end_sprint', 'exec_in'),
-      wire('walk_input', 'started', 'set_walk', 'exec_in'),
-      wire('walking', 'value', 'toggle_walk', 'a'),
-      wire('toggle_walk', 'return_value', 'set_walk', 'value'),
       wire('crouch_input', 'started', 'set_crouch', 'exec_in'),
       wire('crouching', 'value', 'toggle_crouch', 'a'),
       wire('toggle_crouch', 'return_value', 'set_crouch', 'value'),
       wire('set_crouch', 'exec_out', 'tell_crouch', 'exec_in'),
       wire('crouched', 'value', 'tell_crouch', 'value'),
       wire('tick', 'exec_tick_out', 'gait_speed', 'exec_in'),
-      wire('gait_walk', 'value', 'walk_or_run', 'pick_a'),
-      wire('walk_or_run', 'return_value', 'or_sprint', 'b'),
-      wire('gait_sprint', 'value', 'or_sprint', 'pick_a'),
+      wire('gait_run', 'value', 'run_or_walk', 'pick_a'),
+      wire('gait_run', 'value', 'run_and_sprint', 'a'),
+      wire('gait_sprint', 'value', 'run_and_sprint', 'b'),
+      wire('run_or_walk', 'return_value', 'or_sprint', 'b'),
+      wire('run_and_sprint', 'return_value', 'or_sprint', 'pick_a'),
       wire('or_sprint', 'return_value', 'or_crouch', 'b'),
       wire('gait_crouch', 'value', 'or_crouch', 'pick_a'),
-      wire('or_crouch', 'return_value', 'gait_speed', 'max_walk_speed'),
+      wire('current_speed', 'return_value', 'ease_speed', 'current'),
+      wire('or_crouch', 'return_value', 'ease_speed', 'target'),
+      wire('tick', 'delta_seconds', 'ease_speed', 'delta_time'),
+      wire('ease_speed', 'return_value', 'gait_speed', 'max_walk_speed'),
+      wire('gait_speed', 'exec_out', 'tell_run', 'exec_in'),
+      wire('anim_run', 'value', 'tell_run', 'value'),
+      wire('tell_run', 'exec_out', 'tell_sprint', 'exec_in'),
+      wire('anim_sprint', 'value', 'tell_sprint', 'value'),
     ];
 
     return LuminaBlueprintDocument(
@@ -230,7 +253,7 @@ abstract final class GaspCharacterContent {
           name: 'CharacterMovement',
           type: 'LuminaCharacterMovementComponent',
           isSceneComponent: false,
-          properties: {'maxWalkSpeed': runSpeed, 'jumpZVelocity': jumpZVelocity, 'airControl': 0.35, 'jumpCutMultiplier': 1.0},
+          properties: {'maxWalkSpeed': walkSpeed, 'jumpZVelocity': jumpZVelocity, 'airControl': 0.35, 'jumpCutMultiplier': 1.0},
         ),
         LuminaBlueprintComponent(
           id: 'mesh',
@@ -264,13 +287,18 @@ abstract final class GaspCharacterContent {
   static const double landSeconds = 0.45;
 
   /// The Animation Blueprint: the update graph stores whether the pawn
-  /// falls (`IsCrouching` comes from the character); Stand, Crouch, Air and
-  /// Land are Motion Matching states on [GaspDatabases]' databases, so every
-  /// pose comes from a matched clip with its root motion removed.
+  /// falls (`IsCrouching`, `WantsRun` and `WantsSprint` come from the
+  /// character); Stand, Run, Sprint, Crouch, Air and Land are Motion
+  /// Matching states on [GaspDatabases]' databases, so every pose comes from
+  /// a matched clip with its root motion removed. Stand (the walk), Run and
+  /// Sprint share the stand database and search only their gait's clips
+  /// (idle clips carry every gait), as the sample picks a database per gait.
   static LuminaAnimBlueprintDocument animBlueprint({required String meshAssetPath}) {
     final variables = [
       const LuminaBlueprintVariable(name: 'IsFalling', typeName: 'Bool', defaultValue: false),
       const LuminaBlueprintVariable(name: 'IsCrouching', typeName: 'Bool', defaultValue: false),
+      const LuminaBlueprintVariable(name: 'WantsRun', typeName: 'Bool', defaultValue: false),
+      const LuminaBlueprintVariable(name: 'WantsSprint', typeName: 'Bool', defaultValue: false),
       const LuminaBlueprintVariable(name: LuminaAnimBlueprintInstance.stateTimeVariable, typeName: 'Float', defaultValue: 0.0),
       const LuminaBlueprintVariable(name: LuminaAnimBlueprintInstance.matchedClipVariable, typeName: 'String', defaultValue: ''),
     ];
@@ -324,8 +352,8 @@ abstract final class GaspCharacterContent {
     }
 
     String db(String name) => databasePath(meshAssetPath, name);
-    LuminaAnimPose mm(String name) =>
-        LuminaAnimPose.motionMatching(db(name), blendTime: 0.2, orientToMovement: true);
+    LuminaAnimPose mm(String name, [List<String> requiredTags = const []]) =>
+        LuminaAnimPose.motionMatching(db(name), blendTime: 0.2, orientToMovement: true, requiredTags: requiredTags);
     var t = 0;
     LuminaAnimTransition go(String from, String to, Map<String, bool> wanted,
             {int priority = 1, double blend = 0.2, double minStateTime = 0.0}) =>
@@ -348,16 +376,29 @@ abstract final class GaspCharacterContent {
           name: 'Locomotion',
           entryState: 'Stand',
           states: [
-            LuminaAnimState('Stand', mm(GaspDatabases.stand), x: 0, y: 0),
+            LuminaAnimState('Stand', mm(GaspDatabases.stand, const ['Walk']), x: 0, y: 0),
+            LuminaAnimState('Run', mm(GaspDatabases.stand, const ['Run']), x: -320, y: -160),
+            LuminaAnimState('Sprint', mm(GaspDatabases.stand, const ['Sprint']), x: -640, y: -160),
             LuminaAnimState('Crouch', mm(GaspDatabases.crouch), x: 0, y: 240),
             LuminaAnimState('Air', mm(GaspDatabases.jump), x: 320, y: 120),
             LuminaAnimState('Land', mm(GaspDatabases.land), x: 640, y: 0),
           ],
           transitions: [
             go('Stand', 'Air', {'IsFalling': true}, priority: 0),
+            go('Run', 'Air', {'IsFalling': true}, priority: 0),
+            go('Sprint', 'Air', {'IsFalling': true}, priority: 0),
             go('Crouch', 'Air', {'IsFalling': true}, priority: 0),
             go('Land', 'Air', {'IsFalling': true}, priority: 0),
             go('Stand', 'Crouch', {'IsCrouching': true}),
+            go('Run', 'Crouch', {'IsCrouching': true}),
+            go('Sprint', 'Crouch', {'IsCrouching': true}),
+            // Gaits: Shift runs, Shift + Ctrl sprints, neither walks.
+            go('Stand', 'Run', {'WantsRun': true, 'WantsSprint': false}, priority: 2),
+            go('Stand', 'Sprint', {'WantsRun': true, 'WantsSprint': true}, priority: 2),
+            go('Run', 'Sprint', {'WantsRun': true, 'WantsSprint': true}, priority: 2),
+            go('Run', 'Stand', {'WantsRun': false}, priority: 2),
+            go('Sprint', 'Run', {'WantsRun': true, 'WantsSprint': false}, priority: 2),
+            go('Sprint', 'Stand', {'WantsRun': false}, priority: 2),
             go('Crouch', 'Stand', {'IsCrouching': false}),
             go('Air', 'Crouch', {'IsFalling': false, 'IsCrouching': true}),
             go('Air', 'Land', {'IsFalling': false, 'IsCrouching': false}),

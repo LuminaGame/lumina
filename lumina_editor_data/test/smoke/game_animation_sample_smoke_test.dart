@@ -10,8 +10,8 @@ import 'support/gasp_sandbox.dart';
 
 /// The Game Animation Sample example project played on the GPU: its
 /// `L_Sandbox`, its game mode spawning the MetaHuman character, and the
-/// project input driving idle → walk → run → sprint → stop → crouch walk →
-/// jump. The project is built locally from the sample's export and a
+/// project input driving idle → walk (no key) → run (Shift) → sprint
+/// (Shift + Ctrl) → walk again (Shift released) → stop → crouch walk → jump. The project is built locally from the sample's export and a
 /// MetaHuman (neither can be shipped): the scenario skips without it.
 const _w = SmokeVideo.defaultWidth;
 const _h = SmokeVideo.defaultHeight;
@@ -23,8 +23,8 @@ void main() {
   final level = File('$_projectDir/${GaspSandboxLevel.levelPath}');
   final skip = level.existsSync() ? false : 'the Game Animation Sample project is not built here ($_projectDir)';
 
-  test('game animation sample: the MetaHuman walks, runs, sprints, stops, crouches and jumps in L_Sandbox', () async {
-    const name = 'game animation sample: the MetaHuman walks, runs, sprints, stops, crouches and jumps in L_Sandbox';
+  test('game animation sample: the MetaHuman walks by default, runs with Shift, sprints with Shift+Ctrl, stops, crouches and jumps in L_Sandbox', () async {
+    const name = 'game animation sample: the MetaHuman walks by default, runs with Shift, sprints with Shift+Ctrl, stops, crouches and jumps in L_Sandbox';
     final dir = _projectDir;
     final sandbox = await GaspSandbox.open(dir);
     final world = sandbox.world;
@@ -44,6 +44,23 @@ void main() {
     final phaseClips = <String, Set<String>>{};
     final phaseStates = <String, Set<String>>{};
     final phaseSpeeds = <String, double>{};
+    // Speed over the last half second of a phase, the clips matched in the
+    // second half of each frame, and the largest one-frame speed drop.
+    final phaseEndSpeeds = <String, double>{};
+    final phaseLateClips = <String, List<String>>{};
+    final phaseLargestDrop = <String, double>{};
+    final gaitOfClip = <String, String>{};
+
+    /// The gait tag (`Idle`, `Walk`, `Run`, `Sprint`, `Crouch`, ...) the
+    /// builder gave [clip] in the database being played.
+    String gaitOf(String clip) {
+      if (gaitOfClip.isEmpty || !gaitOfClip.containsKey(clip)) {
+        for (final c in anim.motionMatching.player?.database.document.clips ?? const <LuminaPoseSearchClip>[]) {
+          if (c.tags.isNotEmpty) gaitOfClip[c.clip] = c.tags.first;
+        }
+      }
+      return gaitOfClip[clip] ?? '?';
+    }
 
     double speed() {
       final v = character.characterMovement.velocity;
@@ -63,6 +80,9 @@ void main() {
       }
       final frames = (seconds * 60).round();
       var peak = 0.0;
+      var endSum = 0.0;
+      var last = speed();
+      var drop = 0.0;
       for (var f = 0; f < frames; f++) {
         if (mouseX != 0) input.injectAnalog(LuminaKey.mouseX, mouseX);
         final w = Stopwatch()..start();
@@ -73,6 +93,13 @@ void main() {
         if (clip is String && clip.isNotEmpty) (phaseClips[label] ??= {}).add(clip);
         (phaseStates[label] ??= {}).add(anim.currentState ?? '');
         peak = math.max(peak, speed());
+        drop = math.max(drop, last - speed());
+        last = speed();
+        if (f >= frames - 30) endSum += speed();
+        if (f >= frames ~/ 2 && clip is String && clip.isNotEmpty) {
+          gaitOf(clip);
+          (phaseLateClips[label] ??= []).add(clip);
+        }
         if (f.isEven) {
           final r = Stopwatch()..start();
           final frame = capture();
@@ -94,17 +121,42 @@ void main() {
         input.injectKeyUp(k);
       }
       phaseSpeeds[label] = peak;
+      phaseEndSpeeds[label] = endSum / math.min(30, frames);
+      phaseLargestDrop[label] = drop;
+    }
+
+    /// Whether [clip] is of [gait]: tagged with it, and no transition into
+    /// another gait (`Transition_Walk_to_Sprint` is tagged `Walk`).
+    bool ofGait(String clip, String gait) =>
+        gaitOfClip[clip] == gait &&
+        RegExp(r'_to_(Walk|Run|Sprint)').allMatches(clip).every((m) => m.group(1) == gait);
+
+    /// The share of [phaseName]'s second-half frames playing a [gait] clip.
+    double share(String phaseName, String gait) {
+      final c = phaseLateClips[phaseName] ?? const <String>[];
+      return c.isEmpty ? 0.0 : c.where((x) => ofGait(x, gait)).length / c.length;
+    }
+
+    /// [phaseName]'s second-half clips by frames played, most first.
+    String lateClips(String phaseName) {
+      final counts = <String, int>{};
+      for (final c in phaseLateClips[phaseName] ?? const <String>[]) {
+        counts[c] = (counts[c] ?? 0) + 1;
+      }
+      final sorted = counts.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+      return sorted.take(5).map((e) => '${e.key}×${e.value}').join(' ');
     }
 
     await phase('idle', 1.5);
-    await phase('walk', 3.0, tap: const [LuminaKey.keyLeftControl], hold: const [LuminaKey.keyW]);
-    await phase('run', 3.0, tap: const [LuminaKey.keyLeftControl], hold: const [LuminaKey.keyW], mouseX: 1.5);
-    await phase('sprint', 3.0, hold: const [LuminaKey.keyW, LuminaKey.keyLeftShift]);
+    await phase('walk', 3.5, hold: const [LuminaKey.keyW]);
+    await phase('run', 3.5, hold: const [LuminaKey.keyW, LuminaKey.keyLeftShift], mouseX: 1.5);
+    await phase('sprint', 3.5, hold: const [LuminaKey.keyW, LuminaKey.keyLeftShift, LuminaKey.keyLeftControl]);
+    await phase('walk again', 3.5, hold: const [LuminaKey.keyW]);
     await phase('stop', 2.0);
     await phase('crouch walk', 3.0, tap: const [LuminaKey.keyC], hold: const [LuminaKey.keyW]);
     await phase('stand up', 1.0, tap: const [LuminaKey.keyC]);
     await phase('jump', 1.5, tap: const [LuminaKey.keySpace]);
-    await phase('running jump', 3.0, tap: const [LuminaKey.keySpace], hold: const [LuminaKey.keyW]);
+    await phase('running jump', 3.0, tap: const [LuminaKey.keySpace], hold: const [LuminaKey.keyW, LuminaKey.keyLeftShift]);
 
     final player = anim.motionMatching.player!;
     String median(List<int> v) {
@@ -123,21 +175,36 @@ void main() {
       'mm_search_us_max': '${player.maxSearchMicroseconds}',
       'mm_rows': '${player.database.index.rowCount}',
       for (final e in phaseSpeeds.entries) 'speed_${e.key.replaceAll(' ', '_')}': e.value.toStringAsFixed(0),
+      for (final e in phaseEndSpeeds.entries) 'end_speed_${e.key.replaceAll(' ', '_')}': e.value.toStringAsFixed(0),
+      for (final e in phaseLargestDrop.entries) 'largest_drop_${e.key.replaceAll(' ', '_')}': e.value.toStringAsFixed(1),
+      for (final (p, g) in const [('walk', 'Walk'), ('run', 'Run'), ('sprint', 'Sprint'), ('walk again', 'Walk')])
+        'gait_share_${p.replaceAll(' ', '_')}': '${(share(p, g) * 100).toStringAsFixed(0)}% $g',
+      for (final p in const ['walk', 'run', 'sprint', 'walk again']) 'late_clips_${p.replaceAll(' ', '_')}': lateClips(p),
       for (final e in phaseClips.entries) 'clips_${e.key.replaceAll(' ', '_')}': e.value.take(6).join(' '),
     };
     // ignore: avoid_print
     print(const JsonEncoder.withIndent('  ').convert({'metrics': metrics, 'states': phaseStates.map((k, v) => MapEntry(k, v.toList()))}));
 
     bool played(String phaseName, String part) => (phaseClips[phaseName] ?? const {}).any((c) => c.contains(part));
-    expect(played('walk', 'Walk'), isTrue, reason: '${phaseClips['walk']}');
-    expect(played('run', 'Run'), isTrue, reason: '${phaseClips['run']}');
-    expect(played('sprint', 'Sprint'), isTrue, reason: '${phaseClips['sprint']}');
     expect(played('crouch walk', 'Crouch'), isTrue, reason: '${phaseClips['crouch walk']}');
     expect(phaseStates['jump'], contains('Air'));
-    expect(phaseSpeeds['walk'], closeTo(GaspCharacterContent.walkSpeed, 10));
-    expect(phaseSpeeds['run'], closeTo(GaspCharacterContent.runSpeed, 10));
-    expect(phaseSpeeds['sprint'], closeTo(GaspCharacterContent.sprintSpeed, 10));
-    expect(phaseSpeeds['crouch walk'], closeTo(GaspCharacterContent.crouchSpeed, 10));
+    // No key walks, Shift runs, Shift + Ctrl sprints, releasing Shift walks.
+    expect(phaseSpeeds['walk'], closeTo(GaspCharacterContent.walkSpeed, 10), reason: 'walking is the default gait');
+    expect(phaseEndSpeeds['run'], closeTo(GaspCharacterContent.runSpeed, 10));
+    expect(phaseEndSpeeds['sprint'], closeTo(GaspCharacterContent.sprintSpeed, 10));
+    expect(phaseEndSpeeds['walk again'], closeTo(GaspCharacterContent.walkSpeed, 10));
+    expect(phaseLargestDrop['walk again'], lessThan(40.0), reason: 'sprint to walk eases over frames');
+    expect(phaseEndSpeeds['stop'], lessThan(5.0));
+    expect(phaseEndSpeeds['crouch walk'], closeTo(GaspCharacterContent.crouchSpeed, 10));
+    // The matched clips follow the gait: walk clips at walk speed.
+    for (final (p, g) in const [('walk', 'Walk'), ('run', 'Run'), ('sprint', 'Sprint'), ('walk again', 'Walk')]) {
+      expect(share(p, g), greaterThanOrEqualTo(0.9), reason: '$p: ${lateClips(p)}');
+    }
+    // Each gait has its Animation Blueprint state, which searches only its clips.
+    expect(phaseStates['walk'], {'Stand'});
+    expect(phaseStates['run'], contains('Run'));
+    expect(phaseStates['sprint'], contains('Sprint'));
+    expect(phaseStates['walk again'], contains('Stand'));
     SmokeArtifacts.saveVideo(name, video.finish(), usedAssets: usedAssets.toList());
   }, skip: skip, timeout: const Timeout(Duration(minutes: 20)));
 

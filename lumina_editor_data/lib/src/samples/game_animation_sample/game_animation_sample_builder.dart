@@ -221,6 +221,47 @@ class GameAnimationSampleBuilder {
     );
   }
 
+  /// Rewrites only the gameplay content of a project [build] made: the
+  /// character, its Animation Blueprint, the game mode, the project's input
+  /// and its generated input code, and the databases' gait tags
+  /// ([GaspDatabases.withGaitTags]; a retagged database's `.posedb` is
+  /// rebuilt). Clips and the level stay as they are, so a change to the
+  /// character's controls needs no re-import.
+  Future<void> updateCharacter() async {
+    if (!await File('$projectDir/$meshAssetPath').exists()) {
+      throw FileSystemException('No skeletal mesh asset', '$projectDir/$meshAssetPath');
+    }
+    await _retagDatabases();
+    await _writeCharacter();
+    final manifest = await Directory(projectDir).list().firstWhere((e) => e is File && e.path.endsWith('.lmproject')) as File;
+    final project = LuminaProject.fromMap(Map<String, dynamic>.from(jsonDecode(await manifest.readAsString()) as Map));
+    await manifest.writeAsString(jsonEncode(project
+        .copyWith(input: GaspCharacterContent.input, lastModifiedTimestamp: DateTime.now().toIso8601String())
+        .toMap()));
+    DartCodeGeneratorService().writeProjectInputDart(projectDir, GaspCharacterContent.input);
+    _log('Updated the character, its input and the generated input code');
+  }
+
+  Future<void> _retagDatabases() async {
+    Uint8List? meshGlb;
+    for (final plan in GaspDatabases.plans) {
+      final path = GaspCharacterContent.databasePath(meshAssetPath, plan.name);
+      final file = File('$projectDir/$path');
+      if (!await file.exists()) continue;
+      final asset = LuminaAsset.fromBytes(await file.readAsBytes());
+      final text = asset.rawMatSource.isNotEmpty ? asset.rawMatSource : utf8.decode(asset.rawPayload ?? Uint8List(0));
+      final doc = LuminaPoseSearchDatabaseDocument.fromJson(Map<String, dynamic>.from(jsonDecode(text) as Map));
+      final tagged = GaspDatabases.withGaitTags(doc);
+      if (jsonEncode(tagged.toJson()) == jsonEncode(doc.toJson())) continue;
+      await _writeDocument(path, AssetType.poseSearchDatabase, tagged.toJson(), meshAssetPath);
+      if (tagged.clips.isEmpty) continue;
+      meshGlb ??= await File('$projectDir/${meshAssetPath.replaceAll(RegExp(r'\.lmas$'), '.entity.glb')}').readAsBytes();
+      final built = await LuminaPoseSearchBuilder.buildInBackground(meshGlb, tagged);
+      await File('$projectDir/${LuminaPoseSearchDatabaseRuntime.cachePathOf(path)}').writeAsBytes(built.cache);
+      _log('${plan.name}: retagged, ${built.stats.rows} rows rebuilt');
+    }
+  }
+
   Future<void> _writeClips(GaspImportOutcome outcome, File meshLmas, File meshGlbFile) async {
     final mesh = LuminaAsset.fromBytes(await meshLmas.readAsBytes());
     await meshGlbFile.writeAsBytes(outcome.meshGlb);

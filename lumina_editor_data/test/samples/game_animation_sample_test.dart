@@ -75,6 +75,19 @@ End Object''';
       expect(missing, contains('PSD_Dense_Stand_Idles'), reason: 'source databases the export lacks are reported');
     });
 
+    test('idle clips carry every standing gait tag, so a search filtered by gait can still stop and stand', () {
+      const doc = LuminaPoseSearchDatabaseDocument(targetMesh: 'm', clips: [
+        LuminaPoseSearchClip('Stand_Idle', loop: true, tags: ['Idle', 'Loops']),
+        LuminaPoseSearchClip('Walk_Start', tags: ['Walk', 'Starts']),
+        LuminaPoseSearchClip('Transition_Walk_to_Sprint', tags: ['Sprint', 'Loops']),
+      ]);
+      final tagged = GaspDatabases.withGaitTags(doc);
+      expect(tagged.clips[0].tags, ['Idle', 'Loops', 'Walk', 'Run', 'Sprint']);
+      expect(tagged.clips[1].tags, ['Walk', 'Starts']);
+      expect(tagged.clips[2].tags, ['Sprint', 'Loops'], reason: 'a walk-to-sprint transition belongs to the sprint gait');
+      expect(GaspDatabases.withGaitTags(tagged).clips[0].tags, tagged.clips[0].tags, reason: 'applying it twice changes nothing');
+    });
+
     test('the export lists FBX clips by folder and keeps the first of two clips with one name', () {
       const root = 'C:/export';
       final files = [
@@ -170,7 +183,7 @@ End Object''';
   group('character', () {
     const mesh = 'contents/meshes/skeletal/SK_Test.lmas';
 
-    test('the Animation Blueprint validates with the four databases and switches stance by the pawn', () {
+    test('the Animation Blueprint validates with the four databases and switches stance and gait by the pawn', () {
       final docs = {
         for (final plan in GaspDatabases.plans)
           GaspCharacterContent.databasePath(mesh, plan.name):
@@ -180,13 +193,24 @@ End Object''';
       final cls = LuminaAnimBlueprintClass.fromDocument(abp, poseDatabases: docs);
       expect(cls.diagnostics.where((d) => d.isError), isEmpty, reason: '${cls.diagnostics}');
       final machine = abp.stateMachine!;
-      expect(machine.states.map((s) => s.name), ['Stand', 'Crouch', 'Air', 'Land']);
+      expect(machine.states.map((s) => s.name), ['Stand', 'Run', 'Sprint', 'Crouch', 'Air', 'Land']);
+      // One stand database; each gait state searches only its gait's clips.
+      List<String> tagsOf(String state) => machine.states.firstWhere((s) => s.name == state).pose.requiredTags;
+      expect(tagsOf('Stand'), ['Walk']);
+      expect(tagsOf('Run'), ['Run']);
+      expect(tagsOf('Sprint'), ['Sprint']);
+      final edges = {for (final t in machine.transitions) '${t.from}>${t.to}'};
+      expect(edges, containsAll(['Stand>Run', 'Stand>Sprint', 'Run>Stand', 'Run>Sprint', 'Sprint>Run', 'Sprint>Stand']));
+      for (final gait in ['Run', 'Sprint']) {
+        expect(edges, containsAll(['$gait>Air', '$gait>Crouch']), reason: '$gait jumps and crouches like Stand');
+      }
+      expect(abp.variables.map((v) => v.name), containsAll(['WantsRun', 'WantsSprint']));
       expect(machine.states.every((s) => s.pose.kind == LuminaAnimPoseKind.motionMatching), isTrue,
           reason: 'no root-motion clip is ever played by gltfio');
       expect(LuminaAnimBlueprintClass.fromDocument(abp).hasErrors, isTrue, reason: 'missing databases are reported');
     });
 
-    test('the character walks, runs, sprints and crouches at the sample gait speeds from the project input', () {
+    test('the character walks by default, runs with Shift, sprints with Shift+Ctrl and crouches at the sample gait speeds', () {
       final world = LuminaWorld(worldType: LuminaWorldType.game);
       world.subsystems.registerSubsystem<LuminaCollisionSubsystem>(LuminaCollisionSubsystem(), world);
       world.persistentLevel.registerActor(LuminaPrimitiveActor(
@@ -236,21 +260,37 @@ End Object''';
       tick(30);
       input.injectKeyDown(LuminaKey.keyW);
       tick(120);
-      expect(speed(), closeTo(GaspCharacterContent.runSpeed, 5), reason: 'run is the default gait');
-      tap(LuminaKey.keyLeftControl);
-      tick(120);
-      expect(speed(), closeTo(GaspCharacterContent.walkSpeed, 5), reason: 'Left Ctrl toggles walking');
-      tap(LuminaKey.keyLeftControl);
+      expect(speed(), closeTo(GaspCharacterContent.walkSpeed, 5), reason: 'walk is the default gait');
       input.injectKeyDown(LuminaKey.keyLeftShift);
-      tick(120);
-      expect(speed(), closeTo(GaspCharacterContent.sprintSpeed, 5), reason: 'held Left Shift sprints');
+      tick(150);
+      expect(speed(), closeTo(GaspCharacterContent.runSpeed, 5), reason: 'held Left Shift runs');
+      input.injectKeyDown(LuminaKey.keyLeftControl);
+      tick(150);
+      expect(speed(), closeTo(GaspCharacterContent.sprintSpeed, 5), reason: 'held Left Shift + Left Ctrl sprints');
+      input.injectKeyUp(LuminaKey.keyLeftControl);
+      tick(150);
+      expect(speed(), closeTo(GaspCharacterContent.runSpeed, 5), reason: 'releasing Left Ctrl runs again');
       input.injectKeyUp(LuminaKey.keyLeftShift);
+      input.injectKeyDown(LuminaKey.keyLeftControl);
+      // Releasing Shift slows down to the walk over frames, not in one step.
+      var last = speed();
+      var largestDrop = 0.0;
+      for (var f = 0; f < 150; f++) {
+        tick(1);
+        largestDrop = math.max(largestDrop, last - speed());
+        last = speed();
+      }
+      expect(speed(), closeTo(GaspCharacterContent.walkSpeed, 5), reason: 'Left Ctrl alone walks');
+      expect(largestDrop, lessThan(40.0), reason: 'run to walk eases over frames');
+      expect(largestDrop, greaterThan(0.0));
+      input.injectKeyUp(LuminaKey.keyLeftControl);
       tap(LuminaKey.keyC);
       tick(120);
       expect(speed(), closeTo(GaspCharacterContent.crouchSpeed, 5), reason: 'C toggles crouching');
       tap(LuminaKey.keyC);
       tick(120);
-      expect(speed(), closeTo(GaspCharacterContent.runSpeed, 5));
+      expect(speed(), closeTo(GaspCharacterContent.walkSpeed, 5));
+      expect(GaspCharacterContent.input.actions.map((a) => a.name), isNot(contains('IA_Walk')), reason: 'no walk toggle');
       input.injectKeyUp(LuminaKey.keyW);
       tap(LuminaKey.keySpace);
       expect(character.characterMovement.isFalling, isTrue, reason: 'Space jumps');

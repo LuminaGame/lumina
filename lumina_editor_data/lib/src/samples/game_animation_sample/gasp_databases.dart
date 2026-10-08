@@ -80,12 +80,25 @@ abstract final class GaspDatabases {
     ],
   );
 
+  /// The standing gaits; the Animation Blueprint searches the stand
+  /// database with one of them as its required tag.
+  static const List<String> gaits = ['Walk', 'Run', 'Sprint'];
+
+  /// [doc] with every `Idle` clip also tagged with each of [gaits]: a
+  /// search limited to one gait can then still stop and stand. Applying it
+  /// twice changes nothing.
+  static LuminaPoseSearchDatabaseDocument withGaitTags(LuminaPoseSearchDatabaseDocument doc) => doc.copyWith(clips: [
+        for (final c in doc.clips)
+          c.tags.contains('Idle') ? c.copyWith(tags: [...c.tags, ...gaits.where((g) => !c.tags.contains(g))]) : c,
+      ]);
+
   /// Whether the clip loops: the sample's loops say so in their names.
   static bool loops(String clip) => clip.contains('_Loop') || clip.endsWith('Loop');
 
   /// [plan] as a database document for [targetMesh]: every clip of its
   /// source databases that [available] has (once; the first source wins),
-  /// tagged with the source's gait tag and its own tags, the source's
+  /// tagged with the source's gait tag and its own tags (idle clips with
+  /// every gait too, see [withGaitTags]), the source's
   /// looping cost bias on loops as the clip's bias, and its sampling range.
   ///
   /// The sample's base cost biases are left out: they rank a database
@@ -128,13 +141,13 @@ abstract final class GaspDatabases {
       }
     }
     return (
-      LuminaPoseSearchDatabaseDocument(
+      withGaitTags(LuminaPoseSearchDatabaseDocument(
         targetMesh: targetMesh,
         clips: clips,
         schema: schema,
         // The sample's biases are per database (on the clips above).
         loopingCostBias: 0.0,
-      ),
+      )),
       missing,
     );
   }
