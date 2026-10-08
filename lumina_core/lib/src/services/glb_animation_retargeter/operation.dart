@@ -164,69 +164,45 @@ abstract final class _RetargetOperation {
       source: 'ANIMATION RETARGETING',
     );
 
-    // Precompute arm bone alignment (source arm direction -> target arm direction).
-    // This allows A-Pose <-> T-Pose retargeting without folding arms or twisting elbows.
-    final armAlign = <int, _Quat>{};
-    for (final entry in mapped.entries) {
-      final tgtJoint = entry.key;
-      final srcJoint = entry.value;
-      final name = tgt.names[tgtJoint];
-      if (!GlbAnimationRetargeter._isArmBone(name)) continue;
-
-      final vTgt = tgt.boneDirection(tgtJoint);
-      final vSrc = src.boneDirection(srcJoint);
-      if (vTgt != null && vSrc != null) {
-        armAlign[tgtJoint] = _Quat.fromTo(vSrc, vTgt);
+    // Forearm twist bones the clip does not animate roll with the hand, each
+    // by its share of the forearm length (0 at the elbow, 1 at the wrist).
+    // Other twist bones ride rigidly on their limb.
+    final forearmTwists = <({int bone, int forearm, int hand, double share})>[];
+    for (final j in joints) {
+      final match = RegExp(
+        r'^lowerarm_twist_\d+_([lr])$',
+      ).firstMatch(tgt.names[j]?.toLowerCase() ?? '');
+      if (soma || match == null || mapped.containsKey(j)) continue;
+      final side = match.group(1);
+      final forearm = tgt.parent[j];
+      final hand = tgt.names.indexWhere(
+        (n) => n?.toLowerCase() == 'hand_$side',
+      );
+      if (forearm < 0 ||
+          hand < 0 ||
+          tgt.parent[hand] != forearm ||
+          tgt.names[forearm]?.toLowerCase() != 'lowerarm_$side') {
+        continue;
       }
+      final elbow = tgt.restWorldPos(forearm);
+      final wrist = tgt.restWorldPos(hand);
+      final at = tgt.restWorldPos(j);
+      final axis = [for (var c = 0; c < 3; c++) wrist[c] - elbow[c]];
+      final lengthSq =
+          axis[0] * axis[0] + axis[1] * axis[1] + axis[2] * axis[2];
+      if (lengthSq < 1e-12) continue;
+      final along =
+          [
+            for (var c = 0; c < 3; c++) (at[c] - elbow[c]) * axis[c],
+          ].reduce((a, b) => a + b) /
+          lengthSq;
+      forearmTwists.add((
+        bone: j,
+        forearm: forearm,
+        hand: hand,
+        share: along.clamp(0.0, 1.0),
+      ));
     }
-
-    // Propagate forearm alignment to hands and fingers so wrists and fingers follow the arm direction cleanly
-    for (final j in mapped.keys) {
-      final name = tgt.names[j]?.toLowerCase() ?? '';
-      if (name.contains('hand') ||
-          name.contains('wrist') ||
-          name.contains('thumb') ||
-          name.contains('index') ||
-          name.contains('middle') ||
-          name.contains('ring') ||
-          name.contains('pinky')) {
-        var p = tgt.parent[j];
-        while (p >= 0) {
-          if (armAlign.containsKey(p)) {
-            armAlign[j] = armAlign[p]!;
-            break;
-          }
-          p = tgt.parent[p];
-        }
-      }
-    }
-
-    // Twist distribution for skeletons with compatible reference axes.
-    const twistRules = [
-      (bone: 'upperarm_twist_01_l', driver: 'upperarm_l', weight: -2.0 / 3.0),
-      (bone: 'upperarm_twist_02_l', driver: 'upperarm_l', weight: -1.0 / 3.0),
-      (bone: 'upperarm_twist_01_r', driver: 'upperarm_r', weight: -2.0 / 3.0),
-      (bone: 'upperarm_twist_02_r', driver: 'upperarm_r', weight: -1.0 / 3.0),
-      (bone: 'lowerarm_twist_01_l', driver: 'lowerarm_l', weight: 1.0 / 3.0),
-      (bone: 'lowerarm_twist_02_l', driver: 'lowerarm_l', weight: 2.0 / 3.0),
-      (bone: 'lowerarm_twist_01_r', driver: 'lowerarm_r', weight: 1.0 / 3.0),
-      (bone: 'lowerarm_twist_02_r', driver: 'lowerarm_r', weight: 2.0 / 3.0),
-      (bone: 'thigh_twist_01_l', driver: 'thigh_l', weight: -0.5),
-      (bone: 'calf_twist_01_l', driver: 'calf_l', weight: 0.5),
-      (bone: 'thigh_twist_01_r', driver: 'thigh_r', weight: -0.5),
-      (bone: 'calf_twist_01_r', driver: 'calf_r', weight: 0.5),
-    ];
-
-    final activeTwistRules = <({int bone, int driver, double weight})>[];
-    for (final r in soma ? const [] : twistRules) {
-      final bIdx = tgt.names.indexWhere((n) => n?.toLowerCase() == r.bone);
-      final dIdx = tgt.names.indexWhere((n) => n?.toLowerCase() == r.driver);
-      if (bIdx >= 0 && dIdx >= 0 && joints.contains(bIdx)) {
-        activeTwistRules.add((bone: bIdx, driver: dIdx, weight: r.weight));
-      }
-    }
-
-    final hasDynamicChannels = <int>{...mapped.keys};
 
     // Check whether the target skeleton shares the bone axis convention
     // and rest pose orientation of the source skeleton.
@@ -248,31 +224,16 @@ abstract final class _RetargetOperation {
       return angle > (45.0 * math.pi / 180.0);
     });
 
-    final tgtRestAligned = List<_Quat>.generate(tgt.count, (j) {
-      final s = mapped[j];
-      if (s == null) return tgtRestWorld[j];
-      String? targetChild;
-      String? sourceChild;
-      if (soma) {
-        for (final side in ['l', 'r']) {
-          final prefix = side == 'l' ? 'Left' : 'Right';
-          if (tgt.names[j] == 'upperarm_$side') {
-            targetChild = 'lowerarm_$side';
-            sourceChild = '${prefix}ForeArm';
-          } else if (tgt.names[j] == 'lowerarm_$side') {
-            targetChild = 'hand_$side';
-            sourceChild = '${prefix}Hand';
-          }
-        }
-      }
-      final vTgt = tgt.boneDirection(j, childName: targetChild);
-      final vSrc = src.boneDirection(s, childName: sourceChild);
-      if (vTgt != null && vSrc != null) {
-        final qAlign = _Quat.fromTo(vTgt, vSrc);
-        return (qAlign * tgtRestWorld[j]).normalized();
-      }
-      return tgtRestWorld[j];
-    });
+    // Skeletons with other bone axes take the clip's motion relative to the
+    // rest poses, where a clip's chest belongs on the target's top spine bone.
+    if (!soma && !sharesRestAxes) {
+      GlbAnimationRetargeter._mapTopSpine(tgt.names, mapped, srcByNameLower);
+    }
+    final hasDynamicChannels = <int>{...mapped.keys};
+
+    final tgtRestAligned = soma
+        ? _somaRestAligned(src, tgt, mapped, tgtRestWorld)
+        : _restAlignedByMappedJoints(src, tgt, mapped, tgtRestWorld);
 
     for (final t in frames) {
       for (final i in src.order) {
@@ -285,28 +246,23 @@ abstract final class _RetargetOperation {
         final parentWorld = p < 0 ? _Quat.identity : tgtWorld[p];
         final s = mapped[j];
         if (s != null) {
-          final isArm = GlbAnimationRetargeter._isArmBone(tgt.names[j]);
           if (soma) {
             // Both model spaces are glTF Y-up. Arm segments must first match
             // the source reference direction to transfer T-pose motion to an
             // A-pose target without adding the reference angle to each bend.
+            final isArm = GlbAnimationRetargeter._isArmBone(tgt.names[j]);
             final delta = (srcWorld[s] * srcRestWorld[s].inverse())
                 .normalized();
             final reference = isArm ? tgtRestAligned[j] : tgtRestWorld[j];
             tgtWorld[j] = (delta * reference).normalized();
-          } else if (isArm && armAlign.containsKey(j)) {
-            // A-Pose <-> T-Pose alignment:
-            // Delta rotation authored relative to source rest orientation,
-            // rotated into target arm frame via armAlign, then applied to target rest orientation.
-            final qAlign = armAlign[j]!;
-            final deltaSrc = (srcWorld[s] * srcRestWorld[s].inverse())
-                .normalized();
-            final deltaTgt = (qAlign * deltaSrc * qAlign.inverse())
-                .normalized();
-            tgtWorld[j] = (deltaTgt * tgtRestWorld[j]).normalized();
           } else if (sharesRestAxes) {
             tgtWorld[j] = (rootAlign * srcWorld[s]).normalized();
           } else {
+            // The clip's model-space motion away from its rest pose, applied
+            // to the target rest pose turned to point its bones like the
+            // clip's rest bones: every mapped bone then points where the
+            // clip's bone points, whatever the two rest poses (A or T) and
+            // bone axis conventions are.
             final delta = (srcWorld[s] * srcRestWorld[s].inverse())
                 .normalized();
             tgtWorld[j] = (delta * tgtRestAligned[j]).normalized();
@@ -321,26 +277,26 @@ abstract final class _RetargetOperation {
         }
       }
 
-      // Evaluate active twist bones for the frame
-      for (final rule in activeTwistRules) {
-        final bIdx = rule.bone;
-        final dIdx = rule.driver;
-        final p = tgt.parent[bIdx];
-        if (p < 0) continue;
-        final parentWorld = tgtWorld[p];
-
-        final driverDelta = (tgtWorld[dIdx] * tgtRestWorld[dIdx].inverse())
+      for (final twist in forearmTwists) {
+        // The hand's roll about the forearm: the hand's rotation away from
+        // riding rigidly on the forearm, twist part about the forearm axis.
+        final forearmWorld = tgtWorld[twist.forearm];
+        final rigidHand = forearmWorld * tgt.restR[twist.hand];
+        final handOffset = (tgtWorld[twist.hand] * rigidHand.inverse())
             .normalized();
-        final axis = tgt.boneDirection(dIdx) ?? const [1.0, 0.0, 0.0];
-        final (_, twist) = _Quat.swingTwist(driverDelta, axis);
-        final twistShare = twist.scaled(rule.weight);
-
-        tgtWorld[bIdx] = (twistShare * tgtRestWorld[bIdx]).normalized();
-        if (joints.contains(bIdx) && rotOut[bIdx]!.isNotEmpty) {
-          rotOut[bIdx]!.last = (parentWorld.inverse() * tgtWorld[bIdx])
-              .normalized();
-        }
-        hasDynamicChannels.add(bIdx);
+        final axis = forearmWorld.rotateVector(tgt.restT[twist.hand]);
+        final length = GlbAnimationRetargeter._length(axis);
+        if (length < 1e-9) continue;
+        final (_, roll) = _Quat.swingTwist(handOffset, [
+          for (final c in axis) c / length,
+        ]);
+        final world =
+            (roll.scaled(twist.share) * forearmWorld * tgt.restR[twist.bone])
+                .normalized();
+        tgtWorld[twist.bone] = world;
+        rotOut[twist.bone]!.last = (forearmWorld.inverse() * world)
+            .normalized();
+        hasDynamicChannels.add(twist.bone);
       }
     }
 

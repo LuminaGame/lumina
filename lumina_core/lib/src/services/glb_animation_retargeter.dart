@@ -7,6 +7,7 @@ import 'package:lumina_core/src/services/engine_logger_service.dart';
 part 'glb_animation_retargeter/models.dart';
 part 'glb_animation_retargeter/pose_sampling.dart';
 part 'glb_animation_retargeter/soma_mapping.dart';
+part 'glb_animation_retargeter/rest_alignment.dart';
 part 'glb_animation_retargeter/operation.dart';
 
 /// Retargets skeletal animation across humanoid skeletons and appends it to
@@ -16,12 +17,17 @@ part 'glb_animation_retargeter/operation.dart';
 /// identical skeleton, this handles skeletons that differ in hierarchy and
 /// proportions and reference axes:
 ///
-/// - **Rotation only.** Every matched bone takes the clip bone's rotation in
-///   model space (the clip's forward kinematics); its local rotation follows
-///   from its target parent. Skeleton bones the clip lacks keep their rest
-///   rotation relative to their parent. Both skeletons must share the bone
-///   axis convention and model space — true for glTF exported by Unreal and
-///   for FBX normalized by `FbxImportService` (both Y up, facing +Z).
+/// - **Rotation only.** Skeleton bones the clip lacks keep their rest
+///   rotation relative to their parent. When both skeletons share their bone
+///   axis convention, every mapped bone takes the clip bone's rotation in
+///   model space. Otherwise each mapped bone takes the clip bone's
+///   model-space motion away from its rest pose, applied to the target rest
+///   pose; limb bones first turn that rest to lie like the clip's rest bone
+///   (A-pose onto T-pose and back), while the trunk and clavicles keep the
+///   target's own rest. Both model spaces must be Y up, facing +Z (glTF
+///   exported by Unreal or Blender, FBX normalized by `FbxImportService`).
+///   Unanimated twist bones ride on their limb; forearm twist bones also roll
+///   with the hand.
 /// - **Translations come from the target skeleton**, except the skeleton root
 ///   (copied: root motion and placement) and the pelvis (copied, scaled by the
 ///   target's leg length over the clip's).
@@ -230,6 +236,38 @@ abstract final class GlbAnimationRetargeter {
       }
     }
     return null;
+  }
+
+  static final RegExp _spineName = RegExp(r'^spine_0*(\d+)$');
+
+  /// A target with more numbered spine bones than the clip (`spine_01` to
+  /// `spine_05` against `spine_01` to `spine_03`) takes the clip's top spine
+  /// bone, the chest, on its own top spine bone; the spine bones in between
+  /// ride on the one below. Mapped by number instead, the clip's chest bend
+  /// would turn the whole upper back.
+  static void _mapTopSpine(List<String?> targetNames, Map<int, int> mapped, Map<String, int> srcByNameLower) {
+    int top(Iterable<String> names) => names.fold(0, (m, n) {
+      final number = int.tryParse(_spineName.firstMatch(n)?.group(1) ?? '');
+      return number != null && number > m ? number : m;
+    });
+    final sourceTop = top(srcByNameLower.keys);
+    final targetSpines = <int, int>{};
+    for (final j in mapped.keys) {
+      final number = int.tryParse(_spineName.firstMatch(targetNames[j]?.toLowerCase() ?? '')?.group(1) ?? '');
+      if (number != null) targetSpines[number] = j;
+    }
+    for (var j = 0; j < targetNames.length; j++) {
+      final number = int.tryParse(_spineName.firstMatch(targetNames[j]?.toLowerCase() ?? '')?.group(1) ?? '');
+      if (number != null) targetSpines.putIfAbsent(number, () => j);
+    }
+    final targetTop = targetSpines.keys.fold(0, math.max);
+    if (sourceTop < 2 || targetTop <= sourceTop) return;
+    final chest = srcByNameLower.entries.firstWhere((e) => int.tryParse(_spineName.firstMatch(e.key)?.group(1) ?? '') == sourceTop).value;
+    for (var n = sourceTop; n < targetTop; n++) {
+      final j = targetSpines[n];
+      if (j != null) mapped.remove(j);
+    }
+    mapped[targetSpines[targetTop]!] = chest;
   }
 
   static GlbSkeletonMatch matchNames(Set<String> targetJoints, Set<String> animated) {

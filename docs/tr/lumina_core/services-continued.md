@@ -250,12 +250,16 @@ Nötr gövde ve bacak konumları korunur; nötr kollar kaynak referans yönünü
 taşımayan eski GEM-X çıktıları yeniden üretim mesajıyla reddedilir.
 
 Uygulama `glb_animation_retargeter/models.dart`, `operation.dart`,
-`pose_sampling.dart` ve `soma_mapping.dart` dosyalarına ayrılmıştır. Genel giriş
+`pose_sampling.dart`, `rest_alignment.dart` ve `soma_mapping.dart` dosyalarına ayrılmıştır. Genel giriş
 noktası `GlbAnimationRetargeter.retargetInto` olarak kalır.
 
 Unlike [GlbAnimationMerger], which copies channels verbatim onto an identical skeleton, this handles skeletons that differ in hierarchy and proportions (UE5's spine_04/05, neck_02 and metacarpals have no UE4 counterpart):
 
-- **Rotation only.** Her eşleşen kemik, model uzayında klip kemiğinin rotasyonunu alır (klibin ileri kinematiği); yerel rotasyonu hedef ebeveyninden türetilir. Klibin eksik olduğu iskelet kemikleri ebeveynlerine göre rest rotasyonlarını korur. Rest pozları farklı olduğunda (örneğin kolların aşağı eğimli olduğu MetaHuman iskeletlerinde kaynak T-pose ile hedef A-pose farkı), hedef kemik rest yönelimleri kaynak rest yönlerine hizalanır; böylece animasyon deltaları rest açılarını katlamadan ve kollar/bacaklar çaprazlanmadan aktarılır. - **Translations come from the target skeleton**, iskelet kökü (kopyalanır: root motion ve yerleşim) ve pelvis (kopyalanır, hedefin bacak uzunluğunun klibinkine oranıyla ölçeklenir) hariç hedeften gelir. Klip kemik ötelemeleri haricinde yok sayılır.
+- **Yalnızca rotasyon.** Klibin eksik olduğu iskelet kemikleri ebeveynlerine göre rest rotasyonlarını korur. Eşleşen kemikler, iki iskeletin kemik eksen kuralını paylaşıp paylaşmadığına bağlıdır (rest pozunda pelvis, spine_01 ve uyluklar 45° içinde):
+  - **Ortak eksenler** (UE4 → UE5 manken): her eşleşen kemik, kollar dahil, klip kemiğinin model uzayı rotasyonunu alır; uyumlu iskeletler klibin yönelimlerini birebir korur.
+  - **Farklı eksenler veya rest pozları** (Blender'dan dışa aktarılmış Superhero, kemik boyunca Y ve T-poz kollar; Manny veya MetaHuman'a, kemik boyunca X ve A-poz kollar): her eşleşen kemik, klip kemiğinin rest pozundan model uzayındaki hareketini hedef rest pozuna uygular. Uzuv kemikleri (üst koldan ve uyluktan aşağısı, eller, parmaklar) önce hedef rest pozlarını klibin rest kemiği gibi uzanacak şekilde döndürür; bu, en yakın eşleşen alt kemikleri ve onların eşlendiği klip eklemleriyle ölçülür (hepsine en iyi uyum: el, parmaklarına göre). Böylece her uzuv parçası klibin parçasının gösterdiği yöne bakar. Gövde (pelvis, omurga, boyun, baş) ve köprücük kemikleri hedefin kendi rest pozunu korur; göğüs ve baş karakterin yapısını korur. Klipten daha fazla numaralı omurga kemiği olan hedef, klibin en üst omurga kemiğini (göğüs) kendi en üst omurga kemiğine alır (`spine_03` karşısında `spine_05`); aradaki omurga kemikleri alttakine bağlı kalır.
+  - Klibin canlandırmadığı twist kemikleri uzuvlarıyla birlikte hareket eder; ön kol twist kemikleri (`lowerarm_twist_NN_l/r`) ayrıca ön kol uzunluğundaki paylarıyla elin dönüşüyle birlikte döner.
+- **Translations come from the target skeleton**, iskelet kökü (kopyalanır: root motion ve yerleşim) ve pelvis (kopyalanır, hedefin bacak uzunluğunun klibinkine oranıyla ölçeklenir) hariç hedeften gelir. Klip kemik ötelemeleri haricinde yok sayılır.
 
 Gövde kemiklerine dinamik veya sabit dönüş/konum kanalları yazılır. Eşleşmeyen yüz ve düzeltici kemikler hariç tutulur; gövde klibi bu kemiklerin yerel referans dönüşlerini korur.
 

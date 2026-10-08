@@ -252,12 +252,16 @@ direction. Older GEM-X exports without that reference
 are refused with a regeneration message.
 
 The implementation is divided into `glb_animation_retargeter/models.dart`,
-`operation.dart`, `pose_sampling.dart` and `soma_mapping.dart`; the public entry
+`operation.dart`, `pose_sampling.dart`, `rest_alignment.dart` and `soma_mapping.dart`; the public entry
 point remains `GlbAnimationRetargeter.retargetInto`.
 
 Unlike [GlbAnimationMerger], which copies channels verbatim onto an identical skeleton, this handles skeletons that differ in hierarchy and proportions (UE5's spine_04/05, neck_02 and metacarpals have no UE4 counterpart):
 
-- **Rotation only.** Every matched bone takes the clip bone's rotation in model space (the clip's forward kinematics); its local rotation follows from its target parent. Skeleton bones the clip lacks keep their rest rotation relative to their parent. When rest poses differ (e.g. source T-pose vs target A-pose, such as MetaHuman skeletons where arms slant downward), target bone rest orientations are aligned to source rest directions so animation deltas transfer without compounding rest angles or crossing limbs. - **Translations come from the target skeleton**, except the skeleton root (copied: root motion and placement) and the pelvis (copied, scaled by the target's leg length over the clip's). Clip bone translations are otherwise ignored: an Unreal FBX carries the authoring skeleton's proportions in them.
+- **Rotation only.** Skeleton bones the clip lacks keep their rest rotation relative to their parent. Mapped bones depend on whether the two skeletons share their bone axis convention (pelvis, spine_01 and thighs within 45° at rest):
+  - **Shared axes** (UE4 → UE5 mannequin): every mapped bone takes the clip bone's model-space rotation, arms included, so compatible skeletons keep the clip's orientations exactly.
+  - **Other axes or rest poses** (the Blender-exported Superhero, Y along each bone and T-pose arms, onto Manny or a MetaHuman, X along each bone and A-pose arms): each mapped bone takes the clip bone's model-space motion away from its rest pose, applied to the target rest. Limb bones (from the upper arm and the thigh down, hands, fingers) first turn their target rest to lie like the clip's rest bone, measured by their nearest mapped descendants and the clip joints those map to (best fit over all of them: a hand over its fingers), so every limb segment points where the clip's segment points. The trunk (pelvis, spine, neck, head) and the clavicles keep the target's own rest, so the chest and head keep the character's build. A target with more numbered spine bones than the clip takes the clip's top spine bone (the chest) on its own top spine bone (`spine_05` against `spine_03`); the spine bones in between ride on the one below.
+  - Twist bones the clip does not animate ride on their limb; forearm twist bones (`lowerarm_twist_NN_l/r`) also roll with the hand by their share of the forearm length.
+- **Translations come from the target skeleton**, except the skeleton root (copied: root motion and placement) and the pelvis (copied, scaled by the target's leg length over the clip's). Clip bone translations are otherwise ignored: an Unreal FBX carries the authoring skeleton's proportions in them.
 
 Body joints receive dynamic or constant rotation/translation channels. Unmapped facial and corrective joints are excluded so body clips preserve their local reference transforms.
 

@@ -112,6 +112,68 @@ class _Quat {
     return _Quat(axis[0] / s, axis[1] / s, axis[2] / s, s / 2.0).normalized();
   }
 
+  /// The rotation that best turns each direction of [from] onto the matching
+  /// direction of [to] (least squares over unit directions, Horn's
+  /// quaternion method). One pair, or pairs that are all parallel, give the
+  /// shortest-arc rotation of their sums.
+  static _Quat bestFit(List<List<double>> from, List<List<double>> to) {
+    List<double> unit(List<double> v) {
+      final l = math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+      return l < 1e-9 ? const [0.0, 0.0, 0.0] : [v[0] / l, v[1] / l, v[2] / l];
+    }
+
+    final a = [for (final v in from) unit(v)];
+    final b = [for (final v in to) unit(v)];
+    List<double> sum(List<List<double>> vs) => [
+      for (var c = 0; c < 3; c++) vs.fold(0.0, (s, v) => s + v[c]),
+    ];
+    final fallback = fromTo(sum(a), sum(b));
+    // Planar spread of the source directions: below it the twist about
+    // their common direction is undetermined.
+    var spread = 0.0;
+    for (var i = 0; i < a.length; i++) {
+      for (var k = i + 1; k < a.length; k++) {
+        final x = a[i][1] * a[k][2] - a[i][2] * a[k][1];
+        final y = a[i][2] * a[k][0] - a[i][0] * a[k][2];
+        final z = a[i][0] * a[k][1] - a[i][1] * a[k][0];
+        spread = math.max(spread, math.sqrt(x * x + y * y + z * z));
+      }
+    }
+    if (a.length < 2 || spread < 0.1) return fallback;
+
+    final s = List.generate(3, (_) => List<double>.filled(3, 0));
+    for (var i = 0; i < a.length; i++) {
+      for (var r = 0; r < 3; r++) {
+        for (var c = 0; c < 3; c++) {
+          s[r][c] += a[i][r] * b[i][c];
+        }
+      }
+    }
+    final (xx, xy, xz) = (s[0][0], s[0][1], s[0][2]);
+    final (yx, yy, yz) = (s[1][0], s[1][1], s[1][2]);
+    final (zx, zy, zz) = (s[2][0], s[2][1], s[2][2]);
+    final shift = a.length.toDouble();
+    // Shifted so every eigenvalue is positive: power iteration then finds
+    // the largest, whose eigenvector (w, x, y, z) is the rotation.
+    final n = [
+      [xx + yy + zz + shift, yz - zy, zx - xz, xy - yx],
+      [yz - zy, xx - yy - zz + shift, xy + yx, zx + xz],
+      [zx - xz, xy + yx, -xx + yy - zz + shift, yz + zy],
+      [xy - yx, zx + xz, yz + zy, -xx - yy + zz + shift],
+    ];
+    var v = [fallback.w, fallback.x, fallback.y, fallback.z];
+    for (var it = 0; it < 500; it++) {
+      final next = [
+        for (var r = 0; r < 4; r++)
+          n[r][0] * v[0] + n[r][1] * v[1] + n[r][2] * v[2] + n[r][3] * v[3],
+      ];
+      final l = math.sqrt(next.fold(0.0, (s, e) => s + e * e));
+      if (l < 1e-12) return fallback;
+      v = [for (final e in next) e / l];
+    }
+    return _Quat(v[1], v[2], v[3], v[0]).normalized();
+  }
+
   /// Rotation part of a column-major matrix (unit scale assumed after
   /// normalizing the columns).
   static _Quat fromMatrix(List<double> m) {
