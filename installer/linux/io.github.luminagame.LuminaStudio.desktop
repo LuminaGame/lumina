@@ -4,13 +4,14 @@ Version=1.5
 Name=Lumina Studio
 GenericName=3D Game Engine Editor
 Comment=Create 3D games with the Lumina engine
-Exec=lumina-studio
+Exec=lumina-studio %F
 Icon=lumina-studio
 Terminal=false
 Categories=Development;IDE;Graphics;3DGraphics;
 Keywords=game;engine;3D;editor;filament;flutter;
 StartupNotify=true
 StartupWMClass=lumina_ui
+MimeType=model/gltf-binary;model/gltf+json;model/x-fbx;model/obj;
 Actions=update;
 
 [Desktop Action update]

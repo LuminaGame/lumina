@@ -22,7 +22,12 @@ G_DEFINE_TYPE(MyApplication, my_application, GTK_TYPE_APPLICATION)
 static gboolean is_plugin_process(MyApplication *self) {
   for (char **arg = self->dart_entrypoint_arguments; arg != nullptr && *arg;
        arg++) {
-    if (g_strcmp0(*arg, "--lumina-plugin-process") == 0) {
+    // `--lumina-thumbnail` (`ModelThumbnailCommand.flag`): a file
+    // manager's thumbnailer renders one model file without a window, on
+    // Filament's own headless swap chain; it needs the same windowless
+    // engine.
+    if (g_strcmp0(*arg, "--lumina-plugin-process") == 0 ||
+        g_strcmp0(*arg, "--lumina-thumbnail") == 0) {
       return TRUE;
     }
   }

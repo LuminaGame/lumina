@@ -14,9 +14,20 @@ namespace {
 // plugin's process part (`PluginProcessLaunch.flag` in Dart).
 constexpr char kPluginProcessFlag[] = "--lumina-plugin-process";
 
-bool IsPluginProcess(const std::vector<std::string>& arguments) {
-  return std::find(arguments.begin(), arguments.end(), kPluginProcessFlag) !=
+// The flag a file manager's thumbnailer starts the editor with to render one
+// model file's thumbnail (`ModelThumbnailCommand.flag` in Dart).
+constexpr char kThumbnailFlag[] = "--lumina-thumbnail";
+
+bool HasFlag(const std::vector<std::string>& arguments, const char* flag) {
+  return std::find(arguments.begin(), arguments.end(), flag) !=
          arguments.end();
+}
+
+// Both run windowless: a plugin process, and a thumbnail render (which draws
+// on Filament's own headless swap chain, never through Flutter).
+bool IsHeadless(const std::vector<std::string>& arguments) {
+  return HasFlag(arguments, kPluginProcessFlag) ||
+         HasFlag(arguments, kThumbnailFlag);
 }
 
 // A plugin process has no window: a headless engine runs the same Dart
@@ -57,11 +68,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
 
   std::vector<std::string> command_line_arguments =
       GetCommandLineArguments();
-  const bool plugin_process = IsPluginProcess(command_line_arguments);
+  const bool headless = IsHeadless(command_line_arguments);
 
   project.set_dart_entrypoint_arguments(std::move(command_line_arguments));
 
-  if (plugin_process) {
+  if (headless) {
     // Nothing is ever drawn: Impeller's startup (its GL context and worker
     // threads, about 25 MB and 60 threads) is skipped, and a laptop's
     // discrete GPU need not wake for the engine's GL display.

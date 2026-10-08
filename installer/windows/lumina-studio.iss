@@ -21,6 +21,16 @@
 ; passes ISCC /Slumina=<command> /DSignToolName=lumina. Setup.exe and the
 ; uninstaller it embeds are then both Authenticode-signed; without the define
 ; nothing is signed.
+;
+; 3D model files (the "modelfiles" task, on by default): .glb, .gltf, .fbx and
+; .obj get Lumina Studio in Explorer's "Open with" (OpenWithProgids and
+; Applications\lumina_ui.exe\SupportedTypes; the default program of those
+; types is never changed), and, when build.ps1 passes
+; /DThumbnailProviderDir=<dir> (thumbnail_provider\build.ps1 built it), a shell
+; thumbnail provider that renders them with the editor
+; ({app}\setup\shell\lumina_thumbnails.dll, registered under
+; SystemFileAssociations so a default program's own thumbnails keep priority).
+; All of it is per-user and removed on uninstall.
 
 #ifndef AppVersion
   #define AppVersion "0.0.0"
@@ -38,6 +48,13 @@
 #define AppName "Lumina Studio"
 #define AppExe "lumina_ui.exe"
 #define IconSource "..\..\lumina_ui\windows\runner\resources\app_icon.ico"
+; The ProgID "Open with" lists, and the thumbnail provider's class
+; (lumina_thumbnail_provider.cpp kClsid) and the shell's thumbnail handler
+; key, with "{{" because "{" opens an Inno Setup constant.
+#define ModelProgId "LuminaStudio.Model"
+#define ThumbnailClsid "{{4C2F5D1E-8A3B-4E7C-9D21-6B0A5F3E7C18}"
+#define ThumbnailHandler "{{e357fccd-a995-4576-b01f-234630154e96}"
+#define ProviderDll "lumina_thumbnails.dll"
 
 [Setup]
 AppId={{6C1F7E52-3B8A-4E0D-9A57-5D2C4B8E9F13}
@@ -66,6 +83,9 @@ WizardStyle=modern
 Compression=lzma2
 SolidCompression=yes
 ChangesEnvironment=yes
+; Explorer re-reads "Open with" and the thumbnail handlers after install and
+; uninstall.
+ChangesAssociations=yes
 CloseApplications=yes
 SetupLogging=yes
 ; Off: Windows hands the mitigation on to every process setup starts (the
@@ -85,10 +105,70 @@ Name: "turkish"; MessagesFile: "compiler:Languages\Turkish.isl"
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 Name: "ffmpeg"; Description: "Install FFmpeg (video encoding without GStreamer)"; GroupDescription: "Optional tools:"; Flags: unchecked
+#ifdef ThumbnailProviderDir
+Name: "modelfiles"; Description: "Add Lumina Studio to ""Open with"" for .glb, .gltf, .fbx and .obj files and show their 3D previews as thumbnails"; GroupDescription: "3D model files:"
+#else
+Name: "modelfiles"; Description: "Add Lumina Studio to ""Open with"" for .glb, .gltf, .fbx and .obj files"; GroupDescription: "3D model files:"
+#endif
 
 [Files]
 Source: "lumina-setup.ps1"; DestDir: "{app}\setup"; Flags: ignoreversion
 Source: "{#IconSource}"; DestDir: "{app}\setup"; DestName: "lumina-studio.ico"; Flags: ignoreversion
+#ifdef ThumbnailProviderDir
+  #ifdef SignToolName
+Source: "{#ThumbnailProviderDir}\{#ProviderDll}"; DestDir: "{app}\setup\shell"; Flags: ignoreversion sign; Tasks: modelfiles
+  #else
+Source: "{#ThumbnailProviderDir}\{#ProviderDll}"; DestDir: "{app}\setup\shell"; Flags: ignoreversion; Tasks: modelfiles
+  #endif
+#endif
+
+[Registry]
+; "Open with" for 3D model files: a ProgID listed under each extension's
+; OpenWithProgids, and the editor under Applications with its SupportedTypes.
+; No extension's default value is written: the default program stays.
+Root: HKA; Subkey: "Software\Classes\{#ModelProgId}"; ValueType: string; ValueName: ""; ValueData: "3D model"; Flags: uninsdeletekey; Tasks: modelfiles
+Root: HKA; Subkey: "Software\Classes\{#ModelProgId}\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\setup\lumina-studio.ico,0"; Tasks: modelfiles
+Root: HKA; Subkey: "Software\Classes\{#ModelProgId}\shell\open"; ValueType: string; ValueName: "FriendlyAppName"; ValueData: "{#AppName}"; Tasks: modelfiles
+Root: HKA; Subkey: "Software\Classes\{#ModelProgId}\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#AppExe}"" ""%1"""; Tasks: modelfiles
+Root: HKA; Subkey: "Software\Classes\Applications\{#AppExe}"; ValueType: string; ValueName: "FriendlyAppName"; ValueData: "{#AppName}"; Flags: uninsdeletekey; Tasks: modelfiles
+Root: HKA; Subkey: "Software\Classes\Applications\{#AppExe}\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\setup\lumina-studio.ico,0"; Tasks: modelfiles
+Root: HKA; Subkey: "Software\Classes\Applications\{#AppExe}\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#AppExe}"" ""%1"""; Tasks: modelfiles
+Root: HKA; Subkey: "Software\Classes\.glb"; Flags: uninsdeletekeyifempty; Tasks: modelfiles
+Root: HKA; Subkey: "Software\Classes\.glb\OpenWithProgids"; Flags: uninsdeletekeyifempty; Tasks: modelfiles
+Root: HKA; Subkey: "Software\Classes\.glb\OpenWithProgids"; ValueType: none; ValueName: "{#ModelProgId}"; Flags: uninsdeletevalue; Tasks: modelfiles
+Root: HKA; Subkey: "Software\Classes\Applications\{#AppExe}\SupportedTypes"; ValueType: string; ValueName: ".glb"; ValueData: ""; Tasks: modelfiles
+Root: HKA; Subkey: "Software\Classes\.gltf"; Flags: uninsdeletekeyifempty; Tasks: modelfiles
+Root: HKA; Subkey: "Software\Classes\.gltf\OpenWithProgids"; Flags: uninsdeletekeyifempty; Tasks: modelfiles
+Root: HKA; Subkey: "Software\Classes\.gltf\OpenWithProgids"; ValueType: none; ValueName: "{#ModelProgId}"; Flags: uninsdeletevalue; Tasks: modelfiles
+Root: HKA; Subkey: "Software\Classes\Applications\{#AppExe}\SupportedTypes"; ValueType: string; ValueName: ".gltf"; ValueData: ""; Tasks: modelfiles
+Root: HKA; Subkey: "Software\Classes\.fbx"; Flags: uninsdeletekeyifempty; Tasks: modelfiles
+Root: HKA; Subkey: "Software\Classes\.fbx\OpenWithProgids"; Flags: uninsdeletekeyifempty; Tasks: modelfiles
+Root: HKA; Subkey: "Software\Classes\.fbx\OpenWithProgids"; ValueType: none; ValueName: "{#ModelProgId}"; Flags: uninsdeletevalue; Tasks: modelfiles
+Root: HKA; Subkey: "Software\Classes\Applications\{#AppExe}\SupportedTypes"; ValueType: string; ValueName: ".fbx"; ValueData: ""; Tasks: modelfiles
+Root: HKA; Subkey: "Software\Classes\.obj"; Flags: uninsdeletekeyifempty; Tasks: modelfiles
+Root: HKA; Subkey: "Software\Classes\.obj\OpenWithProgids"; Flags: uninsdeletekeyifempty; Tasks: modelfiles
+Root: HKA; Subkey: "Software\Classes\.obj\OpenWithProgids"; ValueType: none; ValueName: "{#ModelProgId}"; Flags: uninsdeletevalue; Tasks: modelfiles
+Root: HKA; Subkey: "Software\Classes\Applications\{#AppExe}\SupportedTypes"; ValueType: string; ValueName: ".obj"; ValueData: ""; Tasks: modelfiles
+#ifdef ThumbnailProviderDir
+; The shell thumbnail provider: an in-process COM class (the shell runs it in
+; its isolated surrogate), the thumbnail handler of each type under
+; SystemFileAssociations.
+Root: HKA; Subkey: "Software\Classes\CLSID\{#ThumbnailClsid}"; ValueType: string; ValueName: ""; ValueData: "Lumina Studio 3D model thumbnail provider"; Flags: uninsdeletekey; Tasks: modelfiles
+Root: HKA; Subkey: "Software\Classes\CLSID\{#ThumbnailClsid}\InprocServer32"; ValueType: string; ValueName: ""; ValueData: "{app}\setup\shell\{#ProviderDll}"; Tasks: modelfiles
+Root: HKA; Subkey: "Software\Classes\CLSID\{#ThumbnailClsid}\InprocServer32"; ValueType: string; ValueName: "ThreadingModel"; ValueData: "Apartment"; Tasks: modelfiles
+Root: HKA; Subkey: "Software\Classes\SystemFileAssociations\.glb"; Flags: uninsdeletekeyifempty; Tasks: modelfiles
+Root: HKA; Subkey: "Software\Classes\SystemFileAssociations\.glb\ShellEx"; Flags: uninsdeletekeyifempty; Tasks: modelfiles
+Root: HKA; Subkey: "Software\Classes\SystemFileAssociations\.glb\ShellEx\{#ThumbnailHandler}"; ValueType: string; ValueName: ""; ValueData: "{#ThumbnailClsid}"; Flags: uninsdeletekey; Tasks: modelfiles
+Root: HKA; Subkey: "Software\Classes\SystemFileAssociations\.gltf"; Flags: uninsdeletekeyifempty; Tasks: modelfiles
+Root: HKA; Subkey: "Software\Classes\SystemFileAssociations\.gltf\ShellEx"; Flags: uninsdeletekeyifempty; Tasks: modelfiles
+Root: HKA; Subkey: "Software\Classes\SystemFileAssociations\.gltf\ShellEx\{#ThumbnailHandler}"; ValueType: string; ValueName: ""; ValueData: "{#ThumbnailClsid}"; Flags: uninsdeletekey; Tasks: modelfiles
+Root: HKA; Subkey: "Software\Classes\SystemFileAssociations\.fbx"; Flags: uninsdeletekeyifempty; Tasks: modelfiles
+Root: HKA; Subkey: "Software\Classes\SystemFileAssociations\.fbx\ShellEx"; Flags: uninsdeletekeyifempty; Tasks: modelfiles
+Root: HKA; Subkey: "Software\Classes\SystemFileAssociations\.fbx\ShellEx\{#ThumbnailHandler}"; ValueType: string; ValueName: ""; ValueData: "{#ThumbnailClsid}"; Flags: uninsdeletekey; Tasks: modelfiles
+Root: HKA; Subkey: "Software\Classes\SystemFileAssociations\.obj"; Flags: uninsdeletekeyifempty; Tasks: modelfiles
+Root: HKA; Subkey: "Software\Classes\SystemFileAssociations\.obj\ShellEx"; Flags: uninsdeletekeyifempty; Tasks: modelfiles
+Root: HKA; Subkey: "Software\Classes\SystemFileAssociations\.obj\ShellEx\{#ThumbnailHandler}"; ValueType: string; ValueName: ""; ValueData: "{#ThumbnailClsid}"; Flags: uninsdeletekey; Tasks: modelfiles
+#endif
 
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExe}"; WorkingDir: "{app}"; IconFilename: "{app}\setup\lumina-studio.ico"
@@ -201,11 +281,30 @@ begin
   Result := Code;
 end;
 
+// The thumbnail provider may be loaded by the shell's surrogate process: a
+// loaded DLL cannot be overwritten or deleted, but it can be renamed. Moved
+// aside into [Folder] it frees its own name; leftovers from earlier runs are
+// deleted once nothing holds them.
+procedure MoveProviderAside(const Folder: String);
+var
+  Dll: String;
+begin
+  Dll := ExpandConstant('{app}\setup\shell\{#ProviderDll}');
+  DelTree(AddBackslash(Folder) + 'lumina_thumbnails-*.old', False, True, False);
+  if FileExists(Dll) and not DeleteFile(Dll) then
+  begin
+    ForceDirectories(Folder);
+    RenameFile(Dll, AddBackslash(Folder) + 'lumina_thumbnails-' + GetDateTimeString('yyyymmddhhnnsszzz', #0, #0) + '.old');
+  end;
+end;
+
 procedure CurStepChanged(CurStep: TSetupStep);
 var
   Extra: String;
   Show: Integer;
 begin
+  if CurStep = ssInstall then
+    MoveProviderAside(ExpandConstant('{app}\setup\shell'));
   if CurStep <> ssPostInstall then
     Exit;
   Extra := '';
@@ -237,6 +336,8 @@ var
 begin
   if CurUninstallStep <> usUninstall then
     Exit;
+  // Out of {app}, so the folder goes even while the shell holds the DLL.
+  MoveProviderAside(ExpandConstant('{%TEMP}\LuminaThumbnails'));
   Extra := '-Uninstall';
   if FileExists(ExpandConstant('{localappdata}\Lumina\install-state.json')) and
     (SuppressibleMsgBox('Also remove the Flutter SDK that Lumina Studio installed in ' +

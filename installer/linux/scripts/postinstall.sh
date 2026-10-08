@@ -42,6 +42,18 @@ if [ -n "$user" ] && [ "$user" != root ] && getent passwd "$user" >/dev/null 2>&
   fi
 fi
 
+# -- 3D model files: the MIME types and the .desktop entry's MimeType
+# (dpkg / rpm triggers usually do this already; harmless twice)
+refresh_desktop_databases() {
+  if command -v update-mime-database >/dev/null 2>&1; then
+    update-mime-database /usr/share/mime >/dev/null 2>&1 || true
+  fi
+  if command -v update-desktop-database >/dev/null 2>&1; then
+    update-desktop-database -q /usr/share/applications >/dev/null 2>&1 || true
+  fi
+}
+refresh_desktop_databases
+
 share_with_group() {
   chgrp -R "$GROUP" "$1" 2>/dev/null || true
   chmod -R g+rwX "$1" 2>/dev/null || true

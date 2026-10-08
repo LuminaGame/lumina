@@ -365,6 +365,40 @@ Renders are serialized: callers may overlap, the engine never does.
 | `isFilamatPackage` | `static bool isFilamatPackage(Uint8List? bytes)` | Whether [bytes] is a compiled `.filamat` package: a `MAT_VERS` chunk of size 4. Filament aborts the process on anything else. |
 | `materialParameterValues` | `static Map<String, Object?> materialParameterValues(LuminaAsset material)` | The values a material instance starts with: the `.mat` header's `default :` entries, overridden by what the Material Editor saved in `metadata.parameter_defaults`. |
 
+## `lib/src/services/model_file_thumbnailer.dart`
+
+### `abstract final class ModelFileThumbnailer`
+
+Thumbnails of model files on disk that belong to no project: what a file manager shows for a `.glb`, `.gltf`, `.fbx` or `.obj` once Lumina Studio is installed. The file is turned into the GLB an import would make of it and drawn by [FilamentThumbnailRenderer], so it looks like the Content Browser's thumbnail of the same mesh.
+
+**Members:**
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `supportedExtensions` | `static const Set<String> supportedExtensions` | `.glb`, `.gltf`, `.fbx`, `.obj`: the types the thumbnailer and the editor's "Open with" handle. |
+| `supports` | `static bool supports(String path)` | Whether [path] has one of the [supportedExtensions] (any case). |
+| `loadGlb` | `static Future<Uint8List?> loadGlb(String path) async` | The GLB the renderer draws, converted as an import converts it: a `.glb` as it is (a truncated container is refused before it reaches the native loader), a `.gltf` packed with its buffers and images (a missing image drawn white, `GltfPacker.packFile(missingImage:)`), FBX and OBJ through Assimp; textures sanitised with the file's folder searched. Null when the file is missing, of another type or cannot be converted. |
+| `render` | `static Future<Uint8List?> render(String path, FilamentThumbnailRenderer renderer) async` | [path] rendered as a PNG, or null; a conversion error counts as "could not be loaded". |
+| `isCompleteGlb` | `static bool isCompleteGlb(Uint8List bytes)` | Whether [bytes] is a complete binary glTF container (header length matches, the JSON chunk fits). |
+
+### `class ModelThumbnailRequest`
+
+One `--lumina-thumbnail` invocation: `input`, `output`, `size` (default 256).
+
+### `abstract final class ModelThumbnailCommand`
+
+`lumina_ui --lumina-thumbnail <input> <output.png> [--size <px>]`: the installed editor run without a window to render one model file's thumbnail, for the file managers (the Windows shell thumbnail provider and the Linux `.thumbnailer` the installers register; see `installer/README.md`).
+
+**Members:**
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `flag` | `static const String flag` | `--lumina-thumbnail`; the runners start a windowless engine for it, as for a plugin process. |
+| `defaultSize` / `minSize` / `maxSize` | `static const int` | 256, 16, 1024 pixels. |
+| `exitOk` / `exitUsage` / `exitInput` / `exitRender` / `exitOutput` | `static const int` | 0; 64 bad arguments; 65 missing, unsupported or unreadable file; 70 the engine could not start or drew nothing; 73 the PNG could not be written (`sysexits.h`). |
+| `parse` | `static ({ModelThumbnailRequest? request, String? error}) parse(List<String> args)` | The request in the editor's argument list (positional arguments after the flag, `--size N` or `--size=N`), or a usage message. |
+| `run` | `static Future<int> run(ModelThumbnailRequest request, {Uint8List? ibl, void Function(String message)? log}) async` | Renders and writes the PNG through `<output>.tmp` (renamed when complete); [ibl] lights it like the editor's thumbnails. Returns the exit code. |
+
 ---
 
 [Previous: Data layer: use cases and services (continued, part 1)](services-continued.md) | [Up: lumina_editor_data (editor data layer)](index.md) | [Next: Data layer: use cases and services (continued, part 3)](services-continued-3.md)

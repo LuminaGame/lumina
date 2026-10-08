@@ -8,13 +8,15 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:lumina_core/lumina_core.dart';
-import 'package:lumina_editor_data/lumina_editor.dart' show EngineBootstrap, EngineLoggerService, LuminaMedia, LuminaRtxController, LuminaWidgets, PluginHostPatcherService;
+import 'package:lumina_editor_data/lumina_editor.dart' show EngineBootstrap, EngineLoggerService, LuminaMedia, LuminaRtxController, LuminaWidgets, ModelThumbnailCommand, PluginHostPatcherService;
 import 'package:lumina_editor_api/lumina_editor_api.dart';
 import 'package:path/path.dart' as p;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'package:lumina_ui/ui/core/host/editor_host.dart';
+import 'package:lumina_ui/ui/core/host/launch_model_files.dart';
+import 'package:lumina_ui/ui/core/host/model_thumbnail_entry.dart';
 import 'package:lumina_ui/ui/core/host/redirection_trust_guard.dart';
 import 'package:lumina_ui/ui/core/services/crash_reporter.dart';
 import 'package:lumina_ui/ui/core/services/plugin_process/plugin_process_entry.dart';
@@ -59,6 +61,12 @@ Future<void> runLuminaEditor(
     WidgetsFlutterBinding.ensureInitialized();
     exit(await runPluginProcessFromArgs(args, processes) ?? kPluginProcessUsageExit);
   }
+  // `--lumina-thumbnail <input> <output.png>`: a file manager asks for a
+  // model file's thumbnail. Windowless like a plugin process; the process
+  // exits with the command's code.
+  if (args.contains(ModelThumbnailCommand.flag)) {
+    exit(await runModelThumbnailEntry(args));
+  }
   // Started by a process that enforces Windows redirection trust (an
   // installer's finish page does), the editor and everything it runs could
   // not traverse the junctions of the engine checkout and projects: a copy
@@ -80,6 +88,9 @@ Future<void> runLuminaEditor(
   }
   LuminaEditorHost.info = host;
   LuminaEditorHost.args = EditorLaunchArgs.parse(args);
+  // Model files from a file manager's "Open with" (or a hand-off's
+  // `--import`): imported into the project that opens next.
+  LaunchModelFiles.pending.value = await LaunchModelFiles.resolve(args);
   // `--no-plugins` opens the project without its code plugins even in a
   // project editor (the escape hatch when a plugin breaks the editor).
   LuminaEditorHost.plugins = LuminaEditorHost.args.noPlugins ? const [] : plugins;

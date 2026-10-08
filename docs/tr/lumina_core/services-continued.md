@@ -283,7 +283,7 @@ The import pipeline stores a mesh's payload as GLB, so a `.gltf` is staged throu
 | :--- | :--- | :--- |
 | `externalUris` | `static List<String> externalUris(Map<String, dynamic> gltf)` | The relative file URIs (decoded, `/`-separated) [gltf] references: external buffers first, then images. `data:` URIs are left out. |
 | `referencedFiles` | `static List<String> referencedFiles(String gltfPath)` | The files [gltfPath] references, resolved beside it (they need not exist). |
-| `packFile` | `static Uint8List packFile(String gltfPath)` | [gltfPath] as GLB bytes: every buffer (external or `data:`) merged into the BIN chunk, every external or `data:` image moved into a buffer view. Throws a [FormatException] naming a referenced file that is missing. |
+| `packFile` | `static Uint8List packFile(String gltfPath, {Uint8List? missingImage})` | [gltfPath] GLB byte'ları olarak: her buffer (harici ya da `data:`) BIN chunk'ında birleşir, her harici ya da `data:` görsel bir buffer view'a taşınır. Eksik bir referans dosyasında onu adlandıran bir [FormatException] fırlatır; yalnızca [missingImage] verildiğinde eksik bir görsel dosyası bunun yerine bu byte'ları alır (dosya yöneticisi thumbnailer'ı, dokuları yanında kopyalanmamış bir modelin geometrisini yine de çizer; import bunu hiç vermez). |
 
 ## `lib/src/services/import_formats.dart`
 

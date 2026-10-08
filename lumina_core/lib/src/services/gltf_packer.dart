@@ -39,8 +39,10 @@ class GltfPacker {
   /// [gltfPath] as GLB bytes: every buffer (external or `data:`) merged into
   /// the BIN chunk, every external or `data:` image moved into a buffer
   /// view. Throws a [FormatException] naming a referenced file that is
-  /// missing.
-  static Uint8List packFile(String gltfPath) {
+  /// missing, except an image file when [missingImage] is given: that image
+  /// then gets these bytes instead (a preview draws the geometry of a model
+  /// whose textures were not copied along; an import never passes it).
+  static Uint8List packFile(String gltfPath, {Uint8List? missingImage}) {
     final name = _name(gltfPath);
     final decoded = jsonDecode(File(gltfPath).readAsStringSync());
     if (decoded is! Map<String, dynamic>) throw FormatException('$name is not a glTF document');
@@ -92,7 +94,9 @@ class GltfPacker {
     for (final image in (gltf['images'] as List? ?? const []).cast<Map<String, dynamic>>()) {
       final uri = image.remove('uri') as String?;
       if (uri == null) continue;
-      final bytes = readUri(uri, 'image');
+      final missing = missingImage != null && !uri.startsWith('data:') && !File('$dir/${_decode(uri)}').existsSync();
+      final bytes = missing ? missingImage : readUri(uri, 'image');
+      if (missing) image.remove('mimeType');
       align();
       final offset = bin.length;
       bin.add(bytes);

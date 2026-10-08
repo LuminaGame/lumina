@@ -35,6 +35,9 @@ paketindedir. Dosya yolları `lumina_ui/` paket dizinine görelidir.
   açıyordu). Eklenti `.so` dosyaları bağlı kalır, Linux'ta gecikmeli yükleme yoktur. WSLg altında (Mesa llvmpipe)
   release bir proje editöründe ölçülen: eklenti süreci başına yaklaşık 209 MB RSS / 77 MB özel kirli bellek ve 77 iş
   parçacığı; gizli bir `GtkApplicationWindow`, GL çizici ve kayıtlı eklentilerle 271 MB / 131 MB ve 142 iş parçacığıydı.
+- **Thumbnail kipi aynı yolu kullanır**: iki runner da `--lumina-thumbnail` (`ModelThumbnailCommand`) için aynı pencere
+  açmayan engine'i başlatır; bu kip dosya yöneticileri için bir model dosyasının thumbnail'ını Filament'in kendi
+  headless swap chain'inde çizer (bkz. [Launcher ve detaylar](launcher-and-details.md#dosya-yöneticisinden-açılan-model-dosyaları)).
 - **Linux'ta doğrulandı** (WSL2 + WSLg içinde Ubuntu 26.04, Flutter 3.47.5): `lumina_ui`'nin ve üç yalıtılmış eklentili
   bir proje editörünün `flutter build linux` derlemesi (debug ve release); `lumina_ui`, `lumina_editor_api` ve
   `lumina_plugin_protocol` eklenti süreci testleri; bilinmeyen bir eklenti adı yarım saniyenin altında 64 ile çıkar;

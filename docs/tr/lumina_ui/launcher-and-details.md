@@ -970,6 +970,26 @@ Editörü, onu açandan başka bir Lumina ile kurulmuş proje: "Update this proj
 | `show` | `static Future<ProjectEditorUpdateAnswer> show(BuildContext context, {required String projectName, required String fromLabel, required String toLabel}) async` | Diyaloğu gösterir; cevapsız kapatmak Cancel sayılır. |
 | `lumina` | `static String lumina(String label)` | "Lumina 0.0.1-dev.6", ya da olduğu gibi "an older engine". |
 
+## Dosya yöneticisinden açılan model dosyaları
+
+Installer'lar Lumina Studio'yu dosya yöneticilerinin `.glb`, `.gltf`, `.fbx` ve `.obj` için "Birlikte aç" menüsüne ekler ve bunlar için bir thumbnailer kaydeder (`installer/README.tr.md`, "3D model dosyaları").
+
+### `abstract final class LaunchModelFiles` (`lib/ui/core/host/launch_model_files.dart`)
+
+Editörün açılırken aldığı model dosyaları. `runLuminaEditor`, `pending`'i `resolve(args)` ile doldurur: `ModelFileThumbnailer.supportedExtensions` türünde (büyük/küçük harf fark etmez) var olan bir dosyayı adlandıran her konumsal argüman ve her `--import <path>` / `--import=<path>`; mutlak yol, her biri bir kez; `--project`, `--launcher-exe` ve `--size` değerleri atlanır. `handOffArguments(files)` dosya başına `--import <path>`'tir: `EditorHandOff.execProjectEditor` ve `restartThroughLauncher` bunu ekler, böylece kendi proje editöründe açılan bir proje dosyaları orada import eder. `take()` bekleyen dosyaları bir kez döndürür ve listeyi boşaltır.
+
+### `class PendingModelImportBanner` (`lib/ui/features/launcher/views/pending_model_import_banner.dart`)
+
+Dosyalar beklerken launcher'ın notu: "Open or create a project to import <adlar> into it.", yanında `LaunchModelFiles.pending`'i boşaltan "Don't import". Bekleyen dosya yoksa hiçbir şey gösterilmez. Projesiz bir modelin projesi olmadığından, kullanıcının sıradaki açtığı ya da oluşturduğu projeye import edilir.
+
+### `importLaunchModelFiles` (`lib/ui/features/main_editor/services/launch_model_import.dart`)
+
+`Future<void> importLaunchModelFiles(EditorViewModel viewModel)`: `MainEditorView`, bekleyen dosya varsa ilk frame'inden sonra çağırır. Dosyaları alır, arka plan import kuyruğuyla import eder (`importAssetFiles`, `contents/` altında otomatik düzenlenir; hataları import paneli ve Output Log bildirir) ve ilk import edilen asset'i kendi alt editöründe açar (`openAssetEditorByPath`).
+
+### `runModelThumbnailEntry` (`lib/ui/core/host/model_thumbnail_entry.dart`)
+
+`Future<int> runModelThumbnailEntry(List<String> args)`: `runLuminaEditor`, `--lumina-thumbnail`'ı her şeyden önce buraya verir (pencere, crash oturumu ya da bootstrap yok) ve onun koduyla çıkar. Graphics Device tercihini uygular, paketteki stüdyo IBL'ini yükler ve `ModelThumbnailCommand`'ı (`lumina_editor_data`) çalıştırır. Windows ve Linux runner'ları bu flag için `--lumina-plugin-process` ile aynı pencere açmayan engine'i başlatır.
+
 ---
 
 [Önceki: Ana editör: view model ve servisler (devamı)](main-editor-state-continued.md) | [Üst: lumina_ui (Lumina Studio)](index.md) | [Sonraki: Eklenti yöneticisi](plugin-manager.md)

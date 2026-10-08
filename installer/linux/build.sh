@@ -47,7 +47,7 @@ fi
 
 cd "$ROOT"
 # Shell syntax of the scripts the package runs.
-for s in installer/linux/lumina-studio installer/linux/install-studio.sh installer/linux/scripts/*.sh; do
+for s in installer/linux/lumina-studio installer/linux/lumina-thumbnailer installer/linux/install-studio.sh installer/linux/scripts/*.sh; do
   sh -n "$s"
 done
 

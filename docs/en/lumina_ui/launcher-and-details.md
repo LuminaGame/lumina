@@ -970,6 +970,26 @@ A project whose editor was set up with another Lumina than the one opening it: "
 | `show` | `static Future<ProjectEditorUpdateAnswer> show(BuildContext context, {required String projectName, required String fromLabel, required String toLabel}) async` | Shows the dialog; closing it without an answer is Cancel. |
 | `lumina` | `static String lumina(String label)` | "Lumina 0.0.1-dev.6", or "an older engine" as it is. |
 
+## Model files opened from the file manager
+
+The installers put Lumina Studio in the file managers' "Open with" for `.glb`, `.gltf`, `.fbx` and `.obj` and register a thumbnailer for them (`installer/README.md`, "3D model files").
+
+### `abstract final class LaunchModelFiles` (`lib/ui/core/host/launch_model_files.dart`)
+
+The model files the editor was started with. `runLuminaEditor` sets `pending` from `resolve(args)`: every positional argument and every `--import <path>` / `--import=<path>` naming an existing file of `ModelFileThumbnailer.supportedExtensions` (any case), absolute, each once; the values of `--project`, `--launcher-exe` and `--size` are skipped. `handOffArguments(files)` is `--import <path>` per file: `EditorHandOff.execProjectEditor` and `restartThroughLauncher` append it, so a project that opens in its own project editor imports them there. `take()` returns the pending files once and empties the list.
+
+### `class PendingModelImportBanner` (`lib/ui/features/launcher/views/pending_model_import_banner.dart`)
+
+The launcher's note while files wait: "Open or create a project to import <names> into it.", with "Don't import", which empties `LaunchModelFiles.pending`. Nothing is shown when no file waits. A loose model has no project, so it is imported into the project the user opens or creates next.
+
+### `importLaunchModelFiles` (`lib/ui/features/main_editor/services/launch_model_import.dart`)
+
+`Future<void> importLaunchModelFiles(EditorViewModel viewModel)`: `MainEditorView` calls it after its first frame when files are pending. It takes them, imports them through the background import queue (`importAssetFiles`, auto-organised under `contents/`, the import panel and Output Log report failures) and opens the first imported asset in its sub-editor (`openAssetEditorByPath`).
+
+### `runModelThumbnailEntry` (`lib/ui/core/host/model_thumbnail_entry.dart`)
+
+`Future<int> runModelThumbnailEntry(List<String> args)`: `runLuminaEditor` hands `--lumina-thumbnail` here before anything else (no window, crash session or bootstrap) and exits with its code. It applies the Graphics Device preference, loads the bundled studio IBL and runs `ModelThumbnailCommand` (`lumina_editor_data`). The Windows and Linux runners start the same windowless engine for the flag as for `--lumina-plugin-process`.
+
 ---
 
 [Previous: Main editor: view model and services (continued)](main-editor-state-continued.md) | [Up: lumina_ui (Lumina Studio)](index.md) | [Next: Plugin manager](plugin-manager.md)

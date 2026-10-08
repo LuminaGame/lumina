@@ -365,6 +365,40 @@ Renders are serialized: callers may overlap, the engine never does.
 | `isFilamatPackage` | `static bool isFilamatPackage(Uint8List? bytes)` | Whether [bytes] is a compiled `.filamat` package: a `MAT_VERS` chunk of size 4. Filament aborts the process on anything else. |
 | `materialParameterValues` | `static Map<String, Object?> materialParameterValues(LuminaAsset material)` | The values a material instance starts with: the `.mat` header's `default :` entries, overridden by what the Material Editor saved in `metadata.parameter_defaults`. |
 
+## `lib/src/services/model_file_thumbnailer.dart`
+
+### `abstract final class ModelFileThumbnailer`
+
+Hiçbir projeye ait olmayan, diskteki model dosyalarının thumbnail'ları: Lumina Studio kurulduktan sonra dosya yöneticisinin bir `.glb`, `.gltf`, `.fbx` ya da `.obj` için gösterdiği önizleme. Dosya, bir import'un ondan yapacağı GLB'ye çevrilir ve [FilamentThumbnailRenderer] ile çizilir; yani aynı mesh'in Content Browser thumbnail'ı gibi görünür.
+
+**Üyeler:**
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `supportedExtensions` | `static const Set<String> supportedExtensions` | `.glb`, `.gltf`, `.fbx`, `.obj`: thumbnailer'ın ve editörün "Birlikte aç" kaydının işlediği türler. |
+| `supports` | `static bool supports(String path)` | [path] bu uzantılardan birine (büyük/küçük harf fark etmez) sahip mi. |
+| `loadGlb` | `static Future<Uint8List?> loadGlb(String path) async` | Renderer'ın çizdiği GLB, import'un çevirdiği gibi: `.glb` olduğu gibi (kesik bir container native yükleyiciye ulaşmadan reddedilir), `.gltf` buffer ve görselleriyle paketlenir (eksik görsel beyaz çizilir, `GltfPacker.packFile(missingImage:)`), FBX ve OBJ Assimp ile; dokular dosyanın klasörü aranarak temizlenir. Dosya yoksa, başka türdeyse ya da çevrilemiyorsa null. |
+| `render` | `static Future<Uint8List?> render(String path, FilamentThumbnailRenderer renderer) async` | [path] PNG olarak, ya da null; çeviri hatası "yüklenemedi" sayılır. |
+| `isCompleteGlb` | `static bool isCompleteGlb(Uint8List bytes)` | [bytes] eksiksiz bir binary glTF container'ı mı (header uzunluğu tutuyor, JSON chunk'ı sığıyor). |
+
+### `class ModelThumbnailRequest`
+
+Bir `--lumina-thumbnail` çağrısı: `input`, `output`, `size` (varsayılan 256).
+
+### `abstract final class ModelThumbnailCommand`
+
+`lumina_ui --lumina-thumbnail <input> <output.png> [--size <px>]`: kurulu editör, tek bir model dosyasının thumbnail'ını çizmek için pencere açmadan çalışır; dosya yöneticileri için (installer'ların kaydettiği Windows shell thumbnail provider'ı ve Linux `.thumbnailer`'ı; bkz. `installer/README.tr.md`).
+
+**Üyeler:**
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `flag` | `static const String flag` | `--lumina-thumbnail`; runner'lar bunun için, plugin süreci gibi pencere açmayan bir engine başlatır. |
+| `defaultSize` / `minSize` / `maxSize` | `static const int` | 256, 16, 1024 piksel. |
+| `exitOk` / `exitUsage` / `exitInput` / `exitRender` / `exitOutput` | `static const int` | 0; 64 hatalı argümanlar; 65 eksik, desteklenmeyen ya da okunamayan dosya; 70 engine başlayamadı ya da hiçbir şey çizmedi; 73 PNG yazılamadı (`sysexits.h`). |
+| `parse` | `static ({ModelThumbnailRequest? request, String? error}) parse(List<String> args)` | Editörün argüman listesindeki istek (flag'den sonraki konumsal argümanlar, `--size N` ya da `--size=N`) ya da bir kullanım mesajı. |
+| `run` | `static Future<int> run(ModelThumbnailRequest request, {Uint8List? ibl, void Function(String message)? log}) async` | Çizer ve PNG'yi `<output>.tmp` üzerinden yazar (tamamlanınca yeniden adlandırılır); [ibl] editörün thumbnail'ları gibi aydınlatır. Çıkış kodunu döndürür. |
+
 ---
 
 [Önceki: Veri katmanı: use case'ler ve servisler (devamı, bölüm 1)](services-continued.md) | [Üst: lumina_editor_data (editör veri katmanı)](index.md) | [Sonraki: Veri katmanı: use case'ler ve servisler (devamı, bölüm 3)](services-continued-3.md)

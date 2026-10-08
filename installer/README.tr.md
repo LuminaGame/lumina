@@ -206,6 +206,7 @@ Paketin kurdukları:
   Editör yoksa önce onu indirir. `lumina-studio --update` en son release'i indirir.
 - `/usr/lib/lumina-studio/install-studio.sh`: Linux tarball'ını indirir, doğrular ve yerine koyar.
 - `/usr/share/applications/io.github.luminagame.LuminaStudio.desktop`: "Update Lumina Studio" action'ı olan menü girdisi.
+- 3D model MIME türleri, `lumina-thumbnailer` ve onun `.thumbnailer` girdisi (aşağıda "3D model dosyaları").
 - `/usr/share/icons/hicolor/scalable/apps/lumina-studio.svg` ve `/usr/share/pixmaps/lumina-studio.png`:
   `lumina_ui/assets/app_icon.png` ikonu (Lumina amblemi).
 
@@ -239,6 +240,61 @@ dpkg-deb -c dist/lumina-studio_0.1.0-1_amd64.deb
 
 Windows'ta WSL içinde çalıştırın. Pre-release sürümler nfpm'in semver kurallarına uyar (`0.1.0-beta.1`, .deb
 içinde `0.1.0~beta.1` olur).
+
+## 3D model dosyaları: "Birlikte aç" ve thumbnail'lar
+
+İki installer da Lumina Studio'yu `.glb`, `.gltf`, `.fbx` ve `.obj` dosyaları için kaydeder. Bu türlerin varsayılan programını hiçbir zaman değiştirmez.
+
+**Birlikte aç.** Bir model dosyasını Lumina Studio ile açmak editörü yolu argüman olarak vererek başlatır (`lumina_ui <file>` ya da `--import <file>`). Projesiz bir dosyanın projesi olmadığından launcher, "Don't import" düğmesiyle birlikte "Open or create a project to import <file> into it." notunu gösterir. Kullanıcının sıradaki açtığı ya da oluşturduğu proje dosyaları normal import kuyruğuyla import eder (`contents/` altında otomatik düzenlenir) ve ilkini mesh editöründe açar. Proje kendi proje editöründe açılıyorsa dosyalar `--import` argümanları olarak ona geçer. Her "Birlikte aç" yeni bir editör süreci başlatır.
+
+**Thumbnail'lar.** Kurulu editör bir dosyanın thumbnail'ını pencere açmadan çizer:
+
+```text
+lumina_ui --lumina-thumbnail <input> <output.png> [--size <px>]
+```
+
+Dosyayı bir import gibi çevirir ve Content Browser'ın thumbnail renderer'ıyla çizer: stüdyo ışık düzeni, sınırlara oturtulmuş üç çeyrek görünüm, PBR Neutral tone mapping, editörün Graphics Device ayarındaki GPU'da. Görselleri eksik bir `.gltf` beyaz dokularla çizilir. Çıkış kodları: 0 yazıldı, 64 hatalı argümanlar, 65 eksik, desteklenmeyen ya da okunamayan dosya, 70 hiçbir şey çizilmedi, 73 PNG yazılamadı. Her çağrı editörü başlatır (masaüstü GPU'sunda bir saniyenin epey altında). Dosya yöneticileri sonucu önbellekte tutar.
+
+### Windows
+
+Setup'ın "3D model files" görevi (varsayılan olarak açık) kullanıcı başına `HKCU\Software\Classes` altına şunları yazar:
+
+| Anahtar | Değer |
+|---|---|
+| `LuminaStudio.Model` | "3D model", `DefaultIcon`, `shell\open\command` = `"{app}\lumina_ui.exe" "%1"` |
+| `.glb`, `.gltf`, `.fbx`, `.obj` `\OpenWithProgids` | `LuminaStudio.Model` (boş değer): "Birlikte aç"ta Lumina Studio |
+| `Applications\lumina_ui.exe` | `FriendlyAppName` "Lumina Studio", `SupportedTypes` (dört uzantı), `shell\open\command` |
+| `CLSID\{4C2F5D1E-8A3B-4E7C-9D21-6B0A5F3E7C18}\InprocServer32` | `{app}\setup\shell\lumina_thumbnails.dll`, `ThreadingModel` = `Apartment` |
+| `SystemFileAssociations\<ext>\ShellEx\{e357fccd-a995-4576-b01f-234630154e96}` | provider'ın CLSID'si |
+
+Uzantı anahtarlarının varsayılan değerleri hiçbir zaman yazılmaz. Thumbnail handler'ı yalnızca `SystemFileAssociations` altındadır; kendi thumbnail'larını getiren bir varsayılan program onları korur. Kaldırma, setup'ın eklediği her değeri ve anahtarı siler (uzantı anahtarlarını yalnızca boşsa); `ChangesAssociations=yes` Explorer'ın bunları yeniden okumasını sağlar.
+
+Thumbnail provider'ı (`windows/thumbnail_provider/`), `IInitializeWithStream` ve `IThumbnailProvider` uygulayan küçük bir C++ COM DLL'idir. Kendisi hiçbir şey çizmez. Explorer'ın verdiği stream'i `%TEMP%\LuminaThumbnails\` içine kopyalar, `{app}\lumina_ui.exe --lumina-thumbnail`'ı gizli, normalin altındaki önceliğe sahip ve 30 saniye sonra süreç ağacını öldüren bir job object içinde çalıştırır ve PNG'yi WIC ile yükler. Adlandırılmış bir semaphore aynı anda iki render'a izin verir. Her hata `WTS_E_FAILEDEXTRACTION` gibi bir hata döndürür; Explorer normal ikonu korur. Explorer onu yalnızca stream (yol değil) alan yalıtılmış surrogate sürecinde çalıştırır; bu yüzden harici `.bin`/görselleri olan bir `.gltf` ikonunu korur, bir `.obj` ise `.mtl`'si olmadan çizilir. `LUMINA_THUMBNAIL_EDITOR` DLL'i başka bir editör çalıştırılabilirine yönlendirir. Explorer'ın hâlâ tuttuğu bir DLL, bir güncelleme üzerine yazmadan ya da kaldırma klasörü silmeden önce kenara alınır (`lumina_thumbnails-<time>.old`).
+
+`build.ps1` provider'ı Visual Studio 2022 C++ araçlarıyla derler (`windows/thumbnail_provider/build.ps1`: `vswhere`, `vcvars64.bat`, `cl /O2 /MT /W4 /WX`; Visual C++ runtime'ına ihtiyaç duymaz) ve setup.exe içine gömer. İmzalı bir setup build'i DLL'i de imzalar. `-SkipThumbnailProvider` onsuz bir setup üretir (yalnızca "Birlikte aç"). Aynı script kurulmayan `thumbnail_check.exe`'yi de derler:
+
+```powershell
+installer\windows\thumbnail_provider\build.ps1 -OutDir build\thumbnail_provider
+$env:LUMINA_THUMBNAIL_EDITOR = 'lumina_ui\build\windows\x64\runner\Release\lumina_ui.exe'
+build\thumbnail_provider\thumbnail_check.exe build\thumbnail_provider\lumina_thumbnails.dll model.glb out.png 256
+# DLL'i kaydetmeden yükler, dosyayı stream olarak verir, bitmap'i kaydeder
+regsvr32 build\thumbnail_provider\lumina_thumbnails.dll        # setup'ın yaptığı gibi kullanıcı başına kayıt
+build\thumbnail_provider\thumbnail_check.exe --shell model.glb out.png 256   # shell üzerinden
+regsvr32 /u build\thumbnail_provider\lumina_thumbnails.dll     # kaydı yeniden siler
+```
+
+`regsvr32` ile DLL, `LUMINA_THUMBNAIL_EDITOR` verilmemişse editörü iki klasör yukarıda bulur (`<dir>\..\..\lumina_ui.exe`). Microsoft Store MSIX'i henüz dosya türü bildirmiyor.
+
+### Linux
+
+Paket şunları kurar:
+
+- `/usr/share/mime/packages/lumina-studio-models.xml`: `model/gltf-binary` (`*.glb`, `glTF` magic), `model/gltf+json` (`*.gltf`), `model/x-fbx` (`*.fbx`, `Kaydara FBX Binary` magic) ve `model/obj` (`*.obj`, eski TGIF glob'unun üstünde ağırlıkla). Güncel shared-mime-info glTF ve OBJ türlerini zaten bilir; FBX yenidir.
+- `Exec=lumina-studio %F` ve bu dört türü içeren `MimeType=` ile `.desktop` girdisi: Lumina Studio "Birlikte aç" adayı olur.
+- `/usr/bin/lumina-thumbnailer <input> <output> [size]`: kurulu editörün `--lumina-thumbnail`'ını (önce `~/.local/share/lumina/studio`, sonra `/opt/lumina/studio`) `timeout 30` altında çalıştırır. Hiçbir şey indirmez: editör yoksa 1 ile çıkar.
+- `/usr/share/thumbnailers/lumina-studio.thumbnailer`: dört tür için `Exec=lumina-thumbnailer %i %o %s`.
+
+postinstall ve postremove script'leri, varsa `update-mime-database` ve `update-desktop-database` çalıştırır. Thumbnailer'lar Nemo, Caja, Thunar (tumbler üzerinden) ve `.thumbnailer` dosyalarını kullanan diğer dosya yöneticilerinde çalışır. GNOME Files onları `/opt`'a ve GPU'ya erişimi olmayan bir bubblewrap sandbox'ında çalıştırır; editör orada başlayamaz ve Nautilus ikonu korur. Dolphin `.thumbnailer` dosyaları yerine KIO eklentilerini kullanır.
 
 ## macOS: .pkg (doğrulanmadı)
 

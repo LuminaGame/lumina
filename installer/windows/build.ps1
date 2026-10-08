@@ -16,6 +16,8 @@
 .NOTES
   Needs ISCC.exe (Inno Setup 6): `winget install JRSoftware.InnoSetup`, or
   -InstallInnoSetup to install it with Chocolatey (CI runners).
+  The shell thumbnail provider (thumbnail_provider/) is compiled first with the
+  Visual Studio 2022 C++ tools; -SkipThumbnailProvider leaves it out.
 #>
 [CmdletBinding()]
 param(
@@ -24,7 +26,10 @@ param(
   [string]$OutDir = 'dist',
   [string]$Repository = 'LuminaGame/lumina',
   [switch]$InstallInnoSetup,
-  [string]$SignToolCommand
+  [string]$SignToolCommand,
+  # Leaves the shell thumbnail provider out (no Visual Studio C++ tools on
+  # this machine); setup then registers "Open with" only.
+  [switch]$SkipThumbnailProvider
 )
 $ErrorActionPreference = 'Stop'
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -54,7 +59,16 @@ $numeric = "$($Matches[1]).$($Matches[2]).$($Matches[3]).0"
 
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
 $out = (Resolve-Path $OutDir).Path
+# The shell thumbnail provider (thumbnail_provider/build.ps1, VS 2022 C++).
+if (-not $SkipThumbnailProvider) {
+  $providerOut = Join-Path $out 'thumbnail_provider'
+  $dll = & (Join-Path $here 'thumbnail_provider\build.ps1') -OutDir $providerOut | Select-Object -Last 1
+  if (-not $dll -or -not (Test-Path $dll)) { throw 'The thumbnail provider did not build' }
+}
 $isccArgs = @("/DAppVersion=$Version", "/DAppTag=$Tag", "/DNumericVersion=$numeric", "/DRepository=$Repository", "/O$out")
+if (-not $SkipThumbnailProvider) {
+  $isccArgs += "/DThumbnailProviderDir=$providerOut"
+}
 if ($SignToolCommand) {
   # Not quiet: the log then shows the sign tool running for the uninstaller
   # and for setup.exe.
@@ -70,5 +84,9 @@ $exe = Join-Path $out $name
 if (-not (Test-Path $exe)) { throw "ISCC did not produce $exe" }
 $hash = (Get-FileHash -Algorithm SHA256 $exe).Hash.ToLowerInvariant()
 [IO.File]::WriteAllText("$exe.sha256", "$hash  $name`n", (New-Object System.Text.UTF8Encoding($false)))
+if (-not $SkipThumbnailProvider) {
+  # Only setup.exe is a release asset; the provider is inside it.
+  Remove-Item -Recurse -Force $providerOut -ErrorAction SilentlyContinue
+}
 Write-Host "Built $exe"
 Write-Host "  sha256: $hash"

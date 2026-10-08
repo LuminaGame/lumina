@@ -1,0 +1,4 @@
+[Thumbnailer Entry]
+TryExec=lumina-thumbnailer
+Exec=lumina-thumbnailer %i %o %s
+MimeType=model/gltf-binary;model/gltf+json;model/x-fbx;model/obj;

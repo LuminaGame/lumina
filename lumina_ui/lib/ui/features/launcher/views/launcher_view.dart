@@ -23,6 +23,7 @@ import 'package:lumina_ui/ui/features/launcher/views/create_project_dialog.dart'
 import 'package:lumina_ui/ui/features/launcher/views/launcher_recent_projects_pane.dart';
 import 'package:lumina_ui/ui/features/launcher/views/launcher_settings_panes.dart';
 import 'package:lumina_ui/ui/features/launcher/views/launcher_templates_pane.dart';
+import 'package:lumina_ui/ui/features/launcher/views/pending_model_import_banner.dart';
 import 'package:lumina_ui/ui/features/launcher/view_models/create_project_view_model.dart';
 
 class LauncherView extends StatefulWidget {
@@ -613,6 +614,9 @@ class _LauncherViewState extends State<LauncherView> {
                   ],
                 ),
               ),
+
+            // Model files from "Open with" wait for a project.
+            const PendingModelImportBanner(),
 
             // Main Content Area with Left Navigation Bar & Center Pane
             Expanded(

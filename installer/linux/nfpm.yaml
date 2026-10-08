@@ -5,6 +5,7 @@
 #
 # The package holds no editor binary: it declares what building and running
 # Lumina projects needs, installs a launcher, a .desktop entry and the icon,
+# the 3D model MIME types with a thumbnailer for them,
 # and its postinstall script installs Flutter and downloads the latest
 # Lumina Studio release into /opt/lumina.
 name: lumina-studio
@@ -99,6 +100,20 @@ contents:
       mode: 0755
   - src: ./installer/linux/io.github.luminagame.LuminaStudio.desktop
     dst: /usr/share/applications/io.github.luminagame.LuminaStudio.desktop
+    file_info:
+      mode: 0644
+  # 3D model files: the MIME types the .desktop entry opens, and the
+  # thumbnailer file managers run for them (lumina_ui --lumina-thumbnail).
+  - src: ./installer/linux/lumina-studio-models.xml
+    dst: /usr/share/mime/packages/lumina-studio-models.xml
+    file_info:
+      mode: 0644
+  - src: ./installer/linux/lumina-thumbnailer
+    dst: /usr/bin/lumina-thumbnailer
+    file_info:
+      mode: 0755
+  - src: ./installer/linux/lumina-studio.thumbnailer
+    dst: /usr/share/thumbnailers/lumina-studio.thumbnailer
     file_info:
       mode: 0644
   # The app icon: the Lumina emblem without the wordmark.

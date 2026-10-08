@@ -28,6 +28,8 @@ import 'package:lumina_ui/ui/features/main_editor/views/status_bar_engine_segmen
 import 'package:lumina_ui/ui/features/main_editor/views/right_dock_widget.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_layout_state.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/editor_slot_bar.dart';
+import 'package:lumina_ui/ui/core/host/launch_model_files.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/launch_model_import.dart';
 
 /// The status bar's left-hand text segments.
 const TextStyle _statusText = TextStyle(fontSize: 9, fontFamily: EditorTypography.monoFamily, color: EditorColors.mutedForeground);
@@ -67,6 +69,13 @@ class _MainEditorViewState extends State<MainEditorView> {
     }
     viewModel.onLevelBlueprintSavePrompt = _promptLevelBlueprintSave;
     _lifecycle = AppLifecycleListener(onExitRequested: _onExitRequested);
+    // Model files Lumina Studio was started with ("Open with") land in
+    // this project once the editor is up.
+    if (LaunchModelFiles.pending.value.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) unawaited(importLaunchModelFiles(viewModel));
+      });
+    }
     final warning = widget.startupWarning;
     if (warning != null) {
       viewModel.logger.log(warning, level: 'warning', source: 'Plugins');

@@ -34,6 +34,9 @@ paths are relative to the `lumina_ui/` package directory.
   Measured on a release project editor under WSLg (Mesa llvmpipe): about 209 MB RSS / 77 MB private dirty and 77
   threads per plugin process, from 271 MB / 131 MB and 142 threads with a hidden `GtkApplicationWindow`, the GL
   renderer and the plugins registered.
+- **The thumbnail mode shares this path**: both runners start the same windowless engine for `--lumina-thumbnail`
+  (`ModelThumbnailCommand`), which renders a model file's thumbnail on Filament's own headless swap chain for the
+  file managers (see [Launcher and details](launcher-and-details.md#model-files-opened-from-the-file-manager)).
 - **Verified on Linux** (Ubuntu 26.04 in WSL2 with WSLg, Flutter 3.47.5): `flutter build linux` (debug and release)
   of `lumina_ui` and of a project editor with three isolated plugins; the plugin-process tests of `lumina_ui`,
   `lumina_editor_api` and `lumina_plugin_protocol`; an unknown plugin name exits 64 in under half a second; under X11

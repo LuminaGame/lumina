@@ -208,6 +208,7 @@ The package installs:
   When the editor is missing, it downloads it first. `lumina-studio --update` downloads the latest release.
 - `/usr/lib/lumina-studio/install-studio.sh`: downloads and verifies the Linux tarball, then swaps it in.
 - `/usr/share/applications/io.github.luminagame.LuminaStudio.desktop`: the menu entry, with an "Update Lumina Studio" action.
+- The 3D model MIME types, `lumina-thumbnailer` and its `.thumbnailer` entry (see "3D model files" below).
 - `/usr/share/icons/hicolor/scalable/apps/lumina-studio.svg` and `/usr/share/pixmaps/lumina-studio.png`: the
   `lumina_ui/assets/app_icon.png` icon (the Lumina emblem).
 
@@ -241,6 +242,61 @@ dpkg-deb -c dist/lumina-studio_0.1.0-1_amd64.deb
 
 On Windows run it inside WSL. Pre-release versions follow nfpm's semver rules (`0.1.0-beta.1` becomes
 `0.1.0~beta.1` in the .deb).
+
+## 3D model files: "Open with" and thumbnails
+
+Both installers register Lumina Studio for `.glb`, `.gltf`, `.fbx` and `.obj` files. They never change the default program of those types.
+
+**Open with.** Opening a model file with Lumina Studio starts the editor with the path as an argument (`lumina_ui <file>`, or `--import <file>`). A loose file has no project, so the launcher shows "Open or create a project to import <file> into it." with a "Don't import" button. The project the user opens or creates next imports the files through the normal import queue (auto-organised under `contents/`) and opens the first one in its mesh editor. When the project opens in its own project editor, the files go along as `--import` arguments. Each "Open with" starts a new editor process.
+
+**Thumbnails.** The installed editor renders a file's thumbnail without a window:
+
+```text
+lumina_ui --lumina-thumbnail <input> <output.png> [--size <px>]
+```
+
+It converts the file as an import would and draws it with the Content Browser's thumbnail renderer: the studio light rig, a three-quarter view framed on the bounds, PBR Neutral tone mapping, on the GPU of the editor's Graphics Device setting. A `.gltf` whose images are missing is drawn with white textures. Exit codes: 0 written, 64 bad arguments, 65 missing, unsupported or unreadable file, 70 nothing rendered, 73 the PNG could not be written. Each call starts the editor (well under a second on a desktop GPU). The file managers cache the result.
+
+### Windows
+
+Setup's "3D model files" task (on by default) writes, per user under `HKCU\Software\Classes`:
+
+| Key | Value |
+|---|---|
+| `LuminaStudio.Model` | "3D model", `DefaultIcon`, `shell\open\command` = `"{app}\lumina_ui.exe" "%1"` |
+| `.glb`, `.gltf`, `.fbx`, `.obj` `\OpenWithProgids` | `LuminaStudio.Model` (empty value): Lumina Studio in "Open with" |
+| `Applications\lumina_ui.exe` | `FriendlyAppName` "Lumina Studio", `SupportedTypes` (the four extensions), `shell\open\command` |
+| `CLSID\{4C2F5D1E-8A3B-4E7C-9D21-6B0A5F3E7C18}\InprocServer32` | `{app}\setup\shell\lumina_thumbnails.dll`, `ThreadingModel` = `Apartment` |
+| `SystemFileAssociations\<ext>\ShellEx\{e357fccd-a995-4576-b01f-234630154e96}` | the provider's CLSID |
+
+The extension keys' default values are never written. The thumbnail handler is only under `SystemFileAssociations`, so a default program that brings its own thumbnails keeps them. Uninstall removes every value and key setup added (extension keys only when empty), and `ChangesAssociations=yes` makes Explorer reload them.
+
+The thumbnail provider (`windows/thumbnail_provider/`) is a small C++ COM DLL implementing `IInitializeWithStream` and `IThumbnailProvider`. It renders nothing itself. It copies the stream Explorer passes to `%TEMP%\LuminaThumbnails\`, runs `{app}\lumina_ui.exe --lumina-thumbnail` hidden, at below-normal priority, in a job object that kills the process tree after 30 seconds, and loads the PNG with WIC. A named semaphore lets two renders run at a time. Every failure returns an error such as `WTS_E_FAILEDEXTRACTION`, so Explorer keeps the normal icon. Explorer runs it in its isolated surrogate process, which only gets a stream, not a path, so a `.gltf` with external `.bin`/images keeps its icon and an `.obj` is drawn without its `.mtl`. `LUMINA_THUMBNAIL_EDITOR` points the DLL at another editor executable. A DLL that Explorer still holds is renamed aside (`lumina_thumbnails-<time>.old`) before an upgrade overwrites it or an uninstall removes the folder.
+
+`build.ps1` compiles the provider with the Visual Studio 2022 C++ tools (`windows/thumbnail_provider/build.ps1`: `vswhere`, `vcvars64.bat`, `cl /O2 /MT /W4 /WX`, so it needs no Visual C++ runtime) and embeds it in setup.exe. A signed setup build signs the DLL too. `-SkipThumbnailProvider` builds a setup without it ("Open with" only). The same script builds `thumbnail_check.exe`, which is not installed:
+
+```powershell
+installer\windows\thumbnail_provider\build.ps1 -OutDir build\thumbnail_provider
+$env:LUMINA_THUMBNAIL_EDITOR = 'lumina_ui\build\windows\x64\runner\Release\lumina_ui.exe'
+build\thumbnail_provider\thumbnail_check.exe build\thumbnail_provider\lumina_thumbnails.dll model.glb out.png 256
+# loads the DLL without registering it, passes the file as a stream, saves the bitmap
+regsvr32 build\thumbnail_provider\lumina_thumbnails.dll        # per-user registration, as setup does
+build\thumbnail_provider\thumbnail_check.exe --shell model.glb out.png 256   # through the shell
+regsvr32 /u build\thumbnail_provider\lumina_thumbnails.dll     # removes it again
+```
+
+With `regsvr32` the DLL finds the editor two folders up (`<dir>\..\..\lumina_ui.exe`) unless `LUMINA_THUMBNAIL_EDITOR` is set. The Microsoft Store MSIX declares no file types yet.
+
+### Linux
+
+The package installs:
+
+- `/usr/share/mime/packages/lumina-studio-models.xml`: `model/gltf-binary` (`*.glb`, `glTF` magic), `model/gltf+json` (`*.gltf`), `model/x-fbx` (`*.fbx`, `Kaydara FBX Binary` magic) and `model/obj` (`*.obj`, weighted above the old TGIF glob). Current shared-mime-info already knows the glTF and OBJ types; FBX is new.
+- The `.desktop` entry with `Exec=lumina-studio %F` and `MimeType=` those four types, so Lumina Studio is an "Open With" candidate.
+- `/usr/bin/lumina-thumbnailer <input> <output> [size]`: runs the installed editor's `--lumina-thumbnail` (`~/.local/share/lumina/studio` first, then `/opt/lumina/studio`) under `timeout 30`. It never downloads anything: without an editor it exits 1.
+- `/usr/share/thumbnailers/lumina-studio.thumbnailer`: `Exec=lumina-thumbnailer %i %o %s` for the four types.
+
+The postinstall and postremove scripts run `update-mime-database` and `update-desktop-database` when present. Thumbnailers run in Nemo, Caja, Thunar (through tumbler) and other file managers that use `.thumbnailer` files. GNOME Files runs them in a bubblewrap sandbox without `/opt` or the GPU, so the editor cannot start there and Nautilus keeps the icon. Dolphin uses KIO plugins instead of `.thumbnailer` files.
 
 ## macOS: .pkg (not verified)
 

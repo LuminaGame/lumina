@@ -1,0 +1,28 @@
+#!/bin/sh
+# Renders a 3D model file's thumbnail for file managers (installed as
+# /usr/bin/lumina-thumbnailer; /usr/share/thumbnailers/lumina-studio.thumbnailer
+# runs it for .glb, .gltf, .fbx and .obj).
+#
+#   lumina-thumbnailer <input> <output.png> [size]
+#
+# Runs the installed Lumina Studio windowless (`lumina_ui --lumina-thumbnail`),
+# which draws the model with the editor's thumbnail renderer. Never downloads
+# anything: without an installed editor it exits 1 and the file manager keeps
+# its icon. A render that takes longer than 30 s is stopped.
+set -u
+
+[ $# -ge 2 ] || { echo "usage: lumina-thumbnailer <input> <output.png> [size]" >&2; exit 64; }
+input="$1"
+output="$2"
+size="${3:-256}"
+
+for d in "${XDG_DATA_HOME:-$HOME/.local/share}/lumina/studio" /opt/lumina/studio; do
+  if [ -x "$d/lumina_ui" ]; then
+    if command -v timeout >/dev/null 2>&1; then
+      exec timeout -k 5 30 "$d/lumina_ui" --lumina-thumbnail "$input" "$output" --size "$size"
+    fi
+    exec "$d/lumina_ui" --lumina-thumbnail "$input" "$output" --size "$size"
+  fi
+done
+echo "lumina-thumbnailer: Lumina Studio is not installed (run lumina-studio once)" >&2
+exit 1
