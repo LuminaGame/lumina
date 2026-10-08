@@ -20,6 +20,7 @@ import 'package:lumina/src/components/light/spot_light_component.dart';
 import 'package:lumina/src/components/particles/particle_system_component.dart';
 import 'package:lumina/src/components/collision/collision_component.dart';
 import 'package:lumina/src/components/mesh/animated_mesh_component.dart';
+import 'package:lumina/src/components/mesh/spring_morph_component.dart';
 import 'package:lumina/src/components/mesh/static_mesh_component.dart';
 import 'package:lumina/src/components/movement/character_movement_component.dart';
 import 'package:lumina_core/lumina_core.dart';
@@ -183,6 +184,7 @@ abstract final class LuminaBlueprintComponents {
     if (c is LuminaAnimatedMeshComponent) return 'LuminaSkeletalMeshComponent';
     if (c is LuminaStaticMeshComponent) return 'LuminaStaticMeshComponent';
     if (c is LuminaCharacterMovementComponent) return 'LuminaCharacterMovementComponent';
+    if (c is LuminaSpringMorphComponent) return 'LuminaSpringMorphComponent';
     if (c is LuminaSceneComponent) return 'LuminaSceneComponent';
     return 'LuminaActorComponent';
   }
@@ -383,6 +385,8 @@ abstract final class LuminaBlueprintComponents {
         // A Blueprint's camera auto-activates by default.
         camera.isActive = _bool(p, 'autoActivate') ?? true;
         return camera;
+      case 'LuminaSpringMorphComponent':
+        return LuminaSpringMorphComponent.fromProperties(p);
       case 'LuminaSkeletalMeshComponent':
       case 'LuminaAnimatedMeshComponent':
         final stored = p['skeletalMeshAsset'] as String? ?? '';

@@ -9,6 +9,9 @@ Geometri çizen component'ler: LOD'lu static ve instanced static mesh'ler, mesh 
 - [`lib/src/components/mesh/instanced_static_mesh_component.dart`](#libsrccomponentsmeshinstanced_static_mesh_componentdart)
 - [`lib/src/components/mesh/mesh_asset_cache.dart`](#libsrccomponentsmeshmesh_asset_cachedart)
 - [`lib/src/components/mesh/morph_target_set.dart`](#libsrccomponentsmeshmorph_target_setdart)
+- [`lib/src/components/mesh/morph_targets.dart`](#libsrccomponentsmeshmorph_targetsdart)
+- [`lib/src/components/mesh/morph_spring_solver.dart`](#libsrccomponentsmeshmorph_spring_solverdart)
+- [`lib/src/components/mesh/spring_morph_component.dart`](#libsrccomponentsmeshspring_morph_componentdart)
 - [`lib/src/components/mesh/procedural_mesh_component.dart`](#libsrccomponentsmeshprocedural_mesh_componentdart)
 - [`lib/src/components/mesh/skeletal_mesh_component.dart`](#libsrccomponentsmeshskeletal_mesh_componentdart)
 - [`lib/src/components/mesh/skinning_buffer.dart`](#libsrccomponentsmeshskinning_bufferdart)
@@ -116,6 +119,72 @@ Refcounted mesh asset cache managing gltfio parsing and shared instancing across
 | `names` | `List<String> get names` | `names` özelliğinin anlık değerini okuyan getter erişimcisi. |
 | `contains` | `bool contains(String name) => _handles.containsKey(name)` | `contains` işlemini gerçekleştirir. |
 | `getHandle` | `MorphTargetHandle? getHandle(String name)` | `Handle` bilgisini veya alt nesnesini sorgulayıp döndürür. |
+
+## `lib/src/components/mesh/morph_targets.dart`
+
+### `mixin LuminaMorphTargets`
+
+Bir mesh component'inin morph target ağırlıkları; `LuminaSkinnedMeshComponent` ve `LuminaAnimatedMeshComponent`
+(runtime iskelet mesh'i: Blueprint `LuminaSkeletalMeshComponent` ve yay taşıyan yerleştirilmiş iskelet mesh'leri)
+tarafından paylaşılır. Hedefler bir asset'in ya da tek bir asset instance'ının renderable'larından adlarıyla bulunur
+(`discoverMorphTargetsOf`; animated mesh yüklenince bunu kendi instance'ı için yapar, böylece aynı mesh'i paylaşan iki
+karakter kendi ağırlıklarını korur). Ağırlıklar renderable başına bekletilir ve `flushMorphTargets` ile Filament'e
+yazılır (mesh'ler tick'lerinin sonunda yazar).
+
+| Üye | İmza | Açıklama |
+|---|---|---|
+| `hasMorphTargets` | `bool get hasMorphTargets` | Hedef bulunup en az bir tane olup olmadığı. |
+| `discoverMorphTargets` | `void discoverMorphTargets(FilamentAsset asset)` | Asset'in kendi entity'lerinin hedeflerini bulur. |
+| `discoverMorphTargetsOf` | `void discoverMorphTargetsOf(FilamentAsset asset, List<int> entities)` | Bir asset instance'ının entity'lerinin hedeflerini bulur. |
+| `hasMorphTarget` | `bool hasMorphTarget(String name)` | O adda bir hedef olup olmadığı. |
+| `setMorphTarget` / `setMorphTargetByHandle` | `void setMorphTarget(String name, double weight)` | Bir ağırlığı bekletir (adla ya da aramasız, çözülmüş handle ile). |
+| `getMorphTarget` | `double getMorphTarget(String name)` | Bekleyen ağırlık. |
+| `clearMorphTargets` | `void clearMorphTargets()` | Tüm ağırlıkları 0'a döndürür. |
+| `flushMorphTargets` | `void flushMorphTargets()` | Son yazmadan beri değişen ağırlıkları yazar. |
+
+## `lib/src/components/mesh/morph_spring_solver.dart`
+
+### `class LuminaMorphSpringSolver`
+
+İkincil hareket için sönümlü bir yay (saf Dart): gövdenin taşıdığı yumuşak bir kütlenin ofseti (cm, mesh'in
+çerçevesinde). Sabit 240 Hz adımla ilerler: `offset'' = −ω²·offset − 2ζω·offset' − inertia·a + gravity·(g − g_rest)`;
+`a` gövdenin ivmesi, `g` yerçekiminin mesh çerçevesindeki yönüdür (ilk adımda dinlenme yönü olarak alınır, böylece
+uzanmak ya da eğilmek dinlenme konumunu kaydırır). Ofset `limit` ile sınırlanır.
+
+| Üye | Açıklama |
+|---|---|
+| `frequency`, `damping`, `inertia`, `gravity`, `limit` | Doğal frekans (Hz), sönüm oranı (1: aşma yok), ivmenin ve yerçekimi değişiminin payı, en büyük ofset (cm). |
+| `advance(dt, acceleration, gravityLocal)` | `dt` saniye ilerler. |
+| `offset`, `velocity`, `reset()` | Durum; `reset` kütleyi dinlenmeye alır ve sonraki yerçekimini dinlenme yönü yapar. |
+
+## `lib/src/components/mesh/spring_morph_component.dart`
+
+### `class LuminaMorphSpring`
+
+Tek bir yumuşak kütle: `name`, onu taşıyan `bone` (null: mesh'in kendisi) ve ondan `offset` (cm), yay (`frequency`,
+`damping`, `inertia`, `gravity`, `limit`), `range` (hedef ağırlığı 1 olan ofset, cm) ve `morphs`: mesh çerçevesinin her
+eksen yönü için morph target (`+x`, `-x`, `+y`, `-y`, `+z`, `-z`). `toJson` / `fromJson`.
+
+### `class LuminaSpringMorphComponent`
+
+Morph target'larla ikincil hareket (sallanma). Her karede, sahibinin mesh'i tick'ledikten sonra (mesh'ten sonra
+eklenir) her yay kütlesinin dünya konumunu okur (animated mesh'te kemiğin eklem dünya dönüşümü, skinned mesh'te socket
+dönüşümü, yoksa mesh'in dönüşümü), son karelerden ivmesini çıkarır (50 m/s üstü hız ışınlanmadır: yay yeniden
+dinlenir), çözücüsünü mesh çerçevesindeki ivme ve yerçekimiyle ilerletir ve `offset × amplitude / range` değerini her
+eksenin iki hedefinin ağırlığı olarak yazar, sonra mesh'i flush eder. Eksik bir kemik ya da morph target bir kez
+bildirilir.
+
+| Üye | Açıklama |
+|---|---|
+| `springs`, `enabled`, `amplitude`, `stiffnessScale`, `dampingScale` | Kütleler; açık/kapalı; ofset ölçeği (0: hareket yok); frekans ve sönüm çarpanları. |
+| `fromProperties` / `toProperties` | Seviye / Blueprint component özellikleri (`springs`, `LuminaMorphSpring` JSON listesi). |
+| `offsetOf(name)` | Bir yayın anlık ofseti. |
+| `resetSprings()` | Tüm yaylar dinlenmeye döner. |
+
+`LuminaSpringMorphComponent` tipindeki Blueprint component'leri bunu kurar (`LuminaBlueprintComponents`). Bunu taşıyan
+yerleştirilmiş bir `SkeletalMesh` seviye aktörü PIE'de ve üretilen oyunda `LuminaAnimatedMeshComponent` kökü ve bu
+component olarak oynar (diğer iskelet mesh aktörleri değişmez); seviyenin Details paneli Enabled, Amplitude,
+Stiffness Scale ve Damping Scale'i düzenler.
 
 ## `lib/src/components/mesh/procedural_mesh_component.dart`
 
@@ -255,6 +324,8 @@ Component that allows building and deforming 3D meshes dynamically at runtime.
 | `sampleInto` | `void sampleInto(double time, BoneNode bone)` | `sampleInto` işlemini gerçekleştirir. |
 
 ### `class LuminaSkinnedMeshComponent`
+
+Morph target üyeleri `LuminaMorphTargets`'tan gelir (`morph_target_set.dart`'ın altında).
 
 Skinned mesh component supporting bone hierarchies, sockets, and animation interpolation.
 
@@ -456,6 +527,8 @@ A local-space delta multiplied onto one animated joint every frame: `joint = ani
 A skinned glTF/GLB mesh that plays the animation clips stored in it, through gltfio's animator.
 
 gltfio only animates the asset a clip is stored in, so every clip the mesh should play must live in the same GLB — see `GlbAnimationMerger`, which builds such a file from one-clip-per-file exports. Each component draws its own asset instance with its own animator, so characters sharing one cached GLB animate independently.
+
+Ayrıca morph target ağırlıkları taşır (`LuminaMorphTargets`): yüklenince kendi instance'ından bulunur, clip ve eklem override'larından sonra yazılır; `LuminaSpringMorphComponent` bunları ikincil hareket için sürer.
 
 Clips are addressed by name. A request made before the asset has loaded is remembered and applied on load (an unknown name is then left unplayed and reported through [missingClip]); after load an unknown name throws.
 

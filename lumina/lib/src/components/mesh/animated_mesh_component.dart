@@ -3,6 +3,7 @@ import 'dart:developer' as developer;
 import 'package:flutter_filament/filament.dart';
 import 'package:vector_math/vector_math_64.dart';
 
+import 'package:lumina/src/components/mesh/morph_targets.dart';
 import 'package:lumina/src/components/mesh/static_mesh_component.dart';
 
 /// A local-space delta multiplied onto one animated joint every frame:
@@ -34,7 +35,7 @@ class LuminaJointOverride {
 /// Clips are addressed by name. A request made before the asset has loaded is
 /// remembered and applied on load (an unknown name is then left unplayed and
 /// reported through [missingClip]); after load an unknown name throws.
-class LuminaAnimatedMeshComponent extends LuminaStaticMeshComponent {
+class LuminaAnimatedMeshComponent extends LuminaStaticMeshComponent with LuminaMorphTargets {
   LuminaAnimatedMeshComponent({
     super.key,
     super.location,
@@ -276,6 +277,7 @@ class LuminaAnimatedMeshComponent extends LuminaStaticMeshComponent {
     _overrideBase.clear();
     _overrideWritten.clear();
     _asset = instance.getAsset();
+    discoverMorphTargetsOf(_asset!, instance.entities);
     for (var skin = 0; skin < instance.skinCount; skin++) {
       _jointSet.addAll(instance.jointsAt(skin));
     }
@@ -308,6 +310,7 @@ class LuminaAnimatedMeshComponent extends LuminaStaticMeshComponent {
   void onTick(double deltaTime) {
     super.onTick(deltaTime);
     _apply(deltaTime);
+    flushMorphTargets();
   }
 
   void _apply(double deltaTime) {

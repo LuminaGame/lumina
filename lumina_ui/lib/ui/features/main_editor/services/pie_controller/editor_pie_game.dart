@@ -417,6 +417,25 @@ class EditorPieGame extends LuminaGame {
             root: LuminaSceneComponent(location: location, rotation: rotation, scale: scale, isVisible: actor.isVisible),
           );
         }
+        // A skeletal mesh with spring-driven morph targets plays as an
+        // animated mesh with its springs, as in the generated game.
+        final springs = actor.type == 'SkeletalMesh'
+            ? actor.components.where((c) => c.type == 'LuminaSpringMorphComponent').firstOrNull
+            : null;
+        if (springs != null) {
+          // After the mesh, so the springs read its pose of the frame.
+          return LuminaActor(
+            key: LuminaObjectKey(actor.id),
+            root: LuminaAnimatedMeshComponent(
+              location: location,
+              rotation: rotation,
+              scale: scale,
+              meshAssetPath: meshPath,
+              castShadows: actor.castShadows,
+              visible: actor.isVisible,
+            ),
+          )..addComponent(LuminaSpringMorphComponent.fromProperties(Map<String, Object?>.from(springs.properties)));
+        }
         // 06: a mesh's simple collision — imported UCX_
         // hulls and the Static Mesh editor's authored shapes — as in the
         // generated game.

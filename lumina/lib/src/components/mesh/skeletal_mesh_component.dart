@@ -2,11 +2,10 @@
 import 'dart:typed_data';
 import 'package:vector_math/vector_math_64.dart';
 import 'dart:math' as math;
-import 'package:flutter_filament/filament.dart';
 import 'package:lumina/src/components/base/scene_component.dart';
 import 'package:lumina/src/object/actor.dart';
 import 'package:lumina/src/components/mesh/skinning_buffer.dart';
-import 'package:lumina/src/components/mesh/morph_target_set.dart';
+import 'package:lumina/src/components/mesh/morph_targets.dart';
 import 'package:lumina/src/animation/anim_instance.dart';
 
 class LuminaSocket {
@@ -231,14 +230,10 @@ class TransformCurve {
 }
 
 /// Skinned mesh component supporting bone hierarchies, sockets, and animation interpolation.
-class LuminaSkinnedMeshComponent extends LuminaSceneComponent {
+class LuminaSkinnedMeshComponent extends LuminaSceneComponent with LuminaMorphTargets {
   final String? meshAssetPath;
   Skeleton? _skeleton;
   FilamentSkinningBufferBridge? _skinningBridge;
-
-  MorphTargetSet? _morphTargets;
-  final Map<int, Float32List> _morphStaging = {};
-  final Set<int> _dirtyMorphEntities = {};
 
   final List<LuminaSocket> _sockets = [];
   final Map<String, int> _socketBoneIndices = {};
@@ -366,15 +361,7 @@ class LuminaSkinnedMeshComponent extends LuminaSceneComponent {
       }
     }
 
-    // Flush morph targets
-    if (_morphTargets != null && _dirtyMorphEntities.isNotEmpty && owner?.world != null) {
-      final rm = RenderableManager(owner!.world!.filamentEngine);
-      for (final entity in _dirtyMorphEntities) {
-        final staging = _morphStaging[entity]!;
-        rm.setMorphWeights(entity, staging, offset: 0);
-      }
-      _dirtyMorphEntities.clear();
-    }
+    flushMorphTargets();
   }
 
   void addSocket(LuminaSocket socket) {
@@ -486,72 +473,4 @@ class LuminaSkinnedMeshComponent extends LuminaSceneComponent {
     _attachments.removeWhere((a) => a.component == component);
     // Component remains attached to this MeshComponent, but no longer tracks the socket.
   }
-
-  // --- Morph Targets ---
-  
-  void discoverMorphTargets(FilamentAsset asset) {
-    _morphTargets = MorphTargetSet.fromAsset(asset);
-    _morphStaging.clear();
-    _dirtyMorphEntities.clear();
-    
-    for (final entity in asset.entities) {
-      final count = asset.getMorphTargetCountAt(entity);
-      if (count > 0) {
-        _morphStaging[entity] = Float32List(count);
-      }
-    }
-  }
-
-  List<String> get morphTargetNames {
-    if (_morphTargets == null) {
-      throw StateError('no morph targets discovered');
-    }
-    return _morphTargets!.names;
-  }
-
-  MorphTargetHandle resolveMorphTarget(String name) {
-    if (_morphTargets == null) {
-      throw StateError('no morph targets discovered');
-    }
-    final handle = _morphTargets!.getHandle(name);
-    if (handle == null) {
-      final available = _morphTargets!.names.join(', ');
-      throw ArgumentError('Unknown morph target: "$name". Available: $available');
-    }
-    return handle;
-  }
-
-  void setMorphTarget(String name, double weight) {
-    final handle = resolveMorphTarget(name);
-    setMorphTargetByHandle(handle, weight);
-  }
-
-  void setMorphTargetByHandle(MorphTargetHandle handle, double weight) {
-    for (final target in handle.targets) {
-      final entity = target.$1;
-      final index = target.$2;
-      _morphStaging[entity]![index] = weight;
-      _dirtyMorphEntities.add(entity);
-    }
-  }
-
-  double getMorphTarget(String name) {
-    final handle = resolveMorphTarget(name);
-    if (handle.targets.isEmpty) return 0.0;
-    // Just return the first one as representative
-    final target = handle.targets.first;
-    return _morphStaging[target.$1]![target.$2];
-  }
-
-  void clearMorphTargets() {
-    if (_morphTargets == null) return;
-    for (final entry in _morphStaging.entries) {
-      final arr = entry.value;
-      for (int i = 0; i < arr.length; i++) {
-        arr[i] = 0.0;
-      }
-      _dirtyMorphEntities.add(entry.key);
-    }
-  }
 }
-

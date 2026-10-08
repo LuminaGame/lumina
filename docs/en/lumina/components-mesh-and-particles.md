@@ -9,6 +9,9 @@ Components that draw geometry: static and instanced static meshes with LODs, the
 - [`lib/src/components/mesh/instanced_static_mesh_component.dart`](#libsrccomponentsmeshinstanced_static_mesh_componentdart)
 - [`lib/src/components/mesh/mesh_asset_cache.dart`](#libsrccomponentsmeshmesh_asset_cachedart)
 - [`lib/src/components/mesh/morph_target_set.dart`](#libsrccomponentsmeshmorph_target_setdart)
+- [`lib/src/components/mesh/morph_targets.dart`](#libsrccomponentsmeshmorph_targetsdart)
+- [`lib/src/components/mesh/morph_spring_solver.dart`](#libsrccomponentsmeshmorph_spring_solverdart)
+- [`lib/src/components/mesh/spring_morph_component.dart`](#libsrccomponentsmeshspring_morph_componentdart)
 - [`lib/src/components/mesh/procedural_mesh_component.dart`](#libsrccomponentsmeshprocedural_mesh_componentdart)
 - [`lib/src/components/mesh/skeletal_mesh_component.dart`](#libsrccomponentsmeshskeletal_mesh_componentdart)
 - [`lib/src/components/mesh/skinning_buffer.dart`](#libsrccomponentsmeshskinning_bufferdart)
@@ -116,6 +119,72 @@ Refcounted mesh asset cache managing gltfio parsing and shared instancing across
 | `names` | `List<String> get names` | Getter accessor returning the current value of `names`. |
 | `contains` | `bool contains(String name) => _handles.containsKey(name)` | Executes `contains` operation. |
 | `getHandle` | `MorphTargetHandle? getHandle(String name)` | Queries and returns the `Handle` value or child object. |
+
+## `lib/src/components/mesh/morph_targets.dart`
+
+### `mixin LuminaMorphTargets`
+
+Morph target weights of a mesh component, shared by `LuminaSkinnedMeshComponent` and `LuminaAnimatedMeshComponent`
+(the runtime skeletal mesh: Blueprint `LuminaSkeletalMeshComponent`, and placed skeletal meshes that carry springs).
+Targets are discovered by name from the renderables of an asset or of one asset instance (`discoverMorphTargetsOf`;
+the animated mesh does this for its own instance on load, so two characters sharing a mesh keep their own weights).
+Weights are staged per renderable and written to Filament by `flushMorphTargets` (the meshes flush at the end of
+their tick).
+
+| Member | Signature | Description |
+|---|---|---|
+| `hasMorphTargets` | `bool get hasMorphTargets` | Whether targets were discovered and there is at least one. |
+| `discoverMorphTargets` | `void discoverMorphTargets(FilamentAsset asset)` | Discovers the targets of the asset's own entities. |
+| `discoverMorphTargetsOf` | `void discoverMorphTargetsOf(FilamentAsset asset, List<int> entities)` | Discovers the targets of an asset instance's entities. |
+| `hasMorphTarget` | `bool hasMorphTarget(String name)` | Whether a target of that name exists. |
+| `setMorphTarget` / `setMorphTargetByHandle` | `void setMorphTarget(String name, double weight)` | Stages a weight (by name, or by a resolved handle without the lookup). |
+| `getMorphTarget` | `double getMorphTarget(String name)` | The staged weight. |
+| `clearMorphTargets` | `void clearMorphTargets()` | Every weight back to 0. |
+| `flushMorphTargets` | `void flushMorphTargets()` | Writes the weights changed since the last flush. |
+
+## `lib/src/components/mesh/morph_spring_solver.dart`
+
+### `class LuminaMorphSpringSolver`
+
+A damped spring for secondary motion (pure Dart): the offset (cm, in the mesh's frame) of a soft mass carried by the
+body. It steps at a fixed 240 Hz: `offset'' = −ω²·offset − 2ζω·offset' − inertia·a + gravity·(g − g_rest)`, where `a`
+is the body's acceleration and `g` the direction of gravity in the mesh's frame (taken as the rest one on the first
+step, so lying down or bending over moves the rest). The offset is clamped to `limit`.
+
+| Member | Description |
+|---|---|
+| `frequency`, `damping`, `inertia`, `gravity`, `limit` | Natural frequency (Hz), damping ratio (1: no overshoot), share of the acceleration and of the gravity change, largest offset (cm). |
+| `advance(dt, acceleration, gravityLocal)` | Advances by `dt` seconds. |
+| `offset`, `velocity`, `reset()` | The state; `reset` puts the mass at rest and takes the next gravity as the rest one. |
+
+## `lib/src/components/mesh/spring_morph_component.dart`
+
+### `class LuminaMorphSpring`
+
+One soft mass: `name`, the `bone` carrying it (null: the mesh itself) and an `offset` from it (cm), the spring
+(`frequency`, `damping`, `inertia`, `gravity`, `limit`), `range` (the offset at target weight 1, cm) and `morphs`, the
+morph target per axis direction of the mesh's frame (`+x`, `-x`, `+y`, `-y`, `+z`, `-z`). `toJson` / `fromJson`.
+
+### `class LuminaSpringMorphComponent`
+
+Secondary motion (jiggle) through morph targets. Each frame, after the owner's mesh ticked (add it after the mesh),
+every spring reads its mass's world position (the bone's joint world transform on an animated mesh, the socket
+transform on a skinned one, else the mesh's transform), derives its acceleration from the last frames (a speed above
+50 m/s is a teleport: the spring rests again), advances its solver with the acceleration and gravity in the mesh's
+frame and writes `offset × amplitude / range` as the weights of its two targets per axis, then flushes the mesh. A
+missing bone or morph target is reported once.
+
+| Member | Description |
+|---|---|
+| `springs`, `enabled`, `amplitude`, `stiffnessScale`, `dampingScale` | The masses; on/off; offset scale (0: no motion); frequency and damping multipliers. |
+| `fromProperties` / `toProperties` | The level / Blueprint component properties (`springs` as a list of `LuminaMorphSpring` JSON). |
+| `offsetOf(name)` | A spring's current offset. |
+| `resetSprings()` | Every spring back at rest. |
+
+Blueprint components of type `LuminaSpringMorphComponent` build it (`LuminaBlueprintComponents`). A placed
+`SkeletalMesh` level actor that carries one plays, in PIE and in the generated game, as a `LuminaAnimatedMeshComponent`
+root plus this component (every other skeletal mesh actor is unchanged); the level Details panel edits Enabled,
+Amplitude, Stiffness Scale and Damping Scale.
 
 ## `lib/src/components/mesh/procedural_mesh_component.dart`
 
@@ -255,6 +324,8 @@ Component that allows building and deforming 3D meshes dynamically at runtime.
 | `sampleInto` | `void sampleInto(double time, BoneNode bone)` | Executes `sampleInto` operation. |
 
 ### `class LuminaSkinnedMeshComponent`
+
+Its morph target members come from `LuminaMorphTargets` (below `morph_target_set.dart`).
 
 Skinned mesh component supporting bone hierarchies, sockets, and animation interpolation.
 
@@ -456,6 +527,8 @@ A local-space delta multiplied onto one animated joint every frame: `joint = ani
 A skinned glTF/GLB mesh that plays the animation clips stored in it, through gltfio's animator.
 
 gltfio only animates the asset a clip is stored in, so every clip the mesh should play must live in the same GLB — see `GlbAnimationMerger`, which builds such a file from one-clip-per-file exports. Each component draws its own asset instance with its own animator, so characters sharing one cached GLB animate independently.
+
+It also carries morph target weights (`LuminaMorphTargets`), discovered from its own instance on load and flushed after the clip and the joint overrides; `LuminaSpringMorphComponent` drives them for secondary motion.
 
 Clips are addressed by name. A request made before the asset has loaded is remembered and applied on load (an unknown name is then left unplayed and reported through [missingClip]); after load an unknown name throws.
 

@@ -92,6 +92,16 @@ class ComponentPropertyRegistry {
         PropertyDescriptor(id: 'rotationRateYaw', label: 'Rotation Rate Yaw', group: 'Character Movement: Rotation Settings', editor: PropertyEditorType.float, unit: '°/s', defaultValue: 540.0),
       ],
     ),
+    'LuminaSpringMorphComponent': ComponentDescriptor(
+      type: 'LuminaSpringMorphComponent',
+      sections: ['Secondary Motion'],
+      properties: [
+        PropertyDescriptor(id: 'enabled', label: 'Enabled', group: 'Secondary Motion', editor: PropertyEditorType.boolean, defaultValue: true),
+        PropertyDescriptor(id: 'amplitude', label: 'Amplitude', group: 'Secondary Motion', editor: PropertyEditorType.float, unit: 'x', min: 0.0, max: 3.0, defaultValue: 1.0),
+        PropertyDescriptor(id: 'stiffnessScale', label: 'Stiffness Scale', group: 'Secondary Motion', editor: PropertyEditorType.float, unit: 'x', min: 0.1, max: 5.0, defaultValue: 1.0),
+        PropertyDescriptor(id: 'dampingScale', label: 'Damping Scale', group: 'Secondary Motion', editor: PropertyEditorType.float, unit: 'x', min: 0.1, max: 5.0, defaultValue: 1.0),
+      ],
+    ),
     'LuminaSkeletalMeshComponent': ComponentDescriptor(
       type: 'LuminaSkeletalMeshComponent',
       sections: ['Mesh & Geometry', 'Materials', 'Transform & Attachment', 'Render Distance & Culling'],

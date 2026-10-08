@@ -18,8 +18,12 @@ class MorphTargetSet {
 
   MorphTargetHandle? getHandle(String name) => _handles[name];
 
-  MorphTargetSet.fromAsset(FilamentAsset asset) {
-    for (final entity in asset.entities) {
+  MorphTargetSet.fromAsset(FilamentAsset asset) : this.fromEntities(asset, asset.entities);
+
+  /// The targets of [entities] (for example an asset instance's), names
+  /// read through [asset].
+  MorphTargetSet.fromEntities(FilamentAsset asset, List<int> entities) {
+    for (final entity in entities) {
       final count = asset.getMorphTargetCountAt(entity);
       for (int i = 0; i < count; i++) {
         String name = asset.getMorphTargetNameAt(entity, i) ?? 'morph_$i';
