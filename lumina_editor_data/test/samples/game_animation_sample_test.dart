@@ -259,7 +259,33 @@ End Object''';
   });
 
   group('root height', () {
-    test('a clip whose root rises and falls keeps its root at the first key height', () {
+    test('a landing clip whose root starts high above the ground keeps its root at its rest height, not up there', () {
+      final glb = LuminaSyntheticLocomotionRig.build([LuminaSyntheticLocomotionRig.walk('Land', 0, 1)]);
+      final doc = GlbDocument.parse(glb);
+      final nodes = (doc.json['nodes'] as List).cast<Map>();
+      final root = nodes.indexWhere((n) => n['name'] == 'root');
+      final rest = ((nodes[root]['translation'] as List?) ?? const [0, 0, 0]).map((v) => (v as num).toDouble()).toList();
+      final animation = (doc.json['animations'] as List).cast<Map>().first;
+      final channel = (animation['channels'] as List).cast<Map>()
+          .firstWhere((c) => (c['target'] as Map)['node'] == root && (c['target'] as Map)['path'] == 'translation');
+      final accessor = (doc.json['accessors'] as List).cast<Map>()[((animation['samplers'] as List)[channel['sampler'] as int] as Map)['output'] as int];
+      final view = (doc.json['bufferViews'] as List).cast<Map>()[accessor['bufferView'] as int];
+      final base = ((view['byteOffset'] as int?) ?? 0) + ((accessor['byteOffset'] as int?) ?? 0);
+      final data = ByteData.sublistView(doc.bin);
+      final count = accessor['count'] as int;
+      // The root falls from 3 m above its rest to the ground over the clip.
+      for (var k = 0; k < count; k++) {
+        data.setFloat32(base + k * 12 + 4, rest[1] + 3.0 * (1 - k / (count - 1)), Endian.little);
+      }
+      final flat = GlbDocument.parse(GaspAnimationImport.removeRootHeight(GlbDocument(doc.json, doc.bin).encode()));
+      final out = ByteData.sublistView(flat.bin);
+      for (var k = 0; k < count; k++) {
+        expect(out.getFloat32(base + k * 12 + 4, Endian.little), closeTo(rest[1], 1e-5), reason: 'key $k');
+      }
+    });
+
+
+    test('a clip whose root rises and falls keeps its root at its rest height', () {
       final glb = LuminaSyntheticLocomotionRig.build([LuminaSyntheticLocomotionRig.walk('Walk', 0, 1)]);
       final doc = GlbDocument.parse(glb);
       final nodes = (doc.json['nodes'] as List).cast<Map>();
@@ -285,10 +311,10 @@ End Object''';
       final lifted = GlbDocument(doc.json, doc.bin).encode();
       final flat = GlbDocument.parse(GaspAnimationImport.removeRootHeight(lifted));
       final out = ByteData.sublistView(flat.bin);
-      final first = out.getFloat32(base + 4, Endian.little);
+      final restY = (((nodes[root]['translation'] as List?) ?? const [0, 0, 0])[1] as num).toDouble();
       for (var k = 0; k < count; k++) {
         final o = base + k * 12;
-        expect(out.getFloat32(o + 4, Endian.little), closeTo(first, 1e-5), reason: 'key $k');
+        expect(out.getFloat32(o + 4, Endian.little), closeTo(restY, 1e-5), reason: 'key $k');
         expect(out.getFloat32(o + 8, Endian.little), closeTo(forward[k], 1e-5), reason: 'ground motion kept');
       }
     });

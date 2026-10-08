@@ -1,16 +1,12 @@
 import 'dart:convert';
-import 'dart:ffi' as ffi;
 import 'dart:io';
 import 'dart:math' as math;
-import 'dart:typed_data';
 
-import 'package:ffi/ffi.dart';
-import 'package:flutter_filament/flutter_filament.dart';
-import 'package:flutter_filament/src/third_party/filament_c.g.dart' as c;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina/testing.dart';
 import 'package:lumina_editor_data/lumina_editor.dart';
-import 'package:vector_math/vector_math_64.dart';
+
+import 'support/gasp_sandbox.dart';
 
 /// The Game Animation Sample example project played on the GPU: its
 /// `L_Sandbox`, its game mode spawning the MetaHuman character, and the
@@ -30,137 +26,16 @@ void main() {
   test('game animation sample: the MetaHuman walks, runs, sprints, stops, crouches and jumps in L_Sandbox', () async {
     const name = 'game animation sample: the MetaHuman walks, runs, sprints, stops, crouches and jumps in L_Sandbox';
     final dir = _projectDir;
-    final manifest = Directory(dir).listSync().whereType<File>().firstWhere((f) => f.path.endsWith('.lmproject'));
-    final project = LuminaProject.fromMap(jsonDecode(manifest.readAsStringSync()) as Map<String, dynamic>);
-    final previousProvider = LuminaAssets.defaultProvider;
-    final previousDir = LuminaAssets.projectDir;
-    bool absolute(String p) => p.startsWith('/') || RegExp(r'^[A-Za-z]:[\\/]').hasMatch(p);
-    LuminaAssets.defaultProvider = (path) => File(absolute(path) ? path : '$dir/$path').readAsBytes();
-    LuminaAssets.projectDir = dir;
-    LuminaPoseSearchDatabaseRuntime.clearShared();
-    addTearDown(() {
-      LuminaAssets.defaultProvider = previousProvider;
-      LuminaAssets.projectDir = previousDir;
-      LuminaPoseSearchDatabaseRuntime.clearShared();
-    });
-
-    final engine = FilamentEngine.create()!;
-    final scene = engine.createScene();
-    final view = engine.createView();
-    final renderer = engine.createRenderer();
-    final swapChain = engine.createHeadlessSwapChain(_w, _h);
-    final camera = engine.createCamera(engine.createEntity());
-    view
-      ..scene = scene
-      ..camera = camera
-      ..setViewport(0, 0, _w, _h);
-    camera.setProjection(fovDegrees: 60, aspect: _w / _h, near: 10, far: 200000, direction: FovDirection.vertical);
-    final world = LuminaWorld(worldType: LuminaWorldType.game)..initializeNativeContext(engine, scene);
-    world.registerSubsystem(LuminaCollisionSubsystem());
-    world.bindView(view);
-    final pixels = calloc<ffi.Uint8>(_w * _h * 4);
-    addTearDown(() {
-      world.cleanup();
-      calloc.free(pixels);
-      engine.dispose();
-    });
-
-    // L_Sandbox as the generated level builds it.
-    final actors = (jsonDecode(level.readAsStringSync()) as Map)['metadata']['actors'] as List;
-    var start = Vector3.zero();
-    final usedAssets = <String>{GaspSandboxLevel.levelPath};
-    for (final a in actors.cast<Map>()) {
-      final loc = ((a['location'] as List?) ?? const [0, 0, 0]).cast<num>();
-      final rot = ((a['rotation'] as List?) ?? const [0, 0, 0]).cast<num>();
-      final scl = ((a['scale'] as List?) ?? const [1, 1, 1]).cast<num>();
-      switch (a['type']) {
-        case 'PlayerStart':
-          start = LuminaAxes.location(loc);
-        case 'DirectionalLight':
-          world.persistentLevel.registerActor(LuminaActor(
-              root: LuminaDirectionalLightComponent(rotation: LuminaAxes.rotation(rot), intensity: 100000, castShadows: true)));
-        case 'Primitive':
-          final props = Map<String, dynamic>.from(((a['components'] as List).first as Map)['properties'] as Map);
-          world.persistentLevel.registerActor(LuminaPrimitiveActor.fromComponentProperties(props,
-              location: LuminaAxes.location(loc),
-              rotation: LuminaAxes.rotation(rot),
-              materialOverrideAsset: a['materialPath'] as String?));
-          if (a['materialPath'] is String) usedAssets.add(a['materialPath'] as String);
-        case 'StaticMesh':
-          final mesh = a['meshAssetPath'] as String;
-          world.persistentLevel.registerActor(LuminaActor(
-              root: LuminaStaticMeshComponent(
-                  meshAssetPath: mesh,
-                  location: LuminaAxes.location(loc),
-                  rotation: LuminaAxes.rotation(rot),
-                  scale: LuminaAxes.scale(scl))));
-          usedAssets.add(mesh.replaceAll(r'\', '/').split('/contents/').last);
-      }
-    }
-    scene.setSkybox(FilamentSkybox.build(engine, color: Vector4(0.42, 0.56, 0.78, 1), intensity: 30000));
-    scene.setIndirectLight(FilamentIndirectLight.build(
-      engine,
-      irradiance: SphericalHarmonics(bands: 1, coefficients: [0.6, 0.65, 0.72]),
-      intensity: 30000,
-    ));
-
-    // The project's game mode, character and input.
-    final registry = LuminaBlueprintClassRegistry(dir);
-    final mode = registry.createGameMode(project.mapsAndModes);
-    expect(mode, isNotNull, reason: '${registry.diagnostics}');
-    final bound = ProjectInputBinder.bind(project.input);
-    final input = world.registerSubsystem(LuminaInputSubsystem());
-    for (final ctx in bound.contexts) {
-      input.addMappingContext(ctx.context, priority: ctx.priority);
-    }
-    world.persistentLevel.registerActor(LuminaPlayerStart(location: start.clone()));
-    world.gameMode = mode;
-    world.beginPlay();
-    final pc = mode!.login();
-    world.tick(1 / 60);
-    final character = pc.pawn as LuminaBlueprintCharacter;
-    expect(character.blueprintClass.name, GaspCharacterContent.characterName);
-    final mesh = character.blueprintComponents['mesh'] as LuminaAnimatedMeshComponent;
-    final anim = character.blueprintComponents['mesh.anim'] as LuminaAnimBlueprintInstance;
-    final loadWatch = Stopwatch()..start();
-    await mesh.loaded.timeout(const Duration(minutes: 3));
-    final meshLoad = loadWatch.elapsed;
-    // The databases load on background isolates from begin play; hold until
-    // they have.
-    final databases = [
-      for (final f in Directory('$dir/contents/animations').listSync(recursive: true).whereType<File>())
-        if (RegExp(r'/PSD_[^/]+\.lmas$').hasMatch(f.path.replaceAll(r'\', '/')))
-          'contents/animations/${f.path.replaceAll(r'\', '/').split('/contents/animations/').last}',
-    ];
-    expect(databases.length, GaspDatabases.plans.length, reason: '$databases');
-    for (var i = 0; i < 2400 && !databases.every(anim.motionMatching.isLoaded); i++) {
-      // ignore: avoid_print
-      if (i % 20 == 0) print('waiting for ${[for (final d in databases) if (!anim.motionMatching.isLoaded(d)) d.split('/').last]}');
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-      pc.onTick(1 / 60);
-      world.tick(1 / 60);
-      // Ticks without frames still queue skinning and morph updates: let
-      // Filament run them, or its command buffer fills up.
-      engine.flushAndWait();
-    }
-    final databasesLoad = loadWatch.elapsed;
-    expect(databases.every(anim.motionMatching.isLoaded), isTrue, reason: anim.motionMatching.lastError);
-    expect(anim.motionMatching.player, isNotNull, reason: anim.motionMatching.lastError);
-
-    Uint8List capture() {
-      for (var i = 0; i < 2; i++) {
-        if (renderer.beginFrame(swapChain)) {
-          renderer.render(view);
-          if (i == 1) {
-            c.filament_renderer_read_pixels(
-                renderer.nativePointer, engine.nativePointer, 0, 0, _w, _h, pixels.cast(), ffi.nullptr, ffi.nullptr);
-          }
-          renderer.endFrame();
-        }
-        engine.flushAndWait();
-      }
-      return Uint8List.fromList(pixels.asTypedList(_w * _h * 4));
-    }
+    final sandbox = await GaspSandbox.open(dir);
+    final world = sandbox.world;
+    final pc = sandbox.pc;
+    final input = sandbox.input;
+    final character = sandbox.character;
+    final anim = sandbox.anim;
+    final usedAssets = sandbox.usedAssets;
+    final meshLoad = sandbox.meshLoad;
+    final databasesLoad = sandbox.databasesLoad;
+    final capture = sandbox.capture;
 
     final video = SmokeVideoRecorder(width: _w, height: _h, fps: 30, testName: name);
     addTearDown(video.discard);
@@ -264,5 +139,96 @@ void main() {
     expect(phaseSpeeds['sprint'], closeTo(GaspCharacterContent.sprintSpeed, 10));
     expect(phaseSpeeds['crouch walk'], closeTo(GaspCharacterContent.crouchSpeed, 10));
     SmokeArtifacts.saveVideo(name, video.finish(), usedAssets: usedAssets.toList());
+  }, skip: skip, timeout: const Timeout(Duration(minutes: 20)));
+
+  test('game animation sample: the MetaHuman stays on the ground after standing, running and block jumps', () async {
+    const name = 'game animation sample: the MetaHuman stays on the ground after standing, running and block jumps';
+    final s = await GaspSandbox.open(_projectDir);
+    final character = s.character;
+    final movement = character.characterMovement;
+    final video = SmokeVideoRecorder(width: _w, height: _h, fps: 30, testName: name);
+    addTearDown(video.discard);
+    const halfHeight = GaspCharacterContent.capsuleHalfHeight;
+
+    /// The root bone's height above the capsule's feet (cm): 0 when the body
+    /// stands where the capsule does.
+    double rootAboveFeet() => s.mesh.jointWorldTransform('root')!.getTranslation().y - (character.actorLocation.y - halfHeight);
+
+    final results = <String, String>{};
+    var worst = 0.0;
+    var worstAt = '';
+    Future<void> jump(String label, {List<LuminaKey> hold = const [], double runUp = 0.0, double seconds = 2.5}) async {
+      for (final k in hold) {
+        s.input.injectKeyDown(k);
+      }
+      var frame = 0;
+      void tick() {
+        s.pc.onTick(1 / 60);
+        s.world.tick(1 / 60);
+        if (frame++ % 2 == 0) video.addFrame(s.capture());
+      }
+
+      for (var f = 0; f < (runUp * 60).round(); f++) {
+        tick();
+      }
+      s.input.injectKeyDown(LuminaKey.keySpace);
+      tick();
+      s.input.injectKeyUp(LuminaKey.keySpace);
+      var airborne = false, landed = false, wasFalling = false, reJumps = 0;
+      var peak = 0.0;
+      var savedPng = false;
+      for (var f = 0; f < (seconds * 60).round(); f++) {
+        tick();
+        if (movement.isFalling) {
+          // Walking off a ledge after landing falls again; only rising
+          // again would be a jump.
+          if (landed && !wasFalling && movement.velocity.y > 50) reJumps++;
+          airborne = true;
+          wasFalling = true;
+        } else if (airborne) {
+          wasFalling = false;
+          landed = true;
+          final above = rootAboveFeet();
+          peak = math.max(peak, above);
+          if (above > worst) {
+            worst = above;
+            worstAt = '$label ${s.anim.currentState} ${s.anim.variables[LuminaAnimBlueprintInstance.matchedClipVariable]}';
+          }
+          if (!savedPng && s.anim.currentState == 'Land') {
+            savedPng = true;
+            SmokeArtifacts.saveScreenshot('$name — $label landing', SmokeArtifacts.encodePng(_w, _h, s.capture()),
+                usedAssets: s.usedAssets.toList(),
+                metrics: {'root_above_feet_cm': above.toStringAsFixed(1), 'state': s.anim.currentState ?? ''});
+          }
+        }
+      }
+      for (final k in hold) {
+        s.input.injectKeyUp(k);
+      }
+      expect(airborne && landed, isTrue, reason: '$label: jumped and landed');
+      expect(reJumps, 0, reason: '$label: one Space press jumps once');
+      results[label] = 'root ≤ ${peak.toStringAsFixed(1)} cm above the feet after touchdown';
+    }
+
+    await jump('standing jump');
+    await jump('running jump', hold: const [LuminaKey.keyW], runUp: 1.0);
+    // Onto the top of a block 80–260 cm high, then jump off it forward.
+    final block = s.blocks.firstWhere(
+        (b) => !b.rotated && b.size[2] >= 80 && b.size[2] <= 260 && b.size[0] >= 150 && b.size[1] >= 150,
+        orElse: () => throw StateError('L_Sandbox has no block to jump off'));
+    character.actorLocation = LuminaAxes.location([block.center[0], block.center[1], block.center[2] + block.size[2] / 2 + halfHeight + 2]);
+    for (var f = 0; f < 30; f++) {
+      s.pc.onTick(1 / 60);
+      s.world.tick(1 / 60);
+      s.engine.flushAndWait();
+    }
+    expect(movement.isFalling, isFalse, reason: 'standing on the block');
+    await jump('jump off a ${block.size[2].round()} cm block', hold: const [LuminaKey.keyW], seconds: 3.5);
+    await jump('standing jump after the drop');
+
+    // ignore: avoid_print
+    print(const JsonEncoder.withIndent('  ').convert({...results, 'worst': '${worst.toStringAsFixed(1)} cm ($worstAt)'}));
+    expect(worst, lessThan(5.0), reason: 'after touchdown the body stays on the ground: $worstAt');
+    SmokeArtifacts.saveVideo(name, video.finish(), usedAssets: s.usedAssets.toList());
   }, skip: skip, timeout: const Timeout(Duration(minutes: 20)));
 }

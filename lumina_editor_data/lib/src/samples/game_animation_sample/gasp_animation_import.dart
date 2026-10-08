@@ -216,10 +216,12 @@ abstract final class GaspAnimationImport {
   }
 
   /// [clip] with the root bone's height motion removed: every translation
-  /// key of the node named [root] keeps its first key's height (measured
-  /// along world up, glTF +Y, in the root's parent frame), so the body moves
-  /// relative to the root as before but no longer rises or falls with it.
-  /// A clip without such a channel comes back unchanged.
+  /// key of the node named [root] is held at the root's rest height
+  /// (measured along world up, glTF +Y, in the root's parent frame), so the
+  /// body moves relative to the root as before but no longer rises or falls
+  /// with it. The rest height, not the first key's: a landing clip starts
+  /// with its root metres up in the air. A clip without such a channel comes
+  /// back unchanged.
   static Uint8List removeRootHeight(Uint8List clip, {String root = 'root'}) {
     final doc = GlbDocument.parse(clip, label: 'clip');
     final nodes = ((doc.json['nodes'] as List?) ?? const []).cast<Map>();
@@ -264,7 +266,8 @@ abstract final class GaspAnimationImport {
               data.getFloat32(o + 8, Endian.little) * up[2];
         }
 
-        final keep = height(0);
+        final rest = ((nodes[index]['translation'] as List?) ?? const [0, 0, 0]).map((v) => (v as num).toDouble()).toList();
+        final keep = rest[0] * up[0] + rest[1] * up[1] + rest[2] * up[2];
         for (var k = 0; k < count; k++) {
           final d = height(k) - keep;
           final o = base + k * stride;
