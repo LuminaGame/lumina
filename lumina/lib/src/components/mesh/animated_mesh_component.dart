@@ -77,7 +77,8 @@ class LuminaAnimatedMeshComponent extends LuminaStaticMeshComponent with LuminaM
   /// A clip requested before load that the asset turned out not to have.
   String? missingClip;
 
-  /// The skin joint entities, once loaded, and the bones resolved by name
+  /// The skin joint entities and their ancestors, once loaded, and the
+  /// bones resolved by name
   /// (gltfio finds a node by name; it cannot name an entity without a name
   /// manager, so bones are looked up on first use).
   final Set<int> _jointSet = {};
@@ -334,6 +335,17 @@ class LuminaAnimatedMeshComponent extends LuminaStaticMeshComponent with LuminaM
     discoverMorphTargetsOf(_asset!, instance.entities);
     for (var skin = 0; skin < instance.skinCount; skin++) {
       _jointSet.addAll(instance.jointsAt(skin));
+    }
+    // Bones between the joints that carry no skin weights themselves (a
+    // MetaHuman's thighs and upper arms, whose vertices are weighted to
+    // twist and corrective joints) are still bones: a pose driver or a joint
+    // override must move them, or everything below keeps its rest pose.
+    final engine = owner?.world?.nativeEngine;
+    if (engine != null) {
+      final tm = FilamentTransformManager(engine);
+      for (final joint in _jointSet.toList()) {
+        for (var p = tm.getParent(joint); p != 0 && _jointSet.add(p); p = tm.getParent(p)) {}
+      }
     }
     for (final bone in _jointOverrides.keys) {
       if (_joint(bone) == null) _warnMissingBone(bone);
