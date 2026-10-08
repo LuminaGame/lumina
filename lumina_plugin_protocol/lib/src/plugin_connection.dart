@@ -1,5 +1,6 @@
 // ignore_for_file: prefer_initializing_formals
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:lumina_plugin_protocol/src/frame_codec.dart';
 import 'package:lumina_plugin_protocol/src/messages.dart';
@@ -67,12 +68,20 @@ class PluginConnection {
 
   /// Sends a request and waits for its answer. Fails with a
   /// [PluginRemoteError]: the other side's error, [PluginErrorCodes.timeout]
-  /// after [timeout], or [PluginErrorCodes.closed].
+  /// after [timeout], [PluginErrorCodes.closed], or
+  /// [PluginErrorCodes.tooLarge] when the request does not fit in one frame
+  /// (that call fails, the link stays up).
   Future<Object?> request(String method, [Map<String, Object?> args = const {}, Duration? timeout]) {
     if (_closed) {
       return Future.error(PluginRemoteError(code: PluginErrorCodes.closed, message: 'connection closed before $method'));
     }
     final id = _nextId++;
+    final Uint8List frame;
+    try {
+      frame = PluginFrameCodec.encode(PluginRequest(id: id, method: method, args: args).toJson());
+    } on ArgumentError catch (e) {
+      return Future.error(PluginRemoteError(code: PluginErrorCodes.tooLarge, message: '$method: ${e.message}'));
+    }
     final completer = Completer<Object?>();
     final limit = timeout ?? defaultTimeout;
     final timer = Timer(limit, () {
@@ -84,19 +93,36 @@ class PluginConnection {
       }
     });
     _pending[id] = _Pending(completer, timer);
-    _send(PluginRequest(id: id, method: method, args: args));
+    _write(frame);
     return completer.future;
   }
 
-  /// Sends a notification (dropped when closed).
+  /// Sends a notification (dropped when closed; dropped and reported to
+  /// [onProtocolError] when it does not fit in one frame).
   void notify(String method, [Map<String, Object?> args = const {}]) {
     if (_closed) return;
     _send(PluginNotification(method: method, args: args));
   }
 
-  void _send(PluginMessage message) {
+  /// Sends [message]. One that does not fit in a frame is not sent and is
+  /// reported to [onProtocolError]; [_answer] turns that into an error answer.
+  /// The link stays up: an oversized message is the sender's mistake, not a
+  /// corrupt stream.
+  bool _send(PluginMessage message) {
+    final Uint8List frame;
     try {
-      _output.add(PluginFrameCodec.encode(message.toJson()));
+      frame = PluginFrameCodec.encode(message.toJson());
+    } catch (e, s) {
+      onProtocolError?.call(e, s);
+      return false;
+    }
+    _write(frame);
+    return true;
+  }
+
+  void _write(Uint8List frame) {
+    try {
+      _output.add(frame);
     } catch (e, s) {
       onProtocolError?.call(e, s);
       close();
@@ -145,7 +171,12 @@ class PluginConnection {
     }
     try {
       final result = await handler(request.args);
-      if (!_closed) _send(PluginResponse.ok(request.id, result));
+      if (!_closed && !_send(PluginResponse.ok(request.id, result))) {
+        _send(PluginResponse.error(
+          request.id,
+          PluginRemoteError(code: PluginErrorCodes.tooLarge, message: 'the answer to ${request.method} does not fit in one frame'),
+        ));
+      }
     } on PluginRemoteError catch (e) {
       if (!_closed) _send(PluginResponse.error(request.id, e));
     } catch (e, s) {

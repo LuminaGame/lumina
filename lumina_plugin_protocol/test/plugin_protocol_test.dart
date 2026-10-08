@@ -121,6 +121,40 @@ void main() {
       expect(await host.request('core.fast'), 'ok');
     });
 
+    test('a message larger than one frame fails that call only and the link keeps working', () async {
+      final (host, child, server) = await _pair(timeout: const Duration(seconds: 10));
+      addTearDown(server.close);
+      addTearDown(host.close);
+      addTearDown(child.close);
+      final oversized = 'x' * (PluginFrameCodec.maxPayload + 1);
+      host.onRequest('host.save', (a) => 'saved');
+      child.onRequest('core.big', (a) => oversized);
+      final errors = <Object>[];
+      final reporting = PluginConnection(
+        input: StreamController<List<int>>().stream,
+        output: StreamController<List<int>>()..stream.listen((_) {}),
+        onProtocolError: (e, _) => errors.add(e),
+      );
+      addTearDown(reporting.close);
+
+      await expectLater(
+        child.request('host.save', {'bytes': oversized}),
+        throwsA(isA<PluginRemoteError>().having((e) => e.code, 'code', PluginErrorCodes.tooLarge)),
+      );
+      expect(child.isClosed, isFalse);
+      expect(child.pendingCount, 0);
+      await expectLater(
+        host.request('core.big'),
+        throwsA(isA<PluginRemoteError>().having((e) => e.code, 'code', PluginErrorCodes.tooLarge)),
+      );
+      child.notify('host.log', {'message': oversized});
+      reporting.notify('host.log', {'message': oversized});
+      expect(errors.single, isA<ArgumentError>(), reason: 'a dropped notification is reported');
+      expect(reporting.isClosed, isFalse);
+      expect(await child.request('host.save', {'bytes': 'small'}), 'saved');
+      expect(host.isClosed, isFalse);
+    });
+
     test('closing one side fails the other side\'s pending calls and completes done', () async {
       final (host, child, server) = await _pair(timeout: const Duration(seconds: 30));
       addTearDown(server.close);

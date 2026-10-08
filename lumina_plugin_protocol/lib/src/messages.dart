@@ -127,6 +127,10 @@ abstract final class PluginErrorCodes {
   /// The plugin process is not running (host side, for a shell's call).
   static const String unavailable = 'unavailable';
 
+  /// The request or its answer does not fit in one frame
+  /// ([PluginFrameCodec.maxPayload]); the link stays up.
+  static const String tooLarge = 'too_large';
+
   static const String internal = 'internal';
 }
 
