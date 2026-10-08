@@ -1,5 +1,6 @@
 // Lumina Studio's Windows shell thumbnail provider for 3D model files
-// (.glb, .gltf, .fbx, .obj).
+// (.glb, .gltf, .fbx, .obj) and Lumina assets (.lmas: the Content Browser's
+// thumbnail, usually the one embedded in the file).
 //
 // Explorer asks a thumbnail provider for a bitmap through IInitializeWithStream
 // + IThumbnailProvider, in the shell's isolated surrogate process. This DLL
@@ -42,7 +43,7 @@ namespace {
 constexpr CLSID kClsid = {0x4c2f5d1e, 0x8a3b, 0x4e7c, {0x9d, 0x21, 0x6b, 0x0a, 0x5f, 0x3e, 0x7c, 0x18}};
 constexpr wchar_t kClsidString[] = L"{4C2F5D1E-8A3B-4E7C-9D21-6B0A5F3E7C18}";
 constexpr wchar_t kThumbnailHandlerKey[] = L"ShellEx\\{e357fccd-a995-4576-b01f-234630154e96}";
-constexpr const wchar_t* kExtensions[] = {L".glb", L".gltf", L".fbx", L".obj"};
+constexpr const wchar_t* kExtensions[] = {L".glb", L".gltf", L".fbx", L".obj", L".lmas"};
 
 constexpr DWORD kRenderTimeoutMs = 30000;
 constexpr LONG kConcurrentRenders = 2;
@@ -108,6 +109,7 @@ std::wstring ExtensionFor(IStream* stream) {
   if (FAILED(stream->Seek(zero, STREAM_SEEK_SET, nullptr)) || FAILED(stream->Read(head, sizeof(head), &read))) return {};
   stream->Seek(zero, STREAM_SEEK_SET, nullptr);
   if (read >= 4 && memcmp(head, "glTF", 4) == 0) return L".glb";
+  if (read >= 4 && memcmp(head, "LMAS", 4) == 0) return L".lmas";
   if (read >= 18 && memcmp(head, "Kaydara FBX Binary", 18) == 0) return L".fbx";
   if (read >= 1 && head[0] == '{') return L".gltf";
   return {};

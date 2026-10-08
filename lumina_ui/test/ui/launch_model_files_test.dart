@@ -24,6 +24,7 @@ void main() {
   setUp(() => temp = Directory.systemTemp.createTempSync('lumina_launch_files_'));
   tearDown(() {
     LaunchModelFiles.pending.value = const [];
+    LaunchModelFiles.pendingAssets.value = const [];
     try {
       if (temp.existsSync()) temp.deleteSync(recursive: true);
     } on FileSystemException catch (_) {
@@ -73,6 +74,30 @@ void main() {
   test('the hand-off to a project editor carries the pending files', () {
     expect(LaunchModelFiles.handOffArguments(['/a/x.glb', '/b/y.fbx']), ['--import', '/a/x.glb', '--import', '/b/y.fbx']);
     expect(LaunchModelFiles.handOffArguments(const []), isEmpty);
+  });
+
+  group('Lumina assets (.lmas)', () {
+    test('a positional .lmas or --open-asset is an asset to open, not a model to import', () async {
+      final a = touch('SM_Rock.lmas');
+      final b = touch('M_Rock.LMAS');
+      final args = [a.path, '--open-asset', b.path, '--open-asset=${p.join(temp.path, 'gone.lmas')}'];
+      expect(await LaunchModelFiles.resolveAssets(args), [a.path, b.path].map((f) => p.normalize(File(f).absolute.path)).toList());
+      expect(await LaunchModelFiles.resolve(args), isEmpty);
+    });
+
+    test('its project is the nearest folder above it with a .lmproject', () async {
+      final project = Directory(p.join(temp.path, 'Game'))..createSync();
+      File(p.join(project.path, 'Game.lmproject')).writeAsStringSync('{"project_name": "Game"}');
+      final asset = File(p.join(project.path, 'contents', 'meshes', 'static', 'SM_Rock.lmas'))
+        ..parent.createSync(recursive: true)
+        ..writeAsStringSync('{}');
+      expect(await LaunchModelFiles.projectOf(asset.path), p.normalize(project.absolute.path));
+      expect(await LaunchModelFiles.projectOf(touch('loose.lmas').path), isNull);
+    });
+
+    test('the hand-off carries the assets to open', () {
+      expect(LaunchModelFiles.assetHandOffArguments(['/g/contents/a.lmas']), ['--open-asset', '/g/contents/a.lmas']);
+    });
   });
 
   test('take empties the pending list once', () {
@@ -141,4 +166,41 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 1));
   }, timeout: const Timeout(Duration(minutes: 3)));
+
+  testWidgets('an .lmas opened with Lumina Studio opens in its editor in its project', (tester) async {
+    if (!barrel.existsSync()) return markTestSkipped('test-assets missing');
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+    final dir = Directory(p.join(temp.path, 'AssetGame'))..createSync(recursive: true);
+    Directory(p.join(dir.path, 'contents', 'levels')).createSync(recursive: true);
+    File(p.join(dir.path, 'AssetGame.lmproject'))
+        .writeAsStringSync('{"project_name": "AssetGame", "active_level": "contents/levels/L_Main.lmas"}');
+    await tester.runAsync(() => AssetRepository().importExternalFile(projectPath: dir.path, sourceFilePath: barrel.path));
+    final mesh = p.join(dir.path, 'contents', 'meshes', 'static', 'fuel_barrel_red.lmas');
+    expect(File(mesh).existsSync(), isTrue);
+    expect(await tester.runAsync(() => LaunchModelFiles.projectOf(mesh)), p.normalize(dir.absolute.path));
+
+    final vm = EditorViewModel(
+      initialProject: LuminaProject(projectName: 'AssetGame'),
+      projectLocation: temp.path,
+      enableTimers: false,
+      autoInitAssets: false,
+    );
+    addTearDown(vm.dispose);
+    LaunchModelFiles.pendingAssets.value = [p.normalize(mesh)];
+    await tester.pumpWidget(ShadcnApp(theme: luminaEditorTheme(), home: MainEditorView(viewModel: vm)));
+    bool opened() => vm.openTabs.any((t) => t.asset != null && p.basename(t.asset!.relativePath) == 'fuel_barrel_red.lmas');
+    for (var i = 0; i < 100 && !opened(); i++) {
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+    expect(opened(), isTrue, reason: 'the asset opened in its editor');
+    expect(LaunchModelFiles.pendingAssets.value, isEmpty);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 1));
+  }, timeout: const Timeout(Duration(minutes: 2)));
 }

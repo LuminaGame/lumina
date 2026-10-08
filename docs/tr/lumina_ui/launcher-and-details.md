@@ -978,6 +978,10 @@ Installer'lar Lumina Studio'yu dosya yöneticilerinin `.glb`, `.gltf`, `.fbx` ve
 
 Editörün açılırken aldığı model dosyaları. `runLuminaEditor`, `pending`'i `resolve(args)` ile doldurur: `ModelFileThumbnailer.supportedExtensions` türünde (büyük/küçük harf fark etmez) var olan bir dosyayı adlandıran her konumsal argüman ve her `--import <path>` / `--import=<path>`; mutlak yol, her biri bir kez; `--project`, `--launcher-exe` ve `--size` değerleri atlanır. `handOffArguments(files)` dosya başına `--import <path>`'tir: `EditorHandOff.execProjectEditor` ve `restartThroughLauncher` bunu ekler, böylece kendi proje editöründe açılan bir proje dosyaları orada import eder. `take()` bekleyen dosyaları bir kez döndürür ve listeyi boşaltır.
 
+### Lumina asset'leri (`.lmas`)
+
+`LaunchModelFiles.resolveAssets(args)` var olan her konumsal `.lmas`'ı ve her `--open-asset <path>` / `--open-asset=<path>`'i alır; `projectOf(asset)` asset'in üstünde `.lmproject` bulunan en yakın klasördür. `runLuminaEditor`, `pendingAssets`'i ilk asset'in projesindeki asset'lere ayarlar ve `--project` verilmemişse o projeyi açar (`EditorLaunchArgs.withProject`). `assetHandOffArguments` bunları bir proje editörüne `--open-asset` olarak geçirir. `MainEditorView`'un ilk frame'inden sonra çağırdığı `openLaunchAssets(viewModel)` (`launch_model_import.dart`) bunları alır ve projesindeki her asset'i kendi editöründe açar (`openAssetEditorByPath`, Content Browser'da çift tıklama gibi).
+
 ### `class PendingModelImportBanner` (`lib/ui/features/launcher/views/pending_model_import_banner.dart`)
 
 Dosyalar beklerken launcher'ın notu: "Open or create a project to import <adlar> into it.", yanında `LaunchModelFiles.pending`'i boşaltan "Don't import". Bekleyen dosya yoksa hiçbir şey gösterilmez. Projesiz bir modelin projesi olmadığından, kullanıcının sıradaki açtığı ya da oluşturduğu projeye import edilir.

@@ -341,14 +341,25 @@ Service for parsing Wavefront OBJ 3D model geometry.
 
 ### `class ThumbnailService`
 
-`ThumbnailService`: Service class encapsulating business logic, file I/O, or engine processing.
+Content Browser thumbnails: routes each asset to the thumbnail that shows what it is, stores it and knows when it is stale. Static and skeletal meshes, Blueprints (their mesh components), materials (the preview sphere), levels (their actors), animation sequences, Animation Blueprints and Blend Spaces (the skeletal mesh, posed) are rendered by `FilamentThumbnailRenderer`; a texture is its image, downscaled; every other type is its type badge. The thumbnail lives only inside the `.lmas` (`thumbnail_png`), stamped with `metadata.thumbnail_asset_modified`; the file's modification time is set to that stamp, so an asset saved after its thumbnail (its `.lmas`, or a mesh's `.entity.glb`) is stale.
 
 **Functions, Methods & Accessors:**
 
 | Method / Getter | Signature | Purpose & Description |
 | :--- | :--- | :--- |
-| `writeThumbnailCache` | `void writeThumbnailCache(String lmasPath, Uint8List png)` | Executes `writeThumbnailCache` operation. |
-| `readThumbnailCache` | `Uint8List? readThumbnailCache(String lmasPath)` | Executes `readThumbnailCache` operation. |
+| `size` | `static const int size` | 256: the thumbnail edge. |
+| `sourceKey` / `renderedAtKey` / `assetModifiedKey` | `static const String` | The `.lmas` metadata stamps. |
+| `sourceFilament` / `sourceImage` / `sourceBadge` | `static const String` | What made a thumbnail. |
+| `renderer` | `FilamentThumbnailRenderer get renderer` | The injected renderer, else the process-wide one. |
+| `isStale` | `bool isStale(String lmasPath)` | Whether the asset needs a (new) thumbnail (reads its summary only). |
+| `isStaleInfo` / `staleFor` | `static bool isStaleInfo(RealAssetInfo info)`, `static bool staleFor(...)` | The same rule for a scanned asset. |
+| `generate` | `Future<ThumbnailResult?> generate(String lmasPath, {bool force = false})` | Renders a stale (or, with `force`, any) asset and embeds the result in the `.lmas`. |
+| `preview` | `Future<ThumbnailResult?> preview(String lmasPath)` | What the Content Browser shows for the asset, **writing nothing** (the file managers' thumbnailer): a fresh embedded thumbnail as it is, without starting the renderer; outside a project (a copy, as the Windows shell passes one) an embedded thumbnail this service made; otherwise rendered by the same routing as `generate`, falling back to the embedded image (even stale), then the badge. Null when the file is not an asset. |
+| `embedThumbnail` | `static void embedThumbnail(String lmasPath, Uint8List png, {String? source, DateTime? stamp})` | Patches the PNG into the `.lmas` in its own container format and stamps it. |
+| `renderAssetThumbnail` | `Future<Uint8List> renderAssetThumbnail(LuminaAsset asset, {int size})` | An in-memory asset's thumbnail (Build Manager). |
+| `renderTypeIconThumbnail` | `Future<Uint8List> renderTypeIconThumbnail(AssetType type, {int size})` | The type badge. |
+| `animationPart` / `blueprintParts` | `static Future<...>` | The posed mesh of an animation asset; a Blueprint's mesh components. |
+| `projectRootOf` | `static String? projectRootOf(String lmasPath)` | The nearest folder above the asset with a `contents/` folder. |
 
 ## `lib/src/services/glb_parser_service.dart`
 

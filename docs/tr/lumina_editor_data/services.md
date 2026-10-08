@@ -341,14 +341,25 @@ Service for parsing Wavefront OBJ 3D model geometry.
 
 ### `class ThumbnailService`
 
-`ThumbnailService`: Dosya işlemleri, veri dönüşümleri veya motor mantığını yürüten servis sınıfıdır.
+Content Browser thumbnail'ları: her asset'i onu gösteren thumbnail'a yönlendirir, saklar ve ne zaman eskidiğini bilir. Statik ve iskeletli mesh'ler, Blueprint'ler (mesh component'leri), materyaller (önizleme küresi), level'lar (actor'ları), animasyon sekansları, Animation Blueprint'ler ve Blend Space'ler (pozlanmış iskeletli mesh) `FilamentThumbnailRenderer` ile çizilir; bir doku kendi görselidir (küçültülmüş); diğer her tür kendi tür rozetidir. Thumbnail yalnızca `.lmas` içinde (`thumbnail_png`) durur ve `metadata.thumbnail_asset_modified` ile damgalanır; dosyanın değiştirilme zamanı bu damgaya ayarlanır, böylece thumbnail'dan sonra kaydedilen bir asset (`.lmas`'ı ya da bir mesh'in `.entity.glb`'si) eskimiş sayılır.
 
 **Fonksiyonlar, Metotlar ve Erişimciler:**
 
 | Metot / Getter | İmzası | Ne İşe Yarar? |
 | :--- | :--- | :--- |
-| `writeThumbnailCache` | `void writeThumbnailCache(String lmasPath, Uint8List png)` | `writeThumbnailCache` işlemini gerçekleştirir. |
-| `readThumbnailCache` | `Uint8List? readThumbnailCache(String lmasPath)` | `readThumbnailCache` işlemini gerçekleştirir. |
+| `size` | `static const int size` | 256: thumbnail kenarı. |
+| `sourceKey` / `renderedAtKey` / `assetModifiedKey` | `static const String` | `.lmas` metadata damgaları. |
+| `sourceFilament` / `sourceImage` / `sourceBadge` | `static const String` | Thumbnail'ı neyin ürettiği. |
+| `renderer` | `FilamentThumbnailRenderer get renderer` | Verilen renderer, yoksa süreç genelindeki. |
+| `isStale` | `bool isStale(String lmasPath)` | Asset'in (yeni) bir thumbnail'a ihtiyacı var mı (yalnızca özetini okur). |
+| `isStaleInfo` / `staleFor` | `static bool isStaleInfo(RealAssetInfo info)`, `static bool staleFor(...)` | Taranmış bir asset için aynı kural. |
+| `generate` | `Future<ThumbnailResult?> generate(String lmasPath, {bool force = false})` | Eskimiş (ya da `force` ile her) asset'i çizer ve sonucu `.lmas`'a gömer. |
+| `preview` | `Future<ThumbnailResult?> preview(String lmasPath)` | Content Browser'ın asset için gösterdiği görüntü, **hiçbir şey yazmadan** (dosya yöneticilerinin thumbnailer'ı): güncel gömülü thumbnail olduğu gibi, renderer başlatılmadan; proje dışında (Windows shell'in verdiği gibi bir kopya) bu servisin ürettiği gömülü thumbnail; aksi halde `generate` ile aynı yönlendirmeyle çizilir; o da sonuç vermezse gömülü görsel (eskimiş olsa da), sonra rozet. Dosya bir asset değilse null. |
+| `embedThumbnail` | `static void embedThumbnail(String lmasPath, Uint8List png, {String? source, DateTime? stamp})` | PNG'yi `.lmas`'a kendi container biçiminde yazar ve damgalar. |
+| `renderAssetThumbnail` | `Future<Uint8List> renderAssetThumbnail(LuminaAsset asset, {int size})` | Bellekteki bir asset'in thumbnail'ı (Build Manager). |
+| `renderTypeIconThumbnail` | `Future<Uint8List> renderTypeIconThumbnail(AssetType type, {int size})` | Tür rozeti. |
+| `animationPart` / `blueprintParts` | `static Future<...>` | Bir animasyon asset'inin pozlanmış mesh'i; bir Blueprint'in mesh component'leri. |
+| `projectRootOf` | `static String? projectRootOf(String lmasPath)` | Asset'in üstünde `contents/` klasörü olan en yakın klasör. |
 
 ## `lib/src/services/glb_parser_service.dart`
 

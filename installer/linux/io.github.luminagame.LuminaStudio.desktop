@@ -11,7 +11,7 @@ Categories=Development;IDE;Graphics;3DGraphics;
 Keywords=game;engine;3D;editor;filament;flutter;
 StartupNotify=true
 StartupWMClass=lumina_ui
-MimeType=model/gltf-binary;model/gltf+json;model/x-fbx;model/obj;
+MimeType=model/gltf-binary;model/gltf+json;model/x-fbx;model/obj;application/x-lumina-asset;
 Actions=update;
 
 [Desktop Action update]

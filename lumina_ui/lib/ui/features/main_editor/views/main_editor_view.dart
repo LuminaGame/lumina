@@ -76,6 +76,12 @@ class _MainEditorViewState extends State<MainEditorView> {
         if (mounted) unawaited(importLaunchModelFiles(viewModel));
       });
     }
+    // A Lumina asset opened with Lumina Studio opens in its editor.
+    if (LaunchModelFiles.pendingAssets.value.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) openLaunchAssets(viewModel);
+      });
+    }
     final warning = widget.startupWarning;
     if (warning != null) {
       viewModel.logger.log(warning, level: 'warning', source: 'Plugins');

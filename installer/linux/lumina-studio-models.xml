@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  The 3D model types Lumina Studio opens and draws thumbnails for, installed
+  The 3D model types and the Lumina asset type (.lmas) Lumina Studio opens
+  and draws thumbnails for, installed
   to /usr/share/mime/packages/ by the lumina-studio package. Where the system
   database already defines a type (newer shared-mime-info has the glTF ones),
   these definitions merge into it.
@@ -30,5 +31,12 @@
     <sub-class-of type="text/plain"/>
     <!-- Above the default weight (50) of the old TGIF drawing glob. -->
     <glob pattern="*.obj" weight="60"/>
+  </mime-type>
+  <mime-type type="application/x-lumina-asset">
+    <comment>Lumina asset</comment>
+    <glob pattern="*.lmas"/>
+    <magic priority="60">
+      <match type="string" value="LMAS" offset="0"/>
+    </magic>
   </mime-type>
 </mime-info>

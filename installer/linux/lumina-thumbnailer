@@ -1,7 +1,7 @@
 #!/bin/sh
 # Renders a 3D model file's thumbnail for file managers (installed as
 # /usr/bin/lumina-thumbnailer; /usr/share/thumbnailers/lumina-studio.thumbnailer
-# runs it for .glb, .gltf, .fbx and .obj).
+# runs it for .glb, .gltf, .fbx, .obj and Lumina assets, .lmas).
 #
 #   lumina-thumbnailer <input> <output.png> [size]
 #

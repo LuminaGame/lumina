@@ -188,6 +188,40 @@ class ThumbnailService {
     return null;
   }
 
+  /// The thumbnail the Content Browser shows for [lmasPath], for a file
+  /// manager: writes nothing (a thumbnail request must not change the file).
+  ///
+  /// A fresh embedded thumbnail ([isStale] false) is returned as it is,
+  /// without starting the renderer. Outside a project (a copy, as the Windows
+  /// shell passes one) the file's times say nothing, so an embedded thumbnail
+  /// this service made counts as fresh. Otherwise the asset is rendered by
+  /// the same routing as [generate]; when that yields nothing, the embedded
+  /// image (even stale), else the type badge. Null when [lmasPath] is not a
+  /// readable asset.
+  Future<ThumbnailResult?> preview(String lmasPath) async {
+    final file = File(lmasPath);
+    if (!await file.exists()) return null;
+    final bytes = await file.readAsBytes();
+    final asset = _decode(bytes);
+    if (asset == null) return null;
+    final embedded = asset.thumbnailPng;
+    final source = asset.metadata[sourceKey];
+    final embeddedResult = embedded == null || embedded.isEmpty
+        ? null
+        : ThumbnailResult(Uint8List.fromList(embedded), source ?? sourceBadge);
+    if (embeddedResult != null) {
+      final detached = projectRootOf(lmasPath) == null;
+      if (detached ? _currentSources.contains(source) : !isStale(lmasPath)) return embeddedResult;
+    }
+    ThumbnailResult? rendered;
+    try {
+      rendered = await _renderFile(lmasPath, bytes);
+    } catch (e) {
+      _logger.log('Preview of ${file.uri.pathSegments.last} failed: $e', level: 'warning', source: 'ThumbnailService');
+    }
+    return rendered ?? embeddedResult ?? await _badge(asset.type);
+  }
+
   Future<ThumbnailResult?> _renderFile(String lmasPath, Uint8List bytes) async {
     final asset = _decode(bytes);
     if (asset == null) return null;

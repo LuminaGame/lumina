@@ -35,6 +35,11 @@ class EditorLaunchArgs {
 
   const EditorLaunchArgs({this.project, this.rebuild = false, this.noPlugins = false, this.launcherExe, this.updateEditor = false});
 
+  /// These arguments opening [dir] (an `.lmas` opened with Lumina Studio
+  /// names its project this way).
+  EditorLaunchArgs withProject(String dir) => EditorLaunchArgs(
+      project: dir, rebuild: rebuild, noPlugins: noPlugins, launcherExe: launcherExe, updateEditor: updateEditor);
+
   static EditorLaunchArgs parse(List<String> args) {
     String? project, launcherExe;
     var rebuild = false, noPlugins = false, updateEditor = false;
@@ -242,6 +247,7 @@ class EditorHandOff {
       if (launcher != null) ...['--launcher-exe', launcher],
       // Model files from "Open with" are imported by the project editor.
       ...LaunchModelFiles.handOffArguments(LaunchModelFiles.pending.value),
+      ...LaunchModelFiles.assetHandOffArguments(LaunchModelFiles.pendingAssets.value),
     ]);
     await _runBeforeExit();
     exitApp(0);
@@ -266,6 +272,7 @@ class EditorHandOff {
       if (rebuild) '--rebuild',
       if (updateEditor) '--update-editor',
       ...LaunchModelFiles.handOffArguments(LaunchModelFiles.pending.value),
+      ...LaunchModelFiles.assetHandOffArguments(LaunchModelFiles.pendingAssets.value),
     ]);
     await _runBeforeExit();
     exitApp(0);

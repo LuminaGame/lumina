@@ -1,3 +1,5 @@
+import 'package:path/path.dart' as p;
+
 import 'package:lumina_ui/ui/core/host/launch_model_files.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 
@@ -22,5 +24,21 @@ Future<void> importLaunchModelFiles(EditorViewModel viewModel) async {
       viewModel.openAssetEditorByPath(path);
       return;
     }
+  }
+}
+
+/// Opens the Lumina assets Lumina Studio was started with
+/// ([LaunchModelFiles.pendingAssets], taken once) that belong to
+/// [viewModel]'s project, each in its editor (`openAssetEditorByPath`, as a
+/// Content Browser double-click). Assets of another project are skipped
+/// with a log line.
+void openLaunchAssets(EditorViewModel viewModel) {
+  final project = p.normalize(p.absolute(viewModel.projectDirPath));
+  for (final asset in LaunchModelFiles.takeAssets()) {
+    if (!p.isWithin(project, asset)) {
+      viewModel.logger.log('Not opening $asset: it is not in this project', level: 'warning', source: 'ContentBrowser');
+      continue;
+    }
+    viewModel.openAssetEditorByPath(p.relative(asset, from: project).replaceAll(r'\', '/'));
   }
 }

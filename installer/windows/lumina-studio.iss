@@ -30,6 +30,10 @@
 ; thumbnail provider that renders them with the editor
 ; ({app}\setup\shell\lumina_thumbnails.dll, registered under
 ; SystemFileAssociations so a default program's own thumbnails keep priority).
+; Lumina assets (the "luminaassets" task, on by default): .lmas opens with
+; Lumina Studio (its project, then the asset's editor) and becomes its
+; default program when no other program claims it (Lumina's own type), and
+; the same provider shows the Content Browser's thumbnail of the asset.
 ; All of it is per-user and removed on uninstall.
 
 #ifndef AppVersion
@@ -52,6 +56,7 @@
 ; (lumina_thumbnail_provider.cpp kClsid) and the shell's thumbnail handler
 ; key, with "{{" because "{" opens an Inno Setup constant.
 #define ModelProgId "LuminaStudio.Model"
+#define AssetProgId "LuminaStudio.Asset"
 #define ThumbnailClsid "{{4C2F5D1E-8A3B-4E7C-9D21-6B0A5F3E7C18}"
 #define ThumbnailHandler "{{e357fccd-a995-4576-b01f-234630154e96}"
 #define ProviderDll "lumina_thumbnails.dll"
@@ -107,8 +112,10 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Name: "ffmpeg"; Description: "Install FFmpeg (video encoding without GStreamer)"; GroupDescription: "Optional tools:"; Flags: unchecked
 #ifdef ThumbnailProviderDir
 Name: "modelfiles"; Description: "Add Lumina Studio to ""Open with"" for .glb, .gltf, .fbx and .obj files and show their 3D previews as thumbnails"; GroupDescription: "3D model files:"
+Name: "luminaassets"; Description: "Open Lumina assets (.lmas) with Lumina Studio and show their Content Browser thumbnails"; GroupDescription: "3D model files:"
 #else
 Name: "modelfiles"; Description: "Add Lumina Studio to ""Open with"" for .glb, .gltf, .fbx and .obj files"; GroupDescription: "3D model files:"
+Name: "luminaassets"; Description: "Open Lumina assets (.lmas) with Lumina Studio"; GroupDescription: "3D model files:"
 #endif
 
 [Files]
@@ -116,9 +123,9 @@ Source: "lumina-setup.ps1"; DestDir: "{app}\setup"; Flags: ignoreversion
 Source: "{#IconSource}"; DestDir: "{app}\setup"; DestName: "lumina-studio.ico"; Flags: ignoreversion
 #ifdef ThumbnailProviderDir
   #ifdef SignToolName
-Source: "{#ThumbnailProviderDir}\{#ProviderDll}"; DestDir: "{app}\setup\shell"; Flags: ignoreversion sign; Tasks: modelfiles
+Source: "{#ThumbnailProviderDir}\{#ProviderDll}"; DestDir: "{app}\setup\shell"; Flags: ignoreversion sign; Tasks: modelfiles or luminaassets
   #else
-Source: "{#ThumbnailProviderDir}\{#ProviderDll}"; DestDir: "{app}\setup\shell"; Flags: ignoreversion; Tasks: modelfiles
+Source: "{#ThumbnailProviderDir}\{#ProviderDll}"; DestDir: "{app}\setup\shell"; Flags: ignoreversion; Tasks: modelfiles or luminaassets
   #endif
 #endif
 
@@ -130,9 +137,9 @@ Root: HKA; Subkey: "Software\Classes\{#ModelProgId}"; ValueType: string; ValueNa
 Root: HKA; Subkey: "Software\Classes\{#ModelProgId}\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\setup\lumina-studio.ico,0"; Tasks: modelfiles
 Root: HKA; Subkey: "Software\Classes\{#ModelProgId}\shell\open"; ValueType: string; ValueName: "FriendlyAppName"; ValueData: "{#AppName}"; Tasks: modelfiles
 Root: HKA; Subkey: "Software\Classes\{#ModelProgId}\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#AppExe}"" ""%1"""; Tasks: modelfiles
-Root: HKA; Subkey: "Software\Classes\Applications\{#AppExe}"; ValueType: string; ValueName: "FriendlyAppName"; ValueData: "{#AppName}"; Flags: uninsdeletekey; Tasks: modelfiles
-Root: HKA; Subkey: "Software\Classes\Applications\{#AppExe}\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\setup\lumina-studio.ico,0"; Tasks: modelfiles
-Root: HKA; Subkey: "Software\Classes\Applications\{#AppExe}\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#AppExe}"" ""%1"""; Tasks: modelfiles
+Root: HKA; Subkey: "Software\Classes\Applications\{#AppExe}"; ValueType: string; ValueName: "FriendlyAppName"; ValueData: "{#AppName}"; Flags: uninsdeletekey; Tasks: modelfiles or luminaassets
+Root: HKA; Subkey: "Software\Classes\Applications\{#AppExe}\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\setup\lumina-studio.ico,0"; Tasks: modelfiles or luminaassets
+Root: HKA; Subkey: "Software\Classes\Applications\{#AppExe}\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#AppExe}"" ""%1"""; Tasks: modelfiles or luminaassets
 Root: HKA; Subkey: "Software\Classes\.glb"; Flags: uninsdeletekeyifempty; Tasks: modelfiles
 Root: HKA; Subkey: "Software\Classes\.glb\OpenWithProgids"; Flags: uninsdeletekeyifempty; Tasks: modelfiles
 Root: HKA; Subkey: "Software\Classes\.glb\OpenWithProgids"; ValueType: none; ValueName: "{#ModelProgId}"; Flags: uninsdeletevalue; Tasks: modelfiles
@@ -149,13 +156,24 @@ Root: HKA; Subkey: "Software\Classes\.obj"; Flags: uninsdeletekeyifempty; Tasks:
 Root: HKA; Subkey: "Software\Classes\.obj\OpenWithProgids"; Flags: uninsdeletekeyifempty; Tasks: modelfiles
 Root: HKA; Subkey: "Software\Classes\.obj\OpenWithProgids"; ValueType: none; ValueName: "{#ModelProgId}"; Flags: uninsdeletevalue; Tasks: modelfiles
 Root: HKA; Subkey: "Software\Classes\Applications\{#AppExe}\SupportedTypes"; ValueType: string; ValueName: ".obj"; ValueData: ""; Tasks: modelfiles
+; Lumina assets: Lumina's own type, so Lumina Studio becomes the default
+; program of .lmas unless another program already is.
+Root: HKA; Subkey: "Software\Classes\{#AssetProgId}"; ValueType: string; ValueName: ""; ValueData: "Lumina asset"; Flags: uninsdeletekey; Tasks: luminaassets
+Root: HKA; Subkey: "Software\Classes\{#AssetProgId}\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\setup\lumina-studio.ico,0"; Tasks: luminaassets
+Root: HKA; Subkey: "Software\Classes\{#AssetProgId}\shell\open"; ValueType: string; ValueName: "FriendlyAppName"; ValueData: "{#AppName}"; Tasks: luminaassets
+Root: HKA; Subkey: "Software\Classes\{#AssetProgId}\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#AppExe}"" ""%1"""; Tasks: luminaassets
+Root: HKA; Subkey: "Software\Classes\.lmas"; Flags: uninsdeletekeyifempty; Tasks: luminaassets
+Root: HKA; Subkey: "Software\Classes\.lmas"; ValueType: string; ValueName: ""; ValueData: "{#AssetProgId}"; Flags: createvalueifdoesntexist uninsdeletevalue; Tasks: luminaassets
+Root: HKA; Subkey: "Software\Classes\.lmas\OpenWithProgids"; Flags: uninsdeletekeyifempty; Tasks: luminaassets
+Root: HKA; Subkey: "Software\Classes\.lmas\OpenWithProgids"; ValueType: none; ValueName: "{#AssetProgId}"; Flags: uninsdeletevalue; Tasks: luminaassets
+Root: HKA; Subkey: "Software\Classes\Applications\{#AppExe}\SupportedTypes"; ValueType: string; ValueName: ".lmas"; ValueData: ""; Tasks: luminaassets
 #ifdef ThumbnailProviderDir
 ; The shell thumbnail provider: an in-process COM class (the shell runs it in
 ; its isolated surrogate), the thumbnail handler of each type under
 ; SystemFileAssociations.
-Root: HKA; Subkey: "Software\Classes\CLSID\{#ThumbnailClsid}"; ValueType: string; ValueName: ""; ValueData: "Lumina Studio 3D model thumbnail provider"; Flags: uninsdeletekey; Tasks: modelfiles
-Root: HKA; Subkey: "Software\Classes\CLSID\{#ThumbnailClsid}\InprocServer32"; ValueType: string; ValueName: ""; ValueData: "{app}\setup\shell\{#ProviderDll}"; Tasks: modelfiles
-Root: HKA; Subkey: "Software\Classes\CLSID\{#ThumbnailClsid}\InprocServer32"; ValueType: string; ValueName: "ThreadingModel"; ValueData: "Apartment"; Tasks: modelfiles
+Root: HKA; Subkey: "Software\Classes\CLSID\{#ThumbnailClsid}"; ValueType: string; ValueName: ""; ValueData: "Lumina Studio 3D model thumbnail provider"; Flags: uninsdeletekey; Tasks: modelfiles or luminaassets
+Root: HKA; Subkey: "Software\Classes\CLSID\{#ThumbnailClsid}\InprocServer32"; ValueType: string; ValueName: ""; ValueData: "{app}\setup\shell\{#ProviderDll}"; Tasks: modelfiles or luminaassets
+Root: HKA; Subkey: "Software\Classes\CLSID\{#ThumbnailClsid}\InprocServer32"; ValueType: string; ValueName: "ThreadingModel"; ValueData: "Apartment"; Tasks: modelfiles or luminaassets
 Root: HKA; Subkey: "Software\Classes\SystemFileAssociations\.glb"; Flags: uninsdeletekeyifempty; Tasks: modelfiles
 Root: HKA; Subkey: "Software\Classes\SystemFileAssociations\.glb\ShellEx"; Flags: uninsdeletekeyifempty; Tasks: modelfiles
 Root: HKA; Subkey: "Software\Classes\SystemFileAssociations\.glb\ShellEx\{#ThumbnailHandler}"; ValueType: string; ValueName: ""; ValueData: "{#ThumbnailClsid}"; Flags: uninsdeletekey; Tasks: modelfiles
@@ -168,6 +186,9 @@ Root: HKA; Subkey: "Software\Classes\SystemFileAssociations\.fbx\ShellEx\{#Thumb
 Root: HKA; Subkey: "Software\Classes\SystemFileAssociations\.obj"; Flags: uninsdeletekeyifempty; Tasks: modelfiles
 Root: HKA; Subkey: "Software\Classes\SystemFileAssociations\.obj\ShellEx"; Flags: uninsdeletekeyifempty; Tasks: modelfiles
 Root: HKA; Subkey: "Software\Classes\SystemFileAssociations\.obj\ShellEx\{#ThumbnailHandler}"; ValueType: string; ValueName: ""; ValueData: "{#ThumbnailClsid}"; Flags: uninsdeletekey; Tasks: modelfiles
+Root: HKA; Subkey: "Software\Classes\SystemFileAssociations\.lmas"; Flags: uninsdeletekeyifempty; Tasks: luminaassets
+Root: HKA; Subkey: "Software\Classes\SystemFileAssociations\.lmas\ShellEx"; Flags: uninsdeletekeyifempty; Tasks: luminaassets
+Root: HKA; Subkey: "Software\Classes\SystemFileAssociations\.lmas\ShellEx\{#ThumbnailHandler}"; ValueType: string; ValueName: ""; ValueData: "{#ThumbnailClsid}"; Flags: uninsdeletekey; Tasks: luminaassets
 #endif
 
 [Icons]

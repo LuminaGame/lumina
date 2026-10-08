@@ -91,6 +91,15 @@ Future<void> runLuminaEditor(
   // Model files from a file manager's "Open with" (or a hand-off's
   // `--import`): imported into the project that opens next.
   LaunchModelFiles.pending.value = await LaunchModelFiles.resolve(args);
+  // A Lumina asset (`.lmas`) opens its project, then its editor.
+  final assets = await LaunchModelFiles.resolveAssets(args);
+  if (assets.isNotEmpty) {
+    final project = await LaunchModelFiles.projectOf(assets.first);
+    if (project != null) {
+      LaunchModelFiles.pendingAssets.value = [for (final a in assets) if (p.isWithin(project, a)) a];
+      if (LuminaEditorHost.args.project == null) LuminaEditorHost.args = LuminaEditorHost.args.withProject(project);
+    }
+  }
   // `--no-plugins` opens the project without its code plugins even in a
   // project editor (the escape hatch when a plugin breaks the editor).
   LuminaEditorHost.plugins = LuminaEditorHost.args.noPlugins ? const [] : plugins;

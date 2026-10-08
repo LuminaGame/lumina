@@ -387,7 +387,7 @@ Bir `--lumina-thumbnail` çağrısı: `input`, `output`, `size` (varsayılan 256
 
 ### `abstract final class ModelThumbnailCommand`
 
-`lumina_ui --lumina-thumbnail <input> <output.png> [--size <px>]`: kurulu editör, tek bir model dosyasının thumbnail'ını çizmek için pencere açmadan çalışır; dosya yöneticileri için (installer'ların kaydettiği Windows shell thumbnail provider'ı ve Linux `.thumbnailer`'ı; bkz. `installer/README.tr.md`).
+`lumina_ui --lumina-thumbnail <input> <output.png> [--size <px>]`: kurulu editör, tek bir model dosyasının thumbnail'ını çizmek için pencere açmadan çalışır; dosya yöneticileri için (installer'ların kaydettiği Windows shell thumbnail provider'ı ve Linux `.thumbnailer`'ı; bkz. `installer/README.tr.md`). Bir Lumina asset'i (`.lmas`) Content Browser'ın onun için gösterdiğini gösterir (`ThumbnailService.preview`; dosyaya hiç yazılmaz), istenen boyuttan büyükse küçültülür. `supportedExtensions` model türleri artı `.lmas`'tır.
 
 **Üyeler:**
 

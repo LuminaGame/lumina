@@ -243,7 +243,7 @@ içinde `0.1.0~beta.1` olur).
 
 ## 3D model dosyaları: "Birlikte aç" ve thumbnail'lar
 
-İki installer da Lumina Studio'yu `.glb`, `.gltf`, `.fbx` ve `.obj` dosyaları için kaydeder. Bu türlerin varsayılan programını hiçbir zaman değiştirmez.
+İki installer da Lumina Studio'yu `.glb`, `.gltf`, `.fbx` ve `.obj` dosyaları ve kendi asset'leri (`.lmas`, aşağıda) için kaydeder. Bu türlerin varsayılan programını hiçbir zaman değiştirmez.
 
 **Birlikte aç.** Bir model dosyasını Lumina Studio ile açmak editörü yolu argüman olarak vererek başlatır (`lumina_ui <file>` ya da `--import <file>`). Projesiz bir dosyanın projesi olmadığından launcher, "Don't import" düğmesiyle birlikte "Open or create a project to import <file> into it." notunu gösterir. Kullanıcının sıradaki açtığı ya da oluşturduğu proje dosyaları normal import kuyruğuyla import eder (`contents/` altında otomatik düzenlenir) ve ilkini mesh editöründe açar. Proje kendi proje editöründe açılıyorsa dosyalar `--import` argümanları olarak ona geçer. Her "Birlikte aç" yeni bir editör süreci başlatır.
 
@@ -254,6 +254,15 @@ lumina_ui --lumina-thumbnail <input> <output.png> [--size <px>]
 ```
 
 Dosyayı bir import gibi çevirir ve Content Browser'ın thumbnail renderer'ıyla çizer: stüdyo ışık düzeni, sınırlara oturtulmuş üç çeyrek görünüm, PBR Neutral tone mapping, editörün Graphics Device ayarındaki GPU'da. Görselleri eksik bir `.gltf` beyaz dokularla çizilir. Çıkış kodları: 0 yazıldı, 64 hatalı argümanlar, 65 eksik, desteklenmeyen ya da okunamayan dosya, 70 hiçbir şey çizilmedi, 73 PNG yazılamadı. Her çağrı editörü başlatır (masaüstü GPU'sunda bir saniyenin epey altında). Dosya yöneticileri sonucu önbellekte tutar.
+
+### Lumina asset'leri (`.lmas`)
+
+Aynı thumbnailer bir `.lmas`'ı Content Browser'ın gösterdiği gibi gösterir (`ThumbnailService.preview`): editör her asset'in thumbnail'ını `.lmas`'ın içinde (`thumbnail_png`, damgalı) önbellekte tutar; güncel olan olduğu gibi, renderer başlatılmadan döner. Eskimiş ya da eksik olan, Content Browser'ın kendi yönlendirmesiyle çizilir (mesh'ler, önizleme küresi olarak materyaller, görsel olarak dokular, level'lar, Blueprint'ler, iskeletli mesh'leri üzerinde pozlanmış animasyon asset'leri; diğer türler tür rozetini gösterir); referanslar asset'in projesinden çözülür. **`.lmas`'a hiçbir zaman yazılmaz**: dosya yöneticisi değiştirilme zamanını değiştirmez. Windows shell provider'a yol değil stream verir; orada projesinin dışındaki bir kopya, editörün ürettiği gömülü thumbnail varsa onunla, yoksa dosyanın kendi içeriğinden çizilerek gösterilir. Eskimiş gömülü bir thumbnail orada fark edilemez; editör proje bir sonraki açıldığında onu yeniler.
+
+Bir `.lmas`'ı açmak (çift tıklama ya da "Birlikte aç") Lumina Studio'yu projesiyle (üstünde `.lmproject` bulunan en yakın klasör) başlatır ve asset'i kendi editöründe açar. Bir proje editörü bunu `--open-asset <path>` olarak alır.
+
+- Windows: "Lumina assets" görevi (varsayılan olarak açık; `.lmas` Lumina'nın kendi türü olduğu için "3D model files"tan ayrı) `LuminaStudio.Asset` ProgID'sini kaydeder, hiçbir program yoksa onu `.lmas`'ın varsayılan programı yapar (`createvalueifdoesntexist`), `.lmas\OpenWithProgids` ve `Applications\lumina_ui.exe\SupportedTypes` altında listeler ve thumbnail handler'ını `SystemFileAssociations\.lmas` altına yazar. Provider DLL'i ve sınıfı iki görevden biriyle kurulur.
+- Linux: `lumina-studio-models.xml` içinde, `.desktop` girdisinin `MimeType`'ında ve `.thumbnailer`'da `application/x-lumina-asset` (`*.lmas`, `LMAS` magic).
 
 ### Windows
 

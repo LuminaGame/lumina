@@ -387,7 +387,7 @@ One `--lumina-thumbnail` invocation: `input`, `output`, `size` (default 256).
 
 ### `abstract final class ModelThumbnailCommand`
 
-`lumina_ui --lumina-thumbnail <input> <output.png> [--size <px>]`: the installed editor run without a window to render one model file's thumbnail, for the file managers (the Windows shell thumbnail provider and the Linux `.thumbnailer` the installers register; see `installer/README.md`).
+`lumina_ui --lumina-thumbnail <input> <output.png> [--size <px>]`: the installed editor run without a window to render one model file's thumbnail, for the file managers (the Windows shell thumbnail provider and the Linux `.thumbnailer` the installers register; see `installer/README.md`). A Lumina asset (`.lmas`) shows what the Content Browser shows for it (`ThumbnailService.preview`; the file is never written), downscaled to the asked size when larger. `supportedExtensions` is the model types plus `.lmas`.
 
 **Members:**
 

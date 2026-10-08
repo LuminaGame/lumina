@@ -4,10 +4,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina_editor_data/lumina_editor.dart' show ModelFileThumbnailer, ModelThumbnailCommand;
 import 'package:path/path.dart' as p;
 
-/// What the installers register for 3D model files, read from the real
-/// installer sources: Lumina Studio in the file managers' "Open with" (never
-/// as the default program) and the thumbnailer that renders the files'
-/// previews with the editor (`lumina_ui --lumina-thumbnail`).
+/// What the installers register for 3D model files and Lumina assets, read
+/// from the real installer sources: Lumina Studio in the file managers' "Open
+/// with" (never as the default program of a model type; the default of its
+/// own `.lmas` when nothing else is) and the thumbnailer that renders the
+/// files' previews with the editor (`lumina_ui --lumina-thumbnail`).
 void main() {
   final repo = Directory.current.parent.path;
   String read(String relative) => File(p.joinAll([repo, ...relative.split('/')])).readAsStringSync();
@@ -21,15 +22,17 @@ void main() {
   final nfpm = read('installer/linux/nfpm.yaml');
 
   const extensions = ['.glb', '.gltf', '.fbx', '.obj'];
-  const mimeTypes = ['model/gltf-binary', 'model/gltf+json', 'model/x-fbx', 'model/obj'];
+  const mimeTypes = ['model/gltf-binary', 'model/gltf+json', 'model/x-fbx', 'model/obj', 'application/x-lumina-asset'];
   final registry = iss.split(RegExp(r'\r?\n')).where((l) => l.startsWith('Root: HKA;')).toList();
   Iterable<String> linesFor(String subkey) => registry.where((l) => l.contains('Subkey: "$subkey"'));
 
-  test('the editor and the thumbnailer handle the same four file types', () {
+  test('the editor and the thumbnailer handle the same file types', () {
     expect(ModelFileThumbnailer.supportedExtensions, extensions.toSet());
-    for (final e in extensions) {
+    expect(ModelThumbnailCommand.supportedExtensions, {...extensions, '.lmas'});
+    for (final e in [...extensions, '.lmas']) {
       expect(provider, contains('L"$e"'), reason: 'the shell provider lists $e');
     }
+    expect(provider, contains('memcmp(head, "LMAS", 4) == 0) return L".lmas"'), reason: 'an LMAS stream without a name');
   });
 
   group('Windows setup', () {
@@ -86,6 +89,25 @@ void main() {
       }
     });
 
+    test('.lmas opens with Lumina Studio, its own default program unless another one is', () {
+      expect(iss, contains('#define AssetProgId "LuminaStudio.Asset"'));
+      expect(iss, contains('Name: "luminaassets"'));
+      expect(linesFor(r'Software\Classes\{#AssetProgId}\shell\open\command').single,
+          allOf(contains(r'ValueData: """{app}\{#AppExe}"" ""%1"""'), contains('Tasks: luminaassets')));
+      final own = linesFor(r'Software\Classes\.lmas').toList();
+      expect(own.where((l) => l.contains('ValueData: "{#AssetProgId}"')).single,
+          allOf(contains('createvalueifdoesntexist'), contains('uninsdeletevalue')));
+      expect(linesFor(r'Software\Classes\.lmas\OpenWithProgids').where((l) => l.contains('ValueName: "{#AssetProgId}"')).single,
+          contains('uninsdeletevalue'));
+      expect(linesFor(r'Software\Classes\Applications\{#AppExe}\SupportedTypes').where((l) => l.contains('ValueName: ".lmas"')),
+          hasLength(1));
+      expect(linesFor(r'Software\Classes\SystemFileAssociations\.lmas\ShellEx\{#ThumbnailHandler}').single,
+          allOf(contains('ValueData: "{#ThumbnailClsid}"'), contains('uninsdeletekey'), contains('Tasks: luminaassets')));
+      // The provider and its class serve both tasks.
+      expect(linesFor(r'Software\Classes\CLSID\{#ThumbnailClsid}').single, contains('Tasks: modelfiles or luminaassets'));
+      expect(iss, contains(r'DestDir: "{app}\setup\shell"; Flags: ignoreversion; Tasks: modelfiles or luminaassets'));
+    });
+
     test('the provider DLL ships only when build.ps1 built it', () {
       final files = iss.substring(iss.indexOf('[Files]'), iss.indexOf('[Registry]'));
       expect(files, contains('#ifdef ThumbnailProviderDir'));
@@ -107,6 +129,7 @@ void main() {
         'model/gltf+json': '*.gltf',
         'model/x-fbx': '*.fbx',
         'model/obj': '*.obj',
+        'application/x-lumina-asset': '*.lmas',
       };
       for (final entry in globs.entries) {
         final start = mime.indexOf('<mime-type type="${entry.key}">');
@@ -115,6 +138,7 @@ void main() {
         expect(block, contains('<glob pattern="${entry.value}"'));
       }
       expect(mime, contains('value="Kaydara FBX Binary"'));
+      expect(mime, contains('<match type="string" value="LMAS" offset="0"/>'));
     });
 
     test('the MIME package is well-formed XML', () async {

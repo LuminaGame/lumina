@@ -978,6 +978,10 @@ The installers put Lumina Studio in the file managers' "Open with" for `.glb`, `
 
 The model files the editor was started with. `runLuminaEditor` sets `pending` from `resolve(args)`: every positional argument and every `--import <path>` / `--import=<path>` naming an existing file of `ModelFileThumbnailer.supportedExtensions` (any case), absolute, each once; the values of `--project`, `--launcher-exe` and `--size` are skipped. `handOffArguments(files)` is `--import <path>` per file: `EditorHandOff.execProjectEditor` and `restartThroughLauncher` append it, so a project that opens in its own project editor imports them there. `take()` returns the pending files once and empties the list.
 
+### Lumina assets (`.lmas`)
+
+`LaunchModelFiles.resolveAssets(args)` takes every positional `.lmas` and every `--open-asset <path>` / `--open-asset=<path>` that exists; `projectOf(asset)` is the nearest folder above it holding a `.lmproject`. `runLuminaEditor` sets `pendingAssets` to the assets of the first asset's project and, without a `--project`, opens that project (`EditorLaunchArgs.withProject`). `assetHandOffArguments` passes them to a project editor as `--open-asset`. `openLaunchAssets(viewModel)` (`launch_model_import.dart`), called by `MainEditorView` after its first frame, takes them and opens each asset of its project in its editor (`openAssetEditorByPath`, as a Content Browser double-click).
+
 ### `class PendingModelImportBanner` (`lib/ui/features/launcher/views/pending_model_import_banner.dart`)
 
 The launcher's note while files wait: "Open or create a project to import <names> into it.", with "Don't import", which empties `LaunchModelFiles.pending`. Nothing is shown when no file waits. A loose model has no project, so it is imported into the project the user opens or creates next.

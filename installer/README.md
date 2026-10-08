@@ -245,7 +245,7 @@ On Windows run it inside WSL. Pre-release versions follow nfpm's semver rules (`
 
 ## 3D model files: "Open with" and thumbnails
 
-Both installers register Lumina Studio for `.glb`, `.gltf`, `.fbx` and `.obj` files. They never change the default program of those types.
+Both installers register Lumina Studio for `.glb`, `.gltf`, `.fbx` and `.obj` files, and for its own assets (`.lmas`, below). They never change the default program of those types.
 
 **Open with.** Opening a model file with Lumina Studio starts the editor with the path as an argument (`lumina_ui <file>`, or `--import <file>`). A loose file has no project, so the launcher shows "Open or create a project to import <file> into it." with a "Don't import" button. The project the user opens or creates next imports the files through the normal import queue (auto-organised under `contents/`) and opens the first one in its mesh editor. When the project opens in its own project editor, the files go along as `--import` arguments. Each "Open with" starts a new editor process.
 
@@ -256,6 +256,15 @@ lumina_ui --lumina-thumbnail <input> <output.png> [--size <px>]
 ```
 
 It converts the file as an import would and draws it with the Content Browser's thumbnail renderer: the studio light rig, a three-quarter view framed on the bounds, PBR Neutral tone mapping, on the GPU of the editor's Graphics Device setting. A `.gltf` whose images are missing is drawn with white textures. Exit codes: 0 written, 64 bad arguments, 65 missing, unsupported or unreadable file, 70 nothing rendered, 73 the PNG could not be written. Each call starts the editor (well under a second on a desktop GPU). The file managers cache the result.
+
+### Lumina assets (`.lmas`)
+
+The same thumbnailer shows a `.lmas` as the Content Browser shows it (`ThumbnailService.preview`): the editor caches each asset's thumbnail inside the `.lmas` (`thumbnail_png`, stamped), so a fresh one is returned as it is, without starting the renderer. A stale or missing one is rendered by the Content Browser's own routing (meshes, materials as their preview sphere, textures as the image, levels, Blueprints, animation assets posed on their skeletal mesh; other types show their type badge), with references resolved from the asset's project. **The `.lmas` is never written**: the file manager does not change its modification time. The Windows shell passes the provider a stream, not a path, so there a copy outside its project is shown with its embedded thumbnail when the editor made one, otherwise rendered from what the file itself contains. A stale embedded thumbnail is not detected there; the editor refreshes it the next time the project is open.
+
+Opening a `.lmas` (double-click, or "Open with") starts Lumina Studio on its project, the nearest folder above it with a `.lmproject`, and opens the asset in its editor. A project editor gets it as `--open-asset <path>`.
+
+- Windows: the "Lumina assets" task (on by default, separate from "3D model files" because `.lmas` is Lumina's own type) registers the ProgID `LuminaStudio.Asset`, makes it the default program of `.lmas` when no program is (`createvalueifdoesntexist`), lists it under `.lmas\OpenWithProgids` and `Applications\lumina_ui.exe\SupportedTypes`, and the thumbnail handler under `SystemFileAssociations\.lmas`. The provider DLL and its class install with either task.
+- Linux: `application/x-lumina-asset` (`*.lmas`, `LMAS` magic) in `lumina-studio-models.xml`, in the `.desktop` entry's `MimeType` and in the `.thumbnailer`.
 
 ### Windows
 

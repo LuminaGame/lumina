@@ -9,6 +9,7 @@ import 'package:lumina_editor_data/src/services/fbx_import_service.dart';
 import 'package:lumina_editor_data/src/services/filament_thumbnail_renderer.dart';
 import 'package:lumina_editor_data/src/services/glb_parser_service.dart';
 import 'package:lumina_editor_data/src/services/obj_import_service.dart';
+import 'package:lumina_editor_data/src/services/thumbnail_service.dart';
 
 /// Thumbnails of model files on disk that belong to no project: what a file
 /// manager shows for a `.glb`, `.gltf`, `.fbx` or `.obj` once Lumina Studio is
@@ -102,7 +103,10 @@ class ModelThumbnailRequest {
 /// `lumina_ui --lumina-thumbnail <input> <output.png> [--size <px>]`: the
 /// installed editor run without a window to render one model file's
 /// thumbnail, for the file managers (the Windows shell thumbnail provider and
-/// the Linux `.thumbnailer` the installers register).
+/// the Linux `.thumbnailer` the installers register). A Lumina asset
+/// (`.lmas`) shows what the Content Browser shows for it
+/// ([ThumbnailService.preview]: its fresh embedded thumbnail, else rendered;
+/// the file is never written), at most the asked size.
 ///
 /// Exit codes follow `sysexits.h`: [exitOk], [exitUsage] (bad arguments),
 /// [exitInput] (missing, unsupported or unreadable file), [exitRender] (the
@@ -120,7 +124,12 @@ abstract final class ModelThumbnailCommand {
   static const int exitRender = 70;
   static const int exitOutput = 73;
 
-  static const String usage = 'usage: lumina_ui $flag <input.glb|.gltf|.fbx|.obj> <output.png> [--size <px>]';
+  static const String usage = 'usage: lumina_ui $flag <input.glb|.gltf|.fbx|.obj|.lmas> <output.png> [--size <px>]';
+
+  /// The file types the command draws: the model files and Lumina assets.
+  static const Set<String> supportedExtensions = {...ModelFileThumbnailer.supportedExtensions, '.lmas'};
+
+  static bool _isAsset(String path) => path.toLowerCase().endsWith('.lmas');
 
   /// The request in [args] (the editor's whole argument list), or an error
   /// message for [exitUsage].
@@ -158,6 +167,7 @@ abstract final class ModelThumbnailCommand {
   /// neutral ambient. Returns the exit code.
   static Future<int> run(ModelThumbnailRequest request, {Uint8List? ibl, void Function(String message)? log}) async {
     final say = log ?? (_) {};
+    if (_isAsset(request.input)) return _runAsset(request, ibl: ibl, say: say);
     if (!ModelFileThumbnailer.supports(request.input)) {
       say('Not a supported model file: ${request.input}');
       return exitInput;
@@ -184,15 +194,56 @@ abstract final class ModelThumbnailCommand {
       say('Nothing was rendered for ${request.input}');
       return exitRender;
     }
-    final tmp = File('${request.output}.tmp');
+    return _write(request.output, png, say);
+  }
+
+  static Future<int> _runAsset(ModelThumbnailRequest request, {Uint8List? ibl, required void Function(String) say}) async {
+    final renderer = FilamentThumbnailRenderer(size: request.size)..environmentIbl = ibl;
+    final ThumbnailResult? result;
+    try {
+      result = await ThumbnailService(renderer: renderer).preview(request.input);
+    } finally {
+      renderer.dispose();
+    }
+    if (result == null) {
+      say('Not a readable Lumina asset: ${request.input}');
+      return exitInput;
+    }
+    final size = request.size;
+    final png = await Isolate.run(() => _fitWithin(result!.png, size));
+    if (png == null) {
+      say('The thumbnail of ${request.input} is not an image');
+      return exitRender;
+    }
+    return _write(request.output, png, say);
+  }
+
+  /// [png] downscaled so its longer edge is at most [edge]; as it is when it
+  /// already fits. Null when it does not decode.
+  static Uint8List? _fitWithin(Uint8List png, int edge) {
+    final image = img.decodeImage(png);
+    if (image == null) return null;
+    final longest = image.width > image.height ? image.width : image.height;
+    if (longest <= edge) return png;
+    final scale = edge / longest;
+    return img.encodePng(img.copyResize(
+      image,
+      width: (image.width * scale).round().clamp(1, edge),
+      height: (image.height * scale).round().clamp(1, edge),
+      interpolation: img.Interpolation.average,
+    ));
+  }
+
+  static Future<int> _write(String output, Uint8List png, void Function(String) say) async {
+    final tmp = File('$output.tmp');
     try {
       await tmp.parent.create(recursive: true);
       await tmp.writeAsBytes(png, flush: true);
-      final target = File(request.output);
+      final target = File(output);
       if (await target.exists()) await target.delete();
-      await tmp.rename(request.output);
+      await tmp.rename(output);
     } on FileSystemException catch (e) {
-      say('Could not write ${request.output}: $e');
+      say('Could not write $output: $e');
       try {
         if (await tmp.exists()) await tmp.delete();
       } on FileSystemException catch (_) {}
