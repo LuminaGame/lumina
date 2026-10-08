@@ -64,6 +64,9 @@ abstract class _AnimBlueprintEditorViewModelState extends ChangeNotifier impleme
   /// Bumped whenever the target mesh (and so the clip list) is reloaded.
   int _targetMeshRevision = 0;
 
+  /// The project's skeletal meshes, scanned on first use after a load.
+  List<RealAssetInfo>? _skeletalMeshCache;
+
   bool _isRetargeting = false;
 
   // --- Implemented by the domain mixins or [AnimBlueprintEditorViewModel]. ---

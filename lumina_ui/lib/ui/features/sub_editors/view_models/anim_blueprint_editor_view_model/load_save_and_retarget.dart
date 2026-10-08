@@ -9,6 +9,7 @@ mixin _AnimBlueprintEditorLoadSaveAndRetarget on _AnimBlueprintEditorViewModelSt
   // ---------------------------------------------------------------------------
 
   Future<void> load() async {
+    _skeletalMeshCache = null;
     final dir = projectDir;
     final doc = dir == null ? null : AnimGraphAssetService.readAnimBlueprint(dir, relativePath);
     _document = doc ?? LuminaAnimBlueprintDocument();
@@ -151,14 +152,10 @@ mixin _AnimBlueprintEditorLoadSaveAndRetarget on _AnimBlueprintEditorViewModelSt
     try {
       final targetMeshRel = targetMeshAsset.relativePath;
       final targetBase = AnimGraphAssetService.baseName(targetMeshRel);
-      final sourceMeshRel = _document.targetMesh;
-      final sourceBase = AnimGraphAssetService.baseName(sourceMeshRel);
 
-      // 1. Gather all linked clips & blend spaces
+      // 1. The clips and Blend Spaces the states play.
       final directClips = <String>{};
-      final referencedBlendSpaces = <String, LuminaBlendSpaceDocument>{};
-      final blendSpaceClips = <String>{};
-
+      final blendSpacePaths = <String>{};
       for (final sm in _document.stateMachines) {
         for (final st in sm.states) {
           if (st.pose.kind == LuminaAnimPoseKind.clip) {
@@ -169,195 +166,29 @@ mixin _AnimBlueprintEditorLoadSaveAndRetarget on _AnimBlueprintEditorViewModelSt
               if (c.isNotEmpty) directClips.add(c);
             }
           } else if (st.pose.kind == LuminaAnimPoseKind.blendSpace && st.pose.blendSpace != null && st.pose.blendSpace!.isNotEmpty) {
-            final bsPath = st.pose.blendSpace!;
-            final bsDoc = _blendSpaces[bsPath] ?? AnimGraphAssetService.readBlendSpace(dir, bsPath);
-            if (bsDoc != null) {
-              referencedBlendSpaces[bsPath] = bsDoc;
-              for (final s in bsDoc.samples) {
-                if (s.clip.isNotEmpty) blendSpaceClips.add(s.clip);
-              }
-            }
+            blendSpacePaths.add(st.pose.blendSpace!);
           }
         }
       }
 
-      final allClips = {...directClips, ...blendSpaceClips}.toList()..sort();
-
-      // 2. Resolve source GLB bytes
-      Uint8List? sourceGlbBytes;
-      final sourceCompFile = File('$dir/${sourceMeshRel.replaceAll(RegExp(r'\.lmas$'), '.entity.glb')}');
-      if (sourceCompFile.existsSync()) {
-        sourceGlbBytes = await sourceCompFile.readAsBytes();
-      } else if (sourceMeshRel.isNotEmpty) {
-        final sourceLmasFile = File('$dir/$sourceMeshRel');
-        if (sourceLmasFile.existsSync()) {
-          try {
-            final lmas = LuminaAsset.fromBytes(await sourceLmasFile.readAsBytes());
-            if (lmas.rawPayload != null && lmas.rawPayload!.isNotEmpty) {
-              sourceGlbBytes = lmas.rawPayload!;
-            }
-          } catch (_) {}
-        }
+      // 2–6. Reading the meshes, retargeting every clip, writing the clips,
+      // the target mesh and the Blend Spaces: a background isolate.
+      final result = await AnimBlueprintRetargetWorker.run(AnimBlueprintRetargetJob(
+        projectDir: dir,
+        sourceMeshRel: _document.targetMesh,
+        targetMeshRel: targetMeshRel,
+        directClips: directClips,
+        blendSpacePaths: blendSpacePaths,
+        knownBlendSpaces: {
+          for (final path in blendSpacePaths)
+            if (_blendSpaces[path] != null) path: _blendSpaces[path]!,
+        },
+      ));
+      for (final message in result.messages) {
+        debugPrint('[AnimBlueprintEditorViewModel] $message');
       }
-
-      // 3. Resolve target GLB bytes
-      Uint8List? targetGlbBytes;
-      final targetCompFile = File('$dir/${targetMeshRel.replaceAll(RegExp(r'\.lmas$'), '.entity.glb')}');
-      if (targetCompFile.existsSync()) {
-        targetGlbBytes = await targetCompFile.readAsBytes();
-      } else {
-        final targetLmasFile = File('$dir/$targetMeshRel');
-        if (targetLmasFile.existsSync()) {
-          try {
-            final lmas = LuminaAsset.fromBytes(await targetLmasFile.readAsBytes());
-            if (lmas.rawPayload != null && lmas.rawPayload!.isNotEmpty) {
-              targetGlbBytes = lmas.rawPayload!;
-            }
-          } catch (_) {}
-        }
-      }
-
-      if (targetGlbBytes == null) {
-        throw Exception('Target skeletal mesh GLB not found for $targetMeshRel');
-      }
-
-      // Helper to find source GLB and animation index for a specific clip name
-      ({Uint8List glb, int index})? resolveClipSource(String clipName) {
-        if (sourceGlbBytes != null) {
-          try {
-            final names = GlbAnimationMerger.animationNames(sourceGlbBytes);
-            final idx = names.indexOf(clipName);
-            if (idx >= 0) return (glb: sourceGlbBytes, index: idx);
-          } catch (_) {}
-        }
-        final candidates = [
-          '$dir/contents/animations/$sourceBase/$clipName.entity.glb',
-          '$dir/contents/animations/$sourceBase/$clipName.lmas',
-          '$dir/contents/animations/$clipName.entity.glb',
-          '$dir/contents/animations/$clipName.lmas',
-        ];
-        for (final c in candidates) {
-          final f = File(c);
-          if (f.existsSync()) {
-            try {
-              final bytes = f.readAsBytesSync();
-              if (c.endsWith('.entity.glb')) {
-                final names = GlbAnimationMerger.animationNames(bytes);
-                final idx = names.indexOf(clipName);
-                return (glb: bytes, index: idx >= 0 ? idx : 0);
-              } else {
-                final lmas = LuminaAsset.fromBytes(bytes);
-                if (lmas.rawPayload != null && lmas.rawPayload!.isNotEmpty) {
-                  final names = GlbAnimationMerger.animationNames(lmas.rawPayload!);
-                  final idx = names.indexOf(clipName);
-                  return (glb: lmas.rawPayload!, index: idx >= 0 ? idx : 0);
-                }
-              }
-            } catch (_) {}
-          }
-        }
-        return null;
-      }
-
-      // 4. Retarget clips sequentially into target mesh GLB
-      var currentTargetGlb = targetGlbBytes;
-      final retargetedClips = <String>[];
-      final targetAnimDir = Directory('$dir/contents/animations/$targetBase');
-      if (!targetAnimDir.existsSync()) {
-        targetAnimDir.createSync(recursive: true);
-      }
-
-      for (final clipName in allClips) {
-        final src = resolveClipSource(clipName);
-        if (src == null) {
-          debugPrint('[AnimBlueprintEditorViewModel] Source clip not found: $clipName');
-          continue;
-        }
-
-        try {
-          final res = GlbAnimationRetargeter.retargetInto(
-            target: currentTargetGlb,
-            clip: src.glb,
-            clipName: clipName,
-            animationIndex: src.index,
-          );
-          currentTargetGlb = res.glb;
-          retargetedClips.add(clipName);
-
-          // Write companion .entity.glb for individual animation clip
-          final clipGlbFile = File('${targetAnimDir.path}/$clipName.entity.glb');
-          await clipGlbFile.writeAsBytes(res.glb);
-
-          // Write .lmas for individual animation asset
-          final clipLmasFile = File('${targetAnimDir.path}/$clipName.lmas');
-          final animAsset = LuminaAsset(
-            assetId: 'retarget_${clipName}_${DateTime.now().millisecondsSinceEpoch}',
-            name: clipName,
-            type: AssetType.animation,
-            rawPayload: Uint8List(0),
-            metadata: {
-              'source_mesh': targetMeshRel,
-              'target_mesh': targetMeshRel,
-              'preview_mesh_path': targetMeshRel,
-              'clip_name': clipName,
-              'clip_index': '${res.clipIndex}',
-              'last_modified': DateTime.now().toIso8601String(),
-            },
-          );
-          await clipLmasFile.writeAsBytes(animAsset.toProtoBufferBytes());
-        } catch (e) {
-          debugPrint('[AnimBlueprintEditorViewModel] Error retargeting $clipName: $e');
-        }
-      }
-
-      // 5. Save updated target companion GLB
-      if (retargetedClips.isNotEmpty) {
-        await targetCompFile.writeAsBytes(currentTargetGlb);
-
-        // Update target mesh .lmas metadata if exists
-        final targetLmasFile = File('$dir/$targetMeshRel');
-        if (targetLmasFile.existsSync() && targetMeshRel.endsWith('.lmas')) {
-          try {
-            final lmas = LuminaAsset.fromBytes(await targetLmasFile.readAsBytes());
-            final allNames = GlbAnimationMerger.animationNames(currentTargetGlb);
-            final meta = Map<String, String>.from(lmas.metadata);
-            meta['animation_clips'] = allNames.join(',');
-            final updatedLmas = LuminaAsset(
-              assetId: lmas.assetId,
-              name: lmas.name,
-              type: lmas.type,
-              rawPayload: lmas.rawPayload,
-              rawMatSource: lmas.rawMatSource,
-              thumbnailPng: lmas.thumbnailPng,
-              hasThumbnail: lmas.hasThumbnail,
-              references: lmas.references,
-              metadata: meta,
-            );
-            await targetLmasFile.writeAsBytes(updatedLmas.toProtoBufferBytes());
-          } catch (_) {}
-        }
-      }
-
-      // 6. Retarget referenced Blend Spaces
-      final oldToNewBlendSpaces = <String, String>{};
-      for (final entry in referencedBlendSpaces.entries) {
-        final oldBsPath = entry.key;
-        final oldBsDoc = entry.value;
-        final bsBaseName = AnimGraphAssetService.baseName(oldBsPath);
-        final newBsRelPath = 'contents/animations/$targetBase/$bsBaseName.lmas';
-
-        final newBsDoc = LuminaBlendSpaceDocument(
-          axes: oldBsDoc.axes,
-          samples: oldBsDoc.samples,
-        );
-        AnimGraphAssetService.writeBlendSpace(
-          dir,
-          newBsRelPath,
-          newBsDoc,
-          targetMesh: targetMeshRel,
-        );
-        oldToNewBlendSpaces[oldBsPath] = newBsRelPath;
-      }
+      final retargetedClips = result.retargetedClips;
+      final oldToNewBlendSpaces = result.oldToNewBlendSpaces;
 
       // 7. Update state machine states with new blend space paths
       final newMachines = _document.stateMachines.map((sm) {
@@ -397,7 +228,8 @@ mixin _AnimBlueprintEditorLoadSaveAndRetarget on _AnimBlueprintEditorViewModelSt
       final cleanName = (outputName ?? '').trim().replaceAll(RegExp(r'\.lmas$'), '');
       if (saveAsNew && cleanName.isNotEmpty && cleanName != name) {
         final newRelPath = 'contents/animations/$targetBase/$cleanName.lmas';
-        AnimGraphAssetService.writeAnimBlueprint(dir, newRelPath, _document);
+        final document = _document;
+        await Isolate.run(() => AnimGraphAssetService.writeAnimBlueprint(dir, newRelPath, document));
         finalPath = '$dir/$newRelPath';
       } else {
         await save();
@@ -405,6 +237,7 @@ mixin _AnimBlueprintEditorLoadSaveAndRetarget on _AnimBlueprintEditorViewModelSt
       }
 
       // 9. Sync target mesh, reload clips and blend spaces, reset preview
+      _skeletalMeshCache = null;
       _syncTargetMesh();
       _previewRevision = -1;
       _lastPreviewState = null;

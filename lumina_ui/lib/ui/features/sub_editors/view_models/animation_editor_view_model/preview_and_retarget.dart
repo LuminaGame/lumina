@@ -55,9 +55,7 @@ mixin _AnimationEditorPreviewAndRetarget on _AnimationEditorViewModelState {
 
     final cleanName = outputName.replaceAll(RegExp(r'\.lmas$'), '');
     final outDir = Directory('$projectDir/contents/animations');
-    if (!outDir.existsSync()) {
-      outDir.createSync(recursive: true);
-    }
+    await outDir.create(recursive: true);
 
     final outPath = '${outDir.path}/$cleanName.lmas';
     final companionGlbPath = '${outDir.path}/$cleanName.entity.glb';
@@ -71,11 +69,11 @@ mixin _AnimationEditorPreviewAndRetarget on _AnimationEditorViewModelState {
       if (sourceMeshRel != null && sourceMeshRel.isNotEmpty) {
         final sourceMeshAbs = '$projectDir/$sourceMeshRel';
         final compFile = File(sourceMeshAbs.replaceAll(RegExp(r'\.lmas$'), '.entity.glb'));
-        if (compFile.existsSync()) {
+        if (await compFile.exists()) {
           sourceGlbBytes = await compFile.readAsBytes();
         } else {
           final lmasFile = File(sourceMeshAbs);
-          if (lmasFile.existsSync()) {
+          if (await lmasFile.exists()) {
             try {
               final lmasAsset = LuminaAsset.fromBytes(await lmasFile.readAsBytes());
               if (lmasAsset.rawPayload != null && lmasAsset.rawPayload!.isNotEmpty) {
@@ -94,11 +92,11 @@ mixin _AnimationEditorPreviewAndRetarget on _AnimationEditorViewModelState {
     Uint8List? targetGlbBytes;
     final targetLmasPath = targetMeshAsset.lmasPath ?? '$projectDir/${targetMeshAsset.relativePath}';
     final targetCompFile = File(targetLmasPath.replaceAll(RegExp(r'\.lmas$'), '.entity.glb'));
-    if (targetCompFile.existsSync()) {
+    if (await targetCompFile.exists()) {
       targetGlbBytes = await targetCompFile.readAsBytes();
     } else {
       final targetLmasFile = File(targetLmasPath);
-      if (targetLmasFile.existsSync()) {
+      if (await targetLmasFile.exists()) {
         try {
           final targetAsset = LuminaAsset.fromBytes(await targetLmasFile.readAsBytes());
           if (targetAsset.rawPayload != null && targetAsset.rawPayload!.isNotEmpty) {
@@ -113,12 +111,15 @@ mixin _AnimationEditorPreviewAndRetarget on _AnimationEditorViewModelState {
     if (sourceGlbBytes != null && targetGlbBytes != null) {
       try {
         final clipIdx = (_selectedClip >= 0 && _selectedClip < _clips.length) ? _selectedClip : 0;
-        retargetResult = GlbAnimationRetargeter.retargetInto(
-          target: targetGlbBytes,
-          clip: sourceGlbBytes,
-          clipName: cleanName,
-          animationIndex: clipIdx,
-        );
+        final target = targetGlbBytes, clip = sourceGlbBytes;
+        // Retargeting a clip into a full skeletal mesh GLB is CPU work on
+        // hundreds of megabytes: a background isolate.
+        retargetResult = await Isolate.run(() => GlbAnimationRetargeter.retargetInto(
+              target: target,
+              clip: clip,
+              clipName: cleanName,
+              animationIndex: clipIdx,
+            ));
       } catch (e) {
         debugPrint('[AnimationEditorViewModel] GlbAnimationRetargeter error: $e');
       }

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 import 'dart:math' as math;
 import 'dart:ui' show Offset;
 
@@ -10,6 +11,7 @@ import 'package:vector_math/vector_math_64.dart' show Vector3;
 import 'package:lumina_ui/ui/features/main_editor/commands/editor_transaction.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_compile_status.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_pin_style.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/anim_blueprint_retarget_worker.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/anim_graph_asset_service.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/anim_preview_scene.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/blueprint_graph_editor.dart';
@@ -159,10 +161,15 @@ class AnimBlueprintEditorViewModel extends _AnimBlueprintEditorViewModelState
   String get generatedCode => _generatedCode;
 
   /// Available skeletal meshes in the project for target mesh selection.
+  ///
+  /// The project scan behind it is made once and kept until the next [load]
+  /// or retarget: the Details panel reads this on every build, and a scan per
+  /// build (a walk of every `.lmas` plus an asset index write) froze the
+  /// editor while thumbnails or the preview were updating.
   List<RealAssetInfo> get availableSkeletalMeshes {
     final dir = projectDir;
     if (dir == null) return const [];
-    final list = AnimGraphAssetService.skeletalMeshes(dir);
+    final list = _skeletalMeshCache ??= AnimGraphAssetService.skeletalMeshes(dir);
     if (_document.targetMesh.isNotEmpty && !list.any((m) => m.relativePath == _document.targetMesh)) {
       final name = _document.targetMesh.split('/').last;
       return [

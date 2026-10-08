@@ -647,7 +647,7 @@ The Animation Blueprint editor's state: lumina's [LuminaAnimBlueprintDocument] f
 | `compileStatus` | `BlueprintCompileStatus get compileStatus` |  |
 | `compileRows` | `List<AnimCompileRow> get compileRows` |  |
 | `generatedCode` | `String get generatedCode` |  |
-| `availableSkeletalMeshes` | `List<RealAssetInfo> get availableSkeletalMeshes` | Available skeletal meshes in the project for target mesh selection. |
+| `availableSkeletalMeshes` | `List<RealAssetInfo> get availableSkeletalMeshes` | Available skeletal meshes in the project for target mesh selection; scanned once after `load` (or a retarget) and kept, since the Details panel reads it on every build. `executeRetarget` runs the mesh reads, clip retargeting and file writes on a background isolate (`AnimBlueprintRetargetWorker`). |
 | `undo` | `void undo()` |  |
 | `redo` | `void redo()` |  |
 | `className` | `static String className(String rawName)` | The Dart class the Blueprint [rawName] compiles into ([dartTypeName]: `ABP_Character` → `AbpCharacter`). |
