@@ -244,6 +244,10 @@ A surface's physical response: Coulomb [friction] (dynamic; [staticFriction] whi
 | `combinedStaticFriction` | `static double combinedStaticFriction(LuminaPhysicalMaterial a, LuminaPhysicalMaterial b)` | The static friction of [a] touching [b]. |
 | `combinedRestitution` | `static double combinedRestitution(LuminaPhysicalMaterial a, LuminaPhysicalMaterial b)` | The restitution of [a] touching [b]. |
 
+## Eklemler ve ragdoll'lar
+
+`LuminaPhysicsJoint` (`lib/src/physics/physics_joint.dart`) iki gövdeyi bir bilye-yuva (salınım konisi, burulma aralığı) ya da menteşeyle, isteğe bağlı eklem sürtünmesi ve motorla birleştirir; `LuminaPhysicsSubsystem.addJoint` / `removeJoint` bunları temaslarla birlikte çözer (`LuminaJointBatch`, `lib/src/physics/joint_batch.dart`: `jointIterations` ek hız geçişi, `jointPositionIterations` konum geçişi). Birleştirilmiş gövdeler hiç çarpışmaz ve aynı adayı paylaşır; bir aktörün gövdeleri ancak ikisi de `LuminaRigidBody.collidesWithOwnBodies` açıksa ve biri ötekini `ignoredBodies` içinde listelemiyorsa çarpışır. Bir primitive bileşenin şekilleri ve kütle kuralı `LuminaPhysicsBodyShapes` içindedir (`lib/src/physics/physics_body_shapes.dart`; `resolveMassProperties` / `meshPhysicsOf` ona yönlendirir). Physics asset'ler, ragdoll'lar, düşmeler ve kalkmalar: [Ragdoll, düşme ve ayağa kalkma](ragdoll.md).
+
 ## `lib/src/physics/physics_subsystem.dart`
 
 ### `class LuminaPhysicsSubsystem`
@@ -447,4 +451,4 @@ The body's frame is its component's world frame; [position] is the centre of mas
 
 ---
 
-[Önceki: Çarpışma](collision.md) | [Üst: lumina (engine çekirdeği)](index.md) | [Sonraki: Yapay zeka (AI)](ai.md)
+[Önceki: Çarpışma](collision.md) | [Üst: lumina (engine çekirdeği)](index.md) | [Sonraki: Ragdoll, düşme ve ayağa kalkma](ragdoll.md)

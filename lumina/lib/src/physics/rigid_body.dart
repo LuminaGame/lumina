@@ -166,6 +166,15 @@ class LuminaRigidBody {
   final Vector3 linearFactor = Vector3(1, 1, 1);
   final Vector3 angularFactor = Vector3(1, 1, 1);
 
+  /// Bodies this one never collides with (bodies joined to it, a ragdoll's
+  /// pairs that overlap at rest).
+  final Set<LuminaRigidBody> ignoredBodies = {};
+
+  /// Whether this body collides with other bodies of its own actor that also
+  /// allow it (a ragdoll's limbs); bodies of one actor pass through each
+  /// other otherwise.
+  bool collidesWithOwnBodies = false;
+
   bool _awake = true;
   double sleepTime = 0.0;
 

@@ -385,4 +385,4 @@ Central world subsystem maintaining registries of perception sources and listene
 
 ---
 
-[Önceki: Fizik](physics.md) | [Üst: lumina (engine çekirdeği)](index.md) | [Sonraki: Materyaller ve post-processing](materials-and-post-process.md)
+[Önceki: Ragdoll, düşme ve ayağa kalkma](ragdoll.md) | [Üst: lumina (engine çekirdeği)](index.md) | [Sonraki: Materyaller ve post-processing](materials-and-post-process.md)

@@ -42,7 +42,8 @@ Runtime kodu dosyaları hiçbir zaman doğrudan `File(...)` ile okumaz: açık b
 | [Traversal (engel aşma)](traversal.md) | Engel ölçümü, hurdle / vault / mantle seçimi, motion warping'li root-motion slot montage'ları. |
 | [Ses](audio.md) | Ses backend'i, ses subsystem'i, sesler ve attenuation. |
 | [Çarpışma](collision.md) | Çarpışma şekilleri, filtreler ve profiller, sorgular, GJK/EPA narrow phase. |
-| [Fizik](physics.md) | Rigid body'ler, kütle özellikleri, fiziksel materyaller, temaslar ve fizik subsystem'i. |
+| [Fizik](physics.md) | Rigid body'ler, kütle özellikleri, fiziksel materyaller, temaslar, eklemler ve fizik subsystem'i. |
+| [Ragdoll, düşme ve ayağa kalkma](ragdoll.md) | Physics asset'ler ve üreteçleri, mesh'i süren ragdoll'lar, ragdoll'a düşme, ağır iniş, kalkma klipleri. |
 | [Yapay zeka (AI)](ai.md) | AI controller, behavior tree'ler, blackboard, navigasyon, algı (perception). |
 | [Materyaller ve post-processing](materials-and-post-process.md) | Engine materyalleri, dynamic material instance'lar, materyal cache'i, post-process, ölçeklenebilirlik, gölgeler. |
 | [Render cihazları](rendering.md) | GPU seçimi ve kullanılan render backend'i. |

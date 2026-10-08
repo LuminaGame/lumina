@@ -46,6 +46,7 @@ export 'package:lumina_editor_data/src/services/import_queue.dart';
 export 'package:lumina_editor_data/src/services/import_folder_scanner.dart';
 export 'package:lumina_editor_data/src/services/mesh_collision_service.dart';
 export 'package:lumina_editor_data/src/services/mesh_physics_service.dart';
+export 'package:lumina_editor_data/src/services/physics_asset_generation.dart';
 export 'package:lumina_editor_data/src/services/rig_logic_evaluator.dart';
 
 // Derived data, references and thumbnails

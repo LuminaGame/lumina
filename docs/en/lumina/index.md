@@ -42,7 +42,8 @@ Runtime code never reads files with `File(...)` directly: asset loads without an
 | [Traversal](traversal.md) | Obstacle check, hurdle / vault / mantle chooser, root-motion slot montages with motion warping. |
 | [Audio](audio.md) | Audio backend, audio subsystem, sounds and attenuation. |
 | [Collision](collision.md) | Collision shapes, filters and profiles, queries, GJK/EPA narrow phase. |
-| [Physics](physics.md) | Rigid bodies, mass properties, physical materials, contacts and the physics subsystem. |
+| [Physics](physics.md) | Rigid bodies, mass properties, physical materials, contacts, joints and the physics subsystem. |
+| [Ragdolls, falls and getting up](ragdoll.md) | Physics assets and their generator, ragdolls driving the mesh, falls into ragdoll, heavy landings, get-up clips. |
 | [AI](ai.md) | AI controller, behavior trees, blackboard, navigation, perception. |
 | [Materials and post-processing](materials-and-post-process.md) | Engine materials, dynamic material instances, material cache, post-process, scalability, shadows. |
 | [Rendering devices](rendering.md) | GPU selection and the render backend in use. |

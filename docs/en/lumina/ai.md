@@ -385,4 +385,4 @@ Central world subsystem maintaining registries of perception sources and listene
 
 ---
 
-[Previous: Physics](physics.md) | [Up: lumina (engine core)](index.md) | [Next: Materials and post-processing](materials-and-post-process.md)
+[Previous: Ragdolls, falls and getting up](ragdoll.md) | [Up: lumina (engine core)](index.md) | [Next: Materials and post-processing](materials-and-post-process.md)

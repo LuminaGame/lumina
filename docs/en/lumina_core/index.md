@@ -23,9 +23,10 @@ The package lives in the lumina repository (`lumina_core/`) and is a member of i
 | File formats | `.lmas` assets (`LuminaAsset`, `LuminaAssetSummary`), the `.lmproject` manifest (`LuminaProject` and its settings), level documents (`LuminaLevelDocument`), landscape and sequencer data, `.lmplugin` descriptors (`LuminaPluginDescriptor`, `PluginIsolation`), theme documents, recent projects | [File formats and repositories](formats.md) |
 | Repositories | `LuminaLevelRepository` (level `.lmas` files), `PluginRepository` (plugin discovery and `.lmplugin` validation) | [File formats and repositories](formats.md) |
 | Services | `EngineLoggerService`, `LuminaWorkspace`, `LuminaDataDir`, `LuminaConfigDir`, config JSON files, the asset index, the project editor build fingerprint and cache, engine bootstrap and source vendoring, the glTF packer, the primitive GLB factory, the TGA decoder, GLB animation merging and retargeting, game and level templates, plugin packaging, release assets | [Services](services.md), [Services (continued)](services-continued.md) |
+| Physics assets | `LuminaPhysicsAssetData` (bodies, constraints, disabled pairs; the Physics Asset editor's JSON), `LuminaPhysicsAssetGenerator` / `LuminaSkeletonRest` (a humanoid physics asset from a skinned GLB's skeleton) | [Ragdolls](../lumina/ragdoll.md) |
 | Motion matching | Pose search databases: `LuminaPoseSearchDatabaseDocument` / schema / clips, `LuminaGlbAnimationSampler` (CPU glTF clip sampling and FK), `LuminaPoseSearchBuilder` (features, normalization, mirroring, background build, fingerprint), `LuminaPoseSearchIndex` (pruned search, `.posedb` codec), `LuminaPoseSearchPoser` (root motion removed, mirrored poses); `package:lumina_core/testing.dart` has `LuminaSyntheticLocomotionRig` for tests | [Motion matching](../lumina/motion-matching.md) |
 
-The library is one barrel, `package:lumina_core/lumina_core.dart`. The files are under `lib/src/foundation/`, `lib/src/math/`, `lib/src/formats/`, `lib/src/repositories/`, `lib/src/services/` and `lib/src/pose_search/`.
+The library is one barrel, `package:lumina_core/lumina_core.dart`. The files are under `lib/src/foundation/`, `lib/src/math/`, `lib/src/formats/`, `lib/src/repositories/`, `lib/src/services/`, `lib/src/physics_asset/` and `lib/src/pose_search/`.
 
 ## Change notification without Flutter
 

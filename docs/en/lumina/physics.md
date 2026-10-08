@@ -244,6 +244,10 @@ A surface's physical response: Coulomb [friction] (dynamic; [staticFriction] whi
 | `combinedStaticFriction` | `static double combinedStaticFriction(LuminaPhysicalMaterial a, LuminaPhysicalMaterial b)` | The static friction of [a] touching [b]. |
 | `combinedRestitution` | `static double combinedRestitution(LuminaPhysicalMaterial a, LuminaPhysicalMaterial b)` | The restitution of [a] touching [b]. |
 
+## Joints and ragdolls
+
+`LuminaPhysicsJoint` (`lib/src/physics/physics_joint.dart`) joins two bodies with a ball-and-socket (swing cone, twist range) or a hinge, optional joint friction and a motor; `LuminaPhysicsSubsystem.addJoint` / `removeJoint` solve them next to the contacts (`LuminaJointBatch`, `lib/src/physics/joint_batch.dart`: `jointIterations` extra velocity passes, `jointPositionIterations` position passes). Joined bodies never collide and share an island; bodies of one actor collide only when both set `LuminaRigidBody.collidesWithOwnBodies` and neither lists the other in `ignoredBodies`. The shapes and mass rule of a primitive component are in `LuminaPhysicsBodyShapes` (`lib/src/physics/physics_body_shapes.dart`; `resolveMassProperties` / `meshPhysicsOf` forward to it). Physics assets, ragdolls, falls and get-ups: [Ragdolls, falls and getting up](ragdoll.md).
+
 ## `lib/src/physics/physics_subsystem.dart`
 
 ### `class LuminaPhysicsSubsystem`
@@ -447,4 +451,4 @@ The body's frame is its component's world frame; [position] is the centre of mas
 
 ---
 
-[Previous: Collision](collision.md) | [Up: lumina (engine core)](index.md) | [Next: AI](ai.md)
+[Previous: Collision](collision.md) | [Up: lumina (engine core)](index.md) | [Next: Ragdolls, falls and getting up](ragdoll.md)

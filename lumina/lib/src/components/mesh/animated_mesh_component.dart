@@ -1,9 +1,12 @@
 import 'dart:developer' as developer;
+import 'dart:typed_data';
 
 import 'package:flutter_filament/filament.dart';
+import 'package:lumina_core/lumina_core.dart' show LuminaPoseMath;
 import 'package:vector_math/vector_math_64.dart';
 
 import 'package:lumina/src/components/mesh/mesh_pose_driver.dart';
+import 'package:lumina/src/components/mesh/mesh_pose_modifier.dart';
 import 'package:lumina/src/components/mesh/morph_targets.dart';
 import 'package:lumina/src/components/mesh/static_mesh_component.dart';
 
@@ -103,6 +106,64 @@ class LuminaAnimatedMeshComponent extends LuminaStaticMeshComponent with LuminaM
   }
 
   final List<double> _driverMatrix = List<double>.filled(16, 0.0);
+
+  /// Pose modifiers, applied in order after the clip or [poseDriver] and the
+  /// joint overrides (a ragdoll, a get-up blend).
+  final List<LuminaMeshPoseModifier> poseModifiers = [];
+  final Map<LuminaMeshPoseModifier, (List<String>, List<int?>, Float64List)> _modifierNodes = {};
+
+  void _applyPoseModifiers(FilamentTransformManager tm, double deltaTime) {
+    if (poseModifiers.isEmpty) return;
+    final meshTransform = renderTransform;
+    for (final modifier in poseModifiers) {
+      final names = modifier.poseModifierNodes;
+      var cached = _modifierNodes[modifier];
+      if (cached == null || !identical(cached.$1, names)) {
+        cached = (names, [for (final n in names) _joint(n)], Float64List(names.length * 10));
+        _modifierNodes[modifier] = cached;
+      }
+      final (_, entities, pose) = cached;
+      for (var i = 0; i < entities.length; i++) {
+        final e = entities[i];
+        if (e == null) continue;
+        _decompose(tm.getTransform(e), pose, i * 10);
+      }
+      if (!modifier.modifyPose(pose, meshTransform, deltaTime)) continue;
+      final m = _driverMatrix;
+      for (var i = 0; i < entities.length; i++) {
+        final e = entities[i];
+        if (e == null) continue;
+        _compose(pose, i * 10, m);
+        tm.setTransform(e, m);
+      }
+    }
+  }
+
+  static void _decompose(List<double> m, Float64List out, int o) {
+    final affine = Float64List.fromList([m[0], m[1], m[2], m[4], m[5], m[6], m[8], m[9], m[10], m[12], m[13], m[14]]);
+    LuminaPoseMath.decomposeAffine(affine, 0, out, o);
+  }
+
+  static void _compose(Float64List pose, int o, List<double> m) {
+    final a = Float64List(12);
+    LuminaPoseMath.composeTrs(pose, o, a, 0);
+    m[0] = a[0];
+    m[1] = a[1];
+    m[2] = a[2];
+    m[3] = 0.0;
+    m[4] = a[3];
+    m[5] = a[4];
+    m[6] = a[5];
+    m[7] = 0.0;
+    m[8] = a[6];
+    m[9] = a[7];
+    m[10] = a[8];
+    m[11] = 0.0;
+    m[12] = a[9];
+    m[13] = a[10];
+    m[14] = a[11];
+    m[15] = 1.0;
+  }
 
   /// Writes the driver's pose onto the joints; false when it gave none.
   bool _applyPoseDriver(FilamentTransformManager tm, double deltaTime) {
@@ -329,6 +390,7 @@ class LuminaAnimatedMeshComponent extends LuminaStaticMeshComponent with LuminaM
     _jointSet.clear();
     _jointEntities.clear();
     _driverJoints = const [];
+    _modifierNodes.clear();
     _overrideBase.clear();
     _overrideWritten.clear();
     _asset = instance.getAsset();
@@ -385,10 +447,11 @@ class LuminaAnimatedMeshComponent extends LuminaStaticMeshComponent with LuminaM
     final engine = owner?.world?.nativeEngine;
     if (_poseDriver != null && engine != null && _applyPoseDriver(FilamentTransformManager(engine), deltaTime)) {
       _applyJointOverrides(FilamentTransformManager(engine));
+      _applyPoseModifiers(FilamentTransformManager(engine), deltaTime);
       animator.updateBoneMatrices();
       return;
     }
-    if (_current < 0 && _jointOverrides.isEmpty) return;
+    if (_current < 0 && _jointOverrides.isEmpty && poseModifiers.isEmpty) return;
 
     if (_current >= 0) {
       final step = deltaTime * _playRate;
@@ -409,7 +472,10 @@ class LuminaAnimatedMeshComponent extends LuminaStaticMeshComponent with LuminaM
     }
     // Joint overrides go on after the clip and before the bone matrices, or
     // the clip would overwrite them.
-    if (engine != null) _applyJointOverrides(FilamentTransformManager(engine));
+    if (engine != null) {
+      _applyJointOverrides(FilamentTransformManager(engine));
+      _applyPoseModifiers(FilamentTransformManager(engine), deltaTime);
+    }
     animator.updateBoneMatrices();
   }
 

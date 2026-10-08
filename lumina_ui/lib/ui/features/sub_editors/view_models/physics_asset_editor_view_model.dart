@@ -9,6 +9,9 @@ import 'package:vector_math/vector_math_64.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/physics_asset_document.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/physics_preview_scene.dart';
 
+part 'physics_asset_editor_view_model/body_and_constraint_edits.dart';
+part 'physics_asset_editor_view_model/validation_and_overlays.dart';
+
 /// Drives the Physics Asset sub-editor.
 ///
 /// Loads a real PHYSICS_ASSET `.lmas`, resolves the skeletal mesh it references
@@ -40,6 +43,9 @@ class PhysicsAssetEditorViewModel extends ChangeNotifier {
   LuminaAsset? _asset;
   GlbMeshData? _glbMesh;
   String? _skeletalMeshPath;
+
+  /// The reference as stored (kept project-relative when it was).
+  String? _storedMeshPath;
   String? _skeletalMeshAssetId;
   String? _linkError;
 
@@ -196,7 +202,19 @@ class PhysicsAssetEditorViewModel extends ChangeNotifier {
     }
   }
 
-  Future<void> _loadSkeleton(String meshPath, String? assetId) async {
+  /// [meshPath] on disk: as stored, or, for a project-relative path (what a
+  /// generated physics asset stores), under the project this asset lives in.
+  String _resolveMeshPath(String meshPath) {
+    final normalized = meshPath.replaceAll(r'\', '/');
+    if (!normalized.startsWith('contents/')) return meshPath;
+    final here = assetPath.replaceAll(r'\', '/');
+    final at = here.lastIndexOf('/contents/');
+    return at < 0 ? meshPath : '${here.substring(0, at)}/$normalized';
+  }
+
+  Future<void> _loadSkeleton(String storedPath, String? assetId) async {
+    final meshPath = _resolveMeshPath(storedPath);
+    _storedMeshPath = storedPath;
     _skeletalMeshPath = meshPath;
     _skeletalMeshAssetId = assetId;
     _linkError = null;
@@ -527,132 +545,6 @@ class PhysicsAssetEditorViewModel extends ChangeNotifier {
     return maxRadial * meshUnitScale;
   }
 
-  // ------------------------------------------------------- body properties
-
-  void _withBody(String boneName, void Function(PhysicsBody body) edit) {
-    final body = _document.bodyForBone(boneName);
-    if (body == null) return;
-    edit(body);
-    _markDirty();
-  }
-
-  void setBodyShape(String boneName, PhysicsShapeType shape) => replaceBody(boneName, shape);
-
-  void setBodyRadius(String boneName, double value) =>
-      _withBody(boneName, (b) => b.radius = math.max(_minLength, value));
-
-  void setBodyHalfHeight(String boneName, double value) =>
-      _withBody(boneName, (b) => b.halfHeight = math.max(_minLength, value));
-
-  void setBodyExtent(String boneName, int axis, double value) =>
-      _withBody(boneName, (b) => b.halfExtents[axis] = math.max(_minLength, value));
-
-  void setBodyOffsetLocation(String boneName, int axis, double value) =>
-      _withBody(boneName, (b) => b.offsetLocation[axis] = value);
-
-  void setBodyOffsetRotation(String boneName, int axis, double value) =>
-      _withBody(boneName, (b) => b.offsetRotationDeg[axis] = value);
-
-  void setBodyMass(String boneName, double value) =>
-      _withBody(boneName, (b) => b.massKg = math.max(0.0, value));
-
-  void setBodyLinearDamping(String boneName, double value) =>
-      _withBody(boneName, (b) => b.linearDamping = math.max(0.0, value));
-
-  void setBodyAngularDamping(String boneName, double value) =>
-      _withBody(boneName, (b) => b.angularDamping = math.max(0.0, value));
-
-  void setBodyPhysicsMaterial(String boneName, String name) =>
-      _withBody(boneName, (b) => b.physicsMaterial = name);
-
-  // -------------------------------------------------------- constraints
-
-  /// Adds a constraint between the bodies on [boneA] (parent) and [boneB].
-  bool addConstraint(String boneA, String boneB) {
-    if (boneA == boneB) {
-      _lastError = 'A constraint needs two distinct bones.';
-      notifyListeners();
-      return false;
-    }
-    if (_document.bodyForBone(boneA) == null || _document.bodyForBone(boneB) == null) {
-      _lastError = 'Both bones must already carry a body.';
-      notifyListeners();
-      return false;
-    }
-    final exists = _document.constraints.any((c) =>
-        (c.bodyA == boneA && c.bodyB == boneB) || (c.bodyA == boneB && c.bodyB == boneA));
-    if (exists) {
-      _lastError = 'These bodies are already constrained.';
-      notifyListeners();
-      return false;
-    }
-    final constraint = PhysicsConstraint(bodyA: boneA, bodyB: boneB);
-    _document.constraints.add(constraint);
-    _selectedConstraintName = constraint.name;
-    _selectedBodyBone = null;
-    _lastError = null;
-    _markDirty();
-    return true;
-  }
-
-  bool removeConstraint(String name) {
-    final before = _document.constraints.length;
-    _document.constraints.removeWhere((c) => c.name == name);
-    if (_document.constraints.length == before) return false;
-    if (_selectedConstraintName == name) _selectedConstraintName = null;
-    _markDirty();
-    return true;
-  }
-
-  void _withConstraint(String name, void Function(PhysicsConstraint c) edit) {
-    final c = _document.constraintByName(name);
-    if (c == null) return;
-    edit(c);
-    _markDirty();
-  }
-
-  void setConstraintMode(String name, PhysicsAngularMode mode) =>
-      _withConstraint(name, (c) => c.angularMode = mode);
-
-  double _clampDegrees(double v) => v.clamp(-180.0, 180.0).toDouble();
-
-  void setConstraintSwing1(String name, double deg) =>
-      _withConstraint(name, (c) => c.swing1Deg = _clampDegrees(deg));
-
-  void setConstraintSwing2(String name, double deg) =>
-      _withConstraint(name, (c) => c.swing2Deg = _clampDegrees(deg));
-
-  void setConstraintTwist(String name, double deg) =>
-      _withConstraint(name, (c) => c.twistDeg = _clampDegrees(deg));
-
-  bool constraintLimitsEnabled(PhysicsConstraint constraint) => constraint.limitsEnabled;
-
-  // ------------------------------------------------- collision disables
-
-  bool disableCollisionBetween(String boneA, String boneB) {
-    if (boneA == boneB) return false;
-    if (_document.bodyForBone(boneA) == null || _document.bodyForBone(boneB) == null) {
-      _lastError = 'Both bones must already carry a body.';
-      notifyListeners();
-      return false;
-    }
-    if (_document.isPairDisabled(boneA, boneB)) return false;
-    _document.disabledCollisionPairs.add([boneA, boneB]);
-    _markDirty();
-    return true;
-  }
-
-  bool enableCollisionBetween(String boneA, String boneB) {
-    final before = _document.disabledCollisionPairs.length;
-    _document.disabledCollisionPairs.removeWhere((p) =>
-        (p[0] == boneA && p[1] == boneB) || (p[0] == boneB && p[1] == boneA));
-    if (_document.disabledCollisionPairs.length == before) return false;
-    _markDirty();
-    return true;
-  }
-
-  bool isCollisionDisabled(String boneA, String boneB) => _document.isPairDisabled(boneA, boneB);
-
   // ------------------------------------------------------------ transforms
 
   /// `entityWorld x G_bone x offset` — the same chain sockets use, in cm
@@ -662,130 +554,8 @@ class PhysicsAssetEditorViewModel extends ChangeNotifier {
     return entityWorld.multiplied(bone).multiplied(body.offsetTransform);
   }
 
-  // ----------------------------------------------------------- validation
-
-  /// Runs lumina's real narrow phase over every authored body pair in bind
-  /// pose. Disabled pairs are skipped (and labelled); clean pairs are omitted.
-  List<PhysicsOverlapResult> validateOverlaps() {
-    final bodies = _document.bodies;
-    final results = <PhysicsOverlapResult>[];
-    final contact = ContactResult();
-    for (int i = 0; i < bodies.length; i++) {
-      for (int j = i + 1; j < bodies.length; j++) {
-        final a = bodies[i];
-        final b = bodies[j];
-        if (_document.isPairDisabled(a.boneName, b.boneName)) {
-          results.add(PhysicsOverlapResult(
-            bodyA: a.name,
-            bodyB: b.name,
-            boneA: a.boneName,
-            boneB: b.boneName,
-            penetrationDepth: 0.0,
-            isColliding: false,
-            disabled: true,
-          ));
-          continue;
-        }
-        contact.reset();
-        final hit = testPair(
-          a.toCollisionShape(),
-          bodyWorldTransform(a),
-          b.toCollisionShape(),
-          bodyWorldTransform(b),
-          contact,
-        );
-        if (!hit) continue;
-        results.add(PhysicsOverlapResult(
-          bodyA: a.name,
-          bodyB: b.name,
-          boneA: a.boneName,
-          boneB: b.boneName,
-          penetrationDepth: contact.penetrationDepth,
-          isColliding: true,
-          disabled: false,
-        ));
-      }
-    }
-    _lastValidation = results;
-    _hasValidated = true;
-    notifyListeners();
-    return results;
-  }
-
-  /// Blocking document errors, surfaced inline and gating Save.
-  List<String> get validationErrors {
-    final errors = <String>[];
-    final bodyBones = _document.bodies.map((b) => b.boneName).toSet();
-    final seen = <String>{};
-    for (final b in _document.bodies) {
-      if (!seen.add(b.boneName)) {
-        errors.add('Bone "${b.boneName}" carries more than one body.');
-      }
-    }
-    for (final c in _document.constraints) {
-      if (!bodyBones.contains(c.bodyA)) {
-        errors.add('Constraint ${c.name} references missing body "${c.bodyA}".');
-      }
-      if (!bodyBones.contains(c.bodyB)) {
-        errors.add('Constraint ${c.name} references missing body "${c.bodyB}".');
-      }
-      if (c.bodyA == c.bodyB) {
-        errors.add('Constraint ${c.name} joins a body to itself.');
-      }
-    }
-    for (final p in _document.disabledCollisionPairs) {
-      for (final bone in p) {
-        if (!bodyBones.contains(bone)) {
-          errors.add('Disabled collision pair references missing body "$bone".');
-        }
-      }
-    }
-    return errors;
-  }
-
-  // -------------------------------------------------------------- overlays
-
-  /// World-space line sets for the current view mode.
-  List<PhysicsOverlayLineSet> buildOverlay() {
-    final sets = <PhysicsOverlayLineSet>[];
-    if (_viewMode != PhysicsViewMode.constraintsOnly) {
-      for (final body in _document.bodies) {
-        sets.add(PhysicsOverlayBuilder.buildBody(
-          body,
-          bodyWorldTransform(body),
-          isSelected: _selectedBodyBone == body.boneName,
-          dimmed: _document.disabledCollisionPairs.any((p) => p.contains(body.boneName)),
-          filled: _viewMode == PhysicsViewMode.solidBodies,
-        ));
-      }
-    }
-    for (final c in _document.constraints) {
-      final a = _document.bodyForBone(c.bodyA);
-      final b = _document.bodyForBone(c.bodyB);
-      if (a == null || b == null) continue;
-      sets.add(PhysicsOverlayBuilder.buildConstraint(
-        c,
-        bodyWorldTransform(a),
-        bodyWorldTransform(b),
-        isSelected: _selectedConstraintName == c.name,
-      ));
-    }
-    return sets;
-  }
-
-  /// Translucent solid bodies — only the `Solid Bodies` view mode draws them.
-  List<PhysicsSolidMesh> buildSolidBodies() {
-    if (_viewMode != PhysicsViewMode.solidBodies) return const [];
-    return [
-      for (final body in _document.bodies)
-        PhysicsOverlayBuilder.buildSolidBody(
-          body,
-          bodyWorldTransform(body),
-          isSelected: _selectedBodyBone == body.boneName,
-          dimmed: _document.disabledCollisionPairs.any((p) => p.contains(body.boneName)),
-        ),
-    ];
-  }
+  /// Tells listeners (for the validation / overlay part).
+  void _notify() => notifyListeners();
 
   // ------------------------------------------------------------------ save
 
@@ -816,7 +586,7 @@ class PhysicsAssetEditorViewModel extends ChangeNotifier {
       references.add(AssetReference(
         slotName: skeletalMeshSlot,
         assetId: _skeletalMeshAssetId ?? '',
-        assetPath: _skeletalMeshPath!,
+        assetPath: _storedMeshPath ?? _skeletalMeshPath!,
       ));
     }
 

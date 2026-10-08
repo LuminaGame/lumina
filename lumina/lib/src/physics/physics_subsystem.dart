@@ -3,7 +3,6 @@ import 'dart:math' as math;
 import 'package:vector_math/vector_math_64.dart';
 
 import 'package:lumina/src/collision/collision_subsystem.dart';
-import 'package:lumina/src/components/base/scene_component.dart';
 import 'package:lumina/src/components/collision/box_component.dart';
 import 'package:lumina/src/components/collision/collision_component.dart';
 import 'package:lumina/src/components/mesh/static_mesh_component.dart';
@@ -14,7 +13,10 @@ import 'package:lumina/src/world/world.dart';
 import 'package:lumina/src/physics/contact_generation.dart';
 import 'package:lumina/src/physics/contact_solver.dart';
 import 'package:lumina/src/physics/mass_properties.dart';
+import 'package:lumina/src/physics/physics_body_shapes.dart';
 import 'package:lumina/src/physics/physical_material.dart';
+import 'package:lumina/src/physics/joint_batch.dart';
+import 'package:lumina/src/physics/physics_joint.dart';
 import 'package:lumina/src/physics/rigid_body.dart';
 
 class _BodyRecord {
@@ -71,6 +73,13 @@ class _Hit {
 ///   (twice the effective weight for a step, and [hitImpulseThreshold]) raises
 ///   `onComponentHit` and the actors' hit hooks (Blueprint Event Hit) once per
 ///   frame with [HitResult.normalImpulse].
+/// - **Joints**: [addJoint] connects two bodies ([LuminaPhysicsJoint]: anchor,
+///   swing cone, twist range, hinge, motor); joint rows are solved with the
+///   contacts ([jointIterations] extra passes), then [jointPositionIterations]
+///   position passes after integration. Joined bodies share an island (they
+///   sleep and wake together). Bodies of one actor collide with each other
+///   only when both have [LuminaRigidBody.collidesWithOwnBodies] and neither
+///   lists the other in [LuminaRigidBody.ignoredBodies] (a ragdoll's limbs).
 class LuminaPhysicsSubsystem extends LuminaWorldSubsystem {
   double fixedTimeStep = 1 / 120;
   int maxSubsteps = 8;
@@ -82,6 +91,10 @@ class LuminaPhysicsSubsystem extends LuminaWorldSubsystem {
   double timeToSleep = 0.5;
   double hitImpulseThreshold = 1.0;
 
+  /// Joint-only velocity passes after the shared ones, and position passes.
+  int jointIterations = 6;
+  int jointPositionIterations = 4;
+
   /// Write interpolated poses (true) or the last step's (false).
   bool interpolate = true;
 
@@ -90,6 +103,7 @@ class LuminaPhysicsSubsystem extends LuminaWorldSubsystem {
   final Map<LuminaRigidBody, _BodyRecord> _records = {};
   final Map<String, LuminaContactManifold> _manifolds = {};
   final Map<String, _Hit> _pendingHits = {};
+  final List<LuminaPhysicsJoint> _joints = [];
   int _nextBodyId = 0;
   double _accumulator = 0.0;
 
@@ -133,6 +147,26 @@ class LuminaPhysicsSubsystem extends LuminaWorldSubsystem {
     }
   }
 
+  /// The joints, in creation order.
+  List<LuminaPhysicsJoint> get joints => List.unmodifiable(_joints);
+
+  /// Connects two bodies of this subsystem; they stop colliding with each
+  /// other.
+  LuminaPhysicsJoint addJoint(LuminaPhysicsJoint joint) {
+    _joints.add(joint);
+    joint.bodyA.ignoredBodies.add(joint.bodyB);
+    joint.bodyB.ignoredBodies.add(joint.bodyA);
+    joint.bodyA.wake();
+    joint.bodyB.wake();
+    return joint;
+  }
+
+  void removeJoint(LuminaPhysicsJoint joint) {
+    if (!_joints.remove(joint)) return;
+    joint.bodyA.wake();
+    joint.bodyB.wake();
+  }
+
   // --- Bodies ---------------------------------------------------------------------
 
   /// Makes [component] a rigid body (see [LuminaPrimitivePhysics]); returns it,
@@ -143,10 +177,10 @@ class LuminaPhysicsSubsystem extends LuminaWorldSubsystem {
     final owner = component.owner;
     if (owner == null) return null;
     LuminaBoxComponent? proxy;
-    var shapes = _shapesFor(component);
+    var shapes = LuminaPhysicsBodyShapes.shapesFor(component);
     if (shapes.isEmpty && component is LuminaStaticMeshComponent) {
       proxy = _proxyFor(component);
-      shapes = _shapesFor(component);
+      shapes = LuminaPhysicsBodyShapes.shapesFor(component);
     }
     if (shapes.isEmpty) return null;
 
@@ -210,6 +244,10 @@ class LuminaPhysicsSubsystem extends LuminaWorldSubsystem {
     final body = component.physicsBody;
     if (body == null || !identical(body.component, component)) return;
     _bodies.remove(body);
+    _joints.removeWhere((j) => identical(j.bodyA, body) || identical(j.bodyB, body));
+    for (final other in _bodies) {
+      other.ignoredBodies.remove(body);
+    }
     final record = _records.remove(body);
     for (final s in body.shapes) {
       if (identical(s.component?.physicsBody, body)) s.component!.physicsBody = null;
@@ -243,7 +281,7 @@ class LuminaPhysicsSubsystem extends LuminaWorldSubsystem {
   void refreshShapes(LuminaRigidBody body) {
     final c = body.component;
     if (c is! LuminaPrimitivePhysics) return;
-    final shapes = _shapesFor(c);
+    final shapes = LuminaPhysicsBodyShapes.shapesFor(c);
     if (shapes.isEmpty) return;
     body.shapes
       ..clear()
@@ -256,119 +294,12 @@ class LuminaPhysicsSubsystem extends LuminaWorldSubsystem {
 
   /// The mass properties [component] simulates with (see
   /// [LuminaPrimitivePhysics] for the mass rule).
-  static LuminaMassProperties resolveMassProperties(LuminaPrimitivePhysics component, [List<LuminaBodyShape>? shapes]) {
-    final pieces = shapes ?? _shapesFor(component, forMass: true);
-    final parts = [for (final s in pieces) (mass: s.massProperties, position: s.position, rotation: s.rotation)];
-    var volume = 0.0;
-    for (final p in parts) {
-      volume += p.mass.volume;
-    }
-    final mesh = meshPhysicsOf(component);
-    final double mass;
-    if (component.overrideMass && component.massKg > 0) {
-      mass = component.massKg;
-    } else if (mesh?.massKg != null) {
-      mass = mesh!.massKg!;
-    } else {
-      // g/cm³ × cm³ → kg.
-      mass = math.max(component.effectivePhysicalMaterial.density * volume / 1000.0, 1e-3);
-    }
-    final offset = component.centerOfMassOffset ?? mesh?.runtimeCenterOfMassOffset;
-    return LuminaMassProperties.combine(parts, mass: mass, centerOfMassOffset: offset);
-  }
+  static LuminaMassProperties resolveMassProperties(LuminaPrimitivePhysics component, [List<LuminaBodyShape>? shapes]) =>
+      LuminaPhysicsBodyShapes.resolveMassProperties(component, shapes);
 
-  /// The static mesh physics [component] inherits: its own, else the nearest
-  /// static mesh component's in its actor (a parent, then a child, then any).
-  static LuminaMeshPhysics? meshPhysicsOf(LuminaPrimitivePhysics component) {
-    if (component.meshPhysics != null) return component.meshPhysics;
-    for (var p = component.parentComponent; p != null; p = p.parentComponent) {
-      if (p is LuminaStaticMeshComponent && p.meshPhysics != null) return p.meshPhysics;
-    }
-    LuminaMeshPhysics? fromChildren(LuminaSceneComponent c) {
-      for (final child in c.childComponents) {
-        if (child is LuminaStaticMeshComponent && child.meshPhysics != null) return child.meshPhysics;
-        final deeper = fromChildren(child);
-        if (deeper != null) return deeper;
-      }
-      return null;
-    }
-
-    final child = fromChildren(component);
-    if (child != null) return child;
-    final owner = component.owner;
-    if (owner == null) return null;
-    for (final c in owner.components) {
-      if (c is LuminaStaticMeshComponent && c.meshPhysics != null) return c.meshPhysics;
-    }
-    return null;
-  }
-
-  static List<LuminaBodyShape> _shapesFor(LuminaPrimitivePhysics component, {bool forMass = false}) {
-    if (component is LuminaCollisionComponent) {
-      final s = _shapeOf(component, Vector3.zero(), Quaternion.identity());
-      return s == null ? const [] : [s];
-    }
-    if (component is! LuminaStaticMeshComponent) return const [];
-    final mesh = component;
-    final out = <LuminaBodyShape>[];
-    final invRot = mesh.worldRotation.conjugated();
-    final origin = mesh.worldLocation;
-    void walk(LuminaSceneComponent c) {
-      for (final child in c.childComponents) {
-        if (child is LuminaCollisionComponent && !child.simulatePhysics) {
-          final p = (child.worldLocation - origin)..applyQuaternion(invRot);
-          final q = invRot * child.worldRotation;
-          final s = _shapeOf(child, p, q);
-          if (s != null) out.add(s);
-        }
-        if (child is! LuminaStaticMeshComponent) walk(child);
-      }
-    }
-
-    walk(mesh);
-    if (out.isEmpty && forMass) {
-      final (center, extent) = _meshBox(mesh);
-      out.add(LuminaBodyShape(BoxShape(extent), position: center));
-    }
-    return out;
-  }
-
-  static LuminaBodyShape? _shapeOf(LuminaCollisionComponent c, Vector3 position, Quaternion rotation) {
-    final s = c.relativeScale;
-    final abs = Vector3(s.x.abs(), s.y.abs(), s.z.abs());
-    final CollisionShape shape;
-    var scale = Vector3(1, 1, 1);
-    switch (c.shapeType) {
-      case CollisionShapeType.sphere:
-        shape = SphereShape(c.radius);
-      case CollisionShapeType.box:
-        shape = BoxShape(c.boxExtent.clone()..multiply(abs));
-      case CollisionShapeType.capsule:
-        shape = CapsuleShape(c.radius, c.halfHeight);
-      case CollisionShapeType.cylinder:
-        shape = CylinderShape(c.radius, c.height);
-      case CollisionShapeType.cone:
-        shape = ConeShape(c.radius, c.height);
-      case CollisionShapeType.convex:
-        shape = c.convexHull!;
-        scale = s.clone();
-      case CollisionShapeType.heightfield:
-        return null;
-    }
-    return LuminaBodyShape(shape, position: position, rotation: rotation, scale: scale, component: c);
-  }
-
-  /// The mesh's bounds box in its own frame (cm, its scale applied); a 50 cm
-  /// cube until the mesh has loaded.
-  static (Vector3, Vector3) _meshBox(LuminaStaticMeshComponent mesh) {
-    final b = mesh.localBounds;
-    final s = mesh.relativeScale;
-    final abs = Vector3(s.x.abs(), s.y.abs(), s.z.abs());
-    if (b == null) return (Vector3.zero(), Vector3.all(25.0));
-    final center = ((b.min + b.max)..scale(0.5))..multiply(s);
-    final extent = ((b.max - b.min)..scale(0.5))..multiply(abs);
-    return (center, Vector3(math.max(extent.x, 0.5), math.max(extent.y, 0.5), math.max(extent.z, 0.5)));
-  }
+  /// The static mesh physics [component] inherits (see
+  /// [LuminaPhysicsBodyShapes.meshPhysicsOf]).
+  static LuminaMeshPhysics? meshPhysicsOf(LuminaPrimitivePhysics component) => LuminaPhysicsBodyShapes.meshPhysicsOf(component);
 
   /// A box collider around a static mesh that has no collision, so the
   /// character, traces and the solver all see it. It is attached under the
@@ -385,7 +316,7 @@ class LuminaPhysicsSubsystem extends LuminaWorldSubsystem {
   }
 
   void _sizeProxy(LuminaStaticMeshComponent mesh, LuminaBoxComponent proxy) {
-    final (center, extent) = _meshBox(mesh);
+    final (center, extent) = LuminaPhysicsBodyShapes.meshBox(mesh);
     proxy.relativeLocation = center;
     proxy.setBoxExtent(extent);
   }
@@ -476,10 +407,14 @@ class LuminaPhysicsSubsystem extends LuminaWorldSubsystem {
     for (final b in _bodies) {
       if (b.isAwake) b.integrateForces(dt, g);
     }
+    final joints = LuminaJointBatch.awake(_joints);
     solver.prepare(dt);
+    joints.prepare(dt);
     for (var i = 0; i < velocityIterations; i++) {
+      joints.velocityPass(i);
       solver.solveVelocities();
     }
+    joints.velocityPasses(jointIterations);
     solver.applyRestitution();
     for (var i = 0; i < positionIterations; i++) {
       solver.solvePositions(dt);
@@ -487,6 +422,7 @@ class LuminaPhysicsSubsystem extends LuminaWorldSubsystem {
     for (final b in _bodies) {
       if (b.isAwake) b.integrateVelocities(dt);
     }
+    joints.positionPasses(jointPositionIterations);
     _recordHits(dt, g.length);
     _updateSleep(dt);
   }
@@ -560,7 +496,12 @@ class LuminaPhysicsSubsystem extends LuminaWorldSubsystem {
     for (final (a, b, staticC) in pairs) {
       final ownerA = a.component.owner;
       final ownerB = b?.component.owner ?? staticC?.owner;
-      if (ownerA != null && identical(ownerA, ownerB)) continue;
+      if (b != null && (a.ignoredBodies.contains(b) || b.ignoredBodies.contains(a))) continue;
+      if (ownerA != null &&
+          identical(ownerA, ownerB) &&
+          !(b != null && a.collidesWithOwnBodies && b.collidesWithOwnBodies)) {
+        continue;
+      }
       for (var i = 0; i < a.shapes.length; i++) {
         final sa = a.shapes[i];
         if (b != null) {
@@ -700,6 +641,12 @@ class LuminaPhysicsSubsystem extends LuminaWorldSubsystem {
       final ia = find(index[m.a]!), ib = find(index[b]!);
       if (ia != ib) parent[ia] = ib;
     }
+    for (final j in _joints) {
+      final xa = index[j.bodyA], xb = index[j.bodyB];
+      if (xa == null || xb == null) continue;
+      final ia = find(xa), ib = find(xb);
+      if (ia != ib) parent[ia] = ib;
+    }
     final linTol = sleepLinearVelocity * sleepLinearVelocity;
     final angTol = sleepAngularVelocity * sleepAngularVelocity;
     for (final b in _bodies) {
@@ -740,6 +687,7 @@ class LuminaPhysicsSubsystem extends LuminaWorldSubsystem {
       if (c is LuminaPrimitivePhysics) removeBody(c);
     }
     _manifolds.clear();
+    _joints.clear();
     solver.manifolds.clear();
     super.onWorldShutdown();
   }

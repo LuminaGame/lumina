@@ -15,7 +15,7 @@ The Physics Asset editor: collision bodies and constraints per bone, overlap che
 
 ### `class PhysicsAssetSubEditor`
 
-Lumina Studio's Physics Asset editor.  Authors per-bone bodies, constraints and disabled-collision pairs against a real skeletal mesh, draws them over the live Filament preview, and runs lumina's real narrow phase through `Validate Overlaps`. There is no ragdoll simulation here: the engine has no dynamics solver, so the editor authors data instead of faking a simulation.
+Lumina Studio's Physics Asset editor.  Authors per-bone bodies, constraints and disabled-collision pairs against a real skeletal mesh, draws them over the live Filament preview, and runs lumina's real narrow phase through `Validate Overlaps`. It does not simulate: the engine's ragdoll ([Ragdolls, falls and getting up](../../lumina/ragdoll.md)) consumes the document at run time.
 
 **Functions, Methods & Accessors:**
 
@@ -48,7 +48,7 @@ Lumina Studio's Physics Asset editor.  Authors per-bone bodies, constraints and 
 
 ### `class PhysicsAssetEditorViewModel`
 
-Drives the Physics Asset sub-editor.  Loads a real PHYSICS_ASSET `.lmas`, resolves the skeletal mesh it references through an `AssetReference{slot_name: 'skeletal_mesh'}`, parses that mesh's real bone hierarchy, and authors per-bone bodies, constraints and disabled-collision pairs into a versioned document persisted back into the asset's metadata.  `Validate Overlaps` runs lumina's real narrow phase (`testPair`) over the authored bodies in **bind pose** — that is the only physics the engine actually runs; there is no dynamics solver, so nothing here simulates.
+Drives the Physics Asset sub-editor.  Loads a real PHYSICS_ASSET `.lmas`, resolves the skeletal mesh it references through an `AssetReference{slot_name: 'skeletal_mesh'}`, parses that mesh's real bone hierarchy, and authors per-bone bodies, constraints and disabled-collision pairs into a versioned document persisted back into the asset's metadata.  `Validate Overlaps` runs lumina's real narrow phase (`testPair`) over the authored bodies in **bind pose** — the editor itself does not simulate; the engine's ragdoll reads the saved document at run time. A project-relative `skeletal_mesh` reference (what a generated physics asset stores) resolves under the asset's project and stays relative on save. The validation and overlays live in `physics_asset_editor_view_model/validation_and_overlays.dart`, the body and constraint edits in `physics_asset_editor_view_model/body_and_constraint_edits.dart` (parts of the view model).
 
 **Functions, Methods & Accessors:**
 
@@ -198,7 +198,7 @@ Angular constraint modes of a joint between two bodies.
 
 ### `class PhysicsBody`
 
-One authored rigid body attached to a single bone of the skeletal mesh.  Masses and damping have no solver behind them yet (lumina runs a kinematic collision stack, not dynamics) but they are part of the persisted schema so a future solver consumes the document unchanged.
+One authored rigid body attached to a single bone of the skeletal mesh.  Masses and damping are what the ragdoll's rigid bodies use. Keys the editor does not show are kept in `extra` and written back.
 
 **Constructors:**
 - `PhysicsBody.fromJson(Map<String, dynamic> j)`: Initializes `PhysicsBody.fromJson(Map<String, dynamic> j)`.

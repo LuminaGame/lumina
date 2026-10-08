@@ -33,6 +33,9 @@ export 'package:lumina_core/src/formats/recent_project_entry.dart';
 export 'package:lumina_core/src/formats/sequencer_data.dart';
 
 // Repositories that read and write them.
+// Physics assets (ragdoll bodies and joints) and their generator.
+export 'package:lumina_core/src/physics_asset/physics_asset_data.dart';
+export 'package:lumina_core/src/physics_asset/physics_asset_generator.dart';
 // Motion matching: pose search databases (document, clip sampler, features, search).
 export 'package:lumina_core/src/pose_search/glb_animation_sampler.dart';
 export 'package:lumina_core/src/pose_search/pose_math.dart';

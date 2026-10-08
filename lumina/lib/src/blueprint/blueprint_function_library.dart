@@ -40,6 +40,7 @@ import 'package:lumina/src/components/mesh/animated_mesh_component.dart';
 import 'package:lumina/src/components/mesh/skeletal_mesh_component.dart';
 import 'package:lumina/src/components/mesh/static_mesh_component.dart';
 import 'package:lumina/src/components/movement/character_movement_component.dart';
+import 'package:lumina/src/physics/ragdoll/ragdoll_component.dart';
 import 'package:lumina/src/components/movement/traversal/traversal_check.dart';
 import 'package:lumina/src/components/movement/traversal/traversal_component.dart';
 import 'package:lumina/src/controller/controller.dart';
@@ -84,6 +85,7 @@ part 'blueprint_function_library/actor_events_enums_timers.dart';
 part 'blueprint_function_library/game_framework_save_input.dart';
 part 'blueprint_function_library/audio_animation_effects_debug.dart';
 part 'blueprint_function_library/widget_blueprint.dart';
+part 'blueprint_function_library/ragdoll.dart';
 part 'blueprint_function_library/traversal.dart';
 
 /// What a node function gets when the VM calls it: the
@@ -945,6 +947,13 @@ abstract final class LuminaBlueprintFunctionLibrary {
   static const setAnimVariable = _setAnimVariable;
   static const getAnimVariable = _getAnimVariable;
 
+  /// The owner's ragdoll (see `LuminaRagdollComponent`).
+  static const startRagdoll = _startRagdoll;
+  static const stopRagdoll = _stopRagdoll;
+  static const toggleRagdoll = _toggleRagdoll;
+  static const isRagdoll = _isRagdoll;
+  static const addRagdollImpulse = _addRagdollImpulse;
+
   /// Traversal through the owner's traversal component (see its class).
   static const tryTraversalAction = _tryTraversalAction;
   static const traversalCheck = _traversalCheck;
@@ -1011,6 +1020,7 @@ abstract final class LuminaBlueprintFunctionLibrary {
     ..._engineCallShapes,
     ..._gameFrameworkCallShapes,
     ..._widgetBlueprintCallShapes,
+    ..._ragdollCallShapes,
     ..._traversalCallShapes,
     // @@CALL_SHAPES_END
   });
@@ -1041,6 +1051,7 @@ abstract final class LuminaBlueprintFunctionLibrary {
     ..._graphMemberFunctions,
     ..._gameFrameworkFunctions,
     ..._widgetBlueprintFunctions,
+    ..._ragdollFunctions,
     ..._traversalFunctions,
     // @@FUNCTIONS_END
   });

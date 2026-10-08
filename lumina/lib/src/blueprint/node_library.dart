@@ -17,6 +17,7 @@ part 'node_library/game_framework.dart';
 part 'node_library/media_and_debug.dart';
 part 'node_library/type_context.dart';
 part 'node_library/widget_blueprint.dart';
+part 'node_library/ragdoll.dart';
 part 'node_library/traversal.dart';
 
 /// How a node takes part in execution.
@@ -622,6 +623,7 @@ abstract final class LuminaBlueprintNodeLibrary {
     ..._gameFrameworkNodes,
     ..._mediaAndDebugNodes,
     ..._widgetBlueprintNodes,
+    ..._ragdollNodes,
     ..._traversalNodes,
   ]);
 

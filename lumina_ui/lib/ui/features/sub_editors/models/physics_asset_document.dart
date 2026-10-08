@@ -100,6 +100,9 @@ class PhysicsBody {
   /// Free-text physics-material name (no PM asset type exists yet).
   String physicsMaterial;
 
+  /// Keys this editor does not show (written back unchanged).
+  final Map<String, dynamic> extra;
+
   PhysicsBody({
     required this.boneName,
     required this.shape,
@@ -112,7 +115,9 @@ class PhysicsBody {
     this.linearDamping = 0.01,
     this.angularDamping = 0.0,
     this.physicsMaterial = '',
-  })  : halfExtents = halfExtents ?? [10.0, 10.0, 10.0],
+    Map<String, dynamic>? extra,
+  })  : extra = extra ?? {},
+        halfExtents = halfExtents ?? [10.0, 10.0, 10.0],
         offsetLocation = offsetLocation ?? [0.0, 0.0, 0.0],
         offsetRotationDeg = offsetRotationDeg ?? [0.0, 0.0, 0.0];
 
@@ -142,6 +147,7 @@ class PhysicsBody {
       );
 
   Map<String, dynamic> toJson() => {
+        ...extra,
         'bone': boneName,
         'shape': shape.name,
         'radius': radius,
@@ -172,9 +178,18 @@ class PhysicsBody {
       linearDamping: _d(j['linear_damping'], 0.01),
       angularDamping: _d(j['angular_damping'], 0.0),
       physicsMaterial: j['physics_material'] as String? ?? '',
+      extra: _extraKeys(j, const {
+        'bone', 'shape', 'radius', 'half_height', 'half_extents', 'offset_t', 'offset_r', 'mass_kg', //
+        'linear_damping', 'angular_damping', 'physics_material',
+      }),
     );
   }
 }
+
+/// The entries of [json] outside [known]: what the runtime reads and this
+/// editor does not show (a joint's hinge range and frame) survives a save.
+Map<String, dynamic> _extraKeys(Map<String, dynamic> json, Set<String> known) =>
+    {for (final e in json.entries) if (!known.contains(e.key)) e.key: e.value};
 
 /// A joint definition between two authored bodies, keyed by their bone names.
 class PhysicsConstraint {
@@ -189,6 +204,10 @@ class PhysicsConstraint {
   double swing2Deg;
   double twistDeg;
 
+  /// Keys this editor does not show (the joint type, an asymmetric twist
+  /// range, the joint frame), written back unchanged.
+  final Map<String, dynamic> extra;
+
   PhysicsConstraint({
     required this.bodyA,
     required this.bodyB,
@@ -196,7 +215,8 @@ class PhysicsConstraint {
     this.swing1Deg = 45.0,
     this.swing2Deg = 45.0,
     this.twistDeg = 30.0,
-  });
+    Map<String, dynamic>? extra,
+  }) : extra = extra ?? {};
 
   /// `spine_01_Constraint`.
   String get name => '${bodyB}_Constraint';
@@ -206,6 +226,7 @@ class PhysicsConstraint {
   bool touches(String bone) => bodyA == bone || bodyB == bone;
 
   Map<String, dynamic> toJson() => {
+        ...extra,
         'body_a': bodyA,
         'body_b': bodyB,
         'angular_mode': angularMode.name,
@@ -221,6 +242,7 @@ class PhysicsConstraint {
         swing1Deg: _d(j['swing1_deg'], 45.0),
         swing2Deg: _d(j['swing2_deg'], 45.0),
         twistDeg: _d(j['twist_deg'], 30.0),
+        extra: _extraKeys(j, const {'body_a', 'body_b', 'angular_mode', 'swing1_deg', 'swing2_deg', 'twist_deg'}),
       );
 }
 

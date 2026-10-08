@@ -15,7 +15,7 @@ Fizik Asset editörü: kemik başına çarpışma gövdeleri ve kısıtlar, çak
 
 ### `class PhysicsAssetSubEditor`
 
-Lumina Studio's Physics Asset editor.  Authors per-bone bodies, constraints and disabled-collision pairs against a real skeletal mesh, draws them over the live Filament preview, and runs lumina's real narrow phase through `Validate Overlaps`. There is no ragdoll simulation here: the engine has no dynamics solver, so the editor authors data instead of faking a simulation.
+Lumina Studio's Physics Asset editor.  Authors per-bone bodies, constraints and disabled-collision pairs against a real skeletal mesh, draws them over the live Filament preview, and runs lumina's real narrow phase through `Validate Overlaps`. Burada simülasyon yoktur: motorun ragdoll'u ([Ragdoll, düşme ve ayağa kalkma](../../lumina/ragdoll.md)) belgeyi çalışma zamanında kullanır.
 
 **Fonksiyonlar, Metotlar ve Erişimciler:**
 
@@ -48,7 +48,7 @@ Lumina Studio's Physics Asset editor.  Authors per-bone bodies, constraints and 
 
 ### `class PhysicsAssetEditorViewModel`
 
-Drives the Physics Asset sub-editor.  Loads a real PHYSICS_ASSET `.lmas`, resolves the skeletal mesh it references through an `AssetReference{slot_name: 'skeletal_mesh'}`, parses that mesh's real bone hierarchy, and authors per-bone bodies, constraints and disabled-collision pairs into a versioned document persisted back into the asset's metadata.  `Validate Overlaps` runs lumina's real narrow phase (`testPair`) over the authored bodies in **bind pose** — that is the only physics the engine actually runs; there is no dynamics solver, so nothing here simulates.
+Drives the Physics Asset sub-editor.  Loads a real PHYSICS_ASSET `.lmas`, resolves the skeletal mesh it references through an `AssetReference{slot_name: 'skeletal_mesh'}`, parses that mesh's real bone hierarchy, and authors per-bone bodies, constraints and disabled-collision pairs into a versioned document persisted back into the asset's metadata.  `Validate Overlaps` runs lumina's real narrow phase (`testPair`) over the authored bodies in **bind pose** — editörün kendisi simüle etmez; motorun ragdoll'u kaydedilmiş belgeyi çalışma zamanında okur. Projeye göreli bir `skeletal_mesh` referansı (üretilmiş bir physics asset'in sakladığı) asset'in projesi altında çözülür ve kaydederken göreli kalır. Doğrulama ve overlay'ler `physics_asset_editor_view_model/validation_and_overlays.dart`, gövde ve kısıt düzenlemeleri `physics_asset_editor_view_model/body_and_constraint_edits.dart` içindedir (view model'in part dosyaları).
 
 **Fonksiyonlar, Metotlar ve Erişimciler:**
 
@@ -198,7 +198,7 @@ Angular constraint modes of a joint between two bodies.
 
 ### `class PhysicsBody`
 
-One authored rigid body attached to a single bone of the skeletal mesh.  Masses and damping have no solver behind them yet (lumina runs a kinematic collision stack, not dynamics) but they are part of the persisted schema so a future solver consumes the document unchanged.
+One authored rigid body attached to a single bone of the skeletal mesh.  Kütle ve sönüm, ragdoll'un rijit gövdelerinin kullandığı değerlerdir. Editörün göstermediği anahtarlar `extra` içinde korunur ve geri yazılır.
 
 **Yapıcı Metotlar (Constructors):**
 - `PhysicsBody.fromJson(Map<String, dynamic> j)`: `PhysicsBody.fromJson(Map<String, dynamic> j)` nesnesini ilklendirir.
