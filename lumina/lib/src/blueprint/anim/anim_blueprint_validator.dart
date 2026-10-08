@@ -2,6 +2,7 @@ import 'package:lumina/src/blueprint/blueprint_model.dart';
 import 'package:lumina/src/blueprint/blueprint_validator.dart';
 import 'package:lumina/src/blueprint/node_library.dart';
 import 'package:lumina/src/blueprint/anim/anim_blueprint_model.dart';
+import 'package:lumina_core/lumina_core.dart';
 
 /// Checks an Animation Blueprint the way the VM and the code
 /// generator both need it: the update graph as a Blueprint graph without
@@ -11,6 +12,7 @@ import 'package:lumina/src/blueprint/anim/anim_blueprint_model.dart';
 List<LuminaBlueprintDiagnostic> validateAnimBlueprint(
   LuminaAnimBlueprintDocument document, {
   Map<String, LuminaBlendSpaceDocument> blendSpaces = const {},
+  Map<String, LuminaPoseSearchDatabaseDocument> poseDatabases = const {},
 }) {
   final diagnostics = validateBlueprint(document.updateDocument);
   for (final n in document.eventGraph.nodes) {
@@ -36,6 +38,14 @@ List<LuminaBlueprintDiagnostic> validateAnimBlueprint(
     final space = s.pose.blendSpace;
     if (space != null && !blendSpaces.containsKey(space)) {
       diagnostics.add(LuminaBlueprintDiagnostic(LuminaBlueprintSeverity.error, "State '${s.name}' plays a missing blend space '$space'."));
+    }
+    if (s.pose.kind == LuminaAnimPoseKind.motionMatching) {
+      final db = s.pose.database ?? '';
+      if (db.isEmpty) {
+        diagnostics.add(LuminaBlueprintDiagnostic(LuminaBlueprintSeverity.error, "State '${s.name}' plays motion matching without a database."));
+      } else if (!poseDatabases.containsKey(db)) {
+        diagnostics.add(LuminaBlueprintDiagnostic(LuminaBlueprintSeverity.error, "State '${s.name}' plays a missing pose search database '$db'."));
+      }
     }
     if (s.pose.kind == LuminaAnimPoseKind.clip && (s.pose.clip ?? '').isEmpty) {
       diagnostics.add(LuminaBlueprintDiagnostic(LuminaBlueprintSeverity.error, "State '${s.name}' plays no clip."));

@@ -542,6 +542,7 @@ Clips are addressed by name. A request made before the asset has loaded is remem
 | :--- | :--- | :--- |
 | `missingClip` | `String? missingClip` | A clip requested before load that the asset turned out not to have. |
 | `jointOverrides` | `Map<String, LuminaJointOverride> get jointOverrides` | The joint overrides in force, by bone name. |
+| `poseDriver` | `LuminaMeshPoseDriver? poseDriver` | Atanmışken gltfio animatörünün yerini alan CPU poz kaynağı (motion matching): her karede pozu aynı adlı skin eklemlerine yazılır, sonra joint override'lar uygulanır ve kemik matrisleri güncellenir. Null eklemleri oynayan clip'e geri verir. |
 | `missingJointOverrideBones` | `Set<String> get missingJointOverrideBones` | The overridden bones the mesh turned out not to have, each logged once. |
 | `hasJoint` | `bool hasJoint(String bone)` | Whether the loaded mesh has a skin joint named [bone]. |
 | `setJointOverride` | `void setJointOverride(String bone, {Quaternion? rotation, Vector3? translation})` | Multiplies a local-space delta onto [bone]'s animated transform every frame, after the clip is applied and before the bone matrices update (e.g. an aim offset): `joint = animated · T · R`. Replaces an earlier override of the same bone; a bone the mesh lacks is logged once and ignored. |

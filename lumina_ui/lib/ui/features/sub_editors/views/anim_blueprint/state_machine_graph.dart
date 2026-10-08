@@ -425,6 +425,7 @@ class AnimStateMachineGraphState extends State<AnimStateMachineGraph> {
       LuminaAnimPoseKind.clip => s.pose.clip ?? '',
       LuminaAnimPoseKind.blendSpace => (s.pose.blendSpace ?? '').split('/').last.replaceAll('.lmas', ''),
       LuminaAnimPoseKind.hold => 'Hold pose',
+      LuminaAnimPoseKind.motionMatching => 'Motion matching: ${(s.pose.database ?? '').split('/').last.replaceAll('.lmas', '')}',
     };
     return Positioned(
       key: ValueKey('anim_state_${s.name}'),

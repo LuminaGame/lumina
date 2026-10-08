@@ -38,6 +38,7 @@ Runtime code never reads files with `File(...)` directly: asset loads without an
 | [Components: environment and landscape](components-environment-and-landscape.md) | Sky, procedural sky, reflection captures, landscape terrain and foliage. |
 | [Input](input.md) | Input actions, mapping contexts, keys, modifiers and triggers. |
 | [Animation](animation.md) | Anim instances, montages, clips, blend spaces, keyframe tracks, retargeting. |
+| [Motion matching](motion-matching.md) | Pose search databases, trajectory prediction, inertialization, the Motion Matching state pose. |
 | [Audio](audio.md) | Audio backend, audio subsystem, sounds and attenuation. |
 | [Collision](collision.md) | Collision shapes, filters and profiles, queries, GJK/EPA narrow phase. |
 | [Physics](physics.md) | Rigid bodies, mass properties, physical materials, contacts and the physics subsystem. |

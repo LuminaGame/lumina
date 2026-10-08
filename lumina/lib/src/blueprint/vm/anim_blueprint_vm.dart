@@ -7,6 +7,7 @@ import 'package:lumina/src/blueprint/blueprint_model.dart';
 import 'package:lumina/src/blueprint/blueprint_validator.dart';
 import 'package:lumina/src/blueprint/node_library.dart';
 import 'package:lumina/src/blueprint/vm/blueprint_vm.dart';
+import 'package:lumina_core/lumina_core.dart';
 
 /// An Animation Blueprint ready to run in the VM: its update
 /// graph and every transition rule validated once.
@@ -14,17 +15,19 @@ class LuminaAnimBlueprintClass {
   final String name;
   final LuminaAnimBlueprintDocument document;
   final Map<String, LuminaBlendSpaceDocument> blendSpaces;
+  final Map<String, LuminaPoseSearchDatabaseDocument> poseDatabases;
   final List<LuminaBlueprintDiagnostic> diagnostics;
 
-  LuminaAnimBlueprintClass._(this.name, this.document, this.blendSpaces, this.diagnostics);
+  LuminaAnimBlueprintClass._(this.name, this.document, this.blendSpaces, this.poseDatabases, this.diagnostics);
 
   factory LuminaAnimBlueprintClass.fromDocument(
     LuminaAnimBlueprintDocument document, {
     String name = 'AnimBlueprint',
     Map<String, LuminaBlendSpaceDocument> blendSpaces = const {},
+    Map<String, LuminaPoseSearchDatabaseDocument> poseDatabases = const {},
   }) {
-    final diagnostics = validateAnimBlueprint(document, blendSpaces: blendSpaces);
-    return LuminaAnimBlueprintClass._(name, document, blendSpaces, diagnostics);
+    final diagnostics = validateAnimBlueprint(document, blendSpaces: blendSpaces, poseDatabases: poseDatabases);
+    return LuminaAnimBlueprintClass._(name, document, blendSpaces, poseDatabases, diagnostics);
   }
 
   bool get hasErrors => diagnostics.any((d) => d.isError);
@@ -57,6 +60,7 @@ class LuminaVmAnimBlueprintInstance extends LuminaAnimBlueprintInstance implemen
           mesh: mesh,
           stateMachine: animClass.document.stateMachine!,
           blendSpaces: animClass.blendSpaces,
+          poseDatabases: animClass.poseDatabases,
           meshYawOffsetDegrees: animClass.document.meshYawOffsetDegrees,
           aimOffset: animClass.document.aimOffset,
           initialVariables: luminaAnimVariableDefaults(animClass.document.variables),

@@ -136,10 +136,11 @@ A 1D or 2D blend space asset (`blend_space` `.lmas` payload).
 - `clip`
 - `blendSpace`
 - `hold`
+- `motionMatching`
 
 ### `class LuminaAnimPose`
 
-What a state plays: a clip (or one clip picked at random from a set when the state is entered), a blend space sampled by variables (with a play rate from a speed variable), or the current pose held still.
+What a state plays: a clip (or one clip picked at random from a set when the state is entered), a blend space sampled by variables (with a play rate from a speed variable), the current pose held still, or motion matching over a pose search database ([database]) steered by the pawn's movement ([Motion matching](../motion-matching.md)). While a Motion Matching state plays, the instance writes the matched clip into the reserved `MatchedClip` variable; leaving it hands the mesh back to gltfio at the matched clip and time.
 
 A clip pose may play once ([loop] false — the last frame holds until the state is left; the instance reports it in its `ClipFinished` variable), turn the mesh by [rootYawDegrees] over the clip's length (turn-in-place clips whose root motion was stripped), and [plantsFeet]: while such a state plays, the mesh keeps facing where it was when the pawn's yaw changes, and the instance's `RootYawOffset` variable accumulates the difference for the transition rules (the root yaw offset).
 
@@ -149,6 +150,7 @@ A clip pose may play once ([loop] false — the last frame holds until the state
 - `LuminaAnimPose.randomClip(List<String> clips, {this.rate = 1.0, this.loop = false, this.rootYawDegrees = 0.0, this.plantsFeet = false,})`: One of [clips], chosen when the state is entered (idle breaks). Plays once by default.
 - `const LuminaAnimPose.blendSpace(String this.blendSpace, {required String this.xVariable, this.yVariable, this.rate = 1.0, this.rateVariable, this.rateReference...`
 - `const LuminaAnimPose.hold()`
+- `const LuminaAnimPose.motionMatching(String this.database, {this.blendTime = 0.2, this.poseWeight = 1.0, this.trajectoryWeight = 1.0, this.requiredTags = const [], this.orientToMovement = false, this.debugDraw = false})`: Motion matching over the pose search database at [database].
 - `factory LuminaAnimPose.fromJson(Map<String, dynamic> j)`
 
 **Members:**

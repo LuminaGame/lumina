@@ -61,6 +61,7 @@ Kinematic movement component for character actors supporting sweeping, sliding, 
 | `inputVector` | `Vector3 get inputVector` | Getter accessor returning the current value of `inputVector`. |
 | `addInputVector` | `void addInputVector(Vector3 worldDirection, [double scale = 1.0])` | Accumulates world space input displacement for this tick. |
 | `consumeInputVector` | `Vector3 consumeInputVector()` | Consumes and clears the accumulated input vector. |
+| `lastInputVector` | `Vector3 get lastInputVector` | The input the last move consumed (world space), after `consumeInputVector` cleared it: what motion matching's trajectory prediction steers toward. |
 | `addRootMotionDelta` | `void addRootMotionDelta(Vector3 delta)` | Accumulates root motion displacement to be consumed during the next [performMove]. |
 | `onRegister` | `void onRegister(LuminaActor ownerActor)` | Callback invoked when the corresponding event is triggered. |
 | `calcVelocity` | `void calcVelocity(double dt, Vector3 inputDir)` | Calculates horizontal acceleration and turning friction from [inputDir]. |

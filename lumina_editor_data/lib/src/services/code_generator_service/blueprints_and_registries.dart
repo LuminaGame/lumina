@@ -265,13 +265,24 @@ mixin _BlueprintsAndRegistriesCodegen on _DartCodeGeneratorServiceState {
             if (DartCodeGeneratorService._readPayload(projectPath, state.pose.blendSpace!) case final space?)
               state.pose.blendSpace!: LuminaBlendSpaceDocument.fromJson(space),
     };
+    final poseDatabases = <String, LuminaPoseSearchDatabaseDocument>{
+      for (final machine in anim.stateMachines)
+        for (final state in machine.states)
+          if (state.pose.kind == LuminaAnimPoseKind.motionMatching && state.pose.database != null)
+            if (DartCodeGeneratorService._readPayload(projectPath, state.pose.database!) case final db?)
+              state.pose.database!: LuminaPoseSearchDatabaseDocument.fromJson(db),
+    };
     final rawName = assetPath.split('/').last.replaceAll('.lmas', '');
     LuminaGeneratedCodeMigration.migrate(projectPath);
     final file = File('$projectPath/lib/anim/${dartFileName(rawName)}');
     final existingContent = file.existsSync() ? await file.readAsString() : null;
     final className = DartCodeGeneratorService._sanitizeClassName(rawName);
     final result = const BlueprintDartGenerator().generateAnimBlueprint(anim,
-        className: className, assetPath: assetPath, blendSpaces: blendSpaces, existingContent: existingContent);
+        className: className,
+        assetPath: assetPath,
+        blendSpaces: blendSpaces,
+        poseDatabases: poseDatabases,
+        existingContent: existingContent);
     if (!result.ok) return (ok: false, ref: null, issues: result.issues);
     if (existingContent != result.code) {
       await file.parent.create(recursive: true);

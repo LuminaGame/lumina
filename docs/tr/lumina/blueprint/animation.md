@@ -136,6 +136,7 @@ A 1D or 2D blend space asset (`blend_space` `.lmas` payload).
 - `clip`
 - `blendSpace`
 - `hold`
+- `motionMatching` (bir pose search database üzerinde motion matching; pawn'ın hareketiyle sürülür, eşleşen clip ayrılmış `MatchedClip` değişkenine yazılır; bkz. [Motion matching](../motion-matching.md))
 
 ### `class LuminaAnimPose`
 
@@ -149,6 +150,7 @@ A clip pose may play once ([loop] false — the last frame holds until the state
 - `LuminaAnimPose.randomClip(List<String> clips, {this.rate = 1.0, this.loop = false, this.rootYawDegrees = 0.0, this.plantsFeet = false,})`: One of [clips], chosen when the state is entered (idle breaks). Plays once by default.
 - `const LuminaAnimPose.blendSpace(String this.blendSpace, {required String this.xVariable, this.yVariable, this.rate = 1.0, this.rateVariable, this.rateReference...`
 - `const LuminaAnimPose.hold()`
+- `const LuminaAnimPose.motionMatching(String this.database, {this.blendTime = 0.2, this.poseWeight = 1.0, this.trajectoryWeight = 1.0, this.requiredTags = const [], this.orientToMovement = false, this.debugDraw = false})`: [database] yolundaki pose search database üzerinde motion matching.
 - `factory LuminaAnimPose.fromJson(Map<String, dynamic> j)`
 
 **Üyeler:**

@@ -10,6 +10,7 @@ class _AnimClassWriter {
   final String className;
   final String? assetPath;
   final Map<String, LuminaBlendSpaceDocument> blendSpaces;
+  final Map<String, LuminaPoseSearchDatabaseDocument> poseDatabases;
   final List<LuminaBlueprintDiagnostic> issues;
   final Map<String, String> functionImports;
   late final LuminaBlueprintTypeContext context = LuminaBlueprintTypeContext(variables: doc.variables);
@@ -17,7 +18,8 @@ class _AnimClassWriter {
   final Set<String> _libraries = {};
   var failed = false;
 
-  _AnimClassWriter(this.doc, this.className, this.assetPath, this.blendSpaces, this.issues, this.functionImports);
+  _AnimClassWriter(
+      this.doc, this.className, this.assetPath, this.blendSpaces, this.poseDatabases, this.issues, this.functionImports);
 
   void _error(String message, {String? node}) {
     failed = true;
@@ -61,6 +63,11 @@ class _AnimClassWriter {
     b.writeln('// Animation Blueprint ${assetPath ?? className}, compiled by Lumina.');
     b.writeln(_ignoreForFile);
     b.writeln();
+    final databasePaths = {
+      for (final s in machine.states)
+        if (s.pose.kind == LuminaAnimPoseKind.motionMatching && s.pose.database != null) s.pose.database!,
+    };
+    if (databasePaths.isNotEmpty) b.writeln("import 'dart:convert';");
     b.writeln("import 'package:lumina/lumina_runtime.dart';");
     b.writeln("import 'package:vector_math/vector_math_64.dart';");
     _functionImports(b, _libraries, functionImports);
@@ -70,6 +77,7 @@ class _AnimClassWriter {
     b.writeln('      : super(');
     b.writeln('          stateMachine: _stateMachine,');
     b.writeln('          blendSpaces: _blendSpaces,');
+    if (databasePaths.isNotEmpty) b.writeln('          poseDatabases: _poseDatabases,');
     b.writeln('          meshYawOffsetDegrees: ${_double(doc.meshYawOffsetDegrees)},');
     final aim = doc.aimOffset;
     if (aim != null) {
@@ -129,6 +137,16 @@ class _AnimClassWriter {
       b.writeln('    ),');
     }
     b.writeln('  };');
+    if (databasePaths.isNotEmpty) {
+      b.writeln();
+      b.writeln('  /// The pose search databases its Motion Matching states play, by asset path.');
+      b.writeln('  static final Map<String, LuminaPoseSearchDatabaseDocument> _poseDatabases = {');
+      for (final path in databasePaths) {
+        final json = jsonEncode(poseDatabases[path]!.toJson());
+        b.writeln("    ${_str(path)}: LuminaPoseSearchDatabaseDocument.fromJson(jsonDecode(r'''$json''') as Map<String, dynamic>),");
+      }
+      b.writeln('  };');
+    }
     b.writeln();
     b.writeln('  @override');
     b.writeln('  void updateAnimation(double deltaTimeX) {');
@@ -169,6 +187,15 @@ class _AnimClassWriter {
             : 'LuminaAnimPose.clip(${_str(p.clip!)}, rate: ${_double(p.rate)}, loop: ${p.loop}, '
                 'rootYawDegrees: ${_double(p.rootYawDegrees)}, plantsFeet: ${p.plantsFeet})',
         LuminaAnimPoseKind.hold => 'LuminaAnimPose.hold()',
+        LuminaAnimPoseKind.motionMatching => 'LuminaAnimPose.motionMatching(${[
+            _str(p.database ?? ''),
+            'blendTime: ${_double(p.blendTime)}',
+            'poseWeight: ${_double(p.poseWeight)}',
+            'trajectoryWeight: ${_double(p.trajectoryWeight)}',
+            'requiredTags: [${p.requiredTags.map(_str).join(', ')}]',
+            'orientToMovement: ${p.orientToMovement}',
+            'debugDraw: ${p.debugDraw}',
+          ].join(', ')})',
         LuminaAnimPoseKind.blendSpace => 'LuminaAnimPose.blendSpace(${[
             _str(p.blendSpace!),
             'xVariable: ${_str(p.xVariable!)}',

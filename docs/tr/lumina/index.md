@@ -38,6 +38,7 @@ Runtime kodu dosyaları hiçbir zaman doğrudan `File(...)` ile okumaz: açık b
 | [Bileşenler: çevre ve landscape](components-environment-and-landscape.md) | Sky, procedural sky, reflection capture'lar, landscape arazi ve foliage. |
 | [Girdi (input)](input.md) | Input action'lar, mapping context'ler, tuşlar, modifier'lar ve trigger'lar. |
 | [Animasyon](animation.md) | Anim instance'lar, montage'lar, clip'ler, blend space'ler, keyframe track'leri, retargeting. |
+| [Motion matching](motion-matching.md) | Pose search database'ler, yörünge tahmini, inertialization, Motion Matching state pozu. |
 | [Ses](audio.md) | Ses backend'i, ses subsystem'i, sesler ve attenuation. |
 | [Çarpışma](collision.md) | Çarpışma şekilleri, filtreler ve profiller, sorgular, GJK/EPA narrow phase. |
 | [Fizik](physics.md) | Rigid body'ler, kütle özellikleri, fiziksel materyaller, temaslar ve fizik subsystem'i. |

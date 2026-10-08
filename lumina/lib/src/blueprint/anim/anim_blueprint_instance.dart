@@ -10,6 +10,7 @@ import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/src/blueprint/blueprint_model.dart';
 import 'package:lumina/src/blueprint/blueprint_runtime.dart';
 import 'package:lumina/src/blueprint/anim/anim_blueprint_model.dart';
+import 'package:lumina/src/blueprint/anim/anim_motion_matching_driver.dart';
 
 /// Makes the Animation Blueprint instance for a skeletal mesh component.
 typedef LuminaAnimBlueprintFactory = LuminaAnimBlueprintInstance Function(LuminaAnimatedMeshComponent mesh);
@@ -33,10 +34,13 @@ typedef LuminaAnimBlueprintFactory = LuminaAnimBlueprintInstance Function(Lumina
 /// [rootYawOffsetVariable] (degrees the planted mesh lags behind the pawn's
 /// yaw, see [rootYawOffsetDegrees]). Transitions may also gate on
 /// [LuminaAnimTransition.minStateTime] / [LuminaAnimTransition.automaticRule].
+/// While a Motion Matching state plays, [matchedClipVariable] holds the clip
+/// the motion matching player matched ('' while its database loads).
 abstract class LuminaAnimBlueprintInstance extends LuminaActorComponent {
   static const String stateTimeVariable = 'StateTime';
   static const String clipFinishedVariable = 'ClipFinished';
   static const String rootYawOffsetVariable = 'RootYawOffset';
+  static const String matchedClipVariable = 'MatchedClip';
 
   /// How fast [rootYawOffsetDegrees] blends back to 0 while the current pose
   /// does not plant the feet (degrees per second).
@@ -49,6 +53,12 @@ abstract class LuminaAnimBlueprintInstance extends LuminaActorComponent {
 
   /// The aim offset layered over the pose, if any.
   final LuminaAnimAimOffset? aimOffset;
+
+  /// The pose search databases Motion Matching states play, by asset path.
+  final Map<String, LuminaPoseSearchDatabaseDocument> poseDatabases;
+
+  /// Runs the Motion Matching states.
+  late final LuminaAnimMotionMatchingDriver motionMatching = LuminaAnimMotionMatchingDriver(mesh, poseDatabases);
 
   double _aimYaw = 0.0;
   double _aimPitch = 0.0;
@@ -137,6 +147,7 @@ abstract class LuminaAnimBlueprintInstance extends LuminaActorComponent {
     this.blendSpaces = const {},
     this.meshYawOffsetDegrees = 0.0,
     this.aimOffset,
+    this.poseDatabases = const {},
     Map<String, Object?> initialVariables = const {},
   }) {
     variables.addAll(initialVariables);
@@ -225,6 +236,11 @@ abstract class LuminaAnimBlueprintInstance extends LuminaActorComponent {
     if (taken != null) _enterState(taken.to);
 
     final pose = _currentPose;
+    if (pose != null && pose.kind == LuminaAnimPoseKind.motionMatching) {
+      variables[matchedClipVariable] = motionMatching.drive(owner!, pose, deltaTime) ?? '';
+      return;
+    }
+    motionMatching.leave();
     final (target, rate) = _target(pose);
     if (target != null && mesh.currentClip != target) {
       if (!_meshLoaded || mesh.hasClip(target)) {
@@ -357,6 +373,8 @@ abstract class LuminaAnimBlueprintInstance extends LuminaActorComponent {
         return (_stateClip ?? pose.clip, pose.rate);
       case LuminaAnimPoseKind.hold:
         return (null, 0.0);
+      case LuminaAnimPoseKind.motionMatching:
+        return (null, 1.0);
       case LuminaAnimPoseKind.blendSpace:
         final space = blendSpaces[pose.blendSpace];
         final x = _number(pose.xVariable);

@@ -12,6 +12,7 @@ import '../../../lumina/test/blueprint/flow_blueprint.dart';
 import '../../../lumina/test/blueprint/flow_nodes_blueprint.dart';
 import '../../../lumina/test/blueprint/gameplay_nodes_blueprint.dart';
 import '../../../lumina/test/blueprint/level_load_blueprint.dart';
+import '../../../lumina/test/blueprint/motion_matching_blueprint.dart';
 import '../../../lumina/test/blueprint/no_begin_play_blueprint.dart';
 import '../../../lumina/test/blueprint/reusable_graphs_blueprint.dart';
 import '../../../lumina/test/blueprint/third_person_blueprint.dart';
@@ -82,6 +83,11 @@ void main() {
     // ABP_Character, and a character whose mesh names it.
     'abp_character': () => generator.generateAnimBlueprint(LuminaThirdPersonContent.animBlueprint,
         className: 'AbpCharacter', assetPath: LuminaThirdPersonContent.projectAnimBlueprintPath, blendSpaces: templateBlendSpaces()),
+    // A Motion Matching state over an inline pose search database.
+    'abp_motion_matching': () => generator.generateAnimBlueprint(MotionMatchingBlueprintFixture.animBlueprint(),
+        className: 'AbpMotionMatching',
+        assetPath: 'contents/animations/ABP_MotionMatching.lmas',
+        poseDatabases: {MotionMatchingBlueprintFixture.databasePath: MotionMatchingBlueprintFixture.database}),
     // What the Third Person scaffold compiles for its character.
     'bp_third_person_template': () => generator.generate(
         LuminaThirdPersonContent.characterBlueprint(inputActions: templateInputActions()),

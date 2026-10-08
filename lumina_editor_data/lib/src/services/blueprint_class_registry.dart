@@ -344,8 +344,18 @@ class LuminaBlueprintClassRegistry {
       final spaceJson = space.existsSync() ? _payload(space) : null;
       if (spaceJson != null) spaces[s] = LuminaBlendSpaceDocument.fromJson(spaceJson);
     }
+    final databases = <String, LuminaPoseSearchDatabaseDocument>{};
+    for (final machine in document.stateMachines) {
+      for (final state in machine.states) {
+        final db = state.pose.database;
+        if (state.pose.kind != LuminaAnimPoseKind.motionMatching || db == null) continue;
+        final file = File('$projectDir/$db');
+        final json = file.existsSync() ? _payload(file) : null;
+        if (json != null) databases[db] = LuminaPoseSearchDatabaseDocument.fromJson(json);
+      }
+    }
     final name = path.split('/').last.replaceAll('.lmas', '');
-    final cls = LuminaAnimBlueprintClass.fromDocument(document, name: name, blendSpaces: spaces);
+    final cls = LuminaAnimBlueprintClass.fromDocument(document, name: name, blendSpaces: spaces, poseDatabases: databases);
     for (final d in cls.diagnostics.where((d) => d.isError)) {
       _report(d.severity, '$name: ${d.message}', nodeId: d.nodeId);
     }

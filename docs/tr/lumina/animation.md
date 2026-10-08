@@ -2,7 +2,7 @@
 
 # Animasyon
 
-İskelet animasyonu: animasyon clip'leri ve bone track'leri, state machine ve montage harmanlamasıyla anim instance, section ve notify'lı montage'lar, 1D ve 2D blend space'ler, düzenlenebilir keyframe track'leri ve skeleton retargeter. Dosya yolları `lumina/` paket dizinine görelidir. Bir oyunun oynattığı clip'ler iskelet mesh'in GLB'sindeki glTF animasyonlarıdır ve gltfio üzerinden adlarıyla oynatılır; editörde oluşturulan clip'ler de oraya yazılır (`AuthoredAnimationClip`, `GlbAuthoredClipWriter`, `AuthoredAnimationStore`, [veri katmanında](../lumina_core/services.md#libsrcservicesauthored_animation_clipdart)).
+İskelet animasyonu: animasyon clip'leri ve bone track'leri, state machine ve montage harmanlamasıyla anim instance, section ve notify'lı montage'lar, 1D ve 2D blend space'ler, düzenlenebilir keyframe track'leri ve skeleton retargeter. Dosya yolları `lumina/` paket dizinine görelidir. Bir oyunun oynattığı clip'ler iskelet mesh'in GLB'sindeki glTF animasyonlarıdır ve gltfio üzerinden adlarıyla oynatılır; editörde oluşturulan clip'ler de oraya yazılır (`AuthoredAnimationClip`, `GlbAuthoredClipWriter`, `AuthoredAnimationStore`, [veri katmanında](../lumina_core/services.md#libsrcservicesauthored_animation_clipdart)). Bir karakter, clip'leri CPU'da örnekleyip eklemleri `LuminaAnimatedMeshComponent.poseDriver` üzerinden yazan bir pose search database üzerinde motion matching ile de canlandırılabilir: bkz. [Motion matching](motion-matching.md).
 
 **Bu sayfada:**
 

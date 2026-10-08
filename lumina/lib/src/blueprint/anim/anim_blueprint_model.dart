@@ -144,11 +144,13 @@ class LuminaBlendSpaceDocument {
       );
 }
 
-enum LuminaAnimPoseKind { clip, blendSpace, hold }
+enum LuminaAnimPoseKind { clip, blendSpace, hold, motionMatching }
 
 /// What a state plays: a clip (or one clip picked at random from a set when
 /// the state is entered), a blend space sampled by variables (with a play
-/// rate from a speed variable), or the current pose held still.
+/// rate from a speed variable), the current pose held still, or motion
+/// matching over a pose search database ([database]) steered by the pawn's
+/// movement.
 ///
 /// A clip pose may play once ([loop] false — the last frame holds until the
 /// state is left; the instance reports it in its `ClipFinished` variable),
@@ -182,6 +184,27 @@ class LuminaAnimPose {
   final double rootYawDegrees;
   final bool plantsFeet;
 
+  /// Motion matching: the pose search database asset (`.lmas` path).
+  final String? database;
+
+  /// Motion matching: seconds a switch blends over (inertialization).
+  final double blendTime;
+
+  /// Motion matching: multipliers of the database schema's pose and
+  /// trajectory weights.
+  final double poseWeight;
+  final double trajectoryWeight;
+
+  /// Motion matching: only clips carrying these tags are searched.
+  final List<String> requiredTags;
+
+  /// Motion matching: turn the pawn toward its movement (else it keeps the
+  /// facing its controller gives it and strafes).
+  final bool orientToMovement;
+
+  /// Motion matching: draw the desired and matched trajectories.
+  final bool debugDraw;
+
   const LuminaAnimPose.clip(
     String this.clip, {
     this.rate = 1.0,
@@ -197,7 +220,14 @@ class LuminaAnimPose {
         rateReference = 1.0,
         minRate = 0.0,
         maxRate = 10.0,
-        rateRows = false;
+        rateRows = false,
+        database = null,
+        blendTime = 0.2,
+        poseWeight = 1.0,
+        trajectoryWeight = 1.0,
+        requiredTags = const [],
+        orientToMovement = false,
+        debugDraw = false;
 
   /// One of [clips], chosen when the state is entered (idle breaks). Plays
   /// once by default.
@@ -217,7 +247,14 @@ class LuminaAnimPose {
         rateReference = 1.0,
         minRate = 0.0,
         maxRate = 10.0,
-        rateRows = false;
+        rateRows = false,
+        database = null,
+        blendTime = 0.2,
+        poseWeight = 1.0,
+        trajectoryWeight = 1.0,
+        requiredTags = const [],
+        orientToMovement = false,
+        debugDraw = false;
 
   const LuminaAnimPose.blendSpace(
     String this.blendSpace, {
@@ -234,7 +271,14 @@ class LuminaAnimPose {
         clips = const [],
         loop = true,
         rootYawDegrees = 0.0,
-        plantsFeet = false;
+        plantsFeet = false,
+        database = null,
+        blendTime = 0.2,
+        poseWeight = 1.0,
+        trajectoryWeight = 1.0,
+        requiredTags = const [],
+        orientToMovement = false,
+        debugDraw = false;
 
   const LuminaAnimPose.hold()
       : kind = LuminaAnimPoseKind.hold,
@@ -248,6 +292,38 @@ class LuminaAnimPose {
         rateReference = 1.0,
         minRate = 0.0,
         maxRate = 0.0,
+        rateRows = false,
+        loop = true,
+        rootYawDegrees = 0.0,
+        plantsFeet = false,
+        database = null,
+        blendTime = 0.2,
+        poseWeight = 1.0,
+        trajectoryWeight = 1.0,
+        requiredTags = const [],
+        orientToMovement = false,
+        debugDraw = false;
+
+  /// Motion matching over the pose search database at [database].
+  const LuminaAnimPose.motionMatching(
+    String this.database, {
+    this.blendTime = 0.2,
+    this.poseWeight = 1.0,
+    this.trajectoryWeight = 1.0,
+    this.requiredTags = const [],
+    this.orientToMovement = false,
+    this.debugDraw = false,
+  })  : kind = LuminaAnimPoseKind.motionMatching,
+        clip = null,
+        clips = const [],
+        blendSpace = null,
+        xVariable = null,
+        yVariable = null,
+        rate = 1.0,
+        rateVariable = null,
+        rateReference = 1.0,
+        minRate = 0.0,
+        maxRate = 10.0,
         rateRows = false,
         loop = true,
         rootYawDegrees = 0.0,
@@ -275,6 +351,15 @@ class LuminaAnimPose {
         if (kind == LuminaAnimPoseKind.clip) 'loop': loop,
         if (kind == LuminaAnimPoseKind.clip) 'rootYawDegrees': rootYawDegrees,
         if (kind == LuminaAnimPoseKind.clip) 'plantsFeet': plantsFeet,
+        if (kind == LuminaAnimPoseKind.motionMatching) ...{
+          'database': database,
+          'blendTime': blendTime,
+          'poseWeight': poseWeight,
+          'trajectoryWeight': trajectoryWeight,
+          'requiredTags': requiredTags,
+          'orientToMovement': orientToMovement,
+          'debugDraw': debugDraw,
+        },
       };
 
   factory LuminaAnimPose.fromJson(Map<String, dynamic> j) {
@@ -301,6 +386,16 @@ class LuminaAnimPose {
           minRate: (j['minRate'] as num?)?.toDouble() ?? 0.0,
           maxRate: (j['maxRate'] as num?)?.toDouble() ?? 10.0,
           rateRows: j['rateRows'] as bool? ?? false,
+        );
+      case 'motionMatching':
+        return LuminaAnimPose.motionMatching(
+          j['database'] as String? ?? '',
+          blendTime: (j['blendTime'] as num?)?.toDouble() ?? 0.2,
+          poseWeight: (j['poseWeight'] as num?)?.toDouble() ?? 1.0,
+          trajectoryWeight: (j['trajectoryWeight'] as num?)?.toDouble() ?? 1.0,
+          requiredTags: (j['requiredTags'] as List?)?.cast<String>() ?? const [],
+          orientToMovement: j['orientToMovement'] as bool? ?? false,
+          debugDraw: j['debugDraw'] as bool? ?? false,
         );
       default:
         return const LuminaAnimPose.hold();

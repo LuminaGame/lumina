@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:vector_math/vector_math_64.dart';
 
 import 'package:lumina/lumina.dart';
@@ -183,12 +185,13 @@ class BlueprintDartGenerator {
     required String className,
     String? assetPath,
     Map<String, LuminaBlendSpaceDocument> blendSpaces = const {},
+    Map<String, LuminaPoseSearchDatabaseDocument> poseDatabases = const {},
     String? existingContent,
     Map<String, String> functionImports = const {},
   }) {
-    final issues = validateAnimBlueprint(doc, blendSpaces: blendSpaces);
+    final issues = validateAnimBlueprint(doc, blendSpaces: blendSpaces, poseDatabases: poseDatabases);
     if (issues.any((d) => d.isError)) return BlueprintGenerationResult(null, issues);
-    final writer = _AnimClassWriter(doc, className, assetPath, blendSpaces, issues, functionImports);
+    final writer = _AnimClassWriter(doc, className, assetPath, blendSpaces, poseDatabases, issues, functionImports);
     final code = writer.write(_userRegions(existingContent));
     return BlueprintGenerationResult(writer.failed ? null : code, issues);
   }
