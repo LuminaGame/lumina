@@ -23,7 +23,7 @@ Alt editörler ve eklentiler sekmeler arasında görsel ve davranışsal uyumu g
 - **Yeniden Boyutlandırılabilir Düzenler**: Paneller her zaman `ResizablePanel` ve sürükleyiciler ile yeniden boyutlandırılabilir ve minimum boyut sınırlarına (`minSize: 120-200 px`) sahiptir.
 - **Content Browser Etkileşimi**:
   - `contentDroppable`: Etkinleştirildiğinde çalışma alanı kanvası `DragTarget<RealAssetInfo>` olarak çalışır ve sürüklenen mesh, materyal, doku veya Blueprint varlıklarını kabul eder.
-  - `contentBrowserOpened`: `true` olduğunda Content Browser sekmenin altında dikey bir `ResizablePanel` olarak kenetlenmiş gelir. `false` olduğunda sol alt köşede klasör çekmece butonu (`LucideIcons.folder`) yer alır; kullanıcı buna tıklayarak alttaki Content Drawer'ı açabilir ve iğne butonuyla sekmeye sabitleyebilir.
+  - `contentBrowserOpened`: `true` olduğunda Content Browser sekmenin altında dikey bir `ResizablePanel` olarak kenetlenmiş gelir. `false` olduğunda Content Drawer butonu (`LucideIcons.folder` / `folderOpen`) editörün durum çubuğunda, motor sürümünün solunda durur ve etkin sekmenin alttaki Content Drawer'ını açıp kapatır; iğne butonu onu sekmeye sabitler. Her sekmenin çekmece durumu `EditorViewModel.subEditorDrawer(tabId)` ile tutulan bir `SubEditorContentDrawer`'dır; sekme dışındaki bir kabuk sol altta kendi yüzen butonunu gösterir.
 
 ## Alt editörler
 

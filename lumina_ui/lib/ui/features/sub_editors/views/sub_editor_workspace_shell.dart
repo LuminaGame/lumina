@@ -1,4 +1,5 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/sub_editor_content_drawer.dart';
 import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/core/plugin_extension_registry.dart';
@@ -18,6 +19,10 @@ class SubEditorWorkspaceShell extends StatefulWidget {
   final bool? contentBrowserOpened;
   final void Function(RealAssetInfo asset)? onAssetDropped;
 
+  /// The tab the shell is in: the editor's status bar toggles its Content
+  /// Drawer. Without one the shell shows its own drawer button.
+  final String? tabId;
+
   const SubEditorWorkspaceShell({
     super.key,
     required this.child,
@@ -27,6 +32,7 @@ class SubEditorWorkspaceShell extends StatefulWidget {
     this.contentDroppable,
     this.contentBrowserOpened,
     this.onAssetDropped,
+    this.tabId,
   });
 
   @override
@@ -34,15 +40,36 @@ class SubEditorWorkspaceShell extends StatefulWidget {
 }
 
 class _SubEditorWorkspaceShellState extends State<SubEditorWorkspaceShell> {
-  late bool _pinned;
-  late bool _drawerOpen;
+  late final SubEditorContentDrawer _drawer;
+  late final bool _ownsDrawer;
   double _bottomHeight = 240.0;
+
+  bool get _pinned => _drawer.pinned;
+  bool get _drawerOpen => _drawer.open;
 
   @override
   void initState() {
     super.initState();
-    _pinned = _resolveContentBrowserOpened();
-    _drawerOpen = _pinned;
+    final tabId = widget.tabId, editor = widget.editorViewModel;
+    if (tabId != null && editor != null) {
+      _ownsDrawer = false;
+      _drawer = editor.subEditorDrawer(tabId, pinned: _resolveContentBrowserOpened());
+    } else {
+      _ownsDrawer = true;
+      _drawer = SubEditorContentDrawer(pinned: _resolveContentBrowserOpened());
+    }
+    _drawer.addListener(_changed);
+  }
+
+  void _changed() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _drawer.removeListener(_changed);
+    if (_ownsDrawer) _drawer.dispose();
+    super.dispose();
   }
 
   bool _resolveContentBrowserOpened() {
@@ -151,7 +178,8 @@ class _SubEditorWorkspaceShellState extends State<SubEditorWorkspaceShell> {
               child: _buildBottomPanel(pinned: false),
             ),
           ),
-        if (!_drawerOpen)
+        // In a tab the status bar's button opens it; elsewhere this one.
+        if (!_drawerOpen && _ownsDrawer)
           Positioned(
             left: 8,
             bottom: 8,
@@ -169,7 +197,7 @@ class _SubEditorWorkspaceShellState extends State<SubEditorWorkspaceShell> {
                 child: GhostButton(
                   key: const ValueKey('sub_editor_content_drawer_btn'),
                   density: ButtonDensity.compact,
-                  onPressed: () => setState(() => _drawerOpen = true),
+                  onPressed: () => _drawer.setOpen(true),
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -257,12 +285,7 @@ class _SubEditorWorkspaceShellState extends State<SubEditorWorkspaceShell> {
                       child: GhostButton(
                         key: const ValueKey('sub_editor_bottom_panel_pin'),
                         density: ButtonDensity.compact,
-                        onPressed: () {
-                          setState(() {
-                            _pinned = !pinned;
-                            if (!_pinned) _drawerOpen = false;
-                          });
-                        },
+                        onPressed: () => _drawer.setPinned(!pinned),
                         child: Icon(
                           pinned ? LucideIcons.pin : LucideIcons.pinOff,
                           size: 11,
@@ -276,7 +299,7 @@ class _SubEditorWorkspaceShellState extends State<SubEditorWorkspaceShell> {
                         child: GhostButton(
                           key: const ValueKey('sub_editor_bottom_drawer_close'),
                           density: ButtonDensity.compact,
-                          onPressed: () => setState(() => _drawerOpen = false),
+                          onPressed: () => _drawer.setOpen(false),
                           child: const Icon(LucideIcons.x, size: 11, color: EditorColors.mutedForeground),
                         ),
                       ),

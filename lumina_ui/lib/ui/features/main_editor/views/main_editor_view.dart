@@ -5,7 +5,6 @@ import 'dart:ui' show AppExitResponse, AppExitType;
 import 'package:flutter/services.dart' show ServicesBinding;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_editor_data/lumina_editor.dart';
-import 'package:lumina_editor_api/lumina_editor_api.dart' show EditorSlot, MinimizedPluginDialogsBar;
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/core/window/lumina_window.dart';
 import 'package:lumina_ui/ui/core/property_editors/asset_picker_select.dart';
@@ -23,16 +22,13 @@ import 'package:lumina_ui/ui/features/main_editor/views/restart_required_banner.
 import 'package:lumina_ui/ui/features/main_editor/views/import_progress_panel.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/quit_progress_overlay.dart';
 import 'package:lumina_ui/ui/features/main_editor/shortcuts/editor_shortcuts_scope.dart';
-import 'package:lumina_ui/ui/features/main_editor/views/about_dialog.dart' show rhiLabel;
-import 'package:lumina_ui/ui/features/main_editor/views/status_bar_engine_segment.dart';
+import 'package:lumina_ui/ui/features/main_editor/views/editor_status_bar.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/right_dock_widget.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_layout_state.dart';
-import 'package:lumina_ui/ui/features/main_editor/views/editor_slot_bar.dart';
 import 'package:lumina_ui/ui/core/host/launch_model_files.dart';
 import 'package:lumina_ui/ui/features/main_editor/services/launch_model_import.dart';
 
 /// The status bar's left-hand text segments.
-const TextStyle _statusText = TextStyle(fontSize: 9, fontFamily: EditorTypography.monoFamily, color: EditorColors.mutedForeground);
 
 class MainEditorView extends StatefulWidget {
   final LuminaProject? project;
@@ -383,102 +379,7 @@ class _MainEditorViewState extends State<MainEditorView> {
               const Divider(height: 1),
 
               // 5. Bottom Status Bar
-              Container(
-                height: 20,
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                color: EditorColors.cardHeader,
-                child: Row(
-                  children: [
-                    // The Content Drawer's button, only
-                    // while the bottom panel is unpinned.
-                    if (!viewModel.layoutState.bottomPinned) ...[
-                      Tooltip(
-                        tooltip: (context) => TooltipContainer(child: const Text('Content Drawer')),
-                        child: GhostButton(
-                          key: const ValueKey('status_bar_content_drawer'),
-                          density: ButtonDensity.compact,
-                          onPressed: () => viewModel.toggleContentDrawer(),
-                          child: Icon(
-                            viewModel.layoutState.bottomVisible ? LucideIcons.folderOpen : LucideIcons.folder,
-                            size: 11,
-                            color: viewModel.layoutState.bottomVisible ? EditorColors.primary : EditorColors.foreground,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                    ],
-                    // Minimized plugin dialogs dock here with their plugin icon and progress.
-                    const MinimizedPluginDialogsBar(),
-                    Image.asset('assets/logo_white.png', height: 11),
-                    const SizedBox(width: 6),
-                    // Engine · Filament · level · counts;
-                    // the level and counts truncate first, never a version.
-                    Text(
-                      'Lumina Engine ${LuminaRelease.displayVersion}',
-                      key: const ValueKey('status_engine_version'),
-                      style: _statusText,
-                    ),
-                    const Text('  ·  ', style: _statusText),
-                    FilamentStatusSegment(onPressed: () => viewModel.commands.execute('help.about', context)),
-                    const Text('  ·  ', style: _statusText),
-                    Flexible(
-                      child: Text(
-                        viewModel.activeLevelName,
-                        key: const ValueKey('status_level'),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: _statusText,
-                      ),
-                    ),
-                    const Text('  ·  ', style: _statusText),
-                    Flexible(
-                      child: Text(
-                        '${viewModel.actorCount} actors · ${viewModel.hiddenActorCount} hidden · ${viewModel.selectedCount} selected',
-                        key: const ValueKey('status_actor_counts'),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: _statusText,
-                      ),
-                    ),
-                    // What Play is running.
-                    if (viewModel.pieController.isPlaying && viewModel.pieController.pawnClassLabel != null) ...[
-                      const SizedBox(width: 12),
-                      const Icon(LucideIcons.gamepad2, size: 10, color: EditorColors.logSuccess),
-                      const SizedBox(width: 4),
-                      Text(
-                        'PIE · ${viewModel.pieController.pawnClassLabel}',
-                        key: const ValueKey('status_pie_pawn'),
-                        style: const TextStyle(fontSize: 9, fontFamily: EditorTypography.monoFamily, color: EditorColors.logSuccess),
-                      ),
-                    ],
-                    // Plugin buttons on both sides of the bar.
-                    EditorSlotBar(registry: viewModel.extensionRegistry, slot: EditorSlot.statusBarLeft, compact: true, leadingGap: 8),
-                    const Spacer(),
-                    EditorSlotBar(registry: viewModel.extensionRegistry, slot: EditorSlot.statusBarRight, compact: true, trailingGap: 8),
-                    ImportProgressChip(jobs: viewModel.importJobs),
-                    Row(
-                      children: [
-                        const Icon(LucideIcons.circleCheck, size: 10, color: EditorColors.logSuccess),
-                        const SizedBox(width: 4),
-                        ValueListenableBuilder<String?>(
-                          valueListenable: LuminaGraphicsDevices.inUse.asValueListenable(),
-                          builder: (context, gpu, _) => Text(
-                            // What this renderer really is doing, not borrowed
-                            // feature names: the quality preset in force, the
-                            // shadow technique it implies, the backend and
-                            // the GPU it runs on.
-                            'Shaders compiled  ·  Quality: ${viewModel.qualityPreset.toUpperCase()}  ·  '
-                            'Shadows: ${viewModel.quality.profile.shadows.shadowType.name.toUpperCase()} '
-                            '${viewModel.quality.profile.shadows.mapSize}  ·  ${rhiLabel(gpu)}',
-                            key: const ValueKey('status_bar_rhi'),
-                            style: const TextStyle(fontSize: 9, fontFamily: EditorTypography.monoFamily, color: EditorColors.mutedForeground),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
+              EditorStatusBar(viewModel: viewModel),
             ],
           ),
         );

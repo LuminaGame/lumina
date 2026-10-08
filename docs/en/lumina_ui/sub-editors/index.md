@@ -23,7 +23,7 @@ Sub-editors and plugins run inside `SubEditorWorkspaceShell`, which guarantees c
 - **Resizable Layouts**: Panels are always resizable via `ResizablePanel` and draggers, with sensible minimum sizes (`minSize: 120-200 px`).
 - **Content Browser Interop**:
   - `contentDroppable`: When enabled, the workspace canvas acts as a `DragTarget<RealAssetInfo>` to accept dragged meshes, materials, textures, or Blueprints.
-  - `contentBrowserOpened`: When `true`, docks the Content Browser at the bottom in a vertical `ResizablePanel`. When `false`, a folder drawer icon button is positioned at the bottom-left corner (`LucideIcons.folder`), allowing the user to slide open the bottom Content Drawer and pin/dock it to the layout.
+  - `contentBrowserOpened`: When `true`, docks the Content Browser at the bottom in a vertical `ResizablePanel`. When `false`, the Content Drawer button (`LucideIcons.folder` / `folderOpen`) sits in the editor's status bar, left of the engine version, and toggles the active tab's bottom Content Drawer, which its pin button docks to the layout. Each tab's drawer state is a `SubEditorContentDrawer` kept by `EditorViewModel.subEditorDrawer(tabId)`; a shell outside a tab shows its own floating button at the bottom-left instead.
 
 ## Sub-editors
 

@@ -25,6 +25,18 @@ mixin _EditorSubEditorTabs on _EditorViewModelState {
   }
 
   int get activeTabIndex => _activeTabIndex;
+
+  /// Each open sub-editor tab's Content Drawer, by tab id.
+  final Map<String, SubEditorContentDrawer> _subEditorDrawers = {};
+
+  /// The Content Drawer of sub-editor tab [tabId], made [pinned] or not the
+  /// first time it is asked for.
+  SubEditorContentDrawer subEditorDrawer(String tabId, {required bool pinned}) =>
+      _subEditorDrawers.putIfAbsent(tabId, () => SubEditorContentDrawer(pinned: pinned));
+
+  /// The active tab's Content Drawer when it is a sub-editor tab with one.
+  SubEditorContentDrawer? get activeSubEditorDrawer =>
+      _activeTabIndex <= 0 || _activeTabIndex >= _openTabs.length ? null : _subEditorDrawers[_openTabs[_activeTabIndex].id];
   EditorTabInfo get currentTab {
     _syncLevelTabTitle();
     return _openTabs[_activeTabIndex];
@@ -184,6 +196,7 @@ mixin _EditorSubEditorTabs on _EditorViewModelState {
     if (index == 0) return; // Cannot close main 3D level tab
     if (index >= 0 && index < _openTabs.length) {
       unbindTabSession(_openTabs[index].id);
+      _subEditorDrawers.remove(_openTabs[index].id)?.dispose();
       _releaseLevelBlueprintEditor(_openTabs[index]);
       _openTabs.removeAt(index);
       if (_activeTabIndex >= _openTabs.length) {

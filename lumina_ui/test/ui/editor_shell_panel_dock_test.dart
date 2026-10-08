@@ -249,4 +249,38 @@ void main() {
     expect(json['outlinerWidth'], EditorLayoutState.defaultOutlinerWidth);
     expect(json.containsKey('detailsWidth'), isFalse);
   });
+
+  testWidgets('A sub-editor tab Content Drawer button sits in the status bar, left of the engine version', (tester) async {
+    await pumpEditor(tester);
+    viewModel.openSubEditorTab('Material Editor');
+    await tester.pump(const Duration(milliseconds: 500));
+    final drawer = viewModel.activeSubEditorDrawer;
+    expect(drawer, isNotNull);
+    drawer!.setPinned(false);
+    await tester.pump(const Duration(milliseconds: 300));
+
+    final button = find.byKey(const ValueKey('status_bar_content_drawer'));
+    expect(button, findsOneWidget);
+    expect(find.byKey(const ValueKey('sub_editor_content_drawer_btn')), findsNothing, reason: 'no floating button over the tab');
+    final version = tester.getRect(find.byKey(const ValueKey('status_engine_version')));
+    final at = tester.getRect(button);
+    expect(at.right, lessThanOrEqualTo(version.left), reason: 'left of the version');
+    expect(at.center.dy, moreOrLessEquals(version.center.dy, epsilon: 3), reason: 'on the same row');
+
+    expect(find.byType(ContentBrowserWidget), findsNothing);
+    await tester.tap(button);
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(drawer.open, isTrue);
+    expect(find.byType(ContentBrowserWidget), findsOneWidget, reason: 'the tab drawer opened');
+    expect(find.descendant(of: button, matching: find.byIcon(LucideIcons.folderOpen)), findsOneWidget);
+    await tester.tap(button);
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(drawer.open, isFalse);
+
+    // Back on the level tab the button follows the level's pinned panel.
+    viewModel.selectTab(0);
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(viewModel.activeSubEditorDrawer, isNull);
+    expect(button, findsNothing);
+  });
 }

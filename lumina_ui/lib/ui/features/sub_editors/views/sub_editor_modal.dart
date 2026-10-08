@@ -188,6 +188,7 @@ class _SubEditorWorkspaceWidgetState extends State<SubEditorWorkspaceWidget> {
       contentDroppable: widget.contentDroppable,
       contentBrowserOpened: widget.contentBrowserOpened,
       onAssetDropped: widget.onAssetDropped,
+      tabId: widget.tabId,
       child: content,
     );
   }

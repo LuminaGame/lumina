@@ -1,4 +1,5 @@
 import 'package:lumina_ui/ui/core/built_in_editor_plugin.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/sub_editor_content_drawer.dart';
 import 'package:lumina_ui/ui/core/host/editor_host.dart';
 import 'package:lumina_ui/ui/core/plugin_extension_registry.dart';
 import 'package:lumina_ui/ui/core/editor_level_access.dart';
