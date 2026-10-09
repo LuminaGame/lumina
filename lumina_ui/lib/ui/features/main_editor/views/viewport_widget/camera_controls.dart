@@ -278,7 +278,8 @@ mixin _ViewportCameraControls on _ViewportWidgetStateBase {
           LuminaRtxController.dlssAvailable,
           vm.dlssSettings.enabled,
           'DLSS',
-          vm.dlssSettings.enabled ? ' ${_dlssQualityLabel(vm.dlssSettings.quality)}' : '',
+          '${vm.dlssSettings.enabled ? ' ${_dlssQualityLabel(vm.dlssSettings.quality)}${vm.dlssSettings.rayReconstruction ? ' RR' : ''}' : ''}'
+              '${vm.dlssFrameGenerationSettings.enabled ? ' +FG ${vm.dlssFrameGenerationSettings.generatedFrames + 1}x' : ''}',
           'DLSS Super Resolution: {state}\nClick to toggle, the arrow opens the quality mode.',
           'DLSS is unavailable: the NGX runtime was not found or this GPU has no DLSS.\nThe arrow still opens the settings.',
         ),
@@ -384,6 +385,7 @@ mixin _ViewportCameraControls on _ViewportWidgetStateBase {
       };
 
   void _showRtxSettings(RtxSettingsKind kind, bool supported) {
+    final engine = _rtxController?.engine;
     showOverlay(
       context,
       const DialogConfiguration(),
@@ -391,6 +393,8 @@ mixin _ViewportCameraControls on _ViewportWidgetStateBase {
         viewModel: widget.viewModel,
         kind: kind,
         supported: supported,
+        rayReconstructionSupported: engine != null && LuminaRtxController.rayReconstructionSupported(engine),
+        maxDlssGeneratedFrames: engine == null ? 0 : LuminaRtxController.maxDlssGeneratedFrames(engine),
         onClose: () => Navigator.of(context).pop(),
       ),
     );

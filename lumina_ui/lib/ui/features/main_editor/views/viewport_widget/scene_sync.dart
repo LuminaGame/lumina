@@ -651,6 +651,7 @@ mixin _ViewportSceneSync on _ViewportWidgetStateBase {
       quality.rayTracing,
       quality.dlss,
       fsr3: quality.fsr3,
+      dlssFrameGeneration: quality.dlssFrameGeneration,
       baseTaa: quality.profile.taa,
       baseDynamicResolution: quality.profile.dynamicResolution,
     );

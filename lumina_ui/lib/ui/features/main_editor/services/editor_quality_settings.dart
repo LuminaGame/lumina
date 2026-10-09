@@ -38,8 +38,13 @@ class EditorQualitySettings {
   /// sun shadows and ReSTIR direct lighting (the RTX HUD button).
   final LuminaRayTracingSettings rayTracing;
 
-  /// DLSS Super Resolution of the viewport (the DLSS HUD button).
+  /// DLSS Super Resolution of the viewport (the DLSS HUD button), or DLSS
+  /// Ray Reconstruction with [LuminaDlssSettings.rayReconstruction].
   final LuminaDlssSettings dlss;
+
+  /// DLSS Frame Generation of the viewport: generated frames per rendered
+  /// frame, 0 (off) to 5.
+  final LuminaDlssFrameGenerationSettings dlssFrameGeneration;
 
   /// FSR3 upscaling and frame generation of the viewport (the FSR3 HUD button).
   final LuminaFsr3Settings fsr3;
@@ -53,6 +58,7 @@ class EditorQualitySettings {
     this.rayTracing = const LuminaRayTracingSettings(),
     this.dlss = const LuminaDlssSettings(),
     this.fsr3 = const LuminaFsr3Settings(),
+    this.dlssFrameGeneration = const LuminaDlssFrameGenerationSettings(),
   });
 
   /// The engine profile this preset and resolution scale describe.
@@ -94,6 +100,7 @@ class EditorQualitySettings {
     LuminaRayTracingSettings? rayTracing,
     LuminaDlssSettings? dlss,
     LuminaFsr3Settings? fsr3,
+    LuminaDlssFrameGenerationSettings? dlssFrameGeneration,
   }) {
     return EditorQualitySettings(
       preset: (preset ?? this.preset).toLowerCase(),
@@ -104,6 +111,7 @@ class EditorQualitySettings {
       rayTracing: rayTracing ?? this.rayTracing,
       dlss: dlss ?? this.dlss,
       fsr3: fsr3 ?? this.fsr3,
+      dlssFrameGeneration: dlssFrameGeneration ?? this.dlssFrameGeneration,
     );
   }
 
@@ -116,6 +124,7 @@ class EditorQualitySettings {
         'ray_tracing': rayTracing.toMap(),
         'dlss': dlss.toMap(),
         'fsr3': fsr3.toMap(),
+        'dlss_frame_generation': dlssFrameGeneration.toMap(),
       };
 
   factory EditorQualitySettings.fromMap(Map<String, dynamic> map) {
@@ -123,6 +132,7 @@ class EditorQualitySettings {
     final rayTracing = map['ray_tracing'];
     final dlss = map['dlss'];
     final fsr3 = map['fsr3'];
+    final frameGeneration = map['dlss_frame_generation'];
     return EditorQualitySettings(
       preset: (map['preset'] as String? ?? 'epic').toLowerCase(),
       resolutionScale: scale is num ? scale.toDouble() : 100,
@@ -132,6 +142,9 @@ class EditorQualitySettings {
       rayTracing: rayTracing is Map ? LuminaRayTracingSettings.fromMap(Map<String, dynamic>.from(rayTracing)) : const LuminaRayTracingSettings(),
       dlss: dlss is Map ? LuminaDlssSettings.fromMap(Map<String, dynamic>.from(dlss)) : const LuminaDlssSettings(),
       fsr3: fsr3 is Map ? LuminaFsr3Settings.fromMap(Map<String, dynamic>.from(fsr3)) : const LuminaFsr3Settings(),
+      dlssFrameGeneration: frameGeneration is Map
+          ? LuminaDlssFrameGenerationSettings.fromMap(Map<String, dynamic>.from(frameGeneration))
+          : const LuminaDlssFrameGenerationSettings(),
     );
   }
 
@@ -145,15 +158,18 @@ class EditorQualitySettings {
       other.screenSpaceReflections == screenSpaceReflections &&
       other.rayTracing == rayTracing &&
       other.dlss == dlss &&
-      other.fsr3 == fsr3;
+      other.fsr3 == fsr3 &&
+      other.dlssFrameGeneration == dlssFrameGeneration;
 
   @override
-  int get hashCode => Object.hash(preset, resolutionScale, ssao, bloom, screenSpaceReflections, rayTracing, dlss, fsr3);
+  int get hashCode =>
+      Object.hash(preset, resolutionScale, ssao, bloom, screenSpaceReflections, rayTracing, dlss, fsr3, dlssFrameGeneration);
 
   @override
   String toString() =>
       'EditorQualitySettings($preset, ${resolutionScale.toStringAsFixed(0)}%, ssao: $ssao, bloom: $bloom, ssr: $screenSpaceReflections, '
-      'rtx: ${rayTracing.enabled}, dlss: ${dlss.enabled}, fsr3: ${fsr3.enabled})';
+      'rtx: ${rayTracing.enabled}, dlss: ${dlss.enabled}${dlss.rayReconstruction ? ' RR' : ''}, fsr3: ${fsr3.enabled}, '
+      'dlss fg: ${dlssFrameGeneration.generatedFrames})';
 }
 
 /// Per-user store for [EditorQualitySettings], one entry per project

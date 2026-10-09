@@ -200,10 +200,11 @@ Applies both settings to one view: the scene's acceleration structures, the dire
 | Method / Getter | Signature | Purpose & Description |
 | :--- | :--- | :--- |
 | `requestExtensions` | `static bool requestExtensions({String? dlssRuntimeDir})` | Asks the engines created from now on for the ray query extensions and, with the NGX runtime present, the DLSS and DLSS Frame Generation ones. Call it before the engine exists. |
+| `activeNvidiaFeatures` | `static ObservableValue<Set<String>> activeNvidiaFeatures` | The NGX features running on any view right now (`DLSS Super Resolution`, `DLSS Ray Reconstruction`, `DLSS Frame Generation`), for an NVIDIA attribution while they are in use. |
 | `rayReconstructionSupported`, `maxDlssGeneratedFrames` | `static bool rayReconstructionSupported(FilamentEngine engine)`, `static int maxDlssGeneratedFrames(FilamentEngine engine)` | Whether NGX runs Ray Reconstruction on the engine's GPU, and the most frames DLSS Frame Generation generates per rendered frame (0 without it); probed once per engine. |
 | `dlssAvailable` | `static bool get dlssAvailable` | The NGX runtime was found and an NVIDIA Vulkan device exists. |
 | `rayTracingSupported` | `bool get rayTracingSupported` | The engine traces rays. |
-| `apply` | `void apply(LuminaRayTracingSettings rayTracing, LuminaDlssSettings dlss, {LuminaFsr3Settings fsr3 = const LuminaFsr3Settings(), LuminaDlssFrameGenerationSettings? dlssFrameGeneration, required TemporalAntiAliasingOptions baseTaa, required DynamicResolutionOptions baseDynamicResolution})` | Applies both; cheap when nothing changed. The base options are restored when DLSS turns off (DLSS itself needs TAA with motion vectors). |
+| `apply` | `void apply(LuminaRayTracingSettings rayTracing, LuminaDlssSettings dlss, {LuminaFsr3Settings fsr3 = const LuminaFsr3Settings(), LuminaDlssFrameGenerationSettings dlssFrameGeneration = const LuminaDlssFrameGenerationSettings(), required TemporalAntiAliasingOptions baseTaa, required DynamicResolutionOptions baseDynamicResolution})` | Applies both; cheap when nothing changed. The base options are restored when DLSS turns off (DLSS itself needs TAA with motion vectors). |
 | `dlss`, `appliedRayTracing`, `appliedDlss` | | The live DLSS instance and the settings last applied. |
 | `rayReconstruction`, `frameGenerator`, `appliedFrameGeneration` | | The live `DlssRayReconstruction` (with the view's guide buffers on) and `DlssFrameGenerator`, and the frame generation settings last applied. |
 | `appliedFsr3`, `fsr3Active`, `fsr3Supported` | | The FSR3 settings last applied, whether FSR3 is on the view now (enabled, motion vectors available, no DLSS) and whether the engine renders the motion vectors it needs. |
@@ -212,7 +213,7 @@ Applies both settings to one view: the scene's acceleration structures, the dire
 
 ### `class LuminaDlssFrameGenerationSettings`
 
-`generatedFrames` (1–5): frames DLSS Frame Generation generates per rendered frame (1 is 2x, 3 is 4x). `null` in `apply` turns it off. The generated frames are presented between the rendered ones by the native swap chain path; a Flutter texture viewport receives only the rendered frames.
+`generatedFrames` (0–5): frames DLSS Frame Generation generates per rendered frame (0 is off, the default; 1 is 2x, 3 is 4x); `enabled`; JSON key `generated_frames`. The generated frames are presented between the rendered ones by the native swap chain path; a Flutter texture viewport receives only the rendered frames.
 
 ## `lib/src/post_process/rendering_features.dart`
 

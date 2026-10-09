@@ -81,14 +81,19 @@ void main() {
       expect(rr.dlssSettings.rayReconstruction, isTrue);
       expect(rr.fsr3Settings.enabled, isFalse);
       final fg = const LuminaRenderingFeatureSettings(
-          frameGeneration: true, frameGenerator: LuminaFrameGenerator.dlss, dlssGeneratedFrames: 2);
+        frameGeneration: true,
+        frameGenerator: LuminaFrameGenerator.dlss,
+        dlssGeneratedFrames: 2,
+      );
       expect(fg.dlssFrameGenerationSettings.generatedFrames, 2);
       expect(fg.fsr3Settings.frameGeneration, isFalse);
       final fsr3Fg = const LuminaRenderingFeatureSettings(upscaler: LuminaUpscaler.fsr3, frameGeneration: true);
       expect(fsr3Fg.dlssFrameGenerationSettings.enabled, isFalse);
       expect(fsr3Fg.fsr3Settings.frameGeneration, isTrue);
-      expect(LuminaDlssSettings.fromMap(const LuminaDlssSettings(rayReconstruction: true).toMap()).rayReconstruction,
-          isTrue);
+      expect(
+        LuminaDlssSettings.fromMap(const LuminaDlssSettings(rayReconstruction: true).toMap()).rayReconstruction,
+        isTrue,
+      );
       expect(LuminaDlssFrameGenerationSettings.fromMap({'generated_frames': 9}).generatedFrames, 5);
     });
   });
@@ -115,7 +120,12 @@ void main() {
 
       final withRt = rr.copyWith(rayTracing: true);
       const noRr = LuminaRenderingFeatureSupport(
-          rayTracing: true, dlss: true, fsr3: true, frameGeneration: true, rayReconstructionReason: 'no nvngx_dlssd');
+        rayTracing: true,
+        dlss: true,
+        fsr3: true,
+        frameGeneration: true,
+        rayReconstructionReason: 'no nvngx_dlssd',
+      );
       final r1 = withRt.resolve(noRr);
       expect(r1.settings.upscaler, LuminaUpscaler.dlss);
       expect(r1.fallbacks.single, contains('no nvngx_dlssd'));
@@ -134,14 +144,25 @@ void main() {
         dlssGeneratedFrames: 5,
       );
       const noDlssFg = LuminaRenderingFeatureSupport(
-          rayTracing: false, dlss: true, fsr3: true, frameGeneration: true, dlssFrameGenerationReason: 'RTX 40 needed');
+        rayTracing: false,
+        dlss: true,
+        fsr3: true,
+        frameGeneration: true,
+        dlssFrameGenerationReason: 'RTX 40 needed',
+      );
       final r1 = fg.resolve(noDlssFg);
       expect(r1.settings.frameGeneration, isTrue);
       expect(r1.settings.frameGenerator, LuminaFrameGenerator.fsr3);
       expect(r1.fallbacks.single, contains('RTX 40 needed'));
 
       const twoX = LuminaRenderingFeatureSupport(
-          rayTracing: false, dlss: true, fsr3: true, frameGeneration: true, dlssFrameGeneration: true, maxDlssGeneratedFrames: 1);
+        rayTracing: false,
+        dlss: true,
+        fsr3: true,
+        frameGeneration: true,
+        dlssFrameGeneration: true,
+        maxDlssGeneratedFrames: 1,
+      );
       final r2 = fg.resolve(twoX);
       expect(r2.settings.frameGenerator, LuminaFrameGenerator.dlss);
       expect(r2.settings.dlssGeneratedFrames, 1);
@@ -192,8 +213,10 @@ void main() {
         expect(LuminaBlueprintFunctionLibrary.builtInFunctions.containsKey(id), isTrue, reason: id);
         expect(LuminaBlueprintFunctionLibrary.callShapes.containsKey(id), isTrue, reason: id);
       }
-      Set<String> found(String word) =>
-          {for (final s in LuminaBlueprintNodeLibrary.builtIns) if (s.keywords.contains(word)) s.id};
+      Set<String> found(String word) => {
+        for (final s in LuminaBlueprintNodeLibrary.builtIns)
+          if (s.keywords.contains(word)) s.id,
+      };
       expect(found('ray reconstruction'), contains('is_ray_reconstruction_supported'));
       expect(found('mfg'), containsAll(['set_dlss_generated_frames', 'get_max_dlss_generated_frames']));
     });
@@ -270,6 +293,10 @@ void main() {
         expect(view.guideBufferOptions.enabled, isTrue);
         expect(controller.frameGenerator, isNotNull);
         expect(controller.frameGenerator!.generatedFrames, 3);
+        expect(LuminaRtxController.activeNvidiaFeatures.value, {
+          LuminaRtxController.nvidiaDlssRayReconstruction,
+          LuminaRtxController.nvidiaDlssFrameGeneration,
+        });
         final (rw, rh) = controller.rayReconstruction!.renderResolution;
         expect(rw, lessThan(1280));
         expect(rh, lessThan(720));
@@ -303,6 +330,7 @@ void main() {
         expect(controller.dlss, isNotNull);
         expect(view.guideBufferOptions.enabled, isFalse);
         expect(controller.frameGenerator, isNull);
+        expect(LuminaRtxController.activeNvidiaFeatures.value, {LuminaRtxController.nvidiaDlssSuperResolution});
 
         controller.apply(
           const LuminaRayTracingSettings(),
@@ -312,6 +340,7 @@ void main() {
         );
         expect(controller.dlss, isNull);
         expect(view.dynamicResolutionOptions.upscaler, Upscaler.builtin);
+        expect(LuminaRtxController.activeNvidiaFeatures.value, isEmpty);
       } finally {
         controller.dispose();
         view.dispose();

@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:lumina_editor_data/lumina_editor.dart' show LuminaGraphicsDevices, LuminaRelease, LuminaRenderBackendInfo;
+import 'package:lumina_editor_data/lumina_editor.dart'
+    show LuminaGraphicsDevices, LuminaRelease, LuminaRenderBackendInfo, LuminaRtxController, ObservableAsValueListenable;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
@@ -36,6 +37,17 @@ void showAboutLuminaDialog(BuildContext context, {required String engineVersion}
     const DialogConfiguration(),
     builder: (c) => AboutLuminaDialog(engineVersion: engineVersion, onClose: () => Navigator.of(c).pop()),
   );
+}
+
+/// The About line naming the NVIDIA NGX features in use, in a fixed order.
+String nvidiaAttribution(Set<String> features) {
+  const order = [
+    LuminaRtxController.nvidiaDlssSuperResolution,
+    LuminaRtxController.nvidiaDlssRayReconstruction,
+    LuminaRtxController.nvidiaDlssFrameGeneration,
+  ];
+  final named = [for (final f in order) if (features.contains(f)) f];
+  return 'NVIDIA ${named.join(', ')}: powered by NVIDIA DLSS';
 }
 
 class AboutLuminaDialog extends StatelessWidget {
@@ -125,6 +137,23 @@ class AboutLuminaDialog extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+            ValueListenableBuilder<Set<String>>(
+              valueListenable: LuminaRtxController.activeNvidiaFeatures.asValueListenable(),
+              builder: (context, features, _) {
+                if (features.isEmpty) return const SizedBox.shrink();
+                return Padding(
+                  padding: const EdgeInsets.only(top: 10),
+                  child: Column(
+                    key: const ValueKey('about_nvidia_attribution'),
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(nvidiaAttribution(features), style: const TextStyle(fontSize: 12)),
+                      const Text('NVIDIA, RTX and DLSS are trademarks of NVIDIA Corporation.', style: muted),
+                    ],
+                  ),
+                );
+              },
             ),
           ],
         ),

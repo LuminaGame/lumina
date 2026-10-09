@@ -64,6 +64,7 @@ Filament's logo in the variant that reads on the current theme: the light-on-dar
 | Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
 | `rhiLabel` | `String rhiLabel(String? gpu)` | The renderer the status bar and About name: `RHI: Vulkan · <gpu>`, the GPU the editor renders on. |
+| `nvidiaAttribution` | `String nvidiaAttribution(Set<String> features)` | Kullanımdaki NVIDIA NGX özelliklerini (`LuminaRtxController.activeNvidiaFeatures`) adlandıran About satırı; About bunu NVIDIA'nın marka notuyla yalnızca biri çalışırken gösterir (anahtar `about_nvidia_attribution`). |
 | `showAboutLuminaDialog` | `void showAboutLuminaDialog(BuildContext context, {required String engineVersion})` | Help ▸ About: Lumina's version, then what renders it — Filament's logo, version, material version and licence, read from the linked library through package:lumina. |
 
 ## `lib/ui/features/main_editor/views/affected_actors_note.dart`

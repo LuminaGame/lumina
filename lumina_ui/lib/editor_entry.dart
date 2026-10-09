@@ -41,7 +41,8 @@ final ValueNotifier<ThemeMode> appThemeModeNotifier = ValueNotifier<ThemeMode>(T
 String? _dlssSdkDir() {
   final root = LuminaWorkspace.findSourceRoot();
   if (root == null) return null;
-  final dir = Directory(p.join(root, 'lumina', 'flutter_filament', 'build', 'dlss-sdk'));
+  // The source root holds the packages side by side (`<root>/flutter_filament`).
+  final dir = Directory(p.join(LuminaWorkspace.packageIn(root, 'flutter_filament'), 'build', 'dlss-sdk'));
   return dir.existsSync() ? dir.path : null;
 }
 

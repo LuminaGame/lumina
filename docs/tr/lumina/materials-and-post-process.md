@@ -200,10 +200,11 @@ Filament'in fragment pass portu (patch 0009) üzerinden bir view için FidelityF
 | Metot / Getter | İmza | Amaç ve Açıklama |
 | :--- | :--- | :--- |
 | `requestExtensions` | `static bool requestExtensions({String? dlssRuntimeDir})` | Bundan sonra oluşturulan motorlardan ray query uzantılarını ve NGX çalışma zamanı varsa DLSS ile DLSS Frame Generation uzantılarını ister. Motor var olmadan önce çağrılır. |
+| `activeNvidiaFeatures` | `static ObservableValue<Set<String>> activeNvidiaFeatures` | Şu an herhangi bir view'da çalışan NGX özellikleri (`DLSS Super Resolution`, `DLSS Ray Reconstruction`, `DLSS Frame Generation`); kullanımdayken NVIDIA atfı göstermek için. |
 | `rayReconstructionSupported`, `maxDlssGeneratedFrames` | `static bool rayReconstructionSupported(FilamentEngine engine)`, `static int maxDlssGeneratedFrames(FilamentEngine engine)` | NGX'in motorun GPU'sunda Ray Reconstruction çalıştırıp çalıştırmadığı ve DLSS Frame Generation'ın çizilen kare başına üretebildiği en çok kare (yoksa 0); motor başına bir kez sorulur. |
 | `dlssAvailable` | `static bool get dlssAvailable` | NGX çalışma zamanı bulundu ve bir NVIDIA Vulkan aygıtı var. |
 | `rayTracingSupported` | `bool get rayTracingSupported` | Motor ışın izliyor. |
-| `apply` | `void apply(LuminaRayTracingSettings rayTracing, LuminaDlssSettings dlss, {LuminaFsr3Settings fsr3 = const LuminaFsr3Settings(), LuminaDlssFrameGenerationSettings? dlssFrameGeneration, required TemporalAntiAliasingOptions baseTaa, required DynamicResolutionOptions baseDynamicResolution})` | İkisini de uygular; değişiklik yoksa ucuzdur. DLSS kapanınca temel seçenekler geri yüklenir (DLSS'in kendisi hareket vektörlü TAA ister). |
+| `apply` | `void apply(LuminaRayTracingSettings rayTracing, LuminaDlssSettings dlss, {LuminaFsr3Settings fsr3 = const LuminaFsr3Settings(), LuminaDlssFrameGenerationSettings dlssFrameGeneration = const LuminaDlssFrameGenerationSettings(), required TemporalAntiAliasingOptions baseTaa, required DynamicResolutionOptions baseDynamicResolution})` | İkisini de uygular; değişiklik yoksa ucuzdur. DLSS kapanınca temel seçenekler geri yüklenir (DLSS'in kendisi hareket vektörlü TAA ister). |
 | `dlss`, `appliedRayTracing`, `appliedDlss` | | Canlı DLSS örneği ve son uygulanan ayarlar. |
 | `rayReconstruction`, `frameGenerator`, `appliedFrameGeneration` | | Canlı `DlssRayReconstruction` (view'ın rehber tamponları açıkken) ve `DlssFrameGenerator` ile son uygulanan kare üretimi ayarları. |
 | `appliedFsr3`, `fsr3Active`, `fsr3Supported` | | Son uygulanan FSR3 ayarları, FSR3'ün şu an view'da olup olmadığı (açık, hareket vektörleri var, DLSS yok) ve motorun gereken hareket vektörlerini çizip çizmediği. |
@@ -212,7 +213,7 @@ Filament'in fragment pass portu (patch 0009) üzerinden bir view için FidelityF
 
 ### `class LuminaDlssFrameGenerationSettings`
 
-`generatedFrames` (1–5): DLSS Frame Generation'ın çizilen kare başına ürettiği kare (1 = 2x, 3 = 4x). `apply`'a `null` verilirse kapanır. Üretilen kareler yerel swap chain yolunda çizilen karelerin arasında sunulur; Flutter texture viewport'u yalnızca çizilen kareleri alır.
+`generatedFrames` (0–5): DLSS Frame Generation'ın çizilen kare başına ürettiği kare (0 kapalı, varsayılan; 1 = 2x, 3 = 4x); `enabled`; JSON anahtarı `generated_frames`. Üretilen kareler yerel swap chain yolunda çizilen karelerin arasında sunulur; Flutter texture viewport'u yalnızca çizilen kareleri alır.
 
 ## `lib/src/post_process/rendering_features.dart`
 

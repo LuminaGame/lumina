@@ -583,6 +583,7 @@ mixin _EditorCameraAndViewport on _EditorViewModelState {
   LuminaRayTracingSettings get rayTracingSettings => _quality.rayTracing;
   LuminaDlssSettings get dlssSettings => _quality.dlss;
   LuminaFsr3Settings get fsr3Settings => _quality.fsr3;
+  LuminaDlssFrameGenerationSettings get dlssFrameGenerationSettings => _quality.dlssFrameGeneration;
   bool get vsyncEnabled => _project.settings.vsyncEnabled;
 
   /// Points the viewport camera at the whole level and pulls back far enough
@@ -744,6 +745,12 @@ mixin _EditorCameraAndViewport on _EditorViewModelState {
   );
 
   void setDlssSettings(LuminaDlssSettings settings) => _setQuality(_quality.copyWith(dlss: settings), 'DLSS $settings');
+
+  /// DLSS Frame Generation: 0 (off) to 5 generated frames per rendered frame.
+  void setDlssFrameGeneration(int generatedFrames) => _setQuality(
+    _quality.copyWith(dlssFrameGeneration: LuminaDlssFrameGenerationSettings(generatedFrames: generatedFrames.clamp(0, 5))),
+    'DLSS frame generation ${generatedFrames <= 0 ? 'off' : '${generatedFrames + 1}x'}',
+  );
 
   /// The FSR3 HUD button: FSR3 on or off, keeping the preset and sharpness.
   void toggleFsr3() => _setQuality(

@@ -1,5 +1,5 @@
 import 'package:flutter_filament/filament.dart';
-import 'package:lumina_core/lumina_core.dart' show EngineLoggerService;
+import 'package:lumina_core/lumina_core.dart' show EngineLoggerService, ObservableValue;
 
 import 'package:lumina/src/post_process/fsr3_settings.dart';
 
@@ -195,6 +195,30 @@ class LuminaRtxController {
   (int, int)? _dlssOutputSize;
   final Set<int> _rayTracedSuns = <int>{};
 
+  static final Set<LuminaRtxController> _live = <LuminaRtxController>{};
+
+  /// The NVIDIA NGX features running on any view right now
+  /// ([nvidiaDlssSuperResolution], [nvidiaDlssRayReconstruction],
+  /// [nvidiaDlssFrameGeneration]): what an About screen attributes to NVIDIA
+  /// while it is in use. Updated by every [apply], [invalidate] and [dispose].
+  static final ObservableValue<Set<String>> activeNvidiaFeatures = ObservableValue<Set<String>>(const <String>{});
+
+  static const String nvidiaDlssSuperResolution = 'DLSS Super Resolution';
+  static const String nvidiaDlssRayReconstruction = 'DLSS Ray Reconstruction';
+  static const String nvidiaDlssFrameGeneration = 'DLSS Frame Generation';
+
+  static void _publishNvidiaFeatures() {
+    final features = <String>{
+      if (_live.any((c) => c._dlss != null)) nvidiaDlssSuperResolution,
+      if (_live.any((c) => c._rayReconstruction != null)) nvidiaDlssRayReconstruction,
+      if (_live.any((c) => c._frameGenerator != null)) nvidiaDlssFrameGeneration,
+    };
+    final current = activeNvidiaFeatures.value;
+    if (features.length != current.length || !features.containsAll(current)) {
+      activeNvidiaFeatures.value = Set<String>.unmodifiable(features);
+    }
+  }
+
   /// Asks the engines created from now on for the Vulkan ray query extensions
   /// and, when the NGX runtime is present, the DLSS ones. [dlssRuntimeDir] names
   /// the fetched NGX SDK (or the folder of its runtime) to look in first.
@@ -308,6 +332,12 @@ class LuminaRtxController {
     _applyDlss(dlss, baseTaa: baseTaa, baseDynamicResolution: baseDynamicResolution);
     _applyFsr3(fsr3, baseTaa: baseTaa, baseDynamicResolution: baseDynamicResolution);
     _applyFrameGeneration(dlssFrameGeneration);
+    if (_dlss != null || _rayReconstruction != null || _frameGenerator != null) {
+      _live.add(this);
+    } else {
+      _live.remove(this);
+    }
+    _publishNvidiaFeatures();
   }
 
   void _applyFrameGeneration(LuminaDlssFrameGenerationSettings settings) {
@@ -460,6 +490,8 @@ class LuminaRtxController {
     _appliedRayTracing = null;
     _appliedDlss = null;
     _appliedFsr3 = null;
+    _live.remove(this);
+    _publishNvidiaFeatures();
   }
 
   /// Releases the DLSS instance; the view keeps the last ray tracing settings.
@@ -471,5 +503,7 @@ class LuminaRtxController {
     _frameGenerator?.destroy();
     _frameGenerator = null;
     _dlssOutputSize = null;
+    _live.remove(this);
+    _publishNvidiaFeatures();
   }
 }

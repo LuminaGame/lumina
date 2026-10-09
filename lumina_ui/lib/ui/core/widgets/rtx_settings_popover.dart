@@ -1,5 +1,5 @@
 import 'package:flutter_filament/flutter_filament.dart' show DlssQuality;
-import 'package:lumina_editor_data/lumina_editor.dart' show LuminaFsr3Quality;
+import 'package:lumina_editor_data/lumina_editor.dart' show LuminaDlssSettings, LuminaFsr3Quality;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
@@ -21,12 +21,22 @@ class RtxSettingsPopover extends StatelessWidget {
   /// Whether the engine behind the viewport can do what this popover sets.
   final bool supported;
 
+  /// The engine runs DLSS Ray Reconstruction (the `nvngx_dlssd` runtime on an
+  /// RTX GPU).
+  final bool rayReconstructionSupported;
+
+  /// The most frames DLSS Frame Generation generates per rendered frame on
+  /// this GPU; 0 without it.
+  final int maxDlssGeneratedFrames;
+
   const RtxSettingsPopover({
     super.key,
     required this.viewModel,
     required this.kind,
     required this.onClose,
     required this.supported,
+    this.rayReconstructionSupported = false,
+    this.maxDlssGeneratedFrames = 0,
   });
 
   @override
@@ -35,7 +45,7 @@ class RtxSettingsPopover extends StatelessWidget {
       listenable: viewModel,
       builder: (context, _) {
         final title = switch (kind) {
-          RtxSettingsKind.dlss => 'DLSS SUPER RESOLUTION',
+          RtxSettingsKind.dlss => viewModel.dlssSettings.rayReconstruction ? 'DLSS RAY RECONSTRUCTION' : 'DLSS SUPER RESOLUTION',
           RtxSettingsKind.fsr3 => 'FSR3 UPSCALING',
           RtxSettingsKind.rayTracing => 'RTX RAY TRACING',
         };
@@ -92,7 +102,11 @@ class RtxSettingsPopover extends StatelessWidget {
                       const SizedBox(height: 10),
                     ],
                     switch (kind) {
-                      RtxSettingsKind.dlss => _DlssBody(viewModel: viewModel),
+                      RtxSettingsKind.dlss => _DlssBody(
+                          viewModel: viewModel,
+                          rayReconstructionSupported: rayReconstructionSupported,
+                          maxDlssGeneratedFrames: maxDlssGeneratedFrames,
+                        ),
                       RtxSettingsKind.fsr3 => _Fsr3Body(viewModel: viewModel),
                       RtxSettingsKind.rayTracing => _RayTracingBody(viewModel: viewModel),
                     },
@@ -121,7 +135,9 @@ class RtxSettingsPopover extends StatelessWidget {
 
 class _DlssBody extends StatelessWidget {
   final EditorViewModel viewModel;
-  const _DlssBody({required this.viewModel});
+  final bool rayReconstructionSupported;
+  final int maxDlssGeneratedFrames;
+  const _DlssBody({required this.viewModel, required this.rayReconstructionSupported, required this.maxDlssGeneratedFrames});
 
   @override
   Widget build(BuildContext context) {
@@ -172,6 +188,93 @@ class _DlssBody extends StatelessWidget {
         const Text(
           'Ultra Performance renders at about a third of the viewport per axis, Balanced at 58%, Quality at 67%; DLAA keeps the full resolution and only anti-aliases.',
           style: TextStyle(fontSize: 9, color: EditorColors.mutedForeground),
+        ),
+        const SizedBox(height: 10),
+        _rayReconstruction(settings),
+        const SizedBox(height: 10),
+        _frameGeneration(),
+      ],
+    );
+  }
+
+  /// Why Ray Reconstruction cannot be switched on, or null when it can.
+  String? get _rayReconstructionBlocker {
+    if (!rayReconstructionSupported) {
+      return 'Needs the NGX Ray Reconstruction runtime (nvngx_dlssd, fetched with the DLSS SDK) on an NVIDIA RTX GPU.';
+    }
+    if (!viewModel.rayTracingSettings.enabled) return 'Turn RTX ray tracing on first: Ray Reconstruction denoises its lighting.';
+    return null;
+  }
+
+  Widget _rayReconstruction(LuminaDlssSettings settings) {
+    final blocker = _rayReconstructionBlocker;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _ToggleRow(
+          key: const ValueKey('dlss_ray_reconstruction'),
+          label: 'Ray Reconstruction',
+          help: 'DLSS upscaling that also denoises the ray-traced lighting (ReSTIR, shadows) with the transformer model, fed by the guide buffers.',
+          value: settings.rayReconstruction,
+          enabled: blocker == null || settings.rayReconstruction,
+          onChanged: (v) => viewModel.setDlssSettings(settings.copyWith(rayReconstruction: v, enabled: v ? true : null)),
+        ),
+        if (blocker != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            blocker,
+            key: const ValueKey('dlss_ray_reconstruction_blocker'),
+            style: const TextStyle(fontSize: 9, color: EditorColors.mutedForeground),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _frameGeneration() {
+    final current = viewModel.dlssFrameGenerationSettings.generatedFrames;
+    final available = maxDlssGeneratedFrames > 0;
+    // Off, then 2x up to the GPU's limit (a saved choice above it stays visible).
+    final top = available ? maxDlssGeneratedFrames : 0;
+    final options = [0, for (var n = 1; n <= (current > top ? current : top); n++) n];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _SectionLabel('FRAME GENERATION'),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            for (final n in options)
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 1.5),
+                  child: Button(
+                    key: ValueKey('dlss_frame_generation_$n'),
+                    style: current == n ? const ButtonStyle.primary() : const ButtonStyle.secondary(),
+                    enabled: n == 0 || (available && n <= maxDlssGeneratedFrames),
+                    onPressed: () => viewModel.setDlssFrameGeneration(n),
+                    child: Text(
+                      n == 0 ? 'Off' : '${n + 1}x',
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                        color: current == n ? Colors.black : EditorColors.foreground,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Text(
+          available
+              ? 'DLSS generates frames between the rendered ones (up to ${maxDlssGeneratedFrames + 1}x on this GPU). '
+                  'The viewport is composited by Flutter, so it shows the generated frame instead of more frames; '
+                  'a packaged game presents them all.'
+              : 'DLSS Frame Generation needs the NGX runtime (nvngx_dlssg, fetched with the DLSS SDK) on an NVIDIA RTX 40 or 50 class GPU.',
+          key: const ValueKey('dlss_frame_generation_note'),
+          style: const TextStyle(fontSize: 9, color: EditorColors.mutedForeground),
         ),
       ],
     );
@@ -330,8 +433,16 @@ class _ToggleRow extends StatelessWidget {
   final String help;
   final bool value;
   final ValueChanged<bool> onChanged;
+  final bool enabled;
 
-  const _ToggleRow({super.key, required this.label, required this.help, required this.value, required this.onChanged});
+  const _ToggleRow({
+    super.key,
+    required this.label,
+    required this.help,
+    required this.value,
+    required this.onChanged,
+    this.enabled = true,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -349,7 +460,7 @@ class _ToggleRow extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 8),
-        Switch(value: value, onChanged: onChanged),
+        Switch(value: value, onChanged: enabled ? onChanged : null),
       ],
     );
   }

@@ -390,13 +390,15 @@ The axis letter (12 px column by default), the value and, when the value is not 
 
 ### `class RtxSettingsPopover`
 
-The settings behind the viewport's DLSS, FSR3 and RTX HUD buttons (next to the camera speed): the arrow of each button opens this popover for its kind. The FSR3 popover switches FSR3 upscaling, picks the quality preset (Ultra Performance to Native AA), the sharpness and frame generation (keys `fsr3_enabled`, `fsr3_quality_<name>`, `fsr3_sharpness`, `fsr3_frame_generation`). The DLSS popover switches DLSS Super Resolution and picks the NGX quality mode (Ultra Performance, Performance, Balanced, Quality, DLAA); the RTX popover switches ray tracing, ray-traced sun shadows and ReSTIR direct lighting and tunes the ReSTIR candidate and spatial sample counts. Every control changes the editor's per-user `EditorQualitySettings` through the view model, which the live viewport re-applies at once through `LuminaRtxController`. When the engine cannot do it (`supported` false) the header reads UNAVAILABLE and the choices are still kept.
+The settings behind the viewport's DLSS, FSR3 and RTX HUD buttons (next to the camera speed): the arrow of each button opens this popover for its kind. The FSR3 popover switches FSR3 upscaling, picks the quality preset (Ultra Performance to Native AA), the sharpness and frame generation (keys `fsr3_enabled`, `fsr3_quality_<name>`, `fsr3_sharpness`, `fsr3_frame_generation`). The DLSS popover switches DLSS Super Resolution and picks the NGX quality mode (Ultra Performance, Performance, Balanced, Quality, DLAA), switches **Ray Reconstruction** (`dlss_ray_reconstruction`: DLSS that also denoises the ray-traced lighting; disabled with the reason until RTX ray tracing is on and the `nvngx_dlssd` runtime runs, and switching it on turns DLSS on) and picks **Frame Generation** (`dlss_frame_generation_<n>`: Off, then 2x up to the GPU's limit, 6x on RTX 50 class GPUs; the note says that the Flutter-composited viewport shows the generated frame rather than more frames); the RTX popover switches ray tracing, ray-traced sun shadows and ReSTIR direct lighting and tunes the ReSTIR candidate and spatial sample counts. Every control changes the editor's per-user `EditorQualitySettings` through the view model, which the live viewport re-applies at once through `LuminaRtxController`. When the engine cannot do it (`supported` false) the header reads UNAVAILABLE and the choices are still kept.
 
 | Method / Getter | Signature | Purpose & Description |
 | :--- | :--- | :--- |
 | `viewModel` | `EditorViewModel viewModel` | The editor view model whose quality settings the controls change. |
 | `kind` | `RtxSettingsKind kind` | DLSS, FSR3 or ray tracing. |
 | `supported` | `bool supported` | Whether the live engine can do what this popover sets. |
+| `rayReconstructionSupported` | `bool rayReconstructionSupported` | The engine runs DLSS Ray Reconstruction (`LuminaRtxController.rayReconstructionSupported`). Default false. |
+| `maxDlssGeneratedFrames` | `int maxDlssGeneratedFrames` | The most frames DLSS Frame Generation generates per rendered frame on this GPU (`LuminaRtxController.maxDlssGeneratedFrames`); 0 offers only Off. |
 | `onClose` | `VoidCallback onClose` | Closes the popover. |
 
 ## `lib/ui/core/services/crash_report.dart`

@@ -354,6 +354,7 @@ How the **editor viewport** renders — an editor scalability setting, which is 
 | `ssao` | `bool ssao` | Screen-space ambient occlusion. |
 | `bloom` | `bool bloom` | Bloom. |
 | `screenSpaceReflections` | `bool screenSpaceReflections` | Screen-space reflections. |
+| `dlss`, `dlssFrameGeneration` | `LuminaDlssSettings dlss`, `LuminaDlssFrameGenerationSettings dlssFrameGeneration` | DLSS of the viewport (Super Resolution, or Ray Reconstruction with `dlss.rayReconstruction`) and DLSS Frame Generation (0–5 generated frames); JSON keys `dlss` (with `ray_reconstruction`) and `dlss_frame_generation`; older entries load with both off. The view model sets them with `setDlssSettings` and `setDlssFrameGeneration(int generatedFrames)`. |
 | `profile` | `LuminaScalabilityProfile get profile` | The engine profile this preset and resolution scale describe. |
 | `applyFeatures` | `LuminaPostProcessSettings applyFeatures(LuminaPostProcessSettings base)` | [base] with this settings object's feature flags applied. Used for the post-process passes, which live on the settings rather than the profile. |
 | `toMap` | `Map<String, dynamic> toMap()` | Executes `toMap` operation. |

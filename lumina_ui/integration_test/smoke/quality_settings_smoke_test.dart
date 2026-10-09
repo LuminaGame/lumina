@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:flutter_filament/flutter_filament.dart' show FilamentScene, FilamentView, QualityLevel, TaaAlgorithm;
+import 'package:flutter_filament/flutter_filament.dart' show DlssFrameGeneration, DlssRayReconstruction, FilamentScene, FilamentView, GuideBuffers, QualityLevel, TaaAlgorithm;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:integration_test/integration_test.dart';
@@ -10,6 +10,7 @@ import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/testing.dart';
 import 'package:lumina_ui/ui/core/widgets/quality_settings_popover.dart';
 import 'package:lumina_ui/ui/core/widgets/rtx_settings_popover.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/light_actor_properties.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/main_editor_view.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/viewport_widget.dart';
@@ -196,7 +197,9 @@ void main() {
     try {
       // As the editor does at startup: before the viewport creates the shared engine.
       final sourceRoot = LuminaWorkspace.findSourceRoot();
-      final sdk = sourceRoot == null ? null : Directory('$sourceRoot/lumina/flutter_filament/build/dlss-sdk');
+      final sdk = sourceRoot == null
+          ? null
+          : Directory('${LuminaWorkspace.packageIn(sourceRoot, 'flutter_filament')}/build/dlss-sdk');
       LuminaRtxController.requestExtensions(dlssRuntimeDir: sdk != null && sdk.existsSync() ? sdk.path : null);
       final vm = EditorViewModel(initialProject: project, projectLocation: tempProjectsDir.path);
       await tester.runAsync(() => vm.ensureDefaultLevelAssets());
@@ -345,6 +348,169 @@ void main() {
       expect(reopened.dlssSettings.quality.name, 'maxQuality');
       reopened.dispose();
       rec.save(name, usedAssets: usedAssets);
+    } finally {
+      if (tempProjectsDir.existsSync()) tempProjectsDir.deleteSync(recursive: true);
+    }
+  });
+
+  testWidgets('RTX Smoke: the RTX popover turns on Ray Reconstruction and frame generation', (tester) async {
+    const neuralAssets = [
+      'Props/Barrels/fuel_barrel_red.glb',
+      'Props/AC_units/ac_unit_a_300x300.glb',
+      'Props/Banana Bunch/banana_bunch_long.glb',
+    ];
+    for (final a in neuralAssets) {
+      if (!File('${SmokeArtifacts.testAssetsDir.path}/$a').existsSync()) return markTestSkipped('test-assets missing $a');
+    }
+    final tempProjectsDir = Directory.systemTemp.createTempSync('lumina_smoke_rtx_neural_');
+    final pDir = Directory('${tempProjectsDir.path}/SmokeNeural')..createSync(recursive: true);
+    const project = LuminaProject(projectName: 'SmokeNeural', activeLevel: 'contents/levels/L_Main.lmas');
+    File('${pDir.path}/SmokeNeural.lmproject').writeAsStringSync(jsonEncode(project.toMap()));
+    const name = 'RTX Smoke: the RTX popover turns on Ray Reconstruction and frame generation';
+
+    try {
+      final sourceRoot = LuminaWorkspace.findSourceRoot();
+      // The fetched NGX runtimes: the workspace's, else the sibling package's.
+      final sdk = [
+        if (sourceRoot != null) Directory('${LuminaWorkspace.packageIn(sourceRoot, 'flutter_filament')}/build/dlss-sdk'),
+        Directory('${Directory.current.path}/../flutter_filament/build/dlss-sdk'),
+      ].where((d) => d.existsSync()).firstOrNull;
+      debugPrint('[rtx_neural_smoke] source root: $sourceRoot, NGX runtimes: ${sdk?.absolute.path}');
+      LuminaRtxController.requestExtensions(dlssRuntimeDir: sdk?.absolute.path);
+      final vm = EditorViewModel(initialProject: project, projectLocation: tempProjectsDir.path);
+      await tester.runAsync(() => vm.ensureDefaultLevelAssets());
+      for (final (i, a) in neuralAssets.indexed) {
+        final src = File('${SmokeArtifacts.testAssetsDir.path}/$a');
+        await tester.runAsync(() => vm.processImportPipeline(sourceFilePath: src.path));
+        final stem = a.split('/').last.replaceAll('.glb', '');
+        final imported = vm.realAssets.firstWhere((x) => x.fileName.startsWith(stem));
+        // The AC unit (3 m) stands behind the barrel and the bananas.
+        const spots = [
+          [-110.0, -90.0, 0.0],
+          [0.0, 260.0, 0.0],
+          [120.0, -90.0, 0.0],
+        ];
+        await tester.runAsync(() => vm.spawnActorFromAsset(imported, location: spots[i]));
+      }
+      // Point lights for ReSTIR: the lighting Ray Reconstruction denoises.
+      for (final (pos, color) in const [
+        ([0.0, -260.0, 180.0], '#FFD8A8'),
+        ([-260.0, 40.0, 120.0], '#7FB2FF'),
+        ([260.0, 40.0, 120.0], '#FF8A6A'),
+      ]) {
+        vm.spawnNewActor('PointLight');
+        final lamp = vm.actors.last;
+        vm.selectActorById(lamp.id);
+        vm.updateActorLocation(pos);
+        final component = LightActorProperties.componentOf(lamp)!;
+        vm.updateComponentPropertyWithTransaction(lamp.id, component.id, 'intensity', 400000.0, isCommit: true);
+        vm.updateComponentPropertyWithTransaction(lamp.id, component.id, 'colorHex', color, isCommit: true);
+      }
+      vm.selectActorById(null);
+
+      tester.view.physicalSize = const Size(1600, 1000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      final boundaryKey = GlobalKey();
+      await tester.pumpWidget(
+        RepaintBoundary(
+          key: boundaryKey,
+          child: ShadcnApp(theme: luminaEditorTheme(), home: MainEditorView(viewModel: vm)),
+        ),
+      );
+      Future<void> settle([int frames = 20]) async {
+        for (var i = 0; i < frames; i++) {
+          await tester.pump(const Duration(milliseconds: 16));
+          await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 16)));
+        }
+      }
+
+      await settle(40);
+      vm.frameLevelBounds();
+      final rec = SmokeRecorder(tester, boundary: find.byKey(boundaryKey));
+      await rec.hold(const Duration(seconds: 2));
+      final viewportFinder = find.byType(ViewportWidget);
+      final dynamic viewportState = viewportFinder.evaluate().isEmpty ? null : tester.state(viewportFinder);
+      final view = viewportState?.nativeViewForTest as FilamentView?;
+      LuminaRtxController? controller() => viewportState?.rtxControllerForTest as LuminaRtxController?;
+      final engine = controller()?.engine;
+      final rrSupported = engine != null && LuminaRtxController.rayReconstructionSupported(engine);
+      final maxFrames = engine == null ? 0 : LuminaRtxController.maxDlssGeneratedFrames(engine);
+      debugPrint('[rtx_neural_smoke] live view: ${view != null}, engine: ${engine != null}, DLSS: ${LuminaRtxController.dlssAvailable}, '
+          'RR: $rrSupported (${DlssRayReconstruction.available}, ${DlssRayReconstruction.lastErrorMessage}), '
+          'max generated frames: $maxFrames (${DlssFrameGeneration.available}, ${DlssFrameGeneration.lastErrorMessage})');
+
+      Future<void> shot(String label) async {
+        final png = await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey));
+        SmokeArtifacts.saveScreenshot('$name ($label)', png, usedAssets: neuralAssets);
+      }
+
+      // Ray tracing + ReSTIR from the RTX popover.
+      await tester.tap(find.byKey(const ValueKey('hud_rtx_settings')));
+      await settle(10);
+      await tester.tap(find.descendant(of: find.byKey(const ValueKey('rtx_restir')), matching: find.byType(Switch)));
+      await tester.tap(find.descendant(of: find.byKey(const ValueKey('rtx_enabled')), matching: find.byType(Switch)));
+      await settle(5);
+      await tester.tap(find.byKey(const ValueKey('rtx_popover_close')));
+      await settle(30);
+      expect(vm.rayTracingSettings.enabled, isTrue);
+      expect(vm.rayTracingSettings.restir, isTrue);
+      await rec.hold(const Duration(seconds: 2));
+      await shot('ray tracing + restir');
+
+      // DLSS popover: Ray Reconstruction on, 2x frame generation.
+      await tester.tap(find.byKey(const ValueKey('hud_dlss_settings')));
+      await settle(10);
+      expect(find.byKey(const ValueKey('dlss_ray_reconstruction')), findsOneWidget);
+      if (!rrSupported || maxFrames == 0) {
+        await shot('dlss popover without NGX');
+        await tester.tap(find.byKey(const ValueKey('rtx_popover_close')));
+        rec.save(name, usedAssets: neuralAssets);
+        return markTestSkipped('needs the NGX Ray Reconstruction and Frame Generation runtimes on an RTX GPU');
+      }
+      await tester.tap(find.descendant(of: find.byKey(const ValueKey('dlss_ray_reconstruction')), matching: find.byType(Switch)));
+      await settle(5);
+      await tester.tap(find.byKey(const ValueKey('dlss_frame_generation_1')));
+      await settle(5);
+      await rec.hold(const Duration(seconds: 1));
+      await shot('dlss popover');
+      await tester.tap(find.byKey(const ValueKey('rtx_popover_close')));
+      await settle(30);
+      expect(vm.dlssSettings.enabled, isTrue);
+      expect(vm.dlssSettings.rayReconstruction, isTrue);
+      expect(vm.dlssFrameGenerationSettings.generatedFrames, 1);
+
+      // Orbit while it runs, so the video shows RR on moving lighting.
+      for (var i = 0; i < 6; i++) {
+        vm.frameLevelBounds();
+        await rec.hold(const Duration(seconds: 1));
+      }
+      expect(controller()?.rayReconstruction, isNotNull, reason: 'Ray Reconstruction is on the live view');
+      expect(view?.guideBufferOptions.enabled, isTrue, reason: 'it is fed by the guide buffers');
+      expect(controller()?.frameGenerator?.generatedFrames, 1, reason: 'the frame generator is on the live view');
+      expect(controller()!.frameGenerator!.frameCount, greaterThan(0), reason: 'frames were generated');
+      expect(LuminaRtxController.activeNvidiaFeatures.value,
+          containsAll([LuminaRtxController.nvidiaDlssRayReconstruction, LuminaRtxController.nvidiaDlssFrameGeneration]));
+      expect(find.textContaining('RR'), findsWidgets, reason: 'the HUD names Ray Reconstruction');
+      await shot('ray reconstruction + frame generation 2x');
+
+      // Off again from the popover.
+      await tester.tap(find.byKey(const ValueKey('hud_dlss_settings')));
+      await settle(10);
+      await tester.tap(find.byKey(const ValueKey('dlss_frame_generation_0')));
+      await tester.tap(find.descendant(of: find.byKey(const ValueKey('dlss_ray_reconstruction')), matching: find.byType(Switch)));
+      await settle(5);
+      await tester.tap(find.byKey(const ValueKey('rtx_popover_close')));
+      await settle(30);
+      expect(controller()?.rayReconstruction, isNull);
+      expect(controller()?.frameGenerator, isNull);
+      await rec.hold(const Duration(seconds: 2));
+
+      await vm.flushQualitySettings();
+      rec.save(name, usedAssets: neuralAssets);
     } finally {
       if (tempProjectsDir.existsSync()) tempProjectsDir.deleteSync(recursive: true);
     }

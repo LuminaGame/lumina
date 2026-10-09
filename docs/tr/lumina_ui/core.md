@@ -390,13 +390,15 @@ Eksen harfi (varsayılan 12 px sütun), değer ve değer varsayılanından farkl
 
 ### `class RtxSettingsPopover`
 
-Viewport'un DLSS, FSR3 ve RTX HUD düğmelerinin (kamera hızının yanında) arkasındaki ayarlar: her düğmenin oku bu popover'ı kendi türü için açar. FSR3 popover'ı FSR3 büyütmeyi açıp kapatır, kalite ön ayarını (Ultra Performance'tan Native AA'ya), keskinliği ve kare üretimini seçer (anahtarlar `fsr3_enabled`, `fsr3_quality_<name>`, `fsr3_sharpness`, `fsr3_frame_generation`). DLSS popover'ı DLSS Super Resolution'ı açıp kapatır ve NGX kalite modunu seçer (Ultra Performance, Performance, Balanced, Quality, DLAA); RTX popover'ı ışın izlemeyi, ışın izlemeli güneş gölgelerini ve ReSTIR doğrudan aydınlatmayı açıp kapatır, ReSTIR aday ve uzamsal örnek sayılarını ayarlar. Her denetim editörün kullanıcı başına `EditorQualitySettings` değerini view model üzerinden değiştirir; canlı viewport bunu `LuminaRtxController` ile hemen uygular. Motor bunu yapamıyorsa (`supported` false) başlık UNAVAILABLE yazar ve seçimler yine saklanır.
+Viewport'un DLSS, FSR3 ve RTX HUD düğmelerinin (kamera hızının yanında) arkasındaki ayarlar: her düğmenin oku bu popover'ı kendi türü için açar. FSR3 popover'ı FSR3 büyütmeyi açıp kapatır, kalite ön ayarını (Ultra Performance'tan Native AA'ya), keskinliği ve kare üretimini seçer (anahtarlar `fsr3_enabled`, `fsr3_quality_<name>`, `fsr3_sharpness`, `fsr3_frame_generation`). DLSS popover'ı DLSS Super Resolution'ı açıp kapatır ve NGX kalite modunu seçer (Ultra Performance, Performance, Balanced, Quality, DLAA), **Ray Reconstruction**'ı açıp kapatır (`dlss_ray_reconstruction`: ışın izlemeli aydınlatmanın gürültüsünü de temizleyen DLSS; RTX ışın izleme açılana ve `nvngx_dlssd` runtime'ı çalışana kadar sebebiyle birlikte devre dışıdır, açılınca DLSS'i de açar) ve **Frame Generation**'ı seçer (`dlss_frame_generation_<n>`: Off, sonra GPU'nun sınırına kadar 2x, RTX 50 sınıfında 6x; not, Flutter'ın birleştirdiği viewport'un daha çok kare değil üretilen kareyi gösterdiğini söyler); RTX popover'ı ışın izlemeyi, ışın izlemeli güneş gölgelerini ve ReSTIR doğrudan aydınlatmayı açıp kapatır, ReSTIR aday ve uzamsal örnek sayılarını ayarlar. Her denetim editörün kullanıcı başına `EditorQualitySettings` değerini view model üzerinden değiştirir; canlı viewport bunu `LuminaRtxController` ile hemen uygular. Motor bunu yapamıyorsa (`supported` false) başlık UNAVAILABLE yazar ve seçimler yine saklanır.
 
 | Metot / Getter | İmza | Amaç ve Açıklama |
 | :--- | :--- | :--- |
 | `viewModel` | `EditorViewModel viewModel` | Denetimlerin kalite ayarlarını değiştirdiği editör view model'i. |
 | `kind` | `RtxSettingsKind kind` | DLSS, FSR3 ya da ışın izleme. |
 | `supported` | `bool supported` | Canlı motorun bu popover'ın ayarladığını yapıp yapamadığı. |
+| `rayReconstructionSupported` | `bool rayReconstructionSupported` | Motor DLSS Ray Reconstruction çalıştırıyor (`LuminaRtxController.rayReconstructionSupported`). Varsayılan false. |
+| `maxDlssGeneratedFrames` | `int maxDlssGeneratedFrames` | DLSS Frame Generation'ın bu GPU'da çizilen kare başına üretebildiği en çok kare (`LuminaRtxController.maxDlssGeneratedFrames`); 0 yalnızca Off sunar. |
 | `onClose` | `VoidCallback onClose` | Popover'ı kapatır. |
 
 ## `lib/ui/core/services/crash_report.dart`
