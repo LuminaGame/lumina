@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- `tool/dlss/check_neural_rendering.dart` reports whether the pinned DLSS SDK (or, with `--remote`, NVIDIA/DLSS and the
+  latest Streamline release) offers a Neural Rendering (DLSS 5) feature; a readiness test checks that the external
+  post pass gives such a pass the HDR frame, output-resolution motion and history.
 - DLSS Frame Generation and Multi Frame Generation (prebuilt `1.77.2-lumina.11`, Filament patch `0013`): NGX `dlssg`
   driven directly on Vulkan. `DlssFrameGenerator` registers an external frame generator
   (`View::setExternalFrameGenerator`); `Renderer::endFrame` presents up to five generated frames before each rendered

@@ -14,6 +14,7 @@ NVIDIA DLSS Super Resolution behind Filament's dynamic resolution: the view rend
 - [Quality modes](#quality-modes)
 - [Ray Reconstruction](#ray-reconstruction)
 - [Frame Generation](#frame-generation)
+- [Neural rendering (DLSS 5)](#neural-rendering-dlss-5)
 - [Limits](#limits)
 
 ## How it fits Filament
@@ -143,6 +144,15 @@ DLSS Frame Generation (NGX feature `dlssg`, `nvngx_dlssg`) generates frames betw
 - **Inspecting** (`DlssFrameInterpolator.create(engine:, view:)`): runs the network as an external post pass and shows the generated frame in place of the rendered one, so its quality can be measured.
 - **C bridge** (`src/dlss_fg_c.h`): `filament_dlss_fg_available`, `_request_extensions`, `_clear_extension_request`, `_probe`, `_create`, `_set_generated_frames`, `_frame_count`, `_last_result`, `_last_gpu_time_ns`, `_destroy`, the `_interpolator_*` functions and `_last_error`; `filament_renderer_get_present_times` in `src/renderer_c.h`.
 - **Measured on the RTX PRO 2000** (SDK 310.9.1, 1024×768): `MultiFrameCountMax` 5 (up to 6x); 2x, 4x and 6x present exactly 2, 4 and 6 frames per rendered frame; NGX takes 1.6 ms (2x), 3.6 ms (4x) and 5.4 ms (6x) of GPU time per rendered frame. A generated frame of a sliding prop is 36.9 dB from the rendered true midpoint (24.5 dB from either neighbour). Without vsync no two presents of a frame are submitted back to back (none of 119 intervals under 1 ms), but the presented rate does not rise: Filament paces on its single render thread, so the waits between the presents of one frame lengthen the frame itself (4x: about 60 presents/s against 80 plain frames/s in the test loop). A real gain needs presentation paced off the render thread (a present thread or `VK_KHR_present_wait`), which this integration does not do; with vsync the SwapChain's own blocking spaces the presents at the refresh rate.
+
+## Neural rendering (DLSS 5)
+
+NVIDIA's DLSS 5 Neural Rendering (a generative pass that re-renders the finished frame) is not available to an independent Vulkan engine yet:
+
+- **Status (checked 2026-10-10)**: DLSS SDK `v310.9.1` has no Neural Rendering feature or runtime; Streamline `v2.14.1` reserves a feature id (`kFeatureDLSS_NR = 1004` in `sl_core_types.h`) but ships no header, API or plugin for it. `dart tool/dlss/check_neural_rendering.dart` (the fetched SDK) and `--remote` (NVIDIA/DLSS at `tool/dlss/VERSION` and the latest Streamline release) report the state; run it on every `tool/dlss/VERSION` bump.
+- **The hook is ready**: such a pass needs the HDR frame after upscaling and before colour grading, its depth, motion at its resolution with a history-valid flag, and the exposure, which is exactly what the [external post pass](external-post-pass.md) hands over (`test/src/neural_rendering_readiness_test.dart` keeps it honest: values above 1 reach the pass, the images have the output size after FSR3, a reset drops the history).
+- **Not used**: reverse-engineered re-implementations of NVIDIA's network (OpenDLSS-NR) and "bring your own weights" options: the only usable weights are extracted from NVIDIA's runtime, which its licence forbids.
+- **Games**: NGX runtimes (`nvngx_dlss`, `nvngx_dlssd`, `nvngx_dlssg`, and a future Neural Rendering runtime) are NVIDIA's, under NVIDIA's licence: never part of Lumina's own release archives, only shipped with an exported game when its author opts in, with the NVIDIA attribution the licence asks for.
 
 ## Limits
 

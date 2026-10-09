@@ -14,6 +14,7 @@ Filament'in dinamik çözünürlüğünün arkasında NVIDIA DLSS Super Resoluti
 - [Kalite modları](#kalite-modları)
 - [Ray Reconstruction](#ray-reconstruction)
 - [Frame Generation](#frame-generation)
+- [Nöral render (DLSS 5)](#nöral-render-dlss-5)
 - [Sınırlar](#sınırlar)
 
 ## Filament'e nasıl oturur
@@ -143,6 +144,15 @@ DLSS Frame Generation (NGX özelliği `dlssg`, `nvngx_dlssg`), son görüntü, d
 - **İnceleme** (`DlssFrameInterpolator.create(engine:, view:)`): ağı harici bir post pass olarak çalıştırır ve çizilmiş karenin yerine üretilmiş kareyi gösterir; böylece kalitesi ölçülebilir.
 - **C köprüsü** (`src/dlss_fg_c.h`): `filament_dlss_fg_available`, `_request_extensions`, `_clear_extension_request`, `_probe`, `_create`, `_set_generated_frames`, `_frame_count`, `_last_result`, `_last_gpu_time_ns`, `_destroy`, `_interpolator_*` fonksiyonları ve `_last_error`; `src/renderer_c.h` içinde `filament_renderer_get_present_times`.
 - **RTX PRO 2000'de ölçülen** (SDK 310.9.1, 1024×768): `MultiFrameCountMax` 5 (6x'e kadar); 2x, 4x ve 6x çizilmiş kare başına tam 2, 4 ve 6 kare sunar; NGX çizilmiş kare başına 1,6 ms (2x), 3,6 ms (4x) ve 5,4 ms (6x) GPU zamanı alır. Kayan bir prop'un üretilmiş karesi, çizilmiş gerçek ara kareden 36,9 dB uzaktadır (iki komşudan 24,5 dB). Vsync olmadan bir karenin iki sunumu art arda gönderilmez (119 aralığın hiçbiri 1 ms'nin altında değil), ama sunulan hız artmaz: Filament tek render thread'inde tempo tutar; bir karenin sunumları arasındaki beklemeler karenin kendisini uzatır (4x: test döngüsünde düz 80 kare/s'ye karşı yaklaşık 60 sunum/s). Gerçek bir kazanç, render thread'i dışında tempolanan sunum gerektirir (bir sunum thread'i ya da `VK_KHR_present_wait`); bu entegrasyon bunu yapmaz. Vsync ile SwapChain'in kendi beklemesi sunumları yenileme hızında aralar.
+
+## Nöral render (DLSS 5)
+
+NVIDIA'nın DLSS 5 Neural Rendering'i (bitmiş kareyi yeniden üreten üretken bir geçiş) bağımsız bir Vulkan motoru için henüz kullanılabilir değil:
+
+- **Durum (2026-10-10'da kontrol edildi)**: DLSS SDK `v310.9.1`'de Neural Rendering özelliği ya da çalışma zamanı yoktur; Streamline `v2.14.1` bir özellik kimliği ayırır (`sl_core_types.h` içinde `kFeatureDLSS_NR = 1004`) ama bunun için başlık, API ya da eklenti içermez. `dart tool/dlss/check_neural_rendering.dart` (indirilen SDK) ve `--remote` (`tool/dlss/VERSION`'daki NVIDIA/DLSS ve en son Streamline sürümü) durumu bildirir; her `tool/dlss/VERSION` artışında çalıştırın.
+- **Kanca hazır**: böyle bir geçiş upscale sonrası ve renk düzenleme öncesi HDR kareye, derinliğine, kendi çözünürlüğünde geçmiş geçerlilik bayraklı harekete ve pozlamaya ihtiyaç duyar; [harici post pass](external-post-pass.md) tam olarak bunları verir (`test/src/neural_rendering_readiness_test.dart` bunu doğrular: 1'in üstündeki değerler geçişe ulaşır, görüntüler FSR3 sonrası çıktı boyutundadır, sıfırlama geçmişi düşürür).
+- **Kullanılmayan**: NVIDIA ağının tersine mühendislikle yapılmış yeniden uygulamaları (OpenDLSS-NR) ve "kendi ağırlıklarını getir" seçenekleri: kullanılabilir tek ağırlıklar NVIDIA'nın çalışma zamanından çıkarılanlardır ve lisansı bunu yasaklar.
+- **Oyunlar**: NGX çalışma zamanları (`nvngx_dlss`, `nvngx_dlssd`, `nvngx_dlssg` ve gelecekteki bir Neural Rendering çalışma zamanı) NVIDIA'nındır ve NVIDIA lisansı altındadır: Lumina'nın kendi sürüm arşivlerinde asla yer almaz; dışa aktarılan bir oyunla yalnızca yazarı seçerse ve lisansın istediği NVIDIA atfıyla birlikte gönderilir.
 
 ## Sınırlar
 
