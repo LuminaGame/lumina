@@ -1,7 +1,7 @@
 # The files tool/dlss/fetch_sdk.dart downloads from github.com/NVIDIA/DLSS at the tag in
 # tool/dlss/VERSION, with their SHA-256 and size. Only what the wrapper needs: the NGX
-# headers, the static entry-point library and the DLSS Super Resolution and Ray Reconstruction
-# runtimes.
+# headers, the static entry-point library and the DLSS Super Resolution, Ray Reconstruction and
+# Frame Generation runtimes.
 # sha256  size  path (relative to the repository root and to build/dlss-sdk/)
 d4216e39ebef5f9b50a6712ebb37beeb5379862a67733a9999c651f21592aaf0  26620  LICENSE.txt
 dc38e7467cf415379c9d12ae1b6e4a494c453ed92720fb53e92aecb523e7b848  40289  include/nvsdk_ngx.h
@@ -21,6 +21,8 @@ c24fa5aa68ffa2808c828b75cfa32843f1606f80a145f84055ac450d7e6c74ad  6137  include/
 3975567b8943c53acce397f2b72380092f84f162d00b0d2c7d08a1025c563983  58956912  lib/Windows_x86_64/rel/nvngx_dlss.dll
 4bc7ea5fcb2f32cf86bc2cb072e8d2860914a0be511cbdcb2fc206c1d9d83b80  48343664  lib/Windows_x86_64/rel/nvngx_dlssd.dll
 15043b4129a420b09dcd45a0294cb15f135da23054602827f68095f8080b05b0  48238232  lib/Linux_x86_64/rel/libnvidia-ngx-dlssd.so.310.9.1
+ff6e90eb78b827927dff5b4ecc6b1c870c2e9bca29ed9f48c7d348cc9e170b82  7460976  lib/Windows_x86_64/rel/nvngx_dlssg.dll
+aef4c911831b0381a6afa0164b743138e8571822646b6a4226e810a035ad678e  7346176  lib/Linux_x86_64/rel/libnvidia-ngx-dlssg.so.310.9.1
 4e5d355086d2bc11e1a0842457d2519ea528ee1f3e112c45679a84960c07dff3  3782558  lib/Windows_x86_64/x64/nvsdk_ngx_s.lib
 f2851a76107bdf4fbcb7b261f3c35573c312d8ecb4bc18fb02d9e2cec7705042  3593  include/nvsdk_ngx_helpers_cuda.h
 ec75224f36ed6580baaf250fa83620405ad81a1d98c2c436654a0c9cf6a6b8ba  31976  include/nvsdk_ngx_helpers_d3d.h

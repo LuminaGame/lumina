@@ -78,6 +78,11 @@ FFI_PLUGIN_EXPORT uint32_t filament_renderer_get_max_frame_history_size(void* re
 FFI_PLUGIN_EXPORT int64_t filament_frame_info_invalid_sentinel(void);
 FFI_PLUGIN_EXPORT int64_t filament_frame_info_pending_sentinel(void);
 
+// The steady-clock times (nanoseconds) of the most recent SwapChain presents, oldest first, up to
+// `capacity` (at most 128 are kept). With frame generation one rendered frame is presented more
+// than once; the intervals show the pacing. Returns the count written; 0 on the web.
+FFI_PLUGIN_EXPORT uint32_t filament_renderer_get_present_times(void* renderer, uint64_t* out, uint32_t capacity);
+
 // ==========================================
 // Standalone View & Read Pixels
 // ==========================================

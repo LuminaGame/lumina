@@ -134,6 +134,22 @@ void filament_renderer_set_frame_rate_options(void* renderer,
 // Frame Info & History
 // ==========================================
 
+uint32_t filament_renderer_get_present_times(void* renderer, uint64_t* out, uint32_t capacity) {
+#if defined(__EMSCRIPTEN__)
+  (void) renderer;
+  (void) out;
+  (void) capacity;
+  return 0;
+#else
+  if (!renderer || !out || capacity == 0) return 0;
+  auto times = toRenderer(renderer)->getPresentTimes();
+  uint32_t const count = std::min(static_cast<uint32_t>(times.size()), capacity);
+  size_t const first = times.size() - count;
+  for (uint32_t i = 0; i < count; i++) out[i] = times[first + i];
+  return count;
+#endif
+}
+
 uint32_t filament_renderer_get_frame_info_history(void* renderer,
     filament_frame_info_t* out, uint32_t capacity) {
   FFI_TRY

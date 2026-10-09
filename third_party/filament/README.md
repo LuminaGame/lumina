@@ -19,6 +19,7 @@ are upstream v1.77.2 with exactly these files applied in order.
 | `0010-ray-query-samplers-vulkan-only.patch` | `shaders/src/surface_light_{directional,punctual}.fs` | The ray-traced shadow fetch of 0007 and the ReSTIR light evaluation of 0008 are compiled for Vulkan only, so OpenGL and WebGL lit shaders spend no fragment sampler on them (Chrome's ANGLE/Direct3D 11 crashed on a 16th). |
 | `0011-external-post-pass-and-device-features.patch` | `backend/include/backend/{ExternalPass.h,platforms/VulkanPlatform.h}`, `backend/src/vulkan/platform/VulkanPlatform.cpp`, `filament/include/filament/View.h`, `filament/src/{PostProcessManager,FrameHistory,View}.*`, `filament/src/details/{Renderer,View}.*`, `filament/src/materials/rt/{postPassMotion.mat (new),rt.*}`, `filament/CMakeLists.txt` | An external post pass on the HDR frame before colour grading (`View::setExternalPostPass`) with output-resolution motion and a history-valid flag, an `HDR` stage for external upscalers, eight external-pass images, and client-requested Vulkan device feature structures (`Customization::extraDeviceFeatures`). |
 | `0012-guide-buffers.patch` | `filament/include/filament/{Options,View}.h`, `filament/src/{RendererUtils,PostProcessManager,View}.*`, `filament/src/details/{Renderer,View}.*`, `filament/src/materials/rt/{rtSpecularHitDistance.mat (new),rt.cpp}`, `filament/CMakeLists.txt`, `shaders/src/surface_main.fs` | Guide buffers for neural denoisers: normal + roughness, diffuse and specular albedo written by the lit shaders as colour attachments 1-3 (Vulkan), the ray-traced specular hit distance, `View::setGuideBufferOptions` / `setGuideBufferTexture`, and `ExternalUpscaler::guideBuffers()`. |
+| `0013-external-frame-generator.patch` | `filament/include/filament/{View,Renderer}.h`, `filament/src/{PostProcessManager,FrameHistory,View,Renderer}.*`, `filament/src/details/{Renderer,View}.*` | An external frame generator (`View::setExternalFrameGenerator`, DLSS Frame Generation) that writes up to five generated frames per rendered frame; `Renderer::endFrame` presents them before the rendered frame with even pacing without vsync, and `Renderer::getPresentTimes()` reports the presents. |
 
 ## 0001: libassimp glTF 2 `ReplaceData_joint` bounds
 
@@ -315,3 +316,20 @@ ray query material (one mirror ray per pixel from the depth and the normal guide
 images 4-7. `View::setGuideBufferTexture` blits a guide into a user texture of the same size and format.
 OpenGL, Metal, WebGPU and WebGL compile no extra outputs, so their sampler and output budgets are
 unchanged.
+
+## 0013: external frame generator
+
+Patch 0009 presents one FSR3-interpolated frame before each rendered frame. This patch lets a library
+outside Filament generate the frames (DLSS Frame Generation, up to five per rendered frame for Multi
+Frame Generation). `View::setExternalFrameGenerator(ExternalFrameGenerator*)` registers it; when the
+view renders straight into the SwapChain on Vulkan (no guard band, not translucent, no FSR3 frame
+generation), `PostProcessManager::externalFrameGeneration` renders the motion at the final frame's
+size (the `postPassMotion` material of 0011) and issues an `externalPass` with the final frame, the
+depth, the motion and `generatedFrameCount()` storage outputs of the final frame's format. The first
+output is copied into the SwapChain (forwarding a storage image would replace it by the SwapChain
+image); the rendered frame and the other outputs go into `FrameHistoryEntry::frameGeneration`
+(`generated[]`). `FRenderer::presentRenderedFrame` now presents every frame left for this frame in
+order and then the rendered one, redrawing the views drawn on top each time; without vsync
+`paceRenderedFrame` spaces the presents at `1 / (generated + 1)` of the measured frame interval.
+`Renderer::getPresentTimes()` returns the steady-clock times of the last 128 presents.
+`View::resetExternalPostPassHistory()` also restarts the generator's history.

@@ -7955,6 +7955,19 @@ external int filament_frame_info_invalid_sentinel();
 @ffi.Native<ffi.Int64 Function()>()
 external int filament_frame_info_pending_sentinel();
 
+@ffi.Native<
+  ffi.Uint32 Function(
+    ffi.Pointer<ffi.Void>,
+    ffi.Pointer<ffi.Uint64>,
+    ffi.Uint32,
+  )
+>()
+external int filament_renderer_get_present_times(
+  ffi.Pointer<ffi.Void> renderer,
+  ffi.Pointer<ffi.Uint64> out,
+  int capacity,
+);
+
 @ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>, ffi.Pointer<ffi.Void>)>()
 external void filament_renderer_render_standalone_view(
   ffi.Pointer<ffi.Void> renderer,
@@ -9634,6 +9647,95 @@ external void filament_dlss_rr_destroy(ffi.Pointer<ffi.Void> rr);
 
 @ffi.Native<ffi.Pointer<ffi.Char> Function()>()
 external ffi.Pointer<ffi.Char> filament_dlss_rr_last_error();
+
+@ffi.Native<ffi.Bool Function()>()
+external bool filament_dlss_fg_available();
+
+@ffi.Native<ffi.Bool Function()>()
+external bool filament_dlss_fg_request_extensions();
+
+@ffi.Native<ffi.Void Function()>()
+external void filament_dlss_fg_clear_extension_request();
+
+@ffi.Native<
+  ffi.Bool Function(
+    ffi.Pointer<ffi.Void>,
+    ffi.Pointer<filament_dlss_fg_probe_t>,
+  )
+>()
+external bool filament_dlss_fg_probe(
+  ffi.Pointer<ffi.Void> engine,
+  ffi.Pointer<filament_dlss_fg_probe_t> out,
+);
+
+@ffi.Native<
+  ffi.Pointer<ffi.Void> Function(
+    ffi.Pointer<ffi.Void>,
+    ffi.Pointer<ffi.Void>,
+    ffi.Uint32,
+    ffi.Uint32,
+  )
+>()
+external ffi.Pointer<ffi.Void> filament_dlss_fg_interpolator_create(
+  ffi.Pointer<ffi.Void> engine,
+  ffi.Pointer<ffi.Void> view,
+  int multiFrameCount,
+  int index,
+);
+
+@ffi.Native<ffi.Uint64 Function(ffi.Pointer<ffi.Void>)>()
+external int filament_dlss_fg_interpolator_frame_count(
+  ffi.Pointer<ffi.Void> interpolator,
+);
+
+@ffi.Native<ffi.Int32 Function(ffi.Pointer<ffi.Void>)>()
+external int filament_dlss_fg_interpolator_last_result(
+  ffi.Pointer<ffi.Void> interpolator,
+);
+
+@ffi.Native<ffi.Uint64 Function(ffi.Pointer<ffi.Void>)>()
+external int filament_dlss_fg_interpolator_last_gpu_time_ns(
+  ffi.Pointer<ffi.Void> interpolator,
+);
+
+@ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>)>()
+external void filament_dlss_fg_interpolator_destroy(
+  ffi.Pointer<ffi.Void> interpolator,
+);
+
+@ffi.Native<
+  ffi.Pointer<ffi.Void> Function(
+    ffi.Pointer<ffi.Void>,
+    ffi.Pointer<ffi.Void>,
+    ffi.Uint32,
+  )
+>()
+external ffi.Pointer<ffi.Void> filament_dlss_fg_create(
+  ffi.Pointer<ffi.Void> engine,
+  ffi.Pointer<ffi.Void> view,
+  int generatedFrames,
+);
+
+@ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>, ffi.Uint32)>()
+external void filament_dlss_fg_set_generated_frames(
+  ffi.Pointer<ffi.Void> generator,
+  int generatedFrames,
+);
+
+@ffi.Native<ffi.Uint64 Function(ffi.Pointer<ffi.Void>)>()
+external int filament_dlss_fg_frame_count(ffi.Pointer<ffi.Void> generator);
+
+@ffi.Native<ffi.Int32 Function(ffi.Pointer<ffi.Void>)>()
+external int filament_dlss_fg_last_result(ffi.Pointer<ffi.Void> generator);
+
+@ffi.Native<ffi.Uint64 Function(ffi.Pointer<ffi.Void>)>()
+external int filament_dlss_fg_last_gpu_time_ns(ffi.Pointer<ffi.Void> generator);
+
+@ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>)>()
+external void filament_dlss_fg_destroy(ffi.Pointer<ffi.Void> generator);
+
+@ffi.Native<ffi.Pointer<ffi.Char> Function()>()
+external ffi.Pointer<ffi.Char> filament_dlss_fg_last_error();
 
 enum FilamentBackend {
   FILAMENT_BACKEND_DEFAULT(0),
@@ -11602,4 +11704,33 @@ final class filament_dlss_rr_options_t extends ffi.Struct {
 
   @ffi.Uint8()
   external int preset;
+}
+
+final class filament_dlss_fg_probe_t extends ffi.Struct {
+  @ffi.Bool()
+  external bool available;
+
+  @ffi.Bool()
+  external bool needsUpdatedDriver;
+
+  @ffi.Uint32()
+  external int minDriverMajor;
+
+  @ffi.Uint32()
+  external int minDriverMinor;
+
+  @ffi.Int32()
+  external int featureInitResult;
+
+  @ffi.Uint32()
+  external int multiFrameCountMax;
+
+  @ffi.Uint32()
+  external int supportFlags;
+
+  @ffi.Uint32()
+  external int minHwArchitecture;
+
+  @ffi.Array.multi([1024])
+  external ffi.Array<ffi.Char> deviceExtensions;
 }

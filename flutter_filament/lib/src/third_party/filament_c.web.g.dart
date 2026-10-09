@@ -3562,6 +3562,9 @@ int filament_frame_info_invalid_sentinel() =>
 int filament_frame_info_pending_sentinel() =>
     FlutterFilamentModule.fromBigInt(_m.filament_frame_info_pending_sentinel());
 
+int filament_renderer_get_present_times(ffi.Pointer<ffi.Void> renderer, ffi.Pointer<ffi.Uint64> out, int capacity) =>
+    _m.filament_renderer_get_present_times(renderer.address.toJS, out.address.toJS, capacity.toJS).toDartInt.toUnsigned(32);
+
 void filament_renderer_render_standalone_view(ffi.Pointer<ffi.Void> renderer, ffi.Pointer<ffi.Void> view) {
   _m.filament_renderer_render_standalone_view(renderer.address.toJS, view.address.toJS);
 }
@@ -4284,6 +4287,58 @@ void filament_dlss_rr_destroy(ffi.Pointer<ffi.Void> rr) {
 
 ffi.Pointer<ffi.Char> filament_dlss_rr_last_error() =>
     ffi.Pointer<ffi.Char>.fromAddress(_m.filament_dlss_rr_last_error().toDartInt);
+
+bool filament_dlss_fg_available() =>
+    _m.filament_dlss_fg_available().toDartInt != 0;
+
+bool filament_dlss_fg_request_extensions() =>
+    _m.filament_dlss_fg_request_extensions().toDartInt != 0;
+
+void filament_dlss_fg_clear_extension_request() {
+  _m.filament_dlss_fg_clear_extension_request();
+}
+
+bool filament_dlss_fg_probe(ffi.Pointer<ffi.Void> engine, ffi.Pointer<filament_dlss_fg_probe_t> out) =>
+    _m.filament_dlss_fg_probe(engine.address.toJS, out.address.toJS).toDartInt != 0;
+
+ffi.Pointer<ffi.Void> filament_dlss_fg_interpolator_create(ffi.Pointer<ffi.Void> engine, ffi.Pointer<ffi.Void> view, int multiFrameCount, int index) =>
+    ffi.Pointer<ffi.Void>.fromAddress(_m.filament_dlss_fg_interpolator_create(engine.address.toJS, view.address.toJS, multiFrameCount.toJS, index.toJS).toDartInt);
+
+int filament_dlss_fg_interpolator_frame_count(ffi.Pointer<ffi.Void> interpolator) =>
+    FlutterFilamentModule.fromBigInt(_m.filament_dlss_fg_interpolator_frame_count(interpolator.address.toJS));
+
+int filament_dlss_fg_interpolator_last_result(ffi.Pointer<ffi.Void> interpolator) =>
+    _m.filament_dlss_fg_interpolator_last_result(interpolator.address.toJS).toDartInt;
+
+int filament_dlss_fg_interpolator_last_gpu_time_ns(ffi.Pointer<ffi.Void> interpolator) =>
+    FlutterFilamentModule.fromBigInt(_m.filament_dlss_fg_interpolator_last_gpu_time_ns(interpolator.address.toJS));
+
+void filament_dlss_fg_interpolator_destroy(ffi.Pointer<ffi.Void> interpolator) {
+  _m.filament_dlss_fg_interpolator_destroy(interpolator.address.toJS);
+}
+
+ffi.Pointer<ffi.Void> filament_dlss_fg_create(ffi.Pointer<ffi.Void> engine, ffi.Pointer<ffi.Void> view, int generatedFrames) =>
+    ffi.Pointer<ffi.Void>.fromAddress(_m.filament_dlss_fg_create(engine.address.toJS, view.address.toJS, generatedFrames.toJS).toDartInt);
+
+void filament_dlss_fg_set_generated_frames(ffi.Pointer<ffi.Void> generator, int generatedFrames) {
+  _m.filament_dlss_fg_set_generated_frames(generator.address.toJS, generatedFrames.toJS);
+}
+
+int filament_dlss_fg_frame_count(ffi.Pointer<ffi.Void> generator) =>
+    FlutterFilamentModule.fromBigInt(_m.filament_dlss_fg_frame_count(generator.address.toJS));
+
+int filament_dlss_fg_last_result(ffi.Pointer<ffi.Void> generator) =>
+    _m.filament_dlss_fg_last_result(generator.address.toJS).toDartInt;
+
+int filament_dlss_fg_last_gpu_time_ns(ffi.Pointer<ffi.Void> generator) =>
+    FlutterFilamentModule.fromBigInt(_m.filament_dlss_fg_last_gpu_time_ns(generator.address.toJS));
+
+void filament_dlss_fg_destroy(ffi.Pointer<ffi.Void> generator) {
+  _m.filament_dlss_fg_destroy(generator.address.toJS);
+}
+
+ffi.Pointer<ffi.Char> filament_dlss_fg_last_error() =>
+    ffi.Pointer<ffi.Char>.fromAddress(_m.filament_dlss_fg_last_error().toDartInt);
 
 enum FilamentBackend {
   FILAMENT_BACKEND_DEFAULT(0),
@@ -6336,6 +6391,36 @@ final class filament_dlss_rr_options_t extends ffi.Struct {
   set preset(int value) => FlutterFilamentModule.heap.setUint8($address + 12, value);
 }
 
+final class filament_dlss_fg_probe_t extends ffi.Struct {
+  filament_dlss_fg_probe_t.$at(super.$address) : super.$at();
+
+  bool get available => FlutterFilamentModule.heap.getUint8($address) != 0;
+  set available(bool value) => FlutterFilamentModule.heap.setUint8($address, value ? 1 : 0);
+
+  bool get needsUpdatedDriver => FlutterFilamentModule.heap.getUint8($address + 1) != 0;
+  set needsUpdatedDriver(bool value) => FlutterFilamentModule.heap.setUint8($address + 1, value ? 1 : 0);
+
+  int get minDriverMajor => FlutterFilamentModule.heap.getUint32($address + 4, Endian.little);
+  set minDriverMajor(int value) => FlutterFilamentModule.heap.setUint32($address + 4, value, Endian.little);
+
+  int get minDriverMinor => FlutterFilamentModule.heap.getUint32($address + 8, Endian.little);
+  set minDriverMinor(int value) => FlutterFilamentModule.heap.setUint32($address + 8, value, Endian.little);
+
+  int get featureInitResult => FlutterFilamentModule.heap.getInt32($address + 12, Endian.little);
+  set featureInitResult(int value) => FlutterFilamentModule.heap.setInt32($address + 12, value, Endian.little);
+
+  int get multiFrameCountMax => FlutterFilamentModule.heap.getUint32($address + 16, Endian.little);
+  set multiFrameCountMax(int value) => FlutterFilamentModule.heap.setUint32($address + 16, value, Endian.little);
+
+  int get supportFlags => FlutterFilamentModule.heap.getUint32($address + 20, Endian.little);
+  set supportFlags(int value) => FlutterFilamentModule.heap.setUint32($address + 20, value, Endian.little);
+
+  int get minHwArchitecture => FlutterFilamentModule.heap.getUint32($address + 24, Endian.little);
+  set minHwArchitecture(int value) => FlutterFilamentModule.heap.setUint32($address + 24, value, Endian.little);
+
+  ffi.Array<ffi.Char> get deviceExtensions => ffi.Array<ffi.Char>.$view($address + 28, 1024);
+}
+
 // --- the module's exports (web) ---------------------------------------------
 extension type _Module._(JSObject _) implements JSObject {
   @JS('_filament_get_version')
@@ -8280,6 +8365,8 @@ extension type _Module._(JSObject _) implements JSObject {
   external JSBigInt filament_frame_info_invalid_sentinel();
   @JS('_filament_frame_info_pending_sentinel')
   external JSBigInt filament_frame_info_pending_sentinel();
+  @JS('_filament_renderer_get_present_times')
+  external JSNumber filament_renderer_get_present_times(JSNumber renderer, JSNumber out, JSNumber capacity);
   @JS('_filament_renderer_render_standalone_view')
   external void filament_renderer_render_standalone_view(JSNumber renderer, JSNumber view);
   @JS('_filament_renderer_read_pixels')
@@ -8696,6 +8783,38 @@ extension type _Module._(JSObject _) implements JSObject {
   external void filament_dlss_rr_destroy(JSNumber rr);
   @JS('_filament_dlss_rr_last_error')
   external JSNumber filament_dlss_rr_last_error();
+  @JS('_filament_dlss_fg_available')
+  external JSNumber filament_dlss_fg_available();
+  @JS('_filament_dlss_fg_request_extensions')
+  external JSNumber filament_dlss_fg_request_extensions();
+  @JS('_filament_dlss_fg_clear_extension_request')
+  external void filament_dlss_fg_clear_extension_request();
+  @JS('_filament_dlss_fg_probe')
+  external JSNumber filament_dlss_fg_probe(JSNumber engine, JSNumber out);
+  @JS('_filament_dlss_fg_interpolator_create')
+  external JSNumber filament_dlss_fg_interpolator_create(JSNumber engine, JSNumber view, JSNumber multiFrameCount, JSNumber index);
+  @JS('_filament_dlss_fg_interpolator_frame_count')
+  external JSBigInt filament_dlss_fg_interpolator_frame_count(JSNumber interpolator);
+  @JS('_filament_dlss_fg_interpolator_last_result')
+  external JSNumber filament_dlss_fg_interpolator_last_result(JSNumber interpolator);
+  @JS('_filament_dlss_fg_interpolator_last_gpu_time_ns')
+  external JSBigInt filament_dlss_fg_interpolator_last_gpu_time_ns(JSNumber interpolator);
+  @JS('_filament_dlss_fg_interpolator_destroy')
+  external void filament_dlss_fg_interpolator_destroy(JSNumber interpolator);
+  @JS('_filament_dlss_fg_create')
+  external JSNumber filament_dlss_fg_create(JSNumber engine, JSNumber view, JSNumber generatedFrames);
+  @JS('_filament_dlss_fg_set_generated_frames')
+  external void filament_dlss_fg_set_generated_frames(JSNumber generator, JSNumber generatedFrames);
+  @JS('_filament_dlss_fg_frame_count')
+  external JSBigInt filament_dlss_fg_frame_count(JSNumber generator);
+  @JS('_filament_dlss_fg_last_result')
+  external JSNumber filament_dlss_fg_last_result(JSNumber generator);
+  @JS('_filament_dlss_fg_last_gpu_time_ns')
+  external JSBigInt filament_dlss_fg_last_gpu_time_ns(JSNumber generator);
+  @JS('_filament_dlss_fg_destroy')
+  external void filament_dlss_fg_destroy(JSNumber generator);
+  @JS('_filament_dlss_fg_last_error')
+  external JSNumber filament_dlss_fg_last_error();
 }
 
 _Module get _m => _Module._(FlutterFilamentModule.instance);
@@ -8743,6 +8862,7 @@ void $registerFilamentBindings() {
   ffi.$registerStruct<filament_gpu_memory_t>(32, 8, filament_gpu_memory_t.$at);
   ffi.$registerStruct<filament_guide_buffer_options_t>(2, 1, filament_guide_buffer_options_t.$at);
   ffi.$registerStruct<filament_dlss_rr_options_t>(16, 4, filament_dlss_rr_options_t.$at);
+  ffi.$registerStruct<filament_dlss_fg_probe_t>(1052, 4, filament_dlss_fg_probe_t.$at);
   ffi.$registerCallbackType<FilamentPickCallbackFunction>(const ffi.$CallbackSignature('v', ['u', 'f', 'f', 'f', 'p']));
   ffi.$registerCallbackType<FilamentRaycastCallbackFunction>(const ffi.$CallbackSignature('b', ['p', 'p', 'p', 'p']));
   ffi.$registerCallbackType<filament_buffer_free_fnFunction>(const ffi.$CallbackSignature('v', ['p', 'u', 'p']));

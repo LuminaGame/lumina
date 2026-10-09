@@ -258,6 +258,22 @@ class FilamentRenderer {
     );
   }
 
+  /// The steady-clock times (nanoseconds) of the most recent SwapChain
+  /// presents, oldest first (at most 128). With frame generation one rendered
+  /// frame is presented more than once; the intervals show the pacing. Empty
+  /// on the web.
+  List<int> getPresentTimes([int count = 128]) {
+    _checkDisposed();
+    if (count <= 0) return const [];
+    final out = calloc<ffi.Uint64>(count);
+    try {
+      final written = c.filament_renderer_get_present_times(_ptr, out, count);
+      return [for (var i = 0; i < written; i++) out[i]];
+    } finally {
+      calloc.free(out);
+    }
+  }
+
   /// Retrieves past frame timing information.
   List<FrameInfo> getFrameInfoHistory([int count = 1]) {
     _checkDisposed();

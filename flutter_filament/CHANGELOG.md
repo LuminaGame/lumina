@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- DLSS Frame Generation and Multi Frame Generation (prebuilt `1.77.2-lumina.11`, Filament patch `0013`): NGX `dlssg`
+  driven directly on Vulkan. `DlssFrameGenerator` registers an external frame generator
+  (`View::setExternalFrameGenerator`); `Renderer::endFrame` presents up to five generated frames before each rendered
+  one, evenly spaced without vsync, for views rendered into a SwapChain. `DlssFrameGeneration.probe` reports
+  availability and the multi-frame limit, `DlssFrameInterpolator` shows the generated frame for inspection,
+  `FilamentRenderer.getPresentTimes` the present pacing. The `nvngx_dlssg` runtimes are pinned in
+  `tool/dlss/manifest.txt`.
 - DLSS Ray Reconstruction (`DlssRayReconstruction`, `src/dlss_rr_c.cpp`): NGX `dlssd` as an HDR-stage external upscaler
   fed by the guide buffers, denoising ReSTIR and ray-traced shadows while it upscales. `tool/dlss/manifest.txt` pins the
   `nvngx_dlssd` runtimes (fetched, never committed); NGX is shared with Super Resolution (`src/ngx_c.cpp`).

@@ -13,6 +13,7 @@ NVIDIA DLSS Super Resolution behind Filament's dynamic resolution: the view rend
 - [Dart API (`lib/src/dlss.dart`)](#dart-api-libsrcdlssdart)
 - [Quality modes](#quality-modes)
 - [Ray Reconstruction](#ray-reconstruction)
+- [Frame Generation](#frame-generation)
 - [Limits](#limits)
 
 ## How it fits Filament
@@ -133,9 +134,19 @@ DLSS Ray Reconstruction (NGX feature `dlssd`, `nvngx_dlssd`) replaces the upscal
 - **C bridge** (`src/dlss_rr_c.h`): `filament_dlss_rr_available`, `_supported(engine)`, `_create(engine, view, const filament_dlss_rr_options_t*)` with `{ quality, outputWidth, outputHeight, preset }`, `_get_render_resolution`, `_set_quality`, `_reset_history`, `_last_gpu_time_ns` (Vulkan timestamps around the evaluation), `_frame_count`, `_destroy`, `_last_error`.
 - **Measured on the RTX PRO 2000** (SDK 310.9.1, preset F): Balanced at 1920×1080 renders 1114×626 and the evaluation takes 4.6 ms; Max Quality at 1024×768 (683×512) 1.8 ms. On raw one-ray ReSTIR (two candidates, no reuse) at 1280×720 the temporal noise (per-pixel luma standard deviation over 16 still frames) falls to 29 % of Filament's TAA (0.53 against 1.85 on a 0..255 scale); on Lumina's default ReSTIR, which already reuses samples, to 76 % (0.53 against 0.69). Against a 128-frame accumulation of the TAA image the PSNR is about 1 dB lower than TAA's (the reference is TAA's own mean; Ray Reconstruction also upscales from 67 %).
 
+## Frame Generation
+
+DLSS Frame Generation (NGX feature `dlssg`, `nvngx_dlssg`) generates frames between two rendered frames from the final image, the depth and the motion; Multi Frame Generation generates up to five per rendered frame (6x) on RTX 50 class GPUs. Lumina drives NGX directly on Vulkan (no Streamline):
+
+- **Probe**: `DlssFrameGeneration.probe(engine)` reads `FrameGeneration.Available`, the driver requirement, `DLSSG.MultiFrameCountMax` and the device extensions NGX asks for. `DlssFrameGeneration.requestExtensions()` (with `Dlss.requestExtensions()`) before the engine adds what Frame Generation uses.
+- **Presenting** (`DlssFrameGenerator.create(engine:, view:, generatedFrames:)`): an external frame generator (Filament patch `0013`, `View::setExternalFrameGenerator`) receives the view's final frame, its depth and the motion at its size, and writes `generatedFrames` frames. The first is presented in place of the frame's present; `Renderer::endFrame` presents the others and then the rendered frame. With `SwapChainConfig.disableVsync` the presents are spaced evenly (the wait is part of the render thread); `FilamentRenderer.getPresentTimes()` returns the most recent present times. Only views rendered straight into a SwapChain get extra presents; a view drawn into a texture (a Flutter widget, so Lumina Studio's viewport and Flutter-hosted games) is composited at Flutter's rate and shows the first generated frame of each rendered frame instead. FSR3 frame generation (patch `0009`) takes precedence when both are on.
+- **Inspecting** (`DlssFrameInterpolator.create(engine:, view:)`): runs the network as an external post pass and shows the generated frame in place of the rendered one, so its quality can be measured.
+- **C bridge** (`src/dlss_fg_c.h`): `filament_dlss_fg_available`, `_request_extensions`, `_clear_extension_request`, `_probe`, `_create`, `_set_generated_frames`, `_frame_count`, `_last_result`, `_last_gpu_time_ns`, `_destroy`, the `_interpolator_*` functions and `_last_error`; `filament_renderer_get_present_times` in `src/renderer_c.h`.
+- **Measured on the RTX PRO 2000** (SDK 310.9.1, 1024×768): `MultiFrameCountMax` 5 (up to 6x); 2x, 4x and 6x present exactly 2, 4 and 6 frames per rendered frame; NGX takes 1.6 ms (2x), 3.6 ms (4x) and 5.4 ms (6x) of GPU time per rendered frame. A generated frame of a sliding prop is 36.9 dB from the rendered true midpoint (24.5 dB from either neighbour). Without vsync no two presents of a frame are submitted back to back (none of 119 intervals under 1 ms), but the presented rate does not rise: Filament paces on its single render thread, so the waits between the presents of one frame lengthen the frame itself (4x: about 60 presents/s against 80 plain frames/s in the test loop). A real gain needs presentation paced off the render thread (a present thread or `VK_KHR_present_wait`), which this integration does not do; with vsync the SwapChain's own blocking spaces the presents at the refresh rate.
+
 ## Limits
 
 - Vulkan only, NVIDIA GPUs with DLSS support only; OpenGL, Metal, WebGPU and the web report `Dlss.available == false`.
-- DLSS Frame Generation is not integrated (see [Ray Reconstruction](#ray-reconstruction) for the denoiser).
+- [Frame Generation](#frame-generation) adds presents only for views rendered into a SwapChain; Flutter-hosted views show one generated frame per rendered frame.
 - The frame DLSS Super Resolution receives is LDR (after colour grading): it is an external upscaler of the `DISPLAY` stage. Patch `0011` adds the `HDR` stage (in place of the TAA resolve, before bloom and colour grading) for upscalers that need the linear frame; see [External post pass and Vulkan device features](external-post-pass.md).
 - Lumina Studio drives DLSS from the viewport HUD; games choose it through the game user settings (`LuminaUserSettingsSubsystem`, Blueprint **Set Upscaler** / **Is DLSS Supported**, see `lumina/world.md`), which fall back to FSR3 or none where DLSS is unavailable. A game built without the fetched SDK has no NGX code, like an installed editor.

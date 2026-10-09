@@ -13,6 +13,7 @@ Filament'in dinamik çözünürlüğünün arkasında NVIDIA DLSS Super Resoluti
 - [Dart API (`lib/src/dlss.dart`)](#dart-api-libsrcdlssdart)
 - [Kalite modları](#kalite-modları)
 - [Ray Reconstruction](#ray-reconstruction)
+- [Frame Generation](#frame-generation)
 - [Sınırlar](#sınırlar)
 
 ## Filament'e nasıl oturur
@@ -133,9 +134,19 @@ DLSS Ray Reconstruction (NGX özelliği `dlssd`, `nvngx_dlssd`), ışın izlemel
 - **C köprüsü** (`src/dlss_rr_c.h`): `filament_dlss_rr_available`, `_supported(engine)`, `_create(engine, view, const filament_dlss_rr_options_t*)` (`{ quality, outputWidth, outputHeight, preset }`), `_get_render_resolution`, `_set_quality`, `_reset_history`, `_last_gpu_time_ns` (değerlendirme etrafında Vulkan zaman damgaları), `_frame_count`, `_destroy`, `_last_error`.
 - **RTX PRO 2000'de ölçülen** (SDK 310.9.1, preset F): 1920×1080'de Balanced 1114×626 çizer, değerlendirme 4,6 ms; 1024×768'de Max Quality (683×512) 1,8 ms. Ham tek ışınlı ReSTIR'de (iki aday, yeniden kullanım yok) 1280×720'de zamansal gürültü (16 durağan karede piksel başına luma standart sapması) Filament TAA'sının %29'una iner (0..255 ölçeğinde 1,85'e karşı 0,53); örnekleri zaten yeniden kullanan Lumina varsayılan ReSTIR'inde %76'ya (0,69'a karşı 0,53). TAA görüntüsünün 128 karelik birikimine karşı PSNR, TAA'nınkinden yaklaşık 1 dB düşüktür (referans TAA'nın kendi ortalamasıdır; Ray Reconstruction ayrıca %67'den upscale eder).
 
+## Frame Generation
+
+DLSS Frame Generation (NGX özelliği `dlssg`, `nvngx_dlssg`), son görüntü, derinlik ve hareketten iki çizilmiş kare arasında kareler üretir; Multi Frame Generation RTX 50 sınıfı GPU'larda çizilmiş kare başına beşe kadar üretir (6x). Lumina NGX'i Vulkan'da doğrudan sürer (Streamline yok):
+
+- **Yoklama**: `DlssFrameGeneration.probe(engine)` `FrameGeneration.Available`, sürücü gereksinimi, `DLSSG.MultiFrameCountMax` ve NGX'in istediği aygıt uzantılarını okur. Motordan önce `DlssFrameGeneration.requestExtensions()` (`Dlss.requestExtensions()` ile birlikte) Frame Generation'ın kullandıklarını ekler.
+- **Sunma** (`DlssFrameGenerator.create(engine:, view:, generatedFrames:)`): harici bir kare üreteci (Filament yaması `0013`, `View::setExternalFrameGenerator`) view'ın son karesini, derinliğini ve onun boyutundaki hareketi alır, `generatedFrames` kare yazar. İlki karenin sunumunun yerine sunulur; `Renderer::endFrame` diğerlerini ve ardından çizilmiş kareyi sunar. `SwapChainConfig.disableVsync` ile sunumlar eşit aralıklıdır (bekleme render thread'inin parçasıdır); `FilamentRenderer.getPresentTimes()` son sunum zamanlarını verir. Yalnızca doğrudan bir SwapChain'e çizilen view'lar ek sunum alır; bir dokuya çizilen view (bir Flutter widget'ı; yani Lumina Studio'nun viewport'u ve Flutter içinde çalışan oyunlar) Flutter'ın hızında birleştirilir ve her çizilmiş karenin ilk üretilmiş karesini gösterir. İkisi açıksa FSR3 kare üretimi (yama `0009`) önceliklidir.
+- **İnceleme** (`DlssFrameInterpolator.create(engine:, view:)`): ağı harici bir post pass olarak çalıştırır ve çizilmiş karenin yerine üretilmiş kareyi gösterir; böylece kalitesi ölçülebilir.
+- **C köprüsü** (`src/dlss_fg_c.h`): `filament_dlss_fg_available`, `_request_extensions`, `_clear_extension_request`, `_probe`, `_create`, `_set_generated_frames`, `_frame_count`, `_last_result`, `_last_gpu_time_ns`, `_destroy`, `_interpolator_*` fonksiyonları ve `_last_error`; `src/renderer_c.h` içinde `filament_renderer_get_present_times`.
+- **RTX PRO 2000'de ölçülen** (SDK 310.9.1, 1024×768): `MultiFrameCountMax` 5 (6x'e kadar); 2x, 4x ve 6x çizilmiş kare başına tam 2, 4 ve 6 kare sunar; NGX çizilmiş kare başına 1,6 ms (2x), 3,6 ms (4x) ve 5,4 ms (6x) GPU zamanı alır. Kayan bir prop'un üretilmiş karesi, çizilmiş gerçek ara kareden 36,9 dB uzaktadır (iki komşudan 24,5 dB). Vsync olmadan bir karenin iki sunumu art arda gönderilmez (119 aralığın hiçbiri 1 ms'nin altında değil), ama sunulan hız artmaz: Filament tek render thread'inde tempo tutar; bir karenin sunumları arasındaki beklemeler karenin kendisini uzatır (4x: test döngüsünde düz 80 kare/s'ye karşı yaklaşık 60 sunum/s). Gerçek bir kazanç, render thread'i dışında tempolanan sunum gerektirir (bir sunum thread'i ya da `VK_KHR_present_wait`); bu entegrasyon bunu yapmaz. Vsync ile SwapChain'in kendi beklemesi sunumları yenileme hızında aralar.
+
 ## Sınırlar
 
 - Yalnızca Vulkan, yalnızca DLSS destekli NVIDIA GPU'lar; OpenGL, Metal, WebGPU ve web `Dlss.available == false` döndürür.
-- DLSS Frame Generation entegre değildir (denoiser için bkz. [Ray Reconstruction](#ray-reconstruction)).
+- [Frame Generation](#frame-generation) yalnızca bir SwapChain'e çizilen view'lar için ek sunum ekler; Flutter içindeki view'lar çizilmiş kare başına bir üretilmiş kare gösterir.
 - DLSS Super Resolution'ın aldığı kare LDR'dir (color grading sonrası): `DISPLAY` aşamasında bir harici upscaler'dır. Yama `0011` doğrusal kareye ihtiyaç duyan upscaler'lar için `HDR` aşamasını ekler (TAA çözümlemesinin yerine, bloom ve color grading'den önce); bkz. [Harici post pass ve Vulkan aygıt özellikleri](external-post-pass.md).
 - Lumina Studio DLSS'i viewport HUD'undan sürer; oyunlar onu oyun kullanıcı ayarlarından seçer (`LuminaUserSettingsSubsystem`, Blueprint **Set Upscaler** / **Is DLSS Supported**, bkz. `lumina/world.md`); DLSS yoksa FSR3'e ya da hiçbirine geri düşülür. İndirilmiş SDK olmadan derlenen bir oyun, kurulu editör gibi NGX kodu taşımaz.

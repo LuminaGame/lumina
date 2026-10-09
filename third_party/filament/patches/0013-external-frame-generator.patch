@@ -1,0 +1,666 @@
+diff --git a/filament/include/filament/Renderer.h b/filament/include/filament/Renderer.h
+index 5e1ba11d..bc13f84b 100644
+--- a/filament/include/filament/Renderer.h
++++ b/filament/include/filament/Renderer.h
+@@ -130,6 +130,13 @@ public:
+      */
+     size_t getMaxFrameHistorySize() const noexcept;
+ 
++    /**
++     * The steady-clock times (nanoseconds) at which the most recent SwapChain presents were
++     * submitted, oldest first (at most 128). With frame generation a rendered frame is presented
++     * more than once; the intervals show the pacing.
++     */
++    utils::FixedCapacityVector<uint64_t> getPresentTimes() const noexcept;
++
+     /**
+      * Use FrameRateOptions to set the desired frame rate and control how quickly the system
+      * reacts to GPU load changes.
+diff --git a/filament/include/filament/View.h b/filament/include/filament/View.h
+index 5fd295d3..b66d8f7f 100644
+--- a/filament/include/filament/View.h
++++ b/filament/include/filament/View.h
+@@ -52,6 +52,7 @@ class Scene;
+ class Texture;
+ class ExternalUpscaler;
+ class ExternalPostPass;
++class ExternalFrameGenerator;
+ class Viewport;
+ 
+ /**
+@@ -192,6 +193,56 @@ protected:
+     ~ExternalPostPass() = default;
+ };
+ 
++/**
++ * Frame generation implemented outside Filament (DLSS Frame Generation for instance): from the
++ * final frame of a view rendered into the SwapChain, its depth and its motion, generates
++ * generatedFrameCount() frames between the previous final frame and this one. The first is
++ * presented in place of this frame's present; Renderer::endFrame() then presents the others and
++ * finally the rendered frame, spacing the presents evenly when the SwapChain has no vsync
++ * (SwapChain::CONFIG_DISABLE_VSYNC). Vulkan only; the view must render into the SwapChain
++ * without guard band and not be translucent. FSR3 frame generation takes precedence.
++ *
++ * @see View::setExternalFrameGenerator
++ */
++class UTILS_PUBLIC ExternalFrameGenerator {
++public:
++    /** At most this many frames are generated per rendered frame (6x presentation). */
++    static constexpr uint32_t MAX_GENERATED_FRAMES = 5;
++
++    /** Indices of the images evaluate() receives in ExternalPassContext::images. */
++    enum Image : uint32_t {
++        COLOR = 0,      //!< the final frame of the view (after colour grading), read-only
++        DEPTH = 1,      //!< the colour pass depth at the render resolution (reversed Z)
++        MOTION = 2,     //!< as ExternalPostPass::MOTION, at the final frame's size
++        /**
++         * OUTPUT + i (i < generatedFrameCount()): storage images of the final frame's size and
++         * format for generated frame i + 1 of the sequence between the previous frame and this
++         * one (OUTPUT is the earliest).
++         */
++        OUTPUT = 3,
++    };
++
++    /** Frames to generate per rendered frame, 1 to MAX_GENERATED_FRAMES. Asked every frame. */
++    virtual uint32_t generatedFrameCount() const noexcept = 0;
++
++    /**
++     * Called on the main thread with the final frame's size. Return false to present this frame
++     * alone.
++     */
++    virtual bool supports(uint32_t width, uint32_t height) noexcept = 0;
++
++    /**
++     * Called on the backend thread while the frame's command buffer records; frame.flags
++     * carries ExternalPassFrame::FLAG_HISTORY_RESET on the first frame and after
++     * View::resetExternalPostPassHistory(). Record into context.commandBuffer only and write
++     * every output.
++     */
++    virtual void evaluate(backend::ExternalPassContext const& context) noexcept = 0;
++
++protected:
++    ~ExternalFrameGenerator() = default;
++};
++
+ class UTILS_PUBLIC View : public FilamentAPI {
+ public:
+     using QualityLevel = filament::QualityLevel;
+@@ -606,6 +657,15 @@ public:
+      */
+     void resetExternalPostPassHistory() noexcept;
+ 
++    /**
++     * Registers a frame generator (see ExternalFrameGenerator) for this view; nullptr
++     * unregisters it. It must outlive its registration.
++     */
++    void setExternalFrameGenerator(ExternalFrameGenerator* UTILS_NULLABLE generator) noexcept;
++
++    /** Returns the generator registered with setExternalFrameGenerator(), or nullptr. */
++    ExternalFrameGenerator* UTILS_NULLABLE getExternalFrameGenerator() const noexcept;
++
+     /**
+      * Enables the guide buffers (see GuideBufferOptions): normal + roughness, diffuse and
+      * specular albedo written by the lit shaders in the colour pass, and the specular hit
+diff --git a/filament/src/FrameHistory.h b/filament/src/FrameHistory.h
+index efbc66aa..cf2f5bcd 100644
+--- a/filament/src/FrameHistory.h
++++ b/filament/src/FrameHistory.h
+@@ -75,10 +75,13 @@ struct FrameHistoryEntry {
+         math::mat4 clipFromWorld;
+         bool valid = false;
+     } postPass;
+-    // frame generation: the final (rendered, not interpolated) frame
++    // frame generation: the final (rendered, not interpolated) frame, and the generated frames an
++    // external frame generator made after the first one (presented by endFrame() before it)
+     struct {
+         FrameGraphTexture color;
+         FrameGraphTexture::Descriptor desc;
++        FrameGraphTexture generated[4];
++        uint32_t generatedCount = 0;
+     } frameGeneration;
+ };
+ 
+diff --git a/filament/src/PostProcessManager.cpp b/filament/src/PostProcessManager.cpp
+index aa3bbafa..c3d3c4d2 100644
+--- a/filament/src/PostProcessManager.cpp
++++ b/filament/src/PostProcessManager.cpp
+@@ -4543,6 +4543,176 @@ void PostProcessManager::exportGuideBuffer(FrameGraph& fg,
+             });
+ }
+ 
++FrameGraphId<FrameGraphTexture> PostProcessManager::externalFrameGeneration(FrameGraph& fg,
++        ExternalFrameGenerator* const generator, FrameGraphId<FrameGraphTexture> const input,
++        FrameGraphId<FrameGraphTexture> const depth, FrameGraphId<FrameGraphTexture> const velocity,
++        math::float2 jitter, uint32_t const frameId, bool const resetHistory,
++        CameraInfo const& cameraInfo, FrameHistory& frameHistory) noexcept {
++
++    auto const& inputDesc = fg.getDescriptor(input);
++    uint32_t const count = std::min(generator ? generator->generatedFrameCount() : 0u,
++            ExternalFrameGenerator::MAX_GENERATED_FRAMES);
++    if (!generator || !depth || count == 0 ||
++            !generator->supports(inputDesc.width, inputDesc.height)) {
++        return input;
++    }
++    auto const& depthDesc = fg.getDescriptor(depth);
++
++    // the motion at the final frame's size, as for the external post pass
++    switch (mEngine.getBackend()) {
++        case Backend::METAL:
++        case Backend::VULKAN:
++        case Backend::WEBGPU:
++            jitter.y = -jitter.y;
++            break;
++        default:
++            break;
++    }
++    math::mat4f const projection = cameraInfo.projection;
++    math::mat4f jittered = projection;
++    jittered[2].xy -= jitter * (2.0f / math::float2{ depthDesc.width, depthDesc.height });
++    math::mat4 const clipFromWorld = math::mat4(projection) * math::mat4(cameraInfo.view);
++    math::mat4 const worldFromClip = math::mat4(cameraInfo.model) * inverse(math::mat4(jittered));
++    auto const& previous = frameHistory.getPrevious().postPass;
++    auto& current = frameHistory.getCurrent().postPass;
++    bool const historyValid = previous.valid && !resetHistory;
++    math::mat4 const prevClipFromWorld = historyValid ? previous.clipFromWorld : clipFromWorld;
++    current.clipFromWorld = clipFromWorld;
++    current.valid = true;
++
++    struct MotionData {
++        FrameGraphId<FrameGraphTexture> depth;
++        FrameGraphId<FrameGraphTexture> velocity;
++        FrameGraphId<FrameGraphTexture> motion;
++    };
++    auto const& motionPass = fg.addPass<MotionData>("external frame generation motion",
++            [&](FrameGraph::Builder& builder, auto& data) {
++                data.depth = builder.sample(depth);
++                if (velocity) {
++                    data.velocity = builder.sample(velocity);
++                }
++                data.motion = builder.createTexture("external frame generation motion", {
++                        .width = inputDesc.width, .height = inputDesc.height,
++                        .format = TextureFormat::RGBA16F });
++                data.motion = builder.declareRenderPass(data.motion);
++            },
++            [=, this](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
++                bindPostProcessDescriptorSet(driver);
++                bindPerRenderableDescriptorSet(driver);
++                auto const& out = resources.getRenderPassInfo();
++                auto const& material = getPostProcessMaterial("postPassMotion");
++                FMaterialInstance* const mi = getMaterialInstance(mEngine, driver, material);
++                mi->setParameter("depth", resources.getTexture(data.depth), SamplerParams{});
++                math::float2 velocitySize{ 1.0f, 1.0f };
++                if (data.velocity) {
++                    auto const& vdesc = resources.getDescriptor(data.velocity);
++                    velocitySize = { float(vdesc.width), float(vdesc.height) };
++                    mi->setParameter("velocity", resources.getTexture(data.velocity),
++                            SamplerParams{});
++                } else {
++                    mi->setParameter("velocity", mEngine.getZeroTexture(), SamplerParams{});
++                }
++                mi->setParameter("worldFromClip", math::mat4f(worldFromClip));
++                mi->setParameter("clipFromWorld", math::mat4f(clipFromWorld));
++                mi->setParameter("prevClipFromWorld", math::mat4f(prevClipFromWorld));
++                mi->setParameter("resolution", math::float4{
++                        float(inputDesc.width), float(inputDesc.height),
++                        1.0f / float(inputDesc.width), 1.0f / float(inputDesc.height) });
++                mi->setParameter("depthSize",
++                        math::float2{ float(depthDesc.width), float(depthDesc.height) });
++                mi->setParameter("velocitySize", velocitySize);
++                mi->setParameter("hasVelocity", data.velocity ? 1.0f : 0.0f);
++                mi->setParameter("historyValid", historyValid ? 1.0f : 0.0f);
++                commitAndRenderFullScreenQuad(driver, out, mi);
++                unbindAllDescriptorSets(driver);
++            });
++
++    struct GenerationData {
++        FrameGraphId<FrameGraphTexture> color;
++        FrameGraphId<FrameGraphTexture> depth;
++        FrameGraphId<FrameGraphTexture> motion;
++        FrameGraphId<FrameGraphTexture> outputs[ExternalFrameGenerator::MAX_GENERATED_FRAMES];
++    };
++    float const exposure = Exposure::exposure(cameraInfo.ev100);
++    math::mat4f const viewFromWorld = cameraInfo.view;
++    auto const& generation = fg.addPass<GenerationData>("external frame generation",
++            [&](FrameGraph::Builder& builder, auto& data) {
++                data.color = builder.read(input, FrameGraphTexture::Usage::SAMPLEABLE);
++                data.depth = builder.read(depth, FrameGraphTexture::Usage::SAMPLEABLE);
++                data.motion = builder.read(motionPass->motion, FrameGraphTexture::Usage::SAMPLEABLE);
++                for (uint32_t i = 0; i < count; i++) {
++                    data.outputs[i] = builder.createTexture("generated frame", {
++                            .width = inputDesc.width, .height = inputDesc.height,
++                            .format = inputDesc.format });
++                    data.outputs[i] = builder.write(data.outputs[i],
++                            FrameGraphTexture::Usage::STORAGE | FrameGraphTexture::Usage::SAMPLEABLE |
++                            FrameGraphTexture::Usage::COLOR_ATTACHMENT |
++                            FrameGraphTexture::Usage::BLIT_SRC);
++                    builder.declareRenderPass(builder.getName(data.outputs[i]), {
++                            .attachments = { .color = { data.outputs[i] } } });
++                }
++                builder.sideEffect();
++            },
++            [generator, count, inputDesc, depthDesc, historyValid, exposure, projection,
++                    viewFromWorld, jitter, frameId](FrameGraphResources const& resources,
++                    auto const& data, DriverApi& driver) {
++                ExternalPassDescriptor descriptor{};
++                descriptor.callback = [](ExternalPassContext const& context) {
++                    static_cast<ExternalFrameGenerator*>(context.user)->evaluate(context);
++                };
++                descriptor.user = generator;
++                descriptor.textureCount = ExternalFrameGenerator::OUTPUT + count;
++                descriptor.textures[ExternalFrameGenerator::COLOR] = resources.getTexture(data.color);
++                descriptor.textures[ExternalFrameGenerator::DEPTH] = resources.getTexture(data.depth);
++                descriptor.textures[ExternalFrameGenerator::MOTION] = resources.getTexture(data.motion);
++                for (uint32_t i = 0; i < count; i++) {
++                    descriptor.textures[ExternalFrameGenerator::OUTPUT + i] =
++                            resources.getTexture(data.outputs[i]);
++                    descriptor.writeMask |= 1u << (ExternalFrameGenerator::OUTPUT + i);
++                }
++                descriptor.frame.jitter[0] = jitter.x;
++                descriptor.frame.jitter[1] = jitter.y;
++                descriptor.frame.renderWidth = depthDesc.width;
++                descriptor.frame.renderHeight = depthDesc.height;
++                descriptor.frame.outputWidth = inputDesc.width;
++                descriptor.frame.outputHeight = inputDesc.height;
++                descriptor.frame.frameId = frameId;
++                descriptor.frame.flags = historyValid ? 0u : ExternalPassFrame::FLAG_HISTORY_RESET;
++                descriptor.frame.exposure = exposure;
++                std::memcpy(descriptor.frame.viewFromWorld, &viewFromWorld,
++                        sizeof(descriptor.frame.viewFromWorld));
++                std::memcpy(descriptor.frame.clipFromView, &projection,
++                        sizeof(descriptor.frame.clipFromView));
++                driver.externalPass(descriptor);
++            });
++
++    // The rendered frame and the later generated frames are presented by the Renderer after
++    // the first generated one (hence BLIT_SRC), and kept for the next frame.
++    auto& currentEntry = frameHistory.getCurrent().frameGeneration;
++    currentEntry.generatedCount = count - 1;
++    struct ExportData {
++        FrameGraphId<FrameGraphTexture> color;
++        FrameGraphId<FrameGraphTexture> generated[ExternalFrameGenerator::MAX_GENERATED_FRAMES - 1];
++    };
++    fg.addPass<ExportData>("Export external frame generation",
++            [&](FrameGraph::Builder& builder, auto& data) {
++                builder.sideEffect();
++                data.color = builder.read(input, FrameGraphTexture::Usage::BLIT_SRC);
++                for (uint32_t i = 1; i < count; i++) {
++                    data.generated[i - 1] = builder.read(generation->outputs[i],
++                            FrameGraphTexture::Usage::BLIT_SRC);
++                }
++            }, [&currentEntry, count](FrameGraphResources const& resources, auto const& data) {
++                resources.detach(data.color, &currentEntry.color, &currentEntry.desc);
++                for (uint32_t i = 1; i < count; i++) {
++                    FrameGraphTexture::Descriptor desc;
++                    resources.detach(data.generated[i - 1], &currentEntry.generated[i - 1], &desc);
++                }
++            });
++
++    return generation->outputs[0];
++}
++
+ FrameGraphId<FrameGraphTexture> PostProcessManager::externalPostPass(FrameGraph& fg,
+         ExternalPostPassInputs const& external, FrameGraphId<FrameGraphTexture> const input,
+         CameraInfo const& cameraInfo, FrameHistory& frameHistory) noexcept {
+diff --git a/filament/src/PostProcessManager.h b/filament/src/PostProcessManager.h
+index a41c5697..21f7c14a 100644
+--- a/filament/src/PostProcessManager.h
++++ b/filament/src/PostProcessManager.h
+@@ -68,6 +68,7 @@ class FView;
+ class FrameGraph;
+ class ExternalUpscaler;
+ class ExternalPostPass;
++class ExternalFrameGenerator;
+ class RenderPass;
+ class RenderPassBuilder;
+ class ShadowMapManager;
+@@ -298,6 +299,16 @@ public:
+             FrameGraphId<FrameGraphTexture> depth, FrameGraphId<FrameGraphTexture> normals,
+             CameraInfo const& cameraInfo) noexcept;
+ 
++    // Runs an external frame generator on the final frame: the motion at its size, then the
++    // generator's external pass writing `count` frames. The rendered frame and the generated
++    // frames after the first are kept in the frame history for Renderer::endFrame(); returns
++    // the first generated frame, or the input when the generator declines.
++    FrameGraphId<FrameGraphTexture> externalFrameGeneration(FrameGraph& fg,
++            ExternalFrameGenerator* generator, FrameGraphId<FrameGraphTexture> input,
++            FrameGraphId<FrameGraphTexture> depth, FrameGraphId<FrameGraphTexture> velocity,
++            math::float2 jitter, uint32_t frameId, bool resetHistory,
++            CameraInfo const& cameraInfo, FrameHistory& frameHistory) noexcept;
++
+     // Copies a guide buffer into a user texture of the same size (View::setGuideBufferTexture).
+     void exportGuideBuffer(FrameGraph& fg, FrameGraphId<FrameGraphTexture> guide,
+             FTexture const* texture) noexcept;
+diff --git a/filament/src/Renderer.cpp b/filament/src/Renderer.cpp
+index e0fe2d6a..a0b8ad3b 100644
+--- a/filament/src/Renderer.cpp
++++ b/filament/src/Renderer.cpp
+@@ -164,4 +164,8 @@ size_t Renderer::getMaxFrameHistorySize() const noexcept {
+     return downcast(this)->getMaxFrameHistorySize();
+ }
+ 
++utils::FixedCapacityVector<uint64_t> Renderer::getPresentTimes() const noexcept {
++    return downcast(this)->getPresentTimes();
++}
++
+ } // namespace filament
+diff --git a/filament/src/View.cpp b/filament/src/View.cpp
+index ea2ee7f4..4a750ca0 100644
+--- a/filament/src/View.cpp
++++ b/filament/src/View.cpp
+@@ -208,6 +208,14 @@ void View::resetExternalPostPassHistory() noexcept {
+     downcast(this)->resetExternalPostPassHistory();
+ }
+ 
++void View::setExternalFrameGenerator(ExternalFrameGenerator* UTILS_NULLABLE generator) noexcept {
++    downcast(this)->setExternalFrameGenerator(generator);
++}
++
++ExternalFrameGenerator* UTILS_NULLABLE View::getExternalFrameGenerator() const noexcept {
++    return downcast(this)->getExternalFrameGenerator();
++}
++
+ void View::setGuideBufferOptions(GuideBufferOptions const options) noexcept {
+     downcast(this)->setGuideBufferOptions(options);
+ }
+diff --git a/filament/src/details/Renderer.cpp b/filament/src/details/Renderer.cpp
+index d36d015b..8f548446 100644
+--- a/filament/src/details/Renderer.cpp
++++ b/filament/src/details/Renderer.cpp
+@@ -557,14 +557,9 @@ void FRenderer::endFrame() {
+     // mSwapChain cannot be null by construction
+     // With frame generation, this presents the interpolated frame.
+     mSwapChain->commit(driver);
++    recordPresent();
+ 
+     if (UTILS_UNLIKELY(mFrameGenerationView)) {
+-        if (mSwapChain->isVsyncDisabled()) {
+-            // without vsync, nothing spaces the two presents out: submit the interpolated frame
+-            // now and wait to present the rendered one.
+-            engine.flush();
+-            paceRenderedFrame();
+-        }
+         presentRenderedFrame(driver);
+     }
+ 
+@@ -743,27 +738,48 @@ void FRenderer::render(FView const* view) {
+     }
+ }
+ 
+-void FRenderer::paceRenderedFrame() noexcept {
++void FRenderer::recordPresent() noexcept {
++    uint64_t const now = uint64_t(std::chrono::duration_cast<std::chrono::nanoseconds>(
++            std::chrono::steady_clock::now().time_since_epoch()).count());
++    mPresentTimes[mPresentCount % 128] = now;
++    mPresentCount++;
++}
++
++utils::FixedCapacityVector<uint64_t> FRenderer::getPresentTimes() const noexcept {
++    size_t const n = std::min(mPresentCount, size_t(128));
++    auto out = utils::FixedCapacityVector<uint64_t>::with_capacity(n);
++    for (size_t i = mPresentCount - n; i < mPresentCount; i++) {
++        out.push_back(mPresentTimes[i % 128]);
++    }
++    return out;
++}
++
++void FRenderer::paceRenderedFrame(uint32_t const presentsPerFrame, bool const first) noexcept {
+     auto const now = std::chrono::steady_clock::now();
+-    if (mLastInterpolatedFramePresent.time_since_epoch().count()) {
+-        double const interval =
+-                std::chrono::duration<double>(now - mLastInterpolatedFramePresent).count();
+-        // ignore long pauses (e.g. the first frame after frame generation is turned on)
+-        if (interval < 0.25) {
+-            mFrameGenerationInterval = mFrameGenerationInterval > 0.0 ?
+-                    mFrameGenerationInterval * 0.9 + interval * 0.1 : interval;
++    if (first) {
++        if (mLastInterpolatedFramePresent.time_since_epoch().count()) {
++            double const interval =
++                    std::chrono::duration<double>(now - mLastInterpolatedFramePresent).count();
++            // ignore long pauses (e.g. the first frame after frame generation is turned on)
++            if (interval < 0.25) {
++                mFrameGenerationInterval = mFrameGenerationInterval > 0.0 ?
++                        mFrameGenerationInterval * 0.9 + interval * 0.1 : interval;
++            }
+         }
++        mLastInterpolatedFramePresent = now;
++        mLastPresent = now;
+     }
+-    mLastInterpolatedFramePresent = now;
+ 
+     if (mFrameGenerationInterval <= 0.0) {
++        mLastPresent = now;
+         return;
+     }
+ 
+-    // Because the wait is part of the interval, the interval converges to twice the frame's
+-    // work when the frame rate isn't limited otherwise.
+-    auto const deadline = now + std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+-            std::chrono::duration<double>(mFrameGenerationInterval * 0.5));
++    // Because the wait is part of the interval, the interval converges to presentsPerFrame
++    // times the frame's work when the frame rate isn't limited otherwise.
++    auto const deadline = mLastPresent + std::chrono::duration_cast<std::chrono::steady_clock::duration>(
++            std::chrono::duration<double>(mFrameGenerationInterval / double(presentsPerFrame)));
++    mLastPresent = deadline;
+     // sleep() is coarse on some platforms, so we sleep most of the wait and yield the rest
+     constexpr auto sleepMargin = std::chrono::milliseconds(2);
+     if (deadline - std::chrono::steady_clock::now() > sleepMargin) {
+@@ -784,36 +800,58 @@ void FRenderer::presentRenderedFrame(DriverApi& driver) {
+     auto const& rendered = view.getFrameHistory().getPrevious().frameGeneration;
+     assert_invariant(rendered.color.handle);
+ 
+-    // acquire the next SwapChain image
+-    mSwapChain->makeCurrent(driver);
+-
+-    RenderPassParams params = {};
+-    params.clearColor = mClearOptions.clearColor;
+-    params.flags.clear = TargetBufferFlags::COLOR;
+-    params.flags.discardStart = TargetBufferFlags::ALL;
+-    params.flags.discardEnd = TargetBufferFlags::NONE;
+-    params.viewport.width = std::numeric_limits<uint32_t>::max();
+-    params.viewport.height = std::numeric_limits<uint32_t>::max();
+-    driver.beginRenderPass(mRenderTargetHandle, params);
+-    driver.endRenderPass();
+-
+-    Handle<HwRenderTarget> const source = driver.createRenderTarget(TargetBufferFlags::COLOR0,
+-            rendered.desc.width, rendered.desc.height, 1, 1, { rendered.color.handle }, {}, {},
+-            "FrameGenerationRenderedFrame");
+-    filament::Viewport const& viewport = view.getViewport();
+-    driver.blitDEPRECATED(TargetBufferFlags::COLOR, mRenderTargetHandle, viewport, source,
+-            { 0, 0, rendered.desc.width, rendered.desc.height }, SamplerMagFilter::NEAREST);
+-    driver.destroyRenderTarget(source);
++    // the generated frames after the first one (an external frame generator), then the
++    // rendered frame
++    Handle<HwTexture> frames[ExternalFrameGenerator::MAX_GENERATED_FRAMES];
++    uint32_t frameCount = 0;
++    for (uint32_t i = 0; i < rendered.generatedCount; i++) {
++        if (rendered.generated[i].handle) {
++            frames[frameCount++] = rendered.generated[i].handle;
++        }
++    }
++    frames[frameCount++] = rendered.color.handle;
++    uint32_t const presentsPerFrame = frameCount + 1;
+ 
+-    // draw the Views that were on top of the interpolated frame (the default RenderTarget is in
+-    // mPreviousRenderTargets, so they won't clear it)
+     auto const views = std::move(mViewsAfterFrameGeneration);
+     mViewsAfterFrameGeneration.clear();
+-    for (FView const* v : views) {
+-        renderInternal(driver, v, false);
+-    }
++    FEngine& engine = mEngine;
++    filament::Viewport const& viewport = view.getViewport();
++    for (uint32_t f = 0; f < frameCount; f++) {
++        if (mSwapChain->isVsyncDisabled()) {
++            // without vsync, nothing spaces the presents out: submit what is recorded and wait
++            engine.flush();
++            paceRenderedFrame(presentsPerFrame, f == 0);
++        }
+ 
+-    mSwapChain->commit(driver);
++        // acquire the next SwapChain image
++        mSwapChain->makeCurrent(driver);
++
++        RenderPassParams params = {};
++        params.clearColor = mClearOptions.clearColor;
++        params.flags.clear = TargetBufferFlags::COLOR;
++        params.flags.discardStart = TargetBufferFlags::ALL;
++        params.flags.discardEnd = TargetBufferFlags::NONE;
++        params.viewport.width = std::numeric_limits<uint32_t>::max();
++        params.viewport.height = std::numeric_limits<uint32_t>::max();
++        driver.beginRenderPass(mRenderTargetHandle, params);
++        driver.endRenderPass();
++
++        Handle<HwRenderTarget> const source = driver.createRenderTarget(TargetBufferFlags::COLOR0,
++                rendered.desc.width, rendered.desc.height, 1, 1, { frames[f] }, {}, {},
++                "FrameGenerationRenderedFrame");
++        driver.blitDEPRECATED(TargetBufferFlags::COLOR, mRenderTargetHandle, viewport, source,
++                { 0, 0, rendered.desc.width, rendered.desc.height }, SamplerMagFilter::NEAREST);
++        driver.destroyRenderTarget(source);
++
++        // draw the Views that were on top of the first frame (the default RenderTarget is in
++        // mPreviousRenderTargets, so they won't clear it)
++        for (FView const* v : views) {
++            renderInternal(driver, v, false);
++        }
++
++        mSwapChain->commit(driver);
++        recordPresent();
++    }
+ }
+ 
+ void FRenderer::renderInternal(DriverApi& driver, FView const* view, bool const flush) {
+@@ -1919,6 +1957,33 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+         mFrameGenerationView = &view;
+     }
+ 
++    // An external frame generator (DLSS Frame Generation): the first generated frame goes into
++    // the SwapChain now; endFrame() presents the others and then the rendered frame.
++    if (ExternalFrameGenerator* const frameGenerator = view.getExternalFrameGenerator();
++            UTILS_UNLIKELY(frameGenerator && engine.getBackend() == Backend::VULKAN &&
++                    mSwapChain && viewRenderTarget == mRenderTargetHandle &&
++                    !blendModeTranslucent && !guardBandOptions.enabled && !mFrameGenerationView)) {
++        math::float2 jitter{};
++        uint32_t frameId = 0;
++        if (taaOptions.enabled) {
++            auto const& taaHistory = view.getFrameHistory().getCurrent().taa;
++            jitter = taaHistory.jitter;
++            frameId = taaHistory.frameId;
++        }
++        auto const generated = ppm.externalFrameGeneration(fg, frameGenerator, input, depth,
++                velocity, jitter, frameId, view.consumeExternalFrameGeneratorReset(), cameraInfo,
++                view.getFrameHistory());
++        if (generated != input) {
++            // The generated frame is a storage image written outside the frame graph's
++            // knowledge; forwarding it to the SwapChain would replace it by the SwapChain image
++            // (see the external upscaler), so it is copied.
++            auto const& desc = fg.getDescriptor(generated);
++            input = ppm.blit(fg, false, generated, { 0, 0, desc.width, desc.height }, desc,
++                    SamplerMagFilter::NEAREST, SamplerMinFilter::NEAREST);
++            mFrameGenerationView = &view;
++        }
++    }
++
+ //    auto debug = structure
+ //    fg.forwardResource(fgViewRenderTarget, debug ? debug : input);
+ 
+diff --git a/filament/src/details/Renderer.h b/filament/src/details/Renderer.h
+index 26bcaa46..5c4e6d5d 100644
+--- a/filament/src/details/Renderer.h
++++ b/filament/src/details/Renderer.h
+@@ -180,6 +180,8 @@ public:
+         return mClearOptions;
+     }
+ 
++    utils::FixedCapacityVector<uint64_t> getPresentTimes() const noexcept;
++
+     utils::FixedCapacityVector<FrameInfo> getFrameInfoHistory(size_t const historySize) const noexcept {
+         return mFrameInfoManager.getFrameInfoHistory(historySize);
+     }
+@@ -266,16 +268,22 @@ private:
+     // Frame generation: presents the rendered frame after the interpolated one, see endFrame()
+     void presentRenderedFrame(backend::DriverApi& driver);
+ 
+-    // Frame generation without vsync: waits until half a frame after the interpolated frame was
+-    // presented, so interpolated and rendered frames are evenly spaced.
+-    void paceRenderedFrame() noexcept;
++    // Frame generation without vsync: waits until 1 / (generated + 1) of a frame after the
++    // previous present, so generated and rendered frames are evenly spaced. `first` marks the
++    // first wait of a frame, which measures the frame interval.
++    void paceRenderedFrame(uint32_t presentsPerFrame, bool first) noexcept;
++    // the steady-clock times of the most recent SwapChain presents (commits)
++    void recordPresent() noexcept;
+     // Frame generation: the View whose interpolated frame is in the SwapChain this frame, and
+     // the Views rendered on top of it (e.g. UI), which must be rendered again on the rendered
+     // frame.
+     FView* mFrameGenerationView = nullptr;
+     std::vector<FView const*> mViewsAfterFrameGeneration;
+     std::chrono::steady_clock::time_point mLastInterpolatedFramePresent{};
+-    double mFrameGenerationInterval = 0.0;  // smoothed interval between presents, in seconds
++    double mFrameGenerationInterval = 0.0;  // smoothed interval between frames, in seconds
++    std::chrono::steady_clock::time_point mLastPresent{};
++    uint64_t mPresentTimes[128] = {};
++    size_t mPresentCount = 0;
+     std::function<void()> mBeginFrameInternal;
+     uint64_t mVsyncSteadyClockTimeNano = 0;
+     std::chrono::steady_clock::time_point mRenderingDeadline{};
+diff --git a/filament/src/details/View.cpp b/filament/src/details/View.cpp
+index 334fd623..b665b0af 100644
+--- a/filament/src/details/View.cpp
++++ b/filament/src/details/View.cpp
+@@ -1594,6 +1594,10 @@ void FView::commitFrameHistory(FEngine& engine) noexcept {
+     disposer.destroy(std::move(last.restir.reservoir.handle));
+     destroyFsr3History(disposer, last.fsr3);
+     disposer.destroy(std::move(last.frameGeneration.color.handle));
++    for (auto& generated: last.frameGeneration.generated) {
++        disposer.destroy(std::move(generated.handle));
++    }
++    last.frameGeneration.generatedCount = 0;
+ 
+     // and then push the new history entry to the history stack
+     frameHistory.commit();
+@@ -1610,6 +1614,10 @@ void FView::clearFrameHistory(FEngine& engine) noexcept {
+         disposer.destroy(std::move(last.restir.reservoir.handle));
+         destroyFsr3History(disposer, last.fsr3);
+         disposer.destroy(std::move(last.frameGeneration.color.handle));
++        for (auto& generated: last.frameGeneration.generated) {
++            disposer.destroy(std::move(generated.handle));
++        }
++        last.frameGeneration.generatedCount = 0;
+     }
+ }
+ 
+diff --git a/filament/src/details/View.h b/filament/src/details/View.h
+index b42afeb2..730921ce 100644
+--- a/filament/src/details/View.h
++++ b/filament/src/details/View.h
+@@ -355,7 +355,20 @@ public:
+ 
+     void setExternalPostPass(ExternalPostPass* pass) noexcept { mExternalPostPass = pass; }
+     ExternalPostPass* getExternalPostPass() const noexcept { return mExternalPostPass; }
+-    void resetExternalPostPassHistory() noexcept { mExternalPostPassReset = true; }
++    void resetExternalPostPassHistory() noexcept {
++        mExternalPostPassReset = true;
++        mExternalFrameGeneratorReset = true;
++    }
++    void setExternalFrameGenerator(ExternalFrameGenerator* generator) noexcept {
++        mExternalFrameGenerator = generator;
++    }
++    ExternalFrameGenerator* getExternalFrameGenerator() const noexcept { return mExternalFrameGenerator; }
++    // true once after resetExternalPostPassHistory()
++    bool consumeExternalFrameGeneratorReset() noexcept {
++        bool const reset = mExternalFrameGeneratorReset;
++        mExternalFrameGeneratorReset = false;
++        return reset;
++    }
+ 
+     // guide buffers (View::setGuideBufferOptions)
+     void setGuideBufferOptions(GuideBufferOptions const options) noexcept {
+@@ -748,6 +761,8 @@ private:
+     ExternalUpscaler* mExternalUpscaler = nullptr;
+     ExternalPostPass* mExternalPostPass = nullptr;
+     bool mExternalPostPassReset = false;
++    ExternalFrameGenerator* mExternalFrameGenerator = nullptr;
++    bool mExternalFrameGeneratorReset = false;
+     GuideBufferOptions mGuideBufferOptions;
+     FTexture const* mGuideBufferTextures[4] = {};
+     MultiSampleAntiAliasingOptions mMultiSampleAntiAliasingOptions;
