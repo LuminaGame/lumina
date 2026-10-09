@@ -107,7 +107,7 @@ print(view.restirStats); // RestirStats(lights: 512, rays: 786432, gpu: 0:00:00.
 
 ## Sınırlar
 
-- Yalnızca `VK_KHR_ray_query`'li Vulkan; başka yerlerde `restirSupported` false'tur ve `enabled` saklanır ama yok sayılır.
+- Yalnızca `VK_KHR_ray_query`'li Vulkan; başka yerlerde `restirSupported` false'tur ve `enabled` saklanır ama yok sayılır. ReSTIR ışık değerlendirmesini yalnızca Vulkan için derlenen shader'lar içerir ve iki texture'ını yalnızca onlar örnekler.
 - Sahnede `rayTracingEnabled` açık olmalıdır; hızlandırma yapıları yoksa froxel yolu çizer.
 - Yeniden örnekleme, derinlikten türetilen normale sahip difüz bir yüzeyi hedefler; parlak yansımalar daha yavaş yakınsar ve uzamsal yeniden kullanım derinlik kenarlarında temel, hafif yanlı birleştirmedir.
 - Piksel ve kare başına tek ışık gölgelenir: kamera kesmesi ya da geçmiş sıfırlamasından sonra birkaç kare gürültü görünür; tek gürültü giderici zamansal birikimdir.

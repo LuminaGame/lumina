@@ -96,7 +96,7 @@ Bir post-process malzeme, malzeme bloğunda `rayQuery : true` bildirerek GLSL 46
 
 ## Sınırlar
 
-- Yalnızca Vulkan, `VK_KHR_ray_query` olan GPU'larda; OpenGL, Metal, WebGPU ve web `supportsRayQuery == false` bildirir.
+- Yalnızca Vulkan, `VK_KHR_ray_query` olan GPU'larda; OpenGL, Metal, WebGPU ve web `supportsRayQuery == false` bildirir. `sampler0_rtShadow`'u (ve ReSTIR texture'larını) yalnızca Vulkan için derlenen shader'lar örnekler: diğer API'lerin lit shader'ları onları dışarıda bırakır, böylece orada fragment sampler'ı harcamazlar (WebGL'de sekiz sampler'lı ve sisli bir lit materyal aksi halde 16'ya ulaşır; Chrome'un Direct3D 11 arka ucu bunu kaldıramaz).
 - Skinned ve morph'lu renderable'lar bind pozunda izlenir: hızlandırma yapıları vertex buffer'ları okur ve skinning paletini ya da morph ağırlıklarını uygulayan bir compute ön geçişi henüz yoktur. Gölgeleri ve ışın isabetleri renderable'ın dönüşümünü izler, animasyonunu değil.
 - Yapılara yalnızca pozisyon özniteliği olan `PrimitiveType.triangles` primitive'leri girer; çizgiler, noktalar ve şeritler yok sayılır.
 - Işın izlemeli gölgeler serttir (penumbra yok) ve yalnızca yönlü ışığı kapsar.

@@ -66,14 +66,18 @@ A package resolved from git lives in the pub cache and has no Filament next to i
 
 ## Build Filament
 
-The hooks expect the static libraries in `filament/out/cmake-release/` (Linux and macOS) or `filament/out/cmake-release-windows/` (Windows). Lumina uses upstream Filament v1.77.2 with six local patches, kept in `third_party/filament/patches/` and explained in `third_party/filament/README.md`:
+The hooks expect the static libraries in `filament/out/cmake-release/` (Linux and macOS) or `filament/out/cmake-release-windows/` (Windows). Lumina uses upstream Filament v1.77.2 with ten local patches, kept in `third_party/filament/patches/` and explained in `third_party/filament/README.md`:
 
 - a bounds fix in the bundled `libassimp`;
 - a `RenderPass.cpp` change that keeps skinned and morphed renderables out of the screen-space reflections pass (without it the Vulkan backend loses the device);
 - a `third_party/libwebp/tnt` change so that a WebAssembly build with WebP textures configures without SDL2;
 - per-pixel motion vectors from the structure pass (`TemporalAntiAliasingOptions::motionVectors`), consumed by TAA and exportable through `View::setMotionVectorTexture`;
 - an `Engine::shutdown` ordering fix: views left for the engine to clean up are terminated before the cameras their shadow maps own and the disposer their TAA history returns to, instead of after (which read freed memory and crashed `Engine::destroy`);
-- an external upscaler pass: `DynamicResolutionOptions::upscaler`, `View::setExternalUpscaler` and a Vulkan `externalPass` driver command hand the low-resolution frame to a client library (DLSS in `flutter_filament`), with client-requested Vulkan extensions.
+- an external upscaler pass: `DynamicResolutionOptions::upscaler`, `View::setExternalUpscaler` and a Vulkan `externalPass` driver command hand the low-resolution frame to a client library (DLSS in `flutter_filament`), with client-requested Vulkan extensions;
+- Vulkan ray query: acceleration structures, ray-traced sun shadows (`ShadowOptions::rayTraced`) and `View::traceRay`;
+- ReSTIR direct lighting (`RestirOptions`) on top of ray query;
+- the FSR3 upscaler and frame generation as fragment passes, and `SwapChain::CONFIG_DISABLE_VSYNC`;
+- lit shaders sample the ray query textures (the ray-traced shadow mask, the ReSTIR reservoir and light textures) only when compiled for Vulkan, so OpenGL and WebGL shaders spend no fragment sampler on them (a lit material with eight samplers and fog stays at 15; Chrome's Direct3D 11 backend crashes on 16).
 
 ### Prebuilt archive
 

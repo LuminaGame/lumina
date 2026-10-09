@@ -16,6 +16,7 @@ are upstream v1.77.2 with exactly these files applied in order.
 | `0008-restir-direct-lighting.patch` | `filament/include/filament/{Options,View,LightManager}.h`, `filament/src/{PostProcessManager,RendererUtils,FrameHistory}.*`, `filament/src/details/{Renderer,View}.*`, `filament/src/components/LightManager.*`, `filament/src/ds/ColorPassDescriptorSet.*`, `filament/src/materials/rt/restir*.mat` (new), `libs/filabridge` (bindings 14/15, `restirMode` uniform), `libs/filamat/src/shaders/{Sib,Uib}Generator.cpp`, `shaders/src/surface_light_punctual.fs` | ReSTIR direct lighting: `RestirOptions` on the view, a per-frame light buffer texture of every punctual light, candidate / temporal / spatial resampling and visibility passes as ray query materials, and the lit shaders shading the one resampled light; also fixes the vertical flip of the ray query materials' depth reconstruction. |
 | `0007-vulkan-ray-query.patch` | `filament/backend/include/backend/AccelerationStructure.h` (new), `backend/src/vulkan/VulkanAccelerationStructure.*` (new), `backend/{DriverEnums.h,Handle.h,private/backend/{Driver.h,DriverAPI.inc}}`, the Vulkan driver, context, platform, handles, buffer and descriptor-set caches, the other drivers' no-ops, `filament/include/filament/{Engine,LightManager,RenderableManager,Scene,View}.h`, `filament/src/{PostProcessManager,RenderPrimitive,RendererUtils,MaterialParser,MaterialDefinition}.*`, `filament/src/details/{Renderer,Scene,View,VertexBuffer,IndexBuffer,Engine}.*`, `filament/src/ds/*`, `filament/src/materials/rt/` (new), `libs/filabridge` (binding points, chunk type), `libs/filamat` (the `rayQuery` material flag, GLSL 460 + `GL_EXT_ray_query`, SPIR-V 1.4), `shaders/src/surface_light_directional.fs`, `third_party/smol-v/source/smolv.cpp` | Vulkan ray query: acceleration structures as backend objects, a per-scene BLAS/TLAS kept by `Scene::setRayTracingEnabled`, hard ray-traced sun shadows (`ShadowOptions::rayTraced`) and single-ray visibility queries (`View::traceRay`). |
 | `0009-fsr3-upscaler-frame-generation.patch` | `filament/include/filament/{Options,SwapChain}.h`, `filament/src/{PostProcessManager,FrameHistory}.*`, `filament/src/details/{Renderer,View,SwapChain}.*`, `filament/src/materials/fsr3/*` (new), `filament/CMakeLists.txt`, `backend/DriverEnums.h`, `backend/src/vulkan/platform/VulkanPlatformSwapChainImpl.*`, `backend/{include/backend/platforms/PlatformWGL.h,src/opengl/platforms/PlatformWGL.cpp}` | The FidelityFX Super Resolution 3.1 upscaler and frame generation as fragment passes (`TemporalAntiAliasingOptions::algorithm`, `frameGeneration`), fed by the structure pass motion vectors of 0004, and the `SwapChain::CONFIG_DISABLE_VSYNC` flag (Vulkan, WGL). FidelityFX SDK shader code is MIT licensed (AMD). |
+| `0010-ray-query-samplers-vulkan-only.patch` | `shaders/src/surface_light_{directional,punctual}.fs` | The ray-traced shadow fetch of 0007 and the ReSTIR light evaluation of 0008 are compiled for Vulkan only, so OpenGL and WebGL lit shaders spend no fragment sampler on them (Chrome's ANGLE/Direct3D 11 crashed on a 16th). |
 
 ## 0001: libassimp glTF 2 `ReplaceData_joint` bounds
 
@@ -247,3 +248,22 @@ device without the extensions behaves exactly as before.
   like `View::pick`. The next frame renders the built-in `rayVisibility` material into a 1x1
   RGBA32F target and reads it back; the callback receives `RayQueryResult{hit, distance,
   renderable, primitive}`. Without support the queries are answered with no hit.
+
+## 0010: ray query textures only in Vulkan shaders
+
+0007 and 0008 made every lit shader sample `sampler0_rtShadow` (when bit 2 of
+`directionalShadows` is set) and the ReSTIR reservoir and light textures (when
+`restirMode` is on), for every target API. Ray query exists only on Vulkan, so on
+OpenGL, OpenGL ES and WebGL those textures are always placeholders, yet each fetch
+keeps its sampler active. On feature level 1 a lit material with eight samplers (the
+glTF ubershader) plus fog then has 16 active fragment samplers instead of upstream's 15,
+and Chrome's GPU process crashes on that program under ANGLE's Direct3D 11 backend (the
+default on Windows): every WebGL context of the page is lost, the next program's link
+status reads as failed with an empty log, and the page goes blank. Any 15 of the 16 draw.
+
+The patch wraps the ray-traced shadow fetch in `surface_light_directional.fs` and the
+ReSTIR evaluation (`evaluateRestirLight` and its call) in `surface_light_punctual.fs` in
+`#if defined(TARGET_VULKAN_ENVIRONMENT)`. The per-view declarations stay, so the
+descriptor-set layouts and `MATERIAL_VERSION` are unchanged; on the other APIs the unused
+samplers are inactive. Materials compiled before the patch keep sampling the placeholder
+until they are rebuilt.

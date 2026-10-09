@@ -1,0 +1,71 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Can Us <me@canus.dev>
+Date: Fri, 9 Oct 2026 23:30:00 +0300
+Subject: [PATCH] Sample the ray query textures only in Vulkan shaders
+
+The lit shaders sampled sampler0_rtShadow (0007) and the ReSTIR reservoir
+and light textures (0008) behind runtime flags, for every target API.
+Ray query exists only on Vulkan: on OpenGL, OpenGL ES and WebGL the
+texture is always a 1x1 placeholder, yet the sampler is active. A lit
+material with eight samplers plus fog then has 16 active fragment
+samplers on feature level 1 (upstream: 15), and Chrome's ANGLE/D3D11
+backend crashes its GPU process on that program.
+
+The ray-traced shadow fetch and the ReSTIR evaluation are now compiled
+for TARGET_VULKAN_ENVIRONMENT only; the per-view declarations stay, so
+the descriptor layouts are unchanged.
+
+diff --git a/shaders/src/surface_light_directional.fs b/shaders/src/surface_light_directional.fs
+index 9dc81c7..76b8907 100644
+--- a/shaders/src/surface_light_directional.fs
++++ b/shaders/src/surface_light_directional.fs
+@@ -70,10 +70,14 @@ void evaluateDirectionalLight(const MaterialInputs material,
+             visibility = 1.0 - ((1.0 - visibility) * saturate(p.x - z * z * p.y));
+ #endif
+         }
+-        // ray-traced sun shadows: the visibility mask the renderer traced at this resolution
++#if defined(TARGET_VULKAN_ENVIRONMENT)
++        // ray-traced sun shadows: the visibility mask the renderer traced at this resolution.
++        // Ray query is Vulkan-only; elsewhere the texture would only be a placeholder that
++        // costs a fragment sampler (and ANGLE/D3D11 does not survive a 16th one).
+         if ((frameUniforms.directionalShadows & 0x4) != 0 && visibility > 0.0) {
+             visibility *= texelFetch(sampler0_rtShadow, ivec2(gl_FragCoord.xy), 0).r;
+         }
++#endif
+ 
+         if ((frameUniforms.directionalShadows & 0x2) != 0 && visibility > 0.0) {
+             if ((object_uniforms_flagsChannels & FILAMENT_OBJECT_CONTACT_SHADOWS_BIT) != 0) {
+diff --git a/shaders/src/surface_light_punctual.fs b/shaders/src/surface_light_punctual.fs
+index 14a434a..dd9c65c 100644
+--- a/shaders/src/surface_light_punctual.fs
++++ b/shaders/src/surface_light_punctual.fs
+@@ -172,6 +172,7 @@ Light getLight(const uint lightIndex) {
+     return light;
+ }
+ 
++#if defined(TARGET_VULKAN_ENVIRONMENT)
+ /**
+  * ReSTIR direct lighting: the renderer resampled the scene's punctual lights per pixel and
+  * left (light index, W, visibility) in the reservoir texture; this fragment shades that single
+@@ -220,6 +221,7 @@ void evaluateRestirLight(const MaterialInputs material,
+     color.rgb += surfaceShading(pixel, light, reservoir.z) * reservoir.y;
+ #endif
+ }
++#endif
+ 
+ /**
+  * Evaluates all punctual lights that my affect the current fragment.
+@@ -229,8 +231,9 @@ void evaluateRestirLight(const MaterialInputs material,
+ void evaluatePunctualLights(const MaterialInputs material,
+         const PixelParams pixel, inout vec3 color) {
+ 
+-    // ReSTIR direct lighting replaces the froxel loop for opaque surfaces
+-#if !defined(BLEND_MODE_TRANSPARENT) && !defined(BLEND_MODE_FADE)
++    // ReSTIR direct lighting replaces the froxel loop for opaque surfaces (Vulkan only: its
++    // resampling and visibility passes are ray query materials)
++#if defined(TARGET_VULKAN_ENVIRONMENT) && !defined(BLEND_MODE_TRANSPARENT) && !defined(BLEND_MODE_FADE)
+     if (frameUniforms.restirMode > 0.5) {
+         evaluateRestirLight(material, pixel, color);
+         return;
+-- 
+2.43.0

@@ -84,6 +84,7 @@ Their `filament_*` functions still exist on the web, so the Dart bindings are id
 What this means for games:
 - materials must ship as compiled filamat packages for OpenGL ES (`matc -a opengl -p mobile`) instead of being compiled at runtime;
 - glTF assets use the ubershader provider.
+- fragment samplers: WebGL 2 gives a shader 16 (ANGLE's Direct3D 11 backend, Chrome's default on Windows, crashes its GPU process on some 16-sampler lit shaders). A lit shader spends up to 7 on the per-view set (structure, shadow map, the two IBL textures, SSAO, SSR, fog), so keep a material at 8 samplers or fewer; the ubershader uses 8. The Vulkan-only ray query textures (`sampler0_rtShadow`, the ReSTIR textures) are not sampled in OpenGL / WebGL shaders (Filament patch `0010`).
 
 Regenerate the stubs after changing `filamat_c.h` or `imageio_c.h`:
 ```bash

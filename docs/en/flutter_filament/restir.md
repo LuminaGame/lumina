@@ -107,7 +107,7 @@ print(view.restirStats); // RestirStats(lights: 512, rays: 786432, gpu: 0:00:00.
 
 ## Limits
 
-- Vulkan with `VK_KHR_ray_query` only; `restirSupported` is false elsewhere and `enabled` is kept but ignored.
+- Vulkan with `VK_KHR_ray_query` only; `restirSupported` is false elsewhere and `enabled` is kept but ignored. Only shaders compiled for Vulkan contain the ReSTIR light evaluation and sample its two textures.
 - The scene must have `rayTracingEnabled`; without acceleration structures the froxel path renders.
 - Resampling targets a diffuse surface with a normal reconstructed from depth; glossy highlights converge more slowly and the spatial reuse is the basic, slightly biased combination at depth edges.
 - Only one light is shaded per pixel and frame: noise is visible for a few frames after a camera cut or a history reset, and temporal accumulation is the only denoiser.

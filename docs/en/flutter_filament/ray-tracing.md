@@ -96,7 +96,7 @@ A post-process material declares `rayQuery : true` in its material block to be c
 
 ## Limits
 
-- Vulkan only, on GPUs with `VK_KHR_ray_query`; OpenGL, Metal, WebGPU and the web report `supportsRayQuery == false`.
+- Vulkan only, on GPUs with `VK_KHR_ray_query`; OpenGL, Metal, WebGPU and the web report `supportsRayQuery == false`. Only shaders compiled for Vulkan sample `sampler0_rtShadow` (and the ReSTIR textures): the other APIs' lit shaders leave them out, so they cost no fragment sampler there (on WebGL a lit material with eight samplers and fog would otherwise reach 16, which Chrome's Direct3D 11 backend does not survive).
 - Skinned and morphed renderables are traced in their bind pose: the acceleration structures read the vertex buffers, and there is no compute pre-pass applying the skinning palette or morph weights yet. Their shadows and ray hits follow the renderable's transform, not its animation.
 - Only `PrimitiveType.triangles` primitives with a position attribute enter the structures; lines, points and strips are ignored.
 - Ray-traced shadows are hard (no penumbra) and cover the directional light only.

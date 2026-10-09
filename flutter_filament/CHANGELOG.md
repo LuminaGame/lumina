@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Web: lit shaders no longer sample the Vulkan-only ray query textures (prebuilt `1.77.2-lumina.8`, Filament
+  patch `0010`). On OpenGL and WebGL a lit material with eight samplers and fog (the glTF ubershader) had 16
+  active fragment samplers, and Chrome's GPU process crashed on it under ANGLE/Direct3D 11: the page went
+  blank after `Link error in "…"`, `CONTEXT_LOST_WEBGL` and `RenderPass arena is full`. The ray-traced shadow
+  fetch and the ReSTIR evaluation are now compiled for Vulkan only. Rebuild the web module and recompile
+  materials compiled before.
 - Linux arm64: the native hook links the bundled libc++ of the target architecture
   (`third_party/libcxx/usr/lib/aarch64-linux-gnu`), `tool/filament/build_prebuilt.sh` builds
   `filament-<VERSION>-linux-arm64.tar.gz` on an aarch64 host, and CI and the release workflow build
