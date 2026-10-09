@@ -5,12 +5,14 @@ import 'package:lumina/src/post_process/rtx_settings.dart';
 import 'package:lumina/src/utility/lumina_platform.dart';
 
 /// The upscaler a game renders with: none (native resolution and the
-/// anti-aliasing setting), FidelityFX Super Resolution 3, or NVIDIA DLSS
-/// Super Resolution.
+/// anti-aliasing setting), FidelityFX Super Resolution 3, NVIDIA DLSS
+/// Super Resolution, or NVIDIA DLSS Ray Reconstruction (a denoising upscaler
+/// for ray-traced lighting).
 enum LuminaUpscaler {
   none('None'),
   fsr3('FSR3'),
-  dlss('DLSS');
+  dlss('DLSS'),
+  dlssRayReconstruction('DLSS RR');
 
   const LuminaUpscaler(this.displayName);
 
@@ -23,8 +25,30 @@ enum LuminaUpscaler {
     final t = (text ?? '').trim().toLowerCase();
     if (t == 'fsr3' || t == 'fsr') return fsr3;
     if (t == 'dlss') return dlss;
+    final compact = t.replaceAll(RegExp(r'[\s_\-]'), '');
+    if (compact == 'dlssrr' || compact == 'rayreconstruction' || compact == 'dlssrayreconstruction') {
+      return dlssRayReconstruction;
+    }
     return none;
   }
+}
+
+/// Which technique generates frames when frame generation is on: AMD's FSR3
+/// frame interpolation (with the FSR3 upscaler) or NVIDIA DLSS Frame
+/// Generation (any upscaler; up to five generated frames per rendered frame
+/// on RTX 50 class GPUs).
+enum LuminaFrameGenerator {
+  fsr3('FSR3'),
+  dlss('DLSS');
+
+  const LuminaFrameGenerator(this.displayName);
+
+  /// The name the Blueprint nodes and the settings file use.
+  final String displayName;
+
+  /// [text] as a generator: `DLSS` in any case is [dlss], anything else [fsr3].
+  static LuminaFrameGenerator parse(String? text) =>
+      (text ?? '').trim().toLowerCase().startsWith('dlss') ? dlss : fsr3;
 }
 
 /// How far below the output resolution an upscaler renders, one scale for
@@ -84,10 +108,15 @@ class LuminaRenderingFeatureSupport {
     required this.dlss,
     required this.fsr3,
     required this.frameGeneration,
+    this.rayReconstruction = false,
+    this.dlssFrameGeneration = false,
+    this.maxDlssGeneratedFrames = 0,
     this.rayTracingReason = '',
     this.dlssReason = '',
     this.fsr3Reason = '',
     this.frameGenerationReason = '',
+    this.rayReconstructionReason = 'not probed',
+    this.dlssFrameGenerationReason = 'not probed',
   });
 
   /// Nothing is supported, for [reason] (the web, no renderer bound).
@@ -100,6 +129,8 @@ class LuminaRenderingFeatureSupport {
         dlssReason: reason,
         fsr3Reason: reason,
         frameGenerationReason: reason,
+        rayReconstructionReason: reason,
+        dlssFrameGenerationReason: reason,
       );
 
   /// Asks [engine] and [view]: ray tracing needs Vulkan ray query (the
@@ -128,11 +159,26 @@ class LuminaRenderingFeatureSupport {
     final dlss = vulkan && LuminaRtxController.dlssAvailable;
     final motionVectors = ask(() => view.motionVectorsSupported);
     const fsr3Reason = 'needs motion vectors (a GPU backend at feature level 1 or higher)';
+    final rayReconstruction = dlss && ask(() => LuminaRtxController.rayReconstructionSupported(engine));
+    final frameGenerationMax = vulkan ? LuminaRtxController.maxDlssGeneratedFrames(engine) : 0;
     return LuminaRenderingFeatureSupport(
       rayTracing: rayTracing,
       dlss: dlss,
       fsr3: motionVectors,
       frameGeneration: motionVectors,
+      rayReconstruction: rayReconstruction,
+      dlssFrameGeneration: frameGenerationMax > 0,
+      maxDlssGeneratedFrames: frameGenerationMax,
+      rayReconstructionReason: rayReconstruction
+          ? ''
+          : vulkan
+              ? 'needs an NVIDIA RTX GPU and the NGX Ray Reconstruction runtime (nvngx_dlssd)'
+              : 'needs the Vulkan backend',
+      dlssFrameGenerationReason: frameGenerationMax > 0
+          ? ''
+          : vulkan
+              ? 'needs an NVIDIA RTX 40 or newer GPU and the NGX Frame Generation runtime (nvngx_dlssg)'
+              : 'needs the Vulkan backend',
       rayTracingReason:
           rayTracing ? '' : 'needs Vulkan ray query (a ray tracing GPU and driver, extensions requested before the engine)',
       dlssReason: dlss
@@ -148,22 +194,62 @@ class LuminaRenderingFeatureSupport {
   final bool rayTracing;
   final bool dlss;
   final bool fsr3;
+
+  /// FSR3 frame generation (needs the FSR3 upscaler when applied).
   final bool frameGeneration;
+
+  /// DLSS Ray Reconstruction (the `nvngx_dlssd` runtime on an RTX GPU).
+  final bool rayReconstruction;
+
+  /// DLSS Frame Generation (the `nvngx_dlssg` runtime on an RTX 40 or newer GPU).
+  final bool dlssFrameGeneration;
+
+  /// The most frames DLSS can generate per rendered frame on this GPU (1 is
+  /// 2x; 3 to 5 are Multi Frame Generation on RTX 50 class GPUs); 0 without
+  /// [dlssFrameGeneration].
+  final int maxDlssGeneratedFrames;
+
   final String rayTracingReason;
   final String dlssReason;
   final String fsr3Reason;
   final String frameGenerationReason;
+  final String rayReconstructionReason;
+  final String dlssFrameGenerationReason;
 
-  /// This support with DLSS turned off for [reason] (DLSS failed to start).
+  /// This support with DLSS (and Ray Reconstruction) turned off for [reason]
+  /// (DLSS failed to start).
   LuminaRenderingFeatureSupport withoutDlss(String reason) => LuminaRenderingFeatureSupport(
         rayTracing: rayTracing,
         dlss: false,
         fsr3: fsr3,
         frameGeneration: frameGeneration,
+        rayReconstruction: false,
+        dlssFrameGeneration: dlssFrameGeneration,
+        maxDlssGeneratedFrames: maxDlssGeneratedFrames,
         rayTracingReason: rayTracingReason,
         dlssReason: reason,
         fsr3Reason: fsr3Reason,
         frameGenerationReason: frameGenerationReason,
+        rayReconstructionReason: reason,
+        dlssFrameGenerationReason: dlssFrameGenerationReason,
+      );
+
+  /// This support with Ray Reconstruction turned off for [reason] (it failed
+  /// to start).
+  LuminaRenderingFeatureSupport withoutRayReconstruction(String reason) => LuminaRenderingFeatureSupport(
+        rayTracing: rayTracing,
+        dlss: dlss,
+        fsr3: fsr3,
+        frameGeneration: frameGeneration,
+        rayReconstruction: false,
+        dlssFrameGeneration: dlssFrameGeneration,
+        maxDlssGeneratedFrames: maxDlssGeneratedFrames,
+        rayTracingReason: rayTracingReason,
+        dlssReason: dlssReason,
+        fsr3Reason: fsr3Reason,
+        frameGenerationReason: frameGenerationReason,
+        rayReconstructionReason: reason,
+        dlssFrameGenerationReason: dlssFrameGenerationReason,
       );
 
   /// The upscalers that can be chosen, [LuminaUpscaler.none] always first.
@@ -171,11 +257,13 @@ class LuminaRenderingFeatureSupport {
         LuminaUpscaler.none,
         if (fsr3) LuminaUpscaler.fsr3,
         if (dlss) LuminaUpscaler.dlss,
+        if (rayReconstruction) LuminaUpscaler.dlssRayReconstruction,
       ];
 
   @override
   String toString() => 'LuminaRenderingFeatureSupport(rayTracing: $rayTracing, dlss: $dlss, fsr3: $fsr3, '
-      'frameGeneration: $frameGeneration)';
+      'frameGeneration: $frameGeneration, rayReconstruction: $rayReconstruction, '
+      'dlssFrameGeneration: $dlssFrameGeneration (max $maxDlssGeneratedFrames))';
 }
 
 /// What the game's ray tracing / upscaler choice resolves to on one GPU:
@@ -202,6 +290,8 @@ class LuminaRenderingFeatureSettings {
     this.upscalerQuality = LuminaUpscalerQuality.quality,
     this.sharpness = 0.5,
     this.frameGeneration = false,
+    this.frameGenerator = LuminaFrameGenerator.fsr3,
+    this.dlssGeneratedFrames = 1,
   });
 
   /// Hardware ray tracing (the switch for [rayTracedShadows] and [restir]).
@@ -225,8 +315,16 @@ class LuminaRenderingFeatureSettings {
   /// Sharpening after the upscale, 0 to 1 (FSR3's RCAS; DLSS ignores it).
   final double sharpness;
 
-  /// FSR3 frame generation: an interpolated frame before each rendered one.
+  /// Frame generation: generated frames before each rendered one, by
+  /// [frameGenerator].
   final bool frameGeneration;
+
+  /// Who generates the frames: FSR3 (one interpolated frame, with the FSR3
+  /// upscaler) or DLSS ([dlssGeneratedFrames] frames, any upscaler).
+  final LuminaFrameGenerator frameGenerator;
+
+  /// Frames DLSS generates per rendered frame, 1 (2x) to 5 (6x).
+  final int dlssGeneratedFrames;
 
   /// The ray tracing settings for the view.
   LuminaRayTracingSettings get rayTracingSettings => LuminaRayTracingSettings(
@@ -242,12 +340,22 @@ class LuminaRenderingFeatureSettings {
         enabled: upscaler == LuminaUpscaler.fsr3,
         quality: upscalerQuality.fsr3,
         sharpness: sharpness,
-        frameGeneration: frameGeneration,
+        frameGeneration: frameGeneration && frameGenerator == LuminaFrameGenerator.fsr3,
       );
 
-  /// The DLSS settings for the view (enabled when [upscaler] is DLSS).
-  LuminaDlssSettings get dlssSettings =>
-      LuminaDlssSettings(enabled: upscaler == LuminaUpscaler.dlss, quality: upscalerQuality.dlss);
+  /// The DLSS settings for the view (enabled when [upscaler] is DLSS or DLSS
+  /// Ray Reconstruction).
+  LuminaDlssSettings get dlssSettings => LuminaDlssSettings(
+        enabled: upscaler == LuminaUpscaler.dlss || upscaler == LuminaUpscaler.dlssRayReconstruction,
+        quality: upscalerQuality.dlss,
+        rayReconstruction: upscaler == LuminaUpscaler.dlssRayReconstruction,
+      );
+
+  /// The DLSS frame generation settings for the view (off unless frame
+  /// generation is on with the DLSS generator).
+  LuminaDlssFrameGenerationSettings get dlssFrameGenerationSettings => LuminaDlssFrameGenerationSettings(
+        generatedFrames: frameGeneration && frameGenerator == LuminaFrameGenerator.dlss ? dlssGeneratedFrames : 0,
+      );
 
   /// These settings on a GPU with [support]: ray tracing off when it cannot
   /// trace rays; DLSS falls back to FSR3, FSR3 to none; frame generation only
@@ -260,6 +368,14 @@ class LuminaRenderingFeatureSettings {
       fallbacks.add('Ray tracing is off: ${support.rayTracingReason}.');
     }
     var up = upscaler;
+    if (up == LuminaUpscaler.dlssRayReconstruction && !rt) {
+      up = LuminaUpscaler.dlss;
+      fallbacks.add('DLSS Ray Reconstruction needs ray tracing; using DLSS.');
+    }
+    if (up == LuminaUpscaler.dlssRayReconstruction && !support.rayReconstruction) {
+      up = LuminaUpscaler.dlss;
+      fallbacks.add('DLSS Ray Reconstruction is unavailable (${support.rayReconstructionReason}); using DLSS.');
+    }
     if (up == LuminaUpscaler.dlss && !support.dlss) {
       up = support.fsr3 ? LuminaUpscaler.fsr3 : LuminaUpscaler.none;
       fallbacks.add('DLSS is unavailable (${support.dlssReason}); using ${up.displayName}.');
@@ -269,15 +385,29 @@ class LuminaRenderingFeatureSettings {
       fallbacks.add('FSR3 is unavailable (${support.fsr3Reason}); using None.');
     }
     var fg = frameGeneration;
-    if (fg && !support.frameGeneration) {
-      fg = false;
-      fallbacks.add('Frame generation is off: ${support.frameGenerationReason}.');
-    } else if (fg && up != LuminaUpscaler.fsr3) {
-      fg = false;
-      fallbacks.add('Frame generation is off: it needs the FSR3 upscaler (active: ${up.displayName}).');
+    var generator = frameGenerator;
+    var generated = dlssGeneratedFrames;
+    if (fg && generator == LuminaFrameGenerator.dlss) {
+      if (!support.dlssFrameGeneration) {
+        generator = LuminaFrameGenerator.fsr3;
+        fallbacks.add('DLSS frame generation is unavailable (${support.dlssFrameGenerationReason}); trying FSR3.');
+      } else if (generated > support.maxDlssGeneratedFrames) {
+        fallbacks.add('This GPU generates at most ${support.maxDlssGeneratedFrames} frame(s) per rendered frame '
+            '(asked for $generated).');
+        generated = support.maxDlssGeneratedFrames;
+      }
+    }
+    if (fg && generator == LuminaFrameGenerator.fsr3) {
+      if (!support.frameGeneration) {
+        fg = false;
+        fallbacks.add('Frame generation is off: ${support.frameGenerationReason}.');
+      } else if (up != LuminaUpscaler.fsr3) {
+        fg = false;
+        fallbacks.add('Frame generation is off: it needs the FSR3 upscaler (active: ${up.displayName}).');
+      }
     }
     return LuminaResolvedRenderingFeatures(
-      copyWith(rayTracing: rt, upscaler: up, frameGeneration: fg),
+      copyWith(rayTracing: rt, upscaler: up, frameGeneration: fg, frameGenerator: generator, dlssGeneratedFrames: generated),
       List.unmodifiable(fallbacks),
     );
   }
@@ -292,6 +422,8 @@ class LuminaRenderingFeatureSettings {
     LuminaUpscalerQuality? upscalerQuality,
     double? sharpness,
     bool? frameGeneration,
+    LuminaFrameGenerator? frameGenerator,
+    int? dlssGeneratedFrames,
   }) =>
       LuminaRenderingFeatureSettings(
         rayTracing: rayTracing ?? this.rayTracing,
@@ -303,6 +435,8 @@ class LuminaRenderingFeatureSettings {
         upscalerQuality: upscalerQuality ?? this.upscalerQuality,
         sharpness: (sharpness ?? this.sharpness).clamp(0.0, 1.0).toDouble(),
         frameGeneration: frameGeneration ?? this.frameGeneration,
+        frameGenerator: frameGenerator ?? this.frameGenerator,
+        dlssGeneratedFrames: (dlssGeneratedFrames ?? this.dlssGeneratedFrames).clamp(1, 5),
       );
 
   Map<String, dynamic> toMap() => {
@@ -315,6 +449,8 @@ class LuminaRenderingFeatureSettings {
         'upscaler_quality': upscalerQuality.displayName,
         'sharpness': sharpness,
         'frame_generation': frameGeneration,
+        'frame_generator': frameGenerator.displayName,
+        'dlss_generated_frames': dlssGeneratedFrames,
       };
 
   factory LuminaRenderingFeatureSettings.fromMap(Map<String, dynamic> map) {
@@ -322,6 +458,7 @@ class LuminaRenderingFeatureSettings {
     final candidates = map['restir_candidates'];
     final spatial = map['restir_spatial_samples'];
     final sharpness = map['sharpness'];
+    final generated = map['dlss_generated_frames'];
     return d.copyWith(
       rayTracing: map['ray_tracing'] is bool ? map['ray_tracing'] as bool : null,
       rayTracedShadows: map['ray_traced_shadows'] is bool ? map['ray_traced_shadows'] as bool : null,
@@ -333,6 +470,9 @@ class LuminaRenderingFeatureSettings {
           map['upscaler_quality'] is String ? LuminaUpscalerQuality.parse(map['upscaler_quality'] as String) : null,
       sharpness: sharpness is num ? sharpness.toDouble() : null,
       frameGeneration: map['frame_generation'] is bool ? map['frame_generation'] as bool : null,
+      frameGenerator:
+          map['frame_generator'] is String ? LuminaFrameGenerator.parse(map['frame_generator'] as String) : null,
+      dlssGeneratedFrames: generated is int ? generated : null,
     );
   }
 
@@ -347,11 +487,13 @@ class LuminaRenderingFeatureSettings {
       other.upscaler == upscaler &&
       other.upscalerQuality == upscalerQuality &&
       other.sharpness == sharpness &&
-      other.frameGeneration == frameGeneration;
+      other.frameGeneration == frameGeneration &&
+      other.frameGenerator == frameGenerator &&
+      other.dlssGeneratedFrames == dlssGeneratedFrames;
 
   @override
   int get hashCode => Object.hash(rayTracing, rayTracedShadows, restir, restirCandidates, restirSpatialSamples, upscaler,
-      upscalerQuality, sharpness, frameGeneration);
+      upscalerQuality, sharpness, frameGeneration, frameGenerator, dlssGeneratedFrames);
 
   @override
   String toString() => 'LuminaRenderingFeatureSettings(${toMap()})';

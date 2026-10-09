@@ -621,13 +621,17 @@ Vectors and rotators are **authoring space** (cm, Z up; rotators about X/Y/Z lik
 | `setRestirEnabled` / `getRestirEnabled` | `static const setRestirEnabled` | ReSTIR direct lighting of the point and spot lights. |
 | `setRestirCandidates` / `getRestirCandidates` | `static const setRestirCandidates` | Lights ReSTIR samples per pixel and frame (1–64, default 8). |
 | `setRestirSpatialSamples` / `getRestirSpatialSamples` | `static const setRestirSpatialSamples` | Neighbouring reservoirs merged per pixel (0–8, default 2). |
-| `setUpscaler` / `getUpscaler` | `static const setUpscaler` | The chosen upscaler: `None`, `FSR3` or `DLSS` (case-insensitive; `fsr` is FSR3, anything else None). |
+| `setUpscaler` / `getUpscaler` | `static const setUpscaler` | The chosen upscaler: `None`, `FSR3`, `DLSS` or `DLSS RR` (DLSS Ray Reconstruction: DLSS upscaling that also denoises the ray-traced lighting; case-insensitive, `fsr` is FSR3, `dlss_rr` / `ray reconstruction` / `DLSS Ray Reconstruction` is DLSS RR, anything else None). |
 | `setUpscalerQuality` / `getUpscalerQuality` | `static const setUpscalerQuality` | `Native AA`, `Quality`, `Balanced`, `Performance`, `Ultra Performance`; FSR3 renders at 1/1, 1/1.5, 1/1.7, 1/2, 1/3 per axis, DLSS uses DLAA, Max Quality, Balanced, Max Performance, Ultra Performance. |
 | `setUpscalerSharpness` / `getUpscalerSharpness` | `static const setUpscalerSharpness` | Sharpening after the upscale, 0–1 (FSR3's RCAS; DLSS ignores it). |
-| `setFrameGenerationEnabled` / `getFrameGenerationEnabled` | `static const setFrameGenerationEnabled` | FSR3 frame generation: an interpolated frame before each rendered one. Only with the FSR3 upscaler. |
+| `setFrameGenerationEnabled` / `getFrameGenerationEnabled` | `static const setFrameGenerationEnabled` | Frame generation by the chosen frame generator: FSR3 (an interpolated frame before each rendered one, only with the FSR3 upscaler) or DLSS (with any upscaler). |
+| `setFrameGenerator` / `getFrameGenerator` | `static const setFrameGenerator` | Who generates the frames: `FSR3` or `DLSS` (case-insensitive; anything else FSR3). |
+| `setDlssGeneratedFrames` / `getDlssGeneratedFrames` | `static const setDlssGeneratedFrames` | Frames DLSS generates per rendered frame, 1 (2x) to 5 (6x); the apply clamps it to what the GPU can do. |
 | `isRayTracingSupported` | `static const isRayTracingSupported` | The game's engine traces rays (Vulkan ray query; requested before the engine by `LuminaGameWidget`). False on the web and without a renderer. |
 | `isDlssSupported` | `static const isDlssSupported` | Vulkan backend, an NVIDIA GPU and the NGX runtime (`nvngx_dlss`); false after DLSS failed to start on this view. |
 | `isFsr3Supported` / `isFrameGenerationSupported` | `static const isFsr3Supported` | The view renders motion vectors (a GPU backend at feature level 1 or higher). |
+| `isRayReconstructionSupported` | `static const isRayReconstructionSupported` | DLSS is supported and the NGX Ray Reconstruction runtime (`nvngx_dlssd`) runs on this GPU; false after it failed to start on this view. |
+| `isDlssFrameGenerationSupported` / `getMaxDlssGeneratedFrames` | `static const isDlssFrameGenerationSupported` | The NGX frame generation runtime (`nvngx_dlssg`) runs on this GPU, and the most frames it generates per rendered frame (1 on RTX 40 class GPUs, up to 5 on RTX 50 class; 0 without it). |
 | `getSupportedUpscalers` | `static const getSupportedUpscalers` | String array of the upscalers this GPU can run, `None` first: for an options menu. |
 | `getActiveUpscaler` / `isRayTracingActive` | `static const getActiveUpscaler` | What the last apply actually turned on after fallback (Get Upscaler keeps the player's choice). |
 | `saveGameUserSettings` / `loadGameUserSettings` | `static const saveGameUserSettings` | Writes / reads every user setting as `GameUserSettings.json` in the save game directory, in the background; Load applies what it read. |

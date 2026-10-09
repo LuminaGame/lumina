@@ -794,14 +794,15 @@ Oyun ölçeklenebilirliğini, kamera görüş mesafesini ve kullanıcı ekran ay
 | :--- | :--- | :--- |
 | `renderingFeatures` / `setRenderingFeatures` | `LuminaRenderingFeatureSettings` | Seçimin tamamı tek değer olarak. |
 | `rayTracingEnabled`, `rayTracedShadowsEnabled`, `restirEnabled`, `restirCandidates`, `restirSpatialSamples` | getter + `set…` | Işın izleme, ışın izlemeli güneş gölgeleri, ReSTIR ve iki sayısı (1–64 / 0–8 aralığına kırpılır). |
-| `upscaler`, `upscalerQuality`, `upscalerSharpness`, `frameGenerationEnabled` | getter + `set…` | `None`/`FSR3`/`DLSS`, `Native AA`…`Ultra Performance`, 0–1, FSR3 kare üretimi. |
+| `upscaler`, `upscalerQuality`, `upscalerSharpness`, `frameGenerationEnabled` | getter + `set…` | `None`/`FSR3`/`DLSS`/`DLSS RR`, `Native AA`…`Ultra Performance`, 0–1, kare üretimi. |
+| `frameGenerator`, `dlssGeneratedFrames` | getter + `set…` | `FSR3`/`DLSS`; DLSS'in çizilen kare başına ürettiği kare (1–5). |
 | `renderingSupport` | `LuminaRenderingFeatureSupport get renderingSupport` | Dünyanın motoru ve view'ının şu an desteklediği (renderer yokken ya da web'de hiçbiri), her "hayır" için bir sebeple. |
-| `isRayTracingSupported`, `isDlssSupported`, `isFsr3Supported`, `isFrameGenerationSupported`, `supportedUpscalers` | getter | Blueprint node'larının döndürdüğü destek sorguları. |
+| `isRayTracingSupported`, `isDlssSupported`, `isFsr3Supported`, `isFrameGenerationSupported`, `isRayReconstructionSupported`, `isDlssFrameGenerationSupported`, `maxDlssGeneratedFrames`, `supportedUpscalers` | getter | Blueprint node'larının döndürdüğü destek sorguları. |
 | `activeRenderingFeatures`, `activeUpscaler`, `rayTracingActive` | getter | Son uygulamanın geri düşüşten sonra gerçekten açtığı. |
 | `renderingFallbacks` | `List<String> get renderingFallbacks` | Son uygulamanın neyi neden değiştirdiği; her yeni liste ayrıca uyarı olarak loglanır. |
 | `rtxController` | `LuminaRtxController? get rtxController` | Bağlı view'daki denetleyici (varken). |
 
-**Geri düşüş**: ray query olmadan ışın izleme kapalıdır (gölgeleri ve ReSTIR ile birlikte); desteklenmeyen ya da NGX'in view'da başlatmayı reddettiği DLSS, FSR3 çalışıyorsa FSR3'e, yoksa None'a düşer; hareket vektörü olmadan FSR3 None olur; kare üretimi yalnızca etkin FSR3 ölçekleyiciyle kalır. Oyuncunun seçimi korunur; aynı ayar dosyası yetenekli bir GPU'da her şeyi açar.
+**Geri düşüş**: ray query olmadan ışın izleme kapalıdır (gölgeleri ve ReSTIR ile birlikte); ışın izleme ya da Ray Reconstruction desteği olmayan ya da NGX'in başlatmayı reddettiği DLSS RR, DLSS'e düşer; desteklenmeyen ya da NGX'in view'da başlatmayı reddettiği DLSS, FSR3 çalışıyorsa FSR3'e, yoksa None'a düşer; hareket vektörü olmadan FSR3 None olur; desteklenmeyen DLSS kare üretimi FSR3 kare üretimine düşer ve üretilen kare sayısı GPU'nun en çoğuna kırpılır; FSR3 kare üretimi yalnızca etkin FSR3 ölçekleyiciyle kalır. Oyuncunun seçimi korunur; aynı ayar dosyası yetenekli bir GPU'da her şeyi açar.
 
 **Ölçeklenebilirlik ön ayarları ışın izlemeye ve ölçekleyiciye dokunmaz.** Bunlar GPU'ya bağlıdır ve oyuncunun tercihidir: `Cinematic` ışın izlemeyi asla açmaz (çoğu donanımda sessizce geri düşer, kalanında en pahalısıdır), `Low` seçilmiş bir ölçekleyiciyi asla kapatmaz (düşük seviye GPU'nun en çok yararlandığı şey ölçekleyicidir). Yeni bir oyun her şey kapalı başlar.
 

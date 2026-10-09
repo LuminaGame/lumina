@@ -98,32 +98,75 @@ class LuminaRayTracingSettings {
 /// fetched NGX runtime ([LuminaRtxController.dlssAvailable]) and a Vulkan
 /// engine created after [LuminaRtxController.requestExtensions].
 class LuminaDlssSettings {
-  const LuminaDlssSettings({this.enabled = false, this.quality = DlssQuality.balanced});
+  const LuminaDlssSettings({this.enabled = false, this.quality = DlssQuality.balanced, this.rayReconstruction = false});
 
   final bool enabled;
   final DlssQuality quality;
 
-  LuminaDlssSettings copyWith({bool? enabled, DlssQuality? quality}) =>
-      LuminaDlssSettings(enabled: enabled ?? this.enabled, quality: quality ?? this.quality);
+  /// Run DLSS Ray Reconstruction (the denoising upscaler, `nvngx_dlssd`)
+  /// instead of Super Resolution; it reads the view's guide buffers.
+  final bool rayReconstruction;
 
-  Map<String, dynamic> toMap() => {'enabled': enabled, 'quality': quality.name};
+  LuminaDlssSettings copyWith({bool? enabled, DlssQuality? quality, bool? rayReconstruction}) => LuminaDlssSettings(
+        enabled: enabled ?? this.enabled,
+        quality: quality ?? this.quality,
+        rayReconstruction: rayReconstruction ?? this.rayReconstruction,
+      );
+
+  Map<String, dynamic> toMap() => {'enabled': enabled, 'quality': quality.name, 'ray_reconstruction': rayReconstruction};
 
   factory LuminaDlssSettings.fromMap(Map<String, dynamic> map) {
     final name = map['quality'];
     return LuminaDlssSettings(
       enabled: map['enabled'] as bool? ?? false,
       quality: DlssQuality.values.where((q) => q.name == name).firstOrNull ?? DlssQuality.balanced,
+      rayReconstruction: map['ray_reconstruction'] as bool? ?? false,
     );
   }
 
   @override
-  bool operator ==(Object other) => other is LuminaDlssSettings && other.enabled == enabled && other.quality == quality;
+  bool operator ==(Object other) =>
+      other is LuminaDlssSettings &&
+      other.enabled == enabled &&
+      other.quality == quality &&
+      other.rayReconstruction == rayReconstruction;
 
   @override
-  int get hashCode => Object.hash(enabled, quality);
+  int get hashCode => Object.hash(enabled, quality, rayReconstruction);
 
   @override
-  String toString() => 'LuminaDlssSettings(enabled: $enabled, quality: ${quality.name})';
+  String toString() =>
+      'LuminaDlssSettings(enabled: $enabled, quality: ${quality.name}, rayReconstruction: $rayReconstruction)';
+}
+
+/// DLSS Frame Generation for a view: [generatedFrames] frames generated
+/// before each rendered one (0 is off, 1 is 2x, up to 5 for 6x on RTX 50
+/// class GPUs). Extra presents happen only for views rendered into a
+/// SwapChain; a view drawn by Flutter shows one generated frame per rendered
+/// frame.
+class LuminaDlssFrameGenerationSettings {
+  const LuminaDlssFrameGenerationSettings({this.generatedFrames = 0});
+
+  final int generatedFrames;
+
+  bool get enabled => generatedFrames > 0;
+
+  Map<String, dynamic> toMap() => {'generated_frames': generatedFrames};
+
+  factory LuminaDlssFrameGenerationSettings.fromMap(Map<String, dynamic> map) {
+    final n = map['generated_frames'];
+    return LuminaDlssFrameGenerationSettings(generatedFrames: n is int ? n.clamp(0, 5) : 0);
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is LuminaDlssFrameGenerationSettings && other.generatedFrames == generatedFrames;
+
+  @override
+  int get hashCode => generatedFrames.hashCode;
+
+  @override
+  String toString() => 'LuminaDlssFrameGenerationSettings(generatedFrames: $generatedFrames)';
 }
 
 /// Applies [LuminaRayTracingSettings], [LuminaDlssSettings] and
@@ -142,6 +185,9 @@ class LuminaRtxController {
   final FilamentScene scene;
 
   Dlss? _dlss;
+  DlssRayReconstruction? _rayReconstruction;
+  DlssFrameGenerator? _frameGenerator;
+  LuminaDlssFrameGenerationSettings? _appliedFrameGeneration;
   LuminaRayTracingSettings? _appliedRayTracing;
   LuminaDlssSettings? _appliedDlss;
   LuminaFsr3Settings? _appliedFsr3;
@@ -163,12 +209,50 @@ class LuminaRtxController {
     try {
       if (dlssRuntimeDir != null) Dlss.runtimeDirectory = dlssRuntimeDir;
       if (Dlss.available) Dlss.requestExtensions();
+      if (DlssFrameGeneration.available) DlssFrameGeneration.requestExtensions();
     } catch (e) {
       EngineLoggerService().log('DLSS extensions not requested: $e', level: 'warning', source: 'LuminaRtxController');
     }
     return requested;
   }
 
+  static final Expando<bool> _rayReconstructionByEngine = Expando<bool>('rayReconstruction');
+  static final Expando<int> _generatedFramesByEngine = Expando<int>('dlssGeneratedFrames');
+
+  /// Whether [engine]'s GPU and driver run DLSS Ray Reconstruction (asked
+  /// once per engine: NGX starts for the query).
+  static bool rayReconstructionSupported(FilamentEngine engine) {
+    final cached = _rayReconstructionByEngine[engine];
+    if (cached != null) return cached;
+    var supported = false;
+    try {
+      supported = DlssRayReconstruction.available && DlssRayReconstruction.supported(engine);
+    } catch (_) {
+      supported = false;
+    }
+    _rayReconstructionByEngine[engine] = supported;
+    return supported;
+  }
+
+  /// The most frames DLSS Frame Generation generates per rendered frame on
+  /// [engine]'s GPU (0 without it; asked once per engine).
+  static int maxDlssGeneratedFrames(FilamentEngine engine) {
+    final cached = _generatedFramesByEngine[engine];
+    if (cached != null) return cached;
+    var max = 0;
+    try {
+      if (DlssFrameGeneration.available) {
+        final probe = DlssFrameGeneration.probe(engine);
+        if (probe != null && probe.available && !probe.needsUpdatedDriver) {
+          max = probe.multiFrameCountMax < 1 ? 1 : probe.multiFrameCountMax.clamp(1, 5);
+        }
+      }
+    } catch (_) {
+      max = 0;
+    }
+    _generatedFramesByEngine[engine] = max;
+    return max;
+  }
   /// The NGX runtime was found and an NVIDIA Vulkan device exists.
   static bool get dlssAvailable {
     try {
@@ -183,6 +267,15 @@ class LuminaRtxController {
 
   /// The live DLSS instance, while DLSS is applied and the engine supports it.
   Dlss? get dlss => _dlss;
+
+  /// The live DLSS Ray Reconstruction instance, while it is applied.
+  DlssRayReconstruction? get rayReconstruction => _rayReconstruction;
+
+  /// The live DLSS frame generator, while DLSS frame generation is applied.
+  DlssFrameGenerator? get frameGenerator => _frameGenerator;
+
+  /// The DLSS frame generation settings last applied.
+  LuminaDlssFrameGenerationSettings? get appliedFrameGeneration => _appliedFrameGeneration;
 
   /// The ray tracing settings last applied.
   LuminaRayTracingSettings? get appliedRayTracing => _appliedRayTracing;
@@ -207,12 +300,31 @@ class LuminaRtxController {
     LuminaRayTracingSettings rayTracing,
     LuminaDlssSettings dlss, {
     LuminaFsr3Settings fsr3 = const LuminaFsr3Settings(),
+    LuminaDlssFrameGenerationSettings dlssFrameGeneration = const LuminaDlssFrameGenerationSettings(),
     required TemporalAntiAliasingOptions baseTaa,
     required DynamicResolutionOptions baseDynamicResolution,
   }) {
     _applyRayTracing(rayTracing);
     _applyDlss(dlss, baseTaa: baseTaa, baseDynamicResolution: baseDynamicResolution);
     _applyFsr3(fsr3, baseTaa: baseTaa, baseDynamicResolution: baseDynamicResolution);
+    _applyFrameGeneration(dlssFrameGeneration);
+  }
+
+  void _applyFrameGeneration(LuminaDlssFrameGenerationSettings settings) {
+    final wanted = settings.enabled && maxDlssGeneratedFrames(engine) > 0;
+    if (!wanted) {
+      _frameGenerator?.destroy();
+      _frameGenerator = null;
+    } else if (_frameGenerator == null) {
+      try {
+        _frameGenerator = DlssFrameGenerator.create(engine: engine, view: view, generatedFrames: settings.generatedFrames);
+      } catch (e) {
+        EngineLoggerService().log('DLSS frame generation not created: $e', level: 'warning', source: 'LuminaRtxController');
+      }
+    } else if (_frameGenerator!.generatedFrames != settings.generatedFrames) {
+      _frameGenerator!.generatedFrames = settings.generatedFrames;
+    }
+    _appliedFrameGeneration = settings;
   }
 
   void _applyFsr3(
@@ -220,14 +332,14 @@ class LuminaRtxController {
     required TemporalAntiAliasingOptions baseTaa,
     required DynamicResolutionOptions baseDynamicResolution,
   }) {
-    final wanted = settings.enabled && _dlss == null && fsr3Supported;
+    final wanted = settings.enabled && _dlss == null && _rayReconstruction == null && fsr3Supported;
     if (wanted && (!_fsr3OnView || _appliedFsr3 != settings)) {
       view.temporalAntiAliasingOptions = settings.taaOptions(baseTaa);
       view.dynamicResolutionOptions = settings.dynamicResolutionOptions;
       _fsr3OnView = true;
     } else if (!wanted && _fsr3OnView) {
       _fsr3OnView = false;
-      if (_dlss == null) {
+      if (_dlss == null && _rayReconstruction == null) {
         view.temporalAntiAliasingOptions = baseTaa;
         view.dynamicResolutionOptions = baseDynamicResolution;
       }
@@ -275,15 +387,40 @@ class LuminaRtxController {
     final (_, _, width, height) = view.viewport;
     final wanted = settings.enabled && dlssAvailable && width > 0 && height > 0;
     final sizeChanged = _dlssOutputSize != null && _dlssOutputSize != (width, height);
-    if (!wanted || sizeChanged) {
-      if (_dlss != null) {
-        _dlss!.destroy();
+    final wantRayReconstruction = wanted && settings.rayReconstruction && rayReconstructionSupported(engine);
+    final modeChanged = (wantRayReconstruction && _dlss != null) || (!wantRayReconstruction && _rayReconstruction != null);
+    if (!wanted || sizeChanged || modeChanged) {
+      if (_dlss != null || _rayReconstruction != null) {
+        _dlss?.destroy();
         _dlss = null;
+        _rayReconstruction?.destroy();
+        _rayReconstruction = null;
         _dlssOutputSize = null;
         view.dynamicResolutionOptions = baseDynamicResolution;
         view.temporalAntiAliasingOptions = baseTaa;
         _fsr3OnView = false; // FSR3, if wanted, is put back by _applyFsr3
       }
+    }
+    if (wantRayReconstruction) {
+      if (_rayReconstruction == null) {
+        _fsr3OnView = false;
+        try {
+          _rayReconstruction = DlssRayReconstruction.create(
+            engine: engine,
+            view: view,
+            options: DlssRayReconstructionOptions(quality: settings.quality, outputWidth: width, outputHeight: height),
+          );
+          _dlssOutputSize = (width, height);
+        } catch (e) {
+          EngineLoggerService().log('DLSS Ray Reconstruction not created: $e', level: 'warning', source: 'LuminaRtxController');
+          view.temporalAntiAliasingOptions = baseTaa;
+          view.dynamicResolutionOptions = baseDynamicResolution;
+        }
+      } else if (_appliedDlss?.quality != settings.quality) {
+        _rayReconstruction!.quality = settings.quality;
+      }
+      _appliedDlss = settings;
+      return;
     }
     if (wanted && _dlss == null) {
       _fsr3OnView = false; // DLSS owns the TAA options from here
@@ -313,6 +450,11 @@ class LuminaRtxController {
   void invalidate() {
     _dlss?.destroy();
     _dlss = null;
+    _rayReconstruction?.destroy();
+    _rayReconstruction = null;
+    _frameGenerator?.destroy();
+    _frameGenerator = null;
+    _appliedFrameGeneration = null;
     _dlssOutputSize = null;
     _fsr3OnView = false;
     _appliedRayTracing = null;
@@ -324,6 +466,10 @@ class LuminaRtxController {
   void dispose() {
     _dlss?.destroy();
     _dlss = null;
+    _rayReconstruction?.destroy();
+    _rayReconstruction = null;
+    _frameGenerator?.destroy();
+    _frameGenerator = null;
     _dlssOutputSize = null;
   }
 }

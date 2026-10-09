@@ -19,6 +19,7 @@ mixin LuminaUserSettingsRenderingFeatures on LuminaWorldSubsystem {
   LuminaRtxController? _rtx;
   FilamentView? _rtxView;
   String? _dlssFailure;
+  String? _rayReconstructionFailure;
   TemporalAntiAliasingOptions? _baseTaa;
   DynamicResolutionOptions? _baseDynamicResolution;
   List<String> _loggedFallbacks = const [];
@@ -46,7 +47,7 @@ mixin LuminaUserSettingsRenderingFeatures on LuminaWorldSubsystem {
   int get restirSpatialSamples => _features.restirSpatialSamples;
   void setRestirSpatialSamples(int samples) => _features = _features.copyWith(restirSpatialSamples: samples);
 
-  /// The chosen upscaler: `None`, `FSR3` or `DLSS`.
+  /// The chosen upscaler: `None`, `FSR3`, `DLSS` or `DLSS RR`.
   String get upscaler => _features.upscaler.displayName;
   void setUpscaler(String upscaler) => _features = _features.copyWith(upscaler: LuminaUpscaler.parse(upscaler));
 
@@ -59,22 +60,39 @@ mixin LuminaUserSettingsRenderingFeatures on LuminaWorldSubsystem {
   double get upscalerSharpness => _features.sharpness;
   void setUpscalerSharpness(double sharpness) => _features = _features.copyWith(sharpness: sharpness);
 
-  /// FSR3 frame generation.
+  /// Frame generation (by [frameGenerator]).
   bool get frameGenerationEnabled => _features.frameGeneration;
   void setFrameGenerationEnabled(bool enabled) => _features = _features.copyWith(frameGeneration: enabled);
+
+  /// Who generates the frames: `FSR3` or `DLSS`.
+  String get frameGenerator => _features.frameGenerator.displayName;
+  void setFrameGenerator(String generator) =>
+      _features = _features.copyWith(frameGenerator: LuminaFrameGenerator.parse(generator));
+
+  /// Frames DLSS generates per rendered frame (clamped to 1–5; 1 is 2x).
+  int get dlssGeneratedFrames => _features.dlssGeneratedFrames;
+  void setDlssGeneratedFrames(int frames) => _features = _features.copyWith(dlssGeneratedFrames: frames);
 
   /// What the world's renderer supports right now (nothing without one).
   LuminaRenderingFeatureSupport get renderingSupport {
     final w = world;
     final support = LuminaRenderingFeatureSupport.probe(engine: w?.filamentEngineOrNull, view: w?.filamentViewOrNull);
     final failure = _dlssFailure;
-    return failure != null && support.dlss ? support.withoutDlss(failure) : support;
+    var result = failure != null && support.dlss ? support.withoutDlss(failure) : support;
+    final rrFailure = _rayReconstructionFailure;
+    if (rrFailure != null && result.rayReconstruction) result = result.withoutRayReconstruction(rrFailure);
+    return result;
   }
 
   bool get isRayTracingSupported => renderingSupport.rayTracing;
   bool get isDlssSupported => renderingSupport.dlss;
   bool get isFsr3Supported => renderingSupport.fsr3;
   bool get isFrameGenerationSupported => renderingSupport.frameGeneration;
+  bool get isRayReconstructionSupported => renderingSupport.rayReconstruction;
+  bool get isDlssFrameGenerationSupported => renderingSupport.dlssFrameGeneration;
+
+  /// The most frames DLSS can generate per rendered frame on this GPU (0 without DLSS frame generation).
+  int get maxDlssGeneratedFrames => renderingSupport.maxDlssGeneratedFrames;
 
   /// The display names of the upscalers this GPU can run, `None` first.
   List<String> get supportedUpscalers => [for (final u in renderingSupport.supportedUpscalers) u.displayName];
@@ -119,6 +137,18 @@ mixin LuminaUserSettingsRenderingFeatures on LuminaWorldSubsystem {
       if (baseChanged) controller.invalidate();
       _push(controller, resolved.settings);
       final (_, _, width, height) = controller.view.viewport;
+      if (resolved.settings.upscaler == LuminaUpscaler.dlssRayReconstruction &&
+          controller.rayReconstruction == null &&
+          width > 0 &&
+          height > 0) {
+        String? error;
+        try {
+          error = DlssRayReconstruction.lastErrorMessage;
+        } catch (_) {}
+        _rayReconstructionFailure = 'DLSS Ray Reconstruction could not start: ${error ?? 'unknown error'}';
+        resolved = _features.resolve(renderingSupport);
+        _push(controller, resolved.settings);
+      }
       if (resolved.settings.upscaler == LuminaUpscaler.dlss && controller.dlss == null && width > 0 && height > 0) {
         String? error;
         try {
@@ -163,6 +193,7 @@ mixin LuminaUserSettingsRenderingFeatures on LuminaWorldSubsystem {
       _rtx = LuminaRtxController(engine: engine, view: view, scene: scene);
       _rtxView = view;
       _dlssFailure = null;
+      _rayReconstructionFailure = null;
     }
     return _rtx;
   }
@@ -173,6 +204,7 @@ mixin LuminaUserSettingsRenderingFeatures on LuminaWorldSubsystem {
         s.rayTracingSettings,
         s.dlssSettings,
         fsr3: s.fsr3Settings,
+        dlssFrameGeneration: s.dlssFrameGenerationSettings,
         baseTaa: _baseTaa ?? const TemporalAntiAliasingOptions(),
         baseDynamicResolution: _baseDynamicResolution ?? const DynamicResolutionOptions(),
       );

@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Rendering settings: DLSS Ray Reconstruction is a fourth upscaler (`LuminaUpscaler.dlssRayReconstruction`,
+  `DLSS RR`) and frame generation has a generator (`LuminaFrameGenerator` FSR3 / DLSS) with DLSS's
+  generated frames per rendered frame (1–5). `LuminaRtxController` drives `DlssRayReconstruction` (with
+  the view's guide buffers) and `DlssFrameGenerator`; the user settings resolve them with fallbacks
+  (DLSS RR → DLSS, DLSS frame generation → FSR3). New Blueprint nodes: Set/Get Frame Generator,
+  Set/Get DLSS Generated Frames, Is Ray Reconstruction Supported, Is DLSS Frame Generation
+  Supported, Get Max DLSS Generated Frames.
+
 - Particles: `LuminaParticleSystemComponent` now draws its own particles. It batches a pair of
   crossed quads per live particle into one procedural mesh section, rebuilt each render prep,
   with each particle's colour and size sampled from its own normalized age. Before this it

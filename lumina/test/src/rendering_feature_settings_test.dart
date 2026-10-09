@@ -117,7 +117,8 @@ void main() {
       expect(r.fallbacks.single, contains('DLSS'));
       expect(r.fallbacks.single, contains('no NGX'));
       expect(noDlss.supportedUpscalers, [LuminaUpscaler.none, LuminaUpscaler.fsr3]);
-      expect(all.supportedUpscalers, LuminaUpscaler.values);
+      // DLSS RR is listed only when Ray Reconstruction is supported too
+      expect(all.supportedUpscalers, [LuminaUpscaler.none, LuminaUpscaler.fsr3, LuminaUpscaler.dlss]);
     });
 
     test('nothing supported turns ray tracing, the upscaler and frame generation off with a reason each', () {

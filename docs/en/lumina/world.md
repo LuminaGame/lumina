@@ -794,14 +794,15 @@ World subsystem managing game scalability, camera view distance, and user displa
 | :--- | :--- | :--- |
 | `renderingFeatures` / `setRenderingFeatures` | `LuminaRenderingFeatureSettings` | The whole choice as one value. |
 | `rayTracingEnabled`, `rayTracedShadowsEnabled`, `restirEnabled`, `restirCandidates`, `restirSpatialSamples` | getters + `set…` | Ray tracing, ray-traced sun shadows, ReSTIR and its two counts (clamped 1–64 / 0–8). |
-| `upscaler`, `upscalerQuality`, `upscalerSharpness`, `frameGenerationEnabled` | getters + `set…` | `None`/`FSR3`/`DLSS`, `Native AA`…`Ultra Performance`, 0–1, FSR3 frame generation. |
+| `upscaler`, `upscalerQuality`, `upscalerSharpness`, `frameGenerationEnabled` | getters + `set…` | `None`/`FSR3`/`DLSS`/`DLSS RR`, `Native AA`…`Ultra Performance`, 0–1, frame generation. |
+| `frameGenerator`, `dlssGeneratedFrames` | getters + `set…` | `FSR3`/`DLSS`; frames DLSS generates per rendered frame (1–5). |
 | `renderingSupport` | `LuminaRenderingFeatureSupport get renderingSupport` | What the world's engine and view support now (nothing without a renderer or on the web), with a reason per "no". |
-| `isRayTracingSupported`, `isDlssSupported`, `isFsr3Supported`, `isFrameGenerationSupported`, `supportedUpscalers` | getters | The support queries the Blueprint nodes return. |
+| `isRayTracingSupported`, `isDlssSupported`, `isFsr3Supported`, `isFrameGenerationSupported`, `isRayReconstructionSupported`, `isDlssFrameGenerationSupported`, `maxDlssGeneratedFrames`, `supportedUpscalers` | getters | The support queries the Blueprint nodes return. |
 | `activeRenderingFeatures`, `activeUpscaler`, `rayTracingActive` | getters | What the last apply turned on after fallback. |
 | `renderingFallbacks` | `List<String> get renderingFallbacks` | What the last apply changed and why; each new set is also logged as a warning. |
 | `rtxController` | `LuminaRtxController? get rtxController` | The controller on the bound view, while there is one. |
 
-**Fallback**: ray tracing without ray query is off (its shadows and ReSTIR with it); DLSS without support, or when NGX declines to start on the view, becomes FSR3 where FSR3 works, else None; FSR3 without motion vectors becomes None; frame generation stays only with the active FSR3 upscaler. The player's choice is kept, so the same settings file turns everything on with a capable GPU.
+**Fallback**: ray tracing without ray query is off (its shadows and ReSTIR with it); DLSS RR without ray tracing, without Ray Reconstruction support, or when NGX declines to start it, becomes DLSS; DLSS without support, or when NGX declines to start on the view, becomes FSR3 where FSR3 works, else None; FSR3 without motion vectors becomes None; DLSS frame generation without support becomes FSR3 frame generation and its generated frames are clamped to the GPU's maximum; FSR3 frame generation stays only with the active FSR3 upscaler. The player's choice is kept, so the same settings file turns everything on with a capable GPU.
 
 **Scalability presets do not touch ray tracing or the upscaler.** They depend on the GPU and are the player's opt-in, so `Cinematic` never turns ray tracing on (it would fall back silently on most hardware and cost the most on the rest) and `Low` never turns a chosen upscaler off (an upscaler is what a low-end GPU most benefits from). A fresh game starts with everything off.
 

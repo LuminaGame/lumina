@@ -172,6 +172,7 @@ Hardware ray tracing for a view: the scene's acceleration structures, ray-traced
 | :--- | :--- | :--- |
 | `enabled` | `bool enabled` | DLSS Super Resolution on the view. Default false. |
 | `quality` | `DlssQuality quality` | The NGX quality mode. Default `balanced`. |
+| `rayReconstruction` | `bool rayReconstruction` | DLSS Ray Reconstruction (`DlssRayReconstruction`, the transformer model) instead of Super Resolution: also denoises the ray-traced lighting, fed by the view's guide buffers. Its output is the view's viewport (the chosen screen resolution in borderless fullscreen) and it renders at the quality scale of that; a resize recreates it on the next apply. Default false; JSON key `ray_reconstruction`. |
 | `copyWith`, `toMap`, `fromMap` | | Value semantics and the JSON form the editor stores. |
 
 ### `enum LuminaFsr3Quality`
@@ -198,14 +199,20 @@ Applies both settings to one view: the scene's acceleration structures, the dire
 
 | Method / Getter | Signature | Purpose & Description |
 | :--- | :--- | :--- |
-| `requestExtensions` | `static bool requestExtensions()` | Asks the engines created from now on for the ray query extensions and, with the NGX runtime present, the DLSS ones. Call it before the engine exists. |
+| `requestExtensions` | `static bool requestExtensions({String? dlssRuntimeDir})` | Asks the engines created from now on for the ray query extensions and, with the NGX runtime present, the DLSS and DLSS Frame Generation ones. Call it before the engine exists. |
+| `rayReconstructionSupported`, `maxDlssGeneratedFrames` | `static bool rayReconstructionSupported(FilamentEngine engine)`, `static int maxDlssGeneratedFrames(FilamentEngine engine)` | Whether NGX runs Ray Reconstruction on the engine's GPU, and the most frames DLSS Frame Generation generates per rendered frame (0 without it); probed once per engine. |
 | `dlssAvailable` | `static bool get dlssAvailable` | The NGX runtime was found and an NVIDIA Vulkan device exists. |
 | `rayTracingSupported` | `bool get rayTracingSupported` | The engine traces rays. |
-| `apply` | `void apply(LuminaRayTracingSettings rayTracing, LuminaDlssSettings dlss, {LuminaFsr3Settings fsr3 = const LuminaFsr3Settings(), required TemporalAntiAliasingOptions baseTaa, required DynamicResolutionOptions baseDynamicResolution})` | Applies both; cheap when nothing changed. The base options are restored when DLSS turns off (DLSS itself needs TAA with motion vectors). |
+| `apply` | `void apply(LuminaRayTracingSettings rayTracing, LuminaDlssSettings dlss, {LuminaFsr3Settings fsr3 = const LuminaFsr3Settings(), LuminaDlssFrameGenerationSettings? dlssFrameGeneration, required TemporalAntiAliasingOptions baseTaa, required DynamicResolutionOptions baseDynamicResolution})` | Applies both; cheap when nothing changed. The base options are restored when DLSS turns off (DLSS itself needs TAA with motion vectors). |
 | `dlss`, `appliedRayTracing`, `appliedDlss` | | The live DLSS instance and the settings last applied. |
+| `rayReconstruction`, `frameGenerator`, `appliedFrameGeneration` | | The live `DlssRayReconstruction` (with the view's guide buffers on) and `DlssFrameGenerator`, and the frame generation settings last applied. |
 | `appliedFsr3`, `fsr3Active`, `fsr3Supported` | | The FSR3 settings last applied, whether FSR3 is on the view now (enabled, motion vectors available, no DLSS) and whether the engine renders the motion vectors it needs. |
 | `invalidate` | `void invalidate()` | Forgets what it put on the view (DLSS is destroyed), so the next `apply` pushes everything again: call it after something else rewrote the view's TAA or dynamic resolution, such as a scalability profile. |
-| `dispose` | `void dispose()` | Releases the DLSS instance. |
+| `dispose` | `void dispose()` | Releases the DLSS, Ray Reconstruction and frame generator instances. |
+
+### `class LuminaDlssFrameGenerationSettings`
+
+`generatedFrames` (1–5): frames DLSS Frame Generation generates per rendered frame (1 is 2x, 3 is 4x). `null` in `apply` turns it off. The generated frames are presented between the rendered ones by the native swap chain path; a Flutter texture viewport receives only the rendered frames.
 
 ## `lib/src/post_process/rendering_features.dart`
 
@@ -213,7 +220,11 @@ The game-facing form of the settings above, used by the game user settings (`Lum
 
 ### `enum LuminaUpscaler`
 
-`none` (`None`), `fsr3` (`FSR3`), `dlss` (`DLSS`); `displayName`, and `parse(String?)` (case-insensitive, `fsr` is FSR3, anything else `none`).
+`none` (`None`), `fsr3` (`FSR3`), `dlss` (`DLSS`), `dlssRayReconstruction` (`DLSS RR`); `displayName`, and `parse(String?)` (case-insensitive, `fsr` is FSR3, `dlss_rr` / `ray reconstruction` / `DLSS Ray Reconstruction` is DLSS RR, anything else `none`).
+
+### `enum LuminaFrameGenerator`
+
+`fsr3` (`FSR3`), `dlss` (`DLSS`): who generates the frames; `parse(String?)`, anything unknown is `fsr3`.
 
 ### `enum LuminaUpscalerQuality`
 
@@ -221,13 +232,13 @@ One quality scale for both upscalers, with `displayName`, the FSR3 preset (`fsr3
 
 ### `class LuminaRenderingFeatureSupport`
 
-What a GPU can do, with a reason per "no": `rayTracing`, `dlss`, `fsr3`, `frameGeneration` and their `…Reason` strings. `probe({engine, view})` asks the engine (`supportsRayQuery`; Vulkan backend + `LuminaRtxController.dlssAvailable` for DLSS) and the view (`motionVectorsSupported` for FSR3 and frame generation); `none(reason)` on the web or without a renderer; `withoutDlss(reason)`; `supportedUpscalers` (`none` first).
+What a GPU can do, with a reason per "no": `rayTracing`, `dlss`, `fsr3`, `frameGeneration`, `rayReconstruction`, `dlssFrameGeneration` (+ `maxDlssGeneratedFrames`) and their `…Reason` strings. `probe({engine, view})` asks the engine (`supportsRayQuery`; Vulkan backend + `LuminaRtxController.dlssAvailable` for DLSS) and the view (`motionVectorsSupported` for FSR3 and frame generation); `none(reason)` on the web or without a renderer; `withoutDlss(reason)`, `withoutRayReconstruction(reason)`; `supportedUpscalers` (`none` first, `DLSS RR` when Ray Reconstruction runs).
 
 ### `class LuminaRenderingFeatureSettings`
 
-The player's choice: `rayTracing`, `rayTracedShadows` (default true), `restir`, `restirCandidates` (1–64, 8), `restirSpatialSamples` (0–8, 2), `upscaler`, `upscalerQuality` (`quality`), `sharpness` (0–1, 0.5), `frameGeneration`. `rayTracingSettings`, `fsr3Settings`, `dlssSettings` are the engine settings it describes; `resolve(support)` returns a `LuminaResolvedRenderingFeatures` (`settings` actually applied + `fallbacks` messages: ray tracing off without ray query, DLSS → FSR3 → None, frame generation only with FSR3); `copyWith` clamps; `toMap` / `fromMap` (keys `ray_tracing`, `ray_traced_shadows`, `restir`, `restir_candidates`, `restir_spatial_samples`, `upscaler`, `upscaler_quality`, `sharpness`, `frame_generation`; unknown or mistyped values keep the default).
+The player's choice: `rayTracing`, `rayTracedShadows` (default true), `restir`, `restirCandidates` (1–64, 8), `restirSpatialSamples` (0–8, 2), `upscaler`, `upscalerQuality` (`quality`), `sharpness` (0–1, 0.5), `frameGeneration`, `frameGenerator` (`fsr3`), `dlssGeneratedFrames` (1–5, 1). `rayTracingSettings`, `fsr3Settings`, `dlssSettings`, `dlssFrameGenerationSettings` are the engine settings it describes; `resolve(support)` returns a `LuminaResolvedRenderingFeatures` (`settings` actually applied + `fallbacks` messages: ray tracing off without ray query, DLSS RR → DLSS without ray tracing or Ray Reconstruction support, DLSS → FSR3 → None, DLSS frame generation → FSR3 frame generation without support and clamped to the GPU's maximum, FSR3 frame generation only with FSR3); `copyWith` clamps; `toMap` / `fromMap` (keys `ray_tracing`, `ray_traced_shadows`, `restir`, `restir_candidates`, `restir_spatial_samples`, `upscaler`, `upscaler_quality`, `sharpness`, `frame_generation`, `frame_generator`, `dlss_generated_frames`; unknown or mistyped values keep the default).
 
-**Games**: `LuminaGameWidget` asks for the ray query and DLSS extensions (`LuminaRtxController.requestExtensions`) before the shared engine is created, once per process and never on the web. DLSS also needs the NGX runtime (`nvngx_dlss`) next to the game executable, in `LUMINA_DLSS_DIR` or a fetched SDK; the packaged game does not ship it.
+**Games**: `LuminaGameWidget` asks for the ray query and DLSS extensions (`LuminaRtxController.requestExtensions`) before the shared engine is created, once per process and never on the web. DLSS also needs the NGX runtimes (`nvngx_dlss`; `nvngx_dlssd` for Ray Reconstruction, `nvngx_dlssg` for frame generation) next to the game executable, in `LUMINA_DLSS_DIR` or a fetched SDK; the packaged game does not ship it.
 
 ## `lib/src/material/dynamic_material_instance.dart`
 

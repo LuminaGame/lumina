@@ -4,6 +4,9 @@ const String _renderingCategory = 'Settings|Ray Tracing & Upscaling';
 
 const List<String> _rayTracingKeywords = ['rtx', 'ray tracing', 'raytracing', 'rt', 'graphics', 'settings'];
 const List<String> _upscalingKeywords = ['upscaler', 'upscaling', 'super resolution', 'dlss', 'fsr', 'fsr3', 'graphics', 'settings'];
+const List<String> _frameGenerationKeywords = [
+  'frame generation', 'framegen', 'multi frame generation', 'mfg', 'dlss', 'fsr3', 'interpolation', 'fps', 'graphics', 'settings',
+];
 
 /// A setter of the game user settings: staged, committed by Apply
 /// Scalability Settings.
@@ -31,8 +34,9 @@ LuminaBlueprintNodeSpec _renderingGet(String id, String title, LuminaPinType typ
     );
 
 /// Built-in nodes: the game user settings' ray tracing (sun shadows, ReSTIR),
-/// upscaler (None / FSR3 / DLSS) with quality and sharpness, FSR3 frame
-/// generation, and what the GPU supports.
+/// upscaler (None / FSR3 / DLSS / DLSS RR) with quality and sharpness, frame
+/// generation (FSR3 or DLSS with its generated frames), and what the GPU
+/// supports.
 final List<LuminaBlueprintNodeSpec> _renderingFeatureNodes = <LuminaBlueprintNodeSpec>[
   _renderingSet('set_ray_tracing_enabled', 'Set Ray Tracing Enabled', _b('enabled', 'Enabled', true), _rayTracingKeywords),
   _renderingGet('get_ray_tracing_enabled', 'Get Ray Tracing Enabled', LuminaPinType.boolean, _rayTracingKeywords),
@@ -62,6 +66,19 @@ final List<LuminaBlueprintNodeSpec> _renderingFeatureNodes = <LuminaBlueprintNod
       [..._upscalingKeywords, 'frame generation', 'framegen', 'interpolation', 'fps']),
   _renderingGet('get_frame_generation_enabled', 'Get Frame Generation Enabled', LuminaPinType.boolean,
       [..._upscalingKeywords, 'frame generation', 'framegen']),
+  _renderingSet('set_frame_generator', 'Set Frame Generator', _s('generator', 'Generator', 'DLSS'),
+      _frameGenerationKeywords),
+  _renderingGet('get_frame_generator', 'Get Frame Generator', LuminaPinType.string, _frameGenerationKeywords),
+  _renderingSet('set_dlss_generated_frames', 'Set DLSS Generated Frames', _i('frames', 'Frames', 1),
+      [..._frameGenerationKeywords, 'generated frames', '2x', '3x', '4x']),
+  _renderingGet('get_dlss_generated_frames', 'Get DLSS Generated Frames', LuminaPinType.integer,
+      [..._frameGenerationKeywords, 'generated frames']),
+  _renderingGet('is_ray_reconstruction_supported', 'Is Ray Reconstruction Supported', LuminaPinType.boolean,
+      [..._upscalingKeywords, 'ray reconstruction', 'dlss rr', 'denoiser', 'supported', 'capability', 'nvidia']),
+  _renderingGet('is_dlss_frame_generation_supported', 'Is DLSS Frame Generation Supported', LuminaPinType.boolean,
+      [..._frameGenerationKeywords, 'supported', 'capability', 'nvidia']),
+  _renderingGet('get_max_dlss_generated_frames', 'Get Max DLSS Generated Frames', LuminaPinType.integer,
+      [..._frameGenerationKeywords, 'max', 'supported', 'capability', 'rtx 50']),
   _renderingGet('is_ray_tracing_supported', 'Is Ray Tracing Supported', LuminaPinType.boolean,
       [..._rayTracingKeywords, 'supported', 'capability', 'gpu', 'vulkan']),
   _renderingGet('is_dlss_supported', 'Is DLSS Supported', LuminaPinType.boolean,

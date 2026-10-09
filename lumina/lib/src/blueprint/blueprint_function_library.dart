@@ -941,6 +941,13 @@ abstract final class LuminaBlueprintFunctionLibrary {
   static const isDlssSupported = _isDlssSupported;
   static const isFsr3Supported = _isFsr3Supported;
   static const isFrameGenerationSupported = _isFrameGenerationSupported;
+  static const setFrameGenerator = _setFrameGenerator;
+  static const getFrameGenerator = _getFrameGenerator;
+  static const setDlssGeneratedFrames = _setDlssGeneratedFrames;
+  static const getDlssGeneratedFrames = _getDlssGeneratedFrames;
+  static const isRayReconstructionSupported = _isRayReconstructionSupported;
+  static const isDlssFrameGenerationSupported = _isDlssFrameGenerationSupported;
+  static const getMaxDlssGeneratedFrames = _getMaxDlssGeneratedFrames;
   static const getSupportedUpscalers = _getSupportedUpscalers;
   static const getActiveUpscaler = _getActiveUpscaler;
   static const isRayTracingActive = _isRayTracingActive;
