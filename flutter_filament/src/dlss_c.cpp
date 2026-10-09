@@ -18,12 +18,7 @@
 #include <unordered_map>
 #include <vector>
 
-#if defined(FLUTTER_FILAMENT_DLSS) && FLUTTER_FILAMENT_DLSS && !defined(__EMSCRIPTEN__) && \
-        (defined(_WIN32) || (defined(__linux__) && !defined(__ANDROID__)))
-#define FLUTTER_FILAMENT_DLSS_ENABLED 1
-#else
-#define FLUTTER_FILAMENT_DLSS_ENABLED 0
-#endif
+#include "ngx_internal.h"
 
 namespace {
 
@@ -61,194 +56,19 @@ const char* filament_dlss_last_error(void) {
 #include <nvsdk_ngx_helpers.h>
 #include <nvsdk_ngx_helpers_vk.h>
 
-#include "gpu_c.h"
 #include "gpu_engine_internal.h"
 
-#if defined(_WIN32)
-#include <windows.h>
-#else
-#include <sys/stat.h>
-#include <unistd.h>
-#include <dirent.h>
-#endif
-
 using namespace filament;
+namespace ngx = flutter_filament::ngx;
 
 namespace {
 
-// Lumina's NGX project id: stable across releases, identifies the integration
-// to the driver (no account or registration is attached to it).
-constexpr const char* kProjectId = "a1f0c3a0-4e7b-4d4a-9b2e-6c3f1d8e2b11";
-constexpr const char* kEngineVersion = "lumina-filament-1.77.2";
 constexpr int kBaseFlags =
         NVSDK_NGX_DLSS_Feature_Flags_MVLowRes | NVSDK_NGX_DLSS_Feature_Flags_DepthInverted;
 
-const char* resultName(NVSDK_NGX_Result r) {
-    switch (r) {
-        case NVSDK_NGX_Result_Success: return "success";
-        case NVSDK_NGX_Result_FAIL_FeatureNotSupported: return "feature not supported";
-        case NVSDK_NGX_Result_FAIL_PlatformError: return "platform error";
-        case NVSDK_NGX_Result_FAIL_FeatureAlreadyExists: return "feature already exists";
-        case NVSDK_NGX_Result_FAIL_FeatureNotFound: return "feature not found";
-        case NVSDK_NGX_Result_FAIL_InvalidParameter: return "invalid parameter";
-        case NVSDK_NGX_Result_FAIL_ScratchBufferTooSmall: return "scratch buffer too small";
-        case NVSDK_NGX_Result_FAIL_NotInitialized: return "not initialized";
-        case NVSDK_NGX_Result_FAIL_UnsupportedInputFormat: return "unsupported input format";
-        case NVSDK_NGX_Result_FAIL_RWFlagMissing: return "read/write flag missing";
-        case NVSDK_NGX_Result_FAIL_MissingInput: return "missing input";
-        case NVSDK_NGX_Result_FAIL_UnableToInitializeFeature: return "unable to initialize feature";
-        case NVSDK_NGX_Result_FAIL_OutOfDate: return "driver or runtime out of date";
-        case NVSDK_NGX_Result_FAIL_OutOfGPUMemory: return "out of GPU memory";
-        case NVSDK_NGX_Result_FAIL_UnsupportedFormat: return "unsupported format";
-        case NVSDK_NGX_Result_FAIL_UnableToWriteToAppDataPath: return "cannot write to the app data path";
-        case NVSDK_NGX_Result_FAIL_UnsupportedParameter: return "unsupported parameter";
-        case NVSDK_NGX_Result_FAIL_Denied: return "denied";
-        case NVSDK_NGX_Result_FAIL_NotImplemented: return "not implemented";
-        default: return "unknown NGX error";
-    }
-}
-
-std::string describe(const char* what, NVSDK_NGX_Result r) {
-    char buf[32];
-    std::snprintf(buf, sizeof(buf), " (0x%08x)", static_cast<unsigned>(r));
-    return std::string(what) + ": " + resultName(r) + buf;
-}
-
-bool fileExists(const std::string& path) {
-#if defined(_WIN32)
-    DWORD attrs = GetFileAttributesA(path.c_str());
-    return attrs != INVALID_FILE_ATTRIBUTES && !(attrs & FILE_ATTRIBUTE_DIRECTORY);
-#else
-    struct stat st{};
-    return ::stat(path.c_str(), &st) == 0 && S_ISREG(st.st_mode);
-#endif
-}
-
-// Whether `dir` holds the DLSS runtime library itself.
-bool hasRuntime(const std::string& dir) {
-#if defined(_WIN32)
-    return fileExists(dir + "\\nvngx_dlss.dll");
-#else
-    DIR* d = ::opendir(dir.c_str());
-    if (!d) return false;
-    bool found = false;
-    while (dirent* e = ::readdir(d)) {
-        if (std::strncmp(e->d_name, "libnvidia-ngx-dlss.so", 21) == 0) {
-            found = true;
-            break;
-        }
-    }
-    ::closedir(d);
-    return found;
-#endif
-}
-
-std::string executableDir() {
-#if defined(_WIN32)
-    char buf[MAX_PATH];
-    DWORD n = GetModuleFileNameA(nullptr, buf, MAX_PATH);
-    if (n == 0 || n >= MAX_PATH) return {};
-    std::string path(buf, n);
-    size_t slash = path.find_last_of("\\/");
-    return slash == std::string::npos ? std::string() : path.substr(0, slash);
-#else
-    char buf[4096];
-    ssize_t n = ::readlink("/proc/self/exe", buf, sizeof(buf) - 1);
-    if (n <= 0) return {};
-    std::string path(buf, size_t(n));
-    size_t slash = path.find_last_of('/');
-    return slash == std::string::npos ? std::string() : path.substr(0, slash);
-#endif
-}
-
-#if defined(_WIN32)
-constexpr const char* kSdkRuntimeSubdir = "\\lib\\Windows_x86_64\\rel";
-#else
-constexpr const char* kSdkRuntimeSubdir = "/lib/Linux_x86_64/rel";
-#endif
-
-std::string workingDir() {
-#if defined(_WIN32)
-    char buf[MAX_PATH];
-    DWORD n = GetCurrentDirectoryA(MAX_PATH, buf);
-    return (n == 0 || n >= MAX_PATH) ? std::string() : std::string(buf, n);
-#else
-    char buf[4096];
-    return ::getcwd(buf, sizeof(buf)) ? std::string(buf) : std::string();
-#endif
-}
-
-// The folder the nvngx_dlss runtime is loaded from: LUMINA_DLSS_DIR (the folder
-// itself or an SDK root), the executable's folder, then the fetched SDK under
-// the working directory (build/dlss-sdk, where tool/dlss/fetch_sdk.dart puts it).
-std::string gRuntimeDirHint;
-
-std::string runtimeDir() {
-    std::vector<std::string> candidates;
-    if (!gRuntimeDirHint.empty()) {
-        candidates.push_back(gRuntimeDirHint);
-        candidates.push_back(gRuntimeDirHint + kSdkRuntimeSubdir);
-    }
-    if (const char* env = std::getenv("LUMINA_DLSS_DIR"); env && *env) {
-        candidates.emplace_back(env);
-        candidates.emplace_back(std::string(env) + kSdkRuntimeSubdir);
-    }
-    if (std::string exe = executableDir(); !exe.empty()) {
-        candidates.push_back(exe);
-    }
-    if (std::string cwd = workingDir(); !cwd.empty()) {
-#if defined(_WIN32)
-        candidates.emplace_back(cwd + "\\build\\dlss-sdk" + kSdkRuntimeSubdir);
-#else
-        candidates.emplace_back(cwd + "/build/dlss-sdk" + kSdkRuntimeSubdir);
-#endif
-    }
-    for (const auto& c : candidates) {
-        if (hasRuntime(c)) return c;
-    }
-    return {};
-}
-
-bool hasNvidiaVulkanDevice() {
-    const int count = filament_vulkan_device_count();
-    for (int i = 0; i < count; ++i) {
-        filament_gpu_info_t info{};
-        if (filament_vulkan_device_info(i, &info) && info.vendor_id == 0x10DE) return true;
-    }
-    return false;
-}
-
-std::wstring widen(const std::string& s) {
-    std::wstring out;
-    out.reserve(s.size());
-    for (unsigned char ch : s) out.push_back(static_cast<wchar_t>(ch));
-    return out;
-}
-
-NVSDK_NGX_PerfQuality_Value toPerfQuality(uint8_t quality) {
-    switch (quality) {
-        case FILAMENT_DLSS_MAX_PERFORMANCE: return NVSDK_NGX_PerfQuality_Value_MaxPerf;
-        case FILAMENT_DLSS_MAX_QUALITY: return NVSDK_NGX_PerfQuality_Value_MaxQuality;
-        case FILAMENT_DLSS_ULTRA_PERFORMANCE: return NVSDK_NGX_PerfQuality_Value_UltraPerformance;
-        case FILAMENT_DLSS_DLAA: return NVSDK_NGX_PerfQuality_Value_DLAA;
-        case FILAMENT_DLSS_BALANCED:
-        default: return NVSDK_NGX_PerfQuality_Value_Balanced;
-    }
-}
-
-// NGX is initialised once per engine (per VkDevice) and shared by that
-// engine's DLSS features.
-struct NgxDevice {
-    VkDevice device = VK_NULL_HANDLE;
-    NVSDK_NGX_Parameter* capabilities = nullptr;
-    int refs = 0;
-};
-
-std::mutex gNgxMutex;
-std::unordered_map<Engine*, NgxDevice> gNgxDevices;
-std::string gRuntimeDir;
-std::wstring gRuntimeDirW;
-std::wstring gAppDataPathW;
+using ngx::describe;
+using ngx::toPerfQuality;
+using NgxDevice = ngx::Device;
 
 struct OptimalSettings {
     uint32_t width = 0, height = 0, maxWidth = 0, maxHeight = 0, minWidth = 0, minHeight = 0;
@@ -271,86 +91,24 @@ bool queryOptimal(NVSDK_NGX_Parameter* caps, uint32_t outW, uint32_t outH, uint8
     return true;
 }
 
-// Initialises NGX for the engine (refcounted) and returns its capability parameters.
+// NGX for the engine plus the Super Resolution availability check.
 NgxDevice* acquireDevice(Engine* engine, std::string& error) {
-    auto it = gNgxDevices.find(engine);
-    if (it != gNgxDevices.end()) {
-        it->second.refs++;
-        return &it->second;
-    }
-    void* instance = nullptr;
-    void* physicalDevice = nullptr;
-    void* device = nullptr;
-    bool hadExtensions = false;
-    if (!flutter_filament_engine_vulkan_handles(engine, &instance, &physicalDevice, &device, &hadExtensions)) {
-        error = "DLSS needs an engine on the Vulkan backend (desktop Windows or Linux)";
-        return nullptr;
-    }
-    if (!hadExtensions) {
-        unsigned instCount = 0, devCount = 0;
-        const char** instExts = nullptr;
-        const char** devExts = nullptr;
-        const char* first = "VK_NVX_binary_import";
-        if (NVSDK_NGX_SUCCEED(NVSDK_NGX_VULKAN_RequiredExtensions(&instCount, &instExts, &devCount, &devExts)) &&
-                devCount > 0 && devExts && devExts[0]) {
-            first = devExts[0];
-        }
-        error = std::string("the engine was created without the NGX Vulkan extensions (") + first +
-                " and others): call filament_dlss_request_extensions() before creating the engine";
-        return nullptr;
-    }
-    if (gRuntimeDir.empty()) {
-        gRuntimeDir = runtimeDir();
-        if (gRuntimeDir.empty()) {
-            error = "DLSS runtime not available: nvngx_dlss not found (LUMINA_DLSS_DIR, the executable folder or the fetched SDK)";
-            return nullptr;
-        }
-        gRuntimeDirW = widen(gRuntimeDir);
-        gAppDataPathW = widen(gRuntimeDir);
-    }
-    const wchar_t* paths[] = { gRuntimeDirW.c_str() };
-    NVSDK_NGX_FeatureCommonInfo info{};
-    info.PathListInfo.Path = paths;
-    info.PathListInfo.Length = 1;
-    NVSDK_NGX_Result r = NVSDK_NGX_VULKAN_Init_with_ProjectID(kProjectId, NVSDK_NGX_ENGINE_TYPE_CUSTOM,
-            kEngineVersion, gAppDataPathW.c_str(), static_cast<VkInstance>(instance),
-            static_cast<VkPhysicalDevice>(physicalDevice), static_cast<VkDevice>(device),
-            bluevk::vkGetInstanceProcAddr, bluevk::vkGetDeviceProcAddr, &info, NVSDK_NGX_Version_API);
-    if (NVSDK_NGX_FAILED(r)) {
-        error = describe("NVSDK_NGX_VULKAN_Init", r);
-        return nullptr;
-    }
-    NVSDK_NGX_Parameter* caps = nullptr;
-    r = NVSDK_NGX_VULKAN_GetCapabilityParameters(&caps);
-    if (NVSDK_NGX_FAILED(r) || !caps) {
-        NVSDK_NGX_VULKAN_Shutdown1(static_cast<VkDevice>(device));
-        error = describe("NVSDK_NGX_VULKAN_GetCapabilityParameters", r);
-        return nullptr;
-    }
+    NgxDevice* device = ngx::acquire(engine, error);
+    if (!device) return nullptr;
     int needsDriver = 0;
-    NVSDK_NGX_Parameter_GetI(caps, NVSDK_NGX_Parameter_SuperSampling_NeedsUpdatedDriver, &needsDriver);
+    NVSDK_NGX_Parameter_GetI(device->capabilities, NVSDK_NGX_Parameter_SuperSampling_NeedsUpdatedDriver, &needsDriver);
     int available = 0;
-    NVSDK_NGX_Parameter_GetI(caps, NVSDK_NGX_Parameter_SuperSampling_Available, &available);
+    NVSDK_NGX_Parameter_GetI(device->capabilities, NVSDK_NGX_Parameter_SuperSampling_Available, &available);
     if (needsDriver || !available) {
-        NVSDK_NGX_VULKAN_DestroyParameters(caps);
-        NVSDK_NGX_VULKAN_Shutdown1(static_cast<VkDevice>(device));
+        ngx::release(engine);
         error = needsDriver ? "DLSS needs a newer NVIDIA driver" : "DLSS Super Resolution is not available on this GPU";
         return nullptr;
     }
-    NgxDevice& entry = gNgxDevices[engine];
-    entry.device = static_cast<VkDevice>(device);
-    entry.capabilities = caps;
-    entry.refs = 1;
-    return &entry;
+    return device;
 }
 
 void releaseDevice(Engine* engine) {
-    auto it = gNgxDevices.find(engine);
-    if (it == gNgxDevices.end()) return;
-    if (--it->second.refs > 0) return;
-    NVSDK_NGX_VULKAN_DestroyParameters(it->second.capabilities);
-    NVSDK_NGX_VULKAN_Shutdown1(it->second.device);
-    gNgxDevices.erase(it);
+    ngx::release(engine);
 }
 
 class DlssUpscaler final : public ExternalUpscaler {
@@ -526,26 +284,13 @@ private:
 } // namespace
 
 void filament_dlss_set_runtime_dir(const char* dir) {
-    std::lock_guard<std::mutex> lock(gNgxMutex);
-    gRuntimeDirHint = dir ? dir : "";
-    if (!gRuntimeDir.empty() && !hasRuntime(gRuntimeDir)) {
-        gRuntimeDir.clear();
-    }
-    if (gRuntimeDir.empty() && !gRuntimeDirHint.empty()) {
-        // re-resolve with the hint at the next availability check
-    }
+    std::lock_guard<std::mutex> lock(ngx::mutex());
+    ngx::setRuntimeDirHint(dir);
 }
 
 bool filament_dlss_available(void) {
-    std::lock_guard<std::mutex> lock(gNgxMutex);
-    if (gRuntimeDir.empty()) {
-        gRuntimeDir = runtimeDir();
-        if (!gRuntimeDir.empty()) {
-            gRuntimeDirW = widen(gRuntimeDir);
-            gAppDataPathW = widen(gRuntimeDir);
-        }
-    }
-    return !gRuntimeDir.empty() && hasNvidiaVulkanDevice();
+    std::lock_guard<std::mutex> lock(ngx::mutex());
+    return !ngx::runtimeDir().empty() && ngx::hasNvidiaVulkanDevice();
 }
 
 bool filament_dlss_request_extensions(void) {
@@ -582,7 +327,7 @@ void* filament_dlss_create(void* engine, void* view, const filament_dlss_options
         setError("filament_dlss_create: the output size must be positive");
         return nullptr;
     }
-    std::lock_guard<std::mutex> lock(gNgxMutex);
+    std::lock_guard<std::mutex> lock(ngx::mutex());
     std::string error;
     auto* fengine = static_cast<Engine*>(engine);
     NgxDevice* ngx = acquireDevice(fengine, error);
@@ -616,7 +361,7 @@ void filament_dlss_set_quality(void* dlss, uint8_t quality) {
     // The feature is replaced on the next frame; make sure no frame still uses it.
     d->engine()->flushAndWait();
     std::string error;
-    std::lock_guard<std::mutex> lock(gNgxMutex);
+    std::lock_guard<std::mutex> lock(ngx::mutex());
     if (!d->setQuality(quality, error)) {
         setError(error);
         return;
@@ -636,7 +381,7 @@ void filament_dlss_destroy(void* dlss) {
     d->detachFromView();
     // Frames recorded before this call may still evaluate the feature.
     d->engine()->flushAndWait();
-    std::lock_guard<std::mutex> lock(gNgxMutex);
+    std::lock_guard<std::mutex> lock(ngx::mutex());
     d->releaseFeature();
     releaseDevice(d->engine());
     delete d;

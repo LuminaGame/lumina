@@ -69,8 +69,9 @@ class DebugPostPass {
   bool get isDestroyed => _ptr == ffi.nullptr;
 
   void _checkDestroyed() {
-    if (_ptr == ffi.nullptr)
+    if (_ptr == ffi.nullptr) {
       throw StateError('DebugPostPass has been destroyed');
+    }
   }
 
   DebugPostPassMode get mode => _mode;

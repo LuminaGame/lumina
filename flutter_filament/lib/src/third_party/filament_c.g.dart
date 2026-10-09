@@ -9582,6 +9582,59 @@ external void filament_view_set_guide_buffer_texture(
   ffi.Pointer<ffi.Void> texture,
 );
 
+@ffi.Native<ffi.Bool Function()>()
+external bool filament_dlss_rr_available();
+
+@ffi.Native<ffi.Bool Function(ffi.Pointer<ffi.Void>)>()
+external bool filament_dlss_rr_supported(ffi.Pointer<ffi.Void> engine);
+
+@ffi.Native<
+  ffi.Pointer<ffi.Void> Function(
+    ffi.Pointer<ffi.Void>,
+    ffi.Pointer<ffi.Void>,
+    ffi.Pointer<filament_dlss_rr_options_t>,
+  )
+>()
+external ffi.Pointer<ffi.Void> filament_dlss_rr_create(
+  ffi.Pointer<ffi.Void> engine,
+  ffi.Pointer<ffi.Void> view,
+  ffi.Pointer<filament_dlss_rr_options_t> opts,
+);
+
+@ffi.Native<
+  ffi.Void Function(
+    ffi.Pointer<ffi.Void>,
+    ffi.Pointer<ffi.Uint32>,
+    ffi.Pointer<ffi.Uint32>,
+  )
+>()
+external void filament_dlss_rr_get_render_resolution(
+  ffi.Pointer<ffi.Void> rr,
+  ffi.Pointer<ffi.Uint32> out_w,
+  ffi.Pointer<ffi.Uint32> out_h,
+);
+
+@ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>, ffi.Uint8)>()
+external void filament_dlss_rr_set_quality(
+  ffi.Pointer<ffi.Void> rr,
+  int quality,
+);
+
+@ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>)>()
+external void filament_dlss_rr_reset_history(ffi.Pointer<ffi.Void> rr);
+
+@ffi.Native<ffi.Uint64 Function(ffi.Pointer<ffi.Void>)>()
+external int filament_dlss_rr_last_gpu_time_ns(ffi.Pointer<ffi.Void> rr);
+
+@ffi.Native<ffi.Uint64 Function(ffi.Pointer<ffi.Void>)>()
+external int filament_dlss_rr_frame_count(ffi.Pointer<ffi.Void> rr);
+
+@ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>)>()
+external void filament_dlss_rr_destroy(ffi.Pointer<ffi.Void> rr);
+
+@ffi.Native<ffi.Pointer<ffi.Char> Function()>()
+external ffi.Pointer<ffi.Char> filament_dlss_rr_last_error();
+
 enum FilamentBackend {
   FILAMENT_BACKEND_DEFAULT(0),
   FILAMENT_BACKEND_OPENGL(1),
@@ -11515,4 +11568,38 @@ final class filament_guide_buffer_options_t extends ffi.Struct {
 
   @ffi.Bool()
   external bool specularHitDistance;
+}
+
+enum filament_dlss_rr_preset {
+  FILAMENT_DLSS_RR_PRESET_DEFAULT(0),
+  FILAMENT_DLSS_RR_PRESET_D(4),
+  FILAMENT_DLSS_RR_PRESET_E(5),
+  FILAMENT_DLSS_RR_PRESET_F(6);
+
+  final int value;
+  const filament_dlss_rr_preset(this.value);
+
+  static filament_dlss_rr_preset fromValue(int value) => switch (value) {
+    0 => FILAMENT_DLSS_RR_PRESET_DEFAULT,
+    4 => FILAMENT_DLSS_RR_PRESET_D,
+    5 => FILAMENT_DLSS_RR_PRESET_E,
+    6 => FILAMENT_DLSS_RR_PRESET_F,
+    _ => throw ArgumentError(
+      'Unknown value for filament_dlss_rr_preset: $value',
+    ),
+  };
+}
+
+final class filament_dlss_rr_options_t extends ffi.Struct {
+  @ffi.Uint8()
+  external int quality;
+
+  @ffi.Uint32()
+  external int outputWidth;
+
+  @ffi.Uint32()
+  external int outputHeight;
+
+  @ffi.Uint8()
+  external int preset;
 }

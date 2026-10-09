@@ -251,6 +251,154 @@ void main() {
         RayTracing.clearExtensionRequest();
       }
     }, timeout: const Timeout(Duration(minutes: 15)));
+
+    test('DLSS Ray Reconstruction denoises ReSTIR lighting', () async {
+      if (smokeBackend != FilamentBackend.vulkan) {
+        markTestSkipped(
+          'Ray Reconstruction needs the Vulkan backend ($smokeBackendName)',
+        );
+        return;
+      }
+      if (!DlssRayReconstruction.available) {
+        markTestSkipped(
+          'nvngx_dlssd not available (tool/dlss/fetch_sdk.dart on an RTX machine)',
+        );
+        return;
+      }
+      Dlss.requestExtensions();
+      RayTracing.requestExtensions();
+      final engine = FilamentEngine.create(backend: FilamentBackend.vulkan)!;
+      final r = rig = SmokeRig.adopt(
+        engine,
+        width: smokeVideoWidth,
+        height: smokeVideoHeight,
+      );
+      const name =
+          'rtx neural Smoke Tests DLSS Ray Reconstruction denoises ReSTIR lighting';
+      final scene = GuideScene.build(r);
+      DlssRayReconstruction? rr;
+      try {
+        if (!engine.supportsRayQuery ||
+            !DlssRayReconstruction.supported(engine)) {
+          markTestSkipped(
+            'no ray query or Ray Reconstruction on this GPU: ${DlssRayReconstruction.lastErrorMessage}',
+          );
+          return;
+        }
+        // 48 coloured point lights circling above the props, shaded by raw one-ray ReSTIR
+        final lights = <int>[];
+        final rnd = math.Random(5);
+        final phases = <double>[];
+        for (var i = 0; i < 48; i++) {
+          final e = engine.createEntity();
+          LightBuilder(LightType.point)
+            ..color(
+              0.3 + 0.7 * rnd.nextDouble(),
+              0.3 + 0.7 * rnd.nextDouble(),
+              0.3 + 0.7 * rnd.nextDouble(),
+            )
+            ..intensity(80000)
+            ..position(0, 1, 0)
+            ..falloff(3.5)
+            ..build(engine, e);
+          r.scene.addEntity(e);
+          r.entities.add(e);
+          lights.add(e);
+          phases.add(rnd.nextDouble() * math.pi * 2);
+        }
+        final lm = FilamentLightManager(engine);
+        void moveLights(double t) {
+          for (var i = 0; i < lights.length; i++) {
+            final a = phases[i] + t * math.pi * 2 * (i.isEven ? 1 : -1) * 0.5;
+            final radius = 1.0 + (i % 4) * 0.8;
+            lm.setPosition(
+              lights[i],
+              radius * math.cos(a),
+              0.35 + (i % 3) * 0.5,
+              radius * math.sin(a),
+            );
+          }
+        }
+
+        r.camera.setExposure(
+          aperture: 16,
+          shutterSpeed: 1 / 125,
+          sensitivity: 100,
+        );
+        r.scene.rayTracingEnabled = true;
+        r.view.restirOptions = const RestirOptions(
+          enabled: true,
+          initialCandidates: 2,
+          spatialSamples: 0,
+          temporal: false,
+        );
+        r.view.temporalAntiAliasingOptions = const TemporalAntiAliasingOptions(
+          enabled: true,
+          motionVectors: true,
+        );
+
+        // the still comparison: Filament's TAA on the left, Ray Reconstruction on the right
+        scene.orbit(0.5);
+        moveLights(0.25);
+        final taa = r.renderFrame(warmup: 30);
+        rr = DlssRayReconstruction.create(
+          engine: engine,
+          view: r.view,
+          options: DlssRayReconstructionOptions(
+            quality: DlssQuality.maxQuality,
+            outputWidth: r.width,
+            outputHeight: r.height,
+          ),
+        );
+        final denoised = r.renderFrame(warmup: 30);
+        final side = Uint8List(r.width * 2 * r.height * 4);
+        for (var y = 0; y < r.height; y++) {
+          final row = y * r.width * 4;
+          side.setRange(
+            y * r.width * 8,
+            y * r.width * 8 + r.width * 4,
+            taa,
+            row,
+          );
+          side.setRange(
+            y * r.width * 8 + r.width * 4,
+            (y + 1) * r.width * 8,
+            denoised,
+            row,
+          );
+        }
+        SmokeArtifacts.saveScreenshot(
+          '$name (TAA left, Ray Reconstruction right)',
+          SmokeArtifacts.encodePng(r.width * 2, r.height, side),
+        );
+
+        rr.resetHistory();
+        final last = r.video(
+          name,
+          onFrame: (frame, t) {
+            scene.orbit(t);
+            moveLights(t);
+          },
+          alsoScreenshot: true,
+        );
+        expect(
+          rr.lastError,
+          isNull,
+          reason: 'NGX reported no error during the clip',
+        );
+        expect(frameStats(last).distinct, greaterThan(200));
+        final gpu = rr.lastGpuTimeNanos;
+        final (rw, rh) = rr.renderResolution;
+        smokeLog(
+          'Ray Reconstruction ${rw}x$rh -> ${r.width}x${r.height}: ${(gpu / 1e6).toStringAsFixed(3)} ms GPU',
+        );
+      } finally {
+        rr?.destroy();
+        scene.dispose();
+        Dlss.clearExtensionRequest();
+        RayTracing.clearExtensionRequest();
+      }
+    }, timeout: const Timeout(Duration(minutes: 15)));
   });
 }
 

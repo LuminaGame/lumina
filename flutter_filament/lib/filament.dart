@@ -27,6 +27,7 @@ export 'package:flutter_filament/src/manipulator.dart';
 export 'package:flutter_filament/src/material.dart';
 export 'package:flutter_filament/src/motion_vectors.dart';
 export 'package:flutter_filament/src/dlss.dart';
+export 'package:flutter_filament/src/dlss_ray_reconstruction.dart';
 export 'package:flutter_filament/src/ray_tracing.dart';
 export 'package:flutter_filament/src/restir.dart';
 export 'package:flutter_filament/src/post_pass.dart';

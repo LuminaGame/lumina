@@ -12,6 +12,7 @@ NVIDIA DLSS Super Resolution behind Filament's dynamic resolution: the view rend
 - [Native C bridge (`src/dlss_c.h`)](#native-c-bridge-srcdlss_ch)
 - [Dart API (`lib/src/dlss.dart`)](#dart-api-libsrcdlssdart)
 - [Quality modes](#quality-modes)
+- [Ray Reconstruction](#ray-reconstruction)
 - [Limits](#limits)
 
 ## How it fits Filament
@@ -121,9 +122,20 @@ dlss.destroy();
 
 The exact sizes come from NGX (`NGX_DLSS_GET_OPTIMAL_SETTINGS`) and may change between SDK releases.
 
+## Ray Reconstruction
+
+DLSS Ray Reconstruction (NGX feature `dlssd`, `nvngx_dlssd`) replaces the upscaler *and* the denoiser of a ray-traced frame with one network: it takes the noisy HDR colour at the render resolution, depth, motion vectors and the [guide buffers](guide-buffers.md), and writes a denoised, anti-aliased HDR frame at the output resolution. In Lumina it denoises ReSTIR lighting (one visibility ray per pixel) and ray-traced shadow edges.
+
+- **Where it runs**: an external upscaler of the `HDR` stage (patch `0011`, see [External post pass and Vulkan device features](external-post-pass.md)): in place of Filament's TAA, before bloom and colour grading. It asks for all four guides (`ExternalUpscaler::guideBuffers()`), which arrive as images 4–7.
+- **Runtime**: `tool/dlss/manifest.txt` pins `lib/Windows_x86_64/rel/nvngx_dlssd.dll` and `lib/Linux_x86_64/rel/libnvidia-ngx-dlssd.so.310.9.1`; `dart run tool/dlss/fetch_sdk.dart` fetches them next to `nvngx_dlss` (never committed, NVIDIA's licence). NGX is initialised once per engine and shared with Super Resolution (`src/ngx_c.cpp`).
+- **Order**: `DlssRayReconstruction.available` → `Dlss.requestExtensions()` and `RayTracing.requestExtensions()` before the engine → a scene with ray tracing (ReSTIR, ray-traced shadows) → `DlssRayReconstruction.create(engine:, view:, options: DlssRayReconstructionOptions(quality:, outputWidth:, outputHeight:, preset:))`. Creating it turns on the view's guide buffers, TAA jitter and motion vectors, and dynamic resolution at the NGX render size; `destroy()` restores the previous options.
+- **Settings sent to NGX**: packed roughness (normals.w), hardware (reversed-Z) depth, motion scale (−1, −1), jitter = −Filament's sample offset, `IsHDR | AutoExposure | MVLowRes | DepthInverted`, the camera's view and unjittered projection matrices, the specular hit distance. Presets: `DlssRayReconstructionPreset.f` (default, the SDK 310.9 transformer model), `e`, `d`, `defaultPreset`.
+- **C bridge** (`src/dlss_rr_c.h`): `filament_dlss_rr_available`, `_supported(engine)`, `_create(engine, view, const filament_dlss_rr_options_t*)` with `{ quality, outputWidth, outputHeight, preset }`, `_get_render_resolution`, `_set_quality`, `_reset_history`, `_last_gpu_time_ns` (Vulkan timestamps around the evaluation), `_frame_count`, `_destroy`, `_last_error`.
+- **Measured on the RTX PRO 2000** (SDK 310.9.1, preset F): Balanced at 1920×1080 renders 1114×626 and the evaluation takes 4.6 ms; Max Quality at 1024×768 (683×512) 1.8 ms. On raw one-ray ReSTIR (two candidates, no reuse) at 1280×720 the temporal noise (per-pixel luma standard deviation over 16 still frames) falls to 29 % of Filament's TAA (0.53 against 1.85 on a 0..255 scale); on Lumina's default ReSTIR, which already reuses samples, to 76 % (0.53 against 0.69). Against a 128-frame accumulation of the TAA image the PSNR is about 1 dB lower than TAA's (the reference is TAA's own mean; Ray Reconstruction also upscales from 67 %).
+
 ## Limits
 
 - Vulkan only, NVIDIA GPUs with DLSS support only; OpenGL, Metal, WebGPU and the web report `Dlss.available == false`.
-- DLSS Frame Generation and Ray Reconstruction are not integrated.
+- DLSS Frame Generation is not integrated (see [Ray Reconstruction](#ray-reconstruction) for the denoiser).
 - The frame DLSS Super Resolution receives is LDR (after colour grading): it is an external upscaler of the `DISPLAY` stage. Patch `0011` adds the `HDR` stage (in place of the TAA resolve, before bloom and colour grading) for upscalers that need the linear frame; see [External post pass and Vulkan device features](external-post-pass.md).
 - Lumina Studio drives DLSS from the viewport HUD; games choose it through the game user settings (`LuminaUserSettingsSubsystem`, Blueprint **Set Upscaler** / **Is DLSS Supported**, see `lumina/world.md`), which fall back to FSR3 or none where DLSS is unavailable. A game built without the fetched SDK has no NGX code, like an installed editor.

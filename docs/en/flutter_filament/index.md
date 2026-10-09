@@ -38,7 +38,7 @@ Each page covers one subsystem: the C functions of its `src/*_c.h` headers first
 | [Engine, entities and core types](engine.md) | Engine lifecycle, entities, shared enums, fences, exceptions, callbacks, diagnostics. |
 | [Renderer, views and frame pacing](renderer-and-view.md) | Renderer, swap chains, views, render targets, frame pacing, the Flutter widget. |
 | [View options and color grading](view-options.md) | Per-view post-processing and quality options, tone mapping and color grading. |
-| [DLSS Super Resolution](dlss.md) | NVIDIA DLSS behind dynamic resolution: the fetched SDK, the extension request before engine creation, quality modes, limits. |
+| [DLSS Super Resolution](dlss.md) | NVIDIA DLSS behind dynamic resolution: the fetched SDK, the extension request before engine creation, quality modes, Ray Reconstruction (the denoising upscaler), limits. |
 | [Ray tracing](ray-tracing.md) | Vulkan ray query: the extension request, per-scene acceleration structures, ray-traced sun shadows, visibility rays, limits. |
 | [ReSTIR direct lighting](restir.md) | Many punctual lights by reservoir resampling with ray-traced visibility: options, stats, what changes versus froxels, limits. |
 | [Guide buffers](guide-buffers.md) | Normal + roughness, diffuse and specular albedo from the lit shaders and the ray-traced specular hit distance, for neural denoisers and upscalers; readback for tests and debug views. |

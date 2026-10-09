@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- DLSS Ray Reconstruction (`DlssRayReconstruction`, `src/dlss_rr_c.cpp`): NGX `dlssd` as an HDR-stage external upscaler
+  fed by the guide buffers, denoising ReSTIR and ray-traced shadows while it upscales. `tool/dlss/manifest.txt` pins the
+  `nvngx_dlssd` runtimes (fetched, never committed); NGX is shared with Super Resolution (`src/ngx_c.cpp`).
 - Guide buffers (prebuilt `1.77.2-lumina.10`, Filament patch `0012`): `view.guideBufferOptions =
   GuideBufferOptions(enabled: true)` makes the lit shaders write world normal + roughness, diffuse and specular
   albedo as extra colour-pass outputs (Vulkan), and the specular hit distance is traced with ray queries.

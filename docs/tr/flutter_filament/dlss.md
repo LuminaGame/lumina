@@ -12,6 +12,7 @@ Filament'in dinamik çözünürlüğünün arkasında NVIDIA DLSS Super Resoluti
 - [Native C köprüsü (`src/dlss_c.h`)](#native-c-köprüsü-srcdlss_ch)
 - [Dart API (`lib/src/dlss.dart`)](#dart-api-libsrcdlssdart)
 - [Kalite modları](#kalite-modları)
+- [Ray Reconstruction](#ray-reconstruction)
 - [Sınırlar](#sınırlar)
 
 ## Filament'e nasıl oturur
@@ -121,9 +122,20 @@ dlss.destroy();
 
 Kesin boyutlar NGX'ten gelir (`NGX_DLSS_GET_OPTIMAL_SETTINGS`) ve SDK sürümleri arasında değişebilir.
 
+## Ray Reconstruction
+
+DLSS Ray Reconstruction (NGX özelliği `dlssd`, `nvngx_dlssd`), ışın izlemeli bir karenin upscaler'ını *ve* denoiser'ını tek bir ağla değiştirir: render çözünürlüğünde gürültülü HDR rengi, derinliği, hareket vektörlerini ve [kılavuz tamponlarını](guide-buffers.md) alır; çıktı çözünürlüğünde temizlenmiş, kenar yumuşatılmış bir HDR kare yazar. Lumina'da ReSTIR aydınlatmasını (piksel başına bir görünürlük ışını) ve ışın izlemeli gölge kenarlarını temizler.
+
+- **Nerede çalışır**: `HDR` aşamasındaki bir harici upscaler (yama `0011`, bkz. [Harici post pass ve Vulkan aygıt özellikleri](external-post-pass.md)): Filament'in TAA'sının yerinde, bloom ve renk düzenlemeden önce. Dört kılavuzun hepsini ister (`ExternalUpscaler::guideBuffers()`); 4–7 görüntüleri olarak gelir.
+- **Çalışma zamanı**: `tool/dlss/manifest.txt` `lib/Windows_x86_64/rel/nvngx_dlssd.dll` ve `lib/Linux_x86_64/rel/libnvidia-ngx-dlssd.so.310.9.1` dosyalarını sabitler; `dart run tool/dlss/fetch_sdk.dart` onları `nvngx_dlss`'in yanına indirir (asla commit edilmez, NVIDIA lisansı). NGX motor başına bir kez başlatılır ve Super Resolution ile paylaşılır (`src/ngx_c.cpp`).
+- **Sıra**: `DlssRayReconstruction.available` → motordan önce `Dlss.requestExtensions()` ve `RayTracing.requestExtensions()` → ışın izlemeli bir sahne (ReSTIR, ışın izlemeli gölgeler) → `DlssRayReconstruction.create(engine:, view:, options: DlssRayReconstructionOptions(quality:, outputWidth:, outputHeight:, preset:))`. Oluşturmak view'ın kılavuz tamponlarını, TAA jitter'ını ve hareket vektörlerini, NGX render boyutunda dinamik çözünürlüğü açar; `destroy()` önceki seçenekleri geri yükler.
+- **NGX'e gönderilenler**: paketlenmiş pürüzlülük (normals.w), donanım (ters Z) derinliği, hareket ölçeği (−1, −1), jitter = −Filament'in örnek kayması, `IsHDR | AutoExposure | MVLowRes | DepthInverted`, kameranın view ve jitter'sız projeksiyon matrisleri, specular isabet mesafesi. Preset'ler: `DlssRayReconstructionPreset.f` (varsayılan, SDK 310.9 transformer modeli), `e`, `d`, `defaultPreset`.
+- **C köprüsü** (`src/dlss_rr_c.h`): `filament_dlss_rr_available`, `_supported(engine)`, `_create(engine, view, const filament_dlss_rr_options_t*)` (`{ quality, outputWidth, outputHeight, preset }`), `_get_render_resolution`, `_set_quality`, `_reset_history`, `_last_gpu_time_ns` (değerlendirme etrafında Vulkan zaman damgaları), `_frame_count`, `_destroy`, `_last_error`.
+- **RTX PRO 2000'de ölçülen** (SDK 310.9.1, preset F): 1920×1080'de Balanced 1114×626 çizer, değerlendirme 4,6 ms; 1024×768'de Max Quality (683×512) 1,8 ms. Ham tek ışınlı ReSTIR'de (iki aday, yeniden kullanım yok) 1280×720'de zamansal gürültü (16 durağan karede piksel başına luma standart sapması) Filament TAA'sının %29'una iner (0..255 ölçeğinde 1,85'e karşı 0,53); örnekleri zaten yeniden kullanan Lumina varsayılan ReSTIR'inde %76'ya (0,69'a karşı 0,53). TAA görüntüsünün 128 karelik birikimine karşı PSNR, TAA'nınkinden yaklaşık 1 dB düşüktür (referans TAA'nın kendi ortalamasıdır; Ray Reconstruction ayrıca %67'den upscale eder).
+
 ## Sınırlar
 
 - Yalnızca Vulkan, yalnızca DLSS destekli NVIDIA GPU'lar; OpenGL, Metal, WebGPU ve web `Dlss.available == false` döndürür.
-- DLSS Frame Generation ve Ray Reconstruction entegre değildir.
+- DLSS Frame Generation entegre değildir (denoiser için bkz. [Ray Reconstruction](#ray-reconstruction)).
 - DLSS Super Resolution'ın aldığı kare LDR'dir (color grading sonrası): `DISPLAY` aşamasında bir harici upscaler'dır. Yama `0011` doğrusal kareye ihtiyaç duyan upscaler'lar için `HDR` aşamasını ekler (TAA çözümlemesinin yerine, bloom ve color grading'den önce); bkz. [Harici post pass ve Vulkan aygıt özellikleri](external-post-pass.md).
 - Lumina Studio DLSS'i viewport HUD'undan sürer; oyunlar onu oyun kullanıcı ayarlarından seçer (`LuminaUserSettingsSubsystem`, Blueprint **Set Upscaler** / **Is DLSS Supported**, bkz. `lumina/world.md`); DLSS yoksa FSR3'e ya da hiçbirine geri düşülür. İndirilmiş SDK olmadan derlenen bir oyun, kurulu editör gibi NGX kodu taşımaz.

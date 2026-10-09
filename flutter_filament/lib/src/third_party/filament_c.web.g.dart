@@ -4251,6 +4251,40 @@ void filament_view_set_guide_buffer_texture(ffi.Pointer<ffi.Void> view, int whic
   _m.filament_view_set_guide_buffer_texture(view.address.toJS, which.toJS, texture.address.toJS);
 }
 
+bool filament_dlss_rr_available() =>
+    _m.filament_dlss_rr_available().toDartInt != 0;
+
+bool filament_dlss_rr_supported(ffi.Pointer<ffi.Void> engine) =>
+    _m.filament_dlss_rr_supported(engine.address.toJS).toDartInt != 0;
+
+ffi.Pointer<ffi.Void> filament_dlss_rr_create(ffi.Pointer<ffi.Void> engine, ffi.Pointer<ffi.Void> view, ffi.Pointer<filament_dlss_rr_options_t> opts) =>
+    ffi.Pointer<ffi.Void>.fromAddress(_m.filament_dlss_rr_create(engine.address.toJS, view.address.toJS, opts.address.toJS).toDartInt);
+
+void filament_dlss_rr_get_render_resolution(ffi.Pointer<ffi.Void> rr, ffi.Pointer<ffi.Uint32> out_w, ffi.Pointer<ffi.Uint32> out_h) {
+  _m.filament_dlss_rr_get_render_resolution(rr.address.toJS, out_w.address.toJS, out_h.address.toJS);
+}
+
+void filament_dlss_rr_set_quality(ffi.Pointer<ffi.Void> rr, int quality) {
+  _m.filament_dlss_rr_set_quality(rr.address.toJS, quality.toJS);
+}
+
+void filament_dlss_rr_reset_history(ffi.Pointer<ffi.Void> rr) {
+  _m.filament_dlss_rr_reset_history(rr.address.toJS);
+}
+
+int filament_dlss_rr_last_gpu_time_ns(ffi.Pointer<ffi.Void> rr) =>
+    FlutterFilamentModule.fromBigInt(_m.filament_dlss_rr_last_gpu_time_ns(rr.address.toJS));
+
+int filament_dlss_rr_frame_count(ffi.Pointer<ffi.Void> rr) =>
+    FlutterFilamentModule.fromBigInt(_m.filament_dlss_rr_frame_count(rr.address.toJS));
+
+void filament_dlss_rr_destroy(ffi.Pointer<ffi.Void> rr) {
+  _m.filament_dlss_rr_destroy(rr.address.toJS);
+}
+
+ffi.Pointer<ffi.Char> filament_dlss_rr_last_error() =>
+    ffi.Pointer<ffi.Char>.fromAddress(_m.filament_dlss_rr_last_error().toDartInt);
+
 enum FilamentBackend {
   FILAMENT_BACKEND_DEFAULT(0),
   FILAMENT_BACKEND_OPENGL(1),
@@ -6264,6 +6298,42 @@ final class filament_guide_buffer_options_t extends ffi.Struct {
 
   bool get specularHitDistance => FlutterFilamentModule.heap.getUint8($address + 1) != 0;
   set specularHitDistance(bool value) => FlutterFilamentModule.heap.setUint8($address + 1, value ? 1 : 0);
+}
+
+enum filament_dlss_rr_preset {
+  FILAMENT_DLSS_RR_PRESET_DEFAULT(0),
+  FILAMENT_DLSS_RR_PRESET_D(4),
+  FILAMENT_DLSS_RR_PRESET_E(5),
+  FILAMENT_DLSS_RR_PRESET_F(6);
+
+  final int value;
+  const filament_dlss_rr_preset(this.value);
+
+  static filament_dlss_rr_preset fromValue(int value) => switch (value) {
+    0 => FILAMENT_DLSS_RR_PRESET_DEFAULT,
+    4 => FILAMENT_DLSS_RR_PRESET_D,
+    5 => FILAMENT_DLSS_RR_PRESET_E,
+    6 => FILAMENT_DLSS_RR_PRESET_F,
+    _ => throw ArgumentError(
+      'Unknown value for filament_dlss_rr_preset: $value',
+    ),
+  };
+}
+
+final class filament_dlss_rr_options_t extends ffi.Struct {
+  filament_dlss_rr_options_t.$at(super.$address) : super.$at();
+
+  int get quality => FlutterFilamentModule.heap.getUint8($address);
+  set quality(int value) => FlutterFilamentModule.heap.setUint8($address, value);
+
+  int get outputWidth => FlutterFilamentModule.heap.getUint32($address + 4, Endian.little);
+  set outputWidth(int value) => FlutterFilamentModule.heap.setUint32($address + 4, value, Endian.little);
+
+  int get outputHeight => FlutterFilamentModule.heap.getUint32($address + 8, Endian.little);
+  set outputHeight(int value) => FlutterFilamentModule.heap.setUint32($address + 8, value, Endian.little);
+
+  int get preset => FlutterFilamentModule.heap.getUint8($address + 12);
+  set preset(int value) => FlutterFilamentModule.heap.setUint8($address + 12, value);
 }
 
 // --- the module's exports (web) ---------------------------------------------
@@ -8606,6 +8676,26 @@ extension type _Module._(JSObject _) implements JSObject {
   external void filament_view_get_guide_buffer_options(JSNumber view, JSNumber out);
   @JS('_filament_view_set_guide_buffer_texture')
   external void filament_view_set_guide_buffer_texture(JSNumber view, JSNumber which, JSNumber texture);
+  @JS('_filament_dlss_rr_available')
+  external JSNumber filament_dlss_rr_available();
+  @JS('_filament_dlss_rr_supported')
+  external JSNumber filament_dlss_rr_supported(JSNumber engine);
+  @JS('_filament_dlss_rr_create')
+  external JSNumber filament_dlss_rr_create(JSNumber engine, JSNumber view, JSNumber opts);
+  @JS('_filament_dlss_rr_get_render_resolution')
+  external void filament_dlss_rr_get_render_resolution(JSNumber rr, JSNumber out_w, JSNumber out_h);
+  @JS('_filament_dlss_rr_set_quality')
+  external void filament_dlss_rr_set_quality(JSNumber rr, JSNumber quality);
+  @JS('_filament_dlss_rr_reset_history')
+  external void filament_dlss_rr_reset_history(JSNumber rr);
+  @JS('_filament_dlss_rr_last_gpu_time_ns')
+  external JSBigInt filament_dlss_rr_last_gpu_time_ns(JSNumber rr);
+  @JS('_filament_dlss_rr_frame_count')
+  external JSBigInt filament_dlss_rr_frame_count(JSNumber rr);
+  @JS('_filament_dlss_rr_destroy')
+  external void filament_dlss_rr_destroy(JSNumber rr);
+  @JS('_filament_dlss_rr_last_error')
+  external JSNumber filament_dlss_rr_last_error();
 }
 
 _Module get _m => _Module._(FlutterFilamentModule.instance);
@@ -8652,6 +8742,7 @@ void $registerFilamentBindings() {
   ffi.$registerStruct<filament_gpu_info_t>(276, 4, filament_gpu_info_t.$at);
   ffi.$registerStruct<filament_gpu_memory_t>(32, 8, filament_gpu_memory_t.$at);
   ffi.$registerStruct<filament_guide_buffer_options_t>(2, 1, filament_guide_buffer_options_t.$at);
+  ffi.$registerStruct<filament_dlss_rr_options_t>(16, 4, filament_dlss_rr_options_t.$at);
   ffi.$registerCallbackType<FilamentPickCallbackFunction>(const ffi.$CallbackSignature('v', ['u', 'f', 'f', 'f', 'p']));
   ffi.$registerCallbackType<FilamentRaycastCallbackFunction>(const ffi.$CallbackSignature('b', ['p', 'p', 'p', 'p']));
   ffi.$registerCallbackType<filament_buffer_free_fnFunction>(const ffi.$CallbackSignature('v', ['p', 'u', 'p']));
