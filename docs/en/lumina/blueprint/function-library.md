@@ -226,7 +226,7 @@ Vectors and rotators are **authoring space** (cm, Z up; rotators about X/Y/Z lik
 | `getPlayerController` | `static const getPlayerController` |  |
 | `getPlayerPawn` | `static const getPlayerPawn` |  |
 | `getPlayerCharacter` | `static const getPlayerCharacter` |  |
-| `setShowMouseCursor` | `static const setShowMouseCursor` |  |
+| `setShowMouseCursor` | `static const setShowMouseCursor` | Target resolution shared by the four cursor / input-mode nodes (VM and generated code): a Player Controller is used as is; a Pawn or Character acts on the Player Controller possessing it; an unwired Target acts on player 0's controller; a Target that resolves to no Player Controller logs one warning (Output Log) and does nothing. |
 | `setInputModeGameAndUI` | `static const setInputModeGameAndUI` |  |
 | `setInputModeGameOnly` | `static const setInputModeGameOnly` |  |
 | `setInputModeUIOnly` | `static const setInputModeUIOnly` |  |

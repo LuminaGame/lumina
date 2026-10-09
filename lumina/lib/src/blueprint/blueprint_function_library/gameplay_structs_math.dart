@@ -34,19 +34,38 @@ Object? _getPlayerCharacter(LuminaActor self, [int playerIndex = 0]) {
 }
 
 /// The controller a Set Show Mouse Cursor / Set Input Mode node acts on: its
-/// Target, or — when Target is unwired — player 0's controller (the
-/// validator warns about the unwired pin).
-LuminaPlayerController? _controllerTarget(LuminaActor self, Object? target) {
+/// Target when that is a Player Controller, the Player Controller possessing
+/// it when Target is a Pawn or Character, or — when Target is unwired —
+/// player 0's controller (the validator warns about the unwired pin). A
+/// Target that resolves to no Player Controller logs one warning per node
+/// title and Target type instead of doing nothing silently.
+LuminaPlayerController? _controllerTarget(LuminaActor self, Object? target, String nodeTitle) {
   final resolved = target ?? _getPlayerController(self);
-  return resolved is LuminaPlayerController ? resolved : null;
+  if (resolved is LuminaPlayerController) return resolved;
+  if (resolved is LuminaPawn && resolved.controller is LuminaPlayerController) {
+    return resolved.controller! as LuminaPlayerController;
+  }
+  final what = resolved == null
+      ? 'no Player Controller exists'
+      : resolved is LuminaPawn
+          ? '${resolved.runtimeType} is not possessed by a Player Controller'
+          : '${resolved.runtimeType} is not a Player Controller or a Pawn';
+  if (_unresolvedControllerTargets.add('$nodeTitle|$what')) {
+    LuminaBlueprintFunctionLibrary.logWarning(
+        self, '$nodeTitle: Target resolves to no Player Controller ($what); the node does nothing.');
+  }
+  return null;
 }
+
+/// The unresolved Targets already reported, so a node in a tick logs once.
+final Set<String> _unresolvedControllerTargets = <String>{};
 
 void _setShowMouseCursor(
   LuminaActor self,
   Object? target, [
   bool showMouseCursor = true,
 ]) {
-  _controllerTarget(self, target)?.setShowMouseCursor(showMouseCursor);
+  _controllerTarget(self, target, 'Set Show Mouse Cursor')?.setShowMouseCursor(showMouseCursor);
 }
 
 void _setInputModeGameAndUI(
@@ -55,14 +74,14 @@ void _setInputModeGameAndUI(
   Object? inWidgetToFocus,
   bool lockMouseToViewport = false,
 ]) {
-  _controllerTarget(self, target)?.setInputModeGameAndUI(
+  _controllerTarget(self, target, 'Set Input Mode Game and UI')?.setInputModeGameAndUI(
     widgetToFocus: inWidgetToFocus,
     lockMouseToViewport: lockMouseToViewport,
   );
 }
 
 void _setInputModeGameOnly(LuminaActor self, Object? target) {
-  _controllerTarget(self, target)?.setInputModeGameOnly();
+  _controllerTarget(self, target, 'Set Input Mode Game Only')?.setInputModeGameOnly();
 }
 
 void _setInputModeUIOnly(
@@ -71,7 +90,7 @@ void _setInputModeUIOnly(
   Object? inWidgetToFocus,
   bool lockMouseToViewport = false,
 ]) {
-  _controllerTarget(self, target)?.setInputModeUIOnly(
+  _controllerTarget(self, target, 'Set Input Mode UI Only')?.setInputModeUIOnly(
     widgetToFocus: inWidgetToFocus,
     lockMouseToViewport: lockMouseToViewport,
   );

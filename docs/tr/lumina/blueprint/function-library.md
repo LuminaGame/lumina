@@ -226,7 +226,7 @@ Vectors and rotators are **authoring space** (cm, Z up; rotators about X/Y/Z lik
 | `getPlayerController` | `static const getPlayerController` |  |
 | `getPlayerPawn` | `static const getPlayerPawn` |  |
 | `getPlayerCharacter` | `static const getPlayerCharacter` |  |
-| `setShowMouseCursor` | `static const setShowMouseCursor` |  |
+| `setShowMouseCursor` | `static const setShowMouseCursor` | Dört imleç / girdi modu düğümünün ortak Target çözümü (VM ve üretilen kod): Player Controller olduğu gibi kullanılır; Pawn veya Character, onu possess eden Player Controller üzerinde çalışır; bağlanmamış Target oyuncu 0'ın controller'ını kullanır; hiçbir Player Controller'a çözülemeyen Target bir kez uyarı loglar (Output Log) ve hiçbir şey yapmaz. |
 | `setInputModeGameAndUI` | `static const setInputModeGameAndUI` |  |
 | `setInputModeGameOnly` | `static const setInputModeGameOnly` |  |
 | `setInputModeUIOnly` | `static const setInputModeUIOnly` |  |

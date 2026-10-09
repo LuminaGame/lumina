@@ -674,7 +674,7 @@ One compiler-results row: what is wrong, and the node / pin it is on.
 
 | Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
-| `validateBlueprint` | `List<LuminaBlueprintDiagnostic> validateBlueprint(LuminaBlueprintDocument doc, {List<LuminaInputAction> inputA...` | Checks a Blueprint against the node library: unknown nodes, wire types and multiplicity, pure cycles, unset required inputs, missing input actions and variables, duplicate events. An empty list means it can run in the VM and be generated to Dart. |
+| `validateBlueprint` | `List<LuminaBlueprintDiagnostic> validateBlueprint(LuminaBlueprintDocument doc, {List<LuminaInputAction> inputA...` | Checks a Blueprint against the node library: unknown nodes, wire types and multiplicity, pure cycles, unset required inputs, missing input actions and variables, duplicate events. An empty list means it can run in the VM and be generated to Dart. Set Show Mouse Cursor / Set Input Mode *: bağlanmamış Target ya da tipi Pawn, Character veya düz Actor olan Target bir uyarıdır (Pawn'ı possess eden Player Controller kullanılır); başka bir tipteki Target (widget, component, pawn olmayan actor sınıfı) bir hatadır. |
 
 ## `lib/src/blueprint/collision_overrides.dart`
 

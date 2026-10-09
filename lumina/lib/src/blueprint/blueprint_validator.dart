@@ -116,6 +116,45 @@ const Set<String> _controllerTargetNodes = {
   'set_input_mode_ui_only',
 };
 
+/// A controller-only node's wired Target: a Player Controller (or an untyped
+/// object, checked when it runs) is fine; a Pawn or Character acts on the
+/// Player Controller possessing it (a warning says so); any other typed
+/// object can never be a controller (an error). Non-object values are
+/// refused by the wire type check.
+void _checkControllerTarget(
+  LuminaBlueprintGraph graph,
+  LuminaBlueprintWire wire,
+  String title,
+  LuminaBlueprintTypeContext context,
+  void Function(String m, {String? node, String? pin}) error,
+  void Function(String m, {String? node, String? pin}) warning,
+) {
+  final source = graph.node(wire.fromNodeId);
+  if (source == null) return;
+  final from = LuminaBlueprintNodeLibrary.pinsOf(source, context)?.outputs.where((p) => p.id == wire.fromPinId).firstOrNull;
+  if (from == null || from.type != LuminaPinType.object) return;
+  final cls = from.objectClass;
+  if (cls == null || cls == LuminaBlueprintObjectClass.any) return;
+  final name = LuminaBlueprintObjectClass.displayName(cls);
+  if (LuminaBlueprintObjectClass.kind(cls) == LuminaBlueprintObjectClass.actorKind) {
+    final chain = {cls, ...LuminaBlueprintObjectClass.ancestors(cls, parents: context.actorParents)};
+    if (chain.contains('${LuminaBlueprintObjectClass.actorKind}:LuminaPawn')) {
+      warning('$title: Target is a $name, not a Player Controller; '
+          'it acts on the Player Controller that possesses it (nothing happens while none does).',
+          node: wire.toNodeId, pin: wire.toPinId);
+      return;
+    }
+    final n = LuminaBlueprintObjectClass.name(cls);
+    if (n.isEmpty || n == 'LuminaActor') {
+      warning('$title: Target is an Actor; it acts only when that actor is a Pawn possessed by a Player Controller. '
+          'Wire Get Player Controller into Target.', node: wire.toNodeId, pin: wire.toPinId);
+      return;
+    }
+  }
+  error('$title: Target must be a Player Controller (or a Pawn possessed by one), not a $name. '
+      'Wire Get Player Controller into Target.', node: wire.toNodeId, pin: wire.toPinId);
+}
+
 /// Checks one graph (the event graph, a function's or a macro's) in [context].
 void _validateGraph(
   LuminaBlueprintGraph graph,
@@ -140,10 +179,14 @@ void _validateGraph(
     if (spec.unsupported != null) warning('${spec.title}: ${spec.unsupported}', node: node.id);
     // A controller-only node with no Target acts on player 0
     // (Lumina warns and picks the obvious one).
-    if (_controllerTargetNodes.contains(spec.id) &&
-        !graph.wires.any((w) => w.toNodeId == node.id && w.toPinId == 'target')) {
-      warning('${spec.title}: Target is not connected; it acts on Player Controller 0. '
-          'Wire Get Player Controller into Target to make that explicit.', node: node.id, pin: 'target');
+    if (_controllerTargetNodes.contains(spec.id)) {
+      final targetWire = graph.wireInto(node.id, 'target');
+      if (targetWire == null) {
+        warning('${spec.title}: Target is not connected; it acts on Player Controller 0. '
+            'Wire Get Player Controller into Target to make that explicit.', node: node.id, pin: 'target');
+      } else {
+        _checkControllerTarget(graph, targetWire, spec.title, context, error, warning);
+      }
     }
 
     if (spec.id == LuminaBlueprintNodeLibrary.enhancedInputAction) {
