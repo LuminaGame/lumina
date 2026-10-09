@@ -316,6 +316,18 @@ Diyalog içerisindeki seçilebilir her bir tuş veya eksen seçeneğini temsil e
 | `icon` | `final IconData icon` | Tuş türünü temsil eden ikon. |
 | `searchTerms` | `final List<String> searchTerms` | Hızlı filtreleme için arama terimleri ve takma adlar. |
 
+## Start Fullscreen
+
+**Engine & Graphics > Start Fullscreen** (`.lmproject` içinde `settings.start_fullscreen`) derlenen oyunu kenarlıksız
+tam ekranda başlatır: açıldığı monitörün tamamını, görev çubuğu dahil, monitörün doğal çözünürlüğünde kaplayan,
+başlık çubuğu ve kenarlığı olmayan bir pencere (oyun ekranı ekranın fiziksel pikselinde çizer). Oyuncu pencereli ↔
+tam ekran arasında **Alt+Enter** ya da **F11** ile, Blueprint'ler **Set Fullscreen Mode** / **Toggle Fullscreen**
+ile geçer; oyuncunun son seçimi kayıtların yanındaki `user_settings.json`'da saklanır ve sonraki açılışta ayarın
+önüne geçer. Ayar kapalıyken oyun pencereli başlar, tuşlar yine çalışır. Runner tarafını kod üretimi yazar
+(`GameWindowRunnerService`); ayarı değiştirdikten sonra oyunu yeniden derleyin. Özel (exclusive) tam ekran modu
+yoktur: oyunun karesini Flutter'ın compositor'ü sunar (bkz.
+[`LuminaWindowMode`](../../lumina/game.md#libsrcgamegame_windowdart)).
+
 ## Ölçeklenebilirlik Presetleri ve Teknik Karşılıkları
 
 **Engine & Graphics** kategorisi, projenin `.lmproject` manifest dosyasındaki `settings.scalability` altında saklanan genel grafik ayarlarını yapılandırır. Bir preset seçildiğinde motor seviyesinde arka plandaki tüm render parametreleri ve kamera kırpma mesafeleri (far clip plane) anında güncellenir:

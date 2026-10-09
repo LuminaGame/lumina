@@ -83,7 +83,7 @@ mixin _ProjectSettingsCategories on _ProjectSettingsSubEditorStateBase {
               onChanged: _vm.setStartFullscreen,
             ),
           ),
-          help: 'Launch game in fullscreen at desktop resolution',
+          help: 'Borderless fullscreen over the whole monitor (taskbar included) at native resolution; Alt+Enter / F11 toggle',
         ),
       ]),
     ]);

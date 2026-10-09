@@ -15,6 +15,7 @@ import 'package:lumina/src/components/particles/particle_emitter_config.dart';
 import 'package:lumina/src/components/particles/particle_system_component.dart';
 import 'package:lumina/src/game/console.dart';
 import 'package:lumina/src/game/game_instance.dart';
+import 'package:lumina/src/game/game_window.dart';
 import 'package:lumina/src/material/dynamic_material_instance.dart';
 import 'package:lumina/src/media/video_playback.dart';
 import 'package:lumina/src/utility/lumina_platform.dart';
@@ -88,6 +89,7 @@ part 'blueprint_function_library/audio_animation_effects_debug.dart';
 part 'blueprint_function_library/widget_blueprint.dart';
 part 'blueprint_function_library/ragdoll.dart';
 part 'blueprint_function_library/traversal.dart';
+part 'blueprint_function_library/window_mode.dart';
 
 /// What a node function gets when the VM calls it: the
 /// Blueprint instance it runs on.
@@ -990,6 +992,11 @@ abstract final class LuminaBlueprintFunctionLibrary {
   static const tryTraversalAction = _tryTraversalAction;
   static const traversalCheck = _traversalCheck;
   static const isTraversing = _isTraversing;
+
+  /// The game window's mode (see `LuminaGameWindow`).
+  static const setFullscreenMode = _setFullscreenMode;
+  static const getFullscreenMode = _getFullscreenMode;
+  static const toggleFullscreen = _toggleFullscreen;
   static const spawnEmitterAtLocation = _spawnEmitterAtLocation;
   static const spawnEmitterAttached = _spawnEmitterAttached;
   static const activateParticleSystem = _activateParticleSystem;
@@ -1055,6 +1062,7 @@ abstract final class LuminaBlueprintFunctionLibrary {
     ..._widgetBlueprintCallShapes,
     ..._ragdollCallShapes,
     ..._traversalCallShapes,
+    ..._windowModeCallShapes,
     // @@CALL_SHAPES_END
   });
 
@@ -1087,6 +1095,7 @@ abstract final class LuminaBlueprintFunctionLibrary {
     ..._widgetBlueprintFunctions,
     ..._ragdollFunctions,
     ..._traversalFunctions,
+    ..._windowModeFunctions,
     // @@FUNCTIONS_END
   });
 }

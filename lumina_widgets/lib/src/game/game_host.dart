@@ -269,6 +269,10 @@ class LuminaGameHostState extends State<LuminaGameHost> {
                   game: _game,
                   targetFps: widget.targetFps,
                   vsyncEnabled: widget.vsyncEnabled,
+                  // A game screen: edge to edge, at the display's native
+                  // resolution (fullscreen included).
+                  decorated: false,
+                  physicalResolution: true,
                 ),
                 LuminaWidgetLayer.forGame(game: _game),
               ],

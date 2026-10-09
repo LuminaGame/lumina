@@ -25,7 +25,7 @@ The editor-facing data layer, part one: the domain use cases (save level, import
 
 ### `class GenerateDartCodeUseCase`
 
-Generates the live declarative Dart code for a level (`lib/main.dart` + `lib/levels/<levelName>.dart`) via [DartCodeGeneratorService] and, when a [LuminaProject] is supplied, clears its dirty flag and stamps `lastCodeGeneratedTimestamp` through [ProjectRepository.saveProject].
+Generates the live declarative Dart code for a level (`lib/main.dart` + `lib/levels/<levelName>.dart`) via [DartCodeGeneratorService] and, when a [LuminaProject] is supplied, clears its dirty flag and stamps `lastCodeGeneratedTimestamp` through [ProjectRepository.saveProject]. The launcher gets the project's Target FPS, VSync and Start Fullscreen, and [GameWindowRunnerService] writes the desktop runners' window modes.
 
 ## `lib/src/domain/use_cases/import_asset_use_case.dart`
 
@@ -152,6 +152,35 @@ Every 3D format Assimp reads besides FBX and OBJ (which have their own services)
 | `handles` | `static bool handles(String path)` | Whether [path] is imported through this service (an Assimp format other than FBX and OBJ). |
 | `convert` | `static Future<AssimpImportResult> convert(String path, {List<String> textureSearchDirs = const []})` | [convertSync] in a background isolate. |
 | `convertSync` | `static AssimpImportResult convertSync(String path, {List<String> textureSearchDirs = const []})` | Throws [AssimpImportException] when Assimp cannot read the file. |
+
+## `lib/src/services/game_window_runner/game_window_runner_service.dart`
+
+### `abstract final class GameWindowRunnerService`
+
+Gives a game project's desktop runners their window modes. Writes `windows/runner/lumina_window_mode.{h,cpp}` and
+`linux/runner/lumina_window_mode.{h,cc}` (regenerated each time; the sources are in `windows_sources.dart` /
+`linux_sources.dart`) and hooks them into the runners `flutter create` wrote: the source list of the runner
+`CMakeLists.txt` (`linux/CMakeLists.txt` for old Linux templates), `LuminaWindowModeAttach(...)` after
+`SetChildContent` in `flutter_window.cpp`, `lumina_window_mode_attach(window, view)` after `fl_register_plugins` in
+`my_application.cc` (between `// BEGIN/END LUMINA WINDOW MODE` markers). It also puts back the template window in a
+`main.cpp` that earlier versions sized to `GetSystemMetrics(SM_CXSCREEN/SM_CYSCREEN)`. Idempotent; a file is written
+only when its content changes. The editor's code generation and `GenerateDartCodeUseCase` (Build pipeline) run it.
+
+What the Windows runner does: with Start Fullscreen on it switches the still hidden window (it shows on the first
+frame) to `WS_POPUP` and sizes it to `rcMonitor` of `MonitorFromWindow` with `HWND_TOP` and DWM corner rounding off,
+so the game never appears windowed; the windowed placement Alt+Enter returns to is centred on that monitor. Alt+Enter
+and F11 are taken in a subclass of the Flutter view's window before Flutter sees them (repeats, key-ups and the
+beeping `WM_SYSCHAR` included) and toggle; leaving fullscreen restores the saved style and `WINDOWPLACEMENT`
+(maximized included). While fullscreen, `WM_DPICHANGED` / `WM_DISPLAYCHANGE` refit it to the monitor. The runner is
+per-monitor DPI aware (Flutter's manifest), so the window and the Flutter view are the monitor's physical pixels.
+The Linux runner uses `gtk_window_fullscreen` before the window is shown and the window's `key-press-event` for the
+keys.
+
+| Member | Signature | Description |
+|---|---|---|
+| `apply` | `static GameWindowRunnerReport apply(String projectDir, {required bool startFullscreen})` | Writes and hooks both runners (a missing platform folder is skipped). `files`: what changed; `warnings`: an anchor not found. |
+| `windowsSource` / `linuxSource` | `static String windowsSource({required bool startFullscreen})` | The generated `.cpp` / `.cc`. |
+| `addSource` / `patchFlutterWindow` / `patchMyApplication` / `revertScreenSizedMainCpp` | `static String? ...(String source)` | The individual patches (null: no anchor). |
 
 ## `lib/src/services/code_generator_service.dart`
 

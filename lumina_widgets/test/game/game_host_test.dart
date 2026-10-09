@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_filament/flutter_filament.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina/lumina.dart';
 import 'package:lumina_mouse_capture/lumina_mouse_capture.dart';
@@ -54,6 +55,14 @@ void main() {
     await tester.pump();
     return tester.state<LuminaGameHostState>(find.byType(LuminaGameHost));
   }
+
+  testWidgets('the game screen fills the window at the display physical pixels, without a panel border',
+      (tester) async {
+    await pumpHost(tester);
+    final frame = tester.widget<FilamentWidget>(find.byType(FilamentWidget));
+    expect(frame.decorated, isFalse);
+    expect(frame.physicalResolution, isTrue);
+  });
 
   testWidgets('keyboard keys reach the input subsystem through the engine key table', (tester) async {
     final state = await pumpHost(tester);

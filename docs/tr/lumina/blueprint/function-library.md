@@ -604,6 +604,9 @@ Vectors and rotators are **authoring space** (cm, Z up; rotators about X/Y/Z lik
 | `getTargetFPS` | `static const getTargetFPS` | Geçerli hedef kare hızı sınırını döner. |
 | `setVSyncEnabled` | `static const setVSyncEnabled` | Dikey senkronizasyonu (VSync) açar veya kapatır. |
 | `getVSyncEnabled` | `static const getVSyncEnabled` | Dikey senkronizasyonun açık olup olmadığını döner. |
+| `setFullscreenMode` | `static const setFullscreenMode` | **Set Fullscreen Mode** düğümü (kategori `Settings\|Display`): `Windowed` ya da `Borderless Fullscreen` (`Fullscreen` da olur; başka bir değer loglanıp yok sayılır), `LuminaGameWindow.setMode` üzerinden: oyunun runner'ı hemen uygular ve oyuncunun seçimi olarak saklanır. |
+| `getFullscreenMode` | `static const getFullscreenMode` | **Get Fullscreen Mode** düğümü: pencerenin şu anki modu, `Windowed` ya da `Borderless Fullscreen` (Alt+Enter / F11 sonrası da). |
+| `toggleFullscreen` | `static const toggleFullscreen` | **Toggle Fullscreen** düğümü: pencereli ↔ kenarlıksız tam ekran; Alt+Enter ve F11'in yaptığı. |
 | `applyScalabilitySettings` | `static const applyScalabilitySettings` | Bekleyen tüm ölçeklenebilirlik ve görüş mesafesi ayarlarını canlı sahneye ve kameralara anında derleyip uygular. |
 | `setRayTracingEnabled` / `getRayTracingEnabled` | `static const setRayTracingEnabled` | **Set / Get Ray Tracing Enabled** node'u (kategori `Settings\|Ray Tracing & Upscaling`): oyun kullanıcı ayarlarındaki donanımsal ışın izleme, alttaki ikisinin ana anahtarı. Buradaki her setter gibi bekletilir; Apply Scalability Settings uygular. |
 | `setRayTracedShadowsEnabled` / `getRayTracedShadowsEnabled` | `static const setRayTracedShadowsEnabled` | Güneş, gölge haritaları yerine ışın izlemeli sert gölge düşürür (varsayılan açık). |

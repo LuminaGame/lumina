@@ -1,8 +1,9 @@
-import 'package:flutter/foundation.dart' show TargetPlatform, defaultTargetPlatform;
+import 'package:flutter/foundation.dart' show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:flutter/services.dart' show rootBundle;
 
 import 'package:lumina/lumina_runtime.dart';
 import 'package:lumina_widgets/src/media/video/lumina_video_controller.dart';
+import 'package:lumina_widgets/src/utility/window_mode_channel.dart';
 
 /// Connects the engine to Flutter at start-up. The engine (`lumina`) holds no
 /// Flutter UI, so the services it needs from the app are handed to it here:
@@ -11,7 +12,10 @@ import 'package:lumina_widgets/src/media/video/lumina_video_controller.dart';
 /// - [LuminaAssets.bundleProvider]: the app's asset bundle (the procedural
 ///   sky's shader and textures ship in the lumina package);
 /// - [LuminaVideoPlayback.factory]: media_kit video ([LuminaVideoController]),
-///   what the Blueprint video nodes open.
+///   what the Blueprint video nodes open;
+/// - [LuminaGameWindow.backend]: the generated runner's window mode
+///   ([LuminaWindowModeChannel], Windows and Linux), what `Set Fullscreen
+///   Mode` drives.
 ///
 /// A generated game calls [ensureInitialized] in `main()`; the game widget
 /// calls it too, so Play-In-Editor and tests that only mount a
@@ -34,6 +38,9 @@ abstract final class LuminaWidgets {
     };
     LuminaVideoPlayback.factory ??= ({required String source, bool autoPlay = false, bool loop = false, double initialVolume = 1.0}) =>
         LuminaVideoController(source: source, autoPlay: autoPlay, loop: loop, initialVolume: initialVolume);
+    if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.linux)) {
+      LuminaGameWindow.backend ??= LuminaWindowModeChannel();
+    }
   }
 
   /// The engine's platform for Flutter's [platform].

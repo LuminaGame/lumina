@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina_editor_data/src/repositories/project_repository.dart';
 import 'package:lumina_editor_data/src/services/code_generator_service.dart';
+import 'package:lumina_editor_data/src/services/game_window_runner/game_window_runner_service.dart';
 import 'package:lumina_editor_data/src/domain/models/use_case_results.dart';
 import 'package:lumina_editor_data/src/domain/use_cases/use_case_validation.dart';
 
@@ -67,7 +68,16 @@ class GenerateDartCodeUseCase {
         widgetClasses: File('${libDir.path}/widgets/widget_registry.g.dart').existsSync(),
         blueprintRegistry: blueprintRegistry,
         levelNames: levelNames,
+        // Project Settings > Graphics, as the editor's own code generation.
+        targetFps: project?.settings.targetFps ?? 0,
+        vsyncEnabled: project?.settings.vsyncEnabled ?? false,
+        startFullscreen: project?.settings.startFullscreen ?? false,
       ));
+      // The desktop runners' window modes (Start Fullscreen, Alt+Enter / F11).
+      final runner = GameWindowRunnerService.apply(projectDir, startFullscreen: project?.settings.startFullscreen ?? false);
+      for (final w in runner.warnings) {
+        _logger.log('Window modes: $w', level: 'warning', source: _source);
+      }
 
       final assetActors = actors
           .map((a) => LuminaAsset(

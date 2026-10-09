@@ -65,7 +65,8 @@ Engine state notifies through `lumina_core`'s pure types (`ChangeSignal`, `Obser
 
 Connects the engine to Flutter at start-up: sets `LuminaPlatform.override`, `LuminaAssets.bundleProvider` and
 `LuminaVideoPlayback.factory` (each only when the host has not set it). A generated game calls it in `main()` after
-`WidgetsFlutterBinding.ensureInitialized()`; `LuminaGameWidget`, Lumina Studio's start-up and Play call it too.
+`WidgetsFlutterBinding.ensureInitialized()`; `LuminaGameWidget`, Lumina Studio's start-up and Play call it too. On
+Windows and Linux it also sets `LuminaGameWindow.backend` to a [`LuminaWindowModeChannel`](#libsrcutilitywindow_mode_channeldart).
 
 | Member | Signature | Description |
 | :--- | :--- | :--- |
@@ -130,6 +131,12 @@ view renders as before.
 
 Flutter widget that embeds the `FilamentWidget` viewport and drives the [LuminaGame] loop via [LuminaFrameDriver].  The widget is the game host: it calls `LuminaWidgets.ensureInitialized` and, once per process and never on the web, `LuminaRtxController.requestExtensions` (ray tracing and DLSS need Vulkan extensions before the shared engine exists), then [LuminaGame.mountGame] and `beginPlay()` on the mounted world once `FilamentWidget` has created the scene.  Play control: - [paused] is declarative: flipping it calls [LuminaGame.pause] / [LuminaGame.resume] once the scene exists (and on scene creation if it starts `true`). - [onPlayStateChanged] receives every [LuminaPlayState] transition of [game] for the widget's lifetime — bind an editor toolbar to it.  Swap chain: - With [useHeadlessSwapChain] (default `true`, today's behaviour) the widget creates a 1×1 headless swap chain plus a [LuminaFrameDriver], so the world is ticked with a vsync-derived, frame-paced delta time and [LuminaFrameDriver.frameStats] is available to the HUD overlay. - With `false` no extra swap chain or driver is created: the ticker calls [LuminaGame.tickGame] with a fixed 1/60 s delta and `FilamentWidget` presents through its own swap chain. Use this for hosts that must not allocate a second swap chain; note that no frame stats are produced in that mode.
 
+
+`decorated` and `physicalResolution` are forwarded to `FilamentWidget` (defaults `true` / `false`: the bordered panel
+at logical size). [`LuminaGameHost`](#class-luminagamehost), the screen generated games show, passes `false` /
+`true`: the frame fills the window edge to edge at the display's physical pixels, so a borderless fullscreen game
+renders at the monitor's native resolution.
+
 **Functions, Methods & Accessors:**
 
 | Method / Getter | Signature | Purpose & Description |
@@ -192,6 +199,24 @@ returns the same object (so calling it in `build` does not resubscribe). A round
 | `ChangeSignalAsListenable` on `ChangeSignal` | `Listenable asListenable()` | For a `ListenableBuilder` (`controller.cursorState.asListenable()`). |
 | `ValueListenableAsObservable<T>` on `ValueListenable<T>` | `Observable<T> asObservable()` | A Flutter value handed to pure code (a plugin process API). |
 | `ListenableAsChangeSignal` on `Listenable` | `ChangeSignal asChangeSignal()` | A Flutter notifier handed to pure code. |
+
+## `lib/src/utility/window_mode_channel.dart`
+
+### `class LuminaWindowModeChannel implements LuminaWindowModeBackend`
+
+The generated runner's window ([`LuminaGameWindow.backend`](../lumina/game.md#libsrcgamegame_windowdart)) over the
+`lumina/game_window` method channel; `LuminaWidgets.ensureInitialized` installs it on Windows and Linux. The runner
+(`windows/runner/lumina_window_mode.cpp`, `linux/runner/lumina_window_mode.cc`) answers `getMode` (`windowed` /
+`borderless_fullscreen`), `setMode {mode}` (whether it applied) and `getInfo` (diagnostics: `window`, `monitor`, `work`
+as `[left, top, right, bottom]` physical pixels, `client` `[w, h]`, `popup`, `caption`, `foreground`), and calls
+`modeChanged {mode}` after Alt+Enter or F11. A runner without them (the editor, games generated earlier) throws
+`MissingPluginException`: no mode, nothing applied.
+
+| Member | Signature | Description |
+|---|---|---|
+| `channelName` | `static const String channelName = 'lumina/game_window'` | The channel. |
+| `getMode` / `setMode` / `onModeChanged` | see `LuminaWindowModeBackend` | The runner protocol above. |
+| `windowInfo` | `Future<Map<String, Object?>?> windowInfo()` | `getInfo`, or null without a runner that reports it. |
 
 ## `lib/src/utility/web_loading.dart`
 

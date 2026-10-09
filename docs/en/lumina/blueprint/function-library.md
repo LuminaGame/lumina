@@ -604,6 +604,9 @@ Vectors and rotators are **authoring space** (cm, Z up; rotators about X/Y/Z lik
 | `getTargetFPS` | `static const getTargetFPS` | Returns the current target frame rate cap. |
 | `setVSyncEnabled` | `static const setVSyncEnabled` | Enables or disables vertical synchronization. |
 | `getVSyncEnabled` | `static const getVSyncEnabled` | Returns whether vertical synchronization is enabled. |
+| `setFullscreenMode` | `static const setFullscreenMode` | Node **Set Fullscreen Mode** (category `Settings\|Display`): `Windowed` or `Borderless Fullscreen` (also `Fullscreen`; anything else is logged and ignored) through `LuminaGameWindow.setMode`: applied by the game's runner at once and kept as the player's choice. |
+| `getFullscreenMode` | `static const getFullscreenMode` | Node **Get Fullscreen Mode**: `Windowed` or `Borderless Fullscreen`, the window's current mode (also after Alt+Enter / F11). |
+| `toggleFullscreen` | `static const toggleFullscreen` | Node **Toggle Fullscreen**: windowed ↔ borderless fullscreen, what Alt+Enter and F11 do. |
 | `applyScalabilitySettings` | `static const applyScalabilitySettings` | Compiles and applies pending scalability and view distance settings to the live viewport and cameras. |
 | `setRayTracingEnabled` / `getRayTracingEnabled` | `static const setRayTracingEnabled` | Node **Set / Get Ray Tracing Enabled** (category `Settings\|Ray Tracing & Upscaling`): hardware ray tracing in the game user settings, the switch for the two below. Staged; committed by Apply Scalability Settings, like every setter here. |
 | `setRayTracedShadowsEnabled` / `getRayTracedShadowsEnabled` | `static const setRayTracedShadowsEnabled` | The sun casts ray-traced hard shadows instead of shadow maps (default on). |

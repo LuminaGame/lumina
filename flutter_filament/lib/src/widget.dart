@@ -78,6 +78,15 @@ class FilamentWidget extends StatefulWidget {
 
   final FilamentFrameViewsCallback? frameViews;
 
+  /// Whether the frame sits in the rounded, bordered viewport panel (the
+  /// default, editor tools) or fills the widget edge to edge (a game).
+  final bool decorated;
+
+  /// Whether the frame renders at the display's physical pixels (layout size
+  /// × device pixel ratio, what a game wants on a scaled display) instead of
+  /// the layout's logical size (the default).
+  final bool physicalResolution;
+
   const FilamentWidget({
     super.key,
     this.onSceneCreated,
@@ -95,6 +104,8 @@ class FilamentWidget extends StatefulWidget {
     this.width = double.infinity,
     this.height = double.infinity,
     this.targetFps,
+    this.decorated = true,
+    this.physicalResolution = false,
   });
 
   /// Target frame rate in FPS; null or <= 0 means unlimited / display refresh rate.

@@ -94,34 +94,11 @@ class DartCodeGeneratorService extends _DartCodeGeneratorServiceState
     final modeExpr = pawnClass.isEmpty
         ? modeCreate
         : "($modeCreate..defaultPawnFactory = () => luminaBlueprintFactories['${_escape(pawnClass)}']!() as LuminaPawn)";
-    final ffiImport = startFullscreen ? "import 'dart:ffi' as ffi;\n" : '';
-    final fullscreenCall = startFullscreen
-        ? "  if (!kIsWeb && Platform.isWindows) {\n    _enableFullscreen();\n  }\n"
-        : '';
-    final fullscreenHelper = startFullscreen
-        ? """
-
-void _enableFullscreen() {
-  try {
-    final user32 = ffi.DynamicLibrary.open('user32.dll');
-    final getForegroundWindow = user32.lookupFunction<ffi.IntPtr Function(), int Function()>('GetForegroundWindow');
-    final getSystemMetrics = user32.lookupFunction<ffi.Int32 Function(ffi.Int32), int Function(int)>('GetSystemMetrics');
-    final setWindowPos = user32.lookupFunction<
-        ffi.Int32 Function(ffi.IntPtr, ffi.IntPtr, ffi.Int32, ffi.Int32, ffi.Int32, ffi.Int32, ffi.Uint32),
-        int Function(int, int, int, int, int, int, int)>('SetWindowPos');
-    final showWindow = user32.lookupFunction<ffi.Int32 Function(ffi.IntPtr, ffi.Int32), int Function(int, int)>('ShowWindow');
-
-    final hwnd = getForegroundWindow();
-    if (hwnd != 0) {
-      final width = getSystemMetrics(0);
-      final height = getSystemMetrics(1);
-      showWindow(hwnd, 3);
-      setWindowPos(hwnd, 0, 0, 0, width, height, 0x0020 | 0x0040);
-    }
-  } catch (_) {}
-}
-"""
-        : '';
+    // The window mode: the runner opens the window in the project's Start
+    // Fullscreen mode; the player's own choice (Alt+Enter, F11, Set
+    // Fullscreen Mode), kept next to the save games, is put back before the
+    // first frame.
+    final startMode = startFullscreen ? 'LuminaWindowMode.borderlessFullscreen' : 'LuminaWindowMode.windowed';
     return """
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // Lumina Engine $kLuminaEngineVersion Auto-Generated Launcher
@@ -129,7 +106,7 @@ void _enableFullscreen() {
 
 import 'dart:async';
 import 'dart:io' show Platform, exit;
-${ffiImport}import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '$kLuminaGameLibrary';
@@ -139,7 +116,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // The engine's Flutter services: platform, asset bundle, video player.
   LuminaWidgets.ensureInitialized();
-$registerFunctions$registerWidgets$registerBlueprints$fullscreenCall  // Every asset the level names is read from the app bundle (pubspec.yaml
+$registerFunctions$registerWidgets$registerBlueprints  // Every asset the level names is read from the app bundle (pubspec.yaml
   // bundles contents/), so the same game runs on desktop and on the web.
   LuminaAssets.defaultProvider = (path) async {
     final data = await rootBundle.load(path);
@@ -151,6 +128,12 @@ $registerFunctions$registerWidgets$registerBlueprints$fullscreenCall  // Every a
   // Save Game to Slot writes to the platform's app-support directory.
   LuminaSaveGameSubsystem.defaultSaveDirectoryPath =
       LuminaSaveGameSubsystem.platformSaveDirectory('${_escape(projectName)}') ?? LuminaSaveGameSubsystem.defaultSaveDirectoryPath;
+  // Windowed or borderless fullscreen (Project Settings > Start Fullscreen,
+  // then the player's last choice); Alt+Enter and F11 toggle.
+  await LuminaGameWindow.restore(
+    startMode: $startMode,
+    settingsFilePath: LuminaGameWindow.settingsFileFor(LuminaSaveGameSubsystem.defaultSaveDirectoryPath),
+  );
   // Quit Game (a Blueprint node, or the console's `quit`) closes the game.
   LuminaGame.onQuitRequested = () {
     if (!kIsWeb && (Platform.isLinux || Platform.isMacOS || Platform.isWindows)) exit(0);
@@ -162,7 +145,7 @@ $registerFunctions$registerWidgets$registerBlueprints$fullscreenCall  // Every a
   await LuminaWebLoading.prepareGame();
   runApp(const MyLuminaGameApp());
 }
-$fullscreenHelper
+
 /// The levels Open Level can load, by name.
 final Map<String, LuminaLevel Function()> _projectLevels = {
 $levelTable

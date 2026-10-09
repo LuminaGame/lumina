@@ -33,6 +33,7 @@ export 'package:lumina_editor_data/src/services/blueprint_project_assets.dart';
 export 'package:lumina_editor_data/src/services/code_generator_service.dart';
 export 'package:lumina_editor_data/src/services/base_eye_height_migration.dart';
 export 'package:lumina_editor_data/src/services/app_icon_service.dart';
+export 'package:lumina_editor_data/src/services/game_window_runner/game_window_runner_service.dart';
 export 'package:lumina_editor_data/src/services/web_loading_screen_service.dart';
 
 // Importers

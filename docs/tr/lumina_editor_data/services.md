@@ -25,7 +25,7 @@ Editöre dönük veri katmanı, birinci bölüm: domain use case'leri (level kay
 
 ### `class GenerateDartCodeUseCase`
 
-Generates the live declarative Dart code for a level (`lib/main.dart` + `lib/levels/<levelName>.dart`) via [DartCodeGeneratorService] and, when a [LuminaProject] is supplied, clears its dirty flag and stamps `lastCodeGeneratedTimestamp` through [ProjectRepository.saveProject].
+Generates the live declarative Dart code for a level (`lib/main.dart` + `lib/levels/<levelName>.dart`) via [DartCodeGeneratorService] and, when a [LuminaProject] is supplied, clears its dirty flag and stamps `lastCodeGeneratedTimestamp` through [ProjectRepository.saveProject]. Başlatıcı projenin Target FPS, VSync ve Start Fullscreen ayarlarını alır; [GameWindowRunnerService] masaüstü runner'larının pencere modlarını yazar.
 
 ## `lib/src/domain/use_cases/import_asset_use_case.dart`
 
@@ -152,6 +152,35 @@ FBX ve OBJ dışında (onların kendi servisleri var) Assimp'in okuduğu her 3D 
 | `handles` | `static bool handles(String path)` | [path] bu servis üzerinden mi içe aktarılır (FBX ve OBJ dışında bir Assimp formatı). |
 | `convert` | `static Future<AssimpImportResult> convert(String path, {List<String> textureSearchDirs = const []})` | [convertSync]'i arka plan isolate'inde çalıştırır. |
 | `convertSync` | `static AssimpImportResult convertSync(String path, {List<String> textureSearchDirs = const []})` | Assimp dosyayı okuyamazsa [AssimpImportException] fırlatır. |
+
+## `lib/src/services/game_window_runner/game_window_runner_service.dart`
+
+### `abstract final class GameWindowRunnerService`
+
+Bir oyun projesinin masaüstü runner'larına pencere modlarını kazandırır. `windows/runner/lumina_window_mode.{h,cpp}` ve
+`linux/runner/lumina_window_mode.{h,cc}` dosyalarını yazar (her seferinde yeniden üretilir; kaynaklar
+`windows_sources.dart` / `linux_sources.dart` içinde) ve `flutter create`'in yazdığı runner'lara bağlar: runner
+`CMakeLists.txt` kaynak listesi (eski Linux şablonlarında `linux/CMakeLists.txt`), `flutter_window.cpp` içinde
+`SetChildContent`'ten sonra `LuminaWindowModeAttach(...)`, `my_application.cc` içinde `fl_register_plugins`'ten sonra
+`lumina_window_mode_attach(window, view)` (`// BEGIN/END LUMINA WINDOW MODE` işaretleri arasında). Önceki sürümlerin
+`GetSystemMetrics(SM_CXSCREEN/SM_CYSCREEN)` boyutuna getirdiği `main.cpp`'yi şablon penceresine geri çevirir.
+İdempotenttir; bir dosya yalnızca içeriği değişince yazılır. Editörün kod üretimi ve `GenerateDartCodeUseCase`
+(Build pipeline) çalıştırır.
+
+Windows runner'ın yaptığı: Start Fullscreen açıkken henüz gizli olan pencereyi (ilk karede görünür) `WS_POPUP`'a
+çevirir, `MonitorFromWindow`'un `rcMonitor`'üne `HWND_TOP` ile boyutlandırır ve DWM köşe yuvarlamasını kapatır; oyun
+hiç pencereli görünmez. Alt+Enter'ın döneceği pencereli yerleşim o monitörde ortalanır. Alt+Enter ve F11, Flutter
+görmeden önce Flutter view penceresinin bir subclass'ında yakalanır (tekrarlar, key-up'lar ve bip sesi çıkaran
+`WM_SYSCHAR` dahil) ve modu değiştirir; tam ekrandan çıkış kayıtlı stili ve `WINDOWPLACEMENT`'ı (maximize dahil) geri
+getirir. Tam ekrandayken `WM_DPICHANGED` / `WM_DISPLAYCHANGE` pencereyi monitöre yeniden oturtur. Runner monitör
+başına DPI farkındadır (Flutter'ın manifest'i); pencere ve Flutter view monitörün fiziksel pikselleridir. Linux
+runner'ı pencere gösterilmeden önce `gtk_window_fullscreen`, tuşlar için pencerenin `key-press-event`'ini kullanır.
+
+| Üye | İmza | Açıklama |
+|---|---|---|
+| `apply` | `static GameWindowRunnerReport apply(String projectDir, {required bool startFullscreen})` | İki runner'ı yazar ve bağlar (olmayan platform klasörü atlanır). `files`: değişenler; `warnings`: bulunamayan bir bağlantı noktası. |
+| `windowsSource` / `linuxSource` | `static String windowsSource({required bool startFullscreen})` | Üretilen `.cpp` / `.cc`. |
+| `addSource` / `patchFlutterWindow` / `patchMyApplication` / `revertScreenSizedMainCpp` | `static String? ...(String source)` | Tek tek yamalar (null: bağlantı noktası yok). |
 
 ## `lib/src/services/code_generator_service.dart`
 

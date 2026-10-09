@@ -65,7 +65,8 @@ verir: `LuminaGameInstance` bir `ChangeEmitter`, `LuminaPlayerController.cursorS
 Açılışta motoru Flutter'a bağlar: `LuminaPlatform.override`, `LuminaAssets.bundleProvider` ve
 `LuminaVideoPlayback.factory` değerlerini ayarlar (her birini yalnızca host ayarlamamışsa). Üretilen bir oyun bunu
 `main()` içinde `WidgetsFlutterBinding.ensureInitialized()` sonrasında çağırır; `LuminaGameWidget`, Lumina Studio'nun
-açılışı ve Play de çağırır.
+açılışı ve Play de çağırır. Windows ve Linux'ta `LuminaGameWindow.backend`'i bir
+[`LuminaWindowModeChannel`](#libsrcutilitywindow_mode_channeldart) olarak da ayarlar.
 
 | Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
@@ -130,6 +131,12 @@ yoksa varsayılan view önceki şekilde render edilir.
 
 Flutter widget that embeds the `FilamentWidget` viewport and drives the [LuminaGame] loop via [LuminaFrameDriver].  The widget is the game host: it calls `LuminaWidgets.ensureInitialized` and, once per process and never on the web, `LuminaRtxController.requestExtensions` (ray tracing and DLSS need Vulkan extensions before the shared engine exists), then [LuminaGame.mountGame] and `beginPlay()` on the mounted world once `FilamentWidget` has created the scene.  Play control: - [paused] is declarative: flipping it calls [LuminaGame.pause] / [LuminaGame.resume] once the scene exists (and on scene creation if it starts `true`). - [onPlayStateChanged] receives every [LuminaPlayState] transition of [game] for the widget's lifetime — bind an editor toolbar to it.  Swap chain: - With [useHeadlessSwapChain] (default `true`, today's behaviour) the widget creates a 1×1 headless swap chain plus a [LuminaFrameDriver], so the world is ticked with a vsync-derived, frame-paced delta time and [LuminaFrameDriver.frameStats] is available to the HUD overlay. - With `false` no extra swap chain or driver is created: the ticker calls [LuminaGame.tickGame] with a fixed 1/60 s delta and `FilamentWidget` presents through its own swap chain. Use this for hosts that must not allocate a second swap chain; note that no frame stats are produced in that mode.
 
+
+`decorated` ve `physicalResolution` `FilamentWidget`'a iletilir (varsayılanlar `true` / `false`: mantıksal boyutta
+kenarlıklı panel). Üretilen oyunların gösterdiği ekran olan [`LuminaGameHost`](#class-luminagamehost) `false` / `true`
+verir: kare pencereyi ekranın fiziksel pikselinde kenardan kenara doldurur; kenarlıksız tam ekran bir oyun
+monitörün doğal çözünürlüğünde çizer.
+
 **Fonksiyonlar, Metotlar ve Erişimciler:**
 
 | Metot / Getter | İmzası | Ne İşe Yarar? |
@@ -193,6 +200,24 @@ kaynağın kendisini verir.
 | `ChangeSignalAsListenable` on `ChangeSignal` | `Listenable asListenable()` | `ListenableBuilder` için (`controller.cursorState.asListenable()`). |
 | `ValueListenableAsObservable<T>` on `ValueListenable<T>` | `Observable<T> asObservable()` | Saf koda (bir plugin süreci API'sine) verilen bir Flutter değeri. |
 | `ListenableAsChangeSignal` on `Listenable` | `ChangeSignal asChangeSignal()` | Saf koda verilen bir Flutter notifier'ı. |
+
+## `lib/src/utility/window_mode_channel.dart`
+
+### `class LuminaWindowModeChannel implements LuminaWindowModeBackend`
+
+Üretilen runner'ın penceresi ([`LuminaGameWindow.backend`](../lumina/game.md#libsrcgamegame_windowdart)),
+`lumina/game_window` method channel'ı üzerinden; `LuminaWidgets.ensureInitialized` Windows ve Linux'ta kurar. Runner
+(`windows/runner/lumina_window_mode.cpp`, `linux/runner/lumina_window_mode.cc`) `getMode` (`windowed` /
+`borderless_fullscreen`), `setMode {mode}` (uygulayıp uygulamadığı) ve `getInfo` (tanılama: fiziksel piksel
+`[left, top, right, bottom]` olarak `window`, `monitor`, `work`; `client` `[w, h]`, `popup`, `caption`, `foreground`)
+çağrılarını yanıtlar, Alt+Enter ya da F11 sonrası `modeChanged {mode}` çağırır. Bunları bilmeyen bir runner (editör,
+önceden üretilmiş oyunlar) `MissingPluginException` atar: mod yok, hiçbir şey uygulanmaz.
+
+| Üye | İmza | Açıklama |
+|---|---|---|
+| `channelName` | `static const String channelName = 'lumina/game_window'` | Kanal. |
+| `getMode` / `setMode` / `onModeChanged` | bkz. `LuminaWindowModeBackend` | Yukarıdaki runner protokolü. |
+| `windowInfo` | `Future<Map<String, Object?>?> windowInfo()` | `getInfo`; bildiren bir runner yoksa null. |
 
 ## `lib/src/utility/web_loading.dart`
 

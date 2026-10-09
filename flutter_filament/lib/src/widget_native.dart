@@ -43,6 +43,11 @@ class NativeFilamentWidgetState extends State<FilamentWidget>
 
   int _viewWidth = 800;
   int _viewHeight = 600;
+
+  /// The size the frame renders at, in pixels (the swap chain and viewport).
+  @visibleForTesting
+  (int, int) get renderSize => (_viewWidth, _viewHeight);
+
   ffi.Pointer<ffi.Uint8>? _nativePixelBuffer;
   ui.Image? _renderedImage;
   ui.Image? _previousImage;
@@ -356,8 +361,13 @@ class NativeFilamentWidgetState extends State<FilamentWidget>
         final double layoutHeight = constraints.maxHeight.isFinite
             ? constraints.maxHeight
             : widget.height;
-        final int targetWidth = layoutWidth.toInt().clamp(1, 4096);
-        final int targetHeight = layoutHeight.toInt().clamp(1, 4096);
+        // Logical pixels, or the display's physical pixels for a game.
+        final double scale = widget.physicalResolution
+            ? (MediaQuery.maybeDevicePixelRatioOf(context) ?? 1.0)
+            : 1.0;
+        final int maxSize = widget.physicalResolution ? 8192 : 4096;
+        final int targetWidth = (layoutWidth * scale).round().clamp(1, maxSize);
+        final int targetHeight = (layoutHeight * scale).round().clamp(1, maxSize);
 
         if (_viewWidth != targetWidth || _viewHeight != targetHeight) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -370,7 +380,10 @@ class NativeFilamentWidgetState extends State<FilamentWidget>
         return Container(
           width: layoutWidth,
           height: layoutHeight,
-          decoration: BoxDecoration(
+          // A game fills the widget edge to edge; tools get the panel.
+          decoration: !widget.decorated
+              ? const BoxDecoration(color: Colors.black)
+              : BoxDecoration(
             color: Colors.black87,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
@@ -386,7 +399,7 @@ class NativeFilamentWidgetState extends State<FilamentWidget>
             ],
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(widget.decorated ? 10 : 0),
             child: Stack(
               children: [
                 // Live Rendered 3D Scene RawImage Widget

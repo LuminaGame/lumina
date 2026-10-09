@@ -101,6 +101,51 @@ The shared, observable snapshot of match state and player states.
 | `removeListener` | `void removeListener(void Function() listener)` | Removes a listener from this game state. |
 | `notifyChanged` | `void notifyChanged()` | Notifies listeners that the state has changed. |
 
+## `lib/src/game/game_window.dart`
+
+The game window's mode on the desktop. The generated runner (`windows/runner/lumina_window_mode.cpp`,
+`linux/runner/lumina_window_mode.cc`, written by `GameWindowRunnerService` in lumina_editor_data) opens the window in
+the project's **Start Fullscreen** mode, toggles it on Alt+Enter and F11 and answers the `lumina/game_window` channel;
+`LuminaWindowModeChannel` (lumina_widgets) is the [LuminaGameWindow.backend] it talks to. The generated `main()` calls
+[LuminaGameWindow.restore] before `runApp`, so the player's last choice is back before the first frame.
+
+### `enum LuminaWindowMode`
+
+| Value | `id` | `label` | Meaning |
+|---|---|---|---|
+| `windowed` | `windowed` | `Windowed` | A normal window with title bar and borders; Alt+Enter restores the size and place it had. |
+| `borderlessFullscreen` | `borderless_fullscreen` | `Borderless Fullscreen` | Windows: a `WS_POPUP` window covering the whole monitor it is on (`MonitorFromWindow` → `rcMonitor`, taskbar included) at the monitor's physical resolution, no title bar, border or rounded corners. Linux: `gtk_window_fullscreen` (X11 and Wayland). |
+
+`parse(text)` accepts an `id`, a `label`, `fullscreen` or `borderless` (case, spaces, `_` and `-` ignored); null otherwise.
+
+There is no exclusive mode (and so no `VK_EXT_full_screen_exclusive`): Filament renders into a headless swap chain
+whose frame Flutter's compositor presents, so the game never owns a presentable swap chain that could take the display
+exclusively. A borderless window covering the monitor is what current games default to; the compositor presents it
+without an extra copy, and Alt+Tab and overlays keep working.
+
+### `abstract interface class LuminaWindowModeBackend`
+
+| Member | Signature | Description |
+|---|---|---|
+| `getMode` | `Future<LuminaWindowMode?> getMode()` | The window's mode; null from a runner without window-mode support (generated before it). |
+| `setMode` | `Future<bool> setMode(LuminaWindowMode mode)` | Shows the window in `mode`; whether the runner applied it. |
+| `onModeChanged` | `set onModeChanged(void Function(LuminaWindowMode)? listener)` | Called when the runner changed the mode itself (Alt+Enter, F11). |
+
+### `abstract final class LuminaGameWindow`
+
+| Member | Signature | Description |
+|---|---|---|
+| `backend` | `static LuminaWindowModeBackend? backend` | The runner's window; `LuminaWidgets.ensureInitialized` sets it on Windows and Linux. Null in tests and on the web. |
+| `mode` | `static final ObservableValue<LuminaWindowMode> mode` | The current mode (what `Get Fullscreen Mode` reads). |
+| `settingsFilePath` | `static String? settingsFilePath` | Where the player's choice is kept; null keeps nothing (Play-In-Editor). |
+| `settingsKey` | `static const String settingsKey = 'window_mode'` | Its key in that JSON file; other keys of the file are kept. |
+| `settingsFileFor` | `static String settingsFileFor(String saveGamesDirectory)` | `<app support>/<game>/SaveGames` → `<app support>/<game>/user_settings.json`. |
+| `restore` | `static Future<LuminaWindowMode> restore({LuminaWindowMode startMode = windowed, String? settingsFilePath})` | Applies the saved choice, or `startMode` (Project Settings > Start Fullscreen) when there is none, and listens to the runner's toggles (each one is saved). A runner already in the mode is left alone. |
+| `setMode` | `static Future<bool> setMode(LuminaWindowMode next)` | Records and saves `next` and asks the runner to apply it; false without a runner (the mode is still recorded). |
+| `toggle` | `static Future<bool> toggle()` | Windowed ↔ borderless fullscreen. |
+| `pendingWrite` | `static Future<void> get pendingWrite` | Completes when the last change and its settings write are done. |
+| `resetForTesting` | `static void resetForTesting()` | A fresh process's state. |
+
 ## `lib/src/game/lumina_game.dart`
 
 ### `class LuminaGame`

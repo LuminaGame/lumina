@@ -158,28 +158,12 @@ mixin _EditorCodegenAndSave on _EditorViewModelState {
     );
     File('${libDir.path}/main.dart').writeAsStringSync(mainContent);
 
-    final mainCppFile = File('$projectDirPath/windows/runner/main.cpp');
-    if (mainCppFile.existsSync()) {
-      try {
-        var cpp = mainCppFile.readAsStringSync();
-        if (currentProject.settings.startFullscreen) {
-          if (!cpp.contains('GetSystemMetrics(SM_CXSCREEN)')) {
-            cpp = cpp.replaceAll(
-              RegExp(r'Win32Window::Point origin\(\d+,\s*\d+\);\s*Win32Window::Size size\(\d+,\s*\d+\);'),
-              'Win32Window::Point origin(0, 0);\n  Win32Window::Size size(GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN));',
-            );
-            mainCppFile.writeAsStringSync(cpp);
-          }
-        } else {
-          if (cpp.contains('GetSystemMetrics(SM_CXSCREEN)')) {
-            cpp = cpp.replaceAll(
-              RegExp(r'Win32Window::Point origin\(\d+,\s*\d+\);\s*Win32Window::Size size\(GetSystemMetrics\(SM_CXSCREEN\),\s*GetSystemMetrics\(SM_CYSCREEN\)\);'),
-              'Win32Window::Point origin(10, 10);\n  Win32Window::Size size(1280, 720);',
-            );
-            mainCppFile.writeAsStringSync(cpp);
-          }
-        }
-      } catch (_) {}
+    // The desktop runners' window modes: borderless fullscreen when Start
+    // Fullscreen is on, Alt+Enter / F11 toggles, the channel Set Fullscreen
+    // Mode drives.
+    final runner = GameWindowRunnerService.apply(projectDirPath, startFullscreen: currentProject.settings.startFullscreen);
+    for (final w in runner.warnings) {
+      EngineLoggerService().log('Window modes: $w', level: 'warning', source: 'CodeGen');
     }
 
     final levelDir = Directory('${libDir.path}/levels');

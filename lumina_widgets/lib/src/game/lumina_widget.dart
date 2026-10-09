@@ -73,6 +73,14 @@ class LuminaGameWidget extends StatefulWidget {
   /// The callback configures each view's viewport in physical pixels.
   final FilamentFrameViewsCallback? frameViews;
 
+  /// Whether the frame sits in the bordered viewport panel
+  /// (`FilamentWidget.decorated`); a game screen fills edge to edge.
+  final bool decorated;
+
+  /// Whether the frame renders at the display's physical pixels
+  /// (`FilamentWidget.physicalResolution`), what a game screen does.
+  final bool physicalResolution;
+
   const LuminaGameWidget({
     super.key,
     required this.game,
@@ -83,6 +91,8 @@ class LuminaGameWidget extends StatefulWidget {
     this.targetFps = 0,
     this.vsyncEnabled = false,
     this.frameViews,
+    this.decorated = true,
+    this.physicalResolution = false,
   });
 
   @override
@@ -224,6 +234,8 @@ class _LuminaGameWidgetState extends State<LuminaGameWidget>
       onDispose: _onDispose,
       targetFps: widget.targetFps > 0 ? widget.targetFps : null,
       frameViews: widget.frameViews,
+      decorated: widget.decorated,
+      physicalResolution: widget.physicalResolution,
     );
 
     if (widget.hudBuilder != null) {

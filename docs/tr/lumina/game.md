@@ -101,6 +101,51 @@ The shared, observable snapshot of match state and player states.
 | `removeListener` | `void removeListener(void Function() listener)` | Removes a listener from this game state. |
 | `notifyChanged` | `void notifyChanged()` | Notifies listeners that the state has changed. |
 
+## `lib/src/game/game_window.dart`
+
+Masaüstünde oyun penceresinin modu. Üretilen runner (`windows/runner/lumina_window_mode.cpp`,
+`linux/runner/lumina_window_mode.cc`; lumina_editor_data'daki `GameWindowRunnerService` yazar) pencereyi projenin
+**Start Fullscreen** ayarındaki modda açar, Alt+Enter ve F11 ile değiştirir ve `lumina/game_window` kanalını yanıtlar;
+`LuminaWindowModeChannel` (lumina_widgets) onunla konuşan [LuminaGameWindow.backend]'dir. Üretilen `main()`
+`runApp`'ten önce [LuminaGameWindow.restore]'u çağırır; oyuncunun son seçimi ilk kareden önce geri gelir.
+
+### `enum LuminaWindowMode`
+
+| Değer | `id` | `label` | Anlamı |
+|---|---|---|---|
+| `windowed` | `windowed` | `Windowed` | Başlık çubuğu ve kenarlıkları olan normal pencere; Alt+Enter önceki boyut ve konumuna döndürür. |
+| `borderlessFullscreen` | `borderless_fullscreen` | `Borderless Fullscreen` | Windows: üzerinde bulunduğu monitörün tamamını (`MonitorFromWindow` → `rcMonitor`, görev çubuğu dahil) monitörün fiziksel çözünürlüğünde kaplayan, başlık çubuğu, kenarlığı ve yuvarlak köşesi olmayan bir `WS_POPUP` pencere. Linux: `gtk_window_fullscreen` (X11 ve Wayland). |
+
+`parse(text)` bir `id`, bir `label`, `fullscreen` ya da `borderless` kabul eder (büyük/küçük harf, boşluk, `_` ve `-` yok sayılır); aksi halde null.
+
+Özel (exclusive) mod yoktur (dolayısıyla `VK_EXT_full_screen_exclusive` de yok): Filament başsız bir swap chain'e
+çizer ve kareyi Flutter'ın compositor'ü sunar; oyun ekranı tek başına alabilecek sunulabilir bir swap chain'e hiç
+sahip olmaz. Monitörü kaplayan kenarlıksız pencere güncel oyunların varsayılanıdır; compositor onu ek kopya olmadan
+sunar, Alt+Tab ve overlay'ler çalışmaya devam eder.
+
+### `abstract interface class LuminaWindowModeBackend`
+
+| Üye | İmza | Açıklama |
+|---|---|---|
+| `getMode` | `Future<LuminaWindowMode?> getMode()` | Pencerenin modu; pencere modu desteği olmayan (ondan önce üretilmiş) bir runner'da null. |
+| `setMode` | `Future<bool> setMode(LuminaWindowMode mode)` | Pencereyi `mode` ile gösterir; runner'ın uygulayıp uygulamadığı. |
+| `onModeChanged` | `set onModeChanged(void Function(LuminaWindowMode)? listener)` | Runner modu kendisi değiştirdiğinde (Alt+Enter, F11) çağrılır. |
+
+### `abstract final class LuminaGameWindow`
+
+| Üye | İmza | Açıklama |
+|---|---|---|
+| `backend` | `static LuminaWindowModeBackend? backend` | Runner'ın penceresi; `LuminaWidgets.ensureInitialized` Windows ve Linux'ta atar. Testlerde ve web'de null. |
+| `mode` | `static final ObservableValue<LuminaWindowMode> mode` | Şu anki mod (`Get Fullscreen Mode`'un okuduğu). |
+| `settingsFilePath` | `static String? settingsFilePath` | Oyuncunun seçiminin saklandığı yer; null hiçbir şey saklamaz (Play-In-Editor). |
+| `settingsKey` | `static const String settingsKey = 'window_mode'` | O JSON dosyasındaki anahtarı; dosyanın diğer anahtarları korunur. |
+| `settingsFileFor` | `static String settingsFileFor(String saveGamesDirectory)` | `<app support>/<oyun>/SaveGames` → `<app support>/<oyun>/user_settings.json`. |
+| `restore` | `static Future<LuminaWindowMode> restore({LuminaWindowMode startMode = windowed, String? settingsFilePath})` | Kayıtlı seçimi, yoksa `startMode`'u (Project Settings > Start Fullscreen) uygular ve runner'ın değişikliklerini dinler (her biri kaydedilir). Zaten o modda olan runner'a dokunulmaz. |
+| `setMode` | `static Future<bool> setMode(LuminaWindowMode next)` | `next`'i kaydeder ve runner'dan uygulamasını ister; runner yoksa false (mod yine kaydedilir). |
+| `toggle` | `static Future<bool> toggle()` | Pencereli ↔ kenarlıksız tam ekran. |
+| `pendingWrite` | `static Future<void> get pendingWrite` | Son değişiklik ve ayar yazımı bitince tamamlanır. |
+| `resetForTesting` | `static void resetForTesting()` | Yeni bir sürecin durumu. |
+
 ## `lib/src/game/lumina_game.dart`
 
 ### `class LuminaGame`

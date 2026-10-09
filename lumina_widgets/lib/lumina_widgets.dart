@@ -7,6 +7,7 @@
 ///   the Blueprints add widgets to;
 /// - media players (media_kit) and the UMG media widgets;
 /// - the web build's loading screen glue ([LuminaWebLoading]);
+/// - the generated runner's window mode ([LuminaWindowModeChannel]);
 /// - Flutter views of the engine's pure observables (`asValueListenable()`,
 ///   `asListenable()`) and [LuminaWidgets.ensureInitialized], which hands the
 ///   engine Flutter's platform, asset bundle and video player.
@@ -26,3 +27,4 @@ export 'package:lumina_widgets/src/umg/theme_document_colors.dart';
 export 'package:lumina_widgets/src/umg/umg_widgets.dart';
 export 'package:lumina_widgets/src/umg/widget_layer.dart';
 export 'package:lumina_widgets/src/utility/web_loading.dart';
+export 'package:lumina_widgets/src/utility/window_mode_channel.dart';
