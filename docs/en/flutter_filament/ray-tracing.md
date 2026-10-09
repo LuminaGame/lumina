@@ -88,7 +88,7 @@ if (hit != null) print('hit entity ${hit.entity} at ${hit.t} units');
 
 ## Ray-traced sun shadows
 
-With `ShadowOptions.rayTraced` on a directional light, and only when the engine supports ray queries and the scene has `rayTracingEnabled`, the view skips the cascaded shadow maps of that light. The structure pass runs at full resolution and the built-in `rtShadow` material traces one ray per pixel from the reconstructed surface toward the light (with a distance-scaled bias against self-shadowing) into an R8 visibility mask that the lit materials multiply into the sun's visibility. The shadows are hard-edged, cover every renderable in the scene including the ones off-screen, and need no cascade tuning; `mapSize`, `shadowCascades` and the softness options are ignored while ray tracing is active. Point and spot lights keep their shadow maps.
+With `ShadowOptions.rayTraced` on a directional light, and only when the engine supports ray queries and the scene has `rayTracingEnabled`, the view skips the cascaded shadow maps of that light. The structure pass runs at full resolution and the built-in `rtShadow` material traces one ray per pixel from the reconstructed surface toward the light (its origin moved three texels' world size toward the light against self-shadowing, so the offset is the same on screen whether the scene is in metres or centimetres) into an R8 visibility mask that the lit materials multiply into the sun's visibility. The shadows are hard-edged, cover every renderable in the scene including the ones off-screen, and need no cascade tuning; `mapSize`, `shadowCascades` and the softness options are ignored while ray tracing is active. Point and spot lights keep their shadow maps.
 
 ## Ray query materials
 

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Ray-traced sun shadows, ReSTIR visibility rays and the specular hit distance offset their origin by a few
+  texels' world size instead of half the near plane grown with the camera distance (prebuilt `1.77.2-lumina.12`,
+  Filament patch `0014`): in a centimetre-scale level the shadow ray started past small props, which cast a hollow
+  ring or no ray-traced shadow at all.
 - `tool/dlss/check_neural_rendering.dart` reports whether the pinned DLSS SDK (or, with `--remote`, NVIDIA/DLSS and the
   latest Streamline release) offers a Neural Rendering (DLSS 5) feature; a readiness test checks that the external
   post pass gives such a pass the HDR frame, output-resolution motion and history.

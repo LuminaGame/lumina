@@ -1,0 +1,154 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Can Us <me@canus.dev>
+Date: Sat, 10 Oct 2026 12:00:00 +0300
+Subject: [PATCH] Offset ray query origins by a few texels, not by the near plane
+
+The ray-traced sun shadow (0007), the ReSTIR visibility ray (0008) and the
+specular hit distance ray (0012) moved their origin off the surface by
+max(0.002, near * 0.5), and the sun shadow and hit distance rays grew it by
+2 % per world unit of camera distance. Both terms assume a scene in metres.
+In a centimetre level (near plane 10, camera 13 m = 1300 units away) the
+shadow ray started 135 units toward the sun, past a 115 unit barrel: only
+the far rim of its shadow survived, or nothing.
+
+The offset is now a number of texels' world size at the pixel's distance
+(perspective) or a constant texel size (orthographic), from the projection
+and the target height: the same on screen whatever the scene's unit.
+---
+diff --git a/filament/src/PostProcessManager.cpp b/filament/src/PostProcessManager.cpp
+index c3d3c4d2..9fffe5b4 100644
+--- a/filament/src/PostProcessManager.cpp
++++ b/filament/src/PostProcessManager.cpp
+@@ -232,6 +232,19 @@ static constexpr auto halton() {
+ const PostProcessManager::JitterSequence<32>
+         PostProcessManager::sHaltonSamples = { halton<32>() };
+ 
++// The offset that keeps a ray query's origin off the surface it starts on, in world units, as
++// (a, b) for an offset of a + b * distanceToCamera: `pixels` texels of a target `height` texels
++// tall. A perspective projection's texel grows with the distance (b), an orthographic one's is
++// constant (a). Measuring the offset in texels keeps it independent of the scene's unit: a
++// centimetre level and a metre level get the same offset on screen.
++static math::float2 rayOriginOffset(math::mat4f const& projection, float const height,
++        float const pixels) noexcept {
++    // projection[1][1] is 2n / (top - bottom) (perspective) or 2 / (top - bottom) (ortho)
++    float const texel = 2.0f / (std::abs(projection[1][1]) * std::max(1.0f, height));
++    bool const perspective = projection[2][3] != 0.0f;
++    return perspective ? math::float2{ 0.0f, texel * pixels } : math::float2{ texel * pixels, 0.0f };
++}
++
+ PostProcessManager::PostProcessManager(FEngine& engine) noexcept
+         : mEngine(engine),
+           mWorkaroundSplitEasu(false),
+@@ -298,8 +311,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::rayTracedShadows(FrameGraph&
+                 mi->setParameter("toLight", toLight);
+                 mi->setParameter("cameraPosition", math::float3(
+                         (trueWorldFromShaderWorld * math::double4(cameraInfo.getPosition(), 1.0)).xyz));
+-                // a fraction of the depth range that keeps surfaces from shadowing themselves
+-                mi->setParameter("bias", std::max(0.002f, cameraInfo.zn * 0.5f));
++                // a few texels toward the light keep surfaces from shadowing themselves
++                mi->setParameter("bias", rayOriginOffset(cameraInfo.projection, float(desc.height), 3.0f));
+ 
+                 commitAndRenderFullScreenQuad(driver, out, mi);
+                 unbindAllDescriptorSets(driver);
+@@ -468,7 +481,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::restir(FrameGraph& fg,
+                 mi->setParameter("cameraPosition", cameraInfo.getPosition());
+                 mi->setParameter("trueWorldOffset", trueWorldOffset);
+                 mi->setParameter("visibilityRays", int32_t(options.visibilityRays ? 1 : 0));
+-                mi->setParameter("bias", std::max(0.002f, cameraInfo.zn * 0.5f));
++                mi->setParameter("bias", rayOriginOffset(cameraInfo.projection, float(desc.height), 2.0f));
+                 commitAndRenderFullScreenQuad(driver, out, mi);
+                 unbindAllDescriptorSets(driver);
+                 if (timeThisFrame) {
+@@ -4508,7 +4521,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::specularHitDistance(FrameGra
+                         1.0f / float(desc.width), 1.0f / float(desc.height) });
+                 mi->setParameter("cameraPosition", math::float3(
+                         (trueWorldFromShaderWorld * math::double4(cameraInfo.getPosition(), 1.0)).xyz));
+-                mi->setParameter("bias", std::max(0.002f, cameraInfo.zn * 0.5f));
++                mi->setParameter("bias", rayOriginOffset(cameraInfo.projection, float(desc.height), 2.0f));
+                 commitAndRenderFullScreenQuad(driver, out, mi);
+                 unbindAllDescriptorSets(driver);
+             });
+diff --git a/filament/src/materials/rt/restirShade.mat b/filament/src/materials/rt/restirShade.mat
+index 56c91e3e..de325dd2 100644
+--- a/filament/src/materials/rt/restirShade.mat
++++ b/filament/src/materials/rt/restirShade.mat
+@@ -44,7 +44,7 @@ material {
+             name : visibilityRays
+         },
+         {
+-            type : float,
++            type : float2,
+             name : bias
+         }
+     ],
+@@ -88,15 +88,18 @@ fragment {
+             if (dot(N, materialParams.cameraPosition - P) < 0.0) N = -N;
+             highp vec4 t0 = texelFetch(materialParams_lights, ivec2(0, int(r.x + 0.5)), 0);
+             // the acceleration structures live in the true world, the camera in the shifted one
+-            highp vec3 origin = P + materialParams.trueWorldOffset + N * materialParams.bias;
++            // a few texels' world size at this distance (bias.x + bias.y * d)
++            highp float bias = materialParams.bias.x +
++                    materialParams.bias.y * length(P - materialParams.cameraPosition);
++            highp vec3 origin = P + materialParams.trueWorldOffset + N * bias;
+             highp vec3 target = t0.xyz + materialParams.trueWorldOffset;
+             highp vec3 toLight = target - origin;
+             highp float distance = length(toLight);
+-            if (distance > materialParams.bias) {
++            if (distance > bias) {
+                 rayQueryEXT rq;
+                 rayQueryInitializeEXT(rq, sceneTlas,
+                         gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT, 0xFFu,
+-                        origin, 0.0, toLight / distance, distance - materialParams.bias);
++                        origin, 0.0, toLight / distance, distance - bias);
+                 rayQueryProceedEXT(rq);
+                 if (rayQueryGetIntersectionTypeEXT(rq, true) != gl_RayQueryCommittedIntersectionNoneEXT) {
+                     visibility = 0.0;
+diff --git a/filament/src/materials/rt/rtShadow.mat b/filament/src/materials/rt/rtShadow.mat
+index 31e8702e..4fc211a6 100644
+--- a/filament/src/materials/rt/rtShadow.mat
++++ b/filament/src/materials/rt/rtShadow.mat
+@@ -28,7 +28,7 @@ material {
+             precision: high
+         },
+         {
+-            type : float,
++            type : float2,
+             name : bias,
+             precision: high
+         }
+@@ -60,10 +60,10 @@ fragment {
+         highp vec4 clip = vec4(uv.x * 2.0 - 1.0, 1.0 - uv.y * 2.0, depth, 1.0);
+             highp vec4 world = materialParams.worldFromClip * clip;
+             world.xyz /= world.w;
+-            // offset the origin along the ray, scaled with the distance to the camera so that
+-            // depth quantization does not make surfaces shadow themselves
++            // offset the origin along the ray by a few texels' world size at this distance, so
++            // that depth quantization does not make surfaces shadow themselves (bias.x + bias.y * d)
+             highp float distanceToCamera = length(world.xyz - materialParams.cameraPosition);
+-            highp float bias = materialParams.bias * (1.0 + distanceToCamera * 0.02);
++            highp float bias = materialParams.bias.x + materialParams.bias.y * distanceToCamera;
+             highp vec3 origin = world.xyz + materialParams.toLight * bias;
+             rayQueryEXT rq;
+             rayQueryInitializeEXT(rq, sceneTlas,
+diff --git a/filament/src/materials/rt/rtSpecularHitDistance.mat b/filament/src/materials/rt/rtSpecularHitDistance.mat
+index 66707151..b7a87496 100644
+--- a/filament/src/materials/rt/rtSpecularHitDistance.mat
++++ b/filament/src/materials/rt/rtSpecularHitDistance.mat
+@@ -29,7 +29,7 @@ material {
+             precision: high
+         },
+         {
+-            type : float,
++            type : float2,
+             name : bias,
+             precision: high
+         }
+@@ -67,7 +67,7 @@ fragment {
+             highp vec3 view = normalize(world.xyz - materialParams.cameraPosition);
+             highp vec3 direction = reflect(view, n);
+             highp float distanceToCamera = length(world.xyz - materialParams.cameraPosition);
+-            highp float bias = materialParams.bias * (1.0 + distanceToCamera * 0.02);
++            highp float bias = materialParams.bias.x + materialParams.bias.y * distanceToCamera;
+             highp vec3 origin = world.xyz + n * bias;
+             rayQueryEXT rq;
+             rayQueryInitializeEXT(rq, sceneTlas, gl_RayFlagsOpaqueEXT, 0xFFu,

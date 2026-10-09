@@ -88,7 +88,7 @@ if (hit != null) print('${hit.entity} entity, ${hit.t} birimde');
 
 ## Işın izlemeli güneş gölgeleri
 
-Yönlü bir ışıkta `ShadowOptions.rayTraced` ile, yalnızca motor ray query destekliyor ve sahnede `rayTracingEnabled` açıksa, view o ışığın kademeli gölge haritalarını atlar. Yapı geçişi tam çözünürlükte çalışır ve yerleşik `rtShadow` malzemesi, yeniden kurulan yüzeyden ışığa doğru piksel başına bir ışın izler (kendi kendini gölgelemeye karşı mesafeyle ölçeklenen bir sapmayla) ve lit malzemelerin güneş görünürlüğüyle çarptığı R8 bir görünürlük maskesi üretir. Gölgeler sert kenarlıdır, ekran dışındakiler dahil sahnedeki her renderable'ı kapsar ve kademe ayarı gerektirmez; ışın izleme etkinken `mapSize`, `shadowCascades` ve yumuşaklık seçenekleri yok sayılır. Nokta ve spot ışıklar gölge haritalarını korur.
+Yönlü bir ışıkta `ShadowOptions.rayTraced` ile, yalnızca motor ray query destekliyor ve sahnede `rayTracingEnabled` açıksa, view o ışığın kademeli gölge haritalarını atlar. Yapı geçişi tam çözünürlükte çalışır ve yerleşik `rtShadow` malzemesi, yeniden kurulan yüzeyden ışığa doğru piksel başına bir ışın izler (kendi kendini gölgelemeye karşı başlangıç noktası ışığa doğru üç texel'in dünya boyutu kadar kaydırılır; böylece kayma, sahne metre de olsa santimetre de olsa ekranda aynıdır) ve lit malzemelerin güneş görünürlüğüyle çarptığı R8 bir görünürlük maskesi üretir. Gölgeler sert kenarlıdır, ekran dışındakiler dahil sahnedeki her renderable'ı kapsar ve kademe ayarı gerektirmez; ışın izleme etkinken `mapSize`, `shadowCascades` ve yumuşaklık seçenekleri yok sayılır. Nokta ve spot ışıklar gölge haritalarını korur.
 
 ## Ray query malzemeleri
 

@@ -1,4 +1,5 @@
 import 'dart:io' show Platform;
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter_filament/flutter_filament.dart';
@@ -97,7 +98,14 @@ void main() {
 
     /// A unit quad (1 x 1 world units) facing +Z at depth [z], shifted by [x];
     /// unlit by default, [lit] when it has to receive shadows.
-    int addQuad(SmokeRig r, {double z = 0, double x = 0, double sizeUnits = 1.0, (double, double, double) color = (0.8, 0.8, 0.8), bool lit = false}) {
+    int addQuad(
+      SmokeRig r, {
+      double z = 0,
+      double x = 0,
+      double sizeUnits = 1.0,
+      (double, double, double) color = (0.8, 0.8, 0.8),
+      bool lit = false,
+    }) {
       final quad = SmokeQuad.create(r.engine, size: sizeUnits, z: 0, tangents: lit);
       quads.add(quad);
       final material = lit ? buildLitMaterial(r.engine) : buildUnlitMaterial(r.engine);
@@ -220,6 +228,101 @@ void main() {
       }
     }, timeout: const Timeout(Duration(minutes: 3)));
 
+    test('a Draco-compressed barrel is solid for rays: lid or bottom from above, walls from every side', () async {
+      if (skipWithoutRayQuery()) return;
+      final r = rig!;
+      for (final barrel in ['Props/Barrels/fuel_barrel_red.glb', 'Props/Barrels/dented_barrel.glb']) {
+        final gltf = loadGltfIntoScene(r, barrel, frameCamera: false);
+        try {
+          r.scene.rayTracingEnabled = true;
+          r.renderFrame(warmup: 1);
+          final box = gltf.asset.getBoundingBox();
+          final c = box.center;
+          final radius = (box.max.x - box.min.x) / 2;
+          final misses = <String>[];
+          // straight down over the inner disc: the closed barrel's lid, the open one's bottom
+          for (var i = -3; i <= 3; i++) {
+            for (var j = -3; j <= 3; j++) {
+              final dx = i / 3 * radius * 0.7, dz = j / 3 * radius * 0.7;
+              if (dx * dx + dz * dz > radius * radius * 0.49) continue;
+              final hit = await r.scene.traceVisibility(c.x + dx, box.max.y + 1, c.z + dz, 0, -1, 0, maxDistance: 10);
+              if (hit == null) misses.add('down ($dx, $dz)');
+            }
+          }
+          // horizontally through the side walls at several heights
+          for (var k = 1; k < 10; k++) {
+            final y = box.min.y + (box.max.y - box.min.y) * k / 10;
+            for (var a = 0; a < 8; a++) {
+              final ang = a * math.pi / 4;
+              final hit = await r.scene.traceVisibility(
+                c.x + (radius + 1) * math.cos(ang),
+                y,
+                c.z + (radius + 1) * math.sin(ang),
+                -math.cos(ang),
+                0,
+                -math.sin(ang),
+                maxDistance: 10,
+              );
+              if (hit == null || hit.t > 1 + radius * 0.5) misses.add('wall y=$y a=$a t=${hit?.t}');
+            }
+          }
+          expect(misses, isEmpty, reason: barrel);
+        } finally {
+          gltf.dispose(r.scene);
+        }
+      }
+    }, timeout: const Timeout(Duration(minutes: 3)));
+
+    test('ray-traced sun shadows of a barrel in a centimetre-scale scene are as solid as the shadow map ones', () {
+      // A level in centimetres: a 115 cm barrel on a 20 m floor, a camera 13 m away with a
+      // 10 cm near plane. The shadow ray's self-intersection offset must stay a few pixels
+      // wide in world units, not grow with the scene's unit, or it jumps over the occluder.
+      if (skipWithoutRayQuery()) return;
+      final r = rig!;
+      final floor = addQuad(r, sizeUnits: 2000, color: (0.9, 0.9, 0.9), lit: true);
+      expect(floor, isNonZero);
+      final gltf = loadGltfIntoScene(r, 'Props/Barrels/fuel_barrel_red.glb', frameCamera: false);
+      try {
+        // the barrel is Y-up in metres: stand it on the Z-up floor, scaled to centimetres
+        FilamentTransformManager(
+          r.engine,
+        ).setTransform(gltf.asset.rootEntity, [100, 0, 0, 0, 0, 0, 100, 0, 0, -100, 0, 0, 0, 0, 0, 1]);
+        r.camera.setProjection(fovDegrees: 45, aspect: 1, near: 10, far: 100000);
+        r.camera.lookAt(eyeX: 0, eyeY: -900, eyeZ: 950, centerX: 30, centerY: 0, centerZ: 40);
+        final lm = FilamentLightManager(r.engine);
+        final sun = r.addSun();
+        lm.setDirection(sun, 0.5, 0.3, -1);
+        r.scene.rayTracingEnabled = true;
+
+        Uint8List render({required bool shadows, bool rayTraced = false}) {
+          lm.setShadowCaster(sun, shadows);
+          lm.setShadowOptions(sun, ShadowOptions(mapSize: 2048, rayTraced: rayTraced));
+          return r.renderFrame(warmup: 3);
+        }
+
+        final unshadowed = render(shadows: false);
+        final csm = render(shadows: true);
+        final rt = render(shadows: true, rayTraced: true);
+        int darkened(Uint8List img) {
+          var n = 0;
+          for (var y = 0; y < size; y++) {
+            for (var x = 0; x < size; x++) {
+              final (a, _, _) = pixelAt(unshadowed, size, x, y);
+              final (b, _, _) = pixelAt(img, size, x, y);
+              if (a - b > 30) n++;
+            }
+          }
+          return n;
+        }
+
+        final csmDark = darkened(csm);
+        final rtDark = darkened(rt);
+        expect(csmDark, greaterThan(150), reason: 'the shadow map draws the barrel shadow');
+        expect(rtDark, greaterThan(csmDark * 0.8), reason: 'ray-traced: $rtDark darkened texels, shadow map: $csmDark');
+      } finally {
+        gltf.dispose(r.scene);
+      }
+    }, timeout: const Timeout(Duration(minutes: 3)));
     test('ray-traced directional shadows darken the floor under an occluder with a hard edge', () {
       if (skipWithoutRayQuery()) return;
       final r = rig!;
@@ -312,8 +415,11 @@ void main() {
         final noise = countChangedPixels(csmA, csmB, tolerance: 3);
         lm.setShadowOptions(sun, ShadowOptions(rayTraced: true));
         final fallback = rig.renderFrame(warmup: 3);
-        expect(countChangedPixels(fallback, csmB, tolerance: 3), lessThanOrEqualTo(noise + 16),
-            reason: 'without ray query the CSM render is used unchanged');
+        expect(
+          countChangedPixels(fallback, csmB, tolerance: 3),
+          lessThanOrEqualTo(noise + 16),
+          reason: 'without ray query the CSM render is used unchanged',
+        );
         expect(rig.scene.tlasInstanceCount, 0);
       } finally {
         gltf.dispose(rig.scene);
