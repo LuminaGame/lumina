@@ -266,7 +266,8 @@ void main() {
       final hit = HitResult();
       expect(sys.raycast(Vector3(-500, 0, 0), Vector3(1, 0, 0), 10000, hit), isTrue);
       expect(hit.component, hull);
-      expect(hit.time, closeTo(500, 1e-6), reason: 'the raycast time is a distance');
+      expect(hit.distance, closeTo(500, 1e-6));
+      expect(hit.time, closeTo(500 / 10000, 1e-9), reason: 'Time is the fraction of the ray length');
       _expectVec(hit.impactNormal, Vector3(-1, 0, 0));
 
       final trace = HitResult();

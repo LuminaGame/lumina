@@ -384,8 +384,8 @@ Vectors and rotators are **authoring space** (cm, Z up; rotators about X/Y/Z lik
 | `arrayShuffle` | `static const arrayShuffle` |  |
 | `multiGateNext` | `static const multiGateNext` | MultiGate's next output: [used] outputs so far (null = fresh), the output [count], and the node's settings. Returns the output index to take (-1 when every output was used and Loop is off) and the new used list. |
 | `whileLoopCapped` | `static const whileLoopCapped` | Logs a WhileLoop that hit its iteration cap. |
-| `makeHitResult` | `static const makeHitResult` |  |
-| `breakHitResult` | `static const breakHitResult` |  |
+| `makeHitResult` | `static const makeHitResult` | `hitResult` pininin taşıdığı hit. İsteğe bağlı [normal], [time], [traceStart] ve [traceEnd] varsayılanları: [impactNormal], hit için 0 (ıskalamada 1) ve sıfır vektörler. |
+| `breakHitResult` | `static const breakHitResult` | Break Hit Result: Blocking Hit, Location, Impact Point, Normal, Impact Normal, Time, Distance, Trace Start, Trace End, Hit Actor, Hit Component (her alanın line trace ve sweep için anlamı collision.md'deki `HitResult` bölümünde). |
 | `getFrameRate` | `static const getFrameRate` |  |
 | `getFrameTimeMs` | `static const getFrameTimeMs` |  |
 | `getFrameNumber` | `static const getFrameNumber` |  |

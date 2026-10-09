@@ -384,8 +384,8 @@ Vectors and rotators are **authoring space** (cm, Z up; rotators about X/Y/Z lik
 | `arrayShuffle` | `static const arrayShuffle` |  |
 | `multiGateNext` | `static const multiGateNext` | MultiGate's next output: [used] outputs so far (null = fresh), the output [count], and the node's settings. Returns the output index to take (-1 when every output was used and Loop is off) and the new used list. |
 | `whileLoopCapped` | `static const whileLoopCapped` | Logs a WhileLoop that hit its iteration cap. |
-| `makeHitResult` | `static const makeHitResult` |  |
-| `breakHitResult` | `static const breakHitResult` |  |
+| `makeHitResult` | `static const makeHitResult` | A hit as the `hitResult` pin carries it. The optional [normal], [time], [traceStart] and [traceEnd] default to [impactNormal], 0 for a hit (1 for a miss) and zero vectors. |
+| `breakHitResult` | `static const breakHitResult` | Break Hit Result: Blocking Hit, Location, Impact Point, Normal, Impact Normal, Time, Distance, Trace Start, Trace End, Hit Actor, Hit Component (see `HitResult` in collision.md for what each means for a line trace and for a sweep). |
 | `getFrameRate` | `static const getFrameRate` |  |
 | `getFrameTimeMs` | `static const getFrameTimeMs` |  |
 | `getFrameNumber` | `static const getFrameNumber` |  |

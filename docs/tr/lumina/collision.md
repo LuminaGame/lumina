@@ -63,12 +63,27 @@ Standard preset configurations for collision components.
 
 Container describing a raycast or geometric sweep impact.
 
+Her sorguda (`raycast`, `sweep`, `lineTraceSingle` / `lineTraceMulti`, `sphereTraceSingle` / `sphereTraceMulti`) ve Blueprint trace node'larında alanların anlamı (Break Hit Result aynı alanları authoring uzayında verir):
+
+| Alan | Line trace / raycast | Şekil sweep'i (sphere, capsule, box) |
+| :--- | :--- | :--- |
+| `location` | Çarpma noktası (ışının hacmi yoktur). | Şeklin temas anındaki merkezi. |
+| `impactPoint` | Işının yüzeye çarptığı nokta. | Çarpılan yüzeydeki temas noktası. |
+| `normal` | `impactNormal` ile aynı. | Temas noktasından şeklin çekirdeğine (sphere merkezi, capsule ekseni) doğru; box için `impactNormal`. |
+| `impactNormal` | Çarpılan yüzeyin normali. | Çarpılan yüzeyin normali. |
+| `time` | `traceStart`'tan `traceEnd`'e trace'in kesri (0–1); ıskalamada 1. | Aynı. |
+| `distance` | `traceStart`'tan `location`'a. | Aynı (merkezin aldığı yol). |
+| `traceStart` / `traceEnd` | Işının başlangıcı ve sonu. | Merkezin başlangıcı ve sonu. |
+
+Bir Blueprint trace'i hiçbir şeye çarpmazsa Location ve Impact Point trace sonudur, Time 1'dir.
+
 **Fonksiyonlar, Metotlar ve Erişimciler:**
 
 | Metot / Getter | İmzası | Ne İşe Yarar? |
 | :--- | :--- | :--- |
 | `component` | `LuminaCollisionComponent? component` | The component that was struck. |
 | `reset` | `void reset()` | Resets this container to default state for pool reuse. |
+| `copyFrom` | `void copyFrom(HitResult other)` | [other]'ın bütün alanlarını bu container'a kopyalar. |
 
 ## `lib/src/collision/collision_subsystem.dart`
 
@@ -84,6 +99,10 @@ Central world subsystem managing broad-phase filtering, overlap/hit event dispat
 | `unregister` | `void unregister(LuminaCollisionComponent c)` | Unregisters a collision component and terminates any active overlap relationships. |
 | `onWorldTick` | `void onWorldTick(double deltaTime)` | Olay tetiklendiğinde çalışan geri çağırım metodudur. |
 | `updateCollision` | `void updateCollision(double deltaTime)` | Executes broad phase, narrow phase, and fires overlap/hit events for all registered components. |
+| `raycast` | `bool raycast(Vector3 origin, Vector3 direction, double maxDistance, HitResult out, {int layerMask, LuminaCollisionComponent? ignore})` | Bir ışın atar, ilk engelleyen çarpmayı kaydeder; `time` [maxDistance]'ın kesridir. |
+| `sweep` | `bool sweep(CollisionShape shape, Matrix4 start, Vector3 delta, HitResult out, {int layerMask, LuminaCollisionComponent? ignore})` | [shape]'i [delta] boyunca süpürür; `location` şeklin temas anındaki merkezidir. |
+
+Trace sorguları `LuminaCollisionTraces` extension'ındadır (`lib/src/collision/collision_traces.dart`, bu kütüphanenin bir part'ı): `lineTraceSingle`, `lineTraceMulti`, `sphereTraceSingle`, `sphereTraceMulti` ve `sphereOverlapActors`; trace node'larının kullandığı actor, component, layer, object type ve sınıf filtreleriyle. Çarpmaları yukarıdaki `HitResult` tablosuna uyar.
 
 ## `lib/src/collision/gjk_epa.dart`
 

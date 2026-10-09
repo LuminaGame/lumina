@@ -162,8 +162,12 @@ final Map<String, LuminaBlueprintFunction> _mathFunctions = <String, LuminaBluep
       'blocking_hit': r.blockingHit,
       'location': r.location,
       'impact_point': r.impactPoint,
+      'normal': r.normal,
       'impact_normal': r.impactNormal,
+      'time': r.time,
       'distance': r.distance,
+      'trace_start': r.traceStart,
+      'trace_end': r.traceEnd,
       'hit_actor': r.hitActor,
       'hit_component': r.hitComponent,
     };

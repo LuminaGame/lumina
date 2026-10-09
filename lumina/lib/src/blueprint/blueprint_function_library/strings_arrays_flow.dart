@@ -176,27 +176,51 @@ void _whileLoopCapped(String owner, String node) => developer.log(
 
 // --- Structs: hit result -----------------------------------------------------------
 
+/// A hit result as a map. [normal] defaults to [impactNormal] (a line
+/// trace's), [time] to 0 for a hit and 1 for a miss.
 Map<String, Object?> _makeHitResult(bool blockingHit, Vector3 location, Vector3 impactPoint, Vector3 impactNormal,
-        double distance, [Object? hitActor, Object? hitComponent]) =>
+        double distance,
+        [Object? hitActor, Object? hitComponent, Vector3? normal, double? time, Vector3? traceStart, Vector3? traceEnd]) =>
     <String, Object?>{
       'blockingHit': blockingHit,
       'location': _list3(location),
       'impactPoint': _list3(impactPoint),
+      'normal': _list3(normal ?? impactNormal),
       'impactNormal': _list3(impactNormal),
+      'time': time ?? (blockingHit ? 0.0 : 1.0),
       'distance': distance,
+      'traceStart': _list3(traceStart ?? Vector3.zero()),
+      'traceEnd': _list3(traceEnd ?? Vector3.zero()),
       'hitActor': hitActor,
       'hitComponent': hitComponent,
     };
 
-({bool blockingHit, Vector3 location, Vector3 impactPoint, Vector3 impactNormal, double distance, Object? hitActor, Object? hitComponent})
-    _breakHitResult(Object? hit) {
+({
+  bool blockingHit,
+  Vector3 location,
+  Vector3 impactPoint,
+  Vector3 normal,
+  Vector3 impactNormal,
+  double time,
+  double distance,
+  Vector3 traceStart,
+  Vector3 traceEnd,
+  Object? hitActor,
+  Object? hitComponent
+}) _breakHitResult(Object? hit) {
   final h = hit is Map ? hit : const {};
+  final blockingHit = h['blockingHit'] == true;
+  final impactNormal = _vec3(h['impactNormal']);
   return (
-    blockingHit: h['blockingHit'] == true,
+    blockingHit: blockingHit,
     location: _vec3(h['location']),
     impactPoint: _vec3(h['impactPoint']),
-    impactNormal: _vec3(h['impactNormal']),
+    normal: h['normal'] == null ? impactNormal.clone() : _vec3(h['normal']),
+    impactNormal: impactNormal,
+    time: (h['time'] as num?)?.toDouble() ?? (blockingHit ? 0.0 : 1.0),
     distance: (h['distance'] as num?)?.toDouble() ?? 0.0,
+    traceStart: _vec3(h['traceStart']),
+    traceEnd: _vec3(h['traceEnd']),
     hitActor: h['hitActor'],
     hitComponent: h['hitComponent'],
   );

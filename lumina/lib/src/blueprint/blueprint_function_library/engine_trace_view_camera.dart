@@ -70,8 +70,16 @@ bool Function(LuminaActor)? _classFilter(String cls) =>
         ? null
         : (a) => LuminaBlueprintFunctionLibrary.isA(a, cls);
 
-Map<String, Object?> _hitToMap(HitResult h) => LuminaBlueprintFunctionLibrary.makeHitResult(h.blockingHit, LuminaBlueprintFunctionLibrary.toAuthoring(h.location),
-    LuminaBlueprintFunctionLibrary.toAuthoring(h.impactPoint), LuminaBlueprintFunctionLibrary.toAuthoring(h.impactNormal), h.distance, h.actor, h.component);
+Map<String, Object?> _hitToMap(HitResult h) {
+  final a = LuminaBlueprintFunctionLibrary.toAuthoring;
+  return LuminaBlueprintFunctionLibrary.makeHitResult(h.blockingHit, a(h.location), a(h.impactPoint), a(h.impactNormal), h.distance,
+      h.actor, h.component, a(h.normal), h.time, a(h.traceStart), a(h.traceEnd));
+}
+
+/// A trace's result when nothing was hit: Location and Impact Point at the
+/// trace end, Time 1 (authoring space).
+Map<String, Object?> _missToMap(Vector3 start, Vector3 end) =>
+    LuminaBlueprintFunctionLibrary.makeHitResult(false, end, end, Vector3(0, 0, 1), 0.0, null, null, Vector3(0, 0, 1), 1.0, start, end);
 
 Map<String, Object?> _hitEventOutputs(LuminaActor self, LuminaActor other, HitResult hit) => {
       'self_actor': self,
@@ -125,7 +133,7 @@ LuminaCollisionSubsystem? _collision(LuminaActor self) => self.world?.getSubsyst
           layerMask: ch.layerMask,
           objectTypes: ch.objectTypes);
   _debugTrace(self, rs, re, drawDebug, found ? hit : null);
-  return (outHit: found ? LuminaBlueprintFunctionLibrary.hitToMap(hit) : LuminaBlueprintFunctionLibrary.makeHitResult(false, start, end, Vector3(0, 0, 1), 0.0), returnValue: found);
+  return (outHit: found ? LuminaBlueprintFunctionLibrary.hitToMap(hit) : _missToMap(start, end), returnValue: found);
 }
 
 ({List<Object?> outHits, bool returnValue}) _multiLineTraceByChannel(LuminaActor self, Vector3 start, Vector3 end,
@@ -157,7 +165,7 @@ LuminaCollisionSubsystem? _collision(LuminaActor self) => self.world?.getSubsyst
           layerMask: ch.layerMask,
           objectTypes: ch.objectTypes);
   _debugTrace(self, rs, re, drawDebug, found ? hit : null);
-  return (outHit: found ? LuminaBlueprintFunctionLibrary.hitToMap(hit) : LuminaBlueprintFunctionLibrary.makeHitResult(false, start, end, Vector3(0, 0, 1), 0.0), returnValue: found);
+  return (outHit: found ? LuminaBlueprintFunctionLibrary.hitToMap(hit) : _missToMap(start, end), returnValue: found);
 }
 
 /// The segment a forward trace covers: from Self's eyes along its look direction.

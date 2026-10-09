@@ -63,12 +63,27 @@ Standard preset configurations for collision components.
 
 Container describing a raycast or geometric sweep impact.
 
+What each field means, for every query (`raycast`, `sweep`, `lineTraceSingle` / `lineTraceMulti`, `sphereTraceSingle` / `sphereTraceMulti`) and for the Blueprint trace nodes (Break Hit Result shows the same fields in authoring space):
+
+| Field | Line trace / raycast | Shape sweep (sphere, capsule, box) |
+| :--- | :--- | :--- |
+| `location` | The impact point (a ray has no extent). | The shape's centre when it touched. |
+| `impactPoint` | Where the ray hit the surface. | The contact point on the hit surface. |
+| `normal` | Equals `impactNormal`. | From the contact back to the shape's core (a sphere's centre, a capsule's axis); `impactNormal` for a box. |
+| `impactNormal` | The hit surface's normal. | The hit surface's normal. |
+| `time` | Fraction (0–1) of the trace from `traceStart` to `traceEnd`; 1 on a miss. | Same. |
+| `distance` | From `traceStart` to `location`. | Same (how far the centre travelled). |
+| `traceStart` / `traceEnd` | The ray's start and end. | The centre's start and end. |
+
+When a Blueprint trace hits nothing, Location and Impact Point are the trace end and Time is 1.
+
 **Functions, Methods & Accessors:**
 
 | Method / Getter | Signature | Purpose & Description |
 | :--- | :--- | :--- |
 | `component` | `LuminaCollisionComponent? component` | The component that was struck. |
 | `reset` | `void reset()` | Resets this container to default state for pool reuse. |
+| `copyFrom` | `void copyFrom(HitResult other)` | Copies every field of [other] into this container. |
 
 ## `lib/src/collision/collision_subsystem.dart`
 
@@ -84,6 +99,10 @@ Central world subsystem managing broad-phase filtering, overlap/hit event dispat
 | `unregister` | `void unregister(LuminaCollisionComponent c)` | Unregisters a collision component and terminates any active overlap relationships. |
 | `onWorldTick` | `void onWorldTick(double deltaTime)` | Callback invoked when the corresponding event is triggered. |
 | `updateCollision` | `void updateCollision(double deltaTime)` | Executes broad phase, narrow phase, and fires overlap/hit events for all registered components. |
+| `raycast` | `bool raycast(Vector3 origin, Vector3 direction, double maxDistance, HitResult out, {int layerMask, LuminaCollisionComponent? ignore})` | Casts a ray and records the first blocking hit; `time` is the fraction of [maxDistance]. |
+| `sweep` | `bool sweep(CollisionShape shape, Matrix4 start, Vector3 delta, HitResult out, {int layerMask, LuminaCollisionComponent? ignore})` | Sweeps [shape] along [delta]; `location` is the shape's centre at contact. |
+
+The trace queries live in the `LuminaCollisionTraces` extension (`lib/src/collision/collision_traces.dart`, a part of this library): `lineTraceSingle`, `lineTraceMulti`, `sphereTraceSingle`, `sphereTraceMulti` and `sphereOverlapActors`, with the actor, component, layer, object type and class filters the trace nodes use. Their hits follow the `HitResult` table above.
 
 ## `lib/src/collision/gjk_epa.dart`
 

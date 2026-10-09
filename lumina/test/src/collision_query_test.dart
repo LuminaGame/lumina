@@ -31,7 +31,8 @@ void main() {
 
       expect(hitFound, isTrue);
       expect(hit.component, equals(sphere));
-      expect(hit.time, closeTo(900.0, 1e-4));
+      expect(hit.distance, closeTo(900.0, 1e-4));
+      expect(hit.time, closeTo(900.0 / 2000.0, 1e-9));
       expect(hit.impactPoint.x, closeTo(-100.0, 1e-4));
       expect(hit.impactNormal.x, closeTo(-1.0, 1e-6));
 
@@ -47,7 +48,7 @@ void main() {
 
       expect(hitBox, isTrue);
       expect(hitLayer2.component, equals(box));
-      expect(hitLayer2.time, closeTo(1400.0, 1e-4)); // -1000 to 400 = 1400
+      expect(hitLayer2.distance, closeTo(1400.0, 1e-4)); // -1000 to 400 = 1400
     });
 
     test('raycast with ignore set to intervening component passes through it', () {

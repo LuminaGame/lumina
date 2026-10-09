@@ -213,7 +213,7 @@ class BpEngineNodes extends LuminaCharacter with LuminaBlueprintRuntime {
     if (trace != null) blueprintTrace('begin', 'if_hit', 'branch', {'condition': (otrace_return_value ?? false)});
     if ((otrace_return_value ?? false)) {
       final p28 = LuminaBlueprintFunctionLibrary.breakHitResult(otrace_out_hit);
-      if (trace != null) blueprintTrace('begin', 'hit', 'break_hit_result', {'hit': otrace_out_hit, 'blocking_hit': p28.blockingHit, 'location': p28.location, 'impact_point': p28.impactPoint, 'impact_normal': p28.impactNormal, 'distance': p28.distance, 'hit_actor': p28.hitActor, 'hit_component': p28.hitComponent});
+      if (trace != null) blueprintTrace('begin', 'hit', 'break_hit_result', {'hit': otrace_out_hit, 'blocking_hit': p28.blockingHit, 'location': p28.location, 'impact_point': p28.impactPoint, 'normal': p28.normal, 'impact_normal': p28.impactNormal, 'time': p28.time, 'distance': p28.distance, 'trace_start': p28.traceStart, 'trace_end': p28.traceEnd, 'hit_actor': p28.hitActor, 'hit_component': p28.hitComponent});
       final p29 = LuminaBlueprintFunctionLibrary.floatToString(p28.distance, 0);
       if (trace != null) blueprintTrace('begin', 'hit_text', 'float_to_string', {'in_float': p28.distance, 'decimals': 0, 'return_value': p29});
       LuminaBlueprintFunctionLibrary.printString(this, p29, true, true, <double>[0.0, 0.66, 1.0, 1.0], 2.0, '');
@@ -350,7 +350,7 @@ class BpEngineNodes extends LuminaCharacter with LuminaBlueprintRuntime {
   /// Event Hit (node hit_event).
   void _onHit_event(Map<String, Object?> hitOutputs) {
     final p59 = LuminaBlueprintFunctionLibrary.breakHitResult(hitOutputs['hit']);
-    if (trace != null) blueprintTrace('hit_event', 'hit_parts', 'break_hit_result', {'hit': hitOutputs['hit'], 'blocking_hit': p59.blockingHit, 'location': p59.location, 'impact_point': p59.impactPoint, 'impact_normal': p59.impactNormal, 'distance': p59.distance, 'hit_actor': p59.hitActor, 'hit_component': p59.hitComponent});
+    if (trace != null) blueprintTrace('hit_event', 'hit_parts', 'break_hit_result', {'hit': hitOutputs['hit'], 'blocking_hit': p59.blockingHit, 'location': p59.location, 'impact_point': p59.impactPoint, 'normal': p59.normal, 'impact_normal': p59.impactNormal, 'time': p59.time, 'distance': p59.distance, 'trace_start': p59.traceStart, 'trace_end': p59.traceEnd, 'hit_actor': p59.hitActor, 'hit_component': p59.hitComponent});
     final p60 = LuminaBlueprintFunctionLibrary.getDisplayName(p59.hitActor);
     if (trace != null) blueprintTrace('hit_event', 'hit_name', 'get_display_name', {'object': p59.hitActor, 'return_value': p60});
     LuminaBlueprintFunctionLibrary.printString(this, p60, true, true, <double>[0.0, 0.66, 1.0, 1.0], 2.0, '');
