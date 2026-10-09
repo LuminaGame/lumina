@@ -74,6 +74,7 @@ part 'editor_view_model/level_sections.dart';
 part 'editor_view_model/actors_and_components.dart';
 part 'editor_view_model/actor_spawning.dart';
 part 'editor_view_model/outliner.dart';
+part 'editor_view_model/outliner_visibility.dart';
 part 'editor_view_model/selection_and_transforms.dart';
 part 'editor_view_model/camera_and_viewport.dart';
 part 'editor_view_model/assets_and_content_browser.dart';
@@ -328,6 +329,7 @@ class EditorViewModel extends _EditorViewModelState
         _EditorActorsAndComponents,
         _EditorActorSpawning,
         _EditorOutliner,
+        _EditorOutlinerVisibility,
         _EditorSelectionAndTransforms,
         _EditorCameraAndViewport,
         _EditorAssetsAndContentBrowser,
