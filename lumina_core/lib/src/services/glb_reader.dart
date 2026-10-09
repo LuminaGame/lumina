@@ -6,6 +6,7 @@ import 'package:lumina_core/src/services/engine_logger_service.dart';
 
 part 'glb_reader/parse_glb.dart';
 part 'glb_reader/chunks_images_animations.dart';
+part 'glb_reader/primitive.dart';
 
 /// A Draco-compressed primitive (`KHR_draco_mesh_compression`) decoded to
 /// flat arrays: positions `[x0, y0, z0, …]`, UVs `[u0, v0, …]` and triangle
