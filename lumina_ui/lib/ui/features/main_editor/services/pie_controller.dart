@@ -22,6 +22,8 @@ import 'package:lumina_ui/ui/features/main_editor/services/pie_pointer_input.dar
 import 'package:lumina_ui/ui/features/details/services/blueprint_collision_overrides.dart';
 
 part 'pie_controller/editor_pie_game.dart';
+part 'pie_controller/blueprints_in_play.dart';
+part 'pie_controller/game_input.dart';
 
 /// Ticks the local player's controller inside the world tick, ahead of the
 /// pawn it possesses (the pawn is spawned later, so it ticks after this).
@@ -37,11 +39,16 @@ class _PieControllerDriver extends LuminaLevelScriptActor {
   }
 }
 
-class PieController {
+class PieController with _PieBlueprintsInPlay, _PieGameInput {
+  @override
   final EditorViewModel viewModel;
+  @override
   EditorPieGame? _game;
+  @override
   bool isPlaying = false;
+  @override
   bool isPaused = false;
+  @override
   bool isEjected = false;
 
   /// Last error raised while mounting or ticking the runtime world, or null.
@@ -55,6 +62,7 @@ class PieController {
 
   /// The game's hold on the mouse: captured from Play, F4
   /// releases it, a click on the game view takes it again, Esc stops Play.
+  @override
   late final PieMouseCapture mouseCapture = PieMouseCapture(
     gameAcceptsInput: () => acceptsGameInput,
     gameWantsFreeCursor: () => _game?.playerController?.wantsFreeCursor ?? false,
@@ -93,12 +101,14 @@ class PieController {
   LuminaTemplateCharacter? get playerPawn => _game?.playerPawn;
 
   /// Which pawn this project's template scaffolds, read from the manifest.
+  @override
   GameTemplateKind templateKindForProject() =>
       GameTemplateCatalog.byId(viewModel.project.template).kind;
 
   /// The Third Person character mesh the project carries
   /// ([LuminaThirdPersonContent.projectMeshGlbPath]), or null — a
   /// project created before the template shipped it plays with no body.
+  @override
   String? mannequinPathForProject() {
     final file = File('${viewModel.projectDirPath}/${LuminaThirdPersonContent.projectMeshGlbPath}');
     return file.existsSync() ? file.path : null;
@@ -109,6 +119,7 @@ class PieController {
   /// A project created before the template work has no input section; it falls
   /// back to its template's defaults so Play still moves, and the user can then
   /// edit them in Project Settings.
+  @override
   BoundProjectInput boundInputForProject() {
     final manifest = viewModel.project.input;
     final settings = manifest.mappingContexts.isEmpty
@@ -229,36 +240,6 @@ class PieController {
     }
   }
 
-  // --- Blueprints in Play -----------------------------
-
-  EditorBlueprintClassRegistry? _registry;
-
-  /// The registry the next Play resolves Blueprint classes through: the
-  /// project's `.lmas` files, with open Blueprint editors' documents as they
-  /// are in the editor.
-  EditorBlueprintClassRegistry get registry => _registry ??= EditorBlueprintClassRegistry(
-        viewModel.projectDirPath,
-        inputActions: boundInputForProject().actions.values.toList(),
-        openDocuments: () => viewModel.openBlueprintDocuments,
-      );
-
-  /// Play's compile step without the editors: loads and validates every
-  /// Blueprint class Play will use. Empty when Play can start.
-  List<PlayBlocker> preflight({List<PlayBlocker>? warnings}) {
-    _registry = null; // the manifest's input actions may have changed
-    registerWidgetClasses();
-    registerBlueprintAssets();
-    return BlueprintPlayPreflight.validate(
-      registry,
-      viewModel.project.mapsAndModes,
-      [
-        for (final a in viewModel.actors)
-          if (a.blueprintClass != null && a.blueprintClass!.isNotEmpty) a.blueprintClass!,
-      ],
-      warnings: warnings,
-    );
-  }
-
   /// The game Play mounts for [actors] (the level snapshot) of [levelPath]
   /// (default: the level Play is running, else the editor's).
   /// The actors as Play spawns them: one hidden in the outliner, itself or
@@ -283,136 +264,6 @@ class PieController {
     ];
   }
 
-  EditorPieGame createGame(List<EditorActorNode> actors, {BoundProjectInput? input, String? levelPath}) {
-    final templateKind = templateKindForProject();
-    final logged = <String>{};
-    registerWidgetClasses();
-    registerWidgetScripts();
-    registerBlueprintAssets();
-    // Simulating components inherit their static mesh's
-    // mass (the Static Mesh editor's `metadata.physics`), read fresh.
-    final projectDir = viewModel.projectDirPath;
-    LuminaBlueprintComponents.meshPhysicsResolver = (stored) => MeshPhysicsService.forMeshAsset(stored, projectDir: projectDir);
-    // Blueprints name assets project-relative (a Set Material node's
-    // `contents/materials/…`); Play reads them from this project.
-    LuminaAssets.projectDir = projectDir;
-    return EditorPieGame(
-      actors,
-      templateKind: templateKind,
-      input: input ?? boundInputForProject(),
-      mannequinMeshPath: templateKind == GameTemplateKind.thirdPerson ? mannequinPathForProject() : null,
-      registry: registry,
-      mapsAndModes: viewModel.project.mapsAndModes,
-      onBlueprintInstance: (instance) => _attachProjectCodeNotice(instance, logged),
-      levelScript: levelScriptFor(levelPath ?? _playingLevel ?? viewModel.project.activeLevel, actors),
-    );
-  }
-
-  /// The script of [levelPath]'s Level Blueprint over
-  /// the placed [actors], or null when the level has none. One with compile
-  /// errors does not run; the Output Log names them.
-  LuminaBlueprintLevelScript? levelScriptFor(String levelPath, List<EditorActorNode> actors) {
-    if (levelPath.isEmpty) return null;
-    final cls = registry.levelClassFor(levelPath, actorMaps: [for (final a in actors) a.toMap()]);
-    if (cls == null) return null;
-    if (cls.hasErrors) {
-      viewModel.logger.log(
-        'The Level Blueprint of ${cls.name} has errors and does not run: '
-        '${cls.diagnostics.where((d) => d.isError).map((d) => d.message).join('; ')}',
-        level: 'warning',
-        source: 'PIE',
-      );
-      return null;
-    }
-    viewModel.logger.log('Level Blueprint of ${cls.name} runs in Play', level: 'info', source: 'PIE');
-    return cls.instantiateLevelScript(key: LuminaObjectKey('${cls.name}_script'));
-  }
-
-  /// Makes the project's widget Blueprints known to the runtime before Play:
-  /// `Create Widget` seeds each instance's per-element
-  /// state (`elements.FPSCounter.text`) from the class registered here, read
-  /// fresh from the `.lmas` files so the designer's last save is what plays.
-  void registerWidgetClasses() {
-    final classes = WidgetClassCatalog.scanWidgetClasses(viewModel.projectDirPath).toList();
-    for (final open in viewModel.openWidgetEditors) {
-      if (open.isLoaded) {
-        final name = UmgWidgetCodegen.fileBaseName(open.fileBasename);
-        final inMemClass = WidgetClassCatalog.fromUmgDocument(name, open.document);
-        final index = classes.indexWhere((c) => c.name == name);
-        if (index >= 0) {
-          classes[index] = inMemClass;
-        } else {
-          classes.add(inMemClass);
-        }
-      }
-    }
-    LuminaWidgetClassRegistry.registerAll(classes);
-    if (classes.isNotEmpty) {
-      viewModel.logger.log(
-        'Registered ${classes.length} widget class${classes.length == 1 ? '' : 'es'}: ${classes.map((c) => c.name).join(', ')}',
-        level: 'info',
-        source: 'PIE',
-      );
-    }
-  }
-
-  /// Every widget graph plays in the VM (an open designer's
-  /// as it is in the editor, the others as saved) — `Create
-  /// Widget` gives each instance a `LuminaBlueprintUserWidget` over it, as the
-  /// built game's registry gives it the compiled `WBP<Name>Graph`. A graph
-  /// with errors does not run; the Output Log names them.
-  void registerWidgetScripts() {
-    LuminaUserWidgets.clear();
-    final input = boundInputForProject().actions.values.toList();
-    final names = <String>[];
-    final documents = UmgWidgetCodegen.widgetDocuments(viewModel.projectDirPath);
-    for (final open in viewModel.openWidgetEditors) {
-      if (open.isLoaded) documents[UmgWidgetCodegen.fileBaseName(open.fileBasename)] = open.documentForPlay;
-    }
-    for (final e in documents.entries) {
-      final graph = UmgWidgetCodegen.widgetGraphOf(e.value, e.key);
-      if (graph == null) continue;
-      final cls = LuminaBlueprintClass.forWidget(graph, inputActions: input);
-      if (cls.hasErrors) {
-        viewModel.logger.log(
-          'The graph of ${e.key} has errors and does not run: ${cls.diagnostics.where((d) => d.isError).map((d) => d.message).join('; ')}',
-          level: 'warning',
-          source: 'PIE',
-        );
-        continue;
-      }
-      LuminaUserWidgets.register(e.key, cls.instantiateUserWidget);
-      names.add(e.key);
-    }
-    if (names.isNotEmpty) {
-      viewModel.logger.log('Widget graphs run in Play: ${names.join(', ')}', level: 'info', source: 'PIE');
-    }
-  }
-
-  // --- Blueprint registries and host hooks -----------
-
-  /// Makes the project's Blueprint assets known to the runtime before Play,
-  /// as a built game's `registerProjectBlueprints()` does: enums, interfaces,
-  /// save-game classes, montages and particle templates from the `.lmas`
-  /// files, and every actor Blueprint class (compiled through [registry], so
-  /// an open editor's document plays) for `Spawn Actor from Class`.
-  void registerBlueprintAssets() {
-    final assets = LuminaProjectBlueprintAssets.scan(viewModel.projectDirPath);
-    assets.registerRuntime();
-    final spawnable = registry.registerActorClasses(assets.actorClasses);
-    final counts = [
-      if (spawnable.isNotEmpty) '${spawnable.length} actor class${spawnable.length == 1 ? '' : 'es'}',
-      if (assets.enums.isNotEmpty) '${assets.enums.length} enum${assets.enums.length == 1 ? '' : 's'}',
-      if (assets.interfaces.isNotEmpty) '${assets.interfaces.length} interface${assets.interfaces.length == 1 ? '' : 's'}',
-      if (assets.saveGameClasses.isNotEmpty) '${assets.saveGameClasses.length} save-game class${assets.saveGameClasses.length == 1 ? '' : 'es'}',
-      if (assets.montages.isNotEmpty) '${assets.montages.length} montage${assets.montages.length == 1 ? '' : 's'}',
-      if (assets.particleTemplates.isNotEmpty) '${assets.particleTemplates.length} particle template${assets.particleTemplates.length == 1 ? '' : 's'}',
-    ];
-    if (counts.isNotEmpty) {
-      viewModel.logger.log('Registered Blueprint assets: ${counts.join(', ')}', level: 'info', source: 'PIE');
-    }
-  }
-
   FilamentEngine? _engine;
   FilamentScene? _scene;
   FilamentView? _postProcessView;
@@ -424,6 +275,7 @@ class PieController {
   /// The project-relative level Play is running: the editor's level, or the
   /// one `Open Level` switched to. Null when not playing.
   String? get playingLevelPath => _playingLevel;
+  @override
   String? _playingLevel;
 
   String? _savedDefaultSaveDirectory;
@@ -646,99 +498,6 @@ class PieController {
   /// `BP_ThirdPersonCharacter (VM)` while a Blueprint pawn plays.
   String? get pawnClassLabel => _game?.pawnClassLabel;
 
-  String? _debugSelection;
-
-  /// A Blueprint instance whose graph calls a project
-  /// function (declared from the project's manifest, never run in the editor)
-  /// says so in the Output Log the first time such a node is reached —
-  /// lumina's VM skips it with zero outputs and plays the rest of the graph.
-  /// A `breakpoint` node reached by any instance pauses
-  /// Play and frames the node. Attached as each instance is created, before
-  /// its BeginPlay.
-  void _attachProjectCodeNotice(LuminaBlueprintInstance instance, Set<String> logged) {
-    final cls = instance.blueprintClass;
-    final graph = cls.document.eventGraph;
-    final hasDeclaredOnly = graph.nodes.any((n) => LuminaBlueprintFunctionRegistry.isDeclaredOnly(n.registryId));
-    final hasBreakpoint = _classHasBreakpoint(cls);
-    if (!hasDeclaredOnly && !hasBreakpoint) return;
-    instance.trace = (event) {
-      if (hasBreakpoint && event.registryId == 'breakpoint') {
-        _hitBreakpoint(cls, event.nodeId);
-        return;
-      }
-      if (!hasDeclaredOnly || !LuminaBlueprintFunctionRegistry.isDeclaredOnly(event.registryId)) return;
-      if (!logged.add('${cls.name}|${event.nodeId}')) return;
-      final title = graph.node(event.nodeId)?.title ?? event.registryId;
-      viewModel.logger.log(
-        '${cls.name}: $title ${LuminaBlueprintFunctionRegistry.unavailableMessage}; skipped in the editor.',
-        level: 'warning',
-        source: 'PIE',
-      );
-    };
-  }
-
-  static bool _classHasBreakpoint(LuminaBlueprintClass cls) {
-    bool any(LuminaBlueprintGraph g) => g.nodes.any((n) => n.registryId == 'breakpoint');
-    final doc = cls.document;
-    return any(doc.eventGraph) || doc.functions.any((f) => any(f.graph)) || doc.macros.any((m) => any(m.graph));
-  }
-
-  /// The project-relative `.lmas` of Blueprint class [name]
-  /// (`contents/blueprints/<name>.lmas`, else the first match under contents/).
-  String? _blueprintPathOf(String name) {
-    final direct = 'contents/blueprints/$name.lmas';
-    if (File('${viewModel.projectDirPath}/$direct').existsSync()) return direct;
-    final contents = Directory('${viewModel.projectDirPath}/contents');
-    if (!contents.existsSync()) return null;
-    for (final f in contents.listSync(recursive: true, followLinks: false)) {
-      if (f is File && f.path.replaceAll(r'\', '/').endsWith('/$name.lmas')) {
-        return f.path.substring(viewModel.projectDirPath.length + 1).replaceAll(r'\', '/');
-      }
-    }
-    return null;
-  }
-
-  /// The breakpoint Play last stopped on (null when none, or after resume).
-  BlueprintBreakpointHit? get breakpointHit => BlueprintBreakpoints.instance.current;
-
-  void _hitBreakpoint(LuminaBlueprintClass cls, String nodeId) {
-    if (!isPlaying || isPaused) return;
-    final path = _blueprintPathOf(cls.name) ?? 'contents/blueprints/${cls.name}.lmas';
-    if (!BlueprintBreakpoints.instance.hit(path, nodeId)) return;
-    final title = cls.document.eventGraph.node(nodeId)?.title ?? 'Breakpoint';
-    viewModel.logger.log('Breakpoint hit in ${cls.name} ($title): Play paused. Resume or step to continue.', level: 'warning', source: 'PIE');
-    pause();
-    // Frame the node in the Blueprint editor showing this class (or the
-    // docked debug panel); the editor opens on demand from the log line.
-    BlueprintNavigation.instance.request(path, nodeId);
-    viewModel.notifyListeners();
-  }
-
-  /// Hands the running Blueprint instances to the Blueprint debugger: the
-  /// level's Blueprint script, the possessed pawn's, and the selected placed
-  /// Blueprint actor's.
-  void _publishDebugTargets() {
-    final game = _game;
-    if (game == null) return;
-    final targets = <String, LuminaBlueprintInstance>{};
-    // The level's Blueprint script, beside the pawn.
-    final levelScript = game.gameInstance.world?.persistentLevel.scriptActor;
-    final levelPath = _playingLevel ?? viewModel.project.activeLevel;
-    if (levelScript is LuminaBlueprintLevelScript && levelPath.isNotEmpty) targets[levelPath] = levelScript;
-    final pawn = game.possessedPawn;
-    final pawnPath = game.registry?.pawnClassPath(game.mapsAndModes);
-    if (pawn is LuminaBlueprintInstance && pawnPath != null) targets[pawnPath] = pawn as LuminaBlueprintInstance;
-    final selected = viewModel.primarySelectedActor;
-    final placedPath = selected?.blueprintClass;
-    final world = game.gameInstance.world;
-    if (selected != null && placedPath != null && placedPath.isNotEmpty && world != null) {
-      final runtime = world.persistentLevel.actors.where((a) => a.key == LuminaObjectKey(selected.id)).firstOrNull;
-      if (runtime is LuminaBlueprintInstance) targets[placedPath] = runtime;
-    }
-    _debugSelection = selected?.id;
-    BlueprintPieDebugger.instance.setTargets(targets);
-  }
-
   void stopPie(FilamentEngine engine, FilamentScene scene) {
     if (!isPlaying) return;
     BlueprintPieDebugger.instance.clear();
@@ -789,6 +548,7 @@ class PieController {
 
   /// Pauses the runtime world (timers, subsystems and audio freeze) and the
   /// editor tick. No-op unless playing.
+  @override
   void pause() {
     if (!isPlaying || isPaused) return;
     isPaused = true;
@@ -848,103 +608,6 @@ class PieController {
       lastError = e.toString();
       viewModel.logger.log('PIE restart raised: $e', level: 'error', source: 'PIE');
     }
-  }
-
-  bool _keyboardHandlerInstalled = false;
-
-  /// Takes the keyboard for the running game.
-  ///
-  /// This is deliberately not routed through the viewport's focus node: the
-  /// editor's focus can sit on any panel when the user presses Play, and a
-  /// running game that ignores W because a tree view has focus is not playing.
-  /// Every keyboard key reaches the game through the engine's one key table
-  /// (`LuminaKey.fromKeyId`) — the same the project input
-  /// binder and a shipped game's `main.dart` use. Only the keys the project's
-  /// mapping contexts bind are swallowed, and only while the session accepts
-  /// input, so editor shortcuts (Alt+P) and Stop keep working.
-  bool _onHardwareKey(KeyEvent event) {
-    // While the game has the mouse, F4 gives the cursor back and
-    // Esc stops Play, wherever keyboard focus sits. Once released, Esc still
-    // stops Play through the editor shell's `shell.cancel`.
-    if (event.logicalKey == LogicalKeyboardKey.f4) {
-      if (event is! KeyDownEvent || !mouseCapture.isCaptured) return false;
-      mouseCapture.release();
-      return true;
-    }
-    if (event.logicalKey == LogicalKeyboardKey.escape) {
-      if (event is! KeyDownEvent || !isPlaying || !mouseCapture.isCaptured) return false;
-      viewModel.stopSimulation();
-      return true;
-    }
-    final key = LuminaKey.fromKeyId(event.logicalKey.keyId);
-    if (key == null) return false;
-    if (event is KeyDownEvent) {
-      if (!acceptsGameInput) return false;
-      injectKeyDown(key);
-    } else if (event is KeyUpEvent) {
-      injectKeyUp(key);
-    } else if (event is! KeyRepeatEvent) {
-      return false;
-    }
-    return acceptsGameInput && (_game?.bindsKey(key) ?? false);
-  }
-
-  /// Feeds [event] to the keyboard handler Play installs (widget tests).
-  bool handleKeyEventForTest(KeyEvent event) => _onHardwareKey(event);
-
-  void _installKeyboardHandler() {
-    if (_keyboardHandlerInstalled) return;
-    HardwareKeyboard.instance.addHandler(_onHardwareKey);
-    _keyboardHandlerInstalled = true;
-  }
-
-  void _removeKeyboardHandler() {
-    if (!_keyboardHandlerInstalled) return;
-    HardwareKeyboard.instance.removeHandler(_onHardwareKey);
-    _keyboardHandlerInstalled = false;
-  }
-
-  /// Whether the running world should receive keyboard and mouse events.
-  /// An ejected user drives the editor flycam instead of the pawn.
-  bool get acceptsGameInput => isPlaying && !isPaused && !isEjected;
-
-  /// Whether scripted input (an agent's play-test) reaches
-  /// the world: as [acceptsGameInput], but a paused world takes it too, and
-  /// the next [step] sees it — frame-exact testing presses keys while paused.
-  bool get acceptsScriptedInput => isPlaying && !isEjected;
-
-  /// A key press; [scripted] input also lands while paused
-  /// ([acceptsScriptedInput]).
-  void injectKeyDown(LuminaKey key, {bool scripted = false}) {
-    if (!(scripted ? acceptsScriptedInput : acceptsGameInput)) return;
-    _game?.injectKeyDown(key);
-  }
-
-  void injectKeyUp(LuminaKey key) {
-    // A release is always forwarded, even after an eject, so a key held at the
-    // moment of ejecting does not stay stuck down in the world.
-    _game?.injectKeyUp(key);
-  }
-
-  void injectMouseDelta(double dx, double dy, {bool scripted = false}) {
-    if (!(scripted ? acceptsScriptedInput : acceptsGameInput)) return;
-    _game?.injectMouseDelta(dx, dy);
-  }
-
-  /// An analog axis value (`MouseX`, `GamepadLeftStickX`, …) for the next
-  /// tick, beside [injectMouseDelta] (the MCP server's `pie_axis`).
-  void injectAnalog(LuminaKey key, double value, {bool scripted = false}) {
-    if (!(scripted ? acceptsScriptedInput : acceptsGameInput)) return;
-    _game?.injectAnalog(key, value);
-  }
-
-  /// A delta from Flutter's own pointer events (the viewport's hover/move,
-  /// the window shield): the game's mouse look only while the game has the
-  /// mouse, and only when the capture backend does not report relative
-  /// motion itself.
-  void injectPointerDelta(double dx, double dy) {
-    if (!mouseCapture.acceptsPointerDeltas) return;
-    injectMouseDelta(dx, dy);
   }
 
   void eject() {
