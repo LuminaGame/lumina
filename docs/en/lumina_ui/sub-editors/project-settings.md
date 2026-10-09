@@ -247,6 +247,10 @@ Builds a titled settings section (the sub-editor's own look).
 
 Builds a labelled, search-aware settings row.
 
+### `class WebModuleDownloadPanel`
+
+Project Settings → Packaging & Target, under the **Web** target: while flutter_filament's WebAssembly module is missing, a **Download web module** button (a progress bar and message while it runs, the error and **Retry download** after a failure) with the `build_module.sh` hint as secondary text; it replaces the target's "not available" reason. Once the module is found it names its source (downloaded `<tag>` or local build) and folder, and the Web target is buildable without reopening the editor. The editor also starts the download by itself at launch (`WebModuleDownload`).
+
 ### `class WebLoadingStyleSection`
 
 Project Settings → Packaging & Target → **Web Loading Style**: the look of a web build's plain HTML loading screen, shown while a web target is ticked. Every control edits the view model's working copy; Apply & Save writes `packaging.web_loading_style` and regenerates the project's `web/` loading screen. The preview draws the generated page's layout with the same values, and "Open in Browser" serves the generated page itself.

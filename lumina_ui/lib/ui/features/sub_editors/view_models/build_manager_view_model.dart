@@ -7,6 +7,7 @@ import 'package:lumina_ui/ui/core/host/editor_host.dart' show LuminaEditorHost;
 
 import 'package:lumina_ui/ui/features/sub_editors/services/build_pipeline_service.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/project_icon_packaging.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/web_module_download.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/web_preview_server.dart';
 
 /// Per-step UI state derived from real pipeline events.
@@ -148,7 +149,9 @@ class BuildManagerViewModel extends ChangeNotifier {
     this.openUrl,
     this.onTargetsChanged,
     List<String>? webModulePackageRoots,
+    WebModuleDownload? webModuleDownload,
   })  : _initialProject = project,
+        _webModuleDownload = webModuleDownload ?? WebModuleDownload.instance,
         // ignore: prefer_initializing_formals
         _webModulePackageRoots = webModulePackageRoots,
         // ignore: prefer_initializing_formals
@@ -186,12 +189,26 @@ class BuildManagerViewModel extends ChangeNotifier {
   /// (no host, toolchain or engine reason).
   List<String> get buildableTargets => _hostTargets == null ? const [] : kPackagingPlatforms.where((t) => reasonsFor(t).isEmpty).toList();
 
-  /// flutter_filament's WebAssembly module, looked up once: first through
-  /// the project's own dependencies (the flutter_filament its game links),
-  /// then the engine's and the editor's. Null disables web cooks.
-  late final FlutterFilamentWebModule? webModule = FlutterFilamentWebModule.locate(
-    packageRoots: _webModulePackageRoots ?? [projectDirPath, ProjectRepository.luminaPackagePath, LuminaEditorHost.uiRoot],
-  );
+  final WebModuleDownload _webModuleDownload;
+  FlutterFilamentWebModule? _webModule;
+  Object? _webModuleLookedFor = const Object();
+
+  /// flutter_filament's WebAssembly module: first a local build found
+  /// through the project's own dependencies (the flutter_filament its game
+  /// links), then the engine's and the editor's, then the copy the editor
+  /// downloaded. Looked up once, and again after a download. Null disables
+  /// web cooks.
+  FlutterFilamentWebModule? get webModule {
+    final install = _webModuleDownload.install;
+    if (!identical(install, _webModuleLookedFor)) {
+      _webModule = FlutterFilamentWebModule.locate(
+        packageRoots: _webModulePackageRoots ?? [projectDirPath, ProjectRepository.luminaPackagePath, LuminaEditorHost.uiRoot],
+        downloadRoot: _webModuleDownload.root,
+      );
+      _webModuleLookedFor = install;
+    }
+    return _webModule;
+  }
 
   /// Why the engine cannot build [target] (flutter_filament's native
   /// build), or null.

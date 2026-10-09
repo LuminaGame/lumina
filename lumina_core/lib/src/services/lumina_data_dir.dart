@@ -51,6 +51,11 @@ abstract final class LuminaDataDir {
   static Directory filamentRoot({Map<String, String>? environment, String? operatingSystem}) =>
       Directory(p.join(resolve(environment: environment, operatingSystem: operatingSystem).path, 'filament'));
 
+  /// `<data>/flutter_filament_web`: flutter_filament's downloaded
+  /// WebAssembly module (one copy, replaced when the editor version changes).
+  static Directory webModuleRoot({Map<String, String>? environment, String? operatingSystem}) =>
+      Directory(p.join(resolve(environment: environment, operatingSystem: operatingSystem).path, 'flutter_filament_web'));
+
   /// `<data>/openriglogic`: one prebuilt OpenRigLogic per release tag.
   static Directory openriglogicRoot({Map<String, String>? environment, String? operatingSystem}) =>
       Directory(p.join(resolve(environment: environment, operatingSystem: operatingSystem).path, 'openriglogic'));

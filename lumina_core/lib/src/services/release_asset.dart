@@ -77,7 +77,10 @@ abstract final class ReleaseAssets {
 
   /// Downloads [uri] and its `.sha256` sidecar, checks the checksum, unpacks
   /// the archive and moves its single top folder [folder] to [target] once
-  /// [accept] approves the `<folder>/<infoFileName>` it holds. Staging
+  /// [accept] approves the `<folder>/<infoFileName>` it holds (an archive
+  /// without a provenance file passes a null [infoFileName] and a [verify]
+  /// check of the unpacked folder instead). [onVerified] gets the archive's
+  /// SHA-256 once it matched the sidecar. Staging
   /// happens next to [target], so a failed or interrupted run leaves no
   /// partial [target] behind. [onProgress] gets 0..0.9 while downloading,
   /// then 0.9 and 1; [label] names the download in its messages; [error]
@@ -86,8 +89,10 @@ abstract final class ReleaseAssets {
   static Future<Directory> fetch({
     required Uri uri,
     required String folder,
-    required String infoFileName,
-    required bool Function(Map<String, Object?> info) accept,
+    String? infoFileName,
+    bool Function(Map<String, Object?> info)? accept,
+    bool Function(Directory unpacked)? verify,
+    void Function(String sha256)? onVerified,
     required Directory target,
     required String label,
     required Exception Function(String message) error,
@@ -95,6 +100,7 @@ abstract final class ReleaseAssets {
     void Function(double progress, String message)? onProgress,
     HttpClient? httpClient,
   }) async {
+    assert(infoFileName != null ? accept != null : verify != null, 'an info file needs accept, none needs verify');
     final missing = notFound ?? error;
     final shaUri = uri.replace(path: '${uri.path}.sha256');
     final client = httpClient ?? (HttpClient()..connectionTimeout = const Duration(seconds: 30));
@@ -119,13 +125,18 @@ abstract final class ReleaseAssets {
       if (actual.toString() != expected) {
         throw error('Checksum mismatch for $uri: expected $expected, got $actual.');
       }
+      onVerified?.call(expected);
       onProgress?.call(0.9, 'Unpacking $label');
       final unpacked = Directory(p.join(staging.path, 'unpacked'))..createSync();
       await _extract(archive, unpacked, error);
       final inner = Directory(p.join(unpacked.path, folder));
-      final info = readInfo(inner, infoFileName);
-      if (info == null || !accept(info)) {
-        throw error('${archive.path} does not hold $folder/$infoFileName for $label.');
+      if (infoFileName != null) {
+        final info = readInfo(inner, infoFileName);
+        if (info == null || !accept!(info)) {
+          throw error('${archive.path} does not hold $folder/$infoFileName for $label.');
+        }
+      } else if (!inner.existsSync() || !verify!(inner)) {
+        throw error('${archive.path} does not hold the $folder folder $label needs.');
       }
       if (target.existsSync()) target.deleteSync(recursive: true);
       inner.renameSync(target.path);
@@ -200,11 +211,31 @@ abstract final class ReleaseAssets {
   }
 
   /// Unpacks [archive] into [into] with the system `tar` (bsdtar on
-  /// Windows 10+ and macOS reads zip too; GNU tar on Linux reads .tar.gz).
+  /// Windows 10+ and macOS reads zip too; GNU tar on Linux reads .tar.gz,
+  /// and a zip there goes through `unzip` or `python3 -m zipfile`).
   static Future<void> _extract(File archive, Directory into, Exception Function(String) error) async {
     // On Windows, System32's bsdtar: a Git-for-Windows GNU tar on PATH can
     // read neither zip nor `C:` paths.
     final tar = Platform.isWindows ? p.join(Platform.environment['SystemRoot'] ?? r'C:\Windows', 'System32', 'tar.exe') : 'tar';
+    if (Platform.isLinux && archive.path.toLowerCase().endsWith('.zip')) {
+      // GNU tar reads no zip: unzip, else Python's zipfile module.
+      for (final (exe, args) in [
+        ('unzip', ['-q', '-o', archive.path, '-d', into.path]),
+        ('python3', ['-m', 'zipfile', '-e', archive.path, into.path]),
+      ]) {
+        final ProcessResult result;
+        try {
+          result = await Process.run(exe, args);
+        } on ProcessException {
+          continue;
+        }
+        if (result.exitCode != 0) {
+          throw error('Could not unpack ${archive.path} ($exe exit ${result.exitCode}): ${result.stderr}'.trim());
+        }
+        return;
+      }
+      throw error('Could not unpack ${archive.path}: neither unzip nor python3 is installed.');
+    }
     final result = await Process.run(tar, ['-xf', archive.path, '-C', into.path]);
     if (result.exitCode != 0) {
       throw error('Could not unpack ${archive.path} (tar exit ${result.exitCode}): ${result.stderr}'.trim());

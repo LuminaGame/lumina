@@ -28,6 +28,8 @@ abstract class _ProjectSettingsViewModelState extends ChangeNotifier {
   bool _probingTargets = false;
   final CookCodeGenerator? _codeGenerator;
   final List<String>? _webModulePackageRoots;
+  final Directory? _webModuleDownloadRoot;
+  final WebModuleDownload _webModuleDownload;
 
   _ProjectSettingsViewModelState({
     required this.projectDirPath,
@@ -39,6 +41,8 @@ abstract class _ProjectSettingsViewModelState extends ChangeNotifier {
     HostBuildTargets? hostTargets,
     CookCodeGenerator? codeGenerator,
     List<String>? webModulePackageRoots,
+    Directory? webModuleDownloadRoot,
+    WebModuleDownload? webModuleDownload,
   })  : _projectRepo = projectRepository ?? ProjectRepository(),
         _assetRepo = assetRepository ?? AssetRepository(),
         _logger = logger ?? EngineLoggerService(),
@@ -49,7 +53,11 @@ abstract class _ProjectSettingsViewModelState extends ChangeNotifier {
         // ignore: prefer_initializing_formals
         _codeGenerator = codeGenerator,
         // ignore: prefer_initializing_formals
-        _webModulePackageRoots = webModulePackageRoots {
+        _webModulePackageRoots = webModulePackageRoots,
+        // ignore: prefer_initializing_formals
+        _webModuleDownloadRoot = webModuleDownloadRoot,
+        _webModuleDownload = webModuleDownload ?? WebModuleDownload.instance {
+    _webModuleDownload.addListener(_onWebModuleDownload);
     if (initialProject != null) {
       _onDisk = initialProject;
       _working = initialProject;
@@ -70,10 +78,34 @@ abstract class _ProjectSettingsViewModelState extends ChangeNotifier {
   String? _iconStatus;
   String? _iconError;
 
-  /// flutter_filament's WebAssembly module (web packages), looked up once.
-  late final FlutterFilamentWebModule? webModule = FlutterFilamentWebModule.locate(
-    packageRoots: _webModulePackageRoots ?? [projectDirPath, ProjectRepository.luminaPackagePath, LuminaEditorHost.uiRoot],
-  );
+  FlutterFilamentWebModule? _webModule;
+  bool _webModuleLooked = false;
+
+  /// flutter_filament's WebAssembly module (web packages): a local package
+  /// build, else the downloaded copy. Looked up once, and again when
+  /// [webModuleDownload] finishes.
+  FlutterFilamentWebModule? get webModule {
+    if (!_webModuleLooked) {
+      _webModule = FlutterFilamentWebModule.locate(
+        packageRoots: _webModulePackageRoots ?? [projectDirPath, ProjectRepository.luminaPackagePath, LuminaEditorHost.uiRoot],
+        downloadRoot: _webModuleDownloadRoot ?? _webModuleDownload.root,
+      );
+      _webModuleLooked = true;
+    }
+    return _webModule;
+  }
+
+  /// The web module download Packaging shows and starts.
+  WebModuleDownload get webModuleDownload => _webModuleDownload;
+
+  /// Starts (or retries) the web module download.
+  Future<bool> downloadWebModule() => _webModuleDownload.start();
+
+  void _onWebModuleDownload() {
+    if (_disposed) return;
+    if (_webModuleDownload.phase == WebModuleDownloadPhase.ready) _webModuleLooked = false;
+    notifyListeners();
+  }
 
   String? _webLoadingStatus;
   String? _webLoadingError;

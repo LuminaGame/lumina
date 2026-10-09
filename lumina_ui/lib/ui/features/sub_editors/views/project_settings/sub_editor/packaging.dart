@@ -97,7 +97,12 @@ mixin _ProjectSettingsPackaging on _ProjectSettingsSubEditorStateBase {
   }
 
   Widget _targetRow(String target, bool selected, PackagingRunState run) {
-    final reasons = _vm.reasonsFor(target);
+    // The web module's own line (download button, progress, retry) replaces
+    // its "not available" reason.
+    final reasons = [
+      for (final r in _vm.reasonsFor(target))
+        if (r != FlutterFilamentWebModule.missingReason) r,
+    ];
     final status = run.statuses[target];
     final dir = run.packageDirs[target];
     return Padding(
@@ -134,6 +139,7 @@ mixin _ProjectSettingsPackaging on _ProjectSettingsSubEditorStateBase {
                 style: const TextStyle(fontSize: 8.5, color: EditorColors.logWarning),
               ),
             ),
+          if (target == 'web') WebModuleDownloadPanel(download: _vm.webModuleDownload, module: _vm.webModule),
           if (dir != null)
             Padding(
               padding: const EdgeInsets.only(left: 28, top: 1),

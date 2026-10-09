@@ -30,6 +30,7 @@ import 'package:lumina_ui/ui/features/engine_bootstrap/views/engine_bootstrap_vi
 import 'package:lumina_ui/ui/features/launcher/views/launcher_view.dart';
 import 'package:lumina_ui/ui/features/main_editor/services/editor_graphics_preferences.dart';
 import 'package:lumina_ui/ui/features/main_editor/services/editor_preferences.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/web_module_download.dart';
 
 export 'package:lumina_ui/ui/core/host/editor_host.dart' show EditorHostInfo, EditorLaunchArgs, LuminaEditorHost, EditorAssets, EditorHandOff;
 
@@ -156,6 +157,11 @@ Future<void> runLuminaEditor(
     EngineLoggerService().log('Crash reporting is off: $e', level: 'warning', source: 'CrashReporter');
   }
   unawaited(_loadCrashReportServer());
+  // flutter_filament's WebAssembly module for web packaging: downloaded in
+  // the background from this editor's release (reused offline once there,
+  // fetched again for a new editor version; a local package build wins).
+  // A failure is logged and retried from Project Settings > Packaging.
+  unawaited(WebModuleDownload.instance.startAtLaunch());
   // The remembered editor theme (a JSON file under
   // ~/.config/lumina/themes/, or a built-in) is active before the first frame.
   EditorThemeController.instance.reload();

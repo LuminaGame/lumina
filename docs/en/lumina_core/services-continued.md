@@ -16,6 +16,7 @@ The pure services, part two: generated-code migration, GLB animation merging and
 - [`lib/src/services/level_template_service.dart`](#libsrcserviceslevel_template_servicedart)
 - [`lib/src/services/lumina_config_dir.dart`](#libsrcserviceslumina_config_dirdart)
 - [`lib/src/services/lumina_data_dir.dart`](#libsrcserviceslumina_data_dirdart)
+- [`lib/src/services/flutter_filament_web_prebuilt.dart`](#libsrcservicesflutter_filament_web_prebuiltdart)
 - [`lib/src/services/plugin_host_patcher_service.dart`](#libsrcservicesplugin_host_patcher_servicedart)
 - [`lib/src/services/plugin_pack_script.dart`](#libsrcservicesplugin_pack_scriptdart)
 - [`lib/src/services/primitive_glb_factory.dart`](#libsrcservicesprimitive_glb_factorydart)
@@ -402,7 +403,7 @@ Test suites set [override] to a fresh temp directory in their `flutter_test_conf
 
 ### `abstract final class LuminaDataDir`
 
-The per-user directory Lumina keeps downloaded data in: the engine source a release build fetches for itself (`engine/<version>/`) and the prebuilt Filament builds (`filament/<version>/`).
+The per-user directory Lumina keeps downloaded data in: the engine source a release build fetches for itself (`engine/<version>/`) the prebuilt Filament builds (`filament/<version>/`) and flutter_filament's downloaded web module (`flutter_filament_web/module/`).
 
 - Windows: `%LOCALAPPDATA%\Lumina`; - Linux: `$XDG_DATA_HOME/lumina`, else `~/.local/share/lumina` (where the user plugins and the MiniAI models live too); - macOS: `~/Library/Application Support/Lumina`.
 
@@ -417,6 +418,33 @@ The per-user directory Lumina keeps downloaded data in: the engine source a rele
 | `resolve` | `static Directory resolve({Map<String, String>? environment, String? operatingSystem})` | The data directory for [environment] (default: the process environment) on [operatingSystem] (default: this one). |
 | `engineRoot` | `static Directory engineRoot({Map<String, String>? environment, String? operatingSystem})` | `<data>/engine`: one checkout per release tag. |
 | `filamentRoot` | `static Directory filamentRoot({Map<String, String>? environment, String? operatingSystem})` | `<data>/filament`: one prebuilt Filament per Filament version. |
+| `webModuleRoot` | `static Directory webModuleRoot({Map<String, String>? environment, String? operatingSystem})` | `<data>/flutter_filament_web`: flutter_filament's downloaded WebAssembly module (one copy, replaced when the editor version changes). |
+
+## `lib/src/services/flutter_filament_web_prebuilt.dart`
+
+### `abstract final class FlutterFilamentWebPrebuilt`
+
+The flutter_filament web module every Lumina release attaches (`.github/workflows/release.yml`): `flutter-filament-web-<tag>.zip` plus a `.sha256` sidecar, holding one folder `flutter-filament-web-<tag>` with `flutter_filament.js`, `flutter_filament.wasm` and a `README.md`.
+
+`ensure` downloads the archive of the editor's own release; when that release has none (HTTP 404) or the editor is a development build (no tag), it takes the newest non-draft release that carries the archive and its sidecar, found through the GitHub releases API. The archive is checked against its sidecar before anything is unpacked (`ReleaseAssets.fetch`), unpacked to `<root>/module`, and `lumina-web-module.json` there records the release it came from (`tag`), the editor version that asked for it (`requestedTag`), the verified `sha256` and `fetchedAt`. An install made for the same editor version is reused without the network; one made for another version is downloaded again. A failed or interrupted run keeps the previous install. The default root is `LuminaDataDir.webModuleRoot()`; `LUMINA_RELEASE_BASE_URL` and `LUMINA_RELEASE_API_URL` redirect the download and the listing (mirrors).
+
+**Members:**
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `fileNames` | `static const List<String> fileNames` | `flutter_filament.js`, `flutter_filament.wasm`. |
+| `markerFileName` | `static const String markerFileName` | `lumina-web-module.json`. |
+| `defaultApiUrl` / `apiUrlVariable` | `static const String` | The GitHub releases listing and the variable that redirects it. |
+| `baseName` / `archiveName` | `static String baseName(String tag)` / `archiveName(String tag)` | `flutter-filament-web-<tag>` and `flutter-filament-web-<tag>.zip`. |
+| `moduleDir` | `static Directory moduleDir(Directory root)` | `<root>/module`. |
+| `defaultRoot` | `static Directory defaultRoot()` | `LuminaDataDir.webModuleRoot()`. |
+| `installed` | `static FlutterFilamentWebInstall? installed([Directory? root])` | The unpacked module with its marker, or null when missing or incomplete. |
+| `ensure` | `static Future<FlutterFilamentWebInstall> ensure({required String requestedTag, Directory? root, void Function(double, String)? onProgress, String? baseUrl, String? apiUrl, bool force = false, HttpClient? httpClient, Map<String, String>? environment})` | Installs the module for the editor version `requestedTag` (empty in a development build) as described above. Throws `FlutterFilamentWebPrebuiltException` (offline, checksum mismatch, no release with the asset). |
+| `newestTagWithModule` | `static Future<String?> newestTagWithModule(String apiUrl, {HttpClient? httpClient, Set<String> skip = const {}})` | The newest non-draft release in the listing whose assets hold the archive and its sidecar. |
+
+### `class FlutterFilamentWebInstall`
+
+A downloaded module: `directory` (both files), `tag` (the release it came from), `requestedTag` (the editor version that asked for it) and `sha256`.
 
 ## `lib/src/services/plugin_host_patcher_service.dart`
 

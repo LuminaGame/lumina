@@ -12,6 +12,7 @@ import 'package:lumina_ui/ui/features/sub_editors/services/project_icon_packagin
 import 'package:lumina_ui/ui/features/sub_editors/services/project_icon_rasterizer.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/umg_widget_codegen.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/umg_widget_validator.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/web_module_download.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/web_preview_server.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/build_manager_view_model.dart' show BuildManagerViewModel;
 
@@ -42,6 +43,8 @@ class ProjectSettingsViewModel extends _ProjectSettingsViewModelState
     super.hostTargets,
     super.codeGenerator,
     super.webModulePackageRoots,
+    super.webModuleDownloadRoot,
+    super.webModuleDownload,
   });
 
   static Future<Process> _defaultStarter(String executable, List<String> arguments, {String? workingDirectory}) =>
@@ -606,6 +609,7 @@ class ProjectSettingsViewModel extends _ProjectSettingsViewModelState
   void dispose() {
     _disposed = true;
     _packagingToken?.cancel();
+    _webModuleDownload.removeListener(_onWebModuleDownload);
     unawaited(_webLoadingPreview.stop());
     super.dispose();
   }

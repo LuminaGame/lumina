@@ -434,20 +434,41 @@ With one, `SubEditor3DViewport` reports the camera ray under the mouse on every 
 
 ### `class FlutterFilamentWebModule`
 
-flutter_filament's WebAssembly module — `web/flutter_filament.{js,wasm}`, built by its `tool/web/build_module.sh`. A Lumina game can only be built for the web when it exists: the cook serves both files next to the game's `index.html`, where `FilamentWeb.ensureInitialized` loads them.
+flutter_filament'in WebAssembly modülü — `flutter_filament.{js,wasm}`: paketin `web/` klasörüne `tool/web/build_module.sh` ile build edilir ya da editör tarafından bir Lumina release'inden indirilir (`flutter-filament-web-<tag>.zip`, `FlutterFilamentWebPrebuilt`). `locate` önce yerel paket build'ine (geliştirici önceliği), sonra indirilen kopyaya bakar. A Lumina game can only be built for the web when it exists: the cook serves both files next to the game's `index.html`, where `FilamentWeb.ensureInitialized` loads them.
 
 **Üyeler:**
 
 | Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
-| `directory` | `final Directory directory` | The package's `web/` folder. |
+| `directory` | `final Directory directory` | The folder holding both files: the package's `web/` folder or the downloaded module. |
+| `source` | `final FlutterFilamentWebModuleSource source` | `packageBuild` (a local `build_module.sh` build) or `download`. |
 | `fileNames` | `static const List<String> fileNames` |  |
-| `missingReason` | `static const String missingReason` | Why web builds are unavailable while the module is missing. |
+| `missingReason` | `static const String missingReason` | Why web builds are unavailable while the module is missing (it names the Packaging download and `build_module.sh`). |
+| `buildHint` | `static const String buildHint` | The secondary hint next to the Packaging download button. |
 | `files` | `List<File> get files` |  |
 | `sizeBytes` | `int get sizeBytes` |  |
-| `at` | `static FlutterFilamentWebModule? at(Directory webDir)` | The module in [webDir], or null when either file is missing. |
-| `locate` | `static FlutterFilamentWebModule? locate({List<String>? packageRoots})` | Finds the flutter_filament package through the resolved dependencies (`.dart_tool/package_config.json`) of each of [packageRoots], in order. By default: the engine package the editor scaffolds projects against, then the editor's own working directory. Pass the project first to use exactly the flutter_filament its game links. |
+| `at` | `static FlutterFilamentWebModule? at(Directory webDir, [FlutterFilamentWebModuleSource source])` | The module in [webDir], or null when either file is missing. |
+| `locate` | `static FlutterFilamentWebModule? locate({List<String>? packageRoots, Directory? downloadRoot})` | The module a web build stages: `locatePackageBuild` over [packageRoots] first, then `locateDownload` under [downloadRoot] (default `FlutterFilamentWebPrebuilt.defaultRoot()`). |
+| `locateDownload` | `static FlutterFilamentWebModule? locateDownload([Directory? downloadRoot])` | The module `FlutterFilamentWebPrebuilt` unpacked, or null. |
+| `locatePackageBuild` | `static FlutterFilamentWebModule? locatePackageBuild({List<String>? packageRoots})` | Finds the flutter_filament package through the resolved dependencies (`.dart_tool/package_config.json`) of each of [packageRoots], in order, and returns the module built into its `web/` folder. By default: the engine package the editor scaffolds projects against, then the editor's own working directory. Pass the project first to use exactly the flutter_filament its game links. |
 | `stageInto` | `List<File> stageInto(Directory webBuild)` | Copies both files into [webBuild] (a `flutter build web` output) and returns the copies. |
+
+## `lib/ui/features/sub_editors/services/web_module_download.dart`
+
+### `class WebModuleDownload extends ChangeNotifier`
+
+Web paketleme hedefi için flutter_filament'in WebAssembly modülünü arka planda indirir (`FlutterFilamentWebPrebuilt.ensure`). `runLuminaEditor`, `WebModuleDownload.instance.startAtLaunch()`'ı beklemeden çağırır: yerel bir paket build'i varsa hiçbir şey yapmaz; yoksa bu editör sürümü için yapılmış kurulum ağa çıkmadan kullanılır, eksikse (ya da başka sürüm içinse) indirilir. Project Settings ▸ Packaging indirmeyi başlatır (`start`) ve hatadan sonra yeniden dener (`retry`); durum çubuğu indirme sürerken ya da başarısız olduğunda bunu gösterir. Hatalar (ağ yok, checksum uyuşmazlığı) Output Log'a (`WebModule`) yazılır, asla fırlatılmaz.
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `instance` | `static WebModuleDownload instance` | Editörün paylaşılan indirmesi. |
+| `root` | `Directory get root` | Modülün açıldığı yer (`<root>/module`); varsayılan `FlutterFilamentWebPrebuilt.defaultRoot()`. |
+| `requestedTag` | `final String requestedTag` | İndirmenin yapıldığı editör sürümü (`LuminaRelease.version`; geliştirme build'inde boş). |
+| `phase` | `WebModuleDownloadPhase get phase` | `idle`, `downloading`, `ready` ya da `failed`. |
+| `progress` / `message` / `error` / `install` | getter'lar | 0..1 ilerleme, son mesaj, son hata, son kurulum. |
+| `startAtLaunch` | `Future<bool> startAtLaunch()` | Yukarıda anlatılan açılış adımı. |
+| `start` | `Future<bool> start({bool force = false})` | `requestedTag` için kurulu değilse indirir; sürerken gelen çağrı aynı indirmeye katılır. Bir modül kurulu mu, onu döndürür. |
+| `retry` | `Future<bool> retry()` | Hatadan sonra yeniden `start`. |
 
 ## `lib/ui/features/sub_editors/services/project_icon_packaging.dart`
 

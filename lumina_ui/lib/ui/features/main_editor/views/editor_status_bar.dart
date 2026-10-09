@@ -7,12 +7,14 @@ import 'package:lumina_ui/ui/features/main_editor/views/about_dialog.dart' show 
 import 'package:lumina_ui/ui/features/main_editor/views/editor_slot_bar.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/import_progress_panel.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/status_bar_engine_segment.dart';
+import 'package:lumina_ui/ui/features/main_editor/views/status_bar_web_module_segment.dart';
 
 const TextStyle _statusText = TextStyle(fontSize: 9, fontFamily: EditorTypography.monoFamily, color: EditorColors.mutedForeground);
 
 /// The editor's bottom status bar, shared by every tab: the Content Drawer
 /// button, minimized plugin dialogs, engine and Filament versions, the level
-/// and its counts, what Play runs, plugin buttons, imports and the renderer.
+/// and its counts, what Play runs, plugin buttons, the web module download,
+/// imports and the renderer.
 class EditorStatusBar extends StatelessWidget {
   final EditorViewModel viewModel;
 
@@ -76,6 +78,8 @@ class EditorStatusBar extends StatelessWidget {
           ],
           // Plugin buttons on both sides of the bar.
           EditorSlotBar(registry: viewModel.extensionRegistry, slot: EditorSlot.statusBarLeft, compact: true, leadingGap: 8),
+          // The web module download (first launch or Packaging).
+          const WebModuleStatusSegment(),
           const Spacer(),
           EditorSlotBar(registry: viewModel.extensionRegistry, slot: EditorSlot.statusBarRight, compact: true, trailingGap: 8),
           ImportProgressChip(jobs: viewModel.importJobs),

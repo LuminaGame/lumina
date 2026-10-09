@@ -68,6 +68,7 @@ export 'package:lumina_core/src/services/engine_logger_service.dart';
 export 'package:lumina_core/src/services/fbx_material_mapper.dart';
 export 'package:lumina_core/src/services/fbx_texture_locator.dart';
 export 'package:lumina_core/src/services/filament_prebuilt.dart';
+export 'package:lumina_core/src/services/flutter_filament_web_prebuilt.dart';
 export 'package:lumina_core/src/services/game_template_service.dart';
 export 'package:lumina_core/src/services/generated_code_migration.dart';
 export 'package:lumina_core/src/services/glb_animation_merger.dart';

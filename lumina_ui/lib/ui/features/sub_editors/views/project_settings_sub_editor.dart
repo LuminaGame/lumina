@@ -12,6 +12,7 @@ import 'package:lumina_ui/ui/features/sub_editors/sub_editor_binding.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/project_settings_view_model.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/project_settings/key_binding_dialog.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/project_settings/web_loading_style_section.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/project_settings/web_module_download_panel.dart';
 
 part 'project_settings/sub_editor/state.dart';
 part 'project_settings/sub_editor/layout.dart';

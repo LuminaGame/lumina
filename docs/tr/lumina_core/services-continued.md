@@ -16,6 +16,7 @@ Saf servisler, ikinci bölüm: üretilmiş kod göçü, GLB animasyon birleştir
 - [`lib/src/services/level_template_service.dart`](#libsrcserviceslevel_template_servicedart)
 - [`lib/src/services/lumina_config_dir.dart`](#libsrcserviceslumina_config_dirdart)
 - [`lib/src/services/lumina_data_dir.dart`](#libsrcserviceslumina_data_dirdart)
+- [`lib/src/services/flutter_filament_web_prebuilt.dart`](#libsrcservicesflutter_filament_web_prebuiltdart)
 - [`lib/src/services/plugin_host_patcher_service.dart`](#libsrcservicesplugin_host_patcher_servicedart)
 - [`lib/src/services/plugin_pack_script.dart`](#libsrcservicesplugin_pack_scriptdart)
 - [`lib/src/services/primitive_glb_factory.dart`](#libsrcservicesprimitive_glb_factorydart)
@@ -400,7 +401,7 @@ Test suites set [override] to a fresh temp directory in their `flutter_test_conf
 
 ### `abstract final class LuminaDataDir`
 
-The per-user directory Lumina keeps downloaded data in: the engine source a release build fetches for itself (`engine/<version>/`) and the prebuilt Filament builds (`filament/<version>/`).
+The per-user directory Lumina keeps downloaded data in: the engine source a release build fetches for itself (`engine/<version>/`) the prebuilt Filament builds (`filament/<version>/`) and flutter_filament's downloaded web module (`flutter_filament_web/module/`).
 
 - Windows: `%LOCALAPPDATA%\Lumina`; - Linux: `$XDG_DATA_HOME/lumina`, else `~/.local/share/lumina` (where the user plugins and the MiniAI models live too); - macOS: `~/Library/Application Support/Lumina`.
 
@@ -415,6 +416,33 @@ The per-user directory Lumina keeps downloaded data in: the engine source a rele
 | `resolve` | `static Directory resolve({Map<String, String>? environment, String? operatingSystem})` | The data directory for [environment] (default: the process environment) on [operatingSystem] (default: this one). |
 | `engineRoot` | `static Directory engineRoot({Map<String, String>? environment, String? operatingSystem})` | `<data>/engine`: one checkout per release tag. |
 | `filamentRoot` | `static Directory filamentRoot({Map<String, String>? environment, String? operatingSystem})` | `<data>/filament`: one prebuilt Filament per Filament version. |
+| `webModuleRoot` | `static Directory webModuleRoot({Map<String, String>? environment, String? operatingSystem})` | `<data>/flutter_filament_web`: flutter_filament's downloaded WebAssembly module (one copy, replaced when the editor version changes). |
+
+## `lib/src/services/flutter_filament_web_prebuilt.dart`
+
+### `abstract final class FlutterFilamentWebPrebuilt`
+
+Her Lumina release'inin eklediği flutter_filament web modülü (`.github/workflows/release.yml`): `flutter-filament-web-<tag>.zip` ve bir `.sha256` dosyası; içinde `flutter_filament.js`, `flutter_filament.wasm` ve bir `README.md` taşıyan tek bir `flutter-filament-web-<tag>` klasörü.
+
+`ensure` editörün kendi release'inin arşivini indirir; o release'te yoksa (HTTP 404) ya da editör bir geliştirme build'iyse (tag yok), GitHub releases API'sinden arşivi ve `.sha256` dosyasını taşıyan en yeni taslak olmayan release'i bulur. Arşiv açılmadan önce `.sha256` ile doğrulanır (`ReleaseAssets.fetch`), `<root>/module`'e açılır; oradaki `lumina-web-module.json` geldiği release'i (`tag`), isteyen editör sürümünü (`requestedTag`), doğrulanan `sha256`'yı ve `fetchedAt`'i kaydeder. Aynı editör sürümü için yapılmış kurulum ağa çıkmadan yeniden kullanılır; başka bir sürüm için yapılmışsa yeniden indirilir. Başarısız ya da yarıda kalan bir çalışma önceki kurulumu korur. Varsayılan kök `LuminaDataDir.webModuleRoot()`; `LUMINA_RELEASE_BASE_URL` ve `LUMINA_RELEASE_API_URL` indirmeyi ve listeyi yönlendirir (aynalar).
+
+**Üyeler:**
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `fileNames` | `static const List<String> fileNames` | `flutter_filament.js`, `flutter_filament.wasm`. |
+| `markerFileName` | `static const String markerFileName` | `lumina-web-module.json`. |
+| `defaultApiUrl` / `apiUrlVariable` | `static const String` | GitHub releases listesi ve onu yönlendiren değişken. |
+| `baseName` / `archiveName` | `static String baseName(String tag)` / `archiveName(String tag)` | `flutter-filament-web-<tag>` ve `flutter-filament-web-<tag>.zip`. |
+| `moduleDir` | `static Directory moduleDir(Directory root)` | `<root>/module`. |
+| `defaultRoot` | `static Directory defaultRoot()` | `LuminaDataDir.webModuleRoot()`. |
+| `installed` | `static FlutterFilamentWebInstall? installed([Directory? root])` | İşaret dosyasıyla birlikte açılmış modül; yoksa ya da eksikse null. |
+| `ensure` | `static Future<FlutterFilamentWebInstall> ensure({required String requestedTag, Directory? root, void Function(double, String)? onProgress, String? baseUrl, String? apiUrl, bool force = false, HttpClient? httpClient, Map<String, String>? environment})` | Modülü `requestedTag` editör sürümü için (geliştirme build'inde boş) yukarıdaki gibi kurar. `FlutterFilamentWebPrebuiltException` fırlatır (ağ yok, checksum uyuşmazlığı, asset'i taşıyan release yok). |
+| `newestTagWithModule` | `static Future<String?> newestTagWithModule(String apiUrl, {HttpClient? httpClient, Set<String> skip = const {}})` | Listede arşivi ve `.sha256` dosyasını taşıyan en yeni taslak olmayan release. |
+
+### `class FlutterFilamentWebInstall`
+
+İndirilmiş bir modül: `directory` (iki dosya), `tag` (geldiği release), `requestedTag` (isteyen editör sürümü) ve `sha256`.
 
 ## `lib/src/services/plugin_host_patcher_service.dart`
 

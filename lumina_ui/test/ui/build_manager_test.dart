@@ -23,6 +23,8 @@ void main() {
 
   setUp(() {
     tempDir = Directory.systemTemp.createTempSync('lumina_build_manager_ui_');
+    // The editor's downloaded web module stays out: only what a test sets up counts.
+    LuminaDataDir.override = Directory('${tempDir.path}/lumina_data');
     projDir = Directory('${tempDir.path}/bm_game')..createSync(recursive: true);
     Directory('${projDir.path}/contents/levels').createSync(recursive: true);
     Directory('${projDir.path}/contents/materials').createSync(recursive: true);
@@ -39,6 +41,7 @@ void main() {
   });
 
   tearDown(() {
+    LuminaDataDir.override = null;
     if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
   });
 
