@@ -6,7 +6,6 @@ import 'package:vector_math/vector_math_64.dart';
 
 import 'package:lumina/src/animation/motion_matching/motion_matching_player.dart';
 import 'package:lumina/src/animation/motion_matching/pose_search_database_runtime.dart';
-import 'package:lumina/src/animation/motion_matching/spring_math.dart';
 import 'package:lumina/src/animation/motion_matching/trajectory_predictor.dart';
 import 'package:lumina/src/components/base/actor_component.dart';
 import 'package:lumina/src/components/mesh/animated_mesh_component.dart';
@@ -59,14 +58,12 @@ abstract final class LuminaMotionMatchingCharacter {
   }
 
   /// Turns [actor] toward its movement with the predictor's facing spring
-  /// (what the prediction assumed).
+  /// (what the prediction assumed), which keeps its own velocity from frame
+  /// to frame (see [LuminaTrajectoryPredictor.turnFacing]).
   static void orientToMovement(LuminaActor actor, LuminaMotionMatchingPlayer player, LuminaMotionMatchingInput input, double dt) {
     final d = input.desiredVelocity;
     if (Vector3(d.x, 0, d.z).length < 1e-3) return;
-    final goal = luminaWorldYaw(d);
-    final (yaw, _) = LuminaSpringMath.springAngle(
-        input.facingYaw, player.predictor.yawVelocity, goal, player.predictor.facingHalflife, dt);
-    setFacingYaw(actor, yaw);
+    setFacingYaw(actor, player.predictor.turnFacing(input.facingYaw, luminaWorldYaw(d), dt));
   }
 
   /// Draws the desired (green) and matched (orange) trajectories for one

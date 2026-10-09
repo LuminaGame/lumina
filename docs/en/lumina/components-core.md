@@ -327,6 +327,7 @@ A camera's authored settings as one property map, read the one way every consume
 | `socketWorldLocation` | `Vector3 get socketWorldLocation` | Calculates desired socket location in world space. |
 | `socketWorldRotation` | `Quaternion get socketWorldRotation` | Calculates desired socket rotation in world space. |
 | `onTick` | `void onTick(double deltaTime)` | Callback invoked when the corresponding event is triggered. |
+| `onRenderPrep` | `void onRenderPrep(LuminaWorld world)` | With `bUsePawnControlRotation`, puts the children back at the socket rotation after every actor ticked (moved by the arm's movement since its tick), so an owner turned later in the frame (an Animation Blueprint turning the pawn toward its movement) does not turn or orbit the camera. |
 
 ## `lib/src/components/player/input_binding.dart`
 

@@ -48,6 +48,8 @@ Measured on the sample's 1879 clips onto a MetaHuman (1201 nodes, Windows): 33 s
 
 `test/smoke/game_animation_sample_ragdoll_smoke_test.dart` walks the MetaHuman off the 7 m block: it goes limp in the air, lands, settles, gets up with a get-up clip, then R makes it limp and R again gets it up; PNG per phase, a video, and the fall / get-up times, joint errors and ragdoll frame cost in the metrics.
 
+`test/smoke/game_animation_sample_facing_smoke_test.dart` drives the character at a game's varying frame times (1/30 to 1/90 s): walking, running and sprinting straight, running and walking diagonally, and running while the camera turns. Per frame it measures the capsule's, the pelvis's and the follow camera's yaw and checks that the capsule and the camera hold their heading (yaw-rate sign changes under 1 per second, swing about the 0.5 s trend under 1.5°); PNG per phase, a video, the oscillation per phase in the metrics and the per-frame yaws in `build/gasp_facing_frames.json`.
+
 ## Not covered
 
 The sample's interactions, slides, aim offsets, look-at and ragdoll clips (and the airborne traversal catches and the wall climb beyond its start) are imported into the library asset but nothing plays them: the engine has no interaction or slide logic and no aim offset on Motion Matching states. Of the ragdoll clips only the two standing get-ups and one flail play. Crouching does not shrink the capsule. The level export's landscape and Blueprint actors (teleporters, buttons, target dummy) are not rebuilt.

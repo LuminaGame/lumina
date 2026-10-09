@@ -5,6 +5,7 @@ import 'package:lumina/src/collision/shapes.dart';
 import 'package:lumina/src/components/base/scene_component.dart';
 import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/src/object/pawn.dart';
+import 'package:lumina/src/world/world.dart';
 
 class LuminaSpringArmComponent extends LuminaSceneComponent {
   double targetArmLength = 300.0; // cm
@@ -45,6 +46,7 @@ class LuminaSpringArmComponent extends LuminaSceneComponent {
   final Vector3 _forwardVec = Vector3.zero();
   final Matrix4 _scratchMatrix = Matrix4.identity();
   final HitResult _hitResult = HitResult();
+  final Vector3 _armLocationAtTick = Vector3.zero();
 
   LuminaSpringArmComponent({
     super.key,
@@ -187,24 +189,31 @@ class LuminaSpringArmComponent extends LuminaSceneComponent {
     _socketWorldRotation.setFrom(_currentRotation);
 
     // 6) Write socket transform to every attached child
+    _armLocationAtTick.setFrom(worldLocation);
+    _placeChildren(_socketWorldLocation, _socketWorldRotation);
+  }
+
+  /// Puts every attached child at the world [location] and [rotation]
+  /// (written as transforms relative to this arm).
+  void _placeChildren(Vector3 location, Quaternion rotation) {
+    final invRot = worldRotation.clone()..inverse();
+    final armLocation = worldLocation;
     for (final child in childComponents) {
-      // Child relative location = socketWorldLocation - child's parent's world location (which is arm worldLocation? No, child parent is ARM)
-      // Actually, we want child.worldLocation = socketWorldLocation.
-      // So relative = socketWorldLocation in local space of ARM.
-      
-      // Let's invert ARM's world transform
-      _scratchVec.setFrom(_socketWorldLocation);
-      _scratchVec.sub(worldLocation);
-      
-      final invRot = worldRotation.clone();
-      invRot.inverse();
-      _scratchVec.applyQuaternion(invRot);
-      
-      child.relativeLocation.setFrom(_scratchVec);
-      
-      _scratchQuat.setFrom(_socketWorldRotation);
-      final childRelRot = invRot * _scratchQuat;
-      child.relativeRotation.setFrom(childRelRot);
+      child.relativeLocation.setFrom((location - armLocation)..applyQuaternion(invRot));
+      child.relativeRotation.setFrom(invRot * rotation);
     }
+  }
+
+  /// A boom on the control rotation keeps its camera turned as the control
+  /// rotation says, however its owner turned after this arm ticked (an
+  /// Animation Blueprint turning the pawn toward its movement later in the
+  /// same frame): the children were written relative to the arm, so they
+  /// would otherwise turn — and orbit — with the owner until the next tick.
+  /// They still follow the arm's movement since the tick.
+  @override
+  void onRenderPrep(LuminaWorld world) {
+    super.onRenderPrep(world);
+    if (!bUsePawnControlRotation || childComponents.isEmpty) return;
+    _placeChildren(_socketWorldLocation + (worldLocation - _armLocationAtTick), _socketWorldRotation);
   }
 }

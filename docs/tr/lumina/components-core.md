@@ -327,6 +327,7 @@ Bir kameranın yazılmış ayarları tek bir özellik haritası olarak; her tük
 | `socketWorldLocation` | `Vector3 get socketWorldLocation` | Calculates desired socket location in world space. |
 | `socketWorldRotation` | `Quaternion get socketWorldRotation` | Calculates desired socket rotation in world space. |
 | `onTick` | `void onTick(double deltaTime)` | Olay tetiklendiğinde çalışan geri çağırım metodudur. |
+| `onRenderPrep` | `void onRenderPrep(LuminaWorld world)` | `bUsePawnControlRotation` açıkken, tüm aktörler tick ettikten sonra çocukları soket dönüşüne geri koyar (kolun tick'ten beri yaptığı hareket kadar kaydırarak); böylece sahibin karede daha sonra dönmesi (pawn'ı hareketine çeviren bir Animation Blueprint) kamerayı döndürmez ya da etrafında yörüngeye sokmaz. |
 
 ## `lib/src/components/player/input_binding.dart`
 

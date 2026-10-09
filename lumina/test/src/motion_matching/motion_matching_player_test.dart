@@ -175,6 +175,43 @@ void main() {
       expect(played, ['Idle', 'Start', 'WalkF', 'Stop', 'Idle']);
     });
 
+    test('turning toward the movement settles without swinging back and forth when frame times vary', () {
+      final player = LuminaMotionMatchingPlayer(db);
+      final actor = LuminaActor(root: LuminaSceneComponent());
+      LuminaMotionMatchingCharacter.setFacingYaw(actor, 0.0);
+      // A game's frame times: mostly 60 Hz with faster and slower frames.
+      const frameTimes = [1 / 60, 1 / 60, 1 / 60, 1 / 50, 1 / 75, 1 / 40, 1 / 90, 1 / 30];
+      final random = math.Random(7);
+      const goal = math.pi / 2;
+      final yaws = <double>[];
+      for (var i = 0; i < 240; i++) {
+        final dt = frameTimes[random.nextInt(frameTimes.length)];
+        final input = LuminaMotionMatchingInput(
+          position: Vector3.zero(),
+          facingYaw: LuminaMotionMatchingCharacter.facingYaw(actor),
+          velocity: Vector3(500, 0, 0),
+          desiredVelocity: Vector3(500, 0, 0),
+        );
+        // The order of a frame: the Animation Blueprint turns the pawn, then
+        // the mesh evaluates the player's pose.
+        LuminaMotionMatchingCharacter.orientToMovement(actor, player, input, dt);
+        player.update(dt, input);
+        yaws.add(LuminaMotionMatchingCharacter.facingYaw(actor));
+      }
+      var flips = 0;
+      var lastSign = 0.0;
+      for (var i = 1; i < yaws.length; i++) {
+        final d = yaws[i] - yaws[i - 1];
+        if (d.abs() < 1e-4) continue;
+        if (lastSign != 0 && d.sign != lastSign) flips++;
+        lastSign = d.sign;
+      }
+      final overshoot = yaws.map((y) => y - goal).reduce(math.max);
+      expect(flips, lessThanOrEqualTo(1), reason: 'the turn reverses $flips times');
+      expect(overshoot, lessThan(0.05), reason: 'overshoots the movement direction by ${overshoot.toStringAsFixed(3)} rad');
+      expect(yaws.last, closeTo(goal, 1e-3));
+    });
+
     test('searches every interval, at once on a sharp input change, and keeps the loop under constant input', () {
       final player = LuminaMotionMatchingPlayer(db);
       run(player, [(1.0, 0.0)]);

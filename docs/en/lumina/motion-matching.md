@@ -53,7 +53,7 @@ Measured on the Game Animation Sample (UEFN mannequin) set, Windows, Dart JIT:
 
 ### Trajectory prediction
 
-`LuminaTrajectoryPredictor` records where the character has been (the past samples) and predicts where it will be: each horizontal velocity component follows an exact critically damped spring toward the desired velocity (`velocityHalflife` 0.2 s, `LuminaSpringMath.springCharacter`), the facing a spring toward the desired yaw (`facingHalflife` 0.25 s). The desired velocity is the movement component's last input (`LuminaCharacterMovementComponent.lastInputVector`, clamped to length 1) × its walk speed; the desired facing is the movement direction (orient to movement) or the pawn's own facing (strafing).
+`LuminaTrajectoryPredictor` records where the character has been (the past samples) and predicts where it will be: each horizontal velocity component follows an exact critically damped spring toward the desired velocity (`velocityHalflife` 0.2 s, `LuminaSpringMath.springCharacter`), the facing a spring toward the desired yaw (`facingHalflife` 0.25 s). When the character is turned by that spring (`turnFacing(yaw, goal, dt)`, which orient to movement uses) the spring keeps its own yaw velocity from frame to frame; otherwise `yawVelocity` is estimated from the recorded facings. A velocity estimated back from the facings would divide a turn by the next frame's time, and with frame times that vary the facing would overshoot and swing left and right. The desired velocity is the movement component's last input (`LuminaCharacterMovementComponent.lastInputVector`, clamped to length 1) × its walk speed; the desired facing is the movement direction (orient to movement) or the pawn's own facing (strafing).
 
 ### The player
 
@@ -67,7 +67,7 @@ Measured on the Game Animation Sample (UEFN mannequin) set, Windows, Dart JIT:
 
 ### `LuminaMotionMatchingComponent`
 
-For a code-driven character: `LuminaMotionMatchingComponent(databasePath: …)` (or `runtime:`) finds the owner's animated mesh and movement component, loads the database with `LuminaPoseSearchDatabaseRuntime.load` (shared per path; the `.posedb` is used when its fingerprint matches, otherwise the index is rebuilt in the background and, on disk, written back), and feeds the player each tick. `orientToMovement` turns the owner toward its movement with the predictor's facing spring; `desiredYaw` gives a facing to keep (strafing); `requiredTags`; `debugDraw` adds the desired (green) and matched (orange) trajectories as world debug lines (`LuminaWorld.addDebugShape`).
+For a code-driven character: `LuminaMotionMatchingComponent(databasePath: …)` (or `runtime:`) finds the owner's animated mesh and movement component, loads the database with `LuminaPoseSearchDatabaseRuntime.load` (shared per path; the `.posedb` is used when its fingerprint matches, otherwise the index is rebuilt in the background and, on disk, written back), and feeds the player each tick. `orientToMovement` turns the owner toward its movement with the predictor's facing spring (`LuminaTrajectoryPredictor.turnFacing`); `desiredYaw` gives a facing to keep (strafing); `requiredTags`; `debugDraw` adds the desired (green) and matched (orange) trajectories as world debug lines (`LuminaWorld.addDebugShape`).
 
 ## In an Animation Blueprint
 

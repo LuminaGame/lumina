@@ -39,6 +39,36 @@ void main() {
           reason: 'socket direction ${behind.normalized()} vs forward $forward');
     });
 
+    test('a boom on the control rotation keeps its camera where it put it when the owner turns later in the frame', () {
+      final world = LuminaWorld(worldType: LuminaWorldType.game);
+      final arm = LuminaSpringArmComponent(targetArmLength: 300.0)
+        ..bUsePawnControlRotation = true
+        ..bEnableCameraLag = false
+        ..bEnableCameraRotationLag = false
+        ..bDoCollisionTest = false;
+      final camera = LuminaCameraComponent();
+      final pawn = LuminaPawn(location: Vector3(0, 90, 0))..addComponent(arm);
+      camera.attachToComponent(arm);
+      pawn.addComponent(camera);
+      final pc = LuminaPlayerController();
+      pc.possess(pawn);
+      pc.controlRotation.setValues(-10.0, 30.0, 0.0);
+      arm.onTick(1 / 60);
+      final location = camera.worldLocation.clone();
+      final rotation = camera.worldRotation.clone();
+      // Later in the same frame the body turns (an Animation Blueprint
+      // turning the pawn toward its movement) and moves a step.
+      pawn.actorRotation = Quaternion.axisAngle(Vector3(0, 1, 0), 0.6);
+      pawn.actorLocation = Vector3(5, 90, 0);
+      pawn.onRenderPrep(world);
+      final turned = camera.worldRotation;
+      final dot = (turned.x * rotation.x + turned.y * rotation.y + turned.z * rotation.z + turned.w * rotation.w).abs();
+      expect(dot, closeTo(1.0, 1e-9), reason: 'the camera turned with the body');
+      // It follows the body's step, not its turn.
+      expect((camera.worldLocation - (location + Vector3(5, 0, 0))).length, lessThan(1e-6),
+          reason: '${camera.worldLocation} vs ${location + Vector3(5, 0, 0)}');
+    });
+
     test('luminaQuaternionToControlRotation undoes luminaControlRotationToQuaternion', () {
       for (final (p, y, r) in [(0.0, 40.0, 0.0), (-30.0, 125.0, 0.0), (20.0, -70.0, 15.0), (0.0, 180.0, 0.0)]) {
         final back = luminaQuaternionToControlRotation(luminaControlRotationToQuaternion(p, y, r));

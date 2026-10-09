@@ -53,7 +53,7 @@ Game Animation Sample (UEFN mannequin) kümesinde, Windows, Dart JIT ile ölçü
 
 ### Yörünge tahmini
 
-`LuminaTrajectoryPredictor` karakterin nerede olduğunu kaydeder (geçmiş örnekler) ve nerede olacağını tahmin eder: her yatay hız bileşeni istenen hıza doğru tam kritik sönümlü bir yayı izler (`velocityHalflife` 0.2 sn, `LuminaSpringMath.springCharacter`), bakış yönü istenen yaw'a doğru bir yayı (`facingHalflife` 0.25 sn). İstenen hız, hareket bileşeninin son girdisi (`LuminaCharacterMovementComponent.lastInputVector`, uzunluğu 1'e kırpılır) × yürüme hızıdır; istenen yön hareket yönü (harekete dön) ya da pawn'ın kendi yönüdür (yan adım).
+`LuminaTrajectoryPredictor` karakterin nerede olduğunu kaydeder (geçmiş örnekler) ve nerede olacağını tahmin eder: her yatay hız bileşeni istenen hıza doğru tam kritik sönümlü bir yayı izler (`velocityHalflife` 0.2 sn, `LuminaSpringMath.springCharacter`), bakış yönü istenen yaw'a doğru bir yayı (`facingHalflife` 0.25 sn). Karakter bu yayla döndürüldüğünde (`turnFacing(yaw, goal, dt)`; harekete dönme bunu kullanır) yay kendi yaw hızını kareden kareye korur; aksi halde `yawVelocity` kaydedilen yönlerden tahmin edilir. Yönlerden geriye doğru tahmin edilen bir hız, bir dönüşü sonraki karenin süresine böler ve kare süreleri değiştikçe bakış yönü hedefi aşıp sağa sola salınır. İstenen hız, hareket bileşeninin son girdisi (`LuminaCharacterMovementComponent.lastInputVector`, uzunluğu 1'e kırpılır) × yürüme hızıdır; istenen yön hareket yönü (harekete dön) ya da pawn'ın kendi yönüdür (yan adım).
 
 ### Oynatıcı
 
@@ -67,7 +67,7 @@ Game Animation Sample (UEFN mannequin) kümesinde, Windows, Dart JIT ile ölçü
 
 ### `LuminaMotionMatchingComponent`
 
-Kodla sürülen bir karakter için: `LuminaMotionMatchingComponent(databasePath: …)` (ya da `runtime:`) sahibinin animasyonlu mesh'ini ve hareket bileşenini bulur, veritabanını `LuminaPoseSearchDatabaseRuntime.load` ile yükler (yol başına paylaşılır; `.posedb` parmak izi uyuyorsa kullanılır, yoksa dizin arka planda yeniden kurulur ve diskteyse geri yazılır) ve oynatıcıyı her tick besler. `orientToMovement` sahibini tahmincinin yön yayıyla hareketine çevirir; `desiredYaw` korunacak yönü verir (yan adım); `requiredTags`; `debugDraw` istenen (yeşil) ve eşleşen (turuncu) yörüngeleri dünya debug çizgileri olarak ekler (`LuminaWorld.addDebugShape`).
+Kodla sürülen bir karakter için: `LuminaMotionMatchingComponent(databasePath: …)` (ya da `runtime:`) sahibinin animasyonlu mesh'ini ve hareket bileşenini bulur, veritabanını `LuminaPoseSearchDatabaseRuntime.load` ile yükler (yol başına paylaşılır; `.posedb` parmak izi uyuyorsa kullanılır, yoksa dizin arka planda yeniden kurulur ve diskteyse geri yazılır) ve oynatıcıyı her tick besler. `orientToMovement` sahibini tahmincinin yön yayıyla (`LuminaTrajectoryPredictor.turnFacing`) hareketine çevirir; `desiredYaw` korunacak yönü verir (yan adım); `requiredTags`; `debugDraw` istenen (yeşil) ve eşleşen (turuncu) yörüngeleri dünya debug çizgileri olarak ekler (`LuminaWorld.addDebugShape`).
 
 ## Bir Animation Blueprint'te
 

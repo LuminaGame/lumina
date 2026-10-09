@@ -48,6 +48,8 @@ flutter test tool/game_animation_sample/build_game_animation_sample_test.dart
 
 `test/smoke/game_animation_sample_ragdoll_smoke_test.dart`, MetaHuman'ı 7 m'lik bloktan yürütüp düşürür: havada gevşer, yere iner, durulur, bir kalkma klibiyle kalkar, sonra R onu gevşetir ve yeniden R kaldırır; her aşama için PNG, bir video ve metriklerde düşme / kalkma süreleri, eklem hataları ve ragdoll kare maliyeti.
 
+`test/smoke/game_animation_sample_facing_smoke_test.dart` karakteri bir oyunun değişken kare süreleriyle (1/30 – 1/90 sn) sürer: düz yürüme, koşma ve sprint, çapraz koşma ve yürüme, kamera dönerken koşma. Her karede kapsülün, pelvisin ve takip kamerasının yaw'ını ölçer; kapsülün ve kameranın yönünü koruduğunu denetler (yaw hızının işaret değişimi saniyede 1'in altında, 0.5 sn'lik eğilim etrafındaki salınım 1.5°'nin altında); her aşama için PNG, bir video, metriklerde aşama başına salınım ve `build/gasp_facing_frames.json` içinde kare kare yaw'lar.
+
 ## Kapsanmayanlar
 
 Örneğin etkileşim, kayma, aim offset, look-at ve ragdoll clip'leri (ve havadaki traversal yakalamaları ile başlangıcından sonraki duvar tırmanışı) kütüphane asset'ine aktarılır ama hiçbir şey onları oynatmaz: motorda etkileşim ya da kayma mantığı, Motion Matching state'lerinde aim offset yoktur. Ragdoll clip'lerinden yalnızca iki ayakta kalkma ve bir çırpınma oynar. Çömelme kapsülü küçültmez. Level dışa aktarımının landscape'i ve Blueprint actor'ları (ışınlayıcılar, düğmeler, hedef mankeni) yeniden kurulmaz.

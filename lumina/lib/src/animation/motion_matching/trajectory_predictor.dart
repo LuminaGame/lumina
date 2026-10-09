@@ -33,12 +33,28 @@ class LuminaTrajectoryPredictor {
   final Vector3 _acceleration = Vector3.zero();
   double? _lastYaw;
   double _yawVelocity = 0.0;
+  bool _facingDriven = false;
 
   /// The acceleration estimated from the recorded velocities (cm/s²).
   Vector3 get acceleration => _acceleration;
 
-  /// The yaw velocity estimated from the recorded facings (rad/s).
+  /// The facing's yaw velocity (rad/s): the facing spring's own velocity
+  /// while [turnFacing] turns the character, else estimated from the
+  /// recorded facings.
   double get yawVelocity => _yawVelocity;
+
+  /// Turns a character facing [yaw] toward [goal] for [dt] seconds with the
+  /// facing spring ([facingHalflife]) and returns the new yaw. The spring
+  /// keeps its velocity for the next frame and the prediction: a velocity
+  /// estimated back from the recorded facings would divide the last turn by
+  /// this frame's time instead of the time it was made in, and with frame
+  /// times that vary the spring would overshoot and swing back and forth.
+  double turnFacing(double yaw, double goal, double dt) {
+    final (next, velocity) = LuminaSpringMath.springAngle(yaw, _yawVelocity, goal, facingHalflife, dt);
+    _yawVelocity = velocity;
+    _facingDriven = true;
+    return next;
+  }
 
   /// Seconds of history kept.
   double historySeconds = 1.5;
@@ -59,7 +75,12 @@ class LuminaTrajectoryPredictor {
     }
     _lastVelocity = velocity.clone();
     final lastYaw = _lastYaw;
-    if (lastYaw != null && dt > 1e-6) _yawVelocity = LuminaSpringMath.wrap(yaw - lastYaw) / dt;
+    if (_facingDriven) {
+      // The facing spring knows its velocity (see [turnFacing]).
+      _facingDriven = false;
+    } else if (lastYaw != null && dt > 1e-6) {
+      _yawVelocity = LuminaSpringMath.wrap(yaw - lastYaw) / dt;
+    }
     _lastYaw = yaw;
   }
 
@@ -70,6 +91,7 @@ class LuminaTrajectoryPredictor {
     _lastYaw = null;
     _acceleration.setZero();
     _yawVelocity = 0.0;
+    _facingDriven = false;
   }
 
   /// The trajectory at [times] (seconds; negative = past) from the
