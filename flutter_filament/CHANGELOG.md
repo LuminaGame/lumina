@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- External post pass and Vulkan device features (prebuilt `1.77.2-lumina.9`, Filament patch `0011`): a hook
+  for passes on the HDR frame after TAA / FSR3 and before bloom and colour grading (`View::setExternalPostPass`,
+  colour, depth and an output-resolution motion image with a history-valid flag), an `HDR` stage for external
+  upscalers, eight external-pass images, and Vulkan feature structures requested before engine creation
+  (`VulkanFeatures.requestFeature`, `VulkanFeatures.isFeatureEnabled`). `DebugPostPass` is a compute-shader pass
+  on the hook (passthrough, motion, history, invert).
 - Web: lit shaders no longer sample the Vulkan-only ray query textures (prebuilt `1.77.2-lumina.8`, Filament
   patch `0010`). On OpenGL and WebGL a lit material with eight samplers and fog (the glTF ubershader) had 16
   active fragment samplers, and Chrome's GPU process crashed on it under ANGLE/Direct3D 11: the page went

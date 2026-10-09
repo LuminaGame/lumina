@@ -17,6 +17,7 @@ are upstream v1.77.2 with exactly these files applied in order.
 | `0007-vulkan-ray-query.patch` | `filament/backend/include/backend/AccelerationStructure.h` (new), `backend/src/vulkan/VulkanAccelerationStructure.*` (new), `backend/{DriverEnums.h,Handle.h,private/backend/{Driver.h,DriverAPI.inc}}`, the Vulkan driver, context, platform, handles, buffer and descriptor-set caches, the other drivers' no-ops, `filament/include/filament/{Engine,LightManager,RenderableManager,Scene,View}.h`, `filament/src/{PostProcessManager,RenderPrimitive,RendererUtils,MaterialParser,MaterialDefinition}.*`, `filament/src/details/{Renderer,Scene,View,VertexBuffer,IndexBuffer,Engine}.*`, `filament/src/ds/*`, `filament/src/materials/rt/` (new), `libs/filabridge` (binding points, chunk type), `libs/filamat` (the `rayQuery` material flag, GLSL 460 + `GL_EXT_ray_query`, SPIR-V 1.4), `shaders/src/surface_light_directional.fs`, `third_party/smol-v/source/smolv.cpp` | Vulkan ray query: acceleration structures as backend objects, a per-scene BLAS/TLAS kept by `Scene::setRayTracingEnabled`, hard ray-traced sun shadows (`ShadowOptions::rayTraced`) and single-ray visibility queries (`View::traceRay`). |
 | `0009-fsr3-upscaler-frame-generation.patch` | `filament/include/filament/{Options,SwapChain}.h`, `filament/src/{PostProcessManager,FrameHistory}.*`, `filament/src/details/{Renderer,View,SwapChain}.*`, `filament/src/materials/fsr3/*` (new), `filament/CMakeLists.txt`, `backend/DriverEnums.h`, `backend/src/vulkan/platform/VulkanPlatformSwapChainImpl.*`, `backend/{include/backend/platforms/PlatformWGL.h,src/opengl/platforms/PlatformWGL.cpp}` | The FidelityFX Super Resolution 3.1 upscaler and frame generation as fragment passes (`TemporalAntiAliasingOptions::algorithm`, `frameGeneration`), fed by the structure pass motion vectors of 0004, and the `SwapChain::CONFIG_DISABLE_VSYNC` flag (Vulkan, WGL). FidelityFX SDK shader code is MIT licensed (AMD). |
 | `0010-ray-query-samplers-vulkan-only.patch` | `shaders/src/surface_light_{directional,punctual}.fs` | The ray-traced shadow fetch of 0007 and the ReSTIR light evaluation of 0008 are compiled for Vulkan only, so OpenGL and WebGL lit shaders spend no fragment sampler on them (Chrome's ANGLE/Direct3D 11 crashed on a 16th). |
+| `0011-external-post-pass-and-device-features.patch` | `backend/include/backend/{ExternalPass.h,platforms/VulkanPlatform.h}`, `backend/src/vulkan/platform/VulkanPlatform.cpp`, `filament/include/filament/View.h`, `filament/src/{PostProcessManager,FrameHistory,View}.*`, `filament/src/details/{Renderer,View}.*`, `filament/src/materials/rt/{postPassMotion.mat (new),rt.*}`, `filament/CMakeLists.txt` | An external post pass on the HDR frame before colour grading (`View::setExternalPostPass`) with output-resolution motion and a history-valid flag, an `HDR` stage for external upscalers, eight external-pass images, and client-requested Vulkan device feature structures (`Customization::extraDeviceFeatures`). |
 
 ## 0001: libassimp glTF 2 `ReplaceData_joint` bounds
 
@@ -267,3 +268,29 @@ ReSTIR evaluation (`evaluateRestirLight` and its call) in `surface_light_punctua
 descriptor-set layouts and `MATERIAL_VERSION` are unchanged; on the other APIs the unused
 samplers are inactive. Materials compiled before the patch keep sampling the placeholder
 until they are rebuilt.
+## 0011: external post pass, HDR-stage upscalers and device feature structures
+
+Patch 0006 lets a library outside Filament upscale the LDR frame after colour grading. Neural
+passes (a denoiser, a learned post-process, a neural rendering network) need the frame earlier:
+anti-aliased or upscaled but still linear HDR, with depth and motion at that resolution.
+`View::setExternalPostPass(ExternalPostPass*)` registers such a pass; the renderer calls it after
+the TAA or FSR3 resolve and before depth of field, bloom and colour grading, on Vulkan only.
+`PostProcessManager::externalPostPass` first renders the `postPassMotion` material (Vulkan-only
+resources next to the ray query materials) into an RGBA16F motion image at the colour's size: the
+velocity buffer of patch 0004 rescaled, or, where it has nothing (motion vectors off, the sky),
+the surface the jittered depth describes projected by this and the previous frame's unjittered
+cameras (`FrameHistoryEntry::postPass`); `b` flags a previous position on screen, `a` the sky.
+It then issues `externalPass` with colour, depth, motion and an RGBA16F storage output that
+replaces the colour. `View::resetExternalPostPassHistory()` reports no usable history for one
+frame. `ExternalPassFrame` gains the exposure, the view and unjittered projection matrices and
+two flags; `ExternalPassContext::MAX_IMAGES` grows from 4 to 8 for guide images.
+`ExternalUpscaler::stage()` (default `DISPLAY`, the 0006 behaviour) can return `HDR`: the
+upscaler then replaces the TAA resolve on the linear frame, writes RGBA16F at the output
+resolution, and bloom and colour grading run unscaled after it.
+`VulkanPlatform::Customization::extraDeviceFeatures` lists feature structures (sType, size,
+extension, byte offsets of requested `VkBool32` members). Filament queries each through
+`vkGetPhysicalDeviceFeatures2`, enables the requested members the device supports and chains
+the structure, skipping (with a log line) unsupported members, structures whose extension is not
+enabled and structure types it already chains; `isExtraDeviceFeatureEnabled` and
+`isDeviceExtensionEnabled` report the result. Colour grading as a subpass is disabled while an
+external post pass is registered.

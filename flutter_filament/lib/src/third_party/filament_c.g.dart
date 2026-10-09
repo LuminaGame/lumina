@@ -1121,146 +1121,6 @@ external ffi.Pointer<ffi.Void> filament_view_get_motion_vector_texture(
   ffi.Pointer<ffi.Void> view,
 );
 
-@ffi.Native<ffi.Bool Function()>()
-external bool filament_dlss_available();
-
-@ffi.Native<ffi.Bool Function()>()
-external bool filament_dlss_request_extensions();
-
-@ffi.Native<ffi.Void Function()>()
-external void filament_dlss_clear_extension_request();
-
-@ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Char>)>()
-external void filament_dlss_set_runtime_dir(ffi.Pointer<ffi.Char> dir);
-
-@ffi.Native<ffi.Bool Function()>()
-external bool filament_ray_tracing_request_extensions();
-
-@ffi.Native<ffi.Void Function()>()
-external void filament_ray_tracing_clear_extension_request();
-
-@ffi.Native<ffi.Bool Function(ffi.Pointer<ffi.Void>)>()
-external bool filament_engine_supports_ray_query(ffi.Pointer<ffi.Void> engine);
-
-@ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>, ffi.Bool)>()
-external void filament_scene_set_ray_tracing_enabled(
-  ffi.Pointer<ffi.Void> scene,
-  bool enabled,
-);
-
-@ffi.Native<ffi.Bool Function(ffi.Pointer<ffi.Void>)>()
-external bool filament_scene_get_ray_tracing_enabled(
-  ffi.Pointer<ffi.Void> scene,
-);
-
-@ffi.Native<ffi.Uint32 Function(ffi.Pointer<ffi.Void>)>()
-external int filament_scene_get_tlas_instance_count(
-  ffi.Pointer<ffi.Void> scene,
-);
-
-@ffi.Native<ffi.Uint64 Function(ffi.Pointer<ffi.Void>)>()
-external int filament_scene_get_tlas_build_nanos(ffi.Pointer<ffi.Void> scene);
-
-@ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>, ffi.Uint32, ffi.Bool)>()
-external void filament_renderable_set_ray_tracing_visible(
-  ffi.Pointer<ffi.Void> engine,
-  int entity,
-  bool visible,
-);
-
-@ffi.Native<ffi.Bool Function(ffi.Pointer<ffi.Void>, ffi.Uint32)>()
-external bool filament_renderable_is_ray_tracing_visible(
-  ffi.Pointer<ffi.Void> engine,
-  int entity,
-);
-
-@ffi.Native<
-  ffi.Bool Function(
-    ffi.Pointer<ffi.Void>,
-    ffi.Pointer<ffi.Void>,
-    ffi.Pointer<ffi.Float>,
-    ffi.Pointer<ffi.Float>,
-    ffi.Float,
-    ffi.Pointer<ffi.Float>,
-    ffi.Pointer<ffi.Uint32>,
-    ffi.Pointer<ffi.Uint32>,
-  )
->()
-external bool filament_scene_trace_visibility(
-  ffi.Pointer<ffi.Void> engine,
-  ffi.Pointer<ffi.Void> scene,
-  ffi.Pointer<ffi.Float> origin3,
-  ffi.Pointer<ffi.Float> direction3,
-  double max_distance,
-  ffi.Pointer<ffi.Float> out_distance,
-  ffi.Pointer<ffi.Uint32> out_entity,
-  ffi.Pointer<ffi.Uint32> out_primitive,
-);
-
-@ffi.Native<
-  ffi.Void Function(
-    ffi.Pointer<ffi.Void>,
-    ffi.Pointer<ffi.Float>,
-    ffi.Pointer<ffi.Float>,
-    ffi.Float,
-    FilamentRayHitCallback,
-    ffi.Pointer<ffi.Void>,
-  )
->()
-external void filament_view_trace_ray(
-  ffi.Pointer<ffi.Void> view,
-  ffi.Pointer<ffi.Float> origin3,
-  ffi.Pointer<ffi.Float> direction3,
-  double max_distance,
-  FilamentRayHitCallback callback,
-  ffi.Pointer<ffi.Void> user_data,
-);
-
-@ffi.Native<
-  ffi.Pointer<ffi.Void> Function(
-    ffi.Pointer<ffi.Void>,
-    ffi.Pointer<ffi.Void>,
-    ffi.Pointer<filament_dlss_options_t>,
-  )
->()
-external ffi.Pointer<ffi.Void> filament_dlss_create(
-  ffi.Pointer<ffi.Void> engine,
-  ffi.Pointer<ffi.Void> view,
-  ffi.Pointer<filament_dlss_options_t> opts,
-);
-
-@ffi.Native<
-  ffi.Void Function(
-    ffi.Pointer<ffi.Void>,
-    ffi.Pointer<ffi.Uint32>,
-    ffi.Pointer<ffi.Uint32>,
-  )
->()
-external void filament_dlss_get_render_resolution(
-  ffi.Pointer<ffi.Void> dlss,
-  ffi.Pointer<ffi.Uint32> out_w,
-  ffi.Pointer<ffi.Uint32> out_h,
-);
-
-@ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>, ffi.Uint8)>()
-external void filament_dlss_set_quality(
-  ffi.Pointer<ffi.Void> dlss,
-  int quality,
-);
-
-@ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>)>()
-external void filament_dlss_reset_history(
-  ffi.Pointer<ffi.Void> dlss,
-);
-
-@ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>)>()
-external void filament_dlss_destroy(
-  ffi.Pointer<ffi.Void> dlss,
-);
-
-@ffi.Native<ffi.Pointer<ffi.Char> Function()>()
-external ffi.Pointer<ffi.Char> filament_dlss_last_error();
-
 @ffi.Native<
   ffi.Pointer<ffi.Void> Function(
     ffi.Pointer<ffi.Void>,
@@ -2444,43 +2304,6 @@ external void filament_light_set_falloff(
   ffi.Pointer<ffi.Void> engine,
   int entity,
   double radius,
-);
-
-@ffi.Native<
-  ffi.Void Function(ffi.Pointer<ffi.Void>, ffi.Pointer<filament_restir_options>)
->()
-external void filament_view_set_restir_options(
-  ffi.Pointer<ffi.Void> view,
-  ffi.Pointer<filament_restir_options> options,
-);
-
-@ffi.Native<
-  ffi.Void Function(ffi.Pointer<ffi.Void>, ffi.Pointer<filament_restir_options>)
->()
-external void filament_view_get_restir_options(
-  ffi.Pointer<ffi.Void> view,
-  ffi.Pointer<filament_restir_options> out_options,
-);
-
-@ffi.Native<ffi.Bool Function(ffi.Pointer<ffi.Void>)>()
-external bool filament_view_restir_supported(ffi.Pointer<ffi.Void> view);
-
-@ffi.Native<
-  ffi.Void Function(ffi.Pointer<ffi.Void>, ffi.Pointer<filament_restir_stats_t>)
->()
-external void filament_view_get_restir_stats(
-  ffi.Pointer<ffi.Void> view,
-  ffi.Pointer<filament_restir_stats_t> out_stats,
-);
-
-@ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>)>()
-external void filament_view_restir_reset_history(ffi.Pointer<ffi.Void> view);
-
-@ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>, ffi.Uint32, ffi.Float)>()
-external void filament_light_set_restir_sampling_weight(
-  ffi.Pointer<ffi.Void> engine,
-  int entity,
-  double weight,
 );
 
 @ffi.Native<ffi.Float Function(ffi.Pointer<ffi.Void>, ffi.Uint32)>()
@@ -8877,6 +8700,179 @@ external void filament_image_generate_mipmaps(
   int count,
 );
 
+@ffi.Native<ffi.Bool Function()>()
+external bool filament_dlss_available();
+
+@ffi.Native<ffi.Bool Function()>()
+external bool filament_dlss_request_extensions();
+
+@ffi.Native<ffi.Void Function()>()
+external void filament_dlss_clear_extension_request();
+
+@ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Char>)>()
+external void filament_dlss_set_runtime_dir(ffi.Pointer<ffi.Char> dir);
+
+@ffi.Native<
+  ffi.Pointer<ffi.Void> Function(
+    ffi.Pointer<ffi.Void>,
+    ffi.Pointer<ffi.Void>,
+    ffi.Pointer<filament_dlss_options_t>,
+  )
+>()
+external ffi.Pointer<ffi.Void> filament_dlss_create(
+  ffi.Pointer<ffi.Void> engine,
+  ffi.Pointer<ffi.Void> view,
+  ffi.Pointer<filament_dlss_options_t> opts,
+);
+
+@ffi.Native<
+  ffi.Void Function(
+    ffi.Pointer<ffi.Void>,
+    ffi.Pointer<ffi.Uint32>,
+    ffi.Pointer<ffi.Uint32>,
+  )
+>()
+external void filament_dlss_get_render_resolution(
+  ffi.Pointer<ffi.Void> dlss,
+  ffi.Pointer<ffi.Uint32> out_w,
+  ffi.Pointer<ffi.Uint32> out_h,
+);
+
+@ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>, ffi.Uint8)>()
+external void filament_dlss_set_quality(
+  ffi.Pointer<ffi.Void> dlss,
+  int quality,
+);
+
+@ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>)>()
+external void filament_dlss_reset_history(ffi.Pointer<ffi.Void> dlss);
+
+@ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>)>()
+external void filament_dlss_destroy(ffi.Pointer<ffi.Void> dlss);
+
+@ffi.Native<ffi.Pointer<ffi.Char> Function()>()
+external ffi.Pointer<ffi.Char> filament_dlss_last_error();
+
+@ffi.Native<ffi.Bool Function()>()
+external bool filament_ray_tracing_request_extensions();
+
+@ffi.Native<ffi.Void Function()>()
+external void filament_ray_tracing_clear_extension_request();
+
+@ffi.Native<ffi.Bool Function(ffi.Pointer<ffi.Void>)>()
+external bool filament_engine_supports_ray_query(ffi.Pointer<ffi.Void> engine);
+
+@ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>, ffi.Bool)>()
+external void filament_scene_set_ray_tracing_enabled(
+  ffi.Pointer<ffi.Void> scene,
+  bool enabled,
+);
+
+@ffi.Native<ffi.Bool Function(ffi.Pointer<ffi.Void>)>()
+external bool filament_scene_get_ray_tracing_enabled(
+  ffi.Pointer<ffi.Void> scene,
+);
+
+@ffi.Native<ffi.Uint32 Function(ffi.Pointer<ffi.Void>)>()
+external int filament_scene_get_tlas_instance_count(
+  ffi.Pointer<ffi.Void> scene,
+);
+
+@ffi.Native<ffi.Uint64 Function(ffi.Pointer<ffi.Void>)>()
+external int filament_scene_get_tlas_build_nanos(ffi.Pointer<ffi.Void> scene);
+
+@ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>, ffi.Uint32, ffi.Bool)>()
+external void filament_renderable_set_ray_tracing_visible(
+  ffi.Pointer<ffi.Void> engine,
+  int entity,
+  bool visible,
+);
+
+@ffi.Native<ffi.Bool Function(ffi.Pointer<ffi.Void>, ffi.Uint32)>()
+external bool filament_renderable_is_ray_tracing_visible(
+  ffi.Pointer<ffi.Void> engine,
+  int entity,
+);
+
+@ffi.Native<
+  ffi.Bool Function(
+    ffi.Pointer<ffi.Void>,
+    ffi.Pointer<ffi.Void>,
+    ffi.Pointer<ffi.Float>,
+    ffi.Pointer<ffi.Float>,
+    ffi.Float,
+    ffi.Pointer<ffi.Float>,
+    ffi.Pointer<ffi.Uint32>,
+    ffi.Pointer<ffi.Uint32>,
+  )
+>()
+external bool filament_scene_trace_visibility(
+  ffi.Pointer<ffi.Void> engine,
+  ffi.Pointer<ffi.Void> scene,
+  ffi.Pointer<ffi.Float> origin3,
+  ffi.Pointer<ffi.Float> direction3,
+  double max_distance,
+  ffi.Pointer<ffi.Float> out_distance,
+  ffi.Pointer<ffi.Uint32> out_entity,
+  ffi.Pointer<ffi.Uint32> out_primitive,
+);
+
+@ffi.Native<
+  ffi.Void Function(
+    ffi.Pointer<ffi.Void>,
+    ffi.Pointer<ffi.Float>,
+    ffi.Pointer<ffi.Float>,
+    ffi.Float,
+    FilamentRayHitCallback,
+    ffi.Pointer<ffi.Void>,
+  )
+>()
+external void filament_view_trace_ray(
+  ffi.Pointer<ffi.Void> view,
+  ffi.Pointer<ffi.Float> origin3,
+  ffi.Pointer<ffi.Float> direction3,
+  double max_distance,
+  FilamentRayHitCallback callback,
+  ffi.Pointer<ffi.Void> user_data,
+);
+
+@ffi.Native<
+  ffi.Void Function(ffi.Pointer<ffi.Void>, ffi.Pointer<filament_restir_options>)
+>()
+external void filament_view_set_restir_options(
+  ffi.Pointer<ffi.Void> view,
+  ffi.Pointer<filament_restir_options> options,
+);
+
+@ffi.Native<
+  ffi.Void Function(ffi.Pointer<ffi.Void>, ffi.Pointer<filament_restir_options>)
+>()
+external void filament_view_get_restir_options(
+  ffi.Pointer<ffi.Void> view,
+  ffi.Pointer<filament_restir_options> out_options,
+);
+
+@ffi.Native<ffi.Bool Function(ffi.Pointer<ffi.Void>)>()
+external bool filament_view_restir_supported(ffi.Pointer<ffi.Void> view);
+
+@ffi.Native<
+  ffi.Void Function(ffi.Pointer<ffi.Void>, ffi.Pointer<filament_restir_stats_t>)
+>()
+external void filament_view_get_restir_stats(
+  ffi.Pointer<ffi.Void> view,
+  ffi.Pointer<filament_restir_stats_t> out_stats,
+);
+
+@ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>)>()
+external void filament_view_restir_reset_history(ffi.Pointer<ffi.Void> view);
+
+@ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>, ffi.Uint32, ffi.Float)>()
+external void filament_light_set_restir_sampling_weight(
+  ffi.Pointer<ffi.Void> engine,
+  int entity,
+  double weight,
+);
+
 @ffi.Native<
   ffi.Pointer<FilLinearImage> Function(ffi.Pointer<FilLinearImage>, ffi.Uint32)
 >()
@@ -9470,6 +9466,91 @@ external ffi.Pointer<ffi.Void> filament_engine_create_for_canvas(
 @ffi.Native<ffi.Void Function(ffi.Int32)>()
 external void filament_web_destroy_canvas_context(int context);
 
+@ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>)>()
+external void filament_vulkan_request_device_extension(
+  ffi.Pointer<ffi.Char> requester,
+  ffi.Pointer<ffi.Char> name,
+);
+
+@ffi.Native<
+  ffi.Void Function(
+    ffi.Pointer<ffi.Char>,
+    ffi.Uint32,
+    ffi.Uint32,
+    ffi.Uint32,
+    ffi.Pointer<ffi.Char>,
+  )
+>()
+external void filament_vulkan_request_device_feature(
+  ffi.Pointer<ffi.Char> requester,
+  int sType,
+  int structSize,
+  int fieldOffset,
+  ffi.Pointer<ffi.Char> extension,
+);
+
+@ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Char>)>()
+external void filament_vulkan_clear_requests(ffi.Pointer<ffi.Char> requester);
+
+@ffi.Native<ffi.Bool Function(ffi.Pointer<ffi.Void>, ffi.Uint32, ffi.Uint32)>()
+external bool filament_vulkan_device_feature_enabled(
+  ffi.Pointer<ffi.Void> engine,
+  int sType,
+  int fieldOffset,
+);
+
+@ffi.Native<ffi.Bool Function(ffi.Pointer<ffi.Void>, ffi.Pointer<ffi.Char>)>()
+external bool filament_vulkan_device_extension_enabled(
+  ffi.Pointer<ffi.Void> engine,
+  ffi.Pointer<ffi.Char> name,
+);
+
+@ffi.Native<
+  ffi.Pointer<ffi.Void> Function(
+    ffi.Pointer<ffi.Void>,
+    ffi.Pointer<ffi.Void>,
+    ffi.Uint8,
+  )
+>()
+external ffi.Pointer<ffi.Void> filament_post_pass_debug_create(
+  ffi.Pointer<ffi.Void> engine,
+  ffi.Pointer<ffi.Void> view,
+  int mode,
+);
+
+@ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>, ffi.Uint8)>()
+external void filament_post_pass_debug_set_mode(
+  ffi.Pointer<ffi.Void> pass,
+  int mode,
+);
+
+@ffi.Native<ffi.Uint64 Function(ffi.Pointer<ffi.Void>)>()
+external int filament_post_pass_debug_frame_count(ffi.Pointer<ffi.Void> pass);
+
+@ffi.Native<
+  ffi.Void Function(
+    ffi.Pointer<ffi.Void>,
+    ffi.Pointer<ffi.Uint32>,
+    ffi.Pointer<ffi.Uint32>,
+  )
+>()
+external void filament_post_pass_debug_last_size(
+  ffi.Pointer<ffi.Void> pass,
+  ffi.Pointer<ffi.Uint32> out_w,
+  ffi.Pointer<ffi.Uint32> out_h,
+);
+
+@ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>)>()
+external void filament_view_reset_external_post_pass_history(
+  ffi.Pointer<ffi.Void> view,
+);
+
+@ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>)>()
+external void filament_post_pass_debug_destroy(ffi.Pointer<ffi.Void> pass);
+
+@ffi.Native<ffi.Pointer<ffi.Char> Function()>()
+external ffi.Pointer<ffi.Char> filament_post_pass_last_error();
+
 enum FilamentBackend {
   FILAMENT_BACKEND_DEFAULT(0),
   FILAMENT_BACKEND_OPENGL(1),
@@ -9622,60 +9703,6 @@ enum filament_blend_mode {
   };
 }
 
-final class filament_dlss_options_t extends ffi.Struct {
-  @ffi.Uint8()
-  external int quality;
-
-  @ffi.Uint32()
-  external int outputWidth;
-
-  @ffi.Uint32()
-  external int outputHeight;
-
-  @ffi.Bool()
-  external bool hdr;
-
-  @ffi.Bool()
-  external bool autoExposure;
-
-  @ffi.Float()
-  external double sharpness;
-}
-
-enum filament_dlss_quality {
-  FILAMENT_DLSS_MAX_PERFORMANCE(0),
-  FILAMENT_DLSS_BALANCED(1),
-  FILAMENT_DLSS_MAX_QUALITY(2),
-  FILAMENT_DLSS_ULTRA_PERFORMANCE(3),
-  FILAMENT_DLSS_DLAA(4);
-
-  final int value;
-  const filament_dlss_quality(this.value);
-
-  static filament_dlss_quality fromValue(int value) => switch (value) {
-    0 => FILAMENT_DLSS_MAX_PERFORMANCE,
-    1 => FILAMENT_DLSS_BALANCED,
-    2 => FILAMENT_DLSS_MAX_QUALITY,
-    3 => FILAMENT_DLSS_ULTRA_PERFORMANCE,
-    4 => FILAMENT_DLSS_DLAA,
-    _ => throw ArgumentError('Unknown value for filament_dlss_quality: $value'),
-  };
-}
-
-enum filament_upscaler {
-  FILAMENT_UPSCALER_BUILTIN(0),
-  FILAMENT_UPSCALER_EXTERNAL(1);
-
-  final int value;
-  const filament_upscaler(this.value);
-
-  static filament_upscaler fromValue(int value) => switch (value) {
-    0 => FILAMENT_UPSCALER_BUILTIN,
-    1 => FILAMENT_UPSCALER_EXTERNAL,
-    _ => throw ArgumentError('Unknown value for filament_upscaler: $value'),
-  };
-}
-
 final class filament_dynamic_resolution_options extends ffi.Struct {
   @ffi.Array.multi([2])
   external ffi.Array<ffi.Float> minScale;
@@ -9697,6 +9724,20 @@ final class filament_dynamic_resolution_options extends ffi.Struct {
 
   @ffi.Uint8()
   external int upscaler;
+}
+
+enum filament_upscaler {
+  FILAMENT_UPSCALER_BUILTIN(0),
+  FILAMENT_UPSCALER_EXTERNAL(1);
+
+  final int value;
+  const filament_upscaler(this.value);
+
+  static filament_upscaler fromValue(int value) => switch (value) {
+    0 => FILAMENT_UPSCALER_BUILTIN,
+    1 => FILAMENT_UPSCALER_EXTERNAL,
+    _ => throw ArgumentError('Unknown value for filament_upscaler: $value'),
+  };
 }
 
 enum filament_bloom_blend_mode {
@@ -10118,6 +10159,22 @@ final class filament_temporal_anti_aliasing_options extends ffi.Struct {
   external bool frameGeneration;
 }
 
+enum filament_taa_algorithm {
+  FILAMENT_TAA_ALGORITHM_FILAMENT(0),
+  FILAMENT_TAA_ALGORITHM_FSR3(1);
+
+  final int value;
+  const filament_taa_algorithm(this.value);
+
+  static filament_taa_algorithm fromValue(int value) => switch (value) {
+    0 => FILAMENT_TAA_ALGORITHM_FILAMENT,
+    1 => FILAMENT_TAA_ALGORITHM_FSR3,
+    _ => throw ArgumentError(
+      'Unknown value for filament_taa_algorithm: $value',
+    ),
+  };
+}
+
 final class filament_screen_space_reflections_options extends ffi.Struct {
   @ffi.Float()
   external double thickness;
@@ -10229,46 +10286,6 @@ final class filament_stereoscopic_options extends ffi.Struct {
   external bool enabled;
 }
 
-final class filament_restir_options extends ffi.Struct {
-  @ffi.Bool()
-  external bool enabled;
-
-  @ffi.Uint8()
-  external int initialCandidates;
-
-  @ffi.Uint8()
-  external int spatialSamples;
-
-  @ffi.Float()
-  external double spatialRadiusPx;
-
-  @ffi.Bool()
-  external bool temporal;
-
-  @ffi.Uint8()
-  external int maxHistory;
-
-  @ffi.Bool()
-  external bool visibilityRays;
-
-  @ffi.Bool()
-  external bool shadeEmissive;
-}
-
-final class filament_restir_stats_t extends ffi.Struct {
-  @ffi.Uint32()
-  external int lightCount;
-
-  @ffi.Uint32()
-  external int emissiveTriangleCount;
-
-  @ffi.Uint32()
-  external int raysPerFrame;
-
-  @ffi.Uint64()
-  external int gpuNanos;
-}
-
 typedef FilamentPickCallbackFunction =
     ffi.Void Function(
       ffi.Uint32 renderable,
@@ -10287,24 +10304,6 @@ typedef DartFilamentPickCallbackFunction =
     );
 typedef FilamentPickCallback =
     ffi.Pointer<ffi.NativeFunction<FilamentPickCallbackFunction>>;
-typedef FilamentRayHitCallbackFunction =
-    ffi.Void Function(
-      ffi.Bool hit,
-      ffi.Float distance,
-      ffi.Uint32 entity,
-      ffi.Uint32 primitive,
-      ffi.Pointer<ffi.Void> user_data,
-    );
-typedef DartFilamentRayHitCallbackFunction =
-    void Function(
-      bool hit,
-      double distance,
-      int entity,
-      int primitive,
-      ffi.Pointer<ffi.Void> user_data,
-    );
-typedef FilamentRayHitCallback =
-    ffi.Pointer<ffi.NativeFunction<FilamentRayHitCallbackFunction>>;
 
 final class filament_rt_attachment_t extends ffi.Struct {
   external ffi.Pointer<ffi.Void> texture;
@@ -11215,6 +11214,105 @@ enum FilImageBoundary {
   };
 }
 
+enum filament_dlss_quality {
+  FILAMENT_DLSS_MAX_PERFORMANCE(0),
+  FILAMENT_DLSS_BALANCED(1),
+  FILAMENT_DLSS_MAX_QUALITY(2),
+  FILAMENT_DLSS_ULTRA_PERFORMANCE(3),
+  FILAMENT_DLSS_DLAA(4);
+
+  final int value;
+  const filament_dlss_quality(this.value);
+
+  static filament_dlss_quality fromValue(int value) => switch (value) {
+    0 => FILAMENT_DLSS_MAX_PERFORMANCE,
+    1 => FILAMENT_DLSS_BALANCED,
+    2 => FILAMENT_DLSS_MAX_QUALITY,
+    3 => FILAMENT_DLSS_ULTRA_PERFORMANCE,
+    4 => FILAMENT_DLSS_DLAA,
+    _ => throw ArgumentError('Unknown value for filament_dlss_quality: $value'),
+  };
+}
+
+final class filament_dlss_options_t extends ffi.Struct {
+  @ffi.Uint8()
+  external int quality;
+
+  @ffi.Uint32()
+  external int outputWidth;
+
+  @ffi.Uint32()
+  external int outputHeight;
+
+  @ffi.Bool()
+  external bool hdr;
+
+  @ffi.Bool()
+  external bool autoExposure;
+
+  @ffi.Float()
+  external double sharpness;
+}
+
+typedef FilamentRayHitCallbackFunction =
+    ffi.Void Function(
+      ffi.Bool hit,
+      ffi.Float distance,
+      ffi.Uint32 entity,
+      ffi.Uint32 primitive,
+      ffi.Pointer<ffi.Void> user_data,
+    );
+typedef DartFilamentRayHitCallbackFunction =
+    void Function(
+      bool hit,
+      double distance,
+      int entity,
+      int primitive,
+      ffi.Pointer<ffi.Void> user_data,
+    );
+typedef FilamentRayHitCallback =
+    ffi.Pointer<ffi.NativeFunction<FilamentRayHitCallbackFunction>>;
+
+final class filament_restir_options extends ffi.Struct {
+  @ffi.Bool()
+  external bool enabled;
+
+  @ffi.Uint8()
+  external int initialCandidates;
+
+  @ffi.Uint8()
+  external int spatialSamples;
+
+  @ffi.Float()
+  external double spatialRadiusPx;
+
+  @ffi.Bool()
+  external bool temporal;
+
+  @ffi.Uint8()
+  external int maxHistory;
+
+  @ffi.Bool()
+  external bool visibilityRays;
+
+  @ffi.Bool()
+  external bool shadeEmissive;
+}
+
+final class filament_restir_stats_t extends ffi.Struct {
+  @ffi.Uint32()
+  external int lightCount;
+
+  @ffi.Uint32()
+  external int emissiveTriangleCount;
+
+  @ffi.Uint32()
+  external int raysPerFrame;
+
+  @ffi.Uint64()
+  external int gpuNanos;
+}
+
 /// One Vulkan physical device, in the loader's enumeration order (the index
 /// space Filament's GPU preference uses). `type` is VkPhysicalDeviceType:
 /// 0 other, 1 integrated, 2 discrete, 3 virtual, 4 cpu.
@@ -11341,3 +11439,23 @@ typedef DartFilIblProgressFunction =
     void Function(int index, double progress, ffi.Pointer<ffi.Void> userdata);
 typedef FilIblProgress =
     ffi.Pointer<ffi.NativeFunction<FilIblProgressFunction>>;
+
+enum filament_post_pass_debug_mode {
+  FILAMENT_POST_PASS_DEBUG_PASSTHROUGH(0),
+  FILAMENT_POST_PASS_DEBUG_MOTION(1),
+  FILAMENT_POST_PASS_DEBUG_HISTORY(2),
+  FILAMENT_POST_PASS_DEBUG_INVERT(3);
+
+  final int value;
+  const filament_post_pass_debug_mode(this.value);
+
+  static filament_post_pass_debug_mode fromValue(int value) => switch (value) {
+    0 => FILAMENT_POST_PASS_DEBUG_PASSTHROUGH,
+    1 => FILAMENT_POST_PASS_DEBUG_MOTION,
+    2 => FILAMENT_POST_PASS_DEBUG_HISTORY,
+    3 => FILAMENT_POST_PASS_DEBUG_INVERT,
+    _ => throw ArgumentError(
+      'Unknown value for filament_post_pass_debug_mode: $value',
+    ),
+  };
+}

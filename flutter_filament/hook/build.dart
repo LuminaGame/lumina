@@ -126,6 +126,7 @@ void main(List<String> args) async {
         'src/dlss_c.cpp',
         'src/ray_tracing_c.cpp',
         'src/restir_c.cpp',
+        'src/post_pass_c.cpp',
         'src/image_ops_c.cpp',
         'src/color_transform_c.cpp',
         'src/image_sdf_c.cpp',

@@ -1,0 +1,37 @@
+#version 450
+// The debug external post pass (src/post_pass_c.cpp). Compiled to SPIR-V by
+// tool/build_post_pass_shaders.dart into src/post_pass_debug_spv.h.
+
+layout(local_size_x = 8, local_size_y = 8) in;
+
+layout(set = 0, binding = 0) uniform sampler2D colorImage;
+layout(set = 0, binding = 1) uniform sampler2D motionImage;
+layout(set = 0, binding = 2, rgba16f) uniform writeonly image2D outputImage;
+
+layout(push_constant) uniform Params {
+    ivec2 size;
+    int mode;
+    float motionScale;
+} params;
+
+void main() {
+    ivec2 p = ivec2(gl_GlobalInvocationID.xy);
+    if (p.x >= params.size.x || p.y >= params.size.y) {
+        return;
+    }
+    vec4 color = texelFetch(colorImage, p, 0);
+    vec4 motion = texelFetch(motionImage, p, 0);
+    vec4 result = color;
+    if (params.mode == 1) {
+        // motion: |dx| red, |dy| green (scaled), over the dimmed frame
+        vec2 m = min(abs(motion.xy) * params.motionScale, vec2(1.0));
+        result = vec4(color.rgb * 0.25 + vec3(m, motion.a * 0.5), color.a);
+    } else if (params.mode == 2) {
+        // history: green where the previous position was on screen, red where it was not
+        vec3 tint = motion.z > 0.5 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
+        result = vec4(color.rgb * 0.5 + tint * 0.5, color.a);
+    } else if (params.mode == 3) {
+        result = vec4(max(vec3(1.0) - color.rgb, vec3(0.0)), color.a);
+    }
+    imageStore(outputImage, p, result);
+}

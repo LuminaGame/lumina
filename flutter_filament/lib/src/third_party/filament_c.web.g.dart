@@ -579,79 +579,6 @@ void filament_view_set_motion_vector_texture(ffi.Pointer<ffi.Void> view, ffi.Poi
 ffi.Pointer<ffi.Void> filament_view_get_motion_vector_texture(ffi.Pointer<ffi.Void> view) =>
     ffi.Pointer<ffi.Void>.fromAddress(_m.filament_view_get_motion_vector_texture(view.address.toJS).toDartInt);
 
-bool filament_dlss_available() =>
-    _m.filament_dlss_available().toDartInt != 0;
-
-bool filament_dlss_request_extensions() =>
-    _m.filament_dlss_request_extensions().toDartInt != 0;
-
-void filament_dlss_clear_extension_request() {
-  _m.filament_dlss_clear_extension_request();
-}
-
-void filament_dlss_set_runtime_dir(ffi.Pointer<ffi.Char> dir) {
-  _m.filament_dlss_set_runtime_dir(dir.address.toJS);
-}
-
-bool filament_ray_tracing_request_extensions() =>
-    _m.filament_ray_tracing_request_extensions().toDartInt != 0;
-
-void filament_ray_tracing_clear_extension_request() {
-  _m.filament_ray_tracing_clear_extension_request();
-}
-
-bool filament_engine_supports_ray_query(ffi.Pointer<ffi.Void> engine) =>
-    _m.filament_engine_supports_ray_query(engine.address.toJS).toDartInt != 0;
-
-void filament_scene_set_ray_tracing_enabled(ffi.Pointer<ffi.Void> scene, bool enabled) {
-  _m.filament_scene_set_ray_tracing_enabled(scene.address.toJS, (enabled ? 1 : 0).toJS);
-}
-
-bool filament_scene_get_ray_tracing_enabled(ffi.Pointer<ffi.Void> scene) =>
-    _m.filament_scene_get_ray_tracing_enabled(scene.address.toJS).toDartInt != 0;
-
-int filament_scene_get_tlas_instance_count(ffi.Pointer<ffi.Void> scene) =>
-    _m.filament_scene_get_tlas_instance_count(scene.address.toJS).toDartInt.toUnsigned(32);
-
-int filament_scene_get_tlas_build_nanos(ffi.Pointer<ffi.Void> scene) =>
-    FlutterFilamentModule.fromBigInt(_m.filament_scene_get_tlas_build_nanos(scene.address.toJS));
-
-void filament_renderable_set_ray_tracing_visible(ffi.Pointer<ffi.Void> engine, int entity, bool visible) {
-  _m.filament_renderable_set_ray_tracing_visible(engine.address.toJS, entity.toJS, (visible ? 1 : 0).toJS);
-}
-
-bool filament_renderable_is_ray_tracing_visible(ffi.Pointer<ffi.Void> engine, int entity) =>
-    _m.filament_renderable_is_ray_tracing_visible(engine.address.toJS, entity.toJS).toDartInt != 0;
-
-bool filament_scene_trace_visibility(ffi.Pointer<ffi.Void> engine, ffi.Pointer<ffi.Void> scene, ffi.Pointer<ffi.Float> origin3, ffi.Pointer<ffi.Float> direction3, double max_distance, ffi.Pointer<ffi.Float> out_distance, ffi.Pointer<ffi.Uint32> out_entity, ffi.Pointer<ffi.Uint32> out_primitive) =>
-    _m.filament_scene_trace_visibility(engine.address.toJS, scene.address.toJS, origin3.address.toJS, direction3.address.toJS, max_distance.toJS, out_distance.address.toJS, out_entity.address.toJS, out_primitive.address.toJS).toDartInt != 0;
-
-void filament_view_trace_ray(ffi.Pointer<ffi.Void> view, ffi.Pointer<ffi.Float> origin3, ffi.Pointer<ffi.Float> direction3, double max_distance, FilamentRayHitCallback callback, ffi.Pointer<ffi.Void> user_data) {
-  _m.filament_view_trace_ray(view.address.toJS, origin3.address.toJS, direction3.address.toJS, max_distance.toJS, callback.address.toJS, user_data.address.toJS);
-}
-
-ffi.Pointer<ffi.Void> filament_dlss_create(ffi.Pointer<ffi.Void> engine, ffi.Pointer<ffi.Void> view, ffi.Pointer<filament_dlss_options_t> opts) =>
-    ffi.Pointer<ffi.Void>.fromAddress(_m.filament_dlss_create(engine.address.toJS, view.address.toJS, opts.address.toJS).toDartInt);
-
-void filament_dlss_get_render_resolution(ffi.Pointer<ffi.Void> dlss, ffi.Pointer<ffi.Uint32> out_w, ffi.Pointer<ffi.Uint32> out_h) {
-  _m.filament_dlss_get_render_resolution(dlss.address.toJS, out_w.address.toJS, out_h.address.toJS);
-}
-
-void filament_dlss_set_quality(ffi.Pointer<ffi.Void> dlss, int quality) {
-  _m.filament_dlss_set_quality(dlss.address.toJS, quality.toJS);
-}
-
-void filament_dlss_reset_history(ffi.Pointer<ffi.Void> dlss) {
-  _m.filament_dlss_reset_history(dlss.address.toJS);
-}
-
-void filament_dlss_destroy(ffi.Pointer<ffi.Void> dlss) {
-  _m.filament_dlss_destroy(dlss.address.toJS);
-}
-
-ffi.Pointer<ffi.Char> filament_dlss_last_error() =>
-    ffi.Pointer<ffi.Char>.fromAddress(_m.filament_dlss_last_error().toDartInt);
-
 ffi.Pointer<ffi.Void> filament_render_target_create_ex(ffi.Pointer<ffi.Void> engine, ffi.Pointer<filament_rt_attachment_t> color_attachments, int color_count, ffi.Pointer<filament_rt_attachment_t> depth_attachment, int samples) =>
     ffi.Pointer<ffi.Void>.fromAddress(_m.filament_render_target_create_ex(engine.address.toJS, color_attachments.address.toJS, color_count.toJS, depth_attachment.address.toJS, samples.toJS).toDartInt);
 
@@ -1119,29 +1046,6 @@ void filament_light_get_position(ffi.Pointer<ffi.Void> engine, int entity, ffi.P
 
 void filament_light_set_falloff(ffi.Pointer<ffi.Void> engine, int entity, double radius) {
   _m.filament_light_set_falloff(engine.address.toJS, entity.toJS, radius.toJS);
-}
-
-void filament_view_set_restir_options(ffi.Pointer<ffi.Void> view, ffi.Pointer<filament_restir_options> options) {
-  _m.filament_view_set_restir_options(view.address.toJS, options.address.toJS);
-}
-
-void filament_view_get_restir_options(ffi.Pointer<ffi.Void> view, ffi.Pointer<filament_restir_options> out_options) {
-  _m.filament_view_get_restir_options(view.address.toJS, out_options.address.toJS);
-}
-
-bool filament_view_restir_supported(ffi.Pointer<ffi.Void> view) =>
-    _m.filament_view_restir_supported(view.address.toJS).toDartInt != 0;
-
-void filament_view_get_restir_stats(ffi.Pointer<ffi.Void> view, ffi.Pointer<filament_restir_stats_t> out_stats) {
-  _m.filament_view_get_restir_stats(view.address.toJS, out_stats.address.toJS);
-}
-
-void filament_view_restir_reset_history(ffi.Pointer<ffi.Void> view) {
-  _m.filament_view_restir_reset_history(view.address.toJS);
-}
-
-void filament_light_set_restir_sampling_weight(ffi.Pointer<ffi.Void> engine, int entity, double weight) {
-  _m.filament_light_set_restir_sampling_weight(engine.address.toJS, entity.toJS, weight.toJS);
 }
 
 double filament_light_get_falloff(ffi.Pointer<ffi.Void> engine, int entity) =>
@@ -3940,6 +3844,102 @@ void filament_image_generate_mipmaps(ffi.Pointer<FilLinearImage> src, int filter
   _m.filament_image_generate_mipmaps(src.address.toJS, filter.toJS, out_levels.address.toJS, count.toJS);
 }
 
+bool filament_dlss_available() =>
+    _m.filament_dlss_available().toDartInt != 0;
+
+bool filament_dlss_request_extensions() =>
+    _m.filament_dlss_request_extensions().toDartInt != 0;
+
+void filament_dlss_clear_extension_request() {
+  _m.filament_dlss_clear_extension_request();
+}
+
+void filament_dlss_set_runtime_dir(ffi.Pointer<ffi.Char> dir) {
+  _m.filament_dlss_set_runtime_dir(dir.address.toJS);
+}
+
+ffi.Pointer<ffi.Void> filament_dlss_create(ffi.Pointer<ffi.Void> engine, ffi.Pointer<ffi.Void> view, ffi.Pointer<filament_dlss_options_t> opts) =>
+    ffi.Pointer<ffi.Void>.fromAddress(_m.filament_dlss_create(engine.address.toJS, view.address.toJS, opts.address.toJS).toDartInt);
+
+void filament_dlss_get_render_resolution(ffi.Pointer<ffi.Void> dlss, ffi.Pointer<ffi.Uint32> out_w, ffi.Pointer<ffi.Uint32> out_h) {
+  _m.filament_dlss_get_render_resolution(dlss.address.toJS, out_w.address.toJS, out_h.address.toJS);
+}
+
+void filament_dlss_set_quality(ffi.Pointer<ffi.Void> dlss, int quality) {
+  _m.filament_dlss_set_quality(dlss.address.toJS, quality.toJS);
+}
+
+void filament_dlss_reset_history(ffi.Pointer<ffi.Void> dlss) {
+  _m.filament_dlss_reset_history(dlss.address.toJS);
+}
+
+void filament_dlss_destroy(ffi.Pointer<ffi.Void> dlss) {
+  _m.filament_dlss_destroy(dlss.address.toJS);
+}
+
+ffi.Pointer<ffi.Char> filament_dlss_last_error() =>
+    ffi.Pointer<ffi.Char>.fromAddress(_m.filament_dlss_last_error().toDartInt);
+
+bool filament_ray_tracing_request_extensions() =>
+    _m.filament_ray_tracing_request_extensions().toDartInt != 0;
+
+void filament_ray_tracing_clear_extension_request() {
+  _m.filament_ray_tracing_clear_extension_request();
+}
+
+bool filament_engine_supports_ray_query(ffi.Pointer<ffi.Void> engine) =>
+    _m.filament_engine_supports_ray_query(engine.address.toJS).toDartInt != 0;
+
+void filament_scene_set_ray_tracing_enabled(ffi.Pointer<ffi.Void> scene, bool enabled) {
+  _m.filament_scene_set_ray_tracing_enabled(scene.address.toJS, (enabled ? 1 : 0).toJS);
+}
+
+bool filament_scene_get_ray_tracing_enabled(ffi.Pointer<ffi.Void> scene) =>
+    _m.filament_scene_get_ray_tracing_enabled(scene.address.toJS).toDartInt != 0;
+
+int filament_scene_get_tlas_instance_count(ffi.Pointer<ffi.Void> scene) =>
+    _m.filament_scene_get_tlas_instance_count(scene.address.toJS).toDartInt.toUnsigned(32);
+
+int filament_scene_get_tlas_build_nanos(ffi.Pointer<ffi.Void> scene) =>
+    FlutterFilamentModule.fromBigInt(_m.filament_scene_get_tlas_build_nanos(scene.address.toJS));
+
+void filament_renderable_set_ray_tracing_visible(ffi.Pointer<ffi.Void> engine, int entity, bool visible) {
+  _m.filament_renderable_set_ray_tracing_visible(engine.address.toJS, entity.toJS, (visible ? 1 : 0).toJS);
+}
+
+bool filament_renderable_is_ray_tracing_visible(ffi.Pointer<ffi.Void> engine, int entity) =>
+    _m.filament_renderable_is_ray_tracing_visible(engine.address.toJS, entity.toJS).toDartInt != 0;
+
+bool filament_scene_trace_visibility(ffi.Pointer<ffi.Void> engine, ffi.Pointer<ffi.Void> scene, ffi.Pointer<ffi.Float> origin3, ffi.Pointer<ffi.Float> direction3, double max_distance, ffi.Pointer<ffi.Float> out_distance, ffi.Pointer<ffi.Uint32> out_entity, ffi.Pointer<ffi.Uint32> out_primitive) =>
+    _m.filament_scene_trace_visibility(engine.address.toJS, scene.address.toJS, origin3.address.toJS, direction3.address.toJS, max_distance.toJS, out_distance.address.toJS, out_entity.address.toJS, out_primitive.address.toJS).toDartInt != 0;
+
+void filament_view_trace_ray(ffi.Pointer<ffi.Void> view, ffi.Pointer<ffi.Float> origin3, ffi.Pointer<ffi.Float> direction3, double max_distance, FilamentRayHitCallback callback, ffi.Pointer<ffi.Void> user_data) {
+  _m.filament_view_trace_ray(view.address.toJS, origin3.address.toJS, direction3.address.toJS, max_distance.toJS, callback.address.toJS, user_data.address.toJS);
+}
+
+void filament_view_set_restir_options(ffi.Pointer<ffi.Void> view, ffi.Pointer<filament_restir_options> options) {
+  _m.filament_view_set_restir_options(view.address.toJS, options.address.toJS);
+}
+
+void filament_view_get_restir_options(ffi.Pointer<ffi.Void> view, ffi.Pointer<filament_restir_options> out_options) {
+  _m.filament_view_get_restir_options(view.address.toJS, out_options.address.toJS);
+}
+
+bool filament_view_restir_supported(ffi.Pointer<ffi.Void> view) =>
+    _m.filament_view_restir_supported(view.address.toJS).toDartInt != 0;
+
+void filament_view_get_restir_stats(ffi.Pointer<ffi.Void> view, ffi.Pointer<filament_restir_stats_t> out_stats) {
+  _m.filament_view_get_restir_stats(view.address.toJS, out_stats.address.toJS);
+}
+
+void filament_view_restir_reset_history(ffi.Pointer<ffi.Void> view) {
+  _m.filament_view_restir_reset_history(view.address.toJS);
+}
+
+void filament_light_set_restir_sampling_weight(ffi.Pointer<ffi.Void> engine, int entity, double weight) {
+  _m.filament_light_set_restir_sampling_weight(engine.address.toJS, entity.toJS, weight.toJS);
+}
+
 ffi.Pointer<FilLinearImage> filament_image_extract_channel(ffi.Pointer<FilLinearImage> src, int channel) =>
     ffi.Pointer<FilLinearImage>.fromAddress(_m.filament_image_extract_channel(src.address.toJS, channel.toJS).toDartInt);
 
@@ -4196,6 +4196,49 @@ void filament_web_destroy_canvas_context(int context) {
   _m.filament_web_destroy_canvas_context(context.toJS);
 }
 
+void filament_vulkan_request_device_extension(ffi.Pointer<ffi.Char> requester, ffi.Pointer<ffi.Char> name) {
+  _m.filament_vulkan_request_device_extension(requester.address.toJS, name.address.toJS);
+}
+
+void filament_vulkan_request_device_feature(ffi.Pointer<ffi.Char> requester, int sType, int structSize, int fieldOffset, ffi.Pointer<ffi.Char> extension) {
+  _m.filament_vulkan_request_device_feature(requester.address.toJS, sType.toJS, structSize.toJS, fieldOffset.toJS, extension.address.toJS);
+}
+
+void filament_vulkan_clear_requests(ffi.Pointer<ffi.Char> requester) {
+  _m.filament_vulkan_clear_requests(requester.address.toJS);
+}
+
+bool filament_vulkan_device_feature_enabled(ffi.Pointer<ffi.Void> engine, int sType, int fieldOffset) =>
+    _m.filament_vulkan_device_feature_enabled(engine.address.toJS, sType.toJS, fieldOffset.toJS).toDartInt != 0;
+
+bool filament_vulkan_device_extension_enabled(ffi.Pointer<ffi.Void> engine, ffi.Pointer<ffi.Char> name) =>
+    _m.filament_vulkan_device_extension_enabled(engine.address.toJS, name.address.toJS).toDartInt != 0;
+
+ffi.Pointer<ffi.Void> filament_post_pass_debug_create(ffi.Pointer<ffi.Void> engine, ffi.Pointer<ffi.Void> view, int mode) =>
+    ffi.Pointer<ffi.Void>.fromAddress(_m.filament_post_pass_debug_create(engine.address.toJS, view.address.toJS, mode.toJS).toDartInt);
+
+void filament_post_pass_debug_set_mode(ffi.Pointer<ffi.Void> pass, int mode) {
+  _m.filament_post_pass_debug_set_mode(pass.address.toJS, mode.toJS);
+}
+
+int filament_post_pass_debug_frame_count(ffi.Pointer<ffi.Void> pass) =>
+    FlutterFilamentModule.fromBigInt(_m.filament_post_pass_debug_frame_count(pass.address.toJS));
+
+void filament_post_pass_debug_last_size(ffi.Pointer<ffi.Void> pass, ffi.Pointer<ffi.Uint32> out_w, ffi.Pointer<ffi.Uint32> out_h) {
+  _m.filament_post_pass_debug_last_size(pass.address.toJS, out_w.address.toJS, out_h.address.toJS);
+}
+
+void filament_view_reset_external_post_pass_history(ffi.Pointer<ffi.Void> view) {
+  _m.filament_view_reset_external_post_pass_history(view.address.toJS);
+}
+
+void filament_post_pass_debug_destroy(ffi.Pointer<ffi.Void> pass) {
+  _m.filament_post_pass_debug_destroy(pass.address.toJS);
+}
+
+ffi.Pointer<ffi.Char> filament_post_pass_last_error() =>
+    ffi.Pointer<ffi.Char>.fromAddress(_m.filament_post_pass_last_error().toDartInt);
+
 enum FilamentBackend {
   FILAMENT_BACKEND_DEFAULT(0),
   FILAMENT_BACKEND_OPENGL(1),
@@ -4352,62 +4395,6 @@ enum filament_blend_mode {
   };
 }
 
-final class filament_dlss_options_t extends ffi.Struct {
-  filament_dlss_options_t.$at(super.$address) : super.$at();
-
-  int get quality => FlutterFilamentModule.heap.getUint8($address);
-  set quality(int value) => FlutterFilamentModule.heap.setUint8($address, value);
-
-  int get outputWidth => FlutterFilamentModule.heap.getUint32($address + 4, Endian.little);
-  set outputWidth(int value) => FlutterFilamentModule.heap.setUint32($address + 4, value, Endian.little);
-
-  int get outputHeight => FlutterFilamentModule.heap.getUint32($address + 8, Endian.little);
-  set outputHeight(int value) => FlutterFilamentModule.heap.setUint32($address + 8, value, Endian.little);
-
-  bool get hdr => FlutterFilamentModule.heap.getUint8($address + 12) != 0;
-  set hdr(bool value) => FlutterFilamentModule.heap.setUint8($address + 12, value ? 1 : 0);
-
-  bool get autoExposure => FlutterFilamentModule.heap.getUint8($address + 13) != 0;
-  set autoExposure(bool value) => FlutterFilamentModule.heap.setUint8($address + 13, value ? 1 : 0);
-
-  double get sharpness => FlutterFilamentModule.heap.getFloat32($address + 16, Endian.little);
-  set sharpness(double value) => FlutterFilamentModule.heap.setFloat32($address + 16, value, Endian.little);
-}
-
-enum filament_dlss_quality {
-  FILAMENT_DLSS_MAX_PERFORMANCE(0),
-  FILAMENT_DLSS_BALANCED(1),
-  FILAMENT_DLSS_MAX_QUALITY(2),
-  FILAMENT_DLSS_ULTRA_PERFORMANCE(3),
-  FILAMENT_DLSS_DLAA(4);
-
-  final int value;
-  const filament_dlss_quality(this.value);
-
-  static filament_dlss_quality fromValue(int value) => switch (value) {
-    0 => FILAMENT_DLSS_MAX_PERFORMANCE,
-    1 => FILAMENT_DLSS_BALANCED,
-    2 => FILAMENT_DLSS_MAX_QUALITY,
-    3 => FILAMENT_DLSS_ULTRA_PERFORMANCE,
-    4 => FILAMENT_DLSS_DLAA,
-    _ => throw ArgumentError('Unknown value for filament_dlss_quality: $value'),
-  };
-}
-
-enum filament_upscaler {
-  FILAMENT_UPSCALER_BUILTIN(0),
-  FILAMENT_UPSCALER_EXTERNAL(1);
-
-  final int value;
-  const filament_upscaler(this.value);
-
-  static filament_upscaler fromValue(int value) => switch (value) {
-    0 => FILAMENT_UPSCALER_BUILTIN,
-    1 => FILAMENT_UPSCALER_EXTERNAL,
-    _ => throw ArgumentError('Unknown value for filament_upscaler: $value'),
-  };
-}
-
 final class filament_dynamic_resolution_options extends ffi.Struct {
   filament_dynamic_resolution_options.$at(super.$address) : super.$at();
 
@@ -4429,6 +4416,20 @@ final class filament_dynamic_resolution_options extends ffi.Struct {
 
   int get upscaler => FlutterFilamentModule.heap.getUint8($address + 23);
   set upscaler(int value) => FlutterFilamentModule.heap.setUint8($address + 23, value);
+}
+
+enum filament_upscaler {
+  FILAMENT_UPSCALER_BUILTIN(0),
+  FILAMENT_UPSCALER_EXTERNAL(1);
+
+  final int value;
+  const filament_upscaler(this.value);
+
+  static filament_upscaler fromValue(int value) => switch (value) {
+    0 => FILAMENT_UPSCALER_BUILTIN,
+    1 => FILAMENT_UPSCALER_EXTERNAL,
+    _ => throw ArgumentError('Unknown value for filament_upscaler: $value'),
+  };
 }
 
 enum filament_bloom_blend_mode {
@@ -4871,6 +4872,22 @@ final class filament_temporal_anti_aliasing_options extends ffi.Struct {
   set frameGeneration(bool value) => FlutterFilamentModule.heap.setUint8($address + 40, value ? 1 : 0);
 }
 
+enum filament_taa_algorithm {
+  FILAMENT_TAA_ALGORITHM_FILAMENT(0),
+  FILAMENT_TAA_ALGORITHM_FSR3(1);
+
+  final int value;
+  const filament_taa_algorithm(this.value);
+
+  static filament_taa_algorithm fromValue(int value) => switch (value) {
+    0 => FILAMENT_TAA_ALGORITHM_FILAMENT,
+    1 => FILAMENT_TAA_ALGORITHM_FSR3,
+    _ => throw ArgumentError(
+      'Unknown value for filament_taa_algorithm: $value',
+    ),
+  };
+}
+
 final class filament_screen_space_reflections_options extends ffi.Struct {
   filament_screen_space_reflections_options.$at(super.$address) : super.$at();
 
@@ -4992,50 +5009,6 @@ final class filament_stereoscopic_options extends ffi.Struct {
   set enabled(bool value) => FlutterFilamentModule.heap.setUint8($address, value ? 1 : 0);
 }
 
-final class filament_restir_options extends ffi.Struct {
-  filament_restir_options.$at(super.$address) : super.$at();
-
-  bool get enabled => FlutterFilamentModule.heap.getUint8($address) != 0;
-  set enabled(bool value) => FlutterFilamentModule.heap.setUint8($address, value ? 1 : 0);
-
-  int get initialCandidates => FlutterFilamentModule.heap.getUint8($address + 1);
-  set initialCandidates(int value) => FlutterFilamentModule.heap.setUint8($address + 1, value);
-
-  int get spatialSamples => FlutterFilamentModule.heap.getUint8($address + 2);
-  set spatialSamples(int value) => FlutterFilamentModule.heap.setUint8($address + 2, value);
-
-  double get spatialRadiusPx => FlutterFilamentModule.heap.getFloat32($address + 4, Endian.little);
-  set spatialRadiusPx(double value) => FlutterFilamentModule.heap.setFloat32($address + 4, value, Endian.little);
-
-  bool get temporal => FlutterFilamentModule.heap.getUint8($address + 8) != 0;
-  set temporal(bool value) => FlutterFilamentModule.heap.setUint8($address + 8, value ? 1 : 0);
-
-  int get maxHistory => FlutterFilamentModule.heap.getUint8($address + 9);
-  set maxHistory(int value) => FlutterFilamentModule.heap.setUint8($address + 9, value);
-
-  bool get visibilityRays => FlutterFilamentModule.heap.getUint8($address + 10) != 0;
-  set visibilityRays(bool value) => FlutterFilamentModule.heap.setUint8($address + 10, value ? 1 : 0);
-
-  bool get shadeEmissive => FlutterFilamentModule.heap.getUint8($address + 11) != 0;
-  set shadeEmissive(bool value) => FlutterFilamentModule.heap.setUint8($address + 11, value ? 1 : 0);
-}
-
-final class filament_restir_stats_t extends ffi.Struct {
-  filament_restir_stats_t.$at(super.$address) : super.$at();
-
-  int get lightCount => FlutterFilamentModule.heap.getUint32($address, Endian.little);
-  set lightCount(int value) => FlutterFilamentModule.heap.setUint32($address, value, Endian.little);
-
-  int get emissiveTriangleCount => FlutterFilamentModule.heap.getUint32($address + 4, Endian.little);
-  set emissiveTriangleCount(int value) => FlutterFilamentModule.heap.setUint32($address + 4, value, Endian.little);
-
-  int get raysPerFrame => FlutterFilamentModule.heap.getUint32($address + 8, Endian.little);
-  set raysPerFrame(int value) => FlutterFilamentModule.heap.setUint32($address + 8, value, Endian.little);
-
-  int get gpuNanos => ffi.$readInt64($address + 16);
-  set gpuNanos(int value) => ffi.$writeInt64($address + 16, value);
-}
-
 typedef FilamentPickCallbackFunction =
     ffi.Void Function(
       ffi.Uint32 renderable,
@@ -5054,24 +5027,6 @@ typedef DartFilamentPickCallbackFunction =
     );
 typedef FilamentPickCallback =
     ffi.Pointer<ffi.NativeFunction<FilamentPickCallbackFunction>>;
-typedef FilamentRayHitCallbackFunction =
-    ffi.Void Function(
-      ffi.Bool hit,
-      ffi.Float distance,
-      ffi.Uint32 entity,
-      ffi.Uint32 primitive,
-      ffi.Pointer<ffi.Void> user_data,
-    );
-typedef DartFilamentRayHitCallbackFunction =
-    void Function(
-      bool hit,
-      double distance,
-      int entity,
-      int primitive,
-      ffi.Pointer<ffi.Void> user_data,
-    );
-typedef FilamentRayHitCallback =
-    ffi.Pointer<ffi.NativeFunction<FilamentRayHitCallbackFunction>>;
 
 final class filament_rt_attachment_t extends ffi.Struct {
   filament_rt_attachment_t.$at(super.$address) : super.$at();
@@ -6016,6 +5971,111 @@ enum FilImageBoundary {
   };
 }
 
+enum filament_dlss_quality {
+  FILAMENT_DLSS_MAX_PERFORMANCE(0),
+  FILAMENT_DLSS_BALANCED(1),
+  FILAMENT_DLSS_MAX_QUALITY(2),
+  FILAMENT_DLSS_ULTRA_PERFORMANCE(3),
+  FILAMENT_DLSS_DLAA(4);
+
+  final int value;
+  const filament_dlss_quality(this.value);
+
+  static filament_dlss_quality fromValue(int value) => switch (value) {
+    0 => FILAMENT_DLSS_MAX_PERFORMANCE,
+    1 => FILAMENT_DLSS_BALANCED,
+    2 => FILAMENT_DLSS_MAX_QUALITY,
+    3 => FILAMENT_DLSS_ULTRA_PERFORMANCE,
+    4 => FILAMENT_DLSS_DLAA,
+    _ => throw ArgumentError('Unknown value for filament_dlss_quality: $value'),
+  };
+}
+
+final class filament_dlss_options_t extends ffi.Struct {
+  filament_dlss_options_t.$at(super.$address) : super.$at();
+
+  int get quality => FlutterFilamentModule.heap.getUint8($address);
+  set quality(int value) => FlutterFilamentModule.heap.setUint8($address, value);
+
+  int get outputWidth => FlutterFilamentModule.heap.getUint32($address + 4, Endian.little);
+  set outputWidth(int value) => FlutterFilamentModule.heap.setUint32($address + 4, value, Endian.little);
+
+  int get outputHeight => FlutterFilamentModule.heap.getUint32($address + 8, Endian.little);
+  set outputHeight(int value) => FlutterFilamentModule.heap.setUint32($address + 8, value, Endian.little);
+
+  bool get hdr => FlutterFilamentModule.heap.getUint8($address + 12) != 0;
+  set hdr(bool value) => FlutterFilamentModule.heap.setUint8($address + 12, value ? 1 : 0);
+
+  bool get autoExposure => FlutterFilamentModule.heap.getUint8($address + 13) != 0;
+  set autoExposure(bool value) => FlutterFilamentModule.heap.setUint8($address + 13, value ? 1 : 0);
+
+  double get sharpness => FlutterFilamentModule.heap.getFloat32($address + 16, Endian.little);
+  set sharpness(double value) => FlutterFilamentModule.heap.setFloat32($address + 16, value, Endian.little);
+}
+
+typedef FilamentRayHitCallbackFunction =
+    ffi.Void Function(
+      ffi.Bool hit,
+      ffi.Float distance,
+      ffi.Uint32 entity,
+      ffi.Uint32 primitive,
+      ffi.Pointer<ffi.Void> user_data,
+    );
+typedef DartFilamentRayHitCallbackFunction =
+    void Function(
+      bool hit,
+      double distance,
+      int entity,
+      int primitive,
+      ffi.Pointer<ffi.Void> user_data,
+    );
+typedef FilamentRayHitCallback =
+    ffi.Pointer<ffi.NativeFunction<FilamentRayHitCallbackFunction>>;
+
+final class filament_restir_options extends ffi.Struct {
+  filament_restir_options.$at(super.$address) : super.$at();
+
+  bool get enabled => FlutterFilamentModule.heap.getUint8($address) != 0;
+  set enabled(bool value) => FlutterFilamentModule.heap.setUint8($address, value ? 1 : 0);
+
+  int get initialCandidates => FlutterFilamentModule.heap.getUint8($address + 1);
+  set initialCandidates(int value) => FlutterFilamentModule.heap.setUint8($address + 1, value);
+
+  int get spatialSamples => FlutterFilamentModule.heap.getUint8($address + 2);
+  set spatialSamples(int value) => FlutterFilamentModule.heap.setUint8($address + 2, value);
+
+  double get spatialRadiusPx => FlutterFilamentModule.heap.getFloat32($address + 4, Endian.little);
+  set spatialRadiusPx(double value) => FlutterFilamentModule.heap.setFloat32($address + 4, value, Endian.little);
+
+  bool get temporal => FlutterFilamentModule.heap.getUint8($address + 8) != 0;
+  set temporal(bool value) => FlutterFilamentModule.heap.setUint8($address + 8, value ? 1 : 0);
+
+  int get maxHistory => FlutterFilamentModule.heap.getUint8($address + 9);
+  set maxHistory(int value) => FlutterFilamentModule.heap.setUint8($address + 9, value);
+
+  bool get visibilityRays => FlutterFilamentModule.heap.getUint8($address + 10) != 0;
+  set visibilityRays(bool value) => FlutterFilamentModule.heap.setUint8($address + 10, value ? 1 : 0);
+
+  bool get shadeEmissive => FlutterFilamentModule.heap.getUint8($address + 11) != 0;
+  set shadeEmissive(bool value) => FlutterFilamentModule.heap.setUint8($address + 11, value ? 1 : 0);
+}
+
+final class filament_restir_stats_t extends ffi.Struct {
+  filament_restir_stats_t.$at(super.$address) : super.$at();
+
+  int get lightCount => FlutterFilamentModule.heap.getUint32($address, Endian.little);
+  set lightCount(int value) => FlutterFilamentModule.heap.setUint32($address, value, Endian.little);
+
+  int get emissiveTriangleCount => FlutterFilamentModule.heap.getUint32($address + 4, Endian.little);
+  set emissiveTriangleCount(int value) => FlutterFilamentModule.heap.setUint32($address + 4, value, Endian.little);
+
+  int get raysPerFrame => FlutterFilamentModule.heap.getUint32($address + 8, Endian.little);
+  set raysPerFrame(int value) => FlutterFilamentModule.heap.setUint32($address + 8, value, Endian.little);
+
+  int get gpuNanos => ffi.$readInt64($address + 16);
+  set gpuNanos(int value) => ffi.$writeInt64($address + 16, value);
+}
+
 /// One Vulkan physical device, in the loader's enumeration order (the index
 /// space Filament's GPU preference uses). `type` is VkPhysicalDeviceType:
 /// 0 other, 1 integrated, 2 discrete, 3 virtual, 4 cpu.
@@ -6145,6 +6205,26 @@ typedef DartFilIblProgressFunction =
     void Function(int index, double progress, ffi.Pointer<ffi.Void> userdata);
 typedef FilIblProgress =
     ffi.Pointer<ffi.NativeFunction<FilIblProgressFunction>>;
+
+enum filament_post_pass_debug_mode {
+  FILAMENT_POST_PASS_DEBUG_PASSTHROUGH(0),
+  FILAMENT_POST_PASS_DEBUG_MOTION(1),
+  FILAMENT_POST_PASS_DEBUG_HISTORY(2),
+  FILAMENT_POST_PASS_DEBUG_INVERT(3);
+
+  final int value;
+  const filament_post_pass_debug_mode(this.value);
+
+  static filament_post_pass_debug_mode fromValue(int value) => switch (value) {
+    0 => FILAMENT_POST_PASS_DEBUG_PASSTHROUGH,
+    1 => FILAMENT_POST_PASS_DEBUG_MOTION,
+    2 => FILAMENT_POST_PASS_DEBUG_HISTORY,
+    3 => FILAMENT_POST_PASS_DEBUG_INVERT,
+    _ => throw ArgumentError(
+      'Unknown value for filament_post_pass_debug_mode: $value',
+    ),
+  };
+}
 
 // --- the module's exports (web) ---------------------------------------------
 extension type _Module._(JSObject _) implements JSObject {
@@ -6464,48 +6544,6 @@ extension type _Module._(JSObject _) implements JSObject {
   external void filament_view_set_motion_vector_texture(JSNumber view, JSNumber texture);
   @JS('_filament_view_get_motion_vector_texture')
   external JSNumber filament_view_get_motion_vector_texture(JSNumber view);
-  @JS('_filament_dlss_available')
-  external JSNumber filament_dlss_available();
-  @JS('_filament_dlss_request_extensions')
-  external JSNumber filament_dlss_request_extensions();
-  @JS('_filament_dlss_clear_extension_request')
-  external void filament_dlss_clear_extension_request();
-  @JS('_filament_dlss_set_runtime_dir')
-  external void filament_dlss_set_runtime_dir(JSNumber dir);
-  @JS('_filament_ray_tracing_request_extensions')
-  external JSNumber filament_ray_tracing_request_extensions();
-  @JS('_filament_ray_tracing_clear_extension_request')
-  external void filament_ray_tracing_clear_extension_request();
-  @JS('_filament_engine_supports_ray_query')
-  external JSNumber filament_engine_supports_ray_query(JSNumber engine);
-  @JS('_filament_scene_set_ray_tracing_enabled')
-  external void filament_scene_set_ray_tracing_enabled(JSNumber scene, JSNumber enabled);
-  @JS('_filament_scene_get_ray_tracing_enabled')
-  external JSNumber filament_scene_get_ray_tracing_enabled(JSNumber scene);
-  @JS('_filament_scene_get_tlas_instance_count')
-  external JSNumber filament_scene_get_tlas_instance_count(JSNumber scene);
-  @JS('_filament_scene_get_tlas_build_nanos')
-  external JSBigInt filament_scene_get_tlas_build_nanos(JSNumber scene);
-  @JS('_filament_renderable_set_ray_tracing_visible')
-  external void filament_renderable_set_ray_tracing_visible(JSNumber engine, JSNumber entity, JSNumber visible);
-  @JS('_filament_renderable_is_ray_tracing_visible')
-  external JSNumber filament_renderable_is_ray_tracing_visible(JSNumber engine, JSNumber entity);
-  @JS('_filament_scene_trace_visibility')
-  external JSNumber filament_scene_trace_visibility(JSNumber engine, JSNumber scene, JSNumber origin3, JSNumber direction3, JSNumber max_distance, JSNumber out_distance, JSNumber out_entity, JSNumber out_primitive);
-  @JS('_filament_view_trace_ray')
-  external void filament_view_trace_ray(JSNumber view, JSNumber origin3, JSNumber direction3, JSNumber max_distance, JSNumber callback, JSNumber user_data);
-  @JS('_filament_dlss_create')
-  external JSNumber filament_dlss_create(JSNumber engine, JSNumber view, JSNumber opts);
-  @JS('_filament_dlss_get_render_resolution')
-  external void filament_dlss_get_render_resolution(JSNumber dlss, JSNumber out_w, JSNumber out_h);
-  @JS('_filament_dlss_set_quality')
-  external void filament_dlss_set_quality(JSNumber dlss, JSNumber quality);
-  @JS('_filament_dlss_reset_history')
-  external void filament_dlss_reset_history(JSNumber dlss);
-  @JS('_filament_dlss_destroy')
-  external void filament_dlss_destroy(JSNumber dlss);
-  @JS('_filament_dlss_last_error')
-  external JSNumber filament_dlss_last_error();
   @JS('_filament_render_target_create_ex')
   external JSNumber filament_render_target_create_ex(JSNumber engine, JSNumber color_attachments, JSNumber color_count, JSNumber depth_attachment, JSNumber samples);
   @JS('_filament_render_target_get_supported_color_attachments_count')
@@ -6756,18 +6794,6 @@ extension type _Module._(JSObject _) implements JSObject {
   external void filament_light_get_position(JSNumber engine, JSNumber entity, JSNumber out_xyz);
   @JS('_filament_light_set_falloff')
   external void filament_light_set_falloff(JSNumber engine, JSNumber entity, JSNumber radius);
-  @JS('_filament_view_set_restir_options')
-  external void filament_view_set_restir_options(JSNumber view, JSNumber options);
-  @JS('_filament_view_get_restir_options')
-  external void filament_view_get_restir_options(JSNumber view, JSNumber out_options);
-  @JS('_filament_view_restir_supported')
-  external JSNumber filament_view_restir_supported(JSNumber view);
-  @JS('_filament_view_get_restir_stats')
-  external void filament_view_get_restir_stats(JSNumber view, JSNumber out_stats);
-  @JS('_filament_view_restir_reset_history')
-  external void filament_view_restir_reset_history(JSNumber view);
-  @JS('_filament_light_set_restir_sampling_weight')
-  external void filament_light_set_restir_sampling_weight(JSNumber engine, JSNumber entity, JSNumber weight);
   @JS('_filament_light_get_falloff')
   external JSNumber filament_light_get_falloff(JSNumber engine, JSNumber entity);
   @JS('_filament_light_set_spot_light_cone')
@@ -8314,6 +8340,60 @@ extension type _Module._(JSObject _) implements JSObject {
   external JSNumber filament_image_get_mipmap_count(JSNumber img);
   @JS('_filament_image_generate_mipmaps')
   external void filament_image_generate_mipmaps(JSNumber src, JSNumber filter, JSNumber out_levels, JSNumber count);
+  @JS('_filament_dlss_available')
+  external JSNumber filament_dlss_available();
+  @JS('_filament_dlss_request_extensions')
+  external JSNumber filament_dlss_request_extensions();
+  @JS('_filament_dlss_clear_extension_request')
+  external void filament_dlss_clear_extension_request();
+  @JS('_filament_dlss_set_runtime_dir')
+  external void filament_dlss_set_runtime_dir(JSNumber dir);
+  @JS('_filament_dlss_create')
+  external JSNumber filament_dlss_create(JSNumber engine, JSNumber view, JSNumber opts);
+  @JS('_filament_dlss_get_render_resolution')
+  external void filament_dlss_get_render_resolution(JSNumber dlss, JSNumber out_w, JSNumber out_h);
+  @JS('_filament_dlss_set_quality')
+  external void filament_dlss_set_quality(JSNumber dlss, JSNumber quality);
+  @JS('_filament_dlss_reset_history')
+  external void filament_dlss_reset_history(JSNumber dlss);
+  @JS('_filament_dlss_destroy')
+  external void filament_dlss_destroy(JSNumber dlss);
+  @JS('_filament_dlss_last_error')
+  external JSNumber filament_dlss_last_error();
+  @JS('_filament_ray_tracing_request_extensions')
+  external JSNumber filament_ray_tracing_request_extensions();
+  @JS('_filament_ray_tracing_clear_extension_request')
+  external void filament_ray_tracing_clear_extension_request();
+  @JS('_filament_engine_supports_ray_query')
+  external JSNumber filament_engine_supports_ray_query(JSNumber engine);
+  @JS('_filament_scene_set_ray_tracing_enabled')
+  external void filament_scene_set_ray_tracing_enabled(JSNumber scene, JSNumber enabled);
+  @JS('_filament_scene_get_ray_tracing_enabled')
+  external JSNumber filament_scene_get_ray_tracing_enabled(JSNumber scene);
+  @JS('_filament_scene_get_tlas_instance_count')
+  external JSNumber filament_scene_get_tlas_instance_count(JSNumber scene);
+  @JS('_filament_scene_get_tlas_build_nanos')
+  external JSBigInt filament_scene_get_tlas_build_nanos(JSNumber scene);
+  @JS('_filament_renderable_set_ray_tracing_visible')
+  external void filament_renderable_set_ray_tracing_visible(JSNumber engine, JSNumber entity, JSNumber visible);
+  @JS('_filament_renderable_is_ray_tracing_visible')
+  external JSNumber filament_renderable_is_ray_tracing_visible(JSNumber engine, JSNumber entity);
+  @JS('_filament_scene_trace_visibility')
+  external JSNumber filament_scene_trace_visibility(JSNumber engine, JSNumber scene, JSNumber origin3, JSNumber direction3, JSNumber max_distance, JSNumber out_distance, JSNumber out_entity, JSNumber out_primitive);
+  @JS('_filament_view_trace_ray')
+  external void filament_view_trace_ray(JSNumber view, JSNumber origin3, JSNumber direction3, JSNumber max_distance, JSNumber callback, JSNumber user_data);
+  @JS('_filament_view_set_restir_options')
+  external void filament_view_set_restir_options(JSNumber view, JSNumber options);
+  @JS('_filament_view_get_restir_options')
+  external void filament_view_get_restir_options(JSNumber view, JSNumber out_options);
+  @JS('_filament_view_restir_supported')
+  external JSNumber filament_view_restir_supported(JSNumber view);
+  @JS('_filament_view_get_restir_stats')
+  external void filament_view_get_restir_stats(JSNumber view, JSNumber out_stats);
+  @JS('_filament_view_restir_reset_history')
+  external void filament_view_restir_reset_history(JSNumber view);
+  @JS('_filament_light_set_restir_sampling_weight')
+  external void filament_light_set_restir_sampling_weight(JSNumber engine, JSNumber entity, JSNumber weight);
   @JS('_filament_image_extract_channel')
   external JSNumber filament_image_extract_channel(JSNumber src, JSNumber channel);
   @JS('_filament_image_combine_channels')
@@ -8456,6 +8536,30 @@ extension type _Module._(JSObject _) implements JSObject {
   external JSNumber filament_engine_create_for_canvas(JSNumber canvas_selector, JSNumber out_context);
   @JS('_filament_web_destroy_canvas_context')
   external void filament_web_destroy_canvas_context(JSNumber context);
+  @JS('_filament_vulkan_request_device_extension')
+  external void filament_vulkan_request_device_extension(JSNumber requester, JSNumber name);
+  @JS('_filament_vulkan_request_device_feature')
+  external void filament_vulkan_request_device_feature(JSNumber requester, JSNumber sType, JSNumber structSize, JSNumber fieldOffset, JSNumber extension);
+  @JS('_filament_vulkan_clear_requests')
+  external void filament_vulkan_clear_requests(JSNumber requester);
+  @JS('_filament_vulkan_device_feature_enabled')
+  external JSNumber filament_vulkan_device_feature_enabled(JSNumber engine, JSNumber sType, JSNumber fieldOffset);
+  @JS('_filament_vulkan_device_extension_enabled')
+  external JSNumber filament_vulkan_device_extension_enabled(JSNumber engine, JSNumber name);
+  @JS('_filament_post_pass_debug_create')
+  external JSNumber filament_post_pass_debug_create(JSNumber engine, JSNumber view, JSNumber mode);
+  @JS('_filament_post_pass_debug_set_mode')
+  external void filament_post_pass_debug_set_mode(JSNumber pass, JSNumber mode);
+  @JS('_filament_post_pass_debug_frame_count')
+  external JSBigInt filament_post_pass_debug_frame_count(JSNumber pass);
+  @JS('_filament_post_pass_debug_last_size')
+  external void filament_post_pass_debug_last_size(JSNumber pass, JSNumber out_w, JSNumber out_h);
+  @JS('_filament_view_reset_external_post_pass_history')
+  external void filament_view_reset_external_post_pass_history(JSNumber view);
+  @JS('_filament_post_pass_debug_destroy')
+  external void filament_post_pass_debug_destroy(JSNumber pass);
+  @JS('_filament_post_pass_last_error')
+  external JSNumber filament_post_pass_last_error();
 }
 
 _Module get _m => _Module._(FlutterFilamentModule.instance);
@@ -8464,7 +8568,6 @@ _Module get _m => _Module._(FlutterFilamentModule.instance);
 void $registerFilamentBindings() {
   ffi.$registerStruct<filament_engine_config_t>(40, 4, filament_engine_config_t.$at);
   ffi.$registerStruct<filament_engine_resource_counts_t>(152, 8, filament_engine_resource_counts_t.$at);
-  ffi.$registerStruct<filament_dlss_options_t>(20, 4, filament_dlss_options_t.$at);
   ffi.$registerStruct<filament_dynamic_resolution_options>(24, 4, filament_dynamic_resolution_options.$at);
   ffi.$registerStruct<filament_bloom_options>(56, 4, filament_bloom_options.$at);
   ffi.$registerStruct<filament_fog_options>(56, 4, filament_fog_options.$at);
@@ -8481,8 +8584,6 @@ void $registerFilamentBindings() {
   ffi.$registerStruct<filament_vsm_shadow_options>(12, 4, filament_vsm_shadow_options.$at);
   ffi.$registerStruct<filament_soft_shadow_options>(16, 4, filament_soft_shadow_options.$at);
   ffi.$registerStruct<filament_stereoscopic_options>(1, 1, filament_stereoscopic_options.$at);
-  ffi.$registerStruct<filament_restir_options>(12, 4, filament_restir_options.$at);
-  ffi.$registerStruct<filament_restir_stats_t>(24, 8, filament_restir_stats_t.$at);
   ffi.$registerStruct<filament_rt_attachment_t>(16, 4, filament_rt_attachment_t.$at);
   ffi.$registerStruct<FilamentBone>(32, 4, FilamentBone.$at);
   ffi.$registerStruct<FilamentShadowOptions>(104, 4, FilamentShadowOptions.$at);
@@ -8499,10 +8600,12 @@ void $registerFilamentBindings() {
   ffi.$registerStruct<filament_frame_pacer_config_t>(16, 8, filament_frame_pacer_config_t.$at);
   ffi.$registerStruct<filament_hardware_timeline_t>(16, 8, filament_hardware_timeline_t.$at);
   ffi.$registerStruct<filament_vsync_tick_t>(32, 8, filament_vsync_tick_t.$at);
+  ffi.$registerStruct<filament_dlss_options_t>(20, 4, filament_dlss_options_t.$at);
+  ffi.$registerStruct<filament_restir_options>(12, 4, filament_restir_options.$at);
+  ffi.$registerStruct<filament_restir_stats_t>(24, 8, filament_restir_stats_t.$at);
   ffi.$registerStruct<filament_gpu_info_t>(276, 4, filament_gpu_info_t.$at);
   ffi.$registerStruct<filament_gpu_memory_t>(32, 8, filament_gpu_memory_t.$at);
   ffi.$registerCallbackType<FilamentPickCallbackFunction>(const ffi.$CallbackSignature('v', ['u', 'f', 'f', 'f', 'p']));
-  ffi.$registerCallbackType<FilamentRayHitCallbackFunction>(const ffi.$CallbackSignature('v', ['b', 'f', 'u', 'u', 'p']));
   ffi.$registerCallbackType<FilamentRaycastCallbackFunction>(const ffi.$CallbackSignature('b', ['p', 'p', 'p', 'p']));
   ffi.$registerCallbackType<filament_buffer_free_fnFunction>(const ffi.$CallbackSignature('v', ['p', 'u', 'p']));
   ffi.$registerCallbackType<filament_callback_dispatch_fnFunction>(const ffi.$CallbackSignature('v', ['p']));
@@ -8511,6 +8614,7 @@ void $registerFilamentBindings() {
   ffi.$registerCallbackType<FilamentEntityDestructionCallbackFunction>(const ffi.$CallbackSignature('v', ['p', 'u', 'p']));
   ffi.$registerCallbackType<FilamentReadPixelsCallbackFunction>(const ffi.$CallbackSignature('v', ['p', 'p']));
   ffi.$registerCallbackType<FilamentSwapChainCallbackFunction>(const ffi.$CallbackSignature('v', ['p', 'p']));
+  ffi.$registerCallbackType<FilamentRayHitCallbackFunction>(const ffi.$CallbackSignature('v', ['b', 'f', 'u', 'u', 'p']));
   ffi.$registerCallbackType<FilIblProgressFunction>(const ffi.$CallbackSignature('v', ['u', 'f', 'p']));
   ffi.$registerCallbackType<ffi.Void Function(ffi.Pointer<ffi.Void>, ffi.Size, ffi.Pointer<ffi.Void>)>(const ffi.$CallbackSignature('v', ['p', 'u', 'p']));
   ffi.$registerCallbackType<ffi.Void Function(ffi.Pointer<FilamentCallbackEnvelope>)>(const ffi.$CallbackSignature('v', ['p']));

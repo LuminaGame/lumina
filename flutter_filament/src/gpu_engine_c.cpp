@@ -13,6 +13,7 @@
 
 #include "gpu_c.h"
 #include "gpu_engine_internal.h"
+#include "vulkan_features_c.h"
 
 #include <algorithm>
 #include <cstdio>
@@ -86,6 +87,37 @@ static void appendUnique(std::vector<std::string>& into, const std::vector<std::
     }
 }
 
+// Device extensions and feature-structure members requested through
+// filament_vulkan_request_device_* (one entry per requester), united at engine creation.
+struct FeatureRequest {
+    uint32_t sType = 0;
+    uint32_t size = 0;
+    std::string extension;
+    std::vector<uint32_t> fields;
+};
+
+struct VulkanRequests {
+    std::vector<std::string> extensions;
+    std::vector<FeatureRequest> features;
+};
+
+std::map<std::string, VulkanRequests> gVulkanRequests;  // guarded by gExtraExtensionsMutex
+
+static void mergeFeature(std::vector<FeatureRequest>& into, const FeatureRequest& request) {
+    for (auto& existing : into) {
+        if (existing.sType != request.sType) continue;
+        existing.size = std::max(existing.size, request.size);
+        if (existing.extension.empty()) existing.extension = request.extension;
+        for (uint32_t f : request.fields) {
+            if (std::find(existing.fields.begin(), existing.fields.end(), f) == existing.fields.end()) {
+                existing.fields.push_back(f);
+            }
+        }
+        return;
+    }
+    into.push_back(request);
+}
+
 class PreferredGpuPlatform final : public DesktopVulkanPlatform {
 public:
     explicit PreferredGpuPlatform(GpuPreference pref) : mPref(std::move(pref)) {
@@ -93,6 +125,10 @@ public:
         for (const auto& entry : gExtraExtensions) {
             appendUnique(mInstanceExtensions, entry.second.first);
             appendUnique(mDeviceExtensions, entry.second.second);
+        }
+        for (const auto& entry : gVulkanRequests) {
+            appendUnique(mDeviceExtensions, entry.second.extensions);
+            for (const auto& feature : entry.second.features) mergeFeature(mFeatures, feature);
         }
     }
 
@@ -102,6 +138,17 @@ public:
         if (mPref.index >= 0) c.gpu.index = static_cast<int8_t>(mPref.index);
         c.extraInstanceExtensions = toCStrings(mInstanceExtensions);
         c.extraDeviceExtensions = toCStrings(mDeviceExtensions);
+        auto features = utils::FixedCapacityVector<Customization::ExtraDeviceFeature>::with_capacity(mFeatures.size());
+        for (const auto& f : mFeatures) {
+            Customization::ExtraDeviceFeature feature;
+            feature.sType = f.sType;
+            feature.size = f.size;
+            feature.extension = utils::CString(f.extension.c_str());
+            feature.fields = utils::FixedCapacityVector<uint32_t>::with_capacity(f.fields.size());
+            for (uint32_t field : f.fields) feature.fields.push_back(field);
+            features.push_back(std::move(feature));
+        }
+        c.extraDeviceFeatures = std::move(features);
         return c;
     }
 
@@ -119,10 +166,19 @@ private:
     GpuPreference mPref;
     std::vector<std::string> mInstanceExtensions;
     std::vector<std::string> mDeviceExtensions;
+    std::vector<FeatureRequest> mFeatures;
 };
+
+PreferredGpuPlatform* platformOf(void* engine);
 
 std::mutex gPlatformsMutex;
 std::unordered_map<Engine*, PreferredGpuPlatform*> gPlatforms;
+
+PreferredGpuPlatform* platformOf(void* engine) {
+    std::lock_guard<std::mutex> lock(gPlatformsMutex);
+    auto it = gPlatforms.find(static_cast<Engine*>(engine));
+    return it == gPlatforms.end() ? nullptr : it->second;
+}
 #endif
 
 }  // namespace
@@ -351,6 +407,74 @@ bool flutter_filament_engine_vulkan_handles(void* engine, void** outInstance, vo
     return true;
 #else
     (void) engine;
+    return false;
+#endif
+}
+
+void filament_vulkan_request_device_extension(const char* requester, const char* name) {
+#if FLUTTER_FILAMENT_GPU_PLATFORM
+    if (!name || !*name) return;
+    std::lock_guard<std::mutex> lock(gExtraExtensionsMutex);
+    appendUnique(gVulkanRequests[requester ? requester : ""].extensions, { name });
+#else
+    (void) requester;
+    (void) name;
+#endif
+}
+
+void filament_vulkan_request_device_feature(const char* requester, uint32_t sType, uint32_t structSize,
+        uint32_t fieldOffset, const char* extension) {
+#if FLUTTER_FILAMENT_GPU_PLATFORM
+    FeatureRequest request;
+    request.sType = sType;
+    request.size = structSize;
+    request.extension = extension ? extension : "";
+    request.fields.push_back(fieldOffset);
+    std::lock_guard<std::mutex> lock(gExtraExtensionsMutex);
+    mergeFeature(gVulkanRequests[requester ? requester : ""].features, request);
+#else
+    (void) requester;
+    (void) sType;
+    (void) structSize;
+    (void) fieldOffset;
+    (void) extension;
+#endif
+}
+
+void filament_vulkan_clear_requests(const char* requester) {
+#if FLUTTER_FILAMENT_GPU_PLATFORM
+    std::lock_guard<std::mutex> lock(gExtraExtensionsMutex);
+    if (requester) {
+        gVulkanRequests.erase(requester);
+    } else {
+        gVulkanRequests.clear();
+    }
+#else
+    (void) requester;
+#endif
+}
+
+bool filament_vulkan_device_feature_enabled(void* engine, uint32_t sType, uint32_t fieldOffset) {
+#if FLUTTER_FILAMENT_GPU_PLATFORM
+    PreferredGpuPlatform* platform = platformOf(engine);
+    return platform && platform->getDevice() != VK_NULL_HANDLE &&
+            platform->isExtraDeviceFeatureEnabled(sType, fieldOffset);
+#else
+    (void) engine;
+    (void) sType;
+    (void) fieldOffset;
+    return false;
+#endif
+}
+
+bool filament_vulkan_device_extension_enabled(void* engine, const char* name) {
+#if FLUTTER_FILAMENT_GPU_PLATFORM
+    PreferredGpuPlatform* platform = platformOf(engine);
+    return platform && name && platform->getDevice() != VK_NULL_HANDLE &&
+            platform->isDeviceExtensionEnabled(name);
+#else
+    (void) engine;
+    (void) name;
     return false;
 #endif
 }

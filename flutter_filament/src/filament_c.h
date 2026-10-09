@@ -62,5 +62,7 @@
 #include "ibl_sh_c.h"
 #include "ibl_bake_c.h"
 #include "web_c.h"
+#include "vulkan_features_c.h"
+#include "post_pass_c.h"
 
 #endif // FLUTTER_FILAMENT_C_H

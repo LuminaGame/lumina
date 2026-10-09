@@ -29,6 +29,8 @@ export 'package:flutter_filament/src/motion_vectors.dart';
 export 'package:flutter_filament/src/dlss.dart';
 export 'package:flutter_filament/src/ray_tracing.dart';
 export 'package:flutter_filament/src/restir.dart';
+export 'package:flutter_filament/src/post_pass.dart';
+export 'package:flutter_filament/src/vulkan_features.dart';
 export 'package:flutter_filament/src/render_target.dart';
 export 'package:flutter_filament/src/renderable.dart';
 export 'package:flutter_filament/src/renderer.dart';

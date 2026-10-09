@@ -125,5 +125,5 @@ The exact sizes come from NGX (`NGX_DLSS_GET_OPTIMAL_SETTINGS`) and may change b
 
 - Vulkan only, NVIDIA GPUs with DLSS support only; OpenGL, Metal, WebGPU and the web report `Dlss.available == false`.
 - DLSS Frame Generation and Ray Reconstruction are not integrated.
-- The frame DLSS receives is LDR (after colour grading); HDR output through DLSS would need the upscaler before colour grading.
+- The frame DLSS Super Resolution receives is LDR (after colour grading): it is an external upscaler of the `DISPLAY` stage. Patch `0011` adds the `HDR` stage (in place of the TAA resolve, before bloom and colour grading) for upscalers that need the linear frame; see [External post pass and Vulkan device features](external-post-pass.md).
 - Lumina Studio drives DLSS from the viewport HUD; games choose it through the game user settings (`LuminaUserSettingsSubsystem`, Blueprint **Set Upscaler** / **Is DLSS Supported**, see `lumina/world.md`), which fall back to FSR3 or none where DLSS is unavailable. A game built without the fetched SDK has no NGX code, like an installed editor.
