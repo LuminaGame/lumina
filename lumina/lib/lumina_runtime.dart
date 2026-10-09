@@ -161,6 +161,7 @@ export 'package:lumina/src/post_process/shadow_settings.dart';
 export 'package:lumina/src/post_process/scalability_profile.dart';
 export 'package:lumina/src/post_process/rtx_settings.dart';
 export 'package:lumina/src/post_process/fsr3_settings.dart';
+export 'package:lumina/src/post_process/rendering_features.dart';
 export 'package:lumina/src/animation/animation_clip.dart';
 export 'package:lumina/src/animation/anim_instance.dart';
 export 'package:lumina/src/animation/anim_montage.dart';

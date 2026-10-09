@@ -101,4 +101,4 @@ Bir post-process malzeme, malzeme bloğunda `rayQuery : true` bildirerek GLSL 46
 - Yapılara yalnızca pozisyon özniteliği olan `PrimitiveType.triangles` primitive'leri girer; çizgiler, noktalar ve şeritler yok sayılır.
 - Işın izlemeli gölgeler serttir (penumbra yok) ve yalnızca yönlü ışığı kapsar.
 - `FilamentScene.traceVisibility` kendi başına bir kare çizer; çalışan bir çizim döngüsünde `FilamentView.traceRay` kullanın.
-- Lumina Studio ve `lumina` motor paketi bu denetimleri henüz sunmaz; oyunlar doğrudan `flutter_filament` üzerinden çağırır.
+- `lumina`'da `LuminaRtxController` bu denetimleri bir view'a uygular: Lumina Studio viewport HUD'undan, oyunlar oyun kullanıcı ayarlarından sürer (`LuminaUserSettingsSubsystem`, Blueprint **Set Ray Tracing Enabled** / **Is Ray Tracing Supported**, bkz. `lumina/world.md`).

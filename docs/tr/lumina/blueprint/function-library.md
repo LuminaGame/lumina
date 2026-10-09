@@ -605,6 +605,21 @@ Vectors and rotators are **authoring space** (cm, Z up; rotators about X/Y/Z lik
 | `setVSyncEnabled` | `static const setVSyncEnabled` | Dikey senkronizasyonu (VSync) açar veya kapatır. |
 | `getVSyncEnabled` | `static const getVSyncEnabled` | Dikey senkronizasyonun açık olup olmadığını döner. |
 | `applyScalabilitySettings` | `static const applyScalabilitySettings` | Bekleyen tüm ölçeklenebilirlik ve görüş mesafesi ayarlarını canlı sahneye ve kameralara anında derleyip uygular. |
+| `setRayTracingEnabled` / `getRayTracingEnabled` | `static const setRayTracingEnabled` | **Set / Get Ray Tracing Enabled** node'u (kategori `Settings\|Ray Tracing & Upscaling`): oyun kullanıcı ayarlarındaki donanımsal ışın izleme, alttaki ikisinin ana anahtarı. Buradaki her setter gibi bekletilir; Apply Scalability Settings uygular. |
+| `setRayTracedShadowsEnabled` / `getRayTracedShadowsEnabled` | `static const setRayTracedShadowsEnabled` | Güneş, gölge haritaları yerine ışın izlemeli sert gölge düşürür (varsayılan açık). |
+| `setRestirEnabled` / `getRestirEnabled` | `static const setRestirEnabled` | Nokta ve spot ışıkların ReSTIR doğrudan aydınlatması. |
+| `setRestirCandidates` / `getRestirCandidates` | `static const setRestirCandidates` | ReSTIR'in piksel ve kare başına örneklediği ışık sayısı (1–64, varsayılan 8). |
+| `setRestirSpatialSamples` / `getRestirSpatialSamples` | `static const setRestirSpatialSamples` | Piksel başına birleştirilen komşu rezervuar sayısı (0–8, varsayılan 2). |
+| `setUpscaler` / `getUpscaler` | `static const setUpscaler` | Seçilen ölçekleyici: `None`, `FSR3` veya `DLSS` (büyük/küçük harf duyarsız; `fsr` FSR3'tür, diğer her şey None). |
+| `setUpscalerQuality` / `getUpscalerQuality` | `static const setUpscalerQuality` | `Native AA`, `Quality`, `Balanced`, `Performance`, `Ultra Performance`; FSR3 eksen başına 1/1, 1/1.5, 1/1.7, 1/2, 1/3 çözünürlükte çizer, DLSS DLAA, Max Quality, Balanced, Max Performance, Ultra Performance kullanır. |
+| `setUpscalerSharpness` / `getUpscalerSharpness` | `static const setUpscalerSharpness` | Ölçekleme sonrası keskinleştirme, 0–1 (FSR3'ün RCAS'ı; DLSS yok sayar). |
+| `setFrameGenerationEnabled` / `getFrameGenerationEnabled` | `static const setFrameGenerationEnabled` | FSR3 kare üretimi: her çizilen karenin önüne ara kare. Yalnızca FSR3 ölçekleyiciyle. |
+| `isRayTracingSupported` | `static const isRayTracingSupported` | Oyunun motoru ışın izleyebiliyor (Vulkan ray query; `LuminaGameWidget` motordan önce ister). Web'de ve renderer yokken false. |
+| `isDlssSupported` | `static const isDlssSupported` | Vulkan backend, NVIDIA GPU ve NGX runtime'ı (`nvngx_dlss`); bu view'da DLSS başlatılamadıysa false. |
+| `isFsr3Supported` / `isFrameGenerationSupported` | `static const isFsr3Supported` | View hareket vektörü çizebiliyor (feature level 1 veya üstü bir GPU backend'i). |
+| `getSupportedUpscalers` | `static const getSupportedUpscalers` | Bu GPU'nun çalıştırabildiği ölçekleyicilerin string dizisi, önce `None`: ayarlar menüsü için. |
+| `getActiveUpscaler` / `isRayTracingActive` | `static const getActiveUpscaler` | Son uygulamanın geri düşüşten sonra gerçekten açtığı (Get Upscaler oyuncunun seçimini korur). |
+| `saveGameUserSettings` / `loadGameUserSettings` | `static const saveGameUserSettings` | Tüm kullanıcı ayarlarını kayıt dizinindeki `GameUserSettings.json` dosyasına arka planda yazar / okur; Load okuduğunu uygular. |
 | `callShapes` | `static final Map<String, LuminaBlueprintCallShape> callShapes` | One entry per [functions] key: the direct call generated code emits. |
 | `functions` | `static final Map<String, LuminaBlueprintFunction> functions` | Every node the VM can call, keyed by node id: the built-ins, then the functions registered in [LuminaBlueprintFunctionRegistry]. Inputs arrive converted to their pin types (the VM resolves wires, literals and defaults first). |
 | `builtInFunctions` | `static final Map<String, LuminaBlueprintFunction> builtInFunctions` | One entry per pure / impure built-in node, keyed by node id. |

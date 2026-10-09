@@ -204,7 +204,30 @@ Filament'in fragment pass portu (patch 0009) üzerinden bir view için FidelityF
 | `apply` | `void apply(LuminaRayTracingSettings rayTracing, LuminaDlssSettings dlss, {LuminaFsr3Settings fsr3 = const LuminaFsr3Settings(), required TemporalAntiAliasingOptions baseTaa, required DynamicResolutionOptions baseDynamicResolution})` | İkisini de uygular; değişiklik yoksa ucuzdur. DLSS kapanınca temel seçenekler geri yüklenir (DLSS'in kendisi hareket vektörlü TAA ister). |
 | `dlss`, `appliedRayTracing`, `appliedDlss` | | Canlı DLSS örneği ve son uygulanan ayarlar. |
 | `appliedFsr3`, `fsr3Active`, `fsr3Supported` | | Son uygulanan FSR3 ayarları, FSR3'ün şu an view'da olup olmadığı (açık, hareket vektörleri var, DLSS yok) ve motorun gereken hareket vektörlerini çizip çizmediği. |
+| `invalidate` | `void invalidate()` | View'a koyduklarını unutur (DLSS yok edilir); sonraki `apply` her şeyi yeniden yazar. View'ın TAA ya da dinamik çözünürlüğünü başka bir şey (ör. bir ölçeklenebilirlik profili) değiştirdikten sonra çağrılır. |
 | `dispose` | `void dispose()` | DLSS örneğini bırakır. |
+
+## `lib/src/post_process/rendering_features.dart`
+
+Yukarıdaki ayarların oyun tarafındaki biçimi; oyun kullanıcı ayarları (`LuminaUserSettingsSubsystem`, bkz. [Dünya](world.md)) ve Blueprint node'ları kullanır.
+
+### `enum LuminaUpscaler`
+
+`none` (`None`), `fsr3` (`FSR3`), `dlss` (`DLSS`); `displayName` ve `parse(String?)` (büyük/küçük harf duyarsız, `fsr` FSR3'tür, diğer her şey `none`).
+
+### `enum LuminaUpscalerQuality`
+
+İki ölçekleyici için tek kalite ölçeği; `displayName`, FSR3 ön ayarı (`fsr3`) ve DLSS modu (`dlss`) ile: `nativeAA` (`Native AA`, FSR3 native AA, DLAA), `quality` (Max Quality), `balanced`, `performance` (Max Performance), `ultraPerformance`. `parse` büyük/küçük harf, boşluk ve alt çizgiyi yok sayar; `DLAA` ve `native` `nativeAA`'dır, bilinmeyen her şey `quality`.
+
+### `class LuminaRenderingFeatureSupport`
+
+Bir GPU'nun yapabildikleri, her "hayır" için bir sebeple: `rayTracing`, `dlss`, `fsr3`, `frameGeneration` ve `…Reason` metinleri. `probe({engine, view})` motora (`supportsRayQuery`; DLSS için Vulkan backend + `LuminaRtxController.dlssAvailable`) ve view'a (FSR3 ve kare üretimi için `motionVectorsSupported`) sorar; web'de ya da renderer yokken `none(reason)`; `withoutDlss(reason)`; `supportedUpscalers` (önce `none`).
+
+### `class LuminaRenderingFeatureSettings`
+
+Oyuncunun seçimi: `rayTracing`, `rayTracedShadows` (varsayılan true), `restir`, `restirCandidates` (1–64, 8), `restirSpatialSamples` (0–8, 2), `upscaler`, `upscalerQuality` (`quality`), `sharpness` (0–1, 0.5), `frameGeneration`. `rayTracingSettings`, `fsr3Settings`, `dlssSettings` tarif ettiği motor ayarlarıdır; `resolve(support)` bir `LuminaResolvedRenderingFeatures` döner (gerçekten uygulanan `settings` + `fallbacks` mesajları: ray query yoksa ışın izleme kapalı, DLSS → FSR3 → None, kare üretimi yalnızca FSR3 ile); `copyWith` kırpar; `toMap` / `fromMap` (anahtarlar `ray_tracing`, `ray_traced_shadows`, `restir`, `restir_candidates`, `restir_spatial_samples`, `upscaler`, `upscaler_quality`, `sharpness`, `frame_generation`; bilinmeyen ya da yanlış tipli değerler varsayılanı korur).
+
+**Oyunlar**: `LuminaGameWidget` paylaşılan motor oluşturulmadan önce ray query ve DLSS uzantılarını (`LuminaRtxController.requestExtensions`) ister; süreç başına bir kez, web'de asla. DLSS ayrıca oyun çalıştırılabilirinin yanında, `LUMINA_DLSS_DIR`'de ya da indirilmiş bir SDK'da NGX runtime'ını (`nvngx_dlss`) ister; paketlenmiş oyun onu içermez.
 
 ## `lib/src/material/dynamic_material_instance.dart`
 

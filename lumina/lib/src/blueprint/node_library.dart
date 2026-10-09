@@ -14,6 +14,7 @@ part 'node_library/flow_control.dart';
 part 'node_library/engine_and_actors.dart';
 part 'node_library/graph_members.dart';
 part 'node_library/game_framework.dart';
+part 'node_library/rendering_features.dart';
 part 'node_library/media_and_debug.dart';
 part 'node_library/type_context.dart';
 part 'node_library/widget_blueprint.dart';
@@ -621,6 +622,7 @@ abstract final class LuminaBlueprintNodeLibrary {
     ..._engineAndActorNodes,
     ..._graphMemberNodes,
     ..._gameFrameworkNodes,
+    ..._renderingFeatureNodes,
     ..._mediaAndDebugNodes,
     ..._widgetBlueprintNodes,
     ..._ragdollNodes,

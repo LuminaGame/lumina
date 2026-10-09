@@ -605,6 +605,21 @@ Vectors and rotators are **authoring space** (cm, Z up; rotators about X/Y/Z lik
 | `setVSyncEnabled` | `static const setVSyncEnabled` | Enables or disables vertical synchronization. |
 | `getVSyncEnabled` | `static const getVSyncEnabled` | Returns whether vertical synchronization is enabled. |
 | `applyScalabilitySettings` | `static const applyScalabilitySettings` | Compiles and applies pending scalability and view distance settings to the live viewport and cameras. |
+| `setRayTracingEnabled` / `getRayTracingEnabled` | `static const setRayTracingEnabled` | Node **Set / Get Ray Tracing Enabled** (category `Settings\|Ray Tracing & Upscaling`): hardware ray tracing in the game user settings, the switch for the two below. Staged; committed by Apply Scalability Settings, like every setter here. |
+| `setRayTracedShadowsEnabled` / `getRayTracedShadowsEnabled` | `static const setRayTracedShadowsEnabled` | The sun casts ray-traced hard shadows instead of shadow maps (default on). |
+| `setRestirEnabled` / `getRestirEnabled` | `static const setRestirEnabled` | ReSTIR direct lighting of the point and spot lights. |
+| `setRestirCandidates` / `getRestirCandidates` | `static const setRestirCandidates` | Lights ReSTIR samples per pixel and frame (1–64, default 8). |
+| `setRestirSpatialSamples` / `getRestirSpatialSamples` | `static const setRestirSpatialSamples` | Neighbouring reservoirs merged per pixel (0–8, default 2). |
+| `setUpscaler` / `getUpscaler` | `static const setUpscaler` | The chosen upscaler: `None`, `FSR3` or `DLSS` (case-insensitive; `fsr` is FSR3, anything else None). |
+| `setUpscalerQuality` / `getUpscalerQuality` | `static const setUpscalerQuality` | `Native AA`, `Quality`, `Balanced`, `Performance`, `Ultra Performance`; FSR3 renders at 1/1, 1/1.5, 1/1.7, 1/2, 1/3 per axis, DLSS uses DLAA, Max Quality, Balanced, Max Performance, Ultra Performance. |
+| `setUpscalerSharpness` / `getUpscalerSharpness` | `static const setUpscalerSharpness` | Sharpening after the upscale, 0–1 (FSR3's RCAS; DLSS ignores it). |
+| `setFrameGenerationEnabled` / `getFrameGenerationEnabled` | `static const setFrameGenerationEnabled` | FSR3 frame generation: an interpolated frame before each rendered one. Only with the FSR3 upscaler. |
+| `isRayTracingSupported` | `static const isRayTracingSupported` | The game's engine traces rays (Vulkan ray query; requested before the engine by `LuminaGameWidget`). False on the web and without a renderer. |
+| `isDlssSupported` | `static const isDlssSupported` | Vulkan backend, an NVIDIA GPU and the NGX runtime (`nvngx_dlss`); false after DLSS failed to start on this view. |
+| `isFsr3Supported` / `isFrameGenerationSupported` | `static const isFsr3Supported` | The view renders motion vectors (a GPU backend at feature level 1 or higher). |
+| `getSupportedUpscalers` | `static const getSupportedUpscalers` | String array of the upscalers this GPU can run, `None` first: for an options menu. |
+| `getActiveUpscaler` / `isRayTracingActive` | `static const getActiveUpscaler` | What the last apply actually turned on after fallback (Get Upscaler keeps the player's choice). |
+| `saveGameUserSettings` / `loadGameUserSettings` | `static const saveGameUserSettings` | Writes / reads every user setting as `GameUserSettings.json` in the save game directory, in the background; Load applies what it read. |
 | `callShapes` | `static final Map<String, LuminaBlueprintCallShape> callShapes` | One entry per [functions] key: the direct call generated code emits. |
 | `functions` | `static final Map<String, LuminaBlueprintFunction> functions` | Every node the VM can call, keyed by node id: the built-ins, then the functions registered in [LuminaBlueprintFunctionRegistry]. Inputs arrive converted to their pin types (the VM resolves wires, literals and defaults first). |
 | `builtInFunctions` | `static final Map<String, LuminaBlueprintFunction> builtInFunctions` | One entry per pure / impure built-in node, keyed by node id. |

@@ -335,7 +335,7 @@ Diyalog içerisindeki seçilebilir her bir tuş veya eksen seçeneğini temsil e
 - **Epic**: Yüksek kaliteli modern oyun deneyimi hedefidir. 4 cascade 4096×4096 Percentage-Closer Soft Shadows (PCSS) ve 8 adımlı temas gölgeleri, alt piksel titreme arabelleğine sahip Temporal Anti-Aliasing (TAA), ekran alanı ortam kapatma (AO), ACES renk tonlaması, 8x anizotropik dokular ve 2.000 metre (2 km) görüş mesafesi içerir.
 - **Cinematic**: Sinematik ara sahneler, çevrimdışı render alımları, tanıtım videoları ve ultra üst düzey iş istasyonları için tasarlanmış en üstün render modudur. Kamera görüş mesafesini 4.000 metreye (4 km) uzatır; gölgeleri 4 cascade 4096×4096 PCSS, 16 adımlı ekran temas gölgesi ve lambda 0.4 pratik bölünme ile çizer; donanımsal 4x MSAA ile zamansal TAA'yı birlikte kullanır; dokularda 16x anizotropik tam sıkıştırmasız örneklemeyi açar ve sinematik alan derinliği (DoF) ile tam renk derecelendirmesi uygular. Yüksek kare hızlı etkileşimli oynanış için **Epic** veya **High** modu tavsiye edilir.
 
-Bu ayarlar çalışma zamanında (runtime) Blueprint'lerde yer alan `SetOverallScalabilityLevel`, `SetViewDistance`, `ApplyScalabilitySettings` gibi düğümlerle veya kod tarafında `LuminaUserSettingsSubsystem` aracılığıyla dinamik olarak değiştirilebilir.
+Bu ayarlar çalışma zamanında (runtime) Blueprint'lerde yer alan `SetOverallScalabilityLevel`, `SetViewDistance`, `ApplyScalabilitySettings` gibi düğümlerle veya kod tarafında `LuminaUserSettingsSubsystem` aracılığıyla dinamik olarak değiştirilebilir. Işın izleme, ReSTIR, ölçekleyici (None / FSR3 / DLSS) ve kare üretimi ayrı oyuncu tercihleridir (Set Ray Tracing Enabled, Set Upscaler, Is DLSS Supported, ...): ön ayarlar onlara dokunmaz.
 
 ---
 

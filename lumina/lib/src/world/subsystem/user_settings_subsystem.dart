@@ -1,14 +1,33 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter_filament/filament.dart';
+import 'package:lumina_core/lumina_core.dart' show EngineLoggerService;
 
 import 'package:lumina/src/components/camera/camera_component.dart';
+import 'package:lumina/src/post_process/rendering_features.dart';
 import 'package:lumina/src/post_process/scalability_profile.dart';
 import 'package:lumina/src/post_process/shadow_settings.dart';
+import 'package:lumina/src/save/save_game_subsystem.dart';
 import 'package:lumina/src/world/world.dart';
 import 'package:lumina/src/world/subsystem/world_subsystem.dart';
 
+export 'package:lumina/src/world/subsystem/user_settings_rendering.dart';
+
 /// World subsystem managing engine scalability settings, quality presets,
-/// view distance, resolution scale, frame pacing, and graphics configuration.
-class LuminaUserSettingsSubsystem extends LuminaWorldSubsystem {
+/// view distance, resolution scale, frame pacing, and graphics configuration,
+/// plus ray tracing and upscaling ([LuminaUserSettingsRenderingFeatures]).
+///
+/// The scalability presets leave the ray tracing and upscaler choice alone:
+/// those depend on the GPU and are opted into by the player, so picking
+/// `Cinematic` never turns ray tracing on and picking `Low` never turns an
+/// upscaler off.
+class LuminaUserSettingsSubsystem extends LuminaWorldSubsystem with LuminaUserSettingsRenderingFeatures {
+  /// Where [saveSettings] and [loadSettings] keep the settings by default:
+  /// `GameUserSettings.json` in the save game directory.
+  static String get defaultSettingsFilePath =>
+      '${LuminaSaveGameSubsystem.defaultSaveDirectoryPath}/GameUserSettings.json';
+
   static const double viewDistanceLow = 25000.0; // 250 m
   static const double viewDistanceMedium = 50000.0; // 500 m
   static const double viewDistanceHigh = 100000.0; // 1,000 m (1 km)
@@ -86,6 +105,87 @@ class LuminaUserSettingsSubsystem extends LuminaWorldSubsystem {
   void onWorldBeginPlay() {
     super.onWorldBeginPlay();
     applySettings();
+  }
+
+  @override
+  void onWorldTick(double deltaTime) {
+    super.onWorldTick(deltaTime);
+    tickRenderingFeatures();
+  }
+
+  @override
+  void onWorldShutdown() {
+    disposeRenderingFeatures();
+    super.onWorldShutdown();
+  }
+
+  /// Every user setting as JSON (what [saveSettings] writes).
+  Map<String, dynamic> toMap() => {
+        'version': 1,
+        'overall_scalability_level': _overallScalabilityLevel,
+        'view_distance_quality': _viewDistanceQuality,
+        'view_distance': _viewDistance,
+        'shadow_quality': _shadowQuality,
+        'anti_aliasing_quality': _antiAliasingQuality,
+        'post_processing_quality': _postProcessingQuality,
+        'texture_quality': _textureQuality,
+        'shading_quality': _shadingQuality,
+        'resolution_scale': _resolutionScale,
+        'target_fps': _targetFps,
+        'vsync': _vsyncEnabled,
+        'rendering_features': renderingFeatures.toMap(),
+      };
+
+  /// Takes the settings in [map] (what [toMap] wrote; missing or mistyped
+  /// keys keep their value) and applies them.
+  void applyMap(Map<String, dynamic> map) {
+    String str(String key, String current) => map[key] is String ? map[key] as String : current;
+    double dbl(String key, double current) => map[key] is num ? (map[key] as num).toDouble() : current;
+    _overallScalabilityLevel = str('overall_scalability_level', _overallScalabilityLevel);
+    _viewDistanceQuality = str('view_distance_quality', _viewDistanceQuality);
+    _viewDistance = dbl('view_distance', _viewDistance).clamp(100.0, 10000000.0);
+    _shadowQuality = str('shadow_quality', _shadowQuality);
+    _antiAliasingQuality = str('anti_aliasing_quality', _antiAliasingQuality);
+    _postProcessingQuality = str('post_processing_quality', _postProcessingQuality);
+    _textureQuality = str('texture_quality', _textureQuality);
+    _shadingQuality = str('shading_quality', _shadingQuality);
+    _resolutionScale = dbl('resolution_scale', _resolutionScale).clamp(25.0, 200.0);
+    final fps = map['target_fps'];
+    if (fps is int) setTargetFps(fps);
+    if (map['vsync'] is bool) _vsyncEnabled = map['vsync'] as bool;
+    final features = map['rendering_features'];
+    if (features is Map) setRenderingFeatures(LuminaRenderingFeatureSettings.fromMap(Map<String, dynamic>.from(features)));
+    applySettings();
+  }
+
+  /// Writes [toMap] to [path] (default [defaultSettingsFilePath]); false when
+  /// the file cannot be written.
+  Future<bool> saveSettings({String? path}) async {
+    final file = File(path ?? defaultSettingsFilePath);
+    try {
+      await file.parent.create(recursive: true);
+      await file.writeAsString(const JsonEncoder.withIndent('  ').convert(toMap()));
+      return true;
+    } catch (e) {
+      EngineLoggerService().log('user settings not saved to ${file.path}: $e', level: 'warning', source: 'LuminaUserSettingsSubsystem');
+      return false;
+    }
+  }
+
+  /// Reads the settings [saveSettings] wrote and applies them; false, with
+  /// nothing changed, when the file is missing or not a settings object.
+  Future<bool> loadSettings({String? path}) async {
+    final file = File(path ?? defaultSettingsFilePath);
+    try {
+      if (!await file.exists()) return false;
+      final decoded = jsonDecode(await file.readAsString());
+      if (decoded is! Map) return false;
+      applyMap(Map<String, dynamic>.from(decoded));
+      return true;
+    } catch (e) {
+      EngineLoggerService().log('user settings not loaded from ${file.path}: $e', level: 'warning', source: 'LuminaUserSettingsSubsystem');
+      return false;
+    }
   }
 
   /// Sets overall scalability level and updates all constituent quality tiers.
@@ -343,6 +443,10 @@ class LuminaUserSettingsSubsystem extends LuminaWorldSubsystem {
         break;
     }
 
+    // Ray-traced sun shadows ride on the shadow settings too, so a sun
+    // component re-applying its options keeps them.
+    if (rayTracedSunShadowsWanted) shadowSettings = shadowSettings.copyWith(rayTraced: true);
+
     var profile = LuminaScalabilityProfile(
       shadows: shadowSettings,
       renderQuality: renderQuality,
@@ -364,5 +468,7 @@ class LuminaUserSettingsSubsystem extends LuminaWorldSubsystem {
         // In headless tests without native assets, applyScalability is safely caught.
       }
     }
+    // After the profile: the upscalers replace its TAA and dynamic resolution.
+    applyRenderingFeatures(baseTaa: profile.taa, baseDynamicResolution: profile.dynamicResolution);
   }
 }

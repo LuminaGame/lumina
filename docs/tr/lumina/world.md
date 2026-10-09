@@ -783,7 +783,26 @@ Oyun ölçeklenebilirliğini, kamera görüş mesafesini ve kullanıcı ekran ay
 | `setOverallScalabilityLevel` | `void setOverallScalabilityLevel(String preset)` | Tüm ölçeklenebilirlik kademelerini belirtilen presete göre senkronize eder. |
 | `setViewDistanceQuality` | `void setViewDistanceQuality(String tier)` | Görüş mesafesi kademesini belirler ve far clip mesafesini günceller. |
 | `setViewDistance` | `void setViewDistance(double cm)` | Santimetre cinsinden açık kamera far clip düzlemini belirler. |
-| `applySettings` | `void applySettings()` | Yapılandırılan ayarları dünyadaki dinamik çözünürlüğe, post-process denetleyicisine, yönlü ışık gölgelerine ve kamera kırpma düzlemlerine uygular. |
+| `applySettings` | `void applySettings()` | Yapılandırılan ayarları dünyadaki dinamik çözünürlüğe, post-process denetleyicisine, yönlü ışık gölgelerine ve kamera kırpma düzlemlerine uygular; ardından ışın izleme / ölçekleyici seçimini (aşağıda) uygular — ölçekleyiciler profilin TAA ve dinamik çözünürlüğünü değiştirdiği için profilden sonra. |
+| `toMap` / `applyMap` | `Map<String, dynamic> toMap()` / `void applyMap(Map<String, dynamic> map)` | Tüm kullanıcı ayarları JSON olarak (`version`, kalite seviyeleri, `view_distance`, `resolution_scale`, `target_fps`, `vsync`, `rendering_features`); `applyMap` eksik ya da yanlış tipli anahtarın değerini korur ve uygular. |
+| `saveSettings` / `loadSettings` | `Future<bool> saveSettings({String? path})` / `Future<bool> loadSettings({String? path})` | `toMap`'i yazar / okur (varsayılan `defaultSettingsFilePath`: `LuminaSaveGameSubsystem.defaultSaveDirectoryPath` içindeki `GameUserSettings.json`); load uygular, eksik ya da bozuk dosyada hiçbir şeyi değiştirmeden false döner. |
+
+**Işın izleme ve ölçekleme** (`LuminaUserSettingsRenderingFeatures`, `lib/src/world/subsystem/user_settings_rendering.dart`): setter'lar seçimi bekletir, `applySettings` onu GPU'ya göre çözer ve alt sistemin sahip olduğu bir `LuminaRtxController` ile dünyanın bağlı view'ına uygular (DLSS viewport boyutunu izlesin diye her kare tick'lenir; kapanışta bırakılır).
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `renderingFeatures` / `setRenderingFeatures` | `LuminaRenderingFeatureSettings` | Seçimin tamamı tek değer olarak. |
+| `rayTracingEnabled`, `rayTracedShadowsEnabled`, `restirEnabled`, `restirCandidates`, `restirSpatialSamples` | getter + `set…` | Işın izleme, ışın izlemeli güneş gölgeleri, ReSTIR ve iki sayısı (1–64 / 0–8 aralığına kırpılır). |
+| `upscaler`, `upscalerQuality`, `upscalerSharpness`, `frameGenerationEnabled` | getter + `set…` | `None`/`FSR3`/`DLSS`, `Native AA`…`Ultra Performance`, 0–1, FSR3 kare üretimi. |
+| `renderingSupport` | `LuminaRenderingFeatureSupport get renderingSupport` | Dünyanın motoru ve view'ının şu an desteklediği (renderer yokken ya da web'de hiçbiri), her "hayır" için bir sebeple. |
+| `isRayTracingSupported`, `isDlssSupported`, `isFsr3Supported`, `isFrameGenerationSupported`, `supportedUpscalers` | getter | Blueprint node'larının döndürdüğü destek sorguları. |
+| `activeRenderingFeatures`, `activeUpscaler`, `rayTracingActive` | getter | Son uygulamanın geri düşüşten sonra gerçekten açtığı. |
+| `renderingFallbacks` | `List<String> get renderingFallbacks` | Son uygulamanın neyi neden değiştirdiği; her yeni liste ayrıca uyarı olarak loglanır. |
+| `rtxController` | `LuminaRtxController? get rtxController` | Bağlı view'daki denetleyici (varken). |
+
+**Geri düşüş**: ray query olmadan ışın izleme kapalıdır (gölgeleri ve ReSTIR ile birlikte); desteklenmeyen ya da NGX'in view'da başlatmayı reddettiği DLSS, FSR3 çalışıyorsa FSR3'e, yoksa None'a düşer; hareket vektörü olmadan FSR3 None olur; kare üretimi yalnızca etkin FSR3 ölçekleyiciyle kalır. Oyuncunun seçimi korunur; aynı ayar dosyası yetenekli bir GPU'da her şeyi açar.
+
+**Ölçeklenebilirlik ön ayarları ışın izlemeye ve ölçekleyiciye dokunmaz.** Bunlar GPU'ya bağlıdır ve oyuncunun tercihidir: `Cinematic` ışın izlemeyi asla açmaz (çoğu donanımda sessizce geri düşer, kalanında en pahalısıdır), `Low` seçilmiş bir ölçekleyiciyi asla kapatmaz (düşük seviye GPU'nun en çok yararlandığı şey ölçekleyicidir). Yeni bir oyun her şey kapalı başlar.
 
 ---
 

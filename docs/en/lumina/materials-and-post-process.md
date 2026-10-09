@@ -204,7 +204,30 @@ Applies both settings to one view: the scene's acceleration structures, the dire
 | `apply` | `void apply(LuminaRayTracingSettings rayTracing, LuminaDlssSettings dlss, {LuminaFsr3Settings fsr3 = const LuminaFsr3Settings(), required TemporalAntiAliasingOptions baseTaa, required DynamicResolutionOptions baseDynamicResolution})` | Applies both; cheap when nothing changed. The base options are restored when DLSS turns off (DLSS itself needs TAA with motion vectors). |
 | `dlss`, `appliedRayTracing`, `appliedDlss` | | The live DLSS instance and the settings last applied. |
 | `appliedFsr3`, `fsr3Active`, `fsr3Supported` | | The FSR3 settings last applied, whether FSR3 is on the view now (enabled, motion vectors available, no DLSS) and whether the engine renders the motion vectors it needs. |
+| `invalidate` | `void invalidate()` | Forgets what it put on the view (DLSS is destroyed), so the next `apply` pushes everything again: call it after something else rewrote the view's TAA or dynamic resolution, such as a scalability profile. |
 | `dispose` | `void dispose()` | Releases the DLSS instance. |
+
+## `lib/src/post_process/rendering_features.dart`
+
+The game-facing form of the settings above, used by the game user settings (`LuminaUserSettingsSubsystem`, see [World](world.md)) and their Blueprint nodes.
+
+### `enum LuminaUpscaler`
+
+`none` (`None`), `fsr3` (`FSR3`), `dlss` (`DLSS`); `displayName`, and `parse(String?)` (case-insensitive, `fsr` is FSR3, anything else `none`).
+
+### `enum LuminaUpscalerQuality`
+
+One quality scale for both upscalers, with `displayName`, the FSR3 preset (`fsr3`) and the DLSS mode (`dlss`): `nativeAA` (`Native AA`, FSR3 native AA, DLAA), `quality` (Max Quality), `balanced`, `performance` (Max Performance), `ultraPerformance`. `parse` ignores case, spaces and underscores; `DLAA` and `native` are `nativeAA`, anything unknown `quality`.
+
+### `class LuminaRenderingFeatureSupport`
+
+What a GPU can do, with a reason per "no": `rayTracing`, `dlss`, `fsr3`, `frameGeneration` and their `…Reason` strings. `probe({engine, view})` asks the engine (`supportsRayQuery`; Vulkan backend + `LuminaRtxController.dlssAvailable` for DLSS) and the view (`motionVectorsSupported` for FSR3 and frame generation); `none(reason)` on the web or without a renderer; `withoutDlss(reason)`; `supportedUpscalers` (`none` first).
+
+### `class LuminaRenderingFeatureSettings`
+
+The player's choice: `rayTracing`, `rayTracedShadows` (default true), `restir`, `restirCandidates` (1–64, 8), `restirSpatialSamples` (0–8, 2), `upscaler`, `upscalerQuality` (`quality`), `sharpness` (0–1, 0.5), `frameGeneration`. `rayTracingSettings`, `fsr3Settings`, `dlssSettings` are the engine settings it describes; `resolve(support)` returns a `LuminaResolvedRenderingFeatures` (`settings` actually applied + `fallbacks` messages: ray tracing off without ray query, DLSS → FSR3 → None, frame generation only with FSR3); `copyWith` clamps; `toMap` / `fromMap` (keys `ray_tracing`, `ray_traced_shadows`, `restir`, `restir_candidates`, `restir_spatial_samples`, `upscaler`, `upscaler_quality`, `sharpness`, `frame_generation`; unknown or mistyped values keep the default).
+
+**Games**: `LuminaGameWidget` asks for the ray query and DLSS extensions (`LuminaRtxController.requestExtensions`) before the shared engine is created, once per process and never on the web. DLSS also needs the NGX runtime (`nvngx_dlss`) next to the game executable, in `LUMINA_DLSS_DIR` or a fetched SDK; the packaged game does not ship it.
 
 ## `lib/src/material/dynamic_material_instance.dart`
 

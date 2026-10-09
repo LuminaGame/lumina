@@ -335,7 +335,7 @@ The **Engine & Graphics** category configures project-wide graphics defaults sto
 - **Epic**: Production game fidelity target. Utilizes 4096×4096 Percentage-Closer Soft Shadows (PCSS) across 4 cascades with 8-step screen-space contact shadows, Temporal Anti-Aliasing (TAA) with sub-pixel jitter history buffer, ambient occlusion, ACES color grading, 8x anisotropic filtering, and a 2,000-meter (2 km) view distance.
 - **Cinematic**: The highest fidelity profile built for offline/cutscene capture, high-end workstations, and offline promotional rendering. Extends camera far clip plane to 4,000 meters (4 km); pushes shadow cascades to 4096×4096 PCSS with 16-step contact shadows and practical lambda 0.4 split; couples 4x hardware MSAA with TAA; enables uncompressed 16x anisotropic texture samplers; and runs full physical depth of field with cinematic grading. For interactive gameplay at high refresh rates, **Epic** or **High** is recommended.
 
-These settings can be dynamically altered at runtime inside Blueprint graphs using nodes such as `SetOverallScalabilityLevel`, `SetViewDistance`, and `ApplyScalabilitySettings`, or programmatically via `LuminaUserSettingsSubsystem`.
+These settings can be dynamically altered at runtime inside Blueprint graphs using nodes such as `SetOverallScalabilityLevel`, `SetViewDistance`, and `ApplyScalabilitySettings`, or programmatically via `LuminaUserSettingsSubsystem`. Ray tracing, ReSTIR, the upscaler (None / FSR3 / DLSS) and frame generation are separate player choices (Set Ray Tracing Enabled, Set Upscaler, Is DLSS Supported, ...): the presets leave them untouched.
 
 ---
 

@@ -126,4 +126,4 @@ Kesin boyutlar NGX'ten gelir (`NGX_DLSS_GET_OPTIMAL_SETTINGS`) ve SDK sürümler
 - Yalnızca Vulkan, yalnızca DLSS destekli NVIDIA GPU'lar; OpenGL, Metal, WebGPU ve web `Dlss.available == false` döndürür.
 - DLSS Frame Generation ve Ray Reconstruction entegre değildir.
 - DLSS'in aldığı kare LDR'dir (color grading sonrası); DLSS üzerinden HDR çıktı, upscaler'ın color grading'den önce çalışmasını gerektirir.
-- Lumina Studio render ayarlarında DLSS'i henüz göstermez; oyunlar `Dlss`'i doğrudan çağırır.
+- Lumina Studio DLSS'i viewport HUD'undan sürer; oyunlar onu oyun kullanıcı ayarlarından seçer (`LuminaUserSettingsSubsystem`, Blueprint **Set Upscaler** / **Is DLSS Supported**, bkz. `lumina/world.md`); DLSS yoksa FSR3'e ya da hiçbirine geri düşülür. İndirilmiş SDK olmadan derlenen bir oyun, kurulu editör gibi NGX kodu taşımaz.

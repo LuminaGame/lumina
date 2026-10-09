@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_filament/flutter_filament.dart';
@@ -97,10 +98,20 @@ class _LuminaGameWidgetState extends State<LuminaGameWidget>
   int _clockOffsetNanos = 0;
   bool _calibrated = false;
 
+  /// Whether this process asked for the ray tracing / DLSS extensions.
+  static bool _renderingExtensionsRequested = false;
+
   @override
   void initState() {
     super.initState();
     LuminaWidgets.ensureInitialized();
+    // Ray tracing and DLSS (the game user settings) need Vulkan extensions
+    // asked for before the shared engine exists; the FilamentWidget built
+    // below creates it.
+    if (!kIsWeb && !_renderingExtensionsRequested) {
+      _renderingExtensionsRequested = true;
+      LuminaRtxController.requestExtensions();
+    }
     _subscribePlayState();
   }
 

@@ -101,4 +101,4 @@ A post-process material declares `rayQuery : true` in its material block to be c
 - Only `PrimitiveType.triangles` primitives with a position attribute enter the structures; lines, points and strips are ignored.
 - Ray-traced shadows are hard (no penumbra) and cover the directional light only.
 - `FilamentScene.traceVisibility` renders a frame on its own; use `FilamentView.traceRay` in a running render loop.
-- Lumina Studio and the `lumina` engine package do not expose these controls yet; games call them through `flutter_filament` directly.
+- In `lumina`, `LuminaRtxController` applies these controls to a view: Lumina Studio drives it from the viewport HUD and games through the game user settings (`LuminaUserSettingsSubsystem`, Blueprint **Set Ray Tracing Enabled** / **Is Ray Tracing Supported**, see `lumina/world.md`).

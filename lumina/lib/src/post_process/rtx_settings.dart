@@ -306,6 +306,20 @@ class LuminaRtxController {
     _appliedDlss = settings;
   }
 
+  /// Forgets what this controller put on the view, so the next [apply] pushes
+  /// everything again (DLSS is recreated). Call it after something else
+  /// rewrote the view's TAA or dynamic resolution options, such as a
+  /// scalability profile.
+  void invalidate() {
+    _dlss?.destroy();
+    _dlss = null;
+    _dlssOutputSize = null;
+    _fsr3OnView = false;
+    _appliedRayTracing = null;
+    _appliedDlss = null;
+    _appliedFsr3 = null;
+  }
+
   /// Releases the DLSS instance; the view keeps the last ray tracing settings.
   void dispose() {
     _dlss?.destroy();

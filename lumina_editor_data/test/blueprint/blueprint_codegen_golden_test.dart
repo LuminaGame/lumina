@@ -14,6 +14,7 @@ import '../../../lumina/test/blueprint/gameplay_nodes_blueprint.dart';
 import '../../../lumina/test/blueprint/level_load_blueprint.dart';
 import '../../../lumina/test/blueprint/motion_matching_blueprint.dart';
 import '../../../lumina/test/blueprint/no_begin_play_blueprint.dart';
+import '../../../lumina/test/blueprint/rendering_features_blueprint.dart';
 import '../../../lumina/test/blueprint/reusable_graphs_blueprint.dart';
 import '../../../lumina/test/blueprint/third_person_blueprint.dart';
 import '../../../lumina/test/blueprint/traversal_blueprint.dart';
@@ -54,6 +55,8 @@ Map<String, (LuminaBlueprintDocument, String, List<LuminaInputAction>)> goldens(
       'bp_physics': (physicsBlueprint(), 'BpPhysics', const <LuminaInputAction>[]),
       // Load Level, Change Level, Load And Change Level, Cancel Level Load, Is Level Loaded.
       'bp_level_load': (levelLoadBlueprint(), 'BpLevelLoad', const <LuminaInputAction>[]),
+      // The game user settings' ray tracing, upscaler and support nodes.
+      'bp_graphics_settings': (renderingFeaturesBlueprint(), 'BpGraphicsSettings', const <LuminaInputAction>[]),
       // No Event BeginPlay, only a custom event with a latent Delay.
       'bp_no_begin_play': (noBeginPlayBlueprint(), 'BpNoBeginPlay', const <LuminaInputAction>[]),
       // A traversal component and Jump → Try Traversal Action → Branch → Jump.

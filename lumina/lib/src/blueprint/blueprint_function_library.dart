@@ -83,6 +83,7 @@ part 'blueprint_function_library/strings_arrays_flow.dart';
 part 'blueprint_function_library/engine_trace_view_camera.dart';
 part 'blueprint_function_library/actor_events_enums_timers.dart';
 part 'blueprint_function_library/game_framework_save_input.dart';
+part 'blueprint_function_library/rendering_features.dart';
 part 'blueprint_function_library/audio_animation_effects_debug.dart';
 part 'blueprint_function_library/widget_blueprint.dart';
 part 'blueprint_function_library/ragdoll.dart';
@@ -911,6 +912,37 @@ abstract final class LuminaBlueprintFunctionLibrary {
   static const getVsyncEnabled = _getVsyncEnabled;
   static const applyScalabilitySettings = _applyScalabilitySettings;
 
+  /// Ray tracing and upscaling in the game user settings (see
+  /// `LuminaUserSettingsRenderingFeatures`); setters are committed by
+  /// [applyScalabilitySettings].
+  static const setRayTracingEnabled = _setRayTracingEnabled;
+  static const getRayTracingEnabled = _getRayTracingEnabled;
+  static const setRayTracedShadowsEnabled = _setRayTracedShadowsEnabled;
+  static const getRayTracedShadowsEnabled = _getRayTracedShadowsEnabled;
+  static const setRestirEnabled = _setRestirEnabled;
+  static const getRestirEnabled = _getRestirEnabled;
+  static const setRestirCandidates = _setRestirCandidates;
+  static const getRestirCandidates = _getRestirCandidates;
+  static const setRestirSpatialSamples = _setRestirSpatialSamples;
+  static const getRestirSpatialSamples = _getRestirSpatialSamples;
+  static const setUpscaler = _setUpscaler;
+  static const getUpscaler = _getUpscaler;
+  static const setUpscalerQuality = _setUpscalerQuality;
+  static const getUpscalerQuality = _getUpscalerQuality;
+  static const setUpscalerSharpness = _setUpscalerSharpness;
+  static const getUpscalerSharpness = _getUpscalerSharpness;
+  static const setFrameGenerationEnabled = _setFrameGenerationEnabled;
+  static const getFrameGenerationEnabled = _getFrameGenerationEnabled;
+  static const isRayTracingSupported = _isRayTracingSupported;
+  static const isDlssSupported = _isDlssSupported;
+  static const isFsr3Supported = _isFsr3Supported;
+  static const isFrameGenerationSupported = _isFrameGenerationSupported;
+  static const getSupportedUpscalers = _getSupportedUpscalers;
+  static const getActiveUpscaler = _getActiveUpscaler;
+  static const isRayTracingActive = _isRayTracingActive;
+  static const saveGameUserSettings = _saveGameUserSettings;
+  static const loadGameUserSettings = _loadGameUserSettings;
+
   static const playSound2D = _playSound2D;
   static const playSoundAtLocation = _playSoundAtLocation;
   static const spawnSound2D = _spawnSound2D;
@@ -1019,6 +1051,7 @@ abstract final class LuminaBlueprintFunctionLibrary {
     ..._mathCallShapes,
     ..._engineCallShapes,
     ..._gameFrameworkCallShapes,
+    ..._renderingFeatureCallShapes,
     ..._widgetBlueprintCallShapes,
     ..._ragdollCallShapes,
     ..._traversalCallShapes,
@@ -1050,6 +1083,7 @@ abstract final class LuminaBlueprintFunctionLibrary {
     ..._engineFunctions,
     ..._graphMemberFunctions,
     ..._gameFrameworkFunctions,
+    ..._renderingFeatureFunctions,
     ..._widgetBlueprintFunctions,
     ..._ragdollFunctions,
     ..._traversalFunctions,

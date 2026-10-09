@@ -783,7 +783,26 @@ World subsystem managing game scalability, camera view distance, and user displa
 | `setOverallScalabilityLevel` | `void setOverallScalabilityLevel(String preset)` | Sets all scalability tiers to match the specified preset. |
 | `setViewDistanceQuality` | `void setViewDistanceQuality(String tier)` | Sets view distance quality tier and updates far clip distance. |
 | `setViewDistance` | `void setViewDistance(double cm)` | Sets explicit camera far clip plane in centimeters. |
-| `applySettings` | `void applySettings()` | Applies the configured settings to the world, dynamic resolution, post-process controller, directional light shadows, and camera far clip planes. |
+| `applySettings` | `void applySettings()` | Applies the configured settings to the world, dynamic resolution, post-process controller, directional light shadows, and camera far clip planes; then the ray tracing / upscaler choice (below), after the profile because the upscalers replace its TAA and dynamic resolution. |
+| `toMap` / `applyMap` | `Map<String, dynamic> toMap()` / `void applyMap(Map<String, dynamic> map)` | Every user setting as JSON (`version`, the quality tiers, `view_distance`, `resolution_scale`, `target_fps`, `vsync`, `rendering_features`); `applyMap` keeps the value of a missing or mistyped key and applies. |
+| `saveSettings` / `loadSettings` | `Future<bool> saveSettings({String? path})` / `Future<bool> loadSettings({String? path})` | Writes / reads `toMap` (default `defaultSettingsFilePath`: `GameUserSettings.json` in `LuminaSaveGameSubsystem.defaultSaveDirectoryPath`); load applies, and returns false with nothing changed for a missing or corrupt file. |
+
+**Ray tracing and upscaling** (`LuminaUserSettingsRenderingFeatures`, `lib/src/world/subsystem/user_settings_rendering.dart`): the setters stage the choice, `applySettings` resolves it against the GPU and applies it to the world's bound view through a `LuminaRtxController` the subsystem owns (ticked every frame so DLSS follows the viewport size; released on shutdown).
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `renderingFeatures` / `setRenderingFeatures` | `LuminaRenderingFeatureSettings` | The whole choice as one value. |
+| `rayTracingEnabled`, `rayTracedShadowsEnabled`, `restirEnabled`, `restirCandidates`, `restirSpatialSamples` | getters + `set…` | Ray tracing, ray-traced sun shadows, ReSTIR and its two counts (clamped 1–64 / 0–8). |
+| `upscaler`, `upscalerQuality`, `upscalerSharpness`, `frameGenerationEnabled` | getters + `set…` | `None`/`FSR3`/`DLSS`, `Native AA`…`Ultra Performance`, 0–1, FSR3 frame generation. |
+| `renderingSupport` | `LuminaRenderingFeatureSupport get renderingSupport` | What the world's engine and view support now (nothing without a renderer or on the web), with a reason per "no". |
+| `isRayTracingSupported`, `isDlssSupported`, `isFsr3Supported`, `isFrameGenerationSupported`, `supportedUpscalers` | getters | The support queries the Blueprint nodes return. |
+| `activeRenderingFeatures`, `activeUpscaler`, `rayTracingActive` | getters | What the last apply turned on after fallback. |
+| `renderingFallbacks` | `List<String> get renderingFallbacks` | What the last apply changed and why; each new set is also logged as a warning. |
+| `rtxController` | `LuminaRtxController? get rtxController` | The controller on the bound view, while there is one. |
+
+**Fallback**: ray tracing without ray query is off (its shadows and ReSTIR with it); DLSS without support, or when NGX declines to start on the view, becomes FSR3 where FSR3 works, else None; FSR3 without motion vectors becomes None; frame generation stays only with the active FSR3 upscaler. The player's choice is kept, so the same settings file turns everything on with a capable GPU.
+
+**Scalability presets do not touch ray tracing or the upscaler.** They depend on the GPU and are the player's opt-in, so `Cinematic` never turns ray tracing on (it would fall back silently on most hardware and cost the most on the rest) and `Low` never turns a chosen upscaler off (an upscaler is what a low-end GPU most benefits from). A fresh game starts with everything off.
 
 ---
 
