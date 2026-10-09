@@ -6,6 +6,7 @@ import 'package:lumina/src/blueprint/blueprint_model.dart';
 import 'package:lumina/src/blueprint/level_blueprint.dart';
 import 'package:lumina/src/blueprint/widget_blueprint.dart';
 import 'package:lumina/src/blueprint/widget_classes.dart';
+import 'package:lumina/src/umg/combo_box_options.dart';
 
 part 'node_library/events_pawn_ui_input.dart';
 part 'node_library/math_objects_components.dart';
@@ -22,6 +23,7 @@ part 'node_library/ragdoll.dart';
 part 'node_library/traversal.dart';
 part 'node_library/window_mode.dart';
 part 'node_library/display_settings.dart';
+part 'node_library/combo_box.dart';
 
 /// How a node takes part in execution.
 enum LuminaBlueprintNodeKind {
@@ -345,7 +347,19 @@ abstract final class LuminaBlueprintNodeLibrary {
     'set_anim_variable',
     'get_anim_variable',
     'set_particle_parameter',
+    'add_element_option',
+    'set_element_selected_value',
+    'get_element_selected_option',
+    'get_element_option_value',
+    'find_element_option_index_by_value',
   };
+
+  /// Whether [node]'s wildcard pins take a type from its `type` / `class`
+  /// literals, which the editor sets when a wildcard pin is wired: the
+  /// [wildcardNodes] and a Combo Box's On Selection Changed (its Value).
+  static bool adoptsWildcardType(LuminaBlueprintNode node) =>
+      wildcardNodes.contains(node.registryId) ||
+      (node.registryId == eventWidgetElement && node.literals['event'] == LuminaWidgetEvents.onSelectionChanged);
 
   /// The while loop's iteration cap (an infinite-loop guard).
   static const int whileLoopCap = 100000;
@@ -533,6 +547,7 @@ abstract final class LuminaBlueprintNodeLibrary {
   static List<String>? engineEnumValues(String? name) => switch (name) {
         slateVisibilityEnum => slateVisibilities,
         textCommitEnum => LuminaWidgetEvents.commitMethods,
+        LuminaComboBoxOptions.selectInfoEnum => LuminaComboBoxOptions.selectInfos,
         timelineDirectionEnum => timelineDirections,
         _ => null,
       };
@@ -631,6 +646,7 @@ abstract final class LuminaBlueprintNodeLibrary {
     ..._traversalNodes,
     ..._windowModeNodes,
     ..._displaySettingsNodes,
+    ..._comboBoxNodes,
   ]);
 
   static final Map<String, LuminaBlueprintNodeSpec> _byId = {for (final s in builtIns) s.id: s};

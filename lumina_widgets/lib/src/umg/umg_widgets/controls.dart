@@ -292,14 +292,18 @@ class _LuminaUmgTextFieldState extends State<LuminaUmgTextField> {
   }
 }
 
-/// A drop-down of string options (UMG Combo Box, `OnSelectionChanged`). The
-/// list opens in the nearest [Overlay], which every game app has.
+/// A drop-down of option labels (UMG Combo Box). Picking one calls
+/// [onChanged] with its label and [onSelected] with its index (labels may
+/// repeat; the index does not). The list opens in the nearest [Overlay],
+/// which every game app has.
 class LuminaUmgComboBox extends StatefulWidget {
   const LuminaUmgComboBox({
     super.key,
     required this.value,
     required this.options,
     this.onChanged,
+    this.onSelected,
+    this.selectedIndex,
     this.placeholder,
     this.style,
     this.outline = LuminaUmgTextOutline.defaults,
@@ -308,6 +312,13 @@ class LuminaUmgComboBox extends StatefulWidget {
   final String? value;
   final List<String> options;
   final ValueChanged<String>? onChanged;
+
+  /// The index of the picked option.
+  final ValueChanged<int>? onSelected;
+
+  /// The selected option's index; null highlights the first option labelled
+  /// [value].
+  final int? selectedIndex;
   final String? placeholder;
 
   /// Merged over the default label style (font size, colour, shadow).
@@ -325,10 +336,14 @@ class _LuminaUmgComboBoxState extends State<LuminaUmgComboBox> {
   final LayerLink _link = LayerLink();
   double _width = 160;
 
-  void _pick(String option) {
+  void _pick(int index) {
     _portal.hide();
-    widget.onChanged?.call(option);
+    widget.onChanged?.call(widget.options[index]);
+    widget.onSelected?.call(index);
   }
+
+  bool _isSelected(int index) =>
+      widget.selectedIndex != null ? widget.selectedIndex == index : (widget.value != null && widget.options.indexOf(widget.value!) == index);
 
   @override
   Widget build(BuildContext context) {
@@ -362,14 +377,15 @@ class _LuminaUmgComboBoxState extends State<LuminaUmgComboBox> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        for (final option in widget.options)
+                        for (var i = 0; i < widget.options.length; i++)
                           GestureDetector(
+                            key: ValueKey('lumina_umg_combo_option_$i'),
                             behavior: HitTestBehavior.opaque,
-                            onTap: () => _pick(option),
+                            onTap: () => _pick(i),
                             child: Container(
-                              color: option == widget.value ? LuminaUmgColors.raised : null,
+                              color: _isSelected(i) ? LuminaUmgColors.raised : null,
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              child: Text(option, style: text),
+                              child: Text(widget.options[i], style: text),
                             ),
                           ),
                       ],
@@ -381,7 +397,7 @@ class _LuminaUmgComboBoxState extends State<LuminaUmgComboBox> {
           ),
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onTap: widget.onChanged == null ? null : _portal.toggle,
+            onTap: widget.onChanged == null && widget.onSelected == null ? null : _portal.toggle,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               decoration: BoxDecoration(

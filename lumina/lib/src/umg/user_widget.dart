@@ -96,6 +96,14 @@ abstract final class LuminaUserWidgets {
   /// JSON-plain (debug views and copies never see the script).
   static final Expando<LuminaUserWidget> _scripts = Expando('LuminaUserWidget');
 
+  /// Element state map → the instance it belongs to (for a setter that fires
+  /// the instance's events, such as a Combo Box's On Selection Changed).
+  static final Expando<Map<String, Object?>> _owners = Expando('LuminaUserWidget element owner');
+
+  /// The widget instance element state [element] belongs to, when that
+  /// instance runs a graph; null otherwise.
+  static Map<String, Object?>? instanceOfElement(Object? element) => element is Map<String, Object?> ? _owners[element] : null;
+
   static void register(String className, LuminaUserWidget Function() factory) => _factories[className] = factory;
 
   static void registerAll(Map<String, LuminaUserWidget Function()> factories) => _factories.addAll(factories);
@@ -120,6 +128,12 @@ abstract final class LuminaUserWidgets {
     if (factory == null) return null;
     final script = factory()..bindWidgetInstance(instance);
     _scripts[instance] = script;
+    final elements = instance['elements'];
+    if (elements is Map) {
+      for (final e in elements.values) {
+        if (e is Map<String, Object?>) _owners[e] = instance;
+      }
+    }
     world?.spawnActorImmediately(script);
     return script;
   }

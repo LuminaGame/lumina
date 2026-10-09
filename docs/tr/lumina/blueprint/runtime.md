@@ -366,6 +366,7 @@ The one node catalog the editor palette, the VM and the code generator read.
 | `flowIntrinsics` | `static const Set<String> flowIntrinsics` | The flow-control macros, run by the VM and written as Dart control flow by the generator. |
 | `statefulFlow` | `static const Set<String> statefulFlow` | Nodes with per-instance state the runtime keeps by node id. |
 | `wildcardNodes` | `static const Set<String> wildcardNodes` | Nodes whose wildcard pins take the type of their `type` literal (`float`, `object`, …) and `class` literal. |
+| `adoptsWildcardType` | `static bool adoptsWildcardType(LuminaBlueprintNode node)` | [node]'un joker pinlerinin, editörün joker pin bağlandığında yazdığı `type` / `class` ayarlarından tip alıp almadığı: [wildcardNodes] (Combo Box'ın Add Option, Set Selected Value, Get Selected Option, Get Option Value ve Find Option Index by Value düğümleriyle) ve Combo Box'ın On Selection Changed olayı (Value pini). `engineEnumValues('ESelectInfo')` `Direct`, `OnKeyPress`, `OnNavigation`, `OnMouseClick` döner. |
 | `whileLoopCap` | `static const int whileLoopCap` | The while loop's iteration cap (an infinite-loop guard). |
 | `classTypedNodes` | `static const Set<String> classTypedNodes` | Nodes whose object / array outputs take the class of their `class` literal. |
 | `traceNodes` | `static const Set<String> traceNodes` | The trace nodes whose `channel` literal names a trace channel. |
@@ -686,6 +687,7 @@ The events each widget element type can bind in a Widget Blueprint graph (the gr
 | `onUnhovered` | `static const String onUnhovered` |  |
 | `onValueChanged` | `static const String onValueChanged` |  |
 | `onTextCommitted` | `static const String onTextCommitted` |  |
+| `onSelectionChanged` | `static const String onSelectionChanged` | Bir Combo Box'ın seçimi değişti: `Selected Item` (string), `Value` (joker; bağlanınca düğümün `type` ayarıyla tiplenir), `Index` (int), `Select Type` (`ESelectInfo`: Blueprint setter'ından `Direct`, oyuncudan `OnMouseClick`). Combo Box'lar önce On Value Changed (etiket), sonra On Selection Changed sunar. |
 | `forType` | `static List<String> forType(String typeName)` | The events an element of [typeName] offers, in the Details panel's order. |
 | `displayName` | `static String displayName(String event)` | `OnClicked` → `On Clicked` (the bound event node's title prefix). |
 | `valueTypeOf` | `static String valueTypeOf(String typeName)` | The pin type name of `On Value Changed`'s `Value` for [typeName]: `float` (sliders), `boolean` (check boxes, switches, toggles), `integer` (tabs), `string` (texts, combo boxes, selects). |

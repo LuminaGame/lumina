@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
+import 'package:lumina/lumina_runtime.dart' show LuminaComboBoxOption, LuminaComboBoxOptions, LuminaComboBoxSelection;
 
 import 'package:lumina_widgets/src/umg/umg_widgets.dart';
 
@@ -124,13 +125,39 @@ abstract final class LuminaUmgElementBinding {
     );
   }
 
-  /// The options of a Combo Box element: a list (what `Add Option` writes) or
-  /// the designer's comma-separated string.
+  /// The option labels of a Combo Box element: its list (what `Add Option`
+  /// writes: labels, or `{label, value}` maps) or the designer's stored
+  /// options, else [fallback].
   static List<String> options(Map<String, Object?>? element, List<String> fallback) {
     final v = element?['options'];
-    if (v is List) return [for (final o in v) o.toString()];
-    if (v is String) return v.split(',').map((o) => o.trim()).where((o) => o.isNotEmpty).toList();
+    if (v is List || v is String) return LuminaComboBoxOptions.labels(v);
     return fallback;
+  }
+
+  /// The options (label + value) of a Combo Box element, else those of
+  /// [fallback] (the designer's stored options, in any stored form).
+  static List<LuminaComboBoxOption> comboOptions(Map<String, Object?>? element, [Object? fallback]) {
+    final v = element?['options'];
+    return LuminaComboBoxOptions.parse(v is List || v is String ? v : fallback);
+  }
+
+  /// The player picked [label] (the first option with that label, or option
+  /// [index] when given) in Combo Box [elementName] of [instance]: writes
+  /// `selectedOption` and `selectedIndex` and returns the selection On
+  /// Selection Changed delivers ([selectType] `OnMouseClick` by default).
+  /// Without an instance (a preview) the selection comes from
+  /// [fallbackOptions].
+  static LuminaComboBoxSelection selectComboOption(Map<String, Object?>? instance, String elementName, String? label,
+      {int? index, Object? fallbackOptions, String selectType = LuminaComboBoxOptions.onMouseClick}) {
+    final e = element(instance, elementName);
+    final all = comboOptions(e, fallbackOptions);
+    final i = index ?? LuminaComboBoxOptions.indexOfLabel(all, label ?? '');
+    if (instance != null) {
+      write(instance, elementName, LuminaComboBoxOptions.selectedKey, i >= 0 && i < all.length ? all[i].label : (label ?? ''));
+      write(instance, elementName, LuminaComboBoxOptions.selectedIndexKey, i >= 0 && i < all.length ? i : -1);
+    }
+    if (i < 0 || i >= all.length) return LuminaComboBoxSelection(label ?? '', null, -1, selectType);
+    return LuminaComboBoxSelection(all[i].label, all[i].value, i, selectType);
   }
 
   /// `Visible` / `Hidden` / `Collapsed` (with

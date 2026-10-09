@@ -36,7 +36,9 @@ The element setters (`Set Text (Text)`, `Set Percent`, …) write into that map 
 | `containerStyle` | `static LuminaUmgContainerStyle containerStyle(Map<String, Object?>? element, LuminaUmgContainerStyle fallback)` | The Container style of [element]: every Container key the element state holds (`backgroundColor`, `gradient`, `borderColor`, `borderWidth`, `borderSides`, `cornerRadius`, `padding`, `margin`, `shadows`, sizes, `alignment`, `backgroundFit`) over [fallback], the designer's style the generated code carries. |
 | `shadow` | `static LuminaUmgTextShadow shadow(Map<String, Object?>? element, LuminaUmgTextShadow fallback)` | The drop shadow of a text-bearing element: each of `shadowEnabled`, `shadowColor`, `shadowOffsetX`, `shadowOffsetY` and `shadowBlur` [element] holds overrides [fallback] (the designer's shadow, which the generated code carries). |
 | `outline` | `static LuminaUmgTextOutline outline(Map<String, Object?>? element, LuminaUmgTextOutline fallback)` | The outline of a text-bearing element: `outlineSize` and `outlineColor` of [element] override [fallback]. |
-| `options` | `static List<String> options(Map<String, Object?>? element, List<String> fallback)` | The options of a Combo Box element: a list (what `Add Option` writes) or the designer's comma-separated string. |
+| `options` | `static List<String> options(Map<String, Object?>? element, List<String> fallback)` | Bir Combo Box element'inin seçenek etiketleri: listesi (etiketler ya da `{label, value}` map'leri, `Add Option`'ın yazdığı) ya da designer'ın sakladığı seçenekler, yoksa [fallback]. |
+| `comboOptions` | `static List<LuminaComboBoxOption> comboOptions(Map<String, Object?>? element, [Object? fallback])` | Bir Combo Box element'inin seçenekleri (etiket + değer), yoksa [fallback]'inkiler (designer'ın sakladıkları). |
+| `selectComboOption` | `static LuminaComboBoxSelection selectComboOption(Map<String, Object?>? instance, String elementName, String? label, {int? index, Object? fallbackOptions, String selectType = 'OnMouseClick'})` | Oyuncu [label]'ı (ya da [index] numaralı seçeneği) seçti: `selectedOption` + `selectedIndex` yazılır ve On Selection Changed'in verdiği seçim döner. Üretilen widget'lar ve Play-In-Editor bunu çağırıp On Value Changed'i (etiket) ve On Selection Changed'i tetikler. |
 | `visibility` | `static String visibility(Map<String, Object?>? element)` | `Visible` / `Hidden` / `Collapsed` (with `HitTestInvisible` / `SelfHitTestInvisible` rendering as visible). |
 | `isVisible` | `static bool isVisible(Map<String, Object?>? element)` |  |
 | `isEnabled` | `static bool isEnabled(Map<String, Object?>? element)` |  |
@@ -194,11 +196,11 @@ A single-line text input with a placeholder (UMG Editable Text, `OnTextChanged`)
 
 ### `class LuminaUmgComboBox`
 
-A drop-down of string options (UMG Combo Box, `OnSelectionChanged`). The list opens in the nearest [Overlay], which every game app has.
+Seçenek etiketlerinden bir açılır liste (UMG Combo Box). Birini seçmek [onChanged]'i etiketiyle, [onSelected]'ı indeksiyle çağırır (etiketler tekrarlanabilir, indeks tekrarlanmaz). Liste en yakın [Overlay]'de açılır; her oyun uygulamasında vardır.
 
 **Yapıcı Metotlar (Constructors):**
 
-- `const LuminaUmgComboBox({super.key, required this.value, required this.options, this.onChanged, this.placeholder, this.style, this.outline = LuminaUmgTextOutlin...`
+- `const LuminaUmgComboBox({super.key, required this.value, required this.options, this.onChanged, this.onSelected, this.selectedIndex, this.placeholder, this.style, this.outline = LuminaUmgTextOutlin...`
 
 **Üyeler:**
 
@@ -207,6 +209,8 @@ A drop-down of string options (UMG Combo Box, `OnSelectionChanged`). The list op
 | `value` | `final String? value` |  |
 | `options` | `final List<String> options` |  |
 | `onChanged` | `final ValueChanged<String>? onChanged` |  |
+| `onSelected` | `final ValueChanged<int>? onSelected` | Seçilen seçeneğin indeksi. |
+| `selectedIndex` | `final int? selectedIndex` | Seçili seçeneğin indeksi; null ise [value] etiketli ilk seçenek vurgulanır. |
 | `placeholder` | `final String? placeholder` |  |
 | `style` | `final TextStyle? style` | Merged over the default label style (font size, colour, shadow). |
 | `outline` | `final LuminaUmgTextOutline outline` | The outline of the selected label. |

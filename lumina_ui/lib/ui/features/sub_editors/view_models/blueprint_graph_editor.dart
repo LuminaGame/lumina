@@ -705,7 +705,7 @@ class BlueprintGraphEditor extends ChangeNotifier {
   /// the node's `type`/`class` settings drive lumina's pin resolution.
   void _adoptWildcardType(String nodeId, LuminaBlueprintPinSpec end, LuminaBlueprintPinSpec other) {
     final n = node(nodeId);
-    if (n == null || !LuminaBlueprintNodeLibrary.wildcardNodes.contains(n.registryId)) return;
+    if (n == null || !LuminaBlueprintNodeLibrary.adoptsWildcardType(n)) return;
     final current = LuminaPinType.parse(n.literals['type'] as String?);
     if (current != null && current != LuminaPinType.wildcard) return;
     LuminaPinType? type;

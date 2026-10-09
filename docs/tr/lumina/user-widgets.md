@@ -51,6 +51,47 @@ The widget classes whose instances run a graph: the factory of each class's scri
 | `addedToViewport` | `static void addedToViewport(Object? instance)` | `Add to Viewport`: Pre Construct then Construct, once per stay on screen. |
 | `removedFromParent` | `static void removedFromParent(Object? instance)` | `Remove from Parent`: Destruct. |
 | `fire` | `static void fire(Map<String, Object?>? instance, String element, String event, [Map<String, Object?> args = co...` | A generated widget's (or Play-In-Editor's) element event: runs the graph's `On <Event> (<element>)` node, if the widget has one. |
+| `instanceOfElement` | `static Map<String, Object?>? instanceOfElement(Object? element)` | [element] durum map'inin ait olduğu widget instance'ı (instance bir graph çalıştırıyorsa; [attach] hatırlar); Combo Box setter'ları On Selection Changed'i (`Direct`) bununla çalıştırır. |
+
+## `lib/src/umg/combo_box_options.dart`
+
+Bir Combo Box seçeneği oyuncunun gördüğü **etiketi** herhangi bir Blueprint tipindeki bir **değerle** eşler (`Vector2` çözünürlük, bir enum adı, bir aktör, …). Element durumu bunları `options` altında tutar; her saklama biçimi aynı okunur:
+
+| Saklanan biçim | Nereden gelir | Okunuşu |
+| :--- | :--- | :--- |
+| `'Low,High'` | seçeneklerin değeri olmadan önce kaydedilmiş widget belgeleri (designer açınca liste biçimine taşınır) | etiketler, her biri kendi değeri |
+| `['Easy', 'Hard']` | değersiz Add Option | etiketler, her biri kendi değeri |
+| `[{'label': '720p', 'value': Vector2(1280, 720)}]` | değerli Add Option | etiket + değerin kendisi |
+| `[{'label': '4K', 'value': [3840.0, 2160.0], 'type': 'vector2D'}]` | designer'ın tipli literal'i | etiket + `luminaBlueprintLiteral(type, value)` (`Vector2(3840, 2160)`) |
+
+Seçim `selectedOption` (etiket; designer bunu `selected` olarak tohumlar) ile tekrarlanan etiketleri ayıran `selectedIndex`'tir.
+
+### `class LuminaComboBoxOption`
+
+`LuminaComboBoxOption(label, value)`; `LuminaComboBoxOption.text(label)` kendi etiketini temsil eder. Eşitlik etiketi ve değeri içerikle karşılaştırır.
+
+### `class LuminaComboBoxSelection`
+
+On Selection Changed'in verdiği: `label` (Selected Item), `value`, `index` (seçim yoksa -1), `selectType` (`ESelectInfo`). `eventArgs` olayın çıktılarıdır, pin id'sine göre (`selected_item`, `value`, `index`, `select_type`); `none` seçimsizliktir.
+
+### `abstract final class LuminaComboBoxOptions`
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `optionsKey`, `selectedKey`, `designerSelectedKey`, `selectedIndexKey` | `static const String` | `options`, `selectedOption`, `selected`, `selectedIndex`. |
+| `selectInfoEnum`, `selectInfos` | `static const` | `ESelectInfo`: `Direct`, `OnKeyPress`, `OnNavigation`, `OnMouseClick` (sabitler `direct`, `onKeyPress`, `onNavigation`, `onMouseClick`). |
+| `parse` | `static List<LuminaComboBoxOption> parse(Object? stored)` | Saklanan bir değerin bütün seçenekleri (yukarıdaki tablo). |
+| `labels` | `static List<String> labels(Object? stored)` | Saklanan değerin etiketleri. |
+| `entry` | `static Object entry(LuminaComboBoxOption option)` | Element durumundaki kayıt: değer etiketin kendisiyse yalnız etiket, değilse `{label, value}`. |
+| `designerEntry` | `static Map<String, Object?> designerEntry(String label, {Object? value, String? type})` | Designer belgesi kaydı (`{label}` ya da `{label, value, type}`). |
+| `migrateDesignerOptions` | `static List<Map<String, Object?>> migrateDesignerOptions(Object? stored)` | Eski virgülle ayrılmış metni (ya da string listesini) `{label}` kayıtlarına çevirir; kayıt listesi olduğu gibi kalır. |
+| `of` | `static List<LuminaComboBoxOption> of(Object? element)` | Bir element durum map'inin seçenekleri. |
+| `selectedLabel` / `selectedIndex` / `selected` | `static …(Object? element, …)` | Seçili etiket; hâlâ o etiketi gösteriyorsa saklanan indeks, değilse o etiketli ilk seçenek, yoksa -1; seçimin tamamı. |
+| `writeSelection` | `static bool writeSelection(Map<String, Object?> element, List<LuminaComboBoxOption> options, int index)` | [index] numaralı seçeneğin seçimini yazar (-1: seçim yok); değişip değişmediğini döner. |
+| `indexOfLabel` / `indexOfValue` | `static int …(List<LuminaComboBoxOption> options, …)` | Etiketi / eşit değeri olan ilk seçenek, yoksa -1. |
+| `valueEquals` | `static bool valueEquals(Object? a, Object? b)` | Liste ve map içerikle, sayılar sayı olarak, diğerleri `==` ile (vektör ve rotator bileşenleriyle) karşılaştırılır. |
+
+Bu model üzerindeki Blueprint düğümleri (joker Value'lu Add Option, Set Selected Value / Index, Get Selected Option → Label, Value, Index, …) [fonksiyon kütüphanesinde](blueprint/function-library.md); On Selection Changed [`LuminaWidgetEvents`](blueprint/runtime.md) içindedir.
 
 ---
 

@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:ui';
 
-import 'package:lumina_editor_data/lumina_editor.dart' show LuminaBlueprintDocument, LuminaWidgetBlueprintDocument, LuminaWidgetEvents;
+import 'package:lumina_editor_data/lumina_editor.dart' show LuminaBlueprintDocument, LuminaComboBoxOptions, LuminaWidgetBlueprintDocument, LuminaWidgetEvents;
 import 'package:lumina_core/lumina_core.dart';
 
 /// Palette categories of the UMG designer; [shadcn] shows
@@ -181,7 +181,7 @@ enum UmgWidgetType {
       case UmgWidgetType.editableText:
         return {'text': '', 'hint': 'Enter text', 'fontSize': 14.0, 'color': '#FFFFFF'};
       case UmgWidgetType.comboBox:
-        return {'options': 'Option A,Option B,Option C', 'selected': 'Option A', 'fontSize': 12.0};
+        return {'options': LuminaComboBoxOptions.migrateDesignerOptions('Option A,Option B,Option C'), 'selected': 'Option A', 'fontSize': 12.0};
       case UmgWidgetType.border:
         return {'color': '#1B1B22', 'padding': 8.0};
       case UmgWidgetType.container:
@@ -564,6 +564,8 @@ class UmgNode {
     final props = Map<String, dynamic>.from(map['props'] as Map? ?? {});
     // Backfill props introduced after the document was written.
     type.defaultProps().forEach((k, v) => props.putIfAbsent(k, () => v));
+    // A Combo Box's options were one comma-separated string; now label + value rows.
+    if (type == UmgWidgetType.comboBox) props['options'] = LuminaComboBoxOptions.migrateDesignerOptions(props['options']);
     return UmgNode(
       id: map['id']?.toString() ?? 'umg_root',
       type: type,

@@ -36,7 +36,9 @@ The element setters (`Set Text (Text)`, `Set Percent`, …) write into that map 
 | `containerStyle` | `static LuminaUmgContainerStyle containerStyle(Map<String, Object?>? element, LuminaUmgContainerStyle fallback)` | The Container style of [element]: every Container key the element state holds (`backgroundColor`, `gradient`, `borderColor`, `borderWidth`, `borderSides`, `cornerRadius`, `padding`, `margin`, `shadows`, sizes, `alignment`, `backgroundFit`) over [fallback], the designer's style the generated code carries. |
 | `shadow` | `static LuminaUmgTextShadow shadow(Map<String, Object?>? element, LuminaUmgTextShadow fallback)` | The drop shadow of a text-bearing element: each of `shadowEnabled`, `shadowColor`, `shadowOffsetX`, `shadowOffsetY` and `shadowBlur` [element] holds overrides [fallback] (the designer's shadow, which the generated code carries). |
 | `outline` | `static LuminaUmgTextOutline outline(Map<String, Object?>? element, LuminaUmgTextOutline fallback)` | The outline of a text-bearing element: `outlineSize` and `outlineColor` of [element] override [fallback]. |
-| `options` | `static List<String> options(Map<String, Object?>? element, List<String> fallback)` | The options of a Combo Box element: a list (what `Add Option` writes) or the designer's comma-separated string. |
+| `options` | `static List<String> options(Map<String, Object?>? element, List<String> fallback)` | The option labels of a Combo Box element: its list (labels or `{label, value}` maps, what `Add Option` writes) or the designer's stored options, else [fallback]. |
+| `comboOptions` | `static List<LuminaComboBoxOption> comboOptions(Map<String, Object?>? element, [Object? fallback])` | The options (label + value) of a Combo Box element, else those of [fallback] (the designer's stored options). |
+| `selectComboOption` | `static LuminaComboBoxSelection selectComboOption(Map<String, Object?>? instance, String elementName, String? label, {int? index, Object? fallbackOptions, String selectType = 'OnMouseClick'})` | The player picked [label] (or option [index]): writes `selectedOption` + `selectedIndex` and returns the selection On Selection Changed delivers. Generated widgets and Play-In-Editor call it, then fire On Value Changed (the label) and On Selection Changed. |
 | `visibility` | `static String visibility(Map<String, Object?>? element)` | `Visible` / `Hidden` / `Collapsed` (with `HitTestInvisible` / `SelfHitTestInvisible` rendering as visible). |
 | `isVisible` | `static bool isVisible(Map<String, Object?>? element)` |  |
 | `isEnabled` | `static bool isEnabled(Map<String, Object?>? element)` |  |
@@ -194,11 +196,11 @@ A single-line text input with a placeholder (UMG Editable Text, `OnTextChanged`)
 
 ### `class LuminaUmgComboBox`
 
-A drop-down of string options (UMG Combo Box, `OnSelectionChanged`). The list opens in the nearest [Overlay], which every game app has.
+A drop-down of option labels (UMG Combo Box). Picking one calls [onChanged] with its label and [onSelected] with its index (labels may repeat; the index does not). The list opens in the nearest [Overlay], which every game app has.
 
 **Constructors:**
 
-- `const LuminaUmgComboBox({super.key, required this.value, required this.options, this.onChanged, this.placeholder, this.style, this.outline = LuminaUmgTextOutlin...`
+- `const LuminaUmgComboBox({super.key, required this.value, required this.options, this.onChanged, this.onSelected, this.selectedIndex, this.placeholder, this.style, this.outline = LuminaUmgTextOutlin...`
 
 **Members:**
 
@@ -207,6 +209,8 @@ A drop-down of string options (UMG Combo Box, `OnSelectionChanged`). The list op
 | `value` | `final String? value` |  |
 | `options` | `final List<String> options` |  |
 | `onChanged` | `final ValueChanged<String>? onChanged` |  |
+| `onSelected` | `final ValueChanged<int>? onSelected` | The index of the picked option. |
+| `selectedIndex` | `final int? selectedIndex` | The selected option's index; null highlights the first option labelled [value]. |
 | `placeholder` | `final String? placeholder` |  |
 | `style` | `final TextStyle? style` | Merged over the default label style (font size, colour, shadow). |
 | `outline` | `final LuminaUmgTextOutline outline` | The outline of the selected label. |

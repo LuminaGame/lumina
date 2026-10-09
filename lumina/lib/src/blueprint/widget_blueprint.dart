@@ -84,6 +84,10 @@ abstract final class LuminaWidgetEvents {
   static const String onValueChanged = 'OnValueChanged';
   static const String onTextCommitted = 'OnTextCommitted';
 
+  /// A Combo Box's selection changed: Selected Item, Value, Index and
+  /// Select Type (`ESelectInfo`), from the player or a Blueprint setter.
+  static const String onSelectionChanged = 'OnSelectionChanged';
+
   static const Set<String> _shadcnButtons = {
     'shadcnPrimaryButton',
     'shadcnSecondaryButton',
@@ -113,6 +117,7 @@ abstract final class LuminaWidgetEvents {
     if (typeName == 'button') return const [onClicked, onHovered, onUnhovered];
     if (_shadcnButtons.contains(typeName)) return const [onClicked];
     if (_textTypes.contains(typeName)) return const [onValueChanged, onTextCommitted];
+    if (typeName == 'comboBox') return const [onValueChanged, onSelectionChanged];
     if (_valueTypes.contains(typeName)) return const [onValueChanged];
     return const [];
   }

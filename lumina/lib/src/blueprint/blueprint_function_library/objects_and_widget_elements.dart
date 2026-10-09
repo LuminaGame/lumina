@@ -218,27 +218,6 @@ String _getElementEditableText(Object? target) => _getElement(target, 'text', ''
 void _setElementHintText(LuminaActor self, Object? target, [String inHintText = '']) =>
     _setElement(self, target, 'hintText', inHintText);
 
-void _setElementSelectedOption(LuminaActor self, Object? target, [String option = '']) =>
-    _setElement(self, target, 'selectedOption', option);
-
-String _getElementSelectedOption(Object? target) => _getElement(target, 'selectedOption', '');
-
-void _addElementOption(LuminaActor self, Object? target, [String option = '']) {
-  if (target is Map<String, Object?>) {
-    final options = target['options'];
-    final list = options is List ? List<Object?>.from(options) : <Object?>[];
-    list.add(option);
-    _setElement(self, target, 'options', list);
-  }
-}
-
-void _clearElementOptions(LuminaActor self, Object? target) {
-  if (target is Map<String, Object?>) {
-    target['selectedOption'] = '';
-    _setElement(self, target, 'options', <Object?>[]);
-  }
-}
-
 void _setElementActiveIndex(LuminaActor self, Object? target, [int index = 0]) =>
     _setElement(self, target, 'activeIndex', index);
 

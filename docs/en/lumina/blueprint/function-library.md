@@ -124,10 +124,21 @@ Vectors and rotators are **authoring space** (cm, Z up; rotators about X/Y/Z lik
 | `setElementEditableText` | `static const setElementEditableText` |  |
 | `getElementEditableText` | `static const getElementEditableText` |  |
 | `setElementHintText` | `static const setElementHintText` |  |
-| `setElementSelectedOption` | `static const setElementSelectedOption` |  |
-| `getElementSelectedOption` | `static const getElementSelectedOption` |  |
-| `addElementOption` | `static const addElementOption` |  |
-| `clearElementOptions` | `static const clearElementOptions` |  |
+| `setElementSelectedOption` | `static const setElementSelectedOption` | Node **Set Selected Option** (category `Widget\|Combo Box`, `Option` = label): selects the first option with that label; a label no option has is still shown (index -1). A change runs the widget's On Selection Changed (`Direct`). |
+| `getElementSelectedOption` | `static const getElementSelectedOption` | The selected label ('' for none), the Dart API Get Selected Option always had; the node calls [getElementSelection]. |
+| `addElementOption` | `static const addElementOption` | Node **Add Option** (`Label`, wildcard `Value`): appends an option standing for the value; with no value it stands for its label (what older graphs do). The Value pin takes the type of its wire. |
+| `clearElementOptions` | `static const clearElementOptions` | Node **Clear Options**: no options and no selection (no event). |
+| `removeElementOption` | `static const removeElementOption` | Node **Remove Option** (`Option` = label) → bool: removes the first option with that label; removing the selected one clears the selection. |
+| `setElementSelectedValue` | `static const setElementSelectedValue` | Node **Set Selected Value** (wildcard `Value`): selects the first option whose value equals it (vectors, colours, lists and maps compared by content); nothing changes when none does. |
+| `setElementSelectedIndex` | `static const setElementSelectedIndex` | Node **Set Selected Index**: selects option `Index`; -1 clears, any other index outside the options changes nothing. |
+| `clearElementSelection` | `static const clearElementSelection` | Node **Clear Selection**. |
+| `getElementSelection` | `static const getElementSelection` | Node **Get Selected Option** → `Label` (string), `Value` (wildcard), `Index` (int, -1 for none). |
+| `getElementSelectedIndex` | `static const getElementSelectedIndex` | Node **Get Selected Index**. |
+| `getElementOptionCount` | `static const getElementOptionCount` | Node **Get Option Count**. |
+| `getElementOptionAtIndex` | `static const getElementOptionAtIndex` | Node **Get Option at Index** → the label ('' outside the options). |
+| `getElementOptionValue` | `static const getElementOptionValue` | Node **Get Option Value** → the value of option `Index` (wildcard; None outside the options). |
+| `findElementOptionIndex` | `static const findElementOptionIndex` | Node **Find Option Index** (`Option` = label) → index or -1. |
+| `findElementOptionIndexByValue` | `static const findElementOptionIndexByValue` | Node **Find Option Index by Value** (wildcard `Value`) → index or -1. |
 | `setElementActiveIndex` | `static const setElementActiveIndex` |  |
 | `getElementActiveIndex` | `static const getElementActiveIndex` |  |
 | `setElementBackgroundColor` | `static const setElementBackgroundColor` |  |

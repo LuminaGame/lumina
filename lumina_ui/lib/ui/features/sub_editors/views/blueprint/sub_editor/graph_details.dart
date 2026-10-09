@@ -532,7 +532,7 @@ mixin _BlueprintSubEditorGraphDetails on _BlueprintSubEditorStateBase {
           gap,
         ];
     }
-    if (LuminaBlueprintNodeLibrary.wildcardNodes.contains(node.registryId)) {
+    if (LuminaBlueprintNodeLibrary.adoptsWildcardType(node)) {
       return [
         label('Type'),
         select('type', node.literals['type'] as String?, typeOptions, show: (t) => BlueprintPinStyle.label(LuminaPinType.parse(t))),

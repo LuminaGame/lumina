@@ -124,10 +124,21 @@ Vectors and rotators are **authoring space** (cm, Z up; rotators about X/Y/Z lik
 | `setElementEditableText` | `static const setElementEditableText` |  |
 | `getElementEditableText` | `static const getElementEditableText` |  |
 | `setElementHintText` | `static const setElementHintText` |  |
-| `setElementSelectedOption` | `static const setElementSelectedOption` |  |
-| `getElementSelectedOption` | `static const getElementSelectedOption` |  |
-| `addElementOption` | `static const addElementOption` |  |
-| `clearElementOptions` | `static const clearElementOptions` |  |
+| `setElementSelectedOption` | `static const setElementSelectedOption` | **Set Selected Option** düğümü (kategori `Widget\|Combo Box`, `Option` = etiket): o etiketli ilk seçeneği seçer; hiçbir seçeneğin taşımadığı bir etiket yine gösterilir (indeks -1). Değişiklik widget'ın On Selection Changed olayını (`Direct`) çalıştırır. |
+| `getElementSelectedOption` | `static const getElementSelectedOption` | Seçili etiket (seçim yoksa ''), Get Selected Option'ın eskiden beri olan Dart API'si; düğüm [getElementSelection]'ı çağırır. |
+| `addElementOption` | `static const addElementOption` | **Add Option** düğümü (`Label`, joker `Value`): değeri temsil eden bir seçenek ekler; değer verilmezse seçenek kendi etiketini temsil eder (eski grafların yaptığı). Value pini bağlandığı kablonun tipini alır. |
+| `clearElementOptions` | `static const clearElementOptions` | **Clear Options** düğümü: seçenek ve seçim kalmaz (olay yok). |
+| `removeElementOption` | `static const removeElementOption` | **Remove Option** düğümü (`Option` = etiket) → bool: o etiketli ilk seçeneği siler; seçili olan silinirse seçim temizlenir. |
+| `setElementSelectedValue` | `static const setElementSelectedValue` | **Set Selected Value** düğümü (joker `Value`): değeri eşit olan ilk seçeneği seçer (vektör, renk, liste ve map içerikle karşılaştırılır); eşleşme yoksa hiçbir şey değişmez. |
+| `setElementSelectedIndex` | `static const setElementSelectedIndex` | **Set Selected Index** düğümü: `Index` numaralı seçeneği seçer; -1 seçimi temizler, aralık dışındaki diğer indeksler hiçbir şey değiştirmez. |
+| `clearElementSelection` | `static const clearElementSelection` | **Clear Selection** düğümü. |
+| `getElementSelection` | `static const getElementSelection` | **Get Selected Option** düğümü → `Label` (string), `Value` (joker), `Index` (int, seçim yoksa -1). |
+| `getElementSelectedIndex` | `static const getElementSelectedIndex` | **Get Selected Index** düğümü. |
+| `getElementOptionCount` | `static const getElementOptionCount` | **Get Option Count** düğümü. |
+| `getElementOptionAtIndex` | `static const getElementOptionAtIndex` | **Get Option at Index** düğümü → etiket (aralık dışında ''). |
+| `getElementOptionValue` | `static const getElementOptionValue` | **Get Option Value** düğümü → `Index` numaralı seçeneğin değeri (joker; aralık dışında None). |
+| `findElementOptionIndex` | `static const findElementOptionIndex` | **Find Option Index** düğümü (`Option` = etiket) → indeks ya da -1. |
+| `findElementOptionIndexByValue` | `static const findElementOptionIndexByValue` | **Find Option Index by Value** düğümü (joker `Value`) → indeks ya da -1. |
 | `setElementActiveIndex` | `static const setElementActiveIndex` |  |
 | `getElementActiveIndex` | `static const getElementActiveIndex` |  |
 | `setElementBackgroundColor` | `static const setElementBackgroundColor` |  |

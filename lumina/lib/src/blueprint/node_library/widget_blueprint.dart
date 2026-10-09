@@ -72,7 +72,7 @@ final List<LuminaBlueprintNodeSpec> _widgetBlueprintNodes = [
 
 /// The extra outputs of a bound element [event] of an element typed
 /// [typeName] (`On Value Changed (Volume)` → `Value` float).
-List<LuminaBlueprintPinSpec> _widgetEventOutputs(String? event, String? typeName) => switch (event) {
+List<LuminaBlueprintPinSpec> _widgetEventOutputs(String? event, String? typeName, LuminaBlueprintNode node) => switch (event) {
       LuminaWidgetEvents.onValueChanged => [
           LuminaBlueprintPinSpec('value', 'Value', LuminaPinType.parse(LuminaWidgetEvents.valueTypeOf(typeName ?? '')) ?? LuminaPinType.string),
         ],
@@ -80,6 +80,7 @@ List<LuminaBlueprintPinSpec> _widgetEventOutputs(String? event, String? typeName
           _s('text', 'Text'),
           _enum('commit_method', 'Commit Method', LuminaBlueprintNodeLibrary.textCommitEnum),
         ],
+      LuminaWidgetEvents.onSelectionChanged => _selectionChangedOutputs(node),
       _ => const [],
     };
 
@@ -90,7 +91,7 @@ List<LuminaBlueprintPinSpec> _widgetEventOutputs(String? event, String? typeName
   switch (s.id) {
     case LuminaBlueprintNodeLibrary.eventWidgetElement:
       final element = context.widgetVariable(lit('element'));
-      return (inputs: s.inputs, outputs: [...s.outputs, ..._widgetEventOutputs(lit('event'), element?.typeName)]);
+      return (inputs: s.inputs, outputs: [...s.outputs, ..._widgetEventOutputs(lit('event'), element?.typeName, node)]);
     case LuminaBlueprintNodeLibrary.getWidgetVariable:
       final element = context.widgetVariable(lit('element'));
       if (element == null) return (inputs: s.inputs, outputs: s.outputs);

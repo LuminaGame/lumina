@@ -1,5 +1,5 @@
 import 'package:lumina_editor_data/lumina_editor.dart'
-    show LuminaUmgContainer, LuminaUmgContainerStyle, LuminaUmgElementBinding, LuminaUmgSkeleton, LuminaUmgStyleJson;
+    show LuminaComboBoxOptions, LuminaUmgContainer, LuminaUmgContainerStyle, LuminaUmgElementBinding, LuminaUmgSkeleton, LuminaUmgStyleJson;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
@@ -20,7 +20,7 @@ Widget umgContainer(UmgNode node, Map<String, Object?>? element, {ImageProvider?
     LuminaUmgContainer(style: umgContainerStyle(node.props, element), image: image, child: child);
 
 /// The comma-separated options / items of a component.
-List<String> umgItems(Object? v) => (v?.toString() ?? '').split(',').map((o) => o.trim()).where((o) => o.isNotEmpty).toList();
+List<String> umgItems(Object? v) => v is List ? LuminaComboBoxOptions.labels(v) : LuminaComboBoxOptions.labels(v?.toString() ?? '');
 
 /// What a plain-Flutter project shows instead of a shadcn component: the
 /// game cannot import shadcn_flutter.

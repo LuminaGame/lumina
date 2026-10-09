@@ -10,6 +10,7 @@ Oyun arayüzü için widget tasarımcısı: UMG belge modeli, tasarım kanvası,
 - [`lib/ui/features/sub_editors/views/umg/hierarchy_tree.dart`](#libuifeaturessub_editorsviewsumghierarchy_treedart)
 - [`lib/ui/features/sub_editors/views/umg/palette.dart`](#libuifeaturessub_editorsviewsumgpalettedart)
 - [`lib/ui/features/sub_editors/views/umg/slot_inspector.dart`](#libuifeaturessub_editorsviewsumgslot_inspectordart)
+- [`lib/ui/features/sub_editors/views/umg/combo_box_options_editor.dart`](#libuifeaturessub_editorsviewsumgcombo_box_options_editordart)
 - [`lib/ui/features/sub_editors/views/umg/widget_sub_editor.dart`](#libuifeaturessub_editorsviewsumgwidget_sub_editordart)
 - [`lib/ui/features/sub_editors/view_models/umg_editor_view_model.dart`](#libuifeaturessub_editorsview_modelsumg_editor_view_modeldart)
 - [`lib/ui/features/sub_editors/services/umg_widget_codegen.dart`](#libuifeaturessub_editorsservicesumg_widget_codegendart)
@@ -196,6 +197,16 @@ Draws the little anchor glyph (dot/bar) of a preset.
 | `preset` | `UmgAnchorPreset preset` | `preset` alanını (field/property) ve ilişkili veriyi saklar. |
 | `paint` | `void paint(Canvas canvas, Size size)` | `paint` işlemini gerçekleştirir. |
 | `shouldRepaint` | `bool shouldRepaint(_AnchorGlyphPainter old)` | `shouldRepaint` işlemini gerçekleştirir. |
+
+## `lib/ui/features/sub_editors/views/umg/combo_box_options_editor.dart`
+
+### `class UmgComboBoxOptionsEditor`
+
+Bir Combo Box'ın Details satırları (`UmgSlotInspector` bunları eski virgülle ayrılmış metin alanının yerine gösterir): her seçenek için bir satır — etiket, değer tipi (`Label` = seçenek kendi etiketini temsil eder, `String`, `Name`, `Enum`, `Integer`, `Float`, `Boolean`, `Vector 2D`, `Vector`, `Color`), o tipin değer editörü, yukarı / aşağı taşı ve sil — ardından **Add Option** ve **Selected** (etiketler üzerinden). Her düzenleme node'un `options` listesini (`{label}` ya da `{label, value, type}` kayıtları) tek bir geri alma adımı olarak yazar; seçili seçeneğin adı değişince seçili kalır. Nesne ve struct değerleri widget belgesinde literal olamaz: Blueprint'ten gelir (Value'su bağlı Add Option).
+
+Virgülle ayrılmış metinle kaydedilmiş widget belgeleri taşınmış olarak açılır (`UmgNode.fromJson` → `LuminaComboBoxOptions.migrateDesignerOptions`). Üretilen widget ve Play-In-Editor çalışma görünümü seçimi `LuminaUmgElementBinding.selectComboOption` üzerinden yapar (`selectedIndex` seçimi izler) ve önce On Value Changed'i (etiket), sonra On Selection Changed'i (etiket, değer, indeks, `OnMouseClick`) tetikler; bağlı bir On Selection Changed `LuminaComboBoxSelection selection` handler'ı alır.
+
+**Üyeler:** `vm`, `node`, `valueTypes` (seçicinin tipleri, `UmgComboValueType` kayıtları `(id, label, components)`), `zeroOf(type)` (tipi değişen satırın değeri), `build`.
 
 ## `lib/ui/features/sub_editors/views/umg/widget_sub_editor.dart`
 

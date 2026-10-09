@@ -204,6 +204,7 @@ export 'package:lumina/src/utility/gameplay_volumes.dart';
 export 'package:lumina/src/utility/viewport_statics.dart';
 export 'package:lumina/src/utility/lumina_assets.dart';
 export 'package:lumina/src/utility/lumina_platform.dart';
+export 'package:lumina/src/umg/combo_box_options.dart';
 export 'package:lumina/src/umg/user_widget.dart';
 export 'package:lumina/src/media/video_playback.dart';
 export 'package:lumina/src/audio/sound_base.dart';

@@ -51,6 +51,47 @@ The widget classes whose instances run a graph: the factory of each class's scri
 | `addedToViewport` | `static void addedToViewport(Object? instance)` | `Add to Viewport`: Pre Construct then Construct, once per stay on screen. |
 | `removedFromParent` | `static void removedFromParent(Object? instance)` | `Remove from Parent`: Destruct. |
 | `fire` | `static void fire(Map<String, Object?>? instance, String element, String event, [Map<String, Object?> args = co...` | A generated widget's (or Play-In-Editor's) element event: runs the graph's `On <Event> (<element>)` node, if the widget has one. |
+| `instanceOfElement` | `static Map<String, Object?>? instanceOfElement(Object? element)` | The widget instance element state [element] belongs to, when that instance runs a graph (remembered by [attach]); a Combo Box setter uses it to run On Selection Changed (`Direct`). |
+
+## `lib/src/umg/combo_box_options.dart`
+
+A Combo Box option pairs the **label** the player sees with a **value** of any Blueprint type (a `Vector2` resolution, an enum name, an actor, …). The element state stores them under `options`; every stored form reads the same:
+
+| Stored form | Where it comes from | Reads as |
+| :--- | :--- | :--- |
+| `'Low,High'` | widget documents saved before options had values (migrated to the list form when the designer opens them) | labels, each its own value |
+| `['Easy', 'Hard']` | Add Option without a value | labels, each its own value |
+| `[{'label': '720p', 'value': Vector2(1280, 720)}]` | Add Option with a value | label + the value as is |
+| `[{'label': '4K', 'value': [3840.0, 2160.0], 'type': 'vector2D'}]` | the designer's typed literal | label + `luminaBlueprintLiteral(type, value)` (`Vector2(3840, 2160)`) |
+
+The selection is `selectedOption` (the label; the designer seeds it as `selected`) plus `selectedIndex`, which tells duplicate labels apart.
+
+### `class LuminaComboBoxOption`
+
+`LuminaComboBoxOption(label, value)`; `LuminaComboBoxOption.text(label)` stands for its label. Equality compares the label and the value by content.
+
+### `class LuminaComboBoxSelection`
+
+What On Selection Changed delivers: `label` (Selected Item), `value`, `index` (-1 for none), `selectType` (`ESelectInfo`). `eventArgs` is the event's outputs by pin id (`selected_item`, `value`, `index`, `select_type`); `none` is no selection.
+
+### `abstract final class LuminaComboBoxOptions`
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `optionsKey`, `selectedKey`, `designerSelectedKey`, `selectedIndexKey` | `static const String` | `options`, `selectedOption`, `selected`, `selectedIndex`. |
+| `selectInfoEnum`, `selectInfos` | `static const` | `ESelectInfo`: `Direct`, `OnKeyPress`, `OnNavigation`, `OnMouseClick` (constants `direct`, `onKeyPress`, `onNavigation`, `onMouseClick`). |
+| `parse` | `static List<LuminaComboBoxOption> parse(Object? stored)` | Every option of a stored value (table above). |
+| `labels` | `static List<String> labels(Object? stored)` | The labels of a stored value. |
+| `entry` | `static Object entry(LuminaComboBoxOption option)` | The element state's entry: the label alone when the value is the label, else `{label, value}`. |
+| `designerEntry` | `static Map<String, Object?> designerEntry(String label, {Object? value, String? type})` | A designer document entry (`{label}` or `{label, value, type}`). |
+| `migrateDesignerOptions` | `static List<Map<String, Object?>> migrateDesignerOptions(Object? stored)` | The legacy comma-separated string (or a list of strings) as `{label}` entries; a list of entries is kept. |
+| `of` | `static List<LuminaComboBoxOption> of(Object? element)` | The options of an element state map. |
+| `selectedLabel` / `selectedIndex` / `selected` | `static …(Object? element, …)` | The selected label; the stored index while it still points at that label, else the first option with it, else -1; the whole selection. |
+| `writeSelection` | `static bool writeSelection(Map<String, Object?> element, List<LuminaComboBoxOption> options, int index)` | Writes the selection of option [index] (-1: none); whether it changed. |
+| `indexOfLabel` / `indexOfValue` | `static int …(List<LuminaComboBoxOption> options, …)` | The first option with the label / an equal value, or -1. |
+| `valueEquals` | `static bool valueEquals(Object? a, Object? b)` | Lists and maps by content, numbers as numbers, `==` otherwise (vectors and rotators compare their components). |
+
+The Blueprint nodes over this model (Add Option with a wildcard Value, Set Selected Value / Index, Get Selected Option → Label, Value, Index, …) are in the [function library](blueprint/function-library.md); On Selection Changed is in [`LuminaWidgetEvents`](blueprint/runtime.md).
 
 ---
 

@@ -10,6 +10,7 @@ The widget designer for game UI: the UMG document model, the designer canvas, pa
 - [`lib/ui/features/sub_editors/views/umg/hierarchy_tree.dart`](#libuifeaturessub_editorsviewsumghierarchy_treedart)
 - [`lib/ui/features/sub_editors/views/umg/palette.dart`](#libuifeaturessub_editorsviewsumgpalettedart)
 - [`lib/ui/features/sub_editors/views/umg/slot_inspector.dart`](#libuifeaturessub_editorsviewsumgslot_inspectordart)
+- [`lib/ui/features/sub_editors/views/umg/combo_box_options_editor.dart`](#libuifeaturessub_editorsviewsumgcombo_box_options_editordart)
 - [`lib/ui/features/sub_editors/views/umg/widget_sub_editor.dart`](#libuifeaturessub_editorsviewsumgwidget_sub_editordart)
 - [`lib/ui/features/sub_editors/view_models/umg_editor_view_model.dart`](#libuifeaturessub_editorsview_modelsumg_editor_view_modeldart)
 - [`lib/ui/features/sub_editors/services/umg_widget_codegen.dart`](#libuifeaturessub_editorsservicesumg_widget_codegendart)
@@ -196,6 +197,16 @@ Draws the little anchor glyph (dot/bar) of a preset.
 | `preset` | `UmgAnchorPreset preset` | Holds the `preset` property or configuration state. |
 | `paint` | `void paint(Canvas canvas, Size size)` | Executes `paint` operation. |
 | `shouldRepaint` | `bool shouldRepaint(_AnchorGlyphPainter old)` | Executes `shouldRepaint` operation. |
+
+## `lib/ui/features/sub_editors/views/umg/combo_box_options_editor.dart`
+
+### `class UmgComboBoxOptionsEditor`
+
+The Details rows of a Combo Box (shown by `UmgSlotInspector` in place of the old comma-separated text field): one row per option — the label, the value type (`Label` = the option stands for its label, `String`, `Name`, `Enum`, `Integer`, `Float`, `Boolean`, `Vector 2D`, `Vector`, `Color`), a value editor for that type, move up / down and remove — then **Add Option** and **Selected** (over the labels). Every edit writes the node's `options` list (`{label}` or `{label, value, type}` entries) as one undo step; renaming the selected option keeps it selected. Object and struct values cannot be literals in a widget document: they come from Blueprint (Add Option with a wired Value).
+
+Widget documents saved with the comma-separated string open migrated (`UmgNode.fromJson` → `LuminaComboBoxOptions.migrateDesignerOptions`). The generated widget and the Play-In-Editor runtime view pick through `LuminaUmgElementBinding.selectComboOption` (so `selectedIndex` follows the pick) and fire On Value Changed (the label) then On Selection Changed (label, value, index, `OnMouseClick`); a bound On Selection Changed gets a `LuminaComboBoxSelection selection` handler.
+
+**Members:** `vm`, `node`, `valueTypes` (the picker's types, `UmgComboValueType` records `(id, label, components)`), `zeroOf(type)` (a row's value when its type changes), `build`.
 
 ## `lib/ui/features/sub_editors/views/umg/widget_sub_editor.dart`
 

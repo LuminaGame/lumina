@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter/widgets.dart' as widgets show Table, TableRow;
-import 'package:lumina_editor_data/lumina_editor.dart' show LuminaUmgElement, LuminaUmgElementBinding, LuminaUserWidgets, LuminaThemeDocument;
+import 'package:lumina_editor_data/lumina_editor.dart' show LuminaUmgElement, LuminaUmgElementBinding, LuminaUserWidgets, LuminaThemeDocument, LuminaWidgetEvents;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
@@ -242,19 +242,16 @@ class UmgRuntimeView extends StatelessWidget {
           onSubmitted: (v) => _fire(node, 'OnTextCommitted', {'text': v, 'commit_method': 'OnEnter'}),
         );
       case UmgWidgetType.comboBox:
-        final designer = (node.props['options']?.toString() ?? '')
-            .split(',')
-            .map((o) => o.trim())
-            .where((o) => o.isNotEmpty)
-            .toList();
-        final options = LuminaUmgElementBinding.options(e, designer);
+        final options = LuminaUmgElementBinding.options(e, umgItems(node.props['options']));
         final selected = LuminaUmgElementBinding.value<String?>(e, 'selectedOption', node.props['selected']?.toString());
         return Select<String>(
           value: options.contains(selected) ? selected : null,
           onChanged: (v) {
-            LuminaUmgElementBinding.write(runtimeValues, node.name, 'selectedOption', v);
+            // The selection (label, value, index) the graph's events get.
+            final s = LuminaUmgElementBinding.selectComboOption(runtimeValues, node.name, v, fallbackOptions: node.props['options']);
             onAction?.call(node.id, 'selected');
-            _fire(node, 'OnValueChanged', {'value': v});
+            _fire(node, LuminaWidgetEvents.onValueChanged, {'value': v});
+            _fire(node, LuminaWidgetEvents.onSelectionChanged, s.eventArgs);
           },
           itemBuilder: (context, item) => umgText(item, node.props, e),
           popup: SelectPopup(

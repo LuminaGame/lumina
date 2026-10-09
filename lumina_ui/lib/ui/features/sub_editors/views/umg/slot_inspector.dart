@@ -9,6 +9,7 @@ import 'package:lumina_ui/ui/core/property_editors/asset_picker_select.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/umg_document.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/umg_editor_view_model.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/umg/combo_box_options_editor.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/umg/umg_theme_helper.dart';
 
 /// The designer's right panel: Slot (anchors preset matrix, position/size/
@@ -313,8 +314,7 @@ class UmgSlotInspector extends StatelessWidget {
       rows.add(_propText(node, 'Hint', 'hint'));
     }
     if (node.type == UmgWidgetType.comboBox) {
-      rows.add(_propText(node, 'Options (comma separated)', 'options'));
-      rows.add(_propText(node, 'Selected', 'selected'));
+      rows.add(UmgComboBoxOptionsEditor(key: ValueKey('umg_combo_options_${node.id}'), vm: vm, node: node));
     }
     if (node.type == UmgWidgetType.progressBar) rows.add(_propNumber(node, 'Percent', 'percent', 0, 1, fractionDigits: 2));
     if (node.type == UmgWidgetType.slider) rows.add(_propNumber(node, 'Value', 'value', 0, 1, fractionDigits: 2));

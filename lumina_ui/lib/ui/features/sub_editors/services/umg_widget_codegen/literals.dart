@@ -83,8 +83,9 @@ String _drawAsFit(dynamic v) {
   }
 }
 
-List<String> _options(dynamic v) =>
-    (v?.toString() ?? '').split(',').map((o) => o.trim()).where((o) => o.isNotEmpty).toList();
+/// The labels of stored options: the legacy comma-separated string or the
+/// label + value list.
+List<String> _options(dynamic v) => v is List ? LuminaComboBoxOptions.labels(v) : LuminaComboBoxOptions.labels(v?.toString() ?? '');
 
 double _num(dynamic v, double fallback) => v is num ? v.toDouble() : (double.tryParse(v?.toString() ?? '') ?? fallback);
 

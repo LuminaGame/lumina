@@ -271,19 +271,6 @@ final Map<String, LuminaBlueprintFunction> _objectFunctions = <String, LuminaBlu
     LuminaBlueprintFunctionLibrary.setElementHintText(c.self, i['target'], i['in_hint_text'] as String? ?? '');
     return const {};
   },
-  'set_element_selected_option': (c, i) {
-    LuminaBlueprintFunctionLibrary.setElementSelectedOption(c.self, i['target'], i['option'] as String? ?? '');
-    return const {};
-  },
-  'get_element_selected_option': (c, i) => LuminaBlueprintFunctionLibrary._ret(LuminaBlueprintFunctionLibrary.getElementSelectedOption(i['target'])),
-  'add_element_option': (c, i) {
-    LuminaBlueprintFunctionLibrary.addElementOption(c.self, i['target'], i['option'] as String? ?? '');
-    return const {};
-  },
-  'clear_element_options': (c, i) {
-    LuminaBlueprintFunctionLibrary.clearElementOptions(c.self, i['target']);
-    return const {};
-  },
   'set_element_active_index': (c, i) {
     LuminaBlueprintFunctionLibrary.setElementActiveIndex(c.self, i['target'], LuminaBlueprintFunctionLibrary._n(i['index'], 0));
     return const {};

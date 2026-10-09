@@ -881,7 +881,7 @@ class _UmgRuntimeTree extends StatelessWidget {
           onChanged: (_) => onInteraction(),
         );
       case UmgWidgetType.comboBox:
-        final options = (node.props['options']?.toString() ?? '').split(',').map((o) => o.trim()).where((o) => o.isNotEmpty).toList();
+        final options = umgItems(node.props['options']);
         final selected = node.props['selected']?.toString();
         return Select<String>(
           value: options.contains(selected) ? selected : null,
@@ -934,7 +934,7 @@ class _UmgRuntimeTree extends StatelessWidget {
           onChanged: (_) => onInteraction(),
         );
       case UmgWidgetType.comboBox:
-        final options = (node.props['options']?.toString() ?? '').split(',').map((o) => o.trim()).where((o) => o.isNotEmpty).toList();
+        final options = umgItems(node.props['options']);
         final selected = node.props['selected']?.toString();
         return LuminaUmgComboBox(
           value: options.contains(selected) ? selected : null,

@@ -9,6 +9,8 @@ part of '../umg_widget_codegen.dart';
 String _handlerSignature(UmgNode n, UmgEvent e) {
   // On Text Committed hands over the committed text.
   if (e.name == 'OnTextCommitted') return 'String value';
+  // On Selection Changed hands over the label, value, index and select type.
+  if (e.name == 'OnSelectionChanged') return 'LuminaComboBoxSelection selection';
   if (e.name != 'OnValueChanged') return '';
   switch (n.type) {
     case UmgWidgetType.slider:
@@ -288,21 +290,35 @@ String _emitBody(UmgNode node, UmgDocument doc, String indent, bool stateful, bo
 
     case UmgWidgetType.comboBox:
       final handler = _handlerFor(node, 'OnValueChanged');
+      final selectionHandler = _handlerFor(node, 'OnSelectionChanged');
       final options = _options(node.props['options']);
       final optionsExpr = 'LuminaUmgElementBinding.options(e, const [${options.map(_str).join(', ')}])';
       final value = "LuminaUmgElementBinding.value<String?>(e, 'selectedOption', ${node.fieldName}Value)";
+      // The pick: selectedOption + selectedIndex written, the selection
+      // (label, value, index) handed to the bound events.
+      final designer = UmgWidgetCodegen._literal(node.props['options'] is List ? node.props['options'] : _options(node.props['options']));
+      List<String> pick(String label, String? index) => [
+            for (final line in [
+              'final selection = LuminaUmgElementBinding.selectComboOption($inst, ${_str(node.name)}, $label, '
+                  '${index == null ? '' : 'index: $index, '}fallbackOptions: const $designer);',
+              'setState(() => ${node.fieldName}Value = selection.label);',
+              if (handler != null) '$handler(selection.label);',
+              if (selectionHandler != null) '$selectionHandler(selection);',
+            ])
+              '$inner  $line',
+          ];
+
       final b = StringBuffer();
       if (plain) {
         b.writeln('LuminaUmgComboBox(');
         b.writeln('$inner$key,');
         b.writeln('${inner}value: $value,');
+        b.writeln('${inner}selectedIndex: e == null ? null : LuminaComboBoxOptions.selectedIndex(e),');
         b.writeln('${inner}options: $optionsExpr,');
         b.writeln('${inner}style: ${_textStyle(node)},');
         b.writeln('${inner}outline: ${_outline_(node)},');
-        b.writeln('${inner}onChanged: (v) {');
-        b.writeln('$inner  setState(() => ${node.fieldName}Value = v);');
-        b.writeln("$inner  LuminaUmgElementBinding.write($inst, ${_str(node.name)}, 'selectedOption', v);");
-        if (handler != null) b.writeln('$inner  $handler(v);');
+        b.writeln('${inner}onSelected: (i) {');
+        pick('null', 'i').forEach(b.writeln);
         b.writeln('$inner},');
         b.write('$indent)');
         return b.toString();
@@ -311,9 +327,7 @@ String _emitBody(UmgNode node, UmgDocument doc, String indent, bool stateful, bo
       b.writeln('$inner$key,');
       b.writeln('${inner}value: $value,');
       b.writeln('${inner}onChanged: (v) {');
-      b.writeln('$inner  setState(() => ${node.fieldName}Value = v);');
-      b.writeln("$inner  LuminaUmgElementBinding.write($inst, ${_str(node.name)}, 'selectedOption', v);");
-      if (handler != null) b.writeln('$inner  $handler(v);');
+      pick('v', null).forEach(b.writeln);
       b.writeln('$inner},');
       b.writeln('${inner}itemBuilder: (context, item) => ${_text(node, 'item')},');
       b.writeln('${inner}popup: SelectPopup(');

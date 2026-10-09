@@ -62,6 +62,7 @@ import 'package:lumina/src/utility/timer_manager.dart';
 import 'package:lumina/src/world/debug_shapes.dart';
 import 'package:lumina/src/world/subsystem/widget_subsystem.dart';
 import 'package:lumina/src/world/subsystem/user_settings_subsystem.dart';
+import 'package:lumina/src/umg/combo_box_options.dart';
 import 'package:lumina/src/umg/user_widget.dart';
 import 'package:lumina/src/world/world.dart';
 import 'package:lumina/src/blueprint/blueprint_enums_interfaces.dart';
@@ -71,6 +72,7 @@ import 'package:lumina/src/blueprint/blueprint_runtime.dart';
 import 'package:lumina/src/blueprint/component_mapping.dart';
 import 'package:lumina/src/blueprint/level_blueprint.dart';
 import 'package:lumina/src/blueprint/node_library.dart';
+import 'package:lumina/src/blueprint/widget_blueprint.dart';
 import 'package:lumina/src/blueprint/widget_classes.dart';
 
 part 'blueprint_function_library/call_shapes.dart';
@@ -92,6 +94,7 @@ part 'blueprint_function_library/ragdoll.dart';
 part 'blueprint_function_library/traversal.dart';
 part 'blueprint_function_library/window_mode.dart';
 part 'blueprint_function_library/display_settings.dart';
+part 'blueprint_function_library/combo_box.dart';
 
 /// What a node function gets when the VM calls it: the
 /// Blueprint instance it runs on.
@@ -282,6 +285,17 @@ abstract final class LuminaBlueprintFunctionLibrary {
   static const getElementSelectedOption = _getElementSelectedOption;
   static const addElementOption = _addElementOption;
   static const clearElementOptions = _clearElementOptions;
+  static const removeElementOption = _removeElementOption;
+  static const setElementSelectedValue = _setElementSelectedValue;
+  static const setElementSelectedIndex = _setElementSelectedIndex;
+  static const clearElementSelection = _clearElementSelection;
+  static const getElementSelection = _getElementSelection;
+  static const getElementSelectedIndex = _getElementSelectedIndex;
+  static const getElementOptionCount = _getElementOptionCount;
+  static const getElementOptionAtIndex = _getElementOptionAtIndex;
+  static const getElementOptionValue = _getElementOptionValue;
+  static const findElementOptionIndex = _findElementOptionIndex;
+  static const findElementOptionIndexByValue = _findElementOptionIndexByValue;
   static const setElementActiveIndex = _setElementActiveIndex;
   static const getElementActiveIndex = _getElementActiveIndex;
 
@@ -1082,6 +1096,7 @@ abstract final class LuminaBlueprintFunctionLibrary {
     ..._traversalCallShapes,
     ..._windowModeCallShapes,
     ..._displaySettingsCallShapes,
+    ..._comboBoxCallShapes,
     // @@CALL_SHAPES_END
   });
 
@@ -1116,6 +1131,7 @@ abstract final class LuminaBlueprintFunctionLibrary {
     ..._traversalFunctions,
     ..._windowModeFunctions,
     ..._displaySettingsFunctions,
+    ..._comboBoxFunctions,
     // @@FUNCTIONS_END
   });
 }
