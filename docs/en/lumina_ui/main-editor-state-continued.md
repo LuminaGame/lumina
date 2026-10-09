@@ -17,6 +17,7 @@ Continuation of Main editor: view model and services: the remaining public files
 - [`lib/ui/features/main_editor/services/pie_controller/editor_pie_game.dart`](#libuifeaturesmain_editorservicespie_controllereditor_pie_gamedart)
 - [`lib/ui/features/main_editor/services/pie_debug_projection.dart`](#libuifeaturesmain_editorservicespie_debug_projectiondart)
 - [`lib/ui/features/main_editor/services/pie_mouse_capture.dart`](#libuifeaturesmain_editorservicespie_mouse_capturedart)
+- [`lib/ui/features/main_editor/services/pie_pointer_input.dart`](#libuifeaturesmain_editorservicespie_pointer_inputdart)
 - [`lib/ui/features/main_editor/services/project_blueprint_functions.dart`](#libuifeaturesmain_editorservicesproject_blueprint_functionsdart)
 - [`lib/ui/features/main_editor/services/project_trash.dart`](#libuifeaturesmain_editorservicesproject_trashdart)
 - [`lib/ui/features/main_editor/services/standalone_game_runner.dart`](#libuifeaturesmain_editorservicesstandalone_game_runnerdart)
@@ -362,6 +363,7 @@ Every editor actor is mapped to a real Lumina runtime object via [mapEditorActor
 | `injectKeyUp` | `void injectKeyUp(LuminaKey key)` | Forwards a key release from the editor viewport into the running world. |
 | `injectAnalog` | `void injectAnalog(LuminaKey key, double value)` | Forwards an analog axis value into the running world. |
 | `injectMouseDelta` | `void injectMouseDelta(double dx, double dy)` | Forwards a mouse movement, in pixels, into the running world. |
+| `injectMousePosition` | `void injectMousePosition(double x, double y)` | The pointer position in the PIE view's pixels (Get Mouse Position). |
 | `nonRuntimeTypes` | `static const Set<String> nonRuntimeTypes` | Editor actor types that carry no runtime representation. |
 | `mapEditorActor` | `static LuminaObject? mapEditorActor(EditorActorNode actor, {EditorBlueprintClassRegistry? registry, void Funct...` | Maps an editor actor to its runtime counterpart, or null for organisational nodes such as folders. |
 | `eulerDegreesToQuaternion` | `static vm64.Quaternion eulerDegreesToQuaternion(List<double> eulerDeg)` | Converts editor Euler angles in degrees (pitch X, yaw Y, roll Z) to a quaternion using the same XYZ order the viewport applies. |
@@ -442,6 +444,31 @@ Every change of the result is sent to [LuminaMouseCapture.backend], which is a r
 | `release` | `void release()` | F4: the cursor comes back and the editor can be used; the session keeps running. |
 | `recapture` | `void recapture()` | A click on the game view: the game takes the mouse again. |
 | `sync` | `void sync()` | Re-reads whether the game takes input (pause, resume, eject, possess). |
+
+## `lib/ui/features/main_editor/services/pie_pointer_input.dart`
+
+### `class PiePointerInput`
+
+The mouse of a Play-In-Editor session as the running game sees it, with the rules a built game's `LuminaGameHost` follows (`PieController.pointer`):
+
+- the pointer position (`Get Mouse Position`) in the PIE view's pixels, the space of `Get Viewport Size` and the screen projections (`LuminaRenderSpace` over the game view; the editor's view renders the viewport's logical size, so the display's pixel ratio does not scale it), clamped to the view's edge; the world's `viewportSize` follows the viewport every tick;
+- mouse buttons as `LeftMouseButton` / `RightMouseButton` / … keys: while the game holds the hidden, captured cursor, every click (also the ones the window shield catches while the backend holds the pointer); with a free cursor (Set Show Mouse Cursor, Game and UI) only clicks on the game view that the game's UMG widgets do not take, none in Input Mode UI Only; after F4 the click that takes the mouse again is not the game's;
+- a release always reaches the game, and a session that stops taking input (pause, eject, stop) releases what it pressed.
+
+While the game takes input, the viewport's pointer is the game's: the editor's click selection, marquee, gizmo and flycam stand down, and Play shows the view edge to edge (`FilamentWidget.decorated` off) so the cursor maps onto the view's own pixels.
+
+**Members:**
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `viewSize` | `Size? Function()? viewSize` | The game view's logical size, supplied by the viewport. |
+| `devicePixelRatio` | `double Function()? devicePixelRatio` | The display's pixel ratio around the game view. |
+| `renderSpace` | `LuminaRenderSpace? get renderSpace` | The game's render space: the game view, rendering its logical size. |
+| `syncViewportSize` | `void syncViewportSize()` | Keeps the world's view size on the PIE view (called every PIE tick). |
+| `hover` | `void hover(Offset local)` | The pointer is at [local] in the game view. |
+| `viewButtons` | `void viewButtons(Offset local, int buttons)` | A button change over the game view, a place the game's UI left to it. |
+| `heldButtons` | `void heldButtons(Offset local, int buttons)` | A button change caught by the window shield while the game holds the cursor. |
+| `releaseAll` | `void releaseAll()` | Releases every button this session pressed. |
 
 ## `lib/ui/features/main_editor/services/project_blueprint_functions.dart`
 

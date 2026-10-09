@@ -18,7 +18,8 @@ import 'package:lumina_ui/ui/features/main_editor/services/pie_mouse_capture.dar
 /// - while the backend holds the pointer, a window-wide shield in the root
 ///   overlay: the cursor is hidden wherever the held pointer sits (Wayland
 ///   holds it where it was, often on the toolbar's Play button), and clicks
-///   there never press editor buttons.
+///   there never press editor buttons; they are the game's clicks, at the
+///   game view's position of the held pointer.
 class PieMouseCaptureLayer extends StatefulWidget {
   const PieMouseCaptureLayer({super.key, required this.pie, this.hintDuration = const Duration(seconds: 5)});
 
@@ -67,6 +68,14 @@ class _PieMouseCaptureLayerState extends State<PieMouseCaptureLayer> {
   void _detach(PieMouseCapture capture) {
     capture.removeListener(_onCaptureChanged);
     if (capture.centreProvider == _viewCentre) capture.centreProvider = null;
+  }
+
+  /// [global] in the game view's coordinates (the layer covers the view).
+  Offset? _toView(Offset global) {
+    if (!mounted) return null;
+    final box = context.findRenderObject() as RenderBox?;
+    if (box == null || !box.hasSize || !box.attached) return null;
+    return box.globalToLocal(global);
   }
 
   /// The game view's centre in the Flutter view's coordinates.
@@ -120,7 +129,7 @@ class _PieMouseCaptureLayerState extends State<PieMouseCaptureLayer> {
     if (wanted) {
       final overlay = Overlay.maybeOf(context, rootOverlay: true);
       if (overlay == null) return;
-      _shield = OverlayEntry(builder: (_) => _PointerShield(pie: widget.pie));
+      _shield = OverlayEntry(builder: (_) => _PointerShield(pie: widget.pie, toView: _toView));
       overlay.insert(_shield!);
     } else {
       _shield!.remove();
@@ -227,12 +236,24 @@ class _HintChip extends StatelessWidget {
 }
 
 /// Covers the whole window while the pointer is held: no cursor, no clicks
-/// reaching the editor, and — on a backend without relative motion — the
-/// pointer's own deltas still turn the camera.
+/// reaching the editor (they are the game's), and — on a backend without
+/// relative motion — the pointer's own deltas still turn the camera.
 class _PointerShield extends StatelessWidget {
-  const _PointerShield({required this.pie});
+  const _PointerShield({required this.pie, required this.toView});
 
   final PieController pie;
+
+  /// A window position in the game view's coordinates.
+  final Offset? Function(Offset global) toView;
+
+  void _buttons(PointerEvent event) {
+    final local = toView(event.position);
+    if (local == null) {
+      pie.pointer.releaseAll();
+      return;
+    }
+    pie.pointer.heldButtons(local, event.buttons);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -243,10 +264,20 @@ class _PointerShield extends StatelessWidget {
       key: const ValueKey('pie_mouse_shield'),
       cursor: SystemMouseCursors.none,
       opaque: true,
-      onHover: (event) => pie.injectPointerDelta(event.delta.dx, event.delta.dy),
+      onHover: (event) {
+        pie.injectPointerDelta(event.delta.dx, event.delta.dy);
+        final local = toView(event.position);
+        if (local != null) pie.pointer.hover(local);
+      },
       child: Listener(
         behavior: HitTestBehavior.opaque,
-        onPointerMove: (event) => pie.injectPointerDelta(event.delta.dx, event.delta.dy),
+        onPointerDown: _buttons,
+        onPointerMove: (event) {
+          pie.injectPointerDelta(event.delta.dx, event.delta.dy);
+          _buttons(event);
+        },
+        onPointerUp: _buttons,
+        onPointerCancel: (_) => pie.pointer.releaseAll(),
         child: const SizedBox.expand(),
       ),
     );

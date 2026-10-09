@@ -18,6 +18,7 @@ import 'package:lumina_ui/ui/features/main_editor/services/camera_actor_properti
 import 'package:lumina_ui/ui/features/main_editor/services/environment_actor_properties.dart';
 import 'package:lumina_ui/ui/features/main_editor/services/light_actor_properties.dart';
 import 'package:lumina_ui/ui/features/main_editor/services/pie_mouse_capture.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/pie_pointer_input.dart';
 import 'package:lumina_ui/ui/features/details/services/blueprint_collision_overrides.dart';
 
 part 'pie_controller/editor_pie_game.dart';
@@ -59,6 +60,18 @@ class PieController {
     gameWantsFreeCursor: () => _game?.playerController?.wantsFreeCursor ?? false,
     onMotion: injectMouseDelta,
   )..addListener(viewModel.notifyListeners);
+
+  /// The game's mouse position and buttons, from the viewport's pointer.
+  late final PiePointerInput pointer = PiePointerInput(
+    acceptsGameInput: () => acceptsGameInput,
+    gameHoldsCursor: () => mouseCapture.isCaptured,
+    cursorReleased: () => mouseCapture.isReleased,
+    uiOnly: () => _game?.playerController?.inputMode == 'UIOnly',
+    injectPosition: (x, y) => _game?.injectMousePosition(x, y),
+    injectKeyDown: injectKeyDown,
+    injectKeyUp: injectKeyUp,
+    setViewportSize: (w, h) => _game?.world?.viewportSize = (w, h),
+  );
 
   /// The possessed controller whose cursor state Play follows: Set Show Mouse Cursor / Set Input Mode free or take the
   /// pointer as the game runs.
@@ -733,6 +746,7 @@ class PieController {
     _removeKeyboardHandler();
     _removeHostHooks();
     _followCursorOf(null);
+    pointer.releaseAll();
     mouseCapture.end();
 
     try {
@@ -785,6 +799,7 @@ class PieController {
       viewModel.logger.log('PIE pause raised: $e', level: 'warning', source: 'PIE');
     }
     viewModel.setSimulationPaused(true);
+    pointer.releaseAll();
     mouseCapture.sync();
   }
 
@@ -933,6 +948,7 @@ class PieController {
   }
 
   void eject() {
+    pointer.releaseAll();
     isEjected = true;
     mouseCapture.sync();
   }
@@ -946,6 +962,7 @@ class PieController {
     if (!isPlaying || isPaused) return;
     // The debugged placed instance follows the selection.
     if (viewModel.primarySelectedActor?.id != _debugSelection) _publishDebugTargets();
+    pointer.syncViewportSize();
     try {
       _game?.tickGame(dt);
     } catch (e) {

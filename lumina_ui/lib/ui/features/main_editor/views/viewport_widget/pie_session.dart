@@ -71,7 +71,37 @@ mixin _ViewportPieSession on _ViewportWidgetStateBase {
     }
   }
 
+  /// The game's share of the viewport's pointer while Play takes input: the
+  /// position and buttons go to the game ([PiePointerInput]) and the
+  /// editor's own handling (selection, marquee, gizmo, flycam) stands down.
+  /// Returns whether the game took [event].
+  bool _piePointer(PointerEvent event) {
+    final pie = widget.viewModel.pieController;
+    if (!pie.acceptsGameInput) {
+      // A button pressed before a pause or an eject is still released.
+      if (event is PointerUpEvent || event is PointerCancelEvent) pie.pointer.releaseAll();
+      return false;
+    }
+    if (event is PointerCancelEvent) {
+      pie.pointer.releaseAll();
+      return true;
+    }
+    if (event is PointerMoveEvent || event is PointerHoverEvent) pie.injectPointerDelta(event.delta.dx, event.delta.dy);
+    pie.pointer.viewButtons(event.localPosition, event.buttons);
+    return true;
+  }
+
+  /// The game view's logical size: the whole viewport.
+  Size? _pieViewSize() {
+    if (!mounted) return null;
+    final box = _viewportKey.currentContext?.findRenderObject() as RenderBox?;
+    return box != null && box.hasSize ? box.size : null;
+  }
+
   void _startPie() {
+    widget.viewModel.pieController.pointer
+      ..viewSize = _pieViewSize
+      ..devicePixelRatio = () => mounted ? MediaQuery.maybeDevicePixelRatioOf(context) ?? 1.0 : 1.0;
     if (_nativeEngine != null && _nativeScene != null) {
       widget.viewModel.pieController.startPie(
         _nativeEngine!,

@@ -443,7 +443,7 @@ Draws [shapes] through [projection]: a polyline per shape, circles for spheres a
 
 ### `class PieMouseCaptureLayer`
 
-Play's mouse capture on the game view, one child of the viewport's Stack: - the hint "Press F4 to show the mouse cursor", prominent when Play takes the mouse and faded out after [hintDuration]; - once F4 gave the cursor back, a hint and a click target over the view: a click takes the mouse again and is not passed to the editor (no selection); - while the backend holds the pointer, a window-wide shield in the root overlay: the cursor is hidden wherever the held pointer sits (Wayland holds it where it was, often on the toolbar's Play button), and clicks there never press editor buttons.
+Play's mouse capture on the game view, one child of the viewport's Stack: - the hint "Press F4 to show the mouse cursor", prominent when Play takes the mouse and faded out after [hintDuration]; - once F4 gave the cursor back, a hint and a click target over the view: a click takes the mouse again and is not passed to the editor (no selection); - while the backend holds the pointer, a window-wide shield in the root overlay: the cursor is hidden wherever the held pointer sits (Wayland holds it where it was, often on the toolbar's Play button), and clicks there never press editor buttons; they are the game's clicks (`PieController.pointer`), at the game view's position of the held pointer.
 
 **Constructors:**
 

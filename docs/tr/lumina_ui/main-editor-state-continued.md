@@ -17,6 +17,7 @@ Ana editör: view model ve servisler sayfasının devamı: `lib/ui/features/main
 - [`lib/ui/features/main_editor/services/pie_controller/editor_pie_game.dart`](#libuifeaturesmain_editorservicespie_controllereditor_pie_gamedart)
 - [`lib/ui/features/main_editor/services/pie_debug_projection.dart`](#libuifeaturesmain_editorservicespie_debug_projectiondart)
 - [`lib/ui/features/main_editor/services/pie_mouse_capture.dart`](#libuifeaturesmain_editorservicespie_mouse_capturedart)
+- [`lib/ui/features/main_editor/services/pie_pointer_input.dart`](#libuifeaturesmain_editorservicespie_pointer_inputdart)
 - [`lib/ui/features/main_editor/services/project_blueprint_functions.dart`](#libuifeaturesmain_editorservicesproject_blueprint_functionsdart)
 - [`lib/ui/features/main_editor/services/project_trash.dart`](#libuifeaturesmain_editorservicesproject_trashdart)
 - [`lib/ui/features/main_editor/services/standalone_game_runner.dart`](#libuifeaturesmain_editorservicesstandalone_game_runnerdart)
@@ -362,6 +363,7 @@ Every editor actor is mapped to a real Lumina runtime object via [mapEditorActor
 | `injectKeyUp` | `void injectKeyUp(LuminaKey key)` | Forwards a key release from the editor viewport into the running world. |
 | `injectAnalog` | `void injectAnalog(LuminaKey key, double value)` | Forwards an analog axis value into the running world. |
 | `injectMouseDelta` | `void injectMouseDelta(double dx, double dy)` | Forwards a mouse movement, in pixels, into the running world. |
+| `injectMousePosition` | `void injectMousePosition(double x, double y)` | İmleç konumu, PIE görünümünün piksellerinde (Get Mouse Position). |
 | `nonRuntimeTypes` | `static const Set<String> nonRuntimeTypes` | Editor actor types that carry no runtime representation. |
 | `mapEditorActor` | `static LuminaObject? mapEditorActor(EditorActorNode actor, {EditorBlueprintClassRegistry? registry, void Funct...` | Maps an editor actor to its runtime counterpart, or null for organisational nodes such as folders. |
 | `eulerDegreesToQuaternion` | `static vm64.Quaternion eulerDegreesToQuaternion(List<double> eulerDeg)` | Converts editor Euler angles in degrees (pitch X, yaw Y, roll Z) to a quaternion using the same XYZ order the viewport applies. |
@@ -442,6 +444,31 @@ Every change of the result is sent to [LuminaMouseCapture.backend], which is a r
 | `release` | `void release()` | F4: the cursor comes back and the editor can be used; the session keeps running. |
 | `recapture` | `void recapture()` | A click on the game view: the game takes the mouse again. |
 | `sync` | `void sync()` | Re-reads whether the game takes input (pause, resume, eject, possess). |
+
+## `lib/ui/features/main_editor/services/pie_pointer_input.dart`
+
+### `class PiePointerInput`
+
+Play-In-Editor oturumunun faresi, çalışan oyunun gördüğü gibi; derlenmiş oyunun `LuminaGameHost` kurallarıyla (`PieController.pointer`):
+
+- imleç konumu (`Get Mouse Position`) PIE görünümünün piksellerinde; `Get Viewport Size` ve ekran izdüşümleriyle aynı uzay (oyun görünümü üzerinde `LuminaRenderSpace`; editör görünümü viewport'un mantıksal boyutunda çizer, bu yüzden ekranın piksel oranı ölçeklemez), görünümün kenarına kıstırılır; dünyanın `viewportSize` değeri her tick viewport'u izler;
+- fare düğmeleri `LeftMouseButton` / `RightMouseButton` / … tuşları olarak: oyun gizli, yakalanmış imleci tutarken her tıklama (arka uç imleci kilitlerken pencere kalkanının yakaladıkları da); serbest imleçte (Set Show Mouse Cursor, Game and UI) yalnızca oyunun UMG widget'larının almadığı oyun görünümü tıklamaları, Input Mode UI Only'de hiçbiri; F4'ten sonra fareyi yeniden alan tıklama oyunun değildir;
+- bırakma her zaman oyuna ulaşır; girdi almayı bırakan oturum (duraklatma, eject, durdurma) bastığı düğmeleri bırakır.
+
+Oyun girdi alırken viewport'un imleci oyunundur: editörün tıklamayla seçimi, marquee, gizmo ve flycam devre dışı kalır; Play görünümü kenardan kenara gösterir (`FilamentWidget.decorated` kapalı), böylece imleç görünümün kendi piksellerine eşlenir.
+
+**Üyeler:**
+
+| Üye | İmzası | Açıklama |
+| :--- | :--- | :--- |
+| `viewSize` | `Size? Function()? viewSize` | Oyun görünümünün mantıksal boyutu; viewport sağlar. |
+| `devicePixelRatio` | `double Function()? devicePixelRatio` | Oyun görünümünün bulunduğu ekranın piksel oranı. |
+| `renderSpace` | `LuminaRenderSpace? get renderSpace` | Oyunun render uzayı: mantıksal boyutunda çizen oyun görünümü. |
+| `syncViewportSize` | `void syncViewportSize()` | Dünyanın görünüm boyutunu PIE görünümünde tutar (her PIE tick'inde çağrılır). |
+| `hover` | `void hover(Offset local)` | İmleç oyun görünümünde [local] konumunda. |
+| `viewButtons` | `void viewButtons(Offset local, int buttons)` | Oyun görünümü üzerinde, oyunun arayüzünün bıraktığı bir yerde düğme değişimi. |
+| `heldButtons` | `void heldButtons(Offset local, int buttons)` | Oyun imleci tutarken pencere kalkanının yakaladığı düğme değişimi. |
+| `releaseAll` | `void releaseAll()` | Bu oturumun bastığı bütün düğmeleri bırakır. |
 
 ## `lib/ui/features/main_editor/services/project_blueprint_functions.dart`
 

@@ -305,6 +305,9 @@ class _ViewportWidgetState extends _ViewportWidgetStateBase
                         pauseRendering: widget.viewModel.buildManagerViewModel.isRunning,
                         skipReadPixels: _skipReadPixelsFrames > 0,
                         debugLabel: 'Level viewport',
+                        // Play shows the game edge to edge: the view's pixels
+                        // are the viewport's, where the game's mouse maps.
+                        decorated: !_pieOwnsTheScene,
                         onDispose: _disposeNative,
                         onSceneCreated: (engine, scene, camera, view) {
                           try {
@@ -366,13 +369,7 @@ class _ViewportWidgetState extends _ViewportWidgetStateBase
                     MouseRegion(
                       cursor: _viewportCursor(),
                       onHover: (event) {
-                        if (widget.viewModel.pieController.acceptsGameInput) {
-                          widget.viewModel.pieController.injectPointerDelta(
-                            event.delta.dx,
-                            event.delta.dy,
-                          );
-                          return;
-                        }
+                        if (_piePointer(event)) return;
                         final renderBox =
                             _viewportKey.currentContext?.findRenderObject()
                                 as RenderBox?;
@@ -384,7 +381,12 @@ class _ViewportWidgetState extends _ViewportWidgetStateBase
                         }
                       },
                       child: Listener(
+                        // While the game's camera draws, the overlay below
+                        // paints nothing and would not be hit: the view still
+                        // takes every press (the game's clicks).
+                        behavior: HitTestBehavior.opaque,
                         onPointerDown: (event) {
+                          if (_piePointer(event)) return;
                           _downPos = event.localPosition;
                           _hasMovedDuringDrag = false;
                           if (!_keyboardFocus.hasPrimaryFocus) _keyboardFocus.requestFocus();
@@ -430,13 +432,7 @@ class _ViewportWidgetState extends _ViewportWidgetStateBase
                           setState(() {});
                         },
                         onPointerMove: (event) {
-                          if (widget.viewModel.pieController.acceptsGameInput) {
-                            widget.viewModel.pieController.injectPointerDelta(
-                              event.delta.dx,
-                              event.delta.dy,
-                            );
-                            return;
-                          }
+                          if (_piePointer(event)) return;
                           if ((event.position - _downPos).distance > 3.0) {
                             _hasMovedDuringDrag = true;
                           }
@@ -522,6 +518,7 @@ class _ViewportWidgetState extends _ViewportWidgetStateBase
                           }
                         },
                         onPointerUp: (event) {
+                          if (_piePointer(event)) return;
                           if ((event.buttons & kSecondaryMouseButton) == 0) {
                             _isRmbDown = false;
                             widget.viewModel.isFlyNavigating = false;
@@ -566,7 +563,8 @@ class _ViewportWidgetState extends _ViewportWidgetStateBase
                           }
                           setState(() {});
                         },
-                        onPointerCancel: (_) {
+                        onPointerCancel: (event) {
+                          _piePointer(event);
                           _isRmbDown = false;
                           widget.viewModel.isFlyNavigating = false;
                           _isLmbDown = false;

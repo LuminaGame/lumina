@@ -287,6 +287,9 @@ class EditorPieGame extends LuminaGame {
   /// Forwards an analog axis value into the running world.
   void injectAnalog(LuminaKey key, double value) => _inputSubsystem?.injectAnalog(key, value);
 
+  /// The pointer position in the PIE view's pixels (Get Mouse Position).
+  void injectMousePosition(double x, double y) => _inputSubsystem?.injectMousePosition(vm64.Vector2(x, y));
+
   /// Forwards a mouse movement, in pixels, into the running world.
   void injectMouseDelta(double dx, double dy) {
     final input = _inputSubsystem;
