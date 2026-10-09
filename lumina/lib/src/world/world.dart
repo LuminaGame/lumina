@@ -25,11 +25,8 @@ import 'package:lumina/src/utility/viewport_statics.dart';
 import 'package:lumina/src/world/debug_shapes.dart';
 import 'package:lumina/src/game/player_camera_manager.dart' show LuminaMinimalViewInfo;
 
-class _PendingSpawnItem {
-  final LuminaActor actor;
-  final LuminaLevel targetLevel;
-  _PendingSpawnItem(this.actor, this.targetLevel);
-}
+part 'world/tick_phases.dart';
+part 'world/view_sync.dart';
 
 /// Orchestrates levels, actors, Filament scene bindings, and the 5-phase deterministic tick pipeline.
 class LuminaWorld extends LuminaObject {
@@ -128,12 +125,6 @@ class LuminaWorld extends LuminaObject {
   }
 
   int _screenMessageSerial = 0;
-
-  void _expireDebugRecords() {
-    final now = _realTimeSeconds;
-    debugShapes.removeWhere((s) => s.expiresAt <= now);
-    screenMessages.removeWhere((_, m) => m.expiresAt <= now);
-  }
 
   /// Whether the world is paused. While paused, [tick] is a silent no-op — no phases run,
   /// so subsystems (timers, audio), actors and [timeSeconds] all freeze together. Only [step]
@@ -336,26 +327,6 @@ class LuminaWorld extends LuminaObject {
   /// the active camera component, else [LuminaPostProcessBlender.cameraPositionOverride].
   Vector3? get postProcessCameraPosition =>
       activeCamera?.worldLocation ?? postProcessBlender.cameraPositionOverride;
-
-  /// Resolves the blender for the current camera and applies the result when
-  /// it changed. Runs for every world type that renders (editor and game).
-  void _applyPostProcessBlend() {
-    final controller = _postProcessController;
-    if (controller == null) return;
-    final result = postProcessBlender.resolve(postProcessCameraPosition);
-    if (_blendApplied != result.settings) {
-      controller.apply(result.settings, asBaseline: false);
-      _blendApplied = result.settings;
-    }
-    final focus = result.focusDistance;
-    if (focus != null && focus != _blendFocusDistance) {
-      final camera = controller.view.camera;
-      if (camera != null) camera.focusDistance = focus;
-      _blendFocusDistance = focus;
-    } else if (focus == null) {
-      _blendFocusDistance = null;
-    }
-  }
 
   /// The bound native Filament view, or null if unbound.
   FilamentView? get filamentViewOrNull => _filamentView;
@@ -621,102 +592,6 @@ class LuminaWorld extends LuminaObject {
     }
   }
 
-  void _prePhysicsTick(double deltaTime) {
-    onPhaseExecuted?.call('prePhysics');
-    buildOwner?.flushBuild();
-  }
-
-  void _physicsAndSubsystemUpdate(double deltaTime) {
-    onPhaseExecuted?.call('subsystemTick');
-    
-    if (worldType.runsGameplay) {
-      gameState?.tick(deltaTime);
-    }
-
-    if (worldType.ticksSubsystems) {
-      subsystems.notifyTick(deltaTime);
-    }
-  }
-
-  void _actorTick(double deltaTime) {
-    if (!worldType.runsGameplay) return;
-
-    // An actor registered into the persistent level after the world began
-    // play (a pawn added to a running scene, a declarative rebuild,
-    // a save-game factory) begins play here, before any actor ticks, as a
-    // streaming level's actors do below; spawnActor / spawnActorImmediately
-    // begin theirs on spawn.
-    final persistentActors = persistentLevel.actors;
-    for (final actor in persistentActors) {
-      if (actor.hasBegunPlay || actor.isPendingDestroy) continue;
-      if (!actor.isInitialized) actor.onInitialize();
-      actor.onBeginPlay();
-    }
-    for (final actor in persistentActors) {
-      if (actor.isInitialized && actor.hasBegunPlay) {
-        actor.onTick(deltaTime);
-      }
-    }
-    for (final level in streamingLevels) {
-      if (level.state == LevelState.visible) {
-        level.notifyLevelLoaded();
-        for (final actor in level.actors) {
-          if (!actor.isInitialized) actor.onInitialize();
-          if (!actor.hasBegunPlay) actor.onBeginPlay();
-          if (actor.isInitialized && actor.hasBegunPlay) {
-            actor.onTick(deltaTime);
-          }
-        }
-      }
-    }
-
-    if (killZ != null) {
-      final kz = killZ!;
-      final toKill = <LuminaActor>[];
-      for (final actor in persistentLevel.actors) {
-        if (actor.actorLocation.y < kz) {
-          toKill.add(actor);
-        }
-      }
-      for (final level in streamingLevels) {
-        if (level.state == LevelState.visible) {
-          for (final actor in level.actors) {
-            if (actor.actorLocation.y < kz) {
-              toKill.add(actor);
-            }
-          }
-        }
-      }
-      for (final actor in toKill) {
-        if (actor.bCanBeDamaged) {
-          actor.takeDamage(1e9);
-        }
-        destroyActor(actor);
-        onActorFellOutOfWorld?.call(actor);
-      }
-    }
-  }
-
-  void _postPhysicsRenderPrep(double deltaTime) {
-    onPhaseExecuted?.call('renderPrep');
-    if (worldType.runsRenderPrep) {
-      for (final actor in persistentLevel.actors) {
-        actor.onRenderPrep(this);
-        onRenderPrepCallback?.call(actor);
-      }
-      for (final level in streamingLevels) {
-        if (level.state == LevelState.visible) {
-          for (final actor in level.actors) {
-            actor.onRenderPrep(this);
-            onRenderPrepCallback?.call(actor);
-          }
-        }
-      }
-      _syncViewCamera();
-      _applyPostProcessBlend();
-    }
-  }
-
   LuminaCameraComponent? _viewCameraSource;
   (int, int)? _viewCameraViewportSize;
 
@@ -740,115 +615,6 @@ class LuminaWorld extends LuminaObject {
     final camera = activeCamera;
     if (camera == null) return null;
     return (location: camera.worldLocation, rotation: camera.worldRotation, fovDegrees: camera.fieldOfViewInDegrees);
-  }
-
-  /// Points the bound view's camera through [activeCamera], once every
-  /// transform of the frame is final. Projection and exposure are pushed again
-  /// whenever the viewport or the active camera changes, since the view's
-  /// owner may reset its camera's projection on a resize.
-  void _syncViewCamera() {
-    final view = _filamentView;
-    if (view == null || !hasNativeContext) return;
-    final camera = activeCamera;
-    final target = view.camera;
-    final (_, _, width, height) = view.viewport;
-    if (target == null || width <= 0 || height <= 0) return;
-    viewportSize = (width, height);
-    final override = viewTargetPov;
-    if (override != null) {
-      // A view target or blend: look from the manager's POV, and let the
-      // camera component re-sync everything once it is in charge again.
-      _viewCameraSource = null;
-      final eye = override.location;
-      final forward = override.rotation.rotateVector(Vector3(0, 0, -1));
-      final up = override.rotation.rotateVector(Vector3(0, 1, 0));
-      // A camera view target (a placed camera actor) is seen through its
-      // own lens: projection, clip planes and exposure; the pose and field of
-      // view stay the manager's (shakes, FOV overrides).
-      final lens = override.camera;
-      final aspect = width / height;
-      final near = lens?.nearClipPlane ?? camera?.nearClipPlane ?? override.nearClip;
-      final far = lens?.farClipPlane ?? camera?.farClipPlane ?? override.farClip;
-      if (lens != null && lens.projectionMode == CameraProjectionMode.orthographic) {
-        final halfWidth = lens.orthographicWidth * 0.5;
-        final halfHeight = halfWidth / aspect;
-        target.setProjectionOrtho(left: -halfWidth, right: halfWidth, bottom: -halfHeight, top: halfHeight, near: near, far: far);
-      } else {
-        target.setProjection(fovDegrees: override.fovDegrees, aspect: aspect, near: near, far: far);
-      }
-      if (lens != null) {
-        LuminaAutoExposure.applyTo(lens, LuminaAutoExposure.ev100ForWorld(this));
-        target.setExposure(aperture: lens.aperture, shutterSpeed: lens.shutterSpeed, sensitivity: lens.sensitivity);
-      }
-      target.lookAt(
-        eyeX: eye.x, eyeY: eye.y, eyeZ: eye.z,
-        centerX: eye.x + forward.x, centerY: eye.y + forward.y, centerZ: eye.z + forward.z,
-        upX: up.x, upY: up.y, upZ: up.z,
-      );
-      return;
-    }
-    if (camera == null) return;
-    if (!identical(camera, _viewCameraSource) || _viewCameraViewportSize != (width, height)) {
-      camera.invalidateNativeSync();
-      _viewCameraSource = camera;
-      _viewCameraViewportSize = (width, height);
-    }
-    camera.aspectRatio = width / height;
-    // Auto-exposed for the level's lights:
-    // a lamp-lit level is not rendered at sunny 16.
-    LuminaAutoExposure.applyTo(camera, LuminaAutoExposure.ev100ForWorld(this));
-    camera.syncWithFilamentCamera(target);
-  }
-
-  void _executeDeferredCommands() {
-    onPhaseExecuted?.call('deferredCommands');
-
-    // 1. Swap and drain spawn buffer
-    final toSpawn = _activeSpawnBuffer;
-    _activeSpawnBuffer = (_activeSpawnBuffer == _pendingSpawnA) ? _pendingSpawnB : _pendingSpawnA;
-
-    // Drain a snapshot so a throwing actor can never replay the buffer on the
-    // next swap; the level owns registration (LuminaLevel.registerActor calls
-    // onRegister when it is attached to a world), the world only fills in
-    // for detached levels.
-    final spawnBatch = List.of(toSpawn);
-    toSpawn.clear();
-    Object? firstError;
-    StackTrace? firstStack;
-    for (final item in spawnBatch) {
-      final actor = item.actor;
-      final targetLevel = item.targetLevel;
-      try {
-        targetLevel.registerActor(actor);
-        if (!actor.isRegistered) {
-          actor.onRegister(this);
-        }
-        actor.onInitialize();
-        if (worldType.runsGameplay) {
-          actor.onBeginPlay();
-        }
-      } catch (e, st) {
-        // Keep spawning the rest of the batch; surface the first failure once.
-        firstError ??= StateError('spawnActor failed for ${actor.runtimeType}: $e');
-        firstStack ??= st;
-      }
-    }
-    if (firstError != null) {
-      Error.throwWithStackTrace(firstError, firstStack!);
-    }
-
-    // 2. Swap and drain destroy buffer
-    final toDestroy = _activeDestroyBuffer;
-    _activeDestroyBuffer = (_activeDestroyBuffer == _pendingDestroyA) ? _pendingDestroyB : _pendingDestroyA;
-
-    for (final actor in toDestroy) {
-      if (actor.owningLevel != null) {
-        actor.owningLevel!.unregisterActor(actor);
-      } else {
-        persistentLevel.unregisterActor(actor);
-      }
-    }
-    toDestroy.clear();
   }
 
   /// Releases resources and cleans up native scene bindings.
