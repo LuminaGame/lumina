@@ -179,7 +179,7 @@ yok) seçilen boyutu tam ekrandaki gibi ölçekleyerek çizer. Ekran modu hiç d
 dinamik çözünürlüğü değil çizim hedefi kullanılır: dinamik çözünürlük viewport'u monitör boyutunda tutar (letterbox
 olmaz) ve ölçeğini zaten upscaler'lar kullanır. View seçilen boyutta olunca **Resolution Scale** seçilen × ölçek
 boyutunda çizer, **FSR3 / DLSS** seçilen boyutun kalite ölçeğinde çizip seçilen boyutu üretir; Flutter da bu kareyi
-monitöre ölçekler.
+monitöre ölçekler. `Get Viewport Size` bu çıktı boyutudur ve oyun host'u işaretçiyi bu boyuta eşler (lumina_widgets'taki `LuminaRenderSpace`): `Get Mouse Position` seçilen çözünürlüğün pikselindedir, oyunun UI'ı resmin içinde yerleşir, bantlardaki tıklamalar hiçbir yere ulaşmaz.
 
 | Üye | İmza | Açıklama |
 |---|---|---|

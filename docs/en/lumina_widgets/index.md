@@ -88,7 +88,16 @@ Flutter input bridged into the running world's `LuminaInputSubsystem`:
 
 - every keyboard key through the engine's key table (`LuminaKey.fromKeyId(event.logicalKey.keyId)`), key down and up;
 - pointer motion as `MouseX` / `MouseY`: from the captured mouse's relative motion, or the pointer's own deltas while
-  nothing is captured;
+  nothing is captured; these look deltas are never scaled by the screen resolution (the same hand movement turns the
+  view the same at any resolution);
+- the pointer position (`Get Mouse Position`) in the view's pixels, the space of `Get Viewport Size`, `Project World to
+  Screen` and `Deproject Screen to World` ([`LuminaRenderSpace`](#class-luminarenderspace)): with a letterboxed screen
+  resolution it is relative to the picture and in the chosen resolution's pixels, clamped to the picture's edge over
+  the black bars; windowed it is the window position × the device pixel ratio;
+- mouse buttons as `LeftMouseButton` / `RightMouseButton` / `MiddleMouseButton` / thumb keys: while the cursor is
+  visible, only clicks on the picture that the game's UI does not take (a UMG button consumes its click; clicks on the
+  black bars reach nothing; Input Mode UI Only sends none); while the game holds the hidden, captured cursor, every
+  click. A release always reaches the game;
 - mouse capture (`LuminaMouseCapture.backend`): taken once the first frame laid out and on a click, retried while the
   pointer enters until one succeeds, released while player 0's controller wants a free cursor (Set Show Mouse Cursor, a
   UI input mode) and taken back when it hides the cursor, released on dispose;
@@ -139,7 +148,19 @@ renders at the monitor's native resolution. It also passes `followScreenResoluti
 `LuminaGameDisplay.renderResolution` (the player's screen resolution in borderless fullscreen, or where the window
 cannot be resized) through `FilamentWidget.renderResolution`, scaled into the largest box of its aspect ratio, centred
 on black (`LuminaScreenResolutionBox`, `lib/src/game/screen_resolution_box.dart`). The widget tree stays the same when
-the resolution changes, so the view and its engine resources survive. The HUD and UMG layer stay at the window's size.
+the resolution changes, so the view and its engine resources survive. The game's UI (`hudBuilder` and
+`LuminaGameWidget.viewportOverlay`, where the host puts the UMG layer) is laid out in the same box, at the chosen
+resolution's logical size (`LuminaRenderSpace.layoutSize`, the resolution / device pixel ratio) and scaled with the
+picture, so it looks as in a window of that resolution and is drawn and hit where the picture is, never on the bars.
+
+### `class LuminaRenderSpace`
+
+`lib/src/game/render_space.dart`. The game's render space inside the area that shows it, the one mapping the host, the
+resolution box and the tests share: `rect` (where the picture is drawn, letterboxed for a `renderResolution`),
+`viewportPixels` (what the view renders and `Get Viewport Size` reports: the chosen resolution, else the space × the
+device pixel ratio for a physical-pixel view), `layoutSize` (the UI's logical size), `toViewport(local)` (view pixels,
+null on the bars), `clampToViewport(local)` and `fromViewport(pixels)`. Resolution Scale and the FSR3 / DLSS upscalers
+render inside the view at a lower internal size; positions stay in the view's output pixels.
 
 **Functions, Methods & Accessors:**
 

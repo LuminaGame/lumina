@@ -179,7 +179,7 @@ its aspect ratio kept (black bars). A size at least the monitor's renders native
 exclusive fullscreen). It is the render target, not Filament's dynamic resolution, because dynamic resolution keeps
 the viewport at the monitor size (no letterbox) and the upscalers already own its scale: with the view at the chosen
 size, **Resolution Scale** renders at chosen × scale and **FSR3 / DLSS** render at their quality scale of the chosen
-size and output the chosen size; Flutter then scales that frame to the monitor.
+size and output the chosen size; Flutter then scales that frame to the monitor. `Get Viewport Size` is that output size, and the game host maps the pointer into it (`LuminaRenderSpace` in lumina_widgets): `Get Mouse Position` is in the chosen resolution's pixels, the game's UI is laid out in the picture, clicks on the bars reach nothing.
 
 | Member | Signature | Description |
 |---|---|---|

@@ -20,6 +20,7 @@ export 'package:lumina_widgets/src/foundation/observable_adapters.dart';
 export 'package:lumina_widgets/src/game/game_host.dart';
 export 'package:lumina_widgets/src/game/hud_overlay.dart';
 export 'package:lumina_widgets/src/game/lumina_widget.dart';
+export 'package:lumina_widgets/src/game/render_space.dart';
 export 'package:lumina_widgets/src/game/screen_resolution_box.dart';
 export 'package:lumina_widgets/src/lumina_widgets_binding.dart';
 export 'package:lumina_widgets/src/media/media.dart';

@@ -7,6 +7,7 @@ import 'package:flutter_filament/flutter_filament.dart';
 import 'package:lumina/lumina_runtime.dart';
 import 'package:lumina_widgets/src/lumina_widgets_binding.dart';
 import 'package:lumina_widgets/src/game/hud_overlay.dart';
+import 'package:lumina_widgets/src/game/render_space.dart';
 import 'package:lumina_widgets/src/game/screen_resolution_box.dart';
 
 /// Controls whether embedded game previews allocate an additional frame driver.
@@ -88,6 +89,12 @@ class LuminaGameWidget extends StatefulWidget {
   /// ratio kept. What a game screen does; tools render at their own size.
   final bool followScreenResolution;
 
+  /// Laid out over the view (and the HUD) in the game's render space: with
+  /// a screen resolution, inside the letterboxed picture at that resolution's
+  /// logical size ([LuminaRenderSpace.layoutSize]); else over the whole view.
+  /// The game host puts the game's UI and its pointer surface here.
+  final Widget? viewportOverlay;
+
   const LuminaGameWidget({
     super.key,
     required this.game,
@@ -101,6 +108,7 @@ class LuminaGameWidget extends StatefulWidget {
     this.decorated = true,
     this.physicalResolution = false,
     this.followScreenResolution = false,
+    this.viewportOverlay,
   });
 
   @override
@@ -246,24 +254,17 @@ class _LuminaGameWidgetState extends State<LuminaGameWidget>
           physicalResolution: widget.physicalResolution,
           renderResolution: renderResolution,
         );
-    Widget filamentWidget = widget.followScreenResolution
-        ? LuminaScreenResolutionBox(builder: (context, renderResolution) => view(renderResolution))
-        : view(null);
-
-    if (widget.hudBuilder != null) {
-      return Stack(
-        children: [
-          filamentWidget,
-          Positioned.fill(
-            child: LuminaHudOverlay(
-              game: widget.game,
-              hudBuilder: widget.hudBuilder!,
-            ),
-          ),
-        ],
-      );
+    // The HUD and the overlay are the game's UI: in render space with the view.
+    final hud = widget.hudBuilder == null ? null : LuminaHudOverlay(game: widget.game, hudBuilder: widget.hudBuilder!);
+    final overlay = widget.viewportOverlay;
+    final ui = hud == null && overlay == null
+        ? null
+        : Stack(fit: StackFit.expand, children: [if (hud != null) Positioned.fill(child: hud), ?overlay]);
+    if (widget.followScreenResolution) {
+      return LuminaScreenResolutionBox(builder: (context, renderResolution) => view(renderResolution), overlay: ui);
     }
-
-    return filamentWidget;
+    final filamentWidget = view(null);
+    if (ui == null) return filamentWidget;
+    return Stack(children: [filamentWidget, Positioned.fill(child: ui)]);
   }
 }

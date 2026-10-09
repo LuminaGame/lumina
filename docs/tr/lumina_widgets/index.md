@@ -88,7 +88,16 @@ dünyanın `LuminaInputSubsystem`'ine aktarılan Flutter girdisi:
 
 - her klavye tuşu motorun tuş tablosundan geçer (`LuminaKey.fromKeyId(event.logicalKey.keyId)`), basma ve bırakma;
 - işaretçi hareketi `MouseX` / `MouseY` olarak: yakalanan farenin göreli hareketinden, hiçbir şey yakalanmamışken
-  işaretçinin kendi deltalarından;
+  işaretçinin kendi deltalarından; bu bakış deltaları ekran çözünürlüğüyle asla ölçeklenmez (aynı el hareketi her
+  çözünürlükte görüşü aynı döndürür);
+- işaretçi konumu (`Get Mouse Position`) view pikselinde, yani `Get Viewport Size`, `Project World to Screen` ve
+  `Deproject Screen to World` ile aynı uzayda ([`LuminaRenderSpace`](#class-luminarenderspace)): letterbox'lı bir ekran
+  çözünürlüğünde resme göre ve seçilen çözünürlüğün pikselindedir, siyah bantların üzerinde resmin kenarına
+  sıkıştırılır; pencere modunda pencere konumu × cihaz piksel oranıdır;
+- fare tuşları `LeftMouseButton` / `RightMouseButton` / `MiddleMouseButton` / yan tuşlar olarak: imleç görünürken
+  yalnızca resim üzerinde oyunun UI'ının almadığı tıklamalar (bir UMG butonu kendi tıklamasını tüketir; siyah
+  bantlardaki tıklamalar hiçbir yere ulaşmaz; Input Mode UI Only hiçbirini göndermez); oyun gizli, yakalanmış imleci
+  tutarken her tıklama. Bırakma her zaman oyuna ulaşır;
 - fare yakalama (`LuminaMouseCapture.backend`): ilk kare yerleşince ve tıklamada alınır, biri başarılı olana dek
   işaretçi girdikçe yeniden denenir; oyuncu 0'ın controller'ı serbest imleç istediğinde (Set Show Mouse Cursor, bir UI
   input modu) bırakılır, imleci gizleyince geri alınır, dispose'da bırakılır;
@@ -139,7 +148,19 @@ monitörün doğal çözünürlüğünde çizer. Ayrıca `followScreenResolution
 `LuminaGameDisplay.renderResolution`'da (kenarlıksız tam ekranda ya da pencere boyutlanamadığında oyuncunun ekran
 çözünürlüğü) `FilamentWidget.renderResolution` ile çizilir, en-boy oranındaki en büyük kutuya ölçeklenir ve siyah
 zeminde ortalanır (`LuminaScreenResolutionBox`, `lib/src/game/screen_resolution_box.dart`). Çözünürlük değişince
-widget ağacı aynı kalır; view ve motor kaynakları korunur. HUD ve UMG katmanı pencere boyutunda kalır.
+widget ağacı aynı kalır; view ve motor kaynakları korunur. Oyunun UI'ı (`hudBuilder` ve host'un UMG katmanını
+koyduğu `LuminaGameWidget.viewportOverlay`) aynı kutuda, seçilen çözünürlüğün mantıksal boyutunda
+(`LuminaRenderSpace.layoutSize`, çözünürlük / cihaz piksel oranı) yerleşir ve resimle birlikte ölçeklenir; böylece o
+çözünürlükte bir penceredeki gibi görünür, resmin olduğu yerde çizilir ve tıklanır, bantlarda asla.
+
+### `class LuminaRenderSpace`
+
+`lib/src/game/render_space.dart`. Oyunun, onu gösteren alan içindeki render uzayı; host'un, çözünürlük kutusunun ve
+testlerin paylaştığı tek eşleme: `rect` (resmin çizildiği yer, bir `renderResolution` için letterbox'lı),
+`viewportPixels` (view'in çizdiği ve `Get Viewport Size`'ın bildirdiği boyut: seçilen çözünürlük, yoksa fiziksel
+piksel view için alan × cihaz piksel oranı), `layoutSize` (UI'ın mantıksal boyutu), `toViewport(local)` (view pikseli,
+bantlarda null), `clampToViewport(local)` ve `fromViewport(pixels)`. Resolution Scale ve FSR3 / DLSS upscaler'ları
+view içinde daha düşük bir iç boyutta çizer; konumlar view'in çıktı pikselinde kalır.
 
 **Fonksiyonlar, Metotlar ve Erişimciler:**
 

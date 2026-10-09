@@ -1,11 +1,14 @@
 import 'dart:async';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:lumina/lumina_runtime.dart';
 import 'package:lumina_mouse_capture/lumina_mouse_capture.dart';
+import 'package:vector_math/vector_math_64.dart' show Vector2;
 
 import 'package:lumina_widgets/src/game/lumina_widget.dart';
+import 'package:lumina_widgets/src/game/render_space.dart';
 import 'package:lumina_widgets/src/umg/widget_layer.dart';
 
 /// Creates the game that plays [levelName] (a generated game's
@@ -19,7 +22,18 @@ typedef LuminaGameFactory = LuminaGame Function(String levelName);
 ///   ([LuminaKey.fromKeyId]);
 /// - pointer motion as `MouseX` / `MouseY`, from the captured mouse's
 ///   relative motion ([LuminaMouseCapture]) or, uncaptured, from the
-///   pointer's own deltas;
+///   pointer's own deltas; these look deltas are not scaled by the screen
+///   resolution (the same hand movement turns the view the same at any
+///   resolution);
+/// - the pointer position (`Get Mouse Position`) in the view's pixels, the
+///   space of `Get Viewport Size` and the screen projections
+///   ([LuminaRenderSpace]): with a letterboxed screen resolution, relative to
+///   the picture and in the chosen resolution's pixels, clamped to the
+///   picture's edge over the black bars;
+/// - mouse buttons as `LeftMouseButton` / `RightMouseButton` / … keys: while
+///   the cursor is visible, only clicks on the picture that the game's UI
+///   does not take (clicks on the black bars reach nothing; Input Mode UI
+///   Only sends none); while the game holds the hidden cursor, every click;
 /// - mouse capture: taken at start and on a click, released while player 0's
 ///   controller wants a free cursor (Set Show Mouse Cursor, a UI input mode);
 /// - Open Level / Change Level: a new game from [createGame] on that level,
@@ -85,6 +99,66 @@ class LuminaGameHostState extends State<LuminaGameHost> {
   bool get freeCursor => _freeCursor;
 
   LuminaInputSubsystem? get _input => _game.world?.getSubsystem<LuminaInputSubsystem>();
+
+  // The mouse buttons this host pressed in the game, by Flutter button bit.
+  final Map<int, LuminaKey> _pressedButtons = {};
+
+  static const Map<int, LuminaKey> _buttonKeys = {
+    kPrimaryMouseButton: LuminaKey.mouseLeft,
+    kSecondaryMouseButton: LuminaKey.mouseRight,
+    kMiddleMouseButton: LuminaKey.mouseMiddle,
+    kBackMouseButton: LuminaKey.mouseThumb1,
+    kForwardMouseButton: LuminaKey.mouseThumb2,
+  };
+
+  /// The game's render space in this host: the window, the player's screen
+  /// resolution and the display's pixel ratio.
+  LuminaRenderSpace? get renderSpace {
+    final size = (context.findRenderObject() as RenderBox?)?.size;
+    if (size == null) return null;
+    return LuminaRenderSpace(
+      space: size,
+      renderResolution: LuminaGameDisplay.renderResolution.value,
+      devicePixelRatio: MediaQuery.maybeDevicePixelRatioOf(context) ?? 1.0,
+    );
+  }
+
+  /// Whether the game holds the hidden, captured cursor (its clicks are the
+  /// game's wherever they land).
+  bool get _gameHoldsCursor => widget.captureMouse && !_freeCursor;
+
+  void _injectPosition(Offset local) {
+    final space = renderSpace;
+    final input = _input;
+    if (space == null || input == null) return;
+    final p = space.clampToViewport(local);
+    input.injectMousePosition(Vector2(p.dx, p.dy));
+  }
+
+  /// Presses the buttons newly down in [buttons] and releases the ones this
+  /// host pressed that are up now; [press] false only releases.
+  void _syncButtons(int buttons, {required bool press}) {
+    final input = _input;
+    for (final entry in _buttonKeys.entries) {
+      final down = buttons & entry.key != 0;
+      if (down && press && !_pressedButtons.containsKey(entry.key)) {
+        _pressedButtons[entry.key] = entry.value;
+        input?.injectKeyDown(entry.value);
+      } else if (!down && _pressedButtons.containsKey(entry.key)) {
+        input?.injectKeyUp(_pressedButtons.remove(entry.key)!);
+      }
+    }
+  }
+
+  void _releaseButtons() => _syncButtons(0, press: false);
+
+  bool get _uiOnly => _followedController?.inputMode == 'UIOnly';
+
+  /// A click on the picture (the pointer surface under the game's UI).
+  void _onSurfaceButtons(PointerEvent event) {
+    if (_gameHoldsCursor) return; // The outer listener sends it.
+    _syncButtons(event.buttons, press: !_uiOnly);
+  }
 
   @override
   void initState() {
@@ -219,6 +293,7 @@ class LuminaGameHostState extends State<LuminaGameHost> {
 
   void _onPointerDelta(PointerEvent event) {
     _captureUntilFirstLock();
+    _injectPosition(event.localPosition);
     // Captured with relative motion, the backend's deltas turn the view;
     // otherwise the pointer's own deltas do.
     if (_isCaptured && _captureSupport?.relativeMotion == true) return;
@@ -235,6 +310,7 @@ class LuminaGameHostState extends State<LuminaGameHost> {
     LuminaGame.onChangeLevelRequested = null;
     _mouseEvents?.cancel();
     if (widget.captureMouse) LuminaMouseCapture.backend.release();
+    _releaseButtons();
     _focusNode.dispose();
     super.dispose();
   }
@@ -254,9 +330,17 @@ class LuminaGameHostState extends State<LuminaGameHost> {
         child: Listener(
           onPointerDown: (event) {
             _focusNode.requestFocus();
+            _injectPosition(event.localPosition);
+            if (_gameHoldsCursor) _syncButtons(event.buttons, press: true);
             if (!_isCaptured && !_freeCursor) _capture(_centre());
           },
-          onPointerMove: _onPointerDelta,
+          onPointerMove: (event) {
+            _onPointerDelta(event);
+            if (_gameHoldsCursor) _syncButtons(event.buttons, press: true);
+          },
+          // A release always reaches the game, wherever the pointer is.
+          onPointerUp: (event) => _syncButtons(event.buttons, press: false),
+          onPointerCancel: (_) => _releaseButtons(),
           // The widgets the game's Blueprints add to the viewport (Create
           // Widget → Add to Viewport) render above the 3D view. A new game
           // (Open Level) mounts a fresh 3D view and widget layer.
@@ -275,8 +359,21 @@ class LuminaGameHostState extends State<LuminaGameHost> {
                   physicalResolution: true,
                   // The player's screen resolution (Set Screen Resolution).
                   followScreenResolution: true,
+                  // The game's UI in render space (letterboxed with the
+                  // picture), over the surface that takes the picture's
+                  // clicks the UI leaves.
+                  viewportOverlay: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Listener(
+                        behavior: HitTestBehavior.opaque,
+                        onPointerDown: _onSurfaceButtons,
+                        onPointerMove: _onSurfaceButtons,
+                      ),
+                      LuminaWidgetLayer.forGame(game: _game),
+                    ],
+                  ),
                 ),
-                LuminaWidgetLayer.forGame(game: _game),
               ],
             ),
           ),
