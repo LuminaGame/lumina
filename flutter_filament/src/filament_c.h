@@ -64,5 +64,6 @@
 #include "web_c.h"
 #include "vulkan_features_c.h"
 #include "post_pass_c.h"
+#include "guide_buffers_c.h"
 
 #endif // FLUTTER_FILAMENT_C_H

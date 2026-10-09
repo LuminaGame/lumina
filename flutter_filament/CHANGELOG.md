@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Guide buffers (prebuilt `1.77.2-lumina.10`, Filament patch `0012`): `view.guideBufferOptions =
+  GuideBufferOptions(enabled: true)` makes the lit shaders write world normal + roughness, diffuse and specular
+  albedo as extra colour-pass outputs (Vulkan), and the specular hit distance is traced with ray queries.
+  `ExternalUpscaler::guideBuffers()` hands them to an external upscaler (images 4-7); `GuideBufferReadback`
+  copies one into a texture and reads it back. Recompile materials built before (the sky materials are).
 - External post pass and Vulkan device features (prebuilt `1.77.2-lumina.9`, Filament patch `0011`): a hook
   for passes on the HDR frame after TAA / FSR3 and before bloom and colour grading (`View::setExternalPostPass`,
   colour, depth and an output-resolution motion image with a history-valid flag), an `HDR` stage for external

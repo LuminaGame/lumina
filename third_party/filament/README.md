@@ -18,6 +18,7 @@ are upstream v1.77.2 with exactly these files applied in order.
 | `0009-fsr3-upscaler-frame-generation.patch` | `filament/include/filament/{Options,SwapChain}.h`, `filament/src/{PostProcessManager,FrameHistory}.*`, `filament/src/details/{Renderer,View,SwapChain}.*`, `filament/src/materials/fsr3/*` (new), `filament/CMakeLists.txt`, `backend/DriverEnums.h`, `backend/src/vulkan/platform/VulkanPlatformSwapChainImpl.*`, `backend/{include/backend/platforms/PlatformWGL.h,src/opengl/platforms/PlatformWGL.cpp}` | The FidelityFX Super Resolution 3.1 upscaler and frame generation as fragment passes (`TemporalAntiAliasingOptions::algorithm`, `frameGeneration`), fed by the structure pass motion vectors of 0004, and the `SwapChain::CONFIG_DISABLE_VSYNC` flag (Vulkan, WGL). FidelityFX SDK shader code is MIT licensed (AMD). |
 | `0010-ray-query-samplers-vulkan-only.patch` | `shaders/src/surface_light_{directional,punctual}.fs` | The ray-traced shadow fetch of 0007 and the ReSTIR light evaluation of 0008 are compiled for Vulkan only, so OpenGL and WebGL lit shaders spend no fragment sampler on them (Chrome's ANGLE/Direct3D 11 crashed on a 16th). |
 | `0011-external-post-pass-and-device-features.patch` | `backend/include/backend/{ExternalPass.h,platforms/VulkanPlatform.h}`, `backend/src/vulkan/platform/VulkanPlatform.cpp`, `filament/include/filament/View.h`, `filament/src/{PostProcessManager,FrameHistory,View}.*`, `filament/src/details/{Renderer,View}.*`, `filament/src/materials/rt/{postPassMotion.mat (new),rt.*}`, `filament/CMakeLists.txt` | An external post pass on the HDR frame before colour grading (`View::setExternalPostPass`) with output-resolution motion and a history-valid flag, an `HDR` stage for external upscalers, eight external-pass images, and client-requested Vulkan device feature structures (`Customization::extraDeviceFeatures`). |
+| `0012-guide-buffers.patch` | `filament/include/filament/{Options,View}.h`, `filament/src/{RendererUtils,PostProcessManager,View}.*`, `filament/src/details/{Renderer,View}.*`, `filament/src/materials/rt/{rtSpecularHitDistance.mat (new),rt.cpp}`, `filament/CMakeLists.txt`, `shaders/src/surface_main.fs` | Guide buffers for neural denoisers: normal + roughness, diffuse and specular albedo written by the lit shaders as colour attachments 1-3 (Vulkan), the ray-traced specular hit distance, `View::setGuideBufferOptions` / `setGuideBufferTexture`, and `ExternalUpscaler::guideBuffers()`. |
 
 ## 0001: libassimp glTF 2 `ReplaceData_joint` bounds
 
@@ -294,3 +295,23 @@ the structure, skipping (with a log line) unsupported members, structures whose 
 enabled and structure types it already chains; `isExtraDeviceFeatureEnabled` and
 `isDeviceExtensionEnabled` report the result. Colour grading as a subpass is disabled while an
 external post pass is registered.
+
+## 0012: guide buffers
+
+Neural denoisers (DLSS Ray Reconstruction) need per-pixel guides a forward renderer does not keep.
+`GuideBufferOptions` on the view (`View::setGuideBufferOptions`) turns them on for single-sampled
+views on Vulkan: `PostProcessManager::clearGuideBuffers` creates three zero-cleared targets
+(normal + roughness RGBA16F, diffuse albedo RGBA8, specular albedo RGBA8) and the colour pass binds
+them as attachments 1-3 (`RendererUtils::ColorPassConfig::guideBuffers`, also across the split
+opaque / transparent passes of screen-space refraction; the colour pass then always renders into an
+intermediate target). `surface_main.fs` declares the three outputs for `TARGET_VULKAN_ENVIRONMENT` only
+and writes them after `evaluateMaterial()`: `shading_normal` and the perceptual roughness,
+`baseColor * (1 - metallic)`, and `mix(dfg.x, dfg.y, F0)` from `prefilteredDFG` (specular-glossiness and
+cloth materials map their inputs); unlit surfaces and the screen-space reflection variant write zero,
+blended surfaces zero (multiply-blended one) so the opaque guides survive their blend. With ray tracing
+on the scene, `PostProcessManager::specularHitDistance` renders the built-in `rtSpecularHitDistance`
+ray query material (one mirror ray per pixel from the depth and the normal guide) into R16F.
+`ExternalUpscaler::guideBuffers()` asks for guides by `GuideBuffer` bit; they arrive as external-pass
+images 4-7. `View::setGuideBufferTexture` blits a guide into a user texture of the same size and format.
+OpenGL, Metal, WebGPU and WebGL compile no extra outputs, so their sampler and output budgets are
+unchanged.

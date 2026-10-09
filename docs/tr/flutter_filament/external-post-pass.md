@@ -41,7 +41,7 @@ Hareket görüntüsünü Filament'in `postPassMotion` malzemesi üretir: hız ta
 
 ## HDR aşamasındaki harici upscaler'lar
 
-`ExternalUpscaler::stage()` (varsayılan `DISPLAY`) bir harici upscaler'ın (yama `0006`) nerede çalışacağını seçer: `DISPLAY` LDR karede renk düzenlemeden sonraki özgün yerdir (DLSS Super Resolution), `HDR` doğrusal HDR karede TAA çözümlemesinin yerini alır ve çıktı çözünürlüğünde RGBA16F bir görüntü yazar; ardından bloom ve renk düzenleme ölçeksiz çalışır. Işın izlemeli aydınlatmayı da temizleyen upscaler'lar HDR aşamasına ihtiyaç duyar. Harici geçişler artık sekiz görüntüye kadar alır (`ExternalPassContext::MAX_IMAGES`).
+`ExternalUpscaler::stage()` (varsayılan `DISPLAY`) bir harici upscaler'ın (yama `0006`) nerede çalışacağını seçer: `DISPLAY` LDR karede renk düzenlemeden sonraki özgün yerdir (DLSS Super Resolution), `HDR` doğrusal HDR karede TAA çözümlemesinin yerini alır ve çıktı çözünürlüğünde RGBA16F bir görüntü yazar; ardından bloom ve renk düzenleme ölçeksiz çalışır. Işın izlemeli aydınlatmayı da temizleyen upscaler'lar HDR aşamasına ihtiyaç duyar. Harici geçişler artık sekiz görüntüye kadar alır (`ExternalPassContext::MAX_IMAGES`): `ExternalUpscaler::guideBuffers()`'tan bir maske döndüren upscaler, istediği [kılavuz tamponlarını](guide-buffers.md) 4–7 görüntüleri olarak alır (yama `0012`).
 
 ## Vulkan aygıt özellikleri
 

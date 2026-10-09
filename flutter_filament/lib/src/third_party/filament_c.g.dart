@@ -9551,6 +9551,37 @@ external void filament_post_pass_debug_destroy(ffi.Pointer<ffi.Void> pass);
 @ffi.Native<ffi.Pointer<ffi.Char> Function()>()
 external ffi.Pointer<ffi.Char> filament_post_pass_last_error();
 
+@ffi.Native<
+  ffi.Void Function(
+    ffi.Pointer<ffi.Void>,
+    ffi.Pointer<filament_guide_buffer_options_t>,
+  )
+>()
+external void filament_view_set_guide_buffer_options(
+  ffi.Pointer<ffi.Void> view,
+  ffi.Pointer<filament_guide_buffer_options_t> options,
+);
+
+@ffi.Native<
+  ffi.Void Function(
+    ffi.Pointer<ffi.Void>,
+    ffi.Pointer<filament_guide_buffer_options_t>,
+  )
+>()
+external void filament_view_get_guide_buffer_options(
+  ffi.Pointer<ffi.Void> view,
+  ffi.Pointer<filament_guide_buffer_options_t> out,
+);
+
+@ffi.Native<
+  ffi.Void Function(ffi.Pointer<ffi.Void>, ffi.Uint8, ffi.Pointer<ffi.Void>)
+>()
+external void filament_view_set_guide_buffer_texture(
+  ffi.Pointer<ffi.Void> view,
+  int which,
+  ffi.Pointer<ffi.Void> texture,
+);
+
 enum FilamentBackend {
   FILAMENT_BACKEND_DEFAULT(0),
   FILAMENT_BACKEND_OPENGL(1),
@@ -11458,4 +11489,30 @@ enum filament_post_pass_debug_mode {
       'Unknown value for filament_post_pass_debug_mode: $value',
     ),
   };
+}
+
+enum filament_guide_buffer {
+  FILAMENT_GUIDE_NORMAL_ROUGHNESS(0),
+  FILAMENT_GUIDE_DIFFUSE_ALBEDO(1),
+  FILAMENT_GUIDE_SPECULAR_ALBEDO(2),
+  FILAMENT_GUIDE_SPECULAR_HIT_DISTANCE(3);
+
+  final int value;
+  const filament_guide_buffer(this.value);
+
+  static filament_guide_buffer fromValue(int value) => switch (value) {
+    0 => FILAMENT_GUIDE_NORMAL_ROUGHNESS,
+    1 => FILAMENT_GUIDE_DIFFUSE_ALBEDO,
+    2 => FILAMENT_GUIDE_SPECULAR_ALBEDO,
+    3 => FILAMENT_GUIDE_SPECULAR_HIT_DISTANCE,
+    _ => throw ArgumentError('Unknown value for filament_guide_buffer: $value'),
+  };
+}
+
+final class filament_guide_buffer_options_t extends ffi.Struct {
+  @ffi.Bool()
+  external bool enabled;
+
+  @ffi.Bool()
+  external bool specularHitDistance;
 }

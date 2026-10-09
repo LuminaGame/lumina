@@ -149,5 +149,289 @@ void main() {
         gltf.dispose(r.scene);
       }
     }, timeout: const Timeout(Duration(minutes: 10)));
+
+    test('guide buffers of a ray-traced scene', () async {
+      if (smokeBackend != FilamentBackend.vulkan) {
+        markTestSkipped(
+          'the guide buffers need the Vulkan backend ($smokeBackendName)',
+        );
+        return;
+      }
+      RayTracing.requestExtensions();
+      final engine = FilamentEngine.create(backend: FilamentBackend.vulkan)!;
+      final r = rig = SmokeRig.adopt(
+        engine,
+        width: smokeVideoWidth,
+        height: smokeVideoHeight,
+      );
+      r.addSun();
+      r.addIbl();
+      const name = 'rtx neural Smoke Tests guide buffers of a ray-traced scene';
+      final scene = GuideScene.build(r);
+      final readbacks = <GuideBuffer, GuideBufferReadback>{};
+      try {
+        r.scene.rayTracingEnabled = engine.supportsRayQuery;
+        r.view.guideBufferOptions = const GuideBufferOptions(enabled: true);
+        for (final g in GuideBuffer.values) {
+          readbacks[g] = GuideBufferReadback.attach(
+            engine: engine,
+            view: r.view,
+            which: g,
+            width: r.width,
+            height: r.height,
+          );
+        }
+
+        final frames = smokeVideoFrames();
+        SmokeArtifacts.checkVideoDuration(name, frames, smokeVideoFps);
+        SmokeArtifacts.checkVideoSize(name, r.width, r.height);
+        final pngs = <Uint8List>[];
+        for (var f = 0; f < frames; f++) {
+          scene.orbit(f / (frames - 1));
+          final mode = (f * GuideView.values.length) ~/ frames;
+          final colour = r.renderFrame(warmup: f == 0 ? 3 : 0);
+          final image = await GuideView.values[mode].render(
+            r,
+            readbacks,
+            colour,
+          );
+          pngs.add(SmokeArtifacts.encodePng(r.width, r.height, image));
+        }
+        SmokeArtifacts.saveVideoFromPngFrames(name, pngs, fps: smokeVideoFps);
+
+        // the six views of the final pose, 3 x 2 at half size
+        final colour = r.renderFrame(warmup: 1);
+        final w = r.width ~/ 2;
+        final h = r.height ~/ 2;
+        final grid = Uint8List(w * 3 * h * 2 * 4);
+        for (final view in GuideView.values) {
+          final image = await view.render(r, readbacks, colour);
+          final ox = (view.index % 3) * w;
+          final oy = (view.index ~/ 3) * h;
+          for (var y = 0; y < h; y++) {
+            for (var x = 0; x < w; x++) {
+              final s = ((y * 2) * r.width + x * 2) * 4;
+              final d = ((oy + y) * w * 3 + ox + x) * 4;
+              grid.setRange(d, d + 4, image, s);
+            }
+          }
+        }
+        SmokeArtifacts.saveScreenshot(
+          '$name (colour, normal, roughness / diffuse, specular, hit distance)',
+          SmokeArtifacts.encodePng(w * 3, h * 2, grid),
+        );
+
+        final normalRb = readbacks[GuideBuffer.normalRoughness]!;
+        final normals = await normalRb.read(r.renderer);
+        final floorNormal = normalRb.at(normals, r.width ~/ 2, r.height - 8);
+        expect(
+          floorNormal[1],
+          greaterThan(0.95),
+          reason: 'the floor normal points up',
+        );
+        if (engine.supportsRayQuery) {
+          final hits = await readbacks[GuideBuffer.specularHitDistance]!.read(
+            r.renderer,
+          );
+          var surfaces = 0;
+          for (final d in hits) {
+            if (d > 0 && d < 65000) surfaces++;
+          }
+          expect(
+            surfaces,
+            greaterThan(1000),
+            reason: 'mirror rays from the floor hit the props',
+          );
+        }
+      } finally {
+        for (final rb in readbacks.values) {
+          rb.dispose();
+        }
+        scene.dispose();
+        RayTracing.clearExtensionRequest();
+      }
+    }, timeout: const Timeout(Duration(minutes: 15)));
   });
+}
+
+/// Four `test-assets/` props side by side on a lit floor, and an orbit around them.
+class GuideScene {
+  GuideScene._(
+    this.rig,
+    this.props,
+    this.floor,
+    this.floorInstance,
+    this.floorQuad,
+  );
+
+  final SmokeRig rig;
+  final List<LoadedGltf> props;
+  final FilamentMaterial floor;
+  final FilamentMaterialInstance floorInstance;
+  final SmokeQuad floorQuad;
+
+  static GuideScene build(SmokeRig r) {
+    final props = [
+      loadGltfIntoScene(
+        r,
+        'Props/AC_units/ac_unit_a_300x300.glb',
+        frameCamera: false,
+      ),
+      loadGltfIntoScene(
+        r,
+        'Props/Banana Bunch/banana_bunch_medium.glb',
+        frameCamera: false,
+      ),
+      loadGltfIntoScene(
+        r,
+        'Props/Access_cards/access_card_blue.glb',
+        frameCamera: false,
+      ),
+      loadGltfIntoScene(
+        r,
+        'Props/AC_units/aircon_small.glb',
+        frameCamera: false,
+      ),
+    ];
+    final tm = FilamentTransformManager(r.engine);
+    var x = -2.4;
+    for (final p in props) {
+      final box = p.asset.getBoundingBox();
+      final size = math.max(
+        box.max.x - box.min.x,
+        math.max(box.max.y - box.min.y, box.max.z - box.min.z),
+      );
+      final scale = 1.3 / size;
+      tm.setTransform(p.asset.rootEntity, [
+        scale, 0, 0, 0, //
+        0, scale, 0, 0,
+        0, 0, scale, 0,
+        x - box.center.x * scale, -box.min.y * scale, -box.center.z * scale, 1,
+      ]);
+      x += 1.6;
+    }
+    final floor = buildLitMaterial(r.engine);
+    final floorInstance = floor.createInstance()
+      ..setFloat3('baseColor', 0.6, 0.6, 0.62);
+    final floorQuad = SmokeQuad.create(r.engine, size: 12, tangents: true);
+    final floorEntity = addQuadRenderable(
+      r,
+      floorQuad,
+      floorInstance,
+      extent: 12,
+    );
+    // the quad faces +Z; turned -90 degrees about X it faces +Y
+    tm.setTransform(floorEntity, [
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      -1,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+    ]);
+    r.camera.setProjection(
+      fovDegrees: 45,
+      aspect: r.width / r.height,
+      near: 0.05,
+      far: 100,
+    );
+    return GuideScene._(r, props, floor, floorInstance, floorQuad);
+  }
+
+  void orbit(double t) {
+    final angle = -0.5 + t;
+    rig.camera.lookAt(
+      eyeX: 5.5 * math.sin(angle),
+      eyeY: 2.2,
+      eyeZ: 5.5 * math.cos(angle),
+      centerX: 0,
+      centerY: 0.4,
+      centerZ: 0,
+    );
+  }
+
+  void dispose() {
+    rig.releaseEntities();
+    floorInstance.dispose();
+    floor.dispose();
+    floorQuad.dispose();
+    for (final p in props) {
+      p.dispose(rig.scene);
+    }
+  }
+}
+
+/// The views the guide buffer smoke shows: the colour, or one guide mapped to colours.
+enum GuideView {
+  colour,
+  normal,
+  roughness,
+  diffuseAlbedo,
+  specularAlbedo,
+  specularHitDistance;
+
+  GuideBuffer? get guide => switch (this) {
+    GuideView.colour => null,
+    GuideView.normal || GuideView.roughness => GuideBuffer.normalRoughness,
+    GuideView.diffuseAlbedo => GuideBuffer.diffuseAlbedo,
+    GuideView.specularAlbedo => GuideBuffer.specularAlbedo,
+    GuideView.specularHitDistance => GuideBuffer.specularHitDistance,
+  };
+
+  Future<Uint8List> render(
+    SmokeRig r,
+    Map<GuideBuffer, GuideBufferReadback> readbacks,
+    Uint8List colour,
+  ) async {
+    final which = guide;
+    if (which == null) return colour;
+    final rb = readbacks[which]!;
+    final data = await rb.read(r.renderer);
+    final out = Uint8List(r.width * r.height * 4);
+    for (var y = 0; y < r.height; y++) {
+      for (var x = 0; x < r.width; x++) {
+        final v = rb.at(data, x, y);
+        final (cr, cg, cb) = _colour(v);
+        final o = (y * r.width + x) * 4;
+        out[o] = (cr.clamp(0.0, 1.0) * 255).round();
+        out[o + 1] = (cg.clamp(0.0, 1.0) * 255).round();
+        out[o + 2] = (cb.clamp(0.0, 1.0) * 255).round();
+        out[o + 3] = 255;
+      }
+    }
+    return out;
+  }
+
+  (double, double, double) _colour(List<double> v) {
+    switch (this) {
+      case GuideView.normal:
+        if (v[0] == 0 && v[1] == 0 && v[2] == 0) return (0, 0, 0);
+        return (v[0] * 0.5 + 0.5, v[1] * 0.5 + 0.5, v[2] * 0.5 + 0.5);
+      case GuideView.roughness:
+        return (v[3], v[3], v[3]);
+      case GuideView.diffuseAlbedo:
+        return (v[0], v[1], v[2]);
+      case GuideView.specularAlbedo:
+        return (v[0] * 4, v[1] * 4, v[2] * 4);
+      case GuideView.specularHitDistance:
+        // white near, dark at 10 m; blue where the mirror ray leaves the scene; black: no surface
+        final d = v[0];
+        if (d <= 0) return (0, 0, 0);
+        if (d >= 65000) return (0.1, 0.2, 0.6);
+        final g = 1 - (d / 10).clamp(0.0, 0.9);
+        return (g, g, g);
+      case GuideView.colour:
+        return (0, 0, 0);
+    }
+  }
 }

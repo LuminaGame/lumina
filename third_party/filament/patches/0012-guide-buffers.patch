@@ -1,0 +1,759 @@
+diff --git a/filament/CMakeLists.txt b/filament/CMakeLists.txt
+index 1860f6e1..1435ab01 100644
+--- a/filament/CMakeLists.txt
++++ b/filament/CMakeLists.txt
+@@ -345,6 +345,7 @@ if (FILAMENT_SUPPORTS_VULKAN)
+         src/materials/rt/restirSpatial.mat
+         src/materials/rt/restirShade.mat
+         src/materials/rt/postPassMotion.mat
++        src/materials/rt/rtSpecularHitDistance.mat
+     )
+     list(APPEND MATERIAL_SRCS ${MATERIAL_VULKAN_SRCS})
+     set_source_files_properties(src/materials/rt/rt.cpp PROPERTIES COMPILE_DEFINITIONS FILAMENT_RAY_QUERY_MATERIALS)
+diff --git a/filament/include/filament/Options.h b/filament/include/filament/Options.h
+index beb22e21..394c09e2 100644
+--- a/filament/include/filament/Options.h
++++ b/filament/include/filament/Options.h
+@@ -932,6 +932,31 @@ struct RestirOptions {
+     bool shadeEmissive = false;         //!< reserved: emissive triangles as lights (not implemented)
+ };
+ 
++/**
++ * The per-pixel guides a neural denoiser or upscaler needs on top of colour, depth and motion.
++ * @see GuideBufferOptions, View::setGuideBufferTexture, ExternalUpscaler::guideBuffers
++ */
++enum class GuideBuffer : uint8_t {
++    NORMAL_ROUGHNESS = 0,       //!< RGBA16F: world-space normal (xyz) + perceptual roughness (w)
++    DIFFUSE_ALBEDO = 1,         //!< RGBA8: baseColor * (1 - metallic), linear
++    SPECULAR_ALBEDO = 2,        //!< RGBA8: the split-sum specular albedo mix(dfg.x, dfg.y, F0), linear
++    SPECULAR_HIT_DISTANCE = 3,  //!< R16F: distance a mirror ray travels to its hit (world units)
++};
++
++/**
++ * Options for the guide buffers: extra colour-pass outputs written by the lit shaders from the
++ * evaluated material (normal + roughness, diffuse albedo, specular albedo), and the specular hit
++ * distance traced with ray queries. Vulkan only, single-sampled views only; materials compiled
++ * before the guides existed write none (the buffers stay cleared). Blended and unlit surfaces
++ * leave the opaque surface's guides in place (unlit ones write zero).
++ *
++ * @see View::setGuideBufferOptions
++ */
++struct GuideBufferOptions {
++    bool enabled = false;               //!< write the guide buffers in the colour pass
++    bool specularHitDistance = true;    //!< trace the specular hit distance (needs ray tracing)
++};
++
+ } // namespace filament
+ 
+ #endif //TNT_FILAMENT_OPTIONS_H
+diff --git a/filament/include/filament/View.h b/filament/include/filament/View.h
+index 1111bbfd..5fd295d3 100644
+--- a/filament/include/filament/View.h
++++ b/filament/include/filament/View.h
+@@ -93,8 +93,20 @@ public:
+         DEPTH = 1,      //!< the colour pass depth at the render resolution
+         VELOCITY = 2,   //!< motion vectors (RG16F, texels of uv_curr - uv_prev, y up)
+         OUTPUT = 3,     //!< the storage image to write, at the output resolution
++        /** the guide buffers (GuideBuffer) the upscaler asked for, at the render resolution */
++        GUIDE_NORMAL_ROUGHNESS = 4,
++        GUIDE_DIFFUSE_ALBEDO = 5,
++        GUIDE_SPECULAR_ALBEDO = 6,
++        GUIDE_SPECULAR_HIT_DISTANCE = 7,
+     };
+ 
++    /**
++     * The guide buffers this upscaler needs, as a bit mask of (1 << GuideBuffer). Images 4 to 7
++     * carry them when the view renders guide buffers (View::setGuideBufferOptions); an image is
++     * empty (all zero handles) when its guide is not available this frame. Asked every frame.
++     */
++    virtual uint32_t guideBuffers() const noexcept { return 0; }
++
+     /** Where in the frame the upscaler runs. */
+     enum class Stage : uint8_t {
+         /**
+@@ -201,6 +213,8 @@ public:
+     using SoftShadowOptions = filament::SoftShadowOptions;
+     using ScreenSpaceReflectionsOptions = filament::ScreenSpaceReflectionsOptions;
+     using RestirOptions = filament::RestirOptions;
++    using GuideBufferOptions = filament::GuideBufferOptions;
++    using GuideBuffer = filament::GuideBuffer;
+     using GuardBandOptions = filament::GuardBandOptions;
+     using StereoscopicOptions = filament::StereoscopicOptions;
+ 
+@@ -592,6 +606,25 @@ public:
+      */
+     void resetExternalPostPassHistory() noexcept;
+ 
++    /**
++     * Enables the guide buffers (see GuideBufferOptions): normal + roughness, diffuse and
++     * specular albedo written by the lit shaders in the colour pass, and the specular hit
++     * distance traced against the scene's acceleration structures. They feed an external
++     * upscaler that asks for them (ExternalUpscaler::guideBuffers) and can be copied into user
++     * textures (setGuideBufferTexture). Vulkan only; ignored on other backends and with MSAA.
++     */
++    void setGuideBufferOptions(GuideBufferOptions options) noexcept;
++
++    /** Returns the options set with setGuideBufferOptions(). */
++    GuideBufferOptions const& getGuideBufferOptions() const noexcept;
++
++    /**
++     * Copies a guide buffer into `texture` every frame the view renders guides. The texture
++     * must have the render resolution, the guide's format (GuideBuffer) and BLIT_DST usage;
++     * otherwise nothing is copied. nullptr stops the copy.
++     */
++    void setGuideBufferTexture(GuideBuffer which, Texture* UTILS_NULLABLE texture) noexcept;
++
+     /**
+      * Enables or disable screen-space guard band. Disabled by default.
+      *
+diff --git a/filament/src/PostProcessManager.cpp b/filament/src/PostProcessManager.cpp
+index 50620c5d..aa3bbafa 100644
+--- a/filament/src/PostProcessManager.cpp
++++ b/filament/src/PostProcessManager.cpp
+@@ -4373,6 +4373,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleExternal(FrameGraph&
+         FrameGraphId<FrameGraphTexture> depth;
+         FrameGraphId<FrameGraphTexture> velocity;
+         FrameGraphId<FrameGraphTexture> output;
++        FrameGraphId<FrameGraphTexture> guides[4];
+     };
+ 
+     auto const& pass = fg.addPass<ExternalData>("external upscaling",
+@@ -4380,6 +4381,12 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleExternal(FrameGraph&
+                 data.color = builder.read(input, FrameGraphTexture::Usage::SAMPLEABLE);
+                 data.depth = builder.read(external.depth, FrameGraphTexture::Usage::SAMPLEABLE);
+                 data.velocity = builder.read(external.velocity, FrameGraphTexture::Usage::SAMPLEABLE);
++                for (size_t i = 0; i < 4; i++) {
++                    if (external.guides[i]) {
++                        data.guides[i] = builder.read(external.guides[i],
++                                FrameGraphTexture::Usage::SAMPLEABLE);
++                    }
++                }
+                 auto desc = outDesc;
+                 desc.samples = 1;
+                 data.output = builder.createTexture("external upscaled output", desc);
+@@ -4407,6 +4414,13 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleExternal(FrameGraph&
+                 descriptor.textures[ExternalUpscaler::VELOCITY] = resources.getTexture(data.velocity);
+                 descriptor.textures[ExternalUpscaler::OUTPUT] = resources.getTexture(data.output);
+                 descriptor.writeMask = 1u << ExternalUpscaler::OUTPUT;
++                for (size_t i = 0; i < 4; i++) {
++                    if (data.guides[i]) {
++                        descriptor.textures[ExternalUpscaler::GUIDE_NORMAL_ROUGHNESS + i] =
++                                resources.getTexture(data.guides[i]);
++                        descriptor.textureCount = ExternalPassContext::MAX_IMAGES;
++                    }
++                }
+                 descriptor.frame.jitter[0] = external.jitter.x;
+                 descriptor.frame.jitter[1] = external.jitter.y;
+                 descriptor.frame.renderWidth = vp.width;
+@@ -4426,6 +4440,109 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::upscaleExternal(FrameGraph&
+     return pass->output;
+ }
+ 
++std::array<FrameGraphId<FrameGraphTexture>, 3> PostProcessManager::clearGuideBuffers(
++        FrameGraph& fg, uint32_t const width, uint32_t const height) noexcept {
++    struct GuideClearData {
++        FrameGraphId<FrameGraphTexture> guides[3];
++    };
++    auto const& pass = fg.addPass<GuideClearData>("Guide Buffers Clear",
++            [&](FrameGraph::Builder& builder, auto& data) {
++                data.guides[0] = builder.createTexture("Guide Normal Roughness", {
++                        .width = width, .height = height, .format = TextureFormat::RGBA16F });
++                data.guides[1] = builder.createTexture("Guide Diffuse Albedo", {
++                        .width = width, .height = height, .format = TextureFormat::RGBA8 });
++                data.guides[2] = builder.createTexture("Guide Specular Albedo", {
++                        .width = width, .height = height, .format = TextureFormat::RGBA8 });
++                for (auto& guide: data.guides) {
++                    guide = builder.write(guide, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
++                }
++                builder.declareRenderPass("Guide Buffers Clear Target", {
++                        .attachments = { .color = { data.guides[0], data.guides[1], data.guides[2] } },
++                        .clearColor = {},
++                        .clearFlags = TargetBufferFlags::COLOR0 | TargetBufferFlags::COLOR1 |
++                                TargetBufferFlags::COLOR2 });
++            },
++            [](FrameGraphResources const& resources, auto const&, DriverApi& driver) {
++                auto out = resources.getRenderPassInfo();
++                driver.beginRenderPass(out.target, out.params);
++                driver.endRenderPass();
++            });
++    return { pass->guides[0], pass->guides[1], pass->guides[2] };
++}
++
++FrameGraphId<FrameGraphTexture> PostProcessManager::specularHitDistance(FrameGraph& fg,
++        FrameGraphId<FrameGraphTexture> const depth, FrameGraphId<FrameGraphTexture> const normals,
++        CameraInfo const& cameraInfo) noexcept {
++    struct HitDistanceData {
++        FrameGraphId<FrameGraphTexture> depth;
++        FrameGraphId<FrameGraphTexture> normals;
++        FrameGraphId<FrameGraphTexture> distance;
++    };
++    auto const& pass = fg.addPass<HitDistanceData>("Specular Hit Distance",
++            [&](FrameGraph::Builder& builder, auto& data) {
++                auto const& desc = fg.getDescriptor(normals);
++                data.depth = builder.sample(depth);
++                data.normals = builder.sample(normals);
++                data.distance = builder.createTexture("Guide Specular Hit Distance", {
++                        .width = desc.width, .height = desc.height,
++                        .format = TextureFormat::R16F });
++                data.distance = builder.declareRenderPass(data.distance);
++            },
++            [=, this](FrameGraphResources const& resources, auto const& data, DriverApi& driver) {
++                mRayQueryDescriptorSet.bind(driver);
++                bindPerRenderableDescriptorSet(driver);
++                auto const& desc = resources.getDescriptor(data.distance);
++                auto const& out = resources.getRenderPassInfo();
++                auto const& material = getPostProcessMaterial("rtSpecularHitDistance");
++                FMaterialInstance* const mi = getMaterialInstance(mEngine, driver, material);
++                mi->setParameter("depth", resources.getTexture(data.depth), SamplerParams{});
++                mi->setParameter("normals", resources.getTexture(data.normals), SamplerParams{});
++                // the acceleration structures hold true world positions; the camera lives in
++                // the world shifted by cameraInfo.worldTransform (see rayTracedShadows)
++                math::mat4 const trueWorldFromShaderWorld = inverse(cameraInfo.worldTransform);
++                math::mat4 const worldFromClip = trueWorldFromShaderWorld *
++                        math::mat4(cameraInfo.model) * inverse(math::mat4(cameraInfo.projection));
++                mi->setParameter("worldFromClip", math::mat4f(worldFromClip));
++                mi->setParameter("resolution", math::float4{
++                        float(desc.width), float(desc.height),
++                        1.0f / float(desc.width), 1.0f / float(desc.height) });
++                mi->setParameter("cameraPosition", math::float3(
++                        (trueWorldFromShaderWorld * math::double4(cameraInfo.getPosition(), 1.0)).xyz));
++                mi->setParameter("bias", std::max(0.002f, cameraInfo.zn * 0.5f));
++                commitAndRenderFullScreenQuad(driver, out, mi);
++                unbindAllDescriptorSets(driver);
++            });
++    return pass->distance;
++}
++
++void PostProcessManager::exportGuideBuffer(FrameGraph& fg,
++        FrameGraphId<FrameGraphTexture> const guide, FTexture const* const texture) noexcept {
++    auto const& desc = fg.getDescriptor(guide);
++    if (texture->getWidth() != desc.width || texture->getHeight() != desc.height ||
++            texture->getFormat() != desc.format) {
++        return;
++    }
++    auto const exported = fg.import("Guide Buffer (export)", {
++            .width = desc.width, .height = desc.height, .format = desc.format },
++            FrameGraphTexture::Usage::BLIT_DST,
++            FrameGraphTexture{ .handle = texture->getHwHandle() });
++    struct ExportData {
++        FrameGraphId<FrameGraphTexture> source;
++        FrameGraphId<FrameGraphTexture> target;
++    };
++    fg.addPass<ExportData>("Guide Buffer Export",
++            [&](FrameGraph::Builder& builder, auto& data) {
++                data.source = builder.read(guide, FrameGraphTexture::Usage::BLIT_SRC);
++                data.target = builder.write(exported, FrameGraphTexture::Usage::BLIT_DST);
++                builder.sideEffect();
++            },
++            [width = desc.width, height = desc.height](FrameGraphResources const& resources,
++                    auto const& data, DriverApi& driver) {
++                driver.blit(resources.getTexture(data.target), 0, 0, { 0, 0 },
++                        resources.getTexture(data.source), 0, 0, { 0, 0 }, { width, height });
++            });
++}
++
+ FrameGraphId<FrameGraphTexture> PostProcessManager::externalPostPass(FrameGraph& fg,
+         ExternalPostPassInputs const& external, FrameGraphId<FrameGraphTexture> const input,
+         CameraInfo const& cameraInfo, FrameHistory& frameHistory) noexcept {
+diff --git a/filament/src/PostProcessManager.h b/filament/src/PostProcessManager.h
+index 6613bd7b..a41c5697 100644
+--- a/filament/src/PostProcessManager.h
++++ b/filament/src/PostProcessManager.h
+@@ -283,8 +283,25 @@ public:
+         math::mat4f viewFromWorld;
+         math::mat4f clipFromView;
+         uint32_t flags = 0;
++        // the guide buffers the upscaler asked for (GuideBuffer order); null when unavailable
++        FrameGraphId<FrameGraphTexture> guides[4];
+     };
+ 
++    // Three zero-cleared guide buffers (normal + roughness, diffuse albedo, specular albedo) of
++    // the given size, for the colour pass to write.
++    std::array<FrameGraphId<FrameGraphTexture>, 3> clearGuideBuffers(FrameGraph& fg,
++            uint32_t width, uint32_t height) noexcept;
++
++    // The specular hit distance (R16F, world units) of a mirror ray per pixel, traced from the
++    // depth and the normal guide against the scene's acceleration structure (ray query).
++    FrameGraphId<FrameGraphTexture> specularHitDistance(FrameGraph& fg,
++            FrameGraphId<FrameGraphTexture> depth, FrameGraphId<FrameGraphTexture> normals,
++            CameraInfo const& cameraInfo) noexcept;
++
++    // Copies a guide buffer into a user texture of the same size (View::setGuideBufferTexture).
++    void exportGuideBuffer(FrameGraph& fg, FrameGraphId<FrameGraphTexture> guide,
++            FTexture const* texture) noexcept;
++
+     // What an external post pass needs on top of the colour input.
+     struct ExternalPostPassInputs {
+         ExternalPostPass* pass = nullptr;
+diff --git a/filament/src/RendererUtils.cpp b/filament/src/RendererUtils.cpp
+index fc41e5b6..80ff22da 100644
+--- a/filament/src/RendererUtils.cpp
++++ b/filament/src/RendererUtils.cpp
+@@ -73,6 +73,7 @@ RendererUtils::ColorPassOutput RendererUtils::colorPass(
+         FrameGraphId<FrameGraphTexture> structure;
+         FrameGraphId<FrameGraphTexture> rtShadow;
+         FrameGraphId<FrameGraphTexture> restir;
++        FrameGraphId<FrameGraphTexture> guides[3];
+     };
+ 
+     auto& colorPass = fg.addPass<ColorPassData>(name,
+@@ -194,6 +195,36 @@ RendererUtils::ColorPassOutput RendererUtils::colorPass(
+                 data.color = builder.write(data.color, FrameGraphTexture::Usage::COLOR_ATTACHMENT);
+                 data.depth = builder.write(data.depth, depthStencilUsage);
+ 
++                // The guide buffers: the lit shaders write them at locations 1-3 (Vulkan). New
++                // ones are cleared; the transparent part of a split colour pass keeps them.
++                TargetBufferFlags clearGuideFlags = TargetBufferFlags::NONE;
++                if (config.guideBuffers && !colorGradingConfig.asSubpass) {
++                    static constexpr TextureFormat kGuideFormats[3] = {
++                            TextureFormat::RGBA16F, TextureFormat::RGBA8, TextureFormat::RGBA8 };
++                    static constexpr TargetBufferFlags kGuideFlags[3] = {
++                            TargetBufferFlags::COLOR1, TargetBufferFlags::COLOR2,
++                            TargetBufferFlags::COLOR3 };
++                    for (size_t i = 0; i < 3; i++) {
++                        data.guides[i] = colorPassInput.guides[i];
++                        if (!data.guides[i]) {
++                            utils::StaticString const guideName =
++                                    i == 0 ? utils::StaticString("Guide Normal Roughness") :
++                                    i == 1 ? utils::StaticString("Guide Diffuse Albedo") :
++                                             utils::StaticString("Guide Specular Albedo");
++                            data.guides[i] = builder.createTexture(guideName, {
++                                    .width = colorBufferDesc.width,
++                                    .height = colorBufferDesc.height,
++                                    .format = kGuideFormats[i] });
++                            clearGuideFlags |= kGuideFlags[i];
++                        } else {
++                            data.guides[i] = builder.read(data.guides[i],
++                                    FrameGraphTexture::Usage::COLOR_ATTACHMENT);
++                        }
++                        data.guides[i] = builder.write(data.guides[i],
++                                FrameGraphTexture::Usage::COLOR_ATTACHMENT);
++                    }
++                }
++
+                 /*
+                  * There is a bit of magic happening here regarding the viewport used.
+                  * We do not specify the viewport in declareRenderPass() below, so it will be
+@@ -208,6 +239,20 @@ RendererUtils::ColorPassOutput RendererUtils::colorPass(
+                  * be (the imported resource viewport is set to 'vp', see  how 'fgViewRenderTarget'
+                  * is initialized in this file).
+                  */
++                if (data.guides[0]) {
++                    // the guides take the attachments the subpass output would use; the two
++                    // are exclusive (guides need the HDR colour pass)
++                    builder.declareRenderPass("Color Pass Target", {
++                            .attachments = { .color = { data.color,
++                                    data.guides[0], data.guides[1], data.guides[2] },
++                            .depth = data.depth,
++                            .stencil = data.stencil },
++                            .clearColor = config.clearColor,
++                            .samples = config.msaa,
++                            .layerCount = static_cast<uint8_t>(colorBufferDesc.depth),
++                            .clearFlags = clearColorFlags | clearDepthFlags | clearStencilFlags |
++                                    clearGuideFlags });
++                } else {
+                 builder.declareRenderPass("Color Pass Target", {
+                         .attachments = { .color = { data.color, data.output },
+                         .depth = data.depth,
+@@ -216,6 +261,7 @@ RendererUtils::ColorPassOutput RendererUtils::colorPass(
+                         .samples = config.msaa,
+                         .layerCount = static_cast<uint8_t>(colorBufferDesc.depth),
+                         .clearFlags = clearColorFlags | clearDepthFlags | clearStencilFlags});
++                }
+             },
+             [=, passExecutor = std::move(passExecutor), &view, &engine](FrameGraphResources const& resources,
+                     ColorPassData const& data, DriverApi& driver) {
+@@ -306,7 +352,8 @@ RendererUtils::ColorPassOutput RendererUtils::colorPass(
+     return {
+             .linearColor = colorPass->color,
+             .tonemappedColor = colorPass->output,   // can be null
+-            .depth = colorPass->depth
++            .depth = colorPass->depth,
++            .guides = { colorPass->guides[0], colorPass->guides[1], colorPass->guides[2] }
+     };
+ }
+ 
+@@ -375,6 +422,9 @@ RendererUtils::ColorPassOutput RendererUtils::refractionPass(
+     // the width and height.
+     colorPassInput.linearColor = opaquePassOutput.linearColor;
+     colorPassInput.depth = opaquePassOutput.depth;
++    for (size_t i = 0; i < 3; i++) {
++        colorPassInput.guides[i] = opaquePassOutput.guides[i];
++    }
+ 
+     // Since we're reusing the existing target we don't want to clear any of its buffer.
+     // Important: if this target ended up being an imported target, then the clearFlags
+diff --git a/filament/src/RendererUtils.h b/filament/src/RendererUtils.h
+index 8076e01e..edb96884 100644
+--- a/filament/src/RendererUtils.h
++++ b/filament/src/RendererUtils.h
+@@ -77,6 +77,8 @@ public:
+         bool isAutoDepthResolveSupported;
+         // Use post-process fog
+         bool fogAsPostProcess;
++        // Write the guide buffers (GuideBufferOptions) as colour attachments 1-3
++        bool guideBuffers = false;
+     };
+ 
+     struct ColorPassInput {
+@@ -89,11 +91,14 @@ public:
+         FrameGraphId<FrameGraphTexture> structure;
+         FrameGraphId<FrameGraphTexture> rtShadow;
+         FrameGraphId<FrameGraphTexture> restir;
++        // normal + roughness, diffuse albedo, specular albedo (when ColorPassConfig::guideBuffers)
++        FrameGraphId<FrameGraphTexture> guides[3];
+     };
+     struct ColorPassOutput {
+         FrameGraphId<FrameGraphTexture> linearColor;
+         FrameGraphId<FrameGraphTexture> tonemappedColor;
+         FrameGraphId<FrameGraphTexture> depth;
++        FrameGraphId<FrameGraphTexture> guides[3];
+     };
+ 
+     static ColorPassOutput colorPass(
+diff --git a/filament/src/View.cpp b/filament/src/View.cpp
+index 1076465f..ea2ee7f4 100644
+--- a/filament/src/View.cpp
++++ b/filament/src/View.cpp
+@@ -208,6 +208,18 @@ void View::resetExternalPostPassHistory() noexcept {
+     downcast(this)->resetExternalPostPassHistory();
+ }
+ 
++void View::setGuideBufferOptions(GuideBufferOptions const options) noexcept {
++    downcast(this)->setGuideBufferOptions(options);
++}
++
++GuideBufferOptions const& View::getGuideBufferOptions() const noexcept {
++    return downcast(this)->getGuideBufferOptions();
++}
++
++void View::setGuideBufferTexture(GuideBuffer const which, Texture* UTILS_NULLABLE texture) noexcept {
++    downcast(this)->setGuideBufferTexture(which, downcast(texture));
++}
++
+ void View::setGuardBandOptions(GuardBandOptions const options) noexcept {
+     downcast(this)->setGuardBandOptions(options);
+ }
+diff --git a/filament/src/details/Renderer.cpp b/filament/src/details/Renderer.cpp
+index 4cd90e83..d36d015b 100644
+--- a/filament/src/details/Renderer.cpp
++++ b/filament/src/details/Renderer.cpp
+@@ -926,6 +926,12 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+              // an external post pass works on the HDR frame, before colour grading
+              !view.getExternalPostPass();
+ 
++    // Guide buffers (GuideBufferOptions): extra colour-pass outputs of the lit shaders, which
++    // exist on Vulkan only, for single-sampled colour passes.
++    bool const guideBuffers = view.getGuideBufferOptions().enabled &&
++            engine.getBackend() == Backend::VULKAN && msaaSampleCount <= 1 &&
++            mFeatureLevel > FeatureLevel::FEATURE_LEVEL_0;
++
+     // whether we're scaled at all
+     bool scaled = any(notEqual(scale, float2(1.0f)));
+ 
+@@ -1270,6 +1276,7 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+             .featureLevel = mFeatureLevel,
+             .isAutoDepthResolveSupported = mIsAutoDepthResolveSupported,
+             .fogAsPostProcess = view.hasFog() && engine.features.material.enable_fog_as_postprocess,
++            .guideBuffers = guideBuffers,
+     };
+ 
+     /*
+@@ -1517,7 +1524,7 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+     // if MSAA is enabled, we end-up rendering in an intermediate buffer. This is the only case where
+     // "!hasPostProcess" doesn't guarantee rendering into the swapchain.
+     const bool useIntermediateBuffer = hasPostProcess || msaaOptions.enabled ||
+-            ssReflectionsOptions.enabled || hasScreenSpaceRefraction ||
++            ssReflectionsOptions.enabled || hasScreenSpaceRefraction || guideBuffers ||
+             (isRenderingMultiview && engine.debug.stereo.
+             combine_multiview_images);
+ 
+@@ -1527,6 +1534,15 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+ 
+     const_cast<RenderPass&>(pass).finalize(engine, driver);
+ 
++    // the guide buffers start cleared to zero (the colour pass clears to the clear colour)
++    FrameGraphId<FrameGraphTexture> clearedGuides[3];
++    if (UTILS_UNLIKELY(guideBuffers)) {
++        auto const guides = ppm.clearGuideBuffers(fg, colorBufferDesc.width, colorBufferDesc.height);
++        for (size_t i = 0; i < 3; i++) {
++            clearedGuides[i] = guides[i];
++        }
++    }
++
+     // the color pass itself + color-grading as subpass if needed
+     auto colorPassOutput = RendererUtils::colorPass(fg, "Color Pass", mEngine, view, {
+                 .shadows = blackboard.get<FrameGraphTexture>("shadows"),
+@@ -1534,7 +1550,8 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+                 .ssr = ssrConfig.ssr,
+                 .structure = structure,
+                 .rtShadow = blackboard.get<FrameGraphTexture>("rtShadow"),
+-                .restir = blackboard.get<FrameGraphTexture>("restir")
++                .restir = blackboard.get<FrameGraphTexture>("restir"),
++                .guides = { clearedGuides[0], clearedGuides[1], clearedGuides[2] }
+             },
+             colorBufferDesc, config, colorGradingConfigForColor, pass.getExecutor());
+ 
+@@ -1547,11 +1564,31 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+                         .ssr = ssrConfig.ssr,
+                 .structure = structure,
+                 .rtShadow = blackboard.get<FrameGraphTexture>("rtShadow"),
+-                .restir = blackboard.get<FrameGraphTexture>("restir")
++                .restir = blackboard.get<FrameGraphTexture>("restir"),
++                .guides = { clearedGuides[0], clearedGuides[1], clearedGuides[2] }
+             }, config, ssrConfig, colorGradingConfigForColor,
+              pass, firstRefractionCommand);
+     }
+ 
++    // The guide buffers of this frame: the three the colour pass wrote, and the specular hit
++    // distance traced from the depth and the normals (ray tracing only).
++    FrameGraphId<FrameGraphTexture> guideBufferIds[4];
++    if (UTILS_UNLIKELY(guideBuffers)) {
++        for (size_t i = 0; i < 3; i++) {
++            guideBufferIds[i] = colorPassOutput.guides[i];
++        }
++        if (rayTracing && view.getGuideBufferOptions().specularHitDistance) {
++            guideBufferIds[3] = ppm.specularHitDistance(fg, colorPassOutput.depth,
++                    colorPassOutput.guides[0], cameraInfo);
++        }
++        for (size_t i = 0; i < 4; i++) {
++            FTexture const* const exported = view.getGuideBufferTexture(GuideBuffer(i));
++            if (exported && guideBufferIds[i]) {
++                ppm.exportGuideBuffer(fg, guideBufferIds[i], exported);
++            }
++        }
++    }
++
+     if (colorGradingConfig.customResolve) {
+         assert_invariant(fg.getDescriptor(colorPassOutput.linearColor).samples <= 1);
+         // TODO: we have to "uncompress" (i.e. detonemap) the color buffer here because it's used
+@@ -1633,6 +1670,14 @@ void FRenderer::renderJob(DriverApi& driver, LinearAllocatorArena& arena, FView&
+         externalUpscale.viewFromWorld = cameraInfo.view;
+         externalUpscale.clipFromView = cameraInfo.projection;
+         externalUpscale.flags = velocity ? ExternalPassFrame::FLAG_VELOCITY_BUFFER : 0u;
++        if (externalUpscale.upscaler) {
++            uint32_t const wanted = externalUpscale.upscaler->guideBuffers();
++            for (size_t i = 0; i < 4; i++) {
++                if (wanted & (1u << i)) {
++                    externalUpscale.guides[i] = guideBufferIds[i];
++                }
++            }
++        }
+         bool const hdrStage = externalUpscale.upscaler &&
+                 externalUpscale.upscaler->stage() == ExternalUpscaler::Stage::HDR;
+         useExternalUpscaler = PostProcessManager::useExternalUpscaler(dsrOptions, externalUpscale,
+diff --git a/filament/src/details/View.h b/filament/src/details/View.h
+index d4b8cac4..b42afeb2 100644
+--- a/filament/src/details/View.h
++++ b/filament/src/details/View.h
+@@ -356,6 +356,18 @@ public:
+     void setExternalPostPass(ExternalPostPass* pass) noexcept { mExternalPostPass = pass; }
+     ExternalPostPass* getExternalPostPass() const noexcept { return mExternalPostPass; }
+     void resetExternalPostPassHistory() noexcept { mExternalPostPassReset = true; }
++
++    // guide buffers (View::setGuideBufferOptions)
++    void setGuideBufferOptions(GuideBufferOptions const options) noexcept {
++        mGuideBufferOptions = options;
++    }
++    GuideBufferOptions const& getGuideBufferOptions() const noexcept { return mGuideBufferOptions; }
++    void setGuideBufferTexture(GuideBuffer const which, FTexture const* texture) noexcept {
++        mGuideBufferTextures[size_t(which) & 3u] = texture;
++    }
++    FTexture const* getGuideBufferTexture(GuideBuffer const which) const noexcept {
++        return mGuideBufferTextures[size_t(which) & 3u];
++    }
+     // true once after resetExternalPostPassHistory()
+     bool consumeExternalPostPassReset() noexcept {
+         bool const reset = mExternalPostPassReset;
+@@ -736,6 +748,8 @@ private:
+     ExternalUpscaler* mExternalUpscaler = nullptr;
+     ExternalPostPass* mExternalPostPass = nullptr;
+     bool mExternalPostPassReset = false;
++    GuideBufferOptions mGuideBufferOptions;
++    FTexture const* mGuideBufferTextures[4] = {};
+     MultiSampleAntiAliasingOptions mMultiSampleAntiAliasingOptions;
+     ScreenSpaceReflectionsOptions mScreenSpaceReflectionsOptions;
+     GuardBandOptions mGuardBandOptions;
+diff --git a/filament/src/materials/rt/rt.cpp b/filament/src/materials/rt/rt.cpp
+index 47bfcfa0..96a8e4c0 100644
+--- a/filament/src/materials/rt/rt.cpp
++++ b/filament/src/materials/rt/rt.cpp
+@@ -34,6 +34,7 @@ static const StaticMaterialInfo sMaterialList[] = {
+     { "restirCandidates", MATERIAL(RT, RESTIRCANDIDATES) },
+     { "restirSpatial",  MATERIAL(RT, RESTIRSPATIAL) },
+     { "restirShade",    MATERIAL(RT, RESTIRSHADE) },
++    { "rtSpecularHitDistance", MATERIAL(RT, RTSPECULARHITDISTANCE) },
+ };
+ 
+ static const StaticMaterialInfo sVulkanMaterialList[] = {
+diff --git a/filament/src/materials/rt/rtSpecularHitDistance.mat b/filament/src/materials/rt/rtSpecularHitDistance.mat
+new file mode 100644
+index 00000000..66707151
+--- /dev/null
++++ b/filament/src/materials/rt/rtSpecularHitDistance.mat
+@@ -0,0 +1,85 @@
++material {
++    name : rtSpecularHitDistance,
++    parameters : [
++        {
++            type : sampler2d,
++            name : depth,
++            precision: high,
++            filterable: false
++        },
++        {
++            type : sampler2d,
++            name : normals,
++            precision: high,
++            filterable: false
++        },
++        {
++            type : mat4,
++            name : worldFromClip,
++            precision: high
++        },
++        {
++            type : float4,
++            name : resolution,
++            precision: high
++        },
++        {
++            type : float3,
++            name : cameraPosition,
++            precision: high
++        },
++        {
++            type : float,
++            name : bias,
++            precision: high
++        }
++    ],
++    outputs : [
++        {
++            name : distance,
++            target : color,
++            type : float
++        }
++    ],
++    domain : postprocess,
++    rayQuery : true,
++    depthWrite : false,
++    depthCulling : false
++}
++
++fragment {
++    // The specular hit distance guide: one mirror-reflection ray per pixel from the surface
++    // the depth describes, around the normal the colour pass wrote, against the scene's
++    // acceleration structure. 0 where there is no surface (sky) or no normal, 65504 (the
++    // largest half float) when the ray leaves the scene.
++    void postProcess(inout PostProcessInputs postProcess) {
++        ivec2 icoord = ivec2(gl_FragCoord.xy);
++        highp float depth = texelFetch(materialParams_depth, icoord, 0).r;
++        highp vec3 normal = texelFetch(materialParams_normals, icoord, 0).xyz;
++        float distance = 0.0;
++        if (depth > 0.0 && dot(normal, normal) > 0.25) {
++            highp vec2 uv = (vec2(icoord) + 0.5) * materialParams.resolution.zw;
++            // window y grows downwards, NDC y upwards
++            highp vec4 clip = vec4(uv.x * 2.0 - 1.0, 1.0 - uv.y * 2.0, depth, 1.0);
++            highp vec4 world = materialParams.worldFromClip * clip;
++            world.xyz /= world.w;
++            highp vec3 n = normalize(normal);
++            highp vec3 view = normalize(world.xyz - materialParams.cameraPosition);
++            highp vec3 direction = reflect(view, n);
++            highp float distanceToCamera = length(world.xyz - materialParams.cameraPosition);
++            highp float bias = materialParams.bias * (1.0 + distanceToCamera * 0.02);
++            highp vec3 origin = world.xyz + n * bias;
++            rayQueryEXT rq;
++            rayQueryInitializeEXT(rq, sceneTlas, gl_RayFlagsOpaqueEXT, 0xFFu,
++                    origin, 0.0, direction, 1.0e5);
++            while (rayQueryProceedEXT(rq)) {
++            }
++            if (rayQueryGetIntersectionTypeEXT(rq, true) != gl_RayQueryCommittedIntersectionNoneEXT) {
++                distance = min(rayQueryGetIntersectionTEXT(rq, true), 65504.0);
++            } else {
++                distance = 65504.0;
++            }
++        }
++        postProcess.distance = distance;
++    }
++}
+diff --git a/shaders/src/surface_main.fs b/shaders/src/surface_main.fs
+index 005a679c..6d7930c4 100644
+--- a/shaders/src/surface_main.fs
++++ b/shaders/src/surface_main.fs
+@@ -6,6 +6,64 @@ layout(location = 0) out vec4 fragColor;
+ vec4 fragColor;
+ #endif
+ 
++// Guide buffers (GuideBufferOptions): when the view asks for them, the colour pass binds three
++// more colour attachments, written here from the evaluated material. Vulkan only, so the other
++// APIs keep their output count; a colour pass without the attachments discards the writes.
++#if defined(TARGET_VULKAN_ENVIRONMENT) && MATERIAL_FEATURE_LEVEL > 0 && !defined(HAS_CUSTOM_OUTPUT)
++#define FILAMENT_GUIDE_OUTPUTS
++layout(location = 1) out vec4 guideNormalRoughness;
++layout(location = 2) out vec4 guideDiffuseAlbedo;
++layout(location = 3) out vec4 guideSpecularAlbedo;
++
++void writeGuideBuffers(const MaterialInputs inputs) {
++#if defined(BLEND_MODE_OPAQUE) || defined(BLEND_MODE_MASKED)
++#if defined(SHADING_MODEL_UNLIT) || defined(VARIANT_HAS_SSR)
++    // unlit surfaces (the skybox) have no BRDF; the screen-space reflection pass has no guides
++    guideNormalRoughness = vec4(0.0);
++    guideDiffuseAlbedo = vec4(0.0);
++    guideSpecularAlbedo = vec4(0.0);
++#else
++    float perceptualRoughness;
++    vec3 diffuse;
++    vec3 f0;
++#if defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
++    f0 = inputs.specularColor;
++    perceptualRoughness = computeRoughnessFromGlossiness(inputs.glossiness);
++    diffuse = inputs.baseColor.rgb * (1.0 - max3(f0));
++#elif defined(SHADING_MODEL_CLOTH)
++    perceptualRoughness = inputs.roughness;
++    diffuse = inputs.baseColor.rgb;
++    f0 = inputs.sheenColor;
++#else
++    perceptualRoughness = inputs.roughness;
++    diffuse = computeDiffuseColor(inputs.baseColor, inputs.metallic);
++    f0 = computeF0(inputs.baseColor, inputs.metallic, computeDielectricF0(inputs.reflectance));
++#endif
++    perceptualRoughness = saturate(perceptualRoughness);
++    vec3 dfg = prefilteredDFG(perceptualRoughness, shading_NoV);
++#if defined(SHADING_MODEL_CLOTH)
++    vec3 specular = f0 * dfg.z;
++#else
++    vec3 specular = mix(dfg.xxx, dfg.yyy, f0);
++#endif
++    guideNormalRoughness = vec4(shading_normal, perceptualRoughness);
++    guideDiffuseAlbedo = vec4(saturate(diffuse), 1.0);
++    guideSpecularAlbedo = vec4(saturate(specular), 1.0);
++#endif
++#elif defined(BLEND_MODE_MULTIPLY)
++    // multiplied into the attachment: one keeps the opaque surface's guides
++    guideNormalRoughness = vec4(1.0);
++    guideDiffuseAlbedo = vec4(1.0);
++    guideSpecularAlbedo = vec4(1.0);
++#else
++    // blended (premultiplied, additive, screen, fade): zero keeps the opaque surface's guides
++    guideNormalRoughness = vec4(0.0);
++    guideDiffuseAlbedo = vec4(0.0);
++    guideSpecularAlbedo = vec4(0.0);
++#endif
++}
++#endif
++
+ #if defined(MATERIAL_HAS_POST_LIGHTING_COLOR)
+ void blendPostLightingColor(const MaterialInputs material, inout vec4 color) {
+     vec4 blend = color;
+@@ -60,6 +118,10 @@ void main() {
+ 
+     fragColor = evaluateMaterial(inputs);
+ 
++#if defined(FILAMENT_GUIDE_OUTPUTS)
++    writeGuideBuffers(inputs);
++#endif
++
+ #if defined(MATERIAL_HAS_POST_LIGHTING_COLOR) && !defined(MATERIAL_HAS_REFLECTIONS)
+     blendPostLightingColor(inputs, fragColor);
+ #endif

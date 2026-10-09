@@ -4239,6 +4239,18 @@ void filament_post_pass_debug_destroy(ffi.Pointer<ffi.Void> pass) {
 ffi.Pointer<ffi.Char> filament_post_pass_last_error() =>
     ffi.Pointer<ffi.Char>.fromAddress(_m.filament_post_pass_last_error().toDartInt);
 
+void filament_view_set_guide_buffer_options(ffi.Pointer<ffi.Void> view, ffi.Pointer<filament_guide_buffer_options_t> options) {
+  _m.filament_view_set_guide_buffer_options(view.address.toJS, options.address.toJS);
+}
+
+void filament_view_get_guide_buffer_options(ffi.Pointer<ffi.Void> view, ffi.Pointer<filament_guide_buffer_options_t> out) {
+  _m.filament_view_get_guide_buffer_options(view.address.toJS, out.address.toJS);
+}
+
+void filament_view_set_guide_buffer_texture(ffi.Pointer<ffi.Void> view, int which, ffi.Pointer<ffi.Void> texture) {
+  _m.filament_view_set_guide_buffer_texture(view.address.toJS, which.toJS, texture.address.toJS);
+}
+
 enum FilamentBackend {
   FILAMENT_BACKEND_DEFAULT(0),
   FILAMENT_BACKEND_OPENGL(1),
@@ -6224,6 +6236,34 @@ enum filament_post_pass_debug_mode {
       'Unknown value for filament_post_pass_debug_mode: $value',
     ),
   };
+}
+
+enum filament_guide_buffer {
+  FILAMENT_GUIDE_NORMAL_ROUGHNESS(0),
+  FILAMENT_GUIDE_DIFFUSE_ALBEDO(1),
+  FILAMENT_GUIDE_SPECULAR_ALBEDO(2),
+  FILAMENT_GUIDE_SPECULAR_HIT_DISTANCE(3);
+
+  final int value;
+  const filament_guide_buffer(this.value);
+
+  static filament_guide_buffer fromValue(int value) => switch (value) {
+    0 => FILAMENT_GUIDE_NORMAL_ROUGHNESS,
+    1 => FILAMENT_GUIDE_DIFFUSE_ALBEDO,
+    2 => FILAMENT_GUIDE_SPECULAR_ALBEDO,
+    3 => FILAMENT_GUIDE_SPECULAR_HIT_DISTANCE,
+    _ => throw ArgumentError('Unknown value for filament_guide_buffer: $value'),
+  };
+}
+
+final class filament_guide_buffer_options_t extends ffi.Struct {
+  filament_guide_buffer_options_t.$at(super.$address) : super.$at();
+
+  bool get enabled => FlutterFilamentModule.heap.getUint8($address) != 0;
+  set enabled(bool value) => FlutterFilamentModule.heap.setUint8($address, value ? 1 : 0);
+
+  bool get specularHitDistance => FlutterFilamentModule.heap.getUint8($address + 1) != 0;
+  set specularHitDistance(bool value) => FlutterFilamentModule.heap.setUint8($address + 1, value ? 1 : 0);
 }
 
 // --- the module's exports (web) ---------------------------------------------
@@ -8560,6 +8600,12 @@ extension type _Module._(JSObject _) implements JSObject {
   external void filament_post_pass_debug_destroy(JSNumber pass);
   @JS('_filament_post_pass_last_error')
   external JSNumber filament_post_pass_last_error();
+  @JS('_filament_view_set_guide_buffer_options')
+  external void filament_view_set_guide_buffer_options(JSNumber view, JSNumber options);
+  @JS('_filament_view_get_guide_buffer_options')
+  external void filament_view_get_guide_buffer_options(JSNumber view, JSNumber out);
+  @JS('_filament_view_set_guide_buffer_texture')
+  external void filament_view_set_guide_buffer_texture(JSNumber view, JSNumber which, JSNumber texture);
 }
 
 _Module get _m => _Module._(FlutterFilamentModule.instance);
@@ -8605,6 +8651,7 @@ void $registerFilamentBindings() {
   ffi.$registerStruct<filament_restir_stats_t>(24, 8, filament_restir_stats_t.$at);
   ffi.$registerStruct<filament_gpu_info_t>(276, 4, filament_gpu_info_t.$at);
   ffi.$registerStruct<filament_gpu_memory_t>(32, 8, filament_gpu_memory_t.$at);
+  ffi.$registerStruct<filament_guide_buffer_options_t>(2, 1, filament_guide_buffer_options_t.$at);
   ffi.$registerCallbackType<FilamentPickCallbackFunction>(const ffi.$CallbackSignature('v', ['u', 'f', 'f', 'f', 'p']));
   ffi.$registerCallbackType<FilamentRaycastCallbackFunction>(const ffi.$CallbackSignature('b', ['p', 'p', 'p', 'p']));
   ffi.$registerCallbackType<filament_buffer_free_fnFunction>(const ffi.$CallbackSignature('v', ['p', 'u', 'p']));

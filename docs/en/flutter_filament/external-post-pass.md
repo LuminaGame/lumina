@@ -41,7 +41,7 @@ The motion image is built by Filament's `postPassMotion` material: where the vel
 
 ## HDR-stage external upscalers
 
-`ExternalUpscaler::stage()` (default `DISPLAY`) chooses where an external upscaler (patch `0006`) runs: `DISPLAY` is the original slot after colour grading on the LDR frame (DLSS Super Resolution), `HDR` replaces the TAA resolve on the linear HDR frame and writes an RGBA16F image at the output resolution, after which bloom and colour grading run unscaled. Upscalers that also denoise ray-traced lighting need the HDR stage. External passes now take up to eight images (`ExternalPassContext::MAX_IMAGES`).
+`ExternalUpscaler::stage()` (default `DISPLAY`) chooses where an external upscaler (patch `0006`) runs: `DISPLAY` is the original slot after colour grading on the LDR frame (DLSS Super Resolution), `HDR` replaces the TAA resolve on the linear HDR frame and writes an RGBA16F image at the output resolution, after which bloom and colour grading run unscaled. Upscalers that also denoise ray-traced lighting need the HDR stage. External passes now take up to eight images (`ExternalPassContext::MAX_IMAGES`): an upscaler that returns a mask from `ExternalUpscaler::guideBuffers()` gets the [guide buffers](guide-buffers.md) it asked for as images 4–7 (patch `0012`).
 
 ## Vulkan device features
 
