@@ -95,6 +95,7 @@ part 'blueprint_function_library/traversal.dart';
 part 'blueprint_function_library/window_mode.dart';
 part 'blueprint_function_library/display_settings.dart';
 part 'blueprint_function_library/combo_box.dart';
+part 'blueprint_function_library/conversions.dart';
 
 /// What a node function gets when the VM calls it: the
 /// Blueprint instance it runs on.
@@ -507,6 +508,16 @@ abstract final class LuminaBlueprintFunctionLibrary {
   static const ceil = _ceil;
   static const floor = _floor;
   static const intToFloat = _intToFloat;
+  // Math|Conversions (blueprint_function_library/conversions.dart).
+  static const boolToInt = _boolToInt;
+  static const intToBool = _intToBool;
+  static const boolToFloat = _boolToFloat;
+  static const nameToString = _nameToString;
+  static const stringToName = _stringToName;
+  static const stringToIntChecked = _stringToIntChecked;
+  static const stringToFloatChecked = _stringToFloatChecked;
+  static const floatToVector = _floatToVector;
+  static const floatToVector2D = _floatToVector2D;
 
   // --- Math | Int ----------------------------------------------------------------
   static const intAdd = _intAdd;
@@ -1097,6 +1108,7 @@ abstract final class LuminaBlueprintFunctionLibrary {
     ..._windowModeCallShapes,
     ..._displaySettingsCallShapes,
     ..._comboBoxCallShapes,
+    ..._conversionCallShapes,
     // @@CALL_SHAPES_END
   });
 
@@ -1132,6 +1144,7 @@ abstract final class LuminaBlueprintFunctionLibrary {
     ..._windowModeFunctions,
     ..._displaySettingsFunctions,
     ..._comboBoxFunctions,
+    ..._conversionFunctions,
     // @@FUNCTIONS_END
   });
 }

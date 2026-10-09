@@ -14,6 +14,8 @@ mixin _BlueprintGraphCanvasInteractions on _BlueprintGraphCanvasStateBase {
       _dragFrom = from;
       _dragPointer = _toCanvas(_localFromGlobal(global));
       _dragRefusal = null;
+      _dragConversion = null;
+      _dragConversionHint = null;
     });
   }
 
@@ -23,9 +25,12 @@ mixin _BlueprintGraphCanvasInteractions on _BlueprintGraphCanvasStateBase {
     if (from == null) return;
     final pointer = _toCanvas(_localFromGlobal(global));
     final target = _pinAt(pointer, from);
+    final conversion = target == null ? null : _conversion(from, target);
     setState(() {
       _dragPointer = pointer;
-      _dragRefusal = target == null ? null : _refusal(from, target);
+      _dragConversion = conversion?.conversion;
+      _dragConversionHint = conversion?.hint;
+      _dragRefusal = target == null || conversion != null ? null : _refusal(from, target);
     });
   }
 
@@ -37,11 +42,15 @@ mixin _BlueprintGraphCanvasInteractions on _BlueprintGraphCanvasStateBase {
       _dragFrom = null;
       _dragPointer = null;
       _dragRefusal = null;
+      _dragConversion = null;
+      _dragConversionHint = null;
     });
     if (from == null || pointer == null) return;
     final target = _pinAt(pointer, from);
     if (target != null) {
-      editor.connectPins(from, target);
+      final conversion = _conversion(from, target);
+      final wire = editor.connectPins(from, target);
+      if (wire != null && conversion != null && conversion.conversion.lossy) _showLossyConversion(conversion.conversion);
       return;
     }
     if (_nodeAt(pointer) != null) return;
@@ -54,6 +63,33 @@ mixin _BlueprintGraphCanvasInteractions on _BlueprintGraphCanvasStateBase {
     final out = from.isOutput ? from : to;
     final inp = from.isOutput ? to : from;
     return editor.whyNotConnect(out.nodeId, out.pinId, inp.nodeId, inp.pinId);
+  }
+
+  /// The conversion node a drop of [from] on [to] inserts, with the
+  /// tooltip line; null when they connect directly or not at all.
+  ({LuminaBlueprintConversion conversion, String hint})? _conversion(BlueprintPinRef from, BlueprintPinRef to) {
+    if (from.isOutput == to.isOutput) return null;
+    final out = from.isOutput ? from : to;
+    final inp = from.isOutput ? to : from;
+    final c = editor.conversionFor(out.nodeId, out.pinId, inp.nodeId, inp.pinId);
+    if (c == null) return null;
+    return (conversion: c, hint: editor.conversionHint(c, out.type, inp.type));
+  }
+
+  /// A lossy conversion was inserted (float → integer): say what is lost.
+  void _showLossyConversion(LuminaBlueprintConversion conversion) {
+    if (!mounted) return;
+    showToast(
+      context: context,
+      location: ToastLocation.bottomRight,
+      builder: (toastCtx, overlay) => SurfaceCard(
+        key: const ValueKey('conversion_lossy_toast'),
+        child: Basic(
+          title: Text('Inserted ${LuminaBlueprintNodeLibrary.spec(conversion.nodeId)?.title ?? conversion.nodeId}'),
+          content: Text(conversion.hint, style: const TextStyle(fontSize: 10)),
+        ),
+      ),
+    );
   }
 
   LuminaBlueprintNode? _nodeAt(Offset canvas) {

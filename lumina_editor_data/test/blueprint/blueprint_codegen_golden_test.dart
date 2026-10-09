@@ -6,6 +6,7 @@ import 'package:lumina_editor_data/lumina_editor.dart';
 
 import '../../../lumina/test/blueprint/anim_blueprints.dart';
 import '../../../lumina/test/blueprint/collision_shapes_blueprint.dart';
+import '../../../lumina/test/blueprint/conversions_blueprint.dart';
 import '../../../lumina/test/blueprint/display_settings_blueprint.dart';
 import '../../../lumina/test/blueprint/physics_blueprint.dart';
 import '../../../lumina/test/blueprint/engine_nodes_blueprint.dart';
@@ -60,6 +61,8 @@ Map<String, (LuminaBlueprintDocument, String, List<LuminaInputAction>)> goldens(
       'bp_graphics_settings': (renderingFeaturesBlueprint(), 'BpGraphicsSettings', const <LuminaInputAction>[]),
       // The screen resolution, monitor and display mode nodes.
       'bp_display_settings': (displaySettingsBlueprint(), 'BpDisplaySettings', const <LuminaInputAction>[]),
+      // Every Math|Conversions node, String to Int / Float's Success into a Branch.
+      'bp_conversions': (conversionsBlueprint(), 'BpConversions', const <LuminaInputAction>[]),
       // No Event BeginPlay, only a custom event with a latent Delay.
       'bp_no_begin_play': (noBeginPlayBlueprint(), 'BpNoBeginPlay', const <LuminaInputAction>[]),
       // A traversal component and Jump → Try Traversal Action → Branch → Jump.

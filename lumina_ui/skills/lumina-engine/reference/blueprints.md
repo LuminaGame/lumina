@@ -25,7 +25,9 @@ returns the new node with its pin ids.
 1. `add_blueprint_node` with `asset`, `node` (library id), `x`, `y`, optional `graph` (`event` default,
    `function:<Name>`, `macro:<Name>`) and `literals` (pin values and node settings).
 2. `connect_blueprint_pins` with `from_node`, `from_pin`, `to_node`, `to_pin` (exec to exec; data pins of
-   compatible types; a refused wire names the Cast it needs).
+   compatible types; a refused wire names the Cast it needs). Different scalar types are refused here even
+   where the editor's drag inserts a conversion: add the Math|Conversions node yourself (`int_to_float`,
+   `truncate` / `round` / `floor` / `ceil`, `bool_to_int`, `int_to_string`, `string_to_int` with `success`, …).
 3. `set_blueprint_pin_literal` for unconnected inputs.
 4. `compile_blueprint` with `save: true` (without it nothing is written) and fix every diagnostic
    (`get_blueprint_diagnostics`).

@@ -292,11 +292,17 @@ Vectors and rotators are **authoring space** (cm, Z up; rotators about X/Y/Z lik
 | `randomFloatInRange` | `static const randomFloatInRange` |  |
 | `randomBoolWithWeight` | `static const randomBoolWithWeight` |  |
 | `selectFloat` | `static const selectFloat` |  |
-| `round` | `static const round` |  |
-| `truncate` | `static const truncate` |  |
-| `ceil` | `static const ceil` |  |
-| `floor` | `static const floor` |  |
-| `intToFloat` | `static const intToFloat` |  |
+| `round` | `static const round` | Node **Round** (Math|Conversions): half away from zero (2.5 → 3, -2.5 → -3). NaN → 0; ±infinity and values beyond the integer range saturate (2⁶³ − 1 / −2⁶³; ±(2⁵³ − 1) on the web), as for Truncate, Floor and Ceil. |
+| `truncate` | `static const truncate` | Node **Truncate**: toward zero (-2.7 → -2). The conversion the editor inserts for a float → integer wire. |
+| `ceil` | `static const ceil` | Node **Ceil**: toward +∞ (2.1 → 3). |
+| `floor` | `static const floor` | Node **Floor**: toward −∞ (-2.1 → -3). |
+| `intToFloat` | `static const intToFloat` | Node **To Float (Integer)**; inserted for an integer → float wire. |
+| `boolToInt` / `boolToFloat` | `static const boolToInt` | Nodes **To Integer (Bool)** / **To Float (Bool)**: true → 1 / 1.0, false → 0 / 0.0. |
+| `intToBool` | `static const intToBool` | Node **To Bool (Integer)**: any non-zero value is true. |
+| `nameToString` / `stringToName` | `static const nameToString` | Nodes **To String (Name)** / **To Name (String)**: the same text, retyped. |
+| `stringToIntChecked` | `static const stringToIntChecked` | Node **String to Int** → `({int returnValue, bool success})`: an integer (optional sign) or a finite decimal / exponent number truncated toward zero (`'12.7'` → 12, `'1e3'` → 1000); whitespace around it ignored; anything else → (0, false). |
+| `stringToFloatChecked` | `static const stringToFloatChecked` | Node **String to Float** → `({double returnValue, bool success})`: any finite number; anything else, `NaN` and `Infinity` included → (0.0, false). |
+| `floatToVector` / `floatToVector2D` | `static const floatToVector` | Nodes **To Vector (Float)** (f, f, f) / **To Vector 2D (Float)** (f, f). |
 | `intAdd` | `static const intAdd` |  |
 | `intSubtract` | `static const intSubtract` |  |
 | `intMultiply` | `static const intMultiply` |  |
@@ -353,13 +359,13 @@ Vectors and rotators are **authoring space** (cm, Z up; rotators about X/Y/Z lik
 | `colorLerp` | `static const colorLerp` |  |
 | `hexToColor` | `static const hexToColor` | `#RRGGBB` or `#RRGGBBAA` (the `#` is optional); unparsable → white. |
 | `colorToHex` | `static const colorToHex` |  |
-| `floatToString` | `static const floatToString` |  |
-| `intToString` | `static const intToString` |  |
-| `boolToString` | `static const boolToString` |  |
+| `floatToString` | `static const floatToString` | Node **To String (float)**: [decimals] clamps to 0–20; NaN and infinities print as `NaN` / `Infinity`. |
+| `intToString` | `static const intToString` | Node **To String (int)**. |
+| `boolToString` | `static const boolToString` | Node **To String (bool)**: `true` / `false`. |
 | `vectorToString` | `static const vectorToString` |  |
 | `rotatorToString` | `static const rotatorToString` |  |
-| `stringToFloat` | `static const stringToFloat` |  |
-| `stringToInt` | `static const stringToInt` |  |
+| `stringToFloat` | `static const stringToFloat` | [stringToFloatChecked] without its Success. |
+| `stringToInt` | `static const stringToInt` | [stringToIntChecked] without its Success. |
 | `append` | `static const append` |  |
 | `append3` | `static const append3` |  |
 | `formatString` | `static const formatString` | Replaces `{0}`…`{3}` with the arguments that are set; a placeholder whose argument is empty stays as written. |
@@ -649,6 +655,27 @@ Vectors and rotators are **authoring space** (cm, Z up; rotators about X/Y/Z lik
 | `callShapes` | `static final Map<String, LuminaBlueprintCallShape> callShapes` | One entry per [functions] key: the direct call generated code emits. |
 | `functions` | `static final Map<String, LuminaBlueprintFunction> functions` | Every node the VM can call, keyed by node id: the built-ins, then the functions registered in [LuminaBlueprintFunctionRegistry]. Inputs arrive converted to their pin types (the VM resolves wires, literals and defaults first). |
 | `builtInFunctions` | `static final Map<String, LuminaBlueprintFunction> builtInFunctions` | One entry per pure / impure built-in node, keyed by node id. |
+
+## Math|Conversions
+
+Skaler pin tipleri arasındaki her dönüşüm palette'te **Math|Conversions** kategorisindedir
+(`lib/src/blueprint/node_library/conversions.dart`, fonksiyonlar `blueprint_function_library/conversions.dart`);
+arama onları `float to int`, `int to float`, `cast`, `convert`, `parse` gibi ifadelerle bulur.
+
+| Node (id) | Giriş → çıkış | Davranış |
+|---|---|---|
+| To Float (Integer) (`int_to_float`) | integer → float | 2⁵³'e kadar birebir |
+| Truncate / Round / Floor / Ceil (`truncate`, `round`, `floor`, `ceil`) | float → integer | sıfıra doğru / yarım sıfırdan uzağa / −∞'a doğru / +∞'a doğru; NaN → 0; ±∞ ve aralık dışı değerler 64-bit aralığına doyar (web'de ±(2⁵³ − 1)) |
+| To Integer (Bool), To Float (Bool) (`bool_to_int`, `bool_to_float`) | bool → integer / float | true → 1, false → 0 |
+| To Bool (Integer) (`int_to_bool`) | integer → bool | sıfırdan farklı → true |
+| To String (int / float / bool / Name) (`int_to_string`, `float_to_string`, `bool_to_string`, `name_to_string`) | → string | float: Decimals 0–20 (varsayılan 2) |
+| String to Int, String to Float (`string_to_int`, `string_to_float`) | string → sayı + **Success** | başarısızlık (boş, sayı değil, `NaN`, `Infinity`) → 0 ve Success false; String to Int ondalığı keser |
+| To Name (String) (`string_to_name`) | string → name | |
+| To Vector (Float), To Vector 2D (Float) (`float_to_vector`, `float_to_vector2d`) | float → vector / vector 2D | her bileşen o float |
+
+String to Int ve String to Float'a Success çıkışı eklendi; ondan önce kaydedilmiş graph'lar değişmeden açılır
+(`return_value` kabloları çalışmaya devam eder). `LuminaBlueprintNodeLibrary.conversionNodeFor(from, to)`
+([runtime](runtime.md)) bir kablo bu tiplerden ikisini birleştirdiğinde Blueprint editörünün araya koyduğu node'u söyler.
 
 ---
 

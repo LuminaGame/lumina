@@ -16,6 +16,10 @@ abstract class _BlueprintGraphCanvasStateBase extends State<BlueprintGraphCanvas
   Offset? _dragPointer;
   String? _dragRefusal;
 
+  /// The conversion a drop on the pin under the pointer would insert.
+  LuminaBlueprintConversion? _dragConversion;
+  String? _dragConversionHint;
+
   final FocusNode _focus = FocusNode(debugLabel: 'BlueprintGraphCanvas');
   final GlobalKey _stackKey = GlobalKey();
 

@@ -56,17 +56,6 @@ final List<LuminaBlueprintNodeSpec> _mathStringArrayNodes = <LuminaBlueprintNode
   _pureNode('select_float', 'Select (float)', 'Utilities|Flow Control', [_f('a', 'A'), _f('b', 'B'), _b('pick_a', 'Pick A')],
       _ret(LuminaPinType.float), const ['select', 'choose', 'ternary', 'if']),
 
-  // --- Math | Float → Int -------------------------------------------------
-  for (final (id, title, words) in const [
-    ('round', 'Round', ['round', 'nearest', 'int']),
-    ('truncate', 'Truncate', ['trunc', 'int', 'integer part']),
-    ('ceil', 'Ceil', ['ceiling', 'round up', 'int']),
-    ('floor', 'Floor', ['round down', 'int']),
-  ])
-    _pureNode(id, title, 'Math|Float', [_f('a', 'A')], _ret(LuminaPinType.integer), words),
-  _pureNode('int_to_float', 'To Float (Integer)', 'Math|Conversions', [_i('a', 'A')], _ret(LuminaPinType.float),
-      const ['convert', 'cast', 'float', 'int']),
-
   // --- Math | Int --------------------------------------------------------
   for (final (id, title, words) in const [
     ('int_add', 'int + int', ['plus', 'add']),
@@ -209,21 +198,11 @@ final List<LuminaBlueprintNodeSpec> _mathStringArrayNodes = <LuminaBlueprintNode
   _pureNode('color_to_hex', 'Color to Hex', 'Math|Color', [_color('in_color', 'In Color')], _ret(LuminaPinType.string),
       const ['color', 'colour', 'hex', 'string', 'html']),
 
-  // --- String / Conversion -------------------------------------------------
-  _pureNode('float_to_string', 'To String (float)', 'Utilities|String', [_f('in_float', 'In Float'), _i('decimals', 'Decimals', 2)],
-      _ret(LuminaPinType.string), const ['convert', 'string', 'text', 'float', 'fps', 'to string']),
-  _pureNode('int_to_string', 'To String (int)', 'Utilities|String', [_i('in_int', 'In Int')], _ret(LuminaPinType.string),
-      const ['convert', 'string', 'text', 'int', 'fps', 'to string']),
-  _pureNode('bool_to_string', 'To String (bool)', 'Utilities|String', [_b('in_bool', 'In Bool')], _ret(LuminaPinType.string),
-      const ['convert', 'string', 'text', 'bool', 'to string']),
+  // --- String (the number / bool / name conversions are in conversions.dart) --
   _pureNode('vector_to_string', 'To String (Vector)', 'Utilities|String', [_v('in_vec', 'In Vec')], _ret(LuminaPinType.string),
       const ['convert', 'string', 'text', 'vector', 'to string']),
   _pureNode('rotator_to_string', 'To String (Rotator)', 'Utilities|String', [_rot('in_rot', 'In Rot')], _ret(LuminaPinType.string),
       const ['convert', 'string', 'text', 'rotator', 'to string']),
-  _pureNode('string_to_float', 'String to Float', 'Utilities|String', [_s('in_string', 'In String')], _ret(LuminaPinType.float),
-      const ['convert', 'parse', 'float', 'number']),
-  _pureNode('string_to_int', 'String to Int', 'Utilities|String', [_s('in_string', 'In String')], _ret(LuminaPinType.integer),
-      const ['convert', 'parse', 'int', 'number']),
   _pureNode('append', 'Append', 'Utilities|String', [_s('a', 'A'), _s('b', 'B')], _ret(LuminaPinType.string),
       const ['concat', 'concatenate', 'join', '+', 'string', 'fps']),
   _pureNode('append_3', 'Append (3)', 'Utilities|String', [_s('a', 'A'), _s('b', 'B'), _s('c', 'C')], _ret(LuminaPinType.string),

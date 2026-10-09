@@ -11,6 +11,7 @@ How Blueprints run: the node library that the palette, the VM and the code gener
 - [`lib/src/blueprint/level_blueprint.dart`](#libsrcblueprintlevel_blueprintdart)
 - [`lib/src/blueprint/level_blueprint_storage.dart`](#libsrcblueprintlevel_blueprint_storagedart)
 - [`lib/src/blueprint/node_library.dart`](#libsrcblueprintnode_librarydart)
+- [`lib/src/blueprint/node_library/conversions.dart`](#libsrcblueprintnode_libraryconversionsdart)
 - [`lib/src/blueprint/node_library/type_context.dart`](#libsrcblueprintnode_librarytype_contextdart)
 - [`lib/src/blueprint/vm/blueprint_vm.dart`](#libsrcblueprintvmblueprint_vmdart)
 - [`lib/src/blueprint/vm/blueprint_vm/instance.dart`](#libsrcblueprintvmblueprint_vminstancedart)
@@ -450,7 +451,22 @@ The one node catalog the editor palette, the VM and the code generator read.
 | `displayTitle` | `static String displayTitle(String name)` | `AddHealth` → `Add Health`, `OnDoorOpened` → `On Door Opened`. |
 | `place` | `static LuminaBlueprintNode place(String id, {required String nodeId, double x = 0.0, double y = 0.0, Map<Strin...` | A new node of library node [id] at ([x], [y]), with pins resolved for [context]. [literals] carries node settings such as `action` or `variable`. |
 | `connectionError` | `static String? connectionError(LuminaBlueprintPinSpec from, LuminaBlueprintPinSpec to, {LuminaBlueprintTypeCon...` | Why output pin [from] cannot be wired into input pin [to], or null when it can: the types must match and, for object pins, the classes must be assignable; an array's element types must match too. |
+| `conversionNodeFor` | `static LuminaBlueprintConversion? conversionNodeFor(LuminaPinType from, LuminaPinType to)` | The node that converts a [from] value into a [to] input, for the editor to insert between two mismatched pins; null when there is none. [connectionError] stays strict. |
 | `canConnect` | `static bool canConnect(LuminaBlueprintPinSpec from, LuminaBlueprintPinSpec to, {LuminaBlueprintTypeContext con...` | Whether output pin [from] can be wired into input pin [to]. |
+
+## `lib/src/blueprint/node_library/conversions.dart`
+
+### `class LuminaBlueprintConversion`
+
+The node the editor puts between two pins of different types so a wire can join them (an integer output into a float input gets To Float (Integer)): `LuminaBlueprintNodeLibrary.conversionNodeFor`. Automatic conversions: integer → float (`int_to_float`), float → integer (`truncate`, lossy), bool → integer / float, integer / float / bool / name / vector / rotator → string, string → name. Pairs that need the author's choice (string → number can fail, float → bool, vector → float) are absent: the editor keeps the error.
+
+| Member | Signature | Description |
+|---|---|---|
+| `nodeId` | `final String nodeId` | The library node: `int_to_float`, `truncate`, … |
+| `inputPin` | `final String inputPin` | The node's input pin the source output is wired into. |
+| `outputPin` | `final String outputPin` | The node's output pin wired into the target input. |
+| `lossy` | `final bool lossy` | Whether the conversion can lose information (float → integer drops the fraction). |
+| `hint` | `final String hint` | One line for the editor: what the conversion does. |
 
 ## `lib/src/blueprint/node_library/type_context.dart`
 

@@ -434,7 +434,30 @@ class BlueprintGraphCanvasState extends _BlueprintGraphCanvasStateBase
                                 border: Border.all(color: EditorColors.destructive),
                               ),
                               child: Text(_dragRefusal!,
+                                  key: const ValueKey('wire_drag_refusal'),
                                   style: const TextStyle(fontSize: 9, color: EditorColors.destructive)),
+                            ),
+                          ),
+                        if (_dragConversionHint != null && _dragPointer != null)
+                          Positioned(
+                            left: toScreen(_dragPointer!).dx + 14,
+                            top: toScreen(_dragPointer!).dy + 10,
+                            child: IgnorePointer(
+                              child: Container(
+                                constraints: const BoxConstraints(maxWidth: 320),
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: EditorColors.card,
+                                  borderRadius: BorderRadius.circular(3),
+                                  border: Border.all(
+                                      color: _dragConversion?.lossy ?? false ? EditorColors.warning : EditorColors.border),
+                                ),
+                                child: Text(_dragConversionHint!,
+                                    key: const ValueKey('wire_drag_hint'),
+                                    style: TextStyle(
+                                        fontSize: 9,
+                                        color: _dragConversion?.lossy ?? false ? EditorColors.warning : EditorColors.foreground)),
+                              ),
                             ),
                           ),
                         if (widget.graphLabel != null)

@@ -257,16 +257,6 @@ bool _randomBoolWithWeight(double weight) => LuminaBlueprintFunctionLibrary.rand
 
 double _selectFloat(double a, double b, bool pickA) => pickA ? a : b;
 
-int _round(double a) => a.isFinite ? a.round() : 0;
-
-int _truncate(double a) => a.isFinite ? a.truncate() : 0;
-
-int _ceil(double a) => a.isFinite ? a.ceil() : 0;
-
-int _floor(double a) => a.isFinite ? a.floor() : 0;
-
-double _intToFloat(int a) => a.toDouble();
-
 // --- Math | Int ----------------------------------------------------------------
 
 int _intAdd(int a, int b) => a + b;

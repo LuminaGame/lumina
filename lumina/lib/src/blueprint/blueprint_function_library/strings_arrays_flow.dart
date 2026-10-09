@@ -2,20 +2,9 @@ part of '../blueprint_function_library.dart';
 
 // --- String / Conversion -----------------------------------------------------------
 
-String _floatToString(double inFloat, [int decimals = 2]) =>
-    inFloat.isFinite ? inFloat.toStringAsFixed(decimals < 0 ? 0 : (decimals > 20 ? 20 : decimals)) : '$inFloat';
-
-String _intToString(int inInt) => '$inInt';
-
-String _boolToString(bool inBool) => inBool ? 'true' : 'false';
-
 String _vectorToString(Vector3 inVec) => 'X=${LuminaBlueprintFunctionLibrary.floatToString(inVec.x, 3)} Y=${LuminaBlueprintFunctionLibrary.floatToString(inVec.y, 3)} Z=${LuminaBlueprintFunctionLibrary.floatToString(inVec.z, 3)}';
 
 String _rotatorToString(LuminaRotator inRot) => 'P=${LuminaBlueprintFunctionLibrary.floatToString(inRot.pitch, 3)} Y=${LuminaBlueprintFunctionLibrary.floatToString(inRot.yaw, 3)} R=${LuminaBlueprintFunctionLibrary.floatToString(inRot.roll, 3)}';
-
-double _stringToFloat(String inString) => double.tryParse(inString.trim()) ?? 0.0;
-
-int _stringToInt(String inString) => int.tryParse(inString.trim()) ?? (double.tryParse(inString.trim())?.truncate() ?? 0);
 
 String _append(String a, String b) => a + b;
 

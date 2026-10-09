@@ -24,6 +24,7 @@ part 'node_library/traversal.dart';
 part 'node_library/window_mode.dart';
 part 'node_library/display_settings.dart';
 part 'node_library/combo_box.dart';
+part 'node_library/conversions.dart';
 
 /// How a node takes part in execution.
 enum LuminaBlueprintNodeKind {
@@ -647,6 +648,7 @@ abstract final class LuminaBlueprintNodeLibrary {
     ..._windowModeNodes,
     ..._displaySettingsNodes,
     ..._comboBoxNodes,
+    ..._conversionNodes,
   ]);
 
   static final Map<String, LuminaBlueprintNodeSpec> _byId = {for (final s in builtIns) s.id: s};
@@ -1119,6 +1121,10 @@ abstract final class LuminaBlueprintNodeLibrary {
     }
     return null;
   }
+
+  /// The node that converts a [from] value into a [to] input, for the editor
+  /// to insert between two mismatched pins; null when there is none.
+  static LuminaBlueprintConversion? conversionNodeFor(LuminaPinType from, LuminaPinType to) => _conversionNodeFor(from, to);
 
   /// Whether output pin [from] can be wired into input pin [to].
   static bool canConnect(

@@ -17,6 +17,7 @@ Continuation of Blueprint editor: the remaining public files under `lib/ui/featu
 - [`lib/ui/features/sub_editors/services/blueprint_preview_scene.dart`](#libuifeaturessub_editorsservicesblueprint_preview_scenedart)
 - [`lib/ui/features/sub_editors/view_models/blueprint_enum_view_model.dart`](#libuifeaturessub_editorsview_modelsblueprint_enum_view_modeldart)
 - [`lib/ui/features/sub_editors/view_models/blueprint_graph_editor.dart`](#libuifeaturessub_editorsview_modelsblueprint_graph_editordart)
+- [`lib/ui/features/sub_editors/view_models/blueprint_graph_editor/conversion_wiring.dart`](#libuifeaturessub_editorsview_modelsblueprint_graph_editorconversion_wiringdart)
 - [`lib/ui/features/sub_editors/view_models/blueprint_interface_view_model.dart`](#libuifeaturessub_editorsview_modelsblueprint_interface_view_modeldart)
 - [`lib/ui/features/sub_editors/view_models/level_blueprint_editor_view_model.dart`](#libuifeaturessub_editorsview_modelslevel_blueprint_editor_view_modeldart)
 - [`lib/ui/features/sub_editors/view_models/widget_blueprint_editor_view_model.dart`](#libuifeaturessub_editorsview_modelswidget_blueprint_editor_view_modeldart)
@@ -613,7 +614,7 @@ Edits one [LuminaBlueprintGraph] through lumina's node library: placing nodes, w
 | `promoteToVariable` | `LuminaBlueprintNode? promoteToVariable(BlueprintPinRef from, {Offset? position})` | Promote to Variable: declares a variable named after [from] (`HudWidget` for Create Widget WBP_HUD's Return Value), typed with the pin's class, places its Set node at [position] wired from the pin and spliced into the source node's exec chain, in one undo step. Returns the Set node; null for a pin that cannot be promoted. |
 | `adoptWildcardTypesFromWires` | `void adoptWildcardTypesFromWires()` | Types every still-untyped wildcard node from its existing wires — for graphs saved before wildcard nodes adopted a type when wired. Not an undo step: it only makes pins show what the wires already carry. |
 | `addWire` | `LuminaBlueprintWire? addWire({required String fromNodeId, required String fromPinId, required String toNodeId,...` | Wires output [fromPinId] to input [toPinId]; null (nothing recorded) when the pins are incompatible. |
-| `connectPins` | `LuminaBlueprintWire? connectPins(BlueprintPinRef a, BlueprintPinRef b)` | Joins two pins in whichever direction they allow. |
+| `connectPins` | `LuminaBlueprintWire? connectPins(BlueprintPinRef a, BlueprintPinRef b)` | Joins two pins in whichever direction they allow; two different types go through the conversion node lumina names for them (`conversion_wiring.dart`), else nothing is made. [addWire] never converts. |
 | `removeWire` | `bool removeWire(String wireId)` |  |
 | `breakLinks` | `bool breakLinks(String nodeId, String pinId, {required bool output})` | Break Link(s) on a pin. |
 | `removeNode` | `bool removeNode(String nodeId)` |  |
@@ -643,6 +644,18 @@ Edits one [LuminaBlueprintGraph] through lumina's node library: placing nodes, w
 | `beginMove` | `void beginMove()` |  |
 | `moveNodes` | `void moveNodes(Iterable<String> ids, Offset delta)` |  |
 | `endMove` | `void endMove()` |  |
+
+## `lib/ui/features/sub_editors/view_models/blueprint_graph_editor/conversion_wiring.dart`
+
+### `extension BlueprintGraphConversions on BlueprintGraphEditor`
+
+Wiring two pins of different types through the conversion node lumina names for them (`LuminaBlueprintNodeLibrary.conversionNodeFor`). Dropping an integer output on a float input inserts **To Float (Integer)** between them; float → integer inserts **Truncate**; bool → integer / float and integer / float / bool / name / vector / rotator → string insert their node. While dragging, the tooltip says what will be inserted (`wire_drag_hint`; in the warning colour for a lossy conversion, "Truncate drops the fraction"), and after the drop Truncate shows a toast saying the fraction is lost. The insertion is one undo step (`Insert <title>`: the node and both wires). Every other mismatch keeps the red refusal. It works in every graph that shares the canvas: the Blueprint event graph, function / macro graphs, the Level Blueprint, the Widget Blueprint graph and the Anim Blueprint event graph / transition rules. The model stays strict: `connectionError` and `addWire` (MCP, scripts) never convert. There is no compact rendering for pure nodes; conversion nodes draw as ordinary pure nodes.
+
+| Member | Signature | Description |
+|---|---|---|
+| `conversionFor` | `LuminaBlueprintConversion? conversionFor(String fromNodeId, String fromPinId, String toNodeId, String toPinId)` | The conversion the wire goes through; null when the pins connect directly or cannot be joined at all. |
+| `conversionHint` | `String conversionHint(LuminaBlueprintConversion conversion, LuminaPinType from, LuminaPinType to)` | The drag tooltip: `Converts integer → float. To Float (Integer): …`. |
+| `insertConversion` | `LuminaBlueprintNode? insertConversion(String fromNodeId, String fromPinId, String toNodeId, String toPinId)` | Places the node half-way between the two nodes and wires output → node → input, as one undo step. |
 
 ## `lib/ui/features/sub_editors/view_models/blueprint_interface_view_model.dart`
 

@@ -501,7 +501,7 @@ class _GraphCompiler {
           final r = 'r${_counter.next()}';
           out.add('${pad}final $r = $call;');
           for (final o in shape.outputs) {
-            final expr = shape.returnsRecord ? '$r.${_var(o)}' : r;
+            final expr = shape.returnsRecord ? '$r.${_recordField(o)}' : r;
             values[o] = expr;
             final type = nodePins.outputs.firstWhere((p) => p.id == o).type;
             out.add('$pad${_impureVar(frame, node.id, o, type)} = $expr;');
@@ -893,7 +893,7 @@ class _GraphCompiler {
       }
       final r = 'p${_counter.next()}';
       out.add('${pad}final $r = ${_call(shape, node, [for (final a in shape.args) args[a]!])};');
-      outputs = {for (final o in shape.outputs) o: shape.returnsRecord ? '$r.${_var(o)}' : r};
+      outputs = {for (final o in shape.outputs) o: shape.returnsRecord ? '$r.${_recordField(o)}' : r};
     }
     step[nodeId] = outputs;
     out.add('${pad}if (trace != null) blueprintTrace(${_str(frame.traceId)}, ${_str(nodeId)}, '

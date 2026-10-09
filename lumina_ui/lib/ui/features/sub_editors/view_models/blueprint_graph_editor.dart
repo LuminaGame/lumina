@@ -11,6 +11,8 @@ import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_palette.dart'
 import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_pin_style.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/blueprint_debugger.dart';
 
+part 'blueprint_graph_editor/conversion_wiring.dart';
+
 /// What a [BlueprintGraphEditor] edits against: the document's variables and
 /// input actions, and its undo history. The Blueprint editor, the Animation
 /// Blueprint editor's event graph and each transition rule share one canvas
@@ -743,12 +745,14 @@ class BlueprintGraphEditor extends ChangeNotifier {
     return host.mutate('Connect pins', () => _connect(fromNodeId, fromPinId, toNodeId, toPinId));
   }
 
-  /// Joins two pins in whichever direction they allow.
+  /// Joins two pins in whichever direction they allow; two different types
+  /// go through the conversion node lumina names for them, if any.
   LuminaBlueprintWire? connectPins(BlueprintPinRef a, BlueprintPinRef b) {
     if (a.isOutput == b.isOutput) return null;
     final out = a.isOutput ? a : b;
     final inp = a.isOutput ? b : a;
-    return addWire(fromNodeId: out.nodeId, fromPinId: out.pinId, toNodeId: inp.nodeId, toPinId: inp.pinId);
+    return addWire(fromNodeId: out.nodeId, fromPinId: out.pinId, toNodeId: inp.nodeId, toPinId: inp.pinId) ??
+        _connectThroughConversion(out, inp);
   }
 
   bool removeWire(String wireId) => host.mutate('Delete wire', () {

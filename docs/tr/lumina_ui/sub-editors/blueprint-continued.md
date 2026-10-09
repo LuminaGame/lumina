@@ -17,6 +17,7 @@ Blueprint editörü sayfasının devamı: `lib/ui/features/sub_editors/models/`,
 - [`lib/ui/features/sub_editors/services/blueprint_preview_scene.dart`](#libuifeaturessub_editorsservicesblueprint_preview_scenedart)
 - [`lib/ui/features/sub_editors/view_models/blueprint_enum_view_model.dart`](#libuifeaturessub_editorsview_modelsblueprint_enum_view_modeldart)
 - [`lib/ui/features/sub_editors/view_models/blueprint_graph_editor.dart`](#libuifeaturessub_editorsview_modelsblueprint_graph_editordart)
+- [`lib/ui/features/sub_editors/view_models/blueprint_graph_editor/conversion_wiring.dart`](#libuifeaturessub_editorsview_modelsblueprint_graph_editorconversion_wiringdart)
 - [`lib/ui/features/sub_editors/view_models/blueprint_interface_view_model.dart`](#libuifeaturessub_editorsview_modelsblueprint_interface_view_modeldart)
 - [`lib/ui/features/sub_editors/view_models/level_blueprint_editor_view_model.dart`](#libuifeaturessub_editorsview_modelslevel_blueprint_editor_view_modeldart)
 - [`lib/ui/features/sub_editors/view_models/widget_blueprint_editor_view_model.dart`](#libuifeaturessub_editorsview_modelswidget_blueprint_editor_view_modeldart)
@@ -613,7 +614,7 @@ Edits one [LuminaBlueprintGraph] through lumina's node library: placing nodes, w
 | `promoteToVariable` | `LuminaBlueprintNode? promoteToVariable(BlueprintPinRef from, {Offset? position})` | Promote to Variable: declares a variable named after [from] (`HudWidget` for Create Widget WBP_HUD's Return Value), typed with the pin's class, places its Set node at [position] wired from the pin and spliced into the source node's exec chain, in one undo step. Returns the Set node; null for a pin that cannot be promoted. |
 | `adoptWildcardTypesFromWires` | `void adoptWildcardTypesFromWires()` | Types every still-untyped wildcard node from its existing wires — for graphs saved before wildcard nodes adopted a type when wired. Not an undo step: it only makes pins show what the wires already carry. |
 | `addWire` | `LuminaBlueprintWire? addWire({required String fromNodeId, required String fromPinId, required String toNodeId,...` | Wires output [fromPinId] to input [toPinId]; null (nothing recorded) when the pins are incompatible. |
-| `connectPins` | `LuminaBlueprintWire? connectPins(BlueprintPinRef a, BlueprintPinRef b)` | Joins two pins in whichever direction they allow. |
+| `connectPins` | `LuminaBlueprintWire? connectPins(BlueprintPinRef a, BlueprintPinRef b)` | Joins two pins in whichever direction they allow; two different types go through the conversion node lumina names for them (`conversion_wiring.dart`), else nothing is made. [addWire] never converts. |
 | `removeWire` | `bool removeWire(String wireId)` |  |
 | `breakLinks` | `bool breakLinks(String nodeId, String pinId, {required bool output})` | Break Link(s) on a pin. |
 | `removeNode` | `bool removeNode(String nodeId)` |  |
@@ -643,6 +644,18 @@ Edits one [LuminaBlueprintGraph] through lumina's node library: placing nodes, w
 | `beginMove` | `void beginMove()` |  |
 | `moveNodes` | `void moveNodes(Iterable<String> ids, Offset delta)` |  |
 | `endMove` | `void endMove()` |  |
+
+## `lib/ui/features/sub_editors/view_models/blueprint_graph_editor/conversion_wiring.dart`
+
+### `extension BlueprintGraphConversions on BlueprintGraphEditor`
+
+Farklı tipte iki pini lumina'nın onlar için söylediği dönüşüm node'u üzerinden bağlar (`LuminaBlueprintNodeLibrary.conversionNodeFor`). Bir integer çıkışını float girişine sürükleyip bırakınca araya **To Float (Integer)** konur; float → integer **Truncate** koyar; bool → integer / float ve integer / float / bool / name / vector / rotator → string kendi node'unu koyar. Sürüklerken ipucu kutusu ne konacağını söyler (`wire_drag_hint`; kayıplı dönüşümde uyarı renginde, "Truncate drops the fraction"), bırakınca Truncate bir toast ile kesirli kısmın atıldığını söyler. Ekleme tek undo adımıdır (`Insert <başlık>`: node ve iki kablo). Diğer uyuşmazlıklar kırmızı reddi korur. Canvas'ı paylaşan her graph'ta çalışır: Blueprint event graph'ı, fonksiyon / makro graph'ları, Level Blueprint, Widget Blueprint graph'ı ve Anim Blueprint event graph'ı / transition kuralları. Model katı kalır: `connectionError` ve `addWire` (MCP, scriptler) asla dönüştürmez. Pure node'lar için kompakt bir görünüm yoktur; dönüşüm node'ları sıradan pure node gibi çizilir.
+
+| Member | Signature | Description |
+|---|---|---|
+| `conversionFor` | `LuminaBlueprintConversion? conversionFor(String fromNodeId, String fromPinId, String toNodeId, String toPinId)` | Kablonun geçeceği dönüşüm; pinler doğrudan bağlanıyorsa ya da hiç bağlanamıyorsa null. |
+| `conversionHint` | `String conversionHint(LuminaBlueprintConversion conversion, LuminaPinType from, LuminaPinType to)` | Sürükleme ipucu: `Converts integer → float. To Float (Integer): …`. |
+| `insertConversion` | `LuminaBlueprintNode? insertConversion(String fromNodeId, String fromPinId, String toNodeId, String toPinId)` | Node'u iki node'un ortasına koyar ve çıkış → node → giriş bağlar; tek undo adımı. |
 
 ## `lib/ui/features/sub_editors/view_models/blueprint_interface_view_model.dart`
 

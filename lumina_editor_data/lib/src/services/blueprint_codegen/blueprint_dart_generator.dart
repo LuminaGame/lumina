@@ -369,6 +369,13 @@ const _reserved = {
 /// class inherits get a trailing `_`.
 String _var(String name) => dartMemberName(name, reserved: _reserved, fallback: 'variable');
 
+/// The field of a function's record result an output pin reads
+/// (`return_value` → `returnValue`): only Dart keywords are escaped, since a
+/// record field never shadows a member of the generated class.
+String _recordField(String pin) => dartMemberName(pin, reserved: _keywords, fallback: 'value');
+
+const _keywords = {'is', 'in', 'as', 'if', 'do', 'for', 'new', 'var', 'this', 'super', 'null', 'true', 'false'};
+
 String _dartType(LuminaPinType t) => switch (t) {
       LuminaPinType.float => 'double',
       LuminaPinType.integer => 'int',
