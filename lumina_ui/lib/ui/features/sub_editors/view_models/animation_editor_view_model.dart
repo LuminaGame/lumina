@@ -22,6 +22,7 @@ part 'animation_editor_view_model/notifies_curves_blend_space.dart';
 part 'animation_editor_view_model/dope_sheet.dart';
 part 'animation_editor_view_model/authoring.dart';
 part 'animation_editor_view_model/pose_tools.dart';
+part 'animation_editor_view_model/ik_and_root_motion.dart';
 
 class AnimationEditorViewModel extends _AnimationEditorViewModelState
     with
@@ -30,7 +31,8 @@ class AnimationEditorViewModel extends _AnimationEditorViewModelState
         _AnimationEditorNotifiesCurvesBlendSpace,
         _AnimationEditorDopeSheet,
         _AnimationEditorAuthoring,
-        _AnimationEditorPoseTools {
+        _AnimationEditorPoseTools,
+        _AnimationEditorIkAndRootMotion {
   AnimationEditorViewModel({required super.assetPath, super.initialAsset, super.vsync});
 
   bool get isLoading => _isLoading;
