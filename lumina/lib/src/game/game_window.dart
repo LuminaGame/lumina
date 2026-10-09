@@ -1,11 +1,10 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:developer' as developer;
-import 'dart:io';
 
 import 'package:lumina_core/lumina_core.dart' show ObservableValue;
 
-import 'package:lumina/src/utility/lumina_platform.dart';
+import 'package:lumina/src/game/game_display.dart';
+import 'package:lumina/src/game/game_user_settings_file.dart';
 
 /// How the game's window is shown on a desktop.
 ///
@@ -62,7 +61,8 @@ abstract interface class LuminaWindowModeBackend {
 /// `Start Fullscreen` mode and toggles it on Alt+Enter and F11; the generated
 /// `main()` calls [restore] before the first frame, which re-applies the mode
 /// the player chose last time (kept under `window_mode` in the per-player
-/// `user_settings.json`, see [settingsFileFor]). Without a [backend] (the
+/// `GameUserSettings.json`, see [settingsFileFor]) and their screen
+/// resolution and monitor ([LuminaGameDisplay]). Without a [backend] (the
 /// editor's Play-In-Editor, the web, tests) the mode is only recorded.
 abstract final class LuminaGameWindow {
   /// The runner's window, set by lumina_widgets on desktop.
@@ -71,7 +71,8 @@ abstract final class LuminaGameWindow {
   /// The current mode.
   static final ObservableValue<LuminaWindowMode> mode = ObservableValue(LuminaWindowMode.windowed);
 
-  /// Where the player's choice is kept; null keeps nothing (Play-In-Editor).
+  /// Where the player's choices are kept; null keeps nothing
+  /// (Play-In-Editor).
   static String? settingsFilePath;
 
   static Future<void> _pendingWrite = Future<void>.value();
@@ -82,45 +83,54 @@ abstract final class LuminaGameWindow {
   /// The key under which the mode is stored in the settings file.
   static const String settingsKey = 'window_mode';
 
-  /// The per-player settings file next to a game's [saveGamesDirectory]
-  /// (`<app support>/<game>/SaveGames` → `<app support>/<game>/user_settings.json`).
-  static String settingsFileFor(String saveGamesDirectory) {
-    final trimmed = saveGamesDirectory.replaceAll(RegExp(r'[\\/]+$'), '');
-    final cut = trimmed.lastIndexOf(RegExp(r'[\\/]'));
-    if (cut <= 0) return '$trimmed/user_settings.json';
-    return '${trimmed.substring(0, cut)}${trimmed[cut]}user_settings.json';
-  }
+  /// The per-player settings file in a game's [saveGamesDirectory]
+  /// (`<app support>/<game>/SaveGames/GameUserSettings.json`), the file the
+  /// graphics settings (`LuminaUserSettingsSubsystem`) are saved to as well.
+  static String settingsFileFor(String saveGamesDirectory) => LuminaGameUserSettingsFile.pathFor(saveGamesDirectory);
 
   /// Applies the player's saved mode, or [startMode] (Project Settings >
-  /// Start Fullscreen) when they never chose one, and listens for the
-  /// runner's own toggles. Returns the mode the window is in.
+  /// Start Fullscreen) when they never chose one, then their screen
+  /// resolution and monitor ([LuminaGameDisplay.restore]), and listens for
+  /// the runner's own toggles. The `user_settings.json` earlier versions kept
+  /// next to the save directory is merged into the settings file once.
+  /// Returns the mode the window is in.
   static Future<LuminaWindowMode> restore({
     LuminaWindowMode startMode = LuminaWindowMode.windowed,
     String? settingsFilePath,
   }) async {
     if (settingsFilePath != null) LuminaGameWindow.settingsFilePath = settingsFilePath;
-    final target = await _readSaved() ?? startMode;
+    final path = LuminaGameWindow.settingsFilePath;
+    var saved = <String, dynamic>{};
+    if (path != null) {
+      await LuminaGameUserSettingsFile.migrateLegacy(path: path);
+      saved = await LuminaGameUserSettingsFile.read(path);
+    }
+    final value = saved[settingsKey];
+    await _restoreMode((value is String ? LuminaWindowMode.parse(value) : null) ?? startMode);
+    await LuminaGameDisplay.restore(saved);
+    return mode.value;
+  }
+
+  static Future<void> _restoreMode(LuminaWindowMode target) async {
     final b = backend;
     if (b == null) {
       mode.value = target;
-      return target;
+      return;
     }
     b.onModeChanged = (m) {
       mode.value = m;
       _pendingWrite = _save(m);
+      unawaited(LuminaGameDisplay.onWindowModeChanged());
     };
     try {
       final current = await b.getMode();
-      if (current == null) {
-        // A runner without window-mode support: leave the window as it is.
-        return mode.value;
-      }
+      // A runner without window-mode support: leave the window as it is.
+      if (current == null) return;
       mode.value = current;
       if (current != target && await b.setMode(target)) mode.value = target;
     } on Object catch (e) {
       developer.log('Window mode could not be restored: $e', name: 'LuminaGameWindow');
     }
-    return mode.value;
   }
 
   /// Shows the window in [next] and keeps it as the player's choice. Returns
@@ -139,6 +149,8 @@ abstract final class LuminaGameWindow {
         }
       }
       await _save(next);
+      // The chosen screen resolution means something else in the new mode.
+      await LuminaGameDisplay.onWindowModeChanged();
       done.complete(applied);
     }();
     return done.future;
@@ -148,40 +160,10 @@ abstract final class LuminaGameWindow {
   static Future<bool> toggle() => setMode(
       mode.value == LuminaWindowMode.windowed ? LuminaWindowMode.borderlessFullscreen : LuminaWindowMode.windowed);
 
-  static Future<LuminaWindowMode?> _readSaved() async {
-    final path = settingsFilePath;
-    if (path == null || LuminaPlatform.isWeb) return null;
-    try {
-      final file = File(path);
-      if (!await file.exists()) return null;
-      final decoded = jsonDecode(await file.readAsString());
-      final value = decoded is Map ? decoded[settingsKey] : null;
-      return value is String ? LuminaWindowMode.parse(value) : null;
-    } on Object {
-      return null;
-    }
-  }
-
   static Future<void> _save(LuminaWindowMode m) async {
     final path = settingsFilePath;
-    if (path == null || LuminaPlatform.isWeb) return;
-    try {
-      final file = File(path);
-      var data = <String, dynamic>{};
-      if (await file.exists()) {
-        try {
-          final decoded = jsonDecode(await file.readAsString());
-          if (decoded is Map) data = Map<String, dynamic>.from(decoded);
-        } on FormatException {
-          // A damaged file is replaced.
-        }
-      }
-      data[settingsKey] = m.id;
-      await file.parent.create(recursive: true);
-      await file.writeAsString(const JsonEncoder.withIndent('  ').convert(data), flush: true);
-    } on Object catch (e) {
-      developer.log('Window mode could not be saved to $path: $e', name: 'LuminaGameWindow');
-    }
+    if (path == null) return;
+    await LuminaGameUserSettingsFile.update(path, {settingsKey: m.id});
   }
 
   /// Back to a fresh process's state (tests).

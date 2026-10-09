@@ -1,6 +1,8 @@
 import 'dart:io';
 
+import 'package:lumina_editor_data/src/services/game_window_runner/linux_display_sources.dart';
 import 'package:lumina_editor_data/src/services/game_window_runner/linux_sources.dart';
+import 'package:lumina_editor_data/src/services/game_window_runner/windows_display_sources.dart';
 import 'package:lumina_editor_data/src/services/game_window_runner/windows_sources.dart';
 
 /// What [GameWindowRunnerService.apply] did.
@@ -17,8 +19,9 @@ class GameWindowRunnerReport {
 
 /// Gives a game project's desktop runners their window modes: windowed and
 /// borderless fullscreen, the project's Start Fullscreen at launch, Alt+Enter
-/// and F11 toggles, and the `lumina/game_window` channel `LuminaGameWindow`
-/// drives.
+/// and F11 toggles, the monitors and the window size for the game's screen
+/// resolution, and the `lumina/game_window` channel `LuminaGameWindow` and
+/// `LuminaGameDisplay` drive.
 ///
 /// Writes `windows/runner/lumina_window_mode.{h,cpp}` and
 /// `linux/runner/lumina_window_mode.{h,cc}` (regenerated each time) and hooks
@@ -46,11 +49,17 @@ abstract final class GameWindowRunnerService {
 
   /// The Windows `.cpp` for [startFullscreen].
   static String windowsSource({required bool startFullscreen}) =>
-      kWindowsWindowModeSource.replaceFirst('{{START_FULLSCREEN}}', '$startFullscreen').trimLeft();
+      kWindowsWindowModeSource
+          .replaceFirst('{{START_FULLSCREEN}}', '$startFullscreen')
+          .replaceFirst('{{DISPLAY}}', kWindowsDisplaySource.trim())
+          .trimLeft();
 
   /// The Linux `.cc` for [startFullscreen].
   static String linuxSource({required bool startFullscreen}) =>
-      kLinuxWindowModeSource.replaceFirst('{{START_FULLSCREEN}}', startFullscreen ? 'TRUE' : 'FALSE').trimLeft();
+      kLinuxWindowModeSource
+          .replaceFirst('{{START_FULLSCREEN}}', startFullscreen ? 'TRUE' : 'FALSE')
+          .replaceFirst('{{DISPLAY}}', kLinuxDisplaySource.trim())
+          .trimLeft();
 
   static void _windows(String projectDir, bool startFullscreen, List<String> files, List<String> warnings) {
     const runner = 'windows/runner';

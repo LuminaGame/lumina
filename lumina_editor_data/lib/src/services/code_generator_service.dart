@@ -129,7 +129,8 @@ $registerFunctions$registerWidgets$registerBlueprints  // Every asset the level 
   LuminaSaveGameSubsystem.defaultSaveDirectoryPath =
       LuminaSaveGameSubsystem.platformSaveDirectory('${_escape(projectName)}') ?? LuminaSaveGameSubsystem.defaultSaveDirectoryPath;
   // Windowed or borderless fullscreen (Project Settings > Start Fullscreen,
-  // then the player's last choice); Alt+Enter and F11 toggle.
+  // then the player's last choice) and the player's screen resolution and
+  // monitor, from GameUserSettings.json; Alt+Enter and F11 toggle.
   await LuminaGameWindow.restore(
     startMode: $startMode,
     settingsFilePath: LuminaGameWindow.settingsFileFor(LuminaSaveGameSubsystem.defaultSaveDirectoryPath),

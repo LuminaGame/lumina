@@ -176,6 +176,15 @@ per-monitor DPI aware (Flutter's manifest), so the window and the Flutter view a
 The Linux runner uses `gtk_window_fullscreen` before the window is shown and the window's `key-press-event` for the
 keys.
 
+Both runners also carry the display part (`windows_display_sources.dart` / `linux_display_sources.dart`, put in place
+of `{{DISPLAY}}`): `getDisplays`, `setClientSize`, `moveToMonitor` and `displayChanged` for `LuminaGameDisplay`.
+Windows: `EnumDisplayMonitors` + `GetMonitorInfo`, every mode of `EnumDisplaySettingsEx` (24/32-bit, progressive, the
+modes the monitor supports) and `ENUM_CURRENT_SETTINGS`, the monitor's model name through `DisplayConfigGetDeviceInfo`,
+its DPI scale; a client size through `AdjustWindowRectExForDpi` (exact client area, clamped to `rcWork`, centred);
+`displayChanged` on `WM_DISPLAYCHANGE` and when the window ends up on another monitor. Linux: `GdkMonitor` geometry,
+work area, scale, refresh rate and model; GDK lists no modes, so the current mode is the only one (X11 and Wayland);
+`gtk_window_resize` / `gtk_window_move` (Wayland ignores the move) and `gtk_window_fullscreen_on_monitor`.
+
 | Member | Signature | Description |
 |---|---|---|
 | `apply` | `static GameWindowRunnerReport apply(String projectDir, {required bool startFullscreen})` | Writes and hooks both runners (a missing platform folder is skipped). `files`: what changed; `warnings`: an anchor not found. |

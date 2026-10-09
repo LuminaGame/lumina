@@ -273,6 +273,8 @@ class LuminaGameHostState extends State<LuminaGameHost> {
                   // resolution (fullscreen included).
                   decorated: false,
                   physicalResolution: true,
+                  // The player's screen resolution (Set Screen Resolution).
+                  followScreenResolution: true,
                 ),
                 LuminaWidgetLayer.forGame(game: _game),
               ],

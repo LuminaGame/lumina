@@ -226,7 +226,9 @@ class WebFilamentWidgetState extends State<FilamentWidget> with SingleTickerProv
       builder: (context, constraints) {
         final width = constraints.maxWidth.isFinite ? constraints.maxWidth : (widget.width.isFinite ? widget.width : 800.0);
         final height = constraints.maxHeight.isFinite ? constraints.maxHeight : (widget.height.isFinite ? widget.height : 600.0);
-        _resize((width * dpr).round().clamp(1, 8192), (height * dpr).round().clamp(1, 8192));
+        final fixed = widget.renderResolution;
+        _resize((fixed?.width ?? width * dpr).round().clamp(1, 8192),
+            (fixed?.height ?? height * dpr).round().clamp(1, 8192));
         final manipulator = widget.cameraManipulator;
         return SizedBox(
           width: width,

@@ -139,12 +139,75 @@ sunar, Alt+Tab ve overlay'ler çalışmaya devam eder.
 | `mode` | `static final ObservableValue<LuminaWindowMode> mode` | Şu anki mod (`Get Fullscreen Mode`'un okuduğu). |
 | `settingsFilePath` | `static String? settingsFilePath` | Oyuncunun seçiminin saklandığı yer; null hiçbir şey saklamaz (Play-In-Editor). |
 | `settingsKey` | `static const String settingsKey = 'window_mode'` | O JSON dosyasındaki anahtarı; dosyanın diğer anahtarları korunur. |
-| `settingsFileFor` | `static String settingsFileFor(String saveGamesDirectory)` | `<app support>/<oyun>/SaveGames` → `<app support>/<oyun>/user_settings.json`. |
-| `restore` | `static Future<LuminaWindowMode> restore({LuminaWindowMode startMode = windowed, String? settingsFilePath})` | Kayıtlı seçimi, yoksa `startMode`'u (Project Settings > Start Fullscreen) uygular ve runner'ın değişikliklerini dinler (her biri kaydedilir). Zaten o modda olan runner'a dokunulmaz. |
+| `settingsFileFor` | `static String settingsFileFor(String saveGamesDirectory)` | `<app support>/<oyun>/SaveGames` → `<app support>/<oyun>/SaveGames/GameUserSettings.json`; grafik ayarlarıyla paylaşılan dosya (`LuminaGameUserSettingsFile`). |
+| `restore` | `static Future<LuminaWindowMode> restore({LuminaWindowMode startMode = windowed, String? settingsFilePath})` | Eski bir `user_settings.json`'ı bir kez birleştirir, kayıtlı seçimi, yoksa `startMode`'u (Project Settings > Start Fullscreen) uygular, sonra kayıtlı ekran çözünürlüğünü ve monitörü (`LuminaGameDisplay.restore`), ve runner'ın değişikliklerini dinler (her biri kaydedilir ve çözünürlüğü yeniden uygular). Zaten o modda olan runner'a dokunulmaz. |
 | `setMode` | `static Future<bool> setMode(LuminaWindowMode next)` | `next`'i kaydeder ve runner'dan uygulamasını ister; runner yoksa false (mod yine kaydedilir). |
 | `toggle` | `static Future<bool> toggle()` | Pencereli ↔ kenarlıksız tam ekran. |
 | `pendingWrite` | `static Future<void> get pendingWrite` | Son değişiklik ve ayar yazımı bitince tamamlanır. |
 | `resetForTesting` | `static void resetForTesting()` | Yeni bir sürecin durumu. |
+
+## `lib/src/game/game_display.dart`, `display_info.dart`, `game_user_settings_file.dart`
+
+Ekran çözünürlüğü ve monitörler. Üretilen runner'ın `lumina/game_window` kanalı ayrıca `getDisplays`,
+`setClientSize` ve `moveToMonitor`'a yanıt verir ve `displayChanged` çağırır; Windows ve Linux'ta
+[LuminaGameDisplay.backend] `LuminaWindowModeChannel` (lumina_widgets), web'de `LuminaWebDisplayBackend`'dir.
+
+### Modeller
+
+| Tür | Üyeler | Açıklama |
+|---|---|---|
+| `LuminaDisplayMode` | `width`, `height`, `refreshRate` (Hz, 0 = bilinmiyor); `toList`, `fromList` | Fiziksel piksel olarak bir mod. |
+| `LuminaMonitor` | `index`, `name` (model, ör. `DELL U3419W`), `device` (`\\.\DISPLAY1`), `primary`, `bounds`, `workArea` (`LuminaScreenRect`), `current`, `modes`, `scale`; `resolutions`, `refreshRatesFor(w, h)`, `fromMap`, `toMap` | `resolutions`: `modes`'un farklı boyutları ve geçerli boyut, önce genişliğe sonra yüksekliğe göre artan. |
+| `LuminaDisplayInfo` | `monitors`, `currentMonitor`, `clientSize`, `current`; `fromMap`, `toMap` | Runner'ın `getDisplays` yanıtı (kullanılabilir monitör yoksa null). |
+
+### `abstract interface class LuminaDisplayBackend`
+
+| Üye | İmza | Açıklama |
+|---|---|---|
+| `queryDisplays` | `Future<LuminaDisplayInfo?> queryDisplays()` | Monitörler ve istemci alanı; ekran desteği olmayan runner'da null. |
+| `setClientSize` | `Future<(int, int)?> setClientSize(int width, int height)` | Pencereli: fiziksel piksel olarak istemci alanı, monitörün çalışma alanına sığdırılır ve ortalanır; elde edileni döndürür. Pencere boyutlanamıyorsa (web, eski runner'lar) null. |
+| `moveToMonitor` | `Future<bool> moveToMonitor(int index)` | Tam ekran: o monitörü kaplar (pencereli yerleşimi de oraya ortalar); pencereli: pencereyi ona ortalar. |
+| `onDisplayChanged` | `set onDisplayChanged(void Function(LuminaDisplayInfo)? listener)` | Bir ekran değişti ya da pencere başka bir monitöre geçti. |
+
+### `abstract final class LuminaGameDisplay`
+
+Seçilen çözünürlüğün anlamı: **pencereli**, pencerenin istemci alanı (oyun istemci boyutunda çizer); **kenarlıksız
+tam ekran**, pencere monitörü kaplamaya devam eder ve oyunun çizim hedefi (Filament view'ı ve dokusu) seçilen
+boyuttur; `LuminaGameWidget(followScreenResolution: true)` onu en-boy oranını koruyarak monitöre ölçekler (siyah
+bantlar). Monitör kadar ya da daha büyük bir boyut doğal çözünürlükte çizer. Boyutlanamayan bir pencere (web, runner
+yok) seçilen boyutu tam ekrandaki gibi ölçekleyerek çizer. Ekran modu hiç değişmez (exclusive tam ekran yok). Filament'in
+dinamik çözünürlüğü değil çizim hedefi kullanılır: dinamik çözünürlük viewport'u monitör boyutunda tutar (letterbox
+olmaz) ve ölçeğini zaten upscaler'lar kullanır. View seçilen boyutta olunca **Resolution Scale** seçilen × ölçek
+boyutunda çizer, **FSR3 / DLSS** seçilen boyutun kalite ölçeğinde çizip seçilen boyutu üretir; Flutter da bu kareyi
+monitöre ölçekler.
+
+| Üye | İmza | Açıklama |
+|---|---|---|
+| `backend` | `static LuminaDisplayBackend? backend` | `LuminaWidgets.ensureInitialized` kurar. |
+| `info` | `static final ObservableValue<LuminaDisplayInfo?> info` | Son rapor (başlangıç, `displayChanged`, her uygulama). |
+| `renderResolution` | `static final ObservableValue<(int, int)?> renderResolution` | Oyun widget'ının izlediği sabit çizim boyutu; null: kendi boyutu. |
+| `screenResolution` / `fullscreenMonitor` | `static (int, int)? get` / `static int? get` | Uygulanan seçim (null: doğal / olduğu yer). |
+| `apply` | `static Future<void> apply({(int, int)? resolution, int? monitor, bool persist = true})` | Seçimi hemen alır, sonra sırayla taşır / boyutlar ve ayar dosyasına `screen_resolution` / `fullscreen_monitor` yazar. |
+| `onWindowModeChanged` | `static Future<void> onWindowModeChanged()` | Seçimi yeni moda göre yeniden uygular (`LuminaGameWindow`, Set Fullscreen Mode, Alt+Enter ve F11'den sonra çağırır). |
+| `restore` | `static Future<void> restore(Map<String, dynamic> settings)` | Başlangıç (`LuminaGameWindow.restore`'dan): ekran değişikliklerini dinler, ekranları okur, kayıtlı seçimi geri yazmadan uygular. |
+| `currentResolution`, `desktopMode`, `supportedResolutions`, `refreshRatesFor`, `monitorCount`, `currentMonitor` | static | Blueprint düğümlerinin döndürdüğü (rapor yoksa çizim boyutundan yedek değerler). |
+| `resolutionFrom` / `monitorFrom` / `settingsPatch` | static | Ayar dosyası anahtarları: `screen_resolution: {width, height}`, `fullscreen_monitor: {index, device, name}` (aygıt kimliği indisten önce gelir). |
+| `pendingApply` / `resetForTesting` | static | Son uygulamadan sonra tamamlanır / yeni bir sürecin durumu. |
+
+### `abstract final class LuminaGameUserSettingsFile`
+
+Oyuncu başına tek dosya, `<save games>/GameUserSettings.json`: `window_mode`, `screen_resolution`,
+`fullscreen_monitor` ve `LuminaUserSettingsSubsystem.saveSettings`'in yazdığı her şeyi tutan düz bir JSON nesnesi.
+Her yazan kendi anahtarlarını birleştirir (`update`), bilmediği anahtarlar korunur; böylece yeni ayarlar ve başka
+yazanlar bir arada yaşar; yazmalar sıralıdır. Web'de hiçbir şey yazılmaz.
+
+| Üye | İmza | Açıklama |
+|---|---|---|
+| `pathFor` / `legacyPathFor` | `static String pathFor(String saveDirectory)` | `<saveDirectory>/GameUserSettings.json`; save dizininin yanındaki eski `user_settings.json`. |
+| `read` | `static Future<Map<String, dynamic>> read(String path)` | Eksik ya da bozuk dosyada boş. |
+| `update` | `static Future<bool> update(String path, Map<String, Object?> patch)` | `patch`'i birleştirir; null değer anahtarını siler. |
+| `migrateLegacy` | `static Future<bool> migrateLegacy({required String path, String? legacyPath})` | Bir kez: eski dosyanın ayar dosyasında olmayan anahtarlarını ekler (ayar dosyası kazanır), sonra eski dosyayı siler. |
+| `idle` | `static Future<void> get idle` | Sıradaki yazmalar bitince tamamlanır. |
 
 ## `lib/src/game/lumina_game.dart`
 

@@ -39,12 +39,14 @@ void main() {
 
   setUp(() {
     temp = Directory.systemTemp.createTempSync('lumina_window_');
-    settingsPath = '${temp.path}/user_settings.json';
+    settingsPath = LuminaGameWindow.settingsFileFor('${temp.path}/SaveGames');
     LuminaGameWindow.resetForTesting();
+    LuminaGameDisplay.resetForTesting();
   });
 
   tearDown(() {
     LuminaGameWindow.resetForTesting();
+    LuminaGameDisplay.resetForTesting();
     temp.deleteSync(recursive: true);
   });
 
@@ -111,7 +113,9 @@ void main() {
   });
 
   test('other keys of the user settings file are kept', () async {
-    File(settingsPath).writeAsStringSync(jsonEncode({'ray_tracing': true}));
+    File(settingsPath)
+      ..parent.createSync(recursive: true)
+      ..writeAsStringSync(jsonEncode({'ray_tracing': true}));
     LuminaGameWindow.backend = _RunnerWindow(LuminaWindowMode.windowed);
     await LuminaGameWindow.restore(settingsFilePath: settingsPath);
     await LuminaGameWindow.setMode(LuminaWindowMode.borderlessFullscreen);
@@ -134,10 +138,10 @@ void main() {
     expect(LuminaGameWindow.mode.value, LuminaWindowMode.borderlessFullscreen);
   });
 
-  test('settings file sits next to the save games folder', () {
+  test('settings file is GameUserSettings.json in the save games folder', () {
     expect(
-      LuminaGameWindow.settingsFileFor('/home/p/.local/share/My Game/SaveGames').replaceAll('\\', '/'),
-      '/home/p/.local/share/My Game/user_settings.json',
+      LuminaGameWindow.settingsFileFor('/home/p/.local/share/My Game/SaveGames/').replaceAll('\\', '/'),
+      '/home/p/.local/share/My Game/SaveGames/GameUserSettings.json',
     );
   });
 

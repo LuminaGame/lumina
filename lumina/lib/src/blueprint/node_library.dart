@@ -21,6 +21,7 @@ part 'node_library/widget_blueprint.dart';
 part 'node_library/ragdoll.dart';
 part 'node_library/traversal.dart';
 part 'node_library/window_mode.dart';
+part 'node_library/display_settings.dart';
 
 /// How a node takes part in execution.
 enum LuminaBlueprintNodeKind {
@@ -629,6 +630,7 @@ abstract final class LuminaBlueprintNodeLibrary {
     ..._ragdollNodes,
     ..._traversalNodes,
     ..._windowModeNodes,
+    ..._displaySettingsNodes,
   ]);
 
   static final Map<String, LuminaBlueprintNodeSpec> _byId = {for (final s in builtIns) s.id: s};

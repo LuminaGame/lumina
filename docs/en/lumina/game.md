@@ -139,12 +139,75 @@ without an extra copy, and Alt+Tab and overlays keep working.
 | `mode` | `static final ObservableValue<LuminaWindowMode> mode` | The current mode (what `Get Fullscreen Mode` reads). |
 | `settingsFilePath` | `static String? settingsFilePath` | Where the player's choice is kept; null keeps nothing (Play-In-Editor). |
 | `settingsKey` | `static const String settingsKey = 'window_mode'` | Its key in that JSON file; other keys of the file are kept. |
-| `settingsFileFor` | `static String settingsFileFor(String saveGamesDirectory)` | `<app support>/<game>/SaveGames` → `<app support>/<game>/user_settings.json`. |
-| `restore` | `static Future<LuminaWindowMode> restore({LuminaWindowMode startMode = windowed, String? settingsFilePath})` | Applies the saved choice, or `startMode` (Project Settings > Start Fullscreen) when there is none, and listens to the runner's toggles (each one is saved). A runner already in the mode is left alone. |
+| `settingsFileFor` | `static String settingsFileFor(String saveGamesDirectory)` | `<app support>/<game>/SaveGames` → `<app support>/<game>/SaveGames/GameUserSettings.json`, the file shared with the graphics settings (`LuminaGameUserSettingsFile`). |
+| `restore` | `static Future<LuminaWindowMode> restore({LuminaWindowMode startMode = windowed, String? settingsFilePath})` | Merges a legacy `user_settings.json` once, applies the saved choice, or `startMode` (Project Settings > Start Fullscreen) when there is none, then the saved screen resolution and monitor (`LuminaGameDisplay.restore`), and listens to the runner's toggles (each one is saved and re-applies the resolution). A runner already in the mode is left alone. |
 | `setMode` | `static Future<bool> setMode(LuminaWindowMode next)` | Records and saves `next` and asks the runner to apply it; false without a runner (the mode is still recorded). |
 | `toggle` | `static Future<bool> toggle()` | Windowed ↔ borderless fullscreen. |
 | `pendingWrite` | `static Future<void> get pendingWrite` | Completes when the last change and its settings write are done. |
 | `resetForTesting` | `static void resetForTesting()` | A fresh process's state. |
+
+## `lib/src/game/game_display.dart`, `display_info.dart`, `game_user_settings_file.dart`
+
+The screen resolution and the monitors. The generated runner's `lumina/game_window` channel also answers
+`getDisplays`, `setClientSize` and `moveToMonitor` and calls `displayChanged`; `LuminaWindowModeChannel` (lumina_widgets)
+is the [LuminaGameDisplay.backend] on Windows and Linux, `LuminaWebDisplayBackend` on the web.
+
+### Models
+
+| Type | Members | Description |
+|---|---|---|
+| `LuminaDisplayMode` | `width`, `height`, `refreshRate` (Hz, 0 = unknown); `toList`, `fromList` | One mode in physical pixels. |
+| `LuminaMonitor` | `index`, `name` (model, e.g. `DELL U3419W`), `device` (`\\.\DISPLAY1`), `primary`, `bounds`, `workArea` (`LuminaScreenRect`), `current`, `modes`, `scale`; `resolutions`, `refreshRatesFor(w, h)`, `fromMap`, `toMap` | `resolutions`: the distinct sizes of `modes` plus the current one, ascending by width then height. |
+| `LuminaDisplayInfo` | `monitors`, `currentMonitor`, `clientSize`, `current`; `fromMap`, `toMap` | The runner's `getDisplays` answer (null without a usable monitor). |
+
+### `abstract interface class LuminaDisplayBackend`
+
+| Member | Signature | Description |
+|---|---|---|
+| `queryDisplays` | `Future<LuminaDisplayInfo?> queryDisplays()` | The monitors and the client area; null from a runner without display support. |
+| `setClientSize` | `Future<(int, int)?> setClientSize(int width, int height)` | Windowed: the client area in physical pixels, clamped to the monitor's work area and centred; returns what it got. Null when the window cannot be resized (web, older runners). |
+| `moveToMonitor` | `Future<bool> moveToMonitor(int index)` | Fullscreen: covers that monitor (and centres the windowed placement there); windowed: centres the window on it. |
+| `onDisplayChanged` | `set onDisplayChanged(void Function(LuminaDisplayInfo)? listener)` | A display changed, or the window ended up on another monitor. |
+
+### `abstract final class LuminaGameDisplay`
+
+What the chosen resolution means: **windowed**, the window's client area (the game renders at the client size);
+**borderless fullscreen**, the window keeps covering the monitor and the game's render target (the Filament view and
+its texture) is the chosen size, which `LuminaGameWidget(followScreenResolution: true)` scales to the monitor with
+its aspect ratio kept (black bars). A size at least the monitor's renders native. A window that cannot be resized
+(web, no runner) renders the chosen size scaled, as in fullscreen. The display mode itself never changes (no
+exclusive fullscreen). It is the render target, not Filament's dynamic resolution, because dynamic resolution keeps
+the viewport at the monitor size (no letterbox) and the upscalers already own its scale: with the view at the chosen
+size, **Resolution Scale** renders at chosen × scale and **FSR3 / DLSS** render at their quality scale of the chosen
+size and output the chosen size; Flutter then scales that frame to the monitor.
+
+| Member | Signature | Description |
+|---|---|---|
+| `backend` | `static LuminaDisplayBackend? backend` | Set by `LuminaWidgets.ensureInitialized`. |
+| `info` | `static final ObservableValue<LuminaDisplayInfo?> info` | The last report (start, `displayChanged`, every apply). |
+| `renderResolution` | `static final ObservableValue<(int, int)?> renderResolution` | The fixed render size the game widget follows; null: its own size. |
+| `screenResolution` / `fullscreenMonitor` | `static (int, int)? get` / `static int? get` | The applied choice (null: native / where it is). |
+| `apply` | `static Future<void> apply({(int, int)? resolution, int? monitor, bool persist = true})` | Takes the choice at once, then moves / resizes in order and writes `screen_resolution` / `fullscreen_monitor` to the settings file. |
+| `onWindowModeChanged` | `static Future<void> onWindowModeChanged()` | Re-applies the choice for the new mode (`LuminaGameWindow` calls it after Set Fullscreen Mode, Alt+Enter, F11). |
+| `restore` | `static Future<void> restore(Map<String, dynamic> settings)` | Start-up (from `LuminaGameWindow.restore`): listens for display changes, reads the displays, applies the stored choice without writing it. |
+| `currentResolution`, `desktopMode`, `supportedResolutions`, `refreshRatesFor`, `monitorCount`, `currentMonitor` | static | What the Blueprint nodes return (fallbacks from the render size without a report). |
+| `resolutionFrom` / `monitorFrom` / `settingsPatch` | static | The settings-file keys: `screen_resolution: {width, height}`, `fullscreen_monitor: {index, device, name}` (the device id wins over the index). |
+| `pendingApply` / `resetForTesting` | static | Completes after the last apply / a fresh process's state. |
+
+### `abstract final class LuminaGameUserSettingsFile`
+
+The one per-player file, `<save games>/GameUserSettings.json`: a flat JSON object holding `window_mode`,
+`screen_resolution`, `fullscreen_monitor` and everything `LuminaUserSettingsSubsystem.saveSettings` writes. Every
+writer merges its keys (`update`) and keys it does not know are kept, so newer settings and other writers coexist;
+writes are serialized. Nothing is written on the web.
+
+| Member | Signature | Description |
+|---|---|---|
+| `pathFor` / `legacyPathFor` | `static String pathFor(String saveDirectory)` | `<saveDirectory>/GameUserSettings.json`; the legacy `user_settings.json` beside the save directory. |
+| `read` | `static Future<Map<String, dynamic>> read(String path)` | Empty for a missing or damaged file. |
+| `update` | `static Future<bool> update(String path, Map<String, Object?> patch)` | Merges `patch`; a null value removes its key. |
+| `migrateLegacy` | `static Future<bool> migrateLegacy({required String path, String? legacyPath})` | Once: adds the legacy file's keys the settings file lacks (the settings file wins), then deletes the legacy file. |
+| `idle` | `static Future<void> get idle` | Completes when queued writes are done. |
 
 ## `lib/src/game/lumina_game.dart`
 

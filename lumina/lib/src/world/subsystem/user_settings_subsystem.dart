@@ -5,6 +5,7 @@ import 'package:flutter_filament/filament.dart';
 import 'package:lumina_core/lumina_core.dart' show EngineLoggerService;
 
 import 'package:lumina/src/components/camera/camera_component.dart';
+import 'package:lumina/src/game/game_user_settings_file.dart';
 import 'package:lumina/src/post_process/rendering_features.dart';
 import 'package:lumina/src/post_process/scalability_profile.dart';
 import 'package:lumina/src/post_process/shadow_settings.dart';
@@ -12,21 +13,25 @@ import 'package:lumina/src/save/save_game_subsystem.dart';
 import 'package:lumina/src/world/world.dart';
 import 'package:lumina/src/world/subsystem/world_subsystem.dart';
 
+export 'package:lumina/src/world/subsystem/user_settings_display.dart';
 export 'package:lumina/src/world/subsystem/user_settings_rendering.dart';
 
 /// World subsystem managing engine scalability settings, quality presets,
 /// view distance, resolution scale, frame pacing, and graphics configuration,
-/// plus ray tracing and upscaling ([LuminaUserSettingsRenderingFeatures]).
+/// plus ray tracing and upscaling ([LuminaUserSettingsRenderingFeatures]) and
+/// the screen resolution and monitor ([LuminaUserSettingsDisplay]).
 ///
 /// The scalability presets leave the ray tracing and upscaler choice alone:
 /// those depend on the GPU and are opted into by the player, so picking
 /// `Cinematic` never turns ray tracing on and picking `Low` never turns an
 /// upscaler off.
-class LuminaUserSettingsSubsystem extends LuminaWorldSubsystem with LuminaUserSettingsRenderingFeatures {
+class LuminaUserSettingsSubsystem extends LuminaWorldSubsystem
+    with LuminaUserSettingsRenderingFeatures, LuminaUserSettingsDisplay {
   /// Where [saveSettings] and [loadSettings] keep the settings by default:
-  /// `GameUserSettings.json` in the save game directory.
+  /// `GameUserSettings.json` in the save game directory, the file the window
+  /// mode, screen resolution and monitor are kept in as well.
   static String get defaultSettingsFilePath =>
-      '${LuminaSaveGameSubsystem.defaultSaveDirectoryPath}/GameUserSettings.json';
+      LuminaGameUserSettingsFile.pathFor(LuminaSaveGameSubsystem.defaultSaveDirectoryPath);
 
   static const double viewDistanceLow = 25000.0; // 250 m
   static const double viewDistanceMedium = 50000.0; // 500 m
@@ -134,6 +139,7 @@ class LuminaUserSettingsSubsystem extends LuminaWorldSubsystem with LuminaUserSe
         'target_fps': _targetFps,
         'vsync': _vsyncEnabled,
         'rendering_features': renderingFeatures.toMap(),
+        ...displaySettingsMap(),
       };
 
   /// Takes the settings in [map] (what [toMap] wrote; missing or mistyped
@@ -155,21 +161,21 @@ class LuminaUserSettingsSubsystem extends LuminaWorldSubsystem with LuminaUserSe
     if (map['vsync'] is bool) _vsyncEnabled = map['vsync'] as bool;
     final features = map['rendering_features'];
     if (features is Map) setRenderingFeatures(LuminaRenderingFeatureSettings.fromMap(Map<String, dynamic>.from(features)));
+    stageDisplaySettingsFrom(map);
     applySettings();
   }
 
-  /// Writes [toMap] to [path] (default [defaultSettingsFilePath]); false when
-  /// the file cannot be written.
+  /// Merges [toMap] into the settings file at [path] (default
+  /// [defaultSettingsFilePath]), keeping the keys others keep there (the
+  /// window mode, settings of newer versions); false when the file cannot be
+  /// written.
   Future<bool> saveSettings({String? path}) async {
-    final file = File(path ?? defaultSettingsFilePath);
-    try {
-      await file.parent.create(recursive: true);
-      await file.writeAsString(const JsonEncoder.withIndent('  ').convert(toMap()));
-      return true;
-    } catch (e) {
-      EngineLoggerService().log('user settings not saved to ${file.path}: $e', level: 'warning', source: 'LuminaUserSettingsSubsystem');
-      return false;
+    final target = path ?? defaultSettingsFilePath;
+    final saved = await LuminaGameUserSettingsFile.update(target, toMap());
+    if (!saved) {
+      EngineLoggerService().log('user settings not saved to $target', level: 'warning', source: 'LuminaUserSettingsSubsystem');
     }
+    return saved;
   }
 
   /// Reads the settings [saveSettings] wrote and applies them; false, with
@@ -470,5 +476,7 @@ class LuminaUserSettingsSubsystem extends LuminaWorldSubsystem with LuminaUserSe
     }
     // After the profile: the upscalers replace its TAA and dynamic resolution.
     applyRenderingFeatures(baseTaa: profile.taa, baseDynamicResolution: profile.dynamicResolution);
+    // The screen resolution and monitor, when a new choice is staged.
+    applyDisplaySettings();
   }
 }

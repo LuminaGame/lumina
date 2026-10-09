@@ -18,7 +18,10 @@ const String kWindowsWindowModeHeader = r'''
 // mode while the window is still hidden, toggles on Alt+Enter and F11
 // (restoring the windowed placement), keeps covering the monitor through
 // display and DPI changes, and answers the "lumina/game_window" channel
-// (getMode, setMode, getInfo; calls modeChanged after a key toggle).
+// (getMode, setMode, getInfo; calls modeChanged after a key toggle). It also
+// reports the monitors and their display modes and resizes or moves the
+// window for the game's screen resolution (getDisplays, setClientSize,
+// moveToMonitor; calls displayChanged).
 //
 // Call once from FlutterWindow::OnCreate, after SetChildContent.
 void LuminaWindowModeAttach(flutter::BinaryMessenger* messenger, HWND window,
@@ -37,9 +40,14 @@ const String kWindowsWindowModeSource = r'''
 #include <flutter/encodable_value.h>
 #include <flutter/method_channel.h>
 #include <flutter/standard_method_codec.h>
+#include <flutter_windows.h>
 
+#include <algorithm>
 #include <memory>
+#include <set>
 #include <string>
+#include <tuple>
+#include <vector>
 
 namespace {
 
@@ -185,6 +193,8 @@ EncodableValue Info() {
   });
 }
 
+{{DISPLAY}}
+
 bool IsToggleKey(UINT message, WPARAM key, LPARAM flags) {
   const bool alt = (flags & (1 << 29)) != 0;
   if (message == WM_SYSKEYDOWN && key == VK_RETURN && alt) return true;
@@ -220,6 +230,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wparam,
   if (g_fullscreen && (message == WM_DPICHANGED || message == WM_DISPLAYCHANGE)) {
     FitToMonitor();
   }
+  WatchDisplays(message);
   return result;
 }
 
@@ -247,6 +258,8 @@ void HandleCall(const flutter::MethodCall<EncodableValue>& call,
     }
   } else if (method == "getInfo") {
     result->Success(Info());
+  } else if (HandleDisplayCall(call, result)) {
+    // getDisplays, setClientSize, moveToMonitor.
   } else {
     result->NotImplemented();
   }
@@ -267,6 +280,7 @@ void LuminaWindowModeAttach(flutter::BinaryMessenger* messenger, HWND window,
   g_channel = std::make_unique<flutter::MethodChannel<EncodableValue>>(
       messenger, kChannelName, &flutter::StandardMethodCodec::GetInstance());
   g_channel->SetMethodCallHandler(HandleCall);
+  g_last_monitor = ::MonitorFromWindow(window, MONITOR_DEFAULTTONEAREST);
   if (kStartFullscreen) {
     // The windowed size Alt+Enter returns to: centred on the monitor.
     RECT r = {};

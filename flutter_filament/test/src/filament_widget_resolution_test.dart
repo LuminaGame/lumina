@@ -35,6 +35,19 @@ void main() {
     expect(size, (1600, 900));
   });
 
+  testWidgets('a fixed render resolution wins over the layout size', (tester) async {
+    final size = await renderSizeOf(
+      tester,
+      const FilamentWidget(
+        backend: FilamentBackend.noop,
+        physicalResolution: true,
+        decorated: false,
+        renderResolution: Size(1280, 720),
+      ),
+    );
+    expect(size, (1280, 720));
+  });
+
   testWidgets('by default the frame renders at the logical layout size', (tester) async {
     final size = await renderSizeOf(tester, const FilamentWidget(backend: FilamentBackend.noop));
     expect(size, (800, 450));

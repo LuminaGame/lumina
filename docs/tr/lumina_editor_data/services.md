@@ -176,6 +176,15 @@ getirir. Tam ekrandayken `WM_DPICHANGED` / `WM_DISPLAYCHANGE` pencereyi monitör
 başına DPI farkındadır (Flutter'ın manifest'i); pencere ve Flutter view monitörün fiziksel pikselleridir. Linux
 runner'ı pencere gösterilmeden önce `gtk_window_fullscreen`, tuşlar için pencerenin `key-press-event`'ini kullanır.
 
+İki runner ekran bölümünü de taşır (`windows_display_sources.dart` / `linux_display_sources.dart`, `{{DISPLAY}}`
+yerine konur): `LuminaGameDisplay` için `getDisplays`, `setClientSize`, `moveToMonitor` ve `displayChanged`. Windows:
+`EnumDisplayMonitors` + `GetMonitorInfo`, `EnumDisplaySettingsEx`'in her modu (24/32 bit, progresif, monitörün
+desteklediği modlar) ve `ENUM_CURRENT_SETTINGS`, `DisplayConfigGetDeviceInfo` ile monitörün model adı, DPI ölçeği;
+istemci boyutu `AdjustWindowRectExForDpi` ile (tam istemci alanı, `rcWork`'e sığdırılmış, ortalanmış);
+`WM_DISPLAYCHANGE`'de ve pencere başka monitöre geçince `displayChanged`. Linux: `GdkMonitor` geometri, çalışma alanı,
+ölçek, yenileme hızı ve model; GDK mod listelemez, tek mod geçerli moddur (X11 ve Wayland); `gtk_window_resize` /
+`gtk_window_move` (Wayland taşımayı yok sayar) ve `gtk_window_fullscreen_on_monitor`.
+
 | Üye | İmza | Açıklama |
 |---|---|---|
 | `apply` | `static GameWindowRunnerReport apply(String projectDir, {required bool startFullscreen})` | İki runner'ı yazar ve bağlar (olmayan platform klasörü atlanır). `files`: değişenler; `warnings`: bulunamayan bir bağlantı noktası. |

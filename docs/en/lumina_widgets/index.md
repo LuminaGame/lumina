@@ -135,7 +135,11 @@ Flutter widget that embeds the `FilamentWidget` viewport and drives the [LuminaG
 `decorated` and `physicalResolution` are forwarded to `FilamentWidget` (defaults `true` / `false`: the bordered panel
 at logical size). [`LuminaGameHost`](#class-luminagamehost), the screen generated games show, passes `false` /
 `true`: the frame fills the window edge to edge at the display's physical pixels, so a borderless fullscreen game
-renders at the monitor's native resolution.
+renders at the monitor's native resolution. It also passes `followScreenResolution: true`: the view then renders at
+`LuminaGameDisplay.renderResolution` (the player's screen resolution in borderless fullscreen, or where the window
+cannot be resized) through `FilamentWidget.renderResolution`, scaled into the largest box of its aspect ratio, centred
+on black (`LuminaScreenResolutionBox`, `lib/src/game/screen_resolution_box.dart`). The widget tree stays the same when
+the resolution changes, so the view and its engine resources survive. The HUD and UMG layer stay at the window's size.
 
 **Functions, Methods & Accessors:**
 
@@ -202,21 +206,30 @@ returns the same object (so calling it in `build` does not resubscribe). A round
 
 ## `lib/src/utility/window_mode_channel.dart`
 
-### `class LuminaWindowModeChannel implements LuminaWindowModeBackend`
+### `class LuminaWindowModeChannel implements LuminaWindowModeBackend, LuminaDisplayBackend`
 
 The generated runner's window ([`LuminaGameWindow.backend`](../lumina/game.md#libsrcgamegame_windowdart)) over the
 `lumina/game_window` method channel; `LuminaWidgets.ensureInitialized` installs it on Windows and Linux. The runner
 (`windows/runner/lumina_window_mode.cpp`, `linux/runner/lumina_window_mode.cc`) answers `getMode` (`windowed` /
 `borderless_fullscreen`), `setMode {mode}` (whether it applied) and `getInfo` (diagnostics: `window`, `monitor`, `work`
 as `[left, top, right, bottom]` physical pixels, `client` `[w, h]`, `popup`, `caption`, `foreground`), and calls
-`modeChanged {mode}` after Alt+Enter or F11. A runner without them (the editor, games generated earlier) throws
-`MissingPluginException`: no mode, nothing applied.
+`modeChanged {mode}` after Alt+Enter or F11. For the screen resolution ([`LuminaGameDisplay.backend`](../lumina/game.md#libsrcgamegame_displaydart-display_infodart-game_user_settings_filedart),
+the same object) it answers `getDisplays` (monitors with name, device, bounds, work area, current mode, every mode,
+scale; the current monitor; the client size), `setClientSize {width, height}` (the client size it got) and
+`moveToMonitor {index}`, and calls `displayChanged` when a display changes or the window moves to another monitor.
+A runner without them (the editor, games generated earlier) throws `MissingPluginException`: no mode, no displays,
+nothing applied.
+
+`LuminaWebDisplayBackend` (`lib/src/utility/web_display_backend.dart`) is the web's display backend: one monitor, the
+browser screen (`window.screen` × `devicePixelRatio`) with its current mode only and no refresh rate, the page's
+viewport as client size; it cannot resize or move the window, so a chosen resolution renders scaled in the canvas.
 
 | Member | Signature | Description |
 |---|---|---|
 | `channelName` | `static const String channelName = 'lumina/game_window'` | The channel. |
 | `getMode` / `setMode` / `onModeChanged` | see `LuminaWindowModeBackend` | The runner protocol above. |
 | `windowInfo` | `Future<Map<String, Object?>?> windowInfo()` | `getInfo`, or null without a runner that reports it. |
+| `queryDisplays` / `setClientSize` / `moveToMonitor` / `onDisplayChanged` | see `LuminaDisplayBackend` | The display protocol above. |
 
 ## `lib/src/utility/web_loading.dart`
 

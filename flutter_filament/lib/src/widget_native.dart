@@ -366,8 +366,9 @@ class NativeFilamentWidgetState extends State<FilamentWidget>
             ? (MediaQuery.maybeDevicePixelRatioOf(context) ?? 1.0)
             : 1.0;
         final int maxSize = widget.physicalResolution ? 8192 : 4096;
-        final int targetWidth = (layoutWidth * scale).round().clamp(1, maxSize);
-        final int targetHeight = (layoutHeight * scale).round().clamp(1, maxSize);
+        final Size? fixed = widget.renderResolution;
+        final int targetWidth = (fixed?.width ?? layoutWidth * scale).round().clamp(1, maxSize);
+        final int targetHeight = (fixed?.height ?? layoutHeight * scale).round().clamp(1, maxSize);
 
         if (_viewWidth != targetWidth || _viewHeight != targetHeight) {
           WidgetsBinding.instance.addPostFrameCallback((_) {

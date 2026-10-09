@@ -686,6 +686,7 @@ A Flutter widget for rendering 3D Filament scenes natively.  Manages engine life
 | `skipReadPixels` | `bool skipReadPixels` | Whether to skip readPixels for the current frame. Useful when the first frame of a new complex asset is rendered, which causes shader compilation and might timeout the readPixels fence. |
 | `decorated` | `bool decorated` | Whether the frame sits in the rounded, bordered viewport panel (default `true`, tools) or fills the widget edge to edge on black (`false`, a game screen). |
 | `physicalResolution` | `bool physicalResolution` | Whether the frame renders at the display's physical pixels (layout size × device pixel ratio, up to 8192 per side) instead of the layout's logical size (default `false`, up to 4096). A game on a scaled display renders at the monitor's native resolution this way. |
+| `renderResolution` | `Size? renderResolution` | A fixed render size in physical pixels that wins over the layout size (a game's chosen screen resolution); the frame is scaled to fill the widget (native: `RawImage` fill; web: the canvas's drawing buffer). Null: the layout size. |
 | `createState` | `State<FilamentWidget> createState() => _FilamentWidgetState()` | Creates, configures, and returns a new `State` instance or associated GPU resource. |
 
 #### `class _FilamentWidgetState`

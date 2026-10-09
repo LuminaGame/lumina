@@ -322,8 +322,10 @@ Diyalog içerisindeki seçilebilir her bir tuş veya eksen seçeneğini temsil e
 tam ekranda başlatır: açıldığı monitörün tamamını, görev çubuğu dahil, monitörün doğal çözünürlüğünde kaplayan,
 başlık çubuğu ve kenarlığı olmayan bir pencere (oyun ekranı ekranın fiziksel pikselinde çizer). Oyuncu pencereli ↔
 tam ekran arasında **Alt+Enter** ya da **F11** ile, Blueprint'ler **Set Fullscreen Mode** / **Toggle Fullscreen**
-ile geçer; oyuncunun son seçimi kayıtların yanındaki `user_settings.json`'da saklanır ve sonraki açılışta ayarın
-önüne geçer. Ayar kapalıyken oyun pencereli başlar, tuşlar yine çalışır. Runner tarafını kod üretimi yazar
+ile geçer; oyuncunun son seçimi kayıt klasöründeki `GameUserSettings.json`'da saklanır (Set Screen Resolution / Set
+Fullscreen Monitor'ün seçtiği ekran çözünürlüğü ve monitörle birlikte) ve sonraki açılışta ayarın önüne geçer.
+Varsayılan çözünürlük ayarı yoktur: pencereli bir oyun, oyuncu bir çözünürlük seçene kadar runner'ın 1280×720
+boyutunda açılır. Ayar kapalıyken oyun pencereli başlar, tuşlar yine çalışır. Runner tarafını kod üretimi yazar
 (`GameWindowRunnerService`); ayarı değiştirdikten sonra oyunu yeniden derleyin. Özel (exclusive) tam ekran modu
 yoktur: oyunun karesini Flutter'ın compositor'ü sunar (bkz.
 [`LuminaWindowMode`](../../lumina/game.md#libsrcgamegame_windowdart)).

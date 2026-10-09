@@ -15,6 +15,7 @@ import 'package:lumina/src/components/particles/particle_emitter_config.dart';
 import 'package:lumina/src/components/particles/particle_system_component.dart';
 import 'package:lumina/src/game/console.dart';
 import 'package:lumina/src/game/game_instance.dart';
+import 'package:lumina/src/game/game_display.dart';
 import 'package:lumina/src/game/game_window.dart';
 import 'package:lumina/src/material/dynamic_material_instance.dart';
 import 'package:lumina/src/media/video_playback.dart';
@@ -90,6 +91,7 @@ part 'blueprint_function_library/widget_blueprint.dart';
 part 'blueprint_function_library/ragdoll.dart';
 part 'blueprint_function_library/traversal.dart';
 part 'blueprint_function_library/window_mode.dart';
+part 'blueprint_function_library/display_settings.dart';
 
 /// What a node function gets when the VM calls it: the
 /// Blueprint instance it runs on.
@@ -997,6 +999,15 @@ abstract final class LuminaBlueprintFunctionLibrary {
   static const setFullscreenMode = _setFullscreenMode;
   static const getFullscreenMode = _getFullscreenMode;
   static const toggleFullscreen = _toggleFullscreen;
+  /// The screen resolution and monitors (see `LuminaGameDisplay`).
+  static const getScreenResolution = _getScreenResolution;
+  static const getDesktopResolution = _getDesktopResolution;
+  static const getSupportedResolutions = _getSupportedResolutions;
+  static const getSupportedRefreshRates = _getSupportedRefreshRates;
+  static const getMonitorCount = _getMonitorCount;
+  static const getCurrentMonitor = _getCurrentMonitor;
+  static const setScreenResolution = _setScreenResolution;
+  static const setFullscreenMonitor = _setFullscreenMonitor;
   static const spawnEmitterAtLocation = _spawnEmitterAtLocation;
   static const spawnEmitterAttached = _spawnEmitterAttached;
   static const activateParticleSystem = _activateParticleSystem;
@@ -1063,6 +1074,7 @@ abstract final class LuminaBlueprintFunctionLibrary {
     ..._ragdollCallShapes,
     ..._traversalCallShapes,
     ..._windowModeCallShapes,
+    ..._displaySettingsCallShapes,
     // @@CALL_SHAPES_END
   });
 
@@ -1096,6 +1108,7 @@ abstract final class LuminaBlueprintFunctionLibrary {
     ..._ragdollFunctions,
     ..._traversalFunctions,
     ..._windowModeFunctions,
+    ..._displaySettingsFunctions,
     // @@FUNCTIONS_END
   });
 }

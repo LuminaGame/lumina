@@ -87,6 +87,11 @@ class FilamentWidget extends StatefulWidget {
   /// the layout's logical size (the default).
   final bool physicalResolution;
 
+  /// A fixed size, in physical pixels, to render at whatever the layout
+  /// size (a game's chosen screen resolution); the frame is scaled to fill
+  /// the widget. Null renders at the layout size ([physicalResolution]).
+  final Size? renderResolution;
+
   const FilamentWidget({
     super.key,
     this.onSceneCreated,
@@ -106,6 +111,7 @@ class FilamentWidget extends StatefulWidget {
     this.targetFps,
     this.decorated = true,
     this.physicalResolution = false,
+    this.renderResolution,
   });
 
   /// Target frame rate in FPS; null or <= 0 means unlimited / display refresh rate.

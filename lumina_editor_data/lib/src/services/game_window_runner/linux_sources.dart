@@ -16,7 +16,10 @@ const String kLinuxWindowModeHeader = r'''
 // (gtk_window_fullscreen, X11 and Wayland). Starts in the project's Start
 // Fullscreen mode before the window is shown, toggles on Alt+Enter and F11,
 // and answers the "lumina/game_window" channel (getMode, setMode, getInfo;
-// calls modeChanged after a key toggle).
+// calls modeChanged after a key toggle). It also reports the monitors
+// (GdkMonitor: current mode only) and resizes or moves the window for the
+// game's screen resolution (getDisplays, setClientSize, moveToMonitor; calls
+// displayChanged).
 //
 // Call once from my_application_activate, after fl_register_plugins.
 void lumina_window_mode_attach(GtkWindow* window, FlView* view);
@@ -95,6 +98,8 @@ static gboolean key_release_cb(GtkWidget* widget, GdkEventKey* event,
   return TRUE;
 }
 
+{{DISPLAY}}
+
 static void method_call_cb(FlMethodChannel* channel, FlMethodCall* call,
                            gpointer user_data) {
   const gchar* method = fl_method_call_get_name(call);
@@ -131,6 +136,9 @@ static void method_call_cb(FlMethodChannel* channel, FlMethodCall* call,
     fl_value_append_take(client, fl_value_new_int(height * scale));
     fl_value_set_string_take(result, "client", client);
     response = FL_METHOD_RESPONSE(fl_method_success_response_new(result));
+  } else if (FlMethodResponse* display = handle_display_call(method, fl_method_call_get_args(call))) {
+    // getDisplays, setClientSize, moveToMonitor.
+    response = display;
   } else {
     response = FL_METHOD_RESPONSE(fl_method_not_implemented_response_new());
   }
@@ -150,6 +158,7 @@ void lumina_window_mode_attach(GtkWindow* window, FlView* view) {
   g_signal_connect(window, "key-press-event", G_CALLBACK(key_press_cb), nullptr);
   g_signal_connect(window, "key-release-event", G_CALLBACK(key_release_cb),
                    nullptr);
+  watch_displays();
   // Before the window is shown (it shows on the first frame): it opens
   // fullscreen on the monitor it maps to.
   if (kStartFullscreen) set_fullscreen(TRUE);

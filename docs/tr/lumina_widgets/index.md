@@ -135,7 +135,11 @@ Flutter widget that embeds the `FilamentWidget` viewport and drives the [LuminaG
 `decorated` ve `physicalResolution` `FilamentWidget`'a iletilir (varsayılanlar `true` / `false`: mantıksal boyutta
 kenarlıklı panel). Üretilen oyunların gösterdiği ekran olan [`LuminaGameHost`](#class-luminagamehost) `false` / `true`
 verir: kare pencereyi ekranın fiziksel pikselinde kenardan kenara doldurur; kenarlıksız tam ekran bir oyun
-monitörün doğal çözünürlüğünde çizer.
+monitörün doğal çözünürlüğünde çizer. Ayrıca `followScreenResolution: true` verir: view bu durumda
+`LuminaGameDisplay.renderResolution`'da (kenarlıksız tam ekranda ya da pencere boyutlanamadığında oyuncunun ekran
+çözünürlüğü) `FilamentWidget.renderResolution` ile çizilir, en-boy oranındaki en büyük kutuya ölçeklenir ve siyah
+zeminde ortalanır (`LuminaScreenResolutionBox`, `lib/src/game/screen_resolution_box.dart`). Çözünürlük değişince
+widget ağacı aynı kalır; view ve motor kaynakları korunur. HUD ve UMG katmanı pencere boyutunda kalır.
 
 **Fonksiyonlar, Metotlar ve Erişimciler:**
 
@@ -203,21 +207,31 @@ kaynağın kendisini verir.
 
 ## `lib/src/utility/window_mode_channel.dart`
 
-### `class LuminaWindowModeChannel implements LuminaWindowModeBackend`
+### `class LuminaWindowModeChannel implements LuminaWindowModeBackend, LuminaDisplayBackend`
 
 Üretilen runner'ın penceresi ([`LuminaGameWindow.backend`](../lumina/game.md#libsrcgamegame_windowdart)),
 `lumina/game_window` method channel'ı üzerinden; `LuminaWidgets.ensureInitialized` Windows ve Linux'ta kurar. Runner
 (`windows/runner/lumina_window_mode.cpp`, `linux/runner/lumina_window_mode.cc`) `getMode` (`windowed` /
 `borderless_fullscreen`), `setMode {mode}` (uygulayıp uygulamadığı) ve `getInfo` (tanılama: fiziksel piksel
 `[left, top, right, bottom]` olarak `window`, `monitor`, `work`; `client` `[w, h]`, `popup`, `caption`, `foreground`)
-çağrılarını yanıtlar, Alt+Enter ya da F11 sonrası `modeChanged {mode}` çağırır. Bunları bilmeyen bir runner (editör,
-önceden üretilmiş oyunlar) `MissingPluginException` atar: mod yok, hiçbir şey uygulanmaz.
+çağrılarını yanıtlar, Alt+Enter ya da F11 sonrası `modeChanged {mode}` çağırır. Ekran çözünürlüğü için
+([`LuminaGameDisplay.backend`](../lumina/game.md#libsrcgamegame_displaydart-display_infodart-game_user_settings_filedart),
+aynı nesne) `getDisplays` (ad, aygıt, sınırlar, çalışma alanı, geçerli mod, tüm modlar ve ölçekle monitörler; geçerli
+monitör; istemci boyutu), `setClientSize {width, height}` (elde edilen istemci boyutu) ve `moveToMonitor {index}`
+çağrılarını yanıtlar, bir ekran değişince ya da pencere başka monitöre geçince `displayChanged` çağırır. Bunları
+bilmeyen bir runner (editör, önceden üretilmiş oyunlar) `MissingPluginException` atar: mod yok, ekran bilgisi yok,
+hiçbir şey uygulanmaz.
+
+`LuminaWebDisplayBackend` (`lib/src/utility/web_display_backend.dart`) web'in ekran backend'idir: tek monitör,
+tarayıcı ekranı (`window.screen` × `devicePixelRatio`), yalnız geçerli moduyla ve yenileme hızı olmadan; istemci boyutu
+sayfanın viewport'u. Pencereyi boyutlayamaz ya da taşıyamaz; seçilen çözünürlük canvas içinde ölçeklenerek çizilir.
 
 | Üye | İmza | Açıklama |
 |---|---|---|
 | `channelName` | `static const String channelName = 'lumina/game_window'` | Kanal. |
 | `getMode` / `setMode` / `onModeChanged` | bkz. `LuminaWindowModeBackend` | Yukarıdaki runner protokolü. |
 | `windowInfo` | `Future<Map<String, Object?>?> windowInfo()` | `getInfo`; bildiren bir runner yoksa null. |
+| `queryDisplays` / `setClientSize` / `moveToMonitor` / `onDisplayChanged` | bkz. `LuminaDisplayBackend` | Yukarıdaki ekran protokolü. |
 
 ## `lib/src/utility/web_loading.dart`
 

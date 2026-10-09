@@ -686,6 +686,7 @@ A Flutter widget for rendering 3D Filament scenes natively.  Manages engine life
 | `skipReadPixels` | `bool skipReadPixels` | Whether to skip readPixels for the current frame. Useful when the first frame of a new complex asset is rendered, which causes shader compilation and might timeout the readPixels fence. |
 | `decorated` | `bool decorated` | Kare yuvarlak köşeli, kenarlıklı viewport panelinde mi durur (varsayılan `true`, araçlar) yoksa widget'ı siyah zemin üzerinde kenardan kenara mı doldurur (`false`, oyun ekranı). |
 | `physicalResolution` | `bool physicalResolution` | Kare yerleşimin mantıksal boyutu (varsayılan `false`, kenar başına en çok 4096) yerine ekranın fiziksel pikselinde mi çizilir (yerleşim boyutu × device pixel ratio, kenar başına en çok 8192). Ölçeklenmiş bir ekranda oyun böylece monitörün doğal çözünürlüğünde çizer. |
+| `renderResolution` | `Size? renderResolution` | Yerleşim boyutunun yerine geçen, fiziksel piksel olarak sabit çizim boyutu (oyunun seçtiği ekran çözünürlüğü); kare widget'ı dolduracak biçimde ölçeklenir (native: `RawImage` fill; web: canvas'ın çizim tamponu). Null: yerleşim boyutu. |
 | `createState` | `State<FilamentWidget> createState() => _FilamentWidgetState()` | Yeni bir `State` örneği veya ilişkili GPU kaynağını oluşturur ve yapılandırır. |
 
 #### `class _FilamentWidgetState`

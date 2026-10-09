@@ -3,6 +3,7 @@ import 'package:flutter/services.dart' show rootBundle;
 
 import 'package:lumina/lumina_runtime.dart';
 import 'package:lumina_widgets/src/media/video/lumina_video_controller.dart';
+import 'package:lumina_widgets/src/utility/web_display_backend.dart';
 import 'package:lumina_widgets/src/utility/window_mode_channel.dart';
 
 /// Connects the engine to Flutter at start-up. The engine (`lumina`) holds no
@@ -15,7 +16,10 @@ import 'package:lumina_widgets/src/utility/window_mode_channel.dart';
 ///   what the Blueprint video nodes open;
 /// - [LuminaGameWindow.backend]: the generated runner's window mode
 ///   ([LuminaWindowModeChannel], Windows and Linux), what `Set Fullscreen
-///   Mode` drives.
+///   Mode` drives;
+/// - [LuminaGameDisplay.backend]: the monitors and the window size for the
+///   screen resolution nodes (the same channel; on the web
+///   [LuminaWebDisplayBackend], the browser's screen).
 ///
 /// A generated game calls [ensureInitialized] in `main()`; the game widget
 /// calls it too, so Play-In-Editor and tests that only mount a
@@ -39,7 +43,15 @@ abstract final class LuminaWidgets {
     LuminaVideoPlayback.factory ??= ({required String source, bool autoPlay = false, bool loop = false, double initialVolume = 1.0}) =>
         LuminaVideoController(source: source, autoPlay: autoPlay, loop: loop, initialVolume: initialVolume);
     if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.linux)) {
-      LuminaGameWindow.backend ??= LuminaWindowModeChannel();
+      // One channel object answers both (it owns the channel's handler).
+      if (LuminaGameWindow.backend == null || LuminaGameDisplay.backend == null) {
+        final existing = LuminaGameWindow.backend ?? LuminaGameDisplay.backend;
+        final channel = existing is LuminaWindowModeChannel ? existing : LuminaWindowModeChannel();
+        LuminaGameWindow.backend ??= channel;
+        LuminaGameDisplay.backend ??= channel;
+      }
+    } else if (kIsWeb) {
+      LuminaGameDisplay.backend ??= LuminaWebDisplayBackend();
     }
   }
 

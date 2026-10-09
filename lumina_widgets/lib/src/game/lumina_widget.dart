@@ -7,6 +7,7 @@ import 'package:flutter_filament/flutter_filament.dart';
 import 'package:lumina/lumina_runtime.dart';
 import 'package:lumina_widgets/src/lumina_widgets_binding.dart';
 import 'package:lumina_widgets/src/game/hud_overlay.dart';
+import 'package:lumina_widgets/src/game/screen_resolution_box.dart';
 
 /// Controls whether embedded game previews allocate an additional frame driver.
 /// Configure this before mounting previews; changing it does not remount games.
@@ -81,6 +82,12 @@ class LuminaGameWidget extends StatefulWidget {
   /// (`FilamentWidget.physicalResolution`), what a game screen does.
   final bool physicalResolution;
 
+  /// Whether the view follows the player's screen resolution
+  /// (`LuminaGameDisplay.renderResolution`, set by `Set Screen Resolution`):
+  /// rendered at that size and scaled to fill the widget with its aspect
+  /// ratio kept. What a game screen does; tools render at their own size.
+  final bool followScreenResolution;
+
   const LuminaGameWidget({
     super.key,
     required this.game,
@@ -93,6 +100,7 @@ class LuminaGameWidget extends StatefulWidget {
     this.frameViews,
     this.decorated = true,
     this.physicalResolution = false,
+    this.followScreenResolution = false,
   });
 
   @override
@@ -229,14 +237,18 @@ class _LuminaGameWidgetState extends State<LuminaGameWidget>
 
   @override
   Widget build(BuildContext context) {
-    Widget filamentWidget = FilamentWidget(
-      onSceneCreated: _onSceneCreated,
-      onDispose: _onDispose,
-      targetFps: widget.targetFps > 0 ? widget.targetFps : null,
-      frameViews: widget.frameViews,
-      decorated: widget.decorated,
-      physicalResolution: widget.physicalResolution,
-    );
+    Widget view(Size? renderResolution) => FilamentWidget(
+          onSceneCreated: _onSceneCreated,
+          onDispose: _onDispose,
+          targetFps: widget.targetFps > 0 ? widget.targetFps : null,
+          frameViews: widget.frameViews,
+          decorated: widget.decorated,
+          physicalResolution: widget.physicalResolution,
+          renderResolution: renderResolution,
+        );
+    Widget filamentWidget = widget.followScreenResolution
+        ? LuminaScreenResolutionBox(builder: (context, renderResolution) => view(renderResolution))
+        : view(null);
 
     if (widget.hudBuilder != null) {
       return Stack(

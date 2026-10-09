@@ -122,6 +122,44 @@ void main() {
     expect(RegExp(r'add_executable\([^)]*"lumina_window_mode\.cc"', dotAll: true).hasMatch(cmake), isTrue);
   });
 
+  test('both runners report the displays and size the window for the screen resolution', () {
+    final cpp = GameWindowRunnerService.windowsSource(startFullscreen: false);
+    expect(cpp, isNot(contains('{{DISPLAY}}')));
+    for (final piece in [
+      '"getDisplays"',
+      '"setClientSize"',
+      '"moveToMonitor"',
+      '"displayChanged"',
+      'EnumDisplayMonitors',
+      'EnumDisplaySettingsExW',
+      'ENUM_CURRENT_SETTINGS',
+      'DisplayConfigGetDeviceInfo',
+      'AdjustWindowRectExForDpi',
+      'rcWork',
+      'WatchDisplays(message);',
+      'HandleDisplayCall(call, result)',
+    ]) {
+      expect(cpp, contains(piece), reason: piece);
+    }
+    // The display part sits before the window procedure that calls it.
+    expect(cpp.indexOf('void WatchDisplays('), lessThan(cpp.indexOf('WatchDisplays(message);')));
+    final cc = GameWindowRunnerService.linuxSource(startFullscreen: false);
+    expect(cc, isNot(contains('{{DISPLAY}}')));
+    for (final piece in [
+      '"getDisplays"',
+      '"setClientSize"',
+      '"moveToMonitor"',
+      '"displayChanged"',
+      'gdk_display_get_n_monitors',
+      'gdk_monitor_get_refresh_rate',
+      'gtk_window_fullscreen_on_monitor',
+      'handle_display_call(method',
+      'watch_displays();',
+    ]) {
+      expect(cc, contains(piece), reason: piece);
+    }
+  });
+
   test('a project without desktop runners is left alone', () {
     final report = GameWindowRunnerService.apply(root.path, startFullscreen: true);
     expect(report.files, isEmpty);

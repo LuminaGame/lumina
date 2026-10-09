@@ -322,8 +322,10 @@ A single selectable key or axis option in the dialog.
 borderless fullscreen: a window without title bar or borders covering the whole monitor it opens on, taskbar
 included, at the monitor's native resolution (the game screen renders at the display's physical pixels). Players
 toggle windowed ↔ fullscreen with **Alt+Enter** or **F11**, and Blueprints with **Set Fullscreen Mode** /
-**Toggle Fullscreen**; the player's last choice is kept in `user_settings.json` next to the save games and wins over
-the setting on the next launch. With the setting off the game starts windowed and the keys still work. Code
+**Toggle Fullscreen**; the player's last choice is kept in `GameUserSettings.json` in the save games folder (with the
+screen resolution and monitor Set Screen Resolution / Set Fullscreen Monitor choose) and wins over the setting on the
+next launch. There is no default-resolution setting: a windowed game opens at the runner's 1280×720 until the player
+chooses a resolution. With the setting off the game starts windowed and the keys still work. Code
 generation writes the runner side (`GameWindowRunnerService`); rebuild the game after changing the setting. There is
 no exclusive fullscreen mode: the game's frame is presented by Flutter's compositor (see
 [`LuminaWindowMode`](../../lumina/game.md#libsrcgamegame_windowdart)).
