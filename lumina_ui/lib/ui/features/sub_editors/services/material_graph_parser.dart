@@ -9,7 +9,9 @@ import 'package:lumina_ui/ui/features/sub_editors/services/mat_source.dart';
 
 part 'material_graph_parser/lexer_and_parser.dart';
 part 'material_graph_parser/lowering.dart';
+part 'material_graph_parser/lowering_calls.dart';
 part 'material_graph_parser/lowering_control_flow.dart';
+part 'material_graph_parser/lowering_members.dart';
 part 'material_graph_parser/lowering_values.dart';
 part 'material_graph_parser/layout.dart';
 
