@@ -30,7 +30,9 @@ void main() {
 
   testWidgets('Project Settings Engine category renders technical preset specifications table', (tester) async {
     final vm = ProjectSettingsViewModel(projectDirPath: projDir.path);
-    await vm.load();
+    // Real disk I/O: outside the fake-async zone, where it never completes.
+    await tester.runAsync(vm.load);
+    addTearDown(vm.dispose);
 
     await tester.pumpWidget(
       ShadcnApp(
