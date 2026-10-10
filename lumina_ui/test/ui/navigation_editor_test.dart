@@ -154,6 +154,11 @@ void main() {
   Future<EditorViewModel> openEditor() async {
     final vm = EditorViewModel(initialProject: project, projectLocation: tempDir.path, enableTimers: false);
     await vm.ensureDefaultLevelAssets();
+    // Level meshes stream in the background after the level loads; the
+    // obstacle boxes come from their bounds, so wait for the stream.
+    for (var i = 0; i < 500 && vm.meshesLoading; i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+    }
     return vm;
   }
 
