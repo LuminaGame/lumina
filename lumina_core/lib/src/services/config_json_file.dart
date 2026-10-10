@@ -69,12 +69,31 @@ class ConfigJsonFile {
     final temp = File('${file.path}.tmp-$pid-${_random.nextInt(1 << 32)}');
     try {
       temp.writeAsStringSync(text, flush: true);
-      temp.renameSync(file.path);
+      _renameOver(temp);
     } catch (_) {
       try {
         if (temp.existsSync()) temp.deleteSync();
       } on FileSystemException catch (_) {}
       rethrow;
+    }
+  }
+
+  /// How long [write] keeps trying to replace a file a reader holds open.
+  static const Duration replaceTimeout = Duration(seconds: 2);
+
+  /// Renames [temp] over [file]. Windows refuses to replace a file another
+  /// reader (another isolate or process) has open at that moment ("Access is
+  /// denied"); readers hold it only while they read, so try again briefly.
+  void _renameOver(File temp) {
+    final deadline = DateTime.now().add(replaceTimeout);
+    while (true) {
+      try {
+        temp.renameSync(file.path);
+        return;
+      } on FileSystemException {
+        if (!Platform.isWindows || DateTime.now().isAfter(deadline)) rethrow;
+        sleep(const Duration(milliseconds: 2));
+      }
     }
   }
 

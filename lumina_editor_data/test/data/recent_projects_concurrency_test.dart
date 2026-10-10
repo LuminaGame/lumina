@@ -112,6 +112,10 @@ void main() {
             jsonDecode(File(path).readAsStringSync());
           } on FormatException {
             failures++;
+          } on FileSystemException {
+            // Windows: the file is opened at the instant the writer renames
+            // over it (a sharing violation). Not a half-written file; the
+            // editor's own reads (ConfigJsonFile.read) try again.
           }
         }
         return failures;
