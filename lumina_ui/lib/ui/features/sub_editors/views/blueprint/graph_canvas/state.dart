@@ -57,4 +57,10 @@ abstract class _BlueprintGraphCanvasStateBase extends State<BlueprintGraphCanvas
   void _endWire();
 
   void _showNodeMenu(LuminaBlueprintNode node, Offset global);
+
+  List<BlueprintPaletteEntry> clipboardPaletteEntries();
+
+  bool _runClipboardEntry(BlueprintPaletteEntry entry, Offset at);
+
+  List<MenuItem> _clipboardMenuItems();
 }

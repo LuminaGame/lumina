@@ -128,6 +128,7 @@ mixin _BlueprintGraphCanvasViewControls on _BlueprintGraphCanvasStateBase {
   void openNodePalette(Offset localPosition, {BlueprintPinRef? from}) {
     final canvasPos = _toCanvas(localPosition);
     var entries = [
+      ...clipboardPaletteEntries(),
       ...editor.paletteActions(canCollapse: widget.actions.onCollapse != null),
       ...editor.paletteEntries(),
     ];
@@ -156,6 +157,7 @@ mixin _BlueprintGraphCanvasViewControls on _BlueprintGraphCanvasStateBase {
         fromColor: fromColor,
         onSelect: (entry) {
           closeOverlay(dialogContext);
+          if (_runClipboardEntry(entry, canvasPos)) return;
           if (entry.action != null && entry.action != BlueprintPaletteAction.promoteToVariable) {
             runAction(entry.action!, canvasPos);
             return;

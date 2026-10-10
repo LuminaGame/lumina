@@ -8,6 +8,8 @@ Continuation of Blueprint editor: the remaining public files under `lib/ui/featu
 
 - [`lib/ui/features/sub_editors/views/blueprint/graph_canvas.dart`](#libuifeaturessub_editorsviewsblueprintgraph_canvasdart)
 - [`lib/ui/features/sub_editors/views/blueprint/graph_canvas/painters.dart`](#libuifeaturessub_editorsviewsblueprintgraph_canvaspaintersdart)
+- [`lib/ui/features/sub_editors/models/blueprint_graph_clipboard.dart`](#libuifeaturessub_editorsmodelsblueprint_graph_clipboarddart)
+- [`lib/ui/features/sub_editors/view_models/blueprint_graph_clipboard_ops.dart`](#libuifeaturessub_editorsview_modelsblueprint_graph_clipboard_opsdart)
 - [`lib/ui/features/sub_editors/views/blueprint/my_blueprint_panel.dart`](#libuifeaturessub_editorsviewsblueprintmy_blueprint_paneldart)
 - [`lib/ui/features/sub_editors/views/blueprint/node_palette.dart`](#libuifeaturessub_editorsviewsblueprintnode_palettedart)
 - [`lib/ui/features/sub_editors/views/blueprint/pin_literal_editor.dart`](#libuifeaturessub_editorsviewsblueprintpin_literal_editordart)
@@ -210,6 +212,25 @@ The Blueprint graph canvas: nodes from lumina's library, colour-coded typed pins
 | :--- | :--- | :--- |
 | `panOffset` | `Offset get panOffset` |  |
 | `zoom` | `double get zoom` |  |
+| `copySelectedNodes` | `Future<bool> copySelectedNodes()` | Ctrl+C: the selected nodes to the system clipboard as Lumina graph-nodes JSON; false when nothing is selected. |
+| `cutSelectedNodes` | `Future<bool> cutSelectedNodes()` | Ctrl+X: copies, then removes the selection as one undo step. |
+| `pasteNodes` | `Future<BlueprintPasteResult> pasteNodes({Offset? canvasAt})` | Ctrl+V: pastes the clipboard at [canvasAt], else under the mouse when it is over the canvas, else at the view centre. Other text pastes nothing. |
+| `duplicateSelectedNodes` | `BlueprintPasteResult duplicateSelectedNodes()` | Ctrl+D: a copy 30 units down and right; the clipboard is left alone. |
+| `clipboardPaletteEntries` | `List<BlueprintPaletteEntry> clipboardPaletteEntries()` | The Edit rows the right-click palette pins first: Paste, and Copy / Cut / Duplicate while nodes are selected. |
+
+#### Keyboard
+
+The canvas's keys: Delete / Backspace delete the selection, `C` puts a comment around it, Ctrl+C / Ctrl+X / Ctrl+V / Ctrl+D copy, cut, paste and duplicate (also in the node's right-click menu and as pinned rows of the canvas palette). **No canvas key fires while a text input has focus** (a node's literal field, a comment title, a Details field): the key goes to the field, so Backspace removes a character instead of the node, and the sub-editors' Ctrl+Z / Ctrl+Y bindings stand down the same way (`NotWhileTypingActivator`), leaving undo to the field.
+
+#### Copy and paste
+
+- A copy keeps the wires between the copied nodes and drops wires to nodes that were not copied. Comments, reroute dots and variable Get / Set nodes copy too.
+- A paste gets new node and wire ids, becomes the selection and is one undo step (`Paste N nodes`); a cut is one step (`Cut N nodes`).
+- A variable Get / Set node whose variable the target Blueprint lacks declares it with the copied name, type and default value, in the same undo step (no prompt). A variable of another class (`class` literal set) is never declared.
+- An event the target graph already has (Event BeginPlay, Tick, the same input action, a custom event of the same name: the compiler's one-node-per-event rule) is left out, as are nodes the graph does not accept (an impure node in a transition rule); a toast lists them.
+- Copies move between Blueprints, Level / Widget / Anim Blueprint graphs and editor windows through the system clipboard. Material-graph nodes and Blueprint nodes never paste into each other's graphs.
+- The clipboard text is a JSON object: `{"format": "lumina.graph-nodes", "version": 1, "graph": "blueprint" | "material", "nodes": [...], "wires": [...], "variables": [...]}` (nodes and wires in the `.lmas` graph format).
+- Covered: every graph on this canvas (Blueprint event / function / macro graphs, Level Blueprint, Widget Blueprint graph, Anim Blueprint event graph and transition rules, the material node graph). The Anim Blueprint state machine graph has its own canvas of states and transitions without copy / paste; it only stands down while a text field has focus.
 
 ## `lib/ui/features/sub_editors/views/blueprint/graph_canvas/painters.dart`
 
@@ -466,3 +487,35 @@ The Blueprint Interface sub-editor: the interface's functions with their signatu
 ---
 
 [Previous: Blueprint editor (continued, part 1)](blueprint-continued.md) | [Up: Sub-editors](index.md) | [Next: Build manager](build-manager.md)
+
+## `lib/ui/features/sub_editors/models/blueprint_graph_clipboard.dart`
+
+### `class BlueprintGraphClipboard`
+
+Graph nodes on the clipboard: copied nodes, the wires between them, and the declarations of the member variables their Get / Set nodes read. On the system clipboard it is a JSON object whose `format` is `lumina.graph-nodes` and whose `version` is at most 1; any other text decodes to null.
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `copy` | `factory BlueprintGraphClipboard.copy(LuminaBlueprintGraph graph, Set<String> ids, {required String graphKind, LuminaBlueprintVariable? Function(String name)? variableOf})` | Deep copies of nodes [ids], the wires between them only, the variables their own-class Get / Set nodes name. |
+| `encode` | `String encode()` | The clipboard text. |
+| `decode` | `static BlueprintGraphClipboard? decode(String? text)` | Null for plain text, other JSON, a newer version or no nodes. |
+| `instantiate` | `({List<LuminaBlueprintNode> nodes, List<LuminaBlueprintWire> wires}) instantiate({required Offset at, required String Function(String prefix) newId, bool Function(LuminaBlueprintNode node)? keep})` | Fresh copies for a paste: new ids, the top-left node moved to [at], wires re-pointed; [keep] leaves nodes out. |
+| `singleInstanceKey` | `static String? singleInstanceKey(LuminaBlueprintNode node)` | The one-node-per-event key of an event node (the compiler's rule); null for other nodes. |
+| `memberVariableOf` | `static String? memberVariableOf(LuminaBlueprintNode node)` | The own-class variable a Get / Set node names. |
+
+## `lib/ui/features/sub_editors/view_models/blueprint_graph_clipboard_ops.dart`
+
+### `extension BlueprintGraphClipboardOps on BlueprintGraphEditor`
+
+Copy, cut, paste and duplicate for every graph edited through a `BlueprintGraphEditor`.
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `copySelection` | `BlueprintGraphClipboard? copySelection()` | The selection as a clipboard; null when nothing is selected. |
+| `cutSelection` | `BlueprintGraphClipboard? cutSelection()` | Copies and removes the selection: one undo step `Cut N nodes`. |
+| `pasteClipboard` | `BlueprintPasteResult pasteClipboard(BlueprintGraphClipboard clipboard, Offset at)` | One undo step `Paste N nodes`: fresh ids, internal wires, missing variables declared, duplicate events and unaccepted nodes left out (listed in `skipped`), the pasted nodes selected. |
+| `duplicateSelection` | `BlueprintPasteResult duplicateSelection()` | Pastes a copy of the selection 30 units down and right. |
+
+### `class BlueprintPasteResult`
+
+`pasted` (the placed nodes), `skipped` (why the others were left out), `declaredVariables`.

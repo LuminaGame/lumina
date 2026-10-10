@@ -9,9 +9,11 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_ui/ui/core/input/text_input_focus.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_editor_nodes.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_graph_clipboard.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_palette.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_pin_style.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/blueprint_debugger.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/blueprint_graph_clipboard_ops.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/blueprint_graph_editor.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/blueprint/node_palette.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/blueprint/pin_literal_editor.dart';
@@ -21,6 +23,7 @@ part 'graph_canvas/view_controls.dart';
 part 'graph_canvas/interactions.dart';
 part 'graph_canvas/node_widgets.dart';
 part 'graph_canvas/painters.dart';
+part 'graph_canvas/clipboard.dart';
 
 /// What a My Blueprint variable row carries when dragged onto a graph.
 /// A My Blueprint component dragged onto the graph: drops a `Get <name>`.
@@ -212,7 +215,8 @@ class BlueprintGraphCanvasState extends _BlueprintGraphCanvasStateBase
     with
         _BlueprintGraphCanvasViewControls,
         _BlueprintGraphCanvasInteractions,
-        _BlueprintGraphCanvasNodeWidgets {
+        _BlueprintGraphCanvasNodeWidgets,
+        _BlueprintGraphCanvasClipboard {
 
   @override
   BlueprintGraphEditor get editor => widget.editor;
@@ -299,12 +303,14 @@ class BlueprintGraphCanvasState extends _BlueprintGraphCanvasStateBase
                 editor.placeElementGet(data.variable, data.element, position: _toCanvas(_localFromGlobal(details.offset)));
               }
             },
-            builder: (context, candidate, rejected) => Focus(
+            builder: (context, candidate, rejected) => _trackClipboardPointer(Focus(
               focusNode: _focus,
               onKeyEvent: (node, event) {
                 // A focused text field (a node's literal, a comment title)
                 // owns its editing keys: Backspace edits the text.
                 if (isTextInputFocused()) return KeyEventResult.ignored;
+                final clipboard = _clipboardKey(event);
+                if (clipboard != null) return clipboard;
                 if (event is KeyDownEvent &&
                     (event.logicalKey == LogicalKeyboardKey.delete || event.logicalKey == LogicalKeyboardKey.backspace)) {
                   if (editor.removeSelected()) return KeyEventResult.handled;
@@ -498,7 +504,7 @@ class BlueprintGraphCanvasState extends _BlueprintGraphCanvasStateBase
                   ),
                 ),
               ),
-            ),
+            )),
           );
         });
       },

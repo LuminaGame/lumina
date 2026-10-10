@@ -222,6 +222,7 @@ mixin _BlueprintGraphCanvasInteractions on _BlueprintGraphCanvasStateBase {
               });
             },
           ),
+          ..._clipboardMenuItems(),
           MenuButton(
             key: const ValueKey('node_menu_delete'),
             leading: const Icon(LucideIcons.trash2, size: 12),

@@ -8,6 +8,8 @@ Blueprint editörü sayfasının devamı: `lib/ui/features/sub_editors/views/blu
 
 - [`lib/ui/features/sub_editors/views/blueprint/graph_canvas.dart`](#libuifeaturessub_editorsviewsblueprintgraph_canvasdart)
 - [`lib/ui/features/sub_editors/views/blueprint/graph_canvas/painters.dart`](#libuifeaturessub_editorsviewsblueprintgraph_canvaspaintersdart)
+- [`lib/ui/features/sub_editors/models/blueprint_graph_clipboard.dart`](#libuifeaturessub_editorsmodelsblueprint_graph_clipboarddart)
+- [`lib/ui/features/sub_editors/view_models/blueprint_graph_clipboard_ops.dart`](#libuifeaturessub_editorsview_modelsblueprint_graph_clipboard_opsdart)
 - [`lib/ui/features/sub_editors/views/blueprint/my_blueprint_panel.dart`](#libuifeaturessub_editorsviewsblueprintmy_blueprint_paneldart)
 - [`lib/ui/features/sub_editors/views/blueprint/node_palette.dart`](#libuifeaturessub_editorsviewsblueprintnode_palettedart)
 - [`lib/ui/features/sub_editors/views/blueprint/pin_literal_editor.dart`](#libuifeaturessub_editorsviewsblueprintpin_literal_editordart)
@@ -210,6 +212,25 @@ The Blueprint graph canvas: nodes from lumina's library, colour-coded typed pins
 | :--- | :--- | :--- |
 | `panOffset` | `Offset get panOffset` |  |
 | `zoom` | `double get zoom` |  |
+| `copySelectedNodes` | `Future<bool> copySelectedNodes()` | Ctrl+C: seçili node'ları Lumina graph-nodes JSON'u olarak sistem panosuna yazar; seçim yoksa false. |
+| `cutSelectedNodes` | `Future<bool> cutSelectedNodes()` | Ctrl+X: kopyalar, sonra seçimi tek geri alma adımıyla siler. |
+| `pasteNodes` | `Future<BlueprintPasteResult> pasteNodes({Offset? canvasAt})` | Ctrl+V: panoyu [canvasAt] noktasına, yoksa fare tuvalin üstündeyse farenin altına, değilse görünümün ortasına yapıştırır. Başka metin hiçbir şey yapıştırmaz. |
+| `duplicateSelectedNodes` | `BlueprintPasteResult duplicateSelectedNodes()` | Ctrl+D: 30 birim sağa-aşağıya bir kopya; panoya dokunmaz. |
+| `clipboardPaletteEntries` | `List<BlueprintPaletteEntry> clipboardPaletteEntries()` | Sağ tık paletinin en üste sabitlediği Edit satırları: Paste, node seçiliyken Copy / Cut / Duplicate. |
+
+#### Klavye
+
+Tuvalin tuşları: Delete / Backspace seçimi siler, `C` seçimin etrafına yorum kutusu koyar, Ctrl+C / Ctrl+X / Ctrl+V / Ctrl+D kopyalar, keser, yapıştırır ve çoğaltır (node'un sağ tık menüsünde ve tuval paletinin sabit satırlarında da var). **Bir metin girişi odaktayken (node'un literal alanı, yorum başlığı, Details alanı) hiçbir tuval tuşu çalışmaz**: tuş alana gider, Backspace node'u değil bir karakteri siler; alt editörlerin Ctrl+Z / Ctrl+Y bağları da aynı şekilde geri çekilir (`NotWhileTypingActivator`), geri almayı alan yapar.
+
+#### Kopyala ve yapıştır
+
+- Kopya, kopyalanan node'lar arasındaki kabloları tutar, kopyalanmayan node'lara giden kabloları bırakır. Yorum kutuları, reroute noktaları ve değişken Get / Set node'ları da kopyalanır.
+- Yapıştırılan node'lar yeni node ve kablo id'leri alır, seçim olur ve tek geri alma adımıdır (`Paste N nodes`); kesme de tek adımdır (`Cut N nodes`).
+- Hedef Blueprint'te olmayan bir değişkenin Get / Set node'u, değişkeni kopyalanan ad, tip ve varsayılan değerle aynı geri alma adımında tanımlar (soru sorulmaz). Başka bir sınıfın değişkeni (`class` literal'i dolu) asla tanımlanmaz.
+- Hedef grafta zaten olan bir event (Event BeginPlay, Tick, aynı input action, aynı adlı custom event: derleyicinin "bir event'in tek node'u olur" kuralı) ve grafın kabul etmediği node'lar (transition rule'da impure node) yapıştırılmaz; bir toast bunları listeler.
+- Kopyalar sistem panosu üzerinden Blueprint'ler, Level / Widget / Anim Blueprint grafları ve editör pencereleri arasında taşınır. Materyal grafı node'ları ile Blueprint node'ları birbirinin grafına yapışmaz.
+- Pano metni bir JSON nesnesidir: `{"format": "lumina.graph-nodes", "version": 1, "graph": "blueprint" | "material", "nodes": [...], "wires": [...], "variables": [...]}` (node ve kablolar `.lmas` graf biçiminde).
+- Kapsam: bu tuvali kullanan her graf (Blueprint event / function / macro grafları, Level Blueprint, Widget Blueprint grafı, Anim Blueprint event grafı ve transition rule'ları, materyal node grafı). Anim Blueprint state machine grafının state ve transition'lardan oluşan kendi tuvali var, kopyala / yapıştır yok; yalnızca bir metin alanı odaktayken tuşları geri çekilir.
 
 ## `lib/ui/features/sub_editors/views/blueprint/graph_canvas/painters.dart`
 
@@ -466,3 +487,35 @@ The Blueprint Interface sub-editor: the interface's functions with their signatu
 ---
 
 [Önceki: Blueprint editörü (devamı, bölüm 1)](blueprint-continued.md) | [Üst: Alt editörler](index.md) | [Sonraki: Build yöneticisi](build-manager.md)
+
+## `lib/ui/features/sub_editors/models/blueprint_graph_clipboard.dart`
+
+### `class BlueprintGraphClipboard`
+
+Panodaki graf node'ları: kopyalanan node'lar, aralarındaki kablolar ve Get / Set node'larının okuduğu üye değişkenlerin tanımları. Sistem panosunda `format` alanı `lumina.graph-nodes`, `version` alanı en fazla 1 olan bir JSON nesnesidir; başka her metin null çözülür.
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `copy` | `factory BlueprintGraphClipboard.copy(LuminaBlueprintGraph graph, Set<String> ids, {required String graphKind, LuminaBlueprintVariable? Function(String name)? variableOf})` | Deep copies of nodes [ids], the wires between them only, the variables their own-class Get / Set nodes name. |
+| `encode` | `String encode()` | The clipboard text. |
+| `decode` | `static BlueprintGraphClipboard? decode(String? text)` | Null for plain text, other JSON, a newer version or no nodes. |
+| `instantiate` | `({List<LuminaBlueprintNode> nodes, List<LuminaBlueprintWire> wires}) instantiate({required Offset at, required String Function(String prefix) newId, bool Function(LuminaBlueprintNode node)? keep})` | Fresh copies for a paste: new ids, the top-left node moved to [at], wires re-pointed; [keep] leaves nodes out. |
+| `singleInstanceKey` | `static String? singleInstanceKey(LuminaBlueprintNode node)` | The one-node-per-event key of an event node (the compiler's rule); null for other nodes. |
+| `memberVariableOf` | `static String? memberVariableOf(LuminaBlueprintNode node)` | The own-class variable a Get / Set node names. |
+
+## `lib/ui/features/sub_editors/view_models/blueprint_graph_clipboard_ops.dart`
+
+### `extension BlueprintGraphClipboardOps on BlueprintGraphEditor`
+
+`BlueprintGraphEditor` ile düzenlenen her graf için kopyala, kes, yapıştır ve çoğalt.
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `copySelection` | `BlueprintGraphClipboard? copySelection()` | The selection as a clipboard; null when nothing is selected. |
+| `cutSelection` | `BlueprintGraphClipboard? cutSelection()` | Copies and removes the selection: one undo step `Cut N nodes`. |
+| `pasteClipboard` | `BlueprintPasteResult pasteClipboard(BlueprintGraphClipboard clipboard, Offset at)` | One undo step `Paste N nodes`: fresh ids, internal wires, missing variables declared, duplicate events and unaccepted nodes left out (listed in `skipped`), the pasted nodes selected. |
+| `duplicateSelection` | `BlueprintPasteResult duplicateSelection()` | Pastes a copy of the selection 30 units down and right. |
+
+### `class BlueprintPasteResult`
+
+`pasted` (yerleştirilen node'lar), `skipped` (diğerlerinin neden yapıştırılmadığı), `declaredVariables`.
