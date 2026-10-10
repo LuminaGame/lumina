@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/services.dart' show LogicalKeyboardKey;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
@@ -63,6 +64,18 @@ void main() {
     );
   }
 
+  /// Waits in real time for [done], pumping between waits: the device
+  /// listing and the run were started from a tap, inside the test's
+  /// fake-async zone, so their process callbacks only run on a pump — and
+  /// on Windows `Process.start` completes only once fake time moves on.
+  Future<void> pumpUntil(WidgetTester tester, bool Function() done, Duration timeout) async {
+    final until = DateTime.now().add(timeout);
+    while (!done() && DateTime.now().isBefore(until)) {
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
+      await tester.pump(const Duration(milliseconds: 10));
+    }
+  }
+
   Future<void> pumpToolbar(WidgetTester tester, EditorViewModel vm) async {
     tester.view.physicalSize = const Size(2400, 900);
     tester.view.devicePixelRatio = 1.0;
@@ -72,7 +85,13 @@ void main() {
     });
     await tester.pumpWidget(ShadcnApp(
       theme: luminaEditorTheme(),
-      home: Scaffold(child: Column(children: [ToolbarWidget(viewModel: vm), const Expanded(child: SizedBox())])),
+      // The editor shell rebuilds the toolbar on every view-model change.
+      home: Scaffold(
+        child: ListenableBuilder(
+          listenable: vm,
+          builder: (context, _) => Column(children: [ToolbarWidget(viewModel: vm), const Expanded(child: SizedBox())]),
+        ),
+      ),
     ));
     await tester.pump();
   }
@@ -81,19 +100,15 @@ void main() {
   Future<void> openPlayModes(WidgetTester tester, EditorViewModel vm) async {
     await tester.tap(find.byKey(const ValueKey('play_mode_dropdown')));
     await tester.pump();
-    await tester.runAsync(() async {
-      final until = DateTime.now().add(const Duration(seconds: 30));
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-      while (vm.androidDevices.loading && DateTime.now().isBefore(until)) {
-        await Future<void>.delayed(const Duration(milliseconds: 50));
-      }
-    });
+    await pumpUntil(tester, () => !vm.androidDevices.loading, const Duration(seconds: 30));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
   }
 
   Future<void> closeMenu(WidgetTester tester) async {
-    await tester.tapAt(const Offset(1200, 800));
+    // Escape, not a tap: a tap that lands on one of the menu's rows starts
+    // that device or refreshes the list.
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await tester.pump(const Duration(milliseconds: 300));
   }
 
@@ -113,11 +128,7 @@ void main() {
     await tester.pump();
     expect(find.byKey(const ValueKey('play_on_device_section')), findsOneWidget);
     expect(find.byKey(const ValueKey('play_on_device_loading')), findsOneWidget, reason: 'the listing runs without blocking the menu');
-    await tester.runAsync(() async {
-      while (vm.androidDevices.loading) {
-        await Future<void>.delayed(const Duration(milliseconds: 50));
-      }
-    });
+    await pumpUntil(tester, () => !vm.androidDevices.loading, const Duration(seconds: 30));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
@@ -140,12 +151,11 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('play_on_device_serial:0a1b2c3')));
     await tester.pump();
-    await tester.runAsync(() async {
-      final until = DateTime.now().add(const Duration(seconds: 60));
-      while (vm.androidRunner?.state != AndroidRunState.running && DateTime.now().isBefore(until)) {
-        await Future<void>.delayed(const Duration(milliseconds: 100));
-      }
-    });
+    // The menu closes on the choice; its fade-out ends before Stop is tapped.
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('Connected devices'), findsNothing);
+    await pumpUntil(tester, () => vm.androidRunner?.state == AndroidRunState.running, const Duration(seconds: 60));
     await tester.pump();
     expect(vm.androidRunner!.state, AndroidRunState.running);
     final cmds = standIn.commands;
@@ -161,12 +171,7 @@ void main() {
 
     // The toolbar's Stop force-stops the game on the device.
     await tester.tap(find.byKey(const ValueKey('toolbar_stop')));
-    await tester.runAsync(() async {
-      final until = DateTime.now().add(const Duration(seconds: 20));
-      while (vm.androidRunner!.isActive && DateTime.now().isBefore(until)) {
-        await Future<void>.delayed(const Duration(milliseconds: 50));
-      }
-    });
+    await pumpUntil(tester, () => !vm.androidRunner!.isActive, const Duration(seconds: 20));
     await tester.pump();
     expect(standIn.commands, contains('adb -s 0a1b2c3 shell am force-stop com.example.device_game'));
     expect(find.byKey(const ValueKey('play_on_device_status')), findsNothing);
