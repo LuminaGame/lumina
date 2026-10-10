@@ -705,8 +705,11 @@ presents **directly**:
   (`SwapChainConfig.none` with VSync: FIFO; `disableVsync` without: the presents, frame generation's included, are paced
   by the backend's present thread of patch `0016`) and a `FilamentUiOverlay`. `setVsync` recreates the SwapChain,
   `updateHandle` follows the window, `viewportFor(w, h, renderAspect:)` letterboxes a `renderResolution`'s aspect ratio
-  inside the window (the frame renders at that rectangle's pixels). `unsupportedReason(engine)`: the web, a backend
-  other than Vulkan.
+  inside the window (the frame renders at that rectangle's pixels), sizes rounded down to even pixels (DLSS Frame
+  Generation writes black frames for odd sizes). A window holds one swap chain: a VSync change destroys the old one
+  first; when the new one cannot be made `swapChain` is null with `failure` and the widget falls back.
+  `active` / `renderer` / `presentTimes()`: diagnostics of the running presenter. `unsupportedReason(engine)`: the web,
+  a backend other than Vulkan.
 - The frame loop stays the widget's ticker (Flutter's vsync callbacks and the `FilamentFrameLimiter`): each rendered
   frame is `beginFrame` → the views → `overlay.render` → `endFrame`, with no readback and no wait for the GPU;
   Filament presents. The widget paints nothing (`SizedBox.expand`).

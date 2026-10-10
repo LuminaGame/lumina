@@ -166,6 +166,17 @@ Gives a game project's desktop runners their window modes. Writes `windows/runne
 `main.cpp` that earlier versions sized to `GetSystemMetrics(SM_CXSCREEN/SM_CYSCREEN)`. Idempotent; a file is written
 only when its content changes. The editor's code generation and `GenerateDartCodeUseCase` (Build pipeline) run it.
 
+The presentation window (direct presentation, `windows_surface_sources.dart`): `createSurface` creates a child window
+of the Flutter view covering its client area, `WS_DISABLED` and `HTTRANSPARENT` (the Flutter view under it gets the
+mouse and keeps the keyboard), never erased or painted, on a thread of its own that only pumps its messages (presenting
+to a window can send it messages from the GPU driver's threads, which must never wait for the platform thread; the
+platform thread waits for it only while handling sent messages). It follows the view's `WM_SIZE` (asynchronously) and
+reports `surfaceChanged` (0 x 0 while minimised); `destroySurface` closes it and joins the thread. The Linux runner
+answers `createSurface` with `unsupported` (an X11 child window / Wayland subsurface over the GTK view is not done yet),
+so Linux games present through Flutter. `generateMainDart(presentation: 'direct')` passes
+`presentation: LuminaPresentationMode.direct` to the game host; every generated `main()` wraps the app in
+`LuminaUiCaptureRoot` with a transparent Scaffold.
+
 What the Windows runner does: with Start Fullscreen on it switches the still hidden window (it shows on the first
 frame) to `WS_POPUP` and sizes it to `rcMonitor` of `MonitorFromWindow` with `HWND_TOP` and DWM corner rounding off,
 so the game never appears windowed; the windowed placement Alt+Enter returns to is centred on that monitor. Alt+Enter

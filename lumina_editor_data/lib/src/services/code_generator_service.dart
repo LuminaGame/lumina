@@ -39,6 +39,7 @@ class DartCodeGeneratorService extends _DartCodeGeneratorServiceState
     bool vsyncEnabled = false,
     bool startFullscreen = false,
     ProjectNeuralRenderingSettings? neuralRendering,
+    String presentation = 'flutter',
   }) {
     // Every level the game can Open Level to, by authored name
     // (`L_Main` → `levels/l_main.dart`, class `LMain`).
@@ -68,6 +69,9 @@ class DartCodeGeneratorService extends _DartCodeGeneratorServiceState
         '          createGame: _createGame,\n'
         '          targetFps: $targetFps,\n'
         '          vsyncEnabled: $vsyncEnabled,\n'
+        // Project Settings > Presentation: Direct lets Filament present into
+        // the game window (frame generation asks for it by itself).
+        '${presentation == 'direct' ? '          presentation: LuminaPresentationMode.direct,\n' : ''}'
         '        )';
     final gameHost = shadcn ? 'shadcn.ShadcnLayer(theme: shadcn.ThemeData.dark(), child: $host)' : host;
     final gameClass = '${_sanitizeClassName(projectName)}Game';
@@ -146,7 +150,9 @@ $neuralRenderingOptIn$registerFunctions$registerWidgets$registerBlueprints  // E
   // loading screen (Project Settings > Web Loading Style), which shows their
   // progress. Native builds go straight on.
   await LuminaWebLoading.prepareGame();
-  runApp(const MyLuminaGameApp());
+  // Presenting directly (Project Settings > Presentation, frame generation),
+  // Filament shows the frame and blends the whole app's UI over it.
+  runApp(const LuminaUiCaptureRoot(child: MyLuminaGameApp()));
 }
 
 /// The levels Open Level can load, by name.
@@ -210,7 +216,9 @@ class MyLuminaGameApp extends StatelessWidget {
       theme: ThemeData.dark(),
       // The keys bound by the project's `Gameplay` mapping context reach the
       // possessed pawn through the host's keyboard and mouse bridge.
+      // Transparent: presenting directly, the game shows through the app.
       home: const Scaffold(
+        backgroundColor: Color(0x00000000),
         body: $gameHost,
       ),
     );

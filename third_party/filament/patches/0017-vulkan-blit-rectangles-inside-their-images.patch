@@ -1,0 +1,71 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Can Us <me@canus.dev>
+Date: Sat, 10 Oct 2026 18:00:00 +0300
+Subject: [PATCH] Vulkan: keep blit rectangles inside their images
+
+Frame generation (0009, 0013) presents its extra frames with
+blitDEPRECATED into the view's viewport of the SwapChain. When a window
+shrinks, the SwapChain is recreated at the new size before the
+application has seen the resize, so for a frame or two the view's
+viewport is larger than the SwapChain image: the destination rectangle
+reaches past the image (a negative top after the Y flip), an invalid
+vkCmdBlitImage that loses the device or hangs the queue. A game that
+presents directly into its window (resize, Alt+Enter, a smaller screen
+resolution) with frame generation on hit it every time.
+
+VulkanDriver::blitDEPRECATED now keeps the part of both rectangles that
+lies inside both images, in the same proportion, and skips a blit with
+nothing left.
+
+diff --git a/filament/backend/src/vulkan/VulkanDriver.cpp b/filament/backend/src/vulkan/VulkanDriver.cpp
+index a5610d33..7b5628a0 100644
+--- a/filament/backend/src/vulkan/VulkanDriver.cpp
++++ b/filament/backend/src/vulkan/VulkanDriver.cpp
+@@ -48,7 +48,9 @@
+ #include <utils/ImmutableCString.h>
+ #include <utils/Panic.h>
+ 
++#include <algorithm>
+ #include <chrono>
++#include <cmath>
+ #include <mutex>
+ #ifndef NDEBUG
+ #include <set>  // For VulkanDriver::debugCommandBegin
+@@ -2920,6 +2922,37 @@ void VulkanDriver::blitDEPRECATED(TargetBufferFlags buffers,
+     VkExtent2D const srcExtent = srcTarget->getExtent();
+     VkExtent2D const dstExtent = dstTarget->getExtent();
+ 
++    // A rectangle reaching past its image (a view's viewport larger than a window whose swap
++    // chain was just recreated smaller, the presents of frame generation during a resize) is
++    // an invalid blit that loses the device: both rectangles keep the part that lies inside
++    // both images, in the same proportion.
++    if (dstRect.left + dstRect.width > dstExtent.width ||
++            dstRect.bottom + dstRect.height > dstExtent.height ||
++            srcRect.left + srcRect.width > srcExtent.width ||
++            srcRect.bottom + srcRect.height > srcExtent.height) {
++        if (dstRect.width == 0 || dstRect.height == 0 || srcRect.width == 0 ||
++                srcRect.height == 0 || dstRect.left >= int32_t(dstExtent.width) ||
++                dstRect.bottom >= int32_t(dstExtent.height) ||
++                srcRect.left >= int32_t(srcExtent.width) ||
++                srcRect.bottom >= int32_t(srcExtent.height)) {
++            return;
++        }
++        double const sx = double(srcRect.width) / double(dstRect.width);
++        double const sy = double(srcRect.height) / double(dstRect.height);
++        // the destination width / height that keeps both rectangles inside their images
++        double w = std::min(double(dstRect.width), double(dstExtent.width - dstRect.left));
++        double h = std::min(double(dstRect.height), double(dstExtent.height - dstRect.bottom));
++        w = std::min(w, double(srcExtent.width - srcRect.left) / sx);
++        h = std::min(h, double(srcExtent.height - srcRect.bottom) / sy);
++        if (w < 1.0 || h < 1.0) {
++            return;
++        }
++        dstRect.width = uint32_t(w);
++        dstRect.height = uint32_t(h);
++        srcRect.width = std::min(uint32_t(std::lround(w * sx)), srcExtent.width - srcRect.left);
++        srcRect.height = std::min(uint32_t(std::lround(h * sy)), srcExtent.height - srcRect.bottom);
++    }
++
+     auto const dstLeft   = int32_t(dstRect.left);
+     auto const srcLeft   = int32_t(srcRect.left);
+     auto const dstTop    = int32_t(dstExtent.height - (dstRect.bottom + dstRect.height));

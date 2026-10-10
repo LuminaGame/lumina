@@ -50,7 +50,14 @@ class LuminaGameHost extends StatefulWidget {
     this.targetFps = 0,
     this.vsyncEnabled = false,
     this.captureMouse = true,
+    this.presentation = LuminaPresentationMode.flutter,
   });
+
+  /// The project's presentation (Project Settings > Presentation): Flutter,
+  /// or Direct (Filament presents into the runner's window, the UI blended
+  /// in; frame generation asks for it by itself). Forwarded to
+  /// [LuminaGameWidget.presentation].
+  final LuminaPresentationMode presentation;
 
   /// Creates the game for a level name.
   final LuminaGameFactory createGame;
@@ -353,6 +360,10 @@ class LuminaGameHostState extends State<LuminaGameHost> {
                   game: _game,
                   targetFps: widget.targetFps,
                   vsyncEnabled: widget.vsyncEnabled,
+                  // A built game may present directly (Project Settings >
+                  // Presentation, frame generation).
+                  allowDirectPresentation: true,
+                  presentation: widget.presentation,
                   // A game screen: edge to edge, at the display's native
                   // resolution (fullscreen included).
                   decorated: false,

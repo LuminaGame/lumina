@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_filament/src/engine.dart';
 import 'package:flutter_filament/src/ffi_platform.dart' as ffi;
 import 'package:flutter_filament/src/native_surface.dart';
+import 'package:flutter_filament/src/renderer.dart';
 import 'package:flutter_filament/src/swap_chain.dart';
 import 'package:flutter_filament/src/ui_overlay.dart';
 
@@ -23,15 +24,32 @@ class FilamentDirectPresenter {
   final FilamentEngine _engine;
   final FilamentNativeSurface _surface;
   FilamentNativeSurfaceHandle _handle;
-  FilamentSwapChain _swapChain;
+  FilamentSwapChain? _swapChain;
   bool _vsync;
   bool _disposed = false;
 
   /// The UI blended over the frame (the host uploads its pictures).
   final FilamentUiOverlay overlay;
 
-  /// The SwapChain on the native window.
-  FilamentSwapChain get swapChain => _swapChain;
+  /// The renderer presenting into [swapChain] (set by the widget).
+  FilamentRenderer? renderer;
+
+  static FilamentDirectPresenter? _active;
+
+  /// The presenter started last and still running: diagnostics (a game's
+  /// presented frame rate).
+  static FilamentDirectPresenter? get active => _active;
+
+  /// The steady-clock times (ns) of the last [max] presents into the window
+  /// (the backend's actual present times without VSync, the commits with).
+  List<int> presentTimes([int max = 1024]) => renderer?.getPresentTimes(max) ?? const [];
+
+  /// The SwapChain on the native window; null after a recreation failed
+  /// ([failure] says why): the widget then goes back to the texture path.
+  FilamentSwapChain? get swapChain => _swapChain;
+
+  /// Why the SwapChain is gone, if it is.
+  String? failure;
 
   /// The native window and its size in physical pixels.
   FilamentNativeSurfaceHandle get handle => _handle;
@@ -84,7 +102,9 @@ class FilamentDirectPresenter {
       return (null, 'the UI overlay material could not be created');
     }
     overlay.setViewport(0, 0, handle.width, handle.height);
-    return (FilamentDirectPresenter._(engine, surface, handle, swapChain, overlay, vsync), null);
+    final presenter = FilamentDirectPresenter._(engine, surface, handle, swapChain, overlay, vsync);
+    _active = presenter;
+    return (presenter, null);
   }
 
   static FilamentSwapChain? _createSwapChain(FilamentEngine engine, FilamentNativeSurfaceHandle handle, bool vsync) {
@@ -116,40 +136,51 @@ class FilamentDirectPresenter {
     _recreate();
   }
 
+  /// A window holds one swap chain at a time (a second one is
+  /// VK_ERROR_NATIVE_WINDOW_IN_USE_KHR): the old one goes first.
   void _recreate() {
     _engine.flushAndWait();
-    final next = _createSwapChain(_engine, _handle, _vsync);
-    if (next == null) return;
-    _swapChain.dispose();
-    _swapChain = next;
+    _swapChain?.dispose();
+    _swapChain = _createSwapChain(_engine, _handle, _vsync);
+    if (_swapChain == null) failure = 'the swap chain could not be created again on the native window';
   }
 
   /// The main view's viewport in the surface (origin bottom-left): the whole
   /// surface, or with a [renderResolution] the largest centred rectangle of
   /// its aspect ratio (letterboxed; the frame renders at that rectangle's
   /// pixels, Resolution Scale and upscalers apply inside it).
+  ///
+  /// The size is rounded down to even pixels: DLSS Frame Generation writes
+  /// black generated frames for an odd width or height (a window whose
+  /// client area is 1264 × 861 flickered); the edge left over is a pixel.
   static (int, int, int, int) viewportFor(int width, int height, {double? renderAspect}) {
-    if (renderAspect == null || renderAspect <= 0 || width <= 0 || height <= 0) return (0, 0, width, height);
+    int even(int v) => v > 1 ? v & ~1 : v;
+    if (width <= 0 || height <= 0) return (0, 0, width, height);
     final surfaceAspect = width / height;
-    if ((surfaceAspect - renderAspect).abs() < 1e-3) return (0, 0, width, height);
-    if (renderAspect > surfaceAspect) {
-      final h = (width / renderAspect).round().clamp(1, height);
-      return (0, (height - h) ~/ 2, width, h);
+    if (renderAspect == null || renderAspect <= 0 || (surfaceAspect - renderAspect).abs() < 1e-3) {
+      return (0, 0, even(width), even(height));
     }
-    final w = (height * renderAspect).round().clamp(1, width);
-    return ((width - w) ~/ 2, 0, w, height);
+    if (renderAspect > surfaceAspect) {
+      final h = even((width / renderAspect).round().clamp(1, height));
+      return (0, (height - h) ~/ 2, even(width), h);
+    }
+    final w = even((height * renderAspect).round().clamp(1, width));
+    return ((width - w) ~/ 2, 0, w, even(height));
   }
 
   /// Destroys the swap chain and the overlay and releases the window.
   Future<void> dispose() async {
     if (_disposed) return;
     _disposed = true;
+    if (identical(_active, this)) _active = null;
+    renderer = null;
     try {
       if (!_engine.isDisposed) _engine.flushAndWait();
     } catch (_) {}
     if (!_engine.isDisposed) {
       overlay.dispose();
-      _swapChain.dispose();
+      _swapChain?.dispose();
+      _swapChain = null;
     }
     await _surface.release();
   }

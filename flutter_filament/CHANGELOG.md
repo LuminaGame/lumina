@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Frame generation into a window that just shrank no longer loses the device (prebuilt `1.77.2-lumina.15`, Filament
+  patch `0017`: Vulkan blits stay inside their images). Direct presentation rounds the view to even pixels (DLSS Frame
+  Generation wrote black frames for odd sizes) and recreates a VSync-changed swap chain after destroying the old one.
 - Direct presentation: `FilamentWidget.nativeSurface` renders into a Vulkan SwapChain on a native window and lets
   Filament present (VSync: FIFO; off: `disableVsync` with the backend present pacing), with no readback; frame
   generation's frames reach the screen. `FilamentUiOverlay` blends a premultiplied picture of the Flutter UI over

@@ -153,6 +153,27 @@ koyduğu `LuminaGameWidget.viewportOverlay`) aynı kutuda, seçilen çözünürl
 (`LuminaRenderSpace.layoutSize`, çözünürlük / cihaz piksel oranı) yerleşir ve resimle birlikte ölçeklenir; böylece o
 çözünürlükte bir penceredeki gibi görünür, resmin olduğu yerde çizilir ve tıklanır, bantlarda asla.
 
+### Doğrudan sunum
+
+`allowDirectPresentation` (false; `LuminaGameHost` true verir, editör hiçbir zaman) ve `presentation` (projenin
+`LuminaPresentationMode`'u), `LuminaGamePresentation.requested` istediğinde derlenen oyunun doğrudan sunmasını sağlar.
+Widget o zaman `FilamentWidget`'ına bir `LuminaWindowSurface` verir (`lib/src/game/window_surface.dart`: runner'ın
+sunum penceresi, `lumina/game_window` kanalı üzerinden: `createSurface`, `destroySurface`, `surfaceChanged`) ve aldığı
+`FilamentUiOverlay`'i `LuminaUiCapture.directOverlay`'e yayımlar; geri dönüşte nedeni bildirir
+(`LuminaGamePresentation.reportFallback`, bir kez loglanır) ve doku yolunda kalır. Ağacın şekli hiç değişmez, geçiş
+view'i ve UI'ı korur. Doğrudan sunarken frame driver'ın ekran dışı çizimi atlanır (tek çizim widget'ınkidir; aynı
+view'in ikinci kez çizilmesi TAA / upscaler / frame generation geçmişini iki kez ilerletir) ve
+`LuminaScreenResolutionBox(barsOnly: true)` yalnızca bantları siyaha boyar.
+
+`LuminaUiCapture` (`lib/src/game/ui_capture.dart`) çocuğunu bir `FilamentUiOverlay` için ekran dışında çizer: çocuk kendi
+birleştirme katmanıdır; resim yalnızca o katmanı sahneye yeniden ekleyen bir kareden (altında herhangi bir değişiklik,
+iç içe repaint boundary'ler dahil) ya da boyutu değiştiren bir kareden sonra, device pixel ratio'da alınır
+(`toImageSync` + `toByteData(rawRgba)`, önceden çarpılmış), aynı anda tek yakalama; `stats` (`LuminaUiCaptureStats`:
+yakalamalar, atlanan kareler, boyut, geri okuma / yükleme / gecikme mikrosaniyesi). `LuminaUiCaptureRoot` bütün
+uygulamayı sarar (üretilen `main()` `runApp(const LuminaUiCaptureRoot(child: MyLuminaGameApp()))` çalıştırır), böylece
+Flutter'ın çizdiği her şey (açılır pencereler, diyaloglar, katmanlar) resme girer; üretilen uygulamanın Scaffold'u
+şeffaftır. Root yoksa oyun widget'ı kendi alt ağacını yakalar.
+
 ### `class LuminaRenderSpace`
 
 `lib/src/game/render_space.dart`. Oyunun, onu gösteren alan içindeki render uzayı; host'un, çözünürlük kutusunun ve
@@ -242,6 +263,9 @@ monitör; istemci boyutu), `setClientSize {width, height}` (elde edilen istemci 
 çağrılarını yanıtlar, bir ekran değişince ya da pencere başka monitöre geçince `displayChanged` çağırır. Bunları
 bilmeyen bir runner (editör, önceden üretilmiş oyunlar) `MissingPluginException` atar: mod yok, ekran bilgisi yok,
 hiçbir şey uygulanmaz.
+
+Doğrudan sunum için `createSurface` (`{handle, width, height}` ya da `unsupported` hatası) ve `destroySurface`'i
+yanıtlar, `surfaceChanged` çağırır; `onSurfaceChanged` bunları alır.
 
 `LuminaWebDisplayBackend` (`lib/src/utility/web_display_backend.dart`) web'in ekran backend'idir: tek monitör,
 tarayıcı ekranı (`window.screen` × `devicePixelRatio`), yalnız geçerli moduyla ve yenileme hızı olmadan; istemci boyutu

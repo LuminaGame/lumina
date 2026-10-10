@@ -705,8 +705,10 @@ sunar:
   `SwapChainConfig.none`: FIFO; kapalıyken `disableVsync`: frame generation'ınkiler dahil sunumları `0016` yamasının
   backend sunum iş parçacığı zamanlar) ve bir `FilamentUiOverlay` oluşturur. `setVsync` SwapChain'i yeniden kurar,
   `updateHandle` pencereyi izler, `viewportFor(w, h, renderAspect:)` bir `renderResolution`'ın en-boy oranını pencerenin
-  içine siyah bantlarla yerleştirir (kare o dikdörtgenin pikselinde çizilir). `unsupportedReason(engine)`: web, Vulkan
-  dışı bir backend.
+  içine siyah bantlarla yerleştirir (kare o dikdörtgenin pikselinde çizilir), boyutlar çift piksele aşağı yuvarlanır
+  (DLSS Frame Generation tek boyutlarda siyah kare yazar). Bir pencerede tek swap chain olur: VSync değişikliği önce
+  eskisini yok eder; yenisi kurulamazsa `swapChain` null, `failure` dolu olur ve widget geri döner. `active` /
+  `renderer` / `presentTimes()`: çalışan sunucunun tanılaması. `unsupportedReason(engine)`: web, Vulkan dışı bir backend.
 - Kare döngüsü widget'ın ticker'ı olarak kalır (Flutter'ın vsync geri çağrıları ve `FilamentFrameLimiter`): çizilen her
   kare `beginFrame` → view'ler → `overlay.render` → `endFrame`; geri okuma ve GPU beklemesi yok; sunumu Filament yapar.
   Widget hiçbir şey boyamaz (`SizedBox.expand`).

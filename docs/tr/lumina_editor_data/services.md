@@ -167,6 +167,17 @@ Bir oyun projesinin masaüstü runner'larına pencere modlarını kazandırır. 
 İdempotenttir; bir dosya yalnızca içeriği değişince yazılır. Editörün kod üretimi ve `GenerateDartCodeUseCase`
 (Build pipeline) çalıştırır.
 
+Sunum penceresi (doğrudan sunum, `windows_surface_sources.dart`): `createSurface` Flutter view'inin istemci alanını
+kaplayan, `WS_DISABLED` ve `HTTRANSPARENT` (fareyi altındaki Flutter view alır, klavye onda kalır), hiç silinmeyen ve
+boyanmayan bir alt pencere oluşturur; pencere yalnızca mesajlarını işleyen kendi iş parçacığındadır (bir pencereye
+sunum, GPU sürücüsünün iş parçacıklarından ona mesaj gönderebilir ve bunlar platform iş parçacığını asla beklememeli;
+platform iş parçacığı onu yalnızca gönderilen mesajları işlerken bekler). View'in `WM_SIZE`'ını (asenkron) izler ve
+`surfaceChanged` bildirir (küçültülmüşken 0 x 0); `destroySurface` onu kapatır ve iş parçacığını bekler. Linux runner'ı
+`createSurface`'e `unsupported` der (GTK view'i üzerinde X11 alt penceresi / Wayland subsurface henüz yok), Linux
+oyunları Flutter üzerinden sunar. `generateMainDart(presentation: 'direct')` oyun host'una
+`presentation: LuminaPresentationMode.direct` verir; üretilen her `main()` uygulamayı şeffaf Scaffold ile
+`LuminaUiCaptureRoot`'a sarar.
+
 Windows runner'ın yaptığı: Start Fullscreen açıkken henüz gizli olan pencereyi (ilk karede görünür) `WS_POPUP`'a
 çevirir, `MonitorFromWindow`'un `rcMonitor`'üne `HWND_TOP` ile boyutlandırır ve DWM köşe yuvarlamasını kapatır; oyun
 hiç pencereli görünmez. Alt+Enter'ın döneceği pencereli yerleşim o monitörde ortalanır. Alt+Enter ve F11, Flutter

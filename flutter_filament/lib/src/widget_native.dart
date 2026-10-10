@@ -116,6 +116,7 @@ class NativeFilamentWidgetState extends State<FilamentWidget>
       return;
     }
     _direct = presenter;
+    presenter.renderer = _renderer;
     _directViewport = null;
     presenter.surfaceListenable.addListener(_onSurfaceChanged);
     widget.onUiOverlay?.call(presenter.overlay);
@@ -351,6 +352,14 @@ class NativeFilamentWidgetState extends State<FilamentWidget>
     final limiter = widget.frameLimiter ?? _limiter;
     limiter.configure(targetFps: widget.targetFps ?? 0, vsync: widget.vsyncEnabled);
     if (!limiter.shouldRender(SchedulerBinding.instance.currentFrameTimeStamp)) return;
+    final swapChain = direct.swapChain;
+    if (swapChain == null) {
+      // Lost its swap chain: back to the texture path, with the reason.
+      final reason = direct.failure;
+      unawaited(_stopDirect().then((_) =>
+          _reportPresentation(FilamentPresentationStatus(FilamentPresentationKind.texture, reason: reason))));
+      return;
+    }
     final surface = direct.handle;
     if (!surface.isVisible) return; // minimised
     final startTick = DateTime.now().microsecondsSinceEpoch;
@@ -367,7 +376,7 @@ class NativeFilamentWidgetState extends State<FilamentWidget>
       if (_camera != null) widget.cameraManipulator?.updateCamera(_camera!);
       final selected = widget.frameViews?.call(_view!, viewport.$3, viewport.$4);
       final views = selected == null || selected.isEmpty ? [_view!] : selected;
-      if (_renderer!.beginFrame(direct.swapChain)) {
+      if (_renderer!.beginFrame(swapChain)) {
         for (final view in views) {
           _renderer!.render(view);
         }

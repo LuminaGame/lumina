@@ -72,6 +72,7 @@ class GenerateDartCodeUseCase {
         targetFps: project?.settings.targetFps ?? 0,
         vsyncEnabled: project?.settings.vsyncEnabled ?? false,
         startFullscreen: project?.settings.startFullscreen ?? false,
+        presentation: project?.settings.presentation ?? 'flutter',
         // Project Settings > Neural rendering: only an opted-in project's game runs OpenDLSS-NR.
         neuralRendering: project?.neuralRendering,
       ));

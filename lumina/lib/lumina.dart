@@ -186,6 +186,7 @@ export 'package:lumina/src/game/game_state.dart';
 export 'package:lumina/src/game/display_info.dart';
 export 'package:lumina/src/game/game_display.dart';
 export 'package:lumina/src/game/game_frame_pacing.dart';
+export 'package:lumina/src/game/game_presentation.dart';
 export 'package:lumina/src/game/game_user_settings_file.dart';
 export 'package:lumina/src/game/game_window.dart';
 export 'package:lumina/src/game/camera_actor.dart';

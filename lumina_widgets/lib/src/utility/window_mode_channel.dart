@@ -15,10 +15,16 @@ import 'package:lumina/lumina_runtime.dart';
 /// - `setClientSize {width, height}` → the client size `[w, h]` the window
 ///   got;
 /// - `moveToMonitor {index}` → whether the window moved;
+/// - `createSurface` → `{handle, width, height}`: the presentation window
+///   (Windows: a child window of the Flutter view that takes no input) a
+///   game presenting directly renders into, or an `unsupported` error with
+///   the reason;
+/// - `destroySurface` → hides and destroys it;
 ///
 /// and call `modeChanged {mode}` when the player toggles with Alt+Enter or
 /// F11, `displayChanged {displays}` when a display changes or the window
-/// moves to another monitor.
+/// moves to another monitor, `surfaceChanged {handle, width, height}` when the
+/// presentation window is resized (0 × 0 while minimised).
 /// A runner without them (the editor, older generated runners) throws
 /// [MissingPluginException]: no mode, nothing applied.
 class LuminaWindowModeChannel implements LuminaWindowModeBackend, LuminaDisplayBackend {
@@ -32,6 +38,10 @@ class LuminaWindowModeChannel implements LuminaWindowModeBackend, LuminaDisplayB
   void Function(LuminaWindowMode mode)? _listener;
   void Function(LuminaDisplayInfo info)? _displayListener;
 
+  /// Called with the presentation window's `{handle, width, height}` when it
+  /// changes.
+  void Function(Map<Object?, Object?> surface)? onSurfaceChanged;
+
   @override
   set onModeChanged(void Function(LuminaWindowMode mode)? listener) => _listener = listener;
 
@@ -39,6 +49,11 @@ class LuminaWindowModeChannel implements LuminaWindowModeBackend, LuminaDisplayB
   set onDisplayChanged(void Function(LuminaDisplayInfo info)? listener) => _displayListener = listener;
 
   Future<Object?> _onCall(MethodCall call) async {
+    if (call.method == 'surfaceChanged') {
+      final args = call.arguments;
+      if (args is Map) onSurfaceChanged?.call(args);
+      return null;
+    }
     if (call.method == 'displayChanged') {
       final args = call.arguments;
       final info = args is Map ? LuminaDisplayInfo.fromMap(args) : null;
@@ -105,6 +120,31 @@ class LuminaWindowModeChannel implements LuminaWindowModeBackend, LuminaDisplayB
       return false;
     } on PlatformException {
       return false;
+    }
+  }
+
+  /// Creates (or returns) the runner's presentation window:
+  /// `({handle, width, height}, null)`, or `(null, reason)`.
+  Future<(Map<Object?, Object?>?, String?)> createSurface() async {
+    try {
+      final map = await _channel.invokeMethod<Map<Object?, Object?>>('createSurface');
+      if (map == null) return (null, 'the runner returned no presentation window');
+      return (map, null);
+    } on MissingPluginException {
+      return (null, 'the game runner has no presentation window (regenerate the project to update it)');
+    } on PlatformException catch (e) {
+      return (null, e.message ?? e.code);
+    }
+  }
+
+  /// Hides and destroys the presentation window.
+  Future<void> destroySurface() async {
+    try {
+      await _channel.invokeMethod<void>('destroySurface');
+    } on MissingPluginException {
+      return;
+    } on PlatformException {
+      return;
     }
   }
 

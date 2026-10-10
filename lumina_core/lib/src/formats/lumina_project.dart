@@ -265,6 +265,14 @@ class EngineScalabilitySettings {
   final int autoSaveIntervalSeconds;
   final bool startFullscreen;
 
+  /// How the built game shows its frames: `flutter` (Flutter composites the
+  /// frame, the default) or `direct` (Filament presents into the game window
+  /// with the UI blended in; frame generation turns it on by itself).
+  final String presentation;
+
+  /// The values [presentation] takes.
+  static const List<String> presentationModes = ['flutter', 'direct'];
+
   const EngineScalabilitySettings({
     // Unlimited frame rate and VSync off by default.
     this.targetFps = 0,
@@ -274,6 +282,7 @@ class EngineScalabilitySettings {
     this.autoOrganizeFiles = true,
     this.autoSaveIntervalSeconds = 60,
     this.startFullscreen = false,
+    this.presentation = 'flutter',
   });
 
   Map<String, dynamic> toMap() {
@@ -285,6 +294,7 @@ class EngineScalabilitySettings {
       'auto_organize_files': autoOrganizeFiles,
       'auto_save_interval_seconds': autoSaveIntervalSeconds,
       'start_fullscreen': startFullscreen,
+      'presentation': presentation,
     };
   }
 
@@ -299,6 +309,7 @@ class EngineScalabilitySettings {
       autoOrganizeFiles: map['auto_organize_files'] as bool? ?? true,
       autoSaveIntervalSeconds: map['auto_save_interval_seconds'] as int? ?? 60,
       startFullscreen: map['start_fullscreen'] as bool? ?? false,
+      presentation: presentationModes.contains(map['presentation']) ? map['presentation'] as String : 'flutter',
     );
   }
 }

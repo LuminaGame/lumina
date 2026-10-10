@@ -160,6 +160,29 @@ void main() {
     }
   });
 
+  test('the Windows runner gives a game presenting directly its presentation window; Linux says unsupported', () {
+    final cpp = GameWindowRunnerService.windowsSource(startFullscreen: false);
+    expect(cpp, isNot(contains('{{SURFACE}}')));
+    for (final piece in [
+      '"createSurface"',
+      '"destroySurface"',
+      '"surfaceChanged"',
+      'WS_CHILD | WS_VISIBLE | WS_DISABLED',
+      'return HTTRANSPARENT;',
+      'HandleSurfaceCall(call, result)',
+      'WatchSurfaceView(message);',
+      'WatchSurfaceWindow(message, wparam);',
+    ]) {
+      expect(cpp, contains(piece), reason: piece);
+    }
+    // Defined before the window procedures that call it.
+    expect(cpp.indexOf('void WatchSurfaceView('), lessThan(cpp.indexOf('WatchSurfaceView(message);')));
+    expect(cpp.indexOf('bool HandleSurfaceCall('), lessThan(cpp.indexOf('HandleSurfaceCall(call, result)')));
+    final cc = GameWindowRunnerService.linuxSource(startFullscreen: false);
+    expect(cc, contains('"createSurface"'));
+    expect(cc, contains('direct presentation is not available on Linux yet'));
+  });
+
   test('a project without desktop runners is left alone', () {
     final report = GameWindowRunnerService.apply(root.path, startFullscreen: true);
     expect(report.files, isEmpty);
@@ -200,6 +223,27 @@ void main() {
       expect(main, contains('vsyncEnabled: true'));
       expect(File('$project/windows/runner/lumina_window_mode.cpp').readAsStringSync(),
           contains('kStartFullscreen = true;'));
+      expect(main, isNot(contains('presentation:')), reason: 'Flutter presentation is the default');
+    });
+
+    test('Presentation Direct reaches the game host', () async {
+      final generated = DartCodeGeneratorService().generateMainDart(projectName: 'Game', presentation: 'direct');
+      expect(generated, contains('presentation: LuminaPresentationMode.direct,'));
+      // The whole app is what Filament blends over its frame; its background
+      // stays transparent.
+      expect(generated, contains('runApp(const LuminaUiCaptureRoot(child: MyLuminaGameApp()));'));
+      expect(generated, contains('backgroundColor: Color(0x00000000),'));
+      final project = _projectWithRunners(root);
+      Directory('$project/contents/levels').createSync(recursive: true);
+      final result = await GenerateDartCodeUseCase()(
+        projectDir: project,
+        levelName: 'L_DefaultLevel',
+        actors: const [],
+        project: const LuminaProject(
+            projectName: 'game', settings: EngineScalabilitySettings(presentation: 'direct')),
+      );
+      expect(result.isSuccess, isTrue, reason: result.error);
+      expect(File('$project/lib/main.dart').readAsStringSync(), contains('presentation: LuminaPresentationMode.direct,'));
     });
   });
 }

@@ -23,6 +23,7 @@ are upstream v1.77.2 with exactly these files applied in order.
 | `0014-ray-query-origin-offset-in-texels.patch` | `filament/src/PostProcessManager.cpp`, `filament/src/materials/rt/{rtShadow,restirShade,rtSpecularHitDistance}.mat` | Ray query origins are offset by a few texels' world size (from the projection and the target height) instead of half the near plane grown 2 % per world unit of camera distance, so ray-traced shadows of small props stay solid in a centimetre-scale scene. |
 | `0015-posed-acceleration-structures-for-skinned-and-morphed-renderables.patch` | `backend/include/backend/AccelerationStructure.h`, `backend/include/private/backend/DriverAPI.inc`, `backend/src/vulkan/{VulkanAccelerationStructure.*,VulkanBlasDeformer.* (new),VulkanBlasDeform.comp (new),VulkanBlasDeformSpirv.h (new),VulkanBufferCache.cpp,VulkanDriver.*}`, the other drivers' no-ops, `backend/CMakeLists.txt`, `filament/include/filament/Scene.h`, `filament/src/{Scene.cpp,details/Scene.*,details/VertexBuffer.h,components/RenderableManager.*}` | Skinned and morphed renderables are traced in their current pose: a Vulkan compute pass poses their vertices into their own deformable BLAS, refit in every frame their palette or weights changed (`Scene::getDeformedBlasCount`, `getLastBlasDeformTimeNanos`). |
 | `0016-present-pacing-thread.patch` | `backend/include/private/backend/DriverAPI.inc`, `backend/src/vulkan/{VulkanPresentPacer.* (new),utils/QueueLock.h (new),VulkanSwapChain.*,VulkanDriver.*,VulkanCommands.cpp,VulkanReadPixels.cpp,platform/VulkanPlatformSwapChainImpl.cpp}`, the other drivers' no-ops, `backend/CMakeLists.txt`, `filament/include/filament/Renderer.h`, `filament/src/details/Renderer.*` | Vsync-less Vulkan SwapChains present from their own thread: frame-generation presents are spaced evenly over the frame interval without the render thread waiting, so the presented rate multiplies; `Renderer::getPresentTimes()` reports the actual present times. |
+| `0017-vulkan-blit-rectangles-inside-their-images.patch` | `backend/src/vulkan/VulkanDriver.cpp` | `blitDEPRECATED` keeps both rectangles inside their images: frame generation's presents into a window that just shrank no longer lose the device. |
 
 ## 0001: libassimp glTF 2 `ReplaceData_joint` bounds
 
@@ -387,3 +388,13 @@ destruction and in `finish()`. Vsync-less surfaces ask for `minImageCount + 7` i
 `Renderer::getPresentTimes()` when `isPresentPacingSupported()`; headless SwapChains pace and timestamp too.
 The patch also bounds the clear pass of the extra presents to the view's viewport (an unbounded viewport and a
 viewport larger than a window's client area are invalid on a real swap chain and lost the device).
+
+## 0017: blit rectangles inside their images
+
+Frame generation (0009, 0013) presents its extra frames with `blitDEPRECATED` into the view's viewport of the
+SwapChain. When a window shrinks, Vulkan's SwapChain is recreated at the new size before the application has seen
+the resize, so for a frame or two the view's viewport is larger than the SwapChain image: the destination rectangle
+reaches past the image (a negative top after the Y flip), an invalid `vkCmdBlitImage` that lost the device or hung
+the queue. A game presenting directly into its window (Lumina's direct presentation: resize, Alt+Enter, a smaller
+screen resolution) with frame generation on hit it every time. `VulkanDriver::blitDEPRECATED` now keeps the part of
+both rectangles that lies inside both images, in the same proportion, and skips a blit with nothing left.

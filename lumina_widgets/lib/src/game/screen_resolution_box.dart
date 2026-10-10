@@ -18,7 +18,7 @@ import 'package:lumina_widgets/src/game/render_space.dart';
 /// The widget tree is the same either way, so the view (and its engine
 /// resources) survives a resolution change.
 class LuminaScreenResolutionBox extends StatelessWidget {
-  const LuminaScreenResolutionBox({super.key, required this.builder, this.resolution, this.overlay});
+  const LuminaScreenResolutionBox({super.key, required this.builder, this.resolution, this.overlay, this.barsOnly = false});
 
   /// Builds the view for a fixed render size in physical pixels (null: the
   /// layout size).
@@ -31,6 +31,12 @@ class LuminaScreenResolutionBox extends StatelessWidget {
   /// Laid out over the view in render space (the game's UI).
   final Widget? overlay;
 
+  /// Paints black only on the bars around the picture, leaving the picture
+  /// transparent: a game presenting directly, whose UI picture (bars
+  /// included) Filament blends over its own frame. False paints the whole
+  /// background black, under the view.
+  final bool barsOnly;
+
   /// The size, in the [space] given, of the largest box with the aspect
   /// ratio of [render] (the whole space without one).
   static Size fit(Size space, (int, int)? render) =>
@@ -40,8 +46,8 @@ class LuminaScreenResolutionBox extends StatelessWidget {
   Widget build(BuildContext context) {
     return ValueListenableBuilder<(int, int)?>(
       valueListenable: (resolution ?? LuminaGameDisplay.renderResolution).asValueListenable(),
-      builder: (context, render, _) => ColoredBox(
-        color: const Color(0xFF000000),
+      builder: (context, render, _) => CustomPaint(
+        painter: _Background(render: render, barsOnly: barsOnly),
         child: LayoutBuilder(builder: (context, constraints) {
           final space = constraints.biggest;
           final renderSpace = LuminaRenderSpace(
@@ -80,4 +86,32 @@ class LuminaScreenResolutionBox extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Black behind the picture, or only on the bars around it.
+class _Background extends CustomPainter {
+  const _Background({required this.render, required this.barsOnly});
+
+  final (int, int)? render;
+  final bool barsOnly;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final black = Paint()..color = const Color(0xFF000000);
+    if (!barsOnly) {
+      canvas.drawRect(Offset.zero & size, black);
+      return;
+    }
+    final picture = LuminaRenderSpace(space: size, renderResolution: render).rect;
+    canvas.drawPath(
+      Path()
+        ..fillType = PathFillType.evenOdd
+        ..addRect(Offset.zero & size)
+        ..addRect(picture),
+      black,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_Background old) => old.render != render || old.barsOnly != barsOnly;
 }

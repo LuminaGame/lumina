@@ -139,6 +139,14 @@ static void method_call_cb(FlMethodChannel* channel, FlMethodCall* call,
   } else if (FlMethodResponse* display = handle_display_call(method, fl_method_call_get_args(call))) {
     // getDisplays, setClientSize, moveToMonitor.
     response = display;
+  } else if (strcmp(method, "createSurface") == 0) {
+    // Direct presentation needs a native child surface over the GTK view (an
+    // X11 child window, a Wayland subsurface); not provided yet: the game
+    // presents through Flutter.
+    response = FL_METHOD_RESPONSE(fl_method_error_response_new(
+        "unsupported", "direct presentation is not available on Linux yet", nullptr));
+  } else if (strcmp(method, "destroySurface") == 0) {
+    response = FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_bool(TRUE)));
   } else {
     response = FL_METHOD_RESPONSE(fl_method_not_implemented_response_new());
   }

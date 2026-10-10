@@ -159,4 +159,14 @@ void main() {
       expect(const LuminaProject(projectName: 'P').toMap().containsKey('plugin_isolation'), isFalse);
     });
   });
+
+  group('Presentation', () {
+    test('defaults to flutter, round-trips direct, an unknown value is flutter', () {
+      expect(const EngineScalabilitySettings().presentation, 'flutter');
+      final direct = EngineScalabilitySettings.fromMap(const EngineScalabilitySettings(presentation: 'direct').toMap());
+      expect(direct.presentation, 'direct');
+      expect(EngineScalabilitySettings.fromMap(const {'presentation': 'metal'}).presentation, 'flutter');
+      expect(EngineScalabilitySettings.fromMap(const {}).presentation, 'flutter');
+    });
+  });
 }

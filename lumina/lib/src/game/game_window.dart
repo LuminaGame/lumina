@@ -5,6 +5,7 @@ import 'package:lumina_core/lumina_core.dart' show ObservableValue;
 
 import 'package:lumina/src/game/game_display.dart';
 import 'package:lumina/src/game/game_frame_pacing.dart';
+import 'package:lumina/src/game/game_presentation.dart';
 import 'package:lumina/src/game/game_user_settings_file.dart';
 
 /// How the game's window is shown on a desktop.
@@ -110,6 +111,8 @@ abstract final class LuminaGameWindow {
     final value = saved[settingsKey];
     // The player's target frame rate and VSync, before the first frame.
     LuminaGameFramePacing.restore(saved);
+    // The player's presentation (Flutter or Direct), if they chose one.
+    LuminaGamePresentation.restore(saved);
     await _restoreMode((value is String ? LuminaWindowMode.parse(value) : null) ?? startMode);
     await LuminaGameDisplay.restore(saved);
     return mode.value;

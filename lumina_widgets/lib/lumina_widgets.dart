@@ -22,6 +22,8 @@ export 'package:lumina_widgets/src/game/hud_overlay.dart';
 export 'package:lumina_widgets/src/game/lumina_widget.dart';
 export 'package:lumina_widgets/src/game/render_space.dart';
 export 'package:lumina_widgets/src/game/screen_resolution_box.dart';
+export 'package:lumina_widgets/src/game/ui_capture.dart';
+export 'package:lumina_widgets/src/game/window_surface.dart';
 export 'package:lumina_widgets/src/lumina_widgets_binding.dart';
 export 'package:lumina_widgets/src/media/media.dart';
 export 'package:lumina_widgets/src/umg/element_binding.dart';

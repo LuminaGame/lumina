@@ -229,6 +229,8 @@ ilk kareden önce geri koyar.
   eşit kare süreleri (60 Hz: 30 ve 45 FPS ikisi de 30; 144 Hz: 60 FPS 48 olur).
 - **VSync kapalı**: hedef ortalamadır; kareler komşu yenileme sayıları arasında değişir (60 Hz, 45 FPS: bir ve iki
   yenileme).
+- **Direct sunumda** ([aşağıda](#libsrcgamegame_presentationdart)) VSync swap chain'in sunum kipidir (açık: FIFO,
+  kapalı: anında) ve geri okuma yoktur.
 - Filament'in `SwapChain::CONFIG_DISABLE_VSYNC`'i (ve vsync'siz bir Vulkan swap chain'in sunum iş parçacığı, yama
   `0016`) yalnızca pencereye kendisi sunan bir swap chain için anlamlıdır; Flutter ile gösterilen oyunda böyle bir swap
   chain yoktur.
@@ -257,6 +259,70 @@ ilk kareden önce geri koyar.
 | `settingsPatch` | `static Map<String, Object?> settingsPatch()` | `{target_fps, vsync}`: oyuncunun seçimi, yoksa null. |
 | `targetFpsKey` / `vsyncKey` | `'target_fps'`, `'vsync'` | Ayar dosyası anahtarları. |
 | `resetForTesting` | `static void resetForTesting()` | Yeni bir sürecin durumu. |
+
+## `lib/src/game/game_presentation.dart`
+
+Derlenen bir oyunun karelerini nasıl gösterdiği (işi lumina_widgets yapar; bu sınıf karar verir).
+
+- **Flutter** (varsayılan, `LuminaPresentationMode.flutter`): Filament ekran dışı bir swap chain'e çizer, kare bir
+  `RawImage`'e geri okunur, UI'ı Flutter birleştirir ve sunar. Her yerde çalışır; editör viewport'u ve Play-In-Editor
+  hep böyledir (Flutter panelleri karenin üstündedir, bunu native bir pencere yapamaz).
+- **Direct** (`LuminaPresentationMode.direct`): Filament kendine ait bir pencerede (üretilen runner'ın sunum penceresi,
+  Flutter view'inin girdi almayan bir alt penceresi) bir Vulkan swap chain'e çizer ve sunar; uygulamanın tüm UI'ı (HUD,
+  UMG katmanı, menüler, açılır pencereler) yerleşim ve girdi için Flutter widget'ı olarak kalır, değiştiğinde ekran
+  dışında çizilir ve Filament onu üretilenler dahil her sunulan karenin üzerine karıştırır
+  ([lumina_widgets](../lumina_widgets/index.md#doğrudan-sunum), [flutter_filament](../flutter_filament/renderer-and-view.md)).
+  Geri okuma yok; frame generation'ın kareleri ekrana ulaşır.
+
+**Geçerli olan.** `resolve(project:, player:, frameGeneration:)`: oyuncunun seçimi (`GameUserSettings.json` anahtarı
+`presentation`, `LuminaGameWindow.restore` geri yükler) projeninkinin (Project Settings > Presentation, `.lmproject`
+içinde `settings.presentation`, üretilen `main()` tarafından `LuminaGameHost(presentation:)`'a verilir) önüne geçer;
+geçerli frame generation (`LuminaRtxController.frameGenerationActive`: DLSS Frame Generation ya da view'de FSR3 frame
+generation) oyuncu Flutter seçmediyse Direct ister. Direct çalışamadığında ev sahibi nedenini bildirir
+(`reportFallback`) ve `decision` o nedenle Flutter olur, bir kez loglanır: web (canvas'ı tarayıcı sunar), Vulkan dışı
+backend, sunum penceresi olmayan runner (önceden üretilmiş proje; şimdilik Linux), başarısız swap chain. Çalışırken
+geçiş pencereyi ve swap chain'i oluşturur ya da bırakır; view ve UI bağlı kalır.
+
+**Tasarım.**
+- *Kare döngüsü*: sahibi değişmedi. Flutter'ın vsync geri çağrıları (oyun widget'ının ticker'ı ve paylaşılan
+  `FilamentFrameLimiter`) dünyayı tick'ler ve `beginFrame` / render / `endFrame` çağırır; sunumu Filament'in sürücü
+  iş parçacığı (VSync kapalıyken `0016` yamasının sunum iş parçacığı) yapar. Çizim hızı en fazla ekran yenileme
+  hızıdır; frame generation sunumları bunun ötesine çarpar.
+- *VSync / Target FPS*: VSync açık swap chain'in FIFO sunum kipidir (`SwapChainConfig.none`), kapalı
+  `SwapChainConfig.disableVsync` (anında sunum, frame generation için backend zamanlar); Apply swap chain'i yeniden
+  kurar. Target FPS sınırlayıcıda kalır.
+- *Boyut, küçültme, DPI*: runner penceresini Flutter view'inin üzerinde tutar ve `surfaceChanged` bildirir; Filament
+  swap chain'i pencere boyutunda yeniden kurar; küçültülmüşken (0 x 0) çizim atlanır. Yeni küçülmüş bir pencereden
+  büyük viewport kırpılır (yama `0017`). View'in viewport'u çift piksele yuvarlanır (DLSS Frame Generation tek
+  boyutlarda siyah kare yazar).
+- *Alt+Enter / tam ekran / ekran çözünürlüğü*: pencere kipleri eskisi gibi runner'ındır; seçilen çözünürlük view'i
+  pencerenin içinde, pencerenin pikselinde siyah bantlarla yerleştirir (Resolution Scale ve upscaler'lar daha az çizer).
+- *Girdi*: Flutter'ın, değişmedi (`LuminaRenderSpace`); sunum penceresi devre dışıdır ve isabet testine şeffaftır.
+- *HDR*: SDR (UNORM swap chain); yama setinde HDR çıkışı yok.
+
+**Ölçüldü** (RTX PRO 2000, 60 Hz 3440x1440 ekran, beş test-assets nesnesi, `D:/fs/dp` üretilmiş oyun kopyası):
+
+| | Flutter | Direct |
+|---|---|---|
+| kenarlıksız tam ekran 3440x1440, FG kapalı, VSync kapalı | 33,8-35,4 sunum/s | 60,0 (CV 0,12) |
+| pencere 1264x861, FG kapalı | 48,0 | 60,2 (CV 0,07) |
+| tam ekran, DLSS FG 2x / 4x / FSR3 FG (VSync kapalı) | takılır (fence zaman aşımı) | 120,0 / 118,1 / 119,9 |
+| pencere, DLSS FG 2x / 4x / FSR3 FG | - | 119,7 / 142,1 / 115,1 |
+| VSync açık, FG kapalı / DLSS 2x | - | 60,4 / 60,3 (FIFO) |
+
+3440x1440'ta UI resmi: Flutter'ın raster iş parçacığında 14-19 ms geri okuma, UI iş parçacığında 1,5-4,7 ms yükleme,
+değişiklikten Filament'e yaklaşık bir kare (16-24 ms); yalnızca UI değiştiğinde alınır (10 Hz HUD saati: saniyede 10).
+60 Hz birleştirilen bir ekranda saniyede yaklaşık 120'den fazla sunum gösterilmez (2x görünür, 4x / 6x için daha hızlı
+ekran gerekir).
+
+| Üye | İmza | Açıklama |
+|---|---|---|
+| `LuminaPresentationMode` | `flutter`, `direct`; `id`, `parse(Object?)` | Kip; dosyalarda `'flutter'` / `'direct'`. |
+| `LuminaPresentationDecision` | `(mode, {reason})` | Bir kip ve nedeni. |
+| `resolve` | `static LuminaPresentationDecision resolve({required project, player, bool frameGeneration = false})` | Yukarıdaki kurallar. |
+| `requested` / `decision` | `static final ObservableValue<LuminaPresentationDecision>` | Oyunun istediği / geçerli olan. |
+| `setProjectDefault` / `apply` / `restore` / `settingsPatch` | | Proje ayarı, oyuncu seçimi (null unutur), ayar dosyasından başlangıç, dosya anahtarı. |
+| `setFrameGenerationActive` / `reportFallback` / `reset` | | Frame generation açık/kapalı; ev sahibi yapamadı (null: yapabiliyor); varsayılanlar. |
 
 ## `lib/src/game/lumina_game.dart`
 

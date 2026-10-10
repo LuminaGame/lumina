@@ -4,6 +4,7 @@ import 'package:lumina_editor_data/src/services/game_window_runner/linux_display
 import 'package:lumina_editor_data/src/services/game_window_runner/linux_sources.dart';
 import 'package:lumina_editor_data/src/services/game_window_runner/windows_display_sources.dart';
 import 'package:lumina_editor_data/src/services/game_window_runner/windows_sources.dart';
+import 'package:lumina_editor_data/src/services/game_window_runner/windows_surface_sources.dart';
 
 /// What [GameWindowRunnerService.apply] did.
 class GameWindowRunnerReport {
@@ -20,8 +21,10 @@ class GameWindowRunnerReport {
 /// Gives a game project's desktop runners their window modes: windowed and
 /// borderless fullscreen, the project's Start Fullscreen at launch, Alt+Enter
 /// and F11 toggles, the monitors and the window size for the game's screen
-/// resolution, and the `lumina/game_window` channel `LuminaGameWindow` and
-/// `LuminaGameDisplay` drive.
+/// resolution, the presentation window a game presenting directly renders
+/// into (Windows; Linux answers unsupported), and the `lumina/game_window`
+/// channel `LuminaGameWindow`, `LuminaGameDisplay` and the game widget's
+/// `LuminaWindowSurface` drive.
 ///
 /// Writes `windows/runner/lumina_window_mode.{h,cpp}` and
 /// `linux/runner/lumina_window_mode.{h,cc}` (regenerated each time) and hooks
@@ -52,6 +55,7 @@ abstract final class GameWindowRunnerService {
       kWindowsWindowModeSource
           .replaceFirst('{{START_FULLSCREEN}}', '$startFullscreen')
           .replaceFirst('{{DISPLAY}}', kWindowsDisplaySource.trim())
+          .replaceFirst('{{SURFACE}}', kWindowsSurfaceSource.trim())
           .trimLeft();
 
   /// The Linux `.cc` for [startFullscreen].

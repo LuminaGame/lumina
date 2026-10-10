@@ -204,6 +204,18 @@ class LuminaRtxController {
   /// while it is in use. Updated by every [apply], [invalidate] and [dispose].
   static final ObservableValue<Set<String>> activeNvidiaFeatures = ObservableValue<Set<String>>(const <String>{});
 
+  /// Whether frame generation (DLSS Frame Generation, or FSR3 frame
+  /// generation with the FSR3 upscaler) is on any view right now; a game
+  /// presents directly while it is (`LuminaGamePresentation`), since the
+  /// generated frames only reach the screen when Filament presents.
+  static final ObservableValue<bool> frameGenerationActive = ObservableValue<bool>(false);
+  static final Set<LuminaRtxController> _generating = <LuminaRtxController>{};
+
+  static void _publishFrameGeneration() {
+    final active = _generating.isNotEmpty;
+    if (frameGenerationActive.value != active) frameGenerationActive.value = active;
+  }
+
   static const String nvidiaDlssSuperResolution = 'DLSS Super Resolution';
   static const String nvidiaDlssRayReconstruction = 'DLSS Ray Reconstruction';
   static const String nvidiaDlssFrameGeneration = 'DLSS Frame Generation';
@@ -344,6 +356,12 @@ class LuminaRtxController {
       _live.remove(this);
     }
     _publishNvidiaFeatures();
+    if (_frameGenerator != null || (_fsr3OnView && fsr3.frameGeneration)) {
+      _generating.add(this);
+    } else {
+      _generating.remove(this);
+    }
+    _publishFrameGeneration();
   }
 
   void _applyFrameGeneration(LuminaDlssFrameGenerationSettings settings) {
@@ -498,6 +516,8 @@ class LuminaRtxController {
     _appliedFsr3 = null;
     _live.remove(this);
     _publishNvidiaFeatures();
+    _generating.remove(this);
+    _publishFrameGeneration();
   }
 
   /// Releases the DLSS instance; the view keeps the last ray tracing settings.
@@ -511,5 +531,7 @@ class LuminaRtxController {
     _dlssOutputSize = null;
     _live.remove(this);
     _publishNvidiaFeatures();
+    _generating.remove(this);
+    _publishFrameGeneration();
   }
 }

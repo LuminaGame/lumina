@@ -230,6 +230,8 @@ So:
   under the target: even frame times (60 Hz: 30 and 45 FPS both run at 30; 144 Hz: 60 FPS runs at 48).
 - **VSync off**: the target is the average; frames alternate between neighbouring refresh counts (60 Hz, 45 FPS: one
   and two refreshes).
+- With **Direct presentation** ([below](#libsrcgamegame_presentationdart)) VSync is the swap chain's present mode
+  (on: FIFO, off: immediate) and the readback is gone.
 - Filament's `SwapChain::CONFIG_DISABLE_VSYNC` (and the present thread of a non-vsync Vulkan swap chain, patch `0016`)
   only matters for a swap chain that presents to a window itself; a Flutter-presented game has none.
 - The presented rate is also bounded by the render + readback cost (measured on the RTX PRO 2000 with five
@@ -258,6 +260,70 @@ So:
 | `settingsPatch` | `static Map<String, Object?> settingsPatch()` | `{target_fps, vsync}`: the player's choice, null where there is none. |
 | `targetFpsKey` / `vsyncKey` | `'target_fps'`, `'vsync'` | The settings-file keys. |
 | `resetForTesting` | `static void resetForTesting()` | A fresh process's state. |
+
+## `lib/src/game/game_presentation.dart`
+
+How a built game shows its frames (lumina_widgets does it; this class decides).
+
+- **Flutter** (default, `LuminaPresentationMode.flutter`): Filament renders into an offscreen swap chain, the frame is
+  read back into a `RawImage` and Flutter composites the UI and presents. Works everywhere; the editor viewport and
+  Play-In-Editor always do this (Flutter panels sit on top of the frame, which a native window cannot).
+- **Direct** (`LuminaPresentationMode.direct`): Filament renders into a Vulkan swap chain on a window of its own (the
+  generated runner's presentation window, a child of the Flutter view that takes no input) and presents; the whole
+  app's UI (HUD, UMG layer, menus, popups) stays Flutter widgets for layout and input, is rendered offscreen when it
+  changes and is blended by Filament over every presented frame, generated frames included
+  ([lumina_widgets](../lumina_widgets/index.md#direct-presentation), [flutter_filament](../flutter_filament/renderer-and-view.md)).
+  No readback; frame generation's frames reach the screen.
+
+**What is in force.** `resolve(project:, player:, frameGeneration:)`: the player's choice (`GameUserSettings.json` key
+`presentation`, restored by `LuminaGameWindow.restore`) wins over the project's (Project Settings > Presentation,
+`settings.presentation` in `.lmproject`, passed by the generated `main()` to `LuminaGameHost(presentation:)`); frame
+generation in force (`LuminaRtxController.frameGenerationActive`: DLSS Frame Generation, or FSR3 frame generation on
+the view) asks for Direct unless the player chose Flutter. Where Direct cannot run the host reports why
+(`reportFallback`) and `decision` is Flutter with that reason, logged once: the web (the browser presents the canvas),
+a backend other than Vulkan, a runner without the presentation window (a project generated before; Linux for now), a
+failed swap chain. Switching at runtime creates or releases the window and the swap chain; the view and the UI stay
+mounted.
+
+**Design.**
+- *Frame loop*: unchanged owner. Flutter's vsync callbacks (the game widget's ticker and the shared
+  `FilamentFrameLimiter`) tick the world and call `beginFrame` / render / `endFrame`; Filament presents from its driver
+  thread (and, without VSync, the present thread of patch `0016`). The rendered rate is at most the display refresh;
+  frame generation multiplies the presents beyond it.
+- *VSync / Target FPS*: VSync on is the swap chain's FIFO present mode (`SwapChainConfig.none`), off is
+  `SwapChainConfig.disableVsync` (immediate presents, paced by the backend for frame generation); Apply recreates the
+  swap chain. Target FPS stays the limiter's.
+- *Resize, minimise, DPI*: the runner keeps its window over the Flutter view and reports `surfaceChanged`; Filament
+  recreates the swap chain at the window's size; minimised (0 x 0) skips rendering. A view's viewport larger than a
+  window that just shrank is clipped (patch `0017`). The view's viewport is rounded to even pixels (DLSS Frame
+  Generation writes black frames for odd sizes).
+- *Alt+Enter / fullscreen / screen resolution*: the window modes are the runner's as before; a chosen resolution
+  letterboxes the view inside the window at the window's pixels (Resolution Scale and the upscalers render fewer).
+- *Input*: Flutter's, unchanged (`LuminaRenderSpace`); the presentation window is disabled and transparent to hit tests.
+- *HDR*: SDR (UNORM swap chain); the patch set has no HDR output.
+
+**Measured** (RTX PRO 2000, 60 Hz 3440x1440 display, five test-assets props, `D:/fs/dp` generated game copy):
+
+| | Flutter | Direct |
+|---|---|---|
+| borderless fullscreen 3440x1440, FG off, VSync off | 33.8-35.4 presents/s | 60.0 (CV 0.12) |
+| windowed 1264x861, FG off | 48.0 | 60.2 (CV 0.07) |
+| fullscreen, DLSS FG 2x / 4x / FSR3 FG (VSync off) | hangs (fence timeouts) | 120.0 / 118.1 / 119.9 |
+| windowed, DLSS FG 2x / 4x / FSR3 FG | - | 119.7 / 142.1 / 115.1 |
+| VSync on, FG off / DLSS 2x | - | 60.4 / 60.3 (FIFO) |
+
+UI picture at 3440x1440: readback 14-19 ms on Flutter's raster thread, upload 1.5-4.7 ms on the UI thread, about one
+frame (16-24 ms) from the change to Filament, taken only when the UI changed (a HUD clock at 10 Hz: 10 captures/s).
+On a 60 Hz composed display more than about 120 presents/s are not shown (2x shows, 4x / 6x need a faster display).
+
+| Member | Signature | Description |
+|---|---|---|
+| `LuminaPresentationMode` | `flutter`, `direct`; `id`, `parse(Object?)` | The mode; `'flutter'` / `'direct'` in files. |
+| `LuminaPresentationDecision` | `(mode, {reason})` | A mode and why. |
+| `resolve` | `static LuminaPresentationDecision resolve({required project, player, bool frameGeneration = false})` | The rules above. |
+| `requested` / `decision` | `static final ObservableValue<LuminaPresentationDecision>` | What the game asks for / what is in force. |
+| `setProjectDefault` / `apply` / `restore` / `settingsPatch` | | Project setting, player choice (null forgets), start-up from the settings file, the file key. |
+| `setFrameGenerationActive` / `reportFallback` / `reset` | | Frame generation on or off; the host could not (null: it can); defaults. |
 
 ## `lib/src/game/lumina_game.dart`
 

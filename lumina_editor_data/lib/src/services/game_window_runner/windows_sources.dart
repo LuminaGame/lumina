@@ -21,7 +21,9 @@ const String kWindowsWindowModeHeader = r'''
 // (getMode, setMode, getInfo; calls modeChanged after a key toggle). It also
 // reports the monitors and their display modes and resizes or moves the
 // window for the game's screen resolution (getDisplays, setClientSize,
-// moveToMonitor; calls displayChanged).
+// moveToMonitor; calls displayChanged), and gives a game presenting directly
+// its presentation window, a child of the Flutter view that takes no input
+// (createSurface, destroySurface; calls surfaceChanged).
 //
 // Call once from FlutterWindow::OnCreate, after SetChildContent.
 void LuminaWindowModeAttach(flutter::BinaryMessenger* messenger, HWND window,
@@ -46,6 +48,7 @@ const String kWindowsWindowModeSource = r'''
 #include <memory>
 #include <set>
 #include <string>
+#include <thread>
 #include <tuple>
 #include <vector>
 
@@ -195,6 +198,8 @@ EncodableValue Info() {
 
 {{DISPLAY}}
 
+{{SURFACE}}
+
 bool IsToggleKey(UINT message, WPARAM key, LPARAM flags) {
   const bool alt = (flags & (1 << 29)) != 0;
   if (message == WM_SYSKEYDOWN && key == VK_RETURN && alt) return true;
@@ -217,7 +222,10 @@ LRESULT CALLBACK ViewProc(HWND hwnd, UINT message, WPARAM wparam,
     return 0;
   }
   if (message == WM_SYSCHAR && wparam == VK_RETURN) return 0;
-  return ::CallWindowProc(g_view_proc, hwnd, message, wparam, lparam);
+  const LRESULT result =
+      ::CallWindowProc(g_view_proc, hwnd, message, wparam, lparam);
+  WatchSurfaceView(message);
+  return result;
 }
 
 // While fullscreen the window keeps covering its monitor when the display or
@@ -231,6 +239,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wparam,
     FitToMonitor();
   }
   WatchDisplays(message);
+  WatchSurfaceWindow(message, wparam);
   return result;
 }
 
@@ -260,6 +269,8 @@ void HandleCall(const flutter::MethodCall<EncodableValue>& call,
     result->Success(Info());
   } else if (HandleDisplayCall(call, result)) {
     // getDisplays, setClientSize, moveToMonitor.
+  } else if (HandleSurfaceCall(call, result)) {
+    // createSurface, destroySurface.
   } else {
     result->NotImplemented();
   }

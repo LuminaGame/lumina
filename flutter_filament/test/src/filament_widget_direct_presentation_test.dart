@@ -32,6 +32,10 @@ void main() {
       // 16:9 on 3440x1440: 2560 wide, centred.
       expect(FilamentDirectPresenter.viewportFor(3440, 1440, renderAspect: 16 / 9), (440, 0, 2560, 1440));
     });
+    test('odd sizes are rounded down to even pixels (DLSS Frame Generation needs them)', () {
+      expect(FilamentDirectPresenter.viewportFor(1264, 861), (0, 0, 1264, 860));
+      expect(FilamentDirectPresenter.viewportFor(1265, 861, renderAspect: 4 / 3), (58, 0, 1148, 860));
+    });
     test('a wider picture gets bars top and bottom', () {
       expect(FilamentDirectPresenter.viewportFor(1600, 1200, renderAspect: 16 / 9), (0, 150, 1600, 900));
     });

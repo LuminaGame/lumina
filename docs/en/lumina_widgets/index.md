@@ -153,6 +153,27 @@ the resolution changes, so the view and its engine resources survive. The game's
 resolution's logical size (`LuminaRenderSpace.layoutSize`, the resolution / device pixel ratio) and scaled with the
 picture, so it looks as in a window of that resolution and is drawn and hit where the picture is, never on the bars.
 
+### Direct presentation
+
+`allowDirectPresentation` (false; `LuminaGameHost` passes true, the editor never) and `presentation` (the project's
+`LuminaPresentationMode`) let a built game present directly when `LuminaGamePresentation.requested` says so. The
+widget then gives its `FilamentWidget` a `LuminaWindowSurface` (`lib/src/game/window_surface.dart`: the runner's
+presentation window over the `lumina/game_window` channel: `createSurface`, `destroySurface`, `surfaceChanged`) and
+publishes the `FilamentUiOverlay` it gets to `LuminaUiCapture.directOverlay`; on a fallback it reports the reason
+(`LuminaGamePresentation.reportFallback`, logged once) and stays on the texture path. The tree never changes shape, so
+switching keeps the view and the UI. While presenting directly the frame driver's offscreen render is skipped (the
+widget's render is the only one; a second render of the same view advances its TAA / upscaler / frame-generation
+history twice), and `LuminaScreenResolutionBox(barsOnly: true)` paints black only on the bars.
+
+`LuminaUiCapture` (`lib/src/game/ui_capture.dart`) renders its child offscreen for a `FilamentUiOverlay`: the child is
+its own compositing layer; a picture is taken only after a frame that added that layer to the scene again (any change
+under it, nested repaint boundaries included) or changed its size, at the device pixel ratio (`toImageSync` +
+`toByteData(rawRgba)`, premultiplied), one capture at a time; `stats` (`LuminaUiCaptureStats`: captures, skipped
+frames, size, readback / upload / latency microseconds). `LuminaUiCaptureRoot` wraps a whole app (a generated
+`main()` runs `runApp(const LuminaUiCaptureRoot(child: MyLuminaGameApp()))`) so everything Flutter draws (popups,
+dialogs, overlays) reaches the picture; the generated app's Scaffold is transparent. Without a root the game widget
+captures its own subtree.
+
 ### `class LuminaRenderSpace`
 
 `lib/src/game/render_space.dart`. The game's render space inside the area that shows it, the one mapping the host, the
@@ -238,6 +259,8 @@ as `[left, top, right, bottom]` physical pixels, `client` `[w, h]`, `popup`, `ca
 the same object) it answers `getDisplays` (monitors with name, device, bounds, work area, current mode, every mode,
 scale; the current monitor; the client size), `setClientSize {width, height}` (the client size it got) and
 `moveToMonitor {index}`, and calls `displayChanged` when a display changes or the window moves to another monitor.
+For direct presentation it answers `createSurface` (`{handle, width, height}` or an `unsupported` error) and
+`destroySurface`, and calls `surfaceChanged`; `onSurfaceChanged` receives those.
 A runner without them (the editor, games generated earlier) throws `MissingPluginException`: no mode, no displays,
 nothing applied.
 
