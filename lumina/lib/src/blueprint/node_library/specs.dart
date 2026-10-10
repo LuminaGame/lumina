@@ -100,8 +100,19 @@ class LuminaBlueprintNodeSpec {
   /// why. Reported as a warning.
   final String? unsupported;
 
-  /// What the palette shows on hover: an exposed Dart function's doc comment.
+  /// What the palette shows on hover: an exposed Dart function's doc comment,
+  /// or a built-in node's description.
   final String? tooltip;
+
+  /// The node only stages a game user setting; it takes effect when Apply
+  /// Scalability Settings runs. The editor shows [applyHint] on the node.
+  final bool requiresApply;
+
+  /// The line the editor shows on a [requiresApply] node.
+  static const String applyHint = 'Needs Apply Scalability Settings';
+
+  /// The sentence that ends a [requiresApply] node's [tooltip].
+  static const String stagedNote = 'Staged: takes effect when Apply Scalability Settings runs.';
 
   const LuminaBlueprintNodeSpec({
     required this.id,
@@ -115,6 +126,7 @@ class LuminaBlueprintNodeSpec {
     this.deprecation,
     this.unsupported,
     this.tooltip,
+    this.requiresApply = false,
   });
 
   bool get hasExecIn => inputs.any((p) => p.type == LuminaPinType.exec);

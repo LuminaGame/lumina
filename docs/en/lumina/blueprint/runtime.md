@@ -468,7 +468,9 @@ One node of the library: its pins and kind. Behaviour lives in `LuminaBlueprintF
 | `headerColor` | `final int headerColor` | ARGB header colour, one per node family. |
 | `deprecation` | `final String? deprecation` | Non-null for a node kept only so old documents load; the message says what replaces it. |
 | `unsupported` | `final String? unsupported` | Non-null when the node loads but is not executed yet; the message says why. Reported as a warning. |
-| `tooltip` | `final String? tooltip` | What the palette shows on hover: an exposed Dart function's doc comment. |
+| `tooltip` | `final String? tooltip` | What the palette shows on hover: an exposed Dart function's doc comment, or a built-in node's description (the settings setters have one). |
+| `requiresApply` | `final bool requiresApply` | The node only stages a game user setting; it takes effect when Apply Scalability Settings runs. Its tooltip ends with `stagedNote`; the Blueprint editor shows `applyHint` on the node and the validator warns when no graph of the Blueprint applies. Set from `node_library/staged_settings.dart`. |
+| `applyHint` / `stagedNote` | `static const String` | `Needs Apply Scalability Settings` / `Staged: takes effect when Apply Scalability Settings runs.` |
 | `hasExecIn` | `bool get hasExecIn` |  |
 
 ## `lib/src/blueprint/node_library/type_context.dart`

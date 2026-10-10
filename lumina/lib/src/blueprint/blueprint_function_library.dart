@@ -985,6 +985,7 @@ abstract final class LuminaBlueprintFunctionLibrary {
   static const getCurrentMonitor = _getCurrentMonitor;
   static const setScreenResolution = _setScreenResolution;
   static const setFullscreenMonitor = _setFullscreenMonitor;
+  static const setScreenResolutionAndApply = _setScreenResolutionAndApply;
   static const spawnEmitterAtLocation = _spawnEmitterAtLocation;
   static const spawnEmitterAttached = _spawnEmitterAttached;
   static const activateParticleSystem = _activateParticleSystem;

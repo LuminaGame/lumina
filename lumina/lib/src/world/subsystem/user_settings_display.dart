@@ -53,6 +53,17 @@ mixin LuminaUserSettingsDisplay on LuminaWorldSubsystem {
     unawaited(LuminaGameDisplay.apply(resolution: resolution, monitor: monitor));
   }
 
+  /// Stages [width]×[height] (a non-positive side: native) and applies only
+  /// the resolution at once, keeping it in `GameUserSettings.json` like
+  /// [applyDisplaySettings]. A staged monitor and every other staged setting
+  /// still wait for Apply Scalability Settings.
+  void applyScreenResolution(int width, int height) {
+    final resolution = LuminaGameDisplay.normalize((width, height));
+    _stagedResolution = null;
+    _resolutionStaged = false;
+    unawaited(LuminaGameDisplay.apply(resolution: resolution, monitor: LuminaGameDisplay.fullscreenMonitor));
+  }
+
   /// The display settings as settings-file keys (what `toMap` adds).
   Map<String, Object?> displaySettingsMap() {
     if (!hasStagedDisplaySettings) return LuminaGameDisplay.settingsPatch();

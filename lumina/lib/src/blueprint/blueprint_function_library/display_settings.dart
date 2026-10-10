@@ -14,6 +14,8 @@ const Map<String, LuminaBlueprintCallShape> _displaySettingsCallShapes = <String
   'get_current_monitor': LuminaBlueprintCallShape('getCurrentMonitor', [], self: true, outputs: ['index', 'name']),
   'set_screen_resolution': LuminaBlueprintCallShape('setScreenResolution', ['width', 'height'], self: true),
   'set_fullscreen_monitor': LuminaBlueprintCallShape('setFullscreenMonitor', ['index'], self: true),
+  'set_screen_resolution_and_apply':
+      LuminaBlueprintCallShape('setScreenResolutionAndApply', ['width', 'height'], self: true),
 };
 
 /// [LuminaBlueprintFunctionLibrary.builtInFunctions]: the screen resolution
@@ -39,6 +41,8 @@ final Map<String, LuminaBlueprintFunction> _displaySettingsFunctions = <String, 
       c.self, LuminaBlueprintFunctionLibrary._n(i['width'], 1920), LuminaBlueprintFunctionLibrary._n(i['height'], 1080))),
   'set_fullscreen_monitor': (c, i) =>
       _settingsEffect(() => _setFullscreenMonitor(c.self, LuminaBlueprintFunctionLibrary._n(i['index'], 0))),
+  'set_screen_resolution_and_apply': (c, i) => _settingsEffect(() => _setScreenResolutionAndApply(
+      c.self, LuminaBlueprintFunctionLibrary._n(i['width'], 1920), LuminaBlueprintFunctionLibrary._n(i['height'], 1080))),
 };
 
 (int, int) _renderSizeOf(LuminaActor self) => self.world?.viewportSize ?? (1280, 720);
@@ -85,3 +89,8 @@ void _setScreenResolution(LuminaActor self, [int width = 1920, int height = 1080
 
 /// Stages the monitor at [index]; Apply Scalability Settings moves the game.
 void _setFullscreenMonitor(LuminaActor self, [int index = 0]) => _userSettings(self).setFullscreenMonitor(index);
+
+/// Applies [width]×[height] (0 × 0: native) at once and keeps it; other
+/// staged settings still wait for Apply Scalability Settings.
+void _setScreenResolutionAndApply(LuminaActor self, [int width = 1920, int height = 1080]) =>
+    _userSettings(self).applyScreenResolution(width, height);

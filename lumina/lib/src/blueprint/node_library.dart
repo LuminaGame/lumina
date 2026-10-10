@@ -28,6 +28,7 @@ part 'node_library/window_mode.dart';
 part 'node_library/display_settings.dart';
 part 'node_library/combo_box.dart';
 part 'node_library/conversions.dart';
+part 'node_library/staged_settings.dart';
 
 /// The one node catalog the editor palette, the VM and the code generator
 /// read.
@@ -386,7 +387,7 @@ abstract final class LuminaBlueprintNodeLibrary {
       : List.unmodifiable([...builtIns, ...LuminaBlueprintFunctionRegistry.specs]);
 
   /// The nodes lumina ships.
-  static final List<LuminaBlueprintNodeSpec> builtIns = List.unmodifiable(<LuminaBlueprintNodeSpec>[
+  static final List<LuminaBlueprintNodeSpec> builtIns = List.unmodifiable(_markStagedSettings(<LuminaBlueprintNodeSpec>[
     ..._eventPawnUiInputNodes,
     ..._mathObjectComponentNodes,
     ..._mathStringArrayNodes,
@@ -403,7 +404,7 @@ abstract final class LuminaBlueprintNodeLibrary {
     ..._displaySettingsNodes,
     ..._comboBoxNodes,
     ..._conversionNodes,
-  ]);
+  ]));
 
   static final Map<String, LuminaBlueprintNodeSpec> _byId = {for (final s in builtIns) s.id: s};
 

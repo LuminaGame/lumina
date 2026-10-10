@@ -17,6 +17,7 @@ import 'package:lumina_ui/ui/features/sub_editors/view_models/blueprint_graph_cl
 import 'package:lumina_ui/ui/features/sub_editors/view_models/blueprint_graph_editor.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/blueprint/node_palette.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/blueprint/pin_literal_editor.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/blueprint/staged_setting_hint.dart';
 
 part 'graph_canvas/state.dart';
 part 'graph_canvas/view_controls.dart';
@@ -115,7 +116,12 @@ class BlueprintNodeLayout {
   /// Height of the editor's [BlueprintGraphEditor.nodeBody] widget.
   final double bodyHeight;
 
-  BlueprintNodeLayout._(this.node, this.pins, this.problems, this.hasSettings, this.connectedInputs, this.width, this.bodyHeight);
+  /// The node only stages a game user setting: a footer under the pins says
+  /// it needs Apply Scalability Settings.
+  final bool hasStagedHint;
+
+  BlueprintNodeLayout._(this.node, this.pins, this.problems, this.hasSettings, this.connectedInputs, this.width, this.bodyHeight,
+      {this.hasStagedHint = false});
 
   static const double rerouteSize = 16;
   static const double commentTitleHeight = 24;
@@ -156,8 +162,11 @@ class BlueprintNodeLayout {
     }
     final title = text(node.title, 6.6) + 44;
     var width = math.max(math.max(inputs + outputs + 24, title), hasSettings ? 210.0 : 160.0);
+    final staged = LuminaBlueprintNodeLibrary.spec(node.registryId)?.requiresApply ?? false;
+    if (staged) width = math.max(width, BlueprintStagedSettingHint.minNodeWidth);
     width = width.clamp(160.0, 520.0).toDouble();
-    return BlueprintNodeLayout._(node, pins, problems, hasSettings, connected, width, editor.nodeBodyHeight(node));
+    return BlueprintNodeLayout._(node, pins, problems, hasSettings, connected, width, editor.nodeBodyHeight(node),
+        hasStagedHint: staged);
   }
 
   /// Plain exec pins are unlabelled.
@@ -171,7 +180,7 @@ class BlueprintNodeLayout {
       ? BlueprintEditorNodes.commentHeight(node)
       : isReroute
           ? rerouteSize
-          : bodyTop + rows * rowHeight + padBottom;
+          : bodyTop + rows * rowHeight + padBottom + (hasStagedHint ? BlueprintStagedSettingHint.height : 0);
   Rect get rect => Rect.fromLTWH(node.x, node.y, width, height);
 
   /// The comment's draggable title bar, in canvas units.

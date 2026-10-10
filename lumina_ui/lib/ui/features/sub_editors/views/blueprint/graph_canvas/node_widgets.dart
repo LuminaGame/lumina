@@ -311,6 +311,7 @@ mixin _BlueprintGraphCanvasNodeWidgets on _BlueprintGraphCanvasStateBase {
                     ),
                   ),
                 const SizedBox(height: BlueprintNodeLayout.padBottom),
+                if (layout.hasStagedHint) BlueprintStagedSettingHint(nodeId: node.id, description: spec?.tooltip),
               ],
             ),
           ),

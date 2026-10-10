@@ -674,7 +674,7 @@ One compiler-results row: what is wrong, and the node / pin it is on.
 
 | Member | Signature | Description |
 | :--- | :--- | :--- |
-| `validateBlueprint` | `List<LuminaBlueprintDiagnostic> validateBlueprint(LuminaBlueprintDocument doc, {List<LuminaInputAction> inputA...` | Checks a Blueprint against the node library: unknown nodes, wire types and multiplicity, pure cycles, unset required inputs, missing input actions and variables, duplicate events. An empty list means it can run in the VM and be generated to Dart. Set Show Mouse Cursor / Set Input Mode *: an unwired Target, or a Target typed as a Pawn, Character or plain Actor, is a warning (the Pawn's possessing Player Controller is used); a Target typed as anything else (a widget, a component, a non-pawn actor class) is an error. |
+| `validateBlueprint` | `List<LuminaBlueprintDiagnostic> validateBlueprint(LuminaBlueprintDocument doc, {List<LuminaInputAction> inputA...` | Checks a Blueprint against the node library: unknown nodes, wire types and multiplicity, pure cycles, unset required inputs, missing input actions and variables, duplicate events. An empty list means it can run in the VM and be generated to Dart. Set Show Mouse Cursor / Set Input Mode *: an unwired Target, or a Target typed as a Pawn, Character or plain Actor, is a warning (the Pawn's possessing Player Controller is used); a Target typed as anything else (a widget, a component, a non-pawn actor class) is an error. A staged settings setter (`requiresApply`) with no Apply Scalability Settings in any graph of the Blueprint is one warning, on the first such node (`checkStagedSettingsApplied`, `staged_settings_check.dart`). |
 
 ## `lib/src/blueprint/collision_overrides.dart`
 

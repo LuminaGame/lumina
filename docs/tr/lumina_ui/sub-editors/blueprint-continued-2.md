@@ -175,6 +175,7 @@ Where a node's parts sit, in canvas units. One deterministic layout is shared by
 | `connectedInputs` | `final Set<String> connectedInputs` |  |
 | `width` | `final double width` |  |
 | `bodyHeight` | `final double bodyHeight` | Height of the editor's [BlueprintGraphEditor.nodeBody] widget. |
+| `hasStagedHint` | `final bool hasStagedHint` | Düğümün spec'inde `requiresApply` var: pin satırlarının altında bir `BlueprintStagedSettingHint` alt satırı (16 px) durur; `height` büyür, pin merkezleri yerinde kalır; düğüm en az 196 px genişliktedir. |
 | `rerouteSize` | `static const double rerouteSize` |  |
 | `commentTitleHeight` | `static const double commentTitleHeight` |  |
 | `isComment` | `bool get isComment` |  |
@@ -190,7 +191,7 @@ Where a node's parts sit, in canvas units. One deterministic layout is shared by
 
 ### `class BlueprintGraphCanvas`
 
-The Blueprint graph canvas: nodes from lumina's library, colour-coded typed pins, Bezier wires, pan / zoom / marquee, drag-to-wire with a context-sensitive palette on empty space, inline literals, My Blueprint variable drops (Ctrl: Get, Alt: Set), node banners for missing actions and deprecated nodes, and Compiler Results navigation. The Blueprint editor's event graph and the Animation Blueprint editor's event and rule graphs all use this one widget.
+The Blueprint graph canvas: nodes from lumina's library, colour-coded typed pins, Bezier wires, pan / zoom / marquee, drag-to-wire with a context-sensitive palette on empty space, inline literals, My Blueprint variable drops (Ctrl: Get, Alt: Set), node banners for missing actions and deprecated nodes, sıraya alan ayar setter'larında "Needs Apply Scalability Settings" alt satırı (`BlueprintStagedSettingHint`, `staged_setting_hint.dart`: saat simgesi, 8.5 px kehribar metin, üzerine gelince düğümün açıklaması), and Compiler Results navigation. The Blueprint editor's event graph and the Animation Blueprint editor's event and rule graphs all use this one widget.
 
 **Yapıcı Metotlar (Constructors):**
 

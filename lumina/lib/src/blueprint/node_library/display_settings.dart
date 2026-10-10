@@ -17,8 +17,9 @@ LuminaBlueprintNodeSpec _displayPure(String id, String title, List<LuminaBluepri
 
 /// Built-in nodes: the screen resolution, the desktop resolution, the
 /// resolutions and refresh rates the monitor offers, the monitors
-/// (`LuminaGameDisplay`), and the staged Set Screen Resolution / Set
-/// Fullscreen Monitor that Apply Scalability Settings applies.
+/// (`LuminaGameDisplay`), the staged Set Screen Resolution / Set
+/// Fullscreen Monitor that Apply Scalability Settings applies, and Set Screen
+/// Resolution And Apply, which applies the resolution at once.
 final List<LuminaBlueprintNodeSpec> _displaySettingsNodes = <LuminaBlueprintNodeSpec>[
   _displayPure(
     'get_screen_resolution',
@@ -60,6 +61,16 @@ final List<LuminaBlueprintNodeSpec> _displaySettingsNodes = <LuminaBlueprintNode
     kind: LuminaBlueprintNodeKind.impure,
     headerColor: _function,
     keywords: const [..._displayKeywords, 'set resolution', 'window size', 'fullscreen', 'windowed', 'apply'],
+    inputs: [_execIn, _i('width', 'Width', 1920), _i('height', 'Height', 1080)],
+    outputs: const [_execOut],
+  ),
+  LuminaBlueprintNodeSpec(
+    id: 'set_screen_resolution_and_apply',
+    title: 'Set Screen Resolution And Apply',
+    category: 'Settings|Display',
+    kind: LuminaBlueprintNodeKind.impure,
+    headerColor: _function,
+    keywords: const [..._displayKeywords, 'set resolution', 'apply', 'apply now', 'window size', 'fullscreen', 'windowed'],
     inputs: [_execIn, _i('width', 'Width', 1920), _i('height', 'Height', 1080)],
     outputs: const [_execOut],
   ),

@@ -6,6 +6,7 @@ import 'package:lumina/src/blueprint/blueprint_model.dart';
 import 'package:lumina/src/blueprint/editor_nodes.dart';
 import 'package:lumina/src/blueprint/level_blueprint.dart';
 import 'package:lumina/src/blueprint/node_library.dart';
+import 'package:lumina/src/blueprint/staged_settings_check.dart';
 
 enum LuminaBlueprintSeverity { error, warning }
 
@@ -105,6 +106,7 @@ List<LuminaBlueprintDiagnostic> validateBlueprint(
     }
     _validateGraph(m.graph, mc, error, warning, scope: m.name);
   }
+  checkStagedSettingsApplied(doc, warning);
   return out;
 }
 

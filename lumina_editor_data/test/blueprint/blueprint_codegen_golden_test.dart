@@ -8,6 +8,7 @@ import '../../../lumina/test/blueprint/anim_blueprints.dart';
 import '../../../lumina/test/blueprint/collision_shapes_blueprint.dart';
 import '../../../lumina/test/blueprint/conversions_blueprint.dart';
 import '../../../lumina/test/blueprint/display_settings_blueprint.dart';
+import '../../../lumina/test/blueprint/screen_resolution_and_apply_blueprint.dart';
 import '../../../lumina/test/blueprint/physics_blueprint.dart';
 import '../../../lumina/test/blueprint/engine_nodes_blueprint.dart';
 import '../../../lumina/test/blueprint/flow_blueprint.dart';
@@ -61,6 +62,8 @@ Map<String, (LuminaBlueprintDocument, String, List<LuminaInputAction>)> goldens(
       'bp_graphics_settings': (renderingFeaturesBlueprint(), 'BpGraphicsSettings', const <LuminaInputAction>[]),
       // The screen resolution, monitor and display mode nodes.
       'bp_display_settings': (displaySettingsBlueprint(), 'BpDisplaySettings', const <LuminaInputAction>[]),
+      // Set Screen Resolution And Apply: stages and applies the resolution in one node.
+      'bp_screen_resolution_and_apply': (screenResolutionAndApplyBlueprint(), 'BpScreenResolutionAndApply', const <LuminaInputAction>[]),
       // Every Math|Conversions node, String to Int / Float's Success into a Branch.
       'bp_conversions': (conversionsBlueprint(), 'BpConversions', const <LuminaInputAction>[]),
       // No Event BeginPlay, only a custom event with a latent Delay.

@@ -175,6 +175,7 @@ Where a node's parts sit, in canvas units. One deterministic layout is shared by
 | `connectedInputs` | `final Set<String> connectedInputs` |  |
 | `width` | `final double width` |  |
 | `bodyHeight` | `final double bodyHeight` | Height of the editor's [BlueprintGraphEditor.nodeBody] widget. |
+| `hasStagedHint` | `final bool hasStagedHint` | The node's spec has `requiresApply`: a `BlueprintStagedSettingHint` footer (16 px) sits under the pin rows, so `height` grows and pin centres stay; the node is at least 196 px wide. |
 | `rerouteSize` | `static const double rerouteSize` |  |
 | `commentTitleHeight` | `static const double commentTitleHeight` |  |
 | `isComment` | `bool get isComment` |  |
@@ -190,7 +191,7 @@ Where a node's parts sit, in canvas units. One deterministic layout is shared by
 
 ### `class BlueprintGraphCanvas`
 
-The Blueprint graph canvas: nodes from lumina's library, colour-coded typed pins, Bezier wires, pan / zoom / marquee, drag-to-wire with a context-sensitive palette on empty space, inline literals, My Blueprint variable drops (Ctrl: Get, Alt: Set), node banners for missing actions and deprecated nodes, and Compiler Results navigation. The Blueprint editor's event graph and the Animation Blueprint editor's event and rule graphs all use this one widget.
+The Blueprint graph canvas: nodes from lumina's library, colour-coded typed pins, Bezier wires, pan / zoom / marquee, drag-to-wire with a context-sensitive palette on empty space, inline literals, My Blueprint variable drops (Ctrl: Get, Alt: Set), node banners for missing actions and deprecated nodes, a "Needs Apply Scalability Settings" footer on staged settings setters (`BlueprintStagedSettingHint`, `staged_setting_hint.dart`: clock icon, amber 8.5 px text, the node's description on hover), and Compiler Results navigation. The Blueprint editor's event graph and the Animation Blueprint editor's event and rule graphs all use this one widget.
 
 **Constructors:**
 
