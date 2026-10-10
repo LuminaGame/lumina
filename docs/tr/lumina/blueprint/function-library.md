@@ -4,7 +4,7 @@
 
 Blueprint fonksiyon kütüphanesi: her pure ve impure node'un bir kez yazılmış davranışı. VM onu fonksiyon tablosu üzerinden çağırır, üretilen Dart kodu aynı static metotları doğrudan çağırır; böylece ikisi de aynı kodu çalıştırır. Dosya yolları `lumina/` paket dizinine görelidir.
 
-## `lib/src/blueprint/blueprint_function_library.dart`
+## `lib/src/blueprint/blueprint_function_library/call_types.dart`
 
 ### `class LuminaBlueprintCallContext`
 
@@ -47,6 +47,8 @@ A Dart function exposed with `@BlueprintCallable` / `@BlueprintPure` also names 
 | `optional` | `final Set<String> optional` | Arguments with a Dart default (optional named or positional). |
 | `record` | `final bool record` | The outputs are a record's fields even when there is one. |
 | `returnsRecord` | `bool get returnsRecord` |  |
+
+## `lib/src/blueprint/blueprint_function_library.dart`
 
 ### `abstract final class LuminaBlueprintFunctionLibrary`
 

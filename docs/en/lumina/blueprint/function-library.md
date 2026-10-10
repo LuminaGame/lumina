@@ -4,7 +4,7 @@
 
 The Blueprint function library: the behaviour of every pure and impure node, written once. The VM calls it through its function table and generated Dart calls the same static methods directly, so both run the same code. File paths are relative to the `lumina/` package directory.
 
-## `lib/src/blueprint/blueprint_function_library.dart`
+## `lib/src/blueprint/blueprint_function_library/call_types.dart`
 
 ### `class LuminaBlueprintCallContext`
 
@@ -47,6 +47,8 @@ A Dart function exposed with `@BlueprintCallable` / `@BlueprintPure` also names 
 | `optional` | `final Set<String> optional` | Arguments with a Dart default (optional named or positional). |
 | `record` | `final bool record` | The outputs are a record's fields even when there is one. |
 | `returnsRecord` | `bool get returnsRecord` |  |
+
+## `lib/src/blueprint/blueprint_function_library.dart`
 
 ### `abstract final class LuminaBlueprintFunctionLibrary`
 
