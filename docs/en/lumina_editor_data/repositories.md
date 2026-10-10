@@ -148,6 +148,8 @@ The editor-facing data layer, part two: the repositories that need the engine or
 
 `ProjectRepository`: `class` representing the data model or functionality of the module.
 
+Creating a project writes the engine as a git dependency in its `pubspec.yaml` (`ProjectEngineLink.withGitEngineDependency`) and links a local engine checkout only through the gitignored `pubspec_overrides.yaml`. The Third Person template's character is read from the engine the editor runs from (`enginePackageDir`, else `luminaPackagePath`), else from the `lumina` package the new project's own `flutter pub get` resolved (its `.dart_tool/package_config.json`: the git checkout in the pub cache), so an installed Studio with no engine checkout still creates a working project. Without a local engine a failed `pub get` says the engine is fetched from git and that `LUMINA_WORKSPACE` can point at a checkout.
+
 **Functions, Methods & Accessors:**
 
 | Method / Getter | Signature | Purpose & Description |

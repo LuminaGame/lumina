@@ -148,6 +148,8 @@ Editöre dönük veri katmanı, ikinci bölüm: engine'e ya da native kütüphan
 
 `ProjectRepository`: İlgili modülün veri modelini veya temel işlevselliğini temsil eden `class` yapısıdır.
 
+Proje oluşturma, motoru `pubspec.yaml`'a git bağımlılığı olarak yazar (`ProjectEngineLink.withGitEngineDependency`) ve yerel bir motor checkout'unu yalnızca gitignore'lu `pubspec_overrides.yaml` ile bağlar. Third Person şablonunun karakteri editörün çalıştığı motordan (`enginePackageDir`, yoksa `luminaPackagePath`), o da yoksa yeni projenin kendi `flutter pub get`'inin çözdüğü `lumina` paketinden (`.dart_tool/package_config.json`: pub önbelleğindeki git checkout'u) okunur; böylece motor checkout'u olmayan kurulu bir Studio da çalışan bir proje oluşturur. Yerel motor yokken başarısız bir `pub get`, motorun git'ten çekildiğini ve `LUMINA_WORKSPACE`'in bir checkout'a yönlendirilebileceğini söyler.
+
 **Fonksiyonlar, Metotlar ve Erişimciler:**
 
 | Metot / Getter | İmzası | Ne İşe Yarar? |

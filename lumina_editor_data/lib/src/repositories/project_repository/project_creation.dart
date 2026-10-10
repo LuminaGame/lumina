@@ -134,7 +134,13 @@ mixin _ProjectCreation {
       yield ProjectCreationProgress(ProjectCreationStep.pubGet, 0.6, 'Running flutter pub get...');
       final pubGetResult = await processRunner('flutter', ['pub', 'get'], workingDirectory: targetDir.path);
       if (pubGetResult.exitCode != 0) {
-        throw ProjectCreationException(ProjectCreationStep.pubGet, 'flutter pub get failed: ${pubGetResult.stderr}');
+        // No engine checkout here (an installed Studio): the engine comes
+        // from git, so say where it was fetched from and how to use a local one.
+        final source = link.isLocal
+            ? ''
+            : ' The engine is fetched from git (${LuminaWorkspace.engineRepo ?? kLuminaGitUrl}) because this Lumina Studio '
+                'has no local engine checkout; check the network, or point LUMINA_WORKSPACE at a Lumina checkout.';
+        throw ProjectCreationException(ProjectCreationStep.pubGet, 'flutter pub get failed: ${pubGetResult.stderr}$source');
       }
 
       // Step 6: manifestAndLevel
@@ -366,12 +372,23 @@ mixin _ProjectCreation {
   /// The mesh `.lmas` carries no payload and the clip assets no GLB copy: every
   /// reader falls back to the `.entity.glb`, and a copy per clip would dwarf
   /// the rest of the project.
+  ///
+  /// The bundle is read from the engine the editor runs from, else from the
+  /// `lumina` package the project's own `pub get` resolved (an installed
+  /// Studio with no engine checkout: the git dependency's checkout in the
+  /// pub cache, which carries the committed template content).
   Future<void> _writeMannequinContent(String projectDir) async {
-    final bundle = File('${enginePackageDir ?? ProjectRepository.luminaPackagePath}/${LuminaThirdPersonContent.bundledMeshPath}');
+    final engine = File('${enginePackageDir ?? ProjectRepository.luminaPackagePath}/${LuminaThirdPersonContent.bundledMeshPath}');
+    final resolved = LuminaWorkspace.resolvedPackageDir(projectDir, 'lumina');
+    final bundle = [
+      engine,
+      if (resolved != null) File('$resolved/${LuminaThirdPersonContent.bundledMeshPath}'),
+    ].firstWhere((f) => f.existsSync(), orElse: () => engine);
     if (!bundle.existsSync()) {
       throw ProjectCreationException(
         ProjectCreationStep.manifestAndLevel,
-        'Third Person template content is missing: ${bundle.path}. Build it with '
+        'Third Person template content is missing: ${bundle.path}'
+        '${resolved == null ? '' : ' (nor in the resolved lumina package at $resolved)'}. Build it with '
         '`dart run tool/build_third_person_content.dart` in the lumina package.',
       );
     }
