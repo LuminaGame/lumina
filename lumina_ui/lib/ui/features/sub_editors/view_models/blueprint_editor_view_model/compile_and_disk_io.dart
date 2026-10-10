@@ -157,7 +157,10 @@ mixin _BlueprintEditorCompileAndDiskIo on _BlueprintEditorViewModelState {
   Future<void> load() async {
     final file = File(assetPath);
     if (file.existsSync()) {
-      _asset = LuminaAsset.fromBytes(await file.readAsBytes());
+      final bytes = await file.readAsBytes();
+      // Disposed while reading (a panel closed before the graph loaded).
+      if (_disposed) return;
+      _asset = LuminaAsset.fromBytes(bytes);
       _document = _documentFromAsset(_asset!);
       if (_asset!.rawPayload == null || _asset!.rawPayload!.isEmpty) {
         if (_asset!.metadata['parent_class'] == null) _document = BlueprintEditorViewModel.createDefaultDocument(fileBasename);

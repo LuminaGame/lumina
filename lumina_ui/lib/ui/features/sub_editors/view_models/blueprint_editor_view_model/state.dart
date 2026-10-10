@@ -5,6 +5,9 @@ part of '../blueprint_editor_view_model.dart';
 /// order) and the members the mixins call on one another.
 abstract class _BlueprintEditorViewModelState extends ChangeNotifier implements BlueprintGraphHost {
   final String assetPath;
+
+  /// Set by dispose: a [load] still reading the file stops there.
+  bool _disposed = false;
   LuminaAsset? _asset;
   late LuminaBlueprintDocument _document;
   String _onDiskJson = '';

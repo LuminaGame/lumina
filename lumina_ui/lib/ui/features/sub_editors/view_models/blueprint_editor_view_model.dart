@@ -325,6 +325,7 @@ class BlueprintEditorViewModel extends _BlueprintEditorViewModelState
 
   @override
   void dispose() {
+    _disposed = true;
     _catalog?.dispose();
     _assets?.dispose();
     for (final e in _graphEditors.values) {

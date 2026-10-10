@@ -12,6 +12,7 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import '../helpers/blueprint_test_project.dart';
 import '../helpers/scaffold_game_project.dart';
+import '../helpers/temp_project.dart';
 
 /// The Level Blueprint in Play-In-Editor: the Level Blueprint authored in the
 /// Level Blueprint editor — compiled, not even saved — runs as the level's
@@ -53,7 +54,7 @@ void main() {
     ];
     LuminaLevelRepository(dir).save(level);
   });
-  tearDownAll(() => root.deleteSync(recursive: true));
+  tearDownAll(() => deleteTempProject(root));
   tearDown(() {
     BlueprintPieDebugger.instance.clear();
     BlueprintBreakpoints.instance.clear();
@@ -141,6 +142,9 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     pie.stopHeadlessForTest();
     vm.stopSimulation();
+    // Let the reads Play and Stop started close their files (Windows
+    // refuses to delete an open file in tearDownAll).
+    await drainRealIo(tester);
   });
 
   testWidgets('a breakpoint in the Level Blueprint pauses Play on its node', (tester) async {
@@ -163,5 +167,8 @@ void main() {
     expect(BlueprintNavigation.instance.take(levelPath), hit.nodeId, reason: 'the Level Blueprint editor frames the node');
     pie.stopHeadlessForTest();
     vm.stopSimulation();
+    // Let the reads Play and Stop started close their files (Windows
+    // refuses to delete an open file in tearDownAll).
+    await drainRealIo(tester);
   });
 }

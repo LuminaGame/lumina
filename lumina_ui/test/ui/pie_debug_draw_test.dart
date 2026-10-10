@@ -13,6 +13,7 @@ import 'package:lumina_ui/ui/features/sub_editors/view_models/blueprint_editor_v
 import 'package:vector_math/vector_math_64.dart' show Quaternion, Vector3;
 
 import '../helpers/scaffold_game_project.dart';
+import '../helpers/temp_project.dart';
 
 /// Play draws `LuminaWorld.debugShapes`, shows
 /// `screenMessages` on the HUD and pauses on `breakpoint` nodes — on a real
@@ -26,7 +27,7 @@ void main() {
     root = Directory.systemTemp.createTempSync('lumina_bp09_pie_');
     dir = await scaffoldGameProject(root, name: 'bp_debug', widgetLibrary: 'flutter');
   });
-  tearDownAll(() => root.deleteSync(recursive: true));
+  tearDownAll(() => deleteTempProject(root));
   tearDown(() {
     BlueprintPieDebugger.instance.clear();
     BlueprintBreakpoints.instance.clear();

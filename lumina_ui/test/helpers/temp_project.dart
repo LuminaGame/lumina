@@ -32,7 +32,19 @@ Future<void> deleteTempProject(Directory dir, {Duration timeout = const Duration
       if (dir.existsSync()) dir.deleteSync(recursive: true);
       return;
     } on FileSystemException {
-      if (DateTime.now().isAfter(deadline)) rethrow;
+      if (DateTime.now().isAfter(deadline)) {
+        // Name the files still held open: usually a read the test started
+        // in its fake-async zone and never let finish (see [drainRealIo]).
+        final locked = <String>[];
+        for (final e in dir.listSync(recursive: true).whereType<File>()) {
+          try {
+            e.deleteSync();
+          } on FileSystemException {
+            locked.add(e.path);
+          }
+        }
+        throw FileSystemException('Files still open after $timeout: ${locked.join(', ')}', dir.path);
+      }
       await Future<void>.delayed(const Duration(milliseconds: 50));
     }
   }
