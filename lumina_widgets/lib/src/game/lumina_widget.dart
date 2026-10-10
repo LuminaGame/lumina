@@ -136,7 +136,8 @@ class _LuminaGameWidgetState extends State<LuminaGameWidget>
     // below creates it.
     if (!kIsWeb && !_renderingExtensionsRequested) {
       _renderingExtensionsRequested = true;
-      LuminaRtxController.requestExtensions();
+      // OpenDLSS-NR's device features only for a project that opted in.
+      LuminaRtxController.requestExtensions(neuralRendering: LuminaNeuralRendering.projectOptIn?.active ?? false);
     }
     _subscribePlayState();
   }

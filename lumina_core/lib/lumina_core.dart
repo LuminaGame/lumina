@@ -27,6 +27,7 @@ export 'package:lumina_core/src/formats/lumina_project.dart';
 export 'package:lumina_core/src/formats/lumina_theme_document.dart';
 export 'package:lumina_core/src/formats/plugin_isolation.dart';
 export 'package:lumina_core/src/formats/project_input_settings.dart';
+export 'package:lumina_core/src/formats/project_neural_rendering_settings.dart';
 export 'package:lumina_core/src/formats/project_packaging_settings.dart';
 export 'package:lumina_core/src/formats/project_web_loading_style.dart';
 export 'package:lumina_core/src/formats/recent_project_entry.dart';

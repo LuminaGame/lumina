@@ -222,6 +222,8 @@ export 'package:lumina/src/post_process/scalability_profile.dart';
 export 'package:lumina/src/post_process/rtx_settings.dart';
 export 'package:lumina/src/post_process/fsr3_settings.dart';
 export 'package:lumina/src/post_process/rendering_features.dart';
+export 'package:lumina/src/post_process/neural_rendering/neural_rendering.dart';
+export 'package:lumina/src/post_process/neural_rendering/neural_rendering_controller.dart';
 export 'package:lumina/src/world/subsystem/user_settings_subsystem.dart';
 
 // Animation

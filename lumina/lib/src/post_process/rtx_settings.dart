@@ -2,6 +2,7 @@ import 'package:flutter_filament/filament.dart';
 import 'package:lumina_core/lumina_core.dart' show EngineLoggerService, ObservableValue;
 
 import 'package:lumina/src/post_process/fsr3_settings.dart';
+import 'package:lumina/src/post_process/neural_rendering/neural_rendering.dart';
 
 /// Hardware ray tracing for a view: the scene's acceleration structures,
 /// ray-traced sun shadows and ReSTIR direct lighting of the punctual lights.
@@ -223,7 +224,11 @@ class LuminaRtxController {
   /// and, when the NGX runtime is present, the DLSS ones. [dlssRuntimeDir] names
   /// the fetched NGX SDK (or the folder of its runtime) to look in first.
   /// Returns whether ray tracing could be requested on this platform.
-  static bool requestExtensions({String? dlssRuntimeDir}) {
+  ///
+  /// With [neuralRendering] it also asks for the device features of the
+  /// OpenDLSS-NR pass ([LuminaNeuralRendering.requestDeviceFeatures]): the
+  /// editor always does, a game only when its project opted in.
+  static bool requestExtensions({String? dlssRuntimeDir, bool neuralRendering = false}) {
     var requested = false;
     try {
       requested = RayTracing.requestExtensions();
@@ -237,6 +242,7 @@ class LuminaRtxController {
     } catch (e) {
       EngineLoggerService().log('DLSS extensions not requested: $e', level: 'warning', source: 'LuminaRtxController');
     }
+    if (neuralRendering) LuminaNeuralRendering.requestDeviceFeatures();
     return requested;
   }
 

@@ -72,6 +72,8 @@ class GenerateDartCodeUseCase {
         targetFps: project?.settings.targetFps ?? 0,
         vsyncEnabled: project?.settings.vsyncEnabled ?? false,
         startFullscreen: project?.settings.startFullscreen ?? false,
+        // Project Settings > Neural rendering: only an opted-in project's game runs OpenDLSS-NR.
+        neuralRendering: project?.neuralRendering,
       ));
       // The desktop runners' window modes (Start Fullscreen, Alt+Enter / F11).
       final runner = GameWindowRunnerService.apply(projectDir, startFullscreen: project?.settings.startFullscreen ?? false);

@@ -570,6 +570,7 @@ One key binding inside a mapping context. [keyId] is the stable `LogicalKeyboard
 | `physics` | `ProjectPhysicsSettings physics` | Holds the `physics` property or configuration state. |
 | `packaging` | `ProjectPackagingSettings packaging` | Holds the `packaging` property or configuration state. |
 | `pluginIsolation` | `final Map<String, PluginIsolation> pluginIsolation` | Per-plugin isolation overrides, `.lmproject` `plugin_isolation: {"<plugin>": "in_process" \| "process"}` (written sorted by name, only when not empty; an unknown value is dropped on read). Forces an isolated plugin in process for debugging; see `LuminaPluginDescriptor.effectiveIsolation`. |
+| `neuralRendering` | `final ProjectNeuralRenderingSettings neuralRendering` | Project Settings ▸ Neural rendering (experimental): the OpenDLSS-NR opt-in (`lib/src/formats/project_neural_rendering_settings.dart`), `.lmproject` `neural_rendering` (written only when it differs from the default): `enabled`, `acknowledged_at` (the accepted warning; `active` needs both), `weights_path` (machine-local, never written into games), `intensity`, `local_tone`, `local_structure`, `auto_mask`, `style`, `paper_white`, `color_strength`. See `lumina/rendering.md`. |
 | `toMap` | `Map<String, dynamic> toMap()` | Executes `toMap` operation. |
 
 ## `lib/src/formats/lumina_theme_document.dart`

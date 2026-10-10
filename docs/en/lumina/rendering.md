@@ -58,3 +58,12 @@ What renders Lumina: the Filament release the engine is linked against and its m
 ---
 
 [Previous: Materials and post-processing](materials-and-post-process.md) | [Up: lumina (engine core)](index.md) | [Next: Game framework](game.md)
+
+## Neural rendering: OpenDLSS-NR (experimental, third-party)
+
+`lib/src/post_process/neural_rendering/` runs the [OpenDLSS-NR pass](../flutter_filament/opendlss-nr.md) on Lumina's views. OpenDLSS-NR is a third-party, unofficial re-implementation of NVIDIA's DLSS 5 neural rendering; it needs NVIDIA's model weights, which Lumina does not provide, ship or describe how to obtain. It is off unless a project opts in (Project Settings ▸ Neural rendering, behind a warning the user must accept).
+
+- `ProjectNeuralRenderingSettings` (`lumina_core`, `neural_rendering` in the `.lmproject`): `enabled`, `acknowledgedAt`, `weightsPath` (machine-local), `intensity`, `localTone`, `localStructure`, `autoMask`, `style` (`none` / `natural` / `cinematic`), `paperWhite`, `colorStrength`; `active` = enabled and acknowledged.
+- `LuminaNeuralRendering`: `projectOptIn` (set by a generated game's `main()` only when its project opted in, without the weights path), `editorWeightsPath`, `resolveWeightsPath()` (editor path, then the player's `neural_rendering_weights` in `GameUserSettings.json`, then the `LUMINA_OPENDLSS_NR_WEIGHTS` environment variable), `requestDeviceFeatures()` (joined to `LuminaRtxController.requestExtensions(neuralRendering: true)`: the editor always, a game only when opted in).
+- `LuminaNeuralRenderingController(engine, view)`: `apply(settings, weightsPath:)` checks the GPU, validates and loads the weights on background isolates and registers the pass; `status` (`LuminaNeuralRenderingStatus`: `off`, `unsupported`, `weightsMissing`, `invalidWeights`, `loading`, `running` with the GPU time, `failed`) with the reason, logged once; `tick()` releases a pass that turned itself off.
+- Games: `LuminaUserSettingsSubsystem` (mixin `LuminaUserSettingsNeuralRendering`) applies the opt-in to the world's view; `setNeuralRenderingWeightsPath` stages the player's folder, kept in `GameUserSettings.json`. **A packaged game never contains weights**; without a folder the pass stays off and the log says where to set one.

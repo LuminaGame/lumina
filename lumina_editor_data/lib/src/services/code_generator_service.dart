@@ -38,6 +38,7 @@ class DartCodeGeneratorService extends _DartCodeGeneratorServiceState
     int targetFps = 0,
     bool vsyncEnabled = false,
     bool startFullscreen = false,
+    ProjectNeuralRenderingSettings? neuralRendering,
   }) {
     // Every level the game can Open Level to, by authored name
     // (`L_Main` → `levels/l_main.dart`, class `LMain`).
@@ -99,6 +100,7 @@ class DartCodeGeneratorService extends _DartCodeGeneratorServiceState
     // Fullscreen Mode), kept next to the save games, is put back before the
     // first frame.
     final startMode = startFullscreen ? 'LuminaWindowMode.borderlessFullscreen' : 'LuminaWindowMode.windowed';
+    final neuralRenderingOptIn = neuralRenderingOptInSource(neuralRendering);
     return """
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // Lumina Engine $kLuminaEngineVersion Auto-Generated Launcher
@@ -116,7 +118,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // The engine's Flutter services: platform, asset bundle, video player.
   LuminaWidgets.ensureInitialized();
-$registerFunctions$registerWidgets$registerBlueprints  // Every asset the level names is read from the app bundle (pubspec.yaml
+$neuralRenderingOptIn$registerFunctions$registerWidgets$registerBlueprints  // Every asset the level names is read from the app bundle (pubspec.yaml
   // bundles contents/), so the same game runs on desktop and on the web.
   LuminaAssets.defaultProvider = (path) async {
     final data = await rootBundle.load(path);
@@ -328,4 +330,26 @@ class MyLuminaGameApp extends StatelessWidget {
     }
     return names.toList()..sort();
   }
+}
+
+/// The generated `main()` lines of a project that opted in to OpenDLSS-NR
+/// (Project Settings > Neural rendering); empty otherwise. The machine-local
+/// weights path is never written into a game.
+String neuralRenderingOptInSource(ProjectNeuralRenderingSettings? settings) {
+  if (settings == null || !settings.active) return '';
+  String f(double v) => v.toStringAsFixed(3);
+  return '  // Project Settings > Neural rendering: OpenDLSS-NR (experimental, third-party) opted in.\n'
+      '  // The game ships no model weights: the player points GameUserSettings.json\n'
+      "  // ('neural_rendering_weights') or LUMINA_OPENDLSS_NR_WEIGHTS at a folder; without one it stays off.\n"
+      '  LuminaNeuralRendering.projectOptIn = const ProjectNeuralRenderingSettings(\n'
+      '    enabled: true,\n'
+      "    acknowledgedAt: '${settings.acknowledgedAt.replaceAll("'", '')}',\n"
+      '    intensity: ${f(settings.intensity)},\n'
+      '    localTone: ${f(settings.localTone)},\n'
+      '    localStructure: ${f(settings.localStructure)},\n'
+      '    autoMask: ${settings.autoMask},\n'
+      "    style: '${settings.style}',\n"
+      '    paperWhite: ${f(settings.paperWhite)},\n'
+      '    colorStrength: ${f(settings.colorStrength)},\n'
+      '  );\n';
 }

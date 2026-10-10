@@ -1,3 +1,4 @@
+import 'package:lumina_core/src/formats/project_neural_rendering_settings.dart';
 import 'package:lumina_core/src/formats/plugin_isolation.dart';
 import 'package:lumina_core/src/formats/project_input_settings.dart';
 import 'package:lumina_core/src/formats/project_packaging_settings.dart';
@@ -397,6 +398,10 @@ class LuminaProject {
   /// The app icon every packaged target uses.
   final ProjectBrandingSettings branding;
 
+  /// Neural rendering (experimental): the OpenDLSS-NR opt-in
+  /// (`neural_rendering`, written only once it differs from the default).
+  final ProjectNeuralRenderingSettings neuralRendering;
+
   /// World units the project was authored in: `cm` since Lumina
   /// switched to centimetres. Manifests written before that have
   /// no `world_units` and read `m`; they are not migrated.
@@ -441,6 +446,7 @@ class LuminaProject {
     this.packaging = const ProjectPackagingSettings(),
     this.ui = const ProjectUiSettings(),
     this.branding = const ProjectBrandingSettings(),
+    this.neuralRendering = const ProjectNeuralRenderingSettings(),
     this.worldUnits = kWorldUnitsCentimetres,
     this.upAxis = kUpAxisZ,
     this.pluginSettings = const {},
@@ -467,6 +473,7 @@ class LuminaProject {
     ProjectPackagingSettings? packaging,
     ProjectUiSettings? ui,
     ProjectBrandingSettings? branding,
+    ProjectNeuralRenderingSettings? neuralRendering,
     String? worldUnits,
     String? upAxis,
     Map<String, Map<String, Object?>>? pluginSettings,
@@ -492,6 +499,7 @@ class LuminaProject {
       packaging: packaging ?? this.packaging,
       ui: ui ?? this.ui,
       branding: branding ?? this.branding,
+      neuralRendering: neuralRendering ?? this.neuralRendering,
       worldUnits: worldUnits ?? this.worldUnits,
       upAxis: upAxis ?? this.upAxis,
       pluginSettings: pluginSettings ?? this.pluginSettings,
@@ -522,6 +530,7 @@ class LuminaProject {
       'packaging': packaging.toMap(),
       'ui': ui.toMap(),
       'branding': branding.toMap(),
+      if (neuralRendering != const ProjectNeuralRenderingSettings()) 'neural_rendering': neuralRendering.toMap(),
       'world_units': worldUnits,
       'up_axis': upAxis,
       if (pluginSettings.isNotEmpty)
@@ -540,7 +549,7 @@ class LuminaProject {
     'project_name', 'engine_version', 'active_level', 'is_dirty', 'last_modified_timestamp',
     'last_code_generated_timestamp', 'settings', 'editor_snap', 'editor_viewport', 'enabled_plugins',
     'description', 'template', 'input', 'maps_and_modes', 'physics', 'packaging', 'ui', 'branding',
-    'world_units', 'up_axis', 'plugin_settings', 'plugin_isolation',
+    'world_units', 'up_axis', 'plugin_settings', 'plugin_isolation', 'neural_rendering',
   };
 
   factory LuminaProject.fromMap(Map<String, dynamic> map) {
@@ -602,6 +611,9 @@ class LuminaProject {
       branding: map['branding'] is Map
           ? ProjectBrandingSettings.fromMap(Map<String, dynamic>.from(map['branding'] as Map))
           : const ProjectBrandingSettings(),
+      neuralRendering: map['neural_rendering'] is Map
+          ? ProjectNeuralRenderingSettings.fromMap(Map<String, dynamic>.from(map['neural_rendering'] as Map))
+          : const ProjectNeuralRenderingSettings(),
       worldUnits: map['world_units'] as String? ?? kWorldUnitsMetres,
       upAxis: map['up_axis'] as String? ?? kUpAxisY,
     );

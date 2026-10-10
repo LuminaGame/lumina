@@ -14,19 +14,22 @@ import 'package:lumina/src/world/world.dart';
 import 'package:lumina/src/world/subsystem/world_subsystem.dart';
 
 export 'package:lumina/src/world/subsystem/user_settings_display.dart';
+export 'package:lumina/src/world/subsystem/user_settings_neural_rendering.dart';
 export 'package:lumina/src/world/subsystem/user_settings_rendering.dart';
 
 /// World subsystem managing engine scalability settings, quality presets,
 /// view distance, resolution scale, frame pacing, and graphics configuration,
 /// plus ray tracing and upscaling ([LuminaUserSettingsRenderingFeatures]) and
-/// the screen resolution and monitor ([LuminaUserSettingsDisplay]).
+/// the screen resolution and monitor ([LuminaUserSettingsDisplay]) and the
+/// OpenDLSS-NR weights of a project that opted in
+/// ([LuminaUserSettingsNeuralRendering]).
 ///
 /// The scalability presets leave the ray tracing and upscaler choice alone:
 /// those depend on the GPU and are opted into by the player, so picking
 /// `Cinematic` never turns ray tracing on and picking `Low` never turns an
 /// upscaler off.
 class LuminaUserSettingsSubsystem extends LuminaWorldSubsystem
-    with LuminaUserSettingsRenderingFeatures, LuminaUserSettingsDisplay {
+    with LuminaUserSettingsRenderingFeatures, LuminaUserSettingsDisplay, LuminaUserSettingsNeuralRendering {
   /// Where [saveSettings] and [loadSettings] keep the settings by default:
   /// `GameUserSettings.json` in the save game directory, the file the window
   /// mode, screen resolution and monitor are kept in as well.
@@ -116,11 +119,13 @@ class LuminaUserSettingsSubsystem extends LuminaWorldSubsystem
   void onWorldTick(double deltaTime) {
     super.onWorldTick(deltaTime);
     tickRenderingFeatures();
+    tickNeuralRendering();
   }
 
   @override
   void onWorldShutdown() {
     disposeRenderingFeatures();
+    disposeNeuralRendering();
     super.onWorldShutdown();
   }
 
@@ -140,6 +145,7 @@ class LuminaUserSettingsSubsystem extends LuminaWorldSubsystem
         'vsync': _vsyncEnabled,
         'rendering_features': renderingFeatures.toMap(),
         ...displaySettingsMap(),
+        ...neuralRenderingSettingsMap(),
       };
 
   /// Takes the settings in [map] (what [toMap] wrote; missing or mistyped
@@ -162,6 +168,7 @@ class LuminaUserSettingsSubsystem extends LuminaWorldSubsystem
     final features = map['rendering_features'];
     if (features is Map) setRenderingFeatures(LuminaRenderingFeatureSettings.fromMap(Map<String, dynamic>.from(features)));
     stageDisplaySettingsFrom(map);
+    stageNeuralRenderingFrom(map);
     applySettings();
   }
 
@@ -478,5 +485,7 @@ class LuminaUserSettingsSubsystem extends LuminaWorldSubsystem
     applyRenderingFeatures(baseTaa: profile.taa, baseDynamicResolution: profile.dynamicResolution);
     // The screen resolution and monitor, when a new choice is staged.
     applyDisplaySettings();
+    // OpenDLSS-NR, when the project opted in (after the upscalers: it runs on their output).
+    applyNeuralRendering();
   }
 }
