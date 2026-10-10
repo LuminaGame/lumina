@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:isolate';
 
@@ -67,7 +68,10 @@ class GitService {
   static Future<ProcessResult> _defaultRunner(String executable, List<String> arguments, {String? workingDirectory}) =>
       Zone.root.run(() async {
         try {
-          return await Process.run(executable, arguments, workingDirectory: workingDirectory);
+          // git prints paths and messages in UTF-8; the platform default
+          // (a Windows ANSI code page) would garble non-ASCII names.
+          return await Process.run(executable, arguments,
+              workingDirectory: workingDirectory, stdoutEncoding: utf8, stderrEncoding: utf8);
         } on ProcessException catch (e) {
           return ProcessResult(-1, spawnFailedExitCode, '', e.message);
         }
