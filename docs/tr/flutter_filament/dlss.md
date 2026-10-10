@@ -83,7 +83,7 @@ Yeniden boyutlanan bir view yeni çıktı boyutuyla yeni bir `Dlss` ister.
 
 | Üye | İmza | Açıklama |
 | :--- | :--- | :--- |
-| `available` | `static bool get available` | NGX runtime bulundu ve bir NVIDIA Vulkan cihazı var. |
+| `available` | `static bool get available` | NGX runtime bulundu ve bir NVIDIA Vulkan cihazı var. Her karede okunabilecek kadar ucuzdur: runtime klasörü ve GPU listesi bir kez aranır ve önbelleğe alınır. |
 | `requestExtensions` | `static bool requestExtensions()` | Motor oluşturulmadan önce çağrılmalı; DLSS yoksa false (ve değişiklik yok). |
 | `runtimeDirectory` | `static set runtimeDirectory(String? dir)` | Çalışma zamanının önce nerede aranacağı (bir SDK kökü ya da kitaplığın klasörü); `available` okunmadan önce ayarlanır. |
 | `clearExtensionRequest` | `static void clearExtensionRequest()` | Sonraki motorlar NGX uzantıları olmadan oluşturulur. |

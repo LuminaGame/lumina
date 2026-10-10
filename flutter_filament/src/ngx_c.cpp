@@ -210,7 +210,9 @@ bool hasFeatureLibrary(const char* windowsStem) {
 }
 
 bool hasNvidiaVulkanDevice() {
-    const int count = filament_vulkan_device_count();
+    // The cached list: enumerating again creates a throwaway VkInstance (several ms), and
+    // availability is read every frame while DLSS is on.
+    const int count = flutter_filament_cached_vulkan_device_count();
     for (int i = 0; i < count; ++i) {
         filament_gpu_info_t info{};
         if (filament_vulkan_device_info(i, &info) && info.vendor_id == 0x10DE) return true;

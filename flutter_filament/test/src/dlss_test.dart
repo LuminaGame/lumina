@@ -13,6 +13,19 @@ import '../smoke/smoke_helper.dart';
 /// committed); without it every entry point reports "not available" and the
 /// engine renders as before.
 void main() {
+  test('reading Dlss.available again is cheap: the GPU list is not enumerated per call', () {
+    // A game reads it every tick while DLSS is on; enumerating the GPUs creates a
+    // throwaway Vulkan instance (several ms), which on the Flutter presentation path
+    // lands on every frame.
+    final first = Dlss.available;
+    final clock = Stopwatch()..start();
+    for (var i = 0; i < 30; i++) {
+      expect(Dlss.available, first);
+    }
+    clock.stop();
+    expect(clock.elapsedMilliseconds, lessThan(30), reason: '30 reads took ${clock.elapsedMilliseconds} ms');
+  });
+
   group('DLSS without a GPU (noop backend)', () {
     late FilamentEngine engine;
     late FilamentView view;

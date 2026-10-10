@@ -83,7 +83,7 @@ A resized view needs a new `Dlss` with the new output size.
 
 | Member | Signature | Description |
 | :--- | :--- | :--- |
-| `available` | `static bool get available` | The NGX runtime was found and an NVIDIA Vulkan device is present. |
+| `available` | `static bool get available` | The NGX runtime was found and an NVIDIA Vulkan device is present. Cheap to read every frame: the runtime folder and the GPU list are looked up once and cached. |
 | `requestExtensions` | `static bool requestExtensions()` | Must run before the engine is created; false (and no change) when DLSS is unavailable. |
 | `runtimeDirectory` | `static set runtimeDirectory(String? dir)` | Where the runtime is looked for first (an SDK root or the library's folder); set it before `available` is read. |
 | `clearExtensionRequest` | `static void clearExtensionRequest()` | Later engines are created without the NGX extensions. |

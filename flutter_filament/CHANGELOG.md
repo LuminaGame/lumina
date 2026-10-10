@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- `Dlss.available` (and the availability checks built on it) reads the cached GPU list instead of creating a Vulkan
+  instance per call (about 7 ms each). A game reads it every tick while DLSS is on, which on the Flutter presentation
+  path at 3440x1440 cost a third to half of the frame rate (offscreen: 60 -> 96-103 frames/s, no upscaler 108-125).
 - Ray-traced sun shadows and ReSTIR's visibility rays follow the scene under a rotated IBL (prebuilt
   `1.77.2-lumina.17`, Filament patch `0019`): with a KTX IBL the sun shadow was traced along a turned direction (IoU
   0.06 against the shadow maps, now 0.91-0.98) and ReSTIR's point light shadows moved with the IBL's rotation.

@@ -188,6 +188,45 @@ void main() {
           reason: '$size: rendering the view once per frame is faster');
     }
 
+    // DLSS Super Resolution on the Flutter path costs its GPU evaluation and no more: the
+    // world tick that checks it every frame stays cheap (a tick that re-enumerated the GPUs
+    // halved the 3440x1440 rate).
+    if (support.dlss) {
+      resize(3440, 1440);
+      (double, double) upscaled(String upscaler) {
+        settings
+          ..setUpscaler(upscaler)
+          ..setFrameGenerationEnabled(false)
+          ..applySettings();
+        run(driver, 20);
+        final tick = Stopwatch();
+        for (var i = 0; i < 60; i++) {
+          animate();
+          tick.start();
+          driver.onVsync(engine.steadyClockTimeNano);
+          tick.stop();
+          texturePath.frame();
+        }
+        final (fps, _) = run(driver, 120);
+        return (fps, tick.elapsedMicroseconds / 60 / 1000);
+      }
+
+      final (none, noneTick) = upscaled('None');
+      final (dlss, dlssTick) = upscaled('DLSS');
+      expect(settings.activeRenderingFeatures.upscaler, LuminaUpscaler.dlss);
+      // ignore: avoid_print
+      print('3440x1440 Flutter path: no upscaler ${none.toStringAsFixed(1)} frames/s (tick '
+          '${noneTick.toStringAsFixed(2)} ms), DLSS Super Resolution ${dlss.toStringAsFixed(1)} '
+          '(tick ${dlssTick.toStringAsFixed(2)} ms)');
+      metrics['3440x1440 no upscaler frames/s'] = double.parse(none.toStringAsFixed(1));
+      metrics['3440x1440 DLSS SR frames/s'] = double.parse(dlss.toStringAsFixed(1));
+      expect(dlssTick, lessThan(2), reason: 'the world tick with DLSS on stays cheap');
+      // This scene is light, so DLSS's own evaluation is a large share of the frame; the tick
+      // is the guard, the rate only a sanity check.
+      expect(dlss, greaterThan(none * 0.5), reason: 'DLSS Super Resolution keeps the Flutter path near its rate');
+      mode(on: false);
+    }
+
     // The clip: the Flutter path with frame generation on, read back at 30 fps.
     resize(1024, 768);
     mode(on: true, generator: support.dlssFrameGeneration ? 'DLSS' : 'FSR3');
