@@ -34,8 +34,14 @@ class UmgEditorViewModel extends _UmgEditorViewModelState with _UmgEditorPersist
   }
 
   void _initThemes() {
-    refreshAvailableThemes().then((_) => loadThemeForDocument());
+    _themesLoaded = refreshAvailableThemes().then((_) => _disposed ? null : loadThemeForDocument());
   }
+
+  late final Future<void> _themesLoaded;
+
+  /// Completes once the project's themes and the document's theme, which the
+  /// constructor starts loading, are in.
+  Future<void> get themesLoaded => _themesLoaded;
 
   /// The prop holding a texture path: an Image's brush, a Container's
   /// background image; null for other types.

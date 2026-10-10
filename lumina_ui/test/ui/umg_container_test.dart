@@ -17,6 +17,8 @@ import 'package:lumina_ui/ui/features/sub_editors/view_models/umg_editor_view_mo
 import 'package:lumina_ui/ui/features/sub_editors/views/umg/widget_sub_editor.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
+import '../helpers/temp_project.dart';
+
 /// The Container panel, styled like Flutter's `Container`,
 /// authored in the inspector, rendered on the canvas and in PIE, emitted by
 /// the codegen and set by Blueprints.
@@ -36,9 +38,8 @@ void main() {
     lmasPath = '$projectDir/contents/widgets/WBP_Panel.lmas';
   });
 
-  tearDown(() {
-    if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
-  });
+  // Retries: Windows refuses to delete a folder a git probe still works in.
+  tearDown(() => deleteTempProject(tempDir));
 
   /// A real TEXTURE `.lmas` (a PNG payload) under the project.
   String writeTexture() {
@@ -58,8 +59,14 @@ void main() {
   Future<UmgEditorViewModel> pumpEditor(WidgetTester tester) async {
     await tester.binding.setSurfaceSize(const Size(1500, 2200));
     addTearDown(() => tester.binding.setSurfaceSize(null));
-    final vm = UmgEditorViewModel(assetPath: lmasPath);
-    await tester.runAsync(() => vm.load());
+    // Built on the real clock: its theme loads would never finish (nor
+    // close their files) inside fake async.
+    final vm = (await tester.runAsync(() async {
+      final vm = UmgEditorViewModel(assetPath: lmasPath);
+      await vm.load();
+      await vm.themesLoaded;
+      return vm;
+    }))!;
     await tester.pumpWidget(ShadcnApp(
       theme: luminaEditorTheme(),
       home: Scaffold(child: UMGWidgetSubEditor(assetName: 'WBP_Panel', assetPath: lmasPath, viewModel: vm)),

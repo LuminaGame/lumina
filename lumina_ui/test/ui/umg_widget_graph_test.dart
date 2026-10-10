@@ -10,6 +10,8 @@ import 'package:lumina_ui/ui/features/sub_editors/view_models/umg_editor_view_mo
 import 'package:lumina_ui/ui/features/sub_editors/views/umg/widget_sub_editor.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
+import '../helpers/temp_project.dart';
+
 /// The Widget Blueprint graph: its document in the widget
 /// `.lmas`, Is Variable, the Details `+` binding, and the Graph tab as the
 /// Blueprint editor in its widget configuration (real temp project, real
@@ -30,9 +32,9 @@ void main() {
     lmasPath = '$projectDir/contents/widgets/WBP_Clicker.lmas';
   });
 
-  tearDown(() {
+  tearDown(() async {
     LuminaWidgetClassRegistry.clear();
-    if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
+    await deleteTempProject(tempDir);
   });
 
   /// A Button `StartButton` and a Text `Title` on the root canvas.
@@ -141,8 +143,14 @@ void main() {
   testWidgets('Graph shows the Blueprint canvas in its widget configuration; View Generated Code shows the source', (tester) async {
     await tester.binding.setSurfaceSize(const Size(1600, 1000));
     addTearDown(() => tester.binding.setSurfaceSize(null));
-    final vm = UmgEditorViewModel(assetPath: lmasPath);
-    await tester.runAsync(() => vm.load());
+    // Built on the real clock: its theme loads would never finish (nor
+    // close their files) inside fake async.
+    final vm = (await tester.runAsync(() async {
+      final vm = UmgEditorViewModel(assetPath: lmasPath);
+      await vm.load();
+      await vm.themesLoaded;
+      return vm;
+    }))!;
     late ({UmgNode button, UmgNode title}) c;
     await tester.runAsync(() async => c = addClicker(vm));
     await tester.pumpWidget(ShadcnApp(

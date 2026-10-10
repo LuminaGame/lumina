@@ -124,8 +124,12 @@ abstract class _UmgEditorViewModelState extends ChangeNotifier {
     if (editor != null) _document.blueprint = editor.document;
   }
 
+  /// Set by dispose: theme loads still reading files stop there.
+  bool _disposed = false;
+
   @override
   void dispose() {
+    _disposed = true;
     _graphEditor?.removeListener(_onGraphChanged);
     _graphEditor?.transactions.removeListener(_onGraphChanged);
     _graphEditor?.dispose();

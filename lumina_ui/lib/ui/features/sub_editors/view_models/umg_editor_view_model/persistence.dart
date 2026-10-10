@@ -87,6 +87,7 @@ mixin _UmgEditorPersistence on _UmgEditorViewModelState {
           _loadedThemes[p] = await LuminaThemeService.loadTheme(p);
         }
       }
+      if (_disposed) return;
       notifyListeners();
     } catch (_) {}
   }
@@ -119,6 +120,8 @@ mixin _UmgEditorPersistence on _UmgEditorViewModelState {
     } else {
       _activeTheme = LuminaThemeDocument.defaultShadcnDark();
     }
+    // Disposed while a theme was read (the editor closed meanwhile).
+    if (_disposed) return;
     notifyListeners();
   }
 

@@ -17,6 +17,8 @@ import 'package:lumina_ui/ui/features/sub_editors/views/umg/umg_runtime_view.dar
 import 'package:lumina_ui/ui/features/sub_editors/views/umg/widget_sub_editor.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
+import '../helpers/temp_project.dart';
+
 /// Text shadow and outline on every text-bearing element,
 /// authored in the inspector, previewed on the designer canvas, persisted in
 /// the WIDGET `.lmas`, rendered by the runtime view and set by Blueprints.
@@ -36,15 +38,20 @@ void main() {
     lmasPath = '$projectDir/contents/widgets/WBP_PlayerHUD.lmas';
   });
 
-  tearDown(() {
-    if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
-  });
+  // Retries: Windows refuses to delete a folder a git probe still works in.
+  tearDown(() => deleteTempProject(tempDir));
 
   Future<UmgEditorViewModel> pumpEditor(WidgetTester tester) async {
     await tester.binding.setSurfaceSize(const Size(1500, 1400));
     addTearDown(() => tester.binding.setSurfaceSize(null));
-    final vm = UmgEditorViewModel(assetPath: lmasPath);
-    await tester.runAsync(() => vm.load());
+    // Built on the real clock: its theme loads would never finish (nor
+    // close their files) inside fake async.
+    final vm = (await tester.runAsync(() async {
+      final vm = UmgEditorViewModel(assetPath: lmasPath);
+      await vm.load();
+      await vm.themesLoaded;
+      return vm;
+    }))!;
     await tester.pumpWidget(ShadcnApp(
       theme: luminaEditorTheme(),
       home: Scaffold(child: UMGWidgetSubEditor(assetName: 'WBP_PlayerHUD', assetPath: lmasPath, viewModel: vm)),
