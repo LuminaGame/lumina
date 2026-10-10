@@ -147,6 +147,26 @@ void main() {
     expect(LuminaGamePresentation.flutterPresentation.value, isNull, reason: 'the host went away');
   });
 
+  testWidgets('the reason Flutter shows the game follows the player choice made after the scene exists', (tester) async {
+    final (driver, game) = await mount(tester, allowDirect: true);
+    for (var i = 0; i < 3; i++) {
+      await frame(tester);
+    }
+    if (driver == null) {
+      await tester.pumpWidget(const SizedBox.shrink());
+      return markTestSkipped('FilamentWidget did not create a scene in the test binding');
+    }
+    expect(LuminaGamePresentation.flutterPresentation.value, 'project setting');
+    LuminaGamePresentation.apply(LuminaPresentationMode.flutter);
+    await frame(tester);
+    expect(LuminaGamePresentation.flutterPresentation.value, 'player setting');
+    LuminaGamePresentation.apply(null);
+    await frame(tester);
+    expect(LuminaGamePresentation.flutterPresentation.value, 'project setting');
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+  });
+
   testWidgets('a refused Direct request with frame generation chosen stays on Flutter, frame generation off, no retries',
       (tester) async {
     const channel = MethodChannel(LuminaWindowModeChannel.channelName);

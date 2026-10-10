@@ -215,6 +215,9 @@ class _LuminaGameWidgetState extends State<LuminaGameWidget>
     if (widget.allowDirectPresentation) {
       LuminaGamePresentation.setProjectDefault(widget.presentation);
       LuminaGamePresentation.requested.addListener(_onPresentationRequested);
+      // After `requested`, the decision is updated: the reason Flutter shows
+      // the game is read from it.
+      LuminaGamePresentation.decision.addListener(_publishFlutterPresentation);
       _onPresentationRequested();
     }
   }
@@ -419,6 +422,7 @@ class _LuminaGameWidgetState extends State<LuminaGameWidget>
     }
     if (widget.allowDirectPresentation) {
       LuminaGamePresentation.requested.removeListener(_onPresentationRequested);
+      LuminaGamePresentation.decision.removeListener(_publishFlutterPresentation);
     }
     _onDispose();
     _playStateSub?.cancel();
