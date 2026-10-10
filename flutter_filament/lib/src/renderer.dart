@@ -259,9 +259,11 @@ class FilamentRenderer {
   }
 
   /// The steady-clock times (nanoseconds) of the most recent SwapChain
-  /// presents, oldest first (at most 128). With frame generation one rendered
-  /// frame is presented more than once; the intervals show the pacing. Empty
-  /// on the web.
+  /// presents, oldest first (at most [count], up to 1024). With frame
+  /// generation one rendered frame is presented more than once; the intervals
+  /// show the pacing. On Vulkan a SwapChain without vsync presents from a
+  /// thread of its own once the GPU finished the image, spacing the presents of
+  /// one rendered frame evenly; these are those present times. Empty on the web.
   List<int> getPresentTimes([int count = 128]) {
     _checkDisposed();
     if (count <= 0) return const [];

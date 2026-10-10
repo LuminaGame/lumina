@@ -1,0 +1,1086 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Can Us <me@canus.dev>
+Date: Sat, 10 Oct 2026 16:00:00 +0300
+Subject: [PATCH] Pace vsync-less presents on a thread of the SwapChain
+
+Frame generation (0009, 0013) paced its presents in Renderer::endFrame on
+the render thread: without vsync the waits between the presents of one
+rendered frame stretched the frame itself, so the presented frame rate
+stayed at the rendering rate. Sleeping with Windows' 15.6 ms timer tick
+also made the spacing uneven.
+
+A Vulkan SwapChain created with CONFIG_DISABLE_VSYNC now presents from its
+own thread (VulkanPresentPacer): the driver thread queues each image with
+the fence of the command buffer that drew it and its slot among the
+presents of one rendered frame (setPresentPacing, set by the renderer before
+each commit); the thread waits for the GPU and spaces the presents evenly
+over the measured rendered-frame interval with a high-resolution timer,
+while the render and driver threads go on with the next frame. Queue access
+(submits, presents, wait-idle, and the acquire of a vsync-less swap chain,
+which polls instead of blocking) is serialised by fvkutils::queueMutex();
+the queue is drained before a swap chain is recreated or destroyed and by
+finish(). Vsync-less surfaces get up to seven more images. The present
+times the thread records (1024 kept) are what Renderer::getPresentTimes()
+returns on Vulkan (getPresentTimes, isPresentPacingSupported). Also clamps
+the clear pass viewport of the frame-generation presents to the view (an
+unbounded viewport is invalid on a real swap chain). The other backends
+keep pacing on the render thread.
+---
+diff --git a/filament/backend/CMakeLists.txt b/filament/backend/CMakeLists.txt
+index 44baa804..e1ba3e9d 100644
+--- a/filament/backend/CMakeLists.txt
++++ b/filament/backend/CMakeLists.txt
+@@ -212,6 +212,9 @@ if (FILAMENT_SUPPORTS_VULKAN)
+             src/vulkan/VulkanBlasDeformer.cpp
+             src/vulkan/VulkanBlasDeformer.h
+             src/vulkan/VulkanBlasDeformSpirv.h
++            src/vulkan/VulkanPresentPacer.cpp
++            src/vulkan/VulkanPresentPacer.h
++            src/vulkan/utils/QueueLock.h
+             src/vulkan/VulkanBufferCache.cpp
+             src/vulkan/VulkanBufferProxy.h
+             src/vulkan/VulkanBufferProxy.cpp
+diff --git a/filament/backend/include/private/backend/DriverAPI.inc b/filament/backend/include/private/backend/DriverAPI.inc
+index 3fcd45eb..13c60a88 100644
+--- a/filament/backend/include/private/backend/DriverAPI.inc
++++ b/filament/backend/include/private/backend/DriverAPI.inc
+@@ -444,6 +444,9 @@ DECL_DRIVER_API_SYNCHRONOUS_N(bool, isWorkaroundNeeded, backend::Workaround, wor
+ DECL_DRIVER_API_SYNCHRONOUS_0(backend::FeatureLevel, getFeatureLevel)
+ DECL_DRIVER_API_SYNCHRONOUS_0(size_t, getUniformBufferOffsetAlignment)
+ DECL_DRIVER_API_SYNCHRONOUS_0(bool, isCompositorTimingSupported)
++DECL_DRIVER_API_SYNCHRONOUS_0(bool, isPresentPacingSupported)
++// the steady-clock times (ns) of the SwapChain's most recent presents, oldest first
++DECL_DRIVER_API_SYNCHRONOUS_N(size_t, getPresentTimes, backend::SwapChainHandle, sch, uint64_t*, times, size_t, capacity)
+ DECL_DRIVER_API_SYNCHRONOUS_N(bool, queryFrameTimestamps, backend::SwapChainHandle, swapChain, uint64_t, frameId, backend::FrameTimestamps*, outFrameTimestamps)
+ DECL_DRIVER_API_SYNCHRONOUS_N(bool, queryCompositorTiming, backend::SwapChainHandle, swapChain, backend::CompositorTiming*, outCompositorTiming)
+ 
+@@ -703,6 +706,14 @@ DECL_DRIVER_API_N(buildAccelerationStructure,
+         backend::AccelerationStructureHandle, ash,
+         backend::AccelerationStructureBuildMode, mode)
+ 
++// Frame generation: the next commit of `sch` is present `slot` of the `count` presents of one
++// rendered frame. A backend that paces presents itself (isPresentPacingSupported()) spaces them
++// out on its own thread for vsync-less SwapChains; the others ignore it.
++DECL_DRIVER_API_N(setPresentPacing,
++        backend::SwapChainHandle, sch,
++        uint32_t, slot,
++        uint32_t, count)
++
+ // Poses a deformable bottom-level acceleration structure's vertices (skinning and morphing, see
+ // backend::AccelerationStructureDeformation) and builds or refits it from them; must run outside a
+ // render pass.
+diff --git a/filament/backend/src/metal/MetalDriver.mm b/filament/backend/src/metal/MetalDriver.mm
+index a95437de..f579257a 100644
+--- a/filament/backend/src/metal/MetalDriver.mm
++++ b/filament/backend/src/metal/MetalDriver.mm
+@@ -2822,6 +2822,17 @@ void MetalDriver::deformAccelerationStructure(Handle<HwAccelerationStructure>,
+         AccelerationStructureDeformation) {
+ }
+ 
++void MetalDriver::setPresentPacing(Handle<HwSwapChain>, uint32_t, uint32_t) {
++}
++
++bool MetalDriver::isPresentPacingSupported() {
++    return false;
++}
++
++size_t MetalDriver::getPresentTimes(Handle<HwSwapChain>, uint64_t*, size_t) {
++    return 0;
++}
++
+ void MetalDriver::updateDescriptorSetAccelerationStructure(Handle<HwDescriptorSet>,
+         descriptor_binding_t, Handle<HwAccelerationStructure>) {
+ }
+diff --git a/filament/backend/src/noop/NoopDriver.cpp b/filament/backend/src/noop/NoopDriver.cpp
+index fb95cfbd..b040d9a0 100644
+--- a/filament/backend/src/noop/NoopDriver.cpp
++++ b/filament/backend/src/noop/NoopDriver.cpp
+@@ -514,6 +514,17 @@ void NoopDriver::deformAccelerationStructure(Handle<HwAccelerationStructure>,
+         AccelerationStructureDeformation) {
+ }
+ 
++void NoopDriver::setPresentPacing(Handle<HwSwapChain>, uint32_t, uint32_t) {
++}
++
++bool NoopDriver::isPresentPacingSupported() {
++    return false;
++}
++
++size_t NoopDriver::getPresentTimes(Handle<HwSwapChain>, uint64_t*, size_t) {
++    return 0;
++}
++
+ void NoopDriver::updateDescriptorSetAccelerationStructure(Handle<HwDescriptorSet>,
+         descriptor_binding_t, Handle<HwAccelerationStructure>) {
+ }
+diff --git a/filament/backend/src/opengl/OpenGLDriver.cpp b/filament/backend/src/opengl/OpenGLDriver.cpp
+index 7568a3d0..bcb81d5a 100644
+--- a/filament/backend/src/opengl/OpenGLDriver.cpp
++++ b/filament/backend/src/opengl/OpenGLDriver.cpp
+@@ -5256,6 +5256,17 @@ void OpenGLDriver::deformAccelerationStructure(Handle<HwAccelerationStructure>,
+         AccelerationStructureDeformation) {
+ }
+ 
++void OpenGLDriver::setPresentPacing(Handle<HwSwapChain>, uint32_t, uint32_t) {
++}
++
++bool OpenGLDriver::isPresentPacingSupported() {
++    return false;
++}
++
++size_t OpenGLDriver::getPresentTimes(Handle<HwSwapChain>, uint64_t*, size_t) {
++    return 0;
++}
++
+ void OpenGLDriver::updateDescriptorSetAccelerationStructure(Handle<HwDescriptorSet>,
+         descriptor_binding_t, Handle<HwAccelerationStructure>) {
+ }
+diff --git a/filament/backend/src/vulkan/VulkanCommands.cpp b/filament/backend/src/vulkan/VulkanCommands.cpp
+index 482c0141..a2965922 100644
+--- a/filament/backend/src/vulkan/VulkanCommands.cpp
++++ b/filament/backend/src/vulkan/VulkanCommands.cpp
+@@ -21,6 +21,8 @@
+ 
+ #include "VulkanCommands.h"
+ 
++#include "vulkan/utils/QueueLock.h"
++
+ #include "VulkanConstants.h"
+ #include "VulkanContext.h"
+ 
+@@ -220,8 +222,12 @@ fvkmemory::resource_ptr<VulkanSemaphore> VulkanCommandBuffer::submit() {
+              << " fence=" << getVkFence();
+ #endif
+ 
+-    UTILS_UNUSED_IN_RELEASE VkResult result =
+-        vkQueueSubmit(mQueue, 1, &submitInfo, getVkFence());
++    VkResult result;
++    {
++        std::lock_guard const queueLock(fvkutils::queueMutex());
++        result = vkQueueSubmit(mQueue, 1, &submitInfo, getVkFence());
++    }
++    (void) result;
+     mFenceStatus->markSubmitted();
+ 
+ #if FVK_ENABLED(FVK_DEBUG_COMMAND_BUFFER)
+diff --git a/filament/backend/src/vulkan/VulkanDriver.cpp b/filament/backend/src/vulkan/VulkanDriver.cpp
+index e8523132..a5610d33 100644
+--- a/filament/backend/src/vulkan/VulkanDriver.cpp
++++ b/filament/backend/src/vulkan/VulkanDriver.cpp
+@@ -16,6 +16,8 @@
+ 
+ #include "VulkanDriver.h"
+ 
++#include "vulkan/utils/QueueLock.h"
++
+ #include "CommandStreamDispatcher.h"
+ #include "SystraceProfile.h"
+ #include "VulkanAccelerationStructure.h"
+@@ -609,15 +611,23 @@ void VulkanDriver::finish(int dummy) {
+ 
+     // It's not enough to wait on the fences of the buffers submitted.  Present calls are
+     // submitted to this same queue, so the more correct option is to call vkQueueWaitIdle.
+-    vkQueueWaitIdle(mPlatform->getGraphicsQueue());
+-    if (auto protectedQueue = mPlatform->getProtectedGraphicsQueue();
+-            UTILS_UNLIKELY(protectedQueue != VK_NULL_HANDLE)) {
+-        vkQueueWaitIdle(protectedQueue);
++    {
++        std::lock_guard const queueLock(fvkutils::queueMutex());
++        vkQueueWaitIdle(mPlatform->getGraphicsQueue());
++        if (auto protectedQueue = mPlatform->getProtectedGraphicsQueue();
++                UTILS_UNLIKELY(protectedQueue != VK_NULL_HANDLE)) {
++            vkQueueWaitIdle(protectedQueue);
++        }
+     }
+ 
+     // This wait() is still necessary to update the fence status.
+     mCommands.wait();
+ 
++    // presents a vsync-less SwapChain's present thread still holds are issued too
++    if (mCurrentSwapChain) {
++        mCurrentSwapChain->drainPresents();
++    }
++
+     mReadPixels.runUntilComplete();
+ }
+ 
+@@ -857,6 +867,32 @@ void VulkanDriver::buildAccelerationStructure(Handle<HwAccelerationStructure> as
+     as->build(commands, mode);
+ }
+ 
++void VulkanDriver::setPresentPacing(Handle<HwSwapChain> sch, uint32_t slot, uint32_t count) {
++    if (!sch) {
++        return;
++    }
++    auto swapChain = resource_ptr<VulkanSwapChain>::cast(&mResourceManager, sch);
++    swapChain->setPresentPacing(slot, count);
++}
++
++bool VulkanDriver::isPresentPacingSupported() {
++    return true;
++}
++
++size_t VulkanDriver::getPresentTimes(Handle<HwSwapChain> sch, uint64_t* times, size_t capacity) {
++    // a synchronous call: the histories are looked up under the timing lock, like
++    // queryCompositorTiming(), instead of touching the ref-counted swap chain
++    std::shared_ptr<VulkanPresentHistory> history;
++    {
++        utils::LockGuard const lock(mTiming.lock);
++        auto const it = mTiming.presentHistories.find(sch.getId());
++        if (it != mTiming.presentHistories.end()) {
++            history = it->second;
++        }
++    }
++    return history && times ? history->read(times, capacity) : 0;
++}
++
+ void VulkanDriver::deformAccelerationStructure(Handle<HwAccelerationStructure> ash,
+         AccelerationStructureDeformation deformation) {
+     FVK_SYSTRACE_SCOPE();
+@@ -1355,6 +1391,7 @@ void VulkanDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
+ 
+     utils::LockGuard const lock(mTiming.lock);
+     mTiming.nativeSwapchains.emplace(sch.getId(), swapChain->swapChain);
++    mTiming.presentHistories.emplace(sch.getId(), swapChain->getPresentHistory());
+ }
+ 
+ void VulkanDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch, uint32_t width,
+@@ -1369,6 +1406,9 @@ void VulkanDriver::createSwapChainHeadlessR(Handle<HwSwapChain> sch, uint32_t wi
+             VkExtent2D{width, height});
+     swapChain.inc();
+     mResourceManager.associateHandle(sch.getId(), std::move(tag));
++
++    utils::LockGuard const lock(mTiming.lock);
++    mTiming.presentHistories.emplace(sch.getId(), swapChain->getPresentHistory());
+ }
+ 
+ void VulkanDriver::createTimerQueryR(Handle<HwTimerQuery> tqh, utils::ImmutableCString&& tag) {
+@@ -1589,6 +1629,7 @@ void VulkanDriver::destroySwapChain(Handle<HwSwapChain> sch) {
+ 
+     utils::LockGuard const lock(mTiming.lock);
+     mTiming.nativeSwapchains.erase(sch.getId());
++    mTiming.presentHistories.erase(sch.getId());
+ }
+ 
+ void VulkanDriver::setFrameRate(Handle<HwSwapChain> const sch, float const frameRate,
+diff --git a/filament/backend/src/vulkan/VulkanDriver.h b/filament/backend/src/vulkan/VulkanDriver.h
+index 4a374d97..339a321e 100644
+--- a/filament/backend/src/vulkan/VulkanDriver.h
++++ b/filament/backend/src/vulkan/VulkanDriver.h
+@@ -192,6 +192,8 @@ private:
+     struct {
+         utils::Mutex lock;
+         std::unordered_map<HandleId, Platform::SwapChain*> nativeSwapchains UTILS_GUARDED_BY(lock);
++        std::unordered_map<HandleId, std::shared_ptr<VulkanPresentHistory>> presentHistories
++                UTILS_GUARDED_BY(lock);
+     } mTiming;
+ 
+     // This is necessary for us to write to push constants after binding a pipeline.
+diff --git a/filament/backend/src/vulkan/VulkanPresentPacer.cpp b/filament/backend/src/vulkan/VulkanPresentPacer.cpp
+new file mode 100644
+index 00000000..a7e63eba
+--- /dev/null
++++ b/filament/backend/src/vulkan/VulkanPresentPacer.cpp
+@@ -0,0 +1,201 @@
++/*
++ * Copyright (C) 2025 The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++#include "VulkanPresentPacer.h"
++
++#include "VulkanAsyncHandles.h"
++
++#include <utils/JobSystem.h>
++
++#include <algorithm>
++
++#if defined(_WIN32)
++#ifndef NOMINMAX
++#define NOMINMAX
++#endif
++#ifndef WIN32_LEAN_AND_MEAN
++#define WIN32_LEAN_AND_MEAN
++#endif
++#include <windows.h>
++#ifndef CREATE_WAITABLE_TIMER_HIGH_RESOLUTION
++#define CREATE_WAITABLE_TIMER_HIGH_RESOLUTION 0x00000002
++#endif
++#endif
++
++namespace filament::backend {
++
++uint64_t VulkanPresentHistory::now() noexcept {
++    return uint64_t(std::chrono::duration_cast<std::chrono::nanoseconds>(
++            std::chrono::steady_clock::now().time_since_epoch()).count());
++}
++
++void VulkanPresentHistory::record(uint64_t const nanos) noexcept {
++    std::lock_guard const lock(mLock);
++    mTimes[mCount % CAPACITY] = nanos;
++    mCount++;
++}
++
++size_t VulkanPresentHistory::read(uint64_t* out, size_t capacity) const noexcept {
++    std::lock_guard const lock(mLock);
++    size_t const n = std::min({ mCount, CAPACITY, capacity });
++    for (size_t i = 0; i < n; i++) {
++        out[i] = mTimes[(mCount - n + i) % CAPACITY];
++    }
++    return n;
++}
++
++VulkanPresentPacer::VulkanPresentPacer(VkDevice const device, PresentFn present,
++        VulkanPresentHistory* history)
++        : mDevice(device), mPresent(std::move(present)), mHistory(history) {
++#if defined(_WIN32)
++    mTimer = CreateWaitableTimerExW(nullptr, nullptr, CREATE_WAITABLE_TIMER_HIGH_RESOLUTION,
++            TIMER_ALL_ACCESS);
++#endif
++    mThread = std::thread([this] { loop(); });
++}
++
++VulkanPresentPacer::~VulkanPresentPacer() {
++    {
++        std::lock_guard const lock(mLock);
++        mStop = true;
++    }
++    mCondition.notify_all();
++    if (mThread.joinable()) {
++        mThread.join();
++    }
++    mDone.clear();
++#if defined(_WIN32)
++    if (mTimer) {
++        CloseHandle(HANDLE(mTimer));
++    }
++#endif
++}
++
++void VulkanPresentPacer::enqueue(uint32_t const index, VkSemaphore const finished,
++        std::shared_ptr<VulkanCmdFence> fence, uint32_t const slot, uint32_t const count) {
++    std::vector<std::shared_ptr<VulkanCmdFence>> done;
++    std::unique_lock lock(mLock);
++    mCondition.wait(lock, [this] { return mQueue.size() < MAX_QUEUED; });
++    mQueue.push_back({ index, finished, std::move(fence), slot, std::max(1u, count) });
++    done.swap(mDone);
++    lock.unlock();
++    mCondition.notify_all();
++}
++
++void VulkanPresentPacer::drain() {
++    std::vector<std::shared_ptr<VulkanCmdFence>> done;
++    std::unique_lock lock(mLock);
++    mCondition.wait(lock, [this] { return mQueue.empty() && !mBusy; });
++    done.swap(mDone);
++}
++
++void VulkanPresentPacer::waitUntil(clock::time_point const target) noexcept {
++    // Sleep most of the wait and yield the rest. Windows' default timer tick is 15.6 ms,
++    // longer than the spacing of generated frames: a high-resolution waitable timer sleeps
++    // to the sub-millisecond there.
++    constexpr auto margin = std::chrono::microseconds(500);
++    auto const remaining = target - clock::now();
++    if (remaining > margin) {
++#if defined(_WIN32)
++        if (mTimer) {
++            LARGE_INTEGER due;
++            // relative, in 100 ns units
++            due.QuadPart = -LONGLONG(std::chrono::duration_cast<std::chrono::nanoseconds>(
++                    remaining - margin).count() / 100);
++            if (SetWaitableTimerEx(HANDLE(mTimer), &due, 0, nullptr, nullptr, nullptr, 0)) {
++                WaitForSingleObject(HANDLE(mTimer), INFINITE);
++            }
++        } else {
++            std::this_thread::sleep_until(target - margin);
++        }
++#else
++        std::this_thread::sleep_until(target - margin);
++#endif
++    }
++    while (clock::now() < target) {
++        std::this_thread::yield();
++    }
++}
++
++void VulkanPresentPacer::loop() {
++    utils::JobSystem::setThreadName("FilamentPresent");
++    while (true) {
++        Job job;
++        bool behind = false;
++        {
++            std::unique_lock lock(mLock);
++            mCondition.wait(lock, [this] { return !mQueue.empty() || mStop; });
++            if (mQueue.empty()) {
++                break; // stopping, nothing left
++            }
++            job = std::move(mQueue.front());
++            mQueue.pop_front();
++            mBusy = true;
++            // The GPU runs a frame or two behind the driver thread, so later rendered frames are
++            // normally queued already; more than that is a backlog: present without spacing to
++            // catch up.
++            behind = std::count_if(mQueue.begin(), mQueue.end(),
++                    [](Job const& j) { return j.slot == 0; }) > MAX_FRAMES_AHEAD;
++        }
++        mCondition.notify_all();
++
++        // the image is ready once the command buffer that drew it completed
++        if (job.fence) {
++            job.fence->wait(mDevice, uint64_t(-1), clock::time_point::max());
++        }
++        clock::time_point const ready = clock::now();
++        if (job.slot == 0) {
++            if (mLastReady.time_since_epoch().count()) {
++                double const dt = std::chrono::duration<double>(ready - mLastReady).count();
++                // a long pause (frame generation just turned on, a hitch) does not count
++                if (dt < 0.25) {
++                    mInterval = mInterval > 0.0 ? mInterval * 0.9 + dt * 0.1 : dt;
++                }
++            }
++            mLastReady = ready;
++        }
++
++        clock::time_point target = ready;
++        if (job.count > 1 && mInterval > 0.0 && !behind && mLastPresent.time_since_epoch().count()) {
++            auto const spacing = std::chrono::duration_cast<clock::duration>(
++                    std::chrono::duration<double>(mInterval / double(job.count)));
++            target = std::max(ready, mLastPresent + spacing);
++            // never hold a frame longer than one rendered-frame interval
++            target = std::min(target, ready + std::chrono::duration_cast<clock::duration>(
++                    std::chrono::duration<double>(mInterval)));
++        }
++        waitUntil(target);
++
++        if (mPresent) {
++            mPresent(job.index, job.finished);
++        }
++        mLastPresent = clock::now();
++        if (mHistory) {
++            mHistory->record(uint64_t(std::chrono::duration_cast<std::chrono::nanoseconds>(
++                    mLastPresent.time_since_epoch()).count()));
++        }
++        {
++            std::lock_guard const lock(mLock);
++            if (job.fence) {
++                mDone.push_back(std::move(job.fence));
++            }
++            mBusy = false;
++        }
++        mCondition.notify_all();
++    }
++}
++
++} // namespace filament::backend
+diff --git a/filament/backend/src/vulkan/VulkanPresentPacer.h b/filament/backend/src/vulkan/VulkanPresentPacer.h
+new file mode 100644
+index 00000000..bb23bdd1
+--- /dev/null
++++ b/filament/backend/src/vulkan/VulkanPresentPacer.h
+@@ -0,0 +1,124 @@
++/*
++ * Copyright (C) 2025 The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++#ifndef TNT_FILAMENT_BACKEND_VULKANPRESENTPACER_H
++#define TNT_FILAMENT_BACKEND_VULKANPRESENTPACER_H
++
++#include <bluevk/BlueVK.h>
++
++#include <array>
++#include <chrono>
++#include <condition_variable>
++#include <deque>
++#include <functional>
++#include <memory>
++#include <mutex>
++#include <thread>
++#include <vector>
++
++#include <stdint.h>
++
++namespace filament::backend {
++
++struct VulkanCmdFence;
++
++/**
++ * The steady-clock times of a SwapChain's most recent presents, shared by the driver thread
++ * (direct presents) and the present thread, read by Renderer::getPresentTimes().
++ */
++class VulkanPresentHistory {
++public:
++    static constexpr size_t CAPACITY = 1024;
++    void record(uint64_t nanos) noexcept;
++    size_t read(uint64_t* out, size_t capacity) const noexcept;
++    static uint64_t now() noexcept;
++
++private:
++    mutable std::mutex mLock;
++    std::array<uint64_t, CAPACITY> mTimes{};
++    size_t mCount = 0;
++};
++
++/**
++ * Presents a vsync-less SwapChain's images from its own thread. The driver thread queues each
++ * image with the fence of the command buffer that drew it and its slot among the presents of
++ * one rendered frame (frame generation presents several); the thread waits for the GPU, then
++ * spaces the presents of a rendered frame evenly over the measured rendered-frame interval.
++ * The render and driver threads never wait for the pacing, so generated frames multiply the
++ * presented frame rate instead of stretching the frame. Queue access is serialised with the
++ * driver thread's submits (fvkutils::queueMutex()).
++ */
++class VulkanPresentPacer {
++public:
++    // presents one image (null for headless SwapChains, which only record the time)
++    using PresentFn = std::function<VkResult(uint32_t index, VkSemaphore finished)>;
++
++    VulkanPresentPacer(VkDevice device, PresentFn present, VulkanPresentHistory* history);
++    ~VulkanPresentPacer();
++
++    VulkanPresentPacer(VulkanPresentPacer const&) = delete;
++    VulkanPresentPacer& operator=(VulkanPresentPacer const&) = delete;
++
++    // Queues one present: slot is its index among the `count` presents of one rendered frame.
++    // Blocks only when too many presents are already queued.
++    void enqueue(uint32_t index, VkSemaphore finished, std::shared_ptr<VulkanCmdFence> fence,
++            uint32_t slot, uint32_t count);
++
++    // Waits until every queued present has been issued.
++    void drain();
++
++private:
++    struct Job {
++        uint32_t index;
++        VkSemaphore finished;
++        std::shared_ptr<VulkanCmdFence> fence;
++        uint32_t slot;
++        uint32_t count;
++    };
++    static constexpr size_t MAX_QUEUED = 16;
++    // rendered frames queued behind the one being presented before the pacer catches up
++    static constexpr long MAX_FRAMES_AHEAD = 2;
++
++    void loop();
++
++    using clock = std::chrono::steady_clock;
++    void waitUntil(clock::time_point target) noexcept;
++
++    VkDevice const mDevice;
++    PresentFn const mPresent;
++    VulkanPresentHistory* const mHistory;
++
++    std::mutex mLock;
++    std::condition_variable mCondition;
++    std::deque<Job> mQueue;
++    // fences the present thread is done with; released on the driver thread (fence pools are
++    // not shared across threads)
++    std::vector<std::shared_ptr<VulkanCmdFence>> mDone;
++    bool mBusy = false;
++    bool mStop = false;
++
++    // present thread only
++    void* mTimer = nullptr;     // Windows: a high-resolution waitable timer
++    clock::time_point mLastReady{};
++    clock::time_point mLastPresent{};
++    double mInterval = 0.0;     // seconds between rendered frames, smoothed
++
++    std::thread mThread;
++};
++
++} // namespace filament::backend
++
++#endif // TNT_FILAMENT_BACKEND_VULKANPRESENTPACER_H
+diff --git a/filament/backend/src/vulkan/VulkanReadPixels.cpp b/filament/backend/src/vulkan/VulkanReadPixels.cpp
+index b484547e..fb9e95f7 100644
+--- a/filament/backend/src/vulkan/VulkanReadPixels.cpp
++++ b/filament/backend/src/vulkan/VulkanReadPixels.cpp
+@@ -16,6 +16,8 @@
+ 
+ #include "VulkanReadPixels.h"
+ 
++#include "vulkan/utils/QueueLock.h"
++
+ #include "DataReshaper.h"
+ #include "VulkanCommands.h"
+ #include "VulkanContext.h"
+@@ -447,7 +449,10 @@ void VulkanReadPixels::run(fvkmemory::resource_ptr<VulkanTexture> srcTexture, ui
+             .signalSemaphoreCount = 0,
+             .pSignalSemaphores = VK_NULL_HANDLE,
+     };
+-    vkQueueSubmit(mQueue, 1, &submitInfo, readCompleteFence);
++    {
++        std::lock_guard const queueLock(fvkutils::queueMutex());
++        vkQueueSubmit(mQueue, 1, &submitInfo, readCompleteFence);
++    }
+ 
+     // The request keeps the source image alive until `gc()` collects it. It must be recorded before
+     // the task is posted: the handler thread can retire the fence as soon as it picks the task up.
+diff --git a/filament/backend/src/vulkan/VulkanSwapChain.cpp b/filament/backend/src/vulkan/VulkanSwapChain.cpp
+index 6591059e..adb17b24 100644
+--- a/filament/backend/src/vulkan/VulkanSwapChain.cpp
++++ b/filament/backend/src/vulkan/VulkanSwapChain.cpp
+@@ -40,6 +40,7 @@ VulkanSwapChain::VulkanSwapChain(VulkanPlatform* platform, VulkanContext const&
+       mAllocator(allocator),
+       mStagePool(stagePool),
+       mHeadless(extent.width != 0 && extent.height != 0 && !nativeWindow),
++      mDisableVsync((flags & backend::SWAP_CHAIN_CONFIG_DISABLE_VSYNC) != 0),
+       mFlushAndWaitOnResize(platform->getCustomization().flushAndWaitOnWindowResize),
+       mTransitionSwapChainImageLayoutForPresent(
+               platform->getCustomization().transitionSwapChainImageLayoutForPresent),
+@@ -54,6 +55,10 @@ VulkanSwapChain::VulkanSwapChain(VulkanPlatform* platform, VulkanContext const&
+ }
+ 
+ VulkanSwapChain::~VulkanSwapChain() {
++    // the queued presents go out (or are dropped by a lost surface) before the images do
++    mCommands->flush();
++    mPacer.reset();
++
+     // Must wait for the inflight command buffers to finish since they might contain the images
+     // we're about to destroy.
+     mCommands->flush();
+@@ -134,8 +139,35 @@ void VulkanSwapChain::present(DriverBase& driver) {
+ 
+     mCommands->flush();
+ 
+-    // We only present if it is not headless. No-op for headless.
+-    if (!mHeadless) {
++    uint32_t const slot = mPacingSlot;
++    uint32_t const count = mPacingCount;
++    mPacingSlot = 0;
++    mPacingCount = 1;
++
++    if (mDisableVsync) {
++        // Nothing spaces vsync-less presents: the present thread waits for the GPU and spaces
++        // the presents of one rendered frame, while this thread goes on with the next frame.
++        if (!mPacer) {
++            VulkanPresentPacer::PresentFn presentFn;
++            if (!mHeadless) {
++                presentFn = [platform = mPlatform, sc = swapChain](uint32_t index,
++                        VkSemaphore finished) {
++                    return platform->present(sc, index, finished);
++                };
++            }
++            mPacer = std::make_unique<VulkanPresentPacer>(mPlatform->getDevice(),
++                    std::move(presentFn), mPresentHistory.get());
++        }
++        VkSemaphore finished = VK_NULL_HANDLE;
++        if (!mHeadless) {
++            auto finishedDrawing = mCommands->acquireFinishedSignal();
++            mFinishedDrawing[mCurrentSwapIndex] = finishedDrawing;
++            finished = finishedDrawing->getVkSemaphore();
++        }
++        mPacer->enqueue(mCurrentSwapIndex, finished, mCommands->getMostRecentFenceStatus(), slot,
++                count);
++    } else if (!mHeadless) {
++        // We only present if it is not headless. No-op for headless.
+         auto finishedDrawing = mCommands->acquireFinishedSignal();
+         mFinishedDrawing[mCurrentSwapIndex] = finishedDrawing;
+         VkResult const result =
+@@ -143,6 +175,9 @@ void VulkanSwapChain::present(DriverBase& driver) {
+         FILAMENT_CHECK_POSTCONDITION(result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR ||
+                 result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_ERROR_SURFACE_LOST_KHR)
+                 << "Cannot present in swapchain. error=" << static_cast<int32_t>(result);
++        mPresentHistory->record(VulkanPresentHistory::now());
++    } else {
++        mPresentHistory->record(VulkanPresentHistory::now());
+     }
+ 
+     // We presented the last acquired buffer.
+@@ -192,7 +227,11 @@ std::pair<bool, bool> VulkanSwapChain::acquire() {
+ 
+     for (uint8_t tryCount = 0; result != VK_SUCCESS && tryCount < 2; tryCount++) {
+         if (result == VK_SUBOPTIMAL_KHR || result == VK_ERROR_OUT_OF_DATE_KHR) {
+-            // Following recreates the swapchain
++            // Following recreates the swapchain; the queued presents go to the old one first
++            if (mPacer) {
++                mCommands->flush();
++                mPacer->drain();
++            }
+ 
+             // Calling flush multiple times is ok, since it's no-op if not recording.
+             if (mFlushAndWaitOnResize) {
+diff --git a/filament/backend/src/vulkan/VulkanSwapChain.h b/filament/backend/src/vulkan/VulkanSwapChain.h
+index b0413fe8..5e135cd8 100644
+--- a/filament/backend/src/vulkan/VulkanSwapChain.h
++++ b/filament/backend/src/vulkan/VulkanSwapChain.h
+@@ -32,6 +32,8 @@
+ 
+ #include <memory>
+ 
++#include "VulkanPresentPacer.h"
++
+ using namespace bluevk;
+ 
+ namespace filament::backend {
+@@ -49,6 +51,25 @@ struct VulkanSwapChain : public HwSwapChain, fvkmemory::Resource {
+ 
+     void present(DriverBase& driver);
+ 
++    // The next present is `slot` of the `count` presents of one rendered frame (frame
++    // generation). Only vsync-less SwapChains pace; the others ignore it.
++    void setPresentPacing(uint32_t slot, uint32_t count) noexcept {
++        mPacingSlot = slot;
++        mPacingCount = count;
++    }
++
++    // Waits until the present thread issued every queued present.
++    void drainPresents() {
++        if (mPacer) {
++            mPacer->drain();
++        }
++    }
++
++    // the times of the recent presents, shared with the present thread
++    std::shared_ptr<VulkanPresentHistory> getPresentHistory() const noexcept {
++        return mPresentHistory;
++    }
++
+     // Acquire a new image from the swapchain. Returns a pair:
+     //   1. whether an acquire is successful.
+     //   2. whether the backing images have changed (due to resize or other factors).
+@@ -104,6 +125,7 @@ private:
+     VmaAllocator mAllocator;
+     VulkanStagePool& mStagePool;
+     bool const mHeadless;
++    bool const mDisableVsync;
+     bool const mFlushAndWaitOnResize;
+     bool const mTransitionSwapChainImageLayoutForPresent;
+ 
+@@ -123,6 +145,12 @@ private:
+     uint32_t mCurrentSwapIndex;
+     bool mAcquired;
+     bool mIsFirstRenderPass;
++
++    std::shared_ptr<VulkanPresentHistory> mPresentHistory = std::make_shared<VulkanPresentHistory>();
++    // vsync-less SwapChains present from their own thread (created on first present)
++    std::unique_ptr<VulkanPresentPacer> mPacer;
++    uint32_t mPacingSlot = 0;
++    uint32_t mPacingCount = 1;
+ };
+ 
+ 
+diff --git a/filament/backend/src/vulkan/platform/VulkanPlatformSwapChainImpl.cpp b/filament/backend/src/vulkan/platform/VulkanPlatformSwapChainImpl.cpp
+index c6c3eb00..feb32a0d 100644
+--- a/filament/backend/src/vulkan/platform/VulkanPlatformSwapChainImpl.cpp
++++ b/filament/backend/src/vulkan/platform/VulkanPlatformSwapChainImpl.cpp
+@@ -16,6 +16,10 @@
+ 
+ #include "VulkanPlatformSwapChainImpl.h"
+ 
++#include "vulkan/utils/QueueLock.h"
++
++#include <thread>
++
+ #ifdef __ANDROID__
+ #include "AndroidNativeWindow.h"
+ #endif
+@@ -197,6 +201,14 @@ VkResult VulkanPlatformSurfaceSwapChain::create() {
+     uint32_t const maxImageCount = caps.maxImageCount;
+     uint32_t const minImageCount = caps.minImageCount;
+     uint32_t desiredImageCount = minImageCount + 1;
++    // Without vsync the present thread (VulkanPresentPacer) holds up to one rendered frame's
++    // presents (frame generation: up to six) while the next frame is drawn.
++    if (mDisableVsync) {
++        desiredImageCount = minImageCount + 7;
++        if (maxImageCount != 0) {
++            desiredImageCount = std::min(desiredImageCount, maxImageCount);
++        }
++    }
+ 
+     // According to section 30.5 of VK 1.1, maxImageCount of zero means "that there is no limit on
+     // the number of images, though there may be limits related to the total amount of memory used
+@@ -354,8 +366,28 @@ VkResult VulkanPlatformSurfaceSwapChain::acquire(VulkanPlatform::ImageSyncData*
+ 
+     mCurrentImageReadyIndex = (mCurrentImageReadyIndex + 1) % IMAGE_READY_SEMAPHORE_COUNT;
+     outImageSyncData->imageReadySemaphore = mImageReady[mCurrentImageReadyIndex];
+-    VkResult result = vkAcquireNextImageKHR(mDevice, mSwapchain, UINT64_MAX,
+-            outImageSyncData->imageReadySemaphore, VK_NULL_HANDLE, &outImageSyncData->imageIndex);
++    // A vsync-less swap chain is presented from its own thread (VulkanPresentPacer); the swap
++    // chain is externally synchronised, so the acquire takes the queue lock too, and polls
++    // instead of blocking under it (the image it waits for comes back with a present).
++    VkResult result;
++    if (mDisableVsync) {
++        while (true) {
++            {
++                std::lock_guard const queueLock(fvkutils::queueMutex());
++                result = vkAcquireNextImageKHR(mDevice, mSwapchain, 0,
++                        outImageSyncData->imageReadySemaphore, VK_NULL_HANDLE,
++                        &outImageSyncData->imageIndex);
++            }
++            if (result != VK_NOT_READY && result != VK_TIMEOUT) {
++                break;
++            }
++            std::this_thread::yield();
++        }
++    } else {
++        result = vkAcquireNextImageKHR(mDevice, mSwapchain, UINT64_MAX,
++                outImageSyncData->imageReadySemaphore, VK_NULL_HANDLE,
++                &outImageSyncData->imageIndex);
++    }
+ 
+     // Users should be notified of a suboptimal surface, but it should not cause a cascade of
+     // log messages or a loop of re-creations.
+@@ -403,7 +435,11 @@ VkResult VulkanPlatformSurfaceSwapChain::present(uint32_t index, VkSemaphore fin
+         presentInfo.pNext = &presentTimeInfoGoogle;
+     }
+ 
+-    VkResult result = vkQueuePresentKHR(mQueue, &presentInfo);
++    VkResult result;
++    {
++        std::lock_guard const queueLock(fvkutils::queueMutex());
++        result = vkQueuePresentKHR(mQueue, &presentInfo);
++    }
+ 
+     // On Android Q and above, a suboptimal surface is always reported after screen rotation:
+     // https://android-developers.googleblog.com/2020/02/handling-device-orientation-efficiently.html
+@@ -534,7 +570,10 @@ void VulkanPlatformSurfaceSwapChain::destroy() {
+     // the queue to be idle. The hope is that this only happens on resize, where performance
+     // degradation is less obvious (until, of course, people complain about lag when rotating their
+     // phone). If necessary, we can revisit and implement the workaround [1].
+-    vkQueueWaitIdle(mQueue);
++    {
++        std::lock_guard const queueLock(fvkutils::queueMutex());
++        vkQueueWaitIdle(mQueue);
++    }
+ 
+     VulkanPlatformSwapChainBase::destroy();
+ 
+diff --git a/filament/backend/src/vulkan/utils/QueueLock.h b/filament/backend/src/vulkan/utils/QueueLock.h
+new file mode 100644
+index 00000000..70b03dc4
+--- /dev/null
++++ b/filament/backend/src/vulkan/utils/QueueLock.h
+@@ -0,0 +1,34 @@
++/*
++ * Copyright (C) 2025 The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++#ifndef TNT_FILAMENT_BACKEND_VULKAN_UTILS_QUEUELOCK_H
++#define TNT_FILAMENT_BACKEND_VULKAN_UTILS_QUEUELOCK_H
++
++#include <mutex>
++
++namespace filament::backend::fvkutils {
++
++// Vulkan queues are externally synchronised. The driver thread submits and the present threads
++// of vsync-less SwapChains (VulkanPresentPacer) present on the same queue: every
++// vkQueueSubmit, vkQueuePresentKHR and vkQueueWaitIdle takes this lock.
++inline std::mutex& queueMutex() noexcept {
++    static std::mutex mutex;
++    return mutex;
++}
++
++} // namespace filament::backend::fvkutils
++
++#endif // TNT_FILAMENT_BACKEND_VULKAN_UTILS_QUEUELOCK_H
+diff --git a/filament/backend/src/webgpu/WebGPUDriver.cpp b/filament/backend/src/webgpu/WebGPUDriver.cpp
+index 5b2e566f..0dbae77e 100644
+--- a/filament/backend/src/webgpu/WebGPUDriver.cpp
++++ b/filament/backend/src/webgpu/WebGPUDriver.cpp
+@@ -2459,6 +2459,17 @@ void WebGPUDriver::deformAccelerationStructure(Handle<HwAccelerationStructure>,
+         AccelerationStructureDeformation) {
+ }
+ 
++void WebGPUDriver::setPresentPacing(Handle<HwSwapChain>, uint32_t, uint32_t) {
++}
++
++bool WebGPUDriver::isPresentPacingSupported() {
++    return false;
++}
++
++size_t WebGPUDriver::getPresentTimes(Handle<HwSwapChain>, uint64_t*, size_t) {
++    return 0;
++}
++
+ void WebGPUDriver::updateDescriptorSetAccelerationStructure(Handle<HwDescriptorSet>,
+         descriptor_binding_t, Handle<HwAccelerationStructure>) {
+ }
+diff --git a/filament/include/filament/Renderer.h b/filament/include/filament/Renderer.h
+index bc13f84b..17c8b666 100644
+--- a/filament/include/filament/Renderer.h
++++ b/filament/include/filament/Renderer.h
+@@ -131,9 +131,12 @@ public:
+     size_t getMaxFrameHistorySize() const noexcept;
+ 
+     /**
+-     * The steady-clock times (nanoseconds) at which the most recent SwapChain presents were
+-     * submitted, oldest first (at most 128). With frame generation a rendered frame is presented
+-     * more than once; the intervals show the pacing.
++     * The steady-clock times (nanoseconds) of the most recent SwapChain presents, oldest first
++     * (at most 1024). With frame generation a rendered frame is presented more than once; the
++     * intervals show the pacing. On Vulkan these are the times the backend presented at: a
++     * SwapChain without vsync presents from a thread of its own once the GPU finished the image,
++     * spacing the presents of one rendered frame evenly, so the render thread never waits for
++     * the pacing. Elsewhere they are the times the presents were submitted.
+      */
+     utils::FixedCapacityVector<uint64_t> getPresentTimes() const noexcept;
+ 
+diff --git a/filament/src/details/Renderer.cpp b/filament/src/details/Renderer.cpp
+index 8f548446..e505bc9b 100644
+--- a/filament/src/details/Renderer.cpp
++++ b/filament/src/details/Renderer.cpp
+@@ -115,6 +115,8 @@ FRenderer::FRenderer(FEngine& engine) :
+                 engine.getConfig(),
+                 engine.getDriverApi()))
+ {
++    mBackendPresentPacing = engine.getDriverApi().isPresentPacingSupported();
++
+     FDebugRegistry& debugRegistry = engine.getDebugRegistry();
+     debugRegistry.registerProperty("d.renderer.doFrameCapture",
+             &engine.debug.renderer.doFrameCapture);
+@@ -556,6 +558,11 @@ void FRenderer::endFrame() {
+ 
+     // mSwapChain cannot be null by construction
+     // With frame generation, this presents the interpolated frame.
++    mLastSwapChain = mSwapChain->getHwHandle();
++    if (UTILS_UNLIKELY(mFrameGenerationView && mBackendPresentPacing &&
++            mSwapChain->isVsyncDisabled())) {
++        driver.setPresentPacing(mLastSwapChain, 0, frameGenerationPresents());
++    }
+     mSwapChain->commit(driver);
+     recordPresent();
+ 
+@@ -741,19 +748,45 @@ void FRenderer::render(FView const* view) {
+ void FRenderer::recordPresent() noexcept {
+     uint64_t const now = uint64_t(std::chrono::duration_cast<std::chrono::nanoseconds>(
+             std::chrono::steady_clock::now().time_since_epoch()).count());
+-    mPresentTimes[mPresentCount % 128] = now;
++    mPresentTimes[mPresentCount % PRESENT_HISTORY] = now;
+     mPresentCount++;
+ }
+ 
+ utils::FixedCapacityVector<uint64_t> FRenderer::getPresentTimes() const noexcept {
+-    size_t const n = std::min(mPresentCount, size_t(128));
++    if (mBackendPresentPacing && mLastSwapChain) {
++        // the times the backend actually presented at (vsync-less SwapChains present from a
++        // thread of their own, after the GPU finished the image)
++        uint64_t times[PRESENT_HISTORY];
++        size_t const n = mEngine.getDriverApi().getPresentTimes(mLastSwapChain, times,
++                PRESENT_HISTORY);
++        auto out = utils::FixedCapacityVector<uint64_t>::with_capacity(n);
++        for (size_t i = 0; i < n; i++) {
++            out.push_back(times[i]);
++        }
++        return out;
++    }
++    size_t const n = std::min(mPresentCount, PRESENT_HISTORY);
+     auto out = utils::FixedCapacityVector<uint64_t>::with_capacity(n);
+     for (size_t i = mPresentCount - n; i < mPresentCount; i++) {
+-        out.push_back(mPresentTimes[i % 128]);
++        out.push_back(mPresentTimes[i % PRESENT_HISTORY]);
+     }
+     return out;
+ }
+ 
++uint32_t FRenderer::frameGenerationPresents() const noexcept {
++    if (!mFrameGenerationView) {
++        return 1;
++    }
++    auto const& rendered = mFrameGenerationView->getFrameHistory().getPrevious().frameGeneration;
++    uint32_t count = 2; // the first (interpolated or generated) frame and the rendered one
++    for (uint32_t i = 0; i < rendered.generatedCount; i++) {
++        if (rendered.generated[i].handle) {
++            count++;
++        }
++    }
++    return count;
++}
++
+ void FRenderer::paceRenderedFrame(uint32_t const presentsPerFrame, bool const first) noexcept {
+     auto const now = std::chrono::steady_clock::now();
+     if (first) {
+@@ -817,7 +850,7 @@ void FRenderer::presentRenderedFrame(DriverApi& driver) {
+     FEngine& engine = mEngine;
+     filament::Viewport const& viewport = view.getViewport();
+     for (uint32_t f = 0; f < frameCount; f++) {
+-        if (mSwapChain->isVsyncDisabled()) {
++        if (mSwapChain->isVsyncDisabled() && !mBackendPresentPacing) {
+             // without vsync, nothing spaces the presents out: submit what is recorded and wait
+             engine.flush();
+             paceRenderedFrame(presentsPerFrame, f == 0);
+@@ -831,8 +864,9 @@ void FRenderer::presentRenderedFrame(DriverApi& driver) {
+         params.flags.clear = TargetBufferFlags::COLOR;
+         params.flags.discardStart = TargetBufferFlags::ALL;
+         params.flags.discardEnd = TargetBufferFlags::NONE;
+-        params.viewport.width = std::numeric_limits<uint32_t>::max();
+-        params.viewport.height = std::numeric_limits<uint32_t>::max();
++        // the view's area of the SwapChain (a viewport beyond the image is invalid in Vulkan)
++        params.viewport.width = uint32_t(std::max(0, viewport.left)) + viewport.width;
++        params.viewport.height = uint32_t(std::max(0, viewport.bottom)) + viewport.height;
+         driver.beginRenderPass(mRenderTargetHandle, params);
+         driver.endRenderPass();
+ 
+@@ -849,6 +883,10 @@ void FRenderer::presentRenderedFrame(DriverApi& driver) {
+             renderInternal(driver, v, false);
+         }
+ 
++        if (mSwapChain->isVsyncDisabled() && mBackendPresentPacing) {
++            // the backend's present thread spaces this present after the previous ones
++            driver.setPresentPacing(mSwapChain->getHwHandle(), f + 1, presentsPerFrame);
++        }
+         mSwapChain->commit(driver);
+         recordPresent();
+     }
+diff --git a/filament/src/details/Renderer.h b/filament/src/details/Renderer.h
+index 5c4e6d5d..9eb8789c 100644
+--- a/filament/src/details/Renderer.h
++++ b/filament/src/details/Renderer.h
+@@ -274,6 +274,8 @@ private:
+     void paceRenderedFrame(uint32_t presentsPerFrame, bool first) noexcept;
+     // the steady-clock times of the most recent SwapChain presents (commits)
+     void recordPresent() noexcept;
++    // how many presents the frame-generation View's rendered frame makes
++    uint32_t frameGenerationPresents() const noexcept;
+     // Frame generation: the View whose interpolated frame is in the SwapChain this frame, and
+     // the Views rendered on top of it (e.g. UI), which must be rendered again on the rendered
+     // frame.
+@@ -282,8 +284,13 @@ private:
+     std::chrono::steady_clock::time_point mLastInterpolatedFramePresent{};
+     double mFrameGenerationInterval = 0.0;  // smoothed interval between frames, in seconds
+     std::chrono::steady_clock::time_point mLastPresent{};
+-    uint64_t mPresentTimes[128] = {};
++    static constexpr size_t PRESENT_HISTORY = 1024;
++    uint64_t mPresentTimes[PRESENT_HISTORY] = {};
+     size_t mPresentCount = 0;
++    // The backend paces vsync-less presents on its own thread (Vulkan): the render thread only
++    // tags them, and the present times come from the backend.
++    bool mBackendPresentPacing = false;
++    backend::Handle<backend::HwSwapChain> mLastSwapChain;
+     std::function<void()> mBeginFrameInternal;
+     uint64_t mVsyncSteadyClockTimeNano = 0;
+     std::chrono::steady_clock::time_point mRenderingDeadline{};

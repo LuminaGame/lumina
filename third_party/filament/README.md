@@ -22,6 +22,7 @@ are upstream v1.77.2 with exactly these files applied in order.
 | `0013-external-frame-generator.patch` | `filament/include/filament/{View,Renderer}.h`, `filament/src/{PostProcessManager,FrameHistory,View,Renderer}.*`, `filament/src/details/{Renderer,View}.*` | An external frame generator (`View::setExternalFrameGenerator`, DLSS Frame Generation) that writes up to five generated frames per rendered frame; `Renderer::endFrame` presents them before the rendered frame with even pacing without vsync, and `Renderer::getPresentTimes()` reports the presents. |
 | `0014-ray-query-origin-offset-in-texels.patch` | `filament/src/PostProcessManager.cpp`, `filament/src/materials/rt/{rtShadow,restirShade,rtSpecularHitDistance}.mat` | Ray query origins are offset by a few texels' world size (from the projection and the target height) instead of half the near plane grown 2 % per world unit of camera distance, so ray-traced shadows of small props stay solid in a centimetre-scale scene. |
 | `0015-posed-acceleration-structures-for-skinned-and-morphed-renderables.patch` | `backend/include/backend/AccelerationStructure.h`, `backend/include/private/backend/DriverAPI.inc`, `backend/src/vulkan/{VulkanAccelerationStructure.*,VulkanBlasDeformer.* (new),VulkanBlasDeform.comp (new),VulkanBlasDeformSpirv.h (new),VulkanBufferCache.cpp,VulkanDriver.*}`, the other drivers' no-ops, `backend/CMakeLists.txt`, `filament/include/filament/Scene.h`, `filament/src/{Scene.cpp,details/Scene.*,details/VertexBuffer.h,components/RenderableManager.*}` | Skinned and morphed renderables are traced in their current pose: a Vulkan compute pass poses their vertices into their own deformable BLAS, refit in every frame their palette or weights changed (`Scene::getDeformedBlasCount`, `getLastBlasDeformTimeNanos`). |
+| `0016-present-pacing-thread.patch` | `backend/include/private/backend/DriverAPI.inc`, `backend/src/vulkan/{VulkanPresentPacer.* (new),utils/QueueLock.h (new),VulkanSwapChain.*,VulkanDriver.*,VulkanCommands.cpp,VulkanReadPixels.cpp,platform/VulkanPlatformSwapChainImpl.cpp}`, the other drivers' no-ops, `backend/CMakeLists.txt`, `filament/include/filament/Renderer.h`, `filament/src/details/Renderer.*` | Vsync-less Vulkan SwapChains present from their own thread: frame-generation presents are spaced evenly over the frame interval without the render thread waiting, so the presented rate multiplies; `Renderer::getPresentTimes()` reports the actual present times. |
 
 ## 0001: libassimp glTF 2 `ReplaceData_joint` bounds
 
@@ -368,3 +369,21 @@ changed (always for shared `SkinningBuffer`s). `Scene::getDeformedBlasCount()` a
 `getLastBlasDeformTimeNanos()` (its own timer query) report the work. Limits: more than four influences per
 vertex (Filament's advanced skinning texture) use the first three, positions must be float or half, and
 custom vertex displacement is not applied.
+
+## 0016: present pacing thread
+
+Patches 0009 and 0013 paced the frame-generation presents in `Renderer::endFrame` on the render thread, which
+stretched the frame by the waits (the presented rate stayed at the rendering rate) and, on Windows, slept with
+the 15.6 ms timer tick. A Vulkan SwapChain with `CONFIG_DISABLE_VSYNC` now owns a `VulkanPresentPacer`: the new
+driver command `setPresentPacing(sch, slot, count)` tags the next commit (the renderer tags the first present of
+a frame-generation frame `0 of N` and the others `k of N`), `VulkanSwapChain::present` queues the image with the
+fence of the command buffer that drew it, and the pacer thread waits for that fence, measures the interval
+between rendered frames (the slot-0 completions) and presents slot k no earlier than the previous present plus
+`interval / N` (a high-resolution waitable timer on Windows), catching up when more than two rendered frames are
+queued. Every `vkQueueSubmit`, `vkQueuePresentKHR`, `vkQueueWaitIdle` and the acquire of a vsync-less swap chain
+(polling with a zero timeout) take `fvkutils::queueMutex()`; the pacer is drained before a recreate, at
+destruction and in `finish()`. Vsync-less surfaces ask for `minImageCount + 7` images. The present times
+(1024 kept, per SwapChain) are read with the synchronous `getPresentTimes` and returned by
+`Renderer::getPresentTimes()` when `isPresentPacingSupported()`; headless SwapChains pace and timestamp too.
+The patch also bounds the clear pass of the extra presents to the view's viewport (an unbounded viewport and a
+viewport larger than a window's client area are invalid on a real swap chain and lost the device).

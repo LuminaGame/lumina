@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Frame generation multiplies the presented frame rate (prebuilt `1.77.2-lumina.14`, Filament patch `0016`): a Vulkan
+  SwapChain without vsync presents from its own thread, spacing the generated and rendered frames evenly while the
+  render loop goes on (8 ms CPU-bound loop: 121 presents/s off, 242 at 2x, 482 at 4x, 725 at 6x). FSR3 frame generation
+  gets the same pacing. `FilamentRenderer.getPresentTimes()` returns the actual present times (up to 1024). Frame
+  generation into a desktop window no longer loses the device.
 - OpenDLSS-NR (experimental, third-party, opt-in): `OpenDlssNr`, `OpenDlssNrModel` and `OpenDlssNrPass` run the
   GLSL cooperative-matrix route of github.com/maanHimself/OpenDLSS-NR (MIT, vendored at `9d08f41` in
   `third_party/opendlss_nr`, no PTX / CUDA) as an external post pass on the HDR frame, on model weights the user

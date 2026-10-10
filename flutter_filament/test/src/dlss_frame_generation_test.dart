@@ -336,10 +336,11 @@ void main() {
             '${(1000 / mean).toStringAsFixed(1)} presents/s)',
           );
           expect(generated.length, 30 * (count + 1));
-          // The render thread itself waits between the presents of one frame, so the frame
-          // interval stretches with the presents and the rate of presents stays close to the
-          // rendering rate (see the DLSS documentation page); what must hold is that the presents
-          // of one rendered frame are spaced out, not submitted back to back.
+          // This loop reads every frame back and waits for the GPU (renderFrame), which also
+          // waits for the queued presents, so the rate of presents stays near the rendering
+          // rate here (frame_generation_present_rate_test.dart measures an uncapped loop); what
+          // must hold is that the presents of one rendered frame are spaced out, not submitted
+          // back to back.
           final bunched = [
             for (var i = 1; i < generated.length; i++) generated[i] - generated[i - 1],
           ].where((ns) => ns < 1000000).length;
