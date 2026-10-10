@@ -9,6 +9,8 @@ import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.
 import 'package:lumina_ui/ui/features/sub_editors/models/navigation_editor_state.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/navigation_preview_scene.dart';
 
+part 'navigation_editor_view_model/path_tester.dart';
+
 /// View model of the Navigation sub-editor.
 ///
 /// Owns the `NavGridConfig` draft, the selected bounds volume, the path
@@ -24,7 +26,8 @@ import 'package:lumina_ui/ui/features/sub_editors/services/navigation_preview_sc
 /// boxes, path points and click positions are in runtime axes (Y up); stored
 /// actor transforms are authoring axes (Z up) and cross over only through
 /// [LuminaAxes] (see [NavMeshBoundsVolume] / [NavigationWorldBuilder]).
-class NavigationEditorViewModel extends ChangeNotifier {
+class NavigationEditorViewModel extends ChangeNotifier with _NavigationPathTester {
+  @override
   final EditorViewModel editor;
   final NavigationPreviewScene preview;
 
@@ -33,6 +36,7 @@ class NavigationEditorViewModel extends ChangeNotifier {
 
   NavigationEditorConfig _config = NavigationEditorConfig.defaults();
   NavigationEditorConfig? _gestureStart;
+  @override
   LuminaNavigationSystem? _nav;
   LuminaWorld? _navWorld;
   NavGridSnapshot? _snapshot;
@@ -42,10 +46,6 @@ class NavigationEditorViewModel extends ChangeNotifier {
   int _buildCount = 0;
   String? _buildError;
 
-  NavPathResult? _pathResult;
-  Vector3? _pathStart;
-  Vector3? _pathGoal;
-  bool _pathTesterMode = false;
   bool _overlayVisible = true;
 
   String? _selectedVolumeId;
@@ -573,89 +573,9 @@ class NavigationEditorViewModel extends ChangeNotifier {
     return _lastBuild;
   }
 
-  // --- Path tester -----------------------------------------------------------
-
-  void setPathTesterMode(bool on) {
-    _pathTesterMode = on;
-    notifyListeners();
-  }
-
   void setOverlayVisible(bool visible) {
     _overlayVisible = visible;
     _pushPreviewOverlay();
-    notifyListeners();
-  }
-
-  /// Runs `findPathSync` between [start] and [goal] (runtime axes, cm) under
-  /// a stopwatch.
-  NavPathResult testPath(Vector3 start, Vector3 goal) {
-    _pathStart = Vector3.copy(start);
-    _pathGoal = Vector3.copy(goal);
-    _pathResult = _query(start, goal);
-    _pushPreviewPath();
-    notifyListeners();
-    return _pathResult!;
-  }
-
-  NavPathResult _query(Vector3 start, Vector3 goal) {
-    final nav = _nav;
-    if (nav == null || !nav.isBuilt) {
-      return NavPathResult(start: start, goal: goal, path: null, queryTimeMs: 0.0, state: NavPathState.noPath);
-    }
-    final sw = Stopwatch()..start();
-    NavPath? path;
-    try {
-      path = nav.findPathSync(start, goal, allowPartialPath: true, smooth: true);
-    } catch (e) {
-      editor.logger.log('Navigation path query failed: $e', level: 'error', source: 'Navigation');
-      path = null;
-    }
-    sw.stop();
-    final ms = sw.elapsedTicks / sw.frequency * 1000.0;
-    final state = path == null
-        ? NavPathState.noPath
-        : path.isPartial
-            ? NavPathState.partial
-            : NavPathState.found;
-    editor.logger.log(
-      'Navigation path ${state.name}: ${path?.points.length ?? 0} points, ${(path?.length ?? 0).toStringAsFixed(0)} cm, ${ms.toStringAsFixed(3)} ms',
-      level: state == NavPathState.noPath ? 'warning' : 'info',
-      source: 'Navigation',
-    );
-    return NavPathResult(start: start, goal: goal, path: path, queryTimeMs: ms, state: state);
-  }
-
-  /// Click-driven placement: [world] is the viewport's floor hit in runtime
-  /// axes (Y up), cm — the grid's own space. The first click drops the start
-  /// flag, the second the goal; later clicks move whichever flag is nearer.
-  /// Endpoints are projected onto the grid by the engine itself.
-  void placePathPoint(Vector3 world) {
-    final p = Vector3.copy(world);
-    if (_pathStart == null) {
-      _pathStart = p;
-      _pathResult = null;
-      _pushPreviewPath();
-      notifyListeners();
-      return;
-    }
-    if (_pathGoal == null) {
-      testPath(_pathStart!, p);
-      return;
-    }
-    final ds = (_pathStart! - p).length2;
-    final dg = (_pathGoal! - p).length2;
-    if (ds < dg) {
-      testPath(p, _pathGoal!);
-    } else {
-      testPath(_pathStart!, p);
-    }
-  }
-
-  void clearPath() {
-    _pathStart = null;
-    _pathGoal = null;
-    _pathResult = null;
-    _pushPreviewPath();
     notifyListeners();
   }
 
@@ -697,6 +617,7 @@ class NavigationEditorViewModel extends ChangeNotifier {
     preview.setOverlay(_snapshot, visible: _overlayVisible);
   }
 
+  @override
   void _pushPreviewPath() {
     if (!preview.isAttached) return;
     preview.setPath(
