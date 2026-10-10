@@ -14,6 +14,7 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import '../helpers/flutter_build_stand_in.dart';
 import '../helpers/mcp_test_client.dart' show realHttpClient;
+import '../helpers/temp_project.dart';
 
 /// Packaging & Target → Web Loading Style, against a
 /// real temp project and its `.lmproject` on disk.
@@ -33,9 +34,8 @@ void main() {
       ..writeAsStringSync(jsonEncode(const LuminaProject(projectName: 'wls_game', activeLevel: 'contents/levels/L_Main.lmas').toMap()));
   });
 
-  tearDown(() {
-    if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
-  });
+  // Retries: the preview server may still be closing a file it served.
+  tearDown(() => deleteTempProject(tempDir));
 
   Future<void> pumpEditor(WidgetTester tester, ProjectSettingsViewModel vm) async {
     await tester.pumpWidget(ShadcnApp(
