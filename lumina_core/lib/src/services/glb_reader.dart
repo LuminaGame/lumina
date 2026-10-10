@@ -209,6 +209,9 @@ class GlbMeshData {
   final List<String> materialNames; // Extracted material slot names
   final Set<int> skeletonJointIndices;
   final List<GlbMorphTarget> morphTargets;
+  /// Four joints per vertex as node indices into [allNodes] (each
+  /// primitive's `JOINTS_0` mapped through its node's skin), with
+  /// [weightsPerVertex] beside them.
   final Uint16List? jointsPerVertex;
   final Float32List? weightsPerVertex;
   final int maxInfluences;

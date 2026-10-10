@@ -520,7 +520,6 @@ class PhysicsAssetEditorViewModel extends ChangeNotifier {
     final weights = mesh.weightsPerVertex;
     if (joints == null || weights == null) return 0.0;
 
-    final jointOrder = mesh.skeletonJointIndices.toList();
     final origin = global.getTranslation();
     final axis = Quaternion.fromRotation(global.getRotation()).rotated(_assetSegment(boneName).direction).normalized();
 
@@ -531,9 +530,8 @@ class PhysicsAssetEditorViewModel extends ChangeNotifier {
       if (base + 3 >= joints.length || base + 3 >= weights.length) break;
       double weight = 0.0;
       for (int i = 0; i < 4; i++) {
-        final raw = joints[base + i];
-        final nodeIndex = raw < jointOrder.length ? jointOrder[raw] : raw;
-        if (nodeIndex == node.index) weight += weights[base + i];
+        // The reader stores node indices (JOINTS_0 mapped through the skin).
+        if (joints[base + i] == node.index) weight += weights[base + i];
       }
       if (weight < 0.5) continue;
       final pi = v * 3;

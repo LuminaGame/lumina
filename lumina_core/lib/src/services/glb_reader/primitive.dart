@@ -313,6 +313,19 @@ void _readGlbPrimitive(
     }
   }
 
+  // JOINTS_0 holds indices into the joints of the skin of the node that
+  // draws the primitive; the model's buffers keep node indices (what
+  // [GlbMeshData.allNodes] and the bone tree use), so several meshes with
+  // their own skins over one skeleton read the same way.
+  final skinIdx = ((json['nodes'] as List?)?.elementAtOrNull(node.index) as Map?)?['skin'] as int?;
+  final skinJoints = skinIdx == null
+      ? null
+      : (((json['skins'] as List?)?.elementAtOrNull(skinIdx) as Map?)?['joints'] as List?)?.cast<int>();
+  List<int> toNodeIndices(List<int> joints) {
+    if (skinJoints == null || skinJoints.isEmpty) return joints;
+    return [for (final j in joints) j < skinJoints.length ? skinJoints[j] : j];
+  }
+
   List<int> getVertexJoints(int vertIndex) {
     if (jointsTotalOffset == null ||
         vertIndex < 0 ||
@@ -489,7 +502,7 @@ void _readGlbPrimitive(
       subColorList.addAll([r, g, b]);
     }
 
-    final joints = getVertexJoints(vertIndex);
+    final joints = toNodeIndices(getVertexJoints(vertIndex));
     final weights = getVertexWeights(vertIndex);
     parsedJointsList.addAll(joints);
     parsedWeightsList.addAll(weights);

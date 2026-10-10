@@ -746,7 +746,7 @@ The engine provides the first two (`LuminaGlbLoader` in `lumina`, see [Utilities
 | `materialNames` | `List<String> materialNames` | Holds the `materialNames` property or configuration state. |
 | `skeletonJointIndices` | `Set<int> skeletonJointIndices` | Holds the `skeletonJointIndices` property or configuration state. |
 | `morphTargets` | `List<GlbMorphTarget> morphTargets` | Holds the `morphTargets` property or configuration state. |
-| `jointsPerVertex` | `Uint16List? jointsPerVertex` | Holds the `jointsPerVertex` property or configuration state. |
+| `jointsPerVertex` | `Uint16List? jointsPerVertex` | Four joints per vertex as node indices into `allNodes`: each primitive's `JOINTS_0` (indices into its node's skin `joints`) is mapped through that skin, so several meshes with their own skins over one skeleton read the same way. `weightsPerVertex` holds the weights beside them. |
 | `weightsPerVertex` | `Float32List? weightsPerVertex` | Holds the `weightsPerVertex` property or configuration state. |
 | `maxInfluences` | `int maxInfluences` | Holds the `maxInfluences` property or configuration state. |
 | `animations` | `List<GlbAnimationClip> animations` | Holds the `animations` property or configuration state. |

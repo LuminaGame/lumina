@@ -32,7 +32,8 @@ void main() {
       0.0, 0.0, 0.0,
       0.0, 0.0, 0.0,
     ]);
-    // JOINTS_0: V0 is bone 0, V1 is bone 1, V2 is bone 0
+    // JOINTS_0 (indices into the skin's joints [pelvis, spine_01]): V0 is
+    // skin joint 0 (pelvis, node 1), V1 skin joint 1 (spine_01, node 2), V2 skin joint 0
     final jointsBytes = Uint8List.fromList([
       0, 0, 0, 0,
       1, 0, 0, 0,
@@ -93,7 +94,7 @@ void main() {
         {'name': 'Armature', 'children': [1]},
         {'name': 'pelvis', 'children': [2]},
         {'name': 'spine_01'},
-        {'name': 'MeshNode', 'mesh': 0},
+        {'name': 'MeshNode', 'mesh': 0, 'skin': 0},
       ],
       'skins': [
         {
@@ -189,14 +190,15 @@ void main() {
     await vm.load();
 
     // Heatmap disabled -> returns null
-    expect(vm.heatmapColors(0), isNull);
+    expect(vm.heatmapColors(1), isNull);
 
     // Enable heatmap
     vm.toggleHeatmap();
     expect(vm.heatmapEnabled, isTrue);
 
-    // Bone 0: V0 has weight 1.0 -> Red (r=255, g=0, b=0), V1 has weight 0.0 -> Blue (r=0, g=0, b=255)
-    final colors0 = vm.heatmapColors(0);
+    // The bones are addressed by node index: the skin's joint 0 is node 1.
+    // pelvis (node 1): V0 has weight 1.0 -> Red (r=255, g=0, b=0), V1 has weight 0.0 -> Blue (r=0, g=0, b=255)
+    final colors0 = vm.heatmapColors(1);
     expect(colors0, isNotNull);
     // V0 (offset 0)
     expect(colors0![0], 255); // Red
@@ -205,8 +207,8 @@ void main() {
     expect(colors0[3], 0);
     expect(colors0[5], 255); // Blue
 
-    // Bone 1: V0 has weight 0.0 -> Blue, V1 has weight 1.0 -> Red
-    final colors1 = vm.heatmapColors(1);
+    // spine_01 (node 2): V0 has weight 0.0 -> Blue, V1 has weight 1.0 -> Red
+    final colors1 = vm.heatmapColors(2);
     expect(colors1, isNotNull);
     // V0 (offset 0)
     expect(colors1![0], 0);
@@ -217,7 +219,9 @@ void main() {
 
     // Vertex Influences table for V0
     final influences0 = vm.getVertexInfluences(0);
+    expect(influences0.keys.first, 'pelvis');
     expect(influences0.values.first, 1.0);
+    expect(vm.getVertexInfluences(1).keys.first, 'spine_01');
     expect(vm.getVertexWeightSum(0), 1.0);
 
     // Vertex Influences table for V2 (sanitized/normalized to 1.0)

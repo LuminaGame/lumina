@@ -744,7 +744,7 @@ Saf Dart GLB okuyucusu. `GlbReader.parse(bytes, decoders:)` bir binary glTF'i (`
 | `materialNames` | `List<String> materialNames` | `materialNames` alanını (field/property) ve ilişkili veriyi saklar. |
 | `skeletonJointIndices` | `Set<int> skeletonJointIndices` | `skeletonJointIndices` alanını (field/property) ve ilişkili veriyi saklar. |
 | `morphTargets` | `List<GlbMorphTarget> morphTargets` | `morphTargets` alanını (field/property) ve ilişkili veriyi saklar. |
-| `jointsPerVertex` | `Uint16List? jointsPerVertex` | `jointsPerVertex` alanını (field/property) ve ilişkili veriyi saklar. |
+| `jointsPerVertex` | `Uint16List? jointsPerVertex` | Köşe başına dört eklem, `allNodes` içindeki düğüm indeksleri olarak: her primitive'in `JOINTS_0`'ı (düğümünün skin `joints` listesine indeksler) o skin üzerinden eşlenir; böylece tek iskelet üzerinde kendi skin'leri olan birden çok mesh aynı biçimde okunur. Ağırlıklar yanında `weightsPerVertex`'tedir. |
 | `weightsPerVertex` | `Float32List? weightsPerVertex` | `weightsPerVertex` alanını (field/property) ve ilişkili veriyi saklar. |
 | `maxInfluences` | `int maxInfluences` | `maxInfluences` alanını (field/property) ve ilişkili veriyi saklar. |
 | `animations` | `List<GlbAnimationClip> animations` | `animations` alanını (field/property) ve ilişkili veriyi saklar. |
