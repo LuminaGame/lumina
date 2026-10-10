@@ -1,11 +1,9 @@
-import 'dart:io';
-import 'dart:typed_data';
-
 import 'package:flutter/widgets.dart';
 import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart';
 import 'package:vector_math/vector_math_64.dart';
 
+import 'package:lumina_ui/ui/core/plugin_3d_viewport_mesh_loader.dart';
 import 'package:lumina_ui/ui/features/main_editor/services/transform_gizmo.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/sub_editor_transform_gizmo.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/sub_editor_3d_viewport.dart';
@@ -29,6 +27,7 @@ class Plugin3DViewportContainer extends StatefulWidget {
 class _Plugin3DViewportContainerState extends State<Plugin3DViewportContainer> {
   GlbMeshData? _mesh;
   String? _loadedKey;
+  int _loadToken = 0;
   String? _selectedBoneName;
   Vector3? _dragStartWorldPos;
   SubEditorTransformGizmo? _transformGizmo;
@@ -116,10 +115,14 @@ class _Plugin3DViewportContainerState extends State<Plugin3DViewportContainer> {
     }
   }
 
+  /// Shows the mesh the options name. The read and the parse run off the UI
+  /// isolate ([Plugin3DViewportMeshLoader]); the viewport shows no mesh until
+  /// it arrives, and a result for a mesh no longer selected is dropped.
   Future<void> _loadMesh() async {
     final opts = widget.options;
     final key = opts.meshPath ?? opts.glbBytes?.hashCode.toString();
     if (key == null) {
+      _loadToken++;
       if (mounted) setState(() => _mesh = null);
       return;
     }
@@ -128,6 +131,7 @@ class _Plugin3DViewportContainerState extends State<Plugin3DViewportContainer> {
       return;
     }
 
+    final token = ++_loadToken;
     if (mounted && _loadedKey != key) {
       setState(() {
         _mesh = null;
@@ -136,33 +140,24 @@ class _Plugin3DViewportContainerState extends State<Plugin3DViewportContainer> {
     }
 
     try {
-      Uint8List? bytes = opts.glbBytes;
-      if (bytes == null && opts.meshPath != null) {
-        final path = opts.meshPath!;
-        var absPath = path;
-        var file = File(absPath);
-        if (!file.existsSync() && !path.startsWith('/') && !path.contains(r':\') && widget.projectDir != null) {
-          absPath = '${widget.projectDir}/$path'.replaceAll(r'\', '/');
-          file = File(absPath);
-        }
-        if (absPath.toLowerCase().endsWith('.glb') && file.existsSync()) {
-          bytes = await file.readAsBytes();
-        } else {
-          bytes = AnimationImportBinder.meshGlb(absPath);
-        }
+      final bytes = opts.glbBytes;
+      final meshPath = opts.meshPath;
+      final GlbMeshData? mesh;
+      if (bytes != null) {
+        mesh = bytes.isEmpty ? null : await Plugin3DViewportMeshLoader.parseBytes(bytes);
+      } else {
+        mesh = await Plugin3DViewportMeshLoader.load(meshPath!, projectDir: widget.projectDir);
       }
-      if (bytes != null && bytes.isNotEmpty) {
-        final mesh = await GlbParserService.parseGlb(bytes);
-        if (mounted && (opts.meshPath ?? opts.glbBytes?.hashCode.toString()) == key) {
-          setState(() {
-            _mesh = mesh;
-            _loadedKey = key;
-          });
-          _syncGizmoTarget();
-          return;
-        }
+      if (mesh != null && mounted && token == _loadToken) {
+        setState(() {
+          _mesh = mesh;
+          _loadedKey = key;
+        });
+        _syncGizmoTarget();
       }
-    } catch (_) {}
+    } catch (e) {
+      EngineLoggerService().log('Plugin viewport could not load ${opts.meshPath ?? 'its mesh'}: $e', level: 'warn');
+    }
   }
 
   void _handleBoneSelected(String boneName) {

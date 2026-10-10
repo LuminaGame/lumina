@@ -419,6 +419,11 @@ A bare [LuminaEditorContext] (a plugin's own unit test, a registration smoke) ha
 
 [LuminaEditorHostContext.build3DViewport] metoduna aktarılan yapılandırma seçenekleri.
 
+Görünüm `meshPath`'i (bir `.glb` ya da GLB'si `.entity.glb` eşlik dosyası veya gömülü yükü olan bir skeletal mesh
+`.lmas`'ı; mutlak veya projeye göreli) editörü bloklamadan yükler: 8 MiB ve üzeri bir dosya arka plan isolate'inde
+okunup ayrıştırılır (`Plugin3DViewportMeshLoader`), daha küçükleri asenkron okunur. Mesh gelene kadar görünüm mesh
+göstermez; son mesh, dosyası değişene kadar tutulur. 8 MiB ve üzeri `glbBytes` da arka plan isolate'inde ayrıştırılır.
+
 **Üyeler:**
 
 | Üye | İmza | Açıklama |

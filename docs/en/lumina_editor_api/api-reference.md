@@ -419,6 +419,12 @@ A bare [LuminaEditorContext] (a plugin's own unit test, a registration smoke) ha
 
 Configuration options passed to [LuminaEditorHostContext.build3DViewport].
 
+The viewport loads `meshPath` (a `.glb`, or a skeletal mesh `.lmas` whose GLB is its `.entity.glb` companion or
+embedded payload; absolute or project-relative) without blocking the editor: a file of 8 MiB or more is read and
+parsed on a background isolate (`Plugin3DViewportMeshLoader`), smaller ones are read asynchronously. The viewport
+shows no mesh until it arrives; the last mesh is kept until its file changes. `glbBytes` of 8 MiB or more are parsed
+on a background isolate as well.
+
 **Members:**
 
 | Member | Signature | Description |
