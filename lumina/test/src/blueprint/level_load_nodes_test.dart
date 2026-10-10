@@ -102,7 +102,10 @@ void main() {
     await until(s.host, () => s.printed.contains('went'));
     expect(s.printed.indexOf('L_First BeginPlay'), lessThan(s.printed.indexOf('went')));
     expect(s.host.world.persistentLevel.levelName, 'L_First');
-    expect(reads.toSet(), {'$dir/$redBarrelPath'}, reason: 'L_First names one asset');
+    // The manifest joins project-relative paths with '/', so compare
+    // separator-agnostic (a Windows temp dir is listed with '\').
+    String slashes(String p) => p.replaceAll(r'\', '/');
+    expect(reads.map(slashes).toSet(), {slashes('$dir/$redBarrelPath')}, reason: 'L_First names one asset');
   });
 
   test('Cancel Level Load stops a running Load Level: no more progress, no Success', () async {
