@@ -666,6 +666,17 @@ A View encompasses all the state needed for rendering a Scene.  A View specifies
 
 - **`with SingleTickerProviderStateMixin`**: `SingleTickerProviderStateMixin` işlemini gerçekleştirir.
 
+#### `class FilamentFrameLimiter` (`lib/src/frame_limiter.dart`)
+
+Her ekran yenilemesinde bir kare çizilip çizilmeyeceğine karar verir: vsync ile sürülen bir döngünün (Flutter ticker,
+tarayıcının `requestAnimationFrame`'i) hedef kare hızı. Yenileme hızını zaman damgalarından öğrenir (son 30 aralığın
+medyana yakın olanlarının ortalaması; birkaç tane görene kadar 60 Hz). `FilamentFrameLimiter({int targetFps = 0, bool
+vsync = true})`; `configure({targetFps, vsync})` (değişiklik ritmi yeniden başlatır), `shouldRender(Duration
+vsyncTimestamp)` (aynı zaman damgası aynı cevabı alır, böylece iki döngü bir sınırlayıcıyı paylaşabilir), `reset()`,
+`refreshRate`, `effectiveFrameRate`. `targetFps` 0: her yenileme; `vsync` true: her kare aynı tam sayıda yenileme
+(60 Hz, 45 FPS → 30); false: hedef ortalama (45 FPS bir ve iki yenilemeyi dönüşümlü kullanır); bir takılma ani kare
+patlaması yerine ritmi yeniden başlatır.
+
 #### `class FilamentWidget`
 
 A Flutter widget for rendering 3D Filament scenes natively.  Manages engine lifecycle, frame rendering loops, and viewport dimensions.
@@ -687,6 +698,9 @@ A Flutter widget for rendering 3D Filament scenes natively.  Manages engine life
 | `decorated` | `bool decorated` | Kare yuvarlak köşeli, kenarlıklı viewport panelinde mi durur (varsayılan `true`, araçlar) yoksa widget'ı siyah zemin üzerinde kenardan kenara mı doldurur (`false`, oyun ekranı). |
 | `physicalResolution` | `bool physicalResolution` | Kare yerleşimin mantıksal boyutu (varsayılan `false`, kenar başına en çok 4096) yerine ekranın fiziksel pikselinde mi çizilir (yerleşim boyutu × device pixel ratio, kenar başına en çok 8192). Ölçeklenmiş bir ekranda oyun böylece monitörün doğal çözünürlüğünde çizer. |
 | `renderResolution` | `Size? renderResolution` | Yerleşim boyutunun yerine geçen, fiziksel piksel olarak sabit çizim boyutu (oyunun seçtiği ekran çözünürlüğü); kare widget'ı dolduracak biçimde ölçeklenir (native: `RawImage` fill; web: canvas'ın çizim tamponu). Null: yerleşim boyutu. |
+| `targetFps` | `int? targetFps` | Hedef kare hızı; null ya da 0 her ekran yenilemesidir. Bir `FilamentFrameLimiter` ekran yenilemeleri (karenin vsync zaman damgası) üzerinden sayar; hiçbir hedef yenileme hızını aşmaz. |
+| `vsyncEnabled` | `bool vsyncEnabled` | `targetFps`'in nasıl zamanladığı (varsayılan `false`): `true` her kareyi aynı tam sayıda yenileme boyunca gösterir, `false` hedefi ortalama tutar. Kareyi her iki durumda Flutter vsync'te gösterir. |
+| `frameLimiter` | `FilamentFrameLimiter? frameLimiter` | Ev sahibinin kendi kare işiyle (oyun widget'ının dünya tick'i) paylaşılan sınırlayıcı; ikisi aynı yenilemelerde çalışır. Null: widget'ın kendi sınırlayıcısı. |
 | `createState` | `State<FilamentWidget> createState() => _FilamentWidgetState()` | Yeni bir `State` örneği veya ilişkili GPU kaynağını oluşturur ve yapılandırır. |
 
 #### `class _FilamentWidgetState`

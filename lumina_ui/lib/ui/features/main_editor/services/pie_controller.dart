@@ -143,6 +143,12 @@ class PieController with _PieBlueprintsInPlay, _PieGameInput {
     // assets, the Blueprint video player) even where the editor's start-up
     // did not run (tests, an embedded editor). Idempotent.
     LuminaWidgets.ensureInitialized();
+    // Get Target FPS / VSync start from the project's settings; the player's
+    // choice is recorded but never changes the editor viewport's pacing.
+    LuminaGameFramePacing.beginPlayInEditor(
+      targetFps: viewModel.project.settings.targetFps,
+      vsyncEnabled: viewModel.project.settings.vsyncEnabled,
+    );
 
     _editorSnapshot = viewModel.actors.map((a) => EditorActorNode.fromMap(a.toMap())).toList();
     _selectedActorIdSnapshot = viewModel.selectedActorId;

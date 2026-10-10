@@ -140,7 +140,7 @@ sunar, Alt+Tab ve overlay'ler çalışmaya devam eder.
 | `settingsFilePath` | `static String? settingsFilePath` | Oyuncunun seçiminin saklandığı yer; null hiçbir şey saklamaz (Play-In-Editor). |
 | `settingsKey` | `static const String settingsKey = 'window_mode'` | O JSON dosyasındaki anahtarı; dosyanın diğer anahtarları korunur. |
 | `settingsFileFor` | `static String settingsFileFor(String saveGamesDirectory)` | `<app support>/<oyun>/SaveGames` → `<app support>/<oyun>/SaveGames/GameUserSettings.json`; grafik ayarlarıyla paylaşılan dosya (`LuminaGameUserSettingsFile`). |
-| `restore` | `static Future<LuminaWindowMode> restore({LuminaWindowMode startMode = windowed, String? settingsFilePath})` | Eski bir `user_settings.json`'ı bir kez birleştirir, kayıtlı seçimi, yoksa `startMode`'u (Project Settings > Start Fullscreen) uygular, sonra kayıtlı ekran çözünürlüğünü ve monitörü (`LuminaGameDisplay.restore`), ve runner'ın değişikliklerini dinler (her biri kaydedilir ve çözünürlüğü yeniden uygular). Zaten o modda olan runner'a dokunulmaz. |
+| `restore` | `static Future<LuminaWindowMode> restore({LuminaWindowMode startMode = windowed, String? settingsFilePath})` | Eski bir `user_settings.json`'ı bir kez birleştirir, kayıtlı seçimi, yoksa `startMode`'u (Project Settings > Start Fullscreen) uygular, sonra kayıtlı ekran çözünürlüğünü ve monitörü (`LuminaGameDisplay.restore`) ve hedef kare hızını ve VSync'i (`LuminaGameFramePacing.restore`, ilk kareden önce), ve runner'ın değişikliklerini dinler (her biri kaydedilir ve çözünürlüğü yeniden uygular). Zaten o modda olan runner'a dokunulmaz. |
 | `setMode` | `static Future<bool> setMode(LuminaWindowMode next)` | `next`'i kaydeder ve runner'dan uygulamasını ister; runner yoksa false (mod yine kaydedilir). |
 | `toggle` | `static Future<bool> toggle()` | Pencereli ↔ kenarlıksız tam ekran. |
 | `pendingWrite` | `static Future<void> get pendingWrite` | Son değişiklik ve ayar yazımı bitince tamamlanır. |
@@ -208,6 +208,55 @@ yazanlar bir arada yaşar; yazmalar sıralıdır. Web'de hiçbir şey yazılmaz.
 | `update` | `static Future<bool> update(String path, Map<String, Object?> patch)` | `patch`'i birleştirir; null değer anahtarını siler. |
 | `migrateLegacy` | `static Future<bool> migrateLegacy({required String path, String? legacyPath})` | Bir kez: eski dosyanın ayar dosyasında olmayan anahtarlarını ekler (ayar dosyası kazanır), sonra eski dosyayı siler. |
 | `idle` | `static Future<void> get idle` | Sıradaki yazmalar bitince tamamlanır. |
+
+## `lib/src/game/game_frame_pacing.dart`
+
+Oyunun hedef kare hızı ve VSync'i: `LuminaGameWidget`'ın dünya tick'ini ve çizdiği kareleri neye göre zamanladığı ve
+Set Target FPS / Set VSync Enabled'ın Apply Scalability Settings ile değiştirdiği değer.
+
+**Yürürlükte olan.** Projenin Target FPS ve VSync'i (Project Settings; üretilen `main()`'e yazılır ve `LuminaGameHost`
+→ `LuminaGameWidget`'a geçer) varsayılandır; oyuncunun uyguladığı seçim bunların önüne geçer. Save Game User Settings
+seçimi `GameUserSettings.json`'a yazar (`target_fps`, `vsync`); seçim yoksa anahtar yazılmaz, böylece sonraki bir proje
+değişikliği oyuncuya yine ulaşır. `LuminaGameWindow.restore` (üretilen `main()`'de, `runApp`'tan önce) kayıtlı seçimi
+ilk kareden önce geri koyar.
+
+**Derlenmiş oyun nasıl gösterir, VSync neyi kontrol edebilir.** Filament oyunu ekran dışı (headless) bir swap chain'e
+çizer; kare bir `RawImage`'a geri okunur, Flutter onu birleştirip ekranın vsync'inde gösterir. Dolayısıyla:
+- Hiçbir hız ekranın yenileme hızını aşmaz (60 Hz: 120 FPS ve sınırsız ikisi de 60 gösterir) ve VSync ne derse desin
+  görüntü yırtılmaz. Hedefe bazı yenilemelerde çizip bazılarını atlayarak ulaşılır (flutter_filament'taki
+  `FilamentFrameLimiter`; dünya tick'i ve görünüm aynı yenilemelerde çalışsın diye ortak kullanılır).
+- **VSync açık**: her kare aynı tam sayıda yenileme boyunca gösterilir; hızı hedefte ya da altında tutan en küçük sayı:
+  eşit kare süreleri (60 Hz: 30 ve 45 FPS ikisi de 30; 144 Hz: 60 FPS 48 olur).
+- **VSync kapalı**: hedef ortalamadır; kareler komşu yenileme sayıları arasında değişir (60 Hz, 45 FPS: bir ve iki
+  yenileme).
+- Filament'in `SwapChain::CONFIG_DISABLE_VSYNC`'i (ve vsync'siz bir Vulkan swap chain'in sunum iş parçacığı, yama
+  `0016`) yalnızca pencereye kendisi sunan bir swap chain için anlamlıdır; Flutter ile gösterilen oyunda böyle bir swap
+  chain yoktur.
+- Gösterilen hız ayrıca çizim + geri okuma maliyetiyle sınırlıdır (RTX PRO 2000'de beş test-assets nesnesiyle ölçüldü:
+  1920×1350'de 60 FPS, 3440×1440 kenarlıksız tam ekranda yaklaşık 32 FPS; dünya hedef hızda tick etmeye devam eder).
+- **Web**: tarayıcının `requestAnimationFrame`'i vsync'tir (hep açık); sınırlayıcı yalnızca yenileme hızının altına
+  indirebilir.
+- **Kare üretimi**: üretilen kareleri yalnızca kendisi sunan bir swap chain gösterir
+  ([flutter_filament dlss.md](../flutter_filament/dlss.md)); Flutter ile gösterilen oyun çizilen her kare için bir kare
+  gösterir, bu yüzden hedef FPS çizilen kareleri sayar. Pencere swap chain'i kullanılan yerde kare üretimi orada VSync
+  kapalı ister ve sunumlarını kendi iş parçacığında aralar.
+- **Play-In-Editor** editörün hızını hiç değiştirmez: `PieController.startPie` projenin ayarlarıyla
+  `beginPlayInEditor` çağırır, her oturum onlardan başlar; Set/Apply kaydedilir (Get onları döner) ama editör
+  viewport'u kendi hızında çizmeye devam eder.
+
+| Üye | İmza | Açıklama |
+|---|---|---|
+| `LuminaFramePacingSettings` | `const LuminaFramePacingSettings({int targetFps = 0, bool vsyncEnabled = false})` | Bir değer: hedef FPS (0 = sınırsız) ve VSync. |
+| `settings` | `static final ObservableValue<LuminaFramePacingSettings> settings` | Yürürlükte olan; oyun widget'ı hemen izler. |
+| `targetFps` / `vsyncEnabled` | `static int get targetFps`, `static bool get vsyncEnabled` | Yürürlükteki değerler. |
+| `hasPlayerChoice` | `static bool get hasPlayerChoice` | Oyuncunun bir seçim uygulayıp uygulamadığı (ya da geri yüklenip yüklenmediği). |
+| `setProjectDefaults` | `static void setProjectDefaults({required int targetFps, required bool vsyncEnabled})` | Projenin ayarları (oyun widget'ı kendi `targetFps` / `vsyncEnabled`'ıyla çağırır). |
+| `apply` | `static void apply({int? targetFps, bool? vsyncEnabled})` | Oyuncunun seçimini yürürlüğe koyar (null o yarıyı korur); negatif FPS 0'dır. |
+| `restore` | `static void restore(Map<String, dynamic> saved)` | Başlangıç: ayar dosyasındaki `target_fps` / `vsync`, varsa. |
+| `beginPlayInEditor` | `static void beginPlayInEditor({required int targetFps, required bool vsyncEnabled})` | Önceki oturumun seçimini unutur ve projenin ayarlarını koyar. |
+| `settingsPatch` | `static Map<String, Object?> settingsPatch()` | `{target_fps, vsync}`: oyuncunun seçimi, yoksa null. |
+| `targetFpsKey` / `vsyncKey` | `'target_fps'`, `'vsync'` | Ayar dosyası anahtarları. |
+| `resetForTesting` | `static void resetForTesting()` | Yeni bir sürecin durumu. |
 
 ## `lib/src/game/lumina_game.dart`
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter_filament/src/camera.dart';
 import 'package:flutter_filament/src/engine.dart';
+import 'package:flutter_filament/src/frame_limiter.dart';
 import 'package:flutter_filament/src/manipulator.dart';
 import 'package:flutter_filament/src/scene.dart';
 import 'package:flutter_filament/src/view.dart';
@@ -109,13 +110,29 @@ class FilamentWidget extends StatefulWidget {
     this.width = double.infinity,
     this.height = double.infinity,
     this.targetFps,
+    this.vsyncEnabled = false,
+    this.frameLimiter,
     this.decorated = true,
     this.physicalResolution = false,
     this.renderResolution,
   });
 
   /// Target frame rate in FPS; null or <= 0 means unlimited / display refresh rate.
+  /// Frames are rendered on the display's refresh ([FilamentFrameLimiter]),
+  /// so no target goes above the refresh rate.
   final int? targetFps;
+
+  /// How [targetFps] paces the frames ([FilamentFrameLimiter.vsync]): true
+  /// shows every frame for the same whole number of refreshes, false keeps
+  /// the target as the average. The frame is presented by Flutter on the
+  /// display's vsync either way.
+  final bool vsyncEnabled;
+
+  /// The limiter deciding which refreshes render; one the host shares with
+  /// its own per-frame work (a game's world tick) so both run on the same
+  /// refreshes. Null uses the widget's own. Configured from [targetFps] and
+  /// [vsyncEnabled] either way.
+  final FilamentFrameLimiter? frameLimiter;
 
   @override
   // A readback into a RawImage natively; a WebGL2 canvas on the web.

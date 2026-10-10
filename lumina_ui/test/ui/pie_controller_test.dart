@@ -147,6 +147,33 @@ void main() {
       expect(vm.actors.map((a) => a.id).toList(), actorsBefore);
     });
 
+    test('Play starts from the project frame rate settings and never keeps an earlier session choice', () {
+      if (!createEngine()) return markTestSkipped('flutter_filament native library unavailable');
+      final paced = EditorViewModel(
+        initialProject: const LuminaProject(
+          projectName: 'PieProject',
+          settings: EngineScalabilitySettings(targetFps: 60, vsyncEnabled: true),
+        ),
+        projectLocation: tempDir.path,
+        enableTimers: false,
+      );
+      addTearDown(paced.dispose);
+      addTearDown(LuminaGameFramePacing.resetForTesting);
+      LuminaGameFramePacing.apply(targetFps: 30, vsyncEnabled: false);
+      final pie = PieController(paced);
+
+      pie.startPie(engine, scene);
+      expect(pie.isPlaying, isTrue, reason: pie.lastError ?? '');
+      final settings = pie.game!.gameInstance.world!.userSettings;
+      expect(settings.targetFps, 60);
+      expect(settings.vsyncEnabled, isTrue);
+      settings
+        ..setTargetFps(120)
+        ..applySettings();
+      expect(settings.targetFps, 120, reason: 'the choice is recorded for Get');
+      pie.stopPie(engine, scene);
+    });
+
     test('Undo stack frozen during PIE', () {
       if (!createEngine()) return markTestSkipped('flutter_filament native library unavailable');
       final pie = PieController(vm);

@@ -666,6 +666,17 @@ A View encompasses all the state needed for rendering a Scene.  A View specifies
 
 - **`with SingleTickerProviderStateMixin`**: Executes `SingleTickerProviderStateMixin` operation.
 
+#### `class FilamentFrameLimiter` (`lib/src/frame_limiter.dart`)
+
+Decides, once per display refresh, whether a frame renders: the target frame rate of a loop driven by vsync (a Flutter
+ticker, the browser's `requestAnimationFrame`). Learns the refresh rate from the timestamps (mean of the last 30
+intervals near their median; 60 Hz until it has seen a few). `FilamentFrameLimiter({int targetFps = 0, bool vsync =
+true})`; `configure({targetFps, vsync})` (a change restarts the cadence), `shouldRender(Duration vsyncTimestamp)` (the
+same timestamp gets the same answer, so two loops can share one limiter), `reset()`, `refreshRate`,
+`effectiveFrameRate`. `targetFps` 0: every refresh; `vsync` true: every frame held for the same whole number of
+refreshes (60 Hz, 45 FPS → 30); false: the target as the average (45 FPS alternates one and two refreshes); a hitch
+restarts the cadence instead of bursting.
+
 #### `class FilamentWidget`
 
 A Flutter widget for rendering 3D Filament scenes natively.  Manages engine lifecycle, frame rendering loops, and viewport dimensions.
@@ -687,6 +698,9 @@ A Flutter widget for rendering 3D Filament scenes natively.  Manages engine life
 | `decorated` | `bool decorated` | Whether the frame sits in the rounded, bordered viewport panel (default `true`, tools) or fills the widget edge to edge on black (`false`, a game screen). |
 | `physicalResolution` | `bool physicalResolution` | Whether the frame renders at the display's physical pixels (layout size × device pixel ratio, up to 8192 per side) instead of the layout's logical size (default `false`, up to 4096). A game on a scaled display renders at the monitor's native resolution this way. |
 | `renderResolution` | `Size? renderResolution` | A fixed render size in physical pixels that wins over the layout size (a game's chosen screen resolution); the frame is scaled to fill the widget (native: `RawImage` fill; web: the canvas's drawing buffer). Null: the layout size. |
+| `targetFps` | `int? targetFps` | Target frame rate; null or 0 is every display refresh. Counted in display refreshes (the frame's vsync timestamp) by a `FilamentFrameLimiter`, so no target goes above the refresh rate. |
+| `vsyncEnabled` | `bool vsyncEnabled` | How `targetFps` paces (default `false`): `true` holds every frame for the same whole number of refreshes, `false` keeps the target as the average. The frame is presented by Flutter on vsync either way. |
+| `frameLimiter` | `FilamentFrameLimiter? frameLimiter` | A limiter shared with the host's own per-frame work (the game widget's world tick) so both run on the same refreshes; null uses the widget's own. |
 | `createState` | `State<FilamentWidget> createState() => _FilamentWidgetState()` | Creates, configures, and returns a new `State` instance or associated GPU resource. |
 
 #### `class _FilamentWidgetState`

@@ -7,11 +7,13 @@ import 'dart:ui_web' as ui_web;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:web/web.dart' as web;
 
 import 'package:flutter_filament/src/camera.dart';
 import 'package:flutter_filament/src/engine.dart';
 import 'package:flutter_filament/src/ffi_platform.dart' as ffi;
+import 'package:flutter_filament/src/frame_limiter.dart';
 import 'package:flutter_filament/src/renderer.dart';
 import 'package:flutter_filament/src/scene.dart';
 import 'package:flutter_filament/src/swap_chain.dart';
@@ -41,6 +43,10 @@ class WebFilamentWidgetState extends State<FilamentWidget> with SingleTickerProv
   int? _cameraEntity;
 
   late final AnimationController _ticker;
+
+  /// Target FPS on the browser's requestAnimationFrame (always the display's
+  /// vsync: the limiter can only throttle below the refresh rate).
+  final FilamentFrameLimiter _limiter = FilamentFrameLimiter();
   bool _isInitialized = false;
   bool _disposed = false;
   String _status = 'Initializing 3D Viewport...';
@@ -138,6 +144,9 @@ class WebFilamentWidgetState extends State<FilamentWidget> with SingleTickerProv
 
   void _onFrameTick() {
     if (!_isInitialized || widget.isPaused || widget.pauseRendering) return;
+    final limiter = widget.frameLimiter ?? _limiter;
+    limiter.configure(targetFps: widget.targetFps ?? 0, vsync: widget.vsyncEnabled);
+    if (!limiter.shouldRender(SchedulerBinding.instance.currentFrameTimeStamp)) return;
     final renderer = _renderer!;
     final start = DateTime.now().microsecondsSinceEpoch;
     try {

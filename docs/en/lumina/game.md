@@ -140,7 +140,7 @@ without an extra copy, and Alt+Tab and overlays keep working.
 | `settingsFilePath` | `static String? settingsFilePath` | Where the player's choice is kept; null keeps nothing (Play-In-Editor). |
 | `settingsKey` | `static const String settingsKey = 'window_mode'` | Its key in that JSON file; other keys of the file are kept. |
 | `settingsFileFor` | `static String settingsFileFor(String saveGamesDirectory)` | `<app support>/<game>/SaveGames` → `<app support>/<game>/SaveGames/GameUserSettings.json`, the file shared with the graphics settings (`LuminaGameUserSettingsFile`). |
-| `restore` | `static Future<LuminaWindowMode> restore({LuminaWindowMode startMode = windowed, String? settingsFilePath})` | Merges a legacy `user_settings.json` once, applies the saved choice, or `startMode` (Project Settings > Start Fullscreen) when there is none, then the saved screen resolution and monitor (`LuminaGameDisplay.restore`), and listens to the runner's toggles (each one is saved and re-applies the resolution). A runner already in the mode is left alone. |
+| `restore` | `static Future<LuminaWindowMode> restore({LuminaWindowMode startMode = windowed, String? settingsFilePath})` | Merges a legacy `user_settings.json` once, applies the saved choice, or `startMode` (Project Settings > Start Fullscreen) when there is none, then the saved screen resolution and monitor (`LuminaGameDisplay.restore`) and target frame rate and VSync (`LuminaGameFramePacing.restore`, before the first frame), and listens to the runner's toggles (each one is saved and re-applies the resolution). A runner already in the mode is left alone. |
 | `setMode` | `static Future<bool> setMode(LuminaWindowMode next)` | Records and saves `next` and asks the runner to apply it; false without a runner (the mode is still recorded). |
 | `toggle` | `static Future<bool> toggle()` | Windowed ↔ borderless fullscreen. |
 | `pendingWrite` | `static Future<void> get pendingWrite` | Completes when the last change and its settings write are done. |
@@ -208,6 +208,56 @@ writes are serialized. Nothing is written on the web.
 | `update` | `static Future<bool> update(String path, Map<String, Object?> patch)` | Merges `patch`; a null value removes its key. |
 | `migrateLegacy` | `static Future<bool> migrateLegacy({required String path, String? legacyPath})` | Once: adds the legacy file's keys the settings file lacks (the settings file wins), then deletes the legacy file. |
 | `idle` | `static Future<void> get idle` | Completes when queued writes are done. |
+
+## `lib/src/game/game_frame_pacing.dart`
+
+The game's target frame rate and VSync: what `LuminaGameWidget` paces its world tick and its rendered frames by, and
+what Set Target FPS / Set VSync Enabled change through Apply Scalability Settings.
+
+**What is in force.** The project's Target FPS and VSync (Project Settings, baked into the generated `main()` and
+passed to `LuminaGameHost` → `LuminaGameWidget`) are the defaults; the player's applied choice wins over them. Save Game
+User Settings writes the choice to `GameUserSettings.json` (`target_fps`, `vsync`); without a choice no key is written,
+so a later project change still reaches the player. `LuminaGameWindow.restore` (in the generated `main()`, before
+`runApp`) puts a saved choice back before the first frame.
+
+**How a built game presents, and what VSync can control.** Filament renders the game into an offscreen (headless)
+swap chain; the frame is read back into a `RawImage` and Flutter composites and presents it on the display's vsync.
+So:
+- No rate goes above the display's refresh rate (60 Hz: 120 FPS and unlimited both present 60), and the picture never
+  tears, whatever VSync says. The target is met by rendering on some refreshes and skipping others
+  (`FilamentFrameLimiter` in flutter_filament, shared by the world tick and the view so both run on the same refreshes).
+- **VSync on**: every frame is held for the same whole number of refreshes, the smallest that keeps the rate at or
+  under the target: even frame times (60 Hz: 30 and 45 FPS both run at 30; 144 Hz: 60 FPS runs at 48).
+- **VSync off**: the target is the average; frames alternate between neighbouring refresh counts (60 Hz, 45 FPS: one
+  and two refreshes).
+- Filament's `SwapChain::CONFIG_DISABLE_VSYNC` (and the present thread of a non-vsync Vulkan swap chain, patch `0016`)
+  only matters for a swap chain that presents to a window itself; a Flutter-presented game has none.
+- The presented rate is also bounded by the render + readback cost (measured on the RTX PRO 2000 with five
+  test-assets props: 60 FPS at 1920×1350, about 32 FPS in borderless fullscreen at 3440×1440, where the world keeps
+  ticking at the target).
+- **Web**: the browser's `requestAnimationFrame` is the vsync (always on); the limiter can only throttle below the
+  refresh rate.
+- **Frame generation**: generated frames are only presented by a swap chain that presents itself
+  ([flutter_filament dlss.md](../flutter_filament/dlss.md)); a Flutter-presented game shows one frame per rendered frame,
+  so the target FPS counts rendered frames. Where a window swap chain is used, frame generation needs VSync off there
+  and paces its presents on its own thread.
+- **Play-In-Editor** never changes the editor's pacing: `PieController.startPie` calls `beginPlayInEditor` with the
+  project's settings, so each session starts from them; Set/Apply are recorded (Get returns them) but the editor
+  viewport keeps rendering at its own rate.
+
+| Member | Signature | Description |
+|---|---|---|
+| `LuminaFramePacingSettings` | `const LuminaFramePacingSettings({int targetFps = 0, bool vsyncEnabled = false})` | A value: target FPS (0 = unlimited) and VSync. |
+| `settings` | `static final ObservableValue<LuminaFramePacingSettings> settings` | What is in force; the game widget follows it at once. |
+| `targetFps` / `vsyncEnabled` | `static int get targetFps`, `static bool get vsyncEnabled` | The values in force. |
+| `hasPlayerChoice` | `static bool get hasPlayerChoice` | Whether the player applied (or restored) a choice. |
+| `setProjectDefaults` | `static void setProjectDefaults({required int targetFps, required bool vsyncEnabled})` | The project's settings (the game widget calls it with its `targetFps` / `vsyncEnabled`). |
+| `apply` | `static void apply({int? targetFps, bool? vsyncEnabled})` | Puts the player's choice in force (null keeps that half); negative FPS is 0. |
+| `restore` | `static void restore(Map<String, dynamic> saved)` | Start-up: the `target_fps` / `vsync` of the settings file, if any. |
+| `beginPlayInEditor` | `static void beginPlayInEditor({required int targetFps, required bool vsyncEnabled})` | Forgets an earlier session's choice and sets the project's settings. |
+| `settingsPatch` | `static Map<String, Object?> settingsPatch()` | `{target_fps, vsync}`: the player's choice, null where there is none. |
+| `targetFpsKey` / `vsyncKey` | `'target_fps'`, `'vsync'` | The settings-file keys. |
+| `resetForTesting` | `static void resetForTesting()` | A fresh process's state. |
 
 ## `lib/src/game/lumina_game.dart`
 

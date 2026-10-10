@@ -14,13 +14,15 @@ import 'package:lumina/src/world/world.dart';
 import 'package:lumina/src/world/subsystem/world_subsystem.dart';
 
 export 'package:lumina/src/world/subsystem/user_settings_display.dart';
+export 'package:lumina/src/world/subsystem/user_settings_frame_pacing.dart';
 export 'package:lumina/src/world/subsystem/user_settings_neural_rendering.dart';
 export 'package:lumina/src/world/subsystem/user_settings_rendering.dart';
 
 /// World subsystem managing engine scalability settings, quality presets,
-/// view distance, resolution scale, frame pacing, and graphics configuration,
+/// view distance, resolution scale, and graphics configuration,
 /// plus ray tracing and upscaling ([LuminaUserSettingsRenderingFeatures]) and
 /// the screen resolution and monitor ([LuminaUserSettingsDisplay]) and the
+/// target frame rate and VSync ([LuminaUserSettingsFramePacing]) and the
 /// OpenDLSS-NR weights of a project that opted in
 /// ([LuminaUserSettingsNeuralRendering]).
 ///
@@ -29,7 +31,7 @@ export 'package:lumina/src/world/subsystem/user_settings_rendering.dart';
 /// `Cinematic` never turns ray tracing on and picking `Low` never turns an
 /// upscaler off.
 class LuminaUserSettingsSubsystem extends LuminaWorldSubsystem
-    with LuminaUserSettingsRenderingFeatures, LuminaUserSettingsDisplay, LuminaUserSettingsNeuralRendering {
+    with LuminaUserSettingsRenderingFeatures, LuminaUserSettingsDisplay, LuminaUserSettingsFramePacing, LuminaUserSettingsNeuralRendering {
   /// Where [saveSettings] and [loadSettings] keep the settings by default:
   /// `GameUserSettings.json` in the save game directory, the file the window
   /// mode, screen resolution and monitor are kept in as well.
@@ -67,8 +69,6 @@ class LuminaUserSettingsSubsystem extends LuminaWorldSubsystem
   String _textureQuality = 'High';
   String _shadingQuality = 'Epic';
   double _resolutionScale = 100.0;
-  int _targetFps = 0;
-  bool _vsyncEnabled = false;
 
   /// Current overall scalability preset name ('Low', 'Medium', 'High', 'Epic', 'Cinematic', or 'Custom').
   String get overallScalabilityLevel => _overallScalabilityLevel;
@@ -96,12 +96,6 @@ class LuminaUserSettingsSubsystem extends LuminaWorldSubsystem
 
   /// Internal render resolution percentage (25.0 % to 200.0 %, 100.0 % = native).
   double get resolutionScale => _resolutionScale;
-
-  /// Target frame rate in FPS (0 = unlimited).
-  int get targetFps => _targetFps;
-
-  /// Whether vertical synchronization is enabled.
-  bool get vsyncEnabled => _vsyncEnabled;
 
   @override
   void onWorldInitialize(LuminaWorld world) {
@@ -141,10 +135,9 @@ class LuminaUserSettingsSubsystem extends LuminaWorldSubsystem
         'texture_quality': _textureQuality,
         'shading_quality': _shadingQuality,
         'resolution_scale': _resolutionScale,
-        'target_fps': _targetFps,
-        'vsync': _vsyncEnabled,
         'rendering_features': renderingFeatures.toMap(),
         ...displaySettingsMap(),
+        ...framePacingSettingsMap(),
         ...neuralRenderingSettingsMap(),
       };
 
@@ -162,9 +155,7 @@ class LuminaUserSettingsSubsystem extends LuminaWorldSubsystem
     _textureQuality = str('texture_quality', _textureQuality);
     _shadingQuality = str('shading_quality', _shadingQuality);
     _resolutionScale = dbl('resolution_scale', _resolutionScale).clamp(25.0, 200.0);
-    final fps = map['target_fps'];
-    if (fps is int) setTargetFps(fps);
-    if (map['vsync'] is bool) _vsyncEnabled = map['vsync'] as bool;
+    stageFramePacingFrom(map);
     final features = map['rendering_features'];
     if (features is Map) setRenderingFeatures(LuminaRenderingFeatureSettings.fromMap(Map<String, dynamic>.from(features)));
     stageDisplaySettingsFrom(map);
@@ -302,16 +293,6 @@ class LuminaUserSettingsSubsystem extends LuminaWorldSubsystem
   /// Sets internal render resolution percentage (25.0 % to 200.0 %).
   void setResolutionScale(double percent) {
     _resolutionScale = percent.clamp(25.0, 200.0);
-  }
-
-  /// Sets target frame rate in frames per second (0 = unlimited).
-  void setTargetFps(int fps) {
-    _targetFps = fps < 0 ? 0 : fps;
-  }
-
-  /// Enables or disables vertical synchronization.
-  void setVsyncEnabled(bool enabled) {
-    _vsyncEnabled = enabled;
   }
 
   void _syncCameras() {
@@ -485,6 +466,8 @@ class LuminaUserSettingsSubsystem extends LuminaWorldSubsystem
     applyRenderingFeatures(baseTaa: profile.taa, baseDynamicResolution: profile.dynamicResolution);
     // The screen resolution and monitor, when a new choice is staged.
     applyDisplaySettings();
+    // The target frame rate and VSync, when a new choice is staged.
+    applyFramePacing();
     // OpenDLSS-NR, when the project opted in (after the upscalers: it runs on their output).
     applyNeuralRendering();
   }

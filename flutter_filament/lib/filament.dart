@@ -15,6 +15,7 @@ export 'package:flutter_filament/src/entity.dart';
 export 'package:flutter_filament/src/fence.dart';
 export 'package:flutter_filament/src/filamat_builder.dart';
 export 'package:flutter_filament/src/matc.dart';
+export 'package:flutter_filament/src/frame_limiter.dart';
 export 'package:flutter_filament/src/frame_pacer.dart';
 export 'package:flutter_filament/src/frame_pipeline_estimator.dart';
 export 'package:flutter_filament/src/gltf_loader.dart';

@@ -49,9 +49,18 @@ class LuminaGameHostConfiguration extends InheritedWidget {
 ///   vsync-derived, frame-paced delta time and [LuminaFrameDriver.frameStats] is available
 ///   to the HUD overlay.
 /// - With `false` no extra swap chain or driver is created: the ticker calls
-///   [LuminaGame.tickGame] with a fixed 1/60 s delta and `FilamentWidget` presents through
+///   [LuminaGame.tickGame] with the real interval between ticked refreshes and `FilamentWidget` presents through
 ///   its own swap chain. Use this for hosts that must not allocate a second swap chain;
 ///   note that no frame stats are produced in that mode.
+///
+/// Frame rate:
+/// - [targetFps] and [vsyncEnabled] are the project's settings: the defaults of
+///   [LuminaGameFramePacing], which the player's choice (Set Target FPS / Set
+///   VSync Enabled + Apply Scalability Settings, or the one restored from
+///   `GameUserSettings.json`) overrides. The widget follows what is in force
+///   at once: the world ticks and the view renders on the same display
+///   refreshes ([FilamentFrameLimiter]); the frame is presented by Flutter on
+///   the display's vsync, so no target goes above the refresh rate.
 class LuminaGameWidget extends StatefulWidget {
   final LuminaGame game;
   final LuminaHudBuilder? hudBuilder;
@@ -65,10 +74,13 @@ class LuminaGameWidget extends StatefulWidget {
   /// Whether an extra headless swap chain and frame driver should be created.
   final bool useHeadlessSwapChain;
 
-  /// Target frame rate in FPS (0 = unlimited / display refresh rate).
+  /// The project's target frame rate in FPS (0 = unlimited / display
+  /// refresh rate), in force until the player chooses one
+  /// ([LuminaGameFramePacing]).
   final int targetFps;
 
-  /// Whether VSync is enabled.
+  /// The project's VSync, in force until the player chooses
+  /// ([LuminaGameFramePacing]).
   final bool vsyncEnabled;
 
   /// Camera views sharing this widget's frame, swap chain and presentation.
@@ -124,6 +136,12 @@ class _LuminaGameWidgetState extends State<LuminaGameWidget>
   int _clockOffsetNanos = 0;
   bool _calibrated = false;
 
+  /// Shared with the FilamentWidget: the world ticks on the refreshes the
+  /// view renders on.
+  final FilamentFrameLimiter _limiter = FilamentFrameLimiter();
+  LuminaFramePacingSettings _pacing = LuminaGameFramePacing.settings.value;
+  int _lastTickMicros = -1;
+
   /// Whether this process asked for the ray tracing / DLSS extensions.
   static bool _renderingExtensionsRequested = false;
 
@@ -140,7 +158,21 @@ class _LuminaGameWidgetState extends State<LuminaGameWidget>
       LuminaRtxController.requestExtensions(neuralRendering: LuminaNeuralRendering.projectOptIn?.active ?? false);
     }
     _subscribePlayState();
+    LuminaGameFramePacing.setProjectDefaults(targetFps: widget.targetFps, vsyncEnabled: widget.vsyncEnabled);
+    _pacing = LuminaGameFramePacing.settings.value;
+    LuminaGameFramePacing.settings.addListener(_onPacingChanged);
   }
+
+  /// A new target frame rate or VSync is in force (Apply Scalability
+  /// Settings, the project's settings changed).
+  void _onPacingChanged() {
+    final next = LuminaGameFramePacing.settings.value;
+    if (next == _pacing || !mounted) return;
+    setState(() => _pacing = next);
+    _configureLimiter();
+  }
+
+  void _configureLimiter() => _limiter.configure(targetFps: _pacing.targetFps, vsync: _pacing.vsyncEnabled);
 
   void _subscribePlayState() {
     _playStateSub?.cancel();
@@ -157,6 +189,9 @@ class _LuminaGameWidgetState extends State<LuminaGameWidget>
     }
     if (oldWidget.paused != widget.paused) {
       _applyPaused();
+    }
+    if (oldWidget.targetFps != widget.targetFps || oldWidget.vsyncEnabled != widget.vsyncEnabled) {
+      LuminaGameFramePacing.setProjectDefaults(targetFps: widget.targetFps, vsyncEnabled: widget.vsyncEnabled);
     }
   }
 
@@ -193,10 +228,11 @@ class _LuminaGameWidgetState extends State<LuminaGameWidget>
         swapChain: swapChain,
         view: view,
       );
-      if (widget.targetFps > 0) {
-        _frameDriver!.targetFrameRate = widget.targetFps.toDouble();
-      }
+      // The driver's pacer for its offscreen frame; the presented rate is
+      // the limiter's.
+      if (_pacing.targetFps > 0) _frameDriver!.targetFrameRate = _pacing.targetFps.toDouble();
     }
+    _configureLimiter();
 
     if (widget.paused) {
       _applyPaused();
@@ -210,13 +246,16 @@ class _LuminaGameWidgetState extends State<LuminaGameWidget>
         _clockOffsetNanos = steadyNow - flutterNowNanos;
         _calibrated = true;
       }
+      // Only on the refreshes the view renders on (the target frame rate).
+      final frameTime = SchedulerBinding.instance.currentFrameTimeStamp;
+      if (!_limiter.shouldRender(frameTime)) return;
       final vsyncNanos = flutterNowNanos + _clockOffsetNanos;
       if (_frameDriver != null) {
         _frameDriver!.onVsync(vsyncNanos);
       } else {
-        final dt = widget.targetFps > 0
-            ? (1.0 / widget.targetFps)
-            : 0.016666667;
+        final now = frameTime.inMicroseconds;
+        final dt = _lastTickMicros < 0 ? 1.0 / 60 : ((now - _lastTickMicros) / 1e6).clamp(0.001, 0.25);
+        _lastTickMicros = now;
         widget.game.tickGame(dt);
       }
     });
@@ -238,6 +277,7 @@ class _LuminaGameWidgetState extends State<LuminaGameWidget>
 
   @override
   void dispose() {
+    LuminaGameFramePacing.settings.removeListener(_onPacingChanged);
     _onDispose();
     _playStateSub?.cancel();
     _playStateSub = null;
@@ -249,7 +289,9 @@ class _LuminaGameWidgetState extends State<LuminaGameWidget>
     Widget view(Size? renderResolution) => FilamentWidget(
           onSceneCreated: _onSceneCreated,
           onDispose: _onDispose,
-          targetFps: widget.targetFps > 0 ? widget.targetFps : null,
+          targetFps: _pacing.targetFps > 0 ? _pacing.targetFps : null,
+          vsyncEnabled: _pacing.vsyncEnabled,
+          frameLimiter: _limiter,
           frameViews: widget.frameViews,
           decorated: widget.decorated,
           physicalResolution: widget.physicalResolution,

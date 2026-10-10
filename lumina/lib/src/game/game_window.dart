@@ -4,6 +4,7 @@ import 'dart:developer' as developer;
 import 'package:lumina_core/lumina_core.dart' show ObservableValue;
 
 import 'package:lumina/src/game/game_display.dart';
+import 'package:lumina/src/game/game_frame_pacing.dart';
 import 'package:lumina/src/game/game_user_settings_file.dart';
 
 /// How the game's window is shown on a desktop.
@@ -90,7 +91,8 @@ abstract final class LuminaGameWindow {
 
   /// Applies the player's saved mode, or [startMode] (Project Settings >
   /// Start Fullscreen) when they never chose one, then their screen
-  /// resolution and monitor ([LuminaGameDisplay.restore]), and listens for
+  /// resolution and monitor ([LuminaGameDisplay.restore]) and their target
+  /// frame rate and VSync ([LuminaGameFramePacing.restore]), and listens for
   /// the runner's own toggles. The `user_settings.json` earlier versions kept
   /// next to the save directory is merged into the settings file once.
   /// Returns the mode the window is in.
@@ -106,6 +108,8 @@ abstract final class LuminaGameWindow {
       saved = await LuminaGameUserSettingsFile.read(path);
     }
     final value = saved[settingsKey];
+    // The player's target frame rate and VSync, before the first frame.
+    LuminaGameFramePacing.restore(saved);
     await _restoreMode((value is String ? LuminaWindowMode.parse(value) : null) ?? startMode);
     await LuminaGameDisplay.restore(saved);
     return mode.value;

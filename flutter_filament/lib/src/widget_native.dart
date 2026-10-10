@@ -4,11 +4,13 @@ import 'dart:ui' as ui;
 import 'package:flutter_filament/src/ffi_package_platform.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 
 import 'package:flutter_filament/src/camera.dart';
 import 'package:flutter_filament/src/engine.dart';
 import 'package:flutter_filament/src/engine_host.dart';
 import 'package:flutter_filament/src/filamat_builder.dart';
+import 'package:flutter_filament/src/frame_limiter.dart';
 import 'package:flutter_filament/src/renderer.dart';
 import 'package:flutter_filament/src/scene.dart';
 import 'package:flutter_filament/src/swap_chain.dart';
@@ -162,6 +164,9 @@ class NativeFilamentWidgetState extends State<FilamentWidget>
 
   bool _isRenderingFrame = false;
 
+  /// Target FPS on the display's refresh (the ticker's vsync timestamps).
+  final FilamentFrameLimiter _limiter = FilamentFrameLimiter();
+
   int _lastTickTimestamp = 0;
   void _onFrameTick() {
     if (!_isInitialized ||
@@ -175,14 +180,10 @@ class NativeFilamentWidgetState extends State<FilamentWidget>
       return;
     }
 
+    final limiter = widget.frameLimiter ?? _limiter;
+    limiter.configure(targetFps: widget.targetFps ?? 0, vsync: widget.vsyncEnabled);
+    if (!limiter.shouldRender(SchedulerBinding.instance.currentFrameTimeStamp)) return;
     final int startTick = DateTime.now().microsecondsSinceEpoch;
-    if (widget.targetFps != null && widget.targetFps! > 0) {
-      final targetIntervalUs = 1000000 / widget.targetFps!;
-      if (_lastTickTimestamp > 0 && (startTick - _lastTickTimestamp) < targetIntervalUs) {
-        return;
-      }
-    }
-    _lastTickTimestamp = startTick;
 
     _isRenderingFrame = true;
     try {
