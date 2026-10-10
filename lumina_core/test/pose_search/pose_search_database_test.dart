@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
+import 'package:crypto/crypto.dart';
 import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina_core/testing.dart';
 import 'package:test/test.dart';
@@ -270,6 +271,26 @@ void main() {
       expect(LuminaPoseSearchBuilder.fingerprint(glb, d.copyWith(clips: [...d.clips, const LuminaPoseSearchClip('Idle')])), isNot(a));
       final other = LuminaSyntheticLocomotionRig.build([LuminaSyntheticLocomotionRig.walk('WalkF', 0, 1, speed: 2)]);
       expect(LuminaPoseSearchBuilder.fingerprint(other, d), isNot(a));
+    });
+
+    test('the fingerprint is the same on the web, where whole-number doubles are integers', () {
+      // A web build reads the caches the editor wrote on the VM: compiled to JavaScript,
+      // 1.0 is the number 1 and `jsonEncode` prints it as `1`.
+      Object? asOnTheWeb(Object? v) => switch (v) {
+            Map() => {for (final e in v.entries) e.key: asOnTheWeb(e.value)},
+            List() => [for (final x in v) asOnTheWeb(x)],
+            double() when v.isFinite && v == v.truncateToDouble() => v.toInt(),
+            _ => v,
+          };
+      final withWholeNumbers = d.copyWith(clips: [
+        const LuminaPoseSearchClip('WalkF', costBias: 1.0, samplingStart: 0.0, samplingEnd: 2.0),
+        const LuminaPoseSearchClip('Idle', costBias: -0.1, samplingStart: 0.25),
+      ]);
+      final vm = withWholeNumbers.toJson();
+      expect(LuminaPoseSearchBuilder.canonicalJson(asOnTheWeb(vm)), LuminaPoseSearchBuilder.canonicalJson(vm));
+      final docHash = sha1.convert(utf8.encode(LuminaPoseSearchBuilder.canonicalJson(asOnTheWeb(vm)))).toString();
+      expect(LuminaPoseSearchBuilder.fingerprintOfHash('glb', withWholeNumbers),
+          'v${LuminaPoseSearchIndex.formatVersion}-glb-$docHash');
     });
 
     test('building in the background gives the same rows', () async {

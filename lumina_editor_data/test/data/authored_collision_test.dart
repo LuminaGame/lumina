@@ -289,6 +289,8 @@ dependencies:
     sdk: flutter
   lumina:
     path: ${Directory.current.parent.path}/lumina
+  lumina_widgets:
+    path: ${Directory.current.parent.path}/lumina_widgets
   vector_math: ^2.1.4
 ''');
       Directory('${probe.path}/lib/levels').createSync(recursive: true);

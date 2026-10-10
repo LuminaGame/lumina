@@ -162,8 +162,52 @@ abstract final class LuminaPoseSearchBuilder {
 
   /// [fingerprint] from the mesh's [glbHash].
   static String fingerprintOfHash(String glbHash, LuminaPoseSearchDatabaseDocument document) {
-    final docHash = sha1.convert(utf8.encode(jsonEncode(document.toJson())));
+    final docHash = sha1.convert(utf8.encode(canonicalJson(document.toJson())));
     return 'v${LuminaPoseSearchIndex.formatVersion}-$glbHash-$docHash';
+  }
+
+  /// [json] encoded the same way on every platform: every number as a double
+  /// in the Dart VM's notation (`1.0`, `0.25`). Compiled to JavaScript a
+  /// whole-number double is an integer and `jsonEncode` prints `1`, so a web
+  /// build would reject every cache the editor wrote and rebuild it on the
+  /// page's only thread. The documents hold doubles only, so this is exactly
+  /// what `jsonEncode` writes on the VM and the caches written so far stay valid.
+  static String canonicalJson(Object? json) {
+    final out = StringBuffer();
+    void write(Object? v) {
+      switch (v) {
+        case Map():
+          out.write('{');
+          var first = true;
+          for (final e in v.entries) {
+            if (!first) out.write(',');
+            first = false;
+            out
+              ..write(jsonEncode('${e.key}'))
+              ..write(':');
+            write(e.value);
+          }
+          out.write('}');
+        case List():
+          out.write('[');
+          for (var i = 0; i < v.length; i++) {
+            if (i > 0) out.write(',');
+            write(v[i]);
+          }
+          out.write(']');
+        case num() when v.isFinite && v == v.truncateToDouble() && v.abs() < 1e21:
+          out
+            ..write(v.toInt())
+            ..write('.0');
+        case num() when v.isFinite:
+          out.write(v.toDouble());
+        default:
+          out.write(jsonEncode(v));
+      }
+    }
+
+    write(json);
+    return out.toString();
   }
 
   /// [build] on a background isolate (inline where isolates are not

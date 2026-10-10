@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Web builds use the bundled pose search caches: the cache fingerprint's document hash no longer depends on how the
+  platform prints whole-number doubles (`LuminaPoseSearchBuilder.canonicalJson`), so the Game Animation Sample on the
+  web no longer rebuilds every database on the page thread (freezes of 3.4, 2.5 and 2.5 s on the first walk and turn,
+  now none over 150 ms). Caches written so far stay valid.
 - Frame generation is not applied while a game is shown through Flutter (the player chose Flutter,
   Direct fell back or is starting, a host without Direct, Play-In-Editor): Flutter shows one frame per
   rendered frame, so it only cost frame rate (3440x1440 built game: 48.1 presented frames/s off, 34.9
