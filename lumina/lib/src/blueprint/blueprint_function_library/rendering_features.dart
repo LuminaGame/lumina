@@ -43,6 +43,8 @@ const Map<String, LuminaBlueprintCallShape> _renderingFeatureCallShapes = <Strin
   'get_supported_upscalers': LuminaBlueprintCallShape('getSupportedUpscalers', [], self: true, outputs: LuminaBlueprintFunctionLibrary._r),
   'get_active_upscaler': LuminaBlueprintCallShape('getActiveUpscaler', [], self: true, outputs: LuminaBlueprintFunctionLibrary._r),
   'is_ray_tracing_active': LuminaBlueprintCallShape('isRayTracingActive', [], self: true, outputs: LuminaBlueprintFunctionLibrary._r),
+  'is_frame_generation_active':
+      LuminaBlueprintCallShape('isFrameGenerationActive', [], self: true, outputs: LuminaBlueprintFunctionLibrary._r),
   'save_game_user_settings': LuminaBlueprintCallShape('saveGameUserSettings', [], self: true),
   'load_game_user_settings': LuminaBlueprintCallShape('loadGameUserSettings', [], self: true),
 };
@@ -92,6 +94,7 @@ final Map<String, LuminaBlueprintFunction> _renderingFeatureFunctions = <String,
   'get_supported_upscalers': (c, i) => LuminaBlueprintFunctionLibrary._ret(_getSupportedUpscalers(c.self)),
   'get_active_upscaler': (c, i) => LuminaBlueprintFunctionLibrary._ret(_getActiveUpscaler(c.self)),
   'is_ray_tracing_active': (c, i) => LuminaBlueprintFunctionLibrary._ret(_isRayTracingActive(c.self)),
+  'is_frame_generation_active': (c, i) => LuminaBlueprintFunctionLibrary._ret(_isFrameGenerationActive(c.self)),
   'save_game_user_settings': (c, i) => _settingsEffect(() => _saveGameUserSettings(c.self)),
   'load_game_user_settings': (c, i) => _settingsEffect(() => _loadGameUserSettings(c.self)),
 };
@@ -150,6 +153,11 @@ List<Object?> _getSupportedUpscalers(LuminaActor self) => List<Object?>.of(_user
 /// The upscaler rendering after the last apply (a fallback may differ from Get Upscaler).
 String _getActiveUpscaler(LuminaActor self) => _userSettings(self).activeUpscaler;
 bool _isRayTracingActive(LuminaActor self) => _userSettings(self).rayTracingActive;
+
+/// Frame generation is applied after the last apply (off where it is not
+/// supported or while the game is shown through Flutter; Get Frame
+/// Generation Enabled keeps the player's choice).
+bool _isFrameGenerationActive(LuminaActor self) => _userSettings(self).frameGenerationActive;
 
 /// Writes the user settings to `GameUserSettings.json` in the background.
 void _saveGameUserSettings(LuminaActor self) => unawaited(_userSettings(self).saveSettings());

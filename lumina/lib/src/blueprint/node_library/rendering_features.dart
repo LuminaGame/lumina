@@ -100,6 +100,8 @@ final List<LuminaBlueprintNodeSpec> _renderingFeatureNodes = <LuminaBlueprintNod
       [..._upscalingKeywords, 'active', 'fallback', 'current']),
   _renderingGet('is_ray_tracing_active', 'Is Ray Tracing Active', LuminaPinType.boolean,
       [..._rayTracingKeywords, 'active', 'fallback', 'current']),
+  _renderingGet('is_frame_generation_active', 'Is Frame Generation Active', LuminaPinType.boolean,
+      [..._frameGenerationKeywords, 'active', 'fallback', 'current', 'flutter', 'presentation']),
   for (final (id, title, verb) in const [
     ('save_game_user_settings', 'Save Game User Settings', 'save'),
     ('load_game_user_settings', 'Load Game User Settings', 'load'),

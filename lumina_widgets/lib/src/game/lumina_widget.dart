@@ -70,11 +70,13 @@ class LuminaGameHostConfiguration extends InheritedWidget {
 ///   is the swap chain's present mode, Target FPS the limiter. Where it
 ///   cannot run (the web, no Vulkan, no presentation window) the widget
 ///   stays on Flutter and reports why ([LuminaGamePresentation.reportFallback]).
-/// - Frame generation asks for Direct by itself. If it stays on while the
-///   game presents through Flutter (the player chose Flutter, Direct fell
-///   back, an editor host), the game keeps running and Flutter shows one
-///   frame per rendered frame; the generated frames are not shown, which
-///   the widget logs as a warning.
+/// - Frame generation the player chose asks for Direct by itself. While the
+///   game is shown through Flutter (the player chose Flutter, Direct fell
+///   back or is starting, a host without Direct) the widget says so
+///   ([LuminaGamePresentation.setFlutterPresentation]) and frame generation
+///   is not applied: the game user settings record it as a rendering
+///   fallback (`Frame generation is off: the game presents through Flutter
+///   (reason).`, logged once) and apply it again when Direct runs.
 ///
 /// Frame rate:
 /// - [targetFps] and [vsyncEnabled] are the project's settings: the defaults of
@@ -212,39 +214,40 @@ class _LuminaGameWidgetState extends State<LuminaGameWidget>
     LuminaGameFramePacing.settings.addListener(_onPacingChanged);
     if (widget.allowDirectPresentation) {
       LuminaGamePresentation.setProjectDefault(widget.presentation);
-      LuminaGamePresentation.setFrameGenerationActive(LuminaRtxController.frameGenerationActive.value);
       LuminaGamePresentation.requested.addListener(_onPresentationRequested);
       _onPresentationRequested();
     }
-    LuminaRtxController.frameGenerationActive.addListener(_onFrameGenerationChanged);
   }
 
-  void _onFrameGenerationChanged() {
-    if (widget.allowDirectPresentation) {
-      LuminaGamePresentation.setFrameGenerationActive(LuminaRtxController.frameGenerationActive.value);
+  /// Why this game is shown through Flutter now (null: presented directly,
+  /// or no scene yet).
+  String? get _flutterPresentationReason {
+    if (!_sceneReady || _presentingDirectly) return null;
+    if (!widget.allowDirectPresentation) return 'the host presents through Flutter';
+    final decision = LuminaGamePresentation.decision.value;
+    if (LuminaGamePresentation.requested.value.mode == LuminaPresentationMode.direct) {
+      return decision.mode == LuminaPresentationMode.flutter
+          ? (decision.reason ?? 'Direct presentation unavailable')
+          : 'Direct presentation starting';
     }
-    _warnFrameGenerationOnFlutter();
+    return decision.reason ?? 'project setting';
   }
 
-  /// Frame generation on while Flutter presents: the game runs, Flutter
-  /// shows one frame per rendered frame, the generated ones are not shown.
-  void _warnFrameGenerationOnFlutter() {
-    final unseen = LuminaRtxController.frameGenerationActive.value && !_presentingDirectly && _sceneReady;
-    if (unseen && !_warnedFrameGeneration) {
-      final reason = widget.allowDirectPresentation
-          ? (LuminaGamePresentation.decision.value.reason ?? 'Direct presentation not running yet')
-          : 'this host presents through Flutter';
-      EngineLoggerService().log(
-          'Frame generation is on but the game presents through Flutter ($reason): '
-          'Flutter shows one frame per rendered frame, the generated frames are not shown.',
-          level: 'warning',
-          source: 'LuminaGameWidget');
+  /// Tells the game user settings whether (and why) Flutter shows the game:
+  /// frame generation is not applied while it does.
+  void _publishFlutterPresentation() {
+    final reason = _flutterPresentationReason;
+    // Never clear what another game host published.
+    if (reason == null && LuminaGamePresentation.flutterPresentation.value != _publishedReason) {
+      _publishedReason = null;
+      return;
     }
-    _warnedFrameGeneration = unseen;
+    LuminaGamePresentation.setFlutterPresentation(reason);
+    _publishedReason = reason;
   }
 
-  bool _warnedFrameGeneration = false;
   bool _sceneReady = false;
+  String? _publishedReason;
 
   /// Direct or Flutter asked for (setting, player choice, frame generation).
   void _onPresentationRequested() {
@@ -262,6 +265,7 @@ class _LuminaGameWidgetState extends State<LuminaGameWidget>
       _presentation = next;
       _surface = surface;
     });
+    _publishFlutterPresentation();
   }
 
   /// The FilamentWidget presents directly, or fell back with a reason.
@@ -279,7 +283,7 @@ class _LuminaGameWidgetState extends State<LuminaGameWidget>
         source: 'LuminaGameWidget');
     if (direct != _presentingDirectly && mounted) setState(() => _presentingDirectly = direct);
     _publishOverlay();
-    _warnFrameGenerationOnFlutter();
+    _publishFlutterPresentation();
   }
 
   /// The app-wide capture ([LuminaUiCaptureRoot]) follows this game's
@@ -345,6 +349,10 @@ class _LuminaGameWidgetState extends State<LuminaGameWidget>
     if (!widget.game.mountGame(engine, scene, view: view)) return;
 
     final world = widget.game.world;
+    // Before BeginPlay applies the user settings: frame generation is not
+    // applied while Flutter shows the game.
+    _sceneReady = true;
+    _publishFlutterPresentation();
     // The widget is the game's host: begin play so the ticker may drive the world.
     world?.beginPlay();
     if (world != null &&
@@ -359,8 +367,6 @@ class _LuminaGameWidgetState extends State<LuminaGameWidget>
       if (_pacing.targetFps > 0) _frameDriver!.targetFrameRate = _pacing.targetFps.toDouble();
       widget.onFrameDriver?.call(_frameDriver!);
     }
-    _sceneReady = true;
-    _warnFrameGenerationOnFlutter();
     _configureLimiter();
 
     if (widget.paused) {
@@ -399,6 +405,7 @@ class _LuminaGameWidgetState extends State<LuminaGameWidget>
     _frameDriver?.dispose();
     _frameDriver = null;
     _sceneReady = false;
+    _publishFlutterPresentation();
     if (widget.game.playState != LuminaPlayState.stopped) {
       widget.game.disposeGame();
     }
@@ -410,7 +417,6 @@ class _LuminaGameWidgetState extends State<LuminaGameWidget>
     if (identical(LuminaUiCapture.directOverlay.value, _publishedOverlay) && _publishedOverlay != null) {
       LuminaUiCapture.directOverlay.value = null;
     }
-    LuminaRtxController.frameGenerationActive.removeListener(_onFrameGenerationChanged);
     if (widget.allowDirectPresentation) {
       LuminaGamePresentation.requested.removeListener(_onPresentationRequested);
     }

@@ -57,12 +57,20 @@ class LuminaPresentationDecision {
 /// ([setProjectDefault]); the player's choice in `GameUserSettings.json`
 /// (key `presentation`, [restore] / [apply]) wins over it. Frame generation
 /// (DLSS or FSR3) in force asks for Direct by itself, since its frames only
-/// reach the screen when Filament presents ([setFrameGenerationActive]).
+/// reach the screen when Filament presents ([setFrameGenerationRequested]).
 ///
 /// The game host tries what [requested] says; when the platform cannot
 /// (the web, a backend other than Vulkan, a runner without the
 /// presentation window, a failure) it reports the reason with
 /// [reportFallback] and keeps Flutter. [decision] is what is in force.
+///
+/// While a game is shown through Flutter ([flutterPresentation] non-null,
+/// set by the game host and Play-In-Editor) frame generation is not applied
+/// to its view: Flutter shows one frame per rendered frame, so generated
+/// frames would only cost frame rate. The request for Direct comes from the
+/// frame generation the player chose ([setFrameGenerationRequested]), not
+/// from what is applied, so a Direct fallback is stable: Flutter, frame
+/// generation inactive, no retry.
 abstract final class LuminaGamePresentation {
   /// The key in the settings file.
   static const String settingsKey = 'presentation';
@@ -87,8 +95,23 @@ abstract final class LuminaGamePresentation {
   /// The player's choice, if any.
   static LuminaPresentationMode? get playerChoice => _player;
 
-  /// Whether frame generation is in force.
-  static bool get frameGenerationActive => _frameGeneration;
+  /// Whether frame generation is chosen and supported (asks for Direct; it
+  /// is applied only where the game is not shown through Flutter).
+  static bool get frameGenerationRequested => _frameGeneration;
+
+  /// Why the game is shown through Flutter right now, null when nothing
+  /// shows it through Flutter: the game host presents directly, or no
+  /// Flutter host is mounted (an engine loop presenting its own swap chain).
+  /// The game host sets it ([setFlutterPresentation]): `player setting`,
+  /// a fallback reason, `Direct presentation starting`, `Play-In-Editor`,
+  /// `the host presents through Flutter`.
+  static final ObservableValue<String?> flutterPresentation = ObservableValue<String?>(null);
+
+  /// The host shows the game through Flutter for [reason] (null: it does
+  /// not, or it went away).
+  static void setFlutterPresentation(String? reason) {
+    if (flutterPresentation.value != reason) flutterPresentation.value = reason;
+  }
 
   /// What [project], the [player]'s choice and [frameGeneration] ask for:
   /// the player's choice wins over the project's; frame generation turns
@@ -135,10 +158,11 @@ abstract final class LuminaGamePresentation {
   /// The key this class keeps in the settings file (null removes it).
   static Map<String, Object?> settingsPatch() => {settingsKey: _player?.id};
 
-  /// Frame generation was turned on or off.
-  static void setFrameGenerationActive(bool active) {
-    if (active == _frameGeneration) return;
-    _frameGeneration = active;
+  /// Frame generation was chosen (and is supported) or turned off: the
+  /// game user settings call this on every apply.
+  static void setFrameGenerationRequested(bool requested) {
+    if (requested == _frameGeneration) return;
+    _frameGeneration = requested;
     _publish();
   }
 
@@ -155,6 +179,7 @@ abstract final class LuminaGamePresentation {
     _player = null;
     _frameGeneration = false;
     _fallback = null;
+    flutterPresentation.value = null;
     _publish();
   }
 

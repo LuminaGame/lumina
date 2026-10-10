@@ -285,11 +285,15 @@ a backend other than Vulkan, a runner without the presentation window (a project
 failed swap chain. Switching at runtime creates or releases the window and the swap chain; the view and the UI stay
 mounted.
 
-**Frame generation with Flutter in force.** Frame generation stays applied when the game presents through Flutter
-anyway (the player chose Flutter, Direct fell back): the game keeps running, Flutter shows one frame per rendered
-frame and the generated frames are not shown; the game widget logs a warning. The view is rendered once per frame
-(only by the `FilamentWidget`), so nothing stalls the readback in any combination of presentation and frame
-generation ([lumina_widgets](../lumina_widgets/index.md#direct-presentation)).
+**Frame generation with Flutter in force.** The request for Direct comes from the frame generation the player chose
+and the GPU supports (`setFrameGenerationRequested`, called by the game user settings on every apply). While a host
+shows the game through Flutter (`flutterPresentation`: the player chose Flutter, Direct fell back or is starting, a
+host without Direct, Play-In-Editor) frame generation is not applied: it is a rendering fallback
+(`Frame generation is off: the game presents through Flutter (<reason>).`), Get Frame Generation Enabled keeps the
+choice, Is Frame Generation Active is false, and it is applied again on the next world tick once Direct runs. A Direct
+fallback is therefore stable (no flip-flop, no retry). The view is rendered once per frame (only by the
+`FilamentWidget`), so nothing stalls the readback in any combination
+([lumina_widgets](../lumina_widgets/index.md#direct-presentation)).
 
 **Design.**
 - *Frame loop*: unchanged owner. Flutter's vsync callbacks (the game widget's ticker and the shared
@@ -329,7 +333,9 @@ On a 60 Hz composed display more than about 120 presents/s are not shown (2x sho
 | `resolve` | `static LuminaPresentationDecision resolve({required project, player, bool frameGeneration = false})` | The rules above. |
 | `requested` / `decision` | `static final ObservableValue<LuminaPresentationDecision>` | What the game asks for / what is in force. |
 | `setProjectDefault` / `apply` / `restore` / `settingsPatch` | | Project setting, player choice (null forgets), start-up from the settings file, the file key. |
-| `setFrameGenerationActive` / `reportFallback` / `reset` | | Frame generation on or off; the host could not (null: it can); defaults. |
+| `setFrameGenerationRequested` / `frameGenerationRequested` | | Frame generation chosen and supported (asks for Direct). |
+| `flutterPresentation` / `setFlutterPresentation` | `static final ObservableValue<String?>` | Why a host shows the game through Flutter now (null: it does not); frame generation is not applied while set. |
+| `reportFallback` / `reset` | | The host could not present directly (null: it can); defaults. |
 
 ## `lib/src/game/lumina_game.dart`
 

@@ -1,6 +1,7 @@
 import 'package:flutter_filament/filament.dart';
 import 'package:lumina_core/lumina_core.dart' show EngineLoggerService;
 
+import 'package:lumina/src/game/game_presentation.dart';
 import 'package:lumina/src/post_process/rendering_features.dart';
 import 'package:lumina/src/post_process/rtx_settings.dart';
 import 'package:lumina/src/world/subsystem/world_subsystem.dart';
@@ -13,6 +14,12 @@ import 'package:lumina/src/world/subsystem/world_subsystem.dart';
 /// Setters only stage the choice; [applyRenderingFeatures] (called by the
 /// subsystem's `applySettings`) resolves it against the GPU and puts it on
 /// the world's bound view through a [LuminaRtxController].
+///
+/// Frame generation the GPU supports asks for Direct presentation
+/// ([LuminaGamePresentation.setFrameGenerationRequested]); while the game is
+/// shown through Flutter ([LuminaGamePresentation.flutterPresentation]) it is
+/// not applied and [renderingFallbacks] says why. The choice is kept, and it
+/// is applied again as soon as nothing shows the game through Flutter.
 mixin LuminaUserSettingsRenderingFeatures on LuminaWorldSubsystem {
   LuminaRenderingFeatureSettings _features = const LuminaRenderingFeatureSettings();
   LuminaResolvedRenderingFeatures? _resolved;
@@ -23,6 +30,8 @@ mixin LuminaUserSettingsRenderingFeatures on LuminaWorldSubsystem {
   TemporalAntiAliasingOptions? _baseTaa;
   DynamicResolutionOptions? _baseDynamicResolution;
   List<String> _loggedFallbacks = const [];
+  String? _flutterPresentationApplied;
+  bool _frameGenerationRequested = false;
 
   /// The player's ray tracing / upscaler choice (staged until applied).
   LuminaRenderingFeatureSettings get renderingFeatures => _features;
@@ -107,6 +116,10 @@ mixin LuminaUserSettingsRenderingFeatures on LuminaWorldSubsystem {
   /// Ray tracing is actually on.
   bool get rayTracingActive => activeRenderingFeatures.rayTracing;
 
+  /// Frame generation is actually applied ([frameGenerationEnabled] is the
+  /// choice; it is off where unsupported or while Flutter shows the game).
+  bool get frameGenerationActive => activeRenderingFeatures.frameGeneration;
+
   /// What the last apply changed from the choice, and why.
   List<String> get renderingFallbacks => _resolved?.fallbacks ?? const [];
 
@@ -130,7 +143,7 @@ mixin LuminaUserSettingsRenderingFeatures on LuminaWorldSubsystem {
     final baseChanged = baseTaa != _baseTaa || baseDynamicResolution != _baseDynamicResolution;
     _baseTaa = baseTaa;
     _baseDynamicResolution = baseDynamicResolution;
-    var resolved = _features.resolve(renderingSupport);
+    var resolved = _resolve();
     final controller = _controller();
     if (controller != null) {
       // The profile just rewrote the view's TAA / dynamic resolution.
@@ -146,7 +159,7 @@ mixin LuminaUserSettingsRenderingFeatures on LuminaWorldSubsystem {
           error = DlssRayReconstruction.lastErrorMessage;
         } catch (_) {}
         _rayReconstructionFailure = 'DLSS Ray Reconstruction could not start: ${error ?? 'unknown error'}';
-        resolved = _features.resolve(renderingSupport);
+        resolved = _resolve();
         _push(controller, resolved.settings);
       }
       if (resolved.settings.upscaler == LuminaUpscaler.dlss && controller.dlss == null && width > 0 && height > 0) {
@@ -155,7 +168,7 @@ mixin LuminaUserSettingsRenderingFeatures on LuminaWorldSubsystem {
           error = Dlss.lastErrorMessage;
         } catch (_) {}
         _dlssFailure = 'DLSS could not start: ${error ?? 'the engine was created without the DLSS extensions'}';
-        resolved = _features.resolve(renderingSupport);
+        resolved = _resolve();
         _push(controller, resolved.settings);
       }
     }
@@ -166,6 +179,16 @@ mixin LuminaUserSettingsRenderingFeatures on LuminaWorldSubsystem {
   /// Keeps DLSS on the viewport size and ray-traced shadows on newly added
   /// suns; cheap when nothing changed.
   void tickRenderingFeatures() {
+    final baseTaa = _baseTaa;
+    final baseDynamicResolution = _baseDynamicResolution;
+    if (_resolved != null &&
+        baseTaa != null &&
+        baseDynamicResolution != null &&
+        LuminaGamePresentation.flutterPresentation.value != _flutterPresentationApplied) {
+      // Shown through Flutter now, or no longer: frame generation off or on again.
+      applyRenderingFeatures(baseTaa: baseTaa, baseDynamicResolution: baseDynamicResolution);
+      return;
+    }
     final controller = _rtx;
     final resolved = _resolved;
     if (controller == null || resolved == null || !identical(world?.filamentViewOrNull, _rtxView)) return;
@@ -174,9 +197,33 @@ mixin LuminaUserSettingsRenderingFeatures on LuminaWorldSubsystem {
 
   /// Releases DLSS and forgets the view.
   void disposeRenderingFeatures() {
+    if (_frameGenerationRequested) {
+      _frameGenerationRequested = false;
+      LuminaGamePresentation.setFrameGenerationRequested(false);
+    }
     _rtx?.dispose();
     _rtx = null;
     _rtxView = null;
+  }
+
+  /// The choice against the GPU, then the presentation: frame generation is
+  /// requested (it asks for Direct) but not applied while the game is shown
+  /// through Flutter.
+  LuminaResolvedRenderingFeatures _resolve() {
+    final resolved = _features.resolve(renderingSupport);
+    final requested = resolved.settings.frameGeneration;
+    if (requested != _frameGenerationRequested) {
+      _frameGenerationRequested = requested;
+      LuminaGamePresentation.setFrameGenerationRequested(requested);
+    }
+    // After the request: asking for Direct may have changed the presentation.
+    final flutter = LuminaGamePresentation.flutterPresentation.value;
+    _flutterPresentationApplied = flutter;
+    if (!requested || flutter == null) return resolved;
+    return LuminaResolvedRenderingFeatures(
+      resolved.settings.copyWith(frameGeneration: false),
+      List.unmodifiable([...resolved.fallbacks, 'Frame generation is off: the game presents through Flutter ($flutter).']),
+    );
   }
 
   LuminaRtxController? _controller() {

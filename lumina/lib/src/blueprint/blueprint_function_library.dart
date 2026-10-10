@@ -921,6 +921,7 @@ abstract final class LuminaBlueprintFunctionLibrary {
   static const getSupportedUpscalers = _getSupportedUpscalers;
   static const getActiveUpscaler = _getActiveUpscaler;
   static const isRayTracingActive = _isRayTracingActive;
+  static const isFrameGenerationActive = _isFrameGenerationActive;
   static const saveGameUserSettings = _saveGameUserSettings;
   static const loadGameUserSettings = _loadGameUserSettings;
 

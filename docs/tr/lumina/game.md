@@ -283,10 +283,14 @@ generation) oyuncu Flutter seçmediyse Direct ister. Direct çalışamadığınd
 backend, sunum penceresi olmayan runner (önceden üretilmiş proje; şimdilik Linux), başarısız swap chain. Çalışırken
 geçiş pencereyi ve swap chain'i oluşturur ya da bırakır; view ve UI bağlı kalır.
 
-**Flutter yürürlükteyken frame generation.** Oyun yine de Flutter üzerinden sunarken (oyuncu Flutter'ı seçti, Direct
-geri döndü) frame generation uygulanmış kalır: oyun çalışmaya devam eder, Flutter çizilen her kare için bir kare
-gösterir ve üretilen kareler gösterilmez; oyun widget'ı bir uyarı loglar. View her karede bir kez çizilir (yalnızca
-`FilamentWidget` tarafından); sunum ve frame generation'ın hiçbir birleşiminde geri okuma tıkanmaz
+**Flutter yürürlükteyken frame generation.** Direct isteği, oyuncunun seçtiği ve GPU'nun desteklediği frame
+generation'dan gelir (`setFrameGenerationRequested`, oyun kullanıcı ayarları her uygulamada çağırır). Bir host oyunu
+Flutter üzerinden gösterirken (`flutterPresentation`: oyuncu Flutter'ı seçti, Direct geri döndü ya da başlıyor,
+Direct'i olmayan bir host, Play-In-Editor) frame generation uygulanmaz: bir rendering geri düşüşüdür
+(`Frame generation is off: the game presents through Flutter (<neden>).`), Get Frame Generation Enabled seçimi korur,
+Is Frame Generation Active false döner ve Direct çalışınca bir sonraki dünya tick'inde yeniden uygulanır. Bu yüzden
+Direct geri dönüşü kararlıdır (açılıp kapanma yok, yeniden deneme yok). View her karede bir kez çizilir (yalnızca
+`FilamentWidget` tarafından); hiçbir birleşimde geri okuma tıkanmaz
 ([lumina_widgets](../lumina_widgets/index.md#doğrudan-sunum)).
 
 **Tasarım.**
@@ -328,7 +332,9 @@ ekran gerekir).
 | `resolve` | `static LuminaPresentationDecision resolve({required project, player, bool frameGeneration = false})` | Yukarıdaki kurallar. |
 | `requested` / `decision` | `static final ObservableValue<LuminaPresentationDecision>` | Oyunun istediği / geçerli olan. |
 | `setProjectDefault` / `apply` / `restore` / `settingsPatch` | | Proje ayarı, oyuncu seçimi (null unutur), ayar dosyasından başlangıç, dosya anahtarı. |
-| `setFrameGenerationActive` / `reportFallback` / `reset` | | Frame generation açık/kapalı; ev sahibi yapamadı (null: yapabiliyor); varsayılanlar. |
+| `setFrameGenerationRequested` / `frameGenerationRequested` | | Seçilen ve desteklenen frame generation (Direct ister). |
+| `flutterPresentation` / `setFlutterPresentation` | `static final ObservableValue<String?>` | Bir host'un oyunu şu an neden Flutter üzerinden gösterdiği (null: göstermiyor); doluyken frame generation uygulanmaz. |
+| `reportFallback` / `reset` | | Ev sahibi doğrudan sunamadı (null: sunabiliyor); varsayılanlar. |
 
 ## `lib/src/game/lumina_game.dart`
 

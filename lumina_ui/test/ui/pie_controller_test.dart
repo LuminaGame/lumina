@@ -174,6 +174,26 @@ void main() {
       pie.stopPie(engine, scene);
     });
 
+    test('Play is shown through Flutter: frame generation chosen in Play stays off, recorded as a fallback', () {
+      if (!createEngine()) return markTestSkipped('flutter_filament native library unavailable');
+      addTearDown(LuminaGamePresentation.reset);
+      final pie = PieController(vm);
+
+      pie.startPie(engine, scene);
+      expect(pie.isPlaying, isTrue, reason: pie.lastError ?? '');
+      expect(LuminaGamePresentation.flutterPresentation.value, 'Play-In-Editor');
+      final settings = pie.game!.gameInstance.world!.userSettings;
+      settings
+        ..setUpscaler('FSR3')
+        ..setFrameGenerationEnabled(true)
+        ..applySettings();
+      expect(settings.frameGenerationEnabled, isTrue, reason: 'Get returns the choice');
+      expect(settings.activeRenderingFeatures.frameGeneration, isFalse);
+
+      pie.stopPie(engine, scene);
+      expect(LuminaGamePresentation.flutterPresentation.value, isNull);
+    });
+
     test('Undo stack frozen during PIE', () {
       if (!createEngine()) return markTestSkipped('flutter_filament native library unavailable');
       final pie = PieController(vm);

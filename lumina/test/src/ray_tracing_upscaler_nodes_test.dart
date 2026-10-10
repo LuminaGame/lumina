@@ -31,6 +31,7 @@ const _ids = [
   'get_supported_upscalers',
   'get_active_upscaler',
   'is_ray_tracing_active',
+  'is_frame_generation_active',
   'save_game_user_settings',
   'load_game_user_settings',
 ];
@@ -91,6 +92,8 @@ void main() {
     expect(get('get_supported_upscalers'), ['None']);
     expect(get('get_active_upscaler'), 'None');
     expect(get('is_ray_tracing_active'), isFalse);
+    expect(get('get_frame_generation_enabled'), isTrue, reason: 'the choice');
+    expect(get('is_frame_generation_active'), isFalse, reason: 'unsupported without a renderer');
     expect(world.userSettings.renderingFallbacks, hasLength(3));
   });
 

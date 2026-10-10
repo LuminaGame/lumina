@@ -56,9 +56,9 @@ void main() {
   group('in force', () {
     test('frame generation turns Direct on and off', () {
       LuminaGamePresentation.setProjectDefault(flutter);
-      LuminaGamePresentation.setFrameGenerationActive(true);
+      LuminaGamePresentation.setFrameGenerationRequested(true);
       expect(LuminaGamePresentation.decision.value.mode, direct);
-      LuminaGamePresentation.setFrameGenerationActive(false);
+      LuminaGamePresentation.setFrameGenerationRequested(false);
       expect(LuminaGamePresentation.decision.value.mode, flutter);
     });
 
@@ -68,7 +68,7 @@ void main() {
       expect(LuminaGamePresentation.requested.value.mode, direct);
       expect(LuminaGamePresentation.decision.value,
           const LuminaPresentationDecision(flutter, reason: 'unsupported on the web'));
-      LuminaGamePresentation.setFrameGenerationActive(true);
+      LuminaGamePresentation.setFrameGenerationRequested(true);
       expect(LuminaGamePresentation.decision.value, const LuminaPresentationDecision(direct, reason: 'frame generation'));
     });
 

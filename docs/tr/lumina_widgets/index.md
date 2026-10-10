@@ -164,12 +164,18 @@ sunum penceresi, `lumina/game_window` kanalı üzerinden: `createSurface`, `dest
 view'i ve UI'ı korur. Her iki yolda da view'in tek çizimi `FilamentWidget`'ınkidir (frame driver yalnızca dünyayı
 tick'ler); doğrudan sunarken `LuminaScreenResolutionBox(barsOnly: true)` yalnızca bantları siyaha boyar.
 
-**Flutter yolunda frame generation.** Yürürlükteki frame generation kendiliğinden Direct ister; üretilen kareler ekrana
-ancak orada ulaşır. Oyun Flutter üzerinden sunarken (oyuncu Flutter'ı seçti, Direct geri döndü, editör) açık kalırsa
-oyun çalışmaya devam eder: `FilamentWidget` view'i her karede bir kez kendi headless swap chain'ine çizer, geri okur
-ve Flutter o kareyi gösterir; üretilen kareler headless swap chain'e sunulur ve hiç gösterilmez. Widget bu durum her
-başladığında bir kez uyarı loglar (`Frame generation is on but the game presents through Flutter (<neden>) ...`).
-Önceden frame driver view'i 1x1 bir headless swap chain'e ikinci kez çiziyordu; frame generation açıkken bu geri
+**Flutter yolunda frame generation.** Oyuncunun seçtiği frame generation kendiliğinden Direct ister; üretilen kareler
+ekrana ancak orada ulaşır. Oyun Flutter üzerinden gösterilirken (oyuncu Flutter'ı seçti, Direct geri döndü ya da
+başlıyor, editör gibi Direct'i olmayan bir host) widget nedenini yayımlar (`LuminaGamePresentation.setFlutterPresentation`,
+`flutterPresentation` ile okunur) ve frame generation view'e **uygulanmaz**: Flutter çizilen her kare için bir kare
+gösterir; derlenmiş bir oyunda 3440x1440'ta uygulanmış kalması boşuna kare hızına mal oluyordu (kapalıyken 48,1
+gösterilen kare/sn, FSR3 frame generation ile 34,9, DLSS frame generation 2x ile 29,0; dünya tick'i de 31 Hz'e düştü).
+Oyun kullanıcı ayarları bunu bir rendering geri düşüşü olarak kaydeder (`Frame generation is off: the game presents
+through Flutter (<neden>).`, bir kez uyarı olarak loglanır); Get Frame Generation Enabled oyuncunun seçimini döndürür,
+Is Frame Generation Active ve `activeRenderingFeatures` kapalı bildirir; Direct çalışmaya başlayınca bir sonraki dünya
+tick'inde yeniden uygulanır. Direct isteği uygulanan değil seçilen frame generation'dan geldiği için Direct geri
+dönüşü kararlıdır: Flutter, frame generation etkin değil, runner'a yeniden sorulmaz. Play-In-Editor oturumu için
+neden `Play-In-Editor` olarak ayarlanır. Önceden frame driver view'i 1x1 bir headless swap chain'e ikinci kez çiziyordu; frame generation açıkken bu geri
 okumayı tıkıyordu (tekrarlanan `readPixels` fence zaman aşımları, oyun donuyordu), kapalıyken kare hızına mal
 oluyordu (ekran dışı, RTX PRO 2000, beş prop: 1024x768'de 199'a karşı 405 kare/sn, 1920x1080'de 137'ye karşı 206,
 3440x1440'ta 92,5'e karşı 118; `test/smoke/flutter_presentation_frame_generation_smoke_test.dart`).

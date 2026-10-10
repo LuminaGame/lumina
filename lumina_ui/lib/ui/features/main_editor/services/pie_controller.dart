@@ -149,6 +149,9 @@ class PieController with _PieBlueprintsInPlay, _PieGameInput {
       targetFps: viewModel.project.settings.targetFps,
       vsyncEnabled: viewModel.project.settings.vsyncEnabled,
     );
+    // The editor viewport shows Play through Flutter: frame generation stays
+    // off (its frames would never be shown), recorded as a rendering fallback.
+    LuminaGamePresentation.setFlutterPresentation('Play-In-Editor');
 
     _editorSnapshot = viewModel.actors.map((a) => EditorActorNode.fromMap(a.toMap())).toList();
     _selectedActorIdSnapshot = viewModel.selectedActorId;
@@ -519,6 +522,8 @@ class PieController with _PieBlueprintsInPlay, _PieGameInput {
     } catch (e) {
       lastError = e.toString();
       viewModel.logger.log('PIE dispose raised: $e', level: 'warning', source: 'PIE');
+    } finally {
+      LuminaGamePresentation.setFlutterPresentation(null);
     }
     _game = null;
     _engine = null;

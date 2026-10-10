@@ -165,12 +165,18 @@ switching keeps the view and the UI. On both paths the `FilamentWidget`'s render
 frame driver only ticks the world), and while presenting directly `LuminaScreenResolutionBox(barsOnly: true)` paints
 black only on the bars.
 
-**Frame generation on the Flutter path.** Frame generation in force asks for Direct by itself, which is where its
-frames reach the screen. When it stays on while the game presents through Flutter (the player chose Flutter, Direct
-fell back, the editor), the game keeps running: the `FilamentWidget` renders the view once per frame into its headless
-swap chain, reads it back and Flutter shows that frame; the generated frames are presented into the headless swap
-chain and never shown. The widget logs a warning (`Frame generation is on but the game presents through Flutter
-(<reason>) ...`) once each time this starts. Earlier the frame driver rendered the view a second time into a 1x1
+**Frame generation on the Flutter path.** Frame generation the player chose asks for Direct by itself, which is where
+its frames reach the screen. While the game is shown through Flutter (the player chose Flutter, Direct fell back or is
+starting, a host without Direct such as the editor) the widget publishes why
+(`LuminaGamePresentation.setFlutterPresentation`, read back as `flutterPresentation`) and frame generation is **not
+applied** to the view: Flutter shows one frame per rendered frame, and in a built game at 3440x1440 keeping it applied
+cost frame rate for nothing (48.1 presented frames/s off, 34.9 with FSR3 frame generation, 29.0 with DLSS frame
+generation 2x, whose world tick also fell to 31 Hz). The game user settings record it as a rendering fallback
+(`Frame generation is off: the game presents through Flutter (<reason>).`, logged once as a warning); Get Frame
+Generation Enabled keeps the player's choice, Is Frame Generation Active and `activeRenderingFeatures` report it off,
+and it is applied again on the next world tick once Direct runs. Because the request for Direct comes from the chosen
+frame generation, not the applied one, a Direct fallback is stable: Flutter, frame generation inactive, the runner is
+not asked again. Play-In-Editor sets the reason `Play-In-Editor` for its session. Earlier the frame driver rendered the view a second time into a 1x1
 headless swap chain; with frame generation on that stalled the readback (repeated `readPixels` fence timeouts, the
 game froze), and with it off it cost frame rate (offscreen, RTX PRO 2000, five props: 199 vs 405 frames/s at
 1024x768, 137 vs 206 at 1920x1080, 92.5 vs 118 at 3440x1440; `test/smoke/flutter_presentation_frame_generation_smoke_test.dart`).

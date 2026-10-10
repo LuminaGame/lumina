@@ -2,12 +2,21 @@
 
 ## Unreleased
 
+- Frame generation is not applied while a game is shown through Flutter (the player chose Flutter,
+  Direct fell back or is starting, a host without Direct, Play-In-Editor): Flutter shows one frame per
+  rendered frame, so it only cost frame rate (3440x1440 built game: 48.1 presented frames/s off, 34.9
+  FSR3, 29.0 DLSS 2x). It is a rendering fallback (`Frame generation is off: the game presents through
+  Flutter (<reason>).`); Get Frame Generation Enabled keeps the choice, the new Is Frame Generation
+  Active node / `frameGenerationActive` report it off, and it comes back once Direct runs. The chosen
+  frame generation still asks for Direct (`LuminaGamePresentation.setFrameGenerationRequested`,
+  replacing `setFrameGenerationActive`; `flutterPresentation` / `setFlutterPresentation`), so a Direct
+  fallback is stable.
+
 - Game widget: the view is rendered once per frame. `LuminaGameWidget`'s frame driver no longer renders
   the view a second time into a 1x1 headless swap chain; it only ticks and paces the world
   (`LuminaFrameDriver` without a `swapChain`, new `rendersView` / `renderedFrames`, widget
   `onFrameDriver`). Frame generation on the Flutter presentation path no longer freezes the game on
-  readback fence timeouts (the generated frames are not shown there; a warning is logged), and the
-  Flutter path is faster (offscreen, five props: 199 → 405 frames/s at 1024x768, 92.5 → 118 at
+  readback fence timeouts, and the Flutter path is faster (offscreen, five props: 199 → 405 frames/s at 1024x768, 92.5 → 118 at
   3440x1440).
 
 - Rendering settings: DLSS Ray Reconstruction is a fourth upscaler (`LuminaUpscaler.dlssRayReconstruction`,

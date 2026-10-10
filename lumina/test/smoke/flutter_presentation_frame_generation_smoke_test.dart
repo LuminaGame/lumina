@@ -14,8 +14,10 @@ import 'package:vector_math/vector_math_64.dart';
 /// The Flutter presentation path of a game, offscreen: the game widget's
 /// frame driver ticks the world and the FilamentWidget renders the view into
 /// its headless swap chain and reads it back each frame (what Flutter then
-/// shows). With frame generation on (FSR3, DLSS 2x) the frames keep coming
-/// with no readback stall; with it off, the presented rate of the view
+/// shows). A game widget does not apply frame generation while Flutter shows
+/// the game; this loop has no Flutter host, so it is applied here, and with
+/// it on (FSR3, DLSS 2x) a readback loop still gets every frame with no
+/// stall. With it off, the presented rate of the view
 /// rendered once per frame is compared with the former wiring, whose frame
 /// driver rendered the view a second time into a 1x1 swap chain.
 void main() {
