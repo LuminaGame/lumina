@@ -118,7 +118,8 @@ The level's World Partition settings (shown when nothing is selected; `details_w
 | Method / Getter | Signature | Purpose & Description |
 | :--- | :--- | :--- |
 | `project` | `LuminaProject? project` | Holds the `project` property or configuration state. |
-| `projectLocation` | `String? projectLocation` | Holds the `projectLocation` property or configuration state. |
+| `projectLocation` | `String? projectLocation` | The folder holding the project folder (`<projectLocation>/<project name>`), when no `projectDir` is given. |
+| `projectDir` | `String? projectDir` | The project folder itself, whatever it is called (wins over `projectLocation`); the launcher passes it for every Open and `--project <dir>`. |
 | `viewModel` | `EditorViewModel? viewModel` | Holds the `viewModel` property or configuration state. |
 | `createState` | `State<MainEditorView> createState() => _MainEditorViewState()` | Creates, configures, and returns a new `State` instance or associated GPU resource. |
 

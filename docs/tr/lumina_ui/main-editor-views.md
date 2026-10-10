@@ -118,7 +118,8 @@ Seviyenin World Partition ayarları (hiçbir şey seçili değilken görünür; 
 | Metot / Getter | İmzası | Ne İşe Yarar? |
 | :--- | :--- | :--- |
 | `project` | `LuminaProject? project` | `project` alanını (field/property) ve ilişkili veriyi saklar. |
-| `projectLocation` | `String? projectLocation` | `projectLocation` alanını (field/property) ve ilişkili veriyi saklar. |
+| `projectLocation` | `String? projectLocation` | Proje klasörünü içeren klasör (`<projectLocation>/<proje adı>`), `projectDir` verilmediğinde. |
+| `projectDir` | `String? projectDir` | Proje klasörünün kendisi, adı ne olursa olsun (`projectLocation`'dan önceliklidir); launcher her açmada ve `--project <dir>` için bunu verir. |
 | `viewModel` | `EditorViewModel? viewModel` | `viewModel` alanını (field/property) ve ilişkili veriyi saklar. |
 | `createState` | `State<MainEditorView> createState() => _MainEditorViewState()` | Yeni bir `State` örneği veya ilişkili GPU kaynağını oluşturur ve yapılandırır. |
 
