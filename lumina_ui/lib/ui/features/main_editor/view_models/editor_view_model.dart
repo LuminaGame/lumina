@@ -598,6 +598,7 @@ class EditorViewModel extends _EditorViewModelState
   @override
   void dispose() {
     _cameraSaveTimer?.cancel();
+    _meshNotifyTimer?.cancel();
     EditorHandOff.beforeExit.remove(_shutdownPluginsForExit);
     unawaited(pluginProcesses.shutdownAll());
     removeListener(panelsController.refresh);

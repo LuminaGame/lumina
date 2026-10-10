@@ -287,7 +287,9 @@ mixin _EditorActorSpawning on _EditorViewModelState {
       notifyListeners();
     } else if (!_meshNotifyDirty) {
       _meshNotifyDirty = true;
-      Future<void>.delayed(const Duration(milliseconds: 60), () {
+      _meshNotifyTimer?.cancel();
+      _meshNotifyTimer = Timer(const Duration(milliseconds: 60), () {
+        _meshNotifyTimer = null;
         if (_disposed || !_meshNotifyDirty) return;
         _meshNotifyDirty = false;
         _lastMeshNotify = DateTime.now();

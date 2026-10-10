@@ -335,6 +335,9 @@ abstract class _EditorViewModelState extends ChangeNotifier {
   int _meshesLoaded = 0;
   bool _meshStreamRunning = false;
   bool _meshNotifyDirty = false;
+
+  /// The deferred notify of a throttled mesh stream; cancelled on dispose.
+  Timer? _meshNotifyTimer;
   DateTime _lastMeshNotify = DateTime.fromMillisecondsSinceEpoch(0);
 
   /// Actor ids in the order their mesh loads were started (tests).
@@ -343,6 +346,11 @@ abstract class _EditorViewModelState extends ChangeNotifier {
   /// The viewport camera, remembered per project and put back on reopen.
   final EditorCameraStore _cameraStore;
   Timer? _cameraSaveTimer;
+
+  /// Whether camera changes are saved after a debounce timer; off with
+  /// `enableTimers: false` (tests), where [flushCameraState] writes them.
+  final bool _debounceCameraSave;
+  bool _cameraSaveDue = false;
   Future<void>? _pendingCameraSave;
   EditorCameraState? _savedCamera;
   int _qualityRevision = 0;
@@ -393,6 +401,7 @@ abstract class _EditorViewModelState extends ChangeNotifier {
        _cameraStore = cameraStore ?? EditorCameraStore(),
        _thumbnailService = thumbnailService ?? ThumbnailService(),
        _autoThumbnails = autoGenerateThumbnails ?? enableTimers,
+       _debounceCameraSave = enableTimers,
        _customProjectLocation = projectDirPath ?? projectLocation,
        _project =
            initialProject ??

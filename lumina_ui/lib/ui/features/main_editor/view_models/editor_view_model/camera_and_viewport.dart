@@ -577,13 +577,18 @@ mixin _EditorCameraAndViewport on _EditorViewModelState {
 
   /// Saves the camera a moment after it stopped moving (one write per pause,
   /// not one per mouse event). Fire-and-forget; [flushCameraState] awaits it.
+  /// Without timers (`enableTimers: false`) the change only waits for
+  /// [flushCameraState], so no timer outlives a test's widget tree.
   void _scheduleCameraSave() {
     _cameraSaveTimer?.cancel();
+    _cameraSaveDue = true;
+    if (!_debounceCameraSave) return;
     _cameraSaveTimer = Timer(const Duration(milliseconds: 400), _saveCameraNow);
   }
 
   void _saveCameraNow() {
     _cameraSaveTimer = null;
+    _cameraSaveDue = false;
     final state = cameraState;
     if (state == _savedCamera) return;
     _savedCamera = state;
@@ -592,8 +597,8 @@ mixin _EditorCameraAndViewport on _EditorViewModelState {
 
   /// Writes a camera change that is still pending (a test, a close).
   Future<void> flushCameraState() async {
-    if (_cameraSaveTimer != null) {
-      _cameraSaveTimer!.cancel();
+    if (_cameraSaveDue) {
+      _cameraSaveTimer?.cancel();
       _saveCameraNow();
     }
     await _pendingCameraSave;
