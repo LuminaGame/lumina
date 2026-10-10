@@ -5,7 +5,11 @@ import 'package:vector_math/vector_math_64.dart';
 import 'package:lumina/lumina.dart';
 
 part 'blueprint_dart_generator/graph_compiler.dart';
+part 'blueprint_dart_generator/graph_compiler_flow.dart';
+part 'blueprint_dart_generator/graph_compiler_values.dart';
 part 'blueprint_dart_generator/class_writer.dart';
+part 'blueprint_dart_generator/class_writer_scripts.dart';
+part 'blueprint_dart_generator/class_writer_members.dart';
 part 'blueprint_dart_generator/anim_class_writer.dart';
 
 /// What [BlueprintDartGenerator.generate] produced: the Dart source, or null
