@@ -422,6 +422,10 @@ mixin _BlueprintSubEditorComponentDetails on _BlueprintSubEditorStateBase {
               VectorRow(
                 value: vec,
                 defaultValue: defaultVec,
+                // `<component>.<field>.<axis>.<revision>`, like the transform
+                // rows: undo / redo rebuild the fields with the restored value.
+                keyPrefix: '${node.id}.${prop.dartField}',
+                revision: _viewModel.componentTransformRevision,
                 onChanged: (v) => _viewModel.previewProperty(node.id, prop.dartField, v),
                 onCommit: (v) => _viewModel.setProperty(node.id, prop.dartField, v),
                 onReset: () => _viewModel.setProperty(node.id, prop.dartField, defaultVec),

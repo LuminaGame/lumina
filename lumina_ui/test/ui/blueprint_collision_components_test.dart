@@ -118,6 +118,8 @@ void main() {
     expect(halfSpans(vm, box.id).map((v) => v.toStringAsFixed(3)), everyElement('50.000'));
 
     await tester.enterText(find.byKey(ValueKey(extentKey(vm, box.id, 0))), '120');
+    // Enter commits the typed value (one undo step); typing alone previews.
+    await tester.testTextInput.receiveAction(TextInputAction.done);
     await tester.pump();
     expect(vm.getComponent(box.id)!.properties['boxExtent'], [120.0, 50.0, 50.0]);
     // Authoring X is runtime X (LuminaAxes, Z up → Y up).
