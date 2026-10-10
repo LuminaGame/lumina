@@ -17,6 +17,7 @@ import 'package:lumina_ui/ui/features/sub_editors/view_models/blueprint_editor_v
 
 import '../helpers/blueprint_test_project.dart';
 import '../helpers/flutter_build_stand_in.dart';
+import '../helpers/temp_project.dart';
 
 /// Every scenario runs against a real
 /// temp project with a real `.lmproject` on disk.
@@ -47,9 +48,9 @@ void main() {
     await repo.createAsset(projectPath: projDir.path, subFolder: 'meshes', fileName: 'SM_Rock.lmas', type: AssetType.filamesh);
   });
 
-  tearDown(() {
-    if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
-  });
+  // Retries: Windows refuses to delete a folder the editor's git probe
+  // still works in.
+  tearDown(() => deleteTempProject(tempDir));
 
   ProjectSettingsViewModel makeVm({ProcessStarter? starter}) =>
       ProjectSettingsViewModel(projectDirPath: projDir.path, processStarter: starter);
@@ -574,7 +575,13 @@ void main() {
       expect((icon.width, icon.height), (512, 512), reason: 'the runner icon was written before the build, and installed into the bundle');
       final desktop = File('$package/com.example.settings_game.desktop').readAsStringSync();
       expect(desktop, contains('Icon=${Directory(package).absolute.path}/data/app_icon.png'));
-      expect(desktop, contains('Exec=${Directory(package).absolute.path}/settings_game'));
+      // The desktop entry spec quotes a path with spaces or backslashes (a
+      // Windows temp dir) and escapes those characters.
+      final exePath = '${Directory(package).absolute.path}/settings_game';
+      final exec = exePath.contains(RegExp(r'[\s"`$\\]'))
+          ? '"${exePath.replaceAllMapped(RegExp(r'["`$\\]'), (m) => '\\${m[0]}')}"'
+          : exePath;
+      expect(desktop, contains('Exec=$exec'));
       final webIcon = img.decodePng(File('${projDir.path}/build/package/web/icons/Icon-512.png').existsSync()
           ? File('${projDir.path}/build/package/web/icons/Icon-512.png').readAsBytesSync()
           : File('${projDir.path}/web/icons/Icon-512.png').readAsBytesSync())!;

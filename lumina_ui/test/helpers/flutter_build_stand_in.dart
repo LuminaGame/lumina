@@ -28,7 +28,18 @@ Future<void> main(List<String> args) async {
     stdout.writeln('✓ Built build/web');
   }
   if (exitCodeWanted == 0 && target == 'linux') {
-    final name = Directory.current.uri.pathSegments.where((s) => s.isNotEmpty).last;
+    // CMake's BINARY_NAME (flutter create sets it to the package name), not
+    // the folder: on Windows the build runs through a short junction.
+    final cmakeName = File('linux/CMakeLists.txt').existsSync()
+        ? RegExp(r'set\(BINARY_NAME "([^"]+)"\)').firstMatch(File('linux/CMakeLists.txt').readAsStringSync())?.group(1)
+        : null;
+    final pubspecName = File('pubspec.yaml').existsSync()
+        ? RegExp(r'^name:\s*(\S+)', multiLine: true).firstMatch(File('pubspec.yaml').readAsStringSync())?.group(1)
+        : null;
+    // A bare test project has neither: its .lmproject names the game.
+    final lmproject = Directory.current.listSync().whereType<File>().where((f) => f.path.endsWith('.lmproject')).firstOrNull;
+    final projectName = lmproject?.uri.pathSegments.last.replaceAll('.lmproject', '');
+    final name = cmakeName ?? pubspecName ?? projectName ?? Directory.current.uri.pathSegments.where((s) => s.isNotEmpty).last;
     final bundle = Directory('build/linux/x64/release/bundle')..createSync(recursive: true);
     Directory('${bundle.path}/data/flutter_assets').createSync(recursive: true);
     Directory('${bundle.path}/lib').createSync(recursive: true);
