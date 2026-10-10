@@ -10,6 +10,7 @@ Continuation of App shell and shared UI: the remaining public files under `lib/u
 - [`lib/ui/core/window/window_controls.dart`](#libuicorewindowwindow_controlsdart)
 - [`lib/ui/core/window/window_state_store.dart`](#libuicorewindowwindow_state_storedart)
 - [`lib/ui/core/widgets/media/editor_media_widgets.dart`](#libuicorewidgetsmediaeditor_media_widgetsdart)
+- [`lib/ui/core/input/text_input_focus.dart`](#libuicoreinputtext_input_focusdart)
 - [`lib/ui/core/widgets/plugin_view/`](#libuicorewidgetsplugin_view)
 
 ## `lib/ui/core/window/lumina_window.dart`
@@ -259,3 +260,12 @@ directory, `emit`), `PluginViewScope`, the typed prop readers, `pluginControlEqu
 ---
 
 [Previous: App shell and shared UI (continued, part 1)](core-continued.md) | [Up: lumina_ui (Lumina Studio)](index.md) | [Next: Main editor: views](main-editor-views.md)
+
+## `lib/ui/core/input/text_input_focus.dart`
+
+Editor shortcuts that reuse editing keys (Delete, Backspace, Ctrl+C / X / V / D, Ctrl+Z / Y, arrows, Home, letters) stand down while a text input owns the keyboard, so the key reaches the field.
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `isTextInputFocused` | `bool isTextInputFocused()` | Whether the primary focus is an `EditableText` (a shadcn `TextField`, a node literal, a Details field, a rename box) or sits inside one. The graph canvas and the state machine graph check it first in their key handlers. |
+| `NotWhileTypingActivator` | `const NotWhileTypingActivator(SingleActivator activator)` | A `ShortcutActivator` that accepts what [activator] accepts unless a text input has focus: the Blueprint, Anim Blueprint, Widget Blueprint and material editors' `CallbackShortcuts` (undo, redo, the designer's Delete) use it. |

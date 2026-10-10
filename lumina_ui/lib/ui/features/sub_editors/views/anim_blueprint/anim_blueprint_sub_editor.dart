@@ -3,6 +3,7 @@ import 'package:lumina_editor_data/lumina_editor.dart' hide BoxShape;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:vector_math/vector_math_64.dart' show Vector3;
 
+import 'package:lumina_ui/ui/core/input/text_input_focus.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/core/property_editors/asset_picker_select.dart';
 import 'package:lumina_ui/ui/features/sub_editors/sub_editor_binding.dart';
@@ -137,9 +138,9 @@ class AnimBlueprintSubEditorState extends State<AnimBlueprintSubEditor> {
   Widget build(BuildContext context) {
     return CallbackShortcuts(
       bindings: {
-        const SingleActivator(LogicalKeyboardKey.keyZ, control: true): _vm.undo,
-        const SingleActivator(LogicalKeyboardKey.keyY, control: true): _vm.redo,
-        const SingleActivator(LogicalKeyboardKey.keyZ, control: true, shift: true): _vm.redo,
+        const NotWhileTypingActivator(SingleActivator(LogicalKeyboardKey.keyZ, control: true)): _vm.undo,
+        const NotWhileTypingActivator(SingleActivator(LogicalKeyboardKey.keyY, control: true)): _vm.redo,
+        const NotWhileTypingActivator(SingleActivator(LogicalKeyboardKey.keyZ, control: true, shift: true)): _vm.redo,
         const SingleActivator(LogicalKeyboardKey.f7): _compile,
       },
       child: ListenableBuilder(

@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:lumina_editor_data/lumina_editor.dart' hide BoxShape;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
+import 'package:lumina_ui/ui/core/input/text_input_focus.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_editor_nodes.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_palette.dart';
@@ -301,6 +302,9 @@ class BlueprintGraphCanvasState extends _BlueprintGraphCanvasStateBase
             builder: (context, candidate, rejected) => Focus(
               focusNode: _focus,
               onKeyEvent: (node, event) {
+                // A focused text field (a node's literal, a comment title)
+                // owns its editing keys: Backspace edits the text.
+                if (isTextInputFocused()) return KeyEventResult.ignored;
                 if (event is KeyDownEvent &&
                     (event.logicalKey == LogicalKeyboardKey.delete || event.logicalKey == LogicalKeyboardKey.backspace)) {
                   if (editor.removeSelected()) return KeyEventResult.handled;

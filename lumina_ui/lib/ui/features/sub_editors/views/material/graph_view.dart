@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
+import 'package:lumina_ui/ui/core/input/text_input_focus.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/material_editor_view_model.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/blueprint/graph_canvas.dart';
@@ -37,9 +38,9 @@ class MaterialGraphViewState extends State<MaterialGraphView> {
     final controller = vm.graph;
     return CallbackShortcuts(
       bindings: {
-        const SingleActivator(LogicalKeyboardKey.keyZ, control: true): controller.undo,
-        const SingleActivator(LogicalKeyboardKey.keyZ, control: true, shift: true): controller.redo,
-        const SingleActivator(LogicalKeyboardKey.keyY, control: true): controller.redo,
+        const NotWhileTypingActivator(SingleActivator(LogicalKeyboardKey.keyZ, control: true)): controller.undo,
+        const NotWhileTypingActivator(SingleActivator(LogicalKeyboardKey.keyZ, control: true, shift: true)): controller.redo,
+        const NotWhileTypingActivator(SingleActivator(LogicalKeyboardKey.keyY, control: true)): controller.redo,
       },
       child: Column(
         children: [

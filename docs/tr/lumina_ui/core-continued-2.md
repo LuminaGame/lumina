@@ -10,6 +10,7 @@ Uygulama kabuğu ve ortak UI sayfasının devamı: `lib/ui/core/window/` ve `lib
 - [`lib/ui/core/window/window_controls.dart`](#libuicorewindowwindow_controlsdart)
 - [`lib/ui/core/window/window_state_store.dart`](#libuicorewindowwindow_state_storedart)
 - [`lib/ui/core/widgets/media/editor_media_widgets.dart`](#libuicorewidgetsmediaeditor_media_widgetsdart)
+- [`lib/ui/core/input/text_input_focus.dart`](#libuicoreinputtext_input_focusdart)
 - [`lib/ui/core/widgets/plugin_view/`](#libuicorewidgetsplugin_view)
 
 ## `lib/ui/core/window/lumina_window.dart`
@@ -262,3 +263,12 @@ kimliği, proje dizini, `emit`), `PluginViewScope`, tipli prop okuyucuları, `pl
 ---
 
 [Önceki: Uygulama kabuğu ve ortak UI (devamı, bölüm 1)](core-continued.md) | [Üst: lumina_ui (Lumina Studio)](index.md) | [Sonraki: Ana editör: view'ler](main-editor-views.md)
+
+## `lib/ui/core/input/text_input_focus.dart`
+
+Düzenleme tuşlarını kullanan editör kısayolları (Delete, Backspace, Ctrl+C / X / V / D, Ctrl+Z / Y, oklar, Home, harfler) bir metin girişi klavyeyi tutarken geri çekilir; tuş alana ulaşır.
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `isTextInputFocused` | `bool isTextInputFocused()` | Birincil odak bir `EditableText` mi (shadcn `TextField`, node literal'i, Details alanı, yeniden adlandırma kutusu) ya da onun içinde mi. Graf tuvali ve state machine grafı tuş işleyicilerinde önce buna bakar. |
+| `NotWhileTypingActivator` | `const NotWhileTypingActivator(SingleActivator activator)` | [activator]'ın kabul ettiğini, bir metin girişi odakta değilse kabul eden `ShortcutActivator`: Blueprint, Anim Blueprint, Widget Blueprint ve materyal editörlerinin `CallbackShortcuts` bağları (undo, redo, designer'ın Delete'i) bunu kullanır. |

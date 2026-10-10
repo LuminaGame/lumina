@@ -2,6 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:lumina_core/lumina_core.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
+import 'package:lumina_ui/ui/core/input/text_input_focus.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/features/sub_editors/sub_editor_binding.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/umg_editor_view_model.dart';
@@ -124,11 +125,11 @@ class _UMGWidgetSubEditorState extends State<UMGWidgetSubEditor> {
     final vm = _vm;
     return CallbackShortcuts(
       bindings: {
-        const SingleActivator(LogicalKeyboardKey.keyZ, control: true): vm.undo,
-        const SingleActivator(LogicalKeyboardKey.keyY, control: true): vm.redo,
-        const SingleActivator(LogicalKeyboardKey.keyZ, control: true, shift: true): vm.redo,
+        const NotWhileTypingActivator(SingleActivator(LogicalKeyboardKey.keyZ, control: true)): vm.undo,
+        const NotWhileTypingActivator(SingleActivator(LogicalKeyboardKey.keyY, control: true)): vm.redo,
+        const NotWhileTypingActivator(SingleActivator(LogicalKeyboardKey.keyZ, control: true, shift: true)): vm.redo,
         const SingleActivator(LogicalKeyboardKey.keyS, control: true): () => vm.save(),
-        const SingleActivator(LogicalKeyboardKey.delete): () {
+        const NotWhileTypingActivator(SingleActivator(LogicalKeyboardKey.delete)): () {
           // In Graph mode Delete belongs to the graph.
           final id = vm.selectedId;
           if (id != null && vm.mode == UmgEditorMode.designer) vm.deleteNode(id);
