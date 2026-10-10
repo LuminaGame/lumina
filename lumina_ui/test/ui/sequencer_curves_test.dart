@@ -9,6 +9,8 @@ import 'package:lumina_ui/ui/features/sub_editors/view_models/sequencer_view_mod
 import 'package:lumina_ui/ui/features/sub_editors/views/sequencer/curve_editor_widget.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 
+import '../helpers/temp_project.dart';
+
 /// Writes a real SEQUENCER `.lmas` with one transform track keyed on
 /// Location.X at frames 0 -> 0.0 and 60 -> 12.0 (cubic by default so the
 /// tangent handles are meaningful) and returns its path.
@@ -90,9 +92,9 @@ void main() {
     pDir = Directory('${tempDir.path}/SeqCurvesProject')..createSync(recursive: true);
   });
 
-  tearDown(() {
-    if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
-  });
+  // Retries: the editor's source-control probe runs git in the project
+  // folder, and Windows refuses to delete a folder a live process works in.
+  tearDown(() => deleteTempProject(tempDir));
 
   test('Scrub-anywhere: playheadFrame = 30 writes Location.X == 6.0 onto the live actor immediately', () async {
     final level = _levelWithCube(pDir);
