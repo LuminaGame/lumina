@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Direct presentation: `FilamentWidget.nativeSurface` renders into a Vulkan SwapChain on a native window and lets
+  Filament present (VSync: FIFO; off: `disableVsync` with the backend present pacing), with no readback; frame
+  generation's frames reach the screen. `FilamentUiOverlay` blends a premultiplied picture of the Flutter UI over
+  every presented frame, generated frames included (patch `0013` redraws it). Falls back to the texture path with a
+  reason (`onPresentationChanged`) on the web, a non-Vulkan backend or a failure.
 - Frame generation multiplies the presented frame rate (prebuilt `1.77.2-lumina.14`, Filament patch `0016`): a Vulkan
   SwapChain without vsync presents from its own thread, spacing the generated and rendered frames evenly while the
   render loop goes on (8 ms CPU-bound loop: 121 presents/s off, 242 at 2x, 482 at 4x, 725 at 6x). FSR3 frame generation

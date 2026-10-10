@@ -136,7 +136,10 @@ class SmokeRig {
   /// `beginFrame` skips frames while the GPU is behind, which happens when
   /// many smokes record 1024×768 videos on one GPU at once; retry for up to
   /// [renderFrameTimeout] instead of a fixed number of attempts.
-  Uint8List renderFrame({int warmup = 3, void Function(int frame)? onFrame}) {
+  ///
+  /// [afterView] renders more into the frame after the view (a UI overlay),
+  /// before the read back.
+  Uint8List renderFrame({int warmup = 3, void Function(int frame)? onFrame, void Function()? afterView}) {
     final total = warmup + 1;
     final nativeBuf = calloc<ffi.Uint8>(width * height * 4);
     try {
@@ -149,6 +152,7 @@ class SmokeRig {
           rendered++;
           onFrame?.call(rendered - 1);
           renderer.render(view);
+          afterView?.call();
           if (rendered == total) {
             c.filament_renderer_read_pixels(renderer.nativePointer, engine.nativePointer,
                 0, 0, width, height, nativeBuf.cast(), ffi.nullptr, ffi.nullptr);
@@ -189,6 +193,7 @@ class SmokeRig {
     required void Function(int frame, double t) onFrame,
     double fps = smokeVideoFps,
     bool alsoScreenshot = true,
+    void Function()? afterView,
   }) {
     final count = frames ?? smokeVideoFrames(fps: fps);
     // Fail before rendering anything when the recording would be too short
@@ -199,7 +204,7 @@ class SmokeRig {
     Uint8List? last;
     for (var f = 0; f < count; f++) {
       onFrame(f, f / (count - 1).clamp(1, 1 << 30));
-      last = renderFrame(warmup: f == 0 ? 3 : 0);
+      last = renderFrame(warmup: f == 0 ? 3 : 0, afterView: afterView);
       pngs.add(SmokeArtifacts.encodePng(width, height, last));
     }
     SmokeArtifacts.saveVideoFromPngFrames(artifactName, pngs, fps: fps);

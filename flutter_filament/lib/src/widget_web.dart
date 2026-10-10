@@ -14,6 +14,7 @@ import 'package:flutter_filament/src/camera.dart';
 import 'package:flutter_filament/src/engine.dart';
 import 'package:flutter_filament/src/ffi_platform.dart' as ffi;
 import 'package:flutter_filament/src/frame_limiter.dart';
+import 'package:flutter_filament/src/native_surface.dart';
 import 'package:flutter_filament/src/renderer.dart';
 import 'package:flutter_filament/src/scene.dart';
 import 'package:flutter_filament/src/swap_chain.dart';
@@ -135,6 +136,9 @@ class WebFilamentWidgetState extends State<FilamentWidget> with SingleTickerProv
       _isInitialized = true;
 
       widget.onSceneCreated?.call(engine, scene, camera, view);
+      // The browser presents the canvas: no direct presentation here.
+      widget.onPresentationChanged?.call(FilamentPresentationStatus(FilamentPresentationKind.texture,
+          reason: widget.nativeSurface == null ? null : 'unsupported on the web (the browser presents the canvas)'));
       setState(() => _status = 'Filament 3D Scene Running');
     } catch (e, stack) {
       debugPrint('[Filament Engine Init Exception]: $e\n$stack');

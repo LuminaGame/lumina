@@ -10,6 +10,7 @@ Everything between a scene and the pixels on screen: the renderer and its frame 
   - [`src/frame_pacer_c.h`](#srcframe_pacer_ch)
   - [`src/renderer_c.h`](#srcrenderer_ch)
   - [`src/swap_chain_c.h`](#srcswap_chain_ch)
+  - [`src/ui_overlay_c.h`](#srcui_overlay_ch)
   - [`src/view_c.h`](#srcview_ch)
 - [Dart API](#dart-api)
   - [`lib/src/frame_history_stream.dart`](#libsrcframe_history_streamdart)
@@ -88,6 +89,18 @@ The C functions below are declared in the package's `src/` headers and called fr
 | `filament_swap_chain_is_frame_scheduled_callback_set` | `FFI_PLUGIN_EXPORT bool filament_swap_chain_is_frame_scheduled_callb...` | Validates or queries the `filament_swap_chain_is_frame_scheduled_callback_set` state/capability. |
 | `filament_swap_chain_set_frame_scheduled_callback` | `FFI_PLUGIN_EXPORT void filament_swap_chain_set_frame_scheduled_call...` | Updates the `filament_swap_chain_set_frame_scheduled_callback` parameter or state in the native C layer. |
 | `filament_swap_chain_set_frame_completed_callback` | `FFI_PLUGIN_EXPORT void filament_swap_chain_set_frame_completed_call...` | Updates the `filament_swap_chain_set_frame_completed_callback` parameter or state in the native C layer. |
+
+### `src/ui_overlay_c.h`
+
+| C Function | Purpose & Description |
+| :--- | :--- |
+| `filament_ui_overlay_create(engine)` / `_destroy` | The overlay's material (embedded `ui_overlay_filamat.h`), quad, scene, camera and translucent View; null on the web. |
+| `filament_ui_overlay_set_viewport(o, left, bottom, w, h)` | The overlay's area of the SwapChain. |
+| `filament_ui_overlay_upload(o, rgba, w, h, stride)` | Copies premultiplied RGBA8 rows (top first) into the texture, recreating it on a size change. |
+| `filament_ui_overlay_begin_upload(o, w, h)` / `_end_upload(o)` | The same with one copy: the caller fills the engine-owned buffer, which is freed once the GPU has it. |
+| `filament_ui_overlay_clear` / `_has_content` | Forget the picture / whether one is uploaded. |
+| `filament_ui_overlay_render(renderer, o)` | `Renderer::render(overlay View)` when it has a picture (after the Views it covers). |
+| `filament_ui_overlay_get_view`, `_last_upload_micros`, `_upload_count` | The View and the upload statistics. |
 
 ### `src/view_c.h`
 
@@ -677,6 +690,44 @@ same timestamp gets the same answer, so two loops can share one limiter), `reset
 refreshes (60 Hz, 45 FPS → 30); false: the target as the average (45 FPS alternates one and two refreshes); a hitch
 restarts the cadence instead of bursting.
 
+#### Direct presentation and the UI overlay (`lib/src/native_surface.dart`, `lib/src/direct_presenter.dart`, `lib/src/ui_overlay.dart`)
+
+By default a native `FilamentWidget` renders into a headless SwapChain, reads every frame back and shows it as a
+`RawImage`; Flutter composites and presents. Frame generation's extra frames never reach the screen that way (only the
+last image of a frame is read back) and the readback costs a GPU wait per frame. Given a `nativeSurface`, the widget
+presents **directly**:
+
+- `FilamentNativeSurface` (abstract): `acquire()` → `FilamentNativeSurfaceHandle(handle, width, height)` (an HWND or
+  X11 window and its client area in physical pixels; null with `unavailableReason`), `current` (size and handle changes,
+  0 × 0 while minimised), `release()`. The host owns the window; a generated game's runner makes a child window of the
+  Flutter view that takes no input.
+- `FilamentDirectPresenter.start(engine, surface, vsync:)` creates a Vulkan SwapChain on the window
+  (`SwapChainConfig.none` with VSync: FIFO; `disableVsync` without: the presents, frame generation's included, are paced
+  by the backend's present thread of patch `0016`) and a `FilamentUiOverlay`. `setVsync` recreates the SwapChain,
+  `updateHandle` follows the window, `viewportFor(w, h, renderAspect:)` letterboxes a `renderResolution`'s aspect ratio
+  inside the window (the frame renders at that rectangle's pixels). `unsupportedReason(engine)`: the web, a backend
+  other than Vulkan.
+- The frame loop stays the widget's ticker (Flutter's vsync callbacks and the `FilamentFrameLimiter`): each rendered
+  frame is `beginFrame` → the views → `overlay.render` → `endFrame`, with no readback and no wait for the GPU;
+  Filament presents. The widget paints nothing (`SizedBox.expand`).
+- `FilamentUiOverlay`: a translucent View (post-processing, shadows, AA and dithering off) with one quad in device
+  coordinates sampling a premultiplied RGBA8 texture (`src/materials/ui_overlay.mat`, unlit, `blending: transparent`).
+  `create(engine)` (null on the web), `setViewport`, `upload(rgba, width, height)` (Flutter's `rawRgba` bytes, rows top
+  first; the pixels are copied once into an engine-owned buffer), `clear()`, `hasContent`, `render(renderer)`,
+  `lastUploadMicros`, `uploadCount`, `dispose()`. Rendered after the main view into the same SwapChain, it is blended
+  after tone mapping and the upscaler at the output resolution, and patch `0013` draws it again over every
+  frame-generation present (DLSS FG / MFG, FSR3 FG): the UI is never interpolated. The bytes are written unchanged into
+  the UNORM SwapChain, as Flutter blends them.
+- Fallback: when the backend is not Vulkan, the host has no window, the SwapChain or the overlay cannot be created, the
+  widget keeps the texture path and calls `onPresentationChanged(FilamentPresentationStatus(texture, reason:))` (and
+  logs the reason). The web reports `unsupported on the web`.
+- Measured on the RTX PRO 2000 (`test/src/ui_overlay_frame_generation_test.dart`, 1024×768, no vsync, 8 ms of game
+  work per frame): without the overlay 123.1 presents/s, with it 122.4 (0.05 ms more CPU per frame); with the overlay
+  DLSS 2x 243 presents/s (2.00 per rendered frame), 4x 475 (4.00), FSR3 frame generation 242 (2.00). Upload of a
+  full-window picture: 0.71 ms at 1920×1080, 1.60 ms at 3440×1440 (median, the calling thread).
+- Shared GPU memory: the stock Flutter Windows and Linux embedders render the UI into their own surface and expose no
+  texture of it, so the overlay is a CPU copy (`toImage` + `toByteData` on the Flutter side, see `lumina_widgets`).
+
 #### `class FilamentWidget`
 
 A Flutter widget for rendering 3D Filament scenes natively.  Manages engine lifecycle, frame rendering loops, and viewport dimensions.
@@ -699,8 +750,11 @@ A Flutter widget for rendering 3D Filament scenes natively.  Manages engine life
 | `physicalResolution` | `bool physicalResolution` | Whether the frame renders at the display's physical pixels (layout size × device pixel ratio, up to 8192 per side) instead of the layout's logical size (default `false`, up to 4096). A game on a scaled display renders at the monitor's native resolution this way. |
 | `renderResolution` | `Size? renderResolution` | A fixed render size in physical pixels that wins over the layout size (a game's chosen screen resolution); the frame is scaled to fill the widget (native: `RawImage` fill; web: the canvas's drawing buffer). Null: the layout size. |
 | `targetFps` | `int? targetFps` | Target frame rate; null or 0 is every display refresh. Counted in display refreshes (the frame's vsync timestamp) by a `FilamentFrameLimiter`, so no target goes above the refresh rate. |
-| `vsyncEnabled` | `bool vsyncEnabled` | How `targetFps` paces (default `false`): `true` holds every frame for the same whole number of refreshes, `false` keeps the target as the average. The frame is presented by Flutter on vsync either way. |
+| `vsyncEnabled` | `bool vsyncEnabled` | How `targetFps` paces (default `false`): `true` holds every frame for the same whole number of refreshes, `false` keeps the target as the average. The frame is presented by Flutter on vsync either way; presenting directly (`nativeSurface`), `true` is the SwapChain's FIFO present mode and `false` presents without vsync. |
 | `frameLimiter` | `FilamentFrameLimiter? frameLimiter` | A limiter shared with the host's own per-frame work (the game widget's world tick) so both run on the same refreshes; null uses the widget's own. |
+| `nativeSurface` | `FilamentNativeSurface? nativeSurface` | A native window to present into directly (Vulkan, desktop): the frame goes into a SwapChain on it and Filament presents, with no readback; the widget paints nothing. Null, or when it cannot be had, keeps the texture path (see *Direct presentation* above). |
+| `onPresentationChanged` | `ValueChanged<FilamentPresentationStatus>? onPresentationChanged` | Called with `direct` or `texture` (and the fallback reason) whenever it changes. |
+| `onUiOverlay` | `ValueChanged<FilamentUiOverlay?>? onUiOverlay` | The `FilamentUiOverlay` blended over every presented frame while presenting directly (null when that stops); the host uploads pictures of its UI into it. |
 | `createState` | `State<FilamentWidget> createState() => _FilamentWidgetState()` | Creates, configures, and returns a new `State` instance or associated GPU resource. |
 
 #### `class _FilamentWidgetState`

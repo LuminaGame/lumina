@@ -1,0 +1,29 @@
+// The UI overlay of direct presentation: one screen-covering quad that blends
+// a premultiplied RGBA8 picture of the Flutter UI over the frame already in
+// the SwapChain (the 3D view after tone mapping and upscaling).
+//
+// The quad is in device coordinates, so no camera transform applies; the
+// texture's rows run top to bottom (Flutter's image order), hence the flip.
+// The bytes are display-encoded already and are written unchanged into the
+// UNORM SwapChain, blended the way Flutter blends them.
+material {
+    name : LuminaUiOverlay,
+    shadingModel : unlit,
+    blending : transparent,
+    vertexDomain : device,
+    culling : none,
+    depthWrite : false,
+    depthCulling : false,
+    parameters : [
+        { type : sampler2d, name : ui, precision : medium }
+    ]
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        highp vec2 uv = getNormalizedViewportCoord().xy;
+        uv.y = 1.0 - uv.y;
+        material.baseColor = texture(materialParams_ui, uv);
+    }
+}

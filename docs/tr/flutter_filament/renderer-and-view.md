@@ -10,6 +10,7 @@ Bir sahne ile ekrandaki pikseller arasındaki her şey: renderer ve frame döng�
   - [`src/frame_pacer_c.h`](#srcframe_pacer_ch)
   - [`src/renderer_c.h`](#srcrenderer_ch)
   - [`src/swap_chain_c.h`](#srcswap_chain_ch)
+  - [`src/ui_overlay_c.h`](#srcui_overlay_ch)
   - [`src/view_c.h`](#srcview_ch)
 - [Dart API](#dart-api)
   - [`lib/src/frame_history_stream.dart`](#libsrcframe_history_streamdart)
@@ -88,6 +89,18 @@ Aşağıdaki C fonksiyonları paketin `src/` header'larında tanımlanır ve Dar
 | `filament_swap_chain_is_frame_scheduled_callback_set` | `FFI_PLUGIN_EXPORT bool filament_swap_chain_is_frame_scheduled_callb...` | Filament C motor durum veya yetenek doğrulamasını yapar. |
 | `filament_swap_chain_set_frame_scheduled_callback` | `FFI_PLUGIN_EXPORT void filament_swap_chain_set_frame_scheduled_call...` | İlgili Filament parametresini veya motor durumunu C katmanında günceller. |
 | `filament_swap_chain_set_frame_completed_callback` | `FFI_PLUGIN_EXPORT void filament_swap_chain_set_frame_completed_call...` | İlgili Filament parametresini veya motor durumunu C katmanında günceller. |
+
+### `src/ui_overlay_c.h`
+
+| C Fonksiyonu | Ne İşe Yarar? |
+| :--- | :--- |
+| `filament_ui_overlay_create(engine)` / `_destroy` | Katmanın malzemesi (gömülü `ui_overlay_filamat.h`), dörtgeni, sahnesi, kamerası ve yarı saydam View'i; webde null. |
+| `filament_ui_overlay_set_viewport(o, left, bottom, w, h)` | Katmanın SwapChain'deki alanı. |
+| `filament_ui_overlay_upload(o, rgba, w, h, stride)` | Önceden çarpılmış RGBA8 satırlarını (üstten) dokuya kopyalar; boyut değişince dokuyu yeniden kurar. |
+| `filament_ui_overlay_begin_upload(o, w, h)` / `_end_upload(o)` | Aynısı tek kopyayla: çağıran motorun tamponunu doldurur, GPU aldıktan sonra serbest bırakılır. |
+| `filament_ui_overlay_clear` / `_has_content` | Resmi unut / yüklü mü. |
+| `filament_ui_overlay_render(renderer, o)` | Resim varsa `Renderer::render(katman View'i)` (örttüğü View'lerden sonra). |
+| `filament_ui_overlay_get_view`, `_last_upload_micros`, `_upload_count` | View ve yükleme istatistikleri. |
 
 ### `src/view_c.h`
 
@@ -677,6 +690,44 @@ vsyncTimestamp)` (aynı zaman damgası aynı cevabı alır, böylece iki döngü
 (60 Hz, 45 FPS → 30); false: hedef ortalama (45 FPS bir ve iki yenilemeyi dönüşümlü kullanır); bir takılma ani kare
 patlaması yerine ritmi yeniden başlatır.
 
+#### Doğrudan sunum ve UI katmanı (`lib/src/native_surface.dart`, `lib/src/direct_presenter.dart`, `lib/src/ui_overlay.dart`)
+
+Varsayılan olarak native `FilamentWidget` headless bir SwapChain'e çizer, her kareyi geri okur ve `RawImage` olarak
+gösterir; birleştirmeyi ve sunumu Flutter yapar. Bu yolda frame generation'ın ek kareleri ekrana hiç ulaşmaz (bir karenin
+yalnızca son görüntüsü okunur) ve geri okuma her karede GPU'yu bekler. `nativeSurface` verildiğinde widget **doğrudan**
+sunar:
+
+- `FilamentNativeSurface` (soyut): `acquire()` → `FilamentNativeSurfaceHandle(handle, width, height)` (bir HWND ya da
+  X11 penceresi ve fiziksel piksel olarak istemci alanı; yoksa null ve `unavailableReason`), `current` (boyut ve pencere
+  değişiklikleri, küçültülmüşken 0 × 0), `release()`. Pencerenin sahibi ev sahibidir; üretilen bir oyunun runner'ı
+  Flutter view'inin girdi almayan bir alt penceresini yapar.
+- `FilamentDirectPresenter.start(engine, surface, vsync:)` pencere üzerinde bir Vulkan SwapChain (VSync açıkken
+  `SwapChainConfig.none`: FIFO; kapalıyken `disableVsync`: frame generation'ınkiler dahil sunumları `0016` yamasının
+  backend sunum iş parçacığı zamanlar) ve bir `FilamentUiOverlay` oluşturur. `setVsync` SwapChain'i yeniden kurar,
+  `updateHandle` pencereyi izler, `viewportFor(w, h, renderAspect:)` bir `renderResolution`'ın en-boy oranını pencerenin
+  içine siyah bantlarla yerleştirir (kare o dikdörtgenin pikselinde çizilir). `unsupportedReason(engine)`: web, Vulkan
+  dışı bir backend.
+- Kare döngüsü widget'ın ticker'ı olarak kalır (Flutter'ın vsync geri çağrıları ve `FilamentFrameLimiter`): çizilen her
+  kare `beginFrame` → view'ler → `overlay.render` → `endFrame`; geri okuma ve GPU beklemesi yok; sunumu Filament yapar.
+  Widget hiçbir şey boyamaz (`SizedBox.expand`).
+- `FilamentUiOverlay`: önceden çarpılmış (premultiplied) RGBA8 bir dokuyu örnekleyen, aygıt koordinatlarında tek bir
+  dörtgenli yarı saydam bir View (post-processing, gölge, AA ve dithering kapalı; `src/materials/ui_overlay.mat`, unlit,
+  `blending: transparent`). `create(engine)` (webde null), `setViewport`, `upload(rgba, width, height)` (Flutter'ın
+  `rawRgba` baytları, üst satır önce; pikseller motorun sahip olduğu bir tampona bir kez kopyalanır), `clear()`,
+  `hasContent`, `render(renderer)`, `lastUploadMicros`, `uploadCount`, `dispose()`. Ana view'den sonra aynı SwapChain'e
+  çizildiği için tone mapping ve upscaler'dan sonra, çıkış çözünürlüğünde karıştırılır; `0013` yaması onu her frame
+  generation sunumunun üzerine yeniden çizer (DLSS FG / MFG, FSR3 FG): UI hiçbir zaman ara kare olarak üretilmez.
+  Baytlar UNORM SwapChain'e değiştirilmeden yazılır, Flutter'ın karıştırdığı gibi.
+- Geri dönüş: backend Vulkan değilse, ev sahibinin penceresi yoksa, SwapChain ya da katman oluşturulamazsa widget doku
+  yolunda kalır ve `onPresentationChanged(FilamentPresentationStatus(texture, reason:))` çağırır (nedeni loglar). Web
+  `unsupported on the web` bildirir.
+- RTX PRO 2000'de ölçüldü (`test/src/ui_overlay_frame_generation_test.dart`, 1024×768, vsync yok, kare başına 8 ms oyun
+  işi): katmansız 123,1 sunum/s, katmanla 122,4 (kare başına 0,05 ms daha fazla CPU); katmanla DLSS 2x 243 sunum/s
+  (çizilen kare başına 2,00), 4x 475 (4,00), FSR3 frame generation 242 (2,00). Pencere boyunda bir resmin yüklenmesi:
+  1920×1080'de 0,71 ms, 3440×1440'ta 1,60 ms (medyan, çağıran iş parçacığı).
+- Paylaşılan GPU belleği: standart Flutter Windows ve Linux gömücüleri UI'ı kendi yüzeylerine çizer ve bir dokusunu
+  vermez; bu yüzden katman bir CPU kopyasıdır (Flutter tarafında `toImage` + `toByteData`, bkz. `lumina_widgets`).
+
 #### `class FilamentWidget`
 
 A Flutter widget for rendering 3D Filament scenes natively.  Manages engine lifecycle, frame rendering loops, and viewport dimensions.
@@ -699,8 +750,11 @@ A Flutter widget for rendering 3D Filament scenes natively.  Manages engine life
 | `physicalResolution` | `bool physicalResolution` | Kare yerleşimin mantıksal boyutu (varsayılan `false`, kenar başına en çok 4096) yerine ekranın fiziksel pikselinde mi çizilir (yerleşim boyutu × device pixel ratio, kenar başına en çok 8192). Ölçeklenmiş bir ekranda oyun böylece monitörün doğal çözünürlüğünde çizer. |
 | `renderResolution` | `Size? renderResolution` | Yerleşim boyutunun yerine geçen, fiziksel piksel olarak sabit çizim boyutu (oyunun seçtiği ekran çözünürlüğü); kare widget'ı dolduracak biçimde ölçeklenir (native: `RawImage` fill; web: canvas'ın çizim tamponu). Null: yerleşim boyutu. |
 | `targetFps` | `int? targetFps` | Hedef kare hızı; null ya da 0 her ekran yenilemesidir. Bir `FilamentFrameLimiter` ekran yenilemeleri (karenin vsync zaman damgası) üzerinden sayar; hiçbir hedef yenileme hızını aşmaz. |
-| `vsyncEnabled` | `bool vsyncEnabled` | `targetFps`'in nasıl zamanladığı (varsayılan `false`): `true` her kareyi aynı tam sayıda yenileme boyunca gösterir, `false` hedefi ortalama tutar. Kareyi her iki durumda Flutter vsync'te gösterir. |
+| `vsyncEnabled` | `bool vsyncEnabled` | `targetFps`'in nasıl zamanladığı (varsayılan `false`): `true` her kareyi aynı tam sayıda yenileme boyunca gösterir, `false` hedefi ortalama tutar. Kareyi her iki durumda Flutter vsync'te gösterir; doğrudan sunarken (`nativeSurface`) `true` SwapChain'in FIFO sunum kipidir, `false` vsync beklemeden sunar. |
 | `frameLimiter` | `FilamentFrameLimiter? frameLimiter` | Ev sahibinin kendi kare işiyle (oyun widget'ının dünya tick'i) paylaşılan sınırlayıcı; ikisi aynı yenilemelerde çalışır. Null: widget'ın kendi sınırlayıcısı. |
+| `nativeSurface` | `FilamentNativeSurface? nativeSurface` | Doğrudan sunulacak native pencere (Vulkan, masaüstü): kare onun üzerindeki bir SwapChain'e gider ve sunumu Filament yapar, geri okuma yok; widget hiçbir şey boyamaz. Null ya da alınamazsa doku yolu (yukarıda *Doğrudan sunum*). |
+| `onPresentationChanged` | `ValueChanged<FilamentPresentationStatus>? onPresentationChanged` | Değiştiğinde `direct` ya da `texture` (ve geri dönüş nedeni) ile çağrılır. |
+| `onUiOverlay` | `ValueChanged<FilamentUiOverlay?>? onUiOverlay` | Doğrudan sunarken her sunulan karenin üzerine karıştırılan `FilamentUiOverlay` (bitince null); ev sahibi UI'ının resimlerini buna yükler. |
 | `createState` | `State<FilamentWidget> createState() => _FilamentWidgetState()` | Yeni bir `State` örneği veya ilişkili GPU kaynağını oluşturur ve yapılandırır. |
 
 #### `class _FilamentWidgetState`

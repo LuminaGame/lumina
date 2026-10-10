@@ -9855,6 +9855,85 @@ external void filament_opendlss_nr_get_status(
 @ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>)>()
 external void filament_opendlss_nr_destroy(ffi.Pointer<ffi.Void> pass);
 
+@ffi.Native<ffi.Pointer<ffi.Void> Function(ffi.Pointer<ffi.Void>)>()
+external ffi.Pointer<ffi.Void> filament_ui_overlay_create(
+  ffi.Pointer<ffi.Void> engine,
+);
+
+@ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>)>()
+external void filament_ui_overlay_destroy(ffi.Pointer<ffi.Void> overlay);
+
+@ffi.Native<
+  ffi.Void Function(
+    ffi.Pointer<ffi.Void>,
+    ffi.Int32,
+    ffi.Int32,
+    ffi.Uint32,
+    ffi.Uint32,
+  )
+>()
+external void filament_ui_overlay_set_viewport(
+  ffi.Pointer<ffi.Void> overlay,
+  int left,
+  int bottom,
+  int width,
+  int height,
+);
+
+@ffi.Native<
+  ffi.Bool Function(
+    ffi.Pointer<ffi.Void>,
+    ffi.Pointer<ffi.Uint8>,
+    ffi.Uint32,
+    ffi.Uint32,
+    ffi.Uint32,
+  )
+>()
+external bool filament_ui_overlay_upload(
+  ffi.Pointer<ffi.Void> overlay,
+  ffi.Pointer<ffi.Uint8> rgba,
+  int width,
+  int height,
+  int stride,
+);
+
+@ffi.Native<
+  ffi.Pointer<ffi.Uint8> Function(ffi.Pointer<ffi.Void>, ffi.Uint32, ffi.Uint32)
+>()
+external ffi.Pointer<ffi.Uint8> filament_ui_overlay_begin_upload(
+  ffi.Pointer<ffi.Void> overlay,
+  int width,
+  int height,
+);
+
+@ffi.Native<ffi.Bool Function(ffi.Pointer<ffi.Void>)>()
+external bool filament_ui_overlay_end_upload(ffi.Pointer<ffi.Void> overlay);
+
+@ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>)>()
+external void filament_ui_overlay_clear(ffi.Pointer<ffi.Void> overlay);
+
+@ffi.Native<ffi.Bool Function(ffi.Pointer<ffi.Void>)>()
+external bool filament_ui_overlay_has_content(ffi.Pointer<ffi.Void> overlay);
+
+@ffi.Native<ffi.Bool Function(ffi.Pointer<ffi.Void>, ffi.Pointer<ffi.Void>)>()
+external bool filament_ui_overlay_render(
+  ffi.Pointer<ffi.Void> renderer,
+  ffi.Pointer<ffi.Void> overlay,
+);
+
+@ffi.Native<ffi.Pointer<ffi.Void> Function(ffi.Pointer<ffi.Void>)>()
+external ffi.Pointer<ffi.Void> filament_ui_overlay_get_view(
+  ffi.Pointer<ffi.Void> overlay,
+);
+
+@ffi.Native<ffi.Uint64 Function(ffi.Pointer<ffi.Void>)>()
+external int filament_ui_overlay_last_upload_micros(
+  ffi.Pointer<ffi.Void> overlay,
+);
+
+@ffi.Native<ffi.Uint64 Function(ffi.Pointer<ffi.Void>)>()
+external int filament_ui_overlay_upload_count(ffi.Pointer<ffi.Void> overlay);
+
 enum FilamentBackend {
   FILAMENT_BACKEND_DEFAULT(0),
   FILAMENT_BACKEND_OPENGL(1),

@@ -130,6 +130,7 @@ void main(List<String> args) async {
         'src/ray_tracing_c.cpp',
         'src/restir_c.cpp',
         'src/post_pass_c.cpp',
+        'src/ui_overlay_c.cpp',
         // OpenDLSS-NR (third-party, MIT): the C surface, Lumina's Vulkan host and frame pass, and the
         // vendored network sources (third_party/opendlss_nr); desktop Vulkan only, compiled out elsewhere.
         'src/opendlss_nr_c.cpp',

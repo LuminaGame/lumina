@@ -4381,6 +4381,45 @@ void filament_opendlss_nr_destroy(ffi.Pointer<ffi.Void> pass) {
   _m.filament_opendlss_nr_destroy(pass.address.toJS);
 }
 
+ffi.Pointer<ffi.Void> filament_ui_overlay_create(ffi.Pointer<ffi.Void> engine) =>
+    ffi.Pointer<ffi.Void>.fromAddress(_m.filament_ui_overlay_create(engine.address.toJS).toDartInt);
+
+void filament_ui_overlay_destroy(ffi.Pointer<ffi.Void> overlay) {
+  _m.filament_ui_overlay_destroy(overlay.address.toJS);
+}
+
+void filament_ui_overlay_set_viewport(ffi.Pointer<ffi.Void> overlay, int left, int bottom, int width, int height) {
+  _m.filament_ui_overlay_set_viewport(overlay.address.toJS, left.toJS, bottom.toJS, width.toJS, height.toJS);
+}
+
+bool filament_ui_overlay_upload(ffi.Pointer<ffi.Void> overlay, ffi.Pointer<ffi.Uint8> rgba, int width, int height, int stride) =>
+    _m.filament_ui_overlay_upload(overlay.address.toJS, rgba.address.toJS, width.toJS, height.toJS, stride.toJS).toDartInt != 0;
+
+ffi.Pointer<ffi.Uint8> filament_ui_overlay_begin_upload(ffi.Pointer<ffi.Void> overlay, int width, int height) =>
+    ffi.Pointer<ffi.Uint8>.fromAddress(_m.filament_ui_overlay_begin_upload(overlay.address.toJS, width.toJS, height.toJS).toDartInt);
+
+bool filament_ui_overlay_end_upload(ffi.Pointer<ffi.Void> overlay) =>
+    _m.filament_ui_overlay_end_upload(overlay.address.toJS).toDartInt != 0;
+
+void filament_ui_overlay_clear(ffi.Pointer<ffi.Void> overlay) {
+  _m.filament_ui_overlay_clear(overlay.address.toJS);
+}
+
+bool filament_ui_overlay_has_content(ffi.Pointer<ffi.Void> overlay) =>
+    _m.filament_ui_overlay_has_content(overlay.address.toJS).toDartInt != 0;
+
+bool filament_ui_overlay_render(ffi.Pointer<ffi.Void> renderer, ffi.Pointer<ffi.Void> overlay) =>
+    _m.filament_ui_overlay_render(renderer.address.toJS, overlay.address.toJS).toDartInt != 0;
+
+ffi.Pointer<ffi.Void> filament_ui_overlay_get_view(ffi.Pointer<ffi.Void> overlay) =>
+    ffi.Pointer<ffi.Void>.fromAddress(_m.filament_ui_overlay_get_view(overlay.address.toJS).toDartInt);
+
+int filament_ui_overlay_last_upload_micros(ffi.Pointer<ffi.Void> overlay) =>
+    FlutterFilamentModule.fromBigInt(_m.filament_ui_overlay_last_upload_micros(overlay.address.toJS));
+
+int filament_ui_overlay_upload_count(ffi.Pointer<ffi.Void> overlay) =>
+    FlutterFilamentModule.fromBigInt(_m.filament_ui_overlay_upload_count(overlay.address.toJS));
+
 enum FilamentBackend {
   FILAMENT_BACKEND_DEFAULT(0),
   FILAMENT_BACKEND_OPENGL(1),
@@ -9009,6 +9048,30 @@ extension type _Module._(JSObject _) implements JSObject {
   external void filament_opendlss_nr_get_status(JSNumber pass, JSNumber status, JSNumber failure, JSNumber capacity);
   @JS('_filament_opendlss_nr_destroy')
   external void filament_opendlss_nr_destroy(JSNumber pass);
+  @JS('_filament_ui_overlay_create')
+  external JSNumber filament_ui_overlay_create(JSNumber engine);
+  @JS('_filament_ui_overlay_destroy')
+  external void filament_ui_overlay_destroy(JSNumber overlay);
+  @JS('_filament_ui_overlay_set_viewport')
+  external void filament_ui_overlay_set_viewport(JSNumber overlay, JSNumber left, JSNumber bottom, JSNumber width, JSNumber height);
+  @JS('_filament_ui_overlay_upload')
+  external JSNumber filament_ui_overlay_upload(JSNumber overlay, JSNumber rgba, JSNumber width, JSNumber height, JSNumber stride);
+  @JS('_filament_ui_overlay_begin_upload')
+  external JSNumber filament_ui_overlay_begin_upload(JSNumber overlay, JSNumber width, JSNumber height);
+  @JS('_filament_ui_overlay_end_upload')
+  external JSNumber filament_ui_overlay_end_upload(JSNumber overlay);
+  @JS('_filament_ui_overlay_clear')
+  external void filament_ui_overlay_clear(JSNumber overlay);
+  @JS('_filament_ui_overlay_has_content')
+  external JSNumber filament_ui_overlay_has_content(JSNumber overlay);
+  @JS('_filament_ui_overlay_render')
+  external JSNumber filament_ui_overlay_render(JSNumber renderer, JSNumber overlay);
+  @JS('_filament_ui_overlay_get_view')
+  external JSNumber filament_ui_overlay_get_view(JSNumber overlay);
+  @JS('_filament_ui_overlay_last_upload_micros')
+  external JSBigInt filament_ui_overlay_last_upload_micros(JSNumber overlay);
+  @JS('_filament_ui_overlay_upload_count')
+  external JSBigInt filament_ui_overlay_upload_count(JSNumber overlay);
 }
 
 _Module get _m => _Module._(FlutterFilamentModule.instance);

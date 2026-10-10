@@ -149,7 +149,7 @@ Platform initialisation for flutter_filament.
 
 | Member | Signature | Description |
 | :--- | :--- | :--- |
-| `createFilamentWidgetState` | `State<FilamentWidget> createFilamentWidgetState()` | Native platforms: render into a headless swap chain and present the readback through a [RawImage]. |
+| `createFilamentWidgetState` | `State<FilamentWidget> createFilamentWidgetState()` | Native platforms: render into a headless swap chain and present the readback through a [RawImage], or, given a `nativeSurface`, render into a SwapChain on that window and let Filament present (see renderer-and-view.md, *Direct presentation*). |
 
 ## `lib/src/widget_web.dart`
 

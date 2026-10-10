@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_filament/src/ffi_platform.dart' as ffi;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -7,10 +8,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
 import 'package:flutter_filament/src/camera.dart';
+import 'package:flutter_filament/src/direct_presenter.dart';
 import 'package:flutter_filament/src/engine.dart';
 import 'package:flutter_filament/src/engine_host.dart';
 import 'package:flutter_filament/src/filamat_builder.dart';
 import 'package:flutter_filament/src/frame_limiter.dart';
+import 'package:flutter_filament/src/native_surface.dart';
 import 'package:flutter_filament/src/renderer.dart';
 import 'package:flutter_filament/src/scene.dart';
 import 'package:flutter_filament/src/swap_chain.dart';
@@ -19,7 +22,8 @@ import 'package:flutter_filament/src/view.dart';
 import 'package:flutter_filament/src/widget.dart';
 
 /// Native platforms: render into a headless swap chain and present the
-/// readback through a [RawImage].
+/// readback through a [RawImage], or, given a [FilamentWidget.nativeSurface],
+/// render into a SwapChain on that window and let Filament present.
 typedef FilamentWidgetStateImpl = NativeFilamentWidgetState;
 
 class NativeFilamentWidgetState extends State<FilamentWidget>
@@ -73,9 +77,78 @@ class NativeFilamentWidgetState extends State<FilamentWidget>
     });
   }
 
+  /// Direct presentation, while it runs.
+  FilamentDirectPresenter? _direct;
+  bool _directStarting = false;
+  FilamentPresentationStatus? _presentation;
+
+  /// The main view's viewport in the direct SwapChain.
+  (int, int, int, int)? _directViewport;
+
+  void _reportPresentation(FilamentPresentationStatus status) {
+    if (status == _presentation) return;
+    _presentation = status;
+    if (status.reason != null) debugPrint('[FilamentWidget] presenting through a Flutter texture: ${status.reason}');
+    widget.onPresentationChanged?.call(status);
+  }
+
+  /// Starts or stops direct presentation to match [FilamentWidget.nativeSurface].
+  Future<void> _syncPresentation() async {
+    final surface = widget.nativeSurface;
+    final engine = _engine;
+    if (!_isInitialized || engine == null || _directStarting) return;
+    if (surface == null) {
+      if (_direct != null) await _stopDirect();
+      _reportPresentation(const FilamentPresentationStatus(FilamentPresentationKind.texture));
+      return;
+    }
+    if (_direct != null) return;
+    _directStarting = true;
+    final (presenter, reason) = await FilamentDirectPresenter.start(engine, surface, vsync: widget.vsyncEnabled);
+    _directStarting = false;
+    if (presenter == null) {
+      _reportPresentation(FilamentPresentationStatus(FilamentPresentationKind.texture, reason: reason));
+      return;
+    }
+    if (!mounted || !identical(widget.nativeSurface, surface)) {
+      await presenter.dispose();
+      if (mounted) unawaited(_syncPresentation());
+      return;
+    }
+    _direct = presenter;
+    _directViewport = null;
+    presenter.surfaceListenable.addListener(_onSurfaceChanged);
+    widget.onUiOverlay?.call(presenter.overlay);
+    _reportPresentation(const FilamentPresentationStatus(FilamentPresentationKind.direct));
+    setState(() {});
+  }
+
+  Future<void> _stopDirect() async {
+    final presenter = _direct;
+    if (presenter == null) return;
+    _direct = null;
+    presenter.surfaceListenable.removeListener(_onSurfaceChanged);
+    widget.onUiOverlay?.call(null);
+    await presenter.dispose();
+    // The texture path's view size again.
+    _view?.setViewport(0, 0, _viewWidth, _viewHeight);
+    if (mounted) setState(() {});
+  }
+
+  void _onSurfaceChanged() {
+    final next = _direct?.surfaceListenable.value;
+    if (next != null) _direct?.updateHandle(next);
+  }
+
   @override
   void didUpdateWidget(FilamentWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.nativeSurface, widget.nativeSurface)) {
+      _stopDirect().then((_) {
+        if (mounted) _syncPresentation();
+      });
+    }
+    _direct?.setVsync(widget.vsyncEnabled);
     if (widget.isPaused != oldWidget.isPaused) {
       if (widget.isPaused) {
         _ticker.stop();
@@ -150,6 +223,7 @@ class NativeFilamentWidgetState extends State<FilamentWidget>
       _isInitialized = true;
 
       widget.onSceneCreated?.call(engine, scene, camera, view);
+      unawaited(_syncPresentation());
 
       setState(() {
         _status = 'Filament 3D Scene Running';
@@ -177,6 +251,10 @@ class NativeFilamentWidgetState extends State<FilamentWidget>
         _view == null ||
         _swapChain == null ||
         _nativePixelBuffer == null) {
+      return;
+    }
+    if (_direct != null) {
+      _renderDirect(_direct!);
       return;
     }
 
@@ -267,9 +345,63 @@ class NativeFilamentWidgetState extends State<FilamentWidget>
     }
   }
 
+  /// One frame into the native window's SwapChain: the views, then the UI
+  /// overlay; Filament presents. No readback and no wait for the GPU.
+  void _renderDirect(FilamentDirectPresenter direct) {
+    final limiter = widget.frameLimiter ?? _limiter;
+    limiter.configure(targetFps: widget.targetFps ?? 0, vsync: widget.vsyncEnabled);
+    if (!limiter.shouldRender(SchedulerBinding.instance.currentFrameTimeStamp)) return;
+    final surface = direct.handle;
+    if (!surface.isVisible) return; // minimised
+    final startTick = DateTime.now().microsecondsSinceEpoch;
+    try {
+      final fixed = widget.renderResolution;
+      final viewport = FilamentDirectPresenter.viewportFor(surface.width, surface.height,
+          renderAspect: fixed == null || fixed.height <= 0 ? null : fixed.width / fixed.height);
+      if (viewport != _directViewport) {
+        _directViewport = viewport;
+        _view!.setViewport(viewport.$1, viewport.$2, viewport.$3, viewport.$4);
+        _camera?.setProjectionFov(fovDegrees: 45.0, aspect: viewport.$3 / viewport.$4, near: 0.1, far: 10000.0);
+        widget.cameraManipulator?.setViewport(viewport.$3, viewport.$4);
+      }
+      if (_camera != null) widget.cameraManipulator?.updateCamera(_camera!);
+      final selected = widget.frameViews?.call(_view!, viewport.$3, viewport.$4);
+      final views = selected == null || selected.isEmpty ? [_view!] : selected;
+      if (_renderer!.beginFrame(direct.swapChain)) {
+        for (final view in views) {
+          _renderer!.render(view);
+        }
+        direct.overlay.render(_renderer!);
+        _renderer!.endFrame();
+        final endTick = DateTime.now().microsecondsSinceEpoch;
+        if (widget.onFrame != null && _lastTickTimestamp != 0) {
+          widget.onFrame!(
+              Duration(microseconds: endTick - startTick), Duration(microseconds: endTick - _lastTickTimestamp));
+        }
+        _lastTickTimestamp = endTick;
+        _framesThisSecond++;
+        final now = DateTime.now().millisecondsSinceEpoch;
+        if (now - _lastFpsTimestamp >= 1000) {
+          _fps = _framesThisSecond;
+          _framesThisSecond = 0;
+          _lastFpsTimestamp = now;
+        }
+      }
+    } catch (e) {
+      debugPrint('[Filament Direct Frame Error (Handled Safely)]: $e');
+    }
+  }
+
   @override
   void dispose() {
     _ticker.dispose();
+    final direct = _direct;
+    _direct = null;
+    if (direct != null) {
+      direct.surfaceListenable.removeListener(_onSurfaceChanged);
+      // Before the engine and the view go; the window is released after.
+      unawaited(direct.dispose());
+    }
     try {
       _engine?.flushAndWait();
     } catch (_) {}
@@ -356,6 +488,9 @@ class NativeFilamentWidgetState extends State<FilamentWidget>
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
+        // Presenting directly, the native window shows the frame: nothing to
+        // paint here (the UI above is composited by Filament).
+        if (_direct != null) return const SizedBox.expand();
         final double layoutWidth = constraints.maxWidth.isFinite
             ? constraints.maxWidth
             : (widget.width.isFinite ? widget.width : 800);

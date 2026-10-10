@@ -4,7 +4,9 @@ import 'package:flutter_filament/src/camera.dart';
 import 'package:flutter_filament/src/engine.dart';
 import 'package:flutter_filament/src/frame_limiter.dart';
 import 'package:flutter_filament/src/manipulator.dart';
+import 'package:flutter_filament/src/native_surface.dart';
 import 'package:flutter_filament/src/scene.dart';
+import 'package:flutter_filament/src/ui_overlay.dart';
 import 'package:flutter_filament/src/view.dart';
 import 'package:flutter_filament/src/widget_state.dart';
 
@@ -115,7 +117,27 @@ class FilamentWidget extends StatefulWidget {
     this.decorated = true,
     this.physicalResolution = false,
     this.renderResolution,
+    this.nativeSurface,
+    this.onPresentationChanged,
+    this.onUiOverlay,
   });
+
+  /// A native window to present into directly (Vulkan, desktop): the frame
+  /// is rendered into a SwapChain on it and presented by Filament, with no
+  /// readback; the widget itself paints nothing. Null (or when the window or
+  /// the SwapChain cannot be had) renders through the texture path, reported
+  /// with the reason to [onPresentationChanged]. A [renderResolution]
+  /// letterboxes the view inside the window at the window's pixels.
+  final FilamentNativeSurface? nativeSurface;
+
+  /// Called with how the frames are presented whenever it changes (and once
+  /// after a direct start was attempted).
+  final ValueChanged<FilamentPresentationStatus>? onPresentationChanged;
+
+  /// Called with the [FilamentUiOverlay] blended over every presented frame
+  /// while presenting directly (null when that stops): the host uploads
+  /// pictures of its UI into it.
+  final ValueChanged<FilamentUiOverlay?>? onUiOverlay;
 
   /// Target frame rate in FPS; null or <= 0 means unlimited / display refresh rate.
   /// Frames are rendered on the display's refresh ([FilamentFrameLimiter]),
@@ -125,7 +147,8 @@ class FilamentWidget extends StatefulWidget {
   /// How [targetFps] paces the frames ([FilamentFrameLimiter.vsync]): true
   /// shows every frame for the same whole number of refreshes, false keeps
   /// the target as the average. The frame is presented by Flutter on the
-  /// display's vsync either way.
+  /// display's vsync; presenting directly ([nativeSurface]), true is the
+  /// SwapChain's FIFO present mode and false presents without vsync.
   final bool vsyncEnabled;
 
   /// The limiter deciding which refreshes render; one the host shares with
