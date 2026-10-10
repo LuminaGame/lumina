@@ -46,15 +46,16 @@ class LuminaGameHostConfiguration extends InheritedWidget {
 /// - [onPlayStateChanged] receives every [LuminaPlayState] transition of [game]
 ///   for the widget's lifetime — bind an editor toolbar to it.
 ///
-/// Swap chain:
-/// - With [useHeadlessSwapChain] (default `true`, today's behaviour) the widget creates a
-///   1×1 headless swap chain plus a [LuminaFrameDriver], so the world is ticked with a
-///   vsync-derived, frame-paced delta time and [LuminaFrameDriver.frameStats] is available
-///   to the HUD overlay.
-/// - With `false` no extra swap chain or driver is created: the ticker calls
-///   [LuminaGame.tickGame] with the real interval between ticked refreshes and `FilamentWidget` presents through
-///   its own swap chain. Use this for hosts that must not allocate a second swap chain;
-///   note that no frame stats are produced in that mode.
+/// Frame driver:
+/// - The `FilamentWidget` is the only renderer of the game's view, on both
+///   presentation paths, so the view's temporal history (TAA, upscalers,
+///   frame generation) advances once per shown frame.
+/// - With [useHeadlessSwapChain] (default `true`; the name is historical, no
+///   swap chain is created) the world is ticked by a [LuminaFrameDriver]
+///   without a swap chain: a vsync-derived, frame-paced delta time
+///   ([onFrameDriver] receives the driver).
+/// - With `false` the ticker calls [LuminaGame.tickGame] with the real
+///   interval between ticked refreshes.
 ///
 /// Frame rate:
 /// Presentation ([allowDirectPresentation], a game screen):
@@ -69,6 +70,11 @@ class LuminaGameHostConfiguration extends InheritedWidget {
 ///   is the swap chain's present mode, Target FPS the limiter. Where it
 ///   cannot run (the web, no Vulkan, no presentation window) the widget
 ///   stays on Flutter and reports why ([LuminaGamePresentation.reportFallback]).
+/// - Frame generation asks for Direct by itself. If it stays on while the
+///   game presents through Flutter (the player chose Flutter, Direct fell
+///   back, an editor host), the game keeps running and Flutter shows one
+///   frame per rendered frame; the generated frames are not shown, which
+///   the widget logs as a warning.
 ///
 /// Frame rate:
 /// - [targetFps] and [vsyncEnabled] are the project's settings: the defaults of
@@ -88,7 +94,9 @@ class LuminaGameWidget extends StatefulWidget {
   /// Called on every play-state transition of [game].
   final void Function(LuminaPlayState state)? onPlayStateChanged;
 
-  /// Whether an extra headless swap chain and frame driver should be created.
+  /// Whether the world is ticked by a [LuminaFrameDriver] (frame-paced
+  /// delta time). The name is historical: no swap chain is created and the
+  /// driver never renders the view.
   final bool useHeadlessSwapChain;
 
   /// The project's target frame rate in FPS (0 = unlimited / display
@@ -140,7 +148,14 @@ class LuminaGameWidget extends StatefulWidget {
     this.viewportOverlay,
     this.allowDirectPresentation = false,
     this.presentation = LuminaPresentationMode.flutter,
+    this.onFrameDriver,
   });
+
+  /// Receives the frame driver ticking the world once the scene exists
+  /// ([LuminaFrameDriver.hitchCount]); not called without one
+  /// ([useHeadlessSwapChain] false or
+  /// [LuminaGameHostConfiguration.allowHeadlessFrameDriver] false).
+  final ValueChanged<LuminaFrameDriver>? onFrameDriver;
 
   /// Whether this game may present directly into the runner's window (a
   /// built game's screen; never the editor's viewport or Play-In-Editor,
@@ -159,7 +174,6 @@ class _LuminaGameWidgetState extends State<LuminaGameWidget>
     with SingleTickerProviderStateMixin {
   Ticker? _ticker;
   LuminaFrameDriver? _frameDriver;
-  FilamentSwapChain? _headlessSwapChain;
   StreamSubscription<LuminaPlayState>? _playStateSub;
   int _clockOffsetNanos = 0;
   bool _calibrated = false;
@@ -199,14 +213,38 @@ class _LuminaGameWidgetState extends State<LuminaGameWidget>
     if (widget.allowDirectPresentation) {
       LuminaGamePresentation.setProjectDefault(widget.presentation);
       LuminaGamePresentation.setFrameGenerationActive(LuminaRtxController.frameGenerationActive.value);
-      LuminaRtxController.frameGenerationActive.addListener(_onFrameGenerationChanged);
       LuminaGamePresentation.requested.addListener(_onPresentationRequested);
       _onPresentationRequested();
     }
+    LuminaRtxController.frameGenerationActive.addListener(_onFrameGenerationChanged);
   }
 
-  void _onFrameGenerationChanged() =>
+  void _onFrameGenerationChanged() {
+    if (widget.allowDirectPresentation) {
       LuminaGamePresentation.setFrameGenerationActive(LuminaRtxController.frameGenerationActive.value);
+    }
+    _warnFrameGenerationOnFlutter();
+  }
+
+  /// Frame generation on while Flutter presents: the game runs, Flutter
+  /// shows one frame per rendered frame, the generated ones are not shown.
+  void _warnFrameGenerationOnFlutter() {
+    final unseen = LuminaRtxController.frameGenerationActive.value && !_presentingDirectly && _sceneReady;
+    if (unseen && !_warnedFrameGeneration) {
+      final reason = widget.allowDirectPresentation
+          ? (LuminaGamePresentation.decision.value.reason ?? 'Direct presentation not running yet')
+          : 'this host presents through Flutter';
+      EngineLoggerService().log(
+          'Frame generation is on but the game presents through Flutter ($reason): '
+          'Flutter shows one frame per rendered frame, the generated frames are not shown.',
+          level: 'warning',
+          source: 'LuminaGameWidget');
+    }
+    _warnedFrameGeneration = unseen;
+  }
+
+  bool _warnedFrameGeneration = false;
+  bool _sceneReady = false;
 
   /// Direct or Flutter asked for (setting, player choice, frame generation).
   void _onPresentationRequested() {
@@ -241,6 +279,7 @@ class _LuminaGameWidgetState extends State<LuminaGameWidget>
         source: 'LuminaGameWidget');
     if (direct != _presentingDirectly && mounted) setState(() => _presentingDirectly = direct);
     _publishOverlay();
+    _warnFrameGenerationOnFlutter();
   }
 
   /// The app-wide capture ([LuminaUiCaptureRoot]) follows this game's
@@ -311,19 +350,17 @@ class _LuminaGameWidgetState extends State<LuminaGameWidget>
     if (world != null &&
         widget.useHeadlessSwapChain &&
         LuminaGameHostConfiguration.allowsHeadlessFrameDriver(context)) {
-      final renderer = engine.createRenderer();
-      final swapChain = engine.createHeadlessSwapChain(1, 1);
-      _headlessSwapChain = swapChain;
-      _frameDriver = LuminaFrameDriver(
-        world,
-        renderer: renderer,
-        swapChain: swapChain,
-        view: view,
-      );
-      // The driver's pacer for its offscreen frame; the presented rate is
-      // the limiter's.
+      // No swap chain: the FilamentWidget renders the view. A second render
+      // here advanced the view's temporal history twice per shown frame and,
+      // with frame generation, stalled the readback of the shown frame.
+      _frameDriver = LuminaFrameDriver(world, renderer: engine.createRenderer(), view: view);
+      // The driver's pacer for the world's delta time; the presented rate
+      // is the limiter's.
       if (_pacing.targetFps > 0) _frameDriver!.targetFrameRate = _pacing.targetFps.toDouble();
+      widget.onFrameDriver?.call(_frameDriver!);
     }
+    _sceneReady = true;
+    _warnFrameGenerationOnFlutter();
     _configureLimiter();
 
     if (widget.paused) {
@@ -342,10 +379,7 @@ class _LuminaGameWidgetState extends State<LuminaGameWidget>
       final frameTime = SchedulerBinding.instance.currentFrameTimeStamp;
       if (!_limiter.shouldRender(frameTime)) return;
       final vsyncNanos = flutterNowNanos + _clockOffsetNanos;
-      // Presenting directly, the FilamentWidget is the only renderer of the
-      // view: the frame driver's offscreen render would advance the view's
-      // temporal history (TAA, upscalers, frame generation) a second time.
-      if (_frameDriver != null && !_presentingDirectly) {
+      if (_frameDriver != null) {
         _frameDriver!.onVsync(vsyncNanos);
       } else {
         final now = frameTime.inMicroseconds;
@@ -361,10 +395,10 @@ class _LuminaGameWidgetState extends State<LuminaGameWidget>
     _ticker?.stop();
     _ticker?.dispose();
     _ticker = null;
+    _frameDriver?.renderer.dispose();
     _frameDriver?.dispose();
     _frameDriver = null;
-    _headlessSwapChain?.dispose();
-    _headlessSwapChain = null;
+    _sceneReady = false;
     if (widget.game.playState != LuminaPlayState.stopped) {
       widget.game.disposeGame();
     }
@@ -376,8 +410,8 @@ class _LuminaGameWidgetState extends State<LuminaGameWidget>
     if (identical(LuminaUiCapture.directOverlay.value, _publishedOverlay) && _publishedOverlay != null) {
       LuminaUiCapture.directOverlay.value = null;
     }
+    LuminaRtxController.frameGenerationActive.removeListener(_onFrameGenerationChanged);
     if (widget.allowDirectPresentation) {
-      LuminaRtxController.frameGenerationActive.removeListener(_onFrameGenerationChanged);
       LuminaGamePresentation.requested.removeListener(_onPresentationRequested);
     }
     _onDispose();

@@ -24,10 +24,19 @@ class LuminaFrameStats {
 }
 
 /// The core game loop driver managing vsync timing, FramePacer integration, frame skipping, and stat streaming.
+///
+/// With a [swapChain] the driver renders [view] into it after each tick (a
+/// loop that owns its presentation). Without one it only ticks and paces the
+/// world: the host renders the view itself, as the game widget's
+/// `FilamentWidget` does, so the view's temporal history (TAA, upscalers,
+/// frame generation) advances once per shown frame. [frameStats] needs the
+/// driver's own frames, so it stays empty without a swap chain.
 class LuminaFrameDriver {
   final LuminaWorld world;
   final FilamentRenderer renderer;
-  final FilamentSwapChain swapChain;
+
+  /// Where the driver renders [view]; null when the host renders it.
+  final FilamentSwapChain? swapChain;
   final FilamentView view;
   final bool useFramePacer;
   final FilamentFramePacer? framePacer;
@@ -51,7 +60,7 @@ class LuminaFrameDriver {
   LuminaFrameDriver(
     this.world, {
     required this.renderer,
-    required this.swapChain,
+    this.swapChain,
     required this.view,
     this.useFramePacer = true,
     FilamentFramePacer? framePacer,
@@ -84,7 +93,7 @@ class LuminaFrameDriver {
   set targetFrameRate(double fps) {
     _targetFps = fps;
     framePacer?.configure(FramePacerConfiguration(targetFrameRate: fps));
-    swapChain.setFrameRate(fps);
+    swapChain?.setFrameRate(fps);
   }
 
   /// Updates the display refresh rate on [renderer], called on display config change.
@@ -94,6 +103,13 @@ class LuminaFrameDriver {
 
   /// Cumulative count of frame time hitches clamped to [maxDeltaTime].
   int get hitchCount => _hitchCount;
+
+  /// Whether the driver renders [view] itself ([swapChain] given).
+  bool get rendersView => swapChain != null;
+
+  /// Frames this driver rendered the view in itself (0 without a [swapChain]).
+  int get renderedFrames => _renderedFrames;
+  int _renderedFrames = 0;
 
   /// Per-frame entry point called on vsync with the engine's steady-clock timestamp in nanoseconds.
   void onVsync(int vsyncSteadyClockNanos) {
@@ -188,15 +204,18 @@ class LuminaFrameDriver {
   }
 
   void _presentFrame(int vsyncSteadyClockNanos, bool shouldRender) {
+    final target = swapChain;
+    if (target == null) return; // the host renders the view
     if (shouldRender) {
       final began = renderer.beginFrame(
-        swapChain,
+        target,
         vsyncSteadyClockTimeNano: vsyncSteadyClockNanos,
       );
       if (began) {
         framePacer?.applyPresentationTime(renderer);
         renderer.render(view);
         renderer.endFrame();
+        _renderedFrames++;
       }
     } else {
       renderer.skipFrame(vsyncSteadyClockNanos: vsyncSteadyClockNanos);

@@ -124,7 +124,7 @@ dünyanın `LuminaInputSubsystem`'ine aktarılan Flutter girdisi:
 
 ### `class LuminaGameHostConfiguration`
 
-Her viewport kendi karelerini sunuyorsa önizlemeleri mount işleminden önce `LuminaGameHostConfiguration(allowHeadlessFrameDriver: false, child: ...)` ile sarın. Bu ayar alt oyun widget'larının ek 1×1 swap chain ve frame driver oluşturmasını engeller; oyun ticker'ı çalışmaya devam eder. Mount öncesinde ayarlayın; sonradan değiştirmek mevcut native sahneleri yeniden oluşturmaz.
+Her viewport kendi karelerini sunuyorsa önizlemeleri mount işleminden önce `LuminaGameHostConfiguration(allowHeadlessFrameDriver: false, child: ...)` ile sarın. Bu ayar alt oyun widget'larında frame driver'ı kapatır (dünyalarını oyun ticker'ı kareler arasındaki gerçek aralıkla tick'ler); driver her iki durumda da view'i çizmez. Mount öncesinde ayarlayın; sonradan değiştirmek mevcut native sahneleri yeniden oluşturmaz.
 
 ### `class LuminaGameWidget`
 
@@ -134,11 +134,11 @@ genişliği ve yüksekliğini alır. Her view'ın viewport'unu sol alt köşeyi 
 alarak ayarlayın. View'lar bağımsız sahne ve kamera kullanabilir. Ek view'ları
 oluşturan host, engine lease bırakılmadan önce `game.disposeGame()` içinde
 kaynakları serbest bırakmalıdır. Bu düzende `useHeadlessSwapChain: false`
-kullanın; tek kare döngüsü ve swap chain widget tarafından sağlanır. Callback
+kullanın; dünyayı oyun ticker'ı sürer. Callback
 yoksa varsayılan view önceki şekilde render edilir.
 
 
-Flutter widget that embeds the `FilamentWidget` viewport and drives the [LuminaGame] loop via [LuminaFrameDriver].  The widget is the game host: it calls `LuminaWidgets.ensureInitialized` and, once per process and never on the web, `LuminaRtxController.requestExtensions` (ray tracing and DLSS need Vulkan extensions before the shared engine exists), then [LuminaGame.mountGame] and `beginPlay()` on the mounted world once `FilamentWidget` has created the scene.  Play control: - [paused] is declarative: flipping it calls [LuminaGame.pause] / [LuminaGame.resume] once the scene exists (and on scene creation if it starts `true`). - [onPlayStateChanged] receives every [LuminaPlayState] transition of [game] for the widget's lifetime — bind an editor toolbar to it.  Swap chain: - With [useHeadlessSwapChain] (default `true`, today's behaviour) the widget creates a 1×1 headless swap chain plus a [LuminaFrameDriver], so the world is ticked with a vsync-derived, frame-paced delta time and [LuminaFrameDriver.frameStats] is available to the HUD overlay. - With `false` no extra swap chain or driver is created: the ticker calls [LuminaGame.tickGame] with the real interval between ticked refreshes as the delta and `FilamentWidget` presents through its own swap chain. Use this for hosts that must not allocate a second swap chain; note that no frame stats are produced in that mode.  Kare hızı: [targetFps] ve [vsyncEnabled] projenin ayarlarıdır, `LuminaGameFramePacing`'in varsayılanları; oyuncunun seçimi (Set Target FPS / Set VSync Enabled + Apply Scalability Settings ya da `GameUserSettings.json`'dan geri yüklenen) bunların önüne geçer. Widget yürürlükteki değeri hemen izler: dünya tick'i ve görünüm aynı ekran yenilemelerinde çalışır (tek ortak `FilamentFrameLimiter`); kareyi Flutter ekranın vsync'inde gösterir, bu yüzden hiçbir hedef yenileme hızını aşmaz ([lumina game.md](../lumina/game.md)).
+Flutter widget that embeds the `FilamentWidget` viewport and drives the [LuminaGame] loop via [LuminaFrameDriver].  The widget is the game host: it calls `LuminaWidgets.ensureInitialized` and, once per process and never on the web, `LuminaRtxController.requestExtensions` (ray tracing and DLSS need Vulkan extensions before the shared engine exists), then [LuminaGame.mountGame] and `beginPlay()` on the mounted world once `FilamentWidget` has created the scene.  Play control: - [paused] is declarative: flipping it calls [LuminaGame.pause] / [LuminaGame.resume] once the scene exists (and on scene creation if it starts `true`). - [onPlayStateChanged] receives every [LuminaPlayState] transition of [game] for the widget's lifetime — bind an editor toolbar to it.  Frame driver: oyunun view'ini her iki sunum yolunda da yalnızca `FilamentWidget` çizer; view'in zamansal geçmişi (TAA, upscaler'lar, frame generation) gösterilen her karede bir kez ilerler. - [useHeadlessSwapChain] ile (varsayılan `true`; ad tarihseldir, swap chain oluşturulmaz) dünyayı swap chain'siz kurulan bir [LuminaFrameDriver] tick'ler: vsync'ten türetilen, kare tempolu delta süresi; `onFrameDriver` driver'ı alır. - `false` ile ticker [LuminaGame.tickGame]'i tick'lenen yenilemeler arasındaki gerçek aralıkla çağırır.  Kare hızı: [targetFps] ve [vsyncEnabled] projenin ayarlarıdır, `LuminaGameFramePacing`'in varsayılanları; oyuncunun seçimi (Set Target FPS / Set VSync Enabled + Apply Scalability Settings ya da `GameUserSettings.json`'dan geri yüklenen) bunların önüne geçer. Widget yürürlükteki değeri hemen izler: dünya tick'i ve görünüm aynı ekran yenilemelerinde çalışır (tek ortak `FilamentFrameLimiter`); kareyi Flutter ekranın vsync'inde gösterir, bu yüzden hiçbir hedef yenileme hızını aşmaz ([lumina game.md](../lumina/game.md)).
 
 
 `decorated` ve `physicalResolution` `FilamentWidget`'a iletilir (varsayılanlar `true` / `false`: mantıksal boyutta
@@ -161,9 +161,18 @@ Widget o zaman `FilamentWidget`'ına bir `LuminaWindowSurface` verir (`lib/src/g
 sunum penceresi, `lumina/game_window` kanalı üzerinden: `createSurface`, `destroySurface`, `surfaceChanged`) ve aldığı
 `FilamentUiOverlay`'i `LuminaUiCapture.directOverlay`'e yayımlar; geri dönüşte nedeni bildirir
 (`LuminaGamePresentation.reportFallback`, bir kez loglanır) ve doku yolunda kalır. Ağacın şekli hiç değişmez, geçiş
-view'i ve UI'ı korur. Doğrudan sunarken frame driver'ın ekran dışı çizimi atlanır (tek çizim widget'ınkidir; aynı
-view'in ikinci kez çizilmesi TAA / upscaler / frame generation geçmişini iki kez ilerletir) ve
-`LuminaScreenResolutionBox(barsOnly: true)` yalnızca bantları siyaha boyar.
+view'i ve UI'ı korur. Her iki yolda da view'in tek çizimi `FilamentWidget`'ınkidir (frame driver yalnızca dünyayı
+tick'ler); doğrudan sunarken `LuminaScreenResolutionBox(barsOnly: true)` yalnızca bantları siyaha boyar.
+
+**Flutter yolunda frame generation.** Yürürlükteki frame generation kendiliğinden Direct ister; üretilen kareler ekrana
+ancak orada ulaşır. Oyun Flutter üzerinden sunarken (oyuncu Flutter'ı seçti, Direct geri döndü, editör) açık kalırsa
+oyun çalışmaya devam eder: `FilamentWidget` view'i her karede bir kez kendi headless swap chain'ine çizer, geri okur
+ve Flutter o kareyi gösterir; üretilen kareler headless swap chain'e sunulur ve hiç gösterilmez. Widget bu durum her
+başladığında bir kez uyarı loglar (`Frame generation is on but the game presents through Flutter (<neden>) ...`).
+Önceden frame driver view'i 1x1 bir headless swap chain'e ikinci kez çiziyordu; frame generation açıkken bu geri
+okumayı tıkıyordu (tekrarlanan `readPixels` fence zaman aşımları, oyun donuyordu), kapalıyken kare hızına mal
+oluyordu (ekran dışı, RTX PRO 2000, beş prop: 1024x768'de 199'a karşı 405 kare/sn, 1920x1080'de 137'ye karşı 206,
+3440x1440'ta 92,5'e karşı 118; `test/smoke/flutter_presentation_frame_generation_smoke_test.dart`).
 
 `LuminaUiCapture` (`lib/src/game/ui_capture.dart`) çocuğunu bir `FilamentUiOverlay` için ekran dışında çizer: çocuk kendi
 birleştirme katmanıdır; resim yalnızca o katmanı sahneye yeniden ekleyen bir kareden (altında herhangi bir değişiklik,
@@ -190,7 +199,8 @@ view içinde daha düşük bir iç boyutta çizer; konumlar view'in çıktı pik
 | `game` | `LuminaGame game` | `game` alanını (field/property) ve ilişkili veriyi saklar. |
 | `hudBuilder` | `LuminaHudBuilder? hudBuilder` | `hudBuilder` alanını (field/property) ve ilişkili veriyi saklar. |
 | `paused` | `bool paused` | Declarative pause flag forwarded to [LuminaGame.pause] / [LuminaGame.resume]. |
-| `useHeadlessSwapChain` | `bool useHeadlessSwapChain` | Whether to create the 1×1 headless swap chain + [LuminaFrameDriver] (see class docs). |
+| `useHeadlessSwapChain` | `bool useHeadlessSwapChain` | Dünyayı bir [LuminaFrameDriver]'ın tick'leyip tick'lemediği (kare tempolu delta süresi; ad tarihseldir, swap chain oluşturulmaz). |
+| `onFrameDriver` | `ValueChanged<LuminaFrameDriver>? onFrameDriver` | Sahne oluşunca frame driver'ı alır (driver yoksa çağrılmaz). |
 | `createState` | `State<LuminaGameWidget> createState() => _LuminaGameWidgetState()` | Yeni bir `State` örneği veya ilişkili GPU kaynağını oluşturur ve yapılandırır. |
 
 ### `class _LuminaGameWidgetState`

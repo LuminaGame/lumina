@@ -102,13 +102,18 @@ Immutable telemetry snapshot for a single rendered or processed frame.
 
 The core game loop driver managing vsync timing, FramePacer integration, frame skipping, and stat streaming.
 
+With a `swapChain` the driver renders `view` into it after each tick (a loop that owns its presentation). Without one
+(`swapChain: null`) it only ticks and paces the world and the host renders the view, as the game widget's
+`FilamentWidget` does, so the view's temporal history (TAA, upscalers, frame generation) advances once per shown
+frame; `frameStats` needs the driver's own frames and stays empty then.
+
 **Functions, Methods & Accessors:**
 
 | Method / Getter | Signature | Purpose & Description |
 | :--- | :--- | :--- |
 | `world` | `LuminaWorld world` | Holds the `world` property or configuration state. |
 | `renderer` | `FilamentRenderer renderer` | Holds the `renderer` property or configuration state. |
-| `swapChain` | `FilamentSwapChain swapChain` | Holds the `swapChain` property or configuration state. |
+| `swapChain` | `FilamentSwapChain? swapChain` | Where the driver renders `view`; null when the host renders it. |
 | `view` | `FilamentView view` | Holds the `view` property or configuration state. |
 | `useFramePacer` | `bool useFramePacer` | Holds the `useFramePacer` property or configuration state. |
 | `framePacer` | `FilamentFramePacer? framePacer` | Holds the `framePacer` property or configuration state. |
@@ -120,6 +125,8 @@ The core game loop driver managing vsync timing, FramePacer integration, frame s
 | `targetFrameRate` | `targetFrameRate(double fps)` | Executes `targetFrameRate` operation. |
 | `setDisplayRefreshRate` | `void setDisplayRefreshRate(double hz)` | Updates the display refresh rate on [renderer], called on display config change. |
 | `hitchCount` | `int get hitchCount` | Cumulative count of frame time hitches clamped to [maxDeltaTime]. |
+| `rendersView` | `bool get rendersView` | Whether the driver renders `view` itself (`swapChain` given). |
+| `renderedFrames` | `int get renderedFrames` | Frames the driver rendered the view in itself (0 without a `swapChain`). |
 | `onVsync` | `void onVsync(int vsyncSteadyClockNanos)` | Per-frame entry point called on vsync with the engine's steady-clock timestamp in nanoseconds. |
 | `dispose` | `void dispose()` | Disposes resources, closes streams, and destroys the frame pacer. |
 

@@ -124,7 +124,7 @@ Flutter input bridged into the running world's `LuminaInputSubsystem`:
 
 ### `class LuminaGameHostConfiguration`
 
-Wrap embedded previews in `LuminaGameHostConfiguration(allowHeadlessFrameDriver: false, child: ...)` before mounting when each viewport already presents its own frames. This disables the additional 1×1 swap chain and frame driver for descendant game widgets; their game ticker remains active. Configure it before mounting; changing this option does not rebuild existing native scenes.
+Wrap embedded previews in `LuminaGameHostConfiguration(allowHeadlessFrameDriver: false, child: ...)` before mounting when each viewport already presents its own frames. This disables the frame driver for descendant game widgets (their world is ticked by the game ticker with the real interval between frames); the driver never renders the view either way. Configure it before mounting; changing this option does not rebuild existing native scenes.
 
 ### `class LuminaGameWidget`
 
@@ -133,12 +133,12 @@ widget's single GPU frame. Its callback receives the default view and physical
 surface width/height; set each view's viewport using bottom-left coordinates.
 Views may use independent scenes and cameras. The host owns any additional
 views and must release them in `game.disposeGame()` before its engine lease is
-released. For this arrangement use `useHeadlessSwapChain: false` so the widget
-provides the only frame driver and swap chain. Without the callback, the default
+released. For this arrangement use `useHeadlessSwapChain: false` so the game ticker
+drives the world. Without the callback, the default
 view renders as before.
 
 
-Flutter widget that embeds the `FilamentWidget` viewport and drives the [LuminaGame] loop via [LuminaFrameDriver].  The widget is the game host: it calls `LuminaWidgets.ensureInitialized` and, once per process and never on the web, `LuminaRtxController.requestExtensions` (ray tracing and DLSS need Vulkan extensions before the shared engine exists), then [LuminaGame.mountGame] and `beginPlay()` on the mounted world once `FilamentWidget` has created the scene.  Play control: - [paused] is declarative: flipping it calls [LuminaGame.pause] / [LuminaGame.resume] once the scene exists (and on scene creation if it starts `true`). - [onPlayStateChanged] receives every [LuminaPlayState] transition of [game] for the widget's lifetime — bind an editor toolbar to it.  Swap chain: - With [useHeadlessSwapChain] (default `true`, today's behaviour) the widget creates a 1×1 headless swap chain plus a [LuminaFrameDriver], so the world is ticked with a vsync-derived, frame-paced delta time and [LuminaFrameDriver.frameStats] is available to the HUD overlay. - With `false` no extra swap chain or driver is created: the ticker calls [LuminaGame.tickGame] with the real interval between ticked refreshes as the delta and `FilamentWidget` presents through its own swap chain. Use this for hosts that must not allocate a second swap chain; note that no frame stats are produced in that mode.  Frame rate: [targetFps] and [vsyncEnabled] are the project's settings, the defaults of `LuminaGameFramePacing`, which the player's choice (Set Target FPS / Set VSync Enabled + Apply Scalability Settings, or the one restored from `GameUserSettings.json`) overrides. The widget follows what is in force at once: the world ticks and the view renders on the same display refreshes (one shared `FilamentFrameLimiter`); the frame is presented by Flutter on the display's vsync, so no target goes above the refresh rate ([lumina game.md](../lumina/game.md)).
+Flutter widget that embeds the `FilamentWidget` viewport and drives the [LuminaGame] loop via [LuminaFrameDriver].  The widget is the game host: it calls `LuminaWidgets.ensureInitialized` and, once per process and never on the web, `LuminaRtxController.requestExtensions` (ray tracing and DLSS need Vulkan extensions before the shared engine exists), then [LuminaGame.mountGame] and `beginPlay()` on the mounted world once `FilamentWidget` has created the scene.  Play control: - [paused] is declarative: flipping it calls [LuminaGame.pause] / [LuminaGame.resume] once the scene exists (and on scene creation if it starts `true`). - [onPlayStateChanged] receives every [LuminaPlayState] transition of [game] for the widget's lifetime — bind an editor toolbar to it.  Frame driver: the `FilamentWidget` is the only renderer of the game's view on both presentation paths, so the view's temporal history (TAA, upscalers, frame generation) advances once per shown frame. - With [useHeadlessSwapChain] (default `true`; the name is historical, no swap chain is created) the world is ticked by a [LuminaFrameDriver] built without a swap chain: a vsync-derived, frame-paced delta time; `onFrameDriver` receives the driver. - With `false` the ticker calls [LuminaGame.tickGame] with the real interval between ticked refreshes as the delta.  Frame rate: [targetFps] and [vsyncEnabled] are the project's settings, the defaults of `LuminaGameFramePacing`, which the player's choice (Set Target FPS / Set VSync Enabled + Apply Scalability Settings, or the one restored from `GameUserSettings.json`) overrides. The widget follows what is in force at once: the world ticks and the view renders on the same display refreshes (one shared `FilamentFrameLimiter`); the frame is presented by Flutter on the display's vsync, so no target goes above the refresh rate ([lumina game.md](../lumina/game.md)).
 
 
 `decorated` and `physicalResolution` are forwarded to `FilamentWidget` (defaults `true` / `false`: the bordered panel
@@ -161,9 +161,19 @@ widget then gives its `FilamentWidget` a `LuminaWindowSurface` (`lib/src/game/wi
 presentation window over the `lumina/game_window` channel: `createSurface`, `destroySurface`, `surfaceChanged`) and
 publishes the `FilamentUiOverlay` it gets to `LuminaUiCapture.directOverlay`; on a fallback it reports the reason
 (`LuminaGamePresentation.reportFallback`, logged once) and stays on the texture path. The tree never changes shape, so
-switching keeps the view and the UI. While presenting directly the frame driver's offscreen render is skipped (the
-widget's render is the only one; a second render of the same view advances its TAA / upscaler / frame-generation
-history twice), and `LuminaScreenResolutionBox(barsOnly: true)` paints black only on the bars.
+switching keeps the view and the UI. On both paths the `FilamentWidget`'s render is the only render of the view (the
+frame driver only ticks the world), and while presenting directly `LuminaScreenResolutionBox(barsOnly: true)` paints
+black only on the bars.
+
+**Frame generation on the Flutter path.** Frame generation in force asks for Direct by itself, which is where its
+frames reach the screen. When it stays on while the game presents through Flutter (the player chose Flutter, Direct
+fell back, the editor), the game keeps running: the `FilamentWidget` renders the view once per frame into its headless
+swap chain, reads it back and Flutter shows that frame; the generated frames are presented into the headless swap
+chain and never shown. The widget logs a warning (`Frame generation is on but the game presents through Flutter
+(<reason>) ...`) once each time this starts. Earlier the frame driver rendered the view a second time into a 1x1
+headless swap chain; with frame generation on that stalled the readback (repeated `readPixels` fence timeouts, the
+game froze), and with it off it cost frame rate (offscreen, RTX PRO 2000, five props: 199 vs 405 frames/s at
+1024x768, 137 vs 206 at 1920x1080, 92.5 vs 118 at 3440x1440; `test/smoke/flutter_presentation_frame_generation_smoke_test.dart`).
 
 `LuminaUiCapture` (`lib/src/game/ui_capture.dart`) renders its child offscreen for a `FilamentUiOverlay`: the child is
 its own compositing layer; a picture is taken only after a frame that added that layer to the scene again (any change
@@ -190,7 +200,8 @@ render inside the view at a lower internal size; positions stay in the view's ou
 | `game` | `LuminaGame game` | Holds the `game` property or configuration state. |
 | `hudBuilder` | `LuminaHudBuilder? hudBuilder` | Holds the `hudBuilder` property or configuration state. |
 | `paused` | `bool paused` | Declarative pause flag forwarded to [LuminaGame.pause] / [LuminaGame.resume]. |
-| `useHeadlessSwapChain` | `bool useHeadlessSwapChain` | Whether to create the 1×1 headless swap chain + [LuminaFrameDriver] (see class docs). |
+| `useHeadlessSwapChain` | `bool useHeadlessSwapChain` | Whether a [LuminaFrameDriver] ticks the world (frame-paced delta time; historical name, no swap chain is created). |
+| `onFrameDriver` | `ValueChanged<LuminaFrameDriver>? onFrameDriver` | Receives the frame driver once the scene exists (not called without one). |
 | `createState` | `State<LuminaGameWidget> createState() => _LuminaGameWidgetState()` | Creates, configures, and returns a new `State` instance or associated GPU resource. |
 
 ### `class _LuminaGameWidgetState`

@@ -205,6 +205,25 @@ void main() {
       expect(ticks, hasLength(1));
     });
 
+    test('without a swap chain the driver ticks and paces the world but never renders the view', () {
+      final driver = LuminaFrameDriver(world, renderer: renderer, view: view, framePacer: pacer);
+      final ticks = <double>[];
+      world.onPreTick = (dt) => ticks.add(dt);
+
+      driver.onVsync(1000000000);
+      driver.onVsync(1016666667);
+      world.isPaused = true;
+      driver.onVsync(1033333333);
+      driver.targetFrameRate = 30;
+
+      expect(driver.rendersView, isFalse);
+      expect(ticks, hasLength(2), reason: 'ticked while playing, not while the world is paused');
+      expect(pacer.callLog.where((c) => c == 'setupFrame'), hasLength(3));
+      expect(pacer.callLog, isNot(contains('applyPresentationTime')));
+      expect(renderer.callLog, isEmpty, reason: 'no beginFrame, render, endFrame or skipFrame');
+      expect(driver.renderedFrames, 0);
+    });
+
     test('deltaTime derives from expectedPresentationTime advancing steadily', () {
       final driver = LuminaFrameDriver(
         world,

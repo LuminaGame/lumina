@@ -102,13 +102,18 @@ Immutable telemetry snapshot for a single rendered or processed frame.
 
 The core game loop driver managing vsync timing, FramePacer integration, frame skipping, and stat streaming.
 
+Bir `swapChain` verilirse driver her tick'ten sonra `view`'i ona çizer (sunumunu kendisi yapan bir döngü). Verilmezse
+(`swapChain: null`) yalnızca dünyayı tick'ler ve tempolar, view'i host çizer (oyun widget'ının `FilamentWidget`'ı
+gibi); view'in zamansal geçmişi (TAA, upscaler'lar, frame generation) gösterilen her karede bir kez ilerler.
+`frameStats` driver'ın kendi karelerini gerektirir, bu durumda boş kalır.
+
 **Fonksiyonlar, Metotlar ve Erişimciler:**
 
 | Metot / Getter | İmzası | Ne İşe Yarar? |
 | :--- | :--- | :--- |
 | `world` | `LuminaWorld world` | `world` alanını (field/property) ve ilişkili veriyi saklar. |
 | `renderer` | `FilamentRenderer renderer` | `renderer` alanını (field/property) ve ilişkili veriyi saklar. |
-| `swapChain` | `FilamentSwapChain swapChain` | `swapChain` alanını (field/property) ve ilişkili veriyi saklar. |
+| `swapChain` | `FilamentSwapChain? swapChain` | Driver'ın `view`'i çizdiği yer; view'i host çiziyorsa null. |
 | `view` | `FilamentView view` | `view` alanını (field/property) ve ilişkili veriyi saklar. |
 | `useFramePacer` | `bool useFramePacer` | `useFramePacer` alanını (field/property) ve ilişkili veriyi saklar. |
 | `framePacer` | `FilamentFramePacer? framePacer` | `framePacer` alanını (field/property) ve ilişkili veriyi saklar. |
@@ -120,6 +125,8 @@ The core game loop driver managing vsync timing, FramePacer integration, frame s
 | `targetFrameRate` | `targetFrameRate(double fps)` | `targetFrameRate` işlemini gerçekleştirir. |
 | `setDisplayRefreshRate` | `void setDisplayRefreshRate(double hz)` | Updates the display refresh rate on [renderer], called on display config change. |
 | `hitchCount` | `int get hitchCount` | Cumulative count of frame time hitches clamped to [maxDeltaTime]. |
+| `rendersView` | `bool get rendersView` | Driver'ın `view`'i kendisinin çizip çizmediği (`swapChain` verildi mi). |
+| `renderedFrames` | `int get renderedFrames` | Driver'ın view'i kendisinin çizdiği kare sayısı (`swapChain` yoksa 0). |
 | `onVsync` | `void onVsync(int vsyncSteadyClockNanos)` | Per-frame entry point called on vsync with the engine's steady-clock timestamp in nanoseconds. |
 | `dispose` | `void dispose()` | Disposes resources, closes streams, and destroys the frame pacer. |
 

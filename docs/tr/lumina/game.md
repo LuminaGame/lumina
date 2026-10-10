@@ -283,6 +283,12 @@ generation) oyuncu Flutter seçmediyse Direct ister. Direct çalışamadığınd
 backend, sunum penceresi olmayan runner (önceden üretilmiş proje; şimdilik Linux), başarısız swap chain. Çalışırken
 geçiş pencereyi ve swap chain'i oluşturur ya da bırakır; view ve UI bağlı kalır.
 
+**Flutter yürürlükteyken frame generation.** Oyun yine de Flutter üzerinden sunarken (oyuncu Flutter'ı seçti, Direct
+geri döndü) frame generation uygulanmış kalır: oyun çalışmaya devam eder, Flutter çizilen her kare için bir kare
+gösterir ve üretilen kareler gösterilmez; oyun widget'ı bir uyarı loglar. View her karede bir kez çizilir (yalnızca
+`FilamentWidget` tarafından); sunum ve frame generation'ın hiçbir birleşiminde geri okuma tıkanmaz
+([lumina_widgets](../lumina_widgets/index.md#doğrudan-sunum)).
+
 **Tasarım.**
 - *Kare döngüsü*: sahibi değişmedi. Flutter'ın vsync geri çağrıları (oyun widget'ının ticker'ı ve paylaşılan
   `FilamentFrameLimiter`) dünyayı tick'ler ve `beginFrame` / render / `endFrame` çağırır; sunumu Filament'in sürücü

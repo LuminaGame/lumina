@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Game widget: the view is rendered once per frame. `LuminaGameWidget`'s frame driver no longer renders
+  the view a second time into a 1x1 headless swap chain; it only ticks and paces the world
+  (`LuminaFrameDriver` without a `swapChain`, new `rendersView` / `renderedFrames`, widget
+  `onFrameDriver`). Frame generation on the Flutter presentation path no longer freezes the game on
+  readback fence timeouts (the generated frames are not shown there; a warning is logged), and the
+  Flutter path is faster (offscreen, five props: 199 → 405 frames/s at 1024x768, 92.5 → 118 at
+  3440x1440).
+
 - Rendering settings: DLSS Ray Reconstruction is a fourth upscaler (`LuminaUpscaler.dlssRayReconstruction`,
   `DLSS RR`) and frame generation has a generator (`LuminaFrameGenerator` FSR3 / DLSS) with DLSS's
   generated frames per rendered frame (1–5). `LuminaRtxController` drives `DlssRayReconstruction` (with

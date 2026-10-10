@@ -285,6 +285,12 @@ a backend other than Vulkan, a runner without the presentation window (a project
 failed swap chain. Switching at runtime creates or releases the window and the swap chain; the view and the UI stay
 mounted.
 
+**Frame generation with Flutter in force.** Frame generation stays applied when the game presents through Flutter
+anyway (the player chose Flutter, Direct fell back): the game keeps running, Flutter shows one frame per rendered
+frame and the generated frames are not shown; the game widget logs a warning. The view is rendered once per frame
+(only by the `FilamentWidget`), so nothing stalls the readback in any combination of presentation and frame
+generation ([lumina_widgets](../lumina_widgets/index.md#direct-presentation)).
+
 **Design.**
 - *Frame loop*: unchanged owner. Flutter's vsync callbacks (the game widget's ticker and the shared
   `FilamentFrameLimiter`) tick the world and call `beginFrame` / render / `endFrame`; Filament presents from its driver
