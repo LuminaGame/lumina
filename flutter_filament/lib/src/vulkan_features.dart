@@ -69,6 +69,25 @@ class VulkanFeature {
     extension: 'VK_EXT_shader_float8',
   );
 
+  /// `VkPhysicalDeviceFeatures::shaderInt16`, a core feature in the
+  /// `VkPhysicalDeviceFeatures2` Filament chains itself: merged into it.
+  static const shaderInt16 = VulkanFeature(
+    name: 'shaderInt16',
+    sType: 1000059000,
+    structSize: 240,
+    fieldOffset: 180,
+  );
+
+  /// `VkPhysicalDevice16BitStorageFeatures::storageBuffer16BitAccess` (Vulkan
+  /// 1.1 core): merged into the `VkPhysicalDeviceVulkan11Features` Filament
+  /// chains.
+  static const storageBuffer16BitAccess = VulkanFeature(
+    name: 'storageBuffer16BitAccess',
+    sType: 1000083000,
+    structSize: 32,
+    fieldOffset: 16,
+  );
+
   @override
   String toString() => 'VulkanFeature($name)';
 }
@@ -112,6 +131,26 @@ abstract final class VulkanFeatures {
       calloc.free(r);
       calloc.free(e);
     }
+  }
+
+  /// Asks for the Vulkan API version the instance is created with
+  /// ([major].[minor], for shaders that need a newer core version: SPIR-V
+  /// 1.6 needs 1.3); the highest request wins, capped at what the loader
+  /// offers. Filament's default is 1.1. [clear] forgets it.
+  static void requestApiVersion(String requester, int major, int minor) {
+    final r = requester.toNativeUtf8();
+    try {
+      c.filament_vulkan_request_api_version(r.cast(), (major << 22) | (minor << 12));
+    } finally {
+      calloc.free(r);
+    }
+  }
+
+  /// The Vulkan API version [engine]'s device runs at, as (major, minor);
+  /// (0, 0) on other backends.
+  static (int, int) apiVersion(FilamentEngine engine) {
+    final v = c.filament_vulkan_api_version(engine.nativePointer);
+    return ((v >> 22) & 0x7f, (v >> 12) & 0x3ff);
   }
 
   /// Forgets what [requester] asked for (every requester when null).

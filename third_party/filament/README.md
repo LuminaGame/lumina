@@ -24,6 +24,7 @@ are upstream v1.77.2 with exactly these files applied in order.
 | `0015-posed-acceleration-structures-for-skinned-and-morphed-renderables.patch` | `backend/include/backend/AccelerationStructure.h`, `backend/include/private/backend/DriverAPI.inc`, `backend/src/vulkan/{VulkanAccelerationStructure.*,VulkanBlasDeformer.* (new),VulkanBlasDeform.comp (new),VulkanBlasDeformSpirv.h (new),VulkanBufferCache.cpp,VulkanDriver.*}`, the other drivers' no-ops, `backend/CMakeLists.txt`, `filament/include/filament/Scene.h`, `filament/src/{Scene.cpp,details/Scene.*,details/VertexBuffer.h,components/RenderableManager.*}` | Skinned and morphed renderables are traced in their current pose: a Vulkan compute pass poses their vertices into their own deformable BLAS, refit in every frame their palette or weights changed (`Scene::getDeformedBlasCount`, `getLastBlasDeformTimeNanos`). |
 | `0016-present-pacing-thread.patch` | `backend/include/private/backend/DriverAPI.inc`, `backend/src/vulkan/{VulkanPresentPacer.* (new),utils/QueueLock.h (new),VulkanSwapChain.*,VulkanDriver.*,VulkanCommands.cpp,VulkanReadPixels.cpp,platform/VulkanPlatformSwapChainImpl.cpp}`, the other drivers' no-ops, `backend/CMakeLists.txt`, `filament/include/filament/Renderer.h`, `filament/src/details/Renderer.*` | Vsync-less Vulkan SwapChains present from their own thread: frame-generation presents are spaced evenly over the frame interval without the render thread waiting, so the presented rate multiplies; `Renderer::getPresentTimes()` reports the actual present times. |
 | `0017-vulkan-blit-rectangles-inside-their-images.patch` | `backend/src/vulkan/VulkanDriver.cpp` | `blitDEPRECATED` keeps both rectangles inside their images: frame generation's presents into a window that just shrank no longer lose the device. |
+| `0018-vulkan-merged-feature-requests-and-api-version.patch` | `backend/include/backend/platforms/VulkanPlatform.h`, `backend/src/vulkan/platform/VulkanPlatform.cpp` | A client's feature request for a structure Filament already chains (core features, Vulkan 1.1 features, 16-bit storage) is OR-merged into Filament's structure; `Customization::apiVersion` opts into a newer Vulkan API version. |
 
 ## 0001: libassimp glTF 2 `ReplaceData_joint` bounds
 
@@ -398,3 +399,16 @@ reaches past the image (a negative top after the Y flip), an invalid `vkCmdBlitI
 the queue. A game presenting directly into its window (Lumina's direct presentation: resize, Alt+Enter, a smaller
 screen resolution) with frame generation on hit it every time. `VulkanDriver::blitDEPRECATED` now keeps the part of
 both rectangles that lies inside both images, in the same proportion, and skips a blit with nothing left.
+
+## 0018: merged feature requests and an opt-in API version
+
+Patch 0011's `VulkanPlatform::Customization::extraDeviceFeatures` chains a client's feature structures into
+`VkDeviceCreateInfo` but skipped a structure type Filament already chains, so a client could not ask for a core feature
+(`shaderInt16` in `VkPhysicalDeviceFeatures`) or a Vulkan 1.1 one (`storageBuffer16BitAccess` in
+`VkPhysicalDeviceVulkan11Features`, also reachable as `VkPhysicalDevice16BitStorageFeatures`, which must not be chained
+next to it). Such a request is now OR-merged into Filament's own structure (the requested members the device supports),
+`VkPhysicalDevice16BitStorageFeatures` going into `VkPhysicalDeviceVulkan11Features` (its first four members);
+`isExtraDeviceFeatureEnabled()` reports merged members too. `Customization::apiVersion` (0 keeps Filament's 1.1) creates
+the instance with a newer API version, capped at what the loader offers, for clients whose shaders need it (SPIR-V 1.6
+needs Vulkan 1.3); `VulkanPlatform::getApiVersion()` returns the version the device runs at. OpenDLSS-NR's kernels
+(flutter_filament) use both.

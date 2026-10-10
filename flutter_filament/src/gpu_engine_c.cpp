@@ -99,6 +99,7 @@ struct FeatureRequest {
 struct VulkanRequests {
     std::vector<std::string> extensions;
     std::vector<FeatureRequest> features;
+    uint32_t apiVersion = 0;
 };
 
 std::map<std::string, VulkanRequests> gVulkanRequests;  // guarded by gExtraExtensionsMutex
@@ -129,6 +130,7 @@ public:
         for (const auto& entry : gVulkanRequests) {
             appendUnique(mDeviceExtensions, entry.second.extensions);
             for (const auto& feature : entry.second.features) mergeFeature(mFeatures, feature);
+            mApiVersion = std::max(mApiVersion, entry.second.apiVersion);
         }
     }
 
@@ -149,6 +151,7 @@ public:
             features.push_back(std::move(feature));
         }
         c.extraDeviceFeatures = std::move(features);
+        c.apiVersion = mApiVersion;
         return c;
     }
 
@@ -167,6 +170,7 @@ private:
     std::vector<std::string> mInstanceExtensions;
     std::vector<std::string> mDeviceExtensions;
     std::vector<FeatureRequest> mFeatures;
+    uint32_t mApiVersion = 0;
 };
 
 PreferredGpuPlatform* platformOf(void* engine);
@@ -438,6 +442,26 @@ void filament_vulkan_request_device_feature(const char* requester, uint32_t sTyp
     (void) structSize;
     (void) fieldOffset;
     (void) extension;
+#endif
+}
+
+void filament_vulkan_request_api_version(const char* requester, uint32_t version) {
+#if FLUTTER_FILAMENT_GPU_PLATFORM
+    std::lock_guard<std::mutex> lock(gExtraExtensionsMutex);
+    gVulkanRequests[requester ? requester : ""].apiVersion = version;
+#else
+    (void) requester;
+    (void) version;
+#endif
+}
+
+uint32_t filament_vulkan_api_version(void* engine) {
+#if FLUTTER_FILAMENT_GPU_PLATFORM
+    PreferredGpuPlatform* platform = platformOf(engine);
+    return platform && platform->getDevice() != VK_NULL_HANDLE ? platform->getApiVersion() : 0;
+#else
+    (void) engine;
+    return 0;
 #endif
 }
 

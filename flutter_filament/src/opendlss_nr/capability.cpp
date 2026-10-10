@@ -6,7 +6,9 @@
 #include "opendlss_nr/opendlss_nr_config.h"
 #include "opendlss_nr/capability.h"
 
+#include <cstddef>
 #include <cstring>
+#include <string>
 #include <vector>
 
 #include "vulkan_features_c.h"
@@ -45,6 +47,11 @@ const std::vector<FeatureStruct>& features() {
       {"the Vulkan memory model", 1000211000u, 32, "VK_KHR_vulkan_memory_model", {16, 20}, {16}},
       {"subgroup size control", 1000225002u, 24, "VK_EXT_subgroup_size_control", {16, 20}, {16, 20}},
       {"maintenance4", 1000413000u, 24, "VK_KHR_maintenance4", {16}, {16}},
+      // Core structures Filament chains itself (patch 0018 merges the members into its own):
+      // VkPhysicalDeviceFeatures2::features.shaderInt16 (offset 16 + 41 * 4) and
+      // VkPhysicalDevice16BitStorageFeatures::storageBuffer16BitAccess / uniformAndStorageBuffer16BitAccess.
+      {"16-bit integers (shaderInt16)", 1000059000u, 240, "", {180}, {180}},
+      {"16-bit storage", 1000083000u, 32, "", {16, 20}, {16}},
   };
   return list;
 }
@@ -52,8 +59,10 @@ const std::vector<FeatureStruct>& features() {
 }  // namespace
 
 void requestDeviceFeatures() {
+  // The kernels are SPIR-V 1.6: Vulkan 1.3.
+  filament_vulkan_request_api_version(kRequester, (1u << 22) | (3u << 12));
   for (const FeatureStruct& f : features()) {
-    filament_vulkan_request_device_extension(kRequester, f.extension);
+    if (*f.extension) filament_vulkan_request_device_extension(kRequester, f.extension);
     for (uint32_t field : f.fields) filament_vulkan_request_device_feature(kRequester, f.sType, f.size, field, f.extension);
   }
 }
@@ -89,8 +98,11 @@ Capability checkCapability(void* engine) {
     }
     return false;
   };
+  static_assert(offsetof(VkPhysicalDeviceFeatures2, features) + offsetof(VkPhysicalDeviceFeatures, shaderInt16) == 180,
+                "shaderInt16 offset");
+  static_assert(sizeof(VkPhysicalDeviceFeatures2) <= 240, "VkPhysicalDeviceFeatures2 size");
   for (const FeatureStruct& f : features()) {
-    if (!supported(f.extension)) {
+    if (*f.extension && !supported(f.extension)) {
       c.code = f.sType == 1000567000u || f.sType == 1000593000u ? kOlderGpu : kMissingExtension;
       c.reason = c.code == kOlderGpu
                      ? "OpenDLSS-NR needs an NVIDIA Ada or newer GPU (" + std::string(f.extension) + " is missing on " + c.deviceName + ")"
@@ -102,9 +114,14 @@ Capability checkCapability(void* engine) {
   for (const FeatureStruct& f : features()) {
     std::vector<uint8_t> query(f.size, 0);
     std::memcpy(query.data(), &f.sType, sizeof(uint32_t));
-    VkPhysicalDeviceFeatures2 features2{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
-    features2.pNext = query.data();
-    vkGetPhysicalDeviceFeatures2(physical, &features2);
+    if (f.sType == uint32_t(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2)) {
+      // the core features: the query structure itself
+      vkGetPhysicalDeviceFeatures2(physical, reinterpret_cast<VkPhysicalDeviceFeatures2*>(query.data()));
+    } else {
+      VkPhysicalDeviceFeatures2 features2{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
+      features2.pNext = query.data();
+      vkGetPhysicalDeviceFeatures2(physical, &features2);
+    }
     for (uint32_t field : f.required) {
       VkBool32 value = VK_FALSE;
       std::memcpy(&value, query.data() + field, sizeof(value));
@@ -126,6 +143,14 @@ Capability checkCapability(void* engine) {
         return c;
       }
     }
+  }
+  // The kernels are SPIR-V 1.6, which needs a Vulkan 1.3 device.
+  if (const uint32_t api = filament_vulkan_api_version(engine); api < ((1u << 22) | (3u << 12))) {
+    c.code = kNotEnabled;
+    c.reason = "the engine's Vulkan device runs API " + std::to_string(api >> 22) + "." +
+               std::to_string((api >> 12) & 0x3ffu) + "; the OpenDLSS-NR kernels need 1.3 (restart after requesting the "
+               "OpenDLSS-NR device features)";
+    return c;
   }
   c.code = kCapable;
   c.reason = "supported on " + c.deviceName;

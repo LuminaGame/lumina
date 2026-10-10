@@ -119,4 +119,43 @@ void main() {
       }
     },
   );
+
+  test('a core or Vulkan 1.1 feature Filament chains itself is merged into its structure', () {
+    VulkanFeatures.requestFeature('test', VulkanFeature.shaderInt16);
+    VulkanFeatures.requestFeature('test', VulkanFeature.storageBuffer16BitAccess);
+    final engine = vulkanEngine();
+    if (engine == null) {
+      markTestSkipped('needs a Vulkan device');
+      return;
+    }
+    try {
+      expect(VulkanFeatures.isFeatureEnabled(engine, VulkanFeature.shaderInt16), isTrue);
+      expect(VulkanFeatures.isFeatureEnabled(engine, VulkanFeature.storageBuffer16BitAccess), isTrue);
+      // Filament's default API version without a request.
+      expect(VulkanFeatures.apiVersion(engine), (1, 1));
+    } finally {
+      engine.dispose();
+    }
+  });
+
+  test('a requested API version is what the device runs at, and only while requested', () {
+    VulkanFeatures.requestApiVersion('test', 1, 3);
+    final engine = vulkanEngine();
+    if (engine == null) {
+      markTestSkipped('needs a Vulkan device');
+      return;
+    }
+    try {
+      expect(VulkanFeatures.apiVersion(engine), (1, 3));
+    } finally {
+      engine.dispose();
+    }
+    VulkanFeatures.clear('test');
+    final plain = vulkanEngine()!;
+    try {
+      expect(VulkanFeatures.apiVersion(plain), (1, 1));
+    } finally {
+      plain.dispose();
+    }
+  });
 }

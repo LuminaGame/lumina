@@ -29,7 +29,7 @@ The upstream PTX / CUDA route (`VK_NV_cuda_kernel_launch`) is not included: the 
 - Desktop Vulkan (Windows, Linux x86_64), an NVIDIA GPU with FP8 cooperative matrices (Ada or newer), and a driver with `VK_KHR_cooperative_matrix`, `VK_NV_cooperative_matrix2`, `VK_EXT_shader_float8`, `VK_KHR_shader_float16_int8`, `VK_KHR_8bit_storage`, `VK_KHR_vulkan_memory_model`, `VK_EXT_subgroup_size_control` and `VK_KHR_maintenance4`.
 - `OpenDlssNr.requestDeviceFeatures()` before `FilamentEngine.create` asks for those extensions and feature members (through the feature chains of [External post pass and Vulkan device features](external-post-pass.md)).
 - `OpenDlssNr.capability(engine)` returns `capable`, or the reason: `notVulkan`, `notNvidia`, `missingExtension`, `olderGpu` (no FP8 tensor cores), `notEnabled` (the engine was created before the request).
-- Two capabilities the kernels use cannot be requested through Filament's feature chain yet (`shaderInt16` and `storageBuffer16BitAccess` live in structures Filament chains itself), and the kernels are SPIR-V 1.6 while Filament creates a Vulkan 1.1 instance; NVIDIA drivers run them regardless, a validation layer reports it. A Filament patch change is planned for both.
+- `requestDeviceFeatures` also asks for `shaderInt16` and `storageBuffer16BitAccess` (merged into the structures Filament chains itself, patch `0018`) and a Vulkan 1.3 instance (`VulkanFeatures.requestApiVersion`; the kernels are SPIR-V 1.6). The capability check requires both: an engine created at API 1.1 reports `notEnabled`. With the Khronos validation layer the post pass, OpenDLSS-NR and DLSS Ray Reconstruction tests report none of these errors any more.
 
 ## The model folder
 

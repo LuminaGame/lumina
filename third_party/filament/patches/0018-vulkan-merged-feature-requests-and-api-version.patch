@@ -1,0 +1,237 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Can Us <me@canus.dev>
+Date: Sat, 10 Oct 2026 18:00:00 +0300
+Subject: [PATCH] Vulkan: merge client feature requests into Filament's own
+ structures; opt-in API version
+
+Patch 0011's VulkanPlatform::Customization::extraDeviceFeatures chains a
+client's feature structures into VkDeviceCreateInfo but skipped a
+structure type Filament already chains: a client could not ask for a core
+feature (shaderInt16 in VkPhysicalDeviceFeatures) or a Vulkan 1.1 one
+(storageBuffer16BitAccess in VkPhysicalDeviceVulkan11Features, also
+reachable as VkPhysicalDevice16BitStorageFeatures, which must not be
+chained next to it). Such a request is now OR-merged into Filament's own
+structure: the requested members the device supports are enabled there,
+VkPhysicalDevice16BitStorageFeatures going into
+VkPhysicalDeviceVulkan11Features (its members are the first four).
+isExtraDeviceFeatureEnabled() reports merged members too.
+
+Customization::apiVersion (0 keeps Filament's 1.1) creates the instance
+with a newer API version, capped at what the loader offers, for clients
+whose shaders need it (SPIR-V 1.6 needs Vulkan 1.3).
+VulkanPlatform::getApiVersion() returns the version the device runs at.
+
+diff --git a/filament/backend/include/backend/platforms/VulkanPlatform.h b/filament/backend/include/backend/platforms/VulkanPlatform.h
+index e0948e2c..3aacf34a 100644
+--- a/filament/backend/include/backend/platforms/VulkanPlatform.h
++++ b/filament/backend/include/backend/platforms/VulkanPlatform.h
+@@ -207,12 +207,25 @@ public:
+         /**
+          * Feature structures the client needs on top of Filament's own. Each one is queried
+          * with vkGetPhysicalDeviceFeatures2; the requested members the device supports are
+-         * enabled and the structure is chained into VkDeviceCreateInfo. Members the device
+-         * does not support, structures whose extension is not enabled and structure types
+-         * Filament already chains itself are skipped with a log line. Ignored with a shared
+-         * context. See isExtraDeviceFeatureEnabled().
++         * enabled and the structure is chained into VkDeviceCreateInfo. A structure type
++         * Filament already chains itself (VkPhysicalDeviceFeatures2 for the core features,
++         * VkPhysicalDeviceVulkan11Features) has the requested members OR-merged into
++         * Filament's own structure instead; VkPhysicalDevice16BitStorageFeatures, whose
++         * members are the first four of VkPhysicalDeviceVulkan11Features and which must not
++         * be chained next to it, is merged there too. Members the device does not support
++         * and structures whose extension is not enabled are skipped with a log line. Ignored
++         * with a shared context. See isExtraDeviceFeatureEnabled().
+          */
+         utils::FixedCapacityVector<ExtraDeviceFeature> extraDeviceFeatures;
++
++        /**
++         * The Vulkan API version to create the instance with (VK_MAKE_API_VERSION), for a
++         * client whose shaders need a newer core version (SPIR-V 1.6 needs Vulkan 1.3).
++         * 0 keeps Filament's own (1.1). The version is capped at what the loader offers;
++         * the device runs at the lower of this and its own version (getApiVersion()).
++         * Ignored with a shared context.
++         */
++        uint32_t apiVersion = 0;
+     };
+ 
+     /**
+@@ -353,6 +366,12 @@ public:
+      */
+     bool isDeviceExtensionEnabled(char const* name) const noexcept;
+ 
++    /**
++     * The Vulkan API version the device runs at: the lower of the instance's version
++     * (Customization::apiVersion, else 1.1) and the device's own. 0 before the device exists.
++     */
++    uint32_t getApiVersion() const noexcept;
++
+     /**
+      * @return The family index of the graphics queue selected for the Vulkan backend.
+      */
+diff --git a/filament/backend/src/vulkan/platform/VulkanPlatform.cpp b/filament/backend/src/vulkan/platform/VulkanPlatform.cpp
+index 7eeb68f3..022c82c8 100644
+--- a/filament/backend/src/vulkan/platform/VulkanPlatform.cpp
++++ b/filament/backend/src/vulkan/platform/VulkanPlatform.cpp
+@@ -605,6 +605,11 @@ struct VulkanPlatformPrivate {
+     // Customization::extraDeviceFeatures as enabled: one copy of each chained structure with
+     // the members that were both requested and supported set to VK_TRUE.
+     std::vector<std::vector<uint8_t>> mExtraDeviceFeatures;
++    // Requested members merged into a structure Filament chains itself: kept here (same
++    // layout as the request, not chained) so isExtraDeviceFeatureEnabled() can answer.
++    std::vector<std::vector<uint8_t>> mMergedDeviceFeatures;
++    uint32_t mInstanceApiVersion = 0;
++    uint32_t mApiVersion = 0;
+     // every extension the logical device was created with
+     std::vector<std::string> mEnabledDeviceExtensions;
+ };
+@@ -1021,11 +1026,26 @@ VkDevice VulkanPlatform::createVkDevice(const VkDeviceCreateInfo& createInfo) no
+ void VulkanPlatform::createInstance(ExtensionSet const& requiredExts,
+         bool enableRenderdoc) noexcept {
+     // Create the Vulkan instance.
++    // Filament's own version unless the client asks for a newer one the loader offers.
++    uint32_t apiVersion =
++            VK_MAKE_API_VERSION(0, FVK_REQUIRED_VERSION_MAJOR, FVK_REQUIRED_VERSION_MINOR, 0);
++    if (uint32_t const requested = getCustomization().apiVersion; requested > apiVersion) {
++        uint32_t loader = apiVersion;
++        if (vkEnumerateInstanceVersion) {
++            vkEnumerateInstanceVersion(&loader);
++        }
++        apiVersion = std::min(requested, loader);
++        if (apiVersion < requested) {
++            FVK_LOGW << "Vulkan API version " << VK_API_VERSION_MAJOR(requested) << "."
++                     << VK_API_VERSION_MINOR(requested) << " requested; the loader offers "
++                     << VK_API_VERSION_MAJOR(loader) << "." << VK_API_VERSION_MINOR(loader);
++        }
++    }
++    mImpl->mInstanceApiVersion = apiVersion;
+     VkApplicationInfo appInfo = {
+         .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
+         .pEngineName = "Filament",
+-        .apiVersion =
+-                VK_MAKE_API_VERSION(0, FVK_REQUIRED_VERSION_MAJOR, FVK_REQUIRED_VERSION_MINOR, 0),
++        .apiVersion = apiVersion,
+     };
+ 
+     VkInstanceCreateInfo instanceCreateInfo = {
+@@ -1430,14 +1450,87 @@ void VulkanPlatform::createLogicalDeviceAndQueues(const ExtensionSet& deviceExte
+ 
+     // The client's feature structures (Customization::extraDeviceFeatures): each one keeps the
+     // requested members the device supports. A structure type already in the chain (Filament's
+-    // own) cannot appear twice, and a structure of an extension that is not enabled is invalid.
++    // own) cannot appear twice: its requested members are OR-merged into Filament's structure
++    // (VkPhysicalDevice16BitStorageFeatures into VkPhysicalDeviceVulkan11Features, whose first
++    // four members it is). A structure of an extension that is not enabled is invalid.
+     mImpl->mExtraDeviceFeatures.clear();
++    mImpl->mMergedDeviceFeatures.clear();
++    // The supported members of [request] (a structure of request.sType, request.size bytes),
++    // queried with vkGetPhysicalDeviceFeatures2; a VkPhysicalDeviceFeatures2 request is the
++    // query structure itself.
++    auto querySupported = [&](Customization::ExtraDeviceFeature const& request) {
++        std::vector<uint8_t> supported(request.size, 0);
++        reinterpret_cast<VkBaseOutStructure*>(supported.data())->sType =
++                VkStructureType(request.sType);
++        if (request.sType == uint32_t(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2)) {
++            vkGetPhysicalDeviceFeatures2(mImpl->mPhysicalDevice,
++                    reinterpret_cast<VkPhysicalDeviceFeatures2*>(supported.data()));
++        } else {
++            VkPhysicalDeviceFeatures2 query = {
++                .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
++                .pNext = supported.data(),
++            };
++            vkGetPhysicalDeviceFeatures2(mImpl->mPhysicalDevice, &query);
++        }
++        reinterpret_cast<VkBaseOutStructure*>(supported.data())->pNext = nullptr;
++        return supported;
++    };
+     for (auto const& request: getCustomization().extraDeviceFeatures) {
+         if (request.size < sizeof(VkBaseOutStructure) + sizeof(VkBool32) || request.size > 4096) {
+             FVK_LOGW << "Extra device feature " << request.sType << " has an invalid size "
+                      << request.size << "; skipped.";
+             continue;
+         }
++        // The structure in the chain the request merges into, if any.
++        uint32_t const mergeType =
++                request.sType == uint32_t(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES)
++                        ? uint32_t(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES)
++                        : request.sType;
++        uint8_t* chained = nullptr;
++        size_t chainedSize = 0;
++        if (mergeType == uint32_t(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2)) {
++            chained = reinterpret_cast<uint8_t*>(&enabledFeatures2);
++            chainedSize = sizeof(enabledFeatures2);
++        } else if (mergeType == uint32_t(VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES)) {
++            chained = reinterpret_cast<uint8_t*>(&enabledVk11Features);
++            chainedSize = sizeof(enabledVk11Features);
++        }
++        if (chained) {
++            if (!request.extension.empty() &&
++                    !setContains(deviceExtensions, request.extension.c_str())) {
++                FVK_LOGW << "Extra device feature " << request.sType << " needs "
++                         << request.extension.c_str() << ", which is not enabled; skipped.";
++                continue;
++            }
++            std::vector<uint8_t> const supported = querySupported(request);
++            std::vector<uint8_t> merged(request.size, 0);
++            reinterpret_cast<VkBaseOutStructure*>(merged.data())->sType =
++                    VkStructureType(request.sType);
++            bool any = false;
++            for (uint32_t const offset: request.fields) {
++                if (offset < sizeof(VkBaseOutStructure) || offset + sizeof(VkBool32) > request.size ||
++                        offset + sizeof(VkBool32) > chainedSize) {
++                    FVK_LOGW << "Extra device feature " << request.sType << ": member offset "
++                             << offset << " is outside the structure; skipped.";
++                    continue;
++                }
++                VkBool32 value = VK_FALSE;
++                std::memcpy(&value, supported.data() + offset, sizeof(value));
++                if (!value) {
++                    FVK_LOGW << "Extra device feature " << request.sType << ": member at offset "
++                             << offset << " is not supported by the device; skipped.";
++                    continue;
++                }
++                VkBool32 const enable = VK_TRUE;
++                std::memcpy(chained + offset, &enable, sizeof(enable));
++                std::memcpy(merged.data() + offset, &enable, sizeof(enable));
++                any = true;
++            }
++            if (any) {
++                mImpl->mMergedDeviceFeatures.push_back(std::move(merged));
++            }
++            continue;
++        }
+         bool duplicate = false;
+         for (auto const* node = static_cast<VkBaseInStructure const*>(deviceCreateInfo.pNext);
+                 node; node = node->pNext) {
+@@ -1509,10 +1602,32 @@ void VulkanPlatform::createLogicalDeviceAndQueues(const ExtensionSet& deviceExte
+     }
+ 
+     mImpl->mDevice = createVkDevice(deviceCreateInfo);
++
++    VkPhysicalDeviceProperties properties = {};
++    vkGetPhysicalDeviceProperties(mImpl->mPhysicalDevice, &properties);
++    mImpl->mApiVersion = std::min(mImpl->mInstanceApiVersion ? mImpl->mInstanceApiVersion
++                                                             : properties.apiVersion,
++            properties.apiVersion);
++}
++
++uint32_t VulkanPlatform::getApiVersion() const noexcept {
++    return mImpl->mApiVersion;
+ }
+ 
+ bool VulkanPlatform::isExtraDeviceFeatureEnabled(uint32_t const sType,
+         uint32_t const fieldOffset) const noexcept {
++    for (auto const& merged: mImpl->mMergedDeviceFeatures) {
++        if (uint32_t(reinterpret_cast<VkBaseOutStructure const*>(merged.data())->sType) != sType ||
++                fieldOffset < sizeof(VkBaseOutStructure) ||
++                fieldOffset + sizeof(VkBool32) > merged.size()) {
++            continue;
++        }
++        VkBool32 value = VK_FALSE;
++        std::memcpy(&value, merged.data() + fieldOffset, sizeof(value));
++        if (value == VK_TRUE) {
++            return true;
++        }
++    }
+     for (auto const& chosen: mImpl->mExtraDeviceFeatures) {
+         if (uint32_t(reinterpret_cast<VkBaseOutStructure const*>(chosen.data())->sType) != sType) {
+             continue;

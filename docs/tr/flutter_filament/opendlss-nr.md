@@ -29,7 +29,7 @@ Her karede, Filament'ın komut tamponunun içinde (patch `0011`'in `View::setExt
 - Masaüstü Vulkan (Windows, Linux x86_64), FP8 cooperative matrix destekli bir NVIDIA GPU (Ada veya daha yeni) ve `VK_KHR_cooperative_matrix`, `VK_NV_cooperative_matrix2`, `VK_EXT_shader_float8`, `VK_KHR_shader_float16_int8`, `VK_KHR_8bit_storage`, `VK_KHR_vulkan_memory_model`, `VK_EXT_subgroup_size_control` ve `VK_KHR_maintenance4` sunan bir sürücü.
 - `FilamentEngine.create`'ten önce `OpenDlssNr.requestDeviceFeatures()` bu uzantıları ve özellik üyelerini ister ([Harici post pass ve Vulkan aygıt özellikleri](external-post-pass.md) zincirleri üzerinden).
 - `OpenDlssNr.capability(engine)` `capable` ya da nedeni döndürür: `notVulkan`, `notNvidia`, `missingExtension`, `olderGpu` (FP8 tensör çekirdeği yok), `notEnabled` (motor istekten önce oluşturulmuş).
-- Çekirdeklerin kullandığı iki yetenek henüz Filament'ın özellik zinciriyle istenemiyor (`shaderInt16` ve `storageBuffer16BitAccess`, Filament'ın kendi zincirlediği yapılarda), ve çekirdekler SPIR-V 1.6 iken Filament Vulkan 1.1 instance'ı oluşturuyor; NVIDIA sürücüleri yine de çalıştırır, doğrulama katmanı bunu bildirir. İkisi için bir Filament patch değişikliği planlandı.
+- `requestDeviceFeatures` ayrıca `shaderInt16` ve `storageBuffer16BitAccess`'i (Filament'ın kendi zincirlediği yapılara katılır, yama `0018`) ve bir Vulkan 1.3 instance'ı (`VulkanFeatures.requestApiVersion`; çekirdekler SPIR-V 1.6) ister. Yetenek denetimi ikisini de gerektirir: API 1.1 ile oluşturulmuş bir motor `notEnabled` bildirir. Khronos doğrulama katmanıyla post pass, OpenDLSS-NR ve DLSS Ray Reconstruction testleri artık bu hataların hiçbirini bildirmez.
 
 ## Model klasörü
 

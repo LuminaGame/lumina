@@ -9510,6 +9510,15 @@ external void filament_vulkan_request_device_feature(
   ffi.Pointer<ffi.Char> extension,
 );
 
+@ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Char>, ffi.Uint32)>()
+external void filament_vulkan_request_api_version(
+  ffi.Pointer<ffi.Char> requester,
+  int version,
+);
+
+@ffi.Native<ffi.Uint32 Function(ffi.Pointer<ffi.Void>)>()
+external int filament_vulkan_api_version(ffi.Pointer<ffi.Void> engine);
+
 @ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Char>)>()
 external void filament_vulkan_clear_requests(ffi.Pointer<ffi.Char> requester);
 

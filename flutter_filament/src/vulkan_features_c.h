@@ -34,6 +34,15 @@ FFI_PLUGIN_EXPORT void filament_vulkan_request_device_extension(const char* requ
 FFI_PLUGIN_EXPORT void filament_vulkan_request_device_feature(const char* requester, uint32_t sType,
         uint32_t structSize, uint32_t fieldOffset, const char* extension);
 
+// Asks for the Vulkan API version (VK_MAKE_API_VERSION) the instance is created with, for
+// shaders that need a newer core version (SPIR-V 1.6 needs 1.3). The highest request wins;
+// 0 forgets `requester`'s. Capped at what the loader offers; Filament's default is 1.1.
+FFI_PLUGIN_EXPORT void filament_vulkan_request_api_version(const char* requester, uint32_t version);
+
+// The Vulkan API version the engine's device runs at (VK_MAKE_API_VERSION); 0 on other
+// backends and platforms.
+FFI_PLUGIN_EXPORT uint32_t filament_vulkan_api_version(void* engine);
+
 // Forgets every extension and feature `requester` asked for (NULL forgets all requesters).
 FFI_PLUGIN_EXPORT void filament_vulkan_clear_requests(const char* requester);
 

@@ -4213,6 +4213,13 @@ void filament_vulkan_request_device_feature(ffi.Pointer<ffi.Char> requester, int
   _m.filament_vulkan_request_device_feature(requester.address.toJS, sType.toJS, structSize.toJS, fieldOffset.toJS, extension.address.toJS);
 }
 
+void filament_vulkan_request_api_version(ffi.Pointer<ffi.Char> requester, int version) {
+  _m.filament_vulkan_request_api_version(requester.address.toJS, version.toJS);
+}
+
+int filament_vulkan_api_version(ffi.Pointer<ffi.Void> engine) =>
+    _m.filament_vulkan_api_version(engine.address.toJS).toDartInt.toUnsigned(32);
+
 void filament_vulkan_clear_requests(ffi.Pointer<ffi.Char> requester) {
   _m.filament_vulkan_clear_requests(requester.address.toJS);
 }
@@ -8950,6 +8957,10 @@ extension type _Module._(JSObject _) implements JSObject {
   external void filament_vulkan_request_device_extension(JSNumber requester, JSNumber name);
   @JS('_filament_vulkan_request_device_feature')
   external void filament_vulkan_request_device_feature(JSNumber requester, JSNumber sType, JSNumber structSize, JSNumber fieldOffset, JSNumber extension);
+  @JS('_filament_vulkan_request_api_version')
+  external void filament_vulkan_request_api_version(JSNumber requester, JSNumber version);
+  @JS('_filament_vulkan_api_version')
+  external JSNumber filament_vulkan_api_version(JSNumber engine);
   @JS('_filament_vulkan_clear_requests')
   external void filament_vulkan_clear_requests(JSNumber requester);
   @JS('_filament_vulkan_device_feature_enabled')

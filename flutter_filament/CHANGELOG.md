@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- OpenDLSS-NR runs validation-clean for its device setup (prebuilt `1.77.2-lumina.16`, Filament patch `0018`): feature
+  requests for structures Filament chains itself are merged into them (`VulkanFeature.shaderInt16`,
+  `VulkanFeature.storageBuffer16BitAccess`), and `VulkanFeatures.requestApiVersion` / `apiVersion` create a Vulkan 1.3
+  instance for its SPIR-V 1.6 kernels; the capability check requires both.
 - Frame generation into a window that just shrank no longer loses the device (prebuilt `1.77.2-lumina.15`, Filament
   patch `0017`: Vulkan blits stay inside their images). Direct presentation rounds the view to even pixels (DLSS Frame
   Generation wrote black frames for odd sizes) and recreates a VSync-changed swap chain after destroying the old one.
