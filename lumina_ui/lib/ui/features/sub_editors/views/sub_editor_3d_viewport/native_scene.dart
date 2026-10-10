@@ -24,6 +24,7 @@ mixin _SubEditor3DViewportNativeScene on _SubEditor3DViewportStateBase {
       !(widget.glbMesh?.rawPayload != null &&
           widget.glbMesh!.rawPayload!.isNotEmpty);
 
+  @override
   void _startWarmupTimer() {
     final hasNativePayload = _hasNativePreview;
     if (!hasNativePayload) return;
@@ -184,6 +185,7 @@ mixin _SubEditor3DViewportNativeScene on _SubEditor3DViewportStateBase {
       _sectionMaterials.clear();
       _sectionMaterialInstances.clear();
       _appliedSectionMaterials = const {};
+      _releaseSkinWeightHeatmap();
 
       _nativeAsset = asset;
       _jointEntities.clear();
@@ -220,6 +222,7 @@ mixin _SubEditor3DViewportNativeScene on _SubEditor3DViewportStateBase {
       _applyJointTransforms(force: true);
       _applySectionMaterials(force: true);
       _applyPreviewMaterialToSections();
+      _applySkinWeightHeatmap(force: true);
       _updateSelectedNodeWireframe();
       _updateCollisionLines(force: true);
       _syncSocketAttachments();
@@ -378,6 +381,7 @@ mixin _SubEditor3DViewportNativeScene on _SubEditor3DViewportStateBase {
         instance.dispose();
       }
       _sectionMaterialInstances.clear();
+      _releaseSkinWeightHeatmap(material: true);
       // After the mesh: its sections may wear the edited material's instance.
       _materialPreview.dispose();
       for (final material in _sectionMaterials.values) {

@@ -147,6 +147,16 @@ abstract class _SubEditor3DViewportStateBase extends State<SubEditor3DViewport> 
 
   void _applyMorphWeights({bool force = false});
 
+  void _applySkinWeightHeatmap({bool force = false});
+
+  void _releaseSkinWeightHeatmap({bool material = false});
+
+  /// Whether the skin weight heatmap is drawn on the mesh now (section and
+  /// preview materials wait until it is off).
+  bool get _heatmapActive;
+
+  void _startWarmupTimer();
+
   void _applyJointTransforms({bool force = false});
 
   void _onPlaybackChanged();

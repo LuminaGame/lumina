@@ -8,6 +8,7 @@ import 'package:flutter_filament/flutter_filament.dart' hide GizmoMode;
 import 'package:lumina_ui/ui/features/sub_editors/services/material_preview_renderer.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/viewport_mesh.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/preview_mesh_factory.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/skin_weight_heatmap.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/material_editor_view_model.dart'
     show MaterialParamModel, MaterialParamType;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
@@ -42,6 +43,7 @@ part 'sub_editor_3d_viewport/gizmo.dart';
 part 'sub_editor_3d_viewport/native_scene.dart';
 part 'sub_editor_3d_viewport/overlays.dart';
 part 'sub_editor_3d_viewport/pose_and_materials.dart';
+part 'sub_editor_3d_viewport/skin_weight_heatmap.dart';
 part 'sub_editor_3d_viewport/mesh_painter.dart';
 part 'sub_editor_3d_viewport/mesh_painting.dart';
 part 'sub_editor_3d_viewport/widget.dart';
@@ -56,6 +58,7 @@ class _SubEditor3DViewportState extends _SubEditor3DViewportStateBase
         _SubEditor3DViewportNativeScene,
         _SubEditor3DViewportOverlays,
         _SubEditor3DViewportPoseAndMaterials,
+        _SubEditor3DViewportSkinWeightHeatmap,
         _SubEditor3DViewportSceneSetup,
         _SubEditor3DViewportToolbar {
 
@@ -214,6 +217,7 @@ class _SubEditor3DViewportState extends _SubEditor3DViewportStateBase
         !_jointDeltasEquals(_appliedJointDeltas, widget.jointDeltas)) {
       _applyJointTransforms();
     }
+    _applySkinWeightHeatmap();
   }
 
   @override

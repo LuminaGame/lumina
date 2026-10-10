@@ -198,6 +198,8 @@ class _SkeletalMeshSubEditorState extends _SkeletalMeshSubEditorStateBase
                             hiddenSectionIndices: _viewModel.hiddenSectionIndices,
                             highlightedSectionIndices: _viewModel.highlightedSectionIndices,
                             sectionMaterialOverrides: _viewModel.slotCompiledMaterials,
+                            showSkinWeightHeatmap: _viewModel.heatmapEnabled,
+                            skinWeightHeatmapBone: _viewModel.selectedBone?.index,
                           ),
                           // Top-Left Stats Overlay
                           Positioned(

@@ -30,7 +30,7 @@ mixin _SubEditor3DViewportPoseAndMaterials on _SubEditor3DViewportStateBase {
     if (!force && _bytesMapEquals(_appliedSectionMaterials, overrides)) return;
     _appliedSectionMaterials = Map<int, Uint8List>.from(overrides);
 
-    if (overrides.isEmpty) return;
+    if (overrides.isEmpty || _heatmapActive) return;
 
     try {
       final rm = FilamentRenderableManager(engine);
@@ -70,7 +70,7 @@ mixin _SubEditor3DViewportPoseAndMaterials on _SubEditor3DViewportStateBase {
     final asset = _nativeAsset;
     final bytes = widget.previewMaterialBytes;
     final sections = widget.previewMaterialSections;
-    if (engine == null || asset == null || sections.isEmpty) return;
+    if (engine == null || asset == null || sections.isEmpty || _heatmapActive) return;
     if (!MaterialPreviewRenderer.isFilamatPackage(bytes)) return;
     if (!_materialPreview.hasMaterial &&
         !_materialPreview.mountMaterialOnly(

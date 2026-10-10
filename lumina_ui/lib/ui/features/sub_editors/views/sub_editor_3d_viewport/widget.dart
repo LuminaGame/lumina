@@ -69,6 +69,14 @@ class SubEditor3DViewport extends StatefulWidget {
   /// `subPrimitives` in.
   final Map<int, Uint8List> sectionMaterialOverrides;
 
+  /// Draws the loaded mesh with the skin weight heatmap (blue → red, the
+  /// weight of [skinWeightHeatmapBone]) instead of its materials; the
+  /// weights are read per vertex on the GPU, so they follow the pose.
+  final bool showSkinWeightHeatmap;
+
+  /// The node index of the bone the heatmap shows (null: none, all blue).
+  final int? skinWeightHeatmapBone;
+
   /// Compiled `.filamat` package to shade the procedural preview primitive
   /// with (Material Editor). When set and no [glbMesh] payload exists, the
   /// viewport still mounts the real Filament renderer.
@@ -221,6 +229,8 @@ class SubEditor3DViewport extends StatefulWidget {
     this.hiddenSectionIndices = const {},
     this.highlightedSectionIndices = const {},
     this.sectionMaterialOverrides = const {},
+    this.showSkinWeightHeatmap = false,
+    this.skinWeightHeatmapBone,
     this.previewMaterialBytes,
     this.previewMaterialParams = const [],
     this.previewMaterialRevision = 0,

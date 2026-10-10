@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image/image.dart' as img;
 import 'package:integration_test/integration_test.dart';
 import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/testing.dart';
@@ -11,6 +12,7 @@ import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.
 import 'package:lumina_ui/ui/features/main_editor/views/main_editor_view.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/skeletal_mesh_editor_view_model.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/skeletal_mesh/skeletal_mesh_sub_editor.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/sub_editor_3d_viewport.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 /// Skeletal Mesh editor smoke: boots the real Lumina
@@ -297,7 +299,7 @@ material {
     }
   });
 
-  testWidgets('Skeletal Mesh Smoke: the skin weight heatmap colours the selected bone of a skin that does not start at node 0',
+  testWidgets('Skeletal Mesh Smoke: the skin weight heatmap colours the selected bone of a skin that does not start at node 0, in the viewport',
       (tester) async {
     // The Quinn mannequin's skin starts at node 1 (node 0 is the mesh):
     // JOINTS_0 indices are skin-local, so reading them as node indices put
@@ -363,10 +365,40 @@ material {
       }
       expect(skel.getVertexInfluences(top).keys.first, 'head');
 
+      // The viewport's pixels: heatmap warm (weight about 0.4 and up: green,
+      // yellow, orange, red) and blue (0). The stats overlay in the
+      // viewport's top-left corner (orange text) is left out.
+      final viewportRect = tester.getRect(find.byType(SubEditor3DViewport).last);
+      Future<({int hot, int blue, double hotY})> heatPixels() async {
+        await settle(20);
+        final png = await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey));
+        final image = img.decodePng(png)!;
+        var hot = 0, blue = 0;
+        var hotY = 0.0;
+        for (var y = viewportRect.top.ceil(); y < viewportRect.bottom.floor() && y < image.height; y++) {
+          for (var x = viewportRect.left.ceil(); x < viewportRect.right.floor() && x < image.width; x++) {
+            if (x < viewportRect.left + 240 && y < viewportRect.top + 150) continue;
+            final px = image.getPixel(x, y);
+            if (px.b < 110 && (px.r > 170 || px.g > 170)) {
+              hot++;
+              hotY += y;
+            } else if (px.b > 170 && px.r < 60 && px.g < 110) {
+              blue++;
+            }
+          }
+        }
+        return (hot: hot, blue: blue, hotY: hot == 0 ? 0.0 : hotY / hot);
+      }
+
+      final before = await heatPixels();
+      expect(before.blue, lessThan(2000), reason: 'no heatmap yet: the lit mannequin ($before)');
+      expect(before.hot, lessThan(300), reason: 'no heatmap yet ($before)');
+
       if (!skel.heatmapEnabled) skel.toggleHeatmap();
       await settle(10);
       await rec.hold(const Duration(seconds: 1));
       final metrics = <String, String>{};
+      final hotY = <String, double>{};
       for (final name in const ['head', 'pelvis', 'hand_l', 'foot_r']) {
         final bone = skel.allBones.firstWhere((b) => b.name == name);
         skel.selectBone(bone);
@@ -385,10 +417,31 @@ material {
         metrics['${name}_weighted_vertices'] = '$count';
         metrics['${name}_mean_height'] = (sumY / count).toStringAsFixed(3);
         await rec.hold(const Duration(seconds: 2));
-        await settle(10);
+        // The Filament viewport draws the weights: red on the bone's skin,
+        // blue on the rest of the body.
+        final heat = await heatPixels();
+        expect(heat.hot, greaterThan(300), reason: '$name: weighted (warm) pixels in the viewport ($heat)');
+        expect(heat.blue, greaterThan(5000), reason: '$name: unweighted (blue) pixels in the viewport ($heat)');
+        hotY[name] = heat.hotY;
+        metrics['${name}_viewport_warm_px'] = '${heat.hot}';
+        metrics['${name}_viewport_blue_px'] = '${heat.blue}';
+        metrics['${name}_viewport_warm_mean_y'] = heat.hotY.toStringAsFixed(1);
         final png = await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey));
         SmokeArtifacts.saveScreenshot('skeletal_mesh_editor_heatmap_$name', png, usedAssets: [quinn], metrics: Map.of(metrics));
       }
+      // The warm area follows the selected bone down the screen.
+      expect(hotY['head']!, lessThan(hotY['pelvis']!));
+      expect(hotY['pelvis']!, lessThan(hotY['foot_r']!));
+
+      // Off again: the mannequin's own materials come back.
+      skel.toggleHeatmap();
+      await rec.hold(const Duration(seconds: 1));
+      final after = await heatPixels();
+      expect(after.blue, lessThan(2000), reason: 'heatmap off: materials restored ($after)');
+      // Only the selected bone's yellow line in the skeleton overlay is warm.
+      expect(after.hot, lessThan(1000), reason: 'heatmap off ($after)');
+      final offPng = await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey));
+      SmokeArtifacts.saveScreenshot('skeletal_mesh_editor_heatmap_off', offPng, usedAssets: [quinn]);
       // The head's weighted vertices sit above the pelvis's, the foot's below.
       final h = double.parse(metrics['head_mean_height']!);
       final pl = double.parse(metrics['pelvis_mean_height']!);
@@ -396,7 +449,7 @@ material {
       expect(h, greaterThan(pl));
       expect(f, lessThan(pl));
       await rec.hold(const Duration(seconds: 1));
-      rec.save('Skeletal Mesh Smoke: the skin weight heatmap colours the selected bone of a skin that does not start at node 0',
+      rec.save('Skeletal Mesh Smoke: the skin weight heatmap colours the selected bone of a skin that does not start at node 0, in the viewport',
           usedAssets: [quinn]);
     } finally {
       if (tempProjectsDir.existsSync()) tempProjectsDir.deleteSync(recursive: true);
