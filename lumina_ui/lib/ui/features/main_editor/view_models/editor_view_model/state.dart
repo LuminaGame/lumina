@@ -392,6 +392,7 @@ abstract class _EditorViewModelState extends ChangeNotifier {
     LuminaProject? initialProject,
     String? projectDirPath,
     String? projectLocation,
+    String? projectDir,
     required bool enableTimers,
     EditorQualityStore? qualityStore,
     EditorCameraStore? cameraStore,
@@ -403,6 +404,7 @@ abstract class _EditorViewModelState extends ChangeNotifier {
        _autoThumbnails = autoGenerateThumbnails ?? enableTimers,
        _debounceCameraSave = enableTimers,
        _customProjectLocation = projectDirPath ?? projectLocation,
+       _projectDir = projectDir == null ? null : _trimSeparators(projectDir),
        _project =
            initialProject ??
            const LuminaProject(
@@ -453,7 +455,23 @@ abstract class _EditorViewModelState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// The project folder the editor was opened on, when given: a project
+  /// lives in whatever folder it was copied, cloned or renamed to.
+  final String? _projectDir;
+
+  static String _trimSeparators(String dir) {
+    var d = dir;
+    while (d.length > 1 && (d.endsWith('/') || d.endsWith(r'\')) && !d.endsWith(':/') && !d.endsWith(r':\')) {
+      d = d.substring(0, d.length - 1);
+    }
+    return d;
+  }
+
+  /// The project folder: the one the editor was opened on, else
+  /// `<projectLocation>/<project name>`, else `~/Lumina Projects/<name>`.
   String get projectDirPath {
+    final dir = _projectDir;
+    if (dir != null) return dir;
     if (_customProjectLocation != null) {
       return '$_customProjectLocation/${_project.projectName}';
     }

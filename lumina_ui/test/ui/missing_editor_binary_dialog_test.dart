@@ -85,8 +85,8 @@ void main() {
       home: LauncherView(
         viewModel: launcher,
         initialProjectDir: fx.projectDir.path,
-        editorBuilder: (project, location, warning) => MainEditorView(
-          viewModel: editor = EditorViewModel(initialProject: project, projectLocation: location, enableTimers: false, autoInitAssets: false),
+        editorBuilder: (project, projectDir, warning) => MainEditorView(
+          viewModel: editor = EditorViewModel(initialProject: project, projectDir: projectDir, enableTimers: false, autoInitAssets: false),
           startupWarning: warning,
         ),
       ),

@@ -37,9 +37,10 @@ class LauncherView extends StatefulWidget {
   /// launcher is up, through the same resolver as Open.
   final String? initialProjectDir;
 
-  /// Builds the editor an Open lands in (default: [MainEditorView]); tests
-  /// pass one with a view model they control.
-  final Widget Function(LuminaProject project, String? projectLocation, String? startupWarning)? editorBuilder;
+  /// Builds the editor an Open lands in (default: [MainEditorView]) on the
+  /// project folder `projectDir`; tests pass one with a view model they
+  /// control.
+  final Widget Function(LuminaProject project, String? projectDir, String? startupWarning)? editorBuilder;
 
   /// Explicitly control whether startup splash is shown (in tests defaults to false
   /// unless initialProjectDir != null; in normal desktop execution defaults to true).

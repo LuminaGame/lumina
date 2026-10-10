@@ -9,16 +9,15 @@ mixin _LauncherProjectOpening on _LauncherViewStateBase {
     String? projectDir,
     String? startupWarning,
   }) {
-    // [projectDir] is the project folder; EditorViewModel wants its parent, so
-    // the editor opens the real folder on disk instead of falling back to
+    // [projectDir] is the project folder the editor edits as it is, whatever
+    // it is called (a copied, cloned or renamed project need not be named
+    // after the project); without one the editor falls back to
     // ~/Lumina Projects/<name>.
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
-        pageBuilder: (_, _, _) {
-          final location = projectDir == null ? null : Directory(projectDir).parent.path;
-          return widget.editorBuilder?.call(project, location, startupWarning) ??
-              MainEditorView(project: project, projectLocation: location, startupWarning: startupWarning);
-        },
+        pageBuilder: (_, _, _) =>
+            widget.editorBuilder?.call(project, projectDir, startupWarning) ??
+            MainEditorView(project: project, projectDir: projectDir, startupWarning: startupWarning),
       ),
     );
   }

@@ -33,6 +33,9 @@ import 'package:lumina_ui/ui/features/main_editor/services/launch_model_import.d
 class MainEditorView extends StatefulWidget {
   final LuminaProject? project;
   final String? projectLocation;
+
+  /// The project folder itself (wins over [projectLocation]).
+  final String? projectDir;
   final EditorViewModel? viewModel;
 
   /// Shown as a toast and logged as a warning once the editor is
@@ -40,7 +43,7 @@ class MainEditorView extends StatefulWidget {
   /// plugins").
   final String? startupWarning;
 
-  const MainEditorView({super.key, this.project, this.projectLocation, this.viewModel, this.startupWarning});
+  const MainEditorView({super.key, this.project, this.projectLocation, this.projectDir, this.viewModel, this.startupWarning});
 
   @override
   State<MainEditorView> createState() => _MainEditorViewState();
@@ -55,6 +58,7 @@ class _MainEditorViewState extends State<MainEditorView> {
     viewModel = widget.viewModel ?? EditorViewModel(
       initialProject: widget.project,
       projectDirPath: widget.projectLocation,
+      projectDir: widget.projectDir,
     );
     // The editor the launcher opened offers its MCP server to
     // AI agents when the user's settings allow it. A test passes its own view

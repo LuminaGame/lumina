@@ -227,7 +227,7 @@ void main() {
         home: LauncherView(
           viewModel: launcher,
           initialProjectDir: fx.projectDir.path,
-          editorBuilder: (project, location, warning) => Text('opened ${project.projectName} ${project.engineVersion}'),
+          editorBuilder: (project, projectDir, warning) => Text('opened ${project.projectName} ${project.engineVersion}'),
         ),
       ));
     }

@@ -432,6 +432,7 @@ class EditorViewModel extends _EditorViewModelState
     super.initialProject,
     super.projectDirPath,
     super.projectLocation,
+    super.projectDir,
     bool enableTimers = true,
     bool autoInitAssets = true,
     super.qualityStore,
