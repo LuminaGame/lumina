@@ -797,15 +797,21 @@ void main() {
         targets: const ['windows'],
         reasonsFor: (_) => const [],
         packageDirFor: (t) => '$projectDir/build/package/$t',
-        buildAliasRoot: Directory('${tempDir.path}/aliases'),
+        // The product's own short alias root (%LOCALAPPDATA%\lumina\hosts,
+        // where stale aliases are pruned): one under the temp dir pushes
+        // MSBuild's intermediate paths past 260 characters.
       );
       final events = await BuildPipelineService().run(BuildPlan(steps: [step]), projectDir: projectDir, project: project).toList();
       final logs = events.whereType<BuildLogEvent>().map((l) => '[${l.level}] ${l.message}').join('\n');
       expect(events.whereType<BuildStepFinished>().single.status, BuildStepStatus.ok, reason: logs);
       expect(logs, contains('Building through '), reason: 'the build ran through the space-free alias');
       expect(File('$projectDir/build/windows/x64/runner/Release/$name.exe').existsSync(), isTrue, reason: logs);
-      for (final dll in ['flutter_filament.dll', 'flutter_assimp.dll', 'flutter_riglogic.dll']) {
-        expect(File('$projectDir/build/package/windows/$dll').existsSync(), isTrue, reason: 'the hooks built $dll\n$logs');
+      expect(File('$projectDir/build/package/windows/flutter_filament.dll').existsSync(), isTrue,
+          reason: 'the hooks built flutter_filament.dll\n$logs');
+      // Model import and rig logic are editor-side (lumina_editor_data): a
+      // game links neither.
+      for (final dll in ['flutter_assimp.dll', 'flutter_riglogic.dll']) {
+        expect(File('$projectDir/build/package/windows/$dll').existsSync(), isFalse, reason: '$dll is not shipped with a game');
       }
     }, timeout: const Timeout(Duration(minutes: 30)));
 
