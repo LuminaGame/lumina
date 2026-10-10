@@ -78,6 +78,7 @@ part 'editor_view_model/outliner.dart';
 part 'editor_view_model/outliner_visibility.dart';
 part 'editor_view_model/selection_and_transforms.dart';
 part 'editor_view_model/camera_and_viewport.dart';
+part 'editor_view_model/camera_navigation.dart';
 part 'editor_view_model/assets_and_content_browser.dart';
 part 'editor_view_model/asset_operations.dart';
 part 'editor_view_model/thumbnails.dart';
@@ -335,6 +336,7 @@ class EditorViewModel extends _EditorViewModelState
         _EditorOutlinerVisibility,
         _EditorSelectionAndTransforms,
         _EditorCameraAndViewport,
+        _EditorCameraNavigation,
         _EditorAssetsAndContentBrowser,
         _EditorAssetOperations,
         _EditorThumbnails,
