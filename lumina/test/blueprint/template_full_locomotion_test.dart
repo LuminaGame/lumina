@@ -374,8 +374,9 @@ void main() {
       expect(c.rig.anim!.variables['WallAhead'], isTrue, reason: 'the Tick trace (60 cm) touches the wall');
       final states = play(c, 150, keys: const [LuminaKey.keySpace]);
       // Jump for the press frame (the rule lives on Jump / FallLoop), then the
-      // wall jump, which lands before its clip ends.
-      expect(sequence(states).take(3), ['Jump', 'WallJump', 'Land']);
+      // wall jump; its clip ends a few frames before the feet touch down, so
+      // the fall loops until the landing.
+      expect(sequence(states).take(4), ['Jump', 'WallJump', 'FallLoop', 'Land']);
       expect(states.where((s) => s == 'Jump').length, 1);
       expect(states.where((s) => s == 'WallJump').length / 60, lessThanOrEqualTo(durations['NinjaJump_Start']! + 0.02));
       expect(c.rig.mesh.oneShots.take(2), ['Jump_Start', 'NinjaJump_Start']);

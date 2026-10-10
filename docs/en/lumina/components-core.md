@@ -70,11 +70,12 @@ Kinematic movement component for character actors supporting sweeping, sliding, 
 | `isJumpHeld` | `bool get isJumpHeld` | Whether a jump initiated by [jump] is still being held. |
 | `jump` | `bool jump()` | Initiates a jump if walking and grounded. |
 | `stopJumping` | `void stopJumping()` | Releases the jump input. If the character is still rising from a held jump, the remaining upward velocity is scaled by [jumpCutMultiplier] so a short tap produces a lower hop than a held press (variable jump height). |
+| `maxLandingDistance` | `double maxLandingDistance` | How far above a walkable floor a falling capsule may be and still land on it (cm, default 1.0); farther up it keeps falling to contact. |
 | `stepUp` | `bool stepUp(HitResult wallHit, Vector3 delta)` | Attempts to step up over obstacles lower than [maxStepHeight]. |
 | `safeMove` | `bool safeMove(Vector3 delta, HitResult outHit)` | Sweeps the character's collision capsule by [delta] and moves the owner up to contact. |
 | `resolvePenetration` | `bool resolvePenetration(ContactResult contact)` | Pushes the character out of intersecting blocking geometry. |
 | `physWalking` | `void physWalking(double dt, Vector3 input)` | Physics integration for [MovementMode.walking]. |
-| `physFalling` | `void physFalling(double dt, Vector3 input)` | Physics integration for [MovementMode.falling]. |
+| `physFalling` | `void physFalling(double dt, Vector3 input)` | Physics integration for [MovementMode.falling]. The floor sweep reaches `maxStepHeight` below the capsule, but a falling capsule lands (switches to walking) only when that floor is walkable, the velocity points down, and the floor is within `maxLandingDistance` or a walkable surface stopped the fall this frame; it is then moved onto the floor, so no frame ends grounded in the air above a step. |
 | `physFlying` | `void physFlying(double dt, Vector3 input)` | Physics integration for [MovementMode.flying]. |
 | `physSwimming` | `void physSwimming(double dt, Vector3 input)` | Physics integration for [MovementMode.swimming]. |
 | `physCustom` | `void physCustom(double dt, Vector3 input)` | Physics integration for [MovementMode.custom]. |

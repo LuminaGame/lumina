@@ -71,6 +71,14 @@ mixin _CharacterMovementModes
     }
   }
 
+  /// Moves the capsule down onto [currentFloor] when it is above it, and
+  /// measures the floor again.
+  void _snapToFloor(LuminaCollisionSubsystem colSys) {
+    if (currentFloor.floorDistance <= 1e-2 || currentFloor.floorDistance > maxStepHeight + skinWidth * 3.0) return;
+    safeMove(Vector3(0.0, -currentFloor.floorDistance, 0.0), HitResult());
+    findFloor(updatedComponent!, colSys, maxStepHeight, maxWalkSlopeAngle, skinWidth, currentFloor);
+  }
+
   /// Physics integration for [MovementMode.falling].
   void physFalling(double dt, Vector3 input) {
     _velocity.y -= _gravity * gravityScale * dt;
@@ -90,11 +98,14 @@ mixin _CharacterMovementModes
     final desired = (_velocity * dt) + _rootMotionDelta;
     _rootMotionDelta.setZero();
 
+    var blocked = false;
     if (desired.length2 > 1e-12) {
       final hit = HitResult();
       final completed = safeMove(desired, hit);
 
       if (!completed) {
+        // Stopped by something it can stand on, not by a wall.
+        blocked = hit.impactNormal.y >= math.cos(maxWalkSlopeAngle * math.pi / 180.0);
         final hitNormals = <Vector3>[];
         slideAlongSurface(
           desired,
@@ -117,8 +128,14 @@ mixin _CharacterMovementModes
     final colSys = owner?.world?.subsystems.getSubsystem<LuminaCollisionSubsystem>();
     if (updatedComponent != null && colSys != null) {
       findFloor(updatedComponent!, colSys, maxStepHeight, maxWalkSlopeAngle, skinWidth, currentFloor);
-      if (currentFloor.blockingHit && currentFloor.isWalkable && _velocity.y <= 0.0) {
+      // The floor sweep reaches a step's height below the capsule; a falling
+      // capsule lands only once it touches the floor (or its fall was
+      // stopped by a walkable surface this frame), so it never stands in
+      // the air above it.
+      final touching = currentFloor.floorDistance <= maxLandingDistance || blocked;
+      if (currentFloor.blockingHit && currentFloor.isWalkable && _velocity.y <= 0.0 && touching) {
         setMovementMode(MovementMode.walking);
+        if (isWalking) _snapToFloor(colSys);
       }
     }
   }

@@ -50,6 +50,11 @@ abstract class _CharacterMovementState extends LuminaActorComponent {
 
   // Kinematic sweep configurations
   double skinWidth = 0.1; // cm
+
+  /// How far above a walkable floor a falling capsule may be and still land
+  /// on it (cm); farther up it keeps falling to contact.
+  double maxLandingDistance = 1.0;
+
   double maxDepenetrationPerFrame = 20.0; // cm
   int maxSlideIterations = 3;
 

@@ -77,12 +77,12 @@ void main() {
     );
   }
 
-  test('the same 4 s of W, W+D, a mouse sweep and Space: VM and generated match the Dart character', () {
+  test('the same 4.5 s of W, W+D, a mouse sweep and Space: VM and generated match the Dart character', () {
     final runs = {for (final k in ['dart', 'vm', 'generated']) k: spawn(k)};
     expect(runs['generated']!.character, isA<BpThirdPersonCharacter>());
     expect((runs['generated']!.character as LuminaBlueprintRuntime).blueprintComponents['mesh.anim'], isA<AbpCharacter>());
     final clips = {for (final k in runs.keys) k: <String?>[]};
-    for (var frame = 0; frame < 240; frame++) {
+    for (var frame = 0; frame < 270; frame++) {
       for (final r in runs.values) {
         if (frame == 20) r.input.injectKeyDown(LuminaKey.keyW);
         if (frame == 60) r.input.injectKeyDown(LuminaKey.keyD);

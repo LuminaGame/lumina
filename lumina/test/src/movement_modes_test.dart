@@ -85,8 +85,8 @@ void main() {
       expect(jumped, isTrue);
       expect(transitions, equals([(MovementMode.walking, MovementMode.falling)]));
 
-      // Fall back down over frames
-      for (int i = 0; i < 60; i++) {
+      // Fall back down over frames (a 500 cm/s jump is airborne ~1.02 s)
+      for (int i = 0; i < 70; i++) {
         world.tick(0.016);
       }
 
