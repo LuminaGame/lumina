@@ -695,7 +695,8 @@ patlaması yerine ritmi yeniden başlatır.
 Varsayılan olarak native `FilamentWidget` headless bir SwapChain'e çizer, her kareyi geri okur ve `RawImage` olarak
 gösterir; birleştirmeyi ve sunumu Flutter yapar. Bu yolda frame generation'ın ek kareleri ekrana hiç ulaşmaz (bir karenin
 yalnızca son görüntüsü okunur) ve geri okuma her karede GPU'yu bekler. `nativeSurface` verildiğinde widget **doğrudan**
-sunar:
+sunar. `FilamentNativeSurface` ve `FilamentDirectPresenter` Flutter foundation türlerini kullandığından motor barrel'ı
+`filament.dart`'tan değil, widget ile birlikte `flutter_filament.dart`'tan dışa aktarılır:
 
 - `FilamentNativeSurface` (soyut): `acquire()` → `FilamentNativeSurfaceHandle(handle, width, height)` (bir HWND ya da
   X11 penceresi ve fiziksel piksel olarak istemci alanı; yoksa null ve `unavailableReason`), `current` (boyut ve pencere

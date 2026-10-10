@@ -43,8 +43,6 @@ export 'package:flutter_filament/src/scene.dart';
 export 'package:flutter_filament/src/skybox.dart';
 export 'package:flutter_filament/src/swap_chain.dart';
 export 'package:flutter_filament/src/ui_overlay.dart';
-export 'package:flutter_filament/src/native_surface.dart';
-export 'package:flutter_filament/src/direct_presenter.dart';
 export 'package:flutter_filament/src/texture.dart';
 export 'package:flutter_filament/src/tools.dart';
 export 'package:flutter_filament/src/transform.dart';

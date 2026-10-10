@@ -24,3 +24,7 @@ library;
 
 export 'package:flutter_filament/filament.dart';
 export 'package:flutter_filament/src/widget.dart';
+// Direct presentation into a native window uses Flutter foundation types
+// (ValueListenable, kIsWeb), so it ships with the widget, not the engine API.
+export 'package:flutter_filament/src/native_surface.dart';
+export 'package:flutter_filament/src/direct_presenter.dart';

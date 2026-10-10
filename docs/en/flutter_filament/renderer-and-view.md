@@ -695,7 +695,8 @@ restarts the cadence instead of bursting.
 By default a native `FilamentWidget` renders into a headless SwapChain, reads every frame back and shows it as a
 `RawImage`; Flutter composites and presents. Frame generation's extra frames never reach the screen that way (only the
 last image of a frame is read back) and the readback costs a GPU wait per frame. Given a `nativeSurface`, the widget
-presents **directly**:
+presents **directly**. `FilamentNativeSurface` and `FilamentDirectPresenter` use Flutter foundation types, so they are
+exported from `flutter_filament.dart` (with the widget), not from the engine barrel `filament.dart`:
 
 - `FilamentNativeSurface` (abstract): `acquire()` → `FilamentNativeSurfaceHandle(handle, width, height)` (an HWND or
   X11 window and its client area in physical pixels; null with `unavailableReason`), `current` (size and handle changes,
