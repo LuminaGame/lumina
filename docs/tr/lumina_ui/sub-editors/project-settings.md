@@ -316,6 +316,16 @@ Diyalog içerisindeki seçilebilir her bir tuş veya eksen seçeneğini temsil e
 | `icon` | `final IconData icon` | Tuş türünü temsil eden ikon. |
 | `searchTerms` | `final List<String> searchTerms` | Hızlı filtreleme için arama terimleri ve takma adlar. |
 
+## Presentation
+
+**Engine & Graphics > Presentation** (`.lmproject` içinde `settings.presentation`: varsayılan `flutter` ya da `direct`).
+Flutter derlenen oyunun karesini doku olarak birleştirir (her yerde çalışır). Direct, Filament'in oyun penceresine
+sunmasını ve UI'ı Filament'in karıştırmasını sağlar: frame generation'ın karelerini göstermek için gereken budur, bu
+yüzden frame generation onu kendiliğinden açar; Vulkan ile Windows (başka yerde oyun Flutter'a döner ve nedenini
+loglar). Editör viewport'u hep Flutter kullanır. Play Standalone üretilen oyunu çalıştırdığı için ayarı izler.
+`ProjectSettingsViewModel.setPresentation`; araç çubuğunun kalite ve VSync kısayolları ayarları yeniden yazarken onu
+(ve Start Fullscreen'i) korur.
+
 ## Start Fullscreen
 
 **Engine & Graphics > Start Fullscreen** (`.lmproject` içinde `settings.start_fullscreen`) derlenen oyunu kenarlıksız

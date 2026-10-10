@@ -316,6 +316,15 @@ A single selectable key or axis option in the dialog.
 | `icon` | `final IconData icon` | Icon associated with the key type. |
 | `searchTerms` | `final List<String> searchTerms` | Search keywords and aliases for rapid filtering. |
 
+## Presentation
+
+**Engine & Graphics > Presentation** (`settings.presentation` in `.lmproject`: `flutter`, the default, or `direct`).
+Flutter composites the built game's frame as a texture (works everywhere). Direct lets Filament present into the game
+window with the UI blended in by Filament: what frame generation needs to show its frames, so frame generation turns
+it on by itself; Windows with Vulkan (elsewhere the game falls back to Flutter and logs why). The editor viewport
+always uses Flutter. Play Standalone runs the generated game, so it follows the setting. `ProjectSettingsViewModel.setPresentation`;
+the toolbar's quality and VSync shortcuts keep it (and Start Fullscreen) when they rewrite the settings.
+
 ## Start Fullscreen
 
 **Engine & Graphics > Start Fullscreen** (`settings.start_fullscreen` in `.lmproject`) starts the built game in

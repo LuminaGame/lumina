@@ -469,6 +469,7 @@ class ProjectSettingsViewModel extends _ProjectSettingsViewModelState
     String? qualityPreset,
     ScalabilityCategory? scalability,
     bool? startFullscreen,
+    String? presentation,
   }) =>
       EngineScalabilitySettings(
         targetFps: targetFps ?? s.targetFps,
@@ -478,6 +479,7 @@ class ProjectSettingsViewModel extends _ProjectSettingsViewModelState
         autoOrganizeFiles: s.autoOrganizeFiles,
         autoSaveIntervalSeconds: s.autoSaveIntervalSeconds,
         startFullscreen: startFullscreen ?? s.startFullscreen,
+        presentation: presentation ?? s.presentation,
       );
 
   /// Selecting a preset instantly expands every per-category tier.
@@ -502,6 +504,13 @@ class ProjectSettingsViewModel extends _ProjectSettingsViewModelState
   void setTargetFps(int fps) => _update((p) => p.copyWith(settings: _copySettings(p.settings, targetFps: fps)));
   void setVSync(bool on) => _update((p) => p.copyWith(settings: _copySettings(p.settings, vsyncEnabled: on)));
   void setStartFullscreen(bool on) => _update((p) => p.copyWith(settings: _copySettings(p.settings, startFullscreen: on)));
+
+  /// Presentation of the built game: `flutter` or `direct`
+  /// ([EngineScalabilitySettings.presentationModes]); anything else is ignored.
+  void setPresentation(String mode) {
+    if (!EngineScalabilitySettings.presentationModes.contains(mode)) return;
+    _update((p) => p.copyWith(settings: _copySettings(p.settings, presentation: mode)));
+  }
 
   // Enhanced Input
   void addAction([String? name]) => _update((p) {

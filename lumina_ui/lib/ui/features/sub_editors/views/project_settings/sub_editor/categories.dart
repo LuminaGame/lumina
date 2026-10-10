@@ -85,6 +85,17 @@ mixin _ProjectSettingsCategories on _ProjectSettingsSubEditorStateBase {
           ),
           help: 'Borderless fullscreen over the whole monitor (taskbar included) at native resolution; Alt+Enter / F11 toggle',
         ),
+        _row(
+          'Presentation',
+          _select(s.presentation, EngineScalabilitySettings.presentationModes, _vm.setPresentation,
+              label: (v) => v == 'direct' ? 'Direct' : 'Flutter (default)'),
+          help: s.presentation == 'direct'
+              ? 'Direct: Filament presents into the game window; the UI is blended in by Filament. '
+                  'Needed for frame generation (turned on by itself with it). Windows, Vulkan; '
+                  'elsewhere the game falls back to Flutter. The editor viewport always uses Flutter'
+              : 'Flutter composites the frame as a texture (works everywhere). Frame generation '
+                  'switches the game to Direct by itself; the editor viewport always uses Flutter',
+        ),
       ]),
       _buildNeuralRendering(),
     ]);

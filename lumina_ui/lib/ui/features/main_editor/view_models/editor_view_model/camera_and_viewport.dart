@@ -403,6 +403,8 @@ mixin _EditorCameraAndViewport on _EditorViewModelState {
       scalability: _project.settings.scalability,
       autoOrganizeFiles: _project.settings.autoOrganizeFiles,
       autoSaveIntervalSeconds: _project.settings.autoSaveIntervalSeconds,
+      startFullscreen: _project.settings.startFullscreen,
+      presentation: _project.settings.presentation,
     );
     _project = _project.copyWith(
       settings: updatedSettings,
@@ -424,6 +426,8 @@ mixin _EditorCameraAndViewport on _EditorViewModelState {
       scalability: _project.settings.scalability,
       autoOrganizeFiles: _project.settings.autoOrganizeFiles,
       autoSaveIntervalSeconds: _project.settings.autoSaveIntervalSeconds,
+      startFullscreen: _project.settings.startFullscreen,
+      presentation: _project.settings.presentation,
     );
     _project = _project.copyWith(
       settings: updatedSettings,
