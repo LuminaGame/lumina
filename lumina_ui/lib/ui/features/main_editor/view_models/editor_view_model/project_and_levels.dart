@@ -77,13 +77,16 @@ mixin _EditorProjectAndLevels on _EditorViewModelState {
         contentsDir.createSync(recursive: true);
       }
 
+      // Scanned before the default theme is written: the theme alone does
+      // not make an empty project's contents non-empty.
+      final existing = _assetRepo.scanProjectContents(projectDirPath);
+
       // Ensure default UI Theme exists for game widgets
       await LuminaThemeService.ensureDefaultTheme(
         projectDirPath,
         seedTheme: LuminaThemeDocument.defaultShadcnDark(),
       );
 
-      final existing = _assetRepo.scanProjectContents(projectDirPath);
       if (existing.isEmpty) {
         await _assetRepo.createAsset(
           projectPath: projectDirPath,
