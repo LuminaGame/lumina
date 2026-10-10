@@ -288,6 +288,17 @@ material {
         await rec.hold(const Duration(seconds: 1));
         await settle(10);
 
+        // Walk the selection across the rig: each selected bone repaints the
+        // overlay with its highlight (the first, a middle and the last bone).
+        final bones = skel.allBones;
+        for (final bone in {bones.first, bones[bones.length ~/ 3], bones[2 * bones.length ~/ 3], bones.last}) {
+          skel.selectBone(bone);
+          await settle(10);
+          expect(skel.selectedBone?.name, bone.name);
+          await rec.hold(const Duration(milliseconds: 900));
+        }
+        await settle(10);
+
         final png = await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey));
         SmokeArtifacts.saveScreenshot('skeletal_mesh_editor_bone_overlay_$stem', png, usedAssets: [rig]);
       }
