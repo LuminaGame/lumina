@@ -295,8 +295,8 @@ class AbpCharacter extends LuminaAnimBlueprintInstance {
 
   /// Can Idle → IdleBreak (transition idle_to_idlebreak) be taken?
   bool _ruleIdleToIdlebreak() {
-    final p37 = variables['IdleTime'] as double;
-    if (trace != null) blueprintTrace('idle_to_idlebreak', 'idle_time', 'variable_get', {'value': p37});
+    final p37 = variables['StateTime'] as double;
+    if (trace != null) blueprintTrace('idle_to_idlebreak', 'idle_state_time', 'variable_get', {'value': p37});
     final p38 = LuminaBlueprintFunctionLibrary.floatGreater(p37, 6.0);
     if (trace != null) blueprintTrace('idle_to_idlebreak', 'waited', 'float_greater', {'a': p37, 'b': 6.0, 'return_value': p38});
     final p39 = variables['ClipFinished'] as bool;

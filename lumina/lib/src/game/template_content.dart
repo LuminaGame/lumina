@@ -456,17 +456,19 @@ class LuminaThirdPersonContent {
           ],
         );
 
-    /// ClipFinished while IdleTime is past the idle-break delay.
+    /// ClipFinished once the character has been in Idle past the idle-break
+    /// delay. StateTime restarts on every Idle entry, so after a break the
+    /// character waits the full delay again before the next one.
     LuminaBlueprintGraph idleBreakDue() => LuminaBlueprintGraph(
           nodes: [
-            get('IdleTime', 'idle_time', 0),
+            get(LuminaAnimBlueprintInstance.stateTimeVariable, 'idle_state_time', 0),
             place('float_greater', 'waited', 240, 0, {'b': idleBreakAfterSeconds}),
             get(LuminaAnimBlueprintInstance.clipFinishedVariable, 'finished', 120),
             place('bool_and', 'both', 480, 60),
             result(720),
           ],
           wires: [
-            wire('w0', 'idle_time', 'value', 'waited', 'a'),
+            wire('w0', 'idle_state_time', 'value', 'waited', 'a'),
             wire('w1', 'waited', 'return_value', 'both', 'a'),
             wire('w2', 'finished', 'value', 'both', 'b'),
             wire('w3', 'both', 'return_value', 'result', 'can_enter'),

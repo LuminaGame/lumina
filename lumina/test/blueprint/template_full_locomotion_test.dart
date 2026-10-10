@@ -123,6 +123,14 @@ void main() {
     expect(after.last, 'Idle');
     expect(r.mesh.currentClip, 'Idle_Loop');
     expect(r.mesh.fades.last, (clip: 'Idle_Loop', duration: 0.2, sync: false));
+    // Back in Idle the character waits the full delay again before the
+    // next break, instead of breaking after every idle cycle.
+    final idleEntered = 8 * 60 + after.indexOf('Idle');
+    final more = run(r, 7 * 60);
+    final nextBreak = more.indexOf('IdleBreak');
+    expect(nextBreak, isNot(-1), reason: 'a second break comes after another wait');
+    final waited = (8 * 60 + after.length + nextBreak - idleEntered) / 60;
+    expect(waited, greaterThan(LuminaThirdPersonContent.idleBreakAfterSeconds - 0.05));
   });
 
   test('a jump press: Jump → FallLoop → Land → Idle, Jump_Start and Jump_Land once each, the loop looping', () {
