@@ -12,6 +12,8 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:vector_math/vector_math_64.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 
+import '../helpers/temp_project.dart';
+
 /// Every scenario
 /// runs against a real temp project whose level `.lmas` lives on disk.
 void main() {
@@ -57,9 +59,8 @@ void main() {
     writeLevelWithoutEnvironment();
   });
 
-  tearDown(() {
-    if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
-  });
+  // The editor's git probe may still hold the folder on Windows.
+  tearDown(() => deleteTempProject(tempDir));
 
   test('opening on a level without environment actors creates Sun + SkyAmbience once', () async {
     final editor = await openEditor();
@@ -118,7 +119,9 @@ void main() {
   });
 
   testWidgets('time slider to 12:00 writes the direction into the sun component; gizmo drag moves the slider', (tester) async {
-    final editor = await openEditor();
+    // Real disk I/O: outside the widget test's fake-async zone, where it
+    // would never complete.
+    final editor = (await tester.runAsync(openEditor))!;
     addTearDown(editor.dispose);
     final vm = EnvironmentLightingViewModel(editor: editor)..open();
     addTearDown(vm.dispose);
