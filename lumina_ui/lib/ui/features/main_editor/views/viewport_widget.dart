@@ -26,6 +26,7 @@ import 'package:lumina_ui/ui/features/main_editor/services/editor_transform.dart
 import 'package:lumina_ui/ui/features/main_editor/services/blueprint_play_support.dart';
 import 'package:lumina_ui/ui/features/main_editor/services/editor_level_lights.dart';
 import 'package:lumina_ui/ui/features/main_editor/services/editor_level_post_process.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/editor_neural_rendering.dart';
 import 'package:lumina_ui/ui/features/main_editor/services/editor_level_scene.dart';
 import 'package:lumina_ui/ui/features/main_editor/services/editor_view_layers.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/viewport_widget/mesh_bind_scheduler.dart';
@@ -246,6 +247,7 @@ class _ViewportWidgetState extends _ViewportWidgetStateBase
                           // A sky light that finished loading, a light a
                           // Play session switched.
                           _syncAutoExposure();
+                          _neuralRendering.tick();
                         },
                         isPaused: widget.viewModel.activeTabIndex != 0 || widget.viewModel.buildManagerViewModel.isRunning,
                         pauseRendering: widget.viewModel.buildManagerViewModel.isRunning,
@@ -274,6 +276,8 @@ class _ViewportWidgetState extends _ViewportWidgetStateBase
                             view.setDynamicLightingOptions(LuminaUnits.dynamicLightingNear, LuminaUnits.dynamicLightingFar);
                             _rtxController?.dispose();
                             _rtxController = LuminaRtxController(engine: engine, view: view, scene: scene);
+                            // Project Settings > Neural rendering (OpenDLSS-NR), on this view for editing and PIE.
+                            _neuralRendering.attach(engine, view);
                             _applyEditorQuality(force: true);
 
                             _updateNativeCamera();

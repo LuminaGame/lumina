@@ -5,7 +5,10 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart' show ProjectSettingsSection, PluginSettingsHandle;
+import 'package:flutter_filament/flutter_filament.dart'
+    show OpenDlssNr, OpenDlssNrCapability, OpenDlssNrModelCheck, OpenDlssNrModelCode;
 import 'package:lumina_ui/ui/core/host/editor_host.dart' show LuminaEditorHost;
+import 'package:lumina_ui/ui/features/main_editor/services/editor_neural_rendering.dart';
 
 import 'package:lumina_ui/ui/features/sub_editors/services/build_pipeline_service.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/project_icon_packaging.dart';
@@ -21,6 +24,7 @@ part 'project_settings_view_model/widget_library_and_icon.dart';
 part 'project_settings_view_model/packaging.dart';
 part 'project_settings_view_model/web_loading_screen.dart';
 part 'project_settings_view_model/models.dart';
+part 'project_settings_view_model/neural_rendering.dart';
 
 typedef ProcessStarter = Future<Process> Function(String executable, List<String> arguments, {String? workingDirectory});
 
@@ -32,7 +36,8 @@ class ProjectSettingsViewModel extends _ProjectSettingsViewModelState
     with
         _ProjectSettingsWidgetLibraryAndIcon,
         _ProjectSettingsPackaging,
-        _ProjectSettingsWebLoadingScreen {
+        _ProjectSettingsWebLoadingScreen,
+        _ProjectSettingsNeuralRendering {
   ProjectSettingsViewModel({
     required super.projectDirPath,
     super.projectRepository,
@@ -94,6 +99,7 @@ class ProjectSettingsViewModel extends _ProjectSettingsViewModelState
       }
       _refreshLevels();
       _refreshGameModes();
+      if (_working != null) unawaited(checkNeuralRenderingWeights());
     } catch (e) {
       _loadError = e.toString();
     } finally {

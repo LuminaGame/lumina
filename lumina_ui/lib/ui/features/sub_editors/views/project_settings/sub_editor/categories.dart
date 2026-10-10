@@ -86,6 +86,7 @@ mixin _ProjectSettingsCategories on _ProjectSettingsSubEditorStateBase {
           help: 'Borderless fullscreen over the whole monitor (taskbar included) at native resolution; Alt+Enter / F11 toggle',
         ),
       ]),
+      _buildNeuralRendering(),
     ]);
   }
 

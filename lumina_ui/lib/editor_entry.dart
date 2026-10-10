@@ -86,7 +86,8 @@ Future<void> runLuminaEditor(
   // The viewport's shared Vulkan engine is created later; the ray query (and,
   // with the NGX runtime, DLSS) extensions must be asked for before it exists.
   if (Platform.isWindows || Platform.isLinux) {
-    LuminaRtxController.requestExtensions(dlssRuntimeDir: _dlssSdkDir());
+    // The editor asks for OpenDLSS-NR's device features too: a project can opt in at any time.
+    LuminaRtxController.requestExtensions(dlssRuntimeDir: _dlssSdkDir(), neuralRendering: true);
   }
   LuminaEditorHost.info = host;
   LuminaEditorHost.args = EditorLaunchArgs.parse(args);

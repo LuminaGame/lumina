@@ -34,6 +34,7 @@ abstract class _ViewportWidgetStateBase extends State<ViewportWidget> with Ticke
   /// their runtime components in an editor world bound to this viewport's
   /// view, blended for the editor camera by lumina's post-process blender.
   final EditorLevelPostProcess _levelPostProcess = EditorLevelPostProcess();
+  late final EditorNeuralRendering _neuralRendering = EditorNeuralRendering(() => widget.viewModel.project);
 
   /// Volume outlines: a
   /// Post Process Volume's box always (bright selected, dim otherwise), a

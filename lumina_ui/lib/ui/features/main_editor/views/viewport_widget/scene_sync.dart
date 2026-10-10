@@ -28,6 +28,7 @@ mixin _ViewportSceneSync on _ViewportWidgetStateBase {
   }
 
   void _onViewModelUpdated() {
+    _neuralRendering.sync();
     if (widget.viewModel.activeTabIndex != 0 || widget.viewModel.buildManagerViewModel.isRunning) {
       _pendingSceneSync = true;
       return;
@@ -54,6 +55,7 @@ mixin _ViewportSceneSync on _ViewportWidgetStateBase {
   /// nothing outlives it and nothing is left behind for the viewports that
   /// keep drawing. Idempotent.
   void _disposeNative() {
+    _neuralRendering.detach();
     final engine = _nativeEngine;
     final scene = _nativeScene;
     // Views drawing this scene let go of it before it is freed.

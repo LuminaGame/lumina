@@ -354,3 +354,13 @@ Bu ayarlar çalışma zamanında (runtime) Blueprint'lerde yer alan `SetOverallS
 ---
 
 [Önceki: Fizik asset editörü](physics-asset.md) | [Üst: Alt editörler](index.md) | [Sonraki: Sequencer](sequencer.md)
+
+## Neural rendering (deneysel)
+
+Engine & Graphics, **Neural rendering (experimental)** bölümüyle biter (`views/project_settings/sub_editor/neural_rendering.dart`, view model mixin'i `view_models/project_settings_view_model/neural_rendering.dart`):
+
+- **Use OpenDLSS-NR**: level viewport'unun GPU'su çalıştıramıyorsa nedeniyle birlikte devre dışıdır (`EditorNeuralRendering.capability`: Ada veya daha yeni NVIDIA, uzantılar, açılmış özellikler). İşaretlemek engelleyici bir diyalog açar (`neural_rendering_warning_dialog.dart`): bunun NVIDIA'nın DLSS 5 nöral render'ının üçüncü taraf, resmî olmayan bir yeniden uygulaması olduğu; Lumina'nın sağlamadığı ve yeniden dağıtılamayan NVIDIA model ağırlıklarına ihtiyaç duyduğu; bunları edinmenin ya da kullanmanın NVIDIA'nın lisans koşullarını ihlal edebileceği ve sorumluluğun kullanıcıda olduğu; yalnızca Ada veya daha yeni olduğu, deneysel olduğu, yanlış çıktı üretebileceği ve performans maliyeti olduğu; gereksinimleri için üst proje sayfası (Aç / Kopyala). **Cancel** kapalı bırakır; **I understand, enable** açar ve `acknowledged_at` kaydeder. İşareti kaldırmak onay kaydını korur.
+- **Weights**: bir model klasörü ya da `manifest.json`'u (Browse… dosyayı seçer), bu makinedeki bir yol; arka plan isolate'inde denetlenir: *No weights set* (seçilene kadar kapalı kalır), doğrulayıcının nedeniyle *Invalid weights* ya da blok / tensör sayıları ve boyutuyla *Valid*.
+- Intensity, Tone, Structure, Auto Mask, Style, Paper White, Color Strength (açıkken görünür).
+- **Uygulanmış** ayarları izleyen level viewport'u için bir durum satırı (`main_editor/services/editor_neural_rendering.dart`): kapalı, yükleniyor, ağırlık yok, geçersiz, nedeniyle başarısız ya da GPU süresiyle çalışıyor. Play-In-Editor aynı view üzerinden render eder.
+- Derlenmiş oyunlar yalnızca proje açtıysa çalıştırır; üretilen `main()` kontrolleri taşır ama ağırlık yolunu asla taşımaz (bkz. `lumina/rendering.md`).

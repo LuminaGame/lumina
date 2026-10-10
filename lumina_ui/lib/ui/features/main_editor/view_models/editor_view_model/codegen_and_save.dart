@@ -155,6 +155,8 @@ mixin _EditorCodegenAndSave on _EditorViewModelState {
       targetFps: currentProject.settings.targetFps,
       vsyncEnabled: currentProject.settings.vsyncEnabled,
       startFullscreen: currentProject.settings.startFullscreen,
+      // Project Settings > Neural rendering: only an opted-in project's game runs OpenDLSS-NR.
+      neuralRendering: currentProject.neuralRendering,
     );
     File('${libDir.path}/main.dart').writeAsStringSync(mainContent);
 

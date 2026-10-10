@@ -354,3 +354,13 @@ These settings can be dynamically altered at runtime inside Blueprint graphs usi
 ---
 
 [Previous: Physics asset editor](physics-asset.md) | [Up: Sub-editors](index.md) | [Next: Sequencer](sequencer.md)
+
+## Neural rendering (experimental)
+
+Engine & Graphics ends with **Neural rendering (experimental)** (`views/project_settings/sub_editor/neural_rendering.dart`, view model mixin `view_models/project_settings_view_model/neural_rendering.dart`):
+
+- **Use OpenDLSS-NR**: disabled with the reason when the level viewport's GPU cannot run it (`EditorNeuralRendering.capability`: NVIDIA Ada or newer, the extensions, the features enabled). Ticking it opens a blocking dialog (`neural_rendering_warning_dialog.dart`) stating that this is a third-party, unofficial re-implementation of NVIDIA's DLSS 5 neural rendering; that it needs NVIDIA's model weights, which Lumina does not provide and which may not be redistributed; that obtaining or using them may violate NVIDIA's licence terms and the user is responsible; that it is Ada-or-newer only, experimental, may produce wrong output and costs performance; with the upstream project page for its requirements (Open / Copy). **Cancel** leaves it off; **I understand, enable** turns it on and records `acknowledged_at`. Unticking keeps the acknowledgement on record.
+- **Weights**: a model folder or its `manifest.json` (Browse… picks the file), a path on this machine; checked on a background isolate: *No weights set* (it stays off until one is chosen), *Invalid weights* with the validator's reason, or *Valid* with the block / tensor counts and size.
+- Intensity, Tone, Structure, Auto Mask, Style, Paper White, Color Strength (shown while enabled).
+- A status line for the level viewport, which follows the **applied** settings (`main_editor/services/editor_neural_rendering.dart`): off, loading, weights missing, invalid, failed with the reason, or running with its GPU time. Play-In-Editor renders through the same view.
+- Built games run it only when the project opted in; the generated `main()` carries the controls but never the weights path (see `lumina/rendering.md`).

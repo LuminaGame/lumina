@@ -27,6 +27,8 @@ abstract class _ProjectSettingsSubEditorStateBase extends State<ProjectSettingsS
 
   Widget _buildGraphics();
 
+  Widget _buildNeuralRendering();
+
   Widget _buildInput();
 
   Widget _buildMapsAndModes();
