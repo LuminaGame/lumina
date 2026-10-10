@@ -14,7 +14,8 @@ import '../web/web_game_build.dart';
 /// checkout's flutter_filament module and played in headless Chrome on the
 /// GPU (on Windows through ANGLE's Direct3D 11 backend, Chrome's default
 /// there): the level, its fog and the glTF ubershader props, and the
-/// MetaHuman character draw, and no WebGL context is lost. The project is
+/// MetaHuman character draw, no WebGL context is lost, and the first walk
+/// and turn do not freeze the page (no painted-frame gap of 1.5 s). The project is
 /// built locally from the sample's export and a MetaHuman (neither can be
 /// shipped): the scenario skips without it.
 const _name = 'web: Game Animation Sample renders on the GPU in Chrome without losing the WebGL context';
@@ -146,19 +147,10 @@ void main() {
     expect(diff, greaterThan(40),
         reason: 'the level is drawn below the sky (${floor.r},${floor.g},${floor.b}) vs (${sky.r},${sky.g},${sky.b})');
 
-    // The first walk and the first turn stall the single-threaded page for a
-    // few seconds (locomotion data and shader variants seen for the first
-    // time): play the same moves once before filming.
-    await page.mouse.click(Point(SmokeVideo.defaultWidth / 2, SmokeVideo.defaultHeight / 2));
-    for (final key in [Key.keyW, Key.keyD, Key.keyW, Key.keyA]) {
-      await page.keyboard.down(key);
-      await Future<void>.delayed(const Duration(seconds: 3));
-      await page.keyboard.up(key);
-    }
-    await Future<void>.delayed(const Duration(seconds: 2));
-
     // Walk forward, then turn with D, 12 s in all, while Chrome streams every
-    // frame it paints; the video lays them on a real-time 30 fps timeline.
+    // frame it paints; the video lays them on a real-time 30 fps timeline. The
+    // first walk and turn are filmed: the page uses the bundled pose search
+    // caches and does not stall when a Motion Matching state first runs.
     final painted = <(int, Uint8List)>[];
     final clock = Stopwatch()..start();
     final screencast = page.devTools.page.onScreencastFrame.listen((e) {
@@ -198,13 +190,16 @@ void main() {
     }
     // ignore: avoid_print
     print('web GASP smoke: Chrome painted ${painted.length} frames in ${(walkEnd - walkStart) / 1000} s');
+    var longestGap = 0;
     for (var i = 1; i < painted.length; i++) {
       final gap = painted[i].$1 - painted[i - 1].$1;
+      if (gap > longestGap) longestGap = gap;
       // ignore: avoid_print
       if (gap > 700) print('web GASP smoke: no new frame for $gap ms at ${painted[i - 1].$1 - walkStart} ms');
     }
     SmokeArtifacts.saveVideo(_name, video.finish(), usedAssets: usedAssets);
 
     expect(console.where(_gpuLoss.hasMatch).toList(), isEmpty, reason: 'the page lost its GPU:\n${console.join('\n')}');
+    expect(longestGap, lessThan(1500), reason: 'the first walk and turn do not freeze the page');
   }, timeout: const Timeout(Duration(minutes: 30)));
 }
