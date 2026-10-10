@@ -12,6 +12,7 @@ Blueprint'lerin nasıl çalıştığı: paletin, VM'in ve kod üretecinin payla�
 - [`lib/src/blueprint/level_blueprint_storage.dart`](#libsrcblueprintlevel_blueprint_storagedart)
 - [`lib/src/blueprint/node_library.dart`](#libsrcblueprintnode_librarydart)
 - [`lib/src/blueprint/node_library/conversions.dart`](#libsrcblueprintnode_libraryconversionsdart)
+- [`lib/src/blueprint/node_library/specs.dart`](#libsrcblueprintnode_libraryspecsdart)
 - [`lib/src/blueprint/node_library/type_context.dart`](#libsrcblueprintnode_librarytype_contextdart)
 - [`lib/src/blueprint/vm/blueprint_vm.dart`](#libsrcblueprintvmblueprint_vmdart)
 - [`lib/src/blueprint/vm/blueprint_vm/instance.dart`](#libsrcblueprintvmblueprint_vminstancedart)
@@ -289,68 +290,6 @@ Bir level `.lmas` dosyası Level Blueprint'ini JSON olarak saklar (`lumina_core`
 
 ## `lib/src/blueprint/node_library.dart`
 
-### `enum LuminaBlueprintNodeKind`
-
-How a node takes part in execution.
-
-**Değerler:**
-
-- `event`: An entry point: BeginPlay, Tick, an input action.
-- `impure`: Runs when its exec input fires, then continues from its exec output.
-- `pure`: No exec pins; evaluated when an impure node pulls one of its outputs.
-- `flow`: Chooses where execution continues (Branch, Sequence).
-- `latent`: Continues later (Delay).
-
-### `class LuminaBlueprintPinSpec`
-
-A pin as the library declares it.
-
-**Yapıcı Metotlar (Constructors):**
-
-- `const LuminaBlueprintPinSpec(this.id, this.name, this.type, {this.defaultValue, this.required = false, this.objectClass, this.elementType, this.enumName})`
-- `factory LuminaBlueprintPinSpec.ofVariable(LuminaBlueprintVariable v)`: The pin a declared parameter / variable makes: id and name are its name.
-
-**Üyeler:**
-
-| Üye | İmza | Açıklama |
-| :--- | :--- | :--- |
-| `id` | `final String id` |  |
-| `name` | `final String name` |  |
-| `type` | `final LuminaPinType type` |  |
-| `defaultValue` | `final Object? defaultValue` |  |
-| `required` | `final bool required` | A required input must be wired or given a literal. |
-| `objectClass` | `final String? objectClass` | The class of an object pin: `Widget:WBP_HUD`, `WidgetElement:text`, `Component:LuminaSpringArmComponent`, `Actor:BP_Door`; null is any object. |
-| `elementType` | `final LuminaPinType? elementType` | The element type of an array pin. |
-| `enumName` | `final String? enumName` | The enum of an enum pin. |
-| `toPin` | `LuminaBlueprintPin toPin({required bool isOutput})` |  |
-| `retyped` | `LuminaBlueprintPinSpec retyped(LuminaPinType type, {String? objectClass, LuminaPinType? elementType, String? e...` | This pin with another type and class. |
-| `renamed` | `LuminaBlueprintPinSpec renamed(String name)` | This pin with another name. |
-
-### `class LuminaBlueprintNodeSpec`
-
-One node of the library: its pins and kind. Behaviour lives in `LuminaBlueprintFunctionLibrary` (pure and impure nodes) or in the VM ([LuminaBlueprintNodeLibrary.intrinsics]).
-
-**Yapıcı Metotlar (Constructors):**
-
-- `const LuminaBlueprintNodeSpec({required this.id, required this.title, required this.category, required this.kind, this.inputs = const [], this.outputs = const [...`
-
-**Üyeler:**
-
-| Üye | İmza | Açıklama |
-| :--- | :--- | :--- |
-| `id` | `final String id` |  |
-| `title` | `final String title` |  |
-| `category` | `final String category` |  |
-| `kind` | `final LuminaBlueprintNodeKind kind` |  |
-| `inputs` | `final List<LuminaBlueprintPinSpec> inputs` |  |
-| `outputs` | `final List<LuminaBlueprintPinSpec> outputs` |  |
-| `keywords` | `final List<String> keywords` |  |
-| `headerColor` | `final int headerColor` | ARGB header colour, one per node family. |
-| `deprecation` | `final String? deprecation` | Non-null for a node kept only so old documents load; the message says what replaces it. |
-| `unsupported` | `final String? unsupported` | Non-null when the node loads but is not executed yet; the message says why. Reported as a warning. |
-| `tooltip` | `final String? tooltip` | What the palette shows on hover: an exposed Dart function's doc comment. |
-| `hasExecIn` | `bool get hasExecIn` |  |
-
 ### `abstract final class LuminaBlueprintNodeLibrary`
 
 The one node catalog the editor palette, the VM and the code generator read.
@@ -467,6 +406,70 @@ Editörün farklı tipte iki pin arasına koyduğu node (integer çıkışı flo
 | `outputPin` | `final String outputPin` | Hedef girişe bağlanan çıkış pini. |
 | `lossy` | `final bool lossy` | Dönüşüm bilgi kaybettirebilir mi (float → integer kesirli kısmı atar). |
 | `hint` | `final String hint` | Editörün gösterdiği tek satır: dönüşümün ne yaptığı. |
+
+## `lib/src/blueprint/node_library/specs.dart`
+
+### `enum LuminaBlueprintNodeKind`
+
+How a node takes part in execution.
+
+**Değerler:**
+
+- `event`: An entry point: BeginPlay, Tick, an input action.
+- `impure`: Runs when its exec input fires, then continues from its exec output.
+- `pure`: No exec pins; evaluated when an impure node pulls one of its outputs.
+- `flow`: Chooses where execution continues (Branch, Sequence).
+- `latent`: Continues later (Delay).
+
+### `class LuminaBlueprintPinSpec`
+
+A pin as the library declares it.
+
+**Yapıcı Metotlar (Constructors):**
+
+- `const LuminaBlueprintPinSpec(this.id, this.name, this.type, {this.defaultValue, this.required = false, this.objectClass, this.elementType, this.enumName})`
+- `factory LuminaBlueprintPinSpec.ofVariable(LuminaBlueprintVariable v)`: The pin a declared parameter / variable makes: id and name are its name.
+
+**Üyeler:**
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `id` | `final String id` |  |
+| `name` | `final String name` |  |
+| `type` | `final LuminaPinType type` |  |
+| `defaultValue` | `final Object? defaultValue` |  |
+| `required` | `final bool required` | A required input must be wired or given a literal. |
+| `objectClass` | `final String? objectClass` | The class of an object pin: `Widget:WBP_HUD`, `WidgetElement:text`, `Component:LuminaSpringArmComponent`, `Actor:BP_Door`; null is any object. |
+| `elementType` | `final LuminaPinType? elementType` | The element type of an array pin. |
+| `enumName` | `final String? enumName` | The enum of an enum pin. |
+| `toPin` | `LuminaBlueprintPin toPin({required bool isOutput})` |  |
+| `retyped` | `LuminaBlueprintPinSpec retyped(LuminaPinType type, {String? objectClass, LuminaPinType? elementType, String? e...` | This pin with another type and class. |
+| `renamed` | `LuminaBlueprintPinSpec renamed(String name)` | This pin with another name. |
+
+### `class LuminaBlueprintNodeSpec`
+
+One node of the library: its pins and kind. Behaviour lives in `LuminaBlueprintFunctionLibrary` (pure and impure nodes) or in the VM ([LuminaBlueprintNodeLibrary.intrinsics]).
+
+**Yapıcı Metotlar (Constructors):**
+
+- `const LuminaBlueprintNodeSpec({required this.id, required this.title, required this.category, required this.kind, this.inputs = const [], this.outputs = const [...`
+
+**Üyeler:**
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `id` | `final String id` |  |
+| `title` | `final String title` |  |
+| `category` | `final String category` |  |
+| `kind` | `final LuminaBlueprintNodeKind kind` |  |
+| `inputs` | `final List<LuminaBlueprintPinSpec> inputs` |  |
+| `outputs` | `final List<LuminaBlueprintPinSpec> outputs` |  |
+| `keywords` | `final List<String> keywords` |  |
+| `headerColor` | `final int headerColor` | ARGB header colour, one per node family. |
+| `deprecation` | `final String? deprecation` | Non-null for a node kept only so old documents load; the message says what replaces it. |
+| `unsupported` | `final String? unsupported` | Non-null when the node loads but is not executed yet; the message says why. Reported as a warning. |
+| `tooltip` | `final String? tooltip` | What the palette shows on hover: an exposed Dart function's doc comment. |
+| `hasExecIn` | `bool get hasExecIn` |  |
 
 ## `lib/src/blueprint/node_library/type_context.dart`
 
