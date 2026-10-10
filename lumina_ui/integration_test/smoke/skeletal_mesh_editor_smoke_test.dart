@@ -296,4 +296,110 @@ material {
       if (tempProjectsDir.existsSync()) tempProjectsDir.deleteSync(recursive: true);
     }
   });
+
+  testWidgets('Skeletal Mesh Smoke: the skin weight heatmap colours the selected bone of a skin that does not start at node 0',
+      (tester) async {
+    // The Quinn mannequin's skin starts at node 1 (node 0 is the mesh):
+    // JOINTS_0 indices are skin-local, so reading them as node indices put
+    // every bone one off (the top of the head read neck_02). The heatmap of
+    // `head` must colour the head, and the topmost vertex's strongest
+    // influence must be `head`.
+    final quinn = '${Directory.current.parent.path}/test-assets/mannequin/exports/SKM_Quinn_Simple.glb';
+    expect(File(quinn).existsSync(), isTrue, reason: 'real skinned asset must exist');
+
+    final tempProjectsDir = Directory.systemTemp.createTempSync('lumina_smoke_skelheat_');
+    final pDir = Directory('${tempProjectsDir.path}/SmokeSkelHeat')..createSync(recursive: true);
+    const project = LuminaProject(projectName: 'SmokeSkelHeat', activeLevel: 'contents/levels/L_Main.lmas');
+    File('${pDir.path}/SmokeSkelHeat.lmproject').writeAsStringSync(jsonEncode(project.toMap()));
+
+    try {
+      final vm = EditorViewModel(initialProject: project, projectLocation: tempProjectsDir.path);
+      await tester.runAsync(() => vm.ensureDefaultLevelAssets());
+      await tester.runAsync(() => vm.processImportPipeline(sourceFilePath: quinn));
+      vm.refreshAssets();
+
+      tester.view.physicalSize = const Size(1920, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      final boundaryKey = GlobalKey();
+      await tester.pumpWidget(
+        RepaintBoundary(
+          key: boundaryKey,
+          child: ShadcnApp(theme: luminaEditorTheme(), home: MainEditorView(viewModel: vm)),
+        ),
+      );
+
+      Future<void> settle([int frames = 20]) async {
+        for (var i = 0; i < frames; i++) {
+          await tester.pump(const Duration(milliseconds: 16));
+          await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 16)));
+          expect(tester.takeException(), isNull);
+        }
+      }
+
+      await settle(30);
+      final rec = SmokeRecorder(tester, boundary: find.byKey(boundaryKey));
+      await rec.hold(const Duration(seconds: 1));
+
+      final meshAsset = vm.realAssets.firstWhere(
+        (a) => (a.type == AssetType.filamesh || a.type == AssetType.filameshSk) && a.fileName.toLowerCase().contains('quinn'),
+        orElse: () => throw StateError('the Quinn import produced no mesh asset'),
+      );
+      vm.openSubEditorTab('SKELETAL', asset: meshAsset);
+      await settle(50);
+      final skel = (tester.state(find.byType(SkeletalMeshSubEditor).last) as dynamic).viewModelForTest
+          as SkeletalMeshEditorViewModel;
+      final mesh = skel.glbMesh!;
+      expect(mesh.jointsPerVertex, isNotNull);
+
+      // The topmost vertex's strongest influence names the head.
+      var top = 0;
+      for (var v = 1; v < mesh.vertexCount; v++) {
+        if (mesh.positions[v * 3 + 1] > mesh.positions[top * 3 + 1]) top = v;
+      }
+      expect(skel.getVertexInfluences(top).keys.first, 'head');
+
+      if (!skel.heatmapEnabled) skel.toggleHeatmap();
+      await settle(10);
+      await rec.hold(const Duration(seconds: 1));
+      final metrics = <String, String>{};
+      for (final name in const ['head', 'pelvis', 'hand_l', 'foot_r']) {
+        final bone = skel.allBones.firstWhere((b) => b.name == name);
+        skel.selectBone(bone);
+        await settle(10);
+        final colors = skel.heatmapColors(bone.index)!;
+        // Weighted vertices (not pure blue) and their mean height.
+        var count = 0;
+        var sumY = 0.0;
+        for (var v = 0; v < mesh.vertexCount; v++) {
+          if (colors[v * 3] > 0 || colors[v * 3 + 2] < 255) {
+            count++;
+            sumY += mesh.positions[v * 3 + 1];
+          }
+        }
+        expect(count, greaterThan(0), reason: '$name colours its vertices');
+        metrics['${name}_weighted_vertices'] = '$count';
+        metrics['${name}_mean_height'] = (sumY / count).toStringAsFixed(3);
+        await rec.hold(const Duration(seconds: 2));
+        await settle(10);
+        final png = await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey));
+        SmokeArtifacts.saveScreenshot('skeletal_mesh_editor_heatmap_$name', png, usedAssets: [quinn], metrics: Map.of(metrics));
+      }
+      // The head's weighted vertices sit above the pelvis's, the foot's below.
+      final h = double.parse(metrics['head_mean_height']!);
+      final pl = double.parse(metrics['pelvis_mean_height']!);
+      final f = double.parse(metrics['foot_r_mean_height']!);
+      expect(h, greaterThan(pl));
+      expect(f, lessThan(pl));
+      await rec.hold(const Duration(seconds: 1));
+      rec.save('Skeletal Mesh Smoke: the skin weight heatmap colours the selected bone of a skin that does not start at node 0',
+          usedAssets: [quinn]);
+    } finally {
+      if (tempProjectsDir.existsSync()) tempProjectsDir.deleteSync(recursive: true);
+    }
+  });
 }
