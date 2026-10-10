@@ -164,6 +164,14 @@ abstract class _ViewportWidgetStateBase extends State<ViewportWidget> with Ticke
   /// or building, requiring a native scene sync upon becoming active again.
   bool _pendingSceneSync = false;
 
+  /// Whether level changes wait for the level tab: another tab is in front
+  /// (except the Sequencer, whose viewport draws this scene) or a build runs.
+  bool get _sceneSyncPaused {
+    final vm = widget.viewModel;
+    if (vm.buildManagerViewModel.isRunning) return true;
+    return vm.activeTabIndex != 0 && vm.currentTab.category != 'SEQUENCER';
+  }
+
   bool _lastVmPlaying = false;
   bool _lastVmPaused = false;
 

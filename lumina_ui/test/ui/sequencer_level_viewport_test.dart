@@ -16,6 +16,8 @@ import 'package:lumina_ui/ui/features/sub_editors/views/sub_editor_3d_viewport.d
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:vector_math/vector_math_64.dart' as vm64;
 
+import '../helpers/temp_project.dart';
+
 /// The Sequencer's viewport draws the level the sequence drives: the level
 /// viewport's own Filament scene, through a camera of its own or through a
 /// camera actor bound in the sequence.
@@ -74,9 +76,8 @@ void main() {
   group('Sequencer viewport on the live level', () {
     late Directory root;
     setUp(() => root = Directory.systemTemp.createTempSync('seq_level_vp_'));
-    tearDown(() {
-      if (root.existsSync()) root.deleteSync(recursive: true);
-    });
+    // The editor's git probe may still hold the folder on Windows.
+    tearDown(() => deleteTempProject(root));
 
     // The editor viewport's tickers never let pumpAndSettle settle.
     Future<void> settle(WidgetTester tester, bool Function() done, {int frames = 400}) async {
@@ -101,12 +102,17 @@ void main() {
       });
       File(acUnitGlb).copySync('${pDir.path}/contents/meshes/AC_Unit.glb');
       File('${pDir.path}/$projectName.lmproject').writeAsStringSync('{}');
-      final evm = EditorViewModel(
-        initialProject: LuminaProject(projectName: projectName, activeLevel: 'contents/levels/L_Main.lmas', settings: EngineScalabilitySettings(targetFps: 60)),
-        projectLocation: root.path,
-        enableTimers: false,
-      );
-      await tester.runAsync(evm.ensureDefaultLevelAssets);
+      // Built on the real clock: the constructor starts the level load, and
+      // a load started in the fake-async zone never completes.
+      final evm = (await tester.runAsync(() async {
+        final evm = EditorViewModel(
+          initialProject: LuminaProject(projectName: projectName, activeLevel: 'contents/levels/L_Main.lmas', settings: EngineScalabilitySettings(targetFps: 60)),
+          projectLocation: root.path,
+          enableTimers: false,
+        );
+        await evm.ensureDefaultLevelAssets();
+        return evm;
+      }))!;
       await tester.runAsync(() => evm.spawnActorFromAsset(evm.realAssets.firstWhere((a) => a.fileName == 'AC_Unit.lmas'), location: [0, 0, 0]));
       final mesh = evm.actors.last;
       evm.spawnNewActor('Camera');

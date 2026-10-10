@@ -29,7 +29,7 @@ mixin _ViewportSceneSync on _ViewportWidgetStateBase {
 
   void _onViewModelUpdated() {
     _neuralRendering.sync();
-    if (widget.viewModel.activeTabIndex != 0 || widget.viewModel.buildManagerViewModel.isRunning) {
+    if (_sceneSyncPaused) {
       _pendingSceneSync = true;
       return;
     }

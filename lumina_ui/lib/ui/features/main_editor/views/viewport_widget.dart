@@ -109,8 +109,7 @@ class _ViewportWidgetState extends _ViewportWidgetStateBase
       oldWidget.viewModel.removeListener(_onViewModelUpdated);
       widget.viewModel.addListener(_onViewModelUpdated);
     }
-    final isPaused = widget.viewModel.activeTabIndex != 0 || widget.viewModel.buildManagerViewModel.isRunning;
-    if (!isPaused) {
+    if (!_sceneSyncPaused) {
       if (_pendingSceneSync) {
         _pendingSceneSync = false;
         _syncPieSession();
