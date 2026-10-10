@@ -1,0 +1,133 @@
+#version 460
+// Elementwise tensor operations of the NR graph, selected by MODE.
+// v2: one thread per eight consecutive channels of one pixel (16-byte f16 and
+// 8-byte E4M3 accesses, packed hardware conversions); every half rounding is
+// the bit-level roundF16 or a packed 16-bit conversion, never float(float16_t()).
+#extension GL_EXT_float_e4m3 : require
+#extension GL_EXT_shader_explicit_arithmetic_types : require
+#extension GL_EXT_control_flow_attributes : require
+#extension GL_GOOGLE_include_directive : require
+#define DLSS_E4M3_HW 1
+#include "common.glsl"
+
+layout(local_size_x = 256) in;
+
+layout(constant_id = 0) const uint MODE = 0;
+const uint MODE_F32_TO_F16 = 0u;        // input features -> f16 A operand
+const uint MODE_QUANTIZE = 1u;          // f16 -> E4M3
+const uint MODE_DOWNSAMPLE_FP8 = 2u;    // raw f16 2x box pool -> E4M3
+const uint MODE_POST_BLEND = 3u;        // 2x upsample E4 * scale + adapter E4 * scale -> f16 raw + E4M3
+const uint MODE_UPSAMPLE_RESIDUAL = 4u; // f16 projection (low res) + E4 skip * scale -> E4M3 (+ f16 raw)
+
+layout(push_constant) uniform Push {
+  uint count;        // output elements (multiple of 8)
+  uint channels;     // multiple of 8
+  uint inWidth;
+  uint inHeight;
+  uint outWidth;
+  uint outHeight;
+  uint auxOffsetA;   // half units in binding 4
+  uint auxOffsetB;
+  uint dual;         // also publish f16 raw output (binding 6)
+} pc;
+
+layout(std430, binding = 0) readonly buffer In32 { vec4 in32x4[]; };
+layout(std430, binding = 1) readonly buffer In16 { uvec4 in16x8[]; };
+layout(std430, binding = 2) readonly buffer In8 { uvec2 in8x8[]; };
+layout(std430, binding = 3) readonly buffer Skip8 { uvec2 skip8x8[]; };
+layout(std430, binding = 4) readonly buffer Aux { uint16_t aux16[]; };
+layout(std430, binding = 5) writeonly buffer Out8 { uvec2 out8x8[]; };
+layout(std430, binding = 6) writeonly buffer Out16 { uvec4 out16x8[]; };
+
+// Eight scale halves as f32 (aux offsets are not 16-byte aligned in general).
+void auxScales(uint offset, uint channel, out float s[8]) {
+  [[unroll]] for (uint i = 0u; i < 8u; ++i) s[i] = float(uint16BitsToFloat16(aux16[offset + channel + i]));
+}
+
+void unpack8(uvec4 words, out float v[8]) {
+  [[unroll]] for (uint i = 0u; i < 4u; ++i) { vec2 p = vec2(unpackFloat2x16(words[i])); v[2u * i] = p.x; v[2u * i + 1u] = p.y; }
+}
+
+void unpackE4x8(uvec2 codes, out float v[8]) {
+  [[unroll]] for (uint i = 0u; i < 8u; ++i) v[i] = e4m3HwToF32((codes[i >> 2u] >> ((i & 3u) * 8u)) & 0xffu);
+}
+
+// f32 values already rounded to half -> packed halves (exact) and E4M3 codes.
+uvec4 packHalves8(float v[8]) {
+  uvec4 w;
+  [[unroll]] for (uint i = 0u; i < 4u; ++i) w[i] = packFloat2x16(f16vec2(v[2u * i], v[2u * i + 1u]));
+  return w;
+}
+uvec2 quantize8(uvec4 halves) {
+  return uvec2(uint(e4m3HwPair(unpackFloat2x16(halves.x))) | (uint(e4m3HwPair(unpackFloat2x16(halves.y))) << 16u),
+               uint(e4m3HwPair(unpackFloat2x16(halves.z))) | (uint(e4m3HwPair(unpackFloat2x16(halves.w))) << 16u));
+}
+
+void main() {
+  uint group = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * 65535u * 256u;   // 8-channel group
+  if (group * 8u >= pc.count) return;
+  const uint groupsPerPixel = pc.channels / 8u;
+  const uint c = (group % groupsPerPixel) * 8u;
+  const uint pixel = group / groupsPerPixel;
+  if (MODE == MODE_F32_TO_F16) {
+    vec4 a = in32x4[group * 2u], b = in32x4[group * 2u + 1u];
+    out16x8[group] = uvec4(packFloat2x16(f16vec2(a.xy)), packFloat2x16(f16vec2(a.zw)), packFloat2x16(f16vec2(b.xy)),
+                           packFloat2x16(f16vec2(b.zw)));
+  } else if (MODE == MODE_QUANTIZE) {
+    out8x8[group] = quantize8(in16x8[group]);
+  } else if (MODE == MODE_DOWNSAMPLE_FP8) {
+    uint ox = pixel % pc.outWidth, oy = pixel / pc.outWidth;
+    uint sx = ox * 2u, sy = oy * 2u;
+    uvec4 result = uvec4(0u);
+    if (sx + 1u < pc.inWidth && sy + 1u < pc.inHeight) {
+      // The 2x2 pool: three add.f16x2 as (a+b)+(c+d), one mul.f16x2 by
+      // 0.25, then cvt.rn.satfinite.e4m3. Every intermediate is a half.
+      uint i00 = ((sy * pc.inWidth + sx) * pc.channels + c) / 8u;
+      uint i10 = ((sy * pc.inWidth + sx + 1u) * pc.channels + c) / 8u;
+      uint i01 = (((sy + 1u) * pc.inWidth + sx) * pc.channels + c) / 8u;
+      uint i11 = (((sy + 1u) * pc.inWidth + sx + 1u) * pc.channels + c) / 8u;
+      uvec4 w00 = in16x8[i00], w10 = in16x8[i10], w01 = in16x8[i01], w11 = in16x8[i11];
+      [[unroll]] for (uint i = 0u; i < 4u; ++i) {
+        precise f16vec2 top = unpackFloat2x16(w00[i]) + unpackFloat2x16(w10[i]);
+        precise f16vec2 bottom = unpackFloat2x16(w01[i]) + unpackFloat2x16(w11[i]);
+        precise f16vec2 sum = top + bottom;
+        precise f16vec2 value = sum * float16_t(0.25);
+        result[i] = packFloat2x16(value);
+      }
+    }
+    out8x8[group] = quantize8(result);
+  } else if (MODE == MODE_POST_BLEND) {
+    uint ox = pixel % pc.outWidth, oy = pixel / pc.outWidth;
+    uint source = ((oy >> 1u) * pc.inWidth + (ox >> 1u)) * pc.channels + c;
+    float up[8], adapter[8], scaleA[8], scaleB[8], raw[8];
+    unpackE4x8(in8x8[source / 8u], up);
+    unpackE4x8(skip8x8[group], adapter);
+    auxScales(pc.auxOffsetA, c, scaleA);
+    auxScales(pc.auxOffsetB, c, scaleB);
+    // learned_post_blend: mul.f16x2, mul.f16x2, add.f16x2 with the adapter
+    // product contracted into the final add before its half rounding.
+    [[unroll]] for (uint i = 0u; i < 8u; ++i) {
+      precise float inputValue = roundF16(up[i] * scaleA[i]);
+      precise float value = inputValue + adapter[i] * scaleB[i];
+      raw[i] = roundF16(value);
+    }
+    uvec4 halves = packHalves8(raw);
+    out16x8[group] = halves;
+    out8x8[group] = quantize8(halves);
+  } else if (MODE == MODE_UPSAMPLE_RESIDUAL) {
+    uint ox = pixel % pc.outWidth, oy = pixel / pc.outWidth;
+    uint source = ((oy >> 1u) * pc.inWidth + (ox >> 1u)) * pc.channels + c;
+    float projected[8], skip[8], scale[8], value[8];
+    unpack8(in16x8[source / 8u], projected);
+    unpackE4x8(skip8x8[group], skip);
+    auxScales(pc.auxOffsetA, c, scale);
+    // residualAfterMatmul + scaleResidual: round_f16(value + residual * scale).
+    [[unroll]] for (uint i = 0u; i < 8u; ++i) {
+      precise float sum = projected[i] + skip[i] * scale[i];
+      value[i] = roundF16(sum);
+    }
+    uvec4 halves = packHalves8(value);
+    out8x8[group] = quantize8(halves);
+    if (pc.dual != 0u) out16x8[group] = halves;
+  }
+}

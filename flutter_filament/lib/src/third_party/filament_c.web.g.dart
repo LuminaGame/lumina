@@ -4346,6 +4346,41 @@ void filament_dlss_fg_destroy(ffi.Pointer<ffi.Void> generator) {
 ffi.Pointer<ffi.Char> filament_dlss_fg_last_error() =>
     ffi.Pointer<ffi.Char>.fromAddress(_m.filament_dlss_fg_last_error().toDartInt);
 
+void filament_opendlss_nr_request_device_features() {
+  _m.filament_opendlss_nr_request_device_features();
+}
+
+int filament_opendlss_nr_capability(ffi.Pointer<ffi.Void> engine, ffi.Pointer<ffi.Char> reason, int capacity) =>
+    _m.filament_opendlss_nr_capability(engine.address.toJS, reason.address.toJS, capacity.toJS).toDartInt;
+
+int filament_opendlss_nr_validate_model(ffi.Pointer<ffi.Char> directory, bool verify_hashes, ffi.Pointer<filament_opendlss_nr_model_info> info, ffi.Pointer<ffi.Char> message, int capacity) =>
+    _m.filament_opendlss_nr_validate_model(directory.address.toJS, (verify_hashes ? 1 : 0).toJS, info.address.toJS, message.address.toJS, capacity.toJS).toDartInt;
+
+int filament_opendlss_nr_write_synthetic_model(ffi.Pointer<ffi.Char> directory, int seed, int fill, ffi.Pointer<ffi.Char> message, int capacity) =>
+    _m.filament_opendlss_nr_write_synthetic_model(directory.address.toJS, seed.toJS, fill.toJS, message.address.toJS, capacity.toJS).toDartInt;
+
+ffi.Pointer<ffi.Void> filament_opendlss_nr_model_load(ffi.Pointer<ffi.Void> engine, ffi.Pointer<ffi.Char> directory, ffi.Pointer<ffi.Char> message, int capacity) =>
+    ffi.Pointer<ffi.Void>.fromAddress(_m.filament_opendlss_nr_model_load(engine.address.toJS, directory.address.toJS, message.address.toJS, capacity.toJS).toDartInt);
+
+void filament_opendlss_nr_model_destroy(ffi.Pointer<ffi.Void> model) {
+  _m.filament_opendlss_nr_model_destroy(model.address.toJS);
+}
+
+ffi.Pointer<ffi.Void> filament_opendlss_nr_create(ffi.Pointer<ffi.Void> engine, ffi.Pointer<ffi.Void> view, ffi.Pointer<ffi.Void> model, ffi.Pointer<ffi.Char> message, int capacity) =>
+    ffi.Pointer<ffi.Void>.fromAddress(_m.filament_opendlss_nr_create(engine.address.toJS, view.address.toJS, model.address.toJS, message.address.toJS, capacity.toJS).toDartInt);
+
+void filament_opendlss_nr_set_controls(ffi.Pointer<ffi.Void> pass, ffi.Pointer<filament_opendlss_nr_controls> controls) {
+  _m.filament_opendlss_nr_set_controls(pass.address.toJS, controls.address.toJS);
+}
+
+void filament_opendlss_nr_get_status(ffi.Pointer<ffi.Void> pass, ffi.Pointer<filament_opendlss_nr_status> status, ffi.Pointer<ffi.Char> failure, int capacity) {
+  _m.filament_opendlss_nr_get_status(pass.address.toJS, status.address.toJS, failure.address.toJS, capacity.toJS);
+}
+
+void filament_opendlss_nr_destroy(ffi.Pointer<ffi.Void> pass) {
+  _m.filament_opendlss_nr_destroy(pass.address.toJS);
+}
+
 enum FilamentBackend {
   FILAMENT_BACKEND_DEFAULT(0),
   FILAMENT_BACKEND_OPENGL(1),
@@ -6425,6 +6460,135 @@ final class filament_dlss_fg_probe_t extends ffi.Struct {
   set minHwArchitecture(int value) => FlutterFilamentModule.heap.setUint32($address + 24, value, Endian.little);
 
   ffi.Array<ffi.Char> get deviceExtensions => ffi.Array<ffi.Char>.$view($address + 28, 1024);
+}
+
+enum filament_opendlss_nr_capability_code {
+  FILAMENT_OPENDLSS_NR_CAPABLE(0),
+  FILAMENT_OPENDLSS_NR_NOT_VULKAN(1),
+  FILAMENT_OPENDLSS_NR_NOT_NVIDIA(2),
+  FILAMENT_OPENDLSS_NR_MISSING_EXTENSION(3),
+  FILAMENT_OPENDLSS_NR_OLDER_GPU(4),
+  FILAMENT_OPENDLSS_NR_NOT_ENABLED(5);
+
+  final int value;
+  const filament_opendlss_nr_capability_code(this.value);
+
+  static filament_opendlss_nr_capability_code fromValue(int value) =>
+      switch (value) {
+        0 => FILAMENT_OPENDLSS_NR_CAPABLE,
+        1 => FILAMENT_OPENDLSS_NR_NOT_VULKAN,
+        2 => FILAMENT_OPENDLSS_NR_NOT_NVIDIA,
+        3 => FILAMENT_OPENDLSS_NR_MISSING_EXTENSION,
+        4 => FILAMENT_OPENDLSS_NR_OLDER_GPU,
+        5 => FILAMENT_OPENDLSS_NR_NOT_ENABLED,
+        _ => throw ArgumentError(
+          'Unknown value for filament_opendlss_nr_capability_code: $value',
+        ),
+      };
+}
+
+enum filament_opendlss_nr_model_code {
+  FILAMENT_OPENDLSS_NR_MODEL_OK(0),
+  FILAMENT_OPENDLSS_NR_MODEL_MISSING(1),
+  FILAMENT_OPENDLSS_NR_MODEL_INVALID_MANIFEST(2),
+  FILAMENT_OPENDLSS_NR_MODEL_STAGE_MISMATCH(3),
+  FILAMENT_OPENDLSS_NR_MODEL_LAYOUT_MISMATCH(4),
+  FILAMENT_OPENDLSS_NR_MODEL_HASH_MISMATCH(5),
+  FILAMENT_OPENDLSS_NR_MODEL_IO_ERROR(6),
+  FILAMENT_OPENDLSS_NR_MODEL_UNAVAILABLE(7);
+
+  final int value;
+  const filament_opendlss_nr_model_code(this.value);
+
+  static filament_opendlss_nr_model_code fromValue(int value) =>
+      switch (value) {
+        0 => FILAMENT_OPENDLSS_NR_MODEL_OK,
+        1 => FILAMENT_OPENDLSS_NR_MODEL_MISSING,
+        2 => FILAMENT_OPENDLSS_NR_MODEL_INVALID_MANIFEST,
+        3 => FILAMENT_OPENDLSS_NR_MODEL_STAGE_MISMATCH,
+        4 => FILAMENT_OPENDLSS_NR_MODEL_LAYOUT_MISMATCH,
+        5 => FILAMENT_OPENDLSS_NR_MODEL_HASH_MISMATCH,
+        6 => FILAMENT_OPENDLSS_NR_MODEL_IO_ERROR,
+        7 => FILAMENT_OPENDLSS_NR_MODEL_UNAVAILABLE,
+        _ => throw ArgumentError(
+          'Unknown value for filament_opendlss_nr_model_code: $value',
+        ),
+      };
+}
+
+final class filament_opendlss_nr_model_info extends ffi.Struct {
+  filament_opendlss_nr_model_info.$at(super.$address) : super.$at();
+
+  int get block_count => FlutterFilamentModule.heap.getUint32($address, Endian.little);
+  set block_count(int value) => FlutterFilamentModule.heap.setUint32($address, value, Endian.little);
+
+  int get stage_count => FlutterFilamentModule.heap.getUint32($address + 4, Endian.little);
+  set stage_count(int value) => FlutterFilamentModule.heap.setUint32($address + 4, value, Endian.little);
+
+  int get tensor_count => FlutterFilamentModule.heap.getUint32($address + 8, Endian.little);
+  set tensor_count(int value) => FlutterFilamentModule.heap.setUint32($address + 8, value, Endian.little);
+
+  int get total_bytes => ffi.$readInt64($address + 16);
+  set total_bytes(int value) => ffi.$writeInt64($address + 16, value);
+}
+
+final class filament_opendlss_nr_controls extends ffi.Struct {
+  filament_opendlss_nr_controls.$at(super.$address) : super.$at();
+
+  bool get enabled => FlutterFilamentModule.heap.getUint8($address) != 0;
+  set enabled(bool value) => FlutterFilamentModule.heap.setUint8($address, value ? 1 : 0);
+
+  double get intensity => FlutterFilamentModule.heap.getFloat32($address + 4, Endian.little);
+  set intensity(double value) => FlutterFilamentModule.heap.setFloat32($address + 4, value, Endian.little);
+
+  double get local_tone => FlutterFilamentModule.heap.getFloat32($address + 8, Endian.little);
+  set local_tone(double value) => FlutterFilamentModule.heap.setFloat32($address + 8, value, Endian.little);
+
+  double get local_structure => FlutterFilamentModule.heap.getFloat32($address + 12, Endian.little);
+  set local_structure(double value) => FlutterFilamentModule.heap.setFloat32($address + 12, value, Endian.little);
+
+  double get skin_structure => FlutterFilamentModule.heap.getFloat32($address + 16, Endian.little);
+  set skin_structure(double value) => FlutterFilamentModule.heap.setFloat32($address + 16, value, Endian.little);
+
+  bool get auto_mask => FlutterFilamentModule.heap.getUint8($address + 20) != 0;
+  set auto_mask(bool value) => FlutterFilamentModule.heap.setUint8($address + 20, value ? 1 : 0);
+
+  int get style => FlutterFilamentModule.heap.getUint32($address + 24, Endian.little);
+  set style(int value) => FlutterFilamentModule.heap.setUint32($address + 24, value, Endian.little);
+
+  double get paper_white => FlutterFilamentModule.heap.getFloat32($address + 28, Endian.little);
+  set paper_white(double value) => FlutterFilamentModule.heap.setFloat32($address + 28, value, Endian.little);
+
+  double get color_strength => FlutterFilamentModule.heap.getFloat32($address + 32, Endian.little);
+  set color_strength(double value) => FlutterFilamentModule.heap.setFloat32($address + 32, value, Endian.little);
+}
+
+final class filament_opendlss_nr_status extends ffi.Struct {
+  filament_opendlss_nr_status.$at(super.$address) : super.$at();
+
+  int get frames => ffi.$readInt64($address);
+  set frames(int value) => ffi.$writeInt64($address, value);
+
+  int get width => FlutterFilamentModule.heap.getUint32($address + 8, Endian.little);
+  set width(int value) => FlutterFilamentModule.heap.setUint32($address + 8, value, Endian.little);
+
+  int get height => FlutterFilamentModule.heap.getUint32($address + 12, Endian.little);
+  set height(int value) => FlutterFilamentModule.heap.setUint32($address + 12, value, Endian.little);
+
+  bool get failed => FlutterFilamentModule.heap.getUint8($address + 16) != 0;
+  set failed(bool value) => FlutterFilamentModule.heap.setUint8($address + 16, value ? 1 : 0);
+
+  double get gpu_ms => FlutterFilamentModule.heap.getFloat64($address + 24, Endian.little);
+  set gpu_ms(double value) => FlutterFilamentModule.heap.setFloat64($address + 24, value, Endian.little);
+
+  double get gpu_ms_average => FlutterFilamentModule.heap.getFloat64($address + 32, Endian.little);
+  set gpu_ms_average(double value) => FlutterFilamentModule.heap.setFloat64($address + 32, value, Endian.little);
+
+  int get dispatches => FlutterFilamentModule.heap.getUint32($address + 40, Endian.little);
+  set dispatches(int value) => FlutterFilamentModule.heap.setUint32($address + 40, value, Endian.little);
+
+  int get device_bytes => ffi.$readInt64($address + 48);
+  set device_bytes(int value) => ffi.$writeInt64($address + 48, value);
 }
 
 // --- the module's exports (web) ---------------------------------------------
@@ -8825,6 +8989,26 @@ extension type _Module._(JSObject _) implements JSObject {
   external void filament_dlss_fg_destroy(JSNumber generator);
   @JS('_filament_dlss_fg_last_error')
   external JSNumber filament_dlss_fg_last_error();
+  @JS('_filament_opendlss_nr_request_device_features')
+  external void filament_opendlss_nr_request_device_features();
+  @JS('_filament_opendlss_nr_capability')
+  external JSNumber filament_opendlss_nr_capability(JSNumber engine, JSNumber reason, JSNumber capacity);
+  @JS('_filament_opendlss_nr_validate_model')
+  external JSNumber filament_opendlss_nr_validate_model(JSNumber directory, JSNumber verify_hashes, JSNumber info, JSNumber message, JSNumber capacity);
+  @JS('_filament_opendlss_nr_write_synthetic_model')
+  external JSNumber filament_opendlss_nr_write_synthetic_model(JSNumber directory, JSNumber seed, JSNumber fill, JSNumber message, JSNumber capacity);
+  @JS('_filament_opendlss_nr_model_load')
+  external JSNumber filament_opendlss_nr_model_load(JSNumber engine, JSNumber directory, JSNumber message, JSNumber capacity);
+  @JS('_filament_opendlss_nr_model_destroy')
+  external void filament_opendlss_nr_model_destroy(JSNumber model);
+  @JS('_filament_opendlss_nr_create')
+  external JSNumber filament_opendlss_nr_create(JSNumber engine, JSNumber view, JSNumber model, JSNumber message, JSNumber capacity);
+  @JS('_filament_opendlss_nr_set_controls')
+  external void filament_opendlss_nr_set_controls(JSNumber pass, JSNumber controls);
+  @JS('_filament_opendlss_nr_get_status')
+  external void filament_opendlss_nr_get_status(JSNumber pass, JSNumber status, JSNumber failure, JSNumber capacity);
+  @JS('_filament_opendlss_nr_destroy')
+  external void filament_opendlss_nr_destroy(JSNumber pass);
 }
 
 _Module get _m => _Module._(FlutterFilamentModule.instance);
@@ -8873,6 +9057,9 @@ void $registerFilamentBindings() {
   ffi.$registerStruct<filament_guide_buffer_options_t>(2, 1, filament_guide_buffer_options_t.$at);
   ffi.$registerStruct<filament_dlss_rr_options_t>(16, 4, filament_dlss_rr_options_t.$at);
   ffi.$registerStruct<filament_dlss_fg_probe_t>(1052, 4, filament_dlss_fg_probe_t.$at);
+  ffi.$registerStruct<filament_opendlss_nr_model_info>(24, 8, filament_opendlss_nr_model_info.$at);
+  ffi.$registerStruct<filament_opendlss_nr_controls>(36, 4, filament_opendlss_nr_controls.$at);
+  ffi.$registerStruct<filament_opendlss_nr_status>(56, 8, filament_opendlss_nr_status.$at);
   ffi.$registerCallbackType<FilamentPickCallbackFunction>(const ffi.$CallbackSignature('v', ['u', 'f', 'f', 'f', 'p']));
   ffi.$registerCallbackType<FilamentRaycastCallbackFunction>(const ffi.$CallbackSignature('b', ['p', 'p', 'p', 'p']));
   ffi.$registerCallbackType<filament_buffer_free_fnFunction>(const ffi.$CallbackSignature('v', ['p', 'u', 'p']));

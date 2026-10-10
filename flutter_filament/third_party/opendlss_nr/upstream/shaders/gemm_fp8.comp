@@ -1,0 +1,353 @@
+#version 460
+// Exact Ada FP8 GEMM on cooperative matrices (v4: shared-memory staged operands,
+// tile-major weights, 64- or 128-row blocks, single-pass packed epilogue).
+//
+// D = A(E4M3, rows x K) * B(E4M3, K x N) accumulated in FP16 as a chain of
+// 16x16x32 MMAs in K order (the m16n8k32 two-group F13 arithmetic of the tensor
+// cores). The prologue seeds the accumulator with the residual/skip vector as
+// the C fragment; the epilogue applies the publication order (residual-after,
+// cubic SiLU, E4M3 quantization) element by element with the hardware half
+// conversions.
+//
+// Data movement (measured): coopMatLoad straight from
+// global memory costs 10-40 ns per tile while the MMA itself costs 3.5 ns, but
+// coopMatLoad from shared memory is free and plain coalesced 16-byte loads
+// move 1 KB in 12 ns (6 ns when the 512 bytes of a warp load are contiguous).
+// So every k32 step stages A[BM][32] and B[BN][32] into shared memory with
+// one uvec4 per thread per row half, DEPTH steps ahead through registers, and
+// the MMAs read shared only. Weights are stored k32-tile-major
+// ([batch][K/32][N][32]) so a B tile is one contiguous block.
+//
+// Work decomposition: a workgroup owns BM = 16*SUBGROUPS rows and
+// BN = 16*TILES columns; the host picks both so the GPU stays occupied.
+#extension GL_EXT_float_e4m3 : require
+#extension GL_EXT_shader_explicit_arithmetic_types : require
+#extension GL_KHR_memory_scope_semantics : require
+#extension GL_KHR_cooperative_matrix : require
+#extension GL_NV_cooperative_matrix2 : require
+#extension GL_KHR_shader_subgroup_basic : require
+#extension GL_EXT_control_flow_attributes : require
+#extension GL_GOOGLE_include_directive : require
+#define DLSS_E4M3_HW 1
+#include "common.glsl"
+
+layout(constant_id = 0) const uint K = 32;
+layout(constant_id = 1) const uint TILES = 4;      // 16-column tiles per subgroup; BN = 16 * TILES
+layout(constant_id = 2) const uint FLAGS = 0;
+layout(constant_id = 3) const uint PARTITION = 0;
+layout(constant_id = 4) const uint DEPTH = 4;      // global -> register prefetch depth in k32 steps (1..4)
+layout(constant_id = 5) const uint PADV4 = 1;      // shared row padding in uvec4 units (bank spread)
+layout(constant_id = 7) const uint SUBGROUPS = 4;  // 16-row tiles per workgroup; BM = 16 * SUBGROUPS
+layout(local_size_x_id = 8) in;                    // = 32 * SUBGROUPS
+layout(constant_id = 9) const uint SPLITK = 1;     // K partitions computed by separate workgroups (partials to binding 2)
+layout(constant_id = 10) const uint KSTEP = 32;    // K per staged step and barrier: 32 or 64 (two k32 tiles, one flexible multiply)
+const uint KW = KSTEP / 16u;                        // uvec4 words of K per staged row
+
+const uint F_RESIDUAL = 1u;
+const uint F_SCALE_RESIDUAL = 2u;
+const uint F_SILU = 8u;
+const uint F_QUANTIZE = 16u;
+const uint F_DUAL = 32u;
+const uint F_RESIDUAL_E4 = 64u;
+const uint F_BROADCAST_INPUT = 128u;
+
+layout(push_constant) uniform Push {
+  uint rows;
+  uint N;
+  uint Nmatrix;
+  uint weightColumnOffset;
+  uint inputStride;
+  uint inputColumnBase;
+  uint outputStride;
+  uint outputColumnOffset;
+  uint auxHalfOffset;   // per-column f16 scale vector, in half units within binding 4 (16-byte aligned)
+  uint batches;
+  uint columnGroups;
+  uint splitStride;     // SPLITK > 1: f16 elements per partition slice of the partial buffer
+} pc;
+
+layout(std430, binding = 0) readonly buffer InputA { uvec4 a4[]; };            // E4M3 [rows][inputStride]
+layout(std430, binding = 1) readonly buffer InputB { uvec4 b4[]; };            // E4M3 [batch][K/32][Nmatrix][32]
+layout(std430, binding = 2) writeonly buffer OutputHalf { uvec4 out16x8[]; };
+layout(std430, binding = 3) readonly buffer ResidualHalf { uvec4 residual16x8[]; };
+layout(std430, binding = 3) readonly buffer ResidualHalfFlat { float16_t residual16[]; };
+layout(std430, binding = 3) readonly buffer ResidualHalfPairs { f16vec2 residual16x2[]; };
+layout(std430, binding = 4) readonly buffer Aux { uvec4 aux16x8[]; };
+layout(std430, binding = 4) readonly buffer AuxPairs { f16vec2 aux16x2[]; };
+layout(std430, binding = 5) writeonly buffer OutputE4 { uvec4 out8x16[]; };
+layout(std430, binding = 6) readonly buffer ResidualE4 { uvec4 residual8x16[]; };
+layout(std430, binding = 6) readonly buffer ResidualE4Pairs { uint16_t residual8x2[]; };
+
+const uint THREADS = 32u * SUBGROUPS;
+const uint BM = 16u * SUBGROUPS;
+const uint BN = TILES * 16u;
+const uint ROWV4 = KW + PADV4;                        // uvec4 per staged row: KSTEP bytes of K plus padding
+const uint A_PER_THREAD = (BM * KW + THREADS - 1u) / THREADS;
+const uint B_PER_THREAD = (KW * BN + THREADS - 1u) / THREADS;
+const uint STAGE_WORDS = 2u * (BM + BN) * ROWV4;      // two operand buffers
+// Epilogue staging: per subgroup [16][64] f16 at a 9-word stride (bank-conflict free), reusing the operand buffers.
+const uint EPI_WORDS = SUBGROUPS * 16u * 9u;
+const uint SHARED_WORDS = STAGE_WORDS > EPI_WORDS ? STAGE_WORDS : EPI_WORDS;
+shared uvec4 stage[SHARED_WORDS];
+shared float16_t tileStage[SUBGROUPS * 256u];         // per-subgroup 16x16 accumulator staging (residual prologue)
+
+#define ACC coopmat<float16_t, gl_ScopeSubgroup, 16, 16, gl_MatrixUseAccumulator>
+#define MAT_A coopmat<floate4m3_t, gl_ScopeSubgroup, 16, KSTEP, gl_MatrixUseA>
+#define MAT_B coopmat<floate4m3_t, gl_ScopeSubgroup, KSTEP, 16, gl_MatrixUseB>
+
+void subgroupSync() { subgroupMemoryBarrierShared(); subgroupBarrier(); }
+
+// Two consecutive columns of one row: residual pair as f32 (prologue path).
+vec2 loadResidualPair(uint pairIndex) {
+  if ((FLAGS & F_RESIDUAL_E4) != 0u) {
+    uint packed = uint(residual8x2[pairIndex]);
+    return vec2(e4m3ToF32(packed & 0xffu), e4m3ToF32(packed >> 8u));
+  }
+  return vec2(residual16x2[pairIndex]);
+}
+
+vec2 auxPair(uint column) { return vec2(aux16x2[(pc.auxHalfOffset + column) >> 1u]); }
+
+// Sixteen residual values (16 columns) as eight f32 pairs.
+void loadResidual16(uint elementIndex, out vec2 r[8]) {
+  if ((FLAGS & F_RESIDUAL_E4) != 0u) {
+    uvec4 codes = residual8x16[elementIndex >> 4u];
+    [[unroll]] for (uint i = 0u; i < 8u; ++i) {
+      uint pair = (codes[i >> 1u] >> ((i & 1u) * 16u)) & 0xffffu;
+      r[i] = vec2(e4m3HwToF32(pair & 0xffu), e4m3HwToF32(pair >> 8u));
+    }
+  } else {
+    uvec4 w0 = residual16x8[elementIndex >> 3u], w1 = residual16x8[(elementIndex >> 3u) + 1u];
+    [[unroll]] for (uint i = 0u; i < 4u; ++i) { r[i] = vec2(unpackFloat2x16(w0[i])); r[4u + i] = vec2(unpackFloat2x16(w1[i])); }
+  }
+}
+
+// Publication of sixteen accumulator halves (two words): output element index `index`
+// (row * stride + batch column base + column, 16-aligned), scale vector column `column`.
+void publish16(uvec4 v0, uvec4 v1, uint index, uint column) {
+  if ((FLAGS & F_SILU) != 0u) {
+    [[unroll]] for (uint i = 0u; i < 4u; ++i) {
+      v0[i] = packFloat2x16(siluPair(unpackFloat2x16(v0[i])));
+      v1[i] = packFloat2x16(siluPair(unpackFloat2x16(v1[i])));
+    }
+  }
+  if ((FLAGS & (F_QUANTIZE | F_DUAL)) != 0u) {
+    uvec4 codes;
+    codes.x = uint(e4m3HwPair(unpackFloat2x16(v0[0]))) | (uint(e4m3HwPair(unpackFloat2x16(v0[1]))) << 16u);
+    codes.y = uint(e4m3HwPair(unpackFloat2x16(v0[2]))) | (uint(e4m3HwPair(unpackFloat2x16(v0[3]))) << 16u);
+    codes.z = uint(e4m3HwPair(unpackFloat2x16(v1[0]))) | (uint(e4m3HwPair(unpackFloat2x16(v1[1]))) << 16u);
+    codes.w = uint(e4m3HwPair(unpackFloat2x16(v1[2]))) | (uint(e4m3HwPair(unpackFloat2x16(v1[3]))) << 16u);
+    out8x16[index >> 4u] = codes;
+  }
+  if ((FLAGS & F_QUANTIZE) == 0u) { out16x8[index >> 3u] = v0; out16x8[(index >> 3u) + 1u] = v1; }
+}
+
+void main() {
+  const uint thread = gl_LocalInvocationID.x;
+  const uint subgroup = gl_SubgroupID;
+  const uint lane = gl_SubgroupInvocationID;
+  const uint split = gl_WorkGroupID.x % SPLITK;
+  const uint columnLinear = gl_WorkGroupID.x / SPLITK;
+  const uint batch = columnLinear / pc.columnGroups;
+  const uint columnGroup = columnLinear % pc.columnGroups;
+  const uint blockRow = (gl_WorkGroupID.y + gl_WorkGroupID.z * 65535u) * BM;
+  const uint rowBase = blockRow + subgroup * 16u;
+  const uint colBase = columnGroup * BN;
+  const uint stageBase = subgroup * 256u;
+  const uint outColumn = pc.outputColumnOffset + batch * pc.N;
+  const bool rowsValid = rowBase < pc.rows;   // whole 16-row tile beyond the end: no MMAs, no stores
+
+  ACC acc[TILES];
+  ACC total[TILES];
+  // Native mma.sync starts from FP16 accumulators holding the scaled skip.
+  const bool seedResidual = (FLAGS & F_RESIDUAL) != 0u && split == 0u;
+  [[unroll]] for (uint t = 0u; t < TILES; ++t) {
+    if (seedResidual) {
+      if ((FLAGS & (F_SCALE_RESIDUAL | F_RESIDUAL_E4)) == 0u) {
+        // Plain half residual: load the C tile directly (rows past the end read padding rows).
+        uint row = min(rowBase, pc.rows - 1u);
+        coopMatLoad(acc[t], residual16, row * pc.outputStride + outColumn + colBase + t * 16u, pc.outputStride,
+                    gl_CooperativeMatrixLayoutRowMajor);
+      } else {
+        acc[t] = ACC(0.0);   // filled below from the staged, scaled residual
+      }
+    } else {
+      acc[t] = ACC(0.0);
+    }
+  }
+  const uint epiBase = subgroup * 16u * 9u;   // per-subgroup f16 [16][64] staging, 9-word rows
+  // Epilogue/prologue lane mapping: a pass covers up to 4 tiles (64 columns); LPR lanes share a row,
+  // each handling 16 columns (two words) with 16-byte accesses; RPI rows per instruction.
+  const uint LPR4 = 4u, RPI4 = 8u;   // 4-tile passes
+  if (seedResidual && (FLAGS & (F_SCALE_RESIDUAL | F_RESIDUAL_E4)) != 0u && rowsValid) {
+    // Scaled and/or E4 residual: round_f16(residual * scale) staged as f16 with 16-byte loads, in passes of
+    // up to four tiles (all loads of a pass in flight together), then loaded as the C fragments.
+    [[unroll]] for (uint pass = 0u; pass < TILES; pass += 4u) {
+      const uint passTiles = (TILES - pass) < 4u ? (TILES - pass) : 4u;
+      const uint lpr = passTiles == 1u ? 1u : (passTiles == 2u ? 2u : 4u);
+      const uint rpi = 32u / lpr;
+      const uint quarter = lane % lpr;
+      [[unroll]] for (uint it = 0u; it < (16u + rpi - 1u) / rpi; ++it) {
+        uint r = it * rpi + lane / lpr;
+        uint row = rowBase + r;
+        if (r < 16u && quarter < passTiles && row < pc.rows) {
+          uint column = colBase + pass * 16u + quarter * 16u;
+          vec2 res[8];
+          loadResidual16(row * pc.outputStride + outColumn + column, res);
+          if ((FLAGS & F_SCALE_RESIDUAL) != 0u) {
+            uvec4 s0 = aux16x8[(pc.auxHalfOffset + column) >> 3u], s1 = aux16x8[((pc.auxHalfOffset + column) >> 3u) + 1u];
+            [[unroll]] for (uint i = 0u; i < 4u; ++i) { res[i] *= vec2(unpackFloat2x16(s0[i])); res[4u + i] *= vec2(unpackFloat2x16(s1[i])); }
+          }
+          uvec4 w0, w1;
+          [[unroll]] for (uint i = 0u; i < 4u; ++i) { w0[i] = packFloat2x16(f16vec2(res[i])); w1[i] = packFloat2x16(f16vec2(res[4u + i])); }
+          stage[epiBase + r * 9u + quarter * 2u] = w0;
+          stage[epiBase + r * 9u + quarter * 2u + 1u] = w1;
+        }
+      }
+      subgroupSync();
+      [[unroll]] for (uint t = 0u; t < passTiles; ++t)
+        coopMatLoad(acc[pass + t], stage, epiBase + t * 2u, 9u, gl_CooperativeMatrixLayoutRowMajor);
+      subgroupSync();
+    }
+  }
+  barrier();   // the prologue staging aliases the operand buffers
+
+  // Per-thread staging assignment: A words idx = thread + THREADS * i -> row idx / KW, word idx % KW of the
+  // row's KSTEP-byte slice; B words idx -> n row idx / KW, word idx % KW (k32 tile 2s + (word >> 1), half word & 1).
+  const uint aColumnBase = pc.inputColumnBase + (((FLAGS & F_BROADCAST_INPUT) != 0u) ? 0u : batch * K);
+  const uint steps = K / KSTEP / SPLITK;        // steps of this workgroup's partition
+  const uint kBegin = split * steps;
+  // B k32 tile j: words (((batch * K/32 + j) * Nmatrix + weightColumnOffset + colBase) + n) * 2 + half.
+  const uint bTile0 = ((batch * (K / 32u)) * pc.Nmatrix + pc.weightColumnOffset + colBase) * 2u;
+  const uint bTileStride = pc.Nmatrix * 2u;
+  const uint A_WORDS = BM * ROWV4;   // per buffer
+  const uint B_WORDS = BN * ROWV4;
+  uint aIndex[A_PER_THREAD];
+  [[unroll]] for (uint i = 0u; i < A_PER_THREAD; ++i) {
+    uint idx = thread + THREADS * i;
+    uint row = min(idx / KW, BM - 1u);
+    aIndex[i] = (min(blockRow + row, pc.rows - 1u) * pc.inputStride + aColumnBase) / 16u + (idx % KW);
+  }
+  uvec4 ra[4 * A_PER_THREAD];
+  uvec4 rb[4 * B_PER_THREAD];
+
+#define LOAD_STEP(d, step) \
+  { \
+    uint kv = (kBegin + (step)) * KW; \
+    [[unroll]] for (uint i = 0u; i < A_PER_THREAD; ++i) \
+      ra[(d) * A_PER_THREAD + i] = a4[aIndex[i] + kv]; \
+    uint tileBase = bTile0 + (kBegin + (step)) * (KW / 2u) * bTileStride; \
+    [[unroll]] for (uint i = 0u; i < B_PER_THREAD; ++i) { \
+      uint idx = min(thread + THREADS * i, KW * BN - 1u); \
+      uint n = idx / KW, w = idx % KW; \
+      rb[(d) * B_PER_THREAD + i] = b4[tileBase + (w >> 1u) * bTileStride + n * 2u + (w & 1u)]; \
+    } \
+  }
+#define STORE_STEP(d, buf) \
+  { \
+    uint aOff = (buf) * (A_WORDS + B_WORDS); \
+    uint bOff = aOff + A_WORDS; \
+    [[unroll]] for (uint i = 0u; i < A_PER_THREAD; ++i) { \
+      uint idx = thread + THREADS * i; \
+      if (idx < BM * KW) stage[aOff + (idx / KW) * ROWV4 + (idx % KW)] = ra[(d) * A_PER_THREAD + i]; \
+    } \
+    [[unroll]] for (uint i = 0u; i < B_PER_THREAD; ++i) { \
+      uint idx = thread + THREADS * i; \
+      if (idx < KW * BN) stage[bOff + (idx / KW) * ROWV4 + (idx % KW)] = rb[(d) * B_PER_THREAD + i]; \
+    } \
+  }
+#define MMA_STEP(step, buf)                                                                    \
+  {                                                                                            \
+    if (rowsValid) {                                                                           \
+      uint aOff = (buf) * (A_WORDS + B_WORDS);                                                 \
+      uint bOff = aOff + A_WORDS;                                                              \
+      MAT_A ma;                                                                                \
+      coopMatLoad(ma, stage, aOff + subgroup * 16u * ROWV4, ROWV4, gl_CooperativeMatrixLayoutRowMajor); \
+      [[unroll]] for (uint t = 0u; t < TILES; ++t) {                                           \
+        MAT_B mb;                                                                              \
+        coopMatLoad(mb, stage, bOff + t * 16u * ROWV4, ROWV4, gl_CooperativeMatrixLayoutColumnMajor); \
+        acc[t] = coopMatMulAdd(ma, mb, acc[t]);                   \
+      }                                                                                        \
+      uint kb = (step) * KSTEP;                                                                  \
+      if (PARTITION != 0u && (((kb + KSTEP) % PARTITION) == 0u || kb + KSTEP >= K)) {              \
+        [[unroll]] for (uint t = 0u; t < TILES; ++t) {                                         \
+          if (kb < PARTITION) total[t] = acc[t];                                               \
+          else total[t] = total[t] + acc[t];                                                   \
+          acc[t] = ACC(0.0);                                                                   \
+        }                                                                                      \
+      }                                                                                        \
+    }                                                                                          \
+  }
+#define RUN_STEP(d)                                                                            \
+  if ((d) < DEPTH && base + (d) < steps) {                                                     \
+    uint step = base + (d);                                                                    \
+    uint buf = step & 1u;                                                                      \
+    STORE_STEP(d, buf)                                                                         \
+    if (step + DEPTH < steps) LOAD_STEP(d, step + DEPTH)                                       \
+    barrier();                                                    \
+    MMA_STEP(step, buf)                                                                        \
+  }
+
+  // Prologue: the first DEPTH steps in flight.
+  if (0u < steps) LOAD_STEP(0, 0u)
+  if (1u < DEPTH && 1u < steps) LOAD_STEP(1, 1u)
+  if (2u < DEPTH && 2u < steps) LOAD_STEP(2, 2u)
+  if (3u < DEPTH && 3u < steps) LOAD_STEP(3, 3u)
+  for (uint base = 0u; base < steps; base += DEPTH) {
+    RUN_STEP(0)
+    RUN_STEP(1)
+    RUN_STEP(2)
+    RUN_STEP(3)
+  }
+  if (PARTITION != 0u) {
+    [[unroll]] for (uint t = 0u; t < TILES; ++t) acc[t] = total[t];
+  }
+  barrier();   // operand buffers are dead: the epilogue staging reuses them
+  if (!rowsValid) return;
+
+  if (SPLITK > 1u) {
+    // Partial accumulators of this partition as raw f16 [rows][N] at split * splitStride.
+    [[unroll]] for (uint pass = 0u; pass < TILES; pass += 4u) {
+      const uint passTiles = (TILES - pass) < 4u ? (TILES - pass) : 4u;
+      [[unroll]] for (uint t = 0u; t < passTiles; ++t)
+        coopMatStore(acc[pass + t], stage, epiBase + t * 2u, 9u, gl_CooperativeMatrixLayoutRowMajor);
+      subgroupSync();
+      const uint lpr = passTiles == 1u ? 1u : (passTiles == 2u ? 2u : 4u);
+      const uint rpi = 32u / lpr;
+      const uint quarter = lane % lpr;
+      [[unroll]] for (uint it = 0u; it < (16u + rpi - 1u) / rpi; ++it) {
+        uint r = it * rpi + lane / lpr;
+        uint row = rowBase + r;
+        if (r < 16u && quarter < passTiles && row < pc.rows) {
+          uint column = colBase + pass * 16u + quarter * 16u;
+          uint index = split * pc.splitStride + row * pc.N + batch * pc.N * pc.rows + column;
+          out16x8[index >> 3u] = stage[epiBase + r * 9u + quarter * 2u];
+          out16x8[(index >> 3u) + 1u] = stage[epiBase + r * 9u + quarter * 2u + 1u];
+        }
+      }
+      subgroupSync();
+    }
+    return;
+  }
+  // Epilogue in passes of up to four tiles (64 columns): stage the tiles as f16 [16][64] per subgroup
+  // (9-word row stride), then lanes publish 16 columns each with 16-byte accesses (full sectors).
+  [[unroll]] for (uint pass = 0u; pass < TILES; pass += 4u) {
+    const uint passTiles = (TILES - pass) < 4u ? (TILES - pass) : 4u;
+    [[unroll]] for (uint t = 0u; t < passTiles; ++t)
+      coopMatStore(acc[pass + t], stage, epiBase + t * 2u, 9u, gl_CooperativeMatrixLayoutRowMajor);
+    subgroupSync();
+    const uint lpr = passTiles == 1u ? 1u : (passTiles == 2u ? 2u : 4u);
+    const uint rpi = 32u / lpr;
+    const uint quarter = lane % lpr;
+    [[unroll]] for (uint it = 0u; it < (16u + rpi - 1u) / rpi; ++it) {
+      uint r = it * rpi + lane / lpr;
+      uint row = rowBase + r;
+      if (r < 16u && quarter < passTiles && row < pc.rows) {
+        uint column = colBase + pass * 16u + quarter * 16u;
+        uvec4 v0 = stage[epiBase + r * 9u + quarter * 2u], v1 = stage[epiBase + r * 9u + quarter * 2u + 1u];
+        publish16(v0, v1, row * pc.outputStride + outColumn + column, column);
+      }
+    }
+    subgroupSync();
+  }
+}

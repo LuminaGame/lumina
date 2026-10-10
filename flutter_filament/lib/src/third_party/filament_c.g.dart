@@ -9745,6 +9745,116 @@ external void filament_dlss_fg_destroy(ffi.Pointer<ffi.Void> generator);
 @ffi.Native<ffi.Pointer<ffi.Char> Function()>()
 external ffi.Pointer<ffi.Char> filament_dlss_fg_last_error();
 
+@ffi.Native<ffi.Void Function()>()
+external void filament_opendlss_nr_request_device_features();
+
+@ffi.Native<
+  ffi.Int32 Function(ffi.Pointer<ffi.Void>, ffi.Pointer<ffi.Char>, ffi.Int32)
+>()
+external int filament_opendlss_nr_capability(
+  ffi.Pointer<ffi.Void> engine,
+  ffi.Pointer<ffi.Char> reason,
+  int capacity,
+);
+
+@ffi.Native<
+  ffi.Int32 Function(
+    ffi.Pointer<ffi.Char>,
+    ffi.Bool,
+    ffi.Pointer<filament_opendlss_nr_model_info>,
+    ffi.Pointer<ffi.Char>,
+    ffi.Int32,
+  )
+>()
+external int filament_opendlss_nr_validate_model(
+  ffi.Pointer<ffi.Char> directory,
+  bool verify_hashes,
+  ffi.Pointer<filament_opendlss_nr_model_info> info,
+  ffi.Pointer<ffi.Char> message,
+  int capacity,
+);
+
+@ffi.Native<
+  ffi.Int32 Function(
+    ffi.Pointer<ffi.Char>,
+    ffi.Uint32,
+    ffi.Int32,
+    ffi.Pointer<ffi.Char>,
+    ffi.Int32,
+  )
+>()
+external int filament_opendlss_nr_write_synthetic_model(
+  ffi.Pointer<ffi.Char> directory,
+  int seed,
+  int fill,
+  ffi.Pointer<ffi.Char> message,
+  int capacity,
+);
+
+@ffi.Native<
+  ffi.Pointer<ffi.Void> Function(
+    ffi.Pointer<ffi.Void>,
+    ffi.Pointer<ffi.Char>,
+    ffi.Pointer<ffi.Char>,
+    ffi.Int32,
+  )
+>()
+external ffi.Pointer<ffi.Void> filament_opendlss_nr_model_load(
+  ffi.Pointer<ffi.Void> engine,
+  ffi.Pointer<ffi.Char> directory,
+  ffi.Pointer<ffi.Char> message,
+  int capacity,
+);
+
+@ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>)>()
+external void filament_opendlss_nr_model_destroy(ffi.Pointer<ffi.Void> model);
+
+@ffi.Native<
+  ffi.Pointer<ffi.Void> Function(
+    ffi.Pointer<ffi.Void>,
+    ffi.Pointer<ffi.Void>,
+    ffi.Pointer<ffi.Void>,
+    ffi.Pointer<ffi.Char>,
+    ffi.Int32,
+  )
+>()
+external ffi.Pointer<ffi.Void> filament_opendlss_nr_create(
+  ffi.Pointer<ffi.Void> engine,
+  ffi.Pointer<ffi.Void> view,
+  ffi.Pointer<ffi.Void> model,
+  ffi.Pointer<ffi.Char> message,
+  int capacity,
+);
+
+@ffi.Native<
+  ffi.Void Function(
+    ffi.Pointer<ffi.Void>,
+    ffi.Pointer<filament_opendlss_nr_controls>,
+  )
+>()
+external void filament_opendlss_nr_set_controls(
+  ffi.Pointer<ffi.Void> pass,
+  ffi.Pointer<filament_opendlss_nr_controls> controls,
+);
+
+@ffi.Native<
+  ffi.Void Function(
+    ffi.Pointer<ffi.Void>,
+    ffi.Pointer<filament_opendlss_nr_status>,
+    ffi.Pointer<ffi.Char>,
+    ffi.Int32,
+  )
+>()
+external void filament_opendlss_nr_get_status(
+  ffi.Pointer<ffi.Void> pass,
+  ffi.Pointer<filament_opendlss_nr_status> status,
+  ffi.Pointer<ffi.Char> failure,
+  int capacity,
+);
+
+@ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>)>()
+external void filament_opendlss_nr_destroy(ffi.Pointer<ffi.Void> pass);
+
 enum FilamentBackend {
   FILAMENT_BACKEND_DEFAULT(0),
   FILAMENT_BACKEND_OPENGL(1),
@@ -11741,4 +11851,127 @@ final class filament_dlss_fg_probe_t extends ffi.Struct {
 
   @ffi.Array.multi([1024])
   external ffi.Array<ffi.Char> deviceExtensions;
+}
+
+enum filament_opendlss_nr_capability_code {
+  FILAMENT_OPENDLSS_NR_CAPABLE(0),
+  FILAMENT_OPENDLSS_NR_NOT_VULKAN(1),
+  FILAMENT_OPENDLSS_NR_NOT_NVIDIA(2),
+  FILAMENT_OPENDLSS_NR_MISSING_EXTENSION(3),
+  FILAMENT_OPENDLSS_NR_OLDER_GPU(4),
+  FILAMENT_OPENDLSS_NR_NOT_ENABLED(5);
+
+  final int value;
+  const filament_opendlss_nr_capability_code(this.value);
+
+  static filament_opendlss_nr_capability_code fromValue(int value) =>
+      switch (value) {
+        0 => FILAMENT_OPENDLSS_NR_CAPABLE,
+        1 => FILAMENT_OPENDLSS_NR_NOT_VULKAN,
+        2 => FILAMENT_OPENDLSS_NR_NOT_NVIDIA,
+        3 => FILAMENT_OPENDLSS_NR_MISSING_EXTENSION,
+        4 => FILAMENT_OPENDLSS_NR_OLDER_GPU,
+        5 => FILAMENT_OPENDLSS_NR_NOT_ENABLED,
+        _ => throw ArgumentError(
+          'Unknown value for filament_opendlss_nr_capability_code: $value',
+        ),
+      };
+}
+
+enum filament_opendlss_nr_model_code {
+  FILAMENT_OPENDLSS_NR_MODEL_OK(0),
+  FILAMENT_OPENDLSS_NR_MODEL_MISSING(1),
+  FILAMENT_OPENDLSS_NR_MODEL_INVALID_MANIFEST(2),
+  FILAMENT_OPENDLSS_NR_MODEL_STAGE_MISMATCH(3),
+  FILAMENT_OPENDLSS_NR_MODEL_LAYOUT_MISMATCH(4),
+  FILAMENT_OPENDLSS_NR_MODEL_HASH_MISMATCH(5),
+  FILAMENT_OPENDLSS_NR_MODEL_IO_ERROR(6),
+  FILAMENT_OPENDLSS_NR_MODEL_UNAVAILABLE(7);
+
+  final int value;
+  const filament_opendlss_nr_model_code(this.value);
+
+  static filament_opendlss_nr_model_code fromValue(int value) =>
+      switch (value) {
+        0 => FILAMENT_OPENDLSS_NR_MODEL_OK,
+        1 => FILAMENT_OPENDLSS_NR_MODEL_MISSING,
+        2 => FILAMENT_OPENDLSS_NR_MODEL_INVALID_MANIFEST,
+        3 => FILAMENT_OPENDLSS_NR_MODEL_STAGE_MISMATCH,
+        4 => FILAMENT_OPENDLSS_NR_MODEL_LAYOUT_MISMATCH,
+        5 => FILAMENT_OPENDLSS_NR_MODEL_HASH_MISMATCH,
+        6 => FILAMENT_OPENDLSS_NR_MODEL_IO_ERROR,
+        7 => FILAMENT_OPENDLSS_NR_MODEL_UNAVAILABLE,
+        _ => throw ArgumentError(
+          'Unknown value for filament_opendlss_nr_model_code: $value',
+        ),
+      };
+}
+
+final class filament_opendlss_nr_model_info extends ffi.Struct {
+  @ffi.Uint32()
+  external int block_count;
+
+  @ffi.Uint32()
+  external int stage_count;
+
+  @ffi.Uint32()
+  external int tensor_count;
+
+  @ffi.Uint64()
+  external int total_bytes;
+}
+
+final class filament_opendlss_nr_controls extends ffi.Struct {
+  @ffi.Bool()
+  external bool enabled;
+
+  @ffi.Float()
+  external double intensity;
+
+  @ffi.Float()
+  external double local_tone;
+
+  @ffi.Float()
+  external double local_structure;
+
+  @ffi.Float()
+  external double skin_structure;
+
+  @ffi.Bool()
+  external bool auto_mask;
+
+  @ffi.Uint32()
+  external int style;
+
+  @ffi.Float()
+  external double paper_white;
+
+  @ffi.Float()
+  external double color_strength;
+}
+
+final class filament_opendlss_nr_status extends ffi.Struct {
+  @ffi.Uint64()
+  external int frames;
+
+  @ffi.Uint32()
+  external int width;
+
+  @ffi.Uint32()
+  external int height;
+
+  @ffi.Bool()
+  external bool failed;
+
+  @ffi.Double()
+  external double gpu_ms;
+
+  @ffi.Double()
+  external double gpu_ms_average;
+
+  @ffi.Uint32()
+  external int dispatches;
+
+  @ffi.Uint64()
+  external int device_bytes;
 }

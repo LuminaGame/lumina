@@ -1,0 +1,72 @@
+#version 460
+// FP16 GEMM on cooperative matrices for the network's two m16n8k16 boundaries:
+// the 16 -> 32 input adapter of the fused pre block and the 32 -> 4 RGBA
+// post head. A and B are f16, accumulation is f16 (two eight-product F24
+// reductions per k16 step on Ada). C starts at zero.
+#extension GL_EXT_shader_explicit_arithmetic_types : require
+#extension GL_KHR_memory_scope_semantics : require
+#extension GL_KHR_cooperative_matrix : require
+#extension GL_KHR_shader_subgroup_basic : require
+#extension GL_GOOGLE_include_directive : require
+#include "common.glsl"
+
+layout(local_size_x = 128) in;
+
+layout(constant_id = 0) const uint K = 16;
+layout(constant_id = 1) const uint TILE_N = 32;   // padded N (multiple of 16)
+layout(constant_id = 2) const uint FLAGS = 0;
+
+const uint F_QUANTIZE = 16u;   // main output E4M3 bytes (binding 5)
+const uint F_DUAL = 32u;       // f16 to binding 2 and E4M3 to binding 5
+const uint F_OUT_F32 = 256u;   // f32 output to binding 7
+
+layout(push_constant) uniform Push {
+  uint rows;
+  uint N;             // valid output columns
+  uint inputStride;   // A row stride (elements)
+  uint outputStride;  // output row stride (elements)
+} pc;
+
+layout(std430, binding = 0) readonly buffer InputA { float16_t a[]; };
+layout(std430, binding = 1) readonly buffer InputB { float16_t b[]; };
+layout(std430, binding = 2) writeonly buffer OutputHalf { float16_t out16[]; };
+layout(std430, binding = 5) writeonly buffer OutputE4 { uint8_t out8[]; };
+layout(std430, binding = 7) writeonly buffer OutputFloat { float out32[]; };
+
+const uint TILES = TILE_N / 16u;
+shared float16_t tileC[4u * 16u * TILE_N];
+
+void main() {
+  const uint subgroup = gl_SubgroupID;
+  const uint lane = gl_SubgroupInvocationID;
+  const uint rowBase = (gl_WorkGroupID.y + gl_WorkGroupID.z * 65535u) * 64u + subgroup * 16u;
+  const uint tileBase = subgroup * 16u * TILE_N;
+
+  coopmat<float16_t, gl_ScopeSubgroup, 16, 16, gl_MatrixUseAccumulator> acc[TILES];
+  for (uint t = 0; t < TILES; ++t) acc[t] = coopmat<float16_t, gl_ScopeSubgroup, 16, 16, gl_MatrixUseAccumulator>(0.0);
+  for (uint kb = 0u; kb < K; kb += 16u) {
+    coopmat<float16_t, gl_ScopeSubgroup, 16, 16, gl_MatrixUseA> ma;
+    coopMatLoad(ma, a, rowBase * pc.inputStride + kb, pc.inputStride, gl_CooperativeMatrixLayoutRowMajor);
+    for (uint t = 0; t < TILES; ++t) {
+      coopmat<float16_t, gl_ScopeSubgroup, 16, 16, gl_MatrixUseB> mb;
+      coopMatLoad(mb, b, kb * TILE_N + t * 16u, TILE_N, gl_CooperativeMatrixLayoutRowMajor);
+      acc[t] = coopMatMulAdd(ma, mb, acc[t]);
+    }
+  }
+  for (uint t = 0; t < TILES; ++t) {
+    coopMatStore(acc[t], tileC, tileBase + t * 16u, TILE_N, gl_CooperativeMatrixLayoutRowMajor);
+  }
+  barrier();
+
+  for (uint i = lane; i < 16u * TILE_N; i += 32u) {
+    uint r = i / TILE_N, c = i % TILE_N;
+    uint row = rowBase + r;
+    if (row >= pc.rows || c >= pc.N) continue;
+    uint index = row * pc.outputStride + c;
+    float16_t value = tileC[tileBase + i];
+    if ((FLAGS & F_OUT_F32) != 0u) out32[index] = float(value);
+    else if ((FLAGS & F_QUANTIZE) != 0u) out8[index] = uint8_t(e4m3CodeFromF16Bits(f16Bits(value)));
+    else out16[index] = value;
+    if ((FLAGS & F_DUAL) != 0u) out8[index] = uint8_t(e4m3CodeFromF16Bits(f16Bits(value)));
+  }
+}

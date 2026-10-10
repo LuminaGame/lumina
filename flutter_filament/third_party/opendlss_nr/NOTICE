@@ -1,0 +1,19 @@
+OpenDLSS-NR (vendored, partial)
+
+Source:   https://github.com/maanHimself/OpenDLSS-NR
+Commit:   9d08f41 (chore: fix network description), the repository HEAD of 2026-09-21
+Licence:  MIT, Copyright (c) 2026 maan (see LICENSE in this folder)
+
+OpenDLSS-NR is a third-party, unofficial re-implementation of NVIDIA's DLSS 5 neural rendering network. It is not
+affiliated with, endorsed by, or supported by NVIDIA Corporation, and neither is Lumina. "DLSS" is a trademark of
+NVIDIA Corporation; it appears here only in the upstream project's name. upstream/NOTICE is the upstream project's
+own notice, unchanged.
+
+This folder contains source code only. It contains no model weights, no NVIDIA software, headers, binaries or
+documentation, no tool that extracts, converts or downloads model weights, and no instructions for obtaining any.
+The network runs only on a model folder the user supplies; whoever supplies it is responsible for the licences
+that apply to it.
+
+Not vendored: the PTX kernels and their Python generators (scripts/ptx, VK_NV_cuda_kernel_launch), the dlss5vk
+tool, the CPU reference, the parity fixtures code, the demo (Filament patch, scenes, ImGui), the WebGPU port, the
+build and fetch scripts, the documentation images.

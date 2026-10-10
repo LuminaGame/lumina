@@ -1,0 +1,273 @@
+#version 460
+// Fused global ViT cosine attention (normalize + attend) for one
+// (head, 64-query block): replaces global_normalize.comp + global_attend.comp.
+// Every workgroup normalizes the head's K/V rows of all padded tokens into
+// shared memory (natural token order, zero rows for padding), its four
+// subgroups normalize their 16 query rows each, then per 64-key block:
+// S = Q K^T (no prior), the ViT exponential, the specified block sum, unnormalized
+// E4M3 weights and P·V accumulated over the blocks in K order. The row total is
+// ((b0 + b1) + b2 ...) minus the padding correction; the half reciprocal is
+// applied to the value accumulator afterwards.
+//
+// Arithmetic identical to the verified unfused kernels; the lane layouts are the
+// attention_common.glsl ones (one lane per token for the norms, one lane pair
+// per S row for the softmax with the exponentials kept in registers).
+#extension GL_EXT_float_e4m3 : require
+#extension GL_EXT_shader_explicit_arithmetic_types : require
+#extension GL_KHR_memory_scope_semantics : require
+#extension GL_KHR_cooperative_matrix : require
+#extension GL_KHR_shader_subgroup_basic : require
+#extension GL_KHR_shader_subgroup_shuffle : require
+#extension GL_EXT_control_flow_attributes : require
+#extension GL_GOOGLE_include_directive : require
+#define DLSS_E4M3_HW 1
+#include "common.glsl"
+
+layout(local_size_x = 128) in;
+
+layout(constant_id = 0) const uint PADDED_TOKENS = 192;   // multiple of 64
+layout(constant_id = 1) const uint CHUNK_TOKENS = 192;    // keys staged in shared memory at a time (multiple of 64, <= PADDED)
+layout(constant_id = 2) const uint PRENORMALIZED = 0;     // 1: binding 0 holds the E4 normalized q/k/v of global_normalize
+
+layout(push_constant) uniform Push {
+  uint tokens;
+  uint heads;
+  uint channels;        // heads * 32
+  uint scaleWordOffset; // per-head f32 learned scale, in words within binding 4
+} pc;
+
+layout(std430, binding = 0) readonly buffer Qkv { uvec4 qkv4[]; };          // f16 [paddedTokens][heads*96] as words
+layout(std430, binding = 0) readonly buffer NormalizedQkv { uvec4 norm4[]; };  // PRENORMALIZED: E4 [tokens][heads*96] as words
+layout(std430, binding = 4) readonly buffer Aux { uint aux32[]; };
+layout(std430, binding = 5) writeonly buffer Attended { uvec4 attended16[]; };  // E4 [tokens][channels] as words
+layout(std430, binding = 7) readonly buffer Prior { float16_t prior[]; };   // unused (attention_common contract)
+
+const uint BLOCKS = PADDED_TOKENS / 64u;
+const uint CHUNK_BLOCKS = CHUNK_TOKENS / 64u;
+// kv4: K E4 rows [CHUNK_TOKENS][32] then V rows, 2 words each. priv4: attention_common layout.
+shared uvec4 kv4[2u * CHUNK_TOKENS * 2u];
+shared uvec4 priv4[4 * 176];
+
+#include "attention_common.glsl"
+
+// ViT exponential on a packed pair: half fma(score, 0.0895, 1.7094), clamp, per half (bits << 4) + 0x4000.
+uint expWeightPairVit(uint scoreBits) {
+  precise f16vec2 affine = fma(unpackFloat2x16(scoreBits), f16vec2(0.08953946828842163), f16vec2(1.7093614339828491));
+  affine = clamp(affine, f16vec2(1.439453125), f16vec2(1.9775390625));
+  uint bits = packFloat2x16(affine);
+  uint lo = (((bits & 0xffffu) << 4u) + 0x4000u) & 0xffffu;
+  uint hi = (((bits >> 16u) << 4u) + 0x4000u) & 0xffffu;
+  return lo | (hi << 16u);
+}
+
+// ViT square sum: r[c] = f16(f32(v[c])^2 + f32(f16(v[c+16]^2))), then the stride 8/4/2/1 tree in half.
+float16_t inverseNormVit(uvec4 w0, uvec4 w1, uvec4 w2, uvec4 w3) {
+  f16vec2 p[16];
+  [[unroll]] for (uint i = 0u; i < 4u; ++i) {
+    p[i] = unpackFloat2x16(w0[i]); p[4u + i] = unpackFloat2x16(w1[i]);
+    p[8u + i] = unpackFloat2x16(w2[i]); p[12u + i] = unpackFloat2x16(w3[i]);
+  }
+  f16vec2 r[8];
+  [[unroll]] for (uint m = 0u; m < 8u; ++m) {
+    precise f16vec2 highSquare = p[m + 8u] * p[m + 8u];
+    precise vec2 square = vec2(p[m]) * vec2(p[m]);
+    vec2 squareRounded = uintBitsToFloat(floatBitsToUint(square));   // no contraction into an fma
+    precise vec2 sum = squareRounded + vec2(highSquare);
+    r[m] = f16vec2(sum);
+  }
+  f16vec2 s8[4];
+  [[unroll]] for (uint m = 0u; m < 4u; ++m) { precise f16vec2 s = r[m] + r[m + 4u]; s8[m] = s; }
+  precise f16vec2 s4a = s8[0] + s8[2];
+  precise f16vec2 s4b = s8[1] + s8[3];
+  precise f16vec2 s2 = s4a + s4b;
+  precise float16_t s1 = s2.x + s2.y;
+  return float16_t(inversesqrt(float(s1)));
+}
+
+// 32 halves times norm (and for Q: times f16(sqrt 32) then the learned scale, three half multiplies), E4 codes.
+void scaleQuantizeVit(uvec4 w0, uvec4 w1, uvec4 w2, uvec4 w3, float16_t norm, bool isQuery, float16_t learned,
+                      out uvec4 e0, out uvec4 e1) {
+  uvec4 words[4] = uvec4[4](w0, w1, w2, w3);
+  const float16_t headScale = float16_t(sqrt(32.0));
+  uint codes[8];
+  [[unroll]] for (uint i = 0u; i < 8u; ++i) {
+    f16vec2 a = unpackFloat2x16(words[i >> 1u][(i & 1u) * 2u]), b = unpackFloat2x16(words[i >> 1u][(i & 1u) * 2u + 1u]);
+    precise f16vec2 na = a * norm;
+    precise f16vec2 nb = b * norm;
+    if (isQuery) {
+      precise f16vec2 ha = na * headScale;
+      precise f16vec2 hb = nb * headScale;
+      precise f16vec2 la = ha * learned;
+      precise f16vec2 lb = hb * learned;
+      na = la; nb = lb;
+    }
+    codes[i] = e4x4(na, nb);
+  }
+  e0 = uvec4(codes[0], codes[1], codes[2], codes[3]);
+  e1 = uvec4(codes[4], codes[5], codes[6], codes[7]);
+}
+
+void main() {
+  const uint thread = gl_LocalInvocationID.x;
+  const uint q = gl_SubgroupID;
+  const uint lane = gl_SubgroupInvocationID;
+  const uint head = gl_WorkGroupID.x;
+  const uint queryBlock = gl_WorkGroupID.y;
+  const uint base = q * PRIV;
+  const uint rowBase = q * 16u;
+  const uint stride3Words = pc.channels * 3u / 8u;
+  const uint headWord = head * 12u;
+  const uint KP = 0u, VP = CHUNK_TOKENS * 2u;
+  const float16_t learned = float16_t(uintBitsToFloat(aux32[pc.scaleWordOffset + head]));
+  const uint strideE4Words = pc.channels * 3u / 16u;   // PRENORMALIZED rows: 16 E4 codes per word
+  const uint headE4Word = head * 6u;
+
+  // ---- Q of this subgroup's 16 tokens: one lane per token (lanes 16..31 idle).
+  const uint queryToken = queryBlock * 64u + rowBase + (lane & 15u);
+  if (lane < 16u) {
+    bool valid = queryToken < pc.tokens;
+    uvec4 e0, e1;
+    if (PRENORMALIZED != 0u) {
+      uint src = queryToken * strideE4Words + headE4Word;
+      e0 = valid ? norm4[src] : uvec4(0u); e1 = valid ? norm4[src + 1u] : uvec4(0u);
+    } else {
+      uint src = queryToken * stride3Words + headWord;
+      uvec4 q0 = valid ? qkv4[src] : uvec4(0u), q1 = valid ? qkv4[src + 1u] : uvec4(0u);
+      uvec4 q2 = valid ? qkv4[src + 2u] : uvec4(0u), q3 = valid ? qkv4[src + 3u] : uvec4(0u);
+      scaleQuantizeVit(q0, q1, q2, q3, inverseNormVit(q0, q1, q2, q3), true, learned, e0, e1);
+    }
+    priv4[base + (lane & 15u) * 2u] = valid ? e0 : uvec4(0u);
+    priv4[base + (lane & 15u) * 2u + 1u] = valid ? e1 : uvec4(0u);
+  }
+
+  // ---- Attention over the key blocks. Lane pair per S row: row = lane >> 1, half hh = lane & 1.
+  const uint lr = lane >> 1u, hh = lane & 1u;
+  const uint sBase = base + F64;
+  ACC mo[2];
+  mo[0] = ACC(0.0); mo[1] = ACC(0.0);
+  precise float16_t total = float16_t(0.0);
+  MAT_A mq;
+  for (uint chunk = 0u; chunk < PADDED_TOKENS; chunk += CHUNK_TOKENS) {
+  // The last chunk is short when CHUNK_TOKENS does not divide PADDED_TOKENS; running the full four blocks
+  // anyway would add whole blocks of padding keys to the softmax denominator that the correction below does
+  // not know about.
+  const uint chunkBlocks = min(CHUNK_BLOCKS, (PADDED_TOKENS - chunk) / 64u);
+  // ---- K/V of this chunk's tokens (zero rows for padding): thread t handles tokens t, t + 128, ...
+  barrier();   // the previous chunk's rows are dead (and the Q rows are visible before the first fragment load)
+  for (uint local = thread; local < CHUNK_TOKENS; local += 128u) {
+    const uint token = chunk + local;
+    bool valid = token < pc.tokens;
+    if (PRENORMALIZED != 0u) {
+      uint src = token * strideE4Words + headE4Word;
+      kv4[KP + local * 2u] = valid ? norm4[src + 2u] : uvec4(0u);
+      kv4[KP + local * 2u + 1u] = valid ? norm4[src + 3u] : uvec4(0u);
+      kv4[VP + local * 2u] = valid ? norm4[src + 4u] : uvec4(0u);
+      kv4[VP + local * 2u + 1u] = valid ? norm4[src + 5u] : uvec4(0u);
+    } else {
+      uint src = token * stride3Words + headWord;
+      uvec4 k0 = valid ? qkv4[src + 4u] : uvec4(0u), k1 = valid ? qkv4[src + 5u] : uvec4(0u);
+      uvec4 k2 = valid ? qkv4[src + 6u] : uvec4(0u), k3 = valid ? qkv4[src + 7u] : uvec4(0u);
+      uvec4 v0 = valid ? qkv4[src + 8u] : uvec4(0u), v1 = valid ? qkv4[src + 9u] : uvec4(0u);
+      uvec4 v2 = valid ? qkv4[src + 10u] : uvec4(0u), v3 = valid ? qkv4[src + 11u] : uvec4(0u);
+      uvec4 e0, e1;
+      scaleQuantizeVit(k0, k1, k2, k3, inverseNormVit(k0, k1, k2, k3), false, learned, e0, e1);
+      kv4[KP + local * 2u] = valid ? e0 : uvec4(0u);
+      kv4[KP + local * 2u + 1u] = valid ? e1 : uvec4(0u);
+      kv4[VP + local * 2u] = valid ? quantize16(v0, v1) : uvec4(0u);
+      kv4[VP + local * 2u + 1u] = valid ? quantize16(v2, v3) : uvec4(0u);
+    }
+  }
+  barrier();
+  if (chunk == 0u) coopMatLoad(mq, priv4, base, 2u, gl_CooperativeMatrixLayoutRowMajor);
+  for (uint block = 0u; block < chunkBlocks; ++block) {
+    [[unroll]] for (uint kTile = 0u; kTile < 4u; ++kTile) {
+      MAT_B mb; coopMatLoad(mb, kv4, KP + (block * 64u + kTile * 16u) * 2u, 2u, gl_CooperativeMatrixLayoutColumnMajor);
+      ACC mc = ACC(0.0);
+      mc = coopMatMulAdd(mq, mb, mc);
+      coopMatStore(mc, priv4, sBase + kTile * 2u, 9u, gl_CooperativeMatrixLayoutRowMajor);
+    }
+    subgroupSync();
+    {
+      uint src = sBase + lr * 9u + hh * 4u;
+      uvec4 s0 = priv4[src], s1 = priv4[src + 1u], s2 = priv4[src + 2u], s3 = priv4[src + 3u];
+      uint e[16];
+      [[unroll]] for (uint i = 0u; i < 4u; ++i) {
+        e[i] = expWeightPairVit(s0[i]); e[4u + i] = expWeightPairVit(s1[i]);
+        e[8u + i] = expWeightPairVit(s2[i]); e[12u + i] = expWeightPairVit(s3[i]);
+      }
+      // the specified block sum: b[g][j] = e[g+16j] + e[g+16j+8]; t[g] = ((b0+b1)+b2)+b3;
+      // block = (((t0+t2)+t4)+t6) + (((t1+t3)+t5)+t7); running total = (total + block) per block in order.
+      uint bOwn[8];
+      [[unroll]] for (uint jl = 0u; jl < 2u; ++jl) {
+        [[unroll]] for (uint m = 0u; m < 4u; ++m) {
+          precise f16vec2 b = unpackFloat2x16(e[8u * jl + m]) + unpackFloat2x16(e[8u * jl + 4u + m]);
+          bOwn[jl * 4u + m] = packFloat2x16(b);
+        }
+      }
+      uint bOther[8];
+      [[unroll]] for (uint i = 0u; i < 8u; ++i) bOther[i] = subgroupShuffleXor(bOwn[i], 1u);
+      f16vec2 t[4];
+      [[unroll]] for (uint m = 0u; m < 4u; ++m) {
+        f16vec2 b0 = unpackFloat2x16(hh == 0u ? bOwn[m] : bOther[m]);
+        f16vec2 b1 = unpackFloat2x16(hh == 0u ? bOwn[4u + m] : bOther[4u + m]);
+        f16vec2 b2 = unpackFloat2x16(hh == 0u ? bOther[m] : bOwn[m]);
+        f16vec2 b3 = unpackFloat2x16(hh == 0u ? bOther[4u + m] : bOwn[4u + m]);
+        precise f16vec2 t01 = b0 + b1;
+        precise f16vec2 t012 = t01 + b2;
+        precise f16vec2 tm = t012 + b3;
+        t[m] = tm;
+      }
+      precise float16_t e01 = t[0].x + t[1].x;
+      precise float16_t e012 = e01 + t[2].x;
+      precise float16_t even = e012 + t[3].x;
+      precise float16_t o01 = t[0].y + t[1].y;
+      precise float16_t o012 = o01 + t[2].y;
+      precise float16_t odd = o012 + t[3].y;
+      precise float16_t blockSum = even + odd;
+      precise float16_t next = total + blockSum;
+      total = next;
+      // Unnormalized E4 weights of this block's keys -> P rows (words 0..3 of the S rows).
+      uint codes[8];
+      [[unroll]] for (uint i = 0u; i < 8u; ++i) codes[i] = e4x4Bits(e[2u * i], e[2u * i + 1u]);
+      subgroupSync();
+      priv4[sBase + lr * 9u + hh * 2u] = uvec4(codes[0], codes[1], codes[2], codes[3]);
+      priv4[sBase + lr * 9u + hh * 2u + 1u] = uvec4(codes[4], codes[5], codes[6], codes[7]);
+    }
+    subgroupSync();
+    [[unroll]] for (uint cTile = 0u; cTile < 2u; ++cTile) {
+      [[unroll]] for (uint kb = 0u; kb < 64u; kb += 32u) {
+        MAT_A mp; coopMatLoad(mp, priv4, sBase + (kb >> 4u), 9u, gl_CooperativeMatrixLayoutRowMajor);
+        MAT_B mv; coopMatLoad(mv, kv4, VP + (block * 64u + kb) * 2u + cTile, 2u, gl_CooperativeMatrixLayoutRowMajor);
+        mo[cTile] = coopMatMulAdd(mp, mv, mo[cTile]);
+      }
+    }
+    subgroupSync();   // P rows dead before the next block's S tiles land
+  }
+  }
+  // Padding correction and the half reciprocal (per row; both lanes of the pair hold the total).
+  const uint padding = PADDED_TOKENS - pc.tokens;
+  if (padding > 0u) {
+    float16_t expZero = unpackFloat2x16(expWeightPairVit(0u)).x;
+    precise float16_t correction = float16_t(float(expZero) * float(padding));
+    precise float16_t corrected = total - correction;
+    total = corrected;
+  }
+  const float reciprocal = roundF16(1.0 / float(total));   // bit-level: float(float16_t(x)) is elided by the compiler
+  // Output: value accumulators staged in words 4..7, times the reciprocal in f32, rounded to half, E4.
+  [[unroll]] for (uint cTile = 0u; cTile < 2u; ++cTile)
+    coopMatStore(mo[cTile], priv4, sBase + 4u + cTile * 2u, 9u, gl_CooperativeMatrixLayoutRowMajor);
+  subgroupSync();
+  const uint outToken = queryBlock * 64u + rowBase + lr;
+  if (outToken < pc.tokens) {
+    uint src = sBase + lr * 9u + 4u + hh * 2u;
+    uvec4 w0 = priv4[src], w1 = priv4[src + 1u];
+    uvec4 r0, r1;
+    [[unroll]] for (uint i = 0u; i < 4u; ++i) {
+      precise vec2 p0 = vec2(unpackFloat2x16(w0[i])) * reciprocal;
+      precise vec2 p1 = vec2(unpackFloat2x16(w1[i])) * reciprocal;
+      r0[i] = packFloat2x16(f16vec2(p0));
+      r1[i] = packFloat2x16(f16vec2(p1));
+    }
+    attended16[(outToken * pc.channels + head * 32u) / 16u + hh] = quantize16(r0, r1);
+  }
+}

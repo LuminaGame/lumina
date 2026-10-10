@@ -1,0 +1,245 @@
+#version 460
+// Fused QKV projection + cosine normalization + 8x8 window attention for one
+// (window, head): replaces the raw-half QKV GEMM (whose f16 output round trip
+// through memory was the largest activation traffic of the multi-head stages)
+// and window_attention_fused.comp.
+//
+// (fragment level, VK_NV_cooperative_matrix2): the window's token rows of the
+// E4 FFN publication come straight from the image tensor per k32 step (constant
+// clamping zeroes tokens outside the image); the head's 96 weight columns are
+// staged in shared memory once per step (double buffered, one barrier); q, k, v
+// accumulate as three 16x32 fragments; normalization and the specified softmax run
+// on the accumulator elements (see fused_block32.comp for the layout argument);
+// K/V rows are the only per-window shared data.
+#extension GL_EXT_float_e4m3 : require
+#extension GL_EXT_shader_explicit_arithmetic_types : require
+#extension GL_KHR_memory_scope_semantics : require
+#extension GL_KHR_cooperative_matrix : require
+#extension GL_NV_cooperative_matrix2 : require
+#extension GL_KHR_shader_subgroup_basic : require
+#extension GL_KHR_shader_subgroup_shuffle : require
+#extension GL_EXT_control_flow_attributes : require
+#extension GL_GOOGLE_include_directive : require
+#define DLSS_E4M3_HW 1
+#include "common.glsl"
+#include "publish.glsl"
+
+layout(local_size_x = 128) in;   // four subgroups, one 16-token row tile of the window each
+const uint THREADS = 128u;
+
+layout(constant_id = 0) const uint K = 64;   // channels = heads * 32
+
+layout(push_constant) uniform Push {
+  uint width;
+  uint height;
+  uint channels;      // heads * 32 (= K)
+  uint heads;
+  uint shiftX;
+  uint shiftY;
+  uint windowsX;
+  uint windowCount;
+  uint scaleWordOffset;  // per-head f32 learned scales (words in binding 4)
+  uint Nmatrix;          // 3 * channels: weight columns per k32 tile
+} pc;
+
+layout(std430, binding = 0) readonly buffer Input { uvec4 in4[]; };          // E4 [tokens][channels] as 16-byte words
+layout(std430, binding = 1) readonly buffer Weights { uvec4 w4[]; };         // E4 [K/32][Nmatrix][32], head-major columns
+layout(std430, binding = 2) readonly buffer Prior { float16_t prior[]; };    // [heads][64][64] f16
+layout(std430, binding = 4) readonly buffer Aux { uint aux32[]; };
+layout(std430, binding = 5) writeonly buffer Attended { uvec4 attended16[]; };  // E4 [tokens][channels] as 16-byte words
+
+
+// Shared (18.5 KB): one K=64 chunk of operands - A [64 tokens][64 k] E4 (256 words) and the head's 96 weight
+// columns re-laid out n-major [96 n][64 k] (384 words); kv16: Kp [64][32] then Vp [64][32] E4.
+shared uvec4 stage[64 * 5 + 96 * 5];   // 5-word (80-byte) rows: bank-conflict-free fragment loads
+shared uint16_t kv16[2048];
+shared uint tile32[4 * 16 * 8];          // per subgroup: the attended row tile as 32-bit words [16 rows][8]
+
+#define ACC16x32 coopmat<float16_t, gl_ScopeSubgroup, 16, 32, gl_MatrixUseAccumulator>
+#define ACC16x64 coopmat<float16_t, gl_ScopeSubgroup, 16, 64, gl_MatrixUseAccumulator>
+#define A16x32 coopmat<floate4m3_t, gl_ScopeSubgroup, 16, 32, gl_MatrixUseA>
+#define A16x64 coopmat<floate4m3_t, gl_ScopeSubgroup, 16, 64, gl_MatrixUseA>
+#define B32x32 coopmat<floate4m3_t, gl_ScopeSubgroup, 32, 32, gl_MatrixUseB>
+#define B64x32k coopmat<floate4m3_t, gl_ScopeSubgroup, 64, 32, gl_MatrixUseB>
+#define B32x64 coopmat<floate4m3_t, gl_ScopeSubgroup, 32, 64, gl_MatrixUseB>
+#define B64x32 coopmat<floate4m3_t, gl_ScopeSubgroup, 64, 32, gl_MatrixUseB>
+
+uint tiledToken(uint token) {  // natural -> physical
+  uint x = token & 7u, y = token >> 3u;
+  return (y >> 2u) * 32u + (x >> 2u) * 16u + (y & 3u) * 4u + (x & 3u);
+}
+
+uint expWeightPair(uint scoreBits) {
+  precise vec2 affine32 = fma(vec2(unpackFloat2x16(scoreBits)), vec2(0.044921875), vec2(1.30078125));
+  f16vec2 affine = clamp(f16vec2(affine32), f16vec2(1.03125), f16vec2(1.5693359375));
+  return ((packFloat2x16(affine) << 5u) & 0xffe0ffe0u) ^ 0x80008000u;
+}
+
+float16_t nanToZero(const in uint row, const in uint col, const in float16_t value) { return isnan(value) ? float16_t(0.0) : value; }
+
+// Cosine normalization in the accumulator layout (reference association order; see fused_block32.comp).
+void normalizeInPlace(inout ACC16x32 m, const in float16_t scale, const in bool applyScale) {
+  [[unroll]] for (uint h = 0u; h < 2u; ++h) {
+    const uint b = 8u * h;
+    f16vec2 p0 = f16vec2(m[b + 0u], m[b + 1u]), p1 = f16vec2(m[b + 2u], m[b + 3u]);
+    f16vec2 p2 = f16vec2(m[b + 4u], m[b + 5u]), p3 = f16vec2(m[b + 6u], m[b + 7u]);
+    precise f16vec2 hs0 = p2 * p2;
+    precise f16vec2 r0 = fma(p0, p0, hs0);
+    precise f16vec2 hs1 = p3 * p3;
+    precise f16vec2 r1 = fma(p1, p1, hs1);
+    precise f16vec2 s8 = r0 + r1;
+    f16vec2 s8o = unpackFloat2x16(subgroupShuffleXor(packFloat2x16(s8), 2u));
+    precise f16vec2 s4 = s8 + s8o;
+    f16vec2 s4o = unpackFloat2x16(subgroupShuffleXor(packFloat2x16(s4), 1u));
+    precise f16vec2 s2 = s4 + s4o;
+    precise float16_t s1 = s2.x + s2.y;
+    float16_t norm = float16_t(inversesqrt(float(s1)));
+    [[unroll]] for (uint i = 0u; i < 8u; ++i) {
+      precise float16_t n = m[b + i] * norm;
+      float16_t value = n;
+      if (applyScale) { precise float16_t ns = n * scale; value = ns; }
+      m[b + i] = isnan(value) ? float16_t(0.0) : value;
+    }
+  }
+}
+
+void publishRows(const in ACC16x32 m, const in uint slotBase, const in uint rowBase, const in uint t, const in uint g,
+                 const in int windowX, const in int windowY) {
+  [[unroll]] for (uint h = 0u; h < 2u; ++h) {
+    uint token = rowBase + g + 8u * h;
+    int x = windowX + int(token & 7u), y = windowY + int(token >> 3u);
+    bool valid = x >= 0 && y >= 0 && x < int(pc.width) && y < int(pc.height);
+    uint row = slotBase + tiledToken(token) * 16u;
+    [[unroll]] for (uint j = 0u; j < 4u; ++j) {
+      uint16_t codes = e4m3HwPair(f16vec2(m[8u * h + 2u * j], m[8u * h + 2u * j + 1u]));
+      kv16[row + 4u * j + t] = valid ? codes : uint16_t(0u);
+    }
+  }
+}
+
+void main() {
+  const uint thread = gl_LocalInvocationID.x;
+  const uint q = gl_SubgroupID;                   // row tile: tokens 16q .. 16q + 15
+  const uint lane = gl_SubgroupInvocationID;
+  const uint g = lane >> 2u, t = lane & 3u;
+  const uint head = gl_WorkGroupID.x;
+  const uint window = gl_WorkGroupID.y + gl_WorkGroupID.z * 65535u;
+  if (window >= pc.windowCount) return;
+  const int windowX = int((window % pc.windowsX) * 8u) - int(pc.shiftX);
+  const int windowY = int((window / pc.windowsX) * 8u) - int(pc.shiftY);
+  const uint rowBase = q * 16u;
+  const uint KP = 0u, VP = 1024u;
+
+  // Image tensor [height][width][channels] E4; this subgroup's 16 tokens are rows windowY + 2q.. (+2), pixels windowX.. (+8).
+  tensorLayoutNV<3, gl_CooperativeMatrixClampModeConstantNV> image = createTensorLayoutNV(3, gl_CooperativeMatrixClampModeConstantNV);
+  image = setTensorLayoutDimensionNV(image, pc.height, pc.width, pc.channels);
+  image = setTensorLayoutStrideNV(image, pc.width * pc.channels, pc.channels, 1);
+
+  // The attention prior (learned 64x64 bias per head) and the head scale: independent loads issued first.
+  ACC16x64 s;
+  coopMatLoad(s, prior, head * 4096u + rowBase * 64u, 64u, gl_CooperativeMatrixLayoutRowMajor);
+  const float16_t scale = float16_t(uintBitsToFloat(aux32[pc.scaleWordOffset + head]));
+
+  // ---- q, k, v projections in K = 64 chunks; A rows gathered by token (zero outside the image) and the
+  // head's 96 weight columns (re-laid out n-major) staged per chunk with plain 16-byte loads.
+  ACC16x32 qa = ACC16x32(0.0), ka = ACC16x32(0.0), va = ACC16x32(0.0);
+  const uint bColumnBase = head * 96u;
+  const uint chunks = K / 64u;
+  const uint rowWords = K / 16u;
+  // Staging words per thread: A word idx < 256 -> token idx >> 2, word idx & 3 of the 64-byte chunk row (zero
+  // outside the image); B word idx < 384 -> n = idx >> 2, word w = idx & 3: source word (chunk * 2 + (w >> 1)) *
+  // Nmatrix * 2 + (bColumnBase + n) * 2 + (w & 1), destination 320 + n * 5 + w.
+  const uint A_PER = (256u + THREADS - 1u) / THREADS, B_PER = (384u + THREADS - 1u) / THREADS;
+  uint aSrc[A_PER], aDst[A_PER]; bool aValid[A_PER];
+  [[unroll]] for (uint i = 0u; i < A_PER; ++i) {
+    uint idx = thread + THREADS * i;
+    uint token = (idx >> 2u) & 63u, w = idx & 3u;
+    int xA = windowX + int(token & 7u), yA = windowY + int(token >> 3u);
+    aValid[i] = idx < 256u && xA >= 0 && yA >= 0 && xA < int(pc.width) && yA < int(pc.height);
+    aSrc[i] = aValid[i] ? (uint(yA) * pc.width + uint(xA)) * rowWords + w : 0u;
+    aDst[i] = token * 5u + w;
+  }
+  uint bSrc[B_PER], bDst[B_PER];
+  [[unroll]] for (uint i = 0u; i < B_PER; ++i) {
+    uint idx = min(thread + THREADS * i, 383u);
+    uint n = idx >> 2u, w = idx & 3u;
+    bSrc[i] = (w >> 1u) * pc.Nmatrix * 2u + (bColumnBase + n) * 2u + (w & 1u);
+    bDst[i] = 320u + n * 5u + w;
+  }
+  // One chunk of operands prefetched into registers: the next chunk's loads are issued before this chunk's
+  // barrier and multiplies, so the L2 latency overlaps them.
+  uvec4 ra[A_PER], rb[B_PER];
+  [[unroll]] for (uint i = 0u; i < A_PER; ++i) ra[i] = aValid[i] ? in4[aSrc[i]] : uvec4(0u);
+  [[unroll]] for (uint i = 0u; i < B_PER; ++i) rb[i] = w4[bSrc[i]];
+  for (uint c = 0u; c < chunks; ++c) {
+    [[unroll]] for (uint i = 0u; i < A_PER; ++i) if (thread + THREADS * i < 256u) stage[aDst[i]] = ra[i];
+    [[unroll]] for (uint i = 0u; i < B_PER; ++i) if (thread + THREADS * i < 384u) stage[bDst[i]] = rb[i];
+    if (c + 1u < chunks) {
+      [[unroll]] for (uint i = 0u; i < A_PER; ++i) ra[i] = aValid[i] ? in4[aSrc[i] + (c + 1u) * 4u] : uvec4(0u);
+      [[unroll]] for (uint i = 0u; i < B_PER; ++i) rb[i] = w4[bSrc[i] + (c + 1u) * 2u * pc.Nmatrix * 2u];
+    }
+    barrier();
+    A16x64 a; coopMatLoad(a, stage, rowBase * 5u, 5u, gl_CooperativeMatrixLayoutRowMajor);
+    B64x32k wq; coopMatLoad(wq, stage, 320u, 5u, gl_CooperativeMatrixLayoutColumnMajor);             // n 0..31 (q)
+    B64x32k wk; coopMatLoad(wk, stage, 320u + 32u * 5u, 5u, gl_CooperativeMatrixLayoutColumnMajor);  // n 32..63 (k)
+    B64x32k wv; coopMatLoad(wv, stage, 320u + 64u * 5u, 5u, gl_CooperativeMatrixLayoutColumnMajor);  // n 64..95 (v)
+    qa = coopMatMulAdd(a, wq, qa);
+    ka = coopMatMulAdd(a, wk, ka);
+    va = coopMatMulAdd(a, wv, va);
+    barrier();   // fragment loads done before the next chunk overwrites the stage
+  }
+  normalizeInPlace(qa, scale, true);
+  normalizeInPlace(ka, scale, false);
+  A16x32 mq = A16x32(qa);
+  publishRows(ka, KP, rowBase, t, g, windowX, windowY);
+  publishRows(va, VP, rowBase, t, g, windowX, windowY);
+  barrier();
+
+  // ---- Attention in registers.
+  B32x64 kp; coopMatLoad(kp, kv16, KP, 16u, gl_CooperativeMatrixLayoutColumnMajor);
+  s = coopMatMulAdd(mq, kp, s);
+  ACC16x64 wAcc = ACC16x64(0.0);
+  [[unroll]] for (uint h = 0u; h < 2u; ++h) {
+    uint e[8];
+    [[unroll]] for (uint m = 0u; m < 8u; ++m) e[m] = expWeightPair(packFloat2x16(f16vec2(s[16u * h + 2u * m], s[16u * h + 2u * m + 1u])));
+    f16vec2 bp[4];
+    [[unroll]] for (uint j = 0u; j < 4u; ++j) { precise f16vec2 bsum = unpackFloat2x16(e[2u * j]) + unpackFloat2x16(e[2u * j + 1u]); bp[j] = bsum; }
+    precise f16vec2 t01 = bp[0] + bp[1];
+    precise f16vec2 t012 = t01 + bp[2];
+    precise f16vec2 tp = t012 + bp[3];
+    uint tpBits = packFloat2x16(tp);
+    uint quad = lane & ~3u;
+    f16vec2 t0 = unpackFloat2x16(subgroupShuffle(tpBits, quad)), t1 = unpackFloat2x16(subgroupShuffle(tpBits, quad + 1u));
+    f16vec2 t2 = unpackFloat2x16(subgroupShuffle(tpBits, quad + 2u)), t3 = unpackFloat2x16(subgroupShuffle(tpBits, quad + 3u));
+    precise float16_t e01 = t0.x + t1.x;
+    precise float16_t e012 = e01 + t2.x;
+    precise float16_t even = e012 + t3.x;
+    precise float16_t o01 = t0.y + t1.y;
+    precise float16_t o012 = o01 + t2.y;
+    precise float16_t odd = o012 + t3.y;
+    precise float16_t total = even + odd;
+    float16_t reciprocal = float16_t(1.0 / float(total));
+    [[unroll]] for (uint m = 0u; m < 8u; ++m) {
+      precise f16vec2 w = unpackFloat2x16(e[m]) * reciprocal;
+      wAcc[16u * h + 2u * m] = w.x;
+      wAcc[16u * h + 2u * m + 1u] = w.y;
+    }
+  }
+  A16x64 p = A16x64(wAcc);
+  B64x32 vp; coopMatLoad(vp, kv16, VP, 16u, gl_CooperativeMatrixLayoutRowMajor);
+  ACC16x32 o = ACC16x32(0.0);
+  o = coopMatMulAdd(p, vp, o);
+  {
+    // 16 tokens x 32 E4: the tile as 32-bit words in shared memory, then one 16-byte word per lane.
+    const uint tileBase = q * 128u;
+    PUBLISH_E4_TILE(o, 32u, tile32, tileBase, g, t)
+    subgroupBarrier();
+    const uint r = lane >> 1u, part = lane & 1u;
+    const uint tok = rowBase + r;
+    const int x = windowX + int(tok & 7u), y = windowY + int(tok >> 3u);
+    const uint base = tileBase + r * 8u + part * 4u;
+    if (x >= 0 && y >= 0 && x < int(pc.width) && y < int(pc.height))
+      attended16[(uint(y) * pc.width + uint(x)) * (pc.channels / 16u) + head * 2u + part] =
+          uvec4(tile32[base], tile32[base + 1u], tile32[base + 2u], tile32[base + 3u]);
+  }
+}

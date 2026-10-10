@@ -67,5 +67,6 @@
 #include "guide_buffers_c.h"
 #include "dlss_rr_c.h"
 #include "dlss_fg_c.h"
+#include "opendlss_nr_c.h"
 
 #endif // FLUTTER_FILAMENT_C_H

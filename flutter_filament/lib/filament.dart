@@ -31,6 +31,7 @@ export 'package:flutter_filament/src/dlss_ray_reconstruction.dart';
 export 'package:flutter_filament/src/dlss_frame_generation.dart';
 export 'package:flutter_filament/src/ray_tracing.dart';
 export 'package:flutter_filament/src/restir.dart';
+export 'package:flutter_filament/src/opendlss_nr.dart';
 export 'package:flutter_filament/src/post_pass.dart';
 export 'package:flutter_filament/src/guide_buffers.dart';
 export 'package:flutter_filament/src/vulkan_features.dart';

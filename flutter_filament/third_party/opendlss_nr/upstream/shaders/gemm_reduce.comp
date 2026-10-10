@@ -1,0 +1,57 @@
+#version 460
+// Split-K reduction + publication for gemm_fp8 (SPLITK > 1): the partial FP16
+// accumulators of the K partitions are summed in partition order
+// (((p0 + p1) + p2) + p3 ...), exactly the `total = total + acc` chain of the
+// single-workgroup kernel, then published (SiLU, E4M3 quantization, f16).
+#extension GL_EXT_float_e4m3 : require
+#extension GL_EXT_shader_explicit_arithmetic_types : require
+#extension GL_EXT_control_flow_attributes : require
+#extension GL_GOOGLE_include_directive : require
+#define DLSS_E4M3_HW 1
+#include "common.glsl"
+
+layout(local_size_x = 256) in;
+
+layout(constant_id = 0) const uint SPLITK = 2;
+layout(constant_id = 1) const uint FLAGS = 0;
+const uint F_SILU = 8u;
+const uint F_QUANTIZE = 16u;
+const uint F_DUAL = 32u;
+
+layout(push_constant) uniform Push {
+  uint rows;
+  uint N;
+  uint splitStride;        // elements per partition slice in the partial buffer
+  uint outputStride;
+  uint outputColumnOffset;
+} pc;
+
+layout(std430, binding = 0) readonly buffer Partials { uvec4 partial16x8[]; };   // f16 [SPLITK][rows][N]
+layout(std430, binding = 2) writeonly buffer OutputHalf { uvec4 out16x8[]; };
+layout(std430, binding = 5) writeonly buffer OutputE4 { uvec2 out8x8[]; };
+
+void main() {
+  uint group = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * 65535u * 256u;   // 8 columns
+  uint groupsPerRow = pc.N / 8u;
+  uint row = group / groupsPerRow, column = (group % groupsPerRow) * 8u;
+  if (row >= pc.rows) return;
+  uvec4 total = partial16x8[(row * pc.N + column) >> 3u];
+  [[unroll]] for (uint s = 1u; s < SPLITK; ++s) {
+    uvec4 part = partial16x8[(s * pc.splitStride + row * pc.N + column) >> 3u];
+    [[unroll]] for (uint i = 0u; i < 4u; ++i) {
+      precise f16vec2 sum = unpackFloat2x16(total[i]) + unpackFloat2x16(part[i]);
+      total[i] = packFloat2x16(sum);
+    }
+  }
+  if ((FLAGS & F_SILU) != 0u) {
+    [[unroll]] for (uint i = 0u; i < 4u; ++i) total[i] = packFloat2x16(siluPair(unpackFloat2x16(total[i])));
+  }
+  uint index = row * pc.outputStride + pc.outputColumnOffset + column;
+  if ((FLAGS & (F_QUANTIZE | F_DUAL)) != 0u) {
+    uvec2 codes;
+    codes.x = uint(e4m3HwPair(unpackFloat2x16(total[0]))) | (uint(e4m3HwPair(unpackFloat2x16(total[1]))) << 16u);
+    codes.y = uint(e4m3HwPair(unpackFloat2x16(total[2]))) | (uint(e4m3HwPair(unpackFloat2x16(total[3]))) << 16u);
+    out8x8[index >> 3u] = codes;
+  }
+  if ((FLAGS & F_QUANTIZE) == 0u) out16x8[index >> 3u] = total;
+}

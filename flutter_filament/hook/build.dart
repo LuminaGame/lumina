@@ -130,6 +130,16 @@ void main(List<String> args) async {
         'src/ray_tracing_c.cpp',
         'src/restir_c.cpp',
         'src/post_pass_c.cpp',
+        // OpenDLSS-NR (third-party, MIT): the C surface, Lumina's Vulkan host and frame pass, and the
+        // vendored network sources (third_party/opendlss_nr); desktop Vulkan only, compiled out elsewhere.
+        'src/opendlss_nr_c.cpp',
+        'src/opendlss_nr/vk_context.cpp',
+        'src/opendlss_nr/model_check.cpp',
+        'src/opendlss_nr/capability.cpp',
+        'src/opendlss_nr/neural_pass.cpp',
+        'src/opendlss_nr/network_model.cpp',
+        'src/opendlss_nr/network_kernels.cpp',
+        'src/opendlss_nr/network_graph.cpp',
         'src/guide_buffers_c.cpp',
         'src/image_ops_c.cpp',
         'src/color_transform_c.cpp',
@@ -187,6 +197,10 @@ void main(List<String> args) async {
         '$filament/third_party/cgltf',
         'third_party/filament_matp/include',
         'third_party/filament_matp/src',
+        // The vendored OpenDLSS-NR sources find their `vk_context.h` in src/opendlss_nr.
+        'src/opendlss_nr',
+        'third_party/opendlss_nr/upstream/src',
+        'third_party/opendlss_nr/modified',
     ];
     // On Windows the sources, includes and Filament libraries go to a
     // response file; cl runs through cmd.exe, whose command line holds 8 191

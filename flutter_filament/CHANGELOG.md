@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- OpenDLSS-NR (experimental, third-party, opt-in): `OpenDlssNr`, `OpenDlssNrModel` and `OpenDlssNrPass` run the
+  GLSL cooperative-matrix route of github.com/maanHimself/OpenDLSS-NR (MIT, vendored at `9d08f41` in
+  `third_party/opendlss_nr`, no PTX / CUDA) as an external post pass on the HDR frame, on model weights the user
+  supplies (none ship, none are fetched). Capability check (NVIDIA Ada or newer, extensions and features), model
+  folder validation, synthetic models for tests; any failure turns the pass off with a reason. About 11 ms at
+  1024x768 and 27.5 ms at 1080p on the RTX PRO 2000.
 - Skinned and morphed renderables are traced in their current pose (prebuilt `1.77.2-lumina.13`, Filament patch
   `0015`): a Vulkan compute pass poses their vertices into their own bottom-level structure, refit every frame
   their bone palette or morph weights change, so ray-traced shadows and ray queries follow the animation.

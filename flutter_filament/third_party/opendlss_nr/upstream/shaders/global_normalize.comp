@@ -1,0 +1,73 @@
+#version 460
+// Global ViT cosine-attention Q/K normalization.
+// One thread per (token, head). Differs from the fused-Swin variant: the pair
+// squares are summed in f32 then rounded, and Q carries the sqrt(head_dim)
+// and learned per-head scales as three separate half multiplies.
+#extension GL_EXT_shader_explicit_arithmetic_types : require
+#extension GL_GOOGLE_include_directive : require
+#include "common.glsl"
+
+layout(local_size_x = 256) in;
+
+layout(push_constant) uniform Push {
+  uint tokens;
+  uint heads;
+  uint channels;        // heads * 32
+  uint scaleWordOffset; // per-head f32 learned scale, in words within binding 4
+} pc;
+
+layout(std430, binding = 1) readonly buffer Qkv { float16_t qkv[]; };
+layout(std430, binding = 4) readonly buffer Aux { uint aux32[]; };
+layout(std430, binding = 5) writeonly buffer Normalized { uint8_t normalized[]; };
+
+float16_t treeSum16(float16_t r[16]) {
+  precise float16_t s8[8];
+  for (uint c = 0u; c < 8u; ++c) s8[c] = r[c] + r[c + 8u];
+  precise float16_t s4[4];
+  for (uint c = 0u; c < 4u; ++c) s4[c] = s8[c] + s8[c + 4u];
+  precise float16_t s2[2];
+  s2[0] = s4[0] + s4[2];
+  s2[1] = s4[1] + s4[3];
+  return s2[0] + s2[1];
+}
+
+void main() {
+  uint id = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * 65535u * 256u;
+  if (id >= pc.tokens * pc.heads) return;
+  uint token = id / pc.heads;
+  uint head = id % pc.heads;
+  uint base = token * pc.channels * 3u + head * 96u;
+
+  float16_t q[32];
+  float16_t k[32];
+  for (uint c = 0u; c < 32u; ++c) {
+    q[c] = qkv[base + c];
+    k[c] = qkv[base + 32u + c];
+  }
+  float16_t r[16];
+  for (uint c = 0u; c < 16u; ++c) {
+    precise float16_t highSquare = q[c + 16u] * q[c + 16u];
+    precise float sum = float(q[c]) * float(q[c]) + float(highSquare);
+    r[c] = float16_t(sum);
+  }
+  float16_t qSum = treeSum16(r);
+  for (uint c = 0u; c < 16u; ++c) {
+    precise float16_t highSquare = k[c + 16u] * k[c + 16u];
+    precise float sum = float(k[c]) * float(k[c]) + float(highSquare);
+    r[c] = float16_t(sum);
+  }
+  float16_t kSum = treeSum16(r);
+  float16_t qNorm = float16_t(inversesqrt(float(qSum)));
+  float16_t kNorm = float16_t(inversesqrt(float(kSum)));
+  float16_t learnedScale = float16_t(uintBitsToFloat(aux32[pc.scaleWordOffset + head]));
+  float16_t headScale = float16_t(sqrt(32.0));
+  for (uint c = 0u; c < 32u; ++c) {
+    precise float16_t nq0 = q[c] * qNorm;
+    precise float16_t nq1 = nq0 * headScale;
+    precise float16_t nq2 = nq1 * learnedScale;
+    precise float16_t nk = k[c] * kNorm;
+    normalized[base + c] = uint8_t(e4m3CodeFromF16Bits(f16Bits(nq2)));
+    normalized[base + 32u + c] = uint8_t(e4m3CodeFromF16Bits(f16Bits(nk)));
+    normalized[base + 64u + c] = uint8_t(e4m3CodeFromF16Bits(f16Bits(qkv[base + 64u + c])));
+  }
+}

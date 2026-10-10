@@ -42,6 +42,7 @@ Her sayfa bir subsystem'i kapsar: önce `src/*_c.h` header'larındaki C fonksiyo
 | [Işın izleme](ray-tracing.md) | Vulkan ray query: uzantı isteği, sahne başına hızlandırma yapıları, ışın izlemeli güneş gölgeleri, görünürlük ışınları, sınırlar. |
 | [ReSTIR doğrudan aydınlatma](restir.md) | Işın izlemeli görünürlükle rezervuar yeniden örneklemesinden çok sayıda noktasal ışık: seçenekler, istatistikler, froxel'lere göre değişenler, sınırlar. |
 | [Kılavuz tamponları](guide-buffers.md) | Lit shader'lardan normal + pürüzlülük, diffuse ve specular albedo ile ışın izlemeli specular isabet mesafesi; nöral denoiser ve upscaler'lar için; testler ve hata ayıklama görünümleri için geri okuma. |
+| [OpenDLSS-NR (deneysel, üçüncü taraf)](opendlss-nr.md) | Harici post pass üzerinde isteğe bağlı üçüncü taraf nöral render geçişi: yalnızca kullanıcının sağladığı ağırlıklar, yetenek denetimi, model klasörü doğrulaması, testler için sentetik modeller, RTX PRO 2000 ölçümleri. |
 | [Harici post pass ve Vulkan aygıt özellikleri](external-post-pass.md) | Renk düzenlemeden önce HDR karedeki geçişler için kanca (renk, derinlik, geçmiş geçerliliğiyle hareket), HDR aşamasındaki harici upscaler'lar, Vulkan aygıtı için istenen özellik yapıları, hata ayıklama geçişi. |
 | [Sahne ve geometri](scene-and-geometry.md) | Sahneler, renderable'lar, transform'lar, vertex/index/instance/morph/skinning buffer'ları, filamesh. |
 | [Kamera ve manipulator](camera-and-manipulator.md) | Kameralar, projeksiyonlar, exposure ve orbit/map/free-flight kamera manipulator'ı. |

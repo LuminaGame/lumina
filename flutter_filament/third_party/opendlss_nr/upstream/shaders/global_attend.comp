@@ -1,0 +1,124 @@
+#version 460
+// Global ViT cosine attention (exact Ada FP8 MMA).
+// One subgroup per (head, 16-query tile). Keys run over the 64-padded token
+// count in natural order. Padding keys have zero K/V, so they add nothing to the
+// numerator, but their score is still 0 and still exponentiates: the denominator
+// therefore carries padding * exp(0), which is subtracted once at the end.
+// Dropping them from the sum instead is a different function, not an optimization.
+// Unlike the window kernel, the E4M3 weights are unnormalized and the
+// reciprocal is applied to the value accumulator afterwards.
+#extension GL_EXT_float_e4m3 : require
+#extension GL_EXT_shader_explicit_arithmetic_types : require
+#extension GL_KHR_memory_scope_semantics : require
+#extension GL_KHR_cooperative_matrix : require
+#extension GL_KHR_shader_subgroup_basic : require
+#extension GL_GOOGLE_include_directive : require
+#include "common.glsl"
+
+layout(local_size_x = 32) in;
+
+layout(constant_id = 0) const uint PADDED_TOKENS = 192;
+
+layout(push_constant) uniform Push {
+  uint tokens;
+  uint heads;
+  uint channels;
+} pc;
+
+layout(std430, binding = 0) readonly buffer Normalized { uint8_t qkv[]; };   // E4M3 [paddedTokens][channels*3]
+layout(std430, binding = 5) writeonly buffer Attended { uint8_t attended[]; }; // E4M3 [tokens][channels]
+
+shared float16_t scores[16u * PADDED_TOKENS];
+shared uint8_t weights[16u * PADDED_TOKENS];
+shared float16_t outputs[16u * 32u];
+shared float16_t reciprocals[16];
+
+float16_t vitExpWeight(float16_t score) {
+  // Global-ViT approximation constants (f32 literals converted to half by PTX).
+  precise float16_t affine = fma(score, float16_t(0.08953946828842163), float16_t(1.7093614339828491));
+  affine = clamp(affine, float16_t(1.439453125), float16_t(1.9775390625));
+  uint bits = f16Bits(affine);
+  uint exponentialBits = ((bits << 4u) + 0x4000u) & 0xffffu;
+  return f16FromBits(exponentialBits);
+}
+
+float16_t softmaxPair(uint row, uint base, uint pair, uint parity) {
+  uint key = row * PADDED_TOKENS + base + pair * 2u + parity;
+  precise float16_t a = scores[key] + scores[key + 8u];
+  precise float16_t b = scores[key + 16u] + scores[key + 24u];
+  precise float16_t c = scores[key + 32u] + scores[key + 40u];
+  precise float16_t d = scores[key + 48u] + scores[key + 56u];
+  precise float16_t ab = a + b;
+  precise float16_t abc = ab + c;
+  return abc + d;
+}
+
+float16_t softmax64(uint row, uint base) {
+  precise float16_t e0 = softmaxPair(row, base, 0u, 0u) + softmaxPair(row, base, 1u, 0u);
+  precise float16_t e1 = e0 + softmaxPair(row, base, 2u, 0u);
+  precise float16_t even = e1 + softmaxPair(row, base, 3u, 0u);
+  precise float16_t o0 = softmaxPair(row, base, 0u, 1u) + softmaxPair(row, base, 1u, 1u);
+  precise float16_t o1 = o0 + softmaxPair(row, base, 2u, 1u);
+  precise float16_t odd = o1 + softmaxPair(row, base, 3u, 1u);
+  return even + odd;
+}
+
+void main() {
+  const uint lane = gl_SubgroupInvocationID;
+  const uint head = gl_WorkGroupID.x;
+  const uint qTile = gl_WorkGroupID.y;
+  const uint stride3 = pc.channels * 3u;
+  const uint headBase = head * 96u;
+  const uint qBase = qTile * 16u * stride3 + headBase;
+
+  coopmat<floate4m3_t, gl_ScopeSubgroup, 16, 32, gl_MatrixUseA> mq;
+  coopMatLoad(mq, qkv, qBase, stride3, gl_CooperativeMatrixLayoutRowMajor);
+  for (uint kTile = 0u; kTile < PADDED_TOKENS / 16u; ++kTile) {
+    coopmat<floate4m3_t, gl_ScopeSubgroup, 32, 16, gl_MatrixUseB> mk;
+    coopMatLoad(mk, qkv, kTile * 16u * stride3 + headBase + 32u, stride3, gl_CooperativeMatrixLayoutColumnMajor);
+    coopmat<float16_t, gl_ScopeSubgroup, 16, 16, gl_MatrixUseAccumulator> mc =
+        coopmat<float16_t, gl_ScopeSubgroup, 16, 16, gl_MatrixUseAccumulator>(0.0);
+    mc = coopMatMulAdd(mq, mk, mc);
+    coopMatStore(mc, scores, kTile * 16u, PADDED_TOKENS, gl_CooperativeMatrixLayoutRowMajor);
+  }
+  barrier();
+  for (uint i = lane; i < 16u * PADDED_TOKENS; i += 32u) scores[i] = vitExpWeight(scores[i]);
+  barrier();
+
+  if (lane < 16u) {
+    precise float16_t total = float16_t(0.0);
+    for (uint base = 0u; base < PADDED_TOKENS; base += 64u) total = total + softmax64(lane, base);
+    uint padding = PADDED_TOKENS - pc.tokens;
+    if (padding > 0u) {
+      precise float16_t correction = float16_t(float(vitExpWeight(float16_t(0.0))) * float(padding));
+      total = total - correction;
+    }
+    reciprocals[lane] = float16_t(1.0 / float(total));
+  }
+  for (uint i = lane; i < 16u * PADDED_TOKENS; i += 32u) {
+    weights[i] = uint8_t(e4m3CodeFromF16Bits(f16Bits(scores[i])));
+  }
+  barrier();
+
+  for (uint cTile = 0u; cTile < 2u; ++cTile) {
+    coopmat<float16_t, gl_ScopeSubgroup, 16, 16, gl_MatrixUseAccumulator> mc =
+        coopmat<float16_t, gl_ScopeSubgroup, 16, 16, gl_MatrixUseAccumulator>(0.0);
+    for (uint kb = 0u; kb < PADDED_TOKENS; kb += 32u) {
+      coopmat<floate4m3_t, gl_ScopeSubgroup, 16, 32, gl_MatrixUseA> mp;
+      coopMatLoad(mp, weights, kb, PADDED_TOKENS, gl_CooperativeMatrixLayoutRowMajor);
+      coopmat<floate4m3_t, gl_ScopeSubgroup, 32, 16, gl_MatrixUseB> mv;
+      coopMatLoad(mv, qkv, kb * stride3 + headBase + 64u + cTile * 16u, stride3, gl_CooperativeMatrixLayoutRowMajor);
+      mc = coopMatMulAdd(mp, mv, mc);
+    }
+    coopMatStore(mc, outputs, cTile * 16u, 32u, gl_CooperativeMatrixLayoutRowMajor);
+  }
+  barrier();
+
+  for (uint i = lane; i < 16u * 32u; i += 32u) {
+    uint row = i >> 5u, component = i & 31u;
+    uint token = qTile * 16u + row;
+    if (token >= pc.tokens) continue;
+    precise float value = roundF16(float(outputs[i]) * float(reciprocals[row]));
+    attended[token * pc.channels + head * 32u + component] = uint8_t(e4m3CodeFromF32(value));
+  }
+}
