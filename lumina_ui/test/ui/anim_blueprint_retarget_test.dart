@@ -13,6 +13,8 @@ import 'package:lumina_ui/ui/features/sub_editors/views/anim_blueprint/anim_blue
 import 'package:lumina_ui/ui/features/sub_editors/widgets/anim_blueprint_retarget_modal.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
+import '../helpers/temp_project.dart';
+
 Uint8List _makeTestGlb({List<String> animations = const []}) {
   return GlbDocument({
     'asset': {'version': '2.0'},
@@ -123,11 +125,9 @@ void main() {
       File('${quinnAnimDir.path}/ABP_Quinn.lmas').writeAsBytesSync(abpAsset.toProtoBufferBytes());
     });
 
-    tearDown(() {
-      if (tempDir.existsSync()) {
-        tempDir.deleteSync(recursive: true);
-      }
-    });
+    // Retries: Windows refuses to delete a folder the editor's git probe
+    // still works in.
+    tearDown(() => deleteTempProject(tempDir));
 
     test('linkedClips and linkedBlendSpacePaths extract all referenced animations', () async {
       final abpPath = '${quinnAnimDir.path}/ABP_Quinn.lmas';
