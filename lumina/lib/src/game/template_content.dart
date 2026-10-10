@@ -189,8 +189,9 @@ class LuminaThirdPersonContent {
         ]..sort((a, b) => a.y != b.y ? a.y.compareTo(b.y) : a.x.compareTo(b.x)),
       );
 
-  /// Seconds of standing still before an idle break may start (the
-  /// break also waits for the idle clip to have played through once).
+  /// Seconds in Idle before an idle break may start, counted again after
+  /// each break (the break also waits for the idle clip to have played
+  /// through once).
   static const double idleBreakAfterSeconds = 6.0;
 
   /// Root yaw offsets (degrees, absolute) beyond which a standing character

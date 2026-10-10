@@ -312,6 +312,7 @@ View model of the UMG designer: one persisted [UmgDocument] inside a real WIDGET
 | `loadedThemes` | `Map<String, LuminaThemeDocument> get loadedThemes` | Cache of loaded theme assets keyed by relative path. |
 | `refreshAvailableThemes` | `Future<void> refreshAvailableThemes()` | Re-scans the project for theme assets and updates [availableThemePaths]. |
 | `loadThemeForDocument` | `Future<void> loadThemeForDocument()` | Loads the document's assigned theme or falls back to project default. |
+| `themesLoaded` | `Future<void> get themesLoaded` | Completes once the project's themes and the document's theme, which the constructor starts loading, are in. A view model disposed meanwhile drops them without notifying. |
 | `setDocumentTheme` | `Future<void> setDocumentTheme(String? path)` | Sets or clears the document-level base theme asset path and reloads. |
 | `setNodeTheme` | `Future<void> setNodeTheme(String nodeId, String? themePath)` | Sets or clears a component-level theme override asset path on a specific node. |
 | `themeForNode` | `LuminaThemeDocument themeForNode(UmgNode node)` | Resolves the effective [LuminaThemeDocument] for [node] (taking component override if present, else document theme). |

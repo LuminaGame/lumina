@@ -312,6 +312,7 @@ View model of the UMG designer: one persisted [UmgDocument] inside a real WIDGET
 | `loadedThemes` | `Map<String, LuminaThemeDocument> get loadedThemes` | Göreli yollarına göre önbelleğe alınmış tema asset'leri haritası. |
 | `refreshAvailableThemes` | `Future<void> refreshAvailableThemes()` | Projedeki tema asset'lerini yeniden tarar ve [availableThemePaths]'i günceller. |
 | `loadThemeForDocument` | `Future<void> loadThemeForDocument()` | Belgeye atanmış temayı yükler veya proje varsayılan temasına döner. |
+| `themesLoaded` | `Future<void> get themesLoaded` | Kurucunun yüklemeye başladığı proje temaları ve belgenin teması geldiğinde tamamlanır. Bu arada dispose edilen view model sonuçları bildirim yapmadan bırakır. |
 | `setDocumentTheme` | `Future<void> setDocumentTheme(String? path)` | Belge düzeyindeki temel tema asset yolunu ayarlar veya temizler ve yeniden yükler. |
 | `setNodeTheme` | `Future<void> setNodeTheme(String nodeId, String? themePath)` | Belirli bir düğüm üzerinde bileşen düzeyinde tema ezme yolunu ayarlar veya kaldırır. |
 | `themeForNode` | `LuminaThemeDocument themeForNode(UmgNode node)` | [node] için geçerli olan [LuminaThemeDocument]'i çözümler (bileşen ezmesi varsa onu, yoksa belge temasını alır). |

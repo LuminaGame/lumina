@@ -642,7 +642,7 @@ The art the Third Person template ships: a CC0 character with its idle, eight-di
 | `gameModeBlueprint` | `static LuminaBlueprintDocument get gameModeBlueprint` | The template's game mode: [characterBlueprint] as the Default Pawn Class. |
 | `walkBlendSpace` | `static LuminaBlendSpaceDocument get walkBlendSpace` | The eight walk cycles on a Direction axis (degrees, right positive, as `calculate_direction` gives it); backward sits at both ends. |
 | `locomotionBlendSpace` | `static LuminaBlendSpaceDocument get locomotionBlendSpace` | The locomotion blend space: Direction (degrees, right positive) × Speed (cm/s). The walk clips sit on the [walkReferenceSpeed] row and the jog clips on the [jogReferenceSpeed] row, each row with backward at both ends of the direction ring. |
-| `idleBreakAfterSeconds` | `static const double idleBreakAfterSeconds` | Seconds of standing still before an idle break may start (the break also waits for the idle clip to have played through once). |
+| `idleBreakAfterSeconds` | `static const double idleBreakAfterSeconds` | Bir idle break başlamadan önce Idle'da geçen saniye; her break'ten sonra yeniden sayılır (break ayrıca idle klibinin bir kez sonuna kadar oynamasını bekler). |
 | `turn90Degrees` | `static const double turn90Degrees` | Root yaw offsets (degrees, absolute) beyond which a standing character turns in place with a 90° / 180° clip, when [turnClips] has them. |
 | `turn180Degrees` | `static const double turn180Degrees` |  |
 | `jumpToFallAfterSeconds` | `static const double jumpToFallAfterSeconds` | Seconds into the jump clip after which still falling hands over to the fall loop. |

@@ -290,6 +290,7 @@ A JSON file in the editor's config directory ([LuminaConfigDir]) that several wr
 | `readRetryDelay` | `static const Duration readRetryDelay` |  |
 | `staleLockAge` | `static const Duration staleLockAge` | A lock older than this was left behind by a writer that died. |
 | `lockTimeout` | `static const Duration lockTimeout` | How long [update] waits for another writer's lock. |
+| `replaceTimeout` | `static const Duration replaceTimeout` | How long [write] keeps trying to replace a file a reader holds open (Windows refuses to rename over an open file; readers hold it only while they read). |
 | `lockFile` | `File get lockFile` | The lock [update] holds while it reads, changes and writes the file. |
 | `read` | `Object? read()` | The decoded content; null when the file is missing or stays blank. |
 | `write` | `void write(Object? value, {bool pretty = false})` | Replaces the file with [value], atomically. |
