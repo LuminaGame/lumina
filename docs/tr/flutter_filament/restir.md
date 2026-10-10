@@ -21,7 +21,7 @@ Lumina'nın Filament yaması `0008` (bkz. `third_party/filament/README.md`) view
 
 1. **Adaylar ve zamansal yeniden kullanım**: `initialCandidates` kadar ışık tekdüze çekilir, difüz bir yüzeye gölgesiz katkılarıyla ağırlıklandırılır (yeniden örneklemeli önem örneklemesi) ve yüzey aynıysa yeniden yansıtılan konumdaki önceki kare rezervuarıyla birleştirilir (`temporal`, geçmiş ağırlığı `maxHistory` ile sınırlı).
 2. **Uzamsal yeniden kullanım**: `spatialRadiusPx` içindeki `spatialSamples` komşu rezervuar, ışıkları bu pikselde yeniden değerlendirilerek birleştirilir.
-3. **Görünürlük**: yüzeyden seçilen ışığa tek bir ışın (`visibilityRays`).
+3. **Görünürlük**: yüzeyden seçilen ışığa tek bir ışın (`visibilityRays`). Işının başlangıcı ve hedefi, view'un dünya dönüşümünün tersiyle (kamera ötelemesi ve bir IBL'in dönüşü) ivme yapılarının gerçek dünyasına geri taşınır.
 
 Sonuç, (ışık indeksi, yeniden örnekleme ağırlığı W, görünürlük), renk geçişine bağlanır; lit malzeme shader'ları froxel'in ışıklarını döngüyle gezmek yerine o tek ışığın verisini okur ve tam BRDF'leriyle gölgeler. Yeniden kullanımdan sonraki rezervuarlar bir sonraki karenin geçmişi olur.
 

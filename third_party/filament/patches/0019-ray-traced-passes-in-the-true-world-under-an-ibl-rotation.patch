@@ -1,0 +1,85 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Can Us <me@canus.dev>
+Date: Sat, 10 Oct 2026 21:00:00 +0300
+Subject: [PATCH] Ray-traced passes trace in the true world under an IBL
+ rotation
+
+The colour pass shades in a world shifted by CameraInfo::worldTransform:
+the camera translation and, when the scene's IndirectLight has a
+rotation, the transpose of that rotation. The acceleration structures
+hold the renderables' true world transforms, so the ray-traced passes
+bring what they trace back into the true world. The sun shadow pass
+(0007) did so for the pixel positions but passed the light direction
+in the shifted world, and ReSTIR's visibility rays (0008) added only
+the translation back. With a rotated IBL (every KTX IBL flutter_filament
+loads carries one) the sun shadow was traced along a turned direction
+and ReSTIR's visibility rays aimed at moved lights.
+
+The shadow pass now rotates the light direction with the inverse world
+transform, and restirShade takes the whole inverse world transform
+(trueWorldFromShaderWorld) instead of the translation.
+---
+diff --git a/filament/src/PostProcessManager.cpp b/filament/src/PostProcessManager.cpp
+index 9fffe5b4..c1ccd7e7 100644
+--- a/filament/src/PostProcessManager.cpp
++++ b/filament/src/PostProcessManager.cpp
+@@ -308,7 +308,10 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::rayTracedShadows(FrameGraph&
+                 mi->setParameter("resolution", math::float4{
+                         float(desc.width), float(desc.height),
+                         1.0f / float(desc.width), 1.0f / float(desc.height) });
+-                mi->setParameter("toLight", toLight);
++                // the light direction comes in the shifted world, which an IBL rotation also
++                // rotates: bring it back into the true world with the positions.
++                mi->setParameter("toLight", math::float3(normalize(
++                        trueWorldFromShaderWorld.upperLeft() * math::double3(toLight))));
+                 mi->setParameter("cameraPosition", math::float3(
+                         (trueWorldFromShaderWorld * math::double4(cameraInfo.getPosition(), 1.0)).xyz));
+                 // a few texels toward the light keep surfaces from shadowing themselves
+@@ -359,9 +362,8 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::restir(FrameGraph& fg,
+     math::mat4 const prevClipFromWorld = historyValid ? previous.clipFromWorld : clipFromWorld;
+     current.clipFromWorld = clipFromWorld;
+     // the acceleration structures hold true world transforms; the camera lives in the world
+-    // shifted by cameraInfo.worldTransform (a translation)
+-    math::float3 const trueWorldOffset = math::float3(
+-            (inverse(cameraInfo.worldTransform) * math::double4(0.0, 0.0, 0.0, 1.0)).xyz);
++    // shifted by cameraInfo.worldTransform (a translation, plus the IBL rotation when it has one)
++    math::mat4f const trueWorldFromShaderWorld{ inverse(cameraInfo.worldTransform) };
+     Handle<HwTexture> const lightTexture = state.lightTexture;
+     uint32_t const lightCount = state.lightCount;
+ 
+@@ -479,7 +481,7 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::restir(FrameGraph& fg,
+                 mi->setParameter("resolution", math::float4{ float(desc.width), float(desc.height),
+                         1.0f / float(desc.width), 1.0f / float(desc.height) });
+                 mi->setParameter("cameraPosition", cameraInfo.getPosition());
+-                mi->setParameter("trueWorldOffset", trueWorldOffset);
++                mi->setParameter("trueWorldFromShaderWorld", trueWorldFromShaderWorld);
+                 mi->setParameter("visibilityRays", int32_t(options.visibilityRays ? 1 : 0));
+                 mi->setParameter("bias", rayOriginOffset(cameraInfo.projection, float(desc.height), 2.0f));
+                 commitAndRenderFullScreenQuad(driver, out, mi);
+diff --git a/filament/src/materials/rt/restirShade.mat b/filament/src/materials/rt/restirShade.mat
+index de325dd2..216375f6 100644
+--- a/filament/src/materials/rt/restirShade.mat
++++ b/filament/src/materials/rt/restirShade.mat
+@@ -35,8 +35,8 @@ material {
+             precision: high
+         },
+         {
+-            type : float3,
+-            name : trueWorldOffset,
++            type : mat4,
++            name : trueWorldFromShaderWorld,
+             precision: high
+         },
+         {
+@@ -91,8 +91,9 @@ fragment {
+             // a few texels' world size at this distance (bias.x + bias.y * d)
+             highp float bias = materialParams.bias.x +
+                     materialParams.bias.y * length(P - materialParams.cameraPosition);
+-            highp vec3 origin = P + materialParams.trueWorldOffset + N * bias;
+-            highp vec3 target = t0.xyz + materialParams.trueWorldOffset;
++            highp mat4 trueWorld = materialParams.trueWorldFromShaderWorld;
++            highp vec3 origin = (trueWorld * vec4(P + N * bias, 1.0)).xyz;
++            highp vec3 target = (trueWorld * vec4(t0.xyz, 1.0)).xyz;
+             highp vec3 toLight = target - origin;
+             highp float distance = length(toLight);
+             if (distance > bias) {

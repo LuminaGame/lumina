@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Ray-traced sun shadows and ReSTIR's visibility rays follow the scene under a rotated IBL (prebuilt
+  `1.77.2-lumina.17`, Filament patch `0019`): with a KTX IBL the sun shadow was traced along a turned direction (IoU
+  0.06 against the shadow maps, now 0.91-0.98) and ReSTIR's point light shadows moved with the IBL's rotation.
 - OpenDLSS-NR runs validation-clean for its device setup (prebuilt `1.77.2-lumina.16`, Filament patch `0018`): feature
   requests for structures Filament chains itself are merged into them (`VulkanFeature.shaderInt16`,
   `VulkanFeature.storageBuffer16BitAccess`), and `VulkanFeatures.requestApiVersion` / `apiVersion` create a Vulkan 1.3

@@ -25,6 +25,7 @@ are upstream v1.77.2 with exactly these files applied in order.
 | `0016-present-pacing-thread.patch` | `backend/include/private/backend/DriverAPI.inc`, `backend/src/vulkan/{VulkanPresentPacer.* (new),utils/QueueLock.h (new),VulkanSwapChain.*,VulkanDriver.*,VulkanCommands.cpp,VulkanReadPixels.cpp,platform/VulkanPlatformSwapChainImpl.cpp}`, the other drivers' no-ops, `backend/CMakeLists.txt`, `filament/include/filament/Renderer.h`, `filament/src/details/Renderer.*` | Vsync-less Vulkan SwapChains present from their own thread: frame-generation presents are spaced evenly over the frame interval without the render thread waiting, so the presented rate multiplies; `Renderer::getPresentTimes()` reports the actual present times. |
 | `0017-vulkan-blit-rectangles-inside-their-images.patch` | `backend/src/vulkan/VulkanDriver.cpp` | `blitDEPRECATED` keeps both rectangles inside their images: frame generation's presents into a window that just shrank no longer lose the device. |
 | `0018-vulkan-merged-feature-requests-and-api-version.patch` | `backend/include/backend/platforms/VulkanPlatform.h`, `backend/src/vulkan/platform/VulkanPlatform.cpp` | A client's feature request for a structure Filament already chains (core features, Vulkan 1.1 features, 16-bit storage) is OR-merged into Filament's structure; `Customization::apiVersion` opts into a newer Vulkan API version. |
+| `0019-ray-traced-passes-in-the-true-world-under-an-ibl-rotation.patch` | `filament/src/PostProcessManager.cpp`, `filament/src/materials/rt/restirShade.mat` | The ray-traced sun shadow rotates its light direction, and ReSTIR's visibility rays their origin and target, back into the true world: under a rotated IBL (every KTX IBL flutter_filament loads) the shadow no longer points the wrong way. |
 
 ## 0001: libassimp glTF 2 `ReplaceData_joint` bounds
 
@@ -412,3 +413,15 @@ next to it). Such a request is now OR-merged into Filament's own structure (the 
 the instance with a newer API version, capped at what the loader offers, for clients whose shaders need it (SPIR-V 1.6
 needs Vulkan 1.3); `VulkanPlatform::getApiVersion()` returns the version the device runs at. OpenDLSS-NR's kernels
 (flutter_filament) use both.
+
+## 0019: ray-traced passes in the true world under an IBL rotation
+
+The colour pass shades in a world shifted by `CameraInfo::worldTransform`: the camera translation and, when the
+scene's `IndirectLight` has a rotation, the transpose of that rotation. The acceleration structures hold the
+renderables' true world transforms, so the ray-traced passes bring what they trace back into the true world. The sun
+shadow pass (0007) did so for the pixel positions but traced along the light direction of the shifted world, and
+ReSTIR's visibility rays (0008) added only the translation back. With a rotated IBL (flutter_filament's KTX IBLs carry a
+0.5 rad turn about +Y) the sun shadow was traced along a turned direction (IoU 0.06 against the shadow map) and the
+visibility rays aimed at moved lights. `PostProcessManager::rayTracedShadows` now rotates `toLight` with the inverse
+world transform, and `restirShade` takes the whole inverse world transform (`trueWorldFromShaderWorld`, replacing
+`trueWorldOffset`).

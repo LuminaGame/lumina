@@ -21,7 +21,7 @@ Lumina's Filament patch `0008` (see `third_party/filament/README.md`) adds `Rest
 
 1. **Candidates and temporal reuse**: `initialCandidates` lights are drawn uniformly, weighted by their unshadowed contribution to a diffuse surface (resampled importance sampling), and merged with the previous frame's reservoir at the reprojected position when the surface is the same (`temporal`, history weight bounded by `maxHistory`).
 2. **Spatial reuse**: `spatialSamples` neighbouring reservoirs within `spatialRadiusPx` are merged, re-evaluating their light at this pixel.
-3. **Visibility**: one ray from the surface to the chosen light (`visibilityRays`).
+3. **Visibility**: one ray from the surface to the chosen light (`visibilityRays`). The ray's origin and target are moved back into the true world of the acceleration structures with the inverse of the view's world transform (the camera translation and an IBL's rotation).
 
 The result, (light index, resampling weight W, visibility), is bound to the colour pass, where the lit material shaders fetch the light's data and shade that one light with their full BRDF instead of looping over the froxel's lights. The reservoirs after reuse become the next frame's history.
 
