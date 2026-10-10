@@ -56,7 +56,9 @@ class WebPreviewServer {
     final path = segments.isEmpty ? 'index.html' : segments.join('/');
     final file = File('$root/$path');
     if (!file.existsSync()) return null;
-    return file.resolveSymbolicLinksSync().startsWith('${Directory(root).resolveSymbolicLinksSync()}/') ? file : null;
+    // Resolved paths use the platform separator (backslashes on Windows).
+    final base = '${Directory(root).resolveSymbolicLinksSync()}${Platform.pathSeparator}';
+    return file.resolveSymbolicLinksSync().startsWith(base) ? file : null;
   }
 
   static ContentType contentTypeFor(String path) => switch (path.split('.').last.toLowerCase()) {
