@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina/testing.dart';
 import 'package:lumina_editor_data/lumina_editor.dart';
+import 'package:vector_math/vector_math_64.dart';
 
 import 'support/gasp_sandbox.dart';
 
@@ -279,18 +280,38 @@ void main() {
 
     await jump('standing jump');
     await jump('running jump', hold: const [LuminaKey.keyW], runUp: 1.0);
-    // Onto the top of a block 80–260 cm high, then jump off it forward.
-    final block = s.blocks.firstWhere(
-        (b) => !b.rotated && b.size[2] >= 80 && b.size[2] <= 260 && b.size[0] >= 150 && b.size[1] >= 150,
-        orElse: () => throw StateError('L_Sandbox has no block to jump off'));
-    character.actorLocation = LuminaAxes.location([block.center[0], block.center[1], block.center[2] + block.size[2] / 2 + halfHeight + 2]);
-    for (var f = 0; f < 30; f++) {
-      s.pc.onTick(1 / 60);
-      s.world.tick(1 / 60);
-      s.engine.flushAndWait();
+    // Onto a block 80–260 cm high standing on the floor, near its edge facing
+    // out, then jump off it forward. Space runs a traversal action instead of
+    // a jump when one fits the obstacle ahead (a hurdle on a raised beam), so
+    // the spot must have nothing ahead: the check is asserted before Space.
+    final traversal = character.components.whereType<LuminaTraversalComponent>().single;
+    final yaw = LuminaMotionMatchingCharacter.facingYaw(character);
+    final forward = Vector3(math.sin(yaw), 0.0, math.cos(yaw));
+    ({List<double> center, List<double> size, bool rotated})? block;
+    for (final b in s.blocks) {
+      final grounded = (b.center[2] - b.size[2] / 2).abs() < 2.0;
+      if (b.rotated || !grounded || b.size[2] < 80 || b.size[2] > 260 || b.size[0] < 150 || b.size[1] < 150) continue;
+      final top = LuminaAxes.location([b.center[0], b.center[1], b.center[2] + b.size[2] / 2 + halfHeight + 2]);
+      // Runtime X is stored X, runtime Z is stored −Y: the half extent along
+      // the facing, less a step so the capsule starts on the top.
+      final reach = forward.x.abs() * b.size[0] / 2 + forward.z.abs() * b.size[1] / 2 - 45.0;
+      character.actorLocation = top + forward * reach;
+      for (var f = 0; f < 30; f++) {
+        s.pc.onTick(1 / 60);
+        s.world.tick(1 / 60);
+        s.engine.flushAndWait();
+      }
+      if (movement.isFalling) continue;
+      if (traversal.checkTraversal().actionType != LuminaTraversalActionType.none) continue;
+      block = b;
+      break;
     }
+    if (block == null) throw StateError('L_Sandbox has no grounded block with a clear edge to jump off');
     expect(movement.isFalling, isFalse, reason: 'standing on the block');
+    expect(traversal.lastCheck?.actionType, LuminaTraversalActionType.none,
+        reason: 'nothing to traverse ahead of the edge: ${traversal.lastCheck}');
     await jump('jump off a ${block.size[2].round()} cm block', hold: const [LuminaKey.keyW], seconds: 3.5);
+    expect(traversal.actionCount, 0, reason: 'Space jumped off the block; no traversal action ran');
     await jump('standing jump after the drop');
 
     // ignore: avoid_print

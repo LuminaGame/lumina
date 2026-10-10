@@ -133,7 +133,10 @@ class GaspSandbox {
       intensity: 30000,
     ));
   
-    // The project's game mode, character and input.
+    // The project's game mode, character and input. Its widget Blueprints
+    // are registered first, as Play and a built game do, so `Get <Element>`
+    // nodes type their outputs.
+    _registerWidgetClasses(dir);
     final registry = LuminaBlueprintClassRegistry(dir);
     final mode = registry.createGameMode(project.mapsAndModes);
     expect(mode, isNotNull, reason: '${registry.diagnostics}');
@@ -204,5 +207,40 @@ class GaspSandbox {
       databasesLoad: databasesLoad,
       capture: capture,
     );
+  }
+}
+
+/// Registers every widget Blueprint under `contents/` of [projectDir]: one
+/// element per designer node below the root, typed by its widget type.
+void _registerWidgetClasses(String projectDir) {
+  final contents = Directory('$projectDir/contents');
+  if (!contents.existsSync()) return;
+  for (final f in contents.listSync(recursive: true).whereType<File>()) {
+    if (!f.path.endsWith('.lmas')) continue;
+    final asset = LuminaAsset.fromBytes(f.readAsBytesSync());
+    final payload = asset.rawPayload;
+    if (asset.type != AssetType.widget || payload == null || payload.isEmpty) continue;
+    final json = jsonDecode(utf8.decode(payload));
+    if (json is! Map || json['root'] is! Map) continue;
+    final elements = <LuminaBlueprintWidgetElement>[];
+    void walk(Map node, {bool root = false}) {
+      final name = node['name'] as String? ?? '';
+      if (!root && name.isNotEmpty) {
+        final field = node['fieldName'] as String? ?? '';
+        elements.add(LuminaBlueprintWidgetElement(
+          name: name,
+          fieldName: field.isEmpty ? name : field,
+          typeName: node['type'] as String? ?? '',
+          props: Map<String, dynamic>.from(node['props'] as Map? ?? const {}),
+        ));
+      }
+      for (final c in (node['children'] as List?) ?? const []) {
+        if (c is Map) walk(c);
+      }
+    }
+
+    walk(json['root'] as Map, root: true);
+    final name = f.uri.pathSegments.last.replaceAll('.lmas', '');
+    LuminaWidgetClassRegistry.register(LuminaBlueprintWidgetClass(name: name, elements: elements));
   }
 }
