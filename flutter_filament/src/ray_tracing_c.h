@@ -49,6 +49,12 @@ FFI_PLUGIN_EXPORT uint32_t filament_scene_get_tlas_instance_count(void* scene);
 // GPU time of the last top-level structure build in nanoseconds (0 until a timer resolved).
 FFI_PLUGIN_EXPORT uint64_t filament_scene_get_tlas_build_nanos(void* scene);
 
+// Skinned and morphed renderables are traced in their current pose: the bottom-level
+// structures the last frame re-posed (their palette or weights changed), and the GPU time
+// of that frame's posing passes and refits in nanoseconds (0 until a timer resolved).
+FFI_PLUGIN_EXPORT uint32_t filament_scene_get_deformed_blas_count(void* scene);
+FFI_PLUGIN_EXPORT uint64_t filament_scene_get_blas_deform_nanos(void* scene);
+
 // Whether the renderable's geometry is part of the acceleration structures (default true).
 FFI_PLUGIN_EXPORT void filament_renderable_set_ray_tracing_visible(void* engine, uint32_t entity, bool visible);
 FFI_PLUGIN_EXPORT bool filament_renderable_is_ray_tracing_visible(void* engine, uint32_t entity);

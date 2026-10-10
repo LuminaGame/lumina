@@ -118,6 +118,18 @@ uint64_t filament_scene_get_tlas_build_nanos(void* scene) {
     FFI_CATCH(0u)
 }
 
+uint32_t filament_scene_get_deformed_blas_count(void* scene) {
+    FFI_TRY
+    return scene ? toScene(scene)->getDeformedBlasCount() : 0u;
+    FFI_CATCH(0u)
+}
+
+uint64_t filament_scene_get_blas_deform_nanos(void* scene) {
+    FFI_TRY
+    return scene ? toScene(scene)->getLastBlasDeformTimeNanos() : 0u;
+    FFI_CATCH(0u)
+}
+
 void filament_renderable_set_ray_tracing_visible(void* engine, uint32_t entity, bool visible) {
     FFI_TRY
     if (!engine) return;

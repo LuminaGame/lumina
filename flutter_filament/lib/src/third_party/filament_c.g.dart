@@ -8794,6 +8794,14 @@ external int filament_scene_get_tlas_instance_count(
 @ffi.Native<ffi.Uint64 Function(ffi.Pointer<ffi.Void>)>()
 external int filament_scene_get_tlas_build_nanos(ffi.Pointer<ffi.Void> scene);
 
+@ffi.Native<ffi.Uint32 Function(ffi.Pointer<ffi.Void>)>()
+external int filament_scene_get_deformed_blas_count(
+  ffi.Pointer<ffi.Void> scene,
+);
+
+@ffi.Native<ffi.Uint64 Function(ffi.Pointer<ffi.Void>)>()
+external int filament_scene_get_blas_deform_nanos(ffi.Pointer<ffi.Void> scene);
+
 @ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>, ffi.Uint32, ffi.Bool)>()
 external void filament_renderable_set_ray_tracing_visible(
   ffi.Pointer<ffi.Void> engine,

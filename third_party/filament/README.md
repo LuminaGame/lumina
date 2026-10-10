@@ -21,6 +21,7 @@ are upstream v1.77.2 with exactly these files applied in order.
 | `0012-guide-buffers.patch` | `filament/include/filament/{Options,View}.h`, `filament/src/{RendererUtils,PostProcessManager,View}.*`, `filament/src/details/{Renderer,View}.*`, `filament/src/materials/rt/{rtSpecularHitDistance.mat (new),rt.cpp}`, `filament/CMakeLists.txt`, `shaders/src/surface_main.fs` | Guide buffers for neural denoisers: normal + roughness, diffuse and specular albedo written by the lit shaders as colour attachments 1-3 (Vulkan), the ray-traced specular hit distance, `View::setGuideBufferOptions` / `setGuideBufferTexture`, and `ExternalUpscaler::guideBuffers()`. |
 | `0013-external-frame-generator.patch` | `filament/include/filament/{View,Renderer}.h`, `filament/src/{PostProcessManager,FrameHistory,View,Renderer}.*`, `filament/src/details/{Renderer,View}.*` | An external frame generator (`View::setExternalFrameGenerator`, DLSS Frame Generation) that writes up to five generated frames per rendered frame; `Renderer::endFrame` presents them before the rendered frame with even pacing without vsync, and `Renderer::getPresentTimes()` reports the presents. |
 | `0014-ray-query-origin-offset-in-texels.patch` | `filament/src/PostProcessManager.cpp`, `filament/src/materials/rt/{rtShadow,restirShade,rtSpecularHitDistance}.mat` | Ray query origins are offset by a few texels' world size (from the projection and the target height) instead of half the near plane grown 2 % per world unit of camera distance, so ray-traced shadows of small props stay solid in a centimetre-scale scene. |
+| `0015-posed-acceleration-structures-for-skinned-and-morphed-renderables.patch` | `backend/include/backend/AccelerationStructure.h`, `backend/include/private/backend/DriverAPI.inc`, `backend/src/vulkan/{VulkanAccelerationStructure.*,VulkanBlasDeformer.* (new),VulkanBlasDeform.comp (new),VulkanBlasDeformSpirv.h (new),VulkanBufferCache.cpp,VulkanDriver.*}`, the other drivers' no-ops, `backend/CMakeLists.txt`, `filament/include/filament/Scene.h`, `filament/src/{Scene.cpp,details/Scene.*,details/VertexBuffer.h,components/RenderableManager.*}` | Skinned and morphed renderables are traced in their current pose: a Vulkan compute pass poses their vertices into their own deformable BLAS, refit in every frame their palette or weights changed (`Scene::getDeformedBlasCount`, `getLastBlasDeformTimeNanos`). |
 
 ## 0001: libassimp glTF 2 `ReplaceData_joint` bounds
 
@@ -345,3 +346,25 @@ its shadow (or nothing) was left. `rayOriginOffset` in `PostProcessManager.cpp` 
 `(a, b)` with `offset = a + b * distanceToCamera`: three texels' world size for the sun shadow and two for the
 other rays, from `projection[1][1]` and the target height (`b` for a perspective projection, `a` for an
 orthographic one). The three materials take `bias` as a `float2`.
+
+## 0015: posed acceleration structures for skinned and morphed renderables
+
+The structures of 0007 read the vertex buffers, so skinned and morphed renderables were traced in their bind
+pose. Now `FScene::updateAccelerationStructures` gives each primitive of such a renderable (skinning with
+`BONE_INDICES`/`BONE_WEIGHTS` and a palette, or position morph targets) its own BLAS, keyed by entity and
+primitive and created with `AccelerationStructureGeometry::deformable`: the Vulkan structure owns a tightly
+packed float3 position buffer and is built from it. The new driver command `deformAccelerationStructure(blas,
+AccelerationStructureDeformation)` records a compute dispatch of `VulkanBlasDeform.comp` (GLSL, precompiled
+with glslangValidator into `VulkanBlasDeformSpirv.h`, one variant with and one without the morph target
+texture) that does what `surface_getters.vs` does: the morph target deltas (texture array, width 2048, offset by
+the primitive's morphing buffer offset) weighted by the morph weights, then four-bone linear blend skinning with
+the `PerRenderableBoneUib` palette. Positions, bone indices/weights (UBYTE4/USHORT4 indices; FLOAT4 or normalized
+UBYTE4/USHORT4 weights), the palette and the weights are read through buffer device addresses in the push
+constants, so uniform buffers get `SHADER_DEVICE_ADDRESS` usage when ray queries are on; the morph texture is
+the only descriptor (one small pool per structure). Barriers order uploads -> compute -> build. The structure
+is refit (`PREFER_FAST_BUILD | ALLOW_UPDATE`) and rebuilt every 32 refits. `FRenderableManager` bumps a pose
+version on `setBones`, `setSkinningBuffer` and `setMorphWeights`; a structure is re-posed only when the version
+changed (always for shared `SkinningBuffer`s). `Scene::getDeformedBlasCount()` and
+`getLastBlasDeformTimeNanos()` (its own timer query) report the work. Limits: more than four influences per
+vertex (Filament's advanced skinning texture) use the first three, positions must be float or half, and
+custom vertex displacement is not applied.

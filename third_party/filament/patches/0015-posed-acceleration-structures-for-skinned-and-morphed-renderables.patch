@@ -1,0 +1,2226 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Can Us <me@canus.dev>
+Date: Sat, 10 Oct 2026 14:00:00 +0300
+Subject: [PATCH] Trace skinned and morphed renderables in their current pose
+
+The acceleration structures of 0007 read the vertex buffers, so skinned and
+morphed renderables were traced in their bind pose: ray-traced shadows and
+ray queries ignored the animation.
+
+A skinned or morphed primitive now gets its own deformable bottom-level
+structure, built from a posed copy of its positions. The new driver command
+deformAccelerationStructure() records a Vulkan compute pass
+(VulkanBlasDeform.comp, precompiled to SPIR-V in VulkanBlasDeformSpirv.h)
+that applies the morph target deltas and the four-bone palette exactly as the
+vertex shaders do, reading every input by buffer device address (the bone
+palette and morph weight uniform buffers get SHADER_DEVICE_ADDRESS usage when
+ray queries are on) and the morph target texture through one descriptor; then
+it refits the structure (a full build every 32 refits). FScene re-poses a
+renderable only in frames its palette or weights changed (a pose version in
+FRenderableManager; shared SkinningBuffers every frame) and reports
+Scene::getDeformedBlasCount() and the GPU time of the posing passes,
+Scene::getLastBlasDeformTimeNanos(). The other backends ignore the command.
+---
+diff --git a/filament/backend/CMakeLists.txt b/filament/backend/CMakeLists.txt
+index bf9c4a46..44baa804 100644
+--- a/filament/backend/CMakeLists.txt
++++ b/filament/backend/CMakeLists.txt
+@@ -209,6 +209,9 @@ if (FILAMENT_SUPPORTS_VULKAN)
+             src/vulkan/VulkanBufferCache.h
+             src/vulkan/VulkanAccelerationStructure.cpp
+             src/vulkan/VulkanAccelerationStructure.h
++            src/vulkan/VulkanBlasDeformer.cpp
++            src/vulkan/VulkanBlasDeformer.h
++            src/vulkan/VulkanBlasDeformSpirv.h
+             src/vulkan/VulkanBufferCache.cpp
+             src/vulkan/VulkanBufferProxy.h
+             src/vulkan/VulkanBufferProxy.cpp
+diff --git a/filament/backend/include/backend/AccelerationStructure.h b/filament/backend/include/backend/AccelerationStructure.h
+index f572bd9f..76c94944 100644
+--- a/filament/backend/include/backend/AccelerationStructure.h
++++ b/filament/backend/include/backend/AccelerationStructure.h
+@@ -24,6 +24,11 @@
+ 
+ namespace filament::backend {
+ 
++enum class AccelerationStructureBuildMode : uint8_t {
++    BUILD,      //!< full build
++    REFIT,      //!< update in place (same topology, moved vertices or instances)
++};
++
+ /**
+  * One triangle geometry a bottom-level acceleration structure is built from: the position
+  * attribute of a vertex buffer object (offset, stride and element type as declared on the
+@@ -38,6 +43,36 @@ struct AccelerationStructureGeometry {
+     Handle<HwIndexBuffer> indexBuffer;      //!< null for non-indexed geometry
+     uint32_t indexOffset = 0;               //!< first index (in indices, not bytes)
+     uint32_t indexCount = 0;                //!< indices of the primitive (a multiple of 3)
++    /**
++     * The structure is built from posed positions it owns (vertexCount tightly packed float3)
++     * that deformAccelerationStructure() writes from the positions above, instead of from the
++     * vertex buffer itself: a skinned or morphed primitive.
++     */
++    bool deformable = false;
++};
++
++/**
++ * The inputs that pose a deformable bottom-level structure's vertices, as the vertex shaders do:
++ * morph target position deltas weighted by the morph weights, then four-bone linear blend
++ * skinning with the bone palette. Attribute offsets are in bytes from the start of their buffer
++ * object; offsets and strides must be multiples of 4.
++ */
++struct AccelerationStructureDeformation {
++    Handle<HwBufferObject> joints;          //!< bone indices (UBYTE4 or USHORT4); null: no skinning
++    uint32_t jointsOffset = 0;
++    uint32_t jointsStride = 0;
++    ElementType jointsType = ElementType::USHORT4;
++    Handle<HwBufferObject> weights;         //!< bone weights (FLOAT4, or normalized UBYTE4/USHORT4)
++    uint32_t weightsOffset = 0;
++    uint32_t weightsStride = 0;
++    ElementType weightsType = ElementType::FLOAT4;
++    Handle<HwBufferObject> bones;           //!< the bone palette (PerRenderableBoneUib::BoneData)
++    uint32_t bonesOffset = 0;               //!< byte offset of the renderable's first bone
++    Handle<HwTexture> morphPositions;       //!< morph target position deltas; null: no morphing
++    uint32_t morphOffset = 0;               //!< the primitive's first texel in morphPositions
++    uint32_t morphCount = 0;                //!< morph targets
++    Handle<HwBufferObject> morphWeights;    //!< one float4 per morph target, weight in x
++    AccelerationStructureBuildMode mode = AccelerationStructureBuildMode::BUILD;
+ };
+ 
+ /**
+@@ -50,11 +85,6 @@ struct AccelerationStructureInstance {
+     Handle<HwAccelerationStructure> blas;   //!< the bottom-level structure
+ };
+ 
+-enum class AccelerationStructureBuildMode : uint8_t {
+-    BUILD,      //!< full build
+-    REFIT,      //!< update in place (same topology, moved vertices or instances)
+-};
+-
+ } // namespace filament::backend
+ 
+ #endif // TNT_FILAMENT_BACKEND_ACCELERATIONSTRUCTURE_H
+diff --git a/filament/backend/include/private/backend/DriverAPI.inc b/filament/backend/include/private/backend/DriverAPI.inc
+index c6f26dff..3fcd45eb 100644
+--- a/filament/backend/include/private/backend/DriverAPI.inc
++++ b/filament/backend/include/private/backend/DriverAPI.inc
+@@ -703,6 +703,13 @@ DECL_DRIVER_API_N(buildAccelerationStructure,
+         backend::AccelerationStructureHandle, ash,
+         backend::AccelerationStructureBuildMode, mode)
+ 
++// Poses a deformable bottom-level acceleration structure's vertices (skinning and morphing, see
++// backend::AccelerationStructureDeformation) and builds or refits it from them; must run outside a
++// render pass.
++DECL_DRIVER_API_N(deformAccelerationStructure,
++        backend::AccelerationStructureHandle, ash,
++        backend::AccelerationStructureDeformation, deformation)
++
+ // Binds a top-level acceleration structure to an ACCELERATION_STRUCTURE descriptor.
+ DECL_DRIVER_API_N(updateDescriptorSetAccelerationStructure,
+         backend::DescriptorSetHandle, dsh,
+diff --git a/filament/backend/src/metal/MetalDriver.mm b/filament/backend/src/metal/MetalDriver.mm
+index 9cfea122..a95437de 100644
+--- a/filament/backend/src/metal/MetalDriver.mm
++++ b/filament/backend/src/metal/MetalDriver.mm
+@@ -2818,6 +2818,10 @@ void MetalDriver::buildAccelerationStructure(Handle<HwAccelerationStructure>,
+         AccelerationStructureBuildMode) {
+ }
+ 
++void MetalDriver::deformAccelerationStructure(Handle<HwAccelerationStructure>,
++        AccelerationStructureDeformation) {
++}
++
+ void MetalDriver::updateDescriptorSetAccelerationStructure(Handle<HwDescriptorSet>,
+         descriptor_binding_t, Handle<HwAccelerationStructure>) {
+ }
+diff --git a/filament/backend/src/noop/NoopDriver.cpp b/filament/backend/src/noop/NoopDriver.cpp
+index 0371b396..fb95cfbd 100644
+--- a/filament/backend/src/noop/NoopDriver.cpp
++++ b/filament/backend/src/noop/NoopDriver.cpp
+@@ -510,6 +510,10 @@ void NoopDriver::buildAccelerationStructure(Handle<HwAccelerationStructure>,
+         AccelerationStructureBuildMode) {
+ }
+ 
++void NoopDriver::deformAccelerationStructure(Handle<HwAccelerationStructure>,
++        AccelerationStructureDeformation) {
++}
++
+ void NoopDriver::updateDescriptorSetAccelerationStructure(Handle<HwDescriptorSet>,
+         descriptor_binding_t, Handle<HwAccelerationStructure>) {
+ }
+diff --git a/filament/backend/src/opengl/OpenGLDriver.cpp b/filament/backend/src/opengl/OpenGLDriver.cpp
+index f860d0c4..7568a3d0 100644
+--- a/filament/backend/src/opengl/OpenGLDriver.cpp
++++ b/filament/backend/src/opengl/OpenGLDriver.cpp
+@@ -5252,6 +5252,10 @@ void OpenGLDriver::buildAccelerationStructure(Handle<HwAccelerationStructure>,
+         AccelerationStructureBuildMode) {
+ }
+ 
++void OpenGLDriver::deformAccelerationStructure(Handle<HwAccelerationStructure>,
++        AccelerationStructureDeformation) {
++}
++
+ void OpenGLDriver::updateDescriptorSetAccelerationStructure(Handle<HwDescriptorSet>,
+         descriptor_binding_t, Handle<HwAccelerationStructure>) {
+ }
+diff --git a/filament/backend/src/vulkan/VulkanAccelerationStructure.cpp b/filament/backend/src/vulkan/VulkanAccelerationStructure.cpp
+index b1b0a335..1d73c67a 100644
+--- a/filament/backend/src/vulkan/VulkanAccelerationStructure.cpp
++++ b/filament/backend/src/vulkan/VulkanAccelerationStructure.cpp
+@@ -16,10 +16,14 @@
+ 
+ #include "VulkanAccelerationStructure.h"
+ 
++#include "VulkanBlasDeformer.h"
+ #include "VulkanCommands.h"
+ #include "VulkanContext.h"
+ #include "VulkanHandles.h"
+ #include "VulkanMemory.h"
++#include "VulkanTexture.h"
++
++#include "vulkan/utils/Image.h"
+ 
+ #include <utils/Logger.h>
+ #include <utils/Panic.h>
+@@ -63,6 +67,34 @@ VkDeviceSize alignUp(VkDeviceSize const value, VkDeviceSize const alignment) {
+     return (value + alignment - 1) / alignment * alignment;
+ }
+ 
++// the element formats the deformation shader decodes; false for the others
++bool positionFormat(ElementType const type, uint32_t& out) {
++    switch (type) {
++        case ElementType::FLOAT3:
++        case ElementType::FLOAT4: out = VulkanBlasDeformer::FLOAT; return true;
++        case ElementType::HALF3:
++        case ElementType::HALF4: out = VulkanBlasDeformer::HALF; return true;
++        default: return false;
++    }
++}
++
++bool jointsFormat(ElementType const type, uint32_t& out) {
++    switch (type) {
++        case ElementType::UBYTE4: out = VulkanBlasDeformer::UBYTE; return true;
++        case ElementType::USHORT4: out = VulkanBlasDeformer::USHORT; return true;
++        default: return false;
++    }
++}
++
++bool weightsFormat(ElementType const type, uint32_t& out) {
++    switch (type) {
++        case ElementType::FLOAT4: out = VulkanBlasDeformer::FLOAT; return true;
++        case ElementType::UBYTE4: out = VulkanBlasDeformer::UBYTE; return true;
++        case ElementType::USHORT4: out = VulkanBlasDeformer::USHORT; return true;
++        default: return false;
++    }
++}
++
+ } // namespace
+ 
+ struct VulkanAccelerationStructure::Impl {
+@@ -85,6 +117,10 @@ struct VulkanAccelerationStructure::Impl {
+         destroyBuffer(storage);
+         destroyBuffer(scratch);
+         destroyBuffer(instances);
++        destroyBuffer(posed);
++        if (morphPool != VK_NULL_HANDLE) {
++            vkDestroyDescriptorPool(device, morphPool, VKALLOC);
++        }
+     }
+ 
+     void createBuffer(Buffer& out, VkDeviceSize size, VkBufferUsageFlags usage, bool hostVisible) {
+@@ -146,8 +182,9 @@ struct VulkanAccelerationStructure::Impl {
+             .type = isTopLevel ? VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR
+                                : VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR,
+             .flags = VkBuildAccelerationStructureFlagsKHR(
+-                    (isTopLevel ? VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_BUILD_BIT_KHR
+-                                : VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR) |
++                    (isTopLevel || deformable
++                            ? VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_BUILD_BIT_KHR
++                            : VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR) |
+                     VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR),
+             .mode = refit ? VK_BUILD_ACCELERATION_STRUCTURE_MODE_UPDATE_KHR
+                           : VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
+@@ -186,6 +223,18 @@ struct VulkanAccelerationStructure::Impl {
+     uint32_t instanceCapacity = 0;  // top level only
+     uint32_t instanceCount = 0;     // top level only
+     uint32_t primitiveCount = 0;    // bottom level only
++    // deformable bottom level: the rest positions it poses, its posed copy and the morph target
++    // texture descriptor
++    bool deformable = false;
++    uint32_t vertexOffset = 0;
++    uint32_t vertexStride = 0;
++    ElementType vertexFormat = ElementType::FLOAT3;
++    uint32_t vertexCount = 0;
++    Buffer posed;
++    VkDescriptorPool morphPool = VK_NULL_HANDLE;
++    VkDescriptorSet morphSet = VK_NULL_HANDLE;
++    VkImageView morphView = VK_NULL_HANDLE;
++    fvkmemory::resource_ptr<VulkanTexture> morphTexture;
+     VkAccelerationStructureGeometryKHR geometry{};
+     // the inputs this structure reads, kept alive with it
+     fvkmemory::resource_ptr<VulkanBufferObject> vertexBuffer;
+@@ -202,6 +251,11 @@ VulkanAccelerationStructure::VulkanAccelerationStructure(VulkanContext const& co
+     Impl& impl = *mImpl;
+     impl.vertexBuffer = std::move(vertexBuffer);
+     impl.indexBuffer = std::move(indexBuffer);
++    impl.vertexOffset = geometry.vertexOffset;
++    impl.vertexStride = geometry.vertexStride;
++    impl.vertexFormat = geometry.vertexFormat;
++    impl.vertexCount = geometry.vertexCount;
++    impl.deformable = geometry.deformable;
+ 
+     VkAccelerationStructureGeometryTrianglesDataKHR triangles = {
+         .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR,
+@@ -213,6 +267,16 @@ VulkanAccelerationStructure::VulkanAccelerationStructure(VulkanContext const& co
+         .indexType = VK_INDEX_TYPE_NONE_KHR,
+         .transformData = { .deviceAddress = 0 },
+     };
++    if (impl.deformable) {
++        // built from the posed positions deform() writes, tightly packed float3
++        impl.createBuffer(impl.posed, VkDeviceSize(std::max(1u, geometry.vertexCount)) * 12u,
++                VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
++                        VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR,
++                false);
++        triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
++        triangles.vertexData.deviceAddress = impl.posed.address;
++        triangles.vertexStride = 12;
++    }
+     if (impl.indexBuffer) {
+         triangles.indexType = impl.indexBuffer->indexType;
+         triangles.indexData.deviceAddress =
+@@ -281,6 +345,151 @@ bool VulkanAccelerationStructure::isBuilt() const noexcept {
+     return mImpl->built;
+ }
+ 
++bool VulkanAccelerationStructure::isDeformable() const noexcept {
++    return mImpl->deformable;
++}
++
++bool VulkanAccelerationStructure::deform(VulkanCommandBuffer& commands,
++        VulkanBlasDeformer& deformer, DeformInputs const& in) {
++    Impl& impl = *mImpl;
++    AccelerationStructureDeformation const& d = in.desc;
++    if (!impl.deformable || !impl.vertexBuffer || impl.vertexCount == 0) {
++        return false;
++    }
++    VulkanBlasDeformer::PushConstants pc{};
++    if (!positionFormat(impl.vertexFormat, pc.positionFormat) ||
++            (impl.vertexOffset | impl.vertexStride) % 4u != 0) {
++        return false;
++    }
++    bool const skin = in.joints && in.weights && in.bones &&
++            jointsFormat(d.jointsType, pc.jointsFormat) &&
++            weightsFormat(d.weightsType, pc.weightsFormat) &&
++            (d.jointsOffset | d.jointsStride | d.weightsOffset | d.weightsStride) % 4u == 0 &&
++            d.bonesOffset % 16u == 0;
++    bool const morph = in.morphPositions && in.morphWeights && d.morphCount > 0;
++    VkDevice const dev = impl.device;
++    if (!deformer.initialize(dev)) {
++        return false;
++    }
++
++    pc.positions = bufferAddress(dev, impl.vertexBuffer->getVkBuffer()) + impl.vertexOffset;
++    pc.positionStride = impl.vertexStride;
++    pc.vertexCount = impl.vertexCount;
++    pc.posed = impl.posed.address;
++    if (skin) {
++        pc.joints = bufferAddress(dev, in.joints->getVkBuffer()) + d.jointsOffset;
++        pc.jointsStride = d.jointsStride;
++        pc.weights = bufferAddress(dev, in.weights->getVkBuffer()) + d.weightsOffset;
++        pc.weightsStride = d.weightsStride;
++        pc.bones = bufferAddress(dev, in.bones->getVkBuffer()) + d.bonesOffset;
++        pc.flags |= VulkanBlasDeformer::SKIN;
++    }
++    if (morph) {
++        if (impl.morphPool == VK_NULL_HANDLE) {
++            VkDescriptorPoolSize const size = {
++                .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
++                .descriptorCount = 1,
++            };
++            VkDescriptorPoolCreateInfo const poolInfo = {
++                .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
++                .maxSets = 1,
++                .poolSizeCount = 1,
++                .pPoolSizes = &size,
++            };
++            if (vkCreateDescriptorPool(dev, &poolInfo, VKALLOC, &impl.morphPool) != VK_SUCCESS) {
++                impl.morphPool = VK_NULL_HANDLE;
++                return false;
++            }
++            VkDescriptorSetLayout const layout = deformer.getMorphSetLayout();
++            VkDescriptorSetAllocateInfo const allocInfo = {
++                .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
++                .descriptorPool = impl.morphPool,
++                .descriptorSetCount = 1,
++                .pSetLayouts = &layout,
++            };
++            if (vkAllocateDescriptorSets(dev, &allocInfo, &impl.morphSet) != VK_SUCCESS) {
++                vkDestroyDescriptorPool(dev, impl.morphPool, VKALLOC);
++                impl.morphPool = VK_NULL_HANDLE;
++                impl.morphSet = VK_NULL_HANDLE;
++                return false;
++            }
++        }
++        VulkanTexture& texture = *in.morphPositions.get();
++        VkImageView const view = texture.getView(texture.getPrimaryViewRange());
++        if (view != impl.morphView) {
++            // A renderable's morph target texture is set once; rewriting the set while an earlier
++            // frame still reads it would need a second set, so a change is only taken here.
++            VkDescriptorImageInfo const info = {
++                .sampler = deformer.getSampler(),
++                .imageView = view,
++                .imageLayout = fvkutils::getVkLayout(texture.getSamplerLayout()),
++            };
++            VkWriteDescriptorSet const write = {
++                .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
++                .dstSet = impl.morphSet,
++                .dstBinding = 0,
++                .descriptorCount = 1,
++                .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
++                .pImageInfo = &info,
++            };
++            vkUpdateDescriptorSets(dev, 1, &write, 0, nullptr);
++            impl.morphView = view;
++            impl.morphTexture = in.morphPositions;
++        }
++        pc.morphWeights = bufferAddress(dev, in.morphWeights->getVkBuffer());
++        pc.morphOffset = d.morphOffset;
++        pc.morphCount = d.morphCount;
++        pc.flags |= VulkanBlasDeformer::MORPH;
++    }
++
++    commands.acquire(impl.vertexBuffer);
++    if (skin) {
++        commands.acquire(in.joints);
++        commands.acquire(in.weights);
++        commands.acquire(in.bones);
++    }
++    if (morph) {
++        commands.acquire(in.morphWeights);
++        commands.acquire(in.morphPositions);
++    }
++
++    VkCommandBuffer const cmd = commands.buffer();
++    // The bone palette, the morph weights and the geometry uploads must be complete, and the
++    // previous build must be done reading the posed positions.
++    VkMemoryBarrier const before = {
++        .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER,
++        .srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_HOST_WRITE_BIT,
++        .dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
++    };
++    vkCmdPipelineBarrier(cmd,
++            VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_HOST_BIT |
++                    VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
++            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1, &before, 0, nullptr, 0, nullptr);
++
++    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, deformer.getPipeline(morph));
++    if (morph) {
++        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, deformer.getLayout(true), 0,
++                1, &impl.morphSet, 0, nullptr);
++    }
++    vkCmdPushConstants(cmd, deformer.getLayout(morph), VK_SHADER_STAGE_COMPUTE_BIT, 0,
++            sizeof(pc), &pc);
++    vkCmdDispatch(cmd, (impl.vertexCount + VulkanBlasDeformer::WORKGROUP_SIZE - 1) /
++            VulkanBlasDeformer::WORKGROUP_SIZE, 1, 1);
++
++    // The posed positions feed the build; later uploads of the inputs wait for the reads.
++    VkMemoryBarrier const after = {
++        .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER,
++        .srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT,
++        .dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR,
++    };
++    vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
++            VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_TRANSFER_BIT,
++            0, 1, &after, 0, nullptr, 0, nullptr);
++
++    build(commands, d.mode);
++    return true;
++}
++
+ void VulkanAccelerationStructure::setInstances(AccelerationStructureInstance const* instances,
+         uint32_t count, BlasResolver const& resolve) {
+     Impl& impl = *mImpl;
+diff --git a/filament/backend/src/vulkan/VulkanAccelerationStructure.h b/filament/backend/src/vulkan/VulkanAccelerationStructure.h
+index 0bba9492..f4d396cd 100644
+--- a/filament/backend/src/vulkan/VulkanAccelerationStructure.h
++++ b/filament/backend/src/vulkan/VulkanAccelerationStructure.h
+@@ -39,6 +39,8 @@ struct VulkanBufferObject;
+ struct VulkanIndexBuffer;
+ struct VulkanCommandBuffer;
+ struct VulkanContext;
++struct VulkanTexture;
++class VulkanBlasDeformer;
+ 
+ /**
+  * A ray tracing acceleration structure (VK_KHR_acceleration_structure): either a bottom-level
+@@ -72,6 +74,24 @@ struct VulkanAccelerationStructure : public HwAccelerationStructure, fvkmemory::
+     // the structure visible to ray queries and to later builds.
+     void build(VulkanCommandBuffer& commands, AccelerationStructureBuildMode mode);
+ 
++    // The resolved inputs of deform().
++    struct DeformInputs {
++        AccelerationStructureDeformation desc;
++        fvkmemory::resource_ptr<VulkanBufferObject> joints;
++        fvkmemory::resource_ptr<VulkanBufferObject> weights;
++        fvkmemory::resource_ptr<VulkanBufferObject> bones;
++        fvkmemory::resource_ptr<VulkanBufferObject> morphWeights;
++        fvkmemory::resource_ptr<VulkanTexture> morphPositions;
++    };
++
++    // Deformable bottom level only: records the compute pass that poses the vertices into the
++    // structure's own position buffer, then the build (or refit) from them. False when nothing
++    // was recorded (not deformable, unsupported formats, or the pipelines are unavailable).
++    bool deform(VulkanCommandBuffer& commands, VulkanBlasDeformer& deformer,
++            DeformInputs const& inputs);
++
++    bool isDeformable() const noexcept;
++
+     VkAccelerationStructureKHR getHandle() const noexcept;
+     VkDeviceAddress getDeviceAddress() const noexcept;
+     bool isTopLevel() const noexcept;
+diff --git a/filament/backend/src/vulkan/VulkanBlasDeform.comp b/filament/backend/src/vulkan/VulkanBlasDeform.comp
+new file mode 100644
+index 00000000..ecbe6102
+--- /dev/null
++++ b/filament/backend/src/vulkan/VulkanBlasDeform.comp
+@@ -0,0 +1,151 @@
++#version 460
++// Poses the vertices of a skinned and/or morphed primitive for its bottom-level acceleration
++// structure: the same morphing (position deltas from the morph target texture, weighted by the
++// renderable's morph weights) and four-bone linear blend skinning (the renderable's bone palette)
++// as Filament's vertex shaders (shaders/src/surface_getters.vs), written as tightly packed
++// float3 positions the acceleration structure is built from.
++//
++// Regenerate VulkanBlasDeformSpirv.h after changing this file:
++//   glslangValidator -V --target-env vulkan1.1 --vn BLAS_DEFORM_SKIN_SPV -o skin.h VulkanBlasDeform.comp
++//   glslangValidator -V --target-env vulkan1.1 -DMORPH --vn BLAS_DEFORM_MORPH_SPV -o morph.h VulkanBlasDeform.comp
++// (see the header for the exact command the patch used).
++
++#extension GL_EXT_buffer_reference : require
++
++layout(local_size_x = 64) in;
++
++layout(buffer_reference, std430, buffer_reference_align = 4) readonly buffer Words {
++    uint w[];
++};
++layout(buffer_reference, std430, buffer_reference_align = 4) writeonly buffer Positions {
++    float f[];
++};
++layout(buffer_reference, std430, buffer_reference_align = 16) readonly buffer Vec4s {
++    vec4 v[];
++};
++
++#ifdef MORPH
++layout(set = 0, binding = 0) uniform highp sampler2DArray morphPositions;
++#endif
++
++// element formats (VulkanBlasDeformer::Format)
++const uint FORMAT_FLOAT = 0u;   // 32-bit float components
++const uint FORMAT_HALF = 1u;    // 16-bit float components
++const uint FORMAT_UBYTE = 2u;   // 8-bit unsigned components (normalized for weights)
++const uint FORMAT_USHORT = 3u;  // 16-bit unsigned components (normalized for weights)
++
++const uint FLAG_SKIN = 1u;
++const uint FLAG_MORPH = 2u;
++
++layout(push_constant) uniform Params {
++    Words positions;        // first position, `positionStride` bytes apart
++    Words joints;           // first bone index set
++    Words weights;          // first bone weight set
++    Vec4s bones;            // PerRenderableBoneUib::BoneData, four vec4 per bone
++    Vec4s morphWeights;     // one vec4 per morph target, weight in x
++    Positions posed;        // output: vertexCount * 3 floats
++    uint vertexCount;
++    uint positionStride;
++    uint positionFormat;
++    uint jointsStride;
++    uint jointsFormat;
++    uint weightsStride;
++    uint weightsFormat;
++    uint morphOffset;       // the primitive's offset into the morph target texture
++    uint morphCount;
++    uint flags;
++} params;
++
++uint wordAt(Words b, uint byteOffset) {
++    return b.w[byteOffset >> 2u];
++}
++
++// the 16-bit half of a word at an even byte offset
++uint halfAt(Words b, uint byteOffset) {
++    uint word = b.w[byteOffset >> 2u];
++    return (byteOffset & 2u) != 0u ? (word >> 16u) : (word & 0xFFFFu);
++}
++
++vec3 readPosition(uint v) {
++    uint o = v * params.positionStride;
++    if (params.positionFormat == FORMAT_HALF) {
++        return vec3(unpackHalf2x16(halfAt(params.positions, o) | (halfAt(params.positions, o + 2u) << 16u)),
++                unpackHalf2x16(halfAt(params.positions, o + 4u)).x);
++    }
++    return vec3(uintBitsToFloat(wordAt(params.positions, o)),
++            uintBitsToFloat(wordAt(params.positions, o + 4u)),
++            uintBitsToFloat(wordAt(params.positions, o + 8u)));
++}
++
++uvec4 readJoints(uint v) {
++    uint o = v * params.jointsStride;
++    if (params.jointsFormat == FORMAT_UBYTE) {
++        uint w = wordAt(params.joints, o);
++        return uvec4(w & 0xFFu, (w >> 8u) & 0xFFu, (w >> 16u) & 0xFFu, w >> 24u);
++    }
++    uint a = wordAt(params.joints, o);
++    uint b = wordAt(params.joints, o + 4u);
++    return uvec4(a & 0xFFFFu, a >> 16u, b & 0xFFFFu, b >> 16u);
++}
++
++vec4 readWeights(uint v) {
++    uint o = v * params.weightsStride;
++    if (params.weightsFormat == FORMAT_UBYTE) {
++        uint w = wordAt(params.weights, o);
++        return vec4(w & 0xFFu, (w >> 8u) & 0xFFu, (w >> 16u) & 0xFFu, w >> 24u) / 255.0;
++    }
++    if (params.weightsFormat == FORMAT_USHORT) {
++        uint a = wordAt(params.weights, o);
++        uint b = wordAt(params.weights, o + 4u);
++        return vec4(a & 0xFFFFu, a >> 16u, b & 0xFFFFu, b >> 16u) / 65535.0;
++    }
++    return vec4(uintBitsToFloat(wordAt(params.weights, o)),
++            uintBitsToFloat(wordAt(params.weights, o + 4u)),
++            uintBitsToFloat(wordAt(params.weights, o + 8u)),
++            uintBitsToFloat(wordAt(params.weights, o + 12u)));
++}
++
++// BoneData.transform holds the rows of a 3x4 matrix (last row [0, 0, 0, 1])
++vec3 mulBone(vec3 p, uint bone) {
++    uint i = bone * 4u;
++    vec4 r0 = params.bones.v[i];
++    vec4 r1 = params.bones.v[i + 1u];
++    vec4 r2 = params.bones.v[i + 2u];
++    return vec3(dot(r0.xyz, p) + r0.w, dot(r1.xyz, p) + r1.w, dot(r2.xyz, p) + r2.w);
++}
++
++void main() {
++    uint v = gl_GlobalInvocationID.x;
++    if (v >= params.vertexCount) {
++        return;
++    }
++    vec3 p = readPosition(v);
++#ifdef MORPH
++    if ((params.flags & FLAG_MORPH) != 0u) {
++        int index = int(v + params.morphOffset);
++        ivec3 texcoord = ivec3(index % 2048, index / 2048, 0);
++        for (uint t = 0u; t < params.morphCount; t++) {
++            float w = params.morphWeights.v[t].x;
++            if (w != 0.0) {
++                texcoord.z = int(t);
++                p += w * texelFetch(morphPositions, texcoord, 0).xyz;
++            }
++        }
++    }
++#endif
++    if ((params.flags & FLAG_SKIN) != 0u) {
++        uvec4 ids = readJoints(v);
++        vec4 weights = readWeights(v);
++        // a negative fourth weight marks more than four influences, which live in a texture
++        // this pass does not read: the first three are used
++        if (weights.w < 0.0) {
++            weights.w = 0.0;
++        }
++        p = weights.x * mulBone(p, ids.x) + weights.y * mulBone(p, ids.y)
++                + weights.z * mulBone(p, ids.z) + weights.w * mulBone(p, ids.w);
++    }
++    uint o = v * 3u;
++    params.posed.f[o] = p.x;
++    params.posed.f[o + 1u] = p.y;
++    params.posed.f[o + 2u] = p.z;
++}
+diff --git a/filament/backend/src/vulkan/VulkanBlasDeformSpirv.h b/filament/backend/src/vulkan/VulkanBlasDeformSpirv.h
+new file mode 100644
+index 00000000..6b966666
+--- /dev/null
++++ b/filament/backend/src/vulkan/VulkanBlasDeformSpirv.h
+@@ -0,0 +1,825 @@
++// Generated from VulkanBlasDeform.comp by glslangValidator (Vulkan SDK 1.4.363):
++//   glslangValidator -V --target-env vulkan1.1 --vn BLAS_DEFORM_SKIN_SPV VulkanBlasDeform.comp
++//   glslangValidator -V --target-env vulkan1.1 -DMORPH --vn BLAS_DEFORM_MORPH_SPV VulkanBlasDeform.comp
++#pragma once
++#include <stdint.h>
++static const uint32_t BLAS_DEFORM_SKIN_SPV[] = {
++	0x07230203,0x00010300,0x0008000b,0x000001ed,0x00000000,0x00020011,0x00000001,0x00020011,
++	0x000014e3,0x0009000a,0x5f565053,0x5f52484b,0x73796870,0x6c616369,0x6f74735f,0x65676172,
++	0x6675625f,0x00726566,0x0006000b,0x00000001,0x4c534c47,0x6474732e,0x3035342e,0x00000000,
++	0x0003000e,0x000014e4,0x00000001,0x0006000f,0x00000005,0x00000004,0x6e69616d,0x00000000,
++	0x00000183,0x00060010,0x00000004,0x00000011,0x00000040,0x00000001,0x00000001,0x00030003,
++	0x00000002,0x000001cc,0x00070004,0x455f4c47,0x625f5458,0x65666675,0x65725f72,0x65726566,
++	0x0065636e,0x00040005,0x00000004,0x6e69616d,0x00000000,0x00040005,0x00000009,0x64726f57,
++	0x00000073,0x00040006,0x00000009,0x00000000,0x00000077,0x00060005,0x0000000f,0x64726f77,
++	0x31287441,0x3b31753b,0x00000000,0x00030005,0x0000000d,0x00000062,0x00050005,0x0000000e,
++	0x65747962,0x7366664f,0x00007465,0x00060005,0x00000013,0x666c6168,0x31287441,0x3b31753b,
++	0x00000000,0x00030005,0x00000011,0x00000062,0x00050005,0x00000012,0x65747962,0x7366664f,
++	0x00007465,0x00070005,0x00000019,0x64616572,0x69736f50,0x6e6f6974,0x3b317528,0x00000000,
++	0x00030005,0x00000018,0x00000076,0x00060005,0x0000001e,0x64616572,0x6e696f4a,0x75287374,
++	0x00003b31,0x00030005,0x0000001d,0x00000076,0x00060005,0x00000023,0x64616572,0x67696557,
++	0x28737468,0x003b3175,0x00030005,0x00000022,0x00000076,0x00060005,0x00000029,0x426c756d,
++	0x28656e6f,0x3b336676,0x003b3175,0x00030005,0x00000027,0x00000070,0x00040005,0x00000028,
++	0x656e6f62,0x00000000,0x00040005,0x00000036,0x64726f77,0x00000000,0x00030005,0x0000004e,
++	0x0000006f,0x00040005,0x00000052,0x61726150,0x0000736d,0x00060006,0x00000052,0x00000000,
++	0x69736f70,0x6e6f6974,0x00000073,0x00050006,0x00000052,0x00000001,0x6e696f6a,0x00007374,
++	0x00050006,0x00000052,0x00000002,0x67696577,0x00737468,0x00050006,0x00000052,0x00000003,
++	0x656e6f62,0x00000073,0x00070006,0x00000052,0x00000004,0x70726f6d,0x69655768,0x73746867,
++	0x00000000,0x00050006,0x00000052,0x00000005,0x65736f70,0x00000064,0x00060006,0x00000052,
++	0x00000006,0x74726576,0x6f437865,0x00746e75,0x00070006,0x00000052,0x00000007,0x69736f70,
++	0x6e6f6974,0x69727453,0x00006564,0x00070006,0x00000052,0x00000008,0x69736f70,0x6e6f6974,
++	0x6d726f46,0x00007461,0x00070006,0x00000052,0x00000009,0x6e696f6a,0x74537374,0x65646972,
++	0x00000000,0x00070006,0x00000052,0x0000000a,0x6e696f6a,0x6f467374,0x74616d72,0x00000000,
++	0x00070006,0x00000052,0x0000000b,0x67696577,0x53737468,0x64697274,0x00000065,0x00070006,
++	0x00000052,0x0000000c,0x67696577,0x46737468,0x616d726f,0x00000074,0x00060006,0x00000052,
++	0x0000000d,0x70726f6d,0x66664f68,0x00746573,0x00060006,0x00000052,0x0000000e,0x70726f6d,
++	0x756f4368,0x0000746e,0x00050006,0x00000052,0x0000000f,0x67616c66,0x00000073,0x00040005,
++	0x00000054,0x34636556,0x00000073,0x00040006,0x00000054,0x00000000,0x00000076,0x00050005,
++	0x00000056,0x69736f50,0x6e6f6974,0x00000073,0x00040006,0x00000056,0x00000000,0x00000066,
++	0x00040005,0x00000058,0x61726170,0x0000736d,0x00040005,0x00000065,0x61726170,0x0000006d,
++	0x00040005,0x00000069,0x61726170,0x0000006d,0x00040005,0x0000006e,0x61726170,0x0000006d,
++	0x00040005,0x00000071,0x61726170,0x0000006d,0x00040005,0x0000007a,0x61726170,0x0000006d,
++	0x00040005,0x0000007d,0x61726170,0x0000006d,0x00040005,0x00000085,0x61726170,0x0000006d,
++	0x00040005,0x00000088,0x61726170,0x0000006d,0x00040005,0x0000008e,0x61726170,0x0000006d,
++	0x00040005,0x00000091,0x61726170,0x0000006d,0x00040005,0x00000097,0x61726170,0x0000006d,
++	0x00040005,0x0000009a,0x61726170,0x0000006d,0x00030005,0x000000a0,0x0000006f,0x00030005,
++	0x000000ac,0x00000077,0x00040005,0x000000ae,0x61726170,0x0000006d,0x00040005,0x000000b1,
++	0x61726170,0x0000006d,0x00030005,0x000000c2,0x00000061,0x00040005,0x000000c3,0x61726170,
++	0x0000006d,0x00040005,0x000000c6,0x61726170,0x0000006d,0x00030005,0x000000c9,0x00000062,
++	0x00040005,0x000000cc,0x61726170,0x0000006d,0x00040005,0x000000cf,0x61726170,0x0000006d,
++	0x00030005,0x000000dc,0x0000006f,0x00030005,0x000000e8,0x00000077,0x00040005,0x000000ea,
++	0x61726170,0x0000006d,0x00040005,0x000000ed,0x61726170,0x0000006d,0x00030005,0x00000109,
++	0x00000061,0x00040005,0x0000010a,0x61726170,0x0000006d,0x00040005,0x0000010d,0x61726170,
++	0x0000006d,0x00030005,0x00000110,0x00000062,0x00040005,0x00000113,0x61726170,0x0000006d,
++	0x00040005,0x00000116,0x61726170,0x0000006d,0x00040005,0x00000129,0x61726170,0x0000006d,
++	0x00040005,0x0000012c,0x61726170,0x0000006d,0x00040005,0x00000132,0x61726170,0x0000006d,
++	0x00040005,0x00000135,0x61726170,0x0000006d,0x00040005,0x0000013a,0x61726170,0x0000006d,
++	0x00040005,0x0000013d,0x61726170,0x0000006d,0x00040005,0x00000143,0x61726170,0x0000006d,
++	0x00040005,0x00000146,0x61726170,0x0000006d,0x00030005,0x0000014c,0x00000069,0x00030005,
++	0x00000150,0x00003072,0x00030005,0x00000159,0x00003172,0x00030005,0x00000160,0x00003272,
++	0x00030005,0x00000180,0x00000076,0x00080005,0x00000183,0x475f6c67,0x61626f6c,0x766e496c,
++	0x7461636f,0x496e6f69,0x00000044,0x00030005,0x0000018f,0x00000070,0x00040005,0x00000190,
++	0x61726170,0x0000006d,0x00030005,0x0000019b,0x00736469,0x00040005,0x0000019c,0x61726170,
++	0x0000006d,0x00040005,0x0000019f,0x67696577,0x00737468,0x00040005,0x000001a0,0x61726170,
++	0x0000006d,0x00040005,0x000001ac,0x61726170,0x0000006d,0x00040005,0x000001ae,0x61726170,
++	0x0000006d,0x00040005,0x000001b5,0x61726170,0x0000006d,0x00040005,0x000001b7,0x61726170,
++	0x0000006d,0x00040005,0x000001bf,0x61726170,0x0000006d,0x00040005,0x000001c1,0x61726170,
++	0x0000006d,0x00040005,0x000001c9,0x61726170,0x0000006d,0x00040005,0x000001cb,0x61726170,
++	0x0000006d,0x00030005,0x000001d1,0x0000006f,0x00040047,0x00000008,0x00000006,0x00000004,
++	0x00030047,0x00000009,0x00000002,0x00040048,0x00000009,0x00000000,0x00000018,0x00050048,
++	0x00000009,0x00000000,0x00000023,0x00000000,0x00030047,0x0000000d,0x000014ec,0x00030047,
++	0x00000011,0x000014ec,0x00030047,0x00000052,0x00000002,0x00050048,0x00000052,0x00000000,
++	0x00000023,0x00000000,0x00050048,0x00000052,0x00000001,0x00000023,0x00000008,0x00050048,
++	0x00000052,0x00000002,0x00000023,0x00000010,0x00050048,0x00000052,0x00000003,0x00000023,
++	0x00000018,0x00050048,0x00000052,0x00000004,0x00000023,0x00000020,0x00050048,0x00000052,
++	0x00000005,0x00000023,0x00000028,0x00050048,0x00000052,0x00000006,0x00000023,0x00000030,
++	0x00050048,0x00000052,0x00000007,0x00000023,0x00000034,0x00050048,0x00000052,0x00000008,
++	0x00000023,0x00000038,0x00050048,0x00000052,0x00000009,0x00000023,0x0000003c,0x00050048,
++	0x00000052,0x0000000a,0x00000023,0x00000040,0x00050048,0x00000052,0x0000000b,0x00000023,
++	0x00000044,0x00050048,0x00000052,0x0000000c,0x00000023,0x00000048,0x00050048,0x00000052,
++	0x0000000d,0x00000023,0x0000004c,0x00050048,0x00000052,0x0000000e,0x00000023,0x00000050,
++	0x00050048,0x00000052,0x0000000f,0x00000023,0x00000054,0x00040047,0x00000053,0x00000006,
++	0x00000010,0x00030047,0x00000054,0x00000002,0x00040048,0x00000054,0x00000000,0x00000018,
++	0x00050048,0x00000054,0x00000000,0x00000023,0x00000000,0x00040047,0x00000055,0x00000006,
++	0x00000004,0x00030047,0x00000056,0x00000002,0x00040048,0x00000056,0x00000000,0x00000019,
++	0x00050048,0x00000056,0x00000000,0x00000023,0x00000000,0x00030047,0x00000065,0x000014ec,
++	0x00030047,0x0000006e,0x000014ec,0x00030047,0x0000007a,0x000014ec,0x00030047,0x00000085,
++	0x000014ec,0x00030047,0x0000008e,0x000014ec,0x00030047,0x00000097,0x000014ec,0x00030047,
++	0x000000ae,0x000014ec,0x00030047,0x000000c3,0x000014ec,0x00030047,0x000000cc,0x000014ec,
++	0x00030047,0x000000ea,0x000014ec,0x00030047,0x0000010a,0x000014ec,0x00030047,0x00000113,
++	0x000014ec,0x00030047,0x00000129,0x000014ec,0x00030047,0x00000132,0x000014ec,0x00030047,
++	0x0000013a,0x000014ec,0x00030047,0x00000143,0x000014ec,0x00040047,0x00000183,0x0000000b,
++	0x0000001c,0x00040047,0x000001ec,0x0000000b,0x00000019,0x00020013,0x00000002,0x00030021,
++	0x00000003,0x00000002,0x00030027,0x00000006,0x000014e5,0x00040015,0x00000007,0x00000020,
++	0x00000000,0x0003001d,0x00000008,0x00000007,0x0003001e,0x00000009,0x00000008,0x00040020,
++	0x00000006,0x000014e5,0x00000009,0x00040020,0x0000000a,0x00000007,0x00000006,0x00040020,
++	0x0000000b,0x00000007,0x00000007,0x00050021,0x0000000c,0x00000007,0x0000000a,0x0000000b,
++	0x00030016,0x00000015,0x00000020,0x00040017,0x00000016,0x00000015,0x00000003,0x00040021,
++	0x00000017,0x00000016,0x0000000b,0x00040017,0x0000001b,0x00000007,0x00000004,0x00040021,
++	0x0000001c,0x0000001b,0x0000000b,0x00040017,0x00000020,0x00000015,0x00000004,0x00040021,
++	0x00000021,0x00000020,0x0000000b,0x00040020,0x00000025,0x00000007,0x00000016,0x00050021,
++	0x00000026,0x00000016,0x00000025,0x0000000b,0x00040015,0x0000002c,0x00000020,0x00000001,
++	0x0004002b,0x0000002c,0x0000002d,0x00000000,0x0004002b,0x00000007,0x0000002f,0x00000002,
++	0x00040020,0x00000031,0x000014e5,0x00000007,0x0004002b,0x00000007,0x0000003e,0x00000000,
++	0x00020014,0x0000003f,0x0004002b,0x00000007,0x00000045,0x00000010,0x0004002b,0x00000007,
++	0x00000049,0x0000ffff,0x00030027,0x00000050,0x000014e5,0x00030027,0x00000051,0x000014e5,
++	0x0012001e,0x00000052,0x00000006,0x00000006,0x00000006,0x00000050,0x00000050,0x00000051,
++	0x00000007,0x00000007,0x00000007,0x00000007,0x00000007,0x00000007,0x00000007,0x00000007,
++	0x00000007,0x00000007,0x0003001d,0x00000053,0x00000020,0x0003001e,0x00000054,0x00000053,
++	0x00040020,0x00000050,0x000014e5,0x00000054,0x0003001d,0x00000055,0x00000015,0x0003001e,
++	0x00000056,0x00000055,0x00040020,0x00000051,0x000014e5,0x00000056,0x00040020,0x00000057,
++	0x00000009,0x00000052,0x0004003b,0x00000057,0x00000058,0x00000009,0x0004002b,0x0000002c,
++	0x00000059,0x00000007,0x00040020,0x0000005a,0x00000009,0x00000007,0x0004002b,0x0000002c,
++	0x0000005e,0x00000008,0x0004002b,0x00000007,0x00000061,0x00000001,0x00040020,0x00000066,
++	0x00000009,0x00000006,0x00040017,0x00000075,0x00000015,0x00000002,0x0004002b,0x00000007,
++	0x00000078,0x00000004,0x0004002b,0x00000007,0x00000095,0x00000008,0x0004002b,0x0000002c,
++	0x000000a2,0x00000009,0x0004002b,0x0000002c,0x000000a6,0x0000000a,0x0004002b,0x0000002c,
++	0x000000ad,0x00000001,0x0004002b,0x00000007,0x000000b5,0x000000ff,0x0004002b,0x00000007,
++	0x000000be,0x00000018,0x0004002b,0x0000002c,0x000000de,0x0000000b,0x0004002b,0x0000002c,
++	0x000000e2,0x0000000c,0x0004002b,0x0000002c,0x000000e9,0x00000002,0x0004002b,0x00000015,
++	0x000000ff,0x437f0000,0x0004002b,0x00000007,0x00000105,0x00000003,0x0004002b,0x00000015,
++	0x00000125,0x477fff00,0x0004002b,0x00000007,0x00000141,0x0000000c,0x00040020,0x0000014f,
++	0x00000007,0x00000020,0x0004002b,0x0000002c,0x00000151,0x00000003,0x00040020,0x00000152,
++	0x00000009,0x00000050,0x00040020,0x00000156,0x000014e5,0x00000020,0x00040020,0x0000016b,
++	0x00000007,0x00000015,0x00040017,0x00000181,0x00000007,0x00000003,0x00040020,0x00000182,
++	0x00000001,0x00000181,0x0004003b,0x00000182,0x00000183,0x00000001,0x00040020,0x00000184,
++	0x00000001,0x00000007,0x0004002b,0x0000002c,0x00000188,0x00000006,0x0004002b,0x0000002c,
++	0x00000193,0x0000000f,0x00040020,0x0000019a,0x00000007,0x0000001b,0x0004002b,0x00000015,
++	0x000001a5,0x00000000,0x0004002b,0x0000002c,0x000001d4,0x00000005,0x00040020,0x000001d5,
++	0x00000009,0x00000051,0x00040020,0x000001db,0x000014e5,0x00000015,0x0004002b,0x00000007,
++	0x000001eb,0x00000040,0x0006002c,0x00000181,0x000001ec,0x000001eb,0x00000061,0x00000061,
++	0x00050036,0x00000002,0x00000004,0x00000000,0x00000003,0x000200f8,0x00000005,0x0004003b,
++	0x0000000b,0x00000180,0x00000007,0x0004003b,0x00000025,0x0000018f,0x00000007,0x0004003b,
++	0x0000000b,0x00000190,0x00000007,0x0004003b,0x0000019a,0x0000019b,0x00000007,0x0004003b,
++	0x0000000b,0x0000019c,0x00000007,0x0004003b,0x0000014f,0x0000019f,0x00000007,0x0004003b,
++	0x0000000b,0x000001a0,0x00000007,0x0004003b,0x00000025,0x000001ac,0x00000007,0x0004003b,
++	0x0000000b,0x000001ae,0x00000007,0x0004003b,0x00000025,0x000001b5,0x00000007,0x0004003b,
++	0x0000000b,0x000001b7,0x00000007,0x0004003b,0x00000025,0x000001bf,0x00000007,0x0004003b,
++	0x0000000b,0x000001c1,0x00000007,0x0004003b,0x00000025,0x000001c9,0x00000007,0x0004003b,
++	0x0000000b,0x000001cb,0x00000007,0x0004003b,0x0000000b,0x000001d1,0x00000007,0x00050041,
++	0x00000184,0x00000185,0x00000183,0x0000003e,0x0004003d,0x00000007,0x00000186,0x00000185,
++	0x0003003e,0x00000180,0x00000186,0x0004003d,0x00000007,0x00000187,0x00000180,0x00050041,
++	0x0000005a,0x00000189,0x00000058,0x00000188,0x0004003d,0x00000007,0x0000018a,0x00000189,
++	0x000500ae,0x0000003f,0x0000018b,0x00000187,0x0000018a,0x000300f7,0x0000018d,0x00000000,
++	0x000400fa,0x0000018b,0x0000018c,0x0000018d,0x000200f8,0x0000018c,0x000100fd,0x000200f8,
++	0x0000018d,0x0004003d,0x00000007,0x00000191,0x00000180,0x0003003e,0x00000190,0x00000191,
++	0x00050039,0x00000016,0x00000192,0x00000019,0x00000190,0x0003003e,0x0000018f,0x00000192,
++	0x00050041,0x0000005a,0x00000194,0x00000058,0x00000193,0x0004003d,0x00000007,0x00000195,
++	0x00000194,0x000500c7,0x00000007,0x00000196,0x00000195,0x00000061,0x000500ab,0x0000003f,
++	0x00000197,0x00000196,0x0000003e,0x000300f7,0x00000199,0x00000000,0x000400fa,0x00000197,
++	0x00000198,0x00000199,0x000200f8,0x00000198,0x0004003d,0x00000007,0x0000019d,0x00000180,
++	0x0003003e,0x0000019c,0x0000019d,0x00050039,0x0000001b,0x0000019e,0x0000001e,0x0000019c,
++	0x0003003e,0x0000019b,0x0000019e,0x0004003d,0x00000007,0x000001a1,0x00000180,0x0003003e,
++	0x000001a0,0x000001a1,0x00050039,0x00000020,0x000001a2,0x00000023,0x000001a0,0x0003003e,
++	0x0000019f,0x000001a2,0x00050041,0x0000016b,0x000001a3,0x0000019f,0x00000105,0x0004003d,
++	0x00000015,0x000001a4,0x000001a3,0x000500b8,0x0000003f,0x000001a6,0x000001a4,0x000001a5,
++	0x000300f7,0x000001a8,0x00000000,0x000400fa,0x000001a6,0x000001a7,0x000001a8,0x000200f8,
++	0x000001a7,0x00050041,0x0000016b,0x000001a9,0x0000019f,0x00000105,0x0003003e,0x000001a9,
++	0x000001a5,0x000200f9,0x000001a8,0x000200f8,0x000001a8,0x00050041,0x0000016b,0x000001aa,
++	0x0000019f,0x0000003e,0x0004003d,0x00000015,0x000001ab,0x000001aa,0x0004003d,0x00000016,
++	0x000001ad,0x0000018f,0x0003003e,0x000001ac,0x000001ad,0x00050041,0x0000000b,0x000001af,
++	0x0000019b,0x0000003e,0x0004003d,0x00000007,0x000001b0,0x000001af,0x0003003e,0x000001ae,
++	0x000001b0,0x00060039,0x00000016,0x000001b1,0x00000029,0x000001ac,0x000001ae,0x0005008e,
++	0x00000016,0x000001b2,0x000001b1,0x000001ab,0x00050041,0x0000016b,0x000001b3,0x0000019f,
++	0x00000061,0x0004003d,0x00000015,0x000001b4,0x000001b3,0x0004003d,0x00000016,0x000001b6,
++	0x0000018f,0x0003003e,0x000001b5,0x000001b6,0x00050041,0x0000000b,0x000001b8,0x0000019b,
++	0x00000061,0x0004003d,0x00000007,0x000001b9,0x000001b8,0x0003003e,0x000001b7,0x000001b9,
++	0x00060039,0x00000016,0x000001ba,0x00000029,0x000001b5,0x000001b7,0x0005008e,0x00000016,
++	0x000001bb,0x000001ba,0x000001b4,0x00050081,0x00000016,0x000001bc,0x000001b2,0x000001bb,
++	0x00050041,0x0000016b,0x000001bd,0x0000019f,0x0000002f,0x0004003d,0x00000015,0x000001be,
++	0x000001bd,0x0004003d,0x00000016,0x000001c0,0x0000018f,0x0003003e,0x000001bf,0x000001c0,
++	0x00050041,0x0000000b,0x000001c2,0x0000019b,0x0000002f,0x0004003d,0x00000007,0x000001c3,
++	0x000001c2,0x0003003e,0x000001c1,0x000001c3,0x00060039,0x00000016,0x000001c4,0x00000029,
++	0x000001bf,0x000001c1,0x0005008e,0x00000016,0x000001c5,0x000001c4,0x000001be,0x00050081,
++	0x00000016,0x000001c6,0x000001bc,0x000001c5,0x00050041,0x0000016b,0x000001c7,0x0000019f,
++	0x00000105,0x0004003d,0x00000015,0x000001c8,0x000001c7,0x0004003d,0x00000016,0x000001ca,
++	0x0000018f,0x0003003e,0x000001c9,0x000001ca,0x00050041,0x0000000b,0x000001cc,0x0000019b,
++	0x00000105,0x0004003d,0x00000007,0x000001cd,0x000001cc,0x0003003e,0x000001cb,0x000001cd,
++	0x00060039,0x00000016,0x000001ce,0x00000029,0x000001c9,0x000001cb,0x0005008e,0x00000016,
++	0x000001cf,0x000001ce,0x000001c8,0x00050081,0x00000016,0x000001d0,0x000001c6,0x000001cf,
++	0x0003003e,0x0000018f,0x000001d0,0x000200f9,0x00000199,0x000200f8,0x00000199,0x0004003d,
++	0x00000007,0x000001d2,0x00000180,0x00050084,0x00000007,0x000001d3,0x000001d2,0x00000105,
++	0x0003003e,0x000001d1,0x000001d3,0x00050041,0x000001d5,0x000001d6,0x00000058,0x000001d4,
++	0x0004003d,0x00000051,0x000001d7,0x000001d6,0x0004003d,0x00000007,0x000001d8,0x000001d1,
++	0x00050041,0x0000016b,0x000001d9,0x0000018f,0x0000003e,0x0004003d,0x00000015,0x000001da,
++	0x000001d9,0x00060041,0x000001db,0x000001dc,0x000001d7,0x0000002d,0x000001d8,0x0005003e,
++	0x000001dc,0x000001da,0x00000002,0x00000004,0x00050041,0x000001d5,0x000001dd,0x00000058,
++	0x000001d4,0x0004003d,0x00000051,0x000001de,0x000001dd,0x0004003d,0x00000007,0x000001df,
++	0x000001d1,0x00050080,0x00000007,0x000001e0,0x000001df,0x00000061,0x00050041,0x0000016b,
++	0x000001e1,0x0000018f,0x00000061,0x0004003d,0x00000015,0x000001e2,0x000001e1,0x00060041,
++	0x000001db,0x000001e3,0x000001de,0x0000002d,0x000001e0,0x0005003e,0x000001e3,0x000001e2,
++	0x00000002,0x00000004,0x00050041,0x000001d5,0x000001e4,0x00000058,0x000001d4,0x0004003d,
++	0x00000051,0x000001e5,0x000001e4,0x0004003d,0x00000007,0x000001e6,0x000001d1,0x00050080,
++	0x00000007,0x000001e7,0x000001e6,0x0000002f,0x00050041,0x0000016b,0x000001e8,0x0000018f,
++	0x0000002f,0x0004003d,0x00000015,0x000001e9,0x000001e8,0x00060041,0x000001db,0x000001ea,
++	0x000001e5,0x0000002d,0x000001e7,0x0005003e,0x000001ea,0x000001e9,0x00000002,0x00000004,
++	0x000100fd,0x00010038,0x00050036,0x00000007,0x0000000f,0x00000000,0x0000000c,0x00030037,
++	0x0000000a,0x0000000d,0x00030037,0x0000000b,0x0000000e,0x000200f8,0x00000010,0x0004003d,
++	0x00000006,0x0000002b,0x0000000d,0x0004003d,0x00000007,0x0000002e,0x0000000e,0x000500c2,
++	0x00000007,0x00000030,0x0000002e,0x0000002f,0x00060041,0x00000031,0x00000032,0x0000002b,
++	0x0000002d,0x00000030,0x0006003d,0x00000007,0x00000033,0x00000032,0x00000002,0x00000004,
++	0x000200fe,0x00000033,0x00010038,0x00050036,0x00000007,0x00000013,0x00000000,0x0000000c,
++	0x00030037,0x0000000a,0x00000011,0x00030037,0x0000000b,0x00000012,0x000200f8,0x00000014,
++	0x0004003b,0x0000000b,0x00000036,0x00000007,0x0004003b,0x0000000b,0x00000041,0x00000007,
++	0x0004003d,0x00000006,0x00000037,0x00000011,0x0004003d,0x00000007,0x00000038,0x00000012,
++	0x000500c2,0x00000007,0x00000039,0x00000038,0x0000002f,0x00060041,0x00000031,0x0000003a,
++	0x00000037,0x0000002d,0x00000039,0x0006003d,0x00000007,0x0000003b,0x0000003a,0x00000002,
++	0x00000004,0x0003003e,0x00000036,0x0000003b,0x0004003d,0x00000007,0x0000003c,0x00000012,
++	0x000500c7,0x00000007,0x0000003d,0x0000003c,0x0000002f,0x000500ab,0x0000003f,0x00000040,
++	0x0000003d,0x0000003e,0x000300f7,0x00000043,0x00000000,0x000400fa,0x00000040,0x00000042,
++	0x00000047,0x000200f8,0x00000042,0x0004003d,0x00000007,0x00000044,0x00000036,0x000500c2,
++	0x00000007,0x00000046,0x00000044,0x00000045,0x0003003e,0x00000041,0x00000046,0x000200f9,
++	0x00000043,0x000200f8,0x00000047,0x0004003d,0x00000007,0x00000048,0x00000036,0x000500c7,
++	0x00000007,0x0000004a,0x00000048,0x00000049,0x0003003e,0x00000041,0x0000004a,0x000200f9,
++	0x00000043,0x000200f8,0x00000043,0x0004003d,0x00000007,0x0000004b,0x00000041,0x000200fe,
++	0x0000004b,0x00010038,0x00050036,0x00000016,0x00000019,0x00000000,0x00000017,0x00030037,
++	0x0000000b,0x00000018,0x000200f8,0x0000001a,0x0004003b,0x0000000b,0x0000004e,0x00000007,
++	0x0004003b,0x0000000a,0x00000065,0x00000007,0x0004003b,0x0000000b,0x00000069,0x00000007,
++	0x0004003b,0x0000000a,0x0000006e,0x00000007,0x0004003b,0x0000000b,0x00000071,0x00000007,
++	0x0004003b,0x0000000a,0x0000007a,0x00000007,0x0004003b,0x0000000b,0x0000007d,0x00000007,
++	0x0004003b,0x0000000a,0x00000085,0x00000007,0x0004003b,0x0000000b,0x00000088,0x00000007,
++	0x0004003b,0x0000000a,0x0000008e,0x00000007,0x0004003b,0x0000000b,0x00000091,0x00000007,
++	0x0004003b,0x0000000a,0x00000097,0x00000007,0x0004003b,0x0000000b,0x0000009a,0x00000007,
++	0x0004003d,0x00000007,0x0000004f,0x00000018,0x00050041,0x0000005a,0x0000005b,0x00000058,
++	0x00000059,0x0004003d,0x00000007,0x0000005c,0x0000005b,0x00050084,0x00000007,0x0000005d,
++	0x0000004f,0x0000005c,0x0003003e,0x0000004e,0x0000005d,0x00050041,0x0000005a,0x0000005f,
++	0x00000058,0x0000005e,0x0004003d,0x00000007,0x00000060,0x0000005f,0x000500aa,0x0000003f,
++	0x00000062,0x00000060,0x00000061,0x000300f7,0x00000064,0x00000000,0x000400fa,0x00000062,
++	0x00000063,0x00000064,0x000200f8,0x00000063,0x00050041,0x00000066,0x00000067,0x00000058,
++	0x0000002d,0x0004003d,0x00000006,0x00000068,0x00000067,0x0003003e,0x00000065,0x00000068,
++	0x0004003d,0x00000007,0x0000006a,0x0000004e,0x0003003e,0x00000069,0x0000006a,0x00060039,
++	0x00000007,0x0000006b,0x00000013,0x00000065,0x00000069,0x0004003d,0x00000007,0x0000006c,
++	0x0000004e,0x00050080,0x00000007,0x0000006d,0x0000006c,0x0000002f,0x00050041,0x00000066,
++	0x0000006f,0x00000058,0x0000002d,0x0004003d,0x00000006,0x00000070,0x0000006f,0x0003003e,
++	0x0000006e,0x00000070,0x0003003e,0x00000071,0x0000006d,0x00060039,0x00000007,0x00000072,
++	0x00000013,0x0000006e,0x00000071,0x000500c4,0x00000007,0x00000073,0x00000072,0x00000045,
++	0x000500c5,0x00000007,0x00000074,0x0000006b,0x00000073,0x0006000c,0x00000075,0x00000076,
++	0x00000001,0x0000003e,0x00000074,0x0004003d,0x00000007,0x00000077,0x0000004e,0x00050080,
++	0x00000007,0x00000079,0x00000077,0x00000078,0x00050041,0x00000066,0x0000007b,0x00000058,
++	0x0000002d,0x0004003d,0x00000006,0x0000007c,0x0000007b,0x0003003e,0x0000007a,0x0000007c,
++	0x0003003e,0x0000007d,0x00000079,0x00060039,0x00000007,0x0000007e,0x00000013,0x0000007a,
++	0x0000007d,0x0006000c,0x00000075,0x0000007f,0x00000001,0x0000003e,0x0000007e,0x00050051,
++	0x00000015,0x00000080,0x0000007f,0x00000000,0x00050051,0x00000015,0x00000081,0x00000076,
++	0x00000000,0x00050051,0x00000015,0x00000082,0x00000076,0x00000001,0x00060050,0x00000016,
++	0x00000083,0x00000081,0x00000082,0x00000080,0x000200fe,0x00000083,0x000200f8,0x00000064,
++	0x00050041,0x00000066,0x00000086,0x00000058,0x0000002d,0x0004003d,0x00000006,0x00000087,
++	0x00000086,0x0003003e,0x00000085,0x00000087,0x0004003d,0x00000007,0x00000089,0x0000004e,
++	0x0003003e,0x00000088,0x00000089,0x00060039,0x00000007,0x0000008a,0x0000000f,0x00000085,
++	0x00000088,0x0004007c,0x00000015,0x0000008b,0x0000008a,0x0004003d,0x00000007,0x0000008c,
++	0x0000004e,0x00050080,0x00000007,0x0000008d,0x0000008c,0x00000078,0x00050041,0x00000066,
++	0x0000008f,0x00000058,0x0000002d,0x0004003d,0x00000006,0x00000090,0x0000008f,0x0003003e,
++	0x0000008e,0x00000090,0x0003003e,0x00000091,0x0000008d,0x00060039,0x00000007,0x00000092,
++	0x0000000f,0x0000008e,0x00000091,0x0004007c,0x00000015,0x00000093,0x00000092,0x0004003d,
++	0x00000007,0x00000094,0x0000004e,0x00050080,0x00000007,0x00000096,0x00000094,0x00000095,
++	0x00050041,0x00000066,0x00000098,0x00000058,0x0000002d,0x0004003d,0x00000006,0x00000099,
++	0x00000098,0x0003003e,0x00000097,0x00000099,0x0003003e,0x0000009a,0x00000096,0x00060039,
++	0x00000007,0x0000009b,0x0000000f,0x00000097,0x0000009a,0x0004007c,0x00000015,0x0000009c,
++	0x0000009b,0x00060050,0x00000016,0x0000009d,0x0000008b,0x00000093,0x0000009c,0x000200fe,
++	0x0000009d,0x00010038,0x00050036,0x0000001b,0x0000001e,0x00000000,0x0000001c,0x00030037,
++	0x0000000b,0x0000001d,0x000200f8,0x0000001f,0x0004003b,0x0000000b,0x000000a0,0x00000007,
++	0x0004003b,0x0000000b,0x000000ac,0x00000007,0x0004003b,0x0000000a,0x000000ae,0x00000007,
++	0x0004003b,0x0000000b,0x000000b1,0x00000007,0x0004003b,0x0000000b,0x000000c2,0x00000007,
++	0x0004003b,0x0000000a,0x000000c3,0x00000007,0x0004003b,0x0000000b,0x000000c6,0x00000007,
++	0x0004003b,0x0000000b,0x000000c9,0x00000007,0x0004003b,0x0000000a,0x000000cc,0x00000007,
++	0x0004003b,0x0000000b,0x000000cf,0x00000007,0x0004003d,0x00000007,0x000000a1,0x0000001d,
++	0x00050041,0x0000005a,0x000000a3,0x00000058,0x000000a2,0x0004003d,0x00000007,0x000000a4,
++	0x000000a3,0x00050084,0x00000007,0x000000a5,0x000000a1,0x000000a4,0x0003003e,0x000000a0,
++	0x000000a5,0x00050041,0x0000005a,0x000000a7,0x00000058,0x000000a6,0x0004003d,0x00000007,
++	0x000000a8,0x000000a7,0x000500aa,0x0000003f,0x000000a9,0x000000a8,0x0000002f,0x000300f7,
++	0x000000ab,0x00000000,0x000400fa,0x000000a9,0x000000aa,0x000000ab,0x000200f8,0x000000aa,
++	0x00050041,0x00000066,0x000000af,0x00000058,0x000000ad,0x0004003d,0x00000006,0x000000b0,
++	0x000000af,0x0003003e,0x000000ae,0x000000b0,0x0004003d,0x00000007,0x000000b2,0x000000a0,
++	0x0003003e,0x000000b1,0x000000b2,0x00060039,0x00000007,0x000000b3,0x0000000f,0x000000ae,
++	0x000000b1,0x0003003e,0x000000ac,0x000000b3,0x0004003d,0x00000007,0x000000b4,0x000000ac,
++	0x000500c7,0x00000007,0x000000b6,0x000000b4,0x000000b5,0x0004003d,0x00000007,0x000000b7,
++	0x000000ac,0x000500c2,0x00000007,0x000000b8,0x000000b7,0x00000095,0x000500c7,0x00000007,
++	0x000000b9,0x000000b8,0x000000b5,0x0004003d,0x00000007,0x000000ba,0x000000ac,0x000500c2,
++	0x00000007,0x000000bb,0x000000ba,0x00000045,0x000500c7,0x00000007,0x000000bc,0x000000bb,
++	0x000000b5,0x0004003d,0x00000007,0x000000bd,0x000000ac,0x000500c2,0x00000007,0x000000bf,
++	0x000000bd,0x000000be,0x00070050,0x0000001b,0x000000c0,0x000000b6,0x000000b9,0x000000bc,
++	0x000000bf,0x000200fe,0x000000c0,0x000200f8,0x000000ab,0x00050041,0x00000066,0x000000c4,
++	0x00000058,0x000000ad,0x0004003d,0x00000006,0x000000c5,0x000000c4,0x0003003e,0x000000c3,
++	0x000000c5,0x0004003d,0x00000007,0x000000c7,0x000000a0,0x0003003e,0x000000c6,0x000000c7,
++	0x00060039,0x00000007,0x000000c8,0x0000000f,0x000000c3,0x000000c6,0x0003003e,0x000000c2,
++	0x000000c8,0x0004003d,0x00000007,0x000000ca,0x000000a0,0x00050080,0x00000007,0x000000cb,
++	0x000000ca,0x00000078,0x00050041,0x00000066,0x000000cd,0x00000058,0x000000ad,0x0004003d,
++	0x00000006,0x000000ce,0x000000cd,0x0003003e,0x000000cc,0x000000ce,0x0003003e,0x000000cf,
++	0x000000cb,0x00060039,0x00000007,0x000000d0,0x0000000f,0x000000cc,0x000000cf,0x0003003e,
++	0x000000c9,0x000000d0,0x0004003d,0x00000007,0x000000d1,0x000000c2,0x000500c7,0x00000007,
++	0x000000d2,0x000000d1,0x00000049,0x0004003d,0x00000007,0x000000d3,0x000000c2,0x000500c2,
++	0x00000007,0x000000d4,0x000000d3,0x00000045,0x0004003d,0x00000007,0x000000d5,0x000000c9,
++	0x000500c7,0x00000007,0x000000d6,0x000000d5,0x00000049,0x0004003d,0x00000007,0x000000d7,
++	0x000000c9,0x000500c2,0x00000007,0x000000d8,0x000000d7,0x00000045,0x00070050,0x0000001b,
++	0x000000d9,0x000000d2,0x000000d4,0x000000d6,0x000000d8,0x000200fe,0x000000d9,0x00010038,
++	0x00050036,0x00000020,0x00000023,0x00000000,0x00000021,0x00030037,0x0000000b,0x00000022,
++	0x000200f8,0x00000024,0x0004003b,0x0000000b,0x000000dc,0x00000007,0x0004003b,0x0000000b,
++	0x000000e8,0x00000007,0x0004003b,0x0000000a,0x000000ea,0x00000007,0x0004003b,0x0000000b,
++	0x000000ed,0x00000007,0x0004003b,0x0000000b,0x00000109,0x00000007,0x0004003b,0x0000000a,
++	0x0000010a,0x00000007,0x0004003b,0x0000000b,0x0000010d,0x00000007,0x0004003b,0x0000000b,
++	0x00000110,0x00000007,0x0004003b,0x0000000a,0x00000113,0x00000007,0x0004003b,0x0000000b,
++	0x00000116,0x00000007,0x0004003b,0x0000000a,0x00000129,0x00000007,0x0004003b,0x0000000b,
++	0x0000012c,0x00000007,0x0004003b,0x0000000a,0x00000132,0x00000007,0x0004003b,0x0000000b,
++	0x00000135,0x00000007,0x0004003b,0x0000000a,0x0000013a,0x00000007,0x0004003b,0x0000000b,
++	0x0000013d,0x00000007,0x0004003b,0x0000000a,0x00000143,0x00000007,0x0004003b,0x0000000b,
++	0x00000146,0x00000007,0x0004003d,0x00000007,0x000000dd,0x00000022,0x00050041,0x0000005a,
++	0x000000df,0x00000058,0x000000de,0x0004003d,0x00000007,0x000000e0,0x000000df,0x00050084,
++	0x00000007,0x000000e1,0x000000dd,0x000000e0,0x0003003e,0x000000dc,0x000000e1,0x00050041,
++	0x0000005a,0x000000e3,0x00000058,0x000000e2,0x0004003d,0x00000007,0x000000e4,0x000000e3,
++	0x000500aa,0x0000003f,0x000000e5,0x000000e4,0x0000002f,0x000300f7,0x000000e7,0x00000000,
++	0x000400fa,0x000000e5,0x000000e6,0x000000e7,0x000200f8,0x000000e6,0x00050041,0x00000066,
++	0x000000eb,0x00000058,0x000000e9,0x0004003d,0x00000006,0x000000ec,0x000000eb,0x0003003e,
++	0x000000ea,0x000000ec,0x0004003d,0x00000007,0x000000ee,0x000000dc,0x0003003e,0x000000ed,
++	0x000000ee,0x00060039,0x00000007,0x000000ef,0x0000000f,0x000000ea,0x000000ed,0x0003003e,
++	0x000000e8,0x000000ef,0x0004003d,0x00000007,0x000000f0,0x000000e8,0x000500c7,0x00000007,
++	0x000000f1,0x000000f0,0x000000b5,0x00040070,0x00000015,0x000000f2,0x000000f1,0x0004003d,
++	0x00000007,0x000000f3,0x000000e8,0x000500c2,0x00000007,0x000000f4,0x000000f3,0x00000095,
++	0x000500c7,0x00000007,0x000000f5,0x000000f4,0x000000b5,0x00040070,0x00000015,0x000000f6,
++	0x000000f5,0x0004003d,0x00000007,0x000000f7,0x000000e8,0x000500c2,0x00000007,0x000000f8,
++	0x000000f7,0x00000045,0x000500c7,0x00000007,0x000000f9,0x000000f8,0x000000b5,0x00040070,
++	0x00000015,0x000000fa,0x000000f9,0x0004003d,0x00000007,0x000000fb,0x000000e8,0x000500c2,
++	0x00000007,0x000000fc,0x000000fb,0x000000be,0x00040070,0x00000015,0x000000fd,0x000000fc,
++	0x00070050,0x00000020,0x000000fe,0x000000f2,0x000000f6,0x000000fa,0x000000fd,0x00070050,
++	0x00000020,0x00000100,0x000000ff,0x000000ff,0x000000ff,0x000000ff,0x00050088,0x00000020,
++	0x00000101,0x000000fe,0x00000100,0x000200fe,0x00000101,0x000200f8,0x000000e7,0x00050041,
++	0x0000005a,0x00000103,0x00000058,0x000000e2,0x0004003d,0x00000007,0x00000104,0x00000103,
++	0x000500aa,0x0000003f,0x00000106,0x00000104,0x00000105,0x000300f7,0x00000108,0x00000000,
++	0x000400fa,0x00000106,0x00000107,0x00000108,0x000200f8,0x00000107,0x00050041,0x00000066,
++	0x0000010b,0x00000058,0x000000e9,0x0004003d,0x00000006,0x0000010c,0x0000010b,0x0003003e,
++	0x0000010a,0x0000010c,0x0004003d,0x00000007,0x0000010e,0x000000dc,0x0003003e,0x0000010d,
++	0x0000010e,0x00060039,0x00000007,0x0000010f,0x0000000f,0x0000010a,0x0000010d,0x0003003e,
++	0x00000109,0x0000010f,0x0004003d,0x00000007,0x00000111,0x000000dc,0x00050080,0x00000007,
++	0x00000112,0x00000111,0x00000078,0x00050041,0x00000066,0x00000114,0x00000058,0x000000e9,
++	0x0004003d,0x00000006,0x00000115,0x00000114,0x0003003e,0x00000113,0x00000115,0x0003003e,
++	0x00000116,0x00000112,0x00060039,0x00000007,0x00000117,0x0000000f,0x00000113,0x00000116,
++	0x0003003e,0x00000110,0x00000117,0x0004003d,0x00000007,0x00000118,0x00000109,0x000500c7,
++	0x00000007,0x00000119,0x00000118,0x00000049,0x00040070,0x00000015,0x0000011a,0x00000119,
++	0x0004003d,0x00000007,0x0000011b,0x00000109,0x000500c2,0x00000007,0x0000011c,0x0000011b,
++	0x00000045,0x00040070,0x00000015,0x0000011d,0x0000011c,0x0004003d,0x00000007,0x0000011e,
++	0x00000110,0x000500c7,0x00000007,0x0000011f,0x0000011e,0x00000049,0x00040070,0x00000015,
++	0x00000120,0x0000011f,0x0004003d,0x00000007,0x00000121,0x00000110,0x000500c2,0x00000007,
++	0x00000122,0x00000121,0x00000045,0x00040070,0x00000015,0x00000123,0x00000122,0x00070050,
++	0x00000020,0x00000124,0x0000011a,0x0000011d,0x00000120,0x00000123,0x00070050,0x00000020,
++	0x00000126,0x00000125,0x00000125,0x00000125,0x00000125,0x00050088,0x00000020,0x00000127,
++	0x00000124,0x00000126,0x000200fe,0x00000127,0x000200f8,0x00000108,0x00050041,0x00000066,
++	0x0000012a,0x00000058,0x000000e9,0x0004003d,0x00000006,0x0000012b,0x0000012a,0x0003003e,
++	0x00000129,0x0000012b,0x0004003d,0x00000007,0x0000012d,0x000000dc,0x0003003e,0x0000012c,
++	0x0000012d,0x00060039,0x00000007,0x0000012e,0x0000000f,0x00000129,0x0000012c,0x0004007c,
++	0x00000015,0x0000012f,0x0000012e,0x0004003d,0x00000007,0x00000130,0x000000dc,0x00050080,
++	0x00000007,0x00000131,0x00000130,0x00000078,0x00050041,0x00000066,0x00000133,0x00000058,
++	0x000000e9,0x0004003d,0x00000006,0x00000134,0x00000133,0x0003003e,0x00000132,0x00000134,
++	0x0003003e,0x00000135,0x00000131,0x00060039,0x00000007,0x00000136,0x0000000f,0x00000132,
++	0x00000135,0x0004007c,0x00000015,0x00000137,0x00000136,0x0004003d,0x00000007,0x00000138,
++	0x000000dc,0x00050080,0x00000007,0x00000139,0x00000138,0x00000095,0x00050041,0x00000066,
++	0x0000013b,0x00000058,0x000000e9,0x0004003d,0x00000006,0x0000013c,0x0000013b,0x0003003e,
++	0x0000013a,0x0000013c,0x0003003e,0x0000013d,0x00000139,0x00060039,0x00000007,0x0000013e,
++	0x0000000f,0x0000013a,0x0000013d,0x0004007c,0x00000015,0x0000013f,0x0000013e,0x0004003d,
++	0x00000007,0x00000140,0x000000dc,0x00050080,0x00000007,0x00000142,0x00000140,0x00000141,
++	0x00050041,0x00000066,0x00000144,0x00000058,0x000000e9,0x0004003d,0x00000006,0x00000145,
++	0x00000144,0x0003003e,0x00000143,0x00000145,0x0003003e,0x00000146,0x00000142,0x00060039,
++	0x00000007,0x00000147,0x0000000f,0x00000143,0x00000146,0x0004007c,0x00000015,0x00000148,
++	0x00000147,0x00070050,0x00000020,0x00000149,0x0000012f,0x00000137,0x0000013f,0x00000148,
++	0x000200fe,0x00000149,0x00010038,0x00050036,0x00000016,0x00000029,0x00000000,0x00000026,
++	0x00030037,0x00000025,0x00000027,0x00030037,0x0000000b,0x00000028,0x000200f8,0x0000002a,
++	0x0004003b,0x0000000b,0x0000014c,0x00000007,0x0004003b,0x0000014f,0x00000150,0x00000007,
++	0x0004003b,0x0000014f,0x00000159,0x00000007,0x0004003b,0x0000014f,0x00000160,0x00000007,
++	0x0004003d,0x00000007,0x0000014d,0x00000028,0x00050084,0x00000007,0x0000014e,0x0000014d,
++	0x00000078,0x0003003e,0x0000014c,0x0000014e,0x00050041,0x00000152,0x00000153,0x00000058,
++	0x00000151,0x0004003d,0x00000050,0x00000154,0x00000153,0x0004003d,0x00000007,0x00000155,
++	0x0000014c,0x00060041,0x00000156,0x00000157,0x00000154,0x0000002d,0x00000155,0x0006003d,
++	0x00000020,0x00000158,0x00000157,0x00000002,0x00000010,0x0003003e,0x00000150,0x00000158,
++	0x00050041,0x00000152,0x0000015a,0x00000058,0x00000151,0x0004003d,0x00000050,0x0000015b,
++	0x0000015a,0x0004003d,0x00000007,0x0000015c,0x0000014c,0x00050080,0x00000007,0x0000015d,
++	0x0000015c,0x00000061,0x00060041,0x00000156,0x0000015e,0x0000015b,0x0000002d,0x0000015d,
++	0x0006003d,0x00000020,0x0000015f,0x0000015e,0x00000002,0x00000010,0x0003003e,0x00000159,
++	0x0000015f,0x00050041,0x00000152,0x00000161,0x00000058,0x00000151,0x0004003d,0x00000050,
++	0x00000162,0x00000161,0x0004003d,0x00000007,0x00000163,0x0000014c,0x00050080,0x00000007,
++	0x00000164,0x00000163,0x0000002f,0x00060041,0x00000156,0x00000165,0x00000162,0x0000002d,
++	0x00000164,0x0006003d,0x00000020,0x00000166,0x00000165,0x00000002,0x00000010,0x0003003e,
++	0x00000160,0x00000166,0x0004003d,0x00000020,0x00000167,0x00000150,0x0008004f,0x00000016,
++	0x00000168,0x00000167,0x00000167,0x00000000,0x00000001,0x00000002,0x0004003d,0x00000016,
++	0x00000169,0x00000027,0x00050094,0x00000015,0x0000016a,0x00000168,0x00000169,0x00050041,
++	0x0000016b,0x0000016c,0x00000150,0x00000105,0x0004003d,0x00000015,0x0000016d,0x0000016c,
++	0x00050081,0x00000015,0x0000016e,0x0000016a,0x0000016d,0x0004003d,0x00000020,0x0000016f,
++	0x00000159,0x0008004f,0x00000016,0x00000170,0x0000016f,0x0000016f,0x00000000,0x00000001,
++	0x00000002,0x0004003d,0x00000016,0x00000171,0x00000027,0x00050094,0x00000015,0x00000172,
++	0x00000170,0x00000171,0x00050041,0x0000016b,0x00000173,0x00000159,0x00000105,0x0004003d,
++	0x00000015,0x00000174,0x00000173,0x00050081,0x00000015,0x00000175,0x00000172,0x00000174,
++	0x0004003d,0x00000020,0x00000176,0x00000160,0x0008004f,0x00000016,0x00000177,0x00000176,
++	0x00000176,0x00000000,0x00000001,0x00000002,0x0004003d,0x00000016,0x00000178,0x00000027,
++	0x00050094,0x00000015,0x00000179,0x00000177,0x00000178,0x00050041,0x0000016b,0x0000017a,
++	0x00000160,0x00000105,0x0004003d,0x00000015,0x0000017b,0x0000017a,0x00050081,0x00000015,
++	0x0000017c,0x00000179,0x0000017b,0x00060050,0x00000016,0x0000017d,0x0000016e,0x00000175,
++	0x0000017c,0x000200fe,0x0000017d,0x00010038
++};
++static const uint32_t BLAS_DEFORM_MORPH_SPV[] = {
++	0x07230203,0x00010300,0x0008000b,0x0000022c,0x00000000,0x00020011,0x00000001,0x00020011,
++	0x000014e3,0x0009000a,0x5f565053,0x5f52484b,0x73796870,0x6c616369,0x6f74735f,0x65676172,
++	0x6675625f,0x00726566,0x0006000b,0x00000001,0x4c534c47,0x6474732e,0x3035342e,0x00000000,
++	0x0003000e,0x000014e4,0x00000001,0x0006000f,0x00000005,0x00000004,0x6e69616d,0x00000000,
++	0x00000183,0x00060010,0x00000004,0x00000011,0x00000040,0x00000001,0x00000001,0x00030003,
++	0x00000002,0x000001cc,0x00070004,0x455f4c47,0x625f5458,0x65666675,0x65725f72,0x65726566,
++	0x0065636e,0x00040005,0x00000004,0x6e69616d,0x00000000,0x00040005,0x00000009,0x64726f57,
++	0x00000073,0x00040006,0x00000009,0x00000000,0x00000077,0x00060005,0x0000000f,0x64726f77,
++	0x31287441,0x3b31753b,0x00000000,0x00030005,0x0000000d,0x00000062,0x00050005,0x0000000e,
++	0x65747962,0x7366664f,0x00007465,0x00060005,0x00000013,0x666c6168,0x31287441,0x3b31753b,
++	0x00000000,0x00030005,0x00000011,0x00000062,0x00050005,0x00000012,0x65747962,0x7366664f,
++	0x00007465,0x00070005,0x00000019,0x64616572,0x69736f50,0x6e6f6974,0x3b317528,0x00000000,
++	0x00030005,0x00000018,0x00000076,0x00060005,0x0000001e,0x64616572,0x6e696f4a,0x75287374,
++	0x00003b31,0x00030005,0x0000001d,0x00000076,0x00060005,0x00000023,0x64616572,0x67696557,
++	0x28737468,0x003b3175,0x00030005,0x00000022,0x00000076,0x00060005,0x00000029,0x426c756d,
++	0x28656e6f,0x3b336676,0x003b3175,0x00030005,0x00000027,0x00000070,0x00040005,0x00000028,
++	0x656e6f62,0x00000000,0x00040005,0x00000036,0x64726f77,0x00000000,0x00030005,0x0000004e,
++	0x0000006f,0x00040005,0x00000052,0x61726150,0x0000736d,0x00060006,0x00000052,0x00000000,
++	0x69736f70,0x6e6f6974,0x00000073,0x00050006,0x00000052,0x00000001,0x6e696f6a,0x00007374,
++	0x00050006,0x00000052,0x00000002,0x67696577,0x00737468,0x00050006,0x00000052,0x00000003,
++	0x656e6f62,0x00000073,0x00070006,0x00000052,0x00000004,0x70726f6d,0x69655768,0x73746867,
++	0x00000000,0x00050006,0x00000052,0x00000005,0x65736f70,0x00000064,0x00060006,0x00000052,
++	0x00000006,0x74726576,0x6f437865,0x00746e75,0x00070006,0x00000052,0x00000007,0x69736f70,
++	0x6e6f6974,0x69727453,0x00006564,0x00070006,0x00000052,0x00000008,0x69736f70,0x6e6f6974,
++	0x6d726f46,0x00007461,0x00070006,0x00000052,0x00000009,0x6e696f6a,0x74537374,0x65646972,
++	0x00000000,0x00070006,0x00000052,0x0000000a,0x6e696f6a,0x6f467374,0x74616d72,0x00000000,
++	0x00070006,0x00000052,0x0000000b,0x67696577,0x53737468,0x64697274,0x00000065,0x00070006,
++	0x00000052,0x0000000c,0x67696577,0x46737468,0x616d726f,0x00000074,0x00060006,0x00000052,
++	0x0000000d,0x70726f6d,0x66664f68,0x00746573,0x00060006,0x00000052,0x0000000e,0x70726f6d,
++	0x756f4368,0x0000746e,0x00050006,0x00000052,0x0000000f,0x67616c66,0x00000073,0x00040005,
++	0x00000054,0x34636556,0x00000073,0x00040006,0x00000054,0x00000000,0x00000076,0x00050005,
++	0x00000056,0x69736f50,0x6e6f6974,0x00000073,0x00040006,0x00000056,0x00000000,0x00000066,
++	0x00040005,0x00000058,0x61726170,0x0000736d,0x00040005,0x00000065,0x61726170,0x0000006d,
++	0x00040005,0x00000069,0x61726170,0x0000006d,0x00040005,0x0000006e,0x61726170,0x0000006d,
++	0x00040005,0x00000071,0x61726170,0x0000006d,0x00040005,0x0000007a,0x61726170,0x0000006d,
++	0x00040005,0x0000007d,0x61726170,0x0000006d,0x00040005,0x00000085,0x61726170,0x0000006d,
++	0x00040005,0x00000088,0x61726170,0x0000006d,0x00040005,0x0000008e,0x61726170,0x0000006d,
++	0x00040005,0x00000091,0x61726170,0x0000006d,0x00040005,0x00000097,0x61726170,0x0000006d,
++	0x00040005,0x0000009a,0x61726170,0x0000006d,0x00030005,0x000000a0,0x0000006f,0x00030005,
++	0x000000ac,0x00000077,0x00040005,0x000000ae,0x61726170,0x0000006d,0x00040005,0x000000b1,
++	0x61726170,0x0000006d,0x00030005,0x000000c2,0x00000061,0x00040005,0x000000c3,0x61726170,
++	0x0000006d,0x00040005,0x000000c6,0x61726170,0x0000006d,0x00030005,0x000000c9,0x00000062,
++	0x00040005,0x000000cc,0x61726170,0x0000006d,0x00040005,0x000000cf,0x61726170,0x0000006d,
++	0x00030005,0x000000dc,0x0000006f,0x00030005,0x000000e8,0x00000077,0x00040005,0x000000ea,
++	0x61726170,0x0000006d,0x00040005,0x000000ed,0x61726170,0x0000006d,0x00030005,0x00000109,
++	0x00000061,0x00040005,0x0000010a,0x61726170,0x0000006d,0x00040005,0x0000010d,0x61726170,
++	0x0000006d,0x00030005,0x00000110,0x00000062,0x00040005,0x00000113,0x61726170,0x0000006d,
++	0x00040005,0x00000116,0x61726170,0x0000006d,0x00040005,0x00000129,0x61726170,0x0000006d,
++	0x00040005,0x0000012c,0x61726170,0x0000006d,0x00040005,0x00000132,0x61726170,0x0000006d,
++	0x00040005,0x00000135,0x61726170,0x0000006d,0x00040005,0x0000013a,0x61726170,0x0000006d,
++	0x00040005,0x0000013d,0x61726170,0x0000006d,0x00040005,0x00000143,0x61726170,0x0000006d,
++	0x00040005,0x00000146,0x61726170,0x0000006d,0x00030005,0x0000014c,0x00000069,0x00030005,
++	0x00000150,0x00003072,0x00030005,0x00000159,0x00003172,0x00030005,0x00000160,0x00003272,
++	0x00030005,0x00000180,0x00000076,0x00080005,0x00000183,0x475f6c67,0x61626f6c,0x766e496c,
++	0x7461636f,0x496e6f69,0x00000044,0x00030005,0x0000018f,0x00000070,0x00040005,0x00000190,
++	0x61726170,0x0000006d,0x00040005,0x0000019b,0x65646e69,0x00000078,0x00050005,0x000001a4,
++	0x63786574,0x64726f6f,0x00000000,0x00030005,0x000001ab,0x00000074,0x00030005,0x000001b6,
++	0x00000077,0x00060005,0x000001ca,0x70726f6d,0x736f5068,0x6f697469,0x0000736e,0x00030005,
++	0x000001dc,0x00736469,0x00040005,0x000001dd,0x61726170,0x0000006d,0x00040005,0x000001e0,
++	0x67696577,0x00737468,0x00040005,0x000001e1,0x61726170,0x0000006d,0x00040005,0x000001ec,
++	0x61726170,0x0000006d,0x00040005,0x000001ee,0x61726170,0x0000006d,0x00040005,0x000001f5,
++	0x61726170,0x0000006d,0x00040005,0x000001f7,0x61726170,0x0000006d,0x00040005,0x000001ff,
++	0x61726170,0x0000006d,0x00040005,0x00000201,0x61726170,0x0000006d,0x00040005,0x00000209,
++	0x61726170,0x0000006d,0x00040005,0x0000020b,0x61726170,0x0000006d,0x00030005,0x00000211,
++	0x0000006f,0x00040047,0x00000008,0x00000006,0x00000004,0x00030047,0x00000009,0x00000002,
++	0x00040048,0x00000009,0x00000000,0x00000018,0x00050048,0x00000009,0x00000000,0x00000023,
++	0x00000000,0x00030047,0x0000000d,0x000014ec,0x00030047,0x00000011,0x000014ec,0x00030047,
++	0x00000052,0x00000002,0x00050048,0x00000052,0x00000000,0x00000023,0x00000000,0x00050048,
++	0x00000052,0x00000001,0x00000023,0x00000008,0x00050048,0x00000052,0x00000002,0x00000023,
++	0x00000010,0x00050048,0x00000052,0x00000003,0x00000023,0x00000018,0x00050048,0x00000052,
++	0x00000004,0x00000023,0x00000020,0x00050048,0x00000052,0x00000005,0x00000023,0x00000028,
++	0x00050048,0x00000052,0x00000006,0x00000023,0x00000030,0x00050048,0x00000052,0x00000007,
++	0x00000023,0x00000034,0x00050048,0x00000052,0x00000008,0x00000023,0x00000038,0x00050048,
++	0x00000052,0x00000009,0x00000023,0x0000003c,0x00050048,0x00000052,0x0000000a,0x00000023,
++	0x00000040,0x00050048,0x00000052,0x0000000b,0x00000023,0x00000044,0x00050048,0x00000052,
++	0x0000000c,0x00000023,0x00000048,0x00050048,0x00000052,0x0000000d,0x00000023,0x0000004c,
++	0x00050048,0x00000052,0x0000000e,0x00000023,0x00000050,0x00050048,0x00000052,0x0000000f,
++	0x00000023,0x00000054,0x00040047,0x00000053,0x00000006,0x00000010,0x00030047,0x00000054,
++	0x00000002,0x00040048,0x00000054,0x00000000,0x00000018,0x00050048,0x00000054,0x00000000,
++	0x00000023,0x00000000,0x00040047,0x00000055,0x00000006,0x00000004,0x00030047,0x00000056,
++	0x00000002,0x00040048,0x00000056,0x00000000,0x00000019,0x00050048,0x00000056,0x00000000,
++	0x00000023,0x00000000,0x00030047,0x00000065,0x000014ec,0x00030047,0x0000006e,0x000014ec,
++	0x00030047,0x0000007a,0x000014ec,0x00030047,0x00000085,0x000014ec,0x00030047,0x0000008e,
++	0x000014ec,0x00030047,0x00000097,0x000014ec,0x00030047,0x000000ae,0x000014ec,0x00030047,
++	0x000000c3,0x000014ec,0x00030047,0x000000cc,0x000014ec,0x00030047,0x000000ea,0x000014ec,
++	0x00030047,0x0000010a,0x000014ec,0x00030047,0x00000113,0x000014ec,0x00030047,0x00000129,
++	0x000014ec,0x00030047,0x00000132,0x000014ec,0x00030047,0x0000013a,0x000014ec,0x00030047,
++	0x00000143,0x000014ec,0x00040047,0x00000183,0x0000000b,0x0000001c,0x00040047,0x000001ca,
++	0x00000021,0x00000000,0x00040047,0x000001ca,0x00000022,0x00000000,0x00040047,0x0000022b,
++	0x0000000b,0x00000019,0x00020013,0x00000002,0x00030021,0x00000003,0x00000002,0x00030027,
++	0x00000006,0x000014e5,0x00040015,0x00000007,0x00000020,0x00000000,0x0003001d,0x00000008,
++	0x00000007,0x0003001e,0x00000009,0x00000008,0x00040020,0x00000006,0x000014e5,0x00000009,
++	0x00040020,0x0000000a,0x00000007,0x00000006,0x00040020,0x0000000b,0x00000007,0x00000007,
++	0x00050021,0x0000000c,0x00000007,0x0000000a,0x0000000b,0x00030016,0x00000015,0x00000020,
++	0x00040017,0x00000016,0x00000015,0x00000003,0x00040021,0x00000017,0x00000016,0x0000000b,
++	0x00040017,0x0000001b,0x00000007,0x00000004,0x00040021,0x0000001c,0x0000001b,0x0000000b,
++	0x00040017,0x00000020,0x00000015,0x00000004,0x00040021,0x00000021,0x00000020,0x0000000b,
++	0x00040020,0x00000025,0x00000007,0x00000016,0x00050021,0x00000026,0x00000016,0x00000025,
++	0x0000000b,0x00040015,0x0000002c,0x00000020,0x00000001,0x0004002b,0x0000002c,0x0000002d,
++	0x00000000,0x0004002b,0x00000007,0x0000002f,0x00000002,0x00040020,0x00000031,0x000014e5,
++	0x00000007,0x0004002b,0x00000007,0x0000003e,0x00000000,0x00020014,0x0000003f,0x0004002b,
++	0x00000007,0x00000045,0x00000010,0x0004002b,0x00000007,0x00000049,0x0000ffff,0x00030027,
++	0x00000050,0x000014e5,0x00030027,0x00000051,0x000014e5,0x0012001e,0x00000052,0x00000006,
++	0x00000006,0x00000006,0x00000050,0x00000050,0x00000051,0x00000007,0x00000007,0x00000007,
++	0x00000007,0x00000007,0x00000007,0x00000007,0x00000007,0x00000007,0x00000007,0x0003001d,
++	0x00000053,0x00000020,0x0003001e,0x00000054,0x00000053,0x00040020,0x00000050,0x000014e5,
++	0x00000054,0x0003001d,0x00000055,0x00000015,0x0003001e,0x00000056,0x00000055,0x00040020,
++	0x00000051,0x000014e5,0x00000056,0x00040020,0x00000057,0x00000009,0x00000052,0x0004003b,
++	0x00000057,0x00000058,0x00000009,0x0004002b,0x0000002c,0x00000059,0x00000007,0x00040020,
++	0x0000005a,0x00000009,0x00000007,0x0004002b,0x0000002c,0x0000005e,0x00000008,0x0004002b,
++	0x00000007,0x00000061,0x00000001,0x00040020,0x00000066,0x00000009,0x00000006,0x00040017,
++	0x00000075,0x00000015,0x00000002,0x0004002b,0x00000007,0x00000078,0x00000004,0x0004002b,
++	0x00000007,0x00000095,0x00000008,0x0004002b,0x0000002c,0x000000a2,0x00000009,0x0004002b,
++	0x0000002c,0x000000a6,0x0000000a,0x0004002b,0x0000002c,0x000000ad,0x00000001,0x0004002b,
++	0x00000007,0x000000b5,0x000000ff,0x0004002b,0x00000007,0x000000be,0x00000018,0x0004002b,
++	0x0000002c,0x000000de,0x0000000b,0x0004002b,0x0000002c,0x000000e2,0x0000000c,0x0004002b,
++	0x0000002c,0x000000e9,0x00000002,0x0004002b,0x00000015,0x000000ff,0x437f0000,0x0004002b,
++	0x00000007,0x00000105,0x00000003,0x0004002b,0x00000015,0x00000125,0x477fff00,0x0004002b,
++	0x00000007,0x00000141,0x0000000c,0x00040020,0x0000014f,0x00000007,0x00000020,0x0004002b,
++	0x0000002c,0x00000151,0x00000003,0x00040020,0x00000152,0x00000009,0x00000050,0x00040020,
++	0x00000156,0x000014e5,0x00000020,0x00040020,0x0000016b,0x00000007,0x00000015,0x00040017,
++	0x00000181,0x00000007,0x00000003,0x00040020,0x00000182,0x00000001,0x00000181,0x0004003b,
++	0x00000182,0x00000183,0x00000001,0x00040020,0x00000184,0x00000001,0x00000007,0x0004002b,
++	0x0000002c,0x00000188,0x00000006,0x0004002b,0x0000002c,0x00000193,0x0000000f,0x00040020,
++	0x0000019a,0x00000007,0x0000002c,0x0004002b,0x0000002c,0x0000019d,0x0000000d,0x00040017,
++	0x000001a2,0x0000002c,0x00000003,0x00040020,0x000001a3,0x00000007,0x000001a2,0x0004002b,
++	0x0000002c,0x000001a6,0x00000800,0x0004002b,0x0000002c,0x000001b2,0x0000000e,0x0004002b,
++	0x0000002c,0x000001b7,0x00000004,0x00040020,0x000001bb,0x000014e5,0x00000015,0x0004002b,
++	0x00000015,0x000001bf,0x00000000,0x00090019,0x000001c7,0x00000015,0x00000001,0x00000000,
++	0x00000001,0x00000000,0x00000001,0x00000000,0x0003001b,0x000001c8,0x000001c7,0x00040020,
++	0x000001c9,0x00000000,0x000001c8,0x0004003b,0x000001c9,0x000001ca,0x00000000,0x00040020,
++	0x000001db,0x00000007,0x0000001b,0x0004002b,0x0000002c,0x00000214,0x00000005,0x00040020,
++	0x00000215,0x00000009,0x00000051,0x0004002b,0x00000007,0x0000022a,0x00000040,0x0006002c,
++	0x00000181,0x0000022b,0x0000022a,0x00000061,0x00000061,0x00050036,0x00000002,0x00000004,
++	0x00000000,0x00000003,0x000200f8,0x00000005,0x0004003b,0x0000000b,0x00000180,0x00000007,
++	0x0004003b,0x00000025,0x0000018f,0x00000007,0x0004003b,0x0000000b,0x00000190,0x00000007,
++	0x0004003b,0x0000019a,0x0000019b,0x00000007,0x0004003b,0x000001a3,0x000001a4,0x00000007,
++	0x0004003b,0x0000000b,0x000001ab,0x00000007,0x0004003b,0x0000016b,0x000001b6,0x00000007,
++	0x0004003b,0x000001db,0x000001dc,0x00000007,0x0004003b,0x0000000b,0x000001dd,0x00000007,
++	0x0004003b,0x0000014f,0x000001e0,0x00000007,0x0004003b,0x0000000b,0x000001e1,0x00000007,
++	0x0004003b,0x00000025,0x000001ec,0x00000007,0x0004003b,0x0000000b,0x000001ee,0x00000007,
++	0x0004003b,0x00000025,0x000001f5,0x00000007,0x0004003b,0x0000000b,0x000001f7,0x00000007,
++	0x0004003b,0x00000025,0x000001ff,0x00000007,0x0004003b,0x0000000b,0x00000201,0x00000007,
++	0x0004003b,0x00000025,0x00000209,0x00000007,0x0004003b,0x0000000b,0x0000020b,0x00000007,
++	0x0004003b,0x0000000b,0x00000211,0x00000007,0x00050041,0x00000184,0x00000185,0x00000183,
++	0x0000003e,0x0004003d,0x00000007,0x00000186,0x00000185,0x0003003e,0x00000180,0x00000186,
++	0x0004003d,0x00000007,0x00000187,0x00000180,0x00050041,0x0000005a,0x00000189,0x00000058,
++	0x00000188,0x0004003d,0x00000007,0x0000018a,0x00000189,0x000500ae,0x0000003f,0x0000018b,
++	0x00000187,0x0000018a,0x000300f7,0x0000018d,0x00000000,0x000400fa,0x0000018b,0x0000018c,
++	0x0000018d,0x000200f8,0x0000018c,0x000100fd,0x000200f8,0x0000018d,0x0004003d,0x00000007,
++	0x00000191,0x00000180,0x0003003e,0x00000190,0x00000191,0x00050039,0x00000016,0x00000192,
++	0x00000019,0x00000190,0x0003003e,0x0000018f,0x00000192,0x00050041,0x0000005a,0x00000194,
++	0x00000058,0x00000193,0x0004003d,0x00000007,0x00000195,0x00000194,0x000500c7,0x00000007,
++	0x00000196,0x00000195,0x0000002f,0x000500ab,0x0000003f,0x00000197,0x00000196,0x0000003e,
++	0x000300f7,0x00000199,0x00000000,0x000400fa,0x00000197,0x00000198,0x00000199,0x000200f8,
++	0x00000198,0x0004003d,0x00000007,0x0000019c,0x00000180,0x00050041,0x0000005a,0x0000019e,
++	0x00000058,0x0000019d,0x0004003d,0x00000007,0x0000019f,0x0000019e,0x00050080,0x00000007,
++	0x000001a0,0x0000019c,0x0000019f,0x0004007c,0x0000002c,0x000001a1,0x000001a0,0x0003003e,
++	0x0000019b,0x000001a1,0x0004003d,0x0000002c,0x000001a5,0x0000019b,0x0005008b,0x0000002c,
++	0x000001a7,0x000001a5,0x000001a6,0x0004003d,0x0000002c,0x000001a8,0x0000019b,0x00050087,
++	0x0000002c,0x000001a9,0x000001a8,0x000001a6,0x00060050,0x000001a2,0x000001aa,0x000001a7,
++	0x000001a9,0x0000002d,0x0003003e,0x000001a4,0x000001aa,0x0003003e,0x000001ab,0x0000003e,
++	0x000200f9,0x000001ac,0x000200f8,0x000001ac,0x000400f6,0x000001ae,0x000001af,0x00000000,
++	0x000200f9,0x000001b0,0x000200f8,0x000001b0,0x0004003d,0x00000007,0x000001b1,0x000001ab,
++	0x00050041,0x0000005a,0x000001b3,0x00000058,0x000001b2,0x0004003d,0x00000007,0x000001b4,
++	0x000001b3,0x000500b0,0x0000003f,0x000001b5,0x000001b1,0x000001b4,0x000400fa,0x000001b5,
++	0x000001ad,0x000001ae,0x000200f8,0x000001ad,0x00050041,0x00000152,0x000001b8,0x00000058,
++	0x000001b7,0x0004003d,0x00000050,0x000001b9,0x000001b8,0x0004003d,0x00000007,0x000001ba,
++	0x000001ab,0x00070041,0x000001bb,0x000001bc,0x000001b9,0x0000002d,0x000001ba,0x0000003e,
++	0x0006003d,0x00000015,0x000001bd,0x000001bc,0x00000002,0x00000004,0x0003003e,0x000001b6,
++	0x000001bd,0x0004003d,0x00000015,0x000001be,0x000001b6,0x000500b7,0x0000003f,0x000001c0,
++	0x000001be,0x000001bf,0x000300f7,0x000001c2,0x00000000,0x000400fa,0x000001c0,0x000001c1,
++	0x000001c2,0x000200f8,0x000001c1,0x0004003d,0x00000007,0x000001c3,0x000001ab,0x0004007c,
++	0x0000002c,0x000001c4,0x000001c3,0x00050041,0x0000019a,0x000001c5,0x000001a4,0x0000002f,
++	0x0003003e,0x000001c5,0x000001c4,0x0004003d,0x00000015,0x000001c6,0x000001b6,0x0004003d,
++	0x000001c8,0x000001cb,0x000001ca,0x0004003d,0x000001a2,0x000001cc,0x000001a4,0x00040064,
++	0x000001c7,0x000001cd,0x000001cb,0x0007005f,0x00000020,0x000001ce,0x000001cd,0x000001cc,
++	0x00000002,0x0000002d,0x0008004f,0x00000016,0x000001cf,0x000001ce,0x000001ce,0x00000000,
++	0x00000001,0x00000002,0x0005008e,0x00000016,0x000001d0,0x000001cf,0x000001c6,0x0004003d,
++	0x00000016,0x000001d1,0x0000018f,0x00050081,0x00000016,0x000001d2,0x000001d1,0x000001d0,
++	0x0003003e,0x0000018f,0x000001d2,0x000200f9,0x000001c2,0x000200f8,0x000001c2,0x000200f9,
++	0x000001af,0x000200f8,0x000001af,0x0004003d,0x00000007,0x000001d3,0x000001ab,0x00050080,
++	0x00000007,0x000001d4,0x000001d3,0x000000ad,0x0003003e,0x000001ab,0x000001d4,0x000200f9,
++	0x000001ac,0x000200f8,0x000001ae,0x000200f9,0x00000199,0x000200f8,0x00000199,0x00050041,
++	0x0000005a,0x000001d5,0x00000058,0x00000193,0x0004003d,0x00000007,0x000001d6,0x000001d5,
++	0x000500c7,0x00000007,0x000001d7,0x000001d6,0x00000061,0x000500ab,0x0000003f,0x000001d8,
++	0x000001d7,0x0000003e,0x000300f7,0x000001da,0x00000000,0x000400fa,0x000001d8,0x000001d9,
++	0x000001da,0x000200f8,0x000001d9,0x0004003d,0x00000007,0x000001de,0x00000180,0x0003003e,
++	0x000001dd,0x000001de,0x00050039,0x0000001b,0x000001df,0x0000001e,0x000001dd,0x0003003e,
++	0x000001dc,0x000001df,0x0004003d,0x00000007,0x000001e2,0x00000180,0x0003003e,0x000001e1,
++	0x000001e2,0x00050039,0x00000020,0x000001e3,0x00000023,0x000001e1,0x0003003e,0x000001e0,
++	0x000001e3,0x00050041,0x0000016b,0x000001e4,0x000001e0,0x00000105,0x0004003d,0x00000015,
++	0x000001e5,0x000001e4,0x000500b8,0x0000003f,0x000001e6,0x000001e5,0x000001bf,0x000300f7,
++	0x000001e8,0x00000000,0x000400fa,0x000001e6,0x000001e7,0x000001e8,0x000200f8,0x000001e7,
++	0x00050041,0x0000016b,0x000001e9,0x000001e0,0x00000105,0x0003003e,0x000001e9,0x000001bf,
++	0x000200f9,0x000001e8,0x000200f8,0x000001e8,0x00050041,0x0000016b,0x000001ea,0x000001e0,
++	0x0000003e,0x0004003d,0x00000015,0x000001eb,0x000001ea,0x0004003d,0x00000016,0x000001ed,
++	0x0000018f,0x0003003e,0x000001ec,0x000001ed,0x00050041,0x0000000b,0x000001ef,0x000001dc,
++	0x0000003e,0x0004003d,0x00000007,0x000001f0,0x000001ef,0x0003003e,0x000001ee,0x000001f0,
++	0x00060039,0x00000016,0x000001f1,0x00000029,0x000001ec,0x000001ee,0x0005008e,0x00000016,
++	0x000001f2,0x000001f1,0x000001eb,0x00050041,0x0000016b,0x000001f3,0x000001e0,0x00000061,
++	0x0004003d,0x00000015,0x000001f4,0x000001f3,0x0004003d,0x00000016,0x000001f6,0x0000018f,
++	0x0003003e,0x000001f5,0x000001f6,0x00050041,0x0000000b,0x000001f8,0x000001dc,0x00000061,
++	0x0004003d,0x00000007,0x000001f9,0x000001f8,0x0003003e,0x000001f7,0x000001f9,0x00060039,
++	0x00000016,0x000001fa,0x00000029,0x000001f5,0x000001f7,0x0005008e,0x00000016,0x000001fb,
++	0x000001fa,0x000001f4,0x00050081,0x00000016,0x000001fc,0x000001f2,0x000001fb,0x00050041,
++	0x0000016b,0x000001fd,0x000001e0,0x0000002f,0x0004003d,0x00000015,0x000001fe,0x000001fd,
++	0x0004003d,0x00000016,0x00000200,0x0000018f,0x0003003e,0x000001ff,0x00000200,0x00050041,
++	0x0000000b,0x00000202,0x000001dc,0x0000002f,0x0004003d,0x00000007,0x00000203,0x00000202,
++	0x0003003e,0x00000201,0x00000203,0x00060039,0x00000016,0x00000204,0x00000029,0x000001ff,
++	0x00000201,0x0005008e,0x00000016,0x00000205,0x00000204,0x000001fe,0x00050081,0x00000016,
++	0x00000206,0x000001fc,0x00000205,0x00050041,0x0000016b,0x00000207,0x000001e0,0x00000105,
++	0x0004003d,0x00000015,0x00000208,0x00000207,0x0004003d,0x00000016,0x0000020a,0x0000018f,
++	0x0003003e,0x00000209,0x0000020a,0x00050041,0x0000000b,0x0000020c,0x000001dc,0x00000105,
++	0x0004003d,0x00000007,0x0000020d,0x0000020c,0x0003003e,0x0000020b,0x0000020d,0x00060039,
++	0x00000016,0x0000020e,0x00000029,0x00000209,0x0000020b,0x0005008e,0x00000016,0x0000020f,
++	0x0000020e,0x00000208,0x00050081,0x00000016,0x00000210,0x00000206,0x0000020f,0x0003003e,
++	0x0000018f,0x00000210,0x000200f9,0x000001da,0x000200f8,0x000001da,0x0004003d,0x00000007,
++	0x00000212,0x00000180,0x00050084,0x00000007,0x00000213,0x00000212,0x00000105,0x0003003e,
++	0x00000211,0x00000213,0x00050041,0x00000215,0x00000216,0x00000058,0x00000214,0x0004003d,
++	0x00000051,0x00000217,0x00000216,0x0004003d,0x00000007,0x00000218,0x00000211,0x00050041,
++	0x0000016b,0x00000219,0x0000018f,0x0000003e,0x0004003d,0x00000015,0x0000021a,0x00000219,
++	0x00060041,0x000001bb,0x0000021b,0x00000217,0x0000002d,0x00000218,0x0005003e,0x0000021b,
++	0x0000021a,0x00000002,0x00000004,0x00050041,0x00000215,0x0000021c,0x00000058,0x00000214,
++	0x0004003d,0x00000051,0x0000021d,0x0000021c,0x0004003d,0x00000007,0x0000021e,0x00000211,
++	0x00050080,0x00000007,0x0000021f,0x0000021e,0x00000061,0x00050041,0x0000016b,0x00000220,
++	0x0000018f,0x00000061,0x0004003d,0x00000015,0x00000221,0x00000220,0x00060041,0x000001bb,
++	0x00000222,0x0000021d,0x0000002d,0x0000021f,0x0005003e,0x00000222,0x00000221,0x00000002,
++	0x00000004,0x00050041,0x00000215,0x00000223,0x00000058,0x00000214,0x0004003d,0x00000051,
++	0x00000224,0x00000223,0x0004003d,0x00000007,0x00000225,0x00000211,0x00050080,0x00000007,
++	0x00000226,0x00000225,0x0000002f,0x00050041,0x0000016b,0x00000227,0x0000018f,0x0000002f,
++	0x0004003d,0x00000015,0x00000228,0x00000227,0x00060041,0x000001bb,0x00000229,0x00000224,
++	0x0000002d,0x00000226,0x0005003e,0x00000229,0x00000228,0x00000002,0x00000004,0x000100fd,
++	0x00010038,0x00050036,0x00000007,0x0000000f,0x00000000,0x0000000c,0x00030037,0x0000000a,
++	0x0000000d,0x00030037,0x0000000b,0x0000000e,0x000200f8,0x00000010,0x0004003d,0x00000006,
++	0x0000002b,0x0000000d,0x0004003d,0x00000007,0x0000002e,0x0000000e,0x000500c2,0x00000007,
++	0x00000030,0x0000002e,0x0000002f,0x00060041,0x00000031,0x00000032,0x0000002b,0x0000002d,
++	0x00000030,0x0006003d,0x00000007,0x00000033,0x00000032,0x00000002,0x00000004,0x000200fe,
++	0x00000033,0x00010038,0x00050036,0x00000007,0x00000013,0x00000000,0x0000000c,0x00030037,
++	0x0000000a,0x00000011,0x00030037,0x0000000b,0x00000012,0x000200f8,0x00000014,0x0004003b,
++	0x0000000b,0x00000036,0x00000007,0x0004003b,0x0000000b,0x00000041,0x00000007,0x0004003d,
++	0x00000006,0x00000037,0x00000011,0x0004003d,0x00000007,0x00000038,0x00000012,0x000500c2,
++	0x00000007,0x00000039,0x00000038,0x0000002f,0x00060041,0x00000031,0x0000003a,0x00000037,
++	0x0000002d,0x00000039,0x0006003d,0x00000007,0x0000003b,0x0000003a,0x00000002,0x00000004,
++	0x0003003e,0x00000036,0x0000003b,0x0004003d,0x00000007,0x0000003c,0x00000012,0x000500c7,
++	0x00000007,0x0000003d,0x0000003c,0x0000002f,0x000500ab,0x0000003f,0x00000040,0x0000003d,
++	0x0000003e,0x000300f7,0x00000043,0x00000000,0x000400fa,0x00000040,0x00000042,0x00000047,
++	0x000200f8,0x00000042,0x0004003d,0x00000007,0x00000044,0x00000036,0x000500c2,0x00000007,
++	0x00000046,0x00000044,0x00000045,0x0003003e,0x00000041,0x00000046,0x000200f9,0x00000043,
++	0x000200f8,0x00000047,0x0004003d,0x00000007,0x00000048,0x00000036,0x000500c7,0x00000007,
++	0x0000004a,0x00000048,0x00000049,0x0003003e,0x00000041,0x0000004a,0x000200f9,0x00000043,
++	0x000200f8,0x00000043,0x0004003d,0x00000007,0x0000004b,0x00000041,0x000200fe,0x0000004b,
++	0x00010038,0x00050036,0x00000016,0x00000019,0x00000000,0x00000017,0x00030037,0x0000000b,
++	0x00000018,0x000200f8,0x0000001a,0x0004003b,0x0000000b,0x0000004e,0x00000007,0x0004003b,
++	0x0000000a,0x00000065,0x00000007,0x0004003b,0x0000000b,0x00000069,0x00000007,0x0004003b,
++	0x0000000a,0x0000006e,0x00000007,0x0004003b,0x0000000b,0x00000071,0x00000007,0x0004003b,
++	0x0000000a,0x0000007a,0x00000007,0x0004003b,0x0000000b,0x0000007d,0x00000007,0x0004003b,
++	0x0000000a,0x00000085,0x00000007,0x0004003b,0x0000000b,0x00000088,0x00000007,0x0004003b,
++	0x0000000a,0x0000008e,0x00000007,0x0004003b,0x0000000b,0x00000091,0x00000007,0x0004003b,
++	0x0000000a,0x00000097,0x00000007,0x0004003b,0x0000000b,0x0000009a,0x00000007,0x0004003d,
++	0x00000007,0x0000004f,0x00000018,0x00050041,0x0000005a,0x0000005b,0x00000058,0x00000059,
++	0x0004003d,0x00000007,0x0000005c,0x0000005b,0x00050084,0x00000007,0x0000005d,0x0000004f,
++	0x0000005c,0x0003003e,0x0000004e,0x0000005d,0x00050041,0x0000005a,0x0000005f,0x00000058,
++	0x0000005e,0x0004003d,0x00000007,0x00000060,0x0000005f,0x000500aa,0x0000003f,0x00000062,
++	0x00000060,0x00000061,0x000300f7,0x00000064,0x00000000,0x000400fa,0x00000062,0x00000063,
++	0x00000064,0x000200f8,0x00000063,0x00050041,0x00000066,0x00000067,0x00000058,0x0000002d,
++	0x0004003d,0x00000006,0x00000068,0x00000067,0x0003003e,0x00000065,0x00000068,0x0004003d,
++	0x00000007,0x0000006a,0x0000004e,0x0003003e,0x00000069,0x0000006a,0x00060039,0x00000007,
++	0x0000006b,0x00000013,0x00000065,0x00000069,0x0004003d,0x00000007,0x0000006c,0x0000004e,
++	0x00050080,0x00000007,0x0000006d,0x0000006c,0x0000002f,0x00050041,0x00000066,0x0000006f,
++	0x00000058,0x0000002d,0x0004003d,0x00000006,0x00000070,0x0000006f,0x0003003e,0x0000006e,
++	0x00000070,0x0003003e,0x00000071,0x0000006d,0x00060039,0x00000007,0x00000072,0x00000013,
++	0x0000006e,0x00000071,0x000500c4,0x00000007,0x00000073,0x00000072,0x00000045,0x000500c5,
++	0x00000007,0x00000074,0x0000006b,0x00000073,0x0006000c,0x00000075,0x00000076,0x00000001,
++	0x0000003e,0x00000074,0x0004003d,0x00000007,0x00000077,0x0000004e,0x00050080,0x00000007,
++	0x00000079,0x00000077,0x00000078,0x00050041,0x00000066,0x0000007b,0x00000058,0x0000002d,
++	0x0004003d,0x00000006,0x0000007c,0x0000007b,0x0003003e,0x0000007a,0x0000007c,0x0003003e,
++	0x0000007d,0x00000079,0x00060039,0x00000007,0x0000007e,0x00000013,0x0000007a,0x0000007d,
++	0x0006000c,0x00000075,0x0000007f,0x00000001,0x0000003e,0x0000007e,0x00050051,0x00000015,
++	0x00000080,0x0000007f,0x00000000,0x00050051,0x00000015,0x00000081,0x00000076,0x00000000,
++	0x00050051,0x00000015,0x00000082,0x00000076,0x00000001,0x00060050,0x00000016,0x00000083,
++	0x00000081,0x00000082,0x00000080,0x000200fe,0x00000083,0x000200f8,0x00000064,0x00050041,
++	0x00000066,0x00000086,0x00000058,0x0000002d,0x0004003d,0x00000006,0x00000087,0x00000086,
++	0x0003003e,0x00000085,0x00000087,0x0004003d,0x00000007,0x00000089,0x0000004e,0x0003003e,
++	0x00000088,0x00000089,0x00060039,0x00000007,0x0000008a,0x0000000f,0x00000085,0x00000088,
++	0x0004007c,0x00000015,0x0000008b,0x0000008a,0x0004003d,0x00000007,0x0000008c,0x0000004e,
++	0x00050080,0x00000007,0x0000008d,0x0000008c,0x00000078,0x00050041,0x00000066,0x0000008f,
++	0x00000058,0x0000002d,0x0004003d,0x00000006,0x00000090,0x0000008f,0x0003003e,0x0000008e,
++	0x00000090,0x0003003e,0x00000091,0x0000008d,0x00060039,0x00000007,0x00000092,0x0000000f,
++	0x0000008e,0x00000091,0x0004007c,0x00000015,0x00000093,0x00000092,0x0004003d,0x00000007,
++	0x00000094,0x0000004e,0x00050080,0x00000007,0x00000096,0x00000094,0x00000095,0x00050041,
++	0x00000066,0x00000098,0x00000058,0x0000002d,0x0004003d,0x00000006,0x00000099,0x00000098,
++	0x0003003e,0x00000097,0x00000099,0x0003003e,0x0000009a,0x00000096,0x00060039,0x00000007,
++	0x0000009b,0x0000000f,0x00000097,0x0000009a,0x0004007c,0x00000015,0x0000009c,0x0000009b,
++	0x00060050,0x00000016,0x0000009d,0x0000008b,0x00000093,0x0000009c,0x000200fe,0x0000009d,
++	0x00010038,0x00050036,0x0000001b,0x0000001e,0x00000000,0x0000001c,0x00030037,0x0000000b,
++	0x0000001d,0x000200f8,0x0000001f,0x0004003b,0x0000000b,0x000000a0,0x00000007,0x0004003b,
++	0x0000000b,0x000000ac,0x00000007,0x0004003b,0x0000000a,0x000000ae,0x00000007,0x0004003b,
++	0x0000000b,0x000000b1,0x00000007,0x0004003b,0x0000000b,0x000000c2,0x00000007,0x0004003b,
++	0x0000000a,0x000000c3,0x00000007,0x0004003b,0x0000000b,0x000000c6,0x00000007,0x0004003b,
++	0x0000000b,0x000000c9,0x00000007,0x0004003b,0x0000000a,0x000000cc,0x00000007,0x0004003b,
++	0x0000000b,0x000000cf,0x00000007,0x0004003d,0x00000007,0x000000a1,0x0000001d,0x00050041,
++	0x0000005a,0x000000a3,0x00000058,0x000000a2,0x0004003d,0x00000007,0x000000a4,0x000000a3,
++	0x00050084,0x00000007,0x000000a5,0x000000a1,0x000000a4,0x0003003e,0x000000a0,0x000000a5,
++	0x00050041,0x0000005a,0x000000a7,0x00000058,0x000000a6,0x0004003d,0x00000007,0x000000a8,
++	0x000000a7,0x000500aa,0x0000003f,0x000000a9,0x000000a8,0x0000002f,0x000300f7,0x000000ab,
++	0x00000000,0x000400fa,0x000000a9,0x000000aa,0x000000ab,0x000200f8,0x000000aa,0x00050041,
++	0x00000066,0x000000af,0x00000058,0x000000ad,0x0004003d,0x00000006,0x000000b0,0x000000af,
++	0x0003003e,0x000000ae,0x000000b0,0x0004003d,0x00000007,0x000000b2,0x000000a0,0x0003003e,
++	0x000000b1,0x000000b2,0x00060039,0x00000007,0x000000b3,0x0000000f,0x000000ae,0x000000b1,
++	0x0003003e,0x000000ac,0x000000b3,0x0004003d,0x00000007,0x000000b4,0x000000ac,0x000500c7,
++	0x00000007,0x000000b6,0x000000b4,0x000000b5,0x0004003d,0x00000007,0x000000b7,0x000000ac,
++	0x000500c2,0x00000007,0x000000b8,0x000000b7,0x00000095,0x000500c7,0x00000007,0x000000b9,
++	0x000000b8,0x000000b5,0x0004003d,0x00000007,0x000000ba,0x000000ac,0x000500c2,0x00000007,
++	0x000000bb,0x000000ba,0x00000045,0x000500c7,0x00000007,0x000000bc,0x000000bb,0x000000b5,
++	0x0004003d,0x00000007,0x000000bd,0x000000ac,0x000500c2,0x00000007,0x000000bf,0x000000bd,
++	0x000000be,0x00070050,0x0000001b,0x000000c0,0x000000b6,0x000000b9,0x000000bc,0x000000bf,
++	0x000200fe,0x000000c0,0x000200f8,0x000000ab,0x00050041,0x00000066,0x000000c4,0x00000058,
++	0x000000ad,0x0004003d,0x00000006,0x000000c5,0x000000c4,0x0003003e,0x000000c3,0x000000c5,
++	0x0004003d,0x00000007,0x000000c7,0x000000a0,0x0003003e,0x000000c6,0x000000c7,0x00060039,
++	0x00000007,0x000000c8,0x0000000f,0x000000c3,0x000000c6,0x0003003e,0x000000c2,0x000000c8,
++	0x0004003d,0x00000007,0x000000ca,0x000000a0,0x00050080,0x00000007,0x000000cb,0x000000ca,
++	0x00000078,0x00050041,0x00000066,0x000000cd,0x00000058,0x000000ad,0x0004003d,0x00000006,
++	0x000000ce,0x000000cd,0x0003003e,0x000000cc,0x000000ce,0x0003003e,0x000000cf,0x000000cb,
++	0x00060039,0x00000007,0x000000d0,0x0000000f,0x000000cc,0x000000cf,0x0003003e,0x000000c9,
++	0x000000d0,0x0004003d,0x00000007,0x000000d1,0x000000c2,0x000500c7,0x00000007,0x000000d2,
++	0x000000d1,0x00000049,0x0004003d,0x00000007,0x000000d3,0x000000c2,0x000500c2,0x00000007,
++	0x000000d4,0x000000d3,0x00000045,0x0004003d,0x00000007,0x000000d5,0x000000c9,0x000500c7,
++	0x00000007,0x000000d6,0x000000d5,0x00000049,0x0004003d,0x00000007,0x000000d7,0x000000c9,
++	0x000500c2,0x00000007,0x000000d8,0x000000d7,0x00000045,0x00070050,0x0000001b,0x000000d9,
++	0x000000d2,0x000000d4,0x000000d6,0x000000d8,0x000200fe,0x000000d9,0x00010038,0x00050036,
++	0x00000020,0x00000023,0x00000000,0x00000021,0x00030037,0x0000000b,0x00000022,0x000200f8,
++	0x00000024,0x0004003b,0x0000000b,0x000000dc,0x00000007,0x0004003b,0x0000000b,0x000000e8,
++	0x00000007,0x0004003b,0x0000000a,0x000000ea,0x00000007,0x0004003b,0x0000000b,0x000000ed,
++	0x00000007,0x0004003b,0x0000000b,0x00000109,0x00000007,0x0004003b,0x0000000a,0x0000010a,
++	0x00000007,0x0004003b,0x0000000b,0x0000010d,0x00000007,0x0004003b,0x0000000b,0x00000110,
++	0x00000007,0x0004003b,0x0000000a,0x00000113,0x00000007,0x0004003b,0x0000000b,0x00000116,
++	0x00000007,0x0004003b,0x0000000a,0x00000129,0x00000007,0x0004003b,0x0000000b,0x0000012c,
++	0x00000007,0x0004003b,0x0000000a,0x00000132,0x00000007,0x0004003b,0x0000000b,0x00000135,
++	0x00000007,0x0004003b,0x0000000a,0x0000013a,0x00000007,0x0004003b,0x0000000b,0x0000013d,
++	0x00000007,0x0004003b,0x0000000a,0x00000143,0x00000007,0x0004003b,0x0000000b,0x00000146,
++	0x00000007,0x0004003d,0x00000007,0x000000dd,0x00000022,0x00050041,0x0000005a,0x000000df,
++	0x00000058,0x000000de,0x0004003d,0x00000007,0x000000e0,0x000000df,0x00050084,0x00000007,
++	0x000000e1,0x000000dd,0x000000e0,0x0003003e,0x000000dc,0x000000e1,0x00050041,0x0000005a,
++	0x000000e3,0x00000058,0x000000e2,0x0004003d,0x00000007,0x000000e4,0x000000e3,0x000500aa,
++	0x0000003f,0x000000e5,0x000000e4,0x0000002f,0x000300f7,0x000000e7,0x00000000,0x000400fa,
++	0x000000e5,0x000000e6,0x000000e7,0x000200f8,0x000000e6,0x00050041,0x00000066,0x000000eb,
++	0x00000058,0x000000e9,0x0004003d,0x00000006,0x000000ec,0x000000eb,0x0003003e,0x000000ea,
++	0x000000ec,0x0004003d,0x00000007,0x000000ee,0x000000dc,0x0003003e,0x000000ed,0x000000ee,
++	0x00060039,0x00000007,0x000000ef,0x0000000f,0x000000ea,0x000000ed,0x0003003e,0x000000e8,
++	0x000000ef,0x0004003d,0x00000007,0x000000f0,0x000000e8,0x000500c7,0x00000007,0x000000f1,
++	0x000000f0,0x000000b5,0x00040070,0x00000015,0x000000f2,0x000000f1,0x0004003d,0x00000007,
++	0x000000f3,0x000000e8,0x000500c2,0x00000007,0x000000f4,0x000000f3,0x00000095,0x000500c7,
++	0x00000007,0x000000f5,0x000000f4,0x000000b5,0x00040070,0x00000015,0x000000f6,0x000000f5,
++	0x0004003d,0x00000007,0x000000f7,0x000000e8,0x000500c2,0x00000007,0x000000f8,0x000000f7,
++	0x00000045,0x000500c7,0x00000007,0x000000f9,0x000000f8,0x000000b5,0x00040070,0x00000015,
++	0x000000fa,0x000000f9,0x0004003d,0x00000007,0x000000fb,0x000000e8,0x000500c2,0x00000007,
++	0x000000fc,0x000000fb,0x000000be,0x00040070,0x00000015,0x000000fd,0x000000fc,0x00070050,
++	0x00000020,0x000000fe,0x000000f2,0x000000f6,0x000000fa,0x000000fd,0x00070050,0x00000020,
++	0x00000100,0x000000ff,0x000000ff,0x000000ff,0x000000ff,0x00050088,0x00000020,0x00000101,
++	0x000000fe,0x00000100,0x000200fe,0x00000101,0x000200f8,0x000000e7,0x00050041,0x0000005a,
++	0x00000103,0x00000058,0x000000e2,0x0004003d,0x00000007,0x00000104,0x00000103,0x000500aa,
++	0x0000003f,0x00000106,0x00000104,0x00000105,0x000300f7,0x00000108,0x00000000,0x000400fa,
++	0x00000106,0x00000107,0x00000108,0x000200f8,0x00000107,0x00050041,0x00000066,0x0000010b,
++	0x00000058,0x000000e9,0x0004003d,0x00000006,0x0000010c,0x0000010b,0x0003003e,0x0000010a,
++	0x0000010c,0x0004003d,0x00000007,0x0000010e,0x000000dc,0x0003003e,0x0000010d,0x0000010e,
++	0x00060039,0x00000007,0x0000010f,0x0000000f,0x0000010a,0x0000010d,0x0003003e,0x00000109,
++	0x0000010f,0x0004003d,0x00000007,0x00000111,0x000000dc,0x00050080,0x00000007,0x00000112,
++	0x00000111,0x00000078,0x00050041,0x00000066,0x00000114,0x00000058,0x000000e9,0x0004003d,
++	0x00000006,0x00000115,0x00000114,0x0003003e,0x00000113,0x00000115,0x0003003e,0x00000116,
++	0x00000112,0x00060039,0x00000007,0x00000117,0x0000000f,0x00000113,0x00000116,0x0003003e,
++	0x00000110,0x00000117,0x0004003d,0x00000007,0x00000118,0x00000109,0x000500c7,0x00000007,
++	0x00000119,0x00000118,0x00000049,0x00040070,0x00000015,0x0000011a,0x00000119,0x0004003d,
++	0x00000007,0x0000011b,0x00000109,0x000500c2,0x00000007,0x0000011c,0x0000011b,0x00000045,
++	0x00040070,0x00000015,0x0000011d,0x0000011c,0x0004003d,0x00000007,0x0000011e,0x00000110,
++	0x000500c7,0x00000007,0x0000011f,0x0000011e,0x00000049,0x00040070,0x00000015,0x00000120,
++	0x0000011f,0x0004003d,0x00000007,0x00000121,0x00000110,0x000500c2,0x00000007,0x00000122,
++	0x00000121,0x00000045,0x00040070,0x00000015,0x00000123,0x00000122,0x00070050,0x00000020,
++	0x00000124,0x0000011a,0x0000011d,0x00000120,0x00000123,0x00070050,0x00000020,0x00000126,
++	0x00000125,0x00000125,0x00000125,0x00000125,0x00050088,0x00000020,0x00000127,0x00000124,
++	0x00000126,0x000200fe,0x00000127,0x000200f8,0x00000108,0x00050041,0x00000066,0x0000012a,
++	0x00000058,0x000000e9,0x0004003d,0x00000006,0x0000012b,0x0000012a,0x0003003e,0x00000129,
++	0x0000012b,0x0004003d,0x00000007,0x0000012d,0x000000dc,0x0003003e,0x0000012c,0x0000012d,
++	0x00060039,0x00000007,0x0000012e,0x0000000f,0x00000129,0x0000012c,0x0004007c,0x00000015,
++	0x0000012f,0x0000012e,0x0004003d,0x00000007,0x00000130,0x000000dc,0x00050080,0x00000007,
++	0x00000131,0x00000130,0x00000078,0x00050041,0x00000066,0x00000133,0x00000058,0x000000e9,
++	0x0004003d,0x00000006,0x00000134,0x00000133,0x0003003e,0x00000132,0x00000134,0x0003003e,
++	0x00000135,0x00000131,0x00060039,0x00000007,0x00000136,0x0000000f,0x00000132,0x00000135,
++	0x0004007c,0x00000015,0x00000137,0x00000136,0x0004003d,0x00000007,0x00000138,0x000000dc,
++	0x00050080,0x00000007,0x00000139,0x00000138,0x00000095,0x00050041,0x00000066,0x0000013b,
++	0x00000058,0x000000e9,0x0004003d,0x00000006,0x0000013c,0x0000013b,0x0003003e,0x0000013a,
++	0x0000013c,0x0003003e,0x0000013d,0x00000139,0x00060039,0x00000007,0x0000013e,0x0000000f,
++	0x0000013a,0x0000013d,0x0004007c,0x00000015,0x0000013f,0x0000013e,0x0004003d,0x00000007,
++	0x00000140,0x000000dc,0x00050080,0x00000007,0x00000142,0x00000140,0x00000141,0x00050041,
++	0x00000066,0x00000144,0x00000058,0x000000e9,0x0004003d,0x00000006,0x00000145,0x00000144,
++	0x0003003e,0x00000143,0x00000145,0x0003003e,0x00000146,0x00000142,0x00060039,0x00000007,
++	0x00000147,0x0000000f,0x00000143,0x00000146,0x0004007c,0x00000015,0x00000148,0x00000147,
++	0x00070050,0x00000020,0x00000149,0x0000012f,0x00000137,0x0000013f,0x00000148,0x000200fe,
++	0x00000149,0x00010038,0x00050036,0x00000016,0x00000029,0x00000000,0x00000026,0x00030037,
++	0x00000025,0x00000027,0x00030037,0x0000000b,0x00000028,0x000200f8,0x0000002a,0x0004003b,
++	0x0000000b,0x0000014c,0x00000007,0x0004003b,0x0000014f,0x00000150,0x00000007,0x0004003b,
++	0x0000014f,0x00000159,0x00000007,0x0004003b,0x0000014f,0x00000160,0x00000007,0x0004003d,
++	0x00000007,0x0000014d,0x00000028,0x00050084,0x00000007,0x0000014e,0x0000014d,0x00000078,
++	0x0003003e,0x0000014c,0x0000014e,0x00050041,0x00000152,0x00000153,0x00000058,0x00000151,
++	0x0004003d,0x00000050,0x00000154,0x00000153,0x0004003d,0x00000007,0x00000155,0x0000014c,
++	0x00060041,0x00000156,0x00000157,0x00000154,0x0000002d,0x00000155,0x0006003d,0x00000020,
++	0x00000158,0x00000157,0x00000002,0x00000010,0x0003003e,0x00000150,0x00000158,0x00050041,
++	0x00000152,0x0000015a,0x00000058,0x00000151,0x0004003d,0x00000050,0x0000015b,0x0000015a,
++	0x0004003d,0x00000007,0x0000015c,0x0000014c,0x00050080,0x00000007,0x0000015d,0x0000015c,
++	0x00000061,0x00060041,0x00000156,0x0000015e,0x0000015b,0x0000002d,0x0000015d,0x0006003d,
++	0x00000020,0x0000015f,0x0000015e,0x00000002,0x00000010,0x0003003e,0x00000159,0x0000015f,
++	0x00050041,0x00000152,0x00000161,0x00000058,0x00000151,0x0004003d,0x00000050,0x00000162,
++	0x00000161,0x0004003d,0x00000007,0x00000163,0x0000014c,0x00050080,0x00000007,0x00000164,
++	0x00000163,0x0000002f,0x00060041,0x00000156,0x00000165,0x00000162,0x0000002d,0x00000164,
++	0x0006003d,0x00000020,0x00000166,0x00000165,0x00000002,0x00000010,0x0003003e,0x00000160,
++	0x00000166,0x0004003d,0x00000020,0x00000167,0x00000150,0x0008004f,0x00000016,0x00000168,
++	0x00000167,0x00000167,0x00000000,0x00000001,0x00000002,0x0004003d,0x00000016,0x00000169,
++	0x00000027,0x00050094,0x00000015,0x0000016a,0x00000168,0x00000169,0x00050041,0x0000016b,
++	0x0000016c,0x00000150,0x00000105,0x0004003d,0x00000015,0x0000016d,0x0000016c,0x00050081,
++	0x00000015,0x0000016e,0x0000016a,0x0000016d,0x0004003d,0x00000020,0x0000016f,0x00000159,
++	0x0008004f,0x00000016,0x00000170,0x0000016f,0x0000016f,0x00000000,0x00000001,0x00000002,
++	0x0004003d,0x00000016,0x00000171,0x00000027,0x00050094,0x00000015,0x00000172,0x00000170,
++	0x00000171,0x00050041,0x0000016b,0x00000173,0x00000159,0x00000105,0x0004003d,0x00000015,
++	0x00000174,0x00000173,0x00050081,0x00000015,0x00000175,0x00000172,0x00000174,0x0004003d,
++	0x00000020,0x00000176,0x00000160,0x0008004f,0x00000016,0x00000177,0x00000176,0x00000176,
++	0x00000000,0x00000001,0x00000002,0x0004003d,0x00000016,0x00000178,0x00000027,0x00050094,
++	0x00000015,0x00000179,0x00000177,0x00000178,0x00050041,0x0000016b,0x0000017a,0x00000160,
++	0x00000105,0x0004003d,0x00000015,0x0000017b,0x0000017a,0x00050081,0x00000015,0x0000017c,
++	0x00000179,0x0000017b,0x00060050,0x00000016,0x0000017d,0x0000016e,0x00000175,0x0000017c,
++	0x000200fe,0x0000017d,0x00010038
++};
+diff --git a/filament/backend/src/vulkan/VulkanBlasDeformer.cpp b/filament/backend/src/vulkan/VulkanBlasDeformer.cpp
+new file mode 100644
+index 00000000..adbcf86d
+--- /dev/null
++++ b/filament/backend/src/vulkan/VulkanBlasDeformer.cpp
+@@ -0,0 +1,143 @@
++/*
++ * Copyright (C) 2025 The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++#include "VulkanBlasDeformer.h"
++
++#include "VulkanBlasDeformSpirv.h"
++#include "VulkanConstants.h"
++
++#include <utils/Logger.h>
++
++using namespace bluevk;
++
++namespace filament::backend {
++
++namespace {
++
++VkPipeline createPipeline(VkDevice device, VkPipelineLayout layout, uint32_t const* code,
++        size_t bytes) {
++    VkShaderModuleCreateInfo const moduleInfo = {
++        .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
++        .codeSize = bytes,
++        .pCode = code,
++    };
++    VkShaderModule module = VK_NULL_HANDLE;
++    if (vkCreateShaderModule(device, &moduleInfo, VKALLOC, &module) != VK_SUCCESS) {
++        return VK_NULL_HANDLE;
++    }
++    VkComputePipelineCreateInfo const pipelineInfo = {
++        .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
++        .stage = {
++            .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
++            .stage = VK_SHADER_STAGE_COMPUTE_BIT,
++            .module = module,
++            .pName = "main",
++        },
++        .layout = layout,
++    };
++    VkPipeline pipeline = VK_NULL_HANDLE;
++    VkResult const result = vkCreateComputePipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo,
++            VKALLOC, &pipeline);
++    vkDestroyShaderModule(device, module, VKALLOC);
++    return result == VK_SUCCESS ? pipeline : VK_NULL_HANDLE;
++}
++
++} // namespace
++
++bool VulkanBlasDeformer::initialize(VkDevice const device) noexcept {
++    if (mSkinPipeline != VK_NULL_HANDLE) {
++        return true;
++    }
++    if (mFailed) {
++        return false;
++    }
++    mDevice = device;
++
++    VkDescriptorSetLayoutBinding const binding = {
++        .binding = 0,
++        .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
++        .descriptorCount = 1,
++        .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
++    };
++    VkDescriptorSetLayoutCreateInfo const setInfo = {
++        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
++        .bindingCount = 1,
++        .pBindings = &binding,
++    };
++    VkSamplerCreateInfo const samplerInfo = {
++        .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
++        .magFilter = VK_FILTER_NEAREST,
++        .minFilter = VK_FILTER_NEAREST,
++        .mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST,
++        .addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
++        .addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
++        .addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
++        .maxLod = 0.0f,
++    };
++    VkPushConstantRange const range = {
++        .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
++        .offset = 0,
++        .size = sizeof(PushConstants),
++    };
++    VkPipelineLayoutCreateInfo skinLayoutInfo = {
++        .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
++        .setLayoutCount = 0,
++        .pushConstantRangeCount = 1,
++        .pPushConstantRanges = &range,
++    };
++    bool ok = vkCreateDescriptorSetLayout(device, &setInfo, VKALLOC, &mMorphSetLayout) == VK_SUCCESS &&
++              vkCreateSampler(device, &samplerInfo, VKALLOC, &mSampler) == VK_SUCCESS &&
++              vkCreatePipelineLayout(device, &skinLayoutInfo, VKALLOC, &mSkinLayout) == VK_SUCCESS;
++    if (ok) {
++        VkPipelineLayoutCreateInfo morphLayoutInfo = skinLayoutInfo;
++        morphLayoutInfo.setLayoutCount = 1;
++        morphLayoutInfo.pSetLayouts = &mMorphSetLayout;
++        ok = vkCreatePipelineLayout(device, &morphLayoutInfo, VKALLOC, &mMorphLayout) == VK_SUCCESS;
++    }
++    if (ok) {
++        mSkinPipeline = createPipeline(device, mSkinLayout, BLAS_DEFORM_SKIN_SPV,
++                sizeof(BLAS_DEFORM_SKIN_SPV));
++        mMorphPipeline = createPipeline(device, mMorphLayout, BLAS_DEFORM_MORPH_SPV,
++                sizeof(BLAS_DEFORM_MORPH_SPV));
++        ok = mSkinPipeline != VK_NULL_HANDLE && mMorphPipeline != VK_NULL_HANDLE;
++    }
++    if (!ok) {
++        FVK_LOGE << "ray tracing: the skinning/morphing compute pipelines could not be created; "
++                      "deformable acceleration structures keep their bind pose";
++        terminate();
++        mFailed = true;
++        return false;
++    }
++    return true;
++}
++
++void VulkanBlasDeformer::terminate() noexcept {
++    if (mDevice == VK_NULL_HANDLE) {
++        return;
++    }
++    if (mSkinPipeline) vkDestroyPipeline(mDevice, mSkinPipeline, VKALLOC);
++    if (mMorphPipeline) vkDestroyPipeline(mDevice, mMorphPipeline, VKALLOC);
++    if (mSkinLayout) vkDestroyPipelineLayout(mDevice, mSkinLayout, VKALLOC);
++    if (mMorphLayout) vkDestroyPipelineLayout(mDevice, mMorphLayout, VKALLOC);
++    if (mSampler) vkDestroySampler(mDevice, mSampler, VKALLOC);
++    if (mMorphSetLayout) vkDestroyDescriptorSetLayout(mDevice, mMorphSetLayout, VKALLOC);
++    mSkinPipeline = mMorphPipeline = VK_NULL_HANDLE;
++    mSkinLayout = mMorphLayout = VK_NULL_HANDLE;
++    mSampler = VK_NULL_HANDLE;
++    mMorphSetLayout = VK_NULL_HANDLE;
++}
++
++} // namespace filament::backend
+diff --git a/filament/backend/src/vulkan/VulkanBlasDeformer.h b/filament/backend/src/vulkan/VulkanBlasDeformer.h
+new file mode 100644
+index 00000000..f2c40d74
+--- /dev/null
++++ b/filament/backend/src/vulkan/VulkanBlasDeformer.h
+@@ -0,0 +1,86 @@
++/*
++ * Copyright (C) 2025 The Android Open Source Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++#ifndef TNT_FILAMENT_BACKEND_VULKANBLASDEFORMER_H
++#define TNT_FILAMENT_BACKEND_VULKANBLASDEFORMER_H
++
++#include <bluevk/BlueVK.h>
++
++#include <stdint.h>
++
++namespace filament::backend {
++
++/**
++ * The compute pipelines that pose skinned and morphed vertices for deformable bottom-level
++ * acceleration structures (VulkanBlasDeform.comp): one without and one with the morph target
++ * texture. Created on first use; the push constants carry buffer device addresses, so the only
++ * descriptor is the morph target texture of the morphing pipeline.
++ */
++class VulkanBlasDeformer {
++public:
++    // element formats the shader decodes
++    enum Format : uint32_t { FLOAT = 0, HALF = 1, UBYTE = 2, USHORT = 3 };
++    enum Flags : uint32_t { SKIN = 1, MORPH = 2 };
++
++    struct PushConstants {
++        VkDeviceAddress positions;
++        VkDeviceAddress joints;
++        VkDeviceAddress weights;
++        VkDeviceAddress bones;
++        VkDeviceAddress morphWeights;
++        VkDeviceAddress posed;
++        uint32_t vertexCount;
++        uint32_t positionStride;
++        uint32_t positionFormat;
++        uint32_t jointsStride;
++        uint32_t jointsFormat;
++        uint32_t weightsStride;
++        uint32_t weightsFormat;
++        uint32_t morphOffset;
++        uint32_t morphCount;
++        uint32_t flags;
++    };
++    static_assert(sizeof(PushConstants) <= 128, "push constants beyond the guaranteed minimum");
++
++    static constexpr uint32_t WORKGROUP_SIZE = 64;
++
++    VulkanBlasDeformer() noexcept = default;
++    VulkanBlasDeformer(VulkanBlasDeformer const&) = delete;
++    VulkanBlasDeformer& operator=(VulkanBlasDeformer const&) = delete;
++
++    // Creates the pipelines on first use; false when that failed.
++    bool initialize(VkDevice device) noexcept;
++    void terminate() noexcept;
++
++    VkPipeline getPipeline(bool morph) const noexcept { return morph ? mMorphPipeline : mSkinPipeline; }
++    VkPipelineLayout getLayout(bool morph) const noexcept { return morph ? mMorphLayout : mSkinLayout; }
++    VkDescriptorSetLayout getMorphSetLayout() const noexcept { return mMorphSetLayout; }
++    VkSampler getSampler() const noexcept { return mSampler; }
++
++private:
++    VkDevice mDevice = VK_NULL_HANDLE;
++    bool mFailed = false;
++    VkDescriptorSetLayout mMorphSetLayout = VK_NULL_HANDLE;
++    VkSampler mSampler = VK_NULL_HANDLE;
++    VkPipelineLayout mSkinLayout = VK_NULL_HANDLE;
++    VkPipelineLayout mMorphLayout = VK_NULL_HANDLE;
++    VkPipeline mSkinPipeline = VK_NULL_HANDLE;
++    VkPipeline mMorphPipeline = VK_NULL_HANDLE;
++};
++
++} // namespace filament::backend
++
++#endif // TNT_FILAMENT_BACKEND_VULKANBLASDEFORMER_H
+diff --git a/filament/backend/src/vulkan/VulkanBufferCache.cpp b/filament/backend/src/vulkan/VulkanBufferCache.cpp
+index f0578919..8ba8401e 100644
+--- a/filament/backend/src/vulkan/VulkanBufferCache.cpp
++++ b/filament/backend/src/vulkan/VulkanBufferCache.cpp
+@@ -138,6 +138,11 @@ VulkanGpuBuffer const* VulkanBufferCache::allocate(VulkanBufferBinding binding,
+         usage |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
+                 VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR;
+     }
++    // Bone palettes and morph weights are read by address by the skinning pass that poses the
++    // deformable acceleration structures.
++    if (mContext.isRayQuerySupported() && binding == VulkanBufferBinding::UNIFORM) {
++        usage |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
++    }
+     VkBufferCreateInfo const bufferInfo{
+         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+         .size = numBytes,
+diff --git a/filament/backend/src/vulkan/VulkanDriver.cpp b/filament/backend/src/vulkan/VulkanDriver.cpp
+index 3050c9ac..e8523132 100644
+--- a/filament/backend/src/vulkan/VulkanDriver.cpp
++++ b/filament/backend/src/vulkan/VulkanDriver.cpp
+@@ -405,6 +405,7 @@ void VulkanDriver::terminate() {
+     mQueryManager.terminate();
+ 
+     mBlitter.terminate();
++    mBlasDeformer.terminate();
+     mReadPixels.terminate();
+ 
+     // Allow the stage pool to clean up.
+@@ -856,6 +857,38 @@ void VulkanDriver::buildAccelerationStructure(Handle<HwAccelerationStructure> as
+     as->build(commands, mode);
+ }
+ 
++void VulkanDriver::deformAccelerationStructure(Handle<HwAccelerationStructure> ash,
++        AccelerationStructureDeformation deformation) {
++    FVK_SYSTRACE_SCOPE();
++    if (!ash || !mContext.isRayQuerySupported()) {
++        return;
++    }
++    FILAMENT_CHECK_PRECONDITION(!mCurrentRenderPass.renderPass)
++            << "deformAccelerationStructure() cannot be invoked inside a render pass.";
++    auto as = resource_ptr<VulkanAccelerationStructure>::cast(&mResourceManager, ash);
++    VulkanAccelerationStructure::DeformInputs inputs{ .desc = deformation };
++    auto buffer = [this](Handle<HwBufferObject> const h) {
++        return h ? resource_ptr<VulkanBufferObject>::cast(&mResourceManager, h)
++                 : resource_ptr<VulkanBufferObject>{};
++    };
++    inputs.joints = buffer(deformation.joints);
++    inputs.weights = buffer(deformation.weights);
++    inputs.bones = buffer(deformation.bones);
++    inputs.morphWeights = buffer(deformation.morphWeights);
++    if (deformation.morphPositions) {
++        inputs.morphPositions =
++                resource_ptr<VulkanTexture>::cast(&mResourceManager, deformation.morphPositions);
++    }
++    VulkanCommandBuffer& commands = mCommands.get();
++    commands.acquire(as);
++    if (!as->deform(commands, mBlasDeformer, inputs)) {
++        // poses it cannot compute keep the rest positions: build from them once
++        if (!as->isBuilt()) {
++            as->build(commands, AccelerationStructureBuildMode::BUILD);
++        }
++    }
++}
++
+ void VulkanDriver::updateDescriptorSetAccelerationStructure(Handle<HwDescriptorSet> dsh,
+         descriptor_binding_t binding, Handle<HwAccelerationStructure> ash) {
+     FVK_SYSTRACE_SCOPE();
+diff --git a/filament/backend/src/vulkan/VulkanDriver.h b/filament/backend/src/vulkan/VulkanDriver.h
+index 8b513e4e..4a374d97 100644
+--- a/filament/backend/src/vulkan/VulkanDriver.h
++++ b/filament/backend/src/vulkan/VulkanDriver.h
+@@ -17,6 +17,7 @@
+ #ifndef TNT_FILAMENT_BACKEND_VULKANDRIVER_H
+ #define TNT_FILAMENT_BACKEND_VULKANDRIVER_H
+ 
++#include "VulkanBlasDeformer.h"
+ #include "VulkanBlitter.h"
+ #include "VulkanBufferCache.h"
+ #include "VulkanConstants.h"
+@@ -176,6 +177,7 @@ private:
+     VulkanYcbcrConversionCache mYcbcrConversionCache;
+     VulkanSamplerCache mSamplerCache;
+     VulkanBlitter mBlitter;
++    VulkanBlasDeformer mBlasDeformer;
+     VulkanReadPixels mReadPixels;
+     VulkanDescriptorSetLayoutCache mDescriptorSetLayoutCache;
+     VulkanDescriptorSetCache mDescriptorSetCache;
+diff --git a/filament/backend/src/webgpu/WebGPUDriver.cpp b/filament/backend/src/webgpu/WebGPUDriver.cpp
+index d636fa0b..5b2e566f 100644
+--- a/filament/backend/src/webgpu/WebGPUDriver.cpp
++++ b/filament/backend/src/webgpu/WebGPUDriver.cpp
+@@ -2455,6 +2455,10 @@ void WebGPUDriver::buildAccelerationStructure(Handle<HwAccelerationStructure>,
+         AccelerationStructureBuildMode) {
+ }
+ 
++void WebGPUDriver::deformAccelerationStructure(Handle<HwAccelerationStructure>,
++        AccelerationStructureDeformation) {
++}
++
+ void WebGPUDriver::updateDescriptorSetAccelerationStructure(Handle<HwDescriptorSet>,
+         descriptor_binding_t, Handle<HwAccelerationStructure>) {
+ }
+diff --git a/filament/include/filament/Scene.h b/filament/include/filament/Scene.h
+index 235de770..cf065118 100644
+--- a/filament/include/filament/Scene.h
++++ b/filament/include/filament/Scene.h
+@@ -108,6 +108,21 @@ public:
+      */
+     uint64_t getLastTlasBuildTimeNanos() const noexcept;
+ 
++    /**
++     * Skinned and morphed renderables are traced in their current pose: every frame their bone
++     * palette or morph weights changed, a compute pass poses their vertices and their bottom-level
++     * structures are refit (rebuilt every 32 refits).
++     *
++     * @return how many of those structures the last frame posed
++     */
++    uint32_t getDeformedBlasCount() const noexcept;
++
++    /**
++     * @return the GPU time of the last frame's posing passes and refits, in nanoseconds (0 until
++     *         a timer result arrived)
++     */
++    uint64_t getLastBlasDeformTimeNanos() const noexcept;
++
+     /**
+      * Set the IndirectLight to use when rendering the Scene.
+      *
+diff --git a/filament/src/Scene.cpp b/filament/src/Scene.cpp
+index b8012208..1c0978e8 100644
+--- a/filament/src/Scene.cpp
++++ b/filament/src/Scene.cpp
+@@ -47,6 +47,14 @@ uint64_t Scene::getLastTlasBuildTimeNanos() const noexcept {
+     return downcast(this)->getLastTlasBuildTimeNanos();
+ }
+ 
++uint32_t Scene::getDeformedBlasCount() const noexcept {
++    return downcast(this)->getDeformedBlasCount();
++}
++
++uint64_t Scene::getLastBlasDeformTimeNanos() const noexcept {
++    return downcast(this)->getLastBlasDeformTimeNanos();
++}
++
+ void Scene::setIndirectLight(IndirectLight* ibl) noexcept {
+     downcast(this)->setIndirectLight(downcast(ibl));
+ }
+diff --git a/filament/src/components/RenderableManager.cpp b/filament/src/components/RenderableManager.cpp
+index 39f0e0d0..928b7795 100644
+--- a/filament/src/components/RenderableManager.cpp
++++ b/filament/src/components/RenderableManager.cpp
+@@ -1102,6 +1102,7 @@ void FRenderableManager::setBones(Instance const ci,
+         if (bones.handle) {
+             boneCount = std::min(boneCount, bones.count - offset);
+             keepPreviousBones(bones);
++            bones.version++;
+             if (bones.shadow) {
+                 for (size_t i = 0; i < boneCount; i++) {
+                     mat4f transform(transforms[i].unitQuaternion);
+@@ -1136,6 +1137,7 @@ void FRenderableManager::setBones(Instance const ci,
+         if (bones.handle) {
+             boneCount = std::min(boneCount, bones.count - offset);
+             keepPreviousBones(bones);
++            bones.version++;
+             if (bones.shadow) {
+                 for (size_t i = 0; i < boneCount; i++) {
+                     bones.shadow[offset + i] = FSkinningBuffer::makeBone(transforms[i]);
+@@ -1174,6 +1176,7 @@ void FRenderableManager::setSkinningBuffer(Instance const ci,
+     bones.handle = skinningBuffer->getHwHandle();
+     bones.count = uint16_t(count);
+     bones.offset = uint16_t(offset);
++    bones.version++;
+ }
+ 
+ static void updateMorphWeights(FEngine& engine, Handle<HwBufferObject> handle,
+@@ -1202,6 +1205,7 @@ void FRenderableManager::setMorphWeights(Instance const instance, float const* w
+ 
+         MorphWeights& morphWeights = mManager[instance].morphWeights;
+         if (morphWeights.handle) {
++            morphWeights.version++;
+             // the first update of a frame keeps the weights the previous frame rendered with
+             if (morphWeights.prevHandle && morphWeights.shadow && morphWeights.prevFrame != mMotionFrame) {
+                 auto& driver = mEngine.getDriverApi();
+diff --git a/filament/src/components/RenderableManager.h b/filament/src/components/RenderableManager.h
+index 5f4c45da..215ca9b1 100644
+--- a/filament/src/components/RenderableManager.h
++++ b/filament/src/components/RenderableManager.h
+@@ -235,6 +235,12 @@ public:
+     inline SkinningBindingInfo getSkinningBufferInfo(Instance instance) const noexcept;
+     inline uint32_t getBoneCount(Instance instance) const noexcept;
+ 
++    // Changes whenever the renderable's bone palette or morph weights are updated. A palette in
++    // a shared SkinningBuffer is updated without the renderable knowing: isPoseShared() is true
++    // and the version says nothing.
++    inline uint32_t getPoseVersion(Instance instance) const noexcept;
++    inline bool isPoseShared(Instance instance) const noexcept;
++
+     struct MorphingBindingInfo {
+         backend::Handle<backend::HwBufferObject> handle;
+         uint32_t count;
+@@ -306,6 +312,8 @@ private:
+         uint32_t prevFrame = 0;
+         bool prevStale = false;         // prevHandle holds an older pose than handle
+         PerRenderableBoneUib::BoneData* shadow = nullptr;
++        // bumped by every palette update (ray tracing re-poses its acceleration structures)
++        uint32_t version = 0;
+     };
+ 
+     struct MorphWeights {
+@@ -316,6 +324,7 @@ private:
+         uint32_t prevFrame = 0;
+         bool prevStale = false;
+         math::float4* shadow = nullptr;
++        uint32_t version = 0;   // bumped by every weight update, see Bones
+     };
+ 
+     enum {
+@@ -610,6 +619,17 @@ inline uint32_t FRenderableManager::getBoneCount(Instance const instance) const
+     return bones.count;
+ }
+ 
++inline uint32_t FRenderableManager::getPoseVersion(Instance const instance) const noexcept {
++    Bones const& bones = mManager[instance].bones;
++    MorphWeights const& morphWeights = mManager[instance].morphWeights;
++    return bones.version + morphWeights.version;
++}
++
++inline bool FRenderableManager::isPoseShared(Instance const instance) const noexcept {
++    Bones const& bones = mManager[instance].bones;
++    return bones.skinningBufferMode;
++}
++
+ FRenderableManager::MorphingBindingInfo
+ FRenderableManager::getMorphingBufferInfo(Instance const instance) const noexcept {
+     MorphWeights const& morphWeights = mManager[instance].morphWeights;
+diff --git a/filament/src/details/Scene.cpp b/filament/src/details/Scene.cpp
+index 3585a3ff..a3bef270 100644
+--- a/filament/src/details/Scene.cpp
++++ b/filament/src/details/Scene.cpp
+@@ -27,6 +27,7 @@
+ #include "details/Skybox.h"
+ #include "details/View.h"
+ #include "details/IndexBuffer.h"
++#include "details/MorphTargetBuffer.h"
+ #include "details/VertexBuffer.h"
+ #include "RenderPrimitive.h"
+ 
+@@ -516,6 +517,14 @@ void FScene::terminate(FEngine& engine) {
+         driver.destroyAccelerationStructure(entry.second.handle);
+     }
+     mRayTracing.blas.clear();
++    for (auto& entry : mRayTracing.deformableBlas) {
++        driver.destroyAccelerationStructure(entry.second.handle);
++    }
++    mRayTracing.deformableBlas.clear();
++    if (mRayTracing.deformTimer) {
++        driver.destroyTimerQuery(mRayTracing.deformTimer);
++        mRayTracing.deformTimer = {};
++    }
+     if (mRayTracing.tlas) {
+         driver.destroyAccelerationStructure(mRayTracing.tlas);
+         mRayTracing.tlas = {};
+@@ -549,6 +558,16 @@ void FScene::updateAccelerationStructures(FEngine& engine, DriverApi& driver) no
+             rt.timerPending = false;
+         }
+     }
++    if (rt.deformTimerPending && rt.deformTimer) {
++        uint64_t nanos = 0;
++        TimerQueryResult const result = driver.getTimerQueryValue(rt.deformTimer, &nanos);
++        if (result == TimerQueryResult::AVAILABLE) {
++            rt.lastDeformNanos = nanos;
++            rt.deformTimerPending = false;
++        } else if (result == TimerQueryResult::ERROR) {
++            rt.deformTimerPending = false;
++        }
++    }
+ 
+     FRenderableManager const& rcm = engine.getRenderableManager();
+     FTransformManager const& tcm = engine.getTransformManager();
+@@ -556,6 +575,11 @@ void FScene::updateAccelerationStructures(FEngine& engine, DriverApi& driver) no
+     std::vector<AccelerationStructureInstance> instances;
+     rt.entities.clear();
+     uint32_t renderableCount = 0;
++    uint32_t deformedCount = 0;
++    bool deformTimed = false;
++    // a deformable structure is rebuilt (instead of refit) after this many refits, so that its
++    // bounding volumes do not degrade as the pose drifts from the one it was built for
++    constexpr uint32_t MAX_REFITS = 32;
+ 
+     // every renderable of the scene, not only the ones visible to a view: shadows and ray
+     // queries see what is off-screen too
+@@ -569,7 +593,23 @@ void FScene::updateAccelerationStructures(FEngine& engine, DriverApi& driver) no
+         math::mat4f const worldTransform = ti ? tcm.getWorldTransform(ti) : math::mat4f{};
+         auto const primitives = rcm.getRenderPrimitives(ri, 0);
+         bool contributed = false;
++
++        // Skinned and morphed renderables are posed by a compute pass into their own copy of
++        // the positions (Vulkan), each frame their palette or weights changed.
++        FRenderableManager::Skinning const skinning = rcm.getSkinning(ri);
++        FRenderableManager::SkinningBindingInfo const skinInfo = rcm.getSkinningBufferInfo(ri);
++        FRenderableManager::MorphingBindingInfo const morphInfo = rcm.getMorphingBufferInfo(ri);
++        bool const skinned = skinning.skinning && skinInfo.handle;
++        bool const morphed = (uint8_t(skinning.morphType) &
++                                     uint8_t(RenderableManager::Builder::MorphType::POSITION)) &&
++                morphInfo.handle && morphInfo.count && morphInfo.morphTargetBuffer &&
++                morphInfo.morphTargetBuffer->hasPositions();
++        uint32_t const poseVersion = rcm.getPoseVersion(ri);
++        bool const poseShared = rcm.isPoseShared(ri);
++
++        uint32_t primitiveIndex = 0;
+         for (FRenderPrimitive const& primitive : primitives) {
++            uint32_t const thisPrimitive = primitiveIndex++;
+             if (primitive.getPrimitiveType() != PrimitiveType::TRIANGLES) {
+                 continue;
+             }
+@@ -585,6 +625,108 @@ void FScene::updateAccelerationStructures(FEngine& engine, DriverApi& driver) no
+                 continue; // the buffer object is not uploaded yet
+             }
+             FIndexBuffer const* const ib = primitive.getIndexBuffer();
++
++            AccelerationStructureDeformation deformation{};
++            bool deformable = false;
++            if (skinned) {
++                BufferObjectHandle joints, weights;
++                uint32_t jointsOffset = 0, jointsStride = 0, weightsOffset = 0, weightsStride = 0;
++                ElementType jointsType = ElementType::USHORT4, weightsType = ElementType::FLOAT4;
++                if (vb->getAttributeBinding(VertexAttribute::BONE_INDICES, joints, jointsOffset,
++                            jointsStride, jointsType) &&
++                        vb->getAttributeBinding(VertexAttribute::BONE_WEIGHTS, weights,
++                                weightsOffset, weightsStride, weightsType)) {
++                    deformation.joints = joints;
++                    deformation.jointsOffset = jointsOffset;
++                    deformation.jointsStride = jointsStride;
++                    deformation.jointsType = jointsType;
++                    deformation.weights = weights;
++                    deformation.weightsOffset = weightsOffset;
++                    deformation.weightsStride = weightsStride;
++                    deformation.weightsType = weightsType;
++                    deformation.bones = skinInfo.handle;
++                    deformation.bonesOffset =
++                            uint32_t(skinInfo.offset * sizeof(PerRenderableBoneUib::BoneData));
++                    deformable = true;
++                }
++            }
++            if (morphed) {
++                deformation.morphPositions = morphInfo.morphTargetBuffer->getPositionsHandle();
++                deformation.morphOffset = primitive.getMorphingBufferOffset();
++                deformation.morphCount = morphInfo.count;
++                deformation.morphWeights = morphInfo.handle;
++                deformable = true;
++            }
++
++            if (deformable) {
++                uint64_t const key = (uint64_t(entity.getId()) << 16u) ^ uint64_t(thisPrimitive);
++                auto it = rt.deformableBlas.find(key);
++                bool const created = it == rt.deformableBlas.end();
++                if (created) {
++                    AccelerationStructureGeometry geometry{};
++                    geometry.vertexBuffer = boh;
++                    geometry.vertexStride = positionStride;
++                    geometry.vertexFormat = positionType;
++                    geometry.vertexOffset = positionOffset;
++                    geometry.deformable = true;
++                    if (ib) {
++                        geometry.vertexCount = uint32_t(vb->getVertexCount());
++                        geometry.indexBuffer = ib->getHwHandle();
++                        geometry.indexOffset = primitive.getOffset();
++                        geometry.indexCount = primitive.getCount();
++                    } else {
++                        // the posing pass reads the vertices of this draw only
++                        geometry.vertexOffset = positionOffset + primitive.getOffset() * positionStride;
++                        geometry.vertexCount = primitive.getCount();
++                    }
++                    if (geometry.vertexCount == 0 || (ib && geometry.indexCount < 3)) {
++                        continue;
++                    }
++                    auto const handle = driver.createAccelerationStructureBlas(geometry);
++                    it = rt.deformableBlas.emplace(key, RayTracingState::Blas{ handle, rt.frame }).first;
++                }
++                RayTracingState::Blas& blas = it->second;
++                if (!ib) {
++                    // the bone and morph data of a non-indexed draw start at its first vertex
++                    deformation.jointsOffset += primitive.getOffset() * deformation.jointsStride;
++                    deformation.weightsOffset += primitive.getOffset() * deformation.weightsStride;
++                    deformation.morphOffset += primitive.getOffset();
++                }
++                if (created || poseShared || blas.poseVersion != poseVersion) {
++                    bool const rebuild = created || blas.refits >= MAX_REFITS;
++                    deformation.mode = rebuild ? AccelerationStructureBuildMode::BUILD
++                                               : AccelerationStructureBuildMode::REFIT;
++                    blas.refits = rebuild ? 0u : blas.refits + 1u;
++                    blas.poseVersion = poseVersion;
++                    if (!deformTimed) {
++                        if (!rt.deformTimer) {
++                            rt.deformTimer = driver.createTimerQuery();
++                        }
++                        deformTimed = !rt.deformTimerPending;
++                        if (deformTimed) {
++                            driver.beginTimerQuery(rt.deformTimer);
++                        }
++                    }
++                    driver.deformAccelerationStructure(blas.handle, deformation);
++                    deformedCount++;
++                }
++                blas.lastUsedFrame = rt.frame;
++
++                AccelerationStructureInstance instance{};
++                for (size_t r = 0; r < 3; r++) {
++                    for (size_t c = 0; c < 4; c++) {
++                        instance.transform[r][c] = worldTransform[c][r];
++                    }
++                }
++                instance.customIndex = uint32_t(rt.entities.size()) & 0xFFFFFFu;
++                instance.mask = 0xFF;
++                instance.blas = blas.handle;
++                instances.push_back(instance);
++                rt.entities.push_back(entity);
++                contributed = true;
++                continue;
++            }
++
+             // one bottom-level structure per geometry, shared by the renderables that draw it
+             uint64_t key = uint64_t(boh.getId());
+             key = key * 1000003u ^ uint64_t(ib ? ib->getHwHandle().getId() : 0u);
+@@ -635,13 +777,21 @@ void FScene::updateAccelerationStructures(FEngine& engine, DriverApi& driver) no
+     });
+     rt.renderableCount = renderableCount;
+ 
++    rt.deformedCount = deformedCount;
++    if (deformTimed) {
++        driver.endTimerQuery(rt.deformTimer);
++        rt.deformTimerPending = true;
++    }
++
+     // bottom-level structures nobody drew for a while go away
+-    for (auto it = rt.blas.begin(); it != rt.blas.end();) {
+-        if (rt.frame - it->second.lastUsedFrame > 120u) {
+-            driver.destroyAccelerationStructure(it->second.handle);
+-            it = rt.blas.erase(it);
+-        } else {
+-            ++it;
++    for (auto* map : { &rt.blas, &rt.deformableBlas }) {
++        for (auto it = map->begin(); it != map->end();) {
++            if (rt.frame - it->second.lastUsedFrame > 120u) {
++                driver.destroyAccelerationStructure(it->second.handle);
++                it = map->erase(it);
++            } else {
++                ++it;
++            }
+         }
+     }
+ 
+diff --git a/filament/src/details/Scene.h b/filament/src/details/Scene.h
+index 70ecc86f..6f3088b8 100644
+--- a/filament/src/details/Scene.h
++++ b/filament/src/details/Scene.h
+@@ -66,6 +66,8 @@ public:
+     bool isRayTracingEnabled() const noexcept { return mRayTracing.enabled; }
+     uint32_t getTlasInstanceCount() const noexcept { return mRayTracing.renderableCount; }
+     uint64_t getLastTlasBuildTimeNanos() const noexcept { return mRayTracing.lastBuildNanos; }
++    uint32_t getDeformedBlasCount() const noexcept { return mRayTracing.deformedCount; }
++    uint64_t getLastBlasDeformTimeNanos() const noexcept { return mRayTracing.lastDeformNanos; }
+     backend::Handle<backend::HwAccelerationStructure> getTlas() const noexcept { return mRayTracing.tlas; }
+     // the entity behind an instance custom index a ray query returned
+     utils::Entity getRayTracedEntity(uint32_t customIndex) const noexcept;
+@@ -265,6 +267,10 @@ private:
+         struct Blas {
+             backend::Handle<backend::HwAccelerationStructure> handle;
+             uint32_t lastUsedFrame = 0;
++            // deformable (skinned or morphed) structures: the pose they were last built for
++            // and the refits since the last full build
++            uint32_t poseVersion = 0;
++            uint32_t refits = 0;
+         };
+         bool enabled = false;
+         backend::Handle<backend::HwAccelerationStructure> tlas;
+@@ -275,6 +281,12 @@ private:
+         bool timerPending = false;
+         uint64_t lastBuildNanos = 0;
+         std::unordered_map<uint64_t, Blas> blas;    // keyed by primitive geometry identity
++        // skinned and morphed primitives pose their own copy: keyed by entity and primitive
++        std::unordered_map<uint64_t, Blas> deformableBlas;
++        backend::Handle<backend::HwTimerQuery> deformTimer;
++        bool deformTimerPending = false;
++        uint64_t lastDeformNanos = 0;
++        uint32_t deformedCount = 0;
+         std::vector<utils::Entity> entities;        // instance custom index -> entity
+     } mRayTracing;
+ 
+diff --git a/filament/src/details/VertexBuffer.h b/filament/src/details/VertexBuffer.h
+index 35cfa2ad..5159c676 100644
+--- a/filament/src/details/VertexBuffer.h
++++ b/filament/src/details/VertexBuffer.h
+@@ -105,7 +105,13 @@ public:
+     // for the ray tracing acceleration structures. False until the buffer object exists.
+     bool getPositionBinding(BufferObjectHandle& boh, uint32_t& offset, uint32_t& stride,
+             backend::ElementType& type) const noexcept {
+-        backend::Attribute const& a = mAttributes[VertexAttribute::POSITION];
++        return getAttributeBinding(VertexAttribute::POSITION, boh, offset, stride, type);
++    }
++
++    // The same for any attribute (the bone indices and weights of a skinned primitive).
++    bool getAttributeBinding(VertexAttribute const attribute, BufferObjectHandle& boh,
++            uint32_t& offset, uint32_t& stride, backend::ElementType& type) const noexcept {
++        backend::Attribute const& a = mAttributes[attribute];
+         if (a.buffer == backend::Attribute::BUFFER_UNUSED || !mBufferObjects[a.buffer]) {
+             return false;
+         }
+@@ -116,6 +122,8 @@ public:
+         return true;
+     }
+ 
++    bool isAdvancedSkinningEnabled() const noexcept { return mAdvancedSkinningEnabled; }
++
+ private:
+     friend class VertexBuffer;
+     VertexBufferInfoHandle mVertexBufferInfoHandle;

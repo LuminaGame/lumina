@@ -57,6 +57,23 @@ class FilamentScene {
     return Duration(microseconds: nanos ~/ 1000);
   }
 
+  /// Skinned and morphed renderables are traced in the pose they render with:
+  /// every frame their bone palette or morph weights change, a compute pass
+  /// poses their vertices and their bottom-level structures are refit. How
+  /// many of those structures the last rendered frame re-posed.
+  int get deformedBlasCount {
+    _checkDisposed();
+    return c.filament_scene_get_deformed_blas_count(_ptr);
+  }
+
+  /// GPU time of the last frame's posing passes and refits ([Duration.zero]
+  /// until a timer query resolved).
+  Duration get lastBlasDeformTime {
+    _checkDisposed();
+    final nanos = c.filament_scene_get_blas_deform_nanos(_ptr);
+    return Duration(microseconds: nanos ~/ 1000);
+  }
+
   /// Traces one visibility ray from ([ox], [oy], [oz]) along ([dx], [dy],
   /// [dz]) against the acceleration structures and waits for the answer.
   ///

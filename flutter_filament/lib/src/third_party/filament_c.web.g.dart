@@ -3906,6 +3906,12 @@ int filament_scene_get_tlas_instance_count(ffi.Pointer<ffi.Void> scene) =>
 int filament_scene_get_tlas_build_nanos(ffi.Pointer<ffi.Void> scene) =>
     FlutterFilamentModule.fromBigInt(_m.filament_scene_get_tlas_build_nanos(scene.address.toJS));
 
+int filament_scene_get_deformed_blas_count(ffi.Pointer<ffi.Void> scene) =>
+    _m.filament_scene_get_deformed_blas_count(scene.address.toJS).toDartInt.toUnsigned(32);
+
+int filament_scene_get_blas_deform_nanos(ffi.Pointer<ffi.Void> scene) =>
+    FlutterFilamentModule.fromBigInt(_m.filament_scene_get_blas_deform_nanos(scene.address.toJS));
+
 void filament_renderable_set_ray_tracing_visible(ffi.Pointer<ffi.Void> engine, int entity, bool visible) {
   _m.filament_renderable_set_ray_tracing_visible(engine.address.toJS, entity.toJS, (visible ? 1 : 0).toJS);
 }
@@ -8571,6 +8577,10 @@ extension type _Module._(JSObject _) implements JSObject {
   external JSNumber filament_scene_get_tlas_instance_count(JSNumber scene);
   @JS('_filament_scene_get_tlas_build_nanos')
   external JSBigInt filament_scene_get_tlas_build_nanos(JSNumber scene);
+  @JS('_filament_scene_get_deformed_blas_count')
+  external JSNumber filament_scene_get_deformed_blas_count(JSNumber scene);
+  @JS('_filament_scene_get_blas_deform_nanos')
+  external JSBigInt filament_scene_get_blas_deform_nanos(JSNumber scene);
   @JS('_filament_renderable_set_ray_tracing_visible')
   external void filament_renderable_set_ray_tracing_visible(JSNumber engine, JSNumber entity, JSNumber visible);
   @JS('_filament_renderable_is_ray_tracing_visible')

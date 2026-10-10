@@ -20,6 +20,8 @@ Lumina'nın Filament yaması `0007` (bkz. `third_party/filament/README.md`) Vulk
 
 Aygıt uzantılara sahipken vertex ve index buffer'lar hızlandırma yapısı kurulumlarının gerektirdiği kullanımlarla oluşturulur; ışın izleme açıldığında hiçbir buffer yeniden oluşturulmaz.
 
+Skinned ve morph'lu renderable'lar çizildikleri pozda izlenir (yama `0015`). Her primitive'leri, pozisyonlarının pozlanmış bir kopyasından kurulan kendi deforme edilebilir BLAS'ını alır: renderable'ın kemik paleti (`setBones`) ya da morph ağırlıkları (`setMorphWeights`) değiştiği her karede bir Vulkan compute geçişi morph target farklarını ve dört kemikli paleti vertex shader'larla birebir aynı şekilde uygular ve BLAS sonuçtan yeniden uydurulur (sınırları sıkı kalsın diye her 32 uydurmada bir baştan kurulur). Pozu değişmeyen bir renderable hiçbir maliyet getirmez; paylaşılan bir `SkinningBuffer` içindeki palet her kare yeniden pozlanır. `scene.deformedBlasCount` son karenin yeniden pozladığı yapıları sayar, `scene.lastBlasDeformTime` bu geçişlerin ve uydurmaların GPU süresini bildirir. RTX PRO 2000'de ölçülen: yürüyen manken (46 bin vertex, iki primitive) kare başına yaklaşık 0,1 ms, bir MetaHuman gövde ve yüzü (70 bin vertex, 13 primitive, 256 eklem, 12 morph target) yaklaşık 0,56 ms, iki sahnenin TLAS kurulumu da 0,06 ms'nin altında.
+
 ## İşlem sırası
 
 1. `FilamentEngine.create`'ten **önce** `RayTracing.requestExtensions()`: `VK_KHR_acceleration_structure`, `VK_KHR_ray_query`, `VK_KHR_deferred_host_operations` ve `VK_KHR_buffer_device_address` var olan bir aygıta eklenemez. İstek DLSS isteğinin yanında saklanır; `Dlss.requestExtensions()` öncesinde ya da sonrasında gelebilir. `RayTracing.clearExtensionRequest()` sonraki motorlar için geri alır.
@@ -69,6 +71,7 @@ Aygıt uzantılara sahipken vertex ve index buffer'lar hızlandırma yapısı ku
 | :--- | :--- | :--- |
 | `supportsRayQuery` | `FilamentEngine` | Aygıtın ışın izleyip izlemediği. |
 | `rayTracingEnabled`, `tlasInstanceCount`, `lastTlasBuildTime`, `traceVisibility(...)` | `FilamentScene` | Sahne başına yapılar ve eşzamanlı test kancası (geçici 1x1 bir view üzerinden çizer; kareler arasında çağrılır). |
+| `deformedBlasCount`, `lastBlasDeformTime` | `FilamentScene` | Son karenin yeniden pozladığı skinned ve morph'lu yapılar ve pozlama geçişleriyle uydurmalarının GPU süresi. |
 | `traceRay(ox, oy, oz, dx, dy, dz, {maxDistance})` | `FilamentView` | View'ın çizdiği bir sonraki karede yanıtlanan `Future<RayHit?>`, `pick` gibi. |
 | `setRayTracingVisible`, `isRayTracingVisible` | `FilamentRenderableManager` | Renderable başına dahil etme. |
 | `rayTraced` | `ShadowOptions` | Yönlü ışık için ışın izlemeli gölgeler. |
@@ -97,7 +100,7 @@ Bir post-process malzeme, malzeme bloğunda `rayQuery : true` bildirerek GLSL 46
 ## Sınırlar
 
 - Yalnızca Vulkan, `VK_KHR_ray_query` olan GPU'larda; OpenGL, Metal, WebGPU ve web `supportsRayQuery == false` bildirir. `sampler0_rtShadow`'u (ve ReSTIR texture'larını) yalnızca Vulkan için derlenen shader'lar örnekler: diğer API'lerin lit shader'ları onları dışarıda bırakır, böylece orada fragment sampler'ı harcamazlar (WebGL'de sekiz sampler'lı ve sisli bir lit materyal aksi halde 16'ya ulaşır; Chrome'un Direct3D 11 arka ucu bunu kaldıramaz).
-- Skinned ve morph'lu renderable'lar bind pozunda izlenir: hızlandırma yapıları vertex buffer'ları okur ve skinning paletini ya da morph ağırlıklarını uygulayan bir compute ön geçişi henüz yoktur. Gölgeleri ve ışın isabetleri renderable'ın dönüşümünü izler, animasyonunu değil.
+- Pozlama geçişi vertex başına dört kemik etkisi (gltfio'nun `JOINTS_0`/`WEIGHTS_0`'ı; Filament'in dörtten fazla etki texture'ı okunmaz) ve float ya da half pozisyonlar kullanır; bir materyaldeki özel vertex kaydırması ışınlarca görülmez.
 - Yapılara yalnızca pozisyon özniteliği olan `PrimitiveType.triangles` primitive'leri girer; çizgiler, noktalar ve şeritler yok sayılır.
 - Işın izlemeli gölgeler serttir (penumbra yok) ve yalnızca yönlü ışığı kapsar.
 - `FilamentScene.traceVisibility` kendi başına bir kare çizer; çalışan bir çizim döngüsünde `FilamentView.traceRay` kullanın.

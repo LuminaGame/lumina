@@ -194,40 +194,6 @@ void main() {
       expect(after!.t - before!.t, closeTo(0.3, 0.01));
     }, timeout: const Timeout(Duration(minutes: 3)));
 
-    test('a skinned renderable is traced in its bind pose: the hit does not follow the animation', () async {
-      // The acceleration structures read the vertex buffers; hardware skinning happens in
-      // the vertex shader, and there is no compute pre-pass applying the palette yet, so a
-      // skinned character keeps its bind-pose geometry for rays whatever pose it renders.
-      if (skipWithoutRayQuery()) return;
-      final r = rig!;
-      final gltf = loadGltfIntoScene(r, 'mannequin/MF_Unarmed_Walk_Fwd.glb', frameCamera: false);
-      try {
-        r.scene.rayTracingEnabled = true;
-        final animator = gltf.asset.animator;
-        final duration = animator.getAnimationDuration(0);
-        final box = gltf.asset.getBoundingBox();
-        final center = box.center;
-        // a ray through the middle of the torso, from the front
-        final oz = box.max.z + 1.0;
-        Future<RayHit?> probe(double time) async {
-          animator.applyAnimation(0, time);
-          animator.updateBoneMatrices();
-          r.renderFrame(warmup: 0);
-          return r.scene.traceVisibility(center.x, center.y, oz, 0, 0, -1, maxDistance: 10);
-        }
-
-        final first = await probe(0);
-        expect(first, isNotNull, reason: 'the torso is in the bind pose too');
-        for (var i = 1; i < 4; i++) {
-          final hit = await probe(duration * i / 4);
-          expect(hit, isNotNull);
-          expect(hit!.t, closeTo(first!.t, 1e-4), reason: 'the geometry rays see does not move with the pose');
-        }
-      } finally {
-        gltf.dispose(r.scene);
-      }
-    }, timeout: const Timeout(Duration(minutes: 3)));
-
     test('a Draco-compressed barrel is solid for rays: lid or bottom from above, walls from every side', () async {
       if (skipWithoutRayQuery()) return;
       final r = rig!;

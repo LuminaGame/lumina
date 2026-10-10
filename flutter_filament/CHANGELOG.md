@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Skinned and morphed renderables are traced in their current pose (prebuilt `1.77.2-lumina.13`, Filament patch
+  `0015`): a Vulkan compute pass poses their vertices into their own bottom-level structure, refit every frame
+  their bone palette or morph weights change, so ray-traced shadows and ray queries follow the animation.
+  `FilamentScene.deformedBlasCount` and `lastBlasDeformTime` report the work.
 - Ray-traced sun shadows, ReSTIR visibility rays and the specular hit distance offset their origin by a few
   texels' world size instead of half the near plane grown with the camera distance (prebuilt `1.77.2-lumina.12`,
   Filament patch `0014`): in a centimetre-scale level the shadow ray started past small props, which cast a hollow

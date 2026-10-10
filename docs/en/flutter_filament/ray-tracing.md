@@ -20,6 +20,8 @@ Lumina's Filament patch `0007` (see `third_party/filament/README.md`) teaches th
 
 Vertex and index buffers are created with the usages acceleration-structure builds need whenever the device has the extensions, so no buffer has to be recreated when ray tracing is turned on.
 
+Skinned and morphed renderables are traced in the pose they render with (patch `0015`). Each of their primitives gets its own deformable BLAS built from a posed copy of its positions: in every frame the renderable's bone palette (`setBones`) or morph weights (`setMorphWeights`) changed, a Vulkan compute pass applies the morph target deltas and the four-bone palette exactly as the vertex shaders do, and the BLAS is refit from the result (rebuilt every 32 refits so its bounds stay tight). A renderable whose pose did not change costs nothing; a palette in a shared `SkinningBuffer` is re-posed every frame. `scene.deformedBlasCount` counts the structures the last frame re-posed and `scene.lastBlasDeformTime` reports the GPU time of those passes and refits. Measured on the RTX PRO 2000: the walking mannequin (46k vertices, two primitives) about 0.1 ms per frame, a MetaHuman body and face (70k vertices, 13 primitives, 256 joints, 12 morph targets) about 0.56 ms, the TLAS build of either scene under 0.06 ms.
+
 ## Order of operations
 
 1. `RayTracing.requestExtensions()` **before** `FilamentEngine.create`: `VK_KHR_acceleration_structure`, `VK_KHR_ray_query`, `VK_KHR_deferred_host_operations` and `VK_KHR_buffer_device_address` cannot be added to an existing device. The request is stored next to the DLSS one, so `Dlss.requestExtensions()` may come before or after it. `RayTracing.clearExtensionRequest()` undoes it for later engines.
@@ -69,6 +71,7 @@ Vertex and index buffers are created with the usages acceleration-structure buil
 | :--- | :--- | :--- |
 | `supportsRayQuery` | `FilamentEngine` | Whether the device traces rays. |
 | `rayTracingEnabled`, `tlasInstanceCount`, `lastTlasBuildTime`, `traceVisibility(...)` | `FilamentScene` | The per-scene structures and the synchronous test hook (renders through a temporary 1x1 view, so call it between frames). |
+| `deformedBlasCount`, `lastBlasDeformTime` | `FilamentScene` | Skinned and morphed structures the last frame re-posed, and the GPU time of their posing passes and refits. |
 | `traceRay(ox, oy, oz, dx, dy, dz, {maxDistance})` | `FilamentView` | `Future<RayHit?>` answered by the next frame the view renders, like `pick`. |
 | `setRayTracingVisible`, `isRayTracingVisible` | `FilamentRenderableManager` | Per-renderable inclusion. |
 | `rayTraced` | `ShadowOptions` | Ray-traced shadows for the directional light. |
@@ -97,7 +100,7 @@ A post-process material declares `rayQuery : true` in its material block to be c
 ## Limits
 
 - Vulkan only, on GPUs with `VK_KHR_ray_query`; OpenGL, Metal, WebGPU and the web report `supportsRayQuery == false`. Only shaders compiled for Vulkan sample `sampler0_rtShadow` (and the ReSTIR textures): the other APIs' lit shaders leave them out, so they cost no fragment sampler there (on WebGL a lit material with eight samplers and fog would otherwise reach 16, which Chrome's Direct3D 11 backend does not survive).
-- Skinned and morphed renderables are traced in their bind pose: the acceleration structures read the vertex buffers, and there is no compute pre-pass applying the skinning palette or morph weights yet. Their shadows and ray hits follow the renderable's transform, not its animation.
+- The posing pass uses four bone influences per vertex (gltfio's `JOINTS_0`/`WEIGHTS_0`; Filament's more-than-four-influences texture is not read) and float or half positions; custom vertex displacement in a material is not seen by rays.
 - Only `PrimitiveType.triangles` primitives with a position attribute enter the structures; lines, points and strips are ignored.
 - Ray-traced shadows are hard (no penumbra) and cover the directional light only.
 - `FilamentScene.traceVisibility` renders a frame on its own; use `FilamentView.traceRay` in a running render loop.
