@@ -233,4 +233,22 @@ abstract class PluginProcessContext {
 
   /// Calls an editor MCP tool (as `EditorMcp.callTool`).
   Future<McpToolResult> callMcpTool(String name, Map<String, Object?> arguments);
+
+  /// Opens [spec] as a modal dialog over the editor and completes with the
+  /// user's answer: the pressed action and the body controls' values
+  /// ([PluginDialogResult.isDismissed] when dismissed, closed by
+  /// [closeDialog] or when the editor could not keep it open). No timeout
+  /// applies. An editor without dialogs throws a [PluginRemoteError] with
+  /// [PluginErrorCodes.unknownMethod]: fall back to a log line or a panel
+  /// message.
+  Future<PluginDialogResult> showDialog(PluginDialogSpec spec);
+
+  /// A confirm dialog ([PluginDialogSpec.confirm]): true when the user
+  /// pressed [confirmLabel].
+  Future<bool> confirm(String title, String message,
+      {String confirmLabel = 'OK', String cancelLabel = 'Cancel', bool destructive = false});
+
+  /// Closes this plugin's open (or queued) dialog [dialogId]; its
+  /// [showDialog] completes dismissed. False when none was open.
+  Future<bool> closeDialog(String dialogId);
 }

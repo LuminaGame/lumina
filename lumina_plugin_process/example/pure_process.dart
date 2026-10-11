@@ -62,6 +62,24 @@ class PureSampleProcess extends LuminaPluginProcess {
       return {'ids': ids, 'names': [for (final a in context.level.actors) a.name]};
     });
 
+    // A modal dialog over the editor: answers the pressed action and the
+    // body's values (`{action: null}` when dismissed or closed).
+    context.handle('askName', (args) async {
+      final r = await context.showDialog(PluginDialogSpec(
+        id: args['id'] as String? ?? 'ask_name',
+        title: args['title'] as String? ?? 'Name the actor',
+        body: [PluginControl.textField('name', label: 'Name', value: args['initial'] as String? ?? '')],
+        actions: const [
+          PluginDialogAction(id: 'cancel', label: 'Cancel'),
+          PluginDialogAction(id: 'accept', label: 'Accept', tone: PluginDialogTone.primary),
+        ],
+      ));
+      return r.toJson();
+    });
+    context.handle('closeDialog', (args) => context.closeDialog(args['id'] as String));
+    context.handle('confirmDelete', (_) => context.confirm('Delete the crates?', 'Removes every crate.',
+        confirmLabel: 'Delete', destructive: true));
+
     context.registerMenuItem(
       'Tools/Pure Sample/Greet',
       PluginProcessCommand(id: 'pure_sample.greet', label: 'Greet', run: () => context.log('greet from the menu')),

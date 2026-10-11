@@ -29,6 +29,27 @@ void main() {
   Future<Object?> call(String method, [Map<String, Object?> args = const {}]) =>
       host.call(PluginMethods.call, {'method': method, 'args': args});
 
+  test('showDialog and confirm reach the host as host.showDialog and return its answer', () async {
+    host.answerDialog = (spec) => spec.kind == PluginDialogKind.confirm
+        ? const PluginDialogResult(action: 'confirm')
+        : const PluginDialogResult(action: 'accept', values: {'name': 'Barrel'});
+    final r = await process.context.showDialog(PluginDialogSpec(
+      id: 'd1',
+      title: 'Name',
+      body: [PluginControl.textField('name')],
+      actions: const [PluginDialogAction(id: 'accept', label: 'Accept', tone: PluginDialogTone.primary)],
+    ));
+    expect(r.action, 'accept');
+    expect(r.values, {'name': 'Barrel'});
+    expect(await process.context.confirm('Delete?', 'Gone for good', destructive: true), isTrue);
+    final confirmSpec = PluginDialogSpec.fromJson(host.requests.lastWhere((r) => r.$1 == PluginMethods.showDialog).$2);
+    expect(confirmSpec.kind, PluginDialogKind.confirm);
+    expect(confirmSpec.actions.last.tone, PluginDialogTone.destructive);
+    host.answerDialog = null;
+    expect(await process.context.confirm('Again?', 'x'), isFalse, reason: 'dismissed');
+    expect(await process.context.closeDialog('d1'), isFalse);
+  });
+
   test('a handler updates a declarative view outside its events through context.view', () async {
     expect(await call('setCount', {'n': 5}), {'found': true, 'unknown': true});
     final update = await host.next(PluginMethods.view, where: (a) => a['viewId'] == 'sample.view' && a['patch'] != null);

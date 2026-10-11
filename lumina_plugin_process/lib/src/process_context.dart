@@ -57,6 +57,9 @@ class ConnectedPluginProcessContext implements PluginProcessContext {
   /// Timeout of a proxied call that may run a while (an MCP tool, a save).
   static const Duration longTimeout = Duration(seconds: 60);
 
+  /// A dialog waits for the user: no practical timeout.
+  static const Duration dialogTimeout = Duration(days: 365);
+
   final Map<String, FutureOr<Object?> Function(Map<String, Object?>)> handlers = {};
   final Map<String, PluginProcessCommand> commands = {};
   final List<PluginMenuSpec> _menus = [];
@@ -315,6 +318,30 @@ class ConnectedPluginProcessContext implements PluginProcessContext {
   Future<void> openTab(String tabId, {String? title}) async {
     await connection.request(PluginMethods.tabs, {'op': 'openTab', 'tabId': tabId, 'title': ?title});
   }
+
+  @override
+  Future<PluginDialogResult> showDialog(PluginDialogSpec spec) async =>
+      PluginDialogResult.fromJson(await connection.request(PluginMethods.showDialog, spec.toJson(), dialogTimeout));
+
+  @override
+  Future<bool> confirm(String title, String message,
+      {String confirmLabel = 'OK', String cancelLabel = 'Cancel', bool destructive = false}) async {
+    final r = await showDialog(PluginDialogSpec.confirm(
+      id: 'confirm_${++_dialogSeq}',
+      title: title,
+      message: message,
+      confirmLabel: confirmLabel,
+      cancelLabel: cancelLabel,
+      destructive: destructive,
+    ));
+    return r.action == 'confirm';
+  }
+
+  int _dialogSeq = 0;
+
+  @override
+  Future<bool> closeDialog(String dialogId) async =>
+      await connection.request(PluginMethods.closeDialog, {'id': dialogId}) == true;
 
   @override
   Future<McpToolResult> callMcpTool(String name, Map<String, Object?> arguments) async {

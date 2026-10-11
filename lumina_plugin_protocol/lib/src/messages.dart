@@ -225,6 +225,19 @@ abstract final class PluginMethods {
   /// `{"tool", "arguments"}` → `McpToolResult.toJson()` of an editor MCP tool.
   static const String mcpCall = 'host.mcp.call';
 
+  /// A modal dialog over the editor: `PluginDialogSpec.toJson()` →
+  /// `PluginDialogResult.toJson()` (`{"action": <id>|null, "values": {...}}`)
+  /// once the user closes it; `null` action when dismissed, closed by
+  /// [closeDialog] or the plugin process stopped. No timeout applies: the
+  /// user decides how long it stays open. At most one per plugin is shown;
+  /// a second request waits. An editor without dialogs answers
+  /// [PluginErrorCodes.unknownMethod].
+  static const String showDialog = 'host.showDialog';
+
+  /// `{"id": <dialog id>}` → bool (whether one was open or queued): closes
+  /// it, its [showDialog] answered with a null action.
+  static const String closeDialog = 'host.closeDialog';
+
   // --- host → process requests ----------------------------------------------
 
   /// Health check, every 2 s: `{}` → `{}`.

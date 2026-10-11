@@ -101,6 +101,10 @@ class LoopbackHost {
   final List<(String, Map<String, Object?>)> requests = [];
   Map<String, Object?>? helloArgs;
 
+  /// Answers `host.showDialog` (a test plays the user); unset, every
+  /// dialog is answered dismissed. The specs are also in [requests].
+  FutureOr<PluginDialogResult> Function(PluginDialogSpec spec)? answerDialog;
+
   /// Runs before the answer to `host.register` is sent (a test can make the
   /// editor shut the process down while it still waits for that answer).
   Future<void> Function()? beforeRegisterReply;
@@ -161,6 +165,16 @@ class LoopbackHost {
         return args['op'] == 'isVisible' ? true : null;
       });
     }
+    c.onRequest(PluginMethods.showDialog, (args) async {
+      requests.add((PluginMethods.showDialog, args));
+      final answer = answerDialog;
+      final spec = PluginDialogSpec.fromJson(args);
+      return (answer == null ? PluginDialogResult.dismissed : await answer(spec)).toJson();
+    });
+    c.onRequest(PluginMethods.closeDialog, (args) {
+      requests.add((PluginMethods.closeDialog, args));
+      return false;
+    });
     c.onRequest(PluginMethods.mcpCall, (args) {
       requests.add((PluginMethods.mcpCall, args));
       return McpToolResult.json({'tool': args['tool'], 'echo': args['arguments']}).toJson();

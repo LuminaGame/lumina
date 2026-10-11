@@ -18,6 +18,7 @@
 library;
 
 export 'package:lumina_plugin_protocol/src/contributions.dart';
+export 'package:lumina_plugin_protocol/src/dialog_spec.dart';
 export 'package:lumina_plugin_protocol/src/frame_codec.dart';
 export 'package:lumina_plugin_protocol/src/launch.dart';
 export 'package:lumina_plugin_protocol/src/messages.dart';
