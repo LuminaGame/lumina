@@ -129,6 +129,24 @@ void main() {
       );
     });
 
+    test('keeps dark but varied vertex colours on a material without a base colour texture', () {
+      // A black leather garment: linear values a few thousandths apart, the
+      // only colour the mesh has.
+      final rgb = [
+        for (var i = 0; i < 200; i++) [0.002 + (i % 7) * 0.004, 0.0015 + (i % 5) * 0.003, 0.001 + (i % 3) * 0.005],
+      ];
+      final result = GlbParserService.convertGlbTgaToPng(_vertexColourGlb(rgb));
+      expect(_attributesOf(result).containsKey('COLOR_0'), isTrue);
+    });
+
+    test('strips a uniform black vertex colour fill on a material without a base colour texture', () {
+      final rgb = [
+        for (var i = 0; i < 200; i++) [0.0, 0.0, 0.0],
+      ];
+      final result = GlbParserService.convertGlbTgaToPng(_vertexColourGlb(rgb));
+      expect(_attributesOf(result).containsKey('COLOR_0'), isFalse);
+    });
+
     test('Strips custom vertex attributes starting with underscore', () {
       final json = {
         'asset': {'version': '2.0'},
@@ -204,4 +222,79 @@ void main() {
       expect(attrs.containsKey('_CUSTOM_PROP'), isFalse);
     });
   });
+}
+
+/// A one-triangle-fan GLB whose only colour source is a 16-bit normalized
+/// `COLOR_0` (the layout an image-to-3D generator writes), on a material with
+/// or without a base colour texture.
+Uint8List _vertexColourGlb(List<List<double>> rgb) {
+  final colours = ByteData(rgb.length * 8);
+  for (var i = 0; i < rgb.length; i++) {
+    for (var c = 0; c < 3; c++) {
+      colours.setUint16(i * 8 + c * 2, (rgb[i][c] * 65535).round(), Endian.little);
+    }
+    colours.setUint16(i * 8 + 6, 65535, Endian.little);
+  }
+  final bin = colours.buffer.asUint8List();
+  final json = {
+    'asset': {'version': '2.0'},
+    'buffers': [
+      {'byteLength': bin.length},
+    ],
+    'bufferViews': [
+      {'buffer': 0, 'byteOffset': 0, 'byteLength': bin.length},
+    ],
+    'accessors': [
+      {'bufferView': 0, 'componentType': 5123, 'normalized': true, 'count': rgb.length, 'type': 'VEC4'},
+    ],
+    'materials': [
+      {
+        'pbrMetallicRoughness': {
+          'baseColorFactor': [1, 1, 1, 1],
+        },
+      },
+    ],
+    'meshes': [
+      {
+        'primitives': [
+          {
+            'attributes': {'COLOR_0': 0},
+            'material': 0,
+          },
+        ],
+      },
+    ],
+  };
+  final jsonBytes = utf8.encode(jsonEncode(json));
+  final jsonLen = (jsonBytes.length + 3) & ~3;
+  final paddedJson = Uint8List(jsonLen)
+    ..fillRange(0, jsonLen, 0x20)
+    ..setRange(0, jsonBytes.length, jsonBytes);
+  final builder = BytesBuilder()
+    ..add((ByteData(12)
+          ..setUint32(0, 0x46546C67, Endian.little)
+          ..setUint32(4, 2, Endian.little)
+          ..setUint32(8, 12 + 8 + jsonLen + 8 + bin.length, Endian.little))
+        .buffer
+        .asUint8List())
+    ..add((ByteData(8)
+          ..setUint32(0, jsonLen, Endian.little)
+          ..setUint32(4, 0x4E4F534A, Endian.little))
+        .buffer
+        .asUint8List())
+    ..add(paddedJson)
+    ..add((ByteData(8)
+          ..setUint32(0, bin.length, Endian.little)
+          ..setUint32(4, 0x004E4942, Endian.little))
+        .buffer
+        .asUint8List())
+    ..add(bin);
+  return builder.toBytes();
+}
+
+Map _attributesOf(Uint8List glb) {
+  final data = ByteData.sublistView(glb);
+  final jsonLen = data.getUint32(12, Endian.little);
+  final json = jsonDecode(utf8.decode(glb.sublist(20, 20 + jsonLen))) as Map;
+  return ((json['meshes'] as List)[0]['primitives'][0] as Map)['attributes'] as Map;
 }

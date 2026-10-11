@@ -5,11 +5,17 @@ part of '../glb_parser_service.dart';
 /// export all-black (0,0,0,0 or 0,0,0,1) vertex color buffers. In Filament PBR shaders,
 /// vertex color multiplies the baseColor (material.baseColor *= getColor()), causing textured
 /// meshes to render pitch-black if not stripped.
+///
+/// A dark buffer is only a dummy when it would darken a base colour texture
+/// ([overBaseColorTexture]) or when it is one uniform fill. Without a base
+/// colour texture, varied dark colours are the mesh's only colour (an
+/// image-to-3D generator's baked vertex colours of a black garment) and stay.
 bool _isDummyBlackVertexColor(
   Map acc,
   List bufferViews,
-  List<Uint8List> bvDataList,
-) {
+  List<Uint8List> bvDataList, {
+  required bool overBaseColorTexture,
+}) {
   try {
     final bvIdx = acc['bufferView'] as int?;
     if (bvIdx == null ||
@@ -51,6 +57,8 @@ bool _isDummyBlackVertexColor(
     final sampleCount = count < 50 ? count : 50;
     final step = count ~/ sampleCount;
     int blackCount = 0;
+    double? firstR, firstG, firstB;
+    var uniform = true;
 
     final byteData = ByteData.sublistView(bvData);
 
@@ -78,9 +86,17 @@ bool _isDummyBlackVertexColor(
       if (r < 0.05 && g < 0.05 && b < 0.05) {
         blackCount++;
       }
+      if (firstR == null) {
+        firstR = r;
+        firstG = g;
+        firstB = b;
+      } else if ((r - firstR).abs() > 1 / 255 || (g - firstG!).abs() > 1 / 255 || (b - firstB!).abs() > 1 / 255) {
+        uniform = false;
+      }
     }
 
-    return blackCount >= (sampleCount * 0.9).floor();
+    if (blackCount < (sampleCount * 0.9).floor()) return false;
+    return overBaseColorTexture || uniform;
   } catch (_) {
     return false;
   }

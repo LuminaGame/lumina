@@ -32,7 +32,7 @@ class GlbParserService {
   /// bump it whenever the sanitizer's output for the same input changes (the
   /// budget's resampling or encoder settings, the skinning rules, the image
   /// branches): entries written by an older converter then miss and rebuild.
-  static const int sanitizerVersion = 3;
+  static const int sanitizerVersion = 4;
 
   static int _decodingConversions = 0;
 

@@ -413,7 +413,14 @@ Uint8List _convertGlbTgaToPng(
           final acc = accessors[colorAccIdx] as Map?;
           if (acc == null) continue;
 
-          if (_isDummyBlackVertexColor(acc, bufferViews, bvDataList)) {
+          final materials = json['materials'] as List?;
+          final materialIndex = prim['material'];
+          final material = materials != null && materialIndex is int && materialIndex >= 0 && materialIndex < materials.length
+              ? materials[materialIndex]
+              : null;
+          final pbr = material is Map ? material['pbrMetallicRoughness'] : null;
+          final overBaseColorTexture = pbr is Map && pbr['baseColorTexture'] is Map;
+          if (_isDummyBlackVertexColor(acc, bufferViews, bvDataList, overBaseColorTexture: overBaseColorTexture)) {
             attrs.remove('COLOR_0');
             modified = true;
             GlbParserService._logger.log(
