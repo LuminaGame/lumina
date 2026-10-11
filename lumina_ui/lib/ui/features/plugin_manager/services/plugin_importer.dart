@@ -144,6 +144,8 @@ class PluginImporter {
     'wav', 'ogg', 'mp3', 'flac', 'ttf', 'otf',
     'dart', 'c', 'cc', 'cpp', 'h', 'hpp', 'js', 'glsl', 'vert', 'frag', 'comp', 'mat',
     'json', 'yaml', 'yml', 'md', 'txt', 'lmproject', 'lmplugin', 'csv', 'lock',
+    // A kernel plugin's compiled process and its checksum.
+    'dill', 'sha256',
   };
   static const Set<String> _allowedBareNames = {'license', 'licence', 'readme', 'notice', 'changelog', 'copying', 'authors'};
   static const Set<String> _allowedDotNames = {'.gitignore', '.gitattributes', '.metadata', '.pubignore'};

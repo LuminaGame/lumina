@@ -265,6 +265,19 @@ void main() {
       expect(userDir.listSync(), isEmpty);
     });
 
+    test("a kernel plugin's .dill and its .sha256 are accepted", () async {
+      final zip = writeZip(temp, 'kernel.zip', [
+        ...zipEntries(pluginFiles('zip_plugin'), top: 'zip_plugin'),
+        ArchiveFile.bytes('zip_plugin/bin/zip_plugin_process.dill', [0x90, 0xab, 0xcd, 0xef]),
+        ArchiveFile.bytes('zip_plugin/bin/zip_plugin_process.dill.sha256', 'abc  zip_plugin_process.dill\n'.codeUnits),
+      ]);
+
+      final result = await importer().importZip(zip.path);
+
+      expect(result.status, PluginImportStatus.installed, reason: result.messages.join('\n'));
+      expect(File('${result.installedDir!.path}/bin/zip_plugin_process.dill').existsSync(), isTrue);
+    });
+
     test('a top folder not named after the plugin is refused', () async {
       final zip = writeZip(temp, 'top.zip', zipEntries(pluginFiles('zip_plugin'), top: 'wrong_top'));
 
