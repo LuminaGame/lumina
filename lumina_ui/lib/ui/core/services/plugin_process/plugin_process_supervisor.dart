@@ -106,6 +106,11 @@ class PluginProcessSupervisor implements PluginProcessChannel {
 
   final StreamController<PluginProcessEvent> _events = StreamController.broadcast();
   final StreamController<PluginProgress> _progress = StreamController.broadcast();
+  final StreamController<PluginPanelStatePatch> _panelStates = StreamController.broadcast();
+
+  /// Element-state patches the process sends its editor panels
+  /// (`host.panelState`); the editor panel host applies them.
+  Stream<PluginPanelStatePatch> get panelStates => _panelStates.stream;
 
   @override
   Stream<PluginProcessEvent> events([String? name]) =>
@@ -259,6 +264,7 @@ class PluginProcessSupervisor implements PluginProcessChannel {
       s.notifier.dispose();
     }
     _events.close();
+    _panelStates.close();
     _progress.close();
     logRevision.dispose();
   }

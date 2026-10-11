@@ -45,7 +45,11 @@ class LuminaBlueprintWidgetClass {
   final String name;
   final List<LuminaBlueprintWidgetElement> elements;
 
-  const LuminaBlueprintWidgetClass({required this.name, this.elements = const []});
+  /// The class is an editor panel (its asset carries an `editorPanel` block):
+  /// the editor docks it, and a game graph may not create it.
+  final bool isEditorPanel;
+
+  const LuminaBlueprintWidgetClass({required this.name, this.elements = const [], this.isEditorPanel = false});
 
   /// The pin class of this widget: `Widget:WBP_HUD`.
   String get objectClass => LuminaBlueprintObjectClass.widget(name);
@@ -60,6 +64,7 @@ class LuminaBlueprintWidgetClass {
   Map<String, dynamic> toJson() => {
         'name': name,
         'elements': elements.map((e) => e.toJson()).toList(),
+        if (isEditorPanel) 'editorPanel': true,
       };
 
   factory LuminaBlueprintWidgetClass.fromJson(Map<String, dynamic> map) => LuminaBlueprintWidgetClass(
@@ -67,6 +72,7 @@ class LuminaBlueprintWidgetClass {
         elements: (map['elements'] as List? ?? const [])
             .map((e) => LuminaBlueprintWidgetElement.fromJson(Map<String, dynamic>.from(e as Map)))
             .toList(),
+        isEditorPanel: map['editorPanel'] == true,
       );
 }
 

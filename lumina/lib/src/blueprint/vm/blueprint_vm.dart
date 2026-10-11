@@ -82,6 +82,12 @@ class LuminaBlueprintClass {
   /// The parent Blueprint class when this class inherits another Blueprint.
   final LuminaBlueprintClass? parentBlueprintClass;
 
+  /// An editor panel's declared capabilities; null for any other class.
+  final Set<String>? editorCapabilities;
+
+  /// Whether this is an editor panel's graph (editor scope).
+  bool get isEditorPanel => editorCapabilities != null;
+
   LuminaBlueprintClass._(this.name, this.document, this.inputActions, this.resolveAsset, this.assetProvider,
       this.animBlueprints, this.resolveClass, this.diagnostics,
       {this.levelActors,
@@ -90,7 +96,8 @@ class LuminaBlueprintClass {
       this.variableOwners = const {},
       this.componentOwners = const {},
       this.widgetVariables,
-      this.parentBlueprintClass});
+      this.parentBlueprintClass,
+      this.editorCapabilities});
 
   /// The root engine class this Blueprint descends from (e.g. `LuminaCharacter`, `LuminaPawn`, `LuminaActor`).
   String get rootEngineClass {
@@ -199,7 +206,8 @@ class LuminaBlueprintClass {
           widgetVariables: widgetVariables,
           inheritedVariables: parentBlueprintClass?.allVariables,
           inheritedComponents: parentBlueprintClass?.allComponents,
-          inheritedCustomEvents: parentBlueprintClass?.allCustomEvents);
+          inheritedCustomEvents: parentBlueprintClass?.allCustomEvents,
+          editorCapabilities: editorCapabilities);
 
   static LuminaBlueprintTypeContext _contextOf(
     LuminaBlueprintDocument document,
@@ -216,6 +224,7 @@ class LuminaBlueprintClass {
     List<LuminaBlueprintVariable>? inheritedVariables,
     List<LuminaBlueprintComponent>? inheritedComponents,
     List<LuminaBlueprintCustomEvent>? inheritedCustomEvents,
+    Set<String>? editorCapabilities,
   }) {
     if (widgetVariables != null || document.parentClass == LuminaWidgetBlueprintDocument.parentClass) {
       return LuminaBlueprintTypeContext.forWidget(
@@ -223,7 +232,8 @@ class LuminaBlueprintClass {
           inputActions: inputActions,
           actorParents: actorParents,
           functionScope: functionScope,
-          macroScope: macroScope);
+          macroScope: macroScope,
+          editorCapabilities: editorCapabilities);
     }
     if (levelActors != null || document.parentClass == LuminaLevelBlueprintDocument.parentClass) {
       return LuminaBlueprintTypeContext.forLevel(LuminaLevelBlueprintDocument(levelPath: name, blueprint: document),
@@ -296,6 +306,23 @@ class LuminaBlueprintClass {
           actorParents: actorParents,
           widgetVariables: widgetDoc.variables);
 
+  /// An editor panel's graph ready to run in the editor's VM: [widgetDoc]'s
+  /// graph in the editor scope with the panel's declared [capabilities].
+  /// Instantiate it with [instantiateUserWidget] and register it in
+  /// `LuminaUserWidgets.editor`.
+  factory LuminaBlueprintClass.forEditorPanel(
+    LuminaWidgetBlueprintDocument widgetDoc, {
+    Set<String> capabilities = const {},
+    LuminaBlueprintAssetResolver? resolveAsset,
+    Future<Uint8List> Function(String path)? assetProvider,
+  }) =>
+      LuminaBlueprintClass.fromDocument(widgetDoc.blueprint,
+          name: widgetDoc.widgetClass,
+          resolveAsset: resolveAsset,
+          assetProvider: assetProvider,
+          widgetVariables: widgetDoc.variables,
+          editorCapabilities: Set.unmodifiable(capabilities));
+
   /// A new script of this Widget Blueprint, for [LuminaUserWidgets.register].
   LuminaBlueprintUserWidget instantiateUserWidget() {
     if (!isUserWidget) throw StateError('$name is not a Widget Blueprint (parent ${document.parentClass}).');
@@ -328,6 +355,7 @@ class LuminaBlueprintClass {
     List<LuminaBlueprintWidgetElement>? widgetVariables,
     LuminaBlueprintClass? parentBlueprintClass,
     Set<String>? visitedClassNames,
+    Set<String>? editorCapabilities,
   }) {
     // Comment boxes and reroutes are the editor's.
     document = LuminaBlueprintEditorNodes.forEngine(document);
@@ -385,7 +413,8 @@ class LuminaBlueprintClass {
             widgetVariables: widgetScope ? (widgetVariables ?? const []) : null,
             inheritedVariables: inheritedVars,
             inheritedComponents: inheritedComps,
-            inheritedCustomEvents: inheritedEvents)
+            inheritedCustomEvents: inheritedEvents,
+            editorCapabilities: editorCapabilities)
         : null;
 
     diagnostics.addAll(validateBlueprint(document,
@@ -426,7 +455,8 @@ class LuminaBlueprintClass {
         variableOwners: variableOwners,
         componentOwners: componentOwners,
         widgetVariables: widgetScope ? (widgetVariables ?? const []) : null,
-        parentBlueprintClass: parentBlueprintClass);
+        parentBlueprintClass: parentBlueprintClass,
+        editorCapabilities: editorCapabilities);
   }
 
   static void _checkGameMode(LuminaBlueprintDocument document,
@@ -552,9 +582,13 @@ abstract final class LuminaBlueprintInterpreter {
       frame.runFrom(nodeId, execPin);
     } on _InfiniteLoop catch (e) {
       final event = host.hostGraph.node(frame.eventNodeId)?.title ?? frame.eventNodeId;
-      final message = 'Infinite loop detected in ${host.hostName}.$event at node ${e.nodeId}';
+      final limit = host.hostInstance?.maxEventDuration?.inMilliseconds;
+      final message = e.tooLong
+          ? 'Stopped: ${host.hostName}.$event ran longer than $limit ms (at node ${e.nodeId})'
+          : 'Infinite loop detected in ${host.hostName}.$event at node ${e.nodeId}';
       host.hostError(message);
       developer.log(message, name: 'Blueprint', level: 1000);
+      host.hostInstance?.onEventStopped?.call(event, message);
     }
   }
 

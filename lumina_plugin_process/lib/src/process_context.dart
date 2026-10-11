@@ -266,6 +266,10 @@ class ConnectedPluginProcessContext implements PluginProcessContext {
   void emit(String name, [Object? data]) => connection.notify(PluginMethods.event, {'name': name, 'data': data});
 
   @override
+  void patchPanel(String panel, List<PluginPanelStateOp> ops) =>
+      connection.notify(PluginMethods.panelState, PluginPanelStatePatch(panel, ops).toJson());
+
+  @override
   void progress(String task, {required String step, int? done, int? total, String? message, bool finished = false}) =>
       connection.notify(PluginMethods.progress, {
         'task': task,

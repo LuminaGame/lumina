@@ -12,6 +12,14 @@ mixin LuminaBlueprintInstance on LuminaBlueprintRuntime implements LuminaBluepri
   /// guard).
   int maxNodesPerEvent = 100000;
 
+  /// A single event run stops after this long (the editor's panels use
+  /// 250 ms so a runaway graph never freezes the editor); null = no limit.
+  Duration? maxEventDuration;
+
+  /// Called with the event's title and the message when an event run was
+  /// stopped by [maxNodesPerEvent] or [maxEventDuration].
+  void Function(String event, String message)? onEventStopped;
+
   late final Map<String, ({List<LuminaBlueprintPinSpec> inputs, List<LuminaBlueprintPinSpec> outputs})> _pins;
 
   /// The event graph with every macro call expanded.

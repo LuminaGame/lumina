@@ -208,6 +208,8 @@ export 'package:lumina_core/src/math/axes.dart';
 export 'package:lumina/src/blueprint/blueprint.dart';
 export 'package:lumina/src/blueprint/vm/anim_blueprint_vm.dart';
 export 'package:lumina/src/blueprint/vm/blueprint_vm.dart';
+export 'package:lumina/src/blueprint/editor/editor_widget_events.dart';
+export 'package:lumina/src/blueprint/editor/json_nodes.dart';
 
 // Save & Persistence
 export 'package:lumina/src/save/save_game.dart';

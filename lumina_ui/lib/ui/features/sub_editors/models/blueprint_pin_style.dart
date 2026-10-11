@@ -54,6 +54,8 @@ abstract final class BlueprintPinStyle {
         return EditorColors.pinDelegate;
       case LuminaPinType.timerHandle:
         return EditorColors.pinTimerHandle;
+      case LuminaPinType.json:
+        return EditorColors.pinStruct;
     }
   }
 
@@ -99,6 +101,8 @@ abstract final class BlueprintPinStyle {
         return 'Delegate';
       case LuminaPinType.timerHandle:
         return 'Timer Handle';
+      case LuminaPinType.json:
+        return 'Json';
     }
   }
 
@@ -202,6 +206,7 @@ abstract final class BlueprintPinStyle {
       case LuminaPinType.exec:
       case LuminaPinType.delegate:
       case LuminaPinType.timerHandle:
+      case LuminaPinType.json:
         return null;
       default:
         return 0.0;

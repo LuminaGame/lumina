@@ -84,13 +84,66 @@ abstract class LuminaUserWidget extends LuminaActor {
   }
 }
 
-/// The widget classes whose instances run a graph: the factory of
-/// each class's script, registered by the generated `widget_registry.g.dart`
-/// (the compiled `WBP<Name>Graph`) or by Play-In-Editor (a VM script over the
-/// editor's graph). The widget nodes call into here, so the VM and generated
-/// code share one lifecycle.
+/// One set of widget classes whose instances run a graph: the factory of
+/// each class's script. Two exist: [LuminaUserWidgets.game], which the
+/// generated `widget_registry.g.dart` and Play-In-Editor fill (Play clears it
+/// on every start), and [LuminaUserWidgets.editor], which the editor's panel
+/// host fills with its editor panels, so starting Play never touches a docked
+/// panel and a panel's script never lives in the game world.
+class LuminaUserWidgetRegistry {
+  /// A name for messages (`game`, `editor`).
+  final String name;
+
+  LuminaUserWidgetRegistry(this.name);
+
+  final Map<String, LuminaUserWidget Function()> _factories = {};
+
+  void register(String className, LuminaUserWidget Function() factory) => _factories[className] = factory;
+
+  void registerAll(Map<String, LuminaUserWidget Function()> factories) => _factories.addAll(factories);
+
+  void unregister(String className) => _factories.remove(className);
+
+  void clear() => _factories.clear();
+
+  bool has(String className) => _factories.containsKey(className);
+
+  Iterable<String> get classNames => _factories.keys;
+
+  /// Creates [instance]'s script when its class is registered here, binds it
+  /// and spawns it into [world]. Returns the script (an existing one when the
+  /// instance already has one), or null.
+  LuminaUserWidget? attach(LuminaWorld? world, Map<String, Object?> instance) {
+    final existing = LuminaUserWidgets._scripts[instance];
+    if (existing != null) return existing;
+    final factory = _factories['${instance['class'] ?? ''}'];
+    if (factory == null) return null;
+    final script = factory()..bindWidgetInstance(instance);
+    LuminaUserWidgets._scripts[instance] = script;
+    final elements = instance['elements'];
+    if (elements is Map) {
+      for (final e in elements.values) {
+        if (e is Map<String, Object?>) LuminaUserWidgets._owners[e] = instance;
+      }
+    }
+    world?.spawnActorImmediately(script);
+    return script;
+  }
+}
+
+/// The widget classes whose instances run a graph. The static members act on
+/// the [game] registry, which the generated
+/// `widget_registry.g.dart` (the compiled `WBP<Name>Graph`) and Play-In-Editor
+/// (a VM script over the editor's graph) fill; [editor] holds the editor's
+/// docked panels. The widget nodes call into here, so the VM and generated
+/// code share one lifecycle; [of], [fire] and the lifecycle calls find a
+/// script whichever registry attached it.
 abstract final class LuminaUserWidgets {
-  static final Map<String, LuminaUserWidget Function()> _factories = {};
+  /// The game's widget scripts (Play-In-Editor clears it on every start).
+  static final LuminaUserWidgetRegistry game = LuminaUserWidgetRegistry('game');
+
+  /// The editor's panel scripts; Play never clears it.
+  static final LuminaUserWidgetRegistry editor = LuminaUserWidgetRegistry('editor');
 
   /// Instance map → its script. An [Expando], so the instance map stays
   /// JSON-plain (debug views and copies never see the script).
@@ -104,39 +157,24 @@ abstract final class LuminaUserWidgets {
   /// instance runs a graph; null otherwise.
   static Map<String, Object?>? instanceOfElement(Object? element) => element is Map<String, Object?> ? _owners[element] : null;
 
-  static void register(String className, LuminaUserWidget Function() factory) => _factories[className] = factory;
+  static void register(String className, LuminaUserWidget Function() factory) => game.register(className, factory);
 
-  static void registerAll(Map<String, LuminaUserWidget Function()> factories) => _factories.addAll(factories);
+  static void registerAll(Map<String, LuminaUserWidget Function()> factories) => game.registerAll(factories);
 
-  static void unregister(String className) => _factories.remove(className);
+  static void unregister(String className) => game.unregister(className);
 
-  static void clear() => _factories.clear();
+  /// Clears the [game] registry only; [editor] panels keep running.
+  static void clear() => game.clear();
 
-  static bool has(String className) => _factories.containsKey(className);
+  static bool has(String className) => game.has(className);
 
-  static Iterable<String> get classNames => _factories.keys;
+  static Iterable<String> get classNames => game.classNames;
 
   /// The script of widget instance [instance], or null (no graph, or not a widget).
   static LuminaUserWidget? of(Object? instance) => instance is Map<String, Object?> ? _scripts[instance] : null;
 
-  /// Creates [instance]'s script when its class has a graph, binds it and
-  /// spawns it into [world] (`Create Widget`). Returns the script, or null.
-  static LuminaUserWidget? attach(LuminaWorld? world, Map<String, Object?> instance) {
-    final existing = _scripts[instance];
-    if (existing != null) return existing;
-    final factory = _factories['${instance['class'] ?? ''}'];
-    if (factory == null) return null;
-    final script = factory()..bindWidgetInstance(instance);
-    _scripts[instance] = script;
-    final elements = instance['elements'];
-    if (elements is Map) {
-      for (final e in elements.values) {
-        if (e is Map<String, Object?>) _owners[e] = instance;
-      }
-    }
-    world?.spawnActorImmediately(script);
-    return script;
-  }
+  /// [LuminaUserWidgetRegistry.attach] on the [game] registry (`Create Widget`).
+  static LuminaUserWidget? attach(LuminaWorld? world, Map<String, Object?> instance) => game.attach(world, instance);
 
   /// `Add to Viewport`: Pre Construct then Construct, once per stay on screen.
   static void addedToViewport(Object? instance) => of(instance)?._construct();

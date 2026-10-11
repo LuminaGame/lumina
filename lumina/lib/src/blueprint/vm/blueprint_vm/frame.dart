@@ -60,7 +60,10 @@ typedef _PinsOf = ({List<LuminaBlueprintPinSpec> inputs, List<LuminaBlueprintPin
 
 class _InfiniteLoop implements Exception {
   final String nodeId;
-  _InfiniteLoop(this.nodeId);
+
+  /// The event ran past its time budget rather than its node budget.
+  final bool tooLong;
+  _InfiniteLoop(this.nodeId, {this.tooLong = false});
 }
 
 /// One event invocation: follows exec wires, evaluates pure inputs on demand
@@ -78,8 +81,15 @@ class _Frame {
 
   LuminaBlueprintGraph get graph => host.hostGraph;
 
+  final Stopwatch _clock = Stopwatch()..start();
+
   void _count(String nodeId) {
     if (++_steps > host.hostMaxNodes) throw _InfiniteLoop(nodeId);
+    // The time budget, checked every 256 nodes.
+    if (_steps & 255 == 0) {
+      final budget = host.hostInstance?.maxEventDuration;
+      if (budget != null && _clock.elapsed > budget) throw _InfiniteLoop(nodeId, tooLong: true);
+    }
   }
 
   /// Loops the VM has broken out of in this run (ForLoopWithBreak).
@@ -260,6 +270,19 @@ class _Frame {
           _emit(node, values);
           stack.add((node.id, result != null ? 'cast_succeeded' : 'cast_failed'));
         default:
+          final latent = LuminaBlueprintFunctionRegistry.latentFunction(node.registryId);
+          if (latent != null) {
+            // A registered latent node: Exec Out now, its result pins later
+            // in a new frame with that pin's outputs.
+            for (final p in pins.inputs) {
+              if (p.type != LuminaPinType.exec) values[p.id] = _input(node, p.id, pins);
+            }
+            _emit(node, values);
+            latent(LuminaBlueprintCallContext(host.hostSelf), {..._settings(node, pins), ...values},
+                (pin, outputs) => LuminaBlueprintInterpreter.run(host, node.id, pin, outputs, eventNodeId: node.id));
+            stack.add((node.id, 'exec_out'));
+            continue;
+          }
           final function = LuminaBlueprintFunctionLibrary.functions[node.registryId];
           if (function == null) {
             if (LuminaBlueprintFunctionRegistry.isDeclaredOnly(node.registryId)) {
@@ -291,7 +314,11 @@ class _Frame {
               printed: node.registryId == 'print_string'
                   ? values['in_string'] as String?
                   : (node.registryId == 'print_text' ? values['in_text'] as String? : null));
-          final next = pins.outputs.where((p) => p.type == LuminaPinType.exec).firstOrNull;
+          // A registered function may pick its exec output (a Failed branch).
+          final chosen = outputs[LuminaBlueprintFunctionRegistry.execPinKey];
+          final next = chosen is String
+              ? pins.outputs.where((p) => p.type == LuminaPinType.exec && p.id == chosen).firstOrNull
+              : pins.outputs.where((p) => p.type == LuminaPinType.exec).firstOrNull;
           if (next != null) stack.add((node.id, next.id));
       }
     }

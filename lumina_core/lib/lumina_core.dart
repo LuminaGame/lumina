@@ -18,6 +18,7 @@ export 'package:lumina_core/src/math/units.dart';
 
 // File formats and their models: .lmas assets, .lmproject, levels, landscape,
 // sequencer, plugin descriptors, themes.
+export 'package:lumina_core/src/formats/editor_panel_info.dart';
 export 'package:lumina_core/src/formats/landscape_data.dart';
 export 'package:lumina_core/src/formats/lumina_asset.dart';
 export 'package:lumina_core/src/formats/lumina_asset_summary.dart';

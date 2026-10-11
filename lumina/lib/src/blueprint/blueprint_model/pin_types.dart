@@ -42,7 +42,11 @@ enum LuminaPinType {
   delegate,
 
   /// A `LuminaTimerHandle` from Set Timer.
-  timerHandle;
+  timerHandle,
+
+  /// A JSON-plain value (map, list, string, number, bool or null): what
+  /// editor panels pass to and from a plugin process. VM only.
+  json;
 
   /// The name this type is stored under (`enum` for [enumeration]).
   String get jsonName => this == LuminaPinType.enumeration ? 'enum' : this.name;
@@ -110,6 +114,8 @@ enum LuminaPinType {
         return LuminaPinType.delegate;
       case 'timerhandle':
         return LuminaPinType.timerHandle;
+      case 'json':
+        return LuminaPinType.json;
     }
     // An enum asset: `Enum:E_DoorState`.
     if (typeName != null && typeName.toLowerCase().startsWith('enum:')) return LuminaPinType.enumeration;

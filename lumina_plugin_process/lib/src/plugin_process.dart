@@ -191,6 +191,13 @@ abstract class PluginProcessContext {
   /// must be JSON.
   void emit(String name, [Object? data]);
 
+  /// Sets element states of every open instance of the editor panel
+  /// [panel] (its asset path in this plugin, `content/EPW_Tools.lmas`):
+  /// `patchPanel('content/EPW_Tools.lmas', [PluginPanelStateOp('StatusText', {'text': 'Ready'})])`.
+  /// The editor applies it without running the panel's graph, at most 30
+  /// times a second per panel (bursts are coalesced); never per-frame data.
+  void patchPanel(String panel, List<PluginPanelStateOp> ops);
+
   /// Reports progress of [task] (shown by the shell, and in the Plugin
   /// Manager's status for long jobs). [finished] ends the task.
   void progress(String task, {required String step, int? done, int? total, String? message, bool finished = false});

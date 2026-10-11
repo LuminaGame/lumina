@@ -81,7 +81,9 @@ List<LuminaBlueprintPinSpec> _widgetEventOutputs(String? event, String? typeName
           _enum('commit_method', 'Commit Method', LuminaBlueprintNodeLibrary.textCommitEnum),
         ],
       LuminaWidgetEvents.onSelectionChanged => _selectionChangedOutputs(node),
-      _ => typeName == LuminaViewportNodes.elementType ? _viewportEventOutputs(event) : const [],
+      _ => typeName == LuminaViewportNodes.elementType
+          ? _viewportEventOutputs(event)
+          : (LuminaEditorWidgetEvents.outputsOf(event) ?? const []),
     };
 
 /// The pins of a widget-graph node in [context].
@@ -136,7 +138,9 @@ String? _widgetScopeError(LuminaBlueprintNode node, LuminaBlueprintNodeSpec spec
       }
       if (spec.id == LuminaBlueprintNodeLibrary.eventWidgetElement) {
         final event = node.literals['event'];
-        if (event is! String || !LuminaWidgetEvents.forType(v.typeName).contains(event)) {
+        // In an editor panel any element may take Content Browser drops.
+        final dropped = context.isEditorScope && event == LuminaEditorWidgetEvents.onAssetDropped;
+        if (event is! String || !(dropped || LuminaWidgetEvents.forType(v.typeName).contains(event))) {
           return "${node.title}: '$element' has no event '${event ?? ''}'.";
         }
       }

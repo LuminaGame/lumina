@@ -177,6 +177,12 @@ abstract final class PluginMethods {
   /// with a check mark.
   static const String menuChecked = 'host.menuChecked';
 
+  /// `PluginPanelStatePatch.toJson()`:
+  /// `{"panel": <asset path in the plugin>, "ops": [{"element": <name>, "set": {...}}]}`,
+  /// applied to every open instance of that editor panel (bounded host-side to 30 per
+  /// second per panel, coalesced). An editor without editor panels ignores it.
+  static const String panelState = 'host.panelState';
+
   // --- process → host requests (proxies) -----------------------------------
 
   /// `{"op": <EditorLevelAccess member>, ...}` → its result as JSON. The ops:

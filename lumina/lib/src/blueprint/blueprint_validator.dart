@@ -504,7 +504,8 @@ void _validateGraph(
       continue;
     }
     if (!LuminaBlueprintNodeLibrary.intrinsics.contains(spec.id) &&
-        !LuminaBlueprintFunctionLibrary.functions.containsKey(spec.id)) {
+        !LuminaBlueprintFunctionLibrary.functions.containsKey(spec.id) &&
+        LuminaBlueprintFunctionRegistry.latentFunction(spec.id) == null) {
       error('${spec.title} has no implementation.', node: node.id);
     }
   }

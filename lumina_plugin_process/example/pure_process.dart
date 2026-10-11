@@ -28,6 +28,26 @@ class PureSampleProcess extends LuminaPluginProcess {
       return {'greeting': 'Hello, ${args['name'] ?? 'editor'}', 'pid': pid};
     });
     context.handle('settings', (_) => context.pluginSettings.value);
+    // What an editor panel Widget Blueprint of this plugin drives: a status
+    // read, an event, element-state patches and a burst of them.
+    context.handle('status', (_) => {'state': 'idle', 'greetings': greetings});
+    context.handle('emitProgress', (args) {
+      context.emit('progress', {'value': args['value'] ?? 0.5});
+      return null;
+    });
+    context.handle('patchStatus', (args) {
+      context.patchPanel('${args['panel']}', [PluginPanelStateOp('StatusText', {'text': args['text'] ?? 'Ready'})]);
+      return null;
+    });
+    context.handle('patchBurst', (args) async {
+      final count = args['count'] as int? ?? 200;
+      final every = Duration(microseconds: (args['periodMs'] as int? ?? 1000) * 1000 ~/ count);
+      for (var i = 1; i <= count; i++) {
+        context.patchPanel('${args['panel']}', [PluginPanelStateOp('StatusText', {'text': 'Step $i'})]);
+        await Future<void>.delayed(every);
+      }
+      return {'sent': count};
+    });
     context.handle('placeCrates', (args) async {
       final count = args['count'] as int? ?? 1;
       final ids = await context.level.runTransaction('Place crates', () {

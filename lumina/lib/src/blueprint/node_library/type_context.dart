@@ -74,6 +74,11 @@ class LuminaBlueprintTypeContext {
   /// scripts; null outside a Widget Blueprint.
   final List<LuminaBlueprintWidgetElement>? widgetVariables;
 
+  /// The capabilities an editor panel's graph declares (`level`, `assets`,
+  /// `process`, `mcp`); null outside an editor panel. Non-null makes this an
+  /// editor scope: editor-only nodes are offered, game-only nodes are not.
+  final Set<String>? editorCapabilities;
+
   const LuminaBlueprintTypeContext({
     this.variables = const [],
     this.inputActions = const [],
@@ -98,7 +103,12 @@ class LuminaBlueprintTypeContext {
     this.variableOwners = const {},
     this.componentOwners = const {},
     this.widgetVariables,
+    this.editorCapabilities,
   });
+
+  /// Whether this is an editor panel's graph (a Widget Blueprint the editor
+  /// runs as a docked panel).
+  bool get isEditorScope => editorCapabilities != null;
 
   /// Whether this is a Level Blueprint's graph.
   bool get isLevelScope => levelActors != null;
@@ -157,6 +167,7 @@ class LuminaBlueprintTypeContext {
     List<LuminaBlueprintVariable>? inheritedVariables,
     List<LuminaBlueprintComponent>? inheritedComponents,
     List<LuminaBlueprintCustomEvent>? inheritedCustomEvents,
+    Set<String>? editorCapabilities,
   }) {
     final childVarNames = {for (final v in doc.variables) v.name};
     final effectiveVariables = [
@@ -208,6 +219,7 @@ class LuminaBlueprintTypeContext {
         ?className: LuminaBlueprintComponentRef.fromComponents(effectiveComponents),
       },
       widgetVariables: widgetVariables,
+      editorCapabilities: editorCapabilities,
     );
   }
 
@@ -225,6 +237,7 @@ class LuminaBlueprintTypeContext {
     List<LuminaBlueprintSaveGameDocument>? saveGameClasses,
     LuminaBlueprintFunctionGraph? functionScope,
     LuminaBlueprintMacroGraph? macroScope,
+    Set<String>? editorCapabilities,
   }) =>
       LuminaBlueprintTypeContext.forDocument(widgetDoc.blueprint,
           inputActions: inputActions,
@@ -237,7 +250,30 @@ class LuminaBlueprintTypeContext {
           saveGameClasses: saveGameClasses,
           functionScope: functionScope,
           macroScope: macroScope,
-          widgetVariables: widgetDoc.variables);
+          widgetVariables: widgetDoc.variables,
+          editorCapabilities: editorCapabilities);
+
+  /// An editor panel's context: [widgetDoc]'s widget scope plus the editor
+  /// scope, with the panel's declared [capabilities] (`level`, `assets`,
+  /// `process`, `mcp`). Editor-only nodes are offered, game-only nodes (the
+  /// player, input, level travel, pause, save games, spawning into the world)
+  /// are not, and a node needing an undeclared capability is an error.
+  factory LuminaBlueprintTypeContext.forEditorPanel(
+    LuminaWidgetBlueprintDocument widgetDoc, {
+    Set<String> capabilities = const {},
+    List<LuminaBlueprintWidgetClass>? widgetClasses,
+    List<LuminaBlueprintEnumDocument>? enums,
+    List<LuminaBlueprintInterfaceDocument>? interfaces,
+    LuminaBlueprintFunctionGraph? functionScope,
+    LuminaBlueprintMacroGraph? macroScope,
+  }) =>
+      LuminaBlueprintTypeContext.forWidget(widgetDoc,
+          widgetClasses: widgetClasses,
+          enums: enums,
+          interfaces: interfaces,
+          functionScope: functionScope,
+          macroScope: macroScope,
+          editorCapabilities: Set.unmodifiable(capabilities));
 
   /// A Level Blueprint's context: [levelDoc]'s variables,
   /// functions…, `Self` typed `Actor:LuminaLevelScriptActor`, and the level's
@@ -303,6 +339,7 @@ class LuminaBlueprintTypeContext {
         variableOwners: variableOwners,
         componentOwners: componentOwners,
         widgetVariables: widgetVariables,
+        editorCapabilities: editorCapabilities,
       );
 
   /// The context of [function]'s own graph inside [doc].

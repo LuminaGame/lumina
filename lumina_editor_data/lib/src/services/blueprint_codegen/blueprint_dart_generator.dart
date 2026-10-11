@@ -446,6 +446,9 @@ String _literal(LuminaPinType type, Object? stored) {
       return _json(<String, Object?>{for (final e in t.entries) '${e.key}': e.value});
     case LuminaPinType.hitResult:
       return v is Map ? _json(<String, Object?>{for (final e in v.entries) '${e.key}': e.value}) : 'null';
+    case LuminaPinType.json:
+      // Editor panels only (never compiled); a literal is plain JSON.
+      return _json(v);
     case LuminaPinType.enumeration:
       return _str((v as String?) ?? '');
     case LuminaPinType.exec:

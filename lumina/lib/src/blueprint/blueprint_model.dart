@@ -210,6 +210,7 @@ Object? luminaBlueprintLiteral(LuminaPinType type, Object? stored) {
     case LuminaPinType.wildcard:
     case LuminaPinType.delegate:
     case LuminaPinType.timerHandle:
+    case LuminaPinType.json:
       return stored;
   }
 }

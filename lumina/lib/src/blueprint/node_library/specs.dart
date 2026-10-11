@@ -108,6 +108,14 @@ class LuminaBlueprintNodeSpec {
   /// Scalability Settings runs. The editor shows [applyHint] on the node.
   final bool requiresApply;
 
+  /// The node runs only in an editor panel's graph (the editor function
+  /// library, the Json nodes): never offered or accepted in a game graph.
+  final bool editorOnly;
+
+  /// The editor panel capability (`level`, `assets`, `process`, `mcp`) a
+  /// graph must declare to use this node; null when reading needs none.
+  final String? editorCapability;
+
   /// The line the editor shows on a [requiresApply] node.
   static const String applyHint = 'Needs Apply Scalability Settings';
 
@@ -127,6 +135,8 @@ class LuminaBlueprintNodeSpec {
     this.unsupported,
     this.tooltip,
     this.requiresApply = false,
+    this.editorOnly = false,
+    this.editorCapability,
   });
 
   bool get hasExecIn => inputs.any((p) => p.type == LuminaPinType.exec);

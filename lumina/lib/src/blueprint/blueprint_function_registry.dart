@@ -9,11 +9,25 @@ class LuminaBlueprintRegisteredFunction {
   final LuminaBlueprintCallShape? call;
   final LuminaBlueprintFunction? function;
 
-  const LuminaBlueprintRegisteredFunction(this.spec, this.call, this.function);
+  /// A latent node's VM callable (Exec Out goes on at once, the result pins
+  /// fire later); null for a pure or impure node.
+  final LuminaBlueprintLatentFunction? latent;
+
+  const LuminaBlueprintRegisteredFunction(this.spec, this.call, this.function, {this.latent});
 
   /// Whether the VM of this process can run it.
-  bool get callable => function != null;
+  bool get callable => function != null || latent != null;
 }
+
+/// A latent node's behaviour as the VM calls it: [inputs] by pin id, and
+/// [resume], which re-enters the graph at one of the node's exec outputs
+/// (`completed`, `failed`, ...) with that pin's data outputs. [resume] may be
+/// called later (after async work) and more than once (progress).
+typedef LuminaBlueprintLatentFunction = void Function(
+  LuminaBlueprintCallContext context,
+  Map<String, Object?> inputs,
+  void Function(String execPin, Map<String, Object?> outputs) resume,
+);
 
 /// Nodes beyond the built-in library: Dart functions registered as
 /// Blueprint-callable.
@@ -58,6 +72,29 @@ abstract final class LuminaBlueprintFunctionRegistry {
     }
     _entries[spec.id] = LuminaBlueprintRegisteredFunction(spec, call, function);
   }
+
+  /// The output key a registered impure function answers to pick which exec
+  /// output the chain continues from (`{execPinKey: 'failed'}`); without it
+  /// the first exec output runs.
+  static const String execPinKey = r'$exec';
+
+  /// Adds latent node [spec] (kind [LuminaBlueprintNodeKind.latent]), run by
+  /// [function] in the VM: Exec Out (`exec_out`) continues at once, the
+  /// result exec outputs fire when [function] calls `resume`. Latent nodes
+  /// run in the VM only (editor panels are never compiled).
+  static void registerLatent(LuminaBlueprintNodeSpec spec, LuminaBlueprintLatentFunction function) {
+    if (spec.kind != LuminaBlueprintNodeKind.latent) {
+      throw ArgumentError.value(spec.kind, 'spec.kind', "'${spec.id}' must be a latent node");
+    }
+    if (LuminaBlueprintNodeLibrary.builtIn(spec.id) != null) {
+      throw StateError("Cannot register Blueprint function '${spec.id}': a built-in node has that id.");
+    }
+    if (_entries.containsKey(spec.id)) throw StateError("Blueprint function '${spec.id}' is already registered.");
+    _entries[spec.id] = LuminaBlueprintRegisteredFunction(spec, null, null, latent: function);
+  }
+
+  /// The latent callable of [id], or null.
+  static LuminaBlueprintLatentFunction? latentFunction(String id) => _entries[id]?.latent;
 
   /// Makes node [spec] known without a callable: the palette lists it, the
   /// validator accepts it (with a warning), the code generator calls it

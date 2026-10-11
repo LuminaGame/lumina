@@ -10,6 +10,8 @@
 /// - [PluginContributions] and its parts: everything an isolated plugin
 ///   registers, as data.
 /// - [PluginViewSpec]: declarative panels the host renders.
+/// - [PluginPanelStatePatch]: element-state updates for editor panel Widget
+///   Blueprints (`host.panelState`).
 ///
 /// Pure Dart (no Flutter): a test fixture or a plugin process can use it
 /// with `dart run`.
@@ -19,5 +21,6 @@ export 'package:lumina_plugin_protocol/src/contributions.dart';
 export 'package:lumina_plugin_protocol/src/frame_codec.dart';
 export 'package:lumina_plugin_protocol/src/launch.dart';
 export 'package:lumina_plugin_protocol/src/messages.dart';
+export 'package:lumina_plugin_protocol/src/panel_state.dart';
 export 'package:lumina_plugin_protocol/src/plugin_connection.dart';
 export 'package:lumina_plugin_protocol/src/view_spec.dart';

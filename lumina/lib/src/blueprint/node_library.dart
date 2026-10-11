@@ -3,6 +3,7 @@ import 'package:lumina/src/blueprint/blueprint_assets.dart';
 import 'package:lumina/src/blueprint/blueprint_enums_interfaces.dart';
 import 'package:lumina/src/blueprint/blueprint_function_registry.dart';
 import 'package:lumina/src/blueprint/blueprint_model.dart';
+import 'package:lumina/src/blueprint/editor/editor_widget_events.dart';
 import 'package:lumina/src/blueprint/level_blueprint.dart';
 import 'package:lumina/src/blueprint/widget_blueprint.dart';
 import 'package:lumina/src/blueprint/widget_classes.dart';
@@ -32,6 +33,7 @@ part 'node_library/combo_box.dart';
 part 'node_library/umg_viewport.dart';
 part 'node_library/conversions.dart';
 part 'node_library/staged_settings.dart';
+part 'node_library/editor_scope.dart';
 
 /// The one node catalog the editor palette, the VM and the code generator
 /// read.
@@ -316,6 +318,9 @@ abstract final class LuminaBlueprintNodeLibrary {
   /// filter); widget-only nodes in a Widget Blueprint, which
   /// takes no actor events, level nodes or components.
   static bool availableIn(LuminaBlueprintNodeSpec spec, LuminaBlueprintTypeContext context) {
+    // Editor panels: editor-only nodes there only, game-only nodes never.
+    if (spec.editorOnly && !context.isEditorScope) return false;
+    if (context.isEditorScope && _isGameOnly(spec)) return false;
     if (context.isWidgetScope) {
       return !levelOnlyNodes.contains(spec.id) &&
           !selfComponentNodes.contains(spec.id) &&
@@ -326,9 +331,14 @@ abstract final class LuminaBlueprintNodeLibrary {
     return context.isLevelScope ? !selfComponentNodes.contains(spec.id) : !levelOnlyNodes.contains(spec.id);
   }
 
-  /// Why [node] breaks the Widget Blueprint rules of [context], or null.
+  /// Why [node] breaks the Widget Blueprint or editor panel rules of
+  /// [context], or null.
   static String? widgetScopeError(LuminaBlueprintNode node, LuminaBlueprintNodeSpec spec, LuminaBlueprintTypeContext context) =>
-      _widgetScopeError(node, spec, context);
+      _editorScopeError(node, spec, context) ?? _widgetScopeError(node, spec, context);
+
+  /// Whether [spec] acts on the game (the player, input, level travel, save
+  /// games, …) and so is never offered in an editor panel.
+  static bool isGameOnly(LuminaBlueprintNodeSpec spec) => _isGameOnly(spec);
 
   /// Latent nodes whose Completed pin fires from a callback:
   /// the VM and the generator resume the chain there.

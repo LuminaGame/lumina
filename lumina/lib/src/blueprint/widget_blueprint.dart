@@ -1,4 +1,5 @@
 import 'package:lumina/src/blueprint/blueprint_model.dart';
+import 'package:lumina/src/blueprint/editor/editor_widget_events.dart';
 import 'package:lumina/src/blueprint/widget_classes.dart';
 
 /// A widget asset's own Blueprint graph (the Widget Blueprint Graph): the
@@ -142,6 +143,7 @@ abstract final class LuminaWidgetEvents {
     if (_textTypes.contains(typeName)) return const [onValueChanged, onTextCommitted];
     if (typeName == 'comboBox') return const [onValueChanged, onSelectionChanged];
     if (typeName == 'viewport') return viewportEvents;
+    if (LuminaEditorWidgetEvents.types.contains(typeName)) return LuminaEditorWidgetEvents.forType(typeName);
     if (_valueTypes.contains(typeName)) return const [onValueChanged];
     return const [];
   }

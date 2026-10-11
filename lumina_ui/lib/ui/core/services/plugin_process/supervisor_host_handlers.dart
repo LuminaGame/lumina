@@ -38,6 +38,10 @@ extension _HostHandlers on PluginProcessSupervisor {
       ..onNotification(PluginMethods.event, (args) {
         if (!_events.isClosed) _events.add(PluginProcessEvent(args['name'] as String? ?? '', args['data']));
       })
+      ..onNotification(PluginMethods.panelState, (args) {
+        final patch = PluginPanelStatePatch.fromJson(args);
+        if (patch != null && !_panelStates.isClosed) _panelStates.add(patch);
+      })
       ..onNotification(PluginMethods.progress, (args) {
         if (!_progress.isClosed) _progress.add(PluginProgress.fromJson(args));
       })
