@@ -17,7 +17,9 @@ import 'package:lumina/src/utility/lumina_assets.dart';
 /// gallery sample (`example/lib/samples/simulated_skybox_sample.dart`, itself a
 /// port of Filament's `web/examples/sky/SimulatedSkybox.js`). The sample's
 /// shader is shipped with this package as
-/// `packages/lumina/assets/sky/simulated_skybox.filamat`.
+/// `packages/lumina/assets/sky/simulated_skybox.filamat`, and compiled with
+/// multiview stereo shaders as `simulated_skybox_multiview.filamat`, which an
+/// engine running `StereoscopicType.multiview` (an XR headset) loads instead.
 ///
 /// The component is the declarative face of [LuminaProceduralSkyBinding]: it
 /// owns the parameters as mutable fields, and the binding owns the GPU

@@ -26,6 +26,7 @@
 
 #ifndef __EMSCRIPTEN__
 #include "materials/ui_overlay_filamat.h"
+#include "materials/ui_overlay_multiview_filamat.h"
 #endif
 
 using namespace filament;
@@ -89,9 +90,15 @@ void* filament_ui_overlay_create(void* engine_ptr) {
     auto* o = new UiOverlay();
     o->engine = engine;
     try {
+        // One package per stereoscopic type: the engine's type picks it, as a
+        // package of the other type draws nothing in a stereo view.
+        const bool multiview =
+                engine->getConfig().stereoscopicType == backend::StereoscopicType::MULTIVIEW;
         o->material = Material::Builder()
-                .package(flutter_filament::kUiOverlayMaterialPackage,
-                         flutter_filament::kUiOverlayMaterialPackageSize)
+                .package(multiview ? flutter_filament::kUiOverlayMultiviewMaterialPackage
+                                   : flutter_filament::kUiOverlayMaterialPackage,
+                         multiview ? flutter_filament::kUiOverlayMultiviewMaterialPackageSize
+                                   : flutter_filament::kUiOverlayMaterialPackageSize)
                 .build(*engine);
         if (!o->material) {
             delete o;

@@ -45,7 +45,7 @@ while IFS='|' read -r output source flags; do
   # shellcheck disable=SC2086
   "$MATC" $flags -o "$TMP/out.filamat" "$source"
   case "$output" in
-    *.h) "$PY" tool/embed_material.py "$TMP/out.filamat" "$output" ;;
+    *.h) "$PY" tool/embed_material.py "$TMP/out.filamat" "$output" "$source" "$flags" ;;
     *)   mkdir -p "$(dirname "$output")"; cp "$TMP/out.filamat" "$output"
          echo "wrote $output ($(stat -c%s "$output") bytes)" ;;
   esac

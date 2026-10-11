@@ -297,6 +297,12 @@ class LuminaProceduralSkyBinding {
   final bool loadNightSkyTextures;
 
   static const String filamatAsset = 'packages/lumina/assets/sky/simulated_skybox.filamat';
+
+  /// The same sky compiled with multiview stereo shaders, loaded on an engine
+  /// configured for [StereoscopicType.multiview] (an XR headset): a package
+  /// carries the stereo shaders of one stereoscopic type, and the other type's
+  /// package draws nothing in a stereo view.
+  static const String multiviewFilamatAsset = 'packages/lumina/assets/sky/simulated_skybox_multiview.filamat';
   static const String moonDiskAsset = 'packages/lumina/assets/sky/moon_disk.png';
   static const String moonNormalAsset = 'packages/lumina/assets/sky/moon_normal.png';
   static const String milkyWayAsset = 'packages/lumina/assets/sky/milkyway.png';
@@ -358,7 +364,8 @@ class LuminaProceduralSkyBinding {
         ..setUint16Data(Uint16List.fromList([0, 1, 2]));
 
       // 2. Compiled shader.
-      final filamat = await assetProvider(filamatAsset);
+      final multiview = engine.config.stereoscopicType == StereoscopicType.multiview;
+      final filamat = await assetProvider(multiview ? multiviewFilamatAsset : filamatAsset);
       if (_disposed) return;
       // _description may have moved on while that await was in flight.
       final material = FilamentMaterial.fromBuffer(engine: engine, filamatBuffer: filamat);

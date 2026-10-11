@@ -52,6 +52,10 @@ static inline MaterialProvider* toMaterialProvider(void* p) { return reinterpret
 
 #include <gltfio/materials/uberarchive.h>
 #include "materials/wireframe_filamat.h"
+#ifndef __EMSCRIPTEN__
+// WebGL has no multiview; native engines may run a multiview XR view.
+#include "materials/wireframe_multiview_filamat.h"
+#endif
 
 void* filament_gltfio_create_ubershader_provider(void* engine, const void* archive, uint32_t archive_size) {
     FFI_TRY
@@ -761,15 +765,26 @@ static std::unordered_map<Engine*, Material*> s_engineMaterials;
 // ignores every colour set on it: the transform gizmo, the grid and the
 // selection boxes were all permanently white.
 
+//
+// A compiled package carries the stereo shaders of one stereoscopic type, and
+// an engine configured for the other type draws nothing with them in a stereo
+// view (an XR headset runs multiview), so the package follows the engine.
 static Material* getEngineWireframeMaterial(Engine* engine) {
     std::lock_guard<std::mutex> lock(s_materialMutex);
     auto it = s_engineMaterials.find(engine);
     if (it != s_engineMaterials.end()) {
         return it->second;
     }
+    const uint8_t* package = flutter_filament::kWireframeMaterialPackage;
+    size_t packageSize = flutter_filament::kWireframeMaterialPackageSize;
+#ifndef __EMSCRIPTEN__
+    if (engine->getConfig().stereoscopicType == backend::StereoscopicType::MULTIVIEW) {
+        package = flutter_filament::kWireframeMultiviewMaterialPackage;
+        packageSize = flutter_filament::kWireframeMultiviewMaterialPackageSize;
+    }
+#endif
     Material* mat = Material::Builder()
-        .package(flutter_filament::kWireframeMaterialPackage,
-                 flutter_filament::kWireframeMaterialPackageSize)
+        .package(package, packageSize)
         .build(*engine);
     s_engineMaterials[engine] = mat;
     return mat;

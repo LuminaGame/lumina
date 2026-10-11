@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Embeds a compiled .filamat package as a C++ byte array header.
 
-Usage: embed_material.py <input.filamat> <output.h>
+Usage: embed_material.py <input.filamat> <output.h> [<source.mat> <matc flags>]
+
+The source and flags, when given, are written into the header's comment, so
+it documents the build that actually produced the bytes.
 """
 import os
 import re
@@ -17,22 +20,28 @@ NOTES = {
 }
 
 def main() -> int:
-    if len(sys.argv) != 3:
+    if len(sys.argv) not in (3, 5):
         print(__doc__, file=sys.stderr)
         return 2
     src, dst = sys.argv[1], sys.argv[2]
     data = open(src, 'rb').read()
-    # <name>_filamat.h -> kNameMaterialPackage (wireframe -> kWireframeMaterialPackage).
+    # <name>_filamat.h -> kNameMaterialPackage (wireframe -> kWireframeMaterialPackage,
+    # wireframe_multiview -> kWireframeMultiviewMaterialPackage).
     name = re.sub(r'_filamat$', '', os.path.splitext(os.path.basename(dst))[0])
     symbol = 'k' + ''.join(part.capitalize() for part in name.split('_')) + 'MaterialPackage'
+    if len(sys.argv) == 5:
+        source, flags = sys.argv[3], sys.argv[4]
+    else:
+        source, flags = 'src/materials/%s.mat' % name, '(see tool/materials.txt)'
     out = [
         '// GENERATED FILE - DO NOT EDIT BY HAND',
         '//',
-        '// Compiled from src/materials/%s.mat by tool/build_materials.sh:' % name,
-        '//   matc -a opengl -a vulkan -p desktop -o %s.filamat %s.mat' % (name, name),
+        '// Compiled from %s by tool/build_materials.sh:' % source,
+        '//   matc %s -o %s.filamat %s' % (flags, name, os.path.basename(source)),
     ]
-    if name in NOTES:
-        out += ['//'] + NOTES[name]
+    note = NOTES.get(os.path.splitext(os.path.basename(source))[0])
+    if note:
+        out += ['//'] + note
     out += [
         '#pragma once',
         '#include <cstddef>',

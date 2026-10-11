@@ -7,8 +7,17 @@
 # is authored there; copying it here would be a second copy to keep in sync,
 # which is how a stale header copy once caused an ABI mismatch.
 #
+# A material the plugin draws itself is compiled once per stereoscopic type
+# (`-PstereoscopicType=instanced|multiview`): a package carries the stereo
+# shaders of one type only, an engine configured for the other type draws
+# nothing with them in a stereo view, and the C wrapper picks the package that
+# matches `Engine::Config::stereoscopicType` (an XR headset runs multiview).
+# `-p all` keeps the mobile feature level a headset renders with.
+#
 # `tool/build_materials.sh` regenerates every row. `test/src/material_packages_test.dart`
 # fails if a `.filamat` in this package is missing from this list.
-src/materials/wireframe_filamat.h|src/materials/wireframe.mat|-a opengl -a vulkan -p all
-src/materials/ui_overlay_filamat.h|src/materials/ui_overlay.mat|-a opengl -a vulkan -p all
+src/materials/wireframe_filamat.h|src/materials/wireframe.mat|-a opengl -a vulkan -p all -PstereoscopicType=instanced
+src/materials/wireframe_multiview_filamat.h|src/materials/wireframe.mat|-a opengl -a vulkan -p all -PstereoscopicType=multiview
+src/materials/ui_overlay_filamat.h|src/materials/ui_overlay.mat|-a opengl -a vulkan -p all -PstereoscopicType=instanced
+src/materials/ui_overlay_multiview_filamat.h|src/materials/ui_overlay.mat|-a opengl -a vulkan -p all -PstereoscopicType=multiview
 example/assets/sky/simulated_skybox.filamat|../filament/web/examples/materials/simulated_skybox.mat|-a all -p all

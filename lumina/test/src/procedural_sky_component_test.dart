@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -342,6 +343,53 @@ void main() {
       expect(binding.isLoaded, isFalse);
       // Disposing twice is safe.
       expect(binding.dispose, returnsNormally);
+    });
+  });
+
+  group('LuminaProceduralSkyBinding on a multiview (XR) engine', () {
+    late FilamentEngine engine;
+    late FilamentScene scene;
+    final logs = <String>[];
+    StreamSubscription<FilamentLogRecord>? subscription;
+
+    setUp(() {
+      FilamentDiagnostics.installLogHandler();
+      logs.clear();
+      subscription = FilamentDiagnostics.onLog.listen((r) => logs.add(r.message));
+      engine = FilamentEngine.create(
+        backend: FilamentBackend.noop,
+        config: const EngineConfig(stereoscopicType: StereoscopicType.multiview, stereoscopicEyeCount: 2),
+      )!;
+      scene = engine.createScene();
+    });
+
+    tearDown(() async {
+      scene.dispose();
+      engine.dispose();
+      await subscription?.cancel();
+      FilamentDiagnostics.clearLogHandler();
+    });
+
+    test('loads the sky compiled with multiview stereo shaders', () async {
+      final requested = <String>[];
+      final binding = LuminaProceduralSkyBinding(
+        engine: engine,
+        scene: scene,
+        assetProvider: (key) {
+          requested.add(key);
+          return _diskAssets(key);
+        },
+        loadNightSkyTextures: false,
+      );
+      addTearDown(binding.dispose);
+
+      await binding.load(LuminaProceduralSkyDescription.defaults);
+      expect(binding.isLoaded, isTrue);
+      expect(requested.where((k) => k.endsWith('.filamat')), [LuminaProceduralSkyBinding.multiviewFilamatAsset]);
+
+      // The log bridge delivers asynchronously.
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+      expect(logs.where((m) => m.contains('stereoscopic type in the compiled material')), isEmpty);
     });
   });
 }

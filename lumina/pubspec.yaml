@@ -52,6 +52,7 @@ flutter:
   assets:
     # Shipped with LuminaProceduralSkyComponent (the Procedural Sky & Ocean).
     - assets/sky/simulated_skybox.filamat
+    - assets/sky/simulated_skybox_multiview.filamat
     - assets/sky/moon_disk.png
     - assets/sky/moon_normal.png
     - assets/sky/milkyway.png
