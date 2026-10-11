@@ -84,6 +84,29 @@ void main() {
     expect(s.reportedPid, isNot(pid));
   });
 
+  test('an update (another version) restarts it live; a removal stops it and drops its contributions', () async {
+    final v1 = await h.sample();
+    await h.manager.syncKernelPlugins([v1]);
+    final first = h.manager.supervisorOf(v1.name)!;
+    await waitForStatus(first, PluginProcessStatus.running);
+    final firstPid = first.reportedPid;
+
+    final dir2 = await writeKernelSamplePlugin(Directory(p.join(h.root.path, 'plugins_v2')), version: '1.1.0');
+    final v2 = await PluginRepository(roots: []).loadInternal(File(p.join(dir2.path, 'kernel_sample.lmplugin')), PluginOrigin.user);
+    await h.manager.syncKernelPlugins([v2]);
+    expect(first.state.value.status, PluginProcessStatus.stopped, reason: 'the old version was shut down');
+    final second = h.manager.supervisorOf(v2.name)!;
+    expect(identical(second, first), isFalse);
+    await waitForStatus(second, PluginProcessStatus.running);
+    expect(second.reportedPid, isNot(firstPid));
+    await waitFor(() => hasMenu() && hasTool(), reason: 'contributions of the new version');
+
+    await h.manager.syncKernelPlugins(const []);
+    expect(second.state.value.status, PluginProcessStatus.stopped);
+    expect(hasMenu() || hasPanel() || hasTool(), isFalse);
+    expect(h.crashReporter.filed, isEmpty);
+  });
+
   test('a tampered kernel (hash mismatch) is not started; the reason says why', () async {
     final d = await h.sample();
     final dill = d.processKernelFile!;
