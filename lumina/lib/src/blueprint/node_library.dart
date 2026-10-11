@@ -31,6 +31,7 @@ part 'node_library/window_mode.dart';
 part 'node_library/display_settings.dart';
 part 'node_library/combo_box.dart';
 part 'node_library/umg_viewport.dart';
+part 'node_library/pose_authoring.dart';
 part 'node_library/conversions.dart';
 part 'node_library/staged_settings.dart';
 part 'node_library/editor_scope.dart';
@@ -166,6 +167,7 @@ abstract final class LuminaBlueprintNodeLibrary {
     'event_hit': 'notifyActorHit',
     'event_montage_ended': 'onMontageEnded',
     'event_anim_notify': 'onAnimNotify',
+    'event_pose_handle_changed': 'onPoseHandleChanged',
   };
 
   /// Typed object nodes.
@@ -418,6 +420,7 @@ abstract final class LuminaBlueprintNodeLibrary {
     ..._displaySettingsNodes,
     ..._comboBoxNodes,
     ..._umgViewportNodes,
+    ..._poseAuthoringNodes,
     ..._conversionNodes,
     ..._editorEventNodes,
   ]));

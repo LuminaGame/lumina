@@ -119,6 +119,11 @@ class LuminaActor extends LuminaObject with LuminaSaveable {
   /// Event AnyDamage runs from.
   void onAnyDamage(double damage, String damageType, LuminaController? instigator, LuminaActor? damageCauser) {}
 
+  /// Called when a pose authoring component of this actor sets or clears a
+  /// handle's target: the hook a Blueprint's Event On Pose Handle Changed
+  /// runs from.
+  void onPoseHandleChanged(String handle) {}
+
   /// Apply Point Damage: [onPointDamage] (the Blueprint Event
   /// TakePointDamage) with where it hit (runtime space), then [takeDamage].
   double takePointDamage(double amount,

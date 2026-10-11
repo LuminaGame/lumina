@@ -22,6 +22,7 @@ import 'package:lumina/src/components/collision/collision_component.dart';
 import 'package:lumina/src/components/mesh/animated_mesh_component.dart';
 import 'package:lumina/src/components/mesh/spring_morph_component.dart';
 import 'package:lumina/src/physics/ragdoll/ragdoll_component.dart';
+import 'package:lumina/src/components/mesh/pose_authoring/pose_authoring_component.dart';
 import 'package:lumina/src/components/mesh/static_mesh_component.dart';
 import 'package:lumina/src/components/movement/character_movement_component.dart';
 import 'package:lumina/src/components/movement/traversal/traversal_component.dart';
@@ -188,6 +189,7 @@ abstract final class LuminaBlueprintComponents {
     if (c is LuminaCharacterMovementComponent) return 'LuminaCharacterMovementComponent';
     if (c is LuminaSpringMorphComponent) return 'LuminaSpringMorphComponent';
     if (c is LuminaRagdollComponent) return 'LuminaRagdollComponent';
+    if (c is LuminaPoseAuthoringComponent) return 'LuminaPoseAuthoringComponent';
     if (c is LuminaTraversalComponent) return 'LuminaTraversalComponent';
     if (c is LuminaSceneComponent) return 'LuminaSceneComponent';
     return 'LuminaActorComponent';
@@ -393,6 +395,8 @@ abstract final class LuminaBlueprintComponents {
         return LuminaSpringMorphComponent.fromProperties(p);
       case 'LuminaRagdollComponent':
         return LuminaRagdollComponent.fromProperties(p);
+      case 'LuminaPoseAuthoringComponent':
+        return LuminaPoseAuthoringComponent.fromProperties(p);
       case 'LuminaTraversalComponent':
         return LuminaTraversalComponent.fromProperties(p);
       case 'LuminaSkeletalMeshComponent':

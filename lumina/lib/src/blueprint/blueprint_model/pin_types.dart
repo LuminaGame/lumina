@@ -200,6 +200,7 @@ abstract final class LuminaBlueprintObjectClass {
     'LuminaCharacterMovementComponent': 'LuminaActorComponent',
     'LuminaSpringMorphComponent': 'LuminaActorComponent',
     'LuminaRagdollComponent': 'LuminaActorComponent',
+    'LuminaPoseAuthoringComponent': 'LuminaActorComponent',
     'LuminaTraversalComponent': 'LuminaActorComponent',
     'LuminaArrowComponent': 'LuminaSceneComponent',
     'LuminaLightComponent': 'LuminaSceneComponent',

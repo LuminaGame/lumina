@@ -171,6 +171,7 @@ void main() {
     pie.startHeadlessForTest(world);
     expect(LuminaBlueprintRuntime.isEditor, isTrue);
     expect(LuminaSaveGameSubsystem.defaultSaveDirectoryPath, '$dir/Saved/SaveGames');
+    expect(LuminaPoseLibrary.editorProjectDir, dir, reason: 'Save Pose writes the project pose library');
     expect(LuminaBlueprintEnums.lookup('E_DoorState'), isNotNull, reason: 'registered from the .lmas');
     expect(LuminaBlueprintSaveGameClasses.lookup('SG_Player')?.fields.single.name, 'Score');
     expect(LuminaBlueprintActorClasses.has('Actor:BP_Door'), isTrue);
@@ -211,5 +212,6 @@ void main() {
     expect(LuminaGame.onQuitRequested, isNull);
     expect(LuminaGame.onOpenLevelRequested, isNull);
     expect(LuminaSaveGameSubsystem.defaultSaveDirectoryPath, kLuminaLegacySaveDirectory);
+    expect(LuminaPoseLibrary.editorProjectDir, isNull);
   });
 }

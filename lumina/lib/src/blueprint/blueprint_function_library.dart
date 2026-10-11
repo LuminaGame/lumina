@@ -43,6 +43,7 @@ import 'package:lumina/src/components/mesh/skeletal_mesh_component.dart';
 import 'package:lumina/src/components/mesh/static_mesh_component.dart';
 import 'package:lumina/src/components/movement/character_movement_component.dart';
 import 'package:lumina/src/physics/ragdoll/ragdoll_component.dart';
+import 'package:lumina/src/components/mesh/pose_authoring/pose_authoring_nodes.dart';
 import 'package:lumina/src/components/movement/traversal/traversal_check.dart';
 import 'package:lumina/src/components/movement/traversal/traversal_component.dart';
 import 'package:lumina/src/controller/controller.dart';
@@ -98,6 +99,7 @@ part 'blueprint_function_library/window_mode.dart';
 part 'blueprint_function_library/display_settings.dart';
 part 'blueprint_function_library/combo_box.dart';
 part 'blueprint_function_library/umg_viewport.dart';
+part 'blueprint_function_library/pose_authoring.dart';
 part 'blueprint_function_library/conversions.dart';
 
 /// Every pure and impure node's behaviour, written once. The
@@ -1054,7 +1056,7 @@ abstract final class LuminaBlueprintFunctionLibrary {
     ..._traversalCallShapes,
     ..._windowModeCallShapes,
     ..._displaySettingsCallShapes,
-    ..._comboBoxCallShapes, ..._umgViewportCallShapes,
+    ..._comboBoxCallShapes, ..._umgViewportCallShapes, ..._poseAuthoringCallShapes,
     ..._conversionCallShapes,
     // @@CALL_SHAPES_END
   });
@@ -1090,7 +1092,7 @@ abstract final class LuminaBlueprintFunctionLibrary {
     ..._traversalFunctions,
     ..._windowModeFunctions,
     ..._displaySettingsFunctions,
-    ..._comboBoxFunctions, ..._umgViewportFunctions,
+    ..._comboBoxFunctions, ..._umgViewportFunctions, ..._poseAuthoringFunctions,
     ..._conversionFunctions,
     // @@FUNCTIONS_END
   });

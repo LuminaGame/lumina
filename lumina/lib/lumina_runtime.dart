@@ -195,6 +195,15 @@ export 'package:lumina/src/components/movement/traversal/traversal_chooser.dart'
 export 'package:lumina/src/components/movement/traversal/traversal_component.dart';
 export 'package:lumina/src/components/mesh/mesh_pose_driver.dart';
 export 'package:lumina/src/components/mesh/mesh_pose_modifier.dart';
+export 'package:lumina/src/components/mesh/pose_authoring/pose_authoring_component.dart';
+export 'package:lumina/src/components/mesh/pose_authoring/pose_authoring_nodes.dart';
+export 'package:lumina/src/components/mesh/pose_authoring/pose_handle.dart';
+export 'package:lumina/src/components/mesh/pose_authoring/pose_library.dart';
+export 'package:lumina/src/components/mesh/pose_authoring/pose_quat.dart';
+export 'package:lumina/src/components/mesh/pose_authoring/pose_rig.dart';
+export 'package:lumina/src/components/mesh/pose_authoring/pose_rig_detect.dart';
+export 'package:lumina/src/components/mesh/pose_authoring/pose_solve_state.dart';
+export 'package:lumina/src/components/mesh/pose_authoring/pose_solvers.dart';
 export 'package:lumina_core/src/physics_asset/physics_asset_data.dart';
 export 'package:lumina_core/src/physics_asset/physics_asset_generator.dart';
 export 'package:lumina_core/src/pose_search/glb_animation_sampler.dart';

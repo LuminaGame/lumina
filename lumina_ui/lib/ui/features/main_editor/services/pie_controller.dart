@@ -307,6 +307,8 @@ class PieController with _PieBlueprintsInPlay, _PieGameInput {
     // `.lmas`, found through the asset index; its meshes upload to Play's
     // engine. Change Level / Load And Change Level play it (changeLevel).
     final projectDir = viewModel.projectDirPath;
+    // Save Pose also writes the mesh's PoseLibrary.lmas in the project.
+    LuminaPoseLibrary.editorProjectDir = projectDir;
     LuminaLevelPreloader.instance
       ..manifestResolver = ((levelName) => LuminaLevelAssetManifest.forProjectLevel(projectDir, levelName))
       ..engine = _headless ? null : _engine;
@@ -322,6 +324,7 @@ class PieController with _PieBlueprintsInPlay, _PieGameInput {
     LuminaGame.onOpenLevelRequested = null;
     LuminaGame.onQuitRequested = null;
     LuminaGame.onChangeLevelRequested = null;
+    LuminaPoseLibrary.editorProjectDir = null;
     // Preloads a session left behind are dropped with it.
     LuminaLevelPreloader.instance.reset();
     _playingLevel = null;

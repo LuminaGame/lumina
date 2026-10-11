@@ -164,6 +164,12 @@ mixin LuminaBlueprintInstance on LuminaBlueprintRuntime implements LuminaBluepri
   }
 
   @override
+  void onPoseHandleChanged(String handle) {
+    super.onPoseHandleChanged(handle);
+    _dispatch('event_pose_handle_changed', 'exec_out', {'handle': handle});
+  }
+
+  @override
   void onAnimNotify(String notifyName) {
     super.onAnimNotify(notifyName);
     _dispatch('event_anim_notify', 'exec_out', {'notify_name': notifyName});
