@@ -274,6 +274,7 @@ class _SubEditorDispatcher extends StatelessWidget {
             for (final rt in editorViewModel!.editorPanels.panels.values)
               if (rt.entry.owner == name) EditorPanelSummary.ofRuntime(rt),
           ],
+          kernels: editorViewModel!.pluginProcesses.kernels,
         );
         return PluginManagerView(viewModel: vm);
       case 'Material':

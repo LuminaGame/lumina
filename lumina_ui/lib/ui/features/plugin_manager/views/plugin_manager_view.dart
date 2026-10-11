@@ -271,6 +271,7 @@ class _PluginCard extends StatelessWidget {
                         Text(desc.friendlyName ?? desc.name, style: const TextStyle(fontWeight: FontWeight.bold)),
                         Text(desc.version.toString()).muted(),
                         SecondaryBadge(child: Text(desc.origin.name.toUpperCase())),
+                        if (desc.isKernelPlugin) KernelPluginBadge(viewModel: vm, plugin: desc.name),
                         if (vm.processFor(desc.name) case final process?) PluginProcessStatusBadge(process: process),
                       ],
                     ),

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:lumina_editor_data/lumina_editor.dart';
 
 import 'package:lumina_ui/ui/core/editor_panels/editor_panel_listing.dart';
+import 'package:lumina_ui/ui/core/services/plugin_process/kernel_plugin_preparer.dart';
 import 'package:lumina_ui/ui/core/services/plugin_process/plugin_process_supervisor.dart';
 import 'package:lumina_ui/ui/features/plugin_manager/services/plugin_importer.dart';
 import 'package:lumina_ui/ui/features/plugin_manager/services/plugin_remover.dart';
@@ -42,6 +43,10 @@ class PluginManagerViewModel extends ChangeNotifier {
   /// Writes the project's `plugin_isolation` override for plugin `name`.
   final Future<void> Function(String name, bool inEditorProcess)? onSetRunInEditorProcess;
 
+  /// The editor's kernel preparer: a kernel plugin's SDK, whether its
+  /// kernel is the shipped or a recompiled one, and the recompile progress.
+  final KernelPluginPreparer? kernels;
+
   String _searchQuery = '';
   String _selectedCategory = 'ALL PLUGINS';
   String _selectedGroup = 'ALL'; // ALL, INSTALLED, BUILT-IN
@@ -60,7 +65,25 @@ class PluginManagerViewModel extends ChangeNotifier {
     this.runsInEditorProcess,
     this.onSetRunInEditorProcess,
     this.editorPanelsOf,
-  });
+    this.kernels,
+  }) {
+    kernels?.addListener(notifyListeners);
+  }
+
+  LuminaPluginDescriptor? _descriptorOf(String name) =>
+      registryService.entries.where((e) => e.descriptor.name == name).firstOrNull?.descriptor;
+
+  /// Whether plugin [name] is a kernel plugin (runs on the Dart VM, enabled
+  /// and disabled live, no editor build).
+  bool isKernel(String name) => _descriptorOf(name)?.isKernelPlugin ?? false;
+
+  /// Plugin [name]'s kernel state (null before its first start).
+  KernelPluginState? kernelStateOf(String name) => kernels?.stateOf(name);
+
+  /// Why "Run in editor process (debugging)" does not apply to plugin
+  /// [name] (a kernel plugin, a process plugin without a
+  /// `registration_class`), or null when it does.
+  String? inEditorUnavailableReason(String name) => _descriptorOf(name)?.inEditorProcessUnavailableReason;
 
   /// The editor panel Widget Blueprints of plugin [name] the editor runs
   /// (title, dock, capabilities, compile state).
@@ -104,6 +127,7 @@ class PluginManagerViewModel extends ChangeNotifier {
 
   @override
   void dispose() {
+    kernels?.removeListener(notifyListeners);
     _disposed = true;
     super.dispose();
   }
