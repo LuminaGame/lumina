@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:archive/archive.dart';
+import 'package:crypto/crypto.dart';
 import 'package:test/test.dart';
 import 'package:lumina_core/lumina_core.dart';
 
@@ -210,6 +211,92 @@ void main() {
     final names = unzip(File('${dir.path}/build/pack/dungeon_props-0.2.0.zip')).keys.toSet();
     expect(names, containsAll(['dungeon_props/dungeon_props.lmplugin', 'dungeon_props/content/meshes/crate.glb']));
     expect(names, isNot(contains('dungeon_props/pubspec.yaml')));
+  }, timeout: const Timeout(Duration(minutes: 2)));
+
+  /// A kernel plugin: shell-less, its process entry in bin/, depending on
+  /// this workspace's lumina_plugin_process by path.
+  Directory kernelFixture({String entryImport = "import 'package:lumina_plugin_process/lumina_plugin_process.dart';"}) {
+    const name = 'k_plugin';
+    final dir = Directory('${tempRoot.path}/$name')..createSync(recursive: true);
+    write(dir, '$name.lmplugin', const JsonEncoder.withIndent('  ').convert(manifest(name, extra: {
+      'isolation': 'process',
+      'can_contain_content': true,
+      'modules': [
+        {
+          'name': name,
+          'type': 'editor',
+          'entry_library': 'lib/$name.dart',
+          'process_class': 'KProcess',
+          'process_entry': 'bin/${name}_process.dart',
+        },
+      ],
+    })));
+    final lpp = LuminaWorkspace.package('lumina_plugin_process').replaceAll(r'\', '/');
+    write(dir, 'pubspec.yaml',
+        "name: $name\nversion: 0.2.0\npublish_to: none\n\nenvironment:\n  sdk: ^3.12.0\n\ndependencies:\n  lumina_plugin_process:\n    path: '$lpp'\n");
+    write(dir, 'lib/$name.dart', '''
+import 'package:lumina_plugin_process/lumina_plugin_process.dart';
+
+class KProcess extends LuminaPluginProcess {
+  @override
+  String get pluginName => '$name';
+
+  @override
+  void register(PluginProcessContext context) => context.handle('ping', (_) => 'pong');
+}
+''');
+    write(dir, 'bin/${name}_process.dart', '''
+$entryImport
+import 'package:$name/$name.dart';
+
+Future<void> main(List<String> args) => runPluginProcessEntry(args, KProcess.new);
+''');
+    write(dir, 'content/panels/EP_Status.lmas', '{"type": "widget_blueprint"}');
+    write(dir, 'README.md', '# K\n');
+    write(dir, 'CHANGELOG.md', '## 0.2.0\n\n- First.\n');
+    write(dir, 'LICENSE', 'MIT License\n');
+    write(dir, '.gitignore', '/pubspec.lock\nbin/*.dill\nbin/*.sha256\n');
+    return dir;
+  }
+
+  test('packs a kernel plugin: the compiled .dill, its .sha256, the SDK stamp, the entry with lib/, pubspec.yaml, '
+      'pubspec.lock and content/', () async {
+    final dir = kernelFixture();
+    final res = await pack(dir);
+    expect(res.exitCode, 0, reason: '${res.stdout}\n${res.stderr}');
+    final files = unzip(File('${dir.path}/build/pack/k_plugin-0.2.0.zip'));
+    expect(files.keys, containsAll([
+      'k_plugin/bin/k_plugin_process.dart',
+      'k_plugin/bin/k_plugin_process.dill',
+      'k_plugin/bin/k_plugin_process.dill.sha256',
+      'k_plugin/lib/k_plugin.dart',
+      'k_plugin/pubspec.yaml',
+      'k_plugin/pubspec.lock',
+      'k_plugin/content/panels/EP_Status.lmas',
+    ]));
+    final dill = files['k_plugin/bin/k_plugin_process.dill']!;
+    final sha = utf8.decode(files['k_plugin/bin/k_plugin_process.dill.sha256']!).split(' ').first;
+    expect(sha, sha256.convert(dill).toString(), reason: "the script's SHA-256 is the standard one");
+    final packed = jsonDecode(utf8.decode(files['k_plugin/k_plugin.lmplugin']!)) as Map<String, dynamic>;
+    final module = (packed['modules'] as List).single as Map<String, dynamic>;
+    final sdk = (await Process.run('dart', ['--version'], runInShell: Platform.isWindows));
+    expect('${sdk.stdout}${sdk.stderr}', contains('Dart SDK version: ${module['process_kernel_sdk']} '));
+    expect(module['process_kernel'], 'bin/k_plugin_process.dill');
+    // The packed manifest reads as a kernel plugin.
+    final unpacked = Directory('${tempRoot.path}/unpacked/k_plugin')..createSync(recursive: true);
+    File('${unpacked.path}/k_plugin.lmplugin').writeAsBytesSync(files['k_plugin/k_plugin.lmplugin']!);
+    final d = await PluginRepository(roots: []).loadInternal(File('${unpacked.path}/k_plugin.lmplugin'), PluginOrigin.user);
+    expect(d.isKernelPlugin, isTrue);
+  }, timeout: const Timeout(Duration(minutes: 3)));
+
+  test('refuses a kernel plugin whose process entry imports Flutter, saying so', () async {
+    final dir = kernelFixture(entryImport: "import 'package:flutter/widgets.dart';\n"
+        "import 'package:lumina_plugin_process/lumina_plugin_process.dart';");
+    final res = await pack(dir);
+    expect(res.exitCode, 2, reason: '${res.stdout}\n${res.stderr}');
+    expect(res.stderr as String, contains('reaches Flutter'));
+    expect(res.stderr as String, contains('bin/k_plugin_process.dart: package:flutter/widgets.dart'));
+    expect(File('${dir.path}/bin/k_plugin_process.dill').existsSync(), isFalse);
   }, timeout: const Timeout(Duration(minutes: 2)));
 
   test('the workspace plugins carry the current script', () {
