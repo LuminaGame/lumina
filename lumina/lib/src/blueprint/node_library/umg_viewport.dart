@@ -127,5 +127,6 @@ List<LuminaBlueprintPinSpec> _viewportEventOutputs(String? event) => switch (eve
         ],
       LuminaWidgetEvents.onCameraChanged => [_f('yaw', 'Yaw'), _f('pitch', 'Pitch'), _f('distance', 'Distance')],
       LuminaWidgetEvents.onAssetLoadFailed => [_s('asset', 'Asset'), _s('message', 'Message')],
-      _ => const [],
+      // In an editor panel a Viewport may take Content Browser drops too.
+      _ => LuminaEditorWidgetEvents.outputsOf(event) ?? const [],
     };

@@ -84,6 +84,26 @@ void main() {
     expect('${run.stderr}', contains('usage'));
   });
 
+  test('a plugin linked into a plugin folder compiles from its checkout', () async {
+    // A checkout whose entry imports a sibling package that its package
+    // config names relatively (`../../deps/local_dep/`, as pub writes a path
+    // dependency): right from the checkout, wrong from the link.
+    final dep = Directory(p.join(tmp.path, 'deps', 'local_dep', 'lib'))..createSync(recursive: true);
+    File(p.join(dep.path, 'local_dep.dart')).writeAsStringSync('const String kDep = "dep";\n');
+    final dir = _plugin(tmp, "import 'package:local_dep/local_dep.dart';\n\nvoid main() => print(kDep);\n");
+    final config = File(p.join(dir.path, '.dart_tool', 'package_config.json'));
+    final json = jsonDecode(config.readAsStringSync()) as Map<String, dynamic>;
+    (json['packages'] as List).add({'name': 'local_dep', 'rootUri': '../../deps/local_dep/', 'packageUri': 'lib/'});
+    config.writeAsStringSync(jsonEncode(json));
+    final plugins = Directory(p.join(tmp.path, 'plugins'))..createSync();
+    final link = Link(p.join(plugins.path, 'pure_sample'))..createSync(dir.path);
+    addTearDown(() => link.existsSync() ? link.deleteSync() : null);
+    final out = File(p.join(tmp.path, 'out', 'pure_sample_process.dill'));
+    await PluginKernelCompiler(dart).compile(pluginDir: Directory(link.path), entry: 'bin/pure_sample_process.dart', output: out);
+    final run = await Process.run(dart, [out.path]);
+    expect('${run.stdout}'.trim(), 'dep');
+  });
+
   test('a tampered kernel fails the hash check, naming why', () async {
     final dir = _plugin(tmp, _pureSampleSource());
     final out = File(p.join(dir.path, 'bin', 'pure_sample_process.dill'));

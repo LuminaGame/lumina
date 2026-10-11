@@ -89,7 +89,8 @@ the launch flags, runs `runPluginProcessMain` and exits with its code; without f
 64). `PluginKernelCompiler(dartExecutable)` (pure Dart, used by the editor's startup recompile; the pack script does
 the same with dart: libraries only):
 
-- `compile(pluginDir:, entry:, output:, onProgress:)`: resolves the plugin's packages when no package config covers
+- `compile(pluginDir:, entry:, output:, onProgress:)`: follows a plugin folder that is a link (a developer's checkout
+  linked into the user plugin folder) to the checkout, so its relative package paths resolve; resolves the plugin's packages when no package config covers
   it (`dart pub get --offline`, then online), walks the entry's imports with `PluginProcessReach.ofEntry` and refuses
   an entry that reaches Flutter or `dart:ui` before compiling (`PluginKernelCompileException.reachedFlutter`), runs
   `dart compile kernel` and writes `<output>.sha256`; returns the SDK version used. A failure is a

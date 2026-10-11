@@ -206,6 +206,17 @@ void main() {
     expect(events, hasLength(1));
   });
 
+  test('a Viewport in an editor panel offers On Asset Dropped with the asset path and type', () {
+    const cls = LuminaBlueprintWidgetClass(name: 'EPW_Drop', elements: [
+      LuminaBlueprintWidgetElement(name: 'Preview', fieldName: 'preview', typeName: 'viewport'),
+    ]);
+    final widget = LuminaWidgetBlueprintDocument(widgetClass: 'EPW_Drop', variables: cls.elements);
+    final context = LuminaBlueprintTypeContext.forWidget(widget, widgetClasses: const [cls]);
+    final node = LuminaBlueprintNodeLibrary.place(LuminaBlueprintNodeLibrary.eventWidgetElement,
+        nodeId: 'drop', literals: {'element': 'Preview', 'event': LuminaEditorWidgetEvents.onAssetDropped}, context: context);
+    expect(node.outputs.map((o) => o.id), ['exec_out', 'asset_path', 'asset_type']);
+  });
+
   test('Viewport nodes refuse an element that is not a Viewport', () {
     const cls = LuminaBlueprintWidgetClass(name: 'WBP_Mixed', elements: [
       LuminaBlueprintWidgetElement(name: 'Label', fieldName: 'label', typeName: 'text'),

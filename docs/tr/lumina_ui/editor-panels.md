@@ -90,7 +90,7 @@ Tasarımcının **Editor** palet bölümü, yalnızca editör paneli için sunul
 | Resizable Split | `orientation`, `split`, `minFirst`, `minSecond` | — |
 | Editor Toolbar | — | — |
 | Status Line | `text`, `tone` | — |
-| Viewport | önizleme sahnesi (`LuminaUmgViewport`, `viewport_*` nodes; proje varlıkları (`contents/…`) açık projeden okunur, graph'ın eklediği mesh kamera elle oynanmamışken yüklenince kadraja alınır, `Play Animation File` bir eklenti sürecinin yazdığı dosyaları okur) | On Picked, Gizmo Preview / Commit / Cancel, Camera Changed, Scene Ready, Asset Load Failed |
+| Viewport | önizleme sahnesi (`LuminaUmgViewport`, `viewport_*` nodes; proje varlıkları (`contents/…`) açık projeden okunur, graph'ın eklediği mesh kamera elle oynanmamışken yüklenince kadraja alınır, `Play Animation File` bir eklenti sürecinin yazdığı dosyaları okur) | On Picked, Gizmo Preview / Commit / Cancel, Camera Changed, Scene Ready, Asset Load Failed, Asset Dropped (bırakma kabul ediyorsa) |
 | Timeline | `fps`, `length`, `playhead`, `playing`, `loop`, `zoom`, `scroll`, `tracks`, `clips`, `keys`, `range`, `snap`, `boundViewport` | On Playhead Changed, Play State Changed, Clip Preview / Commit / Cancel, Clip Text Committed, Key Preview / Commit / Cancel, Key Added, Keys Deleted, Selection Changed, Track Context Menu |
 | Table | `columns`, `rows`, `sort`, `selection`, `selected`, `filter` | On Cell Committed, Row Selected, Row Double Clicked, Row Context Menu, Sort Changed |
 | Canvas | `space`, `background`, `items`, `viewBox` | On Item Clicked, Item Drag Preview / Commit / Cancel, Item Hover, Background Clicked |
@@ -185,7 +185,7 @@ başına alt izler ve bölüm karıştırma; onları taşımak sonraki bir yenid
   süreci bunu `pluginSettings` olarak alır).
 - **Eklenti süreci** (`process`, yalnızca eklenti panelleri): Call Plugin Process (Method, Args Json) → Completed
   (Result) / Failed (Error Code, Error Message), 30 sn çağrı zaman aşımıyla; süreç kapalıyken hemen `unavailable` ile
-  başarısız olur; Get Plugin Process State; olaylar On Plugin Process Event (Name ayarı süzer) ve On Plugin Process
+  başarısız olur; Restart Plugin Process (süreç yeniden çalışınca Completed; elle yeniden başlatma); Get Plugin Process State; olaylar On Plugin Process Event (Name ayarı süzer) ve On Plugin Process
   State Changed (running, stopped, crashed, restarting).
 - **Yerel öğeler**: Timeline Set Clips / Set Keys / Set Playhead, Table Set Rows, Canvas Set Items (yukarıya bakın).
 - **Json** (`lumina`): Make Json Object / Array, Json Get String / Number / Bool / Json / Array, Json Set Field, Json
@@ -199,7 +199,11 @@ Süreç öğe durumlarını `PluginProcessContext.patchPanel(panel, ops)` (`host
 patlamaları birleştirir; bilinmeyen öğeler bir kez günlüğe yazılır. `context.emit(name, data)`, On Plugin Process
 Event'in aldığıdır. `context.openEditorPanel(panel)` eklentinin panellerinden birini yuvasında açar (bir sürecin
 Plugins menüsü komutları çoğu zaman bunu yapar). OpenXR eklentisinin `EPW_OpenXR`'ı eksiksiz bir örnektir: grafiği
-sürecin yöntemlerini çağırır, süreç durum metinlerini yamar ve geri kalanı için `openxr.status` yayar.
+sürecin yöntemlerini çağırır, süreç durum metinlerini yamar ve geri kalanı için `openxr.status` yayar. Kimodo kernel
+eklentisi bu yolla kurulmuş eksiksiz bir editördür: bir Viewport ve ona bağlı bir Timeline içeren çalışma alanı
+sekmesi, eşleme tablosu sekmesi, ağırlık penceresi ve Project Settings bölümü; tüm durum sürecindedir ve süreç her
+değişiklikten sonra timeline'ın kliplerini ve anahtarlarını, Viewport'un `scene`'ini ve kenar çubuğu değerlerini
+yamar; süreç durduğunda sekmenin grafiği girdileri devre dışı bırakır ve Restart Plugin Process sunar.
 
 ## Güven
 

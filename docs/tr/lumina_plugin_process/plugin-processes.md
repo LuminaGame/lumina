@@ -89,7 +89,8 @@ başlatma bayraklarını ayrıştırır, `runPluginProcessMain` çalıştırır 
 satırı yazıp 64 ile çıkar). `PluginKernelCompiler(dartExecutable)` (saf Dart; editörün açılıştaki yeniden derlemesi
 kullanır, paketleme betiği aynısını yalnızca dart: kütüphaneleriyle yapar):
 
-- `compile(pluginDir:, entry:, output:, onProgress:)`: eklentiyi kapsayan paket yapılandırması yoksa paketlerini
+- `compile(pluginDir:, entry:, output:, onProgress:)`: bağlantı olan bir eklenti klasörünü (kullanıcı eklenti
+  klasörüne bağlanmış bir geliştirici checkout'u) checkout'a izler, böylece göreli paket yolları çözülür; eklentiyi kapsayan paket yapılandırması yoksa paketlerini
   çözer (`dart pub get --offline`, sonra çevrimiçi), girişin importlarını `PluginProcessReach.ofEntry` ile dolaşır ve
   Flutter'a ya da `dart:ui`'ye ulaşan girişi derlemeden reddeder (`PluginKernelCompileException.reachedFlutter`),
   `dart compile kernel` çalıştırır ve `<output>.sha256` yazar; kullanılan SDK sürümünü döner. Hata, aracın çıktısıyla

@@ -120,6 +120,9 @@ class PluginKernelCompiler {
     required File output,
     void Function(String line)? onProgress,
   }) async {
+    // A plugin linked into a plugin folder (a developer's checkout) resolves
+    // its packages relative to the checkout, not the link.
+    if (await pluginDir.exists()) pluginDir = Directory(await pluginDir.resolveSymbolicLinks());
     final entryFile = File(p.join(pluginDir.path, entry));
     if (!await entryFile.exists()) {
       throw PluginKernelCompileException('the process entry $entry is missing in ${pluginDir.path}');

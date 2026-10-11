@@ -91,7 +91,7 @@ The designer's **Editor** palette section, offered only for an editor panel (`Ed
 | Resizable Split | `orientation`, `split`, `minFirst`, `minSecond` | — |
 | Editor Toolbar | — | — |
 | Status Line | `text`, `tone` | — |
-| Viewport | the preview scene (`LuminaUmgViewport`, `viewport_*` nodes; project assets (`contents/…`) are read from the open project, a mesh the graph adds is framed once loaded while the camera is untouched, `Play Animation File` reads the files a plugin process writes) | On Picked, Gizmo Preview / Commit / Cancel, Camera Changed, Scene Ready, Asset Load Failed |
+| Viewport | the preview scene (`LuminaUmgViewport`, `viewport_*` nodes; project assets (`contents/…`) are read from the open project, a mesh the graph adds is framed once loaded while the camera is untouched, `Play Animation File` reads the files a plugin process writes) | On Picked, Gizmo Preview / Commit / Cancel, Camera Changed, Scene Ready, Asset Load Failed, Asset Dropped (when it accepts drops) |
 | Timeline | `fps`, `length`, `playhead`, `playing`, `loop`, `zoom`, `scroll`, `tracks`, `clips`, `keys`, `range`, `snap`, `boundViewport` | On Playhead Changed, Play State Changed, Clip Preview / Commit / Cancel, Clip Text Committed, Key Preview / Commit / Cancel, Key Added, Keys Deleted, Selection Changed, Track Context Menu |
 | Table | `columns`, `rows`, `sort`, `selection`, `selected`, `filter` | On Cell Committed, Row Selected, Row Double Clicked, Row Context Menu, Sort Changed |
 | Canvas | `space`, `background`, `items`, `viewBox` | On Item Clicked, Item Drag Preview / Commit / Cancel, Item Hover, Background Clicked |
@@ -182,7 +182,7 @@ Writes need the panel's declared capability (the validator rejects a node whose 
   process receives as `pluginSettings`).
 - **Plugin Process** (`process`, plugin panels only): Call Plugin Process (Method, Args Json) → Completed (Result) /
   Failed (Error Code, Error Message) with the 30 s call timeout, failing at once with `unavailable` while the process is
-  down; Get Plugin Process State; events On Plugin Process Event (its Name setting filters) and On Plugin Process State
+  down; Restart Plugin Process (Completed once it runs again, a manual restart); Get Plugin Process State; events On Plugin Process Event (its Name setting filters) and On Plugin Process State
   Changed (running, stopped, crashed, restarting).
 - **Native Widgets**: Timeline Set Clips / Set Keys / Set Playhead, Table Set Rows, Canvas Set Items (see above).
 - **Json** (`lumina`): Make Json Object / Array, Json Get String / Number / Bool / Json / Array, Json Set Field, Json
@@ -196,7 +196,11 @@ instance of that panel without running its graph. `EditorPanelLinks` applies pat
 panel, coalescing a burst; unknown elements are logged once. `context.emit(name, data)` is what On Plugin Process
 Event receives. `context.openEditorPanel(panel)` opens one of the plugin's panels where it docks (Plugins menu
 commands of a process often do). The OpenXR plugin's `EPW_OpenXR` is a complete example: its graph calls the
-process's methods, the process patches its status texts and emits `openxr.status` for the rest.
+process's methods, the process patches its status texts and emits `openxr.status` for the rest. The Kimodo kernel
+plugin is a whole editor made this way: a workspace tab with a Viewport and a Timeline bound to it, a mapping Table
+tab, a weights dialog and a Project Settings section, all state in its process, which patches the timeline's clips and
+keys, the Viewport's `scene` and the sidebar values after every change; when the process stops, the tab's graph
+disables its inputs and offers Restart Plugin Process.
 
 ## Trust
 

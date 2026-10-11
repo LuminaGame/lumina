@@ -48,6 +48,28 @@ final List<EditorLibraryNode> processLibraryNodes = [
     },
   ),
   EditorLibraryNode(
+    latentNode('editor_restart_plugin_process', 'Restart Plugin Process', _process,
+        results: [exec('completed', 'Completed'), exec('failed', 'Failed')],
+        outputs: [strPin('error_message', 'Error Message')],
+        capability: _processCap,
+        tooltip: "Restarts the panel's plugin process (a manual restart: the automatic restart count starts again). "
+            'Completed once it runs again. Plugin panels only.'),
+    latent: (c, i, resume) {
+      final call = editorPanelCall(c);
+      if (call == null) return;
+      final r = resumer(call.host, call.instance, resume);
+      final entry = call.instance.runtime.entry;
+      if (entry.isProjectPanel) {
+        scheduleMicrotask(() => r('failed', {'error_message': 'A project panel has no plugin process.'}));
+        return;
+      }
+      call.host.vm.extensionRegistry
+          .processChannel(entry.owner)
+          .restart()
+          .then((_) => r('completed', {'error_message': ''}), onError: (Object e) => r('failed', {'error_message': '$e'}));
+    },
+  ),
+  EditorLibraryNode(
     pureNode('editor_get_plugin_process_state', 'Get Plugin Process State', _process,
         outputs: [ret(LuminaPinType.string)], capability: _processCap, tooltip: 'running, stopped, crashed or restarting.'),
     function: (c, _) {

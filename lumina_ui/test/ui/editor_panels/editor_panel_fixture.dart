@@ -121,11 +121,12 @@ class EditorPanelProject {
 
   static const String level = 'contents/levels/L_Main.lmas';
 
-  static Future<EditorPanelProject> create(String name, {List<String> plugins = const []}) async {
+  static Future<EditorPanelProject> create(String name,
+      {List<String> plugins = const [], Map<String, Map<String, Object?>> pluginSettings = const {}}) async {
     final root = await Directory.systemTemp.createTemp('lumina_epw_');
     final dir = Directory(p.join(root.path, name))..createSync();
     Directory(p.join(dir.path, 'contents', 'levels')).createSync(recursive: true);
-    final project = LuminaProject(projectName: name, activeLevel: level, enabledPlugins: plugins);
+    final project = LuminaProject(projectName: name, activeLevel: level, enabledPlugins: plugins, pluginSettings: pluginSettings);
     File(p.join(dir.path, '$name.lmproject')).writeAsStringSync(jsonEncode(project.toMap()));
     // Per-user data (trust decisions, plugin storage, user plugins) in the temp folder.
     LuminaDataDir.override = Directory(p.join(root.path, 'data'));
