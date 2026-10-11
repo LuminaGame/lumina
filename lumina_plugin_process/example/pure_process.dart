@@ -41,12 +41,15 @@ class PureSampleProcess extends LuminaPluginProcess {
     });
     context.handle('patchBurst', (args) async {
       final count = args['count'] as int? ?? 200;
-      final every = Duration(microseconds: (args['periodMs'] as int? ?? 1000) * 1000 ~/ count);
+      final periodUs = (args['periodMs'] as int? ?? 1000) * 1000;
+      // Evenly over the period on any timer resolution: send whatever is due.
+      final clock = Stopwatch()..start();
       for (var i = 1; i <= count; i++) {
+        final due = periodUs * (i - 1) ~/ count - clock.elapsedMicroseconds;
+        if (due > 0) await Future<void>.delayed(Duration(microseconds: due));
         context.patchPanel('${args['panel']}', [PluginPanelStateOp('StatusText', {'text': 'Step $i'})]);
-        await Future<void>.delayed(every);
       }
-      return {'sent': count};
+      return {'sent': count, 'ms': clock.elapsedMilliseconds};
     });
     context.handle('placeCrates', (args) async {
       final count = args['count'] as int? ?? 1;

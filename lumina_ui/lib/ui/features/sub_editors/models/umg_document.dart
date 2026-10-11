@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:ui';
 
-import 'package:lumina_editor_data/lumina_editor.dart' show LuminaBlueprintDocument, LuminaWidgetBlueprintDocument;
+import 'package:lumina_editor_data/lumina_editor.dart' show LuminaBlueprintDocument, LuminaEditorPanelInfo, LuminaWidgetBlueprintDocument;
 import 'package:lumina_ui/ui/features/sub_editors/models/umg_document/layout.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/umg_document/node.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/umg_document/widget_type.dart';
@@ -21,12 +21,20 @@ class UmgDocument {
   /// under `blueprint`; null for a widget that never had one.
   LuminaBlueprintDocument? blueprint;
 
+  /// The `editorPanel` block: set, this Widget Blueprint is an editor panel
+  /// the editor docks and runs (never a game widget); null for a game widget.
+  LuminaEditorPanelInfo? editorPanel;
+
+  /// Whether this document is an editor panel.
+  bool get isEditorPanel => editorPanel != null;
+
   UmgDocument({
     required this.root,
     this.designResolution = const UmgResolution('1920x1080 Full HD', 1920, 1080),
     this.dpiScale = 1.0,
     this.themePath,
     this.blueprint,
+    this.editorPanel,
   });
 
   /// A new widget: one root Canvas Panel.
@@ -46,6 +54,7 @@ class UmgDocument {
         if (themePath != null && themePath!.isNotEmpty) 'theme': themePath,
         'root': root.toJson(),
         if (includeBlueprint && blueprint != null) LuminaWidgetBlueprintDocument.payloadKey: blueprint!.toJson(),
+        if (editorPanel != null) LuminaEditorPanelInfo.payloadKey: editorPanel!.toJson(),
       };
 
   String toFormattedJson({bool includeBlueprint = true}) =>
@@ -64,12 +73,22 @@ class UmgDocument {
     }
     final rootMap = map['root'];
     final graph = map[LuminaWidgetBlueprintDocument.payloadKey];
+    LuminaEditorPanelInfo? panel;
+    try {
+      panel = LuminaEditorPanelInfo.ofPayload(map);
+    } on FormatException {
+      // A malformed block still marks an editor panel: keep it out of games
+      // with the defaults; the panel host reports the error.
+      final block = map[LuminaEditorPanelInfo.payloadKey] as Map;
+      panel = LuminaEditorPanelInfo(title: '${block['title'] ?? 'Editor Panel'}'.trim().isEmpty ? 'Editor Panel' : '${block['title']}');
+    }
     return UmgDocument(
       root: rootMap is Map ? UmgNode.fromJson(Map<String, dynamic>.from(rootMap)) : UmgDocument.createDefault().root,
       designResolution: resolution,
       dpiScale: (map['dpiScale'] as num?)?.toDouble() ?? 1.0,
       themePath: map['theme'] as String?,
       blueprint: graph is Map ? LuminaBlueprintDocument.fromJson(Map<String, dynamic>.from(graph)) : null,
+      editorPanel: panel,
     );
   }
 

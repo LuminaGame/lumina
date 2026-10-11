@@ -92,6 +92,22 @@ IconData umgIconFor(UmgWidgetType type) {
       return LucideIcons.mousePointerClick;
     case UmgWidgetType.shadcnLinkButton:
       return LucideIcons.link;
+    case UmgWidgetType.editorSection:
+      return LucideIcons.listCollapse;
+    case UmgWidgetType.propertyRow:
+      return LucideIcons.rectangleHorizontal;
+    case UmgWidgetType.treeView:
+      return LucideIcons.listTree;
+    case UmgWidgetType.listView:
+      return LucideIcons.list;
+    case UmgWidgetType.assetPicker:
+      return LucideIcons.folderSearch;
+    case UmgWidgetType.resizableSplit:
+      return LucideIcons.columns2;
+    case UmgWidgetType.editorToolbar:
+      return LucideIcons.panelTop;
+    case UmgWidgetType.statusLine:
+      return LucideIcons.panelBottom;
   }
 }
 
@@ -110,6 +126,10 @@ class UmgPalette extends StatelessWidget {
     // Shadcn's components only for a project on shadcn_flutter.
     final shadcn = vm.widgetLibrary == kUmgWidgetLibraryShadcn
         ? UmgWidgetType.values.where((t) => t.category == UmgWidgetCategory.shadcn).toList()
+        : const <UmgWidgetType>[];
+    // The editor widget set only in an editor panel (never in a game widget).
+    final editor = vm.document.isEditorPanel
+        ? UmgWidgetType.values.where((t) => t.category == UmgWidgetCategory.editor).toList()
         : const <UmgWidgetType>[];
     // One Accordion per category: shadcn's Accordion is single-expansion, and
     // the palette must be able to show both categories at once.
@@ -143,6 +163,17 @@ class UmgPalette extends StatelessWidget {
                   expanded: true,
                   trigger: const AccordionTrigger(child: Text('shadcn', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
                   content: Column(children: shadcn.map(_entry).toList()),
+                ),
+              ],
+            ),
+          if (editor.isNotEmpty)
+            Accordion(
+              key: const ValueKey('umg_palette_category_editor'),
+              items: [
+                AccordionItem(
+                  expanded: true,
+                  trigger: const AccordionTrigger(child: Text('Editor', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
+                  content: Column(children: editor.map(_entry).toList()),
                 ),
               ],
             ),

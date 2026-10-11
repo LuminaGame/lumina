@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+
+import 'package:lumina_ui/ui/core/editor_panels/editor_panel_docking.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/core/window/lumina_window.dart';
 import 'package:lumina_ui/ui/core/window/window_controls.dart';
@@ -375,12 +377,28 @@ class MenuBarWidget extends StatelessWidget {
                       // One checked entry per plugin panel; a right-dock
                       // panel's is followed by its "Show in Every Editor" row.
                       if (viewModel != null)
-                        for (final panel in viewModel!.allPluginPanels) ...[
+                        for (final panel in viewModel!.allPluginPanels)
+                          if (EditorPanelDocking.panelIdOf(panel.id) == null) ...[
                           if (viewModel!.commands.byId('window.panel.${panel.id}') case final command?)
                             menuCheckboxItem(command, viewModel!.panelsController.visibility(panel.id), commandContext: context),
                           if (viewModel!.commands.byId('window.panelAlways.${panel.id}') case final command?)
                             menuCheckboxItem(command, viewModel!.panelsController.alwaysVisibility(panel.id), commandContext: context),
                         ],
+                      // Window ▸ Editor Panels: the project's and plugins'
+                      // editor panel Widget Blueprints.
+                      if (viewModel != null && viewModel!.editorPanelDocking.menuPanels.isNotEmpty)
+                        MenuButton(
+                          key: const ValueKey('window_editor_panels'),
+                          leading: const Icon(LucideIcons.panelsTopLeft, size: 14),
+                          subMenu: [
+                            for (final rt in viewModel!.editorPanelDocking.menuPanels)
+                              if (viewModel!.commands.byId(EditorPanelDocking.commandId(rt.id)) case final command?)
+                                menuCheckboxItem(command,
+                                    viewModel!.panelsController.visibility(EditorPanelDocking.descriptorId(rt.id)),
+                                    commandContext: context),
+                          ],
+                          child: const Text('Editor Panels', style: TextStyle(fontSize: 10)),
+                        ),
                       const MenuDivider(),
                       _buildMenuButton(context, 'window.resetLayout'),
                       ..._extensionTail(context, 'Window'),

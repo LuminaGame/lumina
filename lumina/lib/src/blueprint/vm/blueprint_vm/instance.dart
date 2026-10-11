@@ -169,6 +169,15 @@ mixin LuminaBlueprintInstance on LuminaBlueprintRuntime implements LuminaBluepri
     _dispatch('event_anim_notify', 'exec_out', {'notify_name': notifyName});
   }
 
+  /// Runs every event node [registryId] of the event graph (those [where]
+  /// accepts) with [outputs]: how a host raises its own events (the editor's
+  /// selection or process events in an editor panel).
+  void dispatchEvent(String registryId, Map<String, Object?> outputs, {bool Function(LuminaBlueprintNode node)? where}) {
+    for (final node in _graph.nodes) {
+      if (node.registryId == registryId && (where == null || where(node))) _run(node.id, 'exec_out', _eventArgs(node, outputs));
+    }
+  }
+
   void _dispatch(String registryId, String execPin, Map<String, Object?> outputs) {
     for (final node in _graph.nodes) {
       if (node.registryId == registryId) _run(node.id, execPin, outputs);

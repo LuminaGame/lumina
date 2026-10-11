@@ -34,6 +34,22 @@ class UmgRuntimeView extends StatelessWidget {
   final LuminaThemeDocument? theme;
   final Map<String, LuminaThemeDocument>? loadedThemes;
 
+  /// An editor panel: rendered in the editor's own theme (never the
+  /// project's game theme), with the editor widget set.
+  final bool editorTheme;
+
+  /// Builds an editor widget element (`UmgWidgetType.isEditor`) from its
+  /// element state; [buildChild] renders one of its children.
+  final Widget Function(BuildContext context, UmgNode node, Map<String, Object?>? element, Widget Function(UmgNode) buildChild)?
+      editorElementBuilder;
+
+  /// Wraps every rendered element (an editor panel's asset drop targets).
+  final Widget Function(UmgNode node, Widget child)? elementDecorator;
+
+  /// Receives element events instead of the widget registry (an editor
+  /// panel's host runs them as one panel event).
+  final void Function(UmgNode node, String event, Map<String, Object?> args)? onElementEvent;
+
   const UmgRuntimeView({
     super.key,
     required this.document,
@@ -43,10 +59,15 @@ class UmgRuntimeView extends StatelessWidget {
     this.plainLibrary = false,
     this.theme,
     this.loadedThemes,
+    this.editorTheme = false,
+    this.editorElementBuilder,
+    this.elementDecorator,
+    this.onElementEvent,
   });
 
   @override
   Widget build(BuildContext context) {
+    if (editorTheme) return _buildNode(document.root);
     final activeTheme = theme ?? LuminaThemeDocument.defaultShadcnDark();
     return Theme(
       data: UmgThemeHelper.themeDataFromLuminaDoc(activeTheme),
@@ -56,18 +77,29 @@ class UmgRuntimeView extends StatelessWidget {
 
   /// The element event, into the instance's graph script
   /// (Play-In-Editor runs it in the VM); nothing in a designer preview.
-  void _fire(UmgNode node, String event, [Map<String, Object?> args = const {}]) =>
+  void _fire(UmgNode node, String event, [Map<String, Object?> args = const {}]) {
+    final handler = onElementEvent;
+    if (handler != null) {
+      handler(node, event, args);
+    } else {
       LuminaUserWidgets.fire(runtimeValues, node.name, event, args);
+    }
+  }
 
   Widget _buildNode(UmgNode node) {
     if (identical(node, document.root)) return _buildBody(node, null);
-    return LuminaUmgElement(
+    final element = LuminaUmgElement(
       key: ValueKey('umg_rt_element_${node.id}'),
       instance: runtimeValues,
       name: node.name,
-      builder: (context, e) => _buildBody(node, e),
+      builder: (context, e) => node.type.isEditor ? _buildEditor(context, node, e) : _buildBody(node, e),
     );
+    return elementDecorator?.call(node, element) ?? element;
   }
+
+  Widget _buildEditor(BuildContext context, UmgNode node, Map<String, Object?>? e) =>
+      editorElementBuilder?.call(context, node, e, _buildNode) ??
+      Center(child: Text('${node.type.displayName} (editor panels only)', style: const TextStyle(fontSize: 10, color: EditorColors.mutedForeground)));
 
   Widget _buildBody(UmgNode node, Map<String, Object?>? e) {
     // The Container and the shadcn components.

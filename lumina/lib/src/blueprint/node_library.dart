@@ -34,6 +34,7 @@ part 'node_library/umg_viewport.dart';
 part 'node_library/conversions.dart';
 part 'node_library/staged_settings.dart';
 part 'node_library/editor_scope.dart';
+part 'node_library/editor_events.dart';
 
 /// The one node catalog the editor palette, the VM and the code generator
 /// read.
@@ -418,6 +419,7 @@ abstract final class LuminaBlueprintNodeLibrary {
     ..._comboBoxNodes,
     ..._umgViewportNodes,
     ..._conversionNodes,
+    ..._editorEventNodes,
   ]));
 
   static final Map<String, LuminaBlueprintNodeSpec> _byId = {for (final s in builtIns) s.id: s};

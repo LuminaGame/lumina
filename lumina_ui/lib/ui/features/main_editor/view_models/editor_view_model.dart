@@ -3,6 +3,8 @@ import 'package:lumina_ui/ui/features/sub_editors/models/sub_editor_content_draw
 import 'package:lumina_ui/ui/core/host/editor_host.dart';
 import 'package:lumina_ui/ui/core/plugin_extension_registry.dart';
 import 'package:lumina_ui/ui/core/editor_level_access.dart';
+import 'package:lumina_ui/ui/core/editor_panels/editor_panel_docking.dart';
+import 'package:lumina_ui/ui/core/editor_panels/editor_panel_host.dart';
 import 'package:lumina_ui/ui/core/services/content_folders.dart';
 import 'package:lumina_ui/ui/core/services/user_plugin_dir.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart';
@@ -93,6 +95,7 @@ part 'editor_view_model/plugins.dart';
 part 'editor_view_model/plugin_extensions.dart';
 part 'editor_view_model/marketplace.dart';
 part 'editor_view_model/trash.dart';
+part 'editor_view_model/editor_panels.dart';
 
 /// A live binding between an open sub-editor tab and its view model.
 class EditorTabSession {
@@ -350,7 +353,8 @@ class EditorViewModel extends _EditorViewModelState
         _EditorPlugins,
         _EditorPluginExtensions,
         _EditorMarketplace,
-        _EditorTrash {
+        _EditorTrash,
+        _EditorPanelsSupport {
   // Main Workspace Tab Architecture
   ///
   /// The first tab is the level workspace. Its title used to be the literal
@@ -512,6 +516,8 @@ class EditorViewModel extends _EditorViewModelState
     }
     // The isolated plugins' processes start after the shells registered.
     if (pluginProcesses.pluginNames.isNotEmpty) unawaited(pluginProcesses.startAll());
+    // Editor panel Widget Blueprints of the enabled plugins and the project.
+    if (enableTimers) unawaited(startEditorPanels());
     sourceControl = SourceControlViewModel(
       projectRoot: projectDirPath,
       logger: _logger,
@@ -602,6 +608,7 @@ class EditorViewModel extends _EditorViewModelState
     _meshNotifyTimer?.cancel();
     EditorHandOff.beforeExit.remove(_shutdownPluginsForExit);
     unawaited(pluginProcesses.shutdownAll());
+    _disposeEditorPanels();
     removeListener(panelsController.refresh);
     panelsController.dispose();
     _frameStatsRevision.dispose();

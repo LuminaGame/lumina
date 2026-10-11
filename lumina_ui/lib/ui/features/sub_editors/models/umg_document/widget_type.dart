@@ -4,8 +4,9 @@ import 'package:lumina_editor_data/lumina_editor.dart' show LuminaComboBoxOption
 import 'package:lumina_ui/ui/features/sub_editors/models/umg_document/node.dart';
 
 /// Palette categories of the UMG designer; [shadcn] shows
-/// only for projects whose widget library is shadcn_flutter.
-enum UmgWidgetCategory { panels, common, shadcn }
+/// only for projects whose widget library is shadcn_flutter, [editor] only
+/// in an editor panel Widget Blueprint.
+enum UmgWidgetCategory { panels, common, shadcn, editor }
 
 /// Every widget type the designer can place. The order here is the palette
 /// order; `displayName` is what the palette/hierarchy show and `dartWidget`
@@ -56,7 +57,16 @@ enum UmgWidgetType {
   shadcnOutlineButton('Outline Button', UmgWidgetCategory.shadcn, UmgChildCapacity.none),
   shadcnGhostButton('Ghost Button', UmgWidgetCategory.shadcn, UmgChildCapacity.none),
   shadcnDestructiveButton('Destructive Button', UmgWidgetCategory.shadcn, UmgChildCapacity.none),
-  shadcnLinkButton('Link Button', UmgWidgetCategory.shadcn, UmgChildCapacity.none);
+  shadcnLinkButton('Link Button', UmgWidgetCategory.shadcn, UmgChildCapacity.none),
+  // The editor widget set (editor panels only; never in a game).
+  editorSection('Editor Section', UmgWidgetCategory.editor, UmgChildCapacity.many),
+  propertyRow('Property Row', UmgWidgetCategory.editor, UmgChildCapacity.one),
+  treeView('Tree View', UmgWidgetCategory.editor, UmgChildCapacity.none),
+  listView('List View', UmgWidgetCategory.editor, UmgChildCapacity.none),
+  assetPicker('Asset Picker', UmgWidgetCategory.editor, UmgChildCapacity.none),
+  resizableSplit('Resizable Split', UmgWidgetCategory.editor, UmgChildCapacity.many),
+  editorToolbar('Editor Toolbar', UmgWidgetCategory.editor, UmgChildCapacity.many),
+  statusLine('Status Line', UmgWidgetCategory.editor, UmgChildCapacity.none);
 
   const UmgWidgetType(this.displayName, this.category, this.capacity);
 
@@ -69,6 +79,10 @@ enum UmgWidgetType {
   /// A shadcn_flutter component: rendered and generated as the real shadcn
   /// widget, so it needs a project on the shadcn widget library.
   bool get isShadcn => category == UmgWidgetCategory.shadcn;
+
+  /// An editor widget: rendered by the editor panel host, never generated
+  /// into a game.
+  bool get isEditor => category == UmgWidgetCategory.editor;
 
   /// The shadcn button variants.
   bool get isShadcnButton =>
@@ -90,6 +104,9 @@ enum UmgWidgetType {
       case UmgWidgetType.verticalBox:
       case UmgWidgetType.gridPanel:
       case UmgWidgetType.scrollBox:
+      case UmgWidgetType.editorSection:
+      case UmgWidgetType.resizableSplit:
+      case UmgWidgetType.editorToolbar:
         return UmgSlotKind.box;
       case UmgWidgetType.overlay:
       case UmgWidgetType.widgetSwitcher:
@@ -101,6 +118,7 @@ enum UmgWidgetType {
       case UmgWidgetType.container:
       case UmgWidgetType.shadcnCard:
       case UmgWidgetType.shadcnTooltip:
+      case UmgWidgetType.propertyRow:
         return UmgSlotKind.single;
       default:
         return UmgSlotKind.none;
@@ -244,6 +262,22 @@ enum UmgWidgetType {
       case UmgWidgetType.horizontalBox:
       case UmgWidgetType.verticalBox:
         return {};
+      case UmgWidgetType.editorSection:
+        return {'title': 'Section', 'expanded': true};
+      case UmgWidgetType.propertyRow:
+        return {'label': 'Property'};
+      case UmgWidgetType.treeView:
+        return {'items': <Object?>[], 'selected': <Object?>[], 'expanded': <Object?>[]};
+      case UmgWidgetType.listView:
+        return {'items': <Object?>[], 'selected': <Object?>[], 'multiSelect': true};
+      case UmgWidgetType.assetPicker:
+        return {'value': '', 'typeFilter': '', 'placeholder': 'None', 'allowClear': true};
+      case UmgWidgetType.resizableSplit:
+        return {'orientation': 'horizontal', 'split': 0.5, 'minFirst': 120.0, 'minSecond': 120.0};
+      case UmgWidgetType.editorToolbar:
+        return {};
+      case UmgWidgetType.statusLine:
+        return {'text': 'Ready', 'tone': 'info'};
     }
   }
 
@@ -308,6 +342,17 @@ enum UmgWidgetType {
         return const Size(260, 36);
       case UmgWidgetType.comboBox:
         return const Size(200, 36);
+      case UmgWidgetType.editorSection:
+      case UmgWidgetType.treeView:
+      case UmgWidgetType.listView:
+      case UmgWidgetType.resizableSplit:
+        return const Size(300, 220);
+      case UmgWidgetType.propertyRow:
+      case UmgWidgetType.assetPicker:
+        return const Size(280, 28);
+      case UmgWidgetType.editorToolbar:
+      case UmgWidgetType.statusLine:
+        return const Size(320, 28);
       default:
         return _shadcnCanvasSize;
     }

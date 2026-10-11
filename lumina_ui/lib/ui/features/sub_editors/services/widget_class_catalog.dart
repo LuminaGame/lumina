@@ -126,6 +126,7 @@ class WidgetClassCatalog extends ChangeNotifier {
   /// properties.
   static LuminaBlueprintWidgetClass fromUmgDocument(String name, UmgDocument doc) => LuminaBlueprintWidgetClass(
         name: name,
+        isEditorPanel: doc.isEditorPanel,
         elements: [
           for (final n in doc.allNodes)
             if (n.id != doc.root.id)

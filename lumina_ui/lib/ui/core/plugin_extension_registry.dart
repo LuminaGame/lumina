@@ -16,6 +16,7 @@ import 'package:lumina_ui/ui/core/widgets/plugin_process_guard.dart';
 
 part 'plugin_extension_registry_entries.dart';
 part 'plugin_extension_registry_processes.dart';
+part 'plugin_extension_registry_editor_panels.dart';
 
 class PluginExtensionRegistry extends ChangeNotifier implements LuminaEditorHostContext, EditorThemeHost, PluginProcessHost {
   final EngineLoggerService logger;

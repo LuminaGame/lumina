@@ -440,6 +440,8 @@ class UmgWidgetCodegen {
       if (asset.type != AssetType.widget || payload == null || payload.isEmpty) continue;
       try {
         final document = UmgDocument.fromJson(Map<String, dynamic>.from(jsonDecode(utf8.decode(payload)) as Map));
+        // Editor panels run in the editor only: never generated into a game.
+        if (document.isEditorPanel) continue;
         docs[fileBaseName(e.baseName)] = document;
       } catch (_) {
         continue;
