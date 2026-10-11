@@ -488,7 +488,7 @@ new file mode 100644
 index 00000000..bb23bdd1
 --- /dev/null
 +++ b/filament/backend/src/vulkan/VulkanPresentPacer.h
-@@ -0,0 +1,124 @@
+@@ -0,0 +1,126 @@
 +/*
 + * Copyright (C) 2025 The Android Open Source Project
 + *
@@ -602,7 +602,9 @@ index 00000000..bb23bdd1
 +    bool mStop = false;
 +
 +    // present thread only
-+    void* mTimer = nullptr;     // Windows: a high-resolution waitable timer
++#if defined(_WIN32)
++    void* mTimer = nullptr;     // a high-resolution waitable timer
++#endif
 +    clock::time_point mLastReady{};
 +    clock::time_point mLastPresent{};
 +    double mInterval = 0.0;     // seconds between rendered frames, smoothed

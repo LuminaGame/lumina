@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- The prebuilt Filament builds on Linux again (prebuilt `1.77.2-lumina.18`, Filament patch `0016`): the present pacer's
+  Windows timer field is declared only on Windows, so clang's `-Werror` no longer stops the backend.
 - `Dlss.available` (and the availability checks built on it) reads the cached GPU list instead of creating a Vulkan
   instance per call (about 7 ms each). A game reads it every tick while DLSS is on, which on the Flutter presentation
   path at 3440x1440 cost a third to half of the frame rate (offscreen: 60 -> 96-103 frames/s, no upscaler 108-125).

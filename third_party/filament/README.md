@@ -382,7 +382,8 @@ driver command `setPresentPacing(sch, slot, count)` tags the next commit (the re
 a frame-generation frame `0 of N` and the others `k of N`), `VulkanSwapChain::present` queues the image with the
 fence of the command buffer that drew it, and the pacer thread waits for that fence, measures the interval
 between rendered frames (the slot-0 completions) and presents slot k no earlier than the previous present plus
-`interval / N` (a high-resolution waitable timer on Windows), catching up when more than two rendered frames are
+`interval / N` (a high-resolution waitable timer on Windows, a field declared only there: clang's
+`-Wunused-private-field` under the backend's `-Werror` rejects it elsewhere), catching up when more than two rendered frames are
 queued. Every `vkQueueSubmit`, `vkQueuePresentKHR`, `vkQueueWaitIdle` and the acquire of a vsync-less swap chain
 (polling with a zero timeout) take `fvkutils::queueMutex()`; the pacer is drained before a recreate, at
 destruction and in `finish()`. Vsync-less surfaces ask for `minImageCount + 7` images. The present times
