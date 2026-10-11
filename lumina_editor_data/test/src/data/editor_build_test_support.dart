@@ -78,6 +78,30 @@ class AProcess extends LuminaPluginProcess {
 ''');
   }
 
+  /// A kernel plugin [name] in the project's `plugins/` (shell-less, its
+  /// process shipped as a kernel): never compiled into the editor host.
+  Future<LuminaPluginDescriptor> kernelPlugin(String name) async {
+    final dir = Directory(p.join(projectDir.path, 'plugins', name))..createSync(recursive: true);
+    final manifest = File(p.join(dir.path, '$name.lmplugin'));
+    await manifest.writeAsString(jsonEncode({
+      'name': name,
+      'version': '1.0.0',
+      'isolation': 'process',
+      'modules': [
+        {
+          'name': name,
+          'type': 'editor',
+          'entry_library': 'lib/$name.dart',
+          'process_class': 'KProcess',
+          'process_kernel': 'bin/${name}_process.dill',
+          'process_entry': 'bin/${name}_process.dart',
+          'process_kernel_sdk': '3.11.0',
+        },
+      ],
+    }));
+    return PluginRepository(roots: []).loadInternal(manifest, PluginOrigin.project);
+  }
+
   Future<LuminaPluginDescriptor> plugin() =>
       PluginRepository(roots: []).loadInternal(File(p.join(pluginDir.path, 'a_plugin.lmplugin')), PluginOrigin.project);
 

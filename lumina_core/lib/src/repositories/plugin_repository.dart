@@ -113,6 +113,14 @@ class PluginRepository {
 
   static final RegExp _dartIdentifier = RegExp(r'^[A-Za-z_$][A-Za-z0-9_$]*$');
 
+  /// Whether [path] is relative and stays inside the plugin folder.
+  static bool _insidePluginDir(String path) {
+    final normalized = path.replaceAll(r'\', '/');
+    if (normalized.isEmpty || normalized.startsWith('/') || p.windows.isAbsolute(path)) return false;
+    final first = p.posix.normalize(normalized).split('/').first;
+    return first != '..' && first != '.';
+  }
+
   PluginRepository({required this.roots});
 
   Future<PluginScanResult> scanAll() async {
@@ -304,6 +312,35 @@ class PluginRepository {
             filePath: manifest.path,
             kind: PluginErrorKind.schemaViolation,
             message: '`modules[$i].process_class` must be a Dart class name, got "$processClass"',
+          ));
+        }
+        // A kernel plugin's process: paths inside the plugin folder, and the
+        // entry the editor recompiles is mandatory.
+        for (final field in const ['process_kernel', 'process_entry']) {
+          final value = mod[field];
+          if (value == null) continue;
+          if (value is! String || !_insidePluginDir(value)) {
+            throw PluginManifestException(PluginScanError(
+              filePath: manifest.path,
+              kind: PluginErrorKind.schemaViolation,
+              message: '`modules[$i].$field` must be a relative path inside the plugin folder, got "$value"',
+            ));
+          }
+        }
+        if (mod['process_kernel'] != null && mod['process_entry'] == null) {
+          throw PluginManifestException(PluginScanError(
+            filePath: manifest.path,
+            kind: PluginErrorKind.schemaViolation,
+            message: '`modules[$i]` has a "process_kernel" but no "process_entry" (the Dart source the editor '
+                'recompiles when the kernel was built by another Dart SDK)',
+          ));
+        }
+        final sdk = mod['process_kernel_sdk'];
+        if (sdk != null && sdk is! String) {
+          throw PluginManifestException(PluginScanError(
+            filePath: manifest.path,
+            kind: PluginErrorKind.schemaViolation,
+            message: '`modules[$i].process_kernel_sdk` must be a Dart SDK version string, got "$sdk"',
           ));
         }
         // registration_class may be left out only when the module names a

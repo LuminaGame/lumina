@@ -26,12 +26,29 @@ class PluginModuleDescriptor {
   /// editor module of a plugin with `"isolation": "process"`.
   final String? processClass;
 
+  /// The shipped Dart kernel of a kernel plugin's process
+  /// (`"process_kernel"`, e.g. `bin/<name>_process.dill`), relative to the
+  /// plugin folder; the pack script writes it.
+  final String? processKernel;
+
+  /// The Dart entry of a kernel plugin's process (`"process_entry"`, e.g.
+  /// `bin/<name>_process.dart`), relative to the plugin folder: what the
+  /// editor recompiles when [processKernel] was built by another Dart SDK.
+  final String? processEntry;
+
+  /// The Dart SDK version that produced [processKernel]
+  /// (`"process_kernel_sdk"`, e.g. `3.11.0`), written by the pack script.
+  final String? processKernelSdk;
+
   PluginModuleDescriptor({
     required this.name,
     required this.type,
     required this.entryLibrary,
     this.registrationClass,
     this.processClass,
+    this.processKernel,
+    this.processEntry,
+    this.processKernelSdk,
   });
 
   Map<String, dynamic> toJson() => {
@@ -40,6 +57,9 @@ class PluginModuleDescriptor {
         'entry_library': entryLibrary,
         if (registrationClass != null) 'registration_class': registrationClass,
         if (processClass != null) 'process_class': processClass,
+        if (processKernel != null) 'process_kernel': processKernel,
+        if (processEntry != null) 'process_entry': processEntry,
+        if (processKernelSdk != null) 'process_kernel_sdk': processKernelSdk,
       };
 
   factory PluginModuleDescriptor.fromJson(Map<String, dynamic> json) {
@@ -49,6 +69,9 @@ class PluginModuleDescriptor {
       entryLibrary: json['entry_library'] as String,
       registrationClass: json['registration_class'] as String?,
       processClass: json['process_class'] as String?,
+      processKernel: json['process_kernel'] as String?,
+      processEntry: json['process_entry'] as String?,
+      processKernelSdk: json['process_kernel_sdk'] as String?,
     );
   }
 }
@@ -110,14 +133,54 @@ class LuminaPluginDescriptor {
   /// The process part's class name ([processModule]'s `process_class`).
   String? get processClass => processModule?.processClass;
 
+  /// A **kernel plugin**: an isolated plugin without a UI shell whose
+  /// process ships as a Dart kernel (`process_entry`, usually with a
+  /// `process_kernel`) and runs on the Dart VM. It is never compiled into
+  /// the project editor, so enabling or disabling it needs no build.
+  bool get isKernelPlugin {
+    final m = processModule;
+    return isolation == PluginIsolation.process && m != null && m.registrationClass == null && m.processEntry != null;
+  }
+
+  /// [processModule]'s `process_kernel` in [pluginDir] (null when none).
+  File? get processKernelFile {
+    final rel = processModule?.processKernel;
+    return rel == null ? null : File('${pluginDir.path}/$rel');
+  }
+
+  /// [processModule]'s `process_entry` in [pluginDir] (null when none).
+  File? get processEntryFile {
+    final rel = processModule?.processEntry;
+    return rel == null ? null : File('${pluginDir.path}/$rel');
+  }
+
+  /// Why the project's `plugin_isolation: in_process` override cannot apply
+  /// to this plugin, or null when it can. Only an isolated plugin with an
+  /// in-process UI shell (a `registration_class`) is compiled into the
+  /// editor with its process part, so only it can run that part there.
+  String? get inEditorProcessUnavailableReason {
+    if (isolation != PluginIsolation.process || processClass == null) return 'it has no process part';
+    if (isKernelPlugin) return 'a kernel plugin has no code inside the editor; it always runs on the Dart VM';
+    if (processModule?.registrationClass == null) {
+      return 'a process plugin without a registration_class is not compiled into the editor';
+    }
+    return null;
+  }
+
+  /// Whether the project may run this plugin's process part inside the
+  /// editor (see [inEditorProcessUnavailableReason]).
+  bool get canRunInEditorProcess => inEditorProcessUnavailableReason == null;
+
   /// Where this plugin runs in [project]. An isolated plugin
   /// (`"isolation": "process"` with a `process_class`) runs in its own
   /// process unless the project's `plugin_isolation` forces it
   /// `in_process` (the same process part, run inside the editor: how an
-  /// isolated plugin is debugged). Any other plugin runs in process: it has
-  /// no process part to start, whatever the project says.
+  /// isolated plugin is debugged) and it [canRunInEditorProcess]. Any other
+  /// plugin runs in process: it has no process part to start, whatever the
+  /// project says.
   PluginIsolation effectiveIsolation([LuminaProject? project]) {
     if (isolation != PluginIsolation.process || processClass == null) return PluginIsolation.inProcess;
+    if (!canRunInEditorProcess) return PluginIsolation.process;
     return project?.pluginIsolation[name] ?? PluginIsolation.process;
   }
   

@@ -23,7 +23,7 @@ class PluginHostPatcherService {
 
     final pluginBlock = StringBuffer();
     for (final plugin in enabledCodePlugins) {
-      if (plugin.isContentOnly) continue;
+      if (plugin.isContentOnly || plugin.isKernelPlugin) continue;
       pluginBlock.writeln('  ${plugin.name}:');
       final git = workspaceRoot == null ? null : LuminaWorkspace.gitSourceOf(workspaceRoot, plugin.name, packageDir: plugin.pluginDir.path);
       if (git != null) {
@@ -106,7 +106,8 @@ class PluginHostPatcherService {
     
     final modules = <PluginModuleDescriptor>[];
     for (final plugin in enabledCodePlugins) {
-      if (plugin.isContentOnly) continue;
+      // A kernel plugin runs on the Dart VM: nothing of it is compiled in.
+      if (plugin.isContentOnly || plugin.isKernelPlugin) continue;
       for (final module in plugin.modules) {
         if (module.type == PluginModuleType.editor) {
           var entry = module.entryLibrary;
@@ -135,7 +136,11 @@ class PluginHostPatcherService {
     sb.writeln();
     final processes = [
       for (final plugin in enabledCodePlugins)
-        if (!plugin.isContentOnly && plugin.isolation == PluginIsolation.process && plugin.processClass != null) plugin,
+        if (!plugin.isContentOnly &&
+            !plugin.isKernelPlugin &&
+            plugin.isolation == PluginIsolation.process &&
+            plugin.processClass != null)
+          plugin,
     ];
     if (processes.isEmpty) {
       sb.writeln('final Map<String, LuminaPluginProcess Function()> kPluginProcesses = {};');

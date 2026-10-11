@@ -94,6 +94,28 @@ void main() {
     expect(File(p.join(host, 'lib', 'main.dart')).readAsStringSync(), contains('      processes: kPluginProcesses,\n'));
   });
 
+  test('kernel plugins are no build input: neither editorCodePlugins nor kPluginProcesses list them', () async {
+    await fx.isolate();
+    final compiled = await fx.plugin();
+    final kernel = await fx.kernelPlugin('k_plugin');
+    expect(kernel.isKernelPlugin, isTrue);
+    expect(EditorHostGeneratorService.editorCodePlugins([compiled, kernel]).map((d) => d.name), ['a_plugin']);
+    final gen = EditorHostGeneratorService(engineRoot: engineRoot, platform: 'linux');
+    final result = await gen.generate(fx.projectDir.path, [compiled, kernel]);
+    final host = result.hostDir!;
+    final registrar = File(p.join(host.path, 'lib', 'plugin_registrar.dart')).readAsStringSync();
+    expect(registrar, contains("'a_plugin': () => a_plugin_plugin.AProcess(),"));
+    expect(registrar, isNot(contains('k_plugin')));
+    expect(PluginHostPatcherService().registrarSource([compiled, kernel]), isNot(contains('k_plugin')));
+    expect(File(p.join(host.path, 'pubspec.yaml')).readAsStringSync(), isNot(contains('k_plugin')));
+
+    // Enabling a second kernel plugin changes nothing the build reads.
+    final before = snapshot(host);
+    final again = await gen.generate(fx.projectDir.path, [compiled, kernel, await fx.kernelPlugin('k2_plugin')]);
+    expect(again.changed, isFalse);
+    expect(snapshot(host), before);
+  });
+
   test('the windows branch renames the binary, the version resource and the window title', () async {
     if (!Directory(p.join(engineRoot, 'lumina_ui', 'windows')).existsSync()) {
       markTestSkipped('lumina_ui/windows is absent');

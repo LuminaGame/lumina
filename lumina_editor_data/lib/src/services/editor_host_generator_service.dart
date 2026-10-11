@@ -72,9 +72,12 @@ class EditorHostGeneratorService {
   }
 
   /// The plugins that contribute editor code (the ones a host must compile).
+  /// Kernel plugins ([LuminaPluginDescriptor.isKernelPlugin]) are not among
+  /// them: their process runs on the Dart VM, nothing of them is compiled
+  /// into the editor, so they are no build input.
   static List<LuminaPluginDescriptor> editorCodePlugins(List<LuminaPluginDescriptor> plugins) {
     final list = plugins
-        .where((d) => !d.isContentOnly && d.modules.any((m) => m.type == PluginModuleType.editor))
+        .where((d) => !d.isContentOnly && !d.isKernelPlugin && d.modules.any((m) => m.type == PluginModuleType.editor))
         .toList()
       ..sort((a, b) => a.name.compareTo(b.name));
     return list;
