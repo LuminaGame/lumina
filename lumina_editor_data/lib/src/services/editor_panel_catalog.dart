@@ -139,6 +139,14 @@ class EditorPanelCatalog {
     return null;
   }
 
+  /// The editor panels in [sources], read once off the UI isolate (an
+  /// imported plugin's panels for its confirmation).
+  static Future<List<EditorPanelEntry>> scanOnce(List<EditorPanelSource> sources) async {
+    final messages = [for (final s in sources) s._toMessage()];
+    final raw = await Isolate.run(() => _scan(messages));
+    return _titled([for (final m in raw) _entryOf(m)]);
+  }
+
   /// Scans [sources] (replacing the previous set) and watches them.
   Future<List<EditorPanelEntry>> setSources(List<EditorPanelSource> sources) async {
     _sources = List.unmodifiable(sources);

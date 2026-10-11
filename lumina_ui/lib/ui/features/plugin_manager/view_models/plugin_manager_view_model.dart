@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:lumina_editor_data/lumina_editor.dart';
 
+import 'package:lumina_ui/ui/core/editor_panels/editor_panel_listing.dart';
 import 'package:lumina_ui/ui/core/services/plugin_process/plugin_process_supervisor.dart';
 import 'package:lumina_ui/ui/features/plugin_manager/services/plugin_importer.dart';
 import 'package:lumina_ui/ui/features/plugin_manager/services/plugin_remover.dart';
@@ -58,7 +59,12 @@ class PluginManagerViewModel extends ChangeNotifier {
     this.processOf,
     this.runsInEditorProcess,
     this.onSetRunInEditorProcess,
+    this.editorPanelsOf,
   });
+
+  /// The editor panel Widget Blueprints of plugin [name] the editor runs
+  /// (title, dock, capabilities, compile state).
+  final List<EditorPanelSummary> Function(String name)? editorPanelsOf;
 
   /// The process of plugin [name], when it runs in one.
   PluginProcessSupervisor? processFor(String name) => processOf?.call(name);

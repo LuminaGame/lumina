@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:file_picker/file_picker.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
+import 'package:lumina_editor_data/lumina_editor.dart' show EditorPanelCatalog, EditorPanelEntry, EditorPanelSource;
+import 'package:lumina_ui/ui/core/editor_panels/editor_panel_listing.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/features/plugin_manager/services/plugin_importer.dart';
 import 'package:lumina_ui/ui/features/plugin_manager/view_models/plugin_manager_view_model.dart';
@@ -42,7 +44,15 @@ Future<void> startPluginImport(BuildContext context, PluginManagerViewModel vm, 
   }
   if (!context.mounted) return;
   if (result.status == PluginImportStatus.installed) {
-    _showImported(context, result);
+    // Its editor panels and what they may do: trusted with this import.
+    final c = result.candidate!;
+    final panels = result.installedDir == null
+        ? const <EditorPanelEntry>[]
+        : await EditorPanelCatalog.scanOnce([
+            EditorPanelSource.plugin(name: c.name, friendlyName: c.displayName, pluginDir: result.installedDir!.path),
+          ]);
+    if (!context.mounted) return;
+    _showImported(context, result, [for (final e in panels) EditorPanelSummary.ofEntry(e)]);
   } else {
     _showRefused(context, result, source);
   }
@@ -87,7 +97,7 @@ Future<bool> _askReplace(BuildContext context, PluginImportResult pending) {
   return done.future;
 }
 
-void _showImported(BuildContext context, PluginImportResult result) {
+void _showImported(BuildContext context, PluginImportResult result, List<EditorPanelSummary> panels) {
   final c = result.candidate!;
   showOverlay(
     context,
@@ -103,6 +113,10 @@ void _showImported(BuildContext context, PluginImportResult result) {
           children: [
             Text('${c.displayName} ${c.version} was installed into ${result.installedDir?.path}. '
                 'Enable it in the list to use it in this project.'),
+            if (panels.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              EditorPanelSummaryList(panels: panels, title: 'Editor panels it adds (they run once it is enabled)'),
+            ],
             for (final w in result.warnings) ...[
               const SizedBox(height: 6),
               Text(w, style: const TextStyle(fontSize: 11, color: EditorColors.warning)),

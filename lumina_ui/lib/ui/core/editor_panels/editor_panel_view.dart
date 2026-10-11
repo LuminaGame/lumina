@@ -121,6 +121,16 @@ class _EditorPanelViewState extends State<EditorPanelView> {
     instance.viewContext = context;
     final set = EditorWidgetSet(host, instance);
     final droppable = rt.info.contentDroppable;
+    return RepaintBoundary(
+      key: instance.boundaryKey,
+      child: ColoredBox(
+        color: EditorColors.sidebar,
+        child: _runningBody(rt, instance, set, droppable),
+      ),
+    );
+  }
+
+  Widget _runningBody(EditorPanelRuntime rt, EditorPanelInstance instance, EditorWidgetSet set, bool droppable) {
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       if (instance.stoppedMessage != null)
         _banner(instance.stoppedMessage!, EditorColors.logError, action: ('Reload', () => unawaited(host.reload(rt.id)))),

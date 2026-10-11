@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:lumina_editor_api/lumina_editor_api.dart' show kAssetPathMetadataKey;
+import 'package:lumina_ui/ui/core/editor_panels/editor_panel_listing.dart';
 import 'package:lumina_ui/ui/core/plugin_extension_registry.dart';
 import 'package:lumina_ui/ui/features/plugin_manager/view_models/plugin_manager_view_model.dart';
 import 'package:lumina_ui/ui/features/plugin_manager/views/plugin_manager_view.dart';
@@ -269,6 +270,10 @@ class _SubEditorDispatcher extends StatelessWidget {
           processOf: editorViewModel!.pluginProcesses.supervisorOf,
           runsInEditorProcess: editorViewModel!.pluginRunsInEditorProcess,
           onSetRunInEditorProcess: editorViewModel!.setPluginRunsInEditorProcess,
+          editorPanelsOf: (name) => [
+            for (final rt in editorViewModel!.editorPanels.panels.values)
+              if (rt.entry.owner == name) EditorPanelSummary.ofRuntime(rt),
+          ],
         );
         return PluginManagerView(viewModel: vm);
       case 'Material':
@@ -462,6 +467,8 @@ class _SubEditorDispatcher extends StatelessWidget {
           viewModel: _existingSession<UmgEditorViewModel>(),
           onBind: _bind,
           onClose: onClose,
+          onRunAsEditorPanel: editorViewModel?.runAsEditorPanel,
+          readOnly: editorViewModel?.isReadOnlyPluginContent(asset?.lmasPath) ?? false,
         );
       case 'Theme':
       case 'THEME':

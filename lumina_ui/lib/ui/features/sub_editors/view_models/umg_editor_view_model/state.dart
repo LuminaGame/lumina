@@ -72,6 +72,9 @@ abstract class _UmgEditorViewModelState extends ChangeNotifier {
   /// The widget's own Blueprint graph editor, opened on the
   /// document's graph; a widget designed before graphs existed opens with a
   /// bound event node per event recorded on its elements.
+  /// Content of an engine plugin: viewable, never saved.
+  bool readOnly = false;
+
   WidgetBlueprintEditorViewModel get graphEditor => _graphEditor ??= _createGraphEditor();
 
   /// Whether [graphEditor] was opened (a widget never shown in Graph mode
@@ -94,6 +97,10 @@ abstract class _UmgEditorViewModelState extends ChangeNotifier {
         return _compileError == null;
       },
       generatedSource: () => generatedSource,
+      editorCapabilitiesSource: () {
+        final panel = _document.editorPanel;
+        return panel == null ? null : {for (final c in panel.capabilities) c.name};
+      },
     );
     if (!hadGraph) {
       // Migration: the events recorded before graphs existed

@@ -66,6 +66,7 @@ class EditorTreeView extends StatefulWidget {
 class _EditorTreeViewState extends State<EditorTreeView> {
   String? _hover;
   String? _anchor;
+  ({String id, DateTime at})? _lastTap;
 
   List<({EditorTreeItem item, int depth})> _flatten() {
     final out = <({EditorTreeItem item, int depth})>[];
@@ -134,8 +135,19 @@ class _EditorTreeViewState extends State<EditorTreeView> {
               child: GestureDetector(
                 key: ValueKey('editor_tree_row_${widget.elementName}_${item.id}'),
                 behavior: HitTestBehavior.opaque,
-                onTap: () => _select(item.id, rows),
-                onDoubleTap: () => widget.onEvent('OnItemDoubleClicked', {'item_id': item.id}),
+                // A double click is two taps on one row in 300 ms; a single
+                // tap selects at once (no double-tap delay).
+                onTap: () {
+                  final now = DateTime.now();
+                  final last = _lastTap;
+                  _lastTap = (id: item.id, at: now);
+                  if (last != null && last.id == item.id && now.difference(last.at) < const Duration(milliseconds: 300)) {
+                    _lastTap = null;
+                    widget.onEvent('OnItemDoubleClicked', {'item_id': item.id});
+                    return;
+                  }
+                  _select(item.id, rows);
+                },
                 child: Container(
                   height: EditorTreeView.rowHeight,
                   padding: EdgeInsets.only(

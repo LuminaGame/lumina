@@ -173,7 +173,17 @@ class EditorPanelProject {
         if (root.existsSync()) root.deleteSync(recursive: true);
         return;
       } on FileSystemException {
-        if (DateTime.now().isAfter(deadline)) rethrow;
+        if (DateTime.now().isAfter(deadline)) {
+          final locked = <String>[];
+          for (final e in root.listSync(recursive: true)) {
+            try {
+              if (e is File) e.deleteSync();
+            } on FileSystemException {
+              locked.add(e.path);
+            }
+          }
+          throw FileSystemException('Still open after 10 s: ${locked.join(', ')}', root.path);
+        }
         await Future<void>.delayed(const Duration(milliseconds: 100));
       }
     }

@@ -282,6 +282,16 @@ mixin _UmgEditorEditing on _UmgEditorViewModelState {
     });
   }
 
+  /// Class Settings ▸ Editor Panel: sets (or, with null, removes) the
+  /// `editorPanel` block; an editor panel runs in the editor only.
+  void setEditorPanel(LuminaEditorPanelInfo? info) {
+    _mutate<bool>(info == null ? 'Not an Editor Panel' : 'Editor Panel Settings', () {
+      _document.editorPanel = info;
+      return true;
+    });
+    _graphEditor?.refreshTypeContext();
+  }
+
   /// Live (un-recorded) prop edit used by inspector scrubbing.
   void previewProp(String id, String key, dynamic value) {
     final node = _document.findNode(id);

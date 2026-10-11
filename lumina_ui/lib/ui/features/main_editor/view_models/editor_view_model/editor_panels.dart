@@ -43,6 +43,50 @@ mixin _EditorPanelsSupport on _EditorViewModelState, _EditorPlugins {
     return sources;
   }
 
+  /// Content Browser ▸ New ▸ Editor Panel Widget: a working editor panel
+  /// (a section, a property row, a button wired to Show Toast) in [folder]
+  /// (default `contents/editor`). Returns its project-relative path.
+  Future<String> createEditorPanelWidget({String name = 'EPW_NewEditorPanel', String? folder}) async {
+    final path = await createEditorPanelAsset(
+        projectDirPath: projectDirPath, name: name, folder: contentSubfolderOrNull(folder) ?? kEditorPanelFolder);
+    _logger.log('Created editor panel Widget Blueprint ${path.split('/').last} at $path', level: 'success', source: 'ContentBrowser');
+    _refreshAssets();
+    return path;
+  }
+
+  /// The designer's "Run as Editor Panel": the saved panel at [assetPath]
+  /// (re)compiled and opened where it docks. The author running their own
+  /// panel trusts it. Returns whether it could be opened.
+  Future<bool> runAsEditorPanel(String assetPath) async {
+    final host = editorPanels;
+    if (!host.isStarted) await startEditorPanels();
+    await host.refreshSources();
+    final target = p.normalize(p.absolute(assetPath));
+    final rt = host.panels.values.where((r) => p.normalize(p.absolute(r.entry.filePath)) == target).firstOrNull;
+    if (rt == null) {
+      _logger.log('${p.basename(assetPath)} is not an editor panel the editor can find (Class Settings ▸ Editor Panel, '
+          "under the project's contents/ or an enabled plugin's content/).", level: 'warning', source: 'Editor Panels');
+      return false;
+    }
+    if (rt.entry.isProjectPanel) await host.trustProjectPanels([rt.id]);
+    editorPanelDocking.open(rt.id);
+    return true;
+  }
+
+  /// Whether [path] is content of an engine plugin (shipped with Lumina
+  /// Studio): the designer opens it read-only; a user or project plugin's
+  /// content stays editable (its author develops it from its folder).
+  bool isReadOnlyPluginContent(String? path) {
+    if (path == null || !_pluginsScanned.isCompleted) return false;
+    final target = p.normalize(p.absolute(path));
+    for (final e in pluginRegistry.entries) {
+      final d = e.descriptor;
+      if (d.origin != PluginOrigin.engine) continue;
+      if (p.isWithin(p.normalize(p.absolute(d.pluginDir.path)), target)) return true;
+    }
+    return false;
+  }
+
   /// Sets one actor's transform as one undo step (in an editor panel's open
   /// transaction, part of that step): an editor panel's `Set Actor
   /// Transform`, which never changes the selection.

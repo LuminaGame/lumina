@@ -6,7 +6,7 @@ import 'package:lumina_ui/ui/core/input/text_input_focus.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/features/sub_editors/sub_editor_binding.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/umg_editor_view_model.dart';
-import 'package:lumina_ui/ui/features/sub_editors/services/umg_widget_codegen.dart' show UmgWidgetCodegen;
+import 'package:lumina_ui/ui/features/sub_editors/services/umg_widget_codegen.dart' show UmgWidgetCodegen, kEditorPanelNotGenerated;
 import 'package:lumina_ui/ui/features/sub_editors/views/blueprint/blueprint_sub_editor.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/umg/designer_canvas.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/umg/hierarchy_tree.dart';
@@ -37,7 +37,16 @@ class UMGWidgetSubEditor extends StatefulWidget {
     this.onClose,
     this.onBind,
     this.viewModel,
+    this.onRunAsEditorPanel,
+    this.readOnly = false,
   });
+
+  /// An engine plugin's asset: shown, never saved.
+  final bool readOnly;
+
+  /// "Run as Editor Panel" (an editor panel asset): saves, then opens or
+  /// reloads it docked.
+  final Future<bool> Function(String assetPath)? onRunAsEditorPanel;
 
   @override
   State<UMGWidgetSubEditor> createState() => _UMGWidgetSubEditorState();
@@ -63,6 +72,7 @@ class _UMGWidgetSubEditorState extends State<UMGWidgetSubEditor> {
           initialAsset: widget.asset,
           projectDirPathOverride: widget.projectDirPath,
         );
+    _vm.readOnly = widget.readOnly;
     widget.onBind?.call(_vm, _vm.save, () => _vm.isDirty);
     _vm.addListener(_onVmChanged);
     _vm.transactions.addListener(_onVmChanged);
@@ -219,10 +229,35 @@ class _UMGWidgetSubEditorState extends State<UMGWidgetSubEditor> {
             ),
           ),
           const Spacer(),
+          if (vm.readOnly)
+            const Padding(
+              padding: EdgeInsets.only(right: 8),
+              child: SecondaryBadge(
+                  key: ValueKey('umg_read_only'), child: Text('Read-only: engine plugin content', style: TextStyle(fontSize: 8))),
+            ),
+          if (vm.document.isEditorPanel && widget.onRunAsEditorPanel != null && !vm.readOnly) ...[
+            OutlineButton(
+              key: const ValueKey('umg_run_as_editor_panel'),
+              onPressed: () async {
+                if (await vm.save()) await widget.onRunAsEditorPanel!(vm.assetPath);
+              },
+              child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(LucideIcons.panelRight, size: 11),
+                SizedBox(width: 4),
+                Text('Run as Editor Panel', style: TextStyle(fontSize: 9)),
+              ]),
+            ),
+            const SizedBox(width: 8),
+          ],
           if (vm.compileError != null)
             Padding(
               padding: const EdgeInsets.only(right: 8),
               child: DestructiveBadge(child: Text(vm.compileError!, style: const TextStyle(fontSize: 8))),
+            )
+          else if (compile != null && compile.warnings.contains(kEditorPanelNotGenerated))
+            const Padding(
+              padding: EdgeInsets.only(right: 8),
+              child: SecondaryBadge(child: Text('Editor panel: runs in the editor, never generated', style: TextStyle(fontSize: 8))),
             )
           else if (compile != null)
             Padding(

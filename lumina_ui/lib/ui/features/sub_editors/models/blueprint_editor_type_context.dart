@@ -29,6 +29,7 @@ class BlueprintEditorTypeContext extends LuminaBlueprintTypeContext {
     super.variableOwners,
     super.componentOwners,
     super.widgetVariables,
+    super.editorCapabilities,
     this.implementedInterfaces = const [],
   });
 
@@ -56,6 +57,7 @@ class BlueprintEditorTypeContext extends LuminaBlueprintTypeContext {
         variableOwners: base.variableOwners,
         componentOwners: base.componentOwners,
         widgetVariables: base.widgetVariables,
+        editorCapabilities: base.editorCapabilities,
         implementedInterfaces: implementedInterfaces,
       );
 

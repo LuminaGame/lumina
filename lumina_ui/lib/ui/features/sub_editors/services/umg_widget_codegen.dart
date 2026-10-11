@@ -32,6 +32,10 @@ part 'umg_widget_codegen/literals.dart';
 part 'umg_widget_codegen/graph.dart';
 
 /// Outcome of one compile of a widget document.
+/// Why an editor panel Widget Blueprint has no generated widget.
+const String kEditorPanelNotGenerated =
+    "An editor panel runs in the editor's Blueprint VM and is never generated into the game.";
+
 class UmgCompileResult {
   final String filePath;
   final bool written;
@@ -370,6 +374,10 @@ class UmgWidgetCodegen {
     required UmgDocument document,
     String? library,
   }) async {
+    // An editor panel runs in the editor's VM only: never generated.
+    if (document.isEditorPanel) {
+      return const UmgCompileResult(filePath: '', written: false, source: '', warnings: [kEditorPanelNotGenerated]);
+    }
     // Widgets an earlier version wrote as `WBP_<Name>.dart` move first, with their user code.
     LuminaGeneratedCodeMigration.migrate(projectPath);
     final file = File(outputPath(projectPath, assetName));

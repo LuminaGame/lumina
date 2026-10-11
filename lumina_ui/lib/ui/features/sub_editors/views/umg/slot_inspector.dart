@@ -10,6 +10,7 @@ import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/umg_document.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/umg_editor_view_model.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/umg/combo_box_options_editor.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/umg/editor_panel_settings.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/umg/umg_theme_helper.dart';
 
 part 'slot_inspector/slot_section.dart';
@@ -78,6 +79,29 @@ class UmgSlotInspector extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // Class Settings of the widget (on its root): the editor panel block.
+                if (parent == null)
+                  Accordion(
+                    key: const ValueKey('umg_class_settings_editor_panel'),
+                    items: [
+                      AccordionItem(
+                        expanded: true,
+                        trigger: const AccordionTrigger(
+                            child: Text('Class Settings ▸ Editor Panel', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
+                        content: UmgEditorPanelSettings(vm: vm),
+                      ),
+                    ],
+                  ),
+                if (parent != null && vm.document.isEditorPanel)
+                  Accordion(
+                    items: [
+                      AccordionItem(
+                        expanded: true,
+                        trigger: const AccordionTrigger(child: Text('Editor Panel', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
+                        content: UmgEditorElementSettings(vm: vm, node: node),
+                      ),
+                    ],
+                  ),
                 Accordion(
                   items: [
                     AccordionItem(

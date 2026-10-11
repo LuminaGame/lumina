@@ -1,4 +1,5 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart';
+import 'package:lumina_ui/ui/core/editor_panels/editor_panel_listing.dart';
 import 'package:lumina_ui/ui/features/plugin_manager/view_models/plugin_manager_view_model.dart';
 import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/ui/features/plugin_manager/views/new_plugin_wizard.dart';
@@ -578,6 +579,9 @@ class _PluginDetailsPane extends StatelessWidget {
         const SizedBox(height: 8),
         Text('Modules', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: theme.colorScheme.foreground)),
         const SizedBox(height: 6),
+        // Its editor panel Widget Blueprints: dock, capabilities, state.
+        if (vm.editorPanelsOf?.call(desc.name) case final panels? when panels.isNotEmpty)
+          Padding(padding: const EdgeInsets.only(bottom: 8), child: EditorPanelSummaryList(panels: panels)),
         if (desc.isContentOnly)
           Text('Content only — takes effect without restart', style: TextStyle(fontStyle: FontStyle.italic, fontSize: 12, color: theme.colorScheme.mutedForeground))
         else

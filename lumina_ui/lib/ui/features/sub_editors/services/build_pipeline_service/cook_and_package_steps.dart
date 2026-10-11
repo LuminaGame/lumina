@@ -217,6 +217,24 @@ class CookAndPackageStep implements BuildStep {
     ctx.log(gen.message, level: 'success');
     if (ctx.token.isCancelled) return const StepResult.cancelled('Cook cancelled before flutter build started');
 
+    // Editor panel Widget Blueprints stay out of the game: for this build the
+    // pubspec lists the other files of any asset folder holding one.
+    final pubspec = File('${ctx.projectDir}/pubspec.yaml');
+    final panels = await EditorPanelPackaging.panelFiles(ctx.projectDir);
+    String? originalPubspec;
+    if (panels.isNotEmpty && await pubspec.exists()) {
+      originalPubspec = await pubspec.readAsString();
+      await pubspec.writeAsString(EditorPanelPackaging.withoutPanels(originalPubspec, ctx.projectDir, panels));
+      ctx.log('Leaving ${panels.length} editor panel(s) out of the game: ${panels.join(', ')}');
+    }
+    try {
+      return await _build(ctx);
+    } finally {
+      if (originalPubspec != null) await pubspec.writeAsString(originalPubspec);
+    }
+  }
+
+  Future<StepResult> _build(BuildStepContext ctx) async {
     // 2. Real flutter build as a child process. On Windows it runs through a
     // space-free alias of the project: the native-assets hooks cannot
     // compile under a path with a space (see SpaceFreeBuildDir).

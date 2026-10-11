@@ -118,6 +118,9 @@ class EditorPanelInstance {
   /// Whether Construct ran (and Destruct has not).
   bool constructed = false;
 
+  /// The panel's repaint boundary (MCP's `editor_panel_screenshot`).
+  final GlobalKey boundaryKey = GlobalKey(debugLabel: 'editor panel');
+
   /// The panel's mounted view, for dialogs, toasts and popovers.
   BuildContext? viewContext;
 

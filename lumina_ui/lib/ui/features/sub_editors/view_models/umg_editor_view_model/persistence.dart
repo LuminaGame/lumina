@@ -204,6 +204,10 @@ mixin _UmgEditorPersistence on _UmgEditorViewModelState {
 
   @override
   Future<bool> save() async {
+    if (readOnly) {
+      _logger.log('${assetPath.split('/').last} belongs to an engine plugin and opens read-only.', level: 'warning', source: 'UmgEditor');
+      return false;
+    }
     _document.designResolution = _resolution;
     _document.dpiScale = _dpiScale;
     _takeGraph();

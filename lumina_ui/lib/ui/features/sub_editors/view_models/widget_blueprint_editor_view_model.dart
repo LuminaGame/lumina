@@ -43,10 +43,19 @@ class WidgetBlueprintEditorViewModel extends BlueprintEditorViewModel {
     this.onSave,
     this.onCompile,
     this.generatedSource,
+    this.editorCapabilitiesSource,
     LuminaBlueprintDocument? initial,
   }) : super(initialDocument: initial ?? LuminaWidgetBlueprintDocument.emptyGraph()) {
     document.parentClass = LuminaWidgetBlueprintDocument.parentClass;
   }
+
+  /// An editor panel's declared capabilities (its graph is in the editor
+  /// scope: the editor library is offered, game-only nodes are not); null
+  /// for a game widget.
+  final Set<String>? Function()? editorCapabilitiesSource;
+
+  /// Re-resolves pins and the palette after the panel's settings changed.
+  void refreshTypeContext() => notifyListeners();
 
   /// The script class the graph compiles into (`WbpClickerGraph`).
   String get scriptClassName => '${_className(widgetClass)}Graph';
@@ -97,6 +106,7 @@ class WidgetBlueprintEditorViewModel extends BlueprintEditorViewModel {
           functionScope: function,
           macroScope: macro,
           widgetVariables: variablesSource(),
+          editorCapabilities: editorCapabilitiesSource?.call(),
         ),
         implementedInterfaces: document.interfaces,
       );

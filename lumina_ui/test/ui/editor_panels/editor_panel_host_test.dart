@@ -145,7 +145,7 @@ void main() {
   });
 
   tearDown(() async {
-    vm.dispose();
+    await vm.close();
     await project.dispose();
   });
 

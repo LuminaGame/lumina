@@ -5,6 +5,7 @@ import 'package:lumina_ui/ui/core/plugin_extension_registry.dart';
 import 'package:lumina_ui/ui/core/editor_level_access.dart';
 import 'package:lumina_ui/ui/core/editor_panels/editor_panel_docking.dart';
 import 'package:lumina_ui/ui/core/editor_panels/editor_panel_host.dart';
+import 'package:lumina_ui/ui/core/editor_panels/editor_panel_template.dart';
 import 'package:lumina_ui/ui/core/services/content_folders.dart';
 import 'package:lumina_ui/ui/core/services/user_plugin_dir.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart';

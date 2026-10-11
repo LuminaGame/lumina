@@ -6,7 +6,8 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'dart:convert';
 
-import 'package:lumina_editor_data/lumina_editor.dart' show AssetType, GenerateDartCodeUseCase, LuminaAsset, kUmgWidgetLibraryShadcn, kUmgWidgetLibraryFlutter, kGameShadcnFlutterVersion;
+import 'package:lumina_editor_data/lumina_editor.dart'
+    show AssetType, EditorPanelPackaging, GenerateDartCodeUseCase, LuminaAsset, LuminaEditorPanelDock, LuminaEditorPanelInfo, kUmgWidgetLibraryShadcn, kUmgWidgetLibraryFlutter, kGameShadcnFlutterVersion;
 import 'package:lumina_ui/ui/features/sub_editors/models/umg_document.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/umg_widget_codegen.dart';
 
@@ -385,6 +386,58 @@ void main() {
       File('$project/contents/widgets/WBP_Menu.lmas').deleteSync();
       expect(await UmgWidgetCodegen.writeWidgetRegistry(project), isTrue);
       expect(registry.existsSync(), isFalse, reason: 'no widgets, no registry (the launcher stops importing it)');
+    });
+  });
+
+  group('editor panels', () {
+    UmgDocument panel() => UmgDocument.createDefault()
+      ..editorPanel = LuminaEditorPanelInfo(title: 'Batch Rename', dock: LuminaEditorPanelDock.right)
+      ..addChild('umg_root', UmgNode.create(UmgWidgetType.button, name: 'RenameButton'), canvasPosition: const Offset(0, 0));
+
+    void save(String rel, UmgDocument doc) {
+      final file = File('${projectDir.path}/$rel')..parent.createSync(recursive: true);
+      final name = rel.split('/').last.replaceAll('.lmas', '');
+      file.writeAsBytesSync(LuminaAsset(assetId: name.toLowerCase(), name: name, type: AssetType.widget,
+              rawPayload: Uint8List.fromList(utf8.encode(doc.toFormattedJson())))
+          .toProtoBufferBytes());
+    }
+
+    test('an editor panel in contents/ produces no generated widget file and no registry entry', () async {
+      final project = projectDir.path;
+      save('contents/editor/EPW_BatchRename.lmas', panel());
+      final menu = UmgDocument.createDefault()
+        ..addChild('umg_root', UmgNode.create(UmgWidgetType.text, name: 'Title'), canvasPosition: const Offset(0, 0));
+      save('contents/widgets/WBP_Menu.lmas', menu);
+      expect(UmgWidgetCodegen.widgetDocuments(project).keys, ['WBP_Menu']);
+      final results = await UmgWidgetCodegen.recompileProject(project);
+      expect(results, hasLength(1));
+      final compiled = await UmgWidgetCodegen.compileAndWrite(projectPath: project, assetName: 'EPW_BatchRename', document: panel());
+      expect(compiled.written, isFalse);
+      expect(compiled.warnings, [kEditorPanelNotGenerated]);
+      final generated = Directory('$project/lib/widgets').listSync().map((f) => f.uri.pathSegments.last).toList();
+      expect(generated.where((f) => f.toLowerCase().contains('epw') || f.toLowerCase().contains('batch')), isEmpty);
+      final registry = File(UmgWidgetCodegen.registryPath(project)).readAsStringSync();
+      expect(registry, contains("'WBP_Menu'"));
+      expect(registry, isNot(contains('BatchRename')));
+      // Saved and read back, the asset stays an editor panel.
+      final back = UmgDocument.fromJson(Map<String, dynamic>.from(jsonDecode(panel().toFormattedJson()) as Map));
+      expect(back.editorPanel!.title, 'Batch Rename');
+    });
+
+    test('the packaged game contains no editor panel .lmas', () async {
+      final project = projectDir.path;
+      save('contents/editor/EPW_BatchRename.lmas', panel());
+      save('contents/editor/WBP_Help.lmas', UmgDocument.createDefault());
+      save('contents/widgets/WBP_Menu.lmas', UmgDocument.createDefault());
+      final panels = await EditorPanelPackaging.panelFiles(project);
+      expect(panels, ['contents/editor/EPW_BatchRename.lmas']);
+      const pubspec = 'name: game\nflutter:\n  assets:\n    - contents/\n    - contents/editor/\n    - contents/widgets/\n';
+      final packaged = EditorPanelPackaging.withoutPanels(pubspec, project, panels);
+      expect(packaged, isNot(contains('EPW_BatchRename')));
+      expect(packaged, isNot(contains('- contents/editor/\n')), reason: 'the folder holding the panel is listed file by file');
+      expect(packaged, contains('- contents/editor/WBP_Help.lmas'));
+      expect(packaged, contains('- contents/widgets/'));
+      expect(EditorPanelPackaging.withoutPanels(pubspec, project, const []), pubspec);
     });
   });
 }

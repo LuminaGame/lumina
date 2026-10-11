@@ -61,6 +61,7 @@ export 'package:lumina_editor_data/src/services/model_file_thumbnailer.dart';
 
 // Plugins and project editor builds
 export 'package:lumina_editor_data/src/services/editor_panel_catalog.dart';
+export 'package:lumina_editor_data/src/services/editor_panel_packaging.dart';
 export 'package:lumina_editor_data/src/services/plugin_registry_service.dart';
 export 'package:lumina_editor_data/src/services/plugin_template_generator_service.dart';
 export 'package:lumina_editor_data/src/services/editor_host_generator_service.dart';

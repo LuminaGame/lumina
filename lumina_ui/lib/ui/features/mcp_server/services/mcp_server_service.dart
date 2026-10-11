@@ -46,6 +46,7 @@ import 'package:lumina_ui/ui/features/mcp_server/tools/play_tools.dart';
 import 'package:lumina_ui/ui/features/mcp_server/tools/project_settings_tools.dart';
 import 'package:lumina_ui/ui/features/mcp_server/tools/selection_tools.dart';
 import 'package:lumina_ui/ui/features/mcp_server/tools/umg_tools.dart';
+import 'package:lumina_ui/ui/features/mcp_server/tools/editor_panel_tools.dart';
 import 'package:lumina_ui/ui/features/mcp_server/tools/material_graph_tools.dart';
 import 'package:lumina_ui/ui/features/mcp_server/tools/particle_tools.dart';
 import 'package:lumina_ui/ui/features/mcp_server/tools/physics_asset_tools.dart';
@@ -191,6 +192,7 @@ class McpServerService extends ChangeNotifier {
     registerMaintenanceTools(tools, viewModel);
     // The UMG designer and the material node graph.
     registerUmgTools(tools, viewModel, sessions);
+    registerEditorPanelTools(tools, viewModel);
     registerMaterialGraphTools(tools, viewModel, sessions);
     // The Animation Blueprint, Blend Space, Animation and
     // Skeletal Mesh editors, the Sequencer and the Particle editor.

@@ -65,6 +65,30 @@ mixin _ContentBrowserNewAsset on _ContentBrowserWidgetStateBase {
                       LucideIcons.layoutTemplate,
                       'widgets',
                     ),
+                    // An editor panel Widget Blueprint: runs docked in the
+                    // editor (its Blueprint VM), never in the game.
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: OutlineButton(
+                          key: const ValueKey('new_asset_editor_panel'),
+                          onPressed: () async {
+                            Navigator.of(context).pop();
+                            if (vm == null) return;
+                            final path = await vm.createEditorPanelWidget(folder: vm.selectedFolder);
+                            final created = vm.realAssets.where((a) => a.relativePath == path).firstOrNull;
+                            final category = created == null ? null : subEditorCategoryFor(created, extensions: vm.extensionRegistry);
+                            if (category != null && mounted) vm.openSubEditorTab(category, asset: created);
+                          },
+                          child: Row(children: [
+                            Icon(LucideIcons.panelRight, size: 14, color: _getAssetColor(AssetType.widget)),
+                            const SizedBox(width: 8),
+                            const Text('User Interface → Editor Panel Widget (.lmas)', style: TextStyle(fontSize: 10)),
+                          ]),
+                        ),
+                      ),
+                    ),
                     _newAssetTypeBtn(
                       context,
                       vm,

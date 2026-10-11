@@ -487,6 +487,10 @@ class EditorPanelHost extends ChangeNotifier {
     _afterEvent(instance);
   }
 
+  /// A run of [instance]'s graph the host did not start (an MCP tool calling a
+  /// custom event) has finished: open transactions end, elements rebuild.
+  void eventFinished(EditorPanelInstance instance) => _afterEvent(instance);
+
   /// Runs a latent result into [instance]'s graph and ends its event.
   void resume(EditorPanelInstance instance, void Function() run) {
     if (instance.script == null) return;
