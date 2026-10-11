@@ -43,3 +43,7 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# The WebAssembly module, copied in for web builds (lib/viewport_web_smoke.dart)
+/web/flutter_filament.js
+/web/flutter_filament.wasm
