@@ -80,6 +80,32 @@ Canlı değerler `lumina_core`'un saf değişim tipleridir (`Observable`, `Obser
 
 `PluginLevelAccess` ile editörün `EditorLevelAccess`'i (`lumina_editor_api`) tüm işlemleri paylaşır (`EditorLevelOperations`, `lib/src/editor_level.dart`) ve yalnızca `changes`'te ayrılır: süreçte saf bir `ChangeSignal`, editörde bir Flutter `Listenable`. `level.asEditorLevelAccess()` ve `level.asPluginLevelAccess()` birini diğerine çevirir; aşağıdaki adaptör yalnızca veriyle çalışan bir eklentiye ilkini verir.
 
+## Kernel eklentileri: giriş noktası ve `PluginKernelCompiler`
+
+Bir kernel eklentisinin süreci düz bir Dart programıdır: `bin/<ad>_process.dart`
+`Future<void> main(List<String> args) => runPluginProcessEntry(args, MyProcess.new);` içerir (`runPluginProcessEntry`
+başlatma bayraklarını ayrıştırır, `runPluginProcessMain` çalıştırır ve onun koduyla çıkar; bayrak yoksa kullanım
+satırı yazıp 64 ile çıkar). `PluginKernelCompiler(dartExecutable)` (saf Dart; editörün açılıştaki yeniden derlemesi
+kullanır, paketleme betiği aynısını yalnızca dart: kütüphaneleriyle yapar):
+
+- `compile(pluginDir:, entry:, output:, onProgress:)`: eklentiyi kapsayan paket yapılandırması yoksa paketlerini
+  çözer (`dart pub get --offline`, sonra çevrimiçi), girişin importlarını `PluginProcessReach.ofEntry` ile dolaşır ve
+  Flutter'a ya da `dart:ui`'ye ulaşan girişi derlemeden reddeder (`PluginKernelCompileException.reachedFlutter`),
+  `dart compile kernel` çalıştırır ve `<output>.sha256` yazar; kullanılan SDK sürümünü döner. Hata, aracın çıktısıyla
+  bir `PluginKernelCompileException`'dır.
+- `sdkVersionOf(dart)` `dart --version` okur; `sourceHash(pluginDir, entry)` girişi, `lib/**.dart` dosyalarını ve
+  `pubspec.lock`'u özetler (editör önbelleğinin anahtarı); `verifySha256(kernel)` / `writeSha256(kernel)` sağlama
+  dosyasını denetler ve yazar.
+
+## Diyaloglar
+
+`PluginProcessContext.showDialog(PluginDialogSpec)` editörün üstünde kipli bir diyalog açar (`host.showDialog`) ve bir
+`PluginDialogResult` ile tamamlanır (basılan eylemin kimliği ve gövde kontrollerinin değerleri; kullanıcı kapattıysa,
+`closeDialog(id)` kapattıysa ya da editör açık tutamadıysa `isDismissed`). `confirm(title, message, {confirmLabel,
+cancelLabel, destructive})` `confirm` türüdür ve kullanıcının onaylayıp onaylamadığıyla tamamlanır. Diyalog açıkken
+istek zaman aşımı işlemez. Eski bir editör `unknown_method` yanıtı verir: günlük satırına ya da panel mesajına geri
+dönün. Testlerde `LoopbackHost.answerDialog` kullanıcıyı oynar.
+
 ## Mevcut bir eklentiyi süreçte çalıştırmak: PluginProcessAdapter
 
 `PluginProcessAdapter(plugin)` (`lumina_editor_api/lib/src/process/plugin_process_adapter.dart`; bir Flutter `LuminaEditorPlugin`'i sardığı için `lumina_editor_api`'de kalır), katkıları veri olan değiştirilmemiş bir `LuminaEditorPlugin`'i çalıştıran bir `LuminaPluginProcess`'tir. `register`'ı şunları eşleyen bir `LuminaEditorHostContext` (`PluginAdapterContext`) alır:

@@ -66,6 +66,44 @@ paketindedir. Dosya yolları `lumina_ui/` paket dizinine görelidir.
   **in process** olur; editöre bağlı hata ayıklayıcı eklenti kodunda durabilir. Oradaki bir çökme ya da takılma editörü
   etkiler.
 
+## Kernel eklentileri
+
+- Bir kernel eklentisi ([Editör eklentileri](../plugins/index.md#kernel-eklentileri-editör-yeniden-derlenmeden))
+  `LuminaEditorHost.pluginProcesses` içinde değildir: `PluginProcessManager.syncKernelPlugins`, her etkinleştirme,
+  kapatma, yeniden tarama, kurulum ve kaldırmadan sonra eklenti kayıt defterinin `enabledKernelPlugins` listesini alır
+  (`EditorViewModel` onu `_updatePluginState` içinden çağırır). Yenisi bir denetçi alır ve başlar; listeden çıkan ya
+  da başka sürüm veya klasörle geri gelen `core.shutdown` alır (sonra öldürülür) ve katkılarını, panellerini, MCP
+  araçlarını ve diyaloglarını kaybeder; güncellenen yeniden başlar. `PluginRegistryService.setEnabled` onun için
+  yeniden başlatma işaretlemez.
+- Denetçisinin bir `prepareLaunch` adımı vardır (`KernelPluginPreparer`, `kernel_plugin_preparer.dart`): gelen `.dill`
+  `.sha256` ile eşleşmelidir (yoksa eklenti nedeniyle durdurulur, hiç başlatılmaz); `process_kernel_sdk` VM'nin SDK
+  sürümüne (`dart --version`) eşitse gelen kernel çalışır; değilse `process_entry` derlenir (`PluginKernelCompiler`,
+  arka plan isolate'ında: paket yapılandırması yoksa önce `pub get --offline`, sonra çevrimiçi; erişim denetimi;
+  `dart compile kernel`) ve `<LuminaDataDir>/plugin_kernels/<ad>/<sürüm>/<sdk>/<kaynak özeti>.dill` dosyasına yazılır;
+  orada duran bir kernel yeniden kullanılır. Süreç eklenti klasöründe `<dart-sdk>/bin/dart <kernel> <başlatma
+  bayrakları>` olarak başlar (`PluginProcessLauncher.kernel`). Hazırlık sürerken durum "Preparing `<eklenti>` for
+  Dart `<x>`…" nedeniyle `starting` olur; her aşama eklentinin ilerleme akışına ve günlüğüne gider.
+- stderr'i VM'nin kernel'i reddettiğini gösteren bir çalışma ("Invalid SDK hash", "Can't load Kernel binary") çökme
+  sayılmaz: bir sonraki başlatma hemen yeniden derler (arka arkaya bir kez). Derleme hatası eklentiyi "could not be
+  prepared" ile durdurur ve derleyici çıktısını Eklenti Yöneticisi için `preparationError` içinde tutar; çökme raporu
+  ve yeniden başlatma döngüsü yoktur. Çalışan bir kernel eklentisinin çökmesi, takılması ya da öldürülmesi derlenmiş
+  yalıtılmış bir eklentideki gibi işlenir.
+- Dart SDK'sı, editörün proje derlemeleri için kullandığı Flutter SDK'sının içindekidir (`KernelDartSdk`:
+  `FLUTTER_ROOT`, editörün paket yapılandırması, PATH'teki `flutter`); bulunamazsa hazırlık bu nedenle başarısız olur.
+
+## Eklenti sürecinin açtığı diyaloglar
+
+`host.showDialog` (bir `PluginDialogSpec`: gövde kontrolleri ve eylemleriyle `dialog` ya da `confirm`)
+`PluginDialogQueue.shared` (`plugin_dialog_queue.dart`) kuyruğuna girer ve `PluginDialogLayer`
+(`lib/ui/core/widgets/plugin_view/plugin_process_dialog.dart`, `editor_entry.dart` içinde her pencereyi sarar)
+tarafından gösterilir: karartılmış bir bariyer üstünde, gövdesini `PluginViewRenderer` çizen ve düğmeleri eylemler olan
+(primary, destructive ya da outline) bir shadcn `AlertDialog`. Aynı anda tek diyalog görünür; bu yüzden bir eklentinin
+iki diyaloğu açık olmaz, ikinci istek bekler. Bir düğme `{action, values}` yanıtını verir (gövde kontrollerinin
+kimliğe göre değerleri; metin alanı, odak düğmeye geçince yazılanı işler); diyalog kapatılabilirse Escape ya da dışına
+tıklama `{action: null}` yanıtını verir. `host.closeDialog` onu süreç tarafından kapatır. Çıkan bir süreç
+diyaloglarını kapatır (`closeAllOf`). Bir eklentinin diyaloğu açıkken istek zaman aşımları (komutlar, MCP araçları,
+kanal çağrıları) işlemez.
+
 ## Durumlar
 
 `PluginProcessState.status` (`lumina_editor_api`), Eklenti Yöneticisi ve korumanın gösterdiği haliyle:

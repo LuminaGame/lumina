@@ -23,6 +23,18 @@ geçersiz kılmasını yazar (`.lmproject`, `PluginRegistryService.setIsolationO
 **Run in its own process** anahtarı (içerik eklentilerinde sunulmaz) yalıtılmış bir eklenti iskeleti üretir; MCP aracı
 `create_plugin` da `isolated: true` ile aynısını yapar.
 
+## Kernel eklentileri
+
+Bir kernel eklentisinin kartında **Kernel** rozeti vardır (`KernelPluginBadge`): kendi `.dill` dosyası çalışıyorsa
+"Kernel · Dart `<sdk>` · shipped", editör onu bu SDK için yeniden derlediyse "· recompiled" ya da "· recompiled
+(cached)", derlenirken "· preparing", hazırlanamadıysa "· error" (ipucu nedenini söyler). Anahtarı hemen geçerli olur:
+"Restart required" rozeti ve yeniden derleme uyarısı yoktur; süreç hemen başlar ya da durur. Ayrıntıların Process
+bölümü kernel'in SDK'sını, gelen mi yeniden derlenmiş mi olduğunu, yeniden derleme ilerlemesini ve başarısız bir
+hazırlığı derleyici çıktısıyla gösterir. "Run in editor process (debugging)" bir kernel eklentisi ve
+`registration_class`'ı olmayan her süreç eklentisi için nedeniyle birlikte devre dışıdır
+(`PluginManagerViewModel.inEditorUnavailableReason`). Yeni Eklenti sihirbazının **Kernel plugin (no editor rebuild)**
+şablonu bir tane oluşturur.
+
 ## Eklenti içe aktarma
 
 Liste başlığında **New Plugin**'in yanındaki **Import from Folder** ve **Import from Zip**, bir eklentiyi kopyalayarak kullanıcıya özel eklenti klasörüne (`UserPluginDir.resolve()`; Marketplace de eklentileri buraya kurar) kurar; eklenti seçildiği yerden asla bağlanmaz (link). İkisi de sistem seçicisini açar ve hiçbir şey yazmadan önce doğrular:

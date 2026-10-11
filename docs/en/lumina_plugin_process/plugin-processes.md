@@ -80,6 +80,32 @@ The live values are `lumina_core`'s pure change types (`Observable`, `Observable
 
 `PluginLevelAccess` and the editor's `EditorLevelAccess` (`lumina_editor_api`) share every operation (`EditorLevelOperations`, `lib/src/editor_level.dart`) and differ only in `changes`: a pure `ChangeSignal` in the process, a Flutter `Listenable` in the editor. `level.asEditorLevelAccess()` and `level.asPluginLevelAccess()` convert one into the other; the adapter below hands a data-only plugin the first.
 
+## Kernel plugins: the entry and `PluginKernelCompiler`
+
+A kernel plugin's process is a plain Dart program: `bin/<name>_process.dart` holds
+`Future<void> main(List<String> args) => runPluginProcessEntry(args, MyProcess.new);` (`runPluginProcessEntry` parses
+the launch flags, runs `runPluginProcessMain` and exits with its code; without flags it prints a usage line and exits
+64). `PluginKernelCompiler(dartExecutable)` (pure Dart, used by the editor's startup recompile; the pack script does
+the same with dart: libraries only):
+
+- `compile(pluginDir:, entry:, output:, onProgress:)`: resolves the plugin's packages when no package config covers
+  it (`dart pub get --offline`, then online), walks the entry's imports with `PluginProcessReach.ofEntry` and refuses
+  an entry that reaches Flutter or `dart:ui` before compiling (`PluginKernelCompileException.reachedFlutter`), runs
+  `dart compile kernel` and writes `<output>.sha256`; returns the SDK version used. A failure is a
+  `PluginKernelCompileException` with the tool's output.
+- `sdkVersionOf(dart)` reads `dart --version`; `sourceHash(pluginDir, entry)` hashes the entry, `lib/**.dart` and
+  `pubspec.lock` (the editor's cache key); `verifySha256(kernel)` / `writeSha256(kernel)` check and write the
+  checksum file.
+
+## Dialogs
+
+`PluginProcessContext.showDialog(PluginDialogSpec)` opens a modal dialog over the editor (`host.showDialog`) and
+completes with a `PluginDialogResult` (the pressed action's id and the body controls' values; `isDismissed` when the
+user dismissed it, `closeDialog(id)` closed it or the editor could not keep it open). `confirm(title, message,
+{confirmLabel, cancelLabel, destructive})` is the `confirm` kind and completes with whether the user confirmed. No
+request timeout applies while a dialog is open. An older editor answers `unknown_method`: fall back to a log line or a
+panel message. `LoopbackHost.answerDialog` plays the user in tests.
+
 ## Running an existing plugin in a process: PluginProcessAdapter
 
 `PluginProcessAdapter(plugin)` (`lumina_editor_api/lib/src/process/plugin_process_adapter.dart`; it wraps a Flutter `LuminaEditorPlugin`, so it stays in `lumina_editor_api`) is a `LuminaPluginProcess` that runs an unchanged `LuminaEditorPlugin` whose contributions are data. Its `register` receives a `LuminaEditorHostContext` (`PluginAdapterContext`) that maps:

@@ -63,6 +63,43 @@ paths are relative to the `lumina_ui/` package directory.
   Plugin Manager's switch) runs the same process part inside the editor over the same loopback protocol, status
   **in process**, so a debugger attached to the editor stops in plugin code. A crash or hang there affects the editor.
 
+## Kernel plugins
+
+- A kernel plugin (see [Editor plugins](../plugins/index.md#kernel-plugins-no-editor-rebuild)) is not in
+  `LuminaEditorHost.pluginProcesses`: `PluginProcessManager.syncKernelPlugins` takes the plugin registry's
+  `enabledKernelPlugins` after every enable, disable, rescan, install and removal (`EditorViewModel` calls it from
+  `_updatePluginState`). A new one gets a supervisor and starts; one that is gone, or comes back with another version
+  or folder, gets `core.shutdown` (then a kill) and loses its contributions, panels, MCP tools and dialogs; an updated
+  one starts again. `PluginRegistryService.setEnabled` marks no restart for it.
+- Its supervisor has a `prepareLaunch` step (`KernelPluginPreparer`, `kernel_plugin_preparer.dart`): the shipped
+  `.dill` must match its `.sha256` (else the plugin is stopped with the reason, never started); when
+  `process_kernel_sdk` equals the VM's SDK version (`dart --version`) the shipped kernel runs; otherwise the
+  `process_entry` is compiled (`PluginKernelCompiler`, on a background isolate: `pub get --offline` then online when
+  the plugin has no package config, the reach guard, `dart compile kernel`) into
+  `<LuminaDataDir>/plugin_kernels/<name>/<version>/<sdk>/<source hash>.dill`, and a kernel already there is reused.
+  The process starts as `<dart-sdk>/bin/dart <kernel> <launch flags>` (`PluginProcessLauncher.kernel`), in the plugin
+  folder. While it prepares, the state is `starting` with "Preparing `<plugin>` for Dart `<x>`…" and each stage goes to
+  the plugin's progress stream and log.
+- A run whose stderr shows the VM refusing the kernel ("Invalid SDK hash", "Can't load Kernel binary") is no crash:
+  the next start recompiles at once (once in a row). A compile failure stops the plugin with "could not be prepared"
+  and keeps the compiler output in `preparationError` for the Plugin Manager; no crash report, no restart loop. A
+  crash, hang or kill of a running kernel plugin is handled exactly as for a compiled isolated plugin.
+- The Dart SDK is the one inside the Flutter SDK the editor uses for project builds (`KernelDartSdk`:
+  `FLUTTER_ROOT`, the editor's package config, the `flutter` on PATH); without one the preparation fails with that
+  reason.
+
+## Dialogs opened by a plugin process
+
+`host.showDialog` (a `PluginDialogSpec`: `dialog` with body controls and actions, or `confirm`) is queued in
+`PluginDialogQueue.shared` (`plugin_dialog_queue.dart`) and shown by `PluginDialogLayer`
+(`lib/ui/core/widgets/plugin_view/plugin_process_dialog.dart`, wrapped around every window in `editor_entry.dart`):
+a shadcn `AlertDialog` over a dimmed barrier whose body is rendered by `PluginViewRenderer` and whose buttons are the
+actions (primary, destructive or outline). One dialog shows at a time, so a plugin never has two open; a second
+request waits. A button answers `{action, values}` (the body controls' values by id; a text field commits when the
+button takes focus); Escape or a click outside answers `{action: null}` when the dialog is dismissible.
+`host.closeDialog` closes it from the process. A process that exits closes its dialogs (`closeAllOf`). While one of a
+plugin's dialogs is open, its request timeouts (commands, MCP tools, channel calls) do not run.
+
 ## States
 
 `PluginProcessState.status` (`lumina_editor_api`), as the Plugin Manager and the guard show it:

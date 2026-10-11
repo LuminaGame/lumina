@@ -114,6 +114,58 @@ Process kısmı her şeyi `PluginProcessContext` üzerinden veri olarak kaydeder
 
 **Proje geçersiz kılması**: bir proje, hata ayıklamak için yalıtılmış bir eklentiyi `.lmproject` `"plugin_isolation": {"<name>": "in_process"}` ile süreç içinde çalışmaya zorlayabilir (`PluginRegistryService.setIsolationOverride`, Plugin Manager). Aynı process kısmı o zaman editörün içinde, bellek içi bir bağlantı üzerinden çalışır. Geçersiz kılma yalnızca süreç içine zorlar: process kısmı olmayan bir eklenti her zaman süreç içinde çalışır. Registrar, geçersiz kılmadan bağımsız olarak manifest'te yalıtılmış her eklentiyi listeler; böylece tek editör build'i iki durumu da karşılar.
 
+## Kernel eklentileri (editör yeniden derlenmeden)
+
+Üç tür kod eklentisi vardır ve yalnızca ikisi proje editörü derlemesi ister:
+
+| Tür | Manifest | Çalıştığı yer | Proje editörü derlemesi |
+|---|---|---|---|
+| Süreç içi | `registration_class` | editörün içinde | evet; etkinleştirmede, kapatmada ve güncellemede |
+| Derlenmiş yalıtılmış | `"isolation": "process"`, `registration_class` + `process_class` | süreç kısmı, yeniden başlatılan editör çalıştırılabilirinde | evet |
+| **Kernel** | `"isolation": "process"`, `process_class` + `process_entry`, `registration_class` **yok** | süreci, bir Dart kernel dosyasından Dart VM üzerinde | **hayır** |
+
+Kernel eklentisinin UI kabuğu yoktur: katkılarının hepsi veridir (menü öğeleri, slot düğmeleri, içe aktarıcılar,
+konsol komutları, MCP araçları, `PluginViewSpec` panelleri, sürecin açtığı diyaloglar) ya da eklenti içeriğidir
+(`can_contain_content`, `content/` klasörü, örneğin editör paneli Widget Blueprint'leri). Hiçbir parçası editöre
+derlenmez; bu yüzden `EditorHostGeneratorService.editorCodePlugins` ve registrar'ın `kPluginProcesses` haritası onu
+dışarıda bırakır ve proje editörünün parmak izini hiç değiştirmez: kod eklentilerinin hepsi kernel eklentisi olan bir
+proje proje editörü derlemeden açılır, karışık bir proje yalnızca derlenmiş eklentileri için derlenir. Bir kernel
+eklentisini etkinleştirmek, kapatmak, kurmak, güncellemek ya da kaldırmak derleme ve yeniden başlatma olmadan hemen
+geçerli olur.
+
+Editör modülü kernel alanlarını adlandırır (yollar eklenti klasörüne görelidir; klasörden çıkan bir yol tarama
+hatasıdır, `process_entry` olmadan `process_kernel` da öyle):
+
+```json
+{
+  "name": "my_tool",
+  "isolation": "process",
+  "modules": [{
+    "name": "my_tool", "type": "editor", "entry_library": "lib/my_tool.dart",
+    "process_class": "MyToolProcess",
+    "process_entry": "bin/my_tool_process.dart",
+    "process_kernel": "bin/my_tool_process.dill",
+    "process_kernel_sdk": "3.13.4"
+  }]
+}
+```
+
+Giriş noktası `Future<void> main(List<String> args) => runPluginProcessEntry(args, MyToolProcess.new);` biçimindedir
+ve Flutter'a ya da `dart:ui`'ye ulaşamaz. `tool/pack_plugin.dart` onu paketleyenin Dart SDK'sıyla derler
+(`dart compile kernel`), `.dill` dosyasını `.sha256` ile yazar, `process_kernel` ve `process_kernel_sdk` alanlarını
+damgalar; giriş kaynağını, `lib/`, `pubspec.yaml`, `pubspec.lock` ve `content/` klasörünü pakete koyar. Bir kernel
+yalnızca onu üreten SDK'da çalışır: editör damgayı proje derlemelerinde kullandığı Flutter SDK'sının Dart SDK'sıyla
+karşılaştırır; farklıysa (ya da `.dill` yoksa veya VM onu reddederse) girişi bir kez
+`<LuminaDataDir>/plugin_kernels/<ad>/<sürüm>/<sdk>/<kaynak özeti>.dill` içine yeniden derler ve sürüm, kaynak ve SDK
+aynı kaldıkça onu kullanır. Gelen `.dill` çalışmadan önce `.sha256` dosyasıyla eşleşmelidir. `registration_class`'ı
+olmayan bir süreç eklentisi proje tarafından süreç içine zorlanamaz (`inEditorProcessUnavailableReason`). Yeni Eklenti
+sihirbazının **Kernel plugin (no editor rebuild)** şablonu (`PluginTemplateType.kernel`) böyle bir eklenti yazar.
+
+Diğer eklentilerin editör panellerine ve kernel'e geçişte kalan eksikleri: gem_x'in yakalama paneli, openxr/metaxr
+ayarları, MetaHuman Creator (Viewport öğesinde prosedürel mesh ister), map_generator, trellis ve Unreal içe aktarıcısı
+editör panellerine taşınana kadar Flutter kabuklarını korur; openxr derlenmiş yalıtılmış eklenti olarak kalır, çünkü
+yerel kütüphanesi bir build hook'tan gelir ve `dart compile kernel` hook çalıştırmaz.
+
 ## Eklenti oluşturmak ve yayınlamak
 
 **Plugins > New Plugin**, bir `PluginTemplateSpec` (şablon tipi, ad, görünen ad, yazar, açıklama, kategori, `isolated`) ile `PluginTemplateGeneratorService.generate`'i çağıran ve build edilmeye hazır bir eklenti paketi yazan bir sihirbaz açar. `isolated: true` ile paket yalıtılmış bir eklentidir: `lib/src/<name>_process.dart` (bir menü komutu, bir `ping` handler'ı ve bildirimsel bir panel kaydeden process kısmı; importer şablonunun importer'ı da orada çalışır), panelinden kanal üzerinden `ping` çağıran bir UI kabuğu, her yarı için bir test ve `"isolation": "process"` ile `"process_class"` içeren bir manifest.

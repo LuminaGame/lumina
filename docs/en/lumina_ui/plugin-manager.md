@@ -23,6 +23,17 @@ project) and moves the plugin at once: same channel, restarted in the other mode
 **Run in its own process** switch (not offered for content-only plugins) scaffolds an isolated plugin, as the MCP tool
 `create_plugin` does with `isolated: true`.
 
+## Kernel plugins
+
+A kernel plugin's card carries a **Kernel** badge (`KernelPluginBadge`): "Kernel · Dart `<sdk>` · shipped" when its
+own `.dill` runs, "· recompiled" or "· recompiled (cached)" when the editor recompiled it for this SDK, "· preparing"
+while it compiles and "· error" when it could not be prepared (the tooltip says why). Its switch applies live: no
+"Restart required" badge, no rebuild notice; the process starts or stops at once. The details' Process section adds
+the kernel's SDK, whether it is shipped or recompiled, the recompile progress and a failed preparation with the
+compiler's output. "Run in editor process (debugging)" is disabled, with the reason, for a kernel plugin and for any
+process plugin without a `registration_class` (`PluginManagerViewModel.inEditorUnavailableReason`). The New Plugin
+wizard's **Kernel plugin (no editor rebuild)** template scaffolds one.
+
 ## Importing a plugin
 
 **Import from Folder** and **Import from Zip**, next to **New Plugin** in the list header, install a plugin into the per-user plugin folder (`UserPluginDir.resolve()`, where the Marketplace installs plugins too) by copying it; a plugin is never linked from where it was picked. Both open the system picker and validate before anything is written:

@@ -114,6 +114,57 @@ The process part registers everything as data through `PluginProcessContext` (me
 
 **Project override**: a project can force an isolated plugin in process, for debugging, with `.lmproject` `"plugin_isolation": {"<name>": "in_process"}` (`PluginRegistryService.setIsolationOverride`, the Plugin Manager). The same process part then runs inside the editor over an in-memory connection. The override only forces in process: a plugin without a process part always runs in process. The registrar lists every manifest-isolated plugin regardless of the override, so one editor build serves both.
 
+## Kernel plugins (no editor rebuild)
+
+There are three kinds of code plugin, and only two of them need a project editor build:
+
+| Kind | Manifest | Runs | Project editor build |
+|---|---|---|---|
+| In-process | `registration_class` | inside the editor | yes, on enable, disable and update |
+| Compiled isolated | `"isolation": "process"`, `registration_class` + `process_class` | its process part in the editor executable started again | yes |
+| **Kernel** | `"isolation": "process"`, `process_class` + `process_entry`, **no** `registration_class` | its process on the Dart VM from a Dart kernel file | **no** |
+
+A kernel plugin has no UI shell: everything it contributes is data (menu items, slot buttons, importers, console
+commands, MCP tools, `PluginViewSpec` panels, process-opened dialogs) or plugin content (`can_contain_content`, its
+`content/`, for example editor panel Widget Blueprints). Nothing of it is compiled into the editor, so
+`EditorHostGeneratorService.editorCodePlugins` and the registrar's `kPluginProcesses` leave it out and it never
+changes the project editor's fingerprint: a project whose code plugins are all kernel plugins opens without a project
+editor build, and a mixed project builds only for its compiled plugins. Enabling, disabling, installing, updating or
+removing one takes effect at once, without a build or a restart.
+
+The editor module names the kernel fields (paths relative to the plugin folder; a path that leaves it is a scan
+error, and a `process_kernel` without `process_entry` is one too):
+
+```json
+{
+  "name": "my_tool",
+  "isolation": "process",
+  "modules": [{
+    "name": "my_tool", "type": "editor", "entry_library": "lib/my_tool.dart",
+    "process_class": "MyToolProcess",
+    "process_entry": "bin/my_tool_process.dart",
+    "process_kernel": "bin/my_tool_process.dill",
+    "process_kernel_sdk": "3.13.4"
+  }]
+}
+```
+
+The entry is `Future<void> main(List<String> args) => runPluginProcessEntry(args, MyToolProcess.new);` and may not
+reach Flutter or `dart:ui`. `tool/pack_plugin.dart` compiles it with the packer's Dart SDK (`dart compile kernel`),
+writes the `.dill` with its `.sha256`, stamps `process_kernel` and `process_kernel_sdk`, and packs the entry source,
+`lib/`, `pubspec.yaml`, `pubspec.lock` and `content/`. A kernel only runs on the SDK that built it: the editor
+compares the stamp with the SDK of the Flutter SDK it uses for project builds and, when they differ (or the `.dill`
+is missing, or the VM refuses it), recompiles the entry once into
+`<LuminaDataDir>/plugin_kernels/<name>/<version>/<sdk>/<source hash>.dill` and reuses it while version, source and SDK
+match. The shipped `.dill` must match its `.sha256` before it runs. A process plugin without a `registration_class`
+cannot be forced in process by the project (`inEditorProcessUnavailableReason`). The **Kernel plugin (no editor
+rebuild)** template of the New Plugin wizard (`PluginTemplateType.kernel`) writes such a plugin.
+
+Gaps of the other plugins on the way to editor panels and kernels: gem_x's capture panel, the openxr/metaxr settings,
+MetaHuman Creator (needs procedural meshes in the Viewport element), map_generator, trellis and the Unreal importer
+keep their Flutter shells until they move to editor panels; openxr stays a compiled isolated plugin because its
+native library comes from a build hook, which `dart compile kernel` does not run.
+
 ## Creating and publishing a plugin
 
 **Plugins > New Plugin** opens a wizard that calls `PluginTemplateGeneratorService.generate` with a `PluginTemplateSpec` (template type, name, friendly name, author, description, category, `isolated`) and writes a ready-to-build plugin package. With `isolated: true` the package is an isolated plugin: `lib/src/<name>_process.dart` (a process part that registers a menu command, a `ping` handler and a declarative panel; the importer template's importer runs there too), a UI shell whose panel calls `ping` through the channel, a test for each half and a manifest with `"isolation": "process"` and `"process_class"`.
