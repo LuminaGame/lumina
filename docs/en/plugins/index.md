@@ -14,7 +14,7 @@ Lumina Studio can be extended with plugins: Flutter packages that register menu 
 | `PluginExtensionRegistry`, `BuiltInEditorPlugin` | `lumina_ui` | Collect everything plugins register and show it in the editor ([App shell and shared UI](../lumina_ui/core.md)). |
 | Plugin Manager, New Plugin wizard | `lumina_ui` | Enable, disable and create plugins ([Plugin manager](../lumina_ui/plugin-manager.md)). |
 
-`lumina_editor_api` depends only on `lumina`. A plugin therefore never depends on `lumina_ui`, which would create a cycle between the editor and its plugins.
+`lumina_editor_api` exposes the shared formats, plugin process/protocol and game widgets through the split engine packages. A plugin never depends on `lumina_ui`, which would create a cycle between the editor and its plugins.
 
 ## Anatomy of a plugin
 
@@ -95,7 +95,7 @@ The context also gives the plugin `panels` (open, close and observe its panels),
 
 ## Discovery, enabling and restarts
 
-Lumina Studio scans three kinds of plugin roots, project first, then user, then built-in (a plugin found earlier overrides a same-named one found later: intended, so it is logged at info level and the winner's Plugin Manager card says "Overrides the engine copy", never a scan error; only two folders of one root naming the same plugin are an error): `<project>/plugins/`; the per-user folder `~/.local/share/lumina/plugins/` (`%LOCALAPPDATA%\Lumina\plugins` on Windows; `LUMINA_USER_PLUGIN_DIR` overrides it), where the Lumina Marketplace and the Plugin Manager's Import from Folder / Import from Zip install plugins; and the **built-in** plugins, the plugin packages the engine workspace depends on. The built-ins (`lumina_plugin_pcg`, `lumina_plugin_miniai`) live in the plugins repository and are `lumina_ui` dev dependencies pinned by commit, so they are found through the workspace's resolved packages (`LuminaWorkspace.pluginPackageDirs`: every package in `.dart_tool/package_config.json` that ships `<name>.lmplugin`): the sibling `plugins` checkout in a source workspace (through `pubspec_overrides.yaml`), the pub cache's git checkout in a release checkout. An engine `plugins/` folder (`LUMINA_ENGINE_ROOT`) is still scanned when it exists. `PluginRepository` reads every manifest it finds and reports broken ones as scan errors; `PluginRegistryService` resolves the wanted set of enabled plugins against their dependencies and engine version and reports issues.
+Lumina Studio scans three kinds of plugin roots, project first, then user, then built-in (a plugin found earlier overrides a same-named one found later: intended, so it is logged at info level and the winner's Plugin Manager card says "Overrides the engine copy", never a scan error; only two folders of one root naming the same plugin are an error): `<project>/plugins/`; the per-user folder `~/.local/share/lumina/plugins/` (`%LOCALAPPDATA%\Lumina\plugins` on Windows; `LUMINA_USER_PLUGIN_DIR` overrides it), where the Lumina Marketplace and the Plugin Manager's Import from Folder / Import from Zip install plugins; and the **built-in** plugins, the plugin packages the engine workspace depends on. The built-ins (`lumina_plugin_pcg`, `lumina_plugin_miniai`, `lumina_plugin_trellis_image`) live in the plugins repository and are `lumina_ui` dev dependencies pinned by commit, so they are found through the workspace's resolved packages (`LuminaWorkspace.pluginPackageDirs`: every package in `.dart_tool/package_config.json` that ships `<name>.lmplugin`): the sibling `plugins` checkout in a source workspace (through `pubspec_overrides.yaml`), the pub cache's git checkout in a release checkout. An engine `plugins/` folder (`LUMINA_ENGINE_ROOT`) is still scanned when it exists. `PluginRepository` reads every manifest it finds and reports broken ones as scan errors; `PluginRegistryService` resolves the wanted set of enabled plugins against their dependencies and engine version and reports issues.
 
 Plugins are enabled in **Plugins > Plugin Manager**. Code plugins are compiled into the editor: `EditorHostGeneratorService` adds them to a project editor host's `pubspec.yaml` (a built-in resolved from git as the same git dependency, url, path and commit from the engine's `pubspec.lock`, never a path into the pub cache; any other plugin by its folder, also written as a dependency override so a plugin that depends on it from git resolves the same folder) and generates the registrar, whose `registerAllPlugins` registers every enabled editor module and whose `kPluginProcesses` maps each enabled plugin with `"isolation": "process"` to its process class (passed to `runLuminaEditor` as `processes`). A plugin's `.lmplugin` is part of the project editor's build fingerprint, so changing its `isolation` or `process_class` rebuilds the editor. Enabling a code plugin therefore asks for a restart, and the editor comes back with the plugin registered.
 
@@ -122,10 +122,19 @@ Plugins are packed for the marketplace with `dart run tool/pack_plugin.dart` ins
 
 ## Example plugins
 
-The [plugins repository](https://github.com/LuminaGame/plugins) holds two MIT-licensed plugins that also serve as templates:
+The [plugins repository](https://github.com/LuminaGame/plugins) holds MIT-licensed plugins:
 
 - `lumina_plugin_pcg`: procedural content generation (PCG Graph assets and PCG Volume actors that scatter static meshes), the reference example of the plugin API;
 - `lumina_plugin_miniai`: an AI assistant panel that works on the project through the editor's MCP tools.
+- `lumina_plugin_trellis_image`: Qwen Image 2.1 Q4_K_M text generation and reference editing through stable-diffusion.cpp, followed by an explicit image approval before Trellis 3D generation.
+
+### Trellis Image Studio
+
+Enable `trellis_plugin` 0.2+ and `lumina_plugin_trellis_image`, then restart. Open **Plugins → Trellis Image → Text or Reference to 3D…**. The Windows installer downloads the pinned Vulkan runtime and approximately 11 GB of model files with checksum verification and resumable downloads. For a reference edit, select an imported texture through the editor asset picker and describe the desired change.
+
+**Generate image** creates a reviewable draft. **Approve this image & generate 3D** checks the current image's hash, starts Trellis using its saved quality and texture settings, follows progress events, and saves the completed mesh into the open project's Content Browser. It does not place an actor automatically. **Cancel current job** cancels the owned native job. Native failures and missing models appear in the workspace. Other platforms can configure an existing compatible `sd-cli` manually.
+
+For targeted real-runtime verification, set `LUMINA_QWEN_IMAGE_ROOT` and `LUMINA_TRELLIS_PLUGIN` to installed runtime/plugin folders, with `trellis_plugin` available through local dependency overrides, then run `lumina_ui/integration_test/smoke/trellis_image_smoke_test.dart` through the smoke report runner. The scenario verifies that no 3D job starts before approval, saves a real project asset, and records the generated mesh alongside real test assets.
 
 ---
 

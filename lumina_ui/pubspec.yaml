@@ -82,6 +82,11 @@ dependencies:
   image: ^4.9.2
 
 dev_dependencies:
+  lumina_plugin_trellis_image:
+    git:
+      url: https://github.com/LuminaGame/plugins.git
+      path: lumina_plugin_trellis_image
+      ref: fe161b14fda2fa455180e8fb9bea314def9e8b88
   flutter_test:
     sdk: flutter
   # The plugin process tests' fixture speaks the protocol by hand.

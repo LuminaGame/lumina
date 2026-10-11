@@ -14,7 +14,7 @@ Lumina Studio eklentilerle genişletilebilir: `lumina_editor_api` üzerinden men
 | `PluginExtensionRegistry`, `BuiltInEditorPlugin` | `lumina_ui` | Eklentilerin kaydettiği her şeyi toplar ve editörde gösterir ([Uygulama kabuğu ve ortak UI](../lumina_ui/core.md)). |
 | Plugin Manager, New Plugin sihirbazı | `lumina_ui` | Eklentileri etkinleştirir, devre dışı bırakır ve oluşturur ([Eklenti yöneticisi](../lumina_ui/plugin-manager.md)). |
 
-`lumina_editor_api` yalnızca `lumina`'ya bağımlıdır. Bu yüzden bir eklenti hiçbir zaman `lumina_ui`'a bağımlı olmaz; olsaydı editör ile eklentileri arasında bir döngü oluşurdu.
+`lumina_editor_api`, ayrılmış engine paketleri üzerinden ortak formatları, eklenti süreç/protokol API'lerini ve oyun widget'larını sunar. Bir eklenti `lumina_ui`'a bağımlı olmaz; bu, editör ile eklentileri arasında bir döngü oluştururdu.
 
 ## Bir eklentinin yapısı
 
@@ -95,7 +95,7 @@ Context ayrıca eklentiye `panels` (panellerini açma, kapatma ve izleme), `stor
 
 ## Bulma, etkinleştirme ve yeniden başlatma
 
-Lumina Studio üç tür eklenti kökünü önce proje, sonra kullanıcı, sonra yerleşik (built-in) sırasıyla tarar (önce bulunan eklenti, sonra bulunan aynı adlı eklentiyi geçersiz kılar: bu bilinçli bir davranıştır; info düzeyinde loglanır ve kazanan eklentinin Plugin Manager kartında "Overrides the engine copy" yazar, hiçbir zaman tarama hatası değildir; yalnızca aynı kökün iki klasörünün aynı eklenti adını taşıması hatadır): `<proje>/plugins/`; kullanıcıya özel `~/.local/share/lumina/plugins/` klasörü (Windows'ta `%LOCALAPPDATA%\Lumina\plugins`; `LUMINA_USER_PLUGIN_DIR` bunu değiştirir), Lumina Marketplace ve Plugin Manager'ın Import from Folder / Import from Zip komutları eklentileri buraya kurar; ve engine çalışma alanının bağımlı olduğu eklenti paketleri olan **yerleşik** eklentiler. Yerleşik eklentiler (`lumina_plugin_pcg`, `lumina_plugin_miniai`) plugins deposunda durur ve commit ile sabitlenmiş `lumina_ui` dev bağımlılıklarıdır; bu yüzden çalışma alanının çözümlenmiş paketlerinden bulunurlar (`LuminaWorkspace.pluginPackageDirs`: `.dart_tool/package_config.json` içinde `<name>.lmplugin` taşıyan her paket): kaynak çalışma alanında (`pubspec_overrides.yaml` üzerinden) yandaki `plugins` checkout'u, release checkout'unda pub önbelleğindeki git checkout'u. Engine'in `plugins/` klasörü (`LUMINA_ENGINE_ROOT`) varsa hâlâ taranır. `PluginRepository` bulduğu her manifest'i okur ve bozuk olanları tarama hatası olarak bildirir; `PluginRegistryService` etkinleştirilmek istenen eklenti kümesini bağımlılıklarına ve engine sürümüne göre çözer ve sorunları bildirir.
+Lumina Studio üç tür eklenti kökünü önce proje, sonra kullanıcı, sonra yerleşik (built-in) sırasıyla tarar (önce bulunan eklenti, sonra bulunan aynı adlı eklentiyi geçersiz kılar: bu bilinçli bir davranıştır; info düzeyinde loglanır ve kazanan eklentinin Plugin Manager kartında "Overrides the engine copy" yazar, hiçbir zaman tarama hatası değildir; yalnızca aynı kökün iki klasörünün aynı eklenti adını taşıması hatadır): `<proje>/plugins/`; kullanıcıya özel `~/.local/share/lumina/plugins/` klasörü (Windows'ta `%LOCALAPPDATA%\Lumina\plugins`; `LUMINA_USER_PLUGIN_DIR` bunu değiştirir), Lumina Marketplace ve Plugin Manager'ın Import from Folder / Import from Zip komutları eklentileri buraya kurar; ve engine çalışma alanının bağımlı olduğu eklenti paketleri olan **yerleşik** eklentiler. Yerleşik eklentiler (`lumina_plugin_pcg`, `lumina_plugin_miniai`, `lumina_plugin_trellis_image`) plugins deposunda durur ve commit ile sabitlenmiş `lumina_ui` dev bağımlılıklarıdır; bu yüzden çalışma alanının çözümlenmiş paketlerinden bulunurlar (`LuminaWorkspace.pluginPackageDirs`: `.dart_tool/package_config.json` içinde `<name>.lmplugin` taşıyan her paket): kaynak çalışma alanında (`pubspec_overrides.yaml` üzerinden) yandaki `plugins` checkout'u, release checkout'unda pub önbelleğindeki git checkout'u. Engine'in `plugins/` klasörü (`LUMINA_ENGINE_ROOT`) varsa hâlâ taranır. `PluginRepository` bulduğu her manifest'i okur ve bozuk olanları tarama hatası olarak bildirir; `PluginRegistryService` etkinleştirilmek istenen eklenti kümesini bağımlılıklarına ve engine sürümüne göre çözer ve sorunları bildirir.
 
 Eklentiler **Plugins > Plugin Manager** menüsünden etkinleştirilir. Code plugin'ler editöre derlenir: `EditorHostGeneratorService` onları bir proje editor host'unun `pubspec.yaml` dosyasına ekler (git'ten çözülmüş bir yerleşik eklentiyi engine'in `pubspec.lock` dosyasındaki url, path ve commit ile aynı git bağımlılığı olarak, asla pub önbelleğine giden bir path olarak değil; diğer eklentileri klasörleriyle, ona git üzerinden bağımlı bir eklenti aynı klasörü çözsün diye bir dependency override olarak da) ve etkin her editor modülünü kaydeden `registerAllPlugins` fonksiyonunu ve `"isolation": "process"` diyen her etkin eklentiyi process sınıfına eşleyen `kPluginProcesses` haritasını (`runLuminaEditor`'a `processes` olarak verilir) içeren registrar dosyasını üretir. Bir eklentinin `.lmplugin` dosyası proje editörünün build parmak izine dahildir; `isolation` ya da `process_class` değişince editör yeniden derlenir. Bu yüzden bir code plugin'i etkinleştirmek yeniden başlatma ister ve editör eklenti kayıtlı olarak geri gelir.
 
@@ -122,10 +122,19 @@ Eklentiler marketplace için, eklenti klasöründe `dart run tool/pack_plugin.da
 
 ## Örnek eklentiler
 
-[plugins repository'si](https://github.com/LuminaGame/plugins), şablon olarak da kullanılabilen MIT lisanslı iki eklenti barındırır:
+[plugins repository'si](https://github.com/LuminaGame/plugins), MIT lisanslı eklentiler barındırır:
 
 - `lumina_plugin_pcg`: prosedürel içerik üretimi (static mesh'leri dağıtan PCG Graph asset'leri ve PCG Volume actor'leri); eklenti API'sinin referans örneği;
 - `lumina_plugin_miniai`: proje üzerinde editörün MCP araçlarıyla çalışan bir yapay zeka asistanı paneli.
+- `lumina_plugin_trellis_image`: stable-diffusion.cpp ile Qwen Image 2.1 Q4_K_M metinden görsel üretimi ve referans düzenleme; ardından açık görsel onayıyla Trellis 3D üretimi.
+
+### Trellis Image Studio
+
+`trellis_plugin` 0.2+ ve `lumina_plugin_trellis_image` eklentilerini etkinleştirip yeniden başlatın. **Plugins → Trellis Image → Text or Reference to 3D…** menüsünü açın. Windows kurucusu sabitlenmiş Vulkan çalıştırıcısını ve yaklaşık 11 GB model dosyasını sağlama toplamı doğrulaması ve kesilen indirmeleri sürdürme desteğiyle indirir. Referans düzenlemek için editör asset seçicisinden içe aktarılmış bir texture seçin ve istediğiniz değişikliği tarif edin.
+
+**Generate image** incelenebilir bir taslak üretir. **Approve this image & generate 3D**, güncel görselin hash değerini doğrular, Trellis'i kayıtlı kalite ve texture ayarlarıyla başlatır, ilerleme olaylarını izler ve tamamlanan mesh'i açık projenin Content Browser'ına kaydeder. Otomatik actor yerleştirmez. **Cancel current job** sahip olunan native işi iptal eder. Native hatalar ve eksik modeller çalışma alanında gösterilir. Diğer platformlarda uyumlu mevcut bir `sd-cli` elle yapılandırılabilir.
+
+Gerçek çalıştırıcı doğrulaması için `LUMINA_QWEN_IMAGE_ROOT` ve `LUMINA_TRELLIS_PLUGIN` değişkenlerini kurulu çalıştırıcı/eklenti klasörlerine ayarlayın; `trellis_plugin` yerel dependency override üzerinden erişilebilir olmalıdır. Ardından `lumina_ui/integration_test/smoke/trellis_image_smoke_test.dart` dosyasını smoke rapor çalıştırıcısıyla çalıştırın. Senaryo, onaydan önce 3D işinin başlamadığını doğrular, gerçek bir proje asset'i kaydeder ve üretilen mesh'i gerçek test asset'leriyle birlikte kayda alır.
 
 ---
 
