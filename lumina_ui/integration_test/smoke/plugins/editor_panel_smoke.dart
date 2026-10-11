@@ -35,6 +35,8 @@ EpwBuilder propToolsPanel({String buttonLabel = 'Line up selected'}) {
   b.element(UmgWidgetType.treeView, 'ActorTree', parent: box.id);
   final row = b.element(UmgWidgetType.propertyRow, 'MeshRow', props: {'label': 'Preview mesh'});
   b.element(UmgWidgetType.assetPicker, 'MeshPicker', props: {'typeFilter': 'StaticMesh', 'placeholder': 'Pick a mesh'}, parent: row.id);
+  final preview = b.element(UmgWidgetType.sizeBox, 'PreviewBox', props: {'width': 300.0, 'height': 200.0});
+  b.element(UmgWidgetType.viewport, 'PreviewViewport', parent: preview.id);
   b.element(UmgWidgetType.statusLine, 'Status', props: {'text': 'Ready', 'tone': 'info'});
 
   // Construct and On Level Changed → the tree's items.
@@ -50,10 +52,16 @@ EpwBuilder propToolsPanel({String buttonLabel = 'Line up selected'}) {
   b.node('editor_select_actors', 'select');
   b.wire('picked_rows', 'exec_out', 'select');
   b.wire('picked_rows', 'selected_ids', 'select', 'actor_ids');
-  // A picked mesh → the status line.
+  // A picked mesh → the Viewport preview and the status line.
   b.onElement('mesh', 'MeshPicker', LuminaEditorWidgetEvents.onAssetPicked);
+  b.node(LuminaBlueprintNodeLibrary.getWidgetVariable, 'viewport', {'element': 'PreviewViewport'});
+  b.node('viewport_clear', 'preview_clear');
+  b.node('viewport_add_static_mesh', 'preview_mesh');
   b.node('editor_set_element_state', 'mesh_status', {'element': 'Status', 'key': 'text'});
-  b.wire('mesh', 'exec_out', 'mesh_status');
+  b.chain(['mesh', 'preview_clear', 'preview_mesh', 'mesh_status']);
+  b.wire('viewport', 'return_value', 'preview_clear', 'target');
+  b.wire('viewport', 'return_value', 'preview_mesh', 'target');
+  b.wire('mesh', 'asset_path', 'preview_mesh', 'mesh');
   b.wire('mesh', 'asset_path', 'mesh_status', 'value');
   // Line up selected: one transaction over the selection.
   b.onElement('line_up', 'LineUpButton', 'OnClicked');
@@ -218,6 +226,10 @@ void editorPanelSmoke(IntegrationTestWidgetsFlutterBinding binding, Future<void>
       await tester.testTextInput.receiveAction(TextInputAction.done);
       await settle(tester, frames: 10);
       expect(panel.element('Status')!['text'], meshes.first.relativePath);
+      // The Viewport element previews the picked mesh.
+      final scene = LuminaViewportScene.of(panel.element('PreviewViewport')!);
+      expect(scene.nodes.map((n) => n['asset']), [meshes.first.relativePath]);
+      await settle(tester, frames: 30);
       await rec.hold(const Duration(seconds: 1));
       await shot('the barrel mesh picked in the panel');
 

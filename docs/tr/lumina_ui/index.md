@@ -30,6 +30,7 @@
 | [Launcher ve details](launcher-and-details.md) | Proje launcher'ı, proje oluşturma diyaloğu, component property registry'si, çoklu düzenleme. |
 | [Eklenti yöneticisi](plugin-manager.md) | Eklenti yöneticisi view'i ve view model'i, yeni eklenti sihirbazı. |
 | [Eklenti süreçleri](plugin-processes.md) | Yalıtılmış eklentiler: denetleyici, durumlar, yeniden başlatmalar, süreç koruması, `plugin_crash` raporları, editör içi geçersiz kılma, çalıştırılabilir dosyanın eklenti süreci kipi. |
+| [Editör panelleri](editor-panels.md) | Editör paneli Widget Blueprint'leri: keşif, yerleştirme, editör öğe seti ve fonksiyon kütüphanesi, eklenti süreci bağlantısı, güven, canlı yeniden yükleme, MCP. |
 | [Kaynak kontrolü](source-control.md) | Git servisi, kaynak kontrolü view model'i, commit, geçmiş, geri alma ve kimlik diyalogları. |
 | [Marketplace](marketplace.md) | Oturum açma, göz atma, listing kurma ve lisans kayıtları. |
 | [MCP sunucusu](mcp-server.md) | Editörün Model Context Protocol sunucusu: transport, oturumlar, registry, job'lar, sandbox, snapshot'lar, panel. |

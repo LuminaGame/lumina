@@ -297,6 +297,13 @@ Bir kullanıcı ya da proje eklentisini diskten kaldırır; yerleşik eklentiyi 
 
 `PluginRemovalPlan` (`toJson` ile; `remove_plugin` dry run'ı) `name`, `displayName`, `origin`, `pluginDir`, `linkTarget`, `fileCount`, `bytes`, `enabled`, `contentOnly`, `dependents`, `loaded`, `marketplaceRecord`, `revealedOrigin` / `revealedDir`, `data` (`PluginDataFolder`: `kind` user / project, `dir`, `fileCount`, `bytes`) ve `projectDir` taşır. `PluginRemovalResult`: `removed`, `removedPaths`, `notRemoved` (`<path>: <reason>`), `disabled` ve `restartRequired`.
 
+## Eklenti Yöneticisinde editör panelleri
+
+Bir eklentinin ayrıntıları editör paneli Widget Blueprint'lerini yuvaları, yetenekleri ve derleme durumlarıyla
+listeler (`EditorPanelSummaryList`); içe aktarma onayı, içe aktarılan eklentinin eklediği panelleri yetenekleriyle
+listeler (o içe aktarmayla güvenilir olurlar). Yeni eklenti sihirbazının varsayılan şablonu **Editor panel (Widget
+Blueprint)**'tir (`PluginTemplateType.editorPanelWidget`): `content/EPW_<Ad>.lmas` taşıyan yalnızca içerikli bir eklenti.
+
 ---
 
 [Önceki: Launcher ve details](launcher-and-details.md) | [Üst: lumina_ui (Lumina Studio)](index.md) | [Sonraki: Kaynak kontrolü](source-control.md)

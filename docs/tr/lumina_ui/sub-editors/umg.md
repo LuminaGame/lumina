@@ -665,6 +665,17 @@ Renders a [UmgDocument] using real shadcn_flutter widgets and layout. Used by th
 | `buildNodeThemePicker` | `static Widget buildNodeThemePicker({required BuildContext context, required UmgEditorViewModel vm, required UmgNode node})` | Bileşen düzeyinde tema ezmesi için `(Widget Temasından Devral)` seçeneğini de içeren bir seçici çizer. |
 | `buildButtonStylePicker` | `static Widget buildButtonStylePicker({required BuildContext context, required UmgEditorViewModel vm, required UmgNode node})` | Buton varyantları (`primary`, `secondary`, `outline`, vb.) ve temadaki özel stiller (`LuminaCustomStyle`) için bir seçici çizer. |
 
+## Editör panelleri
+
+Class Settings ▸ **Editor Panel** açık (kökün Details'i) bir Widget Blueprint editör panelidir
+([Editör panelleri](../editor-panels.md)): tasarımcı o zaman **Editor** palet bölümünü (Editor Section, Property Row,
+Tree View, List View, Asset Picker, Resizable Split, Editor Toolbar, Status Line, Viewport), İçerik Tarayıcısı
+bırakmalarını alan panelde öğe başına "Accepts Asset Drops" seçeneğini, editör kapsamlı grafik paletini (editör
+kütüphanesi, oyuna özgü düğüm yok; bildirilmemiş yetenek isteyen düğüm hatadır) ve kaydedip paneli yerleşik açan ya da
+yeniden yükleyen **Run as Editor Panel** düğmesini sunar. Editör panelinin Compile'ı hiçbir şey üretmez ("Editor
+panel: runs in the editor, never generated"); kaydetmek yerleşik paneli yerinde yeniden yükler. İçerik Tarayıcısı ▸
+New ▸ Editor Panel Widget şablondan bir tane yazar; motor eklentisinin paneli salt okunur açılır.
+
 ---
 
 [Önceki: Texture editörü](texture.md) | [Üst: Alt editörler](index.md)

@@ -1076,6 +1076,17 @@ The viewport toolbar as MCP tools: snapping and the grid, show flags, buffer vis
 | `set_buffer_visualization` | editorState | Set buffer visualization | View mode → Buffer Visualization: shows one G-buffer channel (${kMcpBufferVisualizations.join( |
 | `set_viewport_quality` | editorState | Set viewport quality | The viewport's quality popover: preset (${kMcpQualityPresets.join( |
 
+## Editör panelleri
+
+| Araç | Risk | Ne yapar |
+|---|---|---|
+| `editor_panels_list` | salt okunur | Her editör paneli: kimlik, başlık, yuva, sahip, yetenekler, güven, açık, çalışıyor, hatalar. |
+| `editor_panel_open` / `editor_panel_close` | editör durumu | Paneli yerleştiği yerde açar / kapatır (Destruct). |
+| `editor_panel_state` | salt okunur | Açık bir panelin öğe durumları ve grafik değişkenleri, JSON olarak. |
+| `editor_panel_interact` | değiştirir | Bir öğe olayını tıklamanın yolundan tetikler: `click`, `value`, `text_commit`, `select` ya da `args` ile herhangi bir `event`. |
+| `editor_panel_screenshot` | salt okunur | Yerleşik panelin PNG'si. |
+| `panel_<sahip>_<olay>` | değiştirir | Güvenilir bir panelin "Expose to MCP" işaretli özel olayı (`mcp` yeteneği), girdilerinden türlenir. |
+
 ---
 
 [Önceki: MCP sunucusu](mcp-server.md) | [Üst: lumina_ui (Lumina Studio)](index.md) | [Sonraki: Windows paketleme](windows-packaging.md)

@@ -899,6 +899,15 @@ Daha öncelikli bir kökte aynı adlı eklenti yüklendiği için yüklenmeyen e
 | `load` | `Future<LuminaPluginDescriptor> load(File manifest)` | Veriyi diskten veya bellekten okuyarak motora yükler ve kullanılabilir hale getirir. |
 | `loadInternal` | `Future<LuminaPluginDescriptor> loadInternal(File manifest, PluginOrigin ...` | Veriyi diskten veya bellekten okuyarak motora yükler ve kullanılabilir hale getirir. `in_process` / `process` dışındaki bir `isolation`'ı, Dart sınıf adı olmayan bir `process_class`'ı ve `process_class` adı veren bir editor modülü olmadan `"isolation": "process"`'i (`schemaViolation` tarama hatası olarak) reddeder. |
 
+## Editör paneli bloğu: `LuminaEditorPanelInfo`
+
+`formats/editor_panel_info.dart`: bir Widget Blueprint yükünün `editorPanel` bloğu (`payloadKey`); editör panelinde
+bulunur. `fromJson` doğrular (`title`, `dock` ya da bilinmeyen yeteneği adlandıran `FormatException`), `toJson` yalnızca
+verilen alanları geri yazar (bayt bayt aynı gidiş-dönüş), `ofPayload` / `isEditorPanelPayload` bir yükü okur;
+`menuPathFor`, `capabilityHash` (güven anahtarı) ve `copyWith`. `LuminaEditorPanelDock`: `left`, `right`, `bottom`,
+`tab`, `dialog`, `projectSettings` (`listedInMenu`); `LuminaEditorPanelCapability`: `level`, `assets`, `process`, `mcp`.
+Bkz. [Editör panelleri](../lumina_ui/editor-panels.md).
+
 ---
 
 [Önceki: Matematik: birimler, eksenler ve dönüşler](math.md) | [Üst: lumina_core (saf Dart temeli)](index.md) | [Sonraki: Servisler](services.md)

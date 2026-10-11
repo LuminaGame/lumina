@@ -899,6 +899,15 @@ A plugin copy that does not load because a plugin of the same name in a higher-p
 | `load` | `Future<LuminaPluginDescriptor> load(File manifest)` | Loads data from disk or memory buffer into the engine. |
 | `loadInternal` | `Future<LuminaPluginDescriptor> loadInternal(File manifest, PluginOrigin ...` | Loads data from disk or memory buffer into the engine. Rejects (as a `schemaViolation` scan error) an `isolation` other than `in_process` / `process`, a `process_class` that is not a Dart class name, and `"isolation": "process"` without an editor module naming its `process_class`. |
 
+## Editor panel block: `LuminaEditorPanelInfo`
+
+`formats/editor_panel_info.dart`: the `editorPanel` block of a Widget Blueprint payload (`payloadKey`), present on an
+editor panel. `fromJson` validates it (`FormatException` naming `title`, `dock` or an unknown capability), `toJson`
+writes back only the fields given (byte-identical round trip), `ofPayload` / `isEditorPanelPayload` read a payload,
+`menuPathFor`, `capabilityHash` (the trust key) and `copyWith`. `LuminaEditorPanelDock`: `left`, `right`, `bottom`,
+`tab`, `dialog`, `projectSettings` (`listedInMenu`); `LuminaEditorPanelCapability`: `level`, `assets`, `process`, `mcp`.
+See [Editor panels](../lumina_ui/editor-panels.md).
+
 ---
 
 [Previous: Math: units, axes and rotations](math.md) | [Up: lumina_core (pure-Dart foundation)](index.md) | [Next: Services](services.md)

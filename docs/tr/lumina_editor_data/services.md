@@ -426,6 +426,15 @@ Content Browser thumbnail'ları: her asset'i onu gösteren thumbnail'a yönlendi
 | `convertGlbTgaToPngAsync` | `static Future<Uint8List> convertGlbTgaToPngAsync(Uint8List glbBytes, {List<String>? searchDirs, int maxTextureSize})` | Görüntü çözmek gerektiğinde aynısı, arka plan isolate'inde. |
 | `inspectImageWork` | `static ({bool needsDecoding, bool selfContained}) inspectImageWork(Uint8List glbBytes, {int maxTextureSize})` | Temizlemenin maliyeti, yalnızca görüntü başlıklarından okunur. |
 
+## Editör panelleri: `EditorPanelCatalog`, `EditorPanelPackaging`
+
+`EditorPanelCatalog`, `EditorPanelSource`'larda (etkin bir eklentinin `content/` klasörü, projenin `contents/`
+klasörü) editör paneli Widget Blueprint'lerini arka plan isolate'inde bulur, klasörleri izler ve `changes` üzerinden
+`EditorPanelEntry`'ler (kimlik, varlık yolu, ayrıştırılmış `LuminaEditorPanelInfo`, yük) yayar; `scanOnce` bir klasörü
+bir kez okur (içe aktarma onayı). `EditorPanelPackaging.panelFiles` projenin panellerini listeler, `withoutPanels`
+panel içeren pubspec varlık klasörlerini diğer dosyalarıyla değiştirir; pişirme adımı bunu kullanır, böylece oyun
+editör paneli içermez.
+
 ---
 
 [Önceki: lumina_editor_data (editör veri katmanı)](index.md) | [Üst: lumina_editor_data (editör veri katmanı)](index.md) | [Sonraki: Veri katmanı: use case'ler ve servisler (devamı, bölüm 1)](services-continued.md)

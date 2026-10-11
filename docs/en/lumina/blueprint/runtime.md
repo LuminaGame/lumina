@@ -796,6 +796,23 @@ One component of a Blueprint's component tree as the type context sees it: `Get 
 | `objectClass` | `String get objectClass` | The pin class: `Component:LuminaSpringArmComponent`. |
 | `fromComponents` | `static List<LuminaBlueprintComponentRef> fromComponents(List<LuminaBlueprintComponent> components)` | The refs of a document's components (editor-only components too: they are typed, and null at run time). |
 
+## Editor scope (editor panels)
+
+- `LuminaBlueprintTypeContext.forEditorPanel(widgetDoc, capabilities:)` is a widget scope plus `isEditorScope`
+  (`editorCapabilities`); `LuminaBlueprintClass.forEditorPanel` compiles in it. `availableIn` offers `editorOnly`
+  node specs only there and never offers game-only nodes there (the player, pawn, camera and input, level travel and
+  level events, pause, quit, save games, user settings, ragdolls, montages, damage, world queries, Spawn Actor from
+  Class, Get All Actors of Class). A node whose `editorCapability` the panel does not declare is a validator error, as
+  is `Create Widget` of an editor panel class (`LuminaBlueprintWidgetClass.isEditorPanel`) in a game graph.
+- `LuminaEditorEventNodes`: On Editor Selection Changed, On Level Changed, On Content Browser Selection Changed, On
+  Plugin Process Event, On Plugin Process State Changed; a host raises them with `LuminaBlueprintInstance.dispatchEvent`.
+- `LuminaBlueprintFunctionRegistry.registerLatent(spec, function)` adds a latent node whose function resumes the graph
+  at its result pins later; a registered impure function may answer `{execPinKey: '<pin>'}` to choose its exec output.
+- Step budget: `maxNodesPerEvent` and `maxEventDuration` stop a runaway event (`onEventStopped` reports it); editor
+  panels use 1,000,000 nodes and 250 ms.
+- `LuminaPinType.json` and `LuminaJsonBlueprintNodes` (Make Json Object / Array, Json Get String / Number / Bool / Json /
+  Array, Json Set Field, Json Has Field, Parse Json, Json To String): VM only and editor-only.
+
 ---
 
 [Previous: Blueprint documents and assets](model.md) | [Up: Blueprints](index.md) | [Next: Blueprint function library](function-library.md)

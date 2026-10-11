@@ -132,7 +132,7 @@ class UmgPalette extends StatelessWidget {
         : const <UmgWidgetType>[];
     // The editor widget set only in an editor panel (never in a game widget).
     final editor = vm.document.isEditorPanel
-        ? UmgWidgetType.values.where((t) => t.category == UmgWidgetCategory.editor).toList()
+        ? [...UmgWidgetType.values.where((t) => t.category == UmgWidgetCategory.editor), UmgWidgetType.viewport]
         : const <UmgWidgetType>[];
     // One Accordion per category: shadcn's Accordion is single-expansion, and
     // the palette must be able to show both categories at once.

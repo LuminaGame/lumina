@@ -426,6 +426,14 @@ Content Browser thumbnails: routes each asset to the thumbnail that shows what i
 | `convertGlbTgaToPngAsync` | `static Future<Uint8List> convertGlbTgaToPngAsync(Uint8List glbBytes, {List<String>? searchDirs, int maxTextureSize})` | The same on a background isolate when images must be decoded. |
 | `inspectImageWork` | `static ({bool needsDecoding, bool selfContained}) inspectImageWork(Uint8List glbBytes, {int maxTextureSize})` | What sanitizing costs, read from image headers only. |
 
+## Editor panels: `EditorPanelCatalog`, `EditorPanelPackaging`
+
+`EditorPanelCatalog` finds editor panel Widget Blueprints in `EditorPanelSource`s (an enabled plugin's `content/`,
+the project's `contents/`) on a background isolate, watches the folders and emits `EditorPanelEntry`s (id, asset path,
+parsed `LuminaEditorPanelInfo`, payload) on `changes`; `scanOnce` reads a folder once (an import confirmation).
+`EditorPanelPackaging.panelFiles` lists a project's panels and `withoutPanels` rewrites a pubspec's asset folders that
+hold one as their other files, which the cook step uses so a game never contains an editor panel.
+
 ---
 
 [Previous: lumina_editor_data (editor data layer)](index.md) | [Up: lumina_editor_data (editor data layer)](index.md) | [Next: Data layer: use cases and services (continued, part 1)](services-continued.md)

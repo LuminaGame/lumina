@@ -108,6 +108,16 @@ class MyPluginProcess extends PluginProcessAdapter {
 
 Commands, slot button states and declarative buttons carry icons as `PluginIconSpec` (code point, font family, font package, text direction). `pluginIconOf(IconData)` builds one from a Flutter icon; `iconDataOf(PluginIconSpec)` turns it back into an `IconData` for the editor to draw (`lumina_editor_api/lib/src/process/plugin_icons.dart`; a pure-Dart process writes the `PluginIconSpec` itself). The glyph comes from the editor's bundled icon fonts: the process runs from the editor's executable, so the const icons a plugin names keep their glyphs when release builds tree-shake the fonts.
 
+## Editor panels: `patchPanel`
+
+`PluginProcessContext.patchPanel(panel, ops)` sends `host.panelState` (`PluginPanelStatePatch`): it sets element
+states of every open instance of the plugin's editor panel `panel` (its asset path in the plugin,
+`content/EPW_Tools.lmas`) without running the panel's graph, e.g.
+`context.patchPanel('content/EPW_Tools.lmas', [PluginPanelStateOp('Progress', {'percent': 0.5})])`. The editor applies at
+most 30 patches a second per panel, merging a burst (`PluginPanelStatePatch.merge`); per-frame data never travels this
+way. `context.emit(name, data)` is what the panel's On Plugin Process Event receives. An editor without editor panels
+ignores the notification, so the protocol version is unchanged.
+
 ---
 
 [Previous: lumina_plugin_process](index.md) | [Up: lumina_plugin_process](index.md) | [Next: Editor plugins](../plugins/index.md)

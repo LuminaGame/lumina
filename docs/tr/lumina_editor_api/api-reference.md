@@ -704,6 +704,16 @@ SHA-256 doğrulaması, yetkilendirme başlıkları (ör. Hugging Face tokenları
 - `download(...)`: Geçerli dosyayı ve genel indirme ilerlemesini bildiren bir [PluginDownloadProgress] nesneleri akışı yayar.
 - `cancel()`: Aktif indirme isteğini iptal eder ve bağlantıları temiz biçimde kapatır.
 
+## Editör paneli Widget Blueprint'leri: `EditorPanelWidgets`
+
+`context.editorPanels` (`LuminaEditorContext` üzerinde bir uzantı, `src/editor_panel_widgets.dart`) editörün
+çalıştırdığı editör paneli Widget Blueprint'lerini (eklentinin `content/EPW_*.lmas` dosyaları, projeninkiler) listeler,
+açar, kapatır ve izler: `all` (`EditorPanelWidgetInfo`: `id`, `title`, `dock`, `owner`, `capabilities`, `open`,
+`running`, `errors`), `byId`, `isOpen`, `open(id)` (yerleştiği yerde; iletişim kutusu kalıcı), `close(id)` (Destruct)
+ve `changes`. Arkasında editör olmayan bağlam `EditorPanelWidgets.detached()` (boş) alır. Derlenen eklentiler
+`EditorPanelDescriptor` / `EditorTabDescriptor` kullanmayı sürdürür; yeni bir eklentinin varsayılan arayüzü editör
+paneli Widget Blueprint'idir. Bkz. [Editör panelleri](../lumina_ui/editor-panels.md).
+
 ---
 
 [Önceki: lumina_editor_api](index.md) | [Üst: lumina_editor_api](index.md) | [Sonraki: MCP araçları API'si](mcp.md)

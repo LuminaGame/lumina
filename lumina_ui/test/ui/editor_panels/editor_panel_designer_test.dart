@@ -97,6 +97,7 @@ void main() {
     for (final t in ['treeView', 'listView', 'assetPicker', 'resizableSplit', 'editorToolbar', 'statusLine', 'editorSection', 'propertyRow']) {
       expect(find.byKey(ValueKey('umg_palette_$t')), findsOneWidget, reason: t);
     }
+    expect(find.byKey(const ValueKey('umg_palette_viewport')), findsNWidgets(2), reason: 'the Viewport in 3D and in Editor');
     await show(UmgEditorPanelSettings(vm: designer));
     expect(find.byKey(const ValueKey('umg_editor_panel_enabled')), findsOneWidget);
     expect(find.byKey(const ValueKey('umg_editor_panel_cap_level')), findsOneWidget);

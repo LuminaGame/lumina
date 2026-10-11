@@ -796,6 +796,26 @@ One component of a Blueprint's component tree as the type context sees it: `Get 
 | `objectClass` | `String get objectClass` | The pin class: `Component:LuminaSpringArmComponent`. |
 | `fromComponents` | `static List<LuminaBlueprintComponentRef> fromComponents(List<LuminaBlueprintComponent> components)` | The refs of a document's components (editor-only components too: they are typed, and null at run time). |
 
+## Editör kapsamı (editör panelleri)
+
+- `LuminaBlueprintTypeContext.forEditorPanel(widgetDoc, capabilities:)` bir pencere öğesi kapsamı artı `isEditorScope`'tur
+  (`editorCapabilities`); `LuminaBlueprintClass.forEditorPanel` onda derler. `availableIn`, `editorOnly` düğüm
+  tanımlarını yalnızca orada sunar ve oyuna özgü düğümleri orada asla sunmaz (oyuncu, piyon, kamera ve girdi, seviye
+  geçişi ve seviye olayları, duraklatma, çıkış, kayıtlar, kullanıcı ayarları, ragdoll, montajlar, hasar, dünya
+  sorguları, Spawn Actor from Class, Get All Actors of Class). Panelin bildirmediği `editorCapability`'yi isteyen düğüm
+  doğrulayıcı hatasıdır; oyun grafiğinde bir editör paneli sınıfının (`LuminaBlueprintWidgetClass.isEditorPanel`)
+  `Create Widget`'ı da öyledir.
+- `LuminaEditorEventNodes`: On Editor Selection Changed, On Level Changed, On Content Browser Selection Changed, On
+  Plugin Process Event, On Plugin Process State Changed; ana bilgisayar onları `LuminaBlueprintInstance.dispatchEvent`
+  ile tetikler.
+- `LuminaBlueprintFunctionRegistry.registerLatent(spec, function)`, fonksiyonu grafiği sonuç uçlarında sonradan
+  sürdüren gecikmeli bir düğüm ekler; kayıtlı saf olmayan bir fonksiyon exec çıkışını seçmek için
+  `{execPinKey: '<uç>'}` yanıtlayabilir.
+- Adım bütçesi: `maxNodesPerEvent` ve `maxEventDuration` kontrolden çıkan olayı durdurur (`onEventStopped` bildirir);
+  editör panelleri 1.000.000 düğüm ve 250 ms kullanır.
+- `LuminaPinType.json` ve `LuminaJsonBlueprintNodes` (Make Json Object / Array, Json Get String / Number / Bool / Json /
+  Array, Json Set Field, Json Has Field, Parse Json, Json To String): yalnızca VM'de ve yalnızca editörde.
+
 ---
 
 [Önceki: Blueprint belgeleri ve asset'leri](model.md) | [Üst: Blueprint'ler](index.md) | [Sonraki: Blueprint fonksiyon kütüphanesi](function-library.md)

@@ -1076,6 +1076,17 @@ The viewport toolbar as MCP tools: snapping and the grid, show flags, buffer vis
 | `set_buffer_visualization` | editorState | Set buffer visualization | View mode → Buffer Visualization: shows one G-buffer channel (${kMcpBufferVisualizations.join( |
 | `set_viewport_quality` | editorState | Set viewport quality | The viewport's quality popover: preset (${kMcpQualityPresets.join( |
 
+## Editor panels
+
+| Tool | Risk | What it does |
+|---|---|---|
+| `editor_panels_list` | read-only | Every editor panel: id, title, dock, owner, capabilities, trusted, open, running, errors. |
+| `editor_panel_open` / `editor_panel_close` | editor state | Opens a panel where it docks / closes it (Destruct). |
+| `editor_panel_state` | read-only | An open panel's element states and graph variables as JSON. |
+| `editor_panel_interact` | mutating | Fires an element event the way a click does: `click`, `value`, `text_commit`, `select`, or any `event` with `args`. |
+| `editor_panel_screenshot` | read-only | A PNG of the docked panel. |
+| `panel_<owner>_<event>` | mutating | A trusted panel's custom event marked "Expose to MCP" (capability `mcp`), typed from its inputs. |
+
 ---
 
 [Previous: MCP server](mcp-server.md) | [Up: lumina_ui (Lumina Studio)](index.md) | [Next: Windows packaging](windows-packaging.md)

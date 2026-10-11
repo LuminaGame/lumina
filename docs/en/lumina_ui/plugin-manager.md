@@ -297,6 +297,13 @@ Removes a user or project plugin from disk; never a built-in.
 
 `PluginRemovalPlan` (with `toJson`, the `remove_plugin` dry run) carries `name`, `displayName`, `origin`, `pluginDir`, `linkTarget`, `fileCount`, `bytes`, `enabled`, `contentOnly`, `dependents`, `loaded`, `marketplaceRecord`, `revealedOrigin` / `revealedDir`, `data` (`PluginDataFolder`: `kind` user / project, `dir`, `fileCount`, `bytes`) and `projectDir`. `PluginRemovalResult` has `removed`, `removedPaths`, `notRemoved` (`<path>: <reason>`), `disabled` and `restartRequired`.
 
+## Editor panels in the Plugin Manager
+
+A plugin's details list its editor panel Widget Blueprints with their dock, capabilities and compile state
+(`EditorPanelSummaryList`), and the import confirmation lists the panels an imported plugin adds with their
+capabilities (trusted with that import). The new-plugin wizard's default template is **Editor panel (Widget
+Blueprint)** (`PluginTemplateType.editorPanelWidget`): a content-only plugin with `content/EPW_<Name>.lmas`.
+
 ---
 
 [Previous: Launcher and details](launcher-and-details.md) | [Up: lumina_ui (Lumina Studio)](index.md) | [Next: Source control](source-control.md)

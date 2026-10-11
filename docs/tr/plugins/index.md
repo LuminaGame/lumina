@@ -136,6 +136,14 @@ Eklentiler marketplace için, eklenti klasöründe `dart run tool/pack_plugin.da
 
 Gerçek çalıştırıcı doğrulaması için `LUMINA_QWEN_IMAGE_ROOT` ve `LUMINA_TRELLIS_PLUGIN` değişkenlerini kurulu çalıştırıcı/eklenti klasörlerine ayarlayın; `trellis_plugin` yerel dependency override üzerinden erişilebilir olmalıdır. Ardından `lumina_ui/integration_test/smoke/trellis_image_smoke_test.dart` dosyasını smoke rapor çalıştırıcısıyla çalıştırın. Senaryo, onaydan önce 3D işinin başlamadığını doğrular, gerçek bir proje asset'i kaydeder ve üretilen mesh'i gerçek test asset'leriyle birlikte kayda alır.
 
+## Editör paneli Widget Blueprint'leri
+
+Bir eklenti arayüzünü `content/` klasöründe (`"can_contain_content": true`) editör paneli Widget Blueprint'leri olarak
+taşıyabilir: UMG tasarımcısında tasarlanır, editörün Blueprint VM'i çalıştırır, hiçbir Dart derlemesi ya da proje
+editörü derlemesi olmadan yerleşir. Bunlardan oluşan yalnızca içerikli bir eklenti yeniden başlatmadan etkinleşir; ağır
+işi panellerin çağırdığı ve öğe durumlarını yamaladığı bir süreç kısmında olabilir. New Plugin'in varsayılan şablonu
+böyle bir eklentidir. Bkz. [Editör panelleri](../lumina_ui/editor-panels.md).
+
 ---
 
 [Önceki: Eklenti süreçleri](../lumina_plugin_process/plugin-processes.md) | [Üst: Lumina dokümantasyonu](../../README.tr.md) | [Sonraki: lumina_ui (Lumina Studio)](../lumina_ui/index.md)

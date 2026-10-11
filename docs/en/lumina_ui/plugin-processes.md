@@ -143,3 +143,11 @@ stop the processes).
 A process death is `CrashReportKind.pluginCrash` (wire `plugin_crash`): `CrashReporter.recordPluginCrash` files it with
 the plugin name, the exit code and the process's log tail, and the crash report screen shows "A PLUGIN PROCESS STOPPED".
 The editor's session marker is not touched. A hang the editor ended is not a crash report.
+
+## Editor panels
+
+A plugin's editor panel Widget Blueprints (its `content/EPW_*.lmas`, see [Editor panels](editor-panels.md)) talk to
+its process: Call Plugin Process goes through the supervisor's `call` (`core.call`, 30 s; `unavailable` at once while
+the process is down), On Plugin Process Event receives `host.event`, On Plugin Process State Changed follows the
+supervisor's state, and `host.panelState` patches (`PluginProcessSupervisor.panelStates`) set the panels' element
+states directly, at most 30 times a second per panel.

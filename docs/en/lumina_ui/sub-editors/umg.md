@@ -665,6 +665,17 @@ Helper utilities bridging [LuminaThemeDocument] with shadcn [ThemeData] and rend
 | `buildNodeThemePicker` | `static Widget buildNodeThemePicker({required BuildContext context, required UmgEditorViewModel vm, required UmgNode node})` | Renders a picker for component-level theme override with an `(Inherit from Widget)` option. |
 | `buildButtonStylePicker` | `static Widget buildButtonStylePicker({required BuildContext context, required UmgEditorViewModel vm, required UmgNode node})` | Renders a picker for button variants (`primary`, `secondary`, `outline`, etc.) and theme custom styles (`LuminaCustomStyle`). |
 
+## Editor panels
+
+A Widget Blueprint with Class Settings ▸ **Editor Panel** on (the root's Details) is an editor panel
+([Editor panels](../editor-panels.md)): the designer then offers the **Editor** palette section (Editor Section,
+Property Row, Tree View, List View, Asset Picker, Resizable Split, Editor Toolbar, Status Line, Viewport), per-element
+"Accepts Asset Drops" in a panel that takes Content Browser drops, the editor-scope graph palette (the editor library,
+no game-only nodes; a node needing an undeclared capability is an error) and **Run as Editor Panel**, which saves and
+opens or reloads it docked. Compile of an editor panel generates nothing ("Editor panel: runs in the editor, never
+generated"); saving reloads the docked panel in place. Content Browser ▸ New ▸ Editor Panel Widget writes one from the
+template; an engine plugin's panel opens read-only.
+
 ---
 
 [Previous: Texture editor](texture.md) | [Up: Sub-editors](index.md)

@@ -151,6 +151,13 @@ Drives one Viewport: `sync(scene)` applies only the description's difference, `f
 
 The `Widget|Viewport` Blueprint nodes ([function library](blueprint/function-library.md)), written once for the VM and generated code. `LuminaViewportTransforms` converts description transforms through `LuminaAxes` / `LuminaUnits` (a location of (0, 0, 100) cm Z-up is (0, 1, 0) m Y-up).
 
+## Game and editor registries
+
+`LuminaUserWidgets` holds two `LuminaUserWidgetRegistry` instances: `game` (what the generated `widget_registry.g.dart`
+and Play-In-Editor fill; `LuminaUserWidgets.register` / `clear` / `has` / `attach` act on it, and Play clears it on
+every start) and `editor` (the editor's docked editor panels). `of`, `fire`, `addedToViewport` and `removedFromParent`
+find a script whichever registry attached it, so clearing the game registry never touches a docked panel.
+
 ---
 
 [Previous: Game framework](game.md) | [Up: lumina (engine core)](index.md) | [Next: Save games](save.md)

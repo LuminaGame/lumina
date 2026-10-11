@@ -704,6 +704,16 @@ HTTP file downloader supporting SHA-256 validation, authorization headers (e.g. 
 - `download(...)`: Emits a stream of [PluginDownloadProgress] objects reporting current file and overall progress.
 - `cancel()`: Cancels the active download request and closes streams cleanly.
 
+## Editor panel Widget Blueprints: `EditorPanelWidgets`
+
+`context.editorPanels` (an extension on `LuminaEditorContext`, `src/editor_panel_widgets.dart`) lists, opens, closes and
+observes the editor panel Widget Blueprints the editor runs (a plugin's `content/EPW_*.lmas`, the project's):
+`all` (`EditorPanelWidgetInfo`: `id`, `title`, `dock`, `owner`, `capabilities`, `open`, `running`, `errors`), `byId`,
+`isOpen`, `open(id)` (where it docks; a dialog modally), `close(id)` (Destruct) and `changes`. A context with no editor
+behind it gets `EditorPanelWidgets.detached()` (empty). Compiled plugins keep `EditorPanelDescriptor` /
+`EditorTabDescriptor`; an editor panel Widget Blueprint is the default UI of a new plugin. See
+[Editor panels](../lumina_ui/editor-panels.md).
+
 ---
 
 [Previous: lumina_editor_api](index.md) | [Up: lumina_editor_api](index.md) | [Next: MCP tools API](mcp.md)

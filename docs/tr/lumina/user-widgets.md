@@ -151,6 +151,14 @@ Bir Viewport'u sürer: `sync(scene)` yalnızca açıklamanın farkını uygular,
 
 `Widget|Viewport` Blueprint düğümleri ([function library](blueprint/function-library.md)); VM ve üretilen kod için bir kez yazılmıştır. `LuminaViewportTransforms` açıklama dönüşümlerini `LuminaAxes` / `LuminaUnits` üzerinden çevirir ((0, 0, 100) cm Z-yukarı konum (0, 1, 0) m Y-yukarıdır).
 
+## Oyun ve editör kayıt defterleri
+
+`LuminaUserWidgets` iki `LuminaUserWidgetRegistry` örneği tutar: `game` (üretilen `widget_registry.g.dart` ile
+Play-In-Editor'ın doldurduğu; `LuminaUserWidgets.register` / `clear` / `has` / `attach` onun üzerinde çalışır ve Play
+her başlangıçta onu temizler) ve `editor` (editörün yerleşik editör panelleri). `of`, `fire`, `addedToViewport` ve
+`removedFromParent` betiği hangi kayıt defteri bağladıysa bulur; oyun kayıt defterini temizlemek yerleşik bir panele
+asla dokunmaz.
+
 ---
 
 [Önceki: Oyun çatısı (game framework)](game.md) | [Üst: lumina (engine çekirdeği)](index.md) | [Sonraki: Kayıt (save game)](save.md)

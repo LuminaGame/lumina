@@ -136,6 +136,14 @@ Enable `trellis_plugin` 0.2+ and `lumina_plugin_trellis_image`, then restart. Op
 
 For targeted real-runtime verification, set `LUMINA_QWEN_IMAGE_ROOT` and `LUMINA_TRELLIS_PLUGIN` to installed runtime/plugin folders, with `trellis_plugin` available through local dependency overrides, then run `lumina_ui/integration_test/smoke/trellis_image_smoke_test.dart` through the smoke report runner. The scenario verifies that no 3D job starts before approval, saves a real project asset, and records the generated mesh alongside real test assets.
 
+## Editor panel Widget Blueprints
+
+A plugin can ship its UI as editor panel Widget Blueprints in its `content/` (`"can_contain_content": true`): designed
+in the UMG designer, run by the editor's Blueprint VM, docked without any Dart compile or project editor build. A
+content-only plugin made of them is enabled with no restart; its heavy work can live in a process part, which the
+panels call and which patches their element states. New Plugin's default template is such a plugin. See
+[Editor panels](../lumina_ui/editor-panels.md).
+
 ---
 
 [Previous: Plugin processes](../lumina_plugin_process/plugin-processes.md) | [Up: Lumina documentation](../../README.md) | [Next: lumina_ui (Lumina Studio)](../lumina_ui/index.md)

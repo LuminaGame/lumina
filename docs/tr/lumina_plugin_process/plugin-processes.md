@@ -108,6 +108,16 @@ class MyPluginProcess extends PluginProcessAdapter {
 
 Komutlar, slot butonu durumları ve bildirimsel butonlar ikonları `PluginIconSpec` olarak taşır (kod noktası, font ailesi, font paketi, metin yönü). `pluginIconOf(IconData)` bir Flutter ikonundan bir tane kurar; `iconDataOf(PluginIconSpec)` onu editörün çizmesi için bir `IconData`'ya geri çevirir (`lumina_editor_api/lib/src/process/plugin_icons.dart`; saf Dart bir süreç `PluginIconSpec`'i kendisi yazar). Glif editörün paketlenmiş ikon fontlarından gelir: süreç editörün çalıştırılabilir dosyasından çalışır, böylece bir eklentinin adlandırdığı const ikonlar, release build'ler fontları tree-shake ettiğinde gliflerini korur.
 
+## Editör panelleri: `patchPanel`
+
+`PluginProcessContext.patchPanel(panel, ops)`, `host.panelState` (`PluginPanelStatePatch`) gönderir: eklentinin
+`panel` editör panelinin (eklentideki varlık yolu, `content/EPW_Tools.lmas`) her açık örneğinin öğe durumlarını,
+panelin grafiğini çalıştırmadan ayarlar; örnek:
+`context.patchPanel('content/EPW_Tools.lmas', [PluginPanelStateOp('Progress', {'percent': 0.5})])`. Editör panel başına
+saniyede en çok 30 yama uygular, patlamaları birleştirir (`PluginPanelStatePatch.merge`); kare başı veri bu yoldan
+gitmez. `context.emit(name, data)`, panelin On Plugin Process Event olayının aldığıdır. Editör panelleri olmayan bir
+editör bildirimi yok sayar; protokol sürümü değişmez.
+
 ---
 
 [Önceki: lumina_plugin_process](index.md) | [Üst: lumina_plugin_process](index.md) | [Sonraki: Editör eklentileri](../plugins/index.md)

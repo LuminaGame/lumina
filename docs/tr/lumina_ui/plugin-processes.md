@@ -146,3 +146,11 @@ durdurur).
 Süreç ölümü `CrashReportKind.pluginCrash` (tel adı `plugin_crash`) olur: `CrashReporter.recordPluginCrash` onu eklenti
 adı, çıkış kodu ve sürecin günlük kuyruğuyla açar; çökme raporu ekranı "A PLUGIN PROCESS STOPPED" gösterir. Editörün
 oturum işaretçisine dokunulmaz. Editörün sonlandırdığı bir takılma çökme raporu değildir.
+
+## Editör panelleri
+
+Bir eklentinin editör paneli Widget Blueprint'leri (`content/EPW_*.lmas`, bkz. [Editör panelleri](editor-panels.md))
+süreciyle konuşur: Call Plugin Process denetleyicinin `call` yolundan gider (`core.call`, 30 sn; süreç kapalıyken hemen
+`unavailable`), On Plugin Process Event `host.event`'i alır, On Plugin Process State Changed denetleyicinin durumunu
+izler ve `host.panelState` yamaları (`PluginProcessSupervisor.panelStates`) panellerin öğe durumlarını doğrudan, panel
+başına saniyede en çok 30 kez ayarlar.
