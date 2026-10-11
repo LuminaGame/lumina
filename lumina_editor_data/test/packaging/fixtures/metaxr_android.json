@@ -1,0 +1,12 @@
+{
+  "uses_features": [
+    {"name": "com.oculus.feature.PASSTHROUGH", "required": false, "required_when_used": "LuminaMetaPassthroughComponent"},
+    {"name": "oculus.software.handtracking", "required": false, "when_used": "LuminaMetaHandTrackingComponent"}
+  ],
+  "permissions": [
+    {"name": "com.oculus.permission.HAND_TRACKING", "when_used": "LuminaMetaHandTrackingComponent"}
+  ],
+  "meta_data": [
+    {"name": "com.oculus.supportedDevices", "value": "quest3|quest3s|quest2|questpro"}
+  ]
+}

@@ -1,7 +1,10 @@
 /// The project's packaging targets (`.lmproject` `packaging`).
 library;
 
+import 'package:lumina_core/src/formats/project_android_settings.dart';
 import 'package:lumina_core/src/formats/project_web_loading_style.dart';
+
+export 'package:lumina_core/src/formats/project_android_settings.dart';
 
 /// Platforms a project can be packaged for, in display order.
 const List<String> kPackagingPlatforms = ['linux', 'windows', 'macos', 'android', 'ios', 'web'];
@@ -49,10 +52,15 @@ class ProjectPackagingSettings {
   /// The web build's HTML loading screen.
   final ProjectWebLoadingStyle webLoadingStyle;
 
+  /// The Android (APK) build: application id, versions, SDK levels, ABIs,
+  /// the XR profile and signing.
+  final ProjectAndroidSettings android;
+
   const ProjectPackagingSettings({
     this.targets = const ['linux'],
     this.outputDir = 'build',
     this.webLoadingStyle = const ProjectWebLoadingStyle(),
+    this.android = const ProjectAndroidSettings(),
   });
 
   /// [ids] in [kPackagingPlatforms] order, unknown ids last, no duplicates.
@@ -94,7 +102,12 @@ class ProjectPackagingSettings {
     return kLegacyPackagingTargetLabels.entries.firstWhere((e) => e.value == first, orElse: () => MapEntry(first, first)).key;
   }
 
-  Map<String, dynamic> toMap() => {'targets': targets, 'output_dir': outputDir, 'web_loading_style': webLoadingStyle.toMap()};
+  Map<String, dynamic> toMap() => {
+        'targets': targets,
+        'output_dir': outputDir,
+        'web_loading_style': webLoadingStyle.toMap(),
+        if (android != const ProjectAndroidSettings()) 'android': android.toMap(),
+      };
 
   /// A manifest with `targets` reads it; one written before multi-target
   /// packaging migrates its `target_os` label; one with neither reads `['linux']`.
@@ -110,10 +123,12 @@ class ProjectPackagingSettings {
       targets = const ['linux'];
     }
     final style = map['web_loading_style'];
+    final android = map['android'];
     return ProjectPackagingSettings(
       targets: targets,
       outputDir: map['output_dir'] as String? ?? 'build',
       webLoadingStyle: style is Map ? ProjectWebLoadingStyle.fromMap(Map<String, dynamic>.from(style)) : const ProjectWebLoadingStyle(),
+      android: android is Map ? ProjectAndroidSettings.fromMap(Map<String, dynamic>.from(android)) : const ProjectAndroidSettings(),
     );
   }
 
@@ -121,11 +136,13 @@ class ProjectPackagingSettings {
     List<String>? targets,
     String? outputDir,
     ProjectWebLoadingStyle? webLoadingStyle,
+    ProjectAndroidSettings? android,
     @Deprecated('Use targets') String? targetOs,
   }) =>
       ProjectPackagingSettings(
         targets: targets ?? (targetOs != null ? [kLegacyPackagingTargetLabels[targetOs] ?? targetOs] : this.targets),
         outputDir: outputDir ?? this.outputDir,
         webLoadingStyle: webLoadingStyle ?? this.webLoadingStyle,
+        android: android ?? this.android,
       );
 }

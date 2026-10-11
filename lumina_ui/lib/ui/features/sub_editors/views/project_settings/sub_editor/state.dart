@@ -38,4 +38,6 @@ abstract class _ProjectSettingsSubEditorStateBase extends State<ProjectSettingsS
   Widget _buildUserInterface();
 
   Widget _buildPackaging();
+
+  Widget _androidSection();
 }

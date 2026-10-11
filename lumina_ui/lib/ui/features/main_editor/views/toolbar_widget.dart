@@ -287,6 +287,19 @@ class _ToolbarWidgetState extends State<ToolbarWidget> {
                         ),
                       ),
                     ),
+                  // Capture from the device while the game runs (Saved/Captures).
+                  if (vm.androidRunner?.state == AndroidRunState.running) ...[
+                    GhostButton(
+                      key: const ValueKey('play_on_device_capture'),
+                      onPressed: () => unawaited(vm.androidRunner!.captureScreenshot()),
+                      child: const Icon(LucideIcons.camera, size: 14, color: EditorColors.foreground),
+                    ),
+                    GhostButton(
+                      key: const ValueKey('play_on_device_record'),
+                      onPressed: () => unawaited(vm.androidRunner!.recordVideo(seconds: 15)),
+                      child: const Icon(LucideIcons.video, size: 14, color: EditorColors.foreground),
+                    ),
+                  ],
                   // Step and Eject/Possess only mean anything mid-session, so they show
                   // up when there is one. They used to live in a second PIE cluster
                   // further along the toolbar; this is the single group now.

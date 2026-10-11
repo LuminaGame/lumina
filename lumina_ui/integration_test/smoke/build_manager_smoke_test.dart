@@ -128,9 +128,12 @@ void main() {
       expect(bm.buildableTargets, contains('linux'));
       expect(bm.buildableTargets.contains('web'), bm.availableTargets.contains('web') && bm.webModule != null);
       expect(bm.selectedTargets, ['linux']);
-      expect(bm.reasonsFor('android'), isNotEmpty, reason: 'flutter_filament has no Android build');
+      // Android: buildable once the toolchain is ready and the Filament
+      // Android archives are on disk; otherwise the reason names how to fetch them.
+      final androidArchives = HostBuildTargets.androidArchivesReason();
+      if (androidArchives != null) expect(bm.reasonsFor('android'), contains(androidArchives));
       await tester.pump();
-      expect(find.textContaining('no Android build of the Filament libraries'), findsWidgets);
+      if (androidArchives != null) expect(find.textContaining('Filament Android archives are missing'), findsWidgets);
       SmokeArtifacts.saveScreenshot(
         'build_manager_unbuildable_targets_disabled',
         await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey)),

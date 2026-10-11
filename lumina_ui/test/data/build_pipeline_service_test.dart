@@ -645,7 +645,9 @@ void main() {
       var codegens = 0;
       final step = PackageTargetsStep(
         targets: const ['linux', 'android', 'web'],
-        reasonsFor: (t) => host.reasonsFor(t, engineReason: (p) => p == 'web' ? null : HostBuildTargets.engineUnsupportedReason(p)),
+        // No Filament Android archives in this run: the engine's reason too.
+        reasonsFor: (t) => host.reasonsFor(t,
+            engineReason: (p) => p == 'web' ? null : HostBuildTargets.engineUnsupportedReason(p, filamentDir: '${tempDir.path}/no_filament')),
         packageDirFor: (t) => const ProjectPackagingSettings().packageDirFor(projDir.path, t),
         processStarter: flutterBuildStandIn(tempDir),
         webModule: module,
@@ -890,16 +892,19 @@ vertex {
   });
 
   group('HostBuildTargets', () {
-    test('the engine refuses android and ios with a reason; linux, macos and windows build', () {
+    test('the engine refuses ios, and android without the Filament archives, with a reason; linux, macos and windows build', () {
       expect(HostBuildTargets.engineUnsupportedReason('linux'), isNull);
       expect(HostBuildTargets.engineUnsupportedReason('macos'), isNull);
       expect(HostBuildTargets.engineUnsupportedReason('windows'), isNull, reason: 'hook/build.dart links Filament on Windows');
-      expect(HostBuildTargets.engineUnsupportedReason('android'), contains('Android'));
-      expect(HostBuildTargets.engineUnsupportedReason('android'), contains('no Android build of the Filament libraries'));
+      final missing = HostBuildTargets.engineUnsupportedReason('android', filamentDir: '${Directory.systemTemp.path}/no_such_filament');
+      expect(missing, contains('Filament Android archives are missing'));
       expect(HostBuildTargets.engineUnsupportedReason('ios'), contains('iOS'));
     });
 
     test('this host\'s real doctor output gives every platform its reasons', () {
+      // No Filament Android archives on that host.
+      HostBuildTargets.filamentDirOverride = '${tempDir.path}/no_filament';
+      addTearDown(() => HostBuildTargets.filamentDirOverride = null);
       final host = HostBuildTargets.parseDoctor(_thisHostDoctor, operatingSystem: 'linux');
       expect(host.flutterAvailable, isTrue);
       expect(host.flutterVersion, '3.47.0');
@@ -913,7 +918,7 @@ vertex {
       expect(android[0], contains('Android license status unknown'));
       expect(android[0], contains('flutter doctor --android-licenses'));
       expect(android[0], isNot(contains('Multiple adb')), reason: 'a ✗ problem is shown instead of the ! warnings');
-      expect(android[1], contains('no Android build of the Filament libraries'));
+      expect(android[1], contains('Filament Android archives are missing'));
       expect(host.reasonsFor('windows').first, contains('need a Windows host'));
       expect(host.reasonsFor('macos').first, contains('need a Mac with Xcode'));
       expect(host.reasonsFor('ios').first, contains('need a Mac with Xcode'));

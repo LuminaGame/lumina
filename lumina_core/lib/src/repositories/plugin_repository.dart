@@ -380,6 +380,22 @@ class PluginRepository {
       }
     }
 
+    // Android manifest contributions: unknown keys and malformed entries
+    // are named, so a typo never silently drops a feature.
+    final rawAndroid = parsed['android'];
+    if (rawAndroid != null) {
+      try {
+        if (rawAndroid is! Map) throw const FormatException('"android" must be an object');
+        PluginAndroidContributions.fromJson(Map<String, dynamic>.from(rawAndroid));
+      } on FormatException catch (e) {
+        throw PluginManifestException(PluginScanError(
+          filePath: manifest.path,
+          kind: PluginErrorKind.schemaViolation,
+          message: e.message,
+        ));
+      }
+    }
+
     try {
       return LuminaPluginDescriptor.fromJson(parsed, pluginDir: manifest.parent, origin: origin);
     } catch (e) {

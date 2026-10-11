@@ -68,6 +68,12 @@ export 'package:lumina_editor_data/src/services/plugin_template_generator_servic
 export 'package:lumina_editor_data/src/services/editor_host_generator_service.dart';
 export 'package:lumina_editor_data/src/services/editor_build_service.dart';
 
+// Packaging
+export 'package:lumina_editor_data/src/packaging/android/android_gradle_configurator.dart';
+export 'package:lumina_editor_data/src/packaging/android/android_manifest_composer.dart';
+export 'package:lumina_editor_data/src/packaging/android/android_packaging.dart';
+export 'package:lumina_editor_data/src/packaging/runtime_module_dependencies.dart';
+
 // Example projects
 export 'package:lumina_editor_data/src/samples/game_animation_sample/game_animation_sample.dart';
 

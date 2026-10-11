@@ -35,6 +35,7 @@
 | [Marketplace](marketplace.md) | Signing in, browsing, installing listings and license records. |
 | [MCP server](mcp-server.md) | The editor's Model Context Protocol server: transport, sessions, registry, jobs, sandbox, snapshots, panel. |
 | [MCP tool catalogue](mcp-tools.md) | Every MCP tool the editor offers, by area, with its risk level. |
+| [Android and Meta Quest packaging](android-quest-packaging.md) | The Android target: Quest profile, composed manifest, plugin runtime modules as game dependencies, signing, cook, Play on Device with a headset. |
 | [Windows packaging](windows-packaging.md) | Building and signing the MSIX package of Lumina Studio. |
 | [Sub-editors](sub-editors/index.md) | The asset editors that open in their own tabs. |
 

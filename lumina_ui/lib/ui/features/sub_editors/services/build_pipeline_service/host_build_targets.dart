@@ -99,13 +99,47 @@ class HostBuildTargets {
   /// links the Filament libraries only on Linux, macOS and Windows, and whose web
   /// build needs its WebAssembly module, looked up through
   /// the dependencies of [packageRoots] ([FlutterFilamentWebModule.locate]).
-  static String? engineUnsupportedReason(String target, {List<String>? packageRoots}) => switch (target) {
+  static String? engineUnsupportedReason(String target, {List<String>? packageRoots, String? filamentDir}) => switch (target) {
         'linux' || 'macos' || 'windows' => null,
         'web' => FlutterFilamentWebModule.locate(packageRoots: packageRoots) == null ? FlutterFilamentWebModule.missingReason : null,
-        'android' || 'apk' => 'flutter_filament has no Android build of the Filament libraries to link yet.',
+        'android' || 'apk' => androidArchivesReason(filamentDir: filamentDir),
         'ios' => 'flutter_filament does not link Filament for iOS (hook/build.dart has no iOS branch).',
         _ => 'Not available for Lumina games: flutter_filament has no native build for this platform.',
       };
+
+  /// The ABI whose archives an Android build links (Quest and phones).
+  static const String androidAbi = 'arm64-v8a';
+
+  /// The Filament folder flutter_filament's hook links from: `LUMINA_FILAMENT_DIR`, else the engine
+  /// workspace's `flutter_filament.filament_dir` hook setting (or its
+  /// `filament/` link); null when neither is known. Resolved once.
+  static String? defaultFilamentDir() => _filamentDir ??= () {
+        final env = Platform.environment['LUMINA_FILAMENT_DIR'];
+        if (env != null && env.isNotEmpty) return env;
+        final root = ProjectEngineLink.localEngineRoot(luminaPackageDir: ProjectRepository.luminaPackagePath);
+        if (root == null) return '';
+        final uri = ProjectEngineLink.hookUserDefines(root)['flutter_filament']?['filament_dir'];
+        return uri == null ? '$root/filament' : Directory.fromUri(Uri.parse(uri)).path;
+      }();
+  static String? _filamentDir;
+
+  /// Replaces [defaultFilamentDir] (a test points it at a temp tree; null
+  /// resolves it again).
+  static set filamentDirOverride(String? dir) => _filamentDir = dir;
+
+  /// Where an Android build's `libfilament.a` must be under [filamentDir].
+  static String androidArchive(String filamentDir) => '$filamentDir/out/android-release/filament/lib/$androidAbi/libfilament.a';
+
+  /// Why the Filament Android archives cannot be linked, or null when they
+  /// are there (detected on disk, under [filamentDir] or
+  /// [defaultFilamentDir]).
+  static String? androidArchivesReason({String? filamentDir}) {
+    final dir = filamentDir ?? defaultFilamentDir();
+    if (dir != null && dir.isNotEmpty && File(androidArchive(dir)).existsSync()) return null;
+    final where = dir == null || dir.isEmpty ? 'the engine\'s Filament folder' : androidArchive(dir);
+    return 'The Filament Android archives are missing ($where): fetch them with '
+        '`dart run tool/filament/fetch_prebuilt.dart --android` in the engine checkout.';
+  }
 
   /// Every reason [platform] cannot be packaged here: host, toolchain and
   /// engine, in that order. Empty means buildable. [engineReason] replaces

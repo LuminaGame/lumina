@@ -14,6 +14,9 @@ import 'package:lumina_ui/ui/features/main_editor/services/android_devices.dart'
 /// - `adb -s <s> shell getprop` → `getprop_<s>.txt` (exit 1 "device offline"
 ///   when missing); `getprop sys.boot_completed` → 1 once booted;
 /// - `adb -s <s> emu avd name` → `avdname_<s>.txt`;
+/// - `shell dumpsys battery` → `battery_<s>.txt`; `am start -n` → Starting;
+///   `exec-out screencap -p` → the bytes of `screencap.png`; `screenrecord`
+///   records its time limit; `pull` copies `screenrecord.mp4`;
 /// - `install` → Success; `monkey` → Events injected; `pidof` → 4242 until
 ///   `am force-stop` writes `stopped`; `logcat` prints a game line and waits;
 /// - `emulator -list-avds` → `list_avds.txt`; `emulator -avd <n>` writes
@@ -183,6 +186,29 @@ Future<void> main(List<String> argv) async {
     f('stopped').writeAsStringSync(cmd[3]);
     exit(0);
   }
+  if (cmd[0] == 'shell' && cmd.length >= 3 && cmd[1] == 'dumpsys' && cmd[2] == 'battery') {
+    stdout.write(read('battery_$serial.txt'));
+    exit(0);
+  }
+  if (cmd[0] == 'shell' && cmd.length >= 5 && cmd[1] == 'am' && cmd[2] == 'start' && cmd[3] == '-n') {
+    stdout.writeln('Starting: Intent { cmp=${cmd[4]} }');
+    exit(0);
+  }
+  if (cmd[0] == 'exec-out' && cmd.length >= 3 && cmd[1] == 'screencap') {
+    stdout.add(f('screencap.png').readAsBytesSync());
+    await stdout.flush();
+    exit(0);
+  }
+  if (cmd[0] == 'shell' && cmd.length >= 5 && cmd[1] == 'screenrecord') {
+    f('recorded_${cmd.last.split('/').last}').writeAsStringSync(cmd[3]);
+    exit(0);
+  }
+  if (cmd[0] == 'pull' && cmd.length == 3) {
+    f('screenrecord.mp4').copySync(cmd[2]);
+    stdout.writeln('${cmd[1]}: 1 file pulled.');
+    exit(0);
+  }
+  if (cmd[0] == 'shell' && cmd.length >= 2 && cmd[1] == 'rm') exit(0);
   if (cmd[0] == 'logcat') {
     stdout.writeln('I/flutter ( 4242): Lumina game started');
     await Future<void>.delayed(const Duration(seconds: 60));

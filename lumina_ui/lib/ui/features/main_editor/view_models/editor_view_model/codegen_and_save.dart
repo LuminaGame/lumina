@@ -157,6 +157,8 @@ mixin _EditorCodegenAndSave on _EditorViewModelState {
       startFullscreen: currentProject.settings.startFullscreen,
       // Project Settings > Neural rendering: only an opted-in project's game runs OpenDLSS-NR.
       neuralRendering: currentProject.neuralRendering,
+      // The enabled plugins' runtime modules, once their registration is written.
+      pluginRuntimeModules: File('${libDir.path}/plugin_runtime_modules.g.dart').existsSync(),
     );
     File('${libDir.path}/main.dart').writeAsStringSync(mainContent);
 

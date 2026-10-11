@@ -1,0 +1,23 @@
+{
+  "uses_features": [
+    {"name": "android.hardware.vr.headtracking", "required": true, "version": 1}
+  ],
+  "permissions": [
+    "org.khronos.openxr.permission.OPENXR",
+    "org.khronos.openxr.permission.OPENXR_SYSTEM"
+  ],
+  "intent_categories": [
+    "com.oculus.intent.category.VR",
+    "org.khronos.openxr.intent.category.IMMERSIVE_HMD"
+  ],
+  "queries": [
+    "<provider android:authorities=\"org.khronos.openxr.runtime_broker;org.khronos.openxr.system_runtime_broker\" />",
+    "<intent><action android:name=\"org.khronos.openxr.OpenXRRuntimeService\" /></intent>"
+  ],
+  "activity_attributes": {
+    "screenOrientation": "landscape",
+    "launchMode": "singleTask",
+    "resizeableActivity": "false",
+    "configChanges": "density|keyboard|keyboardHidden|navigation|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
+  }
+}

@@ -134,6 +134,10 @@ Map<String, String> parseGetprop(String output) {
   return props;
 }
 
+/// `dumpsys battery` → its `level:` (percent), or null.
+int? parseBatteryLevel(String output) =>
+    int.tryParse(RegExp(r'^\s*level:\s*(\d+)', multiLine: true).firstMatch(output)?.group(1) ?? '');
+
 /// `emulator -list-avds` → the AVD names (the emulator's own INFO / WARNING
 /// lines skipped: an AVD name has no spaces).
 List<String> parseAvdList(String output) => [
@@ -268,6 +272,16 @@ class AndroidDevice {
   /// The primary ABI (`arm64-v8a`, `x86_64`).
   final String abi;
 
+  /// `ro.product.manufacturer` / `ro.product.model` (`Oculus`, `Quest 3S`).
+  final String manufacturer;
+  final String model;
+
+  /// A Meta headset's Horizon OS version (`ro.hzos.build.display_name`).
+  final String? horizonOsVersion;
+
+  /// The battery level in percent (read for headsets), or null.
+  final int? batteryLevel;
+
   const AndroidDevice({
     required this.kind,
     required this.state,
@@ -277,7 +291,20 @@ class AndroidDevice {
     this.serial,
     this.avdName,
     this.apiLevel,
+    this.manufacturer = '',
+    this.model = '',
+    this.horizonOsVersion,
+    this.batteryLevel,
   });
+
+  /// A Meta Quest headset: Play on Device builds the project's Meta Quest
+  /// profile for it and launches it immersive.
+  bool get isQuest =>
+      !isEmulator && (manufacturer.toLowerCase() == 'oculus' || manufacturer.toLowerCase() == 'meta') && model.toLowerCase().contains('quest');
+
+  /// The row's first line: `Quest 3S · Horizon OS 2.7.0` for a headset, else
+  /// [name].
+  String get title => isQuest && horizonOsVersion != null ? '$model · Horizon OS $horizonOsVersion' : (isQuest ? model : name);
 
   /// Stable across runs and reboots: `avd:<name>` for an emulator, else
   /// `serial:<serial>`.
@@ -291,11 +318,12 @@ class AndroidDevice {
   /// Play on Device can be chosen: online, or an emulator to start.
   bool get canRun => isOnline || (isEmulator && state == AndroidDeviceState.stopped && avdName != null);
 
-  /// `Android 10.0 ("Q") | arm64`.
+  /// `Android 10.0 ("Q") | arm64` (a headset adds its battery).
   String get description {
     final parts = <String>[
       'Android ${release.version}${release.codename.isEmpty ? '' : ' ("${release.codename}")'}',
       if (abi.isNotEmpty) shortAbi(abi),
+      if (batteryLevel != null) 'battery $batteryLevel %',
     ];
     return parts.join(' | ');
   }
@@ -318,6 +346,10 @@ class AndroidDevice {
         serial: serial ?? this.serial,
         avdName: avdName,
         apiLevel: apiLevel,
+        manufacturer: manufacturer,
+        model: model,
+        horizonOsVersion: horizonOsVersion,
+        batteryLevel: batteryLevel,
       );
 
   @override
@@ -357,6 +389,12 @@ class AndroidDeviceProbe {
   Future<Map<String, String>> getprop(String serial) async {
     final r = await adb(['-s', serial, 'shell', 'getprop']);
     return r.exitCode == 0 ? parseGetprop(r.stdout) : const {};
+  }
+
+  /// `adb -s <serial> shell dumpsys battery`'s `level`, or null.
+  Future<int?> batteryLevel(String serial) async {
+    final r = await adb(['-s', serial, 'shell', 'dumpsys', 'battery']);
+    return r.exitCode == 0 ? parseBatteryLevel(r.stdout) : null;
   }
 
   /// The AVD names: `emulator -list-avds`, else the `.ini` files of the AVD
@@ -413,6 +451,9 @@ class AndroidDeviceProbe {
       }
       final model = props['ro.product.model'] ?? e.properties['model']?.replaceAll('_', ' ') ?? e.serial;
       final maker = props['ro.product.manufacturer'] ?? '';
+      final horizon = props['ro.hzos.build.display_name'];
+      // A headset's battery matters before a session: read it for one.
+      final battery = horizon != null ? await batteryLevel(e.serial) : null;
       physical.add(AndroidDevice(
         kind: AndroidDeviceKind.physical,
         state: e.state,
@@ -421,6 +462,10 @@ class AndroidDeviceProbe {
         apiLevel: api,
         release: release,
         abi: abi,
+        manufacturer: maker,
+        model: model,
+        horizonOsVersion: horizon == null || horizon.isEmpty ? null : horizon,
+        batteryLevel: battery,
       ));
     }));
     physical.sort((a, b) => a.name.compareTo(b.name));

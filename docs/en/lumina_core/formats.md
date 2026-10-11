@@ -332,6 +332,17 @@ A level `.lmas` as Lumina Studio writes it (a JSON container): `assetId`, `name`
 | `toJson` | `Map<String, dynamic> toJson()` | Serializes the object to a JSON map. |
 | `hashCode` | `int get hashCode` | Checks current state or capability and returns a boolean value. |
 
+## `lib/src/formats/plugin_android_contributions.dart`
+
+A plugin descriptor's `android` section (`LuminaPluginDescriptor.android`): what an enabled plugin adds to a game's `AndroidManifest.xml`. `PluginRepository` validates it while scanning: an unknown key or a malformed entry is a schema error that names its path (`android.uses_features[0].requird`). `LuminaPluginDescriptor.runtimeModules` lists the `"type": "runtime"` modules a game links. See [Android and Meta Quest packaging](../lumina_ui/android-quest-packaging.md).
+
+| Type | Purpose |
+| :--- | :--- |
+| `PluginAndroidContributions` | `uses_features`, `permissions`, `intent_categories`, `meta_data`, `queries` (one `<provider …/>` or `<intent>…</intent>` each), `activity_attributes`; `fromJson` validates, `toJson` round-trips, `escapeXml` escapes values. |
+| `AndroidUsesFeature` | `name`, `required`, `version`; `when_used` (declared only when the project uses that class), `required_when_used` (required once it is used); `resolvedFor(usedClasses)`, `toXml()`. |
+| `AndroidPermission` | A name, or `{name, when_used}`; `toXml()`. |
+| `AndroidMetaData` | `<application>` meta-data `{name, value, when_used}`; `toXml()` escapes the value. |
+
 ## `lib/src/formats/lumina_project.dart`
 
 The input settings and maps and modes (`ProjectInputValueType`, `ProjectInputAction`, `ProjectInputMapping`, `ProjectMappingContext`, `ProjectInputSettings`, `ProjectMapsAndModes`) live in `project_input_settings.dart`, the packaging settings (`kPackagingPlatforms`, `packagingPlatformLabel`, `ProjectPackagingSettings`, …) in `project_packaging_settings.dart`; `lumina_project.dart` exports both, so importers see no change.
@@ -482,6 +493,26 @@ One key binding inside a mapping context. [keyId] is the stable `LogicalKeyboard
 | `targetOs` | `String targetOs` | Holds the `targetOs` property or configuration state. |
 | `outputDir` | `String outputDir` | Holds the `outputDir` property or configuration state. |
 | `toMap` | `Map<String, dynamic> toMap()` | Executes `toMap` operation. |
+
+### `class ProjectAndroidSettings` (`project_android_settings.dart`)
+
+`packaging.android`: what an Android (APK) build of the game is. `ProjectPackagingSettings.android` holds it; `project_packaging_settings.dart` exports it. See [Android and Meta Quest packaging](../lumina_ui/android-quest-packaging.md).
+
+| Member | Signature | Purpose |
+| :--- | :--- | :--- |
+| `applicationId` | `final String applicationId` | `application_id`; empty means `com.lumina.<project_snake>` ([applicationIdFor]). |
+| `versionName` / `versionCode` | `final String` / `final int` | `version_name` / `version_code`. |
+| `minSdk` / `targetSdk` | `final int` | `min_sdk` / `target_sdk`; the Quest profile starts at `kQuestMinSdk` 32 / `kQuestTargetSdk` 34 (Meta Horizon Store, read 2026-10-11). |
+| `abis` | `final List<String> abis` | The APK's ABIs (`arm64-v8a`). |
+| `impeller` | `final bool impeller` | Flutter's Impeller for the app UI (off for a Quest). |
+| `xr` | `final String xr` | `none` or `quest` ([kAndroidXrProfiles]). |
+| `refreshRate` / `multiview` | `final int` / `final bool` | What an immersive game asks the headset for. |
+| `keystorePath` / `keyAlias` | `final String` | A release keystore; empty signs with Flutter's debug key. Passwords never live here. |
+| `ProjectAndroidSettings.quest` | `const ProjectAndroidSettings.quest({...})` | A Meta Quest target's defaults. |
+| `applicationIdFor` | `String applicationIdFor(String projectName)` | The id the build uses. |
+| `applicationIdProblem` | `static String? applicationIdProblem(String id)` | Why an id is invalid, or null. |
+| `withXrProfile` | `ProjectAndroidSettings withXrProfile(String profile)` | The profile with its floors and defaults (Quest: SDK floors, arm64 only, Impeller off). |
+| `toMap` / `fromMap` / `copyWith` | | JSON round trip. |
 
 ### `class EditorSnapSettings`
 

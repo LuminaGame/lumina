@@ -332,6 +332,17 @@ A level `.lmas` as Lumina Studio writes it (a JSON container): `assetId`, `name`
 | `toJson` | `Map<String, dynamic> toJson()` | Nesneyi JSON haritasına serileştirir. |
 | `hashCode` | `int get hashCode` | Mevcut durumun veya yeteneğin doğruluğunu kontrol eder (`bool` döndürür). |
 
+## `lib/src/formats/plugin_android_contributions.dart`
+
+Bir eklenti tanımlayıcısının `android` bölümü (`LuminaPluginDescriptor.android`): etkin bir eklentinin oyunun `AndroidManifest.xml` dosyasına ekledikleri. `PluginRepository` tarama sırasında bölümü doğrular: bilinmeyen bir anahtar ya da bozuk bir girdi, yolunu adlandıran bir şema hatasıdır (`android.uses_features[0].requird`). `LuminaPluginDescriptor.runtimeModules`, oyunun bağladığı `"type": "runtime"` modüllerini listeler. Bkz. [Android ve Meta Quest paketleme](../lumina_ui/android-quest-packaging.md).
+
+| Tür | Amaç |
+| :--- | :--- |
+| `PluginAndroidContributions` | `uses_features`, `permissions`, `intent_categories`, `meta_data`, `queries` (her biri tek bir `<provider …/>` ya da `<intent>…</intent>`), `activity_attributes`; `fromJson` doğrular, `toJson` gidiş-dönüş yapar, `escapeXml` değerleri kaçışlar. |
+| `AndroidUsesFeature` | `name`, `required`, `version`; `when_used` (yalnızca proje o sınıfı kullanınca bildirilir), `required_when_used` (kullanılınca zorunlu olur); `resolvedFor(usedClasses)`, `toXml()`. |
+| `AndroidPermission` | Bir ad ya da `{name, when_used}`; `toXml()`. |
+| `AndroidMetaData` | `<application>` meta-data'sı `{name, value, when_used}`; `toXml()` değeri kaçışlar. |
+
 ## `lib/src/formats/lumina_project.dart`
 
 Girdi ayarları ile haritalar ve modlar (`ProjectInputValueType`, `ProjectInputAction`, `ProjectInputMapping`, `ProjectMappingContext`, `ProjectInputSettings`, `ProjectMapsAndModes`) `project_input_settings.dart` içinde, paketleme ayarları (`kPackagingPlatforms`, `packagingPlatformLabel`, `ProjectPackagingSettings`, …) `project_packaging_settings.dart` içinde durur; `lumina_project.dart` ikisini de dışa aktarır, import edenler bir değişiklik görmez.
@@ -482,6 +493,26 @@ One key binding inside a mapping context. [keyId] is the stable `LogicalKeyboard
 | `targetOs` | `String targetOs` | `targetOs` alanını (field/property) ve ilişkili veriyi saklar. |
 | `outputDir` | `String outputDir` | `outputDir` alanını (field/property) ve ilişkili veriyi saklar. |
 | `toMap` | `Map<String, dynamic> toMap()` | `toMap` işlemini gerçekleştirir. |
+
+### `class ProjectAndroidSettings` (`project_android_settings.dart`)
+
+`packaging.android`: oyunun Android (APK) derlemesinin ne olduğu. `ProjectPackagingSettings.android` bunu tutar, `project_packaging_settings.dart` dışa aktarır. Bkz. [Android ve Meta Quest paketleme](../lumina_ui/android-quest-packaging.md).
+
+| Üye | İmza | Amaç |
+| :--- | :--- | :--- |
+| `applicationId` | `final String applicationId` | `application_id`; boşsa `com.lumina.<proje_snake>` ([applicationIdFor]). |
+| `versionName` / `versionCode` | `final String` / `final int` | `version_name` / `version_code`. |
+| `minSdk` / `targetSdk` | `final int` | `min_sdk` / `target_sdk`; Quest profili `kQuestMinSdk` 32 / `kQuestTargetSdk` 34 ile başlar (Meta Horizon Store, 2026-10-11'de okundu). |
+| `abis` | `final List<String> abis` | APK'nın ABI'leri (`arm64-v8a`). |
+| `impeller` | `final bool impeller` | Uygulama arayüzü için Flutter'ın Impeller'ı (Quest'te kapalı). |
+| `xr` | `final String xr` | `none` ya da `quest` ([kAndroidXrProfiles]). |
+| `refreshRate` / `multiview` | `final int` / `final bool` | Immersive bir oyunun gözlükten istedikleri. |
+| `keystorePath` / `keyAlias` | `final String` | Release keystore; boşsa Flutter'ın debug anahtarıyla imzalanır. Parolalar burada tutulmaz. |
+| `ProjectAndroidSettings.quest` | `const ProjectAndroidSettings.quest({...})` | Bir Meta Quest hedefinin varsayılanları. |
+| `applicationIdFor` | `String applicationIdFor(String projectName)` | Derlemenin kullandığı id. |
+| `applicationIdProblem` | `static String? applicationIdProblem(String id)` | Bir id'nin neden geçersiz olduğu, ya da null. |
+| `withXrProfile` | `ProjectAndroidSettings withXrProfile(String profile)` | Profil, alt sınırları ve varsayılanlarıyla (Quest: SDK sınırları, yalnızca arm64, Impeller kapalı). |
+| `toMap` / `fromMap` / `copyWith` | | JSON gidiş-dönüş. |
 
 ### `class EditorSnapSettings`
 

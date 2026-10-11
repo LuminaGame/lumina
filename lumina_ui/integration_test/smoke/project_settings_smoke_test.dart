@@ -231,7 +231,9 @@ void main() {
       await rec.hold(const Duration(milliseconds: 800));
       expect(settings.reasonsFor('linux'), isEmpty);
       expect(settings.reasonsFor('web'), isEmpty, reason: 'the flutter_filament web module is built');
-      expect(settings.reasonsFor('android').join(' '), contains('no Android build of the Filament libraries'));
+      // Android: buildable here once the toolchain and the Filament Android archives are.
+      final androidArchives = HostBuildTargets.androidArchivesReason();
+      if (androidArchives != null) expect(settings.reasonsFor('android'), contains(androidArchives));
       expect(settings.reasonsFor('windows').first, contains('Windows host'));
 
       // Tick Android and Web: both stay tickable, Android with its reasons on screen.

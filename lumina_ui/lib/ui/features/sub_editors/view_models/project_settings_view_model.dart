@@ -11,6 +11,7 @@ import 'package:lumina_ui/ui/core/host/editor_host.dart' show LuminaEditorHost;
 import 'package:lumina_ui/ui/features/main_editor/services/editor_neural_rendering.dart';
 
 import 'package:lumina_ui/ui/features/sub_editors/services/build_pipeline_service.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/android_packaging_hooks.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/project_icon_packaging.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/project_icon_rasterizer.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/umg_widget_codegen.dart';
@@ -22,6 +23,7 @@ import 'package:lumina_ui/ui/features/sub_editors/view_models/build_manager_view
 part 'project_settings_view_model/state.dart';
 part 'project_settings_view_model/widget_library_and_icon.dart';
 part 'project_settings_view_model/packaging.dart';
+part 'project_settings_view_model/packaging_android.dart';
 part 'project_settings_view_model/web_loading_screen.dart';
 part 'project_settings_view_model/models.dart';
 part 'project_settings_view_model/neural_rendering.dart';
@@ -36,6 +38,7 @@ class ProjectSettingsViewModel extends _ProjectSettingsViewModelState
     with
         _ProjectSettingsWidgetLibraryAndIcon,
         _ProjectSettingsPackaging,
+        _ProjectSettingsPackagingAndroid,
         _ProjectSettingsWebLoadingScreen,
         _ProjectSettingsNeuralRendering {
   ProjectSettingsViewModel({

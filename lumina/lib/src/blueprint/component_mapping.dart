@@ -240,6 +240,22 @@ abstract final class LuminaBlueprintComponents {
     return component;
   }
 
+  static final Map<String, LuminaActorComponent Function(Map<String, dynamic> properties)> _registered = {};
+
+  /// Makes component [type] buildable by Blueprints (the construction
+  /// script, Add Component), from its stored [properties]: how a plugin's
+  /// runtime module (registered from the generated `main()`) adds its
+  /// components. A scene component also gets the stored transform. The
+  /// built-in types cannot be replaced.
+  static void registerType(String type, LuminaActorComponent Function(Map<String, dynamic> properties) build) =>
+      _registered[type] = build;
+
+  /// Removes a type [registerType] added.
+  static void unregisterType(String type) => _registered.remove(type);
+
+  /// Whether [type] was added through [registerType].
+  static bool isRegisteredType(String type) => _registered.containsKey(type);
+
   static bool _isOwnField(LuminaActor actor, LuminaActorComponent c) =>
       actor is LuminaCharacter && (identical(c, actor.capsuleComponent) || identical(c, actor.characterMovement));
 
@@ -476,6 +492,12 @@ abstract final class LuminaBlueprintComponents {
         final meshPhysics = meshPhysicsResolver?.call(stored);
         if (meshPhysics != null) mesh.meshPhysics = meshPhysics;
         return mesh;
+    }
+    final registered = _registered[c.type];
+    if (registered != null) {
+      final component = registered(p);
+      if (component is LuminaSceneComponent) _transform(component, p);
+      return component;
     }
     if (editorOnly.contains(c.type)) {
       // Keep the hierarchy: an arrow can parent other components.

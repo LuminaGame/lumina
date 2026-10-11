@@ -31,6 +31,8 @@ void main() {
 
   setUp(() async {
     tempDir = Directory.systemTemp.createTempSync('lumina_project_settings_');
+    // No Filament Android archives in these runs.
+    HostBuildTargets.filamentDirOverride = '${tempDir.path}/no_filament';
     projDir = Directory('${tempDir.path}/settings_game')..createSync(recursive: true);
     Directory('${projDir.path}/contents/levels').createSync(recursive: true);
     Directory('${projDir.path}/contents/meshes').createSync(recursive: true);
@@ -50,7 +52,10 @@ void main() {
 
   // Retries: Windows refuses to delete a folder the editor's git probe
   // still works in.
-  tearDown(() => deleteTempProject(tempDir));
+  tearDown(() {
+    HostBuildTargets.filamentDirOverride = null;
+    return deleteTempProject(tempDir);
+  });
 
   ProjectSettingsViewModel makeVm({ProcessStarter? starter}) =>
       ProjectSettingsViewModel(projectDirPath: projDir.path, processStarter: starter);
@@ -466,7 +471,7 @@ void main() {
       await tester.pump();
       expect(vm.project.packaging.targets, ['linux', 'android']);
       expect(find.byKey(const ValueKey('project_settings_target_reason_android_0')), findsOneWidget);
-      expect(find.textContaining('no Android build of the Filament libraries'), findsOneWidget);
+      expect(find.textContaining('Filament Android archives are missing'), findsOneWidget);
       expect(find.textContaining('need a Windows host'), findsOneWidget);
       expect(find.textContaining('${projDir.path}/build/package/<target>'), findsOneWidget);
 

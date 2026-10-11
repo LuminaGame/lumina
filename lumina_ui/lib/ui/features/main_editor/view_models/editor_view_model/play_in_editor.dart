@@ -85,6 +85,10 @@ mixin _EditorPlayInEditor on _EditorViewModelState {
     final runner = androidRunner;
     if (runner == null || runner.isActive) return false;
     androidDevices.lastDeviceId = device.id;
+    // The Android app first (a Quest gets its profile; the enabled plugins'
+    // runtime modules become dependencies), so the code generated next
+    // registers them.
+    if (!await runner.prepareProject(device)) return false;
     if (!await _prepareProjectRun('Play on Device')) return false;
     return runner.start(device);
   }

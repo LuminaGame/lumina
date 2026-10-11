@@ -37,6 +37,10 @@ class CookAndPackageStep implements BuildStep {
   /// ([SpaceFreeBuildDir]; default [SpaceFreeBuildDir.defaultAliasRoot]).
   final Directory? buildAliasRoot;
 
+  /// For `apk`: the `--target-platform` values (the project's Android ABIs,
+  /// `android-arm64` for a Quest); empty builds Flutter's default set.
+  final List<String> androidTargetPlatforms;
+
   CookAndPackageStep({
     required this.target,
     required this.configuration,
@@ -47,6 +51,7 @@ class CookAndPackageStep implements BuildStep {
     this.webModule,
     this.bundleWebResources = false,
     this.buildAliasRoot,
+    this.androidTargetPlatforms = const [],
   })  : _starter = processStarter ?? defaultBuildProcessStarter,
         _codeGen = codeGenerator ?? levelFileCodeGenerator;
 
@@ -79,6 +84,10 @@ class CookAndPackageStep implements BuildStep {
       // An unsigned Runner.app: signing needs the developer's team in Xcode.
       if (target == 'ios' && !extra.contains('--no-codesign')) '--no-codesign',
       if (target == 'web' && bundleWebResources && !extra.contains(bundleWebResourcesFlag)) bundleWebResourcesFlag,
+      if (target == 'apk' && androidTargetPlatforms.isNotEmpty && !extra.contains('--target-platform')) ...[
+        '--target-platform',
+        androidTargetPlatforms.join(','),
+      ],
       ...extra,
     ];
   }
@@ -371,6 +380,9 @@ class PackageTargetsStep implements BuildStep {
   /// ([CookAndPackageStep.buildAliasRoot]).
   final Directory? buildAliasRoot;
 
+  /// [CookAndPackageStep.androidTargetPlatforms] of the Android target.
+  final List<String> androidTargetPlatforms;
+
   PackageTargetsStep({
     required this.targets,
     required this.reasonsFor,
@@ -385,6 +397,7 @@ class PackageTargetsStep implements BuildStep {
     this.beforeBuild,
     this.afterPackage,
     this.buildAliasRoot,
+    this.androidTargetPlatforms = const [],
   });
 
   @override
@@ -396,6 +409,7 @@ class PackageTargetsStep implements BuildStep {
         configuration: configuration,
         extraFlags: extraFlags,
         bundleWebResources: bundleWebResources,
+        androidTargetPlatforms: androidTargetPlatforms,
       ).buildArguments();
 
   static String sourceFor(String target) => '${BuildStepKind.cookAndPackage.label} [$target]';
@@ -464,6 +478,7 @@ class PackageTargetsStep implements BuildStep {
         webModule: target == 'web' ? webModule : null,
         bundleWebResources: bundleWebResources,
         buildAliasRoot: buildAliasRoot,
+        androidTargetPlatforms: androidTargetPlatforms,
       );
       StepResult result;
       try {

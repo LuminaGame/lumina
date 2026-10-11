@@ -77,6 +77,8 @@ class GenerateDartCodeUseCase {
         neuralRendering: project?.neuralRendering,
         // Project Settings > UI: how many UMG Viewports render at once.
         maxViewports: project?.ui.maxViewports ?? 0,
+        // The enabled plugins' runtime modules, once their registration is written.
+        pluginRuntimeModules: File('${libDir.path}/plugin_runtime_modules.g.dart').existsSync(),
       ));
       // The desktop runners' window modes (Start Fullscreen, Alt+Enter / F11).
       final runner = GameWindowRunnerService.apply(projectDir, startFullscreen: project?.settings.startFullscreen ?? false);

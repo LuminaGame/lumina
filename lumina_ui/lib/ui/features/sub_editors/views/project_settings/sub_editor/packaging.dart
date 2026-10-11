@@ -14,7 +14,7 @@ mixin _ProjectSettingsPackaging on _ProjectSettingsSubEditorStateBase {
       });
     }
     final disabled = _vm.packageDisabledReason;
-    return _section('Packaging & Target', [
+    final packaging = _section('Packaging & Target', [
       _row(
         'Target Platforms',
         Column(
@@ -94,6 +94,9 @@ mixin _ProjectSettingsPackaging on _ProjectSettingsSubEditorStateBase {
         help: 'Generates the game code once, then runs a real flutter build per target',
       ),
     ]);
+    // The Android target's own settings, once it is ticked.
+    if (!pk.isSelected('android')) return packaging;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [packaging, _androidSection()]);
   }
 
   Widget _targetRow(String target, bool selected, PackagingRunState run) {

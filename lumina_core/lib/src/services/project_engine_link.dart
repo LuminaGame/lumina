@@ -39,6 +39,54 @@ class ProjectEngineLink {
 
   static const String overridesFileName = 'pubspec_overrides.yaml';
 
+  /// The block of `pubspec_overrides.yaml` (under `dependency_overrides:`)
+  /// that pins the enabled plugins' runtime packages to their local
+  /// checkouts; written by the plugin dependency service, kept when the
+  /// engine link rewrites the file.
+  static const String pluginOverridesBegin = '  # BEGIN LUMINA PLUGINS (generated)';
+  static const String pluginOverridesEnd = '  # END LUMINA PLUGINS';
+
+  /// The plugin block of an overrides file's [text] (with its markers and
+  /// trailing newline), or empty.
+  static String pluginOverridesBlock(String text) {
+    final t = text.replaceAll('\r\n', '\n');
+    final start = t.indexOf(pluginOverridesBegin);
+    if (start < 0) return '';
+    final end = t.indexOf(pluginOverridesEnd, start);
+    if (end < 0) return '';
+    return '${t.substring(start, end + pluginOverridesEnd.length)}\n';
+  }
+
+  /// [text] (an overrides file) with its plugin block replaced by [block]
+  /// (empty removes it); a file without `dependency_overrides:` gets one.
+  static String withPluginOverridesBlock(String text, String block) {
+    var t = text.replaceAll('\r\n', '\n');
+    final old = pluginOverridesBlock(t);
+    if (old.isNotEmpty) t = t.replaceFirst(old, '');
+    if (block.isEmpty) return t;
+    if (!RegExp(r'^dependency_overrides:', multiLine: true).hasMatch(t)) {
+      if (t.isNotEmpty && !t.endsWith('\n')) t = '$t\n';
+      t = '${t}dependency_overrides:\n';
+    }
+    if (!t.endsWith('\n')) t = '$t\n';
+    return '$t$block';
+  }
+
+  /// [block] without the entries for [names] (each a `name:` line and its
+  /// deeper-indented lines).
+  static String _withoutPackages(String block, Set<String> names) {
+    if (block.isEmpty) return block;
+    final out = <String>[];
+    var skipping = false;
+    for (final line in block.split('\n')) {
+      final m = RegExp(r'^  ([a-z_][a-z0-9_]*):\s*$').firstMatch(line);
+      if (m != null) skipping = names.contains(m.group(1));
+      if (skipping && (m != null || line.startsWith('    '))) continue;
+      out.add(line);
+    }
+    return out.join('\n');
+  }
+
   /// The packages whose hooks take the settings [hookUserDefines] writes.
   static const List<String> hookedPackages = ['flutter_filament', 'flutter_assimp', 'flutter_riglogic'];
 
@@ -405,8 +453,12 @@ class ProjectEngineLink {
           : const <String, Map<String, String>>{};
       if (defines.isEmpty) _syncLinks(Directory(p.join(projectDir, engineLinksDir)), const {});
       pubspec = withHookUserDefines(pubspec, defines);
-      final yaml = overridesYaml(packages, engineRoot);
-      if (!overrides.existsSync() || overrides.readAsStringSync() != yaml) overrides.writeAsStringSync(yaml);
+      final existing = overrides.existsSync() ? overrides.readAsStringSync() : '';
+      // The enabled plugins' packages stay pinned; the engine's own copy of
+      // a package wins over a plugin's.
+      final plugins = _withoutPackages(pluginOverridesBlock(existing), packages.keys.toSet());
+      final yaml = withPluginOverridesBlock(overridesYaml(packages, engineRoot), plugins);
+      if (existing != yaml) overrides.writeAsStringSync(yaml);
       ensureOverridesIgnored(projectDir);
     } else if (engineRoot != null) {
       if (!overrides.existsSync()) {

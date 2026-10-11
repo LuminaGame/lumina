@@ -79,6 +79,7 @@ mixin _ProjectSettingsPackaging on _ProjectSettingsViewModelState {
     String stage = 'Starting…';
     // Every packaged target gets the project icon.
     final icons = ProjectIconPackaging(projectDir: projectDirPath, project: project);
+    final android = AndroidPackagingHooks(projectDir: projectDirPath, project: project);
     final step = PackageTargetsStep(
       targets: targets,
       reasonsFor: reasonsFor,
@@ -86,8 +87,9 @@ mixin _ProjectSettingsPackaging on _ProjectSettingsViewModelState {
       processStarter: _processStarter,
       codeGenerator: _codeGenerator,
       webModule: webModule,
-      beforeBuild: icons.beforeBuild,
-      afterPackage: icons.afterPackage,
+      beforeBuild: chainBeforeBuild(icons.beforeBuild, android.beforeBuild),
+      afterPackage: chainAfterPackage(icons.afterPackage, android.afterPackage),
+      androidTargetPlatforms: AndroidPackaging.targetPlatforms(project.packaging.android),
     );
     await for (final event in BuildPipelineService().run(BuildPlan(steps: [step]), projectDir: projectDirPath, project: project, token: token)) {
       switch (event) {

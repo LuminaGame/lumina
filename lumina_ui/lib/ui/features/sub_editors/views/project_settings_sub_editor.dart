@@ -22,6 +22,7 @@ part 'project_settings/sub_editor/description.dart';
 part 'project_settings/sub_editor/categories.dart';
 part 'project_settings/sub_editor/input.dart';
 part 'project_settings/sub_editor/packaging.dart';
+part 'project_settings/sub_editor/packaging_android.dart';
 part 'project_settings/sub_editor/neural_rendering.dart';
 
 /// Project Settings: split view over the real `.lmproject`.
@@ -70,6 +71,7 @@ class _ProjectSettingsSubEditorState extends _ProjectSettingsSubEditorStateBase
         _ProjectSettingsCategories,
         _ProjectSettingsInput,
         _ProjectSettingsPackaging,
+        _ProjectSettingsPackagingAndroid,
         _ProjectSettingsNeuralRenderingSection {
 
   @override

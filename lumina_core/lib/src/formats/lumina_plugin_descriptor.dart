@@ -3,6 +3,9 @@ import 'package:pub_semver/pub_semver.dart';
 
 import 'package:lumina_core/src/formats/lumina_project.dart';
 
+import 'package:lumina_core/src/formats/plugin_android_contributions.dart';
+
+export 'package:lumina_core/src/formats/plugin_android_contributions.dart';
 export 'package:lumina_core/src/formats/plugin_isolation.dart';
 
 enum PluginOrigin { engine, project, user }
@@ -114,6 +117,10 @@ class LuminaPluginDescriptor {
   /// Where the editor module runs (`.lmplugin` `"isolation"`); a project
   /// can override it (see [effectiveIsolation]).
   final PluginIsolation isolation;
+
+  /// What the plugin adds to a game's Android manifest (`.lmplugin`
+  /// `"android"`), or null.
+  final PluginAndroidContributions? android;
   final Map<String, dynamic> extras;
 
   // Derived / set by discovery
@@ -121,6 +128,11 @@ class LuminaPluginDescriptor {
   final PluginOrigin origin;
 
   bool get isContentOnly => canContainContent && modules.isEmpty;
+
+  /// The modules a game links (`"type": "runtime"`): the code generator adds
+  /// their package to the game's dependencies and calls each
+  /// `registration_class`'s `register()` from the generated `main()`.
+  List<PluginModuleDescriptor> get runtimeModules => [for (final m in modules) if (m.type == PluginModuleType.runtime) m];
 
   /// The editor module that names a `process_class`, or null.
   PluginModuleDescriptor? get processModule {
@@ -202,6 +214,7 @@ class LuminaPluginDescriptor {
     this.enabledByDefault = false,
     this.canContainContent = false,
     this.isolation = PluginIsolation.inProcess,
+    this.android,
     this.extras = const {},
     required this.pluginDir,
     required this.origin,
@@ -222,6 +235,7 @@ class LuminaPluginDescriptor {
       if (enabledByDefault) 'enabled_by_default': true,
       if (canContainContent) 'can_contain_content': true,
       if (isolation != PluginIsolation.inProcess) 'isolation': isolation.manifestValue,
+      if (android != null) 'android': android!.toJson(),
     };
     json.addAll(extras);
     return json;
@@ -261,6 +275,10 @@ class LuminaPluginDescriptor {
       throw FormatException('"isolation" must be "in_process" or "process", got "$rawIsolation"');
     }
 
+    final rawAndroid = extras.remove('android');
+    if (rawAndroid != null && rawAndroid is! Map) throw const FormatException('"android" must be an object');
+    final android = rawAndroid == null ? null : PluginAndroidContributions.fromJson(Map<String, dynamic>.from(rawAndroid as Map));
+
     return LuminaPluginDescriptor(
       name: name,
       friendlyName: friendlyName,
@@ -274,6 +292,7 @@ class LuminaPluginDescriptor {
       enabledByDefault: enabledByDefault,
       canContainContent: canContainContent,
       isolation: isolation,
+      android: android,
       extras: extras,
       pluginDir: pluginDir,
       origin: origin,

@@ -35,6 +35,7 @@
 | [Marketplace](marketplace.md) | Oturum açma, göz atma, listing kurma ve lisans kayıtları. |
 | [MCP sunucusu](mcp-server.md) | Editörün Model Context Protocol sunucusu: transport, oturumlar, registry, job'lar, sandbox, snapshot'lar, panel. |
 | [MCP araç kataloğu](mcp-tools.md) | Editörün sunduğu her MCP aracı, alana göre, risk seviyesiyle. |
+| [Android ve Meta Quest paketleme](android-quest-packaging.md) | Android hedefi: Quest profili, oluşturulan manifest, oyun bağımlılığı olan eklenti runtime modülleri, imzalama, cook, gözlükle Play on Device. |
 | [Windows paketleme](windows-packaging.md) | Lumina Studio'nun MSIX paketinin build edilmesi ve imzalanması. |
 | [Alt editörler](sub-editors/index.md) | Kendi sekmelerinde açılan asset editörleri. |
 

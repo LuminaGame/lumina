@@ -41,6 +41,7 @@ class DartCodeGeneratorService extends _DartCodeGeneratorServiceState
     ProjectNeuralRenderingSettings? neuralRendering,
     int maxViewports = 0,
     String presentation = 'flutter',
+    bool pluginRuntimeModules = false,
   }) {
     // Every level the game can Open Level to, by authored name
     // (`L_Main` → `levels/l_main.dart`, class `LMain`).
@@ -107,6 +108,10 @@ class DartCodeGeneratorService extends _DartCodeGeneratorServiceState
     final startMode = startFullscreen ? 'LuminaWindowMode.borderlessFullscreen' : 'LuminaWindowMode.windowed';
     final neuralRenderingOptIn = neuralRenderingOptInSource(neuralRendering);
     // Project Settings > UI: umg.maxViewports.
+    // The enabled plugins' runtime modules (lib/plugin_runtime_modules.g.dart),
+    // registered before anything else runs.
+    final pluginsImport = pluginRuntimeModules ? "import 'plugin_runtime_modules.g.dart';\n" : '';
+    final registerPlugins = pluginRuntimeModules ? '  registerPluginRuntimeModules();\n' : '';
     final viewportBudget = maxViewports > 0 ? '  LuminaViewportBudget.projectMaxViewports = ${maxViewports.clamp(1, 8)};\n' : '';
     return """
 // GENERATED CODE - DO NOT MODIFY BY HAND
@@ -120,12 +125,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '$kLuminaGameLibrary';
 $shadcnImport$levelImports
-$blueprintImport$inputImport$functionsImport$widgetsImport$registryImport$modeImport
+$blueprintImport$inputImport$functionsImport$widgetsImport$registryImport$modeImport$pluginsImport
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // The engine's Flutter services: platform, asset bundle, video player.
   LuminaWidgets.ensureInitialized();
-$neuralRenderingOptIn$viewportBudget$registerFunctions$registerWidgets$registerBlueprints  // Every asset the level names is read from the app bundle (pubspec.yaml
+$registerPlugins$neuralRenderingOptIn$viewportBudget$registerFunctions$registerWidgets$registerBlueprints  // Every asset the level names is read from the app bundle (pubspec.yaml
   // bundles contents/), so the same game runs on desktop and on the web.
   LuminaAssets.defaultProvider = (path) async {
     final data = await rootBundle.load(path);

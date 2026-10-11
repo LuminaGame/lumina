@@ -6,6 +6,7 @@ import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/ui/core/host/editor_host.dart' show LuminaEditorHost;
 
 import 'package:lumina_ui/ui/features/sub_editors/services/build_pipeline_service.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/android_packaging_hooks.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/project_icon_packaging.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/web_module_download.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/web_preview_server.dart';
@@ -375,6 +376,8 @@ class BuildManagerViewModel extends ChangeNotifier {
     final p = project;
     // Every packaged target gets the project icon.
     final icons = p == null ? null : ProjectIconPackaging(projectDir: projectDirPath, project: p);
+    // The enabled plugins' runtime modules, and the Android manifest / Gradle settings.
+    final android = p == null ? null : AndroidPackagingHooks(projectDir: projectDirPath, project: p);
     return PackageTargetsStep(
         targets: targets,
         reasonsFor: reasonsFor,
@@ -386,8 +389,9 @@ class BuildManagerViewModel extends ChangeNotifier {
         codeGenerator: _codeGenerator,
         webModule: webModule,
         bundleWebResources: _bundleWebResources,
-        beforeBuild: icons?.beforeBuild,
-        afterPackage: icons?.afterPackage,
+        beforeBuild: android == null ? icons?.beforeBuild : chainBeforeBuild(icons?.beforeBuild, android.beforeBuild),
+        afterPackage: android == null ? icons?.afterPackage : chainAfterPackage(icons?.afterPackage, android.afterPackage),
+        androidTargetPlatforms: p == null ? const [] : AndroidPackaging.targetPlatforms(p.packaging.android),
       );
   }
 

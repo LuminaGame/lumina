@@ -25,6 +25,8 @@ void main() {
     tempDir = Directory.systemTemp.createTempSync('lumina_build_manager_ui_');
     // The editor's downloaded web module stays out: only what a test sets up counts.
     LuminaDataDir.override = Directory('${tempDir.path}/lumina_data');
+    // No Filament Android archives in these runs.
+    HostBuildTargets.filamentDirOverride = '${tempDir.path}/no_filament';
     projDir = Directory('${tempDir.path}/bm_game')..createSync(recursive: true);
     Directory('${projDir.path}/contents/levels').createSync(recursive: true);
     Directory('${projDir.path}/contents/materials').createSync(recursive: true);
@@ -41,6 +43,7 @@ void main() {
   });
 
   tearDown(() {
+    HostBuildTargets.filamentDirOverride = null;
     LuminaDataDir.override = null;
     if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
   });
@@ -167,7 +170,8 @@ void main() {
     vm.setConfiguration(BuildConfiguration.development);
     vm.setExtraFlags('--verbose');
     expect(vm.cookArgumentsFor('linux'), ['build', 'linux', '--profile', '--verbose']);
-    expect(vm.cookArgumentsFor('android'), ['build', 'apk', '--profile', '--verbose']);
+    // An APK for the project's Android ABIs (arm64).
+    expect(vm.cookArgumentsFor('android'), ['build', 'apk', '--profile', '--target-platform', 'android-arm64', '--verbose']);
     expect(vm.cookEnabled, isTrue);
     await pumpEditor(tester, vm);
     // Every platform is listed, ticked or not.
@@ -230,7 +234,7 @@ void main() {
     expect(saved.packaging.targets, ['linux', 'android', 'web'], reason: 'a standalone Build Manager saves the manifest itself');
     expect(find.byKey(const ValueKey('build_manager_target_reason_web_0')), findsOneWidget);
     expect(find.textContaining('build_module.sh'), findsWidgets, reason: 'the reason is shown next to the target');
-    expect(find.textContaining('no Android build of the Filament libraries'), findsWidgets);
+    expect(find.textContaining('Filament Android archives are missing'), findsWidgets);
     expect(vm.cookEnabled, isTrue, reason: 'unbuildable targets are reported at cook time, not hidden');
 
     final cook = tester.widget<PrimaryButton>(find.byKey(const ValueKey('build_manager_cook')));

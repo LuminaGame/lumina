@@ -93,7 +93,7 @@ MenuItem _deviceRow(AndroidDevice d, AndroidDeviceList list, bool runActive, voi
             ),
           ),
           const SizedBox(width: 6),
-          Icon(d.isEmulator ? LucideIcons.monitorSmartphone : LucideIcons.smartphone, size: 12),
+          Icon(d.isEmulator ? LucideIcons.monitorSmartphone : (d.isQuest ? LucideIcons.glasses : LucideIcons.smartphone), size: 12),
         ],
       ),
     ),
@@ -102,7 +102,7 @@ MenuItem _deviceRow(AndroidDevice d, AndroidDeviceList list, bool runActive, voi
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(d.name, style: const TextStyle(fontSize: 10)),
+        Text(d.title, key: ValueKey('play_on_device_title_${d.id}'), style: const TextStyle(fontSize: 10)),
         Text(d.description, style: const TextStyle(fontSize: 9, color: EditorColors.mutedForeground)),
         if (hint != null)
           ConstrainedBox(

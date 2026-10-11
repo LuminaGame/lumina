@@ -1,0 +1,3 @@
+List of devices attached
+340YC10GBS0VRX         device product:panther model:Quest_3S device:panther transport_id:1
+
