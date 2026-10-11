@@ -73,6 +73,43 @@ class ExternalVulkanContext {
       'device: 0x${device.toRadixString(16)}, family $queueFamily, queue $queueIndex, multiview $multiview)';
 }
 
+/// The addresses of the `filament_external_vulkan_device_info_*` C
+/// functions, for a native library that creates the device itself (an
+/// OpenXR bridge passes the info's `VkDeviceCreateInfo` to
+/// `xrCreateVulkanDeviceKHR`) without linking flutter_filament.
+abstract final class ExternalVulkanDeviceInfoFunctions {
+  static ffi.Pointer<ffi.Void> get create => ffi.Native.addressOf<
+          ffi.NativeFunction<
+              ffi.Pointer<ffi.Void> Function(ffi.Pointer<ffi.Void>, ffi.Pointer<ffi.Void>, ffi.Bool,
+                  ffi.Pointer<ffi.Pointer<ffi.Char>>, ffi.Uint32)>>(c.filament_external_vulkan_device_info_create)
+      .cast();
+
+  static ffi.Pointer<ffi.Void> get createInfo =>
+      ffi.Native.addressOf<ffi.NativeFunction<ffi.Pointer<ffi.Void> Function(ffi.Pointer<ffi.Void>)>>(
+              c.filament_external_vulkan_device_info_create_info)
+          .cast();
+
+  static ffi.Pointer<ffi.Void> get queueFamily =>
+      ffi.Native.addressOf<ffi.NativeFunction<ffi.Uint32 Function(ffi.Pointer<ffi.Void>)>>(
+              c.filament_external_vulkan_device_info_queue_family)
+          .cast();
+
+  static ffi.Pointer<ffi.Void> get filamentQueueIndex =>
+      ffi.Native.addressOf<ffi.NativeFunction<ffi.Uint32 Function(ffi.Pointer<ffi.Void>)>>(
+              c.filament_external_vulkan_device_info_filament_queue_index)
+          .cast();
+
+  static ffi.Pointer<ffi.Void> get multiview =>
+      ffi.Native.addressOf<ffi.NativeFunction<ffi.Bool Function(ffi.Pointer<ffi.Void>)>>(
+              c.filament_external_vulkan_device_info_multiview)
+          .cast();
+
+  static ffi.Pointer<ffi.Void> get destroy =>
+      ffi.Native.addressOf<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+              c.filament_external_vulkan_device_info_destroy)
+          .cast();
+}
+
 /// One recorded call of an [ExternalVulkanOffscreen] provider.
 class ExternalSwapchainEvent {
   const ExternalSwapchainEvent(this.present, this.index);
