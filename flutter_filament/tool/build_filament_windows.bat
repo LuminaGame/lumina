@@ -22,13 +22,16 @@ if not defined VCINSTALLDIR (
 if defined VSDIR call "%VSDIR%\VC\Auxiliary\Build\vcvars64.bat" >nul || exit /b 1
 if exist "%LOCALAPPDATA%\Programs\Python\Python312\python.exe" set "PATH=%LOCALAPPDATA%\Programs\Python\Python312;%PATH%"
 
-if not exist "%OUT%\build.ninja" (
+rem Configured on every run: a changed flag reaches an existing build tree (cmake is
+rem incremental; ninja rebuilds only what the flag touches).
+(
   cmake -S "%FILAMENT%" -B "%OUT%" -G Ninja -DCMAKE_BUILD_TYPE=Release ^
     -DFILAMENT_BUILD_TESTING=OFF ^
     -DFILAMENT_SUPPORTS_VULKAN=ON -DFILAMENT_SUPPORTS_OPENGL=ON ^
     -DFILAMENT_BUILD_FILAMAT=ON -DFILAMENT_ENABLE_MATDBG=OFF ^
     -DFILAMENT_SUPPORTS_WEBP_TEXTURES=ON ^
-    -DFILAMENT_ENABLE_EXCEPTIONS=ON -DUSE_STATIC_CRT=ON || exit /b 1
+    -DFILAMENT_ENABLE_EXCEPTIONS=ON -DUSE_STATIC_CRT=ON ^
+    -DFILAMENT_ENABLE_MULTIVIEW=ON -DFILAMENT_SAMPLES_STEREO_TYPE=multiview || exit /b 1
 )
 ninja -C "%OUT%" %* || exit /b 1
 echo Filament built at %OUT%

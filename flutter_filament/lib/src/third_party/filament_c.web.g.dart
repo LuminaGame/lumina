@@ -478,6 +478,17 @@ void filament_view_get_soft_shadow_options(ffi.Pointer<ffi.Void> view, ffi.Point
   _m.filament_view_get_soft_shadow_options(view.address.toJS, out_options.address.toJS);
 }
 
+void filament_view_set_stereoscopic_options(ffi.Pointer<ffi.Void> view, ffi.Pointer<filament_stereoscopic_options> options) {
+  _m.filament_view_set_stereoscopic_options(view.address.toJS, options.address.toJS);
+}
+
+void filament_view_get_stereoscopic_options(ffi.Pointer<ffi.Void> view, ffi.Pointer<filament_stereoscopic_options> out_options) {
+  _m.filament_view_get_stereoscopic_options(view.address.toJS, out_options.address.toJS);
+}
+
+bool filament_view_is_stereo_active(ffi.Pointer<ffi.Void> view, ffi.Pointer<ffi.Void> engine) =>
+    _m.filament_view_is_stereo_active(view.address.toJS, engine.address.toJS).toDartInt != 0;
+
 void filament_view_set_render_quality(ffi.Pointer<ffi.Void> view, ffi.Pointer<filament_render_quality> options) {
   _m.filament_view_set_render_quality(view.address.toJS, options.address.toJS);
 }
@@ -3451,6 +3462,22 @@ void filament_camera_set_custom_projection_culling(ffi.Pointer<ffi.Void> camera,
   _m.filament_camera_set_custom_projection_culling(camera.address.toJS, projection16.address.toJS, culling16.address.toJS, near_plane.toJS, far_plane.toJS);
 }
 
+void filament_camera_set_eye_model_matrix(ffi.Pointer<ffi.Void> camera, int eye, ffi.Pointer<ffi.Double> matrix16) {
+  _m.filament_camera_set_eye_model_matrix(camera.address.toJS, eye.toJS, matrix16.address.toJS);
+}
+
+void filament_camera_get_eye_model_matrix(ffi.Pointer<ffi.Void> camera, int eye, ffi.Pointer<ffi.Double> out_matrix16) {
+  _m.filament_camera_get_eye_model_matrix(camera.address.toJS, eye.toJS, out_matrix16.address.toJS);
+}
+
+void filament_camera_set_custom_eye_projection(ffi.Pointer<ffi.Void> camera, ffi.Pointer<ffi.Double> projections16, int count, ffi.Pointer<ffi.Double> culling16, double near_plane, double far_plane) {
+  _m.filament_camera_set_custom_eye_projection(camera.address.toJS, projections16.address.toJS, count.toJS, culling16.address.toJS, near_plane.toJS, far_plane.toJS);
+}
+
+void filament_camera_get_eye_projection_matrix(ffi.Pointer<ffi.Void> camera, int eye, ffi.Pointer<ffi.Double> out_matrix16) {
+  _m.filament_camera_get_eye_projection_matrix(camera.address.toJS, eye.toJS, out_matrix16.address.toJS);
+}
+
 void filament_camera_set_scaling(ffi.Pointer<ffi.Void> camera, double x, double y) {
   _m.filament_camera_set_scaling(camera.address.toJS, x.toJS, y.toJS);
 }
@@ -4429,6 +4456,90 @@ int filament_ui_overlay_last_upload_micros(ffi.Pointer<ffi.Void> overlay) =>
 
 int filament_ui_overlay_upload_count(ffi.Pointer<ffi.Void> overlay) =>
     FlutterFilamentModule.fromBigInt(_m.filament_ui_overlay_upload_count(overlay.address.toJS));
+
+/// Creates a Vulkan engine on the given objects. `config` may be null. A
+/// GPU preference (FILAMENT_GPU, VK_DEVICE_INDEX) does not apply and is
+/// ignored with a log line. Returns null on failure.
+ffi.Pointer<ffi.Void> filament_engine_create_external_vulkan(ffi.Pointer<filament_external_vulkan_context> context, int feature_level, ffi.Pointer<filament_engine_config_t> config) =>
+    ffi.Pointer<ffi.Void>.fromAddress(_m.filament_engine_create_external_vulkan(context.address.toJS, feature_level.toJS, config.address.toJS).toDartInt);
+
+/// The Vulkan objects behind a Vulkan [engine] (external or not): instance,
+/// physical device, device, the queue family and index Filament submits on,
+/// and whether the device supports multiview. False for other backends.
+bool filament_engine_get_vulkan_context(ffi.Pointer<ffi.Void> engine, ffi.Pointer<filament_external_vulkan_context> out) =>
+    _m.filament_engine_get_vulkan_context(engine.address.toJS, out.address.toJS).toDartInt != 0;
+
+/// Whether [engine] was made by filament_engine_create_external_vulkan.
+bool filament_engine_is_external_vulkan(ffi.Pointer<ffi.Void> engine) =>
+    _m.filament_engine_is_external_vulkan(engine.address.toJS).toDartInt != 0;
+
+/// A SwapChain whose images come from [provider] (copied; its user_data must
+/// stay valid until the SwapChain is destroyed). Only on an engine from
+/// filament_engine_create_external_vulkan; null otherwise.
+ffi.Pointer<ffi.Void> filament_swap_chain_create_external(ffi.Pointer<ffi.Void> engine, ffi.Pointer<filament_external_swapchain_provider> provider) =>
+    ffi.Pointer<ffi.Void>.fromAddress(_m.filament_swap_chain_create_external(engine.address.toJS, provider.address.toJS).toDartInt);
+
+/// What Filament needs from a device it will adopt: the features and
+/// extensions it would enable itself (multiview when asked and supported),
+/// one or two queues of the graphics family, plus a protected queue when the
+/// device supports protected memory. The caller passes
+/// filament_external_vulkan_device_info_create_info to vkCreateDevice or
+/// xrCreateVulkanDeviceKHR. `extra_extensions` are added (unavailable ones
+/// are dropped). Returns null when the device has no graphics queue.
+ffi.Pointer<ffi.Void> filament_external_vulkan_device_info_create(ffi.Pointer<ffi.Void> instance, ffi.Pointer<ffi.Void> physical_device, bool multiview, ffi.Pointer<ffi.Pointer<ffi.Char>> extra_extensions, int extra_extension_count) =>
+    ffi.Pointer<ffi.Void>.fromAddress(_m.filament_external_vulkan_device_info_create(instance.address.toJS, physical_device.address.toJS, (multiview ? 1 : 0).toJS, extra_extensions.address.toJS, extra_extension_count.toJS).toDartInt);
+
+/// The VkDeviceCreateInfo (valid while the info lives).
+ffi.Pointer<ffi.Void> filament_external_vulkan_device_info_create_info(ffi.Pointer<ffi.Void> info) =>
+    ffi.Pointer<ffi.Void>.fromAddress(_m.filament_external_vulkan_device_info_create_info(info.address.toJS).toDartInt);
+
+int filament_external_vulkan_device_info_queue_family(ffi.Pointer<ffi.Void> info) =>
+    _m.filament_external_vulkan_device_info_queue_family(info.address.toJS).toDartInt.toUnsigned(32);
+
+/// The queue index Filament should use: 1 when the family offered two queues
+/// (index 0 then belongs to the runtime), else 0.
+int filament_external_vulkan_device_info_filament_queue_index(ffi.Pointer<ffi.Void> info) =>
+    _m.filament_external_vulkan_device_info_filament_queue_index(info.address.toJS).toDartInt.toUnsigned(32);
+
+bool filament_external_vulkan_device_info_multiview(ffi.Pointer<ffi.Void> info) =>
+    _m.filament_external_vulkan_device_info_multiview(info.address.toJS).toDartInt != 0;
+
+void filament_external_vulkan_device_info_destroy(ffi.Pointer<ffi.Void> info) {
+  _m.filament_external_vulkan_device_info_destroy(info.address.toJS);
+}
+
+/// A reference provider with no compositor behind it: it creates its own
+/// instance and device (through filament_external_vulkan_device_info), and
+/// [image_count] RGBA8 images (sRGB-encoded when [srgb], as a headset
+/// compositor's usually are) of [width] x [height] with [layer_count]
+/// layers that can be read back. Desktop tests and bring-up use it; it
+/// records every acquire and present. Returns null when Vulkan is missing.
+ffi.Pointer<ffi.Void> filament_external_vulkan_offscreen_create(int width, int height, int image_count, int layer_count, bool multiview, bool srgb) =>
+    ffi.Pointer<ffi.Void>.fromAddress(_m.filament_external_vulkan_offscreen_create(width.toJS, height.toJS, image_count.toJS, layer_count.toJS, (multiview ? 1 : 0).toJS, (srgb ? 1 : 0).toJS).toDartInt);
+
+void filament_external_vulkan_offscreen_context(ffi.Pointer<ffi.Void> offscreen, ffi.Pointer<filament_external_vulkan_context> out) {
+  _m.filament_external_vulkan_offscreen_context(offscreen.address.toJS, out.address.toJS);
+}
+
+void filament_external_vulkan_offscreen_provider(ffi.Pointer<ffi.Void> offscreen, ffi.Pointer<filament_external_swapchain_provider> out) {
+  _m.filament_external_vulkan_offscreen_provider(offscreen.address.toJS, out.address.toJS);
+}
+
+/// Copies [layer] of image [index] into [out] (width * height * 4 bytes,
+/// RGBA8, top row first). Call only while the engine is idle
+/// (filament_engine_flush_and_wait). Returns false on failure.
+bool filament_external_vulkan_offscreen_read_pixels(ffi.Pointer<ffi.Void> offscreen, int index, int layer, ffi.Pointer<ffi.Uint8> out) =>
+    _m.filament_external_vulkan_offscreen_read_pixels(offscreen.address.toJS, index.toJS, layer.toJS, out.address.toJS).toDartInt != 0;
+
+/// Writes up to [capacity] recorded events, oldest first: an acquire of image
+/// i is i, a present of image i is 0x100 | i. Returns how many were written.
+int filament_external_vulkan_offscreen_events(ffi.Pointer<ffi.Void> offscreen, ffi.Pointer<ffi.Uint32> out, int capacity) =>
+    _m.filament_external_vulkan_offscreen_events(offscreen.address.toJS, out.address.toJS, capacity.toJS).toDartInt.toUnsigned(32);
+
+/// Destroys the images, device and instance. Destroy the engine first.
+void filament_external_vulkan_offscreen_destroy(ffi.Pointer<ffi.Void> offscreen) {
+  _m.filament_external_vulkan_offscreen_destroy(offscreen.address.toJS);
+}
 
 enum FilamentBackend {
   FILAMENT_BACKEND_DEFAULT(0),
@@ -6640,6 +6751,103 @@ final class filament_opendlss_nr_status extends ffi.Struct {
   set device_bytes(int value) => ffi.$writeInt64($address + 48, value);
 }
 
+/// The Vulkan objects an external engine adopts (VkInstance,
+/// VkPhysicalDevice, VkDevice as pointers), the graphics queue family and
+/// the index of Filament's queue in it, and whether the device was created
+/// with the multiview feature.
+final class filament_external_vulkan_context extends ffi.Struct {
+  filament_external_vulkan_context.$at(super.$address) : super.$at();
+
+  ffi.Pointer<ffi.Void> get instance => ffi.Pointer<ffi.Void>.fromAddress(FlutterFilamentModule.heap.getUint32($address, Endian.little));
+  set instance(ffi.Pointer<ffi.Void> value) => FlutterFilamentModule.heap.setUint32($address, value.address, Endian.little);
+
+  ffi.Pointer<ffi.Void> get physical_device => ffi.Pointer<ffi.Void>.fromAddress(FlutterFilamentModule.heap.getUint32($address + 4, Endian.little));
+  set physical_device(ffi.Pointer<ffi.Void> value) => FlutterFilamentModule.heap.setUint32($address + 4, value.address, Endian.little);
+
+  ffi.Pointer<ffi.Void> get device => ffi.Pointer<ffi.Void>.fromAddress(FlutterFilamentModule.heap.getUint32($address + 8, Endian.little));
+  set device(ffi.Pointer<ffi.Void> value) => FlutterFilamentModule.heap.setUint32($address + 8, value.address, Endian.little);
+
+  int get queue_family => FlutterFilamentModule.heap.getUint32($address + 12, Endian.little);
+  set queue_family(int value) => FlutterFilamentModule.heap.setUint32($address + 12, value, Endian.little);
+
+  int get queue_index => FlutterFilamentModule.heap.getUint32($address + 16, Endian.little);
+  set queue_index(int value) => FlutterFilamentModule.heap.setUint32($address + 16, value, Endian.little);
+
+  bool get multiview => FlutterFilamentModule.heap.getUint8($address + 20) != 0;
+  set multiview(bool value) => FlutterFilamentModule.heap.setUint8($address + 20, value ? 1 : 0);
+}
+
+/// Swapchain images owned by someone else (an OpenXR swapchain). The
+/// callbacks run on Filament's driver thread; Dart never calls them.
+final class filament_external_swapchain_provider extends ffi.Struct {
+  filament_external_swapchain_provider.$at(super.$address) : super.$at();
+
+  ffi.Pointer<ffi.Void> get user_data => ffi.Pointer<ffi.Void>.fromAddress(FlutterFilamentModule.heap.getUint32($address, Endian.little));
+  set user_data(ffi.Pointer<ffi.Void> value) => FlutterFilamentModule.heap.setUint32($address, value.address, Endian.little);
+
+  /// Number of colour images, their size, VkFormat and array layers (2 for
+  /// a multiview image).
+  int get image_count => FlutterFilamentModule.heap.getUint32($address + 4, Endian.little);
+  set image_count(int value) => FlutterFilamentModule.heap.setUint32($address + 4, value, Endian.little);
+
+  int get width => FlutterFilamentModule.heap.getUint32($address + 8, Endian.little);
+  set width(int value) => FlutterFilamentModule.heap.setUint32($address + 8, value, Endian.little);
+
+  int get height => FlutterFilamentModule.heap.getUint32($address + 12, Endian.little);
+  set height(int value) => FlutterFilamentModule.heap.setUint32($address + 12, value, Endian.little);
+
+  int get color_format => FlutterFilamentModule.heap.getUint32($address + 16, Endian.little);
+  set color_format(int value) => FlutterFilamentModule.heap.setUint32($address + 16, value, Endian.little);
+
+  int get layer_count => FlutterFilamentModule.heap.getUint32($address + 20, Endian.little);
+  set layer_count(int value) => FlutterFilamentModule.heap.setUint32($address + 20, value, Endian.little);
+
+  /// VkFormat of `depth` from get_images, or of the depth image Filament
+  /// makes itself when get_images leaves it 0.
+  int get depth_format => FlutterFilamentModule.heap.getUint32($address + 24, Endian.little);
+  set depth_format(int value) => FlutterFilamentModule.heap.setUint32($address + 24, value, Endian.little);
+
+  /// Writes image_count VkImage handles into `colors` and a depth VkImage
+  /// (or 0) into `depth`.
+  external ffi.Pointer<
+    ffi.NativeFunction<
+      ffi.Void Function(
+        ffi.Pointer<ffi.Void> user_data,
+        ffi.Pointer<ffi.Uint64> colors,
+        ffi.Pointer<ffi.Uint64> depth,
+      )
+    >
+  >
+  get_images;
+
+  /// Waits until an image may be rendered (xrAcquireSwapchainImage +
+  /// xrWaitSwapchainImage) and writes its index. Returns a VkResult.
+  external ffi.Pointer<
+    ffi.NativeFunction<
+      ffi.Int32 Function(
+        ffi.Pointer<ffi.Void> user_data,
+        ffi.Pointer<ffi.Uint32> index,
+      )
+    >
+  >
+  acquire;
+
+  /// The image's commands are submitted (xrReleaseSwapchainImage). Returns
+  /// a VkResult.
+  external ffi.Pointer<
+    ffi.NativeFunction<
+      ffi.Int32 Function(ffi.Pointer<ffi.Void> user_data, ffi.Uint32 index)
+    >
+  >
+  present;
+
+  /// The swapchain is gone; may be null.
+  external ffi.Pointer<
+    ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void> user_data)>
+  >
+  destroy;
+}
+
 // --- the module's exports (web) ---------------------------------------------
 extension type _Module._(JSObject _) implements JSObject {
   @JS('_filament_get_version')
@@ -6902,6 +7110,12 @@ extension type _Module._(JSObject _) implements JSObject {
   external void filament_view_set_soft_shadow_options(JSNumber view, JSNumber options);
   @JS('_filament_view_get_soft_shadow_options')
   external void filament_view_get_soft_shadow_options(JSNumber view, JSNumber out_options);
+  @JS('_filament_view_set_stereoscopic_options')
+  external void filament_view_set_stereoscopic_options(JSNumber view, JSNumber options);
+  @JS('_filament_view_get_stereoscopic_options')
+  external void filament_view_get_stereoscopic_options(JSNumber view, JSNumber out_options);
+  @JS('_filament_view_is_stereo_active')
+  external JSNumber filament_view_is_stereo_active(JSNumber view, JSNumber engine);
   @JS('_filament_view_set_render_quality')
   external void filament_view_set_render_quality(JSNumber view, JSNumber options);
   @JS('_filament_view_get_render_quality')
@@ -8522,6 +8736,14 @@ extension type _Module._(JSObject _) implements JSObject {
   external void filament_camera_set_custom_projection(JSNumber camera, JSNumber projection16, JSNumber near_plane, JSNumber far_plane);
   @JS('_filament_camera_set_custom_projection_culling')
   external void filament_camera_set_custom_projection_culling(JSNumber camera, JSNumber projection16, JSNumber culling16, JSNumber near_plane, JSNumber far_plane);
+  @JS('_filament_camera_set_eye_model_matrix')
+  external void filament_camera_set_eye_model_matrix(JSNumber camera, JSNumber eye, JSNumber matrix16);
+  @JS('_filament_camera_get_eye_model_matrix')
+  external void filament_camera_get_eye_model_matrix(JSNumber camera, JSNumber eye, JSNumber out_matrix16);
+  @JS('_filament_camera_set_custom_eye_projection')
+  external void filament_camera_set_custom_eye_projection(JSNumber camera, JSNumber projections16, JSNumber count, JSNumber culling16, JSNumber near_plane, JSNumber far_plane);
+  @JS('_filament_camera_get_eye_projection_matrix')
+  external void filament_camera_get_eye_projection_matrix(JSNumber camera, JSNumber eye, JSNumber out_matrix16);
   @JS('_filament_camera_set_scaling')
   external void filament_camera_set_scaling(JSNumber camera, JSNumber x, JSNumber y);
   @JS('_filament_camera_get_scaling')
@@ -9088,6 +9310,38 @@ extension type _Module._(JSObject _) implements JSObject {
   external JSBigInt filament_ui_overlay_last_upload_micros(JSNumber overlay);
   @JS('_filament_ui_overlay_upload_count')
   external JSBigInt filament_ui_overlay_upload_count(JSNumber overlay);
+  @JS('_filament_engine_create_external_vulkan')
+  external JSNumber filament_engine_create_external_vulkan(JSNumber context, JSNumber feature_level, JSNumber config);
+  @JS('_filament_engine_get_vulkan_context')
+  external JSNumber filament_engine_get_vulkan_context(JSNumber engine, JSNumber out);
+  @JS('_filament_engine_is_external_vulkan')
+  external JSNumber filament_engine_is_external_vulkan(JSNumber engine);
+  @JS('_filament_swap_chain_create_external')
+  external JSNumber filament_swap_chain_create_external(JSNumber engine, JSNumber provider);
+  @JS('_filament_external_vulkan_device_info_create')
+  external JSNumber filament_external_vulkan_device_info_create(JSNumber instance, JSNumber physical_device, JSNumber multiview, JSNumber extra_extensions, JSNumber extra_extension_count);
+  @JS('_filament_external_vulkan_device_info_create_info')
+  external JSNumber filament_external_vulkan_device_info_create_info(JSNumber info);
+  @JS('_filament_external_vulkan_device_info_queue_family')
+  external JSNumber filament_external_vulkan_device_info_queue_family(JSNumber info);
+  @JS('_filament_external_vulkan_device_info_filament_queue_index')
+  external JSNumber filament_external_vulkan_device_info_filament_queue_index(JSNumber info);
+  @JS('_filament_external_vulkan_device_info_multiview')
+  external JSNumber filament_external_vulkan_device_info_multiview(JSNumber info);
+  @JS('_filament_external_vulkan_device_info_destroy')
+  external void filament_external_vulkan_device_info_destroy(JSNumber info);
+  @JS('_filament_external_vulkan_offscreen_create')
+  external JSNumber filament_external_vulkan_offscreen_create(JSNumber width, JSNumber height, JSNumber image_count, JSNumber layer_count, JSNumber multiview, JSNumber srgb);
+  @JS('_filament_external_vulkan_offscreen_context')
+  external void filament_external_vulkan_offscreen_context(JSNumber offscreen, JSNumber out);
+  @JS('_filament_external_vulkan_offscreen_provider')
+  external void filament_external_vulkan_offscreen_provider(JSNumber offscreen, JSNumber out);
+  @JS('_filament_external_vulkan_offscreen_read_pixels')
+  external JSNumber filament_external_vulkan_offscreen_read_pixels(JSNumber offscreen, JSNumber index, JSNumber layer, JSNumber out);
+  @JS('_filament_external_vulkan_offscreen_events')
+  external JSNumber filament_external_vulkan_offscreen_events(JSNumber offscreen, JSNumber out, JSNumber capacity);
+  @JS('_filament_external_vulkan_offscreen_destroy')
+  external void filament_external_vulkan_offscreen_destroy(JSNumber offscreen);
 }
 
 _Module get _m => _Module._(FlutterFilamentModule.instance);
@@ -9139,6 +9393,8 @@ void $registerFilamentBindings() {
   ffi.$registerStruct<filament_opendlss_nr_model_info>(24, 8, filament_opendlss_nr_model_info.$at);
   ffi.$registerStruct<filament_opendlss_nr_controls>(36, 4, filament_opendlss_nr_controls.$at);
   ffi.$registerStruct<filament_opendlss_nr_status>(56, 8, filament_opendlss_nr_status.$at);
+  ffi.$registerStruct<filament_external_vulkan_context>(24, 4, filament_external_vulkan_context.$at);
+  ffi.$registerStruct<filament_external_swapchain_provider>(28, 4, filament_external_swapchain_provider.$at);
   ffi.$registerCallbackType<FilamentPickCallbackFunction>(const ffi.$CallbackSignature('v', ['u', 'f', 'f', 'f', 'p']));
   ffi.$registerCallbackType<FilamentRaycastCallbackFunction>(const ffi.$CallbackSignature('b', ['p', 'p', 'p', 'p']));
   ffi.$registerCallbackType<filament_buffer_free_fnFunction>(const ffi.$CallbackSignature('v', ['p', 'u', 'p']));

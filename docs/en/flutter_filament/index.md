@@ -11,7 +11,7 @@
 ## How the package is built
 
 - **C wrapper**: `src/*_c.h` / `src/*_c.cpp` expose Filament as plain C functions prefixed `filament_*`; `src/filament_c.h` is the umbrella header. Every exported declaration carries `FFI_PLUGIN_EXPORT`.
-- **Native-assets hook**: `hook/build.dart` compiles the wrapper on the first `flutter test` or `flutter run` and links about 44 Filament static libraries from `filament/out/cmake-release/` (or `cmake-release-windows/`). It is the authoritative list of include paths, flags (C++20; the bundled libc++ in `third_party/libcxx/` on Linux) and linked libraries.
+- **Native-assets hook**: `hook/build.dart` compiles the wrapper on the first `flutter test` or `flutter run` and links about 44 Filament static libraries from `filament/out/cmake-release/` (or `cmake-release-windows/`, or `out/android-release/filament/lib/<abi>/` on Android). With `hook/native_inputs.dart` (the source list, one for every target, and the per-platform library lists) it is the authoritative list of include paths, flags (C++20; the bundled libc++ in `third_party/libcxx/` on Linux) and linked libraries.
 - **Generated bindings**: `tool/ffigen.dart` writes `lib/src/third_party/filament_c.g.dart`; `tool/ffigen_web.dart` writes the web variants (`filament_c.web.g.dart`, `math_types.web.g.dart`).
 - **Dart wrappers**: `lib/src/*.dart` wrap the C functions in classes such as `FilamentEngine`, `FilamentScene`, `FilamentView` and `FilamentAssetLoader`. They import the package's platform shims (`src/ffi_platform.dart`, `src/ffi_package_platform.dart`, `src/filament_bindings.dart`) instead of `dart:ffi`, so the same code runs natively and on the web.
 - **Web**: `tool/web/` builds one WebAssembly module (`web/flutter_filament.{js,wasm}`) from the same C wrapper and a WebGL2 Filament build; `lib/src/web_ffi/` provides a `dart:ffi`-compatible layer over the module's heap. Web apps call `await FilamentWeb.ensureInitialized()` before using the engine. Desktop-only libraries (filamat, the full imageio, matdbg, the gltfio JIT) are stubbed on the web so every `filament_*` symbol stays exported.
@@ -52,7 +52,8 @@ Each page covers one subsystem: the C functions of its `src/*_c.h` headers first
 | [glTF loading and animation](gltfio.md) | glTF/GLB assets, instances, material providers, animators, Draco decoding. |
 | [Math types](math.md) | Vector, quaternion and matrix value types, boxes, frustums, colors, exposure. |
 | [Editor primitives, tools and testing](editor-tools-and-testing.md) | Grid, selection box, transform gizmo, offline tools, smoke-test entry point. |
-| [Platform integration and GPU selection](platform.md) | Shared engine host, Vulkan GPU listing and preference, web start-up and the platform widget variants. |
+| [Platform integration and GPU selection](platform.md) | Shared engine host, Vulkan GPU listing and preference, web start-up and the platform widget variants, Android builds. |
+| [External Vulkan context and swapchain images](external-vulkan.md) | An engine on a device someone else created (OpenXR), rendering into provider-owned images, the queue rule, multiview stereo, the offscreen reference provider. |
 
 ---
 

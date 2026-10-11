@@ -34,6 +34,14 @@ FFI_PLUGIN_EXPORT void filament_camera_set_projection_fov_direction(void* camera
 FFI_PLUGIN_EXPORT void filament_camera_set_lens_projection(void* camera, double focal_length_mm, double aspect, double near_plane, double far_plane);
 FFI_PLUGIN_EXPORT void filament_camera_set_custom_projection(void* camera, const double* projection16, double near_plane, double far_plane);
 FFI_PLUGIN_EXPORT void filament_camera_set_custom_projection_culling(void* camera, const double* projection16, const double* culling16, double near_plane, double far_plane);
+// Stereo: each eye's model matrix relative to the head (the camera's model
+// matrix), and one projection per eye plus the projection used for culling
+// (it must enclose every eye's frustum).
+FFI_PLUGIN_EXPORT void filament_camera_set_eye_model_matrix(void* camera, uint8_t eye, const double* matrix16);
+FFI_PLUGIN_EXPORT void filament_camera_get_eye_model_matrix(void* camera, uint8_t eye, double* out_matrix16);
+FFI_PLUGIN_EXPORT void filament_camera_set_custom_eye_projection(void* camera, const double* projections16, uint32_t count,
+        const double* culling16, double near_plane, double far_plane);
+FFI_PLUGIN_EXPORT void filament_camera_get_eye_projection_matrix(void* camera, uint8_t eye, double* out_matrix16);
 FFI_PLUGIN_EXPORT void filament_camera_set_scaling(void* camera, double x, double y);
 FFI_PLUGIN_EXPORT void filament_camera_get_scaling(void* camera, double* out_xyzw);
 FFI_PLUGIN_EXPORT void filament_camera_set_shift(void* camera, double x, double y);

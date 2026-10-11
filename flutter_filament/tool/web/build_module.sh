@@ -3,7 +3,7 @@
 # (src/*_c.cpp, the filament_* ABI the Dart bindings call) linked against the
 # WebAssembly build of the vendored Filament (tool/web/build_filament_web.sh).
 #
-# The source and include lists are read from hook/build.dart and the exported
+# The source list is read from hook/native_inputs.dart, the include list from hook/build.dart, and the exported
 # symbols from the ffigen output, so the web module stays in lockstep with the
 # desktop library. Single-threaded, WebGL2, growable heap and function table.
 #   tool/web/build_module.sh            # release (-O3)
@@ -27,11 +27,11 @@ cd "${pkg}"
 mkdir -p "${obj}" web
 
 # --- lockstep inputs --------------------------------------------------------
-# hook/build.dart lists the C wrapper sources (`src/*_c.cpp`), smol-v from the
+# hook/native_inputs.dart lists the C wrapper sources (`src/*_c.cpp`), smol-v from the
 # Filament tree and the vendored matp parser (`third_party/filament_matp/`).
 # matp serves the runtime material compiler, which the web stubs replace
 # (filamat is not part of Filament's WebAssembly build), so it stays out.
-mapfile -t sources < <(grep -oE "'(src/[a-z0-9_]+\.cpp|[$]filament/third_party/smol-v/source/smolv\.cpp)'" hook/build.dart | tr -d "'" |
+mapfile -t sources < <(grep -oE "'(src/[a-z0-9_]+\.cpp|[$]filament/third_party/smol-v/source/smolv\.cpp)'" hook/native_inputs.dart | tr -d "'" |
   sed -e 's#^[$]filament#'"${filament}"'#')
 # The include list names Filament paths as `$filament/...` and the desktop
 # build folder as `$filament/out/$filamentOut`; both are re-rooted at the
@@ -39,7 +39,7 @@ mapfile -t sources < <(grep -oE "'(src/[a-z0-9_]+\.cpp|[$]filament/third_party/s
 mapfile -t includes < <(sed -n '/final includes = \[/,/^    \];/p' hook/build.dart | grep -oE "'[^']+'" | tr -d "'" |
   sed -e 's#^[$]filament/out/[$]filamentOut#'"${filament}"'/out/cmake-wasm-release#' \
       -e 's#^[$]filament#'"${filament}"'#')
-(( ${#sources[@]} > 0 )) || { echo "no sources found in hook/build.dart" >&2; exit 1; }
+(( ${#sources[@]} > 0 )) || { echo "no sources found in hook/native_inputs.dart" >&2; exit 1; }
 (( ${#includes[@]} > 0 )) || { echo "no include list found in hook/build.dart" >&2; exit 1; }
 # The Filament version the module is built against (bare; the C
 # wrapper stringizes it), from the file bump-version.sh treats as primary.

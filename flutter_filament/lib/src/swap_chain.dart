@@ -121,6 +121,18 @@ class FilamentSwapChain {
   /// Internal constructor.
   FilamentSwapChain.internal(this._ptr, this._engine);
 
+  /// A SwapChain whose images belong to a native provider (an OpenXR
+  /// swapchain, or [ExternalVulkanOffscreen.provider]): Filament acquires,
+  /// renders into and hands back the provider's images, calling it on the
+  /// driver thread (Dart is never called per frame). [engine] must come from
+  /// [FilamentEngine.createOnExternalVulkan]; the provider struct is copied
+  /// and its `user_data` must outlive the SwapChain. Returns null otherwise.
+  static FilamentSwapChain? external(
+      FilamentEngine engine, ffi.Pointer<c.filament_external_swapchain_provider> provider) {
+    final ptr = c.filament_swap_chain_create_external(engine.nativePointer, provider);
+    return ptr == ffi.nullptr ? null : FilamentSwapChain.internal(ptr, engine);
+  }
+
   /// The raw native pointer to the Filament SwapChain.
   ffi.Pointer<ffi.Void> get nativePointer {
     _checkDisposed();

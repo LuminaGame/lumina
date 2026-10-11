@@ -408,6 +408,32 @@ void filament_view_get_soft_shadow_options(void* view, filament_soft_shadow_opti
     FFI_CATCH()
 }
 
+void filament_view_set_stereoscopic_options(void* view, const filament_stereoscopic_options* options) {
+    FFI_TRY
+    if (!view || !options) return;
+    View::StereoscopicOptions opts;
+    opts.enabled = options->enabled;
+    toView(view)->setStereoscopicOptions(opts);
+    FFI_CATCH()
+}
+
+void filament_view_get_stereoscopic_options(void* view, filament_stereoscopic_options* out_options) {
+    FFI_TRY
+    if (!view || !out_options) return;
+    out_options->enabled = toView(view)->getStereoscopicOptions().enabled;
+    FFI_CATCH()
+}
+
+bool filament_view_is_stereo_active(void* view, void* engine) {
+    FFI_TRY
+    if (!view || !engine) return false;
+    Engine* e = static_cast<Engine*>(engine);
+    const auto type = e->getConfig().stereoscopicType;
+    return toView(view)->getStereoscopicOptions().enabled && type != backend::StereoscopicType::NONE &&
+            e->isStereoSupported(type);
+    FFI_CATCH(false)
+}
+
 void filament_view_set_render_quality(void* view, const filament_render_quality* options) {
     FFI_TRY toView(view)->setRenderQuality(*reinterpret_cast<const RenderQuality*>(options)); FFI_CATCH()
 }

@@ -190,4 +190,4 @@ Platform initialisation for flutter_filament.
 
 ---
 
-[Önceki: Editör primitifleri, araçlar ve test](editor-tools-and-testing.md) | [Üst: flutter_filament](index.md) | [Sonraki: lumina (engine çekirdeği)](../lumina/index.md)
+[Önceki: Editör primitifleri, araçlar ve test](editor-tools-and-testing.md) | [Üst: flutter_filament](index.md) | [Sonraki: Harici Vulkan bağlamı ve swapchain görüntüleri](external-vulkan.md)

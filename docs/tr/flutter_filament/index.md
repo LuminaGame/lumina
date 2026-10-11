@@ -11,7 +11,7 @@
 ## Paket nasıl build edilir
 
 - **C wrapper**: `src/*_c.h` / `src/*_c.cpp`, Filament'i `filament_*` önekli düz C fonksiyonları olarak sunar; `src/filament_c.h` şemsiye header'dır. Export edilen her bildirim `FFI_PLUGIN_EXPORT` taşır.
-- **Native-assets hook**: `hook/build.dart`, wrapper'ı ilk `flutter test` ya da `flutter run` sırasında derler ve `filament/out/cmake-release/` (ya da `cmake-release-windows/`) içindeki yaklaşık 44 Filament static kütüphanesine link eder. Include path'lerinin, flag'lerin (C++20; Linux'ta `third_party/libcxx/` içindeki gömülü libc++) ve link edilen kütüphanelerin esas listesidir.
+- **Native-assets hook**: `hook/build.dart`, wrapper'ı ilk `flutter test` ya da `flutter run` sırasında derler ve `filament/out/cmake-release/` (ya da `cmake-release-windows/`) içindeki yaklaşık 44 Filament static kütüphanesine link eder. Android'de `out/android-release/filament/lib/<abi>/` kullanılır. `hook/native_inputs.dart` ile (her hedef için tek kaynak listesi ve platform başına kütüphane listeleri) birlikte include path'lerinin, flag'lerin (C++20; Linux'ta `third_party/libcxx/` içindeki gömülü libc++) ve link edilen kütüphanelerin esas listesidir.
 - **Üretilen binding'ler**: `tool/ffigen.dart`, `lib/src/third_party/filament_c.g.dart`'ı yazar; `tool/ffigen_web.dart` web sürümlerini (`filament_c.web.g.dart`, `math_types.web.g.dart`) yazar.
 - **Dart wrapper'ları**: `lib/src/*.dart`, C fonksiyonlarını `FilamentEngine`, `FilamentScene`, `FilamentView` ve `FilamentAssetLoader` gibi sınıflarla sarar. `dart:ffi` yerine paketin platform shim'lerini (`src/ffi_platform.dart`, `src/ffi_package_platform.dart`, `src/filament_bindings.dart`) import ederler; böylece aynı kod hem native hem de web'de çalışır.
 - **Web**: `tool/web/`, aynı C wrapper'ından ve WebGL2'li bir Filament build'inden tek bir WebAssembly modülü (`web/flutter_filament.{js,wasm}`) üretir; `lib/src/web_ffi/`, modülün heap'i üzerinde `dart:ffi` uyumlu bir katman sağlar. Web uygulamaları engine'i kullanmadan önce `await FilamentWeb.ensureInitialized()` çağırır. Yalnızca masaüstünde olan kütüphaneler (filamat, tam imageio, matdbg, gltfio JIT) web'de stub'lanır; böylece her `filament_*` sembolü export edilmeye devam eder.
@@ -52,7 +52,8 @@ Her sayfa bir subsystem'i kapsar: önce `src/*_c.h` header'larındaki C fonksiyo
 | [glTF yükleme ve animasyon](gltfio.md) | glTF/GLB asset'leri, instance'lar, material provider'lar, animator'lar, Draco decode. |
 | [Matematik tipleri](math.md) | Vektör, quaternion ve matris değer tipleri, box'lar, frustum'lar, renkler, exposure. |
 | [Editör primitifleri, araçlar ve test](editor-tools-and-testing.md) | Grid, seçim kutusu, transform gizmo, offline araçlar, smoke test giriş noktası. |
-| [Platform entegrasyonu ve GPU seçimi](platform.md) | Paylaşılan engine host, Vulkan GPU listeleme ve tercihi, web başlatma ve platforma özel widget varyantları. |
+| [Platform entegrasyonu ve GPU seçimi](platform.md) | Paylaşılan engine host, Vulkan GPU listeleme ve tercihi, web başlatma ve platforma özel widget varyantları, Android derlemeleri. |
+| [Harici Vulkan bağlamı ve swapchain görüntüleri](external-vulkan.md) | Başkasının oluşturduğu bir device üzerinde (OpenXR) engine, provider'a ait görüntülere render, kuyruk kuralı, multiview stereo, offscreen referans provider. |
 
 ---
 

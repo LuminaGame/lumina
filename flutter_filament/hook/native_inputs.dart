@@ -66,6 +66,7 @@ List<String> nativeSources(String filament) => [
     'src/engine_c.cpp',
     'src/gpu_c.cpp',
     'src/gpu_engine_c.cpp',
+    'src/external_vulkan_c.cpp',
     'src/view_c.cpp',
     'src/geometry_c.cpp',
     'src/lighting_c.cpp',

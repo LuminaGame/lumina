@@ -6,6 +6,7 @@ import 'package:flutter_filament/src/ffi_package_platform.dart';
 import 'package:flutter_filament/src/camera.dart';
 import 'package:flutter_filament/src/color_grading.dart';
 import 'package:flutter_filament/src/debug_registry.dart';
+import 'package:flutter_filament/src/external_vulkan.dart';
 import 'package:flutter_filament/src/fence.dart';
 import 'package:flutter_filament/src/frame_pacer.dart';
 import 'package:flutter_filament/src/gpu.dart';
@@ -134,6 +135,36 @@ class FilamentEngine with _EngineValidityChecks {
         calloc.free(str);
       }
     }
+  }
+
+  /// A Vulkan engine on an instance and device someone else created (the
+  /// OpenXR runtime through `XR_KHR_vulkan_enable2`, or
+  /// [ExternalVulkanOffscreen]). Filament adds no extensions or features to
+  /// such a device: create it with what
+  /// `filament_external_vulkan_device_info_create` lists. A GPU preference
+  /// does not apply (logged and ignored). Render into its images with
+  /// [FilamentSwapChain.external]. Returns null on failure and off desktop /
+  /// Android Vulkan.
+  static FilamentEngine? createOnExternalVulkan(ExternalVulkanContext context,
+      {EngineConfig? config, FeatureLevel? featureLevel}) {
+    final native = calloc<c.filament_external_vulkan_context>();
+    final configPtr = config == null ? ffi.nullptr : calloc<c.filament_engine_config_t>();
+    try {
+      context.copyToNative(native.ref);
+      if (config != null) config._copyToNative(configPtr);
+      final ptr = c.filament_engine_create_external_vulkan(native, featureLevel?.value ?? -1, configPtr);
+      return ptr == ffi.nullptr ? null : FilamentEngine._(ptr);
+    } finally {
+      calloc.free(native);
+      if (configPtr != ffi.nullptr) calloc.free(configPtr);
+    }
+  }
+
+  /// Whether this engine adopted an external Vulkan device
+  /// ([createOnExternalVulkan]).
+  bool get isExternalVulkan {
+    _checkDisposed();
+    return c.filament_engine_is_external_vulkan(_ptr);
   }
 
   /// The name of the physical device this engine renders on, as Vulkan

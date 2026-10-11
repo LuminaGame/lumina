@@ -368,6 +368,12 @@ FFI_PLUGIN_EXPORT void filament_view_get_vsm_shadow_options(void* view, filament
 
 FFI_PLUGIN_EXPORT void filament_view_set_soft_shadow_options(void* view, const filament_soft_shadow_options* options);
 FFI_PLUGIN_EXPORT void filament_view_get_soft_shadow_options(void* view, filament_soft_shadow_options* out_options);
+// Stereo (the engine's stereoscopicType / stereoscopicEyeCount; multiview into a
+// layered render target). `filament_view_is_stereo_active` is false when the
+// engine cannot render stereo (the options are then ignored, not an error).
+FFI_PLUGIN_EXPORT void filament_view_set_stereoscopic_options(void* view, const filament_stereoscopic_options* options);
+FFI_PLUGIN_EXPORT void filament_view_get_stereoscopic_options(void* view, filament_stereoscopic_options* out_options);
+FFI_PLUGIN_EXPORT bool filament_view_is_stereo_active(void* view, void* engine);
 
 
 FFI_PLUGIN_EXPORT void filament_view_set_render_quality(void* view, const filament_render_quality* options);

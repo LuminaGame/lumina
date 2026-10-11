@@ -69,5 +69,6 @@
 #include "dlss_fg_c.h"
 #include "opendlss_nr_c.h"
 #include "ui_overlay_c.h"
+#include "external_vulkan_c.h"
 
 #endif // FLUTTER_FILAMENT_C_H

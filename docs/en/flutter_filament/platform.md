@@ -190,4 +190,4 @@ Platform initialisation for flutter_filament.
 
 ---
 
-[Previous: Editor primitives, tools and testing](editor-tools-and-testing.md) | [Up: flutter_filament](index.md) | [Next: lumina (engine core)](../lumina/index.md)
+[Previous: Editor primitives, tools and testing](editor-tools-and-testing.md) | [Up: flutter_filament](index.md) | [Next: External Vulkan context and swapchain images](external-vulkan.md)

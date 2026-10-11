@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <vector>
 
 using namespace filament;
 using namespace filament::math;
@@ -119,6 +120,38 @@ void filament_camera_set_custom_projection_culling(void* camera, const double* p
     std::memcpy(&proj[0][0], projection16, sizeof(double) * 16);
     std::memcpy(&cull[0][0], culling16, sizeof(double) * 16);
     static_cast<Camera*>(camera)->setCustomProjection(proj, cull, near_plane, far_plane);
+}
+
+void filament_camera_set_eye_model_matrix(void* camera, uint8_t eye, const double* matrix16) {
+    if (camera == nullptr || matrix16 == nullptr) return;
+    mat4 model;
+    std::memcpy(&model[0][0], matrix16, sizeof(double) * 16);
+    static_cast<Camera*>(camera)->setEyeModelMatrix(eye, model);
+}
+
+void filament_camera_get_eye_model_matrix(void* camera, uint8_t eye, double* out_matrix16) {
+    if (camera == nullptr || out_matrix16 == nullptr) return;
+    mat4 model = static_cast<Camera*>(camera)->getEyeFromViewMatrix(eye);
+    model = inverse(model);
+    std::memcpy(out_matrix16, &model[0][0], sizeof(double) * 16);
+}
+
+void filament_camera_set_custom_eye_projection(void* camera, const double* projections16, uint32_t count,
+        const double* culling16, double near_plane, double far_plane) {
+    if (camera == nullptr || projections16 == nullptr || culling16 == nullptr || count == 0) return;
+    std::vector<mat4> projections(count);
+    for (uint32_t i = 0; i < count; ++i) {
+        std::memcpy(&projections[i][0][0], projections16 + 16 * i, sizeof(double) * 16);
+    }
+    mat4 culling;
+    std::memcpy(&culling[0][0], culling16, sizeof(double) * 16);
+    static_cast<Camera*>(camera)->setCustomEyeProjection(projections.data(), count, culling, near_plane, far_plane);
+}
+
+void filament_camera_get_eye_projection_matrix(void* camera, uint8_t eye, double* out_matrix16) {
+    if (camera == nullptr || out_matrix16 == nullptr) return;
+    mat4 projection = static_cast<Camera*>(camera)->getProjectionMatrix(eye);
+    std::memcpy(out_matrix16, &projection[0][0], sizeof(double) * 16);
 }
 
 void filament_camera_set_scaling(void* camera, double x, double y) {

@@ -11,6 +11,7 @@
 // environment) reaches Filament's device selection, and the chosen physical
 // device can be read back.
 
+#include "external_vulkan_c.h"
 #include "gpu_c.h"
 #include "gpu_engine_internal.h"
 #include "vulkan_features_c.h"
@@ -24,6 +25,7 @@
 #include <mutex>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include <filament/Engine.h>
@@ -133,6 +135,11 @@ static void mergeFeature(std::vector<FeatureRequest>& into, const FeatureRequest
     into.push_back(request);
 }
 
+/// A swapchain whose images belong to a filament_external_swapchain_provider.
+struct ExternalSwapChain : filament::backend::Platform::SwapChain {
+    filament_external_swapchain_provider provider{};
+};
+
 class PreferredGpuPlatform final : public DesktopVulkanPlatform {
 public:
     explicit PreferredGpuPlatform(GpuPreference pref) : mPref(std::move(pref)) {
@@ -148,8 +155,116 @@ public:
         }
     }
 
+    /// An engine on someone else's instance and device
+    /// (filament_engine_create_external_vulkan): no GPU preference, and its
+    /// external swapchains hand their images back in the layout they came in.
+    explicit PreferredGpuPlatform(const filament_external_vulkan_context& context) : mExternal(true) {
+        mShared.instance = static_cast<VkInstance>(context.instance);
+        mShared.physicalDevice = static_cast<VkPhysicalDevice>(context.physical_device);
+        mShared.logicalDevice = static_cast<VkDevice>(context.device);
+        mShared.graphicsQueueFamilyIndex = context.queue_family;
+        mShared.graphicsQueueIndex = context.queue_index;
+        mShared.multiviewSupported = context.multiview;
+    }
+
+    bool isExternal() const noexcept { return mExternal; }
+    VulkanSharedContext* sharedContext() noexcept { return &mShared; }
+
+    /// Registers a provider copy that the next createSwapChain(nativeWindow)
+    /// call recognises as an external swapchain.
+    void expectExternalSwapChain(ExternalSwapChain* swapChain) {
+        std::lock_guard<std::mutex> lock(mSwapChainsMutex);
+        mExternalSwapChains.insert(swapChain);
+    }
+
+    SwapChainPtr createSwapChain(void* nativeWindow, uint64_t flags, VkExtent2D extent) override {
+        if (ExternalSwapChain* external = findExternal(nativeWindow)) return external;
+        return DesktopVulkanPlatform::createSwapChain(nativeWindow, flags, extent);
+    }
+
+    SwapChainBundle getSwapChainBundle(SwapChainPtr handle) override {
+        ExternalSwapChain* external = findExternal(handle);
+        if (!external) return DesktopVulkanPlatform::getSwapChainBundle(handle);
+        const filament_external_swapchain_provider& p = external->provider;
+        std::vector<uint64_t> colors(p.image_count, 0);
+        uint64_t depth = 0;
+        if (p.get_images) p.get_images(p.user_data, colors.data(), &depth);
+        SwapChainBundle bundle;
+        bundle.colors = utils::FixedCapacityVector<VkImage>::with_capacity(colors.size());
+        for (uint64_t image : colors) bundle.colors.push_back(toVkImage(image));
+        bundle.depth = toVkImage(depth);
+        bundle.colorFormat = static_cast<VkFormat>(p.color_format);
+        bundle.depthFormat = static_cast<VkFormat>(p.depth_format);
+        bundle.extent = {p.width, p.height};
+        bundle.layerCount = p.layer_count == 0 ? 1 : p.layer_count;
+        return bundle;
+    }
+
+    VkResult acquire(SwapChainPtr handle, ImageSyncData* out) override {
+        ExternalSwapChain* external = findExternal(handle);
+        if (!external) return DesktopVulkanPlatform::acquire(handle, out);
+        uint32_t index = 0;
+        const VkResult result = static_cast<VkResult>(
+                external->provider.acquire ? external->provider.acquire(external->provider.user_data, &index)
+                                           : VK_ERROR_INITIALIZATION_FAILED);
+        out->imageIndex = index;
+        // The provider waited for the image on the CPU (xrWaitSwapchainImage).
+        out->imageReadySemaphore = VK_NULL_HANDLE;
+        return result;
+    }
+
+    VkResult present(SwapChainPtr handle, uint32_t index, VkSemaphore finishedDrawing) override {
+        ExternalSwapChain* external = findExternal(handle);
+        if (!external) return DesktopVulkanPlatform::present(handle, index, finishedDrawing);
+        // Nothing presents through Vulkan here: consume the semaphore with an empty submit on
+        // Filament's queue (this runs on the driver thread, ordered after the frame's
+        // commands), then hand the image back to its owner.
+        if (finishedDrawing != VK_NULL_HANDLE) {
+            const VkPipelineStageFlags stage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+            VkSubmitInfo submit{};
+            submit.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+            submit.waitSemaphoreCount = 1;
+            submit.pWaitSemaphores = &finishedDrawing;
+            submit.pWaitDstStageMask = &stage;
+            bluevk::vkQueueSubmit(getGraphicsQueue(), 1, &submit, VK_NULL_HANDLE);
+        }
+        return static_cast<VkResult>(external->provider.present
+                ? external->provider.present(external->provider.user_data, index) : VK_SUCCESS);
+    }
+
+    bool hasResized(SwapChainPtr handle) override {
+        return findExternal(handle) ? false : DesktopVulkanPlatform::hasResized(handle);
+    }
+
+    bool isProtected(SwapChainPtr handle) override {
+        return findExternal(handle) ? false : DesktopVulkanPlatform::isProtected(handle);
+    }
+
+    VkResult recreate(SwapChainPtr handle) override {
+        return findExternal(handle) ? VK_SUCCESS : DesktopVulkanPlatform::recreate(handle);
+    }
+
+    void destroy(SwapChainPtr handle) override {
+        ExternalSwapChain* external = findExternal(handle);
+        if (!external) {
+            DesktopVulkanPlatform::destroy(handle);
+            return;
+        }
+        {
+            std::lock_guard<std::mutex> lock(mSwapChainsMutex);
+            mExternalSwapChains.erase(external);
+        }
+        if (external->provider.destroy) external->provider.destroy(external->provider.user_data);
+        delete external;
+    }
+
     Customization getCustomization() const noexcept override {
         Customization c = DesktopVulkanPlatform::getCustomization();
+        if (mExternal) {
+            // OpenXR hands its images in COLOR_ATTACHMENT_OPTIMAL and takes them back so.
+            c.transitionSwapChainImageLayoutForPresent = false;
+            return c;
+        }
         if (!mPref.name.empty()) c.gpu.deviceName = utils::CString(mPref.name.c_str());
         if (mPref.index >= 0) c.gpu.index = static_cast<int8_t>(mPref.index);
         c.extraInstanceExtensions = toCStrings(mInstanceExtensions);
@@ -180,6 +295,26 @@ private:
         return out;
     }
 
+    static VkImage toVkImage(uint64_t handle) {
+#if defined(__LP64__) || defined(_WIN64)
+        return reinterpret_cast<VkImage>(static_cast<uintptr_t>(handle));
+#else
+        return static_cast<VkImage>(handle);
+#endif
+    }
+
+    ExternalSwapChain* findExternal(void* pointer) {
+        if (!mExternal || !pointer) return nullptr;
+        std::lock_guard<std::mutex> lock(mSwapChainsMutex);
+        auto it = mExternalSwapChains.find(static_cast<ExternalSwapChain*>(pointer));
+        return it == mExternalSwapChains.end() ? nullptr : *it;
+    }
+
+    bool mExternal = false;
+    VulkanSharedContext mShared{};
+    std::mutex mSwapChainsMutex;
+    std::unordered_set<ExternalSwapChain*> mExternalSwapChains;
+
     GpuPreference mPref;
     std::vector<std::string> mInstanceExtensions;
     std::vector<std::string> mDeviceExtensions;
@@ -199,6 +334,19 @@ PreferredGpuPlatform* platformOf(void* engine) {
 }
 #endif
 
+void fillEngineConfig(Engine::Config& cfg, const filament_engine_config_t& config) {
+    cfg.commandBufferSizeMB = config.command_buffer_size_mb;
+    cfg.perRenderPassArenaSizeMB = config.per_render_pass_arena_size_mb;
+    cfg.minCommandBufferSizeMB = config.min_command_buffer_size_mb;
+    cfg.jobSystemThreadCount = config.job_system_thread_count;
+    cfg.preferredShaderLanguage = static_cast<Engine::Config::ShaderLanguage>(config.preferred_shader_language);
+    cfg.forceGLES2Context = config.force_gles2_context;
+    cfg.gpuContextPriority = static_cast<backend::Platform::GpuContextPriority>(config.gpu_context_priority);
+    cfg.materialCacheCapacity = config.material_cache_capacity;
+    cfg.stereoscopicEyeCount = static_cast<uint8_t>(config.stereoscopic_eye_count);
+    cfg.stereoscopicType = static_cast<backend::StereoscopicType>(config.stereoscopic_type);
+}
+
 }  // namespace
 
 void* filament_engine_create_on_gpu(int backend, int feature_level, bool paused,
@@ -214,16 +362,7 @@ void* filament_engine_create_on_gpu(int backend, int feature_level, bool paused,
         builder.paused(paused);
         Engine::Config cfg;
         if (config) {
-            cfg.commandBufferSizeMB = config->command_buffer_size_mb;
-            cfg.perRenderPassArenaSizeMB = config->per_render_pass_arena_size_mb;
-            cfg.minCommandBufferSizeMB = config->min_command_buffer_size_mb;
-            cfg.jobSystemThreadCount = config->job_system_thread_count;
-            cfg.preferredShaderLanguage = static_cast<Engine::Config::ShaderLanguage>(config->preferred_shader_language);
-            cfg.forceGLES2Context = config->force_gles2_context;
-            cfg.gpuContextPriority = static_cast<backend::Platform::GpuContextPriority>(config->gpu_context_priority);
-            cfg.materialCacheCapacity = config->material_cache_capacity;
-            cfg.stereoscopicEyeCount = static_cast<uint8_t>(config->stereoscopic_eye_count);
-            cfg.stereoscopicType = static_cast<backend::StereoscopicType>(config->stereoscopic_type);
+            fillEngineConfig(cfg, *config);
             builder.config(&cfg);
         }
         if (feature_names && feature_values && feature_count > 0) {
@@ -303,6 +442,101 @@ void* filament_engine_create_on_gpu(int backend, int feature_level, bool paused,
         FF_ENGINE_LOG("[flutter_filament] engine creation failed: %s\n", e.what());
         return nullptr;
     }
+}
+
+void* filament_engine_create_external_vulkan(const filament_external_vulkan_context* context,
+        int feature_level, const filament_engine_config_t* config) {
+#if FLUTTER_FILAMENT_GPU_PLATFORM
+    if (!context || !context->instance || !context->physical_device || !context->device) return nullptr;
+    PreferredGpuPlatform* platform = nullptr;
+    try {
+        // Filament refuses a GPU preference next to a shared context: the device is chosen.
+        const GpuPreference ignored = fromEnvironment();
+        if (!ignored.empty()) {
+            FF_ENGINE_LOG("[flutter_filament] FILAMENT_GPU / VK_DEVICE_INDEX ignored: the engine adopts an external Vulkan device\n");
+        }
+        platform = new PreferredGpuPlatform(*context);
+        Engine::Builder builder;
+        builder.backend(Engine::Backend::VULKAN);
+        builder.platform(platform);
+        builder.sharedContext(platform->sharedContext());
+        if (feature_level >= 0) builder.featureLevel(static_cast<Engine::FeatureLevel>(feature_level));
+        Engine::Config cfg;
+        if (config) {
+            fillEngineConfig(cfg, *config);
+            builder.config(&cfg);
+        }
+        Engine* engine = builder.build();
+        if (!engine) {
+            delete platform;
+            return nullptr;
+        }
+        std::lock_guard<std::mutex> lock(gPlatformsMutex);
+        gPlatforms[engine] = platform;
+        return engine;
+    } catch (const utils::Panic& e) {
+        FF_ENGINE_LOG("[flutter_filament] external Vulkan engine creation failed: %s\n", e.what());
+    } catch (const std::exception& e) {
+        FF_ENGINE_LOG("[flutter_filament] external Vulkan engine creation failed: %s\n", e.what());
+    }
+    delete platform;
+    return nullptr;
+#else
+    (void) context;
+    (void) feature_level;
+    (void) config;
+    return nullptr;
+#endif
+}
+
+bool filament_engine_get_vulkan_context(void* engine, filament_external_vulkan_context* out) {
+    if (!out) return false;
+    *out = filament_external_vulkan_context{};
+#if FLUTTER_FILAMENT_GPU_PLATFORM
+    PreferredGpuPlatform* platform = platformOf(engine);
+    if (!platform || platform->getDevice() == VK_NULL_HANDLE) return false;
+    out->instance = platform->getInstance();
+    out->physical_device = platform->getPhysicalDevice();
+    out->device = platform->getDevice();
+    out->queue_family = platform->getGraphicsQueueFamilyIndex();
+    out->queue_index = platform->getGraphicsQueueIndex();
+    out->multiview = static_cast<Engine*>(engine)->isStereoSupported(backend::StereoscopicType::MULTIVIEW);
+    return true;
+#else
+    (void) engine;
+    return false;
+#endif
+}
+
+bool filament_engine_is_external_vulkan(void* engine) {
+#if FLUTTER_FILAMENT_GPU_PLATFORM
+    PreferredGpuPlatform* platform = platformOf(engine);
+    return platform && platform->isExternal();
+#else
+    (void) engine;
+    return false;
+#endif
+}
+
+void* filament_swap_chain_create_external(void* engine, const filament_external_swapchain_provider* provider) {
+#if FLUTTER_FILAMENT_GPU_PLATFORM
+    PreferredGpuPlatform* platform = platformOf(engine);
+    if (!platform || !platform->isExternal() || !provider || provider->image_count == 0) return nullptr;
+    try {
+        auto* swapChain = new ExternalSwapChain();
+        swapChain->provider = *provider;
+        platform->expectExternalSwapChain(swapChain);
+        // The provider copy is the "native window": the platform recognises it in createSwapChain.
+        return static_cast<Engine*>(engine)->createSwapChain(swapChain, 0);
+    } catch (const utils::Panic& e) {
+        FF_ENGINE_LOG("[flutter_filament] external swapchain creation failed: %s\n", e.what());
+        return nullptr;
+    }
+#else
+    (void) engine;
+    (void) provider;
+    return nullptr;
+#endif
 }
 
 int filament_engine_get_gpu_name(void* engine, char* out, int capacity) {

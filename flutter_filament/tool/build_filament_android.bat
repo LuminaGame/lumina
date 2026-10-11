@@ -55,7 +55,9 @@ for %%a in (%ABIS%) do (
     -DFILAMENT_SUPPORTS_VULKAN=ON ^
     -DFILAMENT_SUPPORTS_OPENGL=ON ^
     -DFILAMENT_ENABLE_EXCEPTIONS=ON ^
-    -DFILAMENT_SUPPORTS_WEBP_TEXTURES=ON || exit /b 1
+    -DFILAMENT_SUPPORTS_WEBP_TEXTURES=ON ^
+    -DFILAMENT_ENABLE_MULTIVIEW=ON ^
+    -DFILAMENT_SAMPLES_STEREO_TYPE=multiview || exit /b 1
   echo --- Building and Installing %%a ---
   ninja -C "!OUT_DIR!" install || exit /b 1
 )

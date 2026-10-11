@@ -145,6 +145,8 @@ CMAKE_ARGS=(
   -DFILAMENT_ENABLE_MATDBG=OFF
   -DFILAMENT_SUPPORTS_WEBP_TEXTURES=ON
   -DFILAMENT_ENABLE_EXCEPTIONS=ON
+  -DFILAMENT_ENABLE_MULTIVIEW=ON
+  -DFILAMENT_SAMPLES_STEREO_TYPE=multiview
 )
 if [ "$OS" = linux ]; then
   # The system clang has no libc++ headers; Filament links libc++ statically
@@ -163,10 +165,9 @@ else
 fi
 if [ "$SKIP_BUILD" = 0 ]; then
   started=$(date +%s)
-  if [ ! -f "$WORK/$BUILD_OUT/build.ninja" ]; then
-    log "configuring $WORK/$BUILD_OUT"
-    cmake -S "$WORK" -B "$WORK/$BUILD_OUT" "${CMAKE_ARGS[@]}"
-  fi
+  # Configured on every run, so a changed flag reaches an existing tree (incremental).
+  log "configuring $WORK/$BUILD_OUT"
+  cmake -S "$WORK" -B "$WORK/$BUILD_OUT" "${CMAKE_ARGS[@]}"
   log "building ${#TARGETS[@]} targets"
   ninja -C "$WORK/$BUILD_OUT" ${JOBS:+-j "$JOBS"} "${TARGETS[@]}"
   log "build finished in $(( ($(date +%s) - started) / 60 )) min"
@@ -265,7 +266,9 @@ if [ "$ANDROID" = 1 ]; then
         -DFILAMENT_SUPPORTS_VULKAN=ON \
         -DFILAMENT_SUPPORTS_OPENGL=ON \
         -DFILAMENT_ENABLE_EXCEPTIONS=ON \
-        -DFILAMENT_SUPPORTS_WEBP_TEXTURES=ON
+        -DFILAMENT_SUPPORTS_WEBP_TEXTURES=ON \
+        -DFILAMENT_ENABLE_MULTIVIEW=ON \
+        -DFILAMENT_SAMPLES_STEREO_TYPE=multiview
       ninja -C "$out" ${JOBS:+-j "$JOBS"} install
     done
   fi

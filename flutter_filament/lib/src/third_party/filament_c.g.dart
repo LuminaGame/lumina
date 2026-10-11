@@ -913,6 +913,34 @@ external void filament_view_get_soft_shadow_options(
 );
 
 @ffi.Native<
+  ffi.Void Function(
+    ffi.Pointer<ffi.Void>,
+    ffi.Pointer<filament_stereoscopic_options>,
+  )
+>()
+external void filament_view_set_stereoscopic_options(
+  ffi.Pointer<ffi.Void> view,
+  ffi.Pointer<filament_stereoscopic_options> options,
+);
+
+@ffi.Native<
+  ffi.Void Function(
+    ffi.Pointer<ffi.Void>,
+    ffi.Pointer<filament_stereoscopic_options>,
+  )
+>()
+external void filament_view_get_stereoscopic_options(
+  ffi.Pointer<ffi.Void> view,
+  ffi.Pointer<filament_stereoscopic_options> out_options,
+);
+
+@ffi.Native<ffi.Bool Function(ffi.Pointer<ffi.Void>, ffi.Pointer<ffi.Void>)>()
+external bool filament_view_is_stereo_active(
+  ffi.Pointer<ffi.Void> view,
+  ffi.Pointer<ffi.Void> engine,
+);
+
+@ffi.Native<
   ffi.Void Function(ffi.Pointer<ffi.Void>, ffi.Pointer<filament_render_quality>)
 >()
 external void filament_view_set_render_quality(
@@ -7731,6 +7759,52 @@ external void filament_camera_set_custom_projection_culling(
   double far_plane,
 );
 
+@ffi.Native<
+  ffi.Void Function(ffi.Pointer<ffi.Void>, ffi.Uint8, ffi.Pointer<ffi.Double>)
+>()
+external void filament_camera_set_eye_model_matrix(
+  ffi.Pointer<ffi.Void> camera,
+  int eye,
+  ffi.Pointer<ffi.Double> matrix16,
+);
+
+@ffi.Native<
+  ffi.Void Function(ffi.Pointer<ffi.Void>, ffi.Uint8, ffi.Pointer<ffi.Double>)
+>()
+external void filament_camera_get_eye_model_matrix(
+  ffi.Pointer<ffi.Void> camera,
+  int eye,
+  ffi.Pointer<ffi.Double> out_matrix16,
+);
+
+@ffi.Native<
+  ffi.Void Function(
+    ffi.Pointer<ffi.Void>,
+    ffi.Pointer<ffi.Double>,
+    ffi.Uint32,
+    ffi.Pointer<ffi.Double>,
+    ffi.Double,
+    ffi.Double,
+  )
+>()
+external void filament_camera_set_custom_eye_projection(
+  ffi.Pointer<ffi.Void> camera,
+  ffi.Pointer<ffi.Double> projections16,
+  int count,
+  ffi.Pointer<ffi.Double> culling16,
+  double near_plane,
+  double far_plane,
+);
+
+@ffi.Native<
+  ffi.Void Function(ffi.Pointer<ffi.Void>, ffi.Uint8, ffi.Pointer<ffi.Double>)
+>()
+external void filament_camera_get_eye_projection_matrix(
+  ffi.Pointer<ffi.Void> camera,
+  int eye,
+  ffi.Pointer<ffi.Double> out_matrix16,
+);
+
 @ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>, ffi.Double, ffi.Double)>()
 external void filament_camera_set_scaling(
   ffi.Pointer<ffi.Void> camera,
@@ -9946,6 +10020,192 @@ external int filament_ui_overlay_last_upload_micros(
 @ffi.Native<ffi.Uint64 Function(ffi.Pointer<ffi.Void>)>()
 external int filament_ui_overlay_upload_count(ffi.Pointer<ffi.Void> overlay);
 
+/// Creates a Vulkan engine on the given objects. `config` may be null. A
+/// GPU preference (FILAMENT_GPU, VK_DEVICE_INDEX) does not apply and is
+/// ignored with a log line. Returns null on failure.
+@ffi.Native<
+  ffi.Pointer<ffi.Void> Function(
+    ffi.Pointer<filament_external_vulkan_context>,
+    ffi.Int,
+    ffi.Pointer<filament_engine_config_t>,
+  )
+>()
+external ffi.Pointer<ffi.Void> filament_engine_create_external_vulkan(
+  ffi.Pointer<filament_external_vulkan_context> context,
+  int feature_level,
+  ffi.Pointer<filament_engine_config_t> config,
+);
+
+/// The Vulkan objects behind a Vulkan [engine] (external or not): instance,
+/// physical device, device, the queue family and index Filament submits on,
+/// and whether the device supports multiview. False for other backends.
+@ffi.Native<
+  ffi.Bool Function(
+    ffi.Pointer<ffi.Void>,
+    ffi.Pointer<filament_external_vulkan_context>,
+  )
+>()
+external bool filament_engine_get_vulkan_context(
+  ffi.Pointer<ffi.Void> engine,
+  ffi.Pointer<filament_external_vulkan_context> out,
+);
+
+/// Whether [engine] was made by filament_engine_create_external_vulkan.
+@ffi.Native<ffi.Bool Function(ffi.Pointer<ffi.Void>)>()
+external bool filament_engine_is_external_vulkan(ffi.Pointer<ffi.Void> engine);
+
+/// A SwapChain whose images come from [provider] (copied; its user_data must
+/// stay valid until the SwapChain is destroyed). Only on an engine from
+/// filament_engine_create_external_vulkan; null otherwise.
+@ffi.Native<
+  ffi.Pointer<ffi.Void> Function(
+    ffi.Pointer<ffi.Void>,
+    ffi.Pointer<filament_external_swapchain_provider>,
+  )
+>()
+external ffi.Pointer<ffi.Void> filament_swap_chain_create_external(
+  ffi.Pointer<ffi.Void> engine,
+  ffi.Pointer<filament_external_swapchain_provider> provider,
+);
+
+/// What Filament needs from a device it will adopt: the features and
+/// extensions it would enable itself (multiview when asked and supported),
+/// one or two queues of the graphics family, plus a protected queue when the
+/// device supports protected memory. The caller passes
+/// filament_external_vulkan_device_info_create_info to vkCreateDevice or
+/// xrCreateVulkanDeviceKHR. `extra_extensions` are added (unavailable ones
+/// are dropped). Returns null when the device has no graphics queue.
+@ffi.Native<
+  ffi.Pointer<ffi.Void> Function(
+    ffi.Pointer<ffi.Void>,
+    ffi.Pointer<ffi.Void>,
+    ffi.Bool,
+    ffi.Pointer<ffi.Pointer<ffi.Char>>,
+    ffi.Uint32,
+  )
+>()
+external ffi.Pointer<ffi.Void> filament_external_vulkan_device_info_create(
+  ffi.Pointer<ffi.Void> instance,
+  ffi.Pointer<ffi.Void> physical_device,
+  bool multiview,
+  ffi.Pointer<ffi.Pointer<ffi.Char>> extra_extensions,
+  int extra_extension_count,
+);
+
+/// The VkDeviceCreateInfo (valid while the info lives).
+@ffi.Native<ffi.Pointer<ffi.Void> Function(ffi.Pointer<ffi.Void>)>()
+external ffi.Pointer<ffi.Void> filament_external_vulkan_device_info_create_info(
+  ffi.Pointer<ffi.Void> info,
+);
+
+@ffi.Native<ffi.Uint32 Function(ffi.Pointer<ffi.Void>)>()
+external int filament_external_vulkan_device_info_queue_family(
+  ffi.Pointer<ffi.Void> info,
+);
+
+/// The queue index Filament should use: 1 when the family offered two queues
+/// (index 0 then belongs to the runtime), else 0.
+@ffi.Native<ffi.Uint32 Function(ffi.Pointer<ffi.Void>)>()
+external int filament_external_vulkan_device_info_filament_queue_index(
+  ffi.Pointer<ffi.Void> info,
+);
+
+@ffi.Native<ffi.Bool Function(ffi.Pointer<ffi.Void>)>()
+external bool filament_external_vulkan_device_info_multiview(
+  ffi.Pointer<ffi.Void> info,
+);
+
+@ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>)>()
+external void filament_external_vulkan_device_info_destroy(
+  ffi.Pointer<ffi.Void> info,
+);
+
+/// A reference provider with no compositor behind it: it creates its own
+/// instance and device (through filament_external_vulkan_device_info), and
+/// [image_count] RGBA8 images (sRGB-encoded when [srgb], as a headset
+/// compositor's usually are) of [width] x [height] with [layer_count]
+/// layers that can be read back. Desktop tests and bring-up use it; it
+/// records every acquire and present. Returns null when Vulkan is missing.
+@ffi.Native<
+  ffi.Pointer<ffi.Void> Function(
+    ffi.Uint32,
+    ffi.Uint32,
+    ffi.Uint32,
+    ffi.Uint32,
+    ffi.Bool,
+    ffi.Bool,
+  )
+>()
+external ffi.Pointer<ffi.Void> filament_external_vulkan_offscreen_create(
+  int width,
+  int height,
+  int image_count,
+  int layer_count,
+  bool multiview,
+  bool srgb,
+);
+
+@ffi.Native<
+  ffi.Void Function(
+    ffi.Pointer<ffi.Void>,
+    ffi.Pointer<filament_external_vulkan_context>,
+  )
+>()
+external void filament_external_vulkan_offscreen_context(
+  ffi.Pointer<ffi.Void> offscreen,
+  ffi.Pointer<filament_external_vulkan_context> out,
+);
+
+@ffi.Native<
+  ffi.Void Function(
+    ffi.Pointer<ffi.Void>,
+    ffi.Pointer<filament_external_swapchain_provider>,
+  )
+>()
+external void filament_external_vulkan_offscreen_provider(
+  ffi.Pointer<ffi.Void> offscreen,
+  ffi.Pointer<filament_external_swapchain_provider> out,
+);
+
+/// Copies [layer] of image [index] into [out] (width * height * 4 bytes,
+/// RGBA8, top row first). Call only while the engine is idle
+/// (filament_engine_flush_and_wait). Returns false on failure.
+@ffi.Native<
+  ffi.Bool Function(
+    ffi.Pointer<ffi.Void>,
+    ffi.Uint32,
+    ffi.Uint32,
+    ffi.Pointer<ffi.Uint8>,
+  )
+>()
+external bool filament_external_vulkan_offscreen_read_pixels(
+  ffi.Pointer<ffi.Void> offscreen,
+  int index,
+  int layer,
+  ffi.Pointer<ffi.Uint8> out,
+);
+
+/// Writes up to [capacity] recorded events, oldest first: an acquire of image
+/// i is i, a present of image i is 0x100 | i. Returns how many were written.
+@ffi.Native<
+  ffi.Uint32 Function(
+    ffi.Pointer<ffi.Void>,
+    ffi.Pointer<ffi.Uint32>,
+    ffi.Uint32,
+  )
+>()
+external int filament_external_vulkan_offscreen_events(
+  ffi.Pointer<ffi.Void> offscreen,
+  ffi.Pointer<ffi.Uint32> out,
+  int capacity,
+);
+
+/// Destroys the images, device and instance. Destroy the engine first.
+@ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Void>)>()
+external void filament_external_vulkan_offscreen_destroy(
+  ffi.Pointer<ffi.Void> offscreen,
+);
+
 enum FilamentBackend {
   FILAMENT_BACKEND_DEFAULT(0),
   FILAMENT_BACKEND_OPENGL(1),
@@ -12065,4 +12325,93 @@ final class filament_opendlss_nr_status extends ffi.Struct {
 
   @ffi.Uint64()
   external int device_bytes;
+}
+
+/// The Vulkan objects an external engine adopts (VkInstance,
+/// VkPhysicalDevice, VkDevice as pointers), the graphics queue family and
+/// the index of Filament's queue in it, and whether the device was created
+/// with the multiview feature.
+final class filament_external_vulkan_context extends ffi.Struct {
+  external ffi.Pointer<ffi.Void> instance;
+
+  external ffi.Pointer<ffi.Void> physical_device;
+
+  external ffi.Pointer<ffi.Void> device;
+
+  @ffi.Uint32()
+  external int queue_family;
+
+  @ffi.Uint32()
+  external int queue_index;
+
+  @ffi.Bool()
+  external bool multiview;
+}
+
+/// Swapchain images owned by someone else (an OpenXR swapchain). The
+/// callbacks run on Filament's driver thread; Dart never calls them.
+final class filament_external_swapchain_provider extends ffi.Struct {
+  external ffi.Pointer<ffi.Void> user_data;
+
+  /// Number of colour images, their size, VkFormat and array layers (2 for
+  /// a multiview image).
+  @ffi.Uint32()
+  external int image_count;
+
+  @ffi.Uint32()
+  external int width;
+
+  @ffi.Uint32()
+  external int height;
+
+  @ffi.Uint32()
+  external int color_format;
+
+  @ffi.Uint32()
+  external int layer_count;
+
+  /// VkFormat of `depth` from get_images, or of the depth image Filament
+  /// makes itself when get_images leaves it 0.
+  @ffi.Uint32()
+  external int depth_format;
+
+  /// Writes image_count VkImage handles into `colors` and a depth VkImage
+  /// (or 0) into `depth`.
+  external ffi.Pointer<
+    ffi.NativeFunction<
+      ffi.Void Function(
+        ffi.Pointer<ffi.Void> user_data,
+        ffi.Pointer<ffi.Uint64> colors,
+        ffi.Pointer<ffi.Uint64> depth,
+      )
+    >
+  >
+  get_images;
+
+  /// Waits until an image may be rendered (xrAcquireSwapchainImage +
+  /// xrWaitSwapchainImage) and writes its index. Returns a VkResult.
+  external ffi.Pointer<
+    ffi.NativeFunction<
+      ffi.Int32 Function(
+        ffi.Pointer<ffi.Void> user_data,
+        ffi.Pointer<ffi.Uint32> index,
+      )
+    >
+  >
+  acquire;
+
+  /// The image's commands are submitted (xrReleaseSwapchainImage). Returns
+  /// a VkResult.
+  external ffi.Pointer<
+    ffi.NativeFunction<
+      ffi.Int32 Function(ffi.Pointer<ffi.Void> user_data, ffi.Uint32 index)
+    >
+  >
+  present;
+
+  /// The swapchain is gone; may be null.
+  external ffi.Pointer<
+    ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void> user_data)>
+  >
+  destroy;
 }
