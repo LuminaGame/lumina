@@ -41,7 +41,13 @@ mixin _AssetThumbnails on _AssetRepositoryState {
 
       if (type == AssetType.texture && rawPayload != null && rawPayload.isNotEmpty) {
         try {
-          final codec = await ui.instantiateImageCodec(rawPayload);
+          // dart:ui's codec has no KTX2 decoder: a KTX2 texture is drawn from
+          // a PNG of its pixels, made on a background isolate.
+          final drawable = EncodedImageFormat.sniff(rawPayload) == EncodedImageFormat.ktx2
+              ? await EditorImageDecoding.previewPng(rawPayload, maxEdge: 256)
+              : rawPayload;
+          if (drawable == null) throw const FormatException('the KTX2 texture does not transcode');
+          final codec = await ui.instantiateImageCodec(drawable);
           final frame = await codec.getNextFrame();
           final img = frame.image;
           final srcRect = ui.Rect.fromLTWH(0, 0, img.width.toDouble(), img.height.toDouble());

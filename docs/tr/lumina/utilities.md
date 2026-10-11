@@ -363,7 +363,7 @@ Decoded pixels: `width * height` RGBA8 texels, row-major, alpha premultiplied (w
 
 Decodes an encoded image with the decoder for its [EncodedImageFormat], the same way on every isolate.
 
-`dart:ui`'s image codec only exists on a root isolate (the editor's UI isolate, a test's main isolate, the web's only isolate). There it decodes PNG, JPEG, WebP, GIF and BMP; on any other isolate — an `Isolate.run` worker, a save or streaming worker — `package:image` decodes the same formats. TGA always goes through [TgaDecoderService]. KTX2 (Basis) and unrecognised bytes are not decoded to pixels here.
+`dart:ui`'s image codec only exists on a root isolate (the editor's UI isolate, a test's main isolate, the web's only isolate). There it decodes PNG, JPEG, WebP, GIF and BMP; on any other isolate — an `Isolate.run` worker, a save or streaming worker — `package:image` decodes the same formats. TGA always goes through [TgaDecoderService]. KTX2 (Basis Universal, `KHR_texture_basisu`) is transcoded on the CPU by [Ktx2Decoder] (its top mip level), on a background isolate when called from the root isolate. Unrecognised bytes are not decoded to pixels here.
 
 **Üyeler:**
 
@@ -371,7 +371,7 @@ Decodes an encoded image with the decoder for its [EncodedImageFormat], the same
 | :--- | :--- | :--- |
 | `platformCodecAvailable` | `static bool get platformCodecAvailable` | Whether this isolate can use `dart:ui`'s image codec. |
 | `platformCodecProxy` | `static Future<DecodedRgbaImage> Function(Uint8List bytes)? platformCodecProxy` | Decodes with the UI isolate's platform codec on behalf of an isolate that has none: the import worker sets this to a round trip to the UI isolate, so what it decodes — the texels a mesh thumbnail samples — matches a UI-isolate decode bit for bit (JPEG decoders disagree in the last bits). Used only where [platformCodecAvailable] is false. |
-| `decodeRgba` | `static Future<DecodedRgbaImage?> decodeRgba(Uint8List bytes) async` | [bytes] decoded to premultiplied RGBA8, or `null` when its format is not one this decoder turns into pixels (KTX2, unknown). Throws a [FormatException] for bytes that carry a recognised signature but do not decode. |
+| `decodeRgba` | `static Future<DecodedRgbaImage?> decodeRgba(Uint8List bytes) async` | [bytes] decoded to premultiplied RGBA8, or `null` when its format is not one this decoder turns into pixels (unknown, a KTX2 that does not transcode such as an HDR one). Throws a [FormatException] for bytes that carry a recognised signature but do not decode. |
 
 ## `lib/src/assets/glb_loader.dart`
 

@@ -10,6 +10,7 @@ import 'package:image/image.dart' as img;
 import 'package:vector_math/vector_math_64.dart';
 
 import 'package:lumina/lumina.dart';
+import 'package:lumina_editor_data/src/services/editor_image_decoding.dart';
 import 'package:lumina_editor_data/src/services/thumbnail_mesh_loader.dart';
 
 part 'filament_thumbnail_renderer/state.dart';

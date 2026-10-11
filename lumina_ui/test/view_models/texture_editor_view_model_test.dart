@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:flutter_filament/flutter_filament.dart' show BasisEncoderBuilder, LinearImage;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina/testing.dart' show ImportFolderFixture;
@@ -234,5 +235,40 @@ void main() {
     expect(vm.width, width);
     expect(vm.height, height);
     expect(vm.mipChain.length, greaterThan(1));
+  });
+
+  test('a KTX2 (Basis Universal) texture asset loads its pixels', () async {
+    final mips = [8, 4, 2, 1];
+    final builder = BasisEncoderBuilder(mipCount: mips.length);
+    final images = <LinearImage>[];
+    for (var level = 0; level < mips.length; level++) {
+      final image = LinearImage(mips[level], mips[level], 3);
+      for (var y = 0; y < mips[level]; y++) {
+        for (var x = 0; x < mips[level]; x++) {
+          image.setPixel(x, y, 0, 1.0);
+        }
+      }
+      images.add(image);
+      builder.mipLevel(level, image);
+    }
+    final ktx2 = builder.buildAndEncode();
+    for (final image in images) {
+      image.destroy();
+    }
+    final path = '${tempDir.path}/T_Ktx2.lmas';
+    File(path).writeAsBytesSync(
+      LuminaAsset(assetId: 'tex-ktx2', name: 'T_Ktx2', type: AssetType.texture, rawPayload: ktx2, metadata: {'format': 'KTX2'})
+          .toProtoBufferBytes(),
+    );
+
+    final vm = TextureEditorViewModel(assetPath: path);
+    await vm.load();
+
+    expect((vm.width, vm.height), (8, 8));
+    final (r, g, b, a) = vm.pixelAt(0, 3, 3);
+    expect(r, greaterThan(200));
+    expect(g, lessThan(60));
+    expect(b, lessThan(60));
+    expect(a, 255);
   });
 }

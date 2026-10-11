@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart' show debugPrint, visibleForTesting;
 import 'package:flutter_filament/flutter_filament.dart';
 import 'package:image/image.dart' as imglib;
 import 'package:lumina_core/lumina_core.dart';
+import 'package:lumina_editor_data/lumina_editor.dart' show EditorImageDecoding;
 import 'package:vector_math/vector_math_64.dart' as vm;
 
 import 'package:lumina_ui/ui/features/sub_editors/view_models/material_editor_view_model.dart' show MaterialParamModel, MaterialParamType;
@@ -367,7 +368,8 @@ class MaterialPreviewRenderer {
         bytes = payload;
       }
 
-      final decoded = imglib.decodeImage(bytes);
+      // KTX2 (Basis Universal) textures too, through flutter_filament's transcoder.
+      final decoded = EditorImageDecoding.decode(bytes);
       if (decoded == null) return null;
       return (
         rgba: Uint8List.fromList(decoded.getBytes(order: imglib.ChannelOrder.rgba)),

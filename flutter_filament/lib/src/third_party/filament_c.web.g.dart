@@ -3221,6 +3221,13 @@ void filament_ktx2_reader_async_destroy(ffi.Pointer<FilKtx2Reader> r, ffi.Pointe
   _m.filament_ktx2_reader_async_destroy(r.address.toJS, a.address.toJS);
 }
 
+ffi.Pointer<ffi.Uint8> filament_ktx2_decode_rgba8(ffi.Pointer<ffi.Uint8> data, int size, int max_edge, ffi.Pointer<ffi.Uint32> out_width, ffi.Pointer<ffi.Uint32> out_height) =>
+    ffi.Pointer<ffi.Uint8>.fromAddress(_m.filament_ktx2_decode_rgba8(data.address.toJS, size.toJS, max_edge.toJS, out_width.address.toJS, out_height.address.toJS).toDartInt);
+
+void filament_ktx2_decode_free(ffi.Pointer<ffi.Uint8> pixels) {
+  _m.filament_ktx2_decode_free(pixels.address.toJS);
+}
+
 ffi.Pointer<FilKtx1Bundle> filament_ktx1_bundle_create(ffi.Pointer<ffi.Uint8> bytes, int nbytes) =>
     ffi.Pointer<FilKtx1Bundle>.fromAddress(_m.filament_ktx1_bundle_create(bytes.address.toJS, nbytes.toJS).toDartInt);
 
@@ -8602,6 +8609,10 @@ extension type _Module._(JSObject _) implements JSObject {
   external void filament_ktx2_async_upload_images(JSNumber a);
   @JS('_filament_ktx2_reader_async_destroy')
   external void filament_ktx2_reader_async_destroy(JSNumber r, JSNumber a);
+  @JS('_filament_ktx2_decode_rgba8')
+  external JSNumber filament_ktx2_decode_rgba8(JSNumber data, JSNumber size, JSNumber max_edge, JSNumber out_width, JSNumber out_height);
+  @JS('_filament_ktx2_decode_free')
+  external void filament_ktx2_decode_free(JSNumber pixels);
   @JS('_filament_ktx1_bundle_create')
   external JSNumber filament_ktx1_bundle_create(JSNumber bytes, JSNumber nbytes);
   @JS('_filament_ktx1_bundle_create_empty')

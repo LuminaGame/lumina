@@ -69,6 +69,7 @@ export 'package:flutter_filament/src/tangent_space_mesh.dart';
 export 'package:flutter_filament/src/name_component_manager.dart';
 export 'package:flutter_filament/src/transcoder.dart';
 export 'package:flutter_filament/src/filamesh.dart';
+export 'package:flutter_filament/src/ktx2_decoder.dart';
 export 'package:flutter_filament/src/ktx2_reader.dart';
 export 'package:flutter_filament/src/ktx1.dart';
 export 'package:flutter_filament/src/iblprefilter.dart';

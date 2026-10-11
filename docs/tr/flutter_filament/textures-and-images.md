@@ -21,6 +21,7 @@ GPU texture'ları ve sampler'lar, glTF yüklemenin kullandığı texture provide
   - [`lib/src/image_sampler.dart`](#libsrcimage_samplerdart)
   - [`lib/src/imageio.dart`](#libsrcimageiodart)
   - [`lib/src/ktx1.dart`](#libsrcktx1dart)
+  - [`lib/src/ktx2_decoder.dart`](#libsrcktx2_decoderdart)
   - [`lib/src/ktx2_reader.dart`](#libsrcktx2_readerdart)
   - [`lib/src/linear_image.dart`](#libsrclinear_imagedart)
   - [`lib/src/texture.dart`](#libsrctexturedart)
@@ -118,6 +119,8 @@ Aşağıdaki C fonksiyonları paketin `src/` header'larında tanımlanır ve Dar
 | `filament_ktx2_async_do_transcoding` | `FFI_PLUGIN_EXPORT int filament_ktx2_async_do_transcoding(FilKtx2Asy...` | Filament yerel `filament_ktx2_async_do_transcoding` C fonksiyonunu çalıştırır. |
 | `filament_ktx2_async_upload_images` | `FFI_PLUGIN_EXPORT void filament_ktx2_async_upload_images(FilKtx2Asy...` | Filament yerel `filament_ktx2_async_upload_images` C fonksiyonunu çalıştırır. |
 | `filament_ktx2_reader_async_destroy` | `FFI_PLUGIN_EXPORT void filament_ktx2_reader_async_destroy(FilKtx2Re...` | İlgili Filament C API nesnesini yok eder ve GPU belleğini serbest bırakır. |
+| `filament_ktx2_decode_rgba8` | `FFI_PLUGIN_EXPORT uint8_t* filament_ktx2_decode_rgba8(const uint8_t* data, size_t size, uint32_t max_edge, uint32_t* out_width, uint32_t* out_height)` | Motor olmadan CPU'da çözme: uzun kenarı en çok `max_edge` olan en büyük mip seviyesi (0 = en üst seviye), Basis Universal'ın `ktx2_transcoder`'ı ile RGBA8'e çevrilir; KTX2 olmayan baytlar, HDR dokular ya da başarısız çevirmede null. İş parçacığı güvenlidir. Transcoder başlıkları `third_party/basisu_transcoder/` altında taşınır (hazır Filament yalnızca kütüphaneyi içerir). |
+| `filament_ktx2_decode_free` | `FFI_PLUGIN_EXPORT void filament_ktx2_decode_free(uint8_t* pixels)` | `filament_ktx2_decode_rgba8`'in döndürdüğü pikselleri serbest bırakır. |
 
 ### `src/linear_image_c.h`
 
@@ -287,6 +290,20 @@ Structured representation of an in-memory KTX1 texture bundle.  Contains one or 
 #### `class Ktx1Reader`
 
 Utility to construct Filament textures from KTX1 bundles.
+
+### `lib/src/ktx2_decoder.dart`
+
+#### `class Ktx2DecodedImage`
+
+Bir KTX2 dokunun bir mip seviyesi, RGBA8 pikseller olarak: `width`, `height`, `rgba` (düz alfa, dokunun kendi değerleri: sRGB bir renk dokusu, çözülmüş bir PNG gibi sRGB kodlu kalır).
+
+#### `abstract final class Ktx2Decoder`
+
+KTX2 / Basis Universal (`KHR_texture_basisu`) görüntüleri motor olmadan CPU'da piksellere çözer: bir içe aktarıcının, küçük resmin ya da CPU önizlemesinin ihtiyacı budur; `Ktx2Reader` ise GPU dokusuna çevirir. Maliyet çözülen piksellerle büyür; çağıran isolate bir UI çiziyorsa arka plan isolate'inden çağrılır; her isolate'te güvenlidir.
+
+| Metot / Getter | İmzası | Ne İşe Yarar? |
+| :--- | :--- | :--- |
+| `decodeRgba8` | `static Ktx2DecodedImage? decodeRgba8(Uint8List bytes, {int maxEdge = 0})` | Uzun kenarı en çok [maxEdge] olan en büyük mip seviyesi (0: en üst seviye; hiçbiri o kadar küçük değilse en küçüğü), RGBA8 olarak; [bytes] KTX2 değilse, HDR doku içeriyorsa ya da çevrilemiyorsa null. |
 
 ### `lib/src/ktx2_reader.dart`
 

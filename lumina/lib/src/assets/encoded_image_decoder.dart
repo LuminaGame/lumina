@@ -1,6 +1,8 @@
+import 'dart:isolate';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
+import 'package:flutter_filament/filament.dart' show Ktx2Decoder;
 import 'package:image/image.dart' as imglib;
 
 import 'package:lumina_core/lumina_core.dart';
@@ -22,8 +24,10 @@ class DecodedRgbaImage {
 /// isolate, a test's main isolate, the web's only isolate). There it decodes
 /// PNG, JPEG, WebP, GIF and BMP; on any other isolate — an `Isolate.run`
 /// worker, a save or streaming worker — `package:image` decodes the same
-/// formats. TGA always goes through [TgaDecoderService]. KTX2 (Basis) and
-/// unrecognised bytes are not decoded to pixels here.
+/// formats. TGA always goes through [TgaDecoderService]. KTX2 (Basis
+/// Universal, `KHR_texture_basisu`) is transcoded on the CPU by
+/// [Ktx2Decoder] (its top mip level), on a background isolate when called
+/// from the root isolate. Unrecognised bytes are not decoded to pixels here.
 abstract final class EncodedImageDecoder {
   /// Whether this isolate can use `dart:ui`'s image codec.
   static bool get platformCodecAvailable {
@@ -44,15 +48,17 @@ abstract final class EncodedImageDecoder {
   static Future<DecodedRgbaImage> Function(Uint8List bytes)? platformCodecProxy;
 
   /// [bytes] decoded to premultiplied RGBA8, or `null` when its format is not
-  /// one this decoder turns into pixels (KTX2, unknown). Throws a
+  /// one this decoder turns into pixels (unknown, a KTX2 that does not
+  /// transcode such as an HDR one). Throws a
   /// [FormatException] for bytes that carry a recognised signature but do not
   /// decode.
   static Future<DecodedRgbaImage?> decodeRgba(Uint8List bytes) async {
     final format = EncodedImageFormat.sniff(bytes);
     switch (format) {
-      case EncodedImageFormat.ktx2:
       case EncodedImageFormat.unknown:
         return null;
+      case EncodedImageFormat.ktx2:
+        return _decodeKtx2(bytes);
       case EncodedImageFormat.tga:
         final tga = TgaDecoderService.decode(bytes);
         if (tga == null) throw const FormatException('TGA header does not match its pixel data');
@@ -65,6 +71,23 @@ abstract final class EncodedImageDecoder {
         if (platformCodecAvailable) return _decodeWithPlatformCodec(bytes, format);
         final proxy = platformCodecProxy;
         return proxy != null ? proxy(bytes) : _decodeWithPackageImage(bytes, format);
+    }
+  }
+
+  /// Transcoding a KTX2 texture is CPU work in proportion to its pixels: off
+  /// the root isolate (the UI's) wherever isolates exist.
+  static Future<DecodedRgbaImage?> _decodeKtx2(Uint8List bytes) async {
+    DecodedRgbaImage? work() {
+      final image = Ktx2Decoder.decodeRgba8(bytes);
+      if (image == null) return null;
+      return DecodedRgbaImage(image.width, image.height, _premultiply(image.rgba));
+    }
+
+    if (!platformCodecAvailable) return work();
+    try {
+      return await Isolate.run(work, debugName: 'KTX2 decode');
+    } on UnsupportedError {
+      return work(); // The web: one isolate.
     }
   }
 

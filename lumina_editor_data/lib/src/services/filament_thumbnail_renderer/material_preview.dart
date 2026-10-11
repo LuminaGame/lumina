@@ -286,20 +286,12 @@ Uint8List? _imageBytesOf(String path) {
   }
 }
 
+/// The texture's pixels at most [maxEdge] on a side (a KTX2 texture's
+/// largest mip level within it, see [EditorImageDecoding.decode]).
 _DecodedImage? _decodeForSampler(Uint8List bytes, int maxEdge) {
-  var image = img.decodeImage(bytes);
+  final image = EditorImageDecoding.decode(bytes, maxEdge: maxEdge);
   if (image == null) return null;
-  if (image.width > maxEdge || image.height > maxEdge) {
-    final scale = maxEdge / math.max(image.width, image.height);
-    image = img.copyResize(
-      image,
-      width: math.max(1, (image.width * scale).round()),
-      height: math.max(1, (image.height * scale).round()),
-      interpolation: img.Interpolation.average,
-    );
-  }
-  final rgba = image.convert(numChannels: 4, format: img.Format.uint8);
-  return _DecodedImage(Uint8List.fromList(rgba.getBytes(order: img.ChannelOrder.rgba)), rgba.width, rgba.height);
+  return _DecodedImage(Uint8List.fromList(image.getBytes(order: img.ChannelOrder.rgba)), image.width, image.height);
 }
 
 /// A unit quaternion mapping +Z onto [n], with a stable tangent (Filament's

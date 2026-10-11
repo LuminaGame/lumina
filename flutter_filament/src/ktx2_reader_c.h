@@ -36,6 +36,16 @@ FFI_PLUGIN_EXPORT int filament_ktx2_async_do_transcoding(FilKtx2Async* a);
 FFI_PLUGIN_EXPORT void filament_ktx2_async_upload_images(FilKtx2Async* a);
 FFI_PLUGIN_EXPORT void filament_ktx2_reader_async_destroy(FilKtx2Reader* r, FilKtx2Async* a);
 
+// CPU decode, no engine: the largest mip level of a KTX2 / Basis Universal (LDR) image whose
+// longer edge is at most max_edge (0 = the top level; the smallest level when none fits),
+// transcoded to RGBA8 (width * height * 4 bytes, row-major, the texels as stored: sRGB colour stays
+// sRGB). Writes the level's size to out_width / out_height. Returns null for bytes that are not a
+// KTX2 file, an HDR texture or a failed transcode. Free the pixels with filament_ktx2_decode_free.
+// Safe to call from any thread.
+FFI_PLUGIN_EXPORT uint8_t* filament_ktx2_decode_rgba8(const uint8_t* data, size_t size, uint32_t max_edge,
+                                                      uint32_t* out_width, uint32_t* out_height);
+FFI_PLUGIN_EXPORT void filament_ktx2_decode_free(uint8_t* pixels);
+
 #ifdef __cplusplus
 }
 #endif

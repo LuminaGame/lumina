@@ -9,6 +9,7 @@ import 'package:image/image.dart' as img;
 
 import 'package:lumina/lumina.dart';
 import 'package:lumina_editor_data/src/repositories/asset_repository.dart';
+import 'package:lumina_editor_data/src/services/editor_image_decoding.dart';
 import 'package:lumina_editor_data/src/services/filament_thumbnail_renderer.dart';
 import 'package:lumina_editor_data/src/services/thumbnail_mesh_loader.dart';
 
@@ -370,7 +371,11 @@ class ThumbnailService {
 
   /// The image, box-filtered so its longer edge is at most [edge], as PNG.
   static Uint8List? _downscaledImage(Uint8List encoded, int edge) {
-    final image = img.decodeImage(encoded);
+    // A KTX2 texture decodes its largest mip level within twice the edge,
+    // then is box-filtered like any other image.
+    final image = EncodedImageFormat.sniff(encoded) == EncodedImageFormat.ktx2
+        ? EditorImageDecoding.decode(encoded, maxEdge: edge * 2)
+        : img.decodeImage(encoded);
     if (image == null) return null;
     var out = image;
     final longest = math.max(image.width, image.height);

@@ -9,6 +9,7 @@ import 'dart:ui' as ui;
 import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina_editor_data/src/services/assimp_import_service.dart';
 import 'package:lumina_editor_data/src/services/derived_data_cache.dart';
+import 'package:lumina_editor_data/src/services/editor_image_decoding.dart';
 import 'package:lumina_editor_data/src/services/fbx_import_service.dart';
 import 'package:lumina_editor_data/src/services/glb_parser_service.dart';
 import 'package:lumina_editor_data/src/services/import_image_conversion.dart';

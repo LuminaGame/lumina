@@ -41,6 +41,7 @@ export 'package:lumina_editor_data/src/services/assimp_import_service.dart';
 export 'package:lumina_editor_data/src/services/fbx_import_service.dart';
 export 'package:lumina_editor_data/src/services/obj_import_service.dart';
 export 'package:lumina_editor_data/src/services/obj_parser_service.dart';
+export 'package:lumina_editor_data/src/services/editor_image_decoding.dart';
 export 'package:lumina_editor_data/src/services/glb_parser_service.dart';
 export 'package:lumina_editor_data/src/services/import_image_conversion.dart';
 export 'package:lumina_editor_data/src/services/import_queue.dart';

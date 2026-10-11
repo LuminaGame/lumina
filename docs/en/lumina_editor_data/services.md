@@ -418,7 +418,7 @@ Content Browser thumbnails: routes each asset to the thumbnail that shows what i
 
 ### `class GlbParserService`
 
-`GlbParserService`: the editor's GLB service. `parseGlb` reads mesh data with lumina_core's `GlbReader` (the models are documented in [lumina_core services](../lumina_core/services-continued.md)), the engine's decoders (`LuminaGlbLoader.decoders`: Filament's Draco decoder and the platform image codec) and this service's sanitizer as `prepare`. The sanitizer (`convertGlbTgaToPng`, `convertGlbTgaToPngAsync`, `inspectImageWork`) converts TGA textures to PNG, embeds external images, downscales textures over `defaultMaxTextureSize` and reduces skins to four normalised influences; its output version is `sanitizerVersion`.
+`GlbParserService`: the editor's GLB service. `parseGlb` reads mesh data with lumina_core's `GlbReader` (the models are documented in [lumina_core services](../lumina_core/services-continued.md)), the engine's decoders (`LuminaGlbLoader.decoders`: Filament's Draco decoder and the platform image codec) and this service's sanitizer as `prepare`. The sanitizer (`convertGlbTgaToPng`, `convertGlbTgaToPngAsync`, `inspectImageWork`) converts TGA textures to PNG, embeds external images, downscales textures over `defaultMaxTextureSize` and reduces skins to four normalised influences; KTX2 (Basis Universal) images are kept as they are, labelled `image/ktx2` (never re-encoded, never relabelled PNG). Its output version is `sanitizerVersion`. `textureImageIndex` resolves the image a glTF texture samples: its `source`, else the one `KHR_texture_basisu` (or another extension) names; the import uses it for every material slot, so a KTX2 texture lands in its own slot, and writes such images as texture assets with `format` `KTX2` and a `.ktx2` companion file.
 
 **Functions, Methods & Accessors:**
 
@@ -428,6 +428,19 @@ Content Browser thumbnails: routes each asset to the thumbnail that shows what i
 | `convertGlbTgaToPng` | `static Uint8List convertGlbTgaToPng(Uint8List glbBytes, {List<String>? searchDirs, int maxTextureSize})` | The sanitized GLB bytes. |
 | `convertGlbTgaToPngAsync` | `static Future<Uint8List> convertGlbTgaToPngAsync(Uint8List glbBytes, {List<String>? searchDirs, int maxTextureSize})` | The same on a background isolate when images must be decoded. |
 | `inspectImageWork` | `static ({bool needsDecoding, bool selfContained}) inspectImageWork(Uint8List glbBytes, {int maxTextureSize})` | What sanitizing costs, read from image headers only. |
+| `textureImageIndex` | `static int? textureImageIndex(Object? texture)` | The image a glTF texture samples: `source`, else `KHR_texture_basisu.source` (or another extension's `source`), else null. |
+
+## `lib/src/services/editor_image_decoding.dart`
+
+### `abstract final class EditorImageDecoding`
+
+Decodes a texture's encoded bytes for the editor's CPU paths (texture thumbnails, Filament material thumbnails, the Material Editor preview, the Texture editor): KTX2 / Basis Universal images through flutter_filament's `Ktx2Decoder` (the largest mip level within the size asked for), everything else through `package:image`.
+
+| Method / Getter | Signature | Purpose & Description |
+| :--- | :--- | :--- |
+| `decode` | `static img.Image? decode(Uint8List bytes, {int maxEdge = 0})` | RGBA8 image at most [maxEdge] on its longer side (0: full size); null when the bytes do not decode. Synchronous: call it on a background isolate from UI code. |
+| `decodeAsync` | `static Future<({Uint8List rgba, int width, int height})?> decodeAsync(Uint8List bytes, {int maxEdge = 0})` | `decode` on a background isolate, as straight RGBA8 texels. |
+| `previewPng` | `static Future<Uint8List?> previewPng(Uint8List bytes, {int maxEdge = 256})` | The image as a PNG, made on a background isolate: how a texture thumbnail draws a KTX2 texture `dart:ui` cannot read. |
 
 ## Editor panels: `EditorPanelCatalog`, `EditorPanelPackaging`
 

@@ -47,13 +47,14 @@ final Uint8List _neutralNormalPng = TgaDecoderService.encodePng(
 );
 
 /// glTF `mimeType` for [bytes], sniffed from the header. Images resolved from disk
-/// may be JPEG even when the pipeline's other branches produce PNG, and glTF
-/// validators reject a PNG label on JPEG bytes.
+/// may be JPEG or KTX2 even when the pipeline's other branches produce PNG, and glTF
+/// validators reject a PNG label on JPEG bytes (Filament looks for a PNG decoder
+/// for KTX2 bytes labelled PNG).
 String _sniffImageMimeType(Uint8List bytes) {
   if (bytes.length >= 2 && bytes[0] == 0xFF && bytes[1] == 0xD8) {
     return 'image/jpeg';
   }
-  return 'image/png';
+  return EncodedImageFormat.sniff(bytes).mimeType ?? 'image/png';
 }
 
 /// Reads an image's pixel dimensions without decoding it. Returns `null` when the
@@ -151,6 +152,9 @@ Uint8List? _applyTextureBudget(
   String? label,
 }) {
   if (maxTextureSize <= 0 || bytes.isEmpty) return null;
+  // A KTX2 (Basis Universal) texture is kept as it is: it is already
+  // compressed on the GPU, and the editor cannot encode one again.
+  if (EncodedImageFormat.sniff(bytes) == EncodedImageFormat.ktx2) return null;
 
   final peeked = _peekImageSize(bytes);
   if (peeked != null &&
@@ -351,7 +355,7 @@ Uint8List _convertGlbTgaToPng(
             if (textures != null && materials != null) {
               for (int tIdx = 0; tIdx < textures.length; tIdx++) {
                 final tex = textures[tIdx] as Map?;
-                if (tex != null && tex['source'] == imgIdx) {
+                if (tex != null && GlbParserService.textureImageIndex(tex) == imgIdx) {
                   for (final m in materials) {
                     if (m is Map &&
                         m['normalTexture'] is Map &&

@@ -141,6 +141,9 @@ class GlbParserService {
           continue;
         }
 
+        // A KTX2 texture is never re-encoded (see _applyTextureBudget).
+        if (EncodedImageFormat.sniff(head) == EncodedImageFormat.ktx2) continue;
+
         final size = _peekImageSize(head);
         if (size == null ||
             (maxTextureSize > 0 &&
@@ -163,6 +166,24 @@ class GlbParserService {
   /// Images whose longest edge exceeds [maxTextureSize] are downscaled in place,
   /// preserving aspect ratio. Pass `0` to keep source resolution.
   static const convertGlbTgaToPng = _convertGlbTgaToPng;
+
+  /// The image a glTF [texture] samples: its `source`, else the image an
+  /// extension names in its place (`KHR_texture_basisu` for a KTX2 image,
+  /// `EXT_texture_webp`, …), else null.
+  static int? textureImageIndex(Object? texture) {
+    if (texture is! Map) return null;
+    final source = texture['source'];
+    if (source is int) return source;
+    final extensions = texture['extensions'];
+    if (extensions is Map) {
+      final basisu = extensions['KHR_texture_basisu'];
+      if (basisu is Map && basisu['source'] is int) return basisu['source'] as int;
+      for (final ext in extensions.values) {
+        if (ext is Map && ext['source'] is int) return ext['source'] as int;
+      }
+    }
+    return null;
+  }
 }
 
 class _JointWeightPair {

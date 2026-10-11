@@ -88,9 +88,13 @@ mixin _AssetFamilyEmission on _AssetRepositoryState {
       );
       writeAsset(name, asset);
 
-      // Write companion image file (.png/.jpg) beside .lmas
+      // Write companion image file (.png/.jpg/.ktx2) beside .lmas
       if (targetPaths.containsKey(name)) {
-        final ext = format.toLowerCase() == 'jpeg' || format.toLowerCase() == 'jpg' ? 'jpg' : 'png';
+        final ext = switch (format.toLowerCase()) {
+          'jpeg' || 'jpg' => 'jpg',
+          'ktx2' => 'ktx2',
+          _ => 'png',
+        };
         final lmasPath = '$projectPath/${targetPaths[name]}';
         final imgFile = File(lmasPath.replaceAll(RegExp(r'\.lmas$'), '.$ext'));
         try {

@@ -138,6 +138,9 @@ void main(List<String> args) async {
         'src/opendlss_nr',
         'third_party/opendlss_nr/upstream/src',
         'third_party/opendlss_nr/modified',
+        // Basis Universal transcoder headers (the CPU KTX2 decode in ktx2_reader_c.cpp); the
+        // library is Filament's basis_transcoder.
+        'third_party/basisu_transcoder/include',
     ];
     // On Windows the sources, includes and Filament libraries go to a
     // response file; cl runs through cmd.exe, whose command line holds 8 191

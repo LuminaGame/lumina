@@ -95,7 +95,7 @@ mixin _AssetStagedConversion on _AssetRepositoryState {
           for (final (slot, ref) in FbxImportService.textureSlots(m as Map)) {
             final texIdx = ref['index'] as int?;
             if (texIdx == null || texIdx >= textures.length) continue;
-            final source = (textures[texIdx] as Map)['source'] as int? ?? texIdx;
+            final source = GlbParserService.textureImageIndex(textures[texIdx]) ?? texIdx;
             imageSlots.putIfAbsent(source, () => {}).add(slot);
           }
         }
@@ -136,8 +136,15 @@ mixin _AssetStagedConversion on _AssetRepositoryState {
             }
           }
 
+          // The bytes decide over the label; a KTX2 (Basis Universal) image
+          // stays KTX2, never relabelled PNG.
           final mimeType = imgMap['mimeType'] as String? ?? '';
-          final format = mimeType.contains('jpeg') || mimeType.contains('jpg') ? 'JPEG' : 'PNG';
+          final sniffed = imgBytes == null ? EncodedImageFormat.unknown : EncodedImageFormat.sniff(imgBytes);
+          final format = sniffed == EncodedImageFormat.ktx2 || (sniffed == EncodedImageFormat.unknown && mimeType == 'image/ktx2')
+              ? 'KTX2'
+              : sniffed == EncodedImageFormat.jpeg || mimeType.contains('jpeg') || mimeType.contains('jpg')
+                  ? 'JPEG'
+                  : 'PNG';
 
           final slots = imageSlots[imgIdx] ?? const <String>{};
           final linear = slots.isNotEmpty &&
@@ -184,7 +191,7 @@ mixin _AssetStagedConversion on _AssetRepositoryState {
               final texIdx = (pbr['baseColorTexture'] as Map<String, dynamic>)['index'] as int?;
               if (texIdx != null && texIdx < textures.length) {
                 final texObj = textures[texIdx] as Map<String, dynamic>;
-                final sourceImgIdx = texObj['source'] as int? ?? texIdx;
+                final sourceImgIdx = GlbParserService.textureImageIndex(texObj) ?? texIdx;
                 final texName = imageIndexToName[sourceImgIdx] ?? 'T_${baseName}_BaseColor_$texIdx';
                 texRefs.add({'slot': 'baseColorMap', 'name': texName});
               }
@@ -193,7 +200,7 @@ mixin _AssetStagedConversion on _AssetRepositoryState {
               final texIdx = (pbr['metallicRoughnessTexture'] as Map<String, dynamic>)['index'] as int?;
               if (texIdx != null && texIdx < textures.length) {
                 final texObj = textures[texIdx] as Map<String, dynamic>;
-                final sourceImgIdx = texObj['source'] as int? ?? texIdx;
+                final sourceImgIdx = GlbParserService.textureImageIndex(texObj) ?? texIdx;
                 final texName = imageIndexToName[sourceImgIdx] ?? 'T_${baseName}_MetallicRoughness_$texIdx';
                 texRefs.add({'slot': 'metallicRoughnessMap', 'name': texName});
               }
@@ -203,7 +210,7 @@ mixin _AssetStagedConversion on _AssetRepositoryState {
             final texIdx = (matMap['normalTexture'] as Map<String, dynamic>)['index'] as int?;
             if (texIdx != null && texIdx < textures.length) {
               final texObj = textures[texIdx] as Map<String, dynamic>;
-              final sourceImgIdx = texObj['source'] as int? ?? texIdx;
+              final sourceImgIdx = GlbParserService.textureImageIndex(texObj) ?? texIdx;
               final texName = imageIndexToName[sourceImgIdx] ?? 'T_${baseName}_NormalMap_$texIdx';
               texRefs.add({'slot': 'normalMap', 'name': texName});
             }
@@ -212,7 +219,7 @@ mixin _AssetStagedConversion on _AssetRepositoryState {
             final texIdx = (matMap['occlusionTexture'] as Map<String, dynamic>)['index'] as int?;
             if (texIdx != null && texIdx < textures.length) {
               final texObj = textures[texIdx] as Map<String, dynamic>;
-              final sourceImgIdx = texObj['source'] as int? ?? texIdx;
+              final sourceImgIdx = GlbParserService.textureImageIndex(texObj) ?? texIdx;
               final texName = imageIndexToName[sourceImgIdx] ?? 'T_${baseName}_OcclusionMap_$texIdx';
               texRefs.add({'slot': 'occlusionMap', 'name': texName});
             }
@@ -221,7 +228,7 @@ mixin _AssetStagedConversion on _AssetRepositoryState {
             final texIdx = (matMap['emissiveTexture'] as Map<String, dynamic>)['index'] as int?;
             if (texIdx != null && texIdx < textures.length) {
               final texObj = textures[texIdx] as Map<String, dynamic>;
-              final sourceImgIdx = texObj['source'] as int? ?? texIdx;
+              final sourceImgIdx = GlbParserService.textureImageIndex(texObj) ?? texIdx;
               final texName = imageIndexToName[sourceImgIdx] ?? 'T_${baseName}_EmissiveMap_$texIdx';
               texRefs.add({'slot': 'emissiveMap', 'name': texName});
             }
@@ -232,7 +239,7 @@ mixin _AssetStagedConversion on _AssetRepositoryState {
               final texIdx = (spec['specularTexture'] as Map<String, dynamic>)['index'] as int?;
               if (texIdx != null && texIdx < textures.length) {
                 final texObj = textures[texIdx] as Map<String, dynamic>;
-                final sourceImgIdx = texObj['source'] as int? ?? texIdx;
+                final sourceImgIdx = GlbParserService.textureImageIndex(texObj) ?? texIdx;
                 final texName = imageIndexToName[sourceImgIdx] ?? 'T_${baseName}_SpecularMap_$texIdx';
                 texRefs.add({'slot': 'specularMap', 'name': texName});
               }

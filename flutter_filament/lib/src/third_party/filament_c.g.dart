@@ -7165,6 +7165,26 @@ external void filament_ktx2_reader_async_destroy(
 );
 
 @ffi.Native<
+  ffi.Pointer<ffi.Uint8> Function(
+    ffi.Pointer<ffi.Uint8>,
+    ffi.Size,
+    ffi.Uint32,
+    ffi.Pointer<ffi.Uint32>,
+    ffi.Pointer<ffi.Uint32>,
+  )
+>()
+external ffi.Pointer<ffi.Uint8> filament_ktx2_decode_rgba8(
+  ffi.Pointer<ffi.Uint8> data,
+  int size,
+  int max_edge,
+  ffi.Pointer<ffi.Uint32> out_width,
+  ffi.Pointer<ffi.Uint32> out_height,
+);
+
+@ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Uint8>)>()
+external void filament_ktx2_decode_free(ffi.Pointer<ffi.Uint8> pixels);
+
+@ffi.Native<
   ffi.Pointer<FilKtx1Bundle> Function(ffi.Pointer<ffi.Uint8>, ffi.Uint32)
 >()
 external ffi.Pointer<FilKtx1Bundle> filament_ktx1_bundle_create(

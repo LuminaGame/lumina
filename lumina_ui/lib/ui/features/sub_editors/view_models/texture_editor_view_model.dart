@@ -174,6 +174,17 @@ class TextureEditorViewModel extends ChangeNotifier {
   }
 
   Future<void> _decodePayload(Uint8List payload) async {
+    // dart:ui's codec has no KTX2 decoder: a KTX2 (Basis Universal) texture
+    // is transcoded on a background isolate.
+    if (EncodedImageFormat.sniff(payload) == EncodedImageFormat.ktx2) {
+      final decoded = await EditorImageDecoding.decodeAsync(payload);
+      if (decoded == null) throw const FormatException('the KTX2 texture does not transcode');
+      _width = decoded.width;
+      _height = decoded.height;
+      _rawRgba = decoded.rgba;
+      _generateMipChain();
+      return;
+    }
     final codec = await ui.instantiateImageCodec(payload);
     final frame = await codec.getNextFrame();
     final image = frame.image;

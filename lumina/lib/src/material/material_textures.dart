@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer' as developer;
+import 'dart:isolate';
 import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -263,10 +264,23 @@ class LuminaMaterialTextures {
     );
   }
 
-  /// Straight (not premultiplied) RGBA8 texels of an encoded image: the
-  /// platform codec where there is one (PNG, JPEG, WebP, GIF, BMP), else
-  /// `package:image` (TGA and the rest it knows).
+  /// Straight (not premultiplied) RGBA8 texels of an encoded image: a KTX2
+  /// (Basis Universal) texture's top level transcoded by [Ktx2Decoder] on a
+  /// background isolate, else the platform codec where there is one (PNG,
+  /// JPEG, WebP, GIF, BMP), else `package:image` (TGA and the rest it knows).
   static Future<({Uint8List rgba, int width, int height})?> _decode(Uint8List bytes) async {
+    if (EncodedImageFormat.sniff(bytes) == EncodedImageFormat.ktx2) {
+      ({Uint8List rgba, int width, int height})? work() {
+        final image = Ktx2Decoder.decodeRgba8(bytes);
+        return image == null ? null : (rgba: image.rgba, width: image.width, height: image.height);
+      }
+
+      try {
+        return await Isolate.run(work, debugName: 'KTX2 material texture');
+      } on UnsupportedError {
+        return work(); // The web: one isolate.
+      }
+    }
     try {
       final codec = await ui.instantiateImageCodec(bytes);
       try {

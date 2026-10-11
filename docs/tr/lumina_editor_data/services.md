@@ -416,7 +416,7 @@ Content Browser thumbnail'ları: her asset'i onu gösteren thumbnail'a yönlendi
 
 ### `class GlbParserService`
 
-`GlbParserService`: editörün GLB servisi. `parseGlb`, mesh verisini lumina_core'un `GlbReader`'ı (modeller [lumina_core servisleri](../lumina_core/services-continued.md) sayfasında), engine'in çözücüleri (`LuminaGlbLoader.decoders`: Filament'in Draco çözücüsü ve platform görüntü codec'i) ve `prepare` olarak bu servisin temizleyicisiyle okur. Temizleyici (`convertGlbTgaToPng`, `convertGlbTgaToPngAsync`, `inspectImageWork`) TGA dokuları PNG'ye çevirir, dış görüntüleri gömer, `defaultMaxTextureSize` üstündeki dokuları küçültür ve skin'leri dört normalize etkiye indirir; çıktı sürümü `sanitizerVersion`'dır.
+`GlbParserService`: editörün GLB servisi. `parseGlb`, mesh verisini lumina_core'un `GlbReader`'ı (modeller [lumina_core servisleri](../lumina_core/services-continued.md) sayfasında), engine'in çözücüleri (`LuminaGlbLoader.decoders`: Filament'in Draco çözücüsü ve platform görüntü codec'i) ve `prepare` olarak bu servisin temizleyicisiyle okur. Temizleyici (`convertGlbTgaToPng`, `convertGlbTgaToPngAsync`, `inspectImageWork`) TGA dokuları PNG'ye çevirir, dış görüntüleri gömer, `defaultMaxTextureSize` üstündeki dokuları küçültür ve skin'leri dört normalize etkiye indirir; KTX2 (Basis Universal) görüntüler olduğu gibi kalır ve `image/ktx2` etiketini korur (yeniden kodlanmaz, PNG diye etiketlenmez). Çıktı sürümü `sanitizerVersion`'dır. `textureImageIndex` bir glTF dokusunun örneklediği görüntüyü bulur: `source`'u, yoksa `KHR_texture_basisu`'nun (ya da başka bir uzantının) adlandırdığı görüntü; içe aktarım her materyal slotu için bunu kullanır, böylece bir KTX2 doku kendi slotuna düşer, ve böyle görüntüleri `format`'ı `KTX2` olan, yanında `.ktx2` dosyası bulunan doku varlıkları olarak yazar.
 
 **Fonksiyonlar, Metotlar ve Erişimciler:**
 
@@ -426,6 +426,19 @@ Content Browser thumbnail'ları: her asset'i onu gösteren thumbnail'a yönlendi
 | `convertGlbTgaToPng` | `static Uint8List convertGlbTgaToPng(Uint8List glbBytes, {List<String>? searchDirs, int maxTextureSize})` | Temizlenmiş GLB byte'ları. |
 | `convertGlbTgaToPngAsync` | `static Future<Uint8List> convertGlbTgaToPngAsync(Uint8List glbBytes, {List<String>? searchDirs, int maxTextureSize})` | Görüntü çözmek gerektiğinde aynısı, arka plan isolate'inde. |
 | `inspectImageWork` | `static ({bool needsDecoding, bool selfContained}) inspectImageWork(Uint8List glbBytes, {int maxTextureSize})` | Temizlemenin maliyeti, yalnızca görüntü başlıklarından okunur. |
+| `textureImageIndex` | `static int? textureImageIndex(Object? texture)` | Bir glTF dokusunun örneklediği görüntü: `source`, yoksa `KHR_texture_basisu.source` (ya da başka bir uzantının `source`'u), yoksa null. |
+
+## `lib/src/services/editor_image_decoding.dart`
+
+### `abstract final class EditorImageDecoding`
+
+Bir dokunun kodlanmış baytlarını editörün CPU yolları (doku küçük resimleri, Filament materyal küçük resimleri, Material Editor önizlemesi, Texture editörü) için çözer: KTX2 / Basis Universal görüntüler flutter_filament'in `Ktx2Decoder`'ı ile (istenen boyuta sığan en büyük mip seviyesi), geri kalan her şey `package:image` ile.
+
+| Metot / Getter | İmzası | Ne İşe Yarar? |
+| :--- | :--- | :--- |
+| `decode` | `static img.Image? decode(Uint8List bytes, {int maxEdge = 0})` | Uzun kenarı en çok [maxEdge] olan RGBA8 görüntü (0: tam boyut); baytlar çözülmezse null. Eşzamanlı: UI kodundan arka plan isolate'inde çağrılır. |
+| `decodeAsync` | `static Future<({Uint8List rgba, int width, int height})?> decodeAsync(Uint8List bytes, {int maxEdge = 0})` | `decode` arka plan isolate'inde, düz (premultiplied olmayan) RGBA8 texel'ler olarak. |
+| `previewPng` | `static Future<Uint8List?> previewPng(Uint8List bytes, {int maxEdge = 256})` | Görüntü PNG olarak, arka plan isolate'inde üretilir: doku küçük resmi `dart:ui`'ın okuyamadığı bir KTX2 dokuyu böyle çizer. |
 
 ## Editör panelleri: `EditorPanelCatalog`, `EditorPanelPackaging`
 

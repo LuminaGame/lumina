@@ -66,12 +66,22 @@ void main() {
     expect(EncodedImageFormat.sniff(png), EncodedImageFormat.png);
   });
 
-  test('KTX2 and unknown bytes are not decoded to pixels', () async {
-    if (skipIfNoAssets()) return;
-    if (encoded.containsKey(EncodedImageFormat.ktx2)) {
-      expect(await EncodedImageDecoder.decodeRgba(encoded[EncodedImageFormat.ktx2]!), isNull);
-    }
+  test('unknown bytes are not decoded to pixels', () async {
     expect(await EncodedImageDecoder.decodeRgba(Uint8List.fromList(List.filled(64, 7))), isNull);
+  });
+
+  test('a KTX2 texture is transcoded to the same texels on the root and on a worker isolate', () async {
+    if (!ktx2File.existsSync()) {
+      markTestSkipped('flutter_filament test texture missing: ${ktx2File.path}');
+      return;
+    }
+    final ktx2 = ktx2File.readAsBytesSync();
+    final onRoot = (await EncodedImageDecoder.decodeRgba(ktx2))!;
+    final offRoot = (await Isolate.run(() => EncodedImageDecoder.decodeRgba(ktx2)))!;
+    expect(onRoot.width, greaterThan(0));
+    expect(onRoot.rgba.length, onRoot.width * onRoot.height * 4);
+    expect((offRoot.width, offRoot.height), (onRoot.width, onRoot.height));
+    expect(offRoot.rgba, onRoot.rgba);
   });
 
   test('a truncated PNG throws a FormatException instead of decoding garbage', () async {
