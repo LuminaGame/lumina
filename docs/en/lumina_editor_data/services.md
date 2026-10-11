@@ -168,7 +168,8 @@ only when its content changes. The editor's code generation and `GenerateDartCod
 
 The presentation window (direct presentation, `windows_surface_sources.dart`): `createSurface` creates a child window
 of the Flutter view covering its client area, `WS_DISABLED` and `HTTRANSPARENT` (the Flutter view under it gets the
-mouse and keeps the keyboard), never erased or painted, on a thread of its own that only pumps its messages (presenting
+mouse and keeps the keyboard), never erased or painted; the Flutter view gets `WS_CLIPCHILDREN` first, so its own
+presents (the UI it keeps drawing) never cover the game's frame. The window runs on a thread of its own that only pumps its messages (presenting
 to a window can send it messages from the GPU driver's threads, which must never wait for the platform thread; the
 platform thread waits for it only while handling sent messages). It follows the view's `WM_SIZE` (asynchronously) and
 reports `surfaceChanged` (0 x 0 while minimised); `destroySurface` closes it and joins the thread. The Linux runner

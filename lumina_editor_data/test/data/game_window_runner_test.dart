@@ -183,6 +183,16 @@ void main() {
     expect(cc, contains('direct presentation is not available on Linux yet'));
   });
 
+  test('the presentation window parent clips its children, so the Flutter view never draws over the game frame', () {
+    final cpp = GameWindowRunnerService.windowsSource(startFullscreen: false);
+    final create = cpp.substring(cpp.indexOf('bool CreateSurface()'), cpp.indexOf('void DestroySurface()'));
+    final clip = create.indexOf('WS_CLIPCHILDREN');
+    expect(clip, isNonNegative, reason: 'CreateSurface sets WS_CLIPCHILDREN on the parent');
+    expect(create, contains('SetWindowLongPtr(parent, GWL_STYLE'));
+    // Before the presentation window exists: no present can land in its rectangle unclipped.
+    expect(clip, lessThan(create.indexOf('CreateWindowExW(')));
+  });
+
   test('a project without desktop runners is left alone', () {
     final report = GameWindowRunnerService.apply(root.path, startFullscreen: true);
     expect(report.files, isEmpty);

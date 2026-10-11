@@ -169,7 +169,8 @@ Bir oyun projesinin masaüstü runner'larına pencere modlarını kazandırır. 
 
 Sunum penceresi (doğrudan sunum, `windows_surface_sources.dart`): `createSurface` Flutter view'inin istemci alanını
 kaplayan, `WS_DISABLED` ve `HTTRANSPARENT` (fareyi altındaki Flutter view alır, klavye onda kalır), hiç silinmeyen ve
-boyanmayan bir alt pencere oluşturur; pencere yalnızca mesajlarını işleyen kendi iş parçacığındadır (bir pencereye
+boyanmayan bir alt pencere oluşturur; önce Flutter view'e `WS_CLIPCHILDREN` verilir, böylece view'in kendi sunumları
+(çizmeyi sürdürdüğü UI) oyunun karesinin üstüne çizmez. Pencere yalnızca mesajlarını işleyen kendi iş parçacığındadır (bir pencereye
 sunum, GPU sürücüsünün iş parçacıklarından ona mesaj gönderebilir ve bunlar platform iş parçacığını asla beklememeli;
 platform iş parçacığı onu yalnızca gönderilen mesajları işlerken bekler). View'in `WM_SIZE`'ını (asenkron) izler ve
 `surfaceChanged` bildirir (küçültülmüşken 0 x 0); `destroySurface` onu kapatır ve iş parçacığını bekler. Linux runner'ı

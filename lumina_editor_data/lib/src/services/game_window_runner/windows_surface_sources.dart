@@ -17,7 +17,8 @@ const String kWindowsSurfaceSource = r'''
 // The window is a child of the Flutter view covering its client area. It is
 // disabled and transparent to hit tests, so the mouse goes to the Flutter
 // view under it and the keyboard focus stays there; it never erases or paints
-// (Filament's swap chain owns its pixels).
+// (Filament's swap chain owns its pixels). The Flutter view gets
+// WS_CLIPCHILDREN, so its own presents never draw over the window.
 //
 // It lives on a thread of its own that does nothing but pump its messages:
 // presenting to a window can send it messages from the GPU driver's threads,
@@ -118,6 +119,13 @@ bool CreateSurface() {
     g_surface_class = true;
   }
   HWND parent = g_view ? g_view : g_window;
+  // The parent must not draw over this window. The Flutter view keeps
+  // presenting its own frames (the UI the game blends in); without
+  // WS_CLIPCHILDREN each of them covered the game's frame with the view's
+  // pixels (black and the HUD) until the game presented again, so 10-45% of
+  // the frames on screen showed no 3D.
+  ::SetWindowLongPtr(parent, GWL_STYLE,
+                     ::GetWindowLongPtr(parent, GWL_STYLE) | WS_CLIPCHILDREN);
   const SIZE size = SurfaceSize();
   HANDLE created = ::CreateEventW(nullptr, TRUE, FALSE, nullptr);
   if (!created) return false;
