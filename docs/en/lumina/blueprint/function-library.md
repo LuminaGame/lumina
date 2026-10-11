@@ -664,6 +664,31 @@ Vectors and rotators are **authoring space** (cm, Z up; rotators about X/Y/Z lik
 | `functions` | `static final Map<String, LuminaBlueprintFunction> functions` | Every node the VM can call, keyed by node id: the built-ins, then the functions registered in [LuminaBlueprintFunctionRegistry]. Inputs arrive converted to their pin types (the VM resolves wires, literals and defaults first). |
 | `builtInFunctions` | `static final Map<String, LuminaBlueprintFunction> builtInFunctions` | One entry per pure / impure built-in node, keyed by node id. |
 
+## Widget|Viewport (`blueprint_function_library/umg_viewport.dart`)
+
+The Viewport element's nodes (Target: `WidgetElement:viewport`; a Text or any other element on Target is a wire type error). Each one edits the element's scene description ([user widgets](../user-widgets.md#the-viewport-element-libsrcumgviewport)) through `LuminaViewportNodes` (exported by `lumina_runtime.dart`), which the VM calls through `builtInFunctions` and generated code calls directly (`LuminaViewportNodes.addSkeletalMesh(this, …)` through an import prefix). Node ids and marker ids come from the description's own counter, so the VM and generated code return the same ids.
+
+| Node | Pins → outputs | `LuminaViewportNodes` |
+| :--- | :--- | :--- |
+| **Viewport Add Static Mesh** / **Add Skeletal Mesh** | Mesh / Skeletal Mesh (project `.lmas`), Transform → Node Id | `addStaticMesh`, `addSkeletalMesh` |
+| **Viewport Remove Node**, **Viewport Clear** | Node Id | `removeNode`, `clear` |
+| **Viewport Set Node Transform** / **Set Node Visible** / **Set Node Mesh** (part swap) | Node Id, Transform / Visible / Mesh | `setNodeTransform`, `setNodeVisible`, `setNodeMesh` |
+| **Viewport Attach To Socket** | Node Id, Parent, Socket (a socket or bone name) | `attachToSocket` |
+| **Viewport Set Material Parameter** | Node Id, Slot, Parameter (`baseColorFactor`), Value (colour or scalar; wildcard) | `setMaterialParameter` |
+| **Viewport Set Morph Target Weight** | Node Id, Morph, Weight | `setMorphTargetWeight` |
+| **Viewport Play Animation** / **Stop Animation** / **Set Animation Time** | Node Id, Animation (`.lmas` or clip name), Loop, Play Rate / Seconds (scrub, no playback) | `playAnimation`, `stopAnimation`, `setAnimationTime` |
+| **Viewport Play Animation File** | Node Id, Path — editor panels only (`editorOnlyNodes`); a game's Viewport reports On Asset Load Failed | `playAnimationFile` |
+| **Viewport Add Light** | Type (`EViewportLightType`), Color, Intensity, Transform → Node Id | `addLight` |
+| **Viewport Set Environment** / **Set Grid Visible** | Mode (`EViewportEnvironment`: sky / color / transparent), IBL, Intensity / Visible | `setEnvironment`, `setGridVisible` |
+| **Viewport Set Camera Preset** / **Frame Node** / **Set Orbit** | Preset (`EViewportCameraPreset`), Fit / Node Id / Yaw, Pitch, Distance | `setCameraPreset`, `frameNode`, `setOrbit` |
+| **Viewport Get Camera** (pure) | → Yaw, Pitch, Distance (the player's last released orbit) | `getCamera` |
+| **Viewport Set Interaction** | Orbit, Pan, Zoom, Pick, Auto Rotate (deg/s) | `setInteraction` |
+| **Viewport Show Skeleton** / **Show Ghost Pose** / **Hide Skeleton** | Node Id, Color, Joints / Pose Json or Animation + Time, Color, Label | `showSkeleton`, `showGhostPose`, `hideSkeleton` |
+| **Viewport Set Gizmo** / **Hide Gizmo** | Node Id, Bone, Mode (`EViewportGizmoMode`), Space (`EViewportGizmoSpace`), Snap | `setGizmo`, `hideGizmo` |
+| **Viewport Add Marker** / **Remove Marker** | Label, Kind (`EViewportMarkerKind`), From, To, Color → Marker Id / Marker Id | `addMarker`, `removeMarker` |
+
+The element's events (On Picked, On Gizmo Preview / Commit / Cancel, On Camera Changed, On Scene Ready, On Asset Load Failed) are bound with **On Widget Event** ([`LuminaWidgetEvents`](runtime.md)).
+
 ## Math|Conversions
 
 Every conversion between the scalar pin types is in the palette category **Math|Conversions**

@@ -664,6 +664,31 @@ Vectors and rotators are **authoring space** (cm, Z up; rotators about X/Y/Z lik
 | `functions` | `static final Map<String, LuminaBlueprintFunction> functions` | Every node the VM can call, keyed by node id: the built-ins, then the functions registered in [LuminaBlueprintFunctionRegistry]. Inputs arrive converted to their pin types (the VM resolves wires, literals and defaults first). |
 | `builtInFunctions` | `static final Map<String, LuminaBlueprintFunction> builtInFunctions` | One entry per pure / impure built-in node, keyed by node id. |
 
+## Widget|Viewport (`blueprint_function_library/umg_viewport.dart`)
+
+Viewport öğesinin düğümleri (Target: `WidgetElement:viewport`; Target'a bağlanan bir Text ya da başka bir öğe tel tipi hatasıdır). Her biri öğenin sahne açıklamasını ([user widget'lar](../user-widgets.md#viewport-öğesi-libsrcumgviewport)) `LuminaViewportNodes` üzerinden düzenler (`lumina_runtime.dart` dışa aktarır); VM onu `builtInFunctions` üzerinden, üretilen kod doğrudan çağırır (bir import öneki ile `LuminaViewportNodes.addSkeletalMesh(this, …)`). Düğüm ve işaret kimlikleri açıklamanın kendi sayacından gelir; VM ve üretilen kod aynı kimlikleri döndürür.
+
+| Düğüm | Pin'ler → çıktılar | `LuminaViewportNodes` |
+| :--- | :--- | :--- |
+| **Viewport Add Static Mesh** / **Add Skeletal Mesh** | Mesh / Skeletal Mesh (proje `.lmas`'ı), Transform → Node Id | `addStaticMesh`, `addSkeletalMesh` |
+| **Viewport Remove Node**, **Viewport Clear** | Node Id | `removeNode`, `clear` |
+| **Viewport Set Node Transform** / **Set Node Visible** / **Set Node Mesh** (parça değişimi) | Node Id, Transform / Visible / Mesh | `setNodeTransform`, `setNodeVisible`, `setNodeMesh` |
+| **Viewport Attach To Socket** | Node Id, Parent, Socket (soket ya da kemik adı) | `attachToSocket` |
+| **Viewport Set Material Parameter** | Node Id, Slot, Parameter (`baseColorFactor`), Value (renk ya da skaler; joker) | `setMaterialParameter` |
+| **Viewport Set Morph Target Weight** | Node Id, Morph, Weight | `setMorphTargetWeight` |
+| **Viewport Play Animation** / **Stop Animation** / **Set Animation Time** | Node Id, Animation (`.lmas` ya da klip adı), Loop, Play Rate / Seconds (oynatmadan sarma) | `playAnimation`, `stopAnimation`, `setAnimationTime` |
+| **Viewport Play Animation File** | Node Id, Path — yalnızca editör panelleri (`editorOnlyNodes`); bir oyunun Viewport'u On Asset Load Failed bildirir | `playAnimationFile` |
+| **Viewport Add Light** | Type (`EViewportLightType`), Color, Intensity, Transform → Node Id | `addLight` |
+| **Viewport Set Environment** / **Set Grid Visible** | Mode (`EViewportEnvironment`: sky / color / transparent), IBL, Intensity / Visible | `setEnvironment`, `setGridVisible` |
+| **Viewport Set Camera Preset** / **Frame Node** / **Set Orbit** | Preset (`EViewportCameraPreset`), Fit / Node Id / Yaw, Pitch, Distance | `setCameraPreset`, `frameNode`, `setOrbit` |
+| **Viewport Get Camera** (saf) | → Yaw, Pitch, Distance (oyuncunun son bıraktığı yörünge) | `getCamera` |
+| **Viewport Set Interaction** | Orbit, Pan, Zoom, Pick, Auto Rotate (derece/sn) | `setInteraction` |
+| **Viewport Show Skeleton** / **Show Ghost Pose** / **Hide Skeleton** | Node Id, Color, Joints / Pose Json ya da Animation + Time, Color, Label | `showSkeleton`, `showGhostPose`, `hideSkeleton` |
+| **Viewport Set Gizmo** / **Hide Gizmo** | Node Id, Bone, Mode (`EViewportGizmoMode`), Space (`EViewportGizmoSpace`), Snap | `setGizmo`, `hideGizmo` |
+| **Viewport Add Marker** / **Remove Marker** | Label, Kind (`EViewportMarkerKind`), From, To, Color → Marker Id / Marker Id | `addMarker`, `removeMarker` |
+
+Öğenin olayları (On Picked, On Gizmo Preview / Commit / Cancel, On Camera Changed, On Scene Ready, On Asset Load Failed) **On Widget Event** ile bağlanır ([`LuminaWidgetEvents`](runtime.md)).
+
 ## Math|Conversions
 
 Skaler pin tipleri arasındaki her dönüşüm palette'te **Math|Conversions** kategorisindedir

@@ -455,6 +455,49 @@ Renders the widgets a world's [LuminaWidgetSubsystem] shows: the game host stack
 | `resolveBuilder` | `final LuminaWidgetBuilder? Function(String className)? resolveBuilder` | Takes precedence over the registry: the editor renders a class from its designer document instead of a compiled Dart class. |
 | `fallbackBuilder` | `final LuminaWidgetBuilder? fallbackBuilder` | Replaces the default fallback card for classes nobody can build. |
 
+## `lib/src/umg/viewport/` (the Viewport element)
+
+### `class LuminaUmgViewport`
+
+The UMG **Viewport** element: a real Filament preview scene inside the widget tree, on the shared engine. It shows the element's scene description (`LuminaViewportScene` at `elements[name].scene`, [user widgets](../lumina/user-widgets.md#the-viewport-element-libsrcumgviewport)) and follows it: a Blueprint call edits the description, the widget layer refreshes ([`LuminaUmgInstanceBinding`](#class-luminaumginstancebinding)), and only the difference reaches the preview — a refresh for another element applies nothing. Generated widget classes wrap it in a `LuminaUmgElement` like every element.
+
+| Parameter | Description |
+| :--- | :--- |
+| `instance`, `name` | The widget instance and the element's designer name; without an instance (the designer canvas) the widget keeps its own element state. |
+| `designScene` | A design-time description, shown when the element has no scene yet (the designer's preview content). |
+| `background`, `grid`, `cameraPreset`, `orbit`, `pan`, `zoom`, `pick`, `autoRotate` | The element's Details, seeded into a new description. |
+| `renderScale` (0.25–1), `maxFps` (default 60) | The render size fraction and the frame rate cap. |
+| `allowFiles` | Whether `Play Animation File` may read a file (editor panels). |
+| `assetProvider` | Where meshes are read (null: `LuminaAssets`). |
+| `budget` | The `LuminaViewportBudget` it counts against (null: the game's `LuminaViewportHost`, else `LuminaViewportBudget.shared`). |
+| `onEvent`, `onController` | Every event as it reaches the graph; the `LuminaViewportController` once the preview exists. |
+| `backend` | The Flutter path's Filament backend (tests pass the noop backend). |
+
+**Input** (handled in the widget, never per frame through the graph): left drag orbits (a press that moves less than 4 px picks), right or middle drag pans, the wheel and a pinch zoom (the wheel's On Camera Changed fires when it rests), a drag on a gizmo handle moves the target (the cursor follows the hovered axis), F frames the picked node, Escape cancels a gizmo drag. Skeleton overlays, ghost poses, markers and the gizmo are drawn by `LuminaViewportOverlayPainter`, only while the description shows one.
+
+**Presentation paths** (`LuminaUmgViewportState.path`):
+
+- **Flutter** — its own `FilamentWidget` on the shared engine (`sharedEngine`; one readback of the Viewport's size only), rendering only the frames its controller asks for through a `FilamentFrameLimiter`: an idle Viewport renders nothing. It composites like any widget (clipping, opacity, z-order). The editor, Play-In-Editor, games presenting through Flutter and the web (one WebGL2 canvas and engine per Viewport, at most 2) use it.
+- **Direct** — inside a game that presents through Filament (`LuminaViewportHostScope` with `presentingDirectly`), the preview is an extra view in the game's own frame at the element's physical rectangle, after the game's view and before the UI overlay, and the element paints a `BlendMode.clear` hole in the captured UI. A playing animation never re-captures the UI. Limits (accepted for v1): anything in the HUD under the element's rectangle is hidden there, and ancestor opacity does not apply to the 3D image.
+
+Over the budget a placeholder ("Viewport limit reached") shows; a Collapsed, Hidden, off-screen, zero-sized or inactive-tab Viewport renders nothing and holds no slot.
+
+### `class LuminaUmgViewportState`
+
+`controller`, `path` (`LuminaUmgViewportPath.none` / `flutter` / `direct`), `renderSize` (layout × DPR × render scale, long side ≤ 2048), `showsLimitPlaceholder`, `refreshOps` (diff ops applied by binding refreshes).
+
+### `class LuminaViewportHost` / `LuminaViewportHostScope` / `LuminaViewportDirectView`
+
+What a game publishes to the Viewports in its HUD: `engine`, `presentingDirectly`, the game's `budget` (4, or 2 on the web), and the Direct path's registered views. `LuminaGameWidget` owns one, publishes it with `LuminaViewportHostScope` and passes `frameViews(defaultView, width, height, inner)` to its `FilamentWidget`: the game's view (and the views of its own `frameViews`) first, then every registered Viewport view at its window rectangle converted to Filament's bottom-left origin; each view's `frame(dt)` advances its preview first.
+
+### `class LuminaViewportOverlayPainter`, `luminaViewportGizmoModel`
+
+The overlay painter (skeletons with joint dots, ghost poses with labels, points / lines / arrows with labels, the gizmo) and the `TransformGizmoModel` of a controller's gizmo over the preview's camera (authoring frame; a bone gizmo sits on the joint).
+
+## `lib/viewport_gizmo.dart`
+
+The transform manipulator the Viewport and the editor's viewports share (one implementation; lumina_ui re-exports it from its old paths): `TransformGizmoModel` (handle layout, hover hit-testing, drags), `TransformGizmoDrag`, `TransformGizmoSnap`, `AuthoringRotation`, `GizmoController` (axis / plane / ring solvers, `GizmoMode`, `GizmoSpace`), `SnapService`, `SubEditorTransformGizmo` (a target's drag session), `ViewportRay` with `viewportRay` / `unprojectViewportToPlaneY` / `projectWorldToViewport`, and `LuminaTransformGizmoPainter` (arrows, rings, scale stems in configurable axis colours).
+
 ## `lib/src/umg/umg_media_widgets.dart`
 
 ### `class LuminaUmgVideoPlayer`

@@ -21,14 +21,14 @@ abstract final class LuminaViewportCameraPreset {
 
   static const List<String> values = [perspective, front, back, left, right, top];
 
-  /// The orbit (yaw, pitch) in degrees each preset looks from; yaw 0 looks
-  /// along authoring −X (from the front of a character facing +X), pitch is
+  /// The orbit (yaw, pitch) in degrees each preset looks from: yaw 0 looks
+  /// at the front of a model facing glTF's forward (authoring −Y), pitch is
   /// positive looking down.
   static (double, double) angles(String preset) => switch (preset) {
         front => (0.0, 0.0),
         back => (180.0, 0.0),
-        left => (-90.0, 0.0),
-        right => (90.0, 0.0),
+        left => (90.0, 0.0),
+        right => (-90.0, 0.0),
         top => (0.0, 89.0),
         _ => (30.0, 15.0),
       };

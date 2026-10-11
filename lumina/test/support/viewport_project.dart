@@ -13,12 +13,16 @@ Directory get viewportTestAssets =>
 /// listed, an animation `.lmas` that names its clip on that mesh, and
 /// static mesh `.lmas` props, all from the models in `test-assets/`.
 class ViewportTestProject {
-  ViewportTestProject._(this.dir, this.idleClip);
+  ViewportTestProject._(this.dir, this.idleClip, this.mannequinPath, this.idlePath);
 
   final Directory dir;
 
   /// The clip the idle animation asset names.
   final String idleClip;
+
+  /// Where this project keeps the mannequin and its idle animation.
+  final String mannequinPath;
+  final String idlePath;
 
   static const String mannequin = 'contents/meshes/skeletal/SKM_Mannequin.lmas';
   static const String idle = 'contents/animations/Idle/Idle.lmas';
@@ -40,14 +44,17 @@ class ViewportTestProject {
   static bool get available => sources.values.every((s) => File('${viewportTestAssets.path}/$s').existsSync());
 
   /// Builds the project under a new temp folder; the idle animation names
-  /// the mannequin's first clip.
-  static ViewportTestProject create() {
+  /// the mannequin's first clip. [mannequinAt] and [idleAt] move the
+  /// mannequin and its animation, [extra] adds props (project path →
+  /// `test-assets/` model).
+  static ViewportTestProject create({String mannequinAt = mannequin, String idleAt = idle, Map<String, String> extra = const {}}) {
     final dir = Directory.systemTemp.createTempSync('lumina_vp_');
     final names = GlbAnimationMerger.animationNames(File('${viewportTestAssets.path}/${sources[mannequin]}').readAsBytesSync());
     final idleClip = names.isEmpty ? '' : names.first;
-    for (final e in sources.entries) {
+    final all = {for (final e in sources.entries) e.key == mannequin ? mannequinAt : e.key: e.value, ...extra};
+    for (final e in all.entries) {
       final glb = File('${viewportTestAssets.path}/${e.value}').readAsBytesSync();
-      final skeletal = e.key == mannequin;
+      final skeletal = e.key == mannequinAt;
       _write(dir, e.key, glb, skeletal ? AssetType.filameshSk : AssetType.filamesh,
           skeletal ? {'payload_format': 'glb', 'animation_clips': idleClip} : {'payload_format': 'glb'});
     }
@@ -55,12 +62,12 @@ class ViewportTestProject {
       assetId: 'idle',
       name: 'Idle',
       type: AssetType.animation,
-      references: const [AssetReference(slotName: 'skeletal_mesh', assetId: 'mannequin', assetPath: mannequin)],
-      metadata: {'source_mesh': mannequin, 'clip_name': idleClip, 'clip_index': '0'},
+      references: [AssetReference(slotName: 'skeletal_mesh', assetId: 'mannequin', assetPath: mannequinAt)],
+      metadata: {'source_mesh': mannequinAt, 'clip_name': idleClip, 'clip_index': '0'},
     );
-    final animFile = File('${dir.path}/$idle')..parent.createSync(recursive: true);
+    final animFile = File('${dir.path}/$idleAt')..parent.createSync(recursive: true);
     animFile.writeAsBytesSync(anim.toProtoBufferBytes());
-    return ViewportTestProject._(dir, idleClip);
+    return ViewportTestProject._(dir, idleClip, mannequinAt, idleAt);
   }
 
   static void _write(Directory dir, String path, Uint8List glb, AssetType type, Map<String, String> metadata) {

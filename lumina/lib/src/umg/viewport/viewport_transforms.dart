@@ -70,18 +70,23 @@ abstract final class LuminaViewportTransforms {
   }
 
   /// The eye of an orbit camera around [target] (authoring, cm): [yaw]
-  /// degrees about authoring Z (0 looks along +Y, from a character's front),
-  /// [pitch] degrees down, [distance] cm away. Returned in runtime axes.
+  /// degrees about authoring Z, [pitch] degrees down, [distance] cm away.
+  /// Yaw 0 looks from −Y towards +Y: the front of a glTF model, which faces
+  /// runtime +Z (authoring −Y). Returned in runtime axes.
   static Vector3 orbitEye(List<double> target, double yaw, double pitch, double distance) {
+    final o = orbitOffset(yaw, pitch, distance);
+    return LuminaAxes.location([target[0] + o[0], target[1] + o[1], target[2] + o[2]]);
+  }
+
+  /// The eye's offset from the target (authoring, cm) for an orbit.
+  static List<double> orbitOffset(double yaw, double pitch, double distance) {
     const d2r = math.pi / 180.0;
     final y = yaw * d2r;
     final p = pitch * d2r;
-    // Authoring: the eye sits in front (−Y forward of the target … +Y), above.
-    final offset = [
-      -math.sin(y) * math.cos(p) * distance,
-      math.cos(y) * math.cos(p) * distance,
+    return [
+      math.sin(y) * math.cos(p) * distance,
+      -math.cos(y) * math.cos(p) * distance,
       math.sin(p) * distance,
     ];
-    return LuminaAxes.location([target[0] + offset[0], target[1] + offset[1], target[2] + offset[2]]);
   }
 }

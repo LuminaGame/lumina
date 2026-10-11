@@ -119,11 +119,10 @@ class LuminaViewportCamera {
 
   /// The view's right and up directions in authoring space.
   (List<double>, List<double>) _axesAuthoring() {
-    final y = yaw * math.pi / 180.0;
-    final p = pitch * math.pi / 180.0;
     // Forward (eye → target) is the orbit offset reversed; right = forward ×
     // Z, up = right × forward (authoring is right-handed, Z up).
-    final forward = Vector3(math.sin(y) * math.cos(p), -math.cos(y) * math.cos(p), -math.sin(p));
+    final o = LuminaViewportTransforms.orbitOffset(yaw, pitch, 1.0);
+    final forward = Vector3(-o[0], -o[1], -o[2]);
     final right = forward.cross(Vector3(0, 0, 1))..normalize();
     final up = right.cross(forward)..normalize();
     return ([right.x, right.y, right.z], [up.x, up.y, up.z]);

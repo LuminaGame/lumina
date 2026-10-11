@@ -93,6 +93,64 @@ On Selection Changed'in verdiği: `label` (Selected Item), `value`, `index` (se�
 
 Bu model üzerindeki Blueprint düğümleri (joker Value'lu Add Option, Set Selected Value / Index, Get Selected Option → Label, Value, Index, …) [fonksiyon kütüphanesinde](blueprint/function-library.md); On Selection Changed [`LuminaWidgetEvents`](blueprint/runtime.md) içindedir.
 
+## Viewport öğesi (`lib/src/umg/viewport/`)
+
+UMG **Viewport** öğesi (tasarımcı tipi `viewport`) bir widget'ın içinde gerçek bir Filament önizleme sahnesi gösterir: bir karakter özelleştirme ekranı, bir eşya inceleme görünümü, bir mesh'i ya da bir pozu önizleyen bir editör paneli. Sahnesi **öğe durumundaki veridir**: Blueprint çağrıları yalnızca `elements[<ad>].scene` altındaki JSON-düz açıklamayı düzenler; Viewport widget'ı (`LuminaUmgViewport`, [UMG sayfası](../lumina_widgets/umg.md)) onu gösterdiğiyle karşılaştırır ve yalnızca farkı uygular. Böylece VM ve üretilen kod birebir aynı davranır, bir eklenti süreci aynı açıklamayı yazabilir ve kardeş bir öğedeki `Set Text` 3B sahneye hiç dokunmaz. Yörünge, gizmo sürüklemeleri, oynatma ve kaplama çizimi her karede widget'ın içinde çalışır; graph yalnızca öğenin ayrık olaylarını alır.
+
+### `class LuminaViewportScene` (`viewport_scene.dart`)
+
+Açıklama: öğenin `scene` haritasını sarar ve yerinde düzenler. Dönüşümler yazım uzayındadır (`{location, rotation, scale}`, Z yukarı, santimetre; Blueprint Transform pin'inin taşıdığı gibi); onları yalnızca runtime çevirir.
+
+| Anahtar | İçerik |
+| :--- | :--- |
+| `nodes` | `{id, kind (staticMesh / skeletalMesh / light / marker), asset (proje .lmas'ı), transform, visible, pickable, parent, socket, materialParams {slot: {param: değer}}, morphs {ad: ağırlık}, animation {asset ya da file, loop, rate, time, playing, serial}, light {type, color, intensity}}` |
+| `environment` | `{mode (sky / color / transparent), ibl, intensity}` |
+| `grid` | bool |
+| `camera` | `{preset (perspective / front / back / left / right / top), orbitTarget, yaw, pitch, distance, fov, orthographic, frame, frameSerial}` — yaw 0 bir glTF modelinin önüne bakar (yazım −Y) |
+| `skeletonOverlays` | `{node, color, joints, ghostPose {eklem: [x, y, z, qx, qy, qz, qw]} ya da null, ghostAnimation, ghostColor, label}` |
+| `gizmo` | `{node, bone ya da null, mode (translate / rotate / scale), space (world / local), snap}` ya da null |
+| `markers` | `{id, label, kind (point / line / arrow), from, to, color}` |
+| `interaction` | `{orbit, pan, zoom, pick, autoRotate (derece/sn)}` |
+| `nextId` | düğüm ve işaret kimliklerinin sayacı (`skeletal_1`, `mesh_2`, `marker_3`); VM ve üretilen kod aynı numaralar |
+
+`LuminaViewportScene.of(element)` (yoksa oluşturulur), `encode()` / `decode()` (bayt bayt aynı gidiş-dönüş), `copy()`, `addNode`, `removeNode` (ona bağlı düğümleri ve üzerlerindeki kaplamaları / gizmo'yu da kaldırır), `clear`, `setNodeTransform`, `setNodeVisible`, `setNodeAsset` (parça değişimi dönüşümü korur), `attachToSocket`, `setMaterialParameter`, `setMorphTargetWeight`, `playAnimation`, `playAnimationFile`, `stopAnimation`, `setAnimationTime`, `addLight`, `setEnvironment`, `gridVisible`, `setInteraction`, `setCameraPreset`, `frameNode`, `setOrbit`, `showSkeleton`, `showGhostPose`, `hideSkeleton`, `setGizmo`, `hideGizmo`, `addMarker`, `removeMarker`. Sabitler `LuminaViewportNodeKind`, `LuminaViewportCameraPreset`, `LuminaViewportEnvironmentMode` ve `LuminaViewportLightType` içindedir.
+
+### `abstract final class LuminaViewportSceneDiff` (`viewport_scene_diff.dart`)
+
+`diff(old, next)` → en küçük `LuminaViewportSceneOp` listesi (`LuminaViewportSceneOpKind`: değişen `fields` ile düğüm ekle / kaldır / güncelle, environment, grid, camera, interaction, kaplama ekle / kaldır / güncelle, gizmo, işaret ekle / kaldır / güncelle). Bir düğümün dönüşümünü değiştirmek tam olarak bir `updateNode {transform}`; bir işareti kaldırmak tek bir `removeMarker`'dır. `jsonEquals` JSON değerlerini karşılaştırır (sayılar değerce).
+
+### `class LuminaViewportSceneRuntime` (`viewport_runtime.dart`)
+
+Paylaşılan engine üzerindeki önizleme: bir `FilamentScene`, `FilamentView` ve kamera (kendisininkiler ya da bir `FilamentWidget`'ın verdikleri) ve aktörleri açıklamanın düğümleri olan bir önizleme `LuminaWorld`'ü. Mesh'ler `LuminaAssets` ve engine'in mesh önbelleği üzerinden yüklenir (asla bir `File` okuması değil), skeletal mesh'ler gltfio'nun animatörüyle canlanır (bir animasyon `.lmas`'ı adını verdiği `clip_name`'i mesh'inde oynatır; düz bir klip adı da olur), bir sokete bağlı düğümler her karede kemiği izler (soket adları mesh'in `.lmas`'ındaki `sockets`'tan, yoksa kemik adlarından), materyal parametreleri örneğin materyal örneklerine gider (renk → `float4`, skaler → `float`), morph ağırlıkları mesh'in morph hedeflerine. Önizleme görünümleri sabit bir özellik setiyle çizilir: MSAA 4×, gölgeli tek yönlü ışık, IBL; oyunun ışın izleme, ReSTIR, SSR, upscaler veya kare üretimi hiçbir zaman.
+
+| Üye | Açıklama |
+| :--- | :--- |
+| `apply(scene)` | Gösterilenle `scene` arasındaki işlemleri uygular ve döndürür (değişiklik yoksa boş). |
+| `advance(dt)` | Bir kare: animasyon, soket izleme, otomatik dönüş, kamera. |
+| `animating` | Bir şeyin kendiliğinden hareket edip etmediği (oynayan animasyon, otomatik dönüş). |
+| `whenReady` / `isReady` / `failures` | Her mesh yüklendi ya da başarısız oldu; başarısızlıklar asset'e göre. `OnSceneReady` ve `OnAssetLoadFailed (asset, message)` olayları `onEvent`'e gider. |
+| `orbit` | Görünümün gösterdiği `LuminaViewportCamera` (oyuncunun sürüklemesi onu oynatır). |
+| `frameNode(id)` / `boundsOf(id)` | Bir düğümü kadraja alır (`'*'`: her mesh); deri (skinned) mesh eklemleriyle sınırlanır. |
+| `pick(x, y)` | CPU seçimi: ışının sınırlarına girdiği en yakın düğüm, bir skeletal mesh'in en yakın kemiği ve çarpma konumu (yazım uzayı). |
+| `jointsOf(id)` / `ghostJointsOf(id, pose)` | Eklem adları, ebeveynleri ve dünya konumları (canlı ya da bir hayalet pozla). |
+| `setLocalTransform(id, t)` / `transformOf(id)` | Bir gizmo sürüklemesi düğümü açıklamaya dokunmadan taşır. |
+| `setLocalAnimationTime(id, s)` | Bağlı bir zaman çizelgesinin zamanı, açıklama farkı olmadan. |
+| `project` / `projectAuthoring` | Kaplamalar için noktaları viewport piksellerine çevirir. |
+| `allowFiles` | `Play Animation File`'ın bir dosya okuyup okuyamayacağı (editör panelleri); bir oyun `OnAssetLoadFailed` bildirir. |
+| `dispose()` | Düğümleri, gökyüzünü, ızgarayı ve oluşturduğu sahne, görünüm ve kamerayı yok eder. |
+
+### `class LuminaViewportController` (`viewport_controller.dart`)
+
+Bir Viewport'u sürer: `sync(scene)` yalnızca açıklamanın farkını uygular, `frame(dt)` bir `LuminaViewportFrameClock` ile bu karenin çizilip çizilmeyeceğine karar verir ve girdi olaylara dönüşür: `orbitDrag`, `panDrag`, `zoom` sonra `endCameraGesture` (bırakınca tek bir `OnCameraChanged (yaw, pitch, distance)`; açıklama kamerayı alır, böylece `Viewport Get Camera` onu okur), `tap` (`OnPicked (node_id, bone, hit_location)`), `frameSelection` (F), `beginGizmoDrag` / `updateGizmoDrag` (düğüm hemen kayar; `OnGizmoPreview` en fazla 1/30 sn'de bir) / `commitGizmoDrag` (tek bir `OnGizmoCommit (node_id, bone, transform)`; açıklama dönüşümü alır) / `cancelGizmoDrag` (Escape: `OnGizmoCancel`, düğüm geri döner).
+
+### `class LuminaViewportBudget` (`viewport_budget.dart`)
+
+`renderSize(w, h, devicePixelRatio, renderScale)`: yerleşim × DPR × çizim ölçeği (0,25–1), uzun kenar 2048 piksele kırpılır. `acquire(owner)` / `release(owner)`: bir oyunda en fazla 4 çizen Viewport (`LuminaViewportScope.game`), editörde 8, web'de 2; `maxViewports` (1–8) bunu düşürür (`maxViewportsSetting`, bir host'un ilettiği `umg.maxViewports` proje ayarını adlandırır); reddedilen Viewport bir yer tutucu gösterir ve ret bir kez günlüğe yazılır. `counts(...)`: Collapsed, Hidden, ekran dışı, sıfır boyutlu ya da etkin olmayan sekmedeki bir Viewport sayılmaz. `LuminaViewportFrameClock`: boşta bir Viewport (animasyon yok, otomatik dönüş yok, 1 sn girdi yok) açıklama, boyut ya da girdi değişene kadar hiçbir şey çizmez; geri kalanı `maxFps` sınırlar.
+
+### `abstract final class LuminaViewportNodes` (`viewport_nodes.dart`)
+
+`Widget|Viewport` Blueprint düğümleri ([function library](blueprint/function-library.md)); VM ve üretilen kod için bir kez yazılmıştır. `LuminaViewportTransforms` açıklama dönüşümlerini `LuminaAxes` / `LuminaUnits` üzerinden çevirir ((0, 0, 100) cm Z-yukarı konum (0, 1, 0) m Y-yukarıdır).
+
 ---
 
 [Önceki: Oyun çatısı (game framework)](game.md) | [Üst: lumina (engine çekirdeği)](index.md) | [Sonraki: Kayıt (save game)](save.md)

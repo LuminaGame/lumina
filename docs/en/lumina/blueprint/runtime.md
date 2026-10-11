@@ -709,6 +709,11 @@ The events each widget element type can bind in a Widget Blueprint graph (the gr
 | `onValueChanged` | `static const String onValueChanged` |  |
 | `onTextCommitted` | `static const String onTextCommitted` |  |
 | `onSelectionChanged` | `static const String onSelectionChanged` | A Combo Box's selection changed: `Selected Item` (string), `Value` (wildcard, typed by the node's `type` setting once wired), `Index` (int), `Select Type` (`ESelectInfo`: `Direct` from a Blueprint setter, `OnMouseClick` from the player). Combo boxes offer On Value Changed (the label) then On Selection Changed. |
+| `onPicked` | `static const String onPicked` | A Viewport tap hit a node: `Node Id`, `Bone` (the nearest bone of a skeletal mesh, '' otherwise), `Hit Location` (vector, authoring). |
+| `onGizmoPreview` / `onGizmoCommit` / `onGizmoCancel` | `static const String` | A Viewport gizmo drag: previews at most 30 times a second, one commit on release, or a cancel (Escape): `Node Id`, `Bone`, `Transform`. |
+| `onCameraChanged` | `static const String onCameraChanged` | A Viewport orbit, pan or zoom was released (never per frame): `Yaw`, `Pitch`, `Distance`. |
+| `onSceneReady` / `onAssetLoadFailed` | `static const String` | Every asset of a Viewport's description loaded / one failed: `Asset`, `Message`. |
+| `viewportEvents` | `static const List<String> viewportEvents` | The events `forType('viewport')` offers, in that order. |
 | `forType` | `static List<String> forType(String typeName)` | The events an element of [typeName] offers, in the Details panel's order. |
 | `displayName` | `static String displayName(String event)` | `OnClicked` → `On Clicked` (the bound event node's title prefix). |
 | `valueTypeOf` | `static String valueTypeOf(String typeName)` | The pin type name of `On Value Changed`'s `Value` for [typeName]: `float` (sliders), `boolean` (check boxes, switches, toggles), `integer` (tabs), `string` (texts, combo boxes, selects). |

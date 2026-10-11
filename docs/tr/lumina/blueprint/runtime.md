@@ -709,6 +709,11 @@ The events each widget element type can bind in a Widget Blueprint graph (the gr
 | `onValueChanged` | `static const String onValueChanged` |  |
 | `onTextCommitted` | `static const String onTextCommitted` |  |
 | `onSelectionChanged` | `static const String onSelectionChanged` | Bir Combo Box'ın seçimi değişti: `Selected Item` (string), `Value` (joker; bağlanınca düğümün `type` ayarıyla tiplenir), `Index` (int), `Select Type` (`ESelectInfo`: Blueprint setter'ından `Direct`, oyuncudan `OnMouseClick`). Combo Box'lar önce On Value Changed (etiket), sonra On Selection Changed sunar. |
+| `onPicked` | `static const String onPicked` | Bir Viewport dokunuşu bir düğüme çarptı: `Node Id`, `Bone` (skeletal mesh'in en yakın kemiği, değilse ''), `Hit Location` (vektör, yazım uzayı). |
+| `onGizmoPreview` / `onGizmoCommit` / `onGizmoCancel` | `static const String` | Bir Viewport gizmo sürüklemesi: saniyede en fazla 30 önizleme, bırakınca tek bir commit ya da bir iptal (Escape): `Node Id`, `Bone`, `Transform`. |
+| `onCameraChanged` | `static const String onCameraChanged` | Bir Viewport yörünge, kaydırma ya da yakınlaştırması bırakıldı (asla kare başına değil): `Yaw`, `Pitch`, `Distance`. |
+| `onSceneReady` / `onAssetLoadFailed` | `static const String` | Bir Viewport açıklamasının her asset'i yüklendi / biri başarısız oldu: `Asset`, `Message`. |
+| `viewportEvents` | `static const List<String> viewportEvents` | `forType('viewport')`'un sunduğu olaylar, bu sırayla. |
 | `forType` | `static List<String> forType(String typeName)` | The events an element of [typeName] offers, in the Details panel's order. |
 | `displayName` | `static String displayName(String event)` | `OnClicked` → `On Clicked` (the bound event node's title prefix). |
 | `valueTypeOf` | `static String valueTypeOf(String typeName)` | The pin type name of `On Value Changed`'s `Value` for [typeName]: `float` (sliders), `boolean` (check boxes, switches, toggles), `integer` (tabs), `string` (texts, combo boxes, selects). |

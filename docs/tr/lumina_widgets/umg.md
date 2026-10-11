@@ -455,6 +455,49 @@ Renders the widgets a world's [LuminaWidgetSubsystem] shows: the game host stack
 | `resolveBuilder` | `final LuminaWidgetBuilder? Function(String className)? resolveBuilder` | Takes precedence over the registry: the editor renders a class from its designer document instead of a compiled Dart class. |
 | `fallbackBuilder` | `final LuminaWidgetBuilder? fallbackBuilder` | Replaces the default fallback card for classes nobody can build. |
 
+## `lib/src/umg/viewport/` (Viewport öğesi)
+
+### `class LuminaUmgViewport`
+
+UMG **Viewport** öğesi: widget ağacının içinde, paylaşılan engine üzerinde gerçek bir Filament önizleme sahnesi. Öğenin sahne açıklamasını (`elements[ad].scene` altındaki `LuminaViewportScene`, [user widget'lar](../lumina/user-widgets.md#viewport-öğesi-libsrcumgviewport)) gösterir ve izler: bir Blueprint çağrısı açıklamayı düzenler, widget katmanı yenilenir ([`LuminaUmgInstanceBinding`](#class-luminaumginstancebinding)) ve önizlemeye yalnızca fark ulaşır — başka bir öğe için yenileme hiçbir şey uygulamaz. Üretilen widget sınıfları onu her öğe gibi bir `LuminaUmgElement` ile sarar.
+
+| Parametre | Açıklama |
+| :--- | :--- |
+| `instance`, `name` | Widget örneği ve öğenin tasarımcı adı; örnek yoksa (tasarımcı tuvali) widget kendi öğe durumunu tutar. |
+| `designScene` | Tasarım zamanı açıklaması; öğenin henüz sahnesi yokken gösterilir (tasarımcının önizleme içeriği). |
+| `background`, `grid`, `cameraPreset`, `orbit`, `pan`, `zoom`, `pick`, `autoRotate` | Öğenin Details değerleri; yeni bir açıklamaya ekilir. |
+| `renderScale` (0,25–1), `maxFps` (varsayılan 60) | Çizim boyutu oranı ve kare hızı sınırı. |
+| `allowFiles` | `Play Animation File`'ın bir dosya okuyup okuyamayacağı (editör panelleri). |
+| `assetProvider` | Mesh'lerin okunduğu yer (null: `LuminaAssets`). |
+| `budget` | Sayıldığı `LuminaViewportBudget` (null: oyunun `LuminaViewportHost`'u, yoksa `LuminaViewportBudget.shared`). |
+| `onEvent`, `onController` | Graph'a ulaşan her olay; önizleme oluşunca `LuminaViewportController`. |
+| `backend` | Flutter yolunun Filament backend'i (testler noop backend'i verir). |
+
+**Girdi** (widget'ta işlenir, hiçbir zaman kare başına graph'tan geçmez): sol sürükleme yörünge (4 pikselden az kayan basış seçer), sağ ya da orta sürükleme kaydırma, tekerlek ve sıkıştırma yakınlaştırma (tekerleğin On Camera Changed'i durunca gelir), bir gizmo tutamacında sürükleme hedefi taşır (imleç üzerindeki ekseni izler), F seçili düğümü kadraja alır, Escape gizmo sürüklemesini iptal eder. İskelet kaplamaları, hayalet pozlar, işaretler ve gizmo'yu `LuminaViewportOverlayPainter` çizer; yalnızca açıklama bunlardan birini gösterirken.
+
+**Sunum yolları** (`LuminaUmgViewportState.path`):
+
+- **Flutter** — paylaşılan engine üzerinde kendi `FilamentWidget`'ı (`sharedEngine`; yalnızca Viewport boyutunda tek bir geri okuma); yalnızca denetleyicisinin istediği kareleri bir `FilamentFrameLimiter` ile çizer: boşta bir Viewport hiçbir şey çizmez. Her widget gibi birleştirilir (kırpma, opaklık, z-sırası). Editör, Play-In-Editor, Flutter üzerinden sunan oyunlar ve web (Viewport başına bir WebGL2 tuvali ve engine'i, en fazla 2) bunu kullanır.
+- **Direct** — Filament üzerinden sunan bir oyunun içinde (`presentingDirectly` ile `LuminaViewportHostScope`), önizleme oyunun kendi karesinde öğenin fiziksel dikdörtgeninde fazladan bir görünümdür; oyunun görünümünden sonra, UI kaplamasından önce çizilir ve öğe yakalanan UI'da `BlendMode.clear` ile bir delik boyar. Oynayan bir animasyon UI'ı yeniden yakalatmaz. Sınırlar (v1 için kabul edildi): HUD'da öğenin dikdörtgeni altındaki her şey orada gizlenir ve ata opaklığı 3B görüntüye uygulanmaz.
+
+Bütçe aşılınca bir yer tutucu ("Viewport limit reached") görünür; Collapsed, Hidden, ekran dışı, sıfır boyutlu ya da etkin olmayan sekmedeki bir Viewport hiçbir şey çizmez ve slot tutmaz.
+
+### `class LuminaUmgViewportState`
+
+`controller`, `path` (`LuminaUmgViewportPath.none` / `flutter` / `direct`), `renderSize` (yerleşim × DPR × çizim ölçeği, uzun kenar ≤ 2048), `showsLimitPlaceholder`, `refreshOps` (bağlama yenilemelerinin uyguladığı fark işlemleri).
+
+### `class LuminaViewportHost` / `LuminaViewportHostScope` / `LuminaViewportDirectView`
+
+Bir oyunun HUD'ındaki Viewport'lara yayımladığı: `engine`, `presentingDirectly`, oyunun `budget`'ı (4, web'de 2) ve Direct yolunun kayıtlı görünümleri. `LuminaGameWidget` bir tane tutar, onu `LuminaViewportHostScope` ile yayımlar ve `FilamentWidget`'ına `frameViews(defaultView, width, height, inner)` verir: önce oyunun görünümü (ve kendi `frameViews`'unun görünümleri), sonra kayıtlı her Viewport görünümü pencere dikdörtgeninde, Filament'in sol-alt kökenine çevrilerek; her görünümün `frame(dt)`'si önce önizlemesini ilerletir.
+
+### `class LuminaViewportOverlayPainter`, `luminaViewportGizmoModel`
+
+Kaplama ressamı (eklem noktalı iskeletler, etiketli hayalet pozlar, etiketli nokta / çizgi / oklar, gizmo) ve bir denetleyicinin gizmo'sunun önizleme kamerası üzerindeki `TransformGizmoModel`'i (yazım çerçevesi; kemik gizmo'su eklemin üzerindedir).
+
+## `lib/viewport_gizmo.dart`
+
+Viewport'un ve editörün görünümlerinin paylaştığı dönüşüm manipülatörü (tek uygulama; lumina_ui eski yollarından yeniden dışa aktarır): `TransformGizmoModel` (tutamaç yerleşimi, üzerine gelme isabeti, sürüklemeler), `TransformGizmoDrag`, `TransformGizmoSnap`, `AuthoringRotation`, `GizmoController` (eksen / düzlem / halka çözücüleri, `GizmoMode`, `GizmoSpace`), `SnapService`, `SubEditorTransformGizmo` (bir hedefin sürükleme oturumu), `viewportRay` / `unprojectViewportToPlaneY` / `projectWorldToViewport` ile `ViewportRay` ve `LuminaTransformGizmoPainter` (ayarlanabilir eksen renklerinde oklar, halkalar, ölçek gövdeleri).
+
 ## `lib/src/umg/umg_media_widgets.dart`
 
 ### `class LuminaUmgVideoPlayer`
