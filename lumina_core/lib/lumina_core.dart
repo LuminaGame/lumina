@@ -86,6 +86,7 @@ export 'package:lumina_core/src/services/openriglogic_prebuilt.dart';
 export 'package:lumina_core/src/services/plugin_host_patcher_service.dart';
 export 'package:lumina_core/src/services/plugin_pack_script.dart';
 export 'package:lumina_core/src/services/plugin_template/isolated_plugin_sources.dart';
+export 'package:lumina_core/src/services/plugin_template/kernel_plugin_sources.dart';
 export 'package:lumina_core/src/services/primitive_glb_factory.dart';
 export 'package:lumina_core/src/services/project_engine_link.dart';
 export 'package:lumina_core/src/services/release_asset.dart';

@@ -5,6 +5,7 @@ import 'package:path/path.dart' as p;
 import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina_editor_data/src/repositories/project_repository.dart';
 import 'package:lumina_editor_data/src/services/plugin_template/code_plugin_sources.dart';
+import 'package:lumina_editor_data/src/services/plugin_template/kernel_plugin_scaffold.dart';
 import 'package:yaml/yaml.dart';
 
 export 'package:lumina_editor_data/src/repositories/project_repository.dart' show ProcessRunner;
@@ -22,6 +23,10 @@ enum PluginTemplateType {
   /// (`content/EPW_<Name>.lmas`): a full editor UI that the editor's
   /// Blueprint VM runs; no Dart code, no project editor build.
   editorPanelWidget,
+
+  /// A kernel plugin (no editor rebuild): shell-less, pure Dart, its process
+  /// run on the Dart VM from a kernel the pack script compiles.
+  kernel,
 }
 
 class PluginTemplateSpec {
@@ -321,6 +326,7 @@ class PluginTemplateGeneratorService {
     final pluginsDir = Directory(p.join(projectRoot.path, 'plugins'));
     final targetDir = Directory(p.join(pluginsDir.path, spec.name));
 
+    final kernel = spec.templateType == PluginTemplateType.kernel;
     final validationError = spec.isolated && spec.isContentOnly
         ? 'A content-only plugin has no code to run in its own process.'
         : validatePluginName(
@@ -465,7 +471,12 @@ class PluginTemplateGeneratorService {
       final pascalName = nameToPascal(spec.name);
       final cleanFriendlyName = (spec.friendlyName.isEmpty ? nameToFriendly(spec.name) : spec.friendlyName).replaceAll('/', ' ').trim();
 
-      if (!spec.isContentOnly) {
+      if (kernel) {
+        // Pure Dart: its own pubspec (the local overrides above stay), process and entry.
+        emit('Writing the kernel plugin package...');
+        writeKernelPluginPackage(targetDir,
+            name: spec.name, pascalName: pascalName, friendlyName: cleanFriendlyName, description: spec.description);
+      } else if (!spec.isContentOnly) {
         emit('Emitting plugin source code...');
         final libDir = Directory(p.join(targetDir.path, 'lib'))..createSync(recursive: true);
         final srcDir = Directory(p.join(libDir.path, 'src'))..createSync(recursive: true);
@@ -519,7 +530,7 @@ export 'package:${spec.name}/src/${spec.name}_plugin.dart';
         if (spec.author.isNotEmpty) 'authors': [spec.author],
         'engine_version': '>=0.0.1 <1.0.0',
         'can_contain_content': spec.isContentOnly,
-        if (spec.isolated) 'isolation': PluginIsolation.process.manifestValue,
+        if (spec.isolated || kernel) 'isolation': PluginIsolation.process.manifestValue,
         'modules': spec.isContentOnly
             ? <dynamic>[]
             : <dynamic>[
@@ -527,8 +538,10 @@ export 'package:${spec.name}/src/${spec.name}_plugin.dart';
                   'name': spec.name,
                   'type': 'editor',
                   'entry_library': 'lib/${spec.name}.dart',
-                  'registration_class': '${pascalName}Plugin',
-                  if (spec.isolated) 'process_class': '${pascalName}Process',
+                  if (!kernel) 'registration_class': '${pascalName}Plugin',
+                  if (spec.isolated || kernel) 'process_class': '${pascalName}Process',
+                  // The pack script adds process_kernel and process_kernel_sdk.
+                  if (kernel) 'process_entry': KernelPluginSources.entryPath(spec.name),
                 }
               ],
       };
@@ -556,7 +569,7 @@ export 'package:${spec.name}/src/${spec.name}_plugin.dart';
 ${spec.description}
 
 ## Template
-Generated with template: **${spec.templateType.name}**${spec.isolated ? '''
+Generated with template: **${spec.templateType.name}**${kernel ? KernelPluginSources.readme(pluginName: spec.name, pascalName: pascalName) : spec.isolated ? '''
 (isolated: runs in its own process)
 
 ## Two halves
@@ -598,8 +611,8 @@ what goes in.
         ..createSync(recursive: true)
         ..writeAsStringSync(kPluginPackScript);
 
-      // Test file for code plugins
-      if (!spec.isContentOnly) {
+      // Test file for code plugins (a kernel plugin wrote its own)
+      if (!spec.isContentOnly && !kernel) {
         final testDir = Directory(p.join(targetDir.path, 'test'))..createSync(recursive: true);
         final testContent = spec.isolated
             ? IsolatedPluginSources.shellTest(pluginName: spec.name, pascalName: pascalName)

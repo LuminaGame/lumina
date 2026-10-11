@@ -223,6 +223,7 @@ class ${pascalName}Plugin extends LuminaEditorPlugin {
 
       case PluginTemplateType.contentOnly:
       case PluginTemplateType.editorPanelWidget:
+      case PluginTemplateType.kernel:
         return '';
     }
   }

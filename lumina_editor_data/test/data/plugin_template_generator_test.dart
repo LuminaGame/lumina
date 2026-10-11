@@ -510,5 +510,45 @@ void main() {
         expect('${tests.stdout}', contains('All tests passed'));
       }, tags: ['process'], timeout: const Timeout(Duration(minutes: 10)));
     }
+
+    // The kernel plugin: pure Dart, shell-less, its tests pass and its pack
+    // compiles a kernel the Dart VM runs.
+    test('Real process: the kernel template is a kernel plugin whose tests pass and whose pack compiles its kernel',
+        () async {
+      final realEditorApiDir = Directory('${Directory.current.parent.path}/lumina_editor_api');
+      if (!realEditorApiDir.existsSync()) return;
+      final service = PluginTemplateGeneratorService(projectRoot: projectRoot, editorApiRoot: realEditorApiDir);
+      final result = await service.generate(const PluginTemplateSpec(
+        templateType: PluginTemplateType.kernel,
+        name: 'kernel_greeter',
+        friendlyName: 'Kernel Greeter',
+        description: 'Testing the kernel template',
+      ));
+      expect(result.success, isTrue, reason: result.failureOutput);
+      final dir = result.pluginDir!.path;
+      expect(result.descriptor!.isKernelPlugin, isTrue);
+      final module = result.descriptor!.processModule!;
+      expect(module.registrationClass, isNull);
+      expect(module.processClass, 'KernelGreeterProcess');
+      expect(module.processEntry, 'bin/kernel_greeter_process.dart');
+      final pubspec = File('$dir/pubspec.yaml').readAsStringSync();
+      expect(pubspec, isNot(contains('flutter')), reason: 'pure Dart');
+      expect(pubspec, contains('  lumina_plugin_process:\n    git:'));
+      expect(File('$dir/lib/src/kernel_greeter_plugin.dart').existsSync(), isFalse, reason: 'no UI shell');
+      expect(File('$dir/README.md').readAsStringSync(), contains('## A kernel plugin'));
+
+      final tests = await Process.run('dart', ['test'], workingDirectory: dir, runInShell: Platform.isWindows);
+      expect(tests.exitCode, 0, reason: '${tests.stdout}\n${tests.stderr}');
+
+      final pack = await Process.run('dart', ['run', 'tool/pack_plugin.dart'], workingDirectory: dir, runInShell: Platform.isWindows);
+      expect(pack.exitCode, 0, reason: '${pack.stdout}\n${pack.stderr}');
+      final dill = File('$dir/bin/kernel_greeter_process.dill');
+      expect(dill.existsSync(), isTrue);
+      final stamped = await PluginRepository(roots: []).loadInternal(File('$dir/kernel_greeter.lmplugin'), PluginOrigin.project);
+      expect(stamped.processModule!.processKernel, 'bin/kernel_greeter_process.dill');
+      expect(stamped.processModule!.processKernelSdk, isNotNull);
+      final run = await Process.run('dart', [dill.path], runInShell: Platform.isWindows);
+      expect(run.exitCode, 64, reason: 'the kernel runs and asks for the launch flags: ${run.stdout}${run.stderr}');
+    }, tags: ['process'], timeout: const Timeout(Duration(minutes: 10)));
   });
 }

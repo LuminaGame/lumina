@@ -183,7 +183,10 @@ class _NewPluginWizardDialogState extends State<NewPluginWizardDialog> {
       author: _authorController.text.trim(),
       description: _descriptionController.text.trim(),
       category: _category,
-      isolated: _isolated && _selectedTemplate != PluginTemplateType.contentOnly && _selectedTemplate != PluginTemplateType.editorPanelWidget,
+      isolated: _isolated &&
+          _selectedTemplate != PluginTemplateType.contentOnly &&
+          _selectedTemplate != PluginTemplateType.editorPanelWidget &&
+          _selectedTemplate != PluginTemplateType.kernel,
       editorPanelAsset: editorPanelTemplateBytes,
     );
 
@@ -345,6 +348,15 @@ class _NewPluginWizardDialogState extends State<NewPluginWizardDialog> {
                               isSelected: _selectedTemplate == PluginTemplateType.editorPanelWidget,
                               onTap: () => setState(() => _selectedTemplate = PluginTemplateType.editorPanelWidget),
                             ),
+                            const SizedBox(height: 8),
+                            _TemplateTile(
+                              key: const Key('plugin_template_kernel'),
+                              title: 'Kernel plugin (no editor rebuild)',
+                              description: 'Pure-Dart process on the Dart VM: menu, panel, MCP tool',
+                              icon: LucideIcons.cpu,
+                              isSelected: _selectedTemplate == PluginTemplateType.kernel,
+                              onTap: () => setState(() => _selectedTemplate = PluginTemplateType.kernel),
+                            ),
 
                           ],
                         ),
@@ -443,8 +455,10 @@ class _NewPluginWizardDialogState extends State<NewPluginWizardDialog> {
                               const SizedBox(height: 12),
 
                               // Isolation
+                              // A kernel plugin always runs in its own process.
                               if (_selectedTemplate != PluginTemplateType.contentOnly &&
-                                  _selectedTemplate != PluginTemplateType.editorPanelWidget) ...[
+                                  _selectedTemplate != PluginTemplateType.editorPanelWidget &&
+                                  _selectedTemplate != PluginTemplateType.kernel) ...[
                                 Row(
                                   children: [
                                     Switch(
@@ -593,6 +607,10 @@ class _NewPluginWizardDialogState extends State<NewPluginWizardDialog> {
         return 'Generates: <name>.lmplugin, pubspec.yaml, lib/src/<name>_plugin.dart with a working .txt file importer writing binary LuminaAsset (.lmas) files.';
       case PluginTemplateType.editorPanelWidget:
         return 'Generates: <name>.lmplugin (content only), content/EPW_<Name>.lmas — an editor panel Widget Blueprint (a section, a property row and a button wired to Show Toast) docked right; design it in the UMG designer. No Dart code, no build, no restart.';
+      case PluginTemplateType.kernel:
+        return 'Generates: <name>.lmplugin (isolation process, process_entry, no registration_class), a pure-Dart pubspec.yaml, '
+            'bin/<name>_process.dart, lib/src/<name>_process.dart (menu command with a confirm dialog, panel, MCP tool), tests. '
+            'Enabled and disabled live: no project editor build.';
     }
   }
 }

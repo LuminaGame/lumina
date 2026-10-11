@@ -219,6 +219,36 @@ void main() {
     expect(json['isolation'], 'process');
   });
 
+  testWidgets('"Kernel plugin (no editor rebuild)" scaffolds a shell-less kernel plugin, without the isolation switch',
+      (tester) async {
+    Future<ProcessResult> runner(String exec, List<String> args, {String? workingDirectory, bool runInShell = false}) async =>
+        ProcessResult(0, 0, 'ok', '');
+    final generatorService = PluginTemplateGeneratorService(projectRoot: projectDir, editorApiRoot: editorApiDir, runner: runner);
+    await tester.pumpWidget(buildApp(generatorService: generatorService));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Open Wizard'));
+    await tester.pumpAndSettle();
+
+    final tile = find.byKey(const Key('plugin_template_kernel'));
+    await tester.dragUntilVisible(tile, find.text('Importer'), const Offset(0, -80));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Kernel plugin (no editor rebuild)'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('plugin_isolated_switch')), findsNothing, reason: 'a kernel plugin always runs in its own process');
+    await tester.enterText(find.byKey(const Key('plugin_name_field')), 'vm_tool');
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(PrimaryButton, 'Create Plugin'));
+    for (int i = 0; i < 20; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    final manifest = File('${projectPluginsDir.path}/vm_tool/vm_tool.lmplugin');
+    expect(manifest.existsSync(), isTrue);
+    final module = ((jsonDecode(manifest.readAsStringSync()) as Map)['modules'] as List).single as Map;
+    expect(module['process_entry'], 'bin/vm_tool_process.dart');
+    expect(module.containsKey('registration_class'), isFalse);
+    expect(File('${projectPluginsDir.path}/vm_tool/bin/vm_tool_process.dart').existsSync(), isTrue);
+  });
+
   testWidgets('Wizard creation workflow triggers generator, persists author, and shows Enable prompt', (tester) async {
     Future<ProcessResult> mockRunner(String exec, List<String> args, {String? workingDirectory, bool runInShell = false}) async {
       if (args.contains('create')) {
