@@ -226,8 +226,18 @@ A new view id or project directory starts over.
 | `image` | `path` (absolute or project-relative) or `base64`, `height` (default 160) | `Image.memory`, fitted; the file is read asynchronously, base64 over 64 KB is decoded on a background isolate | none |
 | `preview3d` | `scene` (`PluginSceneSpec` json), `height` (default 240) | `Plugin3DViewportContainer` with the node's mesh, `jointLocalPose` and the scene's `cameraDistance`, and the scene's nodes listed under it | `picked` with `{"node": <name>}` when a listed node is clicked |
 | `divider` | none | a thin rule | none |
+| `timeline` | the `PluginTimelineState` fields (`fps`, `length`, `playhead`, `tracks`, `clips`, `keys`, ...), `height` (default 220) | the editor's native timeline (`EditorTimeline`) | `playheadChanged`, `playStateChanged`, `clipChanged`, `clipTextCommitted`, `keysMoved`, `keyAdded`, `keysDeleted`, `selectionChanged`, `trackContextMenu`, with `phase` |
+| `table` | the `PluginTableState` fields (`columns`, `rows`, `sort`, `selection`, `selected`, `filter`), `height` (default 220) | the editor's native table (`EditorTable`); asset cells through `EditorAssetPicker` | `cellCommitted`, `rowSelected`, `rowDoubleClicked`, `rowContextMenu`, `sortChanged` |
+| `canvas` | the `PluginCanvasState` fields (`space`, `background`, `items`, `viewBox`), `height` (default 200) | the editor's native canvas (`EditorCanvas`) | `itemClicked`, `itemDragged` (preview / commit / cancel), `itemHover`, `backgroundClicked` |
 
 A kind the editor does not know draws one muted line, `unsupported control <kind>`, and never throws.
+
+**Timeline, table, canvas.** The three are the editor panels' native widgets (see [Editor panels](editor-panels.md)):
+drags, scrubs and playback run in the editor; the process receives `PluginViewEvent`s whose `value` holds the same
+keys an editor panel graph's event node outputs (`key_ids`, `delta_frames`, `clip_id`, `row_id`, `column_id`,
+`value`, `text`, `item_id`, `x`, `y`, ...) and whose `phase` is `preview`, `commit` or `cancel`. What the user changed
+shows at once; an edit (clips, keys, rows, items) waits for the process's patch of the control: any new props count as
+the answer, and with none within 10 s (`PluginNativeControl.answerTimeout`) the edit reverts with a toast.
 
 **Patches.** `PluginViewPatchOp.set(id, props)` merges props into one control; `PluginViewPatchOp.replace(id, control)`
 replaces it whole. A long job reports progress by patching a `progress` and a `log` control:
@@ -253,9 +263,11 @@ One widget per kind, each in its own file: `plugin_section_control.dart` (also `
 `plugin_asset_ref_field_control.dart` (also `PluginProjectAssets.scan`, the background-isolate project scan),
 `plugin_color_field_control.dart`, `plugin_button_control.dart`, `plugin_progress_control.dart`,
 `plugin_log_control.dart`, `plugin_image_control.dart`, `plugin_preview3d_control.dart`,
-`plugin_divider_control.dart`, `plugin_unsupported_control.dart`. `plugin_control_cache.dart` (`PluginControlCache`)
+`plugin_divider_control.dart`, `plugin_unsupported_control.dart`, `plugin_timeline_control.dart`,
+`plugin_table_control.dart`, `plugin_canvas_control.dart` (over `plugin_native_control.dart`, `PluginNativeControl`:
+the overlay, the answer timeout and the revert toast). `plugin_control_cache.dart` (`PluginControlCache`)
 maps kinds to widgets and reuses unchanged ones; `plugin_view_scope.dart` holds `PluginViewHost` (view id, project
-directory, `emit`), `PluginViewScope`, the typed prop readers, `pluginControlEquals` and `PluginFieldRow`.
+directory, the editor's host context for asset pickers, `emit` with an optional phase), `PluginViewScope`, the typed prop readers, `pluginControlEquals` and `PluginFieldRow`.
 
 ---
 

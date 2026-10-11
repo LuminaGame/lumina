@@ -6,12 +6,14 @@ import 'package:lumina_ui/ui/core/editor_panels/editor_library/assets_library.da
 import 'package:lumina_ui/ui/core/editor_panels/editor_panel_host.dart';
 import 'package:lumina_ui/ui/core/editor_panels/editor_panel_runtime.dart';
 import 'package:lumina_ui/ui/core/editor_panels/widgets/editor_tree_view.dart';
+import 'package:lumina_ui/ui/core/editor_panels/widgets/native_widget_elements.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/umg_document.dart';
 
 /// The editor widget set an editor panel lays out with: Editor Section,
 /// Property Row, Tree View, List View, Asset Picker, Resizable Split,
-/// Editor Toolbar and Status Line, in the Level Editor's tokens
+/// Editor Toolbar, Status Line, and the native Timeline, Table and Canvas
+/// ([EditorNativeElements]), in the Level Editor's tokens
 /// (PANEL_AND_TREE_UNIFORMITY). Each reads its element state (the keys the
 /// graph and `host.panelState` set) and fires its element events into the
 /// panel's graph.
@@ -158,6 +160,10 @@ class EditorWidgetSet {
                 },
               )),
         );
+      case UmgWidgetType.editorTimeline:
+      case UmgWidgetType.editorTable:
+      case UmgWidgetType.editorCanvas:
+        return EditorNativeElements(host, instance).build(node, e) ?? const SizedBox.shrink();
       default:
         return const SizedBox.shrink();
     }

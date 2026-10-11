@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter/widgets.dart' as widgets show Table, TableRow;
-import 'package:lumina_editor_data/lumina_editor.dart' show LuminaUmgElement, LuminaUmgElementBinding, LuminaUserWidgets, LuminaThemeDocument, LuminaWidgetEvents;
+import 'package:lumina_editor_data/lumina_editor.dart' show LuminaUmgElement, LuminaUmgElementBinding, LuminaUserWidgets, LuminaThemeDocument, LuminaViewportController, LuminaWidgetEvents;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
@@ -55,6 +55,10 @@ class UmgRuntimeView extends StatelessWidget {
   /// assets (`contents/…`) from it. Null: the engine's asset resolution.
   final String? projectDir;
 
+  /// A Viewport element's preview controller once it exists (null when it
+  /// goes): an editor panel's Timeline drives it.
+  final void Function(UmgNode node, LuminaViewportController? controller)? onViewportController;
+
   const UmgRuntimeView({
     super.key,
     required this.document,
@@ -69,6 +73,7 @@ class UmgRuntimeView extends StatelessWidget {
     this.elementDecorator,
     this.onElementEvent,
     this.projectDir,
+    this.onViewportController,
   });
 
   @override
@@ -292,6 +297,7 @@ class UmgRuntimeView extends StatelessWidget {
           allowFiles: editorTheme,
           projectDir: projectDir,
           onEvent: onElementEvent == null ? null : (event, args) => _fire(node, event, args),
+          onController: onViewportController == null ? null : (c) => onViewportController!(node, c),
         );
       case UmgWidgetType.comboBox:
         final options = LuminaUmgElementBinding.options(e, umgItems(node.props['options']));

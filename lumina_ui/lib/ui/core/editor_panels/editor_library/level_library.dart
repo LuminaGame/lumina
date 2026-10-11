@@ -85,6 +85,23 @@ final List<EditorLibraryNode> levelLibraryNodes = [
     function: (c, i) => {'return_value': _actor(c, i)?.name ?? ''},
   ),
   EditorLibraryNode(
+    impureNode('editor_set_actor_label', 'Set Actor Label', _level,
+        inputs: [strPin('actor_id', 'Actor Id'), strPin('label', 'Label')],
+        outputs: [boolPin('success', 'Success')],
+        capability: _levelCap,
+        tooltip: "Renames the actor (its Outliner label): one undo step, or part of the open transaction's."),
+    function: (c, i) {
+      final call = editorPanelCall(c);
+      final label = inStr(i, 'label').trim();
+      if (call == null || label.isEmpty || _actor(c, i) == null) return {'success': false};
+      final ok = call.host.transactions.edit(call.instance, () {
+        call.host.vm.renameActorWithTransaction(inStr(i, 'actor_id'), label);
+        return true;
+      });
+      return {'success': ok};
+    },
+  ),
+  EditorLibraryNode(
     pureNode('editor_get_actor_transform', 'Get Actor Transform', _level,
         inputs: [strPin('actor_id', 'Actor Id')], outputs: [ret(LuminaPinType.transform), boolPin('found', 'Found')],
         tooltip: 'Location (cm, Z up), rotation (degrees) and scale.'),

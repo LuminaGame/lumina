@@ -50,6 +50,12 @@ void main() {
     b.node('editor_set_actor_transform', 'set_c', {'transform': at(500)});
     b.chain(['leave', 'begin2', 'set_c']);
     b.wire('leave', 'A', 'set_c', 'actor_id');
+    // Rename (A, Label) → Set Actor Label.
+    b.customEvent('rename', 'Rename', ['A', 'Label']);
+    b.node('editor_set_actor_label', 'set_label');
+    b.wire('rename', 'exec_out', 'set_label');
+    b.wire('rename', 'A', 'set_label', 'actor_id');
+    b.wire('rename', 'Label', 'set_label', 'label');
     return b;
   }
 
@@ -133,5 +139,16 @@ void main() {
     expect(vm.transactions.undoLabel, 'Undo Nudge');
     expect(vm.logger.logs.map((l) => l.message), contains(contains("transaction 'Nudge' was left open")));
     expect(vm.actors.firstWhere((x) => x.id == a).location, [500.0, 0.0, 0.0]);
+  });
+
+  test('Set Actor Label renames the actor in one undo step', () async {
+    final panel = openPanel();
+    final a = ids['AC_Unit']!;
+    panel.script!.callBlueprint('Rename', {'A': a, 'Label': 'AC_Roof'});
+    await pumpEventQueue();
+    expect(vm.actors.firstWhere((x) => x.id == a).name, 'AC_Roof');
+    expect(vm.transactions.undoLabel, 'Undo Rename to AC_Roof');
+    vm.commands.execute('edit.undo');
+    expect(vm.actors.firstWhere((x) => x.id == a).name, 'AC_Unit');
   });
 }

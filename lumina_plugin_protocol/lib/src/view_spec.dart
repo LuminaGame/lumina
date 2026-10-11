@@ -1,3 +1,6 @@
+import 'package:lumina_plugin_protocol/src/view_spec_canvas.dart';
+import 'package:lumina_plugin_protocol/src/view_spec_editor_widgets.dart';
+
 /// A declarative panel: a tree of controls the host renders with its own
 /// widgets. A plugin process cannot send widgets; it sends this, receives
 /// [PluginViewEvent]s and answers with a new spec or a [PluginViewPatch].
@@ -81,6 +84,16 @@ class PluginViewSpec {
 /// - [preview3d]: `scene` ([PluginSceneSpec] json), `height`; the host renders it with its own
 ///   viewport. Event `picked` with `{"node": <name>}` when the user clicks a node.
 /// - [divider].
+/// - [timeline]: the props of a [PluginTimelineState] (tracks, clips, keys,
+///   playhead, fps, ...); events per [PluginEditorWidgetEventKind] with a
+///   [PluginViewEvent.phase].
+/// - [table]: the props of a [PluginTableState] (columns, rows, sort, selection).
+/// - [canvas]: the props of a [PluginCanvasState] (a 2D draw list with hit regions).
+///
+/// The last three are the editor's native timeline, table and canvas
+/// widgets (the same ones editor panel Widget Blueprints place): drags,
+/// scrubs and playback run in the editor; a commit the process does not
+/// answer with a patch within 10 s reverts with a toast.
 abstract final class PluginControlKind {
   static const String section = 'section';
   static const String row = 'row';
@@ -97,10 +110,13 @@ abstract final class PluginControlKind {
   static const String image = 'image';
   static const String preview3d = 'preview3d';
   static const String divider = 'divider';
+  static const String timeline = 'timeline';
+  static const String table = 'table';
+  static const String canvas = 'canvas';
 
   static const List<String> all = [
     section, row, text, textField, numberField, boolField, enumField, assetRefField, colorField, button, progress, log,
-    image, preview3d, divider,
+    image, preview3d, divider, timeline, table, canvas,
   ];
 }
 
@@ -174,25 +190,36 @@ class PluginControl {
   static PluginControl log(String id, List<String> lines) =>
       PluginControl(kind: PluginControlKind.log, id: id, props: {'lines': lines});
   static PluginControl divider(String id) => PluginControl(kind: PluginControlKind.divider, id: id);
+  static PluginControl timeline(String id, PluginTimelineState state, {num? height}) =>
+      PluginControl(kind: PluginControlKind.timeline, id: id, props: {...state.toJson(), 'height': ?height});
+  static PluginControl table(String id, PluginTableState state, {num? height}) =>
+      PluginControl(kind: PluginControlKind.table, id: id, props: {...state.toJson(), 'height': ?height});
+  static PluginControl canvas(String id, PluginCanvasState state, {num? height}) =>
+      PluginControl(kind: PluginControlKind.canvas, id: id, props: {...state.toJson(), 'height': ?height});
 }
 
 /// A user action in a rendered spec. [kind] is `changed`, `pressed`,
-/// `submitted` or `picked`.
+/// `submitted` or `picked`, or one of [PluginEditorWidgetEventKind] for the
+/// timeline, table and canvas controls, which also carry a [phase]
+/// ([PluginViewEventPhase]: `preview`, `commit` or `cancel`).
 class PluginViewEvent {
-  const PluginViewEvent({required this.viewId, required this.controlId, required this.kind, this.value});
+  const PluginViewEvent({required this.viewId, required this.controlId, required this.kind, this.value, this.phase});
 
   final String viewId;
   final String controlId;
   final String kind;
   final Object? value;
+  final String? phase;
 
-  Map<String, Object?> toJson() => {'viewId': viewId, 'controlId': controlId, 'kind': kind, 'value': value};
+  Map<String, Object?> toJson() =>
+      {'viewId': viewId, 'controlId': controlId, 'kind': kind, 'value': value, 'phase': ?phase};
 
   static PluginViewEvent fromJson(Map<String, Object?> json) => PluginViewEvent(
         viewId: json['viewId'] as String,
         controlId: json['controlId'] as String,
         kind: json['kind'] as String,
         value: json['value'],
+        phase: json['phase'] as String?,
       );
 }
 

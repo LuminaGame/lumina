@@ -227,8 +227,19 @@ sıfırdan başlatır.
 | `image` | `path` (mutlak ya da projeye göreli) veya `base64`, `height` (varsayılan 160) | sığdırılmış `Image.memory`; dosya asenkron okunur, 64 KB üstü base64 arka plan isolate'inde çözülür | yok |
 | `preview3d` | `scene` (`PluginSceneSpec` json), `height` (varsayılan 240) | düğümün mesh'i, `jointLocalPose`'u ve sahnenin `cameraDistance`'ı ile `Plugin3DViewportContainer`, altında sahne düğümlerinin listesi | listedeki bir düğüm tıklanınca `{"node": <ad>}` ile `picked` |
 | `divider` | yok | ince bir çizgi | yok |
+| `timeline` | `PluginTimelineState` alanları (`fps`, `length`, `playhead`, `tracks`, `clips`, `keys`, ...), `height` (varsayılan 220) | editörün yerel zaman çizelgesi (`EditorTimeline`) | `playheadChanged`, `playStateChanged`, `clipChanged`, `clipTextCommitted`, `keysMoved`, `keyAdded`, `keysDeleted`, `selectionChanged`, `trackContextMenu`, `phase` ile |
+| `table` | `PluginTableState` alanları (`columns`, `rows`, `sort`, `selection`, `selected`, `filter`), `height` (varsayılan 220) | editörün yerel tablosu (`EditorTable`); varlık hücreleri `EditorAssetPicker` ile | `cellCommitted`, `rowSelected`, `rowDoubleClicked`, `rowContextMenu`, `sortChanged` |
+| `canvas` | `PluginCanvasState` alanları (`space`, `background`, `items`, `viewBox`), `height` (varsayılan 200) | editörün yerel tuvali (`EditorCanvas`) | `itemClicked`, `itemDragged` (preview / commit / cancel), `itemHover`, `backgroundClicked` |
 
 Editörün tanımadığı bir tür tek bir soluk satır çizer, `unsupported control <kind>`, ve asla hata fırlatmaz.
+
+**Timeline, table, canvas.** Üçü editör panellerinin yerel öğeleridir (bkz. [Editör panelleri](editor-panels.md)):
+sürüklemeler, sarmalar ve oynatma editörde çalışır; süreç, `value`'su bir editör paneli grafiğinin olay düğümünün
+çıktılarıyla aynı anahtarları (`key_ids`, `delta_frames`, `clip_id`, `row_id`, `column_id`, `value`, `text`, `item_id`,
+`x`, `y`, ...) tutan ve `phase`'i `preview`, `commit` ya da `cancel` olan `PluginViewEvent`'ler alır. Kullanıcının
+değiştirdiği hemen görünür; bir düzenleme (klipler, anahtarlar, satırlar, öğeler) sürecin kontrolü yamalamasını bekler:
+yeni prop'lar yanıt sayılır, 10 sn içinde yanıt gelmezse (`PluginNativeControl.answerTimeout`) düzenleme bir
+bildirimle geri alınır.
 
 **Yamalar.** `PluginViewPatchOp.set(id, props)` bir kontrolün props'una birleştirir;
 `PluginViewPatchOp.replace(id, control)` onu tümden değiştirir. Uzun bir iş ilerlemesini bir `progress` ve bir `log`
@@ -255,9 +266,12 @@ Her tür için kendi dosyasında bir widget: `plugin_section_control.dart` (`Plu
 `plugin_asset_ref_field_control.dart` (arka plan isolate'inde proje taraması `PluginProjectAssets.scan` da burada),
 `plugin_color_field_control.dart`, `plugin_button_control.dart`, `plugin_progress_control.dart`,
 `plugin_log_control.dart`, `plugin_image_control.dart`, `plugin_preview3d_control.dart`,
-`plugin_divider_control.dart`, `plugin_unsupported_control.dart`. `plugin_control_cache.dart` (`PluginControlCache`)
+`plugin_divider_control.dart`, `plugin_unsupported_control.dart`, `plugin_timeline_control.dart`,
+`plugin_table_control.dart`, `plugin_canvas_control.dart` (`plugin_native_control.dart` üzerinde, `PluginNativeControl`:
+kaplama, yanıt süresi ve geri alma bildirimi). `plugin_control_cache.dart` (`PluginControlCache`)
 türleri widget'lara eşler ve değişmeyenleri yeniden kullanır; `plugin_view_scope.dart` `PluginViewHost` (görünüm
-kimliği, proje dizini, `emit`), `PluginViewScope`, tipli prop okuyucuları, `pluginControlEquals` ve
+kimliği, proje dizini, varlık seçiciler için editörün ana bilgisayar bağlamı, isteğe bağlı bir phase ile `emit`),
+`PluginViewScope`, tipli prop okuyucuları, `pluginControlEquals` ve
 `PluginFieldRow`'u içerir.
 
 ---

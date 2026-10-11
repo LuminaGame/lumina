@@ -9,7 +9,9 @@
 ///   plugin process with.
 /// - [PluginContributions] and its parts: everything an isolated plugin
 ///   registers, as data.
-/// - [PluginViewSpec]: declarative panels the host renders.
+/// - [PluginViewSpec]: declarative panels the host renders, with the
+///   editor's native timeline, table and canvas ([PluginTimelineState],
+///   [PluginTableState], [PluginCanvasState]).
 /// - [PluginPanelStatePatch]: element-state updates for editor panel Widget
 ///   Blueprints (`host.panelState`).
 ///
@@ -25,3 +27,5 @@ export 'package:lumina_plugin_protocol/src/messages.dart';
 export 'package:lumina_plugin_protocol/src/panel_state.dart';
 export 'package:lumina_plugin_protocol/src/plugin_connection.dart';
 export 'package:lumina_plugin_protocol/src/view_spec.dart';
+export 'package:lumina_plugin_protocol/src/view_spec_canvas.dart';
+export 'package:lumina_plugin_protocol/src/view_spec_editor_widgets.dart';

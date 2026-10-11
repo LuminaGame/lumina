@@ -91,10 +91,70 @@ Tasarımcının **Editor** palet bölümü, yalnızca editör paneli için sunul
 | Editor Toolbar | — | — |
 | Status Line | `text`, `tone` | — |
 | Viewport | önizleme sahnesi (`LuminaUmgViewport`, `viewport_*` nodes) | On Picked, Gizmo Preview / Commit / Cancel, Camera Changed, Scene Ready, Asset Load Failed |
+| Timeline | `fps`, `length`, `playhead`, `playing`, `loop`, `zoom`, `scroll`, `tracks`, `clips`, `keys`, `range`, `snap`, `boundViewport` | On Playhead Changed, Play State Changed, Clip Preview / Commit / Cancel, Clip Text Committed, Key Preview / Commit / Cancel, Key Added, Keys Deleted, Selection Changed, Track Context Menu |
+| Table | `columns`, `rows`, `sort`, `selection`, `selected`, `filter` | On Cell Committed, Row Selected, Row Double Clicked, Row Context Menu, Sort Changed |
+| Canvas | `space`, `background`, `items`, `viewBox` | On Item Clicked, Item Drag Preview / Commit / Cancel, Item Hover, Background Clicked |
 
 Ağaç ve liste satırları Outliner'ınkilerdir (24 px, derinlik başına girinti, ok simgeleri, seçim çubuğu, üzerine gelme
-tonu); Ctrl seçimi değiştirir, Shift genişletir. Asset Picker öğesi editörün `EditorAssetPicker`'ıdır. Zaman
-çizelgesi, tablo ve tuval öğeleri daha sonra yerel editör öğeleri olarak gelir.
+tonu); Ctrl seçimi değiştirir, Shift genişletir. Asset Picker öğesi editörün `EditorAssetPicker`'ıdır.
+
+## Timeline, Table ve Canvas (yerel editör öğeleri)
+
+Üç tür editör arayüzü kare kare etkileşir ve öğelerle ve grafiklerle kurulamaz: bir zaman çizelgesi, satır içi
+düzenlemeli bir tablo ve 2B bir tuval. Bunlar `lib/ui/core/editor_panels/widgets/` altında (`timeline/`, `table/`,
+`canvas/`) bir kez yazılır ve hem editör paneli öğeleri olarak (`EditorNativeElements`, Editor paletinde Timeline,
+Table, Canvas) hem de bir eklenti sürecinin bildirimsel panelinde JSON spec kontrolleri `timeline`, `table` ve `canvas`
+olarak kullanılır (`lib/ui/core/widgets/plugin_view/` altındaki ince bağdaştırıcılar). Durumları düz JSON'dur
+(`lumina_plugin_protocol` içindeki `PluginTimelineState`, `PluginTableState`, `PluginCanvasState`; kareler tamsayıdır,
+saniyeler `fps`'ten türetilir).
+
+**Etkileşim sözleşmesi** (`widgets/interaction/editor_interaction.dart`): her sürükleme, sarma, yeniden boyutlandırma
+ve üzerine gelme öğede hemen uygulanır; öğe kısılmış **preview** olayları (saniyede en çok 30, `EditorPreviewThrottle`),
+bırakınca bir **commit** ve Escape ile **cancel** (değer geri döner) bildirir. Oynatma, oynatma kafasını durumun
+fps'iyle kendi boyacı katmanında yerel olarak ilerletir; yalnızca oynat, duraklat, döngü değişiklikleri ve bırakınca ya
+da bir adımda oynatma kafası bildirilir, hiçbir oynatma karesi bildirilmez. Yavaş bir grafik ya da süreç bir
+sürüklemeyi asla durdurmaz. Bir editör panelinde olaylar öğenin olaylarıdır ve commit öğe durumuna geri yazılır; bir
+JSON spec'te bunlar `phase` taşıyan `PluginViewEvent`'lerdir ve bir düzenleme sürecin yamasını bekler (10 sn, sonra
+bir bildirimle geri alınır).
+
+- **Timeline**: grup başlıkları altında iz başlıkları (Lucide simgesi + etiket), kare ve saniye cetveli, metinleriyle
+  klip blokları, anahtar kare simgeleri (`diamond`, `circle`, `square`), editörün seçim renginde seçim, bir aktarım
+  çubuğu (geri adım, oynat / duraklat, ileri adım, döngü, kare / saniye göstergesi, fps). Klipleri `minLength` /
+  `maxLength` içinde taşıyın ve boyutlandırın (kareler, `snap`'e yaslanır), `editableText` olan klibin metnini çift
+  tıklamayla düzenleyin, anahtarları sürükleyin (Shift seçime ekler, boş alanda sürükleme kutu seçimi yapar), bir keys
+  izinde çift tıklama anahtar ekler, Delete seçili anahtarları siler, Space oynatır, ← / → adım atar, Home / End atlar,
+  Ctrl + tekerlek imlecin etrafında yakınlaştırır, tekerlek ya da orta sürükleme kaydırır. Her boyacı kendi
+  dosyasındadır (`timeline_ruler_painter.dart`, `timeline_tracks_painter.dart`, `timeline_playhead_painter.dart`).
+- **Viewport bağlama**: `boundViewport: {element, node}` oynatma kafasının o Viewport öğesinin düğümünü sürmesini
+  sağlar: düğümün animasyon zamanı, oynatma kafası her hareket ettiğinde Viewport'un canlı önizlemesinde ayarlanır
+  (`LuminaViewportSceneRuntime.setLocalAnimationTime`, `EditorPanelViewportDriver`); açıklama farkı, grafik çalışması ya
+  da süreç mesajı yoktur; oynatma kafası durunca zaman sahne açıklamasına yazılır (`animation.time`, oynamıyor), böylece
+  korunur.
+- **Table**: sıralama okları ve yeniden boyutlanabilir sütunlarla yapışkan başlık, isteğe bağlı süzgeç satırı, grup
+  satırları, sanallaştırılmış 24 px satırlar (yalnızca görünen satırlar kurulur; 2.000 satır birkaç milisaniyede
+  sıralanır), ilk hücrede ve sol çubukta `tone` (`warning`, `error`), satır `tooltip`'i. Hücreler `kind`'a göre: `text`,
+  `number`, `color` çift tıklamayla yerinde düzenlenir (Enter onaylar, Escape vazgeçer), `bool` bir onay kutusu, `enum`
+  bir shadcn `Select`, `assetRef` sütunun `typeFilter`'ıyla süzülen editör `EditorAssetPicker`'ıdır. Seçim `single` ya
+  da `multi`'dir (Ctrl değiştirir, Shift aralığı alır). On Cell Committed değeri (`Value` Json) ve metnini (`Text`)
+  taşır.
+- **Canvas**: `local` piksel ya da `normalized` 0–1 uzayında `line`, `polyline`, `rect`, `circle`, `path` (SVG yol
+  verisi: M, L, H, V, C, Q, Z), `text` ve `image` (bir proje yolu, bir doku `.lmas`'ı ya da eklentinin bir dosyası)
+  öğeleri; `stroke`, `fill`, `width`, `hit`, `draggable` ve `cursor` ile; isteğe bağlı bir `viewBox` (`panZoom`: orta
+  sürükleme ve tekerlek kaydırır, Ctrl + tekerlek yakınlaştırır). Her öğe kendi katmanında boyanır ve liste kimliğe göre
+  karşılaştırılır; bir öğedeki değişiklik yalnızca o öğeyi yeniden boyar. Olaylardaki konumlar öğe uzayındadır (`X`,
+  `Y`).
+
+Grafikler dinamik alanları Set Element State ya da tipli yardımcılarla ayarlar: **Timeline Set Clips**, **Timeline Set
+Keys**, **Timeline Set Playhead**, **Table Set Rows** ve **Canvas Set Items** (`Editor|Panels|Native Widgets`; bozuk bir
+değer günlüğe yazılır ve yazılmaz); bir eklenti süreci bütün bir klip ya da satır listesini tek bir `host.panelState`
+işlemiyle gönderir. Details paneli statik alanları düzenler (tracks, fps, length, snap, boundViewport; columns,
+selection, filter; space, background, items). Editör öğelerinden birini içeren bir oyun Widget Blueprint'i doğrulayıcı
+hatasıdır; oyun kod üreteci bunları asla üretmez.
+
+Sequencer'ın ve animasyon editörünün kendi zaman çizelgeleri (`sub_editors/views/sequencer/timeline_widget.dart`,
+`widgets/animation_dope_sheet/`, `views/animation/toolbar_timeline.dart`) view model'e bağlı öğelerini korur. Paylaşılan
+zaman çizelgesinde onlar için eksik olanlar: eğri düzenleme (teğetler, değer eğrileri), ses dalga biçimleri, özellik
+başına alt izler ve bölüm karıştırma; onları taşımak sonraki bir yeniden düzenlemedir.
 
 ## Editör fonksiyon kütüphanesi
 
@@ -104,7 +164,7 @@ tonu); Ctrl seçimi değiştirir, Shift genişletir. Asset Picker öğesi editö
 
 - **Seçim**: Get Selected Actors, Select Actors, Clear Selection; olay On Editor Selection Changed.
 - **Seviye** (yazmalar `level` ister): Get Level Actors (sınıf / etiket süzgeci), Get Level Actor Tree (türe göre Tree
-  View öğeleri), Get Actor Label, Get / Set Actor Transform, Get / Set Component Property, Add Actor From Asset, Remove
+  View öğeleri), Get / Set Actor Label, Get / Set Actor Transform, Get / Set Component Property, Add Actor From Asset, Remove
   Actors, Focus Viewport On Actors, Save Level; olay On Level Changed.
 - **İşlemler**: Begin Transaction (Label) → işlem, End Transaction, Cancel Transaction. İçindeki her seviye ya da
   varlık düzenlemesi etiketle adlandırılan tek bir Edit ▸ Undo adımıdır; olay bittiğinde açık kalan işlemi ana
@@ -127,6 +187,7 @@ tonu); Ctrl seçimi değiştirir, Shift genişletir. Asset Picker öğesi editö
   (Result) / Failed (Error Code, Error Message), 30 sn çağrı zaman aşımıyla; süreç kapalıyken hemen `unavailable` ile
   başarısız olur; Get Plugin Process State; olaylar On Plugin Process Event (Name ayarı süzer) ve On Plugin Process
   State Changed (running, stopped, crashed, restarting).
+- **Yerel öğeler**: Timeline Set Clips / Set Keys / Set Playhead, Table Set Rows, Canvas Set Items (yukarıya bakın).
 - **Json** (`lumina`): Make Json Object / Array, Json Get String / Number / Bool / Json / Array, Json Set Field, Json
   Has Field, Parse Json (hatayla Failed), Json To String.
 

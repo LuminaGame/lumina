@@ -4,6 +4,7 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_ui/ui/core/widgets/plugin_view/plugin_asset_ref_field_control.dart';
 import 'package:lumina_ui/ui/core/widgets/plugin_view/plugin_bool_field_control.dart';
 import 'package:lumina_ui/ui/core/widgets/plugin_view/plugin_button_control.dart';
+import 'package:lumina_ui/ui/core/widgets/plugin_view/plugin_canvas_control.dart';
 import 'package:lumina_ui/ui/core/widgets/plugin_view/plugin_color_field_control.dart';
 import 'package:lumina_ui/ui/core/widgets/plugin_view/plugin_divider_control.dart';
 import 'package:lumina_ui/ui/core/widgets/plugin_view/plugin_enum_field_control.dart';
@@ -14,8 +15,10 @@ import 'package:lumina_ui/ui/core/widgets/plugin_view/plugin_preview3d_control.d
 import 'package:lumina_ui/ui/core/widgets/plugin_view/plugin_progress_control.dart';
 import 'package:lumina_ui/ui/core/widgets/plugin_view/plugin_row_control.dart';
 import 'package:lumina_ui/ui/core/widgets/plugin_view/plugin_section_control.dart';
+import 'package:lumina_ui/ui/core/widgets/plugin_view/plugin_table_control.dart';
 import 'package:lumina_ui/ui/core/widgets/plugin_view/plugin_text_control.dart';
 import 'package:lumina_ui/ui/core/widgets/plugin_view/plugin_text_field_control.dart';
+import 'package:lumina_ui/ui/core/widgets/plugin_view/plugin_timeline_control.dart';
 import 'package:lumina_ui/ui/core/widgets/plugin_view/plugin_unsupported_control.dart';
 import 'package:lumina_ui/ui/core/widgets/plugin_view/plugin_view_scope.dart';
 
@@ -80,6 +83,9 @@ class PluginControlCache {
       PluginControlKind.image => PluginImageControl(key: key, control: c),
       PluginControlKind.preview3d => PluginPreview3dControl(key: key, control: c),
       PluginControlKind.divider => PluginDividerControl(key: key, control: c),
+      PluginControlKind.timeline => PluginTimelineControl(key: key, control: c),
+      PluginControlKind.table => PluginTableControl(key: key, control: c),
+      PluginControlKind.canvas => PluginCanvasControl(key: key, control: c),
       _ => PluginUnsupportedControl(key: key, control: c),
     };
   }

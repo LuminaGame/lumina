@@ -2,6 +2,7 @@ import 'package:lumina_editor_data/lumina_editor.dart';
 
 import 'package:lumina_ui/ui/core/editor_panels/editor_library/assets_library.dart';
 import 'package:lumina_ui/ui/core/editor_panels/editor_library/level_library.dart';
+import 'package:lumina_ui/ui/core/editor_panels/editor_library/native_widgets_library.dart';
 import 'package:lumina_ui/ui/core/editor_panels/editor_library/notifications_library.dart';
 import 'package:lumina_ui/ui/core/editor_panels/editor_library/panels_library.dart';
 import 'package:lumina_ui/ui/core/editor_panels/editor_library/process_library.dart';
@@ -38,6 +39,7 @@ abstract final class EditorPanelLibrary {
     ...notificationsLibraryNodes,
     ...panelsLibraryNodes,
     ...processLibraryNodes,
+    ...nativeWidgetsLibraryNodes,
   ];
 
   /// What an instance leaves behind when it closes (its menu items).

@@ -9,17 +9,22 @@ import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 /// sending to the renderer's current `onEvent` even when the parent passes a
 /// new callback.
 class PluginViewHost {
-  PluginViewHost({required this.viewId, required this.projectDir, required this.sink});
+  PluginViewHost({required this.viewId, required this.projectDir, required this.sink, this.assetHost});
 
   final String viewId;
   final String? projectDir;
 
+  /// The editor's host context (its `EditorAssetPicker`), for the table's
+  /// asset cells; null outside the editor.
+  final LuminaEditorHostContext? assetHost;
+
   /// The renderer's current event callback.
   final void Function(PluginViewEvent event) sink;
 
-  /// Sends [kind] (`changed`, `pressed`, `picked`) for [controlId].
-  void emit(String controlId, String kind, [Object? value]) =>
-      sink(PluginViewEvent(viewId: viewId, controlId: controlId, kind: kind, value: value));
+  /// Sends [kind] (`changed`, `pressed`, `picked`, or a timeline, table or
+  /// canvas event kind with its [phase]) for [controlId].
+  void emit(String controlId, String kind, [Object? value, String? phase]) =>
+      sink(PluginViewEvent(viewId: viewId, controlId: controlId, kind: kind, value: value, phase: phase));
 
   /// The key of [controlId]'s widget: `<viewId>/<controlId>`.
   ValueKey<String> keyOf(String controlId) => pluginControlKey(viewId, controlId);

@@ -68,7 +68,11 @@ enum UmgWidgetType {
   assetPicker('Asset Picker', UmgWidgetCategory.editor, UmgChildCapacity.none),
   resizableSplit('Resizable Split', UmgWidgetCategory.editor, UmgChildCapacity.many),
   editorToolbar('Editor Toolbar', UmgWidgetCategory.editor, UmgChildCapacity.many),
-  statusLine('Status Line', UmgWidgetCategory.editor, UmgChildCapacity.none);
+  statusLine('Status Line', UmgWidgetCategory.editor, UmgChildCapacity.none),
+  // The native timeline, table and canvas (editor panels only).
+  editorTimeline('Timeline', UmgWidgetCategory.editor, UmgChildCapacity.none),
+  editorTable('Table', UmgWidgetCategory.editor, UmgChildCapacity.none),
+  editorCanvas('Canvas', UmgWidgetCategory.editor, UmgChildCapacity.none);
 
   const UmgWidgetType(this.displayName, this.category, this.capacity);
 
@@ -301,6 +305,30 @@ enum UmgWidgetType {
         return {};
       case UmgWidgetType.statusLine:
         return {'text': 'Ready', 'tone': 'info'};
+      case UmgWidgetType.editorTimeline:
+        return {
+          'fps': 30,
+          'length': 300,
+          'snap': 1,
+          'tracks': <Object?>[
+            {'id': 'clips', 'label': 'Clips', 'icon': 'film', 'kind': 'clips'},
+            {'id': 'keys', 'label': 'Keys', 'icon': 'diamond', 'kind': 'keys'},
+          ],
+          'clips': <Object?>[],
+          'keys': <Object?>[],
+        };
+      case UmgWidgetType.editorTable:
+        return {
+          'columns': <Object?>[
+            {'id': 'name', 'label': 'Name', 'kind': 'text'},
+            {'id': 'value', 'label': 'Value', 'kind': 'number', 'editable': true},
+          ],
+          'rows': <Object?>[],
+          'selection': 'single',
+          'filter': false,
+        };
+      case UmgWidgetType.editorCanvas:
+        return {'space': 'local', 'background': '#151519', 'items': <Object?>[]};
     }
   }
 
@@ -378,6 +406,12 @@ enum UmgWidgetType {
       case UmgWidgetType.editorToolbar:
       case UmgWidgetType.statusLine:
         return const Size(320, 28);
+      case UmgWidgetType.editorTimeline:
+        return const Size(520, 220);
+      case UmgWidgetType.editorTable:
+        return const Size(360, 220);
+      case UmgWidgetType.editorCanvas:
+        return const Size(300, 200);
       default:
         return _shadcnCanvasSize;
     }

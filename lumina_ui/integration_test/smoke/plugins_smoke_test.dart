@@ -28,6 +28,7 @@ import 'package:lumina_ui/ui/features/launcher/view_models/create_project_view_m
 
 import '../../test/helpers/desktop_window.dart';
 import 'plugins/editor_panel_smoke.dart';
+import 'plugins/native_widgets_smoke.dart';
 import '../../test/helpers/mcp_test_client.dart';
 import '../../test/helpers/scaffold_game_project.dart' show offlineScaffoldRunner;
 
@@ -49,6 +50,7 @@ void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   editorPanelSmoke(binding, settle);
+  nativeWidgetsSmoke(binding, settle);
 
   testWidgets('Plugins Smoke Scenario: Open Plugin Manager via Plugins Menu', (tester) async {
     final tempProjectsDir = Directory.systemTemp.createTempSync('plugins_smoke_');

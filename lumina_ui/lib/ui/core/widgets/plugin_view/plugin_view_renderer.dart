@@ -16,11 +16,15 @@ import 'package:lumina_ui/ui/core/widgets/plugin_view/plugin_view_scope.dart';
 /// unknown control kind renders a muted "unsupported control" line.
 /// The panel does not scroll by itself; its host (a dock panel) does.
 class PluginViewRenderer extends StatefulWidget {
-  const PluginViewRenderer({super.key, required this.spec, required this.onEvent, this.projectDir});
+  const PluginViewRenderer({super.key, required this.spec, required this.onEvent, this.projectDir, this.assetHost});
 
   final PluginViewSpec spec;
   final void Function(PluginViewEvent event) onEvent;
   final String? projectDir;
+
+  /// The editor's host context: a table control's asset cells use its
+  /// `EditorAssetPicker`.
+  final LuminaEditorHostContext? assetHost;
 
   @override
   State<PluginViewRenderer> createState() => _PluginViewRendererState();
@@ -31,13 +35,13 @@ class _PluginViewRendererState extends State<PluginViewRenderer> {
   late PluginControlCache _cache = PluginControlCache(widget.spec.id);
 
   PluginViewHost _newHost() =>
-      PluginViewHost(viewId: widget.spec.id, projectDir: widget.projectDir, sink: (e) => widget.onEvent(e));
+      PluginViewHost(viewId: widget.spec.id, projectDir: widget.projectDir, sink: (e) => widget.onEvent(e), assetHost: widget.assetHost);
 
   @override
   void didUpdateWidget(PluginViewRenderer oldWidget) {
     super.didUpdateWidget(oldWidget);
     // Another view or project: nothing carries over.
-    if (widget.spec.id != oldWidget.spec.id || widget.projectDir != oldWidget.projectDir) {
+    if (widget.spec.id != oldWidget.spec.id || widget.projectDir != oldWidget.projectDir || widget.assetHost != oldWidget.assetHost) {
       _host = _newHost();
       _cache = PluginControlCache(widget.spec.id);
     }

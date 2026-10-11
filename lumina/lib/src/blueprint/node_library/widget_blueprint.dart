@@ -73,6 +73,8 @@ final List<LuminaBlueprintNodeSpec> _widgetBlueprintNodes = [
 /// The extra outputs of a bound element [event] of an element typed
 /// [typeName] (`On Value Changed (Volume)` → `Value` float).
 List<LuminaBlueprintPinSpec> _widgetEventOutputs(String? event, String? typeName, LuminaBlueprintNode node) => switch (event) {
+      // The timeline's On Selection Changed is not the Combo Box's.
+      _ when LuminaEditorWidgetEvents.isNative(typeName) => LuminaEditorWidgetEvents.outputsOf(event, typeName) ?? const [],
       LuminaWidgetEvents.onValueChanged => [
           LuminaBlueprintPinSpec('value', 'Value', LuminaPinType.parse(LuminaWidgetEvents.valueTypeOf(typeName ?? '')) ?? LuminaPinType.string),
         ],

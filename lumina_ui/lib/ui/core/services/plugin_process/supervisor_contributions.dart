@@ -117,6 +117,7 @@ extension _Contributions on PluginProcessSupervisor {
   Widget _panelBody(String viewId) => PluginProcessPanelView(
         view: _viewNotifier(viewId),
         projectDir: host.projectInfo?.dir,
+        assetHost: host is LuminaEditorHostContext ? host as LuminaEditorHostContext : null,
         onEvent: (event) => unawaited(_sendViewEvent(event)),
       );
 

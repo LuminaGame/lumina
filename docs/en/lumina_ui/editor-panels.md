@@ -92,10 +92,66 @@ The designer's **Editor** palette section, offered only for an editor panel (`Ed
 | Editor Toolbar | — | — |
 | Status Line | `text`, `tone` | — |
 | Viewport | the preview scene (`LuminaUmgViewport`, `viewport_*` nodes) | On Picked, Gizmo Preview / Commit / Cancel, Camera Changed, Scene Ready, Asset Load Failed |
+| Timeline | `fps`, `length`, `playhead`, `playing`, `loop`, `zoom`, `scroll`, `tracks`, `clips`, `keys`, `range`, `snap`, `boundViewport` | On Playhead Changed, Play State Changed, Clip Preview / Commit / Cancel, Clip Text Committed, Key Preview / Commit / Cancel, Key Added, Keys Deleted, Selection Changed, Track Context Menu |
+| Table | `columns`, `rows`, `sort`, `selection`, `selected`, `filter` | On Cell Committed, Row Selected, Row Double Clicked, Row Context Menu, Sort Changed |
+| Canvas | `space`, `background`, `items`, `viewBox` | On Item Clicked, Item Drag Preview / Commit / Cancel, Item Hover, Background Clicked |
 
 Tree and list rows are the Outliner's (24 px, an indent per depth, chevrons, the selection bar, hover tint); Ctrl
-toggles and Shift extends the selection. The Asset Picker element is the editor's `EditorAssetPicker`. Timeline,
-table and canvas widgets come later as native editor widgets.
+toggles and Shift extends the selection. The Asset Picker element is the editor's `EditorAssetPicker`.
+
+## Timeline, Table and Canvas (native editor widgets)
+
+Three kinds of editor UI interact per frame and cannot be built from elements and graphs: a timeline, a table with
+inline editing and a 2D canvas. They are written once in `lib/ui/core/editor_panels/widgets/` (`timeline/`, `table/`,
+`canvas/`) and used both as editor panel elements (`EditorNativeElements`, the Editor palette entries Timeline, Table,
+Canvas) and as the JSON spec controls `timeline`, `table` and `canvas` of a plugin process's declarative panel (thin
+adapters in `lib/ui/core/widgets/plugin_view/`). Their state is JSON-plain (`PluginTimelineState`,
+`PluginTableState`, `PluginCanvasState` in `lumina_plugin_protocol`; frames are integers, seconds derive from `fps`).
+
+**Interaction contract** (`widgets/interaction/editor_interaction.dart`): every drag, scrub, resize and hover is
+applied in the widget at once; it reports throttled **preview** events (at most 30 a second, `EditorPreviewThrottle`),
+one **commit** on release and **cancel** on Escape (the value snaps back). Playback advances the playhead locally at
+the state's fps on its own painter layer; only play, pause, loop changes and the playhead on release or a step are
+reported, never a playback frame. A slow graph or process never stalls a drag. In an editor panel the events are the
+element's events and a commit is written back into the element state; in a JSON spec they are `PluginViewEvent`s with
+`phase` and an edit waits for the process's patch (10 s, then it reverts with a toast).
+
+- **Timeline**: track headers (Lucide icon + label) under group headers, a ruler in frames and seconds, clip blocks
+  with their text, keyframe glyphs (`diamond`, `circle`, `square`), the selection in the editor's selection colour, a
+  transport bar (step back, play / pause, step forward, loop, the frame / seconds readout, fps). Move and resize clips
+  within `minLength` / `maxLength` (frames, snapped to `snap`), double-click a clip with `editableText` to edit its
+  text, drag keys (Shift adds to the selection, a drag on empty space box-selects), double-click a keys track to add a
+  key, Delete removes the selected keys, Space plays, ← / → step, Home / End jump, Ctrl + wheel zooms around the
+  cursor, the wheel or a middle drag pans. Each painter is its own file (`timeline_ruler_painter.dart`,
+  `timeline_tracks_painter.dart`, `timeline_playhead_painter.dart`).
+- **Viewport binding**: `boundViewport: {element, node}` makes the playhead drive that Viewport element's node: the
+  node's animation time is set on the Viewport's live preview every frame the playhead moves
+  (`LuminaViewportSceneRuntime.setLocalAnimationTime`, `EditorPanelViewportDriver`), with no description diff, no
+  graph run and no process message; when the playhead stops, the time is written into the scene description
+  (`animation.time`, not playing), so it is kept.
+- **Table**: a sticky header with sort chevrons and resizable columns, an optional filter row, group rows, 24 px rows
+  virtualised (only the visible rows build; 2,000 rows sort in a few milliseconds), `tone` (`warning`, `error`) on the
+  first cell and a left bar, a row `tooltip`. Cells by `kind`: `text`, `number`, `color` edit in place on a double
+  click (Enter commits, Escape cancels), `bool` is a check box, `enum` a shadcn `Select`, `assetRef` the editor's
+  `EditorAssetPicker` filtered by the column's `typeFilter`. Selection is `single` or `multi` (Ctrl toggles, Shift
+  takes the range). On Cell Committed carries the value (`Value` Json) and its text (`Text`).
+- **Canvas**: items `line`, `polyline`, `rect`, `circle`, `path` (SVG path data: M, L, H, V, C, Q, Z), `text` and
+  `image` (a project path, a texture `.lmas` or a plugin's file) in `local` pixels or `normalized` 0–1 space, with
+  `stroke`, `fill`, `width`, `hit`, `draggable` and `cursor`; an optional `viewBox` (`panZoom`: middle drag and wheel
+  pan, Ctrl + wheel zooms). Each item paints on its own layer and the list is diffed by id, so a change to one item
+  repaints only that item. Positions in events are in the item space (`X`, `Y`).
+
+Graphs set the dynamic fields with Set Element State or the typed helpers **Timeline Set Clips**, **Timeline Set
+Keys**, **Timeline Set Playhead**, **Table Set Rows** and **Canvas Set Items** (`Editor|Panels|Native Widgets`; a
+malformed value is logged and not written); a plugin process pushes a whole clip list or row list with one
+`host.panelState` op. The Details panel edits the static fields (tracks, fps, length, snap, boundViewport; columns,
+selection, filter; space, background, items). A game Widget Blueprint that contains one of the editor widgets is a
+validator error; the game code generator never emits them.
+
+The sequencer's and the animation editor's own timelines (`sub_editors/views/sequencer/timeline_widget.dart`,
+`widgets/animation_dope_sheet/`, `views/animation/toolbar_timeline.dart`) keep their view-model-bound widgets. What
+the shared timeline lacks for them: curve editing (tangents, value curves), audio waveforms, sub-tracks per property
+and section blending; moving them is a later refactor.
 
 ## The editor function library
 
@@ -105,7 +161,7 @@ Writes need the panel's declared capability (the validator rejects a node whose 
 
 - **Selection**: Get Selected Actors, Select Actors, Clear Selection; event On Editor Selection Changed.
 - **Level** (writes need `level`): Get Level Actors (class / label filter), Get Level Actor Tree (Tree View items by
-  type), Get Actor Label, Get / Set Actor Transform, Get / Set Component Property, Add Actor From Asset, Remove Actors,
+  type), Get / Set Actor Label, Get / Set Actor Transform, Get / Set Component Property, Add Actor From Asset, Remove Actors,
   Focus Viewport On Actors, Save Level; event On Level Changed.
 - **Transactions**: Begin Transaction (Label) → transaction, End Transaction, Cancel Transaction. Every level or asset
   edit inside one is one Edit ▸ Undo step named by the label; a transaction left open when the event finishes is
@@ -128,6 +184,7 @@ Writes need the panel's declared capability (the validator rejects a node whose 
   Failed (Error Code, Error Message) with the 30 s call timeout, failing at once with `unavailable` while the process is
   down; Get Plugin Process State; events On Plugin Process Event (its Name setting filters) and On Plugin Process State
   Changed (running, stopped, crashed, restarting).
+- **Native Widgets**: Timeline Set Clips / Set Keys / Set Playhead, Table Set Rows, Canvas Set Items (see above).
 - **Json** (`lumina`): Make Json Object / Array, Json Get String / Number / Bool / Json / Array, Json Set Field, Json
   Has Field, Parse Json (Failed with the error), Json To String.
 

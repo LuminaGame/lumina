@@ -80,6 +80,30 @@ class PureSampleProcess extends LuminaPluginProcess {
     context.handle('confirmDelete', (_) => context.confirm('Delete the crates?', 'Removes every crate.',
         confirmLabel: 'Delete', destructive: true));
 
+    // The editor's native timeline, table and canvas in a declarative
+    // panel: a committed key drag, cell edit or item drag is answered with
+    // a patch, unless `holdAnswers` is on (the editor then reverts the edit
+    // when its answer timeout passes).
+    var holdAnswers = false;
+    final motionEvents = <String>[];
+    context.handle('holdAnswers', (args) {
+      holdAnswers = args['hold'] == true;
+      return null;
+    });
+    context.handle('motionEvents', (_) => motionEvents);
+    context.registerViewPanel(PluginProcessViewPanel(
+      id: 'pure_sample.motion',
+      title: 'Motion',
+      dock: 'bottom',
+      initial: motionView(),
+      onEvent: (event, view) {
+        motionEvents.add('${event.controlId}:${event.kind}:${event.phase}');
+        if (holdAnswers || event.phase != PluginViewEventPhase.commit) return;
+        final answer = answerMotionEdit(view.current, event);
+        if (answer != null) view.patch(answer);
+      },
+    ));
+
     context.registerMenuItem(
       'Tools/Pure Sample/Greet',
       PluginProcessCommand(id: 'pure_sample.greet', label: 'Greet', run: () => context.log('greet from the menu')),
@@ -99,6 +123,81 @@ class PureSampleProcess extends LuminaPluginProcess {
       groups: {McpToolGroups.plugin},
     ));
   }
+}
+
+/// The Motion panel: a timeline (a prompt clip, two key tracks), a bone
+/// table and a canvas overlay.
+PluginViewSpec motionView() => PluginViewSpec(id: 'motion', children: [
+      PluginControl.timeline(
+          'timeline',
+          const PluginTimelineState(
+            fps: 30,
+            length: 180,
+            zoom: 3,
+            snap: 1,
+            tracks: [
+              PluginTimelineTrack(id: 'prompts', label: 'Text prompts', icon: 'text', group: 'Prompts', kind: PluginTimelineTrackKind.clips),
+              PluginTimelineTrack(id: 'root', label: '2D Root', icon: 'move', group: 'Constraints'),
+              PluginTimelineTrack(id: 'lhand', label: 'Left Hand', icon: 'hand', group: 'Constraints'),
+            ],
+            clips: [PluginTimelineClip(id: 'p1', track: 'prompts', start: 0, end: 90, text: 'walk forward', minLength: 60, maxLength: 300, editableText: true)],
+            keys: [PluginTimelineKey(id: 'k1', track: 'root', frame: 30), PluginTimelineKey(id: 'k2', track: 'lhand', frame: 60)],
+          )),
+      PluginControl.table(
+          'bones',
+          const PluginTableState(columns: [
+            PluginTableColumn(id: 'bone', label: 'Bone', width: 140),
+            PluginTableColumn(id: 'weight', label: 'Weight', kind: PluginTableColumnKind.number, editable: true),
+          ], rows: [
+            PluginTableRow(id: 'pelvis', cells: {'bone': 'pelvis', 'weight': 1}),
+            PluginTableRow(id: 'head', cells: {'bone': 'head', 'weight': 0.5}),
+          ])),
+      PluginControl.canvas(
+          'overlay',
+          const PluginCanvasState(background: '#101014', items: [
+            PluginCanvasItem(id: 'pelvis', kind: PluginCanvasItemKind.circle, center: [60, 60], radius: 8, fill: '#F59E0B', hit: true, draggable: true),
+          ])),
+    ]);
+
+/// The patch answering a committed edit of the Motion panel, or null.
+PluginViewPatch? answerMotionEdit(PluginViewSpec view, PluginViewEvent event) {
+  final value = (event.value as Map?)?.cast<String, Object?>() ?? const {};
+  final control = view.find(event.controlId);
+  if (control == null) return null;
+  switch (event.kind) {
+    case PluginEditorWidgetEventKind.keysMoved:
+      final ids = {...(value['key_ids'] as List? ?? const [])};
+      final delta = value['delta_frames'] as int? ?? 0;
+      final keys = [
+        for (final k in PluginTimelineState.fromJson(control.props).keys)
+          (ids.contains(k.id) ? k.copyWith(frame: k.frame + delta) : k).toJson(),
+      ];
+      return PluginViewPatch([PluginViewPatchOp.set(control.id, {'keys': keys})]);
+    case PluginEditorWidgetEventKind.clipChanged || PluginEditorWidgetEventKind.clipTextCommitted:
+      final clips = [
+        for (final c in PluginTimelineState.fromJson(control.props).clips)
+          (c.id == value['clip_id']
+                  ? c.copyWith(start: value['start'] as int?, end: value['end'] as int?, text: value['text'] as String?)
+                  : c)
+              .toJson(),
+      ];
+      return PluginViewPatch([PluginViewPatchOp.set(control.id, {'clips': clips})]);
+    case PluginEditorWidgetEventKind.cellCommitted:
+      final rows = [
+        for (final r in PluginTableState.fromJson(control.props).rows)
+          r.id == value['row_id']
+              ? PluginTableRow(id: r.id, cells: {...r.cells, '${value['column_id']}': value['value']}, group: r.group, tone: r.tone).toJson()
+              : r.toJson(),
+      ];
+      return PluginViewPatch([PluginViewPatchOp.set(control.id, {'rows': rows})]);
+    case PluginEditorWidgetEventKind.itemDragged:
+      final items = [
+        for (final i in PluginCanvasState.fromJson(control.props).items)
+          i.id == value['item_id'] ? {...i.toJson(), 'center': [value['x'], value['y']]} : i.toJson(),
+      ];
+      return PluginViewPatch([PluginViewPatchOp.set(control.id, {'items': items})]);
+  }
+  return null;
 }
 
 Future<void> main(List<String> args) async {

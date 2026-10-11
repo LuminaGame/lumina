@@ -163,6 +163,13 @@ Widget Hierarchy `Tree`: rows are drop targets for palette widgets and for reord
 
 Widget palette: `Accordion` categories whose entries are real `Draggable<UmgWidgetType>`s (pointer-anchored so the drop point is the pointer). Double-click places the widget into the selected panel.
 
+**Editor** kategorisi yalnızca bir editör paneli Widget Blueprint'inde görünür: editör öğe seti, Viewport ve yerel
+**Timeline**, **Table** ve **Canvas** (`UmgWidgetType.editorTimeline`, `editorTable`, `editorCanvas`; bkz.
+[Editör panelleri](../editor-panels.md)). Details'leri (`UmgEditorElementSettings`) statik alanları Json olarak düzenler:
+tracks, fps, length, snap ve boundViewport; columns, selection ve filter; space, background ve items.
+`UmgWidgetValidator.errors` bir oyun Widget Blueprint'indeki her editör öğesini bildirir ("yalnızca bir editör
+panelinde çalışır"); böylece Compile reddeder ve oyun kod üreteci hiçbiriyle karşılaşmaz.
+
 **Fonksiyonlar, Metotlar ve Erişimciler:**
 
 | Metot / Getter | İmzası | Ne İşe Yarar? |

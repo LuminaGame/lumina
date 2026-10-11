@@ -141,6 +141,10 @@ class EditorPanelInstance {
   /// The last pointer position over the panel (where a context menu opens).
   Offset? lastPointer;
 
+  /// The live preview of each Viewport element, by element name (what a
+  /// bound Timeline drives).
+  final Map<String, LuminaViewportController> viewports = {};
+
   /// The Project Settings working copy when the panel is a plugin's
   /// `projectSettings` section.
   PluginSettingsHandle? settings;

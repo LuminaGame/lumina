@@ -151,6 +151,8 @@ class _EditorPanelViewState extends State<EditorPanelView> {
                   projectDir: host.vm.projectDirPath,
                   editorElementBuilder: set.build,
                   onElementEvent: (node, event, args) => host.fire(instance, node.name, event, args),
+                  onViewportController: (node, c) =>
+                      c == null ? instance.viewports.remove(node.name) : instance.viewports[node.name] = c,
                   elementDecorator: droppable ? (node, child) => _dropTarget(instance, node, child) : null,
                 ),
               ),

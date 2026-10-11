@@ -1,7 +1,8 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:lumina_editor_data/lumina_editor.dart' show LuminaUmgViewport, LuminaViewportNodeKind, LuminaViewportScene;
+import 'package:lumina_editor_data/lumina_editor.dart'
+    show LuminaUmgViewport, LuminaViewportController, LuminaViewportNodeKind, LuminaViewportScene;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 /// The design-time description of a Viewport element: its Details
@@ -39,6 +40,7 @@ Widget umgViewportElement({
   bool allowFiles = false,
   String? projectDir,
   void Function(String event, Map<String, Object?> args)? onEvent,
+  ValueChanged<LuminaViewportController?>? onController,
 }) {
   double number(String k, double d) => props[k] is num ? (props[k] as num).toDouble() : d;
   return LuminaUmgViewport(
@@ -59,6 +61,7 @@ Widget umgViewportElement({
     allowFiles: allowFiles,
     assetProvider: projectDir == null ? null : (path) => _readProjectFile(projectDir, path),
     onEvent: onEvent,
+    onController: onController,
   );
 }
 

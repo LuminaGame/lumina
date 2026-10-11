@@ -110,6 +110,12 @@ IconData umgIconFor(UmgWidgetType type) {
       return LucideIcons.panelTop;
     case UmgWidgetType.statusLine:
       return LucideIcons.panelBottom;
+    case UmgWidgetType.editorTimeline:
+      return LucideIcons.chartNoAxesGantt;
+    case UmgWidgetType.editorTable:
+      return LucideIcons.table;
+    case UmgWidgetType.editorCanvas:
+      return LucideIcons.penTool;
   }
 }
 

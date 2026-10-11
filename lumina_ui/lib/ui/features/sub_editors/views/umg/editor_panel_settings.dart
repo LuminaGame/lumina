@@ -134,6 +134,11 @@ class UmgEditorElementSettings extends StatelessWidget {
     UmgWidgetType.statusLine: ['text', 'tone'],
     UmgWidgetType.treeView: ['items'],
     UmgWidgetType.listView: ['items'],
+    // The static fields; clips, keys, rows and items come from the graph
+    // or the plugin process at run time.
+    UmgWidgetType.editorTimeline: ['fps', 'length', 'snap', 'tracks', 'boundViewport'],
+    UmgWidgetType.editorTable: ['columns', 'selection', 'filter'],
+    UmgWidgetType.editorCanvas: ['space', 'background', 'items'],
   };
 
   @override

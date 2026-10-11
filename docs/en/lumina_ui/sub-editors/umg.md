@@ -163,6 +163,13 @@ Widget Hierarchy `Tree`: rows are drop targets for palette widgets and for reord
 
 Widget palette: `Accordion` categories whose entries are real `Draggable<UmgWidgetType>`s (pointer-anchored so the drop point is the pointer). Double-click places the widget into the selected panel.
 
+The **Editor** category shows only in an editor panel Widget Blueprint: the editor widget set, the Viewport, and the
+native **Timeline**, **Table** and **Canvas** (`UmgWidgetType.editorTimeline`, `editorTable`, `editorCanvas`; see
+[Editor panels](../editor-panels.md)). Their Details (`UmgEditorElementSettings`) edit the static fields as Json:
+tracks, fps, length, snap and boundViewport; columns, selection and filter; space, background and items.
+`UmgWidgetValidator.errors` reports every editor widget in a game Widget Blueprint ("runs only in an editor panel"),
+so Compile refuses it and the game code generator never meets one.
+
 **Functions, Methods & Accessors:**
 
 | Method / Getter | Signature | Purpose & Description |

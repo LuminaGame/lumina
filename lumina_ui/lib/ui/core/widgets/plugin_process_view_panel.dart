@@ -9,15 +9,18 @@ import 'package:lumina_ui/ui/core/widgets/plugin_view/plugin_view_renderer.dart'
 /// by [PluginViewRenderer]; the user's actions go back through [onEvent]
 /// (`core.viewEvent`). The editor wraps it in the plugin's process guard.
 class PluginProcessPanelView extends StatelessWidget {
-  const PluginProcessPanelView({super.key, required this.view, required this.onEvent, this.projectDir});
+  const PluginProcessPanelView({super.key, required this.view, required this.onEvent, this.projectDir, this.assetHost});
 
   final ValueListenable<PluginViewSpec> view;
   final void Function(PluginViewEvent event) onEvent;
   final String? projectDir;
 
+  /// The editor's host context (the table control's asset picker).
+  final LuminaEditorHostContext? assetHost;
+
   @override
   Widget build(BuildContext context) => ValueListenableBuilder<PluginViewSpec>(
         valueListenable: view,
-        builder: (context, spec, _) => PluginViewRenderer(spec: spec, onEvent: onEvent, projectDir: projectDir),
+        builder: (context, spec, _) => PluginViewRenderer(spec: spec, onEvent: onEvent, projectDir: projectDir, assetHost: assetHost),
       );
 }
