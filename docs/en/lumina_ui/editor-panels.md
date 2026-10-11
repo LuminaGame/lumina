@@ -193,7 +193,8 @@ Writes need the panel's declared capability (the validator rejects a node whose 
 The process sets element states directly with `PluginProcessContext.patchPanel(panel, ops)` (`host.panelState`):
 `patchPanel('content/EPW_Tools.lmas', [PluginPanelStateOp('StatusText', {'text': 'Ready'})])` reaches every open
 instance of that panel without running its graph. `EditorPanelLinks` applies patches at most 30 times a second per
-panel, coalescing a burst; unknown elements are logged once. `context.emit(name, data)` is what On Plugin Process
+panel, coalescing a burst; unknown elements are logged once. An Editable Text shows a patched `text` at once
+unless the user is typing in it, and fires On Text Committed on Enter or when it loses focus after an edit. `context.emit(name, data)` is what On Plugin Process
 Event receives. `context.openEditorPanel(panel)` opens one of the plugin's panels where it docks (Plugins menu
 commands of a process often do). The OpenXR plugin's `EPW_OpenXR` is a complete example: its graph calls the
 process's methods, the process patches its status texts and emits `openxr.status` for the rest. The Kimodo kernel

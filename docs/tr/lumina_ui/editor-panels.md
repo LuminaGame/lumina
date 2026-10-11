@@ -196,7 +196,8 @@ başına alt izler ve bölüm karıştırma; onları taşımak sonraki bir yenid
 Süreç öğe durumlarını `PluginProcessContext.patchPanel(panel, ops)` (`host.panelState`) ile doğrudan ayarlar:
 `patchPanel('content/EPW_Tools.lmas', [PluginPanelStateOp('StatusText', {'text': 'Ready'})])` o panelin her açık
 örneğine grafiğini çalıştırmadan ulaşır. `EditorPanelLinks` yamaları panel başına saniyede en çok 30 kez uygular,
-patlamaları birleştirir; bilinmeyen öğeler bir kez günlüğe yazılır. `context.emit(name, data)`, On Plugin Process
+patlamaları birleştirir; bilinmeyen öğeler bir kez günlüğe yazılır. Bir Editable Text, kullanıcı içine yazmıyorsa
+yamalanan `text`'i hemen gösterir; On Text Committed'i Enter'da ya da bir düzenlemeden sonra odak kaybında tetikler. `context.emit(name, data)`, On Plugin Process
 Event'in aldığıdır. `context.openEditorPanel(panel)` eklentinin panellerinden birini yuvasında açar (bir sürecin
 Plugins menüsü komutları çoğu zaman bunu yapar). OpenXR eklentisinin `EPW_OpenXR`'ı eksiksiz bir örnektir: grafiği
 sürecin yöntemlerini çağırır, süreç durum metinlerini yamar ve geri kalanı için `openxr.status` yayar. Kimodo kernel
