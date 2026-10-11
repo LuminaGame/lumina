@@ -243,11 +243,19 @@ class MyLuminaGameApp extends StatelessWidget {
   /// The `LuminaKey` constant a manifest key id names (any
   /// keyboard key, the mouse / gamepad sentinels), or null for an unknown id.
   /// Every constant is its id with a lower-case first letter (`KeyV` →
-  /// `keyV`, `MouseX` → `mouseX`).
+  /// `keyV`, `MouseX` → `mouseX`); an id in parts (the XR keys) is camel
+  /// case with its first part lower-cased (`XR_Right_A` → `xrRightA`).
   static String? _keyConstant(int keyId) {
     final key = LuminaKey.fromKeyId(keyId);
     if (key == null) return null;
-    return '${key.id[0].toLowerCase()}${key.id.substring(1)}';
+    return keyConstantName(key.id);
+  }
+
+  /// The `LuminaKey` constant named by key id [id].
+  static String keyConstantName(String id) {
+    if (!id.contains('_')) return '${id[0].toLowerCase()}${id.substring(1)}';
+    final parts = id.split('_').where((p) => p.isNotEmpty).toList();
+    return [parts.first.toLowerCase(), ...parts.skip(1)].join();
   }
 
   /// The JSON document in the `.lmas` at [assetPath]'s `raw_payload`.

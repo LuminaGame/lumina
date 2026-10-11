@@ -36,6 +36,7 @@ import 'package:lumina_editor_data/lumina_editor.dart';
 | Use case'ler | `SaveLevelUseCase`, `GenerateDartCodeUseCase`, `ImportAssetUseCase` ve sonuçları | [Use case'ler ve servisler](services.md) |
 | Paketleme | `AndroidManifestComposer`, `AndroidGradleConfigurator`, `RuntimeModuleDependencies`, `AndroidPackaging` (Android / Meta Quest derlemesi: manifest, Gradle, oyun bağımlılığı olan eklenti runtime modülleri) | [Paketleme (Android)](packaging.md) |
 | Örnek projeler | `GameAnimationSampleBuilder`, `GaspExport`, `GaspAnimationImport`, `GaspDatabases`, `GaspCharacterContent`, `GaspSandboxLevel` (projedeki bir skeletal mesh üzerinde Game Animation Sample, motion matching, bir oyun alanı level'ı) | [Game Animation Sample](game-animation-sample.md) |
+| Örnek projeler | `MetaXrPosingBuilder`, `MetaXrPosingContent`, `MetaXrPosingLevel`, `MetaXrPosingWidgets` (Meta Quest'te kullanıcının odasında kumandalarla poz verilen bir MetaHuman) | [MetaXR poz verme](metaxr-posing.md) |
 
 Dosyalar `lib/src/repositories/`, `lib/src/services/` ve `lib/src/domain/` altındadır.
 

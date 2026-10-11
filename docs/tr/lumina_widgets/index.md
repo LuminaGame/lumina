@@ -111,6 +111,7 @@ dünyanın `LuminaInputSubsystem`'ine aktarılan Flutter girdisi:
 | `levelNames` | `Set<String>? levelNames` | Change Level'ın kabul ettiği level'lar; null hepsini kabul eder. |
 | `targetFps` / `vsyncEnabled` | `int targetFps`, `bool vsyncEnabled` | Projenin ayarları, oyun widget'ına iletilir: oyuncu kendi seçimini uygulayana kadar `LuminaGameFramePacing`'in varsayılanları. |
 | `captureMouse` | `bool captureMouse` | Host'un fareyi alıp almadığı (varsayılan `true`); kapalıyken işaretçi deltaları yine görüşü döndürür. |
+| `immersivePresenter` | `static LuminaImmersivePresenter? immersivePresenter` | Ayarlıysa her host oyununu 2B oyun widget'ı yerine bununla sunar (`Widget Function(LuminaGame game, {required String levelName})`): fare yakalama ve widget katmanı yoktur; sunucu oyunu kendi motor ve sahnesinde bağlar, oyunu başlatır, tick'ler ve kapatır. Bir XR eklentisinin runtime modülü bunu gözlük derlemesinde kurar (openxr eklentisinin `OpenXrGamePresenter`'ı). Change Level ona sıradaki oyunu verir. |
 
 ### `class LuminaGameHostState`
 

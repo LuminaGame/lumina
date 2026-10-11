@@ -15,6 +15,13 @@ import 'package:lumina_widgets/src/umg/widget_layer.dart';
 /// `MyGame(levelName: …)`).
 typedef LuminaGameFactory = LuminaGame Function(String levelName);
 
+/// Presents a running game somewhere other than the Flutter view: an XR
+/// runtime module renders the world into the headset's compositor and
+/// returns the (minimal) widget Flutter shows meanwhile. [game] is not
+/// mounted yet; the presenter mounts it on its own engine and scene, ticks
+/// it, and disposes it when its widget is disposed.
+typedef LuminaImmersivePresenter = Widget Function(LuminaGame game, {required String levelName});
+
 /// A whole game screen: the [LuminaGameWidget] with the widgets its
 /// Blueprints add to the viewport ([LuminaWidgetLayer]) on top, and the
 /// Flutter input bridged into the running world's [LuminaInputSubsystem]:
@@ -79,6 +86,12 @@ class LuminaGameHost extends StatefulWidget {
   /// pointer's own deltas still turn the view.
   final bool captureMouse;
 
+  /// When set, every host presents its game through it instead of the 2D
+  /// [LuminaGameWidget] (no mouse capture, no widget layer): an XR plugin's
+  /// runtime module installs one from the generated `main()` on a headset.
+  /// Open Level still swaps the game; the presenter gets the new one.
+  static LuminaImmersivePresenter? immersivePresenter;
+
   @override
   State<LuminaGameHost> createState() => LuminaGameHostState();
 }
@@ -100,6 +113,17 @@ class LuminaGameHostState extends State<LuminaGameHost> {
 
   /// The running game (a new one after each Change Level).
   LuminaGame get game => _game;
+
+  /// The level [game] plays.
+  late String _levelName;
+
+  /// The presenter in use (fixed for the host's life).
+  LuminaImmersivePresenter? _presenter;
+
+  /// Whether the game is presented by [LuminaGameHost.immersivePresenter].
+  bool get isImmersive => _presenter != null;
+
+  bool get _capturesMouse => widget.captureMouse && _presenter == null;
 
   /// Whether the pointer is free and visible (the game showed the cursor or
   /// gives input to its UI).
@@ -170,6 +194,8 @@ class LuminaGameHostState extends State<LuminaGameHost> {
   @override
   void initState() {
     super.initState();
+    _presenter = LuminaGameHost.immersivePresenter;
+    _levelName = widget.initialLevel;
     _game = widget.createGame(widget.initialLevel);
     // Change Level swaps the game for a new one on that level, after the
     // tick that asked for it and after preloading it; Open Level (a Blueprint
@@ -207,14 +233,14 @@ class LuminaGameHostState extends State<LuminaGameHost> {
     setState(() => _freeCursor = free);
     if (free) {
       _isCaptured = false;
-      if (widget.captureMouse) LuminaMouseCapture.backend.release();
+      if (_capturesMouse) LuminaMouseCapture.backend.release();
     } else {
       _capture(_centre());
     }
   }
 
   Future<void> _initMouseCapture() async {
-    if (!widget.captureMouse) return;
+    if (!_capturesMouse) return;
     final backend = LuminaMouseCapture.backend;
     _mouseEvents = backend.events.listen((event) {
       if (event is MouseCaptureMotion) {
@@ -248,7 +274,10 @@ class LuminaGameHostState extends State<LuminaGameHost> {
     await LuminaLevelPreloader.instance.changeLevel(levelName, () async {
       if (!mounted) throw StateError('Change Level: the game is closing.');
       final game = widget.createGame(levelName);
-      setState(() => _game = game);
+      setState(() {
+        _game = game;
+        _levelName = levelName;
+      });
       while (mounted && !(game.world?.hasBegunPlay ?? false)) {
         await WidgetsBinding.instance.endOfFrame;
       }
@@ -265,7 +294,7 @@ class LuminaGameHostState extends State<LuminaGameHost> {
   /// window has no pointer until the pointer enters it) leaves the game
   /// uncaptured, so hover keeps turning the view and the next try can run.
   Future<void> _capture([Offset? centre]) async {
-    if (!widget.captureMouse || _captureInFlight) return;
+    if (!_capturesMouse || _captureInFlight) return;
     _captureInFlight = true;
     try {
       final ok = await LuminaMouseCapture.backend.capture(centre: centre);
@@ -316,7 +345,7 @@ class LuminaGameHostState extends State<LuminaGameHost> {
     _followedController?.cursorState.removeListener(_onCursorState);
     LuminaGame.onChangeLevelRequested = null;
     _mouseEvents?.cancel();
-    if (widget.captureMouse) LuminaMouseCapture.backend.release();
+    if (_capturesMouse) LuminaMouseCapture.backend.release();
     _releaseButtons();
     _focusNode.dispose();
     super.dispose();
@@ -324,6 +353,10 @@ class LuminaGameHostState extends State<LuminaGameHost> {
 
   @override
   Widget build(BuildContext context) {
+    final presenter = _presenter;
+    // Presented elsewhere (a headset): the presenter's widget, a new one per
+    // game (Open Level).
+    if (presenter != null) return KeyedSubtree(key: ObjectKey(_game), child: presenter(_game, levelName: _levelName));
     return Focus(
       focusNode: _focusNode,
       autofocus: true,

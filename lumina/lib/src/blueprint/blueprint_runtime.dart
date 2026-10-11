@@ -399,8 +399,14 @@ mixin LuminaBlueprintRuntime on LuminaActor implements LuminaBlueprintCallable {
   /// when already bound. The world's input subsystem is created if needed.
   void bindBlueprintInput(List<LuminaBlueprintInputBinding> bindings) {
     final self = this;
-    if (_inputComponent != null || bindings.isEmpty || self is! LuminaPawn) return;
-    if ((self as LuminaPawn).controller is! LuminaPlayerController || world == null) return;
+    if (_inputComponent != null || bindings.isEmpty) return;
+    // A player-controlled pawn binds at once; any other actor once Enable
+    // Input has run (its bindings wait until then).
+    final playerPawn = self is LuminaPawn && (self as LuminaPawn).controller is LuminaPlayerController;
+    if ((!playerPawn && !_inputEnabledByNode) || world == null) {
+      if (self is! LuminaPawn) _waitingInput = bindings;
+      return;
+    }
     final subsystem = world!.getSubsystem<LuminaInputSubsystem>() ?? world!.registerSubsystem(LuminaInputSubsystem());
     final component = LuminaInputComponent(subsystem: subsystem);
     for (final b in bindings) {
@@ -410,6 +416,22 @@ mixin LuminaBlueprintRuntime on LuminaActor implements LuminaBlueprintCallable {
     }
     _inputComponent = component;
     addComponent(component);
+  }
+
+  List<LuminaBlueprintInputBinding>? _waitingInput;
+  bool _inputEnabledByNode = false;
+
+  /// Enable Input: the handlers run again, and an actor that is not a
+  /// player's pawn binds its input actions now (they reach it like a
+  /// pawn's).
+  void enableBlueprintInput() {
+    blueprintInputEnabled = true;
+    _inputEnabledByNode = true;
+    final waiting = _waitingInput;
+    if (waiting != null) {
+      _waitingInput = null;
+      bindBlueprintInput(waiting);
+    }
   }
 
   void unbindBlueprintInput() {

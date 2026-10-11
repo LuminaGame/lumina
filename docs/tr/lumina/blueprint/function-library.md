@@ -543,7 +543,7 @@ Vectors and rotators are **authoring space** (cm, Z up; rotators about X/Y/Z lik
 | `setMousePosition` | `static const setMousePosition` |  |
 | `getLastInputDevice` | `static const getLastInputDevice` |  |
 | `getViewportSize` | `static const getViewportSize` |  |
-| `enableInput` | `static const enableInput` | Enable Input: binds the Blueprint's input again after Disable Input. |
+| `enableInput` | `static const enableInput` | Enable Input: Disable Input'tan sonra Blueprint'in girdi işleyicileri yeniden çalışır; oyuncunun pawn'ı olmayan bir aktör girdi eylemlerini şimdi bağlar, böylece eylemler ona da bir pawn'a ulaştığı gibi ulaşır. |
 | `disableInput` | `static const disableInput` |  |
 | `projectWorldToScreen` | `static const projectWorldToScreen` | Project World to Screen: the viewport pixel of [worldLocation] (authoring space) through the view the world renders from; false when it lies behind the camera. |
 | `deprojectScreenToWorld` | `static const deprojectScreenToWorld` | Deproject Screen to World: the ray through viewport pixel [screenPosition], in authoring space. |

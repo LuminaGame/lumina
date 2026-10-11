@@ -240,7 +240,7 @@ Vector2 _getViewportSize(LuminaActor self) {
   return Vector2(size.$1.toDouble(), size.$2.toDouble());
 }
 
-void _enableInput(LuminaActor self, [Object? playerController]) => _runtime(self)?.blueprintInputEnabled = true;
+void _enableInput(LuminaActor self, [Object? playerController]) => _runtime(self)?.enableBlueprintInput();
 
 void _disableInput(LuminaActor self, [Object? playerController]) => _runtime(self)?.blueprintInputEnabled = false;
 

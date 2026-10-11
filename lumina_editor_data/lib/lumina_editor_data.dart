@@ -76,6 +76,7 @@ export 'package:lumina_editor_data/src/packaging/runtime_module_dependencies.dar
 
 // Example projects
 export 'package:lumina_editor_data/src/samples/game_animation_sample/game_animation_sample.dart';
+export 'package:lumina_editor_data/src/samples/metaxr_posing/metaxr_posing.dart';
 
 // Use cases
 export 'package:lumina_editor_data/src/domain/models/use_case_results.dart';

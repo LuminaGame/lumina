@@ -111,6 +111,7 @@ Flutter input bridged into the running world's `LuminaInputSubsystem`:
 | `levelNames` | `Set<String>? levelNames` | The levels Change Level accepts; null accepts any. |
 | `targetFps` / `vsyncEnabled` | `int targetFps`, `bool vsyncEnabled` | The project's settings, forwarded to the game widget: the defaults of `LuminaGameFramePacing` until the player applies their own. |
 | `captureMouse` | `bool captureMouse` | Whether the host takes the mouse (default `true`); off, pointer deltas still turn the view. |
+| `immersivePresenter` | `static LuminaImmersivePresenter? immersivePresenter` | When set, every host presents its game through it (`Widget Function(LuminaGame game, {required String levelName})`) instead of the 2D game widget: no mouse capture, no widget layer; the presenter mounts, begins play, ticks and disposes the game on its own engine and scene. An XR plugin's runtime module installs one on a headset build (the openxr plugin's `OpenXrGamePresenter`). Change Level hands it the next game. |
 
 ### `class LuminaGameHostState`
 

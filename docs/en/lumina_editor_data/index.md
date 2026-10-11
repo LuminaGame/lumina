@@ -36,6 +36,7 @@ Generated games import `package:lumina_widgets/lumina_game.dart` (`kLuminaGameLi
 | Use cases | `SaveLevelUseCase`, `GenerateDartCodeUseCase`, `ImportAssetUseCase` and their results | [Use cases and services](services.md) |
 | Packaging | `AndroidManifestComposer`, `AndroidGradleConfigurator`, `RuntimeModuleDependencies`, `AndroidPackaging` (the Android / Meta Quest build: manifest, Gradle, plugin runtime modules as game dependencies) | [Packaging (Android)](packaging.md) |
 | Example projects | `GameAnimationSampleBuilder`, `GaspExport`, `GaspAnimationImport`, `GaspDatabases`, `GaspCharacterContent`, `GaspSandboxLevel` (the Game Animation Sample on a skeletal mesh of the project, motion matching, a sandbox level) | [Game Animation Sample](game-animation-sample.md) |
+| Example projects | `MetaXrPosingBuilder`, `MetaXrPosingContent`, `MetaXrPosingLevel`, `MetaXrPosingWidgets` (a MetaHuman posed with the controllers in the user's room on a Meta Quest) | [MetaXR posing](metaxr-posing.md) |
 
 The files are under `lib/src/repositories/`, `lib/src/services/` and `lib/src/domain/`.
 
