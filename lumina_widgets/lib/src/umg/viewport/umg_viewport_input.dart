@@ -12,11 +12,19 @@ class _ViewportInput {
 
   final LuminaUmgViewportState state;
 
-  /// Pixels a press may travel and still count as a tap.
-  static const double tapSlop = 4.0;
+  /// Logical pixels a mouse or stylus press may move away from where it went
+  /// down and still count as a click: a hand on the mouse slips a few pixels
+  /// while clicking. Touch uses Flutter's touch slop.
+  static const double tapSlop = 8.0;
+
+  /// The slop for a press of [kind].
+  static double tapSlopFor(PointerDeviceKind kind) => kind == PointerDeviceKind.touch ? kTouchSlop : tapSlop;
 
   _DragKind _kind = _DragKind.none;
-  double _travel = 0.0;
+  Offset _pressAt = Offset.zero;
+  double _slop = tapSlop;
+  // Whether the press left its slop: a drag from then on, never a click.
+  bool _dragging = false;
   String? activeHandle;
   TransformGizmoDrag? _drag;
   Map<String, Object?>? _start;
@@ -99,7 +107,9 @@ class _ViewportInput {
     state._focus.requestFocus();
     final c = _c;
     if (c == null) return;
-    _travel = 0.0;
+    _pressAt = e.localPosition;
+    _slop = tapSlopFor(e.kind);
+    _dragging = false;
     if (e.buttons & kPrimaryButton != 0) {
       final model = luminaViewportGizmoModel(c);
       final handle = model?.hitTest(e.localPosition);
@@ -126,10 +136,12 @@ class _ViewportInput {
   void _move(PointerMoveEvent e) {
     final c = _c;
     if (c == null) return;
-    _travel += e.delta.distance;
+    // The distance from the press point, not the path: jitter back and forth
+    // stays a click.
+    if (!_dragging && (e.localPosition - _pressAt).distance > _slop) _dragging = true;
     switch (_kind) {
       case _DragKind.orbitOrTap:
-        if (_travel > tapSlop) c.orbitDrag(e.delta.dx, e.delta.dy);
+        if (_dragging) c.orbitDrag(e.delta.dx, e.delta.dy);
       case _DragKind.pan:
         c.panDrag(e.delta.dx, e.delta.dy);
       case _DragKind.gizmo:
@@ -178,8 +190,9 @@ class _ViewportInput {
     if (c == null) return;
     switch (kind) {
       case _DragKind.orbitOrTap:
-        if (_travel <= tapSlop) {
-          c.tap(e.localPosition.dx, e.localPosition.dy);
+        if (!_dragging) {
+          // Where the click went down: what was under the pointer then.
+          c.tap(_pressAt.dx, _pressAt.dy);
         } else {
           c.endCameraGesture();
         }

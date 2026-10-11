@@ -187,6 +187,42 @@ void main() {
     await unmount(tester);
   });
 
+  testWidgets('a click whose pointer slips a few pixels still picks at the press point and leaves the camera', (tester) async {
+    final mounted = await mount(tester);
+    if (mounted == null) return;
+    final (state, _, _, hero) = mounted;
+    final c = state.controller!;
+    c.frame(1 / 60);
+    final head = c.runtime.jointsOf(hero).firstWhere((j) => j.name == 'head');
+    final (x, y) = c.runtime.project(head.position)!;
+    final yaw = c.runtime.orbit.yaw;
+    final pitch = c.runtime.orbit.pitch;
+    // A hand on the mouse: 1 px steps, 7 px away at the release (11 px of path), as a window run recorded it.
+    final press = await tester.startGesture(Offset(x, y), buttons: kPrimaryMouseButton, kind: PointerDeviceKind.mouse);
+    for (final step in const [Offset(3, 0), Offset(-2, 0), Offset(1, 0), Offset(1, 0), Offset(1, 0), Offset(1, 0), Offset(1, 1), Offset(1, -1)]) {
+      await press.moveBy(step);
+    }
+    await press.up();
+    await frames(tester, 1);
+    expect(events.map((e) => e.$1), [LuminaWidgetEvents.onPicked]);
+    expect(events.single.$2['node_id'], hero);
+    expect(events.single.$2['bone'], 'head');
+    expect(c.runtime.orbit.yaw, yaw);
+    expect(c.runtime.orbit.pitch, pitch);
+    events.clear();
+
+    // Past the slop it is a drag: the camera turns, nothing is picked.
+    final drag = await tester.startGesture(Offset(x, y), buttons: kPrimaryMouseButton, kind: PointerDeviceKind.mouse);
+    for (var i = 0; i < 6; i++) {
+      await drag.moveBy(const Offset(4, 0));
+    }
+    await drag.up();
+    await frames(tester, 1);
+    expect(events.map((e) => e.$1), [LuminaWidgetEvents.onCameraChanged]);
+    expect(c.runtime.orbit.yaw, isNot(yaw));
+    await unmount(tester);
+  });
+
   testWidgets('F frames the picked node', (tester) async {
     final mounted = await mount(tester);
     if (mounted == null) return;
