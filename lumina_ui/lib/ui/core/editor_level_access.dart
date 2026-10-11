@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart' show Listenable;
 import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart';
+import 'package:path/path.dart' as p;
 
 import 'package:lumina_ui/ui/features/details/models/editor_component_node.dart';
 import 'package:lumina_ui/ui/features/main_editor/commands/editor_transaction.dart';
@@ -111,7 +112,12 @@ class EditorViewModelLevelAccess implements EditorLevelAccess {
       if (mesh != null && mesh.isNotEmpty) {
         // One parse per distinct file: a scatter of 200 barrels reads the
         // .glb once.
-        if (!meshCache.containsKey(mesh)) meshCache[mesh] = await AssetRepository.loadMeshFromDisk(mesh);
+        // A project-relative path (what a plugin process names) resolves
+        // against the project folder, as the level loader does.
+        if (!meshCache.containsKey(mesh)) {
+          final file = p.isAbsolute(mesh) ? mesh : p.join(viewModel.projectDirPath, mesh);
+          meshCache[mesh] = await AssetRepository.loadMeshFromDisk(file);
+        }
         node.meshData = meshCache[mesh];
       }
       nodes.add(node);

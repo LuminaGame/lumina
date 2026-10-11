@@ -97,6 +97,17 @@ void main() {
     expect(vm.actors.length, before + 5);
   });
 
+  test('addActors loads the geometry of a project-relative meshAssetPath (a plugin process names project files so)', () async {
+    final meshes = Directory('${vm.projectDirPath}/contents/meshes')..createSync(recursive: true);
+    File(barrel).copySync('${meshes.path}/fuel_barrel_red.glb');
+    final ids = await level.addActors(const [
+      EditorActorSpec(name: 'RelBarrel', type: 'StaticMesh', location: [0.0, 0.0, 0.0], meshAssetPath: 'contents/meshes/fuel_barrel_red.glb'),
+    ]);
+    final placed = vm.actors.singleWhere((a) => a.id == ids.single);
+    expect(placed.meshData, isNotNull, reason: 'resolved against the project folder, not the working directory');
+    expect(placed.meshAssetPath, 'contents/meshes/fuel_barrel_red.glb', reason: 'the path is kept as the plugin named it');
+  });
+
   test('removeActors takes children with the parent; setComponentProperty is undoable without a selection', () async {
     final ids = await level.addActors([
       const EditorActorSpec(
