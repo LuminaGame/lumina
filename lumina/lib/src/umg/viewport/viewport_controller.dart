@@ -1,5 +1,7 @@
 import 'package:lumina/src/blueprint/widget_blueprint.dart';
+import 'package:flutter_filament/filament.dart' show FilamentView;
 import 'package:lumina/src/umg/viewport/viewport_budget.dart';
+import 'package:lumina/src/umg/viewport/viewport_overlay_lines.dart';
 import 'package:lumina/src/umg/viewport/viewport_runtime.dart';
 import 'package:lumina/src/umg/viewport/viewport_scene.dart';
 import 'package:lumina/src/umg/viewport/viewport_scene_diff.dart';
@@ -19,6 +21,33 @@ class LuminaViewportController {
       if (event == LuminaWidgetEvents.onSceneReady) clock.markDirty();
       fire(event, args);
     };
+    runtime.onOverlaysChanged = clock.markDirty;
+  }
+
+  LuminaViewportOverlayLines? _overlay;
+
+  /// Lines the widget adds to the overlay every rendered frame (the gizmo),
+  /// runtime frame.
+  List<LuminaViewportSegment> Function()? extraSegments;
+
+  /// The overlay view (skeletons, ghosts, markers, the gizmo as Filament
+  /// lines) a presenter renders right after [LuminaViewportSceneRuntime.view]
+  /// at the same viewport; null while the description shows no overlay.
+  FilamentView? get overlayView => _overlay?.view;
+
+  /// The overlay lines drawn last frame.
+  int get overlayLineCount => _overlay?.lineCount ?? 0;
+
+  bool get _wantsOverlay {
+    final s = _scene;
+    return s != null && (s.skeletonOverlays.isNotEmpty || s.markers.isNotEmpty || s.gizmo != null);
+  }
+
+  void _updateOverlay() {
+    final s = _scene;
+    if (s == null || (!_wantsOverlay && _overlay == null)) return;
+    final overlay = _overlay ??= LuminaViewportOverlayLines(runtime.engine, runtime.camera);
+    overlay.update([...LuminaViewportOverlayLines.segmentsOf(runtime, s), ...?extraSegments?.call()]);
   }
 
   /// The longest pause between two `On Gizmo Preview` events, in seconds.
@@ -76,6 +105,7 @@ class LuminaViewportController {
     if (!clock.tick(dt, animating: runtime.animating)) return false;
     runtime.advance(_pendingDt);
     _pendingDt = 0.0;
+    _updateOverlay();
     return true;
   }
 
@@ -227,5 +257,9 @@ class LuminaViewportController {
     return Vector3((l[0] as num).toDouble(), (l[1] as num).toDouble(), (l[2] as num).toDouble());
   }
 
-  void dispose() => runtime.dispose();
+  void dispose() {
+    _overlay?.dispose();
+    _overlay = null;
+    runtime.dispose();
+  }
 }

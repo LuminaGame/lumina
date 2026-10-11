@@ -180,6 +180,19 @@ mixin _ProjectSettingsCategories on _ProjectSettingsSubEditorStateBase {
             ? "Generated widgets use Flutter's own widgets and the engine's LuminaUmg set; the game needs no extra dependency and its web build is smaller."
             : 'Generated widgets use shadcn_flutter (the look of the editor); the game depends on shadcn_flutter $kGameShadcnFlutterVersion.',
       ),
+      _row(
+        'Max Viewports (umg.maxViewports)',
+        KeyedSubtree(
+          key: const ValueKey('project_settings_max_viewports'),
+          child: _select(
+            '${_vm.project.ui.maxViewports}',
+            const ['0', '1', '2', '3', '4', '5', '6', '7', '8'],
+            (v) => _vm.setMaxViewports(int.parse(v)),
+            label: (v) => v == '0' ? 'Engine default (4 game, 8 editor)' : v,
+          ),
+        ),
+        help: 'How many UMG Viewport elements render at once in the game, Play and editor panels; the others show a placeholder. The web stays at 2.',
+      ),
       // What a switch to plain Flutter leaves without a widget.
       if (_vm.shadcnWidgetsBlockingPlain case final blocking when blocking.isNotEmpty)
         Padding(

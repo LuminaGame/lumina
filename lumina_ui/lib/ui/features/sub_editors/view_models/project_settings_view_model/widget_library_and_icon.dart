@@ -11,6 +11,10 @@ mixin _ProjectSettingsWidgetLibraryAndIcon on _ProjectSettingsViewModelState {
     _update((p) => p.copyWith(ui: p.ui.copyWith(widgetLibrary: library)));
   }
 
+  /// `umg.maxViewports`: how many UMG Viewports render at once (1–8); 0
+  /// keeps the engine's limits (4 in a game, 8 in the editor, 2 on the web).
+  void setMaxViewports(int max) => _update((p) => p.copyWith(ui: p.ui.copyWith(maxViewports: max.clamp(0, 8))));
+
   /// Progress / result of the last library switch.
   String? get widgetLibraryStatus => _widgetLibraryStatus;
 

@@ -75,6 +75,8 @@ class GenerateDartCodeUseCase {
         presentation: project?.settings.presentation ?? 'flutter',
         // Project Settings > Neural rendering: only an opted-in project's game runs OpenDLSS-NR.
         neuralRendering: project?.neuralRendering,
+        // Project Settings > UI: how many UMG Viewports render at once.
+        maxViewports: project?.ui.maxViewports ?? 0,
       ));
       // The desktop runners' window modes (Start Fullscreen, Alt+Enter / F11).
       final runner = GameWindowRunnerService.apply(projectDir, startFullscreen: project?.settings.startFullscreen ?? false);

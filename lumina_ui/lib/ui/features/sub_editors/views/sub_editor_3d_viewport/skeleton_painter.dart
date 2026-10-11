@@ -163,133 +163,38 @@ class _SubEditorGizmoPainter extends CustomPainter {
       collectBonePositions(root, Matrix4.identity());
     }
 
-    // 0. Onion skins, paths and markers under the live skeleton.
+    // 0. Onion skins, paths and markers under the live skeleton; the
+    // skeleton geometry and drawing are lumina_widgets' (LuminaSkeletonPainter),
+    // shared with the UMG Viewport.
+    Offset? projectVec(Vector3 v) => projectPoint(v.x, v.y, v.z);
+    List<LuminaViewportJoint> jointsOf(Map<String, List<double>>? posedBy) {
+      final out = <LuminaViewportJoint>[];
+      void collect(GlbNode node, Matrix4 parent, int parentIndex) {
+        final world = parent * computeNodeTransform(node, posedBy);
+        final index = out.length;
+        out.add(LuminaViewportJoint(node.name, parentIndex, world.getTranslation()));
+        for (final child in node.children) {
+          collect(child, world, index);
+        }
+      }
+
+      for (final root in glbMesh!.rootNodes) {
+        collect(root, Matrix4.identity(), -1);
+      }
+      return out;
+    }
+
     for (final ghost in ghostSkeletons) {
-      final positions = <String, Vector3>{};
-      void collect(GlbNode node, Matrix4 parent) {
-        final world = parent * computeNodeTransform(node, ghost.jointLocalPose);
-        positions[node.name] = world.getTranslation();
-        for (final child in node.children) {
-          collect(child, world);
-        }
-      }
-
-      for (final root in glbMesh!.rootNodes) {
-        collect(root, Matrix4.identity());
-      }
-      final line = Paint()
-        ..color = ghost.color.withValues(alpha: ghost.opacity)
-        ..strokeWidth = 2.5
-        ..style = PaintingStyle.stroke;
-      final joint = Paint()
-        ..color = ghost.color.withValues(alpha: ghost.opacity)
-        ..style = PaintingStyle.fill;
-      Offset? top;
-      void draw(GlbNode node, Offset? parentProj, String? parentName) {
-        final p = positions[node.name];
-        final proj = p == null || !ghost.jointLocalPose.containsKey(node.name) ? null : projectPoint(p.x, p.y, p.z);
-        if (proj != null) {
-          if (parentProj != null) {
-            if (ghost.volumetric) {
-              final n = node.name.toLowerCase();
-              final pn = parentName?.toLowerCase() ?? '';
-              double width = 8.0;
-              if (n.contains('spine') || n.contains('hips') || n.contains('pelvis')) {
-                width = 22.0;
-              } else if (n.contains('thigh') || n.contains('upleg') || pn.contains('pelvis') || pn.contains('hips')) {
-                width = 16.0;
-              } else if (n.contains('calf') || n.contains('leg')) {
-                width = 12.0;
-              } else if (n.contains('upperarm') || (n.contains('arm') && !n.contains('forearm'))) {
-                width = 13.0;
-              } else if (n.contains('lowerarm') || n.contains('forearm')) {
-                width = 9.0;
-              } else if (n.contains('neck') || n.contains('head')) {
-                width = 14.0;
-              }
-
-              // Outer volumetric translucent limb capsule
-              final bodyPaint = Paint()
-                ..color = ghost.color.withValues(alpha: (ghost.opacity * 0.45).clamp(0.0, 1.0))
-                ..strokeWidth = width
-                ..strokeCap = StrokeCap.round
-                ..style = PaintingStyle.stroke;
-              canvas.drawLine(parentProj, proj, bodyPaint);
-
-              // Inner core highlight
-              final corePaint = Paint()
-                ..color = ghost.color.withValues(alpha: (ghost.opacity * 0.85).clamp(0.0, 1.0))
-                ..strokeWidth = 2.0
-                ..strokeCap = StrokeCap.round
-                ..style = PaintingStyle.stroke;
-              canvas.drawLine(parentProj, proj, corePaint);
-            } else {
-              canvas.drawLine(parentProj, proj, line);
-            }
-          }
-
-          // Volumetric head sphere
-          final isHead = node.name.toLowerCase().contains('head');
-          if (ghost.volumetric && isHead) {
-            final headGlow = Paint()
-              ..color = ghost.color.withValues(alpha: (ghost.opacity * 0.5).clamp(0.0, 1.0))
-              ..style = PaintingStyle.fill;
-            canvas.drawCircle(proj, 14.0, headGlow);
-            final headRing = Paint()
-              ..color = ghost.color.withValues(alpha: ghost.opacity)
-              ..strokeWidth = 1.5
-              ..style = PaintingStyle.stroke;
-            canvas.drawCircle(proj, 14.0, headRing);
-          } else {
-            canvas.drawCircle(proj, ghost.volumetric ? 4.0 : 2.5, joint);
-          }
-
-          if (top == null || proj.dy < top!.dy) top = proj;
-        }
-        for (final child in node.children) {
-          draw(child, proj ?? parentProj, node.name);
-        }
-      }
-
-      for (final root in glbMesh!.rootNodes) {
-        draw(root, null, null);
-      }
-      if (ghost.label != null && top != null) {
-        final tp = TextPainter(
-          text: TextSpan(
-            text: ghost.label,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              color: ghost.color,
-            ),
-          ),
-          textDirection: TextDirection.ltr,
-        )..layout();
-
-        final badgeRect = RRect.fromRectAndRadius(
-          Rect.fromLTWH(
-            top!.dx - tp.width / 2 - 8,
-            top!.dy - 24,
-            tp.width + 16,
-            tp.height + 6,
-          ),
-          const Radius.circular(5),
-        );
-
-        final bgPaint = Paint()
-          ..color = const Color(0xDD111115)
-          ..style = PaintingStyle.fill;
-        canvas.drawRRect(badgeRect, bgPaint);
-
-        final borderPaint = Paint()
-          ..color = ghost.color.withValues(alpha: 0.8)
-          ..strokeWidth = 1.0
-          ..style = PaintingStyle.stroke;
-        canvas.drawRRect(badgeRect, borderPaint);
-
-        tp.paint(canvas, Offset(top!.dx - tp.width / 2, top!.dy - 21));
-      }
+      LuminaSkeletonPainter.paintGhost(
+        canvas,
+        jointsOf(ghost.jointLocalPose),
+        projectVec,
+        color: ghost.color,
+        opacity: ghost.opacity,
+        volumetric: ghost.volumetric,
+        posed: ghost.jointLocalPose.keys.toSet(),
+        label: ghost.label,
+      );
     }
 
     for (final path in overlayPaths) {
@@ -369,82 +274,13 @@ class _SubEditorGizmoPainter extends CustomPainter {
 
     // 1. Draw Bones Wireframe
     if (showBones) {
-      final boneLinePaint = Paint()
-        // a 3D overlay: magenta marks a particle emitter volume in the scene
-        ..color = const Color(0xFFB026FF).withValues(alpha: 0.85)
-        ..strokeWidth = 2.0
-        ..style = PaintingStyle.stroke;
-
-      final selBoneLinePaint = Paint()
-        // a 3D overlay: amber marks a socket/attachment point in the scene
-        ..color = const Color(0xFFFFD54F)
-        ..strokeWidth = 3.0
-        ..style = PaintingStyle.stroke;
-
-      final jointPaint = Paint()
-        // a 3D overlay drawn over the sub-editor scene, not editor chrome: cyan is picked to stay legible against lit geometry of any colour
-        ..color = const Color(0xFF00E5FF)
-        ..style = PaintingStyle.fill;
-
-      final selJointPaint = Paint()
-        ..color = Colors.amber
-        ..style = PaintingStyle.fill;
-
-      final visibleLower = visibleBoneNames?.map((n) => n.toLowerCase()).toSet();
-
-      void drawBoneNode(
-        GlbNode node,
-        Offset? parentProj,
-        bool isParentSelected,
-      ) {
-        final pos = boneWorldPositions[node.name];
-        if (pos != null) {
-          final isVisible = visibleLower == null || visibleLower.contains(node.name.toLowerCase());
-          final isSelected = selectedNode?.name == node.name || (selectedBoneName != null && selectedBoneName == node.name);
-          final proj = projectPoint(pos[0], pos[1], pos[2]);
-
-          if (proj != null && isVisible) {
-            if (parentProj != null) {
-              canvas.drawLine(
-                parentProj,
-                proj,
-                (isSelected || isParentSelected)
-                    ? selBoneLinePaint
-                    : boneLinePaint,
-              );
-            }
-
-            // Draw Joint marker
-            canvas.drawCircle(
-              proj,
-              isSelected ? 5.0 : 3.0,
-              isSelected ? selJointPaint : jointPaint,
-            );
-            if (isSelected) {
-              canvas.drawCircle(
-                proj,
-                8.0,
-                Paint()
-                  // a 3D overlay: amber marks a socket/attachment point in the scene
-                  ..color = const Color(0xFFFFD54F).withValues(alpha: 0.5)
-                  ..style = PaintingStyle.stroke
-                  ..strokeWidth = 1.5,
-              );
-            }
-          }
-
-          final nextParent = isVisible ? (proj ?? parentProj) : parentProj;
-          final nextSelected = isVisible ? isSelected : isParentSelected;
-
-          for (final child in node.children) {
-            drawBoneNode(child, nextParent, nextSelected);
-          }
-        }
-      }
-
-      for (final root in glbMesh!.rootNodes) {
-        drawBoneNode(root, null, false);
-      }
+      LuminaSkeletonPainter.paintBones(
+        canvas,
+        jointsOf(null),
+        projectVec,
+        visible: visibleBoneNames,
+        selected: selectedNode?.name ?? selectedBoneName,
+      );
     }
 
     // 2. Draw Sockets

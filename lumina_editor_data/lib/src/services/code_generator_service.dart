@@ -39,6 +39,7 @@ class DartCodeGeneratorService extends _DartCodeGeneratorServiceState
     bool vsyncEnabled = false,
     bool startFullscreen = false,
     ProjectNeuralRenderingSettings? neuralRendering,
+    int maxViewports = 0,
     String presentation = 'flutter',
   }) {
     // Every level the game can Open Level to, by authored name
@@ -105,6 +106,8 @@ class DartCodeGeneratorService extends _DartCodeGeneratorServiceState
     // first frame.
     final startMode = startFullscreen ? 'LuminaWindowMode.borderlessFullscreen' : 'LuminaWindowMode.windowed';
     final neuralRenderingOptIn = neuralRenderingOptInSource(neuralRendering);
+    // Project Settings > UI: umg.maxViewports.
+    final viewportBudget = maxViewports > 0 ? '  LuminaViewportBudget.projectMaxViewports = ${maxViewports.clamp(1, 8)};\n' : '';
     return """
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // Lumina Engine $kLuminaEngineVersion Auto-Generated Launcher
@@ -122,7 +125,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // The engine's Flutter services: platform, asset bundle, video player.
   LuminaWidgets.ensureInitialized();
-$neuralRenderingOptIn$registerFunctions$registerWidgets$registerBlueprints  // Every asset the level names is read from the app bundle (pubspec.yaml
+$neuralRenderingOptIn$viewportBudget$registerFunctions$registerWidgets$registerBlueprints  // Every asset the level names is read from the app bundle (pubspec.yaml
   // bundles contents/), so the same game runs on desktop and on the web.
   LuminaAssets.defaultProvider = (path) async {
     final data = await rootBundle.load(path);

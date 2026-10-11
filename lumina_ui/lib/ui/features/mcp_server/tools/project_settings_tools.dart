@@ -112,7 +112,7 @@ void registerProjectSettingsTools(McpToolRegistry registry, EditorViewModel vm, 
         'progress_style': w.progressStyle,
         'fade_ms': w.fadeMs,
       },
-      'ui': {'widget_library': p.ui.widgetLibrary, 'accepted': kUmgWidgetLibraries},
+      'ui': {'widget_library': p.ui.widgetLibrary, 'accepted': kUmgWidgetLibraries, 'max_viewports': p.ui.maxViewports},
     };
   }
 
@@ -213,6 +213,7 @@ void registerProjectSettingsTools(McpToolRegistry registry, EditorViewModel vm, 
       }
     },
     'packaging.output_dir': (ps, v) => ps.setOutputDir(str('packaging.output_dir', v)),
+    'ui.max_viewports': (ps, v) => ps.setMaxViewports(numb('ui.max_viewports', v).toInt()),
     'branding.icon_background': hex('branding.icon_background', (ps, s) => ps.setIconBackground(s), allowEmpty: false),
     'web_loading.background': hex('web_loading.background', (ps, s) => ps.setWebLoadingBackground(s)),
     'web_loading.gradient': hex('web_loading.gradient', (ps, s) => ps.setWebLoadingGradient(s)),

@@ -59,6 +59,9 @@ mixin _PieBlueprintsInPlay {
     // Blueprints name assets project-relative (a Set Material node's
     // `contents/materials/…`); Play reads them from this project.
     LuminaAssets.projectDir = projectDir;
+    // Project Settings > UI: umg.maxViewports for the game's Viewports.
+    final maxViewports = viewModel.project.ui.maxViewports;
+    LuminaViewportBudget.projectMaxViewports = maxViewports > 0 ? maxViewports : null;
     return EditorPieGame(
       actors,
       templateKind: templateKind,

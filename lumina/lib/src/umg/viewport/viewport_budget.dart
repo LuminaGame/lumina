@@ -34,8 +34,13 @@ class LuminaViewportBudget {
   static const double minRenderScale = 0.25;
   static const double maxRenderScale = 1.0;
 
-  /// The project setting that lowers the count limit (1–8).
+  /// The project setting that sets the count limit (1–8).
   static const String maxViewportsSetting = 'umg.maxViewports';
+
+  /// The project's `umg.maxViewports` (1–8), set by the generated game's
+  /// `main()`, Play and the editor when a project opens; null keeps the
+  /// scope's default. A budget with its own [maxViewports] ignores it.
+  static int? projectMaxViewports;
 
   /// How long a Viewport keeps rendering after its last input, in seconds.
   static const double idleAfterSeconds = 1.0;
@@ -56,7 +61,8 @@ class LuminaViewportBudget {
   /// How many Viewports may render at once: the project setting when set
   /// (1–8), never more than the web's 2 on the web.
   int get maxViewports {
-    final limit = (_max ?? defaultLimit(scope)).clamp(1, 8);
+    final project = projectMaxViewports;
+    final limit = (_max ?? (project != null && project > 0 ? project : defaultLimit(scope))).clamp(1, 8);
     return scope == LuminaViewportScope.web ? math.min(limit, defaultLimit(LuminaViewportScope.web)) : limit;
   }
 

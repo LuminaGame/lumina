@@ -30,6 +30,7 @@ import 'package:lumina_ui/ui/features/sub_editors/models/sub_editor_transform_gi
 import 'package:lumina_ui/ui/features/main_editor/services/transform_gizmo.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/sub_editor_transform_gizmo_painter.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/transform_gizmo_toolbar.dart';
+import 'package:lumina_widgets/viewport_gizmo.dart' show LuminaSkeletonPainter;
 
 export 'package:lumina_ui/ui/features/sub_editors/models/sub_editor_canvas_overlay.dart';
 export 'package:lumina_ui/ui/features/sub_editors/models/sub_editor_line_set.dart';

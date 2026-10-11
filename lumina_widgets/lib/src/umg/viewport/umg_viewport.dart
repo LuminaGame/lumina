@@ -11,6 +11,7 @@ import 'package:vector_math/vector_math_64.dart' show Ray, Vector3;
 
 import 'package:lumina_widgets/src/umg/element_binding.dart';
 import 'package:lumina_widgets/src/umg/viewport/gizmo/gizmo_controller.dart';
+import 'package:lumina_widgets/src/umg/viewport/gizmo/gizmo_segments.dart';
 import 'package:lumina_widgets/src/umg/viewport/gizmo/transform_gizmo.dart';
 import 'package:lumina_widgets/src/umg/viewport/viewport_host.dart';
 import 'package:lumina_widgets/src/umg/viewport/viewport_overlay_painter.dart';
@@ -258,16 +259,41 @@ class LuminaUmgViewportState extends State<LuminaUmgViewport> {
   void _onRefresh() {
     final c = _controller;
     if (c == null || !mounted) return;
-    refreshOps += c.sync(_scene).length;
+    final ops = c.sync(_scene).length;
+    refreshOps += ops;
+    if (ops > 0) _labelsDirty = true;
     final visible = LuminaUmgElementBinding.isVisible(_element);
     if ((visible != _hasSlot && !_refused) || _hasOverlays != _overlaysShown) setState(() {});
   }
 
-  /// Whether the description shows a skeleton, a marker or the gizmo (the
-  /// overlay layer repaints every rendered frame only then).
-  bool get _hasOverlays {
-    final scene = _scene;
-    return scene.skeletonOverlays.isNotEmpty || scene.markers.isNotEmpty || scene.gizmo != null;
+  /// Whether the description shows labels (markers, ghost badges): the only
+  /// overlay Flutter paints; bones, ghosts, markers and the gizmo are
+  /// Filament lines in the preview's overlay view.
+  bool get _hasOverlays => LuminaViewportOverlayPainter.hasLabels(_scene);
+
+  bool _labelsDirty = true;
+  String? _orbitSignature;
+
+  /// A frame rendered: the labels repaint only when the camera moved or the
+  /// description changed, never because something animates.
+  void _rendered() {
+    final o = _controller?.runtime.orbit;
+    final signature = o == null ? null : '${o.yaw}/${o.pitch}/${o.distance}/${o.target}/${o.width}/${o.height}';
+    if (_labelsDirty || signature != _orbitSignature) {
+      _labelsDirty = false;
+      _orbitSignature = signature;
+      _frames.value++;
+    }
+  }
+
+  /// The views the Flutter path renders: the preview, then its overlay
+  /// lines at the same viewport.
+  List<FilamentView> _frameViews(FilamentView main, int width, int height) {
+    final overlay = _controller?.overlayView;
+    if (overlay == null) return [main];
+    final (l, b, w, h) = main.viewport;
+    overlay.setViewport(l, b, w, h);
+    return [main, overlay];
   }
 
   bool _overlaysShown = false;
@@ -330,6 +356,14 @@ class LuminaUmgViewportState extends State<LuminaUmgViewport> {
     );
     _controller = controller;
     controller.resize(math.max(1, _layout.width.round()), math.max(1, _layout.height.round()));
+    controller.extraSegments = () {
+      final model = luminaViewportGizmoModel(controller);
+      return model == null ? const [] : LuminaGizmoSegments.of(model, activeHandle: _input.activeHandle, dragging: _input.draggingGizmo);
+    };
+    runtime.onOverlaysChanged = () {
+      controller.clock.markDirty();
+      _labelsDirty = true;
+    };
     controller.sync(_scene);
     widget.onController?.call(controller);
     _frames.value++;
@@ -367,11 +401,12 @@ class LuminaUmgViewportState extends State<LuminaUmgViewport> {
     _attach(runtime);
     final view = LuminaViewportDirectView(
       view: runtime.view,
+      overlay: () => _controller?.overlayView,
       rect: _physicalRect,
       frame: (dt) {
         final c = _controller;
         if (c == null) return;
-        if (c.frame(dt)) _frames.value++;
+        if (c.frame(dt)) _rendered();
       },
     );
     _directView = view;
@@ -438,6 +473,7 @@ class LuminaUmgViewportState extends State<LuminaUmgViewport> {
             decorated: false,
             renderResolution: Size(math.max(1, _render.$1).toDouble(), math.max(1, _render.$2).toDouble()),
             frameLimiter: _limiter,
+            frameViews: _frameViews,
             onSceneCreated: (engine, scene, camera, view) => _attach(
               LuminaViewportSceneRuntime(
                 engine: engine,
@@ -462,13 +498,7 @@ class LuminaUmgViewportState extends State<LuminaUmgViewport> {
                 if (_hasOverlays)
                   IgnorePointer(
                     child: CustomPaint(
-                      painter: LuminaViewportOverlayPainter(
-                        controller: _controller,
-                        gizmo: () => luminaViewportGizmoModel(_controller),
-                        activeHandle: _input.activeHandle,
-                        dragging: _input.draggingGizmo,
-                        repaint: _frames,
-                      ),
+                      painter: LuminaViewportOverlayPainter(controller: _controller, repaint: _frames),
                     ),
                   ),
               ],
@@ -518,7 +548,7 @@ class _ViewportFrameLimiter extends FilamentFrameLimiter {
       return false;
     }
     final render = c.frame(dt);
-    if (render) state._frames.value++;
+    if (render) state._rendered();
     return render;
   }
 }

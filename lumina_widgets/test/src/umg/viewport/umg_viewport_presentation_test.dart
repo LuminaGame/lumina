@@ -36,11 +36,12 @@ void main() {
     }
   }
 
-  Map<String, Object?> instanceWithMannequin({bool animate = false}) {
+  Map<String, Object?> instanceWithMannequin({bool animate = false, bool skeleton = false}) {
     final preview = <String, Object?>{'type': 'viewport', 'name': 'Preview', 'visibility': 'Visible'};
     final scene = LuminaViewportScene.of(preview);
     final hero = scene.addNode(LuminaViewportNodeKind.skeletalMesh, asset: ViewportTestProject.mannequin);
     if (animate) scene.playAnimation(hero, ViewportTestProject.idle);
+    if (skeleton) scene.showSkeleton(hero, [1.0, 0.85, 0.2, 1.0]);
     return {
       'class': 'WBP_Test',
       'elements': <String, Object?>{'Preview': preview},
@@ -60,7 +61,7 @@ void main() {
       ..presentingDirectly = true;
     final gameView = engine.createView();
     LuminaUiCapture.stats.value = const LuminaUiCaptureStats();
-    final instance = instanceWithMannequin(animate: true);
+    final instance = instanceWithMannequin(animate: true, skeleton: true);
     final key = GlobalKey<LuminaUmgViewportState>();
     final boundary = GlobalKey();
     await tester.pumpWidget(Directionality(
@@ -99,9 +100,11 @@ void main() {
     expect(captures, greaterThan(0));
 
     final views = host.frameViews(gameView, 800, 600);
-    expect(views, hasLength(2));
+    expect(views, hasLength(3), reason: 'the game view, the Viewport, its overlay lines');
     expect(identical(views.first, gameView), isTrue, reason: 'the game view first, the Viewport after it');
-    expect(views.last.viewport, (100, 600 - 50 - 240, 320, 240), reason: 'bottom-left origin, physical pixels');
+    expect(views[1].viewport, (100, 600 - 50 - 240, 320, 240), reason: 'bottom-left origin, physical pixels');
+    expect(views[2].viewport, views[1].viewport, reason: 'the overlay over the preview');
+    expect(state.controller!.overlayLineCount, greaterThan(50), reason: 'the skeleton as Filament lines');
 
     // The idle plays: the preview advances inside the game's frames, the UI
     // capture does not see it.
@@ -114,7 +117,7 @@ void main() {
     }
     expect(mesh.currentTime, isNot(t0), reason: 'the animation plays');
     await frames(tester, 3);
-    expect(LuminaUiCapture.stats.value.captures, captures, reason: 'a moving 3D image never re-captures the UI');
+    expect(LuminaUiCapture.stats.value.captures, captures, reason: 'a moving 3D image and its moving skeleton never re-capture the UI');
 
     // The element's rectangle is a hole in the UI picture.
     final image = await tester.runAsync(() async {

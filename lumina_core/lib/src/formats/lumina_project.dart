@@ -125,18 +125,31 @@ class ProjectUiSettings {
   /// [kUmgWidgetLibraryFlutter] (plain Flutter widgets plus the runtime's
   /// `LuminaUmg*` set, no extra dependency).
   final String widgetLibrary;
-  const ProjectUiSettings({this.widgetLibrary = kUmgWidgetLibraryShadcn});
 
-  Map<String, dynamic> toMap() => {'widget_library': widgetLibrary};
+  /// `umg.maxViewports`: how many UMG Viewports render at once (1–8) in
+  /// the game, Play and the editor's panels; 0 keeps the engine's limits
+  /// (4 in a game, 8 in the editor, 2 on the web).
+  final int maxViewports;
+
+  const ProjectUiSettings({this.widgetLibrary = kUmgWidgetLibraryShadcn, this.maxViewports = 0});
+
+  Map<String, dynamic> toMap() => {'widget_library': widgetLibrary, if (maxViewports > 0) 'max_viewports': maxViewports};
 
   /// Manifests written before the setting existed read [kUmgWidgetLibraryShadcn],
   /// which is what the codegen emitted then.
   factory ProjectUiSettings.fromMap(Map<String, dynamic> map) {
     final library = map['widget_library'];
-    return ProjectUiSettings(widgetLibrary: kUmgWidgetLibraries.contains(library) ? library as String : kUmgWidgetLibraryShadcn);
+    final max = map['max_viewports'];
+    return ProjectUiSettings(
+      widgetLibrary: kUmgWidgetLibraries.contains(library) ? library as String : kUmgWidgetLibraryShadcn,
+      maxViewports: max is num ? max.toInt().clamp(0, 8) : 0,
+    );
   }
 
-  ProjectUiSettings copyWith({String? widgetLibrary}) => ProjectUiSettings(widgetLibrary: widgetLibrary ?? this.widgetLibrary);
+  ProjectUiSettings copyWith({String? widgetLibrary, int? maxViewports}) => ProjectUiSettings(
+        widgetLibrary: widgetLibrary ?? this.widgetLibrary,
+        maxViewports: (maxViewports ?? this.maxViewports).clamp(0, 8),
+      );
 }
 
 /// `branding` section: the project's app icon.

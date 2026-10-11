@@ -12,14 +12,6 @@ class LuminaViewportPick {
   Map<String, Object?> get eventArgs => {'node_id': nodeId, 'bone': bone ?? '', 'hit_location': location};
 }
 
-/// One joint of a skeletal node, for the skeleton overlay: its name, its
-/// parent's index (-1 for a root) and its world position (runtime frame).
-class LuminaViewportJoint {
-  const LuminaViewportJoint(this.name, this.parent, this.position);
-  final String name;
-  final int parent;
-  final Vector3 position;
-}
 
 /// The parts of a [LuminaViewportSceneRuntime] the widget's taps, overlays
 /// and adapters use: picking, joints, poses, projection, material
@@ -27,6 +19,7 @@ class LuminaViewportJoint {
 mixin _ViewportQueries {
   Map<String, _RuntimeNode> get _nodes;
   FilamentEngine get engine;
+  Future<void> _applyTexture(_RuntimeNode node, FilamentMaterialInstance mi, String slot, String name, String path);
   LuminaViewportCamera get orbit;
   Aabb3? _worldBounds(_RuntimeNode node);
 
@@ -50,9 +43,14 @@ mixin _ViewportQueries {
   /// sx, sy, sz]` in the mesh's glTF frame) over its animation.
   void _applyPose(_RuntimeNode node) {
     final pose = node.json['pose'];
+    if (pose is Map) _writePose(node, pose);
+  }
+
+  /// Writes [pose] (joint → local transform values) onto [node]'s joints.
+  void _writePose(_RuntimeNode node, Map pose) {
     final mesh = node.skeletal;
     final instance = mesh?.assetInstance;
-    if (pose is! Map || pose.isEmpty || instance == null || instance.skinCount == 0) return;
+    if (pose.isEmpty || instance == null || instance.skinCount == 0) return;
     final tm = FilamentTransformManager(engine);
     final entities = instance.jointsAt(0);
     final names = node.jointNames;
@@ -93,6 +91,8 @@ mixin _ViewportQueries {
             mi.setFloat(name, v.toDouble());
           } else if (v is bool) {
             mi.setBool(name, v);
+          } else if (v is String && v.isNotEmpty) {
+            unawaited(_applyTexture(node, mi, '${slot.key}', name, v));
           } else {
             developer.log('Viewport: material parameter $name of ${node.id} takes a colour or a scalar', name: 'UMG', level: 900);
           }
@@ -228,6 +228,18 @@ mixin _ViewportQueries {
     final mesh = _nodes[id]?.mesh;
     if (mesh == null || !mesh.isLoaded) return null;
     return Matrix4.inverted(mesh.renderTransform).transform3(world.clone());
+  }
+
+  /// The world transform of joint [name] of [node]'s own instance (by the
+  /// skin's joint order, so two Viewports showing one cached mesh each
+  /// follow their own skeleton); null when the node has no such joint.
+  Matrix4? _jointWorld(_RuntimeNode node, String name) {
+    final instance = node.skeletal?.assetInstance;
+    final i = node.jointNames.indexOf(name);
+    if (instance == null || i < 0 || instance.skinCount == 0) return null;
+    final entities = instance.jointsAt(0);
+    if (i >= entities.length) return null;
+    return Matrix4.fromList(FilamentTransformManager(engine).getWorldTransform(entities[i]));
   }
 
   /// [world] (runtime frame) in pixels, or null behind the camera.

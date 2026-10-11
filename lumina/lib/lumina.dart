@@ -276,10 +276,13 @@ export 'package:lumina/src/umg/user_widget.dart';
 export 'package:lumina/src/umg/viewport/viewport_budget.dart';
 export 'package:lumina/src/umg/viewport/viewport_camera.dart';
 export 'package:lumina/src/umg/viewport/viewport_controller.dart';
+export 'package:lumina/src/umg/viewport/viewport_motion.dart';
 export 'package:lumina/src/umg/viewport/viewport_nodes.dart';
+export 'package:lumina/src/umg/viewport/viewport_overlay_lines.dart';
 export 'package:lumina/src/umg/viewport/viewport_runtime.dart';
 export 'package:lumina/src/umg/viewport/viewport_scene.dart';
 export 'package:lumina/src/umg/viewport/viewport_scene_diff.dart';
+export 'package:lumina/src/umg/viewport/viewport_skeleton_overlay.dart';
 export 'package:lumina/src/umg/viewport/viewport_transforms.dart';
 export 'package:lumina/src/media/video_playback.dart';
 

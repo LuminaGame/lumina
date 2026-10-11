@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer' as developer;
+import 'dart:isolate';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
@@ -14,11 +15,14 @@ import 'package:lumina/src/components/light/spot_light_component.dart';
 import 'package:lumina/src/components/mesh/animated_mesh_component.dart';
 import 'package:lumina/src/components/mesh/mesh_asset_cache.dart';
 import 'package:lumina/src/components/mesh/static_mesh_component.dart';
+import 'package:lumina/src/material/material_textures.dart';
 import 'package:lumina/src/object/actor.dart';
 import 'package:lumina/src/object/lumina_object_key.dart';
 import 'package:lumina/src/umg/viewport/viewport_camera.dart';
+import 'package:lumina/src/umg/viewport/viewport_motion.dart';
 import 'package:lumina/src/umg/viewport/viewport_scene.dart';
 import 'package:lumina/src/umg/viewport/viewport_scene_diff.dart';
+import 'package:lumina/src/umg/viewport/viewport_skeleton_overlay.dart';
 import 'package:lumina/src/umg/viewport/viewport_transforms.dart';
 import 'package:lumina/src/utility/lumina_assets.dart';
 import 'package:lumina/src/world/world.dart';
@@ -27,6 +31,8 @@ import 'package:lumina_core/lumina_core.dart';
 import 'package:vector_math/vector_math_64.dart';
 
 part 'viewport_runtime_queries.dart';
+part 'viewport_runtime_media.dart';
+part 'viewport_runtime_stage.dart';
 
 /// A node of the description, drawn: the actor and its root component.
 class _RuntimeNode {
@@ -49,6 +55,24 @@ class _RuntimeNode {
   /// The joint names of the mesh's first skin, in the skin's order.
   List<String> jointNames = const [];
 
+  /// Textures bound to material parameters, by `slot/parameter`.
+  final Map<String, LuminaMaterialTextures> textures = {};
+  final Map<String, int> textureRequests = {};
+
+  /// A motion file playing (Play Animation File), the mesh a retargeted
+  /// animation file made, and the clip to play once it loads.
+  _NodeMotion? motion;
+  String? meshOverride;
+  (String, bool, double)? pendingClip;
+
+  /// A ghost pose sampled from an animation, and what it was sampled for.
+  String? ghostKey;
+  Map<String, Object?>? ghostPose;
+  bool removed = false;
+
+  /// The mesh the node draws (a retargeted file's mesh, else its asset).
+  String get meshAsset => meshOverride ?? asset;
+
   String get kind => '${json['kind']}';
   String get asset => '${json['asset'] ?? ''}';
   LuminaStaticMeshComponent? get mesh => root is LuminaStaticMeshComponent ? root as LuminaStaticMeshComponent : null;
@@ -68,7 +92,7 @@ class _RuntimeNode {
 /// fixed light feature set (MSAA 4×, one shadowed directional light, IBL;
 /// none of the game's ray tracing, ReSTIR, SSR, upscalers or frame
 /// generation).
-class LuminaViewportSceneRuntime with _ViewportQueries {
+class LuminaViewportSceneRuntime with _ViewportQueries, _ViewportMedia, _ViewportStage {
   LuminaViewportSceneRuntime({
     required this.engine,
     FilamentScene? scene,
@@ -100,7 +124,9 @@ class LuminaViewportSceneRuntime with _ViewportQueries {
 
   @override
   final FilamentEngine engine;
+  @override
   late final FilamentScene scene;
+  @override
   late final FilamentView view;
   late final FilamentCamera camera;
   int? _cameraEntity;
@@ -109,9 +135,11 @@ class LuminaViewportSceneRuntime with _ViewportQueries {
   final bool _ownsCamera;
 
   /// Where meshes and animation assets are read (null: [LuminaAssets]).
+  @override
   final LuminaAssetProvider? assetProvider;
 
   /// Whether `Play Animation File` may read a file (editor panels only).
+  @override
   final bool allowFiles;
 
   /// The Viewport's runtime events (`OnSceneReady`, `OnAssetLoadFailed`)
@@ -119,6 +147,7 @@ class LuminaViewportSceneRuntime with _ViewportQueries {
   void Function(String event, Map<String, Object?> args)? onEvent;
 
   /// The preview world the nodes live in.
+  @override
   final LuminaWorld world = LuminaWorld(worldType: LuminaWorldType.preview);
 
   /// The orbit the camera shows (the player's drag moves it every frame).
@@ -128,10 +157,6 @@ class LuminaViewportSceneRuntime with _ViewportQueries {
   LuminaViewportScene? _shown;
   @override
   final Map<String, _RuntimeNode> _nodes = {};
-  LuminaActor? _sky;
-  LuminaActor? _keyLight;
-  FilamentEditorGrid? _grid;
-  bool _gridShown = false;
   int _frameSerial = 0;
   int _pending = 0;
   bool _disposed = false;
@@ -142,6 +167,7 @@ class LuminaViewportSceneRuntime with _ViewportQueries {
   /// Asset loads that failed, by asset (the last message).
   final Map<String, String> failures = {};
 
+  @override
   bool get isDisposed => _disposed;
 
   /// The description shown now.
@@ -228,16 +254,16 @@ class LuminaViewportSceneRuntime with _ViewportQueries {
     _applyLook(node, const {'materialParams', 'morphs', 'animation', 'visible'});
   }
 
-  LuminaSceneComponent _componentFor(Map<String, Object?> json) {
+  LuminaSceneComponent _componentFor(Map<String, Object?> json, {String? mesh}) {
     final kind = json['kind'];
-    final asset = '${json['asset'] ?? ''}';
+    final asset = mesh ?? '${json['asset'] ?? ''}';
     switch (kind) {
       case LuminaViewportNodeKind.staticMesh:
         if (asset.isEmpty) return LuminaSceneComponent();
-        return LuminaStaticMeshComponent(meshAssetPath: asset, assetProvider: assetProvider);
+        return LuminaStaticMeshComponent(meshAssetPath: asset, assetProvider: _read);
       case LuminaViewportNodeKind.skeletalMesh:
         if (asset.isEmpty) return LuminaSceneComponent();
-        return LuminaAnimatedMeshComponent(meshAssetPath: asset, assetProvider: assetProvider);
+        return LuminaAnimatedMeshComponent(meshAssetPath: asset, assetProvider: _read);
       case LuminaViewportNodeKind.light:
         return _lightFor(json['light'] is Map ? json['light']! as Map : const {});
       default:
@@ -296,13 +322,23 @@ class LuminaViewportSceneRuntime with _ViewportQueries {
   Future<void> _applyLookLoaded(_RuntimeNode node) async {
     _applyLook(node, const {'materialParams', 'morphs', 'pose'});
     final skeletal = node.skeletal;
-    if (skeletal != null) await _applyAnimation(node, skeletal);
+    if (skeletal == null) return;
+    final pending = node.pendingClip;
+    if (pending != null && skeletal.hasClip(pending.$1)) {
+      // A retargeted animation file: its clip on the mesh made for it.
+      node.pendingClip = null;
+      skeletal.play(pending.$1, loop: pending.$2);
+      skeletal.playRate = pending.$3;
+      skeletal.onTick(0.0);
+      return;
+    }
+    await _applyAnimation(node, skeletal);
   }
 
   Future<void> _readSkeleton(_RuntimeNode node, LuminaStaticMeshComponent mesh) async {
-    final provider = LuminaAssets.resolve(assetProvider);
     try {
-      final names = _ViewportQueries._jointNameCache[node.asset] ??= _ViewportQueries.skinJointNames(await LuminaMeshAssetCache.meshBytes(provider, node.asset));
+      final key = node.meshAsset;
+      final names = _ViewportQueries._jointNameCache[key] ??= _ViewportQueries.skinJointNames(await LuminaMeshAssetCache.meshBytes(_read, key));
       if (identical(node.root, mesh)) node.jointNames = names;
     } catch (_) {
       // Unnamed joints.
@@ -317,6 +353,7 @@ class LuminaViewportSceneRuntime with _ViewportQueries {
     }
   }
 
+  @override
   void _fail(String asset, String message) {
     failures[asset] = message;
     developer.log('Viewport: cannot load $asset: $message', name: 'UMG', level: 900);
@@ -326,8 +363,48 @@ class LuminaViewportSceneRuntime with _ViewportQueries {
   void _removeNode(String id) {
     final node = _nodes.remove(id);
     if (node == null) return;
+    node.removed = true;
+    _releaseTextures(node);
+    _dropMemoryMesh(node);
     world.persistentLevel.unregisterActor(node.actor);
   }
+
+  void _dropMemoryMesh(_RuntimeNode node) {
+    final key = node.meshOverride;
+    if (key != null) _memoryAssets.remove(key);
+    node.meshOverride = null;
+  }
+
+  /// Draws [asset] (a mesh made in memory) on [node] in place of its own.
+  @override
+  void _replaceMesh(_RuntimeNode node, String asset) {
+    final old = node.meshOverride;
+    if (old != null && old != asset) _memoryAssets.remove(old);
+    node.meshOverride = asset;
+    _swapComponent(node);
+    _place(node);
+  }
+
+  void _swapComponent(_RuntimeNode node) {
+    _releaseTextures(node);
+    node.actor.removeComponent(node.root);
+    node.root = _componentFor(node.json, mesh: node.meshOverride);
+    node.loaded = false;
+    node.failed = false;
+    node.actor.addComponent(node.root);
+    _watchLoad(node);
+  }
+
+  @override
+  void _onOverlayChanged() => onOverlaysChanged?.call();
+
+  @override
+  Future<void> _applyTexture(_RuntimeNode node, FilamentMaterialInstance mi, String slot, String name, String path) =>
+      _bindTexture(node, mi, slot, name, path);
+
+  /// Called when an overlay changed without a description diff (a ghost
+  /// pose sampled from an animation arrived).
+  void Function()? onOverlaysChanged;
 
   void _updateNode(String id, Map<String, Object?> json, Set<String> fields) {
     final node = _nodes[id];
@@ -336,12 +413,9 @@ class LuminaViewportSceneRuntime with _ViewportQueries {
     node.json = json;
     if (assetChanged) {
       // A part swap: a new component on the same actor, the same transform.
-      node.actor.removeComponent(node.root);
-      node.root = _componentFor(json);
-      node.loaded = false;
-      node.failed = false;
-      node.actor.addComponent(node.root);
-      _watchLoad(node);
+      _dropMemoryMesh(node);
+      node.motion = null;
+      _swapComponent(node);
     }
     if (fields.contains('transform') || assetChanged) {
       node.localTransform = null;
@@ -394,27 +468,16 @@ class LuminaViewportSceneRuntime with _ViewportQueries {
       mesh.stop();
       return;
     }
-    if (a['file'] != null) {
-      if (!allowFiles) {
-        _fail('${a['file']}', 'Play Animation File plays files in editor panels only');
-        return;
-      }
-      _fail('${a['file']}', 'this Viewport has no animation file reader');
-      return;
-    }
+    if (a['file'] != null) return _playFile(node, mesh, a);
+    node.motion = null;
     final asset = '${a['asset'] ?? ''}';
     if (asset.isEmpty) return;
     String clip = asset;
-    if (asset.toLowerCase().endsWith('.lmas')) {
-      try {
-        final bytes = await LuminaAssets.resolve(assetProvider)(asset);
-        final meta = LuminaAsset.fromBytes(bytes).metadata;
-        clip = meta['clip_name'] ?? '';
-        if (clip.isEmpty) throw StateError('$asset names no clip (clip_name)');
-      } catch (e) {
-        if (!_disposed) _fail(asset, '$e');
-        return;
-      }
+    try {
+      clip = await _clipOf(asset);
+    } catch (e) {
+      if (!_disposed) _fail(asset, '$e');
+      return;
     }
     if (_disposed || !identical(node.root, mesh)) return;
     if (!mesh.hasClip(clip)) {
@@ -426,64 +489,6 @@ class LuminaViewportSceneRuntime with _ViewportQueries {
     mesh.play(clip, startTime: time, loop: a['loop'] != false);
     mesh.playRate = playing ? (a['rate'] is num ? (a['rate']! as num).toDouble() : 1.0) : 0.0;
     mesh.onTick(0.0);
-  }
-
-  // --- Environment and grid --------------------------------------------------
-
-  void _applyEnvironment(Map<String, Object?> env) {
-    final old = _sky;
-    if (old != null) world.persistentLevel.unregisterActor(old);
-    _sky = null;
-    final mode = env['mode'];
-    final intensity = env['intensity'] is num ? (env['intensity']! as num).toDouble() : 1.0;
-    final ibl = '${env['ibl'] ?? ''}';
-    view.blendMode = mode == LuminaViewportEnvironmentMode.transparent ? BlendMode.translucent : BlendMode.opaque;
-    final LuminaSkyComponent sky;
-    if (ibl.isNotEmpty && mode != LuminaViewportEnvironmentMode.color) {
-      sky = LuminaSkyComponent.environment(
-        environmentAssetPath: ibl,
-        assetProvider: assetProvider,
-        iblIntensity: 30000.0 * intensity,
-        visible: mode == LuminaViewportEnvironmentMode.sky,
-      );
-    } else {
-      final c = env['color'] is List ? env['color']! as List : const [0.10, 0.11, 0.14, 1.0];
-      sky = LuminaSkyComponent.color(
-        color: Vector4(_n(c, 0, 0.1), _n(c, 1, 0.11), _n(c, 2, 0.14), 1.0),
-        skyIntensity: 14000.0,
-        iblIntensity: 22000.0 * intensity,
-        visible: mode != LuminaViewportEnvironmentMode.transparent,
-      );
-    }
-    final actor = LuminaActor(key: const LuminaObjectKey('viewport_sky'), root: sky);
-    world.persistentLevel.registerActor(actor);
-    _sky = actor;
-    // The preview's one shadowed directional light (a key light from the
-    // front left, above); description lights add to it unshadowed.
-    if (_keyLight == null) {
-      final key = _keyLight = LuminaActor(
-      key: const LuminaObjectKey('viewport_key_light'),
-      root: LuminaDirectionalLightComponent(
-        rotation: LuminaAxes.rotation(const [-40, 0, 30]),
-        color: Vector3(1.0, 0.97, 0.92),
-        intensity: 90000.0,
-        castShadows: true,
-        isSun: false,
-      ),
-      );
-      world.persistentLevel.registerActor(key);
-    }
-  }
-
-  void _applyGrid(bool visible) {
-    if (visible == _gridShown) return;
-    _gridShown = visible;
-    if (visible) {
-      _grid ??= FilamentEditorGrid.create(engine: engine, extent: 500.0, step: 50.0)..setColor(0.35, 0.37, 0.42, 0.6);
-      _grid!.addToScene(scene);
-    } else {
-      _grid?.removeFromScene(scene);
-    }
   }
 
   // --- Camera ----------------------------------------------------------------
@@ -580,7 +585,7 @@ class LuminaViewportSceneRuntime with _ViewportQueries {
     if ((_shown?.autoRotate ?? 0.0) != 0.0) return true;
     for (final node in _nodes.values) {
       final a = node.json['animation'];
-      if (a is Map && a['playing'] != false && node.skeletal?.currentClip != null) return true;
+      if (a is Map && a['playing'] != false && (node.skeletal?.currentClip != null || node.motion != null)) return true;
     }
     return false;
   }
@@ -597,6 +602,7 @@ class LuminaViewportSceneRuntime with _ViewportQueries {
     }
     for (final node in _nodes.values) {
       node.skeletal?.onTick(dt);
+      _advanceMotion(node, dt);
       if (node.json['pose'] is Map) _applyPose(node);
     }
     _syncAttachments();
@@ -615,7 +621,7 @@ class LuminaViewportSceneRuntime with _ViewportQueries {
       final socket = node.json['socket'];
       final skeletal = parent.skeletal;
       final Matrix4 world;
-      final joint = socket is String && skeletal != null ? skeletal.jointWorldTransform(parent.sockets[socket] ?? socket) : null;
+      final joint = socket is String && skeletal != null ? _jointWorld(parent, parent.sockets[socket] ?? socket) : null;
       if (joint != null) {
         // jointWorld maps the bone's frame (asset metres) to the world;
         // the child's centimetre offset and its own ×100 asset scale are

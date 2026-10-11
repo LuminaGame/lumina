@@ -183,6 +183,8 @@ mixin _EditorProjectAndLevels on _EditorViewModelState {
     // …and queue a thumbnail for every asset that has none or an old one.
     _enqueueStaleThumbnails();
     unawaited(_streamActorMeshes(List.of(_actors)));
+    // umg.maxViewports for the designer's and the editor panels' Viewports.
+    LuminaViewportBudget.projectMaxViewports = _project.ui.maxViewports > 0 ? _project.ui.maxViewports : null;
     pieController.registerWidgetClasses();
     notifyListeners();
   }
@@ -192,6 +194,8 @@ mixin _EditorProjectAndLevels on _EditorViewModelState {
   void applyProjectSettings(LuminaProject saved) {
     final libraryChanged = saved.ui.widgetLibrary != _project.ui.widgetLibrary;
     _project = saved.copyWith(isDirty: false);
+    // umg.maxViewports: the editor's panels and the designer follow it at once.
+    LuminaViewportBudget.projectMaxViewports = saved.ui.maxViewports > 0 ? saved.ui.maxViewports : null;
     // The applied plugin settings reach the plugins.
     extensionRegistry.publishPluginSettings(saved.pluginSettings);
     // The launcher's ShadcnLayer wrap follows the new widget library.
