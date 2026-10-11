@@ -62,6 +62,7 @@ Bir eklenti sürecinin kayıt yaptığı ve editöre ulaştığı yer. Her şey 
 | `pluginDir` | Eklentinin kurulu olduğu klasör (`.lmplugin` dosyasını tutan), hello yanıtından: birlikte gönderdiği dosyaları (çalıştırılabilirler, modeller) bulduğu yer. `Isolate.resolvePackageUri` release derlemesinde çalışmaz. Editör bilmiyorsa null. |
 | `view(viewId)` | Kayıtlı bir görünümün `PluginViewHandle`'ı; onu kendi olayları dışında (bir MCP aracı çağrısından, biten bir işten sonra) güncellemek için; bilinmeyen kimlikte null. |
 | `showPanel`, `hidePanel`, `openTab`, `callMcpTool` | Panel görünürlüğü, kabuğun sekmeleri ve herhangi bir editör MCP aracı. |
+| `openEditorPanel(panel)` | Eklentinin editör paneli Widget Blueprint'lerinden birini (eklentideki varlık yolu, `content/EPW_Tools.lmas`) menü öğesinin yaptığı gibi yuvasında açar. |
 
 Katkılar bir kez gönderilir: `register` döndükten sonra bir menü öğesi, buton, araç, importer, konsol komutu ya da panel kaydetmek bir `StateError`'dır. `handle` her zaman çalışır. Gerçekleme `ConnectedPluginProcessContext`'tir (`lib/src/process_context.dart`); istek handler'larını `installPluginProcessHandlers` kurar (`lib/src/process_dispatch.dart`).
 
@@ -143,6 +144,11 @@ panelin grafiğini çalıştırmadan ayarlar; örnek:
 saniyede en çok 30 yama uygular, patlamaları birleştirir (`PluginPanelStatePatch.merge`); kare başı veri bu yoldan
 gitmez. `context.emit(name, data)`, panelin On Plugin Process Event olayının aldığıdır. Editör panelleri olmayan bir
 editör bildirimi yok sayar; protokol sürümü değişmez.
+
+`PluginProcessContext.openEditorPanel(panel)` (`openEditorPanel` işlemli `host.panels` isteği) eklentinin kendi
+`panel` editör panelini yuvasında açar; bir pencere açacak komut bunun yerine paneli açar (OpenXR eklentisinin Check
+Runtime komutu gibi). `LoopbackHost` bunu `requests`'e, `host.panelState` bildirimlerini de `notifications`'a
+kaydeder; bir süreç testi ikisini de denetleyebilir.
 
 ---
 

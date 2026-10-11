@@ -23,6 +23,7 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import '../../test/ui/plugin_process/fixtures/kernel_sample_plugin.dart';
 import '../../test/ui/plugin_process/plugin_process_harness.dart';
+import 'plugins/openxr_panel_smoke.dart';
 
 /// The editor viewport runs tickers while mounted: pump a bounded run of
 /// frames on the live clock.
@@ -39,6 +40,8 @@ Future<void> settle(WidgetTester tester, {int frames = 20}) async {
 /// plugin stopped, and Restart brings it back.
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+
+  openxrPanelSmoke(binding, settle);
 
   testWidgets('Plugin Isolation Smoke: a killed plugin process leaves the editor running and Restart recovers it', (tester) async {
     const name = 'Plugin Isolation Smoke: a killed plugin process leaves the editor running and Restart recovers it';

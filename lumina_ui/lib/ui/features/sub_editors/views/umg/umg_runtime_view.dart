@@ -205,6 +205,8 @@ class UmgRuntimeView extends StatelessWidget {
         return UmgThemeHelper.buildThemedButton(
           node: node,
           theme: resolvedTheme,
+          // The run-time `style` (an editor panel's graph or its process sets it).
+          style: _string(e, node, 'style', 'primary'),
           onPressed: LuminaUmgElementBinding.isEnabled(e)
               ? () {
                   onAction?.call(node.id, 'clicked');

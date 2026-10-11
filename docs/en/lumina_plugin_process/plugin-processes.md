@@ -62,6 +62,7 @@ What a plugin process registers with and reaches the editor through. Everything 
 | `pluginDir` | The folder the plugin is installed in (holding its `.lmplugin`), from the hello answer: where it finds files it ships (executables, models). `Isolate.resolvePackageUri` does not work in a release build. Null when the editor does not know it. |
 | `view(viewId)` | The `PluginViewHandle` of a registered view, to update it outside its own events (after an MCP tool call, a finished job); null for an unknown id. |
 | `showPanel`, `hidePanel`, `openTab`, `callMcpTool` | Panel visibility, the shell's tabs, and any editor MCP tool. |
+| `openEditorPanel(panel)` | Opens one of the plugin's editor panel Widget Blueprints (its asset path in the plugin, `content/EPW_Tools.lmas`) where it docks, as its menu item does. |
 
 Contributions are sent once: registering a menu item, button, tool, importer, console command or panel after `register` has returned is a `StateError`. `handle` works at any time. The implementation is `ConnectedPluginProcessContext` (`lib/src/process_context.dart`); the request handlers are installed by `installPluginProcessHandlers` (`lib/src/process_dispatch.dart`).
 
@@ -143,6 +144,11 @@ states of every open instance of the plugin's editor panel `panel` (its asset pa
 most 30 patches a second per panel, merging a burst (`PluginPanelStatePatch.merge`); per-frame data never travels this
 way. `context.emit(name, data)` is what the panel's On Plugin Process Event receives. An editor without editor panels
 ignores the notification, so the protocol version is unchanged.
+
+`PluginProcessContext.openEditorPanel(panel)` (the `host.panels` request with op `openEditorPanel`) opens the
+plugin's own editor panel `panel` where it docks; a command that would open a dialog opens the panel instead (the
+OpenXR plugin's Check Runtime does). `LoopbackHost` records it in `requests` and records `host.panelState`
+notifications in `notifications`, so a process test can assert both.
 
 ---
 

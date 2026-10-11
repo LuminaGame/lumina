@@ -112,6 +112,24 @@ void main() {
       expect(themeWidget.data.colorScheme.primary, const Color(0xFFF59E0B));
       expect(themeWidget.data.radius, 16.0);
     });
+
+    testWidgets('a run-time style overrides the designer style of a button', (tester) async {
+      final theme = LuminaThemeDocument(name: 'TestTheme', colors: {
+        'primary': 0xFF3B82F6,
+        'primaryForeground': 0xFFFFFFFF,
+        'destructive': 0xFFDC2626,
+        'destructiveForeground': 0xFFFFFFFF,
+      });
+      final node = UmgNode.create(UmgWidgetType.button, name: 'Toggle')..props['style'] = 'primary';
+      await tester.pumpWidget(ShadcnApp(
+        theme: luminaEditorTheme(),
+        home: Scaffold(
+          child: UmgThemeHelper.buildThemedButton(
+              node: node, theme: theme, style: 'destructive', onPressed: () {}, child: const Text('Stop')),
+        ),
+      ));
+      expect(tester.widget<Theme>(find.byType(Theme).last).data.colorScheme.primary, const Color(0xFFDC2626));
+    });
   });
 
   group('UmgDocument Theme Serialization', () {

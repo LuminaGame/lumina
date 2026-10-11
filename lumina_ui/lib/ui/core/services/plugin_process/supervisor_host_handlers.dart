@@ -97,6 +97,10 @@ extension _HostHandlers on PluginProcessSupervisor {
             return null;
           case 'isVisible':
             return host.panels.isVisible(id);
+          case 'openEditorPanel':
+            // One of this plugin's own editor panels, by its asset path.
+            host.editorPanelWidgets.open('$pluginName/$id');
+            return null;
         }
         throw _badArgs('unknown panels op ${args['op']}');
       })

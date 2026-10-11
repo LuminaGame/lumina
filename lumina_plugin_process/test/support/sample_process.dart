@@ -59,6 +59,7 @@ class SampleProcess extends LuminaPluginProcess {
       await context.saveAsset(relativePath: 'contents/gen/a.bin', bytes: Uint8List.fromList([1, 2, 3]));
       await context.showPanel('sample.view');
       await context.hidePanel('sample.view');
+      await context.openEditorPanel('content/EPW_Sample.lmas');
       await context.openTab('sample.tab', title: 'Sample');
       final r = await context.callMcpTool('list_actors', {'limit': 2});
       return r.toJson();

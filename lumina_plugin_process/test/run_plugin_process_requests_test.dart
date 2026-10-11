@@ -196,17 +196,19 @@ void main() {
     });
   });
 
-  test('saveAsset, panels, tabs and editor MCP calls go to the editor', () async {
+  test('saveAsset, panels, editor panels, tabs and editor MCP calls go to the editor', () async {
     final r = await call('editorCalls') as Map;
     expect(File('${host.project!.dir}/contents/gen/a.bin').readAsBytesSync(), [1, 2, 3]);
     expect([for (final (m, a) in host.requests) '$m ${a['op'] ?? a['relativePath'] ?? a['tool']}'], [
       'host.saveAsset contents/gen/a.bin',
       'host.panels show',
       'host.panels hide',
+      'host.panels openEditorPanel',
       'host.tabs openTab',
       'host.mcp.call list_actors',
     ]);
-    expect(host.requests[3].$2, {'op': 'openTab', 'tabId': 'sample.tab', 'title': 'Sample'});
+    expect(host.requests[3].$2, {'op': 'openEditorPanel', 'panelId': 'content/EPW_Sample.lmas'});
+    expect(host.requests[4].$2, {'op': 'openTab', 'tabId': 'sample.tab', 'title': 'Sample'});
     expect(McpToolResult.fromJson(r.cast()).structuredContent, {'tool': 'list_actors', 'echo': {'limit': 2}});
   });
 

@@ -14,6 +14,10 @@ abstract interface class PluginProcessHost {
 
   EditorPanels get panels;
 
+  /// The editor panel Widget Blueprints (a process opens its own by asset
+  /// path, `<plugin>/<asset path>`).
+  EditorPanelWidgets get editorPanelWidgets;
+
   void openTab(String tabId, {String? title});
 
   Future<void> saveAsset({required String relativePath, Uint8List? bytes, bool generateThumbnail = true});

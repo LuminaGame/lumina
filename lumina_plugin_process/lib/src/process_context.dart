@@ -310,6 +310,11 @@ class ConnectedPluginProcessContext implements PluginProcessContext {
     await connection.request(PluginMethods.panels, {'op': 'hide', 'panelId': panelId});
   }
 
+  @override
+  Future<void> openEditorPanel(String panel) async {
+    await connection.request(PluginMethods.panels, {'op': 'openEditorPanel', 'panelId': panel});
+  }
+
   /// Whether the editor shows [panelId] now.
   Future<bool> isPanelVisible(String panelId) async =>
       await connection.request(PluginMethods.panels, {'op': 'isVisible', 'panelId': panelId}) == true;

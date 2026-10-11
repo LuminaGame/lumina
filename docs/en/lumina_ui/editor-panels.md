@@ -120,7 +120,8 @@ Writes need the panel's declared capability (the validator rejects a node whose 
 - **Asset Picker**: Pick Asset (Type Filter) → Picked (Asset Path) / Cancelled, opening the editor's asset picker popup
   over the panel. A text field that looks like an asset path is a "use Asset Picker" warning.
 - **Panels**: Open Editor Panel (Closed → Result Json; a dialog answers with its Close This Panel Json, null when
-  dismissed), Close This Panel (Result Json), Set / Get Element State, Get Project Name, Is Play Active, Get / Set
+  dismissed), Close This Panel (Result Json), Set / Get Element State (a Button's `style`, `primary` / `destructive` / …, is
+  element state too), Get Project Name, Is Play Active, Get / Set
   Plugin Setting (`PluginStorage`), Get / Set Project Plugin Setting (`.lmproject` `plugin_settings`, which the plugin
   process receives as `pluginSettings`).
 - **Plugin Process** (`process`, plugin panels only): Call Plugin Process (Method, Args Json) → Completed (Result) /
@@ -136,7 +137,9 @@ The process sets element states directly with `PluginProcessContext.patchPanel(p
 `patchPanel('content/EPW_Tools.lmas', [PluginPanelStateOp('StatusText', {'text': 'Ready'})])` reaches every open
 instance of that panel without running its graph. `EditorPanelLinks` applies patches at most 30 times a second per
 panel, coalescing a burst; unknown elements are logged once. `context.emit(name, data)` is what On Plugin Process
-Event receives.
+Event receives. `context.openEditorPanel(panel)` opens one of the plugin's panels where it docks (Plugins menu
+commands of a process often do). The OpenXR plugin's `EPW_OpenXR` is a complete example: its graph calls the
+process's methods, the process patches its status texts and emits `openxr.status` for the rest.
 
 ## Trust
 

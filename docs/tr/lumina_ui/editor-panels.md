@@ -119,7 +119,8 @@ tonu); Ctrl seçimi değiştirir, Shift genişletir. Asset Picker öğesi editö
 - **Varlık seçici**: Pick Asset (Type Filter) → Picked (Asset Path) / Cancelled; editörün varlık seçici açılır
   penceresini panelin üstünde açar. Varlık yoluna benzeyen bir metin alanı "use Asset Picker" uyarısıdır.
 - **Paneller**: Open Editor Panel (Closed → Result Json; iletişim kutusu Close This Panel Json'ıyla yanıtlar,
-  kapatılınca null), Close This Panel (Result Json), Set / Get Element State, Get Project Name, Is Play Active, Get /
+  kapatılınca null), Close This Panel (Result Json), Set / Get Element State (bir Button'ın `style`'ı, `primary` / `destructive` / …, de
+  öğe durumudur), Get Project Name, Is Play Active, Get /
   Set Plugin Setting (`PluginStorage`), Get / Set Project Plugin Setting (`.lmproject` `plugin_settings`; eklenti
   süreci bunu `pluginSettings` olarak alır).
 - **Eklenti süreci** (`process`, yalnızca eklenti panelleri): Call Plugin Process (Method, Args Json) → Completed
@@ -135,7 +136,9 @@ Süreç öğe durumlarını `PluginProcessContext.patchPanel(panel, ops)` (`host
 `patchPanel('content/EPW_Tools.lmas', [PluginPanelStateOp('StatusText', {'text': 'Ready'})])` o panelin her açık
 örneğine grafiğini çalıştırmadan ulaşır. `EditorPanelLinks` yamaları panel başına saniyede en çok 30 kez uygular,
 patlamaları birleştirir; bilinmeyen öğeler bir kez günlüğe yazılır. `context.emit(name, data)`, On Plugin Process
-Event'in aldığıdır.
+Event'in aldığıdır. `context.openEditorPanel(panel)` eklentinin panellerinden birini yuvasında açar (bir sürecin
+Plugins menüsü komutları çoğu zaman bunu yapar). OpenXR eklentisinin `EPW_OpenXR`'ı eksiksiz bir örnektir: grafiği
+sürecin yöntemlerini çağırır, süreç durum metinlerini yamar ve geri kalanı için `openxr.status` yayar.
 
 ## Güven
 

@@ -88,15 +88,18 @@ class UmgThemeHelper {
     return documentTheme;
   }
 
-  /// Builds a themed [Button] for a UMG button node according to [theme].
+  /// Builds a themed [Button] for a UMG button node according to [theme];
+  /// [style] (the element's run-time `style` state) overrides the node's
+  /// designer `style`.
   static Widget buildThemedButton({
     required UmgNode node,
     required LuminaThemeDocument theme,
     required VoidCallback? onPressed,
     required Widget child,
     ValueChanged<bool>? onHover,
+    String? style,
   }) {
-    final styleKey = node.props['style']?.toString() ?? 'primary';
+    final styleKey = style ?? node.props['style']?.toString() ?? 'primary';
     final customStyle = theme.customStyles[styleKey]?.style;
     final compStyle = theme.componentStyles['button'];
 

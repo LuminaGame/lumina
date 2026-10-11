@@ -228,6 +228,12 @@ abstract class PluginProcessContext {
   Future<void> showPanel(String panelId);
   Future<void> hidePanel(String panelId);
 
+  /// Opens this plugin's editor panel [panel] (its asset path in this
+  /// plugin, `content/EPW_Tools.lmas`) where it docks, as its
+  /// `Plugins/<Plugin>/<Title>` menu item does; nothing happens when the
+  /// editor has no such panel.
+  Future<void> openEditorPanel(String panel);
+
   /// Opens one of the shell's workspace tabs.
   Future<void> openTab(String tabId, {String? title});
 

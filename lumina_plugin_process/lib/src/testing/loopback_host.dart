@@ -186,6 +186,7 @@ class LoopbackHost {
       PluginMethods.view,
       PluginMethods.slotState,
       PluginMethods.menuChecked,
+      PluginMethods.panelState,
     ]) {
       c.onNotification(m, (args) {
         final n = PluginNotification(method: m, args: args);
