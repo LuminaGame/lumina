@@ -4205,6 +4205,9 @@ void filament_web_destroy_canvas_context(int context) {
   _m.filament_web_destroy_canvas_context(context.toJS);
 }
 
+int filament_web_make_context_current(int context) =>
+    _m.filament_web_make_context_current(context.toJS).toDartInt;
+
 void filament_vulkan_request_device_extension(ffi.Pointer<ffi.Char> requester, ffi.Pointer<ffi.Char> name) {
   _m.filament_vulkan_request_device_extension(requester.address.toJS, name.address.toJS);
 }
@@ -8953,6 +8956,8 @@ extension type _Module._(JSObject _) implements JSObject {
   external JSNumber filament_engine_create_for_canvas(JSNumber canvas_selector, JSNumber out_context);
   @JS('_filament_web_destroy_canvas_context')
   external void filament_web_destroy_canvas_context(JSNumber context);
+  @JS('_filament_web_make_context_current')
+  external JSNumber filament_web_make_context_current(JSNumber context);
   @JS('_filament_vulkan_request_device_extension')
   external void filament_vulkan_request_device_extension(JSNumber requester, JSNumber name);
   @JS('_filament_vulkan_request_device_feature')

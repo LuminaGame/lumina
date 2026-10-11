@@ -9487,6 +9487,9 @@ external ffi.Pointer<ffi.Void> filament_engine_create_for_canvas(
 @ffi.Native<ffi.Void Function(ffi.Int32)>()
 external void filament_web_destroy_canvas_context(int context);
 
+@ffi.Native<ffi.Int32 Function(ffi.Int32)>()
+external int filament_web_make_context_current(int context);
+
 @ffi.Native<ffi.Void Function(ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>)>()
 external void filament_vulkan_request_device_extension(
   ffi.Pointer<ffi.Char> requester,

@@ -36,6 +36,13 @@ FFI_PLUGIN_EXPORT void* filament_engine_create_for_canvas(const char* canvas_sel
 // A no-op in native builds.
 FFI_PLUGIN_EXPORT void filament_web_destroy_canvas_context(int32_t context);
 
+// Makes a context from filament_engine_create_for_canvas the current WebGL
+// context. A page with several canvases has one current context, and an
+// engine's driver draws through whichever is current, so each engine makes
+// its own current before it executes commands. Returns 1 on success; 0 in
+// native builds or for an invalid context.
+FFI_PLUGIN_EXPORT int32_t filament_web_make_context_current(int32_t context);
+
 #ifdef __cplusplus
 }
 #endif

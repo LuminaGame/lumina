@@ -54,6 +54,16 @@ class FilamentEngine with _EngineValidityChecks {
     }
   }
 
+  /// Web builds: makes this engine's WebGL context the page's current one.
+  /// The driver of every engine on a page draws through the one current
+  /// context, so an engine with a canvas makes its own current before it
+  /// renders, flushes or is destroyed ([flush], [flushAndWait], [dispose]
+  /// and the web `FilamentWidget` do). A no-op for an engine without a
+  /// canvas.
+  void makeCanvasContextCurrent() {
+    if (_canvasContext > 0) c.filament_web_make_context_current(_canvasContext);
+  }
+
   /// Creates a new Filament Engine with the specified builder parameters.
   ///
   /// Returns `null` if the engine couldn't be created (e.g., GPU driver
@@ -331,6 +341,7 @@ class FilamentEngine with _EngineValidityChecks {
   /// Flushes the current command buffer to the hardware rendering thread without blocking.
   void flush() {
     _checkDisposed();
+    makeCanvasContextCurrent();
     c.filament_engine_flush(_ptr);
   }
 
@@ -339,6 +350,7 @@ class FilamentEngine with _EngineValidityChecks {
   /// Returns `true` if all commands finished before timeout, `false` otherwise.
   bool flushAndWait({Duration? timeout}) {
     _checkDisposed();
+    makeCanvasContextCurrent();
     if (timeout == null) {
       c.filament_engine_flush_and_wait(_ptr);
       return true;
@@ -600,6 +612,7 @@ class FilamentEngine with _EngineValidityChecks {
       throw StateError('This FilamentEngine is shared through FilamentEngineHost (leases: ${_hostOwners!()}); '
           'release your lease instead of disposing the engine.');
     }
+    makeCanvasContextCurrent();
     _disposeScoped();
     _disposed = true;
     c.filament_engine_destroy(_ptr);

@@ -51,8 +51,11 @@ Both `flutter build web` (dart2js) and `flutter build web --wasm` compile a flut
 `FilamentWidget` is the same widget on every platform. On the web (`lib/src/widget_web.dart`) it:
 - hosts its own `<canvas>` in a platform view, registered with Emscripten as `'!flutter-filament-N'` (`specialHTMLTargets`, so shadow roots do not matter);
 - creates its engine with `FilamentEngine.createForCanvas`;
+- makes that engine's WebGL context current before each frame (`FilamentEngine.makeCanvasContextCurrent`; also in `flush`, `flushAndWait` and `dispose`), so several widgets on one page each draw into their own canvas;
 - presents every frame straight into the canvas (no readback);
 - sizes the drawing buffer to the layout × `devicePixelRatio`.
+
+The wireframe line material (`src/materials/wireframe.mat`: grids, gizmos, overlay lines) is compiled for desktop and mobile shader models (`-p all` in `tool/materials.txt`), so WebGL2 builds it and its colours apply.
 
 A web app must serve `flutter_filament.js` and `flutter_filament.wasm` next to its `index.html` (copy them into the app's `web/`), or call `FilamentWeb.ensureInitialized(moduleUrl: …)` before the first widget. See `example/lib/web_smoke.dart`, which `test/web/widget_web_smoke_test.dart` builds and drives in headless Chrome.
 

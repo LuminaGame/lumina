@@ -65,6 +65,19 @@ void* filament_engine_create_for_canvas(const char* canvas_selector, int32_t* ou
 #endif
 }
 
+int32_t filament_web_make_context_current(int32_t context) {
+#ifdef __EMSCRIPTEN__
+  if (context <= 0) return 0;
+  return emscripten_webgl_make_context_current(static_cast<EMSCRIPTEN_WEBGL_CONTEXT_HANDLE>(context)) ==
+                 EMSCRIPTEN_RESULT_SUCCESS
+             ? 1
+             : 0;
+#else
+  (void) context;
+  return 0;
+#endif
+}
+
 void filament_web_destroy_canvas_context(int32_t context) {
 #ifdef __EMSCRIPTEN__
   if (context > 0) emscripten_webgl_destroy_context(static_cast<EMSCRIPTEN_WEBGL_CONTEXT_HANDLE>(context));

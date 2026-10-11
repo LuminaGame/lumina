@@ -471,6 +471,7 @@ The main entry point for the Filament rendering engine.  An [FilamentEngine] ins
 | `isValidRenderTarget` | `bool isValidRenderTarget(ffi.Pointer<ffi.Void> rt)` | Tells whether a RenderTarget native handle is valid. |
 | `isValidFence` | `bool isValidFence(ffi.Pointer<ffi.Void> fence)` | Tells whether a Fence native handle is valid. |
 | `isValidColorGrading` | `bool isValidColorGrading(ColorGrading cg)` | Tells whether a [ColorGrading] instance is valid. |
+| `makeCanvasContextCurrent` | `void makeCanvasContextCurrent()` | Web builds: makes this engine's WebGL context the page's current one. Every engine on a page draws through the one current context, so an engine with a canvas makes its own current before it renders, flushes or is destroyed (`flush`, `flushAndWait`, `dispose` and the web `FilamentWidget` call it; `filament_web_make_context_current`). A no-op without a canvas. |
 | `flush` | `void flush()` | Flushes the current command buffer to the hardware rendering thread without blocking. |
 | `pumpMessageQueues` | `void pumpMessageQueues()` | Pumps the engine's internal message queues, processing pending callbacks and asynchronous events.  Recommended to call once per frame in the main game loop. |
 | `execute` | `void execute()` | Executes work on the calling thread. Only supported in single-threaded/web builds. |

@@ -159,6 +159,8 @@ class WebFilamentWidgetState extends State<FilamentWidget> with SingleTickerProv
       }
       final selectedViews = widget.frameViews?.call(_view!, _pixelWidth, _pixelHeight);
       final views = selectedViews == null || selectedViews.isEmpty ? [_view!] : selectedViews;
+      // Each widget's engine draws into its own canvas's context.
+      _engine!.makeCanvasContextCurrent();
       if (renderer.beginFrame(_swapChain!)) {
         for (final view in views) {
           renderer.render(view);
