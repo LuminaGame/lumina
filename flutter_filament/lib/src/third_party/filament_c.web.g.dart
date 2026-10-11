@@ -6809,13 +6809,13 @@ final class filament_external_swapchain_provider extends ffi.Struct {
   int get layer_count => FlutterFilamentModule.heap.getUint32($address + 20, Endian.little);
   set layer_count(int value) => FlutterFilamentModule.heap.setUint32($address + 20, value, Endian.little);
 
-  /// VkFormat of `depth` from get_images, or of the depth image Filament
-  /// makes itself when get_images leaves it 0.
+  /// VkFormat of the depth image get_images returns.
   int get depth_format => FlutterFilamentModule.heap.getUint32($address + 24, Endian.little);
   set depth_format(int value) => FlutterFilamentModule.heap.setUint32($address + 24, value, Endian.little);
 
   /// Writes image_count VkImage handles into `colors` and a depth VkImage
-  /// (or 0) into `depth`.
+  /// (with layer_count layers) into `depth`. Filament makes no depth image
+  /// for an external swapchain: without one the view renders without depth.
   external ffi.Pointer<
     ffi.NativeFunction<
       ffi.Void Function(
@@ -9421,6 +9421,12 @@ void $registerFilamentBindings() {
   ffi.$registerCallbackType<ffi.Void Function(ffi.Pointer<FilamentCallbackEnvelope>)>(const ffi.$CallbackSignature('v', ['p']));
   ffi.$registerCallbackType<ffi.Void Function(ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Int, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Void>)>(const ffi.$CallbackSignature('v', ['p', 'p', 'i', 'p', 'p']));
   ffi.$registerCallbackType<ffi.Void Function(ffi.Int, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Void>)>(const ffi.$CallbackSignature('v', ['i', 'p', 'p', 'p']));
+  ffi.$registerNativeAddress(filament_external_vulkan_device_info_create, '_filament_external_vulkan_device_info_create', 'i');
+  ffi.$registerNativeAddress(filament_external_vulkan_device_info_create_info, '_filament_external_vulkan_device_info_create_info', 'i');
+  ffi.$registerNativeAddress(filament_external_vulkan_device_info_queue_family, '_filament_external_vulkan_device_info_queue_family', 'i');
+  ffi.$registerNativeAddress(filament_external_vulkan_device_info_filament_queue_index, '_filament_external_vulkan_device_info_filament_queue_index', 'i');
+  ffi.$registerNativeAddress(filament_external_vulkan_device_info_multiview, '_filament_external_vulkan_device_info_multiview', 'i');
+  ffi.$registerNativeAddress(filament_external_vulkan_device_info_destroy, '_filament_external_vulkan_device_info_destroy', 'i');
   ffi.$registerNativeAddress(filament_ibl_image_destroy, '_filament_ibl_image_destroy', 'i');
   ffi.$registerNativeAddress(filament_cubemap_destroy, '_filament_cubemap_destroy', 'i');
   ffi.$registerNativeAddress(filament_linear_image_destroy, '_filament_linear_image_destroy', 'i');

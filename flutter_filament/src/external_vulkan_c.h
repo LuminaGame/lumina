@@ -54,11 +54,11 @@ typedef struct filament_external_swapchain_provider {
     uint32_t height;
     uint32_t color_format;
     uint32_t layer_count;
-    /// VkFormat of `depth` from get_images, or of the depth image Filament
-    /// makes itself when get_images leaves it 0.
+    /// VkFormat of the depth image get_images returns.
     uint32_t depth_format;
     /// Writes image_count VkImage handles into `colors` and a depth VkImage
-    /// (or 0) into `depth`.
+    /// (with layer_count layers) into `depth`. Filament makes no depth image
+    /// for an external swapchain: without one the view renders without depth.
     void (*get_images)(void* user_data, uint64_t* colors, uint64_t* depth);
     /// Waits until an image may be rendered (xrAcquireSwapchainImage +
     /// xrWaitSwapchainImage) and writes its index. Returns a VkResult.

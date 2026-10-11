@@ -12390,13 +12390,13 @@ final class filament_external_swapchain_provider extends ffi.Struct {
   @ffi.Uint32()
   external int layer_count;
 
-  /// VkFormat of `depth` from get_images, or of the depth image Filament
-  /// makes itself when get_images leaves it 0.
+  /// VkFormat of the depth image get_images returns.
   @ffi.Uint32()
   external int depth_format;
 
   /// Writes image_count VkImage handles into `colors` and a depth VkImage
-  /// (or 0) into `depth`.
+  /// (with layer_count layers) into `depth`. Filament makes no depth image
+  /// for an external swapchain: without one the view renders without depth.
   external ffi.Pointer<
     ffi.NativeFunction<
       ffi.Void Function(

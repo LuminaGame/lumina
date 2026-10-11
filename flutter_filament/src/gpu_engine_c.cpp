@@ -236,6 +236,36 @@ public:
         return findExternal(handle) ? false : DesktopVulkanPlatform::hasResized(handle);
     }
 
+    // The Android platform reads its own swapchain struct in these (frame timing, frame
+    // rate); an external swapchain has none of that.
+    bool setPresentFrameId(filament::backend::Platform::SwapChain const* swapchain, uint64_t frameId) noexcept override {
+        if (isExternal(swapchain)) return false;
+        return DesktopVulkanPlatform::setPresentFrameId(swapchain, frameId);
+    }
+
+    bool queryFrameTimestamps(filament::backend::Platform::SwapChain const* swapchain, uint64_t frameId,
+            FrameTimestamps* out) const noexcept override {
+        if (isExternal(swapchain)) return false;
+        return DesktopVulkanPlatform::queryFrameTimestamps(swapchain, frameId, out);
+    }
+
+    bool queryCompositorTiming(filament::backend::Platform::SwapChain const* swapchain,
+            CompositorTiming* out) const noexcept override {
+        if (isExternal(swapchain)) return false;
+        return DesktopVulkanPlatform::queryCompositorTiming(swapchain, out);
+    }
+
+    int setFrameRate(filament::backend::Platform::SwapChain const* swapchain, float frameRate,
+            FrameRateCompatibility compatibility, ChangeFrameRateStrategy strategy) noexcept override {
+        if (isExternal(swapchain)) return -1;
+        return DesktopVulkanPlatform::setFrameRate(swapchain, frameRate, compatibility, strategy);
+    }
+
+    utils::tribool isFrameRateChangeSupported(void* nativeWindow) const noexcept override {
+        if (isExternal(nativeWindow)) return false;
+        return DesktopVulkanPlatform::isFrameRateChangeSupported(nativeWindow);
+    }
+
     bool isProtected(SwapChainPtr handle) override {
         return findExternal(handle) ? false : DesktopVulkanPlatform::isProtected(handle);
     }
@@ -301,6 +331,10 @@ private:
 #else
         return static_cast<VkImage>(handle);
 #endif
+    }
+
+    bool isExternal(void const* pointer) const {
+        return const_cast<PreferredGpuPlatform*>(this)->findExternal(const_cast<void*>(pointer)) != nullptr;
     }
 
     ExternalSwapChain* findExternal(void* pointer) {
