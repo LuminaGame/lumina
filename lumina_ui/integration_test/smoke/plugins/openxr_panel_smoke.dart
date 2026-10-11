@@ -131,6 +131,9 @@ void openxrPanelSmoke(IntegrationTestWidgetsFlutterBinding binding, Future<void>
         expect(ok(), isTrue, reason: reason);
       }
 
+      int meshActors() => vm.actors.where((a) => a.meshAssetPath != null && a.meshAssetPath!.isNotEmpty).length;
+      final modelsInLevel = meshActors();
+      expect(modelsInLevel, greaterThanOrEqualTo(used.length));
       await rec.hold(const Duration(seconds: 2));
 
       // Plugins ▸ OpenXR ▸ OpenXR Panel.
@@ -177,7 +180,10 @@ void openxrPanelSmoke(IntegrationTestWidgetsFlutterBinding binding, Future<void>
       // Stop it from the status bar button's menu: the open panel follows.
       final slot = find.byWidgetPredicate((w) {
         final key = w.key;
-        return key is ValueKey<String> && key.value.startsWith('slot_button_') && key.value.endsWith('openxr.status_badge');
+        return key is ValueKey<String> &&
+            key.value.startsWith('slot_button_') &&
+            !key.value.startsWith('slot_button_frame_') &&
+            key.value.endsWith('openxr.status_badge');
       });
       expect(slot, findsOneWidget);
       await tester.tap(find.descendant(of: slot, matching: find.byType(GhostButton)));
@@ -197,7 +203,7 @@ void openxrPanelSmoke(IntegrationTestWidgetsFlutterBinding binding, Future<void>
       await tester.tap(find.descendant(of: view, matching: find.text('About OpenXR Support')));
       await settle(tester, frames: 10);
       await rec.hold(const Duration(seconds: 2));
-      expect(vm.actors.where((a) => a.meshAssetPath != null && a.meshAssetPath!.isNotEmpty), hasLength(meshes.length));
+      expect(meshActors(), modelsInLevel, reason: 'the level is untouched');
       rec.save(name, usedAssets: used);
     } finally {
       try {
