@@ -31,6 +31,8 @@ import 'package:lumina_ui/ui/features/launcher/views/launcher_view.dart';
 import 'package:lumina_ui/ui/features/main_editor/services/editor_graphics_preferences.dart';
 import 'package:lumina_ui/ui/features/main_editor/services/editor_preferences.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/web_module_download.dart';
+import 'package:lumina_ui/ui/core/services/plugin_process/plugin_dialog_queue.dart';
+import 'package:lumina_ui/ui/core/widgets/plugin_view/plugin_process_dialog.dart';
 
 export 'package:lumina_ui/ui/core/host/editor_host.dart' show EditorHostInfo, EditorLaunchArgs, LuminaEditorHost, EditorAssets, EditorHandOff;
 
@@ -238,9 +240,13 @@ class LuminaStudioApp extends StatelessWidget {
               bundle: EditorAssets.bundle,
               child: LuminaWindowFrame(
                 window: LuminaWindow.instance,
-                child: CrashReporter.instance == null
-                    ? (child ?? const SizedBox.shrink())
-                    : CrashReportOverlay(reporter: CrashReporter.instance!, child: child ?? const SizedBox.shrink()),
+                // Dialogs plugin processes open (`host.showDialog`).
+                child: PluginDialogLayer(
+                  queue: PluginDialogQueue.shared,
+                  child: CrashReporter.instance == null
+                      ? (child ?? const SizedBox.shrink())
+                      : CrashReportOverlay(reporter: CrashReporter.instance!, child: child ?? const SizedBox.shrink()),
+                ),
               ),
             ),
           );

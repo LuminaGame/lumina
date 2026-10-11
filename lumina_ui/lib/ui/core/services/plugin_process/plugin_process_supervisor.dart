@@ -11,6 +11,7 @@ import 'package:shadcn_flutter/shadcn_flutter.dart' show BuildContext, IconData,
 import 'package:lumina_ui/ui/core/host/editor_host.dart';
 import 'package:lumina_ui/ui/core/services/crash_reporter.dart';
 import 'package:lumina_ui/ui/core/services/plugin_process/lucide_icon_table.dart';
+import 'package:lumina_ui/ui/core/services/plugin_process/plugin_dialog_queue.dart';
 import 'package:lumina_ui/ui/core/services/plugin_process/plugin_process_host.dart';
 import 'package:lumina_ui/ui/core/services/plugin_process/plugin_process_launcher.dart';
 import 'package:lumina_ui/ui/core/services/plugin_process/plugin_supervisor_timings.dart';
@@ -18,6 +19,7 @@ import 'package:lumina_ui/ui/core/widgets/plugin_process_view_panel.dart';
 
 part 'supervisor_contributions.dart';
 part 'supervisor_host_handlers.dart';
+part 'supervisor_launch.dart';
 
 /// Runs one isolated plugin's process part and keeps it alive.
 ///
@@ -47,13 +49,31 @@ class PluginProcessSupervisor implements PluginProcessChannel {
     this.inProcessRunner,
     CrashReporter? Function()? crashReporter,
     this.logTailLines = 300,
-  }) : _crashReporter = crashReporter ?? (() => CrashReporter.instance);
+    PluginDialogQueue? dialogs,
+    this.prepareLaunch,
+    this.launchRefused,
+  })  : _crashReporter = crashReporter ?? (() => CrashReporter.instance),
+        dialogs = dialogs ?? PluginDialogQueue.shared;
 
   @override
   final String pluginName;
   final PluginProcessHost host;
   final PluginProcessLauncher launcher;
   final PluginSupervisorTimings timings;
+
+  /// Where `host.showDialog` requests of this plugin's process are shown.
+  final PluginDialogQueue dialogs;
+
+  /// Runs before every start of a kernel plugin: verifies its kernel,
+  /// recompiles it for this Dart SDK when needed (reporting each stage to
+  /// `progress`) and returns the launcher that runs it. `vmRefusedLast` is
+  /// true when the Dart VM refused the kernel of the last run. A throw stops
+  /// the plugin with the reason ([preparationError]); it is no crash.
+  final Future<PluginProcessLauncher> Function(bool vmRefusedLast, void Function(String line) progress)? prepareLaunch;
+
+  /// Whether a run's stderr shows the Dart VM refusing its kernel (another
+  /// SDK built it): the next start recompiles instead of counting a crash.
+  final bool Function(List<String> stderr)? launchRefused;
 
   /// Set when the project runs this plugin in the editor process
   /// (`.lmproject` `plugin_isolation: {"<name>": "in_process"}`): the same
@@ -120,6 +140,28 @@ class PluginProcessSupervisor implements PluginProcessChannel {
   Stream<PluginProgress> get progress => _progress.stream;
 
   _Run? _run;
+
+  // Kernel plugins (see supervisor_launch.dart).
+  bool _preparing = false;
+
+  /// Bumped by [stop]: a start still preparing its kernel does not launch.
+  int _generation = 0;
+  bool _vmRefusedLast = false;
+  String? _preparationError;
+  List<String>? _lastCommandLine;
+
+  /// Why the last [prepareLaunch] failed (the compiler's output included),
+  /// or null; the Plugin Manager shows it.
+  String? get preparationError => _preparationError;
+
+  /// Whether [prepareLaunch] is running (a kernel being checked or
+  /// recompiled).
+  bool get preparing => _preparing;
+
+  /// The command line of the last process start (it names the kernel of a
+  /// kernel plugin), or null before one.
+  List<String>? get lastCommandLine => _lastCommandLine;
+
   Timer? _restartTimer;
   int _restarts = 0;
   bool _disposed = false;
@@ -142,10 +184,17 @@ class PluginProcessSupervisor implements PluginProcessChannel {
   /// Starts a process run (nothing when one is running or the supervisor
   /// is disposed).
   Future<void> start() async {
-    if (_disposed || _run != null) return;
+    if (_disposed || _run != null || _preparing) return;
     _restartTimer?.cancel();
     _restartTimer = null;
     _setState(PluginProcessState(PluginProcessStatus.starting, restarts: _restarts));
+    var launcher = this.launcher;
+    if (prepareLaunch != null && inProcessRunner == null) {
+      final generation = _generation;
+      final prepared = await _prepare();
+      if (prepared == null || _disposed || _run != null || generation != _generation) return;
+      launcher = prepared;
+    }
     final ServerSocket server;
     try {
       server = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
@@ -182,14 +231,23 @@ class PluginProcessSupervisor implements PluginProcessChannel {
       return;
     }
     try {
+      _lastCommandLine = launcher.commandLine(launch);
       final process = await launcher.start(launch);
       run.process = process;
       _note('started (pid ${process.pid})');
       run.outputs = [
         _pipe(process.stdout, 'stdout'),
-        _pipe(process.stderr, 'stderr'),
+        _pipe(process.stderr, 'stderr', run.stderr),
       ];
-      process.exitCode.then((code) => _onExit(run, code));
+      process.exitCode.then((code) async {
+        // The last stderr lines say why a kernel was refused (only an
+        // unexpected failure needs them).
+        if (launchRefused != null && !run.expectedExit && code != 0) {
+          await Future.wait([for (final o in run.outputs) o.asFuture<void>().catchError((_) {})])
+              .timeout(const Duration(seconds: 2), onTimeout: () => const []);
+        }
+        _onExit(run, code);
+      });
     } catch (e) {
       _note('could not start: $e', level: 'error');
       _onExit(run, null, reason: 'could not start: $e');
@@ -211,6 +269,7 @@ class PluginProcessSupervisor implements PluginProcessChannel {
   /// Stops the process for good (plugin disabled, mode switch): graceful
   /// `core.shutdown`, then a kill after [PluginSupervisorTimings.shutdownTimeout].
   Future<void> stop({String reason = 'stopped'}) async {
+    _generation++;
     _restartTimer?.cancel();
     _restartTimer = null;
     await _stopRun(graceful: true);
@@ -272,10 +331,8 @@ class PluginProcessSupervisor implements PluginProcessChannel {
   // ── Channel ───────────────────────────────────────────────────────
 
   @override
-  Future<Object?> call(String method, [Map<String, Object?> args = const {}, Duration? timeout]) async {
-    final conn = _available();
-    return conn.request(PluginMethods.call, {'method': method, 'args': args}, timeout ?? timings.callTimeout);
-  }
+  Future<Object?> call(String method, [Map<String, Object?> args = const {}, Duration? timeout]) async =>
+      _request(PluginMethods.call, {'method': method, 'args': args}, timeout ?? timings.callTimeout);
 
   PluginConnection _available() {
     final conn = _run?.connection;
@@ -287,8 +344,9 @@ class PluginProcessSupervisor implements PluginProcessChannel {
 
   /// A request to the process on behalf of the editor (commands, tools,
   /// importers): [PluginErrorCodes.unavailable] when it is not running.
+  /// Its [timeout] does not run while one of the plugin's dialogs is open.
   Future<Object?> _request(String method, Map<String, Object?> args, Duration timeout) async =>
-      _available().request(method, args, timeout);
+      _pausingTimeout(_available().request(method, args, _noTimeout), method, timeout);
 
   /// Sends a declarative panel's event to the process (`core.viewEvent`).
   Future<void> sendViewEvent(PluginViewEvent event) => _sendViewEvent(event);
@@ -320,10 +378,13 @@ class PluginProcessSupervisor implements PluginProcessChannel {
     if (!_disposed) logRevision.value++;
   }
 
-  StreamSubscription<String> _pipe(Stream<List<int>> bytes, String name) => bytes
+  StreamSubscription<String> _pipe(Stream<List<int>> bytes, String name, [List<String>? into]) => bytes
       .transform(const Utf8Decoder(allowMalformed: true))
       .transform(const LineSplitter())
-      .listen((line) => _appendLog('[$name] $line'), onError: (_) {});
+      .listen((line) {
+        into?.add(line);
+        _appendLog('[$name] $line');
+      }, onError: (_) {});
 
   void _onSocket(_Run run, Socket socket) {
     if (!identical(run, _run) || run.connection != null || run.exited) {
@@ -499,11 +560,14 @@ class PluginProcessSupervisor implements PluginProcessChannel {
     if (!identical(run, _run)) return;
     _run = null;
     _lastExitCode = code;
+    // A dialog never outlives its process.
+    dialogs.closeAllOf(pluginName);
     if (_disposed) return;
     if (run.expectedExit) {
       _note('exited${code == null ? '' : ' with code $code'}');
       return;
     }
+    if (_kernelRefused(run)) return;
     final why = reason ?? exitReason(code);
     _note('the process $why', level: 'error');
     // Output may still be draining; the report takes what has arrived.
@@ -563,6 +627,9 @@ class _Run {
   int? reportedPid;
   PluginConnection? connection;
   List<StreamSubscription<String>> outputs = const [];
+
+  /// The process's stderr lines.
+  final List<String> stderr = [];
   final Completer<int?> exit = Completer<int?>();
   bool exited = false;
 

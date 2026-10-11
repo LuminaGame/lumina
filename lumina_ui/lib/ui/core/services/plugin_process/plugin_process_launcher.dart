@@ -20,6 +20,11 @@ class PluginProcessLauncher {
     this.runInShell = false,
   });
 
+  /// A kernel plugin's process: `<dart> <kernel> <launch args>` on the Dart
+  /// VM ([dart] is `<dart-sdk>/bin/dart(.exe)`).
+  factory PluginProcessLauncher.kernel(String dart, String kernel, {String? workingDirectory, Map<String, String>? environment}) =>
+      PluginProcessLauncher(executable: dart, leadingArgs: [kernel], workingDirectory: workingDirectory, environment: environment);
+
   /// The program; null is this process's own executable.
   final String? executable;
 

@@ -75,6 +75,18 @@ mixin _EditorPluginExtensions on _EditorViewModelState {
     inEditorProcess: () => PluginIsolationOverrides.inEditorProcess(project),
   );
 
+  /// The enabled kernel plugins run (and only they): enabling one starts
+  /// its process and adds its contributions, disabling, removing or
+  /// updating one stops it and removes them; no build, no restart.
+  @override
+  Future<void> _syncKernelPlugins() async {
+    try {
+      await pluginProcesses.syncKernelPlugins(pluginRegistry.enabledKernelPlugins);
+    } catch (e) {
+      _logger.log('Kernel plugins: $e', level: 'error', source: 'Plugins');
+    }
+  }
+
   /// Whether the project runs [plugin]'s process part inside the editor
   /// (Plugin Manager ▸ "Run in editor process (debugging)").
   bool pluginRunsInEditorProcess(String plugin) => PluginIsolationOverrides.runsInEditorProcess(project, plugin);

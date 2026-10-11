@@ -66,6 +66,17 @@ extension _HostHandlers on PluginProcessSupervisor {
         if (path != null) _checkedNotifier(path, args['checked'] == true);
       })
       ..onRequest(PluginMethods.level, (args) => _level(run, args))
+      ..onRequest(PluginMethods.showDialog, (args) async {
+        final PluginDialogSpec spec;
+        try {
+          spec = PluginDialogSpec.fromJson(args);
+        } on FormatException catch (e) {
+          throw _badArgs(e.message);
+        }
+        if (!identical(run, _run) || run.exited) return PluginDialogResult.dismissed.toJson();
+        return (await dialogs.request(pluginName, spec)).toJson();
+      })
+      ..onRequest(PluginMethods.closeDialog, (args) => dialogs.close(pluginName, _str(args, 'id')))
       ..onRequest(PluginMethods.saveAsset, (args) async {
         final b64 = args['bytesBase64'] as String?;
         await host.saveAsset(

@@ -80,6 +80,12 @@ class PluginRegistryService {
 
   PluginRegistryService({required this.repo, required this.projectRepo, this.hostGenerator});
 
+  /// The enabled kernel plugins ([LuminaPluginDescriptor.isKernelPlugin]):
+  /// their processes run on the Dart VM and start or stop live, with no
+  /// editor build or restart.
+  List<LuminaPluginDescriptor> get enabledKernelPlugins =>
+      [for (final e in _entries.values) if (e.enabled && e.descriptor.isKernelPlugin) e.descriptor];
+
   /// The enabled plugins that contribute editor code.
   List<LuminaPluginDescriptor> get enabledCodePlugins =>
       EditorHostGeneratorService.editorCodePlugins([for (final e in _entries.values) if (e.enabled) e.descriptor]);
@@ -283,7 +289,8 @@ class PluginRegistryService {
         final entry = _entries[desc.name]!;
         if (!entry.enabled) {
           entry.enabled = true;
-          if (!desc.isContentOnly) {
+          // Content and kernel plugins apply live.
+          if (!desc.isContentOnly && !desc.isKernelPlugin) {
             entry.restartPending = true;
             restartRequired = true;
           }
@@ -321,7 +328,7 @@ class PluginRegistryService {
         final entry = _entries[disableName];
         if (entry != null && entry.enabled) {
           entry.enabled = false;
-          if (!entry.descriptor.isContentOnly) {
+          if (!entry.descriptor.isContentOnly && !entry.descriptor.isKernelPlugin) {
             entry.restartPending = true;
             restartRequired = true;
           }

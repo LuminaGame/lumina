@@ -90,6 +90,7 @@ mixin _EditorPlugins on _EditorViewModelState {
         _pluginRestartRequired = true;
       }
     }
+    unawaited(_syncKernelPlugins());
     notifyListeners();
   }
 

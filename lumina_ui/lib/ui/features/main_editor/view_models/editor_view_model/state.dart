@@ -62,6 +62,10 @@ abstract class _EditorViewModelState extends ChangeNotifier {
 
   late final PluginExtensionRegistry extensionRegistry;
 
+  /// Starts and stops the enabled kernel plugins' processes to match the
+  /// plugin registry (plugin_extensions.dart).
+  Future<void> _syncKernelPlugins();
+
   /// Git status/commit/history over the real `git` CLI.
   late final SourceControlViewModel sourceControl;
   final DartCodeGeneratorService _codeGen = DartCodeGeneratorService();

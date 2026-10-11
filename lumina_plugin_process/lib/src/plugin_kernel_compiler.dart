@@ -93,6 +93,13 @@ class PluginKernelCompiler {
     return sink.value.toString();
   }
 
+  /// Writes `<kernel>.sha256` (`<hex>  <file name>`) and returns it.
+  static Future<File> writeSha256(File kernel) async {
+    final file = File('${kernel.path}.sha256');
+    await file.writeAsString('${sha256.convert(await kernel.readAsBytes())}  ${p.basename(kernel.path)}\n');
+    return file;
+  }
+
   /// Null when `<kernel>.sha256` holds [kernel]'s SHA-256, else why not.
   static Future<String?> verifySha256(File kernel) async {
     final file = File('${kernel.path}.sha256');
