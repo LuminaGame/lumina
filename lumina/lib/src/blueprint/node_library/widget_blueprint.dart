@@ -81,7 +81,7 @@ List<LuminaBlueprintPinSpec> _widgetEventOutputs(String? event, String? typeName
           _enum('commit_method', 'Commit Method', LuminaBlueprintNodeLibrary.textCommitEnum),
         ],
       LuminaWidgetEvents.onSelectionChanged => _selectionChangedOutputs(node),
-      _ => const [],
+      _ => typeName == LuminaViewportNodes.elementType ? _viewportEventOutputs(event) : const [],
     };
 
 /// The pins of a widget-graph node in [context].

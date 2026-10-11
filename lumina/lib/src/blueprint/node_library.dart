@@ -7,6 +7,8 @@ import 'package:lumina/src/blueprint/level_blueprint.dart';
 import 'package:lumina/src/blueprint/widget_blueprint.dart';
 import 'package:lumina/src/blueprint/widget_classes.dart';
 import 'package:lumina/src/umg/combo_box_options.dart';
+import 'package:lumina/src/umg/viewport/viewport_nodes.dart';
+import 'package:lumina/src/umg/viewport/viewport_scene.dart';
 
 part 'node_library/specs.dart';
 part 'node_library/pin_builders.dart';
@@ -27,6 +29,7 @@ part 'node_library/traversal.dart';
 part 'node_library/window_mode.dart';
 part 'node_library/display_settings.dart';
 part 'node_library/combo_box.dart';
+part 'node_library/umg_viewport.dart';
 part 'node_library/conversions.dart';
 part 'node_library/staged_settings.dart';
 
@@ -305,7 +308,7 @@ abstract final class LuminaBlueprintNodeLibrary {
         textCommitEnum => LuminaWidgetEvents.commitMethods,
         LuminaComboBoxOptions.selectInfoEnum => LuminaComboBoxOptions.selectInfos,
         timelineDirectionEnum => timelineDirections,
-        _ => null,
+        _ => LuminaViewportNodes.enumValues(name),
       };
 
   /// Whether node [spec] belongs in a graph of [context]: level-only nodes
@@ -403,6 +406,7 @@ abstract final class LuminaBlueprintNodeLibrary {
     ..._windowModeNodes,
     ..._displaySettingsNodes,
     ..._comboBoxNodes,
+    ..._umgViewportNodes,
     ..._conversionNodes,
   ]));
 

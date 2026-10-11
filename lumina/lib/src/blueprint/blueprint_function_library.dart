@@ -62,8 +62,7 @@ import 'package:lumina/src/utility/timer_manager.dart';
 import 'package:lumina/src/world/debug_shapes.dart';
 import 'package:lumina/src/world/subsystem/widget_subsystem.dart';
 import 'package:lumina/src/world/subsystem/user_settings_subsystem.dart';
-import 'package:lumina/src/umg/combo_box_options.dart';
-import 'package:lumina/src/umg/user_widget.dart';
+import 'package:lumina/src/umg/umg_runtime.dart';
 import 'package:lumina/src/world/world.dart';
 import 'package:lumina/src/blueprint/blueprint_enums_interfaces.dart';
 import 'package:lumina/src/blueprint/blueprint_function_registry.dart';
@@ -98,6 +97,7 @@ part 'blueprint_function_library/traversal.dart';
 part 'blueprint_function_library/window_mode.dart';
 part 'blueprint_function_library/display_settings.dart';
 part 'blueprint_function_library/combo_box.dart';
+part 'blueprint_function_library/umg_viewport.dart';
 part 'blueprint_function_library/conversions.dart';
 
 /// Every pure and impure node's behaviour, written once. The
@@ -1054,7 +1054,7 @@ abstract final class LuminaBlueprintFunctionLibrary {
     ..._traversalCallShapes,
     ..._windowModeCallShapes,
     ..._displaySettingsCallShapes,
-    ..._comboBoxCallShapes,
+    ..._comboBoxCallShapes, ..._umgViewportCallShapes,
     ..._conversionCallShapes,
     // @@CALL_SHAPES_END
   });
@@ -1090,7 +1090,7 @@ abstract final class LuminaBlueprintFunctionLibrary {
     ..._traversalFunctions,
     ..._windowModeFunctions,
     ..._displaySettingsFunctions,
-    ..._comboBoxFunctions,
+    ..._comboBoxFunctions, ..._umgViewportFunctions,
     ..._conversionFunctions,
     // @@FUNCTIONS_END
   });

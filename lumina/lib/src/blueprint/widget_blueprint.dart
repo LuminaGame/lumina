@@ -88,6 +88,29 @@ abstract final class LuminaWidgetEvents {
   /// Select Type (`ESelectInfo`), from the player or a Blueprint setter.
   static const String onSelectionChanged = 'OnSelectionChanged';
 
+  /// A Viewport's events: a pick (Node Id, Bone, Hit Location), a gizmo
+  /// drag's preview (throttled), commit and cancel (Node Id, Bone,
+  /// Transform), the camera after an orbit / pan / zoom (Yaw, Pitch,
+  /// Distance; on release), the scene loaded, and a failed asset load
+  /// (Asset, Message).
+  static const String onPicked = 'OnPicked';
+  static const String onGizmoPreview = 'OnGizmoPreview';
+  static const String onGizmoCommit = 'OnGizmoCommit';
+  static const String onGizmoCancel = 'OnGizmoCancel';
+  static const String onCameraChanged = 'OnCameraChanged';
+  static const String onSceneReady = 'OnSceneReady';
+  static const String onAssetLoadFailed = 'OnAssetLoadFailed';
+
+  static const List<String> viewportEvents = [
+    onPicked,
+    onGizmoPreview,
+    onGizmoCommit,
+    onGizmoCancel,
+    onCameraChanged,
+    onSceneReady,
+    onAssetLoadFailed,
+  ];
+
   static const Set<String> _shadcnButtons = {
     'shadcnPrimaryButton',
     'shadcnSecondaryButton',
@@ -118,6 +141,7 @@ abstract final class LuminaWidgetEvents {
     if (_shadcnButtons.contains(typeName)) return const [onClicked];
     if (_textTypes.contains(typeName)) return const [onValueChanged, onTextCommitted];
     if (typeName == 'comboBox') return const [onValueChanged, onSelectionChanged];
+    if (typeName == 'viewport') return viewportEvents;
     if (_valueTypes.contains(typeName)) return const [onValueChanged];
     return const [];
   }

@@ -271,6 +271,11 @@ export 'package:lumina/src/utility/lumina_assets.dart';
 export 'package:lumina/src/utility/lumina_platform.dart';
 export 'package:lumina/src/umg/combo_box_options.dart';
 export 'package:lumina/src/umg/user_widget.dart';
+export 'package:lumina/src/umg/viewport/viewport_budget.dart';
+export 'package:lumina/src/umg/viewport/viewport_nodes.dart';
+export 'package:lumina/src/umg/viewport/viewport_scene.dart';
+export 'package:lumina/src/umg/viewport/viewport_scene_diff.dart';
+export 'package:lumina/src/umg/viewport/viewport_transforms.dart';
 export 'package:lumina/src/media/video_playback.dart';
 
 // Audio
