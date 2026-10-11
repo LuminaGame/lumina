@@ -70,6 +70,18 @@ class LuminaPoseAuthoringComponent extends LuminaActorComponent implements Lumin
   /// Called with a handle's name whenever its target is set or cleared.
   void Function(String handle)? onHandleChanged;
 
+  /// Called at the start of every solve, before the targets are read: an
+  /// interaction that sets targets from tracked devices runs here, so the
+  /// limb never lags a frame behind the hand that holds it.
+  final List<void Function(double deltaTime)> beforeSolve = [];
+
+  /// How many undo steps [pushUndo] keeps.
+  static const int undoCapacity = 32;
+  final List<Map<String, LuminaPoseHandleState>> _undo = [];
+
+  /// Undo steps kept.
+  int get undoDepth => _undo.length;
+
   LuminaPoseRig? _rig;
   LuminaPoseSolveState? _state;
   final Map<String, LuminaPoseHandle> _handles = {};
@@ -271,6 +283,38 @@ class LuminaPoseAuthoringComponent extends LuminaActorComponent implements Lumin
       if (d <= maxDistance && (best == null || d < best.distance)) best = (name: name, distance: d);
     }
     return best;
+  }
+
+  /// Every handle's target now, by handle name.
+  Map<String, LuminaPoseHandleState> targetSnapshot() => {for (final h in _handles.values) h.name: h.state};
+
+  /// Puts back the targets of [snapshot] (handles it does not name are
+  /// cleared); every handle that changes reports it.
+  void restoreTargets(Map<String, LuminaPoseHandleState> snapshot) {
+    for (final h in _handles.values) {
+      final before = h.hasTarget;
+      final s = snapshot[h.name];
+      if (s == null) {
+        h.clear();
+      } else {
+        h.restore(s);
+      }
+      if (before || h.hasTarget) _changed(h.name);
+    }
+  }
+
+  /// Keeps the targets as they are now as an undo step (the oldest go past
+  /// [undoCapacity]).
+  void pushUndo() {
+    _undo.add(targetSnapshot());
+    if (_undo.length > undoCapacity) _undo.removeAt(0);
+  }
+
+  /// Restores the last undo step; false when there is none.
+  bool undo() {
+    if (_undo.isEmpty) return false;
+    restoreTargets(_undo.removeLast());
+    return true;
   }
 
   // --- Poses ------------------------------------------------------------------------

@@ -124,6 +124,18 @@ class LuminaActor extends LuminaObject with LuminaSaveable {
   /// runs from.
   void onPoseHandleChanged(String handle) {}
 
+  /// Called when a grab interactor of this actor picks up a pose handle
+  /// (Event On Pose Handle Grabbed), [grabber] being the grabber's id.
+  void onPoseHandleGrabbed(String handle, String grabber) {}
+
+  /// Called when a grab interactor of this actor lets go of a pose handle
+  /// (Event On Pose Handle Released).
+  void onPoseHandleReleased(String handle, String grabber) {}
+
+  /// Called when a grabber of this actor's grab interactor starts hovering
+  /// a pose handle (Event On Pose Handle Hovered).
+  void onPoseHandleHovered(String handle, String grabber) {}
+
   /// Apply Point Damage: [onPointDamage] (the Blueprint Event
   /// TakePointDamage) with where it hit (runtime space), then [takeDamage].
   double takePointDamage(double amount,

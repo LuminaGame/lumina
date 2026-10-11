@@ -10,6 +10,7 @@ import '../../../lumina/test/blueprint/conversions_blueprint.dart';
 import '../../../lumina/test/blueprint/display_settings_blueprint.dart';
 import '../../../lumina/test/blueprint/screen_resolution_and_apply_blueprint.dart';
 import '../../../lumina/test/blueprint/physics_blueprint.dart';
+import '../../../lumina/test/blueprint/grab_to_pose_blueprint.dart';
 import '../../../lumina/test/blueprint/pose_authoring_blueprint.dart';
 import '../../../lumina/test/blueprint/engine_nodes_blueprint.dart';
 import '../../../lumina/test/blueprint/flow_blueprint.dart';
@@ -71,6 +72,8 @@ Map<String, (LuminaBlueprintDocument, String, List<LuminaInputAction>)> goldens(
       'bp_no_begin_play': (noBeginPlayBlueprint(), 'BpNoBeginPlay', const <LuminaInputAction>[]),
       // Add Pose Authoring, Set Pose Handle Target, Find Nearest Pose Handle and Event On Pose Handle Changed.
       'bp_pose_authoring': (poseAuthoringBlueprint(), 'BpPoseAuthoring', const <LuminaInputAction>[]),
+      // Add Grab Interactor, Set Grab Radius and the On Pose Handle Grabbed / Released / Hovered events.
+      'bp_grab_to_pose': (grabToPoseBlueprint(), 'BpGrabToPose', const <LuminaInputAction>[]),
       // A traversal component and Jump → Try Traversal Action → Branch → Jump.
       'bp_traversal_character': (
         TraversalBlueprintFixture.characterBlueprint(inputActions: templateInputActions()),

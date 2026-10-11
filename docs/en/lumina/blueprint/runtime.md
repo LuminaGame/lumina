@@ -197,6 +197,9 @@ What a running Blueprint needs besides its graph, shared by the VM and generated
 | `onMontageEnded` | `void onMontageEnded(String montage, bool interrupted)` | Called when the playing montage ends: [interrupted] when stopped or replaced (the Blueprint Montage Ended event). |
 | `onAnimNotify` | `void onAnimNotify(String notifyName)` | Called when the playing montage passes a notify (the Anim Notify event). |
 | `onPoseHandleChanged` | `void onPoseHandleChanged(String handle)` | Called when a pose authoring component of the actor sets or clears a handle's target (the On Pose Handle Changed event; see [Pose authoring](../pose-authoring.md)). |
+| `onPoseHandleGrabbed` | `void onPoseHandleGrabbed(String handle, String grabber)` | Called when a grab interactor of the actor picks up a pose handle (the On Pose Handle Grabbed event). |
+| `onPoseHandleReleased` | `void onPoseHandleReleased(String handle, String grabber)` | Called when it lets go of one (the On Pose Handle Released event). |
+| `onPoseHandleHovered` | `void onPoseHandleHovered(String handle, String grabber)` | Called when one of its grabbers starts hovering a pose handle (the On Pose Handle Hovered event). |
 | `endBlueprintMontage` | `void endBlueprintMontage({required bool interrupted})` | Ends the running montage, [interrupted] or not, restoring the Anim Blueprint. |
 | `blueprintTimerManager` | `LuminaTimerManager? get blueprintTimerManager` | The world's timer manager, registered when the world has none yet. |
 | `blueprintRetriggerableDelay` | `void blueprintRetriggerableDelay(String nodeId, double seconds, void Function() resume)` | Retriggerable Delay: like [blueprintDelay], but a trigger while pending restarts the countdown. |

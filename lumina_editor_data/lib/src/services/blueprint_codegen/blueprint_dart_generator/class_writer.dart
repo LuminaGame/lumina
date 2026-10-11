@@ -568,6 +568,9 @@ class _ClassWriter {
     'onMontageEnded': (signature: 'String montage, bool interrupted', args: 'montage, interrupted', before: []),
     'onAnimNotify': (signature: 'String notifyName', args: 'notifyName', before: []),
     'onPoseHandleChanged': (signature: 'String handle', args: 'handle', before: []),
+    'onPoseHandleGrabbed': (signature: 'String handle, String grabber', args: 'handle, grabber', before: []),
+    'onPoseHandleReleased': (signature: 'String handle, String grabber', args: 'handle, grabber', before: []),
+    'onPoseHandleHovered': (signature: 'String handle, String grabber', args: 'handle, grabber', before: []),
   };
 
   /// Each actor event's method: the pin → expression map its frame reads,
@@ -607,6 +610,9 @@ class _ClassWriter {
     'event_montage_ended': (outputs: {'montage': 'montage', 'interrupted': 'interrupted'}, params: 'String montage, bool interrupted', args: 'montage, interrupted'),
     'event_anim_notify': (outputs: {'notify_name': 'notifyName'}, params: 'String notifyName', args: 'notifyName'),
     'event_pose_handle_changed': (outputs: {'handle': 'handle'}, params: 'String handle', args: 'handle'),
+    'event_pose_handle_grabbed': (outputs: {'handle': 'handle', 'grabber': 'grabber'}, params: 'String handle, String grabber', args: 'handle, grabber'),
+    'event_pose_handle_released': (outputs: {'handle': 'handle', 'grabber': 'grabber'}, params: 'String handle, String grabber', args: 'handle, grabber'),
+    'event_pose_handle_hovered': (outputs: {'handle': 'handle', 'grabber': 'grabber'}, params: 'String handle, String grabber', args: 'handle, grabber'),
     'event_hit': (
       outputs: {
         'self_actor': "hitOutputs['self_actor']",

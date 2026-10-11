@@ -11,6 +11,7 @@ A skinned character can be posed like a mannequin at runtime: move a hand and th
 | Handles, capture modes | `pose_handle.dart` |
 | Solvers (two-bone, pole, look, spine, pelvis, twist) | `pose_solvers.dart` over `pose_solve_state.dart`; quaternion helpers in `pose_quat.dart` |
 | Poses: pose library, save game slots, Play-In-Editor | `pose_library.dart` |
+| Grab to pose: grabbers, the mouse grabber, the interactor, handle visuals | `lib/src/interaction/grab/` |
 | Blueprint nodes | `pose_authoring_nodes.dart`, `lib/src/blueprint/node_library/pose_authoring.dart`, `lib/src/blueprint/blueprint_function_library/pose_authoring.dart` |
 
 ## The rig
@@ -80,6 +81,25 @@ poser.resetToReference();
 - **Event On Pose Handle Changed** (`event_pose_handle_changed` → Handle), dispatched from `LuminaActor.onPoseHandleChanged`.
 
 `LuminaPoseAuthoringComponent` is also a Blueprint component type (`LuminaPoseAuthoringComponent.fromProperties`: `rigAsset`, `weight`, `captureMode`).
+
+## Interaction: grab to pose
+
+`lib/src/interaction/grab/`: grabbers pick up handles, drag them and let go of them where they are, so the pose stays. The engine knows grabbers only through `LuminaGrabber` (`id`, `worldTransform` — the grip pose in cm, `grip` 0–1, `isTracked`, an optional `ray`, `pulse(amplitude, seconds)` — a no-op without haptics, `grabbedAt(point)`), so an XR controller (the OpenXR plugin's adapter) and the mouse use the same component.
+
+`LuminaPoseGrabInteractor` (an actor component on the pawn or XR origin) per frame and grabber:
+
+- **Hover**: the nearest handle within `grabRadius` (8 cm; `handleRadius`: head 12, pelvis 15), else with a ray the handle within `rayAngleDegrees` (3°) of it up to `rayMaxDistance` (300 cm).
+- **Grab** when the grip crosses `pressThreshold` (0.7; it lets go below `releaseThreshold`, 0.3): the handle's transform relative to the grabber is kept (the limb does not jump), the character's targets are pushed as an undo step, `pulse(0.5, 0.03)`, `onHandleGrabbed` and the owner's `onPoseHandleGrabbed(handle, grabber)`. One handle per grabber, one grabber per handle: a grabber taking a held handle steals it (the other lets go; both pulse).
+- **Drag**: target = grabber transform × offset; hands, feet and the head also take its rotation. The interactor runs from each character's `beforeSolve` hook (once per world frame), so the limb follows the grabber in the same frame.
+- **Release**: the handle keeps its last target, `pulse(0.2, 0.015)`, `onHandleReleased`. An untracked grabber lets go.
+- **Undo**: `undoLastGrab()` restores the character's targets from before the last grab (`LuminaPoseAuthoringComponent.pushUndo` / `undo` / `targetSnapshot` / `restoreTargets`, 32 steps).
+- Characters come from `register(poser)` and, with `findPosersInReach`, every pose authoring component of the world near a grabber (`reach`, 300 cm) or its ray.
+
+`LuminaPoseHandleVisuals` (made by the interactor when the world renders, `showHandles`) draws the handles near a grabber (60 cm, or 12° off its ray) as small rings of Filament lines over the meshes: idle at `idleAlpha` (0 hides them), hovered in the accent colour at 1.3×, held bright with a line to the grabber.
+
+`LuminaMouseGrabber` is the desktop grabber: it points along the camera ray through `cursor` (viewport pixels; `viewportSize`, `cameraLocation`, `cameraRotation`, `fovYDegrees`), `leftDown` is the grip, and it holds at `depth` cm along the camera's forward — set to the grabbed handle's depth on a grab, so a drag moves the handle in the plane facing the camera; `wheel(notches)` pulls it closer or pushes it away. `syncFromWorld(world)` reads the view and the cursor / `MouseLeft` the host injected into the input subsystem (Play-In-Editor does); `useMouse: true` on the interactor makes one and syncs it every frame. It reads no OS input. A camera further than 3 m needs a longer `rayMaxDistance`.
+
+**Blueprint nodes** (same category): `add_grab_interactor` (Use Mouse → the interactor), `register_grabber` (Grabber object → registered), `set_grab_radius` (Radius), `undo_last_grab` (→ undone), and the events **On Pose Handle Grabbed / Released / Hovered** (`event_pose_handle_grabbed` / `_released` / `_hovered` → Handle, Grabber), dispatched from `LuminaActor.onPoseHandleGrabbed` / `onPoseHandleReleased` / `onPoseHandleHovered` on the interactor's owner. `LuminaPoseGrabInteractor` is a Blueprint component type too (`grabRadius`, `useMouse`, `showHandles`).
 
 ## Numbers
 

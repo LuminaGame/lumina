@@ -11,6 +11,7 @@ Skinli bir karakter çalışma zamanında bir manken gibi pozlanabilir: eli hare
 | Tutamaçlar, yakalama kipleri | `pose_handle.dart` |
 | Çözücüler (iki kemik, pole, bakış, omurga, pelvis, twist) | `pose_solve_state.dart` üzerinde `pose_solvers.dart`; quaternion yardımcıları `pose_quat.dart` |
 | Pozlar: poz kütüphanesi, save game slotları, Play-In-Editor | `pose_library.dart` |
+| Tutup pozlama: tutucular, fare tutucusu, etkileşimci, tutamaç görselleri | `lib/src/interaction/grab/` |
 | Blueprint düğümleri | `pose_authoring_nodes.dart`, `lib/src/blueprint/node_library/pose_authoring.dart`, `lib/src/blueprint/blueprint_function_library/pose_authoring.dart` |
 
 ## Rig
@@ -80,6 +81,25 @@ poser.resetToReference();
 - **Event On Pose Handle Changed** (`event_pose_handle_changed` → Handle), `LuminaActor.onPoseHandleChanged`'den gönderilir.
 
 `LuminaPoseAuthoringComponent` bir Blueprint bileşen türüdür de (`LuminaPoseAuthoringComponent.fromProperties`: `rigAsset`, `weight`, `captureMode`).
+
+## Etkileşim: tutup pozlama
+
+`lib/src/interaction/grab/`: tutucular (grabber) tutamaçları alır, sürükler ve olduğu yerde bırakır; poz kalır. Motor tutucuları yalnızca `LuminaGrabber` üzerinden tanır (`id`, `worldTransform` — cm cinsinden tutma pozu, `grip` 0–1, `isTracked`, isteğe bağlı `ray`, `pulse(amplitude, seconds)` — titreşimi olmayan cihazda hiçbir şey yapmaz, `grabbedAt(point)`); bu yüzden bir XR kumandası (OpenXR eklentisinin adaptörü) ve fare aynı bileşeni kullanır.
+
+`LuminaPoseGrabInteractor` (pawn'da ya da XR origin'de bir aktör bileşeni) her karede her tutucu için:
+
+- **Üzerine gelme**: `grabRadius` (8 cm; `handleRadius`: baş 12, pelvis 15) içindeki en yakın tutamaç, yoksa ışını varsa ona `rayAngleDegrees` (3°) içinde, `rayMaxDistance`'a (300 cm) kadar olan tutamaç.
+- **Tutma**: grip `pressThreshold`'u (0.7) geçince (`releaseThreshold`, 0.3 altında bırakır): tutamacın tutucuya göre dönüşümü saklanır (uzuv sıçramaz), karakterin hedefleri bir geri alma adımı olarak itilir, `pulse(0.5, 0.03)`, `onHandleGrabbed` ve sahibin `onPoseHandleGrabbed(handle, grabber)`'ı. Tutucu başına bir tutamaç, tutamaç başına bir tutucu: tutulan bir tutamacı alan tutucu onu çalar (diğeri bırakır; ikisi de titrer).
+- **Sürükleme**: hedef = tutucu dönüşümü × ofset; eller, ayaklar ve baş rotasyonunu da alır. Etkileşimci her karakterin `beforeSolve` kancasından (dünya karesi başına bir kez) çalışır, böylece uzuv tutucuyu aynı karede izler.
+- **Bırakma**: tutamaç son hedefini korur, `pulse(0.2, 0.015)`, `onHandleReleased`. İzlenmeyen bir tutucu bırakır.
+- **Geri alma**: `undoLastGrab()` karakterin hedeflerini son tutmadan önceki haline getirir (`LuminaPoseAuthoringComponent.pushUndo` / `undo` / `targetSnapshot` / `restoreTargets`, 32 adım).
+- Karakterler `register(poser)`'dan ve `findPosersInReach` ile dünyadaki, bir tutucuya (`reach`, 300 cm) ya da ışınına yakın her pose authoring bileşeninden gelir.
+
+`LuminaPoseHandleVisuals` (dünya render edilirken etkileşimcinin yaptığı, `showHandles`) bir tutucuya yakın (60 cm, ya da ışınından 12°) tutamaçları mesh'lerin üzerinde Filament çizgilerinden küçük halkalar olarak çizer: boşta `idleAlpha` ile (0 gizler), üzerine gelinende vurgu renginde 1.3×, tutulanda parlak ve tutucuya bir çizgiyle.
+
+`LuminaMouseGrabber` masaüstü tutucusudur: `cursor`'dan (viewport pikseli; `viewportSize`, `cameraLocation`, `cameraRotation`, `fovYDegrees`) geçen kamera ışını boyunca bakar, `leftDown` grip'tir ve kameranın ileri ekseni boyunca `depth` cm'de tutar — tutunca tutulan tutamacın derinliğine ayarlanır, böylece sürükleme tutamacı kameraya bakan düzlemde hareket ettirir; `wheel(notches)` onu yaklaştırır ya da uzaklaştırır. `syncFromWorld(world)` görünümü ve host'un input subsystem'e enjekte ettiği imleç / `MouseLeft`'i okur (Play-In-Editor yapar); etkileşimcide `useMouse: true` bir tane yapar ve her kare eşitler. İşletim sistemi girdisi okumaz. 3 m'den uzak bir kamera daha uzun bir `rayMaxDistance` ister.
+
+**Blueprint düğümleri** (aynı kategori): `add_grab_interactor` (Use Mouse → etkileşimci), `register_grabber` (Grabber nesnesi → kaydedildi), `set_grab_radius` (Radius), `undo_last_grab` (→ geri alındı) ve **On Pose Handle Grabbed / Released / Hovered** olayları (`event_pose_handle_grabbed` / `_released` / `_hovered` → Handle, Grabber), etkileşimcinin sahibindeki `LuminaActor.onPoseHandleGrabbed` / `onPoseHandleReleased` / `onPoseHandleHovered`'dan gönderilir. `LuminaPoseGrabInteractor` bir Blueprint bileşen türüdür de (`grabRadius`, `useMouse`, `showHandles`).
 
 ## Sayılar
 

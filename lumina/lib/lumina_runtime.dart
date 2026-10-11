@@ -196,6 +196,10 @@ export 'package:lumina/src/components/movement/traversal/traversal_component.dar
 export 'package:lumina/src/components/mesh/mesh_pose_driver.dart';
 export 'package:lumina/src/components/mesh/mesh_pose_modifier.dart';
 export 'package:lumina/src/components/mesh/pose_authoring/pose_authoring_component.dart';
+export 'package:lumina/src/interaction/grab/grabber.dart';
+export 'package:lumina/src/interaction/grab/mouse_grabber.dart';
+export 'package:lumina/src/interaction/grab/pose_grab_interactor.dart';
+export 'package:lumina/src/interaction/grab/pose_handle_visuals.dart';
 export 'package:lumina/src/components/mesh/pose_authoring/pose_authoring_nodes.dart';
 export 'package:lumina/src/components/mesh/pose_authoring/pose_handle.dart';
 export 'package:lumina/src/components/mesh/pose_authoring/pose_library.dart';

@@ -1,5 +1,13 @@
 import 'package:vector_math/vector_math_64.dart';
 
+/// A handle's target at one moment: what an undo step restores.
+typedef LuminaPoseHandleState = ({
+  Vector3? modelTarget,
+  Quaternion? modelRotation,
+  Vector3? pendingWorldTarget,
+  Quaternion? pendingWorldRotation,
+});
+
 /// How a [LuminaPoseHandle] moves its part of the body.
 enum LuminaPoseHandleKind {
   /// A hand or foot: the end of a two-bone limb.
@@ -52,6 +60,22 @@ class LuminaPoseHandle {
   /// The target in the mesh's model frame (the GLB's), once resolved.
   Vector3? modelTarget;
   Quaternion? modelRotation;
+
+  /// The handle's target as it is now (see [restore]).
+  LuminaPoseHandleState get state => (
+        modelTarget: modelTarget?.clone(),
+        modelRotation: modelRotation?.clone(),
+        pendingWorldTarget: pendingWorldTarget?.clone(),
+        pendingWorldRotation: pendingWorldRotation?.clone(),
+      );
+
+  /// Puts back a target [state] took.
+  void restore(LuminaPoseHandleState s) {
+    modelTarget = s.modelTarget?.clone();
+    modelRotation = s.modelRotation?.clone();
+    pendingWorldTarget = s.pendingWorldTarget?.clone();
+    pendingWorldRotation = s.pendingWorldRotation?.clone();
+  }
 
   void clear() {
     pendingWorldTarget = null;

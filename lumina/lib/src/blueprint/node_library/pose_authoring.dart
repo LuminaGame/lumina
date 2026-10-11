@@ -69,6 +69,32 @@ final List<LuminaBlueprintNodeSpec> _poseAuthoringNodes = <LuminaBlueprintNodeSp
   ], [
     _ret(LuminaPinType.boolean),
   ]),
+  _poseNode('add_grab_interactor', 'Add Grab Interactor', const ['grab', 'interactor', 'controller', 'xr', 'mouse', 'add'], [
+    _b('use_mouse', 'Use Mouse'),
+  ], [
+    _ret(LuminaPinType.object, cls: LuminaBlueprintObjectClass.component('LuminaPoseGrabInteractor')),
+  ]),
+  _poseNode('register_grabber', 'Register Grabber', const ['grab', 'grabber', 'controller', 'xr', 'register'], [
+    _obj('grabber', 'Grabber'),
+  ], [
+    _ret(LuminaPinType.boolean),
+  ]),
+  _poseNode('set_grab_radius', 'Set Grab Radius', const ['grab', 'radius', 'reach'], [_f('radius', 'Radius', 8.0)], const []),
+  _poseNode('undo_last_grab', 'Undo Last Grab', const ['grab', 'undo', 'revert'], const [], [_ret(LuminaPinType.boolean)]),
+  for (final (id, title, word) in const [
+    ('event_pose_handle_grabbed', 'Event On Pose Handle Grabbed', 'grabbed'),
+    ('event_pose_handle_released', 'Event On Pose Handle Released', 'released'),
+    ('event_pose_handle_hovered', 'Event On Pose Handle Hovered', 'hovered'),
+  ])
+    LuminaBlueprintNodeSpec(
+      id: id,
+      title: title,
+      category: 'Events',
+      kind: LuminaBlueprintNodeKind.event,
+      headerColor: _event,
+      keywords: [..._poseKeywords, 'grab', word, 'event'],
+      outputs: [_execOut, _s('handle', 'Handle'), _s('grabber', 'Grabber')],
+    ),
   LuminaBlueprintNodeSpec(
     id: 'event_pose_handle_changed',
     title: 'Event On Pose Handle Changed',

@@ -20,6 +20,10 @@ final Map<String, LuminaBlueprintCallShape> _poseAuthoringCallShapes = <String, 
   'apply_pose': _pose('applyPose', ['pose', 'blend_time'], outputs: LuminaBlueprintFunctionLibrary._r),
   'save_pose': _pose('savePose', ['slot', 'name'], outputs: LuminaBlueprintFunctionLibrary._r),
   'load_pose': _pose('loadPose', ['slot', 'name', 'blend_time'], outputs: LuminaBlueprintFunctionLibrary._r),
+  'add_grab_interactor': _pose('addGrabInteractor', ['use_mouse'], outputs: LuminaBlueprintFunctionLibrary._r),
+  'register_grabber': _pose('registerGrabber', ['grabber'], outputs: LuminaBlueprintFunctionLibrary._r),
+  'set_grab_radius': _pose('setGrabRadius', ['radius']),
+  'undo_last_grab': _pose('undoLastGrab', [], outputs: LuminaBlueprintFunctionLibrary._r),
 };
 
 String _ps(Object? v, [String d = '']) => v is String ? v : (v == null ? d : '$v');
@@ -57,4 +61,12 @@ final Map<String, LuminaBlueprintFunction> _poseAuthoringFunctions = <String, Lu
       LuminaPoseAuthoringNodes.savePose(c.self, _ps(i['slot'], 'Poses'), _ps(i['name'], 'Pose'))),
   'load_pose': (c, i) => LuminaBlueprintFunctionLibrary._ret(LuminaPoseAuthoringNodes.loadPose(
       c.self, _ps(i['slot'], 'Poses'), _ps(i['name'], 'Pose'), LuminaBlueprintFunctionLibrary._d(i['blend_time'], 0.0))),
+  'add_grab_interactor': (c, i) =>
+      LuminaBlueprintFunctionLibrary._ret(LuminaPoseAuthoringNodes.addGrabInteractor(c.self, i['use_mouse'] as bool? ?? false)),
+  'register_grabber': (c, i) => LuminaBlueprintFunctionLibrary._ret(LuminaPoseAuthoringNodes.registerGrabber(c.self, i['grabber'])),
+  'set_grab_radius': (c, i) {
+    LuminaPoseAuthoringNodes.setGrabRadius(c.self, LuminaBlueprintFunctionLibrary._d(i['radius'], 8.0));
+    return const {};
+  },
+  'undo_last_grab': (c, i) => LuminaBlueprintFunctionLibrary._ret(LuminaPoseAuthoringNodes.undoLastGrab(c.self)),
 };

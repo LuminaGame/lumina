@@ -168,6 +168,9 @@ abstract final class LuminaBlueprintNodeLibrary {
     'event_montage_ended': 'onMontageEnded',
     'event_anim_notify': 'onAnimNotify',
     'event_pose_handle_changed': 'onPoseHandleChanged',
+    'event_pose_handle_grabbed': 'onPoseHandleGrabbed',
+    'event_pose_handle_released': 'onPoseHandleReleased',
+    'event_pose_handle_hovered': 'onPoseHandleHovered',
   };
 
   /// Typed object nodes.

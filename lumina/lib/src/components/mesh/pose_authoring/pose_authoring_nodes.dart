@@ -8,6 +8,8 @@ import 'package:lumina/src/blueprint/blueprint_model.dart';
 import 'package:lumina/src/components/mesh/animated_mesh_component.dart';
 import 'package:lumina/src/components/mesh/pose_authoring/pose_authoring_component.dart';
 import 'package:lumina/src/components/mesh/pose_authoring/pose_library.dart';
+import 'package:lumina/src/interaction/grab/grabber.dart';
+import 'package:lumina/src/interaction/grab/pose_grab_interactor.dart';
 import 'package:lumina/src/object/actor.dart';
 import 'package:lumina/src/save/save_game.dart';
 import 'package:lumina/src/save/save_game_subsystem.dart';
@@ -106,6 +108,37 @@ abstract final class LuminaPoseAuthoringNodes {
     }
     return ok;
   }
+
+  static LuminaPoseGrabInteractor? _interactor(LuminaActor self) => self.getComponent<LuminaPoseGrabInteractor>();
+
+  /// Add Grab Interactor: a grab interactor on the owner (the one already
+  /// there, if any); [useMouse] lets the mouse grab in a desktop view.
+  static LuminaPoseGrabInteractor addGrabInteractor(LuminaActor self, bool useMouse) {
+    final existing = _interactor(self);
+    if (existing != null) return existing;
+    final interactor = LuminaPoseGrabInteractor(useMouse: useMouse);
+    self.addComponent(interactor);
+    return interactor;
+  }
+
+  /// Register Grabber: [grabber] (a controller component or any other
+  /// grabber object) grabs through the owner's interactor. False for an
+  /// object that is not a grabber or without an interactor.
+  static bool registerGrabber(LuminaActor self, Object? grabber) {
+    final interactor = _interactor(self);
+    if (interactor == null || grabber is! LuminaGrabber) return false;
+    interactor.registerGrabber(grabber);
+    return true;
+  }
+
+  /// Set Grab Radius (cm) of the owner's interactor.
+  static void setGrabRadius(LuminaActor self, double radius) {
+    final interactor = _interactor(self);
+    if (interactor != null && radius > 0) interactor.grabRadius = radius;
+  }
+
+  /// Undo Last Grab of the owner's interactor.
+  static bool undoLastGrab(LuminaActor self) => _interactor(self)?.undoLastGrab() ?? false;
 
   /// Load Pose: applies the pose [name] of save game slot [slot]; false
   /// when the slot has none.

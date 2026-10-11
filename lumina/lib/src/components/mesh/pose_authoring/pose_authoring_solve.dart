@@ -6,6 +6,9 @@ part of 'pose_authoring_component.dart';
 bool _solve(LuminaPoseAuthoringComponent c, Float64List pose, Matrix4 meshTransform, double deltaTime) {
   final rig = c._rig, state = c._state;
   if (rig == null || state == null || pose.length != rig.length * 10) return false;
+  for (final hook in List.of(c.beforeSolve)) {
+    hook(deltaTime);
+  }
   final watch = Stopwatch()..start();
   c._meshTransform.setFrom(meshTransform);
   final n = rig.length;

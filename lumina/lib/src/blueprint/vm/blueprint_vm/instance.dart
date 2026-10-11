@@ -164,6 +164,24 @@ mixin LuminaBlueprintInstance on LuminaBlueprintRuntime implements LuminaBluepri
   }
 
   @override
+  void onPoseHandleGrabbed(String handle, String grabber) {
+    super.onPoseHandleGrabbed(handle, grabber);
+    _dispatch('event_pose_handle_grabbed', 'exec_out', {'handle': handle, 'grabber': grabber});
+  }
+
+  @override
+  void onPoseHandleReleased(String handle, String grabber) {
+    super.onPoseHandleReleased(handle, grabber);
+    _dispatch('event_pose_handle_released', 'exec_out', {'handle': handle, 'grabber': grabber});
+  }
+
+  @override
+  void onPoseHandleHovered(String handle, String grabber) {
+    super.onPoseHandleHovered(handle, grabber);
+    _dispatch('event_pose_handle_hovered', 'exec_out', {'handle': handle, 'grabber': grabber});
+  }
+
+  @override
   void onPoseHandleChanged(String handle) {
     super.onPoseHandleChanged(handle);
     _dispatch('event_pose_handle_changed', 'exec_out', {'handle': handle});
