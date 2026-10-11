@@ -101,9 +101,69 @@ extension _UmgSlotInspectorAppearance on UmgSlotInspector {
         child: GhostButton(onPressed: vm.refreshTextures, child: const Text('Rescan textures', style: TextStyle(fontSize: 9))),
       ));
     }
+    if (node.type == UmgWidgetType.viewport) rows.addAll(_viewportSections(node));
     if (node.type.isTextBearing) rows.addAll(_textEffects(node));
     if (rows.isEmpty) rows.add(_hint('${node.type.displayName} has no appearance properties.'));
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: rows);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Viewport
+  // ---------------------------------------------------------------------------
+
+  /// A Viewport's Details: background, grid, camera preset, interaction,
+  /// render scale, max FPS, and the design-time preview content (a mesh
+  /// and an animation picked with the asset picker; the designer only).
+  List<Widget> _viewportSections(UmgNode node) {
+    final p = node.props;
+    Widget picker(String label, String key, List<RealAssetInfo> assets, String hint) {
+      final current = p[key]?.toString() ?? '';
+      return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        _label(label),
+        AssetPickerSelect(
+          key: ValueKey('umg_viewport_${key}_${node.id}'),
+          keyPrefix: 'umg_viewport_${key}_${node.id}',
+          assets: assets,
+          selectedPath: current.isEmpty ? null : current,
+          placeholder: '(none)',
+          onSelected: (a) => vm.setProp(node.id, key, a.relativePath),
+          onCleared: () => vm.setProp(node.id, key, ''),
+        ),
+        if (assets.isEmpty) _hint(hint),
+      ]);
+    }
+
+    return [
+      _label('Background'),
+      EnumField(
+        key: ValueKey('umg_viewport_background_${node.id}'),
+        value: p['background']?.toString() ?? 'sky',
+        enumValues: const ['sky', 'color', 'transparent'],
+        onCommit: (v) => vm.setProp(node.id, 'background', v),
+      ),
+      _switchRow('Grid', p['grid'] != false, ValueKey('umg_viewport_grid_${node.id}'), (v) => vm.setProp(node.id, 'grid', v)),
+      _label('Camera Preset'),
+      EnumField(
+        key: ValueKey('umg_viewport_camera_${node.id}'),
+        value: p['cameraPreset']?.toString() ?? 'perspective',
+        enumValues: const ['perspective', 'front', 'back', 'left', 'right', 'top'],
+        onCommit: (v) => vm.setProp(node.id, 'cameraPreset', v),
+      ),
+      const SizedBox(height: 4),
+      _label('Interaction'),
+      for (final (key, label) in const [('orbit', 'Orbit'), ('pan', 'Pan'), ('zoom', 'Zoom'), ('pick', 'Pick')])
+        _switchRow(label, p[key] != false, ValueKey('umg_viewport_${key}_${node.id}'), (v) => vm.setProp(node.id, key, v)),
+      _propNumber(node, 'Auto Rotate', 'autoRotate', -360, 360, unit: 'deg/s'),
+      _propNumber(node, 'Render Scale', 'renderScale', 0.25, 1, fractionDigits: 2),
+      _propNumber(node, 'Max FPS', 'maxFps', 1, 240, fractionDigits: 0, asInt: true),
+      const SizedBox(height: 6),
+      picker('Preview Mesh (design time)', 'previewMesh', vm.meshAssets, 'No meshes in this project yet — import one in the Content Browser.'),
+      picker('Preview Animation (design time)', 'previewAnimation', vm.animationAssets, 'No animations in this project yet.'),
+      Padding(
+        padding: const EdgeInsets.only(top: 4),
+        child: GhostButton(onPressed: vm.refreshTextures, child: const Text('Rescan assets', style: TextStyle(fontSize: 9))),
+      ),
+    ];
   }
 
   // ---------------------------------------------------------------------------

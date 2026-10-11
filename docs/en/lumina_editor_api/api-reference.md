@@ -419,11 +419,15 @@ A bare [LuminaEditorContext] (a plugin's own unit test, a registration smoke) ha
 
 Configuration options passed to [LuminaEditorHostContext.build3DViewport].
 
-The viewport loads `meshPath` (a `.glb`, or a skeletal mesh `.lmas` whose GLB is its `.entity.glb` companion or
-embedded payload; absolute or project-relative) without blocking the editor: a file of 8 MiB or more is read and
-parsed on a background isolate (`Plugin3DViewportMeshLoader`), smaller ones are read asynchronously. The viewport
-shows no mesh until it arrives; the last mesh is kept until its file changes. `glbBytes` of 8 MiB or more are parsed
-on a background isolate as well.
+The viewport is the UMG Viewport widget (`LuminaUmgViewport`, [lumina_widgets UMG](../lumina_widgets/umg.md#class-luminaumgviewport))
+on the editor's shared engine: `Plugin3DViewportContainer` turns the options into a Viewport scene description and
+the Viewport's events into the callbacks. `meshPath` (a `.glb`, or a skeletal mesh `.lmas` whose GLB is its
+`.entity.glb` companion or embedded payload; absolute or project-relative, resolved as `Plugin3DViewportMeshLoader`
+does) or `glbBytes` is a skeletal node read asynchronously through the engine's mesh cache; `jointLocalPose` poses
+it (joint → `[x, y, z, qx, qy, qz, qw, sx, sy, sz]`, glTF frame); `showBones` / `visibleBoneNames` /
+`selectedBoneName` draw its skeleton overlay, `ghostSkeletons` its ghost skeletons with their labels; a click picks
+the nearest bone (`onBoneSelected`); the gizmo on the selected bone reports `onBoneMoved(bone, newPosition, delta)`
+in the mesh's glTF frame (metres, Y up) while it is dragged (at most 30 times a second).
 
 **Members:**
 

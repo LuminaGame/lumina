@@ -470,7 +470,7 @@ The UMG **Viewport** element: a real Filament preview scene inside the widget tr
 | `allowFiles` | Whether `Play Animation File` may read a file (editor panels). |
 | `assetProvider` | Where meshes are read (null: `LuminaAssets`). |
 | `budget` | The `LuminaViewportBudget` it counts against (null: the game's `LuminaViewportHost`, else `LuminaViewportBudget.shared`). |
-| `onEvent`, `onController` | Every event as it reaches the graph; the `LuminaViewportController` once the preview exists. |
+| `onEvent`, `onController` | Receives every event instead of the instance's graph (generated handlers, an editor panel's host, tests; null fires the graph); the `LuminaViewportController` once the preview exists. |
 | `backend` | The Flutter path's Filament backend (tests pass the noop backend). |
 
 **Input** (handled in the widget, never per frame through the graph): left drag orbits (a press that moves less than 4 px picks), right or middle drag pans, the wheel and a pinch zoom (the wheel's On Camera Changed fires when it rests), a drag on a gizmo handle moves the target (the cursor follows the hovered axis), F frames the picked node, Escape cancels a gizmo drag. Skeleton overlays, ghost poses, markers and the gizmo are drawn by `LuminaViewportOverlayPainter`, only while the description shows one.

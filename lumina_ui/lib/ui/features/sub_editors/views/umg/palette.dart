@@ -10,6 +10,8 @@ IconData umgIconFor(UmgWidgetType type) {
   switch (type) {
     case UmgWidgetType.canvasPanel:
       return LucideIcons.layoutDashboard;
+    case UmgWidgetType.viewport:
+      return LucideIcons.box;
     case UmgWidgetType.overlay:
       return LucideIcons.layers;
     case UmgWidgetType.horizontalBox:
@@ -123,6 +125,7 @@ class UmgPalette extends StatelessWidget {
   Widget build(BuildContext context) {
     final panels = UmgWidgetType.values.where((t) => t.category == UmgWidgetCategory.panels).toList();
     final common = UmgWidgetType.values.where((t) => t.category == UmgWidgetCategory.common).toList();
+    final threeD = UmgWidgetType.values.where((t) => t.category == UmgWidgetCategory.threeD).toList();
     // Shadcn's components only for a project on shadcn_flutter.
     final shadcn = vm.widgetLibrary == kUmgWidgetLibraryShadcn
         ? UmgWidgetType.values.where((t) => t.category == UmgWidgetCategory.shadcn).toList()
@@ -152,6 +155,16 @@ class UmgPalette extends StatelessWidget {
                 expanded: true,
                 trigger: const AccordionTrigger(child: Text('Common', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
                 content: Column(children: common.map(_entry).toList()),
+              ),
+            ],
+          ),
+          Accordion(
+            key: const ValueKey('umg_palette_category_3d'),
+            items: [
+              AccordionItem(
+                expanded: true,
+                trigger: const AccordionTrigger(child: Text('3D', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
+                content: Column(children: threeD.map(_entry).toList()),
               ),
             ],
           ),

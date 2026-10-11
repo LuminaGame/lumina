@@ -1,15 +1,19 @@
+import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:flutter/widgets.dart';
-import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_editor_api/lumina_editor_api.dart';
-import 'package:vector_math/vector_math_64.dart';
-
 import 'package:lumina_ui/ui/core/plugin_3d_viewport_mesh_loader.dart';
-import 'package:lumina_ui/ui/features/main_editor/services/transform_gizmo.dart';
-import 'package:lumina_ui/ui/features/sub_editors/models/sub_editor_transform_gizmo.dart';
-import 'package:lumina_ui/ui/features/sub_editors/views/sub_editor_3d_viewport.dart';
+import 'package:lumina_editor_data/lumina_editor.dart'
+    show LuminaAxes, LuminaUmgInstanceBinding, LuminaUmgInstanceScope, LuminaUmgViewport, LuminaViewportController, LuminaViewportNodeKind, LuminaViewportScene, LuminaWidgetEvents;
 
-/// Renders a Filament 3D viewport inside a plugin editor with full support for
-/// skeleton bones, joint picking, and interactive 3D translation gizmo manipulation.
+/// Renders a plugin's 3D viewport (`Plugin3DViewportOptions`) on the UMG
+/// Viewport widget: the options become a Viewport scene description — the
+/// mesh (a path or GLB bytes) as a skeletal node posed by
+/// `jointLocalPose`, the skeleton overlay (`showBones`, `visibleBoneNames`,
+/// the selected bone), the ghost skeletons and the bone gizmo — and the
+/// Viewport's events become the plugin's callbacks (`onBoneSelected` from a
+/// pick, `onBoneMoved` from the gizmo's previews, in the mesh's glTF frame).
 class Plugin3DViewportContainer extends StatefulWidget {
   final Plugin3DViewportOptions options;
   final String? projectDir;
@@ -25,180 +29,191 @@ class Plugin3DViewportContainer extends StatefulWidget {
 }
 
 class _Plugin3DViewportContainerState extends State<Plugin3DViewportContainer> {
-  GlbMeshData? _mesh;
-  String? _loadedKey;
-  int _loadToken = 0;
-  String? _selectedBoneName;
-  Vector3? _dragStartWorldPos;
-  SubEditorTransformGizmo? _transformGizmo;
+  static const String _element = 'Viewport';
+  static const String _memoryPrefix = 'memory://plugin-viewport/';
+
+  late final Map<String, Object?> _instance = <String, Object?>{
+    'class': 'Plugin3DViewport',
+    'elements': <String, Object?>{
+      _element: <String, Object?>{'type': 'viewport', 'name': _element, 'visibility': 'Visible'},
+    },
+  };
+  late final LuminaUmgInstanceBinding _binding = LuminaUmgInstanceBinding(_instance);
+  String? _selectedBone;
+  LuminaViewportController? _controller;
+  String? _nodeId;
+  String? _meshKey;
+  bool _cameraSet = false;
+
+  /// The bone gizmo's start (glTF frame) while a drag runs.
+  List<double>? _dragStart;
+
+  Map<String, Object?> get _state => (_instance['elements']! as Map)[_element] as Map<String, Object?>;
 
   @override
   void initState() {
     super.initState();
-    _selectedBoneName = widget.options.selectedBoneName;
-    _initGizmo();
-    _loadMesh();
-  }
-
-  void _initGizmo() {
-    _transformGizmo = SubEditorTransformGizmo(
-      mode: GizmoMode.translate,
-      space: GizmoSpace.world,
-      onDragBegin: (id) {
-        _dragStartWorldPos = _getBoneWorldPosition(id);
-      },
-      onDragUpdate: (id, delta) {
-        if (delta.translation != null && _dragStartWorldPos != null) {
-          final runtimeDelta = AuthoringRotation.toRuntime(delta.translation!);
-          final newPos = _dragStartWorldPos! + runtimeDelta;
-          widget.options.onBoneMoved?.call(
-            id,
-            [newPos.x, newPos.y, newPos.z],
-            [runtimeDelta.x, runtimeDelta.y, runtimeDelta.z],
-          );
-        }
-      },
-      onDragEnd: (id) {
-        _dragStartWorldPos = null;
-      },
-    );
+    _selectedBone = widget.options.selectedBoneName;
+    _sync();
   }
 
   @override
   void didUpdateWidget(covariant Plugin3DViewportContainer oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.options.selectedBoneName != oldWidget.options.selectedBoneName) {
-      _selectedBoneName = widget.options.selectedBoneName;
-      _syncGizmoTarget();
-    }
-    if (widget.options.meshPath != oldWidget.options.meshPath ||
-        widget.options.glbBytes != oldWidget.options.glbBytes ||
-        widget.projectDir != oldWidget.projectDir) {
-      _loadMesh();
-    } else if (widget.options.jointLocalPose != oldWidget.options.jointLocalPose) {
-      _syncGizmoTarget();
-    }
+    if (widget.options.selectedBoneName != oldWidget.options.selectedBoneName) _selectedBone = widget.options.selectedBoneName;
+    _sync();
+    _binding.refresh();
   }
 
   @override
   void dispose() {
-    _transformGizmo?.dispose();
+    _binding.dispose();
     super.dispose();
   }
 
-  Vector3? _getBoneWorldPosition(String boneName) {
-    if (_mesh == null) return null;
-    final positions = computeSkeletonBonePositions(
-      glbMesh: _mesh!,
-      jointLocalPose: widget.options.jointLocalPose,
-    );
-    return positions[boneName];
+  /// The mesh asset key: the path the options name, or the GLB bytes kept
+  /// under a key of their own.
+  String? get _meshAsset {
+    final o = widget.options;
+    if (o.meshPath != null && o.meshPath!.isNotEmpty) return o.meshPath;
+    final bytes = o.glbBytes;
+    if (bytes == null || bytes.isEmpty) return null;
+    return '$_memoryPrefix${identityHashCode(bytes)}.glb';
   }
 
-  void _syncGizmoTarget() {
-    final bone = _selectedBoneName;
-    if (bone == null || _mesh == null || !widget.options.showGizmo) {
-      _transformGizmo?.setTarget(null);
-      return;
+  /// Reads a mesh: the options' bytes, an absolute file, or a file of the
+  /// project.
+  Future<Uint8List> _provider(String path) async {
+    if (path.startsWith(_memoryPrefix)) {
+      final bytes = widget.options.glbBytes;
+      if (bytes == null) throw StateError('no GLB bytes');
+      return bytes;
     }
-    final worldPos = _getBoneWorldPosition(bone);
-    if (worldPos != null) {
-      _transformGizmo?.setTarget(
-        SubEditorGizmoTarget(
-          id: bone,
-          pivot: AuthoringRotation.toAuthoring(worldPos),
-          rotation: Quaternion.identity(),
-        ),
-      );
+    // An absolute path, or one of the project (Plugin3DViewportMeshLoader's
+    // rule), read asynchronously.
+    final resolved = await Plugin3DViewportMeshLoader.resolve(path, projectDir: widget.projectDir);
+    if (resolved == null) throw FileSystemException('not found', path);
+    return File(resolved).readAsBytes();
+  }
+
+  static List<double> _rgba(Color c, [double? opacity]) => [c.r, c.g, c.b, opacity ?? c.a];
+
+  /// Writes the options into the Viewport's description.
+  void _sync() {
+    final o = widget.options;
+    final scene = LuminaViewportScene.of(_state);
+    final asset = _meshAsset;
+    if (asset != _meshKey) {
+      _meshKey = asset;
+      scene.clear();
+      _nodeId = asset == null ? null : scene.addNode(LuminaViewportNodeKind.skeletalMesh, asset: asset);
+      if (_nodeId != null) scene.frameNode(_nodeId!);
+    }
+    if (!_cameraSet) {
+      _cameraSet = true;
+      scene
+        ..setEnvironment('color')
+        ..gridVisible = true
+        ..setInteraction(pick: true);
+      final distance = o.cameraDistance;
+      if (distance != null) scene.setOrbit(scene.yaw, scene.pitch, distance * 100.0);
+    }
+    final node = _nodeId;
+    if (node == null) return;
+    final n = scene.node(node)!;
+    n['pose'] = o.jointLocalPose == null ? null : LuminaViewportScene.plain(o.jointLocalPose);
+    if (o.showBones) {
+      scene.showSkeleton(node, const [1.0, 0.85, 0.2, 1.0]);
     } else {
-      _transformGizmo?.setTarget(null);
+      scene.hideSkeleton(node);
+      scene.showSkeleton(node, const [0.0, 0.0, 0.0, 0.0], joints: false);
+    }
+    final overlay = scene.skeletonOverlay(node)!;
+    overlay['bones'] = o.visibleBoneNames?.toList();
+    overlay['selected'] = _selectedBone;
+    overlay['ghosts'] = [
+      for (final g in o.ghostSkeletons ?? const <PluginGhostSkeleton>[])
+        {'pose': LuminaViewportScene.plain(g.jointLocalPose), 'color': _rgba(g.color, g.opacity), 'label': g.label ?? ''},
+    ];
+    if (o.showGizmo && _selectedBone != null) {
+      scene.setGizmo(node, bone: _selectedBone);
+    } else {
+      scene.hideGizmo();
     }
   }
 
-  /// Shows the mesh the options name. The read and the parse run off the UI
-  /// isolate ([Plugin3DViewportMeshLoader]); the viewport shows no mesh until
-  /// it arrives, and a result for a mesh no longer selected is dropped.
-  Future<void> _loadMesh() async {
-    final opts = widget.options;
-    final key = opts.meshPath ?? opts.glbBytes?.hashCode.toString();
-    if (key == null) {
-      _loadToken++;
-      if (mounted) setState(() => _mesh = null);
-      return;
+  /// The selected bone's position in the mesh's glTF frame (metres, Y up).
+  List<double>? _bonePosition(String bone) {
+    final c = _controller;
+    final node = _nodeId;
+    if (c == null || node == null) return null;
+    for (final j in c.runtime.jointsOf(node)) {
+      if (j.name != bone) continue;
+      final local = c.runtime.toMeshFrame(node, j.position);
+      return local == null ? null : [local.x, local.y, local.z];
     }
-    if (key == _loadedKey && _mesh != null) {
-      _syncGizmoTarget();
-      return;
-    }
+    return null;
+  }
 
-    final token = ++_loadToken;
-    if (mounted && _loadedKey != key) {
-      setState(() {
-        _mesh = null;
-        _loadedKey = key;
-      });
-    }
-
-    try {
-      final bytes = opts.glbBytes;
-      final meshPath = opts.meshPath;
-      final GlbMeshData? mesh;
-      if (bytes != null) {
-        mesh = bytes.isEmpty ? null : await Plugin3DViewportMeshLoader.parseBytes(bytes);
-      } else {
-        mesh = await Plugin3DViewportMeshLoader.load(meshPath!, projectDir: widget.projectDir);
-      }
-      if (mesh != null && mounted && token == _loadToken) {
+  void _onEvent(String event, Map<String, Object?> args) {
+    final o = widget.options;
+    switch (event) {
+      case LuminaWidgetEvents.onPicked:
+        final bone = '${args['bone'] ?? ''}';
+        if (bone.isEmpty) return;
         setState(() {
-          _mesh = mesh;
-          _loadedKey = key;
+          _selectedBone = bone;
+          _sync();
         });
-        _syncGizmoTarget();
-      }
-    } catch (e) {
-      EngineLoggerService().log('Plugin viewport could not load ${opts.meshPath ?? 'its mesh'}: $e', level: 'warn');
+        _binding.refresh();
+        o.onBoneSelected?.call(bone);
+      case LuminaWidgetEvents.onGizmoPreview:
+      case LuminaWidgetEvents.onGizmoCommit:
+        final bone = '${args['bone'] ?? ''}';
+        final t = args['transform'];
+        if (bone.isEmpty || t is! Map || t['location'] is! List) return;
+        final start = _dragStart ??= _bonePosition(bone);
+        if (start == null) return;
+        final l = [for (final v in (t['location'] as List).take(3)) (v as num).toDouble()];
+        // Authoring cm → the mesh's glTF frame (Y up, metres).
+        final p = LuminaAxes.location(l) / 100.0;
+        final node = _nodeId;
+        final local = node == null ? null : _controller?.runtime.toMeshFrame(node, p * 100.0);
+        if (local == null) return;
+        final newPos = [local.x, local.y, local.z];
+        final delta = [for (var i = 0; i < 3; i++) newPos[i] - start[i]];
+        o.onBoneMoved?.call(bone, newPos, delta);
+        if (event == LuminaWidgetEvents.onGizmoCommit) _dragStart = null;
+      case LuminaWidgetEvents.onGizmoCancel:
+        _dragStart = null;
     }
-  }
-
-  void _handleBoneSelected(String boneName) {
-    setState(() {
-      _selectedBoneName = boneName;
-      _syncGizmoTarget();
-    });
-    widget.options.onBoneSelected?.call(boneName);
   }
 
   @override
   Widget build(BuildContext context) {
-    _syncGizmoTarget();
-
-    return SubEditor3DViewport(
-      title: widget.options.title,
-      glbMesh: _mesh,
-      meshSourcePath: widget.options.meshPath,
-      jointLocalPose: widget.options.jointLocalPose,
-      overlayHUD: widget.options.overlayHUD,
-      initialCameraDistance: widget.options.cameraDistance,
-      showBones: widget.options.showBones,
-      selectedBoneName: _selectedBoneName,
-      visibleBoneNames: widget.options.visibleBoneNames,
-      onBoneSelected: _handleBoneSelected,
-      onBoneMoved: widget.options.onBoneMoved,
-      transformGizmo: widget.options.showGizmo ? _transformGizmo : null,
-      showTransformGizmo: widget.options.showGizmo && _selectedBoneName != null,
-      ghostSkeletons: [
-        if (widget.options.ghostSkeletons != null)
-          for (final g in widget.options.ghostSkeletons!)
-            SubEditorGhostSkeleton(
-              jointLocalPose: g.jointLocalPose,
-              color: g.color,
-              opacity: g.opacity,
-              label: g.label,
-              volumetric: g.volumetric,
-            ),
-      ],
-      yUpCamera: false,
+    final hud = widget.options.overlayHUD;
+    return LuminaUmgInstanceScope(
+      binding: _binding,
+      child: Stack(fit: StackFit.expand, children: [
+        LuminaUmgViewport(
+          key: const ValueKey('plugin_3d_viewport'),
+          instance: _instance,
+          name: _element,
+          background: 'color',
+          allowFiles: true,
+          assetProvider: _provider,
+          onEvent: _onEvent,
+          onController: (c) => _controller = c,
+        ),
+        Positioned(
+          left: 8,
+          top: 6,
+          child: IgnorePointer(
+            child: Text(widget.options.title, style: const TextStyle(fontSize: 10, color: Color(0xFFB0B6C2))),
+          ),
+        ),
+        ?hud,
+      ]),
     );
   }
 }
-

@@ -21,13 +21,55 @@ class LuminaViewportJoint {
   final Vector3 position;
 }
 
-/// Picking, joints and projection of a [LuminaViewportSceneRuntime]: what
-/// the widget's taps and overlays ask of the preview.
+/// The parts of a [LuminaViewportSceneRuntime] the widget's taps, overlays
+/// and adapters use: picking, joints, poses, projection, material
+/// parameters and a timeline's local animation time.
 mixin _ViewportQueries {
   Map<String, _RuntimeNode> get _nodes;
   FilamentEngine get engine;
   LuminaViewportCamera get orbit;
   Aabb3? _worldBounds(_RuntimeNode node);
+
+  /// A bound timeline's time for node [id]'s animation (null: the
+  /// description's), applied without a description diff.
+  void setLocalAnimationTime(String id, double? seconds) {
+    final node = _nodes[id];
+    final mesh = node?.skeletal;
+    if (node == null || mesh == null) return;
+    node.localTime = seconds;
+    final clip = mesh.currentClip;
+    if (seconds == null || clip == null) return;
+    final loop = (node.json['animation'] is Map) ? (node.json['animation']! as Map)['loop'] != false : true;
+    final rate = mesh.playRate;
+    mesh.play(clip, startTime: seconds, loop: loop);
+    mesh.playRate = rate;
+    mesh.onTick(0.0);
+  }
+
+  /// Writes node [node]'s `pose` (joint → local `[x, y, z, qx, qy, qz, qw,
+  /// sx, sy, sz]` in the mesh's glTF frame) over its animation.
+  void _applyPose(_RuntimeNode node) {
+    final pose = node.json['pose'];
+    final mesh = node.skeletal;
+    final instance = mesh?.assetInstance;
+    if (pose is! Map || pose.isEmpty || instance == null || instance.skinCount == 0) return;
+    final tm = FilamentTransformManager(engine);
+    final entities = instance.jointsAt(0);
+    final names = node.jointNames;
+    for (var i = 0; i < entities.length && i < names.length; i++) {
+      final v = pose[names[i]];
+      if (v is! List || v.length < 7) continue;
+      double at(int k, double d) => k < v.length && v[k] is num ? (v[k] as num).toDouble() : d;
+      tm.setTransform(
+        entities[i],
+        Matrix4.compose(Vector3(at(0, 0), at(1, 0), at(2, 0)), Quaternion(at(3, 0), at(4, 0), at(5, 0), at(6, 1)),
+                Vector3(at(7, 1), at(8, 1), at(9, 1)))
+            .storage
+            .toList(),
+      );
+    }
+    instance.animator.updateBoneMatrices();
+  }
 
   /// Writes [node]'s material parameters onto its material instances.
   void _applyMaterialParams(_RuntimeNode node) {
@@ -177,6 +219,15 @@ mixin _ViewportQueries {
         LuminaViewportJoint(i < names.length ? names[i] : '#${entities[i]}', index[tm.getParent(entities[i])] ?? -1,
             worldOf(i).getTranslation()),
     ];
+  }
+
+  /// [world] (runtime frame) in the glTF frame of node [id]'s mesh (its
+  /// own units, before the node's transform and the asset scale); null
+  /// before load.
+  Vector3? toMeshFrame(String id, Vector3 world) {
+    final mesh = _nodes[id]?.mesh;
+    if (mesh == null || !mesh.isLoaded) return null;
+    return Matrix4.inverted(mesh.renderTransform).transform3(world.clone());
   }
 
   /// [world] (runtime frame) in pixels, or null behind the camera.

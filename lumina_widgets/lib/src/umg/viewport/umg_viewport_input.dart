@@ -107,7 +107,14 @@ class _ViewportInput {
         _kind = _DragKind.gizmo;
         activeHandle = handle;
         _drag = model.beginDrag(handle, _ray(e.localPosition), cameraPosition: _eye());
-        _start = c.runtime.transformOf(c.gizmoTarget!.node);
+        final target = c.gizmoTarget!;
+        _start = target.bone == null
+            ? c.runtime.transformOf(target.node)
+            : {
+                'location': [model.pivot.x, model.pivot.y, model.pivot.z],
+                'rotation': [0.0, 0.0, 0.0],
+                'scale': [1.0, 1.0, 1.0],
+              };
         return;
       }
       _kind = _DragKind.orbitOrTap;

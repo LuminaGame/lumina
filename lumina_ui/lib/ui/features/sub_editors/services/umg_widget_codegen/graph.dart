@@ -85,6 +85,7 @@ String _fireCall(UmgNode node, UmgEvent event, String inst) {
     'OnValueChanged' => ", {'value': value}",
     'OnTextCommitted' => ", {'text': value, 'commit_method': 'OnEnter'}",
     'OnSelectionChanged' => ', selection.eventArgs',
+    _ when node.type == UmgWidgetType.viewport => ', args',
     _ => '',
   };
   return 'LuminaUserWidgets.fire($inst, ${_str(node.name)}, ${_str(event.name)}$args);';

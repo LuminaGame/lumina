@@ -129,6 +129,7 @@ class LuminaViewportSceneRuntime with _ViewportQueries {
   @override
   final Map<String, _RuntimeNode> _nodes = {};
   LuminaActor? _sky;
+  LuminaActor? _keyLight;
   FilamentEditorGrid? _grid;
   bool _gridShown = false;
   int _frameSerial = 0;
@@ -251,7 +252,7 @@ class LuminaViewportSceneRuntime with _ViewportQueries {
     return switch (light['type']) {
       LuminaViewportLightType.point => LuminaPointLightComponent(color: color, intensity: intensity),
       LuminaViewportLightType.spot => LuminaSpotLightComponent(color: color, intensity: intensity),
-      _ => LuminaDirectionalLightComponent(color: color, intensity: intensity, castShadows: true, isSun: false),
+      _ => LuminaDirectionalLightComponent(color: color, intensity: intensity, isSun: false),
     };
   }
 
@@ -293,7 +294,7 @@ class LuminaViewportSceneRuntime with _ViewportQueries {
   }
 
   Future<void> _applyLookLoaded(_RuntimeNode node) async {
-    _applyLook(node, const {'materialParams', 'morphs'});
+    _applyLook(node, const {'materialParams', 'morphs', 'pose'});
     final skeletal = node.skeletal;
     if (skeletal != null) await _applyAnimation(node, skeletal);
   }
@@ -382,6 +383,7 @@ class LuminaViewportSceneRuntime with _ViewportQueries {
       }
     }
     if (fields.contains('animation')) unawaited(_applyAnimation(node, skeletal));
+    if (fields.contains('pose')) _applyPose(node);
   }
 
   /// Plays the node's animation: an animation asset (`.lmas`, whose
@@ -426,22 +428,6 @@ class LuminaViewportSceneRuntime with _ViewportQueries {
     mesh.onTick(0.0);
   }
 
-  /// A bound timeline's time for node [id]'s animation (null: the
-  /// description's), applied without a description diff.
-  void setLocalAnimationTime(String id, double? seconds) {
-    final node = _nodes[id];
-    final mesh = node?.skeletal;
-    if (node == null || mesh == null) return;
-    node.localTime = seconds;
-    final clip = mesh.currentClip;
-    if (seconds == null || clip == null) return;
-    final loop = (node.json['animation'] is Map) ? (node.json['animation']! as Map)['loop'] != false : true;
-    final rate = mesh.playRate;
-    mesh.play(clip, startTime: seconds, loop: loop);
-    mesh.playRate = rate;
-    mesh.onTick(0.0);
-  }
-
   // --- Environment and grid --------------------------------------------------
 
   void _applyEnvironment(Map<String, Object?> env) {
@@ -472,6 +458,21 @@ class LuminaViewportSceneRuntime with _ViewportQueries {
     final actor = LuminaActor(key: const LuminaObjectKey('viewport_sky'), root: sky);
     world.persistentLevel.registerActor(actor);
     _sky = actor;
+    // The preview's one shadowed directional light (a key light from the
+    // front left, above); description lights add to it unshadowed.
+    if (_keyLight == null) {
+      final key = _keyLight = LuminaActor(
+      key: const LuminaObjectKey('viewport_key_light'),
+      root: LuminaDirectionalLightComponent(
+        rotation: LuminaAxes.rotation(const [-40, 0, 30]),
+        color: Vector3(1.0, 0.97, 0.92),
+        intensity: 90000.0,
+        castShadows: true,
+        isSun: false,
+      ),
+      );
+      world.persistentLevel.registerActor(key);
+    }
   }
 
   void _applyGrid(bool visible) {
@@ -596,6 +597,7 @@ class LuminaViewportSceneRuntime with _ViewportQueries {
     }
     for (final node in _nodes.values) {
       node.skeletal?.onTick(dt);
+      if (node.json['pose'] is Map) _applyPose(node);
     }
     _syncAttachments();
     world.tick(0.0);
@@ -669,6 +671,9 @@ class LuminaViewportSceneRuntime with _ViewportQueries {
     final sky = _sky;
     if (sky != null) world.persistentLevel.unregisterActor(sky);
     _sky = null;
+    final key = _keyLight;
+    if (key != null) world.persistentLevel.unregisterActor(key);
+    _keyLight = null;
     final grid = _grid;
     if (grid != null) {
       if (_gridShown) grid.removeFromScene(scene);
@@ -685,3 +690,4 @@ class LuminaViewportSceneRuntime with _ViewportQueries {
     if (_ownsScene) scene.dispose();
   }
 }
+

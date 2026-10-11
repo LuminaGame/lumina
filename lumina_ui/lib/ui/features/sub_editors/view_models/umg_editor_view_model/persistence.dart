@@ -170,13 +170,19 @@ mixin _UmgEditorPersistence on _UmgEditorViewModelState {
     final dir = projectDirPath;
     if (dir == null) {
       _textureAssets = const [];
+      _meshAssets = const [];
+      _animationAssets = const [];
       return;
     }
     try {
-      _textureAssets = AssetRepository().scanProjectContents(dir).where((a) => a.type == AssetType.texture).toList()
-        ..sort((a, b) => a.relativePath.compareTo(b.relativePath));
+      final all = AssetRepository().scanProjectContents(dir)..sort((a, b) => a.relativePath.compareTo(b.relativePath));
+      _textureAssets = all.where((a) => a.type == AssetType.texture).toList();
+      _meshAssets = all.where((a) => a.type == AssetType.filamesh || a.type == AssetType.filameshSk).toList();
+      _animationAssets = all.where((a) => a.type == AssetType.animation).toList();
     } catch (_) {
       _textureAssets = const [];
+      _meshAssets = const [];
+      _animationAssets = const [];
     }
   }
 

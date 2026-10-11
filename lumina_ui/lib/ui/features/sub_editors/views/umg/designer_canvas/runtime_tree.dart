@@ -81,6 +81,10 @@ class _UmgRuntimeTree extends StatelessWidget {
       if (plain != null) return plain;
     }
     switch (node.type) {
+      case UmgWidgetType.viewport:
+        // The live preview with the design-time content.
+        return umgViewportElement(
+            key: ValueKey('umg_rt_viewport_${node.id}'), instance: null, name: node.name, props: node.props, projectDir: vm.projectDirPath);
       case UmgWidgetType.canvasPanel:
         return _buildCanvas(node);
       case UmgWidgetType.overlay:

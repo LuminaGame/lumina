@@ -116,7 +116,9 @@ class LuminaUmgViewport extends StatefulWidget {
   /// [LuminaViewportHost], else [LuminaViewportBudget.shared]).
   final LuminaViewportBudget? budget;
 
-  /// Every event the Viewport fires, as it reaches the graph.
+  /// Receives every event the Viewport fires instead of the widget's graph
+  /// (generated handlers, an editor panel's host, tests); null fires the
+  /// instance's graph (`LuminaUserWidgets.fire`).
   final void Function(String event, Map<String, Object?> args)? onEvent;
 
   /// The controller once the preview exists, null when it is torn down
@@ -157,6 +159,10 @@ class LuminaUmgViewportState extends State<LuminaUmgViewport> {
 
   /// The render size in pixels.
   (int, int) get renderSize => _render;
+
+  /// Frame decisions of the Flutter path (calls, no controller, no time
+  /// passed, off screen), for diagnostics.
+  List<int> get frameStats => List.unmodifiable(_limiter.stats);
 
   /// Whether the "Viewport limit reached" placeholder shows.
   bool get showsLimitPlaceholder => _refused;
@@ -222,9 +228,16 @@ class LuminaUmgViewportState extends State<LuminaUmgViewport> {
     if (!identical(oldWidget.instance, widget.instance) || oldWidget.name != widget.name) {
       _seedScene();
       _onRefresh();
-    } else if (widget.designScene != oldWidget.designScene && widget.instance == null && widget.designScene != null) {
+    } else if (widget.instance == null &&
+        widget.designScene != null &&
+        !LuminaViewportSceneDiff.jsonEquals(widget.designScene, oldWidget.designScene)) {
+      // New design-time content: reframed (a later frame request than the
+      // one shown), the player's orbit otherwise kept by the diff.
+      final shownSerial = _controller?.runtime.shown?.camera['frameSerial'];
       _localElement.remove(LuminaViewportScene.sceneKey);
       _seedScene();
+      final camera = _scene.camera;
+      if (camera['frame'] != null && shownSerial is int) camera['frameSerial'] = shownSerial + 1;
       _onRefresh();
     }
     if (oldWidget.maxFps != widget.maxFps) _limiter.maxFps = widget.maxFps ?? LuminaViewportBudget.editorMaxFps;
@@ -323,9 +336,10 @@ class LuminaUmgViewportState extends State<LuminaUmgViewport> {
   }
 
   void _fire(String event, Map<String, Object?> args) {
+    final handler = widget.onEvent;
+    if (handler != null) return handler(event, args);
     final instance = widget.instance;
     if (instance != null) LuminaUserWidgets.fire(instance, widget.name, event, args);
-    widget.onEvent?.call(event, args);
   }
 
   void _teardown() {
@@ -480,15 +494,29 @@ class _ViewportFrameLimiter extends FilamentFrameLimiter {
   @override
   void reset() => _last = null;
 
+  /// Why frames were skipped: calls, no controller, no time passed,
+  /// off screen (diagnostics).
+  final List<int> stats = [0, 0, 0, 0];
+
   @override
   bool shouldRender(Duration timestamp) {
+    stats[0]++;
     final last = _last;
     _last = timestamp;
     final c = state._controller;
-    if (c == null || !state.mounted) return false;
+    if (c == null || !state.mounted) {
+      stats[1]++;
+      return false;
+    }
     final dt = last == null ? 1 / 60 : math.min(0.25, (timestamp - last).inMicroseconds / 1e6);
-    if (dt <= 0) return false;
-    if (!state._onScreen()) return false;
+    if (dt <= 0) {
+      stats[2]++;
+      return false;
+    }
+    if (!state._onScreen()) {
+      stats[3]++;
+      return false;
+    }
     final render = c.frame(dt);
     if (render) state._frames.value++;
     return render;

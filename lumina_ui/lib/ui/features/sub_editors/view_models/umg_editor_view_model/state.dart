@@ -23,6 +23,8 @@ abstract class _UmgEditorViewModelState extends ChangeNotifier {
   UmgCompileResult? _lastCompile;
   String? _compileError;
   List<RealAssetInfo> _textureAssets = const [];
+  List<RealAssetInfo> _meshAssets = const [];
+  List<RealAssetInfo> _animationAssets = const [];
   final Map<String, Uint8List?> _textureCache = {};
   Map<String, dynamic>? _interactionBefore;
   String? _interactionLabel;
@@ -50,6 +52,11 @@ abstract class _UmgEditorViewModelState extends ChangeNotifier {
   UmgCompileResult? get lastCompile => _lastCompile;
   String? get compileError => _compileError;
   List<RealAssetInfo> get textureAssets => List.unmodifiable(_textureAssets);
+
+  /// The project's static and skeletal meshes and animations (a Viewport's
+  /// design-time preview content).
+  List<RealAssetInfo> get meshAssets => List.unmodifiable(_meshAssets);
+  List<RealAssetInfo> get animationAssets => List.unmodifiable(_animationAssets);
   List<String> get availableThemePaths => List.unmodifiable(_availableThemePaths);
   String? get activeThemePath => _document.themePath;
   LuminaThemeDocument get activeTheme => _activeTheme ?? LuminaThemeDocument.defaultShadcnDark();

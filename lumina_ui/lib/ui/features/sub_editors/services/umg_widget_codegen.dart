@@ -162,6 +162,7 @@ class UmgWidgetCodegen {
       'LuminaUmgElementBinding',
       if (usesImages) 'LuminaAssets',
       if (nodes.any((n) => n.type == UmgWidgetType.comboBox)) ...['LuminaComboBoxOptions', 'LuminaComboBoxSelection'],
+      if (nodes.any((n) => n.type == UmgWidgetType.viewport)) ...['LuminaUmgViewport', 'LuminaUserWidgets'],
       if (usesText) ...['LuminaUmgText', 'LuminaUmgTextOutline', 'LuminaUmgTextShadow'],
       if (containers.isNotEmpty) ...['LuminaUmgContainer', 'LuminaUmgContainerStyle'],
       if (usesGradient) 'LuminaUmgGradient',

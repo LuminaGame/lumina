@@ -419,10 +419,15 @@ A bare [LuminaEditorContext] (a plugin's own unit test, a registration smoke) ha
 
 [LuminaEditorHostContext.build3DViewport] metoduna aktarılan yapılandırma seçenekleri.
 
-Görünüm `meshPath`'i (bir `.glb` ya da GLB'si `.entity.glb` eşlik dosyası veya gömülü yükü olan bir skeletal mesh
-`.lmas`'ı; mutlak veya projeye göreli) editörü bloklamadan yükler: 8 MiB ve üzeri bir dosya arka plan isolate'inde
-okunup ayrıştırılır (`Plugin3DViewportMeshLoader`), daha küçükleri asenkron okunur. Mesh gelene kadar görünüm mesh
-göstermez; son mesh, dosyası değişene kadar tutulur. 8 MiB ve üzeri `glbBytes` da arka plan isolate'inde ayrıştırılır.
+Görünüm, editörün paylaşılan engine'indeki UMG Viewport widget'ıdır (`LuminaUmgViewport`, [lumina_widgets UMG](../lumina_widgets/umg.md#class-luminaumgviewport)):
+`Plugin3DViewportContainer` seçenekleri bir Viewport sahne açıklamasına, Viewport olaylarını da geri çağrılara
+çevirir. `meshPath` (bir `.glb` ya da GLB'si `.entity.glb` eşlik dosyası veya gömülü yükü olan bir skeletal mesh
+`.lmas`'ı; mutlak veya projeye göreli, `Plugin3DViewportMeshLoader`'ın kuralıyla çözülür) ya da `glbBytes`, engine'in
+mesh önbelleğinden asenkron okunan bir skeletal düğümdür; `jointLocalPose` onu pozlar (eklem → `[x, y, z, qx, qy, qz,
+qw, sx, sy, sz]`, glTF çerçevesi); `showBones` / `visibleBoneNames` / `selectedBoneName` iskelet kaplamasını,
+`ghostSkeletons` etiketli hayalet iskeletleri çizer; bir tıklama en yakın kemiği seçer (`onBoneSelected`); seçili
+kemikteki gizmo sürüklenirken mesh'in glTF çerçevesinde (metre, Y yukarı) `onBoneMoved(bone, yeniKonum, delta)`
+bildirir (saniyede en fazla 30 kez).
 
 **Üyeler:**
 

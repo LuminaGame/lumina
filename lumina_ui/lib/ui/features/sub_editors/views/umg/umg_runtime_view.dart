@@ -10,6 +10,7 @@ import 'package:lumina_ui/ui/features/sub_editors/services/umg_widget_codegen.da
 import 'package:lumina_ui/ui/features/sub_editors/views/umg/umg_components.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/umg/umg_text_style.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/umg/umg_theme_helper.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/umg/umg_viewport_preview.dart';
 
 /// Renders a [UmgDocument] using real shadcn_flutter widgets and layout.
 /// Used by the Play-In-Editor (PIE) viewport overlay and widget previews.
@@ -272,6 +273,17 @@ class UmgRuntimeView extends StatelessWidget {
             _fire(node, 'OnValueChanged', {'value': v});
           },
           onSubmitted: (v) => _fire(node, 'OnTextCommitted', {'text': v, 'commit_method': 'OnEnter'}),
+        );
+      case UmgWidgetType.viewport:
+        // The element's live scene; its events reach the graph (or the
+        // editor panel's host).
+        return umgViewportElement(
+          key: ValueKey('umg_rt_viewport_${node.id}'),
+          instance: runtimeValues,
+          name: node.name,
+          props: node.props,
+          allowFiles: editorTheme,
+          onEvent: onElementEvent == null ? null : (event, args) => _fire(node, event, args),
         );
       case UmgWidgetType.comboBox:
         final options = LuminaUmgElementBinding.options(e, umgItems(node.props['options']));

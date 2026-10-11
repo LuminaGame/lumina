@@ -208,6 +208,17 @@ Virgülle ayrılmış metinle kaydedilmiş widget belgeleri taşınmış olarak 
 
 **Üyeler:** `vm`, `node`, `valueTypes` (seçicinin tipleri, `UmgComboValueType` kayıtları `(id, label, components)`), `zeroOf(type)` (tipi değişen satırın değeri), `build`.
 
+## `lib/ui/features/sub_editors/views/umg/umg_viewport_preview.dart` (Viewport öğesi)
+
+**Viewport** (`UmgWidgetType.viewport`, palet kategorisi **3D** — `UmgWidgetCategory.threeD`; her widget kütüphanesinde ve editör panellerinde; çocuk almaz) bir widget'a gerçek bir Filament önizleme sahnesi yerleştirir: `lumina_widgets`'ın `LuminaUmgViewport`'u ([UMG sayfası](../../lumina_widgets/umg.md#class-luminaumgviewport)); sahnesini Widget Blueprint graph'ı `Widget|Viewport` düğümleriyle kurar ([function library](../../lumina/blueprint/function-library.md#widgetviewport-blueprint_function_libraryumg_viewportdart)).
+
+- **Details** (`UmgSlotInspector`, `UmgWidgetType.viewportDefaults`): Background (`sky` / `color` / `transparent`), Grid, Camera Preset, Interaction (Orbit, Pan, Zoom, Pick), Auto Rotate (derece/sn), Render Scale (0,25–1), Max FPS ve **tasarım zamanı önizleme içeriği**: asset seçiciyle seçilen bir mesh ya da skeletal mesh ve bir animasyon (`previewMesh`, `previewAnimation`; `UmgEditorViewModel.meshAssets` / `animationAssets`'ten). Önizleme içeriği yalnızca tasarımcı tuvalinde görünür, oyunda asla.
+- **Widget Events**: On Picked, On Gizmo Preview, On Gizmo Commit, On Gizmo Cancel, On Camera Changed, On Scene Ready, On Asset Load Failed (`LuminaWidgetEvents.viewportEvents`).
+- `umgViewportDesignScene(props)` tasarım zamanı açıklamasını kurar; `umgViewportElement(...)` tasarımcı tuvalinin (`_UmgRuntimeTree`, tasarım içeriğiyle) ve `UmgRuntimeView`'in (Play-In-Editor ve editör panelleri, örneğe bağlı; bir editör panelinin olayları host'una gider ve orada `Play Animation File` dosya okuyabilir) çizdiği şeydir.
+- **Codegen** (`UmgWidgetCodegen`): her iki widget kütüphanesinde `LuminaUmgViewport(instance: …, name: …, background: …, grid: …, cameraPreset: …, orbit / pan / zoom / pick, autoRotate, renderScale, maxFps)`; öğenin olayları widget'ın graph'ına widget'ın kendisinden ulaşır, tasarımcıda bağlanan olaylar ise handler'larından geçer (`void _onPickedPreview(Map<String, Object?> args)`), onlar da graph'ı tetikler.
+- **MCP**: UMG araçları `viewport` tipini ve Details anahtarlarını (`default_props`) kabul eder.
+- Editörün Viewport'ları (tasarımcı tuvali, editör panelleri) `LuminaViewportBudget.shared`'ı paylaşır; başlangıçta editörün 8 sınırına ayarlanır; Play'deki bir oyunun 4'lük kendi bütçesi vardır.
+
 ## `lib/ui/features/sub_editors/views/umg/widget_sub_editor.dart`
 
 ### `class UMGWidgetSubEditor`
@@ -350,7 +361,7 @@ Generates the real Flutter widget class for a [UmgDocument] (`<project>/lib/widg
 
 ### `enum UmgWidgetCategory`
 
-Palette categories of the UMG designer.
+UMG tasarımcısının palet kategorileri: `panels`, `common`, `threeD` (Viewport), `shadcn` (shadcn_flutter projeleri), `editor` (editör panelleri).
 
 ### `enum UmgWidgetType`
 

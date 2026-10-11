@@ -5,7 +5,11 @@ part of '../node_library.dart';
 /// A Viewport node: impure (exec in / out) or pure, the Viewport element
 /// first. Every one edits the element's preview-scene description.
 LuminaBlueprintNodeSpec _viewportNode(String id, String title, List<String> keywords,
-        {bool pure = false, List<LuminaBlueprintPinSpec> inputs = const [], List<LuminaBlueprintPinSpec> outputs = const [], String? tooltip}) =>
+        {bool pure = false,
+        List<LuminaBlueprintPinSpec> inputs = const [],
+        List<LuminaBlueprintPinSpec> outputs = const [],
+        String? tooltip,
+        bool editorOnly = false}) =>
     LuminaBlueprintNodeSpec(
       id: id,
       title: title,
@@ -16,6 +20,7 @@ LuminaBlueprintNodeSpec _viewportNode(String id, String title, List<String> keyw
       inputs: [if (!pure) _execIn, _element(LuminaViewportNodes.elementType), ...inputs],
       outputs: [if (!pure) _execOut, ...outputs],
       tooltip: tooltip,
+      editorOnly: editorOnly,
     );
 
 LuminaBlueprintPinSpec _viewportEnum(String id, String name, String enumName, String d) =>
@@ -53,7 +58,8 @@ final List<LuminaBlueprintNodeSpec> _umgViewportNodes = <LuminaBlueprintNodeSpec
       inputs: [_nodeId(), _f('seconds', 'Seconds')]),
   _viewportNode('viewport_play_animation_file', 'Viewport Play Animation File', const ['animation', 'file', 'motion', 'play', 'editor'],
       inputs: [_nodeId(), _s('path', 'Path')],
-      tooltip: 'Editor panels only: plays a motion or animation file a plugin process wrote.'),
+      tooltip: 'Editor panels only: plays a motion or animation file a plugin process wrote.',
+      editorOnly: true),
   _viewportNode('viewport_add_light', 'Viewport Add Light', const ['light', 'add', 'directional', 'point', 'spot'],
       inputs: [
         _viewportEnum('type', 'Type', LuminaViewportNodes.lightTypeEnum, LuminaViewportLightType.directional),

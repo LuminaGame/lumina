@@ -170,5 +170,8 @@ void main() {
     expect(errors.single.nodeId, 'clear');
     expect(LuminaWidgetEvents.forType('viewport'), containsAll([LuminaWidgetEvents.onPicked, LuminaWidgetEvents.onCameraChanged]));
     expect(LuminaWidgetEvents.forType('text'), isNot(contains(LuminaWidgetEvents.onPicked)));
+    // Play Animation File reads a plugin's file: editor panels only.
+    final file = LuminaBlueprintNodeLibrary.builtIns.firstWhere((n) => n.id == 'viewport_play_animation_file');
+    expect(LuminaBlueprintNodeLibrary.availableIn(file, context), isFalse, reason: 'not in a game widget');
   });
 }

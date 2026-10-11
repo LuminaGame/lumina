@@ -35,7 +35,21 @@ class LuminaViewportOverlayPainter extends CustomPainter {
     final runtime = c.runtime;
     for (final overlay in scene.skeletonOverlays) {
       final node = '${overlay['node']}';
-      _skeleton(canvas, runtime, runtime.jointsOf(node), colorOf(overlay['color'], const Color(0xFFFFD933)), overlay['joints'] != false);
+      final bones = overlay['bones'] is List ? {for (final b in overlay['bones']! as List) '$b'} : null;
+      final selected = overlay['selected'] as String?;
+      _skeleton(canvas, runtime, runtime.jointsOf(node), colorOf(overlay['color'], const Color(0xFFFFD933)), overlay['joints'] != false,
+          bones: bones, selected: selected);
+      for (final g in overlay['ghosts'] is List ? overlay['ghosts']! as List : const []) {
+        if (g is! Map || g['pose'] is! Map<String, Object?>) continue;
+        final ghost = runtime.ghostJointsOf(node, g['pose']! as Map<String, Object?>);
+        final color = colorOf(g['color'], const Color(0x9966CCFF));
+        _skeleton(canvas, runtime, ghost, color, false, bones: bones);
+        final label = '${g['label'] ?? ''}';
+        if (label.isNotEmpty && ghost.isNotEmpty) {
+          final top = runtime.project(ghost.reduce((a, b) => a.position.y > b.position.y ? a : b).position);
+          if (top != null) _label(canvas, Offset(top.$1, top.$2 - 18), label, color);
+        }
+      }
       final pose = overlay['ghostPose'];
       if (pose is Map<String, Object?>) {
         final ghost = runtime.ghostJointsOf(node, pose);
@@ -57,8 +71,9 @@ class LuminaViewportOverlayPainter extends CustomPainter {
     }
   }
 
-  void _skeleton(Canvas canvas, LuminaViewportSceneRuntime runtime, List<LuminaViewportJoint> joints, Color color, bool dots) {
-    if (joints.isEmpty) return;
+  void _skeleton(Canvas canvas, LuminaViewportSceneRuntime runtime, List<LuminaViewportJoint> joints, Color color, bool dots,
+      {Set<String>? bones, String? selected}) {
+    if (joints.isEmpty || color.a == 0) return;
     final points = [for (final j in joints) runtime.project(j.position)];
     final bone = Paint()
       ..color = color
@@ -68,10 +83,15 @@ class LuminaViewportOverlayPainter extends CustomPainter {
     for (var i = 0; i < joints.length; i++) {
       final p = points[i];
       if (p == null) continue;
+      if (bones != null && !bones.contains(joints[i].name)) continue;
       final parent = joints[i].parent;
       final q = parent >= 0 ? points[parent] : null;
       if (q != null) canvas.drawLine(Offset(q.$1, q.$2), Offset(p.$1, p.$2), bone);
-      if (dots) canvas.drawCircle(Offset(p.$1, p.$2), 2.5, dot);
+      if (joints[i].name == selected) {
+        canvas.drawCircle(Offset(p.$1, p.$2), 5.0, Paint()..color = const Color(0xFFFFEB3B));
+      } else if (dots) {
+        canvas.drawCircle(Offset(p.$1, p.$2), 2.5, dot);
+      }
     }
   }
 

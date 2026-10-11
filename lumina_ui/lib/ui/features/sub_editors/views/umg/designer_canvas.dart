@@ -13,6 +13,7 @@ import 'package:lumina_ui/ui/features/sub_editors/view_models/umg_editor_view_mo
 import 'package:lumina_ui/ui/features/sub_editors/views/umg/umg_components.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/umg/umg_text_style.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/umg/umg_theme_helper.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/umg/umg_viewport_preview.dart';
 
 part 'designer_canvas/painters.dart';
 part 'designer_canvas/runtime_tree.dart';

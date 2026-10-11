@@ -470,7 +470,7 @@ UMG **Viewport** öğesi: widget ağacının içinde, paylaşılan engine üzeri
 | `allowFiles` | `Play Animation File`'ın bir dosya okuyup okuyamayacağı (editör panelleri). |
 | `assetProvider` | Mesh'lerin okunduğu yer (null: `LuminaAssets`). |
 | `budget` | Sayıldığı `LuminaViewportBudget` (null: oyunun `LuminaViewportHost`'u, yoksa `LuminaViewportBudget.shared`). |
-| `onEvent`, `onController` | Graph'a ulaşan her olay; önizleme oluşunca `LuminaViewportController`. |
+| `onEvent`, `onController` | Her olayı örneğin graph'ı yerine alır (üretilen handler'lar, bir editör panelinin host'u, testler; null graph'ı tetikler); önizleme oluşunca `LuminaViewportController`. |
 | `backend` | Flutter yolunun Filament backend'i (testler noop backend'i verir). |
 
 **Girdi** (widget'ta işlenir, hiçbir zaman kare başına graph'tan geçmez): sol sürükleme yörünge (4 pikselden az kayan basış seçer), sağ ya da orta sürükleme kaydırma, tekerlek ve sıkıştırma yakınlaştırma (tekerleğin On Camera Changed'i durunca gelir), bir gizmo tutamacında sürükleme hedefi taşır (imleç üzerindeki ekseni izler), F seçili düğümü kadraja alır, Escape gizmo sürüklemesini iptal eder. İskelet kaplamaları, hayalet pozlar, işaretler ve gizmo'yu `LuminaViewportOverlayPainter` çizer; yalnızca açıklama bunlardan birini gösterirken.

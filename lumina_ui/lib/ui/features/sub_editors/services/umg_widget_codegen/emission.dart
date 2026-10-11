@@ -11,6 +11,8 @@ String _handlerSignature(UmgNode n, UmgEvent e) {
   if (e.name == 'OnTextCommitted') return 'String value';
   // On Selection Changed hands over the label, value, index and select type.
   if (e.name == 'OnSelectionChanged') return 'LuminaComboBoxSelection selection';
+  // A Viewport's events hand over their outputs (node id, bone, transform…).
+  if (n.type == UmgWidgetType.viewport) return 'Map<String, Object?> args';
   if (e.name != 'OnValueChanged') return '';
   switch (n.type) {
     case UmgWidgetType.slider:
@@ -288,6 +290,9 @@ String _emitBody(UmgNode node, UmgDocument doc, String indent, bool stateful, bo
       b.write('$indent)');
       return b.toString();
 
+    case UmgWidgetType.viewport:
+      return _emitViewport(node, indent, inst);
+
     case UmgWidgetType.comboBox:
       final handler = _handlerFor(node, 'OnValueChanged');
       final selectionHandler = _handlerFor(node, 'OnSelectionChanged');
@@ -342,4 +347,44 @@ String _emitBody(UmgNode node, UmgDocument doc, String indent, bool stateful, bo
     default:
       return 'const SizedBox.shrink()'; // Container and shadcn: emitted above
   }
+}
+
+/// A Viewport element: `LuminaUmgViewport` bound to the element state,
+/// seeded with the Details. Its events reach the graph from the widget
+/// itself; events the designer binds go through their handlers instead.
+String _emitViewport(UmgNode node, String indent, String inst) {
+  final inner = '$indent  ';
+  final p = node.props;
+  String b(String k, bool d) => '${p[k] is bool ? p[k] : d}';
+  double n(String k, double d) => p[k] is num ? (p[k] as num).toDouble() : d;
+  final out = StringBuffer()
+    ..writeln('LuminaUmgViewport(')
+    ..writeln("${inner}key: const ValueKey('${node.fieldName}'),")
+    ..writeln('${inner}instance: $inst,')
+    ..writeln('${inner}name: ${_str(node.name)},')
+    ..writeln('${inner}background: ${_str(p['background']?.toString() ?? 'sky')},')
+    ..writeln('${inner}grid: ${b('grid', true)},')
+    ..writeln('${inner}cameraPreset: ${_str(p['cameraPreset']?.toString() ?? 'perspective')},')
+    ..writeln('${inner}orbit: ${b('orbit', true)},')
+    ..writeln('${inner}pan: ${b('pan', true)},')
+    ..writeln('${inner}zoom: ${b('zoom', true)},')
+    ..writeln('${inner}pick: ${b('pick', true)},')
+    ..writeln('${inner}autoRotate: ${_f(n('autoRotate', 0))},')
+    ..writeln('${inner}renderScale: ${_f(n('renderScale', 1).clamp(0.25, 1.0))},')
+    ..writeln('${inner}maxFps: ${n('maxFps', 60).round()},');
+  final bound = [for (final e in node.events) (e.name, _handlerFor(node, e.name))];
+  if (bound.isNotEmpty) {
+    out.writeln('${inner}onEvent: (event, args) {');
+    out.writeln('$inner  switch (event) {');
+    for (final (name, handler) in bound) {
+      out.writeln("$inner    case ${_str(name)}:");
+      out.writeln('$inner      $handler(args);');
+    }
+    out.writeln('$inner    default:');
+    out.writeln('$inner      LuminaUserWidgets.fire($inst, ${_str(node.name)}, event, args);');
+    out.writeln('$inner  }');
+    out.writeln('$inner},');
+  }
+  out.write('$indent)');
+  return out.toString();
 }

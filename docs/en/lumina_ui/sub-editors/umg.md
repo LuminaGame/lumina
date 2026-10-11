@@ -208,6 +208,17 @@ Widget documents saved with the comma-separated string open migrated (`UmgNode.f
 
 **Members:** `vm`, `node`, `valueTypes` (the picker's types, `UmgComboValueType` records `(id, label, components)`), `zeroOf(type)` (a row's value when its type changes), `build`.
 
+## `lib/ui/features/sub_editors/views/umg/umg_viewport_preview.dart` (the Viewport element)
+
+The **Viewport** (`UmgWidgetType.viewport`, palette category **3D** — `UmgWidgetCategory.threeD`, in every widget library and in editor panels; no children) places a real Filament preview scene in a widget: `LuminaUmgViewport` of `lumina_widgets` ([UMG page](../../lumina_widgets/umg.md#class-luminaumgviewport)), whose scene the Widget Blueprint graph builds with the `Widget|Viewport` nodes ([function library](../../lumina/blueprint/function-library.md#widgetviewport-blueprint_function_libraryumg_viewportdart)).
+
+- **Details** (`UmgSlotInspector`, `UmgWidgetType.viewportDefaults`): Background (`sky` / `color` / `transparent`), Grid, Camera Preset, Interaction (Orbit, Pan, Zoom, Pick), Auto Rotate (deg/s), Render Scale (0.25–1), Max FPS, and the **design-time preview content**: a mesh or skeletal mesh and an animation picked with the asset picker (`previewMesh`, `previewAnimation`, from `UmgEditorViewModel.meshAssets` / `animationAssets`). The preview content shows on the designer canvas only, never in a game.
+- **Widget Events**: On Picked, On Gizmo Preview, On Gizmo Commit, On Gizmo Cancel, On Camera Changed, On Scene Ready, On Asset Load Failed (`LuminaWidgetEvents.viewportEvents`).
+- `umgViewportDesignScene(props)` builds the design-time description; `umgViewportElement(...)` is what the designer canvas (`_UmgRuntimeTree`, with the design-time content) and `UmgRuntimeView` (Play-In-Editor and editor panels, bound to the instance; an editor panel's events go to its host and `Play Animation File` may read files there) render.
+- **Codegen** (`UmgWidgetCodegen`): `LuminaUmgViewport(instance: …, name: …, background: …, grid: …, cameraPreset: …, orbit / pan / zoom / pick, autoRotate, renderScale, maxFps)` in both widget libraries; the element's events reach the widget's graph from the widget itself, and events bound in the designer go through their handlers (`void _onPickedPreview(Map<String, Object?> args)`), which fire the graph.
+- **MCP**: the UMG tools take the type `viewport` and its Details keys (`default_props`).
+- The editor's Viewports (designer canvas, editor panels) share `LuminaViewportBudget.shared`, set to the editor's limit of 8 at start-up; a game in Play has its own budget of 4.
+
 ## `lib/ui/features/sub_editors/views/umg/widget_sub_editor.dart`
 
 ### `class UMGWidgetSubEditor`
@@ -350,7 +361,7 @@ Generates the real Flutter widget class for a [UmgDocument] (`<project>/lib/widg
 
 ### `enum UmgWidgetCategory`
 
-Palette categories of the UMG designer.
+Palette categories of the UMG designer: `panels`, `common`, `threeD` (the Viewport), `shadcn` (shadcn_flutter projects), `editor` (editor panels).
 
 ### `enum UmgWidgetType`
 

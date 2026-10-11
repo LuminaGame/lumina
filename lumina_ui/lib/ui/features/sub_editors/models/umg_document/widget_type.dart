@@ -6,7 +6,7 @@ import 'package:lumina_ui/ui/features/sub_editors/models/umg_document/node.dart'
 /// Palette categories of the UMG designer; [shadcn] shows
 /// only for projects whose widget library is shadcn_flutter, [editor] only
 /// in an editor panel Widget Blueprint.
-enum UmgWidgetCategory { panels, common, shadcn, editor }
+enum UmgWidgetCategory { panels, common, threeD, shadcn, editor }
 
 /// Every widget type the designer can place. The order here is the palette
 /// order; `displayName` is what the palette/hierarchy show and `dartWidget`
@@ -31,6 +31,8 @@ enum UmgWidgetType {
   checkBox('CheckBox', UmgWidgetCategory.common, UmgChildCapacity.none),
   editableText('Editable Text', UmgWidgetCategory.common, UmgChildCapacity.none),
   comboBox('Combo Box', UmgWidgetCategory.common, UmgChildCapacity.none),
+  // A Filament preview scene inside the widget (UMG Viewport).
+  viewport('Viewport', UmgWidgetCategory.threeD, UmgChildCapacity.none),
   // shadcn_flutter's ready-made components.
   shadcnCard('Card', UmgWidgetCategory.shadcn, UmgChildCapacity.one),
   shadcnBadge('Badge', UmgWidgetCategory.shadcn, UmgChildCapacity.none),
@@ -174,6 +176,25 @@ enum UmgWidgetType {
     'outlineColor': '#000000FF',
   };
 
+  /// A Viewport's Details: background (`sky` / `color` / `transparent`),
+  /// grid, camera preset, interaction toggles, auto-rotation (deg/s),
+  /// render scale (0.25–1), max FPS, and the design-time preview content
+  /// (a mesh or skeletal mesh and an animation, shown in the designer only).
+  static const Map<String, dynamic> viewportDefaults = {
+    'background': 'sky',
+    'grid': true,
+    'cameraPreset': 'perspective',
+    'orbit': true,
+    'pan': true,
+    'zoom': true,
+    'pick': true,
+    'autoRotate': 0.0,
+    'renderScale': 1.0,
+    'maxFps': 60,
+    'previewMesh': '',
+    'previewAnimation': '',
+  };
+
   /// Default props for a freshly placed widget of this type.
   Map<String, dynamic> defaultProps() => {
         ..._baseProps(),
@@ -198,6 +219,8 @@ enum UmgWidgetType {
         return {'text': '', 'hint': 'Enter text', 'fontSize': 14.0, 'color': '#FFFFFF'};
       case UmgWidgetType.comboBox:
         return {'options': LuminaComboBoxOptions.migrateDesignerOptions('Option A,Option B,Option C'), 'selected': 'Option A', 'fontSize': 12.0};
+      case UmgWidgetType.viewport:
+        return Map<String, dynamic>.of(viewportDefaults);
       case UmgWidgetType.border:
         return {'color': '#1B1B22', 'padding': 8.0};
       case UmgWidgetType.container:
@@ -342,6 +365,8 @@ enum UmgWidgetType {
         return const Size(260, 36);
       case UmgWidgetType.comboBox:
         return const Size(200, 36);
+      case UmgWidgetType.viewport:
+        return const Size(320, 320);
       case UmgWidgetType.editorSection:
       case UmgWidgetType.treeView:
       case UmgWidgetType.listView:
