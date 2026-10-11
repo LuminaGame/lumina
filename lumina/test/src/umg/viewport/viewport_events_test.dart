@@ -55,6 +55,59 @@ void main() {
     return (controller, events, hero);
   }
 
+  test('a mesh added to a camera the description never placed is framed once it loads', () async {
+    if (!ViewportTestProject.available || engine == null) return markTestSkipped('no native assets or test-assets');
+    final controller = LuminaViewportController(runtime: LuminaViewportSceneRuntime(engine: engine!), fire: (_, _) {});
+    addTearDown(controller.dispose);
+    final runtime = controller.runtime;
+    final scene = LuminaViewportScene();
+    controller.resize(300, 200);
+    controller.sync(scene);
+    controller.frame(1 / 60);
+    Future<String> show(String asset) async {
+      scene.clear();
+      final id = scene.addNode(LuminaViewportNodeKind.staticMesh, asset: asset);
+      controller.sync(scene);
+      await runtime.whenReady;
+      controller.frame(1 / 60);
+      return id;
+    }
+
+    void expectInView(String id) {
+      final box = runtime.boundsOf(id)!;
+      for (final corner in [box.min, box.max, box.center]) {
+        final (x, y) = runtime.project(corner)!;
+        expect(x, inInclusiveRange(-1, 301));
+        expect(y, inInclusiveRange(-1, 201));
+      }
+      expect(LuminaAxes.location(runtime.orbit.target).distanceTo(box.center), lessThan(1.0), reason: 'centred');
+    }
+
+    final barrel = await show(ViewportTestProject.barrel);
+    expect(runtime.failures, isEmpty);
+    final size = runtime.boundsOf(barrel)!.max - runtime.boundsOf(barrel)!.min;
+    expect(size.y, inInclusiveRange(50, 200), reason: 'a fuel barrel is about a metre tall (cm), its unit scale applied once');
+    expectInView(barrel);
+    final ac = await show(ViewportTestProject.acUnit);
+    expectInView(ac);
+    // The player moved the camera: a new mesh keeps that view.
+    runtime.orbit.orbit(25, 0);
+    final moved = runtime.orbit.target.toList();
+    await show(ViewportTestProject.hatA);
+    expect(runtime.orbit.target, moved);
+    // A description that places its camera is never re-framed.
+    final placed = LuminaViewportController(runtime: LuminaViewportSceneRuntime(engine: engine!), fire: (_, _) {});
+    addTearDown(placed.dispose);
+    final s2 = LuminaViewportScene()..setOrbit(10, 10, 900);
+    s2.addNode(LuminaViewportNodeKind.staticMesh, asset: ViewportTestProject.barrel);
+    placed
+      ..resize(300, 200)
+      ..sync(s2);
+    await placed.runtime.whenReady;
+    placed.frame(1 / 60);
+    expect(placed.runtime.orbit.distance, 900);
+  });
+
   test('a tap on the mannequin head picks its node and the head bone', () async {
     final setup = await mannequinViewport();
     if (setup == null) return;

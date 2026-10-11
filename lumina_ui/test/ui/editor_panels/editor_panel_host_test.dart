@@ -11,6 +11,7 @@ import 'package:lumina_ui/ui/core/editor_panels/editor_panel_view.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/main_editor_view.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/umg/umg_runtime_view.dart';
 import 'package:path/path.dart' as p;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
@@ -213,6 +214,9 @@ void main() {
     expect(box.color, EditorColors.sidebar);
     expect(box.constraints!.minWidth, 200);
     expect(tester.getSize(view).width, greaterThanOrEqualTo(200));
+    // A Viewport element in the panel reads the project's `contents/…` assets.
+    final runtimeView = tester.widget<UmgRuntimeView>(find.descendant(of: view, matching: find.byType(UmgRuntimeView)));
+    expect(runtimeView.projectDir, vm.projectDirPath);
     final panel = instance(batchId);
     expect(panel.script!.variables['Constructed'], 1);
     await frames(tester);

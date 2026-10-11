@@ -33,6 +33,7 @@ import 'package:vector_math/vector_math_64.dart';
 part 'viewport_runtime_queries.dart';
 part 'viewport_runtime_media.dart';
 part 'viewport_runtime_stage.dart';
+part 'viewport_runtime_camera.dart';
 
 /// A node of the description, drawn: the actor and its root component.
 class _RuntimeNode {
@@ -92,7 +93,7 @@ class _RuntimeNode {
 /// fixed light feature set (MSAA 4×, one shadowed directional light, IBL;
 /// none of the game's ray tracing, ReSTIR, SSR, upscalers or frame
 /// generation).
-class LuminaViewportSceneRuntime with _ViewportQueries, _ViewportMedia, _ViewportStage {
+class LuminaViewportSceneRuntime with _ViewportQueries, _ViewportMedia, _ViewportStage, _ViewportCamera {
   LuminaViewportSceneRuntime({
     required this.engine,
     FilamentScene? scene,
@@ -157,7 +158,7 @@ class LuminaViewportSceneRuntime with _ViewportQueries, _ViewportMedia, _Viewpor
   LuminaViewportScene? _shown;
   @override
   final Map<String, _RuntimeNode> _nodes = {};
-  int _frameSerial = 0;
+  @override
   int _pending = 0;
   bool _disposed = false;
 
@@ -171,6 +172,7 @@ class LuminaViewportSceneRuntime with _ViewportQueries, _ViewportMedia, _Viewpor
   bool get isDisposed => _disposed;
 
   /// The description shown now.
+  @override
   LuminaViewportScene? get shown => _shown;
 
   /// The node ids drawn now.
@@ -491,49 +493,6 @@ class LuminaViewportSceneRuntime with _ViewportQueries, _ViewportMedia, _Viewpor
     mesh.onTick(0.0);
   }
 
-  // --- Camera ----------------------------------------------------------------
-
-  void _applyCamera(LuminaViewportScene next) {
-    orbit.readFrom(next);
-    final c = next.camera;
-    final serial = c['frameSerial'] is int ? c['frameSerial']! as int : 0;
-    if (serial != _frameSerial) {
-      _frameSerial = serial;
-      final target = c['frame'];
-      if (target is String) frameNode(target);
-    }
-  }
-
-  /// Frames node [id] ('*': every mesh); waits for the meshes to load.
-  void frameNode(String id) {
-    final box = boundsOf(id);
-    if (box != null) {
-      orbit.frame(box);
-      return;
-    }
-    if (_pending > 0) {
-      _deferredFrame = id;
-    }
-  }
-
-  String? _deferredFrame;
-
-  /// The world bounds (runtime frame) of node [id] or ('*') every mesh.
-  Aabb3? boundsOf(String id) {
-    Aabb3? out;
-    for (final node in _nodes.values) {
-      if (id != '*' && node.id != id) continue;
-      final b = _worldBounds(node);
-      if (b == null) continue;
-      if (out == null) {
-        out = b;
-      } else {
-        out.hull(b);
-      }
-    }
-    return out;
-  }
-
   @override
   Aabb3? _worldBounds(_RuntimeNode node) {
     final mesh = node.mesh;
@@ -552,7 +511,8 @@ class LuminaViewportSceneRuntime with _ViewportQueries, _ViewportMedia, _Viewpor
         return Aabb3.minMax(box.min - Vector3.all(pad), box.max + Vector3.all(pad));
       }
     }
-    return Aabb3.copy(local)..transform(mesh.renderTransform);
+    // localBounds already carry the asset unit scale renderTransform adds.
+    return Aabb3.copy(local)..transform(mesh.worldTransform);
   }
 
   /// Sets the viewport size (pixels) the camera projects to.
@@ -595,11 +555,7 @@ class LuminaViewportSceneRuntime with _ViewportQueries, _ViewportMedia, _Viewpor
     if (_disposed) return;
     final spin = _shown?.autoRotate ?? 0.0;
     if (spin != 0.0) orbit.orbit(spin * dt, 0.0);
-    final deferred = _deferredFrame;
-    if (deferred != null && _pending == 0) {
-      _deferredFrame = null;
-      frameNode(deferred);
-    }
+    _frameWhenReady();
     for (final node in _nodes.values) {
       node.skeletal?.onTick(dt);
       _advanceMotion(node, dt);

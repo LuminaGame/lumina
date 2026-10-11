@@ -108,7 +108,7 @@ class LuminaViewportScene {
   }
 
   /// The camera a new description starts with: the perspective preset
-  /// framing what the scene holds.
+  /// framing what the scene holds ([autoFrame]).
   static Map<String, Object?> defaultCamera() {
     final (yaw, pitch) = LuminaViewportCameraPreset.angles(LuminaViewportCameraPreset.perspective);
     return <String, Object?>{
@@ -121,6 +121,7 @@ class LuminaViewportScene {
       'orthographic': false,
       'frame': null,
       'frameSerial': 0,
+      'autoFrame': true,
     };
   }
 
@@ -325,7 +326,16 @@ class LuminaViewportScene {
   }
 
   /// Frames node [id] (the runtime fits its bounds); '*' frames every node.
-  void frameNode(String id) => _requestFrame(camera, id);
+  void frameNode(String id) {
+    camera['autoFrame'] = false;
+    _requestFrame(camera, id);
+  }
+
+  /// Whether the runtime frames every mesh each time the set of meshes
+  /// changes (once they load), as long as the player has not moved the
+  /// camera: true until the description places it (`Set Orbit`, the orbit
+  /// target, `Frame Node`) or the player's released drag writes it back.
+  bool get autoFrame => camera['autoFrame'] == true;
 
   void _requestFrame(Map<String, Object?> c, String id) {
     c['frame'] = id;
@@ -336,6 +346,7 @@ class LuminaViewportScene {
   /// distance changed on an orthographic preset.
   void setOrbit(double yaw, double pitch, double distance) {
     camera
+      ..['autoFrame'] = false
       ..['yaw'] = yaw
       ..['pitch'] = pitch.clamp(-89.0, 89.0)
       ..['distance'] = distance < 1.0 ? 1.0 : distance;
@@ -343,7 +354,9 @@ class LuminaViewportScene {
 
   /// The orbit target, authoring space.
   List<double> get orbitTarget => _vec(camera['orbitTarget'], const [0.0, 0.0, 0.0]);
-  set orbitTarget(List<double> target) => camera['orbitTarget'] = [for (final v in target.take(3)) v.toDouble()];
+  set orbitTarget(List<double> target) => camera
+    ..['autoFrame'] = false
+    ..['orbitTarget'] = [for (final v in target.take(3)) v.toDouble()];
 
   // --- Overlays --------------------------------------------------------------
 

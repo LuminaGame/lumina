@@ -148,6 +148,7 @@ class _EditorPanelViewState extends State<EditorPanelView> {
                   document: rt.document,
                   runtimeValues: instance.map,
                   editorTheme: true,
+                  projectDir: host.vm.projectDirPath,
                   editorElementBuilder: set.build,
                   onElementEvent: (node, event, args) => host.fire(instance, node.name, event, args),
                   elementDecorator: droppable ? (node, child) => _dropTarget(instance, node, child) : null,

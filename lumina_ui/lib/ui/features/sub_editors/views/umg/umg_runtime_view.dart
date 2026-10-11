@@ -51,6 +51,10 @@ class UmgRuntimeView extends StatelessWidget {
   /// panel's host runs them as one panel event).
   final void Function(UmgNode node, String event, Map<String, Object?> args)? onElementEvent;
 
+  /// The open project's folder: a Viewport element reads its project-relative
+  /// assets (`contents/…`) from it. Null: the engine's asset resolution.
+  final String? projectDir;
+
   const UmgRuntimeView({
     super.key,
     required this.document,
@@ -64,6 +68,7 @@ class UmgRuntimeView extends StatelessWidget {
     this.editorElementBuilder,
     this.elementDecorator,
     this.onElementEvent,
+    this.projectDir,
   });
 
   @override
@@ -283,6 +288,7 @@ class UmgRuntimeView extends StatelessWidget {
           name: node.name,
           props: node.props,
           allowFiles: editorTheme,
+          projectDir: projectDir,
           onEvent: onElementEvent == null ? null : (event, args) => _fire(node, event, args),
         );
       case UmgWidgetType.comboBox:

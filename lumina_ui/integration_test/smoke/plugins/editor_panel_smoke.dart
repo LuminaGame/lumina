@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:archive/archive.dart' show Archive, ArchiveFile, ZipEncoder;
 import 'package:flutter/services.dart' show LogicalKeyboardKey;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image/image.dart' as img;
 import 'package:integration_test/integration_test.dart';
 import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/testing.dart';
@@ -217,6 +218,26 @@ void editorPanelSmoke(IntegrationTestWidgetsFlutterBinding binding, Future<void>
           findsOneWidget);
       await rec.hold(const Duration(seconds: 1));
       await shot('Prop Tools docked right');
+      // The panel Viewport's central half, read from the captured frame.
+      Future<img.Image> viewportCentre() async {
+        final png = await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey));
+        final rect = tester.getRect(find.byType(LuminaUmgViewport));
+        final frame = img.decodePng(png)!;
+        return img.copyCrop(frame,
+            x: (rect.left + rect.width / 4).round(), y: (rect.top + rect.height / 4).round(), width: (rect.width / 2).round(), height: (rect.height / 2).round());
+      }
+
+      // The share of [now]'s pixels that differ clearly from [before].
+      double changed(img.Image before, img.Image now) {
+        var n = 0;
+        for (final px in now) {
+          final b = before.getPixel(px.x, px.y);
+          if ((px.r - b.r).abs() + (px.g - b.g).abs() + (px.b - b.b).abs() > 90) n++;
+        }
+        return n / (now.width * now.height);
+      }
+
+      final emptyViewport = await viewportCentre();
 
       // Pick the barrel mesh in the panel's asset picker.
       await tester.tap(find.byKey(const ValueKey('asset_picker_value')));
@@ -229,7 +250,15 @@ void editorPanelSmoke(IntegrationTestWidgetsFlutterBinding binding, Future<void>
       // The Viewport element previews the picked mesh.
       final scene = LuminaViewportScene.of(panel.element('PreviewViewport')!);
       expect(scene.nodes.map((n) => n['asset']), [meshes.first.relativePath]);
-      await settle(tester, frames: 30);
+      // The barrel loads, the untouched camera frames it: it fills the
+      // Viewport's centre (the grid alone changes a few thin lines).
+      var meshShare = 0.0;
+      for (var i = 0; i < 60 && meshShare < 0.25; i++) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
+        await settle(tester, frames: 3);
+        meshShare = changed(emptyViewport, await viewportCentre());
+      }
+      expect(meshShare, greaterThan(0.25), reason: 'the picked barrel is drawn and framed in the panel Viewport');
       await rec.hold(const Duration(seconds: 1));
       await shot('the barrel mesh picked in the panel');
 
