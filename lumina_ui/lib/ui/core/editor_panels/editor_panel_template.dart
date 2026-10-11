@@ -51,6 +51,16 @@ UmgDocument editorPanelTemplate(String className) {
   return doc;
 }
 
+/// The `.lmas` bytes of a new editor panel [className] (a new plugin's
+/// editor panel, written by the plugin template generator).
+Uint8List editorPanelTemplateBytes(String className) => LuminaAsset(
+      assetId: 'epw_${className.toLowerCase()}',
+      name: className,
+      type: AssetType.widget,
+      rawPayload: Uint8List.fromList(utf8.encode(editorPanelTemplate(className).toFormattedJson())),
+      metadata: const {'parent_class': 'LuminaWidget'},
+    ).toProtoBufferBytes();
+
 /// Writes a new editor panel asset `<folder>/<name>.lmas` (a free name:
 /// `_1`, `_2` … when taken) under [projectDirPath]; returns its
 /// project-relative path.

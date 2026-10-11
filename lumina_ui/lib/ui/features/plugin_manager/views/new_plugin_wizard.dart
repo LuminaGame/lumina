@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 import 'package:lumina_editor_data/lumina_editor.dart';
+import 'package:lumina_ui/ui/core/editor_panels/editor_panel_template.dart' show editorPanelTemplateBytes;
 import 'package:lumina_ui/ui/features/plugin_manager/view_models/plugin_manager_view_model.dart';
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 
@@ -56,7 +57,8 @@ class NewPluginWizardDialog extends StatefulWidget {
 }
 
 class _NewPluginWizardDialogState extends State<NewPluginWizardDialog> {
-  PluginTemplateType _selectedTemplate = PluginTemplateType.blank;
+  /// An editor panel Widget Blueprint is the default UI of a new plugin.
+  PluginTemplateType _selectedTemplate = PluginTemplateType.editorPanelWidget;
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _friendlyNameController = TextEditingController();
   final TextEditingController _authorController = TextEditingController();
@@ -181,7 +183,8 @@ class _NewPluginWizardDialogState extends State<NewPluginWizardDialog> {
       author: _authorController.text.trim(),
       description: _descriptionController.text.trim(),
       category: _category,
-      isolated: _isolated && _selectedTemplate != PluginTemplateType.contentOnly,
+      isolated: _isolated && _selectedTemplate != PluginTemplateType.contentOnly && _selectedTemplate != PluginTemplateType.editorPanelWidget,
+      editorPanelAsset: editorPanelTemplateBytes,
     );
 
     // The generation lives in the view model, which the MCP
@@ -333,6 +336,16 @@ class _NewPluginWizardDialogState extends State<NewPluginWizardDialog> {
                               isSelected: _selectedTemplate == PluginTemplateType.importer,
                               onTap: () => setState(() => _selectedTemplate = PluginTemplateType.importer),
                             ),
+                            const SizedBox(height: 8),
+                            _TemplateTile(
+                              key: const ValueKey('plugin_template_editor_panel_widget'),
+                              title: 'Editor panel (Widget Blueprint)',
+                              description: 'A designed panel run by the editor: no code, no build, no restart',
+                              icon: LucideIcons.panelRight,
+                              isSelected: _selectedTemplate == PluginTemplateType.editorPanelWidget,
+                              onTap: () => setState(() => _selectedTemplate = PluginTemplateType.editorPanelWidget),
+                            ),
+
                           ],
                         ),
                       ),
@@ -430,7 +443,8 @@ class _NewPluginWizardDialogState extends State<NewPluginWizardDialog> {
                               const SizedBox(height: 12),
 
                               // Isolation
-                              if (_selectedTemplate != PluginTemplateType.contentOnly) ...[
+                              if (_selectedTemplate != PluginTemplateType.contentOnly &&
+                                  _selectedTemplate != PluginTemplateType.editorPanelWidget) ...[
                                 Row(
                                   children: [
                                     Switch(
@@ -577,6 +591,8 @@ class _NewPluginWizardDialogState extends State<NewPluginWizardDialog> {
         return 'Generates: <name>.lmplugin, pubspec.yaml, lib/src/<name>_plugin.dart with dockable Card panel widget containing an interactive counter button.';
       case PluginTemplateType.importer:
         return 'Generates: <name>.lmplugin, pubspec.yaml, lib/src/<name>_plugin.dart with a working .txt file importer writing binary LuminaAsset (.lmas) files.';
+      case PluginTemplateType.editorPanelWidget:
+        return 'Generates: <name>.lmplugin (content only), content/EPW_<Name>.lmas — an editor panel Widget Blueprint (a section, a property row and a button wired to Show Toast) docked right; design it in the UMG designer. No Dart code, no build, no restart.';
     }
   }
 }
@@ -589,6 +605,7 @@ class _TemplateTile extends StatelessWidget {
   final VoidCallback onTap;
 
   const _TemplateTile({
+    super.key,
     required this.title,
     required this.description,
     required this.icon,

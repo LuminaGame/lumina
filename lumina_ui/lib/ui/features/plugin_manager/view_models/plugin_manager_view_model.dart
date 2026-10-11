@@ -380,7 +380,7 @@ class PluginManagerViewModel extends ChangeNotifier {
     Directory apiRoot() {
       if (editorApiRoot != null) return editorApiRoot;
       // A content-only plugin has no Dart package, so it needs no API root.
-      if (spec.templateType == PluginTemplateType.contentOnly) {
+      if (spec.isContentOnly) {
         try {
           return resolveEditorApiRoot();
         } on StateError {

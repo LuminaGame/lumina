@@ -15,6 +15,7 @@ export 'package:lumina_editor_api/src/editor_level.dart';
 export 'package:lumina_editor_api/src/editor_theme.dart';
 export 'package:lumina_editor_api/src/editor_slot_button.dart';
 export 'package:lumina_editor_api/src/editor_panels.dart';
+export 'package:lumina_editor_api/src/editor_panel_widgets.dart';
 export 'package:lumina_editor_api/src/project_settings_section.dart';
 export 'package:lumina_widgets/lumina_widgets.dart'
     show ObservableAsValueListenable, ChangeSignalAsListenable, ValueListenableAsObservable, ListenableAsChangeSignal;

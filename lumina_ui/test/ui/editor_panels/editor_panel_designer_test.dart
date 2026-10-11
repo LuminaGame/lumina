@@ -115,4 +115,26 @@ void main() {
     }
     designer.dispose();
   });
+
+  test('a new plugin made from the editor panel template is content only and its panel runs with no build', () async {
+    final generator = PluginTemplateGeneratorService(projectRoot: project.projectDir);
+    final result = await generator.generate(const PluginTemplateSpec(
+      templateType: PluginTemplateType.editorPanelWidget,
+      name: 'panel_tools',
+      friendlyName: 'Panel Tools',
+      editorPanelAsset: editorPanelTemplateBytes,
+    ));
+    expect(result.success, isTrue, reason: result.failureOutput);
+    expect(result.descriptor!.isContentOnly, isTrue);
+    expect(File(p.join(result.pluginDir!.path, 'content', 'EPW_PanelTools.lmas')).existsSync(), isTrue);
+    expect(File(p.join(result.pluginDir!.path, 'pubspec.yaml')).existsSync(), isFalse, reason: 'no Dart package');
+    await vm.rescanPlugins();
+    final enabled = await vm.enablePlugin('panel_tools', true);
+    expect(enabled.restartRequired, isFalse);
+    const id = 'panel_tools/content/EPW_PanelTools.lmas';
+    await until(() => vm.editorPanels.panel(id) != null, reason: 'the plugin panel');
+    expect(vm.editorPanels.panel(id)!.errors, isEmpty);
+    vm.editorPanelDocking.open(id);
+    expect(vm.editorPanels.instancesOf(id).single.script, isNotNull, reason: 'trusted with its plugin');
+  });
 }

@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/services.dart' show LogicalKeyboardKey;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumina_editor_api/lumina_editor_api.dart' show MapPluginSettingsHandle;
+import 'package:lumina_editor_api/lumina_editor_api.dart' show EditorPanelWidgetsOfContext, LuminaEditorContext, MapPluginSettingsHandle;
 import 'package:lumina_editor_data/lumina_editor.dart';
 import 'package:lumina_ui/ui/core/editor_panels/editor_panel_docking.dart';
 import 'package:lumina_ui/ui/core/editor_panels/editor_panel_runtime.dart';
@@ -183,6 +183,21 @@ void main() {
     expect(vm.editorPanels.trustOf(tabId).name, 'plugin', reason: 'a plugin panel is trusted with its plugin');
     // The plugin's panel also sits in its plugin menu.
     expect(vm.extensionRegistry.menuEntriesUnder('Plugins').map((e) => e.path), contains('Plugins/Prop Tools/Prop Tools'));
+  });
+
+  test('an in-process plugin lists, opens and closes editor panels through context.editorPanels', () {
+    final LuminaEditorContext context = vm.extensionRegistry;
+    final panels = context.editorPanels;
+    expect(panels.all.map((p) => p.id), containsAll([batchId, tabId, settingsId, confirmId]));
+    expect(panels.byId(batchId)!.dock, 'right');
+    var changes = 0;
+    panels.changes.addListener(() => changes++);
+    panels.open(batchId);
+    expect(panels.isOpen(batchId), isTrue);
+    expect(panels.byId(batchId)!.running, isTrue);
+    panels.close(batchId);
+    expect(panels.isOpen(batchId), isFalse);
+    expect(changes, greaterThan(0));
   });
 
   testWidgets('a right panel docks resizable with its minimum width and the editor tokens; Construct once, Destruct on close',

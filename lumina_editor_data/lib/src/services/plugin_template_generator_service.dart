@@ -17,6 +17,11 @@ enum PluginTemplateType {
   contentOnly,
   editorPanel,
   importer,
+
+  /// Content only, with an editor panel Widget Blueprint
+  /// (`content/EPW_<Name>.lmas`): a full editor UI that the editor's
+  /// Blueprint VM runs; no Dart code, no project editor build.
+  editorPanelWidget,
 }
 
 class PluginTemplateSpec {
@@ -35,6 +40,14 @@ class PluginTemplateSpec {
   /// importer runs in the process part. Not for content-only plugins.
   final bool isolated;
 
+  /// The `.lmas` bytes of the editor panel a [PluginTemplateType.editorPanelWidget]
+  /// plugin ships, for its class name (the editor builds the designer
+  /// document); without it that template writes no panel.
+  final Uint8List Function(String className)? editorPanelAsset;
+
+  /// Whether the plugin is content only (no Dart package, no build).
+  bool get isContentOnly => templateType == PluginTemplateType.contentOnly || templateType == PluginTemplateType.editorPanelWidget;
+
   const PluginTemplateSpec({
     required this.templateType,
     required this.name,
@@ -43,6 +56,7 @@ class PluginTemplateSpec {
     this.description = '',
     this.category = 'Other',
     this.isolated = false,
+    this.editorPanelAsset,
   });
 }
 
@@ -307,7 +321,7 @@ class PluginTemplateGeneratorService {
     final pluginsDir = Directory(p.join(projectRoot.path, 'plugins'));
     final targetDir = Directory(p.join(pluginsDir.path, spec.name));
 
-    final validationError = spec.isolated && spec.templateType == PluginTemplateType.contentOnly
+    final validationError = spec.isolated && spec.isContentOnly
         ? 'A content-only plugin has no code to run in its own process.'
         : validatePluginName(
             spec.name,
@@ -329,13 +343,19 @@ class PluginTemplateGeneratorService {
       }
 
       // Stage 1: Scaffold
-      if (spec.templateType == PluginTemplateType.contentOnly) {
+      if (spec.isContentOnly) {
         emit('Scaffolding content-only directories...');
         targetDir.createSync(recursive: true);
         Directory(p.join(targetDir.path, 'content', 'materials')).createSync(recursive: true);
         Directory(p.join(targetDir.path, 'content', 'meshes')).createSync(recursive: true);
         Directory(p.join(targetDir.path, 'content', 'textures')).createSync(recursive: true);
         Directory(p.join(targetDir.path, 'resources')).createSync(recursive: true);
+        final panel = spec.editorPanelAsset;
+        if (spec.templateType == PluginTemplateType.editorPanelWidget && panel != null) {
+          final className = 'EPW_${spec.name.split('_').map((w) => w.isEmpty ? w : w[0].toUpperCase() + w.substring(1)).join()}';
+          emit('Writing the editor panel Widget Blueprint content/$className.lmas...');
+          File(p.join(targetDir.path, 'content', '$className.lmas')).writeAsBytesSync(panel(className));
+        }
       } else {
         emit('Scaffolding Dart package using flutter/dart create...');
         targetDir.createSync(recursive: true);
@@ -379,7 +399,7 @@ class PluginTemplateGeneratorService {
       }
 
       // Stage 2: Patch pubspec
-      if (spec.templateType != PluginTemplateType.contentOnly) {
+      if (!spec.isContentOnly) {
         emit('Emitting custom pubspec.yaml...');
         final pubspecBuffer = StringBuffer();
         pubspecBuffer.writeln('name: ${spec.name}');
@@ -445,7 +465,7 @@ class PluginTemplateGeneratorService {
       final pascalName = nameToPascal(spec.name);
       final cleanFriendlyName = (spec.friendlyName.isEmpty ? nameToFriendly(spec.name) : spec.friendlyName).replaceAll('/', ' ').trim();
 
-      if (spec.templateType != PluginTemplateType.contentOnly) {
+      if (!spec.isContentOnly) {
         emit('Emitting plugin source code...');
         final libDir = Directory(p.join(targetDir.path, 'lib'))..createSync(recursive: true);
         final srcDir = Directory(p.join(libDir.path, 'src'))..createSync(recursive: true);
@@ -498,9 +518,9 @@ export 'package:${spec.name}/src/${spec.name}_plugin.dart';
         'category': spec.category.isEmpty ? 'Other' : spec.category,
         if (spec.author.isNotEmpty) 'authors': [spec.author],
         'engine_version': '>=0.0.1 <1.0.0',
-        'can_contain_content': spec.templateType == PluginTemplateType.contentOnly,
+        'can_contain_content': spec.isContentOnly,
         if (spec.isolated) 'isolation': PluginIsolation.process.manifestValue,
-        'modules': spec.templateType == PluginTemplateType.contentOnly
+        'modules': spec.isContentOnly
             ? <dynamic>[]
             : <dynamic>[
                 {
@@ -579,7 +599,7 @@ what goes in.
         ..writeAsStringSync(kPluginPackScript);
 
       // Test file for code plugins
-      if (spec.templateType != PluginTemplateType.contentOnly) {
+      if (!spec.isContentOnly) {
         final testDir = Directory(p.join(targetDir.path, 'test'))..createSync(recursive: true);
         final testContent = spec.isolated
             ? IsolatedPluginSources.shellTest(pluginName: spec.name, pascalName: pascalName)
@@ -601,7 +621,7 @@ what goes in.
       }
 
       // Stage 6: Verify
-      if (spec.templateType != PluginTemplateType.contentOnly) {
+      if (!spec.isContentOnly) {
         emit('Running verify stage: dart pub get & dart analyze...');
         final pubGetRes = await runner(
           'dart',

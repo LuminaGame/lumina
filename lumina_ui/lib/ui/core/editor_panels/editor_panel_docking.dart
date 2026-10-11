@@ -46,6 +46,7 @@ class EditorPanelDocking implements EditorPanelDockingTarget {
   void attach() {
     if (_attached) return;
     _attached = true;
+    vm.extensionRegistry.attachEditorPanelWidgets(EditorPanelWidgetsAdapter(this));
     host.addListener(_sync);
     vm.addListener(_followVisibility);
     _sync();
@@ -222,6 +223,37 @@ class EditorPanelDocking implements EditorPanelDockingTarget {
       }
     }
   }
+}
+
+/// The host's panels as the plugin API's [EditorPanelWidgets].
+class EditorPanelWidgetsAdapter extends EditorPanelWidgets {
+  EditorPanelWidgetsAdapter(this.docking);
+
+  final EditorPanelDocking docking;
+
+  @override
+  List<EditorPanelWidgetInfo> get all => [
+        for (final rt in docking.host.panels.values)
+          EditorPanelWidgetInfo(
+            id: rt.id,
+            title: rt.title,
+            dock: rt.info.dock.name,
+            owner: rt.entry.owner,
+            capabilities: [for (final c in rt.info.capabilities) c.name],
+            open: docking.host.isOpen(rt.id),
+            running: docking.host.instancesOf(rt.id).any((i) => i.script != null),
+            errors: rt.errors,
+          ),
+      ];
+
+  @override
+  void open(String id) => docking.open(id);
+
+  @override
+  void close(String id) => docking.close(id);
+
+  @override
+  Listenable get changes => docking.host;
 }
 
 /// A Lucide icon by its name (`pencil`, `box`, …); a panel icon otherwise.

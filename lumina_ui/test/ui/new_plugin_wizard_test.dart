@@ -97,6 +97,8 @@ void main() {
     expect(find.text('Content-only'), findsOneWidget);
     expect(find.text('Editor panel'), findsOneWidget);
     expect(find.text('Importer'), findsOneWidget);
+    expect(find.text('Editor panel (Widget Blueprint)', skipOffstage: false), findsOneWidget);
+    expect(find.textContaining('content/EPW_<Name>.lmas'), findsOneWidget, reason: 'the default template');
     expect(find.text('Plugin Name (package)'), findsOneWidget);
     expect(find.text('Friendly Name'), findsOneWidget);
     expect(find.text('Author'), findsOneWidget);
@@ -116,6 +118,11 @@ void main() {
     await tester.tap(find.text('Open Wizard'));
     await tester.pumpAndSettle();
 
+    // An editor panel Widget Blueprint is the default.
+    expect(find.textContaining('content/EPW_<Name>.lmas'), findsOneWidget);
+
+    await tester.tap(find.text('Blank editor plugin'));
+    await tester.pumpAndSettle();
     expect(find.textContaining('Generates: <name>.lmplugin, pubspec.yaml, lib/<name>.dart'), findsOneWidget);
 
     // Select Content-only
@@ -232,6 +239,8 @@ void main() {
     await tester.tap(find.text('Open Wizard'));
     await tester.pumpAndSettle();
 
+    await tester.tap(find.text('Blank editor plugin'));
+    await tester.pumpAndSettle();
     final nameField = find.byKey(const Key('plugin_name_field'));
     await tester.enterText(nameField, 'magic_wand');
     await tester.pumpAndSettle();
@@ -243,6 +252,7 @@ void main() {
     // Click Create Plugin
     await tester.tap(find.widgetWithText(PrimaryButton, 'Create Plugin'));
     for (int i = 0; i < 20; i++) {
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
       await tester.pump(const Duration(milliseconds: 50));
     }
 

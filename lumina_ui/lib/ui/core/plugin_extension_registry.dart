@@ -18,7 +18,8 @@ part 'plugin_extension_registry_entries.dart';
 part 'plugin_extension_registry_processes.dart';
 part 'plugin_extension_registry_editor_panels.dart';
 
-class PluginExtensionRegistry extends ChangeNotifier implements LuminaEditorHostContext, EditorThemeHost, PluginProcessHost {
+class PluginExtensionRegistry extends ChangeNotifier
+    implements LuminaEditorHostContext, EditorThemeHost, PluginProcessHost, EditorPanelWidgetsProvider {
   final EngineLoggerService logger;
 
   PluginExtensionRegistry({required this.logger});
@@ -161,6 +162,14 @@ class PluginExtensionRegistry extends ChangeNotifier implements LuminaEditorHost
 
   /// [pluginName]'s supervisor when it has a process part, else a detached
   /// channel.
+  EditorPanelWidgets? _editorPanelWidgets;
+
+  /// The editor's editor panel Widget Blueprints, for plugins.
+  void attachEditorPanelWidgets(EditorPanelWidgets panels) => _editorPanelWidgets = panels;
+
+  @override
+  EditorPanelWidgets get editorPanelWidgets => _editorPanelWidgets ?? EditorPanelWidgets.detached();
+
   @override
   PluginProcessChannel processChannel(String pluginName) =>
       _processes?.supervisorOf(pluginName) ?? PluginProcessChannel.detached(pluginName);
