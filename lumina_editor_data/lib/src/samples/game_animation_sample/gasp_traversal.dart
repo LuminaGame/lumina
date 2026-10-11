@@ -3,7 +3,7 @@ import 'dart:typed_data';
 
 import 'package:lumina/lumina.dart';
 
-import 'package:lumina_editor_data/src/samples/game_animation_sample/gasp_databases.dart';
+import 'package:lumina_editor_data/src/samples/game_animation_sample/gasp_pose_search_schema.dart';
 import 'package:lumina_editor_data/src/services/fbx_import_service.dart';
 
 /// The sample's traversal set read from the export's `metadata.json`: the
@@ -158,14 +158,14 @@ abstract final class GaspTraversal {
   /// still on the sample's skeleton, which has the warp point bone): a mesh
   /// the clips were retargeted onto lacks the bone, so the runtime uses the
   /// stored offset. Offsets are in centimetres, in the root's frame of
-  /// [schema] (the character's databases' schema).
+  /// [schema] (the character's databases' schema, [gaspPoseSearchSchema]).
   static List<LuminaTraversalAnimation> withWarpPointOffsets(
     List<LuminaTraversalAnimation> rows,
     Map<String, Uint8List> sourceClips, {
     LuminaPoseSearchSchema? schema,
     double worldUnitsPerModelUnit = 100.0,
   }) {
-    final rootSchema = schema ?? GaspDatabases.schema.copyWith(rootBone: rootBone);
+    final rootSchema = schema ?? gaspPoseSearchSchema.copyWith(rootBone: rootBone);
     final rigs = <String, (LuminaPoseSearchRig, int)?>{};
     return [
       for (final row in rows)

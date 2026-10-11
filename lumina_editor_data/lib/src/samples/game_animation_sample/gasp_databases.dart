@@ -1,6 +1,7 @@
 import 'package:lumina_core/lumina_core.dart';
 
 import 'package:lumina_editor_data/src/samples/game_animation_sample/gasp_export.dart';
+import 'package:lumina_editor_data/src/samples/game_animation_sample/gasp_pose_search_schema.dart';
 
 /// A pose search database the example project builds: its asset name, the
 /// sample databases it merges and the gait tag each contributes.
@@ -67,18 +68,9 @@ abstract final class GaspDatabases {
     }),
   ];
 
-  /// The sample's default schema as far as the engine follows it: future
-  /// trajectory samples at 0.35, 0.7 and 1.0 s and a short past sample
-  /// (-0.05 s; the engine has no present sample: features are relative to
-  /// the current frame), feet position + velocity and pelvis velocity.
-  static const LuminaPoseSearchSchema schema = LuminaPoseSearchSchema(
-    trajectoryTimes: [-0.05, 0.35, 0.7, 1.0],
-    bones: [
-      LuminaPoseSearchBone('foot_l', position: 1.0, velocity: 1.0),
-      LuminaPoseSearchBone('foot_r', position: 1.0, velocity: 1.0),
-      LuminaPoseSearchBone('pelvis', position: 0.0, velocity: 1.0),
-    ],
-  );
+  /// The sample's default schema as far as the engine follows it
+  /// ([gaspPoseSearchSchema]).
+  static const LuminaPoseSearchSchema schema = gaspPoseSearchSchema;
 
   /// The standing gaits; the Animation Blueprint searches the stand
   /// database with one of them as its required tag.
