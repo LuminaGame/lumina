@@ -44,6 +44,17 @@ class PluginProcessReach {
     return PluginProcessReach.walk(roots, packages: packages);
   }
 
+  /// Walks from a kernel plugin's process entry [entry] (a file outside
+  /// `lib/`, usually `bin/<name>_process.dart`) of the plugin in
+  /// [pluginDir]; the entry and the plugin's own `lib/` count as the
+  /// plugin's own libraries.
+  factory PluginProcessReach.ofEntry(File entry, {required Directory pluginDir, PluginPackageRoots? packages}) {
+    final config = packages ?? PluginPackageRoots.read(pluginDir);
+    final reach = PluginProcessReach._(_packageName(pluginDir), [entry.absolute.uri], config);
+    reach._walk();
+    return reach;
+  }
+
   /// The `package:` URIs of the libraries that declare the process classes
   /// named by the `.lmplugin` in [pluginDir] (empty when it names none).
   static List<Uri> processLibrariesOf(Directory pluginDir) {
@@ -158,7 +169,7 @@ class PluginProcessReach {
       final uri = todo.removeLast();
       final file = _packages.resolve(uri);
       if (file == null || !file.existsSync()) continue;
-      final fromOwn = uri.scheme == 'package' && uri.pathSegments.first == package;
+      final fromOwn = uri.scheme == 'file' || (uri.scheme == 'package' && uri.pathSegments.first == package);
       for (final written in headerUris(file.readAsStringSync())) {
         final dep = uri.resolve(written);
         final key = dep.toString();

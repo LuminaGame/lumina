@@ -35,6 +35,7 @@ export 'package:lumina_plugin_process/src/mcp/mcp_types.dart';
 export 'package:lumina_plugin_process/src/plugin_asset_keys.dart';
 export 'package:lumina_plugin_process/src/plugin_crash_reporter.dart';
 export 'package:lumina_plugin_process/src/plugin_downloader.dart';
+export 'package:lumina_plugin_process/src/plugin_kernel_compiler.dart';
 export 'package:lumina_plugin_process/src/plugin_process.dart';
 export 'package:lumina_plugin_process/src/plugin_process_link.dart';
 export 'package:lumina_plugin_process/src/plugin_storage.dart';

@@ -194,3 +194,28 @@ Future<int> servePluginProcess({
     await connection.close();
   });
 }
+
+/// The whole `main` of a kernel plugin's process entry:
+///
+/// ```dart
+/// Future<void> main(List<String> args) => runPluginProcessEntry(args, MyProcess.new);
+/// ```
+///
+/// Parses the launch flags the editor passes ([PluginProcessLaunch.parse]),
+/// runs [create]'s process with [runPluginProcessMain] and exits with its
+/// code; without launch flags it prints a usage line and exits with 64.
+Future<Never> runPluginProcessEntry(List<String> args, LuminaPluginProcess Function() create) async {
+  final PluginProcessLaunch? launch;
+  try {
+    launch = PluginProcessLaunch.parse(args);
+  } on FormatException catch (e) {
+    stderr.writeln('plugin process: ${e.message}');
+    exit(64);
+  }
+  if (launch == null) {
+    stderr.writeln('usage: dart <kernel> ${PluginProcessLaunch.flag} <plugin> --lumina-plugin-port <port> ... '
+        '(the editor starts this process)');
+    exit(64);
+  }
+  exit(await runPluginProcessMain(launch, create()));
+}
