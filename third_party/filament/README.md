@@ -26,6 +26,7 @@ are upstream v1.77.2 with exactly these files applied in order.
 | `0017-vulkan-blit-rectangles-inside-their-images.patch` | `backend/src/vulkan/VulkanDriver.cpp` | `blitDEPRECATED` keeps both rectangles inside their images: frame generation's presents into a window that just shrank no longer lose the device. |
 | `0018-vulkan-merged-feature-requests-and-api-version.patch` | `backend/include/backend/platforms/VulkanPlatform.h`, `backend/src/vulkan/platform/VulkanPlatform.cpp` | A client's feature request for a structure Filament already chains (core features, Vulkan 1.1 features, 16-bit storage) is OR-merged into Filament's structure; `Customization::apiVersion` opts into a newer Vulkan API version. |
 | `0019-ray-traced-passes-in-the-true-world-under-an-ibl-rotation.patch` | `filament/src/PostProcessManager.cpp`, `filament/src/materials/rt/restirShade.mat` | The ray-traced sun shadow rotates its light direction, and ReSTIR's visibility rays their origin and target, back into the true world: under a rotated IBL (every KTX IBL flutter_filament loads) the shadow no longer points the wrong way. |
+| `0020-android-build-without-ray-query-materials.patch` | `CMakeLists.txt`, `build/windows/combine-static-libs.cmake` (new), `filament/CMakeLists.txt`, `filament/src/materials/rt/rt.cpp`, `filament/src/details/Engine.h` | An Android build leaves out the ray query materials (matc compiles `GL_EXT_ray_query` only for the desktop shader model) and its engine reports ray queries as unsupported; a Windows host cross-compiling for Android combines static libraries without the shell script. |
 
 ## 0001: libassimp glTF 2 `ReplaceData_joint` bounds
 
@@ -426,3 +427,23 @@ ReSTIR's visibility rays (0008) added only the translation back. With a rotated 
 visibility rays aimed at moved lights. `PostProcessManager::rayTracedShadows` now rotates `toLight` with the inverse
 world transform, and `restirShade` takes the whole inverse world transform (`trueWorldFromShaderWorld`, replacing
 `trueWorldOffset`).
+
+## 0020: Android builds without the ray query materials
+
+The Android archives (`tool/filament/build_prebuilt.ps1 -Android`, built with NDK 28 for `arm64-v8a` and `x86_64`) come
+from the same tag and patches as the desktop ones. Two things kept the patched tree from building for Android:
+
+- The ray query materials of 0007, 0008, 0012 and 0014 (`rtShadow`, `rayVisibility`, `restirCandidates`,
+  `restirSpatial`, `restirShade`, `rtSpecularHitDistance`) need `GL_EXT_ray_query`, which matc accepts only with the
+  desktop shader model; Android compiles its materials `-p mobile`, and matc stopped at `'rayQueryEXT' : undeclared
+  identifier`. An Android build now leaves them out (`postPassMotion`, which traces no rays, stays), `rt.cpp` guards the
+  two material lists separately, and `FEngine::isRayQuerySupported()` is false in a build without ray query materials.
+  On a Quest (Adreno 740, which exposes `VK_KHR_ray_query`) ray-traced shadows, ReSTIR and `View::traceRay` therefore
+  report unsupported instead of loading a material that has no mobile shaders. Desktop builds are unchanged.
+- `combine_static_libs` runs `build/linux/combine-static-libs.sh`, which `cmd.exe` cannot execute when a Windows host
+  cross-compiles. On such a host it now combines the archives with the archiver's MRI script mode
+  (`build/windows/combine-static-libs.cmake`).
+
+Which patches do what on Android: 0004 (motion vectors), 0006 / 0011 / 0013 (external passes) and 0009 (FSR3) compile
+and work on the Vulkan backend; 0007 / 0008 / 0010 / 0012 / 0014 / 0015 / 0019 compile and report unsupported; 0016
+(present pacing) compiles and is used only by vsync-less SwapChains.

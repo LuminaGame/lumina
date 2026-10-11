@@ -75,7 +75,7 @@ uint32_t filament_mesh_reader_load_mesh_from_buffer(
     FFI_CATCH(0)
 }
 
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(__ANDROID__)
 #include <resources.h>
 #include <monkey.h>
 #endif
@@ -87,7 +87,7 @@ uint32_t filament_mesh_reader_load_mesh_from_buffer(
 #include <fstream>
 #include <vector>
 
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(__ANDROID__)
 struct SuzanneSampleResources {
     utils::Entity renderable;
     Material* material = nullptr;
@@ -258,9 +258,9 @@ uint32_t filament_suzanne_sample_create(void* engine_ptr, void* view_ptr, void* 
     return static_cast<uint32_t>(mesh.renderable.getId());
     FFI_CATCH(0)
 }
-#else  // __EMSCRIPTEN__
+#else  // __EMSCRIPTEN__ || __ANDROID__
 // The Suzanne sample's materials and textures are resources compiled for the
-// desktop samples (out/cmake-release/samples); web builds do not carry them.
+// desktop samples (out/cmake-release/samples); web and Android builds do not carry them.
 void filament_suzanne_sample_destroy(void* engine_ptr, void* scene_ptr) {
     (void) engine_ptr;
     (void) scene_ptr;
@@ -273,7 +273,7 @@ uint32_t filament_suzanne_sample_create(void* engine_ptr, void* view_ptr, void* 
     fprintf(stderr, "[flutter_filament] the Suzanne sample exists only in desktop builds\n");
     return 0;
 }
-#endif  // __EMSCRIPTEN__
+#endif  // __EMSCRIPTEN__ || __ANDROID__
 
 
 

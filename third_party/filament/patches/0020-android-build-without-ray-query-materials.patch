@@ -1,0 +1,201 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Can Us <me@canus.dev>
+Date: Sun, 11 Oct 2026 19:00:00 +0300
+Subject: [PATCH] Android builds without the ray query materials, from a
+ Windows host
+
+Two things kept the patched tree from building for Android:
+
+- The ray query materials (0007, 0008, 0014, 0019) need GL_EXT_ray_query,
+  which matc only accepts with the desktop shader model; an Android build
+  compiles materials with `-p mobile` and failed on rtShadow, rayVisibility,
+  restirCandidates, restirSpatial, restirShade and rtSpecularHitDistance.
+  An Android build now leaves them out (postPassMotion, which traces no
+  rays, stays), rt.cpp guards the two material lists separately, and
+  FEngine::isRayQuerySupported() is false when the build has no ray query
+  materials, so ray-traced shadows, ReSTIR and traceRay report unsupported
+  even on a device whose driver offers VK_KHR_ray_query. Desktop builds
+  are unchanged.
+
+- combine_static_libs runs build/linux/combine-static-libs.sh, which a
+  Windows host cross-compiling for Android cannot execute. On such a host
+  it now combines the archives with the archiver's MRI script mode
+  (build/windows/combine-static-libs.cmake).
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index a95a7476..865eccca 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -775,6 +775,7 @@ function(list_licenses OUTPUT MODULES)
+ endfunction()
+ 
+ set(COMBINE_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/build/linux/combine-static-libs.sh")
++set(COMBINE_SCRIPT_CMAKE "${CMAKE_CURRENT_SOURCE_DIR}/build/windows/combine-static-libs.cmake")
+ 
+ # Add a custom command to TARGET that combines the static libraries in DEPS into a single archive.
+ function(combine_static_libs TARGET OUTPUT DEPS)
+@@ -797,6 +798,15 @@ function(combine_static_libs TARGET OUTPUT DEPS)
+             COMMENT "Combining ${target} dependencies into single shared library"
+             VERBATIM
+         )
++    elseif (CMAKE_HOST_WIN32)
++        # A Windows host cross-compiling (Android) cannot run the shell script.
++        add_custom_command(
++            TARGET ${TARGET} POST_BUILD
++            COMMAND "${CMAKE_COMMAND}" "-DAR_TOOL=${CMAKE_AR}" "-DOUTPUT=${OUTPUT}"
++                    -P "${COMBINE_SCRIPT_CMAKE}" ${DEPS_FILES}
++            COMMENT "Combining ${target} dependencies into single shared library"
++            VERBATIM
++        )
+     else()
+         add_custom_command(
+             TARGET ${TARGET} POST_BUILD
+diff --git a/build/windows/combine-static-libs.cmake b/build/windows/combine-static-libs.cmake
+new file mode 100644
+index 00000000..b89ea9b5
+--- /dev/null
++++ b/build/windows/combine-static-libs.cmake
+@@ -0,0 +1,31 @@
++# Combines static libraries into one archive with the archiver's MRI script mode, for hosts
++# that cannot run build/linux/combine-static-libs.sh (a Windows host building for Android).
++#
++#   cmake -DAR_TOOL=<llvm-ar> -DOUTPUT=<archive> -P combine-static-libs.cmake <archives>...
++set(archives)
++set(seen_script FALSE)
++math(EXPR last "${CMAKE_ARGC} - 1")
++foreach(i RANGE 1 ${last})
++    set(arg "${CMAKE_ARGV${i}}")
++    if (seen_script)
++        list(APPEND archives "${arg}")
++    elseif (arg STREQUAL "-P")
++        math(EXPR next "${i} + 1")
++        set(skip ${next})
++    endif()
++    if (DEFINED skip AND i EQUAL skip)
++        set(seen_script TRUE)
++    endif()
++endforeach()
++set(mri "CREATE ${OUTPUT}\n")
++foreach(archive ${archives})
++    string(APPEND mri "ADDLIB ${archive}\n")
++endforeach()
++string(APPEND mri "SAVE\nEND\n")
++file(WRITE "${OUTPUT}.mri" "${mri}")
++file(REMOVE "${OUTPUT}")
++execute_process(COMMAND "${AR_TOOL}" -M INPUT_FILE "${OUTPUT}.mri" RESULT_VARIABLE rc)
++file(REMOVE "${OUTPUT}.mri")
++if (NOT rc EQUAL 0)
++    message(FATAL_ERROR "combining ${archives} into ${OUTPUT} failed (${rc})")
++endif()
+diff --git a/filament/CMakeLists.txt b/filament/CMakeLists.txt
+index 1435ab01..83b4ff2a 100644
+--- a/filament/CMakeLists.txt
++++ b/filament/CMakeLists.txt
+@@ -335,20 +335,26 @@ if (NOT FILAMENT_DISABLE_GTAO)
+ endif()
+ 
+ # Ray query materials compile for Vulkan only (GL_EXT_ray_query); they are loaded only when
+-# the device supports ray queries.
++# the device supports ray queries. GL_EXT_ray_query needs the desktop shader model, so a
++# mobile build (Android) carries none of them and its engine reports ray queries as
++# unsupported; the external post pass material has no ray query and is built everywhere.
+ set(MATERIAL_VULKAN_SRCS)
+ if (FILAMENT_SUPPORTS_VULKAN)
+-    set(MATERIAL_VULKAN_SRCS
+-        src/materials/rt/rtShadow.mat
+-        src/materials/rt/rayVisibility.mat
+-        src/materials/rt/restirCandidates.mat
+-        src/materials/rt/restirSpatial.mat
+-        src/materials/rt/restirShade.mat
+-        src/materials/rt/postPassMotion.mat
+-        src/materials/rt/rtSpecularHitDistance.mat
+-    )
++    set(MATERIAL_VULKAN_SRCS src/materials/rt/postPassMotion.mat)
++    set(RT_DEFINITIONS FILAMENT_VULKAN_POST_PASS_MATERIALS)
++    if (NOT ANDROID)
++        list(APPEND MATERIAL_VULKAN_SRCS
++            src/materials/rt/rtShadow.mat
++            src/materials/rt/rayVisibility.mat
++            src/materials/rt/restirCandidates.mat
++            src/materials/rt/restirSpatial.mat
++            src/materials/rt/restirShade.mat
++            src/materials/rt/rtSpecularHitDistance.mat
++        )
++        list(APPEND RT_DEFINITIONS FILAMENT_RAY_QUERY_MATERIALS)
++    endif()
+     list(APPEND MATERIAL_SRCS ${MATERIAL_VULKAN_SRCS})
+-    set_source_files_properties(src/materials/rt/rt.cpp PROPERTIES COMPILE_DEFINITIONS FILAMENT_RAY_QUERY_MATERIALS)
++    set_source_files_properties(src/materials/rt/rt.cpp PROPERTIES COMPILE_DEFINITIONS "${RT_DEFINITIONS}")
+ endif()
+ 
+ set(MATERIAL_MULTIVIEW_SRCS
+diff --git a/filament/src/details/Engine.h b/filament/src/details/Engine.h
+index 5fe8a77f..671f0878 100644
+--- a/filament/src/details/Engine.h
++++ b/filament/src/details/Engine.h
+@@ -27,6 +27,7 @@
+ #include "MaterialDefinition.h"
+ #include "PostProcessManager.h"
+ #include "ResourceList.h"
++#include "materials/rt/rt.h"
+ #include "UboManager.h"
+ 
+ #include "components/CameraManager.h"
+@@ -242,8 +243,10 @@ public:
+         return getDriver().isStereoSupported();
+     }
+ 
++    // A build without the ray query materials (Android) cannot trace rays even on a device
++    // whose driver can.
+     bool isRayQuerySupported() const noexcept {
+-        return getDriver().isRayQuerySupported();
++        return getDriver().isRayQuerySupported() && !getRayQueryMaterialList().empty();
+     }
+ 
+     bool isAsynchronousModeEnabled() const noexcept;
+diff --git a/filament/src/materials/rt/rt.cpp b/filament/src/materials/rt/rt.cpp
+index 96a8e4c0..24bb8be9 100644
+--- a/filament/src/materials/rt/rt.cpp
++++ b/filament/src/materials/rt/rt.cpp
+@@ -20,7 +20,7 @@
+ 
+ #include <utils/Slice.h>
+ 
+-#if defined(FILAMENT_RAY_QUERY_MATERIALS)
++#if defined(FILAMENT_VULKAN_POST_PASS_MATERIALS)
+ #include "generated/resources/rt.h"
+ #include <iterator>
+ #endif
+@@ -37,22 +37,24 @@ static const StaticMaterialInfo sMaterialList[] = {
+     { "rtSpecularHitDistance", MATERIAL(RT, RTSPECULARHITDISTANCE) },
+ };
+ 
+-static const StaticMaterialInfo sVulkanMaterialList[] = {
+-    { "postPassMotion", MATERIAL(RT, POSTPASSMOTION) },
+-};
+-
+ utils::Slice<const StaticMaterialInfo> getRayQueryMaterialList() noexcept {
+     return { std::begin(sMaterialList), std::end(sMaterialList) };
+ }
+-
+-utils::Slice<const StaticMaterialInfo> getVulkanPostProcessMaterialList() noexcept {
+-    return { std::begin(sVulkanMaterialList), std::end(sVulkanMaterialList) };
+-}
+ #else
+ utils::Slice<const StaticMaterialInfo> getRayQueryMaterialList() noexcept {
+     return {};
+ }
++#endif
++
++#if defined(FILAMENT_VULKAN_POST_PASS_MATERIALS)
++static const StaticMaterialInfo sVulkanMaterialList[] = {
++    { "postPassMotion", MATERIAL(RT, POSTPASSMOTION) },
++};
+ 
++utils::Slice<const StaticMaterialInfo> getVulkanPostProcessMaterialList() noexcept {
++    return { std::begin(sVulkanMaterialList), std::end(sVulkanMaterialList) };
++}
++#else
+ utils::Slice<const StaticMaterialInfo> getVulkanPostProcessMaterialList() noexcept {
+     return {};
+ }

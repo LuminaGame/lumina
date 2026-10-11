@@ -10,5 +10,5 @@
 # `tool/build_materials.sh` regenerates every row.
 # `test/data/material_packages_test.dart` fails if a `.filamat` in this package
 # is missing from this list.
-assets/sky/simulated_skybox.filamat|../filament/web/examples/materials/simulated_skybox.mat|-a all -p desktop
-example/assets/sky/simulated_skybox.filamat|../filament/web/examples/materials/simulated_skybox.mat|-a all -p desktop
+assets/sky/simulated_skybox.filamat|../filament/web/examples/materials/simulated_skybox.mat|-a all -p all
+example/assets/sky/simulated_skybox.filamat|../filament/web/examples/materials/simulated_skybox.mat|-a all -p all

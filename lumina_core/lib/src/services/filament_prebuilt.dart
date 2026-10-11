@@ -143,6 +143,73 @@ abstract final class FilamentPrebuilt {
   }
 }
 
+/// The Android half of a prebuilt Filament: the static libraries per ABI
+/// (`arm64-v8a`, `x86_64`) and the headers of Android's install tree, built
+/// from the same upstream tag and patches as the desktop archives
+/// (`build_prebuilt.ps1 -Android`).
+///
+/// The asset `filament-<version>-android.tar.gz` (+ `.sha256`) sits in the
+/// same `filament-<version>` release. Its one folder,
+/// `filament-<version>-android`, is the `out/android-release` folder of a
+/// Filament checkout, with its own `lumina-filament.json`; [ensure] unpacks it
+/// there inside an unpacked desktop prebuilt, so one `filament_dir` serves the
+/// desktop and the Android builds of a game.
+abstract final class FilamentPrebuiltAndroid {
+  /// `filament-<version>-android`: the archive's folder.
+  static String baseName(String version) => 'filament-$version-android';
+
+  /// `filament-<version>-android.tar.gz`.
+  static String archiveName(String version) => '${baseName(version)}.tar.gz';
+
+  /// Where the Android tree lives inside a prebuilt (or a checkout).
+  static final String relativePath = p.join('out', 'android-release');
+
+  /// `<prebuilt>/out/android-release` when it holds the Android build of
+  /// [version], else null.
+  static Directory? installed(Directory prebuilt, String version) {
+    final dir = Directory(p.join(prebuilt.path, relativePath));
+    final info = FilamentPrebuilt.readInfo(dir);
+    return info != null && info['version'] == version ? dir : null;
+  }
+
+  /// Makes `<prebuilt>/out/android-release` the Android build of [version]
+  /// (downloaded from the `filament-<version>` release and checked against its
+  /// sidecar, like [FilamentPrebuilt.ensure]) and returns it. [prebuilt] is an
+  /// unpacked desktop prebuilt of the same version.
+  static Future<Directory> ensure({
+    required String version,
+    required Directory prebuilt,
+    void Function(double progress, String message)? onProgress,
+    String? baseUrl,
+    bool force = false,
+    HttpClient? httpClient,
+    Map<String, String>? environment,
+  }) async {
+    if (!force) {
+      final found = installed(prebuilt, version);
+      if (found != null) {
+        onProgress?.call(1, 'Filament $version for Android is already installed');
+        return found;
+      }
+    }
+    final base = baseUrl ??
+        ReleaseAssets.baseUrlFromEnvironment(
+            const [FilamentPrebuilt.baseUrlVariable, ReleaseAssets.baseUrlVariable], environment) ??
+        FilamentPrebuilt.defaultBaseUrl;
+    return ReleaseAssets.fetch(
+      uri: ReleaseAssets.assetUri(base, FilamentPrebuilt.releaseTagFor(version), archiveName(version)),
+      folder: baseName(version),
+      infoFileName: FilamentPrebuilt.infoFileName,
+      accept: (info) => info['version'] == version && info['platform'] == 'android',
+      target: Directory(p.join(prebuilt.path, relativePath)),
+      label: 'Filament $version for Android',
+      error: FilamentPrebuiltException.new,
+      onProgress: onProgress,
+      httpClient: httpClient,
+    );
+  }
+}
+
 /// An HTTP 404 of an asset: the next release tag may have it.
 class _NotFound extends FilamentPrebuiltException {
   const _NotFound(super.message);

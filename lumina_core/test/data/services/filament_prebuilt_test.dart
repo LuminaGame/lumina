@@ -211,4 +211,56 @@ void main() {
     );
     expect(Directory(p.join(cache().path, version)).existsSync(), isFalse);
   });
+  group('the Android archive', () {
+    Future<List<int>> buildAndroidArchive({String platform = 'android'}) async {
+      final stage = Directory(p.join(temp.path, 'stage-android-${DateTime.now().microsecondsSinceEpoch}'));
+      final top = Directory(p.join(stage.path, FilamentPrebuiltAndroid.baseName(version)))..createSync(recursive: true);
+      File(p.join(top.path, 'lumina-filament.json')).writeAsStringSync(jsonEncode({'version': version, 'platform': platform}));
+      File(p.join(top.path, 'filament', 'lib', 'arm64-v8a', 'libfilament.a'))
+        ..createSync(recursive: true)
+        ..writeAsStringSync('!<arch>');
+      final archive = File(p.join(temp.path, FilamentPrebuiltAndroid.archiveName(version)));
+      if (archive.existsSync()) archive.deleteSync();
+      final tar = Platform.isWindows ? p.join(Platform.environment['SystemRoot']!, 'System32', 'tar.exe') : 'tar';
+      final result = await Process.run(tar, ['-c', '-z', '-f', archive.path, FilamentPrebuiltAndroid.baseName(version)],
+          workingDirectory: stage.path);
+      expect(result.exitCode, 0, reason: '${result.stderr}');
+      return archive.readAsBytesSync();
+    }
+
+    void publishAndroid(List<int> bytes) {
+      final name = FilamentPrebuiltAndroid.archiveName(version);
+      assets['/$filamentTag/$name'] = bytes;
+      assets['/$filamentTag/$name.sha256'] = utf8.encode('${sha256.convert(bytes)}  $name\n');
+    }
+
+    test('is named filament-<version>-android.tar.gz', () {
+      expect(FilamentPrebuiltAndroid.archiveName('1.77.2-lumina.18'), 'filament-1.77.2-lumina.18-android.tar.gz');
+    });
+
+    test('unpacks into out/android-release of the desktop prebuilt, then is reused offline', () async {
+      publish(await buildArchive());
+      publishAndroid(await buildAndroidArchive());
+      final prebuilt = await FilamentPrebuilt.ensure(version: version, cacheRoot: cache(), baseUrl: baseUrl());
+      final android = await FilamentPrebuiltAndroid.ensure(version: version, prebuilt: prebuilt, baseUrl: baseUrl());
+      expect(p.equals(android.path, p.join(prebuilt.path, 'out', 'android-release')), isTrue);
+      expect(File(p.join(android.path, 'filament', 'lib', 'arm64-v8a', 'libfilament.a')).existsSync(), isTrue);
+      // The desktop half is untouched.
+      expect(File(p.join(prebuilt.path, 'filament', 'include', 'filament', 'Engine.h')).existsSync(), isTrue);
+      expect(requests.last, '/$filamentTag/${FilamentPrebuiltAndroid.archiveName(version)}');
+
+      requests.clear();
+      await FilamentPrebuiltAndroid.ensure(version: version, prebuilt: prebuilt, baseUrl: baseUrl());
+      expect(requests, isEmpty);
+    });
+
+    test('a desktop archive under the Android name is refused', () async {
+      publish(await buildArchive());
+      publishAndroid(await buildAndroidArchive(platform: 'windows-x64'));
+      final prebuilt = await FilamentPrebuilt.ensure(version: version, cacheRoot: cache(), baseUrl: baseUrl());
+      await expectLater(FilamentPrebuiltAndroid.ensure(version: version, prebuilt: prebuilt, baseUrl: baseUrl()),
+          throwsA(isA<FilamentPrebuiltException>()));
+      expect(FilamentPrebuiltAndroid.installed(prebuilt, version), isNull);
+    });
+  });
 }

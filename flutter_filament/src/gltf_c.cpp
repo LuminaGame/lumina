@@ -61,7 +61,7 @@ void* filament_gltfio_create_ubershader_provider(void* engine, const void* archi
     return createUbershaderProvider(toEngine(engine), archive, archive_size);
     FFI_CATCH(nullptr)
 }
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(__ANDROID__)
 void* filament_gltfio_create_jit_material_provider(void* engine) {
     FFI_TRY return createJitShaderProvider(toEngine(engine)); FFI_CATCH(nullptr)
 }
@@ -71,10 +71,11 @@ void* filament_gltfio_create_jit_material_provider_ex(void* engine, bool optimiz
 }
 #else
 // The JIT shader provider compiles with filamat, which is not in Filament's
-// WebAssembly build; web games use the ubershader provider.
+// WebAssembly build, and Android's gltfio_core has no JIT provider; web and
+// Android games use the ubershader provider.
 void* filament_gltfio_create_jit_material_provider(void* engine) {
     (void) engine;
-    fprintf(stderr, "[flutter_filament] the JIT material provider is not available in web builds; use the ubershader provider\n");
+    fprintf(stderr, "[flutter_filament] the JIT material provider is not available in web and Android builds; use the ubershader provider\n");
     return nullptr;
 }
 

@@ -6,13 +6,19 @@ with MSVC (/MT) through flutter_filament/tool/build_filament_windows.bat, then
 pruned to what the native-assets hooks read and zipped.
 
 .DESCRIPTION
-  tool\filament\build_prebuilt.ps1 [-WorkDir <dir>] [-OutDir <dir>] [-SkipBuild]
+  tool\filament\build_prebuilt.ps1 [-WorkDir <dir>] [-OutDir <dir>] [-SkipBuild] [-Android]
 
 WorkDir  the Filament checkout + build tree (default: $env:LUMINA_FILAMENT_WORK,
          else build\filament-src under the repo root). Reused across runs: the
          clone, the patch state and the ninja tree are all incremental.
 OutDir   where the archive goes (default: build\filament-prebuilt).
 SkipBuild  package an existing build only.
+Android  also build Filament for Android (arm64-v8a, x86_64) from the same
+         patched checkout with the NDK (flutter_filament\tool\build_filament_android.bat,
+         host tools from the Windows build) and pack the `android` manifest
+         entries as <OutDir>\filament-<VERSION>-android.tar.gz (+ .sha256): one
+         folder, filament-<VERSION>-android, that is the out\android-release
+         folder of the prebuilt (fetch_prebuilt.dart --android unpacks it there).
 
 Writes <OutDir>\filament-<VERSION>-windows-x64.zip and a .sha256 sidecar
 (sha256sum format). The zip holds one folder, filament-<VERSION>-windows-x64,
@@ -24,7 +30,8 @@ and git. Keep WorkDir short: MSVC object paths approach MAX_PATH.
 param(
   [string]$WorkDir,
   [string]$OutDir,
-  [switch]$SkipBuild
+  [switch]$SkipBuild,
+  [switch]$Android
 )
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
@@ -190,3 +197,70 @@ $hash = (Get-FileHash $Archive -Algorithm SHA256).Hash.ToLower()
 Remove-Item -Recurse -Force (Join-Path $OutDir 'stage')
 $size = (Get-Item $Archive).Length / 1MB
 Log ("{0} ({1:N1} MiB) sha256 {2}" -f $Archive, $size, $hash)
+
+# --- 6. Android: the same checkout, built with the NDK, its own archive ------
+if ($Android) {
+  $AndroidAbis = @{ 'arm64-v8a' = 'aarch64'; 'x86_64' = 'x86_64' }
+  if (-not $SkipBuild) {
+    $started = Get-Date
+    Log "building Filament for Android ($($AndroidAbis.Keys -join ', '))"
+    $env:LUMINA_FILAMENT_SRC = $WorkDir
+    $bat = Join-Path $Repo 'flutter_filament\tool\build_filament_android.bat'
+    & cmd.exe /d /c "`"$bat`" $($AndroidAbis.Values -join ' ')"
+    $rc = $LASTEXITCODE
+    Remove-Item Env:LUMINA_FILAMENT_SRC
+    if ($rc -ne 0) { throw "Filament Android build failed ($rc)" }
+    Log ("Android build finished in {0:N1} min" -f ((Get-Date) - $started).TotalMinutes)
+  }
+  $AndroidRoot = 'out/android-release'
+  $AndroidName = "filament-$Version-android"
+  $AndroidStage = Join-Path $OutDir "stage\$AndroidName"
+  if (Test-Path (Join-Path $OutDir 'stage')) { Remove-Item -Recurse -Force (Join-Path $OutDir 'stage') }
+  New-Item -ItemType Directory -Force $AndroidStage | Out-Null
+  $androidCopied = 0
+  foreach ($line in [IO.File]::ReadAllLines((Join-Path $PSScriptRoot 'prebuilt_manifest.txt'))) {
+    if (-not $line.Trim() -or $line.StartsWith('#')) { continue }
+    $f = $line.Trim() -split '\s+'
+    if (-not (($f[0] -split ',') -contains 'android')) { continue }
+    if (-not $f[2].StartsWith("$AndroidRoot/")) { throw "android entry outside $AndroidRoot`: $($f[2])" }
+    $rel = $f[2].Substring($AndroidRoot.Length + 1) -replace '/', '\'
+    $src = Join-Path $WorkDir ($f[2] -replace '/', '\')
+    $dst = Join-Path $AndroidStage $rel
+    if ($f[1] -eq 'file') {
+      if (-not (Test-Path -LiteralPath $src -PathType Leaf)) { throw "missing: $($f[2])" }
+      Copy-One $src $dst; $androidCopied++
+    } elseif ($f[1] -eq 'dir') {
+      if (-not (Test-Path -LiteralPath $src -PathType Container)) { throw "missing: $($f[2])" }
+      foreach ($h in Get-ChildItem -LiteralPath $src -Recurse -File) {
+        if ($HeaderExt -notcontains $h.Extension.ToLower()) { continue }
+        Copy-One $h.FullName (Join-Path $dst $h.FullName.Substring($src.Length).TrimStart('\')); $androidCopied++
+      }
+    }
+  }
+  Copy-Item (Join-Path $WorkDir 'LICENSE') (Join-Path $AndroidStage 'LICENSE')
+  $ndk = if ($env:ANDROID_HOME) { $env:ANDROID_HOME } else { Join-Path $env:LOCALAPPDATA 'Android\Sdk' }
+  $ndkVersion = (Get-ChildItem (Join-Path $ndk 'ndk') -Directory | Sort-Object Name -Descending | Select-Object -First 1).Name
+  $androidBat = [IO.File]::ReadAllText((Join-Path $Repo 'flutter_filament\tool\build_filament_android.bat'))
+  $androidMeta = [ordered]@{
+    version = $Version
+    platform = 'android'
+    abis = @($AndroidAbis.Keys | Sort-Object)
+    upstream = $meta.upstream
+    patches = $patchInfo
+    build = [ordered]@{
+      directory = $AndroidRoot
+      cmake = @('-G', 'Ninja') + @([regex]::Matches($androidBat, '-D[A-Za-z0-9_]+=[^\s^]+') | ForEach-Object { $_.Value })
+      ndk = $ndkVersion
+    }
+  }
+  [IO.File]::WriteAllText((Join-Path $AndroidStage 'lumina-filament.json'), ($androidMeta | ConvertTo-Json -Depth 6) + "`n", $Utf8)
+  $AndroidArchive = Join-Path $OutDir "$AndroidName.tar.gz"
+  if (Test-Path $AndroidArchive) { Remove-Item -Force $AndroidArchive }
+  Log "packing $androidCopied files -> $AndroidArchive"
+  Push-Location (Join-Path $OutDir 'stage')
+  try { Invoke-Native "$env:SystemRoot\System32\tar.exe" @('-c', '-z', '-f', $AndroidArchive, $AndroidName) } finally { Pop-Location }
+  $androidHash = (Get-FileHash $AndroidArchive -Algorithm SHA256).Hash.ToLower()
+  [IO.File]::WriteAllText("$AndroidArchive.sha256", "$androidHash  $AndroidName.tar.gz`n", $Utf8)
+  Remove-Item -Recurse -Force (Join-Path $OutDir 'stage')
+  Log ("{0} ({1:N1} MiB) sha256 {2}" -f $AndroidArchive, ((Get-Item $AndroidArchive).Length / 1MB), $androidHash)
+}

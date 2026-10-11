@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 
+import 'package:flutter_filament_example/samples/first_light/first_light_sample.dart';
 import 'package:flutter_filament_example/samples/gltf_viewer_sample.dart';
 import 'package:flutter_filament_example/samples/hello_pbr_sample.dart';
 import 'package:flutter_filament_example/samples/hello_triangle_sample.dart';
@@ -45,6 +46,10 @@ void main() {
   });
 }
 
+/// `--dart-define=FLUTTER_FILAMENT_SAMPLE=first_light` opens that sample
+/// directly (a device launched from adb has no one to tap the gallery).
+const _startSample = String.fromEnvironment('FLUTTER_FILAMENT_SAMPLE');
+
 class FilamentExampleApp extends StatelessWidget {
   const FilamentExampleApp({super.key});
 
@@ -56,7 +61,7 @@ class FilamentExampleApp extends StatelessWidget {
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepOrange),
       ),
-      home: const SampleGalleryScreen(),
+      home: _startSample == 'first_light' ? const FirstLightSample() : const SampleGalleryScreen(),
     );
   }
 }
@@ -81,6 +86,13 @@ class SampleGalleryScreen extends StatelessWidget {
   const SampleGalleryScreen({super.key});
 
   static final List<SampleGalleryItem> samples = [
+    SampleGalleryItem(
+      title: 'First Light',
+      description: 'glTF models from disk, sun + IBL, turning; logs backend, GPU and frame times.',
+      cppSampleFile: 'gltf_viewer.cpp',
+      icon: Icons.light_mode,
+      builder: (context) => const FirstLightSample(),
+    ),
     SampleGalleryItem(
       title: 'Hello Triangle',
       description: 'FilamentVertexBuffer & IndexBuffer 3D triangle rendering.',

@@ -5,7 +5,7 @@
 # (flutter_filament/third_party/libcxx), then pruned to what the native-assets
 # hooks read and packed.
 #
-#   tool/filament/build_prebuilt.sh [--skip-build | --checkout-only] [--out <dir>] [<work-dir>]
+#   tool/filament/build_prebuilt.sh [--skip-build | --checkout-only] [--android] [--out <dir>] [<work-dir>]
 #
 # <work-dir>   Filament checkout + build tree (default: $LUMINA_FILAMENT_WORK,
 #              else build/filament-src under the repo root). Reused across runs:
@@ -14,6 +14,10 @@
 # --skip-build package an existing build only.
 # --checkout-only  stop after the patched checkout (the source tree the web
 #              build, flutter_filament/tool/web/, compiles from).
+# --android    also build Filament for Android (arm64-v8a, x86_64) from the same
+#              checkout with the NDK ($ANDROID_NDK, else the newest under
+#              $ANDROID_HOME/ndk; host tools from the desktop build) and pack the
+#              `android` manifest entries as <out>/filament-<VERSION>-android.tar.gz.
 #
 # Environment: CC / CXX (default clang / clang++, which must match the bundled
 # libc++ 21 headers: clang 19 or newer), LUMINA_LIBCXX_DIR (the bundled libc++),
@@ -31,6 +35,7 @@ TAG="v${VERSION%%-*}"
 UPSTREAM="${LUMINA_FILAMENT_UPSTREAM:-https://github.com/google/filament.git}"
 SKIP_BUILD=0
 CHECKOUT_ONLY=0
+ANDROID=0
 OUT_DIR="$REPO/build/filament-prebuilt"
 WORK="${LUMINA_FILAMENT_WORK:-$REPO/build/filament-src}"
 while [ $# -gt 0 ]; do
@@ -38,7 +43,8 @@ while [ $# -gt 0 ]; do
     --skip-build) SKIP_BUILD=1 ;;
     --checkout-only) CHECKOUT_ONLY=1 ;;
     --out) OUT_DIR="$2"; shift ;;
-    -h|--help) sed -n '2,23p' "$0"; exit 0 ;;
+    --android) ANDROID=1 ;;
+    -h|--help) sed -n '2,27p' "$0"; exit 0 ;;
     -*) echo "unknown option: $1" >&2; exit 2 ;;
     *) WORK="$1" ;;
   esac
@@ -235,3 +241,67 @@ HASH="$(sha256 "$ARCHIVE")"
 printf '%s  %s\n' "$HASH" "$NAME.tar.gz" > "$ARCHIVE.sha256"
 rm -rf "$STAGE_ROOT"
 log "$ARCHIVE ($(du -h "$ARCHIVE" | cut -f1)) sha256 $HASH"
+
+# --- 6. Android: the same checkout, built with the NDK, its own archive ------
+if [ "$ANDROID" = 1 ]; then
+  NDK="${ANDROID_NDK:-}"
+  if [ -z "$NDK" ]; then
+    NDK="$(ls -d "${ANDROID_HOME:-$HOME/Android/Sdk}"/ndk/* 2>/dev/null | sort -V | tail -1)"
+  fi
+  [ -d "$NDK" ] || { echo "no Android NDK (set ANDROID_NDK or ANDROID_HOME)" >&2; exit 1; }
+  if [ "$SKIP_BUILD" = 0 ]; then
+    for arch in aarch64 x86_64; do
+      out="$WORK/out/cmake-android-release-$arch"
+      log "building Filament for Android $arch with $(basename "$NDK")"
+      cmake -S "$WORK" -B "$out" -G Ninja \
+        -DIMPORT_EXECUTABLES_DIR=. \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DFILAMENT_NDK_VERSION="$(basename "$NDK" | cut -d. -f1)" \
+        -DANDROID_NDK="$NDK" \
+        -DCMAKE_INSTALL_PREFIX="$WORK/out/android-release/filament" \
+        -DCMAKE_TOOLCHAIN_FILE="$WORK/build/toolchain-$arch-linux-android.cmake" \
+        -DFILAMENT_BUILD_TESTING=OFF \
+        -DFILAMENT_ENABLE_MATDBG=OFF \
+        -DFILAMENT_SUPPORTS_VULKAN=ON \
+        -DFILAMENT_SUPPORTS_OPENGL=ON \
+        -DFILAMENT_ENABLE_EXCEPTIONS=ON \
+        -DFILAMENT_SUPPORTS_WEBP_TEXTURES=ON
+      ninja -C "$out" ${JOBS:+-j "$JOBS"} install
+    done
+  fi
+  ANAME="filament-$VERSION-android"
+  ASTAGE="$STAGE_ROOT/$ANAME"
+  rm -rf "$STAGE_ROOT"
+  mkdir -p "$ASTAGE"
+  while read -r platforms kind path from; do
+    case "$platforms" in ''|\#*) continue ;; esac
+    [[ ",$platforms," == *",android,"* ]] || continue
+    rel="${path#out/android-release/}"
+    case "$kind" in
+      file)
+        [ -f "$WORK/$path" ] || { echo "missing: $path" >&2; exit 1; }
+        mkdir -p "$ASTAGE/$(dirname "$rel")"
+        cp "$WORK/$path" "$ASTAGE/$rel" ;;
+      dir)
+        [ -d "$WORK/$path" ] || { echo "missing: $path" >&2; exit 1; }
+        (cd "$WORK/$path" && find . -type f \( -name '*.h' -o -name '*.hh' -o -name '*.hpp' -o -name '*.inl' -o -name '*.inc' \) \
+          -exec sh -c 'mkdir -p "$0/$(dirname "$1")" && cp "$1" "$0/$1"' "$ASTAGE/$rel" {} \;) ;;
+    esac
+  done < "$REPO/tool/filament/prebuilt_manifest.txt"
+  cp "$WORK/LICENSE" "$ASTAGE/LICENSE"
+  {
+    echo '{'
+    echo "  \"version\": $(json_str "$VERSION"),"
+    echo '  "platform": "android",'
+    echo '  "abis": ["arm64-v8a", "x86_64"],'
+    echo "  \"upstream\": { \"repository\": \"https://github.com/google/filament\", \"tag\": \"$TAG\", \"commit\": \"$UPSTREAM_COMMIT\" },"
+    echo "  \"build\": { \"directory\": \"out/android-release\", \"ndk\": $(json_str "$(basename "$NDK")") }"
+    echo '}'
+  } > "$ASTAGE/lumina-filament.json"
+  AARCHIVE="$OUT_DIR/$ANAME.tar.gz"
+  tar -C "$STAGE_ROOT" -czf "$AARCHIVE" "$ANAME"
+  AHASH="$(sha256 "$AARCHIVE")"
+  printf '%s  %s\n' "$AHASH" "$ANAME.tar.gz" > "$AARCHIVE.sha256"
+  rm -rf "$STAGE_ROOT"
+  log "$AARCHIVE ($(du -h "$AARCHIVE" | cut -f1)) sha256 $AHASH"
+fi

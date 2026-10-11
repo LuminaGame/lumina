@@ -56,6 +56,7 @@ export 'package:flutter_filament/src/callback_bridge.dart';
 export 'package:flutter_filament/src/enums.dart';
 export 'package:flutter_filament/src/math_types.dart' if (dart.library.js_interop) 'src/math_types.web.g.dart';
 export 'package:flutter_filament/src/web_init.dart';
+export 'package:flutter_filament/src/platform_info.dart';
 export 'package:flutter_filament/src/instance.dart';
 export 'package:flutter_filament/src/texture_sampler.dart';
 export 'package:flutter_filament/src/texture_provider.dart';

@@ -12,6 +12,9 @@
 ///       [--dest <dir>]      default: build/filament-prebuilt/cache
 ///       [--base-url <url>]  default: https://github.com/LuminaGame/lumina/releases/download
 ///       [--force]           download again even when unpacked
+///       [--android]         also the Android archive (static libraries for
+///                           arm64-v8a and x86_64), unpacked into the same
+///                           folder's out/android-release
 ///
 /// The folder is `<dest>/<version>`. The logic lives in
 /// `package:lumina_core` (`FilamentPrebuilt.ensure`).
@@ -51,6 +54,21 @@ Future<void> main(List<String> args) async {
         stderr.writeln('[${percent.toString().padLeft(3)}%] $message');
       },
     );
+    if (args.contains('--android')) {
+      shown = -1;
+      await FilamentPrebuiltAndroid.ensure(
+        version: version,
+        prebuilt: dir,
+        baseUrl: opt('base-url'),
+        force: args.contains('--force'),
+        onProgress: (fraction, message) {
+          final percent = (fraction * 100).round();
+          if (percent == shown) return;
+          shown = percent;
+          stderr.writeln('[${percent.toString().padLeft(3)}%] $message');
+        },
+      );
+    }
     print(p.normalize(dir.absolute.path));
   } on FilamentPrebuiltException catch (e) {
     stderr.writeln(e.message);
@@ -61,6 +79,6 @@ Future<void> main(List<String> args) async {
 Never _usage(String? error) {
   if (error != null) stderr.writeln(error);
   stderr.writeln('usage: dart run tool/filament/fetch_prebuilt.dart [--tag <release-tag>] '
-      '[--version <id>] [--os windows|linux|macos] [--dest <dir>] [--base-url <url>] [--force]');
+      '[--version <id>] [--os windows|linux|macos] [--dest <dir>] [--base-url <url>] [--force] [--android]');
   exit(error == null ? 0 : 2);
 }

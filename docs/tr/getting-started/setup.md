@@ -106,6 +106,8 @@ powershell -ExecutionPolicy Bypass -File tool\filament\build_prebuilt.ps1   # Wi
 
 İkisi de Filament'i tag'inden `build/filament-src`'ye (ya da argüman olarak verilen klasöre) clone eder, yamaları uygular, yalnızca hook'ların link ettiği kütüphaneleri ve `matc`'yi build eder ve arşivi `build/filament-prebuilt/`'e yazar. İlk build yaklaşık bir saat sürer, sonraki çalıştırmalar artımlıdır. Build edilmiş `build/filament-src` aynı zamanda `filament_dir`'in gösterebileceği eksiksiz bir Filament checkout'udur. Bir hook'u değiştirdikten sonra manifest'i güncellemek için `dart tool/filament/prebuilt_manifest.dart` çalıştırın; bir yamayı ya da build flag'lerini değiştirdikten sonra `tool/filament/VERSION` içindeki son eki artırın.
 
+**Android.** Aynı release `filament-<VERSION>-android.tar.gz` (+ `.sha256`) dosyasını da taşır: aynı tag ve yamalardan build edilmiş `arm64-v8a` ve `x86_64` static kütüphaneleri ile Android kurulum ağacının header'ları. `dart run tool/filament/fetch_prebuilt.dart --android` bunu da indirir ve prebuilt klasörünün `out/android-release` dizinine açar; hook Android için build ederken oraya bakar. `build_prebuilt.ps1 -Android` onu Windows arşivinden sonra build eder (Android NDK 28, `%LOCALAPPDATA%\Android\Sdk` ya da `ANDROID_HOME` altında; host araçları Windows build'inden gelir). Bkz. [Platform entegrasyonu](../flutter_filament/platform.md#android-derlemeleri).
+
 ### Bir Filament checkout'unda build etmek
 
 **Linux / macOS**, Filament checkout'unda:

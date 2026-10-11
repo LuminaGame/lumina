@@ -8,6 +8,8 @@ Platform glue of the bindings: the engine host that shares one Filament engine p
 
 - [`lib/src/engine_host.dart`](#libsrcengine_hostdart)
 - [`lib/src/gpu.dart`](#libsrcgpudart)
+- [`lib/src/platform_info.dart`](#libsrcplatform_infodart)
+- [Android builds](#android-builds)
 - [`lib/src/web_init_native.dart`](#libsrcweb_init_nativedart)
 - [`lib/src/web_init_web.dart`](#libsrcweb_init_webdart)
 - [`lib/src/widget_native.dart`](#libsrcwidget_nativedart)
@@ -114,6 +116,31 @@ Lists the GPUs a Vulkan engine can render on.
 | :--- | :--- | :--- |
 | `listVulkanDevices` | `static List<FilamentGpuInfo> listVulkanDevices()` | Enumerates the Vulkan devices through the system loader, independently of any engine. Empty when Vulkan is unavailable (and on the web). |
 | `livePlatformCount` | `static int get livePlatformCount` | Vulkan platforms alive in this process: one per Vulkan engine not yet disposed. For leak checks. |
+
+## `lib/src/platform_info.dart`
+
+### `abstract final class FilamentPlatformInfo`
+
+What the running build of flutter_filament is, for code that picks a different path per platform (a material provider, a backend, a feature).
+
+**Members:**
+
+| Member | Signature | Description |
+| :--- | :--- | :--- |
+| `isWeb` | `static bool get isWeb` | A web (WebAssembly + WebGL2) build. |
+| `isAndroid` | `static bool get isAndroid` | An Android build (phones and standalone headsets such as the Quest): Vulkan by default with an OpenGL ES fallback, a mobile feature level, no JIT glTF materials, no matdbg and no imageio encoders; ray queries, ReSTIR and DLSS report unsupported. |
+| `hasJitMaterialProvider` | `static bool get hasJitMaterialProvider` | Whether the JIT glTF material provider is in this build; when false, use `FilamentMaterialProvider.ubershader`. |
+
+## Android builds
+
+The native-assets hook builds `libflutter_filament.so` for `arm64-v8a` and `x86_64` and links the static libraries of `filament/out/android-release/filament/lib/<abi>/` (`androidFilamentLibs` in `hook/native_inputs.dart`), with the generated headers (`uberarchive.h`, the IBL prefilter materials) from that install tree. Those archives come from the same upstream tag and patches as the desktop prebuilt: `tool/filament/build_prebuilt.ps1 -Android` builds them with NDK 28 and packs `filament-<VERSION>-android.tar.gz`, which `dart run tool/filament/fetch_prebuilt.dart --android` unpacks into the prebuilt folder's `out/android-release` (`FilamentPrebuiltAndroid` in lumina_core). Patch 0020 leaves the ray query materials out of an Android build.
+
+- **One source list.** Every wrapper source (`nativeSources`) is compiled for every target; what Android lacks is compiled out inside the file, so all `filament_*` functions of `src/filament_c.h` are exported and report "unsupported" the way the web stubs do (`false`, `0`, `nullptr`, a ray that misses). `test/hook/android_link_test.dart` checks a built library against the headers.
+- **Backend.** `FilamentBackend.defaultBackend` means Vulkan on Android too (Filament itself would pick OpenGL ES). When the Vulkan engine cannot be created the engine falls back to OpenGL ES and logs `Vulkan is not available; falling back to OpenGL ES` (logcat tag `flutter_filament`). The Vulkan engine gets the same platform subclass as on desktop (`VulkanPlatformAndroid`), so `FilamentEngine.gpuName`, the GPU memory budget and the extension / feature requests work there.
+- **Materials.** A mobile feature level loads the MOBILE shaders of a material. Every shipped material is compiled `-p all` (`tool/materials.txt` in flutter_filament and lumina); `test/src/material_platform_test.dart` checks both shader models.
+- **glTF.** Android's gltfio has no JIT material provider; use `FilamentMaterialProvider.ubershader` (see `FilamentPlatformInfo.hasJitMaterialProvider`).
+- **Plugin module.** `android/` is a library module for Flutter's plugin loader only; the library comes from the hook.
+- **Device check.** The example's First Light sample (`--dart-define=FLUTTER_FILAMENT_SAMPLE=first_light`) loads the `.glb` files pushed to `/sdcard/Android/data/com.lumina.flutter_filament_example/files/first_light/`, turns them under a sun and an IBL and logs the backend, the GPU and the frame times (`[first_light]` lines). On a Quest 3S it runs on `Adreno (TM) 740` (Vulkan 1.3, feature level 1) as a 2D panel.
 
 ## `lib/src/web_init_native.dart`
 

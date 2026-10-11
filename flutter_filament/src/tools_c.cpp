@@ -6,10 +6,10 @@
 #include "tools_c.h"
 
 #include <filaflat/ChunkContainer.h>
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(__ANDROID__)
 #include <matdbg/JsonWriter.h>
 #endif
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(__ANDROID__)
 #include <matdbg/TextWriter.h>
 #endif
 #include <zstd.h>
@@ -48,8 +48,8 @@ static const float PI = 3.14159265358979323846f;
 
 extern "C" {
 
-// matdbg (the material inspector) is not in Filament's WebAssembly build.
-#ifndef __EMSCRIPTEN__
+// matdbg (the material inspector) is not in Filament's WebAssembly and Android builds.
+#if !defined(__EMSCRIPTEN__) && !defined(__ANDROID__)
 char* filament_tools_inspect_material_json(const void* data, uint32_t size) {
     FFI_TRY
     if (!data || size == 0) return nullptr;

@@ -10,5 +10,5 @@
 # `tool/build_materials.sh` regenerates every row. `test/src/material_packages_test.dart`
 # fails if a `.filamat` in this package is missing from this list.
 src/materials/wireframe_filamat.h|src/materials/wireframe.mat|-a opengl -a vulkan -p all
-src/materials/ui_overlay_filamat.h|src/materials/ui_overlay.mat|-a opengl -a vulkan -p desktop
-example/assets/sky/simulated_skybox.filamat|../filament/web/examples/materials/simulated_skybox.mat|-a all -p desktop
+src/materials/ui_overlay_filamat.h|src/materials/ui_overlay.mat|-a opengl -a vulkan -p all
+example/assets/sky/simulated_skybox.filamat|../filament/web/examples/materials/simulated_skybox.mat|-a all -p all

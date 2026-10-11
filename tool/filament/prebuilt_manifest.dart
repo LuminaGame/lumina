@@ -11,13 +11,18 @@
 /// Every `'$filament/…'` literal in a hook is one entry: a path whose last
 /// segment has an extension is a `file`, anything else an include `dir` (the
 /// packagers copy only its headers). `$filamentOut` expands to both output
-/// folders, `windowsLib('…')` calls and the `_windowsFilamentLibs` list name
-/// Windows libraries. [extraEntries] adds what no hook reads but the archive
-/// still carries (the licence and the material compiler).
+/// folders, `windowsLib('…')` calls and the `windowsFilamentLibs` list name
+/// Windows libraries, and the `androidFilamentLibs` list names the Android
+/// libraries of every [androidAbis] entry. A path under `out/android-release/`
+/// is an `android` entry. [extraEntries] adds what no hook reads but the
+/// archive still carries (the licence and the material compiler).
 ///
 /// Manifest line: `<platforms> <kind> <path> [<built-from>]`, platforms a
-/// comma list of `windows`, `linux`, `macos` or `all`; kind `file`, `dir` or
-/// `tool` (a host executable copied from `<built-from>` to `<path>`).
+/// comma list of `windows`, `linux`, `macos`, `android` or `all`; kind
+/// `file`, `dir` or `tool` (a host executable copied from `<built-from>` to
+/// `<path>`). The desktop archives hold the `all` entries and their own; the
+/// Android archive (`build_prebuilt.ps1 -Android`) holds the `android` ones,
+/// unpacked into the same folder.
 library;
 
 import 'dart:convert';
@@ -26,6 +31,13 @@ import 'dart:io';
 /// Output folder of each platform's Filament build, relative to the checkout.
 const windowsOut = 'out/cmake-release-windows';
 const unixOut = 'out/cmake-release';
+
+/// The Android install tree (`flutter_filament/tool/build_filament_android.bat`).
+const androidOut = 'out/android-release/filament';
+
+/// The Android ABIs the Android archive carries: devices and headsets, and the
+/// emulator.
+const androidAbis = ['arm64-v8a', 'x86_64'];
 
 /// Entries no hook names.
 const extraEntries = [
@@ -43,7 +55,7 @@ const extraEntries = [
 class ManifestEntry implements Comparable<ManifestEntry> {
   const ManifestEntry(this.platforms, this.kind, this.path, [this.from]);
 
-  /// `all` or a comma list of `windows`, `linux`, `macos`.
+  /// `all` or a comma list of `windows`, `linux`, `macos`, `android`.
   final String platforms;
 
   /// `file`, `dir` or `tool`.
@@ -91,6 +103,8 @@ List<ManifestEntry> manifestEntries(List<String> hookSources) {
         add('linux,macos', rest.replaceAll('\u0000', unixOut.substring(4)));
       } else if (path.contains(r'$')) {
         continue; // e.g. windowsLib's own `'$filament/out/…/$path'`
+      } else if (path.startsWith('$androidOut/') || path == androidOut) {
+        add('android', path);
       } else if (path.startsWith('$windowsOut/')) {
         add('windows', path);
       } else if (path.startsWith('$unixOut/')) {
@@ -102,10 +116,18 @@ List<ManifestEntry> manifestEntries(List<String> hookSources) {
     for (final m in RegExp(r"windowsLib\('([^']+)'\)").allMatches(source)) {
       add('windows', '$windowsOut/${m.group(1)}');
     }
-    final list = RegExp(r'const _windowsFilamentLibs = \[(.*?)\];', dotAll: true).firstMatch(source);
+    final list = RegExp(r'const windowsFilamentLibs = \[(.*?)\];', dotAll: true).firstMatch(source);
     if (list != null) {
       for (final m in RegExp(r"'([^']+)'").allMatches(list.group(1)!)) {
         add('windows', '$windowsOut/${m.group(1)}');
+      }
+    }
+    final android = RegExp(r'const androidFilamentLibs = \[(.*?)\];', dotAll: true).firstMatch(source);
+    if (android != null) {
+      for (final m in RegExp(r"'([^']+)'").allMatches(android.group(1)!)) {
+        for (final abi in androidAbis) {
+          add('android', '$androidOut/lib/$abi/${m.group(1)}');
+        }
       }
     }
   }
@@ -132,10 +154,12 @@ List<ManifestEntry> parseManifest(String text) => [
     ];
 
 /// The hook files the manifest is derived from, for the lumina repo at
-/// [repoRoot]: flutter_filament's own, and flutter_assimp's wherever the
-/// workspace resolved it (a sibling checkout or the pub cache).
+/// [repoRoot]: flutter_filament's own (and the source and library lists it
+/// imports), and flutter_assimp's wherever the workspace resolved it (a
+/// sibling checkout or the pub cache).
 List<File> hookFiles(Directory repoRoot) {
   final filamentHook = File('${repoRoot.path}/flutter_filament/hook/build.dart');
+  final filamentInputs = File('${repoRoot.path}/flutter_filament/hook/native_inputs.dart');
   File? assimpHook;
   final config = File('${repoRoot.path}/.dart_tool/package_config.json');
   if (config.existsSync()) {
@@ -148,10 +172,10 @@ List<File> hookFiles(Directory repoRoot) {
     }
   }
   assimpHook ??= File('${repoRoot.path}/../tools/flutter_assimp/hook/build.dart');
-  for (final f in [filamentHook, assimpHook]) {
+  for (final f in [filamentHook, filamentInputs, assimpHook]) {
     if (!f.existsSync()) throw StateError('hook not found: ${f.path} (run `flutter pub get` first)');
   }
-  return [filamentHook, assimpHook];
+  return [filamentHook, filamentInputs, assimpHook];
 }
 
 void main(List<String> args) {

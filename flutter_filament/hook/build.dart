@@ -8,6 +8,7 @@ import 'package:logging/logging.dart';
 import 'package:native_toolchain_c/native_toolchain_c.dart';
 
 import 'dlss_sdk_dependencies.dart';
+import 'native_inputs.dart';
 import 'native_library_cache.dart';
 import 'windows_cl_response.dart';
 
@@ -62,7 +63,9 @@ void main(List<String> args) async {
       if (!libDir.existsSync()) {
         throw StateError(
             'Filament Android libraries for $androidAbi not found at ${libDir.path}.\n'
-            'Build them with flutter_filament/tool/build_filament_android.bat first.');
+            'Fetch them with `dart run tool/filament/fetch_prebuilt.dart --android` (the prebuilt '
+            "release's Android archive, unpacked into the same folder) or build them with "
+            '`tool/filament/build_prebuilt.ps1 -Android`.');
       }
       androidLibs = [
         for (final lib in androidFilamentLibs) '$androidLibDir/$lib',
@@ -81,81 +84,7 @@ void main(List<String> args) async {
     if (filamentVersion == null || filamentVersion.isEmpty) {
       throw StateError('No VERSION_NAME in ${gradleProperties.toFilePath()}: cannot stamp the Filament version');
     }
-    final sources = [
-        'src/engine_c.cpp',
-        'src/gpu_c.cpp',
-        'src/gpu_engine_c.cpp',
-        'src/view_c.cpp',
-        'src/geometry_c.cpp',
-        'src/lighting_c.cpp',
-        'src/gltf_c.cpp',
-        'src/manipulator_c.cpp',
-        'src/filamat_c.cpp',
-        'src/matc_c.cpp',
-        'src/tools_c.cpp',
-        'src/buffer_descriptor_c.cpp',
-        'src/callback_bridge_c.cpp',
-        'src/enum_check_c.cpp',
-        'src/math_abi_c.cpp',
-        'src/instance_c.cpp',
-        'src/texture_sampler_c.cpp',
-        'src/texture_c.cpp',
-        'src/vertex_buffer_c.cpp',
-        'src/buffer_object_c.cpp',
-        'src/skinning_buffer_c.cpp',
-        'src/index_buffer_c.cpp',
-        'src/material_c.cpp',
-        'src/material_instance_c.cpp',
-        'src/utils_c.cpp',
-        'src/tangent_space_mesh_c.cpp',
-        'src/filamesh_c.cpp',
-        'src/ktx2_reader_c.cpp',
-        'src/ktx1_c.cpp',
-        'src/iblprefilter_c.cpp',
-        'src/color_grading_c.cpp',
-        'src/camera_c.cpp',
-        'src/renderer_c.cpp',
-        'src/swap_chain_c.cpp',
-        'src/fence_c.cpp',
-        'src/frame_pacer_c.cpp',
-        'src/debug_registry_c.cpp',
-        'src/morph_target_buffer_c.cpp',
-        'src/instance_buffer_c.cpp',
-        'src/linear_image_c.cpp',
-        'src/image_sampler_c.cpp',
-        'src/dlss_c.cpp',
-        'src/ngx_c.cpp',
-        'src/dlss_rr_c.cpp',
-        'src/dlss_fg_c.cpp',
-        'src/ray_tracing_c.cpp',
-        'src/restir_c.cpp',
-        'src/post_pass_c.cpp',
-        'src/ui_overlay_c.cpp',
-        // OpenDLSS-NR (third-party, MIT): the C surface, Lumina's Vulkan host and frame pass, and the
-        // vendored network sources (third_party/opendlss_nr); desktop Vulkan only, compiled out elsewhere.
-        'src/opendlss_nr_c.cpp',
-        'src/opendlss_nr/vk_context.cpp',
-        'src/opendlss_nr/model_check.cpp',
-        'src/opendlss_nr/capability.cpp',
-        'src/opendlss_nr/neural_pass.cpp',
-        'src/opendlss_nr/network_model.cpp',
-        'src/opendlss_nr/network_kernels.cpp',
-        'src/opendlss_nr/network_graph.cpp',
-        'src/guide_buffers_c.cpp',
-        'src/image_ops_c.cpp',
-        'src/color_transform_c.cpp',
-        'src/image_sdf_c.cpp',
-        'src/imageio_c.cpp',
-        'src/ibl_cubemap_c.cpp',
-        'src/ibl_sh_c.cpp',
-        'src/ibl_bake_c.cpp',
-        'src/web_c.cpp',
-        'src/web_stubs_c.cpp',
-        '$filament/third_party/smol-v/source/smolv.cpp',
-        // Filament's .mat parser (matc's matp library), vendored: the
-        // prebuilt Filament archives carry no matp (third_party/filament_matp/README.md).
-        for (final matp in _matpSources) 'third_party/filament_matp/src/$matp',
-    ];
+    final sources = nativeSources(filament);
     final includes = [
         'src',
         // The vendored copy under `third_party/filament/include` used to sit
@@ -188,8 +117,15 @@ void main(List<String> args) async {
         '$filament/libs/ibl/include',
         '$filament/third_party/smol-v/source',
         '$filament/third_party/stb',
-        '$filament/out/$filamentOut/samples/generated/resources',
-        '$filament/out/$filamentOut/libs',
+        // Generated headers (resgen offsets and sizes) must come from the build whose
+        // libraries are linked: Android's install tree has its own uberarchive.h and
+        // iblprefilter_materials.h (mobile materials) and no desktop samples.
+        if (targetOS == OS.android)
+          '$filament/out/android-release/filament/include'
+        else ...[
+          '$filament/out/$filamentOut/samples/generated/resources',
+          '$filament/out/$filamentOut/libs',
+        ],
         '$filament/libs/filaflat/include',
         '$filament/third_party/zstd/lib',
         '$filament/third_party/robin-map/include',
@@ -215,7 +151,7 @@ void main(List<String> args) async {
     final isWindows = targetOS == OS.windows;
     final windowsLibs = isWindows
         ? [
-            for (final lib in _windowsFilamentLibs) windowsLib(lib),
+            for (final lib in windowsFilamentLibs) windowsLib(lib),
             if (dlssSdk != null) '$dlssSdk/lib/Windows_x86_64/x64/nvsdk_ngx_s.lib',
           ]
         : const <String>[];
@@ -324,6 +260,11 @@ void main(List<String> args) async {
           '-lGLESv3',
           '-lm',
           '-ldl',
+          // The NDK's static libc++ after the archives that need it: the
+          // `cppLinkStdLib` below names it before them, which leaves operator new
+          // and friends unresolved until dlopen on the device.
+          '-lc++_static',
+          '-lc++abi',
         ] else if (targetOS == OS.linux) ...[
           '-nostdinc++',
           '-isystem', 'third_party/libcxx/usr/lib/llvm-21/include/c++/v1',
@@ -398,7 +339,7 @@ void main(List<String> args) async {
         if (dlssSdk != null) 'FLUTTER_FILAMENT_DLSS': '1',
       },
       libraries: [
-        if (targetOS == OS.windows) ..._windowsSystemLibs,
+        if (targetOS == OS.windows) ...windowsSystemLibs,
       ],
       cppLinkStdLib: targetOS == OS.macOS ? 'c++' : (targetOS == OS.android ? 'c++_static' : null),
     );
@@ -566,115 +507,6 @@ String _compilerId(OS targetOS) {
     return 'unknown';
   }
 }
-
-/// The Filament static libraries the Windows build links, relative to
-/// `filament/out/cmake-release-windows/` — the MSVC counterparts of the Linux
-/// list above, plus the zlib/libpng/tinyexr Filament builds itself (Linux
-/// takes `-lpng -lz` from the system).
-const _windowsFilamentLibs = [
-  'filament/filament.lib',
-  'filament/backend/backend.lib',
-  'libs/utils/utils.lib',
-  'libs/gltfio/gltfio.lib',
-  'libs/gltfio/uberarchive.lib',
-  'libs/filabridge/filabridge.lib',
-  'libs/filamat/filamat.lib',
-  'libs/camutils/camutils.lib',
-  'libs/matdbg/matdbg.lib',
-  'libs/matdbg/matdbg_resources.lib',
-  'third_party/civetweb/tnt/civetweb.lib',
-  'third_party/abseil/tnt/filament-abseil.lib',
-  'shaders/shaders.lib',
-  'libs/bluegl/bluegl.lib',
-  'libs/bluevk/bluevk.lib',
-  'libs/geometry/geometry.lib',
-  'third_party/draco/tnt/dracodec.lib',
-  'third_party/basisu/tnt/basis_transcoder.lib',
-  'third_party/basisu/tnt/basis_encoder.lib',
-  'third_party/meshoptimizer/tnt/meshoptimizer.lib',
-  'third_party/mikktspace/mikktspace.lib',
-  'libs/filameshio/filameshio.lib',
-  'samples/suzanne-resources.lib',
-  'samples/sample-resources.lib',
-  'libs/filaflat/filaflat.lib',
-  'libs/gltfio/gltfio_core.lib',
-  'third_party/spirv-cross/tnt/spirv-cross-glsl.lib',
-  'third_party/spirv-cross/tnt/spirv-cross-core.lib',
-  'third_party/spirv-cross/tnt/spirv-cross-msl.lib',
-  'third_party/spirv-tools/source/SPIRV-Tools.lib',
-  'third_party/spirv-tools/source/opt/SPIRV-Tools-opt.lib',
-  'third_party/glslang/tnt/glslang/glslang.lib',
-  'third_party/glslang/tnt/SPIRV/SPIRV.lib',
-  'third_party/glslang/tnt/glslang/OSDependent/Windows/OSDependent.lib',
-  'third_party/zstd/tnt/zstd.lib',
-  'libs/image/image.lib',
-  'libs/imageio/imageio.lib',
-  'libs/ibl/ibl.lib',
-  'libs/ktxreader/ktxreader.lib',
-  'libs/iblprefilter/filament-iblprefilter.lib',
-  'libs/uberz/uberzlib.lib',
-  'third_party/libwebp/libwebpdecoder.lib',
-  'third_party/stb/tnt/stb.lib',
-  'third_party/tinyexr/tnt/tinyexr.lib',
-  'third_party/libpng/tnt/png.lib',
-  'third_party/libz/tnt/z.lib',
-];
-
-/// The vendored matp sources (`third_party/filament_matp/src/`).
-const _matpSources = [
-  'DirIncluder.cpp',
-  'Includes.cpp',
-  'JsonishLexer.cpp',
-  'JsonishParser.cpp',
-  'MaterialLexer.cpp',
-  'MaterialParser.cpp',
-  'ParametersProcessor.cpp',
-];
-
-/// Win32 import libraries the Filament backends and civetweb need.
-const _windowsSystemLibs = [
-  'opengl32',
-  'gdi32',
-  'user32',
-  'shell32',
-  'shlwapi',
-  'advapi32',
-  'ole32',
-  'ws2_32',
-];
-
-/// The static libraries linked on Android, relative to
-/// `out/android-release/filament/lib/<abi>/`.
-const androidFilamentLibs = [
-  'libfilament.a',
-  'libbackend.a',
-  'libutils.a',
-  'libgltfio_core.a',
-  'libuberarchive.a',
-  'libfilabridge.a',
-  'libfilamat.a',
-  'libcamutils.a',
-  'libabseil.a',
-  'libcivetweb.a',
-  'libshaders.a',
-  'libbluevk.a',
-  'libgeometry.a',
-  'libdracodec.a',
-  'libbasis_transcoder.a',
-  'libmeshoptimizer.a',
-  'libmikktspace.a',
-  'libfilameshio.a',
-  'libfilaflat.a',
-  'libzstd.a',
-  'libimage.a',
-  'libibl.a',
-  'libktxreader.a',
-  'libfilament-iblprefilter.a',
-  'libuberzlib.a',
-  'libwebpdecoder.a',
-  'libstb.a',
-  'libsmol-v.a',
-];
 
 /// `build/dlss-sdk` (absolute) when `tool/dlss/fetch_sdk.dart` has filled it
 /// for this target OS; null otherwise.

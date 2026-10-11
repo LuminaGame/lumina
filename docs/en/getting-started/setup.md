@@ -104,6 +104,8 @@ powershell -ExecutionPolicy Bypass -File tool\filament\build_prebuilt.ps1   # Wi
 
 Both clone Filament at the tag into `build/filament-src` (or the folder given as argument), apply the patches, build only the libraries the hooks link plus `matc`, and write the archive to `build/filament-prebuilt/`. The first build takes about an hour; later runs are incremental. A built `build/filament-src` is also a complete Filament checkout that `filament_dir` can point at. After changing a hook, run `dart tool/filament/prebuilt_manifest.dart` to update the manifest; after changing a patch or the build flags, bump the suffix in `tool/filament/VERSION`.
 
+**Android.** The same release carries `filament-<VERSION>-android.tar.gz` (+ `.sha256`): the static libraries for `arm64-v8a` and `x86_64` and the headers of Android's install tree, built from the same tag and patches. `dart run tool/filament/fetch_prebuilt.dart --android` also fetches it and unpacks it into the prebuilt folder's `out/android-release`, where the hook looks when it builds for Android. `build_prebuilt.ps1 -Android` builds it after the Windows archive (Android NDK 28 under `%LOCALAPPDATA%\Android\Sdk` or `ANDROID_HOME`; the host tools come from the Windows build). See [Platform integration](../flutter_filament/platform.md#android-builds).
+
 ### Building in a Filament checkout
 
 **Linux / macOS**, in the Filament checkout:

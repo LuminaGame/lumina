@@ -8,6 +8,8 @@ Binding'lerin platform yapıştırıcısı: backend ve GPU başına tek bir Fila
 
 - [`lib/src/engine_host.dart`](#libsrcengine_hostdart)
 - [`lib/src/gpu.dart`](#libsrcgpudart)
+- [`lib/src/platform_info.dart`](#libsrcplatform_infodart)
+- [Android derlemeleri](#android-derlemeleri)
 - [`lib/src/web_init_native.dart`](#libsrcweb_init_nativedart)
 - [`lib/src/web_init_web.dart`](#libsrcweb_init_webdart)
 - [`lib/src/widget_native.dart`](#libsrcwidget_nativedart)
@@ -114,6 +116,31 @@ Lists the GPUs a Vulkan engine can render on.
 | :--- | :--- | :--- |
 | `listVulkanDevices` | `static List<FilamentGpuInfo> listVulkanDevices()` | Enumerates the Vulkan devices through the system loader, independently of any engine. Empty when Vulkan is unavailable (and on the web). |
 | `livePlatformCount` | `static int get livePlatformCount` | Vulkan platforms alive in this process: one per Vulkan engine not yet disposed. For leak checks. |
+
+## `lib/src/platform_info.dart`
+
+### `abstract final class FilamentPlatformInfo`
+
+Çalışan flutter_filament derlemesinin ne olduğu; platforma göre farklı bir yol seçen kod (material sağlayıcı, backend, özellik) için.
+
+**Üyeler:**
+
+| Üye | İmza | Açıklama |
+| :--- | :--- | :--- |
+| `isWeb` | `static bool get isWeb` | Web (WebAssembly + WebGL2) derlemesi. |
+| `isAndroid` | `static bool get isAndroid` | Android derlemesi (telefonlar ve Quest gibi bağımsız gözlükler): varsayılan Vulkan, OpenGL ES'e geri düşüş, mobil feature level, JIT glTF materyali yok, matdbg ve imageio kodlayıcıları yok; ray query, ReSTIR ve DLSS desteklenmiyor olarak raporlanır. |
+| `hasJitMaterialProvider` | `static bool get hasJitMaterialProvider` | JIT glTF material sağlayıcısının bu derlemede olup olmadığı; false ise `FilamentMaterialProvider.ubershader` kullanın. |
+
+## Android derlemeleri
+
+Native-assets hook'u `libflutter_filament.so`'yu `arm64-v8a` ve `x86_64` için derler ve `filament/out/android-release/filament/lib/<abi>/` altındaki statik kütüphaneleri (`hook/native_inputs.dart` içindeki `androidFilamentLibs`) bağlar; üretilmiş başlıklar (`uberarchive.h`, IBL prefilter materyalleri) aynı kurulum ağacından gelir. Bu arşivler masaüstü prebuilt ile aynı upstream etiketinden ve yamalardan derlenir: `tool/filament/build_prebuilt.ps1 -Android` NDK 28 ile derler ve `filament-<VERSION>-android.tar.gz` paketler; `dart run tool/filament/fetch_prebuilt.dart --android` bunu prebuilt klasörünün `out/android-release` dizinine açar (lumina_core'da `FilamentPrebuiltAndroid`). 0020 yaması ray query materyallerini Android derlemesinin dışında bırakır.
+
+- **Tek kaynak listesi.** Her sarmalayıcı kaynağı (`nativeSources`) her hedef için derlenir; Android'de olmayan şey dosyanın içinde derleme dışı kalır, böylece `src/filament_c.h`'deki tüm `filament_*` fonksiyonları dışa aktarılır ve web stub'ları gibi "desteklenmiyor" döndürür (`false`, `0`, `nullptr`, ıskalayan bir ışın). `test/hook/android_link_test.dart` derlenmiş bir kütüphaneyi başlıklarla karşılaştırır.
+- **Backend.** `FilamentBackend.defaultBackend` Android'de de Vulkan demektir (Filament kendisi OpenGL ES seçerdi). Vulkan engine'i oluşturulamazsa engine OpenGL ES'e geri düşer ve `Vulkan is not available; falling back to OpenGL ES` yazar (logcat etiketi `flutter_filament`). Vulkan engine'i masaüstündeki aynı platform alt sınıfını alır (`VulkanPlatformAndroid`); böylece `FilamentEngine.gpuName`, GPU bellek bütçesi ve eklenti / özellik istekleri orada da çalışır.
+- **Materyaller.** Mobil feature level, bir materyalin MOBILE gölgelendiricilerini yükler. Paketlerle gelen her materyal `-p all` ile derlenir (flutter_filament ve lumina'daki `tool/materials.txt`); `test/src/material_platform_test.dart` iki gölgelendirici modelini de denetler.
+- **glTF.** Android'in gltfio'sunda JIT material sağlayıcısı yoktur; `FilamentMaterialProvider.ubershader` kullanın (bkz. `FilamentPlatformInfo.hasJitMaterialProvider`).
+- **Eklenti modülü.** `android/` yalnızca Flutter'ın eklenti yükleyicisi için bir kütüphane modülüdür; kütüphane hook'tan gelir.
+- **Cihaz denetimi.** Örnek uygulamanın First Light örneği (`--dart-define=FLUTTER_FILAMENT_SAMPLE=first_light`) `/sdcard/Android/data/com.lumina.flutter_filament_example/files/first_light/` dizinine itilen `.glb` dosyalarını yükler, bir güneş ve bir IBL altında döndürür ve backend'i, GPU'yu ve kare sürelerini loglar (`[first_light]` satırları). Quest 3S'te `Adreno (TM) 740` (Vulkan 1.3, feature level 1) üzerinde 2D panel olarak çalışır.
 
 ## `lib/src/web_init_native.dart`
 

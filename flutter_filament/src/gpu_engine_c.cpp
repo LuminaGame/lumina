@@ -37,6 +37,20 @@ using DesktopVulkanPlatform = filament::backend::VulkanPlatformLinux;
 #define FLUTTER_FILAMENT_GPU_PLATFORM 1
 #include <backend/platforms/VulkanPlatformWindows.h>
 using DesktopVulkanPlatform = filament::backend::VulkanPlatformWindows;
+#elif defined(__ANDROID__)
+// Android gets the same platform subclass, so the device name, memory budget and the
+// extension / feature requests (OpenXR, for one) work there too.
+#define FLUTTER_FILAMENT_GPU_PLATFORM 1
+#include <android/log.h>
+#include <backend/platforms/VulkanPlatformAndroid.h>
+using DesktopVulkanPlatform = filament::backend::VulkanPlatformAndroid;
+#endif
+
+// Engine creation messages: logcat on Android (stderr goes nowhere there), stderr elsewhere.
+#if defined(__ANDROID__)
+#define FF_ENGINE_LOG(...) __android_log_print(ANDROID_LOG_WARN, "flutter_filament", __VA_ARGS__)
+#else
+#define FF_ENGINE_LOG(...) fprintf(stderr, __VA_ARGS__)
 #endif
 
 using namespace filament;
@@ -219,7 +233,8 @@ void* filament_engine_create_on_gpu(int backend, int feature_level, bool paused,
         }
 
 #if FLUTTER_FILAMENT_GPU_PLATFORM
-        // DEFAULT resolves to Vulkan on desktop Linux and Windows (PlatformFactory.cpp).
+        // DEFAULT resolves to Vulkan on desktop Linux and Windows (PlatformFactory.cpp), and
+        // flutter_filament picks Vulkan for it on Android as well (Filament would pick GLES).
         const bool vulkan = resolved == Engine::Backend::VULKAN || resolved == Engine::Backend::DEFAULT;
         PreferredGpuPlatform* platform = nullptr;
         if (vulkan) {
@@ -237,20 +252,26 @@ void* filament_engine_create_on_gpu(int backend, int feature_level, bool paused,
                 if (found >= 0) {
                     pref.index = found;
                 } else {
-                    fprintf(stderr, "[flutter_filament] no Vulkan device matches \"%s\"; using the default device\n", pref.name.c_str());
+                    FF_ENGINE_LOG("[flutter_filament] no Vulkan device matches \"%s\"; using the default device\n", pref.name.c_str());
                 }
                 pref.name.clear();
             }
             // Filament aborts on an index past its device list; drop it instead.
             if (pref.index >= 0 && pref.index >= flutter_filament_cached_vulkan_device_count()) {
-                fprintf(stderr, "[flutter_filament] GPU index %d is out of range; using the default device\n", pref.index);
+                FF_ENGINE_LOG("[flutter_filament] GPU index %d is out of range; using the default device\n", pref.index);
                 pref.index = -1;
             }
             platform = new PreferredGpuPlatform(pref);
             builder.backend(Engine::Backend::VULKAN);
             builder.platform(platform);
         }
-        Engine* engine = builder.build();
+        Engine* engine = nullptr;
+        try {
+            engine = builder.build();
+        } catch (const utils::Panic& e) {
+            if (!platform) throw;
+            FF_ENGINE_LOG("[flutter_filament] Vulkan engine creation failed: %s\n", e.what());
+        }
         if (platform) {
             if (engine) {
                 std::lock_guard<std::mutex> lock(gPlatformsMutex);
@@ -259,6 +280,16 @@ void* filament_engine_create_on_gpu(int backend, int feature_level, bool paused,
                 delete platform;
             }
         }
+#if defined(__ANDROID__)
+        // DEFAULT means Vulkan on Android too; a device without a usable Vulkan driver
+        // falls back to OpenGL ES, and says so.
+        if (!engine && resolved == Engine::Backend::DEFAULT) {
+            FF_ENGINE_LOG("[flutter_filament] Vulkan is not available; falling back to OpenGL ES\n");
+            builder.platform(nullptr);
+            builder.backend(Engine::Backend::OPENGL);
+            engine = builder.build();
+        }
+#endif
         return engine;
 #else
         (void) gpu_name;
@@ -266,10 +297,10 @@ void* filament_engine_create_on_gpu(int backend, int feature_level, bool paused,
         return builder.build();
 #endif
     } catch (const utils::Panic& e) {
-        fprintf(stderr, "[Filament C++ Panic (Handled Safely)]: %s\n", e.what());
+        FF_ENGINE_LOG("[Filament C++ Panic (Handled Safely)]: %s\n", e.what());
         return nullptr;
     } catch (const std::exception& e) {
-        fprintf(stderr, "[flutter_filament] engine creation failed: %s\n", e.what());
+        FF_ENGINE_LOG("[flutter_filament] engine creation failed: %s\n", e.what());
         return nullptr;
     }
 }
