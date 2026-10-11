@@ -57,6 +57,29 @@ final List<EditorLibraryNode> levelLibraryNodes = [
     },
   ),
   EditorLibraryNode(
+    pureNode('editor_get_level_actor_tree', 'Get Level Actor Tree', _level,
+        inputs: [strPin('label_filter', 'Label Filter')],
+        outputs: [ret(LuminaPinType.json)],
+        tooltip: 'The open level\'s actors as Tree View items: one folder per actor type, each actor '
+            '{"id", "label", "icon"} under it (Label Filter: * matches anything; empty matches all).'),
+    function: (c, i) {
+      final vm = editorPanelCall(c)?.host.vm;
+      if (vm == null) return {'return_value': <Object?>[]};
+      final label = _glob(inStr(i, 'label_filter'));
+      final byType = <String, List<Map<String, Object?>>>{};
+      for (final a in vm.actors) {
+        if (label != null && !label.hasMatch(a.name)) continue;
+        (byType[a.type] ??= []).add({'id': a.id, 'label': a.name, 'icon': 'box'});
+      }
+      final types = byType.keys.toList()..sort();
+      return {
+        'return_value': [
+          for (final t in types) {'id': 'type:$t', 'label': t, 'icon': 'folder', 'children': byType[t]},
+        ],
+      };
+    },
+  ),
+  EditorLibraryNode(
     pureNode('editor_get_actor_label', 'Get Actor Label', _level,
         inputs: [strPin('actor_id', 'Actor Id')], outputs: [ret(LuminaPinType.string)]),
     function: (c, i) => {'return_value': _actor(c, i)?.name ?? ''},

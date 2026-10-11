@@ -73,6 +73,24 @@ mixin _EditorPanelsSupport on _EditorViewModelState, _EditorPlugins {
     return true;
   }
 
+  /// The editor panel at [path] (absolute) as an asset the designer opens:
+  /// a plugin's panel lives in its `content/`, outside the project's assets.
+  RealAssetInfo? editorPanelAssetAt(String path) {
+    if (_editorPanelHost == null) return null;
+    final target = p.normalize(p.absolute(path));
+    for (final rt in _editorPanelHost!.panels.values) {
+      if (p.normalize(p.absolute(rt.entry.filePath)) != target) continue;
+      return RealAssetInfo(
+        fileName: p.basename(target),
+        relativePath: rt.entry.isProjectPanel ? rt.entry.assetPath : target.replaceAll(r'\', '/'),
+        type: AssetType.widget,
+        bytes: 0,
+        lmasPath: target,
+      );
+    }
+    return null;
+  }
+
   /// Whether [path] is content of an engine plugin (shipped with Lumina
   /// Studio): the designer opens it read-only; a user or project plugin's
   /// content stays editable (its author develops it from its folder).

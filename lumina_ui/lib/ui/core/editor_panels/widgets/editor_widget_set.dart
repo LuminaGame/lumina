@@ -85,13 +85,13 @@ class EditorWidgetSet {
         );
       case UmgWidgetType.treeView:
       case UmgWidgetType.listView:
-        final list = node.type == UmgWidgetType.listView;
         return EditorTreeView(
           elementName: node.name,
           items: EditorTreeItem.parse(e?['items'] ?? node.props['items']),
           selected: _ids(e?['selected'] ?? node.props['selected']),
           expanded: _ids(e?['expanded'] ?? node.props['expanded']),
-          multiSelect: list && _v<bool>(e, node, 'multiSelect', true),
+          // Ctrl toggles and Shift extends, as in the Outliner.
+          multiSelect: _v<bool>(e, node, 'multiSelect', true),
           onPointer: (p) => instance.lastPointer = p,
           onSelection: (ids) {
             _write(node, 'selected', ids);
@@ -125,14 +125,14 @@ class EditorWidgetSet {
         return _split(node, e, child);
       case UmgWidgetType.editorToolbar:
         return Container(
-          height: EditorDensity.panelHeaderHeight,
-          padding: const EdgeInsets.symmetric(horizontal: EditorDensity.gutter),
+          constraints: const BoxConstraints(minHeight: EditorDensity.panelHeaderHeight),
+          padding: const EdgeInsets.symmetric(horizontal: EditorDensity.gutter, vertical: 3),
           decoration: const BoxDecoration(
             color: EditorColors.cardHeader,
             border: Border(bottom: BorderSide(color: EditorColors.border)),
           ),
-          child: Row(children: [
-            for (final c in node.children) Padding(padding: const EdgeInsets.only(right: 4), child: child(c)),
+          child: Wrap(spacing: 4, runSpacing: 3, crossAxisAlignment: WrapCrossAlignment.center, children: [
+            for (final c in node.children) child(c),
           ]),
         );
       case UmgWidgetType.statusLine:

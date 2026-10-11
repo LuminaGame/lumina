@@ -94,6 +94,17 @@ void main() {
     expect(panel.script!.variables['Ids'], unorderedEquals([ids['Barrel_A'], ids['Barrel_B']]));
   });
 
+  test('Get Level Actor Tree groups the level actors by type for a Tree View', () async {
+    final panel = openPanel();
+    final tree = LuminaBlueprintFunctionLibrary.functions['editor_get_level_actor_tree']!(
+        LuminaBlueprintCallContext(panel.script!), {'label_filter': '*'})['return_value'] as List;
+    final found = [for (final folder in tree) for (final a in (folder as Map)['children'] as List) (a as Map)['id']];
+    expect(found, containsAll([ids['Barrel_A'], ids['Barrel_B'], ids['AC_Unit']]));
+    final barrels = LuminaBlueprintFunctionLibrary.functions['editor_get_level_actor_tree']!(
+        LuminaBlueprintCallContext(panel.script!), {'label_filter': 'Barrel*'})['return_value'] as List;
+    expect([for (final f in barrels) ...((f as Map)['children'] as List).map((a) => (a as Map)['label'])], unorderedEquals(['Barrel_A', 'Barrel_B']));
+  });
+
   test('a transaction of two Set Actor Transform is one undo step that restores both', () async {
     final panel = openPanel();
     final a = vm.actors.firstWhere((x) => x.id == ids['Barrel_A']);

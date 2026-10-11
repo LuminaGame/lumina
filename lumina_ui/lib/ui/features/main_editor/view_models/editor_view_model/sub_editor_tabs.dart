@@ -220,6 +220,8 @@ mixin _EditorSubEditorTabs on _EditorViewModelState {
       _refreshAssets();
       asset = _realAssets.where((a) => a.relativePath == relative).firstOrNull;
     }
+    // An editor panel of an enabled plugin (its content/ folder).
+    asset ??= (this as EditorViewModel).editorPanelAssetAt(assetPath);
     if (asset == null) {
       _logger.log('Cannot open $relative: not an asset of this project', level: 'warning', source: 'ContentBrowser');
       return;

@@ -32,7 +32,7 @@ typedef EditorTreeEvent = void Function(String event, Map<String, Object?> args)
 /// The editor widget set's Tree View and List View: rows exactly like the
 /// Level Editor's Outliner (24 px, an indent per depth, chevrons, the
 /// selection bar and hover tint, a type icon). A list is a tree without
-/// children and allows multi-select (Ctrl toggles, Shift extends).
+/// children; both multi-select (Ctrl toggles, Shift extends).
 class EditorTreeView extends StatefulWidget {
   const EditorTreeView({
     super.key,

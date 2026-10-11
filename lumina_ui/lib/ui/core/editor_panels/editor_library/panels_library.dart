@@ -49,6 +49,26 @@ final List<EditorLibraryNode> panelsLibraryNodes = [
     },
   ),
   EditorLibraryNode(
+    impureNode('editor_set_element_state', 'Set Element State', _panels,
+        inputs: [strPin('element', 'Element'), strPin('key', 'Key'), const LuminaBlueprintPinSpec('value', 'Value', LuminaPinType.wildcard)],
+        tooltip: 'Sets one state key of this panel\'s element (items of a Tree View, value of an Asset Picker, text of a '
+            'Status Line, visibility, isEnabled, …): what the plugin process sets with host.panelState.'),
+    function: (c, i) {
+      final call = editorPanelCall(c);
+      if (call != null) {
+        LuminaUmgElementBinding.write(call.instance.map, inStr(i, 'element'), inStr(i, 'key'), LuminaJsonBlueprintNodes.plain(i['value']));
+      }
+      return const {};
+    },
+  ),
+  EditorLibraryNode(
+    pureNode('editor_get_element_state', 'Get Element State', _panels,
+        inputs: [strPin('element', 'Element'), strPin('key', 'Key')], outputs: [ret(LuminaPinType.json)]),
+    function: (c, i) => {
+      'return_value': LuminaJsonBlueprintNodes.plain(editorPanelCall(c)?.instance.element(inStr(i, 'element'))?[inStr(i, 'key')]),
+    },
+  ),
+  EditorLibraryNode(
     pureNode('editor_get_project_name', 'Get Project Name', _panels, outputs: [ret(LuminaPinType.string)]),
     function: (c, _) => {'return_value': editorPanelCall(c)?.host.vm.project.projectName ?? ''},
   ),

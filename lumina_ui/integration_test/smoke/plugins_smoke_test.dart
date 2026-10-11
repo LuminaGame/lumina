@@ -27,6 +27,7 @@ import 'package:lumina_ui/ui/features/launcher/views/launcher_view.dart';
 import 'package:lumina_ui/ui/features/launcher/view_models/create_project_view_model.dart';
 
 import '../../test/helpers/desktop_window.dart';
+import 'plugins/editor_panel_smoke.dart';
 import '../../test/helpers/mcp_test_client.dart';
 import '../../test/helpers/scaffold_game_project.dart' show offlineScaffoldRunner;
 
@@ -46,6 +47,8 @@ Finder barItem(String title) => find.descendant(of: find.byType(Menubar), matchi
 
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+
+  editorPanelSmoke(binding, settle);
 
   testWidgets('Plugins Smoke Scenario: Open Plugin Manager via Plugins Menu', (tester) async {
     final tempProjectsDir = Directory.systemTemp.createTempSync('plugins_smoke_');
