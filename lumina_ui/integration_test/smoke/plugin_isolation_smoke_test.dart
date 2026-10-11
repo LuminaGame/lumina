@@ -347,6 +347,9 @@ void main() {
         await rec.hold(const Duration(milliseconds: 100));
       }
       expect(vm.actors.length, actorsBefore + 3, reason: 'placed through the level proxy');
+      final copies = vm.actors.where((a) => a.name.startsWith('KernelBarrel')).toList();
+      expect(copies, hasLength(3));
+      expect(copies.every((a) => a.meshData != null), isTrue, reason: 'the copies draw the barrel model');
       vm.frameLevelBounds();
       await rec.hold(const Duration(seconds: 2));
       await shot('actors placed by the kernel plugin');

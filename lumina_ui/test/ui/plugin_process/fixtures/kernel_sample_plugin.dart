@@ -7,7 +7,7 @@ import 'package:path/path.dart' as p;
 
 /// The reference kernel plugin `kernel_sample`: a shell-less isolated
 /// plugin whose process ships as a Dart kernel. It registers a menu item
-/// that asks a confirm dialog and then copies the level's first mesh actor
+/// that asks a confirm dialog and then copies a barrel of the level
 /// three times through the level proxy, a declarative panel with the same
 /// button, and an MCP tool that counts the level's actors.
 const String kKernelSampleName = 'kernel_sample';
@@ -28,10 +28,13 @@ class KernelSampleProcess extends LuminaPluginProcess {
   @override
   void register(PluginProcessContext context) {
     Future<int> place() async {
-      final ok = await context.confirm('Place barrels?', 'Copies the first mesh actor of the level three times.',
+      final ok = await context.confirm('Place barrels?', 'Copies a barrel of the level three times.',
           confirmLabel: 'Place');
       if (!ok) return 0;
-      final source = context.level.actors.where((a) => a.meshAssetPath != null).firstOrNull;
+      // A barrel of the level (its imported model), else any mesh actor.
+      final meshActors = context.level.actors.where((a) => a.meshAssetPath != null).toList();
+      final source = meshActors.where((a) => a.meshAssetPath!.toLowerCase().contains('barrel')).firstOrNull ??
+          meshActors.firstOrNull;
       final ids = await context.level.runTransaction('Place barrels', () {
         return context.level.addActors([
           for (var i = 0; i < 3; i++)
