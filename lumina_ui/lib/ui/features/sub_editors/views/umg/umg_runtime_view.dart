@@ -8,6 +8,7 @@ import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/umg_document.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/umg_widget_codegen.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/umg/umg_components.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/umg/umg_editable_text.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/umg/umg_text_style.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/umg/umg_theme_helper.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/umg/umg_viewport_preview.dart';
@@ -161,9 +162,16 @@ class UmgRuntimeView extends StatelessWidget {
       case UmgWidgetType.verticalBox:
         final isRow = node.type == UmgWidgetType.horizontalBox;
         final children = node.children.map((c) => _boxChild(c, isRow)).toList();
-        return isRow
-            ? Row(mainAxisSize: MainAxisSize.max, crossAxisAlignment: CrossAxisAlignment.stretch, children: children)
-            : Column(mainAxisSize: MainAxisSize.max, crossAxisAlignment: CrossAxisAlignment.stretch, children: children);
+        if (!isRow) return Column(mainAxisSize: MainAxisSize.max, crossAxisAlignment: CrossAxisAlignment.stretch, children: children);
+        // In a vertical Scroll Box (an unbounded height) a row cannot stretch
+        // its children to its height: it centres them instead.
+        return LayoutBuilder(
+          builder: (context, constraints) => Row(
+            mainAxisSize: MainAxisSize.max,
+            crossAxisAlignment: constraints.hasBoundedHeight ? CrossAxisAlignment.stretch : CrossAxisAlignment.center,
+            children: children,
+          ),
+        );
       case UmgWidgetType.gridPanel:
         final columns = ((node.props['columns'] as num?)?.toInt() ?? 2).clamp(1, 32);
         final rows = <widgets.TableRow>[];
@@ -274,17 +282,17 @@ class UmgRuntimeView extends StatelessWidget {
           trailing: umgText(_string(e, node, 'label', ''), node.props, e),
         );
       case UmgWidgetType.editableText:
-        return TextField(
+        return UmgEditableText(
           key: ValueKey('umg_rt_field_${node.id}'),
-          initialValue: node.props['text']?.toString() ?? '',
-          placeholder: Text(_string(e, node, 'hintText', node.props['hint']?.toString() ?? '')),
+          text: _string(e, node, 'text', ''),
+          placeholder: _string(e, node, 'hintText', node.props['hint']?.toString() ?? ''),
           style: umgTextStyle(node.props, e, outlineRing: true),
           onChanged: (v) {
             LuminaUmgElementBinding.write(runtimeValues, node.name, 'text', v);
             onAction?.call(node.id, 'text_changed');
             _fire(node, 'OnValueChanged', {'value': v});
           },
-          onSubmitted: (v) => _fire(node, 'OnTextCommitted', {'text': v, 'commit_method': 'OnEnter'}),
+          onCommitted: (v, method) => _fire(node, 'OnTextCommitted', {'text': v, 'commit_method': method}),
         );
       case UmgWidgetType.viewport:
         // The element's live scene; its events reach the graph (or the
