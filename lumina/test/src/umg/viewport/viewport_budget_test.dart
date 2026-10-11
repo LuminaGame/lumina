@@ -1,5 +1,8 @@
+import 'package:flutter_filament/flutter_filament.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina/lumina.dart';
+
+import '../../../support/viewport_project.dart';
 
 /// The Viewport budget: render size cap, count cap, hidden Viewports not
 /// counting, and idle Viewports rendering nothing until something changes.
@@ -74,5 +77,49 @@ void main() {
       if (clock.tick(1 / 60, animating: true)) frames++;
     }
     expect(frames, inInclusiveRange(29, 31));
+  });
+
+  test('an idle Viewport renders 0 frames over 2 s, then 1 frame after Set Node Transform', () async {
+    if (!ViewportTestProject.available) return markTestSkipped('test-assets models missing');
+    final engine = FilamentEngine.create(backend: FilamentBackend.noop);
+    if (engine == null) return markTestSkipped('no native assets');
+    final project = ViewportTestProject.create();
+    LuminaAssets.projectDir = project.dir.path;
+    final controller = LuminaViewportController(runtime: LuminaViewportSceneRuntime(engine: engine), fire: (_, _) {});
+    addTearDown(() {
+      controller.dispose();
+      engine.dispose();
+      LuminaAssets.projectDir = null;
+      project.delete();
+    });
+    final world = LuminaWorld(worldType: LuminaWorldType.game);
+    final self = world.spawnActorImmediately(LuminaActor());
+    final element = <String, Object?>{'type': 'viewport', 'name': 'Preview'};
+    final prop = LuminaViewportNodes.addStaticMesh(self, element, ViewportTestProject.barrel, null);
+    controller.resize(320, 240);
+    controller.sync(LuminaViewportScene.of(element));
+    await controller.runtime.whenReady;
+    var frames = 0;
+    for (var i = 0; i < 30; i++) {
+      if (controller.frame(1 / 60)) frames++;
+    }
+    expect(frames, greaterThan(0), reason: 'the loaded scene is shown');
+    frames = 0;
+    for (var i = 0; i < 120; i++) {
+      controller.sync(LuminaViewportScene.of(element));
+      if (controller.frame(1 / 60)) frames++;
+    }
+    expect(frames, 0, reason: 'idle: no animation, no auto-rotate, no input');
+    LuminaViewportNodes.setNodeTransform(self, element, prop, {
+      'location': [0.0, 0.0, 50.0],
+      'rotation': [0.0, 0.0, 0.0],
+      'scale': [1.0, 1.0, 1.0],
+    });
+    for (var i = 0; i < 60; i++) {
+      controller.sync(LuminaViewportScene.of(element));
+      if (controller.frame(1 / 60)) frames++;
+    }
+    expect(frames, 1);
+    expect(controller.clock.idle(), isTrue);
   });
 }

@@ -12,6 +12,7 @@ import 'package:lumina_widgets/src/game/render_space.dart';
 import 'package:lumina_widgets/src/game/screen_resolution_box.dart';
 import 'package:lumina_widgets/src/game/ui_capture.dart';
 import 'package:lumina_widgets/src/game/window_surface.dart';
+import 'package:lumina_widgets/src/umg/viewport/viewport_host.dart';
 
 /// Controls whether embedded game previews allocate an additional frame driver.
 /// Configure this before mounting previews; changing it does not remount games.
@@ -193,6 +194,10 @@ class _LuminaGameWidgetState extends State<LuminaGameWidget>
   FilamentUiOverlay? _uiOverlay;
   bool _presentingDirectly = false;
 
+  /// What the UMG Viewports in this game's HUD share: the engine, the
+  /// presentation path and the views drawn into the game's frame.
+  final LuminaViewportHost _viewportHost = LuminaViewportHost();
+
   /// Whether this process asked for the ray tracing / DLSS extensions.
   static bool _renderingExtensionsRequested = false;
 
@@ -285,6 +290,7 @@ class _LuminaGameWidgetState extends State<LuminaGameWidget>
         level: direct || status.reason == null ? 'info' : 'warning',
         source: 'LuminaGameWidget');
     if (direct != _presentingDirectly && mounted) setState(() => _presentingDirectly = direct);
+    _viewportHost.presentingDirectly = direct;
     _publishOverlay();
     _publishFlutterPresentation();
   }
@@ -350,6 +356,7 @@ class _LuminaGameWidgetState extends State<LuminaGameWidget>
   ) {
     // A game mounted by another scene keeps running there.
     if (!widget.game.mountGame(engine, scene, view: view)) return;
+    _viewportHost.engine = engine;
 
     final world = widget.game.world;
     // Before BeginPlay applies the user settings: frame generation is not
@@ -401,6 +408,7 @@ class _LuminaGameWidgetState extends State<LuminaGameWidget>
   }
 
   void _onDispose() {
+    _viewportHost.engine = null;
     _ticker?.stop();
     _ticker?.dispose();
     _ticker = null;
@@ -425,6 +433,7 @@ class _LuminaGameWidgetState extends State<LuminaGameWidget>
       LuminaGamePresentation.decision.removeListener(_publishFlutterPresentation);
     }
     _onDispose();
+    _viewportHost.dispose();
     _playStateSub?.cancel();
     _playStateSub = null;
     super.dispose();
@@ -438,7 +447,7 @@ class _LuminaGameWidgetState extends State<LuminaGameWidget>
           targetFps: _pacing.targetFps > 0 ? _pacing.targetFps : null,
           vsyncEnabled: _pacing.vsyncEnabled,
           frameLimiter: _limiter,
-          frameViews: widget.frameViews,
+          frameViews: (defaultView, width, height) => _viewportHost.frameViews(defaultView, width, height, widget.frameViews),
           decorated: widget.decorated,
           physicalResolution: widget.physicalResolution,
           renderResolution: renderResolution,
@@ -462,19 +471,22 @@ class _LuminaGameWidgetState extends State<LuminaGameWidget>
     // whole window is captured there instead.
     final overlayTarget = _presentingDirectly && !LuminaUiCaptureRoot.isMounted ? _uiOverlay : null;
     if (widget.followScreenResolution) {
-      return LuminaUiCapture(
+      return LuminaViewportHostScope(host: _viewportHost, child: LuminaUiCapture(
         overlay: overlayTarget,
         child: LuminaScreenResolutionBox(
           builder: (context, renderResolution) => view(renderResolution),
           overlay: ui,
           barsOnly: _presentingDirectly,
         ),
-      );
+      ));
     }
     final filamentWidget = view(null);
-    return LuminaUiCapture(
-      overlay: overlayTarget,
-      child: ui == null ? filamentWidget : Stack(children: [filamentWidget, Positioned.fill(child: ui)]),
+    return LuminaViewportHostScope(
+      host: _viewportHost,
+      child: LuminaUiCapture(
+        overlay: overlayTarget,
+        child: ui == null ? filamentWidget : Stack(children: [filamentWidget, Positioned.fill(child: ui)]),
+      ),
     );
   }
 }

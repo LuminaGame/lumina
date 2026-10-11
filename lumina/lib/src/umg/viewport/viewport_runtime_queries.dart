@@ -1,0 +1,203 @@
+part of 'viewport_runtime.dart';
+
+/// What a pick hit: the node, the nearest bone of a skeletal mesh (null
+/// for other nodes) and the hit location (authoring space, cm).
+class LuminaViewportPick {
+  const LuminaViewportPick(this.nodeId, this.bone, this.location);
+  final String nodeId;
+  final String? bone;
+  final Vector3 location;
+
+  /// The `On Picked` event's outputs.
+  Map<String, Object?> get eventArgs => {'node_id': nodeId, 'bone': bone ?? '', 'hit_location': location};
+}
+
+/// One joint of a skeletal node, for the skeleton overlay: its name, its
+/// parent's index (-1 for a root) and its world position (runtime frame).
+class LuminaViewportJoint {
+  const LuminaViewportJoint(this.name, this.parent, this.position);
+  final String name;
+  final int parent;
+  final Vector3 position;
+}
+
+/// Picking, joints and projection of a [LuminaViewportSceneRuntime]: what
+/// the widget's taps and overlays ask of the preview.
+mixin _ViewportQueries {
+  Map<String, _RuntimeNode> get _nodes;
+  FilamentEngine get engine;
+  LuminaViewportCamera get orbit;
+  Aabb3? _worldBounds(_RuntimeNode node);
+
+  /// Writes [node]'s material parameters onto its material instances.
+  void _applyMaterialParams(_RuntimeNode node) {
+    final instance = node.mesh?.assetInstance;
+    final params = node.json['materialParams'];
+    if (instance == null || params is! Map) return;
+    final materials = instance.materialInstances;
+    for (final slot in params.entries) {
+      final index = int.tryParse('${slot.key}');
+      if (index == null || index < 0 || index >= materials.length || slot.value is! Map) continue;
+      final mi = materials[index];
+      for (final p in (slot.value as Map).entries) {
+        final name = '${p.key}';
+        final v = p.value;
+        try {
+          if (v is List && v.length >= 4) {
+            mi.setFloat4(name, LuminaViewportSceneRuntime._n(v, 0, 0), LuminaViewportSceneRuntime._n(v, 1, 0), LuminaViewportSceneRuntime._n(v, 2, 0), LuminaViewportSceneRuntime._n(v, 3, 1));
+          } else if (v is List && v.length == 3) {
+            mi.setFloat3(name, LuminaViewportSceneRuntime._n(v, 0, 0), LuminaViewportSceneRuntime._n(v, 1, 0), LuminaViewportSceneRuntime._n(v, 2, 0));
+          } else if (v is num) {
+            mi.setFloat(name, v.toDouble());
+          } else if (v is bool) {
+            mi.setBool(name, v);
+          } else {
+            developer.log('Viewport: material parameter $name of ${node.id} takes a colour or a scalar', name: 'UMG', level: 900);
+          }
+        } catch (e) {
+          developer.log('Viewport: material parameter $name of ${node.id}: $e', name: 'UMG', level: 900);
+        }
+      }
+    }
+  }
+
+  static final Map<String, List<String>> _jointNameCache = {};
+
+  /// The joint names of the first skin of the GLB [glb] (its JSON chunk).
+  static List<String> skinJointNames(Uint8List glb) {
+    if (glb.length < 20) return const [];
+    final data = ByteData.sublistView(glb);
+    if (data.getUint32(0, Endian.little) != 0x46546C67) return const [];
+    final length = data.getUint32(12, Endian.little);
+    if (data.getUint32(16, Endian.little) != 0x4E4F534A || 20 + length > glb.length) return const [];
+    final json = jsonDecode(utf8.decode(glb.sublist(20, 20 + length)));
+    if (json is! Map) return const [];
+    final skins = json['skins'];
+    final nodes = json['nodes'];
+    if (skins is! List || skins.isEmpty || nodes is! List) return const [];
+    final joints = (skins.first as Map)['joints'];
+    if (joints is! List) return const [];
+    return [
+      for (final j in joints)
+        j is int && j < nodes.length && nodes[j] is Map ? '${(nodes[j] as Map)['name'] ?? '#$j'}' : '#$j',
+    ];
+  }
+
+  // --- Picking and joints ----------------------------------------------------
+
+  /// The node under pixel ([x], [y]) (top-left origin), the nearest bone of
+  /// a skeletal mesh and the hit location; null over the background.
+  LuminaViewportPick? pick(double x, double y) {
+    final ray = orbit.rayAt(x, y);
+    _RuntimeNode? best;
+    var bestT = double.infinity;
+    for (final node in _nodes.values) {
+      if (node.json['pickable'] == false || node.json['visible'] == false) continue;
+      final box = _worldBounds(node);
+      if (box == null) continue;
+      final t = ray.hitAabb(box);
+      if (t != null && t < bestT) {
+        bestT = t;
+        best = node;
+      }
+    }
+    if (best == null) return null;
+    var hit = ray.at(bestT);
+    String? bone;
+    final joints = jointsOf(best.id);
+    if (joints.isNotEmpty) {
+      var bestD = double.infinity;
+      for (final j in joints) {
+        final d = ray.distanceTo(j.position);
+        if (d < bestD) {
+          bestD = d;
+          bone = j.name;
+          hit = ray.at(ray.closestT(j.position));
+        }
+      }
+    }
+    final a = LuminaAxes.toAuthoringLocation(hit);
+    return LuminaViewportPick(best.id, bone, Vector3(a[0], a[1], a[2]));
+  }
+
+  /// The joints of skeletal node [id] with their world positions (runtime
+  /// frame); empty for other nodes or before load.
+  List<LuminaViewportJoint> jointsOf(String id) {
+    final mesh = _nodes[id]?.skeletal;
+    final instance = mesh?.assetInstance;
+    if (instance == null || instance.skinCount == 0) return const [];
+    final tm = FilamentTransformManager(engine);
+    final names = _nodes[id]!.jointNames;
+    final entities = instance.jointsAt(0);
+    final index = {for (var i = 0; i < entities.length; i++) entities[i]: i};
+    return [
+      for (var i = 0; i < entities.length; i++)
+        LuminaViewportJoint(
+          i < names.length ? names[i] : '#${entities[i]}',
+          index[tm.getParent(entities[i])] ?? -1,
+          Matrix4.fromList(tm.getWorldTransform(entities[i])).getTranslation(),
+        ),
+    ];
+  }
+
+  /// The joints of skeletal node [id] posed by [pose] (joint → local `[x,
+  /// y, z, qx, qy, qz, qw]` in the mesh's frame, glTF metres); joints the
+  /// pose leaves out keep their current local transform. Empty before load.
+  List<LuminaViewportJoint> ghostJointsOf(String id, Map<String, Object?> pose) {
+    final node = _nodes[id];
+    final instance = node?.skeletal?.assetInstance;
+    if (node == null || instance == null || instance.skinCount == 0) return const [];
+    final tm = FilamentTransformManager(engine);
+    final entities = instance.jointsAt(0);
+    final names = node.jointNames;
+    final index = {for (var i = 0; i < entities.length; i++) entities[i]: i};
+    final worlds = List<Matrix4?>.filled(entities.length, null);
+    Matrix4 worldOf(int i) {
+      final cached = worlds[i];
+      if (cached != null) return cached;
+      final e = entities[i];
+      final parent = tm.getParent(e);
+      final parentIndex = index[parent];
+      final parentWorld = parentIndex != null
+          ? worldOf(parentIndex)
+          : (parent == 0 ? Matrix4.identity() : Matrix4.fromList(tm.getWorldTransform(parent)));
+      final p = i < names.length ? pose[names[i]] : null;
+      final Matrix4 local;
+      if (p is List && p.length >= 7) {
+        double at(int k) => (p[k] as num).toDouble();
+        local = Matrix4.compose(Vector3(at(0), at(1), at(2)), Quaternion(at(3), at(4), at(5), at(6)), Vector3.all(1));
+      } else {
+        local = Matrix4.fromList(tm.getTransform(e));
+      }
+      return worlds[i] = parentWorld * local;
+    }
+
+    return [
+      for (var i = 0; i < entities.length; i++)
+        LuminaViewportJoint(i < names.length ? names[i] : '#${entities[i]}', index[tm.getParent(entities[i])] ?? -1,
+            worldOf(i).getTranslation()),
+    ];
+  }
+
+  /// [world] (runtime frame) in pixels, or null behind the camera.
+  (double, double)? project(Vector3 world) => orbit.project(world);
+
+  /// An authoring point (cm, Z up) in pixels, or null behind the camera.
+  (double, double)? projectAuthoring(List<double> p) => orbit.project(LuminaAxes.location(p));
+
+  /// Reads a node's `sockets` from its skeletal mesh `.lmas` (name → bone).
+  static Map<String, String> socketsOf(String metadataSockets) {
+    try {
+      final decoded = jsonDecode(metadataSockets);
+      final list = decoded is Map ? decoded['sockets'] : decoded;
+      if (list is! List) return const {};
+      return {
+        for (final s in list)
+          if (s is Map && s['name'] is String && s['bone'] is String) s['name'] as String: s['bone'] as String,
+      };
+    } catch (_) {
+      return const {};
+    }
+  }
+
+}
