@@ -77,8 +77,8 @@ void main() {
       final box = runtime.boundsOf(id)!;
       for (final corner in [box.min, box.max, box.center]) {
         final (x, y) = runtime.project(corner)!;
-        expect(x, inInclusiveRange(-1, 301));
-        expect(y, inInclusiveRange(-1, 201));
+        expect(x, inInclusiveRange(-1, runtime.orbit.width + 1));
+        expect(y, inInclusiveRange(-1, runtime.orbit.height + 1));
       }
       expect(LuminaAxes.location(runtime.orbit.target).distanceTo(box.center), lessThan(1.0), reason: 'centred');
     }
@@ -90,8 +90,19 @@ void main() {
     expectInView(barrel);
     final ac = await show(ViewportTestProject.acUnit);
     expectInView(ac);
+    // A tall Viewport fits a wide prop by its width.
+    controller.resize(120, 400);
+    runtime.frameNode(ac);
+    controller.frame(1 / 60);
+    expectInView(ac);
+    controller.resize(300, 200);
+    runtime.frameNode(ac);
+    // Auto-rotation turns the yaw on its own: a new mesh is still framed.
+    runtime.orbit.orbit(40, 0);
+    final barrel2 = await show(ViewportTestProject.barrel);
+    expectInView(barrel2);
     // The player moved the camera: a new mesh keeps that view.
-    runtime.orbit.orbit(25, 0);
+    runtime.orbit.orbit(25, 10);
     final moved = runtime.orbit.target.toList();
     await show(ViewportTestProject.hatA);
     expect(runtime.orbit.target, moved);

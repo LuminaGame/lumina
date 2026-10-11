@@ -396,6 +396,9 @@ void main() {
         child: LuminaUiCapture(overlay: overlay, child: SizedBox(width: _w * 1.0, height: _h * 1.0, child: LuminaWidgetLayer(world: world))),
       ),
     ));
+    // Unmounted before the engine goes (tear-downs run last-registered first):
+    // the Viewport disposes its preview and overlay lines on the engine.
+    addTearDown(() => tester.pumpWidget(const SizedBox()));
     world.beginPlay();
     await wait(tester, () => character.widget != null && find.byType(LuminaUmgViewport).evaluate().isNotEmpty, max: 200);
     final state = tester.state<LuminaUmgViewportState>(find.byType(LuminaUmgViewport));
@@ -419,8 +422,11 @@ void main() {
     Uint8List frame() {
       world.tick(1 / 30);
       final sw = Stopwatch()..start();
+      // The views (and each Viewport's frame) before beginFrame, as the
+      // game's FilamentWidget asks for them.
+      final views = host.frameViews(gameView, _w, _h);
       if (renderer.beginFrame(swapChain)) {
-        for (final v in host.frameViews(gameView, _w, _h)) {
+        for (final v in views) {
           renderer.render(v);
         }
         overlay.render(renderer);
@@ -463,6 +469,33 @@ void main() {
     await orbit(tester, hold, 200);
     await hold(const Duration(milliseconds: 1800));
     expect(events, containsAll([LuminaWidgetEvents.onCameraChanged, LuminaWidgetEvents.onPicked]));
+
+    // The skeleton is Filament lines in the Viewport's overlay view, drawn in
+    // the game's own frame right after the preview: yellow bone pixels inside
+    // the Viewport's rectangle, and none before it shows.
+    int yellow(Uint8List rgba) {
+      var n = 0;
+      for (var y = _viewportRect.top.toInt(); y < _viewportRect.bottom; y++) {
+        for (var x = _viewportRect.left.toInt(); x < _viewportRect.right; x++) {
+          // readPixels rows run bottom-up; tone mapping softens the yellow.
+          final o = ((_h - 1 - y) * _w + x) * 4;
+          if (rgba[o] > 140 && rgba[o + 1] > 100 && rgba[o] - rgba[o + 2] > 70) n++;
+        }
+      }
+      return n;
+    }
+
+    final before = yellow(frame());
+    LuminaViewportNodes.showSkeleton(character, previewOf(character.widget!), heroId, [1.0, 0.85, 0.1, 1.0], true);
+    await hold(const Duration(milliseconds: 1200));
+    final withBones = frame();
+    final bones = yellow(withBones);
+    SmokeArtifacts.saveScreenshot('$_name (Direct path) skeleton as Filament lines', SmokeArtifacts.encodePng(_w, _h, withBones),
+        usedAssets: _used);
+    expect(controller.overlayLineCount, greaterThan(50));
+    expect(bones, greaterThan(before + 150), reason: 'the skeleton lines are drawn in the Direct frame ($before -> $bones)');
+    LuminaViewportNodes.hideSkeleton(character, previewOf(character.widget!), heroId);
+    await hold(const Duration(milliseconds: 600));
 
     // Cost on GPU 1: 120 frames of the game alone, with the Viewport in its
     // frame (Direct), and with the Viewport's own 512×512 frame and

@@ -14,13 +14,14 @@ mixin _ViewportCamera {
   String? _deferredFrame;
 
   /// The orbit as last placed by the description or an automatic framing;
-  /// a different orbit means the player moved the camera.
+  /// a different one means the player moved the camera (pitch, distance,
+  /// target: auto-rotation turns the yaw on its own, and framing keeps it).
   String? _placedOrbit;
 
-  /// The meshes the last automatic framing fitted.
+  /// The meshes (and the viewport size) the last automatic framing fitted.
   String? _framedMeshes;
 
-  String get _orbitSignature => '${orbit.yaw}/${orbit.pitch}/${orbit.distance}/${orbit.target}/${orbit.orthographic}';
+  String get _orbitSignature => '${orbit.pitch}/${orbit.distance}/${orbit.target}/${orbit.orthographic}';
 
   void _applyCamera(LuminaViewportScene next) {
     orbit.readFrom(next);
@@ -63,7 +64,8 @@ mixin _ViewportCamera {
   /// Once every mesh has loaded: a deferred `Frame Node`, else, while the
   /// description never placed its camera ([LuminaViewportScene.autoFrame])
   /// and the player has not moved it, fits every mesh whenever
-  /// the set of meshes changes — a mesh a Blueprint adds is in view.
+  /// the set of meshes or the viewport's size changes — a mesh a Blueprint
+  /// adds is in view, whatever the Viewport's shape.
   void _frameWhenReady() {
     if (_pending > 0) return;
     final deferred = _deferredFrame;
@@ -79,6 +81,7 @@ mixin _ViewportCamera {
     final meshes = [
       for (final n in _nodes.values)
         if (n.mesh != null && n.loaded && !n.failed) '${n.id}:${n.meshAsset}',
+      '${orbit.width.round()}x${orbit.height.round()}',
     ].join('|');
     if (meshes == _framedMeshes) return;
     _framedMeshes = meshes;

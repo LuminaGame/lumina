@@ -100,10 +100,9 @@ void main() {
     expect(captures, greaterThan(0));
 
     final views = host.frameViews(gameView, 800, 600);
-    expect(views, hasLength(3), reason: 'the game view, the Viewport, its overlay lines');
+    expect(views, hasLength(2), reason: 'the game view, the Viewport (its overlay lines are in its scene)');
     expect(identical(views.first, gameView), isTrue, reason: 'the game view first, the Viewport after it');
     expect(views[1].viewport, (100, 600 - 50 - 240, 320, 240), reason: 'bottom-left origin, physical pixels');
-    expect(views[2].viewport, views[1].viewport, reason: 'the overlay over the preview');
     expect(state.controller!.overlayLineCount, greaterThan(50), reason: 'the skeleton as Filament lines');
 
     // The idle plays: the preview advances inside the game's frames, the UI

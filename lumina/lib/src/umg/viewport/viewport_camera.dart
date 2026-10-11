@@ -103,12 +103,15 @@ class LuminaViewportCamera {
   void zoom(double factor) => distance = (distance * factor).clamp(5.0, 100000.0);
 
   /// Frames a box (runtime frame, cm): the target at its centre, the
-  /// distance fitting its bounding sphere.
+  /// distance fitting its bounding sphere in the narrower of the vertical
+  /// and horizontal fields of view (a tall Viewport fits by its width).
   void frame(Aabb3 box) {
     final centre = box.center;
     target = LuminaAxes.toAuthoringLocation(centre);
     final radius = math.max(1.0, (box.max - box.min).length / 2);
-    final half = fov * math.pi / 360.0;
+    final vertical = fov * math.pi / 360.0;
+    final aspect = width / math.max(1.0, height);
+    final half = math.min(vertical, math.atan(math.tan(vertical) * aspect));
     distance = (radius / math.sin(half) * 1.05).clamp(10.0, 100000.0);
   }
 

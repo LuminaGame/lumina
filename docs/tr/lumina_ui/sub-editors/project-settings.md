@@ -120,6 +120,7 @@ Edits the real `.lmproject` manifest: loads it through [ProjectRepository], keep
 | `setFixedTimestep` | `void setFixedTimestep(double dt) => _update((p) => p.copyWith(physics: p...` | `FixedTimestep` parametresini günceller ve sisteme uygular. |
 | `setTargetOs` | `void setTargetOs(String os) => _update((p) => p.copyWith(packaging: p.pa...` | `TargetOs` parametresini günceller ve sisteme uygular. |
 | `setOutputDir` | `void setOutputDir(String dir) => _update((p) => p.copyWith(packaging: p....` | `OutputDir` parametresini günceller ve sisteme uygular. |
+| `setMaxViewports` | `void setMaxViewports(int value)` | UI > Max Viewports (`umg.maxViewports`, `ProjectUiSettings.maxViewports`): aynı anda kaç UMG Viewport'un çizdiği, 1–8; 0 motorun sınırlarını kullanır (oyunda 4, editörde 8, web'de 2). Uygulanınca editör panellerine hemen, Play'e ve üretilen oyunun `main()`'ine ulaşır. |
 | `packageProject` | `Future<int> packageProject()` | Runs the real `flutter build <target>` in the project directory, streaming output into the engine log. A non-zero exit code is surfaced as an error and the progress resets; there is no fake success. |
 | `cancelPackaging` | `void cancelPackaging()` | `cancelPackaging` işlemini gerçekleştirir. |
 | `dispose` | `void dispose()` | Yerel FFI göstericilerini, dinleyicileri ve bellek bloklarını serbest bırakır. |

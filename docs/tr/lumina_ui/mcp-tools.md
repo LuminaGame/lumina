@@ -854,7 +854,7 @@ What the Project Settings key picker stores as a mapping's `key` label.
 
 `void registerProjectSettingsTools(McpToolRegistry registry, EditorViewModel vm, McpEditorSessions sessions, McpJobRegistry jobs)`
 
-Project Settings (Edit → Project Settings) as MCP tools (group `settings`): read every category; stage changes on the Project Settings tab's own working copy (the tab shows them, dirty, as if typed); edit the input actions and mapping contexts; the project icon and the web loading logo; Apply & Save or Revert. Only `apply_project_settings` (and `set_widget_library`) write the `.lmproject`, as the tab's Apply does; plugin settings and unknown manifest keys ride along untouched.
+Project Settings (Edit → Project Settings) as MCP tools (group `settings`): read every category; stage changes on the Project Settings tab's own working copy (the tab shows them, dirty, as if typed); edit the input actions and mapping contexts; the project icon and the web loading logo; Apply & Save or Revert. Only `apply_project_settings` (and `set_widget_library`) write the `.lmproject`, as the tab's Apply does; plugin settings and unknown manifest keys ride along untouched. `ui` kategorisi `widget_library` ve `max_viewports`'u (`umg.maxViewports`, 0–8) bildirir; `set_project_settings` `ui.max_viewports` alır.
 
 **Araçlar:**
 

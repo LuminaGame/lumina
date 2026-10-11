@@ -175,7 +175,9 @@ reports `surfaceChanged` (0 x 0 while minimised); `destroySurface` closes it and
 answers `createSurface` with `unsupported` (an X11 child window / Wayland subsurface over the GTK view is not done yet),
 so Linux games present through Flutter. `generateMainDart(presentation: 'direct')` passes
 `presentation: LuminaPresentationMode.direct` to the game host; every generated `main()` wraps the app in
-`LuminaUiCaptureRoot` with a transparent Scaffold.
+`LuminaUiCaptureRoot` with a transparent Scaffold. `generateMainDart(maxViewports: n)` (the project's
+`ui.max_viewports`, Project Settings > UI > Max Viewports) sets `LuminaViewportBudget.projectMaxViewports = n;` first
+thing in `main()`; 0 leaves the engine's limits.
 
 What the Windows runner does: with Start Fullscreen on it switches the still hidden window (it shows on the first
 frame) to `WS_POPUP` and sizes it to `rcMonitor` of `MonitorFromWindow` with `HWND_TOP` and DWM corner rounding off,

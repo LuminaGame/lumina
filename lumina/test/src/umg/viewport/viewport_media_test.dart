@@ -156,7 +156,7 @@ void main() {
     expect(mesh.clipNames, contains(project.idleClip), reason: 'the mesh keeps its own clips');
   });
 
-  test('skeletons, ghosts and markers are Filament lines in an overlay view', () async {
+  test('skeletons, ghosts and markers are Filament lines in the preview scene, drawn over the meshes', () async {
     if (skip()) return;
     final controller = LuminaViewportController(runtime: LuminaViewportSceneRuntime(engine: engine!), fire: (_, _) {});
     addTearDown(controller.dispose);
@@ -166,14 +166,16 @@ void main() {
     controller.sync(scene);
     await controller.runtime.whenReady;
     controller.frame(1 / 60);
-    expect(controller.overlayView, isNull, reason: 'no overlay: no extra view');
+    expect(controller.overlayLineCount, 0, reason: 'no overlay: no lines');
+    final renderables = controller.runtime.scene.renderableCount;
     scene
       ..showSkeleton(hero, [1, 1, 0, 1])
       ..addMarker('Reach', 'arrow', [0, 0, 100], [40, 0, 100], [1, 0, 0, 1]);
     controller.sync(scene);
     expect(controller.frame(1 / 60), isTrue);
     final joints = controller.runtime.jointsOf(hero).length;
-    expect(controller.overlayView, isNotNull);
+    expect(controller.runtime.scene.renderableCount, greaterThanOrEqualTo(renderables + controller.overlayLineCount),
+        reason: 'the lines are renderables of the preview scene');
     final bones = LuminaSkeletonOverlay.bones(controller.runtime.jointsOf(hero)).length;
     expect(controller.overlayLineCount, bones + joints * 2 + 3, reason: 'bones, a cross per joint, an arrow of three lines');
     final lines = LuminaViewportOverlayLines.segmentsOf(controller.runtime, scene);
@@ -189,5 +191,6 @@ void main() {
     expect(LuminaViewportBudget(maxViewports: 3).maxViewports, 3, reason: 'a budget of its own wins');
     LuminaViewportBudget.projectMaxViewports = null;
     expect(LuminaViewportBudget().maxViewports, 4);
+    expect(LuminaViewportBudget.shared.scope, LuminaViewportScope.game, reason: 'the web scope only in a web build');
   });
 }

@@ -176,7 +176,7 @@ platform iş parçacığı onu yalnızca gönderilen mesajları işlerken bekler
 `createSurface`'e `unsupported` der (GTK view'i üzerinde X11 alt penceresi / Wayland subsurface henüz yok), Linux
 oyunları Flutter üzerinden sunar. `generateMainDart(presentation: 'direct')` oyun host'una
 `presentation: LuminaPresentationMode.direct` verir; üretilen her `main()` uygulamayı şeffaf Scaffold ile
-`LuminaUiCaptureRoot`'a sarar.
+`LuminaUiCaptureRoot`'a sarar. `generateMainDart(maxViewports: n)` (projenin `ui.max_viewports`'u, Project Settings > UI > Max Viewports) `main()`'in başında `LuminaViewportBudget.projectMaxViewports = n;` atar; 0 motorun sınırlarını bırakır.
 
 Windows runner'ın yaptığı: Start Fullscreen açıkken henüz gizli olan pencereyi (ilk karede görünür) `WS_POPUP`'a
 çevirir, `MonitorFromWindow`'un `rcMonitor`'üne `HWND_TOP` ile boyutlandırır ve DWM köşe yuvarlamasını kapatır; oyun

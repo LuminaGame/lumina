@@ -1,5 +1,4 @@
 import 'package:lumina/src/blueprint/widget_blueprint.dart';
-import 'package:flutter_filament/filament.dart' show FilamentView;
 import 'package:lumina/src/umg/viewport/viewport_budget.dart';
 import 'package:lumina/src/umg/viewport/viewport_overlay_lines.dart';
 import 'package:lumina/src/umg/viewport/viewport_runtime.dart';
@@ -30,12 +29,8 @@ class LuminaViewportController {
   /// runtime frame.
   List<LuminaViewportSegment> Function()? extraSegments;
 
-  /// The overlay view (skeletons, ghosts, markers, the gizmo as Filament
-  /// lines) a presenter renders right after [LuminaViewportSceneRuntime.view]
-  /// at the same viewport; null while the description shows no overlay.
-  FilamentView? get overlayView => _overlay?.view;
-
-  /// The overlay lines drawn last frame.
+  /// The overlay lines (skeletons, ghosts, markers, the gizmo) placed in the
+  /// preview's scene for the last rendered frame.
   int get overlayLineCount => _overlay?.lineCount ?? 0;
 
   bool get _wantsOverlay {
@@ -46,7 +41,7 @@ class LuminaViewportController {
   void _updateOverlay() {
     final s = _scene;
     if (s == null || (!_wantsOverlay && _overlay == null)) return;
-    final overlay = _overlay ??= LuminaViewportOverlayLines(runtime.engine, runtime.camera);
+    final overlay = _overlay ??= LuminaViewportOverlayLines(runtime.engine, runtime.scene);
     overlay.update([...LuminaViewportOverlayLines.segmentsOf(runtime, s), ...?extraSegments?.call()]);
   }
 

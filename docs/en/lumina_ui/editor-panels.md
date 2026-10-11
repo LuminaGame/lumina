@@ -91,7 +91,7 @@ The designer's **Editor** palette section, offered only for an editor panel (`Ed
 | Resizable Split | `orientation`, `split`, `minFirst`, `minSecond` | — |
 | Editor Toolbar | — | — |
 | Status Line | `text`, `tone` | — |
-| Viewport | the preview scene (`LuminaUmgViewport`, `viewport_*` nodes) | On Picked, Gizmo Preview / Commit / Cancel, Camera Changed, Scene Ready, Asset Load Failed |
+| Viewport | the preview scene (`LuminaUmgViewport`, `viewport_*` nodes; project assets (`contents/…`) are read from the open project, a mesh the graph adds is framed once loaded while the camera is untouched, `Play Animation File` reads the files a plugin process writes) | On Picked, Gizmo Preview / Commit / Cancel, Camera Changed, Scene Ready, Asset Load Failed |
 | Timeline | `fps`, `length`, `playhead`, `playing`, `loop`, `zoom`, `scroll`, `tracks`, `clips`, `keys`, `range`, `snap`, `boundViewport` | On Playhead Changed, Play State Changed, Clip Preview / Commit / Cancel, Clip Text Committed, Key Preview / Commit / Cancel, Key Added, Keys Deleted, Selection Changed, Track Context Menu |
 | Table | `columns`, `rows`, `sort`, `selection`, `selected`, `filter` | On Cell Committed, Row Selected, Row Double Clicked, Row Context Menu, Sort Changed |
 | Canvas | `space`, `background`, `items`, `viewBox` | On Item Clicked, Item Drag Preview / Commit / Cancel, Item Hover, Background Clicked |

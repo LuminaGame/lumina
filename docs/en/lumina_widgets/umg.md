@@ -473,12 +473,12 @@ The UMG **Viewport** element: a real Filament preview scene inside the widget tr
 | `onEvent`, `onController` | Receives every event instead of the instance's graph (generated handlers, an editor panel's host, tests; null fires the graph); the `LuminaViewportController` once the preview exists. |
 | `backend` | The Flutter path's Filament backend (tests pass the noop backend). |
 
-**Input** (handled in the widget, never per frame through the graph): left drag orbits (a press that moves less than 4 px picks), right or middle drag pans, the wheel and a pinch zoom (the wheel's On Camera Changed fires when it rests), a drag on a gizmo handle moves the target (the cursor follows the hovered axis), F frames the picked node, Escape cancels a gizmo drag. Skeleton overlays, ghost poses, markers and the gizmo are drawn by `LuminaViewportOverlayPainter`, only while the description shows one.
+**Input** (handled in the widget, never per frame through the graph): left drag orbits (a press that moves less than 4 px picks), right or middle drag pans, the wheel and a pinch zoom (the wheel's On Camera Changed fires when it rests), a drag on a gizmo handle moves the target (the cursor follows the hovered axis), F frames the picked node, Escape cancels a gizmo drag. Skeleton overlays, ghost poses, markers and the gizmo are Filament lines in the preview's own scene, drawn over the meshes (`LuminaViewportOverlayLines`, the gizmo through `controller.extraSegments` = `LuminaGizmoSegments.of(model)`), on both paths; `LuminaViewportOverlayPainter` paints only the labels (marker names, ghost badges), and repaints only when the camera or the description changed, never because something animates.
 
 **Presentation paths** (`LuminaUmgViewportState.path`):
 
-- **Flutter** — its own `FilamentWidget` on the shared engine (`sharedEngine`; one readback of the Viewport's size only), rendering only the frames its controller asks for through a `FilamentFrameLimiter`: an idle Viewport renders nothing. It composites like any widget (clipping, opacity, z-order). The editor, Play-In-Editor, games presenting through Flutter and the web (one WebGL2 canvas and engine per Viewport, at most 2) use it.
-- **Direct** — inside a game that presents through Filament (`LuminaViewportHostScope` with `presentingDirectly`), the preview is an extra view in the game's own frame at the element's physical rectangle, after the game's view and before the UI overlay, and the element paints a `BlendMode.clear` hole in the captured UI. A playing animation never re-captures the UI. Limits (accepted for v1): anything in the HUD under the element's rectangle is hidden there, and ancestor opacity does not apply to the 3D image.
+- **Flutter** — its own `FilamentWidget` on the shared engine (`sharedEngine`; one readback of the Viewport's size only), rendering only the frames its controller asks for through a `FilamentFrameLimiter`: an idle Viewport renders nothing. It composites like any widget (clipping, opacity, z-order). The editor, Play-In-Editor, games presenting through Flutter and the web (one WebGL2 canvas and engine per Viewport, at most 2; each engine makes its own WebGL context current before it renders, `FilamentEngine.makeCanvasContextCurrent`) use it.
+- **Direct** — inside a game that presents through Filament (`LuminaViewportHostScope` with `presentingDirectly`), the preview is an extra view in the game's own frame at the element's physical rectangle, after the game's view and before the UI overlay, and the element paints a `BlendMode.clear` hole in the captured UI. A playing animation or a moving skeleton never re-captures the UI (the overlay lines are part of the preview's own view). Limits (accepted for v1): anything in the HUD under the element's rectangle is hidden there, and ancestor opacity does not apply to the 3D image.
 
 Over the budget a placeholder ("Viewport limit reached") shows; a Collapsed, Hidden, off-screen, zero-sized or inactive-tab Viewport renders nothing and holds no slot.
 
@@ -488,11 +488,15 @@ Over the budget a placeholder ("Viewport limit reached") shows; a Collapsed, Hid
 
 ### `class LuminaViewportHost` / `LuminaViewportHostScope` / `LuminaViewportDirectView`
 
-What a game publishes to the Viewports in its HUD: `engine`, `presentingDirectly`, the game's `budget` (4, or 2 on the web), and the Direct path's registered views. `LuminaGameWidget` owns one, publishes it with `LuminaViewportHostScope` and passes `frameViews(defaultView, width, height, inner)` to its `FilamentWidget`: the game's view (and the views of its own `frameViews`) first, then every registered Viewport view at its window rectangle converted to Filament's bottom-left origin; each view's `frame(dt)` advances its preview first.
+What a game publishes to the Viewports in its HUD: `engine`, `presentingDirectly`, the game's `budget` (4, or 2 on the web), and the Direct path's registered views. `LuminaGameWidget` owns one, publishes it with `LuminaViewportHostScope` and passes `frameViews(defaultView, width, height, inner)` to its `FilamentWidget`: the game's view (and the views of its own `frameViews`) first, then every registered Viewport view at its window rectangle converted to Filament's bottom-left origin; each view's `frame(dt)` advances its preview first (before the game's `beginFrame`, so the preview's scene changes are committed with the frame).
 
 ### `class LuminaViewportOverlayPainter`, `luminaViewportGizmoModel`
 
-The overlay painter (skeletons with joint dots, ghost poses with labels, points / lines / arrows with labels, the gizmo) and the `TransformGizmoModel` of a controller's gizmo over the preview's camera (authoring frame; a bone gizmo sits on the joint).
+The label painter (marker labels, ghost badges; `hasLabels(scene)`) and the `TransformGizmoModel` of a controller's gizmo over the preview's camera (authoring frame; a bone gizmo sits on the joint).
+
+### `abstract final class LuminaSkeletonPainter`, `LuminaGizmoSegments`
+
+`LuminaSkeletonPainter` draws skeletons on a Flutter canvas: `paintBones(canvas, joints, project, visible, selected)` (bones of `LuminaSkeletonOverlay.bones`, joint dots, the selected branch highlighted), `paintGhost(...)` (thin or volumetric limbs, a head sphere, a labelled badge) and `paintBadge`. The editor's sub-editor viewports paint with it, so they and the Viewport's Filament lines share one bone structure. `LuminaGizmoSegments.of(model, activeHandle, dragging)` turns a `TransformGizmoModel` into the Filament line segments the Viewport draws (axis arrows, rotation rings, scale stems). Both are exported from `package:lumina_widgets/viewport_gizmo.dart`.
 
 ## `lib/viewport_gizmo.dart`
 

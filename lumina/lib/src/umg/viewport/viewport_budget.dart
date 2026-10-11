@@ -23,8 +23,12 @@ enum LuminaViewportScope {
 class LuminaViewportBudget {
   LuminaViewportBudget({this.scope = LuminaViewportScope.game, int? maxViewports}) : _max = maxViewports;
 
-  /// The budget Viewports of a running game or editor share.
-  static LuminaViewportBudget shared = LuminaViewportBudget();
+  /// The budget Viewports of a running game or editor share (the web's
+  /// scope in a web build).
+  static LuminaViewportBudget shared = LuminaViewportBudget(scope: isWeb ? LuminaViewportScope.web : LuminaViewportScope.game);
+
+  /// Whether this is a web build.
+  static const bool isWeb = bool.fromEnvironment('dart.library.js_interop');
 
   /// The longest side a Viewport renders at, in pixels.
   static const int maxRenderSide = 2048;

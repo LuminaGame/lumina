@@ -473,12 +473,12 @@ UMG **Viewport** öğesi: widget ağacının içinde, paylaşılan engine üzeri
 | `onEvent`, `onController` | Her olayı örneğin graph'ı yerine alır (üretilen handler'lar, bir editör panelinin host'u, testler; null graph'ı tetikler); önizleme oluşunca `LuminaViewportController`. |
 | `backend` | Flutter yolunun Filament backend'i (testler noop backend'i verir). |
 
-**Girdi** (widget'ta işlenir, hiçbir zaman kare başına graph'tan geçmez): sol sürükleme yörünge (4 pikselden az kayan basış seçer), sağ ya da orta sürükleme kaydırma, tekerlek ve sıkıştırma yakınlaştırma (tekerleğin On Camera Changed'i durunca gelir), bir gizmo tutamacında sürükleme hedefi taşır (imleç üzerindeki ekseni izler), F seçili düğümü kadraja alır, Escape gizmo sürüklemesini iptal eder. İskelet kaplamaları, hayalet pozlar, işaretler ve gizmo'yu `LuminaViewportOverlayPainter` çizer; yalnızca açıklama bunlardan birini gösterirken.
+**Girdi** (widget'ta işlenir, hiçbir zaman kare başına graph'tan geçmez): sol sürükleme yörünge (4 pikselden az kayan basış seçer), sağ ya da orta sürükleme kaydırma, tekerlek ve sıkıştırma yakınlaştırma (tekerleğin On Camera Changed'i durunca gelir), bir gizmo tutamacında sürükleme hedefi taşır (imleç üzerindeki ekseni izler), F seçili düğümü kadraja alır, Escape gizmo sürüklemesini iptal eder. İskelet kaplamaları, hayalet pozlar, işaretler ve gizmo, önizlemenin kendi sahnesinde meshlerin üstünde çizilen Filament çizgileridir (`LuminaViewportOverlayLines`; gizmo `controller.extraSegments` = `LuminaGizmoSegments.of(model)` üzerinden), iki yolda da; `LuminaViewportOverlayPainter` yalnızca etiketleri (işaret adları, hayalet rozetleri) boyar ve yalnızca kamera ya da açıklama değişince yeniden boyar, bir şey canlandığı için asla.
 
 **Sunum yolları** (`LuminaUmgViewportState.path`):
 
-- **Flutter** — paylaşılan engine üzerinde kendi `FilamentWidget`'ı (`sharedEngine`; yalnızca Viewport boyutunda tek bir geri okuma); yalnızca denetleyicisinin istediği kareleri bir `FilamentFrameLimiter` ile çizer: boşta bir Viewport hiçbir şey çizmez. Her widget gibi birleştirilir (kırpma, opaklık, z-sırası). Editör, Play-In-Editor, Flutter üzerinden sunan oyunlar ve web (Viewport başına bir WebGL2 tuvali ve engine'i, en fazla 2) bunu kullanır.
-- **Direct** — Filament üzerinden sunan bir oyunun içinde (`presentingDirectly` ile `LuminaViewportHostScope`), önizleme oyunun kendi karesinde öğenin fiziksel dikdörtgeninde fazladan bir görünümdür; oyunun görünümünden sonra, UI kaplamasından önce çizilir ve öğe yakalanan UI'da `BlendMode.clear` ile bir delik boyar. Oynayan bir animasyon UI'ı yeniden yakalatmaz. Sınırlar (v1 için kabul edildi): HUD'da öğenin dikdörtgeni altındaki her şey orada gizlenir ve ata opaklığı 3B görüntüye uygulanmaz.
+- **Flutter** — paylaşılan engine üzerinde kendi `FilamentWidget`'ı (`sharedEngine`; yalnızca Viewport boyutunda tek bir geri okuma); yalnızca denetleyicisinin istediği kareleri bir `FilamentFrameLimiter` ile çizer: boşta bir Viewport hiçbir şey çizmez. Her widget gibi birleştirilir (kırpma, opaklık, z-sırası). Editör, Play-In-Editor, Flutter üzerinden sunan oyunlar ve web (Viewport başına bir WebGL2 tuvali ve engine'i, en fazla 2; her engine çizmeden önce kendi WebGL bağlamını geçerli yapar, `FilamentEngine.makeCanvasContextCurrent`) bunu kullanır.
+- **Direct** — Filament üzerinden sunan bir oyunun içinde (`presentingDirectly` ile `LuminaViewportHostScope`), önizleme oyunun kendi karesinde öğenin fiziksel dikdörtgeninde fazladan bir görünümdür; oyunun görünümünden sonra, UI kaplamasından önce çizilir ve öğe yakalanan UI'da `BlendMode.clear` ile bir delik boyar. Oynayan bir animasyon ya da hareket eden bir iskelet UI'ı yeniden yakalatmaz (kaplama çizgileri önizlemenin kendi görünümündedir). Sınırlar (v1 için kabul edildi): HUD'da öğenin dikdörtgeni altındaki her şey orada gizlenir ve ata opaklığı 3B görüntüye uygulanmaz.
 
 Bütçe aşılınca bir yer tutucu ("Viewport limit reached") görünür; Collapsed, Hidden, ekran dışı, sıfır boyutlu ya da etkin olmayan sekmedeki bir Viewport hiçbir şey çizmez ve slot tutmaz.
 
@@ -488,11 +488,15 @@ Bütçe aşılınca bir yer tutucu ("Viewport limit reached") görünür; Collap
 
 ### `class LuminaViewportHost` / `LuminaViewportHostScope` / `LuminaViewportDirectView`
 
-Bir oyunun HUD'ındaki Viewport'lara yayımladığı: `engine`, `presentingDirectly`, oyunun `budget`'ı (4, web'de 2) ve Direct yolunun kayıtlı görünümleri. `LuminaGameWidget` bir tane tutar, onu `LuminaViewportHostScope` ile yayımlar ve `FilamentWidget`'ına `frameViews(defaultView, width, height, inner)` verir: önce oyunun görünümü (ve kendi `frameViews`'unun görünümleri), sonra kayıtlı her Viewport görünümü pencere dikdörtgeninde, Filament'in sol-alt kökenine çevrilerek; her görünümün `frame(dt)`'si önce önizlemesini ilerletir.
+Bir oyunun HUD'ındaki Viewport'lara yayımladığı: `engine`, `presentingDirectly`, oyunun `budget`'ı (4, web'de 2) ve Direct yolunun kayıtlı görünümleri. `LuminaGameWidget` bir tane tutar, onu `LuminaViewportHostScope` ile yayımlar ve `FilamentWidget`'ına `frameViews(defaultView, width, height, inner)` verir: önce oyunun görünümü (ve kendi `frameViews`'unun görünümleri), sonra kayıtlı her Viewport görünümü pencere dikdörtgeninde, Filament'in sol-alt kökenine çevrilerek; her görünümün `frame(dt)`'si önce önizlemesini ilerletir (oyunun `beginFrame`'inden önce; önizleme sahnesindeki değişiklikler kareyle birlikte işlenir).
 
 ### `class LuminaViewportOverlayPainter`, `luminaViewportGizmoModel`
 
-Kaplama ressamı (eklem noktalı iskeletler, etiketli hayalet pozlar, etiketli nokta / çizgi / oklar, gizmo) ve bir denetleyicinin gizmo'sunun önizleme kamerası üzerindeki `TransformGizmoModel`'i (yazım çerçevesi; kemik gizmo'su eklemin üzerindedir).
+Etiket boyayıcı (işaret etiketleri, hayalet rozetleri; `hasLabels(scene)`) ve bir denetleyicinin gizmosunun önizleme kamerası üzerindeki `TransformGizmoModel`'i (yazım çerçevesi; kemik gizmosu eklemin üstündedir).
+
+### `abstract final class LuminaSkeletonPainter`, `LuminaGizmoSegments`
+
+`LuminaSkeletonPainter` iskeletleri bir Flutter tuvaline çizer: `paintBones(canvas, joints, project, visible, selected)` (`LuminaSkeletonOverlay.bones` kemikleri, eklem noktaları, seçili dal vurgulu), `paintGhost(...)` (ince ya da hacimli uzuvlar, baş küresi, etiketli rozet) ve `paintBadge`. Editörün alt editör viewport'ları onunla boyar; böylece onlar ve Viewport'un Filament çizgileri tek bir kemik yapısını paylaşır. `LuminaGizmoSegments.of(model, activeHandle, dragging)` bir `TransformGizmoModel`'i Viewport'un çizdiği Filament çizgi parçalarına çevirir (eksen okları, dönüş halkaları, ölçek gövdeleri). İkisi de `package:lumina_widgets/viewport_gizmo.dart`'tan dışa aktarılır.
 
 ## `lib/viewport_gizmo.dart`
 

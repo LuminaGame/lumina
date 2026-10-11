@@ -17,31 +17,21 @@ class LuminaViewportSegment {
 }
 
 /// A Viewport's overlays drawn by Filament in the 3D view: skeletons, ghost
-/// poses, markers and the gizmo as lines in a second view over the preview
-/// (its own scene, the preview's camera, blended on top, never hidden by
-/// the meshes). Moving overlays therefore never repaint the Flutter UI —
-/// on the Direct path the captured UI stays as it is while a skeleton
-/// animates.
+/// poses, markers and the gizmo as lines in the preview's own scene, drawn
+/// last and without depth testing, so the meshes never hide them. Moving
+/// overlays therefore never repaint the Flutter UI — on the Direct path the
+/// captured UI stays as it is while a skeleton animates — and they need no
+/// view of their own in either presentation path.
 ///
 /// Lines are a pool of unit segments, each placed by its transform every
 /// rendered frame; unused ones collapse to nothing.
 class LuminaViewportOverlayLines {
-  LuminaViewportOverlayLines(this.engine, FilamentCamera camera) {
-    scene = engine.createScene();
-    view = engine.createView()
-      ..scene = scene
-      ..camera = camera
-      ..blendMode = BlendMode.translucent
-      ..postProcessingEnabled = false
-      ..shadowingEnabled = false
-      ..antiAliasing = 0;
-  }
+  LuminaViewportOverlayLines(this.engine, this.scene);
 
   final FilamentEngine engine;
-  late final FilamentScene scene;
 
-  /// The overlay view: rendered after the preview view at its viewport.
-  late final FilamentView view;
+  /// The preview's scene the lines are added to.
+  final FilamentScene scene;
 
   final List<FilamentWireframeMesh> _pool = [];
   final List<List<double>?> _colors = [];
@@ -58,6 +48,15 @@ class LuminaViewportOverlayLines {
     while (_pool.length < segments.length) {
       final mesh = FilamentWireframeMesh.createLineSegments(engine: engine, positions: const [0, 0, 0, 0, 0, 1], lineIndices: const [0, 1]);
       if (mesh == null) break;
+      // Over the meshes: no depth test or write, in the last channel (after
+      // every opaque and translucent mesh).
+      final renderables = FilamentRenderableManager(engine);
+      renderables.getMaterialInstanceAt(mesh.entityId, 0)
+        ?..setDepthCulling(false)
+        ..setDepthWrite(false);
+      renderables
+        ..setChannel(mesh.entityId, 7)
+        ..setPriority(mesh.entityId, 7);
       _pool.add(mesh);
       _colors.add(null);
       scene.addEntity(mesh.entityId);
@@ -97,8 +96,6 @@ class LuminaViewportOverlayLines {
       m.dispose();
     }
     _pool.clear();
-    view.dispose();
-    scene.dispose();
   }
 
   // --- What the description shows ------------------------------------------

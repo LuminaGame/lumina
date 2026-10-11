@@ -90,7 +90,7 @@ Tasarımcının **Editor** palet bölümü, yalnızca editör paneli için sunul
 | Resizable Split | `orientation`, `split`, `minFirst`, `minSecond` | — |
 | Editor Toolbar | — | — |
 | Status Line | `text`, `tone` | — |
-| Viewport | önizleme sahnesi (`LuminaUmgViewport`, `viewport_*` nodes) | On Picked, Gizmo Preview / Commit / Cancel, Camera Changed, Scene Ready, Asset Load Failed |
+| Viewport | önizleme sahnesi (`LuminaUmgViewport`, `viewport_*` nodes; proje varlıkları (`contents/…`) açık projeden okunur, graph'ın eklediği mesh kamera elle oynanmamışken yüklenince kadraja alınır, `Play Animation File` bir eklenti sürecinin yazdığı dosyaları okur) | On Picked, Gizmo Preview / Commit / Cancel, Camera Changed, Scene Ready, Asset Load Failed |
 | Timeline | `fps`, `length`, `playhead`, `playing`, `loop`, `zoom`, `scroll`, `tracks`, `clips`, `keys`, `range`, `snap`, `boundViewport` | On Playhead Changed, Play State Changed, Clip Preview / Commit / Cancel, Clip Text Committed, Key Preview / Commit / Cancel, Key Added, Keys Deleted, Selection Changed, Track Context Menu |
 | Table | `columns`, `rows`, `sort`, `selection`, `selected`, `filter` | On Cell Committed, Row Selected, Row Double Clicked, Row Context Menu, Sort Changed |
 | Canvas | `space`, `background`, `items`, `viewBox` | On Item Clicked, Item Drag Preview / Commit / Cancel, Item Hover, Background Clicked |

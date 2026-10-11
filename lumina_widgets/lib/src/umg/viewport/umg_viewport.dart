@@ -286,15 +286,6 @@ class LuminaUmgViewportState extends State<LuminaUmgViewport> {
     }
   }
 
-  /// The views the Flutter path renders: the preview, then its overlay
-  /// lines at the same viewport.
-  List<FilamentView> _frameViews(FilamentView main, int width, int height) {
-    final overlay = _controller?.overlayView;
-    if (overlay == null) return [main];
-    final (l, b, w, h) = main.viewport;
-    overlay.setViewport(l, b, w, h);
-    return [main, overlay];
-  }
 
   bool _overlaysShown = false;
 
@@ -401,7 +392,6 @@ class LuminaUmgViewportState extends State<LuminaUmgViewport> {
     _attach(runtime);
     final view = LuminaViewportDirectView(
       view: runtime.view,
-      overlay: () => _controller?.overlayView,
       rect: _physicalRect,
       frame: (dt) {
         final c = _controller;
@@ -473,7 +463,6 @@ class LuminaUmgViewportState extends State<LuminaUmgViewport> {
             decorated: false,
             renderResolution: Size(math.max(1, _render.$1).toDouble(), math.max(1, _render.$2).toDouble()),
             frameLimiter: _limiter,
-            frameViews: _frameViews,
             onSceneCreated: (engine, scene, camera, view) => _attach(
               LuminaViewportSceneRuntime(
                 engine: engine,

@@ -9,13 +9,10 @@ import 'package:lumina/lumina_runtime.dart' show LuminaViewportBudget, LuminaVie
 /// where it sits in the window (physical pixels, top-left origin) and the
 /// per-frame step that advances its preview.
 class LuminaViewportDirectView {
-  LuminaViewportDirectView({required this.view, required this.rect, required this.frame, this.overlay});
+  LuminaViewportDirectView({required this.view, required this.rect, required this.frame});
 
   final FilamentView view;
 
-  /// The Viewport's overlay view (its overlay lines), drawn right after
-  /// [view] at the same rectangle; null while it shows none.
-  FilamentView? Function()? overlay;
 
   /// The Viewport's rectangle in the window, physical pixels, top-left
   /// origin; null while it has no layout.
@@ -95,11 +92,6 @@ class LuminaViewportHost extends ChangeNotifier {
       final h = r.height.round();
       v.view.setViewport(left, (surfaceHeight - top - h).round(), w, h);
       views.add(v.view);
-      final overlay = v.overlay?.call();
-      if (overlay != null) {
-        overlay.setViewport(left, (surfaceHeight - top - h).round(), w, h);
-        views.add(overlay);
-      }
     }
     return views;
   }
