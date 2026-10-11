@@ -2,8 +2,8 @@
 ///
 /// The whole keyboard (letters, digits, F1–F12, arrows, the
 /// editing keys, both sides' Shift / Ctrl / Alt / Meta, the locks, the numpad
-/// and punctuation), the mouse buttons and axes and the gamepad keys the
-/// templates bind. A keyboard key's [keyId] is Flutter's
+/// and punctuation), the mouse buttons and axes, the gamepad keys the
+/// templates bind and the XR motion controller keys. A keyboard key's [keyId] is Flutter's
 /// `LogicalKeyboardKey.keyId` — what the Project Settings key picker stores
 /// in the `.lmproject` manifest — and the mouse / gamepad keys carry the
 /// manifest's negative sentinels, so [fromKeyId] is the one table PIE, the
@@ -139,6 +139,25 @@ class LuminaKey {
   static const gamepadFaceButtonRight = LuminaKey._('GamepadFaceButtonRight', keyId: -3);
   static const gamepadLeftThumbstick = LuminaKey._('GamepadLeftThumbstick', keyId: -4);
   static const gamepadRightThumbstick = LuminaKey._('GamepadRightThumbstick', keyId: -5);
+  // XR motion controllers (the OpenXR plugin injects them each frame): the
+  // grip and trigger values (0..1) and the thumbstick axes (-1..1) are analog,
+  // the buttons digital. Left: X, Y, Menu; right: A, B and the system button.
+  static const xrLeftGrip = LuminaKey._('XR_Left_Grip', keyId: -14, isAnalog: true);
+  static const xrLeftTrigger = LuminaKey._('XR_Left_Trigger', keyId: -15, isAnalog: true);
+  static const xrLeftThumbstickX = LuminaKey._('XR_Left_Thumbstick_X', keyId: -16, isAnalog: true);
+  static const xrLeftThumbstickY = LuminaKey._('XR_Left_Thumbstick_Y', keyId: -17, isAnalog: true);
+  static const xrLeftThumbstickClick = LuminaKey._('XR_Left_Thumbstick_Click', keyId: -18);
+  static const xrLeftX = LuminaKey._('XR_Left_X', keyId: -19);
+  static const xrLeftY = LuminaKey._('XR_Left_Y', keyId: -20);
+  static const xrLeftMenu = LuminaKey._('XR_Left_Menu', keyId: -21);
+  static const xrRightGrip = LuminaKey._('XR_Right_Grip', keyId: -22, isAnalog: true);
+  static const xrRightTrigger = LuminaKey._('XR_Right_Trigger', keyId: -23, isAnalog: true);
+  static const xrRightThumbstickX = LuminaKey._('XR_Right_Thumbstick_X', keyId: -24, isAnalog: true);
+  static const xrRightThumbstickY = LuminaKey._('XR_Right_Thumbstick_Y', keyId: -25, isAnalog: true);
+  static const xrRightThumbstickClick = LuminaKey._('XR_Right_Thumbstick_Click', keyId: -26);
+  static const xrRightA = LuminaKey._('XR_Right_A', keyId: -27);
+  static const xrRightB = LuminaKey._('XR_Right_B', keyId: -28);
+  static const xrRightSystem = LuminaKey._('XR_Right_System', keyId: -29);
   static const touchDrag = LuminaKey._('TouchDrag', isAnalog: true);
 
   /// Every key the engine names.
@@ -263,6 +282,22 @@ class LuminaKey {
     gamepadFaceButtonRight,
     gamepadLeftThumbstick,
     gamepadRightThumbstick,
+    xrLeftGrip,
+    xrLeftTrigger,
+    xrLeftThumbstickX,
+    xrLeftThumbstickY,
+    xrLeftThumbstickClick,
+    xrLeftX,
+    xrLeftY,
+    xrLeftMenu,
+    xrRightGrip,
+    xrRightTrigger,
+    xrRightThumbstickX,
+    xrRightThumbstickY,
+    xrRightThumbstickClick,
+    xrRightA,
+    xrRightB,
+    xrRightSystem,
     touchDrag,
   ];
 

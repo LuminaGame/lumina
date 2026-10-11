@@ -88,6 +88,16 @@ void main() {
       expect(LuminaKey.fromKeyId(k.keyId!), k);
     }
     expect(LuminaKey.values, containsAll([LuminaKey.keyLeftAlt, LuminaKey.gamepadRightThumbstick, LuminaKey.touchDrag]));
+    // The XR controller keys: grip, trigger and the thumbstick axes are analog, the buttons digital.
+    expect(LuminaKey.fromKeyId(-14), LuminaKey.xrLeftGrip);
+    expect(LuminaKey.fromKeyId(-29), LuminaKey.xrRightSystem);
+    for (final k in [LuminaKey.xrLeftGrip, LuminaKey.xrRightTrigger, LuminaKey.xrLeftThumbstickX, LuminaKey.xrRightThumbstickY]) {
+      expect(k.isAnalog, isTrue, reason: k.id);
+    }
+    for (final k in [LuminaKey.xrLeftX, LuminaKey.xrLeftMenu, LuminaKey.xrRightA, LuminaKey.xrRightB, LuminaKey.xrRightThumbstickClick]) {
+      expect(k.isAnalog, isFalse, reason: k.id);
+      expect(LuminaKey.fromKeyId(k.keyId!), k);
+    }
     expect(LuminaKey.values.map((k) => k.id).toSet().length, LuminaKey.values.length, reason: 'ids are unique');
     final ids = [for (final k in LuminaKey.values) if (k.keyId != null) k.keyId];
     expect(ids.toSet().length, ids.length, reason: 'key ids are unique');
@@ -125,6 +135,9 @@ void main() {
       'ThumbMouseButton': LuminaKey.mouseThumb1,
       'ThumbMouseButton2': LuminaKey.mouseThumb2,
       'Gamepad Right Thumbstick': LuminaKey.gamepadRightThumbstick,
+      'XR_Left_Grip': LuminaKey.xrLeftGrip,
+      'XR Right Trigger': LuminaKey.xrRightTrigger,
+      'xr right a': LuminaKey.xrRightA,
     };
     for (final e in cases.entries) {
       expect(LuminaKey.fromName(e.key), e.value, reason: e.key);

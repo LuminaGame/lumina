@@ -112,6 +112,14 @@ Component attached to actors for receiving and processing enhanced input signals
 
 Represents a physical or virtual input hardware key / axis.
 
+Klavye, fare ve gamepad tuşlarının yanında OpenXR eklentisinin her karede enjekte ettiği XR hareket kontrolcüsü
+tuşlarını da adlandırır (manifest işaretçileri -14 ile -29 arası): `XR_Left_Grip`, `XR_Left_Trigger`,
+`XR_Left_Thumbstick_X` / `_Y` (analog), `XR_Left_Thumbstick_Click`, `XR_Left_X`, `XR_Left_Y`, `XR_Left_Menu`; sağda
+`XR_Right_Grip`, `XR_Right_Trigger`, `XR_Right_Thumbstick_X` / `_Y` (analog), `XR_Right_Thumbstick_Click`,
+`XR_Right_A`, `XR_Right_B`, `XR_Right_System`. Project Settings bunları *XR Controllers* altında listeler; böylece
+bir girdi aksiyonu `XR_Left_Grip`'i herhangi bir tuş gibi bağlar. Bunlardan biri gelince `lastInputDevice` `XR`
+döndürür.
+
 **Fonksiyonlar, Metotlar ve Erişimciler:**
 
 | Metot / Getter | İmzası | Ne İşe Yarar? |

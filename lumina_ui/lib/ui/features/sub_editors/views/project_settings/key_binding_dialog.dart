@@ -15,6 +15,7 @@ const List<String> kKeyCategories = [
   'Keyboard: Symbols',
   'Mouse',
   'Gamepad',
+  'XR Controllers',
 ];
 
 /// A single selectable key or axis option in the dialog.
@@ -54,6 +55,7 @@ String _luminaKeyCategory(LuminaKey key) {
   final id = key.id;
   if (id.startsWith('Mouse')) return 'Mouse';
   if (id.startsWith('Gamepad')) return 'Gamepad';
+  if (id.startsWith('XR_')) return 'XR Controllers';
   if (id.startsWith('KeyNumpad')) return 'Keyboard: Numpad';
   if (id.startsWith('KeyF') && RegExp(r'^KeyF\d+$').hasMatch(id)) return 'Keyboard: Numbers & Function';
   if (RegExp(r'^Key\d$').hasMatch(id)) return 'Keyboard: Numbers & Function';
@@ -155,6 +157,8 @@ String _luminaKeyLabel(LuminaKey key) {
     'GamepadRightThumbstick' => 'Gamepad Right Thumbstick',
     'GamepadLeftStickX' => 'Gamepad Left Stick X (Axis)',
     'GamepadLeftStickY' => 'Gamepad Left Stick Y (Axis)',
+    // XR_Left_Thumbstick_X -> XR Left Thumbstick X (Axis)
+    _ when id.startsWith('XR_') => '${id.replaceAll('_', ' ')}${key.isAnalog ? ' (Axis)' : ''}',
     _ => id,
   };
 }
@@ -180,6 +184,8 @@ List<String> _luminaKeySearchTerms(LuminaKey key) {
     'MouseMiddle' => ['middle click', 'wheel click', 'mmb'],
     'GamepadFaceButtonBottom' => ['a', 'cross', 'bottom'],
     'GamepadFaceButtonRight' => ['b', 'circle', 'right'],
+    'XR_Left_Grip' || 'XR_Right_Grip' => ['vr', 'squeeze', 'grab'],
+    'XR_Left_Trigger' || 'XR_Right_Trigger' => ['vr', 'select', 'index'],
     _ => const [],
   };
 }
@@ -187,6 +193,7 @@ List<String> _luminaKeySearchTerms(LuminaKey key) {
 IconData _luminaKeyIcon(LuminaKey key, String cat) {
   if (cat == 'Mouse') return key.isAnalog ? LucideIcons.move : LucideIcons.mouse;
   if (cat == 'Gamepad') return LucideIcons.gamepad2;
+  if (cat == 'XR Controllers') return key.isAnalog ? LucideIcons.move : LucideIcons.gamepad;
   return switch (key.id) {
     'KeyEscape' => LucideIcons.undo2,
     'KeyArrowUp' => LucideIcons.arrowUp,
@@ -207,9 +214,10 @@ int _categoryRank(String cat) => switch (cat) {
   'Keyboard: Modifiers & System' => 4,
   'Mouse' => 5,
   'Gamepad' => 6,
-  'Keyboard: Numpad' => 7,
-  'Keyboard: Symbols' => 8,
-  _ => 9,
+  'XR Controllers' => 7,
+  'Keyboard: Numpad' => 8,
+  'Keyboard: Symbols' => 9,
+  _ => 10,
 };
 
 /// Precomputed catalog of all supported key options.

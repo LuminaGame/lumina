@@ -112,7 +112,7 @@ class LuminaInputSubsystem extends LuminaWorldSubsystem {
     _lastInputDevice = 'Mouse';
   }
 
-  /// `Keyboard`, `Mouse`, `Gamepad` or `Touch`: the device of the last input.
+  /// `Keyboard`, `Mouse`, `Gamepad`, `Touch` or `XR`: the device of the last input.
   String get lastInputDevice => _lastInputDevice;
 
   static String _deviceOf(LuminaKey key) {
@@ -120,6 +120,7 @@ class LuminaInputSubsystem extends LuminaWorldSubsystem {
     if (id.startsWith('mouse')) return 'Mouse';
     if (id.startsWith('gamepad')) return 'Gamepad';
     if (id.startsWith('touch')) return 'Touch';
+    if (id.startsWith('xr_')) return 'XR';
     return 'Keyboard';
   }
 

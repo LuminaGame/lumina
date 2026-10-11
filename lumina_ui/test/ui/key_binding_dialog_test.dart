@@ -152,4 +152,16 @@ void main() {
 
     expect(closed, isTrue);
   });
+
+  test('the key catalog lists the XR controller keys under their own category', () {
+    final grip = kAllKeyOptions.firstWhere((o) => o.id == 'XR_Left_Grip');
+    expect(grip.category, 'XR Controllers');
+    expect(grip.label, 'XR Left Grip (Axis)');
+    expect(grip.keyId, -14);
+    final a = kAllKeyOptions.firstWhere((o) => o.id == 'XR_Right_A');
+    expect(a.label, 'XR Right A');
+    expect(kKeyCategories, contains('XR Controllers'));
+    expect(kAllKeyOptions.where((o) => o.category == 'XR Controllers').length, 16);
+    expect(grip.matches('squeeze', 'All'), isTrue);
+  });
 }
