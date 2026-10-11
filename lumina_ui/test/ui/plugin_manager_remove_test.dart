@@ -82,7 +82,8 @@ void main() {
   });
 
   Future<void> pumpView(WidgetTester tester) async {
-    await registry.initialize(projectDir.path);
+    // Real file I/O and the project open's isolates: on the real clock.
+    await tester.runAsync(() => registry.initialize(projectDir.path));
     tester.view.physicalSize = const Size(1500, 1000);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
@@ -93,7 +94,9 @@ void main() {
 
   Future<void> tapAndWait(WidgetTester tester, Finder finder) async {
     await tester.tap(finder);
-    for (var i = 0; i < 10; i++) {
+    // A removal rescans the plugin roots, which opens the project (real
+    // file I/O and isolates): give the real clock time until it is done.
+    for (var i = 0; i < 10 || (vm.removing && i < 200); i++) {
       await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 30)));
       await tester.pump(const Duration(milliseconds: 50));
     }
@@ -148,8 +151,8 @@ void main() {
   testWidgets('removing an enabled project plugin disables it and its dependents in the project', (tester) async {
     final dir = writePlugin(projectPlugins(), 'base_plugin');
     writePlugin(projectPlugins(), 'top_plugin', dependsOn: ['base_plugin']);
-    await registry.initialize(projectDir.path);
-    await registry.setEnabled('top_plugin', true);
+    await tester.runAsync(() => registry.initialize(projectDir.path));
+    await tester.runAsync(() => registry.setEnabled('top_plugin', true));
     expect(enabledInProject(), ['base_plugin', 'top_plugin']);
     await pumpView(tester);
     await openRemove(tester, 'base_plugin');
@@ -254,8 +257,8 @@ void main() {
 
   testWidgets('a removal that cannot move the folder shows what was not removed and changes nothing', (tester) async {
     final dir = writePlugin(userDir, 'stuck_plugin');
-    await registry.initialize(projectDir.path);
-    await registry.setEnabled('stuck_plugin', true);
+    await tester.runAsync(() => registry.initialize(projectDir.path));
+    await tester.runAsync(() => registry.setEnabled('stuck_plugin', true));
     await pumpView(tester);
     await openRemove(tester, 'stuck_plugin');
     final unlock = lockFolder(dir);
