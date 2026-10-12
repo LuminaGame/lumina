@@ -47,4 +47,39 @@ void main() {
         .toSet();
     expect(ids, schema);
   });
+
+  skinnedClothDescriptorTests();
+}
+
+/// The Skinned Cloth (garment) component: registered under its own name
+/// (never matched to the skeletal mesh), its properties the engine's keys
+/// with the engine's defaults, the same set in the Details panel.
+void skinnedClothDescriptorTests() {
+  test('the Skinned Cloth descriptor is its own Physics scene component', () {
+    final d = BlueprintComponentRegistry.getDescriptor('LuminaSkinnedClothComponent')!;
+    expect(d.typeName, 'LuminaSkinnedClothComponent');
+    expect(d.displayName, 'Skinned Cloth');
+    expect(d.category, 'Physics');
+    expect(BlueprintComponentRegistry.getDescriptor('LuminaSkeletalMeshComponent')!.typeName, isNot('LuminaSkinnedClothComponent'));
+  });
+
+  test('every Skinned Cloth property round-trips through the engine with the same defaults', () {
+    final d = BlueprintComponentRegistry.getDescriptor('LuminaSkinnedClothComponent')!;
+    final props = <String, dynamic>{for (final p in d.properties) p.dartField: p.defaultValue};
+    final engine = LuminaSkinnedClothComponent().toProperties();
+    final fromEditor = LuminaSkinnedClothComponent.fromProperties(props);
+    final saved = fromEditor.toProperties();
+    for (final key in props.keys) {
+      if (const {'meshAsset', 'color', 'backstopDistance'}.contains(key)) continue;
+      expect(saved[key], engine[key], reason: key);
+    }
+    expect(fromEditor.meshAsset, isNull, reason: 'an empty garment mesh is a generated skirt');
+    expect(fromEditor.backstopDistance, isNull, reason: 'a negative backstop is none');
+  });
+
+  test('the Details panel describes the same Skinned Cloth properties', () {
+    final details = ComponentPropertyRegistry.descriptors['LuminaSkinnedClothComponent']!;
+    final schema = BlueprintComponentRegistry.getDescriptor('LuminaSkinnedClothComponent')!.properties.map((p) => p.dartField).toSet();
+    expect(details.properties.map((p) => p.id).toSet(), schema);
+  });
 }

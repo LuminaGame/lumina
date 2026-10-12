@@ -8,14 +8,16 @@ import 'package:lumina/src/physics/cloth/skinned_cloth_component.dart';
 import 'package:lumina/src/physics/jolt/jolt_body_shapes.dart';
 import 'package:lumina/src/physics/ragdoll/ragdoll_skeleton.dart';
 
+// dart format off
 /// A `LuminaPoseMath` affine (12 doubles: 3x3 column-major, translation) at
 /// [o] as a column-major 4x4 matrix, scaled by [scale] (cm → m).
 Matrix4 _matrix(Float64List a, int o, [double scale = 1]) => Matrix4(
-      a[o] * scale, a[o + 1] * scale, a[o + 2] * scale, 0, //
-      a[o + 3] * scale, a[o + 4] * scale, a[o + 5] * scale, 0, //
-      a[o + 6] * scale, a[o + 7] * scale, a[o + 8] * scale, 0, //
+      a[o] * scale, a[o + 1] * scale, a[o + 2] * scale, 0,
+      a[o + 3] * scale, a[o + 4] * scale, a[o + 5] * scale, 0,
+      a[o + 6] * scale, a[o + 7] * scale, a[o + 8] * scale, 0,
       a[o + 9] * scale, a[o + 10] * scale, a[o + 11] * scale, 1,
     );
+// dart format on
 
 /// The Jolt skin of [cloth] for a soft body built at [centre] (m, identity
 /// rotation): each joint's bind pose is its rest pose (mesh space) placed by
@@ -32,11 +34,16 @@ JoltClothSkin? clothSkinFor(LuminaSkinnedClothComponent cloth, Vector3 centre) {
   final count = skin.restAffines.length ~/ LuminaPoseMath.affineStride;
   return JoltClothSkin(
     inverseBinds: [
-      for (var j = 0; j < count; j++) Matrix4.inverted(toBody * _matrix(skin.restAffines, j * LuminaPoseMath.affineStride)),
+      for (var j = 0; j < count; j++)
+        Matrix4.inverted(toBody * _matrix(skin.restAffines, j * LuminaPoseMath.affineStride)),
     ],
     joints: skin.joints,
     weights: skin.weights,
     maxDistances: Float32List.fromList([for (final d in skin.maxDistances) d * kJoltScale]),
+    backstopDistances: skin.backstopDistances == null
+        ? null
+        : Float32List.fromList([for (final d in skin.backstopDistances!) d * kJoltScale]),
+    backstopRadius: skin.backstopRadius * kJoltScale,
   );
 }
 
@@ -46,8 +53,7 @@ Float32List clothJointMatrices(Float64List worldAffines) {
   final count = worldAffines.length ~/ LuminaPoseMath.affineStride;
   final out = Float32List(count * 16);
   for (var j = 0; j < count; j++) {
-    final m = _matrix(worldAffines, j * LuminaPoseMath.affineStride, kJoltScale)
-      ..setEntry(3, 3, 1);
+    final m = _matrix(worldAffines, j * LuminaPoseMath.affineStride, kJoltScale)..setEntry(3, 3, 1);
     // Rotation columns carry the mesh's unit scale (×100) times cm → m: 1.
     out.setRange(16 * j, 16 * j + 16, m.storage);
   }
@@ -66,8 +72,14 @@ class LuminaJoltClothColliders {
 
   /// Kinematic bodies for [asset]'s bodies on [skeleton], posed by
   /// [worldAffines] (cm).
-  static LuminaJoltClothColliders create(JoltWorld world, LuminaPhysicsAssetData asset, LuminaRagdollSkeleton skeleton,
-      Float64List worldAffines, {required int owner, required int profile}) {
+  static LuminaJoltClothColliders create(
+    JoltWorld world,
+    LuminaPhysicsAssetData asset,
+    LuminaRagdollSkeleton skeleton,
+    Float64List worldAffines, {
+    required int owner,
+    required int profile,
+  }) {
     final bodies = <({int id, int slot, Vector3 offset, Quaternion rotation})>[];
     for (final data in asset.bodies) {
       final slot = skeleton.slotNamed(data.bone);
@@ -75,10 +87,13 @@ class LuminaJoltClothColliders {
       final shape = switch (data.shape) {
         LuminaPhysicsBodyShape.sphere => JoltShape.sphere(data.radius * kJoltScale),
         LuminaPhysicsBodyShape.box => JoltShape.box(
-            Vector3(data.halfExtents[0], data.halfExtents[1], data.halfExtents[2]) * kJoltScale,
-            convexRadius: 0.005),
-        LuminaPhysicsBodyShape.capsule =>
-          JoltShape.capsule((data.effectiveHalfHeight - data.radius) * kJoltScale, data.radius * kJoltScale),
+          Vector3(data.halfExtents[0], data.halfExtents[1], data.halfExtents[2]) * kJoltScale,
+          convexRadius: 0.005,
+        ),
+        LuminaPhysicsBodyShape.capsule => JoltShape.capsule(
+          (data.effectiveHalfHeight - data.radius) * kJoltScale,
+          data.radius * kJoltScale,
+        ),
       };
       final (position, rotation) = _pose(worldAffines, slot, data.offsetVector, data.offsetQuaternion);
       final id = world.createBody(
@@ -106,6 +121,16 @@ class LuminaJoltClothColliders {
     for (final b in _bodies) {
       final (position, rotation) = _pose(worldAffines, b.slot, b.offset, b.rotation);
       _world.moveKinematic(b.id, position, rotation, dt);
+    }
+  }
+
+  /// Puts every limb on its bone in [worldAffines] at once (a teleport).
+  void place(Float64List worldAffines) {
+    for (final b in _bodies) {
+      final (position, rotation) = _pose(worldAffines, b.slot, b.offset, b.rotation);
+      _world
+        ..setBodyTransform(b.id, position, rotation)
+        ..setBodyVelocity(b.id, Vector3.zero(), Vector3.zero());
     }
   }
 

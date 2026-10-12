@@ -345,7 +345,7 @@ void main() {
     var maxFrameUs = 0, frameUs = 0, nonFinite = 0;
     const frames = 12 * 60;
     for (var f = 0; f < frames; f++) {
-      // Walk 1.5 m/s for 4 s, stop, walk back.
+      // Walk 1.5 m/s for 4 s, stop, turn round within one frame, walk back.
       final speed = f < 240 ? 150.0 : (f < 360 ? 0.0 : -150.0);
       root.relativeLocation = root.relativeLocation + Vector3(speed / 60, 0, 0);
       if (f == 360) mesh.relativeRotation = Quaternion.axisAngle(Vector3(0, 1, 0), -math.pi / 2);
@@ -361,7 +361,8 @@ void main() {
       if (f == 60) save('01 standing', {});
       if (f == 200) save('02 walking, the skirt swings', {});
       if (f == 330) save('03 stopped', {});
-      if (f == 600) save('04 walking back', {});
+      if (f == 362) save('04 turned 180 degrees in one frame, the skirt back on the body', {});
+      if (f == 600) save('05 walking back', {});
     }
     final metrics = <String, Object?>{
       'skirtVertices': skirt.geometry!.simVertexCount,

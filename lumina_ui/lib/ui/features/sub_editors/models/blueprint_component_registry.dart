@@ -1,6 +1,7 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart' show IconData, LucideIcons;
 
 import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_component_registry/cloth_component_descriptor.dart';
+import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_component_registry/skinned_cloth_component_descriptor.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_component_registry/traversal_component_descriptor.dart';
 
 part 'blueprint_component_registry/core_descriptors.dart';
@@ -130,10 +131,14 @@ class BlueprintComponentRegistry {
     ..._lightComponentDescriptors,
     traversalComponentDescriptor,
     clothComponentDescriptor,
+    skinnedClothComponentDescriptor,
   ];
 
   static ComponentTypeDescriptor? getDescriptor(String typeName) {
     try {
+      for (final d in registeredComponents) {
+        if (d.typeName == typeName) return d;
+      }
       final normalized = typeName.toLowerCase().replaceAll('lumina', '').replaceAll('component', '');
       return registeredComponents.firstWhere((d) {
         final dNorm = d.typeName.toLowerCase().replaceAll('lumina', '').replaceAll('component', '');

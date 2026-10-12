@@ -13,9 +13,9 @@ import 'package:vector_math/vector_math_64.dart';
 
 import 'package:lumina/src/assets/glb_loader.dart';
 import 'package:lumina/src/components/mesh/procedural_mesh_component.dart';
-import 'package:lumina/src/game/primitive_actor.dart' show luminaHexToRgb;
 import 'package:lumina/src/object/actor.dart';
 import 'package:lumina/src/physics/cloth/cloth_geometry.dart';
+import 'package:lumina/src/physics/cloth/cloth_properties.dart';
 import 'package:lumina/src/physics/physics_subsystem.dart';
 import 'package:lumina/src/utility/lumina_assets.dart';
 import 'package:lumina/src/world/world.dart';
@@ -38,6 +38,12 @@ export 'package:lumina/src/physics/cloth/cloth_geometry.dart' show LuminaClothGe
 ///   distance it keeps from surfaces), [iterations], [gravityScale].
 /// - **Wind**: [wind] (cm/s, runtime axes) pulls the cloth at [windDrag] per
 ///   second, its strength varying by [windTurbulence] (0..1) over time.
+/// - **Motion**: [inertiaScale] (0..1) is how much of its owner's motion
+///   the cloth resists: 1 keeps all of its inertia in the world (it lags and
+///   swings when the owner moves or turns), 0 moves it rigidly with the
+///   owner. A move of more than [teleportDistance] cm or a turn of more than
+///   [teleportRotation] degrees within one step is a teleport: the cloth is
+///   carried along whole (a garment is put back on its body).
 /// - **Collision**: with every body and collider of the world's physics (the
 ///   level, simulating props, a character's capsule).
 ///
@@ -68,23 +74,26 @@ class LuminaClothComponent extends LuminaProceduralMeshComponent {
     Vector3? wind,
     this.windDrag = 1.0,
     this.windTurbulence = 0.3,
+    this.inertiaScale = 1.0,
+    this.teleportDistance = 100,
+    this.teleportRotation = 60,
     bool simulate = true,
     Vector3? color,
     this.castShadows = true,
     this.assetProvider,
-  })  : _pinning = pinning,
-        _pinnedVertices = List.of(pinnedVertices),
-        _massKg = massKg,
-        _stiffness = stiffness,
-        _bendStiffness = bendStiffness,
-        _damping = damping,
-        _friction = friction,
-        _thickness = thickness,
-        _iterations = iterations,
-        _gravityScale = gravityScale,
-        _simulate = simulate,
-        wind = wind ?? Vector3.zero(),
-        color = color ?? Vector3(0.75, 0.12, 0.1);
+  }) : _pinning = pinning,
+       _pinnedVertices = List.of(pinnedVertices),
+       _massKg = massKg,
+       _stiffness = stiffness,
+       _bendStiffness = bendStiffness,
+       _damping = damping,
+       _friction = friction,
+       _thickness = thickness,
+       _iterations = iterations,
+       _gravityScale = gravityScale,
+       _simulate = simulate,
+       wind = wind ?? Vector3.zero(),
+       color = color ?? Vector3(0.75, 0.12, 0.1);
 
   /// A static mesh `.glb` whose triangles are the cloth; null for a grid.
   final String? meshAsset;
@@ -100,6 +109,12 @@ class LuminaClothComponent extends LuminaProceduralMeshComponent {
   Vector3 wind;
   double windDrag;
   double windTurbulence;
+
+  /// How much of the owner's motion the cloth resists (0..1), and the move
+  /// (cm) or turn (degrees) within one step that counts as a teleport.
+  double inertiaScale;
+  double teleportDistance;
+  double teleportRotation;
 
   /// Base colour (linear 0..1), and whether the cloth casts shadows.
   Vector3 color;
@@ -407,69 +422,66 @@ class LuminaClothComponent extends LuminaProceduralMeshComponent {
 
   /// A cloth from Blueprint / level properties (authoring axes for [wind]).
   factory LuminaClothComponent.fromProperties(Map<String, dynamic> p, {LuminaAssetProvider? assetProvider}) {
-    double dbl(String k, double d) => (p[k] as num?)?.toDouble() ?? d;
-    int integer(String k, int d) => (p[k] as num?)?.toInt() ?? d;
-    List<num>? list(String k) => (p[k] as List?)?.cast<num>();
-    final asset = p['meshAsset'] as String?;
-    final windAuthoring = list('wind');
-    final colorValue = p['color'];
-    // A list is linear 0..1; the editor's `#RRGGBB` is sRGB.
-    final colorList = colorValue is List ? colorValue.cast<num>() : null;
-    final hexColor = colorValue is String ? luminaHexToRgb(colorValue) : null;
+    final r = LuminaClothPropertyReader(p);
     return LuminaClothComponent(
-      meshAsset: asset == null || asset.isEmpty ? null : asset,
-      gridWidth: dbl('gridWidth', 200),
-      gridHeight: dbl('gridHeight', 150),
-      gridColumns: integer('gridColumns', 24),
-      gridRows: integer('gridRows', 18),
+      meshAsset: r.text('meshAsset'),
+      gridWidth: r.number('gridWidth', 200),
+      gridHeight: r.number('gridHeight', 150),
+      gridColumns: r.integer('gridColumns', 24),
+      gridRows: r.integer('gridRows', 18),
       pinning: LuminaClothPinning.parse(p['pinning']) ?? LuminaClothPinning.topEdge,
-      pinnedVertices: [for (final v in (p['pinnedVertices'] as List? ?? const [])) (v as num).toInt()],
-      massKg: dbl('massKg', 1.0),
-      stiffness: dbl('stiffness', 0.95),
-      bendStiffness: dbl('bendStiffness', 0.3),
-      damping: dbl('damping', 0.5),
-      friction: dbl('friction', 0.5),
-      thickness: dbl('thickness', 1.0),
-      iterations: integer('iterations', 8),
-      gravityScale: dbl('gravityScale', 1.0),
-      wind: windAuthoring == null || windAuthoring.length < 3 ? null : LuminaAxes.location(windAuthoring),
-      windDrag: dbl('windDrag', 1.0),
-      windTurbulence: dbl('windTurbulence', 0.3),
-      simulate: p['simulate'] as bool? ?? true,
-      color: hexColor != null
-          ? Vector3(_linear(hexColor.x), _linear(hexColor.y), _linear(hexColor.z))
-          : colorList == null || colorList.length < 3
-              ? null
-              : Vector3(colorList[0].toDouble(), colorList[1].toDouble(), colorList[2].toDouble()),
-      castShadows: p['castShadows'] as bool? ?? true,
+      pinnedVertices: r.integers('pinnedVertices'),
+      massKg: r.number('massKg', 1.0),
+      stiffness: r.number('stiffness', 0.95),
+      bendStiffness: r.number('bendStiffness', 0.3),
+      damping: r.number('damping', 0.5),
+      friction: r.number('friction', 0.5),
+      thickness: r.number('thickness', 1.0),
+      iterations: r.integer('iterations', 8),
+      gravityScale: r.number('gravityScale', 1.0),
+      wind: r.wind,
+      windDrag: r.number('windDrag', 1.0),
+      windTurbulence: r.number('windTurbulence', 0.3),
+      inertiaScale: r.number('inertiaScale', 1.0),
+      teleportDistance: r.number('teleportDistance', 100),
+      teleportRotation: r.number('teleportRotation', 60),
+      simulate: r.flag('simulate', true),
+      color: r.color,
+      castShadows: r.flag('castShadows', true),
       assetProvider: assetProvider,
     );
   }
 
-  static double _linear(double srgb) => math.pow(srgb, 2.2).toDouble();
-
   /// The properties [LuminaClothComponent.fromProperties] reads.
   Map<String, Object?> toProperties() => {
-        if (meshAsset != null) 'meshAsset': meshAsset,
-        'gridWidth': gridWidth,
-        'gridHeight': gridHeight,
-        'gridColumns': gridColumns,
-        'gridRows': gridRows,
-        'pinning': _pinning.name,
-        if (_pinnedVertices.isNotEmpty) 'pinnedVertices': List.of(_pinnedVertices),
-        'massKg': _massKg,
-        'stiffness': _stiffness,
-        'bendStiffness': _bendStiffness,
-        'damping': _damping,
-        'friction': _friction,
-        'thickness': _thickness,
-        'iterations': _iterations,
-        'gravityScale': _gravityScale,
-        'wind': LuminaAxes.toAuthoringLocation(wind),
-        'windDrag': windDrag,
-        'windTurbulence': windTurbulence,
-        'simulate': _simulate,
-        'color': [color.x, color.y, color.z],
-        'castShadows': castShadows,
-      };
+    if (meshAsset != null) 'meshAsset': meshAsset,
+    'gridWidth': gridWidth,
+    'gridHeight': gridHeight,
+    'gridColumns': gridColumns,
+    'gridRows': gridRows,
+    'pinning': _pinning.name,
+    if (_pinnedVertices.isNotEmpty) 'pinnedVertices': List.of(_pinnedVertices),
+    ...materialProperties(),
+  };
+
+  /// The material, wind, motion and drawing properties every cloth shares.
+  Map<String, Object?> materialProperties() => {
+    'massKg': _massKg,
+    'stiffness': _stiffness,
+    'bendStiffness': _bendStiffness,
+    'damping': _damping,
+    'friction': _friction,
+    'thickness': _thickness,
+    'iterations': _iterations,
+    'gravityScale': _gravityScale,
+    'wind': LuminaAxes.toAuthoringLocation(wind),
+    'windDrag': windDrag,
+    'windTurbulence': windTurbulence,
+    'inertiaScale': inertiaScale,
+    'teleportDistance': teleportDistance,
+    'teleportRotation': teleportRotation,
+    'simulate': _simulate,
+    'color': [color.x, color.y, color.z],
+    'castShadows': castShadows,
+  };
 }

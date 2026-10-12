@@ -26,6 +26,8 @@ Bayraklar, perdeler, ipe asılı giysiler ve bir şeylerin üzerine örtülen ç
 
 **Rüzgâr**: `wind` (cm/s, runtime eksenleri; özelliklerde ve düğümlerde authoring eksenleri), `windDrag` (saniyede, 1) ve `windTurbulence` (0..1, zamanla esintiler). Rüzgâr her yüzü, rüzgârın ona çarpan kısmı kadar normali boyunca iter; böylece bir bayrak durgun havada düz durur, sarkar, rüzgârı yakalar ve dalgalanır; rüzgâra yan duran bir yüz hiçbir şey hissetmez.
 
+**Hareket**: `inertiaScale` (0..1, varsayılan 1) kumaşın sahibinin hareketine ne kadar direndiğidir: 1 bütün ataletini dünyada tutar (sahibi hareket edince ya da dönünce geride kalır ve sallanır), 0 onu sahibiyle birlikte katı olarak taşır, aradaki değerler her adımın hareketinin o payını taşır. Bir adım içinde `teleportDistance`'tan (100 cm) fazla bir yer değiştirme ya da `teleportRotation`'dan (60 derece) fazla bir dönüş bir ışınlanmadır: sabitler dahil bütün kumaş bir kerede birlikte taşınır; böylece sıçrama boyunca hiç gerilmez.
+
 **Çalışma anı**: `simulate` (kapalıyken dinlenme pozu çizilir, açılınca ondan başlar), `reset()`, `isSimulating`, `ready` (geometri kuruldu), `geometry`, `currentSimPositions()`, `resolvePinnedVertices()`.
 
 ## Nasıl simüle edilir
@@ -38,16 +40,22 @@ Fizik subsystem'i dünyanın kumaşlarını tutar (`LuminaPhysicsSubsystem.cloth
 
 `LuminaSkinnedClothComponent` animasyonlu bir karakterin giydiği kumaştır: köşeleri karakterin iskeletine skinlenir; böylece giysi animasyonla hareket eder ve skin'in koyduğu yerden belli bir mesafe içinde sallanır.
 
-- **Giysi**: `meshAsset` (eklemleri karakterin kemikleri gibi adlandırılmış skinli bir `.glb`; kendi ağırlıkları kullanılır) ya da `waistBone` (`pelvis`, yoksa `Hips`) çevresinde üretilen bir etek: `skirtLength` (45 cm), `waistRadius` (17) ile `hemRadius` (34), kemiğin üzerinde `waistOffset` (6), `skirtColumns` x `skirtRows` (32 x 12); her köşe en yakın iki kalça ve bacak kemiğine ağırlıklandırılır.
-- **Serbestlik**: giysinin uzak ucunda `maxDistance` (25 cm), üste doğru bunun `t^1.5` katı; üst kısım bedende kalır (sert skinli).
+- **Giysi**: `meshAsset` (eklemleri karakterin kemikleri gibi adlandırılmış skinli bir `.glb`; kendi ağırlıkları kullanılır) ya da `waistBone` (`pelvis`, yoksa `Hips`) çevresinde üretilen bir etek: `skirtLength` (45 cm), `waistRadius` (17) ile `hemRadius` (34), kemiğin üzerinde `waistOffset` (6), `skirtColumns` x `skirtRows` (32 x 12). `fitToBody` ile (varsayılan) her halka, dinlenme pozunda kalça, omurga ve bacak kapsüllerinden kalınlık artı 2.5 cm uzak kalana kadar genişletilir ve üstündeki halkadan hiç dar olmaz; böylece bacaklar ve kalçadaki eller dışarıda kalır. Bel, bel kemiğini izler; eteğe doğru ağırlıklar (üst %70 boyunca yumuşakça) `legFollow` (0..1, 0.5) kadar en yakın iki bacak kemiğine geçer; eteğin geri kalanını bacaklar çarpışarak kenara iter.
+- **Serbestlik**: giysinin uzak ucunda `maxDistance` (25 cm), üste doğru bunun `t^1.5` katı; üst kısım bedende kalır (sert skinli). `maxDistanceMap` (simülasyon köşesi başına bir değer, cm) bu azalmanın yerini alır.
+- **Backstop**: `backstopDistance` (cm; null ya da negatif: yok) ile bir köşe skinli konumunun en fazla o kadar gerisine, skin'in normaline karşı gidebilir; böylece giysi rüzgâr ya da bir çarpışma onu nasıl iterse itsin bedenin içine katlanmaz. Backstop köşenin arkasında `backstopRadius` (20 cm) yarıçaplı bir küredir; `backstopMap` köşe başına mesafeler verir.
+- **Boyanmış haritalar**: `paintedMaps` ile bir giysi asset'inin köşe renkleri haritaları boyar: kırmızı `maxDistance`'ın, yeşil `backstopDistance`'ın oranıdır.
 - **Beden**: `collideWithBody` ile karakterin uzuvları kapsüldür (ragdoll'lardaki gibi iskeletten üretilen physics asset) ve her adımda animasyonla hareket edip giysiyi dışarı iter. Bir kumaş sahibinin diğer body'lerini (karakterin kapsülü) yok sayar; collider olarak işaretlenenler hariç.
 - **Poz**: bileşen kendini `mesh`'e bağlar ve animasyonlu pozu bir pose modifier olarak okur (hiç değiştirmez); mesh'in adresleyemediği düğümler dinlenme pozunda alınır. İskelet (`sampler`) verilmezse mesh asset'inden okunur.
 
-Jolt'ta her adım soft body'yi en son poza skinler (`SkinVertices`, ilk seferde sert) ve uzuv kapsüllerini (kinematik) taşır. Giysi `pinning`'i yok sayar (sabitleri sert skinli köşelerdir). Jolt yoksa dinlenme pozunu çizer. Ölçülen: yürüyen mannequin'de 416 köşeli bir etek, tüm sahne için 60 Hz kare başına 1.4 ms.
+Jolt'ta her adım soft body'yi en son poza skinler (`SkinVertices`, ilk seferde sert) ve uzuv kapsüllerini (kinematik) taşır. Yukarıdaki hareket ayarları geçerlidir: karakterin yer değiştirmesinin ya da dönüşünün bir payı (`1 − inertiaScale`) adımdan önce giysiyi birlikte taşır; bir ışınlanma ya da ani bir dönüş (örneğin tek karede 180 derece) giysiyi her köşesi skinli konumunda ve hızsız olarak bedene geri koyar; sıçramadan önce alınmış bir poz önce karakterin şimdiki yerine taşınır, böylece geç gelen bir poz giysiyi hiç geri çekmez. Giysi `pinning`'i yok sayar (sabitleri sert skinli köşelerdir). Jolt yoksa dinlenme pozunu çizer.
+
+Yürüyen mannequin'de ölçülen: eller ve ön kollar eteğin dışında kalır (bir el kapsülünün en derin 0.8 cm içindeki köşe, kumaşın kalınlığından az), bacaklar 1.3 cm içinde, kenarlar adım ortasında en fazla %18 gerilir; 3000 köşeli bir giysi 120 Hz'de 1.3 ms'de adımlanır (8 iterasyon); 416 köşeli bir etek tüm sahne için 60 Hz kare başına 1.4 ms tutar.
 
 ## Blueprint'ler ve editör
 
 Bileşen tipi `LuminaClothComponent` (bir scene bileşeni): Blueprint editörü onu **Cloth** olarak (Physics kategorisi) ekler; yukarıdaki her ayar Details panelindedir; `meshAsset` bir asset referansı, `wind` authoring eksenlerinde bir vektördür. Bileşen eşlemesi onu Play-In-Editor'da ve üretilen oyunlarda aynı şekilde kurar; özellikler Blueprint'le birlikte kaydedilir (`toProperties` / `fromProperties`).
+
+Bileşen tipi `LuminaSkinnedClothComponent` **Skinned Cloth** olarak (Physics kategorisi) eklenir: onu giyen Skeletal Mesh'in altına bağlayın (yoksa aktörün ilk skeletal mesh'i giyer). Details panelinde giysi (`meshAsset`, bel kemiği, etek ölçüleri, bedene oturtma), serbestliği (max distance, leg follow, backstop mesafesi ve yarıçapı, boyanmış haritalar, bedenle çarpışma), kumaş malzemesi, rüzgâr ve hareket ayarları vardır; negatif bir backstop mesafesi backstop yok demektir. Köşe başına haritalar da özelliktir (`maxDistanceMap`, `backstopMap`); koddan verilir ya da giysinin köşe renklerine boyanır.
 
 Düğümler (kategori **Physics|Cloth**, onları çalıştıran aktörün kumaşları üzerinde; Play-In-Editor ve üretilen kod aynı sonucu verir):
 
@@ -63,7 +71,6 @@ Düğümler (kategori **Physics|Cloth**, onları çalıştıran aktörün kumaş
 
 - Kumaş başına bir malzeme (bir temel renk, çift yüzlü, henüz doku yok).
 - Kumaş body'ler ve collider'larla çarpışır; kendisiyle çarpışmaz.
-- Skinli giysiler yalnızca çalışma anı bileşenidir: Blueprint editörü ve bileşen eşlemesi henüz `LuminaSkinnedClothComponent` sunmuyor; backstop'u açık değil.
 
 ---
 

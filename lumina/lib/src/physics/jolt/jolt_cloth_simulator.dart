@@ -14,7 +14,7 @@ import 'package:lumina/src/physics/jolt/jolt_cloth_skinning.dart';
 
 class _Cloth {
   _Cloth(this.body, this.version, List<int> pinned, this.pinnedLocal, this.phase, this.inverseMass)
-      : pinned = Uint32List.fromList(pinned);
+    : pinned = Uint32List.fromList(pinned);
 
   final int body;
   final int version;
@@ -32,6 +32,14 @@ class _Cloth {
   /// to (−1: never, so the first skin is hard).
   LuminaJoltClothColliders? colliders;
   int skinnedVersion = -1;
+
+  /// The component's world transform at the last step, and whether a
+  /// teleport waits for the next pose to put the garment back on its body.
+  Matrix4? lastTransform;
+  bool resetPending = false;
+
+  /// Whether this step carried the cloth along its owner's motion.
+  bool carried = false;
 }
 
 /// Cloth on Jolt soft bodies. Each cloth is built in the world from its rest
@@ -49,8 +57,8 @@ class _Cloth {
 /// pinned vertices so a hanging cloth does not stretch under its weight.
 class LuminaJoltClothSimulator implements LuminaClothSimulator {
   LuminaJoltClothSimulator(this._world, {int Function(LuminaActor? actor)? ownerOf, int Function()? colliderProfile})
-      : _ownerOf = ownerOf ?? ((_) => 0),
-        _colliderProfile = colliderProfile ?? (() => 0);
+    : _ownerOf = ownerOf ?? ((_) => 0),
+      _colliderProfile = colliderProfile ?? (() => 0);
 
   final JoltWorld Function() _world;
   final int Function(LuminaActor? actor) _ownerOf;
@@ -143,7 +151,7 @@ class LuminaJoltClothSimulator implements LuminaClothSimulator {
       [for (final i in pinned) g.simVertex(i)],
       _cloths.length * 0.37,
       inverseMass,
-    );
+    )..lastTransform = transform.clone();
     if (cloth is LuminaSkinnedClothComponent) _skin(cloth, record, 0);
     return record;
   }
@@ -151,21 +159,41 @@ class LuminaJoltClothSimulator implements LuminaClothSimulator {
   /// Skins [cloth] to its character's latest pose (hard the first time) and
   /// moves its limb colliders there.
   void _skin(LuminaSkinnedClothComponent cloth, _Cloth c, double dt) {
-    final pose = cloth.worldAffines;
+    var pose = cloth.worldAffines;
     if (pose == null || cloth.skin == null) return;
     final world = _world();
-    final first = c.skinnedVersion < 0;
-    if (cloth.poseVersion != c.skinnedVersion) {
-      world.skinCloth(c.body, clothJointMatrices(pose), hardSkinAll: first);
+    final reset = c.skinnedVersion < 0 || c.resetPending;
+    // After a teleport, a pose taken before it is moved to where the
+    // character is now (it would pull the garment back otherwise).
+    final posedAt = cloth.posedAt;
+    if (reset && posedAt != null && !cloth.poseIsCurrent) {
+      pose = movedAffines(pose, cloth.worldTransform * Matrix4.inverted(posedAt));
+    }
+    if (reset || cloth.poseVersion != c.skinnedVersion) {
+      final joints = clothJointMatrices(pose);
+      world.skinCloth(c.body, joints, hardSkinAll: reset);
+      // Jolt eases the skin from the previous pose to this one over the
+      // step; a cloth carried along its owner's motion is already there, so
+      // skinning again makes the step start from this pose too.
+      if (c.carried && !reset) world.skinCloth(c.body, joints);
       c.skinnedVersion = cloth.poseVersion;
+      c.resetPending = false;
     }
     if (!cloth.collideWithBody) return;
     final colliders = c.colliders;
     if (colliders == null) {
       final skeleton = cloth.skeleton, sampler = cloth.sampler;
       if (skeleton == null || sampler == null) return;
-      c.colliders = LuminaJoltClothColliders.create(world, LuminaPhysicsAssetGenerator.fromSampler(sampler), skeleton, pose,
-          owner: _ownerOf(cloth.owner), profile: _colliderProfile());
+      c.colliders = LuminaJoltClothColliders.create(
+        world,
+        LuminaPhysicsAssetGenerator.fromSampler(sampler),
+        skeleton,
+        pose,
+        owner: _ownerOf(cloth.owner),
+        profile: _colliderProfile(),
+      );
+    } else if (reset) {
+      colliders.place(pose);
     } else if (dt > 0) {
       colliders.move(pose, dt);
     }
@@ -184,6 +212,7 @@ class LuminaJoltClothSimulator implements LuminaClothSimulator {
         if (rebuilt == null) continue;
         c = rebuilt;
       }
+      _follow(cloth, c);
       if (cloth is LuminaSkinnedClothComponent) _skin(cloth, c, dt);
       if (c.pinned.isNotEmpty) {
         final transform = cloth.worldTransform;
@@ -204,6 +233,51 @@ class LuminaJoltClothSimulator implements LuminaClothSimulator {
         world.applyClothWind(c.body, wind * (gust * kJoltScale), drag: cloth.windDrag, dt: dt);
       }
     }
+  }
+
+  /// Carries [cloth] along its component's motion since the last step by
+  /// `1 − inertiaScale`, or whole when the motion is a teleport (a skinned
+  /// cloth is then put back on its body at the next pose).
+  void _follow(LuminaClothComponent cloth, _Cloth c) {
+    final now = cloth.worldTransform;
+    final last = c.lastTransform;
+    c.lastTransform = now.clone();
+    c.carried = false;
+    if (last == null) return;
+    final delta = now * Matrix4.inverted(last);
+    final moved = now.getTranslation().distanceTo(last.getTranslation());
+    final turned = rotationAngle(delta) * 180 / math.pi;
+    final teleport = moved > cloth.teleportDistance || turned > cloth.teleportRotation;
+    final amount = teleport ? 1.0 : 1 - cloth.inertiaScale.clamp(0.0, 1.0);
+    if (teleport && cloth is LuminaSkinnedClothComponent) c.resetPending = true;
+    if (amount <= 0 || (moved < 1e-6 && turned < 1e-6)) return;
+    // The same motion in metres.
+    c.carried = true;
+    final t = delta.getTranslation()..scale(kJoltScale);
+    _world().carryCloth(c.body, delta..setTranslation(t), amount, includePinned: teleport);
+  }
+
+  /// [affines] (`LuminaPoseMath` affines, cm) moved by [delta].
+  static Float64List movedAffines(Float64List affines, Matrix4 delta) {
+    final out = Float64List(affines.length);
+    final m = delta.storage;
+    for (var o = 0; o + LuminaPoseMath.affineStride <= affines.length; o += LuminaPoseMath.affineStride) {
+      for (var c = 0; c < 4; c++) {
+        final x = affines[o + 3 * c], y = affines[o + 3 * c + 1], z = affines[o + 3 * c + 2];
+        final w = c == 3 ? 1.0 : 0.0;
+        out[o + 3 * c] = m[0] * x + m[4] * y + m[8] * z + m[12] * w;
+        out[o + 3 * c + 1] = m[1] * x + m[5] * y + m[9] * z + m[13] * w;
+        out[o + 3 * c + 2] = m[2] * x + m[6] * y + m[10] * z + m[14] * w;
+      }
+    }
+    return out;
+  }
+
+  /// The rotation angle (radians) of [m]'s upper 3x3, its columns normalised.
+  static double rotationAngle(Matrix4 m) {
+    final r = m.getRotation();
+    final x = r.getColumn(0)..normalize(), y = r.getColumn(1)..normalize(), z = r.getColumn(2)..normalize();
+    return math.acos(((x.x + y.y + z.z - 1) / 2).clamp(-1.0, 1.0));
   }
 
   @override
