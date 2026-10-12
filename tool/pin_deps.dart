@@ -5,8 +5,10 @@
 //   dart run tool/pin_deps.dart --from-local  # HEAD of the sibling checkouts (../tools, …)
 //   dart run tool/pin_deps.dart --check       # exit 1 when a dependency has no ref: SHA
 //
-// Options: --root <dir> (default: this script's repo), --remote-base <url>
-// (default https://github.com/LuminaGame), --dry-run.
+// Options: --root <dir> (default: this script's repo), --self <repo> (the
+// repo --root belongs to, whose own dependencies are not pinned; default
+// `lumina`), --remote-base <url> (default https://github.com/LuminaGame),
+// --dry-run. Pinning another checkout: `--root ../plugins --self plugins`.
 //
 // A cross-repo dependency is a `git:` dependency whose url is
 // `<remote-base>/<repo>.git` (or any github.com/LuminaGame/<repo>) for a
@@ -145,16 +147,18 @@ List<GitDependency> findGitDependencies(List<String> lines, {String remoteBase =
   return out;
 }
 
-/// The cross-repo dependencies among [deps].
-Iterable<GitDependency> crossRepo(Iterable<GitDependency> deps) => deps.where((d) => d.repo != null && d.repo != selfRepo);
+/// The cross-repo dependencies among [deps], seen from the repo [self].
+Iterable<GitDependency> crossRepo(Iterable<GitDependency> deps, {String self = selfRepo}) =>
+    deps.where((d) => d.repo != null && d.repo != self);
 
 /// [text] (a pubspec) with every cross-repo git dependency's `ref:` set to
 /// `shaFor(repo)`; only ref lines change. Throws [FormatException] for a
 /// one-line `git: <url>` dependency.
-String pinPubspec(String text, String Function(String repo) shaFor, {String remoteBase = defaultRemoteBase}) {
+String pinPubspec(String text, String Function(String repo) shaFor,
+    {String remoteBase = defaultRemoteBase, String self = selfRepo}) {
   final nl = text.contains('\r\n') ? '\r\n' : '\n';
   final lines = text.split(nl);
-  final deps = crossRepo(findGitDependencies(lines, remoteBase: remoteBase)).toList();
+  final deps = crossRepo(findGitDependencies(lines, remoteBase: remoteBase), self: self).toList();
   // Bottom-up, so inserted lines do not shift the ones still to edit.
   for (final d in deps.reversed) {
     if (d.shortForm) {
@@ -218,6 +222,7 @@ Future<int> run(List<String> args, {StringSink? out, StringSink? err}) async {
   err ??= stderr;
   var fromLocal = false, check = false, dryRun = false;
   var remoteBase = defaultRemoteBase;
+  var self = selfRepo;
   Directory root = File.fromUri(Platform.script).parent.parent;
   for (var i = 0; i < args.length; i++) {
     final a = args[i];
@@ -237,8 +242,10 @@ Future<int> run(List<String> args, {StringSink? out, StringSink? err}) async {
         root = Directory(next());
       case '--remote-base':
         remoteBase = next();
+      case '--self':
+        self = next();
       case '-h' || '--help':
-        out.writeln('usage: dart run tool/pin_deps.dart [--from-local | --check] [--root <dir>] [--remote-base <url>] [--dry-run]');
+        out.writeln('usage: dart run tool/pin_deps.dart [--from-local | --check] [--root <dir>] [--self <repo>] [--remote-base <url>] [--dry-run]');
         return 0;
       default:
         err.writeln('Unknown option $a');
@@ -254,7 +261,7 @@ Future<int> run(List<String> args, {StringSink? out, StringSink? err}) async {
   if (check) {
     var bad = 0;
     for (final f in pubspecs) {
-      for (final d in crossRepo(findGitDependencies(f.readAsLinesSync(), remoteBase: remoteBase))) {
+      for (final d in crossRepo(findGitDependencies(f.readAsLinesSync(), remoteBase: remoteBase), self: self)) {
         if (d.pinned) continue;
         bad++;
         err.writeln('${f.path}: ${d.name} (${d.repo}) ${d.ref == null ? 'has no ref:' : 'ref ${d.ref} is not a commit SHA'}');
@@ -271,7 +278,7 @@ Future<int> run(List<String> args, {StringSink? out, StringSink? err}) async {
   final shas = <String, String>{};
   try {
     for (final f in pubspecs) {
-      for (final d in crossRepo(findGitDependencies(f.readAsLinesSync(), remoteBase: remoteBase))) {
+      for (final d in crossRepo(findGitDependencies(f.readAsLinesSync(), remoteBase: remoteBase), self: self)) {
         final repo = d.repo!;
         if (shas.containsKey(repo)) continue;
         shas[repo] = fromLocal ? await localHead(root, repo) : await remoteHead(remoteBase, repo);
@@ -288,7 +295,7 @@ Future<int> run(List<String> args, {StringSink? out, StringSink? err}) async {
     final before = f.readAsStringSync();
     final String after;
     try {
-      after = pinPubspec(before, (repo) => shas[repo]!, remoteBase: remoteBase);
+      after = pinPubspec(before, (repo) => shas[repo]!, remoteBase: remoteBase, self: self);
     } on FormatException catch (e) {
       err.writeln('${f.path}: ${e.message}');
       return 1;

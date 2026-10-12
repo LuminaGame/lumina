@@ -37,7 +37,8 @@ void main() {
     for (final f in pin.workspacePubspecs(Directory(repoRoot)).skip(1)) {
       final rel = p.relative(f.path, from: repoRoot);
       File(p.join(root.path, rel)).parent.createSync(recursive: true);
-      f.copySync(p.join(root.path, rel));
+      // Unpinned copies, whether or not the workspace is pinned right now.
+      File(p.join(root.path, rel)).writeAsStringSync(withoutRefs(f.readAsStringSync()));
     }
     heads = {};
     for (final repo in repos) {
