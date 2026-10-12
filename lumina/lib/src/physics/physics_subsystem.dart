@@ -10,6 +10,7 @@ import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/src/object/actor.dart';
 import 'package:lumina/src/world/subsystem/world_subsystem.dart';
 import 'package:lumina/src/world/world.dart';
+import 'package:lumina/src/physics/cloth/cloth_component.dart';
 import 'package:lumina/src/physics/contact_solver.dart';
 import 'package:lumina/src/physics/dart_physics_backend.dart';
 import 'package:lumina/src/physics/jolt/jolt_backend_factory.dart';
@@ -118,6 +119,7 @@ class LuminaPhysicsSubsystem extends LuminaWorldSubsystem {
   final Map<LuminaRigidBody, _BodyRecord> _records = {};
   final Map<String, _Hit> _pendingHits = {};
   final List<LuminaPhysicsJoint> _joints = [];
+  final List<LuminaClothComponent> _cloths = [];
   int _nextBodyId = 0;
   double _accumulator = 0.0;
 
@@ -169,6 +171,21 @@ class LuminaPhysicsSubsystem extends LuminaWorldSubsystem {
 
   /// The joints, in creation order.
   List<LuminaPhysicsJoint> get joints => List.unmodifiable(_joints);
+
+  /// The cloth components of this world, in registration order (simulated
+  /// when [backend] has a cloth simulator).
+  List<LuminaClothComponent> get cloths => List.unmodifiable(_cloths);
+
+  /// Registers [cloth] (its geometry is built); the cloth starts or stops
+  /// its simulation itself.
+  void addCloth(LuminaClothComponent cloth) {
+    if (!_cloths.contains(cloth)) _cloths.add(cloth);
+  }
+
+  void removeCloth(LuminaClothComponent cloth) {
+    if (!_cloths.remove(cloth)) return;
+    backend.cloth?.remove(cloth);
+  }
 
   /// Connects two bodies of this subsystem; they stop colliding with each
   /// other.
@@ -383,7 +400,7 @@ class LuminaPhysicsSubsystem extends LuminaWorldSubsystem {
   /// raises the frame's hit events.
   void advance(double deltaTime) {
     lastFrameSteps = 0;
-    if (_bodies.isEmpty || deltaTime <= 0) return;
+    if ((_bodies.isEmpty && _cloths.isEmpty) || deltaTime <= 0) return;
     _syncFromComponents();
     _accumulator += deltaTime;
     var steps = (_accumulator / fixedTimeStep + 1e-9).floor();
@@ -513,6 +530,9 @@ class LuminaPhysicsSubsystem extends LuminaWorldSubsystem {
     }
     _joints.clear();
     _pendingHits.clear();
+    for (final c in List.of(_cloths)) {
+      removeCloth(c);
+    }
     backend.dispose();
     super.onWorldShutdown();
   }

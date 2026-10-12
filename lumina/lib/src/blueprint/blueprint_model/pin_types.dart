@@ -203,6 +203,7 @@ abstract final class LuminaBlueprintObjectClass {
     'LuminaPoseAuthoringComponent': 'LuminaActorComponent',
     'LuminaPoseGrabInteractor': 'LuminaActorComponent',
     'LuminaTraversalComponent': 'LuminaActorComponent',
+    'LuminaClothComponent': 'LuminaSceneComponent',
     'LuminaArrowComponent': 'LuminaSceneComponent',
     'LuminaLightComponent': 'LuminaSceneComponent',
     'LuminaPointLightComponent': 'LuminaLightComponent',

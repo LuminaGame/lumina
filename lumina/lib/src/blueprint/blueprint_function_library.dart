@@ -42,6 +42,7 @@ import 'package:lumina/src/components/mesh/animated_mesh_component.dart';
 import 'package:lumina/src/components/mesh/skeletal_mesh_component.dart';
 import 'package:lumina/src/components/mesh/static_mesh_component.dart';
 import 'package:lumina/src/components/movement/character_movement_component.dart';
+import 'package:lumina/src/physics/cloth/cloth_component.dart';
 import 'package:lumina/src/physics/ragdoll/ragdoll_component.dart';
 import 'package:lumina/src/components/mesh/pose_authoring/pose_authoring_nodes.dart';
 import 'package:lumina/src/components/movement/traversal/traversal_check.dart';
@@ -93,6 +94,7 @@ part 'blueprint_function_library/game_framework_save_input.dart';
 part 'blueprint_function_library/rendering_features.dart';
 part 'blueprint_function_library/audio_animation_effects_debug.dart';
 part 'blueprint_function_library/widget_blueprint.dart';
+part 'blueprint_function_library/cloth.dart';
 part 'blueprint_function_library/ragdoll.dart';
 part 'blueprint_function_library/traversal.dart';
 part 'blueprint_function_library/window_mode.dart';
@@ -971,6 +973,13 @@ abstract final class LuminaBlueprintFunctionLibrary {
   static const isRagdoll = _isRagdoll;
   static const addRagdollImpulse = _addRagdollImpulse;
 
+  /// The owner's cloth components (see `LuminaClothComponent`).
+  static const setClothWind = _setClothWind;
+  static const setClothSimulationEnabled = _setClothSimulationEnabled;
+  static const isClothSimulating = _isClothSimulating;
+  static const resetCloth = _resetCloth;
+  static const pinClothVertex = _pinClothVertex;
+
   /// Traversal through the owner's traversal component (see its class).
   static const tryTraversalAction = _tryTraversalAction;
   static const traversalCheck = _traversalCheck;
@@ -1047,15 +1056,9 @@ abstract final class LuminaBlueprintFunctionLibrary {
 
   /// One entry per [functions] key: the direct call generated code emits.
   static final Map<String, LuminaBlueprintCallShape> callShapes = Map.unmodifiable(<String, LuminaBlueprintCallShape>{
-    ..._coreCallShapes,
-    ..._objectCallShapes,
-    ..._mathCallShapes,
-    ..._engineCallShapes,
-    ..._gameFrameworkCallShapes,
-    ..._renderingFeatureCallShapes,
-    ..._widgetBlueprintCallShapes,
-    ..._ragdollCallShapes,
-    ..._traversalCallShapes,
+    ..._coreCallShapes, ..._objectCallShapes, ..._mathCallShapes, ..._engineCallShapes,
+    ..._gameFrameworkCallShapes, ..._renderingFeatureCallShapes, ..._widgetBlueprintCallShapes,
+    ..._ragdollCallShapes, ..._clothCallShapes, ..._traversalCallShapes,
     ..._windowModeCallShapes, ..._displaySettingsCallShapes, ..._performanceStatsCallShapes,
     ..._comboBoxCallShapes, ..._umgViewportCallShapes, ..._poseAuthoringCallShapes,
     ..._conversionCallShapes,
@@ -1081,16 +1084,9 @@ abstract final class LuminaBlueprintFunctionLibrary {
   /// One entry per pure / impure built-in node, keyed by node id.
   static final Map<String, LuminaBlueprintFunction>
   builtInFunctions = Map.unmodifiable(<String, LuminaBlueprintFunction>{
-    ..._coreFunctions,
-    ..._objectFunctions,
-    ..._mathFunctions,
-    ..._engineFunctions,
-    ..._graphMemberFunctions,
-    ..._gameFrameworkFunctions,
-    ..._renderingFeatureFunctions,
-    ..._widgetBlueprintFunctions,
-    ..._ragdollFunctions,
-    ..._traversalFunctions,
+    ..._coreFunctions, ..._objectFunctions, ..._mathFunctions, ..._engineFunctions, ..._graphMemberFunctions,
+    ..._gameFrameworkFunctions, ..._renderingFeatureFunctions, ..._widgetBlueprintFunctions,
+    ..._ragdollFunctions, ..._clothFunctions, ..._traversalFunctions,
     ..._windowModeFunctions, ..._displaySettingsFunctions, ..._performanceStatsFunctions,
     ..._comboBoxFunctions, ..._umgViewportFunctions, ..._poseAuthoringFunctions,
     ..._conversionFunctions,

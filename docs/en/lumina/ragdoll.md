@@ -87,4 +87,4 @@ On the Jolt backend (native desktop, see [Physics backends](physics.md#physics-b
 
 ---
 
-[Previous: Physics](physics.md) | [Up: lumina (engine core)](index.md) | [Next: AI](ai.md)
+[Previous: Physics](physics.md) | [Up: lumina (engine core)](index.md) | [Next: Cloth](cloth.md)

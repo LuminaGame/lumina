@@ -1,3 +1,4 @@
+import 'package:lumina/src/physics/cloth/cloth_simulator.dart';
 import 'package:lumina/src/physics/contact_solver.dart';
 import 'package:lumina/src/physics/jolt/jolt_backend_factory.dart';
 import 'package:lumina/src/physics/physics_joint.dart';
@@ -60,6 +61,10 @@ abstract class LuminaPhysicsBackend {
   /// The contacts of the last step; [LuminaContactManifold.a] is always a
   /// body, [LuminaContactManifold.b] null for a static collider.
   List<LuminaContactManifold> get contacts;
+
+  /// The cloth simulation, or null when this backend has none (cloth then
+  /// draws its rest pose).
+  LuminaClothSimulator? get cloth;
 
   /// Frees what the backend holds (the subsystem shut down).
   void dispose();

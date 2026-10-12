@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:vector_math/vector_math_64.dart';
 
 import 'package:lumina/src/components/collision/collision_component.dart';
+import 'package:lumina/src/physics/cloth/cloth_simulator.dart';
 import 'package:lumina/src/physics/contact_generation.dart';
 import 'package:lumina/src/physics/contact_solver.dart';
 import 'package:lumina/src/physics/joint_batch.dart';
@@ -51,6 +52,10 @@ class LuminaDartPhysicsBackend implements LuminaPhysicsBackend {
 
   @override
   List<LuminaContactManifold> get contacts => List.unmodifiable(solver.manifolds);
+
+  /// The Dart solver simulates no cloth.
+  @override
+  LuminaClothSimulator? get cloth => null;
 
   @override
   void bodyAdded(LuminaRigidBody body) {}

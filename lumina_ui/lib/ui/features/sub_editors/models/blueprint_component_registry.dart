@@ -1,5 +1,6 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart' show IconData, LucideIcons;
 
+import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_component_registry/cloth_component_descriptor.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_component_registry/traversal_component_descriptor.dart';
 
 part 'blueprint_component_registry/core_descriptors.dart';
@@ -128,6 +129,7 @@ class BlueprintComponentRegistry {
     ..._inputComponentDescriptors,
     ..._lightComponentDescriptors,
     traversalComponentDescriptor,
+    clothComponentDescriptor,
   ];
 
   static ComponentTypeDescriptor? getDescriptor(String typeName) {

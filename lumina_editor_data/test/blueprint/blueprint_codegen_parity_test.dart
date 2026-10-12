@@ -8,6 +8,7 @@ import 'package:vector_math/vector_math_64.dart';
 
 import '../../../lumina/test/blueprint/anim_blueprints.dart';
 import '../../../lumina/test/blueprint/collision_shapes_blueprint.dart';
+import '../../../lumina/test/blueprint/cloth_blueprint.dart';
 import '../../../lumina/test/blueprint/physics_blueprint.dart';
 import '../../../lumina/test/blueprint/anim_rig.dart';
 import '../../../lumina/test/blueprint/engine_nodes_blueprint.dart';
@@ -19,6 +20,7 @@ import '../../../lumina/test/blueprint/level_load_blueprint.dart';
 import '../../../lumina/test/blueprint/level_load_fixture.dart';
 import '../../../lumina/test/blueprint/generated/abp_character.g.dart';
 import '../../../lumina/test/blueprint/generated/bp_collision_shapes.g.dart';
+import '../../../lumina/test/blueprint/generated/bp_cloth.g.dart';
 import '../../../lumina/test/blueprint/generated/bp_physics.g.dart';
 import '../../../lumina/test/blueprint/generated/bp_engine_nodes.g.dart';
 import '../../../lumina/test/blueprint/generated/bp_reusable_graphs.g.dart';
@@ -235,6 +237,36 @@ void main() {
     expect((gen.actor as BpTypedPins).armLength, 500.0);
     expect((vm.actor as LuminaBlueprintInstance).variables['ArmLength'], 500.0);
     expect(gen.actor.blueprintClassName, 'bp_typed_pins');
+  });
+
+  test('cloth graph: a cloth component and every Cloth node trace and simulate the same (Jolt)', () async {
+    LuminaPhysicsSubsystem.defaultBackend = LuminaPhysicsBackendKind.jolt;
+    addTearDown(() => LuminaPhysicsSubsystem.defaultBackend = LuminaPhysicsBackendKind.auto);
+    Future<({LuminaWorld world, List<LuminaBlueprintTraceEvent> trace, LuminaClothComponent cloth})> setUp(bool generated) async {
+      final w = world();
+      final LuminaActor actor =
+          generated ? BpCloth() : LuminaBlueprintClass.fromDocument(clothBlueprint(), name: 'bp_cloth').instantiate();
+      final trace = <LuminaBlueprintTraceEvent>[];
+      (actor as LuminaBlueprintRuntime).trace = trace.add;
+      final cloth = actor.getComponent<LuminaClothComponent>()!;
+      w.persistentLevel.registerActor(actor);
+      w.beginPlay();
+      await cloth.ready;
+      for (var i = 0; i < 60; i++) {
+        w.tick(1 / 60);
+      }
+      return (world: w, trace: trace, cloth: cloth);
+    }
+
+    final vm = await setUp(false);
+    final gen = await setUp(true);
+    final printed = [for (final t in vm.trace) if (t.printed != null) t.printed!];
+    expect(printed, ['true', 'false', 'true']);
+    expectSameTrace(vm.trace, gen.trace);
+    expect(gen.cloth.toProperties(), vm.cloth.toProperties());
+    expect(gen.cloth.currentSimPositions(), vm.cloth.currentSimPositions(), reason: 'the same simulation');
+    vm.world.cleanup();
+    gen.world.cleanup();
   });
 
   test('physics graph: simulating components, every Physics node and Event Hit trace the same', () {

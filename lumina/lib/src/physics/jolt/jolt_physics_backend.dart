@@ -4,7 +4,10 @@ import 'package:vector_math/vector_math_64.dart';
 import 'package:lumina/src/components/collision/collision_component.dart';
 import 'package:lumina/src/object/actor.dart';
 import 'package:lumina/src/physics/contact_solver.dart';
+import 'package:lumina/src/physics/cloth/cloth_component.dart';
+import 'package:lumina/src/physics/cloth/cloth_simulator.dart';
 import 'package:lumina/src/physics/jolt/jolt_body_shapes.dart';
+import 'package:lumina/src/physics/jolt/jolt_cloth_simulator.dart';
 import 'package:lumina/src/physics/jolt/jolt_collision_profiles.dart';
 import 'package:lumina/src/physics/jolt/jolt_joints.dart';
 import 'package:lumina/src/physics/jolt/jolt_static_colliders.dart';
@@ -75,6 +78,7 @@ class LuminaJoltPhysicsBackend implements LuminaPhysicsBackend {
   late LuminaPhysicsSubsystem _physics;
   late final LuminaJoltCollisionProfiles _profiles = LuminaJoltCollisionProfiles(_world);
   late final LuminaJoltStaticColliders _statics = LuminaJoltStaticColliders(_world, _profiles, _ownerOfComponent);
+  late final LuminaJoltClothSimulator _cloth = LuminaJoltClothSimulator(() => _world);
   final Map<LuminaRigidBody, _Mirror> _mirrors = {};
   final Map<int, _Mirror> _byId = {};
   final Map<LuminaPhysicsJoint, LuminaJoltJoint> _joints = {};
@@ -85,6 +89,9 @@ class LuminaJoltPhysicsBackend implements LuminaPhysicsBackend {
 
   /// The Jolt world (tests and diagnostics).
   JoltWorld get joltWorld => _world;
+
+  /// The Jolt soft body of [cloth] (null when it is not simulated).
+  int? clothBodyOf(LuminaClothComponent cloth) => _cloth.bodyOf(cloth);
 
   /// The Jolt body id of [body] (null when it is not in this backend).
   int? joltBodyId(LuminaRigidBody body) => _mirrors[body]?.id;
@@ -118,6 +125,9 @@ class LuminaJoltPhysicsBackend implements LuminaPhysicsBackend {
 
   @override
   List<LuminaContactManifold> get contacts => List.unmodifiable(_contacts);
+
+  @override
+  LuminaClothSimulator get cloth => _cloth;
 
   int _ownerOf(LuminaActor? actor) {
     if (actor == null) return 0;
@@ -351,6 +361,7 @@ class LuminaJoltPhysicsBackend implements LuminaPhysicsBackend {
       j.sync();
     }
     _profiles.flush();
+    _cloth.beforeStep(dt);
     _world.step(dt);
     _read(bodies);
     _collectContacts(dt, physics.gravity.length);
@@ -441,6 +452,7 @@ class LuminaJoltPhysicsBackend implements LuminaPhysicsBackend {
     if (_disposed) return;
     _disposed = true;
     _joints.clear();
+    _cloth.clear();
     _mirrors.clear();
     _byId.clear();
     _contacts = const [];

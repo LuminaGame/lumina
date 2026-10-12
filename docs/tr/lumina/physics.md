@@ -270,6 +270,8 @@ A surface's physical response: Coulomb [friction] (dynamic; [staticFriction] whi
 
 Bu makinede ölçülen (Windows, 120 Hz adım): 200 kutu Jolt'ta 60 Hz kare başına 0.9–1.3 ms, Dart'ta 2.56 ms; 16 body'li mannequin ragdoll'u adım başına 18 µs, Dart'ta 236 µs; güçlü ragdoll ortalama eklem sapması 4.0° (Dart 8.3°).
 
+**Kumaş**: backend'in `cloth`'u (`LuminaClothSimulator`) kumaş bileşenlerini Jolt soft body'leri üzerinde simüle eder; Dart backend'inde yoktur (kumaş dinlenme pozunu çizer). Bkz. [Kumaş](cloth.md).
+
 **Sınırlar**: sahne sorguları (trace, sweep, overlap) iki backend için de çarpışma subsystem'inde kalır; Jolt'taki temas impulsları tahmindir; üzerinde body duran bir landscape heightfield'ı ancak veri nesnesi değişince yeniden kurulur.
 
 ## Eklemler ve ragdoll'lar

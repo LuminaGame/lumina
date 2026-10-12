@@ -270,6 +270,8 @@ A surface's physical response: Coulomb [friction] (dynamic; [staticFriction] whi
 
 Measured on this machine (Windows, 120 Hz steps): 200 boxes 0.9–1.3 ms per 60 Hz frame on Jolt vs 2.56 ms on Dart; the 16-body mannequin ragdoll 18 µs per step vs 236 µs; powered ragdoll mean joint deviation 4.0° (Dart 8.3°).
 
+**Cloth**: the backend's `cloth` (`LuminaClothSimulator`) simulates cloth components on Jolt soft bodies; the Dart backend has none (cloth draws its rest pose). See [Cloth](cloth.md).
+
 **Limits**: scene queries (traces, sweeps, overlaps) stay on the collision subsystem for both backends; contact impulses on Jolt are estimates; a landscape heightfield edited while bodies rest on it is rebuilt only when its data object changes.
 
 ## Joints and ragdolls

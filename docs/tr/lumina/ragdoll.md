@@ -87,4 +87,4 @@ Jolt backend'inde (native masaüstü, bkz. [Fizik backend'leri](physics.md#fizik
 
 ---
 
-[Önceki: Fizik](physics.md) | [Üst: lumina (engine çekirdeği)](index.md) | [Sonraki: Yapay zeka (AI)](ai.md)
+[Önceki: Fizik](physics.md) | [Üst: lumina (engine çekirdeği)](index.md) | [Sonraki: Kumaş](cloth.md)
