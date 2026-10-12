@@ -99,32 +99,11 @@ class LuminaViewportMotion {
     return out;
   }
 
-  /// The skeleton order of a mesh GLB's packed motions: its first skin's
-  /// joints and their ancestors, by glTF node index, as node names.
-  static List<String> skeletonOrder(Uint8List glb) {
-    final json = _json(glb);
-    if (json == null) return const [];
-    final nodes = json['nodes'];
-    final skins = json['skins'];
-    if (nodes is! List || skins is! List || skins.isEmpty) return const [];
-    final parent = List<int>.filled(nodes.length, -1);
-    for (var i = 0; i < nodes.length; i++) {
-      final c = nodes[i] is Map ? (nodes[i] as Map)['children'] : null;
-      if (c is List) {
-        for (final k in c) {
-          if (k is int && k < parent.length) parent[k] = i;
-        }
-      }
-    }
-    final set = <int>{};
-    for (final j in ((skins.first as Map)['joints'] as List? ?? const [])) {
-      if (j is! int) continue;
-      set.add(j);
-      for (var p = parent[j]; p >= 0 && set.add(p); p = parent[p]) {}
-    }
-    final ordered = set.toList()..sort();
-    return [for (final i in ordered) nodes[i] is Map ? '${(nodes[i] as Map)['name'] ?? 'joint_$i'}' : 'joint_$i'];
-  }
+  /// The skeleton order of a mesh GLB's packed motions: the joints of every
+  /// skin and their ancestors, by glTF node index, as node names (a
+  /// MetaHuman's first skin is only part of the head; its arms and legs are
+  /// in later skins or are ancestors no skin lists).
+  static List<String> skeletonOrder(Uint8List glb) => LuminaViewportSkeleton.parse(glb).names;
 
   static Map? _json(Uint8List glb) {
     if (glb.length < 20) return null;
@@ -134,5 +113,84 @@ class LuminaViewportMotion {
     if (d.getUint32(16, Endian.little) != 0x4E4F534A || 20 + length > glb.length) return null;
     final decoded = jsonDecode(utf8.decode(glb.sublist(20, 20 + length)));
     return decoded is Map ? decoded : null;
+  }
+}
+
+/// The skeleton a Viewport poses on a skeletal mesh, read from its GLB:
+/// the joints of every skin and their ancestors in glTF node order
+/// ([LuminaViewportMotion.skeletonOrder]), where each joint's entity is
+/// found on an instance ([slots]: its skin and index in that skin, null for
+/// an ancestor no skin lists) and its parent in this list ([parents]).
+class LuminaViewportSkeleton {
+  const LuminaViewportSkeleton(this.names, this.slots, this.parents);
+
+  static const LuminaViewportSkeleton empty = LuminaViewportSkeleton([], [], []);
+
+  final List<String> names;
+  final List<(int, int)?> slots;
+  final List<int> parents;
+
+  int get length => names.length;
+
+  static LuminaViewportSkeleton parse(Uint8List glb) {
+    final json = LuminaViewportMotion._json(glb);
+    if (json == null) return empty;
+    final nodes = json['nodes'];
+    final skins = json['skins'];
+    if (nodes is! List || skins is! List || skins.isEmpty) return empty;
+    final parent = List<int>.filled(nodes.length, -1);
+    for (var i = 0; i < nodes.length; i++) {
+      final c = nodes[i] is Map ? (nodes[i] as Map)['children'] : null;
+      if (c is List) {
+        for (final k in c) {
+          if (k is int && k < parent.length) parent[k] = i;
+        }
+      }
+    }
+    final slot = <int, (int, int)>{};
+    final set = <int>{};
+    for (var s = 0; s < skins.length; s++) {
+      final joints = skins[s] is Map ? (skins[s] as Map)['joints'] : null;
+      if (joints is! List) continue;
+      for (var k = 0; k < joints.length; k++) {
+        final j = joints[k];
+        if (j is! int || j < 0 || j >= nodes.length) continue;
+        slot.putIfAbsent(j, () => (s, k));
+        set.add(j);
+        for (var p = parent[j]; p >= 0 && set.add(p); p = parent[p]) {}
+      }
+    }
+    final ordered = set.toList()..sort();
+    final index = {for (var i = 0; i < ordered.length; i++) ordered[i]: i};
+    return LuminaViewportSkeleton(
+      [for (final i in ordered) nodes[i] is Map ? '${(nodes[i] as Map)['name'] ?? 'joint_$i'}' : 'joint_$i'],
+      [for (final i in ordered) slot[i]],
+      [for (final i in ordered) index[parent[i]] ?? -1],
+    );
+  }
+
+  /// The entity of each joint on an instance: a skin joint from
+  /// [jointsAt] (a skin's joint entities), an ancestor as the parent
+  /// ([parentOf]) of one of its children; 0 where none resolves.
+  List<int> entities(List<int> Function(int skin) jointsAt, int Function(int entity) parentOf) {
+    final skins = <int, List<int>>{};
+    final out = List<int>.filled(length, 0);
+    for (var i = 0; i < length; i++) {
+      final s = slots[i];
+      if (s == null) continue;
+      final list = skins[s.$1] ??= jointsAt(s.$1);
+      if (s.$2 < list.length) out[i] = list[s.$2];
+    }
+    // Ancestors from their children, deepest first (repeat until stable).
+    for (var changed = true; changed;) {
+      changed = false;
+      for (var i = 0; i < length; i++) {
+        final p = parents[i];
+        if (p < 0 || out[p] != 0 || out[i] == 0) continue;
+        out[p] = parentOf(out[i]);
+        if (out[p] != 0) changed = true;
+      }
+    }
+    return out;
   }
 }

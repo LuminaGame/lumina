@@ -21,6 +21,7 @@ mixin _ViewportMedia {
   bool get isDisposed;
   void _fail(String asset, String message);
   void _replaceMesh(_RuntimeNode node, String asset);
+  List<int> _jointEntities(_RuntimeNode node);
   void _writePose(_RuntimeNode node, Map pose);
 
   /// Meshes made in memory (an animation retargeted onto a node's mesh),
@@ -115,17 +116,24 @@ mixin _ViewportMedia {
       return null;
     }
     final tm = FilamentTransformManager(engine);
-    final entities = instance.jointsAt(0);
+    final all = _jointEntities(node);
+    final entities = <int>[];
+    final names = <String>[];
+    for (var i = 0; i < all.length && i < node.jointNames.length; i++) {
+      if (all[i] == 0) continue;
+      entities.add(all[i]);
+      names.add(node.jointNames[i]);
+    }
     final saved = [for (final e in entities) tm.getTransform(e)];
     instance.animator.applyAnimation(index, time);
     final pose = <String, Object?>{};
-    for (var i = 0; i < entities.length && i < node.jointNames.length; i++) {
+    for (var i = 0; i < entities.length && i < names.length; i++) {
       final m = Matrix4.fromList(tm.getTransform(entities[i]));
       final t = Vector3.zero();
       final r = Quaternion.identity();
       final s = Vector3.zero();
       m.decompose(t, r, s);
-      pose[node.jointNames[i]] = <Object?>[t.x, t.y, t.z, r.x, r.y, r.z, r.w];
+      pose[names[i]] = <Object?>[t.x, t.y, t.z, r.x, r.y, r.z, r.w];
     }
     for (var i = 0; i < entities.length; i++) {
       tm.setTransform(entities[i], saved[i]);

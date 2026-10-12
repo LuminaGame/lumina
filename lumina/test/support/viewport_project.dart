@@ -70,6 +70,34 @@ class ViewportTestProject {
     return ViewportTestProject._(dir, idleClip, mannequinAt, idleAt);
   }
 
+  /// Writes the mannequin at [path] as a multi-skin mesh the way a MetaHuman
+  /// export lays one out: a first skin of the head and neck joints only,
+  /// then the full body skin. Returns the written GLB.
+  Uint8List writeMultiSkinMannequin(String path) {
+    final doc = GlbDocument.parse(File('${viewportTestAssets.path}/${sources[mannequin]}').readAsBytesSync());
+    final nodes = (doc.json['nodes'] as List).cast<Map<String, dynamic>>();
+    final head = <int>[];
+    void collect(int i) {
+      head.add(i);
+      for (final c in (nodes[i]['children'] as List? ?? const [])) {
+        collect(c as int);
+      }
+    }
+
+    collect(nodes.indexWhere((n) => n['name'] == 'neck_01'));
+    final skins = (doc.json['skins'] as List).cast<Map<String, dynamic>>();
+    doc.json['skins'] = [
+      {'name': 'head_skin', 'joints': head..sort()},
+      ...skins,
+    ];
+    for (final n in nodes) {
+      if (n['skin'] is int) n['skin'] = (n['skin'] as int) + 1;
+    }
+    final glb = doc.encode();
+    _write(dir, path, glb, AssetType.filameshSk, {'payload_format': 'glb', 'animation_clips': idleClip});
+    return glb;
+  }
+
   static void _write(Directory dir, String path, Uint8List glb, AssetType type, Map<String, String> metadata) {
     final file = File('${dir.path}/$path')..parent.createSync(recursive: true);
     final name = path.split('/').last.replaceAll('.lmas', '');

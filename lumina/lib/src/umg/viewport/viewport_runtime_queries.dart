@@ -52,11 +52,11 @@ mixin _ViewportQueries {
     final instance = mesh?.assetInstance;
     if (pose.isEmpty || instance == null || instance.skinCount == 0) return;
     final tm = FilamentTransformManager(engine);
-    final entities = instance.jointsAt(0);
+    final entities = _jointEntities(node);
     final names = node.jointNames;
     for (var i = 0; i < entities.length && i < names.length; i++) {
       final v = pose[names[i]];
-      if (v is! List || v.length < 7) continue;
+      if (v is! List || v.length < 7 || entities[i] == 0) continue;
       double at(int k, double d) => k < v.length && v[k] is num ? (v[k] as num).toDouble() : d;
       tm.setTransform(
         entities[i],
@@ -103,26 +103,20 @@ mixin _ViewportQueries {
     }
   }
 
-  static final Map<String, List<String>> _jointNameCache = {};
+  /// The skeletons read per mesh asset.
+  static final Map<String, LuminaViewportSkeleton> _skeletonCache = {};
 
-  /// The joint names of the first skin of the GLB [glb] (its JSON chunk).
-  static List<String> skinJointNames(Uint8List glb) {
-    if (glb.length < 20) return const [];
-    final data = ByteData.sublistView(glb);
-    if (data.getUint32(0, Endian.little) != 0x46546C67) return const [];
-    final length = data.getUint32(12, Endian.little);
-    if (data.getUint32(16, Endian.little) != 0x4E4F534A || 20 + length > glb.length) return const [];
-    final json = jsonDecode(utf8.decode(glb.sublist(20, 20 + length)));
-    if (json is! Map) return const [];
-    final skins = json['skins'];
-    final nodes = json['nodes'];
-    if (skins is! List || skins.isEmpty || nodes is! List) return const [];
-    final joints = (skins.first as Map)['joints'];
-    if (joints is! List) return const [];
-    return [
-      for (final j in joints)
-        j is int && j < nodes.length && nodes[j] is Map ? '${(nodes[j] as Map)['name'] ?? '#$j'}' : '#$j',
-    ];
+  /// The entities of [node]'s skeleton on its current instance (resolved
+  /// once per instance); empty before load.
+  List<int> _jointEntities(_RuntimeNode node) {
+    final instance = node.skeletal?.assetInstance;
+    if (instance == null || instance.skinCount == 0) return const [];
+    if (!identical(node.jointEntitiesOf, instance) || node.jointEntities.length != node.skeleton.length) {
+      final tm = FilamentTransformManager(engine);
+      node.jointEntities = node.skeleton.entities(instance.jointsAt, tm.getParent);
+      node.jointEntitiesOf = instance;
+    }
+    return node.jointEntities;
   }
 
   // --- Picking and joints ----------------------------------------------------
@@ -170,7 +164,7 @@ mixin _ViewportQueries {
     if (instance == null || instance.skinCount == 0) return const [];
     final tm = FilamentTransformManager(engine);
     final names = _nodes[id]!.jointNames;
-    final entities = instance.jointsAt(0);
+    final entities = _jointEntities(_nodes[id]!);
     final index = {for (var i = 0; i < entities.length; i++) entities[i]: i};
     return [
       for (var i = 0; i < entities.length; i++)
@@ -190,7 +184,7 @@ mixin _ViewportQueries {
     final instance = node?.skeletal?.assetInstance;
     if (node == null || instance == null || instance.skinCount == 0) return const [];
     final tm = FilamentTransformManager(engine);
-    final entities = instance.jointsAt(0);
+    final entities = _jointEntities(node);
     final names = node.jointNames;
     final index = {for (var i = 0; i < entities.length; i++) entities[i]: i};
     final worlds = List<Matrix4?>.filled(entities.length, null);
@@ -237,8 +231,8 @@ mixin _ViewportQueries {
     final instance = node.skeletal?.assetInstance;
     final i = node.jointNames.indexOf(name);
     if (instance == null || i < 0 || instance.skinCount == 0) return null;
-    final entities = instance.jointsAt(0);
-    if (i >= entities.length) return null;
+    final entities = _jointEntities(node);
+    if (i >= entities.length || entities[i] == 0) return null;
     return Matrix4.fromList(FilamentTransformManager(engine).getWorldTransform(entities[i]));
   }
 

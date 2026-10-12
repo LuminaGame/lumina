@@ -53,8 +53,13 @@ class _RuntimeNode {
   /// The skeletal mesh's sockets (name → bone), from its `.lmas`.
   Map<String, String> sockets = const {};
 
-  /// The joint names of the mesh's first skin, in the skin's order.
-  List<String> jointNames = const [];
+  /// The mesh's skeleton: every skin's joints and their ancestors.
+  LuminaViewportSkeleton skeleton = LuminaViewportSkeleton.empty;
+  List<String> get jointNames => skeleton.names;
+
+  /// [skeleton]'s entities on the instance they were resolved for.
+  List<int> jointEntities = const [];
+  Object? jointEntitiesOf;
 
   /// Textures bound to material parameters, by `slot/parameter`.
   final Map<String, LuminaMaterialTextures> textures = {};
@@ -340,8 +345,8 @@ class LuminaViewportSceneRuntime with _ViewportQueries, _ViewportMedia, _Viewpor
   Future<void> _readSkeleton(_RuntimeNode node, LuminaStaticMeshComponent mesh) async {
     try {
       final key = node.meshAsset;
-      final names = _ViewportQueries._jointNameCache[key] ??= _ViewportQueries.skinJointNames(await LuminaMeshAssetCache.meshBytes(_read, key));
-      if (identical(node.root, mesh)) node.jointNames = names;
+      final skeleton = _ViewportQueries._skeletonCache[key] ??= LuminaViewportSkeleton.parse(await LuminaMeshAssetCache.meshBytes(_read, key));
+      if (identical(node.root, mesh)) node.skeleton = skeleton;
     } catch (_) {
       // Unnamed joints.
     }

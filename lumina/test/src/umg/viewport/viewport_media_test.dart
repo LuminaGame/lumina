@@ -94,6 +94,40 @@ void main() {
     }
   });
 
+  test('a packed motion and the skeleton overlay of a multi-skin mesh span every skin, not just the first', () async {
+    if (skip()) return;
+    const multi = 'contents/meshes/skeletal/SKM_MultiSkin.lmas';
+    final meshGlb = project.writeMultiSkinMannequin(multi);
+    final order = LuminaViewportMotion.skeletonOrder(meshGlb);
+    expect(order, containsAll(['head', 'hand_r', 'pelvis']), reason: 'the body skin is the second one');
+    final data = Float32List(2 * order.length * 10);
+    for (var f = 0; f < 2; f++) {
+      for (var j = 0; j < order.length; j++) {
+        final o = (f * order.length + j) * 10;
+        data[o + 6] = 1;
+        data[o + 7] = data[o + 8] = data[o + 9] = 1;
+        if (f == 1 && order[j] == 'hand_r') data[o] = 0.2;
+      }
+    }
+    final file = File('${project.dir.path}/motions/m_multi.kmo')..parent.createSync(recursive: true);
+    file.writeAsBytesSync(LuminaViewportMotion.encode(LuminaViewportMotion(frames: 2, joints: order.length, frameRate: 1, data: data)));
+
+    final panel = LuminaViewportSceneRuntime(engine: engine!, allowFiles: true);
+    addTearDown(panel.dispose);
+    final scene = LuminaViewportScene();
+    final hero = scene.addNode(LuminaViewportNodeKind.skeletalMesh, asset: multi);
+    scene.playAnimationFile(hero, file.path, loop: false);
+    panel.apply(scene);
+    await panel.whenReady;
+    await settle(panel, () => panel.playsMotion(hero) || panel.failures.isNotEmpty);
+    expect(panel.failures, isEmpty);
+    expect(panel.jointsOf(hero).map((j) => j.name), containsAll(['hand_r', 'lowerarm_r', 'head']));
+    Vector3 hand() => panel.jointsOf(hero).firstWhere((j) => j.name == 'hand_r').position.clone();
+    final rest = hand();
+    panel.advance(1.0);
+    expect((hand() - rest).length, greaterThan(1.0), reason: 'the motion moved a joint of the second skin');
+  });
+
   test('Play Animation File plays a packed motion in an editor panel and is refused in a game', () async {
     if (skip()) return;
     final meshGlb = File('${viewportTestAssets.path}/${ViewportTestProject.sources[ViewportTestProject.mannequin]}').readAsBytesSync();
