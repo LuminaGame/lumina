@@ -125,7 +125,16 @@ class LuminaInputSubsystem extends LuminaWorldSubsystem {
   }
 
   /// Resolves all actuated inputs through contexts, modifiers, and triggers, dispatching events to components.
-  void tick(double deltaTime) {
+  void tick(double deltaTime) => _evaluate(deltaTime, pausedOnly: false);
+
+  /// One frame of a paused world: key state is kept up to date, but only the
+  /// actions with [LuminaInputAction.executeWhenPaused] are evaluated and
+  /// dispatched. Every other action keeps the state it had when the game
+  /// paused (a key pressed and released during the pause fires nothing on
+  /// resume), and mouse / analog motion during the pause is dropped.
+  void tickPaused(double deltaTime) => _evaluate(deltaTime, pausedOnly: true);
+
+  void _evaluate(double deltaTime, {required bool pausedOnly}) {
     // Key state bookkeeping: hold times, this tick's presses, last axis values.
     for (final key in _heldDigitalKeys) {
       _keyDownTimes[key] = (_keyDownTimes[key] ?? 0.0) + deltaTime;
@@ -160,6 +169,7 @@ class LuminaInputSubsystem extends LuminaWorldSubsystem {
     allActions.addAll(_lastActionEvaluations.keys);
 
     for (final action in allActions) {
+      if (pausedOnly && !action.executeWhenPaused) continue;
       TriggerEvaluation currentEval = TriggerEvaluation.none;
       final Vector3 actionAccumulator = Vector3.zero();
 
@@ -263,6 +273,11 @@ class LuminaInputSubsystem extends LuminaWorldSubsystem {
   @override
   void onWorldTick(double deltaTime) {
     tick(deltaTime);
+  }
+
+  @override
+  void onWorldTickWhilePaused(double deltaTime) {
+    tickPaused(deltaTime);
   }
 
   @override

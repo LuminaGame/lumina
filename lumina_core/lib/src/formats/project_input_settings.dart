@@ -8,9 +8,23 @@ enum ProjectInputValueType { digital, axis1D, axis2D }
 class ProjectInputAction {
   final String name;
   final ProjectInputValueType valueType;
-  const ProjectInputAction({required this.name, this.valueType = ProjectInputValueType.digital});
 
-  Map<String, dynamic> toMap() => {'name': name, 'value_type': valueType.name};
+  /// Whether the action still fires while the game is paused (a pause or menu
+  /// key that must close what paused the game). `execute_when_paused` in the
+  /// manifest, written only when true.
+  final bool executeWhenPaused;
+
+  const ProjectInputAction({
+    required this.name,
+    this.valueType = ProjectInputValueType.digital,
+    this.executeWhenPaused = false,
+  });
+
+  Map<String, dynamic> toMap() => {
+        'name': name,
+        'value_type': valueType.name,
+        if (executeWhenPaused) 'execute_when_paused': true,
+      };
 
   factory ProjectInputAction.fromMap(Map<String, dynamic> map) => ProjectInputAction(
         name: map['name'] as String? ?? '',
@@ -18,10 +32,15 @@ class ProjectInputAction {
           (v) => v.name == (map['value_type'] as String? ?? 'digital'),
           orElse: () => ProjectInputValueType.digital,
         ),
+        executeWhenPaused: map['execute_when_paused'] == true,
       );
 
-  ProjectInputAction copyWith({String? name, ProjectInputValueType? valueType}) =>
-      ProjectInputAction(name: name ?? this.name, valueType: valueType ?? this.valueType);
+  ProjectInputAction copyWith({String? name, ProjectInputValueType? valueType, bool? executeWhenPaused}) =>
+      ProjectInputAction(
+        name: name ?? this.name,
+        valueType: valueType ?? this.valueType,
+        executeWhenPaused: executeWhenPaused ?? this.executeWhenPaused,
+      );
 }
 
 /// One key binding inside a mapping context. [keyId] is the stable

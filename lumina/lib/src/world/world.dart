@@ -126,9 +126,10 @@ class LuminaWorld extends LuminaObject {
 
   int _screenMessageSerial = 0;
 
-  /// Whether the world is paused. While paused, [tick] is a silent no-op — no phases run,
-  /// so subsystems (timers, audio), actors and [timeSeconds] all freeze together. Only [step]
-  /// advances a paused world. Subsystems are notified via
+  /// Whether the world is paused. While paused, [tick] runs no phase, so subsystems
+  /// (timers, audio), actors and [timeSeconds] all freeze together; only input actions
+  /// that execute when paused still fire ([tickWhilePaused]). Only [step] advances a
+  /// paused world. Subsystems are notified via
   /// [LuminaWorldSubsystem.onWorldPauseChanged] on every actual change.
   bool get isPaused => _isPaused;
   set isPaused(bool value) {
@@ -543,13 +544,27 @@ class LuminaWorld extends LuminaObject {
 
   /// Executes the 5-phase Deterministic Tick Pipeline for each frame update.
   ///
-  /// Returns immediately (no phases, no [onPreTick], no [tickCount] increment) while [isPaused].
+  /// While [isPaused] no phase runs (no [onPreTick], no [tickCount] increment):
+  /// only [tickWhilePaused] does, so input actions that execute when paused
+  /// still fire.
   void tick(double deltaTime) {
     if (_isCleanedUp) {
       throw StateError('Cannot tick a cleaned-up world.');
     }
-    if (_isPaused) return;
+    if (_isPaused) {
+      tickWhilePaused(deltaTime);
+      return;
+    }
     step(deltaTime);
+  }
+
+  /// One paused frame: [LuminaWorldSubsystem.onWorldTickWhilePaused] on every
+  /// subsystem with the frame's real [deltaTime]; game time, actors and
+  /// timers stay frozen. [tick] calls it while [isPaused]; a host that skips
+  /// [tick] during a pause calls it itself.
+  void tickWhilePaused(double deltaTime) {
+    if (_isCleanedUp || !_isPaused) return;
+    subsystems.tickWhilePaused(deltaTime);
   }
 
   /// Executes exactly one full 5-phase tick regardless of [isPaused] (the pause flag is untouched).

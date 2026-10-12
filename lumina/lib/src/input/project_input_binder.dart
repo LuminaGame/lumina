@@ -58,7 +58,7 @@ class ProjectInputBinder {
   static BoundProjectInput bind(ProjectInputSettings settings) {
     final actions = <String, LuminaInputAction>{
       for (final a in settings.actions)
-        a.name: LuminaInputAction(a.name, valueType: _valueType(a.valueType)),
+        a.name: LuminaInputAction(a.name, valueType: _valueType(a.valueType), executeWhenPaused: a.executeWhenPaused),
     };
     final unbound = <String>[];
     final contexts = <BoundMappingContext>[];

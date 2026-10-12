@@ -57,6 +57,7 @@ Represents an abstract Input Action.
 | :--- | :--- | :--- |
 | `name` | `String name` | `name` alanını (field/property) ve ilişkili veriyi saklar. |
 | `valueType` | `InputValueType valueType` | `valueType` alanını (field/property) ve ilişkili veriyi saklar. |
+| `executeWhenPaused` | `bool executeWhenPaused` | Eylem dünya duraklatılmışken de tetiklenir (`tickPaused`); manifestteki `execute_when_paused` alanından gelir. Eşitliğe katılmaz: Blueprint eylemi adı ve değer tipiyle bağlar. |
 | `hashCode` | `int get hashCode` | Mevcut durumun veya yeteneğin doğruluğunu kontrol eder (`bool` döndürür). |
 | `toString` | `String toString()` | `toString` işlemini gerçekleştirir. |
 
@@ -91,7 +92,9 @@ Global world subsystem that manages mapping contexts, input injection, modifiers
 | `injectKeyUp` | `void injectKeyUp(LuminaKey key)` | Injects a digital key release event. |
 | `injectAnalog` | `void injectAnalog(LuminaKey key, double value)` | Injects an analog axis delta or value. |
 | `tick` | `void tick(double deltaTime)` | Resolves all actuated inputs through contexts, modifiers, and triggers, dispatching events to components. |
+| `tickPaused` | `void tickPaused(double deltaTime)` | Duraklatılmış dünyanın bir karesi: tuş durumu güncel tutulur ama yalnızca `executeWhenPaused` işaretli eylemler değerlendirilip dağıtılır (oyunu duraklatan menüyü kapatan tuş); diğer eylemler oyun duraklarkenki durumlarını korur, duraklatma sırasındaki analog hareket atılır. |
 | `onWorldTick` | `void onWorldTick(double deltaTime)` | Olay tetiklendiğinde çalışan geri çağırım metodudur. |
+| `onWorldTickWhilePaused` | `void onWorldTickWhilePaused(double deltaTime)` | `LuminaWorld.tick` duraklatılmışken geçen her karede `tickPaused` çalıştırır (PIE'de ve paketlenmiş oyunun kare sürücüsünde `LuminaWorld.tickWhilePaused` üzerinden). |
 | `onWorldShutdown` | `void onWorldShutdown()` | Olay tetiklendiğinde çalışan geri çağırım metodudur. |
 
 ### `class LuminaInputComponent`

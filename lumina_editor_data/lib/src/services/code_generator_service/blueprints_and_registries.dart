@@ -126,7 +126,8 @@ mixin _BlueprintsAndRegistriesCodegen on _DartCodeGeneratorServiceState {
     b.writeln("/// The project's input actions, by name.");
     b.writeln('const Map<String, LuminaInputAction> luminaProjectInputActions = {');
     for (final a in settings.actions) {
-      b.writeln("  '${_escape(a.name)}': LuminaInputAction('${_escape(a.name)}', valueType: ${valueType(a.valueType)}),");
+      final paused = a.executeWhenPaused ? ', executeWhenPaused: true' : '';
+      b.writeln("  '${_escape(a.name)}': LuminaInputAction('${_escape(a.name)}', valueType: ${valueType(a.valueType)}$paused),");
     }
     b.writeln('};');
     b.writeln();

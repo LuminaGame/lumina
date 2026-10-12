@@ -119,7 +119,7 @@ gibi); view'in zamansal geçmişi (TAA, upscaler'lar, frame generation) gösteri
 | `framePacer` | `FilamentFramePacer? framePacer` | `framePacer` alanını (field/property) ve ilişkili veriyi saklar. |
 | `maxDeltaTime` | `double maxDeltaTime` | `maxDeltaTime` alanını (field/property) ve ilişkili veriyi saklar. |
 | `frameStats` | `Stream<LuminaFrameStats> get frameStats` | Broadcast stream of per-frame performance statistics. |
-| `paused` | `bool get paused` | Whether the game loop is paused (skips simulation and rendering, keeps message queues pumping).  This is the "window minimized" knob. The PIE pause is [LuminaWorld.isPaused]: while the world is paused the driver keeps pumping message queues and presenting frames (so the viewport shows the frozen state) but skips [LuminaWorld.tick], and resets its delta-time baseline so the first tick after resume is not clamped as a hitch. |
+| `paused` | `bool get paused` | Whether the game loop is paused (skips simulation and rendering, keeps message queues pumping).  This is the "window minimized" knob. The PIE pause is [LuminaWorld.isPaused]: while the world is paused the driver keeps pumping message queues and presenting frames (so the viewport shows the frozen state) but skips [LuminaWorld.tick] (only [LuminaWorld.tickWhilePaused] runs, for the input actions that execute when paused), and resets its delta-time baseline so the first tick after resume is not clamped as a hitch. |
 | `paused` | `paused(bool value)` | `paused` işlemini gerçekleştirir. |
 | `targetFrameRate` | `double get targetFrameRate` | Target frame rate in FPS (0.0 means follow display refresh rate). |
 | `targetFrameRate` | `targetFrameRate(double fps)` | `targetFrameRate` işlemini gerçekleştirir. |
@@ -404,7 +404,7 @@ Orchestrates levels, actors, Filament scene bindings, and the 5-phase determinis
 | `gameState` | `LuminaGameState? get gameState` | The game state for this world, managed by the game mode. |
 | `timeSeconds` | `double get timeSeconds` | Accumulated game time in seconds (does not advance while [isPaused]). |
 | `tickCount` | `int get tickCount` | Number of ticks actually executed by [tick] / [step]; paused no-op ticks are not counted. |
-| `isPaused` | `bool get isPaused` | Whether the world is paused. While paused, [tick] is a silent no-op — no phases run, so subsystems (timers, audio), actors and [timeSeconds] all freeze together. Only [step] advances a paused world. Subsystems are notified via [LuminaWorldSubsystem.onWorldPauseChanged] on every actual change. |
+| `isPaused` | `bool get isPaused` | Whether the world is paused. While paused, [tick] runs no phase, so subsystems (timers, audio), actors and [timeSeconds] all freeze together; only input actions that execute when paused still fire ([tickWhilePaused]). Only [step] advances a paused world. Subsystems are notified via [LuminaWorldSubsystem.onWorldPauseChanged] on every actual change. |
 | `isPaused` | `isPaused(bool value)` | Mevcut durumun veya yeteneğin doğruluğunu kontrol eder (`bool` döndürür). |
 | `killZ` | `double? killZ` | Optional vertical threshold (Y coordinate) below which actors are automatically destroyed. |
 | `buildOwner` | `LuminaBuildOwner? buildOwner` | Optional attached build owner for flushing declarative rebuilds during pre-physics phase. |
@@ -434,7 +434,8 @@ Orchestrates levels, actors, Filament scene bindings, and the 5-phase determinis
 | `applyScalability` | `void applyScalability(LuminaScalabilityProfile profile)` | Applies a full engine scalability profile across post-processing and lighting. |
 | `destroyActor` | `void destroyActor(LuminaActor actor)` | Schedules an actor for destruction, deferred to Phase 5. |
 | `beginPlay` | `void beginPlay()` | Initializes gameplay state and triggers [beginPlay] across subsystems and actors. |
-| `tick` | `void tick(double deltaTime)` | Executes the 5-phase Deterministic Tick Pipeline for each frame update.  Returns immediately (no phases, no [onPreTick], no [tickCount] increment) while [isPaused]. |
+| `tick` | `void tick(double deltaTime)` | Executes the 5-phase Deterministic Tick Pipeline for each frame update.  While [isPaused] no phase runs (no [onPreTick], no [tickCount] increment): only [tickWhilePaused] does. |
+| `tickWhilePaused` | `void tickWhilePaused(double deltaTime)` | Duraklatılmış bir kare: her subsystem'de `onWorldTickWhilePaused` gerçek delta ile çağrılır (girdi subsystem'i duraklatılmışken çalışan eylemleri işler); oyun zamanı, aktörler ve zamanlayıcılar donuk kalır. [tick] duraklatılmışken çağırır; duraklatmada [tick] atlayan bir sürücü (kare sürücüsü) kendisi çağırır. |
 | `step` | `void step(double deltaTime)` | Executes exactly one full 5-phase tick regardless of [isPaused] (the pause flag is untouched). |
 | `cleanup` | `void cleanup()` | Releases resources and cleans up native scene bindings.  The world detaches its references but does NOT destroy the native Filament engine/scene. |
 | `build` | `LuminaObject? build(LuminaBuildContext context)` | Deklaratif alt nesne veya widget ağacını inşa eder. |
@@ -573,6 +574,7 @@ Base class for global, lifetime-bound services attached to a [LuminaWorld].
 | `onWorldBeginPlay` | `void onWorldBeginPlay()` | Called when gameplay begins in the world. |
 | `onWorldTick` | `void onWorldTick(double deltaTime)` | Called on each frame during Phase 2 of the world tick pipeline. |
 | `onWorldPauseChanged` | `void onWorldPauseChanged(bool paused)` | Called when [LuminaWorld.isPaused] changes (`true` = paused, `false` = resumed). |
+| `onWorldTickWhilePaused` | `void onWorldTickWhilePaused(double deltaTime)` | Dünya duraklatılmışken her karede `onWorldTick` yerine çağrılır; yalnızca duraklatmada da çalışması gereken iş burada yapılır (girdi subsystem'i `tickPaused`). |
 | `onWorldShutdown` | `void onWorldShutdown()` | Called when the world is shutting down or cleaned up. |
 
 ## `lib/src/world/debug_shapes.dart`

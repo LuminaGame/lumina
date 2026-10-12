@@ -77,7 +77,8 @@ class LuminaFrameDriver {
   ///
   /// This is the "window minimized" knob. The PIE pause is [LuminaWorld.isPaused]: while the world
   /// is paused the driver keeps pumping message queues and presenting frames (so the viewport shows
-  /// the frozen state) but skips [LuminaWorld.tick], and resets its delta-time baseline so the first
+  /// the frozen state) but skips [LuminaWorld.tick] (only [LuminaWorld.tickWhilePaused] runs, for the
+  /// input actions that execute when paused), and resets its delta-time baseline so the first
   /// tick after resume is not clamped as a hitch.
   bool get paused => _paused;
   set paused(bool value) {
@@ -130,7 +131,10 @@ class LuminaFrameDriver {
       // World (PIE) pause: keep presenting, skip simulation, reset the dt baseline for resume.
       final worldPaused = world.isPaused;
       if (worldPaused) {
-        _lastVsyncNanos = -1;
+        // Input actions that execute when paused still run, on the vsync's real delta.
+        final pausedDelta = _lastVsyncNanos > 0 ? ((vsyncSteadyClockNanos - _lastVsyncNanos) / 1e9).clamp(0.0, 0.25) : 0.0;
+        world.tickWhilePaused(pausedDelta.toDouble());
+        _lastVsyncNanos = vsyncSteadyClockNanos;
         _lastExpectedPresentationNs = -1;
         _wasWorldPaused = true;
         bool shouldRender = renderer.shouldRenderFrame;

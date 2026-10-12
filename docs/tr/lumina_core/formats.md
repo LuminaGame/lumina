@@ -386,7 +386,7 @@ Value type of an input action, as defined by the runtime input system (actions a
 
 **Yapıcı Metotlar (Constructors):**
 - `ProjectInputAction.fromMap(Map<String, dynamic> map)`: `ProjectInputAction.fromMap(Map<String, dynamic> map)` nesnesini ilklendirir.
-- `ProjectInputAction(name: name ?? this.name, valueType: valueType ?? this.valueType)`: `ProjectInputAction(name: name ?? this.name, valueType: valueType ?? this.valueType)` nesnesini ilklendirir.
+- `ProjectInputAction({required String name, ProjectInputValueType valueType = ProjectInputValueType.digital, bool executeWhenPaused = false})`: Project Settings ▸ Input'taki bir girdi eylemi.
 
 **Fonksiyonlar, Metotlar ve Erişimciler:**
 
@@ -394,6 +394,7 @@ Value type of an input action, as defined by the runtime input system (actions a
 | :--- | :--- | :--- |
 | `name` | `String name` | `name` alanını (field/property) ve ilişkili veriyi saklar. |
 | `valueType` | `ProjectInputValueType valueType` | `valueType` alanını (field/property) ve ilişkili veriyi saklar. |
+| `executeWhenPaused` | `bool executeWhenPaused` | Eylem oyun duraklatılmışken de tetiklenir (duraklatma veya menü tuşu); manifestte `execute_when_paused`, yalnızca true iken yazılır (eski dosyalar false okunur). |
 | `toMap` | `Map<String, dynamic> toMap()` | `toMap` işlemini gerçekleştirir. |
 
 ### `class ProjectInputMapping`

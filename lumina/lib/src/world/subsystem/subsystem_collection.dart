@@ -65,6 +65,14 @@ class LuminaSubsystemCollection {
     }
   }
 
+  /// [LuminaWorldSubsystem.onWorldTickWhilePaused] on every subsystem, in
+  /// registration order.
+  void tickWhilePaused(double deltaTime) {
+    for (final sys in List<LuminaWorldSubsystem>.of(_orderedSubsystems)) {
+      sys.onWorldTickWhilePaused(deltaTime);
+    }
+  }
+
   /// Shuts down all registered subsystems in reverse registration order and clears the collection.
   void shutdown() {
     if (_orderedSubsystems.isEmpty) return;

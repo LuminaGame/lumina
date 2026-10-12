@@ -55,7 +55,12 @@ class LuminaInputAction {
   final String name;
   final InputValueType valueType;
 
-  const LuminaInputAction(this.name, {this.valueType = InputValueType.digitalBool});
+  /// Whether the action still fires while the world is paused
+  /// ([LuminaInputSubsystem.tickPaused]). Not part of equality: a Blueprint
+  /// binds the action by name and value type.
+  final bool executeWhenPaused;
+
+  const LuminaInputAction(this.name, {this.valueType = InputValueType.digitalBool, this.executeWhenPaused = false});
 
   @override
   bool operator ==(Object other) =>

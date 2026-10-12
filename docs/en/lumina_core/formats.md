@@ -386,7 +386,7 @@ Value type of an input action, as defined by the runtime input system (actions a
 
 **Constructors:**
 - `ProjectInputAction.fromMap(Map<String, dynamic> map)`: Initializes `ProjectInputAction.fromMap(Map<String, dynamic> map)`.
-- `ProjectInputAction(name: name ?? this.name, valueType: valueType ?? this.valueType)`: Initializes `ProjectInputAction(name: name ?? this.name, valueType: valueType ?? this.valueType)`.
+- `ProjectInputAction({required String name, ProjectInputValueType valueType = ProjectInputValueType.digital, bool executeWhenPaused = false})`: an input action of Project Settings ▸ Input.
 
 **Functions, Methods & Accessors:**
 
@@ -394,6 +394,7 @@ Value type of an input action, as defined by the runtime input system (actions a
 | :--- | :--- | :--- |
 | `name` | `String name` | Holds the `name` property or configuration state. |
 | `valueType` | `ProjectInputValueType valueType` | Holds the `valueType` property or configuration state. |
+| `executeWhenPaused` | `bool executeWhenPaused` | The action still fires while the game is paused (a pause or menu key); `execute_when_paused` in the manifest, written only when true (old files read false). |
 | `toMap` | `Map<String, dynamic> toMap()` | Executes `toMap` operation. |
 
 ### `class ProjectInputMapping`

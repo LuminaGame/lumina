@@ -30,6 +30,12 @@ abstract class LuminaWorldSubsystem {
   /// Called when [LuminaWorld.isPaused] changes (`true` = paused, `false` = resumed).
   void onWorldPauseChanged(bool paused) {}
 
+  /// Called instead of [onWorldTick] for each frame the world spends paused
+  /// ([LuminaWorld.tick] while [LuminaWorld.isPaused]), with the frame's real
+  /// delta. Only what must keep running during a pause does anything here:
+  /// the input subsystem runs the actions that execute when paused.
+  void onWorldTickWhilePaused(double deltaTime) {}
+
   /// Called when the world is shutting down or cleaned up.
   void onWorldShutdown() {
     _world = null;

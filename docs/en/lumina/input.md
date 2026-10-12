@@ -57,6 +57,7 @@ Represents an abstract Input Action.
 | :--- | :--- | :--- |
 | `name` | `String name` | Holds the `name` property or configuration state. |
 | `valueType` | `InputValueType valueType` | Holds the `valueType` property or configuration state. |
+| `executeWhenPaused` | `bool executeWhenPaused` | The action still fires while the world is paused (`tickPaused`); from the manifest's `execute_when_paused`. Not part of equality: a Blueprint binds the action by name and value type. |
 | `hashCode` | `int get hashCode` | Checks current state or capability and returns a boolean value. |
 | `toString` | `String toString()` | Executes `toString` operation. |
 
@@ -91,7 +92,9 @@ Global world subsystem that manages mapping contexts, input injection, modifiers
 | `injectKeyUp` | `void injectKeyUp(LuminaKey key)` | Injects a digital key release event. |
 | `injectAnalog` | `void injectAnalog(LuminaKey key, double value)` | Injects an analog axis delta or value. |
 | `tick` | `void tick(double deltaTime)` | Resolves all actuated inputs through contexts, modifiers, and triggers, dispatching events to components. |
+| `tickPaused` | `void tickPaused(double deltaTime)` | One frame of a paused world: key state stays current, but only actions with `executeWhenPaused` are evaluated and dispatched (a pause or menu key closes what paused the game); every other action keeps the state it had when the game paused, and analog motion during the pause is dropped. |
 | `onWorldTick` | `void onWorldTick(double deltaTime)` | Callback invoked when the corresponding event is triggered. |
+| `onWorldTickWhilePaused` | `void onWorldTickWhilePaused(double deltaTime)` | Runs `tickPaused` for each frame `LuminaWorld.tick` spends paused (PIE, and the built game's frame driver through `LuminaWorld.tickWhilePaused`). |
 | `onWorldShutdown` | `void onWorldShutdown()` | Callback invoked when the corresponding event is triggered. |
 
 ### `class LuminaInputComponent`

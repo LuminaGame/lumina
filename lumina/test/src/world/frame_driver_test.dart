@@ -224,6 +224,28 @@ void main() {
       expect(driver.renderedFrames, 0);
     });
 
+    test('a paused world still runs the input actions that execute when paused, on the vsync delta', () {
+      final driver = LuminaFrameDriver(world, renderer: renderer, view: view, framePacer: pacer);
+      final input = world.registerSubsystem(LuminaInputSubsystem());
+      final menu = const LuminaInputAction('IA_Menu', executeWhenPaused: true);
+      input.addMappingContext(LuminaInputMappingContext()..mapKey(LuminaKey.keyEscape, menu));
+      final component = LuminaInputComponent(subsystem: input);
+      input.registerComponent(component);
+      final started = <bool>[];
+      component.bindAction(menu, TriggerState.started, (_) => started.add(world.isPaused));
+      final ticks = <double>[];
+      world.onPreTick = (dt) => ticks.add(dt);
+
+      driver.onVsync(1000000000);
+      world.isPaused = true;
+      driver.onVsync(1016666667);
+      input.injectKeyDown(LuminaKey.keyEscape);
+      driver.onVsync(1033333333);
+
+      expect(started, [true], reason: 'Started fired inside the paused frame');
+      expect(ticks, hasLength(1), reason: 'the world itself did not tick while paused');
+    });
+
     test('deltaTime derives from expectedPresentationTime advancing steadily', () {
       final driver = LuminaFrameDriver(
         world,
