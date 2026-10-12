@@ -182,11 +182,23 @@ class ProjectEngineLink {
 
   /// The engine workspace root holding [luminaPackageDir] (default
   /// [LuminaWorkspace.package]`('lumina')`), or null when it is not a local
-  /// checkout (no `lumina/pubspec.yaml` there).
+  /// checkout of the `lumina` package: no `pubspec.yaml` there, or one that
+  /// declares a pub workspace or another package (the lumina repository's
+  /// root, `lumina_workspace`, which an editor started from the folder
+  /// holding the repositories would otherwise take for the engine).
   static String? localEngineRoot({String? luminaPackageDir}) {
     final lumina = luminaPackageDir ?? LuminaWorkspace.package('lumina');
-    if (!File(p.join(lumina, 'pubspec.yaml')).existsSync()) return null;
+    if (!_isPackageDir(lumina, 'lumina')) return null;
     return p.dirname(p.normalize(p.absolute(lumina)));
+  }
+
+  /// Whether [dir] holds the package [name]: a pubspec that is no pub
+  /// workspace and declares no other name.
+  static bool _isPackageDir(String dir, String name) {
+    final pubspec = p.join(dir, 'pubspec.yaml');
+    if (!File(pubspec).existsSync() || LuminaWorkspace.declaresPubWorkspace(pubspec)) return false;
+    final declared = LuminaWorkspace.declaredPackageName(pubspec);
+    return declared == null || declared == name;
   }
 
   /// `lumina`, `lumina_widgets` and every package of their path/git closure
@@ -197,7 +209,7 @@ class ProjectEngineLink {
     final out = <String, String>{};
     try {
       for (final root in enginePackages) {
-        if (!File(p.join(engineRoot, root, 'pubspec.yaml')).existsSync()) continue;
+        if (!_isPackageDir(p.join(engineRoot, root), root)) continue;
         final sources = EditorSourceVendorService(engineRoot: engineRoot, rootPackage: root).packageSources();
         for (final dir in sources.values) {
           final yaml = loadYaml(File(p.join(dir, 'pubspec.yaml')).readAsStringSync());
@@ -210,9 +222,11 @@ class ProjectEngineLink {
     } on Exception catch (e) {
       onLog?.call('Could not resolve the engine closure of $engineRoot ($e); pinning lumina and flutter_filament only');
     }
+    // Never an override whose folder declares another package (or is a pub
+    // workspace): pub would refuse it and the build fail.
     for (final name in [...enginePackages, 'flutter_filament']) {
       final dir = p.join(engineRoot, name);
-      if (File(p.join(dir, 'pubspec.yaml')).existsSync()) out.putIfAbsent(name, () => p.normalize(p.absolute(dir)));
+      if (_isPackageDir(dir, name)) out.putIfAbsent(name, () => p.normalize(p.absolute(dir)));
     }
     return out;
   }

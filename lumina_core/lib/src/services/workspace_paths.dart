@@ -185,16 +185,41 @@ class LuminaWorkspace {
     return LuminaGitSource(url: url, path: path == null || path == '.' ? null : path, ref: ref);
   }
 
+  /// Whether the pubspec at [pubspecPath] declares a pub workspace (a
+  /// top-level `workspace:` list): a repository root, never a package.
+  static bool declaresPubWorkspace(String pubspecPath) {
+    try {
+      return RegExp(r'^workspace:', multiLine: true).hasMatch(File(pubspecPath).readAsStringSync());
+    } on FileSystemException {
+      return false;
+    }
+  }
+
+  /// The `name:` the pubspec at [pubspecPath] declares; null when it has none
+  /// or cannot be read.
+  static String? declaredPackageName(String pubspecPath) {
+    try {
+      final m = RegExp(r'''^name:\s*['"]?([A-Za-z0-9_]+)''', multiLine: true).firstMatch(File(pubspecPath).readAsStringSync());
+      return m?.group(1);
+    } on FileSystemException {
+      return null;
+    }
+  }
+
   /// The shared 3D test assets (`<root>/test-assets`).
   static String get testAssets => p.join(root, 'test-assets');
 
   static String _resolveRoot() => findSourceRoot() ?? p.join(home, 'lumina');
 
-  /// The first of [start] and its ancestors holding `lumina/pubspec.yaml`.
+  /// The first of [start] and its ancestors holding `lumina/pubspec.yaml`
+  /// for the `lumina` package. A `lumina/pubspec.yaml` that declares a pub
+  /// workspace is the lumina repository itself, seen from the folder that
+  /// holds the repositories side by side: that folder is not the root.
   static String? findRootFrom(String start) {
     var dir = p.normalize(p.absolute(start));
     while (true) {
-      if (File(p.join(dir, 'lumina', 'pubspec.yaml')).existsSync()) return dir;
+      final pubspec = File(p.join(dir, 'lumina', 'pubspec.yaml'));
+      if (pubspec.existsSync() && !declaresPubWorkspace(pubspec.path)) return dir;
       final parent = p.dirname(dir);
       if (parent == dir) return null;
       dir = parent;
