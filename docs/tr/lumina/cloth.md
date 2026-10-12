@@ -10,6 +10,7 @@ Bayraklar, perdeler, ipe asılı giysiler ve bir şeylerin üzerine örtülen ç
 | Geometri (ızgara, mesh birleştirme, parçalar, sabit seçimi) | `lib/src/physics/cloth/cloth_geometry.dart` |
 | Backend arayüzü | `lib/src/physics/cloth/cloth_simulator.dart` |
 | Jolt simülasyonu | `lib/src/physics/jolt/jolt_cloth_simulator.dart` ([flutter_jolt](https://github.com/LuminaGame/tools/blob/main/docs/tr/flutter_jolt.md) soft body'leri) |
+| Karakterlerdeki giysiler | `lib/src/physics/cloth/skinned_cloth_component.dart`, `lib/src/physics/jolt/jolt_cloth_skinning.dart` |
 | Blueprint düğümleri | `lib/src/blueprint/node_library/cloth.dart`, `blueprint_function_library/cloth.dart` |
 
 ## Bileşen
@@ -33,6 +34,17 @@ Fizik subsystem'i dünyanın kumaşlarını tutar (`LuminaPhysicsSubsystem.cloth
 
 **Dart backend'i** (web, Jolt'suz build'ler): kumaş simülatörü yoktur. Bileşen dinlenme pozunu çizer, `isSimulating` false olur ve motor günlüğü bir kez "Cloth needs the Jolt physics backend" der. Başka hiçbir şey değişmez; web build'i Jolt'a hiç ulaşmaz.
 
+## Karakterlerdeki giysiler
+
+`LuminaSkinnedClothComponent` animasyonlu bir karakterin giydiği kumaştır: köşeleri karakterin iskeletine skinlenir; böylece giysi animasyonla hareket eder ve skin'in koyduğu yerden belli bir mesafe içinde sallanır.
+
+- **Giysi**: `meshAsset` (eklemleri karakterin kemikleri gibi adlandırılmış skinli bir `.glb`; kendi ağırlıkları kullanılır) ya da `waistBone` (`pelvis`, yoksa `Hips`) çevresinde üretilen bir etek: `skirtLength` (45 cm), `waistRadius` (17) ile `hemRadius` (34), kemiğin üzerinde `waistOffset` (6), `skirtColumns` x `skirtRows` (32 x 12); her köşe en yakın iki kalça ve bacak kemiğine ağırlıklandırılır.
+- **Serbestlik**: giysinin uzak ucunda `maxDistance` (25 cm), üste doğru bunun `t^1.5` katı; üst kısım bedende kalır (sert skinli).
+- **Beden**: `collideWithBody` ile karakterin uzuvları kapsüldür (ragdoll'lardaki gibi iskeletten üretilen physics asset) ve her adımda animasyonla hareket edip giysiyi dışarı iter. Bir kumaş sahibinin diğer body'lerini (karakterin kapsülü) yok sayar; collider olarak işaretlenenler hariç.
+- **Poz**: bileşen kendini `mesh`'e bağlar ve animasyonlu pozu bir pose modifier olarak okur (hiç değiştirmez); mesh'in adresleyemediği düğümler dinlenme pozunda alınır. İskelet (`sampler`) verilmezse mesh asset'inden okunur.
+
+Jolt'ta her adım soft body'yi en son poza skinler (`SkinVertices`, ilk seferde sert) ve uzuv kapsüllerini (kinematik) taşır. Giysi `pinning`'i yok sayar (sabitleri sert skinli köşelerdir). Jolt yoksa dinlenme pozunu çizer. Ölçülen: yürüyen mannequin'de 416 köşeli bir etek, tüm sahne için 60 Hz kare başına 1.4 ms.
+
 ## Blueprint'ler ve editör
 
 Bileşen tipi `LuminaClothComponent` (bir scene bileşeni): Blueprint editörü onu **Cloth** olarak (Physics kategorisi) ekler; yukarıdaki her ayar Details panelindedir; `meshAsset` bir asset referansı, `wind` authoring eksenlerinde bir vektördür. Bileşen eşlemesi onu Play-In-Editor'da ve üretilen oyunlarda aynı şekilde kurar; özellikler Blueprint'le birlikte kaydedilir (`toProperties` / `fromProperties`).
@@ -51,7 +63,7 @@ Düğümler (kategori **Physics|Cloth**, onları çalıştıran aktörün kumaş
 
 - Kumaş başına bir malzeme (bir temel renk, çift yüzlü, henüz doku yok).
 - Kumaş body'ler ve collider'larla çarpışır; kendisiyle çarpışmaz.
-- Bir karakterin iskeletini izleyen giysiler (skinned) henüz yapılmadı.
+- Skinli giysiler yalnızca çalışma anı bileşenidir: Blueprint editörü ve bileşen eşlemesi henüz `LuminaSkinnedClothComponent` sunmuyor; backstop'u açık değil.
 
 ---
 

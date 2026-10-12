@@ -78,7 +78,8 @@ class LuminaJoltPhysicsBackend implements LuminaPhysicsBackend {
   late LuminaPhysicsSubsystem _physics;
   late final LuminaJoltCollisionProfiles _profiles = LuminaJoltCollisionProfiles(_world);
   late final LuminaJoltStaticColliders _statics = LuminaJoltStaticColliders(_world, _profiles, _ownerOfComponent);
-  late final LuminaJoltClothSimulator _cloth = LuminaJoltClothSimulator(() => _world);
+  late final LuminaJoltClothSimulator _cloth =
+      LuminaJoltClothSimulator(() => _world, ownerOf: _ownerOf, colliderProfile: () => _profiles.clothColliderProfile);
   final Map<LuminaRigidBody, _Mirror> _mirrors = {};
   final Map<int, _Mirror> _byId = {};
   final Map<LuminaPhysicsJoint, LuminaJoltJoint> _joints = {};
@@ -92,6 +93,9 @@ class LuminaJoltPhysicsBackend implements LuminaPhysicsBackend {
 
   /// The Jolt soft body of [cloth] (null when it is not simulated).
   int? clothBodyOf(LuminaClothComponent cloth) => _cloth.bodyOf(cloth);
+
+  /// The limb colliders of a skinned [cloth].
+  int clothColliderCount(LuminaClothComponent cloth) => _cloth.colliderCount(cloth);
 
   /// The Jolt body id of [body] (null when it is not in this backend).
   int? joltBodyId(LuminaRigidBody body) => _mirrors[body]?.id;

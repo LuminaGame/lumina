@@ -2,11 +2,15 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter_jolt/flutter_jolt.dart';
+import 'package:lumina_core/lumina_core.dart';
 import 'package:vector_math/vector_math_64.dart';
 
 import 'package:lumina/src/physics/cloth/cloth_component.dart';
 import 'package:lumina/src/physics/cloth/cloth_simulator.dart';
+import 'package:lumina/src/object/actor.dart';
+import 'package:lumina/src/physics/cloth/skinned_cloth_component.dart';
 import 'package:lumina/src/physics/jolt/jolt_body_shapes.dart';
+import 'package:lumina/src/physics/jolt/jolt_cloth_skinning.dart';
 
 class _Cloth {
   _Cloth(this.body, this.version, List<int> pinned, this.pinnedLocal, this.phase, this.inverseMass)
@@ -23,6 +27,11 @@ class _Cloth {
 
   /// A free vertex's inverse mass.
   final double inverseMass;
+
+  /// A skinned cloth's limb colliders, the pose version it was last skinned
+  /// to (−1: never, so the first skin is hard).
+  LuminaJoltClothColliders? colliders;
+  int skinnedVersion = -1;
 }
 
 /// Cloth on Jolt soft bodies. Each cloth is built in the world from its rest
@@ -39,9 +48,13 @@ class _Cloth {
 /// `massKg / vertices`, the thickness as the vertex radius, tethers to the
 /// pinned vertices so a hanging cloth does not stretch under its weight.
 class LuminaJoltClothSimulator implements LuminaClothSimulator {
-  LuminaJoltClothSimulator(this._world);
+  LuminaJoltClothSimulator(this._world, {int Function(LuminaActor? actor)? ownerOf, int Function()? colliderProfile})
+      : _ownerOf = ownerOf ?? ((_) => 0),
+        _colliderProfile = colliderProfile ?? (() => 0);
 
   final JoltWorld Function() _world;
+  final int Function(LuminaActor? actor) _ownerOf;
+  final int Function() _colliderProfile;
   final Map<LuminaClothComponent, _Cloth> _cloths = {};
   double _time = 0;
 
@@ -61,7 +74,9 @@ class LuminaJoltClothSimulator implements LuminaClothSimulator {
   @override
   void remove(LuminaClothComponent cloth) {
     final c = _cloths.remove(cloth);
-    if (c != null) _world().destroyBody(c.body);
+    if (c == null) return;
+    c.colliders?.destroy();
+    _world().destroyBody(c.body);
   }
 
   @override
@@ -96,7 +111,9 @@ class LuminaJoltClothSimulator implements LuminaClothSimulator {
     // a light cloth behaves like a heavy one, and never gets the near-rigid
     // constraints that made light cloth over sharp edges unstable.
     final stretch = compliance(cloth.stiffness, 1e-4 * inverseMass, floor: 1e-6 * inverseMass);
+    final skin = cloth is LuminaSkinnedClothComponent ? clothSkinFor(cloth, centre) : null;
     final id = world.createCloth(
+      skin: skin,
       vertices,
       g.simTriangles,
       inverseMasses: [for (var i = 0; i < n; i++) pinnedSet.contains(i) ? 0.0 : inverseMass],
@@ -118,7 +135,8 @@ class LuminaJoltClothSimulator implements LuminaClothSimulator {
         gravityFactor: cloth.gravityScale,
       ),
     );
-    return _Cloth(
+    world.setBodyOwner(id, _ownerOf(cloth.owner));
+    final record = _Cloth(
       id,
       cloth.settingsVersion,
       pinned,
@@ -126,6 +144,31 @@ class LuminaJoltClothSimulator implements LuminaClothSimulator {
       _cloths.length * 0.37,
       inverseMass,
     );
+    if (cloth is LuminaSkinnedClothComponent) _skin(cloth, record, 0);
+    return record;
+  }
+
+  /// Skins [cloth] to its character's latest pose (hard the first time) and
+  /// moves its limb colliders there.
+  void _skin(LuminaSkinnedClothComponent cloth, _Cloth c, double dt) {
+    final pose = cloth.worldAffines;
+    if (pose == null || cloth.skin == null) return;
+    final world = _world();
+    final first = c.skinnedVersion < 0;
+    if (cloth.poseVersion != c.skinnedVersion) {
+      world.skinCloth(c.body, clothJointMatrices(pose), hardSkinAll: first);
+      c.skinnedVersion = cloth.poseVersion;
+    }
+    if (!cloth.collideWithBody) return;
+    final colliders = c.colliders;
+    if (colliders == null) {
+      final skeleton = cloth.skeleton, sampler = cloth.sampler;
+      if (skeleton == null || sampler == null) return;
+      c.colliders = LuminaJoltClothColliders.create(world, LuminaPhysicsAssetGenerator.fromSampler(sampler), skeleton, pose,
+          owner: _ownerOf(cloth.owner), profile: _colliderProfile());
+    } else if (dt > 0) {
+      colliders.move(pose, dt);
+    }
   }
 
   /// Before a step of [dt]: settings changes, pins, wind.
@@ -141,6 +184,7 @@ class LuminaJoltClothSimulator implements LuminaClothSimulator {
         if (rebuilt == null) continue;
         c = rebuilt;
       }
+      if (cloth is LuminaSkinnedClothComponent) _skin(cloth, c, dt);
       if (c.pinned.isNotEmpty) {
         final transform = cloth.worldTransform;
         final targets = Float32List(c.pinned.length * 3);
@@ -194,6 +238,9 @@ class LuminaJoltClothSimulator implements LuminaClothSimulator {
     final toLocal = Matrix4.inverted(cloth.worldTransform)..scaleByDouble(kLuminaScale, kLuminaScale, kLuminaScale, 1);
     return _world().clothLocalVertices(c.body, toLocal, positions, normals) > 0;
   }
+
+  /// The limb colliders of a skinned [cloth] (tests and diagnostics).
+  int colliderCount(LuminaClothComponent cloth) => _cloths[cloth]?.colliders?.length ?? 0;
 
   /// Forgets every cloth (the world is going away).
   void clear() => _cloths.clear();

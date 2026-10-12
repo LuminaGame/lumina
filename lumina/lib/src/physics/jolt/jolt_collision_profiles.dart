@@ -65,6 +65,11 @@ class LuminaJoltCollisionProfiles {
     return _index[p.key] ?? _add(p);
   }
 
+  /// A profile that blocks nothing (a skinned cloth's limb colliders, which
+  /// only cloth touches).
+  late final int clothColliderProfile = _add(_Profile(false, CollisionObjectType.worldDynamic,
+      [for (final _ in CollisionObjectType.values) CollisionResponse.ignore], 0, 0));
+
   /// Whether profiles [a] and [b] block each other.
   bool blocks(int a, int b) => _profiles[a].blocks(_profiles[b]);
 

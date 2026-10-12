@@ -248,4 +248,130 @@ void main() {
     expect(sheetLowest, lessThan(sheetTop - 40), reason: 'its edges hang down');
     SmokeArtifacts.saveVideo(testTitle, video.finish(), usedAssets: used);
   }, timeout: const Timeout(Duration(minutes: 10)));
+
+  const skirtTitle = 'Physics Smoke Scenario 05: a skirt skinned to the walking mannequin swings and stays outside its legs';
+
+  test(skirtTitle, () async {
+    final assets = SmokeArtifacts.testAssetsDir;
+    const mannyAsset = 'mannequin/SKM_Manny_Simple.glb';
+    const walkAsset = 'mannequin/MF_Unarmed_Walk_Fwd.glb';
+    final used = [mannyAsset, walkAsset];
+    for (final a in used) {
+      if (!File('${assets.path}/$a').existsSync()) return markTestSkipped('test-assets missing $a');
+    }
+    final physics = LuminaPhysicsSubsystem(backend: LuminaPhysicsBackendKind.jolt);
+    if (physics.backendKind != LuminaPhysicsBackendKind.jolt) {
+      return markTestSkipped('the Jolt library is not built (tools/flutter_jolt/tool/build_jolt.*)');
+    }
+    final dir = Directory.systemTemp.createTempSync('skirt_smoke_');
+    final merged = GlbAnimationMerger.merge(
+      base: File('${assets.path}/$mannyAsset').readAsBytesSync(),
+      clips: [GlbClipSource(name: 'Walk', bytes: File('${assets.path}/$walkAsset').readAsBytesSync())],
+    );
+    final meshFile = File('${dir.path}/manny_walk.glb')..writeAsBytesSync(merged);
+
+    const w = 1024, h = 768;
+    final engine = FilamentEngine.create()!;
+    final scene = engine.createScene();
+    final view = engine.createView();
+    final renderer = engine.createRenderer();
+    final swapChain = engine.createHeadlessSwapChain(w, h);
+    final camera = engine.createCamera(engine.createEntity());
+    view
+      ..scene = scene
+      ..camera = camera
+      ..setViewport(0, 0, w, h);
+    camera.setProjection(fovDegrees: 40, aspect: w / h, near: 10, far: 100000, direction: FovDirection.vertical);
+    scene.setSkybox(FilamentSkybox.build(engine, color: Vector4(0.45, 0.58, 0.8, 1), intensity: 30000));
+    scene.setIndirectLight(FilamentIndirectLight.build(engine,
+        irradiance: SphericalHarmonics(bands: 1, coefficients: [0.7, 0.7, 0.75]), intensity: 30000));
+    final pixels = calloc<ffi.Uint8>(w * h * 4);
+    final world = LuminaWorld(worldType: LuminaWorldType.game)..initializeNativeContext(engine, scene);
+    addTearDown(() {
+      world.cleanup();
+      calloc.free(pixels);
+      engine.dispose();
+      dir.deleteSync(recursive: true);
+    });
+    world.registerSubsystem(LuminaCollisionSubsystem());
+    world.registerSubsystem(physics);
+    world.bindView(view);
+    for (final a in used) {
+      SmokeArtifacts.recordAsset('${assets.path}/$a');
+    }
+    world.persistentLevel.registerActor(LuminaPrimitiveActor(
+        location: Vector3(0, -10, 0), shape: LuminaPrimitiveShape.box, size: Vector3(4000, 20, 4000), color: Vector3(0.5, 0.52, 0.5)));
+    world.persistentLevel.registerActor(
+        LuminaActor(root: LuminaDirectionalLightComponent(rotation: LuminaAxes.rotation([-50, 0, 35]), intensity: 100000, castShadows: true)));
+
+    // The mannequin walks along +X (it faces glTF +Z: turned 90°).
+    final root = LuminaSceneComponent(location: Vector3(-150, 0, 0));
+    final actor = LuminaActor(root: root);
+    final mesh = LuminaAnimatedMeshComponent(meshAssetPath: meshFile.path)
+      ..relativeRotation = Quaternion.axisAngle(Vector3(0, 1, 0), math.pi / 2);
+    mesh.attachToComponent(root);
+    actor.addComponent(mesh);
+    final skirt = LuminaSkinnedClothComponent(mesh: mesh, color: Vector3(0.55, 0.08, 0.35), wind: Vector3(0, 0, 120), windDrag: 0.5);
+    actor.addComponent(skirt);
+    world.persistentLevel.registerActor(actor);
+    world.beginPlay();
+    await mesh.loaded.timeout(const Duration(seconds: 60));
+    await skirt.ready.timeout(const Duration(seconds: 60));
+    mesh.play('Walk');
+    expect(skirt.isSimulating, isTrue);
+
+    Uint8List shot() {
+      final focus = root.worldLocation + Vector3(0, 95, 0);
+      camera.lookAt(
+          eyeX: focus.x + 120, eyeY: focus.y + 60, eyeZ: focus.z + 330, centerX: focus.x, centerY: focus.y - 10, centerZ: focus.z);
+      for (var i = 0; i < 2; i++) {
+        if (renderer.beginFrame(swapChain)) {
+          renderer.render(view);
+          if (i == 1) {
+            c.filament_renderer_read_pixels(renderer.nativePointer, engine.nativePointer, 0, 0, w, h, pixels.cast(), ffi.nullptr, ffi.nullptr);
+          }
+          renderer.endFrame();
+        }
+        engine.flushAndWait();
+      }
+      return Uint8List.fromList(pixels.asTypedList(w * h * 4));
+    }
+
+    final video = SmokeVideoRecorder(width: w, height: h, fps: 30, testName: skirtTitle);
+    addTearDown(video.discard);
+    void save(String name, Map<String, Object?> metrics) =>
+        SmokeArtifacts.saveScreenshot('$skirtTitle $name', SmokeArtifacts.encodePng(w, h, shot()), usedAssets: used, metrics: metrics);
+
+    var maxFrameUs = 0, frameUs = 0, nonFinite = 0;
+    const frames = 12 * 60;
+    for (var f = 0; f < frames; f++) {
+      // Walk 1.5 m/s for 4 s, stop, walk back.
+      final speed = f < 240 ? 150.0 : (f < 360 ? 0.0 : -150.0);
+      root.relativeLocation = root.relativeLocation + Vector3(speed / 60, 0, 0);
+      if (f == 360) mesh.relativeRotation = Quaternion.axisAngle(Vector3(0, 1, 0), -math.pi / 2);
+      final watch = Stopwatch()..start();
+      world.tick(1 / 60);
+      watch.stop();
+      frameUs += watch.elapsedMicroseconds;
+      maxFrameUs = math.max(maxFrameUs, watch.elapsedMicroseconds);
+      if (f > 120) {
+        nonFinite += skirt.currentSimPositions().where((v) => !v.isFinite).length;
+      }
+      if (f.isEven) video.addFrame(shot());
+      if (f == 60) save('01 standing', {});
+      if (f == 200) save('02 walking, the skirt swings', {});
+      if (f == 330) save('03 stopped', {});
+      if (f == 600) save('04 walking back', {});
+    }
+    final metrics = <String, Object?>{
+      'skirtVertices': skirt.geometry!.simVertexCount,
+      'frameMeanMs': frameUs / frames / 1000,
+      'frameMaxMs': maxFrameUs / 1000,
+      'nonFinite': nonFinite,
+    };
+    // ignore: avoid_print
+    print('skirt smoke: $metrics');
+    expect(nonFinite, 0, reason: 'every vertex stays finite');
+    SmokeArtifacts.saveVideo(skirtTitle, video.finish(), usedAssets: used);
+  }, timeout: const Timeout(Duration(minutes: 10)));
 }

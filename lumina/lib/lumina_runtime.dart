@@ -74,6 +74,7 @@ export 'package:lumina/src/physics/primitive_physics.dart';
 export 'package:lumina/src/physics/physics_joint.dart';
 export 'package:lumina/src/physics/physics_subsystem.dart';
 export 'package:lumina/src/physics/cloth/cloth_component.dart';
+export 'package:lumina/src/physics/cloth/skinned_cloth_component.dart';
 export 'package:lumina/src/physics/ragdoll/fall_monitor.dart';
 export 'package:lumina/src/physics/ragdoll/ragdoll.dart';
 export 'package:lumina/src/physics/ragdoll/ragdoll_component.dart';

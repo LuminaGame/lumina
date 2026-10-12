@@ -217,9 +217,10 @@ class LuminaClothComponent extends LuminaProceduralMeshComponent {
 
   Future<void> _build() async {
     try {
-      final geometry = meshAsset == null || meshAsset!.isEmpty
-          ? LuminaClothGeometry.grid(width: gridWidth, height: gridHeight, columns: gridColumns, rows: gridRows)
-          : await _loadMesh(meshAsset!);
+      // A grid builds at once, so a cloth registered with a running world
+      // simulates from its first frame (Blueprint BeginPlay sees it).
+      final built = buildClothGeometry();
+      final geometry = built is Future<LuminaClothGeometry> ? await built : built;
       if (owner == null) return;
       _geometry = geometry;
       _createSection(geometry);
@@ -246,6 +247,16 @@ class LuminaClothComponent extends LuminaProceduralMeshComponent {
     _physics = LuminaPhysicsSubsystem.ensure(world);
     _physics?.addCloth(this);
     _syncSimulation();
+  }
+
+  /// The cloth's rest geometry in its local frame (cm): the grid, or
+  /// [meshAsset] parsed and welded on a worker isolate.
+  FutureOr<LuminaClothGeometry> buildClothGeometry() {
+    final asset = meshAsset;
+    if (asset == null || asset.isEmpty) {
+      return LuminaClothGeometry.grid(width: gridWidth, height: gridHeight, columns: gridColumns, rows: gridRows);
+    }
+    return _loadMesh(asset);
   }
 
   Future<LuminaClothGeometry> _loadMesh(String path) async {

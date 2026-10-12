@@ -10,6 +10,7 @@ Flags, curtains, clothes on a line and sheets draped over things: a `LuminaCloth
 | Geometry (grid, mesh welding, pieces, pin selection) | `lib/src/physics/cloth/cloth_geometry.dart` |
 | Backend interface | `lib/src/physics/cloth/cloth_simulator.dart` |
 | Jolt simulation | `lib/src/physics/jolt/jolt_cloth_simulator.dart` (soft bodies of [flutter_jolt](https://github.com/LuminaGame/tools/blob/main/docs/en/flutter_jolt.md)) |
+| Garments on characters | `lib/src/physics/cloth/skinned_cloth_component.dart`, `lib/src/physics/jolt/jolt_cloth_skinning.dart` |
 | Blueprint nodes | `lib/src/blueprint/node_library/cloth.dart`, `blueprint_function_library/cloth.dart` |
 
 ## The component
@@ -33,6 +34,17 @@ The physics subsystem keeps the world's cloths (`LuminaPhysicsSubsystem.cloths`,
 
 **Dart backend** (the web, builds without Jolt): there is no cloth simulator. The component draws its rest pose, `isSimulating` is false, and the engine log says once "Cloth needs the Jolt physics backend". Nothing else changes; the web build never reaches Jolt.
 
+## Garments on characters
+
+`LuminaSkinnedClothComponent` is cloth worn by an animated character: its vertices are skinned to the character's skeleton, so the garment moves with the animation and swings within a distance of where the skin puts it.
+
+- **Garment**: `meshAsset` (a skinned `.glb` whose joints are named like the character's bones; its own weights are used) or a generated skirt around `waistBone` (`pelvis`, else `Hips`): `skirtLength` (45 cm), `waistRadius` (17) to `hemRadius` (34), `waistOffset` above the bone (6), `skirtColumns` x `skirtRows` (32 x 12), each vertex weighted to its two nearest hip and leg bones.
+- **Freedom**: `maxDistance` (25 cm) at the garment's far end, `t^1.5` of it toward the top; the top stays on the body (hard skinned).
+- **Body**: with `collideWithBody` the character's limbs are capsules (the physics asset generated from the skeleton, as for ragdolls) that move with the animation every step and push the garment out. A cloth ignores the other bodies of its owner (the character's capsule) unless they are marked as its colliders.
+- **Pose**: the component attaches itself to `mesh` and reads the animated pose as a pose modifier (it never changes it); nodes the mesh cannot address are taken at rest. The skeleton (`sampler`) is read from the mesh asset when not given.
+
+On Jolt each step skins the soft body to the latest pose (`SkinVertices`, hard the first time) and moves the limb capsules (kinematic). The garment ignores `pinning` (its pins are the hard-skinned vertices). Without Jolt it draws its rest pose. Measured: a 416-vertex skirt on the walking mannequin, 1.4 ms per 60 Hz frame for the whole scene.
+
 ## Blueprints and the editor
 
 Component type `LuminaClothComponent` (a scene component): the Blueprint editor adds it as **Cloth** (category Physics) with every setting above in the Details panel; `meshAsset` is an asset reference, `wind` a vector in authoring axes. The component mapping builds it in Play-In-Editor and generated games alike, and the properties are saved with the Blueprint (`toProperties` / `fromProperties`).
@@ -51,7 +63,7 @@ Nodes (category **Physics|Cloth**, acting on the cloths of the actor that runs t
 
 - One material per cloth (a base colour, double-sided, no texture yet).
 - Cloth collides with bodies and colliders; it does not collide with itself.
-- Skinned garments that follow a character's skeleton are not built yet.
+- Skinned garments are a runtime component only: the Blueprint editor and the component mapping do not offer `LuminaSkinnedClothComponent` yet, and its backstop is not exposed.
 
 ---
 
