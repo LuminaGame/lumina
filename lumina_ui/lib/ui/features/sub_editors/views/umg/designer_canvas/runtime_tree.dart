@@ -301,7 +301,9 @@ class _UmgRuntimeTree extends StatelessWidget {
     }
     child = Padding(padding: _padding(s), child: child);
     if (s.fill) {
-      child = Expanded(flex: (s.flex * 100).round().clamp(1, 100000), child: child);
+      // Flutter's Expanded: LuminaUmgBox is a Flutter Flex (shadcn's
+      // Expanded carries its own parent data).
+      child = widgets.Expanded(flex: (s.flex * 100).round().clamp(1, 100000), child: child);
     }
     return child;
   }

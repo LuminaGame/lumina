@@ -355,7 +355,7 @@ Outcome of one compile of a widget document.
 
 Generates the real Flutter widget class for a [UmgDocument] (`<project>/lib/widgets/wbp_<name>.dart`, class `Wbp<Name>`). Same principles as the actor codegen: deterministic, idempotent, compare-before-write, `// BEGIN USER CODE: <tag>` … `// END USER CODE` regions survive regeneration, orphaned regions are kept commented at the end of the file. The game never parses the `.lmas`; this file is the truth.
 
-Horizontal and Vertical Boxes are emitted as `LuminaUmgBox` (lumina_widgets): it stretches its children across a bounded cross axis and sizes to its content in an unbounded one, so a Horizontal Box inside a Vertical Box or a Scroll Box (and a Vertical Box inside a Horizontal Box or a horizontal Scroll Box) is as tall (wide) as its content. The designer canvas and `UmgRuntimeView` build the same widget.
+Horizontal and Vertical Boxes are emitted as `LuminaUmgBox` (lumina_widgets): it stretches its children across a bounded cross axis and sizes to its content in an unbounded one, so a Horizontal Box inside a Vertical Box or a Scroll Box (and a Vertical Box inside a Horizontal Box or a horizontal Scroll Box) is as tall (wide) as its content. The designer canvas and `UmgRuntimeView` build the same widget. A Fill slot is Flutter's `Expanded` (`widgets.Expanded`, from `package:flutter/widgets.dart` imported as `widgets`): `LuminaUmgBox` is a Flutter `Flex`, and shadcn_flutter's own `Expanded` carries parent data a Flutter `Flex` does not take.
 
 **Functions, Methods & Accessors:**
 

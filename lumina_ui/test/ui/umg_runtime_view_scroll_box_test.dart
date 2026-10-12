@@ -30,4 +30,21 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('Button'), findsNWidgets(2));
   });
+
+  testWidgets('a Fill child of a horizontal box takes the free width beside an auto-sized one', (tester) async {
+    final field = UmgNode.create(UmgWidgetType.text, name: 'Seed', id: 'n_Seed')..slot.fill = true;
+    final button = UmgNode.create(UmgWidgetType.button, name: 'Roll', id: 'n_Roll');
+    final row = UmgNode.create(UmgWidgetType.horizontalBox, name: 'SeedRow', id: 'n_SeedRow')..children.addAll([field, button]);
+    final root = UmgNode.create(UmgWidgetType.verticalBox, name: 'Root', id: 'n_Root')..children.add(row);
+    await tester.pumpWidget(ShadcnApp(
+      theme: luminaEditorTheme(),
+      home: SizedBox(width: 400, height: 300, child: UmgRuntimeView(document: UmgDocument(root: root), editorTheme: true)),
+    ));
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    final rowWidth = tester.getSize(find.byKey(const ValueKey('umg_rt_element_n_SeedRow'))).width;
+    final seedWidth = tester.getSize(find.byKey(const ValueKey('umg_rt_element_n_Seed'))).width;
+    final rollWidth = tester.getSize(find.byKey(const ValueKey('umg_rt_element_n_Roll'))).width;
+    expect(seedWidth + rollWidth, closeTo(rowWidth, 1.0), reason: 'the Fill child takes what the button leaves');
+  });
 }

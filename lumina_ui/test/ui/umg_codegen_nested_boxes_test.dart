@@ -113,4 +113,16 @@ void main() {
       expect(src, isNot(contains('crossAxisAlignment: CrossAxisAlignment.stretch')), reason: library);
     }
   });
+
+  test("a Fill slot of a box is Flutter's Expanded in both libraries (shadcn's Expanded does not fit a Flutter Flex)", () {
+    final doc = UmgDocument.createDefault();
+    final row = doc.addChild(doc.root.id, UmgNode.create(UmgWidgetType.horizontalBox, name: 'Row'), canvasPosition: const Offset(40, 40))!;
+    doc.addChild(row.id, UmgNode.create(UmgWidgetType.text, name: 'Label')..slot.fill = true);
+    for (final library in [kUmgWidgetLibraryShadcn, kUmgWidgetLibraryFlutter]) {
+      final src = UmgWidgetCodegen.generateWidgetDart(doc, assetName: 'WBP_Fill', library: library);
+      expect(src, contains('widgets.Expanded(flex: 100'), reason: library);
+      expect(src, isNot(contains(RegExp(r'[^.]Expanded\('))), reason: library);
+      expect(src, contains("import 'package:flutter/widgets.dart' as widgets show Expanded"), reason: library);
+    }
+  });
 }

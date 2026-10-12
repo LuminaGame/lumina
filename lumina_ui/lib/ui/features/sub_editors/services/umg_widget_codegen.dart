@@ -185,7 +185,12 @@ class UmgWidgetCodegen {
       b.writeln();
     }
     if (plain) b.writeln("import 'package:flutter/widgets.dart';");
-    if (usesGrid) b.writeln("import 'package:flutter/widgets.dart' as widgets show Table, TableRow;");
+    // Box slots fill with Flutter's Expanded: LuminaUmgBox is a Flutter Flex
+    // (shadcn_flutter exports an Expanded of its own).
+    final usesBox = nodes.any((n) => n.type.isBox);
+    if (usesGrid || usesBox) {
+      b.writeln("import 'package:flutter/widgets.dart' as widgets show ${[if (usesBox) 'Expanded', if (usesGrid) ...['Table', 'TableRow']].join(', ')};");
+    }
     // The game library (the engine runtime and its Flutter side, not the
     // editor's barrel): it compiles for the web. The graph script uses the
     // whole runtime.

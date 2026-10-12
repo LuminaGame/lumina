@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-import 'package:flutter/widgets.dart' as widgets show Table, TableRow;
+import 'package:flutter/widgets.dart' as widgets show Expanded, Table, TableRow;
 import 'package:lumina_editor_data/lumina_editor.dart' show LuminaUmgBox, LuminaUmgElement, LuminaUmgElementBinding, LuminaUserWidgets, LuminaThemeDocument, LuminaViewportController, LuminaWidgetEvents;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
@@ -386,7 +386,9 @@ class UmgRuntimeView extends StatelessWidget {
     }
     child = Padding(padding: _padding(s), child: child);
     if (s.fill) {
-      child = Expanded(flex: (s.flex * 100).round().clamp(1, 100000), child: child);
+      // Flutter's Expanded: LuminaUmgBox is a Flutter Flex, whose children
+      // take Flutter's flex parent data (shadcn's Expanded carries its own).
+      child = widgets.Expanded(flex: (s.flex * 100).round().clamp(1, 100000), child: child);
     }
     return child;
   }

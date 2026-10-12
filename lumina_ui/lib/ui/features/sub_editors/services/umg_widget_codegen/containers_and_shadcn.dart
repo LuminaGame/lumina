@@ -242,7 +242,7 @@ String _boxChild(UmgNode c, UmgDocument doc, String indent, bool stateful, bool 
   }
   child = 'Padding(\n$indent  padding: EdgeInsets.fromLTRB(${_f(s.paddingLeft)}, ${_f(s.paddingTop)}, ${_f(s.paddingRight)}, ${_f(s.paddingBottom)}),\n$indent  child: $child,\n$indent)';
   if (s.fill) {
-    child = 'Expanded(flex: ${(s.flex * 100).round().clamp(1, 100000)}, child: $child)';
+    child = 'widgets.Expanded(flex: ${(s.flex * 100).round().clamp(1, 100000)}, child: $child)';
   }
   return child;
 }
