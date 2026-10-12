@@ -35,7 +35,7 @@ dependencies:
     git:
       url: https://github.com/LuminaGame/tools.git
       path: flutter_jolt
-      ref: 6cb2254123e96b46a07fc886258880249a26dc40
+      ref: b575a91223c75d31140e105e3a71f99d686d12be
   vector_math: ^2.1.4
 
   meta: any
