@@ -28,6 +28,7 @@ export 'package:lumina_widgets/src/lumina_widgets_binding.dart';
 export 'package:lumina_widgets/src/media/media.dart';
 export 'package:lumina_widgets/src/umg/element_binding.dart';
 export 'package:lumina_widgets/src/umg/theme_document_colors.dart';
+export 'package:lumina_widgets/src/umg/umg_box.dart';
 export 'package:lumina_widgets/src/umg/umg_widgets.dart';
 export 'package:lumina_widgets/src/umg/viewport/umg_viewport.dart';
 export 'package:lumina_widgets/src/umg/viewport/viewport_host.dart';

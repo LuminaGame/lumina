@@ -355,6 +355,8 @@ Outcome of one compile of a widget document.
 
 Generates the real Flutter widget class for a [UmgDocument] (`<project>/lib/widgets/wbp_<name>.dart`, class `Wbp<Name>`). Same principles as the actor codegen: deterministic, idempotent, compare-before-write, `// BEGIN USER CODE: <tag>` … `// END USER CODE` regions survive regeneration, orphaned regions are kept commented at the end of the file. The game never parses the `.lmas`; this file is the truth.
 
+Horizontal ve Vertical Box'lar `LuminaUmgBox` (lumina_widgets) olarak üretilir: sınırlı bir çapraz eksende çocuklarını gerer, sınırsız bir çapraz eksende içeriği kadar olur; böylece Vertical Box ya da Scroll Box içindeki bir Horizontal Box (ve Horizontal Box ya da yatay Scroll Box içindeki bir Vertical Box) içeriği kadar yüksek (geniş) olur. Tasarım kanvası ve `UmgRuntimeView` aynı widget'ı kurar.
+
 **Fonksiyonlar, Metotlar ve Erişimciler:**
 
 | Metot / Getter | İmzası | Ne İşe Yarar? |

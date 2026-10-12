@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter/widgets.dart' as widgets show Table, TableRow;
-import 'package:lumina_editor_data/lumina_editor.dart' show LuminaUmgElement, LuminaUmgElementBinding, LuminaUserWidgets, LuminaThemeDocument, LuminaViewportController, LuminaWidgetEvents;
+import 'package:lumina_editor_data/lumina_editor.dart' show LuminaUmgBox, LuminaUmgElement, LuminaUmgElementBinding, LuminaUserWidgets, LuminaThemeDocument, LuminaViewportController, LuminaWidgetEvents;
 import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
@@ -162,16 +162,9 @@ class UmgRuntimeView extends StatelessWidget {
       case UmgWidgetType.verticalBox:
         final isRow = node.type == UmgWidgetType.horizontalBox;
         final children = node.children.map((c) => _boxChild(c, isRow)).toList();
-        if (!isRow) return Column(mainAxisSize: MainAxisSize.max, crossAxisAlignment: CrossAxisAlignment.stretch, children: children);
-        // In a vertical Scroll Box (an unbounded height) a row cannot stretch
-        // its children to its height: it centres them instead.
-        return LayoutBuilder(
-          builder: (context, constraints) => Row(
-            mainAxisSize: MainAxisSize.max,
-            crossAxisAlignment: constraints.hasBoundedHeight ? CrossAxisAlignment.stretch : CrossAxisAlignment.center,
-            children: children,
-          ),
-        );
+        // In a vertical container a row is as tall as its content, in a
+        // horizontal one a column as wide as its content.
+        return LuminaUmgBox(direction: isRow ? Axis.horizontal : Axis.vertical, children: children);
       case UmgWidgetType.gridPanel:
         final columns = ((node.props['columns'] as num?)?.toInt() ?? 2).clamp(1, 32);
         final rows = <widgets.TableRow>[];

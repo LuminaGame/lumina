@@ -7,6 +7,7 @@ The runtime side of game UI: the plain Flutter widgets that compiled widget asse
 **On this page:**
 
 - [`lib/src/umg/element_binding.dart`](#libsrcumgelement_bindingdart)
+- [`lib/src/umg/umg_box.dart`](#libsrcumgumg_boxdart)
 - [`lib/src/umg/umg_widgets.dart`](#libsrcumgumg_widgetsdart)
 - [`lib/src/umg/umg_media_widgets.dart`](#libsrcumgumg_media_widgetsdart)
 - [`lib/src/umg/widget_layer.dart`](#libsrcumgwidget_layerdart)
@@ -92,6 +93,20 @@ Generated widget classes (umg_widget_codegen) wrap every designer element in one
 | `instance` | `final Map<String, Object?>? instance` |  |
 | `name` | `final String name` |  |
 | `builder` | `final Widget Function(BuildContext context, Map<String, Object?>? element) builder` |  |
+
+## `lib/src/umg/umg_box.dart`
+
+### `class LuminaUmgBox`
+
+A UMG Horizontal Box (`Axis.horizontal`) or Vertical Box (`Axis.vertical`): a `Flex` that fills its main axis and stretches its children across the cross axis. When the parent leaves the cross axis unbounded (a Horizontal Box inside a Vertical Box or a vertical Scroll Box, a Vertical Box inside a Horizontal Box or a horizontal Scroll Box), the box first measures its children and then stretches them to the largest one, so it is as tall (wide) as its content instead of failing layout with an infinite cross extent; children aligned with an `Align` keep that alignment within the measured extent. The designer canvas, the editor's runtime preview and generated widget code all build box panels with it.
+
+**Constructors:**
+
+- `const LuminaUmgBox({super.key, required super.direction, super.children})`
+
+### `class RenderLuminaUmgBox`
+
+The render object of `LuminaUmgBox`: a `RenderFlex` that, with a stretching cross axis the parent leaves unbounded, lays out twice (centred to measure the largest child, then stretched to exactly that extent). Dry layout and dry baseline follow the same two steps, so intrinsic and dry-layout queries from ancestors work.
 
 ## `lib/src/umg/umg_widgets.dart`
 

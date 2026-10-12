@@ -96,9 +96,7 @@ class _UmgRuntimeTree extends StatelessWidget {
       case UmgWidgetType.verticalBox:
         final isRow = node.type == UmgWidgetType.horizontalBox;
         final children = node.children.map((c) => _boxChild(c, isRow)).toList();
-        return isRow
-            ? Row(mainAxisSize: MainAxisSize.max, crossAxisAlignment: CrossAxisAlignment.stretch, children: children)
-            : Column(mainAxisSize: MainAxisSize.max, crossAxisAlignment: CrossAxisAlignment.stretch, children: children);
+        return LuminaUmgBox(direction: isRow ? Axis.horizontal : Axis.vertical, children: children);
       case UmgWidgetType.gridPanel:
         final columns = ((node.props['columns'] as num?)?.toInt() ?? 2).clamp(1, 32);
         final rows = <widgets.TableRow>[];

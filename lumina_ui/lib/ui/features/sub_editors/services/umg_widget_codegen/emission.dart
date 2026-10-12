@@ -128,10 +128,11 @@ String _emitBody(UmgNode node, UmgDocument doc, String indent, bool stateful, bo
     case UmgWidgetType.verticalBox:
       final isRow = node.type == UmgWidgetType.horizontalBox;
       final b = StringBuffer();
-      b.writeln('${isRow ? 'Row' : 'Column'}(');
+      // LuminaUmgBox stretches across a bounded cross axis and sizes to its
+      // content in an unbounded one (a box in a box or a Scroll Box).
+      b.writeln('LuminaUmgBox(');
       b.writeln('$inner$key,');
-      b.writeln('${inner}mainAxisSize: MainAxisSize.max,');
-      b.writeln('${inner}crossAxisAlignment: CrossAxisAlignment.stretch,');
+      b.writeln('${inner}direction: ${isRow ? 'Axis.horizontal' : 'Axis.vertical'},');
       b.writeln('${inner}children: [');
       for (final c in node.children) {
         b.writeln('$inner  ${_boxChild(c, doc, '$inner  ', stateful, plain, isRow, inst)},');

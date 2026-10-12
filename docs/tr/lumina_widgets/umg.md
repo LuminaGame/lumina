@@ -7,6 +7,7 @@ Oyun arayüzünün runtime tarafı: derlenmiş widget asset'lerinin üzerine kur
 **Bu sayfada:**
 
 - [`lib/src/umg/element_binding.dart`](#libsrcumgelement_bindingdart)
+- [`lib/src/umg/umg_box.dart`](#libsrcumgumg_boxdart)
 - [`lib/src/umg/umg_widgets.dart`](#libsrcumgumg_widgetsdart)
 - [`lib/src/umg/umg_media_widgets.dart`](#libsrcumgumg_media_widgetsdart)
 - [`lib/src/umg/widget_layer.dart`](#libsrcumgwidget_layerdart)
@@ -92,6 +93,20 @@ Generated widget classes (umg_widget_codegen) wrap every designer element in one
 | `instance` | `final Map<String, Object?>? instance` |  |
 | `name` | `final String name` |  |
 | `builder` | `final Widget Function(BuildContext context, Map<String, Object?>? element) builder` |  |
+
+## `lib/src/umg/umg_box.dart`
+
+### `class LuminaUmgBox`
+
+Bir UMG Horizontal Box (`Axis.horizontal`) ya da Vertical Box (`Axis.vertical`): ana ekseni dolduran ve çocuklarını çapraz eksende geren bir `Flex`. Ebeveyn çapraz ekseni sınırsız bıraktığında (Vertical Box ya da dikey Scroll Box içinde bir Horizontal Box, Horizontal Box ya da yatay Scroll Box içinde bir Vertical Box), kutu önce çocuklarını ölçer, sonra onları en büyüğüne gerer; böylece sonsuz bir çapraz boyutla yerleşimi bozmak yerine içeriği kadar yüksek (geniş) olur. `Align` ile hizalanmış çocuklar ölçülen boyut içinde hizalarını korur. Tasarım kanvası, editörün runtime önizlemesi ve üretilen widget kodu kutu panellerini bununla kurar.
+
+**Kurucular:**
+
+- `const LuminaUmgBox({super.key, required super.direction, super.children})`
+
+### `class RenderLuminaUmgBox`
+
+`LuminaUmgBox`'ın render nesnesi: çapraz ekseni geren ve ebeveynin bu ekseni sınırsız bıraktığı durumda iki kez yerleşim yapan bir `RenderFlex` (önce ortalanmış olarak en büyük çocuğu ölçer, sonra tam o boyuta gerer). Dry layout ve dry baseline aynı iki adımı izler; atalardan gelen intrinsic ve dry layout sorguları çalışır.
 
 ## `lib/src/umg/umg_widgets.dart`
 
