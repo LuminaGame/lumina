@@ -29,6 +29,7 @@ const ComponentTypeDescriptor clothComponentDescriptor = ComponentTypeDescriptor
       defaultValue: 'topEdge',
       enumOptions: ['none', 'topEdge', 'bottomEdge', 'leftEdge', 'rightEdge', 'topCorners'],
     ),
+    ComponentPropertySchema(group: 'CLOTH MATERIAL', name: 'Cloth Settings', dartField: 'clothSettingsAsset', type: ComponentPropertyType.assetReference, defaultValue: ''),
     ComponentPropertySchema(group: 'CLOTH MATERIAL', name: 'Mass (kg)', dartField: 'massKg', type: ComponentPropertyType.number, defaultValue: 1.0, min: 0.01, max: 50.0),
     ComponentPropertySchema(group: 'CLOTH MATERIAL', name: 'Stiffness', dartField: 'stiffness', type: ComponentPropertyType.number, defaultValue: 0.95, min: 0.0, max: 1.0, hardMax: 1.0),
     ComponentPropertySchema(group: 'CLOTH MATERIAL', name: 'Bend Stiffness', dartField: 'bendStiffness', type: ComponentPropertyType.number, defaultValue: 0.3, min: 0.0, max: 1.0, hardMax: 1.0),

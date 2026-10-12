@@ -90,6 +90,8 @@ String? subEditorCategoryFor(RealAssetInfo asset, {PluginExtensionRegistry? exte
       return 'PoseSearchDatabase';
     case AssetType.theme:
       return 'Theme';
+    case AssetType.clothSettings:
+      return 'ClothSettings';
     case AssetType.unknown:
       // An .lmas a plugin registered an asset type for opens with
       // that plugin's editor.

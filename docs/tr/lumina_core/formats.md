@@ -128,7 +128,7 @@ A square heightmap terrain plus its foliage layers — the single source of trut
 
 ### `enum AssetType`
 
-`AssetType`: Sistemde kullanılan seçenekleri ve durumları listeleyen numaralandırma türüdür.
+`AssetType`: Sistemde kullanılan seçenekleri ve durumları listeleyen numaralandırma türüdür. `clothSettings`, `raw_payload`'ı JSON olarak bir `LuminaClothSettingsDocument` olan kumaş ayarları asset'idir (`lib/src/formats/lumina_cloth_settings_document.dart`: ayarlar, kumaş bileşeninin anahtarlarıyla `toProperties` / `fromProperties` ve kırpılan `ranges`, `withValue`, `toAsset` / `fromAsset`).
 
 ### `class AssetReference`
 

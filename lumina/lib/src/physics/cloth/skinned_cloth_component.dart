@@ -111,6 +111,7 @@ class LuminaSkinnedClothComponent extends LuminaClothComponent implements Lumina
     super.color,
     super.baseColorTexture,
     super.materialAsset,
+    super.clothSettingsAsset,
     super.castShadows,
     super.assetProvider,
   }) : super(pinning: LuminaClothPinning.none);
@@ -284,6 +285,7 @@ class LuminaSkinnedClothComponent extends LuminaClothComponent implements Lumina
       color: r.color,
       baseColorTexture: r.text('baseColorTexture'),
       materialAsset: r.text('materialAsset'),
+      clothSettingsAsset: r.text('clothSettingsAsset'),
       castShadows: r.flag('castShadows', true),
       assetProvider: assetProvider,
     );

@@ -35,6 +35,7 @@ Sub-editors and plugins run inside `SubEditorWorkspaceShell`, which guarantees c
 | [Blueprint editor](blueprint.md) | Blueprint sub-editor, component tree, event graph, component registry. |
 | [Blueprint editor (continued, part 1)](blueprint-continued.md) | More files under `lib/ui/features/sub_editors/models/`, `lib/ui/features/sub_editors/services/`, `lib/ui/features/sub_editors/view_models/`, `lib/ui/features/sub_editors/views/blueprint/`. |
 | [Blueprint editor (continued, part 2)](blueprint-continued-2.md) | More files under `lib/ui/features/sub_editors/views/blueprint/`, `lib/ui/features/sub_editors/views/blueprint/graph_canvas/`, `lib/ui/features/sub_editors/views/blueprint/timeline/`, `lib/ui/features/sub_editors/views/blueprint_enum/`, `lib/ui/features/sub_editors/views/blueprint_interface/`. |
+| [Cloth settings editor](cloth-settings.md) | Cloth settings assets: material, wind, motion and self-collision shared by cloths. |
 | [Build manager](build-manager.md) | Build steps, validation and Cook & Package through `flutter build`. |
 | [Environment lighting](environment-lighting.md) | Sun and time of day, sky and IBL, fog and post-process controls. |
 | [Landscape and foliage](landscape.md) | Sculpt brushes, foliage painting, heightmap assets, terrain preview. |

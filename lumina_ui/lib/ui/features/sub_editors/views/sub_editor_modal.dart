@@ -57,6 +57,8 @@ import 'package:lumina_ui/ui/features/sub_editors/views/environment_lighting_sub
 import 'package:lumina_ui/ui/features/sub_editors/views/navigation_sub_editor.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/build_manager_sub_editor.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/theme/theme_sub_editor.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/cloth_settings/cloth_settings.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/cloth_settings_editor_view_model.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/theme_editor_view_model.dart';
 
 export 'package:lumina_ui/ui/features/sub_editors/views/material/material_sub_editor.dart';
@@ -479,6 +481,16 @@ class _SubEditorDispatcher extends StatelessWidget {
           assetPath: asset?.lmasPath ?? (editorViewModel != null ? '${editorViewModel!.projectDirPath}/contents/themes/$assetName.lmas' : asset?.relativePath),
           asset: asset,
           viewModel: _existingSession<ThemeEditorViewModel>(),
+          onBind: _bind,
+          onClose: onClose,
+        );
+      case 'ClothSettings':
+      case 'CLOTH_SETTINGS':
+        return ClothSettingsSubEditor(
+          assetName: assetName,
+          assetPath: asset?.lmasPath ?? (editorViewModel != null ? '${editorViewModel!.projectDirPath}/contents/physics/$assetName.lmas' : asset?.relativePath),
+          asset: asset,
+          viewModel: _existingSession<ClothSettingsEditorViewModel>(),
           onBind: _bind,
           onClose: onClose,
         );

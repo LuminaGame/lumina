@@ -38,6 +38,11 @@ enum AssetType {
   /// `LuminaPoseSearchDatabaseDocument` as JSON; its feature cache is the
   /// `.posedb` file next to the `.lmas`.
   poseSearchDatabase,
+
+  /// Cloth settings: `raw_payload` is a `LuminaClothSettingsDocument` as
+  /// JSON (mass, stiffness, wind, motion, self-collision), shared by the
+  /// cloth components that name it.
+  clothSettings,
 }
 
 class AssetReference {

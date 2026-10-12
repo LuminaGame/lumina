@@ -29,6 +29,7 @@ const ComponentTypeDescriptor skinnedClothComponentDescriptor = ComponentTypeDes
     ComponentPropertySchema(group: 'GARMENT FREEDOM', name: 'Backstop Radius (cm)', dartField: 'backstopRadius', type: ComponentPropertyType.number, defaultValue: 20.0, min: 1.0, max: 100.0),
     ComponentPropertySchema(group: 'GARMENT FREEDOM', name: 'Painted Maps', dartField: 'paintedMaps', type: ComponentPropertyType.boolean, defaultValue: false),
     ComponentPropertySchema(group: 'GARMENT FREEDOM', name: 'Collide With Body', dartField: 'collideWithBody', type: ComponentPropertyType.boolean, defaultValue: true),
+    ComponentPropertySchema(group: 'CLOTH MATERIAL', name: 'Cloth Settings', dartField: 'clothSettingsAsset', type: ComponentPropertyType.assetReference, defaultValue: ''),
     ComponentPropertySchema(group: 'CLOTH MATERIAL', name: 'Mass (kg)', dartField: 'massKg', type: ComponentPropertyType.number, defaultValue: 0.6, min: 0.01, max: 50.0),
     ComponentPropertySchema(group: 'CLOTH MATERIAL', name: 'Stiffness', dartField: 'stiffness', type: ComponentPropertyType.number, defaultValue: 0.95, min: 0.0, max: 1.0, hardMax: 1.0),
     ComponentPropertySchema(group: 'CLOTH MATERIAL', name: 'Bend Stiffness', dartField: 'bendStiffness', type: ComponentPropertyType.number, defaultValue: 0.15, min: 0.0, max: 1.0, hardMax: 1.0),

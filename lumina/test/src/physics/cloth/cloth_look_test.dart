@@ -154,4 +154,60 @@ void main() {
       expect(referenced.materialAsset, isNull);
     });
   });
+  group('cloth settings asset', () {
+    setUp(() => LuminaPhysicsSubsystem.defaultBackend = LuminaPhysicsBackendKind.jolt);
+
+    test('the component defaults are the asset defaults', () {
+      expect(LuminaClothSettingsDocument.fromProperties(LuminaClothComponent().toProperties()), const LuminaClothSettingsDocument());
+    });
+
+    test('a cloth takes the settings of the asset it names and simulates with them', () async {
+      final dir = await Directory.systemTemp.createTemp('cloth_settings_');
+      addTearDown(() => dir.delete(recursive: true));
+      final path = '${dir.path}/CS_Heavy.lmas';
+      await File(path).writeAsBytes(const LuminaClothSettingsDocument(
+        massKg: 3,
+        stiffness: 0.9,
+        bendStiffness: 0.6,
+        iterations: 12,
+        windDrag: 2,
+        inertiaScale: 0.5,
+        selfCollision: true,
+      ).toAsset(name: 'CS_Heavy').toProtoBufferBytes());
+      final w = PhysicsWorld();
+      addTearDown(w.dispose);
+      final cloth = LuminaClothComponent.fromProperties({
+        'gridColumns': 8,
+        'gridRows': 6,
+        'massKg': 0.2,
+        'clothSettingsAsset': {'asset_path': path},
+        'location': [0.0, 0.0, 300.0],
+      });
+      expect(cloth.clothSettingsAsset, path);
+      w.world.persistentLevel.registerActor(LuminaActor(root: cloth..relativeLocation = Vector3(0, 300, 0)));
+      w.begin();
+      await cloth.ready;
+      expect(cloth.massKg, 3);
+      expect(cloth.iterations, 12);
+      expect(cloth.windDrag, 2);
+      expect(cloth.inertiaScale, 0.5);
+      expect(cloth.selfCollision, isTrue);
+      expect(cloth.isSimulating, isTrue);
+      w.run(1);
+      expect(cloth.currentSimPositions().every((v) => v.isFinite), isTrue);
+      expect(cloth.toProperties()['clothSettingsAsset'], path);
+    });
+
+    test('a cloth whose settings asset cannot be read keeps its own and logs why', () async {
+      final w = PhysicsWorld();
+      addTearDown(w.dispose);
+      final before = EngineLoggerService().logs.length;
+      final cloth = LuminaClothComponent(gridColumns: 4, gridRows: 4, massKg: 0.7, clothSettingsAsset: '${Directory.systemTemp.path}/no_such_cloth_settings.lmas');
+      w.world.persistentLevel.registerActor(LuminaActor(root: cloth..relativeLocation = Vector3(0, 300, 0)));
+      w.begin();
+      await cloth.ready;
+      expect(cloth.massKg, 0.7);
+      expect(EngineLoggerService().logs.skip(before).any((e) => e.message.contains('cannot read cloth settings')), isTrue);
+    });
+  });
 }

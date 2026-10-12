@@ -56,6 +56,8 @@ class AssetTypeStyle {
             EditorColors.assetTypeBlendSpace, 'Pose Search Database', 'poseSearchDatabase', LucideIcons.database),
         AssetType.theme =>
           const AssetTypeStyle._(EditorColors.assetTypeTheme, 'Theme', 'theme', LucideIcons.palette),
+        AssetType.clothSettings => const AssetTypeStyle._(
+            EditorColors.assetTypePhysicsAsset, 'Cloth Settings', 'clothSettings', LucideIcons.shirt),
         AssetType.unknown => const AssetTypeStyle._(EditorColors.mutedForeground, 'Asset', 'unknown', LucideIcons.file),
       };
 }

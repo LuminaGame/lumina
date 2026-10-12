@@ -1,6 +1,7 @@
 // Data & Manifest Models
 export 'package:lumina_core/src/formats/lumina_asset.dart';
 export 'package:lumina_core/src/formats/lumina_theme_document.dart';
+export 'package:lumina_core/src/formats/lumina_cloth_settings_document.dart';
 export 'package:lumina_core/src/formats/sequencer_data.dart';
 export 'package:lumina_core/src/formats/landscape_data.dart';
 // The pure change types engine state notifies through (a widget listens

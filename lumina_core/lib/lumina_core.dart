@@ -25,6 +25,7 @@ export 'package:lumina_core/src/formats/lumina_asset_summary.dart';
 export 'package:lumina_core/src/formats/lumina_level_document.dart';
 export 'package:lumina_core/src/formats/lumina_plugin_descriptor.dart';
 export 'package:lumina_core/src/formats/lumina_project.dart';
+export 'package:lumina_core/src/formats/lumina_cloth_settings_document.dart';
 export 'package:lumina_core/src/formats/lumina_theme_document.dart';
 export 'package:lumina_core/src/formats/plugin_isolation.dart';
 export 'package:lumina_core/src/formats/project_input_settings.dart';

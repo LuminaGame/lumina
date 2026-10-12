@@ -39,6 +39,8 @@ class AssetRefField extends StatelessWidget {
         return {AssetType.filameshSk};
       case 'LuminaSound':
         return {AssetType.audio};
+      case 'LuminaClothSettings':
+        return {AssetType.clothSettings};
       case 'Texture':
       case 'LuminaTexture':
         return {AssetType.texture};

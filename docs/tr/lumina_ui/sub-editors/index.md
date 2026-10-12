@@ -35,6 +35,7 @@ Alt editörler ve eklentiler sekmeler arasında görsel ve davranışsal uyumu g
 | [Blueprint editörü](blueprint.md) | Blueprint alt editörü, component ağacı, event graph, component registry'si. |
 | [Blueprint editörü (devamı, bölüm 1)](blueprint-continued.md) | `lib/ui/features/sub_editors/models/`, `lib/ui/features/sub_editors/services/`, `lib/ui/features/sub_editors/view_models/`, `lib/ui/features/sub_editors/views/blueprint/` altındaki diğer dosyalar. |
 | [Blueprint editörü (devamı, bölüm 2)](blueprint-continued-2.md) | `lib/ui/features/sub_editors/views/blueprint/`, `lib/ui/features/sub_editors/views/blueprint/graph_canvas/`, `lib/ui/features/sub_editors/views/blueprint/timeline/`, `lib/ui/features/sub_editors/views/blueprint_enum/`, `lib/ui/features/sub_editors/views/blueprint_interface/` altındaki diğer dosyalar. |
+| [Kumaş ayarları editörü](cloth-settings.md) | Kumaş ayarları asset'leri: kumaşların paylaştığı malzeme, rüzgâr, hareket ve kendisiyle çarpışma. |
 | [Build yöneticisi](build-manager.md) | Build adımları, doğrulama ve `flutter build` ile Cook & Package. |
 | [Çevre ışıklandırması](environment-lighting.md) | Güneş ve günün saati, sky ve IBL, sis ve post-process kontrolleri. |
 | [Landscape ve foliage](landscape.md) | Şekillendirme fırçaları, foliage boyama, heightmap asset'leri, arazi önizlemesi. |

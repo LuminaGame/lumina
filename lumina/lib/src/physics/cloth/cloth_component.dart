@@ -43,6 +43,9 @@ export 'package:lumina/src/physics/cloth/cloth_geometry.dart' show LuminaClothGe
 /// - **Self-collision**: with [selfCollision] the cloth keeps
 ///   [selfCollisionDistance] cm between its own layers (a fold, a sheet
 ///   falling on itself).
+/// - **Shared settings**: [clothSettingsAsset] (a cloth settings `.lmas`)
+///   replaces the material, wind, motion and self-collision settings with
+///   the asset's when the cloth is built.
 /// - **Wind**: [wind] (cm/s, runtime axes) pulls the cloth at [windDrag] per
 ///   second, its strength varying by [windTurbulence] (0..1) over time.
 /// - **Motion**: [inertiaScale] (0..1) is how much of its owner's motion
@@ -90,6 +93,7 @@ class LuminaClothComponent extends LuminaProceduralMeshComponent {
     Vector3? color,
     this.baseColorTexture,
     this.materialAsset,
+    this.clothSettingsAsset,
     this.castShadows = true,
     this.assetProvider,
   }) : _pinning = pinning,
@@ -138,6 +142,10 @@ class LuminaClothComponent extends LuminaProceduralMeshComponent {
   /// project material asset drawn instead of the built-in material.
   final String? baseColorTexture;
   final String? materialAsset;
+
+  /// A cloth settings `.lmas` whose values replace this cloth's material,
+  /// wind, motion and self-collision settings when it is built.
+  final String? clothSettingsAsset;
 
   LuminaClothPinning _pinning;
   List<int> _pinnedVertices;
@@ -273,6 +281,8 @@ class LuminaClothComponent extends LuminaProceduralMeshComponent {
 
   Future<void> _build() async {
     try {
+      final settings = clothSettingsAsset ?? '';
+      if (settings.isNotEmpty) await _applySettingsAsset(settings);
       // A grid builds at once, so a cloth registered with a running world
       // simulates from its first frame (Blueprint BeginPlay sees it).
       final built = buildClothGeometry();
@@ -286,6 +296,39 @@ class LuminaClothComponent extends LuminaProceduralMeshComponent {
       EngineLoggerService().log('Cloth: could not build "${meshAsset ?? 'grid'}": $e', level: 'error', source: 'Cloth');
       if (!_ready.isCompleted) _ready.completeError(e, st);
     }
+  }
+
+  /// Takes the settings of the cloth settings asset at [path] (a cloth that
+  /// cannot read it keeps its own and logs why).
+  Future<void> _applySettingsAsset(String path) async {
+    try {
+      final asset = LuminaAsset.fromBytes(await LuminaAssets.resolve(assetProvider)(path));
+      if (asset.type != AssetType.clothSettings) throw StateError('not a cloth settings asset (${asset.type.name})');
+      applySettings(LuminaClothSettingsDocument.fromAsset(asset));
+    } catch (e) {
+      EngineLoggerService().log('Cloth: cannot read cloth settings "$path": $e', level: 'warning', source: 'Cloth');
+    }
+  }
+
+  /// Takes every value of [settings] (rebuilding a running simulation once).
+  void applySettings(LuminaClothSettingsDocument settings) {
+    _change(() {
+      _massKg = math.max(settings.massKg, 1e-3);
+      _stiffness = settings.stiffness;
+      _bendStiffness = settings.bendStiffness;
+      _damping = settings.damping;
+      _friction = settings.friction;
+      _thickness = settings.thickness;
+      _iterations = settings.iterations;
+      _gravityScale = settings.gravityScale;
+      _selfCollision = settings.selfCollision;
+      _selfCollisionDistance = settings.selfCollisionDistance;
+    });
+    windDrag = settings.windDrag;
+    windTurbulence = settings.windTurbulence;
+    inertiaScale = settings.inertiaScale;
+    teleportDistance = settings.teleportDistance;
+    teleportRotation = settings.teleportRotation;
   }
 
   @override
@@ -484,6 +527,7 @@ class LuminaClothComponent extends LuminaProceduralMeshComponent {
       color: r.color,
       baseColorTexture: r.text('baseColorTexture'),
       materialAsset: r.text('materialAsset'),
+      clothSettingsAsset: r.text('clothSettingsAsset'),
       castShadows: r.flag('castShadows', true),
       assetProvider: assetProvider,
     );
@@ -523,6 +567,7 @@ class LuminaClothComponent extends LuminaProceduralMeshComponent {
     'color': [color.x, color.y, color.z],
     if (baseColorTexture != null) 'baseColorTexture': baseColorTexture,
     if (materialAsset != null) 'materialAsset': materialAsset,
+    if (clothSettingsAsset != null) 'clothSettingsAsset': clothSettingsAsset,
     'castShadows': castShadows,
   };
 }

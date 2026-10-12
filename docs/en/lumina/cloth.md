@@ -24,6 +24,8 @@ Flags, curtains, clothes on a line and sheets draped over things: a `LuminaCloth
 
 **Settings**: `massKg` (the whole cloth, default 1), `stiffness` (stretch, 0..1, 0.95), `bendStiffness` (0..1, 0.3; 0 bends freely), `damping` (0.5), `friction` (0.5), `thickness` (cm, the distance it keeps from surfaces, 1), `iterations` (8), `gravityScale` (1), `color` (linear RGB, or `#RRGGBB` from the editor), `castShadows`. Changing one of the simulation settings rebuilds the simulation from the rest pose.
 
+**Cloth settings asset**: `clothSettingsAsset` names a cloth settings `.lmas` (a `LuminaClothSettingsDocument`, edited in the [Cloth settings editor](../lumina_ui/sub-editors/cloth-settings.md)); when the cloth is built its material, simulation, wind, motion and self-collision settings are replaced by the asset's (`applySettings`). A cloth that cannot read it keeps its own and logs why.
+
 **Look**: the cloth is drawn with a lit, double-sided material in `color`. `baseColorTexture` (a texture `.lmas` or an image) is drawn on its UVs (the grid's run 0..1 across it; a mesh keeps its own), tinted by `color` (white leaves the texture's colours). `materialAsset` (a project material `.lmas` or `.filamat`, with the parameters and textures the Material Editor saved) is drawn instead. Both load once the cloth draws in a world (`lookReady`, `drawsLook`, `drawnMaterial`); one that cannot be read leaves the colour and is logged.
 
 **Self-collision**: with `selfCollision` the cloth keeps `selfCollisionDistance` (cm, default 2) between its own layers: after every step a vertex that came that close to one of the cloth's triangles is pushed out and stops approaching it (Jolt soft bodies have no self-collision; flutter_jolt adds the pass). Vertices that close to a triangle at rest are its neighbours and are skipped. It costs time (about 0.3 ms per step for 441 vertices), so it is off by default; turn it on for cloth that folds onto itself (a sheet crumpling on the floor, a towel thrown over a rail).
@@ -58,6 +60,8 @@ Measured on the walking mannequin: the hands and forearms stay outside the skirt
 ## Blueprints and the editor
 
 Component type `LuminaClothComponent` (a scene component): the Blueprint editor adds it as **Cloth** (category Physics) with every setting above in the Details panel; `meshAsset` is an asset reference, `wind` a vector in authoring axes. The component mapping builds it in Play-In-Editor and generated games alike, and the properties are saved with the Blueprint (`toProperties` / `fromProperties`).
+
+Both components' Details panels also have the look (Texture, Material), Self Collision and **Cloth Settings** (a cloth settings asset) fields.
 
 Component type `LuminaSkinnedClothComponent` is added as **Skinned Cloth** (category Physics): attach it under the Skeletal Mesh that wears it (otherwise it is worn by the actor's first skeletal mesh). Its Details panel has the garment (`meshAsset`, waist bone, skirt size, fit to body), its freedom (max distance, leg follow, backstop distance and radius, painted maps, collide with body), the cloth material, wind and motion settings; a negative backstop distance is none. The per-vertex maps are properties too (`maxDistanceMap`, `backstopMap`), set from code or painted into the garment's vertex colours.
 

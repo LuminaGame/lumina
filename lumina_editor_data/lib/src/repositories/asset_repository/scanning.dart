@@ -187,9 +187,12 @@ mixin _AssetScanning on _AssetRepositoryState {
     }
 
     final thumbBytes = await _generateThumbnailBytes(type);
-    final rawPayload = type == AssetType.theme
-        ? utf8.encode(LuminaThemeDocument.defaultShadcnDark(name: fileName.replaceAll('.lmas', '')).toJson())
-        : null;
+    final rawPayload = switch (type) {
+      AssetType.theme => utf8.encode(LuminaThemeDocument.defaultShadcnDark(name: fileName.replaceAll('.lmas', '')).toJson()),
+      // New cloth settings start at the cloth component's defaults.
+      AssetType.clothSettings => utf8.encode(const LuminaClothSettingsDocument().toJson()),
+      _ => null,
+    };
 
     final asset = LuminaAsset(
       assetId: fileName.replaceAll('.', '_'),

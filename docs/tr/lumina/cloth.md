@@ -24,6 +24,8 @@ Bayraklar, perdeler, ipe asılı giysiler ve bir şeylerin üzerine örtülen ç
 
 **Ayarlar**: `massKg` (bütün kumaş, varsayılan 1), `stiffness` (gerilme, 0..1, 0.95), `bendStiffness` (0..1, 0.3; 0 serbestçe bükülür), `damping` (0.5), `friction` (0.5), `thickness` (cm, yüzeylerden koruduğu mesafe, 1), `iterations` (8), `gravityScale` (1), `color` (doğrusal RGB, editörden `#RRGGBB`), `castShadows`. Simülasyon ayarlarından biri değişince simülasyon dinlenme pozundan yeniden kurulur.
 
+**Kumaş ayarları asset'i**: `clothSettingsAsset` bir kumaş ayarları `.lmas`'ını adlandırır (bir `LuminaClothSettingsDocument`, [Kumaş ayarları editörü](../lumina_ui/sub-editors/cloth-settings.md) ile düzenlenir); kumaş kurulurken malzeme, simülasyon, rüzgâr, hareket ve kendisiyle çarpışma ayarlarının yerini asset'inkiler alır (`applySettings`). Onu okuyamayan bir kumaş kendininkileri korur ve nedenini günlüğe yazar.
+
 **Görünüm**: kumaş `color` renginde, aydınlatmalı ve çift yüzlü bir malzemeyle çizilir. `baseColorTexture` (bir doku `.lmas`'ı ya da bir resim) UV'leri üzerine çizilir (ızgaranınkiler boyunca 0..1 gider; bir mesh kendininkini korur) ve `color` ile renklendirilir (beyaz dokunun renklerini bırakır). `materialAsset` (Material Editor'ün kaydettiği parametre ve dokularla bir proje malzemesi `.lmas`'ı ya da `.filamat`) onun yerine çizilir. İkisi de kumaş bir dünyada çizildiğinde yüklenir (`lookReady`, `drawsLook`, `drawnMaterial`); okunamayan renk bırakır ve günlüğe yazılır.
 
 **Kendisiyle çarpışma**: `selfCollision` ile kumaş kendi katmanları arasında `selfCollisionDistance` (cm, varsayılan 2) bırakır: her adımdan sonra kumaşın üçgenlerinden birine o kadar yaklaşan bir köşe dışarı itilir ve ona yaklaşması durdurulur (Jolt soft body'lerinde kendisiyle çarpışma yoktur; geçişi flutter_jolt ekler). Dinlenme pozunda bir üçgene o kadar yakın olan köşeler komşusudur ve atlanır. Zaman tutar (441 köşe için adım başına yaklaşık 0.3 ms), bu yüzden varsayılan olarak kapalıdır; kendi üzerine katlanan kumaşta açın (yerde buruşan bir çarşaf, bir rayın üzerine atılmış bir havlu).
@@ -58,6 +60,8 @@ Yürüyen mannequin'de ölçülen: eller ve ön kollar eteğin dışında kalır
 ## Blueprint'ler ve editör
 
 Bileşen tipi `LuminaClothComponent` (bir scene bileşeni): Blueprint editörü onu **Cloth** olarak (Physics kategorisi) ekler; yukarıdaki her ayar Details panelindedir; `meshAsset` bir asset referansı, `wind` authoring eksenlerinde bir vektördür. Bileşen eşlemesi onu Play-In-Editor'da ve üretilen oyunlarda aynı şekilde kurar; özellikler Blueprint'le birlikte kaydedilir (`toProperties` / `fromProperties`).
+
+İki bileşenin Details panelinde görünüm (Texture, Material), Self Collision ve **Cloth Settings** (bir kumaş ayarları asset'i) alanları da vardır.
 
 Bileşen tipi `LuminaSkinnedClothComponent` **Skinned Cloth** olarak (Physics kategorisi) eklenir: onu giyen Skeletal Mesh'in altına bağlayın (yoksa aktörün ilk skeletal mesh'i giyer). Details panelinde giysi (`meshAsset`, bel kemiği, etek ölçüleri, bedene oturtma), serbestliği (max distance, leg follow, backstop mesafesi ve yarıçapı, boyanmış haritalar, bedenle çarpışma), kumaş malzemesi, rüzgâr ve hareket ayarları vardır; negatif bir backstop mesafesi backstop yok demektir. Köşe başına haritalar da özelliktir (`maxDistanceMap`, `backstopMap`); koddan verilir ya da giysinin köşe renklerine boyanır.
 
