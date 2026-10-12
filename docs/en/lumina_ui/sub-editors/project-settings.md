@@ -108,6 +108,7 @@ Edits the real `.lmproject` manifest: loads it through [ProjectRepository], keep
 | `setTargetFps` | `void setTargetFps(int fps) => _update((p) => p.copyWith(settings: _copyS...` | Updates the `TargetFps` parameter and applies changes to the system. |
 | `setVSync` | `void setVSync(bool on) => _update((p) => p.copyWith(settings: _copySetti...` | Updates the `VSync` parameter and applies changes to the system. |
 | `addAction` | `void addAction([String? name]) => _update((p)` | Appends a new item to the collection or scene. |
+| `updateAction` | `void updateAction(int index, {String? name, ProjectInputValueType? valueType, bool? executeWhenPaused})` | Renames (its mappings follow), retypes or flags input action [index]. `executeWhenPaused` is the Input category's **When Paused** checkbox: the action also fires while the game is paused (the key of a pause or options menu), saved as `execute_when_paused`. |
 | `removeAction` | `void removeAction(int index) => _update((p)` | Releases and safely disposes the specified `Action` resource. |
 | `addMappingContext` | `void addMappingContext([String? name]) => _update((p)` | Appends a new item to the collection or scene. |
 | `removeMappingContext` | `void removeMappingContext(int index) => _update((p)` | Releases and safely disposes the specified `MappingContext` resource. |

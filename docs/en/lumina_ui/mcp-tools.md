@@ -862,7 +862,7 @@ Project Settings (Edit → Project Settings) as MCP tools (group `settings`): re
 | :--- | :--- | :--- | :--- |
 | `get_project_settings` | readOnly | Get Project Settings | Every Project Settings category (or one): description, scalability, input (actions; mapping contexts with priority and mappings {action, key, scale, axis, modifiers, triggers}), maps_and_modes (with the accepted values),... |
 | `set_project_settings` | mutating | Stage Project Settings | Stages changes on the Project Settings tab (it opens and turns dirty, as if typed); nothing is saved until apply_project_settings. |
-| `edit_project_input` | mutating | Edit input actions and mappings | Stages an input edit on the Project Settings tab (Input category). |
+| `edit_project_input` | mutating | Edit input actions and mappings | Stages an input edit on the Project Settings tab (Input category). `add_action` / `update_action` take `execute_when_paused` (the action also fires while the game is paused: the key of a pause or options menu); `get_project_settings` lists it on such actions. |
 | `set_project_icon` | mutating | Set project icon | Stages the project icon: {path} copies an SVG / PNG / JPG / WebP that renders into branding/app_icon.<ext> (an absolute path, or project-relative), {default: true} goes back to the Lumina logo. |
 | `set_web_loading_logo` | mutating | Set web loading logo | Stages the web build's loading-screen logo: {path} (PNG, JPG, WebP, SVG, GIF; copied into branding/web_loading_logo.<ext>), {use_project_icon: true} or {none: true}. |
 | `apply_project_settings` | mutating | Apply & Save Project Settings | The Project Settings tab's Apply & Save: validates every category and writes the .lmproject (and the app icons / web loading screen when those changed). |

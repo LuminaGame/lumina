@@ -47,7 +47,10 @@ void registerProjectSettingsTools(McpToolRegistry registry, EditorViewModel vm, 
   const settings = {McpToolGroups.settings};
 
   Map<String, Object?> input(LuminaProject p) => {
-        'actions': [for (final a in p.input.actions) {'name': a.name, 'value_type': a.valueType.name}],
+        'actions': [
+          for (final a in p.input.actions)
+            {'name': a.name, 'value_type': a.valueType.name, if (a.executeWhenPaused) 'execute_when_paused': true},
+        ],
         'mapping_contexts': [
           for (final c in p.input.mappingContexts)
             {
@@ -362,7 +365,8 @@ void registerProjectSettingsTools(McpToolRegistry registry, EditorViewModel vm, 
       removesContent: true,
       title: 'Edit input actions and mappings',
       description: 'Stages an Enhanced Input edit on the Project Settings tab (Input category). op: add_action {action, '
-          'value_type?: digital|axis1D|axis2D}, update_action {action, new_name?, value_type?}, remove_action {action} '
+          'value_type?: digital|axis1D|axis2D, execute_when_paused?}, update_action {action, new_name?, value_type?, '
+          'execute_when_paused?}, remove_action {action} '
           '(its mappings go too), add_context {context, priority?}, update_context {context, new_name?, priority?}, '
           'remove_context {context}, add_mapping {context, action, key, scale?, axis?: X|Y}, update_mapping {context, '
           'action, key, new_key?, new_action?, scale?, axis?}, remove_mapping {context, action, key}. Actions and '
@@ -377,6 +381,8 @@ void registerProjectSettingsTools(McpToolRegistry registry, EditorViewModel vm, 
         'new_key': McpSchema.string('update_mapping: the new key.'),
         'new_action': McpSchema.string('update_mapping: the action the mapping drives instead.'),
         'value_type': McpSchema.string('The action\'s value type.', enumValues: [for (final t in ProjectInputValueType.values) t.name]),
+        'execute_when_paused': McpSchema.boolean('add_action / update_action: the action also fires while the game is '
+            'paused (the key of a pause or options menu). Default false.'),
         'priority': McpSchema.integer('The context\'s priority (higher wins).'),
         'scale': McpSchema.number('The mapping\'s scale (-1 for S / A on IA_Move).'),
         'axis': McpSchema.string('The axis an axis1D / axis2D mapping drives: "X", "Y" or "".'),
@@ -401,11 +407,15 @@ void registerProjectSettingsTools(McpToolRegistry registry, EditorViewModel vm, 
             }
             ps.addAction(name);
             if (args.has('value_type')) ps.updateAction(actionIndex(ps, name), valueType: valueType(args.string('value_type')));
+            if (args.has('execute_when_paused')) {
+              ps.updateAction(actionIndex(ps, name), executeWhenPaused: args.boolean('execute_when_paused'));
+            }
           case 'update_action':
             final i = actionIndex(ps, need('action'));
             ps.updateAction(i,
                 name: args.optionalString('new_name'),
-                valueType: args.has('value_type') ? valueType(args.string('value_type')) : null);
+                valueType: args.has('value_type') ? valueType(args.string('value_type')) : null,
+                executeWhenPaused: args.has('execute_when_paused') ? args.boolean('execute_when_paused') : null);
           case 'remove_action':
             final name = need('action');
             final i = actionIndex(ps, name);

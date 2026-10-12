@@ -33,6 +33,20 @@ mixin _ProjectSettingsInput on _ProjectSettingsSubEditorStateBase {
                   label: (v) => switch (v) { 'axis1D' => 'Axis 1D', 'axis2D' => 'Axis 2D', _ => 'Digital (bool)' },
                 ),
               ),
+              const SizedBox(width: 8),
+              Tooltip(
+                tooltip: (_) => const TooltipContainer(
+                    child: Text('Runs while the game is paused: for the key of a pause or options menu.')),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Checkbox(
+                    key: ValueKey('project_settings_action_paused_$i'),
+                    state: input.actions[i].executeWhenPaused ? CheckboxState.checked : CheckboxState.unchecked,
+                    onChanged: (v) => _vm.updateAction(i, executeWhenPaused: v == CheckboxState.checked),
+                  ),
+                  const SizedBox(width: 4),
+                  const Text('When Paused', style: TextStyle(fontSize: 9, color: EditorColors.mutedForeground)),
+                ]),
+              ),
               GhostButton(
                 key: ValueKey('project_settings_action_remove_$i'),
                 onPressed: () => _vm.removeAction(i),

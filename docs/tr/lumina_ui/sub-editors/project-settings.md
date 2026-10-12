@@ -108,6 +108,7 @@ Edits the real `.lmproject` manifest: loads it through [ProjectRepository], keep
 | `setTargetFps` | `void setTargetFps(int fps) => _update((p) => p.copyWith(settings: _copyS...` | `TargetFps` parametresini günceller ve sisteme uygular. |
 | `setVSync` | `void setVSync(bool on) => _update((p) => p.copyWith(settings: _copySetti...` | `VSync` parametresini günceller ve sisteme uygular. |
 | `addAction` | `void addAction([String? name]) => _update((p)` | Koleksiyona veya sahneye yeni bir öğe ekler. |
+| `updateAction` | `void updateAction(int index, {String? name, ProjectInputValueType? valueType, bool? executeWhenPaused})` | [index] numaralı girdi eylemini yeniden adlandırır (eşlemeleri de izler), tipini değiştirir veya işaretler. `executeWhenPaused`, Input kategorisindeki **When Paused** onay kutusudur: eylem oyun duraklatılmışken de tetiklenir (duraklatma veya ayarlar menüsünün tuşu), `execute_when_paused` olarak kaydedilir. |
 | `removeAction` | `void removeAction(int index) => _update((p)` | Belirtilen `Action` nesnesini/bileşenini serbest bırakır ve güvenle temizler. |
 | `addMappingContext` | `void addMappingContext([String? name]) => _update((p)` | Koleksiyona veya sahneye yeni bir öğe ekler. |
 | `removeMappingContext` | `void removeMappingContext(int index) => _update((p)` | Belirtilen `MappingContext` nesnesini/bileşenini serbest bırakır ve güvenle temizler. |

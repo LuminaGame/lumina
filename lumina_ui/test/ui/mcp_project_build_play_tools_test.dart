@@ -229,6 +229,21 @@ void main() {
       await expectInvalid('edit_project_input', {'op': 'remove_action', 'action': 'IA_Dash'}, contains('IA_Jump'));
     });
 
+    test('edit_project_input: execute_when_paused on add_action and update_action reaches the manifest', () async {
+      await ok('edit_project_input', {'op': 'add_action', 'action': 'IA_Menu', 'execute_when_paused': true});
+      await ok('edit_project_input', {'op': 'add_mapping', 'context': 'Gameplay', 'action': 'IA_Menu', 'key': 'Escape'});
+      expect(tab().project.input.actions.firstWhere((a) => a.name == 'IA_Menu').executeWhenPaused, isTrue);
+      expect((await ok('apply_project_settings'))['saved'], isTrue);
+      Map actionNamed(String name) =>
+          ((manifest()['input'] as Map)['actions'] as List).cast<Map>().firstWhere((a) => a['name'] == name);
+      expect(actionNamed('IA_Menu')['execute_when_paused'], isTrue);
+      expect(actionNamed('IA_Jump').containsKey('execute_when_paused'), isFalse);
+
+      await ok('edit_project_input', {'op': 'update_action', 'action': 'IA_Menu', 'execute_when_paused': false});
+      expect((await ok('apply_project_settings'))['saved'], isTrue);
+      expect(actionNamed('IA_Menu').containsKey('execute_when_paused'), isFalse);
+    });
+
     test('set_project_icon copies a real 512×512 PNG into branding/; a .txt is refused with chooseIcon\'s message', () async {
       final png = img.Image(width: 512, height: 512);
       img.fill(png, color: img.ColorRgb8(240, 120, 20));

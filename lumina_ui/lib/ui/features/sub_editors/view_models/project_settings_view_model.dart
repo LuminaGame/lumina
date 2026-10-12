@@ -526,10 +526,12 @@ class ProjectSettingsViewModel extends _ProjectSettingsViewModelState
         return p.copyWith(input: p.input.copyWith(actions: [...p.input.actions, ProjectInputAction(name: n)]));
       });
 
-  void updateAction(int index, {String? name, ProjectInputValueType? valueType}) => _update((p) {
+  /// Renames, retypes or flags input action [index]; [executeWhenPaused]
+  /// makes it fire while the game is paused (a pause or menu key).
+  void updateAction(int index, {String? name, ProjectInputValueType? valueType, bool? executeWhenPaused}) => _update((p) {
         final list = [...p.input.actions];
         final old = list[index];
-        final updated = old.copyWith(name: name, valueType: valueType);
+        final updated = old.copyWith(name: name, valueType: valueType, executeWhenPaused: executeWhenPaused);
         list[index] = updated;
         // Keep mappings pointing at a renamed action.
         var contexts = p.input.mappingContexts;
