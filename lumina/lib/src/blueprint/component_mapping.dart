@@ -24,6 +24,7 @@ import 'package:lumina/src/components/collision/collision_component.dart';
 import 'package:lumina/src/components/mesh/animated_mesh_component.dart';
 import 'package:lumina/src/components/mesh/spring_morph_component.dart';
 import 'package:lumina/src/physics/cloth/cloth_component.dart';
+import 'package:lumina/src/physics/cloth/cloth_properties.dart';
 import 'package:lumina/src/physics/cloth/skinned_cloth_component.dart';
 import 'package:lumina/src/physics/ragdoll/ragdoll_component.dart';
 import 'package:lumina/src/components/mesh/pose_authoring/pose_authoring_component.dart';
@@ -458,14 +459,14 @@ abstract final class LuminaBlueprintComponents {
       case 'LuminaTraversalComponent':
         return LuminaTraversalComponent.fromProperties(p);
       case 'LuminaClothComponent':
-        final storedCloth = p['meshAsset'] as String? ?? '';
+        final storedCloth = LuminaClothPropertyReader(p).text('meshAsset') ?? '';
         final clothPath = storedCloth.isEmpty ? null : (resolveAsset?.call(storedCloth) ?? luminaBlueprintMeshPath(storedCloth));
         final cloth = LuminaClothComponent.fromProperties({...p, 'meshAsset': clothPath}, assetProvider: assetProvider);
         _transform(cloth, p);
         return cloth;
       case 'LuminaSkinnedClothComponent':
         // Worn by the skeletal mesh it is attached to (or the actor's first).
-        final storedGarment = p['meshAsset'] as String? ?? '';
+        final storedGarment = LuminaClothPropertyReader(p).text('meshAsset') ?? '';
         final garmentPath =
             storedGarment.isEmpty ? null : (resolveAsset?.call(storedGarment) ?? luminaBlueprintMeshPath(storedGarment));
         return LuminaSkinnedClothComponent.fromProperties({...p, 'meshAsset': garmentPath}, assetProvider: assetProvider);

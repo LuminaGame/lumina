@@ -24,6 +24,10 @@ Bayraklar, perdeler, ipe asılı giysiler ve bir şeylerin üzerine örtülen ç
 
 **Ayarlar**: `massKg` (bütün kumaş, varsayılan 1), `stiffness` (gerilme, 0..1, 0.95), `bendStiffness` (0..1, 0.3; 0 serbestçe bükülür), `damping` (0.5), `friction` (0.5), `thickness` (cm, yüzeylerden koruduğu mesafe, 1), `iterations` (8), `gravityScale` (1), `color` (doğrusal RGB, editörden `#RRGGBB`), `castShadows`. Simülasyon ayarlarından biri değişince simülasyon dinlenme pozundan yeniden kurulur.
 
+**Görünüm**: kumaş `color` renginde, aydınlatmalı ve çift yüzlü bir malzemeyle çizilir. `baseColorTexture` (bir doku `.lmas`'ı ya da bir resim) UV'leri üzerine çizilir (ızgaranınkiler boyunca 0..1 gider; bir mesh kendininkini korur) ve `color` ile renklendirilir (beyaz dokunun renklerini bırakır). `materialAsset` (Material Editor'ün kaydettiği parametre ve dokularla bir proje malzemesi `.lmas`'ı ya da `.filamat`) onun yerine çizilir. İkisi de kumaş bir dünyada çizildiğinde yüklenir (`lookReady`, `drawsLook`, `drawnMaterial`); okunamayan renk bırakır ve günlüğe yazılır.
+
+**Kendisiyle çarpışma**: `selfCollision` ile kumaş kendi katmanları arasında `selfCollisionDistance` (cm, varsayılan 2) bırakır: her adımdan sonra kumaşın üçgenlerinden birine o kadar yaklaşan bir köşe dışarı itilir ve ona yaklaşması durdurulur (Jolt soft body'lerinde kendisiyle çarpışma yoktur; geçişi flutter_jolt ekler). Dinlenme pozunda bir üçgene o kadar yakın olan köşeler komşusudur ve atlanır. Zaman tutar (441 köşe için adım başına yaklaşık 0.3 ms), bu yüzden varsayılan olarak kapalıdır; kendi üzerine katlanan kumaşta açın (yerde buruşan bir çarşaf, bir rayın üzerine atılmış bir havlu).
+
 **Rüzgâr**: `wind` (cm/s, runtime eksenleri; özelliklerde ve düğümlerde authoring eksenleri), `windDrag` (saniyede, 1) ve `windTurbulence` (0..1, zamanla esintiler). Rüzgâr her yüzü, rüzgârın ona çarpan kısmı kadar normali boyunca iter; böylece bir bayrak durgun havada düz durur, sarkar, rüzgârı yakalar ve dalgalanır; rüzgâra yan duran bir yüz hiçbir şey hissetmez.
 
 **Hareket**: `inertiaScale` (0..1, varsayılan 1) kumaşın sahibinin hareketine ne kadar direndiğidir: 1 bütün ataletini dünyada tutar (sahibi hareket edince ya da dönünce geride kalır ve sallanır), 0 onu sahibiyle birlikte katı olarak taşır, aradaki değerler her adımın hareketinin o payını taşır. Bir adım içinde `teleportDistance`'tan (100 cm) fazla bir yer değiştirme ya da `teleportRotation`'dan (60 derece) fazla bir dönüş bir ışınlanmadır: sabitler dahil bütün kumaş bir kerede birlikte taşınır; böylece sıçrama boyunca hiç gerilmez.
@@ -69,8 +73,8 @@ Düğümler (kategori **Physics|Cloth**, onları çalıştıran aktörün kumaş
 
 ## Sınırlar
 
-- Kumaş başına bir malzeme (bir temel renk, çift yüzlü, henüz doku yok).
-- Kumaş body'ler ve collider'larla çarpışır; kendisiyle çarpışmaz.
+- Kumaş başına bir malzeme (tek bölüm).
+- Kendisiyle çarpışma köşeye karşı üçgendir: kaba bir kumaşta bir kenar yine de başka bir kenarın arasından kayabilir.
 
 ---
 

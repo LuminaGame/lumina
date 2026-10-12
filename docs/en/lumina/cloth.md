@@ -24,6 +24,10 @@ Flags, curtains, clothes on a line and sheets draped over things: a `LuminaCloth
 
 **Settings**: `massKg` (the whole cloth, default 1), `stiffness` (stretch, 0..1, 0.95), `bendStiffness` (0..1, 0.3; 0 bends freely), `damping` (0.5), `friction` (0.5), `thickness` (cm, the distance it keeps from surfaces, 1), `iterations` (8), `gravityScale` (1), `color` (linear RGB, or `#RRGGBB` from the editor), `castShadows`. Changing one of the simulation settings rebuilds the simulation from the rest pose.
 
+**Look**: the cloth is drawn with a lit, double-sided material in `color`. `baseColorTexture` (a texture `.lmas` or an image) is drawn on its UVs (the grid's run 0..1 across it; a mesh keeps its own), tinted by `color` (white leaves the texture's colours). `materialAsset` (a project material `.lmas` or `.filamat`, with the parameters and textures the Material Editor saved) is drawn instead. Both load once the cloth draws in a world (`lookReady`, `drawsLook`, `drawnMaterial`); one that cannot be read leaves the colour and is logged.
+
+**Self-collision**: with `selfCollision` the cloth keeps `selfCollisionDistance` (cm, default 2) between its own layers: after every step a vertex that came that close to one of the cloth's triangles is pushed out and stops approaching it (Jolt soft bodies have no self-collision; flutter_jolt adds the pass). Vertices that close to a triangle at rest are its neighbours and are skipped. It costs time (about 0.3 ms per step for 441 vertices), so it is off by default; turn it on for cloth that folds onto itself (a sheet crumpling on the floor, a towel thrown over a rail).
+
 **Wind**: `wind` (cm/s, runtime axes; authoring axes in properties and nodes), `windDrag` (per second, 1) and `windTurbulence` (0..1, gusts over time). The wind pushes each face along its normal by the part of the wind that hits it, so a flag lies flat in still air, droops, catches the wind and flutters; a face edge-on to the wind feels nothing.
 
 **Motion**: `inertiaScale` (0..1, default 1) is how much of its owner's motion the cloth resists: 1 keeps all of its inertia in the world (it lags and swings when the owner moves or turns), 0 carries it rigidly with the owner, values between carry that share of each step's motion. A move of more than `teleportDistance` (100 cm) or a turn of more than `teleportRotation` (60 degrees) within one step is a teleport: the whole cloth, pins included, is carried along at once, so it never stretches across the jump.
@@ -69,8 +73,8 @@ Nodes (category **Physics|Cloth**, acting on the cloths of the actor that runs t
 
 ## Limits
 
-- One material per cloth (a base colour, double-sided, no texture yet).
-- Cloth collides with bodies and colliders; it does not collide with itself.
+- One material per cloth (one section).
+- Self-collision is vertex against triangle: an edge can still slip through another edge of a coarse cloth.
 
 ---
 

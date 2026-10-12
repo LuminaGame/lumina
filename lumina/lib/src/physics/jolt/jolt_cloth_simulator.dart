@@ -143,7 +143,9 @@ class LuminaJoltClothSimulator implements LuminaClothSimulator {
         gravityFactor: cloth.gravityScale,
       ),
     );
-    world.setBodyOwner(id, _ownerOf(cloth.owner));
+    world
+      ..setBodyOwner(id, _ownerOf(cloth.owner))
+      ..setClothSelfCollision(id, cloth.selfCollision ? cloth.selfCollisionDistance * kJoltScale : 0);
     final record = _Cloth(
       id,
       cloth.settingsVersion,

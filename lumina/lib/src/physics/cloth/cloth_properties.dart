@@ -24,8 +24,11 @@ class LuminaClothPropertyReader {
 
   bool flag(String key, bool fallback) => p[key] as bool? ?? fallback;
 
+  /// A string, or an asset reference's path (`{asset_path: ...}`); null
+  /// when missing or empty.
   String? text(String key) {
-    final v = p[key] as String?;
+    final raw = p[key];
+    final v = raw is Map ? raw['asset_path'] as String? : raw as String?;
     return v == null || v.isEmpty ? null : v;
   }
 

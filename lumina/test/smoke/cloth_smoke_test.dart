@@ -25,7 +25,8 @@ void main() {
     const shirtAsset = 'Props/Clothes Line/tshirt.glb';
     const barrelAsset = 'Props/Barrels/fuel_barrel_red.glb';
     const acAsset = 'Props/AC_units/roof_aircon_unit_150x150_a.glb';
-    final used = [lineAsset, towelAsset, shirtAsset, barrelAsset, acAsset];
+    const flagTexture = 'Geo/osm_tiles/14/9509/6140.png';
+    final used = [lineAsset, towelAsset, shirtAsset, barrelAsset, acAsset, flagTexture];
     for (final a in used) {
       if (!File('${assets.path}/$a').existsSync()) return markTestSkipped('test-assets missing $a');
     }
@@ -98,7 +99,9 @@ void main() {
       wind: Vector3(500, 0, 450),
       windDrag: 2.5,
       windTurbulence: 0.6,
-      color: Vector3(0.75, 0.05, 0.05),
+      // A map tile printed on the flag (white leaves its colours).
+      color: Vector3.all(1),
+      baseColorTexture: '${assets.path}/$flagTexture',
     );
     place(LuminaActor(root: flag));
 
@@ -155,6 +158,9 @@ void main() {
       massKg: 1.5,
       bendStiffness: 0.15,
       thickness: 1.5,
+      // Its folds over the props keep their layers apart.
+      selfCollision: true,
+      selfCollisionDistance: 2.5,
       color: Vector3(0.85, 0.85, 0.82),
     );
     place(LuminaActor(root: sheet));
@@ -172,6 +178,10 @@ void main() {
       await m.loaded.timeout(const Duration(seconds: 60));
     }
     expect([flag, towel, shirt, sheet].every((c) => c.isSimulating), isTrue);
+    // The texture loads once the flag draws (its first frame).
+    world.tick(1 / 60);
+    await flag.lookReady.timeout(const Duration(seconds: 60));
+    expect(flag.drawsLook, isTrue, reason: 'the map tile is drawn on the flag');
 
     final eye = Vector3(20, 360, 1050), center = Vector3(20, 150, 0);
     Uint8List shot() {
@@ -235,6 +245,8 @@ void main() {
         'sheet': sheet.geometry!.simVertexCount,
       },
       'flagSpanZcm': flagSpanZ(),
+      'flagTextured': flag.drawsLook,
+      'sheetSelfCollision': sheet.selfCollision,
       'sheetTopCm': sheetTop,
       'sheetLowestCm': sheetLowest,
       'frameMeanMs': frameUs / frames / 1000,

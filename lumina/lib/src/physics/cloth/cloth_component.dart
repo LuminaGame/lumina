@@ -15,6 +15,7 @@ import 'package:lumina/src/assets/glb_loader.dart';
 import 'package:lumina/src/components/mesh/procedural_mesh_component.dart';
 import 'package:lumina/src/object/actor.dart';
 import 'package:lumina/src/physics/cloth/cloth_geometry.dart';
+import 'package:lumina/src/physics/cloth/cloth_material.dart';
 import 'package:lumina/src/physics/cloth/cloth_properties.dart';
 import 'package:lumina/src/physics/physics_subsystem.dart';
 import 'package:lumina/src/utility/lumina_assets.dart';
@@ -36,6 +37,12 @@ export 'package:lumina/src/physics/cloth/cloth_geometry.dart' show LuminaClothGe
 /// - **Material**: [stiffness] (stretch, 0..1), [bendStiffness] (0..1),
 ///   [massKg] (the whole cloth), [damping], [friction], [thickness] (cm, the
 ///   distance it keeps from surfaces), [iterations], [gravityScale].
+/// - **Look**: [color] (linear), [baseColorTexture] (a texture asset or
+///   image on the cloth's UVs, tinted by the colour) or [materialAsset] (a
+///   project material drawn instead), [castShadows].
+/// - **Self-collision**: with [selfCollision] the cloth keeps
+///   [selfCollisionDistance] cm between its own layers (a fold, a sheet
+///   falling on itself).
 /// - **Wind**: [wind] (cm/s, runtime axes) pulls the cloth at [windDrag] per
 ///   second, its strength varying by [windTurbulence] (0..1) over time.
 /// - **Motion**: [inertiaScale] (0..1) is how much of its owner's motion
@@ -77,11 +84,17 @@ class LuminaClothComponent extends LuminaProceduralMeshComponent {
     this.inertiaScale = 1.0,
     this.teleportDistance = 100,
     this.teleportRotation = 60,
+    bool selfCollision = false,
+    double selfCollisionDistance = 2.0,
     bool simulate = true,
     Vector3? color,
+    this.baseColorTexture,
+    this.materialAsset,
     this.castShadows = true,
     this.assetProvider,
   }) : _pinning = pinning,
+       _selfCollision = selfCollision,
+       _selfCollisionDistance = selfCollisionDistance,
        _pinnedVertices = List.of(pinnedVertices),
        _massKg = massKg,
        _stiffness = stiffness,
@@ -116,22 +129,34 @@ class LuminaClothComponent extends LuminaProceduralMeshComponent {
   double teleportDistance;
   double teleportRotation;
 
-  /// Base colour (linear 0..1), and whether the cloth casts shadows.
+  /// Base colour (linear 0..1; it tints [baseColorTexture]), and whether the
+  /// cloth casts shadows.
   Vector3 color;
   final bool castShadows;
+
+  /// A texture asset (`.lmas`) or image drawn on the cloth's UVs, and a
+  /// project material asset drawn instead of the built-in material.
+  final String? baseColorTexture;
+  final String? materialAsset;
 
   LuminaClothPinning _pinning;
   List<int> _pinnedVertices;
   double _massKg, _stiffness, _bendStiffness, _damping, _friction, _thickness, _gravityScale;
   int _iterations;
-  bool _simulate;
+  bool _simulate, _selfCollision;
+  double _selfCollisionDistance;
 
   LuminaClothGeometry? _geometry;
   Future<void>? _loading;
   final Completer<void> _ready = Completer<void>();
   Float32List? _simPositions, _simNormals, _renderPositions, _renderNormals;
-  FilamentMaterialProvider? _materialProvider;
-  FilamentMaterialInstance? _material;
+  late final LuminaClothMaterial _look = LuminaClothMaterial(
+    materialAsset: materialAsset,
+    baseColorTexture: baseColorTexture,
+    assetProvider: assetProvider,
+  );
+  Future<void>? _lookLoading;
+  final Completer<void> _lookDone = Completer<void>();
   LuminaPhysicsSubsystem? _physics;
   bool _warned = false;
 
@@ -170,6 +195,22 @@ class LuminaClothComponent extends LuminaProceduralMeshComponent {
   set iterations(int v) => _change(() => _iterations = v.clamp(1, 64));
   double get gravityScale => _gravityScale;
   set gravityScale(double v) => _change(() => _gravityScale = v);
+  bool get selfCollision => _selfCollision;
+  set selfCollision(bool v) => _change(() => _selfCollision = v);
+  double get selfCollisionDistance => _selfCollisionDistance;
+  set selfCollisionDistance(double v) => _change(() => _selfCollisionDistance = math.max(v, 0.1));
+
+  /// The material instance the cloth is drawn with now (null before it
+  /// draws).
+  FilamentMaterialInstance? get drawnMaterial => _look.current;
+
+  /// Whether [baseColorTexture] or [materialAsset] is drawn (loaded).
+  bool get drawsLook => _look.isLoaded;
+
+  /// Completes when [baseColorTexture] or [materialAsset] is drawn (or could
+  /// not be loaded) once the cloth draws in a world; at once without either.
+  Future<void> get lookReady =>
+      (materialAsset ?? '').isEmpty && (baseColorTexture ?? '').isEmpty ? Future.value() : _lookDone.future;
 
   /// Turning simulation off draws the rest pose; on starts from it.
   bool get simulate => _simulate;
@@ -316,18 +357,17 @@ class LuminaClothComponent extends LuminaProceduralMeshComponent {
   FilamentMaterialInstance? _createMaterial() {
     final world = owner?.world;
     if (world == null || !world.hasNativeContext) return null;
-    try {
-      final provider = _materialProvider ??= FilamentMaterialProvider.ubershader(world.filamentEngine);
-      final mi = provider.createMaterialInstance(MaterialKey(doubleSided: true), label: 'lumina_cloth').instance;
-      if (mi == null) return null;
-      mi.setFloat4('baseColorFactor', color.x, color.y, color.z, 1.0);
-      mi.setFloat('roughnessFactor', 0.9);
-      mi.setFloat('metallicFactor', 0.0);
-      mi.setCullingMode(CullingMode.none);
-      return _material = mi;
-    } catch (_) {
-      return null;
+    final mi = _look.create(world, color);
+    if ((materialAsset ?? '').isNotEmpty || (baseColorTexture ?? '').isNotEmpty) {
+      _lookLoading ??= _look
+          .load(world, color, (loaded) {
+            if (hasSection(0)) setSectionMaterial(0, loaded);
+          })
+          .whenComplete(() {
+            if (!_lookDone.isCompleted) _lookDone.complete();
+          });
     }
+    return mi;
   }
 
   void _syncSimulation() {
@@ -407,14 +447,7 @@ class LuminaClothComponent extends LuminaProceduralMeshComponent {
     _physics?.removeCloth(this);
     _physics = null;
     clearAllMeshSections();
-    try {
-      _material?.dispose();
-    } catch (_) {}
-    _material = null;
-    try {
-      _materialProvider?.dispose();
-    } catch (_) {}
-    _materialProvider = null;
+    _look.dispose();
     super.onUnregister();
   }
 
@@ -445,8 +478,12 @@ class LuminaClothComponent extends LuminaProceduralMeshComponent {
       inertiaScale: r.number('inertiaScale', 1.0),
       teleportDistance: r.number('teleportDistance', 100),
       teleportRotation: r.number('teleportRotation', 60),
+      selfCollision: r.flag('selfCollision', false),
+      selfCollisionDistance: r.number('selfCollisionDistance', 2.0),
       simulate: r.flag('simulate', true),
       color: r.color,
+      baseColorTexture: r.text('baseColorTexture'),
+      materialAsset: r.text('materialAsset'),
       castShadows: r.flag('castShadows', true),
       assetProvider: assetProvider,
     );
@@ -480,8 +517,12 @@ class LuminaClothComponent extends LuminaProceduralMeshComponent {
     'inertiaScale': inertiaScale,
     'teleportDistance': teleportDistance,
     'teleportRotation': teleportRotation,
+    'selfCollision': _selfCollision,
+    'selfCollisionDistance': _selfCollisionDistance,
     'simulate': _simulate,
     'color': [color.x, color.y, color.z],
+    if (baseColorTexture != null) 'baseColorTexture': baseColorTexture,
+    if (materialAsset != null) 'materialAsset': materialAsset,
     'castShadows': castShadows,
   };
 }
