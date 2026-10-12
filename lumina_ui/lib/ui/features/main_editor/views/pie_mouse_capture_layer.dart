@@ -32,6 +32,10 @@ class PieMouseCaptureLayer extends StatefulWidget {
   /// The hint while the cursor is released.
   static const String releasedHint = 'Click the game view to capture the mouse · Esc stops Play';
 
+  /// The hint while the cursor is released and the game binds Escape (its
+  /// own menu key): Shift+Esc stops Play.
+  static const String releasedHintGameEscape = 'Click the game view to capture the mouse · Shift+Esc stops Play';
+
   @override
   State<PieMouseCaptureLayer> createState() => _PieMouseCaptureLayerState();
 }
@@ -186,15 +190,17 @@ class _PieMouseCaptureLayerState extends State<PieMouseCaptureLayer> {
           ),
         ),
         if (showReleasedHint)
-          const Positioned(
+          Positioned(
             top: 44,
             left: 0,
             right: 0,
             child: IgnorePointer(
               child: Center(
                 child: _HintChip(
-                  key: ValueKey('pie_mouse_released_hint'),
-                  text: PieMouseCaptureLayer.releasedHint,
+                  key: const ValueKey('pie_mouse_released_hint'),
+                  text: widget.pie.gameBindsEscape
+                      ? PieMouseCaptureLayer.releasedHintGameEscape
+                      : PieMouseCaptureLayer.releasedHint,
                   prominent: false,
                 ),
               ),

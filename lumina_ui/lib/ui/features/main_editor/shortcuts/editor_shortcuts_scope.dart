@@ -132,6 +132,8 @@ class _EditorShortcutsScopeState extends State<EditorShortcutsScope> {
         // File ▸ Import Asset Folder…
         const SingleActivator(LogicalKeyboardKey.keyI, control: true, shift: true): const DispatchCommandIntent('file.importAssetFolder'),
         const SingleActivator(LogicalKeyboardKey.escape): const DispatchCommandIntent('shell.cancel'),
+        // Stops Play also when the running game binds Esc itself.
+        const SingleActivator(LogicalKeyboardKey.escape, shift: true): const DispatchCommandIntent('debug.stopPie'),
         // View ▸ Full Screen.
         const SingleActivator(LogicalKeyboardKey.f11): const DispatchCommandIntent('view.fullscreen'),
       },
@@ -141,8 +143,10 @@ class _EditorShortcutsScopeState extends State<EditorShortcutsScope> {
             onInvoke: (DispatchCommandIntent intent) {
               if (intent.commandId == 'shell.cancel') {
                 // Esc: stop Play (the gizmo is suspended while it runs),
-                // else cancel a transform drag in progress.
+                // unless the running game binds Esc itself (Shift+Esc
+                // stops it then), else cancel a transform drag in progress.
                 if (vm.isPlaying) {
+                  if (vm.pieController.gameBindsEscape) return null;
                   vm.commands.execute('debug.stopPie', context);
                 } else {
                   vm.cancelTransformDrag();

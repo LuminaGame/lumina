@@ -455,6 +455,7 @@ Declarative game built from the editor's level actors for Play-In-Editor.  Every
 | `step` | `void step([double dt = 1 / 60])` | Advances the paused world by exactly one tick of [dt] seconds (frame stepping). No-op unless playing and paused. |
 | `restart` | `void restart()` | Restarts the running session: the runtime world is rebuilt from the same editor snapshot on the same engine/scene, resuming play. |
 | `acceptsGameInput` | `bool get acceptsGameInput` | Whether the running world should receive keyboard and mouse events. An ejected user drives the editor flycam instead of the pawn. |
+| `gameBindsEscape` | `bool get gameBindsEscape` | Çalışan oyunun eşleme bağlamları Escape'i bağlıyor mu (duraklatma veya ayarlar menüsü). Öyleyse Play'de Esc oyunun tuşudur, imleç yakalı da serbest de olsa (tuş işleyicisi onu oyuna iletir, kabuğun `shell.cancel` komutu Play'i durdurmaz) ve Play'i **Shift+Esc** durdurur (`debug.stopPie`); aksi halde Esc Play'i eskisi gibi durdurur. |
 | `injectKeyDown` | `void injectKeyDown(LuminaKey key)` | `injectKeyDown` işlemini gerçekleştirir. |
 | `injectKeyUp` | `void injectKeyUp(LuminaKey key)` | `injectKeyUp` işlemini gerçekleştirir. |
 | `injectMouseDelta` | `void injectMouseDelta(double dx, double dy)` | `injectMouseDelta` işlemini gerçekleştirir. |

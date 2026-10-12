@@ -457,6 +457,7 @@ Play's mouse capture on the game view, one child of the viewport's Stack: - the 
 | `hintDuration` | `final Duration hintDuration` |  |
 | `captureHint` | `static const String captureHint` | The capture hint, as the user asked for it. |
 | `releasedHint` | `static const String releasedHint` | The hint while the cursor is released. |
+| `releasedHintGameEscape` | `static const String releasedHintGameEscape` | The released hint when the game binds Escape itself: "… · Shift+Esc stops Play". |
 
 ## `lib/ui/features/main_editor/views/pie_widget_layer.dart`
 

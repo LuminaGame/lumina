@@ -26,16 +26,27 @@ mixin _PieGameInput {
   bool _onHardwareKey(KeyEvent event) {
     // While the game has the mouse, F4 gives the cursor back and
     // Esc stops Play, wherever keyboard focus sits. Once released, Esc still
-    // stops Play through the editor shell's `shell.cancel`.
+    // stops Play through the editor shell's `shell.cancel`. A game whose
+    // input binds Escape (a pause or options menu) gets Esc instead, captured
+    // or not, and Shift+Esc stops Play.
     if (event.logicalKey == LogicalKeyboardKey.f4) {
       if (event is! KeyDownEvent || !mouseCapture.isCaptured) return false;
       mouseCapture.release();
       return true;
     }
     if (event.logicalKey == LogicalKeyboardKey.escape) {
-      if (event is! KeyDownEvent || !isPlaying || !mouseCapture.isCaptured) return false;
-      viewModel.stopSimulation();
-      return true;
+      if (gameBindsEscape) {
+        if (HardwareKeyboard.instance.isShiftPressed) {
+          if (event is! KeyDownEvent) return false;
+          viewModel.stopSimulation();
+          return true;
+        }
+        // Falls through: the game's Escape, like any bound key.
+      } else {
+        if (event is! KeyDownEvent || !isPlaying || !mouseCapture.isCaptured) return false;
+        viewModel.stopSimulation();
+        return true;
+      }
     }
     final key = LuminaKey.fromKeyId(event.logicalKey.keyId);
     if (key == null) return false;
@@ -49,6 +60,10 @@ mixin _PieGameInput {
     }
     return acceptsGameInput && (_game?.bindsKey(key) ?? false);
   }
+
+  /// Whether the running game's mapping contexts bind Escape: Esc is then the
+  /// game's key and Shift+Esc stops Play.
+  bool get gameBindsEscape => isPlaying && (_game?.bindsKey(LuminaKey.keyEscape) ?? false);
 
   /// Feeds [event] to the keyboard handler Play installs (widget tests).
   bool handleKeyEventForTest(KeyEvent event) => _onHardwareKey(event);
