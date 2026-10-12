@@ -88,7 +88,7 @@ class ProjectEngineLink {
   }
 
   /// The packages whose hooks take the settings [hookUserDefines] writes.
-  static const List<String> hookedPackages = ['flutter_filament', 'flutter_assimp', 'flutter_riglogic'];
+  static const List<String> hookedPackages = ['flutter_filament', 'flutter_assimp', 'flutter_riglogic', 'flutter_jolt'];
 
   /// The first line of the generated `hooks:` comment, found again on
   /// every relink.
@@ -289,6 +289,18 @@ class ProjectEngineLink {
     final riglogic = packages?['flutter_riglogic'] ?? LuminaWorkspace.resolvedPackageDir(engineRoot, 'flutter_riglogic');
     if (riglogic != null && out['flutter_riglogic']?['riglogic_lib_dir'] == null) {
       put('flutter_riglogic', 'riglogic_lib_dir', p.join(riglogic, 'third_party', 'openriglogic', 'lib'));
+    }
+    // flutter_jolt: the engine's `jolt` link (a release checkout's), else the
+    // Jolt built in the resolved package (a development checkout); none
+    // existing, the hook builds no Jolt and the game runs its Dart physics.
+    if (out['flutter_jolt']?['jolt_dir'] == null) {
+      final jolt = packages?['flutter_jolt'] ?? LuminaWorkspace.resolvedPackageDir(engineRoot, 'flutter_jolt');
+      final linked = p.join(engineRoot, 'jolt');
+      if (Directory(p.join(linked, 'lib')).existsSync()) {
+        put('flutter_jolt', 'jolt_dir', linked);
+      } else if (jolt != null) {
+        put('flutter_jolt', 'jolt_dir', p.join(jolt, 'third_party', 'jolt'));
+      }
     }
     return {for (final k in hookedPackages) if (out[k] != null) k: out[k]!};
   }

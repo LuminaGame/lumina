@@ -43,6 +43,11 @@ hooks:
     flutter_riglogic:
       riglogic_lib_dir: openriglogic/lib
       libcxx_dir: flutter_filament/third_party/libcxx
+    # A release checkout's prebuilt Jolt Physics (the bootstrap links it);
+    # without it the hook uses flutter_jolt's own third_party/jolt build.
+    flutter_jolt:
+      jolt_dir: jolt
+      libcxx_dir: flutter_filament/third_party/libcxx
 
 melos:
   scripts:

@@ -101,7 +101,8 @@ class _EngineBootstrapViewState extends State<EngineBootstrapView> {
               const SizedBox(height: 8),
               Text(
                 'Lumina Studio ${b.version} builds games from the engine source of its own release. This first start '
-                'downloads it once (commit $commit) with the matching prebuilt Filament and OpenRigLogic libraries; later starts work offline.',
+                'downloads it once (commit $commit) with the matching prebuilt Filament, OpenRigLogic and Jolt Physics libraries; later starts work '
+                'offline.',
                 style: const TextStyle(fontSize: 12, color: EditorColors.mutedForeground),
               ),
               const SizedBox(height: 4),

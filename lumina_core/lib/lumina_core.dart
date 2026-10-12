@@ -84,6 +84,7 @@ export 'package:lumina_core/src/services/level_template_service.dart';
 export 'package:lumina_core/src/services/lumina_config_dir.dart';
 export 'package:lumina_core/src/services/lumina_data_dir.dart';
 export 'package:lumina_core/src/services/openriglogic_prebuilt.dart';
+export 'package:lumina_core/src/services/jolt_prebuilt.dart';
 export 'package:lumina_core/src/services/plugin_host_patcher_service.dart';
 export 'package:lumina_core/src/services/plugin_pack_script.dart';
 export 'package:lumina_core/src/services/plugin_template/isolated_plugin_sources.dart';

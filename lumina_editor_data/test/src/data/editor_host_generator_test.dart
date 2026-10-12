@@ -53,6 +53,10 @@ void main() {
     // openriglogic link (a release checkout), else its own build.
     expect(pubspec, contains('    flutter_riglogic:\n      filament_dir: filament\n      libcxx_dir: flutter_filament/third_party/libcxx\n'
         '      riglogic_lib_dir: openriglogic/lib\n'));
+    // A copied flutter_jolt takes the prebuilt Jolt of the host's jolt link
+    // (a release checkout), else its own build, else none (Dart physics).
+    expect(pubspec, contains('  flutter_jolt:\n    path: flutter_jolt\n'));
+    expect(pubspec, contains('    flutter_jolt:\n      jolt_dir: jolt\n      libcxx_dir: flutter_filament/third_party/libcxx\n'));
 
     final cmake = File(p.join(host.path, 'linux', 'CMakeLists.txt')).readAsStringSync();
     expect(cmake, contains('set(BINARY_NAME "host_game_editor")'));

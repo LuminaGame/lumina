@@ -5,7 +5,8 @@ import 'package:path/path.dart' as p;
 /// The per-user directory Lumina keeps downloaded data in: the engine
 /// source a release build fetches for itself (`engine/<version>/`), the
 /// prebuilt Filament builds (`filament/<version>/`) and the prebuilt
-/// OpenRigLogic libraries (`openriglogic/<release tag>/`).
+/// OpenRigLogic libraries (`openriglogic/<release tag>/`) and the prebuilt Jolt
+/// Physics builds (`jolt/<release tag>/`).
 ///
 /// - Windows: `%LOCALAPPDATA%\Lumina`;
 /// - Linux: `$XDG_DATA_HOME/lumina`, else `~/.local/share/lumina` (where the
@@ -59,4 +60,8 @@ abstract final class LuminaDataDir {
   /// `<data>/openriglogic`: one prebuilt OpenRigLogic per release tag.
   static Directory openriglogicRoot({Map<String, String>? environment, String? operatingSystem}) =>
       Directory(p.join(resolve(environment: environment, operatingSystem: operatingSystem).path, 'openriglogic'));
+
+  /// `<data>/jolt`: one prebuilt Jolt Physics build per release tag.
+  static Directory joltRoot({Map<String, String>? environment, String? operatingSystem}) =>
+      Directory(p.join(resolve(environment: environment, operatingSystem: operatingSystem).path, 'jolt'));
 }

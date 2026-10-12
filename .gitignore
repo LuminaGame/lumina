@@ -14,10 +14,12 @@ pubspec_overrides.yaml
 
 # Local links (see .lumina_symlinks.json): patched Filament with its prebuilt
 # out/ folders, and the shared 3D test assets (their own repo). A release
-# checkout also links its prebuilt OpenRigLogic library folder.
+# checkout also links its prebuilt OpenRigLogic library folder and its prebuilt
+# Jolt Physics build.
 /filament
 /test-assets
 /openriglogic
+/jolt
 
 # Generated web module (flutter_filament/tool/web)
 flutter_filament/web/flutter_filament.js

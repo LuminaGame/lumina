@@ -7,6 +7,7 @@ import 'package:path/path.dart' as p;
 import 'package:lumina_core/src/formats/lumina_project.dart' show kLuminaEngineDisplayVersion;
 import 'package:lumina_core/src/services/filament_prebuilt.dart';
 import 'package:lumina_core/src/services/lumina_data_dir.dart';
+import 'package:lumina_core/src/services/jolt_prebuilt.dart';
 import 'package:lumina_core/src/services/openriglogic_prebuilt.dart';
 import 'package:lumina_core/src/services/workspace_paths.dart';
 
@@ -50,6 +51,9 @@ class EngineBootstrap {
   /// Where prebuilt OpenRigLogic libraries live (`<data>/openriglogic`).
   final Directory openriglogicRoot;
 
+  /// Where prebuilt Jolt Physics builds live (`<data>/jolt`).
+  final Directory joltRoot;
+
   /// The environment tools are looked up in and run with.
   final Map<String, String> environment;
 
@@ -61,6 +65,10 @@ class EngineBootstrap {
   /// Supplies the prebuilt OpenRigLogic; defaults to
   /// [defaultOpenRigLogicProvider], else [OpenRigLogicPrebuilt.ensure].
   final OpenRigLogicProvider? openriglogic;
+
+  /// Supplies the prebuilt Jolt Physics; defaults to [defaultJoltProvider],
+  /// else [JoltPrebuilt.ensure].
+  final JoltProvider? jolt;
 
   /// Whether to look for the C++ toolchain (reported, never blocking).
   final bool checkToolchain;
@@ -75,9 +83,14 @@ class EngineBootstrap {
   /// [OpenRigLogicPrebuilt.ensure]).
   static OpenRigLogicProvider? defaultOpenRigLogicProvider;
 
+  /// The Jolt Physics provider bootstraps use unless given one (null:
+  /// [JoltPrebuilt.ensure]).
+  static JoltProvider? defaultJoltProvider;
+
   /// The checkout's links to the prebuilt Filament and OpenRigLogic.
   static const String filamentLink = 'filament';
   static const String openriglogicLink = 'openriglogic';
+  static const String joltLink = 'jolt';
 
   /// The marker a complete checkout carries, inside its `.git` folder (so it
   /// never shows as a change and goes when the checkout goes).
@@ -90,24 +103,29 @@ class EngineBootstrap {
     Directory? engineRoot,
     Directory? filamentRoot,
     Directory? openriglogicRoot,
+    Directory? joltRoot,
     Map<String, String>? environment,
     this.filament,
     this.openriglogic,
+    this.jolt,
     this.checkToolchain = true,
     String? operatingSystem,
   })  : engineRoot = engineRoot ?? LuminaDataDir.engineRoot(environment: environment),
         filamentRoot = filamentRoot ?? LuminaDataDir.filamentRoot(environment: environment),
         openriglogicRoot = openriglogicRoot ?? LuminaDataDir.openriglogicRoot(environment: environment),
+        joltRoot = joltRoot ?? LuminaDataDir.joltRoot(environment: environment),
         environment = Map.of(environment ?? Platform.environment),
         _os = operatingSystem ?? Platform.operatingSystem;
 
   /// The bootstrap of this release build ([LuminaRelease]).
-  factory EngineBootstrap.release({FilamentProvider? filament, OpenRigLogicProvider? openriglogic}) => EngineBootstrap(
-      version: LuminaRelease.version,
-      commit: LuminaRelease.commit,
-      repo: LuminaRelease.repo,
-      filament: filament,
-      openriglogic: openriglogic);
+  factory EngineBootstrap.release({FilamentProvider? filament, OpenRigLogicProvider? openriglogic, JoltProvider? jolt}) =>
+      EngineBootstrap(
+          version: LuminaRelease.version,
+          commit: LuminaRelease.commit,
+          repo: LuminaRelease.repo,
+          filament: filament,
+          openriglogic: openriglogic,
+          jolt: jolt);
 
   /// Whether this process needs a bootstrap: a release build that does not
   /// run from a source workspace (`LUMINA_WORKSPACE`, or an ancestor
@@ -134,6 +152,7 @@ class EngineBootstrap {
       if (!head.existsSync() || head.readAsStringSync().trim() != checkout.commit) return null;
       if (!_linkOk(filamentLink, checkout.filamentDir)) return null;
       if (!_linkOk(openriglogicLink, checkout.openriglogicDir)) return null;
+      if (checkout.joltDir.isNotEmpty && !_linkOk(joltLink, checkout.joltDir)) return null;
       if (!File(p.join(checkoutDir.path, '.dart_tool', 'package_config.json')).existsSync()) return null;
       return checkout;
     } on FileSystemException {
@@ -236,6 +255,9 @@ class EngineBootstrap {
       final openriglogicDir = await _ensureOpenRigLogic(emit);
       emit(const EngineBootstrapStepDone(EngineBootstrapStep.openriglogic));
 
+      final joltDir = await _ensureJolt(emit);
+      emit(EngineBootstrapStepDone(EngineBootstrapStep.jolt, skipped: joltDir.isEmpty));
+
       await _pubGet(flutter, emit);
       emit(const EngineBootstrapStepDone(EngineBootstrapStep.packages));
 
@@ -247,6 +269,7 @@ class EngineBootstrap {
         filamentVersion: filamentVersion,
         filamentDir: filamentDir,
         openriglogicDir: openriglogicDir,
+        joltDir: joltDir,
         completedAt: DateTime.now(),
       );
       markerFile.writeAsStringSync(const JsonEncoder.withIndent('  ').convert(checkout.toJson()));

@@ -1,6 +1,6 @@
 part of '../engine_bootstrap.dart';
 
-/// The prebuilt Filament and OpenRigLogic links, `flutter pub get` and
+/// The prebuilt Filament, OpenRigLogic and Jolt Physics links, `flutter pub get` and
 /// deleting a checkout.
 extension _EngineBootstrapArtifacts on EngineBootstrap {
   // ---------------------------------------------------------------------------
@@ -77,6 +77,37 @@ extension _EngineBootstrapArtifacts on EngineBootstrap {
     return target;
   }
 
+  // ---------------------------------------------------------------------------
+  // Jolt Physics
+
+  /// Links the release's prebuilt Jolt Physics as `<checkout>/jolt`:
+  /// flutter_jolt comes from git (the pub cache), where its hook finds no
+  /// Jolt build, so the root pubspec's `jolt_dir` names `jolt`. Jolt is
+  /// optional: a release without the archive (or a failed download) leaves
+  /// no link and returns '' — the hook then builds no Jolt and the engine
+  /// runs its Dart physics.
+  Future<String> _ensureJolt(void Function(EngineBootstrapEvent) emit) async {
+    const step = EngineBootstrapStep.jolt;
+    final JoltProvider provider = jolt ?? EngineBootstrap.defaultJoltProvider ?? JoltPrebuilt.ensure;
+    emit(const EngineBootstrapProgress(step, 'Jolt Physics', fraction: 0));
+    try {
+      final dir = await provider(
+        releaseTag: version,
+        cacheRoot: joltRoot,
+        onProgress: (fraction, message) => emit(EngineBootstrapProgress(step, message, fraction: fraction)),
+      );
+      final target = p.normalize(dir.absolute.path);
+      if (!Directory(target).existsSync()) throw StateError('missing at $target');
+      await _link(EngineBootstrap.joltLink, target, step);
+      emit(EngineBootstrapLog(step, 'Linked ${p.join(checkoutDir.path, EngineBootstrap.joltLink)} -> $target'));
+      emit(const EngineBootstrapProgress(step, 'Jolt Physics ready', fraction: 1));
+      return target;
+    } catch (e) {
+      emit(EngineBootstrapLog(step, 'No prebuilt Jolt Physics for $version ($e): games build with the Dart physics.'));
+      return '';
+    }
+  }
+
   /// `<checkout>/<name>` → [target]: a directory junction on Windows (no
   /// admin rights needed), a symlink elsewhere. The root pubspec's hook
   /// settings (and every hook's `../filament` fallback) name these folders.
@@ -150,7 +181,7 @@ extension _EngineBootstrapArtifacts on EngineBootstrap {
   /// sets on pack files.
   Future<void> _wipe(Directory dir) async {
     if (!dir.existsSync()) return;
-    for (final name in [EngineBootstrap.filamentLink, EngineBootstrap.openriglogicLink]) {
+    for (final name in [EngineBootstrap.filamentLink, EngineBootstrap.openriglogicLink, EngineBootstrap.joltLink]) {
       final link = Link(p.join(dir.path, name));
       if (link.existsSync()) link.deleteSync();
     }

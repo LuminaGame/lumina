@@ -45,12 +45,22 @@ typedef OpenRigLogicProvider = Future<Directory> Function({
   void Function(double progress, String message)? onProgress,
 });
 
+/// Downloads (or finds) the prebuilt Jolt Physics build of the
+/// [releaseTag] release and returns its directory, which the root pubspec's
+/// `jolt_dir` names. The signature of [JoltPrebuilt.ensure].
+typedef JoltProvider = Future<Directory> Function({
+  required String releaseTag,
+  required Directory cacheRoot,
+  void Function(double progress, String message)? onProgress,
+});
+
 /// The steps of [EngineBootstrap.ensure], in order.
 enum EngineBootstrapStep {
   prerequisites('Checking prerequisites'),
   source('Downloading engine source'),
   filament('Downloading Filament'),
   openriglogic('Downloading OpenRigLogic'),
+  jolt('Downloading Jolt Physics'),
   packages('Resolving packages');
 
   const EngineBootstrapStep(this.label);
@@ -178,6 +188,10 @@ class EngineCheckout {
   /// The prebuilt OpenRigLogic directory its `openriglogic` link points at.
   final String openriglogicDir;
 
+  /// The prebuilt Jolt Physics directory its `jolt` link points at; empty
+  /// when the release has none (the engine then runs its Dart physics).
+  final String joltDir;
+
   final DateTime completedAt;
 
   const EngineCheckout({
@@ -188,6 +202,7 @@ class EngineCheckout {
     required this.filamentVersion,
     required this.filamentDir,
     required this.openriglogicDir,
+    this.joltDir = '',
     required this.completedAt,
   });
 
@@ -198,6 +213,7 @@ class EngineCheckout {
         'filamentVersion': filamentVersion,
         'filamentDir': filamentDir,
         'openriglogicDir': openriglogicDir,
+        'joltDir': joltDir,
         'completedAt': completedAt.toUtc().toIso8601String(),
       };
 
@@ -215,6 +231,7 @@ class EngineCheckout {
       filamentVersion: fv,
       filamentDir: fd,
       openriglogicDir: rd,
+      joltDir: s('joltDir') ?? '',
       completedAt: DateTime.tryParse(s('completedAt') ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0),
     );
   }

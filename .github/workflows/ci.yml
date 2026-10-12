@@ -20,6 +20,8 @@
 # WebAssembly build and the host tools) for the release workflow.
 #
 # The unit tests compile the native-assets hooks, so they need prebuilt
+# Filament, and Jolt Physics for flutter_jolt (.github/actions/jolt-build:
+# tools/flutter_jolt/tool/build_jolt.sh, cached by the pinned Jolt tag);
 # Filament: from the cache (key: patches + VERSION + build scripts + OS), else
 # the version's own release, filament-<VERSION>
 # (tool/filament/fetch_prebuilt.dart), else a build.
@@ -125,7 +127,11 @@ jobs:
       - name: Build OpenRigLogic
         run: bash tools/flutter_riglogic/tool/build_openriglogic.sh
 
+      # Jolt Physics for flutter_jolt's hook (cached by the pinned tag).
+      - uses: ./lumina/.github/actions/jolt-build
+
       # Tests never touch a real editor config.
+
       - name: Isolated config folder
         run: echo "LUMINA_CONFIG_DIR=$RUNNER_TEMP/lumina-config" >> "$GITHUB_ENV"
 
@@ -178,6 +184,21 @@ jobs:
           test/architecture/import_cycles_test.dart
           test/architecture/engine_without_editor_data_test.dart
           test/architecture/engine_has_no_widgets_test.dart
+          test/src/physics/physics_backend_test.dart
+          test/src/collision/collision_queries_on_jolt_test.dart
+
+      # flutter_jolt (the sibling tools checkout) against the Jolt build
+      # above: worlds, shapes, constraints, cloth and broad phase proxies.
+      - name: flutter_jolt
+        working-directory: tools/flutter_jolt
+        run: >-
+          flutter test
+          test/jolt_dir_test.dart
+          test/jolt_world_test.dart
+          test/jolt_shape_test.dart
+          test/jolt_constraint_test.dart
+          test/jolt_cloth_test.dart
+          test/jolt_broad_phase_test.dart
 
       - name: lumina_widgets
         working-directory: lumina/lumina_widgets

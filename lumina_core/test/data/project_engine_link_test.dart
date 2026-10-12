@@ -306,6 +306,25 @@ hooks:
       expect(pubspec, isNot(contains(':/')), reason: 'no drive or file: URI');
     });
 
+    test("flutter_jolt takes the engine's prebuilt Jolt (a release checkout), else its own build, else nothing", () {
+      final joltLib = Platform.isWindows ? 'Jolt.lib' : 'libJolt.a';
+      final cache = p.join(temp.path, 'pub-cache', 'git', 'tools-0123');
+      write(p.join(cache, 'flutter_jolt', 'pubspec.yaml'), 'name: flutter_jolt');
+      final withJolt = {...packages, 'flutter_jolt': p.join(cache, 'flutter_jolt')};
+      // A pub-cache flutter_jolt without a build and no prebuilt: no setting
+      // (the hook builds no Jolt; the game runs its Dart physics).
+      expect(ProjectEngineLink.hookUserDefines(engine, packages: withJolt)['flutter_jolt'], isNull);
+
+      write(p.join(cache, 'flutter_jolt', 'third_party', 'jolt', 'lib', joltLib), 'own build');
+      expect(ProjectEngineLink.hookUserDefines(engine, packages: withJolt)['flutter_jolt']!['jolt_dir'],
+          Uri.directory(p.join(cache, 'flutter_jolt', 'third_party', 'jolt')).toString());
+
+      write(p.join(engine, 'jolt', 'lib', joltLib), 'prebuilt');
+      final defines = ProjectEngineLink.linkedHookUserDefines(project, engine, packages: withJolt);
+      expect(defines['flutter_jolt'], {'jolt_dir': '.lumina/engine/jolt'});
+      expect(File(p.join(project, '.lumina', 'engine', 'jolt', 'lib', joltLib)).readAsStringSync(), 'prebuilt');
+    });
+
     test('a relink drops links no setting names any more', () {
       ProjectEngineLink.linkedHookUserDefines(project, engine, packages: packages);
       Directory(p.join(engine, 'openriglogic')).deleteSync(recursive: true);

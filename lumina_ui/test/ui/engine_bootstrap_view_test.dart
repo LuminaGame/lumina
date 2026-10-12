@@ -41,7 +41,7 @@ void main() {
     File(p.join(src.path, 'tool', 'filament', 'VERSION'))
       ..createSync(recursive: true)
       ..writeAsStringSync('1.77.0-test.1\n');
-    File(p.join(src.path, '.gitignore')).writeAsStringSync('/filament\n.dart_tool/\npubspec.lock\n');
+    File(p.join(src.path, '.gitignore')).writeAsStringSync('/filament\n/openriglogic\n/jolt\n.dart_tool/\npubspec.lock\n');
     Future<String> git(List<String> args, String cwd) async {
       final r = await Process.run('git', args, workingDirectory: cwd, environment: gitEnv());
       expect(r.exitCode, 0, reason: '${r.stderr}');
@@ -78,6 +78,9 @@ void main() {
         openriglogicRoot: Directory(p.join(temp.path, 'data', 'openriglogic')),
         openriglogic: ({required releaseTag, required cacheRoot, onProgress}) async =>
             (Directory(p.join(cacheRoot.path, releaseTag, 'lib'))..createSync(recursive: true)).parent,
+        joltRoot: Directory(p.join(temp.path, 'data', 'jolt')),
+        jolt: ({required releaseTag, required cacheRoot, onProgress}) async =>
+            (Directory(p.join(cacheRoot.path, releaseTag, 'lib'))..createSync(recursive: true)).parent,
       );
 
   Future<void> pumpScreen(WidgetTester tester, Widget child) async {
@@ -100,7 +103,7 @@ void main() {
     await tester.pump();
 
     expect(find.text('Setting up Lumina Studio'), findsOneWidget);
-    expect(find.textContaining('prebuilt Filament and OpenRigLogic libraries'), findsOneWidget);
+    expect(find.textContaining('prebuilt Filament, OpenRigLogic and Jolt Physics libraries'), findsOneWidget);
     for (final s in EngineBootstrapStep.values) {
       expect(find.text(s.label), findsOneWidget);
     }

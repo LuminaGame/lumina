@@ -1,0 +1,43 @@
+name: Jolt Physics build
+description: >
+  Builds Jolt Physics for flutter_jolt in the sibling tools checkout
+  (tools/flutter_jolt/tool/build_jolt.{sh,bat}: the pinned release of
+  tool/jolt_version.txt as a static library, its headers, jolt_defines.txt
+  and VERSION under tools/flutter_jolt/third_party/jolt), the folder the
+  native-assets hook links. The build is cached by the pinned Jolt tag, the
+  build scripts and the runner OS and architecture, so it runs once per Jolt
+  version. Without it the hook builds no Jolt and the engine falls back to
+  its Dart physics.
+
+  Linux runners need the linux-build-deps action first (clang 21 and the
+  bundled libc++); Windows runners need Visual Studio 2022 (vswhere finds
+  it) and Ninja.
+
+runs:
+  using: composite
+  steps:
+    - name: Restore the Jolt build
+      id: cache
+      uses: actions/cache@v6
+      with:
+        path: |
+          tools/flutter_jolt/third_party/jolt/include
+          tools/flutter_jolt/third_party/jolt/lib
+          tools/flutter_jolt/third_party/jolt/jolt_defines.txt
+          tools/flutter_jolt/third_party/jolt/VERSION
+          tools/flutter_jolt/third_party/jolt/src/LICENSE
+        key: jolt-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/flutter_jolt/tool/jolt_version.txt', 'tools/flutter_jolt/tool/build_jolt.sh', 'tools/flutter_jolt/tool/build_jolt.bat', 'tools/flutter_jolt/tool/write_jolt_defines.dart') }}
+
+    - name: Build Jolt (Linux)
+      if: steps.cache.outputs.cache-hit != 'true' && runner.os == 'Linux'
+      shell: bash
+      run: bash tools/flutter_jolt/tool/build_jolt.sh
+
+    - name: Build Jolt (Windows)
+      if: steps.cache.outputs.cache-hit != 'true' && runner.os == 'Windows'
+      shell: cmd
+      run: call tools\flutter_jolt\tool\build_jolt.bat
+
+    - name: Jolt build
+      shell: bash
+      run: cat tools/flutter_jolt/third_party/jolt/VERSION tools/flutter_jolt/third_party/jolt/jolt_defines.txt

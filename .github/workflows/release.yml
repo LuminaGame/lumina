@@ -382,6 +382,15 @@ jobs:
       - name: Package OpenRigLogic
         run: bash lumina/.github/scripts/package_openriglogic.sh ${{ matrix.platform }} tools/flutter_riglogic dist
 
+      # Jolt Physics (cached by the pinned tag): the editor built below links
+      # it, and its archive is what an installed editor links into its engine
+      # checkout as `jolt/` (the root pubspec's jolt_dir), so the games it
+      # builds run on Jolt too.
+      - uses: ./lumina/.github/actions/jolt-build
+
+      - name: Package Jolt
+        run: bash lumina/.github/scripts/package_jolt.sh ${{ matrix.platform }} tools/flutter_jolt dist
+
       - name: flutter build ${{ matrix.os }}
         working-directory: lumina/lumina_ui
         run: >-
@@ -721,6 +730,7 @@ jobs:
           | `lumina-studio-*-windows-x64-store.msix` | The editor as an unsigned Microsoft Store package (for the Partner Center submission; it installs once the Store has signed it) |
           | `lumina-studio-*-windows-x64.msix` | The editor as a signed MSIX package (when signed) |
           | `openriglogic-*` | Prebuilt OpenRigLogic library the editor downloads at first launch |
+          | `jolt-*` | Prebuilt Jolt Physics library (headers, static library, defines) the editor downloads at first launch, so the games it builds use Jolt |
           | `flutter-filament-web-*.zip` | flutter_filament's WebAssembly module (`flutter_filament.js` + `.wasm`), the files a web game serves next to its `index.html` |
 
           Every file has a `.sha256` sidecar.

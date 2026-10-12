@@ -416,6 +416,23 @@ class EditorHostGeneratorService {
         }
       }
     }
+    // flutter_jolt: the prebuilt Jolt of the host's `jolt` link (a release
+    // checkout's); without that link the hook keeps the copied package's own
+    // build, or builds no Jolt (the Dart physics).
+    if (overrides.containsKey('flutter_jolt')) {
+      if (hooked.isEmpty) {
+        b
+          ..writeln()
+          ..writeln('hooks:')
+          ..writeln('  user_defines:');
+      }
+      b
+        ..writeln('    flutter_jolt:')
+        ..writeln('      jolt_dir: ${EditorSourceVendorService.joltDir}');
+      if (overrides.containsKey('flutter_filament')) {
+        b.writeln('      libcxx_dir: ${overrides['flutter_filament']}/third_party/libcxx');
+      }
+    }
     b
       ..writeln()
       ..writeln('flutter:')

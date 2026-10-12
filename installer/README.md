@@ -26,6 +26,7 @@ The release workflow (`.github/workflows/release.yml`) builds all of them for ev
 | `lumina-studio-<tag>-windows-x64.zip` | `flutter build windows --release` output with the Visual C++ runtime DLLs next to `lumina_ui.exe`, at the archive root |
 | `lumina-studio-<tag>-linux-x64.tar.gz`, `lumina-studio-<tag>-linux-arm64.tar.gz` | `flutter build linux --release` bundle (`lumina_ui`, `lib/`, `data/`), at the archive root |
 | `openriglogic-<os>-x64.{zip,tar.gz}` | Prebuilt OpenRigLogic static library (built from the pinned tools commit), downloaded by the editor at first launch |
+| `jolt-<os>-<arch>.{zip,tar.gz}` | Prebuilt Jolt Physics (headers, static library, `jolt_defines.txt`; the release flutter_jolt's `tool/jolt_version.txt` pins), downloaded by the editor at first launch and linked into its engine checkout as `jolt/`, so the games it builds use Jolt |
 
 Both editor builds carry `--dart-define=LUMINA_VERSION=<tag>` and `--dart-define=LUMINA_COMMIT=<sha>`.
 

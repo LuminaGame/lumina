@@ -171,6 +171,22 @@ void main() {
           reason: 'a stale link is removed');
     });
 
+    test("a release checkout's jolt folder is linked into the host; none without it", () async {
+      await service().vendor(host);
+      expect(FileSystemEntity.typeSync(p.join(host, 'jolt'), followLinks: false), FileSystemEntityType.notFound,
+          reason: 'a source workspace has no prebuilt Jolt');
+      write('jolt/lib/Jolt.lib', 'library');
+      await service().linkJolt(host);
+      expect(FileSystemEntity.isLinkSync(p.join(host, 'jolt')), isTrue);
+      expect(File(p.join(host, 'jolt', 'lib', 'Jolt.lib')).readAsStringSync(), 'library');
+      await service().sync(host);
+      expect(FileSystemEntity.isLinkSync(p.join(host, 'jolt')), isTrue, reason: 'vendor links it too');
+      Directory(p.join(engine, 'jolt')).deleteSync(recursive: true);
+      await service().linkJolt(host);
+      expect(FileSystemEntity.typeSync(p.join(host, 'jolt'), followLinks: false), FileSystemEntityType.notFound,
+          reason: 'a stale link is removed');
+    });
+
     test('an interrupted copy leaves no package behind; the next vendor completes', () async {
       var n = 0;
       await expectLater(

@@ -55,7 +55,8 @@ class EditorEngineUpdate {
 /// is linked (`<host>/filament` → `<engine>/filament`), never copied; so is
 /// the prebuilt OpenRigLogic library folder of a release checkout
 /// (`<host>/openriglogic` → `<engine>/openriglogic`), which a flutter_riglogic
-/// copied from the pub cache needs. The engine's `pubspec.lock` travels
+/// copied from the pub cache needs, and its prebuilt Jolt Physics build
+/// (`<host>/jolt` → `<engine>/jolt`) for a copied flutter_jolt. The engine's `pubspec.lock` travels
 /// with the copy ([engineLockFileName]).
 ///
 /// The copy is made once and is the project's own afterwards: only [sync]
@@ -89,6 +90,11 @@ class EditorSourceVendorService {
   /// EngineBootstrap), linked beside the copied packages when the engine has
   /// one; the host pubspec's `riglogic_lib_dir` names its `lib`.
   static const String openriglogicDir = 'openriglogic';
+
+  /// The prebuilt Jolt Physics folder a release checkout links (see
+  /// EngineBootstrap), linked beside the copied packages when the engine has
+  /// one; the host pubspec's `jolt_dir` names it.
+  static const String joltDir = 'jolt';
 
   /// Skipped directly under each package root: build outputs, tests and
   /// backlog docs, none of which the editor build reads.
@@ -280,6 +286,7 @@ class EditorSourceVendorService {
     // A junction on Windows: no admin rights or Developer Mode needed.
     DirectoryLink.createSync(link.path, filament.path);
     await linkOpenRigLogic(hostDir);
+    await linkJolt(hostDir);
 
     final engineLock = File(p.join(engineRoot, 'pubspec.lock'));
     final lockCopy = File(p.join(hostDir, engineLockFileName));
@@ -335,6 +342,15 @@ class EditorSourceVendorService {
     final link = Link(p.join(hostDir, openriglogicDir));
     if (FileSystemEntity.isLinkSync(link.path)) await link.delete();
     final target = Directory(p.join(engineRoot, openriglogicDir));
+    if (target.existsSync()) DirectoryLink.createSync(link.path, target.path);
+  }
+
+  /// `<host>/jolt` → `<engine>/jolt` when the engine has that folder (a
+  /// release checkout); otherwise no link (a stale one is removed).
+  Future<void> linkJolt(String hostDir) async {
+    final link = Link(p.join(hostDir, joltDir));
+    if (FileSystemEntity.isLinkSync(link.path)) await link.delete();
+    final target = Directory(p.join(engineRoot, joltDir));
     if (target.existsSync()) DirectoryLink.createSync(link.path, target.path);
   }
 

@@ -16,6 +16,7 @@ void main() {
   late Map<String, String> env;
   late int filamentCalls;
   late int openriglogicCalls;
+  late int joltCalls;
 
   const filamentVersion = '1.77.0-test.1';
 
@@ -64,6 +65,29 @@ void main() {
     return dir;
   }
 
+  /// A stand-in for the Jolt Physics release asset: the unpacked layout.
+  Future<Directory> localJolt({
+    required String releaseTag,
+    required Directory cacheRoot,
+    void Function(double progress, String message)? onProgress,
+  }) async {
+    joltCalls++;
+    final dir = Directory(p.join(cacheRoot.path, releaseTag));
+    File(p.join(dir.path, 'lib', Platform.isWindows ? 'Jolt.lib' : 'libJolt.a'))
+      ..createSync(recursive: true)
+      ..writeAsStringSync('$releaseTag\n');
+    File(p.join(dir.path, 'jolt_defines.txt')).writeAsStringSync('JPH_OBJECT_LAYER_BITS=16\n');
+    onProgress?.call(1, 'extracted');
+    return dir;
+  }
+
+  Future<Directory> offlineJolt({
+    required String releaseTag,
+    required Directory cacheRoot,
+    void Function(double progress, String message)? onProgress,
+  }) =>
+      throw StateError('network access');
+
   Future<Directory> offlineOpenRigLogic({
     required String releaseTag,
     required Directory cacheRoot,
@@ -80,7 +104,12 @@ void main() {
       throw StateError('network access');
 
   EngineBootstrap bootstrap(
-          {String? commit, Map<String, String>? environment, FilamentProvider? filament, OpenRigLogicProvider? openriglogic, String? repo}) =>
+          {String? commit,
+          Map<String, String>? environment,
+          FilamentProvider? filament,
+          OpenRigLogicProvider? openriglogic,
+          JoltProvider? jolt,
+          String? repo}) =>
       EngineBootstrap(
         version: 'v0.0.0-test',
         commit: commit ?? commit1,
@@ -88,9 +117,11 @@ void main() {
         engineRoot: Directory(p.join(temp.path, 'data', 'engine')),
         filamentRoot: Directory(p.join(temp.path, 'data', 'filament')),
         openriglogicRoot: Directory(p.join(temp.path, 'data', 'openriglogic')),
+        joltRoot: Directory(p.join(temp.path, 'data', 'jolt')),
         environment: environment ?? env,
         filament: filament ?? localFilament,
         openriglogic: openriglogic ?? localOpenRigLogic,
+        jolt: jolt ?? localJolt,
         checkToolchain: false,
       );
 
@@ -109,6 +140,7 @@ void main() {
   setUp(() async {
     filamentCalls = 0;
     openriglogicCalls = 0;
+    joltCalls = 0;
     temp = Directory.systemTemp.createTempSync('engine_bootstrap_');
     final src = Directory(p.join(temp.path, 'src'))..createSync();
     File(p.join(src.path, 'pubspec.yaml')).writeAsStringSync('name: fixture_engine\npublish_to: none\nenvironment:\n  sdk: ^3.0.0\n');
@@ -118,7 +150,7 @@ void main() {
     File(p.join(src.path, 'tool', 'filament', 'VERSION'))
       ..createSync(recursive: true)
       ..writeAsStringSync('$filamentVersion\n');
-    File(p.join(src.path, '.gitignore')).writeAsStringSync('/filament\n/openriglogic\n.dart_tool/\npubspec.lock\n');
+    File(p.join(src.path, '.gitignore')).writeAsStringSync('/filament\n/openriglogic\n/jolt\n.dart_tool/\npubspec.lock\n');
     await git(['init', '-q', '-b', 'main'], src.path);
     await git(['add', '.'], src.path);
     await git(['commit', '-q', '-m', 'first'], src.path);
@@ -181,6 +213,13 @@ void main() {
         'v0.0.0-test');
     expect(p.equals(checkout.openriglogicDir, p.join(temp.path, 'data', 'openriglogic', 'v0.0.0-test')), isTrue);
 
+    // The release's Jolt Physics, where the root pubspec's jolt_dir (`jolt`)
+    // looks for it.
+    final jolt = Link(p.join(b.checkoutDir.path, 'jolt'));
+    expect(jolt.existsSync(), isTrue);
+    expect(File(p.join(jolt.path, 'jolt_defines.txt')).existsSync(), isTrue);
+    expect(p.equals(checkout.joltDir, p.join(temp.path, 'data', 'jolt', 'v0.0.0-test')), isTrue);
+
     expect(File(p.join(b.checkoutDir.path, '.dart_tool', 'package_config.json')).existsSync(), isTrue);
     expect(b.markerFile.existsSync(), isTrue);
     expect(await git(['status', '--porcelain'], b.checkoutDir.path), isEmpty, reason: 'the link and the marker are not changes');
@@ -197,6 +236,18 @@ void main() {
     expect(events.whereType<EngineBootstrapLog>().where((e) => e.step == EngineBootstrapStep.packages), isNotEmpty);
     expect(filamentCalls, 1);
     expect(openriglogicCalls, 1);
+    expect(joltCalls, 1);
+  }, timeout: const Timeout(Duration(minutes: 3)));
+
+  test('a release without Jolt Physics still completes: no jolt link, the step skipped, the checkout ready', () async {
+    final events = <EngineBootstrapEvent>[];
+    final checkout = await bootstrap(jolt: offlineJolt).ensure(onEvent: events.add);
+    expect(checkout.joltDir, isEmpty);
+    expect(Link(p.join(checkout.dir, 'jolt')).existsSync(), isFalse);
+    final jolt = events.whereType<EngineBootstrapStepDone>().firstWhere((e) => e.step == EngineBootstrapStep.jolt);
+    expect(jolt.skipped, isTrue);
+    expect(events.whereType<EngineBootstrapLog>().any((e) => e.line.contains('Dart physics')), isTrue);
+    expect(bootstrap(jolt: offlineJolt).readyCheckout(), isNotNull, reason: 'a checkout without Jolt is complete');
   }, timeout: const Timeout(Duration(minutes: 3)));
 
   test('a second run finds the complete checkout and does nothing', () async {
