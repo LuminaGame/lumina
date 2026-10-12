@@ -69,6 +69,63 @@ void main() {
     expect(runtime.apply(scene.copy()), isEmpty);
   });
 
+  test('Unlit turns the key light, the description lights and shadows off; Lit restores them', () async {
+    if (skip()) return;
+    final runtime = LuminaViewportSceneRuntime(engine: engine!);
+    addTearDown(runtime.dispose);
+    final scene = LuminaViewportScene()..setEnvironment(LuminaViewportEnvironmentMode.color);
+    final light = scene.addLight(LuminaViewportLightType.point, [1.0, 1.0, 1.0], 50000.0, at(0, 0, 200));
+    scene.addNode(LuminaViewportNodeKind.staticMesh, asset: ViewportTestProject.barrel, transform: at(0, 0, 0));
+    runtime.apply(scene);
+    await runtime.whenReady;
+    expect(runtime.keyLightLux, 90000.0);
+    expect(runtime.view.shadowingEnabled, isTrue);
+
+    runtime.apply(scene.copy()..viewMode = LuminaViewportViewMode.unlit);
+    expect(runtime.viewMode, LuminaViewportViewMode.unlit);
+    expect(runtime.keyLightLux, 0.0);
+    expect((runtime.componentOf(light)! as LuminaLightComponent).intensity, 0.0);
+    expect(runtime.view.shadowingEnabled, isFalse);
+
+    runtime.apply(scene.copy()..viewMode = LuminaViewportViewMode.lit);
+    expect(runtime.keyLightLux, 90000.0);
+    expect((runtime.componentOf(light)! as LuminaLightComponent).intensity, 50000.0);
+    expect(runtime.view.shadowingEnabled, isTrue);
+  });
+
+  test('Wireframe draws edge lines under each mesh root instead of the solid; Lit removes them', () async {
+    if (skip()) return;
+    final runtime = LuminaViewportSceneRuntime(engine: engine!);
+    addTearDown(runtime.dispose);
+    final scene = LuminaViewportScene()..gridVisible = false;
+    final barrel = scene.addNode(LuminaViewportNodeKind.staticMesh, asset: ViewportTestProject.barrel, transform: at(0, 0, 0));
+    final hero = scene.addNode(LuminaViewportNodeKind.skeletalMesh, asset: ViewportTestProject.mannequin, transform: at(80, 0, 0));
+    runtime.apply(scene..viewMode = LuminaViewportViewMode.wireframe);
+    await runtime.whenReady;
+    for (var i = 0; i < 200 && runtime.wireframeNodeIds.length < 2; i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+    }
+    expect(runtime.wireframeNodeIds.toSet(), {barrel, hero});
+    final mesh = runtime.componentOf(barrel)! as LuminaStaticMeshComponent;
+    expect(mesh.visible, isFalse);
+    final wire = runtime.wireframeEntityOf(barrel)!;
+    expect(runtime.scene.hasEntity(wire), isTrue);
+    expect(FilamentTransformManager(engine!).getParent(wire), mesh.rootEntity);
+
+    // Hidden by the description: neither solid nor lines.
+    final hidden = scene.copy();
+    hidden.node(barrel)!['visible'] = false;
+    runtime.apply(hidden);
+    expect(runtime.scene.hasEntity(wire), isFalse);
+    runtime.apply(scene);
+    expect(runtime.scene.hasEntity(wire), isTrue);
+
+    runtime.apply(scene.copy()..viewMode = LuminaViewportViewMode.lit);
+    expect(runtime.wireframeNodeIds, isEmpty);
+    expect(runtime.scene.hasEntity(wire), isFalse);
+    expect(mesh.visible, isTrue);
+  });
+
   test('swapping the mesh of a node keeps its transform', () async {
     if (skip()) return;
     final runtime = LuminaViewportSceneRuntime(engine: engine!);

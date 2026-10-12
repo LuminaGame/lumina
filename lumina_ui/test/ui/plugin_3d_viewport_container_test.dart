@@ -92,6 +92,14 @@ void main() {
     final ghosts = c.scene!.skeletonOverlay(node)!['ghosts']! as List;
     expect(ghosts, hasLength(1));
     expect((ghosts.single as Map)['label'], '15');
+
+    // The view mode reaches the description and the runtime.
+    expect(c.scene!.viewMode, 'lit');
+    await tester.pumpWidget(host(Plugin3DViewportOptions(title: 'Motion', meshPath: mesh.path, viewMode: 'unlit')));
+    await frames(tester, 2);
+    expect(c.scene!.viewMode, 'unlit');
+    expect(c.runtime.viewMode, 'unlit');
+    expect(c.runtime.keyLightLux, 0.0);
     await tester.pumpWidget(const SizedBox());
     await frames(tester, 2);
   });

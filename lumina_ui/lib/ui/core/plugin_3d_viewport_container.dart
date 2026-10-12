@@ -118,6 +118,7 @@ class _Plugin3DViewportContainerState extends State<Plugin3DViewportContainer> {
       final distance = o.cameraDistance;
       if (distance != null) scene.setOrbit(scene.yaw, scene.pitch, distance * 100.0);
     }
+    scene.viewMode = o.viewMode;
     final node = _nodeId;
     if (node == null) return;
     final n = scene.node(node)!;

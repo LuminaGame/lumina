@@ -8,6 +8,10 @@ mixin _ViewportStage {
   FilamentView get view;
   LuminaWorld get world;
   LuminaAssetProvider? get assetProvider;
+  String get _viewMode;
+
+  /// The key light's intensity in Lit (lux).
+  static const double keyLightIntensity = 90000.0;
 
   LuminaActor? _sky;
   LuminaActor? _keyLight;
@@ -52,7 +56,7 @@ mixin _ViewportStage {
       root: LuminaDirectionalLightComponent(
         rotation: LuminaAxes.rotation(const [-40, 0, 30]),
         color: Vector3(1.0, 0.97, 0.92),
-        intensity: 90000.0,
+        intensity: _viewMode == LuminaViewportViewMode.unlit ? 0.0 : keyLightIntensity,
         castShadows: true,
         isSun: false,
       ),

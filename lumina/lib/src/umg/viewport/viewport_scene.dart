@@ -43,6 +43,21 @@ abstract final class LuminaViewportEnvironmentMode {
   static const List<String> values = [sky, color, transparent];
 }
 
+/// How a Viewport shades its meshes.
+abstract final class LuminaViewportViewMode {
+  /// The lit scene: the shadowed key light, the description's lights, IBL.
+  static const String lit = 'lit';
+
+  /// Base and vertex colours under the IBL alone: no direct lights, no
+  /// shadows.
+  static const String unlit = 'unlit';
+
+  /// Triangle edges instead of the solid surface.
+  static const String wireframe = 'wireframe';
+
+  static const List<String> values = [lit, unlit, wireframe];
+}
+
 /// The light types a Viewport adds.
 abstract final class LuminaViewportLightType {
   static const String directional = 'directional';
@@ -292,6 +307,16 @@ class LuminaViewportScene {
       'intensity': intensity,
     };
   }
+
+  /// The shading of the meshes ([LuminaViewportViewMode]); unknown values
+  /// read as lit.
+  String get viewMode {
+    final m = json['viewMode'];
+    return LuminaViewportViewMode.values.contains(m) ? m! as String : LuminaViewportViewMode.lit;
+  }
+
+  set viewMode(String mode) =>
+      json['viewMode'] = LuminaViewportViewMode.values.contains(mode) ? mode : LuminaViewportViewMode.lit;
 
   bool get gridVisible => json['grid'] != false;
   set gridVisible(bool visible) => json['grid'] = visible;

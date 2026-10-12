@@ -6,6 +6,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter_filament/filament.dart';
+import 'package:lumina/src/assets/glb_loader.dart';
 import 'package:lumina/src/components/base/scene_component.dart';
 import 'package:lumina/src/components/environment/sky_component.dart';
 import 'package:lumina/src/components/light/directional_light_component.dart';
@@ -24,6 +25,7 @@ import 'package:lumina/src/umg/viewport/viewport_scene.dart';
 import 'package:lumina/src/umg/viewport/viewport_scene_diff.dart';
 import 'package:lumina/src/umg/viewport/viewport_skeleton_overlay.dart';
 import 'package:lumina/src/umg/viewport/viewport_transforms.dart';
+import 'package:lumina/src/umg/viewport/viewport_wire_source.dart';
 import 'package:lumina/src/utility/lumina_assets.dart';
 import 'package:lumina/src/world/world.dart';
 import 'package:lumina/src/world/world_type.dart';
@@ -34,6 +36,7 @@ part 'viewport_runtime_queries.dart';
 part 'viewport_runtime_media.dart';
 part 'viewport_runtime_stage.dart';
 part 'viewport_runtime_camera.dart';
+part 'viewport_runtime_view_mode.dart';
 
 /// A node of the description, drawn: the actor and its root component.
 class _RuntimeNode {
@@ -98,7 +101,7 @@ class _RuntimeNode {
 /// fixed light feature set (MSAA 4×, one shadowed directional light, IBL;
 /// none of the game's ray tracing, ReSTIR, SSR, upscalers or frame
 /// generation).
-class LuminaViewportSceneRuntime with _ViewportQueries, _ViewportMedia, _ViewportStage, _ViewportCamera {
+class LuminaViewportSceneRuntime with _ViewportQueries, _ViewportMedia, _ViewportStage, _ViewportCamera, _ViewportViewMode {
   LuminaViewportSceneRuntime({
     required this.engine,
     FilamentScene? scene,
@@ -229,6 +232,8 @@ class LuminaViewportSceneRuntime with _ViewportQueries, _ViewportMedia, _Viewpor
           _applyGrid(next.gridVisible);
         case LuminaViewportSceneOpKind.camera:
           _applyCamera(next);
+        case LuminaViewportSceneOpKind.viewMode:
+          _applyViewMode(next.viewMode);
         case LuminaViewportSceneOpKind.interaction:
         case LuminaViewportSceneOpKind.addOverlay:
         case LuminaViewportSceneOpKind.removeOverlay:
@@ -258,6 +263,7 @@ class LuminaViewportSceneRuntime with _ViewportQueries, _ViewportMedia, _Viewpor
     _place(node);
     world.persistentLevel.registerActor(actor);
     _watchLoad(node);
+    _applyNodeLight(node);
     _applyLook(node, const {'materialParams', 'morphs', 'animation', 'visible'});
   }
 
@@ -309,6 +315,7 @@ class LuminaViewportSceneRuntime with _ViewportQueries, _ViewportMedia, _Viewpor
         if (node.skeletal != null) await _readSkeleton(node, mesh);
         node.loaded = true;
         await _applyLookLoaded(node);
+        if (!_solidShown) _syncWires();
       }
     } catch (e) {
       if (!_disposed && identical(_nodes[node.id]?.root, mesh)) {
@@ -371,6 +378,7 @@ class LuminaViewportSceneRuntime with _ViewportQueries, _ViewportMedia, _Viewpor
     final node = _nodes.remove(id);
     if (node == null) return;
     node.removed = true;
+    _dropWire(id);
     _releaseTextures(node);
     _dropMemoryMesh(node);
     world.persistentLevel.unregisterActor(node.actor);
@@ -393,6 +401,7 @@ class LuminaViewportSceneRuntime with _ViewportQueries, _ViewportMedia, _Viewpor
   }
 
   void _swapComponent(_RuntimeNode node) {
+    _dropWire(node.id);
     _releaseTextures(node);
     node.actor.removeComponent(node.root);
     node.root = _componentFor(node.json, mesh: node.meshOverride);
@@ -428,6 +437,7 @@ class LuminaViewportSceneRuntime with _ViewportQueries, _ViewportMedia, _Viewpor
       node.localTransform = null;
       _place(node);
     }
+    if (fields.contains('light')) _applyNodeLight(node);
     _applyLook(node, assetChanged ? const {'materialParams', 'morphs', 'animation', 'visible'} : fields);
   }
 
@@ -446,7 +456,7 @@ class LuminaViewportSceneRuntime with _ViewportQueries, _ViewportMedia, _Viewpor
       final visible = node.json['visible'] != false;
       final mesh = node.mesh;
       if (mesh != null) {
-        mesh.visible = visible;
+        _applyNodeSolid(node);
       } else {
         node.root.isVisible = visible;
       }
@@ -634,6 +644,9 @@ class LuminaViewportSceneRuntime with _ViewportQueries, _ViewportMedia, _Viewpor
     _disposed = true;
     for (final id in _nodes.keys.toList()) {
       _removeNode(id);
+    }
+    for (final id in _wires.keys.toList()) {
+      _dropWire(id);
     }
     final sky = _sky;
     if (sky != null) world.persistentLevel.unregisterActor(sky);

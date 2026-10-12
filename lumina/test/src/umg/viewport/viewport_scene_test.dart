@@ -39,6 +39,22 @@ void main() {
     expect(LuminaViewportSceneDiff.diff(scene, again), isEmpty);
   });
 
+  test('the view mode defaults to lit, round-trips and changes as one viewMode op', () {
+    final scene = sample();
+    expect(scene.viewMode, LuminaViewportViewMode.lit);
+    final next = scene.copy()..viewMode = LuminaViewportViewMode.wireframe;
+    expect(LuminaViewportScene(LuminaViewportScene.plain(next.json) as Map<String, Object?>).viewMode, LuminaViewportViewMode.wireframe);
+    final ops = LuminaViewportSceneDiff.diff(scene, next);
+    expect(ops.map((o) => o.kind), [LuminaViewportSceneOpKind.viewMode]);
+    expect(ops.single.value, {'value': 'wireframe'});
+    next.viewMode = 'toon';
+    expect(next.viewMode, LuminaViewportViewMode.lit);
+    expect(LuminaViewportSceneDiff.diff(scene, next), isEmpty);
+    // A first description that is not lit applies its mode.
+    final unlit = sample()..viewMode = LuminaViewportViewMode.unlit;
+    expect(LuminaViewportSceneDiff.diff(null, unlit).map((o) => o.kind), contains(LuminaViewportSceneOpKind.viewMode));
+  });
+
   test('changing one node transform is exactly one updateNode op', () {
     final before = sample();
     final after = before.copy();

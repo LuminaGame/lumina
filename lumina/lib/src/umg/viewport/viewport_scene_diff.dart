@@ -16,6 +16,9 @@ enum LuminaViewportSceneOpKind {
   addMarker,
   removeMarker,
   updateMarker,
+
+  /// The shading mode changed ([LuminaViewportScene.viewMode]).
+  viewMode,
 }
 
 /// One change between two descriptions: [id] names the node, overlay (its
@@ -81,6 +84,9 @@ abstract final class LuminaViewportSceneDiff {
     whole('grid', LuminaViewportSceneOpKind.grid);
     whole('camera', LuminaViewportSceneOpKind.camera);
     whole('interaction', LuminaViewportSceneOpKind.interaction);
+    if (old == null ? next.viewMode != LuminaViewportViewMode.lit : old.viewMode != next.viewMode) {
+      ops.add(LuminaViewportSceneOp(LuminaViewportSceneOpKind.viewMode, value: {'value': next.viewMode}));
+    }
 
     _keyed(ops, old?.skeletonOverlays ?? const [], next.skeletonOverlays, 'node', LuminaViewportSceneOpKind.addOverlay,
         LuminaViewportSceneOpKind.removeOverlay, LuminaViewportSceneOpKind.updateOverlay);

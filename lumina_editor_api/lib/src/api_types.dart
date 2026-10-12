@@ -129,6 +129,10 @@ class Plugin3DViewportOptions {
   final bool showGizmo;
   final Set<String>? visibleBoneNames;
 
+  /// How the mesh is shaded: `lit` (default), `unlit` (no direct lights or
+  /// shadows) or `wireframe` (triangle edges instead of the solid).
+  final String viewMode;
+
   const Plugin3DViewportOptions({
     this.title = 'Viewport',
     this.meshPath,
@@ -143,6 +147,7 @@ class Plugin3DViewportOptions {
     this.onBoneMoved,
     this.showGizmo = true,
     this.visibleBoneNames,
+    this.viewMode = 'lit',
   });
 }
 
