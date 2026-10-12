@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:developer' as developer;
 import 'dart:typed_data';
 
 import 'package:vector_math/vector_math_64.dart';
@@ -31,6 +33,7 @@ import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/src/object/actor.dart';
 import 'package:lumina/src/object/character.dart';
 import 'package:lumina/src/physics/mass_properties.dart';
+import 'package:lumina/src/utility/lumina_assets.dart';
 import 'package:lumina/src/blueprint/anim/anim_blueprint_instance.dart';
 import 'package:lumina/src/blueprint/blueprint_model.dart';
 import 'package:lumina/src/blueprint/blueprint_runtime.dart';
@@ -114,11 +117,42 @@ abstract final class LuminaBlueprintComponents {
             actor.addComponent(anim);
           }
         }
+        // A Skeletal Mesh using an animation asset loops its Anim to Play.
+        if (component is LuminaAnimatedMeshComponent && c.properties['animMode'] == 'Use Animation Asset') {
+          final anim = c.properties['animToPlay'] as String? ?? '';
+          if (anim.isNotEmpty) unawaited(playAnimationAsset(component, anim, assetProvider: assetProvider));
+        }
         if (!_isOwnField(actor, component) && component != actor.rootComponent) actor.addComponent(component);
       }
     }
     _inheritMeshPhysics(components, built);
     return built;
+  }
+
+  /// Loops [animation] on [mesh]: the clip an animation `.lmas` names
+  /// (`clip_name`, read through [assetProvider] / [LuminaAssets]), or a bare
+  /// clip name of the mesh. A clip the mesh lacks is logged and the mesh
+  /// keeps its pose.
+  static Future<void> playAnimationAsset(
+    LuminaAnimatedMeshComponent mesh,
+    String animation, {
+    Future<Uint8List> Function(String path)? assetProvider,
+  }) async {
+    var clip = animation;
+    try {
+      if (animation.toLowerCase().endsWith('.lmas')) {
+        final asset = LuminaAsset.fromBytes(await LuminaAssets.resolve(assetProvider)(animation));
+        final named = asset.metadata['clip_name'] ?? '';
+        clip = named.isEmpty ? asset.name : named;
+      }
+      if (mesh.isLoaded && !mesh.hasClip(clip)) {
+        developer.log('Anim to Play: ${mesh.meshAssetPath} has no clip "$clip" ($animation)', name: 'Blueprint', level: 900);
+        return;
+      }
+      mesh.play(clip);
+    } catch (e) {
+      developer.log('Anim to Play: cannot play $animation: $e', name: 'Blueprint', level: 900);
+    }
   }
 
   /// Resolves a static mesh asset's `metadata.physics` (`{massKg,

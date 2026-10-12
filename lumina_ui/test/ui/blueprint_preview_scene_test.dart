@@ -137,6 +137,20 @@ void main() {
     expect(scene.summary, contains('reference pose'));
   });
 
+  test('a Skeletal Mesh in Use Animation Asset mode plays its Anim to Play in the preview, and says so', () async {
+    final doc = LuminaBlueprintDocument.fromJson(character.toJson());
+    doc.components.firstWhere((c) => c.id == 'mesh').properties
+      ..['animMode'] = 'Use Animation Asset'
+      ..['animToPlay'] = 'Idle_Loop'
+      ..remove('animClass');
+    final scene = BlueprintPreviewScene()..setDocument(doc, projectDir: dir);
+    addTearDown(scene.dispose);
+    scene.attachHeadless();
+    await Future<void>.delayed(Duration.zero);
+    expect((scene.componentFor('mesh') as LuminaAnimatedMeshComponent).currentClip, 'Idle_Loop');
+    expect(scene.summary, contains('plays Idle_Loop'));
+  });
+
   test("the editor's default Character keeps its arrow, drawn in its colour", () {
     final doc = BlueprintEditorViewModel.createDefaultDocument('BP_Default');
     final scene = BlueprintPreviewScene()..setDocument(doc, projectDir: dir);

@@ -470,8 +470,11 @@ class BlueprintPreviewScene extends _BlueprintPreviewSceneState with _BlueprintP
       final animClass = (c.properties['animClass'] as String? ?? '').split('/').last.replaceAll('.lmas', '');
       if (anim != null) {
         parts.add('${c.name}: $name · $animClass ${anim.currentState ?? ''} (${anim.mesh.currentClip ?? 'no clip'})');
+      } else if (built is LuminaAnimatedMeshComponent && built.currentClip != null) {
+        parts.add('${c.name}: $name · plays ${built.currentClip}');
       } else if (built is LuminaAnimatedMeshComponent) {
-        parts.add('${c.name}: $name · reference pose (no Animation Blueprint)');
+        final asset = c.properties['animMode'] == 'Use Animation Asset';
+        parts.add('${c.name}: $name · reference pose (${asset ? 'no Anim to Play' : 'no Animation Blueprint'})');
       } else {
         parts.add('${c.name}: $name');
       }
