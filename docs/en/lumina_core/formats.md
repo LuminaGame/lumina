@@ -481,19 +481,24 @@ One key binding inside a mapping context. [keyId] is the stable `LogicalKeyboard
 
 ### `class ProjectPackagingSettings`
 
-`ProjectPackagingSettings`: `class` representing the data model or functionality of the module.
+The `.lmproject` `packaging` section: the platforms Package Project builds and where the packages go.
 
 **Constructors:**
-- `ProjectPackagingSettings.fromMap(Map<String, dynamic> map)`: Initializes `ProjectPackagingSettings.fromMap(Map<String, dynamic> map)`.
-- `ProjectPackagingSettings(targetOs: targetOs ?? this.targetOs, outputDir: outputDir ?? this.outputDir)`: Initializes `ProjectPackagingSettings(targetOs: targetOs ?? this.targetOs, outputDir: outputDir ?? this.outputDir)`.
+- `const ProjectPackagingSettings({this.targets = const ['linux'], this.outputDir = 'build', this.webLoadingStyle, this.android, this.bundleDlssRuntime = false})`
+- `ProjectPackagingSettings.fromMap(Map<String, dynamic> map)`: reads `targets`; a manifest written before multi-target packaging migrates its `target_os` label; one with neither reads `['linux']`.
 
 **Functions, Methods & Accessors:**
 
 | Method / Getter | Signature | Purpose & Description |
 | :--- | :--- | :--- |
-| `targetOs` | `String targetOs` | Holds the `targetOs` property or configuration state. |
-| `outputDir` | `String outputDir` | Holds the `outputDir` property or configuration state. |
-| `toMap` | `Map<String, dynamic> toMap()` | Executes `toMap` operation. |
+| `targets` | `List<String> targets` | Platform ids in `kPackagingPlatforms` order; unknown ids are kept so validation can name them. |
+| `outputDir` | `String outputDir` | Relative to the project, or absolute. |
+| `webLoadingStyle` | `ProjectWebLoadingStyle webLoadingStyle` | The web build's HTML loading screen (`web_loading_style`). |
+| `android` | `ProjectAndroidSettings android` | The Android (APK) build (`android`, written only when not the default). |
+| `bundleDlssRuntime` | `bool bundleDlssRuntime` | `bundle_dlss_runtime` (written only when true): copy NVIDIA's DLSS runtime and licence next to the executable of Windows and Linux packages. Off by default; the files are NVIDIA's, under the NVIDIA RTX SDKs licence. See [Packaging](../lumina_editor_data/packaging.md#nvidia-dlss-runtime). |
+| `withTarget` | `ProjectPackagingSettings withTarget(String id, bool selected)` | The selection with `id` ticked or unticked. |
+| `outputDirIn` / `packageDirFor` | `String packageDirFor(String projectDir, String id)` | `<output dir>/package/<id>`, where a target's package is copied. |
+| `toMap` / `copyWith` | | Serialisation and copies. |
 
 ### `class ProjectAndroidSettings` (`project_android_settings.dart`)
 

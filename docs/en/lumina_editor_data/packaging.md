@@ -1,8 +1,8 @@
 [Türkçe](../../tr/lumina_editor_data/packaging.md)
 
-# Packaging (Android)
+# Packaging (Android, NVIDIA DLSS runtime)
 
-`lib/src/packaging/` prepares a game for an Android build: the manifest, the Gradle settings and the enabled plugins' runtime modules. Lumina Studio's Build Manager, Project Settings and Play on Device call it through `AndroidPackagingHooks` (lumina_ui). The workflow is described in [Android and Meta Quest packaging](../lumina_ui/android-quest-packaging.md).
+`lib/src/packaging/` prepares a game for an Android build: the manifest, the Gradle settings and the enabled plugins' runtime modules. It also bundles NVIDIA's DLSS runtime into Windows and Linux packages when a project opts in ([below](#nvidia-dlss-runtime)). Lumina Studio's Build Manager, Project Settings and Play on Device call it through `AndroidPackagingHooks` (lumina_ui). The workflow is described in [Android and Meta Quest packaging](../lumina_ui/android-quest-packaging.md).
 
 ## `lib/src/packaging/android/android_manifest_composer.dart`
 
@@ -40,3 +40,16 @@ The real cook runner is `tool/android_quest/cook_android_quest_test.dart` (`LUMI
 ---
 
 [Up: lumina_editor_data](index.md)
+
+## NVIDIA DLSS runtime
+
+`lib/src/packaging/dlss/` puts NVIDIA's DLSS runtime into a packaged Windows or Linux game when the project's `packaging.bundle_dlss_runtime` is on. Lumina Studio calls it through `DlssPackagingHooks` (lumina_ui) in Project Settings' Package Project and the Build Manager's Cook & Package.
+
+| Member | Purpose |
+| :--- | :--- |
+| `DlssSdk.locate(projectDir, {fallbackPackageRoots})` | The DLSS SDK of the flutter_filament the game builds against: the one the project's `.dart_tool/package_config.json` resolves (its native build compiles DLSS in only when that package's `build/dlss-sdk/` exists), else the first fallback (default: the editor's source checkout) with `tool/dlss/`. Runs on a background isolate. |
+| `DlssSdk` | `packageRoot`, `version` (`tool/dlss/VERSION`), `manifest` (`DlssManifestEntry`: SHA-256, size, path), `missing`, `isFetched`, `missingReason` (with `dart run tool/dlss/fetch_sdk.dart`), `runtimeEntriesFor(target)` (`lib/Windows_x86_64/rel/*` or `lib/Linux_x86_64/rel/*`), `verify(entries)` (size + SHA-256 on an isolate), `refresh()`. `supportsTarget` is true for `windows` and `linux` only. |
+| `DlssRuntimeBundle.bundleInto(sdk, target:, packageDir:)` | Verifies the target's runtime libraries and `LICENSE.txt` against the manifest first; any mismatch or missing file throws `DlssBundleRefused` and nothing is copied. Then copies the libraries flat next to the executable (the runtime lookup checks the executable's folder, not `lib/`), the licence as `NVIDIA_DLSS_LICENSE.txt`, and writes `NVIDIA_DLSS_NOTICE.txt` (the files, their SHA-256, the licence they are under). Other targets return a `DlssBundleReport` with `skippedReason` and get nothing. `describe(report)` gives the log lines. |
+| `DlssSdkFetcher(baseUrl:).fetch(sdk, onProgress:)` | Downloads the manifest's files from the pinned tag (`https://raw.githubusercontent.com/NVIDIA/DLSS/<tag>/<path>`) into `build/dlss-sdk/`, as `tool/dlss/fetch_sdk.dart` does: files already present and matching are kept, each download goes to `<file>.part`, is verified and renamed, a mismatch throws and leaves no partial file. `DlssSdkFetchProgress` carries files and bytes. |
+
+The files are NVIDIA's, redistributed under the NVIDIA RTX SDKs licence (§1c allows distributing them incorporated in an application under §2; §4b forbids a stand-alone distribution; §4e forbids making the SDK subject to an open-source licence). Whether a game may ship them is the developer's decision; Lumina's own releases never contain them.

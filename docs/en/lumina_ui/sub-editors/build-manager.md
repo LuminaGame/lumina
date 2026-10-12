@@ -505,7 +505,7 @@ Packages every ticked target in turn: a target the host, its toolchain or the en
 | `webModule` | `final FlutterFilamentWebModule? webModule` |  |
 | `bundleWebResources` | `final bool bundleWebResources` |  |
 | `beforeBuild` | `final Future<String?> Function(BuildStepContext ctx, String target)? beforeBuild` | Runs before a buildable target's `flutter build`; a non-null result fails the target with that message (e.g. the project icon becomes the platform's app icon). |
-| `afterPackage` | `final Future<void> Function(BuildStepContext ctx, String target, String artifactPath, String packageDir)? afte...` | Runs once a target is copied into its package folder (e.g. a Linux bundle's `.desktop` entry and file-manager icon). |
+| `afterPackage` | `final Future<void> Function(BuildStepContext ctx, String target, String artifactPath, String packageDir)? afte...` | Runs once a target is copied into its package folder (e.g. a Linux bundle's `.desktop` entry and file-manager icon, or NVIDIA's DLSS runtime next to a Windows / Linux executable when the project's `packaging.bundle_dlss_runtime` is on: `DlssPackagingHooks`). A throw fails the target. |
 | `buildAliasRoot` | `final Directory? buildAliasRoot` | Windows: where the space-free alias each build runs through lives ([CookAndPackageStep.buildAliasRoot]). |
 | `argumentsFor` | `List<String> argumentsFor(String target)` | The argv `flutter` gets for [target]. |
 | `sourceFor` | `static String sourceFor(String target)` |  |

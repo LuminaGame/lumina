@@ -7,6 +7,7 @@ import 'package:lumina_ui/ui/core/host/editor_host.dart' show LuminaEditorHost;
 
 import 'package:lumina_ui/ui/features/sub_editors/services/build_pipeline_service.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/android_packaging_hooks.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/dlss_packaging_hooks.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/project_icon_packaging.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/web_module_download.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/web_preview_server.dart';
@@ -378,6 +379,8 @@ class BuildManagerViewModel extends ChangeNotifier {
     final icons = p == null ? null : ProjectIconPackaging(projectDir: projectDirPath, project: p);
     // The enabled plugins' runtime modules, and the Android manifest / Gradle settings.
     final android = p == null ? null : AndroidPackagingHooks(projectDir: projectDirPath, project: p);
+    // NVIDIA's DLSS runtime next to Windows / Linux executables, when the project opted in.
+    final dlss = p == null ? null : DlssPackagingHooks(projectDir: projectDirPath, project: p);
     return PackageTargetsStep(
         targets: targets,
         reasonsFor: reasonsFor,
@@ -389,8 +392,12 @@ class BuildManagerViewModel extends ChangeNotifier {
         codeGenerator: _codeGenerator,
         webModule: webModule,
         bundleWebResources: _bundleWebResources,
-        beforeBuild: android == null ? icons?.beforeBuild : chainBeforeBuild(icons?.beforeBuild, android.beforeBuild),
-        afterPackage: android == null ? icons?.afterPackage : chainAfterPackage(icons?.afterPackage, android.afterPackage),
+        beforeBuild: android == null || dlss == null
+            ? icons?.beforeBuild
+            : chainBeforeBuild(chainBeforeBuild(icons?.beforeBuild, android.beforeBuild), dlss.beforeBuild),
+        afterPackage: android == null || dlss == null
+            ? icons?.afterPackage
+            : chainAfterPackage(chainAfterPackage(icons?.afterPackage, android.afterPackage), dlss.afterPackage),
         androidTargetPlatforms: p == null ? const [] : AndroidPackaging.targetPlatforms(p.packaging.android),
       );
   }

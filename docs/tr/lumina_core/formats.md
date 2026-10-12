@@ -481,19 +481,24 @@ One key binding inside a mapping context. [keyId] is the stable `LogicalKeyboard
 
 ### `class ProjectPackagingSettings`
 
-`ProjectPackagingSettings`: İlgili modülün veri modelini veya temel işlevselliğini temsil eden `class` yapısıdır.
+`.lmproject` dosyasının `packaging` bölümü: Package Project'in derlediği platformlar ve paketlerin gittiği yer.
 
 **Yapıcı Metotlar (Constructors):**
-- `ProjectPackagingSettings.fromMap(Map<String, dynamic> map)`: `ProjectPackagingSettings.fromMap(Map<String, dynamic> map)` nesnesini ilklendirir.
-- `ProjectPackagingSettings(targetOs: targetOs ?? this.targetOs, outputDir: outputDir ?? this.outputDir)`: `ProjectPackagingSettings(targetOs: targetOs ?? this.targetOs, outputDir: outputDir ?? this.outputDir)` nesnesini ilklendirir.
+- `const ProjectPackagingSettings({this.targets = const ['linux'], this.outputDir = 'build', this.webLoadingStyle, this.android, this.bundleDlssRuntime = false})`
+- `ProjectPackagingSettings.fromMap(Map<String, dynamic> map)`: `targets` alanını okur; çoklu hedeften önce yazılmış bir manifestin `target_os` etiketi taşınır; ikisi de yoksa `['linux']` okunur.
 
 **Fonksiyonlar, Metotlar ve Erişimciler:**
 
 | Metot / Getter | İmzası | Ne İşe Yarar? |
 | :--- | :--- | :--- |
-| `targetOs` | `String targetOs` | `targetOs` alanını (field/property) ve ilişkili veriyi saklar. |
-| `outputDir` | `String outputDir` | `outputDir` alanını (field/property) ve ilişkili veriyi saklar. |
-| `toMap` | `Map<String, dynamic> toMap()` | `toMap` işlemini gerçekleştirir. |
+| `targets` | `List<String> targets` | `kPackagingPlatforms` sırasıyla platform kimlikleri; bilinmeyenler doğrulama adlandırabilsin diye tutulur. |
+| `outputDir` | `String outputDir` | Projeye göre göreli ya da mutlak. |
+| `webLoadingStyle` | `ProjectWebLoadingStyle webLoadingStyle` | Web derlemesinin HTML yükleme ekranı (`web_loading_style`). |
+| `android` | `ProjectAndroidSettings android` | Android (APK) derlemesi (`android`, yalnızca varsayılandan farklıysa yazılır). |
+| `bundleDlssRuntime` | `bool bundleDlssRuntime` | `bundle_dlss_runtime` (yalnızca true iken yazılır): NVIDIA'nın DLSS çalışma zamanını ve lisansını Windows ve Linux paketlerinde çalıştırılabilir dosyanın yanına kopyalar. Varsayılan kapalı; dosyalar NVIDIA'nındır ve NVIDIA RTX SDKs lisansına tabidir. Bkz. [Paketleme](../lumina_editor_data/packaging.md#nvidia-dlss-çalışma-zamanı). |
+| `withTarget` | `ProjectPackagingSettings withTarget(String id, bool selected)` | `id` işaretli ya da işaretsiz seçim. |
+| `outputDirIn` / `packageDirFor` | `String packageDirFor(String projectDir, String id)` | `<output dir>/package/<id>`: bir hedefin paketinin kopyalandığı yer. |
+| `toMap` / `copyWith` | | Serileştirme ve kopyalar. |
 
 ### `class ProjectAndroidSettings` (`project_android_settings.dart`)
 

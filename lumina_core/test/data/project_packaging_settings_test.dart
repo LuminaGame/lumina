@@ -68,6 +68,25 @@ void main() {
     });
   });
 
+  group('NVIDIA DLSS runtime bundling', () {
+    test('is off by default and stays out of the manifest until it is turned on', () {
+      const off = ProjectPackagingSettings();
+      expect(off.bundleDlssRuntime, isFalse);
+      expect(off.toMap().containsKey('bundle_dlss_runtime'), isFalse);
+      expect(roundTrip(const LuminaProject(projectName: 'g')).packaging.bundleDlssRuntime, isFalse);
+    });
+
+    test('round-trips as bundle_dlss_runtime and survives copyWith of other fields', () {
+      final on = const ProjectPackagingSettings(targets: ['windows']).copyWith(bundleDlssRuntime: true);
+      expect(on.toMap()['bundle_dlss_runtime'], isTrue);
+      final back = roundTrip(LuminaProject(projectName: 'g', packaging: on));
+      expect(back.packaging.bundleDlssRuntime, isTrue);
+      expect(back.packaging.withTarget('linux', true).bundleDlssRuntime, isTrue);
+      expect(back.packaging.copyWith(outputDir: 'out').bundleDlssRuntime, isTrue);
+      expect(back.packaging.copyWith(bundleDlssRuntime: false).toMap().containsKey('bundle_dlss_runtime'), isFalse);
+    });
+  });
+
   group('branding', () {
     test('round-trips; a missing section reads the Lumina logo on black', () {
       const p = LuminaProject(projectName: 'g', branding: ProjectBrandingSettings(icon: 'branding/app_icon.svg', iconBackground: '#1E90FF'));

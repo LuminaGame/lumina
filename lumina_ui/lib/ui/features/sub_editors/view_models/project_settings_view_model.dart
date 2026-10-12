@@ -12,6 +12,8 @@ import 'package:lumina_ui/ui/features/main_editor/services/editor_neural_renderi
 
 import 'package:lumina_ui/ui/features/sub_editors/services/build_pipeline_service.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/android_packaging_hooks.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/dlss_packaging_hooks.dart';
+import 'package:lumina_ui/ui/features/sub_editors/services/dlss_sdk_download.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/project_icon_packaging.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/project_icon_rasterizer.dart';
 import 'package:lumina_ui/ui/features/sub_editors/services/umg_widget_codegen.dart';
@@ -24,6 +26,7 @@ part 'project_settings_view_model/state.dart';
 part 'project_settings_view_model/widget_library_and_icon.dart';
 part 'project_settings_view_model/packaging.dart';
 part 'project_settings_view_model/packaging_android.dart';
+part 'project_settings_view_model/packaging_dlss.dart';
 part 'project_settings_view_model/web_loading_screen.dart';
 part 'project_settings_view_model/models.dart';
 part 'project_settings_view_model/neural_rendering.dart';
@@ -39,6 +42,7 @@ class ProjectSettingsViewModel extends _ProjectSettingsViewModelState
         _ProjectSettingsWidgetLibraryAndIcon,
         _ProjectSettingsPackaging,
         _ProjectSettingsPackagingAndroid,
+        _ProjectSettingsPackagingDlss,
         _ProjectSettingsWebLoadingScreen,
         _ProjectSettingsNeuralRendering {
   ProjectSettingsViewModel({
@@ -53,6 +57,8 @@ class ProjectSettingsViewModel extends _ProjectSettingsViewModelState
     super.webModulePackageRoots,
     super.webModuleDownloadRoot,
     super.webModuleDownload,
+    super.dlssFallbackPackageRoots,
+    super.dlssSdkDownload,
   });
 
   static Future<Process> _defaultStarter(String executable, List<String> arguments, {String? workingDirectory}) =>
@@ -630,6 +636,8 @@ class ProjectSettingsViewModel extends _ProjectSettingsViewModelState
     _disposed = true;
     _packagingToken?.cancel();
     _webModuleDownload.removeListener(_onWebModuleDownload);
+    _dlssSdkDownload.removeListener(_onDlssSdkDownload);
+    _dlssSdkDownload.dispose();
     unawaited(_webLoadingPreview.stop());
     super.dispose();
   }

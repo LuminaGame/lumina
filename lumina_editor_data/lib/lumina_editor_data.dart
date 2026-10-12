@@ -73,6 +73,9 @@ export 'package:lumina_editor_data/src/packaging/android/android_gradle_configur
 export 'package:lumina_editor_data/src/packaging/android/android_manifest_composer.dart';
 export 'package:lumina_editor_data/src/packaging/android/android_packaging.dart';
 export 'package:lumina_editor_data/src/packaging/runtime_module_dependencies.dart';
+export 'package:lumina_editor_data/src/packaging/dlss/dlss_runtime_bundle.dart';
+export 'package:lumina_editor_data/src/packaging/dlss/dlss_sdk.dart';
+export 'package:lumina_editor_data/src/packaging/dlss/dlss_sdk_fetcher.dart';
 
 // Example projects
 export 'package:lumina_editor_data/src/samples/game_animation_sample/game_animation_sample.dart';

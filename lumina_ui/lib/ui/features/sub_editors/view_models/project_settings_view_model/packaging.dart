@@ -80,6 +80,7 @@ mixin _ProjectSettingsPackaging on _ProjectSettingsViewModelState {
     // Every packaged target gets the project icon.
     final icons = ProjectIconPackaging(projectDir: projectDirPath, project: project);
     final android = AndroidPackagingHooks(projectDir: projectDirPath, project: project);
+    final dlss = DlssPackagingHooks(projectDir: projectDirPath, project: project, fallbackPackageRoots: _dlssFallbackPackageRoots);
     final step = PackageTargetsStep(
       targets: targets,
       reasonsFor: reasonsFor,
@@ -87,8 +88,8 @@ mixin _ProjectSettingsPackaging on _ProjectSettingsViewModelState {
       processStarter: _processStarter,
       codeGenerator: _codeGenerator,
       webModule: webModule,
-      beforeBuild: chainBeforeBuild(icons.beforeBuild, android.beforeBuild),
-      afterPackage: chainAfterPackage(icons.afterPackage, android.afterPackage),
+      beforeBuild: chainBeforeBuild(chainBeforeBuild(icons.beforeBuild, android.beforeBuild), dlss.beforeBuild),
+      afterPackage: chainAfterPackage(chainAfterPackage(icons.afterPackage, android.afterPackage), dlss.afterPackage),
       androidTargetPlatforms: AndroidPackaging.targetPlatforms(project.packaging.android),
     );
     await for (final event in BuildPipelineService().run(BuildPlan(steps: [step]), projectDir: projectDirPath, project: project, token: token)) {

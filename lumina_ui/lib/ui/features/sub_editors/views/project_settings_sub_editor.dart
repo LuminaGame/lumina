@@ -11,6 +11,7 @@ import 'package:lumina_ui/ui/features/sub_editors/services/project_icon_rasteriz
 import 'package:lumina_ui/ui/features/sub_editors/sub_editor_binding.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/project_settings_view_model.dart';
 import 'package:lumina_ui/ui/features/main_editor/services/editor_neural_rendering.dart';
+import 'package:lumina_ui/ui/features/sub_editors/views/project_settings/dlss_bundle_panel.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/project_settings/key_binding_dialog.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/project_settings/neural_rendering_warning_dialog.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/project_settings/web_loading_style_section.dart';

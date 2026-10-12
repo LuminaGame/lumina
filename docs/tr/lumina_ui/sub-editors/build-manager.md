@@ -505,7 +505,7 @@ Packages every ticked target in turn: a target the host, its toolchain or the en
 | `webModule` | `final FlutterFilamentWebModule? webModule` |  |
 | `bundleWebResources` | `final bool bundleWebResources` |  |
 | `beforeBuild` | `final Future<String?> Function(BuildStepContext ctx, String target)? beforeBuild` | Runs before a buildable target's `flutter build`; a non-null result fails the target with that message (e.g. the project icon becomes the platform's app icon). |
-| `afterPackage` | `final Future<void> Function(BuildStepContext ctx, String target, String artifactPath, String packageDir)? afte...` | Runs once a target is copied into its package folder (e.g. a Linux bundle's `.desktop` entry and file-manager icon). |
+| `afterPackage` | `final Future<void> Function(BuildStepContext ctx, String target, String artifactPath, String packageDir)? afte...` | Bir hedef paket klasörüne kopyalandıktan sonra çalışır (ör. Linux paketinin `.desktop` girdisi ve dosya yöneticisi simgesi; projenin `packaging.bundle_dlss_runtime` ayarı açıkken Windows / Linux çalıştırılabilir dosyasının yanına NVIDIA'nın DLSS çalışma zamanı: `DlssPackagingHooks`). Hata fırlatırsa hedef başarısız olur. |
 | `buildAliasRoot` | `final Directory? buildAliasRoot` | Windows: her build'in üzerinden çalıştığı boşluksuz takma adın bulunduğu yer ([CookAndPackageStep.buildAliasRoot]). |
 | `argumentsFor` | `List<String> argumentsFor(String target)` | The argv `flutter` gets for [target]. |
 | `sourceFor` | `static String sourceFor(String target)` |  |

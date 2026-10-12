@@ -56,11 +56,18 @@ class ProjectPackagingSettings {
   /// the XR profile and signing.
   final ProjectAndroidSettings android;
 
+  /// Copy NVIDIA's DLSS runtime (the fetched NGX SDK's `nvngx_dlss*` libraries
+  /// and its licence) next to the executable of Windows and Linux packages.
+  /// Off by default: the files are NVIDIA's, under the NVIDIA RTX SDKs
+  /// licence, and shipping them is the developer's decision.
+  final bool bundleDlssRuntime;
+
   const ProjectPackagingSettings({
     this.targets = const ['linux'],
     this.outputDir = 'build',
     this.webLoadingStyle = const ProjectWebLoadingStyle(),
     this.android = const ProjectAndroidSettings(),
+    this.bundleDlssRuntime = false,
   });
 
   /// [ids] in [kPackagingPlatforms] order, unknown ids last, no duplicates.
@@ -107,6 +114,7 @@ class ProjectPackagingSettings {
         'output_dir': outputDir,
         'web_loading_style': webLoadingStyle.toMap(),
         if (android != const ProjectAndroidSettings()) 'android': android.toMap(),
+        if (bundleDlssRuntime) 'bundle_dlss_runtime': true,
       };
 
   /// A manifest with `targets` reads it; one written before multi-target
@@ -129,6 +137,7 @@ class ProjectPackagingSettings {
       outputDir: map['output_dir'] as String? ?? 'build',
       webLoadingStyle: style is Map ? ProjectWebLoadingStyle.fromMap(Map<String, dynamic>.from(style)) : const ProjectWebLoadingStyle(),
       android: android is Map ? ProjectAndroidSettings.fromMap(Map<String, dynamic>.from(android)) : const ProjectAndroidSettings(),
+      bundleDlssRuntime: map['bundle_dlss_runtime'] == true,
     );
   }
 
@@ -137,6 +146,7 @@ class ProjectPackagingSettings {
     String? outputDir,
     ProjectWebLoadingStyle? webLoadingStyle,
     ProjectAndroidSettings? android,
+    bool? bundleDlssRuntime,
     @Deprecated('Use targets') String? targetOs,
   }) =>
       ProjectPackagingSettings(
@@ -144,5 +154,6 @@ class ProjectPackagingSettings {
         outputDir: outputDir ?? this.outputDir,
         webLoadingStyle: webLoadingStyle ?? this.webLoadingStyle,
         android: android ?? this.android,
+        bundleDlssRuntime: bundleDlssRuntime ?? this.bundleDlssRuntime,
       );
 }

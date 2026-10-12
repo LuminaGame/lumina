@@ -30,6 +30,8 @@ abstract class _ProjectSettingsViewModelState extends ChangeNotifier {
   final List<String>? _webModulePackageRoots;
   final Directory? _webModuleDownloadRoot;
   final WebModuleDownload _webModuleDownload;
+  final List<String>? _dlssFallbackPackageRoots;
+  final DlssSdkDownload _dlssSdkDownload;
 
   _ProjectSettingsViewModelState({
     required this.projectDirPath,
@@ -43,6 +45,8 @@ abstract class _ProjectSettingsViewModelState extends ChangeNotifier {
     List<String>? webModulePackageRoots,
     Directory? webModuleDownloadRoot,
     WebModuleDownload? webModuleDownload,
+    List<String>? dlssFallbackPackageRoots,
+    DlssSdkDownload? dlssSdkDownload,
   })  : _projectRepo = projectRepository ?? ProjectRepository(),
         _assetRepo = assetRepository ?? AssetRepository(),
         _logger = logger ?? EngineLoggerService(),
@@ -56,8 +60,12 @@ abstract class _ProjectSettingsViewModelState extends ChangeNotifier {
         _webModulePackageRoots = webModulePackageRoots,
         // ignore: prefer_initializing_formals
         _webModuleDownloadRoot = webModuleDownloadRoot,
-        _webModuleDownload = webModuleDownload ?? WebModuleDownload.instance {
+        _webModuleDownload = webModuleDownload ?? WebModuleDownload.instance,
+        // ignore: prefer_initializing_formals
+        _dlssFallbackPackageRoots = dlssFallbackPackageRoots,
+        _dlssSdkDownload = dlssSdkDownload ?? DlssSdkDownload() {
     _webModuleDownload.addListener(_onWebModuleDownload);
+    _dlssSdkDownload.addListener(_onDlssSdkDownload);
     if (initialProject != null) {
       _onDisk = initialProject;
       _working = initialProject;
@@ -100,6 +108,10 @@ abstract class _ProjectSettingsViewModelState extends ChangeNotifier {
 
   /// Starts (or retries) the web module download.
   Future<bool> downloadWebModule() => _webModuleDownload.start();
+
+  void _onDlssSdkDownload() {
+    if (!_disposed) notifyListeners();
+  }
 
   void _onWebModuleDownload() {
     if (_disposed) return;

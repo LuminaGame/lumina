@@ -48,6 +48,11 @@ mixin _ProjectSettingsPackaging on _ProjectSettingsSubEditorStateBase {
         ]),
       ),
       _row(
+        'NVIDIA DLSS Runtime',
+        DlssBundlePanel(vm: _vm),
+        help: 'Copies nvngx_dlss / dlssd / dlssg and the NVIDIA licence next to Windows and Linux executables (off by default)',
+      ),
+      _row(
         'Package Project',
         Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
