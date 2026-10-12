@@ -50,12 +50,14 @@ void main() {
     expect(d.maxStretch(), lessThan(0.1), reason: 'stretch after half a second');
   }, skip: mannySkip);
 
-  test('a teleport whose pose arrives a frame late does not pull the skirt back', () async {
+  test('a teleport and half turn whose pose arrives a frame late does not pull the skirt back', () async {
     final d = await Dressed.create();
     addTearDown(d.w.dispose);
     d.pose();
     d.run(1);
-    d.actor.rootComponent.relativeLocation = Vector3(500, 0, 0);
+    d.actor.rootComponent
+      ..relativeLocation = Vector3(500, 0, 0)
+      ..relativeRotation = Quaternion.axisAngle(Vector3(0, 1, 0), math.pi);
     // The step runs with the pose taken before the move, then a fresh one.
     d.w.world.tick(1 / 60);
     expect(d.maxStretch(), lessThan(0.1));
@@ -64,6 +66,34 @@ void main() {
     expect(d.maxStretch(), lessThan(0.1));
     final centre = d.worldVertices().fold(Vector3.zero(), (a, v) => a..add(v))..scale(1 / d.restVertices().length);
     expect(centre.x, closeTo(500, 10));
+  }, skip: mannySkip);
+
+  test('while a pose is a frame late the limbs move with the character, never back through the skirt', () async {
+    final d = await Dressed.create();
+    addTearDown(d.w.dispose);
+    // One leg forward: the pose turned round is not the same pose.
+    final stride = Float64List.fromList(d.cloth.skeleton!.restPose);
+    final o = d.cloth.skeleton!.slotNamed('thigh_l') * LuminaPoseMath.trsStride;
+    final q =
+        Quaternion(stride[o + 3], stride[o + 4], stride[o + 5], stride[o + 6]) *
+        Quaternion.axisAngle(Vector3(0, 0, 1), 0.6);
+    stride.setRange(o + 3, o + 7, [q.x, q.y, q.z, q.w]);
+    d.pose(stride);
+    d.w.run(1, (_) => d.pose(stride));
+    bool legs(String bone) => bone.startsWith('thigh') || bone.startsWith('calf');
+    final settled = d.deepestIn(legs);
+    // Turned round with the pose a frame late: the limbs go with the
+    // character, so the skirt stays outside them.
+    d.actor.rootComponent.relativeRotation = Quaternion.axisAngle(Vector3(0, 1, 0), math.pi);
+    d.w.world.tick(1 / 60);
+    d.pose(stride);
+    expect(d.deepestIn(legs), lessThan(settled + 1.0));
+    // Put back on its skin at once (the stride's own skinning stretch, about
+    // 26 %); limbs swept back to the old pose tore it by over 200 %.
+    expect(d.maxStretch(), lessThan(0.5));
+    d.w.run(0.5, (_) => d.pose(stride));
+    expect(d.maxStretch(), lessThan(0.1));
+    expect(d.deepestIn(legs), lessThan(2.0));
   }, skip: mannySkip);
 
   test('the inertia scale sets how far the hem lags a fast move: 0 carries it with the body', () async {

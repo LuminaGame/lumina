@@ -163,10 +163,12 @@ class LuminaJoltClothSimulator implements LuminaClothSimulator {
     if (pose == null || cloth.skin == null) return;
     final world = _world();
     final reset = c.skinnedVersion < 0 || c.resetPending;
-    // After a teleport, a pose taken before it is moved to where the
-    // character is now (it would pull the garment back otherwise).
+    // A pose taken before the character last moved (the mesh poses after
+    // the step) is carried to where the character is now, for the skin and
+    // the limbs alike: after a teleport it would pull the garment back, and
+    // limbs swept back to it would cut through the garment.
     final posedAt = cloth.posedAt;
-    if (reset && posedAt != null && !cloth.poseIsCurrent) {
+    if (posedAt != null && !cloth.poseIsCurrent) {
       pose = movedAffines(pose, cloth.worldTransform * Matrix4.inverted(posedAt));
     }
     if (reset || cloth.poseVersion != c.skinnedVersion) {
