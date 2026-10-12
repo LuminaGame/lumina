@@ -232,6 +232,23 @@ void main() {
     });
   });
 
+  test('a 32 x 32 cloth costs under 1 ms per 120 Hz step on Jolt', () async {
+    LuminaPhysicsSubsystem.defaultBackend = LuminaPhysicsBackendKind.jolt;
+    final (w, cloth) = await hang(LuminaClothComponent(gridColumns: 31, gridRows: 31, wind: Vector3(400, 0, 300)));
+    addTearDown(w.dispose);
+    expect(cloth.geometry!.simVertexCount, 32 * 32);
+    w.run(0.5);
+    final watch = Stopwatch()..start();
+    for (var i = 0; i < 240; i++) {
+      w.physics.step(1 / 120);
+    }
+    watch.stop();
+    final us = watch.elapsedMicroseconds / 240;
+    // ignore: avoid_print
+    print('cloth step: ${us.toStringAsFixed(0)} µs for 1024 vertices');
+    expect(us, lessThan(1000));
+  });
+
   group('on Dart', () {
     setUp(() => LuminaPhysicsSubsystem.defaultBackend = LuminaPhysicsBackendKind.dart);
 
