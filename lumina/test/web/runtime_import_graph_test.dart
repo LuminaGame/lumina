@@ -20,6 +20,8 @@ bool _forbidden(String uri) =>
     uri == 'dart:ffi' ||
     uri.startsWith('package:flutter_assimp/') ||
     uri.startsWith('package:flutter_riglogic/') ||
+    // Jolt is reached only through the conditional backend factory.
+    uri.startsWith('package:flutter_jolt/') ||
     uri.startsWith('package:ffi/') ||
     uri.startsWith('package:lumina_editor_data/') ||
     // The Blueprint function scanner is editor-only.

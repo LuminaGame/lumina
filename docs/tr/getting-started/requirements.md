@@ -21,6 +21,7 @@ Native-assets hook'ları, `flutter_filament`, `flutter_assimp` ve `flutter_riglo
 ## tools repository'sinden native kütüphaneler
 
 - **OpenRigLogic**: `flutter_riglogic`, vendored kaynaklarından build edilen static bir OpenRigLogic kütüphanesine link eder (bkz. [tools dokümantasyonu](https://github.com/LuminaGame/tools/tree/main/docs)).
+- **Jolt Physics**: `flutter_jolt`, `tools/flutter_jolt/tool/build_jolt.*` betiğinin indirip (sabitlenen sürüm) build ettiği static bir Jolt kütüphanesine link eder. Kütüphane yoksa motor Dart çözücüsüyle simüle eder (bkz. [Fizik backend'leri](../lumina/physics.md#fizik-backendleri)).
 - **Assimp** ek bir şey gerektirmez: `flutter_assimp`, Filament build'indeki Assimp kütüphanesine link eder.
 
 ## İsteğe bağlı

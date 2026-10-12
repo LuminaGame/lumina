@@ -2,7 +2,7 @@
 
 # Fizik
 
-Rigid body dinamiği: bir dünya için Simulate Physics'i çalıştıran fizik subsystem'i, rigid body'ler ve konveks şekilleri, kütle özellikleri, sürtünme ve esneklik (restitution) içeren fiziksel materyaller, çarpışma narrow phase'i üzerine kurulu temas üretimi ve sequential-impulse temas çözücüsü. Çözücü saf Dart olduğu için web build'lerinde de çalışır. Dosya yolları `lumina/` paket dizinine görelidir.
+Rigid body dinamiği: bir dünya için Simulate Physics'i çalıştıran fizik subsystem'i, rigid body'ler ve konveks şekilleri, kütle özellikleri, sürtünme ve esneklik (restitution) içeren fiziksel materyaller, çarpışma narrow phase'i üzerine kurulu temas üretimi ve sequential-impulse temas çözücüsü. Subsystem bir backend üzerinde adım atar: native masaüstünde Jolt Physics, web'de ve yedek olarak saf Dart çözücü (bkz. [Fizik backend'leri](#fizik-backendleri)). Dosya yolları `lumina/` paket dizinine görelidir.
 
 **Bu sayfada:**
 
@@ -10,6 +10,7 @@ Rigid body dinamiği: bir dünya için Simulate Physics'i çalıştıran fizik s
 - [`lib/src/physics/contact_solver.dart`](#libsrcphysicscontact_solverdart)
 - [`lib/src/physics/mass_properties.dart`](#libsrcphysicsmass_propertiesdart)
 - [`lib/src/physics/physical_material.dart`](#libsrcphysicsphysical_materialdart)
+- [Fizik backend'leri](#fizik-backendleri)
 - [`lib/src/physics/physics_subsystem.dart`](#libsrcphysicsphysics_subsystemdart)
 - [`lib/src/physics/primitive_physics.dart`](#libsrcphysicsprimitive_physicsdart)
 - [`lib/src/physics/rigid_body.dart`](#libsrcphysicsrigid_bodydart)
@@ -244,17 +245,44 @@ A surface's physical response: Coulomb [friction] (dynamic; [staticFriction] whi
 | `combinedStaticFriction` | `static double combinedStaticFriction(LuminaPhysicalMaterial a, LuminaPhysicalMaterial b)` | The static friction of [a] touching [b]. |
 | `combinedRestitution` | `static double combinedRestitution(LuminaPhysicalMaterial a, LuminaPhysicalMaterial b)` | The restitution of [a] touching [b]. |
 
+## Fizik backend'leri
+
+`LuminaPhysicsSubsystem` tek bir genel API tutar; arkasındaki çözücü bir `LuminaPhysicsBackend`'dir (`lib/src/physics/physics_backend.dart`): `attach`, `bodyAdded` / `bodyRemoved`, `jointAdded` / `jointRemoved`, `step(dt)` (bir sabit adım), `contacts`, `dispose`. Blueprint'ler, bileşenler ve üretilen oyunlar backend'le değişmez.
+
+| Tür | Sınıf | Nerede |
+| :--- | :--- | :--- |
+| `jolt` | `LuminaJoltPhysicsBackend` (`lib/src/physics/jolt/`) | Jolt build'i olan native masaüstü ([flutter_jolt](https://github.com/LuminaGame/tools/blob/main/docs/tr/flutter_jolt.md), Jolt Physics 5.6). |
+| `dart` | `LuminaDartPhysicsBackend` (`lib/src/physics/dart_physics_backend.dart`) | Her yerde, web'in tek backend'i ve yedek. |
+
+**Seçim** (`LuminaPhysicsBackendKind`): `backend:` ile kurulan bir subsystem o türü kullanır; yoksa `LuminaPhysicsSubsystem.defaultBackend` (`auto`), sonra `LUMINA_PHYSICS_BACKEND` dart-define'ı ya da ortam değişkeni (`dart`, `jolt`), sonra `JoltPhysics.isAvailable` ise Jolt, değilse Dart. Kütüphane yokken istenen `jolt` Dart'a düşer. Mevcut fizik testleri ikisinde de çalışır: `flutter test --dart-define=LUMINA_PHYSICS_BACKEND=dart test/src/physics/rigid_body_test.dart`. Web build'i `dart:ffi`'a hiç ulaşmaz: `lib/src/physics/jolt/jolt_backend_factory.dart` onsuz bir stub export eder.
+
+**Jolt backend'i** Dart body'lerini yansıtır; oyun kodu adımlar arasında `LuminaRigidBody`'yi okumaya ve itmeye devam eder (hızlar, impulslar, kuvvetler, uyku, ışınlama):
+
+- **Birimler**: uzunluklar yalnızca bu sınırda cm ↔ m (`LuminaUnits`); runtime çerçevesi iki tarafta da Y-up, eksen dönüşümü yok. Kuvvetler ×0.01 (N), torklar ve atalet ×1e-4, impulslar ×0.01; yerçekimi dünyanın `gravityZ` değeri, runtime −Y yönünde.
+- **Body'ler**: her `LuminaRigidBody` için body çerçevesindeki parçalarıyla dinamik bir Jolt body'si (kutu, küre, kapsül, silindir; koni tepe noktası ve taban çemberinin convex hull'u; ölçekli, aynalanmış dahil convex hull'lar; bir static mesh'in çarpışma çocukları compound olarak), kütle merkezi `localCenterOfMass`'a taşınmış, kütlesi ve ataleti verilmiş; böylece Lumina'nın kütle kuralları geçerli kalır. Kilitler Jolt'un izinli serbestlik dereceleri olur; her eksende kilitli bir body kinematiktir.
+- **Static collider'lar**: simülasyon yapmayan her çarpışma bileşeni (level geometrisi, karakterin kapsülü, ölçeğiyle landscape heightfield'ı) static bir Jolt body'sidir; bileşeni hareket edince taşınır, şekli değişince yeniden kurulur.
+- **Filtreleme**: her çarpışma bileşeninin etkin bayrağı, nesne tipi, kanal cevapları ve katman maskeleri bir profile eşlenir; iki parça ancak ikisi de diğerini blokluyorsa çarpışır (`jolt_collision_profiles.dart`). Bir aktörün body'leri ancak ikisi de izin verirse çarpışır; `ignoredBodies` (eklemli body'ler) asla çarpışmaz.
+- **Malzemeler**: sürtünme (dururken statik, kayarken dinamik) ve esneklik, Lumina'nın combine modlarıyla.
+- **Senkron**: her adımdan önce yalnızca oyun kodunun değiştirdiği gönderilir (poz, hız, uyku, sönüm, yerçekimi, kilitler, malzeme, şekiller, kütle, yok sayılan çiftler) ve karenin kuvvetleri; sonra pozlar, hızlar ve uyku tek çağrıda geri okunur (`previousPosition` / `previousOrientation` render interpolasyonunu korur, `onComponentSleep` / `onComponentWake` Jolt'un aktivasyonundan tetiklenir).
+- **Temaslar ve vuruşlar**: adımın Jolt temasları `contacts` olur (`LuminaContactManifold`, A her zaman bir body, ortalamada tek nokta, Jolt'un tahmini normal impulsu kg·cm/s) ve Dart çözücüsüyle aynı eşikle vuruş adayı olur.
+- **Eklemler**: bilye eklem bir Jolt swing-twist constraint'idir (eklem çerçevesinin X'i etrafında twist, Y etrafında düzlem konisi `swing1`, Z etrafında normal konisi `swing2`), menteşe (ya da konileri kapalı bir bilye) twist aralığı limitli X etrafında bir Jolt menteşesidir (Jolt `min ≤ 0 ≤ max` tutar); ankrajlar body çerçevesinden kütle merkezine taşınır; `frictionTorque` en büyük sürtünme torkudur; motor `motorTarget`'a doğru kritik sönümlü bir konum motorudur, Hz cinsinden frekansı `motorRate`'in yarısıdır, `motorMaxTorque` ile sınırlanır. Eklem adaları 20 hız ve 10 konum iterasyonuyla çözülür (`LuminaJoltJoint.jointVelocitySteps` / `jointPositionSteps`). Değişen limitler, sürtünme ve motor hedefleri her adımdan önce gönderilir.
+- **Çözücü**: hız iterasyonu `velocityIterations + jointIterations`, konum iterasyonu `positionIterations + 1`, 2 mm penetrasyon payı, 1 cm spekülatif temas, `sleepLinearVelocity` altında `timeToSleep` sonra uyku. Jolt dünyası ve iki worker thread'i ilk kullanımda kurulur.
+
+Bu makinede ölçülen (Windows, 120 Hz adım): 200 kutu Jolt'ta 60 Hz kare başına 0.52 ms, Dart'ta 2.56 ms; 16 body'li mannequin ragdoll'u adım başına 18 µs, Dart'ta 236 µs; güçlü ragdoll ortalama eklem sapması 4.0° (Dart 8.3°).
+
+**Sınırlar**: sahne sorguları (trace, sweep, overlap) iki backend için de çarpışma subsystem'inde kalır; Jolt'taki temas impulsları tahmindir; üzerinde body duran bir landscape heightfield'ı ancak veri nesnesi değişince yeniden kurulur.
+
 ## Eklemler ve ragdoll'lar
 
-`LuminaPhysicsJoint` (`lib/src/physics/physics_joint.dart`) iki gövdeyi bir bilye-yuva (salınım konisi, burulma aralığı) ya da menteşeyle, isteğe bağlı eklem sürtünmesi ve motorla birleştirir; `LuminaPhysicsSubsystem.addJoint` / `removeJoint` bunları temaslarla birlikte çözer (`LuminaJointBatch`, `lib/src/physics/joint_batch.dart`: `jointIterations` ek hız geçişi, `jointPositionIterations` konum geçişi). Birleştirilmiş gövdeler hiç çarpışmaz ve aynı adayı paylaşır; bir aktörün gövdeleri ancak ikisi de `LuminaRigidBody.collidesWithOwnBodies` açıksa ve biri ötekini `ignoredBodies` içinde listelemiyorsa çarpışır. Bir primitive bileşenin şekilleri ve kütle kuralı `LuminaPhysicsBodyShapes` içindedir (`lib/src/physics/physics_body_shapes.dart`; `resolveMassProperties` / `meshPhysicsOf` ona yönlendirir). Physics asset'ler, ragdoll'lar, düşmeler ve kalkmalar: [Ragdoll, düşme ve ayağa kalkma](ragdoll.md).
+`LuminaPhysicsJoint` (`lib/src/physics/physics_joint.dart`) iki gövdeyi bir bilye-yuva (salınım konisi, burulma aralığı) ya da menteşeyle, isteğe bağlı eklem sürtünmesi ve motorla birleştirir; `LuminaPhysicsSubsystem.addJoint` / `removeJoint` bunları ekler; Jolt backend'i Jolt constraint'leri kurar (yukarıda), Dart backend'i onları temaslarla birlikte çözer (`LuminaJointBatch`, `lib/src/physics/joint_batch.dart`: `jointIterations` ek hız geçişi, `jointPositionIterations` konum geçişi). Birleştirilmiş gövdeler hiç çarpışmaz ve aynı adayı paylaşır; bir aktörün gövdeleri ancak ikisi de `LuminaRigidBody.collidesWithOwnBodies` açıksa ve biri ötekini `ignoredBodies` içinde listelemiyorsa çarpışır. Bir primitive bileşenin şekilleri ve kütle kuralı `LuminaPhysicsBodyShapes` içindedir (`lib/src/physics/physics_body_shapes.dart`; `resolveMassProperties` / `meshPhysicsOf` ona yönlendirir). Physics asset'ler, ragdoll'lar, düşmeler ve kalkmalar: [Ragdoll, düşme ve ayağa kalkma](ragdoll.md).
 
 ## `lib/src/physics/physics_subsystem.dart`
 
 ### `class LuminaPhysicsSubsystem`
 
-Rigid-body dynamics for a world (what a primitive component's Simulate Physics runs on). A pure-Dart solver on the existing narrow phase, so the web build simulates the same; it sits behind this class so a native engine could replace it.
+Bir dünya için rigid body dinamiği (bir primitive bileşenin Simulate Physics'inin üzerinde çalıştığı şey). Subsystem body'lere, eklemlere, sabit adım saatine, bileşen senkronuna ve olaylara sahiptir; adımı bir [LuminaPhysicsBackend] atar: kütüphanesi build edilmiş native masaüstünde Jolt Physics, web'de ve yedek olarak saf Dart çözücü ([LuminaDartPhysicsBackend]) (bkz. [Fizik backend'leri](#fizik-backendleri)).
 
-- **Stepping**: fixed [fixedTimeStep] (120 Hz), at most [maxSubsteps] per frame; components are written at the pose interpolated between the last two steps. Pairs are processed in body-creation order, so the same input gives the same result. - **Contacts**: up to four points per pair from [LuminaContactGenerator], warm started across steps; [LuminaContactSolver] runs [velocityIterations] sequential-impulse passes (Coulomb friction, static and dynamic, restitution above [LuminaContactSolver.restitutionThreshold]) and [positionIterations] split-impulse passes. - **World**: every collision component that does not simulate (level geometry, the landscape heightfield, a character's capsule) blocks bodies as an immovable collider; gravity is the world's `gravityZ` (authoring −Z, runtime −Y). - **Sleep**: a group of touching bodies slower than [sleepLinearVelocity] / [sleepAngularVelocity] for [timeToSleep] sleeps; a contact with an awake body, an impulse or a force wakes it. - **Driving**: a simulating component that is its actor's root, or a direct child of the root, moves the whole actor; one deeper in the tree is detached and moves by itself. - **Events**: a contact whose normal impulse clearly exceeds resting (twice the effective weight for a step, and [hitImpulseThreshold]) raises `onComponentHit` and the actors' hit hooks (Blueprint Event Hit) once per frame with [HitResult.normalImpulse].
+- **Adım**: sabit [fixedTimeStep] (120 Hz), kare başına en çok [maxSubsteps]; bileşenler son iki adım arasında interpolasyonlu pozla yazılır. Aynı girdi aynı backend'de aynı sonucu verir. - **Temaslar** (Dart backend'i): [LuminaContactGenerator]'dan çift başına en çok dört nokta, adımlar arasında warm start; [LuminaContactSolver] [velocityIterations] sequential-impulse geçişi (Coulomb sürtünmesi, statik ve dinamik, [LuminaContactSolver.restitutionThreshold] üstünde esneklik) ve [positionIterations] split-impulse geçişi çalıştırır. - **World**: every collision component that does not simulate (level geometry, the landscape heightfield, a character's capsule) blocks bodies as an immovable collider; gravity is the world's `gravityZ` (authoring −Z, runtime −Y). - **Sleep**: a group of touching bodies slower than [sleepLinearVelocity] / [sleepAngularVelocity] for [timeToSleep] sleeps; a contact with an awake body, an impulse or a force wakes it. - **Driving**: a simulating component that is its actor's root, or a direct child of the root, moves the whole actor; one deeper in the tree is detached and moves by itself. - **Events**: a contact whose normal impulse clearly exceeds resting (twice the effective weight for a step, and [hitImpulseThreshold]) raises `onComponentHit` and the actors' hit hooks (Blueprint Event Hit) once per frame with [HitResult.normalImpulse].
 
 **Üyeler:**
 
@@ -270,7 +298,14 @@ Rigid-body dynamics for a world (what a primitive component's Simulate Physics r
 | `timeToSleep` | `double timeToSleep` |  |
 | `hitImpulseThreshold` | `double hitImpulseThreshold` |  |
 | `interpolate` | `bool interpolate` | Write interpolated poses (true) or the last step's (false). |
-| `solver` | `final LuminaContactSolver solver` |  |
+| `LuminaPhysicsSubsystem` | `LuminaPhysicsSubsystem({LuminaPhysicsBackendKind? backend})` | [backend] ile adım atan bir subsystem (`auto`: [defaultBackend], sonra `LUMINA_PHYSICS_BACKEND` dart-define'ı ya da ortam değişkeni, sonra varsa Jolt, yoksa Dart). |
+| `defaultBackend` | `static LuminaPhysicsBackendKind defaultBackend` | Yeni subsystem'lerin istediği backend türü (`auto`). |
+| `backend` | `late final LuminaPhysicsBackend backend` | Bu subsystem'in body'lerini adımlayan. |
+| `backendKind` | `LuminaPhysicsBackendKind get backendKind` | [backend]'in türü (asla `auto` değil). |
+| `solver` | `LuminaContactSolver get solver` | Dart backend'inin temas çözücüsü (başka backend'de boşta bir çözücü). |
+| `colliders` | `List<LuminaCollisionComponent> colliders()` | Body'leri bloklayabilen çarpışma bileşenleri. |
+| `shapesBlock` | `static bool shapesBlock(LuminaCollisionComponent? a, LuminaCollisionComponent? b)` | [a] ve [b]'den gelen body parçaları birbirini blokluyor mu (null bileşen `worldDynamic`'i bloklayanı bloklar). |
+| `recordHit` | `void recordHit(LuminaContactManifold m, double impulse, Vector3 point, Vector3 normal, double dt, double gravity)` | Bir backend'in bu adımdaki teması: durgunluğu açıkça aşıyorsa çiftinin o karedeki vuruşu olarak tutulur. |
 | `stepCount` | `int stepCount` | Fixed steps taken so far, and the simulated time (s). |
 | `simulatedTime` | `double simulatedTime` |  |
 | `lastFrameSteps` | `int lastFrameSteps` | Steps taken in the last frame. |

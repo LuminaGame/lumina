@@ -2,7 +2,7 @@
 
 # Physics
 
-Rigid-body dynamics: the physics subsystem that runs Simulate Physics for a world, rigid bodies and their convex shapes, mass properties, physical materials with friction and restitution, contact generation on top of the collision narrow phase, and the sequential-impulse contact solver. The solver is pure Dart, so it also runs in web builds. File paths are relative to the `lumina/` package directory.
+Rigid-body dynamics: the physics subsystem that runs Simulate Physics for a world, rigid bodies and their convex shapes, mass properties, physical materials with friction and restitution, contact generation on top of the collision narrow phase, and the sequential-impulse contact solver. The subsystem steps on a backend: Jolt Physics on native desktop, the pure-Dart solver on the web and as the fallback (see [Physics backends](#physics-backends)). File paths are relative to the `lumina/` package directory.
 
 **On this page:**
 
@@ -10,6 +10,7 @@ Rigid-body dynamics: the physics subsystem that runs Simulate Physics for a worl
 - [`lib/src/physics/contact_solver.dart`](#libsrcphysicscontact_solverdart)
 - [`lib/src/physics/mass_properties.dart`](#libsrcphysicsmass_propertiesdart)
 - [`lib/src/physics/physical_material.dart`](#libsrcphysicsphysical_materialdart)
+- [Physics backends](#physics-backends)
 - [`lib/src/physics/physics_subsystem.dart`](#libsrcphysicsphysics_subsystemdart)
 - [`lib/src/physics/primitive_physics.dart`](#libsrcphysicsprimitive_physicsdart)
 - [`lib/src/physics/rigid_body.dart`](#libsrcphysicsrigid_bodydart)
@@ -244,17 +245,44 @@ A surface's physical response: Coulomb [friction] (dynamic; [staticFriction] whi
 | `combinedStaticFriction` | `static double combinedStaticFriction(LuminaPhysicalMaterial a, LuminaPhysicalMaterial b)` | The static friction of [a] touching [b]. |
 | `combinedRestitution` | `static double combinedRestitution(LuminaPhysicalMaterial a, LuminaPhysicalMaterial b)` | The restitution of [a] touching [b]. |
 
+## Physics backends
+
+`LuminaPhysicsSubsystem` keeps one public API; the solver behind it is a `LuminaPhysicsBackend` (`lib/src/physics/physics_backend.dart`): `attach`, `bodyAdded` / `bodyRemoved`, `jointAdded` / `jointRemoved`, `step(dt)` (one fixed step), `contacts`, `dispose`. Blueprints, components and generated games do not change with the backend.
+
+| Kind | Class | Where |
+| :--- | :--- | :--- |
+| `jolt` | `LuminaJoltPhysicsBackend` (`lib/src/physics/jolt/`) | Native desktop with a Jolt build ([flutter_jolt](https://github.com/LuminaGame/tools/blob/main/docs/en/flutter_jolt.md), Jolt Physics 5.6). |
+| `dart` | `LuminaDartPhysicsBackend` (`lib/src/physics/dart_physics_backend.dart`) | Everywhere, the web's only one, and the fallback. |
+
+**Selection** (`LuminaPhysicsBackendKind`): a subsystem built with `backend:` uses that kind; otherwise `LuminaPhysicsSubsystem.defaultBackend` (`auto`), then the `LUMINA_PHYSICS_BACKEND` dart-define or environment variable (`dart`, `jolt`), then Jolt when `JoltPhysics.isAvailable`, else Dart. A `jolt` request without the library falls back to Dart. The existing physics tests run on either: `flutter test --dart-define=LUMINA_PHYSICS_BACKEND=dart test/src/physics/rigid_body_test.dart`. The web build never reaches `dart:ffi`: `lib/src/physics/jolt/jolt_backend_factory.dart` exports a stub without it.
+
+**The Jolt backend** mirrors the Dart bodies; gameplay keeps reading and pushing `LuminaRigidBody` (velocities, impulses, forces, sleep, teleports) between steps:
+
+- **Units**: lengths cm ↔ m at this boundary only (`LuminaUnits`); the runtime frame is Y-up on both sides, so no axis conversion. Forces ×0.01 (N), torques and inertia ×1e-4, impulses ×0.01; gravity is the world's `gravityZ` on runtime −Y.
+- **Bodies**: a dynamic Jolt body per `LuminaRigidBody` with its pieces in the body frame (box, sphere, capsule, cylinder; a cone as a convex hull of its apex and base circle; convex hulls with their scale, mirrored included; a static mesh's collision children as a compound), its centre of mass moved to `localCenterOfMass` and its mass and inertia provided, so Lumina's mass rules hold. Locks become Jolt's allowed degrees of freedom; a body locked on every axis is kinematic.
+- **Static colliders**: every non-simulating collision component (level geometry, a character's capsule, a landscape heightfield with its scale) is a static Jolt body, moved when its component moves and rebuilt when its shape changes.
+- **Filtering**: each collision component's enabled flag, object type, channel responses and layer masks map to a profile; two pieces collide only when both block each other (`jolt_collision_profiles.dart`). Bodies of one actor collide only when both allow it; `ignoredBodies` (joined bodies) never collide.
+- **Materials**: friction (static while resting, dynamic while sliding) and restitution with Lumina's combine modes.
+- **Sync**: before each step only what gameplay changed is pushed (pose, velocity, sleep, damping, gravity, locks, material, shapes, mass, ignored pairs) plus the frame's forces; after it, poses, velocities and sleep are read back in one call (`previousPosition` / `previousOrientation` keep render interpolation working, `onComponentSleep` / `onComponentWake` fire from Jolt's activation).
+- **Contacts and hits**: Jolt's contacts of the step become `contacts` (`LuminaContactManifold`, A always a body, one point at the mean with Jolt's estimated normal impulse in kg·cm/s) and hit candidates with the same threshold as the Dart solver.
+- **Joints**: a ball joint is a Jolt swing-twist constraint (twist about the joint frame's X, `swing1` the plane cone about Y, `swing2` the normal cone about Z), a hinge (or a ball with closed cones) a Jolt hinge about X with the twist range as limits (Jolt keeps `min ≤ 0 ≤ max`); anchors move from the body frame to the centre of mass; `frictionTorque` is the maximum friction torque; the motor is a critically damped position motor toward `motorTarget` whose frequency in Hz is half `motorRate`, capped at `motorMaxTorque`. Joint islands solve with 20 velocity and 10 position iterations (`LuminaJoltJoint.jointVelocitySteps` / `jointPositionSteps`). Changed limits, friction and motor targets are sent before every step.
+- **Solver**: velocity iterations `velocityIterations + jointIterations`, position iterations `positionIterations + 1`, 2 mm penetration slop, 1 cm speculative contacts, sleep after `timeToSleep` below `sleepLinearVelocity`. The Jolt world and its two worker threads are made on first use.
+
+Measured on this machine (Windows, 120 Hz steps): 200 boxes 0.52 ms per 60 Hz frame on Jolt vs 2.56 ms on Dart; the 16-body mannequin ragdoll 18 µs per step vs 236 µs; powered ragdoll mean joint deviation 4.0° (Dart 8.3°).
+
+**Limits**: scene queries (traces, sweeps, overlaps) stay on the collision subsystem for both backends; contact impulses on Jolt are estimates; a landscape heightfield edited while bodies rest on it is rebuilt only when its data object changes.
+
 ## Joints and ragdolls
 
-`LuminaPhysicsJoint` (`lib/src/physics/physics_joint.dart`) joins two bodies with a ball-and-socket (swing cone, twist range) or a hinge, optional joint friction and a motor; `LuminaPhysicsSubsystem.addJoint` / `removeJoint` solve them next to the contacts (`LuminaJointBatch`, `lib/src/physics/joint_batch.dart`: `jointIterations` extra velocity passes, `jointPositionIterations` position passes). Joined bodies never collide and share an island; bodies of one actor collide only when both set `LuminaRigidBody.collidesWithOwnBodies` and neither lists the other in `ignoredBodies`. The shapes and mass rule of a primitive component are in `LuminaPhysicsBodyShapes` (`lib/src/physics/physics_body_shapes.dart`; `resolveMassProperties` / `meshPhysicsOf` forward to it). Physics assets, ragdolls, falls and get-ups: [Ragdolls, falls and getting up](ragdoll.md).
+`LuminaPhysicsJoint` (`lib/src/physics/physics_joint.dart`) joins two bodies with a ball-and-socket (swing cone, twist range) or a hinge, optional joint friction and a motor; `LuminaPhysicsSubsystem.addJoint` / `removeJoint` add them; the Jolt backend makes Jolt constraints (above), the Dart backend solves them next to the contacts (`LuminaJointBatch`, `lib/src/physics/joint_batch.dart`: `jointIterations` extra velocity passes, `jointPositionIterations` position passes). Joined bodies never collide and share an island; bodies of one actor collide only when both set `LuminaRigidBody.collidesWithOwnBodies` and neither lists the other in `ignoredBodies`. The shapes and mass rule of a primitive component are in `LuminaPhysicsBodyShapes` (`lib/src/physics/physics_body_shapes.dart`; `resolveMassProperties` / `meshPhysicsOf` forward to it). Physics assets, ragdolls, falls and get-ups: [Ragdolls, falls and getting up](ragdoll.md).
 
 ## `lib/src/physics/physics_subsystem.dart`
 
 ### `class LuminaPhysicsSubsystem`
 
-Rigid-body dynamics for a world (what a primitive component's Simulate Physics runs on). A pure-Dart solver on the existing narrow phase, so the web build simulates the same; it sits behind this class so a native engine could replace it.
+Rigid-body dynamics for a world (what a primitive component's Simulate Physics runs on). The subsystem owns the bodies, joints, the fixed-step clock, component sync and events; a [LuminaPhysicsBackend] does the stepping: Jolt Physics on native desktop where its library is built, the pure-Dart solver ([LuminaDartPhysicsBackend]) on the web and as the fallback (see [Physics backends](#physics-backends)).
 
-- **Stepping**: fixed [fixedTimeStep] (120 Hz), at most [maxSubsteps] per frame; components are written at the pose interpolated between the last two steps. Pairs are processed in body-creation order, so the same input gives the same result. - **Contacts**: up to four points per pair from [LuminaContactGenerator], warm started across steps; [LuminaContactSolver] runs [velocityIterations] sequential-impulse passes (Coulomb friction, static and dynamic, restitution above [LuminaContactSolver.restitutionThreshold]) and [positionIterations] split-impulse passes. - **World**: every collision component that does not simulate (level geometry, the landscape heightfield, a character's capsule) blocks bodies as an immovable collider; gravity is the world's `gravityZ` (authoring −Z, runtime −Y). - **Sleep**: a group of touching bodies slower than [sleepLinearVelocity] / [sleepAngularVelocity] for [timeToSleep] sleeps; a contact with an awake body, an impulse or a force wakes it. - **Driving**: a simulating component that is its actor's root, or a direct child of the root, moves the whole actor; one deeper in the tree is detached and moves by itself. - **Events**: a contact whose normal impulse clearly exceeds resting (twice the effective weight for a step, and [hitImpulseThreshold]) raises `onComponentHit` and the actors' hit hooks (Blueprint Event Hit) once per frame with [HitResult.normalImpulse].
+- **Stepping**: fixed [fixedTimeStep] (120 Hz), at most [maxSubsteps] per frame; components are written at the pose interpolated between the last two steps. The same input gives the same result on a backend. - **Contacts** (Dart backend): up to four points per pair from [LuminaContactGenerator], warm started across steps; [LuminaContactSolver] runs [velocityIterations] sequential-impulse passes (Coulomb friction, static and dynamic, restitution above [LuminaContactSolver.restitutionThreshold]) and [positionIterations] split-impulse passes. - **World**: every collision component that does not simulate (level geometry, the landscape heightfield, a character's capsule) blocks bodies as an immovable collider; gravity is the world's `gravityZ` (authoring −Z, runtime −Y). - **Sleep**: a group of touching bodies slower than [sleepLinearVelocity] / [sleepAngularVelocity] for [timeToSleep] sleeps; a contact with an awake body, an impulse or a force wakes it. - **Driving**: a simulating component that is its actor's root, or a direct child of the root, moves the whole actor; one deeper in the tree is detached and moves by itself. - **Events**: a contact whose normal impulse clearly exceeds resting (twice the effective weight for a step, and [hitImpulseThreshold]) raises `onComponentHit` and the actors' hit hooks (Blueprint Event Hit) once per frame with [HitResult.normalImpulse].
 
 **Members:**
 
@@ -270,7 +298,14 @@ Rigid-body dynamics for a world (what a primitive component's Simulate Physics r
 | `timeToSleep` | `double timeToSleep` |  |
 | `hitImpulseThreshold` | `double hitImpulseThreshold` |  |
 | `interpolate` | `bool interpolate` | Write interpolated poses (true) or the last step's (false). |
-| `solver` | `final LuminaContactSolver solver` |  |
+| `LuminaPhysicsSubsystem` | `LuminaPhysicsSubsystem({LuminaPhysicsBackendKind? backend})` | A subsystem stepped by [backend] (`auto`: [defaultBackend], then the `LUMINA_PHYSICS_BACKEND` dart-define or environment variable, then Jolt when available, else Dart). |
+| `defaultBackend` | `static LuminaPhysicsBackendKind defaultBackend` | The backend kind new subsystems ask for (`auto`). |
+| `backend` | `late final LuminaPhysicsBackend backend` | What steps this subsystem's bodies. |
+| `backendKind` | `LuminaPhysicsBackendKind get backendKind` | [backend]'s kind (never `auto`). |
+| `solver` | `LuminaContactSolver get solver` | The Dart backend's contact solver (an idle one on another backend). |
+| `colliders` | `List<LuminaCollisionComponent> colliders()` | The collision components that can block bodies. |
+| `shapesBlock` | `static bool shapesBlock(LuminaCollisionComponent? a, LuminaCollisionComponent? b)` | Whether body shapes from [a] and [b] block each other (a null component blocks whatever blocks `worldDynamic`). |
+| `recordHit` | `void recordHit(LuminaContactManifold m, double impulse, Vector3 point, Vector3 normal, double dt, double gravity)` | A backend's contact this step: kept as the frame's hit for its pair when it clearly exceeds resting. |
 | `stepCount` | `int stepCount` | Fixed steps taken so far, and the simulated time (s). |
 | `simulatedTime` | `double simulatedTime` |  |
 | `lastFrameSteps` | `int lastFrameSteps` | Steps taken in the last frame. |

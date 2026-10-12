@@ -307,6 +307,11 @@ class LuminaRigidBody {
     if (angularDamping > 0) angularVelocity.scale(1.0 / (1.0 + dt * angularDamping));
   }
 
+  /// The force (kg·cm/s², through the centre of mass) and torque
+  /// (kg·cm²/s²) added for this frame, applied on each of its steps.
+  Vector3 get pendingForce => _force;
+  Vector3 get pendingTorque => _torque;
+
   /// Drops the forces added for this frame (after its last step).
   void clearForces() {
     _force.setZero();

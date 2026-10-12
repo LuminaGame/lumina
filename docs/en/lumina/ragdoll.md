@@ -83,7 +83,7 @@ On this machine (Windows, RTX PRO 2000 for the smoke): a 16-body, 15-joint manne
 
 ## Limits
 
-The solver has no continuous collision: a limb moving faster than about 5 cm per step can sink that far into the floor for a step before it is pushed out. Self-collision is between non-adjacent bodies that do not overlap at rest. There is no partial ragdoll (a limp arm on an animated body) and no hit reaction blending beyond impulses on a full ragdoll.
+On the Jolt backend (native desktop, see [Physics backends](physics.md#physics-backends)) the joints are Jolt swing-twist and hinge constraints and powered joints use Jolt position motors; on the Dart backend (web, fallback) they are solver rows. The Dart solver has no continuous collision: a limb moving faster than about 5 cm per step can sink that far into the floor for a step before it is pushed out (measured on the mannequin's 1.5 m drop: 6.2 cm on Dart, 1.4 cm on Jolt). Self-collision is between non-adjacent bodies that do not overlap at rest. There is no partial ragdoll (a limp arm on an animated body) and no hit reaction blending beyond impulses on a full ragdoll.
 
 ---
 

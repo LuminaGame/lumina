@@ -83,7 +83,7 @@ Bu makinede (Windows, smoke için RTX PRO 2000): 16 gövde, 15 eklemli bir manne
 
 ## Sınırlar
 
-Çözücüde sürekli çarpışma yoktur: adım başına yaklaşık 5 cm'den hızlı giden bir uzuv dışarı itilmeden önce bir adım boyunca o kadar zemine gömülebilir. Kendi kendine çarpışma, dinlenmede çakışmayan ve komşu olmayan gövdeler arasındadır. Kısmi ragdoll (animasyonlu bedende gevşek bir kol) ve tam bir ragdoll'a itkiler dışında vuruş tepkisi harmanlaması yoktur.
+Jolt backend'inde (native masaüstü, bkz. [Fizik backend'leri](physics.md#fizik-backendleri)) eklemler Jolt swing-twist ve menteşe constraint'leridir, güçlü eklemler Jolt konum motorlarını kullanır; Dart backend'inde (web, yedek) çözücü satırlarıdır. Dart çözücüsünde sürekli çarpışma yoktur: adım başına yaklaşık 5 cm'den hızlı giden bir uzuv dışarı itilmeden önce bir adım boyunca o kadar zemine gömülebilir (mannequin'in 1.5 m düşüşünde ölçülen: Dart'ta 6.2 cm, Jolt'ta 1.4 cm). Kendi kendine çarpışma, dinlenmede çakışmayan ve komşu olmayan gövdeler arasındadır. Kısmi ragdoll (animasyonlu bedende gevşek bir kol) ve tam bir ragdoll'a itkiler dışında vuruş tepkisi harmanlaması yoktur.
 
 ---
 

@@ -21,6 +21,7 @@ The native-assets hooks compile the C wrappers of `flutter_filament`, `flutter_a
 ## Native libraries from the tools repository
 
 - **OpenRigLogic**: `flutter_riglogic` links a static OpenRigLogic library that is built from its vendored sources (see the [tools documentation](https://github.com/LuminaGame/tools/tree/main/docs)).
+- **Jolt Physics**: `flutter_jolt` links a static Jolt library that `tools/flutter_jolt/tool/build_jolt.*` fetches (the pinned release) and builds. Without it the engine simulates with its Dart solver (see [Physics backends](../lumina/physics.md#physics-backends)).
 - **Assimp** needs nothing extra: `flutter_assimp` links the Assimp library of the Filament build.
 
 ## Optional

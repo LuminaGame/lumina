@@ -59,6 +59,7 @@ hooks:
 | `filament_dir` | `flutter_filament`, `flutter_assimp` | `LUMINA_FILAMENT_DIR` | `<package>/../filament` |
 | `libcxx_dir` (Linux) | `flutter_assimp`, `flutter_riglogic` | `LUMINA_LIBCXX_DIR` | `<package>/../../lumina/flutter_filament/third_party/libcxx` |
 | `riglogic_lib_dir` | `flutter_riglogic` | `LUMINA_RIGLOGIC_LIB_DIR` | `<package>/third_party/openriglogic/lib` (also when the user-define's folder has no library) |
+| `jolt_dir` | `flutter_jolt` | `LUMINA_JOLT_DIR` | `<package>/third_party/jolt` (also when the user-define's folder has no library) |
 
 A package resolved from git lives in the pub cache and has no Filament next to it; the user-defines tell its hook where this repository's `filament/` link is. The environment overrides only reach a hook that is run directly: the Flutter/Dart hooks runner does not forward `LUMINA_*` variables.
 
@@ -137,6 +138,17 @@ bash ../tools/flutter_riglogic/tool/build_openriglogic.sh      # Linux
 ```
 
 With the `pubspec_overrides.yaml` above, the hook finds the library in the tools checkout: the root pubspec's `riglogic_lib_dir: openriglogic/lib` names a folder that only an installed Lumina Studio's engine checkout has (it links the release's prebuilt library there), and a user-define whose folder holds no library yields to the package's own build. When `flutter_riglogic` is resolved from git in a development checkout, point `riglogic_lib_dir` at `../tools/flutter_riglogic/third_party/openriglogic/lib` instead.
+
+## Build Jolt Physics
+
+`flutter_jolt` links a static Jolt Physics library built in the tools checkout from the release pinned in `flutter_jolt/tool/jolt_version.txt` (fetched into the gitignored `third_party/jolt/`):
+
+```bash
+bash ../tools/flutter_jolt/tool/build_jolt.sh      # Linux
+..\tools\flutter_jolt\tool\build_jolt.bat          # Windows (VS 2022)
+```
+
+With the `pubspec_overrides.yaml` above the hook finds it in the tools checkout. Without a Jolt build the package builds no native library and the physics subsystem uses its Dart solver; nothing else changes.
 
 ## Compiled materials
 

@@ -59,6 +59,7 @@ hooks:
 | `filament_dir` | `flutter_filament`, `flutter_assimp` | `LUMINA_FILAMENT_DIR` | `<package>/../filament` |
 | `libcxx_dir` (Linux) | `flutter_assimp`, `flutter_riglogic` | `LUMINA_LIBCXX_DIR` | `<package>/../../lumina/flutter_filament/third_party/libcxx` |
 | `riglogic_lib_dir` | `flutter_riglogic` | `LUMINA_RIGLOGIC_LIB_DIR` | `<package>/third_party/openriglogic/lib` (user-define'ın klasöründe kütüphane yoksa da) |
+| `jolt_dir` | `flutter_jolt` | `LUMINA_JOLT_DIR` | `<package>/third_party/jolt` (user-define'ın klasöründe kütüphane yoksa da) |
 
 Git'ten çözülen bir paket pub cache'te durur ve yanında Filament yoktur; user-define'lar onun hook'una bu repository'nin `filament/` link'inin nerede olduğunu söyler. Environment override'ları yalnızca doğrudan çalıştırılan bir hook'a ulaşır: Flutter/Dart hooks runner'ı `LUMINA_*` değişkenlerini iletmez.
 
@@ -128,6 +129,17 @@ flutter_filament\tool\build_filament_windows.bat filament   :: tek bir target'ı
 Bu script `filament/out/cmake-release-windows/`'u static CRT (`/MT`) ile, Linux build'iyle aynı özellik setinde build eder.
 
 **Web**: `flutter_filament/tool/web/build_host_tools.sh` Filament'in host araçlarını build eder, `flutter_filament/tool/web/build_filament_web.sh` Filament'i WebAssembly için `filament/out/cmake-wasm-release`'e build eder, `flutter_filament/tool/web/build_module.sh` ise `flutter_filament/web/flutter_filament.{js,wasm}`'ı link eder. Betikler bir Filament kaynak ağacı ister (`LUMINA_FILAMENT_SRC`, ya da tam bir checkout olduğunda `filament` bağlantısı); budanmış prebuilt yetmez. CI da modülü build eder (`.github/actions/filament-web`): `ci.yml`'ın `web` işi onu headless Chrome'da test eder, her release de `flutter-filament-web-<tag>.zip` olarak ekler. Lumina Studio bu zip'i açılışta arka planda indirir (kendi release'inden, yoksa onu taşıyan en yeni release'ten; sha256 doğrulamalı) ve `<LuminaDataDir>/flutter_filament_web/module`'e açar; yeni bir editör sürümünde yeniden indirir; Project Settings ▸ Packaging indirme ve yeniden deneme sunar. Yerel bir `flutter_filament/web/` build'i her zaman önceliklidir. Bkz. `flutter_filament/tool/web/README.md`.
+
+## Jolt Physics'i build etmek
+
+`flutter_jolt`, tools checkout'unda `flutter_jolt/tool/jolt_version.txt` içinde sabitlenen sürümden (gitignore'daki `third_party/jolt/` klasörüne indirilir) build edilen static bir Jolt Physics kütüphanesine link eder:
+
+```bash
+bash ../tools/flutter_jolt/tool/build_jolt.sh      # Linux
+..\tools\flutter_jolt\tool\build_jolt.bat          # Windows (VS 2022)
+```
+
+Yukarıdaki `pubspec_overrides.yaml` ile hook onu tools checkout'unda bulur. Jolt build'i yoksa paket native kütüphane üretmez ve fizik subsystem'i Dart çözücüsünü kullanır; başka hiçbir şey değişmez.
 
 ## OpenRigLogic'i build etmek
 

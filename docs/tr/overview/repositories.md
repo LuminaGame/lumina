@@ -9,7 +9,7 @@ Lumina kod tabanı, LuminaGame organizasyonundaki birkaç repository'ye dağılm
 | Repository | İçerik |
 |---|---|
 | [lumina](https://github.com/LuminaGame/lumina) | Bu repository: `flutter_filament`, `lumina_core`, `lumina`, `lumina_widgets`, `lumina_editor_data`, `lumina_plugin_process`, `lumina_plugin_protocol`, `lumina_editor_api` ve `lumina_ui`, ayrıca `tool/ci.sh` ve bu dokümantasyon. |
-| [tools](https://github.com/LuminaGame/tools) | Engine'in üzerine kurulduğu native ve FFI paketleri: `flutter_assimp`, `flutter_riglogic`, `flutter_gstreamer`, `lumina_smoke` (smoke test sistemi) ve `lumina_mouse_capture`. [tools dokümantasyonunda](https://github.com/LuminaGame/tools/tree/main/docs) anlatılır. |
+| [tools](https://github.com/LuminaGame/tools) | Engine'in üzerine kurulduğu native ve FFI paketleri: `flutter_assimp`, `flutter_riglogic`, `flutter_jolt` (Jolt Physics), `flutter_gstreamer`, `lumina_smoke` (smoke test sistemi) ve `lumina_mouse_capture`. [tools dokümantasyonunda](https://github.com/LuminaGame/tools/tree/main/docs) anlatılır. |
 | [plugins](https://github.com/LuminaGame/plugins) | Örnek editör eklentileri: `lumina_plugin_pcg` (prosedürel içerik üretimi, eklenti API'sinin referans örneği) ve `lumina_plugin_miniai` (bir yapay zeka asistanı paneli). |
 | [marketplace](https://github.com/LuminaGame/marketplace) | Lumina Marketplace: `shelf` API sunucusu, ortak paket (`lumina_marketplace_shared`, DTO'lar ve `MarketplaceClient`) ve Flutter web arayüzü. |
 | [test-assets](https://github.com/LuminaGame/test-assets) | Testlerin ve smoke testlerin kullandığı ortak 3D modeller ve fixture'lar (Git LFS, isteğe bağlı). |
@@ -29,6 +29,7 @@ Repository'ler birbirine git dependency'leriyle bağlanır:
 | `flutter_filament`, `lumina`, `lumina_ui` | `lumina_smoke`, `flutter_gstreamer` (smoke testler) | tools (git) |
 | `lumina`, `lumina_ui` | `flutter_assimp`, `flutter_riglogic` | tools (git) |
 | `lumina`, `lumina_ui` | `lumina_mouse_capture` | tools |
+| `lumina` | `flutter_jolt` (Jolt Physics backend) | tools (git) |
 | `lumina_ui` | `lumina_marketplace_shared` | marketplace (git) |
 | `lumina_ui` (dev) | `lumina_plugin_pcg`, `lumina_plugin_miniai` | plugins (git) |
 | plugins | `lumina`, `lumina_core`, `lumina_editor_api` | lumina (git) |
@@ -44,6 +45,8 @@ dependency_overrides:
     path: ../tools/flutter_assimp
   flutter_riglogic:
     path: ../tools/flutter_riglogic
+  flutter_jolt:
+    path: ../tools/flutter_jolt
   flutter_gstreamer:
     path: ../tools/flutter_gstreamer
   lumina_marketplace_shared:

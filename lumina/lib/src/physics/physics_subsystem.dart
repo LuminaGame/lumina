@@ -10,14 +10,16 @@ import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/src/object/actor.dart';
 import 'package:lumina/src/world/subsystem/world_subsystem.dart';
 import 'package:lumina/src/world/world.dart';
-import 'package:lumina/src/physics/contact_generation.dart';
 import 'package:lumina/src/physics/contact_solver.dart';
+import 'package:lumina/src/physics/dart_physics_backend.dart';
+import 'package:lumina/src/physics/jolt/jolt_backend_factory.dart';
 import 'package:lumina/src/physics/mass_properties.dart';
+import 'package:lumina/src/physics/physics_backend.dart';
 import 'package:lumina/src/physics/physics_body_shapes.dart';
-import 'package:lumina/src/physics/physical_material.dart';
-import 'package:lumina/src/physics/joint_batch.dart';
 import 'package:lumina/src/physics/physics_joint.dart';
 import 'package:lumina/src/physics/rigid_body.dart';
+
+export 'package:lumina/src/physics/physics_backend.dart' show LuminaPhysicsBackend, LuminaPhysicsBackendKind;
 
 class _BodyRecord {
   final bool drivesRoot;
@@ -29,14 +31,6 @@ class _BodyRecord {
   _BodyRecord(this.drivesRoot);
 }
 
-class _Entry {
-  final Aabb3 box;
-  final LuminaRigidBody? body;
-  final LuminaCollisionComponent? component;
-  final int order;
-  _Entry(this.box, this.body, this.component, this.order);
-}
-
 class _Hit {
   final LuminaContactManifold manifold;
   double impulse;
@@ -46,26 +40,22 @@ class _Hit {
 }
 
 /// Rigid-body dynamics for a world (what a primitive component's Simulate
-/// Physics runs on). A pure-Dart solver on
-/// the existing narrow phase, so the web build simulates the same; it sits
-/// behind this class so a native engine could replace it.
+/// Physics runs on). The subsystem owns the bodies, joints, the fixed-step
+/// clock, component sync and events; a [LuminaPhysicsBackend] does the
+/// stepping: Jolt Physics on native desktop where its library is built, the
+/// pure-Dart solver ([LuminaDartPhysicsBackend]) on the web and as the
+/// fallback ([backendKind], [defaultBackend]).
 ///
 /// - **Stepping**: fixed [fixedTimeStep] (120 Hz), at most [maxSubsteps] per
 ///   frame; components are written at the pose interpolated between the last
-///   two steps. Pairs are processed in body-creation order, so the same input
-///   gives the same result.
-/// - **Contacts**: up to four points per pair from [LuminaContactGenerator],
-///   warm started across steps; [LuminaContactSolver] runs
-///   [velocityIterations] sequential-impulse passes (Coulomb friction, static
-///   and dynamic, restitution above [LuminaContactSolver.restitutionThreshold])
-///   and [positionIterations] split-impulse passes.
+///   two steps. The same input gives the same result on a backend.
 /// - **World**: every collision component that does not simulate (level
 ///   geometry, the landscape heightfield, a character's capsule) blocks bodies
 ///   as an immovable collider; gravity is the world's `gravityZ` (authoring
 ///   −Z, runtime −Y).
-/// - **Sleep**: a group of touching bodies slower than
-///   [sleepLinearVelocity] / [sleepAngularVelocity] for [timeToSleep] sleeps;
-///   a contact with an awake body, an impulse or a force wakes it.
+/// - **Sleep**: bodies slower than [sleepLinearVelocity] /
+///   [sleepAngularVelocity] for [timeToSleep] sleep; a contact with an awake
+///   body, an impulse or a force wakes them.
 /// - **Driving**: a simulating component that is its actor's root, or a
 ///   direct child of the root, moves the whole actor; one deeper in the tree
 ///   is detached and moves by itself.
@@ -74,13 +64,30 @@ class _Hit {
 ///   `onComponentHit` and the actors' hit hooks (Blueprint Event Hit) once per
 ///   frame with [HitResult.normalImpulse].
 /// - **Joints**: [addJoint] connects two bodies ([LuminaPhysicsJoint]: anchor,
-///   swing cone, twist range, hinge, motor); joint rows are solved with the
-///   contacts ([jointIterations] extra passes), then [jointPositionIterations]
-///   position passes after integration. Joined bodies share an island (they
-///   sleep and wake together). Bodies of one actor collide with each other
-///   only when both have [LuminaRigidBody.collidesWithOwnBodies] and neither
-///   lists the other in [LuminaRigidBody.ignoredBodies] (a ragdoll's limbs).
+///   swing cone, twist range, hinge, motor). Joined bodies never collide.
+///   Bodies of one actor collide with each other only when both have
+///   [LuminaRigidBody.collidesWithOwnBodies] and neither lists the other in
+///   [LuminaRigidBody.ignoredBodies] (a ragdoll's limbs).
 class LuminaPhysicsSubsystem extends LuminaWorldSubsystem {
+  /// A subsystem stepped by [backend] (`auto`: [defaultBackend], then the
+  /// `LUMINA_PHYSICS_BACKEND` dart-define / environment variable, then Jolt
+  /// when available, else Dart).
+  LuminaPhysicsSubsystem({LuminaPhysicsBackendKind? backend}) {
+    final kind = resolvePhysicsBackendKind(backend ?? defaultBackend);
+    final chosen = kind == LuminaPhysicsBackendKind.jolt ? createJoltPhysicsBackend() : null;
+    this.backend = chosen ?? LuminaDartPhysicsBackend();
+    this.backend.attach(this);
+  }
+
+  /// The backend kind new subsystems ask for.
+  static LuminaPhysicsBackendKind defaultBackend = LuminaPhysicsBackendKind.auto;
+
+  /// What steps this subsystem's bodies.
+  late final LuminaPhysicsBackend backend;
+
+  /// [backend]'s kind (never `auto`).
+  LuminaPhysicsBackendKind get backendKind => backend.kind;
+
   double fixedTimeStep = 1 / 120;
   int maxSubsteps = 8;
   int velocityIterations = 8;
@@ -91,17 +98,24 @@ class LuminaPhysicsSubsystem extends LuminaWorldSubsystem {
   double timeToSleep = 0.5;
   double hitImpulseThreshold = 1.0;
 
-  /// Joint-only velocity passes after the shared ones, and position passes.
+  /// Joint-only velocity passes after the shared ones, and position passes
+  /// (the Dart backend).
   int jointIterations = 6;
   int jointPositionIterations = 4;
 
   /// Write interpolated poses (true) or the last step's (false).
   bool interpolate = true;
 
-  final LuminaContactSolver solver = LuminaContactSolver();
+  /// The Dart backend's contact solver (an idle one on another backend).
+  LuminaContactSolver get solver {
+    final b = backend;
+    return b is LuminaDartPhysicsBackend ? b.solver : _idleSolver;
+  }
+
+  static final LuminaContactSolver _idleSolver = LuminaContactSolver();
+
   final List<LuminaRigidBody> _bodies = [];
   final Map<LuminaRigidBody, _BodyRecord> _records = {};
-  final Map<String, LuminaContactManifold> _manifolds = {};
   final Map<String, _Hit> _pendingHits = {};
   final List<LuminaPhysicsJoint> _joints = [];
   int _nextBodyId = 0;
@@ -117,8 +131,14 @@ class LuminaPhysicsSubsystem extends LuminaWorldSubsystem {
   /// The bodies, in creation order.
   List<LuminaRigidBody> get bodies => List.unmodifiable(_bodies);
 
+  /// The live body list, for backends (do not modify).
+  List<LuminaRigidBody> get bodyList => _bodies;
+
+  /// The live joint list, for backends (do not modify).
+  List<LuminaPhysicsJoint> get jointList => _joints;
+
   /// The contacts of the last step.
-  List<LuminaContactManifold> get contacts => List.unmodifiable(solver.manifolds);
+  List<LuminaContactManifold> get contacts => backend.contacts;
 
   /// Gravity in the runtime frame (cm/s²): the world's authoring Z.
   Vector3 get gravity => Vector3(0, world?.gravityZ ?? -LuminaUnits.gravity, 0);
@@ -158,11 +178,13 @@ class LuminaPhysicsSubsystem extends LuminaWorldSubsystem {
     joint.bodyB.ignoredBodies.add(joint.bodyA);
     joint.bodyA.wake();
     joint.bodyB.wake();
+    backend.jointAdded(joint);
     return joint;
   }
 
   void removeJoint(LuminaPhysicsJoint joint) {
     if (!_joints.remove(joint)) return;
+    backend.jointRemoved(joint);
     joint.bodyA.wake();
     joint.bodyB.wake();
   }
@@ -229,6 +251,7 @@ class LuminaPhysicsSubsystem extends LuminaWorldSubsystem {
     record.lastRotation = component.worldRotation.clone();
     _bodies.add(body);
     _records[body] = record;
+    backend.bodyAdded(body);
     if (proxy != null && component is LuminaStaticMeshComponent && !component.isLoaded) {
       component.loaded.then((_) {
         if (!identical(component.physicsBody, body)) return;
@@ -243,8 +266,12 @@ class LuminaPhysicsSubsystem extends LuminaWorldSubsystem {
   void removeBody(LuminaPrimitivePhysics component) {
     final body = component.physicsBody;
     if (body == null || !identical(body.component, component)) return;
+    for (final j in _joints.where((j) => identical(j.bodyA, body) || identical(j.bodyB, body)).toList()) {
+      _joints.remove(j);
+      backend.jointRemoved(j);
+    }
+    backend.bodyRemoved(body);
     _bodies.remove(body);
-    _joints.removeWhere((j) => identical(j.bodyA, body) || identical(j.bodyB, body));
     for (final other in _bodies) {
       other.ignoredBodies.remove(body);
     }
@@ -259,8 +286,6 @@ class LuminaPhysicsSubsystem extends LuminaWorldSubsystem {
       proxy.detachFromParent();
       proxy.onUnregister();
     }
-    _manifolds.removeWhere((_, m) => identical(m.a, body) || identical(m.b, body));
-    solver.manifolds.removeWhere((m) => identical(m.a, body) || identical(m.b, body));
     _pendingHits.removeWhere((_, h) => identical(h.manifold.a, body) || identical(h.manifold.b, body));
   }
 
@@ -319,6 +344,31 @@ class LuminaPhysicsSubsystem extends LuminaWorldSubsystem {
     final (center, extent) = LuminaPhysicsBodyShapes.meshBox(mesh);
     proxy.relativeLocation = center;
     proxy.setBoxExtent(extent);
+  }
+
+  /// The collision components that can block bodies: the collision
+  /// subsystem's, else every collision component of the world's actors.
+  List<LuminaCollisionComponent> colliders() {
+    final collision = world?.getSubsystem<LuminaCollisionSubsystem>();
+    if (collision != null) return collision.components;
+    final w = world;
+    if (w == null) return const [];
+    return [
+      for (final actor in w.actors)
+        for (final c in actor.components)
+          if (c is LuminaCollisionComponent) c,
+    ];
+  }
+
+  /// Whether a body shape from [a] and one from [b] block each other (a null
+  /// component blocks whatever blocks `worldDynamic`).
+  static bool shapesBlock(LuminaCollisionComponent? a, LuminaCollisionComponent? b) {
+    if (a != null && !a.collisionEnabled) return false;
+    if (b != null && !b.collisionEnabled) return false;
+    if (a != null && b != null) return effectiveResponse(a, b) == CollisionResponse.block;
+    final c = a ?? b;
+    if (c == null) return true;
+    return c.getResponse(CollisionObjectType.worldDynamic) == CollisionResponse.block;
   }
 
   // --- Tick -------------------------------------------------------------------------
@@ -402,195 +452,27 @@ class LuminaPhysicsSubsystem extends LuminaWorldSubsystem {
   void step(double dt) {
     stepCount++;
     simulatedTime += dt;
-    _collide();
-    final g = gravity;
-    for (final b in _bodies) {
-      if (b.isAwake) b.integrateForces(dt, g);
-    }
-    final joints = LuminaJointBatch.awake(_joints);
-    solver.prepare(dt);
-    joints.prepare(dt);
-    for (var i = 0; i < velocityIterations; i++) {
-      joints.velocityPass(i);
-      solver.solveVelocities();
-    }
-    joints.velocityPasses(jointIterations);
-    solver.applyRestitution();
-    for (var i = 0; i < positionIterations; i++) {
-      solver.solvePositions(dt);
-    }
-    for (final b in _bodies) {
-      if (b.isAwake) b.integrateVelocities(dt);
-    }
-    joints.positionPasses(jointPositionIterations);
-    _recordHits(dt, g.length);
-    _updateSleep(dt);
+    backend.step(dt);
   }
 
-  List<LuminaCollisionComponent> _colliders() {
-    final collision = world?.getSubsystem<LuminaCollisionSubsystem>();
-    if (collision != null) return collision.components;
-    final w = world;
-    if (w == null) return const [];
-    return [
-      for (final actor in w.actors)
-        for (final c in actor.components)
-          if (c is LuminaCollisionComponent) c,
-    ];
-  }
-
-  void _collide() {
-    final margin = contactMargin;
-    final entries = <_Entry>[];
-    var order = 0;
-    for (final b in _bodies) {
-      final box = Aabb3.copy(b.bounds)
-        ..min.sub(Vector3.all(margin))
-        ..max.add(Vector3.all(margin));
-      entries.add(_Entry(box, b, null, order++));
-    }
-    for (final c in _colliders()) {
-      if (!c.collisionEnabled || c.physicsBody != null) continue;
-      entries.add(_Entry(c.getAABB(), null, c, order++));
-    }
-    entries.sort((x, y) {
-      final d = x.box.min.x.compareTo(y.box.min.x);
-      return d != 0 ? d : x.order.compareTo(y.order);
-    });
-    final pairs = <(LuminaRigidBody, LuminaRigidBody?, LuminaCollisionComponent?)>[];
-    final active = <_Entry>[];
-    for (final e in entries) {
-      active.removeWhere((a) => a.box.max.x < e.box.min.x);
-      for (final a in active) {
-        if (a.box.max.y < e.box.min.y || a.box.min.y > e.box.max.y) continue;
-        if (a.box.max.z < e.box.min.z || a.box.min.z > e.box.max.z) continue;
-        final ba = a.body, be = e.body;
-        if (ba == null && be == null) continue;
-        if (ba != null && be != null) {
-          if (!ba.isAwake && !be.isAwake) continue;
-          final first = ba.id < be.id ? ba : be;
-          pairs.add((first, identical(first, ba) ? be : ba, null));
-        } else {
-          final body = ba ?? be!;
-          if (!body.isAwake) continue;
-          pairs.add((body, null, a.component ?? e.component));
-        }
-      }
-      active.add(e);
-    }
-    // Deterministic processing order: by body id, then partner.
-    pairs.sort((p, q) {
-      final d = p.$1.id.compareTo(q.$1.id);
-      if (d != 0) return d;
-      final ip = p.$2?.id ?? (1 << 40) + (p.$3?.componentId ?? 0);
-      final iq = q.$2?.id ?? (1 << 40) + (q.$3?.componentId ?? 0);
-      return ip.compareTo(iq);
-    });
-
-    final active2 = <LuminaContactManifold>[];
-    final set = LuminaContactSet();
-    // A static collider's shape and transform, once per step.
-    final statics = <LuminaCollisionComponent, LuminaCollider>{};
-    LuminaCollider staticCollider(LuminaCollisionComponent c) =>
-        statics.putIfAbsent(c, () => LuminaCollider(c.worldShape, c.worldTransform));
-    for (final (a, b, staticC) in pairs) {
-      final ownerA = a.component.owner;
-      final ownerB = b?.component.owner ?? staticC?.owner;
-      if (b != null && (a.ignoredBodies.contains(b) || b.ignoredBodies.contains(a))) continue;
-      if (ownerA != null &&
-          identical(ownerA, ownerB) &&
-          !(b != null && a.collidesWithOwnBodies && b.collidesWithOwnBodies)) {
-        continue;
-      }
-      for (var i = 0; i < a.shapes.length; i++) {
-        final sa = a.shapes[i];
-        if (b != null) {
-          for (var j = 0; j < b.shapes.length; j++) {
-            final sb = b.shapes[j];
-            if (!_blocks(sa.component, sb.component)) continue;
-            if (!_near(sa.worldBounds, sb.worldBounds, margin)) continue;
-            if (!LuminaContactGenerator.collide(
-                LuminaCollider(sa.shape, sa.worldTransform), LuminaCollider(sb.shape, sb.worldTransform), set,
-                margin: margin)) {
-              continue;
-            }
-            active2.add(_manifold('${a.id}:$i:${b.id}:$j', a, b, sa.component, sb.component, set, b.material));
-          }
-        } else {
-          final c = staticC!;
-          if (!_blocks(sa.component, c)) continue;
-          if (!_near(sa.worldBounds, c.getAABB(), margin)) continue;
-          if (!LuminaContactGenerator.collide(LuminaCollider(sa.shape, sa.worldTransform), staticCollider(c), set,
-              margin: margin)) {
-            continue;
-          }
-          active2.add(_manifold('${a.id}:$i:s${c.componentId}', a, null, sa.component, c, set, c.effectivePhysicalMaterial));
-        }
-      }
-    }
-    _manifolds.removeWhere((_, m) => m.lastStep != stepCount);
-    solver.manifolds
-      ..clear()
-      ..addAll(active2);
-  }
-
-  static bool _near(Aabb3 a, Aabb3 b, double margin) =>
-      a.max.x + margin >= b.min.x &&
-      a.min.x - margin <= b.max.x &&
-      a.max.y + margin >= b.min.y &&
-      a.min.y - margin <= b.max.y &&
-      a.max.z + margin >= b.min.z &&
-      a.min.z - margin <= b.max.z;
-
-  static bool _blocks(LuminaCollisionComponent? a, LuminaCollisionComponent? b) {
-    if (a != null && !a.collisionEnabled) return false;
-    if (b != null && !b.collisionEnabled) return false;
-    if (a != null && b != null) return effectiveResponse(a, b) == CollisionResponse.block;
-    final c = a ?? b;
-    if (c == null) return true;
-    return c.getResponse(CollisionObjectType.worldDynamic) == CollisionResponse.block;
-  }
-
-  LuminaContactManifold _manifold(String key, LuminaRigidBody a, LuminaRigidBody? b, LuminaCollisionComponent? ca,
-      LuminaCollisionComponent? cb, LuminaContactSet set, LuminaPhysicalMaterial materialB) {
-    var m = _manifolds[key];
-    if (m == null) {
-      m = LuminaContactManifold(a, b, ca, cb, key);
-      _manifolds[key] = m;
-    } else {
-      m.age++;
-    }
-    m.lastStep = stepCount;
-    m.update(set, 2.0);
-    m.friction = LuminaPhysicalMaterial.combinedFriction(a.material, materialB);
-    m.staticFriction = LuminaPhysicalMaterial.combinedStaticFriction(a.material, materialB);
-    m.restitution = LuminaPhysicalMaterial.combinedRestitution(a.material, materialB);
-    return m;
-  }
-
-  void _recordHits(double dt, double g) {
-    for (final m in solver.manifolds) {
-      final a = m.a, b = m.b;
-      final invA = a.isAwake ? a.inverseMass : 0.0;
-      final invB = b != null && b.isAwake ? b.inverseMass : 0.0;
-      final inv = invA + invB;
-      if (inv <= 0) continue;
-      final threshold = math.max(hitImpulseThreshold, 2.0 * g * dt / inv);
-      final impulse = m.normalImpulse;
-      if (impulse <= threshold) continue;
-      final point = Vector3.zero();
-      for (final p in m.points) {
-        point.add(p.point);
-      }
-      if (m.points.isNotEmpty) point.scale(1 / m.points.length);
-      final existing = _pendingHits[m.key];
-      if (existing == null) {
-        _pendingHits[m.key] = _Hit(m, impulse, point, m.normal.clone());
-      } else if (impulse > existing.impulse) {
-        existing.impulse = impulse;
-        existing.point.setFrom(point);
-        existing.normal.setFrom(m.normal);
-      }
+  /// A backend's contact [m] with normal impulse [impulse] (kg·cm/s) at
+  /// [point] this step: kept as the frame's hit for its pair when it clearly
+  /// exceeds resting ([gravity] cm/s² over [dt]).
+  void recordHit(LuminaContactManifold m, double impulse, Vector3 point, Vector3 normal, double dt, double gravity) {
+    final a = m.a, b = m.b;
+    final invA = a.isAwake ? a.inverseMass : 0.0;
+    final invB = b != null && b.isAwake ? b.inverseMass : 0.0;
+    final inv = invA + invB;
+    if (inv <= 0) return;
+    final threshold = math.max(hitImpulseThreshold, 2.0 * gravity * dt / inv);
+    if (impulse <= threshold) return;
+    final existing = _pendingHits[m.key];
+    if (existing == null) {
+      _pendingHits[m.key] = _Hit(m, impulse, point.clone(), normal.clone());
+    } else if (impulse > existing.impulse) {
+      existing.impulse = impulse;
+      existing.point.setFrom(point);
+      existing.normal.setFrom(normal);
     }
   }
 
@@ -623,72 +505,15 @@ class LuminaPhysicsSubsystem extends LuminaWorldSubsystem {
     }
   }
 
-  void _updateSleep(double dt) {
-    final n = _bodies.length;
-    final index = <LuminaRigidBody, int>{for (var i = 0; i < n; i++) _bodies[i]: i};
-    final parent = List<int>.generate(n, (i) => i);
-    int find(int i) {
-      while (parent[i] != i) {
-        parent[i] = parent[parent[i]];
-        i = parent[i];
-      }
-      return i;
-    }
-
-    for (final m in solver.manifolds) {
-      final b = m.b;
-      if (b == null) continue;
-      final ia = find(index[m.a]!), ib = find(index[b]!);
-      if (ia != ib) parent[ia] = ib;
-    }
-    for (final j in _joints) {
-      final xa = index[j.bodyA], xb = index[j.bodyB];
-      if (xa == null || xb == null) continue;
-      final ia = find(xa), ib = find(xb);
-      if (ia != ib) parent[ia] = ib;
-    }
-    final linTol = sleepLinearVelocity * sleepLinearVelocity;
-    final angTol = sleepAngularVelocity * sleepAngularVelocity;
-    for (final b in _bodies) {
-      if (!b.isAwake) continue;
-      if (b.linearVelocity.length2 > linTol || b.angularVelocity.length2 > angTol) {
-        b.sleepTime = 0.0;
-      } else {
-        b.sleepTime += dt;
-      }
-    }
-    final islandMin = <int, double>{};
-    final islandAwake = <int, bool>{};
-    for (var i = 0; i < n; i++) {
-      final b = _bodies[i];
-      final root = find(i);
-      if (b.isAwake) {
-        islandAwake[root] = true;
-        islandMin[root] = math.min(islandMin[root] ?? double.infinity, b.sleepTime);
-      }
-    }
-    for (var i = 0; i < n; i++) {
-      final b = _bodies[i];
-      final root = find(i);
-      if (islandAwake[root] != true) continue;
-      final min = islandMin[root]!;
-      if (min >= timeToSleep) {
-        b.sleep();
-      } else if (!b.isAwake) {
-        b.wake();
-      }
-    }
-  }
-
   @override
   void onWorldShutdown() {
     for (final b in List.of(_bodies)) {
       final c = b.component;
       if (c is LuminaPrimitivePhysics) removeBody(c);
     }
-    _manifolds.clear();
     _joints.clear();
-    solver.manifolds.clear();
+    _pendingHits.clear();
+    backend.dispose();
     super.onWorldShutdown();
   }
 }

@@ -9,7 +9,7 @@ The Lumina code base is split across several repositories of the LuminaGame orga
 | Repository | Contents |
 |---|---|
 | [lumina](https://github.com/LuminaGame/lumina) | This repository: `flutter_filament`, `lumina_core`, `lumina`, `lumina_widgets`, `lumina_editor_data`, `lumina_plugin_process`, `lumina_plugin_protocol`, `lumina_editor_api` and `lumina_ui`, plus `tool/ci.sh` and this documentation. |
-| [tools](https://github.com/LuminaGame/tools) | Native and FFI packages the engine builds on: `flutter_assimp`, `flutter_riglogic`, `flutter_gstreamer`, `lumina_smoke` (the smoke-test system) and `lumina_mouse_capture`. Documented in the [tools documentation](https://github.com/LuminaGame/tools/tree/main/docs). |
+| [tools](https://github.com/LuminaGame/tools) | Native and FFI packages the engine builds on: `flutter_assimp`, `flutter_riglogic`, `flutter_jolt` (Jolt Physics), `flutter_gstreamer`, `lumina_smoke` (the smoke-test system) and `lumina_mouse_capture`. Documented in the [tools documentation](https://github.com/LuminaGame/tools/tree/main/docs). |
 | [plugins](https://github.com/LuminaGame/plugins) | Example editor plugins: `lumina_plugin_pcg` (procedural content generation, the reference example of the plugin API) and `lumina_plugin_miniai` (an AI assistant panel). |
 | [marketplace](https://github.com/LuminaGame/marketplace) | The Lumina Marketplace: the `shelf` API server, the shared package (`lumina_marketplace_shared`, DTOs and `MarketplaceClient`) and the Flutter web front end. |
 | [test-assets](https://github.com/LuminaGame/test-assets) | Shared 3D models and fixtures used by tests and smoke tests (Git LFS, optional). |
@@ -29,6 +29,7 @@ Repositories reference each other through git dependencies:
 | `flutter_filament`, `lumina`, `lumina_ui` | `lumina_smoke`, `flutter_gstreamer` (smoke tests) | tools (git) |
 | `lumina`, `lumina_ui` | `flutter_assimp`, `flutter_riglogic` | tools (git) |
 | `lumina`, `lumina_ui` | `lumina_mouse_capture` | tools |
+| `lumina` | `flutter_jolt` (Jolt Physics backend) | tools (git) |
 | `lumina_ui` | `lumina_marketplace_shared` | marketplace (git) |
 | `lumina_ui` (dev) | `lumina_plugin_pcg`, `lumina_plugin_miniai` | plugins (git) |
 | plugins | `lumina`, `lumina_core`, `lumina_editor_api` | lumina (git) |
@@ -44,6 +45,8 @@ dependency_overrides:
     path: ../tools/flutter_assimp
   flutter_riglogic:
     path: ../tools/flutter_riglogic
+  flutter_jolt:
+    path: ../tools/flutter_jolt
   flutter_gstreamer:
     path: ../tools/flutter_gstreamer
   lumina_marketplace_shared:

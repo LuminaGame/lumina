@@ -29,6 +29,13 @@ dependencies:
       url: https://github.com/LuminaGame/tools.git
       path: lumina_smoke
       ref: 7ee320876caab2a0cbf6b556362c8c5fc6703a8c
+  # Jolt Physics, the physics backend on native desktop (the hook builds no
+  # library where no Jolt build exists; the Dart solver runs instead).
+  flutter_jolt:
+    git:
+      url: https://github.com/LuminaGame/tools.git
+      path: flutter_jolt
+      ref: 6cb2254123e96b46a07fc886258880249a26dc40
   vector_math: ^2.1.4
 
   meta: any
