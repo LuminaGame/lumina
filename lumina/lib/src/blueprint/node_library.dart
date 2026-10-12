@@ -36,6 +36,7 @@ part 'node_library/conversions.dart';
 part 'node_library/staged_settings.dart';
 part 'node_library/editor_scope.dart';
 part 'node_library/editor_events.dart';
+part 'node_library/performance_stats.dart';
 
 /// The one node catalog the editor palette, the VM and the code generator
 /// read.
@@ -421,6 +422,7 @@ abstract final class LuminaBlueprintNodeLibrary {
     ..._traversalNodes,
     ..._windowModeNodes,
     ..._displaySettingsNodes,
+    ..._performanceStatsNodes,
     ..._comboBoxNodes,
     ..._umgViewportNodes,
     ..._poseAuthoringNodes,

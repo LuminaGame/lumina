@@ -243,6 +243,7 @@ Vectors and rotators are **authoring space** (cm, Z up; rotators about X/Y/Z lik
 | `setInputModeGameAndUI` | `static const setInputModeGameAndUI` |  |
 | `setInputModeGameOnly` | `static const setInputModeGameOnly` |  |
 | `setInputModeUIOnly` | `static const setInputModeUIOnly` |  |
+| `getShowMouseCursor` / `getInputMode` | `static const getShowMouseCursor` | **Get Show Mouse Cursor** (bool) ve **Get Input Mode** (`GameOnly`, `GameAndUI` veya `UIOnly`) düğümleri: player controller'ın şu anki durumu; Target setter'lardaki gibi çözülür ama uyarı yazılmaz (controller yoksa false / `GameOnly`). Bir menü imleci serbest bırakmadan önce bunları okur, kapanırken geri yazar. Part `performance_stats.dart`. |
 | `makeVector2D` | `static const makeVector2D` |  |
 | `breakVector2D` | `static const breakVector2D` |  |
 | `makeVector` | `static const makeVector` |  |
@@ -660,6 +661,8 @@ Vectors and rotators are **authoring space** (cm, Z up; rotators about X/Y/Z lik
 | `getSupportedUpscalers` | `static const getSupportedUpscalers` | Bu GPU'nun çalıştırabildiği ölçekleyicilerin string dizisi, önce `None`: ayarlar menüsü için. |
 | `getActiveUpscaler` / `isRayTracingActive` / `isFrameGenerationActive` | `static const getActiveUpscaler` | Son uygulamanın geri düşüşten sonra gerçekten açtığı (Get Upscaler ve Get Frame Generation Enabled oyuncunun seçimini korur; oyun Flutter üzerinden gösterilirken Is Frame Generation Active false döner). |
 | `saveGameUserSettings` / `loadGameUserSettings` | `static const saveGameUserSettings` | Tüm kullanıcı ayarlarını kayıt dizinindeki `GameUserSettings.json` dosyasına arka planda yazar / okur; Load okuduğunu uygular. |
+| `getGpuMemoryUsage` | `static const getGpuMemoryUsage` | **Get GPU Memory Usage** düğümü (kategori `Lumina\|Engine`, çıkışlar `Used MB`, `Budget MB`, `Available`): bu oyun sürecinin kullandığı cihaz-yerel GPU belleği ve sürücünün ona tanıdığı bütçe, MiB cinsinden; `VK_EXT_memory_budget` üzerinden `FilamentEngine.gpuMemory` ile okunur. Yerel motor yoksa, OpenGL'de, noop backend'de, web'de ve eklentiyi desteklemeyen GPU'da `Available` false'tur (iki sayı da 0). |
+| `getRenderResolution` | `static const getRenderResolution` | **Get Render Resolution** düğümü (kategori `Settings\|Display`, `Width`, `Height`): GPU'nun sahneyi çizdiği çözünürlük, fiziksel piksel: Get Screen Resolution çarpı görünümün son karedeki dinamik çözünürlük ölçeği (upscaler kalitesi ve çözünürlük ölçeği); bu yüzden bir uygulamadan bir kare sonra güncellenir. Bağlı görünüm yoksa ekran çözünürlüğüdür. |
 | `callShapes` | `static final Map<String, LuminaBlueprintCallShape> callShapes` | One entry per [functions] key: the direct call generated code emits. |
 | `functions` | `static final Map<String, LuminaBlueprintFunction> functions` | Every node the VM can call, keyed by node id: the built-ins, then the functions registered in [LuminaBlueprintFunctionRegistry]. Inputs arrive converted to their pin types (the VM resolves wires, literals and defaults first). |
 | `builtInFunctions` | `static final Map<String, LuminaBlueprintFunction> builtInFunctions` | One entry per pure / impure built-in node, keyed by node id. |

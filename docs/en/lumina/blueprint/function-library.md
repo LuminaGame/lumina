@@ -243,6 +243,7 @@ Vectors and rotators are **authoring space** (cm, Z up; rotators about X/Y/Z lik
 | `setInputModeGameAndUI` | `static const setInputModeGameAndUI` |  |
 | `setInputModeGameOnly` | `static const setInputModeGameOnly` |  |
 | `setInputModeUIOnly` | `static const setInputModeUIOnly` |  |
+| `getShowMouseCursor` / `getInputMode` | `static const getShowMouseCursor` | Nodes **Get Show Mouse Cursor** (bool) and **Get Input Mode** (`GameOnly`, `GameAndUI` or `UIOnly`): what the player controller has now, Target resolved like the setters but silently (no controller: false / `GameOnly`). A menu reads them before it frees the cursor and sets them back when it closes. Part `performance_stats.dart`. |
 | `makeVector2D` | `static const makeVector2D` |  |
 | `breakVector2D` | `static const breakVector2D` |  |
 | `makeVector` | `static const makeVector` |  |
@@ -660,6 +661,8 @@ Vectors and rotators are **authoring space** (cm, Z up; rotators about X/Y/Z lik
 | `getSupportedUpscalers` | `static const getSupportedUpscalers` | String array of the upscalers this GPU can run, `None` first: for an options menu. |
 | `getActiveUpscaler` / `isRayTracingActive` / `isFrameGenerationActive` | `static const getActiveUpscaler` | What the last apply actually turned on after fallback (Get Upscaler and Get Frame Generation Enabled keep the player's choice; Is Frame Generation Active is false while the game is shown through Flutter). |
 | `saveGameUserSettings` / `loadGameUserSettings` | `static const saveGameUserSettings` | Writes / reads every user setting as `GameUserSettings.json` in the save game directory, in the background; Load applies what it read. |
+| `getGpuMemoryUsage` | `static const getGpuMemoryUsage` | Node **Get GPU Memory Usage** (category `Lumina\|Engine`, outputs `Used MB`, `Budget MB`, `Available`): the device-local GPU memory this game process uses and the budget the driver grants it, in MiB, from `VK_EXT_memory_budget` through `FilamentEngine.gpuMemory`. `Available` is false (and both numbers 0) without a native engine, on OpenGL, the noop backend, the web, and on a GPU without the extension. |
+| `getRenderResolution` | `static const getRenderResolution` | Node **Get Render Resolution** (category `Settings\|Display`, `Width`, `Height`): what the GPU renders the scene at, physical pixels: Get Screen Resolution times the view's dynamic resolution scale of the last frame (upscaler quality and resolution scale), so it lags an apply by one frame; the screen resolution when no view is bound. |
 | `callShapes` | `static final Map<String, LuminaBlueprintCallShape> callShapes` | One entry per [functions] key: the direct call generated code emits. |
 | `functions` | `static final Map<String, LuminaBlueprintFunction> functions` | Every node the VM can call, keyed by node id: the built-ins, then the functions registered in [LuminaBlueprintFunctionRegistry]. Inputs arrive converted to their pin types (the VM resolves wires, literals and defaults first). |
 | `builtInFunctions` | `static final Map<String, LuminaBlueprintFunction> builtInFunctions` | One entry per pure / impure built-in node, keyed by node id. |

@@ -101,6 +101,7 @@ part 'blueprint_function_library/combo_box.dart';
 part 'blueprint_function_library/umg_viewport.dart';
 part 'blueprint_function_library/pose_authoring.dart';
 part 'blueprint_function_library/conversions.dart';
+part 'blueprint_function_library/performance_stats.dart';
 
 /// Every pure and impure node's behaviour, written once. The
 /// VM calls it through [functions]; generated Dart calls the static methods
@@ -989,6 +990,7 @@ abstract final class LuminaBlueprintFunctionLibrary {
   static const setScreenResolution = _setScreenResolution;
   static const setFullscreenMonitor = _setFullscreenMonitor;
   static const setScreenResolutionAndApply = _setScreenResolutionAndApply;
+  static const getGpuMemoryUsage = _getGpuMemoryUsage, getRenderResolution = _getRenderResolution, getShowMouseCursor = _getShowMouseCursor, getInputMode = _getInputMode;
   static const spawnEmitterAtLocation = _spawnEmitterAtLocation;
   static const spawnEmitterAttached = _spawnEmitterAttached;
   static const activateParticleSystem = _activateParticleSystem;
@@ -1054,8 +1056,7 @@ abstract final class LuminaBlueprintFunctionLibrary {
     ..._widgetBlueprintCallShapes,
     ..._ragdollCallShapes,
     ..._traversalCallShapes,
-    ..._windowModeCallShapes,
-    ..._displaySettingsCallShapes,
+    ..._windowModeCallShapes, ..._displaySettingsCallShapes, ..._performanceStatsCallShapes,
     ..._comboBoxCallShapes, ..._umgViewportCallShapes, ..._poseAuthoringCallShapes,
     ..._conversionCallShapes,
     // @@CALL_SHAPES_END
@@ -1090,8 +1091,7 @@ abstract final class LuminaBlueprintFunctionLibrary {
     ..._widgetBlueprintFunctions,
     ..._ragdollFunctions,
     ..._traversalFunctions,
-    ..._windowModeFunctions,
-    ..._displaySettingsFunctions,
+    ..._windowModeFunctions, ..._displaySettingsFunctions, ..._performanceStatsFunctions,
     ..._comboBoxFunctions, ..._umgViewportFunctions, ..._poseAuthoringFunctions,
     ..._conversionFunctions,
     // @@FUNCTIONS_END
