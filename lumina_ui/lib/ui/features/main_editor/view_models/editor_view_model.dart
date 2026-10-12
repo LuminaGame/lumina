@@ -554,7 +554,8 @@ class EditorViewModel extends _EditorViewModelState
       _autoSaveTimer = AutoSaveTimerService(
         onPerformSave: _autoSaveAndGenerateCode,
       );
-      _autoSaveTimer?.start(_project);
+      // Each tick reads the project the editor holds then.
+      _autoSaveTimer?.start(() => _project);
       // The palette knows the project's exposed
       // functions from the start, and follows edits to them.
       unawaited(blueprintFunctions.open());

@@ -259,14 +259,15 @@ Up is glTF +Y.
 
 ### `class AutoSaveTimerService`
 
-`AutoSaveTimerService`: Service class encapsulating business logic, file I/O, or engine processing.
+Saves the editor's project every interval while it has unsaved changes (dirty, or modified after its last code generation).
 
 **Functions, Methods & Accessors:**
 
 | Method / Getter | Signature | Purpose & Description |
 | :--- | :--- | :--- |
 | `onPerformSave` | `SaveCallback onPerformSave` | Holds the `onPerformSave` property or configuration state. |
-| `stop` | `void stop()` | Executes `stop` operation. |
+| `start` | `void start(LuminaProject Function() currentProject, {Duration interval = const Duration(minutes: 1)})` | Checks `currentProject()` every [interval]; it is called on each tick, so a save sees the project the editor holds then (settings applied since the editor opened included), never a copy taken when the timer started. A tick does not start a second save while one runs. |
+| `stop` | `void stop()` | Stops the timer. |
 | `checkAndExecuteAutoSave` | `Future<LuminaProject> checkAndExecuteAutoSave(LuminaProject project)` | Executes `checkAndExecuteAutoSave` operation. |
 
 ## `lib/src/services/config_json_file.dart`

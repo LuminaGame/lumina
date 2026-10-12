@@ -259,14 +259,15 @@ Yukarı yön glTF +Y'dir.
 
 ### `class AutoSaveTimerService`
 
-`AutoSaveTimerService`: Dosya işlemleri, veri dönüşümleri veya motor mantığını yürüten servis sınıfıdır.
+Editörün projesini, kaydedilmemiş değişikliği olduğu sürece (dirty ya da son kod üretiminden sonra değişmiş) her aralıkta kaydeder.
 
 **Fonksiyonlar, Metotlar ve Erişimciler:**
 
 | Metot / Getter | İmzası | Ne İşe Yarar? |
 | :--- | :--- | :--- |
 | `onPerformSave` | `SaveCallback onPerformSave` | `onPerformSave` alanını (field/property) ve ilişkili veriyi saklar. |
-| `stop` | `void stop()` | `stop` işlemini gerçekleştirir. |
+| `start` | `void start(LuminaProject Function() currentProject, {Duration interval = const Duration(minutes: 1)})` | `currentProject()` değerini her [interval] aralığında kontrol eder; her tikte çağrıldığından kayıt, editörün o anda tuttuğu projeyi görür (editör açıldıktan sonra uygulanan ayarlar dahil), zamanlayıcı başlarken alınmış bir kopyayı asla. Bir kayıt sürerken yeni tik ikinci bir kayıt başlatmaz. |
+| `stop` | `void stop()` | Zamanlayıcıyı durdurur. |
 | `checkAndExecuteAutoSave` | `Future<LuminaProject> checkAndExecuteAutoSave(LuminaProject project)` | `checkAndExecuteAutoSave` işlemini gerçekleştirir. |
 
 ## `lib/src/services/config_json_file.dart`
