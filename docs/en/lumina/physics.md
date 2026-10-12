@@ -272,7 +272,9 @@ Measured on this machine (Windows, 120 Hz steps): 200 boxes 0.9–1.3 ms per 60 
 
 **Cloth**: the backend's `cloth` (`LuminaClothSimulator`) simulates cloth components on Jolt soft bodies; the Dart backend has none (cloth draws its rest pose). See [Cloth](cloth.md).
 
-**Limits**: scene queries (traces, sweeps, overlaps) stay on the collision subsystem for both backends; contact impulses on Jolt are estimates; a landscape heightfield edited while bodies rest on it is rebuilt only when its data object changes.
+**Scene queries**: traces, sweeps and overlaps stay on the collision subsystem (the same results on both backends); on native desktop it picks the components to test through Jolt's broad phase, in a query world of its own (see [Collision](collision.md#broad-phase-every-component-or-jolts)).
+
+**Limits**: contact impulses on Jolt are estimates; a landscape heightfield edited while bodies rest on it is rebuilt only when its data object changes.
 
 ## Joints and ragdolls
 

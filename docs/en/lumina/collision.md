@@ -104,6 +104,14 @@ Central world subsystem managing broad-phase filtering, overlap/hit event dispat
 
 The trace queries live in the `LuminaCollisionTraces` extension (`lib/src/collision/collision_traces.dart`, a part of this library): `lineTraceSingle`, `lineTraceMulti`, `sphereTraceSingle`, `sphereTraceMulti` and `sphereOverlapActors`, with the actor, component, layer, object type and class filters the trace nodes use. Their hits follow the `HitResult` table above.
 
+### Broad phase: every component, or Jolt's
+
+Queries (`raycast`, `sweep`, `overlapTest`, the traces, `sphereOverlapActors`) and the per-frame overlap pass (`updateCollision`) first pick the components to test in detail. Without a broad phase that is every registered component, in registration order (the reference, and always the case on the web). With one (`LuminaCollisionQueryAccelerator`, `lib/src/collision/collision_query_accelerator.dart`) a query asks it which components its segment, swept box or box may touch, and tests only those, in registration order, with the same narrow phase: the hits, their order and the overlap events are the same.
+
+- `LuminaCollisionSubsystem.defaultQueryBackend` / `queryBackend` (`LuminaCollisionQueryBackendKind`): `dart` (every component), `jolt` (Jolt's broad phase where it runs), `auto` (the default: Jolt once a world has `autoAcceleratorThreshold` components, 32). `queryAccelerator` is the broad phase in use (null: none).
+- **Jolt** (`LuminaJoltCollisionQueries`, `lib/src/physics/jolt/jolt_collision_queries.dart`): every collision component is a box proxy (its bounds grown by 0.5 cm, in metres) in a Jolt world of its own that is never stepped; a line trace is a broad phase ray, a sweep a box cast of the shape's bounding sphere along the sweep, an overlap or the overlap pass a box query. A component whose bounds change (`markCollisionDirty`, which every transform and shape change calls) is updated before the next query; the tree is rebuilt once more than an eighth of the proxies moved.
+- Measured (10 000 components, 100 m square): 1 000 line traces 2 060 ms on every component, 73 ms on Jolt; 200 sphere traces 6 990 ms and 169 ms; the overlap pass of 3 000 packed components 193 ms and 66 ms. With 32 components a capsule sweep takes 148 µs on every component and 21 µs on Jolt (`test/src/collision/collision_queries_bench_test.dart`). The query, filter, sweep, event, landscape and Blueprint collision node tests run on both (`test/src/collision/collision_queries_on_jolt_test.dart`).
+
 ## `lib/src/collision/gjk_epa.dart`
 
 **Top-level Functions:**

@@ -56,7 +56,7 @@ extension LuminaCollisionTraces on LuminaCollisionSubsystem {
     if (dist < 1e-9) return const [];
     final dir = delta / dist;
     final hits = <HitResult>[];
-    for (final c in _components) {
+    for (final c in _alongSegment(start, end)) {
       if (!_traceable(c, ignoreActors: ignoreActors, ignoreComponents: ignoreComponents, layerMask: layerMask,
           actorFilter: actorFilter, objectTypes: objectTypes)) {
         continue;
@@ -142,7 +142,7 @@ extension LuminaCollisionTraces on LuminaCollisionSubsystem {
     final contact = ContactResult();
     final hits = <HitResult>[];
     Matrix4 at(double t) => Matrix4.translation(start + delta * t);
-    for (final c in _components) {
+    for (final c in _sweptBy(shape, Matrix4.translation(start), delta)) {
       if (!_traceable(c, ignoreActors: ignoreActors, ignoreComponents: ignoreComponents, layerMask: layerMask,
           actorFilter: actorFilter, objectTypes: objectTypes)) {
         continue;

@@ -262,10 +262,15 @@ class LuminaCollisionComponent extends LuminaSceneComponent with LuminaPrimitive
     return pts;
   }
 
+  /// Told when this component's bounds change (its collision subsystem's
+  /// broad phase listens).
+  void Function(LuminaCollisionComponent component)? collisionDirtyListener;
+
   /// Marks cached AABB and OBB bounding structures as dirty.
   void markCollisionDirty() {
     _cachedAabb = null;
     _cachedObb = null;
+    collisionDirtyListener?.call(this);
   }
 
   @override

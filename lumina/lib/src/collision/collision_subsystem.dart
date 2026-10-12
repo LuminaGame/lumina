@@ -3,12 +3,17 @@ import 'package:vector_math/vector_math_64.dart';
 import 'package:lumina/src/components/collision/collision_component.dart';
 import 'package:lumina/src/object/actor.dart';
 import 'package:lumina/src/world/subsystem/world_subsystem.dart';
+import 'package:lumina/src/collision/collision_query_accelerator.dart';
 import 'package:lumina/src/collision/gjk_epa.dart';
 import 'package:lumina/src/collision/heightfield.dart';
 import 'package:lumina/src/collision/narrow_phase.dart';
 import 'package:lumina/src/collision/raycast_math.dart';
+import 'package:lumina/src/physics/jolt/jolt_backend_factory.dart';
 import 'package:lumina_core/lumina_core.dart';
 
+export 'package:lumina/src/collision/collision_query_accelerator.dart';
+
+part 'package:lumina/src/collision/collision_query_candidates.dart';
 part 'package:lumina/src/collision/collision_traces.dart';
 
 /// Central world subsystem managing broad-phase filtering, overlap/hit event dispatch, and geometric queries.
@@ -23,16 +28,43 @@ class LuminaCollisionSubsystem extends LuminaWorldSubsystem {
   /// The registered components, in registration order.
   List<LuminaCollisionComponent> get components => List.unmodifiable(_components);
 
+  /// The broad phase every new collision subsystem's queries use, unless
+  /// [queryBackend] says otherwise.
+  static LuminaCollisionQueryBackendKind defaultQueryBackend = LuminaCollisionQueryBackendKind.auto;
+
+  /// How many components a world needs before [LuminaCollisionQueryBackendKind.auto]
+  /// asks Jolt's broad phase (below it, testing every component is cheaper
+  /// than the native calls).
+  static int autoAcceleratorThreshold = 32;
+
+  /// This subsystem's broad phase (null: [defaultQueryBackend]).
+  LuminaCollisionQueryBackendKind? queryBackend;
+
+  LuminaCollisionQueryAccelerator? _accelerator;
+  bool _acceleratorUnavailable = false;
+  final Map<LuminaCollisionComponent, int> _ordinal = {};
+  int _nextOrdinal = 0;
+
+  /// The broad phase the queries use now (null: every component is tested).
+  LuminaCollisionQueryAccelerator? get queryAccelerator => _accelerator;
+
   /// Registers a collision component with this subsystem.
   void register(LuminaCollisionComponent c) {
-    if (!_components.contains(c)) {
-      _components.add(c);
-    }
+    if (_ordinal.containsKey(c)) return;
+    _components.add(c);
+    _ordinal[c] = _nextOrdinal++;
+    c.collisionDirtyListener = _onCollisionDirty;
+    _accelerator?.add(c);
   }
+
+  void _onCollisionDirty(LuminaCollisionComponent c) => _accelerator?.dirty(c);
 
   /// Unregisters a collision component and terminates any active overlap relationships.
   void unregister(LuminaCollisionComponent c) {
-    if (!_components.remove(c)) return;
+    if (_ordinal.remove(c) == null) return;
+    _components.remove(c);
+    if (identical(c.collisionDirtyListener, _onCollisionDirty)) c.collisionDirtyListener = null;
+    _accelerator?.remove(c);
 
     final overlapping = List<LuminaCollisionComponent>.from(c.overlappingComponents);
     for (final other in overlapping) {
@@ -57,6 +89,13 @@ class LuminaCollisionSubsystem extends LuminaWorldSubsystem {
     updateCollision(deltaTime);
   }
 
+  @override
+  void onWorldShutdown() {
+    _accelerator?.dispose();
+    _accelerator = null;
+    super.onWorldShutdown();
+  }
+
   /// Executes broad phase, narrow phase, and fires overlap/hit events for all registered components.
   void updateCollision(double deltaTime) {
     if (_isUpdating) return;
@@ -75,12 +114,16 @@ class LuminaCollisionSubsystem extends LuminaWorldSubsystem {
     }
 
     final n = _components.length;
+    final broadPhase = _queryAccelerator();
     for (int i = 0; i < n; i++) {
       final a = _components[i];
       if (!a.collisionEnabled) continue;
 
-      for (int j = i + 1; j < n; j++) {
-        final b = _components[j];
+      // Every later component, or only those whose bounds may overlap a's.
+      final later = broadPhase == null ? null : _laterCandidates(a, broadPhase);
+      final count = later?.length ?? n - i - 1;
+      for (int k = 0; k < count; k++) {
+        final b = later == null ? _components[i + 1 + k] : later[k];
         if (!b.collisionEnabled) continue;
 
         // Step 1: Layer bitmask & response early exit
@@ -211,7 +254,7 @@ class LuminaCollisionSubsystem extends LuminaWorldSubsystem {
     final closestNormal = Vector3.zero();
     final closestPoint = Vector3.zero();
 
-    for (final c in _components) {
+    for (final c in _alongSegment(origin, origin + dNorm * maxDistance)) {
       if (c == ignore || !c.collisionEnabled) continue;
       if ((c.collisionLayer & layerMask) == 0) continue;
 
@@ -332,7 +375,7 @@ class LuminaCollisionSubsystem extends LuminaWorldSubsystem {
     const int steps = 8;
     final contact = ContactResult();
 
-    for (final c in _components) {
+    for (final c in _sweptBy(shape, start, delta)) {
       if (c == ignore || !c.collisionEnabled) continue;
       if ((c.collisionLayer & layerMask) == 0) continue;
       if (ignore != null && effectiveResponse(ignore, c) != CollisionResponse.block) {
@@ -419,7 +462,7 @@ class LuminaCollisionSubsystem extends LuminaWorldSubsystem {
   }) {
     outResults.clear();
     final contact = ContactResult();
-    for (final c in _components) {
+    for (final c in _sweptBy(shape, transform, Vector3.zero())) {
       if (c == ignore || !c.collisionEnabled) continue;
       if ((c.collisionLayer & layerMask) == 0) continue;
       contact.reset();

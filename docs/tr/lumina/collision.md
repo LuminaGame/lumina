@@ -104,6 +104,14 @@ Central world subsystem managing broad-phase filtering, overlap/hit event dispat
 
 Trace sorguları `LuminaCollisionTraces` extension'ındadır (`lib/src/collision/collision_traces.dart`, bu kütüphanenin bir part'ı): `lineTraceSingle`, `lineTraceMulti`, `sphereTraceSingle`, `sphereTraceMulti` ve `sphereOverlapActors`; trace node'larının kullandığı actor, component, layer, object type ve sınıf filtreleriyle. Çarpmaları yukarıdaki `HitResult` tablosuna uyar.
 
+### Geniş faz: her bileşen ya da Jolt'unki
+
+Sorgular (`raycast`, `sweep`, `overlapTest`, trace'ler, `sphereOverlapActors`) ve kare başına çakışma geçişi (`updateCollision`) önce ayrıntılı test edilecek bileşenleri seçer. Geniş faz yoksa bunlar kayıt sırasıyla bütün kayıtlı bileşenlerdir (referans; web'de hep böyledir). Biri varsa (`LuminaCollisionQueryAccelerator`, `lib/src/collision/collision_query_accelerator.dart`) sorgu ona parçasının, süpürülen kutusunun ya da kutusunun hangi bileşenlere değebileceğini sorar ve yalnızca onları, kayıt sırasıyla ve aynı dar fazla test eder: çarpmalar, sıraları ve çakışma olayları aynıdır.
+
+- `LuminaCollisionSubsystem.defaultQueryBackend` / `queryBackend` (`LuminaCollisionQueryBackendKind`): `dart` (her bileşen), `jolt` (çalıştığı yerde Jolt'un geniş fazı), `auto` (varsayılan: bir dünyada `autoAcceleratorThreshold` bileşen, 32, olunca Jolt). `queryAccelerator` kullanılan geniş fazdır (null: yok).
+- **Jolt** (`LuminaJoltCollisionQueries`, `lib/src/physics/jolt/jolt_collision_queries.dart`): her çarpışma bileşeni hiç adımlanmayan, kendine ait bir Jolt dünyasında bir kutu vekilidir (sınırları 0.5 cm büyütülmüş, metre cinsinden); bir line trace geniş fazda bir ışın, bir sweep şeklin sınırlayıcı küresinin süpürme boyunca kutu atımı, bir overlap ya da çakışma geçişi bir kutu sorgusudur. Sınırları değişen bir bileşen (`markCollisionDirty`; her transform ve şekil değişikliği çağırır) bir sonraki sorgudan önce güncellenir; vekillerin sekizde birinden fazlası hareket edince ağaç yeniden kurulur.
+- Ölçülen (10 000 bileşen, 100 m'lik kare): 1 000 line trace her bileşende 2 060 ms, Jolt'ta 73 ms; 200 sphere trace 6 990 ms ve 169 ms; sıkışık 3 000 bileşenin çakışma geçişi 193 ms ve 66 ms. 32 bileşenle bir kapsül sweep her bileşende 148 µs, Jolt'ta 21 µs (`test/src/collision/collision_queries_bench_test.dart`). Sorgu, filtre, sweep, olay, landscape ve Blueprint çarpışma düğümü testleri ikisinde de çalışır (`test/src/collision/collision_queries_on_jolt_test.dart`).
+
 ## `lib/src/collision/gjk_epa.dart`
 
 **Üst Düzey Fonksiyonlar (Top-level Functions):**

@@ -272,7 +272,9 @@ Bu makinede ölçülen (Windows, 120 Hz adım): 200 kutu Jolt'ta 60 Hz kare baş
 
 **Kumaş**: backend'in `cloth`'u (`LuminaClothSimulator`) kumaş bileşenlerini Jolt soft body'leri üzerinde simüle eder; Dart backend'inde yoktur (kumaş dinlenme pozunu çizer). Bkz. [Kumaş](cloth.md).
 
-**Sınırlar**: sahne sorguları (trace, sweep, overlap) iki backend için de çarpışma subsystem'inde kalır; Jolt'taki temas impulsları tahmindir; üzerinde body duran bir landscape heightfield'ı ancak veri nesnesi değişince yeniden kurulur.
+**Sahne sorguları**: trace, sweep ve overlap'ler çarpışma subsystem'inde kalır (iki backend'de de aynı sonuç); native masaüstünde test edilecek bileşenleri kendine ait bir sorgu dünyasında Jolt'un geniş fazıyla seçer (bkz. [Çarpışma](collision.md#geniş-faz-her-bileşen-ya-da-joltunki)).
+
+**Sınırlar**: Jolt'taki temas impulsları tahmindir; üzerinde body duran bir landscape heightfield'ı ancak veri nesnesi değişince yeniden kurulur.
 
 ## Eklemler ve ragdoll'lar
 
