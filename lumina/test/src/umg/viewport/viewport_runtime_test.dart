@@ -75,19 +75,27 @@ void main() {
     addTearDown(runtime.dispose);
     final scene = LuminaViewportScene()..setEnvironment(LuminaViewportEnvironmentMode.color);
     final light = scene.addLight(LuminaViewportLightType.point, [1.0, 1.0, 1.0], 50000.0, at(0, 0, 200));
-    scene.addNode(LuminaViewportNodeKind.staticMesh, asset: ViewportTestProject.barrel, transform: at(0, 0, 0));
+    final barrel = scene.addNode(LuminaViewportNodeKind.staticMesh, asset: ViewportTestProject.barrel, transform: at(0, 0, 0));
     runtime.apply(scene);
     await runtime.whenReady;
     expect(runtime.keyLightLux, 90000.0);
     expect(runtime.view.shadowingEnabled, isTrue);
+    final mi = (runtime.componentOf(barrel)! as LuminaStaticMeshComponent).assetInstance!.materialInstances.first;
+    final metallic = mi.getFloat('metallicFactor'), rough = mi.getFloat('roughnessFactor');
 
     runtime.apply(scene.copy()..viewMode = LuminaViewportViewMode.unlit);
     expect(runtime.viewMode, LuminaViewportViewMode.unlit);
     expect(runtime.keyLightLux, 0.0);
     expect((runtime.componentOf(light)! as LuminaLightComponent).intensity, 0.0);
     expect(runtime.view.shadowingEnabled, isFalse);
+    // Flat colours: non-metallic, fully rough, under a neutral ambient.
+    expect(mi.getFloat('metallicFactor'), 0.0);
+    expect(mi.getFloat('roughnessFactor'), 1.0);
+    expect(runtime.scene.indirectLight, isNotNull);
 
     runtime.apply(scene.copy()..viewMode = LuminaViewportViewMode.lit);
+    expect(mi.getFloat('metallicFactor'), closeTo(metallic, 1e-6));
+    expect(mi.getFloat('roughnessFactor'), closeTo(rough, 1e-6));
     expect(runtime.keyLightLux, 90000.0);
     expect((runtime.componentOf(light)! as LuminaLightComponent).intensity, 50000.0);
     expect(runtime.view.shadowingEnabled, isTrue);
@@ -97,6 +105,8 @@ void main() {
     if (skip()) return;
     final runtime = LuminaViewportSceneRuntime(engine: engine!);
     addTearDown(runtime.dispose);
+    var frames = 0;
+    runtime.onOverlaysChanged = () => frames++;
     final scene = LuminaViewportScene()..gridVisible = false;
     final barrel = scene.addNode(LuminaViewportNodeKind.staticMesh, asset: ViewportTestProject.barrel, transform: at(0, 0, 0));
     final hero = scene.addNode(LuminaViewportNodeKind.skeletalMesh, asset: ViewportTestProject.mannequin, transform: at(80, 0, 0));
@@ -106,6 +116,7 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 20));
     }
     expect(runtime.wireframeNodeIds.toSet(), {barrel, hero});
+    expect(frames, greaterThanOrEqualTo(2), reason: 'each built wireframe asks for a frame');
     final mesh = runtime.componentOf(barrel)! as LuminaStaticMeshComponent;
     expect(mesh.visible, isFalse);
     final wire = runtime.wireframeEntityOf(barrel)!;

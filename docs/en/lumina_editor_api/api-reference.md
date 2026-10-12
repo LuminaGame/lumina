@@ -443,7 +443,7 @@ in the mesh's glTF frame (metres, Y up) while it is dragged (at most 30 times a 
 | `selectedBoneName` | `final String? selectedBoneName` | The active selected bone/joint highlighted with an amber selection ring. |
 | `onBoneSelected` | `final void Function(String boneName)? onBoneSelected` | Callback fired when the user clicks or taps on a skeleton joint in the 3D viewport. |
 | `onBoneMoved` | `final void Function(String boneName, List<double> newWorldPos, List<double> delta)? onBoneMoved` | Callback fired when the user drags the 3D translation gizmo attached to the selected bone. |
-| `viewMode` | `final String viewMode` | `'lit'` (default), `'unlit'` (no direct lights or shadows) or `'wireframe'` (triangle edges instead of the solid); the Viewport's `viewMode`, switched live. |
+| `viewMode` | `final String viewMode` | `'lit'` (default), `'unlit'` (flat base and vertex colours: no direct lights or shadows) or `'wireframe'` (triangle edges instead of the solid); the Viewport's `viewMode`, switched live. |
 | `showGizmo` | `final bool showGizmo` | Whether the 3D translation gizmo (RGB axes + planar quads) is active on the selected bone. |
 | `visibleBoneNames` | `final Set<String>? visibleBoneNames` | Optional whitelist of bone names to exclusively display and pick; when set, other joints (e.g. facial expression or corrective bones) are skipped. |
 

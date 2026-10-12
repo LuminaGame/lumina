@@ -100,6 +100,11 @@ void main() {
     expect(c.scene!.viewMode, 'unlit');
     expect(c.runtime.viewMode, 'unlit');
     expect(c.runtime.keyLightLux, 0.0);
+    await tester.pumpWidget(host(Plugin3DViewportOptions(title: 'Motion', meshPath: mesh.path, viewMode: 'wireframe')));
+    for (var i = 0; i < 300 && c.runtime.wireframeNodeIds.isEmpty; i++) {
+      await frames(tester);
+    }
+    expect(c.runtime.wireframeNodeIds, isNotEmpty, reason: 'the mesh is drawn as triangle edges');
     await tester.pumpWidget(const SizedBox());
     await frames(tester, 2);
   });

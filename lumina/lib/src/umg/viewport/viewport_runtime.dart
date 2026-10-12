@@ -233,7 +233,7 @@ class LuminaViewportSceneRuntime with _ViewportQueries, _ViewportMedia, _Viewpor
         case LuminaViewportSceneOpKind.camera:
           _applyCamera(next);
         case LuminaViewportSceneOpKind.viewMode:
-          _applyViewMode(next.viewMode);
+          _applyViewMode(next.viewMode, next.environment);
         case LuminaViewportSceneOpKind.interaction:
         case LuminaViewportSceneOpKind.addOverlay:
         case LuminaViewportSceneOpKind.removeOverlay:
@@ -316,6 +316,7 @@ class LuminaViewportSceneRuntime with _ViewportQueries, _ViewportMedia, _Viewpor
         node.loaded = true;
         await _applyLookLoaded(node);
         if (!_solidShown) _syncWires();
+        _applyNodeMaterials(node);
       }
     } catch (e) {
       if (!_disposed && identical(_nodes[node.id]?.root, mesh)) {
@@ -379,6 +380,7 @@ class LuminaViewportSceneRuntime with _ViewportQueries, _ViewportMedia, _Viewpor
     if (node == null) return;
     node.removed = true;
     _dropWire(id);
+    _forgetMaterials(id);
     _releaseTextures(node);
     _dropMemoryMesh(node);
     world.persistentLevel.unregisterActor(node.actor);
@@ -402,6 +404,7 @@ class LuminaViewportSceneRuntime with _ViewportQueries, _ViewportMedia, _Viewpor
 
   void _swapComponent(_RuntimeNode node) {
     _dropWire(node.id);
+    _forgetMaterials(node.id);
     _releaseTextures(node);
     node.actor.removeComponent(node.root);
     node.root = _componentFor(node.json, mesh: node.meshOverride);
@@ -419,8 +422,13 @@ class LuminaViewportSceneRuntime with _ViewportQueries, _ViewportMedia, _Viewpor
       _bindTexture(node, mi, slot, name, path);
 
   /// Called when an overlay changed without a description diff (a ghost
-  /// pose sampled from an animation arrived).
+  /// pose sampled from an animation arrived, a wireframe was built): the
+  /// widget renders a frame.
+  @override
   void Function()? onOverlaysChanged;
+
+  @override
+  void _reapplyEnvironment(Map<String, Object?> env) => _applyEnvironment(env);
 
   void _updateNode(String id, Map<String, Object?> json, Set<String> fields) {
     final node = _nodes[id];

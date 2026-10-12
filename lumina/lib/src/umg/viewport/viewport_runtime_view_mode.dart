@@ -2,7 +2,9 @@ part of 'viewport_runtime.dart';
 
 /// The preview's view modes ([LuminaViewportViewMode]): Lit draws the
 /// scene as described; Unlit turns the key light, the description's lights
-/// and shadows off (the IBL alone lights the base and vertex colours);
+/// and shadows off and shows base and vertex colours flat (a neutral white
+/// ambient in a colour environment, materials as non-metallic and fully
+/// rough, put back in Lit);
 /// Wireframe hides each mesh's solid and draws its triangle edges, built
 /// from the mesh's GLB on a worker isolate.
 mixin _ViewportViewMode {
@@ -13,11 +15,16 @@ mixin _ViewportViewMode {
   LuminaActor? get _keyLight;
   bool get isDisposed;
   Future<Uint8List> _read(String path);
+  void Function()? get onOverlaysChanged;
+  void _reapplyEnvironment(Map<String, Object?> env);
 
   /// The densest mesh Wireframe draws as lines; denser ones stay solid.
   static const int wireframeTriangleCap = 3000000;
 
   String _viewMode = LuminaViewportViewMode.lit;
+
+  /// Material values Unlit replaced, by node id (put back in Lit).
+  final Map<String, List<(FilamentMaterialInstance, String, double)>> _unlitSaved = {};
 
   /// Line meshes by node id, and what they were built from.
   final Map<String, (String, FilamentWireframeMesh)> _wires = {};
@@ -41,17 +48,54 @@ mixin _ViewportViewMode {
   /// Whether a mesh's solid is drawn (not in Wireframe).
   bool get _solidShown => _viewMode != LuminaViewportViewMode.wireframe;
 
-  void _applyViewMode(String mode) {
+  void _applyViewMode(String mode, Map<String, Object?> environment) {
+    final wasUnlit = _viewMode == LuminaViewportViewMode.unlit;
     _viewMode = mode;
     final lit = mode != LuminaViewportViewMode.unlit;
+    // The ambient changes with Unlit (a colour environment's neutral white).
+    if (wasUnlit == lit) _reapplyEnvironment(environment);
     view.shadowingEnabled = lit;
     final key = _keyLight?.rootComponent;
     if (key is LuminaLightComponent) key.intensity = lit ? _ViewportStage.keyLightIntensity : 0.0;
     for (final node in _nodes.values) {
       _applyNodeLight(node);
       _applyNodeSolid(node);
+      _applyNodeMaterials(node);
     }
     _syncWires();
+    onOverlaysChanged?.call();
+  }
+
+  /// Unlit draws [node]'s materials non-metallic and fully rough (so a
+  /// metallic mesh shows its colours under the flat ambient); other modes
+  /// put the values back.
+  void _applyNodeMaterials(_RuntimeNode node) {
+    final unlit = _viewMode == LuminaViewportViewMode.unlit;
+    final saved = _unlitSaved.remove(node.id);
+    if (saved != null) {
+      for (final (mi, name, value) in saved) {
+        try {
+          mi.setFloat(name, value);
+        } catch (_) {
+          // The instance went with a swapped mesh.
+        }
+      }
+    }
+    if (!unlit || !node.loaded) return;
+    final instance = node.mesh?.assetInstance;
+    if (instance == null) return;
+    final kept = <(FilamentMaterialInstance, String, double)>[];
+    for (final mi in instance.materialInstances) {
+      for (final (name, flat) in const [('metallicFactor', 0.0), ('roughnessFactor', 1.0)]) {
+        try {
+          kept.add((mi, name, mi.getFloat(name)));
+          mi.setFloat(name, flat);
+        } catch (_) {
+          // A material without the parameter (unlit, custom).
+        }
+      }
+    }
+    _unlitSaved[node.id] = kept;
   }
 
   /// A description light's intensity under the view mode.
@@ -130,7 +174,12 @@ mixin _ViewportViewMode {
     FilamentTransformManager(engine).setParent(mesh.entityId, root);
     _wires[node.id] = (source, mesh);
     _applyNodeSolid(node);
+    // A built wireframe is a new picture: ask the widget for a frame.
+    onOverlaysChanged?.call();
   }
+
+  /// Forgets [id]'s saved material values (its node or mesh went).
+  void _forgetMaterials(String id) => _unlitSaved.remove(id);
 
   void _dropWire(String id) {
     _wireRequests.remove(id);

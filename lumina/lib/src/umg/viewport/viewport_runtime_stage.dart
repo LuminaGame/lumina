@@ -13,6 +13,10 @@ mixin _ViewportStage {
   /// The key light's intensity in Lit (lux).
   static const double keyLightIntensity = 90000.0;
 
+  /// Unlit's ambient intensity: 1 / the preview camera's exposure (f/16,
+  /// 1/125 s, ISO 100), so radiance 1 maps to white.
+  static const double unlitAmbient = 38400.0;
+
   LuminaActor? _sky;
   LuminaActor? _keyLight;
   FilamentEditorGrid? _grid;
@@ -38,10 +42,14 @@ mixin _ViewportStage {
       );
     } else {
       final c = env['color'] is List ? env['color']! as List : const [0.10, 0.11, 0.14, 1.0];
+      final unlit = _viewMode == LuminaViewportViewMode.unlit;
       sky = LuminaSkyComponent.color(
         color: Vector4(LuminaViewportSceneRuntime._n(c, 0, 0.1), LuminaViewportSceneRuntime._n(c, 1, 0.11), LuminaViewportSceneRuntime._n(c, 2, 0.14), 1.0),
         skyIntensity: 14000.0,
-        iblIntensity: 22000.0 * intensity,
+        // Unlit: a neutral white ambient bright enough that a diffuse
+        // surface shows its base colour (the preview camera's exposure).
+        ambientSh: unlit ? SphericalHarmonics(bands: 1, coefficients: const [1.0, 1.0, 1.0]) : null,
+        iblIntensity: unlit ? unlitAmbient : 22000.0 * intensity,
         visible: mode != LuminaViewportEnvironmentMode.transparent,
       );
     }
