@@ -672,6 +672,7 @@ Manages transform components for entities.  Transform components give entities a
 | `getParent` | `int getParent(int entity)` | Gets the parent entity ID of [entity]'s transform, or 0 if it has no parent. |
 | `childCount` | `int childCount(int entity)` | Gets the number of children attached to [entity]'s transform. |
 | `getChildren` | `List<int> getChildren(int entity, int capacity)` | Gets a list of children entities attached to [entity]'s transform. The list will be clamped to [capacity] elements. |
+| `copyPoses` | `void copyPoses(FilamentPosePairs pairs)` | Entity çiftleri arasında pozları tek native çağrıyla, sırayla (önce ebeveynler) kopyalar: mod 0 kaynağın yerel dönüşümünü kopyalar, mod 1 hedefe kendi ebeveyninin altında kaynağın dünya dönüşümünü verir. `FilamentPosePairs(sources, destinations, modes)` dizileri native bellekte tutar, bir kez kurulur ve her karede yeniden kullanılır; `dispose()` serbest bırakır. Skinned mesh poz takipçileri kullanır. |
 
 ### `lib/src/vertex_buffer.dart`
 

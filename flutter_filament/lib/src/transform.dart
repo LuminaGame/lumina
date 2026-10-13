@@ -12,6 +12,46 @@ export 'package:flutter_filament/src/instance.dart' show TransformInstance;
 /// Manages transform components for entities.
 ///
 /// Transform components give entities a position and orientation in space.
+/// Entity pairs for [FilamentTransformManager.copyPoses], in native memory
+/// built once and reused every frame: per pair the source entity, the
+/// destination entity and the mode (0: copy the local transform; 1: give the
+/// destination the source's world transform).
+class FilamentPosePairs {
+  FilamentPosePairs(List<int> sources, List<int> destinations, List<int> modes)
+      : count = sources.length,
+        _src = calloc<ffi.Uint32>(sources.isEmpty ? 1 : sources.length),
+        _dst = calloc<ffi.Uint32>(sources.isEmpty ? 1 : sources.length),
+        _modes = calloc<ffi.Uint8>(sources.isEmpty ? 1 : sources.length) {
+    if (destinations.length != count || modes.length != count) {
+      dispose();
+      throw ArgumentError('sources, destinations and modes must have the same length');
+    }
+    for (var i = 0; i < count; i++) {
+      _src[i] = sources[i];
+      _dst[i] = destinations[i];
+      _modes[i] = modes[i];
+    }
+  }
+
+  /// The number of pairs.
+  final int count;
+  final ffi.Pointer<ffi.Uint32> _src;
+  final ffi.Pointer<ffi.Uint32> _dst;
+  final ffi.Pointer<ffi.Uint8> _modes;
+  bool _disposed = false;
+
+  bool get isDisposed => _disposed;
+
+  /// Frees the native arrays.
+  void dispose() {
+    if (_disposed) return;
+    _disposed = true;
+    calloc.free(_src);
+    calloc.free(_dst);
+    calloc.free(_modes);
+  }
+}
+
 class FilamentTransformManager {
   final FilamentEngine engine;
   static bool _inTransaction = false;
@@ -191,6 +231,14 @@ class FilamentTransformManager {
     final result = List<double>.generate(16, (i) => ptr[i]);
     calloc.free(ptr);
     return result;
+  }
+
+  /// Copies the poses of [pairs] in order (parents before children), one
+  /// native call for all of them.
+  void copyPoses(FilamentPosePairs pairs) {
+    if (pairs.isDisposed) throw StateError('the pose pairs were disposed');
+    if (pairs.count == 0) return;
+    c.filament_transform_copy_poses(engine.nativePointer, pairs._src, pairs._dst, pairs._modes, pairs.count);
   }
 
   /// Destroys the transform component for [entity].

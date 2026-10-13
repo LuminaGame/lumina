@@ -2045,6 +2045,23 @@ external void filament_transform_get_children(
 );
 
 @ffi.Native<
+  ffi.Void Function(
+    ffi.Pointer<ffi.Void>,
+    ffi.Pointer<ffi.Uint32>,
+    ffi.Pointer<ffi.Uint32>,
+    ffi.Pointer<ffi.Uint8>,
+    ffi.Uint32,
+  )
+>()
+external void filament_transform_copy_poses(
+  ffi.Pointer<ffi.Void> engine,
+  ffi.Pointer<ffi.Uint32> src,
+  ffi.Pointer<ffi.Uint32> dst,
+  ffi.Pointer<ffi.Uint8> modes,
+  int count,
+);
+
+@ffi.Native<
   ffi.Size Function(
     ffi.Pointer<ffi.Float>,
     ffi.Pointer<ffi.Void>,

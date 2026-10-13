@@ -561,6 +561,10 @@ Clips are addressed by name. A request made before the asset has loaded is remem
 | `play` | `void play(String clip, {double startTime = 0.0, bool loop = true})` | Snaps to [clip] at [startTime], dropping any cross-fade in progress. |
 | `crossFadeTo` | `void crossFadeTo(String clip, {double duration = 0.2, bool syncPhase = false, bool loop = true,})` | Blends from the current pose to [clip] over [duration] seconds. |
 | `stop` | `void stop()` | Stops playback: the mesh holds its current pose and [currentClip] is null until the next [play]. |
+| `poseLeader` | `LuminaAnimatedMeshComponent? poseLeader` | The skinned mesh whose pose this one takes by bone name (a character split into body, face, hair and garment meshes is animated once, on the body). The leader updates its followers right after its own pose is final: the follower's own clip or pose driver first, then every bone with a same-named leader bone takes the leader's transform (its local transform when both hang under same-named parents, else the leader bone's world transform), then the follower's joint overrides and pose modifiers, then its bone matrices. Bones the leader lacks keep their own pose (a face's facial joints). Pairs are resolved once per loaded asset pair and copied in one native call (`FilamentTransformManager.copyPoses`). A cycle throws `StateError`; null hands the mesh back to its own animation. Blueprint / level property `poseFrom` (the leader component's id or name). |
+| `poseLinkReady` | `Future<void> get poseLinkReady` | Completes once this mesh and its leader are loaded and their bone names read; until then a follower animates on its own. |
+| `poseFollowers` | `List<LuminaAnimatedMeshComponent> get poseFollowers` | The components following this one. |
+| `followedBones` / `unmatchedBones` | `List<String>` | The bones taking the leader's pose and those keeping their own (filled on the first followed frame). |
 
 ---
 

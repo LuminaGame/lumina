@@ -561,6 +561,10 @@ Clips are addressed by name. A request made before the asset has loaded is remem
 | `play` | `void play(String clip, {double startTime = 0.0, bool loop = true})` | Snaps to [clip] at [startTime], dropping any cross-fade in progress. |
 | `crossFadeTo` | `void crossFadeTo(String clip, {double duration = 0.2, bool syncPhase = false, bool loop = true,})` | Blends from the current pose to [clip] over [duration] seconds. |
 | `stop` | `void stop()` | Stops playback: the mesh holds its current pose and [currentClip] is null until the next [play]. |
+| `poseLeader` | `LuminaAnimatedMeshComponent? poseLeader` | Bu mesh'in pozunu kemik adına göre aldığı skinned mesh (gövde, yüz, saç ve giysi mesh'lerine bölünmüş bir karakter tek seferde, gövde üzerinde animasyonlanır). Lider kendi pozu kesinleşince takipçilerini günceller: önce takipçinin kendi clip'i ya da pose driver'ı, sonra liderde aynı adlı karşılığı olan her kemik liderin dönüşümünü alır (ikisi de aynı adlı ebeveynin altındaysa yerel dönüşümü, değilse lider kemiğin dünya dönüşümünü), sonra takipçinin eklem override'ları ve pose modifier'ları, en son kemik matrisleri. Liderde olmayan kemikler kendi pozunu korur (yüzün facial eklemleri). Eşleşmeler yüklenen her asset çifti için bir kez çözülür ve tek native çağrıyla kopyalanır (`FilamentTransformManager.copyPoses`). Döngü `StateError` fırlatır; null mesh'i kendi animasyonuna geri verir. Blueprint / seviye özelliği `poseFrom` (lider bileşenin id'si ya da adı). |
+| `poseLinkReady` | `Future<void> get poseLinkReady` | Bu mesh ve lideri yüklenip kemik adları okununca tamamlanır; o zamana kadar takipçi kendi başına animasyonlanır. |
+| `poseFollowers` | `List<LuminaAnimatedMeshComponent> get poseFollowers` | Bunu takip eden bileşenler. |
+| `followedBones` / `unmatchedBones` | `List<String>` | Liderin pozunu alan ve kendi pozunu koruyan kemikler (ilk takip edilen karede dolar). |
 
 ---
 

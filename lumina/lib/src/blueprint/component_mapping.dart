@@ -129,7 +129,36 @@ abstract final class LuminaBlueprintComponents {
       }
     }
     _inheritMeshPhysics(components, built);
+    linkPoseLeaders(components, built, diagnostics: diagnostics);
     return built;
+  }
+
+  /// Points every skeletal mesh whose `poseFrom` names another skeletal
+  /// mesh component (by id, else by name) at it as its pose leader. A
+  /// missing or non-mesh target leaves the mesh animating on its own; a
+  /// cycle is reported and skipped.
+  static void linkPoseLeaders(
+    List<LuminaBlueprintComponent> docs,
+    Map<String, LuminaActorComponent> built, {
+    List<LuminaBlueprintDiagnostic>? diagnostics,
+  }) {
+    for (final d in docs) {
+      final from = d.properties['poseFrom'];
+      if (from is! String || from.isEmpty || from == 'None') continue;
+      final follower = built[d.id];
+      if (follower is! LuminaAnimatedMeshComponent) continue;
+      var leader = built[from];
+      if (leader == null) {
+        final byName = docs.where((o) => o.name == from).firstOrNull;
+        if (byName != null) leader = built[byName.id];
+      }
+      if (leader is! LuminaAnimatedMeshComponent || identical(leader, follower)) continue;
+      try {
+        follower.poseLeader = leader;
+      } on StateError catch (e) {
+        diagnostics?.add(LuminaBlueprintDiagnostic(LuminaBlueprintSeverity.warning, "Component '${d.name}': ${e.message}"));
+      }
+    }
   }
 
   /// Loops [animation] on [mesh]: the clip an animation `.lmas` names

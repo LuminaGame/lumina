@@ -290,5 +290,43 @@ void main() {
         engine.destroyEntity(pB);
       });
     });
+
+    group('copyPoses', () {
+      test('mode 0 copies local transforms; mode 1 gives the destination the source world transform under its own parent', () {
+        final srcRoot = engine.createEntity(), srcBone = engine.createEntity();
+        final dstRoot = engine.createEntity(), dstBone = engine.createEntity(), dstTop = engine.createEntity();
+        tm.create(srcRoot);
+        tm.create(srcBone, parent: srcRoot);
+        tm.create(dstRoot);
+        tm.create(dstBone, parent: dstRoot);
+        tm.create(dstTop, parent: dstRoot);
+        tm.setTransform(srcRoot, (Matrix4.identity()..setTranslationRaw(0, 10, 0)).storage);
+        final local = Matrix4.compose(Vector3(1, 2, 3), Quaternion.axisAngle(Vector3(0, 0, 1), math.pi / 3), Vector3.all(1));
+        tm.setTransform(srcBone, local.storage);
+        tm.setTransform(dstRoot, (Matrix4.identity()..setTranslationRaw(100, 0, 0)).storage);
+
+        final pairs = FilamentPosePairs([srcBone, srcBone], [dstBone, dstTop], [0, 1]);
+        tm.copyPoses(pairs);
+
+        final copied = tm.getTransform(dstBone);
+        for (var i = 0; i < 16; i++) {
+          expect(copied[i], closeTo(local.storage[i], 1e-5), reason: 'local entry $i');
+        }
+        // The world-mode bone lands where the source is, whatever its parent.
+        final srcWorld = tm.getWorldTransform(srcBone), topWorld = tm.getWorldTransform(dstTop);
+        for (var i = 0; i < 16; i++) {
+          expect(topWorld[i], closeTo(srcWorld[i], 1e-4), reason: 'world entry $i');
+        }
+        // The local-mode bone keeps its own parent's offset (100 cm aside).
+        expect(tm.getWorldTransform(dstBone)[12] - srcWorld[12], closeTo(100, 1e-4));
+
+        pairs.dispose();
+        expect(() => tm.copyPoses(pairs), throwsStateError);
+        expect(() => FilamentPosePairs([1], [], [0]), throwsArgumentError);
+        for (final e in [dstTop, dstBone, dstRoot, srcBone, srcRoot]) {
+          engine.destroyEntity(e);
+        }
+      });
+    });
   });
 }

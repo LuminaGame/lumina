@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:developer' as developer;
 import 'dart:typed_data';
 
@@ -5,10 +6,14 @@ import 'package:flutter_filament/filament.dart';
 import 'package:lumina_core/lumina_core.dart' show LuminaPoseMath;
 import 'package:vector_math/vector_math_64.dart';
 
+import 'package:lumina/src/components/mesh/mesh_asset_cache.dart';
 import 'package:lumina/src/components/mesh/mesh_pose_driver.dart';
 import 'package:lumina/src/components/mesh/mesh_pose_modifier.dart';
 import 'package:lumina/src/components/mesh/morph_targets.dart';
 import 'package:lumina/src/components/mesh/static_mesh_component.dart';
+import 'package:lumina/src/utility/lumina_assets.dart';
+
+part 'animated_mesh_component/pose_following.dart';
 
 /// A local-space delta multiplied onto one animated joint every frame:
 /// `joint = animated · T(translation) · R(rotation)`.
@@ -217,8 +222,13 @@ class LuminaAnimatedMeshComponent extends LuminaStaticMeshComponent with LuminaM
     final asset = _asset;
     if (asset == null) return null;
     return _jointEntities.putIfAbsent(bone, () {
+      // Instances of one cached asset share its names: pick this instance's.
       final entity = asset.getFirstEntityByName(bone);
-      return entity != 0 && _jointSet.contains(entity) ? entity : null;
+      if (entity != 0 && _jointSet.contains(entity)) return entity;
+      for (final e in asset.getEntitiesByName(bone)) {
+        if (_jointSet.contains(e)) return e;
+      }
+      return null;
     });
   }
 
@@ -394,6 +404,9 @@ class LuminaAnimatedMeshComponent extends LuminaStaticMeshComponent with LuminaM
     _overrideBase.clear();
     _overrideWritten.clear();
     _asset = instance.getAsset();
+    _namedJoints = null;
+    _loadVersion++;
+    _disposePairs();
     discoverMorphTargetsOf(_asset!, instance.entities);
     for (var skin = 0; skin < instance.skinCount; skin++) {
       _jointSet.addAll(instance.jointsAt(skin));
@@ -425,6 +438,46 @@ class LuminaAnimatedMeshComponent extends LuminaStaticMeshComponent with LuminaM
     }
   }
 
+  // --- Pose following (pose_following.dart) ---------------------------------------------
+
+  LuminaAnimatedMeshComponent? _poseLeader;
+  final List<LuminaAnimatedMeshComponent> _followers = [];
+  FilamentPosePairs? _pairs;
+  int _pairsLeaderLoad = -1;
+  int _loadVersion = 0;
+  Map<String, int>? _namedJoints;
+  Future<List<String>>? _nodeNames;
+  List<String>? _loadedNodeNames;
+  List<String> _followedBones = const [];
+  List<String> _unmatchedBones = const [];
+
+  /// The skinned mesh whose pose this one takes, by bone name (null: its
+  /// own animation only).
+  ///
+  /// While set, the leader updates this component right after its own pose
+  /// is final (clip or pose driver, joint overrides, pose modifiers): this
+  /// component's own clip or pose driver poses it first, then every bone
+  /// with a same-named leader bone takes the leader's transform, then this
+  /// component's joint overrides and pose modifiers apply and its bone
+  /// matrices update. Bones the leader lacks keep their own pose (a face's
+  /// facial joints). The bone pairs are resolved once per loaded pair of
+  /// assets and copied in one native call. A cycle throws [StateError].
+  LuminaAnimatedMeshComponent? get poseLeader => _poseLeader;
+  set poseLeader(LuminaAnimatedMeshComponent? leader) => _setPoseLeader(leader);
+
+  /// Completes once this component and its leader have loaded and their
+  /// bone names are known, so the next leader update copies the pose (until
+  /// then a follower animates on its own).
+  Future<void> get poseLinkReady => _poseLinkReady();
+
+  /// The components following this one's pose.
+  List<LuminaAnimatedMeshComponent> get poseFollowers => List.unmodifiable(_followers);
+
+  /// The bones that take the leader's pose, and those that keep their own
+  /// (both empty until the pairs are built on the first followed frame).
+  List<String> get followedBones => _followedBones;
+  List<String> get unmatchedBones => _unmatchedBones;
+
   /// Stops playback: the mesh holds its current pose and [currentClip] is
   /// null until the next [play].
   void stop() {
@@ -437,8 +490,18 @@ class LuminaAnimatedMeshComponent extends LuminaStaticMeshComponent with LuminaM
   @override
   void onTick(double deltaTime) {
     super.onTick(deltaTime);
-    _apply(deltaTime);
+    // A follower is updated by its leader, right after the leader's pose.
+    if (!_follows) _apply(deltaTime);
     flushMorphTargets();
+  }
+
+  @override
+  void onUnregister() {
+    for (final follower in List.of(_followers)) {
+      follower._disposePairs();
+    }
+    _disposePairs();
+    super.onUnregister();
   }
 
   void _apply(double deltaTime) {
@@ -449,10 +512,26 @@ class LuminaAnimatedMeshComponent extends LuminaStaticMeshComponent with LuminaM
       _applyJointOverrides(FilamentTransformManager(engine));
       _applyPoseModifiers(FilamentTransformManager(engine), deltaTime);
       animator.updateBoneMatrices();
+      _driveFollowers(deltaTime);
       return;
     }
-    if (_current < 0 && _jointOverrides.isEmpty && poseModifiers.isEmpty) return;
+    if (_current < 0 && _jointOverrides.isEmpty && poseModifiers.isEmpty) {
+      _driveFollowers(deltaTime);
+      return;
+    }
+    _applyClip(animator, deltaTime);
+    // Joint overrides go on after the clip and before the bone matrices, or
+    // the clip would overwrite them.
+    if (engine != null) {
+      _applyJointOverrides(FilamentTransformManager(engine));
+      _applyPoseModifiers(FilamentTransformManager(engine), deltaTime);
+    }
+    animator.updateBoneMatrices();
+    _driveFollowers(deltaTime);
+  }
 
+  /// Advances and applies the playing clip (and the cross-fade).
+  void _applyClip(FilamentAnimator animator, double deltaTime) {
     if (_current >= 0) {
       final step = deltaTime * _playRate;
       _time = _wrap(_time + step, _durations[_current], _loop);
@@ -470,13 +549,6 @@ class LuminaAnimatedMeshComponent extends LuminaStaticMeshComponent with LuminaM
         }
       }
     }
-    // Joint overrides go on after the clip and before the bone matrices, or
-    // the clip would overwrite them.
-    if (engine != null) {
-      _applyJointOverrides(FilamentTransformManager(engine));
-      _applyPoseModifiers(FilamentTransformManager(engine), deltaTime);
-    }
-    animator.updateBoneMatrices();
   }
 
   int _indexOf(String clip) {

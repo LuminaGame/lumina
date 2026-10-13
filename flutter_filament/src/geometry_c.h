@@ -162,6 +162,10 @@ FFI_PLUGIN_EXPORT void filament_transform_set_parent(void* engine, uint32_t enti
 FFI_PLUGIN_EXPORT uint32_t filament_transform_get_parent(void* engine, uint32_t entity);
 FFI_PLUGIN_EXPORT uint32_t filament_transform_get_child_count(void* engine, uint32_t entity);
 FFI_PLUGIN_EXPORT void filament_transform_get_children(void* engine, uint32_t entity, uint32_t* out_children, uint32_t capacity);
+// Copies poses between entity pairs, in order: mode 0 copies src's local
+// transform onto dst; mode 1 sets dst's local so that its world transform
+// equals src's (inverse(world(parent(dst))) * world(src)).
+FFI_PLUGIN_EXPORT void filament_transform_copy_poses(void* engine, const uint32_t* src, const uint32_t* dst, const uint8_t* modes, uint32_t count);
 
 // Transcoder
 FFI_PLUGIN_EXPORT size_t filament_transcode(

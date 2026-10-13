@@ -672,6 +672,7 @@ Manages transform components for entities.  Transform components give entities a
 | `getParent` | `int getParent(int entity)` | Gets the parent entity ID of [entity]'s transform, or 0 if it has no parent. |
 | `childCount` | `int childCount(int entity)` | Gets the number of children attached to [entity]'s transform. |
 | `getChildren` | `List<int> getChildren(int entity, int capacity)` | Gets a list of children entities attached to [entity]'s transform. The list will be clamped to [capacity] elements. |
+| `copyPoses` | `void copyPoses(FilamentPosePairs pairs)` | Copies poses between entity pairs in one native call, in order (parents first): mode 0 copies the source's local transform, mode 1 gives the destination the source's world transform under its own parent. `FilamentPosePairs(sources, destinations, modes)` holds the arrays in native memory, built once and reused every frame; `dispose()` frees them. Used by skinned mesh pose followers. |
 
 ### `lib/src/vertex_buffer.dart`
 

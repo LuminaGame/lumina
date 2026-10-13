@@ -992,6 +992,26 @@ void filament_transform_get_children(void* engine, uint32_t entity, uint32_t* ou
     FFI_CATCH()
 }
 
+void filament_transform_copy_poses(void* engine, const uint32_t* src, const uint32_t* dst, const uint8_t* modes, uint32_t count) {
+    FFI_TRY
+    if (!engine || !src || !dst || !modes) return;
+    auto& tcm = toEngine(engine)->getTransformManager();
+    for (uint32_t i = 0; i < count; i++) {
+        auto si = tcm.getInstance(toEntity(src[i]));
+        auto di = tcm.getInstance(toEntity(dst[i]));
+        if (!si || !di) continue;
+        if (modes[i] == 0) {
+            tcm.setTransform(di, tcm.getTransform(si));
+            continue;
+        }
+        const mat4f world = tcm.getWorldTransform(si);
+        const Entity parent = tcm.getParent(di);
+        auto pi = parent.isNull() ? TransformManager::Instance{} : tcm.getInstance(parent);
+        tcm.setTransform(di, pi ? inverse(tcm.getWorldTransform(pi)) * world : world);
+    }
+    FFI_CATCH()
+}
+
 #include <geometry/Transcoder.h>
 
 size_t filament_transcode(

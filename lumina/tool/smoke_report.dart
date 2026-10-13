@@ -46,7 +46,7 @@ const TestCategories luminaTestCategories = TestCategories(
     ('Physics', ['physics', 'rigid_body', 'character_push', 'mass_resolution', 'cloth', 'ragdoll']),
     ('Camera & Spring Arm', ['camera', 'spring_arm', 'game_view_camera']),
     ('Input', ['input']),
-    ('Animation', ['anim', 'animation', 'animated_mesh', 'blend_space', 'montage', 'retarget', 'rig_logic', 'locomotion', 'mannequin', 'free_look', 'joint_override', 'aim_offset', 'pose_authoring', 'grab', 'motion_warping', 'authored_clip', 'authored_rotation', 'pose_search', 'motion_matching']),
+    ('Animation', ['anim', 'animation', 'animated_mesh', 'blend_space', 'montage', 'retarget', 'rig_logic', 'locomotion', 'mannequin', 'free_look', 'joint_override', 'pose_follower', 'character_slots', 'garment', 'aim_offset', 'pose_authoring', 'grab', 'motion_warping', 'authored_clip', 'authored_rotation', 'pose_search', 'motion_matching']),
     ('Mesh & Material', ['mesh', 'static_mesh', 'skeletal_mesh', 'procedural_mesh', 'skeleton_fk', 'skinning', 'sockets', 'morph', 'primitive', 'material']),
     ('AI & Navigation', ['ai_', 'navigation', 'behavior_tree', 'perception']),
     ('Light, Environment & Post Process', ['light', 'exposure', 'environment', 'sky', 'procedural_sky', 'reflection', 'post_process', 'scalability', 'fog', 'dlss', 'frame_generation', 'ray_tracing', 'upscaler', 'neural_rendering', 'rendering_feature', 'rtx']),

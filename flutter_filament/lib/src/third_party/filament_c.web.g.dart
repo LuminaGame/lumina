@@ -936,6 +936,10 @@ void filament_transform_get_children(ffi.Pointer<ffi.Void> engine, int entity, f
   _m.filament_transform_get_children(engine.address.toJS, entity.toJS, out_children.address.toJS, capacity.toJS);
 }
 
+void filament_transform_copy_poses(ffi.Pointer<ffi.Void> engine, ffi.Pointer<ffi.Uint32> src, ffi.Pointer<ffi.Uint32> dst, ffi.Pointer<ffi.Uint8> modes, int count) {
+  _m.filament_transform_copy_poses(engine.address.toJS, src.address.toJS, dst.address.toJS, modes.address.toJS, count.toJS);
+}
+
 int filament_transcode(ffi.Pointer<ffi.Float> target, ffi.Pointer<ffi.Void> source, int vertex_count, int component_type, bool normalized, int component_count, int input_stride_bytes) =>
     _m.filament_transcode(target.address.toJS, source.address.toJS, vertex_count.toJS, component_type.toJS, (normalized ? 1 : 0).toJS, component_count.toJS, input_stride_bytes.toJS).toDartInt.toUnsigned(32);
 
@@ -7344,6 +7348,8 @@ extension type _Module._(JSObject _) implements JSObject {
   external JSNumber filament_transform_get_child_count(JSNumber engine, JSNumber entity);
   @JS('_filament_transform_get_children')
   external void filament_transform_get_children(JSNumber engine, JSNumber entity, JSNumber out_children, JSNumber capacity);
+  @JS('_filament_transform_copy_poses')
+  external void filament_transform_copy_poses(JSNumber engine, JSNumber src, JSNumber dst, JSNumber modes, JSNumber count);
   @JS('_filament_transcode')
   external JSNumber filament_transcode(JSNumber target, JSNumber source, JSNumber vertex_count, JSNumber component_type, JSNumber normalized, JSNumber component_count, JSNumber input_stride_bytes);
   @JS('_filament_transcode_output_size')
