@@ -239,7 +239,9 @@ class _Transformer {
   });
 
   static final _classHead = RegExp(r'final class (\w+) extends ffi\.(Struct|Union) \{');
-  static final _field = RegExp(r'((?:@ffi\.[\w.]+\([^)]*\)\s*)?)external\s+([\w.<>, ]+?)\s+(\w+);');
+  // A field's type may span lines and hold a function type (a function
+  // pointer field: `ffi.Pointer<ffi.NativeFunction<… Function(…)>>`).
+  static final _field = RegExp(r'((?:@ffi\.[\w.]+\([^)]*\)\s*)?)external\s+([\w.<>,()\s]+?)\s+(\w+);');
 
   void collectStructs() {
     for (final m in _classHead.allMatches(source)) {

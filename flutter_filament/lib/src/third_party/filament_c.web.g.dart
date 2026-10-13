@@ -6816,43 +6816,22 @@ final class filament_external_swapchain_provider extends ffi.Struct {
   /// Writes image_count VkImage handles into `colors` and a depth VkImage
   /// (with layer_count layers) into `depth`. Filament makes no depth image
   /// for an external swapchain: without one the view renders without depth.
-  external ffi.Pointer<
-    ffi.NativeFunction<
-      ffi.Void Function(
-        ffi.Pointer<ffi.Void> user_data,
-        ffi.Pointer<ffi.Uint64> colors,
-        ffi.Pointer<ffi.Uint64> depth,
-      )
-    >
-  >
-  get_images;
+  ffi.Pointer< ffi.NativeFunction< ffi.Void Function( ffi.Pointer<ffi.Void> user_data, ffi.Pointer<ffi.Uint64> colors, ffi.Pointer<ffi.Uint64> depth, ) > > get get_images => ffi.Pointer< ffi.NativeFunction< ffi.Void Function( ffi.Pointer<ffi.Void> user_data, ffi.Pointer<ffi.Uint64> colors, ffi.Pointer<ffi.Uint64> depth, ) > >.fromAddress(FlutterFilamentModule.heap.getUint32($address + 28, Endian.little));
+  set get_images(ffi.Pointer< ffi.NativeFunction< ffi.Void Function( ffi.Pointer<ffi.Void> user_data, ffi.Pointer<ffi.Uint64> colors, ffi.Pointer<ffi.Uint64> depth, ) > > value) => FlutterFilamentModule.heap.setUint32($address + 28, value.address, Endian.little);
 
   /// Waits until an image may be rendered (xrAcquireSwapchainImage +
   /// xrWaitSwapchainImage) and writes its index. Returns a VkResult.
-  external ffi.Pointer<
-    ffi.NativeFunction<
-      ffi.Int32 Function(
-        ffi.Pointer<ffi.Void> user_data,
-        ffi.Pointer<ffi.Uint32> index,
-      )
-    >
-  >
-  acquire;
+  ffi.Pointer< ffi.NativeFunction< ffi.Int32 Function( ffi.Pointer<ffi.Void> user_data, ffi.Pointer<ffi.Uint32> index, ) > > get acquire => ffi.Pointer< ffi.NativeFunction< ffi.Int32 Function( ffi.Pointer<ffi.Void> user_data, ffi.Pointer<ffi.Uint32> index, ) > >.fromAddress(FlutterFilamentModule.heap.getUint32($address + 32, Endian.little));
+  set acquire(ffi.Pointer< ffi.NativeFunction< ffi.Int32 Function( ffi.Pointer<ffi.Void> user_data, ffi.Pointer<ffi.Uint32> index, ) > > value) => FlutterFilamentModule.heap.setUint32($address + 32, value.address, Endian.little);
 
   /// The image's commands are submitted (xrReleaseSwapchainImage). Returns
   /// a VkResult.
-  external ffi.Pointer<
-    ffi.NativeFunction<
-      ffi.Int32 Function(ffi.Pointer<ffi.Void> user_data, ffi.Uint32 index)
-    >
-  >
-  present;
+  ffi.Pointer< ffi.NativeFunction< ffi.Int32 Function(ffi.Pointer<ffi.Void> user_data, ffi.Uint32 index) > > get present => ffi.Pointer< ffi.NativeFunction< ffi.Int32 Function(ffi.Pointer<ffi.Void> user_data, ffi.Uint32 index) > >.fromAddress(FlutterFilamentModule.heap.getUint32($address + 36, Endian.little));
+  set present(ffi.Pointer< ffi.NativeFunction< ffi.Int32 Function(ffi.Pointer<ffi.Void> user_data, ffi.Uint32 index) > > value) => FlutterFilamentModule.heap.setUint32($address + 36, value.address, Endian.little);
 
   /// The swapchain is gone; may be null.
-  external ffi.Pointer<
-    ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void> user_data)>
-  >
-  destroy;
+  ffi.Pointer< ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void> user_data)> > get destroy => ffi.Pointer< ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void> user_data)> >.fromAddress(FlutterFilamentModule.heap.getUint32($address + 40, Endian.little));
+  set destroy(ffi.Pointer< ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void> user_data)> > value) => FlutterFilamentModule.heap.setUint32($address + 40, value.address, Endian.little);
 }
 
 // --- the module's exports (web) ---------------------------------------------
@@ -9405,7 +9384,7 @@ void $registerFilamentBindings() {
   ffi.$registerStruct<filament_opendlss_nr_controls>(36, 4, filament_opendlss_nr_controls.$at);
   ffi.$registerStruct<filament_opendlss_nr_status>(56, 8, filament_opendlss_nr_status.$at);
   ffi.$registerStruct<filament_external_vulkan_context>(24, 4, filament_external_vulkan_context.$at);
-  ffi.$registerStruct<filament_external_swapchain_provider>(28, 4, filament_external_swapchain_provider.$at);
+  ffi.$registerStruct<filament_external_swapchain_provider>(44, 4, filament_external_swapchain_provider.$at);
   ffi.$registerCallbackType<FilamentPickCallbackFunction>(const ffi.$CallbackSignature('v', ['u', 'f', 'f', 'f', 'p']));
   ffi.$registerCallbackType<FilamentRaycastCallbackFunction>(const ffi.$CallbackSignature('b', ['p', 'p', 'p', 'p']));
   ffi.$registerCallbackType<filament_buffer_free_fnFunction>(const ffi.$CallbackSignature('v', ['p', 'u', 'p']));
