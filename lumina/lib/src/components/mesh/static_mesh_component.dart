@@ -42,6 +42,8 @@ class LuminaStaticMeshComponent extends LuminaSceneComponent with LuminaPrimitiv
 
   FilamentAssetInstance? _instance;
   Completer<void> _loadCompleter = Completer<void>();
+  Future<void>? _loadHold;
+  int _loadGeneration = 0;
   Matrix4? _lastSyncedTransform;
   Aabb3? _localBounds;
 
@@ -489,7 +491,18 @@ class LuminaStaticMeshComponent extends LuminaSceneComponent with LuminaPrimitiv
     _loadMeshAsset();
   }
 
+  /// Holds the mesh's load until [until] completes (its owner first decides
+  /// what it draws, e.g. a slot reading whether its asset is a garment); a
+  /// [setMeshAsset] meanwhile replaces the held load.
+  void holdLoadUntil(Future<void> until) => _loadHold = until;
+
   Future<void> _loadMeshAsset() async {
+    final generation = ++_loadGeneration;
+    final hold = _loadHold;
+    if (hold != null) {
+      await hold;
+      if (generation != _loadGeneration) return;
+    }
     final w = owner?.world;
     if (w == null || !w.hasNativeContext) {
       return;
@@ -598,6 +611,8 @@ class LuminaStaticMeshComponent extends LuminaSceneComponent with LuminaPrimitiv
   Future<void> setMeshAsset(String path, {Future<Uint8List> Function(String path)? assetProvider}) async {
     _releaseMeshInstance();
     _meshAssetPath = path;
+    _loadHold = null;
+    _loadGeneration++;
     if (assetProvider != null) _assetProvider = assetProvider;
     if (_loadCompleter.isCompleted) _loadCompleter = Completer<void>();
     _lastSyncedTransform = null;

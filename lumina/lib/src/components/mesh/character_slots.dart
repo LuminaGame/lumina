@@ -86,6 +86,58 @@ class LuminaCharacterSlots {
   /// Reads the meshes (the Blueprint's asset provider; null: the default).
   LuminaAssetProvider? assetProvider;
 
+  Future<void>? _ready;
+
+  /// Completes when what a Blueprint's construction left to do is done
+  /// ([applyConstructed]): garments fitted, bodies masked.
+  Future<void> get ready => _ready ?? Future.value();
+
+  /// After a Blueprint's construction: a slot whose mesh is a Garment asset
+  /// is fitted to the body of the slot it follows (its component's load is
+  /// held meanwhile, so the `.lmas` is never loaded as a mesh), then every
+  /// body under a non-empty slot that masks it gets its mask, as after
+  /// [setMesh]. Runs in the background ([ready]); fits and masks run on
+  /// worker isolates and are cached.
+  void applyConstructed() {
+    final holds = <String, Completer<void>>{};
+    for (final s in _slots.values) {
+      final c = s.component;
+      if (c is LuminaAnimatedMeshComponent && s.mesh.toLowerCase().endsWith('.lmas')) {
+        final hold = Completer<void>();
+        c.holdLoadUntil(hold.future);
+        holds[s.name] = hold;
+      }
+    }
+    _ready = _applyConstructed(holds);
+  }
+
+  Future<void> _applyConstructed(Map<String, Completer<void>> holds) async {
+    for (final e in holds.entries) {
+      final s = _slots[e.key]!;
+      try {
+        s.garment = await _garmentAt(s.mesh);
+        if (s.garment != null) await _fitGarment(s);
+      } catch (err) {
+        developer.log('slot ${s.name}: cannot fit its garment: $err', name: 'LuminaCharacterSlots', level: 900);
+        // Nothing to draw rather than the garment's asset as a mesh.
+        if (s.garment != null && s.component is LuminaAnimatedMeshComponent) _replace(s, LuminaSceneComponent());
+      } finally {
+        if (!e.value.isCompleted) e.value.complete();
+      }
+    }
+    final bodies = {
+      for (final s in _slots.values)
+        if (s.masksBody && !s.isEmpty && s.leaderSlot != null) s.leaderSlot!,
+    };
+    for (final body in bodies) {
+      try {
+        await refreshBodyMask(body);
+      } catch (err) {
+        developer.log('slot $body: cannot mask the body: $err', name: 'LuminaCharacterSlots', level: 900);
+      }
+    }
+  }
+
   /// Changes whenever a slot's component is replaced.
   final StreamController<String> _changes = StreamController.broadcast(sync: true);
   Stream<String> get changes => _changes.stream;
@@ -234,7 +286,8 @@ class LuminaCharacterSlots {
         assetProvider: provider,
       );
       _replace(slot, next);
-      await next.loaded;
+      // Not in a world yet (a Blueprint still constructing): it loads there.
+      if (actor.world != null) await next.loaded;
     }
   }
 
@@ -372,4 +425,5 @@ void luminaRegisterBlueprintSlots(
       properties: d.properties,
     );
   }
+  slots?.applyConstructed();
 }

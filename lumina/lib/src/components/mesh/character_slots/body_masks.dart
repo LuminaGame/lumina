@@ -1,5 +1,8 @@
 part of '../character_slots.dart';
 
+/// The latest masked bodies, by the content of the body and its garments.
+final Map<String, Uint8List> _maskCache = {};
+
 /// Body masks: the body triangles under the garments of the slots that
 /// mask the body are left out of its draw.
 extension LuminaCharacterSlotMasks on LuminaCharacterSlots {
@@ -29,7 +32,13 @@ extension LuminaCharacterSlotMasks on LuminaCharacterSlots {
     final garmentBytes = [
       for (final g in garments) await LuminaMeshAssetCache.meshBytes(LuminaAssets.resolve(_garmentProvider(g) ?? assetProvider), _garmentPath(g)),
     ];
-    final masked = await Isolate.run(() {
+    // The same body under the same garments (a Blueprint built again, a
+    // preview rebuilt after an edit) reuses its mask.
+    final cacheKey = [
+      LuminaMeshAssetCache.contentDigest(bodyBytes),
+      for (final b in garmentBytes) LuminaMeshAssetCache.contentDigest(b),
+    ].join('|');
+    final Uint8List masked = _maskCache[cacheKey] ?? await Isolate.run<Uint8List>(() {
       LuminaSkinnedMeshData parse(Uint8List b) {
         try {
           return LuminaSkinnedMeshData.fromGlb(b, draco: LuminaGlbLoader.decoders.draco);
@@ -42,6 +51,11 @@ extension LuminaCharacterSlotMasks on LuminaCharacterSlots {
       final covered = LuminaBodyMask.compute(bodyData, [for (final b in garmentBytes) parse(b)]);
       return LuminaBodyMask.applyDegenerate(bodyData, covered);
     }, debugName: 'body mask');
+    _maskCache.remove(cacheKey);
+    _maskCache[cacheKey] = masked;
+    while (_maskCache.length > 8) {
+      _maskCache.remove(_maskCache.keys.first);
+    }
     // A newer mask (another garment changed meanwhile) wins.
     if (version != _maskVersion) return true;
     final key = '$bodyPath#masked-${LuminaMeshAssetCache.contentDigest(masked)}';

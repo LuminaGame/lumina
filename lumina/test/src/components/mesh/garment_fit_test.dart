@@ -283,6 +283,37 @@ void main() {
       expect(LuminaBlueprintFunctionLibrary.fitGarment(actor, null, 'Torso', 'shirt.glb'), isFalse);
       expect(LuminaBlueprintFunctionLibrary.fitGarment(actor, null, 'Cape', garment), isFalse);
     }, skip: skip, timeout: const Timeout(Duration(minutes: 3)));
+
+    test('a Blueprint whose Torso slot holds a Garment asset fits it and masks the body as it is built', () async {
+      final doc = placed(read(tshirt), read(manny)).copyWith(sourceMesh: tshirt.path, referenceBody: manny.path);
+      final garment = '${dir.path}/G_Tshirt.lmas';
+      await File(garment).writeAsBytes(doc.toAsset(name: 'G_Tshirt').toProtoBufferBytes());
+      final actor = LuminaActor(root: LuminaSceneComponent());
+      final built = LuminaBlueprintComponents.construct(actor, [
+        LuminaBlueprintComponent(id: 'body', name: 'Body', type: 'LuminaSkeletalMeshComponent', isSceneComponent: true, properties: {'skeletalMeshAsset': manny.path, 'slot': 'Body'}),
+        LuminaBlueprintComponent(
+          id: 'torso',
+          name: 'Torso',
+          type: 'LuminaSkeletalMeshComponent',
+          parentId: 'body',
+          isSceneComponent: true,
+          properties: {'skeletalMeshAsset': garment, 'slot': 'Torso', 'poseFrom': 'body'},
+        ),
+      ], resolveAsset: (s) => s);
+      world.persistentLevel.registerActor(actor);
+      world.beginPlay();
+      final slots = LuminaCharacterSlots.of(actor);
+      await slots.ready;
+      final torso = slots.component('Torso') as LuminaAnimatedMeshComponent;
+      await torso.loaded;
+      expect(torso.meshAssetPath, startsWith('garment:Torso#'), reason: 'the Garment asset is fitted, never loaded as a mesh');
+      expect(slots.slot('Torso')!.garment, isNotNull);
+      expect(slots.slot('Torso')!.lastFit!.maxPenetration, lessThan(0.1));
+      final body = built['body'] as LuminaAnimatedMeshComponent;
+      await body.loaded;
+      expect(body.meshAssetPath, startsWith('${manny.path}#masked-'), reason: 'masked as soon as the Blueprint is built');
+      expect(torso.poseLeader, same(body));
+    }, skip: skip, timeout: const Timeout(Duration(minutes: 3)));
   });
 }
 

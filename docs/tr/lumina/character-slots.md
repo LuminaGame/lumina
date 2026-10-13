@@ -42,11 +42,12 @@ Mesh'i boş bir slot boş bir sahne bileşeni olarak kurulur ve sonra doldurulab
 | `clear(name)` | Slotu boşaltır (çocuklar boş bir bileşenin altında kalır). |
 | `register(name, component, {mesh, leaderSlot, properties})` | Dart'ta kurulmuş bir slotu kaydeder. |
 | `refreshBodyMask(bodySlot)` | Gövdeyi takip eden giysi slotlarından gövde maskesini yeniden hesaplar. |
+| `applyConstructed()` / `ready` | Bir Blueprint kurulduktan sonra: Garment asset'i tutan slotları uydurur ve maskeleyen slotların altındaki gövdeleri arka planda maskeler; `ready` bitince tamamlanır. |
 | `changes` | Bir slotun bileşeni her değiştiğinde slot adlarının akışı. |
 
 ## Gövde maskeleri
 
-Bir giysi slotu (`masksBody`) doldurulunca ya da boşaltılınca, ya da gövdenin kendisi değişince gövde maskesi bir worker isolate'ta yeniden hesaplanır: `LuminaBodyMask.compute`, dışında 4 cm içinde bir giysi yüzeyi olan ve o giysi noktası giysinin açık kenarlarından en az 3 cm uzakta olan gövde köşesini örtülü sayar (yakalar, manşetler ve etekler altındaki ten çizilmeye devam eder); üç köşesi örtülü olan üçgen örtülüdür. Yalnızca ten örtülebilir (aşağıya bakın): bir giysinin üzerine düşen saç, gözler ve dişler çizilmeye devam eder. `LuminaBodyMask.applyDegenerate`, örtülü üçgenleri dejenere (çizilmeyen) gövde GLB'sinin bir kopyasını yazar ve gövde bileşeni bu kopyayı yerinde çizer (`<gövde yolu>#masked-<özet>`). Kayıtlı mesh maskesiz gövde olarak kalır; giysileri boşaltmak onu geri getirir. Draco ile sıkıştırılmış bir gövde yamalanamaz ve bütün kalır.
+Bir Blueprint kurulunca (Play, üretilen oyun, Blueprint editörünün viewport'u), bir giysi slotu (`masksBody`) doldurulunca ya da boşaltılınca, ya da gövdenin kendisi değişince gövde maskesi bir worker isolate'ta yeniden hesaplanır: `LuminaBodyMask.compute`, dışında 4 cm içinde bir giysi yüzeyi olan ve o giysi noktası giysinin açık kenarlarından en az 3 cm uzakta olan gövde köşesini örtülü sayar (yakalar, manşetler ve etekler altındaki ten çizilmeye devam eder); üç köşesi örtülü olan üçgen örtülüdür. Yalnızca ten örtülebilir (aşağıya bakın): bir giysinin üzerine düşen saç, gözler ve dişler çizilmeye devam eder. `LuminaBodyMask.applyDegenerate`, örtülü üçgenleri dejenere (çizilmeyen) gövde GLB'sinin bir kopyasını yazar ve gövde bileşeni bu kopyayı yerinde çizer (`<gövde yolu>#masked-<özet>`). Kayıtlı mesh maskesiz gövde olarak kalır; giysileri boşaltmak onu geri getirir. Draco ile sıkıştırılmış bir gövde yamalanamaz ve bütün kalır.
 
 ## Yerleştirilmiş skeletal mesh'ler
 
@@ -57,6 +58,12 @@ Bir seviyeye yerleştirilmiş `SkeletalMesh` aktörü, Play-In-Editor'da ve üre
 ## Slotlardaki giysiler
 
 Bir **Garment** asset'iyle (`AssetType.garment` türünde `.lmas`, bkz. [Giysi editörü](../lumina_ui/sub-editors/garment.md)) doldurulan bir slot, giysiyi takip ettiği slotun gövdesine uydurulmuş olarak gösterir. `setMesh(slot, garment)` (ya da uyum raporunu döndüren `fitGarment(slot, garment)`) giysiyi, kaynak mesh'ini, referans gövdesini ve şu anki gövdeyi (maskesiz) okur ve onu `LuminaGarmentCache` üzerinden bir worker isolate'ta uydurur (giysi, kaynak, referans gövde ve hedef gövde içeriği başına bir uyum; aynı gövde yeniden önbellekten gelir). Gövde slotu değişince onu takip eden her giysi slotu yeni gövdeye uydurulur ve gövde maskesi yeniden hesaplanır. Kumaş olarak simüle edilen bir giysi, Cloth Settings'iyle gövdede giyilen bir Skinned Cloth olur.
+
+Bir Blueprint'in slot bileşeni doğrudan bir Garment asset'i tutabilir: Blueprint editöründeki Skeletal Mesh Asset seçicisi Garment asset'lerini de sunar. Blueprint kurulunca `luminaRegisterBlueprintSlots`, `LuminaCharacterSlots.applyConstructed()`'ı çağırır; bu arka planda çalışır (`ready` bitince tamamlanır):
+- mesh'i `.lmas` olan bir slot bileşeninin yüklenmesi asset okunana dek bekletilir (`LuminaStaticMeshComponent.holdLoadUntil`), böylece bir Garment `.lmas`'ı hiçbir zaman mesh olarak yüklenmez;
+- her Garment asset'i takip ettiği slotun gövdesine uydurulur;
+- kendisini maskeleyen boş olmayan bir slotun altındaki her gövde maskesini alır.
+Maskeler gövdenin ve giysilerinin içeriğine göre önbelleğe alınır, böylece yeniden kurulan aynı karakter (bir düzenlemeden sonra yeniden kurulan önizleme) maskesini yeniden kullanır.
 
 Uyum (`LuminaGarmentFitter`, lumina_core, saf Dart):
 

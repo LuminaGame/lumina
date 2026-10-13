@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lumina_editor_data/lumina_editor.dart' show AssetType;
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_component_registry.dart';
 import 'package:lumina_ui/ui/features/sub_editors/view_models/blueprint_editor_view_model.dart';
@@ -29,6 +30,11 @@ void main() {
     await tester.pump(const Duration(milliseconds: 50));
     return vm;
   }
+
+  test('a Skeletal Mesh slot can hold a Garment asset (fitted to its body when built)', () {
+    final mesh = BlueprintComponentRegistry.getSchema('LuminaSkeletalMeshComponent').firstWhere((p) => p.dartField == 'skeletalMeshAsset');
+    expect(mesh.assetTypes, containsAll([AssetType.filameshSk, AssetType.garment]));
+  });
 
   test('Skeletal Mesh and Skinned Cloth carry Slot and Pose From', () {
     for (final type in ['LuminaSkeletalMeshComponent', 'LuminaSkinnedClothComponent']) {

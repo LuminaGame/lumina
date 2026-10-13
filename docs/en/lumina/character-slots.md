@@ -42,11 +42,12 @@ A slot whose mesh is empty is built as an empty scene component and can be fille
 | `clear(name)` | Empties the slot (children stay under an empty component). |
 | `register(name, component, {mesh, leaderSlot, properties})` | Registers a slot built in Dart. |
 | `refreshBodyMask(bodySlot)` | Recomputes the body's mask from the garment slots following it. |
+| `applyConstructed()` / `ready` | After a Blueprint's construction: fits the slots holding a Garment asset and masks the bodies under masking slots, in the background; `ready` completes when done. |
 | `changes` | A stream of slot names, each time a slot's component changes. |
 
 ## Body masks
 
-When a garment slot (`masksBody`) is filled or cleared, or the body itself changes, the body's mask is recomputed on a worker isolate: `LuminaBodyMask.compute` marks a body vertex covered when a garment surface lies within 4 cm outside it and that garment point is at least 3 cm from the garment's open edges (collars, cuffs and hems keep the skin under them drawn); a triangle is covered when its three vertices are. Only skin can be covered (see below): hair lying on a garment, eyes and teeth stay drawn. `LuminaBodyMask.applyDegenerate` writes a copy of the body GLB whose covered triangles are degenerate (not drawn), and the body component draws that copy in place (`<body path>#masked-<digest>`). The stored mesh stays the unmasked body; clearing the garments restores it. A Draco-compressed body cannot be patched and stays whole.
+When a Blueprint is built (Play, the generated game, the Blueprint editor's viewport), when a garment slot (`masksBody`) is filled or cleared, or when the body itself changes, the body's mask is recomputed on a worker isolate: `LuminaBodyMask.compute` marks a body vertex covered when a garment surface lies within 4 cm outside it and that garment point is at least 3 cm from the garment's open edges (collars, cuffs and hems keep the skin under them drawn); a triangle is covered when its three vertices are. Only skin can be covered (see below): hair lying on a garment, eyes and teeth stay drawn. `LuminaBodyMask.applyDegenerate` writes a copy of the body GLB whose covered triangles are degenerate (not drawn), and the body component draws that copy in place (`<body path>#masked-<digest>`). The stored mesh stays the unmasked body; clearing the garments restores it. A Draco-compressed body cannot be patched and stays whole.
 
 ## Placed skeletal meshes
 
@@ -57,6 +58,12 @@ A `SkeletalMesh` actor placed in a level plays, in Play-In-Editor and in the gen
 ## Garments in slots
 
 A slot filled with a **Garment** asset (`.lmas` of `AssetType.garment`, see the [Garment editor](../lumina_ui/sub-editors/garment.md)) shows the garment fitted to the body of the slot it follows. `setMesh(slot, garment)` (or `fitGarment(slot, garment)`, which returns the fit report) reads the garment, its source mesh and reference body and the current body (unmasked), and fits it on a worker isolate through `LuminaGarmentCache` (one fit per garment, source, reference body and target body content; the same body again comes from the cache). When the body slot changes, every garment slot following it is fitted to the new body and the body's mask is recomputed. A garment that simulates as cloth becomes a Skinned Cloth worn on the body, with its Cloth Settings.
+
+A Blueprint's slot component can hold a Garment asset directly: its Skeletal Mesh Asset picker in the Blueprint editor offers Garment assets. When the Blueprint is built, `luminaRegisterBlueprintSlots` calls `LuminaCharacterSlots.applyConstructed()`, which runs in the background (`ready` completes when it is done):
+- the load of a slot component whose mesh is a `.lmas` is held (`LuminaStaticMeshComponent.holdLoadUntil`) until the asset is read, so a Garment `.lmas` is never loaded as a mesh;
+- each Garment asset is fitted to the body of the slot it follows;
+- every body under a non-empty slot that masks it gets its mask.
+Masks are cached by the content of the body and its garments, so the same character built again (a preview rebuilt after an edit) reuses its mask.
 
 The fit (`LuminaGarmentFitter`, lumina_core, pure Dart):
 

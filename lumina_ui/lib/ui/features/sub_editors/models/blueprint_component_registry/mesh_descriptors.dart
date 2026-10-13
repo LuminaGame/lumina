@@ -34,7 +34,9 @@ const List<ComponentTypeDescriptor> _meshComponentDescriptors = [
         name: 'Skeletal Mesh Asset',
         dartField: 'skeletalMeshAsset',
         type: ComponentPropertyType.assetReference,
-        assetTypes: [AssetType.filameshSk],
+        // A Garment asset too: in a character slot it is fitted to the body
+        // of the slot it follows (Pose From) when the Blueprint is built.
+        assetTypes: [AssetType.filameshSk, AssetType.garment],
         defaultValue: '',
       ),
       ComponentPropertySchema(
