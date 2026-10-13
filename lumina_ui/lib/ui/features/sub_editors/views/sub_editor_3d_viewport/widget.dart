@@ -140,6 +140,10 @@ class SubEditor3DViewport extends StatefulWidget {
   /// Height of the floor plane [onFloorTap] rays are intersected with.
   final double floorTapPlaneY;
 
+  /// A primary click (no drag) in the viewport: the Y-up orbit camera's ray
+  /// through it (runtime frame), for picking points on meshes.
+  final void Function(ViewportRay ray)? onRayTap;
+
   /// A paint/sculpt tool driven by the mouse (the Landscape editor's
   /// brushes): the Y-up camera's ray under the mouse on hover, and plain LMB
   /// strokes instead of an orbit. Alt+LMB, RMB, MMB and the wheel keep the
@@ -245,6 +249,7 @@ class SubEditor3DViewport extends StatefulWidget {
     this.statsLabel,
     this.onFloorTap,
     this.floorTapPlaneY = 0.0,
+    this.onRayTap,
     this.brushInput,
     this.showGrid = true,
     this.collisionLines,

@@ -42,7 +42,7 @@ const SmokeReportConfig studioSmokeConfig = SmokeReportConfig(
 const TestCategories studioTestCategories = TestCategories([
   ('Blueprint', ['blueprint']),
   ('Material & Texture', ['material', 'texture', 'shader']),
-  ('Mesh & Physics', ['static_mesh', 'skeletal', 'mesh', 'physics', 'socket', 'lod', 'ccmh', 'manny', 'mannequin']),
+  ('Mesh & Physics', ['static_mesh', 'skeletal', 'mesh', 'physics', 'socket', 'lod', 'ccmh', 'manny', 'mannequin', 'garment', 'cloth']),
   ('Animation & Sequencer', ['animation', 'anim_', 'sequencer', 'montage', 'retarget']),
   ('Lighting & Environment', ['environment', 'lighting', 'solar', 'sky', 'light', 'post_process', 'quality']),
   ('Landscape & Foliage', ['landscape', 'foliage']),

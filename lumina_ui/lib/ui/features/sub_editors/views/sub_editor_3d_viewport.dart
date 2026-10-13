@@ -449,6 +449,10 @@ class _SubEditor3DViewportState extends _SubEditor3DViewportStateBase
                             !HardwareKeyboard.instance.isAltPressed) {
                           _handleGizmoClick(event.localPosition);
                         }
+                        if (widget.onRayTap != null) {
+                          final ray = _brushRay(event.localPosition);
+                          if (ray != null) widget.onRayTap!(ray);
+                        }
                         if (widget.onFloorTap == null) return;
                         _handleFloorTap(event.localPosition);
                       },

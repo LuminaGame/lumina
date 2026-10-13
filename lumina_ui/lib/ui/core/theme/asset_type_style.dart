@@ -58,6 +58,8 @@ class AssetTypeStyle {
           const AssetTypeStyle._(EditorColors.assetTypeTheme, 'Theme', 'theme', LucideIcons.palette),
         AssetType.clothSettings => const AssetTypeStyle._(
             EditorColors.assetTypePhysicsAsset, 'Cloth Settings', 'clothSettings', LucideIcons.shirt),
+        AssetType.garment =>
+          const AssetTypeStyle._(EditorColors.assetTypeSkeletalMesh, 'Garment', 'garment', LucideIcons.shirt),
         AssetType.unknown => const AssetTypeStyle._(EditorColors.mutedForeground, 'Asset', 'unknown', LucideIcons.file),
       };
 }

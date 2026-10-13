@@ -43,6 +43,11 @@ enum AssetType {
   /// JSON (mass, stiffness, wind, motion, self-collision), shared by the
   /// cloth components that name it.
   clothSettings,
+
+  /// A garment: `raw_payload` is a `LuminaGarmentDocument` as JSON (its
+  /// source mesh, reference body, placement, landmarks, thickness, slot),
+  /// fitted to whatever body wears it.
+  garment,
 }
 
 class AssetReference {

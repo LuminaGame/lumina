@@ -41,6 +41,8 @@ class AssetRefField extends StatelessWidget {
         return {AssetType.audio};
       case 'LuminaClothSettings':
         return {AssetType.clothSettings};
+      case 'LuminaGarment':
+        return {AssetType.garment};
       case 'Texture':
       case 'LuminaTexture':
         return {AssetType.texture};

@@ -140,6 +140,14 @@ mixin _ContentBrowserNewAsset on _ContentBrowserWidgetStateBase {
                     _newAssetTypeBtn(
                       context,
                       vm,
+                      'Character → Garment (.lmas)',
+                      AssetType.garment,
+                      LucideIcons.shirt,
+                      'characters',
+                    ),
+                    _newAssetTypeBtn(
+                      context,
+                      vm,
                       'New Sequencer (.lmas)',
                       AssetType.sequencer,
                       LucideIcons.film,

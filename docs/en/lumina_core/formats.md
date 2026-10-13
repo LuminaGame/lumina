@@ -128,7 +128,7 @@ A square heightmap terrain plus its foliage layers — the single source of trut
 
 ### `enum AssetType`
 
-`AssetType`: Enumeration listing system options and state constants. `clothSettings` is a cloth settings asset whose `raw_payload` is a `LuminaClothSettingsDocument` as JSON (`lib/src/formats/lumina_cloth_settings_document.dart`: the settings, `toProperties` / `fromProperties` with the cloth component's keys and clamped `ranges`, `withValue`, `toAsset` / `fromAsset`).
+`AssetType`: Enumeration listing system options and state constants. `clothSettings` is a cloth settings asset whose `raw_payload` is a `LuminaClothSettingsDocument` as JSON (`lib/src/formats/lumina_cloth_settings_document.dart`: the settings, `toProperties` / `fromProperties` with the cloth component's keys and clamped `ranges`, `withValue`, `toAsset` / `fromAsset`). `garment` is a garment asset whose `raw_payload` is a `LuminaGarmentDocument` as JSON (`lib/src/formats/lumina_garment_document.dart`: source mesh, reference body, placement and `placementMatrix` / `place`, `LuminaGarmentLandmark` pairs and the 17 `presets`, thickness clamped to 0–10 cm, slot, cloth options, `toAsset` / `fromAsset`).
 
 ### `class AssetReference`
 

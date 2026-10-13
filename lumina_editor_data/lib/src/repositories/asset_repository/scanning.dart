@@ -191,6 +191,8 @@ mixin _AssetScanning on _AssetRepositoryState {
       AssetType.theme => utf8.encode(LuminaThemeDocument.defaultShadcnDark(name: fileName.replaceAll('.lmas', '')).toJson()),
       // New cloth settings start at the cloth component's defaults.
       AssetType.clothSettings => utf8.encode(const LuminaClothSettingsDocument().toJson()),
+      // A new garment has no mesh yet: Torso, 0.5 cm from the skin.
+      AssetType.garment => utf8.encode(const LuminaGarmentDocument().toJson()),
       _ => null,
     };
 
