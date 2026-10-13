@@ -503,8 +503,8 @@ packages:
     dependency: transitive
     description:
       path: shared
-      ref: ea8e8f38d5b5d613c8d783606c01c84efa0879b9
-      resolved-ref: ea8e8f38d5b5d613c8d783606c01c84efa0879b9
+      ref: daf1035ea8421dd23e25bfb5af57d7ec2eb3fb3b
+      resolved-ref: daf1035ea8421dd23e25bfb5af57d7ec2eb3fb3b
       url: "https://github.com/LuminaGame/marketplace.git"
     source: git
     version: "0.1.0"
@@ -521,8 +521,8 @@ packages:
     dependency: transitive
     description:
       path: lumina_plugin_miniai
-      ref: a36a06cce7dbd86273a842ab995a6da06c854e64
-      resolved-ref: a36a06cce7dbd86273a842ab995a6da06c854e64
+      ref: f9a7bbfae9e0d49d032a6813c511714630259634
+      resolved-ref: f9a7bbfae9e0d49d032a6813c511714630259634
       url: "https://github.com/LuminaGame/plugins.git"
     source: git
     version: "0.1.0"
@@ -530,8 +530,8 @@ packages:
     dependency: transitive
     description:
       path: lumina_plugin_pcg
-      ref: a36a06cce7dbd86273a842ab995a6da06c854e64
-      resolved-ref: a36a06cce7dbd86273a842ab995a6da06c854e64
+      ref: f9a7bbfae9e0d49d032a6813c511714630259634
+      resolved-ref: f9a7bbfae9e0d49d032a6813c511714630259634
       url: "https://github.com/LuminaGame/plugins.git"
     source: git
     version: "0.1.0"
@@ -539,8 +539,8 @@ packages:
     dependency: transitive
     description:
       path: lumina_plugin_trellis_image
-      ref: a36a06cce7dbd86273a842ab995a6da06c854e64
-      resolved-ref: a36a06cce7dbd86273a842ab995a6da06c854e64
+      ref: f9a7bbfae9e0d49d032a6813c511714630259634
+      resolved-ref: f9a7bbfae9e0d49d032a6813c511714630259634
       url: "https://github.com/LuminaGame/plugins.git"
     source: git
     version: "0.2.0"
