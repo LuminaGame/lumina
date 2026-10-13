@@ -95,7 +95,8 @@ class GenerateDartCodeUseCase {
               ))
           .toList();
       final levelFile = File('${levelsDir.path}/${dartFileName(levelName)}');
-      levelFile.writeAsStringSync(_codeGenerator.generateLevelDart(
+      // The Anim Classes its skeletal meshes play are compiled first.
+      await levelFile.writeAsString(await _codeGenerator.generateLevelDartAsync(
         levelName: levelName,
         actors: assetActors,
         actorMaps: actors,

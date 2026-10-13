@@ -35,6 +35,7 @@ mixin _LevelCodegen on _DartCodeGeneratorServiceState {
     Map<String, dynamic>? worldPartition,
     String? projectDir,
     LuminaLevelBlueprintDocument? levelBlueprint,
+    Map<String, BlueprintAnimClassRef> animBlueprints = const {},
   }) {
     // The level's class follows Dart's naming rules (`L_Main` → `LMain`, in
     // `levels/l_main.dart`, which main.dart imports); the level keeps its
@@ -78,6 +79,9 @@ mixin _LevelCodegen on _DartCodeGeneratorServiceState {
       buffer.writeln("import '${_escape(gameModeBinding.$2)}';");
     }
     if (usesBlueprints) buffer.writeln("import '../actors/actors.g.dart';");
+    for (final uri in _levelAnimImports(maps, animBlueprints)) {
+      buffer.writeln("import '${_escape(uri)}';");
+    }
     buffer.writeln();
     buffer.writeln('/// Level `$levelName` as authored in Lumina Studio.');
     buffer.writeln('class $className extends LuminaLevel {');
@@ -94,6 +98,7 @@ mixin _LevelCodegen on _DartCodeGeneratorServiceState {
         projectDir: projectDir,
         environment: environment,
         hiddenInGame: hidden.contains((map['id'] ?? map['name'] ?? '').toString()),
+        animBlueprints: animBlueprints,
       );
       if (emitted == null) continue;
       final label = (map['name'] ?? '').toString().replaceAll(RegExp(r'[\r\n]'), ' ');
@@ -378,6 +383,7 @@ mixin _LevelCodegen on _DartCodeGeneratorServiceState {
     String? projectDir,
     Map<String, dynamic>? environment,
     bool hiddenInGame = false,
+    Map<String, BlueprintAnimClassRef> animBlueprints = const {},
   }) {
     final expression = _emitActorExpression(
       a,
@@ -386,6 +392,7 @@ mixin _LevelCodegen on _DartCodeGeneratorServiceState {
       projectDir: projectDir,
       environment: environment,
       hiddenInGame: hiddenInGame,
+      animBlueprints: animBlueprints,
     );
     if (expression == null || !hiddenInGame) return expression;
     // Every expression is one actor followed by the list's comma; the cascade
@@ -402,6 +409,7 @@ mixin _LevelCodegen on _DartCodeGeneratorServiceState {
     String? projectDir,
     Map<String, dynamic>? environment,
     bool hiddenInGame = false,
+    Map<String, BlueprintAnimClassRef> animBlueprints = const {},
   }) {
     final type = (a['type'] ?? 'actor').toString();
     if (type == 'Folder') return null;
@@ -509,7 +517,8 @@ mixin _LevelCodegen on _DartCodeGeneratorServiceState {
                   scaleCode: scaleCode,
                   castShadows: '$castShadows',
                   visible: '$visible',
-                  material: material);
+                  material: material,
+                  animBlueprints: animBlueprints);
         }
         if (meshPath is String && meshPath.isNotEmpty) {
           // The material assigned to the placed mesh, drawn on every section.

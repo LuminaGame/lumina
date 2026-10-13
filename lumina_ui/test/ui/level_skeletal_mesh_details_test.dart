@@ -1,9 +1,11 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina_editor_data/lumina_editor.dart' hide BoxShape;
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
 import 'package:lumina_ui/ui/features/details/models/editor_component_node.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/blueprint_play_support.dart';
 import 'package:lumina_ui/ui/features/main_editor/services/pie_controller.dart';
 import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
 import 'package:lumina_ui/ui/features/main_editor/views/details_widget.dart';
@@ -88,5 +90,37 @@ void main() {
     expect(bodyMesh.castShadows, isTrue);
     expect(LuminaCharacterSlots.of(hairActor).names, ['Hair']);
     expect(LuminaCharacterSlots.of(hairActor).component('Hair'), same(hairMesh));
+  });
+
+  test("Play runs the Anim Class the mesh's Details name, through the project's Blueprint registry", () {
+    void write(String path, String name, AssetType type, Map<String, dynamic> payload) => File('${tempDir.path}/$path')
+      ..parent.createSync(recursive: true)
+      ..writeAsBytesSync(
+          LuminaAsset(assetId: name, name: name, type: type, rawPayload: utf8.encode(jsonEncode(payload))).toProtoBufferBytes());
+    write(LuminaThirdPersonContent.projectAnimBlueprintPath, 'ABP_Character', AssetType.animBlueprint,
+        LuminaThirdPersonContent.animBlueprint.toJson());
+    write(LuminaThirdPersonContent.projectWalkBlendSpacePath, 'BS_Walk', AssetType.blendSpace,
+        LuminaThirdPersonContent.walkBlendSpace.toJson());
+    write(LuminaThirdPersonContent.projectLocomotionBlendSpacePath, 'BS_Locomotion', AssetType.blendSpace,
+        LuminaThirdPersonContent.locomotionBlendSpace.toJson());
+    final body = skeletal('body_1', 'Body'), still = skeletal('still_1', 'Still');
+    body.components.single.properties['animClass'] = {
+      'slot_name': 'animClass',
+      'asset_id': 'ABP_Character',
+      'asset_path': LuminaThirdPersonContent.projectAnimBlueprintPath,
+    };
+    final game = EditorPieGame([body, still], registry: EditorBlueprintClassRegistry(tempDir.path, inputActions: const []));
+    final world = LuminaWorld(worldType: LuminaWorldType.game);
+    addTearDown(world.cleanup);
+    game.mountIntoWorldForTest(world);
+    for (var i = 0; i < 30; i++) {
+      world.tick(1 / 60);
+    }
+    LuminaActor actor(String id) => world.persistentLevel.actors.firstWhere((a) => a.key == LuminaObjectKey(id));
+    final anim = actor('body_1').components.whereType<LuminaAnimBlueprintInstance>().single;
+    expect(anim.mesh, same(actor('body_1').rootComponent));
+    expect(anim.currentState, isNotNull);
+    expect((actor('body_1').rootComponent as LuminaAnimatedMeshComponent).currentClip, isNotNull);
+    expect(actor('still_1').components.whereType<LuminaAnimBlueprintInstance>(), isEmpty);
   });
 }

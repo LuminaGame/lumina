@@ -484,7 +484,7 @@ class GameAnimationSampleBuilder {
     final codegen = DartCodeGeneratorService();
     final levels = Directory('$projectDir/lib/levels');
     await levels.create(recursive: true);
-    await File('${levels.path}/${dartFileName(GaspSandboxLevel.levelName)}').writeAsString(codegen.generateLevelDart(
+    await File('${levels.path}/${dartFileName(GaspSandboxLevel.levelName)}').writeAsString(await codegen.generateLevelDartAsync(
       levelName: GaspSandboxLevel.levelName,
       actors: const [],
       actorMaps: actors,

@@ -184,7 +184,8 @@ mixin _EditorCodegenAndSave on _EditorViewModelState {
         )
         .toList();
 
-    final levelContent = _codeGen.generateLevelDart(
+    // The Anim Classes the level's skeletal meshes play are compiled first.
+    final levelContent = await _codeGen.generateLevelDartAsync(
       levelName: activeLevelName,
       actors: assetActors,
       // Full editor actor maps (transforms, lights, meshes, sky components) and
@@ -206,9 +207,9 @@ mixin _EditorCodegenAndSave on _EditorViewModelState {
         blueprint: BlueprintEditorNodes.forEngine(levelBlueprint.blueprint),
       ),
     );
-    File(
+    await File(
       '${levelDir.path}/${dartFileName(activeLevelName)}',
-    ).writeAsStringSync(levelContent);
+    ).writeAsString(levelContent);
 
     final updatedProject = currentProject.copyWith(
       isDirty: false,

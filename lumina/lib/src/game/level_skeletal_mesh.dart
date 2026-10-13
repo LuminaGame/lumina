@@ -1,5 +1,6 @@
 import 'package:vector_math/vector_math_64.dart';
 
+import 'package:lumina/src/blueprint/anim/anim_blueprint_instance.dart';
 import 'package:lumina/src/components/base/actor_component.dart';
 import 'package:lumina/src/components/mesh/animated_mesh_component.dart';
 import 'package:lumina/src/components/mesh/character_slots.dart';
@@ -63,8 +64,22 @@ class LuminaPoseFromActorComponent extends LuminaActorComponent {
 /// - `slot`: the actor's character slot of that name holds the mesh,
 /// - `poseFrom`: the id of another level actor whose skeletal mesh it
 ///   follows by bone name,
-/// - [springs]: a `LuminaSpringMorphComponent` (jiggle), after the mesh.
+/// - [springs]: a `LuminaSpringMorphComponent` (jiggle), after the mesh,
+/// - [animBlueprint]: the instance of the Anim Class (Details), which
+///   drives the mesh's pose every frame.
 abstract final class LuminaLevelSkeletalMesh {
+  /// The project path of the Animation Blueprint the Details' Anim Class
+  /// names (an asset reference or a path), or null for none.
+  static String? animClassPath(Map<String, Object?> details) {
+    final value = details['animClass'];
+    var path = value is Map ? value['asset_path'] : value;
+    if (path is! String) return null;
+    path = path.replaceAll(r'\', '/');
+    final contents = path.indexOf('/contents/');
+    if (!path.startsWith('contents/') && contents >= 0) path = path.substring(contents + 1);
+    return path.isEmpty || path == 'None' || !path.endsWith('.lmas') ? null : path;
+  }
+
   static LuminaActor build({
     LuminaObjectKey? key,
     required String meshAssetPath,
@@ -77,6 +92,7 @@ abstract final class LuminaLevelSkeletalMesh {
     Map<String, Object?> details = const {},
     Map<String, Object?>? springs,
     LuminaAssetProvider? assetProvider,
+    LuminaAnimBlueprintFactory? animBlueprint,
   }) {
     final shadow = details['castShadow'];
     final mesh = LuminaAnimatedMeshComponent(
@@ -90,6 +106,7 @@ abstract final class LuminaLevelSkeletalMesh {
       assetProvider: assetProvider,
     );
     final actor = LuminaActor(key: key, root: mesh);
+    if (animBlueprint != null) actor.addComponent(animBlueprint(mesh));
     if (springs != null) actor.addComponent(LuminaSpringMorphComponent.fromProperties(Map<String, Object?>.of(springs)));
     final from = details['poseFrom'];
     if (from is String && from.isNotEmpty && from != 'None' && from != key?.value) {

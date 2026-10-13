@@ -426,7 +426,12 @@ class EditorPieGame extends LuminaGame {
         if (actor.type == 'SkeletalMesh') {
           final springs = actor.components.where((c) => c.type == 'LuminaSpringMorphComponent').firstOrNull;
           final details = actor.components.where((c) => c.type == 'LuminaSkeletalMeshComponent').firstOrNull;
+          final detailMap = Map<String, Object?>.from(details?.properties ?? const {});
+          // The Anim Class (Details) through the registry's VM class, as the
+          // generated level plays its compiled class.
+          final animPath = LuminaLevelSkeletalMesh.animClassPath(detailMap);
           return LuminaLevelSkeletalMesh.build(
+            animBlueprint: animPath == null ? null : registry?.animClassFor(animPath)?.factory,
             key: LuminaObjectKey(actor.id),
             meshAssetPath: meshPath,
             location: location,
@@ -435,7 +440,7 @@ class EditorPieGame extends LuminaGame {
             castShadows: actor.castShadows,
             visible: actor.isVisible,
             materialOverrideAsset: _assignedMaterial(actor),
-            details: Map<String, Object?>.from(details?.properties ?? const {}),
+            details: detailMap,
             springs: springs == null ? null : Map<String, Object?>.from(springs.properties),
           );
         }

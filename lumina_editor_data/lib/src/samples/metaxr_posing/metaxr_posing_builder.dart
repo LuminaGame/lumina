@@ -238,7 +238,7 @@ class MetaXrPosingBuilder {
     ProjectRepository.ensurePubspecAssets(projectDir);
     final levels = Directory('$projectDir/lib/levels');
     await levels.create(recursive: true);
-    await File('${levels.path}/${dartFileName(MetaXrPosingLevel.levelName)}').writeAsString(codegen.generateLevelDart(
+    await File('${levels.path}/${dartFileName(MetaXrPosingLevel.levelName)}').writeAsString(await codegen.generateLevelDartAsync(
       levelName: MetaXrPosingLevel.levelName,
       actors: const [],
       actorMaps: MetaXrPosingLevel.actors(),

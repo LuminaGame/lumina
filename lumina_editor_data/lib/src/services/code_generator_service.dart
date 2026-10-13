@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
+import 'dart:typed_data';
 import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/lumina.dart';
 import 'package:lumina_editor_data/src/services/blueprint_codegen/blueprint_dart_generator.dart';
@@ -271,6 +273,76 @@ class MyLuminaGameApp extends StatelessWidget {
     } catch (_) {
       return null;
     }
+  }
+
+  /// [_readPayload] with async file I/O; a large payload (a pose database)
+  /// is decoded on a worker isolate.
+  static Future<Map<String, dynamic>?> _readPayloadAsync(String projectPath, String assetPath) async {
+    final file = File('$projectPath/$assetPath');
+    if (!await file.exists()) return null;
+    try {
+      final bytes = await file.readAsBytes();
+      return bytes.length < 256 * 1024 ? _decodePayload(bytes) : await Isolate.run(() => _decodePayload(bytes));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Map<String, dynamic>? _decodePayload(Uint8List bytes) {
+    try {
+      final payload = LuminaAsset.fromBytes(bytes).rawPayload;
+      if (payload == null) return null;
+      final decoded = jsonDecode(utf8.decode(payload));
+      return decoded is Map ? Map<String, dynamic>.from(decoded) : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Compiles the Animation Blueprints the level's placed skeletal meshes
+  /// play (the Anim Class in their Details) into the project's `lib/anim/`,
+  /// with async file I/O: the class each one is, by its project path, for
+  /// [generateLevelDart]'s `animBlueprints`. A class that is missing or has
+  /// errors is left out (the level notes it and the mesh plays no animation).
+  Future<Map<String, BlueprintAnimClassRef>> compileLevelAnimBlueprints(
+      String projectDir, List<Map<String, dynamic>> actorMaps) async {
+    final paths = <String>{
+      for (final a in actorMaps) ?_levelAnimClass(a),
+    };
+    final refs = <String, BlueprintAnimClassRef>{};
+    for (final path in paths) {
+      if (!await File('$projectDir/$path').exists()) continue;
+      final compiled = await compileAndWriteAnimBlueprint(projectDir, path);
+      if (compiled.ok && compiled.ref != null) refs[path] = compiled.ref!;
+    }
+    return refs;
+  }
+
+  /// [generateLevelDart] after compiling the Anim Classes the level's
+  /// skeletal meshes play ([compileLevelAnimBlueprints]; needs [projectDir]),
+  /// so the generated level plays them. Nothing here blocks on file I/O.
+  Future<String> generateLevelDartAsync({
+    required String levelName,
+    required List<LuminaAsset> actors,
+    List<Map<String, dynamic>>? actorMaps,
+    Map<String, dynamic>? environment,
+    Map<String, dynamic>? worldPartition,
+    String? projectDir,
+    LuminaLevelBlueprintDocument? levelBlueprint,
+  }) async {
+    final anims = projectDir == null || actorMaps == null
+        ? const <String, BlueprintAnimClassRef>{}
+        : await compileLevelAnimBlueprints(projectDir, actorMaps);
+    return generateLevelDart(
+      levelName: levelName,
+      actors: actors,
+      actorMaps: actorMaps,
+      environment: environment,
+      worldPartition: worldPartition,
+      projectDir: projectDir,
+      levelBlueprint: levelBlueprint,
+      animBlueprints: anims,
+    );
   }
 
   /// The project's input actions from its `.lmproject` manifest.

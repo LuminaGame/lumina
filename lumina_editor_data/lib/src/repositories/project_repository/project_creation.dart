@@ -215,10 +215,11 @@ mixin _ProjectCreation {
       );
       File('${libDir.path}/main.dart').writeAsStringSync(mainCode);
 
-      final levelCode = codeGenService.generateLevelDart(
+      final levelCode = await codeGenService.generateLevelDartAsync(
         levelName: 'L_DefaultLevel',
         actors: [],
         actorMaps: seededActors,
+        projectDir: targetDir.path,
       );
       final levelCodeDir = Directory('${targetDir.path}/lib/levels');
       levelCodeDir.createSync(recursive: true);

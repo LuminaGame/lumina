@@ -117,7 +117,7 @@ class TemplateProjectCreator {
       final project = _manifestFor(template, sourceProject, projectName, target.path);
       File('${target.path}/$projectName.lmproject').writeAsStringSync(jsonEncode(project.toMap()));
       yield ProjectCreationProgress(step, 0.82, 'Generating Dart code for ${project.activeLevel}...');
-      final generated = _generateCode(target.path, project);
+      final generated = await _generateCode(target.path, project);
       yield ProjectCreationProgress(step, 0.88, 'Generated ${generated.join(', ')}');
       final license = _keepLicense(template, target.path);
       if (license != null) yield ProjectCreationProgress(step, 0.92, 'Kept the template license in $license');
@@ -247,7 +247,7 @@ class TemplateProjectCreator {
   /// What the editor's Save Level generates, for the new project: level code
   /// for any level the template did not ship generated, the Blueprint
   /// registry, and `lib/main.dart`. Returns the files written.
-  List<String> _generateCode(String projectDir, LuminaProject project) {
+  Future<List<String>> _generateCode(String projectDir, LuminaProject project) async {
     final written = <String>[];
     final lib = Directory('$projectDir/lib')..createSync(recursive: true);
     final levelsDir = Directory('${lib.path}/levels')..createSync(recursive: true);
@@ -257,12 +257,12 @@ class TemplateProjectCreator {
     for (final rel in _levelFiles(projectDir)) {
       final name = rel.split('/').last.replaceAll('.lmas', '');
       final out = File('${levelsDir.path}/${dartFileName(name)}');
-      if (out.existsSync()) continue;
+      if (await out.exists()) continue;
       final meta = _levelMetadata(File('$projectDir/$rel'));
       final actors = [
         for (final a in (meta?['actors'] as List?) ?? const []) Map<String, dynamic>.from(a as Map),
       ];
-      out.writeAsStringSync(_codegen.generateLevelDart(
+      await out.writeAsString(await _codegen.generateLevelDartAsync(
         levelName: name,
         actors: [
           for (final a in actors)

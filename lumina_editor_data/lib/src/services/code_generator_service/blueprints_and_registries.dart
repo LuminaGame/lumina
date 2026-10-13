@@ -250,7 +250,7 @@ mixin _BlueprintsAndRegistriesCodegen on _DartCodeGeneratorServiceState {
   /// generated Blueprint in `lib/actors/` imports.
   Future<({bool ok, BlueprintAnimClassRef? ref, List<LuminaBlueprintDiagnostic> issues})> compileAndWriteAnimBlueprint(
       String projectPath, String assetPath) async {
-    final document = DartCodeGeneratorService._readPayload(projectPath, assetPath);
+    final document = await DartCodeGeneratorService._readPayloadAsync(projectPath, assetPath);
     if (document == null) {
       return (
         ok: false,
@@ -259,24 +259,26 @@ mixin _BlueprintsAndRegistriesCodegen on _DartCodeGeneratorServiceState {
       );
     }
     final anim = LuminaAnimBlueprintDocument.fromJson(document);
-    final blendSpaces = <String, LuminaBlendSpaceDocument>{
-      for (final machine in anim.stateMachines)
-        for (final state in machine.states)
-          if (state.pose.blendSpace != null)
-            if (DartCodeGeneratorService._readPayload(projectPath, state.pose.blendSpace!) case final space?)
-              state.pose.blendSpace!: LuminaBlendSpaceDocument.fromJson(space),
-    };
-    final poseDatabases = <String, LuminaPoseSearchDatabaseDocument>{
-      for (final machine in anim.stateMachines)
-        for (final state in machine.states)
-          if (state.pose.kind == LuminaAnimPoseKind.motionMatching && state.pose.database != null)
-            if (DartCodeGeneratorService._readPayload(projectPath, state.pose.database!) case final db?)
-              state.pose.database!: LuminaPoseSearchDatabaseDocument.fromJson(db),
-    };
+    final blendSpaces = <String, LuminaBlendSpaceDocument>{};
+    final poseDatabases = <String, LuminaPoseSearchDatabaseDocument>{};
+    for (final machine in anim.stateMachines) {
+      for (final state in machine.states) {
+        final space = state.pose.blendSpace;
+        if (space != null && !blendSpaces.containsKey(space)) {
+          final json = await DartCodeGeneratorService._readPayloadAsync(projectPath, space);
+          if (json != null) blendSpaces[space] = LuminaBlendSpaceDocument.fromJson(json);
+        }
+        final db = state.pose.database;
+        if (state.pose.kind == LuminaAnimPoseKind.motionMatching && db != null && !poseDatabases.containsKey(db)) {
+          final json = await DartCodeGeneratorService._readPayloadAsync(projectPath, db);
+          if (json != null) poseDatabases[db] = LuminaPoseSearchDatabaseDocument.fromJson(json);
+        }
+      }
+    }
     final rawName = assetPath.split('/').last.replaceAll('.lmas', '');
     LuminaGeneratedCodeMigration.migrate(projectPath);
     final file = File('$projectPath/lib/anim/${dartFileName(rawName)}');
-    final existingContent = file.existsSync() ? await file.readAsString() : null;
+    final existingContent = await file.exists() ? await file.readAsString() : null;
     final className = DartCodeGeneratorService._sanitizeClassName(rawName);
     final result = const BlueprintDartGenerator().generateAnimBlueprint(anim,
         className: className,
