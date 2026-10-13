@@ -371,6 +371,7 @@ An actor a plugin asks the host to place: same units and axes as [EditorActorSna
 | `scale` | `final List<double> scale` |  |
 | `meshAssetPath` | `final String? meshAssetPath` |  |
 | `components` | `final List<EditorComponentSpec> components` |  |
+| `blueprintClass` | `final String? blueprintClass` | Örneği yerleştirilecek Blueprint sınıfı (projeye göre `.lmas` yolu); aktör, `type` ne derse desin, sınıfın ilk mesh bileşeniyle çizilen bir `Blueprint` aktörü olur. |
 
 ### `abstract class EditorLevelAccess implements EditorLevelOperations`
 

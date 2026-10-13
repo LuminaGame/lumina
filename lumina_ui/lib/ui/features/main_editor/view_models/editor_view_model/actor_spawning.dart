@@ -425,6 +425,10 @@ mixin _EditorActorSpawning on _EditorViewModelState {
     ));
   }
 
+  /// Reads a placed Blueprint actor's class and loads the mesh the viewport
+  /// draws for it (a plugin placing a Blueprint through the level API).
+  Future<void> loadBlueprintPreview(EditorActorNode actor) => _loadBlueprintPreview(actor);
+
   /// Reads a placed Blueprint's class and loads the mesh the viewport draws
   /// for it.
   Future<void> _loadBlueprintPreview(EditorActorNode actor, {BlueprintActorPreview? preview}) async {

@@ -126,8 +126,10 @@ void main() {
       type: 'Empty',
       location: [1, 1, 1],
       components: [EditorComponentSpec(type: 'Tag', name: 'T', properties: {'x': 'y'})],
+      blueprintClass: 'contents/blueprints/BP_Hero.lmas',
     );
     final specBack = EditorLevelJson.specFromJson(jsonDecode(jsonEncode(EditorLevelJson.specToJson(spec))) as Map<String, Object?>);
     expect(EditorLevelJson.specToJson(specBack), EditorLevelJson.specToJson(spec));
+    expect(specBack.blueprintClass, 'contents/blueprints/BP_Hero.lmas');
   });
 }

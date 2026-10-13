@@ -92,7 +92,7 @@ class EditorViewModelLevelAccess implements EditorLevelAccess {
       final node = EditorActorNode(
         id: id,
         name: spec.name,
-        type: spec.type,
+        type: (spec.blueprintClass ?? '').isNotEmpty ? 'Blueprint' : spec.type,
         parentId: spec.parentId,
         location: List<double>.from(spec.location),
         rotation: List<double>.from(spec.rotation),
@@ -108,6 +108,14 @@ class EditorViewModelLevelAccess implements EditorLevelAccess {
             ),
         ],
       );
+      final blueprint = spec.blueprintClass;
+      if (blueprint != null && blueprint.isNotEmpty) {
+        // An instance of a Blueprint class, drawn by its first mesh.
+        node.blueprintClass = blueprint.replaceAll(r'\', '/');
+        await viewModel.loadBlueprintPreview(node);
+        nodes.add(node);
+        continue;
+      }
       final mesh = spec.meshAssetPath;
       if (mesh != null && mesh.isNotEmpty) {
         // One parse per distinct file: a scatter of 200 barrels reads the

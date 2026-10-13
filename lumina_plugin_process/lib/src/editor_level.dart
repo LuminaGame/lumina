@@ -86,6 +86,11 @@ class EditorActorSpec {
   final String? meshAssetPath;
   final List<EditorComponentSpec> components;
 
+  /// A Blueprint class to place an instance of (its project-relative
+  /// `.lmas`, e.g. `contents/blueprints/BP_Hero.lmas`); the actor is then a
+  /// `Blueprint` actor whatever [type] says.
+  final String? blueprintClass;
+
   const EditorActorSpec({
     this.id,
     required this.name,
@@ -96,6 +101,7 @@ class EditorActorSpec {
     this.scale = const [1.0, 1.0, 1.0],
     this.meshAssetPath,
     this.components = const [],
+    this.blueprintClass,
   });
 }
 

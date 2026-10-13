@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina_editor_data/lumina_editor.dart';
@@ -106,6 +107,39 @@ void main() {
     final placed = vm.actors.singleWhere((a) => a.id == ids.single);
     expect(placed.meshData, isNotNull, reason: 'resolved against the project folder, not the working directory');
     expect(placed.meshAssetPath, 'contents/meshes/fuel_barrel_red.glb', reason: 'the path is kept as the plugin named it');
+  });
+
+  test('addActors places an instance of a Blueprint class, drawn by its first mesh component', () async {
+    final meshes = Directory('${vm.projectDirPath}/contents/meshes')..createSync(recursive: true);
+    File(barrel).copySync('${meshes.path}/fuel_barrel_red.glb');
+    final doc = LuminaBlueprintDocument(parentClass: 'LuminaActor', components: [
+      LuminaBlueprintComponent(id: 'root', name: 'Root', type: 'LuminaSceneComponent'),
+      LuminaBlueprintComponent(
+        id: 'mesh',
+        name: 'Mesh',
+        type: 'LuminaStaticMeshComponent',
+        parentId: 'root',
+        properties: {'staticMeshAsset': 'contents/meshes/fuel_barrel_red.glb'},
+      ),
+    ]);
+    final json = doc.toFormattedJson();
+    final bp = File('${vm.projectDirPath}/contents/blueprints/BP_Barrel.lmas')..parent.createSync(recursive: true);
+    bp.writeAsBytesSync(LuminaAsset(
+      assetId: 'bp_test',
+      name: 'BP_Barrel',
+      type: AssetType.actor,
+      rawPayload: Uint8List.fromList(utf8.encode(json)),
+      rawMatSource: json,
+      metadata: const {'parent_class': 'LuminaActor'},
+    ).toProtoBufferBytes());
+    final ids = await level.addActors(const [
+      EditorActorSpec(name: 'Hero', type: 'SkeletalMesh', location: [0.0, 0.0, 0.0], blueprintClass: 'contents/blueprints/BP_Barrel.lmas'),
+    ]);
+    final placed = vm.actors.singleWhere((a) => a.id == ids.single);
+    expect(placed.type, 'Blueprint');
+    expect(placed.blueprintClass, 'contents/blueprints/BP_Barrel.lmas');
+    expect(placed.blueprintPreview, isNotNull);
+    expect(placed.meshData, isNotNull, reason: 'the viewport draws its first mesh component');
   });
 
   test('removeActors takes children with the parent; setComponentProperty is undoable without a selection', () async {

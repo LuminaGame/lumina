@@ -9,7 +9,7 @@ import 'package:lumina_plugin_process/src/editor_level.dart';
 ///   "rotation":[x,y,z],"scale":[x,y,z],"isVisible","meshAssetPath"?,
 ///   "components":[{"id","type","name","enabled","properties":{...}}]}`
 /// - actor spec: `{"id"?,"name","type","parentId"?,"location","rotation",
-///   "scale","meshAssetPath"?,"components":[{"type","name","properties":{...}}]}`
+///   "scale","meshAssetPath"?,"blueprintClass"?,"components":[{"type","name","properties":{...}}]}`
 abstract final class EditorLevelJson {
   static Map<String, Object?> snapshotToJson(EditorActorSnapshot a) => {
         'id': a.id,
@@ -58,6 +58,7 @@ abstract final class EditorLevelJson {
         'rotation': s.rotation,
         'scale': s.scale,
         if (s.meshAssetPath != null) 'meshAssetPath': s.meshAssetPath,
+        if (s.blueprintClass != null) 'blueprintClass': s.blueprintClass,
         'components': [
           for (final c in s.components) {'type': c.type, 'name': c.name, 'properties': c.properties},
         ],
@@ -72,6 +73,7 @@ abstract final class EditorLevelJson {
         rotation: _vec(json['rotation'], 0),
         scale: _vec(json['scale'], 1),
         meshAssetPath: json['meshAssetPath'] as String?,
+        blueprintClass: json['blueprintClass'] as String?,
         components: [
           for (final c in _maps(json['components']))
             EditorComponentSpec(
