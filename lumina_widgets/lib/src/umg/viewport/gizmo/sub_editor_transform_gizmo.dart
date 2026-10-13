@@ -95,6 +95,10 @@ class SubEditorTransformGizmo extends ChangeNotifier {
   /// The click's result, so the owner can sync its selection.
   final void Function(String? id)? onPick;
 
+  /// A tool was chosen (a toolbar button, Q/W/E/R), also the tool already
+  /// active: the owner leaves any mode that hides the gizmo.
+  final void Function(GizmoMode mode)? onToolChosen;
+
   SubEditorTransformGizmo({
     GizmoMode mode = GizmoMode.translate,
     GizmoSpace space = GizmoSpace.world,
@@ -106,6 +110,7 @@ class SubEditorTransformGizmo extends ChangeNotifier {
     this.onDragCancel,
     this.pick,
     this.onPick,
+    this.onToolChosen,
     // ignore: prefer_initializing_formals
   })  : _mode = mode,
         // ignore: prefer_initializing_formals
@@ -128,6 +133,7 @@ class SubEditorTransformGizmo extends ChangeNotifier {
       };
 
   void setMode(GizmoMode mode) {
+    onToolChosen?.call(mode);
     if (mode == _mode) return;
     _mode = mode;
     notifyListeners();

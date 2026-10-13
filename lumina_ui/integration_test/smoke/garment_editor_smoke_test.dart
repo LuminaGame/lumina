@@ -12,6 +12,7 @@ import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.
 import 'package:lumina_ui/ui/features/main_editor/views/main_editor_view.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/sub_editor_transform_gizmo.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/viewport_ray.dart';
+import 'package:lumina_ui/ui/features/sub_editors/view_models/garment_editor_view_model.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/garment/garment.dart';
 import 'package:lumina_ui/ui/features/sub_editors/views/sub_editor_3d_viewport.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart';
@@ -99,14 +100,18 @@ void main() {
         gizmo.onDragEnd!('garment');
       }
 
-      await drag((t) => SubEditorGizmoDelta.translate(Vector3(0, -18 * t, 150 * t)));
+      // A new garment starts on the body (Torso region), not at the origin.
+      final start = [...garment.doc.location];
+      debugPrint('[garment_smoke] placed on the body at $start, scale ${garment.doc.scale}');
+      expect(start[1], greaterThan(80), reason: 'placed over the torso');
+      await drag((t) => SubEditorGizmoDelta.translate(Vector3(0, -18 * t, 6 * t)));
       await tester.tap(find.byKey(const ValueKey('garment_rotate')));
       await settle(4);
       await drag((t) => SubEditorGizmoDelta.rotate(Vector3(0, 0, 1), 90 * t));
       await tester.tap(find.byKey(const ValueKey('garment_scale')));
       await settle(4);
       await drag((t) => SubEditorGizmoDelta.scale(TransformGizmoModel.uniform, 0.15 * t));
-      expect(garment.doc.location[1], closeTo(150, 1));
+      expect(garment.doc.location[1], closeTo(start[1] + 6, 1));
       expect(garment.doc.rotation[1].abs(), closeTo(90, 1));
       expect(garment.doc.scale[0], closeTo(1.15, 0.01));
       final placedPng = await SmokeArtifacts.captureIntegrationPng(binding, tester, boundary: find.byKey(boundaryKey));
@@ -125,10 +130,12 @@ void main() {
         viewport.onRayTap!(front(e.value.$1, e.value.$2));
         await settle(10);
         await rec.capture();
-        await tester.tap(find.byKey(const ValueKey('garment_pick_body')));
+        // The placed garment point hands over to the body point.
+        expect(garment.pickMode, GarmentPickMode.body);
         await settle(3);
         viewport.onRayTap!(front(e.value.$1, e.value.$2));
         await settle(10);
+        expect(garment.pickMode, GarmentPickMode.none, reason: 'both points placed: the gizmo is back');
         await rec.hold(const Duration(milliseconds: 500));
       }
       expect(garment.doc.landmarks.where((l) => l.isComplete).length, 4);

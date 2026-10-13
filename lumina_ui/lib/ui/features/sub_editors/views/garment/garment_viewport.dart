@@ -22,6 +22,11 @@ mixin _GarmentViewport on _GarmentEditorBase {
       if (start != null) vm.setPlacement(location: start.location, rotation: start.rotation, scale: start.scale);
       _dragStart = null;
     },
+    // Any tool choice (this toolbar, the viewport's, W/E/R) ends landmark
+    // picking, which hides the gizmo.
+    onToolChosen: (_) {
+      if (vm.pickMode != GarmentPickMode.none) vm.setPickMode(GarmentPickMode.none);
+    },
   );
 
   @override
@@ -57,8 +62,12 @@ mixin _GarmentViewport on _GarmentEditorBase {
     }
   }
 
+  /// The gizmo's target: none while a click places a landmark (the hint
+  /// says so) or without a source mesh; drawn but fixed, with a hint, while
+  /// another body is previewed (the placement belongs to the reference
+  /// body).
   SubEditorGizmoTarget? _target() {
-    if (vm.pickMode != GarmentPickMode.none || vm.doc.sourceMesh.isEmpty || vm.fittedPreview != null) return null;
+    if (vm.pickMode != GarmentPickMode.none || vm.doc.sourceMesh.isEmpty) return null;
     final l = vm.doc.location;
     final q = LuminaGarmentMath.quaternionFromEuler(vm.doc.rotation);
     final pivot = LuminaAxes.toAuthoringLocation(Vector3(l[0], l[1], l[2]));
@@ -66,7 +75,20 @@ mixin _GarmentViewport on _GarmentEditorBase {
       id: 'garment',
       pivot: Vector3(pivot[0], pivot[1], pivot[2]),
       rotation: AuthoringRotation.quaternionToAuthoring(Quaternion(q[0], q[1], q[2], q[3])),
+      locked: vm.previewsAnotherBody,
+      lockedHint: 'Placed on the reference body: set Preview On to it to move the garment',
     );
+  }
+
+  /// What a click in the viewport does now, shown over it in a pick mode.
+  String? _pickHint() {
+    final name = vm.selectedLandmark;
+    return switch (vm.pickMode) {
+      GarmentPickMode.none => null,
+      _ when name == null => 'Select a landmark to place — Esc to exit',
+      GarmentPickMode.garment => 'Click on the garment to place "$name" — Esc to exit',
+      GarmentPickMode.body => 'Click on the body to place "$name" — Esc to exit',
+    };
   }
 
   /// The scene follows the document: the meshes shown and the placement.
@@ -177,7 +199,8 @@ mixin _GarmentViewport on _GarmentEditorBase {
       );
     }
     gizmo.setTarget(_target());
-    return SubEditor3DViewport(
+    final hint = _pickHint();
+    final view = SubEditor3DViewport(
       key: const ValueKey('garment_viewport'),
       title: 'Garment Fitting Viewport',
       transformGizmo: gizmo,
@@ -193,6 +216,44 @@ mixin _GarmentViewport on _GarmentEditorBase {
       onRayTap: _onRay,
       onPreviewWorldReady: _attach,
       onPreviewWorldDisposing: (_) => scene.detach(),
+    );
+    // Esc ends a pick mode (the viewport passes keys it does not use up).
+    return Focus(
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.escape && vm.pickMode != GarmentPickMode.none) {
+          vm.setPickMode(GarmentPickMode.none);
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
+      child: MouseRegion(
+        cursor: hint == null ? MouseCursor.defer : SystemMouseCursors.precise,
+        child: Stack(
+          children: [
+            Positioned.fill(child: view),
+            if (hint != null)
+              Positioned(
+                top: 44,
+                left: 0,
+                right: 0,
+                child: IgnorePointer(
+                  child: Center(
+                    child: Container(
+                      key: const ValueKey('garment_viewport_pick_hint'),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: EditorColors.card.withValues(alpha: 0.92),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: vm.pickMode == GarmentPickMode.garment ? const Color(0xFFF59E0B) : const Color(0xFF22D3EE)),
+                      ),
+                      child: Text(hint, style: const TextStyle(fontSize: 11, color: EditorColors.foreground)),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }

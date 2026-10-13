@@ -78,8 +78,12 @@ class GarmentEditorViewModel extends ChangeNotifier {
   /// while fitting): the viewport shows it instead of the placed source.
   LuminaFittedGarment? get fittedPreview => _fitted;
 
-  /// Whether a preview body other than the reference body is shown.
-  bool get previewsAnotherBody => _previewBody.isNotEmpty && _previewBody != _doc.referenceBody;
+  /// Whether a preview body other than the reference body is shown (the
+  /// same asset spelled with other separators or case is the same body).
+  bool get previewsAnotherBody => _previewBody.isNotEmpty && !samePath(_previewBody, _doc.referenceBody);
+
+  /// Whether two project paths name the same file.
+  static bool samePath(String a, String b) => a.replaceAll(r'\', '/').toLowerCase() == b.replaceAll(r'\', '/').toLowerCase();
 
   /// Increases when the meshes or the placement change (the viewport
   /// rebuilds its preview).
@@ -125,7 +129,7 @@ class GarmentEditorViewModel extends ChangeNotifier {
     _notify();
   }
 
-  Future<void> _reloadMeshes() async {
+  Future<void> _reloadMeshes({bool autoPlace = false}) async {
     final source = _doc.sourceMesh, body = previewBody;
     final results = await Future.wait([_mesh(source), _mesh(body)]);
     if (_disposed) return;
@@ -134,7 +138,67 @@ class GarmentEditorViewModel extends ChangeNotifier {
     if (previewBody == body) _body = results[1];
     _revision++;
     _notify();
+    if (autoPlace) placeOnBody();
     await refitPreview();
+  }
+
+  /// Where each slot's garment sits on a body, as fractions of its height
+  /// from the soles (unknown slots: the torso's).
+  static const Map<String, (double, double)> slotRegions = {
+    'Torso': (0.48, 0.82),
+    'Legs': (0.0, 0.55),
+    'Feet': (0.0, 0.07),
+    'Hair': (0.86, 1.0),
+    'Head': (0.86, 1.0),
+    'Hands': (0.38, 0.5),
+  };
+
+  /// Puts a garment that is not on the reference body yet onto it: with
+  /// complete landmarks it is aligned to them; otherwise, when the placed
+  /// source's centre lies outside its slot's region of the body (a mesh
+  /// modelled at the origin, under the feet), it is moved to the region's
+  /// centre, resized to the region when its height is off by more than
+  /// two times. A garment already over its region, or one placed by hand,
+  /// stays. True when the placement changed.
+  bool placeOnBody() {
+    final source = _source, body = _body;
+    if (source == null || body == null || previewsAnotherBody) return false;
+    final identity = _doc.location.every((v) => v == 0) && _doc.rotation.every((v) => v == 0) && _doc.scale.every((v) => v == 1);
+    if (!identity) return false;
+    if (_doc.landmarks.any((l) => l.isComplete)) return align();
+    final g = _bounds(source.data.positions), b = _bounds(body.data.positions);
+    final height = b.$2[1] - b.$1[1];
+    if (height <= 0 || g.$2[1] - g.$1[1] <= 0) return false;
+    final (lo, hi) = slotRegions[_doc.slot] ?? slotRegions['Torso']!;
+    final bottom = b.$1[1] + lo * height, top = b.$1[1] + hi * height;
+    final centre = [for (var k = 0; k < 3; k++) (g.$1[k] + g.$2[k]) / 2];
+    final margin = 0.15 * height;
+    final over = centre[1] >= bottom - margin &&
+        centre[1] <= top + margin &&
+        centre[0] >= b.$1[0] - margin &&
+        centre[0] <= b.$2[0] + margin &&
+        centre[2] >= b.$1[2] - margin &&
+        centre[2] <= b.$2[2] + margin;
+    if (over) return false;
+    final ratio = (g.$2[1] - g.$1[1]) / (top - bottom);
+    final s = ratio > 2 || ratio < 0.5 ? 1 / ratio : 1.0;
+    final target = [(b.$1[0] + b.$2[0]) / 2, (bottom + top) / 2, (b.$1[2] + b.$2[2]) / 2];
+    _set(_doc.copyWith(
+      location: [for (var k = 0; k < 3; k++) target[k] - s * centre[k]],
+      scale: [s, s, s],
+    ));
+    return true;
+  }
+
+  static (List<double>, List<double>) _bounds(Float64List p) {
+    final lo = [double.infinity, double.infinity, double.infinity], hi = [-double.infinity, -double.infinity, -double.infinity];
+    for (var i = 0; i + 2 < p.length; i += 3) {
+      for (var k = 0; k < 3; k++) {
+        lo[k] = math.min(lo[k], p[i + k]);
+        hi[k] = math.max(hi[k], p[i + k]);
+      }
+    }
+    return (lo, hi);
   }
 
   /// Fits the garment to the preview body (on a worker isolate, cached);
@@ -201,14 +265,16 @@ class GarmentEditorViewModel extends ChangeNotifier {
     }
   }
 
+  /// Chooses the garment's source mesh; a garment not on the body yet is
+  /// placed on it ([placeOnBody]).
   Future<void> setSourceMesh(String relative) async {
     _set(_doc.copyWith(sourceMesh: relative));
-    await _reloadMeshes();
+    await _reloadMeshes(autoPlace: true);
   }
 
   Future<void> setReferenceBody(String relative) async {
     _set(_doc.copyWith(referenceBody: relative));
-    await _reloadMeshes();
+    await _reloadMeshes(autoPlace: true);
   }
 
   /// Shows the garment on another body ('' : the reference body); not saved.
@@ -264,7 +330,9 @@ class GarmentEditorViewModel extends ChangeNotifier {
   /// A click's ray (body / runtime frame, cm): in garment mode it sets the
   /// selected landmark's garment point where the ray meets the placed
   /// garment (stored in the source mesh's space), in body mode its body
-  /// point on the body. False when nothing was hit or nothing is selected.
+  /// point on the body. After a hit the pick goes on to the landmark's
+  /// other point when that one is missing, else it ends (the gizmo is
+  /// back). False when nothing was hit or nothing is selected.
   bool pick(double ox, double oy, double oz, double dx, double dy, double dz) {
     final name = _selectedLandmark;
     final landmark = name == null ? null : _doc.landmark(name);
@@ -276,6 +344,7 @@ class GarmentEditorViewModel extends ChangeNotifier {
       if (body == null) return false;
       final hit = LuminaGarmentMath.raycast(body.data.positions, body.data.triangles, ox, oy, oz, dx, dy, dz);
       if (hit == null) return false;
+      _pickMode = landmark.garment == null ? GarmentPickMode.garment : GarmentPickMode.none;
       _set(_doc.withLandmark(landmark.withBody([hit.x, hit.y, hit.z])));
       return true;
     }
@@ -284,6 +353,7 @@ class GarmentEditorViewModel extends ChangeNotifier {
     final placed = placedSourcePositions();
     final hit = LuminaGarmentMath.raycast(placed, source.data.triangles, ox, oy, oz, dx, dy, dz);
     if (hit == null) return false;
+    _pickMode = landmark.body == null ? GarmentPickMode.body : GarmentPickMode.none;
     _set(_doc.withLandmark(landmark.withGarment(unplace([hit.x, hit.y, hit.z]))));
     return true;
   }

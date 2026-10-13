@@ -161,7 +161,9 @@ mixin _SubEditor3DViewportGizmo on _SubEditor3DViewportStateBase {
     if (gizmo == null || target == null) return false;
     final model = _transformGizmoModel();
     if (model == null) return false;
-    final handle = _gizmoHover ?? model.hitTest(local);
+    // Hit-tested where the gizmo is now: a hover from before it moved
+    // (an edit under a still pointer) is stale.
+    final handle = model.hitTest(local);
     if (handle == null) return false;
     if (target.locked) {
       setState(() {
