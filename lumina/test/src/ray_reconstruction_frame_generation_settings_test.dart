@@ -292,7 +292,9 @@ void main() {
         expect(controller.dlss, isNull);
         expect(view.guideBufferOptions.enabled, isTrue);
         expect(controller.frameGenerator, isNotNull);
-        expect(controller.frameGenerator!.generatedFrames, 3);
+        // Three asked: an RTX 50 class GPU generates three, an RTX 40 class
+        // one generates the one it can.
+        expect(controller.frameGenerator!.generatedFrames, LuminaRtxController.maxDlssGeneratedFrames(e).clamp(1, 3));
         expect(LuminaRtxController.activeNvidiaFeatures.value, {
           LuminaRtxController.nvidiaDlssRayReconstruction,
           LuminaRtxController.nvidiaDlssFrameGeneration,

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter_filament/filament.dart';
 import 'package:lumina_core/lumina_core.dart' show EngineLoggerService, ObservableValue;
 
@@ -142,7 +144,8 @@ class LuminaDlssSettings {
 
 /// DLSS Frame Generation for a view: [generatedFrames] frames generated
 /// before each rendered one (0 is off, 1 is 2x, up to 5 for 6x on RTX 50
-/// class GPUs). Extra presents happen only for views rendered into a
+/// class GPUs; a GPU that generates fewer, such as one frame on RTX 40
+/// class GPUs, generates as many as it can). Extra presents happen only for views rendered into a
 /// SwapChain; a view drawn by Flutter shows one generated frame per rendered
 /// frame.
 class LuminaDlssFrameGenerationSettings {
@@ -365,18 +368,22 @@ class LuminaRtxController {
   }
 
   void _applyFrameGeneration(LuminaDlssFrameGenerationSettings settings) {
-    final wanted = settings.enabled && maxDlssGeneratedFrames(engine) > 0;
+    final max = maxDlssGeneratedFrames(engine);
+    final wanted = settings.enabled && max > 0;
+    // More frames than the GPU generates (Multi Frame Generation on an RTX
+    // 40 class GPU) is the most it does, not none.
+    final frames = math.min(settings.generatedFrames, max);
     if (!wanted) {
       _frameGenerator?.destroy();
       _frameGenerator = null;
     } else if (_frameGenerator == null) {
       try {
-        _frameGenerator = DlssFrameGenerator.create(engine: engine, view: view, generatedFrames: settings.generatedFrames);
+        _frameGenerator = DlssFrameGenerator.create(engine: engine, view: view, generatedFrames: frames);
       } catch (e) {
         EngineLoggerService().log('DLSS frame generation not created: $e', level: 'warning', source: 'LuminaRtxController');
       }
-    } else if (_frameGenerator!.generatedFrames != settings.generatedFrames) {
-      _frameGenerator!.generatedFrames = settings.generatedFrames;
+    } else if (_frameGenerator!.generatedFrames != frames) {
+      _frameGenerator!.generatedFrames = frames;
     }
     _appliedFrameGeneration = settings;
   }

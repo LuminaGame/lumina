@@ -213,7 +213,7 @@ Applies both settings to one view: the scene's acceleration structures, the dire
 
 ### `class LuminaDlssFrameGenerationSettings`
 
-`generatedFrames` (0–5): frames DLSS Frame Generation generates per rendered frame (0 is off, the default; 1 is 2x, 3 is 4x); `enabled`; JSON key `generated_frames`. The generated frames are presented between the rendered ones by the native swap chain path; a Flutter texture viewport receives only the rendered frames.
+`generatedFrames` (0–5): frames DLSS Frame Generation generates per rendered frame (0 is off, the default; 1 is 2x, 3 is 4x; `LuminaRtxController` generates at most `maxDlssGeneratedFrames`, so 3 on an RTX 40 class GPU generates 1); `enabled`; JSON key `generated_frames`. The generated frames are presented between the rendered ones by the native swap chain path; a Flutter texture viewport receives only the rendered frames.
 
 ## `lib/src/post_process/rendering_features.dart`
 

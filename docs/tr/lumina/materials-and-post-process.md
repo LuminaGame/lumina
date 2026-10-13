@@ -213,7 +213,7 @@ Filament'in fragment pass portu (patch 0009) üzerinden bir view için FidelityF
 
 ### `class LuminaDlssFrameGenerationSettings`
 
-`generatedFrames` (0–5): DLSS Frame Generation'ın çizilen kare başına ürettiği kare (0 kapalı, varsayılan; 1 = 2x, 3 = 4x); `enabled`; JSON anahtarı `generated_frames`. Üretilen kareler yerel swap chain yolunda çizilen karelerin arasında sunulur; Flutter texture viewport'u yalnızca çizilen kareleri alır.
+`generatedFrames` (0–5): DLSS Frame Generation'ın çizilen kare başına ürettiği kare (0 kapalı, varsayılan; 1 = 2x, 3 = 4x; `LuminaRtxController` en çok `maxDlssGeneratedFrames` kadar üretir, yani RTX 40 sınıfı bir GPU'da 3 istenince 1 üretir); `enabled`; JSON anahtarı `generated_frames`. Üretilen kareler yerel swap chain yolunda çizilen karelerin arasında sunulur; Flutter texture viewport'u yalnızca çizilen kareleri alır.
 
 ## `lib/src/post_process/rendering_features.dart`
 
