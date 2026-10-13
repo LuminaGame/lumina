@@ -210,6 +210,7 @@ mixin _BlueprintEditorCompileAndDiskIo on _BlueprintEditorViewModelState {
   @override
   void _scanProjectAssets(String projectDir) {
     final allAssets = AssetRepository().scanProjectContents(projectDir);
+    _availableAssets = allAssets;
     bool isAnimGraphAsset(RealAssetInfo a) => a.type == AssetType.animBlueprint || a.type == AssetType.blendSpace;
 
     _availableSkeletalMeshes = allAssets.where((a) {

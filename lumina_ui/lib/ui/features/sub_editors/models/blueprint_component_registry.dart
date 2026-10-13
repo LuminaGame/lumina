@@ -1,4 +1,5 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart' show IconData, LucideIcons;
+import 'package:lumina_editor_data/lumina_editor.dart' show AssetType;
 
 import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_component_registry/cloth_component_descriptor.dart';
 import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_component_registry/skinned_cloth_component_descriptor.dart';
@@ -49,6 +50,10 @@ class ComponentPropertySchema {
   /// may name.
   final List<String> referenceTypes;
 
+  /// The asset types an [ComponentPropertyType.assetReference] property
+  /// takes (its picker offers only these).
+  final List<AssetType> assetTypes;
+
   const ComponentPropertySchema({
     required this.group,
     required this.name,
@@ -61,6 +66,7 @@ class ComponentPropertySchema {
     this.hardMax,
     this.enumOptions = const [],
     this.referenceTypes = const [],
+    this.assetTypes = const [],
   });
 
   /// The lowest value a number may take (typed values go past the slider).

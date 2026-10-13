@@ -234,6 +234,7 @@ Real Component Hierarchy Tree for Blueprint Editor.
 | `max` | `double max` | Holds the `max` property or configuration state. |
 | `enumOptions` | `List<String> enumOptions` | Holds the `enumOptions` property or configuration state. |
 | `referenceTypes` | `List<String> referenceTypes` | The component types a `componentReference` property may name. A `componentReference` row (Skeletal Mesh / Skinned Cloth **Pose From**) is a picker over the Blueprint's components of those types, leaving out the component itself and any that already follow it; stored as the component id (see [Character slots](../../lumina/character-slots.md)). |
+| `assetTypes` | `List<AssetType> assetTypes` | The asset types an `assetReference` property takes: its Details picker offers only these (`BlueprintEditorViewModel.assetsOfTypes`; skeletal meshes also include older imports the name rules recognise). Every asset reference field of the built-in components names its types (a cloth's Cloth Settings: cloth settings; Texture: textures; Material / Material Override: materials; Mesh Asset: static and skeletal meshes). |
 
 ### `class ComponentTypeDescriptor`
 

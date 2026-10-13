@@ -441,6 +441,9 @@ mixin _BlueprintSubEditorComponentDetails on _BlueprintSubEditorStateBase {
         final fieldLower = prop.dartField.toLowerCase();
         final nameLower = prop.name.toLowerCase();
 
+        if (prop.assetTypes.isNotEmpty) {
+          return _assetReferenceRow(prop, node, selectedVal, _viewModel.assetsOfTypes(prop.assetTypes));
+        }
         final isAnim = fieldLower.contains('anim') || nameLower.contains('anim');
         final isMat = fieldLower.contains('material') || fieldLower.contains('mat') || nameLower.contains('material');
         final isStatic = fieldLower.contains('static') || nameLower.contains('static mesh');
@@ -452,40 +455,7 @@ mixin _BlueprintSubEditorComponentDetails on _BlueprintSubEditorStateBase {
                     ? _viewModel.availableStaticMeshes
                     : _viewModel.availableSkeletalMeshes));
 
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 6),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Text(prop.name, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: EditorColors.foreground)),
-                  const Spacer(),
-                  Clickable(
-                    onPressed: () => _viewModel.load(),
-                    child: const Row(
-                      children: [
-                        Icon(LucideIcons.refreshCw, size: 10, color: EditorColors.mutedForeground),
-                        SizedBox(width: 2),
-                        Text('Refresh', style: TextStyle(fontSize: 9, color: EditorColors.mutedForeground)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              // The shared searchable picker with thumbnails.
-              AssetPickerSelect(
-                key: ValueKey('bp_asset_${node.id}_${prop.dartField}'),
-                keyPrefix: 'bp_asset_${prop.dartField}',
-                assets: availableAssets,
-                selectedPath: selectedVal.isNotEmpty ? selectedVal : null,
-                onSelected: (a) => _viewModel.setMeshForComponent(node.id, prop.dartField, a.relativePath),
-                onCleared: () => _viewModel.setMeshForComponent(node.id, prop.dartField, ''),
-              ),
-            ],
-          ),
-        );
+        return _assetReferenceRow(prop, node, selectedVal, availableAssets);
 
       case ComponentPropertyType.enumType:
         final currentStr = currentVal?.toString() ?? prop.defaultValue?.toString() ?? '';
@@ -555,6 +525,45 @@ mixin _BlueprintSubEditorComponentDetails on _BlueprintSubEditorStateBase {
           ),
         );
     }
+  }
+
+  /// An asset reference row: the field's name, Refresh, and the shared
+  /// searchable picker over [assets].
+  Widget _assetReferenceRow(ComponentPropertySchema prop, LuminaBlueprintComponent node, String selectedVal, List<RealAssetInfo> assets) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(prop.name, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: EditorColors.foreground)),
+              const Spacer(),
+              Clickable(
+                onPressed: () => _viewModel.load(),
+                child: const Row(
+                  children: [
+                    Icon(LucideIcons.refreshCw, size: 10, color: EditorColors.mutedForeground),
+                    SizedBox(width: 2),
+                    Text('Refresh', style: TextStyle(fontSize: 9, color: EditorColors.mutedForeground)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          // The shared searchable picker with thumbnails.
+          AssetPickerSelect(
+            key: ValueKey('bp_asset_${node.id}_${prop.dartField}'),
+            keyPrefix: 'bp_asset_${prop.dartField}',
+            assets: assets,
+            selectedPath: selectedVal.isNotEmpty ? selectedVal : null,
+            onSelected: (a) => _viewModel.setMeshForComponent(node.id, prop.dartField, a.relativePath),
+            onCleared: () => _viewModel.setMeshForComponent(node.id, prop.dartField, ''),
+          ),
+        ],
+      ),
+    );
   }
 
   /// The Anim Class picker: only Animation

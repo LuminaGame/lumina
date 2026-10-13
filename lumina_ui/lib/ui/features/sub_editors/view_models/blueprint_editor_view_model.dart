@@ -275,6 +275,22 @@ class BlueprintEditorViewModel extends _BlueprintEditorViewModelState
   List<RealAssetInfo> get availableAnimations => List.unmodifiable(_availableAnimations);
   List<RealAssetInfo> get availableMaterials => List.unmodifiable(_availableMaterials);
 
+  /// The project's assets of [types] (an asset reference field's picker):
+  /// exact type matches, plus the meshes the name rules above recognise as
+  /// skeletal or static (imports that predate the mesh types).
+  List<RealAssetInfo> assetsOfTypes(List<AssetType> types) {
+    final out = <String, RealAssetInfo>{
+      for (final a in _availableAssets)
+        if (types.contains(a.type)) a.relativePath: a,
+    };
+    if (types.contains(AssetType.filameshSk)) {
+      for (final a in _availableSkeletalMeshes) {
+        if (a.type == AssetType.filamesh || a.type == AssetType.filameshSk) out[a.relativePath] = a;
+      }
+    }
+    return List.unmodifiable(out.values);
+  }
+
   /// Animation Blueprints in the project that animate [meshPath] (the Anim
   /// Class picker of a Skeletal Mesh component lists only these).
   List<String> animBlueprintsFor(String? meshPath) => [

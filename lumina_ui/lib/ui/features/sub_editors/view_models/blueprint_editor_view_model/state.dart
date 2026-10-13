@@ -43,6 +43,7 @@ abstract class _BlueprintEditorViewModelState extends ChangeNotifier implements 
   BlueprintAssetCatalog? _assets;
   Map<String, List<String>> _knownEnumValues = const {};
 
+  List<RealAssetInfo> _availableAssets = [];
   List<RealAssetInfo> _availableSkeletalMeshes = [];
   List<RealAssetInfo> _availableStaticMeshes = [];
   List<RealAssetInfo> _availableAnimations = [];

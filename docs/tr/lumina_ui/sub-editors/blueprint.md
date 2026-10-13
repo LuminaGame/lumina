@@ -234,6 +234,7 @@ Real Component Hierarchy Tree for Blueprint Editor.
 | `max` | `double max` | `max` alanını (field/property) ve ilişkili veriyi saklar. |
 | `enumOptions` | `List<String> enumOptions` | `enumOptions` alanını (field/property) ve ilişkili veriyi saklar. |
 | `referenceTypes` | `List<String> referenceTypes` | Bir `componentReference` özelliğinin gösterebileceği bileşen türleri. Bir `componentReference` satırı (Skeletal Mesh / Skinned Cloth **Pose From**), Blueprint'in bu türlerdeki bileşenleri üzerinde bir seçicidir; bileşenin kendisini ve onu zaten takip edenleri dışarıda bırakır; bileşen id'si olarak saklanır (bkz. [Karakter slotları](../../lumina/character-slots.md)). |
+| `assetTypes` | `List<AssetType> assetTypes` | Bir `assetReference` özelliğinin aldığı asset türleri: Details seçicisi yalnızca bunları sunar (`BlueprintEditorViewModel.assetsOfTypes`; skeletal mesh'ler ad kurallarının tanıdığı eski içe aktarımları da içerir). Yerleşik bileşenlerin her asset referans alanı türlerini adlandırır (bir kumaşın Cloth Settings'i: kumaş ayarları; Texture: dokular; Material / Material Override: materyaller; Mesh Asset: statik ve skeletal mesh'ler). |
 
 ### `class ComponentTypeDescriptor`
 

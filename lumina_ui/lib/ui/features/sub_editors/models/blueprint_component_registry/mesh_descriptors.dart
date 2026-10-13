@@ -34,6 +34,7 @@ const List<ComponentTypeDescriptor> _meshComponentDescriptors = [
         name: 'Skeletal Mesh Asset',
         dartField: 'skeletalMeshAsset',
         type: ComponentPropertyType.assetReference,
+        assetTypes: [AssetType.filameshSk],
         defaultValue: '',
       ),
       ComponentPropertySchema(
@@ -49,6 +50,7 @@ const List<ComponentTypeDescriptor> _meshComponentDescriptors = [
         name: 'Anim to Play',
         dartField: 'animToPlay',
         type: ComponentPropertyType.assetReference,
+        assetTypes: [AssetType.animation],
         defaultValue: '',
       ),
       // The Animation Blueprint that animates the
@@ -66,6 +68,7 @@ const List<ComponentTypeDescriptor> _meshComponentDescriptors = [
         name: 'Material Override',
         dartField: 'materialOverride',
         type: ComponentPropertyType.assetReference,
+        assetTypes: [AssetType.filamat],
         defaultValue: '',
       ),
       ComponentPropertySchema(
@@ -133,6 +136,7 @@ const List<ComponentTypeDescriptor> _meshComponentDescriptors = [
         name: 'Static Mesh Asset',
         dartField: 'staticMeshAsset',
         type: ComponentPropertyType.assetReference,
+        assetTypes: [AssetType.filamesh],
         defaultValue: '',
       ),
       ComponentPropertySchema(
@@ -140,6 +144,7 @@ const List<ComponentTypeDescriptor> _meshComponentDescriptors = [
         name: 'Material Override',
         dartField: 'materialOverride',
         type: ComponentPropertyType.assetReference,
+        assetTypes: [AssetType.filamat],
         defaultValue: '',
       ),
       ComponentPropertySchema(

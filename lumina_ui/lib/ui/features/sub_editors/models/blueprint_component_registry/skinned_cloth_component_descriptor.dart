@@ -1,5 +1,6 @@
 import 'package:shadcn_flutter/shadcn_flutter.dart' show LucideIcons;
 
+import 'package:lumina_editor_data/lumina_editor.dart' show AssetType;
 import 'package:lumina_ui/ui/features/sub_editors/models/blueprint_component_registry.dart';
 
 /// The skinned cloth component as the Blueprint editor adds it: a garment
@@ -14,7 +15,7 @@ const ComponentTypeDescriptor skinnedClothComponentDescriptor = ComponentTypeDes
   isSceneComponent: true,
   icon: LucideIcons.shirt,
   properties: [
-    ComponentPropertySchema(group: 'GARMENT', name: 'Garment Mesh', dartField: 'meshAsset', type: ComponentPropertyType.assetReference, defaultValue: ''),
+    ComponentPropertySchema(group: 'GARMENT', name: 'Garment Mesh', dartField: 'meshAsset', type: ComponentPropertyType.assetReference, assetTypes: [AssetType.filamesh, AssetType.filameshSk], defaultValue: ''),
     ComponentPropertySchema(group: 'GARMENT', name: 'Waist Bone', dartField: 'waistBone', type: ComponentPropertyType.string, defaultValue: 'pelvis'),
     ComponentPropertySchema(group: 'GARMENT', name: 'Skirt Length (cm)', dartField: 'skirtLength', type: ComponentPropertyType.number, defaultValue: 45.0, min: 10.0, max: 150.0),
     ComponentPropertySchema(group: 'GARMENT', name: 'Waist Radius (cm)', dartField: 'waistRadius', type: ComponentPropertyType.number, defaultValue: 17.0, min: 5.0, max: 60.0),
@@ -29,7 +30,7 @@ const ComponentTypeDescriptor skinnedClothComponentDescriptor = ComponentTypeDes
     ComponentPropertySchema(group: 'GARMENT FREEDOM', name: 'Backstop Radius (cm)', dartField: 'backstopRadius', type: ComponentPropertyType.number, defaultValue: 20.0, min: 1.0, max: 100.0),
     ComponentPropertySchema(group: 'GARMENT FREEDOM', name: 'Painted Maps', dartField: 'paintedMaps', type: ComponentPropertyType.boolean, defaultValue: false),
     ComponentPropertySchema(group: 'GARMENT FREEDOM', name: 'Collide With Body', dartField: 'collideWithBody', type: ComponentPropertyType.boolean, defaultValue: true),
-    ComponentPropertySchema(group: 'CLOTH MATERIAL', name: 'Cloth Settings', dartField: 'clothSettingsAsset', type: ComponentPropertyType.assetReference, defaultValue: ''),
+    ComponentPropertySchema(group: 'CLOTH MATERIAL', name: 'Cloth Settings', dartField: 'clothSettingsAsset', type: ComponentPropertyType.assetReference, assetTypes: [AssetType.clothSettings], defaultValue: ''),
     ComponentPropertySchema(group: 'CLOTH MATERIAL', name: 'Mass (kg)', dartField: 'massKg', type: ComponentPropertyType.number, defaultValue: 0.6, min: 0.01, max: 50.0),
     ComponentPropertySchema(group: 'CLOTH MATERIAL', name: 'Stiffness', dartField: 'stiffness', type: ComponentPropertyType.number, defaultValue: 0.95, min: 0.0, max: 1.0, hardMax: 1.0),
     ComponentPropertySchema(group: 'CLOTH MATERIAL', name: 'Bend Stiffness', dartField: 'bendStiffness', type: ComponentPropertyType.number, defaultValue: 0.15, min: 0.0, max: 1.0, hardMax: 1.0),
@@ -39,8 +40,8 @@ const ComponentTypeDescriptor skinnedClothComponentDescriptor = ComponentTypeDes
     ComponentPropertySchema(group: 'CLOTH MATERIAL', name: 'Iterations', dartField: 'iterations', type: ComponentPropertyType.number, defaultValue: 8, min: 1.0, max: 32.0),
     ComponentPropertySchema(group: 'CLOTH MATERIAL', name: 'Gravity Scale', dartField: 'gravityScale', type: ComponentPropertyType.number, defaultValue: 1.0, min: 0.0, max: 3.0),
     ComponentPropertySchema(group: 'CLOTH MATERIAL', name: 'Color', dartField: 'color', type: ComponentPropertyType.color, defaultValue: '#E0615A'),
-    ComponentPropertySchema(group: 'CLOTH MATERIAL', name: 'Texture', dartField: 'baseColorTexture', type: ComponentPropertyType.assetReference, defaultValue: ''),
-    ComponentPropertySchema(group: 'CLOTH MATERIAL', name: 'Material', dartField: 'materialAsset', type: ComponentPropertyType.assetReference, defaultValue: ''),
+    ComponentPropertySchema(group: 'CLOTH MATERIAL', name: 'Texture', dartField: 'baseColorTexture', type: ComponentPropertyType.assetReference, assetTypes: [AssetType.texture], defaultValue: ''),
+    ComponentPropertySchema(group: 'CLOTH MATERIAL', name: 'Material', dartField: 'materialAsset', type: ComponentPropertyType.assetReference, assetTypes: [AssetType.filamat], defaultValue: ''),
     ComponentPropertySchema(group: 'CLOTH MATERIAL', name: 'Self Collision', dartField: 'selfCollision', type: ComponentPropertyType.boolean, defaultValue: false),
     ComponentPropertySchema(group: 'CLOTH MATERIAL', name: 'Self Collision Distance (cm)', dartField: 'selfCollisionDistance', type: ComponentPropertyType.number, defaultValue: 2.0, min: 0.1, max: 20.0),
     ComponentPropertySchema(group: 'CLOTH WIND', name: 'Wind (cm/s)', dartField: 'wind', type: ComponentPropertyType.vector3, defaultValue: [0.0, 0.0, 0.0]),
