@@ -424,7 +424,7 @@ The per-user directory Lumina keeps downloaded data in: the engine source a rele
 
 ### `abstract final class FlutterFilamentWebPrebuilt`
 
-The flutter_filament web module every Lumina release attaches (`.github/workflows/release.yml`): `flutter-filament-web-<tag>.zip` plus a `.sha256` sidecar, holding one folder `flutter-filament-web-<tag>` with `flutter_filament.js`, `flutter_filament.wasm` and a `README.md`.
+The flutter_filament web module every Lumina release attaches (`.github/workflows/release.yml`): `flutter-filament-web-<tag>.zip` plus a `.sha256` sidecar, holding one folder `flutter-filament-web-<tag>` with `flutter_filament.js`, `flutter_filament.wasm` and a `README.md`; releases from the one that ships web Jolt on also hold `flutter_jolt.js` and `flutter_jolt.wasm` (Jolt Physics' module, staged beside the renderer's when present).
 
 `ensure` downloads the archive of the editor's own release; when that release has none (HTTP 404) or the editor is a development build (no tag), it takes the newest non-draft release that carries the archive and its sidecar, found through the GitHub releases API. The archive is checked against its sidecar before anything is unpacked (`ReleaseAssets.fetch`), unpacked to `<root>/module`, and `lumina-web-module.json` there records the release it came from (`tag`), the editor version that asked for it (`requestedTag`), the verified `sha256` and `fetchedAt`. An install made for the same editor version is reused without the network; one made for another version is downloaded again. A failed or interrupted run keeps the previous install. The default root is `LuminaDataDir.webModuleRoot()`; `LUMINA_RELEASE_BASE_URL` and `LUMINA_RELEASE_API_URL` redirect the download and the listing (mirrors).
 

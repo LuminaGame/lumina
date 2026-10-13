@@ -40,7 +40,7 @@ Bayraklar, perdeler, ipe asılı giysiler ve bir şeylerin üzerine örtülen ç
 
 Fizik subsystem'i dünyanın kumaşlarını tutar (`LuminaPhysicsSubsystem.cloths`, `addCloth` / `removeCloth`); onları backend'in `LuminaClothSimulator`'ı (`LuminaPhysicsBackend.cloth`) simüle eder. Jolt'ta her kumaş, bileşenin transform'undaki dinlenme pozundan, merkezinde kurulan bir Jolt soft body'sidir: kenar, kayma ve dihedral bükülme constraint'leri, sabit köşelere tether'lar (uzun menzilli bağlar), köşe yarıçapı olarak kalınlık. Compliance'lar köşelerin ters kütlesiyle (`w = köşe sayısı / massKg`) ölçeklenir: gerilme `1e-4 · w · (1/stiffness − 1)` (en az `1e-6 · w`), kayma bunun iki katı, bükülme `4.5e-3 · w · (1/bendStiffness − 1)` (en az `1e-5 · w`); böylece hafif bir kumaş ağır biri gibi davranır ve keskin kenarlar üzerinde kararlı kalır. Her adımdan önce sabitler sürülür ve rüzgâr uygulanır; bileşen çizilirken (`onRenderPrep`) köşeleri ve normallerini kendi çerçevesinde okur (native olarak hesaplanır) ve mesh bölümünü günceller. Adımın kendisi Jolt dünyasının adım thread'inde çalışır.
 
-**Dart backend'i** (web, Jolt'suz build'ler): kumaş simülatörü yoktur. Bileşen dinlenme pozunu çizer, `isSimulating` false olur ve motor günlüğü bir kez "Cloth needs the Jolt physics backend" der. Başka hiçbir şey değişmez; web build'i Jolt'a hiç ulaşmaz.
+**Dart backend'i** (Jolt'suz bir build ya da web sayfası): kumaş simülatörü yoktur. Bileşen dinlenme pozunu çizer, `isSimulating` false olur ve motor günlüğü bir kez "Cloth needs the Jolt physics backend" der. Başka hiçbir şey değişmez. Web'de Jolt'un WebAssembly modülü yüklüyken (`LuminaPhysicsSubsystem.prepareJolt`) kumaş masaüstündeki gibi simüle edilir.
 
 ## Karakterlerdeki giysiler
 

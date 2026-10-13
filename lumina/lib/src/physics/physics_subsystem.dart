@@ -43,9 +43,10 @@ class _Hit {
 /// Rigid-body dynamics for a world (what a primitive component's Simulate
 /// Physics runs on). The subsystem owns the bodies, joints, the fixed-step
 /// clock, component sync and events; a [LuminaPhysicsBackend] does the
-/// stepping: Jolt Physics on native desktop where its library is built, the
-/// pure-Dart solver ([LuminaDartPhysicsBackend]) on the web and as the
-/// fallback ([backendKind], [defaultBackend]).
+/// stepping: Jolt Physics on native desktop where its library is built and
+/// on the web once its WebAssembly module is loaded ([prepareJolt]), the
+/// pure-Dart solver ([LuminaDartPhysicsBackend]) otherwise ([backendKind],
+/// [defaultBackend]).
 ///
 /// - **Stepping**: fixed [fixedTimeStep] (120 Hz), at most [maxSubsteps] per
 ///   frame; components are written at the pose interpolated between the last
@@ -82,6 +83,13 @@ class LuminaPhysicsSubsystem extends LuminaWorldSubsystem {
 
   /// The backend kind new subsystems ask for.
   static LuminaPhysicsBackendKind defaultBackend = LuminaPhysicsBackendKind.auto;
+
+  /// Makes Jolt available to the subsystems created afterwards: on the web,
+  /// loads its WebAssembly module (`flutter_jolt.js` and `flutter_jolt.wasm`
+  /// from [moduleUrl]'s directory, served next to the page); natively the
+  /// library is already linked. Returns whether Jolt can run; without it the
+  /// Dart solver does. Generated web games call it while loading.
+  static Future<bool> prepareJolt({String moduleUrl = 'flutter_jolt.js'}) => loadJoltPhysics(moduleUrl);
 
   /// What steps this subsystem's bodies.
   late final LuminaPhysicsBackend backend;

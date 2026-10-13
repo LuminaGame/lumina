@@ -12,3 +12,6 @@ LuminaPhysicsBackend? createJoltPhysicsBackend() => null;
 
 /// Jolt's broad phase for collision queries: never without `dart:ffi`.
 LuminaCollisionQueryAccelerator? createJoltCollisionQueries() => null;
+
+/// Jolt never loads without `dart:ffi` or the web.
+Future<bool> loadJoltPhysics(String moduleUrl) async => false;

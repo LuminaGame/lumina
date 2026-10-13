@@ -446,6 +446,10 @@ flutter_filament'in WebAssembly modülü — `flutter_filament.{js,wasm}`: paket
 | `missingReason` | `static const String missingReason` | Why web builds are unavailable while the module is missing (it names the Packaging download and `build_module.sh`). |
 | `buildHint` | `static const String buildHint` | The secondary hint next to the Packaging download button. |
 | `files` | `List<File> get files` |  |
+| `joltFileNames` | `static const List<String> joltFileNames` | `flutter_jolt.js`, `flutter_jolt.wasm`: Jolt Physics'in modülü, bulunduğunda yerleştirilir. |
+| `joltDirectory` | `final Directory? joltDirectory` | Modül bir paket build'inden geldiğinde flutter_jolt'un `web/` klasörü (aynı package config üzerinden bulunur). |
+| `joltFiles` | `List<File> get joltFiles` | [directory]'nin yanındaki (indirilen bir release ikisini de taşır) ya da [joltDirectory]'deki Jolt modülü; bulunmazsa boş (oyun o zaman Dart çözücüyle simüle eder). |
+| `stageInto` | `List<File> stageInto(Directory webBuild)` | Renderer dosyalarını ve bulunduğunda Jolt'unkileri build edilen `index.html`'in yanına kopyalar. |
 | `sizeBytes` | `int get sizeBytes` |  |
 | `at` | `static FlutterFilamentWebModule? at(Directory webDir, [FlutterFilamentWebModuleSource source])` | The module in [webDir], or null when either file is missing. |
 | `locate` | `static FlutterFilamentWebModule? locate({List<String>? packageRoots, Directory? downloadRoot})` | The module a web build stages: `locatePackageBuild` over [packageRoots] first, then `locateDownload` under [downloadRoot] (default `FlutterFilamentWebPrebuilt.defaultRoot()`). |

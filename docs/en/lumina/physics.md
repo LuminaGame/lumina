@@ -2,7 +2,7 @@
 
 # Physics
 
-Rigid-body dynamics: the physics subsystem that runs Simulate Physics for a world, rigid bodies and their convex shapes, mass properties, physical materials with friction and restitution, contact generation on top of the collision narrow phase, and the sequential-impulse contact solver. The subsystem steps on a backend: Jolt Physics on native desktop, the pure-Dart solver on the web and as the fallback (see [Physics backends](#physics-backends)). File paths are relative to the `lumina/` package directory.
+Rigid-body dynamics: the physics subsystem that runs Simulate Physics for a world, rigid bodies and their convex shapes, mass properties, physical materials with friction and restitution, contact generation on top of the collision narrow phase, and the sequential-impulse contact solver. The subsystem steps on a backend: Jolt Physics on native desktop and on the web (its WebAssembly module), the pure-Dart solver as the fallback (see [Physics backends](#physics-backends)). File paths are relative to the `lumina/` package directory.
 
 **On this page:**
 
@@ -251,10 +251,12 @@ A surface's physical response: Coulomb [friction] (dynamic; [staticFriction] whi
 
 | Kind | Class | Where |
 | :--- | :--- | :--- |
-| `jolt` | `LuminaJoltPhysicsBackend` (`lib/src/physics/jolt/`) | Native desktop with a Jolt build ([flutter_jolt](https://github.com/LuminaGame/tools/blob/main/docs/en/flutter_jolt.md), Jolt Physics 5.6). |
-| `dart` | `LuminaDartPhysicsBackend` (`lib/src/physics/dart_physics_backend.dart`) | Everywhere, the web's only one, and the fallback. |
+| `jolt` | `LuminaJoltPhysicsBackend` (`lib/src/physics/jolt/`) | Native desktop with a Jolt build, and the web once `flutter_jolt.wasm` is loaded ([flutter_jolt](https://github.com/LuminaGame/tools/blob/main/docs/en/flutter_jolt.md), Jolt Physics 5.6). |
+| `dart` | `LuminaDartPhysicsBackend` (`lib/src/physics/dart_physics_backend.dart`) | Everywhere, and the fallback. |
 
-**Selection** (`LuminaPhysicsBackendKind`): a subsystem built with `backend:` uses that kind; otherwise `LuminaPhysicsSubsystem.defaultBackend` (`auto`), then the `LUMINA_PHYSICS_BACKEND` dart-define or environment variable (`dart`, `jolt`), then Jolt when `JoltPhysics.isAvailable`, else Dart. A `jolt` request without the library falls back to Dart. The existing physics tests run on either: `flutter test --dart-define=LUMINA_PHYSICS_BACKEND=dart test/src/physics/rigid_body_test.dart`. The web build never reaches `dart:ffi`: `lib/src/physics/jolt/jolt_backend_factory.dart` exports a stub without it.
+**Selection** (`LuminaPhysicsBackendKind`): a subsystem built with `backend:` uses that kind; otherwise `LuminaPhysicsSubsystem.defaultBackend` (`auto`), then the `LUMINA_PHYSICS_BACKEND` dart-define or environment variable (`dart`, `jolt`), then Jolt when `JoltPhysics.isAvailable`, else Dart. A `jolt` request without the library falls back to Dart. The existing physics tests run on either: `flutter test --dart-define=LUMINA_PHYSICS_BACKEND=dart test/src/physics/rigid_body_test.dart`. The web build never reaches `dart:ffi`: `lib/src/physics/jolt/jolt_backend_factory.dart` exports the native factory where `dart:ffi` exists, a web factory over flutter_jolt's WebAssembly layer on the web, and a stub elsewhere.
+
+**The web**: `await LuminaPhysicsSubsystem.prepareJolt()` loads Jolt's WebAssembly module (`flutter_jolt.js` + `flutter_jolt.wasm` beside the page; a generated web game does it while it loads, after the renderer); subsystems created afterwards run on Jolt, and without the module on the Dart solver. Lumina Studio's web build stages both files next to `index.html` when it finds them (a downloaded `flutter-filament-web` release archive holds them, or flutter_jolt's own `web/` build). The rigid body test file runs in the browser on Jolt too: the lumina example's physics web smoke app (`example/web_smoke/physics_web_smoke.dart`, driven by `lumina_widgets/test/smoke/physics_web_smoke_test.dart`) runs it through `test/support/test_api.dart` and then simulates and draws a barrel tower that a thrown barrel knocks down.
 
 **The Jolt backend** mirrors the Dart bodies; gameplay keeps reading and pushing `LuminaRigidBody` (velocities, impulses, forces, sleep, teleports) between steps:
 

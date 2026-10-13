@@ -57,9 +57,10 @@ export 'package:lumina/src/physics/cloth/cloth_geometry.dart' show LuminaClothGe
 /// - **Collision**: with every body and collider of the world's physics (the
 ///   level, simulating props, a character's capsule).
 ///
-/// Cloth needs the Jolt physics backend (native desktop). With the Dart
-/// backend (the web, a build without Jolt) the component draws its rest pose
-/// and logs once that cloth is not simulated.
+/// Cloth needs the Jolt physics backend (native desktop, or the web with
+/// Jolt's WebAssembly module loaded). With the Dart backend (a build or page
+/// without Jolt) the component draws its rest pose and logs once that cloth
+/// is not simulated.
 class LuminaClothComponent extends LuminaProceduralMeshComponent {
   LuminaClothComponent({
     super.key,

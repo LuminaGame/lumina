@@ -46,4 +46,6 @@ app.*.map.json
 
 # The WebAssembly module, copied in for web builds (lib/viewport_web_smoke.dart)
 /web/flutter_filament.js
+/web/flutter_jolt.js
+/web/flutter_jolt.wasm
 /web/flutter_filament.wasm

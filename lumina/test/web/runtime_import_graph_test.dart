@@ -20,7 +20,8 @@ bool _forbidden(String uri) =>
     uri == 'dart:ffi' ||
     uri.startsWith('package:flutter_assimp/') ||
     uri.startsWith('package:flutter_riglogic/') ||
-    // Jolt is reached only through the conditional backend factory.
+    // Jolt is reached only through the conditional backend factory (its
+    // web branch uses flutter_jolt's WebAssembly layer, never dart:ffi).
     uri.startsWith('package:flutter_jolt/') ||
     uri.startsWith('package:ffi/') ||
     uri.startsWith('package:lumina_editor_data/') ||

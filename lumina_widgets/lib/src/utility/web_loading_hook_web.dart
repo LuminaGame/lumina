@@ -1,12 +1,13 @@
 /// Web builds: the page's HTML loading screen (`web/loading.js`, generated
-/// from the project's Web Loading Style) and flutter_filament's WebAssembly
-/// module. Only compiled for the web (conditional import in
+/// from the project's Web Loading Style), flutter_filament's WebAssembly
+/// module and Jolt Physics'. Only compiled for the web (conditional import in
 /// `web_loading.dart`).
 library;
 
 import 'dart:js_interop';
 
 import 'package:flutter_filament/flutter_filament.dart' show FilamentWeb;
+import 'package:lumina/lumina_runtime.dart' show LuminaPhysicsSubsystem;
 
 const bool isWeb = true;
 
@@ -23,5 +24,10 @@ void progress(double fraction, String label) {
   _luminaLoading?.progress(fraction.toJS, label.toJS);
 }
 
-/// Downloads and instantiates the renderer's WebAssembly module.
-Future<void> loadRenderer() => FilamentWeb.ensureInitialized();
+/// Downloads and instantiates the renderer's WebAssembly module, then Jolt
+/// Physics' (`flutter_jolt.js` + `.wasm` beside the page; without them the
+/// game simulates with the Dart solver).
+Future<void> loadRenderer() async {
+  await FilamentWeb.ensureInitialized();
+  await LuminaPhysicsSubsystem.prepareJolt();
+}

@@ -487,6 +487,16 @@ jobs:
       - id: web
         uses: ./lumina/.github/actions/filament-web
 
+      # Jolt Physics for the web (flutter_jolt's WebAssembly module, built
+      # with the emsdk the step above set up): Dart for the build script's
+      # defines writer, and the tools checkout the pubspecs pin.
+      - uses: dart-lang/setup-dart@v1
+
+      - uses: ./lumina/.github/actions/checkout-siblings
+
+      - name: flutter_jolt web module
+        run: bash tools/flutter_jolt/tool/web/build_jolt_wasm.sh
+
       - name: Package
         env:
           MODULE_DIR: ${{ steps.web.outputs.module-dir }}
@@ -497,6 +507,7 @@ jobs:
           stage="$RUNNER_TEMP/$name"
           mkdir -p "$stage" dist
           cp "$MODULE_DIR/flutter_filament.js" "$MODULE_DIR/flutter_filament.wasm" "$stage/"
+          cp tools/flutter_jolt/web/flutter_jolt.js tools/flutter_jolt/web/flutter_jolt.wasm "$stage/"
           filament="$(tr -d '[:space:]' < lumina/tool/filament/VERSION)"
           cat > "$stage/README.md" <<EOF
           # flutter_filament web module $TAG
@@ -508,6 +519,11 @@ jobs:
           A Lumina web game serves both files next to its \`index.html\` (Lumina Studio's web
           build stages them from \`flutter_filament/web/\`), or loads them from another URL
           through \`FilamentWeb.ensureInitialized(moduleUrl: ...)\`.
+
+          \`flutter_jolt.js\` and \`flutter_jolt.wasm\`: Jolt Physics and flutter_jolt's C wrapper
+          as one single-threaded WebAssembly module (WASM SIMD). Served beside them, a web game
+          simulates on Jolt (\`LuminaPhysicsSubsystem.prepareJolt\` loads it while the game
+          loads); without them it uses the engine's Dart solver.
           EOF
           (cd "$RUNNER_TEMP" && zip -q -r "$GITHUB_WORKSPACE/dist/$name.zip" "$name")
           (cd dist && sha256sum "$name.zip" > "$name.zip.sha256" && cat "$name.zip.sha256")

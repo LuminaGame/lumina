@@ -21,3 +21,6 @@ LuminaPhysicsBackend? createJoltPhysicsBackend() => JoltPhysics.isAvailable ? Lu
 /// the library is missing.
 LuminaCollisionQueryAccelerator? createJoltCollisionQueries() =>
     JoltPhysics.isAvailable ? LuminaJoltCollisionQueries() : null;
+
+/// The native library is linked at build time: nothing to load.
+Future<bool> loadJoltPhysics(String moduleUrl) async => JoltPhysics.isAvailable;

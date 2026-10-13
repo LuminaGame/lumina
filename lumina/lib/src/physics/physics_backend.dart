@@ -7,13 +7,14 @@ import 'package:lumina/src/physics/physics_subsystem.dart';
 
 /// Which engine steps a [LuminaPhysicsSubsystem]'s bodies.
 enum LuminaPhysicsBackendKind {
-  /// Jolt where its native library is available, else Dart.
+  /// Jolt where it is available (its native library, or its WebAssembly
+  /// module loaded on the web), else Dart.
   auto,
 
-  /// The pure-Dart solver (every platform, the web's only one).
+  /// The pure-Dart solver (every platform; the fallback).
   dart,
 
-  /// Jolt Physics through `flutter_jolt` (native desktop).
+  /// Jolt Physics through `flutter_jolt` (native desktop and the web).
   jolt;
 
   /// Parses `dart` / `jolt` / `auto` (case-insensitive); null otherwise.

@@ -23,8 +23,14 @@ enum FlutterFilamentWebModuleSource {
 /// A Lumina game can only be built for the web when it exists:
 /// the cook serves both files next to the game's
 /// `index.html`, where `FilamentWeb.ensureInitialized` loads them.
+///
+/// Jolt Physics' module (`flutter_jolt.{js,wasm}`, [joltFileNames]) is staged
+/// beside them when found — in the same folder (a downloaded release holds
+/// both modules) or built into flutter_jolt's own `web/` folder
+/// (`tool/web/build_jolt_wasm.sh`); the game then simulates on Jolt, else on
+/// the engine's Dart solver.
 class FlutterFilamentWebModule {
-  FlutterFilamentWebModule._(this.directory, [this.source = FlutterFilamentWebModuleSource.packageBuild]);
+  FlutterFilamentWebModule._(this.directory, [this.source = FlutterFilamentWebModuleSource.packageBuild, this.joltDirectory]);
 
   /// The folder holding both files: the package's `web/` folder or the
   /// downloaded module.
@@ -34,6 +40,22 @@ class FlutterFilamentWebModule {
   final FlutterFilamentWebModuleSource source;
 
   static const List<String> fileNames = ['flutter_filament.js', 'flutter_filament.wasm'];
+
+  /// Jolt Physics' WebAssembly module, staged when present.
+  static const List<String> joltFileNames = ['flutter_jolt.js', 'flutter_jolt.wasm'];
+
+  /// Where Jolt's module was found when not in [directory] (flutter_jolt's
+  /// package build), or null.
+  final Directory? joltDirectory;
+
+  /// Jolt's module files, or empty when it was not found.
+  List<File> get joltFiles {
+    for (final dir in [directory, ?joltDirectory]) {
+      final found = [for (final name in joltFileNames) File('${dir.path}/$name')];
+      if (found.every((f) => f.existsSync())) return found;
+    }
+    return const [];
+  }
 
   /// Why web builds are unavailable while the module is missing.
   static const String missingReason = "Not available yet: flutter_filament's WebAssembly module (flutter_filament.wasm) "
@@ -77,21 +99,23 @@ class FlutterFilamentWebModule {
   static FlutterFilamentWebModule? locatePackageBuild({List<String>? packageRoots}) {
     final roots = packageRoots ?? [ProjectRepository.luminaPackagePath, LuminaEditorHost.uiRoot];
     for (final root in roots) {
-      final package = _flutterFilamentRoot(root);
+      final package = _packageRootUri(root, 'flutter_filament');
       if (package == null) continue;
       final module = at(Directory.fromUri(package.resolve('web/')));
-      if (module != null) return module;
+      if (module == null) continue;
+      final jolt = _packageRootUri(root, 'flutter_jolt');
+      return FlutterFilamentWebModule._(module.directory, module.source, jolt == null ? null : Directory.fromUri(jolt.resolve('web/')));
     }
     return null;
   }
 
-  static Uri? _flutterFilamentRoot(String packageRoot) {
+  static Uri? _packageRootUri(String packageRoot, String name) {
     final config = File('$packageRoot/.dart_tool/package_config.json');
     if (!config.existsSync()) return null;
     try {
       final packages = (jsonDecode(config.readAsStringSync()) as Map)['packages'] as List;
       for (final p in packages.whereType<Map>()) {
-        if (p['name'] != 'flutter_filament') continue;
+        if (p['name'] != name) continue;
         final rootUri = p['rootUri'] as String;
         return config.parent.uri.resolve(rootUri.endsWith('/') ? rootUri : '$rootUri/');
       }
@@ -103,5 +127,6 @@ class FlutterFilamentWebModule {
 
   /// Copies both files into [webBuild] (a `flutter build web` output) and
   /// returns the copies.
-  List<File> stageInto(Directory webBuild) => [for (final f in files) f.copySync('${webBuild.path}/${f.uri.pathSegments.last}')];
+  List<File> stageInto(Directory webBuild) =>
+      [for (final f in [...files, ...joltFiles]) f.copySync('${webBuild.path}/${f.uri.pathSegments.last}')];
 }

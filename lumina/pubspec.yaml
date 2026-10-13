@@ -43,6 +43,7 @@ dependencies:
   image: ^4.9.2
   path: ^1.9.1
 dev_dependencies:
+  matcher: ^0.12.17
   pub_semver: ^2.2.0
   flutter_test:
     sdk: flutter

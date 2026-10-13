@@ -2,7 +2,7 @@
 
 # Fizik
 
-Rigid body dinamiği: bir dünya için Simulate Physics'i çalıştıran fizik subsystem'i, rigid body'ler ve konveks şekilleri, kütle özellikleri, sürtünme ve esneklik (restitution) içeren fiziksel materyaller, çarpışma narrow phase'i üzerine kurulu temas üretimi ve sequential-impulse temas çözücüsü. Subsystem bir backend üzerinde adım atar: native masaüstünde Jolt Physics, web'de ve yedek olarak saf Dart çözücü (bkz. [Fizik backend'leri](#fizik-backendleri)). Dosya yolları `lumina/` paket dizinine görelidir.
+Rigid body dinamiği: bir dünya için Simulate Physics'i çalıştıran fizik subsystem'i, rigid body'ler ve konveks şekilleri, kütle özellikleri, sürtünme ve esneklik (restitution) içeren fiziksel materyaller, çarpışma narrow phase'i üzerine kurulu temas üretimi ve sequential-impulse temas çözücüsü. Subsystem bir backend üzerinde adım atar: native masaüstünde ve web'de (WebAssembly modülüyle) Jolt Physics, yedek olarak saf Dart çözücü (bkz. [Fizik backend'leri](#fizik-backendleri)). Dosya yolları `lumina/` paket dizinine görelidir.
 
 **Bu sayfada:**
 
@@ -251,10 +251,12 @@ A surface's physical response: Coulomb [friction] (dynamic; [staticFriction] whi
 
 | Tür | Sınıf | Nerede |
 | :--- | :--- | :--- |
-| `jolt` | `LuminaJoltPhysicsBackend` (`lib/src/physics/jolt/`) | Jolt build'i olan native masaüstü ([flutter_jolt](https://github.com/LuminaGame/tools/blob/main/docs/tr/flutter_jolt.md), Jolt Physics 5.6). |
-| `dart` | `LuminaDartPhysicsBackend` (`lib/src/physics/dart_physics_backend.dart`) | Her yerde, web'in tek backend'i ve yedek. |
+| `jolt` | `LuminaJoltPhysicsBackend` (`lib/src/physics/jolt/`) | Jolt build'i olan native masaüstü ve `flutter_jolt.wasm` yüklendikten sonra web ([flutter_jolt](https://github.com/LuminaGame/tools/blob/main/docs/tr/flutter_jolt.md), Jolt Physics 5.6). |
+| `dart` | `LuminaDartPhysicsBackend` (`lib/src/physics/dart_physics_backend.dart`) | Her yerde ve yedek. |
 
-**Seçim** (`LuminaPhysicsBackendKind`): `backend:` ile kurulan bir subsystem o türü kullanır; yoksa `LuminaPhysicsSubsystem.defaultBackend` (`auto`), sonra `LUMINA_PHYSICS_BACKEND` dart-define'ı ya da ortam değişkeni (`dart`, `jolt`), sonra `JoltPhysics.isAvailable` ise Jolt, değilse Dart. Kütüphane yokken istenen `jolt` Dart'a düşer. Mevcut fizik testleri ikisinde de çalışır: `flutter test --dart-define=LUMINA_PHYSICS_BACKEND=dart test/src/physics/rigid_body_test.dart`. Web build'i `dart:ffi`'a hiç ulaşmaz: `lib/src/physics/jolt/jolt_backend_factory.dart` onsuz bir stub export eder.
+**Seçim** (`LuminaPhysicsBackendKind`): `backend:` ile kurulan bir subsystem o türü kullanır; yoksa `LuminaPhysicsSubsystem.defaultBackend` (`auto`), sonra `LUMINA_PHYSICS_BACKEND` dart-define'ı ya da ortam değişkeni (`dart`, `jolt`), sonra `JoltPhysics.isAvailable` ise Jolt, değilse Dart. Kütüphane yokken istenen `jolt` Dart'a düşer. Mevcut fizik testleri ikisinde de çalışır: `flutter test --dart-define=LUMINA_PHYSICS_BACKEND=dart test/src/physics/rigid_body_test.dart`. Web build'i `dart:ffi`'a hiç ulaşmaz: `lib/src/physics/jolt/jolt_backend_factory.dart`, `dart:ffi` olan yerde native fabrikayı, web'de flutter_jolt'un WebAssembly katmanı üzerinde bir web fabrikasını, başka yerde bir stub'ı export eder.
+
+**Web**: `await LuminaPhysicsSubsystem.prepareJolt()` Jolt'un WebAssembly modülünü yükler (sayfanın yanındaki `flutter_jolt.js` + `flutter_jolt.wasm`; üretilen bir web oyunu bunu yüklenirken, renderer'dan sonra yapar); sonra kurulan subsystem'ler Jolt'ta, modül yoksa Dart çözücüde çalışır. Lumina Studio'nun web build'i iki dosyayı bulduğunda `index.html`'in yanına koyar (indirilen bir `flutter-filament-web` release arşivi onları taşır ya da flutter_jolt'un kendi `web/` build'i). Rigid body test dosyası tarayıcıda da Jolt'ta çalışır: lumina örneğinin fizik web smoke uygulaması (`example/web_smoke/physics_web_smoke.dart`, `lumina_widgets/test/smoke/physics_web_smoke_test.dart` tarafından sürülür) onu `test/support/test_api.dart` üzerinden çalıştırır, sonra fırlatılan bir varilin devirdiği bir varil kulesini simüle eder ve çizer.
 
 **Jolt backend'i** Dart body'lerini yansıtır; oyun kodu adımlar arasında `LuminaRigidBody`'yi okumaya ve itmeye devam eder (hızlar, impulslar, kuvvetler, uyku, ışınlama):
 

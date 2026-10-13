@@ -422,7 +422,7 @@ The per-user directory Lumina keeps downloaded data in: the engine source a rele
 
 ### `abstract final class FlutterFilamentWebPrebuilt`
 
-Her Lumina release'inin eklediği flutter_filament web modülü (`.github/workflows/release.yml`): `flutter-filament-web-<tag>.zip` ve bir `.sha256` dosyası; içinde `flutter_filament.js`, `flutter_filament.wasm` ve bir `README.md` taşıyan tek bir `flutter-filament-web-<tag>` klasörü.
+Her Lumina release'inin eklediği flutter_filament web modülü (`.github/workflows/release.yml`): `flutter-filament-web-<tag>.zip` ve bir `.sha256` dosyası; içinde `flutter_filament.js`, `flutter_filament.wasm` ve bir `README.md` taşıyan tek bir `flutter-filament-web-<tag>` klasörü. Web Jolt'u taşıyan release'ten itibaren klasör `flutter_jolt.js` ve `flutter_jolt.wasm`'ı da taşır (Jolt Physics'in modülü; varsa renderer'ınkinin yanına yerleştirilir).
 
 `ensure` editörün kendi release'inin arşivini indirir; o release'te yoksa (HTTP 404) ya da editör bir geliştirme build'iyse (tag yok), GitHub releases API'sinden arşivi ve `.sha256` dosyasını taşıyan en yeni taslak olmayan release'i bulur. Arşiv açılmadan önce `.sha256` ile doğrulanır (`ReleaseAssets.fetch`), `<root>/module`'e açılır; oradaki `lumina-web-module.json` geldiği release'i (`tag`), isteyen editör sürümünü (`requestedTag`), doğrulanan `sha256`'yı ve `fetchedAt`'i kaydeder. Aynı editör sürümü için yapılmış kurulum ağa çıkmadan yeniden kullanılır; başka bir sürüm için yapılmışsa yeniden indirilir. Başarısız ya da yarıda kalan bir çalışma önceki kurulumu korur. Varsayılan kök `LuminaDataDir.webModuleRoot()`; `LUMINA_RELEASE_BASE_URL` ve `LUMINA_RELEASE_API_URL` indirmeyi ve listeyi yönlendirir (aynalar).
 

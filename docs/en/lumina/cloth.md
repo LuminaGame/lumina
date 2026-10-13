@@ -40,7 +40,7 @@ Flags, curtains, clothes on a line and sheets draped over things: a `LuminaCloth
 
 The physics subsystem keeps the world's cloths (`LuminaPhysicsSubsystem.cloths`, `addCloth` / `removeCloth`); the backend's `LuminaClothSimulator` (`LuminaPhysicsBackend.cloth`) simulates them. On Jolt each cloth is a Jolt soft body built at its centre from the rest pose at the component's transform: edge, shear and dihedral bend constraints, tethers (long range attachments) to the pinned vertices, the thickness as the vertex radius. The compliances are scaled by the vertices' inverse mass (`w = vertices / massKg`): stretch `1e-4 · w · (1/stiffness − 1)` (at least `1e-6 · w`), shear twice that, bend `4.5e-3 · w · (1/bendStiffness − 1)` (at least `1e-5 · w`), so a light cloth behaves like a heavy one and stays stable over sharp edges. Before every step the pins are driven and the wind applied; when the component draws (`onRenderPrep`) it reads the vertices and their normals in its own frame (computed natively) and updates its mesh section. The step itself runs on the Jolt world's stepping thread.
 
-**Dart backend** (the web, builds without Jolt): there is no cloth simulator. The component draws its rest pose, `isSimulating` is false, and the engine log says once "Cloth needs the Jolt physics backend". Nothing else changes; the web build never reaches Jolt.
+**Dart backend** (a build or a web page without Jolt): there is no cloth simulator. The component draws its rest pose, `isSimulating` is false, and the engine log says once "Cloth needs the Jolt physics backend". Nothing else changes. On the web with Jolt's WebAssembly module loaded (`LuminaPhysicsSubsystem.prepareJolt`) cloth simulates as on desktop.
 
 ## Garments on characters
 
