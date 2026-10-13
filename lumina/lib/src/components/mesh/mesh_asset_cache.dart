@@ -484,6 +484,9 @@ class LuminaMeshAssetCache {
     final handle = await acquire(meshAssetPath, assetProvider: assetProvider);
     if (handle == null) return null;
     _byInstance[handle.instance] = handle;
+    // Each new instance's commands go to the driver at once: many loads with
+    // no frame in between would otherwise overflow the command stream.
+    if (!_isDisposed) engine.flush();
     return handle.instance;
   }
 

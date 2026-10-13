@@ -436,7 +436,7 @@ Orchestrates levels, actors, Filament scene bindings, and the 5-phase determinis
 | `beginPlay` | `void beginPlay()` | Initializes gameplay state and triggers [beginPlay] across subsystems and actors. |
 | `tick` | `void tick(double deltaTime)` | Executes the 5-phase Deterministic Tick Pipeline for each frame update.  While [isPaused] no phase runs (no [onPreTick], no [tickCount] increment): only [tickWhilePaused] does. |
 | `tickWhilePaused` | `void tickWhilePaused(double deltaTime)` | Duraklatılmış bir kare: her subsystem'de `onWorldTickWhilePaused` gerçek delta ile çağrılır (girdi subsystem'i duraklatılmışken çalışan eylemleri işler); oyun zamanı, aktörler ve zamanlayıcılar donuk kalır. [tick] duraklatılmışken çağırır; duraklatmada [tick] atlayan bir sürücü (kare sürücüsü) kendisi çağırır. |
-| `step` | `void step(double deltaTime)` | Executes exactly one full 5-phase tick regardless of [isPaused] (the pause flag is untouched). |
+| `step` | `void step(double deltaTime)` | Executes exactly one full 5-phase tick regardless of [isPaused] (the pause flag is untouched). Fazlardan sonra motorun komutları sürücüye gönderilir (flush); böylece arada kare çizilmeden ilerletilen bir dünya (başsız, testler) Filament'in komut akışını taşırmaz; mesh önbelleği de aynı nedenle her yeni mesh instance'ından sonra flush eder. |
 | `cleanup` | `void cleanup()` | Releases resources and cleans up native scene bindings.  The world detaches its references but does NOT destroy the native Filament engine/scene. |
 | `build` | `LuminaObject? build(LuminaBuildContext context)` | Deklaratif alt nesne veya widget ağacını inşa eder. |
 

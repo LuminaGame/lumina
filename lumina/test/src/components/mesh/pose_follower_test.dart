@@ -212,9 +212,9 @@ void main() {
     expect(diagnostics, isEmpty);
   });
 
-  test('five followers take their poses in well under a millisecond per frame', () async {
+  test('twenty followers take their poses in about a millisecond per frame', () async {
     if (!File(bundle).existsSync()) return markTestSkipped('build tool/build_third_person_content.dart first');
-    final meshes = await spawn(List.filled(6, bundle));
+    final meshes = await spawn(List.filled(21, bundle));
     final leader = meshes.first;
     for (final f in meshes.skip(1)) {
       f.poseLeader = leader;
@@ -232,8 +232,8 @@ void main() {
     sw.stop();
     final perFrame = sw.elapsedMicroseconds / frames / 1000;
     // ignore: avoid_print
-    print('pose follow: 5 followers, $pairs bone pairs, ${perFrame.toStringAsFixed(3)} ms per world tick (all 6 meshes, clip included)');
+    print('pose follow: 20 followers, $pairs bone pairs, ${perFrame.toStringAsFixed(3)} ms per world tick (all 21 meshes, clip included)');
     expect(probe.followedBones, isNotEmpty);
-    expect(perFrame, lessThan(1.0));
+    expect(perFrame, lessThan(2.0));
   });
 }

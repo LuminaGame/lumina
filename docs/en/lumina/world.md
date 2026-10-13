@@ -436,7 +436,7 @@ Orchestrates levels, actors, Filament scene bindings, and the 5-phase determinis
 | `beginPlay` | `void beginPlay()` | Initializes gameplay state and triggers [beginPlay] across subsystems and actors. |
 | `tick` | `void tick(double deltaTime)` | Executes the 5-phase Deterministic Tick Pipeline for each frame update.  While [isPaused] no phase runs (no [onPreTick], no [tickCount] increment): only [tickWhilePaused] does. |
 | `tickWhilePaused` | `void tickWhilePaused(double deltaTime)` | One paused frame: `onWorldTickWhilePaused` on every subsystem with the frame's real delta (the input subsystem runs the actions that execute when paused); game time, actors and timers stay frozen. [tick] calls it while paused; a host that skips [tick] during a pause (the frame driver) calls it itself. |
-| `step` | `void step(double deltaTime)` | Executes exactly one full 5-phase tick regardless of [isPaused] (the pause flag is untouched). |
+| `step` | `void step(double deltaTime)` | Executes exactly one full 5-phase tick regardless of [isPaused] (the pause flag is untouched). After the phases the engine's commands are flushed to the driver, so a world ticked with no frame rendered in between (headless, tests) never overflows Filament's command stream; the mesh cache flushes after each new mesh instance for the same reason. |
 | `cleanup` | `void cleanup()` | Releases resources and cleans up native scene bindings.  The world detaches its references but does NOT destroy the native Filament engine/scene. |
 | `build` | `LuminaObject? build(LuminaBuildContext context)` | Constructs and returns the declarative element or widget hierarchy. |
 

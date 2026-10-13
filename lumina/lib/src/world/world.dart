@@ -605,6 +605,11 @@ class LuminaWorld extends LuminaObject {
     } finally {
       _isTicking = false;
     }
+    // The tick's engine commands (bone matrices, transforms, uploads) go to
+    // the driver now: a world ticked with no frame rendered in between (a
+    // headless world, a test, a burst of ticks before the first frame)
+    // would otherwise fill Filament's command stream until it overflows.
+    _filamentEngine?.flush();
   }
 
   LuminaCameraComponent? _viewCameraSource;
