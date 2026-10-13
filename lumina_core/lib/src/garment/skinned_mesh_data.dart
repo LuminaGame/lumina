@@ -158,9 +158,10 @@ class LuminaSkinnedMeshData {
   (double, double, double) nodePosition(int node) =>
       (nodeWorld[node * 16 + 12], nodeWorld[node * 16 + 13], nodeWorld[node * 16 + 14]);
 
-  /// A mesh from arrays (positions in cm; normals computed when null), not
+  /// A mesh from arrays (positions in cm; normals computed when null; uvs
+  /// two per vertex, zero when null), not
   /// read from a GLB: it has no nodes, skin or primitives to patch.
-  factory LuminaSkinnedMeshData.fromArrays(List<double> positions, List<int> triangles, {List<double>? normals}) {
+  factory LuminaSkinnedMeshData.fromArrays(List<double> positions, List<int> triangles, {List<double>? normals, List<double>? uvs}) {
     final n = Float32List(positions.length);
     if (normals != null) {
       for (var i = 0; i < n.length; i++) {
@@ -178,7 +179,7 @@ class LuminaSkinnedMeshData {
       document: GlbDocument(const {}, Uint8List(0)),
       positions: Float64List.fromList(positions),
       normals: n,
-      uvs: Float32List(positions.length ~/ 3 * 2),
+      uvs: uvs == null ? Float32List(positions.length ~/ 3 * 2) : Float32List.fromList(uvs),
       triangles: Uint32List.fromList(triangles),
       joints: null,
       weights: null,

@@ -111,6 +111,36 @@ void main() {
     expect(checked, greaterThan(5));
   }, skip: skip, timeout: const Timeout(Duration(minutes: 2)));
 
+  test('bodies with the same UV layout but another vertex order still fit vertex for vertex', () {
+    final shirt = read(tshirt), mannyBody = read(manny);
+    final wide = LuminaSkinnedMeshData.fromGlb(_widened(manny.readAsBytesSync(), 1.12));
+    // The widened Manny with its vertices in reverse order (as another
+    // export would split and order its seams): only the UVs still match.
+    final n = wide.vertexCount;
+    final positions = <double>[], uvs = <double>[];
+    for (var v = n - 1; v >= 0; v--) {
+      positions.addAll([wide.positions[v * 3], wide.positions[v * 3 + 1], wide.positions[v * 3 + 2]]);
+      uvs.addAll([wide.uvs[v * 2], wide.uvs[v * 2 + 1]]);
+    }
+    final reordered = LuminaSkinnedMeshData.fromArrays(positions, [for (final i in wide.triangles) n - 1 - i], uvs: uvs);
+    final doc = placed(shirt, mannyBody);
+    final direct = LuminaGarmentFitter.fit(source: shirt, document: doc, referenceBody: mannyBody, targetBody: wide);
+    // Same vertex count, other order: identity would be wrong; the UVs map it
+    // only when the counts differ, so drop the identity path by adding one
+    // unused vertex.
+    final extra = LuminaSkinnedMeshData.fromArrays([...positions, 0, 0, 0], [for (final i in wide.triangles) n - 1 - i], uvs: [...uvs, -1, -1]);
+    final viaUv = LuminaGarmentFitter.fit(source: shirt, document: doc, referenceBody: mannyBody, targetBody: extra);
+    expect(viaUv.report.denseCorrespondence, isTrue);
+    var worst = 0.0;
+    for (var i = 0; i < direct.positions.length; i++) {
+      worst = math.max(worst, (direct.positions[i] - viaUv.positions[i]).abs());
+    }
+    // ignore: avoid_print
+    print('UV correspondence: largest difference to the direct fit ${worst.toStringAsFixed(3)} cm');
+    expect(worst, lessThan(0.5));
+    expect(reordered.vertexCount, n);
+  }, skip: skip, timeout: const Timeout(Duration(minutes: 2)));
+
   test('refitting to the reference body itself keeps the authored placement where it was clear of the body', () {
     final shirt = read(tshirt), mannyBody = read(manny);
     final doc = placed(shirt, mannyBody);

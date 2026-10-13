@@ -102,7 +102,10 @@ abstract final class LuminaGarmentFitter {
     }
     final refGrid = LuminaTriangleGrid(referenceBody.positions, referenceBody.triangles);
     final targetGrid = LuminaTriangleGrid(targetBody.positions, targetBody.triangles);
-    final dense = referenceBody.vertexCount == targetBody.vertexCount && referenceBody.triangleCount == targetBody.triangleCount;
+    // Vertex for vertex: the same mesh layout, or the same UV layout (bodies
+    // of one family exported with their seams split differently).
+    final correspondence = _correspondence(referenceBody, targetBody);
+    final dense = correspondence != null;
 
     // Each placed vertex against the reference body: nearest point and its
     // signed offset along the surface normal.
@@ -119,7 +122,7 @@ abstract final class LuminaGarmentFitter {
     // 2. Coarse deformation.
     final moved = Float64List(n * 3);
     if (dense) {
-      final field = _denseField(referenceBody, targetBody, document);
+      final field = _denseField(referenceBody, targetBody, correspondence);
       final d = [0.0, 0.0, 0.0];
       for (var v = 0; v < n; v++) {
         field.displacement(placed[v * 3], placed[v * 3 + 1], placed[v * 3 + 2], d);
@@ -141,9 +144,9 @@ abstract final class LuminaGarmentFitter {
       final hit = refHits[v];
       if (hit == null || h.abs() >= looseOffset) continue;
       double qx, qy, qz, nx, ny, nz;
-      if (dense) {
-        final t = hit.triangle * 3;
-        final a = targetBody.triangles[t] * 3, b = targetBody.triangles[t + 1] * 3, c = targetBody.triangles[t + 2] * 3;
+      final corners = dense ? _targetCorners(referenceBody, correspondence, hit.triangle) : null;
+      if (corners != null) {
+        final (a, b, c) = corners;
         final tp = targetBody.positions;
         qx = hit.u * tp[a] + hit.v * tp[b] + hit.w * tp[c];
         qy = hit.u * tp[a + 1] + hit.v * tp[b + 1] + hit.w * tp[c + 1];
@@ -178,7 +181,12 @@ abstract final class LuminaGarmentFitter {
         moved[i] = before[i] + push[i];
       }
     }
-    pushed += _pushOut(moved, targetGrid, thickness);
+    // Until nothing moves (a push can land a vertex nearer another face).
+    for (var pass = 0; pass < 4; pass++) {
+      final moves = _pushOut(moved, targetGrid, thickness);
+      pushed += moves;
+      if (moves == 0) break;
+    }
     if (document.settleSteps > 0) _settle(moved, source.triangles, adjacency, targetGrid, thickness, document.settleSteps);
 
     // Measure what is left inside.
@@ -254,9 +262,9 @@ abstract final class LuminaGarmentFitter {
       final bodyHit = refGrid.closest(l.body![0], l.body![1], l.body![2]);
       if (bodyHit == null) continue;
       List<double> target;
-      if (dense) {
-        final t = bodyHit.triangle * 3;
-        final a = targetBody.triangles[t] * 3, b = targetBody.triangles[t + 1] * 3, c = targetBody.triangles[t + 2] * 3;
+      final corners = dense ? _targetCorners(referenceBody, correspondence, bodyHit.triangle) : null;
+      if (corners != null) {
+        final (a, b, c) = corners;
         final tp = targetBody.positions;
         target = [for (var k = 0; k < 3; k++) bodyHit.u * tp[a + k] + bodyHit.v * tp[b + k] + bodyHit.w * tp[c + k]];
       } else {
@@ -289,16 +297,82 @@ abstract final class LuminaGarmentFitter {
 
   /// The RBF field from the reference body to the target through farthest
   /// point samples of the shared vertices and the landmarks.
-  static LuminaRbfField _denseField(LuminaSkinnedMeshData ref, LuminaSkinnedMeshData target, LuminaGarmentDocument doc) {
+  static LuminaRbfField _denseField(LuminaSkinnedMeshData ref, LuminaSkinnedMeshData target, Int32List map) {
     final samples = _farthestPoints(ref.positions, 360);
     final from = <double>[], to = <double>[];
     for (final s in samples) {
+      final t = map[s];
+      if (t < 0) continue;
       for (var k = 0; k < 3; k++) {
         from.add(ref.positions[s * 3 + k]);
-        to.add(target.positions[s * 3 + k]);
+        to.add(target.positions[t * 3 + k]);
       }
     }
     return LuminaRbfField.fit(from, to, smoothing: 1e-3);
+  }
+
+  /// Reference vertex → target vertex when the two bodies correspond vertex
+  /// for vertex: the same layout (identity), else the same UV layout (each
+  /// UV, rounded to 1e-5, names one vertex; at least 95 % of the reference
+  /// vertices found). Null when they do not.
+  static Int32List? _correspondence(LuminaSkinnedMeshData ref, LuminaSkinnedMeshData target) {
+    if (ref.vertexCount == target.vertexCount && ref.triangleCount == target.triangleCount) {
+      return Int32List.fromList([for (var v = 0; v < ref.vertexCount; v++) v]);
+    }
+    if (ref.uvs.isEmpty || target.uvs.isEmpty) return null;
+    int key(Float32List uv, int v) => (uv[v * 2] * 1e5).round() * 200003 + (uv[v * 2 + 1] * 1e5).round();
+    // Mirrored UVs name two vertices (left and right): among the target
+    // vertices with a UV, the nearest in each body's normalised bounds.
+    final rn = _normaliser(ref.positions), tn = _normaliser(target.positions);
+    final byUv = <int, List<int>>{};
+    for (var v = 0; v < target.vertexCount; v++) {
+      (byUv[key(target.uvs, v)] ??= <int>[]).add(v);
+    }
+    final map = Int32List(ref.vertexCount);
+    var found = 0;
+    for (var v = 0; v < ref.vertexCount; v++) {
+      final candidates = byUv[key(ref.uvs, v)];
+      var best = -1;
+      var bestD = 0.25; // within a quarter of the body's size
+      if (candidates != null) {
+        for (final t in candidates) {
+          var d = 0.0;
+          for (var k = 0; k < 3; k++) {
+            final a = (ref.positions[v * 3 + k] - rn.$1[k]) / rn.$2, b = (target.positions[t * 3 + k] - tn.$1[k]) / tn.$2;
+            d += (a - b) * (a - b);
+          }
+          d = math.sqrt(d);
+          if (d < bestD) {
+            bestD = d;
+            best = t;
+          }
+        }
+      }
+      map[v] = best;
+      if (best >= 0) found++;
+    }
+    return found >= ref.vertexCount * 0.95 ? map : null;
+  }
+
+  /// The centre of [p]'s bounds and its largest extent.
+  static (List<double>, double) _normaliser(Float64List p) {
+    final lo = [double.infinity, double.infinity, double.infinity], hi = [-double.infinity, -double.infinity, -double.infinity];
+    for (var i = 0; i + 2 < p.length; i += 3) {
+      for (var k = 0; k < 3; k++) {
+        lo[k] = math.min(lo[k], p[i + k]);
+        hi[k] = math.max(hi[k], p[i + k]);
+      }
+    }
+    final size = math.max(hi[0] - lo[0], math.max(hi[1] - lo[1], hi[2] - lo[2]));
+    return ([for (var k = 0; k < 3; k++) (lo[k] + hi[k]) / 2], size <= 0 ? 1.0 : size);
+  }
+
+  /// The target vertices (×3 offsets) of reference triangle [t]'s corners,
+  /// or null when one has no counterpart.
+  static (int, int, int)? _targetCorners(LuminaSkinnedMeshData ref, Int32List map, int t) {
+    final a = map[ref.triangles[t * 3]], b = map[ref.triangles[t * 3 + 1]], c = map[ref.triangles[t * 3 + 2]];
+    if (a < 0 || b < 0 || c < 0) return null;
+    return (a * 3, b * 3, c * 3);
   }
 
   static List<int> _farthestPoints(Float64List p, int count) {
