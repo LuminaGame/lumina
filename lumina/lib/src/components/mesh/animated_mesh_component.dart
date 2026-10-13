@@ -213,7 +213,8 @@ class LuminaAnimatedMeshComponent extends LuminaStaticMeshComponent with LuminaM
   /// The overridden bones the mesh turned out not to have, each logged once.
   Set<String> get missingJointOverrideBones => Set.unmodifiable(_warnedBones);
 
-  /// Whether the loaded mesh has a skin joint named [bone].
+  /// Whether the loaded mesh has a bone named [bone] (a skin joint, an
+  /// ancestor of one, or a non-mesh node below one).
   bool hasJoint(String bone) => _joint(bone) != null;
 
   /// [bone]'s skin joint entity, or null before load / for a node that is
@@ -418,8 +419,24 @@ class LuminaAnimatedMeshComponent extends LuminaStaticMeshComponent with LuminaM
     final engine = owner?.world?.nativeEngine;
     if (engine != null) {
       final tm = FilamentTransformManager(engine);
+      // Up to this instance's root: instance roots hang under the shared
+      // asset's root, above which lie the other instances.
+      final instanceRoot = instance.root;
       for (final joint in _jointSet.toList()) {
-        for (var p = tm.getParent(joint); p != 0 && _jointSet.add(p); p = tm.getParent(p)) {}
+        for (var p = tm.getParent(joint); p != 0 && _jointSet.add(p) && p != instanceRoot; p = tm.getParent(p)) {}
+      }
+      // Bones below the joints that this mesh's skin does not use (a split
+      // character's body has no weights on the head) are bones too: the
+      // animation moves them and a pose follower reads them.
+      final renderables = FilamentRenderableManager(engine);
+      final pending = _jointSet.toList();
+      while (pending.isNotEmpty) {
+        final e = pending.removeLast();
+        final n = tm.childCount(e);
+        if (n == 0) continue;
+        for (final c in tm.getChildren(e, n)) {
+          if (!renderables.hasComponent(c) && _jointSet.add(c)) pending.add(c);
+        }
       }
     }
     for (final bone in _jointOverrides.keys) {

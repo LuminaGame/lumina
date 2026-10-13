@@ -61,8 +61,12 @@ extension _PoseFollowing on LuminaAnimatedMeshComponent {
     final out = <String, int>{};
     for (final name in names) {
       if (name.isEmpty || out.containsKey(name)) continue;
-      final joint = _joint(name);
-      if (joint != null) out[name] = joint;
+      for (final e in asset.getEntitiesByName(name)) {
+        if (_jointSet.contains(e)) {
+          out[name] = e;
+          break;
+        }
+      }
     }
     return _namedJoints = out;
   }
