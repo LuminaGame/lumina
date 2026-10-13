@@ -6,6 +6,8 @@ import 'package:lumina_core/src/garment/rbf.dart';
 import 'package:lumina_core/src/garment/skinned_mesh_data.dart';
 import 'package:lumina_core/src/garment/triangle_grid.dart';
 
+part 'package:lumina_core/src/garment/garment_fit_passes.dart';
+
 /// How a fit went: the largest and mean depth of a garment vertex inside
 /// the target body (cm, ≈ 0 after the push-out), the landmark error on the
 /// target (cm; garment landmark against the body landmark carried to the
@@ -18,6 +20,7 @@ class LuminaGarmentFitReport {
     required this.denseCorrespondence,
     required this.milliseconds,
     required this.pushedVertices,
+    this.maxPokeThrough = 0,
   });
 
   final double maxPenetration, meanPenetration;
@@ -26,6 +29,11 @@ class LuminaGarmentFitReport {
   final int milliseconds;
   final int pushedVertices;
 
+  /// The largest distance (cm) a body point stands in front of the garment
+  /// where the garment covers it (a bump or a separate sub-mesh poking
+  /// through between the garment's vertices); 0 when nothing does.
+  final double maxPokeThrough;
+
   Map<String, Object?> toJson() => {
     'max_penetration_cm': maxPenetration,
     'mean_penetration_cm': meanPenetration,
@@ -33,6 +41,7 @@ class LuminaGarmentFitReport {
     'dense': denseCorrespondence,
     'ms': milliseconds,
     'pushed_vertices': pushedVertices,
+    'max_poke_through_cm': maxPokeThrough,
   };
 }
 
@@ -188,6 +197,17 @@ abstract final class LuminaGarmentFitter {
       if (moves == 0) break;
     }
     if (document.settleSteps > 0) _settle(moved, source.triangles, adjacency, targetGrid, thickness, document.settleSteps);
+    // Nothing of the body in front of the garment where it covers it: the
+    // garment's vertices may clear the skin while a bump or a separate
+    // sub-mesh (a MetaHuman's nipples) pokes through between them.
+    for (var round = 0; round < 10; round++) {
+      final lifted = _coverBody(moved, source.triangles, adjacency, targetBody, thickness);
+      // Deep insides were pushed out already: only what a lift moved near.
+      for (var pass = 0; pass < 4; pass++) {
+        if (_pushOut(moved, targetGrid, thickness, reach: coverReach + thickness) == 0) break;
+      }
+      if (lifted == 0) break;
+    }
 
     // Measure what is left inside.
     var maxPen = 0.0, sumPen = 0.0;
@@ -291,6 +311,7 @@ abstract final class LuminaGarmentFitter {
         denseCorrespondence: dense,
         milliseconds: clock.elapsedMilliseconds,
         pushedVertices: pushed,
+        maxPokeThrough: _pokeThrough(moved, source.triangles, targetBody),
       ),
     );
   }
@@ -455,150 +476,8 @@ abstract final class LuminaGarmentFitter {
     return [ox / total, oy / total, oz / total];
   }
 
-  /// Moves every vertex closer than [thickness] outside the surface (or
-  /// inside it) out along the surface normal; returns how many moved.
-  static int _pushOut(Float64List p, LuminaTriangleGrid grid, double thickness) {
-    var moved = 0;
-    for (var v = 0; v < p.length ~/ 3; v++) {
-      // No distance limit: a vertex deep inside the body is far from it.
-      final hit = grid.closest(p[v * 3], p[v * 3 + 1], p[v * 3 + 2]);
-      if (hit == null) continue;
-      final s = (p[v * 3] - hit.x) * hit.nx + (p[v * 3 + 1] - hit.y) * hit.ny + (p[v * 3 + 2] - hit.z) * hit.nz;
-      if (s >= thickness - 1e-6) continue;
-      p[v * 3] = hit.x + hit.nx * thickness;
-      p[v * 3 + 1] = hit.y + hit.ny * thickness;
-      p[v * 3 + 2] = hit.z + hit.nz * thickness;
-      moved++;
-    }
-    return moved;
-  }
-
-  /// A cloth settle: [steps] steps of 1/60 s under gravity (−Y, cm) with
-  /// position-based edge constraints at their lengths now and the body
-  /// pushed out after each step; vertices touching the body (within the
-  /// thickness plus 1 cm) are held where they are.
-  static void _settle(Float64List p, List<int> triangles, List<List<int>> adjacency, LuminaTriangleGrid body, double thickness, int steps) {
-    final n = p.length ~/ 3;
-    final held = Uint8List(n);
-    for (var v = 0; v < n; v++) {
-      final hit = body.closest(p[v * 3], p[v * 3 + 1], p[v * 3 + 2], maxDistance: thickness + 1);
-      if (hit != null) held[v] = 1;
-    }
-    // Welded copies move with their root.
-    int root(int v) {
-      final nb = adjacency[v];
-      return nb.length == 1 && nb[0] < 0 ? -1 - nb[0] : v;
-    }
-
-    final edges = <int>[];
-    final rest = <double>[];
-    final seen = <int>{};
-    for (var t = 0; t + 2 < triangles.length; t += 3) {
-      for (var k = 0; k < 3; k++) {
-        final a = root(triangles[t + k]), b = root(triangles[t + (k + 1) % 3]);
-        if (a == b) continue;
-        final key = a < b ? a * 0x200000 + b : b * 0x200000 + a;
-        if (!seen.add(key)) continue;
-        edges
-          ..add(a)
-          ..add(b);
-        final dx = p[a * 3] - p[b * 3], dy = p[a * 3 + 1] - p[b * 3 + 1], dz = p[a * 3 + 2] - p[b * 3 + 2];
-        rest.add(math.sqrt(dx * dx + dy * dy + dz * dz));
-      }
-    }
-    const dt = 1 / 60, gravity = 980.0;
-    final previous = Float64List.fromList(p);
-    for (var s = 0; s < steps; s++) {
-      for (var v = 0; v < n; v++) {
-        if (held[v] == 1 || root(v) != v) continue;
-        // Verlet with damping: velocity from the last step, plus gravity.
-        final vx = (p[v * 3] - previous[v * 3]) * 0.9;
-        final vy = (p[v * 3 + 1] - previous[v * 3 + 1]) * 0.9;
-        final vz = (p[v * 3 + 2] - previous[v * 3 + 2]) * 0.9;
-        previous[v * 3] = p[v * 3];
-        previous[v * 3 + 1] = p[v * 3 + 1];
-        previous[v * 3 + 2] = p[v * 3 + 2];
-        p[v * 3] += vx;
-        p[v * 3 + 1] += vy - gravity * dt * dt;
-        p[v * 3 + 2] += vz;
-      }
-      for (var it = 0; it < 16; it++) {
-        for (var e = 0; e < rest.length; e++) {
-          final a = edges[e * 2], b = edges[e * 2 + 1];
-          final wa = held[a] == 1 ? 0.0 : 1.0, wb = held[b] == 1 ? 0.0 : 1.0;
-          if (wa + wb == 0) continue;
-          final dx = p[b * 3] - p[a * 3], dy = p[b * 3 + 1] - p[a * 3 + 1], dz = p[b * 3 + 2] - p[a * 3 + 2];
-          final len = math.sqrt(dx * dx + dy * dy + dz * dz);
-          if (len < 1e-9) continue;
-          final c = (len - rest[e]) / len / (wa + wb);
-          p[a * 3] += wa * c * dx;
-          p[a * 3 + 1] += wa * c * dy;
-          p[a * 3 + 2] += wa * c * dz;
-          p[b * 3] -= wb * c * dx;
-          p[b * 3 + 1] -= wb * c * dy;
-          p[b * 3 + 2] -= wb * c * dz;
-        }
-      }
-      _pushOut(p, body, thickness);
-    }
-    for (var v = 0; v < n; v++) {
-      final r = root(v);
-      if (r == v) continue;
-      p[v * 3] = p[r * 3];
-      p[v * 3 + 1] = p[r * 3 + 1];
-      p[v * 3 + 2] = p[r * 3 + 2];
-    }
-  }
-
-  /// Neighbours of every vertex (vertices at the same position welded).
-  static List<List<int>> _adjacency(int n, List<int> triangles, List<double> positions) {
-    final weld = <String, int>{};
-    final root = Int32List(n);
-    for (var v = 0; v < n; v++) {
-      final k = '${(positions[v * 3] * 1e3).round()},${(positions[v * 3 + 1] * 1e3).round()},${(positions[v * 3 + 2] * 1e3).round()}';
-      root[v] = weld.putIfAbsent(k, () => v);
-    }
-    final sets = List.generate(n, (_) => <int>{});
-    for (var t = 0; t + 2 < triangles.length; t += 3) {
-      for (var k = 0; k < 3; k++) {
-        final a = root[triangles[t + k]], b = root[triangles[t + (k + 1) % 3]];
-        if (a == b) continue;
-        sets[a].add(b);
-        sets[b].add(a);
-      }
-    }
-    return [for (var v = 0; v < n; v++) root[v] == v ? sets[v].toList() : <int>[-1 - root[v]]];
-  }
-
-  /// Laplacian smoothing of a per-vertex vector field over [adjacency]
-  /// (welded copies take their root's value).
-  static void _smooth(Float64List field, List<List<int>> adjacency, int iterations) {
-    final n = adjacency.length;
-    for (var it = 0; it < iterations; it++) {
-      final next = Float64List.fromList(field);
-      for (var v = 0; v < n; v++) {
-        final nb = adjacency[v];
-        if (nb.isEmpty || (nb.length == 1 && nb[0] < 0)) continue;
-        for (var k = 0; k < 3; k++) {
-          var s = field[v * 3 + k];
-          for (final u in nb) {
-            s += field[u * 3 + k];
-          }
-          next[v * 3 + k] = s / (nb.length + 1);
-        }
-      }
-      for (var v = 0; v < n; v++) {
-        final nb = adjacency[v];
-        if (nb.length == 1 && nb[0] < 0) {
-          final r = -1 - nb[0];
-          for (var k = 0; k < 3; k++) {
-            next[v * 3 + k] = next[r * 3 + k];
-          }
-        }
-      }
-      field.setAll(0, next);
-    }
-  }
+  /// How near (cm) the garment must pass a body point to cover it.
+  static const double coverReach = 3;
 
   static (double, double, double) _faceNormal(List<double> p, int a, int b, int c) {
     final ux = p[b] - p[a], uy = p[b + 1] - p[a + 1], uz = p[b + 2] - p[a + 2];
