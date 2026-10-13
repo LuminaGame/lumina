@@ -131,6 +131,38 @@ void main() {
     expect(sum / count, lessThan(0.5));
   }, skip: skip, timeout: const Timeout(Duration(minutes: 2)));
 
+  test('a cloth settle drapes the fitted shirt under gravity: hanging parts sag, nothing inside, edges kept', () {
+    final shirt = read(tshirt).refined(), mannyBody = read(manny), quinnBody = read(quinn);
+    final doc = placed(read(tshirt), mannyBody);
+    final still = LuminaGarmentFitter.fit(source: shirt, document: doc, referenceBody: mannyBody, targetBody: quinnBody);
+    final settled = LuminaGarmentFitter.fit(source: shirt, document: doc.copyWith(settleSteps: 60), referenceBody: mannyBody, targetBody: quinnBody);
+    expect(penetration(settled, quinnBody), lessThan(0.1));
+    var sagged = 0, rose = 0;
+    for (var v = 0; v < still.vertexCount; v++) {
+      final dy = settled.positions[v * 3 + 1] - still.positions[v * 3 + 1];
+      if (dy < -0.5) sagged++;
+      if (dy > 0.5) rose++;
+    }
+    // ignore: avoid_print
+    print('settle: $sagged of ${still.vertexCount} vertices sagged more than 0.5 cm, $rose rose');
+    expect(sagged, greaterThan(still.vertexCount ~/ 20));
+    expect(rose, lessThan(sagged));
+    double stretch(LuminaGarmentFit f) {
+      var sum = 0.0, count = 0;
+      for (var t = 0; t + 2 < f.triangles.length; t += 3) {
+        final a = f.triangles[t], b = f.triangles[t + 1];
+        final d1 = math.sqrt([0, 1, 2].fold(0.0, (s, k) => s + math.pow(f.positions[a * 3 + k] - f.positions[b * 3 + k], 2)));
+        final d0 = math.sqrt([0, 1, 2].fold(0.0, (s, k) => s + math.pow(still.positions[a * 3 + k] - still.positions[b * 3 + k], 2)));
+        if (d0 > 1e-6) {
+          sum += (d1 - d0).abs() / d0;
+          count++;
+        }
+      }
+      return sum / count;
+    }
+    expect(stretch(settled), lessThan(0.08), reason: 'mean edge length change');
+  }, skip: skip, timeout: const Timeout(Duration(minutes: 2)));
+
   group('a garment in a character slot', () {
     late FilamentEngine engine;
     late FilamentScene scene;

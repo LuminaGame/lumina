@@ -82,6 +82,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(vm.doc.landmarks, isEmpty);
 
+    expect(find.byKey(const ValueKey('garment_settle_steps')), findsOneWidget);
+    vm.setSettleSteps(500);
+    expect(vm.doc.settleSteps, LuminaGarmentDocument.maxSettleSteps, reason: 'clamped');
+    vm.setSettleSteps(30);
     vm.setThickness(2.5);
     await tester.pumpAndSettle();
     expect(find.text('G_Coat *'), findsOneWidget);
@@ -94,6 +98,7 @@ void main() {
     expect(find.text('G_Coat'), findsOneWidget);
     final saved = LuminaGarmentDocument.fromAsset(LuminaAsset.fromBytes(File(garmentPath).readAsBytesSync()));
     expect(saved.thickness, 2.5);
+    expect(saved.settleSteps, 30);
     await tester.pumpWidget(const SizedBox());
   });
 }

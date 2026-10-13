@@ -223,6 +223,7 @@ class GarmentEditorViewModel extends ChangeNotifier {
   void setThickness(double cm) => _set(_doc.copyWith(thickness: cm));
   void setSimulateAsCloth(bool on) => _set(_doc.copyWith(simulateAsCloth: on));
   void setClothSettings(String relative) => _set(_doc.copyWith(clothSettingsAsset: relative));
+  void setSettleSteps(int steps) => _set(_doc.copyWith(settleSteps: steps));
 
   void setPlacement({List<double>? location, List<double>? rotation, List<double>? scale}) =>
       _set(_doc.copyWith(location: location, rotation: rotation, scale: scale));

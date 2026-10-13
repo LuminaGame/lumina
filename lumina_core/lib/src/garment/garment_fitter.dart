@@ -179,6 +179,7 @@ abstract final class LuminaGarmentFitter {
       }
     }
     pushed += _pushOut(moved, targetGrid, thickness);
+    if (document.settleSteps > 0) _settle(moved, source.triangles, adjacency, targetGrid, thickness, document.settleSteps);
 
     // Measure what is left inside.
     var maxPen = 0.0, sumPen = 0.0;
@@ -396,6 +397,83 @@ abstract final class LuminaGarmentFitter {
       moved++;
     }
     return moved;
+  }
+
+  /// A cloth settle: [steps] steps of 1/60 s under gravity (−Y, cm) with
+  /// position-based edge constraints at their lengths now and the body
+  /// pushed out after each step; vertices touching the body (within the
+  /// thickness plus 1 cm) are held where they are.
+  static void _settle(Float64List p, List<int> triangles, List<List<int>> adjacency, LuminaTriangleGrid body, double thickness, int steps) {
+    final n = p.length ~/ 3;
+    final held = Uint8List(n);
+    for (var v = 0; v < n; v++) {
+      final hit = body.closest(p[v * 3], p[v * 3 + 1], p[v * 3 + 2], maxDistance: thickness + 1);
+      if (hit != null) held[v] = 1;
+    }
+    // Welded copies move with their root.
+    int root(int v) {
+      final nb = adjacency[v];
+      return nb.length == 1 && nb[0] < 0 ? -1 - nb[0] : v;
+    }
+
+    final edges = <int>[];
+    final rest = <double>[];
+    final seen = <int>{};
+    for (var t = 0; t + 2 < triangles.length; t += 3) {
+      for (var k = 0; k < 3; k++) {
+        final a = root(triangles[t + k]), b = root(triangles[t + (k + 1) % 3]);
+        if (a == b) continue;
+        final key = a < b ? a * 0x200000 + b : b * 0x200000 + a;
+        if (!seen.add(key)) continue;
+        edges
+          ..add(a)
+          ..add(b);
+        final dx = p[a * 3] - p[b * 3], dy = p[a * 3 + 1] - p[b * 3 + 1], dz = p[a * 3 + 2] - p[b * 3 + 2];
+        rest.add(math.sqrt(dx * dx + dy * dy + dz * dz));
+      }
+    }
+    const dt = 1 / 60, gravity = 980.0;
+    final previous = Float64List.fromList(p);
+    for (var s = 0; s < steps; s++) {
+      for (var v = 0; v < n; v++) {
+        if (held[v] == 1 || root(v) != v) continue;
+        // Verlet with damping: velocity from the last step, plus gravity.
+        final vx = (p[v * 3] - previous[v * 3]) * 0.9;
+        final vy = (p[v * 3 + 1] - previous[v * 3 + 1]) * 0.9;
+        final vz = (p[v * 3 + 2] - previous[v * 3 + 2]) * 0.9;
+        previous[v * 3] = p[v * 3];
+        previous[v * 3 + 1] = p[v * 3 + 1];
+        previous[v * 3 + 2] = p[v * 3 + 2];
+        p[v * 3] += vx;
+        p[v * 3 + 1] += vy - gravity * dt * dt;
+        p[v * 3 + 2] += vz;
+      }
+      for (var it = 0; it < 16; it++) {
+        for (var e = 0; e < rest.length; e++) {
+          final a = edges[e * 2], b = edges[e * 2 + 1];
+          final wa = held[a] == 1 ? 0.0 : 1.0, wb = held[b] == 1 ? 0.0 : 1.0;
+          if (wa + wb == 0) continue;
+          final dx = p[b * 3] - p[a * 3], dy = p[b * 3 + 1] - p[a * 3 + 1], dz = p[b * 3 + 2] - p[a * 3 + 2];
+          final len = math.sqrt(dx * dx + dy * dy + dz * dz);
+          if (len < 1e-9) continue;
+          final c = (len - rest[e]) / len / (wa + wb);
+          p[a * 3] += wa * c * dx;
+          p[a * 3 + 1] += wa * c * dy;
+          p[a * 3 + 2] += wa * c * dz;
+          p[b * 3] -= wb * c * dx;
+          p[b * 3 + 1] -= wb * c * dy;
+          p[b * 3 + 2] -= wb * c * dz;
+        }
+      }
+      _pushOut(p, body, thickness);
+    }
+    for (var v = 0; v < n; v++) {
+      final r = root(v);
+      if (r == v) continue;
+      p[v * 3] = p[r * 3];
+      p[v * 3 + 1] = p[r * 3 + 1];
+      p[v * 3 + 2] = p[r * 3 + 2];
+    }
   }
 
   /// Neighbours of every vertex (vertices at the same position welded).

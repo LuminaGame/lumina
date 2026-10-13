@@ -128,7 +128,7 @@ A square heightmap terrain plus its foliage layers — the single source of trut
 
 ### `enum AssetType`
 
-`AssetType`: Sistemde kullanılan seçenekleri ve durumları listeleyen numaralandırma türüdür. `clothSettings`, `raw_payload`'ı JSON olarak bir `LuminaClothSettingsDocument` olan kumaş ayarları asset'idir (`lib/src/formats/lumina_cloth_settings_document.dart`: ayarlar, kumaş bileşeninin anahtarlarıyla `toProperties` / `fromProperties` ve kırpılan `ranges`, `withValue`, `toAsset` / `fromAsset`). `garment`, `raw_payload`'ı JSON olarak bir `LuminaGarmentDocument` olan giysi asset'idir (`lib/src/formats/lumina_garment_document.dart`: kaynak mesh, referans gövde, yerleşim ve `placementMatrix` / `place`, `LuminaGarmentLandmark` çiftleri ve 17 `presets`, 0–10 cm'ye kırpılan kalınlık, slot, kumaş seçenekleri, `toAsset` / `fromAsset`).
+`AssetType`: Sistemde kullanılan seçenekleri ve durumları listeleyen numaralandırma türüdür. `clothSettings`, `raw_payload`'ı JSON olarak bir `LuminaClothSettingsDocument` olan kumaş ayarları asset'idir (`lib/src/formats/lumina_cloth_settings_document.dart`: ayarlar, kumaş bileşeninin anahtarlarıyla `toProperties` / `fromProperties` ve kırpılan `ranges`, `withValue`, `toAsset` / `fromAsset`). `garment`, `raw_payload`'ı JSON olarak bir `LuminaGarmentDocument` olan giysi asset'idir (`lib/src/formats/lumina_garment_document.dart`: kaynak mesh, referans gövde, yerleşim ve `placementMatrix` / `place`, `LuminaGarmentLandmark` çiftleri ve 17 `presets`, 0–10 cm'ye kırpılan kalınlık, slot, kumaş seçenekleri, `settleSteps` (0–240, uyumdan sonraki kumaş oturtma), `toAsset` / `fromAsset`).
 
 ### `class AssetReference`
 

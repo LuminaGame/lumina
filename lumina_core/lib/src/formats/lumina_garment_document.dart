@@ -56,6 +56,7 @@ class LuminaGarmentDocument {
     this.slot = 'Torso',
     this.simulateAsCloth = false,
     this.clothSettingsAsset = '',
+    this.settleSteps = 0,
   });
 
   final String sourceMesh, referenceBody;
@@ -65,6 +66,14 @@ class LuminaGarmentDocument {
   final String slot;
   final bool simulateAsCloth;
   final String clothSettingsAsset;
+
+  /// Cloth settle steps after a fit (0: none): the fitted garment drapes
+  /// under gravity for this many 1/60 s steps, keeping its edge lengths,
+  /// staying out of the body, the parts touching the body held.
+  final int settleSteps;
+
+  /// The settle steps an editor offers.
+  static const int maxSettleSteps = 240;
 
   /// The thickness range an editor offers (cm).
   static const double minThickness = 0, maxThickness = 10;
@@ -104,6 +113,7 @@ class LuminaGarmentDocument {
     String? slot,
     bool? simulateAsCloth,
     String? clothSettingsAsset,
+    int? settleSteps,
   }) => LuminaGarmentDocument(
     sourceMesh: sourceMesh ?? this.sourceMesh,
     referenceBody: referenceBody ?? this.referenceBody,
@@ -115,6 +125,7 @@ class LuminaGarmentDocument {
     slot: slot ?? this.slot,
     simulateAsCloth: simulateAsCloth ?? this.simulateAsCloth,
     clothSettingsAsset: clothSettingsAsset ?? this.clothSettingsAsset,
+    settleSteps: (settleSteps ?? this.settleSteps).clamp(0, maxSettleSteps).toInt(),
   );
 
   /// The landmark named [name], or null.
@@ -183,6 +194,7 @@ class LuminaGarmentDocument {
     'slot': slot,
     'simulateAsCloth': simulateAsCloth,
     'clothSettingsAsset': clothSettingsAsset,
+    if (settleSteps > 0) 'settleSteps': settleSteps,
   };
 
   factory LuminaGarmentDocument.fromProperties(Map<String, dynamic> p) {
@@ -203,6 +215,7 @@ class LuminaGarmentDocument {
       slot: p['slot'] as String? ?? 'Torso',
       simulateAsCloth: p['simulateAsCloth'] == true,
       clothSettingsAsset: p['clothSettingsAsset'] as String? ?? '',
+      settleSteps: ((p['settleSteps'] as num?)?.toInt() ?? 0).clamp(0, maxSettleSteps).toInt(),
     );
   }
 
