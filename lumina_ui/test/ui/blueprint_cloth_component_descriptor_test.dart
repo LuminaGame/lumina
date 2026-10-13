@@ -79,7 +79,12 @@ void skinnedClothDescriptorTests() {
 
   test('the Details panel describes the same Skinned Cloth properties', () {
     final details = ComponentPropertyRegistry.descriptors['LuminaSkinnedClothComponent']!;
-    final schema = BlueprintComponentRegistry.getDescriptor('LuminaSkinnedClothComponent')!.properties.map((p) => p.dartField).toSet();
+    // Slot and Pose From place a garment in a Blueprint character's slots.
+    final schema = BlueprintComponentRegistry.getDescriptor('LuminaSkinnedClothComponent')!
+        .properties
+        .map((p) => p.dartField)
+        .where((f) => !const {'slot', 'poseFrom'}.contains(f))
+        .toSet();
     expect(details.properties.map((p) => p.id).toSet(), schema);
   });
 }

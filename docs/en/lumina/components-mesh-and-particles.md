@@ -379,6 +379,7 @@ Scene component rendering a static (non-skinned) 3D mesh via Filament and gltfio
 
 | Method / Getter | Signature | Purpose & Description |
 | :--- | :--- | :--- |
+| `setMeshAsset` | `Future<void> setMeshAsset(String path, {assetProvider})` | Draws another mesh **in place**: the component, its transform, children and place in the actor stay; the old instance is released and the new one loads (`loaded` is the new load). A skeletal mesh keeps playing its clip by name and keeps its followers; character slots fill skeletal mesh slots this way (see [Character slots](character-slots.md)). |
 | `meshAssetPath` | `String meshAssetPath` | Holds the `meshAssetPath` property or configuration state. |
 | `isLoaded` | `bool get isLoaded` | Whether the glTF/GLB asset has completed loading and is active in the scene. |
 | `loaded` | `Future<void> get loaded` | Future completing when the mesh asset finishes asynchronous loading and scene attachment. |

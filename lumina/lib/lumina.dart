@@ -149,6 +149,7 @@ export 'package:lumina/src/components/environment/local_fog_volume_component.dar
 export 'package:lumina/src/components/environment/reflection_capture_component.dart';
 export 'package:lumina/src/components/mesh/static_mesh_component.dart';
 export 'package:lumina/src/components/mesh/animated_mesh_component.dart';
+export 'package:lumina/src/components/mesh/character_slots.dart';
 export 'package:lumina/src/components/mesh/procedural_mesh_component.dart';
 export 'package:lumina/src/components/mesh/instanced_static_mesh_component.dart';
 export 'package:lumina/src/components/mesh/mesh_asset_cache.dart';

@@ -25,6 +25,7 @@ part 'node_library/rendering_features.dart';
 part 'node_library/media_and_debug.dart';
 part 'node_library/type_context.dart';
 part 'node_library/widget_blueprint.dart';
+part 'node_library/character_slots.dart';
 part 'node_library/cloth.dart';
 part 'node_library/ragdoll.dart';
 part 'node_library/traversal.dart';
@@ -421,6 +422,7 @@ abstract final class LuminaBlueprintNodeLibrary {
     ..._widgetBlueprintNodes,
     ..._ragdollNodes,
     ..._clothNodes,
+    ..._characterSlotNodes,
     ..._traversalNodes,
     ..._windowModeNodes,
     ..._displaySettingsNodes,

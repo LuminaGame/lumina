@@ -51,5 +51,15 @@ const ComponentTypeDescriptor skinnedClothComponentDescriptor = ComponentTypeDes
     ComponentPropertySchema(group: 'CLOTH MOTION', name: 'Teleport Rotation (deg)', dartField: 'teleportRotation', type: ComponentPropertyType.number, defaultValue: 60.0, min: 1.0, max: 180.0),
     ComponentPropertySchema(group: 'CLOTH SIMULATION', name: 'Simulate', dartField: 'simulate', type: ComponentPropertyType.boolean, defaultValue: true),
     ComponentPropertySchema(group: 'CLOTH SIMULATION', name: 'Cast Shadows', dartField: 'castShadows', type: ComponentPropertyType.boolean, defaultValue: true),
+    // A garment slot of a character, worn on the skeletal mesh Pose From names.
+    ComponentPropertySchema(group: 'CHARACTER', name: 'Slot', dartField: 'slot', type: ComponentPropertyType.string, defaultValue: ''),
+    ComponentPropertySchema(
+      group: 'CHARACTER',
+      name: 'Pose From',
+      dartField: 'poseFrom',
+      type: ComponentPropertyType.componentReference,
+      defaultValue: '',
+      referenceTypes: ['LuminaSkeletalMeshComponent', 'LuminaAnimatedMeshComponent'],
+    ),
   ],
 );

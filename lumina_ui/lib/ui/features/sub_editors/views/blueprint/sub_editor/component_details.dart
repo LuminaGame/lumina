@@ -535,8 +535,12 @@ mixin _BlueprintSubEditorComponentDetails on _BlueprintSubEditorStateBase {
           ),
         );
 
+      case ComponentPropertyType.componentReference:
+        return _componentReferencePicker(_viewModel, prop, node);
+
       case ComponentPropertyType.string:
         return Padding(
+          key: ValueKey('bp_prop_${node.id}_${prop.dartField}'),
           padding: const EdgeInsets.symmetric(vertical: 4),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

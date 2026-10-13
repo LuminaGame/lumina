@@ -22,6 +22,7 @@ import 'package:lumina/src/components/light/spot_light_component.dart';
 import 'package:lumina/src/components/particles/particle_system_component.dart';
 import 'package:lumina/src/components/collision/collision_component.dart';
 import 'package:lumina/src/components/mesh/animated_mesh_component.dart';
+import 'package:lumina/src/components/mesh/character_slots.dart';
 import 'package:lumina/src/components/mesh/spring_morph_component.dart';
 import 'package:lumina/src/physics/cloth/cloth_component.dart';
 import 'package:lumina/src/physics/cloth/cloth_properties.dart';
@@ -130,11 +131,19 @@ abstract final class LuminaBlueprintComponents {
     }
     _inheritMeshPhysics(components, built);
     linkPoseLeaders(components, built, diagnostics: diagnostics);
+    luminaRegisterBlueprintSlots(
+      actor,
+      [for (final c in components) (id: c.id, name: c.name, properties: c.properties)],
+      built,
+      resolve: (stored) => resolveAsset?.call(stored) ?? luminaBlueprintMeshPath(stored),
+      assetProvider: assetProvider,
+    );
     return built;
   }
 
   /// Points every skeletal mesh whose `poseFrom` names another skeletal
-  /// mesh component (by id, else by name) at it as its pose leader. A
+  /// mesh component (by id, else by name) at it as its pose leader (a
+  /// skinned cloth's `poseFrom` is the mesh it is worn on). A
   /// missing or non-mesh target leaves the mesh animating on its own; a
   /// cycle is reported and skipped.
   static void linkPoseLeaders(
@@ -146,13 +155,18 @@ abstract final class LuminaBlueprintComponents {
       final from = d.properties['poseFrom'];
       if (from is! String || from.isEmpty || from == 'None') continue;
       final follower = built[d.id];
-      if (follower is! LuminaAnimatedMeshComponent) continue;
       var leader = built[from];
       if (leader == null) {
         final byName = docs.where((o) => o.name == from).firstOrNull;
         if (byName != null) leader = built[byName.id];
       }
       if (leader is! LuminaAnimatedMeshComponent || identical(leader, follower)) continue;
+      // A garment's poseFrom names the mesh it is worn on.
+      if (follower is LuminaSkinnedClothComponent) {
+        follower.mesh ??= leader;
+        continue;
+      }
+      if (follower is! LuminaAnimatedMeshComponent) continue;
       try {
         follower.poseLeader = leader;
       } on StateError catch (e) {

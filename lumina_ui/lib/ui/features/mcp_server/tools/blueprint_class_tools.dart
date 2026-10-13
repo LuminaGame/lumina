@@ -59,6 +59,7 @@ void registerBlueprintClassTools(McpToolRegistry registry, EditorViewModel vm, M
         return value;
       case ComponentPropertyType.string:
       case ComponentPropertyType.assetReference:
+      case ComponentPropertyType.componentReference:
         if (value is! String) bad('a string');
         return value;
       case ComponentPropertyType.enumType:

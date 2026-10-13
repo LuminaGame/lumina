@@ -233,6 +233,7 @@ Real Component Hierarchy Tree for Blueprint Editor.
 | `min` | `double min` | `min` alanını (field/property) ve ilişkili veriyi saklar. |
 | `max` | `double max` | `max` alanını (field/property) ve ilişkili veriyi saklar. |
 | `enumOptions` | `List<String> enumOptions` | `enumOptions` alanını (field/property) ve ilişkili veriyi saklar. |
+| `referenceTypes` | `List<String> referenceTypes` | Bir `componentReference` özelliğinin gösterebileceği bileşen türleri. Bir `componentReference` satırı (Skeletal Mesh / Skinned Cloth **Pose From**), Blueprint'in bu türlerdeki bileşenleri üzerinde bir seçicidir; bileşenin kendisini ve onu zaten takip edenleri dışarıda bırakır; bileşen id'si olarak saklanır (bkz. [Karakter slotları](../../lumina/character-slots.md)). |
 
 ### `class ComponentTypeDescriptor`
 

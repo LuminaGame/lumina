@@ -82,6 +82,23 @@ const List<ComponentTypeDescriptor> _meshComponentDescriptors = [
         type: ComponentPropertyType.boolean,
         defaultValue: true,
       ),
+      // A character's swappable part: its slot name, and the skeletal
+      // mesh whose pose it follows by bone name.
+      ComponentPropertySchema(
+        group: 'CHARACTER',
+        name: 'Slot',
+        dartField: 'slot',
+        type: ComponentPropertyType.string,
+        defaultValue: '',
+      ),
+      ComponentPropertySchema(
+        group: 'CHARACTER',
+        name: 'Pose From',
+        dartField: 'poseFrom',
+        type: ComponentPropertyType.componentReference,
+        defaultValue: '',
+        referenceTypes: ['LuminaSkeletalMeshComponent', 'LuminaAnimatedMeshComponent'],
+      ),
     ],
   ),
   ComponentTypeDescriptor(

@@ -76,6 +76,13 @@ mixin LuminaMorphTargets on LuminaSceneComponent {
     return _morphStaging[target.$1]![target.$2];
   }
 
+  /// Drops the discovered targets (the mesh they belong to was released).
+  void forgetMorphTargets() {
+    _morphTargets = null;
+    _morphStaging.clear();
+    _dirtyMorphEntities.clear();
+  }
+
   void clearMorphTargets() {
     if (_morphTargets == null) return;
     for (final entry in _morphStaging.entries) {

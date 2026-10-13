@@ -46,6 +46,7 @@ Runtime code never reads files with `File(...)` directly: asset loads without an
 | [Pose authoring](pose-authoring.md) | Posing a character through handles (hands, elbows, feet, knees, head, chest, pelvis) with IK, saved poses, grabbing handles with XR controllers or the mouse, Blueprint nodes. |
 | [Ragdolls, falls and getting up](ragdoll.md) | Physics assets and their generator, ragdolls driving the mesh, falls into ragdoll, heavy landings, get-up clips. |
 | [Cloth](cloth.md) | Cloth components on Jolt soft bodies: grids and mesh assets, pins and attachments, wind, collisions, Blueprint nodes. |
+| [Character slots](character-slots.md) | Characters of several skinned meshes: pose following by bone name, named slots filled and cleared at run time, body masks under garments, the Slot nodes. |
 | [AI](ai.md) | AI controller, behavior trees, blackboard, navigation, perception. |
 | [Materials and post-processing](materials-and-post-process.md) | Engine materials, dynamic material instances, material cache, post-process, scalability, shadows. |
 | [Rendering devices](rendering.md) | GPU selection and the render backend in use. |

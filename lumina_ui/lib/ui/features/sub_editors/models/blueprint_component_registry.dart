@@ -21,6 +21,10 @@ enum ComponentPropertyType {
 
   /// An sRGB `#RRGGBB` string, edited with the colour picker.
   color,
+
+  /// Another component of the same Blueprint, stored by id ('' none),
+  /// picked from the components of [ComponentPropertySchema.referenceTypes].
+  componentReference,
 }
 
 class ComponentPropertySchema {
@@ -41,6 +45,10 @@ class ComponentPropertySchema {
   final double? hardMax;
   final List<String> enumOptions;
 
+  /// The component types a [ComponentPropertyType.componentReference]
+  /// may name.
+  final List<String> referenceTypes;
+
   const ComponentPropertySchema({
     required this.group,
     required this.name,
@@ -52,6 +60,7 @@ class ComponentPropertySchema {
     this.hardMin,
     this.hardMax,
     this.enumOptions = const [],
+    this.referenceTypes = const [],
   });
 
   /// The lowest value a number may take (typed values go past the slider).

@@ -379,6 +379,7 @@ Scene component rendering a static (non-skinned) 3D mesh via Filament and gltfio
 
 | Metot / Getter | İmzası | Ne İşe Yarar? |
 | :--- | :--- | :--- |
+| `setMeshAsset` | `Future<void> setMeshAsset(String path, {assetProvider})` | Başka bir mesh'i **yerinde** çizer: bileşen, dönüşümü, çocukları ve aktördeki yeri kalır; eski instance bırakılır, yenisi yüklenir (`loaded` yeni yüklemedir). Bir skeletal mesh clip'ini adıyla oynatmayı sürdürür ve takipçilerini korur; karakter slotları skeletal mesh slotlarını böyle doldurur (bkz. [Karakter slotları](character-slots.md)). |
 | `meshAssetPath` | `String meshAssetPath` | `meshAssetPath` alanını (field/property) ve ilişkili veriyi saklar. |
 | `isLoaded` | `bool get isLoaded` | Whether the glTF/GLB asset has completed loading and is active in the scene. |
 | `loaded` | `Future<void> get loaded` | Future completing when the mesh asset finishes asynchronous loading and scene attachment. |

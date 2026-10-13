@@ -11,6 +11,7 @@ import '../../../lumina/test/blueprint/cursor_state_blueprint.dart';
 import '../../../lumina/test/blueprint/display_settings_blueprint.dart';
 import '../../../lumina/test/blueprint/screen_resolution_and_apply_blueprint.dart';
 import '../../../lumina/test/blueprint/cloth_blueprint.dart';
+import '../../../lumina/test/blueprint/slots_blueprint.dart';
 import '../../../lumina/test/blueprint/physics_blueprint.dart';
 import '../../../lumina/test/blueprint/grab_to_pose_blueprint.dart';
 import '../../../lumina/test/blueprint/pose_authoring_blueprint.dart';
@@ -62,6 +63,8 @@ Map<String, (LuminaBlueprintDocument, String, List<LuminaInputAction>)> goldens(
       'bp_physics': (physicsBlueprint(), 'BpPhysics', const <LuminaInputAction>[]),
       // A cloth component and the Cloth nodes.
       'bp_cloth': (clothBlueprint(), 'BpCloth', const <LuminaInputAction>[]),
+      // Character slots and the Slot nodes.
+      'bp_slots': (slotsBlueprint(), 'BpSlots', const <LuminaInputAction>[]),
       // Load Level, Change Level, Load And Change Level, Cancel Level Load, Is Level Loaded.
       'bp_level_load': (levelLoadBlueprint(), 'BpLevelLoad', const <LuminaInputAction>[]),
       // The game user settings' ray tracing, upscaler and support nodes.

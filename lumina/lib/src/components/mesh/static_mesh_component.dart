@@ -20,8 +20,14 @@ import 'package:lumina/src/physics/primitive_physics.dart';
 /// rigid body made of the collision components under it (a box around its
 /// bounds when it has none).
 class LuminaStaticMeshComponent extends LuminaSceneComponent with LuminaPrimitivePhysics {
-  final String meshAssetPath;
-  final Future<Uint8List> Function(String path)? assetProvider;
+  String _meshAssetPath;
+  Future<Uint8List> Function(String path)? _assetProvider;
+
+  /// The mesh this component draws (see [setMeshAsset]).
+  String get meshAssetPath => _meshAssetPath;
+
+  /// Reads the mesh (null: [LuminaAssets.defaultProvider], else disk).
+  Future<Uint8List> Function(String path)? get assetProvider => _assetProvider;
 
   /// Asset units → world units, applied below the component's own transform.
   /// glTF is metres by specification and the world is
@@ -34,7 +40,7 @@ class LuminaStaticMeshComponent extends LuminaSceneComponent with LuminaPrimitiv
   bool _visible;
 
   FilamentAssetInstance? _instance;
-  final Completer<void> _loadCompleter = Completer<void>();
+  Completer<void> _loadCompleter = Completer<void>();
   Matrix4? _lastSyncedTransform;
   Aabb3? _localBounds;
 
@@ -43,14 +49,16 @@ class LuminaStaticMeshComponent extends LuminaSceneComponent with LuminaPrimitiv
     super.location,
     super.rotation,
     super.scale,
-    required this.meshAssetPath,
+    required String meshAssetPath,
     bool castShadows = true,
     bool receiveShadows = true,
     bool visible = true,
-    this.assetProvider,
+    Future<Uint8List> Function(String path)? assetProvider,
     this.assetUnitScale = LuminaUnits.unitsPerMetre,
     this.materialOverrideAsset,
-  })  : _castShadows = castShadows, // ignore: prefer_initializing_formals
+  })  : _meshAssetPath = meshAssetPath, // ignore: prefer_initializing_formals
+        _assetProvider = assetProvider, // ignore: prefer_initializing_formals
+        _castShadows = castShadows, // ignore: prefer_initializing_formals
         _receiveShadows = receiveShadows, // ignore: prefer_initializing_formals
         _visible = visible,
         super(isVisible: visible);
@@ -557,6 +565,48 @@ class LuminaStaticMeshComponent extends LuminaSceneComponent with LuminaPrimitiv
       if ((a.storage[i] - b.storage[i]).abs() > 1e-6) return false;
     }
     return true;
+  }
+
+  /// Draws [path] instead of the current mesh, in place: the component, its
+  /// transform, children, overrides set through its API and its place in
+  /// the actor stay; the old instance is released and the new one loads
+  /// (read through [assetProvider] when given, else the current provider).
+  /// Completes when the new mesh has loaded ([loaded] is the new load).
+  Future<void> setMeshAsset(String path, {Future<Uint8List> Function(String path)? assetProvider}) async {
+    _releaseMeshInstance();
+    _meshAssetPath = path;
+    if (assetProvider != null) _assetProvider = assetProvider;
+    if (_loadCompleter.isCompleted) _loadCompleter = Completer<void>();
+    _lastSyncedTransform = null;
+    if (owner?.world == null) return;
+    await _loadMeshAsset();
+    return loaded;
+  }
+
+  /// Called when the drawn instance is released for another mesh (after
+  /// [setMeshAsset]); subclasses drop what they hold of it. Call `super`.
+  @protected
+  @mustCallSuper
+  void onAssetUnloaded() {}
+
+  void _releaseMeshInstance() {
+    final w = owner?.world;
+    if (w == null || _instance == null || !w.hasNativeContext) return;
+    final rm = FilamentRenderableManager(w.filamentEngine);
+    for (final index in _ownMaterials.keys.toList()) {
+      _restoreOwnMaterial(rm, index);
+    }
+    _ownMaterials.clear();
+    for (final index in _assetMaterials.keys.toList()) {
+      _releaseAssetMaterial(index);
+    }
+    final scene = w.filamentScene;
+    for (final entity in entities) {
+      if (scene.hasEntity(entity)) scene.removeEntity(entity);
+    }
+    w.meshAssetCache.releaseInstance(meshAssetPath, _instance!);
+    _instance = null;
+    onAssetUnloaded();
   }
 
   @override

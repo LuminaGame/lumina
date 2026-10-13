@@ -46,6 +46,7 @@ Runtime kodu dosyaları hiçbir zaman doğrudan `File(...)` ile okumaz: açık b
 | [Poz verme](pose-authoring.md) | Bir karakteri IK ile tutamaçlardan (eller, dirsekler, ayaklar, dizler, baş, göğüs, pelvis) pozlama, kayıtlı pozlar, tutamaçları XR kumandaları ya da fareyle tutma, Blueprint düğümleri. |
 | [Ragdoll, düşme ve ayağa kalkma](ragdoll.md) | Physics asset'ler ve üreteçleri, mesh'i süren ragdoll'lar, ragdoll'a düşme, ağır iniş, kalkma klipleri. |
 | [Kumaş](cloth.md) | Jolt soft body'leri üzerinde kumaş bileşenleri: ızgaralar ve mesh asset'ler, sabitler ve bağlantılar, rüzgâr, çarpışmalar, Blueprint düğümleri. |
+| [Karakter slotları](character-slots.md) | Birkaç skinned mesh'ten oluşan karakterler: kemik adına göre poz takibi, çalışma anında doldurulan ve boşaltılan adlı slotlar, giysi altındaki gövde maskeleri, Slot düğümleri. |
 | [Yapay zeka (AI)](ai.md) | AI controller, behavior tree'ler, blackboard, navigasyon, algı (perception). |
 | [Materyaller ve post-processing](materials-and-post-process.md) | Engine materyalleri, dynamic material instance'lar, materyal cache'i, post-process, ölçeklenebilirlik, gölgeler. |
 | [Render cihazları](rendering.md) | GPU seçimi ve kullanılan render backend'i. |

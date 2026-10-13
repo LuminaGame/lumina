@@ -40,6 +40,7 @@ part 'sub_editor/navigation.dart';
 part 'sub_editor/layout.dart';
 part 'sub_editor/graph_details.dart';
 part 'sub_editor/component_details.dart';
+part 'sub_editor/component_reference_picker.dart';
 
 /// The main editor's gizmo settings a Blueprint editor opens with.
 class BlueprintGizmoDefaults {

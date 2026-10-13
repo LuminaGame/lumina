@@ -1,0 +1,284 @@
+import 'dart:async';
+import 'dart:developer' as developer;
+import 'dart:isolate';
+import 'dart:typed_data';
+
+import 'package:lumina_core/lumina_core.dart' show LuminaBodyMask, LuminaSkinnedMeshData;
+import 'package:vector_math/vector_math_64.dart';
+
+import 'package:lumina/src/assets/glb_loader.dart';
+
+import 'package:lumina/src/components/base/actor_component.dart';
+import 'package:lumina/src/components/base/scene_component.dart';
+import 'package:lumina/src/components/mesh/animated_mesh_component.dart';
+import 'package:lumina/src/components/mesh/mesh_asset_cache.dart';
+import 'package:lumina/src/object/actor.dart';
+import 'package:lumina/src/physics/cloth/skinned_cloth_component.dart';
+import 'package:lumina/src/utility/lumina_assets.dart';
+
+part 'character_slots/body_masks.dart';
+
+/// Maps a stored mesh reference (a Blueprint's `contents/…/X.lmas`) to the
+/// path a mesh component loads.
+typedef LuminaSlotMeshResolver = String Function(String storedPath);
+
+/// One named slot of a character: the component in it now (a skeletal
+/// mesh, a skinned cloth, or an empty scene component while the slot holds
+/// nothing), the stored mesh reference, and the slot whose component leads
+/// its pose.
+class LuminaCharacterSlot {
+  LuminaCharacterSlot._(this.name, this.component, this.mesh, this.leaderSlot, this.properties);
+
+  final String name;
+
+  /// The component holding the slot now.
+  LuminaSceneComponent component;
+
+  /// The stored mesh reference ('' while empty).
+  String mesh;
+
+  /// The slot leading this one's pose (null: none, it animates on its own).
+  final String? leaderSlot;
+
+  /// The properties the slot was built from (shadows, cloth settings).
+  final Map<String, dynamic> properties;
+
+  /// Whether a garment in this slot hides the body under it (default for
+  /// the `Torso`, `Legs` and `Feet` slots; `masksBody` overrides).
+  bool get masksBody => properties['masksBody'] as bool? ?? const {'torso', 'legs', 'feet'}.contains(name.toLowerCase());
+
+  bool get isEmpty => mesh.isEmpty;
+}
+
+/// The named slots of an actor's swappable parts (a character's `Body`,
+/// `Face`, `Hair`, `Torso`, …): listed, read, filled and cleared at run
+/// time. Filling a slot replaces its component with a new one of the mesh,
+/// at the same place in the hierarchy (same parent, transform, children)
+/// and following the same leader; the components following the old one
+/// follow the new one. A Blueprint's components carrying a `slot` property
+/// are registered when the Blueprint constructs.
+class LuminaCharacterSlots {
+  LuminaCharacterSlots._(this.actor);
+
+  static final Expando<LuminaCharacterSlots> _of = Expando('character slots');
+
+  /// The slots of [actor] (created empty on first use).
+  static LuminaCharacterSlots of(LuminaActor actor) => _of[actor] ??= LuminaCharacterSlots._(actor);
+
+  /// The slots of [actor] if any were registered, else null.
+  static LuminaCharacterSlots? maybeOf(LuminaActor actor) => _of[actor];
+
+  final LuminaActor actor;
+  final Map<String, LuminaCharacterSlot> _slots = {};
+  int _maskVersion = 0;
+
+  /// Maps stored mesh references to loadable paths (from the Blueprint's
+  /// construction; identity by default).
+  LuminaSlotMeshResolver resolve = (stored) => stored;
+
+  /// Reads the meshes (the Blueprint's asset provider; null: the default).
+  LuminaAssetProvider? assetProvider;
+
+  /// Changes whenever a slot's component is replaced.
+  final StreamController<String> _changes = StreamController.broadcast(sync: true);
+  Stream<String> get changes => _changes.stream;
+
+  /// The slot names, in registration order.
+  List<String> get names => List.unmodifiable(_slots.keys);
+
+  LuminaCharacterSlot? slot(String name) => _slots[name];
+
+  /// The component in [name] now (null for an unknown slot).
+  LuminaSceneComponent? component(String name) => _slots[name]?.component;
+
+  /// The stored mesh reference of [name] ('' when empty; null when unknown).
+  String? meshOf(String name) => _slots[name]?.mesh;
+
+  /// Registers [component] as slot [name] holding [mesh] (stored form);
+  /// [leaderSlot] names the slot whose component leads its pose.
+  LuminaCharacterSlot register(
+    String name,
+    LuminaSceneComponent component, {
+    String mesh = '',
+    String? leaderSlot,
+    Map<String, dynamic> properties = const {},
+  }) {
+    final slot = LuminaCharacterSlot._(name, component, mesh, leaderSlot, Map.of(properties));
+    _slots[name] = slot;
+    return slot;
+  }
+
+  /// Fills [name] with the mesh at [mesh] (stored form, resolved through
+  /// [resolve]); completes with false for an unknown slot. A skeletal mesh
+  /// slot swaps its mesh in place (its animation, followers and children
+  /// stay); an empty slot gets a new skeletal mesh component; a skinned
+  /// cloth slot is rebuilt on the new garment. A garment slot that masks
+  /// the body recomputes the body's mask. Completes once loaded (or failed).
+  Future<bool> setMesh(String name, String mesh) async {
+    final slot = _slots[name];
+    if (slot == null) return false;
+    if (mesh.isEmpty) return clear(name);
+    final old = slot.component;
+    slot.mesh = mesh;
+    try {
+      if (old is LuminaAnimatedMeshComponent) {
+        await old.setMeshAsset(resolve(mesh), assetProvider: assetProvider);
+        _changes.add(name);
+      } else if (old is LuminaSkinnedClothComponent) {
+        final cloth = LuminaSkinnedClothComponent.fromProperties(
+          {...slot.properties, ...old.toProperties(), 'meshAsset': resolve(mesh)},
+          assetProvider: assetProvider,
+        )..mesh = _leaderMesh(slot);
+        _replace(slot, cloth);
+      } else {
+        final next = LuminaAnimatedMeshComponent(
+          meshAssetPath: resolve(mesh),
+          castShadows: slot.properties['castShadows'] as bool? ?? true,
+          receiveShadows: slot.properties['receiveShadows'] as bool? ?? true,
+          assetProvider: assetProvider,
+        );
+        _replace(slot, next);
+        await next.loaded;
+      }
+    } catch (e) {
+      developer.log('slot $name: cannot load $mesh: $e', name: 'LuminaCharacterSlots', level: 900);
+    }
+    await _afterChange(slot);
+    return true;
+  }
+
+  Future<void> _afterChange(LuminaCharacterSlot slot) async {
+    final body = slot.leaderSlot;
+    if (slot.masksBody && body != null) {
+      await refreshBodyMask(body);
+    } else if (_slots.values.any((s) => s.leaderSlot == slot.name && s.masksBody && !s.isEmpty)) {
+      // A new body: its garments mask it again.
+      await refreshBodyMask(slot.name);
+    }
+  }
+
+  /// Replaces [name]'s component with [next] (an already built component,
+  /// e.g. a masked body loading its own bytes), keeping the stored mesh
+  /// reference unless [mesh] is given.
+  void replaceComponent(String name, LuminaSceneComponent next, {String? mesh}) {
+    final slot = _slots[name];
+    if (slot == null) throw ArgumentError.value(name, 'name', 'no such slot');
+    if (mesh != null) slot.mesh = mesh;
+    _replace(slot, next);
+  }
+
+  /// Empties [name] (its children stay, under an empty component); false
+  /// for an unknown slot. A garment slot unmasks the body.
+  Future<bool> clear(String name) async {
+    final slot = _slots[name];
+    if (slot == null) return false;
+    slot.mesh = '';
+    if (slot.component is LuminaAnimatedMeshComponent || slot.component is LuminaSkinnedClothComponent) {
+      _replace(slot, LuminaSceneComponent());
+    }
+    await _afterChange(slot);
+    return true;
+  }
+
+  LuminaAnimatedMeshComponent? _leaderMesh(LuminaCharacterSlot slot) {
+    final leader = slot.leaderSlot == null ? null : _slots[slot.leaderSlot!]?.component;
+    return leader is LuminaAnimatedMeshComponent ? leader : null;
+  }
+
+  void _replace(LuminaCharacterSlot slot, LuminaSceneComponent next) {
+    final old = slot.component;
+    final parent = old.parentComponent;
+    next
+      ..relativeLocation = Vector3.copy(old.relativeLocation)
+      ..relativeRotation = Quaternion.copy(old.relativeRotation)
+      ..relativeScale = Vector3.copy(old.relativeScale);
+    if (parent != null) next.attachToComponent(parent);
+    // Children move under the new component.
+    for (final child in old.childComponents.toList()) {
+      child.detachFromParent();
+      child.attachToComponent(next);
+    }
+    if (next is LuminaAnimatedMeshComponent) {
+      final leader = _leaderMesh(slot);
+      if (leader != null && !identical(leader, old)) next.poseLeader = leader;
+    }
+    // Whoever followed the old component follows the new one; a garment
+    // bound to it is rebuilt on the new one afterwards.
+    final worn = <LuminaCharacterSlot>[];
+    if (old is LuminaAnimatedMeshComponent) {
+      for (final follower in old.poseFollowers.toList()) {
+        follower.poseLeader = next is LuminaAnimatedMeshComponent ? next : null;
+      }
+      for (final other in _slots.values) {
+        final c = other.component;
+        if (!identical(other, slot) && c is LuminaSkinnedClothComponent && identical(c.mesh, old)) worn.add(other);
+      }
+      old.poseLeader = null;
+    }
+    old.detachFromParent();
+    actor.removeComponent(old);
+    slot.component = next;
+    actor.addComponent(next);
+    _changes.add(slot.name);
+    for (final other in worn) {
+      final c = other.component as LuminaSkinnedClothComponent;
+      final cloth = LuminaSkinnedClothComponent.fromProperties(
+        {...other.properties, ...c.toProperties()},
+        assetProvider: assetProvider,
+      )..mesh = next is LuminaAnimatedMeshComponent ? next : null;
+      _replace(other, cloth);
+    }
+  }
+
+  /// Bytes served under a synthetic mesh path (a masked body), through the
+  /// slot's asset provider.
+  LuminaAssetProvider providerWith(String path, Uint8List bytes) {
+    final base = LuminaAssets.resolve(assetProvider);
+    return (p) async => p == path ? bytes : base(p);
+  }
+
+  /// Disposes the change stream (the actor is gone).
+  void dispose() => _changes.close();
+}
+
+/// Registers the slotted components a Blueprint built: every component with
+/// a non-empty `slot` property (skeletal mesh, skinned cloth, or the empty
+/// placeholder of a slot without a mesh), its stored mesh and the slot of
+/// the component its `poseFrom` names.
+void luminaRegisterBlueprintSlots(
+  LuminaActor actor,
+  List<({String id, String name, Map<String, dynamic> properties})> docs,
+  Map<String, LuminaActorComponent> built, {
+  LuminaSlotMeshResolver? resolve,
+  LuminaAssetProvider? assetProvider,
+}) {
+  LuminaCharacterSlots? slots;
+  String? slotOfComponent(String ref) {
+    for (final d in docs) {
+      if (d.id == ref || d.name == ref) {
+        final s = d.properties['slot'];
+        return s is String && s.isNotEmpty ? s : null;
+      }
+    }
+    return null;
+  }
+
+  for (final d in docs) {
+    final name = d.properties['slot'];
+    if (name is! String || name.isEmpty) continue;
+    final component = built[d.id];
+    if (component is! LuminaSceneComponent) continue;
+    slots ??= LuminaCharacterSlots.of(actor)
+      ..resolve = resolve ?? ((s) => s)
+      ..assetProvider = assetProvider;
+    final from = d.properties['poseFrom'];
+    final mesh = (d.properties['skeletalMeshAsset'] ?? d.properties['meshAsset']) as Object?;
+    slots.register(
+      name,
+      component,
+      mesh: mesh is String ? mesh : '',
+      leaderSlot: from is String && from.isNotEmpty ? slotOfComponent(from) : null,
+      properties: d.properties,
+    );
+  }
+}

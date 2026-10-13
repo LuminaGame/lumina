@@ -9,6 +9,7 @@ import 'package:vector_math/vector_math_64.dart';
 import '../../../lumina/test/blueprint/anim_blueprints.dart';
 import '../../../lumina/test/blueprint/collision_shapes_blueprint.dart';
 import '../../../lumina/test/blueprint/cloth_blueprint.dart';
+import '../../../lumina/test/blueprint/slots_blueprint.dart';
 import '../../../lumina/test/blueprint/physics_blueprint.dart';
 import '../../../lumina/test/blueprint/anim_rig.dart';
 import '../../../lumina/test/blueprint/engine_nodes_blueprint.dart';
@@ -21,6 +22,7 @@ import '../../../lumina/test/blueprint/level_load_fixture.dart';
 import '../../../lumina/test/blueprint/generated/abp_character.g.dart';
 import '../../../lumina/test/blueprint/generated/bp_collision_shapes.g.dart';
 import '../../../lumina/test/blueprint/generated/bp_cloth.g.dart';
+import '../../../lumina/test/blueprint/generated/bp_slots.g.dart';
 import '../../../lumina/test/blueprint/generated/bp_physics.g.dart';
 import '../../../lumina/test/blueprint/generated/bp_engine_nodes.g.dart';
 import '../../../lumina/test/blueprint/generated/bp_reusable_graphs.g.dart';
@@ -267,6 +269,31 @@ void main() {
     expect(gen.cloth.currentSimPositions(), vm.cloth.currentSimPositions(), reason: 'the same simulation');
     vm.world.cleanup();
     gen.world.cleanup();
+  });
+
+  test('slots graph: Get Slots, Set Slot Mesh, Get Slot Mesh and Clear Slot trace the same', () {
+    ({List<LuminaBlueprintTraceEvent> trace, LuminaActor actor}) setUp(bool generated) {
+      final w = world();
+      final LuminaActor actor =
+          generated ? BpSlots() : LuminaBlueprintClass.fromDocument(slotsBlueprint(), name: 'bp_slots').instantiate();
+      final trace = <LuminaBlueprintTraceEvent>[];
+      (actor as LuminaBlueprintRuntime).trace = trace.add;
+      w.persistentLevel.registerActor(actor);
+      w.beginPlay();
+      w.tick(1 / 60);
+      return (trace: trace, actor: actor);
+    }
+
+    final vm = setUp(false);
+    final gen = setUp(true);
+    final printed = [for (final t in vm.trace) if (t.printed != null) t.printed!];
+    expect(printed, ['3', 'true', 'contents/meshes/skeletal/SK_Hero_Hair.lmas', 'true', '', 'false']);
+    expectSameTrace(vm.trace, gen.trace);
+    for (final r in [vm, gen]) {
+      final slots = LuminaCharacterSlots.of(r.actor);
+      expect(slots.names, ['Body', 'Hair', 'Torso']);
+      expect(slots.meshOf('Hair'), '');
+    }
   });
 
   test('physics graph: simulating components, every Physics node and Event Hit trace the same', () {

@@ -495,6 +495,35 @@ class LuminaAnimatedMeshComponent extends LuminaStaticMeshComponent with LuminaM
   List<String> get followedBones => _followedBones;
   List<String> get unmatchedBones => _unmatchedBones;
 
+  @override
+  void onAssetUnloaded() {
+    // Another mesh is coming: keep playing the clip there (by name).
+    if (_current >= 0) {
+      _pendingClip = _clipNames[_current];
+      _pendingStart = _time;
+      _pendingLoop = _loop;
+    }
+    _current = -1;
+    _previous = -1;
+    _animator = null;
+    _asset = null;
+    _jointSet.clear();
+    _jointEntities.clear();
+    _driverJoints = const [];
+    _modifierNodes.clear();
+    _overrideBase.clear();
+    _overrideWritten.clear();
+    _namedJoints = null;
+    _nodeNames = null;
+    _loadedNodeNames = null;
+    for (final follower in _followers) {
+      follower._disposePairs();
+    }
+    _disposePairs();
+    forgetMorphTargets();
+    super.onAssetUnloaded();
+  }
+
   /// Stops playback: the mesh holds its current pose and [currentClip] is
   /// null until the next [play].
   void stop() {

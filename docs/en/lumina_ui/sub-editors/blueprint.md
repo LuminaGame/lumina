@@ -215,7 +215,7 @@ Real Component Hierarchy Tree for Blueprint Editor.
 
 ### `enum ComponentPropertyType`
 
-`ComponentPropertyType`: Enumeration listing system options and state constants.
+`ComponentPropertyType`: Enumeration listing system options and state constants. `componentReference` names another component of the same Blueprint.
 
 ### `class ComponentPropertySchema`
 
@@ -233,6 +233,7 @@ Real Component Hierarchy Tree for Blueprint Editor.
 | `min` | `double min` | Holds the `min` property or configuration state. |
 | `max` | `double max` | Holds the `max` property or configuration state. |
 | `enumOptions` | `List<String> enumOptions` | Holds the `enumOptions` property or configuration state. |
+| `referenceTypes` | `List<String> referenceTypes` | The component types a `componentReference` property may name. A `componentReference` row (Skeletal Mesh / Skinned Cloth **Pose From**) is a picker over the Blueprint's components of those types, leaving out the component itself and any that already follow it; stored as the component id (see [Character slots](../../lumina/character-slots.md)). |
 
 ### `class ComponentTypeDescriptor`
 
