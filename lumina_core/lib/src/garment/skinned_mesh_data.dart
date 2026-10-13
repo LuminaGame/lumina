@@ -151,6 +151,120 @@ class LuminaSkinnedMeshData {
     );
   }
 
+  /// Parts of a character mesh that are not skin, by node, mesh or
+  /// material name: grooms (hair, eyebrows, eyelashes, beards), eyes and
+  /// their shells, teeth, tongue, saliva, cartilage.
+  static final RegExp notSkinNames = RegExp(
+    r'groom|hair|brow|lash|beard|mustache|moustache|fuzz|peachfuzz|eye|cornea|iris|pupil|tear|teeth|tooth|tongue|saliva|cartilage',
+    caseSensitive: false,
+  );
+
+  /// Whether primitive [p] is skin: not a groom, eye, tooth and the like by
+  /// its node, mesh or material name ([notSkinNames]), and not drawn with an
+  /// alpha-masked or blended material (hair cards) when the body has opaque
+  /// skin (a body whose every material is masked, as some mannequins are,
+  /// is judged by names only). Garments fit to skin and only skin is masked
+  /// under them; a body's separate sub-meshes (nipples, hands) are skin.
+  bool isSkin(LuminaGlbPrimitiveRef p) {
+    final i = primitives.indexOf(p);
+    return i < 0 || _skinPrimitives[i];
+  }
+
+  late final List<bool> _skinPrimitives = _classifySkin();
+
+  List<bool> _classifySkin() {
+    final json = document.json;
+    final meshes = json['meshes'] as List?;
+    final materials = json['materials'] as List?;
+    final named = <bool>[], opaque = <bool>[];
+    for (final p in primitives) {
+      final names = <String>[
+        if (p.node >= 0 && p.node < nodeNames.length) nodeNames[p.node],
+        if (meshes != null && p.mesh < meshes.length) ((meshes[p.mesh] as Map)['name'] as String? ?? ''),
+      ];
+      final material = p.material != null && materials != null && p.material! < materials.length ? materials[p.material!] as Map : null;
+      if (material != null) names.add(material['name'] as String? ?? '');
+      named.add(!names.any(notSkinNames.hasMatch));
+      opaque.add((material?['alphaMode'] as String? ?? 'OPAQUE') == 'OPAQUE');
+    }
+    var opaqueSkin = false;
+    for (var i = 0; i < named.length; i++) {
+      if (named[i] && opaque[i]) opaqueSkin = true;
+    }
+    return [for (var i = 0; i < named.length; i++) named[i] && (opaque[i] || !opaqueSkin)];
+  }
+
+  /// 1 for every vertex of a skin primitive ([isSkin]); all ones for a
+  /// mesh without primitives.
+  Uint8List skinVertices() {
+    final out = Uint8List(vertexCount);
+    if (primitives.isEmpty || !_skinPrimitives.contains(true)) return out..fillRange(0, out.length, 1);
+    for (var i = 0; i < primitives.length; i++) {
+      final p = primitives[i];
+      if (_skinPrimitives[i]) out.fillRange(p.firstVertex, p.firstVertex + p.vertexCount, 1);
+    }
+    return out;
+  }
+
+  /// Only the skin primitives ([isSkin]), with their joints, nodes and
+  /// document; this mesh itself when every primitive is skin (or none is,
+  /// so a body is never emptied).
+  LuminaSkinnedMeshData skin() {
+    final keep = [for (var i = 0; i < primitives.length; i++) if (_skinPrimitives[i]) primitives[i]];
+    if (keep.length == primitives.length || keep.isEmpty) return this;
+    final pos = <double>[], nor = <double>[], uv = <double>[], tri = <int>[];
+    final js = <int>[], ws = <double>[];
+    final prims = <LuminaGlbPrimitiveRef>[];
+    for (final p in keep) {
+      final first = pos.length ~/ 3, firstTriangle = tri.length ~/ 3;
+      for (var v = p.firstVertex; v < p.firstVertex + p.vertexCount; v++) {
+        for (var k = 0; k < 3; k++) {
+          pos.add(positions[v * 3 + k]);
+          nor.add(normals[v * 3 + k]);
+        }
+        uv
+          ..add(uvs[v * 2])
+          ..add(uvs[v * 2 + 1]);
+        if (joints != null) {
+          for (var k = 0; k < 4; k++) {
+            js.add(joints![v * 4 + k]);
+            ws.add(weights![v * 4 + k]);
+          }
+        }
+      }
+      for (var t = p.firstTriangle; t < p.firstTriangle + p.triangleCount; t++) {
+        for (var k = 0; k < 3; k++) {
+          tri.add(triangles[t * 3 + k] - p.firstVertex + first);
+        }
+      }
+      prims.add(LuminaGlbPrimitiveRef(
+        mesh: p.mesh,
+        primitive: p.primitive,
+        node: p.node,
+        firstVertex: first,
+        vertexCount: p.vertexCount,
+        firstTriangle: firstTriangle,
+        triangleCount: p.triangleCount,
+        material: p.material,
+        indexAccessor: p.indexAccessor,
+      ));
+    }
+    return LuminaSkinnedMeshData._(
+      document: document,
+      positions: Float64List.fromList(pos),
+      normals: Float32List.fromList(nor),
+      uvs: Float32List.fromList(uv),
+      triangles: Uint32List.fromList(tri),
+      joints: joints == null ? null : Uint16List.fromList(js),
+      weights: weights == null ? null : Float32List.fromList(ws),
+      nodeNames: nodeNames,
+      nodeParents: nodeParents,
+      nodeWorld: nodeWorld,
+      inverseBind: inverseBind,
+      primitives: prims,
+    );
+  }
+
   /// The index of the node named [name], or -1.
   int nodeNamed(String name) => nodeNames.indexOf(name);
 

@@ -94,13 +94,43 @@ abstract final class LuminaGarmentFitter {
   /// Rounds of skin weight smoothing over the garment.
   static const int weightSmoothing = 3;
 
+  /// Fits [source], placed by [document] on [referenceBody], to
+  /// [targetBody]. Only the bodies' skin counts
+  /// ([LuminaSkinnedMeshData.skin]: no grooms, eyes or teeth of a merged
+  /// character mesh). On its own reference body (the same skin) the
+  /// garment stays where it was placed: only vertices inside the skin are
+  /// pushed out to it, and the cloth settle runs when the document asks for
+  /// one.
   static LuminaGarmentFit fit({
     required LuminaSkinnedMeshData source,
     required LuminaGarmentDocument document,
     required LuminaSkinnedMeshData referenceBody,
     required LuminaSkinnedMeshData targetBody,
-  }) {
+  }) =>
+      _fit(source, document, referenceBody.skin(), targetBody.skin());
+
+  /// Whether [a] and [b] are the same surface (same triangles, positions
+  /// within 1e-6 cm).
+  static bool _sameSurface(LuminaSkinnedMeshData a, LuminaSkinnedMeshData b) {
+    if (identical(a, b)) return true;
+    if (a.vertexCount != b.vertexCount || a.triangleCount != b.triangleCount) return false;
+    for (var i = 0; i < a.triangles.length; i++) {
+      if (a.triangles[i] != b.triangles[i]) return false;
+    }
+    for (var i = 0; i < a.positions.length; i++) {
+      if ((a.positions[i] - b.positions[i]).abs() > 1e-6) return false;
+    }
+    return true;
+  }
+
+  static LuminaGarmentFit _fit(
+    LuminaSkinnedMeshData source,
+    LuminaGarmentDocument document,
+    LuminaSkinnedMeshData referenceBody,
+    LuminaSkinnedMeshData targetBody,
+  ) {
     final clock = Stopwatch()..start();
+    final sameBody = _sameSurface(referenceBody, targetBody);
     final n = source.vertexCount;
     final thickness = document.thickness;
     // 1. Placed on the reference body.
@@ -128,9 +158,11 @@ abstract final class LuminaGarmentFitter {
       }
     }
 
-    // 2. Coarse deformation.
+    // 2. Coarse deformation (none on the reference body itself).
     final moved = Float64List(n * 3);
-    if (dense) {
+    if (sameBody) {
+      moved.setAll(0, placed);
+    } else if (dense) {
       final field = _denseField(referenceBody, targetBody, correspondence);
       final d = [0.0, 0.0, 0.0];
       for (var v = 0; v < n; v++) {
@@ -147,8 +179,9 @@ abstract final class LuminaGarmentFitter {
       }
     }
 
-    // 3. Keep the distance to the skin near it.
-    for (var v = 0; v < n; v++) {
+    // 3. Keep the distance to the skin near it (on the reference body
+    // itself there is nothing to keep: the garment is where it was put).
+    for (var v = 0; v < n && !sameBody; v++) {
       final h = offsets[v];
       final hit = refHits[v];
       if (hit == null || h.abs() >= looseOffset) continue;
@@ -175,11 +208,13 @@ abstract final class LuminaGarmentFitter {
       }
     }
 
-    // 4. Push-out, smoothed, then again so nothing stays inside.
+    // 4. Push-out, smoothed, then again so nothing stays inside (on the
+    // reference body itself the garment stays as authored).
     final adjacency = _adjacency(n, source.triangles, source.positions);
-    var pushed = _pushOut(moved, targetGrid, thickness);
+    var pushed = 0;
+    if (!sameBody) pushed = _pushOut(moved, targetGrid, thickness);
     final push = Float64List(n * 3);
-    for (var round = 0; round < 2; round++) {
+    for (var round = 0; round < 2 && !sameBody; round++) {
       final before = Float64List.fromList(moved);
       _pushOut(moved, targetGrid, thickness);
       for (var i = 0; i < push.length; i++) {
@@ -191,8 +226,10 @@ abstract final class LuminaGarmentFitter {
       }
     }
     // Until nothing moves (a push can land a vertex nearer another face).
+    // On the reference body itself only what is inside the skin moves, by
+    // what is missing: the authored layers and gaps stay.
     for (var pass = 0; pass < 4; pass++) {
-      final moves = _pushOut(moved, targetGrid, thickness);
+      final moves = _pushOut(moved, targetGrid, sameBody ? 0 : thickness);
       pushed += moves;
       if (moves == 0) break;
     }
@@ -200,7 +237,7 @@ abstract final class LuminaGarmentFitter {
     // Nothing of the body in front of the garment where it covers it: the
     // garment's vertices may clear the skin while a bump or a separate
     // sub-mesh (a MetaHuman's nipples) pokes through between them.
-    for (var round = 0; round < 10; round++) {
+    for (var round = 0; round < 10 && !sameBody; round++) {
       final lifted = _coverBody(moved, source.triangles, adjacency, targetBody, thickness);
       // Deep insides were pushed out already: only what a lift moved near.
       for (var pass = 0; pass < 4; pass++) {

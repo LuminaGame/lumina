@@ -13,7 +13,8 @@ import 'package:lumina_core/src/services/glb_animation_merger.dart' show GlbDocu
 /// the skin by more than [insideTolerance]) and that garment point is at
 /// least [edgeMargin] from the garment's open edges (so the skin near a
 /// collar, cuff or hem stays drawn and no gap shows). A triangle is covered
-/// when its three vertices are. Units are centimetres.
+/// when its three vertices are. Only skin primitives
+/// ([LuminaSkinnedMeshData.isSkin]) can be covered. Units are centimetres.
 abstract final class LuminaBodyMask {
   /// Covered body triangles (indices into [body]'s triangles), for the
   /// garments in [garments] posed on [body] at rest.
@@ -25,13 +26,15 @@ abstract final class LuminaBodyMask {
     double edgeMargin = 3,
   }) {
     final covered = Uint8List(body.vertexCount);
+    // Only skin is ever hidden: hair lying on a garment, eyes and teeth stay.
+    final skin = body.skinVertices();
     for (final garment in garments) {
       if (garment.triangleCount == 0) continue;
       final grid = LuminaTriangleGrid(garment.positions, garment.triangles);
       final nearEdge = _nearOpenEdges(garment, edgeMargin);
       final p = body.positions, n = body.normals;
       for (var v = 0; v < body.vertexCount; v++) {
-        if (covered[v] == 1) continue;
+        if (covered[v] == 1 || skin[v] == 0) continue;
         final x = p[v * 3], y = p[v * 3 + 1], z = p[v * 3 + 2];
         final hit = grid.closest(x, y, z, maxDistance: coverDistance);
         if (hit == null) continue;
