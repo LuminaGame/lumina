@@ -88,6 +88,7 @@ extension _LuminaWorldTickPhases on LuminaWorld {
   void _postPhysicsRenderPrep(double deltaTime) {
     onPhaseExecuted?.call('renderPrep');
     if (worldType.runsRenderPrep) {
+      _drawDistanceView = viewTargetPov?.location.clone() ?? postProcessCameraPosition;
       for (final actor in persistentLevel.actors) {
         actor.onRenderPrep(this);
         onRenderPrepCallback?.call(actor);

@@ -147,6 +147,7 @@ export 'package:lumina/src/components/environment/exponential_height_fog_compone
 export 'package:lumina/src/components/environment/post_process_volume_component.dart';
 export 'package:lumina/src/components/environment/local_fog_volume_component.dart';
 export 'package:lumina/src/components/environment/reflection_capture_component.dart';
+export 'package:lumina/src/components/mesh/draw_distance.dart';
 export 'package:lumina/src/components/mesh/static_mesh_component.dart';
 export 'package:lumina/src/components/mesh/animated_mesh_component.dart';
 export 'package:lumina/src/components/mesh/character_slots.dart';

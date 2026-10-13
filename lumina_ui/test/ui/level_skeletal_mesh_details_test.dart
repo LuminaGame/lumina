@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina_editor_data/lumina_editor.dart' hide BoxShape;
 import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/details/models/component_property_registry.dart';
 import 'package:lumina_ui/ui/features/details/models/editor_component_node.dart';
 import 'package:lumina_ui/ui/features/main_editor/services/blueprint_play_support.dart';
 import 'package:lumina_ui/ui/features/main_editor/services/pie_controller.dart';
@@ -122,5 +123,27 @@ void main() {
     expect(anim.currentState, isNotNull);
     expect((actor('body_1').rootComponent as LuminaAnimatedMeshComponent).currentClip, isNotNull);
     expect(actor('still_1').components.whereType<LuminaAnimBlueprintInstance>(), isEmpty);
+  });
+
+  test('Play gives placed meshes their Details draw distances in cm; the Details offer no Volumetric Shadow', () {
+    final far = skeletal('far_1', 'Far');
+    far.components.single.properties.addAll({'minDrawDistance': 1.5, 'maxDrawDistance': 40.0});
+    final rock = EditorActorNode(id: 'rock_1', name: 'Rock', type: 'StaticMesh', location: [0, 0, 0], meshAssetPath: 'contents/meshes/Rock.lmas')
+      ..components.add(EditorComponentNode(id: 'rock_1_mesh', type: 'LuminaMeshComponent', name: 'Mesh Component', properties: {'maxDrawDistance': 12.0}));
+    final plain = skeletal('plain_1', 'Plain');
+    final game = EditorPieGame([far, rock, plain]);
+    final world = LuminaWorld(worldType: LuminaWorldType.game);
+    addTearDown(world.cleanup);
+    game.mountIntoWorldForTest(world);
+    LuminaStaticMeshComponent meshOf(String id) =>
+        world.persistentLevel.actors.firstWhere((a) => a.key == LuminaObjectKey(id)).components.whereType<LuminaStaticMeshComponent>().first;
+    expect([meshOf('far_1').minDrawDistance, meshOf('far_1').maxDrawDistance], [150.0, 4000.0]);
+    expect(meshOf('rock_1').maxDrawDistance, 1200.0);
+    expect([meshOf('plain_1').minDrawDistance, meshOf('plain_1').maxDrawDistance], [0.0, 0.0]);
+    for (final type in ['LuminaSkeletalMeshComponent', 'LuminaMeshComponent']) {
+      final ids = ComponentPropertyRegistry.descriptors[type]!.properties.map((p) => p.id);
+      expect(ids, containsAll(['minDrawDistance', 'maxDrawDistance']));
+      expect(ids, isNot(contains('volumetricShadow')), reason: 'no fog in the renderer is shadowed by geometry');
+    }
   });
 }

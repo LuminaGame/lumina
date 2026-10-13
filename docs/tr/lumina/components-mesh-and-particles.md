@@ -6,6 +6,7 @@ Geometri çizen component'ler: LOD'lu static ve instanced static mesh'ler, mesh 
 
 **Bu sayfada:**
 
+- [`lib/src/components/mesh/draw_distance.dart`](#libsrccomponentsmeshdraw_distancedart)
 - [`lib/src/components/mesh/instanced_static_mesh_component.dart`](#libsrccomponentsmeshinstanced_static_mesh_componentdart)
 - [`lib/src/components/mesh/mesh_asset_cache.dart`](#libsrccomponentsmeshmesh_asset_cachedart)
 - [`lib/src/components/mesh/morph_target_set.dart`](#libsrccomponentsmeshmorph_target_setdart)
@@ -19,6 +20,20 @@ Geometri çizen component'ler: LOD'lu static ve instanced static mesh'ler, mesh 
 - [`lib/src/components/particles/particle_emitter_config.dart`](#libsrccomponentsparticlesparticle_emitter_configdart)
 - [`lib/src/components/particles/particle_system_component.dart`](#libsrccomponentsparticlesparticle_system_componentdart)
 - [`lib/src/components/mesh/animated_mesh_component.dart`](#libsrccomponentsmeshanimated_mesh_componentdart)
+
+## `lib/src/components/mesh/draw_distance.dart`
+
+### `class LuminaDrawDistance`
+
+Mesh'lerin mesafeye göre gizlenmesi. `minDrawDistance` ya da `maxDrawDistance` (cm; 0 = sınır yok; kurucu argümanı olarak da verilebilir) taşıyan bir `LuminaStaticMeshComponent` (dolayısıyla animasyonlu ya da skeletal bir mesh de), orijini `LuminaWorld.drawDistanceViewLocation`'a en küçük değerden yakın ya da en büyük değerden uzak olduğu sürece sahneden çıkar. Dünya bu konumu her render hazırlığının başında belirler: ayarlıysa view target'ın bakış noktası, değilse etkin kamera bileşeni, o da yoksa post-process kamera konumu; null ise her mesh çizilir. Her mesh konumu kendi render hazırlığında denetler (sınırı olmayan bir mesh için iki karşılaştırma) ve entity'lerini yalnızca sonuç değiştiğinde ekler ya da çıkarır. Durumu `isDistanceHidden` bildirir; `visible` kullanıcının anahtarı olarak kalır, yani gizlenmiş bir mesh mesafesi ne olursa olsun dışarıda kalır.
+
+| Üye | İmza | Açıklama |
+|---|---|---|
+| `within` | `static bool within(double distance, double min, double max)` | Görüş noktasına `distance` cm uzaklıktaki bir şeyin çizilip çizilmediği. |
+| `fromDetails` | `static ({double min, double max})? fromDetails(Map<String, Object?> properties)` | Details'teki Min / Max Draw Distance (metre) cm olarak; ikisi de bir şey sınırlamıyorsa null. |
+| `apply` | `static T apply<T extends LuminaActor>(T actor, {double min = 0, double max = 0})` | Aktörün her mesh bileşenine sınırları verir; aktörü döndürür. |
+
+Yerleştirilmiş bir `Mesh`, `StaticMesh` ya da `SkeletalMesh` aktörü, Mesh Component Details'indeki Min / Max Draw Distance'ı Play-In-Editor'da (`EditorPieGame.meshDrawDistance`) ve üretilen seviyede (`LuminaDrawDistance.apply(<aktör>, min:, max:)`) alır. Seviye viewport'u, editörün böyle bir mesh'in kendi kopyasını aynı kuralla gizler; mesafe editör kamerasının gözünden ölçülür ve kamera her hareket ettiğinde denetlenir.
 
 ## `lib/src/components/mesh/instanced_static_mesh_component.dart`
 

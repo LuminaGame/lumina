@@ -341,7 +341,21 @@ class EditorPieGame extends LuminaGame {
     // controller): hidden in Play, whatever class the actor became and
     // however many components it has.
     if (mapped is LuminaActor && !actor.isVisible) mapped.hiddenInGame = true;
+    // A placed mesh's Min / Max Draw Distance (Details, metres), as the
+    // generated level applies them.
+    final limits = meshDrawDistance(actor);
+    if (mapped is LuminaActor && limits != null) LuminaDrawDistance.apply(mapped, min: limits.min, max: limits.max);
     return mapped;
+  }
+
+  /// The draw distances (cm) a placed mesh's Mesh Component Details set,
+  /// or null when they limit nothing.
+  static ({double min, double max})? meshDrawDistance(EditorActorNode actor) {
+    if (!const {'Mesh', 'StaticMesh', 'SkeletalMesh'}.contains(actor.type)) return null;
+    final mesh = actor.components
+        .where((c) => c.type == 'LuminaMeshComponent' || c.type == 'LuminaSkeletalMeshComponent')
+        .firstOrNull;
+    return mesh == null ? null : LuminaDrawDistance.fromDetails(Map<String, Object?>.from(mesh.properties));
   }
 
   static LuminaObject? _mapEditorActor(

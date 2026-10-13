@@ -488,7 +488,7 @@ Transform component that has a position, rotation, and scale in 3D space.
 | Metot / Getter | İmzası | Ne İşe Yarar? |
 | :--- | :--- | :--- |
 | `isVisible`, `onVisibilityChanged` | `bool isVisible` (özellik), `void onVisibilityChanged(bool visible)` | Bileşenin çizilip çizilmediği; ayarlamak `onVisibilityChanged`'i çağırır, render kaynağı olan bileşenler bunu geçersiz kılar (bir static mesh sahneden çıkar ve geri girer; `visible` anahtarı ile `isVisible` eşit tutulur). |
-| `isVisibleAtDistance` | `bool isVisibleAtDistance(double distance)` | Evaluates whether this component should be rendered based on camera distance. |
+| `isVisibleAtDistance` | `bool isVisibleAtDistance(double distance)` | `isVisible` ile `minDrawDistance` / `maxDrawDistance` sınırlarını (cm, 0 = yok) bir kamera mesafesi (`distance`) için değerlendirir. Mesh'ler bu sınırlarla her karede `LuminaDrawDistance` üzerinden gizlenir (components-mesh-and-particles). |
 | `relativeLocation` | `Vector3 get relativeLocation` | `relativeLocation` özelliğinin anlık değerini okuyan getter erişimcisi. |
 | `relativeLocation` | `relativeLocation(Vector3 v)` | `relativeLocation` işlemini gerçekleştirir. |
 | `location` | `Vector3 get location` | Alias for relativeLocation. |

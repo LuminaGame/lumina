@@ -223,6 +223,9 @@ mixin _ViewportCameraControls on _ViewportWidgetStateBase {
       upZ: isPolar ? -math.cos(yawRad) : 0,
     );
     _pushedCameraPose = _editorCameraPose;
+    // Draw distances are measured from the new eye.
+    _editorEye = (eyeX, eyeY, eyeZ);
+    _applyEditorDrawDistances();
     // The blend follows the editor camera.
     _syncLevelPostProcess();
   }

@@ -209,10 +209,12 @@ class ComponentPropertyRegistry {
         PropertyDescriptor(id: 'relativeRotation', label: 'Relative Rotation', group: 'Transform & Attachment', editor: PropertyEditorType.vector3, defaultValue: [0.0, 0.0, 0.0]),
         PropertyDescriptor(id: 'relativeScale', label: 'Relative Scale', group: 'Transform & Attachment', editor: PropertyEditorType.vector3, defaultValue: [1.0, 1.0, 1.0]),
         PropertyDescriptor(id: 'attachParent', label: 'Attach Parent', group: 'Transform & Attachment', editor: PropertyEditorType.dropdown, defaultValue: 'None'),
-        PropertyDescriptor(id: 'minDrawDistance', label: 'Min Draw Distance', group: 'Render Distance & Culling', editor: PropertyEditorType.float, unit: 'm', defaultValue: 0.0),
-        PropertyDescriptor(id: 'maxDrawDistance', label: 'Max Draw Distance', group: 'Render Distance & Culling', editor: PropertyEditorType.float, unit: 'm', defaultValue: 200.0),
+        // Hidden nearer than Min / farther than Max from the view, 0 = no limit
+        // (LuminaDrawDistance). No Volumetric Shadow: the renderer's fog is not
+        // shadowed by geometry.
+        PropertyDescriptor(id: 'minDrawDistance', label: 'Min Draw Distance', group: 'Render Distance & Culling', editor: PropertyEditorType.float, unit: 'm', hardMin: 0.0, defaultValue: 0.0),
+        PropertyDescriptor(id: 'maxDrawDistance', label: 'Max Draw Distance', group: 'Render Distance & Culling', editor: PropertyEditorType.float, unit: 'm', hardMin: 0.0, defaultValue: 0.0),
         PropertyDescriptor(id: 'castShadow', label: 'Cast Shadow', group: 'Render Distance & Culling', editor: PropertyEditorType.boolean, defaultValue: true),
-        PropertyDescriptor(id: 'volumetricShadow', label: 'Volumetric Shadow', group: 'Render Distance & Culling', editor: PropertyEditorType.boolean, defaultValue: true),
         // A character's swappable part: its slot name, and the skeletal
         // mesh actor whose pose it follows by bone name.
         PropertyDescriptor(id: 'slot', label: 'Slot', group: 'Character', editor: PropertyEditorType.text, defaultValue: ''),
@@ -229,10 +231,12 @@ class ComponentPropertyRegistry {
         PropertyDescriptor(id: 'relativeRotation', label: 'Relative Rotation', group: 'Transform & Attachment', editor: PropertyEditorType.vector3, defaultValue: [0.0, 0.0, 0.0]),
         PropertyDescriptor(id: 'relativeScale', label: 'Relative Scale', group: 'Transform & Attachment', editor: PropertyEditorType.vector3, defaultValue: [1.0, 1.0, 1.0]),
         PropertyDescriptor(id: 'attachParent', label: 'Attach Parent', group: 'Transform & Attachment', editor: PropertyEditorType.dropdown, defaultValue: 'None'),
-        PropertyDescriptor(id: 'minDrawDistance', label: 'Min Draw Distance', group: 'Render Distance & Culling', editor: PropertyEditorType.float, unit: 'm', defaultValue: 0.0),
-        PropertyDescriptor(id: 'maxDrawDistance', label: 'Max Draw Distance', group: 'Render Distance & Culling', editor: PropertyEditorType.float, unit: 'm', defaultValue: 200.0),
+        // Hidden nearer than Min / farther than Max from the view, 0 = no limit
+        // (LuminaDrawDistance). No Volumetric Shadow: the renderer's fog is not
+        // shadowed by geometry.
+        PropertyDescriptor(id: 'minDrawDistance', label: 'Min Draw Distance', group: 'Render Distance & Culling', editor: PropertyEditorType.float, unit: 'm', hardMin: 0.0, defaultValue: 0.0),
+        PropertyDescriptor(id: 'maxDrawDistance', label: 'Max Draw Distance', group: 'Render Distance & Culling', editor: PropertyEditorType.float, unit: 'm', hardMin: 0.0, defaultValue: 0.0),
         PropertyDescriptor(id: 'castShadow', label: 'Cast Shadow', group: 'Render Distance & Culling', editor: PropertyEditorType.boolean, defaultValue: true),
-        PropertyDescriptor(id: 'volumetricShadow', label: 'Volumetric Shadow', group: 'Render Distance & Culling', editor: PropertyEditorType.boolean, defaultValue: true),
       ],
     ),
     'LuminaSpringArmComponent': ComponentDescriptor(

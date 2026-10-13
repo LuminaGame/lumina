@@ -19,6 +19,30 @@ Set<String> _levelAnimImports(List<Map<String, dynamic>> maps, Map<String, Bluep
         if (_levelAnimClass(a) case final path?) ?animBlueprints[path]?.importUri,
     };
 
+/// [expression] (one placed mesh actor and the list's comma) with the Min /
+/// Max Draw Distance its Mesh Component Details set (metres → cm), through
+/// `LuminaDrawDistance.apply`; unchanged when they limit nothing.
+String _withDrawDistance(Map<String, dynamic> a, String expression) {
+  if (!const {'Mesh', 'StaticMesh', 'SkeletalMesh'}.contains((a['type'] ?? '').toString())) return expression;
+  final mesh = _componentOfType(a, 'LuminaMeshComponent') ?? _componentOfType(a, 'LuminaSkeletalMeshComponent');
+  final props = mesh?['properties'];
+  final limits = props is Map ? LuminaDrawDistance.fromDetails(Map<String, Object?>.from(props)) : null;
+  final trimmed = expression.trimRight();
+  if (limits == null || !trimmed.endsWith(',')) return expression;
+  // Comment lines before the actor stay in front of the call, which may
+  // span lines (collision lists).
+  final lines = trimmed.substring(0, trimmed.length - 1).split('\n');
+  var first = 0;
+  while (first < lines.length - 1 && lines[first].trimLeft().startsWith('//')) {
+    first++;
+  }
+  final head = [for (final l in lines.take(first)) '$l\n'].join();
+  final call = lines.skip(first).join('\n');
+  final indent = call.length - call.trimLeft().length;
+  return '$head${call.substring(0, indent)}LuminaDrawDistance.apply(${call.substring(indent)}, '
+      'min: ${DartCodeGeneratorService._dartLiteral(limits.min)}, max: ${DartCodeGeneratorService._dartLiteral(limits.max)}),';
+}
+
 /// A placed `SkeletalMesh` actor as generated code: an animated skeletal
 /// mesh with its Details, level material and springs, built by the same
 /// runtime factory Play-In-Editor uses.

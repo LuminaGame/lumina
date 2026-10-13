@@ -133,7 +133,7 @@ mixin _ViewportPieSession on _ViewportWidgetStateBase {
   /// Whether the editor draws its own copy of [actorId] right now.
   @override
   bool _editorActorDrawn(String actorId) =>
-      !_pieOwnsTheScene && widget.viewModel.isEffectivelyVisible(actorId);
+      !_pieOwnsTheScene && widget.viewModel.isEffectivelyVisible(actorId) && _withinDrawDistance(actorId);
 
   /// Test seam: how many editor actors the level view draws as solids (in
   /// Wireframe none: their solids stay in the scene on a layer the level
@@ -142,6 +142,9 @@ mixin _ViewportPieSession on _ViewportWidgetStateBase {
 
   /// Test seam: how many editor actors have their solid mesh in the scene.
   int get editorActorSolidsInSceneForTest => _visibleInScene.length;
+
+  /// Test seam: whether [actorId]'s solid mesh is in the scene.
+  bool editorActorInSceneForTest(String actorId) => _visibleInScene.contains(actorId);
 
   /// Test seam: the visibility layers the level view shows.
   int? get viewLayersForTest => _nativeView?.visibleLayers;

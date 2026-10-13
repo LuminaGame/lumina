@@ -12,6 +12,7 @@ import 'package:lumina/src/utility/lumina_assets.dart';
 import 'package:lumina/src/object/actor.dart';
 import 'package:lumina/src/world/world.dart';
 import 'package:lumina/src/components/base/scene_component.dart';
+import 'package:lumina/src/components/mesh/draw_distance.dart';
 import 'package:lumina/src/physics/primitive_physics.dart';
 
 /// Scene component rendering a static (non-skinned) 3D mesh via Filament and gltfio.
@@ -49,6 +50,8 @@ class LuminaStaticMeshComponent extends LuminaSceneComponent with LuminaPrimitiv
     super.location,
     super.rotation,
     super.scale,
+    super.minDrawDistance,
+    super.maxDrawDistance,
     required String meshAssetPath,
     bool castShadows = true,
     bool receiveShadows = true,
@@ -146,6 +149,25 @@ class LuminaStaticMeshComponent extends LuminaSceneComponent with LuminaPrimitiv
   @override
   void onVisibilityChanged(bool visible) => this.visible = visible;
 
+  /// Whether the mesh is out of the scene because of its draw distances
+  /// (`LuminaDrawDistance`), whatever [visible] says.
+  bool get isDistanceHidden => _distanceHidden;
+  bool _distanceHidden = false;
+
+  bool get _drawn => _visible && !_distanceHidden;
+
+  /// Hides or shows the mesh for the frame's view location (cm, runtime
+  /// axes) and its draw distances; touches the scene only on a change.
+  void _applyDrawDistance(Vector3? view) {
+    final limited = minDrawDistance > 0 || maxDrawDistance > 0;
+    final hidden = limited &&
+        view != null &&
+        !LuminaDrawDistance.within(worldLocation.distanceTo(view), minDrawDistance, maxDrawDistance);
+    if (hidden == _distanceHidden) return;
+    _distanceHidden = hidden;
+    _updateVisibility();
+  }
+
   void _updateShadowFlags() {
     final w = owner?.world;
     if (w == null || _instance == null || !w.hasNativeContext) return;
@@ -162,7 +184,7 @@ class LuminaStaticMeshComponent extends LuminaSceneComponent with LuminaPrimitiv
     final w = owner?.world;
     if (w == null || _instance == null || !w.hasNativeContext) return;
     final scene = w.filamentScene;
-    if (_visible) {
+    if (_drawn) {
       for (final entity in entities) {
         if (!scene.hasEntity(entity)) {
           scene.addEntity(entity);
@@ -495,7 +517,7 @@ class LuminaStaticMeshComponent extends LuminaSceneComponent with LuminaPrimitiv
       _instance = instance;
 
       // Add entities to scene if visible
-      if (_visible) {
+      if (_drawn) {
         final scene = w.filamentScene;
         for (final entity in entities) {
           if (!scene.hasEntity(entity)) {
@@ -548,6 +570,7 @@ class LuminaStaticMeshComponent extends LuminaSceneComponent with LuminaPrimitiv
   @override
   void onRenderPrep(LuminaWorld world) {
     super.onRenderPrep(world);
+    _applyDrawDistance(world.drawDistanceViewLocation);
     if (_instance == null || rootEntity == null || !world.hasNativeContext) return;
 
     final currentMtx = renderTransform;

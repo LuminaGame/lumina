@@ -182,19 +182,7 @@ mixin _ViewportSceneSync on _ViewportWidgetStateBase {
   void _placeBoundActor(EditorActorNode actor, LuminaMeshHandle handle) {
     _syncActorMaterial(actor, handle);
 
-    // In Wireframe the solids stay in the scene for other views of it (a
-    // camera preview); the level view hides their layer.
-    final isVisible = _editorActorDrawn(actor.id);
-    final currentlyVisible = _visibleInScene.contains(actor.id);
-
-    if (isVisible && !currentlyVisible) {
-      EditorViewLayers.tag(_nativeEngine!, handle.instance.entities, EditorViewLayers.solids);
-      _nativeScene!.addEntities(handle.instance.entities);
-      _visibleInScene.add(actor.id);
-    } else if (!isVisible && currentlyVisible) {
-      _nativeScene!.removeEntities(handle.instance.entities);
-      _visibleInScene.remove(actor.id);
-    }
+    _syncSceneMembership(actor.id, handle);
 
     try {
       // Stored Z-up cm → the scene's Y up, with the mesh's asset unit
@@ -212,6 +200,37 @@ mixin _ViewportSceneSync on _ViewportWidgetStateBase {
         source: 'FilamentNative',
       );
     }
+  }
+
+  /// Puts [id]'s mesh in the scene or takes it out as [_editorActorDrawn]
+  /// says; true when that changed. In Wireframe the solids stay in the scene
+  /// for other views of it (a camera preview); the level view hides their
+  /// layer.
+  bool _syncSceneMembership(String id, LuminaMeshHandle handle) {
+    final isVisible = _editorActorDrawn(id);
+    final currentlyVisible = _visibleInScene.contains(id);
+    if (isVisible && !currentlyVisible) {
+      EditorViewLayers.tag(_nativeEngine!, handle.instance.entities, EditorViewLayers.solids);
+      _nativeScene!.addEntities(handle.instance.entities);
+      _visibleInScene.add(id);
+      return true;
+    } else if (!isVisible && currentlyVisible) {
+      _nativeScene!.removeEntities(handle.instance.entities);
+      _visibleInScene.remove(id);
+      return true;
+    }
+    return false;
+  }
+
+  @override
+  void _applyEditorDrawDistances() {
+    if (_nativeScene == null || _nativeEngine == null || _drawDistanceLimits.isEmpty) return;
+    var changed = false;
+    for (final id in _drawDistanceLimits.keys) {
+      final handle = _actorAssets[id];
+      if (handle != null && _syncSceneMembership(id, handle)) changed = true;
+    }
+    if (changed) _syncMeshWires();
   }
 
   void _queueActorBind(String id) {
@@ -413,6 +432,7 @@ mixin _ViewportSceneSync on _ViewportWidgetStateBase {
     }
 
     // 2. Load, show / hide and place the current actors' meshes
+    _collectDrawDistances();
     for (final actor in widget.viewModel.actors) {
       Uint8List? payload = actor.meshData?.rawPayload;
 

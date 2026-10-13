@@ -624,6 +624,12 @@ class LuminaWorld extends LuminaObject {
   /// Null: the active camera component is rendered as usual.
   LuminaMinimalViewInfo? viewTargetPov;
 
+  /// Where draw distances are measured from this frame (runtime axes, cm):
+  /// the view target, else [postProcessCameraPosition]; set before render
+  /// prep. Null shows every mesh.
+  Vector3? get drawDistanceViewLocation => _drawDistanceView;
+  Vector3? _drawDistanceView;
+
   /// What the bound view renders from this frame: [viewTargetPov] when set,
   /// else the active camera component's transform and FOV; null without a
   /// camera. Runtime axes.

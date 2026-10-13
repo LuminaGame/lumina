@@ -6,6 +6,7 @@ Components that draw geometry: static and instanced static meshes with LODs, the
 
 **On this page:**
 
+- [`lib/src/components/mesh/draw_distance.dart`](#libsrccomponentsmeshdraw_distancedart)
 - [`lib/src/components/mesh/instanced_static_mesh_component.dart`](#libsrccomponentsmeshinstanced_static_mesh_componentdart)
 - [`lib/src/components/mesh/mesh_asset_cache.dart`](#libsrccomponentsmeshmesh_asset_cachedart)
 - [`lib/src/components/mesh/morph_target_set.dart`](#libsrccomponentsmeshmorph_target_setdart)
@@ -19,6 +20,20 @@ Components that draw geometry: static and instanced static meshes with LODs, the
 - [`lib/src/components/particles/particle_emitter_config.dart`](#libsrccomponentsparticlesparticle_emitter_configdart)
 - [`lib/src/components/particles/particle_system_component.dart`](#libsrccomponentsparticlesparticle_system_componentdart)
 - [`lib/src/components/mesh/animated_mesh_component.dart`](#libsrccomponentsmeshanimated_mesh_componentdart)
+
+## `lib/src/components/mesh/draw_distance.dart`
+
+### `class LuminaDrawDistance`
+
+Distance-based hiding of meshes. A `LuminaStaticMeshComponent` (and so an animated or skeletal mesh) with a `minDrawDistance` or `maxDrawDistance` (cm; 0 = no limit; also constructor arguments) leaves the scene while its origin is nearer than the minimum or farther than the maximum from `LuminaWorld.drawDistanceViewLocation`. The world sets that location at the start of every render prep: the view target's point of view when one is set, else the active camera component, else the post-process camera override; null shows every mesh. Each mesh checks it in its own render prep (two comparisons for a mesh without limits) and adds or removes its entities only when the answer changes. `isDistanceHidden` reports the state; `visible` stays the user's switch, so a hidden mesh stays out whatever its distance.
+
+| Member | Signature | Description |
+|---|---|---|
+| `within` | `static bool within(double distance, double min, double max)` | Whether something `distance` cm from the view is drawn. |
+| `fromDetails` | `static ({double min, double max})? fromDetails(Map<String, Object?> properties)` | The Details' Min / Max Draw Distance (metres) in cm; null when neither limits anything. |
+| `apply` | `static T apply<T extends LuminaActor>(T actor, {double min = 0, double max = 0})` | Gives every mesh component of the actor the limits; returns the actor. |
+
+A placed `Mesh`, `StaticMesh` or `SkeletalMesh` actor takes the Min / Max Draw Distance of its Mesh Component Details in Play-In-Editor (`EditorPieGame.meshDrawDistance`) and in the generated level (`LuminaDrawDistance.apply(<actor>, min:, max:)`). The level viewport hides the editor's own copy of such a mesh by the same rule, measured from the editor camera's eye and checked whenever the camera moves.
 
 ## `lib/src/components/mesh/instanced_static_mesh_component.dart`
 

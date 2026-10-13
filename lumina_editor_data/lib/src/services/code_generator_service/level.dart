@@ -394,11 +394,13 @@ mixin _LevelCodegen on _DartCodeGeneratorServiceState {
       hiddenInGame: hiddenInGame,
       animBlueprints: animBlueprints,
     );
-    if (expression == null || !hiddenInGame) return expression;
+    if (expression == null) return null;
+    final limited = _withDrawDistance(a, expression);
+    if (!hiddenInGame) return limited;
     // Every expression is one actor followed by the list's comma; the cascade
     // hides the actor whatever class it is (a Blueprint factory, a mesh actor).
-    final trimmed = expression.trimRight();
-    if (!trimmed.endsWith(',')) return expression;
+    final trimmed = limited.trimRight();
+    if (!trimmed.endsWith(',')) return limited;
     return '${trimmed.substring(0, trimmed.length - 1)}..hiddenInGame = true,';
   }
 

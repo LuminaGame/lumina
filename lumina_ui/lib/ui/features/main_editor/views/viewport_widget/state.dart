@@ -182,6 +182,44 @@ abstract class _ViewportWidgetStateBase extends State<ViewportWidget> with Ticke
   /// The EV100 last pushed to the viewport camera.
   double? _appliedEv100;
 
+  /// The editor camera's eye (stored Z-up, cm) draw distances are measured
+  /// from; null until the camera is first pointed.
+  (double, double, double)? _editorEye;
+
+  /// The placed meshes whose Details set a Min / Max Draw Distance: limits
+  /// (cm) and location (stored Z-up, cm) by actor id, rebuilt on each sync.
+  Map<String, ({double min, double max, double x, double y, double z})> _drawDistanceLimits = {};
+
+  /// Whether [actorId] is drawn at the editor camera's distance
+  /// (`LuminaDrawDistance`, the rule Play and the game use).
+  bool _withinDrawDistance(String actorId) {
+    final limits = _drawDistanceLimits[actorId];
+    final eye = _editorEye;
+    if (limits == null || eye == null) return true;
+    final dx = limits.x - eye.$1, dy = limits.y - eye.$2, dz = limits.z - eye.$3;
+    return LuminaDrawDistance.within(math.sqrt(dx * dx + dy * dy + dz * dz), limits.min, limits.max);
+  }
+
+  /// Rebuilds [_drawDistanceLimits] from the level's placed meshes.
+  void _collectDrawDistances() {
+    final limits = <String, ({double min, double max, double x, double y, double z})>{};
+    for (final actor in widget.viewModel.actors) {
+      if (!const {'Mesh', 'StaticMesh', 'SkeletalMesh'}.contains(actor.type)) continue;
+      for (final c in actor.components) {
+        if (c.type != 'LuminaMeshComponent' && c.type != 'LuminaSkeletalMeshComponent') continue;
+        final d = LuminaDrawDistance.fromDetails(Map<String, Object?>.from(c.properties));
+        if (d != null) {
+          limits[actor.id] = (min: d.min, max: d.max, x: actor.location[0], y: actor.location[1], z: actor.location[2]);
+        }
+        break;
+      }
+    }
+    _drawDistanceLimits = limits;
+  }
+
+  /// Shows or hides the meshes with draw distances for the current eye.
+  void _applyEditorDrawDistances();
+
   String? _hoveredGizmoAxis;
 
   /// The gizmo drag in progress (shared solvers).
