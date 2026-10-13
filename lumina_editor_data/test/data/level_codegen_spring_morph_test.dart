@@ -1,5 +1,5 @@
-// A placed skeletal mesh that carries spring-driven morph targets plays as an
-// animated mesh with its springs; any other skeletal mesh generates as before.
+// A placed skeletal mesh plays as an animated mesh (the runtime's level
+// skeletal mesh factory) with its springs and its Mesh Component Details.
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina_editor_data/lumina_editor.dart';
 
@@ -35,18 +35,40 @@ void main() {
         },
       ]),
     ]);
-    expect(code, contains("LuminaActor(key: const LuminaObjectKey('mh_1'), root: LuminaAnimatedMeshComponent(meshAssetPath: "));
-    expect(code, contains('..addComponent(LuminaSpringMorphComponent.fromProperties('));
+    expect(code, contains("LuminaLevelSkeletalMesh.build(key: const LuminaObjectKey('mh_1'), meshAssetPath: "));
+    expect(code, contains(', springs: <String, dynamic>{'));
     expect(code, contains("'amplitude': 0.8"));
     expect(code, contains("'bone': 'spine_05'"));
     expect(code, contains("'-y': 'BreastJiggleDownL'"));
   });
 
-  test('a skeletal mesh without springs generates as a static mesh, as before', () {
+  test('a skeletal mesh without springs is an animated skeletal mesh too, with no springs', () {
     final code = DartCodeGeneratorService().generateLevelDart(levelName: 'L_Plain', actors: const [], actorMaps: [skeletal()]);
-    expect(code, contains('root: LuminaStaticMeshComponent(meshAssetPath: '));
-    expect(code, isNot(contains('LuminaAnimatedMeshComponent')));
-    expect(code, isNot(contains('LuminaSpringMorphComponent')));
+    expect(code, contains("LuminaLevelSkeletalMesh.build(key: const LuminaObjectKey('mh_1'), meshAssetPath: "));
+    expect(code, isNot(contains('LuminaStaticMeshComponent')));
+    expect(code, isNot(contains('springs:')));
+  });
+
+  test("the Mesh Component's cast shadow, slot and pose from reach the game; an unset pose from is left out", () {
+    final code = DartCodeGeneratorService().generateLevelDart(levelName: 'L_Slots', actors: const [], actorMaps: [
+      skeletal(components: [
+        {
+          'id': 'mh_1_mesh',
+          'type': 'LuminaSkeletalMeshComponent',
+          'name': 'Mesh Component',
+          'properties': {'castShadow': false, 'slot': 'Hair', 'poseFrom': 'body_1', 'minDrawDistance': 0.0},
+        },
+      ]),
+      {
+        ...skeletal(components: [
+          {'id': 'b_mesh', 'type': 'LuminaSkeletalMeshComponent', 'name': 'Mesh Component', 'properties': {'poseFrom': 'None'}},
+        ]),
+        'id': 'body_1',
+      },
+    ]);
+    expect(code, contains("details: <String, dynamic>{'castShadow': false, 'slot': 'Hair', 'poseFrom': 'body_1'}"));
+    expect(code, contains("LuminaLevelSkeletalMesh.build(key: const LuminaObjectKey('body_1'), meshAssetPath: "));
+    expect(RegExp("LuminaObjectKey\('body_1'\)[^\n]*details:").hasMatch(code), isFalse, reason: 'None is no pose from');
   });
 
   test('a spring component on a static mesh is not a skeletal one: unchanged', () {

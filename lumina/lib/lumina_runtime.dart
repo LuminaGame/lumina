@@ -141,6 +141,7 @@ export 'package:lumina/src/components/particles/particle_emitter_config.dart';
 export 'package:lumina/src/components/particles/particle_system_component.dart';
 export 'package:lumina/src/game/game_instance.dart';
 export 'package:lumina/src/game/game_mode.dart';
+export 'package:lumina/src/game/level_skeletal_mesh.dart';
 export 'package:lumina/src/game/player_camera_manager.dart';
 export 'package:lumina/src/game/game_state.dart';
 export 'package:lumina/src/game/display_info.dart';

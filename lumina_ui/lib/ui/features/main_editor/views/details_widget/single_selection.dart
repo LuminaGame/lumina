@@ -2,7 +2,7 @@ part of '../details_widget.dart';
 
 /// One selected actor: transform, collision, component blocks, property
 /// rows and the Add Component popover.
-mixin _DetailsSingleSelection on _DetailsWidgetStateBase {
+mixin _DetailsSingleSelection on _DetailsWidgetStateBase, _DetailsReferenceFields {
 
   Widget _buildTransformBlock(EditorActorNode actor) {
     return Column(
@@ -293,6 +293,12 @@ mixin _DetailsSingleSelection on _DetailsWidgetStateBase {
           onCommit: (v) => widget.viewModel.updateComponentPropertyWithTransaction(actor.id, comp.id, prop.id, v),
           viewModel: widget.viewModel,
         );
+        break;
+      case PropertyEditorType.text:
+        editorWidget = _textPropertyField(actor, comp, prop, effectiveValue);
+        break;
+      case PropertyEditorType.actorReference:
+        editorWidget = _actorReferenceField(actor, comp, prop, effectiveValue);
         break;
       case PropertyEditorType.collisionMatrix:
         editorWidget = const Text('Matrix Editor (WIP)', style: TextStyle(fontSize: 9, color: EditorColors.mutedForeground));

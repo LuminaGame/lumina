@@ -11,6 +11,13 @@ enum PropertyEditorType {
   curve,
   eventList,
   collisionMatrix,
+
+  /// A short text (a name).
+  text,
+
+  /// Another actor of the level, stored by id ('' none); the descriptor's
+  /// [PropertyDescriptor.type] names the actor type offered.
+  actorReference,
 }
 
 class PropertyDescriptor {
@@ -193,7 +200,7 @@ class ComponentPropertyRegistry {
     ),
     'LuminaSkeletalMeshComponent': ComponentDescriptor(
       type: 'LuminaSkeletalMeshComponent',
-      sections: ['Mesh & Geometry', 'Materials', 'Transform & Attachment', 'Render Distance & Culling'],
+      sections: ['Mesh & Geometry', 'Materials', 'Transform & Attachment', 'Render Distance & Culling', 'Character'],
       properties: [
         PropertyDescriptor(id: 'skeletalMeshAsset', label: 'Skeletal Mesh Asset', group: 'Mesh & Geometry', editor: PropertyEditorType.assetRef),
         PropertyDescriptor(id: 'animClass', label: 'Anim Class / Animation Blueprint', group: 'Mesh & Geometry', editor: PropertyEditorType.assetRef),
@@ -206,6 +213,10 @@ class ComponentPropertyRegistry {
         PropertyDescriptor(id: 'maxDrawDistance', label: 'Max Draw Distance', group: 'Render Distance & Culling', editor: PropertyEditorType.float, unit: 'm', defaultValue: 200.0),
         PropertyDescriptor(id: 'castShadow', label: 'Cast Shadow', group: 'Render Distance & Culling', editor: PropertyEditorType.boolean, defaultValue: true),
         PropertyDescriptor(id: 'volumetricShadow', label: 'Volumetric Shadow', group: 'Render Distance & Culling', editor: PropertyEditorType.boolean, defaultValue: true),
+        // A character's swappable part: its slot name, and the skeletal
+        // mesh actor whose pose it follows by bone name.
+        PropertyDescriptor(id: 'slot', label: 'Slot', group: 'Character', editor: PropertyEditorType.text, defaultValue: ''),
+        PropertyDescriptor(id: 'poseFrom', label: 'Pose From', group: 'Character', editor: PropertyEditorType.actorReference, type: 'SkeletalMesh', defaultValue: ''),
       ],
     ),
     'LuminaMeshComponent': ComponentDescriptor(

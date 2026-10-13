@@ -420,24 +420,24 @@ class EditorPieGame extends LuminaGame {
             root: LuminaSceneComponent(location: location, rotation: rotation, scale: scale, isVisible: actor.isVisible),
           );
         }
-        // A skeletal mesh with spring-driven morph targets plays as an
-        // animated mesh with its springs, as in the generated game.
-        final springs = actor.type == 'SkeletalMesh'
-            ? actor.components.where((c) => c.type == 'LuminaSpringMorphComponent').firstOrNull
-            : null;
-        if (springs != null) {
-          // After the mesh, so the springs read its pose of the frame.
-          return LuminaActor(
+        // A skeletal mesh plays as an animated mesh with its Mesh Component
+        // Details (cast shadow, slot, pose from another actor), its level
+        // material and its springs, as in the generated game.
+        if (actor.type == 'SkeletalMesh') {
+          final springs = actor.components.where((c) => c.type == 'LuminaSpringMorphComponent').firstOrNull;
+          final details = actor.components.where((c) => c.type == 'LuminaSkeletalMeshComponent').firstOrNull;
+          return LuminaLevelSkeletalMesh.build(
             key: LuminaObjectKey(actor.id),
-            root: LuminaAnimatedMeshComponent(
-              location: location,
-              rotation: rotation,
-              scale: scale,
-              meshAssetPath: meshPath,
-              castShadows: actor.castShadows,
-              visible: actor.isVisible,
-            ),
-          )..addComponent(LuminaSpringMorphComponent.fromProperties(Map<String, Object?>.from(springs.properties)));
+            meshAssetPath: meshPath,
+            location: location,
+            rotation: rotation,
+            scale: scale,
+            castShadows: actor.castShadows,
+            visible: actor.isVisible,
+            materialOverrideAsset: _assignedMaterial(actor),
+            details: Map<String, Object?>.from(details?.properties ?? const {}),
+            springs: springs == null ? null : Map<String, Object?>.from(springs.properties),
+          );
         }
         // 06: a mesh's simple collision — imported UCX_
         // hulls and the Static Mesh editor's authored shapes — as in the

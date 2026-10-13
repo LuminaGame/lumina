@@ -263,7 +263,7 @@ Her yeni proje, oyun üzerinde (motor üzerinde değil) çalışan AI ajanları 
 
 ### `enum PropertyEditorType`
 
-`PropertyEditorType`: Sistemde kullanılan seçenekleri ve durumları listeleyen numaralandırma türüdür.
+`PropertyEditorType`: Sistemde kullanılan seçenekleri ve durumları listeleyen numaralandırma türüdür. `text`, gönderilince kaydedilen kısa bir metindir (tek geri alma adımı); `actorReference` seviyedeki başka bir aktörü id'siyle seçer (tanımlayıcının `type`'ı sunulan aktör türünü adlandırır; aktörün kendisi ve aynı özelliği ona çıkan aktörler dışarıda kalır). Yerleştirilmiş bir skeletal mesh'in Mesh Component'inde Character bölümünde **Slot** (`text`) ve **Pose From** (`SkeletalMesh` aktörleri üzerinde `actorReference`) vardır; bkz. [Karakter slotları](../lumina/character-slots.md).
 
 ### `class PropertyDescriptor`
 

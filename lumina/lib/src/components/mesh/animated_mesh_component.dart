@@ -56,6 +56,7 @@ class LuminaAnimatedMeshComponent extends LuminaStaticMeshComponent with LuminaM
     super.visible,
     super.assetProvider,
     super.assetUnitScale,
+    super.materialOverrideAsset,
   });
 
   @override

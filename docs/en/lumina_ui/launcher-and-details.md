@@ -263,7 +263,7 @@ Every new project is set up for AI agents working on the game (not the engine):
 
 ### `enum PropertyEditorType`
 
-`PropertyEditorType`: Enumeration listing system options and state constants.
+`PropertyEditorType`: Enumeration listing system options and state constants. `text` is a short text committed on submit (one undo step); `actorReference` picks another actor of the level by id (the descriptor's `type` names the actor type offered; the actor itself and actors whose same property already leads to it are left out). A placed skeletal mesh's Mesh Component has **Slot** (`text`) and **Pose From** (`actorReference` over `SkeletalMesh` actors) in a Character section; see [Character slots](../lumina/character-slots.md).
 
 ### `class PropertyDescriptor`
 

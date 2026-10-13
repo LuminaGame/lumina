@@ -497,14 +497,19 @@ mixin _LevelCodegen on _DartCodeGeneratorServiceState {
       case 'StaticMesh':
       case 'SkeletalMesh':
         final meshPath = a['meshAssetPath'];
-        // A skeletal mesh with spring-driven morph targets plays as an
-        // animated mesh (it carries the morph weights) with its springs.
-        final springs = type == 'SkeletalMesh' ? _componentOfType(a, 'LuminaSpringMorphComponent') : null;
-        if (springs != null && meshPath is String && meshPath.isNotEmpty) {
-          final properties = springs['properties'] is Map ? Map<String, dynamic>.from(springs['properties'] as Map) : <String, dynamic>{};
-          return 'LuminaActor($key, root: LuminaAnimatedMeshComponent(meshAssetPath: \'${_escape(_bundlePath(meshPath))}\', '
-              '$transform, scale: $scaleCode, castShadows: $castShadows, visible: $visible))'
-              '..addComponent(LuminaSpringMorphComponent.fromProperties(${DartCodeGeneratorService._dartLiteral(properties)})),';
+        // A skeletal mesh plays as an animated mesh with its Mesh Component
+        // Details, level material and springs (the runtime factory PIE uses).
+        if (type == 'SkeletalMesh' && meshPath is String && meshPath.isNotEmpty) {
+          final (material, materialNote) = _materialArgument(a, projectDir);
+          return materialNote +
+              _emitLevelSkeletalMesh(a,
+                  key: key,
+                  meshPath: meshPath,
+                  transform: transform,
+                  scaleCode: scaleCode,
+                  castShadows: '$castShadows',
+                  visible: '$visible',
+                  material: material);
         }
         if (meshPath is String && meshPath.isNotEmpty) {
           // The material assigned to the placed mesh, drawn on every section.

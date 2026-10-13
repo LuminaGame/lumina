@@ -8,6 +8,7 @@ import 'package:lumina_editor_data/src/services/mesh_collision_service.dart';
 
 part 'code_generator_service/state.dart';
 part 'code_generator_service/level.dart';
+part 'code_generator_service/level_skeletal_mesh.dart';
 part 'code_generator_service/character_and_game_mode.dart';
 part 'code_generator_service/blueprints_and_registries.dart';
 part 'code_generator_service/literals.dart';

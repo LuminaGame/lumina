@@ -37,9 +37,9 @@ void main() {
     expect(springs.springs.single.morphs['-y'], 'BreastJiggleDownL');
   });
 
-  test('a skeletal mesh without springs plays as before', () {
+  test('a skeletal mesh without springs plays as an animated mesh too, with no springs', () {
     final built = EditorPieGame.mapEditorActor(character(springs: false)) as LuminaActor;
-    expect(built.rootComponent, isNot(isA<LuminaAnimatedMeshComponent>()));
+    expect(built.rootComponent, isA<LuminaAnimatedMeshComponent>());
     expect(built.components.whereType<LuminaSpringMorphComponent>(), isEmpty);
   });
 

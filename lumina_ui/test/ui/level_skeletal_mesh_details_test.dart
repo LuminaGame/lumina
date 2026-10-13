@@ -1,0 +1,92 @@
+import 'dart:io';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:lumina_editor_data/lumina_editor.dart' hide BoxShape;
+import 'package:lumina_ui/ui/core/theme/editor_theme.dart';
+import 'package:lumina_ui/ui/features/details/models/editor_component_node.dart';
+import 'package:lumina_ui/ui/features/main_editor/services/pie_controller.dart';
+import 'package:lumina_ui/ui/features/main_editor/view_models/editor_view_model.dart';
+import 'package:lumina_ui/ui/features/main_editor/views/details_widget.dart';
+import 'package:shadcn_flutter/shadcn_flutter.dart';
+
+/// A placed skeletal mesh's Mesh Component Details reach Play: Slot and
+/// Pose From (another skeletal mesh actor, never itself or one already
+/// following it), Cast Shadow; Play builds an animated mesh that follows
+/// the chosen actor's pose and holds its slot.
+void main() {
+  late Directory tempDir;
+  setUp(() => tempDir = Directory.systemTemp.createTempSync('lumina_level_skm_'));
+  tearDown(() => tempDir.deleteSync(recursive: true));
+
+  EditorViewModel vm() => EditorViewModel(
+        initialProject: const LuminaProject(projectName: 'LevelSkm'),
+        projectLocation: tempDir.path,
+        enableTimers: false,
+        autoInitAssets: false,
+      );
+
+  EditorActorNode skeletal(String id, String name) => EditorActorNode(
+        id: id,
+        name: name,
+        type: 'SkeletalMesh',
+        location: [0, 0, 0],
+        meshAssetPath: 'contents/meshes/skeletal/$name.lmas',
+      )..components.add(EditorComponentNode(id: '${id}_mesh', type: 'LuminaSkeletalMeshComponent', name: 'Mesh Component', properties: {}));
+
+  testWidgets('the Details panel edits Slot and Pose From; Pose From offers no cycle', (tester) async {
+    final model = vm();
+    addTearDown(model.dispose);
+    final body = skeletal('body_1', 'Body'), hair = skeletal('hair_1', 'Hair');
+    model.addActorNodes([body, hair]);
+    model.selectActorById(hair.id);
+    tester.view.physicalSize = const Size(900, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    await tester.pumpWidget(ShadcnApp(theme: luminaEditorTheme(), home: Scaffold(child: DetailsWidget(viewModel: model))));
+    await tester.pumpAndSettle();
+    expect(find.text('Slot', skipOffstage: false), findsWidgets);
+    expect(find.text('Pose From', skipOffstage: false), findsWidgets);
+
+    final slot = find.descendant(of: find.byKey(const ValueKey('details_text_hair_1_mesh_slot')), matching: find.byType(EditableText));
+    await tester.enterText(slot, 'Hair');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pumpAndSettle();
+    expect(hair.components.single.properties['slot'], 'Hair');
+
+    await tester.tap(find.byKey(const ValueKey('details_actor_ref_hair_1_mesh_poseFrom')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Body').last);
+    await tester.pumpAndSettle();
+    expect(hair.components.single.properties['poseFrom'], 'body_1');
+
+    // The body cannot follow its own follower.
+    model.selectActorById(body.id);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('details_actor_ref_body_1_mesh_poseFrom')));
+    await tester.pumpAndSettle();
+    final labels = [
+      for (final e in find.descendant(of: find.byType(SelectItemButton<String>), matching: find.byType(Text)).evaluate()) (e.widget as Text).data,
+    ];
+    expect(labels, ['None']);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  test('Play builds the follower as an animated mesh following the chosen actor, with its slot and cast shadow', () {
+    final body = skeletal('body_1', 'Body'), hair = skeletal('hair_1', 'Hair');
+    hair.components.single.properties.addAll({'slot': 'Hair', 'poseFrom': 'body_1', 'castShadow': false});
+    final game = EditorPieGame([body, hair]);
+    final world = LuminaWorld(worldType: LuminaWorldType.game);
+    addTearDown(world.cleanup);
+    game.mountIntoWorldForTest(world);
+    world.tick(1 / 60);
+    final bodyActor = world.persistentLevel.actors.firstWhere((a) => a.key == const LuminaObjectKey('body_1'));
+    final hairActor = world.persistentLevel.actors.firstWhere((a) => a.key == const LuminaObjectKey('hair_1'));
+    final bodyMesh = bodyActor.rootComponent as LuminaAnimatedMeshComponent;
+    final hairMesh = hairActor.rootComponent as LuminaAnimatedMeshComponent;
+    expect(hairMesh.poseLeader, same(bodyMesh));
+    expect(hairMesh.castShadows, isFalse);
+    expect(bodyMesh.castShadows, isTrue);
+    expect(LuminaCharacterSlots.of(hairActor).names, ['Hair']);
+    expect(LuminaCharacterSlots.of(hairActor).component('Hair'), same(hairMesh));
+  });
+}

@@ -38,6 +38,7 @@ part 'details_widget/state.dart';
 part 'details_widget/level_and_blueprint_sections.dart';
 part 'details_widget/world_partition_section.dart';
 part 'details_widget/data_layer_tree.dart';
+part 'details_widget/reference_fields.dart';
 part 'details_widget/single_selection.dart';
 part 'details_widget/multi_selection.dart';
 part 'details_widget/widgets.dart';
@@ -54,6 +55,7 @@ class DetailsWidget extends StatefulWidget {
 class _DetailsWidgetState extends _DetailsWidgetStateBase
     with
         _DetailsLevelAndBlueprintSections,
+        _DetailsReferenceFields,
         _DetailsSingleSelection,
         _DetailsMultiSelection {
 
