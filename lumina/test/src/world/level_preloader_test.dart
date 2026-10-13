@@ -16,7 +16,9 @@ void main() {
 
   setUp(() {
     project = Directory.systemTemp.createTempSync('lvl_preloader_');
-    dir = project.resolveSymbolicLinksSync();
+    // The asset index names files by `/`-separated absolute paths on every
+    // platform, so the expectations use the same form.
+    dir = project.resolveSymbolicLinksSync().replaceAll(r'\', '/');
     writeLevelLoadProject(dir, broken: true);
   });
   tearDown(() {

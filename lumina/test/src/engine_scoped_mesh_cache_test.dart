@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'package:flutter_filament/flutter_filament.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumina/lumina.dart';
+import 'package:path/path.dart' as p;
 
 final _assets = '${Directory.current.parent.path}/test-assets';
 final _barrel = File('$_assets/Props/Barrels/dented_barrel.glb');
@@ -111,7 +112,7 @@ void main() {
     final lmas = File('${dir.path}/SM_Barrel.lmas')
       ..writeAsBytesSync(const LuminaAsset(assetId: 'SM_Barrel', name: 'SM_Barrel', type: AssetType.filamesh).toProtoBufferBytes());
     final companion = File('${dir.path}/SM_Barrel.entity.glb')..writeAsBytesSync(_barrel.readAsBytesSync());
-    expect(LuminaMeshAssetCache.canonicalSourcePath(lmas.path), companion.absolute.path);
+    expect(LuminaMeshAssetCache.canonicalSourcePath(lmas.path), p.normalize(companion.absolute.path));
 
     final cache = LuminaMeshAssetCache.forEngine(engine);
     final payload = companion.readAsBytesSync();
@@ -119,14 +120,14 @@ void main() {
     final byPath = (await cache.acquire(lmas.path))!;
     expect(byPath.key, byBytes.key);
     expect(cache.uploadCount, 1);
-    expect(cache.entries.single.sourcePaths, {companion.absolute.path});
+    expect(cache.entries.single.sourcePaths, {p.normalize(companion.absolute.path)});
 
     // The same bytes under another path are the same upload, both recorded.
     final copy = File('${dir.path}/SM_BarrelCopy.glb')..writeAsBytesSync(payload);
     final byCopy = (await cache.acquire(copy.path))!;
     expect(byCopy.key, byBytes.key);
     expect(cache.uploadCount, 1);
-    expect(cache.entries.single.sourcePaths, {companion.absolute.path, copy.absolute.path});
+    expect(cache.entries.single.sourcePaths, {p.normalize(companion.absolute.path), p.normalize(copy.absolute.path)});
 
     // The same mesh with an edited glTF header is new content: a second asset.
     final edited = _withAssetExtras(payload, {'edited': true});
@@ -196,7 +197,7 @@ void main() {
     };
     final cache = LuminaMeshAssetCache.forEngine(engine);
     final handle = (await cache.acquire(_barrel.path))!;
-    expect(filteredPath, _barrel.absolute.path);
+    expect(filteredPath, p.normalize(_barrel.absolute.path));
     expect(handle.key, LuminaMeshAssetCache.contentDigest(filtered), reason: 'the fixture, not the barrel, was parsed');
     handle.release();
   }, skip: hasAssets ? false : 'test-assets missing');
