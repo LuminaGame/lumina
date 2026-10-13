@@ -79,4 +79,4 @@ Uyum (`LuminaGarmentFitter`, lumina_core, saf Dart):
 | **Get Slot Mesh** | `slot` → içindeki mesh (boşsa ya da bilinmiyorsa ''). |
 | **Get Slots** | → sahibin slot adları. |
 
-Düğümler grafı çalıştıran aktör üzerinde çalışır. VM ve üretilen Dart aynı sonuçları verir (`blueprint_codegen_parity_test.dart`).
+Her slot düğümünün bir **Target** pini (bir aktör) vardır: düğümler o aktörün slotlarında, Target bağlı değilse grafı çalıştıran aktörde çalışır. VM ve üretilen Dart aynı sonuçları verir (`blueprint_codegen_parity_test.dart`).

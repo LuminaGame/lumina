@@ -1,6 +1,7 @@
 part of '../node_library.dart';
 
-/// Built-in nodes: the owner's character slots (`LuminaCharacterSlots`).
+/// Built-in nodes: an actor's character slots (`LuminaCharacterSlots`):
+/// Target's, or the owner's when Target is not connected.
 final List<LuminaBlueprintNodeSpec> _characterSlotNodes = <LuminaBlueprintNodeSpec>[
   LuminaBlueprintNodeSpec(
     id: 'set_slot_mesh',
@@ -9,10 +10,11 @@ final List<LuminaBlueprintNodeSpec> _characterSlotNodes = <LuminaBlueprintNodeSp
     kind: LuminaBlueprintNodeKind.impure,
     headerColor: _function,
     keywords: const ['slot', 'mesh', 'hair', 'beard', 'garment', 'clothes', 'outfit', 'swap', 'character', 'part'],
-    inputs: const [
+    inputs: [
       _execIn,
-      LuminaBlueprintPinSpec('slot', 'Slot', LuminaPinType.string, defaultValue: 'Hair'),
-      LuminaBlueprintPinSpec('mesh', 'Mesh', LuminaPinType.string, defaultValue: ''),
+      _obj('target', 'Target', LuminaBlueprintObjectClass.anyActor),
+      const LuminaBlueprintPinSpec('slot', 'Slot', LuminaPinType.string, defaultValue: 'Hair'),
+      const LuminaBlueprintPinSpec('mesh', 'Mesh', LuminaPinType.string, defaultValue: ''),
     ],
     outputs: [_execOut, _ret(LuminaPinType.boolean)],
   ),
@@ -23,10 +25,11 @@ final List<LuminaBlueprintNodeSpec> _characterSlotNodes = <LuminaBlueprintNodeSp
     kind: LuminaBlueprintNodeKind.impure,
     headerColor: _function,
     keywords: const ['garment', 'fit', 'clothes', 'outfit', 'wear', 'refit', 'slot', 'character'],
-    inputs: const [
+    inputs: [
       _execIn,
-      LuminaBlueprintPinSpec('slot', 'Slot', LuminaPinType.string, defaultValue: 'Torso'),
-      LuminaBlueprintPinSpec('garment', 'Garment', LuminaPinType.string, defaultValue: ''),
+      _obj('target', 'Target', LuminaBlueprintObjectClass.anyActor),
+      const LuminaBlueprintPinSpec('slot', 'Slot', LuminaPinType.string, defaultValue: 'Torso'),
+      const LuminaBlueprintPinSpec('garment', 'Garment', LuminaPinType.string, defaultValue: ''),
     ],
     outputs: [_execOut, _ret(LuminaPinType.boolean)],
   ),
@@ -37,7 +40,11 @@ final List<LuminaBlueprintNodeSpec> _characterSlotNodes = <LuminaBlueprintNodeSp
     kind: LuminaBlueprintNodeKind.impure,
     headerColor: _function,
     keywords: const ['slot', 'clear', 'remove', 'empty', 'garment', 'character', 'part'],
-    inputs: const [_execIn, LuminaBlueprintPinSpec('slot', 'Slot', LuminaPinType.string, defaultValue: 'Hair')],
+    inputs: [
+      _execIn,
+      _obj('target', 'Target', LuminaBlueprintObjectClass.anyActor),
+      const LuminaBlueprintPinSpec('slot', 'Slot', LuminaPinType.string, defaultValue: 'Hair'),
+    ],
     outputs: [_execOut, _ret(LuminaPinType.boolean)],
   ),
   LuminaBlueprintNodeSpec(
@@ -47,7 +54,10 @@ final List<LuminaBlueprintNodeSpec> _characterSlotNodes = <LuminaBlueprintNodeSp
     kind: LuminaBlueprintNodeKind.pure,
     headerColor: _pure,
     keywords: const ['slot', 'mesh', 'character', 'part'],
-    inputs: const [LuminaBlueprintPinSpec('slot', 'Slot', LuminaPinType.string, defaultValue: 'Hair')],
+    inputs: [
+      _obj('target', 'Target', LuminaBlueprintObjectClass.anyActor),
+      const LuminaBlueprintPinSpec('slot', 'Slot', LuminaPinType.string, defaultValue: 'Hair'),
+    ],
     outputs: [_ret(LuminaPinType.string)],
   ),
   LuminaBlueprintNodeSpec(
@@ -57,6 +67,7 @@ final List<LuminaBlueprintNodeSpec> _characterSlotNodes = <LuminaBlueprintNodeSp
     kind: LuminaBlueprintNodeKind.pure,
     headerColor: _pure,
     keywords: const ['slots', 'parts', 'character', 'list'],
+    inputs: [_obj('target', 'Target', LuminaBlueprintObjectClass.anyActor)],
     outputs: const [LuminaBlueprintPinSpec(_returnValue, 'Return Value', LuminaPinType.array, elementType: LuminaPinType.string)],
   ),
 ];

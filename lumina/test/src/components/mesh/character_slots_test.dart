@@ -157,9 +157,20 @@ void main() {
       expect(LuminaBlueprintFunctionLibrary.builtInFunctions.containsKey(id), isTrue, reason: id);
       expect(LuminaBlueprintFunctionLibrary.callShapes.containsKey(id), isTrue, reason: id);
     }
+    if (!File(manny).existsSync() || !File(quinn).existsSync()) return markTestSkipped('the mannequins are missing');
     final noSlots = LuminaActor(root: LuminaSceneComponent());
     expect(LuminaBlueprintFunctionLibrary.getSlots(noSlots), isEmpty);
-    expect(LuminaBlueprintFunctionLibrary.setSlotMesh(noSlots, 'Hair', 'x.glb'), isFalse);
-    expect(LuminaBlueprintFunctionLibrary.getSlotMesh(noSlots, 'Hair'), '');
+    expect(LuminaBlueprintFunctionLibrary.setSlotMesh(noSlots, null, 'Hair', 'x.glb'), isFalse);
+    expect(LuminaBlueprintFunctionLibrary.getSlotMesh(noSlots, null, 'Hair'), '');
+    // With a Target, the nodes act on that actor's slots, not the caller's.
+    final character = LuminaActor(root: LuminaSceneComponent());
+    LuminaBlueprintComponents.construct(character, [mesh('body', 'Body', manny), mesh('hair', 'Hair', '', parent: 'body', from: 'body')],
+        resolveAsset: (s) => s);
+    expect(LuminaBlueprintFunctionLibrary.getSlots(noSlots, character), ['Body', 'Hair']);
+    expect(LuminaBlueprintFunctionLibrary.setSlotMesh(noSlots, character, 'Hair', quinn), isTrue);
+    expect(LuminaBlueprintFunctionLibrary.getSlotMesh(noSlots, character, 'Hair'), quinn);
+    expect(LuminaBlueprintFunctionLibrary.clearSlot(noSlots, character, 'Hair'), isTrue);
+    expect(LuminaBlueprintFunctionLibrary.getSlotMesh(noSlots, character, 'Hair'), '');
+    expect(LuminaBlueprintFunctionLibrary.getSlots(noSlots), isEmpty, reason: 'the caller has none');
   });
 }

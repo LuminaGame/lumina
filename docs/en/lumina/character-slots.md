@@ -79,4 +79,4 @@ The push-out holds at the rest pose; poke-through while animating is hidden by t
 | **Get Slot Mesh** | `slot` → the mesh in it ('' when empty or unknown). |
 | **Get Slots** | → the owner's slot names. |
 
-The nodes act on the actor running the graph. The VM and generated Dart give the same results (`blueprint_codegen_parity_test.dart`).
+Every slot node has a **Target** pin (an actor): the nodes act on that actor's slots, or on the actor running the graph when Target is not connected. The VM and generated Dart give the same results (`blueprint_codegen_parity_test.dart`).

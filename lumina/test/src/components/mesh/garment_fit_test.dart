@@ -238,9 +238,9 @@ void main() {
       expect(cache.computed - before, 2, reason: 'Manny and Quinn, each once');
 
       // The node does the same from a graph.
-      expect(LuminaBlueprintFunctionLibrary.fitGarment(actor, 'Torso', garment), isTrue);
-      expect(LuminaBlueprintFunctionLibrary.fitGarment(actor, 'Torso', 'shirt.glb'), isFalse);
-      expect(LuminaBlueprintFunctionLibrary.fitGarment(actor, 'Cape', garment), isFalse);
+      expect(LuminaBlueprintFunctionLibrary.fitGarment(actor, null, 'Torso', garment), isTrue);
+      expect(LuminaBlueprintFunctionLibrary.fitGarment(actor, null, 'Torso', 'shirt.glb'), isFalse);
+      expect(LuminaBlueprintFunctionLibrary.fitGarment(actor, null, 'Cape', garment), isFalse);
     }, skip: skip, timeout: const Timeout(Duration(minutes: 3)));
   });
 }
