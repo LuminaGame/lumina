@@ -241,16 +241,19 @@ void main() {
       expect(d.cloth.geometry!.simVertexCount, 3000);
       d.pose();
       d.run(0.5);
-      // The best of twelve 0.25 s runs: other work on the machine (test files
-      // run side by side) only ever slows a run down.
+      // The best of many short windows of 6 steps over up to 3 s: other work
+      // on the machine (test files run side by side, each with Jolt's
+      // worker threads) only ever slows a window down, and short windows
+      // find the moments it leaves the cores free.
       var us = double.infinity;
-      for (var run = 0; run < 12; run++) {
+      final budget = Stopwatch()..start();
+      for (var run = 0; run < 400 && budget.elapsedMilliseconds < 3000; run++) {
         final watch = Stopwatch()..start();
-        for (var i = 0; i < 30; i++) {
+        for (var i = 0; i < 6; i++) {
           if (i.isEven) d.pose();
           d.w.physics.step(1 / 120);
         }
-        us = math.min(us, watch.elapsedMicroseconds / 30);
+        us = math.min(us, watch.elapsedMicroseconds / 6);
       }
       // ignore: avoid_print
       print('garment step: ${us.toStringAsFixed(0)} µs for 3000 vertices');
