@@ -21,7 +21,7 @@ abstract final class LuminaBodyMask {
     LuminaSkinnedMeshData body,
     List<LuminaSkinnedMeshData> garments, {
     double coverDistance = 4,
-    double insideTolerance = 1,
+    double insideTolerance = 2,
     double edgeMargin = 3,
   }) {
     final covered = Uint8List(body.vertexCount);

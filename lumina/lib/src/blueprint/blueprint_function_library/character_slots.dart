@@ -4,6 +4,7 @@ part of '../blueprint_function_library.dart';
 const Map<String, LuminaBlueprintCallShape> _characterSlotCallShapes = <String, LuminaBlueprintCallShape>{
   'set_slot_mesh': LuminaBlueprintCallShape('setSlotMesh', ['slot', 'mesh'], self: true, outputs: LuminaBlueprintFunctionLibrary._r),
   'clear_slot': LuminaBlueprintCallShape('clearSlot', ['slot'], self: true, outputs: LuminaBlueprintFunctionLibrary._r),
+  'fit_garment': LuminaBlueprintCallShape('fitGarment', ['slot', 'garment'], self: true, outputs: LuminaBlueprintFunctionLibrary._r),
   'get_slot_mesh': LuminaBlueprintCallShape('getSlotMesh', ['slot'], self: true, outputs: LuminaBlueprintFunctionLibrary._r),
   'get_slots': LuminaBlueprintCallShape('getSlots', [], self: true, outputs: LuminaBlueprintFunctionLibrary._r),
 };
@@ -12,6 +13,9 @@ const Map<String, LuminaBlueprintCallShape> _characterSlotCallShapes = <String, 
 final Map<String, LuminaBlueprintFunction> _characterSlotFunctions = <String, LuminaBlueprintFunction>{
   'set_slot_mesh': (c, i) => LuminaBlueprintFunctionLibrary._ret(
     LuminaBlueprintFunctionLibrary.setSlotMesh(c.self, i['slot'] as String? ?? '', i['mesh'] as String? ?? ''),
+  ),
+  'fit_garment': (c, i) => LuminaBlueprintFunctionLibrary._ret(
+    LuminaBlueprintFunctionLibrary.fitGarment(c.self, i['slot'] as String? ?? '', i['garment'] as String? ?? ''),
   ),
   'clear_slot': (c, i) => LuminaBlueprintFunctionLibrary._ret(LuminaBlueprintFunctionLibrary.clearSlot(c.self, i['slot'] as String? ?? '')),
   'get_slot_mesh': (c, i) => LuminaBlueprintFunctionLibrary._ret(LuminaBlueprintFunctionLibrary.getSlotMesh(c.self, i['slot'] as String? ?? '')),
@@ -24,6 +28,17 @@ bool _setSlotMesh(LuminaActor self, String slot, String mesh) {
   final slots = LuminaCharacterSlots.maybeOf(self);
   if (slots == null || slots.slot(slot) == null) return false;
   unawaited(slots.setMesh(slot, mesh));
+  return true;
+}
+
+/// Fits the Garment asset [garment] (its `.lmas`) into the owner's [slot],
+/// on the body of the slot it follows (refitting it when it is there
+/// already). True when the owner has that slot and [garment] is a `.lmas`;
+/// the fit runs in the background on a worker isolate.
+bool _fitGarment(LuminaActor self, String slot, String garment) {
+  final slots = LuminaCharacterSlots.maybeOf(self);
+  if (slots == null || slots.slot(slot) == null || !garment.toLowerCase().endsWith('.lmas')) return false;
+  unawaited(slots.fitGarment(slot, garment));
   return true;
 }
 

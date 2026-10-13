@@ -985,6 +985,7 @@ abstract final class LuminaBlueprintFunctionLibrary {
   /// The owner's character slots (see `LuminaCharacterSlots`).
   static const setSlotMesh = _setSlotMesh;
   static const clearSlot = _clearSlot;
+  static const fitGarment = _fitGarment;
   static const getSlotMesh = _getSlotMesh;
   static const getSlots = _getSlots;
 

@@ -3,7 +3,8 @@ import 'package:lumina/lumina.dart';
 /// A character Blueprint with three slots (Body leading, an empty Hair and
 /// an empty Torso following it). BeginPlay prints how many slots there are,
 /// fills Hair (printing whether the slot exists and its mesh), clears it
-/// (printing again), and tries a slot that does not exist.
+/// (printing again), tries a slot that does not exist, and fits a garment
+/// into Torso.
 LuminaBlueprintDocument slotsBlueprint() {
   LuminaBlueprintComponent slot(String id, String name, String mesh, {String? parent, String? from}) =>
       LuminaBlueprintComponent(
@@ -47,6 +48,9 @@ LuminaBlueprintDocument slotsBlueprint() {
     place('set_slot_mesh', 'missing', {'slot': 'Cape', 'mesh': 'contents/meshes/skeletal/SK_Cape.lmas'}),
     place('bool_to_string', 'missing_text'),
     place('print_string', 'say_missing'),
+    place('fit_garment', 'fit', {'slot': 'Torso', 'garment': 'contents/characters/G_Shirt.lmas'}),
+    place('bool_to_string', 'fit_text'),
+    place('print_string', 'say_fit'),
   ]);
   doc.eventGraph.wires.addAll([
     wire('begin', 'exec_out', 'say_count', 'exec_in'),
@@ -69,6 +73,10 @@ LuminaBlueprintDocument slotsBlueprint() {
     wire('missing', 'exec_out', 'say_missing', 'exec_in'),
     wire('missing', 'return_value', 'missing_text', 'in_bool'),
     wire('missing_text', 'return_value', 'say_missing', 'in_string'),
+    wire('say_missing', 'exec_out', 'fit', 'exec_in'),
+    wire('fit', 'exec_out', 'say_fit', 'exec_in'),
+    wire('fit', 'return_value', 'fit_text', 'in_bool'),
+    wire('fit_text', 'return_value', 'say_fit', 'in_string'),
   ]);
   return doc;
 }

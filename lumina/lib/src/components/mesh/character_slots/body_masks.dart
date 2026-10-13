@@ -25,7 +25,10 @@ extension LuminaCharacterSlotMasks on LuminaCharacterSlots {
     }
     final read = LuminaAssets.resolve(assetProvider);
     final bodyBytes = await LuminaMeshAssetCache.meshBytes(read, bodyPath);
-    final garmentBytes = [for (final g in garments) await LuminaMeshAssetCache.meshBytes(read, _garmentPath(g))];
+    // A fitted garment is served by its own component's provider.
+    final garmentBytes = [
+      for (final g in garments) await LuminaMeshAssetCache.meshBytes(LuminaAssets.resolve(_garmentProvider(g) ?? assetProvider), _garmentPath(g)),
+    ];
     final masked = await Isolate.run(() {
       LuminaSkinnedMeshData parse(Uint8List b) {
         try {
@@ -48,6 +51,13 @@ extension LuminaCharacterSlotMasks on LuminaCharacterSlots {
       developer.log('slot $bodySlot: the masked body did not load: $e', name: 'LuminaCharacterSlots', level: 900);
     }
     return true;
+  }
+
+  LuminaAssetProvider? _garmentProvider(LuminaCharacterSlot s) {
+    final c = s.component;
+    if (c is LuminaSkinnedClothComponent) return c.assetProvider;
+    if (c is LuminaAnimatedMeshComponent) return c.assetProvider;
+    return null;
   }
 
   String _garmentPath(LuminaCharacterSlot s) {

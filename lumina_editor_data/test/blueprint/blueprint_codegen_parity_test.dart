@@ -271,7 +271,7 @@ void main() {
     gen.world.cleanup();
   });
 
-  test('slots graph: Get Slots, Set Slot Mesh, Get Slot Mesh and Clear Slot trace the same', () {
+  test('slots graph: Get Slots, Set Slot Mesh, Get Slot Mesh, Clear Slot and Fit Garment trace the same', () {
     ({List<LuminaBlueprintTraceEvent> trace, LuminaActor actor}) setUp(bool generated) {
       final w = world();
       final LuminaActor actor =
@@ -287,7 +287,7 @@ void main() {
     final vm = setUp(false);
     final gen = setUp(true);
     final printed = [for (final t in vm.trace) if (t.printed != null) t.printed!];
-    expect(printed, ['3', 'true', 'contents/meshes/skeletal/SK_Hero_Hair.lmas', 'true', '', 'false']);
+    expect(printed, ['3', 'true', 'contents/meshes/skeletal/SK_Hero_Hair.lmas', 'true', '', 'false', 'true']);
     expectSameTrace(vm.trace, gen.trace);
     for (final r in [vm, gen]) {
       final slots = LuminaCharacterSlots.of(r.actor);

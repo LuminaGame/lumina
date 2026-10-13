@@ -3,7 +3,8 @@ import 'dart:developer' as developer;
 import 'dart:isolate';
 import 'dart:typed_data';
 
-import 'package:lumina_core/lumina_core.dart' show LuminaBodyMask, LuminaSkinnedMeshData;
+import 'package:lumina_core/lumina_core.dart'
+    show AssetType, LuminaAsset, LuminaBodyMask, LuminaGarmentDocument, LuminaGarmentFitReport, LuminaSkinnedMeshData;
 import 'package:vector_math/vector_math_64.dart';
 
 import 'package:lumina/src/assets/glb_loader.dart';
@@ -11,6 +12,7 @@ import 'package:lumina/src/assets/glb_loader.dart';
 import 'package:lumina/src/components/base/actor_component.dart';
 import 'package:lumina/src/components/base/scene_component.dart';
 import 'package:lumina/src/components/mesh/animated_mesh_component.dart';
+import 'package:lumina/src/components/mesh/garment_cache.dart';
 import 'package:lumina/src/components/mesh/mesh_asset_cache.dart';
 import 'package:lumina/src/object/actor.dart';
 import 'package:lumina/src/physics/cloth/skinned_cloth_component.dart';
@@ -48,6 +50,11 @@ class LuminaCharacterSlot {
   bool get masksBody => properties['masksBody'] as bool? ?? const {'torso', 'legs', 'feet'}.contains(name.toLowerCase());
 
   bool get isEmpty => mesh.isEmpty;
+
+  /// The garment in the slot (when its mesh is a Garment asset), fitted to
+  /// the leader slot's body, and how its latest fit went.
+  LuminaGarmentDocument? garment;
+  LuminaGarmentFitReport? lastFit;
 }
 
 /// The named slots of an actor's swappable parts (a character's `Body`,
@@ -120,8 +127,11 @@ class LuminaCharacterSlots {
     if (mesh.isEmpty) return clear(name);
     final old = slot.component;
     slot.mesh = mesh;
+    slot.garment = await _garmentAt(mesh);
     try {
-      if (old is LuminaAnimatedMeshComponent) {
+      if (slot.garment != null) {
+        await _fitGarment(slot);
+      } else if (old is LuminaAnimatedMeshComponent) {
         await old.setMeshAsset(resolve(mesh), assetProvider: assetProvider);
         _changes.add(name);
       } else if (old is LuminaSkinnedClothComponent) {
@@ -143,8 +153,89 @@ class LuminaCharacterSlots {
     } catch (e) {
       developer.log('slot $name: cannot load $mesh: $e', name: 'LuminaCharacterSlots', level: 900);
     }
+    // A new body: the garments on it are fitted to it again.
+    for (final other in _slots.values.toList()) {
+      if (other.leaderSlot == name && other.garment != null) {
+        try {
+          await _fitGarment(other);
+        } catch (e) {
+          developer.log('slot ${other.name}: cannot refit its garment: $e', name: 'LuminaCharacterSlots', level: 900);
+        }
+      }
+    }
     await _afterChange(slot);
     return true;
+  }
+
+  /// Fits the Garment asset [garment] (stored path of its `.lmas`) into
+  /// slot [name] on the body of the slot it follows; the fit report, or null
+  /// for an unknown slot or an asset that is not a garment.
+  Future<LuminaGarmentFitReport?> fitGarment(String name, String garment) async {
+    final slot = _slots[name];
+    if (slot == null || await _garmentAt(garment) == null) return null;
+    await setMesh(name, garment);
+    return slot.lastFit;
+  }
+
+  /// The garment document of the `.lmas` at [stored], or null when it is not
+  /// a Garment asset (or cannot be read).
+  Future<LuminaGarmentDocument?> _garmentAt(String stored) async {
+    if (!stored.toLowerCase().endsWith('.lmas')) return null;
+    final read = LuminaAssets.resolve(assetProvider);
+    try {
+      final asset = LuminaAsset.fromBytes(await read(stored));
+      return asset.type == AssetType.garment ? LuminaGarmentDocument.fromAsset(asset) : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Fits [slot]'s garment to its leader's body (unmasked) on a worker
+  /// isolate (cached) and shows it: a skinned mesh following the body, or a
+  /// skinned cloth worn on it when the garment simulates as cloth.
+  Future<void> _fitGarment(LuminaCharacterSlot slot) async {
+    final doc = slot.garment!;
+    final body = slot.leaderSlot == null ? null : _slots[slot.leaderSlot!];
+    if (body == null || body.isEmpty) {
+      throw StateError('slot ${slot.name} follows no body to fit its garment to');
+    }
+    final read = LuminaAssets.resolve(assetProvider);
+    final bytes = await Future.wait([
+      LuminaMeshAssetCache.meshBytes(read, resolve(doc.sourceMesh)),
+      LuminaMeshAssetCache.meshBytes(read, resolve(doc.referenceBody)),
+      LuminaMeshAssetCache.meshBytes(read, resolve(body.mesh)),
+    ]);
+    final fitted = await LuminaGarmentCache.instance.fit(
+      document: doc,
+      source: bytes[0],
+      reference: bytes[1],
+      target: bytes[2],
+      name: slot.name,
+    );
+    slot.lastFit = fitted.report;
+    final provider = providerWith(fitted.path, fitted.bytes);
+    final current = slot.component;
+    if (doc.simulateAsCloth) {
+      final cloth = LuminaSkinnedClothComponent.fromProperties({
+        ...slot.properties,
+        'meshAsset': fitted.path,
+        if (doc.clothSettingsAsset.isNotEmpty) 'clothSettingsAsset': doc.clothSettingsAsset,
+      }, assetProvider: provider)
+        ..mesh = _leaderMesh(slot);
+      _replace(slot, cloth);
+    } else if (current is LuminaAnimatedMeshComponent) {
+      await current.setMeshAsset(fitted.path, assetProvider: provider);
+      _changes.add(slot.name);
+    } else {
+      final next = LuminaAnimatedMeshComponent(
+        meshAssetPath: fitted.path,
+        castShadows: slot.properties['castShadows'] as bool? ?? true,
+        receiveShadows: slot.properties['receiveShadows'] as bool? ?? true,
+        assetProvider: provider,
+      );
+      _replace(slot, next);
+      await next.loaded;
+    }
   }
 
   Future<void> _afterChange(LuminaCharacterSlot slot) async {

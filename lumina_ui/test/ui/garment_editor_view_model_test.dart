@@ -11,6 +11,7 @@ void main() {
   final assets = Platform.environment['LUMINA_TEST_ASSETS'] ?? '${Directory.current.parent.parent.path}/test-assets';
   final tshirt = File('$assets/Props/Clothes Line/tshirt.glb');
   final manny = File('$assets/mannequin/SKM_Manny_Simple.glb');
+  final quinn = File('$assets/mannequin/exports/SKM_Quinn_Simple.glb');
   final skip = tshirt.existsSync() && manny.existsSync() ? false : 'the T-shirt or the mannequin is missing from test-assets';
 
   late Directory project;
@@ -23,6 +24,7 @@ void main() {
     await Directory('${project.path}/contents/characters').create(recursive: true);
     await tshirt.copy('${project.path}/contents/meshes/static/tshirt.glb');
     await manny.copy('${project.path}/contents/meshes/skeletal/SKM_Manny_Simple.glb');
+    if (quinn.existsSync()) await quinn.copy('${project.path}/contents/meshes/skeletal/SKM_Quinn_Simple.glb');
     await File('${project.path}/Garments.lmproject').writeAsString('{"projectName":"Garments"}');
     garmentPath = '${project.path}/contents/characters/G_Tshirt.lmas';
     await File(garmentPath).writeAsBytes(const LuminaGarmentDocument().toAsset(name: 'G_Tshirt').toProtoBufferBytes());
@@ -91,6 +93,26 @@ void main() {
     await reread.load();
     expect(reread.doc, vm.doc);
     expect(reread.doc.landmarks.map((l) => l.name), picks.keys);
+  }, skip: skip, timeout: const Timeout(Duration(minutes: 2)));
+
+  test('Preview On another body shows the garment fitted to it; picking is for the reference body only', () async {
+    if (!quinn.existsSync()) return markTestSkipped('test-assets/mannequin/exports/SKM_Quinn_Simple.glb is missing');
+    final vm = await open();
+    addTearDown(vm.dispose);
+    vm.setPlacement(location: [0, 150, 9], rotation: [0, 90, 0], scale: [1.15, 1.15, 1.15]);
+    expect(vm.fittedPreview, isNull, reason: 'on the reference body the placed source shows');
+    await vm.setPreviewBody('contents/meshes/skeletal/SKM_Quinn_Simple.glb');
+    expect(vm.previewsAnotherBody, isTrue);
+    final fitted = vm.fittedPreview;
+    expect(fitted, isNotNull, reason: vm.error);
+    expect(fitted!.report.maxPenetration, lessThan(0.1));
+    expect(fitted.report.denseCorrespondence, isFalse);
+    expect(LuminaSkinnedMeshData.fromGlb(fitted.bytes).isSkinned, isTrue);
+    vm.addLandmark('Neck');
+    vm.setPickMode(GarmentPickMode.body);
+    expect(vm.pick(0, 145, 200, 0, 0, -1), isFalse);
+    await vm.setPreviewBody('');
+    expect(vm.fittedPreview, isNull);
   }, skip: skip, timeout: const Timeout(Duration(minutes: 2)));
 
   test('a missing source mesh is reported, not thrown; revert restores the saved document', () async {

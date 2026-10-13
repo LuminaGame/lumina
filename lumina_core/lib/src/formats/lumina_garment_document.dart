@@ -197,7 +197,7 @@ class LuminaGarmentDocument {
       scale: vec(p['scale'], const [1, 1, 1]),
       landmarks: [
         for (final l in (p['landmarks'] as List? ?? const []))
-          if (LuminaGarmentLandmark.fromJson(l) case final landmark?) landmark,
+          ?LuminaGarmentLandmark.fromJson(l),
       ],
       thickness: (thickness is num ? thickness.toDouble() : 0.5).clamp(minThickness, maxThickness).toDouble(),
       slot: p['slot'] as String? ?? 'Torso',

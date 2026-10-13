@@ -17,6 +17,20 @@ final List<LuminaBlueprintNodeSpec> _characterSlotNodes = <LuminaBlueprintNodeSp
     outputs: [_execOut, _ret(LuminaPinType.boolean)],
   ),
   LuminaBlueprintNodeSpec(
+    id: 'fit_garment',
+    title: 'Fit Garment',
+    category: 'Character|Slots',
+    kind: LuminaBlueprintNodeKind.impure,
+    headerColor: _function,
+    keywords: const ['garment', 'fit', 'clothes', 'outfit', 'wear', 'refit', 'slot', 'character'],
+    inputs: const [
+      _execIn,
+      LuminaBlueprintPinSpec('slot', 'Slot', LuminaPinType.string, defaultValue: 'Torso'),
+      LuminaBlueprintPinSpec('garment', 'Garment', LuminaPinType.string, defaultValue: ''),
+    ],
+    outputs: [_execOut, _ret(LuminaPinType.boolean)],
+  ),
+  LuminaBlueprintNodeSpec(
     id: 'clear_slot',
     title: 'Clear Slot',
     category: 'Character|Slots',

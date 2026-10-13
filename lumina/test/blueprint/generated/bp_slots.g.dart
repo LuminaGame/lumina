@@ -67,6 +67,7 @@ class BpSlots extends LuminaActor with LuminaBlueprintRuntime {
     bool? ofill_return_value;
     bool? oempty_return_value;
     bool? omissing_return_value;
+    bool? ofit_return_value;
     final p0 = LuminaBlueprintFunctionLibrary.getSlots(this);
     if (trace != null) blueprintTrace('begin', 'slots', 'get_slots', {'return_value': p0});
     final p1 = LuminaBlueprintFunctionLibrary.arrayLength(p0);
@@ -104,6 +105,13 @@ class BpSlots extends LuminaActor with LuminaBlueprintRuntime {
     if (trace != null) blueprintTrace('begin', 'missing_text', 'bool_to_string', {'in_bool': (omissing_return_value ?? false), 'return_value': p10});
     LuminaBlueprintFunctionLibrary.printString(this, p10, true, true, <double>[0.0, 0.66, 1.0, 1.0], 2.0, '');
     if (trace != null) blueprintTrace('begin', 'say_missing', 'print_string', {'in_string': p10, 'print_to_screen': true, 'print_to_log': true, 'text_color': <double>[0.0, 0.66, 1.0, 1.0], 'duration': 2.0, 'key': ''}, printed: p10);
+    final r11 = LuminaBlueprintFunctionLibrary.fitGarment(this, 'Torso', 'contents/characters/G_Shirt.lmas');
+    ofit_return_value = r11;
+    if (trace != null) blueprintTrace('begin', 'fit', 'fit_garment', {'slot': 'Torso', 'garment': 'contents/characters/G_Shirt.lmas', 'return_value': r11});
+    final p12 = LuminaBlueprintFunctionLibrary.boolToString((ofit_return_value ?? false));
+    if (trace != null) blueprintTrace('begin', 'fit_text', 'bool_to_string', {'in_bool': (ofit_return_value ?? false), 'return_value': p12});
+    LuminaBlueprintFunctionLibrary.printString(this, p12, true, true, <double>[0.0, 0.66, 1.0, 1.0], 2.0, '');
+    if (trace != null) blueprintTrace('begin', 'say_fit', 'print_string', {'in_string': p12, 'print_to_screen': true, 'print_to_log': true, 'text_color': <double>[0.0, 0.66, 1.0, 1.0], 'duration': 2.0, 'key': ''}, printed: p12);
   }
 
   // BEGIN USER CODE: class_body

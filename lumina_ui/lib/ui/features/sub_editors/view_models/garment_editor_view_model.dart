@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
 import 'dart:isolate';
@@ -52,6 +53,9 @@ class GarmentEditorViewModel extends ChangeNotifier {
   final Map<String, Future<GarmentEditorMesh?>> _meshLoads = {};
   List<RealAssetInfo> _meshes = const [], _skeletalMeshes = const [], _clothSettings = const [];
   int _revision = 0;
+  LuminaFittedGarment? _fitted;
+  Timer? _refitTimer;
+  int _fitVersion = 0;
 
   LuminaGarmentDocument get doc => _doc;
   bool get isLoaded => _loaded;
@@ -69,6 +73,13 @@ class GarmentEditorViewModel extends ChangeNotifier {
   /// loading or unset).
   GarmentEditorMesh? get sourceMesh => _source;
   GarmentEditorMesh? get bodyMesh => _body;
+
+  /// The garment fitted to the preview body (null on the reference body or
+  /// while fitting): the viewport shows it instead of the placed source.
+  LuminaFittedGarment? get fittedPreview => _fitted;
+
+  /// Whether a preview body other than the reference body is shown.
+  bool get previewsAnotherBody => _previewBody.isNotEmpty && _previewBody != _doc.referenceBody;
 
   /// Increases when the meshes or the placement change (the viewport
   /// rebuilds its preview).
@@ -123,6 +134,36 @@ class GarmentEditorViewModel extends ChangeNotifier {
     if (previewBody == body) _body = results[1];
     _revision++;
     _notify();
+    await refitPreview();
+  }
+
+  /// Fits the garment to the preview body (on a worker isolate, cached);
+  /// nothing on the reference body. Completes when the fit is shown.
+  Future<void> refitPreview() async {
+    _refitTimer?.cancel();
+    final version = ++_fitVersion;
+    if (!previewsAnotherBody || _doc.sourceMesh.isEmpty || _doc.referenceBody.isEmpty) {
+      if (_fitted != null) {
+        _fitted = null;
+        _revision++;
+        _notify();
+      }
+      return;
+    }
+    try {
+      Future<Uint8List> bytes(String relative) => LuminaMeshAssetCache.meshBytes((p) => File(p).readAsBytes(), absolute(relative));
+      final all = await Future.wait([bytes(_doc.sourceMesh), bytes(_doc.referenceBody), bytes(_previewBody)]);
+      final fitted = await LuminaGarmentCache.instance.fit(document: _doc, source: all[0], reference: all[1], target: all[2], name: 'preview');
+      if (_disposed || version != _fitVersion) return;
+      _fitted = fitted;
+      _error = null;
+    } catch (e) {
+      if (_disposed || version != _fitVersion) return;
+      _fitted = null;
+      _error = 'Cannot fit the garment to $_previewBody: $e';
+    }
+    _revision++;
+    _notify();
   }
 
   /// [relative]'s geometry, read and parsed on a worker isolate (cached).
@@ -153,6 +194,11 @@ class GarmentEditorViewModel extends ChangeNotifier {
     _doc = next;
     _revision++;
     _notify();
+    // On another body the fit follows the edits, once they settle.
+    if (previewsAnotherBody) {
+      _refitTimer?.cancel();
+      _refitTimer = Timer(const Duration(milliseconds: 400), refitPreview);
+    }
   }
 
   Future<void> setSourceMesh(String relative) async {
@@ -222,6 +268,8 @@ class GarmentEditorViewModel extends ChangeNotifier {
     final name = _selectedLandmark;
     final landmark = name == null ? null : _doc.landmark(name);
     if (landmark == null || _pickMode == GarmentPickMode.none) return false;
+    // Landmarks belong to the reference body and the placed source.
+    if (previewsAnotherBody) return false;
     if (_pickMode == GarmentPickMode.body) {
       final body = _body;
       if (body == null) return false;
@@ -341,6 +389,7 @@ class GarmentEditorViewModel extends ChangeNotifier {
 
   @override
   void dispose() {
+    _refitTimer?.cancel();
     _disposed = true;
     super.dispose();
   }

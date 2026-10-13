@@ -77,6 +77,80 @@ class LuminaSkinnedMeshData {
   int get triangleCount => triangles.length ~/ 3;
   bool get isSkinned => joints != null;
 
+  /// A finer copy for fitting: every triangle split in four (edge
+  /// midpoints shared) until the mean edge is at most [maxEdge] cm or
+  /// another split would pass [maxVertices]; positions, normals and uvs
+  /// interpolated, skin weights left out (a fit computes its own). The
+  /// primitives keep their order and materials; the GLB is the same.
+  LuminaSkinnedMeshData refined({double maxEdge = 2.5, int maxVertices = 40000}) {
+    var p = positions.toList(), nrm = normals.toList(), uv = uvs.toList(), tri = triangles.toList();
+    var prims = primitives;
+    double meanEdge() {
+      var sum = 0.0;
+      for (var t = 0; t + 2 < tri.length; t += 3) {
+        final a = tri[t] * 3, b = tri[t + 1] * 3;
+        final dx = p[a] - p[b], dy = p[a + 1] - p[b + 1], dz = p[a + 2] - p[b + 2];
+        sum += math.sqrt(dx * dx + dy * dy + dz * dz);
+      }
+      return tri.isEmpty ? 0 : sum / (tri.length ~/ 3);
+    }
+
+    while (tri.isNotEmpty && meanEdge() > maxEdge) {
+      final vertices = p.length ~/ 3;
+      final edges = (tri.length ~/ 3) * 3 ~/ 2;
+      if (vertices + edges > maxVertices) break;
+      final mid = <int, int>{};
+      int midpoint(int a, int b) => mid.putIfAbsent(a < b ? a * 0x200000 + b : b * 0x200000 + a, () {
+        final i = p.length ~/ 3;
+        for (var k = 0; k < 3; k++) {
+          p.add((p[a * 3 + k] + p[b * 3 + k]) / 2);
+          nrm.add((nrm[a * 3 + k] + nrm[b * 3 + k]) / 2);
+        }
+        for (var k = 0; k < 2; k++) {
+          uv.add((uv[a * 2 + k] + uv[b * 2 + k]) / 2);
+        }
+        return i;
+      });
+      final next = <int>[];
+      for (var t = 0; t + 2 < tri.length; t += 3) {
+        final a = tri[t], b = tri[t + 1], c = tri[t + 2];
+        final ab = midpoint(a, b), bc = midpoint(b, c), ca = midpoint(c, a);
+        next.addAll([a, ab, ca, ab, b, bc, ca, bc, c, ab, bc, ca]);
+      }
+      tri = next;
+      prims = [
+        for (final r in prims)
+          LuminaGlbPrimitiveRef(
+            mesh: r.mesh,
+            primitive: r.primitive,
+            node: r.node,
+            firstVertex: r.firstVertex,
+            vertexCount: r.vertexCount,
+            firstTriangle: r.firstTriangle * 4,
+            triangleCount: r.triangleCount * 4,
+            material: r.material,
+            indexAccessor: null,
+          ),
+      ];
+    }
+    final n = Float32List.fromList(nrm);
+    _normalize(n);
+    return LuminaSkinnedMeshData._(
+      document: document,
+      positions: Float64List.fromList(p),
+      normals: n,
+      uvs: Float32List.fromList(uv),
+      triangles: Uint32List.fromList(tri),
+      joints: null,
+      weights: null,
+      nodeNames: nodeNames,
+      nodeParents: nodeParents,
+      nodeWorld: nodeWorld,
+      inverseBind: inverseBind,
+      primitives: prims,
+    );
+  }
+
   /// The index of the node named [name], or -1.
   int nodeNamed(String name) => nodeNames.indexOf(name);
 

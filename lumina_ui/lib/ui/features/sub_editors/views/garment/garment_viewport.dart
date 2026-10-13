@@ -58,7 +58,7 @@ mixin _GarmentViewport on _GarmentEditorBase {
   }
 
   SubEditorGizmoTarget? _target() {
-    if (vm.pickMode != GarmentPickMode.none || vm.doc.sourceMesh.isEmpty) return null;
+    if (vm.pickMode != GarmentPickMode.none || vm.doc.sourceMesh.isEmpty || vm.fittedPreview != null) return null;
     final l = vm.doc.location;
     final q = LuminaGarmentMath.quaternionFromEuler(vm.doc.rotation);
     final pivot = LuminaAxes.toAuthoringLocation(Vector3(l[0], l[1], l[2]));
@@ -73,8 +73,27 @@ mixin _GarmentViewport on _GarmentEditorBase {
   @override
   void syncScene() {
     scene.setBody(vm.absolute(vm.previewBody));
-    scene.setGarment(vm.absolute(vm.doc.sourceMesh));
-    scene.place(vm.doc);
+    final fitted = vm.fittedPreview;
+    if (fitted != null) {
+      // Fitted to the preview body: already in its space.
+      scene.setGarment(fitted.path, provider: _fittedProvider(fitted));
+      scene.place(vm.doc, placed: false);
+    } else {
+      scene.setGarment(vm.absolute(vm.doc.sourceMesh));
+      scene.place(vm.doc);
+    }
+  }
+
+  LuminaFittedGarment? _servedFit;
+  LuminaAssetProvider? _servedProvider;
+
+  /// One provider per fit, so the scene keeps the mesh while the fit stays.
+  LuminaAssetProvider _fittedProvider(LuminaFittedGarment fitted) {
+    if (!identical(fitted, _servedFit)) {
+      _servedFit = fitted;
+      _servedProvider = (p) async => p == fitted.path ? fitted.bytes : File(p).readAsBytes();
+    }
+    return _servedProvider!;
   }
 
   void _attach(LuminaWorld world) {
@@ -142,7 +161,9 @@ mixin _GarmentViewport on _GarmentEditorBase {
   }
 
   Widget viewport() {
+    final fit = vm.fittedPreview?.report;
     final summary = [
+      if (fit != null) 'fitted: ${fit.maxPenetration.toStringAsFixed(2)} cm inside, ${fit.milliseconds} ms${fit.denseCorrespondence ? ', vertex for vertex' : ''}',
       if (vm.sourceMesh != null) 'garment ${vm.sourceMesh!.data.vertexCount} vertices',
       if (vm.bodyMesh != null) 'body ${vm.bodyMesh!.data.vertexCount} vertices',
       '${vm.doc.landmarks.where((l) => l.isComplete).length}/${vm.doc.landmarks.length} landmarks placed',
