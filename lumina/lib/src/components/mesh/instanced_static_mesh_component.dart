@@ -147,8 +147,7 @@ class LuminaInstancedStaticMeshComponent extends LuminaSceneComponent {
       );
       builder.build(engine, _entity);
 
-      final scene = world.filamentScene;
-      scene.addEntity(_entity);
+      if (!isDistanceHidden) world.filamentScene.addEntity(_entity);
     }
   }
 
@@ -303,10 +302,30 @@ class LuminaInstancedStaticMeshComponent extends LuminaSceneComponent {
     _maxDirty = null;
   }
 
+  /// The batch's bounds (all instances), its origin while empty.
+  @override
+  ({Vector3 center, double radius}) get drawDistanceSphere {
+    final b = _combinedBounds;
+    if (b.min.x > b.max.x) return super.drawDistanceSphere;
+    final m = worldTransform;
+    return (center: m.transformed3(b.center), radius: (b.max - b.min).length / 2 * m.getMaxScaleOnAxis());
+  }
+
+  @override
+  void onDistanceHiddenChanged(bool hidden) {
+    final world = owner?.world;
+    if (world == null || !world.hasNativeContext || _entity == 0) return;
+    final scene = world.filamentScene;
+    if (hidden && scene.hasEntity(_entity)) scene.removeEntity(_entity);
+    if (!hidden && !scene.hasEntity(_entity)) scene.addEntity(_entity);
+  }
+
   /// Evaluates distance-based LOD switching and whole-batch frustum culling.
   void updateLodAndCulling(Vector3 cameraPosition, {Matrix4? projViewMatrix}) {
     final world = owner?.world;
     if (world == null || !world.hasNativeContext || _entity == 0) return;
+    // Beyond its draw distances the batch stays out whatever the frustum.
+    if (isDistanceHidden) return;
 
     // 1. Frustum culling
     if (projViewMatrix != null) {

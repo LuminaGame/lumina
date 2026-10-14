@@ -1,7 +1,10 @@
+import 'dart:math' as math;
+
 import 'package:meta/meta.dart' show protected;
 import 'package:vector_math/vector_math_64.dart';
 import 'package:lumina_core/lumina_core.dart';
 import 'package:lumina/src/components/base/actor_component.dart';
+import 'package:lumina/src/world/world.dart';
 
 /// Transform component that has a position, rotation, and scale in 3D space.
 ///
@@ -55,6 +58,45 @@ class LuminaSceneComponent extends LuminaActorComponent {
     if (location != null) _relativeLocation.setFrom(location);
     if (rotation != null) _relativeRotation = rotation;
     if (scale != null) _relativeScale.setFrom(scale);
+  }
+
+  /// Whether the component is left out of the drawing because of its draw
+  /// distances, whatever [isVisible] says.
+  bool get isDistanceHidden => _distanceHidden;
+  bool _distanceHidden = false;
+
+  /// The sphere draw distances are measured to (world, cm): its nearest
+  /// point to the view counts. A component without bounds is a point at its
+  /// world location; a mesh, a batch or a section set gives its bounds.
+  @protected
+  ({Vector3 center, double radius}) get drawDistanceSphere => (center: worldLocation, radius: 0.0);
+
+  /// Called when [isDistanceHidden] changed: a component that draws leaves
+  /// the scene or comes back; the default does nothing.
+  @protected
+  void onDistanceHiddenChanged(bool hidden) {}
+
+  /// Hides or shows the component for the frame's [view] location (cm,
+  /// runtime axes; null shows it) and its [minDrawDistance] /
+  /// [maxDrawDistance] (0 = no limit), measured to the nearest point of its
+  /// [drawDistanceSphere]. Runs in every render prep; only a change touches
+  /// the scene.
+  void applyDrawDistance(Vector3? view) {
+    var hidden = false;
+    if ((minDrawDistance > 0 || maxDrawDistance > 0) && view != null) {
+      final s = drawDistanceSphere;
+      final d = math.max(0.0, s.center.distanceTo(view) - s.radius);
+      hidden = (minDrawDistance > 0 && d < minDrawDistance) || (maxDrawDistance > 0 && d > maxDrawDistance);
+    }
+    if (hidden == _distanceHidden) return;
+    _distanceHidden = hidden;
+    onDistanceHiddenChanged(hidden);
+  }
+
+  @override
+  void onRenderPrep(LuminaWorld world) {
+    super.onRenderPrep(world);
+    applyDrawDistance(world.drawDistanceViewLocation);
   }
 
   /// Evaluates whether this component should be rendered based on camera distance.

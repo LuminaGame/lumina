@@ -1,6 +1,6 @@
 import 'package:lumina_core/lumina_core.dart';
 
-import 'package:lumina/src/components/mesh/static_mesh_component.dart';
+import 'package:lumina/src/components/base/scene_component.dart';
 import 'package:lumina/src/object/actor.dart';
 
 /// Distance-based hiding of meshes. A mesh component with a
@@ -24,11 +24,12 @@ abstract final class LuminaDrawDistance {
     return min == 0 && max == 0 ? null : (min: min, max: max);
   }
 
-  /// Gives every mesh component of [actor] the limits [min] / [max] (cm);
-  /// returns [actor].
+  /// Gives every scene component of [actor] the limits [min] / [max] (cm);
+  /// the ones that draw (meshes, instanced batches, procedural sections,
+  /// particles) follow them. Returns [actor].
   static T apply<T extends LuminaActor>(T actor, {double min = 0, double max = 0}) {
-    for (final mesh in actor.components.whereType<LuminaStaticMeshComponent>()) {
-      mesh
+    for (final c in actor.components.whereType<LuminaSceneComponent>()) {
+      c
         ..minDrawDistance = min
         ..maxDrawDistance = max;
     }

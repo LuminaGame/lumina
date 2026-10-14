@@ -87,6 +87,28 @@ const List<ComponentTypeDescriptor> _meshComponentDescriptors = [
         type: ComponentPropertyType.boolean,
         defaultValue: true,
       ),
+      // Hidden nearer / farther than this from the view, metres (0: no
+      // limit), measured to the mesh's bounds; Play and the game alike.
+      ComponentPropertySchema(
+        group: 'RENDER DISTANCE',
+        name: 'Min Draw Distance (m)',
+        dartField: 'minDrawDistance',
+        type: ComponentPropertyType.number,
+        defaultValue: 0.0,
+        min: 0.0,
+        max: 10000.0,
+        hardMin: 0.0,
+      ),
+      ComponentPropertySchema(
+        group: 'RENDER DISTANCE',
+        name: 'Max Draw Distance (m)',
+        dartField: 'maxDrawDistance',
+        type: ComponentPropertyType.number,
+        defaultValue: 0.0,
+        min: 0.0,
+        max: 10000.0,
+        hardMin: 0.0,
+      ),
       // A character's swappable part: its slot name, and the skeletal
       // mesh whose pose it follows by bone name.
       ComponentPropertySchema(
@@ -162,6 +184,28 @@ const List<ComponentTypeDescriptor> _meshComponentDescriptors = [
         dartField: 'receiveShadows',
         type: ComponentPropertyType.boolean,
         defaultValue: true,
+      ),
+      // Hidden nearer / farther than this from the view, metres (0: no
+      // limit), measured to the mesh's bounds; Play and the game alike.
+      ComponentPropertySchema(
+        group: 'RENDER DISTANCE',
+        name: 'Min Draw Distance (m)',
+        dartField: 'minDrawDistance',
+        type: ComponentPropertyType.number,
+        defaultValue: 0.0,
+        min: 0.0,
+        max: 10000.0,
+        hardMin: 0.0,
+      ),
+      ComponentPropertySchema(
+        group: 'RENDER DISTANCE',
+        name: 'Max Draw Distance (m)',
+        dartField: 'maxDrawDistance',
+        type: ComponentPropertyType.number,
+        defaultValue: 0.0,
+        min: 0.0,
+        max: 10000.0,
+        hardMin: 0.0,
       ),
     ],
   ),

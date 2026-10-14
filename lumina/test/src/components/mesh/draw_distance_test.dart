@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter_filament/flutter_filament.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -110,5 +111,67 @@ void main() {
     final actor = LuminaActor(root: a)..addComponent(b);
     expect(LuminaDrawDistance.apply(actor, min: 10, max: 20), same(actor));
     expect([a.minDrawDistance, a.maxDrawDistance, b.minDrawDistance, b.maxDrawDistance], [10, 20, 10, 20]);
+  });
+
+  test('the distance is measured to the mesh bounds, not its origin', () async {
+    final view = cameraAt(Vector3(0, 0, 2100));
+    final mesh = await placed(max: 2000);
+    final s = mesh.localBounds!;
+    final radius = (s.max - s.min).length / 2;
+    expect(radius, greaterThan(100), reason: 'a 3 m unit');
+    world.tick(1 / 60);
+    expect(mesh.isDistanceHidden, isFalse, reason: 'its origin is 21 m away, its near side under 20 m');
+    view.camera.relativeLocation = Vector3(0, 0, 2000 + radius + 50);
+    world.tick(1 / 60);
+    expect(mesh.isDistanceHidden, isTrue);
+  }, skip: skip);
+
+  test('procedural sections and particles leave the drawing beyond their draw distances', () {
+    final view = cameraAt(Vector3(0, 0, 500));
+    final procedural = LuminaProceduralMeshComponent()..maxDrawDistance = 1000;
+    final particles = LuminaParticleSystemComponent(
+      config: LuminaParticleEmitterConfig(spawnRate: 60, lifetimeMin: 2, lifetimeMax: 2, maxParticles: 32, looping: true, duration: 4),
+      randomSeed: 3,
+    )..maxDrawDistance = 1000;
+    world.persistentLevel.registerActor(LuminaActor(root: procedural)..addComponent(particles));
+    world.beginPlay();
+    procedural.createMeshSection(
+      0,
+      positions: Float32List.fromList([0, 0, 0, 100, 0, 0, 100, 100, 0]),
+      indices: Uint32List.fromList([0, 1, 2]),
+      generateTangents: false,
+    );
+    for (var i = 0; i < 10; i++) {
+      world.tick(1 / 30);
+    }
+    expect(procedural.isDistanceHidden, isFalse);
+    expect(particles.renderedParticleCount, greaterThan(0));
+
+    view.camera.relativeLocation = Vector3(0, 0, 3000);
+    world.tick(1 / 30);
+    expect(procedural.isDistanceHidden, isTrue);
+    expect(particles.isDistanceHidden, isTrue);
+    expect(particles.hasSpriteGeometry, isFalse, reason: 'no sprites drawn');
+    expect(particles.liveParticleCount, greaterThan(0), reason: 'the simulation goes on');
+
+    view.camera.relativeLocation = Vector3(0, 0, 500);
+    world.tick(1 / 30);
+    expect(procedural.isDistanceHidden, isFalse);
+    expect(particles.hasSpriteGeometry, isTrue);
+  });
+
+  test('a Blueprint mesh takes its Details draw distances (metres) when built', () {
+    final actor = LuminaActor(root: LuminaSceneComponent());
+    final built = LuminaBlueprintComponents.construct(actor, [
+      LuminaBlueprintComponent(
+        id: 'crate',
+        name: 'Crate',
+        type: 'LuminaStaticMeshComponent',
+        isSceneComponent: true,
+        properties: {'staticMeshAsset': prop, 'minDrawDistance': 1.5, 'maxDrawDistance': 80.0},
+      ),
+    ], resolveAsset: (s) => s);
+    final crate = built['crate'] as LuminaSceneComponent;
+    expect([crate.minDrawDistance, crate.maxDrawDistance], [150.0, 8000.0]);
   });
 }

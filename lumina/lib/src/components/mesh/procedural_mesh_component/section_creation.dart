@@ -341,8 +341,8 @@ mixin _ProceduralMeshSectionCreation on LuminaSceneComponent {
       FilamentTransformManager(engine).create(entity, localTransform: transform);
       _lastSyncedTransform = transform;
 
-      final scene = world.filamentScene;
-      scene.addEntity(entity);
+      // Beyond the draw distances it joins the scene when they allow.
+      if (!isDistanceHidden) world.filamentScene.addEntity(entity);
     }
 
     final section = _ProceduralMeshSection(

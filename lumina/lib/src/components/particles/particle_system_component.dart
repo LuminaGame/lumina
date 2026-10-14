@@ -374,9 +374,11 @@ class LuminaParticleSystemComponent extends LuminaSceneComponent {
 
   @override
   void onRenderPrep(LuminaWorld world) {
+    super.onRenderPrep(world);
     final mesh = _spriteMesh;
     if (mesh == null) return;
-    if (_liveCount == 0) {
+    // Beyond its draw distances nothing is drawn; the particles live on.
+    if (_liveCount == 0 || isDistanceHidden) {
       _clearSprites();
       return;
     }

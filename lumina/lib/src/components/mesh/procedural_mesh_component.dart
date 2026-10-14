@@ -165,16 +165,37 @@ class LuminaProceduralMeshComponent extends LuminaSceneComponent
     final section = _sections[sectionIndex];
     if (section == null || section.visible == visible) return;
     section.visible = visible;
+    _syncSection(section);
+  }
 
+  /// A section is in the scene when it is visible and the component is
+  /// within its draw distances.
+  void _syncSection(_ProceduralMeshSection section) {
     final world = owner?.world;
-    if (world != null && world.hasNativeContext && section.entity != 0) {
-      final scene = world.filamentScene;
-      if (visible) {
-        scene.addEntity(section.entity);
-      } else {
-        scene.removeEntity(section.entity);
-      }
+    if (world == null || !world.hasNativeContext || section.entity == 0) return;
+    final scene = world.filamentScene;
+    final drawn = section.visible && !isDistanceHidden;
+    if (drawn && !scene.hasEntity(section.entity)) scene.addEntity(section.entity);
+    if (!drawn && scene.hasEntity(section.entity)) scene.removeEntity(section.entity);
+  }
+
+  @override
+  void onDistanceHiddenChanged(bool hidden) {
+    for (final section in _sections.values) {
+      _syncSection(section);
     }
+  }
+
+  /// The sections' bounds together, the origin without any.
+  @override
+  ({Vector3 center, double radius}) get drawDistanceSphere {
+    Aabb3? all;
+    for (final s in _sections.values) {
+      all = all == null ? Aabb3.copy(s.bounds) : (all..hull(s.bounds));
+    }
+    if (all == null) return super.drawDistanceSphere;
+    final m = worldTransform;
+    return (center: m.transformed3(all.center), radius: (all.max - all.min).length / 2 * m.getMaxScaleOnAxis());
   }
 
   /// Clears and releases all native and staging resources for [sectionIndex].

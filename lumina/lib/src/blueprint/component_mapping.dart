@@ -7,6 +7,7 @@ import 'package:vector_math/vector_math_64.dart';
 import 'package:lumina/src/components/base/actor_component.dart';
 import 'package:lumina/src/components/base/scene_component.dart';
 import 'package:lumina/src/components/camera/camera_component.dart';
+import 'package:lumina/src/components/mesh/draw_distance.dart';
 import 'package:lumina/src/components/camera/spring_arm_component.dart';
 import 'package:lumina/src/components/audio/audio_component.dart';
 import 'package:lumina/src/components/collision/capsule_component.dart';
@@ -99,6 +100,15 @@ abstract final class LuminaBlueprintComponents {
         }
         final component = _build(actor, c, resolveAsset, assetProvider, diagnostics);
         if (component == null) continue;
+        // Min / Max Draw Distance (Details, metres) on what draws.
+        if (component is LuminaSceneComponent) {
+          final limits = LuminaDrawDistance.fromDetails(c.properties);
+          if (limits != null) {
+            component
+              ..minDrawDistance = limits.min
+              ..maxDrawDistance = limits.max;
+          }
+        }
         built[c.id] = component;
         if (component is LuminaSceneComponent && component != actor.rootComponent && !_isOwnField(actor, component)) {
           var parent = c.parentId == null ? null : built[c.parentId];
