@@ -98,7 +98,7 @@ mixin _GarmentViewport on _GarmentEditorBase {
     final fitted = vm.fittedPreview;
     if (fitted != null) {
       // Fitted to the preview body: already in its space.
-      scene.setGarment(fitted.path, provider: _fittedProvider(fitted));
+      scene.setGarment(fitted.path, provider: _fittedProvider(fitted), materialsFrom: vm.absolute(vm.doc.sourceMesh));
       scene.place(vm.doc, placed: false);
     } else {
       scene.setGarment(vm.absolute(vm.doc.sourceMesh));

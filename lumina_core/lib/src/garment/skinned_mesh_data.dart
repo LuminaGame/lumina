@@ -4,6 +4,8 @@ import 'dart:typed_data';
 import 'package:lumina_core/src/services/glb_animation_merger.dart' show GlbDocument;
 import 'package:lumina_core/src/services/glb_reader.dart' show GlbDracoDecoder;
 
+part 'package:lumina_core/src/garment/skinned_mesh_accessors.dart';
+
 /// Where one glTF primitive sits in a [LuminaSkinnedMeshData]: its vertices
 /// and triangles in the combined arrays, its material and its index
 /// accessor (null when it is Draco-compressed and cannot be patched).
@@ -47,6 +49,7 @@ class LuminaSkinnedMeshData {
     required this.nodeWorld,
     required this.inverseBind,
     required this.primitives,
+    this.colors,
   });
 
   /// The parsed GLB the arrays were read from.
@@ -73,6 +76,11 @@ class LuminaSkinnedMeshData {
 
   final List<LuminaGlbPrimitiveRef> primitives;
 
+  /// Vertex colours (RGBA per vertex, linear, from `COLOR_0`; white where a
+  /// primitive has none), or null when no primitive has them. A garment
+  /// coloured per vertex keeps its colours through a fit.
+  final Float32List? colors;
+
   int get vertexCount => positions.length ~/ 3;
   int get triangleCount => triangles.length ~/ 3;
   bool get isSkinned => joints != null;
@@ -84,6 +92,7 @@ class LuminaSkinnedMeshData {
   /// primitives keep their order and materials; the GLB is the same.
   LuminaSkinnedMeshData refined({double maxEdge = 2.5, int maxVertices = 40000}) {
     var p = positions.toList(), nrm = normals.toList(), uv = uvs.toList(), tri = triangles.toList();
+    final col = colors?.toList();
     var prims = primitives;
     double meanEdge() {
       var sum = 0.0;
@@ -108,6 +117,11 @@ class LuminaSkinnedMeshData {
         }
         for (var k = 0; k < 2; k++) {
           uv.add((uv[a * 2 + k] + uv[b * 2 + k]) / 2);
+        }
+        if (col != null) {
+          for (var k = 0; k < 4; k++) {
+            col.add((col[a * 4 + k] + col[b * 4 + k]) / 2);
+          }
         }
         return i;
       });
@@ -148,6 +162,7 @@ class LuminaSkinnedMeshData {
       nodeWorld: nodeWorld,
       inverseBind: inverseBind,
       primitives: prims,
+      colors: col == null ? null : Float32List.fromList(col),
     );
   }
 
@@ -362,7 +377,8 @@ class LuminaSkinnedMeshData {
       }
     }
 
-    final positions = <double>[], normals = <double>[], uvs = <double>[];
+    final positions = <double>[], normals = <double>[], uvs = <double>[], colors = <double>[];
+    var coloured = false;
     final triangles = <int>[];
     final joints = <int>[], weights = <double>[];
     var skinned = false;
@@ -383,7 +399,8 @@ class LuminaSkinnedMeshData {
         final attributes = (prim['attributes'] as Map).cast<String, dynamic>();
         final dracoExt = (prim['extensions'] as Map?)?['KHR_draco_mesh_compression'] as Map?;
         List<double> pos;
-        List<double>? nor, uv;
+        List<double>? nor, uv, col;
+        var colComponents = 4;
         List<int> idx;
         int? indexAccessor;
         if (dracoExt != null) {
@@ -398,6 +415,12 @@ class LuminaSkinnedMeshData {
           nor = na == null ? null : reader.floats(na.toInt());
           final ua = attributes['TEXCOORD_0'] as num?;
           uv = ua == null ? null : reader.floats(ua.toInt());
+          final ca = attributes['COLOR_0'] as num?;
+          if (ca != null) {
+            col = reader.floats(ca.toInt());
+            colComponents = (json['accessors'] as List)[ca.toInt()]['type'] == 'VEC3' ? 3 : 4;
+            coloured = true;
+          }
           final ia = prim['indices'] as num?;
           indexAccessor = ia?.toInt();
           idx = ia == null ? [for (var i = 0; i < pos.length ~/ 3; i++) i] : reader.ints(ia.toInt());
@@ -444,6 +467,9 @@ class LuminaSkinnedMeshData {
           uvs
             ..add(uv == null ? 0 : uv[v * 2])
             ..add(uv == null ? 0 : uv[v * 2 + 1]);
+          for (var k = 0; k < 4; k++) {
+            colors.add(col == null || k >= colComponents ? 1 : col[v * colComponents + k]);
+          }
         }
         if (nor == null) _accumulateNormals(positions, normals, idx, first);
         final firstTriangle = triangles.length ~/ 3;
@@ -509,6 +535,7 @@ class LuminaSkinnedMeshData {
       triangles: Uint32List.fromList(triangles),
       joints: skinned ? Uint16List.fromList(joints) : null,
       weights: skinned ? Float32List.fromList(weights) : null,
+      colors: coloured ? Float32List.fromList(colors) : null,
       nodeNames: names,
       nodeParents: parents,
       nodeWorld: centimetres(world),
@@ -598,78 +625,5 @@ class LuminaSkinnedMeshData {
       out[i + 14] *= 100;
     }
     return out;
-  }
-}
-
-/// Reads glTF accessors out of a [GlbDocument]'s binary chunk.
-class _Accessors {
-  _Accessors(this.doc)
-      : accessors = (doc.json['accessors'] as List? ?? const []).cast<Map<String, dynamic>>(),
-        views = (doc.json['bufferViews'] as List? ?? const []).cast<Map<String, dynamic>>();
-
-  final GlbDocument doc;
-  final List<Map<String, dynamic>> accessors, views;
-
-  static const _components = {'SCALAR': 1, 'VEC2': 2, 'VEC3': 3, 'VEC4': 4, 'MAT4': 16};
-
-  Uint8List bufferView(int index) {
-    final v = views[index];
-    final offset = (v['byteOffset'] as num? ?? 0).toInt();
-    return Uint8List.sublistView(doc.bin, offset, offset + (v['byteLength'] as num).toInt());
-  }
-
-  List<double> floats(int index) {
-    final a = accessors[index];
-    final n = (a['count'] as num).toInt() * _components[a['type']]!;
-    final out = Float64List(n);
-    _read(a, (i, value) => out[i] = value);
-    return out;
-  }
-
-  List<int> ints(int index) {
-    final a = accessors[index];
-    final n = (a['count'] as num).toInt() * _components[a['type']]!;
-    final out = Uint32List(n);
-    _read(a, (i, value) => out[i] = value.toInt(), integer: true);
-    return out;
-  }
-
-  void _read(Map<String, dynamic> a, void Function(int i, double v) put, {bool integer = false}) {
-    final count = (a['count'] as num).toInt();
-    final comps = _components[a['type']]!;
-    final type = (a['componentType'] as num).toInt();
-    final normalized = a['normalized'] == true;
-    final size = switch (type) { 5126 || 5125 => 4, 5123 || 5122 => 2, _ => 1 };
-    final viewIndex = a['bufferView'] as num?;
-    if (viewIndex == null) return; // all zeros
-    final view = views[viewIndex.toInt()];
-    final stride = (view['byteStride'] as num?)?.toInt() ?? comps * size;
-    final base = (view['byteOffset'] as num? ?? 0).toInt() + (a['byteOffset'] as num? ?? 0).toInt();
-    final data = ByteData.sublistView(doc.bin);
-    for (var e = 0; e < count; e++) {
-      for (var c = 0; c < comps; c++) {
-        final o = base + e * stride + c * size;
-        double v;
-        switch (type) {
-          case 5126:
-            v = data.getFloat32(o, Endian.little);
-          case 5125:
-            v = data.getUint32(o, Endian.little).toDouble();
-          case 5123:
-            final raw = data.getUint16(o, Endian.little);
-            v = normalized && !integer ? raw / 65535 : raw.toDouble();
-          case 5122:
-            final raw = data.getInt16(o, Endian.little);
-            v = normalized && !integer ? math.max(raw / 32767, -1.0) : raw.toDouble();
-          case 5121:
-            final raw = data.getUint8(o);
-            v = normalized && !integer ? raw / 255 : raw.toDouble();
-          default:
-            final raw = data.getInt8(o);
-            v = normalized && !integer ? math.max(raw / 127, -1.0) : raw.toDouble();
-        }
-        put(e * comps + c, v);
-      }
-    }
   }
 }

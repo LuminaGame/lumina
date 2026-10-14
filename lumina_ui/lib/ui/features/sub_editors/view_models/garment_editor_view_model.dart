@@ -27,6 +27,10 @@ class GarmentEditorMesh {
   /// The project-relative mesh asset.
   final String path;
   final LuminaSkinnedMeshData data;
+
+  /// Only the skin of a body (no hair cards, eyes or teeth): where body
+  /// landmarks are placed.
+  late final LuminaSkinnedMeshData skin = data.skin();
 }
 
 /// View model of the Garment editor: one garment `.lmas` (a
@@ -342,7 +346,7 @@ class GarmentEditorViewModel extends ChangeNotifier {
     if (_pickMode == GarmentPickMode.body) {
       final body = _body;
       if (body == null) return false;
-      final hit = LuminaGarmentMath.raycast(body.data.positions, body.data.triangles, ox, oy, oz, dx, dy, dz);
+      final hit = LuminaGarmentMath.raycast(body.skin.positions, body.skin.triangles, ox, oy, oz, dx, dy, dz);
       if (hit == null) return false;
       _pickMode = landmark.garment == null ? GarmentPickMode.garment : GarmentPickMode.none;
       _set(_doc.withLandmark(landmark.withBody([hit.x, hit.y, hit.z])));

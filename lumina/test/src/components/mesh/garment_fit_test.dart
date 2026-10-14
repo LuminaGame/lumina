@@ -307,6 +307,7 @@ void main() {
       final torso = slots.component('Torso') as LuminaAnimatedMeshComponent;
       await torso.loaded;
       expect(torso.meshAssetPath, startsWith('garment:Torso#'), reason: 'the Garment asset is fitted, never loaded as a mesh');
+      expect(torso.slotMaterialSource, tshirt.path, reason: "drawn with the source mesh's slot materials");
       expect(slots.slot('Torso')!.garment, isNotNull);
       expect(slots.slot('Torso')!.lastFit!.maxPenetration, lessThan(0.1));
       final body = built['body'] as LuminaAnimatedMeshComponent;

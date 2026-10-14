@@ -73,6 +73,9 @@ abstract final class LuminaGarmentGlbWriter {
       'TEXCOORD_0': accessor(Float32List.fromList(fit.uvs).buffer.asUint8List(), 5126, n, 'VEC2', target: 34962),
       'JOINTS_0': accessor(joints.buffer.asUint8List(), 5123, n, 'VEC4', target: 34962),
       'WEIGHTS_0': accessor(Float32List.fromList(fit.weights).buffer.asUint8List(), 5126, n, 'VEC4', target: 34962),
+      // The source's vertex colours (a garment coloured per vertex).
+      if (source.colors case final c? when c.length == n * 4)
+        'COLOR_0': accessor(Float32List.fromList(c).buffer.asUint8List(), 5126, n, 'VEC4', target: 34962),
     };
 
     // The source's materials with their textures and images.

@@ -184,6 +184,7 @@ class LuminaCharacterSlots {
       if (slot.garment != null) {
         await _fitGarment(slot);
       } else if (old is LuminaAnimatedMeshComponent) {
+        old.slotMaterialSource = null;
         await old.setMeshAsset(resolve(mesh), assetProvider: assetProvider);
         _changes.add(name);
       } else if (old is LuminaSkinnedClothComponent) {
@@ -276,6 +277,8 @@ class LuminaCharacterSlots {
         ..mesh = _leaderMesh(slot);
       _replace(slot, cloth);
     } else if (current is LuminaAnimatedMeshComponent) {
+      // The source mesh's slot materials, on the fitted sections.
+      current.slotMaterialSource = resolve(doc.sourceMesh);
       await current.setMeshAsset(fitted.path, assetProvider: provider);
       _changes.add(slot.name);
     } else {
@@ -284,7 +287,7 @@ class LuminaCharacterSlots {
         castShadows: slot.properties['castShadows'] as bool? ?? true,
         receiveShadows: slot.properties['receiveShadows'] as bool? ?? true,
         assetProvider: provider,
-      );
+      )..slotMaterialSource = resolve(doc.sourceMesh);
       _replace(slot, next);
       // Not in a world yet (a Blueprint still constructing): it loads there.
       if (actor.world != null) await next.loaded;

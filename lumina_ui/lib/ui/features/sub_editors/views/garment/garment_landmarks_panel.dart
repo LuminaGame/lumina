@@ -136,6 +136,7 @@ mixin _GarmentLandmarksPanel on _GarmentEditorBase {
   }
 
   Widget _pointRow(String name, String what, List<double>? p, IconData icon, Color color) => GestureDetector(
+    key: ValueKey('garment_point_${name}_$what'),
     behavior: HitTestBehavior.opaque,
     onTap: () {
       vm.selectLandmark(name);

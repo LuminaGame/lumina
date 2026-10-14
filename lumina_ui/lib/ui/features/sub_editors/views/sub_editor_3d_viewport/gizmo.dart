@@ -136,6 +136,19 @@ mixin _SubEditor3DViewportGizmo on _SubEditor3DViewportStateBase {
     return _transformGizmoModel();
   }
 
+  /// Where [runtimePoint] (the preview world's frame: Y up, cm) is drawn in
+  /// the viewport (local pixels) through the orbit camera now, or null when
+  /// it is behind the camera; a test or a recorded tutorial clicks there.
+  @visibleForTesting
+  Offset? screenPositionOf(Vector3 runtimePoint) => projectWorldToViewport(
+        worldPos: runtimePoint,
+        size: _viewportSize,
+        yawDeg: _cameraYaw,
+        pitchDeg: _cameraPitch,
+        distance: _cameraDistance,
+        target: _yUpTarget(),
+      );
+
   /// The gizmo handle under the pointer, or null.
   @visibleForTesting
   String? get hoveredGizmoHandleForTest => _gizmoHover;

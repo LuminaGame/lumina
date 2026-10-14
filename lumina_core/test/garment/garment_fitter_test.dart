@@ -55,7 +55,7 @@ void main() {
 
   /// A GLB with one node and mesh per part; a [masked] part's material is
   /// alpha-masked (hair cards).
-  Uint8List glb(List<({String name, List<double> positions, List<int> indices, bool masked})> parts) {
+  Uint8List glb(List<({String name, List<double> positions, List<int> indices, bool masked})> parts, {List<double>? colors}) {
     final bin = BytesBuilder();
     final views = <Map<String, Object?>>[], accessors = <Map<String, Object?>>[];
     final meshes = <Map<String, Object?>>[], nodes = <Map<String, Object?>>[], materials = <Map<String, Object?>>[];
@@ -73,11 +73,24 @@ void main() {
       views.add({'buffer': 0, 'byteOffset': bin.length, 'byteLength': ind.lengthInBytes});
       bin.add(ind.buffer.asUint8List());
       accessors.add({'bufferView': views.length - 1, 'componentType': 5125, 'count': ind.length, 'type': 'SCALAR'});
+      final indexAccessor = accessors.length - 1;
+      int? colorAccessor;
+      if (colors != null) {
+        final c = Float32List.fromList(colors);
+        views.add({'buffer': 0, 'byteOffset': bin.length, 'byteLength': c.lengthInBytes});
+        bin.add(c.buffer.asUint8List());
+        accessors.add({'bufferView': views.length - 1, 'componentType': 5126, 'count': c.length ~/ 4, 'type': 'VEC4'});
+        colorAccessor = accessors.length - 1;
+      }
       materials.add({'name': 'M_${part.name}', if (part.masked) 'alphaMode': 'MASK'});
       meshes.add({
         'name': part.name,
         'primitives': [
-          {'attributes': {'POSITION': accessors.length - 2}, 'indices': accessors.length - 1, 'material': materials.length - 1},
+          {
+            'attributes': {'POSITION': indexAccessor - 1, 'COLOR_0': ?colorAccessor},
+            'indices': indexAccessor,
+            'material': materials.length - 1,
+          },
         ],
       });
       nodes.add({'name': part.name, 'mesh': meshes.length - 1});
@@ -168,5 +181,21 @@ void main() {
     final moved = doc.copyWith(location: [0, 5, 0]);
     final fit2 = LuminaGarmentFitter.fit(source: coat, document: moved, referenceBody: bumpy, targetBody: bumpy);
     expect(fit2.positions[1], closeTo(coat.positions[1] + 5, 1e-6));
+  });
+
+  test('a garment coloured per vertex keeps its colours through the fit and in the written GLB', () {
+    final colours = [for (var v = 0; v < shell.positions.length ~/ 3; v++) ...[0.8, 0.1 * (v % 7), 0.05, 1.0]];
+    final dress = LuminaSkinnedMeshData.fromGlb(glb([part('dress', shell)], colors: colours));
+    expect(dress.colors, isNotNull);
+    expect(dress.colors!.sublist(0, 8), [closeTo(0.8, 1e-6), 0, closeTo(0.05, 1e-6), 1, closeTo(0.8, 1e-6), closeTo(0.1, 1e-6), closeTo(0.05, 1e-6), 1]);
+    final refined = dress.refined(maxEdge: 1);
+    expect(refined.colors!.length, refined.vertexCount * 4, reason: 'new vertices take their edge midpoints');
+    final fit = LuminaGarmentFitter.fit(source: dress, document: doc, referenceBody: bodyOnly, targetBody: wideBodyOnly);
+    final written = LuminaSkinnedMeshData.fromGlb(LuminaGarmentGlbWriter.write(fit: fit, source: dress, targetBody: wideBodyOnly));
+    expect(written.colors, isNotNull, reason: 'COLOR_0 written');
+    for (var i = 0; i < 40; i++) {
+      expect(written.colors![i], closeTo(dress.colors![i], 1e-6));
+    }
+    expect(bodyOnly.colors, isNull, reason: 'no COLOR_0, no colours');
   });
 }

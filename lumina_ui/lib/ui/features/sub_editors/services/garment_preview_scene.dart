@@ -13,7 +13,7 @@ class GarmentPreviewScene {
   final List<LuminaActor> _environment = [];
   LuminaActor? _bodyActor, _garmentActor;
   LuminaStaticMeshComponent? _garment;
-  String? _bodyPath, _garmentPath;
+  String? _bodyPath, _garmentPath, _garmentMaterials;
   LuminaAssetProvider? _garmentProvider;
   Timer? _timer;
 
@@ -30,7 +30,7 @@ class GarmentPreviewScene {
     final body = _bodyPath, garment = _garmentPath;
     _bodyPath = _garmentPath = null;
     if (body != null) setBody(body);
-    if (garment != null) setGarment(garment, provider: _garmentProvider);
+    if (garment != null) setGarment(garment, provider: _garmentProvider, materialsFrom: _garmentMaterials);
     _timer = Timer.periodic(const Duration(microseconds: 16667), (_) => _tick());
   }
 
@@ -86,18 +86,20 @@ class GarmentPreviewScene {
   }
 
   /// Shows the garment mesh at [path] (an absolute mesh path, or a key
-  /// [provider] serves; '' hides it).
-  void setGarment(String path, {LuminaAssetProvider? provider}) {
-    if (path == _garmentPath && provider == _garmentProvider) return;
+  /// [provider] serves; '' hides it), drawn with the slot materials of
+  /// [materialsFrom] when given (a fitted garment: its source mesh's).
+  void setGarment(String path, {LuminaAssetProvider? provider, String? materialsFrom}) {
+    if (path == _garmentPath && provider == _garmentProvider && materialsFrom == _garmentMaterials) return;
     _garmentPath = path;
     _garmentProvider = provider;
+    _garmentMaterials = materialsFrom;
     final w = _world;
     if (w == null) return;
     if (_garmentActor != null) w.persistentLevel.unregisterActor(_garmentActor!);
     _garmentActor = null;
     _garment = null;
     if (path.isEmpty) return;
-    final mesh = LuminaStaticMeshComponent(meshAssetPath: path, assetProvider: provider);
+    final mesh = LuminaStaticMeshComponent(meshAssetPath: path, assetProvider: provider)..slotMaterialSource = materialsFrom;
     final actor = LuminaActor(key: const LuminaObjectKey('garment_preview_garment'), root: mesh);
     w.persistentLevel.registerActor(actor);
     _garmentActor = actor;

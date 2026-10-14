@@ -80,6 +80,10 @@ class LuminaStaticMeshComponent extends LuminaSceneComponent with LuminaPrimitiv
   @protected
   bool get drawsSlotMaterials => true;
 
+  /// The mesh asset whose slot materials are drawn when it is not the mesh
+  /// itself (a garment fitted from it: one section per source section).
+  String? slotMaterialSource;
+
   /// The transform the asset's root is drawn with: the component's world
   /// transform, then the asset → world unit scale.
   Matrix4 get renderTransform => assetUnitScale == 1.0
@@ -340,7 +344,7 @@ class LuminaStaticMeshComponent extends LuminaSceneComponent with LuminaPrimitiv
   /// [materialOverrideAsset] or does not draw slot materials.
   Future<Map<int, String>> _slotMaterials(LuminaWorld w) {
     if ((materialOverrideAsset ?? '').isNotEmpty || !drawsSlotMaterials) return Future.value(const {});
-    final path = meshAssetPath;
+    final path = slotMaterialSource ?? meshAssetPath;
     final lower = path.toLowerCase();
     final String lmas;
     if (lower.endsWith('.entity.glb')) {
