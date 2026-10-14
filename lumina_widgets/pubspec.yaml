@@ -29,7 +29,7 @@ dependencies:
     git:
       url: https://github.com/LuminaGame/tools.git
       path: lumina_mouse_capture
-      ref: 4f37c7d72a05b651cb282a346717771cd0089802
+      ref: ec8d456315290cb0c317d007a5009789c9561fa8
   # Video and audio players (UMG media widgets, the Blueprint video nodes).
   media_kit: ^1.1.11
   media_kit_video: ^1.2.5
@@ -50,4 +50,4 @@ dev_dependencies:
     git:
       url: https://github.com/LuminaGame/tools.git
       path: lumina_smoke
-      ref: 4f37c7d72a05b651cb282a346717771cd0089802
+      ref: ec8d456315290cb0c317d007a5009789c9561fa8

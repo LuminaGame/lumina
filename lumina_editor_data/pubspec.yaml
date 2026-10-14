@@ -33,12 +33,12 @@ dependencies:
     git:
       url: https://github.com/LuminaGame/tools.git
       path: flutter_assimp
-      ref: 4f37c7d72a05b651cb282a346717771cd0089802
+      ref: ec8d456315290cb0c317d007a5009789c9561fa8
   flutter_riglogic:
     git:
       url: https://github.com/LuminaGame/tools.git
       path: flutter_riglogic
-      ref: 4f37c7d72a05b651cb282a346717771cd0089802
+      ref: ec8d456315290cb0c317d007a5009789c9561fa8
   # The editor-side scanner that reads @BlueprintCallable / @BlueprintPure
   # functions.
   analyzer: ^13.3.0
@@ -66,6 +66,6 @@ dev_dependencies:
     git:
       url: https://github.com/LuminaGame/tools.git
       path: lumina_smoke
-      ref: 4f37c7d72a05b651cb282a346717771cd0089802
+      ref: ec8d456315290cb0c317d007a5009789c9561fa8
   # The web smoke drives the built game in a headless browser.
   puppeteer: ^3.26.0
