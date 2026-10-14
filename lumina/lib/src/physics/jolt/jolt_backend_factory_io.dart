@@ -11,6 +11,9 @@ import 'package:lumina/src/physics/physics_backend.dart';
 /// this target and loads.
 bool get joltPhysicsAvailable => JoltPhysics.isAvailable;
 
+/// Why Jolt cannot run here (null while it can).
+String? get joltPhysicsUnavailableReason => JoltPhysics.isAvailable ? null : JoltPhysics.loadError;
+
 /// The `LUMINA_PHYSICS_BACKEND` environment variable.
 String? physicsBackendEnvironment() => Platform.environment['LUMINA_PHYSICS_BACKEND'];
 

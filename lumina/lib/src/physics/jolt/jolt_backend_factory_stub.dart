@@ -4,6 +4,9 @@ import 'package:lumina/src/physics/physics_backend.dart';
 /// Whether the Jolt backend can run here: never without `dart:ffi`.
 bool get joltPhysicsAvailable => false;
 
+/// Why Jolt cannot run here.
+String? get joltPhysicsUnavailableReason => 'no dart:ffi on this platform';
+
 /// The `LUMINA_PHYSICS_BACKEND` environment variable (none on the web).
 String? physicsBackendEnvironment() => null;
 

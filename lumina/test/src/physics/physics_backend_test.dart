@@ -15,9 +15,15 @@ void main() {
 
   group('backend selection', () {
     test('a requested kind wins; auto picks Jolt where its library is built', () {
+      expect(
+        JoltPhysics.isAvailable,
+        isTrue,
+        reason: 'build tools/flutter_jolt with tool/build_jolt.bat or tool/build_jolt.sh: '
+            '${LuminaPhysicsSubsystem.joltUnavailableReason}',
+      );
+      expect(LuminaPhysicsSubsystem.joltUnavailableReason, isNull);
       expect(LuminaPhysicsSubsystem(backend: LuminaPhysicsBackendKind.dart).backendKind, LuminaPhysicsBackendKind.dart);
       expect(LuminaPhysicsSubsystem(backend: LuminaPhysicsBackendKind.jolt).backendKind, LuminaPhysicsBackendKind.jolt);
-      expect(JoltPhysics.isAvailable, isTrue, reason: 'build tools/flutter_jolt with tool/build_jolt.bat');
       const forced = String.fromEnvironment('LUMINA_PHYSICS_BACKEND');
       final expected = LuminaPhysicsBackendKind.parse(forced) ?? LuminaPhysicsBackendKind.jolt;
       expect(LuminaPhysicsSubsystem().backendKind, expected == LuminaPhysicsBackendKind.auto ? LuminaPhysicsBackendKind.jolt : expected);

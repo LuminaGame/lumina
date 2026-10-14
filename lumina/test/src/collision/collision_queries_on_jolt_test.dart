@@ -22,6 +22,7 @@ void main() {
   tearDownAll(() => LuminaCollisionSubsystem.defaultQueryBackend = LuminaCollisionQueryBackendKind.auto);
 
   test('a collision subsystem on Jolt answers through its broad phase', () {
+    expect(LuminaPhysicsSubsystem.joltUnavailableReason, isNull, reason: 'the Jolt library must load here');
     final world = LuminaWorld(worldType: LuminaWorldType.game);
     addTearDown(world.cleanup);
     final collision = world.registerSubsystem(LuminaCollisionSubsystem());

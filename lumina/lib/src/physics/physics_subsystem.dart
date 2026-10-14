@@ -77,9 +77,26 @@ class LuminaPhysicsSubsystem extends LuminaWorldSubsystem {
   LuminaPhysicsSubsystem({LuminaPhysicsBackendKind? backend}) {
     final kind = resolvePhysicsBackendKind(backend ?? defaultBackend);
     final chosen = kind == LuminaPhysicsBackendKind.jolt ? createJoltPhysicsBackend() : null;
+    // Jolt asked for by name (not `auto`) and missing is worth a warning:
+    // the Dart solver steps instead.
+    if (chosen == null && kind == LuminaPhysicsBackendKind.jolt && !_warnedJoltMissing) {
+      _warnedJoltMissing = true;
+      EngineLoggerService().log(
+        'Jolt Physics requested but unavailable, using the Dart solver: $joltUnavailableReason',
+        level: 'warning',
+        source: 'LuminaPhysicsSubsystem',
+      );
+    }
     this.backend = chosen ?? LuminaDartPhysicsBackend();
     this.backend.attach(this);
   }
+
+  static bool _warnedJoltMissing = false;
+
+  /// Why Jolt cannot run in this process (the native library is not built
+  /// for the target or failed to load, with the loader's message; on the
+  /// web, the module is not loaded); null while it can.
+  static String? get joltUnavailableReason => joltPhysicsUnavailableReason;
 
   /// The backend kind new subsystems ask for.
   static LuminaPhysicsBackendKind defaultBackend = LuminaPhysicsBackendKind.auto;

@@ -10,6 +10,10 @@ import 'package:lumina/src/physics/physics_backend.dart';
 /// (`flutter_jolt.js` + `.wasm`); until then the Dart solver runs.
 bool get joltPhysicsAvailable => JoltPhysics.isAvailable;
 
+/// Why Jolt cannot run here (null while it can).
+String? get joltPhysicsUnavailableReason =>
+    JoltPhysics.isAvailable ? null : JoltPhysics.loadError ?? 'the WebAssembly module is not loaded (prepareJolt)';
+
 /// No environment variables on the web (the `LUMINA_PHYSICS_BACKEND`
 /// dart-define still applies).
 String? physicsBackendEnvironment() => null;
